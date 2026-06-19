@@ -370,6 +370,38 @@ test("a native pipeline shows the Target repo picker (required when unset; set-r
   assert.ok(withRepo.includes("update repo"), "offers update when set");
 });
 
+test("a completed project-ideation card shows its spec as the outcome + next step, not a dead end", () => {
+  const profiles = [
+    { pipeline: "project-ideation", label: "Project Ideation", source: "http-intake",
+      gates: ["stepwise-refinement", "principles-create", "premortem"], executorMode: "none",
+      executors: ["spec"], enabled: true, llmProvider: "claude-cli", color: "#b8bb26" },
+  ];
+  const done: Item = {
+    id: "done1", pipeline: "project-ideation", step: "premortem", state: "passed",
+    payload: {
+      title: "a finished idea",
+      executorResult: { outcome: "succeeded", verdict: "spec-written", detail: "wrote spec",
+        output: { specPath: "/var/lib/refinery/specs/done1-spec.md",
+          spec: { goal: "Ship the thing", steps: ["P1: do x", "P2: do y"], deliverable: "a merged module" } } },
+    },
+    // ran stepwise + premortem; principles-create skipped (greenfield gate n/a here)
+    history: [
+      { step: "stepwise-refinement", status: "passed", at: "t1" },
+      { step: "premortem", status: "passed", at: "t2" },
+      { step: "spec", status: "passed", at: "t3", note: "wrote spec" },
+    ],
+  };
+  const d = renderProjectDetail(done, profiles, profiles);
+  assert.ok(d.includes("✓ Done — outcome"), "leads with a done/outcome section");
+  assert.ok(d.includes("developed spec") && d.includes("Ship the thing"), "renders the produced spec inline");
+  assert.ok(d.includes("P1: do x"), "shows the spec steps");
+  assert.ok(d.includes("<b>Next:</b>"), "states a next step");
+  assert.ok(d.includes("done1-spec.md"), "links/shows the spec path");
+  assert.ok(d.includes("↻ re-run"), "re-run is demoted, not the prominent action");
+  assert.ok(!d.includes("▶ run pipeline now"), "no prominent run-now on a finished item");
+  assert.ok(d.includes("gate-dot skipped") || d.includes("ndot skipped"), "skipped gate (principles-create) renders skipped, not pending");
+});
+
 test("setRepo binds (and clears) payload.repo on an item", async () => {
   const { cfg, cleanup } = setup(triageStub("project-ideation"));
   try {

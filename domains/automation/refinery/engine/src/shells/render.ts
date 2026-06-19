@@ -166,6 +166,7 @@ const STYLE = `<style>
   .gate-dot.failed{background:var(--err)}
   .gate-dot.running{background:var(--acc)}
   .gate-dot.pending{background:var(--dim)}
+  .gate-dot.skipped{background:transparent;border:1px solid var(--muted)}
   .gate-dot.current{box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--ink)}
   /* item pipeline node strip (detail page): Triage → gates → executor → Done */
   .nodes{display:flex;flex-direction:column;gap:6px;margin-top:8px}
@@ -179,6 +180,7 @@ const STYLE = `<style>
   .node .ndot.parked{background:var(--warn)}
   .node .ndot.failed{background:var(--err)}
   .node .ndot.running{background:var(--acc)}
+  .node .ndot.skipped{background:transparent;border:1px solid var(--muted)}
   .node .nbody{padding:0 12px 10px;font-size:12px;color:var(--dim)}
   .node .nbody b{color:var(--fg)}
 </style>`;
@@ -315,11 +317,17 @@ function dotStateFromStatus(status: string): string {
 
 // Per-step state for the dot strip = the LAST matching history entry's status
 // for that step (mapped to a dot state); no history for a step → "pending".
+// On a COMPLETED pipeline (state=passed) a step that never ran is "skipped"
+// (e.g. a gate whose applies() was false), not "pending" — otherwise a finished
+// item looks stuck mid-pipeline.
 function stepStates(item: Item, steps: string[]): Map<string, string> {
   const m = new Map<string, string>();
   for (const s of steps) m.set(s, "pending");
   for (const h of item.history) {
     if (m.has(h.step)) m.set(h.step, dotStateFromStatus(h.status));
+  }
+  if (item.state === "passed") {
+    for (const s of steps) if (m.get(s) === "pending") m.set(s, "skipped");
   }
   return m;
 }
@@ -529,7 +537,9 @@ export function renderProjectDetail(
         const st = states.get(g) ?? "pending";
         const body = Object.keys(v).length
           ? `${v.decision != null ? `<div><b>decision:</b> ${esc(String(v.decision))}</div>` : ""}${v.reason != null ? `<div><b>reason:</b> ${esc(String(v.reason))}</div>` : ""}${prettyOutput(v.output)}`
-          : `<div class="kv">no verdict recorded for this step</div>`;
+          : st === "skipped"
+            ? `<div class="kv">skipped — this gate did not apply to the item</div>`
+            : `<div class="kv">no verdict recorded for this step</div>`;
         return node(g, st, body);
       })
       .join(arrow);
@@ -620,7 +630,9 @@ export function renderProjectDetail(
   const runHint = execId === "native"
     ? "runs the gates here, then queues native execution (worktree → claude → push)"
     : `runs ${esc(pipeline?.gates.join(" → ") ?? "")}; writes a developed spec`;
-  const runBlock = (!isIdea && pipeline && !readonly)
+  // The prominent Run block is for items that haven't completed. A passed item
+  // leads with its Outcome (below) and offers only a muted re-run.
+  const runBlock = (!isIdea && pipeline && !readonly && item.state !== "passed")
     ? item.state === "running"
       ? `<h2>Run</h2><div class="kv">⏳ running the ${esc(item.pipeline)} pipeline (${esc(pipeline.gates.join(" → "))})… refresh to see the result.</div>`
       : `<h2>Run</h2>
@@ -629,6 +641,36 @@ export function renderProjectDetail(
            <button type="submit">▶ run pipeline now</button>
            <span class="kv">${runHint}</span>
          </form>`
+    : "";
+
+  // Outcome — what a COMPLETED item produced + the next step. This is the answer
+  // to "what do I do now?" on a passed card (which otherwise dead-ends on "no
+  // human action needed"). project-ideation → a developed spec (rendered inline);
+  // native → a pushed branch + report.
+  const execResult = obj(payloadObj.executorResult);
+  const isDone = !isIdea && !readonly && item.state === "passed" && Object.keys(execResult).length > 0;
+  const specObj = obj(obj(execResult.output).spec);
+  const specPath = typeof (obj(execResult.output).specPath) === "string" ? String(obj(execResult.output).specPath) : "";
+  const branchStr = typeof execResult.branch === "string" ? execResult.branch : "";
+  const outcomeBody = Object.keys(specObj).length
+    ? `<div class="kv" style="margin-bottom:8px">This idea is now a <b>developed spec</b> — nothing more to do in this pipeline. Review it, then build it.</div>
+       <div class="md">
+         ${specObj.goal ? `<p><b>Goal:</b> ${esc(String(specObj.goal))}</p>` : ""}
+         ${Array.isArray(specObj.steps) ? `<p><b>Steps</b></p><ol>${(specObj.steps as unknown[]).map((s) => `<li>${esc(String(s))}</li>`).join("")}</ol>` : ""}
+         ${specObj.deliverable ? `<p><b>Deliverable:</b> ${esc(String(specObj.deliverable))}</p>` : ""}
+       </div>
+       ${specPath ? `<div class="kv">spec written to <code>${esc(specPath)}</code></div>` : ""}
+       <div class="kv" style="margin-top:8px"><b>Next:</b> build it. Automatic handoff to a build pipeline isn't wired yet — take this spec to a builder (or route a new app-refinement item at the target repo).</div>`
+    : `<div class="kv">${execResult.detail ? esc(String(execResult.detail)) : "completed"}${branchStr ? ` · branch <code>${esc(branchStr)}</code>${execResult.pushed ? " (pushed)" : ""}` : ""}.</div>
+       ${(payloadObj.hasReport || execResult.reportPresent) ? `<div class="act"><a href="/report/${esc(item.id)}">📄 view REPORT</a></div>` : ""}
+       <div class="kv" style="margin-top:8px"><b>Next:</b> review the result${branchStr ? " and the pushed branch — open a PR" : ""}.</div>`;
+  const outcomeBlock = isDone
+    ? `<h2>✓ Done — outcome</h2>${outcomeBody}
+       <form class="act" method="post" action="/run" style="margin-top:8px">
+         <input type="hidden" name="id" value="${esc(item.id)}">
+         <button type="submit">↻ re-run</button>
+         <span class="kv">re-runs the whole pipeline from the start</span>
+       </form>`
     : "";
 
   const actions = readonly
@@ -647,7 +689,7 @@ export function renderProjectDetail(
         `<h2>Investigation (read-only)</h2>
          <div class="kv">Produced by the sr_gauntlet overnight run.</div>
          <div class="act">${reportLink}</div>`
-    : `${promote}${repoBlock}${runBlock}
+    : `${outcomeBlock}${promote}${repoBlock}${runBlock}
   <h2>Human-in-the-loop</h2>
   ${parkedActions}
 
