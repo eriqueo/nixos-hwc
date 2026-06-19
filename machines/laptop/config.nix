@@ -110,6 +110,19 @@
     bluetooth.enable = true;
     monitoring.enable = true;
     fanControl.enable = true;
+    # Softer fan curve: extended silent zone + ~6°C-higher trip points so the
+    # fan ramps later and gentler. Paired with turbo-boost-off-on-AC below,
+    # peak temps stay low enough that the fan mostly sits at level 0-1.
+    # Firmware emergency handoff at 90°C keeps it well clear of Tjmax (~100°C).
+    fanControl.levels = [
+      [ 0             0   60 ]   # Silent zone (was 55)
+      [ 1            55   68 ]   # Gentle ramp
+      [ 2            63   74 ]   # Gradual increase
+      [ 3            70   80 ]   # Medium cooling
+      [ 4            76   86 ]   # Higher cooling
+      [ 5            82   92 ]   # Maximum manual control
+      [ "level auto" 90 32767 ]  # Emergency firmware handoff
+    ];
     peripherals = {
       enable = true;
       avahi = true;  # Network printer discovery
@@ -381,8 +394,11 @@
       CPU_ENERGY_PERF_POLICY_ON_AC = "balance_power";  # Changed from "performance" to reduce heat
       CPU_ENERGY_PERF_POLICY_ON_BAT = "balance-power";
 
-      # Boost control (disable turbo on battery for cooler operation)
-      CPU_BOOST_ON_AC = 1;
+      # Boost control (disable turbo on AC too — Meteor Lake turbo bursts spike
+      # temps past the fan trip points and slam the fan to max; capping heat at
+      # the source keeps the machine quiet. Reversible: set back to 1 if you
+      # need peak burst perf on AC.)
+      CPU_BOOST_ON_AC = 0;
       CPU_BOOST_ON_BAT = 0;
 
       # Power saving on battery
