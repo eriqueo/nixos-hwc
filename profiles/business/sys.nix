@@ -39,6 +39,9 @@
   # (FB scrape/classify pipeline migrated to hwc.server.ai.leadScout in 2026-05.)
   hwc.business.datax.enable = true;
 
+  # DataX Monitor — DX1 agent-execution diagnostic dashboard (monitor.hwc.iheartwoodcraft.com)
+  hwc.business.dataxMonitor.enable = true;
+
   # Paperless-NGX document management
   hwc.business.paperless.enable = lib.mkDefault true;
 

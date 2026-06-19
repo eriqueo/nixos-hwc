@@ -18,6 +18,7 @@ business/
 ├── index.nix          # Domain aggregator
 ├── databases/         # hwc.business.databases — business PostgreSQL layer
 ├── datax/             # hwc.business.datax — legacy postgres role/db (lead_scout)
+├── datax-monitor/     # hwc.business.dataxMonitor — DX1 diagnostic dashboard on :4400
 ├── estimator/         # hwc.business.estimator — React PWA on :13443
 ├── firefly/           # hwc.business.firefly — Firefly III finance
 ├── leads/             # hwc.business.leads — unified lead pipeline
@@ -27,6 +28,16 @@ business/
 ```
 
 ## Changelog
+- 2026-06-18: Added `datax-monitor` — standalone DX1 agent-execution diagnostic
+  dashboard (`hwc.business.dataxMonitor`). Native out-of-store Node app at
+  `~/projects/datax-monitor` (mirrors lead-scout): one Hono server on :4400
+  serves the React SPA (`ui/dist`) + REST API; `datax-monitor-migrate` oneshot
+  applies the schema before the API; `datax-monitor-ingest` oneshot + 4h timer
+  pulls Firestore executions, classifies them, and writes the local
+  `datax_monitor` Postgres DB. Caddy vhost `monitor.hwc.iheartwoodcraft.com`
+  (one route line in `domains/networking/routes.nix`). Firebase creds via two
+  new agenix secrets (`datax-monitor-fb-{email,key}`); OpenSearch enrichment
+  reuses existing `opensearch-{host,user,pw}` (optional, degrades to null).
 - 2026-06-11: README rewritten — this file previously contained the AI-MCP
   domain readme by mistake. Business enables now come from the business
   role rather than machines/server/config.nix.
