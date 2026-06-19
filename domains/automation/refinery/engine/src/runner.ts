@@ -35,6 +35,23 @@ function startIndex(ordered: GateModule[], step: string): number {
   return idx;
 }
 
+// Merge a gate's verdict into payload.verdicts[step] (non-destructive). Only
+// applies when the payload is an object (engine items always are); a non-object
+// payload is returned unchanged so nothing is lost.
+function withVerdict(
+  payload: unknown,
+  step: string,
+  decision: string,
+  reason: string,
+  output: unknown,
+): unknown {
+  if (!payload || typeof payload !== "object") return payload;
+  const pl = { ...(payload as Record<string, unknown>) };
+  const prior = pl.verdicts && typeof pl.verdicts === "object" ? (pl.verdicts as Record<string, unknown>) : {};
+  pl.verdicts = { ...prior, [step]: { decision, reason, output } };
+  return pl;
+}
+
 export async function runPass(
   itemIn: Item,
   pipeline: Pipeline,
@@ -62,9 +79,14 @@ export async function runPass(
     ran.push(gate.id);
     const verdict = await gate.run(item);
     const decision = gate.decide(verdict);
+    // Persist the gate's full verdict (reasoning + structured output) into the
+    // payload so the UI can surface WHY a gate passed/parked/failed — the
+    // runner used to keep only the token string. Keyed by step.
+    const payload = withVerdict(item.payload, gate.id, decision, verdict.verdict, verdict.output);
     if (decision === "pass") {
       item = {
         ...item,
+        payload,
         state: "passed",
         parkedReason: undefined,
         history: [
@@ -79,6 +101,7 @@ export async function runPass(
       typeof verdict.verdict === "string" ? verdict.verdict : decision;
     item = {
       ...item,
+      payload,
       state: status,
       parkedReason: reason,
       history: [

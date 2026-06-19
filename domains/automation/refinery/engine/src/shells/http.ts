@@ -16,6 +16,11 @@ import { triageSentence, makeTriagedItem, UNTRIAGED } from "../triage.js";
 import { rewind } from "../runner.js";
 import { gateList } from "../gates/index.js";
 import { makeSpecExecutor } from "../executors/spec.js";
+import { makeNativeExecutor, NativePorts } from "../executors/native.js";
+import { makeGitWorktree } from "../adapters/git-worktree.js";
+import { makeClaudeHeadless } from "../adapters/claude-headless.js";
+import { makeReportFs } from "../adapters/report-fs.js";
+import { GAUNTLET_CONFIGS } from "../pipelines/gauntlet-config.js";
 import { runPipelineOnce } from "../cli/run-once.js";
 import { LlmPort } from "../gates/llm-port.js";
 import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX, finishedProjects, reopenProject, parseFinishedId, FINISHED_PREFIX } from "../sources/nightly-cards.js";
@@ -39,6 +44,9 @@ export interface HttpShellConfig {
   clock: () => string;
   triageLlm?: LlmPort; // test override; production resolves from triageProvider
   runLlm?: LlmPort; // test override for the pipeline runner; prod resolves per pipeline
+  nativeRepo?: string; // default target repo for native pipelines (REFINERY_NATIVE_REPO); payload.repo overrides
+  nativeTimeoutMs?: number; // headless-claude timeout for a native run (REFINERY_NATIVE_TIMEOUT)
+  nativePorts?: NativePorts; // test override; production builds real git/claude/report adapters
 }
 
 export function configFromEnv(): HttpShellConfig {
@@ -57,9 +65,27 @@ export function configFromEnv(): HttpShellConfig {
     srGauntletDir: process.env.REFINERY_SR_GAUNTLET_DIR,
     runNowSpoolDir: process.env.REFINERY_RUNNOW_SPOOL || `${base}/run-now`,
     srRunNowSpoolDir: process.env.REFINERY_SR_RUNNOW_SPOOL || `${base}/sr-run-now`,
+    nativeRepo: process.env.REFINERY_NATIVE_REPO,
+    nativeTimeoutMs: process.env.REFINERY_NATIVE_TIMEOUT ? Number(process.env.REFINERY_NATIVE_TIMEOUT) : undefined,
     clock: () => new Date().toISOString(),
   };
 }
+
+// Fallback native-executor wrapper when a pipeline ships no prompt file. The
+// item (its payload) is appended after this by the executor; the agent must
+// write the report file and end with the pipeline's verdict token.
+const DEFAULT_NATIVE_WRAPPER = [
+  "You are executing a refinery pipeline item in a disposable git worktree.",
+  "Do the work described under THE ITEM. Make the smallest correct change; do not",
+  "bundle unrelated edits. When done, write REPORT.md (what you did, why, how it",
+  "was verified) to the worktree root, and end your output with the verdict token",
+  "your pipeline expects on its own line.",
+].join("\n");
+
+// Pipelines owned by an external standalone gauntlet (their run.sh timers + spools
+// remain the executor). The board surfaces them read-only and triggers them via
+// the run-now spool — it must never native-run them (double-execution guard).
+const EXTERNAL_GAUNTLET_PIPELINES = new Set(["nightly-build", "datax-sr"]);
 
 function readBody(req: IncomingMessage): Promise<URLSearchParams> {
   return new Promise((resolve, reject) => {
@@ -180,12 +206,57 @@ export function createShell(cfg: HttpShellConfig) {
     }
   }
 
-  /** Resolve the pipeline's integrate executor. spec is wired; other executors
-   *  (e.g. SR's `native`) aren't board-runnable yet — fail loud so the item
-   *  parks with a clear reason rather than silently no-op'ing. */
-  function resolveExecutor(pipeline: Pipeline, llm: LlmPort): Executor {
+  const nativeWrapperFor = (pipelineId: string): string => {
+    const f = join(cfg.pipelinesDir, "prompts", `${pipelineId}.md`);
+    return existsSync(f) ? readFileSync(f, "utf8") : DEFAULT_NATIVE_WRAPPER;
+  };
+
+  /** Resolve a pipeline's terminal executor for one item.
+   *  - `spec`   → synthesize+write a spec (project-ideation).
+   *  - `native` → in-process worktree+headless-claude (app-refinement); the
+   *    target repo is `payload.repo` or `cfg.nativeRepo`. External-gauntlet
+   *    pipelines are refused here (the double-execution guard).
+   *  Anything else fails loud so the item parks with a clear reason. */
+  function resolveExecutor(pipeline: Pipeline, llm: LlmPort, item: Item): Executor {
     if (pipeline.executors.includes("spec")) {
       return makeSpecExecutor({ scratchDir: cfg.scratchDir }, llm);
+    }
+    if (pipeline.executors.includes("native")) {
+      if (EXTERNAL_GAUNTLET_PIPELINES.has(pipeline.pipeline)) {
+        throw new Error(
+          `pipeline "${pipeline.pipeline}" is owned by an external gauntlet — trigger it via the run-now spool, not board native execution`,
+        );
+      }
+      const ncfg = GAUNTLET_CONFIGS[pipeline.pipeline];
+      if (!ncfg) throw new Error(`native executor has no config for pipeline "${pipeline.pipeline}"`);
+      const pl = (item.payload && typeof item.payload === "object" ? item.payload : {}) as Record<string, unknown>;
+      const repo = (typeof pl.repo === "string" && pl.repo) || cfg.nativeRepo;
+      if (!repo) {
+        throw new Error(
+          `native pipeline "${pipeline.pipeline}" needs a target repo — set payload.repo on the item or REFINERY_NATIVE_REPO`,
+        );
+      }
+      const date = cfg.clock().slice(0, 10);
+      const branch =
+        ncfg.executorMode === "write"
+          ? `${ncfg.branchPrefix ?? `${pipeline.pipeline}/`}${date}-${slug(item.id)}`
+          : undefined;
+      const ports: NativePorts =
+        cfg.nativePorts ?? { git: makeGitWorktree(), claude: makeClaudeHeadless(), report: makeReportFs() };
+      return makeNativeExecutor(
+        {
+          repo,
+          worktree: join(cfg.scratchDir, "wt", item.id),
+          executorMode: ncfg.executorMode,
+          branch,
+          promptWrapper: nativeWrapperFor(pipeline.pipeline),
+          verdictPattern: ncfg.verdictPattern,
+          successVerdicts: ncfg.successVerdicts,
+          timeoutMs: cfg.nativeTimeoutMs ?? 3 * 60 * 60 * 1000,
+          reportFile: ncfg.reportFile,
+        },
+        ports,
+      );
     }
     throw new Error(
       `no board executor wired for pipeline "${pipeline.pipeline}" (executors: ${pipeline.executors.join(", ")})`,
@@ -205,7 +276,7 @@ export function createShell(cfg: HttpShellConfig) {
     const llm = cfg.runLlm ?? resolveLlm(pipeline.llmProvider ?? cfg.triageProvider);
     await runPipelineOnce(
       { id, input },
-      { pipeline, gates: gateList(llm), integrate: resolveExecutor(pipeline, llm), store, clock: cfg.clock },
+      { pipeline, gates: gateList(llm), integrate: resolveExecutor(pipeline, llm, item), store, clock: cfg.clock },
     );
   }
 
