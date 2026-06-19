@@ -1,0 +1,35 @@
+# App-refinement genre — bring an EXISTING, working app into compliance with
+# Eric's engineering principles. Brownfield, not greenfield: the prime directive
+# is "don't break working behavior", so the pipeline is the fixing-systems canon
+# (understand intent → map blast radius → audit principles → premortem → admit),
+# NOT the greenfield gates (stepwise-refinement, principles-create self-skip via
+# their applies() because defaultTraits marks this brownfield).
+#
+# Scheduling is orthogonal: an item runs immediately on the board ("Run now") by
+# default — the daytime, monitored path. Flag an item `nightly: true` only to
+# batch it into the overnight gauntlet lane (the same `execute` effector, just
+# unmonitored). The executor is not nightly-coupled; nightly is a skin on top.
+genre: app-refinement
+label: App Refinement
+color: "#b48ead" # HWC palette: refine (aurora purple) — distinct from ideation/nightly
+source: cli-input
+gates:
+  - chestertons-fence # understand why the code exists before touching it
+  - blast-radius # map every reference a change would affect
+  - principles-fix # audit against the fixing-systems canon (min-viable-fix)
+  - premortem # assume it shipped and broke — why?
+  - admission-gates # is it allowed to execute (write mode)?
+executeMode: write
+effectors:
+  - execute
+llmProvider: claude-cli
+# defaultTraits marks every routed item brownfield + write so the gates above
+# actually fire (chestertons-fence needs touchesExistingCode; principles-fix and
+# blast-radius need mode=brownfield; blast-radius also needs writeMode).
+defaultTraits:
+  mode: brownfield
+  touchesExistingCode: true
+  writeMode: true
+# enabled: routable by triage. Daytime use is "Run now" on the board; flip an
+# item to nightly only for unattended overnight iteration.
+enabled: true
