@@ -300,12 +300,22 @@ PYEOF
     log "PHASE B: no commits on $BRANCH"
   fi
 
-  # Verdict: done only if the agent exited 0, wrote its report, AND declared
-  # success itself (an agent that stops cleanly on an unsatisfiable card also
-  # exits 0 — its self-verdict is what separates done from reviewable-failed)
-  VERDICT=$(rg -o 'NIGHTLY-VERDICT: (success|failure)' -r '$1' \
+  # Verdict (tri-state — the agent's self-verdict separates the three; the rule
+  # lives in prompts/run-wrapper.md). The contract is differential-vs-BASE, not
+  # absolute-green:
+  #   success — own checks pass + no regression vs BASE                → done
+  #   blocked — work committed + own checks pass, but the done-condition
+  #             can't be EVALUATED in this venue (missing browser/lib/
+  #             capability CI itself doesn't use). The board renders
+  #             `blocked: …` as a force-queueable human decision — NOT a
+  #             failure (the code is ready; the venue couldn't confirm it).
+  #   failure — own checks fail / real regression / blast-radius / budget
+  # An agent that stops cleanly also exits 0, so the self-verdict — not the
+  # exit code alone — is what separates the three.
+  VERDICT=$(rg -o 'NIGHTLY-VERDICT: (success|failure|blocked)' -r '$1' \
     "$RUN_DIR/agent-output.log" 2>/dev/null | tail -1)
-  if [ "$AGENT_EXIT" -eq 0 ] && [ -f "$RUN_DIR/REPORT.md" ] && [ "$VERDICT" = "success" ]; then
+  REPORT_PRESENT=$([ -f "$RUN_DIR/REPORT.md" ] && echo yes || echo no)
+  if [ "$AGENT_EXIT" -eq 0 ] && [ "$REPORT_PRESENT" = yes ] && [ "$VERDICT" = "success" ]; then
     set_field "$CARD" status done
     set_field "$CARD" pr "branch \`$BRANCH\` (pushed; open PR at morning review)"
     log "PHASE B: card $SLUG done"
@@ -315,14 +325,27 @@ PYEOF
       || notify 5 "✅ $GOAL/$SLUG — done (${ELAPSED}s)" \
         "Branch \`$BRANCH\` pushed to origin. Open the PR at morning review.
 Report: runs/$RUN_NAME/REPORT.md"
+  elif [ "$AGENT_EXIT" -eq 0 ] && [ "$REPORT_PRESENT" = yes ] && [ "$VERDICT" = "blocked" ]; then
+    # Venue-blocked: the work is committed and the card's own checks pass, but
+    # the done-condition can't be confirmed here. NOT a failure — a human
+    # decides at morning review (usually: open/merge the pushed branch). The
+    # board treats `blocked: …` as a force-queueable, non-dead-end state.
+    set_field "$CARD" status "blocked: done-condition unverifiable in venue — see report"
+    set_field "$CARD" pr "branch \`$BRANCH\` (pushed; venue could not confirm — human decides)"
+    log "PHASE B: card $SLUG BLOCKED (venue) — see $RUN_DIR/REPORT.md"
+    "$AGENT_DIR/send-report.sh" "$RUN_DIR" blocked "$ELAPSED" "$BRANCH" "$GOAL/$SLUG" >>"$LOG_FILE" 2>&1 \
+      || notify 3 "⚠️ $GOAL/$SLUG — blocked: venue can't confirm (${ELAPSED}s)" \
+        "Code committed + the card's own checks pass, but the done-condition can't be evaluated in this venue.
+Branch \`$BRANCH\` pushed (reviewable). A human decides at morning review.
+Report: runs/$RUN_NAME/REPORT.md"
   else
-    set_field "$CARD" status "failed: exit=$AGENT_EXIT verdict=${VERDICT:-none} report=$([ -f "$RUN_DIR/REPORT.md" ] && echo yes || echo no)"
+    set_field "$CARD" status "failed: exit=$AGENT_EXIT verdict=${VERDICT:-none} report=$REPORT_PRESENT"
     log "PHASE B: card $SLUG FAILED — see $RUN_DIR/agent-output.log"
     # If a (partial) REPORT.md exists, post it richly — the failure report is
     # exactly what you want to read. Otherwise fall back to metadata notify().
     "$AGENT_DIR/send-report.sh" "$RUN_DIR" failed "$ELAPSED" "$BRANCH" "$GOAL/$SLUG" >>"$LOG_FILE" 2>&1 \
       || notify 2 "❌ $GOAL/$SLUG — failed (${ELAPSED}s)" \
-        "exit=$AGENT_EXIT verdict=${VERDICT:-none} report=$([ -f "$RUN_DIR/REPORT.md" ] && echo yes || echo no)
+        "exit=$AGENT_EXIT verdict=${VERDICT:-none} report=$REPORT_PRESENT
 Any partial commits were pushed to \`$BRANCH\` (reviewable, gate 8).
 Logs: runs/$RUN_NAME/agent-output.log"
   fi

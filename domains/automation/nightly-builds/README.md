@@ -54,6 +54,32 @@ domains/automation/nightly-builds/
 `reviewLlmProvider`, `maxCards`, `vaultDir`, `repoDir`, `enableRebuildButton`.
 
 ## Changelog
+- **2026-06-18** — Verdict contract: differential-vs-BASE + tri-state (the real
+  fix). The gauntlet verdict was *absolute-green* — "done" required the whole
+  suite to pass in the worker — so completed cards were mislabeled `failed`
+  whenever the venue couldn't run a check (missing browser/system lib) or a test
+  was already red on the base branch. Root cause: the verdict had an opinion
+  about its environment. Rewritten in the **prompts** (the contract): a card is
+  done when it *advanced without regressing `{{BASE}}`, judged only by what the
+  venue can run* — NOT "all tests green". `prompts/run-wrapper.md` now: derives
+  the runnable slice from the repo's CI config (`.github/workflows/*`, late
+  binding — no hardcoded "chromium"), timeboxes every check (a hung browser
+  install can't eat the budget), and requires *evidence* to exclude a failure (it
+  must be run on `{{BASE}}` and quoted). Verdict is now **tri-state**:
+  `success` / `blocked` (work committed + own checks pass, but the done-condition
+  can't be evaluated here — a human decides; the board renders this
+  force-queueable, not failed) / `failure`. `run.sh` parses the third token →
+  `status: blocked: …`; `send-report.sh` gets a ⚠️ blocked case.
+  `prompts/card-smith.md` now authors done-conditions venue-scoped + differential
+  (not absolute-green). SR (`~/700_datax/sr_gauntlet/prompts/investigate.md`,
+  separate repo) is **exempt + documented**: it's read-only (no diff/tests/BASE),
+  so its `investigated`/`inconclusive` already embodies the invariant — note
+  added there, no behavior change. Follow-up (deferred, not this pass): the
+  refinery engine's `engine/src/effectors/execute.ts` replicates the same
+  absolute-green verdict (`exitCode===0 && !timedOut && reportPresent &&
+  verdictOk`) and already receives `base`; port the differential/tri-state
+  contract there **with** its parity-harness when the engine adopts the
+  gauntlets — it's inert today (run.sh is the live path) so it's left untouched.
 - **2026-06-18** — Launcher re-run idempotency (`run.sh`). Re-running a card now
   works regardless of stale worktree/branch state a prior run left behind — the
   norm for an overnight gauntlet, where a card fails one night and is re-queued
