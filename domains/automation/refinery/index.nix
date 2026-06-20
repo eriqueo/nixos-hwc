@@ -241,6 +241,10 @@ in
         REFINERY_PIPELINE_STATE = "/var/lib/refinery/profiles.json";
         # Disposable native-run worktrees live here, not the board's specs dir.
         REFINERY_SCRATCH_DIR = "/var/lib/refinery/native";
+        # Per-build wall-clock cap. The serial drain means throughput = builds/night,
+        # so cap each build at 45 min (kidpix-scale features); an over-runner times
+        # out and fails-clean (reviewable) rather than hogging the queue.
+        REFINERY_NATIVE_TIMEOUT = "2700000";
         HOME = "${paths.user.home}";
       } // lib.optionalAttrs (cfg.claudeBin != null) {
         REFINERY_CLAUDE_BIN = cfg.claudeBin;
