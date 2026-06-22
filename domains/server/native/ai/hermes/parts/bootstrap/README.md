@@ -57,3 +57,6 @@ The actual installation runs as a one-shot systemd service
 
 Missing or invalid values produce a `CONFIG_INVALID` `HermesDeployError` with
 a clear list of which vars are missing.
+
+## Changelog
+- 2026-06-22: Add changelog per Law 12. hermes-deploy: drop parameter-property shorthand for `strip-types` compat.
