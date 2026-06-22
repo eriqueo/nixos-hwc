@@ -157,3 +157,4 @@ deno task dev
   `knowledgeTopK` via `_defaults.nix` merge pattern. `hwc-llm` gains
   `--new-conversation`, `--conversation`, `--print-id` flags that route
   through the daemon.
+- 2026-06-22: Complete Law 10 migration — inline all 18 remaining options.nix files (persona-daemon picked up in sweep).
