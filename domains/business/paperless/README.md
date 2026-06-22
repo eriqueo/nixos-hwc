@@ -106,3 +106,4 @@ hwc.business.paperless = {
 
 - 2026-03-25: Created README per Law 12
 - 2026-03-04: Namespace migration hwc.server.containers.paperless → hwc.business.paperless
+- 2026-06-22: hwc-server tailnet rename sweep; business domain reshuffle (2c59868b); add Paperless-ngx setup script for Heartwood Craft.

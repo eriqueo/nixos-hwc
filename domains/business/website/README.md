@@ -22,3 +22,4 @@ Application files live at `/opt/business/heartwood-cms/` (not in the NixOS repo)
 ## Changelog
 - 2026-04-01: Rename heartwood-site to site_files, update paths in index.nix
 - 2026-03-30: Initial creation — systemd service for Heartwood CMS Dashboard
+- 2026-06-22: Law 9/10 conversion to directory module + Law 3 path sweep (remaining derivable hardcodes); hwc-server tailnet rename.
