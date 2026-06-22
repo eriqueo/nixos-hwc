@@ -136,7 +136,11 @@ in {
       "${mod},Q,killactive"
     ];
 
-  bindm = [];
+  bindm = [
+    # Drag floating windows (e.g. PiP / Meet popups) with the mouse
+    "${mod},mouse:272,movewindow"    # SUPER + left-click  drag = move
+    "${mod},mouse:273,resizewindow"  # SUPER + right-click drag = resize
+  ];
 
   windowrule = [
     # Chromium tiling
