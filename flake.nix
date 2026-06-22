@@ -141,6 +141,16 @@
       url = "github:eriqueo/pave-query-builder";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # tetro — terminal tetromino-stacking game (TUI), consumed by
+    # domains/home/apps/tetro. UPSTREAM third-party repo (Strophox/tetro-tui), not
+    # a first-party eriqueo app, so there is no local-clone build pattern here —
+    # the flake's own packages.<system>.default builds the binary via rust-overlay.
+    # Bump: `nix flake update tetro` → rebuild.
+    tetro = {
+      url = "github:Strophox/tetro-tui";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   #============================================================================

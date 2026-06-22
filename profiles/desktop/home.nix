@@ -88,6 +88,7 @@
       ipcalc.enable = lib.mkDefault true;
       wasistlos.enable = lib.mkDefault false;
       bottles-unwrapped.enable = lib.mkDefault true;
+      tetro.enable = lib.mkDefault true;   # terminal tetromino game (TUI)
       localsend.enable = lib.mkDefault true;
       opencode.enable = lib.mkDefault true;
       google-cloud-sdk.enable = lib.mkDefault true;
