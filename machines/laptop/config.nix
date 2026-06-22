@@ -94,6 +94,12 @@
   # --- System Services Configuration ---
   hwc.system.core.shell.enable = true;
 
+  # FHS shim for the Claude Desktop Cowork port: its exec registry resolves host
+  # tools (bash, git, curl, …) only from hardcoded /usr/bin + /bin paths, which
+  # NixOS doesn't have — so Cowork's Bash/workspace "never boots". envfs maps
+  # those paths onto the live PATH. See domains/home/apps/claude-desktop.
+  hwc.system.core.envfs.enable = true;
+
   # BOM-PROOF LOGIN: Ensure 'il0wwlm?' always works for 'eric' and 'root' on laptop.
   # This makes the login screen independent of secret decryption.
   hwc.system.users.user.useSecrets = false;

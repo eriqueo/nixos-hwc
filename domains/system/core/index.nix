@@ -39,6 +39,14 @@
   options.hwc.system.core.nixld.guiLibs.enable =
     lib.mkEnableOption "X11/GTK/audio library set for nix-ld on graphical machines";
 
+  # envfs: FUSE shim that maps /usr/bin/* and /bin/* onto the live PATH at
+  # runtime. Sibling to nix-ld — both make foreign binaries that assume an FHS
+  # layout work on NixOS. Needed by the Claude Desktop Cowork port, whose OCap
+  # exec registry resolves host tools (bash, git, curl, xdg-open, …) only from
+  # hardcoded /usr/bin + /bin paths that don't exist on NixOS.
+  options.hwc.system.core.envfs.enable =
+    lib.mkEnableOption "envfs dynamic /usr/bin + /bin FHS shim (FUSE) for foreign binaries";
+
   imports = [
     ./packages.nix
     ../../paths/paths.nix
@@ -50,14 +58,20 @@
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf config.hwc.system.core.nixld.guiLibs.enable {
-    programs.nix-ld.libraries = with pkgs; [
-      gtk3 pango cairo gdk-pixbuf atk
-      libdrm mesa alsa-lib cups libpulseaudio
-      libx11 libxcomposite libxcursor libxdamage libxext libxfixes
-      libxi libxrandr libxrender libxtst libxcb libxscrnsaver
-      at-spi2-atk at-spi2-core
-      libgbm libxkbcommon
-    ];
-  };
+  config = lib.mkMerge [
+    (lib.mkIf config.hwc.system.core.nixld.guiLibs.enable {
+      programs.nix-ld.libraries = with pkgs; [
+        gtk3 pango cairo gdk-pixbuf atk
+        libdrm mesa alsa-lib cups libpulseaudio
+        libx11 libxcomposite libxcursor libxdamage libxext libxfixes
+        libxi libxrandr libxrender libxtst libxcb libxscrnsaver
+        at-spi2-atk at-spi2-core
+        libgbm libxkbcommon
+      ];
+    })
+
+    (lib.mkIf config.hwc.system.core.envfs.enable {
+      services.envfs.enable = true;
+    })
+  ];
 }
