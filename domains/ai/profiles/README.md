@@ -19,3 +19,4 @@ profiles/
 ## Changelog
 - 2026-02-28: Updated GPU refs for infrastructure migration
 - 2026-02-28: Added README for Charter Law 12 compliance
+- 2026-06-22: Drop per-eval "AI Profile" informational warning; options.nix orphan cleanup + AI domain refactor (Law 3 path-abstraction sweep).

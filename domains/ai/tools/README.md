@@ -38,3 +38,4 @@ tools/
 - 2026-03-09: Add custom AI model for generating human-readable changelogs
 - 2026-03-09: Add readme-butler.sh for automated Law 12 changelog updates
 - 2026-02-28: Added README for Charter Law 12 compliance
+- 2026-06-22: AI domain refactor + options.nix orphan cleanup (no functional changes to tools/).
