@@ -254,7 +254,17 @@
     ];
   };
 
-  systemd.tmpfiles.rules = [ "d /mnt/seagate 0755 root root -" ];
+  systemd.tmpfiles.rules = [
+    "d /mnt/seagate 0755 root root -"
+
+    # Claude Desktop Cowork path parity: on macOS/Windows the workspace lives at
+    # the VM path /sessions/<id>/mnt/...; the Linux port has no VM and expects a
+    # /sessions symlink into its host session store (its docs do this once via
+    # sudo). Declaring it here means /sessions/... paths the model constructs
+    # resolve directly, matching the Mac/Windows layout. Companion to
+    # hwc.system.core.envfs.enable above. See domains/home/apps/claude-desktop.
+    "L+ /sessions - - - - /home/eric/.config/Claude/local-agent-mode-sessions/sessions"
+  ];
 
   # USB auto-mount for external drives + NTFS fixperms for Seagate
   hwc.system.usb.autoMount.enable = true;
