@@ -147,15 +147,15 @@ in {
     "match:class ^(Chromium-browser)$, match:title ^.*JobTread.*$, tile on"
     "match:class ^(chromium-.*|Chromium-.*)$, tile on"
 
-    # File pickers - float and position
-    "match:title ^(Open).*, float on, move 50 100, size 1000 700"
-    "match:title ^(Save).*, float on, move 50 100, size 1000 700"
-    "match:title ^(Choose).*, float on, move 50 100, size 1000 700"
-    "match:title ^(Select).*, float on, move 50 100, size 1000 700"
-    "match:title ^(Upload).*, float on, move 50 100, size 1000 700"
-    "match:class ^(file_dialog)$, float on"
-    "match:class ^(xdg-desktop-portal-gtk)$, float on, move 50 100"
-    "match:class ^(org.gtk.FileChooserDialog)$, float on, move 50 100"
+    # File pickers - float and center
+    "match:title ^(Open).*, float on, center 1, size 1000 700"
+    "match:title ^(Save).*, float on, center 1, size 1000 700"
+    "match:title ^(Choose).*, float on, center 1, size 1000 700"
+    "match:title ^(Select).*, float on, center 1, size 1000 700"
+    "match:title ^(Upload).*, float on, center 1, size 1000 700"
+    "match:class ^(file_dialog)$, float on, center 1"
+    "match:class ^(xdg-desktop-portal-gtk)$, float on, center 1"
+    "match:class ^(org.gtk.FileChooserDialog)$, float on, center 1"
 
     # Floating utilities
     "match:class ^(pavucontrol)$, float on, size 800 600"
