@@ -185,3 +185,4 @@ workspace/home/
 - `domains/home/index.nix` reaches every machine through
   `profiles/base/home.nix`, which feeds **both** activation paths
   (HM-as-module and `hms`) from one source via the flake glue.
+- 2026-06-22: Workbench — open `url:` targets with `gpu-launch chromium-hwc` (not xdg-open); flat hub-pages + Ctrl+Space leader (Step 4c); default to HWC hub; reliable meta leader + host navigates to tabs. Keymap — unified factory (one grammar → every app); meta-mode j/k cycle tabs; zellij meta layer uses GoToTab index. Zellij — themed true-powerline tab bar then drop emojis/zjstatus for reliable built-in bar. Shell — gate prompt re-bake on interactive shells; rebind starship after rebuild. MCP — run git/time/fetch via uvx, drop brave-search. khalt — render Radicale calendar + iCloud→Radicale migration.

@@ -43,3 +43,4 @@ domains/home/apps/khalt/
   so the MCP can point `HWC_KHALT_CONFIG` at the generated config.
 - Initial: thin translator importing `inputs.khalt.homeManagerModules.khalt`;
   theme-driven `[palette_tokens]`, zoom `default_view`, vdirsyncer on PATH.
+- 2026-06-22: Unified keymap factory — khalt picks up the shared grammar.

@@ -52,3 +52,4 @@ todui/
   menus, list/project/context management, CalDAV list deletion, week strip);
   read/write VTODO parity with the prior todoman-backed engine verified
   against real data. Profile enable flipped `tasq.enable` → `todui.enable`.
+- 2026-06-22: Unified keymap factory — todui picks up the shared grammar (one grammar → every app).
