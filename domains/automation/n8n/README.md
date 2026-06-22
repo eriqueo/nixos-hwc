@@ -156,3 +156,4 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 - 2026-04-03: Add MCP bridge — n8n-mcp HTTP bridge on port 6201 with declarative npm install, JSON response patch, Express proxy route, and Claude.ai connection via Tailscale Funnel
 - 2026-03-25: Created README per Law 12
 - 2026-06-22: Sweep — Law 3 path sweep (derive worst hardcoded paths from hwc.paths), Law 9/10 conversion of option-declaring leaf modules to directory modules, remove 600_shared NFS share and standardize on Syncthing.
+- 2026-06-22: README sweep across n8n/parts children — Law 12 catch-up.

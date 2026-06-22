@@ -65,3 +65,4 @@ networking/
 
 - 2026-03-04: Namespace migration hwc.server.{reverseProxy,shared,containers.gluetun,containers.pihole} → hwc.networking.*
 - 2026-03-04: Created networking domain; moved reverseProxy, routes, podman-network, gluetun, pihole from domains/server/ (Phase 3 of DDD migration)
+- 2026-06-22: README sweep across networking/ children (pihole) — Law 12 catch-up.
