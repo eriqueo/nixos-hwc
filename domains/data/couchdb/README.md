@@ -74,3 +74,4 @@ hwc.data.couchdb = {
 ## Changelog
 
 - 2026-03-25: Created README per Law 12
+- 2026-06-22: Minor update sweep (1da0a031) — no behavior change.
