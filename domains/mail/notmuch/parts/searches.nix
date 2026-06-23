@@ -20,9 +20,13 @@ let
     "inbox:proton-hwc"      = "tag:inbox AND tag:proton-hwc";
     "inbox:proton-personal" = "tag:inbox AND tag:proton-personal";
 
-    # Disabled - Gmail sync removed (both accounts now forward to Proton)
-    # "inbox:gmail-personal"  = "tag:inbox AND tag:gmail-personal";
-    # "inbox:gmail-business"  = "tag:inbox AND tag:gmail-business";
+    # Gmail backlog views (sync re-enabled 2026-06 for cleanup)
+    "inbox:gmail"          = "tag:inbox AND (path:gmail-personal/inbox/** OR path:gmail-business/inbox/**)";
+
+    # Family & friends — Eric's real people, preserved from Gmail All Mail (2007+)
+    "family"               = "tag:family";
+    "family:unread"        = "tag:family AND tag:unread";
+    "keep"                 = "tag:keep";
 
     # Domain rollups (Proton-only now)
     "all:work"     = "tag:inbox AND tag:hwc";
