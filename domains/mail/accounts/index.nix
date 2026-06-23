@@ -86,7 +86,7 @@ in
         };
         maildirName = "gmail-personal";
         sync.enable = true;   # Backlog cleanup: pull INBOX into notmuch
-        sync.wildcards = [ "INBOX" ];
+        sync.wildcards = [ "INBOX" "Family-Friends" ];
         send.msmtpAccount = "gmail-personal";
       };
 
@@ -102,7 +102,7 @@ in
         };
         maildirName = "gmail-business";
         sync.enable = true;   # Backlog cleanup: pull INBOX into notmuch
-        sync.wildcards = [ "INBOX" ];
+        sync.wildcards = [ "INBOX" "Family-Friends" ];
         send.msmtpAccount = "gmail-business";
       };
     
