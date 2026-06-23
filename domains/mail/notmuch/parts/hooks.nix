@@ -36,6 +36,14 @@ let
     ${nm} tag -action -newsletter -notification -- 'tag:sent OR tag:trash OR tag:spam OR tag:draft'
   '';
 
+  # Protected mail (family/friends, tag:keep) is never trashed — afew's
+  # folder-state filter can re-tag a kept message that also sits in a Trash
+  # folder, so this shield runs after all tagging and reasserts keep > trash.
+  keepShield = ''
+    # Shield: kept mail (family/friends) is never trash
+    ${nm} tag -trash -- 'tag:keep AND tag:trash'
+  '';
+
   # Strip the transient "new" tag after all processing is done
   removeNew = ''
     # Remove transient new tag — must be last
@@ -95,7 +103,7 @@ let
     fi
   '';
 
-  tail = rulesPatched + "\n" + accountTags + protonLabelTags + extra + "\n" + removeNew;
+  tail = rulesPatched + "\n" + accountTags + protonLabelTags + extra + "\n" + keepShield + "\n" + removeNew;
 in
 {
   text = head + "\n" + body + "\n" + tail;
