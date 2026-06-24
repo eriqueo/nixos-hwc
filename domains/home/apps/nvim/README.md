@@ -5,7 +5,8 @@ Full IDE-like Neovim configuration with lazy.nvim plugin management.
 ## Purpose
 
 Provides a complete Neovim setup with:
-- Telescope fuzzy finding
+- fzf-lua fuzzy finding (primary; native fzf binary, fast over huge trees)
+- Telescope (secondary pickers: help/commands/keymaps/resume)
 - Treesitter syntax highlighting
 - LSP integration
 - Autocompletion (nvim-cmp)
@@ -33,7 +34,8 @@ nvim/
         │   ├── plugins.lua     # lazy.nvim plugin definitions
         │   └── colorscheme.lua # Gruvbox with Deep Nord colors
         └── plugins/
-            ├── telescope.lua   # Fuzzy finder config
+            ├── fzf-lua.lua     # Primary fuzzy finder (native fzf binary)
+            ├── telescope.lua   # Secondary pickers (help/commands/keymaps)
             ├── treesitter.lua  # Syntax highlighting
             ├── lsp.lua         # Language server config
             └── cmp.lua         # Autocompletion config
@@ -57,3 +59,4 @@ nvim/
 - 2026-03-12: Initial domain creation, migrated from ~/.config/nvim
 - 2026-06-02: Migrate `nvim-treesitter-textobjects` block to the new `main`-branch API (`require("nvim-treesitter-textobjects").setup` + explicit keymaps). Fixes "module 'nvim-treesitter.configs' not found" startup error caused by the v1.0 rewrite removing the legacy entry point.
 - 2026-06-09: Added `IogaMaster/tuxedo.nvim` — floating todo.txt popup, companion to the tuxedo CLI (`hwc.home.apps.tuxedo`). Lazy-loaded on `:Tuxedo` / `<leader>td`.
+- 2026-06-24: Added `ibhagwan/fzf-lua` as the primary fuzzy finder and repointed the file/content/buffer keymaps (`ff`/`fg`/`fb`/`fr`/`fn`/`fs`) at it. Telescope's Lua-side result pipeline crawls and mis-filters past ~40k entries even with `fzf-native`; fzf-lua offloads filtering to the native `fzf` binary and stays instant on large trees (e.g. content vaults). Telescope retained for help/commands/keymaps/resume pickers. New file `parts/lua/plugins/fzf-lua.lua` deployed via `xdg.configFile`.

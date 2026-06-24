@@ -30,15 +30,17 @@ map("n", "<leader>go", "<cmd>cd ~/Documents<cr>", { desc = "Go: documents" })
 map("n", "<leader>gr", "<cmd>cd /<cr>", { desc = "Go: root" })
 
 -- FIND / SEARCH
-map("n", "<leader>ff", "<cmd>Telescope find_files<cr>", { desc = "Find: files" })
-map("n", "<leader>fg", "<cmd>Telescope live_grep<cr>", { desc = "Find: grep content" })
-map("n", "<leader>fb", "<cmd>Telescope buffers<cr>", { desc = "Find: buffers" })
+-- File/content/buffer finders use fzf-lua (native fzf — fast over huge trees).
+-- Small list pickers (help/commands/keymaps) stay on Telescope.
+map("n", "<leader>ff", "<cmd>FzfLua files<cr>", { desc = "Find: files" })
+map("n", "<leader>fg", "<cmd>FzfLua live_grep<cr>", { desc = "Find: grep content" })
+map("n", "<leader>fb", "<cmd>FzfLua buffers<cr>", { desc = "Find: buffers" })
 map("n", "<leader>fh", "<cmd>Telescope help_tags<cr>", { desc = "Find: help" })
-map("n", "<leader>fr", "<cmd>Telescope oldfiles<cr>", { desc = "Find: recent files" })
+map("n", "<leader>fr", "<cmd>FzfLua oldfiles<cr>", { desc = "Find: recent files" })
 map("n", "<leader>fc", "<cmd>Telescope commands<cr>", { desc = "Find: commands" })
 map("n", "<leader>fk", "<cmd>Telescope keymaps<cr>", { desc = "Find: keymaps" })
-map("n", "<leader>fn", function() require("telescope.builtin").find_files({ cwd = "~/.nixos", hidden = true }) end, { desc = "Find: nixos files" })
-map("n", "<leader>fs", function() require("telescope.builtin").find_files({ cwd = vim.fn.stdpath("config") }) end, { desc = "Find: neovim config" })
+map("n", "<leader>fn", function() require("fzf-lua").files({ cwd = "~/.nixos" }) end, { desc = "Find: nixos files" })
+map("n", "<leader>fs", function() require("fzf-lua").files({ cwd = vim.fn.stdpath("config") }) end, { desc = "Find: neovim config" })
 
 -- SESSION / TOGGLES
 map("n", "<leader>ss", "<cmd>mksession! Session.vim<cr>", { desc = "Session: save" })

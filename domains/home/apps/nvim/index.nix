@@ -74,6 +74,7 @@ in
 
       # Plugin configurations
       "nvim/lua/plugins/telescope.lua".source = "${luaDir}/plugins/telescope.lua";
+      "nvim/lua/plugins/fzf-lua.lua".source = "${luaDir}/plugins/fzf-lua.lua";
       "nvim/lua/plugins/treesitter.lua".source = "${luaDir}/plugins/treesitter.lua";
       "nvim/lua/plugins/lsp.lua".source = "${luaDir}/plugins/lsp.lua";
       "nvim/lua/plugins/cmp.lua".source = "${luaDir}/plugins/cmp.lua";
