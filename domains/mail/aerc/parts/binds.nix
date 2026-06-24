@@ -22,6 +22,45 @@ let
          else "      <Space>g${goKey} = :cf ${name}<Enter>"
     ) tags.allTags)
   );
+
+  # ── Leader cheat sheet (generated from the same tag data) ──
+  # Stock aerc has no live which-key popup; this is a static reference shown
+  # on <Space>?.  A real incremental which-key is a candidate for the aerc fork.
+  catHelp  = lib.concatStringsSep "\n" (map (t: "    Space m ${t.spaceKey}   ${t.tag}") tags.categoryTags);
+  flagHelp = lib.concatStringsSep "\n" (map (t: "    Space m ${t.spaceKey}   +${t.tag}") tags.flagTags);
+  goHelp   = lib.concatStringsSep "\n" (lib.filter (s: s != "") (map (t:
+    let name = tags.tagStyle t; goKey = t.spaceKey or (builtins.substring 0 1 t.tag);
+    in if (t.noGoTo or false) then "" else "    Space g ${goKey}   ${name}"
+  ) tags.allTags));
+  leaderHelp = ''
+    ════════ AERC LEADER MAP ════════   (Space = leader; Space ? shows this)
+
+    NAVIGATE  -  Space g ...
+    Space g i  inbox     Space g u  unread    Space g a  archive
+    Space g s  sent      Space g d  trash     Space g z  spam
+    ${goHelp}
+
+    MARK / TAG  -  Space m ...
+    Space m a  archive   Space m d  trash     Space m u  unread
+    Space m z  spam      Space m l  label...  Space m -  clear flags
+    Space m 0  clear ALL tags
+    -- flags (additive) --
+    ${flagHelp}
+    -- categories (exclusive) --
+    ${catHelp}
+
+    FILTER / SORT / VIEW
+    Space f f  filter        Space f s  search      Space f t  trash-sender
+    Space s d  sort by date  Space t t  toggle threads
+    Space t s  switch styleset            Space M    add new tag
+
+    MESSAGES (no leader)
+    j / k  move      J / K  mark + move    V  visual-mark
+    r  read          u  unread             a  archive     d  trash
+    c  compose       C  reply-all          Enter  open    /  search
+
+    (press q to close)
+  '';
 in
 {
   files = profileBase: {
@@ -43,6 +82,9 @@ in
 
       # Show your actual binds.conf instead of built-in defaults
       <semicolon> = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/binds.conf"'<Enter>
+
+      # Leader cheat sheet (Space ?) — static which-key reference
+      <Space>? = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/leader-cheatsheet.txt"'<Enter>
 
       # Switch styleset on the fly
       <Space>ts = :reload -s<space>
@@ -173,6 +215,8 @@ ${categoryBinds}
       $noinherit = true
       $ex = <C-x>
     '';
+
+    ".config/aerc/leader-cheatsheet.txt".text = leaderHelp;
 
     ".local/bin/hwc-open" = {
       text = ''
