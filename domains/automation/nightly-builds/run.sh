@@ -282,9 +282,19 @@ text += '\n\n---\n\n# THE CARD\n\n' + open(card).read()
 open(out, 'w').write(text)
 PYEOF
 
-  log "PHASE B: launching agent (timeout ${NB_CARD_TIMEOUT:-18000}s)..."
+  # Per-card budget as the timeout. A card declares "Budget: ≤ N min"; honor it
+  # (+50% margin) so a hung card can't starve the rest of a sequential batch — a
+  # 45-min audit no longer gets the flat 5h ceiling. Falls back to NB_CARD_TIMEOUT
+  # when no minute budget is parseable.
+  CARD_MIN=$(rg -o -m1 '([0-9]+)[[:space:]]*min' -r '$1' "$CARD" 2>/dev/null | tail -1)
+  if [ -n "$CARD_MIN" ] && [ "$CARD_MIN" -gt 0 ] 2>/dev/null; then
+    CARD_TIMEOUT=$(( CARD_MIN * 90 ))   # N min × 60s × 1.5 margin
+  else
+    CARD_TIMEOUT="${NB_CARD_TIMEOUT:-18000}"
+  fi
+  log "PHASE B: launching agent (timeout ${CARD_TIMEOUT}s; card budget=${CARD_MIN:-none}min)..."
   START=$(date +%s)
-  (cd "$WT" && timeout "${NB_CARD_TIMEOUT:-18000}" "$CLAUDE_BIN" -p "$(cat "$PROMPT_FILE")" \
+  (cd "$WT" && timeout "$CARD_TIMEOUT" "$CLAUDE_BIN" -p "$(cat "$PROMPT_FILE")" \
     --dangerously-skip-permissions) > "$RUN_DIR/agent-output.log" 2>&1
   AGENT_EXIT=$?
   ELAPSED=$(( $(date +%s) - START ))

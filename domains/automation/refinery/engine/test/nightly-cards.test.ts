@@ -31,8 +31,8 @@ test("nightlyCardProjects groups a goal folder into ONE project with its steps",
     assert.equal(p.steps.length, 3);
     assert.ok(p.goalBody.includes("Why: it matters"));
     // nothing queued → parks (Needs You), not Done
-    assert.equal(proj.phaseStatus, "parked");
-    assert.equal(proj.phase, "1/3 steps");
+    assert.equal(proj.state, "parked");
+    assert.equal(proj.step, "1/3 steps");
   } finally {
     v.cleanup();
   }
@@ -45,7 +45,7 @@ test("queueNextStep queues the next draft step; unqueueStep reverts it; done sta
     assert.equal(f, "02-b.md", "queues the first draft step (not the done or blocked one)");
     let proj = nightlyCardProjects(v.root)[0];
     assert.equal((proj.payload as { queuedCount: number }).queuedCount, 1);
-    assert.equal(proj.phaseStatus, "pending", "a queued step → In Progress lane");
+    assert.equal(proj.state, "pending", "a queued step → In Progress lane");
     // the 02 card on disk is now queued
     assert.match(readFileSync(join(v.root, "_inbox/nightly_builds/estimator/02-b.md"), "utf8"), /^status: queued$/m);
 
@@ -68,7 +68,7 @@ test("an all-done project lands in the Done lane (not queued tonight)", () => {
       writeFileSync(p, readFileSync(p, "utf8").replace(/^status:.*$/m, "status: done"));
     }
     const proj = nightlyCardProjects(v.root)[0];
-    assert.equal(proj.phaseStatus, "passed");
+    assert.equal(proj.state, "passed");
     assert.equal((proj.payload as { queuedCount: number }).queuedCount, 0);
   } finally {
     v.cleanup();

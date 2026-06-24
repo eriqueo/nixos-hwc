@@ -36,7 +36,7 @@ export const GauntletContractSchema = z.object({
 
 export type GauntletContract = z.infer<typeof GauntletContractSchema>;
 
-/** Parse + validate a gauntlet contract from YAML (mirrors parseProfile). */
+/** Parse + validate a gauntlet contract from YAML (mirrors parsePipeline). */
 export function parseGauntletContract(yamlText: string): GauntletContract {
   let raw: unknown;
   try {

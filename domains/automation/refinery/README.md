@@ -11,63 +11,126 @@ The module is being built in slices:
   `_inbox/nightly_builds/*/NN-*.md` goal folders (plus raw `_ideas.md` ideas) as
   a live, status-grouped board.
 - **Slice 03 — engine core:** the substance-agnostic engine itself — a typed
-  Item state machine driven by genre profiles, with hexagonal boundaries (the
+  Item state machine driven by pipelines, with hexagonal boundaries (the
   core knows nothing about filesystem, Firestore, or Claude).
 
-The gate registry, genres, and interactivity (amend/rewind) are later slices
+The gate registry, pipelines, and interactivity (amend/rewind) are later slices
 (cards 04–09 in the hopper).
 
 - **Namespace:** `hwc.automation.refinery.*`
 - **URL:** `refinery.hwc.iheartwoodcraft.com` (Caddy vhost → `127.0.0.1:8060`)
 - **Reads:** the brain vault, read-only (`hwc.paths.brain.*`).
 
-The TypeScript board app (`app/src/*.ts`, zero runtime deps, pure `node:http`) is
-bundled to one JS file by **esbuild** at build time — no npm / node_modules /
-`npmDepsHash`. The page meta-refreshes every 10s; no client framework (htmx
-arrives with the interactive amend/rewind slice). The engine core (`engine/`) is
-a standalone TypeScript library with `node --test` unit tests, substance-agnostic
-and IO-free beyond injected ports.
-
-### Two build toolchains (intentional)
-The `app/` and `engine/` use **different** module-resolution worlds — don't
-"unify" them:
-- **`app/` (board)** — relative imports carry `.ts` extensions
-  (`./parse.ts`). It's bundled by **esbuild** (which resolves TS specifiers) and
-  has **zero runtime deps**. Tests run via Node's native type-stripping
-  (`node --test 'test/**/*.test.ts'`) — no build step. `package.json` carries
-  dev-only deps (`@types/node`, `typescript`) for typecheck/tests; they never
-  reach the bundle.
-- **`engine/` (library)** — relative imports carry `.js` extensions
-  (`./contracts.js`, ESM convention). It's compiled by **tsc** to `dist/`, and
-  tests run against the compiled output (`tsc && node --test dist/test/**`).
+The `:8060` service is the engine's own HTTP shell (`engine/src/shells/serve.ts`),
+esbuild-bundled to one dep-free JS file at build time. No client framework; plain
+form-posts (POST → 303). The engine core (`engine/`) is a standalone TypeScript
+library with `node --test` unit tests, substance-agnostic and IO-free beyond
+injected ports: relative imports carry `.js` extensions (ESM convention), it's
+compiled by **tsc** to `dist/`, and tests run against the compiled output
+(`tsc && node --test dist/test/**`).
 
 ## Structure
 | Path | Purpose |
 |---|---|
-| `index.nix` | Module: options + the `:8060` service. Builds the **engine** package (buildNpmPackage → esbuild bundles **two** entry points: `serve.ts`→`server.js` for the board, and `cli/morning-review.ts`→`morning-review.js` wrapped as `bin/refinery-morning-review`). Profiles baked to the store, mutable state in `/var/lib/refinery`. Hardened (ProtectHome=tmpfs + vault bound read-only for `/hopper`). Exposes a read-only `package` option so the **nightly-builds** morning-review pass runs the CLI without rebuilding the engine. |
+| `index.nix` | Module: options + the `:8060` service. Builds the **engine** package (buildNpmPackage → esbuild bundles **two** entry points: `serve.ts`→`server.js` for the board, and `cli/morning-review.ts`→`morning-review.js` wrapped as `bin/refinery-morning-review`). Pipelines baked to the store, mutable state in `/var/lib/refinery`. Hardened (ProtectHome=tmpfs + vault bound read-only for `/hopper`). Exposes a read-only `package` option so the **nightly-builds** morning-review pass runs the CLI without rebuilding the engine. |
 | `engine/src/cli/morning-review.ts` | The morning PR-review CLI shell. Late-binds config from env (`REFINERY_VAULT_DIR`, `REFINERY_DEFAULT_REPO`, `REFINERY_REVIEWS_DIR`, `REFINERY_LLM_PROVIDER`, optional `REFINERY_REVIEW_DATE`), wires real git/gh/fs/LLM adapters, runs the orchestrator, prints a JSON summary to stdout. Driven by `nightly-builds-review.service` (timer in the **nightly-builds** domain). |
-| `engine/src/shells/` | HTTP shell over the core: `http.ts` (routes — `/` Gauntlet, `/hopper` ideas+intake, `/cards` legacy, + intake/amend/rewind handlers), `render.ts` (Gauntlet board = projects in phase lanes tinted by profile color + a profiles **legend**; Hopper page = raw ideas + intake; plain form-posts), `hopper.ts` (legacy nightly-builds card view at `/cards`), `serve.ts` (service entry). |
-| `app/` | **Superseded** by the engine shell as the `:8060` service; kept as the original read-only hopper board (slice 01/02) and its tests. The hopper view now lives at the engine's `/hopper` route. |
-| `app/src/parse.ts` | Read-only parser over the hopper (cards + ideas) |
-| `app/src/render.ts` | Server-side Kanban HTML render |
-| `app/src/server.ts` | `node:http` shell; late-bound port + vault from env |
-| `app/test/*.test.ts` | Parser + render unit tests (`node --test`, native type-strip) |
-| `app/package.json` | Dev-only deps + `test`/`typecheck` scripts (esbuild bundle stays dep-free) |
-| `app/tsconfig.json` | TS config (typecheck/editor; esbuild needs no build step) |
-| `engine/` | Engine core: Item + GateModule + Profile contracts (Zod), stage runner, in-memory ItemStore. TypeScript library, `node --test` unit tests. Substance-agnostic, no IO beyond injected ports. |
+| `engine/src/shells/` | HTTP shell over the core: `http.ts` (routes — `/` Flow board, `/hopper`, `/nightly` Overnight, `/finished`, `/sr`, `/reviews`, `/reference`, per-item detail, + intake/amend/rewind/promote handlers), `render.ts` (Flow board = projects in state lanes, each card carrying a **gate-dot progress strip**; item detail = a pipeline node strip with expandable gate verdicts + executor result; `/reference` = the terminology canon + live pipelines; `/reviews` = morning PR verdicts; plain form-posts, CSS-only interactivity), `serve.ts` (service entry). |
+| `engine/` | Engine core: Item + GateModule + Pipeline contracts (Zod), step runner, in-memory ItemStore. TypeScript library, `node --test` unit tests. Substance-agnostic, no IO beyond injected ports. |
 | `engine/src/gates/` | Gate registry: Eric's engineering canon as `GateModule`s (stepwise-refinement, principles-create/fix, chestertons-fence, blast-radius, premortem, admission-gates). Each = `applies()` predicate over item traits + a prompt + a Zod verdict schema + `decide()`. LLM consulted via an injected `LlmPort` (stubbed in tests). `makeGateRegistry(llm)` / `gateList(llm)`. |
-| `engine/src/effectors/` | Effectors (`ItemEffector`s): `dispatch` — the thin port to a **standalone** gauntlet (trigger via `ProcessPort`, read its report+verdict back via `ResultReader`, map to `EffectorResult`); the modular seam that keeps the engine from absorbing each gauntlet's code. `execute` — the native-execution fallback (mode-parameterized worktree → headless-claude → verdict → report → push/pristine; git/claude/report injected) for a substance with no standalone runner. `write-spec` — the project-ideation `integrate` step (LLM → `SpecSchema` → markdown spec to scratch). |
+| `engine/src/executors/` | Executors (`Executor`s): `gauntlet` — the thin port to a **standalone** gauntlet (trigger via `ProcessPort`, read its report+verdict back via `ResultReader`, map to `ExecutorResult`); the modular seam that keeps the engine from absorbing each gauntlet's code. `native` — the in-process executor (mode-parameterized worktree → headless-claude → verdict → report → push/pristine; git/claude/report injected) for a pipeline with no standalone runner. `spec` — the project-ideation terminal step (LLM → `SpecSchema` → markdown spec to scratch). |
 | `engine/src/gauntlets/` | The gauntlet dispatch contract: `GauntletContract` schema (`{trigger, resultsDir, reportFile, verdictPattern, successVerdicts}`, Zod) + `parseGauntletContract`; `ProcessPort`/`ResultReader` ports (real `nodeProcessPort`/`fsResultReader`, stubbed in tests); `loadGauntlets` registry over `gauntlets/*.yaml`. A standalone gauntlet becomes one YAML file. |
 | `engine/src/stores/` | `MarkdownItemStore` (`ItemStore`): one `.md` per item — board-readable frontmatter + a canonical ```json block for lossless round-trip. |
-| `engine/src/adapters/` | `LlmPort` adapters — `claude-cli` (headless `claude -p`), `anthropic-api` (raw-fetch Messages API), `ollama` (local daemon) — plus `resolveLlm(provider)` mapping a profile's `llmProvider` to the adapter. All late-bound from env. |
-| `engine/src/profiles/` | `ProfileCatalog` — lead_scout-style registry: disk scan of `profiles/*.yaml` + a writable `enabled` overlay (so toggling never rewrites a repo file). `list`/`get`/`enabled`/`setEnabled`. `gauntlet-config.ts` holds the per-gauntlet execute knobs (verdict token, success verdicts) not on the Profile schema. |
-| `engine/src/sources/` | `SourcePort` — inbound intake boundary (a profile's `source` field names the adapter). Concrete adapters (vault card scan, Firestore SR fetch) are a later human-gated step. |
-| `engine/src/triage.ts` | `triageSentence` — intake classifier: routes a raw sentence to one of the enabled profiles (via `LlmPort`) or `untriaged` below a confidence threshold. `makeTriagedItem` builds the Item (parked at `triage` if untriaged). |
-| `engine/src/cli/run-once.ts` | `runGenreOnce` — orchestration core: load/create item → run gate pipeline → fire integrate effector on a clean pass. Fully injected (testable). |
-| `engine/src/cli.ts` | CLI shell: `refinery run --genre … --input "<sentence>"`. Parses args, wires real adapters, delegates to `runGenreOnce`. |
-| `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` (live e2e); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
+| `engine/src/adapters/` | `LlmPort` adapters — `claude-cli` (headless `claude -p`), `anthropic-api` (raw-fetch Messages API), `ollama` (local daemon) — plus `resolveLlm(provider)` mapping a pipeline's `llmProvider` to the adapter. All late-bound from env. |
+| `engine/src/pipelines/` | `PipelineCatalog` — lead_scout-style registry: disk scan of `pipelines/*.yaml` + a writable `enabled` overlay (so toggling never rewrites a repo file). `list`/`get`/`enabled`/`setEnabled`. `gauntlet-config.ts` holds the per-gauntlet executor knobs (verdict token, success verdicts) not on the Pipeline schema. |
+| `engine/src/sources/` | `SourcePort` — inbound intake boundary (a pipeline's `source` field names the adapter). Concrete adapters (vault card scan, Firestore SR fetch) are a later human-gated step. |
+| `engine/src/triage.ts` | `triageSentence` — intake classifier: routes a raw sentence to one of the enabled pipelines (via `LlmPort`) or `untriaged` below a confidence threshold. `makeTriagedItem` builds the Item (parked at the `triage` step if untriaged). |
+| `engine/src/cli/run-once.ts` | `runPipelineOnce` — orchestration core: load/create item → run gate pipeline → fire the executor on a clean pass. Fully injected (testable). |
+| `engine/src/cli.ts` | CLI shell: `refinery run --pipeline … --input "<sentence>"`. Parses args, wires real adapters, delegates to `runPipelineOnce`. |
+| `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-24** — **Morning-review resilience** (`review/run.ts`), from the
+  2026-06-24 nightly batch retro where 3/10 cards errored transiently and were
+  then swept off the board. (1) **Per-card retry with backoff** (`withRetry`,
+  2s→6s, 3 attempts) around the LLM-review + gh + save body — idempotent, so a
+  retry never double-opens a PR or double-counts. (2) **Graduate-after-review**:
+  a project graduates to `_finished/` only when *every* reviewable step (done +
+  has a `run:` dir) carries a review record; an errored/unreviewed step now keeps
+  the project on the active board so the next pass retries it instead of losing
+  it. Deliberately NOT done here: a dedicated "errored" board lane — it would
+  widen the `PrReview.verdict` union across the board renderer *and* the external
+  `hwc_nightly_review` MCP tool; retry + graduate-gate + the loud nightly-builds
+  notify cover the visibility gap with far smaller blast radius.
+- **2026-06-19** — **Idea → spec → build assembly line + two-kanban board.** New native
+  **`build`** pipeline (`pipelines/build.yaml` + `prompts/build.md`, `BUILD-VERDICT`) that
+  implements a developed spec in the target repo. **Declarative chaining**: a pipeline can
+  declare `next:` (project-ideation → build) and each item has a **`chain`** auto-advance
+  switch — OFF stops at the spec for review, ON runs idea→spec→build unattended; plus a
+  one-shot **"▸ build this"** button on a finished spec. `chainTo` seeds a deterministic
+  `<id>-build` successor (carries the spec + repo + domain) and kicks it (gates in-board →
+  native spool). The board `/` is now **two stacked kanbans** — Hopper (ideas) over
+  Development (projects); `/hopper` 303-redirects to `/`. 142 tests pass.
+- **2026-06-19** — **Completed cards show their outcome + next step (no more dead end).** A passed project-ideation card led with a pointless "▶ run pipeline now" + "No human action needed" and never showed the spec it produced. Now a done item leads with a **"✓ Done — outcome"** section that renders the developed spec inline (goal / steps / deliverable + the spec path) and states the **Next** step; re-run is demoted. Native items show branch/report + next step. Skipped middle gates (e.g. a greenfield gate that didn't apply) now render **"skipped"** instead of a misleading "pending". 135 tests pass.
+- **2026-06-19** — **Parked cards are actionable + native target-repo picker.** A gate
+  that parks/fails now emits an `asks` array (added to `BaseVerdictSchema` + enforced in
+  `buildGatePrompt`) — the specific, concrete decisions the human must make, not a prose
+  refusal. The parked card renders them as a **"To unblock, decide:"** checklist with an
+  **"answer & continue"** box (fallback note for items that ran before asks were captured).
+  Native pipelines (app-refinement) get a prominent **Target repo** picker (`POST /set-repo`
+  → `payload.repo`), required when unset — this is what lets app-refinement actually
+  execute (names the target app, e.g. `~/600_apps/<app>`); the run hint is now executor-aware.
+  134 tests pass.
+- **2026-06-19** — **Native execution via spool → privileged runner.** The hardened
+  board (no repo/push access) no longer runs the `native` executor in-process: for a
+  `native` pipeline it runs the **gates in-process** (LLM-only, works in the sandbox)
+  and, on a clean pass, drops `<itemId>` in `/var/lib/refinery/native-run` and marks
+  the item "queued for native execution". A privileged `refinery-native-runnow`
+  path+service (runs as eric — ~/.ssh, ~/600_apps, ~/.claude; intentionally
+  unsandboxed, mirrors `nightly-builds-runnow`) drains the spool and runs the new
+  `refinery-run-native --id <id>` CLI, which builds the real native executor
+  (worktree → headless claude → push via `native-factory.ts`) and finalizes the item
+  (executorResult + passed/failed). External-gauntlet pipelines stay guarded.
+  `refinery-run-native` is a 3rd esbuild bundle in the package. NOTE: app-refinement
+  still needs `payload.repo` set to name its target app (a UI affordance is the next
+  small step); without it the runner fails the item cleanly. 131 tests pass.
+- **2026-06-19** — **UI redesign — the board mirrors the engine flow.** The main
+  board is now **Flow** (retired "Gauntlet" as the board name; "Nightly" tab →
+  "Overnight"). Every Project card carries a **gate-dot progress strip** (one dot
+  per pipeline step — gates + executor — colored by per-step state from history),
+  so where an item sits in its pipeline is glanceable. The item detail page gains
+  a **pipeline node strip** (Triage → each gate → Executor → Done) where each node
+  expands (native `<details>`, no JS) to its persisted gate verdict / executor
+  result / triage confidence — surfacing state that was previously thrown away.
+  Two new pages: **`/reference`** (the terminology canon + live pipelines) and
+  **`/reviews`** (the morning PR-review verdicts, which had zero UI). `REFINERY_REVIEWS_DIR`
+  wired into the board. 127 tests pass (+4 render).
+- **2026-06-19** — **Terminology canon (full rename, code + UI + data).** Retired
+  the overloaded vocabulary: `Profile`/`genre`/`manifest` → **Pipeline** (`item.pipeline`,
+  `pipelines/*.yaml`, `PipelineCatalog`); the overloaded `phase` → **step** (pipeline
+  position) + **stage** (hopper maturation); `phaseStatus` → **state**; `effector` →
+  **Executor** (`execute`→`native`, `dispatch`→`gauntlet`, `write-spec`→`spec`);
+  `executeMode` → `executorMode`; `nightly` flag → **schedule** (`now`|`nightly`).
+  `MarkdownItemStore` carries a read-old/write-new migration shim so existing
+  `/var/lib/refinery/items` survive; the enabled-overlay file stays `profiles.json`
+  to preserve toggles. Env vars `REFINERY_PROFILES_DIR`/`_PROFILE_STATE` →
+  `REFINERY_PIPELINES_DIR`/`_PIPELINE_STATE`. 117 tests pass (+2 migration). No
+  behavior or UI-label change yet — that's the next slice.
+- **2026-06-19** — Removed the dead `app/` board (the original slice-01/02
+  read-only hopper). `index.nix` builds only `./engine`; nothing referenced
+  `app/`/`@refinery/board`. First step of the engine-finish + UI-redesign arc.
+- **2026-06-19** — `app-refinement` genre (brownfield app compliance) + profile
+  `defaultTraits`. A profile may now declare the item traits to stamp at intake,
+  so gate applicability is profile **data**, not a hardcoded intake literal —
+  fixing a latent bug where `makeTriagedItem` stamped `mode: greenfield` on every
+  item, making any brownfield genre's gates (chestertons-fence / principles-fix /
+  blast-radius) silently self-skip. `app-refinement.yaml` declares
+  `{mode: brownfield, touchesExistingCode, writeMode}` so its fixing-systems
+  pipeline (chestertons-fence → blast-radius → principles-fix → premortem →
+  admission-gates) fires; `executeMode: write`, `effectors: [execute]`. Runs
+  daytime via the board's Run button by default; flag an item `nightly` only to
+  batch it into the unattended overnight lane (the executor is not nightly-coupled).
+  `ItemTraitsSchema` moved to `contracts.ts` (core contract; `gates/traits.ts`
+  re-exports). +2 triage tests (115 pass).
 - **2026-06-18** — Two-axis board + domains + per-card control. The board now
   models the Refinery as one chain with two axes (SR2 parity): **domain**
   (identity → card color + header tag, data-driven `domains.yaml`, auto-classified

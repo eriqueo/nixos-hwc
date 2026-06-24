@@ -1,0 +1,17 @@
+# sr_gauntlet expressed as a refinery pipeline (strangler-fig: the live run.sh +
+# timer keep running untouched). Read-only executor mode — worktrees must stay
+# pristine, PII stays local. enabled:false until a human wires it into a live
+# engine timer. Brownfield pipeline, so chesterton's-fence + principles-fix apply.
+pipeline: datax-sr
+label: DataX SR Gauntlet
+color: "#5e81ac" # HWC palette: info (blue)
+source: firestore-srs
+gates:
+  - chestertons-fence
+  - principles-fix
+  - premortem
+executorMode: read-only
+executors:
+  - native
+llmProvider: claude-cli
+enabled: false

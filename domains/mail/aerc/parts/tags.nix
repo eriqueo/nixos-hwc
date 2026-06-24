@@ -67,10 +67,14 @@ let
     { tag = "website";      color = group.system;   display = "website_@";      spaceKey = "@"; }
   ] ++ customCategories;
 
-  # Flag tags coexist with categories (not exclusive).
+  # Flag tags coexist with categories (not exclusive) and are NOT inbox-scoped,
+  # so their virtual folders show the full tagged set across all folders.
   flagTags = [
     { tag = "action";  color = group.urgent;  display = "action_!";  spaceKey = "!"; bold = true; }
     { tag = "pending"; color = group.waiting;  display = "pending_?"; spaceKey = "?"; }
+    # Protected family/friends correspondence (preserved from Gmail All Mail,
+    # 2007+). Non-inbox-scoped so the folder shows the whole archive.
+    { tag = "keep";    color = group.growth;   display = "keep_k";    spaceKey = "k"; }
   ] ++ customFlags;
 
   allTags = flagTags ++ categoryTags;

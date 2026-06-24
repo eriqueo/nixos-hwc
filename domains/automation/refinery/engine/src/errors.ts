@@ -7,11 +7,11 @@ export class RefineryError extends Error {
   }
 }
 
-export class InvalidProfileError extends RefineryError {
+export class InvalidPipelineError extends RefineryError {
   readonly issues: unknown;
   constructor(message: string, issues: unknown) {
-    super("E_INVALID_PROFILE", message);
-    this.name = "InvalidProfileError";
+    super("E_INVALID_PIPELINE", message);
+    this.name = "InvalidPipelineError";
     this.issues = issues;
   }
 }
@@ -27,18 +27,18 @@ export class InvalidGauntletContractError extends RefineryError {
 
 export class UnknownGateError extends RefineryError {
   constructor(gateId: string) {
-    super("E_UNKNOWN_GATE", `profile references unregistered gate: ${gateId}`);
+    super("E_UNKNOWN_GATE", `pipeline references unregistered gate: ${gateId}`);
     this.name = "UnknownGateError";
   }
 }
 
-export class UnknownPhaseError extends RefineryError {
-  constructor(phase: string) {
+export class UnknownStepError extends RefineryError {
+  constructor(step: string) {
     super(
-      "E_UNKNOWN_PHASE",
-      `phase not present in profile gates: ${phase}`,
+      "E_UNKNOWN_STEP",
+      `step not present in pipeline gates: ${step}`,
     );
-    this.name = "UnknownPhaseError";
+    this.name = "UnknownStepError";
   }
 }
 

@@ -10,7 +10,7 @@ in
   options.hwc.home.apps.claude-code = {
     enable = lib.mkEnableOption "Claude Code CLI (Nix package + Obsidian MCP cert)";
 
-    # Shared, version-controlled skill/agent/command/CLAUDE.md set. Lives in a
+    # Shared, version-controlled skill/agent/command/CLAUDE.md/engineering-principles set. Lives in a
     # standalone git repo (NOT ~/.nixos — branch switches there would vaporize
     # the symlink targets mid-session). Symlinked live so edits are immediate
     # and identical across every host.
@@ -23,7 +23,7 @@ in
       enable = lib.mkOption {
         type = lib.types.bool;
         default = cfg.enable;
-        description = "Symlink ~/.claude/{skills,agents,commands,CLAUDE.md} from the shared claude-config git repo. Defaults to the package enable, but can be turned on standalone (e.g. hwc-server).";
+        description = "Symlink ~/.claude/{skills,agents,commands,CLAUDE.md,engineering-principles} from the shared claude-config git repo. Defaults to the package enable, but can be turned on standalone (e.g. hwc-server).";
       };
       repoPath = lib.mkOption {
         type = lib.types.str;
@@ -32,7 +32,7 @@ in
       };
       items = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [ "skills" "agents" "commands" "CLAUDE.md" ];
+        default = [ "skills" "agents" "commands" "CLAUDE.md" "engineering-principles" ];
         description = "Entries under repoPath to symlink into ~/.claude/.";
       };
       autoPull = {

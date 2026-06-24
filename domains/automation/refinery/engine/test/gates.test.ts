@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Item, Profile } from "../src/contracts.js";
+import { Item, Pipeline } from "../src/contracts.js";
 import { InMemoryItemStore } from "../src/store-memory.js";
 import { runPass } from "../src/runner.js";
 import { InvalidGateVerdictError } from "../src/errors.js";
@@ -37,8 +37,8 @@ function rawLlm(raw: string): LlmPort {
   return { async complete() { return raw; } };
 }
 
-function itemWithTraits(traits: Record<string, unknown>, phase = "stepwise-refinement"): Item {
-  return makeItem({ phase, payload: { traits } });
+function itemWithTraits(traits: Record<string, unknown>, step = "stepwise-refinement"): Item {
+  return makeItem({ step, payload: { traits } });
 }
 
 const ALL_IDS = [
@@ -113,22 +113,22 @@ test("a profile gate list composes through the slice-03 runner end-to-end", asyn
   const store = new InMemoryItemStore();
   const llm = stubLlm("pass", "looks good");
   const gates = gateList(llm);
-  const profile: Profile = {
-    genre: "greenfield-test",
+  const profile: Pipeline = {
+    pipeline: "greenfield-test",
     source: "inline://gates-test",
     gates: ["principles-create", "premortem", "admission-gates"],
-    executeMode: "sync",
-    effectors: [],
+    executorMode: "sync",
+    executors: [],
   };
   const item = makeItem({
-    phase: "principles-create",
+    step: "principles-create",
     payload: { traits: { mode: "greenfield", trivial: false } },
   });
 
   const result = await runPass(item, profile, gates, { store, clock: fixedClock });
   assert.deepEqual(result.ran, ["principles-create", "premortem", "admission-gates"]);
-  assert.equal(result.item.phase, "admission-gates");
-  assert.equal(result.item.phaseStatus, "passed");
+  assert.equal(result.item.step, "admission-gates");
+  assert.equal(result.item.state, "passed");
   assert.equal(result.stoppedBy, undefined);
 });
 
@@ -143,19 +143,19 @@ test("end-to-end parks at the first gate that returns park, leaving later gates 
     makePremortemGate(parkLlm),
     makeAdmissionGatesGate(passLlm),
   ];
-  const profile: Profile = {
-    genre: "greenfield-test",
+  const profile: Pipeline = {
+    pipeline: "greenfield-test",
     source: "inline://gates-test",
     gates: ["principles-create", "premortem", "admission-gates"],
-    executeMode: "sync",
-    effectors: [],
+    executorMode: "sync",
+    executors: [],
   };
   const item = makeItem({
-    phase: "principles-create",
+    step: "principles-create",
     payload: { traits: { mode: "greenfield", trivial: false } },
   });
   const result = await runPass(item, profile, gates, { store, clock: fixedClock });
   assert.deepEqual(result.ran, ["principles-create", "premortem"]);
-  assert.deepEqual(result.stoppedBy, { phase: "premortem", reason: "parked" });
+  assert.deepEqual(result.stoppedBy, { step: "premortem", reason: "parked" });
   assert.equal(result.item.parkedReason, "needs a human call");
 });

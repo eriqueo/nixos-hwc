@@ -2,13 +2,14 @@
 #
 # Automation domain — workflow engine and event bus.
 #
-# Namespace: hwc.automation.{n8n,mqtt,nightlyBuilds,readmeFreshness,refinery,srGauntlet,vaultSync,inboxJanitor}.*
+# Namespace: hwc.automation.{n8n,mqtt,nightlyBuilds,readmeFreshness,refinery,srGauntlet,vaultSync,inboxJanitor,mailJanitor}.*
 
 { lib, config, ... }:
 
 {
   imports = [
     ./inbox-janitor/index.nix
+    ./mail-janitor/index.nix
     ./mqtt/index.nix
     ./n8n/index.nix
     ./nightly-builds/index.nix
