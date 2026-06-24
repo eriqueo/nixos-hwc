@@ -36,6 +36,17 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-06-19: Added `deploy/` — `hwc.server.deploy` provides an interactive `deploy`
+  CLI (on PATH, server only). Auto-discovers app repos under `appsDir` (default
+  `~/600_apps`) that carry an executable `deploy.sh`, presents an `fzf` picker (or
+  `deploy <app>` direct), and execs that app's recipe. Recipes live WITH each app
+  (late binding — new deployable app = drop a `deploy.sh`, no Nix edit); the
+  dispatcher only discovers/picks/execs and supplies the toolchain PATH
+  (node/git/sudo/podman-compose) via `runtimeInputs`. Recipes added to
+  datax-monitor (tsx + ui build + restart), lead_scout (tsx + frontend build +
+  restart; supersedes the inline `lead-scout-deploy`), sr_analyzer (podman-compose
+  rebuild). Each recipe pulls only if the tree is clean + has an upstream, else
+  deploys in place — safe on the currently-dirty server checkouts.
 - 2026-06-11: Added `services/radicale/` — self-hosted CalDAV server
   (localhost:5232, Caddy vhost `tasks`) for two-way task sync with list
   creation (companion to `domains/mail/tasks` radicale pair + todui `N`).

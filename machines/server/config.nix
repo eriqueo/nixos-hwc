@@ -30,6 +30,7 @@
     ../../domains/server/native/ai/persona-daemon/index.nix # Persona-aware HTTP daemon + SQLite memory
     ../../domains/server/services/inbox-processor/index.nix # Phone capture processor (Whisper + Tesseract)
     ../../domains/server/services/radicale/index.nix # Self-hosted CalDAV (tasks.hwc.*)
+    ../../domains/server/deploy/index.nix # `deploy` — one-step deploy CLI for 600_apps
   ];
 
   assertions = [
@@ -109,6 +110,9 @@
 
   # Lead Scout — Facebook group lead scraper/classifier, MCP + HTTP on port 8420
   hwc.server.ai.leadScout.enable = true;
+
+  # `deploy` — interactive one-step deploy CLI; auto-discovers ~/600_apps/*/deploy.sh
+  hwc.server.deploy.enable = true;
 
   # Brain MCP Server — vault filesystem tools (read/write/search/lint) on port 9876
   hwc.server.ai.brainMcp.enable = true;
@@ -357,6 +361,14 @@
   # set hwc.automation.inboxJanitor.dryRun = false.
   hwc.automation.inboxJanitor.enable = true;
   hwc.automation.inboxJanitor.dryRun = false;
+
+  # mail-janitor — weekly age-aware Gmail anti-buildup sweep. Trashes NOISE
+  # (promo/streaming/social/bot) at any age + TRANSACTIONAL (receipts/orders)
+  # older than 1yr; PRESERVE (people/history/finance) and the Family-Friends
+  # label are never touched. Ships dryRun=true — watch the Discord report +
+  # journal, then set hwc.automation.mailJanitor.dryRun = false to let it act.
+  hwc.automation.mailJanitor.enable = true;
+  hwc.automation.mailJanitor.dryRun = false;  # active after dry-run verified 2026-06-24
   # Unified lead pipeline comes from the business role.
 
   # Alert sources — what to monitor (thresholds, triggers)

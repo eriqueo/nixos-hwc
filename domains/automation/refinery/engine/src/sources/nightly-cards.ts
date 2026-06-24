@@ -13,7 +13,7 @@ import { join, dirname } from "node:path";
 import { Item } from "../contracts.js";
 
 export const NB_PREFIX = "nb:";
-export const NIGHTLY_BUILD_GENRE = "nightly-build";
+export const NIGHTLY_BUILD_PIPELINE = "nightly-build";
 
 // The exit ramp. A project is work-in-flight while it lives directly under
 // _inbox/nightly_builds/<goal>/. When every step is `done` it GRADUATES off the
@@ -85,15 +85,15 @@ function isPending(s: string): boolean { return !isDone(s) && !isQueuedish(s); }
  *  targeted run right away). Persisted in the project's _goal.md frontmatter. */
 export type NbMode = "nightly" | "immediate";
 
-/** Derive a project's (phase, phaseStatus) from its steps for lane placement. */
-function projectState(steps: NbStep[]): { phase: string; phaseStatus: Item["phaseStatus"]; parkedReason?: string } {
+/** Derive a project's (step, state) from its steps for lane placement. */
+function projectState(steps: NbStep[]): { step: string; state: Item["state"]; parkedReason?: string } {
   const total = steps.length;
   const done = steps.filter((s) => isDone(s.status)).length;
   const queued = steps.filter((s) => isQueuedish(s.status));
-  const phase = `${done}/${total} steps`;
-  if (total > 0 && done === total) return { phase, phaseStatus: "passed" };
-  if (queued.length) return { phase, phaseStatus: "pending", parkedReason: `${queued.length} queued tonight` };
-  return { phase, phaseStatus: "parked", parkedReason: "nothing queued — pick the next step" };
+  const step = `${done}/${total} steps`;
+  if (total > 0 && done === total) return { step, state: "passed" };
+  if (queued.length) return { step, state: "pending", parkedReason: `${queued.length} queued tonight` };
+  return { step, state: "parked", parkedReason: "nothing queued — pick the next step" };
 }
 
 /** True once a project has nothing left to do — every step is `done`. This is
@@ -123,14 +123,14 @@ function buildProjectItem(dir: string, goalId: string, finished: boolean): Item 
   }
   const nextPending = steps.find((s) => isPending(s.status));
 
-  const { phase, phaseStatus, parkedReason } = projectState(steps);
+  const { step, state, parkedReason } = projectState(steps);
   const done = steps.filter((s) => isDone(s.status)).length;
   const queuedCount = steps.filter((s) => isQueuedish(s.status)).length;
   return {
     id: `${finished ? FINISHED_PREFIX : NB_PREFIX}${goalId}`,
-    genre: NIGHTLY_BUILD_GENRE,
-    phase,
-    phaseStatus: finished ? "passed" : phaseStatus,
+    pipeline: NIGHTLY_BUILD_PIPELINE,
+    step,
+    state: finished ? "passed" : state,
     parkedReason: finished ? undefined : parkedReason,
     payload: {
       title,
@@ -150,8 +150,8 @@ function buildProjectItem(dir: string, goalId: string, finished: boolean): Item 
       source: finished ? "nightly-builds (finished)" : "nightly-builds project",
     },
     history: [],
-    nightly: true,
-    nightlyPriority: 0,
+    schedule: "nightly",
+    schedulePriority: 0,
   };
 }
 

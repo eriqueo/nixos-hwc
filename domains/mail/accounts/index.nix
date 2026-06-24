@@ -66,9 +66,13 @@ in
         primary = true;
       };
 
-    ## Gmail accounts - IMAP sync disabled; both now forward to Proton Mail.
-    ##  Credentials kept here for reference / re-enabling if needed.
-    ##   msmtp send-only accounts (proton-personal / gmail-personal) still active.
+    ## Gmail accounts - IMAP sync ENABLED for backlog cleanup (2026-06-22).
+    ##  Both still forward to Proton; msmtp send-only accounts remain active.
+    ##  Wildcards bounded to INBOX only: pulling [Gmail]/All Mail would drag in
+    ##  the full archive superset (tens of thousands, duplicated). Archive in
+    ##  Gmail = removing the INBOX label, which mbsync expresses by expunging the
+    ##  message from the INBOX channel (it survives in All Mail). Widen the
+    ##  wildcard set later if other labels need indexing.
 
     gmail-personal = {
         name = "gmail-personal";
@@ -81,8 +85,8 @@ in
           agenix = gmailPersonalSecretPath;
         };
         maildirName = "gmail-personal";
-        sync.enable = false;  # Forwarding to Proton; send-only via msmtp
-        sync.wildcards = [ "INBOX" "[Gmail]/*" ];
+        sync.enable = true;   # Backlog cleanup: pull INBOX into notmuch
+        sync.wildcards = [ "INBOX" "Family-Friends" ];
         send.msmtpAccount = "gmail-personal";
       };
 
@@ -97,8 +101,8 @@ in
           agenix = gmailBusinessSecretPath;
         };
         maildirName = "gmail-business";
-        sync.enable = false;  # Forwarding to Proton; send-only via msmtp
-        sync.wildcards = [ "INBOX" "[Gmail]/*" ];
+        sync.enable = true;   # Backlog cleanup: pull INBOX into notmuch
+        sync.wildcards = [ "INBOX" "Family-Friends" ];
         send.msmtpAccount = "gmail-business";
       };
     

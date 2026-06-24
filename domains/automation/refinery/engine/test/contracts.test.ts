@@ -5,21 +5,21 @@ import { ItemSchema } from "../src/contracts.js";
 test("ItemSchema accepts a well-formed item", () => {
   const result = ItemSchema.safeParse({
     id: "x",
-    genre: "leads",
-    phase: "intake",
-    phaseStatus: "pending",
+    pipeline: "leads",
+    step: "intake",
+    state: "pending",
     payload: { any: "shape" },
     history: [],
   });
   assert.equal(result.success, true);
 });
 
-test("ItemSchema rejects unknown phaseStatus", () => {
+test("ItemSchema rejects unknown state", () => {
   const result = ItemSchema.safeParse({
     id: "x",
-    genre: "leads",
-    phase: "intake",
-    phaseStatus: "wat",
+    pipeline: "leads",
+    step: "intake",
+    state: "wat",
     payload: {},
     history: [],
   });

@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { Item } from "../contracts.js";
 
 export const SR_PREFIX = "sr:";
-export const SR_GENRE = "datax-sr";
+export const SR_PIPELINE = "datax-sr";
 
 interface SrMeta {
   id?: string;
@@ -47,9 +47,9 @@ export function srInvestigationProjects(gauntletDir: string): Item[] {
     const hasReport = existsSync(join(dir, "REPORT.md"));
     out.push({
       id: `${SR_PREFIX}${runName}`,
-      genre: SR_GENRE,
-      phase: "investigated",
-      phaseStatus: "passed", // a completed investigation
+      pipeline: SR_PIPELINE,
+      step: "investigated",
+      state: "passed", // a completed investigation
       payload: {
         title: meta.title || meta.id || runName,
         srId: meta.id ?? "",

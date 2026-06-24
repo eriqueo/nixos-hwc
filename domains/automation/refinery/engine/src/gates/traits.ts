@@ -4,22 +4,12 @@
 // matches its traits" (design note: gate registry). Traits live on the item
 // payload under `traits`; they are a trust-boundary input, so we parse them.
 
-import { z } from "zod";
-import { Item } from "../contracts.js";
+import { Item, ItemTraitsSchema, ItemTraits } from "../contracts.js";
 
-export const ItemTraitsSchema = z.object({
-  // greenfield = builds something new; brownfield = modifies what exists.
-  mode: z.enum(["greenfield", "brownfield"]).optional(),
-  // touches code the author didn't write (Chesterton's Fence territory).
-  touchesExistingCode: z.boolean().optional(),
-  // a trivial item (typo, rename) skips the heavier disciplines.
-  trivial: z.boolean().optional(),
-  // multi-part work that stepwise-refinement should decompose.
-  multiPart: z.boolean().optional(),
-  // write-mode execution (commits/pushes) vs read-only.
-  writeMode: z.boolean().optional(),
-});
-export type ItemTraits = z.infer<typeof ItemTraitsSchema>;
+// The trait schema is a core contract (profiles reference it via defaultTraits),
+// so it lives in contracts.ts. Re-exported here for the gates that read traits.
+export { ItemTraitsSchema };
+export type { ItemTraits };
 
 /**
  * Read traits off an item payload, tolerating any payload shape. Looks for a

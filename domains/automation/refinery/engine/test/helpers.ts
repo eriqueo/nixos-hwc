@@ -32,9 +32,9 @@ export function stubGate(opts: StubOpts): GateModule {
 export function makeItem(overrides: Partial<Item> = {}): Item {
   return {
     id: "item-1",
-    genre: "test-genre",
-    phase: "g1",
-    phaseStatus: "pending",
+    pipeline: "test-pipeline",
+    step: "g1",
+    state: "pending",
     payload: { hello: "world" },
     history: [],
     ...overrides,

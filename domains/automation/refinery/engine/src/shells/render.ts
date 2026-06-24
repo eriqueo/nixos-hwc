@@ -9,8 +9,9 @@
 // Cards are click-through; all actions live on the detail page. Plain
 // form-posts (POST → 303); no client framework.
 
-import { Item } from "../contracts.js";
-import { ResolvedProfile } from "../profiles/catalog.js";
+import { Item, Pipeline } from "../contracts.js";
+import { PrReview } from "../review/contract.js";
+import { ResolvedPipeline } from "../pipelines/catalog.js";
 import { DomainRegistry, domainOf } from "../domains.js";
 import { mdToHtml } from "./markdown.js";
 
@@ -28,8 +29,8 @@ function titleOf(item: Item): string {
     : item.id;
 }
 
-const LANES: { status: Item["phaseStatus"]; label: string }[] = [
-  { status: "pending", label: "In Progress" },
+const LANES: { status: Item["state"]; label: string }[] = [
+  { status: "pending", label: "In Pipeline" },
   { status: "running", label: "Running" },
   { status: "parked", label: "Needs You" },
   { status: "passed", label: "Done" },
@@ -37,7 +38,7 @@ const LANES: { status: Item["phaseStatus"]; label: string }[] = [
 ];
 
 // Hopper lanes = idea-maturation stages (the chain's first half, before an idea
-// is promoted into the Gauntlet). Stored in `item.phase` on untriaged items.
+// is promoted into the Gauntlet). Stored in `item.stage` on untriaged items.
 export const HOPPER_STAGES: { key: string; label: string }[] = [
   { key: "captured", label: "Captured" },
   { key: "shaping", label: "Shaping" },
@@ -45,16 +46,16 @@ export const HOPPER_STAGES: { key: string; label: string }[] = [
 ];
 export const HOPPER_STAGE_KEYS = HOPPER_STAGES.map((s) => s.key);
 function stageOf(item: Item): string {
-  return HOPPER_STAGE_KEYS.includes(item.phase) ? item.phase : "captured";
+  return item.stage && HOPPER_STAGE_KEYS.includes(item.stage) ? item.stage : "captured";
 }
 
 // Render context threaded to every card: the domain registry (color/tag), all
-// profiles (for the genre label), the promote-target (enabled) profiles, and the
-// `back` path that actions redirect to.
+// pipelines (for the pipeline label), the promote-target (enabled) pipelines, and
+// the `back` path that actions redirect to.
 interface CardCtx {
   domains: DomainRegistry;
-  profiles: ResolvedProfile[];
-  enabled: ResolvedProfile[];
+  profiles: ResolvedPipeline[];
+  enabled: ResolvedPipeline[];
   back: string;
 }
 
@@ -99,6 +100,10 @@ const STYLE = `<style>
   .title{display:block;font-size:13px;color:var(--ink);font-weight:600;overflow-wrap:anywhere}
   a.title:hover{color:var(--acc)}
   .reason{margin-top:5px;font-size:12px;color:var(--acc)}
+  .asks{margin:4px 0 12px;border-left:3px solid var(--warn);padding:6px 0 6px 12px;background:color-mix(in srgb,var(--warn) 8%,transparent)}
+  .asks .askhdr{font-size:12px;font-weight:700;color:var(--warn);text-transform:uppercase;letter-spacing:.04em}
+  .asks ol{margin:6px 0 0 18px;padding:0}
+  .asks li{margin:4px 0;color:var(--ink);font-size:13px}
   .card .why{margin-top:2px;font-size:12px;color:var(--dim);overflow-wrap:anywhere}
   /* inline per-card controls (SR2-style quick actions) */
   .ccrow{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;align-items:center}
@@ -153,6 +158,31 @@ const STYLE = `<style>
   .step .st{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--line);color:var(--dim)}
   .step .st.done{color:var(--bg);background:var(--ok)}
   .step .st.queued,.step .st.running{color:var(--bg);background:var(--acc)}
+  /* per-card gate-dot progress strip: one dot per pipeline step, in order */
+  .gate-dots{display:flex;gap:5px;margin-top:7px;align-items:center;flex-wrap:wrap}
+  .gate-dot{width:9px;height:9px;border-radius:50%;background:var(--dim);flex:none}
+  .gate-dot.passed{background:var(--ok)}
+  .gate-dot.parked{background:var(--warn)}
+  .gate-dot.failed{background:var(--err)}
+  .gate-dot.running{background:var(--acc)}
+  .gate-dot.pending{background:var(--dim)}
+  .gate-dot.skipped{background:transparent;border:1px solid var(--muted)}
+  .gate-dot.current{box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--ink)}
+  /* item pipeline node strip (detail page): Triage → gates → executor → Done */
+  .nodes{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  .node{border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+  .node summary{display:flex;gap:8px;align-items:center;padding:8px 10px;cursor:pointer;list-style:none}
+  .node summary::-webkit-details-marker{display:none}
+  .node .nlab{flex:1;color:var(--ink);font-size:13px}
+  .node .arrow{color:var(--muted)}
+  .node .ndot{width:10px;height:10px;border-radius:50%;background:var(--dim);flex:none}
+  .node .ndot.passed{background:var(--ok)}
+  .node .ndot.parked{background:var(--warn)}
+  .node .ndot.failed{background:var(--err)}
+  .node .ndot.running{background:var(--acc)}
+  .node .ndot.skipped{background:transparent;border:1px solid var(--muted)}
+  .node .nbody{padding:0 12px 10px;font-size:12px;color:var(--dim)}
+  .node .nbody b{color:var(--fg)}
 </style>`;
 
 function layout(active: string, body: string): string {
@@ -162,7 +192,7 @@ function layout(active: string, body: string): string {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Refinery</title>${STYLE}</head><body>
 <header><h1>🛠 Refinery</h1><nav>
-  ${tab("/", "Gauntlet", "gauntlet")}${tab("/hopper", "Hopper", "hopper")}${tab("/nightly", "Nightly", "nightly")}${tab("/finished", "Finished", "finished")}${tab("/sr", "SR", "sr")}
+  ${tab("/", "Board", "flow")}${tab("/nightly", "Overnight", "nightly")}${tab("/finished", "Finished", "finished")}${tab("/sr", "SR", "sr")}${tab("/reviews", "Reviews", "reviews")}${tab("/reference", "Reference", "reference")}
 </nav></header>
 ${body}
 </body></html>`;
@@ -174,7 +204,7 @@ ${body}
 // why-it-matters (one-line summary), status/signal badges, and ≥1 action (the
 // card itself is the click-through; all controls live on the detail page).
 const STATUS_LANES = LANES.map((l) => ({ key: l.status as string, label: l.label }));
-const statusOf = (item: Item): string => item.phaseStatus;
+const statusOf = (item: Item): string => item.state;
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === "object" ? (v as Record<string, unknown>) : {});
 
 // Each board POST carries `back` so the handler redirects to the board the user
@@ -198,10 +228,10 @@ function domainPicker(item: Item, ctx: CardCtx, idIn: string, bk: string): strin
 // posts). Kind decides the controls:
 //   • read-only nightly mirror → vault-backed queue / run-now / mode
 //   • idea → domain picker + stage advance (+ promote when Ready)
-//   • engine project → status lane + genre re-pick + domain + run + nightly + delete
+//   • engine project → status lane + pipeline re-pick + domain + run + nightly + delete
 function controlsFor(item: Item, ctx: CardCtx): string {
   const pl = obj(item.payload);
-  const isIdea = item.genre === UNTRIAGED;
+  const isIdea = item.pipeline === UNTRIAGED;
   const readonly = pl.readonly === true;
   const idIn = `<input type="hidden" name="id" value="${esc(item.id)}">`;
   const bk = backField(ctx.back);
@@ -240,7 +270,7 @@ function controlsFor(item: Item, ctx: CardCtx): string {
     // Promote redirects to the Gauntlet (back=/) so the new project is seen
     // arriving, not just leaving the Hopper.
     const promote = stage === "ready"
-      ? `<form class="cc" method="post" action="/promote">${idIn}<input type="hidden" name="back" value="/"><input type="hidden" name="genre" value="project-ideation">
+      ? `<form class="cc" method="post" action="/promote">${idIn}<input type="hidden" name="back" value="/"><input type="hidden" name="pipeline" value="project-ideation">
            <button type="submit" name="schedule" value="immediate" title="refine into a spec now">→ refine now</button>
            <button type="submit" name="schedule" value="nightly" title="queue for the overnight run">🌙 nightly</button>
          </form>`
@@ -249,33 +279,86 @@ function controlsFor(item: Item, ctx: CardCtx): string {
     return `<div class="ccrow">${stageSel}${domainPicker(item, ctx, idIn, bk)}${promote}${delBtn}</div>`;
   }
 
-  // engine project: change lane (status), re-pick pipeline (genre), domain, run,
+  // engine project: change lane (status), re-pick pipeline, domain, run,
   // nightly toggle, delete.
+  const isNightly = item.schedule === "nightly";
   const statusOpts = STATUS_LANES.map(
-    (l) => `<option value="${l.key}"${item.phaseStatus === l.key ? " selected" : ""}>${esc(l.label)}</option>`,
+    (l) => `<option value="${l.key}"${item.state === l.key ? " selected" : ""}>${esc(l.label)}</option>`,
   ).join("");
   const statusSel = `<form class="cc" method="post" action="/status">${idIn}${bk}<select name="status" title="move to lane" onchange="this.form.submit()">${statusOpts}</select></form>`;
-  const genreOpts = ctx.enabled
-    .map((p) => `<option value="${esc(p.genre)}"${p.genre === item.genre ? " selected" : ""}>${esc(p.label)}</option>`)
+  const pipelineOpts = ctx.enabled
+    .map((p) => `<option value="${esc(p.pipeline)}"${p.pipeline === item.pipeline ? " selected" : ""}>${esc(p.label)}</option>`)
     .join("");
-  const genreSel = ctx.enabled.length
-    ? `<form class="cc" method="post" action="/promote">${idIn}${bk}<select name="genre" title="pipeline" onchange="this.form.submit()">${genreOpts}</select></form>`
+  const pipelineSel = ctx.enabled.length
+    ? `<form class="cc" method="post" action="/promote">${idIn}${bk}<select name="pipeline" title="pipeline" onchange="this.form.submit()">${pipelineOpts}</select></form>`
     : "";
-  const runBtn = item.phaseStatus === "running"
+  const runBtn = item.state === "running"
     ? `<span class="badge">running…</span>`
     : `<form class="cc" method="post" action="/run">${idIn}${bk}<button type="submit" title="run the pipeline now">▶</button></form>`;
-  const nightlyBtn = `<form class="cc" method="post" action="/nightly/toggle">${idIn}${bk}<input type="hidden" name="nightly" value="${item.nightly ? "false" : "true"}"><button type="submit" title="${item.nightly ? "remove from nightly" : "run overnight"}">${item.nightly ? "🌙✓" : "🌙"}</button></form>`;
+  const nightlyBtn = `<form class="cc" method="post" action="/nightly/toggle">${idIn}${bk}<input type="hidden" name="nightly" value="${isNightly ? "false" : "true"}"><button type="submit" title="${isNightly ? "remove from nightly" : "run overnight"}">${isNightly ? "🌙✓" : "🌙"}</button></form>`;
   const delBtn = `<form class="cc" method="post" action="/delete">${idIn}${bk}<button type="submit" class="danger" title="delete project">🗑</button></form>`;
-  return `<div class="ccrow">${statusSel}${genreSel}${domainPicker(item, ctx, idIn, bk)}${runBtn}${nightlyBtn}${delBtn}</div>`;
+  return `<div class="ccrow">${statusSel}${pipelineSel}${domainPicker(item, ctx, idIn, bk)}${runBtn}${nightlyBtn}${delBtn}</div>`;
+}
+
+// The full step sequence of a pipeline = its gates, then its terminal executor
+// id. This is the canonical ordering the gate-dot strip + the detail node strip
+// both walk.
+function pipelineSteps(p: ResolvedPipeline | Pipeline | undefined): string[] {
+  if (!p) return [];
+  return [...p.gates, ...(p.executors[0] ? [p.executors[0]] : [])];
+}
+
+// Map a history-status onto a gate-dot CSS state class. History statuses are
+// State | "rewound" | "entered"; only the State ones carry a color.
+function dotStateFromStatus(status: string): string {
+  if (status === "passed" || status === "parked" || status === "failed" || status === "running") return status;
+  return "pending"; // pending / entered / rewound → neutral
+}
+
+// Per-step state for the dot strip = the LAST matching history entry's status
+// for that step (mapped to a dot state); no history for a step → "pending".
+// On a COMPLETED pipeline (state=passed) a step that never ran is "skipped"
+// (e.g. a gate whose applies() was false), not "pending" — otherwise a finished
+// item looks stuck mid-pipeline.
+function stepStates(item: Item, steps: string[]): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const s of steps) m.set(s, "pending");
+  for (const h of item.history) {
+    if (m.has(h.step)) m.set(h.step, dotStateFromStatus(h.status));
+  }
+  if (item.state === "passed") {
+    for (const s of steps) if (m.get(s) === "pending") m.set(s, "skipped");
+  }
+  return m;
+}
+
+/** Gate-dot progress strip — one dot per pipeline step (gates + executor id), in
+ *  order. Color = the step's last history state; the current `item.step` wears a
+ *  ring. Ideas (untriaged, no pipeline) get nothing. Pure CSS. */
+function gateDots(item: Item, ctx: CardCtx): string {
+  if (item.pipeline === UNTRIAGED) return "";
+  const pipeline = ctx.profiles.find((p) => p.pipeline === item.pipeline);
+  const steps = pipelineSteps(pipeline);
+  if (!steps.length) return "";
+  const states = stepStates(item, steps);
+  const dots = steps
+    .map((s) => {
+      const st = states.get(s) ?? "pending";
+      const cur = item.step === s ? " current" : "";
+      return `<span class="gate-dot ${st}${cur}" title="${esc(`${s}: ${st}`)}"></span>`;
+    })
+    .join("");
+  return `<div class="gate-dots" title="pipeline steps">${dots}</div>`;
 }
 
 function cardLink(item: Item, ctx: CardCtx): string {
   const dom = domainOf(item, ctx.domains);
   const color = dom.color;
   const c = esc(color);
-  const isIdea = item.genre === UNTRIAGED;
+  const isIdea = item.pipeline === UNTRIAGED;
+  const isNightly = item.schedule === "nightly";
   const pl = obj(item.payload);
-  const moon = item.nightly ? `<span class="moon" title="nightly">🌙</span>` : "";
+  const moon = isNightly ? `<span class="moon" title="nightly">🌙</span>` : "";
   const goal = typeof pl.goal === "string" ? pl.goal : "";
   const customer = typeof pl.customer === "string" ? pl.customer : "";
   const question = typeof pl.title === "string" ? pl.title : "";
@@ -284,13 +367,13 @@ function cardLink(item: Item, ctx: CardCtx): string {
   const doneN = typeof pl.stepsDone === "number" ? pl.stepsDone : 0;
 
   // Identity badge = DOMAIN (color + tag), persistent across the chain. Then the
-  // pipeline/genre as a neutral badge (projects only), plus goal/phase/report.
+  // pipeline as a neutral badge (projects only), plus goal/step/report.
   // Lane (column) encodes stage/status; color stays the domain (type) axis.
   const domainTag = `<span class="badge type" style="color:${c};background:color-mix(in srgb,${c} 18%,transparent);border-color:color-mix(in srgb,${c} 40%,transparent)">${esc(dom.label)}</span>`;
-  const genreLabel = ctx.profiles.find((p) => p.genre === item.genre)?.label ?? item.genre;
-  const genreBadge = isIdea ? "" : `<span class="badge" title="pipeline">${esc(genreLabel)}</span>`;
+  const pipelineLabel = ctx.profiles.find((p) => p.pipeline === item.pipeline)?.label ?? item.pipeline;
+  const pipelineBadge = isIdea ? "" : `<span class="badge" title="pipeline">${esc(pipelineLabel)}</span>`;
   const goalBadge = goal ? `<span class="badge">${esc(goal)}</span>` : "";
-  const phaseBadge = isIdea ? "" : `<span class="badge">${esc(item.phase)}</span>`;
+  const stepBadge = isIdea || !item.step ? "" : `<span class="badge">${esc(item.step)}</span>`;
   const reportBadge = hasReport ? `<span class="badge" title="has REPORT">📄</span>` : "";
 
   const bar = total > 0
@@ -308,11 +391,12 @@ function cardLink(item: Item, ctx: CardCtx): string {
 
   // Card is a container (not a link) so it can hold interactive controls; the
   // title is the click-through to the detail page.
-  return `<div class="card${item.nightly ? " nightly" : ""}" style="${skin}">
-    <div class="badges">${domainTag}${genreBadge}${goalBadge}${phaseBadge}${reportBadge}${moon}</div>
+  return `<div class="card${isNightly ? " nightly" : ""}" style="${skin}">
+    <div class="badges">${domainTag}${pipelineBadge}${goalBadge}${stepBadge}${reportBadge}${moon}</div>
     <a class="title" href="/project/${esc(item.id)}">${esc(title)}</a>
     ${why}
     ${bar}
+    ${gateDots(item, ctx)}
     ${item.parkedReason ? `<div class="reason">${esc(item.parkedReason)}</div>` : ""}
     ${controlsFor(item, ctx)}
   </div>`;
@@ -338,15 +422,16 @@ function laneBoard(
 
 const emptyRegistry: DomainRegistry = { domains: [], fallback: { key: "misc", label: "Misc", color: NEUTRAL, match: [] } };
 
-/** Gauntlet: triaged PROJECTS in status lanes, colored by domain. */
-export function renderGauntlet(
+/** Flow board: triaged PROJECTS in state lanes, colored by domain. Each card's
+ *  gate-dot strip makes the engine's pipeline progress visible at a glance. */
+export function renderFlowBoard(
   projects: Item[],
-  profiles: ResolvedProfile[],
-  enabled: ResolvedProfile[] = [],
+  profiles: ResolvedPipeline[],
+  enabled: ResolvedPipeline[] = [],
   domains: DomainRegistry = emptyRegistry,
 ): string {
   const ctx: CardCtx = { domains, profiles, enabled, back: "/" };
-  return layout("gauntlet", `<div class="wrap">${laneBoard(projects, ctx, STATUS_LANES, statusOf)}</div>`);
+  return layout("flow", `<div class="wrap">${laneBoard(projects, ctx, STATUS_LANES, statusOf)}</div>`);
 }
 
 /** Hopper: untriaged IDEAS in maturation-stage lanes (Captured → Shaping →
@@ -354,8 +439,8 @@ export function renderGauntlet(
  *  promotes into the Gauntlet. */
 export function renderHopperPage(
   ideas: Item[],
-  profiles: ResolvedProfile[],
-  enabled: ResolvedProfile[] = [],
+  profiles: ResolvedPipeline[],
+  enabled: ResolvedPipeline[] = [],
   domains: DomainRegistry = emptyRegistry,
 ): string {
   const ctx: CardCtx = { domains, profiles, enabled, back: "/hopper" };
@@ -369,13 +454,48 @@ export function renderHopperPage(
   return layout("hopper", body);
 }
 
+/** Board: the two stacked kanbans on one page (the assembly-line view). The
+ *  intake box, then **Hopper** (untriaged IDEAS in maturation-stage lanes) on
+ *  top, then **Development** (triaged PROJECTS in state lanes) below. One page,
+ *  two boards — an idea matures in the Hopper, gets promoted, then runs through
+ *  the pipeline in Development. Each board reuses laneBoard; section headers name
+ *  them. */
+export function renderBoard(
+  ideas: Item[],
+  projects: Item[],
+  profiles: ResolvedPipeline[],
+  enabled: ResolvedPipeline[] = [],
+  domains: DomainRegistry = emptyRegistry,
+): string {
+  const hopperCtx: CardCtx = { domains, profiles, enabled, back: "/" };
+  const devCtx: CardCtx = { domains, profiles, enabled, back: "/" };
+  const hopperBoard = ideas.length
+    ? laneBoard(ideas, hopperCtx, HOPPER_STAGES, stageOf)
+    : '<div class="empty" style="padding:16px">no ideas waiting — capture one above</div>';
+  const devBoard = projects.length
+    ? laneBoard(projects, devCtx, STATUS_LANES, statusOf)
+    : '<div class="empty" style="padding:16px">no projects yet — promote a Ready idea from the Hopper</div>';
+  const body = `
+<form class="intake" method="post" action="/intake">
+  <input type="text" name="text" placeholder="Capture an idea — it lands in the Hopper (and the brain backlog); shape it, then promote it when Ready…" required autofocus>
+  <button type="submit">→ hopper</button>
+</form>
+<div class="wrap" style="flex-direction:column">
+  <h2 style="width:100%;margin:0 0 2px;font-size:14px;color:var(--ink)">Hopper — ideas <span class="kv" style="font-weight:400">capture → shape → promote</span></h2>
+  ${hopperBoard}
+  <h2 style="width:100%;margin:14px 0 2px;font-size:14px;color:var(--ink)">Development — projects <span class="kv" style="font-weight:400">spec → build, gate by gate</span></h2>
+  ${devBoard}
+</div>`;
+  return layout("flow", body);
+}
+
 /** Nightly: projects flagged nightly, as a status-lane kanban with a per-night
  *  cap. Each card carries its queue/run/mode controls inline. */
 export function renderNightly(
   nightly: Item[],
   maxPerNight: number,
-  profiles: ResolvedProfile[],
-  enabled: ResolvedProfile[] = [],
+  profiles: ResolvedPipeline[],
+  enabled: ResolvedPipeline[] = [],
   domains: DomainRegistry = emptyRegistry,
 ): string {
   const ctx: CardCtx = { domains, profiles, enabled, back: "/nightly" };
@@ -395,47 +515,118 @@ export function renderNightly(
 /** Detail + edit page for one item (project or idea). */
 export function renderProjectDetail(
   item: Item,
-  profiles: ResolvedProfile[],
-  enabledProfiles: ResolvedProfile[],
+  profiles: ResolvedPipeline[],
+  enabledProfiles: ResolvedPipeline[],
   domains: DomainRegistry = emptyRegistry,
 ): string {
-  const isIdea = item.genre === UNTRIAGED;
+  const isIdea = item.pipeline === UNTRIAGED;
   const color = domainOf(item, domains).color;
-  const profile = profiles.find((p) => p.genre === item.genre);
-  const targets = profile
+  const isNightly = item.schedule === "nightly";
+  const pipeline = profiles.find((p) => p.pipeline === item.pipeline);
+  const targets = pipeline
     ? (() => {
-        const idx = profile.gates.indexOf(item.phase);
-        return idx > 0 ? profile.gates.slice(0, idx) : profile.gates.filter((g) => g !== item.phase);
+        const idx = item.step ? pipeline.gates.indexOf(item.step) : -1;
+        return idx > 0 ? pipeline.gates.slice(0, idx) : pipeline.gates.filter((g) => g !== item.step);
       })()
     : [];
 
-  const history = item.history.length
-    ? item.history.map((h) => `<div class="hist">${esc(h.at)} · <b>${esc(h.phase)}</b> · ${esc(h.status)}${h.note ? ` — ${esc(h.note)}` : ""}</div>`).join("")
+  // Timeline (was "History"): each entry with a small state dot.
+  const timeline = item.history.length
+    ? item.history.map((h) => `<div class="hist"><span class="gate-dot ${dotStateFromStatus(h.status)}" style="display:inline-block;vertical-align:middle;margin-right:6px"></span>${esc(h.at)} · <b>${esc(h.step)}</b> · ${esc(h.status)}${h.note ? ` — ${esc(h.note)}` : ""}</div>`).join("")
     : `<div class="hist">—</div>`;
+
+  // Pipeline node strip: Triage → <each gate> → <executor> → Done. Each node is
+  // a <details> that expands to its persisted verdict (gates) / executor result
+  // (terminal) / triage decision. State dot from the last matching history entry.
+  const pipelineNodes = (() => {
+    if (isIdea || !pipeline) return "";
+    const steps = pipelineSteps(pipeline); // gates + executor id
+    const states = stepStates(item, steps);
+    const pl = obj(item.payload);
+    const verdicts = obj(pl.verdicts);
+    const execResult = obj(pl.executorResult);
+    const triage = obj(pl.triage);
+    const executorId = pipeline.executors[0] ?? "";
+
+    const dot = (st: string) => `<span class="ndot ${st}"></span>`;
+    const node = (label: string, st: string, bodyHtml: string) =>
+      `<details class="node"><summary>${dot(st)}<span class="nlab">${esc(label)}</span><span class="kv">${esc(st)}</span></summary><div class="nbody">${bodyHtml}</div></details>`;
+    const arrow = `<div class="arrow" style="text-align:center;color:var(--muted)">↓</div>`;
+
+    const prettyOutput = (v: unknown): string => {
+      if (v == null) return "";
+      if (typeof v === "string") return `<div class="md">${mdToHtml(v)}</div>`;
+      return `<pre>${esc(JSON.stringify(v, null, 2))}</pre>`;
+    };
+
+    // Triage node — confidence + reason from payload.triage.
+    const triageBody = Object.keys(triage).length
+      ? `${typeof triage.confidence === "number" ? `<div><b>confidence:</b> ${triage.confidence}</div>` : ""}${typeof triage.reason === "string" ? `<div><b>reason:</b> ${esc(triage.reason)}</div>` : ""}`
+      : `<div class="kv">no triage record</div>`;
+    const triageNode = node("Triage", "passed", triageBody);
+
+    // Gate nodes — each gate's full verdict from payload.verdicts[step].
+    const gateNodes = pipeline.gates
+      .map((g) => {
+        const v = obj(verdicts[g]);
+        const st = states.get(g) ?? "pending";
+        const body = Object.keys(v).length
+          ? `${v.decision != null ? `<div><b>decision:</b> ${esc(String(v.decision))}</div>` : ""}${v.reason != null ? `<div><b>reason:</b> ${esc(String(v.reason))}</div>` : ""}${prettyOutput(v.output)}`
+          : st === "skipped"
+            ? `<div class="kv">skipped — this gate did not apply to the item</div>`
+            : `<div class="kv">no verdict recorded for this step</div>`;
+        return node(g, st, body);
+      })
+      .join(arrow);
+
+    // Executor node — payload.executorResult.
+    const branch = typeof execResult.branch === "string" ? execResult.branch : "";
+    const execBody = Object.keys(execResult).length
+      ? `${execResult.outcome != null ? `<div><b>outcome:</b> ${esc(String(execResult.outcome))}</div>` : ""}${execResult.verdict != null ? `<div><b>verdict:</b> ${esc(String(execResult.verdict))}</div>` : ""}${branch ? `<div><b>branch:</b> ${esc(branch)}</div>` : ""}${"pushed" in execResult ? `<div><b>pushed:</b> ${String(execResult.pushed)}</div>` : ""}${"pristine" in execResult ? `<div><b>pristine:</b> ${String(execResult.pristine)}</div>` : ""}${"reportPresent" in execResult ? `<div><b>report:</b> ${String(execResult.reportPresent)}</div>` : ""}${execResult.detail != null ? `<div><b>detail:</b> ${esc(String(execResult.detail))}</div>` : ""}${prettyOutput(execResult.output)}`
+      : `<div class="kv">not yet executed</div>`;
+    const execNode = executorId
+      ? node(`Executor · ${executorId}`, states.get(executorId) ?? "pending", execBody)
+      : "";
+
+    const doneNode = node("Done", item.state === "passed" ? "passed" : "pending", `<div class="kv">${item.state === "passed" ? "pipeline complete" : "not finished"}</div>`);
+
+    return `<h2>Pipeline</h2><div class="nodes">${triageNode}${arrow}${gateNodes}${execNode ? arrow + execNode : ""}${arrow}${doneNode}</div>`;
+  })();
 
   const promote = isIdea
     ? `<h2>Promote to a project</h2>
        <form class="act" method="post" action="/promote">
          <input type="hidden" name="id" value="${esc(item.id)}">
-         <select name="genre">${enabledProfiles.map((p) => `<option value="${esc(p.genre)}">${esc(p.label)}</option>`).join("")}</select>
+         <select name="pipeline">${enabledProfiles.map((p) => `<option value="${esc(p.pipeline)}">${esc(p.label)}</option>`).join("")}</select>
          <button type="submit">promote →</button>
        </form>`
     : "";
 
-  const parkedActions =
-    item.phaseStatus === "parked"
-      ? `<form class="act" method="post" action="/amend">
+  const parkedActions = (() => {
+    if (item.state !== "parked") {
+      return `<div class="kv">No human action needed at this step (${esc(item.state)}).</div>`;
+    }
+    // The gate that parked this step records its verdict (incl. `asks` — the
+    // concrete decisions the human must make) at payload.verdicts[step].output.
+    const pv = obj(obj(obj(item.payload).verdicts)[item.step ?? ""]);
+    const rawAsks = obj(pv.output).asks;
+    const asks = Array.isArray(rawAsks) ? rawAsks.filter((a) => typeof a === "string") as string[] : [];
+    const askList = asks.length
+      ? `<div class="asks"><div class="askhdr">To unblock, decide:</div><ol>${asks.map((a) => `<li>${esc(a)}</li>`).join("")}</ol></div>`
+      : `<div class="kv" style="margin-bottom:8px">This step needs a human call — answer below to re-arm and continue, or rewind to revisit an earlier step. (No structured asks recorded${pv.output ? "" : "; this item ran before asks were captured — re-run to get them"}.)</div>`;
+    return `${askList}
+         <form class="act" method="post" action="/amend">
            <input type="hidden" name="id" value="${esc(item.id)}">
-           <input type="text" name="note" placeholder="answer / amendment (re-arms the phase)" required>
-           <button type="submit">✎ amend</button>
+           <input type="text" name="note" placeholder="${asks.length ? "your decision(s) — answering the asks above re-arms the step" : "your decision / answer (re-arms the step)"}" required>
+           <button type="submit">✎ answer &amp; continue</button>
          </form>
          ${targets.length ? `<form class="act" method="post" action="/rewind">
            <input type="hidden" name="id" value="${esc(item.id)}">
-           <select name="toPhase">${targets.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
+           <select name="toStep">${targets.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
            <input type="text" name="note" placeholder="why rewind?" required>
            <button type="submit">⟲ rewind</button>
-         </form>` : ""}`
-      : `<div class="kv">No human action needed at this phase (${esc(item.phaseStatus)}).</div>`;
+         </form>` : ""}`;
+  })();
 
   const payloadObj = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
   const readonly = payloadObj.readonly === true;
@@ -452,18 +643,91 @@ export function renderProjectDetail(
     ? `<a href="/report/${esc(item.id)}">📄 view REPORT</a>`
     : `<span class="kv">no REPORT yet</span>`;
 
-  // Run button — triggers the engine pipeline (gates → effector) for a triaged
+  // Run button — triggers the engine pipeline (gates → executor) for a triaged
   // engine item. Read-only mirror items (nightly/SR cards) execute via their own
   // gauntlets, so they don't get it.
-  const runBlock = (!isIdea && profile && !readonly)
-    ? item.phaseStatus === "running"
-      ? `<h2>Run</h2><div class="kv">⏳ running the ${esc(item.genre)} pipeline (${esc(profile.gates.join(" → "))})… refresh to see the result.</div>`
+  // Native pipelines (app-refinement) execute against a target repo; the board
+  // runs the gates then spools execution. Surface a repo picker — prominent and
+  // required when unset, since the run fails cleanly without it.
+  const usesNative = !isIdea && !!pipeline && pipeline.executors.includes("native") && !readonly;
+  const curRepo = typeof payloadObj.repo === "string" ? payloadObj.repo : "";
+  const repoBlock = usesNative
+    ? `<h2>Target repo${curRepo ? "" : " ⚠"}</h2>
+       <form class="act" method="post" action="/set-repo">
+         <input type="hidden" name="id" value="${esc(item.id)}">
+         <input type="text" name="repo" value="${esc(curRepo)}" placeholder="/home/eric/600_apps/<app>" ${curRepo ? "" : "required"}>
+         <button type="submit">${curRepo ? "update repo" : "set repo"}</button>
+         <span class="kv">${curRepo ? "the app this pipeline refines (worktree + push target)" : "⚠ required — this pipeline can't execute until you bind the target app repo"}</span>
+       </form>`
+    : "";
+
+  const execId = (pipeline && pipeline.executors[0]) || "";
+  const runHint = execId === "native"
+    ? "runs the gates here, then queues native execution (worktree → claude → push)"
+    : `runs ${esc(pipeline?.gates.join(" → ") ?? "")}; writes a developed spec`;
+  // The prominent Run block is for items that haven't completed. A passed item
+  // leads with its Outcome (below) and offers only a muted re-run.
+  const runBlock = (!isIdea && pipeline && !readonly && item.state !== "passed")
+    ? item.state === "running"
+      ? `<h2>Run</h2><div class="kv">⏳ running the ${esc(item.pipeline)} pipeline (${esc(pipeline.gates.join(" → "))})… refresh to see the result.</div>`
       : `<h2>Run</h2>
          <form class="act" method="post" action="/run">
            <input type="hidden" name="id" value="${esc(item.id)}">
            <button type="submit">▶ run pipeline now</button>
-           <span class="kv">runs ${esc(profile.gates.join(" → "))}; writes a developed spec</span>
+           <span class="kv">${runHint}</span>
          </form>`
+    : "";
+
+  // Outcome — what a COMPLETED item produced + the next step. This is the answer
+  // to "what do I do now?" on a passed card (which otherwise dead-ends on "no
+  // human action needed"). project-ideation → a developed spec (rendered inline);
+  // native → a pushed branch + report.
+  const execResult = obj(payloadObj.executorResult);
+  const isDone = !isIdea && !readonly && item.state === "passed" && Object.keys(execResult).length > 0;
+  const specObj = obj(obj(execResult.output).spec);
+  const specPath = typeof (obj(execResult.output).specPath) === "string" ? String(obj(execResult.output).specPath) : "";
+  const branchStr = typeof execResult.branch === "string" ? execResult.branch : "";
+  const outcomeBody = Object.keys(specObj).length
+    ? `<div class="kv" style="margin-bottom:8px">This idea is now a <b>developed spec</b> — nothing more to do in this pipeline. Review it, then build it.</div>
+       <div class="md">
+         ${specObj.goal ? `<p><b>Goal:</b> ${esc(String(specObj.goal))}</p>` : ""}
+         ${Array.isArray(specObj.steps) ? `<p><b>Steps</b></p><ol>${(specObj.steps as unknown[]).map((s) => `<li>${esc(String(s))}</li>`).join("")}</ol>` : ""}
+         ${specObj.deliverable ? `<p><b>Deliverable:</b> ${esc(String(specObj.deliverable))}</p>` : ""}
+       </div>
+       ${specPath ? `<div class="kv">spec written to <code>${esc(specPath)}</code></div>` : ""}
+       <div class="kv" style="margin-top:8px"><b>Next:</b> build it — hit <b>▸ build this</b> below to hand the spec to the build pipeline, or flip auto-build on so it happens automatically when a spec is ready.</div>`
+    : `<div class="kv">${execResult.detail ? esc(String(execResult.detail)) : "completed"}${branchStr ? ` · branch <code>${esc(branchStr)}</code>${execResult.pushed ? " (pushed)" : ""}` : ""}.</div>
+       ${(payloadObj.hasReport || execResult.reportPresent) ? `<div class="act"><a href="/report/${esc(item.id)}">📄 view REPORT</a></div>` : ""}
+       <div class="kv" style="margin-top:8px"><b>Next:</b> review the result${branchStr ? " and the pushed branch — open a PR" : ""}.</div>`;
+  // Build handoff — on a DONE spec-bearing item, offer the one-shot "▸ build
+  // this" (POST /build) and the auto-advance toggle (POST /chain). Only when the
+  // item's pipeline declares a `next` AND it produced a spec (it has somewhere to
+  // hand off to). On → the build fires automatically when the spec is ready;
+  // off → it stops at the spec for review.
+  const hasNext = !!pipeline && typeof pipeline.next === "string" && !!pipeline.next;
+  const buildBlock = (hasNext && Object.keys(specObj).length)
+    ? `<form class="act" method="post" action="/build" style="margin-top:8px">
+         <input type="hidden" name="id" value="${esc(item.id)}">
+         <button type="submit">▸ build this</button>
+         <span class="kv">hands this spec to the <b>${esc(pipeline!.next!)}</b> pipeline now</span>
+       </form>
+       <form class="act" method="post" action="/chain">
+         <input type="hidden" name="id" value="${esc(item.id)}">
+         <input type="hidden" name="on" value="${item.chain ? "false" : "true"}">
+         <button type="submit">${item.chain ? "⛔ turn auto-build OFF" : "⚙ turn auto-build ON"}</button>
+         <span class="kv">${item.chain
+           ? "on → when the spec is ready it builds automatically; click to stop at the spec for review"
+           : "off → stops at the spec for review; turn on → when the spec is ready it builds automatically"}</span>
+       </form>`
+    : "";
+  const outcomeBlock = isDone
+    ? `<h2>✓ Done — outcome</h2>${outcomeBody}
+       ${buildBlock}
+       <form class="act" method="post" action="/run" style="margin-top:8px">
+         <input type="hidden" name="id" value="${esc(item.id)}">
+         <button type="submit">↻ re-run</button>
+         <span class="kv">re-runs the whole pipeline from the start</span>
+       </form>`
     : "";
 
   const actions = readonly
@@ -482,16 +746,16 @@ export function renderProjectDetail(
         `<h2>Investigation (read-only)</h2>
          <div class="kv">Produced by the sr_gauntlet overnight run.</div>
          <div class="act">${reportLink}</div>`
-    : `${promote}${runBlock}
+    : `${outcomeBlock}${promote}${repoBlock}${runBlock}
   <h2>Human-in-the-loop</h2>
   ${parkedActions}
 
   <h2>Schedule</h2>
   <form class="act" method="post" action="/nightly/toggle">
     <input type="hidden" name="id" value="${esc(item.id)}">
-    <input type="hidden" name="nightly" value="${item.nightly ? "false" : "true"}">
-    <button type="submit">${item.nightly ? "🌙 remove from nightly" : "🌙 run overnight"}</button>
-    <span class="kv">${item.nightly ? "queued for the overnight gauntlet run" : "runs only when advanced manually / on a beat"}</span>
+    <input type="hidden" name="nightly" value="${isNightly ? "false" : "true"}">
+    <button type="submit">${isNightly ? "🌙 remove from nightly" : "🌙 run overnight"}</button>
+    <span class="kv">${isNightly ? "queued for the overnight gauntlet run" : "runs only when advanced manually / on a beat"}</span>
   </form>
 
   <h2>Danger</h2>
@@ -504,7 +768,7 @@ export function renderProjectDetail(
   const body = `<div class="detail">
   <a href="/" class="kv">← board</a>
   <h2><span class="swatch" style="background:${esc(color)}"></span> ${esc(titleOf(item))}</h2>
-  <div class="kv">${isIdea ? "idea (untriaged)" : `project · ${esc(item.genre)}`}${goal ? ` · goal: <b>${esc(goal)}</b>` : ""} · phase <b>${esc(item.phase)}</b> · ${esc(item.phaseStatus)} ${item.nightly ? "· 🌙 nightly" : ""}</div>
+  <div class="kv">${isIdea ? "idea (untriaged)" : `project · ${esc(item.pipeline)}`}${goal ? ` · goal: <b>${esc(goal)}</b>` : ""} · step <b>${esc(item.step ?? item.stage ?? "—")}</b> · ${esc(item.state)} ${isNightly ? "· 🌙 nightly" : ""}</div>
   ${item.parkedReason ? `<div class="reason">${esc(item.parkedReason)}</div>` : ""}
   ${input ? `<div class="md"><p><em>${esc(input)}</em></p></div>` : ""}
 
@@ -512,11 +776,13 @@ export function renderProjectDetail(
 
   ${cardBody ? `<h2>Card</h2><div class="md">${mdToHtml(cardBody)}</div>` : ""}
 
+  ${pipelineNodes}
+
   <h2>Payload</h2>
   <pre>${esc(JSON.stringify(item.payload, null, 2))}</pre>
 
-  <h2>History</h2>
-  ${history}
+  <h2>Timeline</h2>
+  ${timeline}
 </div>`;
   return layout("", body);
 }
@@ -527,7 +793,7 @@ export function renderProjectDetail(
 export function renderSr(
   srs: Item[],
   maxPerNight: number,
-  profiles: ResolvedProfile[],
+  profiles: ResolvedPipeline[],
   domains: DomainRegistry = emptyRegistry,
 ): string {
   const srStatusOf = (item: Item): string => {
@@ -718,8 +984,8 @@ export function renderNightlyProject(item: Item): string {
  *  read-only detail (/project/nbf:<goal>). */
 export function renderFinished(
   finished: Item[],
-  profiles: ResolvedProfile[] = [],
-  enabled: ResolvedProfile[] = [],
+  profiles: ResolvedPipeline[] = [],
+  enabled: ResolvedPipeline[] = [],
   domains: DomainRegistry = emptyRegistry,
 ): string {
   const ctx: CardCtx = { domains, profiles, enabled, back: "/finished" };
@@ -793,6 +1059,100 @@ export function renderFinishedProject(item: Item): string {
   ${goalBody ? `<h2>Goal</h2><div class="md">${mdToHtml(goalBody)}</div>` : ""}
 </div>`;
   return layout("finished", body);
+}
+
+// The canon glossary — the source of truth for the UI's vocabulary. Data-driven
+// (a table rendered from this list, not hardcoded rows), so a term added here
+// shows up on /reference with no template edit.
+const GLOSSARY: { term: string; def: string }[] = [
+  { term: "Pipeline", def: "The data-driven recipe for one kind of work — which steps fire, in what executor mode, with which executor and LLM." },
+  { term: "Step", def: "A single position in a pipeline: a gate, Triage, or the terminal executor id." },
+  { term: "Stage", def: "Hopper-only idea maturation: Captured → Shaping → Ready (before promotion to a project)." },
+  { term: "State", def: "An item's execution state at its current step: pending, running, passed, parked, or failed." },
+  { term: "Executor", def: "The side-effecting terminal step of a pipeline. native = in-process worktree + headless Claude; gauntlet = dispatch to an external standalone gauntlet; spec = synthesize and write a spec." },
+  { term: "executorMode", def: "How the executor runs: read-only vs write (commits/pushes a branch)." },
+  { term: "Schedule", def: "The 'when' axis, orthogonal to the pipeline: Now (on demand) or Overnight (the unattended batch)." },
+  { term: "Domain", def: "The identity axis — a card's color + tag, persistent across the pipeline." },
+  { term: "Idea / Project", def: "An Idea is untriaged (lives in the Hopper). A Project is triaged into a pipeline (lives on the Flow board)." },
+  { term: "Gate", def: "A pre-executor check that passes, parks (needs you), or fails an item at a step." },
+  { term: "Triage", def: "The classification that routes an idea into a pipeline, with a confidence + reason." },
+  { term: "Flow board", def: "The main board — triaged Projects in state lanes, each card showing its gate-dot progress." },
+];
+
+/** Reference: a static glossary of the canon + the live pipelines from the
+ *  catalog (label, gates in order, executor + mode, enabled). Data-driven. */
+export function renderReference(pipelines: ResolvedPipeline[]): string {
+  const rows = GLOSSARY.map(
+    (g) => `<tr><td style="white-space:nowrap;vertical-align:top"><b>${esc(g.term)}</b></td><td>${esc(g.def)}</td></tr>`,
+  ).join("");
+  const plRows = pipelines.length
+    ? pipelines
+        .map(
+          (p) => `<tr>
+            <td style="vertical-align:top"><b style="color:${esc(p.color)}">${esc(p.label)}</b><div class="kv">${esc(p.pipeline)}</div></td>
+            <td style="vertical-align:top">${p.gates.map((gn) => `<span class="badge">${esc(gn)}</span>`).join(" ")}</td>
+            <td style="vertical-align:top;white-space:nowrap">${esc(p.executors.join(", "))}<div class="kv">${esc(p.executorMode)}</div></td>
+            <td style="vertical-align:top">${p.enabled ? "✓" : "—"}</td>
+          </tr>`,
+        )
+        .join("")
+    : `<tr><td colspan="4" class="empty">no pipelines on disk</td></tr>`;
+  const body = `<div class="detail" style="max-width:920px">
+  <h2>Glossary</h2>
+  <table style="width:100%;border-collapse:collapse" class="ref">
+    <thead><tr><th style="text-align:left;padding:6px 8px;color:var(--dim)">Term</th><th style="text-align:left;padding:6px 8px;color:var(--dim)">Definition</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <h2>Live pipelines</h2>
+  <table style="width:100%;border-collapse:collapse" class="ref">
+    <thead><tr><th style="text-align:left;padding:6px 8px;color:var(--dim)">Pipeline</th><th style="text-align:left;padding:6px 8px;color:var(--dim)">Gates (in order)</th><th style="text-align:left;padding:6px 8px;color:var(--dim)">Executor</th><th style="text-align:left;padding:6px 8px;color:var(--dim)">Enabled</th></tr></thead>
+    <tbody>${plRows}</tbody>
+  </table>
+</div>`;
+  return layout("reference", body);
+}
+
+// PR-review lanes, by status (the canon set from review/contract.ts). A new
+// status would need a lane added here, but the set is closed (Zod enum).
+const REVIEW_LANES: { key: PrReview["status"]; label: string }[] = [
+  { key: "needs-you", label: "Needs You" },
+  { key: "merged", label: "Merged" },
+  { key: "requeued", label: "Requeued" },
+  { key: "rejected", label: "Rejected" },
+];
+
+function reviewCard(r: PrReview): string {
+  const prLink = r.prUrl
+    ? `<a class="md" style="color:var(--acc2)" href="${esc(r.prUrl)}" rel="noreferrer">${esc(r.prUrl)}</a>`
+    : `<span class="kv">no PR yet</span>`;
+  const risks = r.risks.length
+    ? `<ul style="margin:6px 0 0 16px;padding:0">${r.risks.map((x) => `<li class="kv">${esc(x)}</li>`).join("")}</ul>`
+    : "";
+  return `<div class="card" style="border-left-color:var(--acc2)">
+    <div class="badges">
+      <span class="badge type">${esc(r.verdict)}</span>
+      <span class="badge" title="repo">${esc(r.repo)}</span>
+    </div>
+    <a class="title" href="/project/${esc(r.id)}">${esc(r.title)}</a>
+    ${r.recommendation ? `<div class="reason">${esc(r.recommendation)}</div>` : ""}
+    <div class="why" style="margin-top:6px">${prLink}</div>
+    ${risks}
+  </div>`;
+}
+
+/** Reviews: morning PR reviews grouped into lanes by status. Each card shows
+ *  title, repo, verdict, recommendation, a PR link, and risks. Empty → an
+ *  empty state (the reviews dir may be absent / unwritten). */
+export function renderReviews(reviews: PrReview[]): string {
+  if (!reviews.length) {
+    return layout("reviews", `<div class="wrap"><div class="empty" style="padding:24px">no PR reviews yet — the morning review pass writes them after the overnight run pushes branches</div></div>`);
+  }
+  const cols = REVIEW_LANES.map((lane) => {
+    const inLane = reviews.filter((r) => r.status === lane.key);
+    const body = inLane.length ? inLane.map(reviewCard).join("") : `<div class="empty">—</div>`;
+    return `<section class="col"><h2>${esc(lane.label)} <span class="count">${inLane.length}</span></h2><div class="cards">${body}</div></section>`;
+  }).join("");
+  return layout("reviews", `<div class="wrap"><div class="board">${cols}</div></div>`);
 }
 
 /** Render a run's REPORT.md (plain — escaped <pre>). */

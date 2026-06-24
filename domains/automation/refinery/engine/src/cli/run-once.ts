@@ -1,24 +1,24 @@
-// Orchestration core for "run a genre one pass" — the testable heart of the
-// CLI shell. Loads-or-creates the item, runs it through the profile's gate
+// Orchestration core for "run a pipeline one pass" — the testable heart of the
+// CLI shell. Loads-or-creates the item, runs it through the pipeline's gate
 // pipeline (slice-03 runner + slice-04 gates), and — only if every gate passed
-// — fires the genre's integrate effector. Everything is injected (profile,
-// gates, integrate effector, store, clock) so the e2e test drives it with a
+// — fires the pipeline's integrate executor. Everything is injected (pipeline,
+// gates, integrate executor, store, clock) so the e2e test drives it with a
 // stub LLM and tmp dirs; cli.ts wires the real adapters.
 
 import { Clock, runPass } from "../runner.js";
 import {
-  EffectorResult,
+  ExecutorResult,
   GateModule,
   Item,
-  ItemEffector,
+  Executor,
   ItemStore,
-  Profile,
+  Pipeline,
 } from "../contracts.js";
 
-export interface GenreDeps {
-  profile: Profile;
+export interface PipelineDeps {
+  pipeline: Pipeline;
   gates: GateModule[];
-  integrate: ItemEffector;
+  integrate: Executor;
   store: ItemStore;
   clock?: Clock;
 }
@@ -27,21 +27,21 @@ export interface RunOnceResult {
   item: Item;
   ran: string[];
   parked: boolean;
-  integrated: EffectorResult | null;
+  integrated: ExecutorResult | null;
 }
 
-/** Build a fresh item for a project-ideation-style genre from an input sentence. */
+/** Build a fresh item for a project-ideation-style pipeline from an input sentence. */
 export function newIdeationItem(
   id: string,
-  genre: string,
+  pipeline: string,
   input: string,
-  firstPhase: string,
+  firstStep: string,
 ): Item {
   return {
     id,
-    genre,
-    phase: firstPhase,
-    phaseStatus: "pending",
+    pipeline,
+    step: firstStep,
+    state: "pending",
     payload: {
       input,
       title: input.length > 80 ? `${input.slice(0, 77)}…` : input,
@@ -52,16 +52,16 @@ export function newIdeationItem(
   };
 }
 
-export async function runGenreOnce(
+export async function runPipelineOnce(
   opts: { id: string; input: string },
-  deps: GenreDeps,
+  deps: PipelineDeps,
 ): Promise<RunOnceResult> {
   const existing = await deps.store.load(opts.id);
   const item =
     existing ??
-    newIdeationItem(opts.id, deps.profile.genre, opts.input, deps.profile.gates[0]!);
+    newIdeationItem(opts.id, deps.pipeline.pipeline, opts.input, deps.pipeline.gates[0]!);
 
-  const result = await runPass(item, deps.profile, deps.gates, {
+  const result = await runPass(item, deps.pipeline, deps.gates, {
     store: deps.store,
     clock: deps.clock,
   });
@@ -73,12 +73,21 @@ export async function runGenreOnce(
 
   const integrated = await deps.integrate.run(result.item);
   const at = (deps.clock ?? (() => new Date().toISOString()))();
+  // Persist the full executor result (branch/pushed/pristine/verdict/detail)
+  // into the payload so the UI can surface what the executor did — history kept
+  // only the one-line detail before.
+  const basePayload =
+    result.item.payload && typeof result.item.payload === "object"
+      ? (result.item.payload as Record<string, unknown>)
+      : {};
   const done: Item = {
     ...result.item,
+    payload: { ...basePayload, executorResult: integrated },
+    state: integrated.outcome === "succeeded" ? "passed" : "failed",
     history: [
       ...result.item.history,
       {
-        phase: deps.integrate.id,
+        step: deps.integrate.id,
         status: integrated.outcome === "succeeded" ? "passed" : "failed",
         at,
         note: integrated.detail,

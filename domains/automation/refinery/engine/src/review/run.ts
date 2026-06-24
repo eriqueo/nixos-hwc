@@ -143,6 +143,25 @@ function prBody(review: PrReview): string {
   return lines.join("\n");
 }
 
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
+/** Retry an async op a few times with exponential backoff. Per-card review hits
+ *  transient LLM / gh failures (the 2026-06-24 pass lost 3/10 cards this way);
+ *  one retry pass recovers most of them. The op must be idempotent — the review
+ *  body is (read-only facts, existingPr-before-createPr, overwriting store.save). */
+async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastErr = e;
+      if (i < attempts - 1) await sleep(2000 * 3 ** i); // 2s, then 6s
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
 /**
  * Review every last-night done card: gather git facts, judge the branch, open a
  * PR if none exists, persist the record. Per-card failures are collected so one
@@ -175,53 +194,60 @@ export async function runMorningReview(
         continue;
       }
 
-      const base = await ports.facts.resolveBase(card.repo);
-      const [diffstat, commits, mergeable] = await Promise.all([
-        ports.facts.diffstat({ repo: card.repo, base, branch: card.branch }),
-        ports.facts.commits({ repo: card.repo, base, branch: card.branch }),
-        ports.facts
-          .isMergeable({ repo: card.repo, base, branch: card.branch })
-          .then((x) => x as boolean | null)
-          .catch(() => null),
-      ]);
+      // Per-card retry with backoff: the LLM review + gh calls fail transiently
+      // (the 2026-06-24 pass lost 3/10 this way). Retry the whole side-effecting
+      // body — facts are read-only, existingPr makes PR creation idempotent, and
+      // store.save overwrites — so a retry never double-acts.
+      const { persisted, openedNew } = await withRetry(async () => {
+        const base = await ports.facts.resolveBase(card.repo);
+        const [diffstat, commits, mergeable] = await Promise.all([
+          ports.facts.diffstat({ repo: card.repo, base, branch: card.branch }),
+          ports.facts.commits({ repo: card.repo, base, branch: card.branch }),
+          ports.facts
+            .isMergeable({ repo: card.repo, base, branch: card.branch })
+            .then((x) => x as boolean | null)
+            .catch(() => null),
+        ]);
 
-      const reportText = readReport(cfg.vaultDir, card.run);
+        const reportText = readReport(cfg.vaultDir, card.run);
 
-      const input: ReviewInput = {
-        id: card.id,
-        goal: card.goal,
-        cardSlug: card.cardSlug,
-        title: card.title,
-        repo: card.repo,
-        branch: card.branch,
-        base,
-        diffstat,
-        commits,
-        mergeable,
-        reportText,
-        cardBody: card.body,
-        reportRelPath: card.run,
-        reviewedAt: now(),
-      };
-
-      const review = await reviewBranch(input, ports.llm);
-
-      // Open the PR idempotently: reuse an existing one, else create.
-      const existing = await ports.github.existingPr({ repo: card.repo, branch: card.branch });
-      const pr =
-        existing ??
-        (await ports.github.createPr({
-          repo: card.repo,
-          base,
-          branch: card.branch,
+        const input: ReviewInput = {
+          id: card.id,
+          goal: card.goal,
+          cardSlug: card.cardSlug,
           title: card.title,
-          body: prBody(review),
-        }));
-      if (!existing) summary.opened += 1;
+          repo: card.repo,
+          branch: card.branch,
+          base,
+          diffstat,
+          commits,
+          mergeable,
+          reportText,
+          cardBody: card.body,
+          reportRelPath: card.run,
+          reviewedAt: now(),
+        };
 
-      const persisted: PrReview = { ...review, prUrl: pr.url, prNumber: pr.number };
-      await ports.store.save(persisted);
+        const review = await reviewBranch(input, ports.llm);
 
+        // Open the PR idempotently: reuse an existing one, else create.
+        const existing = await ports.github.existingPr({ repo: card.repo, branch: card.branch });
+        const pr =
+          existing ??
+          (await ports.github.createPr({
+            repo: card.repo,
+            base,
+            branch: card.branch,
+            title: card.title,
+            body: prBody(review),
+          }));
+
+        const rec: PrReview = { ...review, prUrl: pr.url, prNumber: pr.number };
+        await ports.store.save(rec);
+        return { persisted: rec, openedNew: !existing };
+      });
+
+      if (openedNew) summary.opened += 1;
       summary.reviewed += 1;
       summary.byVerdict[persisted.verdict] += 1;
       summary.items.push(persisted);
@@ -236,7 +262,18 @@ export async function runMorningReview(
   // via reopenProject ("send back with amendments").
   for (const proj of nightlyCardProjects(cfg.vaultDir)) {
     const payload = proj.payload as { goal: string; steps: NbStep[] };
-    if (isProjectComplete(payload.steps) && graduateProject(cfg.vaultDir, payload.goal)) {
+    if (!isProjectComplete(payload.steps)) continue;
+    // Graduate ONLY when every reviewable step (done + has a run dir → produced a
+    // branch) carries a review record. Otherwise a card that errored in review
+    // (no record) would vanish into _finished/ and never get retried — exactly
+    // what swept the 3 errored cards off the board on 2026-06-24. Steps with no
+    // run dir produced no branch and don't block graduation.
+    const reviewableIds = payload.steps
+      .filter((s) => s.run)
+      .map((s) => `${payload.goal}/${s.file.replace(/^\d\d-/, "").replace(/\.md$/, "")}`);
+    const records = await Promise.all(reviewableIds.map((id) => ports.store.load(id)));
+    if (!records.every((r) => r != null)) continue; // an errored/unreviewed step — keep it on the active board
+    if (graduateProject(cfg.vaultDir, payload.goal)) {
       summary.graduated.push(payload.goal);
     }
   }

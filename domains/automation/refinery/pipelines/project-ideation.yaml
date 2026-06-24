@@ -1,0 +1,20 @@
+# Project-ideation pipeline — the first proof-substance: raw idea → developed spec,
+# no code execution. The pipeline is the subset of gate modules that apply to a
+# greenfield, non-trivial item (brownfield-only gates self-skip via applies()).
+# The integrate executor (spec) writes the developed spec to a scratch dir.
+pipeline: project-ideation
+label: Project Ideation
+color: "#a3be8c" # HWC palette: success (sage green)
+source: cli-input
+gates:
+  - stepwise-refinement
+  - principles-create
+  - premortem
+executorMode: none
+executors:
+  - spec
+# next: the chain link — a developed spec hands off to the `build` pipeline that
+# implements it. Per-item gated by item.chain (auto-advance toggle on the board):
+# on → builds automatically when the spec is ready; off → stops at the spec for
+# review. A one-shot "▸ build this" button (POST /build) also fires this handoff.
+next: build

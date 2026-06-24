@@ -1,0 +1,33 @@
+# Build pipeline — spec → code. The second half of the idea → spec → build
+# assembly line: it takes a developed spec (from project-ideation) and IMPLEMENTS
+# it in an existing target repo. Brownfield + native, mirroring app-refinement:
+# the worktree IS the target repo, so the prime directive is "don't break working
+# behavior". `source: chain` marks it as a chained successor — it's created by the
+# handoff helper, not by triage/intake.
+#
+# It is the terminal pipeline of the chain (no `next`): a build either ships a
+# branch or parks for a human. Scheduling is orthogonal (Run now by default;
+# flag nightly to batch into the overnight lane — same native executor).
+pipeline: build
+label: Build
+color: "#5e81ac" # HWC palette: accent (nord blue) — distinct from ideation/refine/nightly
+source: chain
+# The spec was already vetted in ideation (stepwise-refinement → principles →
+# premortem), so build does NOT re-litigate it — re-running those here just parks
+# good specs and kills unattended throughput. One gate: admission-gates, the
+# "safe to run unattended?" go/no-go (the 8 admission gates) before native execute.
+gates:
+  - admission-gates
+executorMode: write
+executors:
+  - native
+llmProvider: claude-cli
+# defaultTraits: a build implements a spec in an existing target repo → brownfield
+# + write (carried into the native executor's mode).
+defaultTraits:
+  mode: brownfield
+  touchesExistingCode: true
+  writeMode: true
+# enabled: surfaced on the board (chained successors land here). Triage won't
+# route to it directly (source: chain), but the catalog still lists it.
+enabled: true

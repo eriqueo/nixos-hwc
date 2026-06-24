@@ -28,9 +28,15 @@ business/
 ```
 
 ## Changelog
+- 2026-06-19: Moved `datax-monitor` checkout `~/projects/datax-monitor` →
+  `~/600_apps/datax-monitor` to match every other app (lead-scout, todui, khalt,
+  sr_analyzer…). Updated the `projectDir` default in `datax-monitor/index.nix`
+  accordingly; nothing else references the old path. Zero-downtime on the server
+  (moved + symlinked old path so the live service kept serving, rebuilt to
+  repoint the unit, dropped the symlink).
 - 2026-06-18: Added `datax-monitor` — standalone DX1 agent-execution diagnostic
   dashboard (`hwc.business.dataxMonitor`). Native out-of-store Node app at
-  `~/projects/datax-monitor` (mirrors lead-scout): one Hono server on :4400
+  `~/600_apps/datax-monitor` (mirrors lead-scout): one Hono server on :4400
   serves the React SPA (`ui/dist`) + REST API; `datax-monitor-migrate` oneshot
   applies the schema before the API; `datax-monitor-ingest` oneshot + 4h timer
   pulls Firestore executions, classifies them, and writes the local

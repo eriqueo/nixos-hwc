@@ -47,7 +47,8 @@ in
       notificationSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = [ "no-reply@" "noreply@" "notifications@" "notices@" "github.com" ]; };
       financeSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = [ "amazon.com" "paypal.com" "stripe.com" "squareup.com" "intuit.com" "quickbooks" "chase.com" "bankofamerica.com" ]; };
       actionSubjects = lib.mkOption { type = lib.types.listOf lib.types.str; default = [ "invoice" "quote" "proposal" "estimate" "RFP" "action required" "approve" "signature" "past due" ]; };
-      trashSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; description = "Senders whose mail is auto-trashed on arrival."; };
+      trashSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; description = "Senders whose mail is auto-trashed on arrival (+trash -inbox -unread, scoped to tag:new)."; };
+      archiveSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; description = "Senders whose mail is auto-archived on arrival (+archive -inbox, kept but out of inbox; scoped to tag:new)."; };
     };
   };
 
