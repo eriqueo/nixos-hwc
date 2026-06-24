@@ -73,6 +73,15 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-06-24: aerc view + readability overhaul. Fixed the main contrast bug — the
+  `[user] default` style was dim `fg3` slate (unreadable on dark bg for every
+  uncategorized message); now the palette `fg1`. Added scoped views (`focus`
+  [new default], `today`, `week`, `people`) + colour-grouped **family aggregates**
+  (`business`=work/office/hwcmt, `money`=finance/bank/insurance, `growth`,
+  `system`) + `family`/`keep`/`all`/`newsletters`/`notifications`, so the sidebar
+  leads with manageable views instead of the 4.6k `inbox_i` firehose. `folders-sort`
+  reordered; existing per-tag folders kept (binds unchanged). Note: aerc 0.21 has
+  NO column-header feature (`index-columns` defines columns but renders no header row).
 - 2026-06-23: Persisted the Gmail-cleanup rules declaratively. New `hwc.mail.notmuch.rules.archiveSenders` option (parallels `trashSenders`) → `+archive -inbox` on `tag:new`. `profiles/mail/home.nix` now sets `trashSenders` (lead-gen/marketing/social) + `archiveSenders` (retail/coaching/bulk) from the 2026-06 backlog audit, so future noise auto-classifies out of the inbox. Both destructive rules are `NOT tag:keep`-guarded, and the post-new hook gained a permanent **keep shield** (`-trash` for `tag:keep AND tag:trash`) so family/friends (`+keep`) can never be auto-trashed (e.g. by afew re-tagging a kept msg that also sits in a Trash folder). aerc gained a non-inbox-scoped **`keep_k`** virtual folder (`tags.nix` flagTags) surfacing the full ~4.4k family/friends archive.
 - 2026-06-22: Enabled IMAP sync for both Gmail accounts (`gmail-personal`, `gmail-business`) for a one-time backlog cleanup into notmuch. `sync.enable false→true`; wildcards bounded to `[ "INBOX" ]` only (NOT `[Gmail]/*`) to avoid pulling the `[Gmail]/All Mail` archive superset (~tens of thousands, duplicated against Proton-forwarded copies via Message-ID). Gmail "archive" = expunge from the INBOX channel (message survives in All Mail). First sync verified additive (Create Near). App passwords in `gmail-{personal,business}-password` agenix secrets confirmed valid via IMAP probe.
 - 2026-06-11: Added `tasks/` — VTODO/Reminders sync via vdirsyncer + todoman CLI. Contributes a `[pair tasks]` (item_types=["VTODO"]) to the calendar vdirsyncer config via new `hwc.mail.calendar.extraVdirsyncerPairs`, so there's one config file and one sync timer. Reuses calendar's icloud account + apple-app-pw secret. TUI (`todui`) deferred to Phase B.
