@@ -1,4 +1,4 @@
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, aercPkg, ... }:
 let
     common    = import ../../accounts/helpers.nix { inherit lib; };
     accounts  = config.hwc.mail.accounts or {};
@@ -119,7 +119,7 @@ default.dim = true
   bundledStylesets = [ "blue" "catppuccin" "default" "dracula" "monochrome" "nord" "pink" "solarized" "solarized-dark" ];
   stylesetFiles = lib.listToAttrs (map (name: {
     name = ".config/aerc/stylesets/${name}";
-    value.text = builtins.readFile "${pkgs.aerc}/share/aerc/stylesets/${name}" + tagUserSection;
+    value.text = builtins.readFile "${aercPkg}/share/aerc/stylesets/${name}" + tagUserSection;
   }) bundledStylesets) // {
     ".config/aerc/stylesets/hwc".text = stylesetConf;
   };
@@ -162,15 +162,15 @@ in
       address-book-cmd = notmuch address --format=text --output=recipients "%s"
       file-picker-cmd = ${pkgs.yazi}/bin/yazi --chooser-file %s
       [filters]
-      text/html = ${pkgs.aerc}/libexec/aerc/filters/html
-      text/plain = ${pkgs.aerc}/libexec/aerc/filters/wrap -w $(${pkgs.ncurses}/bin/tput cols) | ${pkgs.aerc}/libexec/aerc/filters/colorize
-      text/calendar = ${pkgs.aerc}/libexec/aerc/filters/calendar
+      text/html = ${aercPkg}/libexec/aerc/filters/html
+      text/plain = ${aercPkg}/libexec/aerc/filters/wrap -w $(${pkgs.ncurses}/bin/tput cols) | ${aercPkg}/libexec/aerc/filters/colorize
+      text/calendar = ${aercPkg}/libexec/aerc/filters/calendar
       text/* = cat -
-      message/delivery-status = ${pkgs.aerc}/libexec/aerc/filters/colorize
+      message/delivery-status = ${aercPkg}/libexec/aerc/filters/colorize
       image/* = ${pkgs.bash}/bin/bash -lc 'if [ -n "$KITTY_WINDOW_ID" ]; then ${pkgs.kitty}/bin/kitty +kitten icat --stdin yes; else ${pkgs.chafa}/bin/chafa -f sixel -s $(${pkgs.ncurses}/bin/tput cols)x0 -; fi'
       application/pdf = ${pkgs.poppler-utils}/bin/pdftotext -layout - -
       application/json = ${pkgs.jq}/bin/jq -C . 2>/dev/null || cat -
-      subject,~^\[PATCH = ${pkgs.aerc}/libexec/aerc/filters/hldiff
+      subject,~^\[PATCH = ${aercPkg}/libexec/aerc/filters/hldiff
 
       [openers]
       text/html = ${config.home.homeDirectory}/.local/bin/hwc-open
@@ -190,7 +190,7 @@ in
       On {{.DateAutoFormat .OriginalDate.Local}}, {{index (.OriginalFrom | names) 0}} wrote:
 
       {{ if eq .OriginalMIMEType "text/html" -}}
-      {{- trimSignature (exec `${pkgs.aerc}/libexec/aerc/filters/html` .OriginalText) | quote -}}
+      {{- trimSignature (exec `${aercPkg}/libexec/aerc/filters/html` .OriginalText) | quote -}}
       {{- else -}}
       {{- trimSignature .OriginalText | quote -}}
       {{- end}}
@@ -202,7 +202,7 @@ in
   } // stylesetFiles;
 
   packages = with pkgs; [
-    aerc msmtp isync w3m notmuch urlscan ripgrep glow pandoc
+    aercPkg msmtp isync w3m notmuch urlscan ripgrep glow pandoc
     chafa poppler-utils jq mpv xdg-utils ov xclip
   ];
 

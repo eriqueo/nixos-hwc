@@ -116,6 +116,21 @@
       url = "github:eriqueo/workbench";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # aerc — forked notmuch mail TUI (which-key leader popup + msglist column
+    # headers, config-gated default-off). Same shared-remote model as
+    # todui/khalt/workbench: private GitHub repo via a github: input. The flake
+    # packages via overrideAttrs on nixpkgs' aerc @ 0.21.0, so filters/stylesets/
+    # man pages come out identical. Ship: push to eriqueo/aerc →
+    # `nix flake update aerc` → rebuild. Iterate via its devShell (nix develop →
+    # make → ./aerc), no rebuild to test code.
+    # Pinned to /main explicitly: eriqueo/aerc is a true GitHub fork of
+    # rjarry/aerc, so its default branch is `master` (upstream lineage). Our
+    # flake + feature work lives on `main`.
+    aerc = {
+      url = "github:eriqueo/aerc/main";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   #============================================================================
