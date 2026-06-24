@@ -34,6 +34,10 @@ TRIAGE_MAX = int(os.environ.get("MJ_TRIAGE_MAX_AGE_DAYS", "30"))
 STATE_DIR  = os.environ.get("MJ_STATE_DIR", os.path.expanduser("~/.local/state/mail-janitor"))
 NOTIFY     = os.environ.get("MJ_NOTIFY_URL", "")
 ACCOUNTS   = json.loads(os.environ.get("MJ_ACCOUNTS", "[]"))
+# Human-decided junk domains (fed from hwc.mail.notmuch.rules.trashSenders — one
+# source of truth). These marketing/lead-gen senders use personal-looking from
+# addresses the heuristics miss, so name them explicitly -> NOISE.
+DENY       = tuple(d.lower() for d in json.loads(os.environ.get("MJ_DENY", "[]")))
 TRIAGE_LABEL = "Newsletters-Triage"
 
 FREE={"gmail.com","yahoo.com","aol.com","icloud.com","me.com","mac.com","hotmail.com","outlook.com","comcast.net","msn.com","live.com","mcn.net","proton.me","ymail.com","yahoo.co.uk"}
@@ -55,6 +59,8 @@ def classify(a, subj):
         return "PRESERVE"                                               # security/account alerts
     # --- newsletters -> TRIAGE (collect for review, don't trash outright) ---
     if any(n in local for n in NEWS_LOCAL): return "TRIAGE"
+    # --- explicitly denied (trashSenders) -> NOISE ---
+    if any(dom == dd or dom.endswith("." + dd) for dd in DENY): return "NOISE"
     # --- clear junk ---
     if any(s in a for s in STREAM) or any(s in a for s in SOCIAL): return "NOISE"
     if any(e in dom for e in ESP): return "NOISE"

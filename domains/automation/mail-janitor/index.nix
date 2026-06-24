@@ -22,6 +22,10 @@ let
   notifyCfg = config.hwc.notifications.notify;
   paths     = config.hwc.paths;
   agentDir  = "${paths.nixos}/domains/automation/mail-janitor";
+  # One source of truth: the same trashSenders that drive the local notmuch rules
+  # also tell the janitor which marketing/lead-gen senders are junk.
+  mailRules = config.home-manager.users.eric.hwc.mail.notmuch.rules or {};
+  denyDomains = mailRules.trashSenders or [];
 in
 {
   options.hwc.automation.mailJanitor = {
@@ -90,6 +94,7 @@ in
         MJ_STATE_DIR           = cfg.stateDir;
         MJ_NOTIFY_URL          = cfg.notifyUrl;
         MJ_ACCOUNTS            = builtins.toJSON cfg.accounts;
+        MJ_DENY                = builtins.toJSON denyDomains;
       };
       path = [ pkgs.python3 ];
       serviceConfig = {
