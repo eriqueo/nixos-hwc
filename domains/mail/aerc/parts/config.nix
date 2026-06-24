@@ -13,6 +13,28 @@ let
         in if nmRoot != "" then nmRoot else "${pathBase}/Maildir";
 
   queries = ''
+    # ── Focus: the manageable daily views ──
+    focus          = tag:inbox AND tag:unread AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:trash
+    today          = tag:inbox AND date:1d.. AND NOT tag:trash
+    week           = tag:inbox AND date:1w.. AND NOT tag:trash
+    people         = tag:inbox AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:sent AND NOT tag:trash
+
+    # ── Relationships ──
+    family         = tag:family AND NOT tag:trash
+    keep           = tag:keep
+
+    # ── Family aggregates (colour-grouped) ──
+    business       = tag:inbox AND (tag:work OR tag:office OR tag:hwcmt) AND NOT tag:trash
+    money          = tag:inbox AND (tag:finance OR tag:bank OR tag:insurance) AND NOT tag:trash
+    growth         = tag:inbox AND (tag:admin OR tag:coaching) AND NOT tag:trash
+    system         = tag:inbox AND (tag:tech OR tag:website) AND NOT tag:trash
+
+    # ── Bulk / review ──
+    all            = tag:inbox AND NOT tag:trash
+    newsletters    = tag:inbox AND tag:newsletter AND NOT tag:trash
+    notifications  = tag:inbox AND tag:notification AND NOT tag:trash
+
+    # ── System + per-tag drill-down ──
     inbox_i        = tag:inbox AND NOT tag:trash
     unread_u       = tag:unread AND NOT tag:trash
     sent_s         = tag:sent
@@ -34,9 +56,9 @@ ${tagQueries}
     query-map           = ${config.home.homeDirectory}/.config/aerc/notmuch-queries
     from                = Eric <eric@iheartwoodcraft.com>
     outgoing            = ${pkgs.msmtp}/bin/msmtp
-    default             = inbox_i
+    default             = focus
     enable-folders-sort = true
-    folders-sort        = inbox_i,unread_u,action_!,pending_?,important,drafts,sent_s,Archive_a,trash_d,spam_z
+    folders-sort        = focus,today,week,people,action_!,pending_?,family,keep,business,money,growth,system,all,newsletters,notifications,inbox_i,unread_u,important,drafts,sent_s,Archive_a,trash_d,spam_z
   '';
 
   accountsFile = pkgs.writeText "aerc-accounts.conf" accountsConf;
