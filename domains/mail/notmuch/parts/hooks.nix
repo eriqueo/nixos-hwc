@@ -49,8 +49,11 @@ let
   # `+sent -inbox` rule above de-inboxes them — then MailMover archives them.
   # Reassert inbox (and clear sent/archive) so these stay where you read them.
   digestShield = ''
-    # Shield: self-sent MI weekly briefs/digests stay in the inbox
-    ${nm} tag +inbox -archive -sent -- 'tag:new AND (from:eric@iheartwoodcraft.com OR from:office@iheartwoodcraft.com OR from:admin@iheartwoodcraft.com) AND (subject:"weekly brief" OR subject:"Weekly Intelligence Digest")'
+    # Shield: self-sent MI weekly briefs/digests stay in the inbox.
+    # Scoped by folder residency (NOT tag:new — new.tags has no 'new' tag, and
+    # afew strips it anyway). Idempotent: re-asserts inbox on the live Sent-copy
+    # of a self-sent digest that hasn't already been archived.
+    ${nm} tag +inbox -archive -sent -- '(from:eric@iheartwoodcraft.com OR from:office@iheartwoodcraft.com OR from:admin@iheartwoodcraft.com) AND (subject:"weekly brief" OR subject:"Weekly Intelligence Digest") AND path:proton/Sent/** AND NOT path:proton/Archive/**'
   '';
 
   # Strip the transient "new" tag after all processing is done
