@@ -10,14 +10,16 @@ content changes): the audits domain owns its own README here.
 
 ## Structure
 
-| Path                            | What                                                                              |
-|---------------------------------|-----------------------------------------------------------------------------------|
-| `media/books-audit.md`          | Books library audit vs. Readarr's `Author/Title/Title.ext` standard (2026-06-24). |
-| `media/books-reorg.sh`          | Dry-run fix plan for the books audit. Refuses to apply without `DRY_RUN=0`.       |
+| Path                        | What                                                                                          |
+|-----------------------------|-----------------------------------------------------------------------------------------------|
+| `media/aux-audit.md`        | Aux libraries audit for `courses`, `podcasts`, `youtube`, `photos` (2026-06-24).              |
+| `media/aux-reorg.sh`        | Dry-run fix plan for the aux audit. Refuses to apply without `DRY_RUN=0`; per-library gated. |
 
 (The older `docs/audit/` directory — singular — holds the 2026-06-09 charter
 merits / server-audit pair; new audits land here under the plural form
-referenced by the nightly-builds gauntlet.)
+referenced by the nightly-builds gauntlet. Parallel audits for movies, TV,
+music, and books exist on sibling `audit/media-*` branches and will land
+here as they merge.)
 
 ## Conventions
 
@@ -30,10 +32,12 @@ referenced by the nightly-builds gauntlet.)
 
 ## Changelog
 
-- 2026-06-24 — Books library audit + dry-run reorg landed (`media/books-audit.md`,
-  `media/books-reorg.sh`). Covers `/mnt/media/books/{audiobooks,ebooks}`,
-  ignores the Audiobookshelf sidecar at `.audiobookshelf-metadata/`. Companion
-  script renames 7 flat `Author - Title` audiobook dirs into `Author/Title/`
-  and authors 2 loose `ebooks/` epubs; topic shelves, the nested
-  `ebooks/ebooks/calibre/` dump, and 4 unparseable audiobook dirs are flagged
-  for manual review only.
+- 2026-06-24 — Aux libraries audit + dry-run reorg landed
+  (`media/aux-audit.md`, `media/aux-reorg.sh`). Covers
+  `/mnt/media/{courses,podcasts,youtube,photos}` against per-library
+  standards. Script auto-actions one safe move (promote
+  `Linux Security for Beginners/~Get Your Files Here !/` contents up one
+  level); everything else (23× `.url` shortcuts, the `Gary Katz` channel
+  duplicate, two Immich UUID backups under `photos/archive/`, the 3-way
+  camera-dump collapse) is flagged for manual review only. `podcasts/`
+  is empty and is a no-op.
