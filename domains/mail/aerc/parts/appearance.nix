@@ -59,8 +59,10 @@ spinner.fg          = ${sel}
 msglist_unread.bold         = true
 msglist_read.dim            = true
 msglist_deleted.dim         = true
+# Marked (bulk-select) rows: reverse video = a clear highlighter bar,
+# inverting bg/fg per row (was a too-subtle bold+italic).
+msglist_marked.reverse      = true
 msglist_marked.bold         = true
-msglist_marked.italic       = true
 msglist_result.bold         = true
 msglist_thread_folded.bold  = true
 msglist_thread_context.dim  = true
