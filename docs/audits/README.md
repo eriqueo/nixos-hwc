@@ -10,14 +10,16 @@ content changes): the audits domain owns its own README here.
 
 ## Structure
 
-| Path                                                     | What                                                       |
-|----------------------------------------------------------|------------------------------------------------------------|
-| `media/tv-audit.md`                                      | TV library audit vs. `Show/Season NN/SxxEyy` standard (2026-06-24). |
-| `media/tv-reorg.sh`                                      | Dry-run fix plan for the TV audit. Refuses to apply without `DRY_RUN=0`. |
+| Path                        | What                                                                                          |
+|-----------------------------|-----------------------------------------------------------------------------------------------|
+| `media/aux-audit.md`        | Aux libraries audit for `courses`, `podcasts`, `youtube`, `photos` (2026-06-24).              |
+| `media/aux-reorg.sh`        | Dry-run fix plan for the aux audit. Refuses to apply without `DRY_RUN=0`; per-library gated. |
 
 (The older `docs/audit/` directory — singular — holds the 2026-06-09 charter
 merits / server-audit pair; new audits land here under the plural form
-referenced by the nightly-builds gauntlet.)
+referenced by the nightly-builds gauntlet. Parallel audits for movies, TV,
+music, and books exist on sibling `audit/media-*` branches and will land
+here as they merge.)
 
 ## Conventions
 
@@ -30,5 +32,12 @@ referenced by the nightly-builds gauntlet.)
 
 ## Changelog
 
-- 2026-06-24 — Added `media/tv-audit.md` + `media/tv-reorg.sh` (nightly-builds
-  card `03-tv-audit`).
+- 2026-06-24 — Aux libraries audit + dry-run reorg landed
+  (`media/aux-audit.md`, `media/aux-reorg.sh`). Covers
+  `/mnt/media/{courses,podcasts,youtube,photos}` against per-library
+  standards. Script auto-actions one safe move (promote
+  `Linux Security for Beginners/~Get Your Files Here !/` contents up one
+  level); everything else (23× `.url` shortcuts, the `Gary Katz` channel
+  duplicate, two Immich UUID backups under `photos/archive/`, the 3-way
+  camera-dump collapse) is flagged for manual review only. `podcasts/`
+  is empty and is a no-op.
