@@ -114,7 +114,25 @@ in
             #   blender-offload       — Blender-specific NVIDIA dGPU launcher
             # Both in domains/system/gpu/index.nix.
 
-            exec ${pkgs.dbus}/bin/dbus-run-session ${pkgs.hyprland}/bin/start-hyprland
+            # Join the systemd user bus instead of spawning a private one.
+            # `dbus-run-session` was creating a throwaway session bus
+            # (/tmp/dbus-XXX) for Hyprland and every app it launches, while
+            # `systemd --user` services (pass-secret-service, the
+            # xdg-desktop-portal-* units, waybar) live on the user bus at
+            # $XDG_RUNTIME_DIR/bus. That split meant GUI apps could not see
+            # org.freedesktop.secrets: Electron/Cowork's launcher probes
+            # `NameHasOwner org.freedesktop.secrets`, got false on the private
+            # bus, fell back to `--password-store=basic`, and Electron
+            # safeStorage then reported "encryption not available" — so Cowork
+            # could not persist its project allowlist and every project
+            # create/import failed ("Failed to create project" → "Project not
+            # found"). Pointing at the user bus (already populated:
+            # `systemctl --user show-environment` shows DBUS_SESSION_BUS_ADDRESS,
+            # WAYLAND_DISPLAY, XDG_CURRENT_DESKTOP) unifies the session so the
+            # Secret Service and portals resolve. The user bus exists pre-login
+            # via user lingering; the fallback covers an unset XDG_RUNTIME_DIR.
+            export DBUS_SESSION_BUS_ADDRESS="unix:path=''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}/bus"
+            exec ${pkgs.hyprland}/bin/start-hyprland
           '';
 
           # Crash-resilient auto-login: restarts Hyprland after crash,
