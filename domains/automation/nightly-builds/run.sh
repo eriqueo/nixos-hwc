@@ -30,6 +30,10 @@ CLAUDE_BIN="${NB_CLAUDE_BIN:-/etc/profiles/per-user/eric/bin/claude}"
 
 NB_DIR="$VAULT_DIR/_inbox/nightly_builds"
 RUNS_DIR="$VAULT_DIR/runs"
+# Morning-review records dir (refinery StateDirectory). run.sh clears a card's
+# stale record when it (re)builds the card — see "Requeue hygiene" in Phase B.
+# Overridable for tests.
+REVIEWS_DIR="${NB_REVIEWS_DIR:-/var/lib/refinery/reviews}"
 IDEAS_FILE="$NB_DIR/_ideas.md"
 LOCK_FILE="/tmp/nightly-builds.lock"
 DATE="$(date +%F)"
@@ -212,6 +216,21 @@ for CARD in $QUEUED; do
   fi
 
   log "PHASE B: card=$GOAL/$SLUG repo=$CARD_REPO branch=$BRANCH run=$RUN_NAME"
+
+  # Requeue hygiene: this queued card is about to be (re)built, so any existing
+  # morning-review record for it describes STALE work (a prior attempt / a closed
+  # PR). Delete it now so the morning pass re-reviews fresh — otherwise the review
+  # CLI's idempotent-skip keeps the old record, and the graduate-gate then sees a
+  # record and graduates the project on stale data (live-hit 2026-06-24: the
+  # reconcile-script requeue left a record pointing at closed PR #65, so the v2
+  # work was skipped and the goal graduated unreviewed). Filename mirrors the
+  # engine's safeReviewId("<goal>/<slug>"): the slug drops its NN- prefix and the
+  # id's "/" becomes "-". Goals/slugs are kebab, so this matches exactly.
+  CARD_SLUG="${SLUG#[0-9][0-9]-}"
+  STALE_REC="$REVIEWS_DIR/${GOAL}-${CARD_SLUG}.json"
+  if [ -f "$STALE_REC" ]; then
+    rm -f "$STALE_REC" && log "PHASE B: cleared stale review record ($STALE_REC) — card is being rebuilt"
+  fi
 
   if [ "$DRY_RUN" -eq 1 ]; then
     log "DRY: would run card $CARD in worktree $WT"
