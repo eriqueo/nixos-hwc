@@ -29,7 +29,10 @@ domains/automation/nightly-builds/
 │                     #   -review(.timer), and the opt-in privileged -rebuild(.path).
 │                     #   tmpfiles for the run-now / reviews / rebuild spools.
 ├── run.sh            # Nightly launcher: card-smith draft pass + queued-card runner
+│                     #   (per-card timeout = the card's declared minute budget +50%)
 ├── send-report.sh    # Rich per-card Discord report (REPORT.md attached)
+├── gen-index.sh      # Assemble a shared index README from per-card index.d/*.md
+│                     #   fragments (run-wrapper rule 8 — avoids batch merge conflicts)
 ├── prompts/          # card-smith + run-wrapper prompts
 └── README.md         # This file
 ```
@@ -54,6 +57,26 @@ domains/automation/nightly-builds/
 `reviewLlmProvider`, `maxCards`, `vaultDir`, `repoDir`, `enableRebuildButton`.
 
 ## Changelog
+- **2026-06-24** — Hardening + observability from the 2026-06-24 media/hot batch
+  retro (10/10 built, but delivery + verification leaked):
+  - **Read-only `/mnt` (OS-enforced Gate 7).** `nightly-builds.service` and
+    `-runnow` now set `ReadOnlyPaths = [ "/mnt" ]` — cards still READ media but
+    physically cannot move/delete it; the guarantee was prompt-only before.
+  - **Per-card budget = timeout.** `run.sh` parses the card's `Budget: ≤ N min`
+    and uses N×60×1.5 as the agent `timeout` instead of the flat 5h, so a hung
+    card can't starve a sequential batch (falls back to `NB_CARD_TIMEOUT`).
+  - **Morning-review errors persist + go loud.** `reviewRun` archives the CLI's
+    full JSON (incl `.errors[]`) to `reviews/_runs/<ts>-morning-review.json`
+    BEFORE the trap deletes it, and on `errors>0` raises the notify priority and
+    quotes each error + warns a branch may have pushed without a PR. (Last run
+    silently swallowed 3 review errors as a bare count.)
+  - **Wrapper standing rules (apply to every card).** `prompts/run-wrapper.md`
+    adds: (6) prove executable behavior by RUNNING it against a fixture, never
+    grep-for-tokens — a script that parses clean but does nothing is `failure`;
+    (7) bulk data → `RUN_DIR`, not the repo; (8) contribute to shared indexes via
+    `<dir>/index.d/<slug>.md` fragments, assembled by `gen-index.sh`, never edit
+    the shared file (kills batch add/add conflicts).
+  - **New `gen-index.sh`** — generic fragment→README index assembler (idempotent).
 - **2026-06-18** — Verdict contract: differential-vs-BASE + tri-state (the real
   fix). The gauntlet verdict was *absolute-green* — "done" required the whole
   suite to pass in the worker — so completed cards were mislabeled `failed`
