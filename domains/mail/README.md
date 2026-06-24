@@ -73,6 +73,18 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-06-24: aerc now builds from the **forked `github:eriqueo/aerc`** flake input
+  instead of `pkgs.aerc` — a **zero-change canary** (the fork's `flake.nix` is
+  `pkgs.aerc.overrideAttrs { src = self; }` pinned to the `0.21.0` tag, so
+  filters/stylesets/man pages/wrapper come out byte-identical; `vendorHash`
+  reused, no Go-dep change). Wiring mirrors khalt: new `aerc` flake input
+  (`inputs.nixpkgs.follows`), new `domains/mail/aerc/package.nix`
+  (`inputs.aerc.packages.${pkgs.system}.default`), `index.nix` threads `inputs`
+  and computes `aercPkg`, and `parts/config.nix` swaps all 8 `pkgs.aerc`
+  references → `aercPkg`. No behaviour change; this lands the packaging pipeline
+  ahead of the upcoming config-gated **which-key** leader popup + msglist column
+  headers (both default-off). Rollback = revert these files + drop the input
+  (one commit, zero residue).
 - 2026-06-24: Added a permanent **digest shield** to the post-new hook (`notmuch/parts/hooks.nix`). Server-generated Market-Intelligence weekly briefs are self-addressed (sent from an HWC address to the user's own inbox), so Proton Bridge saves a copy in `proton/Sent`; the folder-state rule `+sent -inbox -- path:proton/Sent/**` then stripped the `inbox` tag and MailMover (`'NOT tag:inbox':proton/Archive`) archived them. The shield reasserts `+inbox -archive -sent` for `tag:new` self-sent mail (`from:eric@/office@/admin@iheartwoodcraft.com`) whose subject is `"weekly brief"` or `"Weekly Intelligence Digest"`, so the briefs land and stay in the inbox. Parallels the keep shield; runs after `accountTags`, before `removeNew`.
 - 2026-06-24: aerc view + readability overhaul. Fixed the main contrast bug — the
   `[user] default` style was dim `fg3` slate (unreadable on dark bg for every
