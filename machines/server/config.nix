@@ -361,6 +361,13 @@
   # set hwc.automation.inboxJanitor.dryRun = false.
   hwc.automation.inboxJanitor.enable = true;
   hwc.automation.inboxJanitor.dryRun = false;
+
+  # mail-janitor — weekly age-aware Gmail anti-buildup sweep. Trashes NOISE
+  # (promo/streaming/social/bot) at any age + TRANSACTIONAL (receipts/orders)
+  # older than 1yr; PRESERVE (people/history/finance) and the Family-Friends
+  # label are never touched. Ships dryRun=true — watch the Discord report +
+  # journal, then set hwc.automation.mailJanitor.dryRun = false to let it act.
+  hwc.automation.mailJanitor.enable = true;
   # Unified lead pipeline comes from the business role.
 
   # Alert sources — what to monitor (thresholds, triggers)
