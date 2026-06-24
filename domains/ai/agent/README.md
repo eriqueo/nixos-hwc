@@ -142,3 +142,7 @@ To register the agent as a tool in Open WebUI:
    - Headers: `Content-Type: application/json`
 
 Then users can invoke system commands through the chat interface.
+
+## Changelog
+- 2026-06-22: Refresh README to comply with Charter Law 12 (covers Sprint 5 MCP/agent/discovery integration, hwc-server tailnet rename, options.nix orphan cleanup, charter Law 3 path-abstraction sweep, AI domain refactor).
+- 2026-02-28: Added README for Charter Law 12 compliance

@@ -22,3 +22,4 @@ local-workflows/
 ## Changelog
 - 2026-04-12: Remove journaling (restart-loop bug, replaced by morning-briefing) and HTTP API (never integrated). Keep file-cleanup, auto-doc, chat-cli.
 - 2026-02-28: Added README for Charter Law 12 compliance
+- 2026-06-22: Refresh README (Sprint 5.4 HTTP API for local-workflows; NixOS 24.11 deprecation cleanup; auto-doc service hardening with mkForce User/Group; AI domain refactor + options.nix orphan cleanup).

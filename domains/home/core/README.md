@@ -24,3 +24,4 @@ core/
 - 2026-06-11: Structure section updated to reality (shell/ and development/
   are directories; namespaces moved under hwc.home.core.* per Law 2; the
   phantom options.nix/shell.nix flat files are gone).
+- 2026-06-22: Shell — gate prompt re-bake on interactive shell in snix/tnix/hms; rebind starship after rebuild (not just hash -r); use HOME=/root not ~root in _hwc_rebuild; add `wb-reload` alias to re-apply workbench layout edits. MCP — run git/time/fetch via uvx, drop brave-search. Workbench — SUPER+W keybind + `workbench` alias. Aerc — SUPER+E keybind fix (hwc→server); alias `aerc` to server aerc on laptop.

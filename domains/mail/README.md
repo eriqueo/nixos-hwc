@@ -80,3 +80,5 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 - 2026-03-23: Domain refactor — moved aerc from apps/ to mail/ (hwc.mail.aerc); consolidated bridge services (protonmail-bridge/ + protonmail-bridge-cert/ merged into bridge/sys.nix); deleted 6 stale migration docs; removed dead aerc files (behavior.nix, session.nix)
 - 2026-03-19: Add label copy-back to sync-mail (tags→Labels/ Maildir→Proton two-way sync); fix protonLabelTags to not require tag:new; add trashSenders option; remove dead code
 - 2026-02-28: Added README for Charter Law 12 compliance
+- 2026-06-22: Separate Radicale principals for calendar (cal) vs tasks (eric); scope calendar_radicale to its own collection; expose only khalt's khal CLI to avoid khalt buildEnv clash; Radicale (VEVENT) backend + retire plain khal; repair vdirsyncer to restore khalt + todui sync; workbench TUI host + zellij + todui/khalt peers with palette-driven khal.
+- 2026-06-22: README sweep across mail/ children (aerc, calendar, tasks) — Law 12 catch-up.

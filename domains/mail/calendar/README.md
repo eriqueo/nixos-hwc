@@ -64,3 +64,4 @@ domains/mail/calendar/
   radicale-only (no iCloud account). Added the one-time migration script.
   Companion to `domains/system/mcp` (hwc_calendar→khalt) and
   `domains/home/apps/khalt`.
+- 2026-06-22: Separate Radicale principals for calendar (cal) vs tasks (eric); scope calendar_radicale to its own collection; expose only khalt's khal CLI (avoid khalt buildEnv clash).

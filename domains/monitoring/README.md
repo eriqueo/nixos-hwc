@@ -59,3 +59,4 @@ monitoring/
 - 2026-03-04: Namespace migration hwc.server.native.monitoring.* → hwc.monitoring.*
 - 2026-03-04: Moved from domains/server/native/monitoring/ (Phase 4 of DDD migration)
 - 2026-03-27: Added Homepage (gethomepage) service dashboard and Uptime Kuma uptime monitor
+- 2026-06-22: Networking — vhost static support; bulk-migrate port-mode services to name-based vhosts; static dashboards migrated to clean names. Homepage — point dashboard tiles at name-based vhost URLs.

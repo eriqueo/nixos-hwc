@@ -64,3 +64,4 @@ in {
 - 2026-05-21: Added `hwc.paths.brain.*` namespace (Phase 1 of brain knowledge vault migration). Declares canonical paths for the unified brain vault (laptop-primary, server replica), the mobile capture inbox, vault backups, and the 10 V1–V10 legacy source vaults being merged. Exports matching `HWC_BRAIN_*` env vars. All defaults are conditional (`isLaptop`/`isServer`) so non-matching hosts get `null` and the env vars drop out.
 - 2026-02-26: Created README per Law 12
 - 2026-02-20: Refactored path detection logic
+- 2026-06-22: Remove 600_shared NFS share; standardize on Syncthing (paths sweep).

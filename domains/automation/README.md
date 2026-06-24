@@ -94,3 +94,5 @@ workspace/automation/
 - 2026-03-15: Changed port 10000 funnel to full n8n access (was webhook-only)
 - 2026-03-04: Namespace migration hwc.server.native.n8n.* → hwc.automation.n8n.*
 - 2026-03-04: Created automation domain; moved n8n from domains/server/native/ (Phase 6 of DDD migration)
+- 2026-06-22: Nightly-builds gauntlet hardening — differential-vs-BASE tri-state verdict contract, reclaim-on-rerun cross-day worktree handoff, idempotent re-run via `worktree add -B` + prune, morning review now produces real verdicts. Refinery work: Finished page (graduate + send back with amendments), two-axis board (domains color/tag + Hopper maturation kanban), inline per-card controls, HWC brand palette, Card Standard v0.1 unification.
+- 2026-06-22: README sweep across automation/n8n children — Law 12 catch-up after Law 3/9/10 sweeps and the Heartwood MCP /call workflow.

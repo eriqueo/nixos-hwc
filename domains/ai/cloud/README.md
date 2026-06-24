@@ -15,3 +15,4 @@ cloud/
 
 ## Changelog
 - 2026-02-28: Added README for Charter Law 12 compliance
+- 2026-06-22: Refresh README (Sprint 4.3 added cloud API infrastructure; AI domain refactor + options.nix orphan cleanup; Charter Law 3 path-abstraction sweep).

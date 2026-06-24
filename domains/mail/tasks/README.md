@@ -100,3 +100,4 @@ stay CLI-visible. Deploy order + phone CalDAV setup: see the radicale README.
   survive iCloud round-trip.
 - 2026-06-11: Initial Phase A — vdirsyncer VTODO pair (contributed to the shared
   calendar config/timer) + todoman CLI and config. TUI (`todui`) deferred to Phase B.
+- 2026-06-22: Separate Radicale principals for calendar (cal) vs tasks (eric); Radicale (VEVENT) backend + retire plain khal; repair vdirsyncer to restore khalt + todui sync.

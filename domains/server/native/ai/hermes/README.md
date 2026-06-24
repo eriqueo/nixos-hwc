@@ -154,3 +154,5 @@ into this module is pending.
 - **2026-05-29** — Initial Phase 1 scaffold. Native systemd, install + gateway
   units, TypeScript hermes-deploy CLI (hexagonal-lite, Node 22
   --experimental-strip-types).
+
+- 2026-06-22: README sweep across hermes/parts/bootstrap child — Law 12 catch-up.

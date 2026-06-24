@@ -62,3 +62,4 @@ README.md
 - 2026-05-29: Initial module. 5 personas (classifier, extractor, coder,
   assistant, thinker). Stateless CLI wrapping `llama-gpu` (port 11500)
   and `llama-cpu` (port 11501).
+- 2026-06-22: Add RAG over the brain vault + indexer (commit 3/4) and a Deno HTTP daemon with SQLite conversation memory (commit 2/4); fix orphan option-sets that broke `nix flake check`.

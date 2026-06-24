@@ -125,3 +125,6 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 │   └── session.json   ← created on login
 └── package.json
 ```
+
+## Changelog
+- 2026-06-22: Add changelog per Law 12. HWC lead scoring (new prompt, classifier, promptFile option); switch to launchPersistentContext with `--profile` flag; login detection via c_user cookie + polling that survives passkey redirects; pin playwright 1.59.1 to match image; shell.nix uses system chromium; jobber-mcp project path moved to 300_tech/320_projects.

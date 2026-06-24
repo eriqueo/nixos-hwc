@@ -41,3 +41,4 @@ business/
 - 2026-06-11: README rewritten — this file previously contained the AI-MCP
   domain readme by mistake. Business enables now come from the business
   role rather than machines/server/config.nix.
+- 2026-06-22: README sweep across business/ children (paperless, website, datax/fb-group-scraper) — Law 12 catch-up.

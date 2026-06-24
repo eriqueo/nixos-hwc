@@ -119,3 +119,4 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
   todui/workbench keymap.json staging — all guarded, one `hms` away (laptop).
   DEFERRED: yazi/nvim/aerc generator-sourcing (already conform by hand; QA-gated
   refactor). App-side readers (todui/workbench/khalt Python) staged, not built.
+- 2026-06-22: Meta mode — j/k cycle tabs left/right (sticky).

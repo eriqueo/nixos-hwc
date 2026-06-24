@@ -25,3 +25,4 @@ mcp/
 - 2026-03-26: jt-mcp decoupled from parent hwc.ai.mcp.enable — now standalone; enabled directly in server config
 - 2026-03-25: Added heartwood/ subdomain — JT MCP Server (Phase 1: 63 JT tools)
 - 2026-02-28: Added README for Charter Law 12 compliance
+- 2026-06-22: Refresh README (Sprint 5 MCP/agent/discovery integration; Sprint 4.1 model validation + health checks; Sprint 3 MCP hardening + reverse proxy; Sprint 1 hwc.ai.* namespace; options.nix orphan cleanup).

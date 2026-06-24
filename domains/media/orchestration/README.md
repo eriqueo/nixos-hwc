@@ -25,3 +25,4 @@ orchestration/
 
 ## Changelog
 - 2026-03-26: audiobook-copier workspace path updated from workspace/hooks/ to workspace/automation/hooks/ (domain alignment)
+- 2026-06-22: Law 9/10 — convert all option-declaring leaf modules to directory modules.
