@@ -18,7 +18,10 @@ let
   lhs = keys: "<Space>" + lib.concatStrings (lib.splitString " " keys);
 
   sharedFor = lib.filter (b: (b.cmd or {}) ? ${app}) grammar.shared;
-  line = b: ''      ${lhs b.keys} = ${b.cmd.${app}}<Enter>'';
+  # Trailing " # <desc>" is the aerc binding annotation, surfaced in the
+  # which-key popover (forked aerc feature).
+  line = b: ''      ${lhs b.keys} = ${b.cmd.${app}}<Enter>''
+    + lib.optionalString ((b.desc or "") != "") " # ${b.desc}";
 
   bindsFragment = lib.concatStringsSep "\n" (
     [ "      # --- generated Space grammar (domains/home/keymap/grammar.nix);"

@@ -66,6 +66,12 @@ msglist_marked.bold         = true
 msglist_result.bold         = true
 msglist_thread_folded.bold  = true
 msglist_thread_context.dim  = true
+# Column-header row (forked aerc index-headers). fg+bg are set deliberately —
+# the "no .fg" rule above only matters for message rows (so tag colors show);
+# the header isn't a message, so give it a solid accent bar to read as a header.
+msglist_header.fg           = ${bg}
+msglist_header.bg           = ${sel}
+msglist_header.bold         = true
 
 # dirlist_* — NO .fg so [user] tag colors come through (same rule as msglist)
 dirlist_unread.bold = true
