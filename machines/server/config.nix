@@ -368,6 +368,7 @@
   # label are never touched. Ships dryRun=true — watch the Discord report +
   # journal, then set hwc.automation.mailJanitor.dryRun = false to let it act.
   hwc.automation.mailJanitor.enable = true;
+  hwc.automation.mailJanitor.dryRun = false;  # active after dry-run verified 2026-06-24
   # Unified lead pipeline comes from the business role.
 
   # Alert sources — what to monitor (thresholds, triggers)
