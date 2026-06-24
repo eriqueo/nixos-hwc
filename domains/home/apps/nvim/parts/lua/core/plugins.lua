@@ -88,6 +88,16 @@ require("lazy").setup({
     end,
   },
 
+  -- Primary fuzzy finder (native fzf binary — fast over huge file trees).
+  -- Finder keymaps (ff/fg/fb/fn/fs) point here; Telescope kept for the rest.
+  {
+    "ibhagwan/fzf-lua",
+    dependencies = { "echasnovski/mini.icons" },
+    config = function()
+      require("plugins.fzf-lua")
+    end,
+  },
+
   -- Formatting (replaces none-ls)
   {
     "stevearc/conform.nvim",
