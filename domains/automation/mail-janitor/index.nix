@@ -45,6 +45,18 @@ in
       description = "Transactional mail (receipts/orders) is trashed once older than this. NOISE is trashed at any age; PRESERVE never.";
     };
 
+    triageMaxAgeDays = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 30;
+      description = "Newsletters sit in the Newsletters-Triage label this many days (from when they entered triage) before being trashed — unless starred or keep/Family-Friends-labeled.";
+    };
+
+    stateDir = lib.mkOption {
+      type = lib.types.str;
+      default = "${paths.user.home}/.local/state/mail-janitor";
+      description = "Where the per-account triage clock state (message-id → first-seen date) is kept.";
+    };
+
     notifyUrl = lib.mkOption {
       type = lib.types.str;
       default = "http://127.0.0.1:${toString notifyCfg.port}/notify";
@@ -72,10 +84,12 @@ in
       after = [ "network-online.target" "hwc-notify.service" ];
       wants = [ "network-online.target" ];
       environment = {
-        MJ_DRY_RUN          = if cfg.dryRun then "1" else "0";
-        MJ_TXN_MAX_AGE_DAYS = toString cfg.txnMaxAgeDays;
-        MJ_NOTIFY_URL       = cfg.notifyUrl;
-        MJ_ACCOUNTS         = builtins.toJSON cfg.accounts;
+        MJ_DRY_RUN             = if cfg.dryRun then "1" else "0";
+        MJ_TXN_MAX_AGE_DAYS    = toString cfg.txnMaxAgeDays;
+        MJ_TRIAGE_MAX_AGE_DAYS = toString cfg.triageMaxAgeDays;
+        MJ_STATE_DIR           = cfg.stateDir;
+        MJ_NOTIFY_URL          = cfg.notifyUrl;
+        MJ_ACCOUNTS            = builtins.toJSON cfg.accounts;
       };
       path = [ pkgs.python3 ];
       serviceConfig = {
