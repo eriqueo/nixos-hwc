@@ -22,6 +22,8 @@ content changes): the audits domain owns its own README here.
 | `media/tv-audit.md`           | TV library audit vs `Show/Season NN/SxxEyy` (2026-06-24).                                      |
 | `media/tv-reorg.sh`           | Dry-run fix plan for the TV audit.                                                            |
 | `mnt-hot/orphan-audit.md`     | `/mnt/hot` orphan/crust audit — ~86 G reclaimable; consolidate + safe-delete lists (2026-06-24). |
+| `mnt-hot/reconcile.sh`        | Dry-run-by-default reconcile script: MOVE orphans → `/mnt/media` (rsync `--remove-source-files`), prune empty orphan dirs; active-paths-guarded (2026-06-24). |
+| `mnt-hot/reconcile-checklist.md` | Human run procedure for `reconcile.sh` (pre-flight → dry-run → log review → real run → verify → idempotency re-run). |
 
 (The older `docs/audit/` directory — singular — holds the 2026-06-09 charter
 merits / server-audit pair; new audits land here under the plural form
@@ -42,6 +44,15 @@ referenced by the nightly-builds gauntlet. Three more 2026-06-24 audits —
 
 ## Changelog
 
+- 2026-06-24 — `/mnt/hot` reconcile script generator (card 03, v2 after PR
+  #65 was closed): `mnt-hot/reconcile.sh` (dry-run-by-default, MOVE-semantics
+  consolidate + guarded prune) and `mnt-hot/reconcile-checklist.md`. The
+  prior v1 attempt used `rsync` without `--remove-source-files` so phase 1
+  copied instead of moved, leaving phase 2 unable to delete the still-populated
+  orphan and reclaiming nothing. v2 uses `rsync -a --remove-source-files`
+  (verified-delete-of-source) and was exercised against a throwaway fixture
+  proving move + delete + active-path-guard + clean-no-op-on-rerun before
+  commit.
 - 2026-06-24 — Nightly-builds media/hot audit batch landed (6 audits):
   aux libraries (`media/aux-*`), books + audiobooks (`media/books-*`),
   cross-pool duplicates (`media/duplicates-audit.md`, `media/dedupe.sh`),
