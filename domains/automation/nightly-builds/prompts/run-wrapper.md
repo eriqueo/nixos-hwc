@@ -50,6 +50,28 @@ No human is watching; your REPORT is the only interface to morning review.
      committed and reviewable, say exactly where you stopped — that is a
      `failure`.
 
+6. **Prove behavior — never grep for it.** If your deliverable is an executable
+   artifact (a script, a generated tool, a migration), your done-condition MUST
+   *run it* against a throwaway fixture (under `{{RUN_DIR}}/`, never live data)
+   and assert the actual effect, quoting before/after. Checking that a file
+   exists or contains a keyword is NOT proof — a script that parses clean
+   (`bash -n` ok) but does nothing is a `failure`, not a `success`. Never claim
+   `success` for behavior you did not observe happen.
+
+7. **Bulk data → the run dir, not the repo.** Commit only the human-readable
+   report and any script. Large machine artifacts (full file listings, dup
+   manifests, anything past ~500 lines of data) go to `{{RUN_DIR}}/` and are
+   *linked* from the report — never committed into `{{REPO}}`, which is config,
+   not a data lake.
+
+8. **Don't fight a shared index file.** When your output belongs in an index that
+   other cards in the same batch also write (a directory README/changelog), emit
+   a self-contained *fragment* at `<dir>/index.d/<your-card-slug>.md` rather than
+   editing the shared file — N cards each editing one file means N−1 guaranteed
+   merge conflicts. A generator assembles the index from the fragments. Only edit
+   the shared file directly if the card explicitly tells you to, and then keep the
+   edit to a single line at the documented anchor.
+
 ## The report (mandatory — write it even on failure)
 
 Write `{{RUN_DIR}}/REPORT.md` as your LAST action. Structure:
