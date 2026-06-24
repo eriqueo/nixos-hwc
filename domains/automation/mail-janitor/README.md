@@ -37,6 +37,12 @@ mail-janitor/
   keeping); refine the pattern lists in `janitor.py` as new junk surfaces.
 
 ## Changelog
+- 2026-06-24 (b): PRESERVE allowlist (`.gov` filings, `calendar.*` invites, security/
+  account alerts) — fixes NOISE false-positives. New **TRIAGE** tier: newsletters
+  (`newsletter@`/`news@`/`digest`…) → `Newsletters-Triage` label instead of trash;
+  trashed only after `triageMaxAgeDays` (30) IN triage (state-tracked per message-id
+  in `stateDir`; clock starts at label time, not send date) unless starred or keep/
+  Family-Friends-labeled. Star a newsletter to save it.
 - 2026-06-24: Created. Weekly Gmail anti-buildup sweep (NOISE any-age + TXN >1yr),
   Family-Friends-protected, dry-run-first. Productionizes the interactive
   `~/400_mail/_cleanup` sweep into a standing job.
