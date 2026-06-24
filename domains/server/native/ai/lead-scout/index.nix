@@ -125,6 +125,20 @@ in
         PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromiumBin;
         PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
         DISCORD_WEBHOOK_FILE = config.age.secrets.${cfg.discordWebhookSecret}.path;
+
+        # The classifier shells out to the `claude` CLI. Upstream lead_scout
+        # used to hardcode /etc/profiles/per-user/eric/bin/claude as a fallback;
+        # it now late-binds via CLAUDE_BIN → `which claude` → candidate paths.
+        # This unit's PATH carries only nodejs (no `claude`), so we MUST declare
+        # the binary here or classification silently fails to spawn it.
+        CLAUDE_BIN = "/etc/profiles/per-user/eric/bin/claude";
+
+        # The server (ExecStart → `serve`) can auto-build the frontend on boot if
+        # dist/ is stale, but this unit is hardened (ProtectSystem = "strict";
+        # only data/ + /tmp are writable) so a build write to frontend/dist would
+        # crash startup. Deploy (lead-scout-deploy) prebuilds the frontend; the
+        # service must never try. Hence skip the in-process build entirely.
+        SKIP_FRONTEND_BUILD = "1";
       };
 
       # Needed so detached subprocesses spawned by /api/pipeline tool
