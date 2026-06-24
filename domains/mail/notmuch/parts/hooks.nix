@@ -44,6 +44,15 @@ let
     ${nm} tag -trash -- 'tag:keep AND tag:trash'
   '';
 
+  # Shield: server-generated intelligence briefs are self-addressed (sent from an
+  # HWC address to your own inbox), so a copy lands in proton/Sent and the
+  # `+sent -inbox` rule above de-inboxes them — then MailMover archives them.
+  # Reassert inbox (and clear sent/archive) so these stay where you read them.
+  digestShield = ''
+    # Shield: self-sent MI weekly briefs/digests stay in the inbox
+    ${nm} tag +inbox -archive -sent -- 'tag:new AND (from:eric@iheartwoodcraft.com OR from:office@iheartwoodcraft.com OR from:admin@iheartwoodcraft.com) AND (subject:"weekly brief" OR subject:"Weekly Intelligence Digest")'
+  '';
+
   # Strip the transient "new" tag after all processing is done
   removeNew = ''
     # Remove transient new tag — must be last
@@ -103,7 +112,7 @@ let
     fi
   '';
 
-  tail = rulesPatched + "\n" + accountTags + protonLabelTags + extra + "\n" + keepShield + "\n" + removeNew;
+  tail = rulesPatched + "\n" + accountTags + protonLabelTags + extra + "\n" + keepShield + "\n" + digestShield + "\n" + removeNew;
 in
 {
   text = head + "\n" + body + "\n" + tail;
