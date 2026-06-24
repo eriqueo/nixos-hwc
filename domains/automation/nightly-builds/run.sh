@@ -192,8 +192,11 @@ for CARD in $QUEUED; do
   RUN_DIR="$RUNS_DIR/$RUN_NAME"
   WT="/tmp/nightly/$RUN_NAME"
 
-  # Branch: prefer the card's declared "PR to branch `x`"; fall back to nightly/
-  BRANCH=$(rg -o -m1 'branch `([^`]+)`' -r '$1' "$CARD" 2>/dev/null || true)
+  # Branch: prefer the card's declared "PR to branch `x`"; fall back to nightly/.
+  # `head -1`: -m1 stops after the first matching LINE, but a single line may hold
+  # two `branch `x`` refs (e.g. a requeue card naming the old + new branch); take
+  # only the first match so BRANCH is never a multi-line string (worktree add fails).
+  BRANCH=$(rg -o -m1 'branch `([^`]+)`' -r '$1' "$CARD" 2>/dev/null | head -1 || true)
   [ -n "$BRANCH" ] || BRANCH="nightly/$RUN_NAME"
 
   # Target repo: a card may declare `repo: <path>` in its frontmatter to run
