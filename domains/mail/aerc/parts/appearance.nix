@@ -103,19 +103,43 @@ ${tags.tagStyleLines}
 hide.fg           = ${dim}
 starred.fg        = ${h (c.errorBright or "d08080")}
 starred.bold      = true
+
+# Scoped views (sidebar)
+focus.fg          = ${fg0}
+focus.bold        = true
+today.fg          = ${fg}
+week.fg           = ${fg}
+people.fg         = ${h (c.warningBright or "fcbb74")}
+action.fg         = ${h (c.error or "bf616a")}
+action.bold       = true
+family.fg         = ${h (c.warningBright or "fcbb74")}
+keep.fg           = ${h (c.success or "a3be8c")}
+
+# Family aggregate groups (each its family colour)
+business.fg       = ${h (c.accent or "d08770")}
+business.bold     = true
+money.fg          = ${h (c.info or "5e81ac")}
+money.bold        = true
+growth.fg         = ${h (c.success or "a3be8c")}
+growth.bold       = true
+system.fg         = ${h (c.fg2 or "a7aaad")}
+all.fg            = ${fg}
+newsletters.fg    = ${dim}
+notifications.fg  = ${dim}
+
+important.fg      = ${sel}
+important.bold    = true
 inbox_i.fg        = ${fg0}
 inbox_i.bold      = true
 unread_u.fg       = ${fg0}
 unread_u.bold     = true
-important.fg      = ${sel}
-important.bold    = true
 sent_s.fg         = ${dim}
 drafts.fg         = ${dim}
 Archive_a.fg      = ${dim}
 trash_d.fg        = ${dim}
 spam_z.fg         = ${dim}
 hide_my_email.fg  = ${dim}
-default.fg        = ${dim}
-default.dim       = true
+# Readable default — was dim slate (fg3), the main 'unreadable rows' bug.
+default.fg        = ${fg}
   '';
 }
