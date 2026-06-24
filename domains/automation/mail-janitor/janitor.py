@@ -55,7 +55,7 @@ def classify(a, subj):
     # --- PRESERVE allowlist (override) — these were false-positives in NOISE ---
     if ".gov" in dom: return "PRESERVE"                                   # govt filings
     if "calendar." in dom: return "PRESERVE"                             # meeting invites
-    if ("ads" not in a) and ("accounts.google.com" in dom or any(k in local for k in SEC)):
+    if ("ads" not in a) and ("accounts.google.com" in dom or any(k in a for k in SEC)):
         return "PRESERVE"                                               # security/account alerts
     # --- newsletters -> TRIAGE (collect for review, don't trash outright) ---
     if any(n in local for n in NEWS_LOCAL): return "TRIAGE"
