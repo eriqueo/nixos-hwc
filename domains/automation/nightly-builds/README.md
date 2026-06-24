@@ -57,6 +57,20 @@ domains/automation/nightly-builds/
 `reviewLlmProvider`, `maxCards`, `vaultDir`, `repoDir`, `enableRebuildButton`.
 
 ## Changelog
+- **2026-06-24** — Requeue hygiene + branch-parse robustness (found while running
+  the post-hardening batch live):
+  - **BRANCH parse takes the first match only** (`head -1`). `rg -m1` stops after
+    the first matching *line*, but a requeue card can name two `` branch `x` ``
+    refs on one line (old + new), so `rg -o` emitted both → multi-line BRANCH →
+    `worktree add failed`.
+  - **`run.sh` clears a card's stale morning-review record when it (re)builds it.**
+    Review records are keyed by `<goal>/<slug>`, not by branch/run, so a requeued
+    card kept its old record; the review CLI's idempotent-skip then never
+    re-reviewed the new work and the graduate-gate graduated the project on stale
+    data (live-hit: reconcile-script v2's record still pointed at closed PR #65).
+    Now Phase B deletes `$REVIEWS_DIR/<goal>-<slug>.json` before rebuilding, so the
+    next pass always re-reviews fresh. Covers every requeue path (board, manual,
+    amendment) and needs no engine rebuild.
 - **2026-06-24** — Hardening + observability from the 2026-06-24 media/hot batch
   retro (10/10 built, but delivery + verification leaked):
   - **Read-only `/mnt` (OS-enforced Gate 7).** `nightly-builds.service` and
