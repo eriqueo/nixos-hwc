@@ -134,6 +134,11 @@ in
       index-columns = tags<12,date<10,from<16,flags>4,subject<*
       threading-enabled = true
       confirm-quit = false
+      # which-key leader popup (forked aerc feature). Pressing the Space leader
+      # and pausing shows the possible next keys + annotations, narrowing as you
+      # type. which-key-delay tuned a touch faster than the 500ms default.
+      which-key = true
+      which-key-delay = 350ms
       styleset-name = hwc
       dirlist-left = {{.Style .Folder .Folder}}
       dirlist-tree = true
