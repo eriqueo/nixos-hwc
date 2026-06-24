@@ -109,6 +109,15 @@ let
     # or the trailing human line corrupts the JSON and jq yields an empty digest.
     ${reviewBin} > "$OUT"
     rc=$?
+    # Persist the full CLI JSON (incl .errors[]) BEFORE the trap deletes $OUT.
+    # A transient per-record failure otherwise leaves only a count in the journal
+    # and the detail is unrecoverable (the CLI is idempotent + graduates done
+    # work, so it can't be re-derived). Keep a dated archive under reviews/_runs/.
+    ARCHIVE_DIR="${reviewsDir}/_runs"
+    mkdir -p "$ARCHIVE_DIR" 2>/dev/null || true
+    ARCHIVE="$ARCHIVE_DIR/$(date +%Y-%m-%d-%H%M%S)-morning-review.json"
+    cp "$OUT" "$ARCHIVE" 2>/dev/null && echo "morning-review: archived summary -> $ARCHIVE"
+    nerr="$(jq -r '(.errors // []) | length' "$OUT" 2>/dev/null || echo 0)"
     # The CLI prints a JSON summary to stdout and a human line to stderr (both
     # captured above). Pull the digest fields with jq; degrade to a raw tail if
     # the output isn't the expected JSON (e.g. an early fatal).
@@ -130,6 +139,19 @@ let
     fi
     body="$summary
 Review them in workbench → Nightly Builds hub (live: merge / requeue / rebuild)."
+    # Loud at the edge: if any record errored, override to a high-priority notify
+    # that quotes the per-record errors and points at the archived JSON — never
+    # let a swallowed count hide a branch that pushed but never got a PR.
+    if [ "''${nerr:-0}" -gt 0 ] 2>/dev/null; then
+      prio=2; title="⚠️ Morning review — ''${nerr} review error(s)"
+      errdetail="$(jq -r '(.errors // []) | map("• \(.id // .step // "?"): \(.error // .message // .)") | join("\n")' "$OUT" 2>/dev/null)"
+      body="$summary
+
+Review errors (full JSON: $ARCHIVE):
+$errdetail
+
+A branch may have pushed without a PR — run \`gh pr list\` and open any missing ones."
+    fi
     if command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
       payload=$(jq -nc --arg t "$title" --arg b "$body" --argjson p "$prio" \
         '{topic:"nightly-builds", title:$t, body:$b, priority:$p, source:"nightly-builds", tags:["nightly-builds","morning-review"]}')
@@ -329,6 +351,12 @@ in
         StandardOutput = "journal";
         StandardError = "journal";
         NoNewPrivileges = true;
+        # OS-enforced Gate 7 (contained — no live side effects). Cards routinely
+        # READ /mnt (media/hot audits) but must NEVER mutate it; the guarantee
+        # was prompt-only. Bind /mnt read-only so a misbehaving agent physically
+        # cannot move/delete media. Worktrees (/tmp/nightly), the vault
+        # (runs/REPORT), the repo, and /var/lib/refinery stay writable.
+        ReadOnlyPaths = [ "/mnt" ];
       };
     };
 
@@ -367,6 +395,9 @@ in
         StandardOutput = "journal";
         StandardError = "journal";
         NoNewPrivileges = true;
+        # Same OS-enforced Gate 7 as the nightly runner: run-now executes the
+        # same cards, so /mnt is read-only here too.
+        ReadOnlyPaths = [ "/mnt" ];
       };
     };
 

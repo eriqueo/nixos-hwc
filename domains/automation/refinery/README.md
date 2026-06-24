@@ -49,6 +49,18 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-24** — **Morning-review resilience** (`review/run.ts`), from the
+  2026-06-24 nightly batch retro where 3/10 cards errored transiently and were
+  then swept off the board. (1) **Per-card retry with backoff** (`withRetry`,
+  2s→6s, 3 attempts) around the LLM-review + gh + save body — idempotent, so a
+  retry never double-opens a PR or double-counts. (2) **Graduate-after-review**:
+  a project graduates to `_finished/` only when *every* reviewable step (done +
+  has a `run:` dir) carries a review record; an errored/unreviewed step now keeps
+  the project on the active board so the next pass retries it instead of losing
+  it. Deliberately NOT done here: a dedicated "errored" board lane — it would
+  widen the `PrReview.verdict` union across the board renderer *and* the external
+  `hwc_nightly_review` MCP tool; retry + graduate-gate + the loud nightly-builds
+  notify cover the visibility gap with far smaller blast radius.
 - **2026-06-19** — **Idea → spec → build assembly line + two-kanban board.** New native
   **`build`** pipeline (`pipelines/build.yaml` + `prompts/build.md`, `BUILD-VERDICT`) that
   implements a developed spec in the target repo. **Declarative chaining**: a pipeline can
