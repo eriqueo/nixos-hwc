@@ -3,13 +3,14 @@ let
   tags = import ./tags.nix { inherit lib; };
 
   # Exclusive category bindings under <Space>m leader (adds tag, removes all other categories)
+  # Trailing " # <tag>" is the aerc binding annotation — shown in the which-key popover.
   categoryBinds = lib.concatStringsSep "\n" (map (t:
-    "      <Space>m${t.spaceKey} = :modify-labels ${tags.exclusiveCmd t}<Enter>"
+    "      <Space>m${t.spaceKey} = :modify-labels ${tags.exclusiveCmd t}<Enter> # ${t.tag}"
   ) tags.categoryTags);
 
   # Additive flag bindings under <Space>m leader (coexist with categories)
   flagBinds = lib.concatStringsSep "\n" (map (t:
-    "      <Space>m${t.spaceKey} = :modify-labels +${t.tag}<Enter>"
+    "      <Space>m${t.spaceKey} = :modify-labels +${t.tag}<Enter> # +${t.tag}"
   ) tags.flagTags);
 
   # Space-leader go-to-folder bindings
@@ -19,7 +20,7 @@ let
         name = tags.tagStyle t;
         goKey = t.spaceKey or (builtins.substring 0 1 t.tag);
       in if (t.noGoTo or false) then ""
-         else "      <Space>g${goKey} = :cf ${name}<Enter>"
+         else "      <Space>g${goKey} = :cf ${name}<Enter> # ${t.tag}"
     ) tags.allTags)
   );
 
@@ -114,13 +115,14 @@ in
       C = :reply -aq<Enter>
 
       # Navigation (static folders + derived tag folders)
-      <Space>gi = :cf inbox_i<Enter>
-      <Space>gu = :cf unread_u<Enter>
-      <Space>ga = :cf Archive_a<Enter>
-      <Space>gs = :cf sent_s<Enter>
-      <Space>gd = :cf trash_d<Enter>
-      <Space>gz = :cf spam_z<Enter>
-      <Space>g_ = :cf hide_my_email<Enter>
+      # Trailing " # <label>" is the aerc annotation shown in the which-key popover.
+      <Space>gi = :cf inbox_i<Enter> # inbox
+      <Space>gu = :cf unread_u<Enter> # unread
+      <Space>ga = :cf Archive_a<Enter> # archive
+      <Space>gs = :cf sent_s<Enter> # sent
+      <Space>gd = :cf trash_d<Enter> # trash
+      <Space>gz = :cf spam_z<Enter> # spam
+      <Space>g_ = :cf hide_my_email<Enter> # hide-my-email
 ${goToBinds}
 
       # Flexible path
@@ -128,32 +130,32 @@ ${goToBinds}
       Y = :cp<space>
 
       # Filter and Sort
-      <Space>ff = :filter<space>
-      <Space>fs = :search<space>
-      <Space>sd = :sort -r date<Enter>
-      <Space>tt = :toggle-threads<Enter>
+      <Space>ff = :filter<space> # filter
+      <Space>fs = :search<space> # search
+      <Space>sd = :sort -r date<Enter> # sort by date
+      <Space>tt = :toggle-threads<Enter> # toggle threads
 
       # Auto-trash sender management
-      <Space>ft = :pipe -b -m ${config.home.homeDirectory}/.local/bin/aerc-trash-sender<Enter>:modify-labels +trash -inbox -unread<Enter>
-      <Space>; = :term ${config.home.homeDirectory}/.local/bin/aerc-show-trash-senders<Enter>
+      <Space>ft = :pipe -b -m ${config.home.homeDirectory}/.local/bin/aerc-trash-sender<Enter>:modify-labels +trash -inbox -unread<Enter> # trash sender
+      <Space>; = :term ${config.home.homeDirectory}/.local/bin/aerc-show-trash-senders<Enter> # show trash senders
 
       # === ALL MARKING UNDER <Space>m LEADER ===
-      <Space>mu = :modify-labels +unread<Enter>
-      <Space>ma = :modify-labels +archive -inbox<Enter>
-      <Space>md = :modify-labels +trash -inbox<Enter>
-      <Space>mz = :modify-labels +spam -inbox<Enter>
-      <Space>ml = :modify-labels<space>
+      <Space>mu = :modify-labels +unread<Enter> # mark unread
+      <Space>ma = :modify-labels +archive -inbox<Enter> # archive
+      <Space>md = :modify-labels +trash -inbox<Enter> # trash
+      <Space>mz = :modify-labels +spam -inbox<Enter> # spam
+      <Space>ml = :modify-labels<space> # label…
 
       # Toggle flags off (keys avoid collision with flag add-binds below)
-      <Space>mx = :modify-labels -action<Enter>
-      <Space>m. = :modify-labels -pending<Enter>
-      <Space>mr = :modify-labels -important<Enter>
-      <Space>mF = :modify-labels -flagged<Enter>
+      <Space>mx = :modify-labels -action<Enter> # -action
+      <Space>m. = :modify-labels -pending<Enter> # -pending
+      <Space>mr = :modify-labels -important<Enter> # -important
+      <Space>mF = :modify-labels -flagged<Enter> # -flagged
 
       # Clear flags only (keeps category)
-      <Space>m- = :modify-labels ${tags.clearFlagsCmd}<Enter>
+      <Space>m- = :modify-labels ${tags.clearFlagsCmd}<Enter> # clear flags
       # Nuclear: clear ALL tags (flags + category)
-      <Space>m0 = :modify-labels ${tags.clearAllCmd}<Enter> 
+      <Space>m0 = :modify-labels ${tags.clearAllCmd}<Enter> # clear all tags
 
       # Additive flag marking (coexists with categories)
 ${flagBinds}
@@ -162,7 +164,7 @@ ${flagBinds}
 ${categoryBinds}
 
       # Add a new tag definition (edits tags-custom.json, runs hms)
-      <Space>M = :term ${config.home.homeDirectory}/.local/bin/aerc-new-tag<Enter>
+      <Space>M = :term ${config.home.homeDirectory}/.local/bin/aerc-new-tag<Enter> # new tag…
 
       [view]
       $noinherit = true
