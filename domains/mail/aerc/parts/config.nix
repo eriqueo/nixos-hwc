@@ -142,6 +142,9 @@ in
       # type. which-key-delay tuned a touch faster than the 500ms default.
       which-key = true
       which-key-delay = 350ms
+      # Labels for group (prefix) keys in the popover, so <Space>g shows
+      # "go: folders" not "+20". Mirrors domains/home/keymap/grammar.nix groups.
+      which-key-groups = g:go (folders), m:mark (tags), f:find, s:sort, t:toggle, b:buffer, y:yank, d:delete, w:window, p:project, o:open, q:quit
       styleset-name = hwc
       dirlist-left = {{.Style .Folder .Folder}}
       dirlist-tree = true

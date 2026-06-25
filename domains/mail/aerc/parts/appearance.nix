@@ -88,6 +88,19 @@ completion_default.bg  = ${bg2}
 completion_pill.fg     = ${fg0}
 completion_pill.bg     = ${h (c.bg3 or "32373c")}
 
+# which-key popover (forked aerc): a distinct dark panel + bright copper border
+# so it clearly floats above the message list. Group keys get a cool accent to
+# read differently from leaf actions.
+whichkey_default.bg    = ${h (c.bg0 or "1d2021")}
+whichkey_default.fg    = ${fg0}
+whichkey_key.fg        = ${sel}
+whichkey_key.bold      = true
+whichkey_group.fg      = ${h (c.info or "83a598")}
+whichkey_group.bold    = true
+whichkey_border.fg     = ${sel}
+whichkey_title.fg      = ${fg0}
+whichkey_title.bold    = true
+
 selector_default.bg    = ${bg}
 selector_focused.bg    = ${h (c.bg3 or "32373c")}
 selector_focused.fg    = ${fg0}

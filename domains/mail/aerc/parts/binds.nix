@@ -85,10 +85,10 @@ in
       <semicolon> = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/binds.conf"'<Enter>
 
       # Leader cheat sheet (Space ?) — static which-key reference
-      <Space>? = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/leader-cheatsheet.txt"'<Enter>
+      <Space>? = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/leader-cheatsheet.txt"'<Enter> # cheat sheet
 
       # Switch styleset on the fly
-      <Space>ts = :reload -s<space>
+      <Space>ts = :reload -s<space> # reload styleset
 
 
       [messages]
