@@ -131,7 +131,7 @@ in
       enable-osc8 = true
 
       [ui]
-      index-columns = tags<12,date<10,from<16,flags>4,subject<*
+      index-columns = flags<6,tags<12,date<10,from<16,subject<*
       # Column header row above the msglist (forked aerc feature), styled via the
       # msglist_header styleset object. Labels: tags date from flags subject.
       index-headers = true
