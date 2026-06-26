@@ -696,11 +696,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781397407,
-        "narHash": "sha256-afcRB+BBhbejqJnPDBYBd1XeKCaMV13kVjFOqdJ6Uys=",
+        "lastModified": 1782502984,
+        "narHash": "sha256-rLO0IoCo6PDpQuAP1v66HHg2P+bBY1nAc35n+vNTZlw=",
         "owner": "eriqueo",
         "repo": "todui",
-        "rev": "2a7536c17eb67e503a97721136551682d48638e7",
+        "rev": "0257d6eefc53d7e3c56233af9b3a1030388c2834",
         "type": "github"
       },
       "original": {
