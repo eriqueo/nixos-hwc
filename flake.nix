@@ -151,6 +151,15 @@
       url = "github:Strophox/tetro-tui";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # zellij-which — custom zellij plugin (Rust→wasm): the meta-layer which-key
+    # card. Its own private repo + flake (rust-overlay wasm toolchain), consumed
+    # by domains/home/apps/zellij as the floating meta menu. Ship: push to
+    # eriqueo/zellij-which → `nix flake update zellij-which` → rebuild.
+    zellij-which = {
+      url = "github:eriqueo/zellij-which";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   #============================================================================

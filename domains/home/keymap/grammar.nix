@@ -161,13 +161,15 @@ rec {
   ];
 
   #--------------------------------------------------------------------------
-  # Two-column nav: same keys, modifier picks the column. Already how todui and
-  # aerc behave; now the standard for any app with a side column. Ctrl+j/k is
-  # clear of zellij (its defaults never bind them) and Hyprland (all SUPER).
+  # Two-column nav: same keys, modifier picks the column. Modifier doctrine:
+  # **Ctrl is the workbench (meta) layer** — zellij now binds Ctrl+j/k to cycle
+  # tabs and Ctrl+Space to the meta which-key. So in-app side-column nav moved
+  # off Ctrl onto **Alt** to avoid the collision (Alt passes through zellij to
+  # the focused app). primary = bare keys; secondary = Alt+keys.
   #--------------------------------------------------------------------------
   columns = {
-    primary   = { down = "j";      up = "k"; };       # tasks / messages / files
-    secondary = { down = "ctrl+j"; up = "ctrl+k"; };  # lists / folders / side col
+    primary   = { down = "j";     up = "k"; };       # tasks / messages / files
+    secondary = { down = "alt+j"; up = "alt+k"; };   # lists / folders / side col
   };
 
   #--------------------------------------------------------------------------

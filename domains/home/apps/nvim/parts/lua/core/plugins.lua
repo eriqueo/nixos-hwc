@@ -411,7 +411,28 @@ require("lazy").setup({
       vim.o.timeoutlen = 300
     end,
     config = function()
-      require("which-key").setup()
+      -- HWC standard popup look (matches the aerc which-key card): a
+      -- double-bordered floating card, "key → desc" rows, no per-mapping
+      -- icons. Colors come from the generated colorscheme (WhichKey* groups
+      -- in parts/appearance.nix) so the red default group colour is gone.
+      require("which-key").setup({
+        preset = "modern",
+        icons = {
+          mappings = false,
+          separator = "→",
+        },
+        win = {
+          border = "double",
+          padding = { 1, 3 },
+          title = true,
+          title_pos = "left",
+        },
+        layout = {
+          spacing = 4,
+          align = "left",
+        },
+        show_help = false,
+      })
     end,
   },
 

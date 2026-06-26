@@ -98,6 +98,12 @@
     # Mail lives on the server (laptop mbsync is disabled); run aerc there.
     # `command aerc` still reaches the local binary if ever needed.
     aliases.aerc = "ssh -t server aerc";
+    # datax/jt-mcp relocated to a worktree-container layout (2026-06-26): the repo
+    # root is now a container holding main/ (read-only upstream mirror) + eok/* work
+    # worktrees. Point the jump aliases at main/. Laptop-only override — the server's
+    # checkouts are not relocated, so its base cdd/cdj (parts/aliases.nix) stay as-is.
+    aliases.cdd = "cd ~/700_datax/datax/main";
+    aliases.cdj = "cd ~/700_datax/jt-mcp/main";
     mcp = {
       enable = true;
       includeConfigDir = false;   # don't expose ~/.config to Claude
