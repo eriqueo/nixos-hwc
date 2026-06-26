@@ -16,7 +16,7 @@
 # as `config.hwc.home.theme.colors`; this module derives the zellij theme from
 # it. Switch hwc.home.theme.palette → zellij + workbench restyle on rebuild.
 
-{ config, lib, pkgs, osConfig ? {}, ... }:
+{ config, lib, pkgs, inputs, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.home.apps.zellij;
@@ -37,8 +37,21 @@ let
   # if the keymap module is not imported, this is "" and zellij keeps its prior
   # default keybinds — so this wiring is safe whether or not keymap is enabled.
   km           = (config.hwc.home.keymap or {}).grammar or {};
+  # The meta which-key is a custom zellij plugin (its own 600_apps repo, built to
+  # wasm). The meta-leader launches it as a floating card instead of the subtle
+  # status-bar mode; entries are generated from grammar.meta in to-zellij.nix.
+  zellijWhichWasm = inputs.zellij-which.packages.${pkgs.system}.default;
+  # Stable on-disk path (NOT the /nix/store path): zellij keys a plugin's
+  # permission grant by its location string, and a store path's hash changes
+  # every rebuild → it would re-prompt forever. Deploy the wasm to a fixed path
+  # (below) and reference that, so the grant persists across rebuilds.
+  zellijWhichPath = "${config.home.homeDirectory}/.config/zellij/plugins/zellij-which.wasm";
   metaKeybinds = lib.optionalString (km ? meta)
-    (import ../../keymap/parts/to-zellij.nix { inherit lib; grammar = km; }).keybinds;
+    (import ../../keymap/parts/to-zellij.nix {
+      inherit lib colors;
+      grammar = km;
+      pluginWasm = zellijWhichPath;
+    }).keybinds;
 in
 {
   #============================================================================
@@ -86,6 +99,10 @@ in
         ${appearance.themeBlock}
         ${metaKeybinds}
       '';
+
+      # Stable path for the meta which-key plugin (see zellijWhichPath note).
+      "zellij/plugins/zellij-which.wasm".source =
+        "${zellijWhichWasm}/zellij-which.wasm";
 
       # The workbench pane grid. workbench spawns/focuses into these panes by
       # name via `zellij action new-pane`/`go-to-tab-name`; the layout just

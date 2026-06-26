@@ -75,8 +75,8 @@ in
       <C-l> = :next-tab<Enter>
       <C-q> = :prompt 'Quit aerc?' quit<Enter>
       <C-t> = :term<Enter>
-      <C-j> = :next-folder<Enter>
-      <C-k> = :prev-folder<Enter>
+      <A-j> = :next-folder<Enter>
+      <A-k> = :prev-folder<Enter>
       <C-p> = :next-account<Enter>
       <C-n> = :prev-account<Enter>
       <C-r> = :exec ${config.home.homeDirectory}/.local/bin/sync-mail<Enter>

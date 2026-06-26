@@ -109,14 +109,17 @@ in
     hovered = { fg = "${hex c.marked}" }
 
     [which]
-    # Which-key style helper
+    # Which-key style helper — HWC standard popup look. yazi's which-key is a
+    # bottom BAR (no border/title/legend like aerc's card), so only the shared
+    # tokens map: arrow separator + role colours (cand=key=copper, desc, rest,
+    # dim separator). This is the deliberate graceful-degradation case.
     cols = 2
-    separator = " - "
-    separator_style = { fg = "${hex c.separator}" }
-    mask = { bg = "${hex c.bg0}" }
+    separator = " → "
+    separator_style = { fg = "${hex c.fg3}" }
+    mask = { bg = "${hex c.bg3}" }
     rest = { fg = "${hex c.fg3}" }
     cand = { fg = "${hex c.accent}" }
-    desc = { fg = "${hex c.fg2}" }
+    desc = { fg = "${hex c.fg1}" }
 
     [help]
     # Help screen

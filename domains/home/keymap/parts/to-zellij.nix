@@ -13,7 +13,7 @@
 #
 # Pure function: returns { keybinds = "<kdl>"; }.
 
-{ lib, grammar }:
+{ lib, grammar, pluginWasm ? null, colors ? {} }:
 
 let
   # meta `target` -> zellij tab INDEX (1-based). zellij keybinds only support
@@ -68,14 +68,57 @@ let
 
   metaBinds = lib.concatStringsSep "\n" (map bindLine grammar.meta);
 
-  keybinds = ''
-    // ===========================================================================
-    // INTER-APP META LAYER — generated from domains/home/keymap/grammar.nix.
-    // clear-defaults strips zellij's default Ctrl-chords (they collided with
-    // aerc/yazi). The meta-leader (${grammar.metaLeader}) is the only global key.
-    // ===========================================================================
-    keybinds clear-defaults=true {
+  # ── zellij-which plugin entries (Model A) ────────────────────────────────
+  # When a built plugin wasm is supplied, the meta-leader launches the
+  # zellij-which floating card INSTEAD of the tmux-mode status-bar. Its entries
+  # are generated from the SAME grammar.meta above (so they can never go stale),
+  # mapping each meta intent to a plugin verb it can dispatch.
+  intentVerb = {
+    cycle-prev = "prev-tab"; cycle-next = "next-tab";
+    next-tab = "next-tab";   prev-tab = "prev-tab";
+    next-pane = "next-pane"; prev-pane = "prev-pane";
+    pane-picker = "pane-mode"; zoom = "fullscreen";
+    scroll = "scroll"; detach = "detach";
+    # `kill` (Quit) has no plugin verb — omitted from the card on purpose.
+  };
+  entryFor = e:
+    let tok = keyToken e.key; in
+    if (e ? target) then "${tok}|goto-tab|${toString tabFor.${e.target}}|${e.desc}"
+    else if intentVerb ? ${e.intent} then "${tok}|${intentVerb.${e.intent}}||${e.desc}"
+    else null;
+  pluginEntries = lib.concatStringsSep ";"
+    (lib.filter (x: x != null) (map entryFor grammar.meta));
+
+  # Distinct META accent (info/blue) so the outer/meta card reads differently
+  # from the inner-app copper cards at a glance.
+  hx = name: fallback: colors.${name} or fallback;
+  # Ctrl is the workbench (meta) layer: Ctrl+j/k cycle tabs directly (no menu).
+  # In-app side-column nav moved to Alt+j/k (apps), which passes through here.
+  tabCycle = ''
+            bind "Ctrl j" { GoToPreviousTab; }
+            bind "Ctrl k" { GoToNextTab; }'';
+
+  pluginNormalBlock = ''
         normal {
+    ${tabCycle}
+            bind "${grammar.metaLeader}" {
+                LaunchOrFocusPlugin "file:${toString pluginWasm}" {
+                    floating true
+                    move_to_focused_tab true
+                    title "META"
+                    accent "${hx "info" "83a598"}"
+                    fg "${hx "fg0" "ebdbb2"}"
+                    title_bg "${hx "info" "83a598"}"
+                    title_fg "${hx "bg0" "1d2021"}"
+                    dim "${hx "fg3" "50626f"}"
+                    entries "${pluginEntries}"
+                }
+            }
+        }
+  '';
+  modeNormalBlock = ''
+        normal {
+    ${tabCycle}
             bind "${grammar.metaLeader}" { SwitchToMode "Tmux"; }
         }
         // `tmux` mode is repurposed as the transient META (app-switch) mode.
@@ -84,6 +127,16 @@ let
             bind "Esc" { SwitchToMode "Normal"; }
     ${metaBinds}
         }
+  '';
+
+  keybinds = ''
+    // ===========================================================================
+    // INTER-APP META LAYER — generated from domains/home/keymap/grammar.nix.
+    // clear-defaults strips zellij's default Ctrl-chords (they collided with
+    // aerc/yazi). The meta-leader (${grammar.metaLeader}) is the only global key.
+    // ===========================================================================
+    keybinds clear-defaults=true {
+    ${if pluginWasm != null then pluginNormalBlock else modeNormalBlock}
         // Pane-picker drops you into a minimal Pane mode; Esc/leader returns.
         pane {
             bind "Esc" "${grammar.metaLeader}" { SwitchToMode "Normal"; }
