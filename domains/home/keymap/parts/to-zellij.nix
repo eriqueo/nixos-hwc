@@ -95,7 +95,7 @@ let
   pluginNormalBlock = ''
         normal {
             bind "${grammar.metaLeader}" {
-                LaunchOrFocusPlugin "file:${toString pluginWasm}/zellij-which.wasm" {
+                LaunchOrFocusPlugin "file:${toString pluginWasm}" {
                     floating true
                     move_to_focused_tab true
                     title "META"

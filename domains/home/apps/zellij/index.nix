@@ -41,11 +41,16 @@ let
   # wasm). The meta-leader launches it as a floating card instead of the subtle
   # status-bar mode; entries are generated from grammar.meta in to-zellij.nix.
   zellijWhichWasm = inputs.zellij-which.packages.${pkgs.system}.default;
+  # Stable on-disk path (NOT the /nix/store path): zellij keys a plugin's
+  # permission grant by its location string, and a store path's hash changes
+  # every rebuild → it would re-prompt forever. Deploy the wasm to a fixed path
+  # (below) and reference that, so the grant persists across rebuilds.
+  zellijWhichPath = "${config.home.homeDirectory}/.config/zellij/plugins/zellij-which.wasm";
   metaKeybinds = lib.optionalString (km ? meta)
     (import ../../keymap/parts/to-zellij.nix {
       inherit lib colors;
       grammar = km;
-      pluginWasm = zellijWhichWasm;
+      pluginWasm = zellijWhichPath;
     }).keybinds;
 in
 {
@@ -94,6 +99,10 @@ in
         ${appearance.themeBlock}
         ${metaKeybinds}
       '';
+
+      # Stable path for the meta which-key plugin (see zellijWhichPath note).
+      "zellij/plugins/zellij-which.wasm".source =
+        "${zellijWhichWasm}/zellij-which.wasm";
 
       # The workbench pane grid. workbench spawns/focuses into these panes by
       # name via `zellij action new-pane`/`go-to-tab-name`; the layout just
