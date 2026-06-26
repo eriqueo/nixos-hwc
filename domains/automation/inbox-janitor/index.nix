@@ -73,6 +73,10 @@ in
   config = lib.mkIf cfg.enable {
     systemd.services.inbox-janitor = {
       description = "Drain ~/000_inbox/downloads per the routing rule table";
+      # Ordered after Syncthing so the post-move rescan (republish) can reach the
+      # local REST API; the janitor reads its API key from the config.xml below.
+      after = [ "syncthing.service" ];
+      wants = [ "syncthing.service" ];
       serviceConfig = {
         Type = "oneshot";
         User = cfg.user;
@@ -80,7 +84,13 @@ in
         ExecStart =
           "${lib.getExe janitorBin} --config ${cfg.rulesFile}"
           + lib.optionalString (!cfg.dryRun) " --apply";
-        Environment = "HOME=/home/${cfg.user}";
+        # SYNCTHING_CONFIG lets janitor.py self-resolve the API key (no secret in
+        # the unit) and rescan moved paths so the laptop/phone re-index instantly
+        # instead of waiting up to an hour for Syncthing's periodic scan.
+        Environment = [
+          "HOME=/home/${cfg.user}"
+          "SYNCTHING_CONFIG=/home/${cfg.user}/.config/syncthing/config.xml"
+        ];
       };
     };
 
