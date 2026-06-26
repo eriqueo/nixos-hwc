@@ -106,6 +106,8 @@ whichkey_border.fg     = ${sel}
 whichkey_title.bg      = ${fg0}
 whichkey_title.fg      = ${h (c.bg0 or "1d2021")}
 whichkey_title.bold    = true
+whichkey_legend.bg     = ${h (c.bg3 or "32373c")}
+whichkey_legend.fg     = ${dim}
 
 selector_default.bg    = ${bg}
 selector_focused.bg    = ${h (c.bg3 or "32373c")}
