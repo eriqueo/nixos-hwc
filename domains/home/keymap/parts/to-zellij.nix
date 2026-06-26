@@ -92,8 +92,15 @@ let
   # Distinct META accent (info/blue) so the outer/meta card reads differently
   # from the inner-app copper cards at a glance.
   hx = name: fallback: colors.${name} or fallback;
+  # Ctrl is the workbench (meta) layer: Ctrl+j/k cycle tabs directly (no menu).
+  # In-app side-column nav moved to Alt+j/k (apps), which passes through here.
+  tabCycle = ''
+            bind "Ctrl j" { GoToPreviousTab; }
+            bind "Ctrl k" { GoToNextTab; }'';
+
   pluginNormalBlock = ''
         normal {
+    ${tabCycle}
             bind "${grammar.metaLeader}" {
                 LaunchOrFocusPlugin "file:${toString pluginWasm}" {
                     floating true
@@ -111,6 +118,7 @@ let
   '';
   modeNormalBlock = ''
         normal {
+    ${tabCycle}
             bind "${grammar.metaLeader}" { SwitchToMode "Tmux"; }
         }
         // `tmux` mode is repurposed as the transient META (app-switch) mode.
