@@ -92,6 +92,16 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 
 ## Changelog
 
+- 2026-06-26 — **Meta layer → `zellij-which` plugin card.** The meta-leader
+  (`Ctrl Space`) now launches the `zellij-which` floating which-key card (custom
+  Rust→wasm zellij plugin, `~/600_apps/zellij-which`, flake input) instead of the
+  subtle built-in status-bar `tmux` mode. `to-zellij.nix` gains optional
+  `pluginWasm`/`colors` args: when `pluginWasm` is set it emits a
+  `LaunchOrFocusPlugin` bind whose `entries` are generated from the SAME
+  `grammar.meta` (key|verb|arg|label) — so the card can't go stale; else it falls
+  back to the old tmux-mode block. Card uses a distinct blue (`info`) accent to
+  signal meta scope vs the inner copper app cards. `kill` (Quit) omitted (no
+  plugin verb). First plugin load prompts for zellij permissions (grant once).
 - 2026-06-18 — **Flat hub-pages + `Ctrl Space` leader.** The single multi-hub
   "home" tab is dissolved: each workbench hub is now its own zellij tab
   (`workbench --hub <id>`), peer of the tool tabs (order: hwc · datax · server ·
