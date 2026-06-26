@@ -16,14 +16,18 @@
 # opensearch-query.mjs, send-report.sh) lives in its own repo at
 # ~/700_datax/sr_gauntlet — this module only provides the schedule.
 # Credentials are late-bound at runtime from ~/600_apps/sr_analyzer/.env
-# (Firestore) and ~/700_datax/datax/.env.local (Firestore admin +
-# OpenSearch); nothing secret passes through the Nix store.
+# (Firestore fetch) and /var/lib/sr-gauntlet/datax.env (Firestore admin +
+# OpenSearch — a trimmed copy, not the dev tree); nothing secret passes
+# through the Nix store.
 #
 # NAMESPACE: hwc.automation.srGauntlet.*
 #
 # DEPENDENCIES:
 #   - ~/700_datax/sr_gauntlet checkout (the pipeline)
-#   - ~/700_datax/datax + ~/700_datax/jt-mcp git checkouts (worktree sources)
+#   - /var/lib/sr-gauntlet/{datax,jt-mcp} — service-owned clones of the official
+#     elstruck repos (worktree sources, origin/main). Set up once, fetch-only;
+#     decoupled from Eric's ~/700_datax dev worktrees.
+#   - /var/lib/sr-gauntlet/datax.env — trimmed 0600 cred file (7 keys)
 #   - Claude Code CLI authenticated for the eric user
 #   - hwc-notify on 127.0.0.1:11600 (run summaries; best-effort)
 
@@ -48,6 +52,17 @@ let
     # derive everywhere). Without this the script falls back to a stale default
     # path and fetch FATALs with ENOENT.
     SRG_ENV_FILE = "${paths.user.home}/600_apps/sr_analyzer/.env";
+    # Service-owned source clones (origin = official elstruck, pinned to main),
+    # NOT Eric's ~/700_datax dev worktrees. run.sh fetches origin/main from these
+    # and builds throwaway /tmp worktrees — nothing edits them. Decouples the
+    # long-running service from the interactive dev tree (laptop-only editing).
+    SRG_DATAX_REPO = "/var/lib/sr-gauntlet/datax";
+    SRG_JTMCP_REPO = "/var/lib/sr-gauntlet/jt-mcp";
+    # aggregate-context.mjs + opensearch-query.mjs read Firestore-admin +
+    # OpenSearch creds from this file. A trimmed, service-owned copy of the 7
+    # keys they use (was ~/700_datax/datax/.env.local — gone with the dev tree).
+    # Plain 0600 file, eric-owned; refresh it by hand if those secrets rotate.
+    SRG_DATAX_ENV = "/var/lib/sr-gauntlet/datax.env";
   };
   srgPath = [
     pkgs.bash pkgs.coreutils pkgs.git pkgs.openssh
