@@ -333,6 +333,7 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-06-26: which-key popover redesign (forked aerc) — compact content-sized box (was edge-to-edge), `key → label` rows with nvim arrow, group keys read `domain +N` (e.g. `buffer +7`); styleset reworked to a raised slate card (bg3, lighter than terminal) with an inverted cream title chip and copper border, plus interior padding + a minimum box size. Code in `github:eriqueo/aerc` (app/whichkey.go, app/aerc.go); colors in `parts/appearance.nix`.
 - 2026-03-19: Fix act-one-delete-rest → act-dir (was deleting label file copies); fix hide_my_email query to use tag:hide instead of wrong Folders/ path
 - 2026-03-15: Add family and hwcmt tags; spam folder and bidirectional sync; hide_my_email folder; to column; symbolic flags; human-readable column layout; full sync-mail pipeline on `<C-r>`; tag exclude filters for notifications/action/aerc; single-source-of-truth tag system with derived bindings, queries, stylesets, and column templates
 - 2026-03-14: Fix compose editor (lf-editor), send (msmtp path), TLS (certcheck off); add compose review bindings; switch to dracula styleset with live switching; add tag-based message coloring across all themes; add quoted_reply HTML template; add bundled filters and multipart-converters
