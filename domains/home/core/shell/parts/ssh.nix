@@ -6,6 +6,7 @@
 { lib, cfg, nixosApiVersion }:
 if nixosApiVersion == "stable" then {
   enable = true;
+  enableDefaultConfig = false;
   matchBlocks = {
     "*" = {
       forwardAgent = false;

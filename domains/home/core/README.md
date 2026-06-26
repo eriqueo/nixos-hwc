@@ -21,6 +21,9 @@ core/
 ```
 
 ## Changelog
+- 2026-06-26: shell/parts/ssh.nix — set `enableDefaultConfig = false` on the
+  stable (HM 25.11) branch to silence the `programs.ssh` default-values
+  deprecation; the `matchBlocks."*"` block already replicates HM's defaults.
 - 2026-06-11: Structure section updated to reality (shell/ and development/
   are directories; namespaces moved under hwc.home.core.* per Law 2; the
   phantom options.nix/shell.nix flat files are gone).
