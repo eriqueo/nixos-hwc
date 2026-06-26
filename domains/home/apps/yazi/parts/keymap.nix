@@ -164,8 +164,8 @@
       # ══════════════════════════════════════════════════════════════════
       # PREVIEW
       # ══════════════════════════════════════════════════════════════════
-      { on = [ "<C-j>" ], run = "seek 5", desc = "Preview: down" },
-      { on = [ "<C-k>" ], run = "seek -5", desc = "Preview: up" },
+      { on = [ "<A-j>" ], run = "seek 5", desc = "Preview: down" },
+      { on = [ "<A-k>" ], run = "seek -5", desc = "Preview: up" },
     ]
 
     [tasks]
