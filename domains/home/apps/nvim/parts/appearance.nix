@@ -55,6 +55,18 @@ in
         CursorLineNr = {fg = "#${c.fg1}", bold = true},
         StatusLine   = {fg = "#${c.fg1}", bg = "#${c.bg3}", bold = true},
 
+        -- Which-key popover — HWC standard popup look (mirrors aerc whichkey_*):
+        -- raised slate card (bg3), copper border, inverted cream title chip,
+        -- copper keys, cool-accent groups (was the default RED), dim separator.
+        WhichKey          = {fg = "#${c.accent}", bold = true},
+        WhichKeyGroup     = {fg = "#${c.info or "83a598"}", bold = true},
+        WhichKeyDesc      = {fg = "#${c.fg1}"},
+        WhichKeySeparator = {fg = "#${c.fg3}"},
+        WhichKeyBorder    = {fg = "#${c.accent}", bg = "#${c.bg3}"},
+        WhichKeyTitle     = {fg = "#${c.bg0}", bg = "#${c.fg0}", bold = true},
+        WhichKeyNormal    = {bg = "#${c.bg3}"},
+        WhichKeyValue     = {fg = "#${c.fg3}"},
+
         -- Treesitter: functions
         ["@function"]         = {fg = "#${c.accent}", bold = true},
         ["@function.call"]    = {fg = "#${c.accent}"},
