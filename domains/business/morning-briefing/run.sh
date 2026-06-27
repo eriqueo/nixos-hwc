@@ -72,7 +72,12 @@ KHAL_BIN="/etc/profiles/per-user/eric/bin/khal"
 # -- system: service counts + overall state (systemctl is read-only/always-safe) --
 SERVICES_ACTIVE=$("${SYSTEMCTL}" list-units --type=service --state=running --no-legend 2>/dev/null | wc -l | tr -d ' ' || echo 0)
 SERVICES_FAILED=$("${SYSTEMCTL}" list-units --type=service --state=failed --no-legend 2>/dev/null | wc -l | tr -d ' ' || echo 0)
-SYS_STATE=$("${SYSTEMCTL}" is-system-running 2>/dev/null || echo "unknown")
+# NB: `is-system-running` EXITS NON-ZERO when not "running" (e.g. "degraded"),
+# so a `|| echo` fallback would fire ON TOP of the real output and concatenate
+# ("degraded\nunknown"). Capture the output, swallow the exit with `|| true`,
+# then default only if it came back empty.
+SYS_STATE=$("${SYSTEMCTL}" is-system-running 2>/dev/null) || true
+[ -n "${SYS_STATE}" ] || SYS_STATE="unknown"
 [ -n "${SERVICES_ACTIVE}" ] || SERVICES_ACTIVE=0
 [ -n "${SERVICES_FAILED}" ] || SERVICES_FAILED=0
 
