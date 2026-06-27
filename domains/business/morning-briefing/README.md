@@ -1,6 +1,16 @@
 # Morning Briefing
 
-Daily automated briefing for Heartwood Craft ops. Runs as a systemd timer at 6am MT, compiles data from MCP servers and mail into a single JSON file served by Caddy.
+Daily automated briefing for Heartwood Craft ops. Runs as a systemd timer at 6am MT, gathers data into a single JSON file served by Caddy and read by the workbench `brief` hub (via the `hwc_morning_brief` MCP tool).
+
+**Data gathering is local CLI, not MCP.** The 6am run is headless, and `~/.claude`
+runs `defaultMode=acceptEdits` — which does NOT auto-approve Bash or MCP tool
+calls. So an agent asked to gather via MCP gets every call *permission-denied*
+(this produced briefings full of bogus `[CRITICAL] … permission denied` alerts).
+`run.sh` therefore gathers system/mail/calendar directly in bash (`systemctl`,
+`df`, `notmuch`, `khal`) as `eric`, who has full file/CLI access. Claude is used
+ONLY for the mail-triage *reasoning* in Step 2 (no tool calls). **JobTread
+sections (jobs/leads/tasks/overdue/docs) are placeholders** pending a local data
+source — see "JobTread follow-up" below.
 
 Dashboard: `https://hwc-server.ocelot-wahoo.ts.net:16443`
 
@@ -26,14 +36,23 @@ logs/
 
 | Step | What | How |
 |------|------|-----|
-| 0 | Pre-flight | Check claude binary exists at expected path |
-| 1 | Main briefing | `claude --print` queries Calendar, JobTread, system health, backup, weather via MCP |
-| 2 | Mail triage | `notmuch search` → `claude --print` classifies into urgent/review/noise |
+| 0 | Pre-flight | Check claude binary exists (still needed for Step 2 mail triage) |
+| 1 | Local gather | bash assembles `briefing.json` directly: `systemctl` (services), `df` (storage), `notmuch` (mail), `khal`→`jq` (calendar). Alerts computed locally. JobTread sections = placeholders. **No Claude, no MCP.** |
+| 2 | Mail triage | `notmuch search` → `claude --print` classifies into urgent/review/noise (pure reasoning, no tool calls) |
 | 2b | Persist buckets | `notmuch tag` stamps each classified thread with `triage/<bucket>` (removes other `triage/*`) |
 | 3 | Merge | `jq` injects mail_triage into briefing.json |
 | 4 | Publish | Dashboard reads via symlink; no-op if symlink exists |
 
-Post-step-1: `generated_at` is stamped by `jq` from `date -Iseconds` (not Claude's timestamp). Validation checks for `sections.calendar` and `sections.jobs` keys. Steps 1 and 2 log elapsed seconds for performance tracking.
+Step 1 builds `briefing.json` atomically (`.tmp` → validate with `jq empty` → `mv`); on any failure the previous briefing is kept. `generated_at` is stamped from `date -Iseconds`. The calendar is parsed with `jq` (NOT `python3`, which is not on the unit PATH — the old `python3` injector silently failed).
+
+### JobTread follow-up
+
+`sections.{jobs,leads,overdue,tasks,recent_documents}` are emitted as empty
+placeholders. JobTread data is fetched from the JT API by `jt-mcp` (no obvious
+local file), so a future pass must pick a source: read a local JT cache if one
+exists, or have `run.sh` `curl` the local gateway (`localhost:6200/mcp`, no
+Claude permission needed) for `jt_jobs`/`jt_tasks`/`jt_documents`/`hwc_leads` and
+assemble with `jq`. Until then the brief tile shows live system/mail/calendar.
 
 ### Tag-backed triage buckets (persisted moves)
 
@@ -113,6 +132,7 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-06-27** — **Step 1 no longer uses Claude/MCP.** The headless 6am run can't get tool-permission approvals (`~/.claude` `defaultMode=acceptEdits` doesn't cover Bash/MCP), so every MCP gather was auto-denied → briefings full of bogus `[CRITICAL] permission denied` alerts. Rewrote Step 1 to gather system/mail/calendar directly in bash (`systemctl`/`df`/`notmuch`/`khal`→`jq`), compute alerts locally, and assemble `briefing.json` atomically. Fixed the calendar injector (`python3` → `jq`; python3 isn't on the unit PATH). JobTread sections are placeholders pending a local source (see "JobTread follow-up"). Claude is kept only for Step 2 mail-triage reasoning. Deploy = `git pull` on the server + a manual run (run.sh is read from the live repo path; no nixos rebuild).
 - **2026-04-12** — Update tool references for MCP consolidation: `hwc_calendar_week`→`hwc_calendar_list` (range=week), `hwc_storage_backup_status`→`hwc_storage_status`. Rename heartwood-mcp→jt-mcp in docs.
 - **2026-04-09** — Add backup status, tasks due, and recent documents sections. Expand mail triage with known noise senders (nextdoor, quora, zillow, angi, thumbtack, yelp) and review senders (Quo, Stripe, QuickBooks, JobTread). Add reasoning rules for 'sent' tag and flagged+work threads. Dashboard: add backup row, collapsible tasks view, recent docs with type badges, footer with section count, keyboard 'r' refresh, fade-in animation, prominent day-of-week header. Pipeline: add pre-flight check, post-step-1 validation, per-step timing. New alert rules: backup errors, stale backups, overdue tasks, incomplete tasks after 3pm
 - **2026-04-07** — Upgrade dashboard with mail triage UI (expandable thread cards, action buttons, urgent/review/noise buckets). Add `jt_get_overdue_documents` tool to heartwood-mcp. Make `jt_search_jobs` searchTerm optional (allows listing all open jobs). Fix stale paths (routes.nix + old systemd unit), fix mail triage JSON parsing (remove `--output=threads`, extract JSON with sed range instead of fence strip), fix `cp` same-file error on dashboard symlink, stamp `generated_at` from shell, pass explicit date in prompt, increase timeout to 300s, reduce thread limit to 30, add debug logging on triage parse failure

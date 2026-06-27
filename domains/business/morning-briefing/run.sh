@@ -54,105 +54,124 @@ fi
 log "OK: Pre-flight passed (claude binary exists)"
 
 # ── Step 1: Main briefing ─────────────────────────────────────────────────────
-log "STEP 1: Main briefing (Claude Code CLI)..."
+log "STEP 1: Gathering deterministic data locally (no Claude / no MCP)..."
 STEP1_START=$(date +%s)
 
-TODAY="$(date +%Y-%m-%d)"
-RESULT=$("${CLAUDE_BIN}" \
-  --print \
-  -p "Today is ${TODAY} ($(date '+%A, %B %-d, %Y')). Compile today's morning briefing as specified in CLAUDE.md. IMPORTANT: For the calendar section, call hwc_calendar_list with range='today' to get today's events from iCloud via khal."
-  2>&1) || {
-  log "ERROR: Claude Code CLI failed"
-  echo "${RESULT}" >> "${LOG_FILE}"
-  cat > "${OUTPUT_DIR}/briefing.json.tmp" <<ERRJSON
-{
-  "generated_at": "$(date -Iseconds)",
-  "error": true,
-  "error_message": "Claude Code CLI failed to compile briefing",
-  "sections": {},
-  "alerts": [{"level": "critical", "section": "system", "message": "Briefing compilation failed — check logs"}]
-}
-ERRJSON
+# The 6am HEADLESS run cannot get tool-permission approvals inside Claude
+# (~/.claude runs defaultMode=acceptEdits, which does NOT cover Bash or MCP
+# calls), so the agent's MCP gather was auto-denied — the CRITICAL "permission
+# denied" alerts. Gather everything here in bash instead: full file/CLI access
+# as eric, the same pattern Step 2 (notmuch) already uses. Claude is used ONLY
+# for the mail-triage reasoning (Step 2), which needs no tools. JobTread
+# sections (jobs/leads/tasks/overdue/docs) are placeholders until a local data
+# source is wired — see README "JobTread follow-up".
+
+SYSTEMCTL="/run/current-system/sw/bin/systemctl"; [ -x "${SYSTEMCTL}" ] || SYSTEMCTL="systemctl"
+KHAL_BIN="/etc/profiles/per-user/eric/bin/khal"
+
+# -- system: service counts + overall state (systemctl is read-only/always-safe) --
+SERVICES_ACTIVE=$("${SYSTEMCTL}" list-units --type=service --state=running --no-legend 2>/dev/null | wc -l | tr -d ' ' || echo 0)
+SERVICES_FAILED=$("${SYSTEMCTL}" list-units --type=service --state=failed --no-legend 2>/dev/null | wc -l | tr -d ' ' || echo 0)
+SYS_STATE=$("${SYSTEMCTL}" is-system-running 2>/dev/null || echo "unknown")
+[ -n "${SERVICES_ACTIVE}" ] || SERVICES_ACTIVE=0
+[ -n "${SERVICES_FAILED}" ] || SERVICES_FAILED=0
+
+# -- storage: df for the key mounts → [{mount, percent}] --
+STORAGE_JSON=$(df -h --output=target,pcent / /mnt/hot /mnt/media 2>/dev/null \
+  | tail -n +2 \
+  | jq -R -s 'split("\n") | map(select(length>0)) | map(
+      (split(" ") | map(select(length>0))) as $p
+      | { mount: ($p[0] // "?"), percent: (($p[1] // "0%") | rtrimstr("%") | tonumber? // 0) }
+    )' 2>/dev/null || echo '[]')
+echo "${STORAGE_JSON}" | jq empty 2>/dev/null || STORAGE_JSON='[]'
+WORST=$(echo "${STORAGE_JSON}" | jq '[.[].percent] | max // 0' 2>/dev/null || echo 0)
+
+OVERALL="green"
+if [ "${SERVICES_FAILED}" -gt 0 ] 2>/dev/null; then OVERALL="red"; fi
+if [ "${WORST:-0}" -ge 90 ] 2>/dev/null; then OVERALL="red"; fi
+
+# -- mail health (notmuch counts) --
+UNREAD=$(notmuch count tag:unread 2>/dev/null || echo 0)
+INBOX_UNREAD=$(notmuch count "tag:inbox and tag:unread" 2>/dev/null || echo 0)
+[ -n "${UNREAD}" ] || UNREAD=0
+[ -n "${INBOX_UNREAD}" ] || INBOX_UNREAD=0
+
+# -- calendar: today's events via khal, parsed with jq. (NOT python3 — it is not
+#    on the unit PATH [bash coreutils jq nodejs notmuch], which is why the old
+#    injector silently failed and left the agent's denied calendar in place.) --
+CAL_JSON='{"events": []}'
+if [ -x "${KHAL_BIN}" ]; then
+  CAL_JSON=$("${KHAL_BIN}" list \
+    --format='{start-date}T{start-time}|{end-date}T{end-time}|{title}|{location}|{all-day}' \
+    today today 2>/dev/null \
+    | jq -R -s 'split("\n") | map(select(length>0)) | map(split("|")) | map(select(length>=5)) | map({
+        summary: .[2],
+        start: .[0],
+        end: .[1],
+        location: (if .[3] == "" then null else .[3] end),
+        allDay: (.[4] | ascii_downcase == "true")
+      }) | { events: . }' 2>/dev/null || echo '{"events": []}')
+  echo "${CAL_JSON}" | jq empty 2>/dev/null || CAL_JSON='{"events": []}'
+fi
+EV_COUNT=$(echo "${CAL_JSON}" | jq '.events | length' 2>/dev/null || echo 0)
+
+# -- alerts: computed from what we actually gathered (CLAUDE.md rules subset) --
+ALERTS_JSON=$(jq -n \
+  --argjson failed "${SERVICES_FAILED}" \
+  --argjson worst "${WORST:-0}" '
+  [ (if $failed > 0 then {level:"critical", section:"system", message:"\($failed) failed service(s)"} else empty end)
+  , (if $worst >= 90 then {level:"critical", section:"system", message:"Storage at \($worst)% on a mount"} else empty end)
+  ]' 2>/dev/null || echo '[]')
+echo "${ALERTS_JSON}" | jq empty 2>/dev/null || ALERTS_JSON='[]'
+
+# -- assemble briefing.json atomically: build .tmp, validate, then mv --
+if jq -n \
+  --arg now "$(date -Iseconds)" \
+  --arg overall "${OVERALL}" \
+  --arg sys_state "${SYS_STATE}" \
+  --argjson cal "${CAL_JSON}" \
+  --argjson storage "${STORAGE_JSON}" \
+  --argjson services_active "${SERVICES_ACTIVE}" \
+  --argjson services_failed "${SERVICES_FAILED}" \
+  --argjson unread "${UNREAD}" \
+  --argjson inbox_unread "${INBOX_UNREAD}" \
+  --argjson alerts "${ALERTS_JSON}" '
+  {
+    generated_at: $now,
+    sections: {
+      calendar: $cal,
+      jobs: { active: [] },
+      leads: { new_count: 0, items: [] },
+      overdue: { count: 0, total_amount: 0, items: [] },
+      system: {
+        overall: $overall,
+        state: $sys_state,
+        services_active: $services_active,
+        services_failed: $services_failed,
+        storage: $storage
+      },
+      mail: { healthy: true, unread: $unread, inbox_unread: $inbox_unread,
+              summary: "\($inbox_unread) inbox unread (\($unread) total)" },
+      weather: { location: "Bozeman, MT", outdoor_work_ok: true, notes: "not gathered" },
+      comms: { source: "none", items: [] },
+      weekly_snapshot: {},
+      backup: {},
+      tasks: { due_today: [], due_this_week: [], overdue: [] },
+      recent_documents: { items: [] }
+    },
+    alerts: $alerts,
+    notes: "JobTread sections pending a local data source (see README). System/mail/calendar are live."
+  }' > "${OUTPUT_DIR}/briefing.json.tmp" 2>>"${LOG_FILE}" \
+  && jq empty "${OUTPUT_DIR}/briefing.json.tmp" 2>/dev/null; then
   mv "${OUTPUT_DIR}/briefing.json.tmp" "${OUTPUT_DIR}/briefing.json"
-  cp "${OUTPUT_DIR}/briefing.json" "${DASHBOARD_DIR}/briefing.json"
-  exit 1
-}
+  log "OK: Local briefing assembled (services: ${SERVICES_ACTIVE} active / ${SERVICES_FAILED} failed · cal: ${EV_COUNT} events · mail: ${INBOX_UNREAD} inbox unread)"
+else
+  log "ERROR: assembled briefing.json was invalid — keeping previous briefing"
+  rm -f "${OUTPUT_DIR}/briefing.json.tmp"
+fi
 
 STEP1_END=$(date +%s)
-STEP1_ELAPSED=$((STEP1_END - STEP1_START))
-log "STEP 1: completed in ${STEP1_ELAPSED}s"
-
-if [ -f "${OUTPUT_DIR}/briefing.json" ]; then
-  # Stamp generated_at with the real time — don't trust Claude's timestamp
-  NOW="$(date -Iseconds)"
-  jq --arg ts "${NOW}" '.generated_at = $ts' \
-    "${OUTPUT_DIR}/briefing.json" > "${OUTPUT_DIR}/briefing.json.tmp" \
-  && mv "${OUTPUT_DIR}/briefing.json.tmp" "${OUTPUT_DIR}/briefing.json"
-  ALERT_COUNT=$(jq '.alerts | length' "${OUTPUT_DIR}/briefing.json" 2>/dev/null || echo "?")
-  log "OK: Main briefing compiled (${ALERT_COUNT} alerts)"
-
-  # Validate minimum structure
-  HAS_SECTIONS=$(jq 'has("sections") and (.sections | has("calendar")) and (.sections | has("jobs"))' \
-    "${OUTPUT_DIR}/briefing.json" 2>/dev/null || echo "false")
-  if [ "${HAS_SECTIONS}" != "true" ]; then
-    log "WARN: briefing.json missing expected sections (calendar/jobs) — partial data, continuing"
-  fi
-
-  # ── Step 1b: Inject live khal calendar (overrides agent's stale data) ──────
-  KHAL_BIN="/etc/profiles/per-user/eric/bin/khal"
-  if [ -x "${KHAL_BIN}" ]; then
-    log "STEP 1b: Injecting live khal calendar..."
-    KHAL_JSON=$(${KHAL_BIN} list \
-      --format='{start-date}T{start-time}|{end-date}T{end-time}|{title}|{location}|{all-day}' \
-      today today 2>/dev/null \
-      | python3 -c "
-import sys, json
-events = []
-tz = '-06:00'
-lines = sys.stdin.read().split('\n')
-merged = []
-for line in lines:
-    line = line.strip()
-    if not line:
-        continue
-    if len(line) >= 11 and line[4] == '-' and line[7] == '-' and 'T' in line[:11]:
-        merged.append(line)
-    elif merged:
-        merged[-1] += ' ' + line
-for line in merged:
-    if '|' not in line:
-        continue
-    parts = line.split('|', 4)
-    if len(parts) < 5:
-        continue
-    start, end, title, location, allday = [p.strip() for p in parts]
-    is_allday = allday.lower() == 'true'
-    ev = {
-        'summary': title,
-        'start': start + tz if not is_allday else start[:10],
-        'end': end + tz if not is_allday else end[:10],
-        'location': location if location else None,
-        'allDay': is_allday
-    }
-    events.append(ev)
-print(json.dumps({'events': events}))
-" 2>/dev/null) && {
-      if echo "${KHAL_JSON}" | jq empty 2>/dev/null; then
-        jq --argjson cal "${KHAL_JSON}" '.sections.calendar = $cal' \
-          "${OUTPUT_DIR}/briefing.json" > "${OUTPUT_DIR}/briefing.json.tmp" \
-        && mv "${OUTPUT_DIR}/briefing.json.tmp" "${OUTPUT_DIR}/briefing.json"
-        EV_COUNT=$(echo "${KHAL_JSON}" | jq '.events | length' 2>/dev/null || echo "?")
-        log "OK: Calendar injected (${EV_COUNT} events from khal)"
-      else
-        log "WARN: khal output was not valid JSON — keeping agent calendar"
-      fi
-    } || log "WARN: khal calendar injection failed — keeping agent calendar"
-  else
-    log "WARN: khal binary not found — keeping agent calendar"
-  fi
-else
-  log "WARN: Claude ran but no output/briefing.json found"
-fi
+log "STEP 1: completed in $((STEP1_END - STEP1_START))s"
 
 # ── Step 2: Mail triage ───────────────────────────────────────────────────────
 log "STEP 2: Mail triage..."

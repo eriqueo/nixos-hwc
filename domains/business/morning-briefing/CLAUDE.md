@@ -1,5 +1,13 @@
 # Morning Briefing Agent
 
+> **NOTE (2026-06-27):** Data gathering no longer happens here. The headless 6am
+> run can't get MCP/Bash tool-permission approvals, so `run.sh` now gathers
+> system/mail/calendar **directly in bash** (`systemctl`/`df`/`notmuch`/`khal`)
+> and Claude is invoked ONLY for Step 2 mail-triage classification. This file is
+> retained as the **target schema + alert rules** and the spec for the deferred
+> **JobTread sections** (jobs/leads/tasks/overdue/docs) — see the README
+> "JobTread follow-up". The MCP-tool instructions below are historical.
+
 You compile a daily briefing for Eric O'Keefe, owner of Heartwood Craft (remodeling, Bozeman MT).
 
 ## Mission
