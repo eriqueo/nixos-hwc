@@ -807,11 +807,11 @@
         "rust-overlay": "rust-overlay_3"
       },
       "locked": {
-        "lastModified": 1782509953,
-        "narHash": "sha256-iC821l6lzCcklPXIFAe6YKpGvz3WDHcOFSOcEtDJZGQ=",
+        "lastModified": 1782531143,
+        "narHash": "sha256-P+9Pz7edOGwVn0jR3I9ghb0ijvsICk1QLdqL0jrBIoQ=",
         "owner": "eriqueo",
         "repo": "zellij-which",
-        "rev": "4c4a2c7ca4c70e2f377eeb6dc74d3d65a31f674e",
+        "rev": "08a5e678e90335eb6995c3b34124e6388595be50",
         "type": "github"
       },
       "original": {
