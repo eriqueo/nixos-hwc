@@ -492,6 +492,22 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-06-27**: Added **`hwc_morning_brief`** (`tools/morning-brief.ts`) — a rich
+  companion to the infra-only `hwc_morning_status`. It reads the structured
+  `briefing.json` written daily at 6am MT by the `morning-briefing.service`
+  Claude-CLI agent
+  (`domains/business/morning-briefing/output/briefing.json`, server-only,
+  git-ignored — which is why this is an MCP tool, not a laptop-side file read) and
+  reshapes all sections (calendar, jobs, leads, overdue, system, mail, weather,
+  comms, weekly snapshot, backup, tasks, recent documents) plus top-level `alerts`
+  and `mail_triage` into a `contract("text", …)` view: `greeting`/`summary`/
+  `highlights` for the workbench brief **tile**, and a full-markdown `body` for the
+  **detail modal**. Coded fully defensively (every section optional, missing →
+  skipped, never throws) since the agent's output drifts from its documented
+  schema; a briefing older than ~26h is flagged STALE in `summary`. Backs the
+  workbench `brief` hub (`hubs/brief.toml` tile retargeted from `hwc_morning_status`).
+  `hwc_morning_status` is left untouched. Deploy: `npm run build` in `src/` +
+  `sudo systemctl restart hwc-sys-mcp`.
 - **2026-06-18**: Added **`datax_*` tools** — `datax_support_requests` (kanban)
   and `datax_api_health` (status), which back the workbench **DataX hub**
   (`hubs/datax.toml`). Before this the gateway had no `datax_*` tool, so both
@@ -607,6 +623,8 @@ domains/system/mcp/
         ├── tools/
         │   ├── index.ts
         │   ├── registry.ts
+        │   ├── morning-status.ts          # hwc_morning_status (infra-only composite)
+        │   ├── morning-brief.ts           # hwc_morning_brief (rich briefing.json reshaper)
         │   ├── datax.ts
         │   ├── config.ts
         │   ├── services.ts
