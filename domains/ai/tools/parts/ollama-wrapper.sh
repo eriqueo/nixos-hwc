@@ -1,17 +1,22 @@
 #!/usr/bin/env bash
 # domains/ai/framework/parts/ollama-wrapper.sh
 #
-# Thermal-aware Ollama wrapper with Charter integration
+# Thermal-aware llama.cpp wrapper with Charter integration
+# Talks to llama.cpp's OpenAI-compatible server (/v1/chat/completions).
 # Replaces separate dispatcher service with simple shell logic
 
 set -euo pipefail
 
 # Configuration (overridable by environment)
-OLLAMA_ENDPOINT="${OLLAMA_ENDPOINT:-http://localhost:11434}"
+LLM_ENDPOINT="${LLM_ENDPOINT:-http://127.0.0.1:11500}"   # llama.cpp OpenAI server (llama-gpu)
+LLM_MODEL="${LLM_MODEL:-lfm2-2.6b}"                       # --alias served by llama-gpu
 CHARTER_PATH="${CHARTER_PATH:-/home/eric/.nixos/CHARTER.md}"
 LOG_DIR="${LOG_DIR:-/var/log/hwc-ai}"
 THERMAL_WARNING="${THERMAL_WARNING:-75}"
 THERMAL_CRITICAL="${THERMAL_CRITICAL:-85}"
+# The dGPU now does the inference, so watch its temperature too (80/90 °C).
+GPU_WARN="${GPU_WARN:-80}"
+GPU_CRIT="${GPU_CRIT:-90}"
 PROFILE="${PROFILE:-auto}"
 VERBOSE="${VERBOSE:-false}"
 NPU_ENABLED="${NPU_ENABLED:-false}"
@@ -60,16 +65,25 @@ get_temp() {
   echo "$temp"
 }
 
-# Check thermal safety
+# Get NVIDIA dGPU temperature in °C. Best-effort: empty string if nvidia-smi
+# is absent or fails, in which case GPU thermal checks are skipped.
+gpu_temp() {
+  nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -n1
+}
+
+# Check thermal safety (CPU + dGPU). Pre-flight gate before dispatching a task.
 check_thermal() {
   local temp=$(get_temp)
+  local gtemp=$(gpu_temp)
 
-  log_debug "Current CPU temperature: ${temp}°C"
+  log_debug "Current CPU temperature: ${temp}°C; GPU: ${gtemp:-n/a}°C"
 
-  if [[ $temp -eq 0 ]]; then
-    log_warn "Could not read CPU temperature, proceeding with caution"
-    echo "unknown"
-    return 0
+  # GPU critical → abort. The dGPU runs the inference now, so it is the primary
+  # heat source; CPU stays secondary.
+  if [[ -n "$gtemp" ]] && [[ "$gtemp" -gt $GPU_CRIT ]]; then
+    log_error "🚨 ABORT: GPU at ${gtemp}°C (critical: ${GPU_CRIT}°C)"
+    notify-send "AI Task Aborted" "GPU too hot: ${gtemp}°C" -u critical 2>/dev/null || true
+    return 1
   fi
 
   if [[ $temp -gt $THERMAL_CRITICAL ]]; then
@@ -78,52 +92,37 @@ check_thermal() {
     return 1
   fi
 
-  if [[ $temp -gt $THERMAL_WARNING ]]; then
-    log_warn "⚠️  High temperature: ${temp}°C (warning: ${THERMAL_WARNING}°C)"
-    log_warn "Forcing smallest model for safety"
-    echo "hot"
+  if [[ $temp -eq 0 ]] && [[ -z "$gtemp" ]]; then
+    log_warn "Could not read CPU or GPU temperature, proceeding with caution"
+    echo "unknown"
     return 0
   fi
 
-  log_debug "Temperature OK: ${temp}°C"
+  # Warnings: log and proceed. Only one chat model (lfm2-2.6b) is served, so
+  # there is NO smaller model to downgrade to — we warn but do not throttle.
+  if [[ -n "$gtemp" ]] && [[ "$gtemp" -gt $GPU_WARN ]]; then
+    log_warn "⚠️  High GPU temperature: ${gtemp}°C (warning: ${GPU_WARN}°C) — no downgrade target, proceeding"
+  fi
+  if [[ $temp -gt $THERMAL_WARNING ]]; then
+    log_warn "⚠️  High CPU temperature: ${temp}°C (warning: ${THERMAL_WARNING}°C) — no downgrade target, proceeding"
+  fi
+
+  log_debug "Temperature OK: CPU ${temp}°C / GPU ${gtemp:-n/a}°C"
   echo "ok"
   return 0
 }
 
-# Select model based on task complexity and thermal state
+# Select model. The laptop's llama-gpu serves exactly one chat alias
+# (lfm2-2.6b), so every task maps to it — there is no complexity/thermal-based
+# model swap any more. Args kept for call-site compatibility and a possible
+# future multi-model setup.
 select_model() {
-  local task_complexity="${1:-medium}"  # small/medium/large
-  local thermal_state="${2:-ok}"        # ok/hot/unknown
-  local profile="${3:-auto}"            # auto/laptop/server/cpu-only
+  local task_complexity="${1:-medium}"  # accepted, unused
+  local thermal_state="${2:-ok}"        # accepted, unused
+  local profile="${3:-auto}"            # accepted, unused
 
-  log_debug "Selecting model: complexity=$task_complexity, thermal=$thermal_state, profile=$profile"
-
-  # Thermal override: always use smallest model if hot
-  if [[ "$thermal_state" == "hot" ]]; then
-    echo "llama3.2:1b"
-    return
-  fi
-
-  # Profile-based selection
-  case "$profile:$task_complexity" in
-    # Laptop profiles
-    laptop:small|auto:small)       echo "llama3.2:1b" ;;
-    laptop:medium|auto:medium)     echo "llama3.2:3b" ;;
-    laptop:large|auto:large)       echo "phi3.5:3.8b" ;;
-
-    # Server profiles
-    server:small)                  echo "llama3.2:3b" ;;
-    server:medium)                 echo "qwen2.5-coder:7b" ;;
-    server:large)                  echo "qwen2.5-coder:14b" ;;
-
-    # CPU-only profiles
-    cpu-only:small)                echo "llama3.2:1b" ;;
-    cpu-only:medium)               echo "llama3.2:1b" ;;
-    cpu-only:large)                echo "llama3.2:3b" ;;
-
-    # Default fallback
-    *)                             echo "llama3.2:3b" ;;
-  esac
+  log_debug "Selecting model: complexity=$task_complexity, thermal=$thermal_state, profile=$profile -> $LLM_MODEL"
+  echo "$LLM_MODEL"
 }
 
 # Get Charter context using charter-search.sh
@@ -152,11 +151,11 @@ get_charter_context() {
   }
 }
 
-# Check if Ollama is available
-check_ollama() {
-  if ! curl -s --connect-timeout 2 "$OLLAMA_ENDPOINT/api/tags" >/dev/null 2>&1; then
-    log_error "Ollama not available at $OLLAMA_ENDPOINT"
-    log_error "Start Ollama with: systemctl start podman-ollama.service"
+# Check if the llama.cpp server is reachable
+check_llm() {
+  if ! curl -s --connect-timeout 2 "$LLM_ENDPOINT/v1/models" >/dev/null 2>&1; then
+    log_error "llama.cpp server not reachable at $LLM_ENDPOINT"
+    log_error "Check: systemctl status llama-gpu.service"
     return 1
   fi
   return 0
@@ -223,8 +222,8 @@ execute_npu() {
   return 0
 }
 
-# Execute Ollama request with thermal monitoring
-execute_ollama() {
+# Execute a chat completion against llama.cpp with thermal monitoring
+execute_llm() {
   local model="$1"
   local prompt="$2"
   local timeout="${3:-60}"
@@ -233,18 +232,24 @@ execute_ollama() {
   log_header "🤖 Executing AI Task"
   log_info "Model: $model"
   log_info "Timeout: ${timeout}s"
-  log_info "Temperature: $(get_temp)°C"
+  log_info "Temperature: CPU $(get_temp)°C / GPU $(gpu_temp)°C"
 
-  # Start thermal monitoring in background
+  # Start thermal monitoring in background (dGPU primary, CPU secondary)
   local monitor_running=true
   (
     while $monitor_running; do
       local temp=$(get_temp)
+      local gtemp=$(gpu_temp)
+      if [[ -n "$gtemp" ]] && [[ "$gtemp" -gt $GPU_CRIT ]]; then
+        log_error "🚨 Emergency stop at GPU ${gtemp}°C!"
+        notify-send "AI Emergency Stop" "GPU critical: ${gtemp}°C" -u critical 2>/dev/null || true
+        pkill -f "curl.*$LLM_ENDPOINT" || true
+        exit 1
+      fi
       if [[ $temp -gt $THERMAL_CRITICAL ]]; then
-        log_error "🚨 Emergency stop at ${temp}°C!"
+        log_error "🚨 Emergency stop at CPU ${temp}°C!"
         notify-send "AI Emergency Stop" "CPU critical: ${temp}°C" -u critical 2>/dev/null || true
-        # Kill the curl process
-        pkill -f "curl.*$OLLAMA_ENDPOINT" || true
+        pkill -f "curl.*$LLM_ENDPOINT" || true
         exit 1
       fi
       sleep 5
@@ -252,27 +257,25 @@ execute_ollama() {
   ) &
   local monitor_pid=$!
 
-  # Prepare request JSON
+  # Prepare request JSON (OpenAI /v1/chat/completions shape)
   local request_json=$(jq -n \
     --arg model "$model" \
     --arg prompt "$prompt" \
     '{
       model: $model,
-      prompt: $prompt,
-      stream: false,
-      options: {
-        temperature: 0.2,
-        num_predict: 2000
-      }
+      messages: [ { role: "user", content: $prompt } ],
+      temperature: 0.2,
+      max_tokens: 2000,
+      stream: false
     }')
 
   # Execute request with timeout
-  log_debug "Sending request to Ollama..."
+  log_debug "Sending request to llama.cpp..."
   local response
   local exit_code=0
 
-  response=$(timeout "$timeout" curl -s -X POST \
-    "$OLLAMA_ENDPOINT/api/generate" \
+  response=$(timeout "$timeout" curl -sS -X POST \
+    "$LLM_ENDPOINT/v1/chat/completions" \
     -H "Content-Type: application/json" \
     -d "$request_json" 2>&1) || exit_code=$?
 
@@ -291,11 +294,11 @@ execute_ollama() {
     return 1
   fi
 
-  # Extract response
-  local ai_response=$(echo "$response" | jq -r '.response' 2>/dev/null || echo "")
+  # Extract response (OpenAI shape)
+  local ai_response=$(echo "$response" | jq -r '.choices[0].message.content // empty' 2>/dev/null || echo "")
 
-  if [[ -z "$ai_response" ]] || [[ "$ai_response" == "null" ]]; then
-    log_error "Empty or invalid response from Ollama"
+  if [[ -z "$ai_response" ]]; then
+    log_error "Empty or invalid response from llama.cpp"
     log_debug "Raw response: $response"
     return 1
   fi
@@ -306,7 +309,7 @@ execute_ollama() {
       echo "# AI Task Execution Log"
       echo "Timestamp: $(date)"
       echo "Model: $model"
-      echo "Temperature: $(get_temp)°C"
+      echo "Temperature: CPU $(get_temp)°C / GPU $(gpu_temp)°C"
       echo "---"
       echo "$ai_response"
     } >> "$log_file" 2>/dev/null || log_warn "Failed to write log file"
@@ -316,7 +319,7 @@ execute_ollama() {
   echo "$ai_response"
 
   log_info "Task completed successfully"
-  log_info "Final temperature: $(get_temp)°C"
+  log_info "Final temperature: CPU $(get_temp)°C / GPU $(gpu_temp)°C"
 }
 
 # Main workflow
@@ -449,8 +452,8 @@ Report any violations with Law citations."
   if [[ "$use_npu" == "true" ]]; then
     result=$(execute_npu "$prompt" "$log_file") || exit 1
   else
-    check_ollama || exit 1
-    result=$(execute_ollama "$model" "$prompt" "$timeout" "$log_file") || exit 1
+    check_llm || exit 1
+    result=$(execute_llm "$model" "$prompt" "$timeout" "$log_file") || exit 1
   fi
 
   # Output result
@@ -470,7 +473,7 @@ Report any violations with Law citations."
 # Show usage
 show_usage() {
   cat <<EOF
-${BOLD}Ollama Wrapper - Thermal-Aware AI Execution${NC}
+${BOLD}llama.cpp Wrapper - Thermal-Aware AI Execution${NC}
 
 USAGE:
     ollama-wrapper [--npu] <task> <complexity> <file> [output]
@@ -488,10 +491,13 @@ EXAMPLES:
     ollama-wrapper readme large domains/ai/ README.md
 
 ENVIRONMENT:
-    OLLAMA_ENDPOINT      Ollama API URL (default: http://localhost:11434)
+    LLM_ENDPOINT         llama.cpp OpenAI server URL (default: http://127.0.0.1:11500)
+    LLM_MODEL            Chat model alias (default: lfm2-2.6b)
     CHARTER_PATH         Charter document path
-    THERMAL_WARNING      Warning temperature (default: 75°C)
-    THERMAL_CRITICAL     Critical temperature (default: 85°C)
+    THERMAL_WARNING      CPU warning temperature (default: 75°C)
+    THERMAL_CRITICAL     CPU critical temperature (default: 85°C)
+    GPU_WARN             GPU warning temperature (default: 80°C)
+    GPU_CRIT             GPU critical temperature (default: 90°C)
     PROFILE              Hardware profile: auto|laptop|server|cpu-only
     VERBOSE              Enable debug output (default: false)
     LOG_DIR              Log directory (default: /var/log/hwc-ai)
@@ -501,9 +507,11 @@ ENVIRONMENT:
     HWC_NPU_MODEL_DIR    Override NPU model directory
 
 THERMAL SAFETY:
-    - Monitors CPU temperature every 5 seconds
-    - Downgrades to smallest model if temp > warning
-    - Aborts immediately if temp > critical
+    - Monitors GPU (primary) and CPU temperature every 5 seconds
+    - Only one chat model is served, so a warning logs but does NOT throttle
+      (no smaller model to downgrade to)
+    - Aborts immediately if GPU > GPU_CRIT or CPU > THERMAL_CRITICAL,
+      killing any in-flight request
     - Logs all temperature readings
 
 CHARTER INTEGRATION:
