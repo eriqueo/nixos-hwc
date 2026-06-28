@@ -21,7 +21,7 @@ Charter v11.1 native-systemd pattern; mirrors
 ## Structure
 
 ```
-              # - top-level: enable, user, modelsDir, cudaCapabilities
+              # - top-level: enable, user, modelsDir, cudaSupport, cudaCapabilities
               # - per-service submodule via mkLlamaService { defaults = ...; }
               # - instances: gpu, cpu, embed (each {enable,port,modelFile,
               #              modelUrl,contextSize,gpuLayers,threads,extraArgs})
@@ -70,6 +70,13 @@ download via `ExecStartPre`; subsequent starts are no-ops.
 
 ## Changelog
 
+- 2026-06-28: Add `cudaSupport` option (nullOr bool, default `null`). `null`
+  trusts the host's global `nixpkgs.config.cudaSupport` (unchanged for the
+  server's stable-cuda pkgs). Set `true` on hosts without global cudaSupport
+  (the unstable laptop) to force the CUDA backend via
+  `pkgs.llama-cpp.override { cudaSupport = true; }` — the whisper-cpp/blender
+  precedent — otherwise `-ngl` is silently ignored and inference runs on the
+  CPU. Module now reused in-place by `machines/laptop` (gpu + embed only).
 - 2026-05-29: Refactor — extract `mkLlamaService` submodule type from the
   duplicated gpu/cpu option trees; add `llama-embed` (nomic-embed-text-v1.5,
   port 11502) as a third instance. Adding a fourth service is now one

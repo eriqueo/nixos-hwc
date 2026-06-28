@@ -89,9 +89,18 @@ let
     else lib.concatStringsSep ";"
       (map (c: lib.replaceStrings [ "." ] [ "" ] c) cfg.cudaCapabilities);
 
+  # Base package. null (default) = use pkgs.llama-cpp as built by the host's
+  # global nixpkgs.config.cudaSupport (server's stable-cuda set has it on).
+  # On hosts whose pkgs set does NOT enable cudaSupport globally (the unstable
+  # laptop), set cudaSupport = true to force the CUDA backend via a per-package
+  # override — the whisper-cpp / blender precedent — so -ngl actually offloads.
+  basePkg =
+    if cfg.cudaSupport == null then pkgs.llama-cpp
+    else pkgs.llama-cpp.override { cudaSupport = cfg.cudaSupport; };
+
   llamaCppPkg =
-    if cfg.cudaCapabilities == null then pkgs.llama-cpp
-    else pkgs.llama-cpp.overrideAttrs (old: {
+    if cfg.cudaCapabilities == null then basePkg
+    else basePkg.overrideAttrs (old: {
       cmakeFlags = map (f:
         if lib.hasPrefix "-DCMAKE_CUDA_ARCHITECTURES" f
         then "-DCMAKE_CUDA_ARCHITECTURES:STRING=${cmakeArchList}"
@@ -218,6 +227,24 @@ in
       description = ''
         Directory storing downloaded GGUF model files. Derived from
         hwc.paths.ai.models so it respects the path-abstraction contract.
+      '';
+    };
+
+    cudaSupport = lib.mkOption {
+      type = lib.types.nullOr lib.types.bool;
+      default = null;
+      example = true;
+      description = ''
+        Force the llama-cpp CUDA backend on/off via a per-package
+        `.override { cudaSupport = ...; }`. null (default) = leave pkgs.llama-cpp
+        as-is, trusting the host's global nixpkgs.config.cudaSupport — correct
+        for the server, whose stable-cuda pkgs set already builds with CUDA.
+
+        Set true on hosts whose pkgs set does NOT enable cudaSupport globally
+        (e.g. the unstable laptop's pkgs-laptop). Without it, -ngl is silently
+        ignored and inference runs on the CPU. Follows the whisper-cpp / blender
+        per-package override precedent. Setting this forces a local llama-cpp
+        rebuild; the CUDA toolkit itself comes from cache.nixos-cuda.org.
       '';
     };
 
