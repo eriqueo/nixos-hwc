@@ -7,7 +7,6 @@
   imports = [
     ./profiles          # Hardware profile detection and defaults
     ./tools             # AI CLI tools (charter-search, ai-doc, ai-commit, etc.)
-    ./ollama            # Local LLM service
     ./mcp               # Model Context Protocol servers
     ./cloud             # Cloud AI API integration
     ./agent             # HTTP tool agent

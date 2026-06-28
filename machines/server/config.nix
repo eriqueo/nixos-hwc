@@ -217,8 +217,6 @@
       3000 # Grafana
       9090 # Prometheus
       9093 # Alertmanager
-      # AI services
-      11434 # Ollama
       # Calibre VNC
       5909 # Calibre desktop VNC
       # YouTube
@@ -519,31 +517,6 @@
 
     # AI CLI tools disabled on server (headless environment)
     tools.enable = false;
-
-    # Ollama LLM service with profile-based defaults
-    ollama = {
-      enable = true;
-
-      # Explicit model list for 4GB VRAM GPU (Quadro P1000)
-      # Note: Load one at a time due to VRAM constraints
-      models = [
-        "qwen2.5-coder:3b" # 1.9GB - Best coding model
-        "phi3:3.8b" # 2.3GB - General purpose
-        "llama3.2:3b" # 2.0GB - Chat, journaling
-      ];
-
-      # Override profile defaults for server (unlimited resources)
-      resourceLimits = {
-        enable = true;
-        maxCpuPercent = null; # Unlimited CPU
-        maxMemoryMB = null; # Unlimited memory
-        maxRequestSeconds = 600; # 10 minute timeout
-      };
-
-      healthCheck.interval = "30min"; # Was 5min — just a ping, no need to hammer
-      idleShutdown.enable = false; # Always-on service
-      thermalProtection.enable = false; # Datacenter cooling
-    };
   };
 
   # MCP (Model Context Protocol) server infrastructure

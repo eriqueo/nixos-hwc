@@ -2,11 +2,11 @@
 
 ## Purpose
 
-AI infrastructure including local LLMs (Ollama), cloud API integration, MCP servers, CLI tools, and agent orchestration.
+AI infrastructure including cloud API integration, MCP servers, CLI tools, persona CLIs over local llama.cpp, and agent orchestration. (Local llama.cpp inference services live in `domains/server/native/ai/`.)
 
 ## Boundaries
 
-- **Manages**: Ollama service, MCP servers, AI CLI tools, NanoClaw agent, hardware profile detection
+- **Manages**: MCP servers, AI CLI tools, hardware profile detection, persona CLIs (`hwc-llm`)
 - **Does NOT manage**: GPU drivers (→ `domains/infrastructure/hardware/gpu`), container runtime (→ `domains/server/`), secrets for API keys (→ `domains/secrets/`)
 
 ## Structure
@@ -18,7 +18,6 @@ domains/ai/
 ├── cloud/              # Cloud AI API integration (Anthropic, OpenAI)
 ├── mcp/                # Model Context Protocol servers
 ├── nanoclaw/           # NanoClaw AI agent orchestrator (Slack)
-├── ollama/             # Local LLM service
 ├── personas/           # `hwc-llm` persona CLI wrapping llama.cpp endpoints
 ├── profiles/           # Hardware profile detection and defaults
 └── tools/              # AI CLI tools (charter-search, ai-doc, ai-commit)
@@ -36,12 +35,13 @@ Boundaries: this listing reflects what `ai/index.nix` actually imports. Any othe
 ## Hardware Profiles
 
 Auto-detects and configures based on available hardware:
-- **NVIDIA GPU**: CUDA acceleration for Ollama
+- **NVIDIA GPU**: CUDA acceleration for local inference
 - **AMD GPU**: ROCm acceleration
 - **CPU-only**: Optimized CPU inference
 
 ## Changelog
 
+- 2026-06-27: Retired the `ollama/` domain (container LLM stack: podman-ollama + pull/health/disk/model-health/idle/thermal timers). Broken since a Jul-2025 dangling `/var/lib/ollama → private/ollama` symlink and superseded by the native llama.cpp + persona-daemon stack (`domains/server/native/ai/`). Removed the import, the server `:11434` firewall hole, all `hwc.ai.ollama.*` refs (server/laptop/xps), and the laptop waybar-toggle `podman-ollama` sudo grant. The laptop waybar widget self-disables (`behavior.nix` reads the option via `attrByPath … false`). Local-LLM provider intent parked at `brain wiki/nixos/idea-refinery-local-llm-provider.md`.
 - 2026-06-27: Retired `local-workflows/` wholesale (fileCleanup/autoDoc/chatCli + orphaned `api/` FastAPI client). All three were dead or superseded: fileCleanup collided with `inbox-janitor` (and was a destructive mover with its dryRun guard off), autoDoc's `post-rebuild-ai-docs` duplicated `grebuild-docs`/readme-freshness, and chatCli was redundant with `hwc-llm` + persona-daemon. Removed the import + all `hwc.ai.local-workflows.*` refs (server/laptop/xps). Part of the ollama-stack retirement (see next entry).
 - 2026-06-10: profiles/index.nix — removed the informational "AI Profile: …" `warnings` entry. It printed on every eval of every host and drowned out real warnings; detection itself is unchanged and still exported via `_module.args.aiProfile` / `aiProfileName`.
 - 2026-06-09: Removed `.nanoclaw-disabled/` (decommissioned 2026-05-29, superseded by Hermes; flagged in audit `docs/audit/2026-06-09-server-audit.md` §2.1, recoverable from git history).
