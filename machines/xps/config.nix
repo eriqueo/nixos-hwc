@@ -118,7 +118,6 @@
   hwc.ai = {
     profiles.selected = "laptop";
     tools.enable = false;
-    ollama.enable = false;
   };
 
   hwc.ai.mcp = {

@@ -171,12 +171,9 @@
     loginManager.autoLoginUser = "eric";
     sudo.enable = true;
     sudo.extraRules = [
-      # Allow eric to start/stop ollama service without password (for waybar toggle)
       {
         users = [ "eric" ];
         commands = [
-          { command = "/run/current-system/sw/bin/systemctl start podman-ollama.service"; options = [ "NOPASSWD" ]; }
-          { command = "/run/current-system/sw/bin/systemctl stop podman-ollama.service"; options = [ "NOPASSWD" ]; }
           # Performance mode: allow CPU governor changes
           { command = "/run/current-system/sw/bin/tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"; options = [ "NOPASSWD" ]; }
         ];
@@ -299,7 +296,6 @@
 
   #============================================================================
   # VIRTUALIZATION
-  # Podman is required by hwc.ai.ollama module
   virtualisation.docker.enable = lib.mkForce false;
 
   #============================================================================
@@ -343,26 +339,6 @@
     tools = {
       enable = true;
       logging.enable = true;
-    };
-
-    # Ollama LLM service with profile-based defaults
-    ollama = {
-      enable = false;
-
-      # Explicit model list (overrides profile defaults without mkForce)
-      models = [
-        "llama3.2:3b"          # 2.0GB, 10W, <10s - Documentation
-        "deepseek-coder:6.7b"  # 4GB - Coding tasks
-      ];
-
-      # Override profile defaults for instant GPU inference
-      # Profile would enable these for battery/thermal protection, but GPU can handle it
-      idleShutdown.enable = false;
-      thermalProtection.enable = false;
-
-      # Profile automatically applies:
-      # - resourceLimits: CPU=200%, Memory=4GB, Timeout=60s
-      # - Models pulled on first boot
     };
   };
 
