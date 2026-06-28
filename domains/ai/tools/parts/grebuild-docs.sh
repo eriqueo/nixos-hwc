@@ -9,7 +9,7 @@ set -euo pipefail
 # Configuration
 NIXOS_DIR="${NIXOS_DIR:-/home/eric/.nixos}"
 OUTPUT_DIR="${OUTPUT_DIR:-${NIXOS_DIR}/docs/ai-doc}"
-OLLAMA_ENDPOINT="${OLLAMA_ENDPOINT:-http://localhost:11434}"
+LLM_ENDPOINT="${LLM_ENDPOINT:-http://127.0.0.1:11500}"  # llama.cpp OpenAI server (llama-gpu)
 
 # Colors
 GREEN='\033[0;32m'
@@ -24,46 +24,28 @@ log_warn() { echo -e "${YELLOW}⚠️${NC} $*"; }
 log_error() { echo -e "${RED}❌${NC} $*" >&2; }
 log_header() { echo -e "\n${BOLD}${BLUE}$*${NC}"; }
 
-# Check if Ollama is running, start it if needed
-check_ollama() {
-  # Check if service is active
-  if ! systemctl is-active --quiet podman-ollama.service; then
-    log_info "Ollama service idle, waking it up..."
-    systemctl start podman-ollama.service || {
-      log_error "Failed to start Ollama service"
-      return 1
-    }
+# Check if the llama.cpp server (llama-gpu) is reachable. The native systemd
+# unit is always-on (no on-demand wake like the old podman-ollama), so this is
+# a plain readiness probe — wait briefly in case it is still loading a model.
+check_llm() {
+  for i in {1..30}; do
+    if curl --fail --silent --max-time 2 "$LLM_ENDPOINT/v1/models" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
 
-    # Wait for Ollama to be ready (up to 30 seconds)
-    log_info "Waiting for Ollama to be ready..."
-    for i in {1..30}; do
-      if curl --fail --silent --max-time 2 "$OLLAMA_ENDPOINT/api/tags" >/dev/null 2>&1; then
-        log_info "Ollama is ready!"
-        return 0
-      fi
-      sleep 1
-    done
-
-    log_error "Ollama failed to start within 30 seconds"
-    return 1
-  fi
-
-  # Service is active, check if API is responding
-  if ! curl --fail --silent --max-time 5 "$OLLAMA_ENDPOINT/api/tags" >/dev/null 2>&1; then
-    log_warn "Ollama service active but API not responding"
-    return 1
-  fi
-
-  return 0
+  log_warn "llama.cpp server not reachable at $LLM_ENDPOINT (check: systemctl status llama-gpu.service)"
+  return 1
 }
 
 # Main documentation generation
 main() {
   log_header "🤖 Post-Rebuild AI Documentation Generator (Framework-based)"
 
-  # Check Ollama availability
-  if ! check_ollama; then
-    log_info "Skipping AI documentation (Ollama not available)"
+  # Check llama.cpp availability
+  if ! check_llm; then
+    log_info "Skipping AI documentation (llama.cpp not available)"
     exit 0
   fi
 
