@@ -29,6 +29,7 @@
     ../../domains/automation/index.nix
     ../../domains/notifications/index.nix
     ../../domains/networking/index.nix
+    ../../domains/server/native/ai/llama-cpp/index.nix # local llama.cpp (GPU LFM2-2.6B + embed); module reused in-place
   ];
   # CUDA binary cache comes from the gpu module (nvidia machines only).
   # Blender 3D modeling with GPU rendering support (configured in profiles/home-session.nix)
@@ -323,6 +324,11 @@
   hwc.paths.hot.root = "/home/eric/500_media/hot";     # Override: laptop uses hot for active work
   hwc.paths.cold = "/home/eric/500_media/archive";     # Override: laptop archives locally
 
+  # AI model storage. ai.root is null on non-server hosts (paths.nix), but the
+  # llama.cpp module asserts an absolute modelsDir derived from ai.models. Point
+  # it at /opt/ai so models land in /opt/ai/models/llama-cpp (matches the server).
+  hwc.paths.ai.root = "/opt/ai";
+
   # Machine-specific Home Manager overrides live in ./home.nix (HM lane),
   # wired by the flake glue for both nixos-rebuild and standalone hms.
 
@@ -340,6 +346,28 @@
       enable = true;
       logging.enable = true;
     };
+  };
+
+  # Local llama.cpp inference (reuses the server module in-place). Laptop runs
+  # ONLY the GPU chat model + embeddings — NOT the 24B CPU service (won't fit
+  # the 8GB VRAM, and CPU inference is the fan-noise condition we're avoiding).
+  #   GPU:   LFM2-2.6B Q4 (~1.5 GB)  127.0.0.1:11500  (alias lfm2-2.6b)
+  #   Embed: nomic-embed-text-v1.5   127.0.0.1:11502
+  hwc.server.ai.llamaCpp = {
+    enable = true;
+    # pkgs-laptop has no global cudaSupport (unlike the server's stable-cuda
+    # set), so force the CUDA backend per-package — otherwise -ngl is silently
+    # ignored and inference falls back to the CPU. cudaCapabilities stays null:
+    # the nixpkgs default arch list (75;80;86;89;...) already covers the
+    # RTX 2000 Ada (sm_89), so no arch rebuild is needed beyond the backend.
+    cudaSupport = true;
+    gpu = {
+      enable = true;
+      threads = 8;                          # cap under the 22 logical cores; GPU does the work
+      extraArgs = [ "--alias" "lfm2-2.6b" ]; # stable model name for the wrapper/clients
+    };
+    embed.enable = true;                     # RAG embeddings, same model/flags as the server
+    # cpu.enable left false → 24B CPU service intentionally skipped.
   };
 
   #============================================================================
