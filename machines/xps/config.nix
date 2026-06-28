@@ -119,12 +119,6 @@
     profiles.selected = "laptop";
     tools.enable = false;
     ollama.enable = false;
-    local-workflows = {
-      enable = false;
-      fileCleanup.enable = false;
-      autoDoc.enable = false;
-      chatCli.enable = false;
-    };
   };
 
   hwc.ai.mcp = {
