@@ -129,10 +129,14 @@ in
       description = "sr_gauntlet dir — read-only mirror of its investigations/";
     };
 
+    # The dormant `ollama` adapter (engine/src/adapters/ollama.ts) is retained
+    # but no longer advertised here: the container ollama stack was retired
+    # 2026-06-27. Local-LLM provider intent parked:
+    # see brain wiki/nixos/idea-refinery-local-llm-provider.md
     triageProvider = lib.mkOption {
       type = lib.types.str;
       default = "claude-cli";
-      description = "LlmPort provider used to triage intake sentences (claude-cli | anthropic-api | ollama)";
+      description = "LlmPort provider used to triage intake sentences (claude-cli | anthropic-api)";
     };
 
     claudeBin = lib.mkOption {
