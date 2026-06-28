@@ -49,6 +49,12 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-27** — De-advertised the dormant `ollama` triage provider in the
+  `triageProvider` option description after the container ollama stack was retired
+  (`domains/ai/ollama/` removed). The `engine/src/adapters/ollama.ts` adapter and
+  its tests are **retained** (inert: default is `claude-cli`, no pipeline selects
+  ollama). Local-LLM provider intent parked at
+  `brain wiki/nixos/idea-refinery-local-llm-provider.md`.
 - **2026-06-24** — **Morning-review resilience** (`review/run.ts`), from the
   2026-06-24 nightly batch retro where 3/10 cards errored transiently and were
   then swept off the board. (1) **Per-card retry with backoff** (`withRetry`,
