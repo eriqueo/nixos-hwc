@@ -364,9 +364,6 @@
       # - resourceLimits: CPU=200%, Memory=4GB, Timeout=60s
       # - Models pulled on first boot
     };
-
-    # Local AI workflows disabled (can enable if needed)
-    local-workflows.enable = false;
   };
 
   #============================================================================

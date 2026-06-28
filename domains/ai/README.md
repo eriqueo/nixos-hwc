@@ -6,7 +6,7 @@ AI infrastructure including local LLMs (Ollama), cloud API integration, MCP serv
 
 ## Boundaries
 
-- **Manages**: Ollama service, MCP servers, AI CLI tools, NanoClaw agent, hardware profile detection, local workflows (file-cleanup, auto-doc, chat-cli)
+- **Manages**: Ollama service, MCP servers, AI CLI tools, NanoClaw agent, hardware profile detection
 - **Does NOT manage**: GPU drivers (→ `domains/infrastructure/hardware/gpu`), container runtime (→ `domains/server/`), secrets for API keys (→ `domains/secrets/`)
 
 ## Structure
@@ -16,7 +16,6 @@ domains/ai/
 ├── index.nix           # Domain aggregator
 ├── agent/              # HTTP tool agent
 ├── cloud/              # Cloud AI API integration (Anthropic, OpenAI)
-├── local-workflows/    # AI automation (file-cleanup, auto-doc, chat-cli)
 ├── mcp/                # Model Context Protocol servers
 ├── nanoclaw/           # NanoClaw AI agent orchestrator (Slack)
 ├── ollama/             # Local LLM service
@@ -43,6 +42,7 @@ Auto-detects and configures based on available hardware:
 
 ## Changelog
 
+- 2026-06-27: Retired `local-workflows/` wholesale (fileCleanup/autoDoc/chatCli + orphaned `api/` FastAPI client). All three were dead or superseded: fileCleanup collided with `inbox-janitor` (and was a destructive mover with its dryRun guard off), autoDoc's `post-rebuild-ai-docs` duplicated `grebuild-docs`/readme-freshness, and chatCli was redundant with `hwc-llm` + persona-daemon. Removed the import + all `hwc.ai.local-workflows.*` refs (server/laptop/xps). Part of the ollama-stack retirement (see next entry).
 - 2026-06-10: profiles/index.nix — removed the informational "AI Profile: …" `warnings` entry. It printed on every eval of every host and drowned out real warnings; detection itself is unchanged and still exported via `_module.args.aiProfile` / `aiProfileName`.
 - 2026-06-09: Removed `.nanoclaw-disabled/` (decommissioned 2026-05-29, superseded by Hermes; flagged in audit `docs/audit/2026-06-09-server-audit.md` §2.1, recoverable from git history).
 - 2026-05-30: Persona-daemon Phase 2 + 2.5 landed (see `domains/server/native/ai/persona-daemon/`). `hwc-llm` gained `--new-conversation` / `--conversation <id>` / `--print-id` flags that route through the daemon for memory-backed multi-turn chats. `assistant`, `coder`, `thinker` personas now `useKnowledge=true` (top-K=6/6/10 respectively) — RAG over `/mnt/vaults/brain` via embeddings against `llama-embed`. `library/_defaults.nix` introduced for schema-merge pattern.

@@ -544,33 +544,6 @@
       idleShutdown.enable = false; # Always-on service
       thermalProtection.enable = false; # Datacenter cooling
     };
-
-    # Local AI workflows and automation
-    local-workflows = {
-      enable = true;
-
-      # AI-powered file cleanup agent
-      fileCleanup = {
-        enable = true;
-        watchDirs = ["/mnt/hot/inbox" "/home/eric/Downloads"];
-        schedule = "*:0/30"; # Every 30 minutes
-        model = "qwen2.5-coder:3b";
-        dryRun = false; # Set to true for testing
-      };
-
-      # Auto-documentation generator (CLI tool)
-      autoDoc = {
-        enable = true;
-        model = "qwen2.5-coder:3b";
-      };
-
-      # Interactive chat CLI
-      chatCli = {
-        enable = true;
-        model = "llama3:8b"; # Better instruction following than qwen2.5-coder
-        # systemPrompt inherited from domain default
-      };
-    };
   };
 
   # MCP (Model Context Protocol) server infrastructure
