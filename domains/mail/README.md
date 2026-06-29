@@ -73,6 +73,7 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-06-29: aerc — which-key UX polish: enable leader popover with 350 ms `which-key-delay` (34a4c217), index-headers column-header row (52905cf4), distinct column-header style + annotations (41756840), reorder index columns flags-first + wider, centred headers (9e049299), border/groups styling + annotate last 2 leader binds (f9994754), raised slate card + inverted title chip (f19a02f1), footer legend style (`whichkey_legend`, 7889a761). Folder nav `<C-j>/<C-k>` → `<A-j>/<A-k>` (0d46a737) to match the Alt-in-app convention.
 - 2026-06-24: aerc now builds from the **forked `github:eriqueo/aerc`** flake input
   instead of `pkgs.aerc` — a **zero-change canary** (the fork's `flake.nix` is
   `pkgs.aerc.overrideAttrs { src = self; }` pinned to the `0.21.0` tag, so
