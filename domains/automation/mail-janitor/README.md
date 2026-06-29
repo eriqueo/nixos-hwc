@@ -37,6 +37,7 @@ mail-janitor/
   keeping); refine the pattern lists in `janitor.py` as new junk surfaces.
 
 ## Changelog
+- 2026-06-29: Security allowlist matches the full address, not just local-part (adb3a00d), so `watchguardsecurity.net`/`verify.bluehost.com` are preserved (the security keyword lives in the domain). `trashSenders` deny list now feeds the classifier directly (b7dd294c) to catch marketing-from-personal-address that the heuristics missed (DRY with the explicit deny list).
 - 2026-06-24 (b): PRESERVE allowlist (`.gov` filings, `calendar.*` invites, security/
   account alerts) — fixes NOISE false-positives. New **TRIAGE** tier: newsletters
   (`newsletter@`/`news@`/`digest`…) → `Newsletters-Triage` label instead of trash;

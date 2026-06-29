@@ -39,6 +39,7 @@ nightly-builds run-now pattern exactly. The board sets
 
 ## Changelog
 
+- **2026-06-29**: Decouple from `~/700_datax` dev tree (a804ae1b). `SRG_DATAX_REPO`/`SRG_JTMCP_REPO` now point at service-owned clones under `/var/lib/sr-gauntlet/{datax,jt-mcp}` (origin=elstruck, fetch-only) and `SRG_DATAX_ENV` reads a 0600 `/var/lib/sr-gauntlet/datax.env` instead of `~/700_datax/datax/.env.local`. Clones + creds are provisioned imperatively (secrets stay off the Nix store); the long-running service no longer collides with Eric's interactive worktrees.
 - **2026-06-16**: Auto-investigation + run-now. Timer changed from daily 06:30
   to a **15-min poll** (Persistent=false) so new SR tickets are investigated on
   arrival (the ledger makes idle ticks cheap). Added the **run-now drain**:
