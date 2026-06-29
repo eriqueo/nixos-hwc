@@ -59,6 +59,7 @@ README.md
 
 ## Changelog
 
+- 2026-06-29: Fix orphan option-sets that broke `nix flake check` (a3690f01); Phase 2/3 daemon work landed earlier in May (Deno HTTP daemon + SQLite memory in 9d499dee, RAG-over-brain indexer in a8eac402).
 - 2026-05-29: Initial module. 5 personas (classifier, extractor, coder,
   assistant, thinker). Stateless CLI wrapping `llama-gpu` (port 11500)
   and `llama-cpu` (port 11501).

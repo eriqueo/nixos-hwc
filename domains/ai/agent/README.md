@@ -142,3 +142,7 @@ To register the agent as a tool in Open WebUI:
    - Headers: `Content-Type: application/json`
 
 Then users can invoke system commands through the chat interface.
+
+## Changelog
+- 2026-06-29: Charter refactor sweep (5e27cd37/956a621a): added `default.nix`; dead `options.nix` removed in efd7063e; tailnet rename `hwc → hwc-server` propagated through `hwc-ai-agent.py` (22bbbb48).
+

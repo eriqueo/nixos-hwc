@@ -17,5 +17,6 @@ profiles/
 ```
 
 ## Changelog
+- 2026-06-29: Drop per-eval "AI Profile" informational warning (5b53151b); options moved in 0f8f427c; ai refactor populated `index.nix`/`options.nix` and added `default.nix` (5e27cd37); transient orphan `options.nix` removed again in efd7063e.
 - 2026-02-28: Updated GPU refs for infrastructure migration
 - 2026-02-28: Added README for Charter Law 12 compliance
