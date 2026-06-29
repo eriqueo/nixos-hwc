@@ -51,4 +51,5 @@ Adding the FRED/FMP secrets (one-time): add the two `publicKeys` rules to
 
 ## Changelog
 
+- 2026-06-29: Law 10 stragglers swept (056cf4d7) — module's `options.nix` inlined into `index.nix` under `# OPTIONS`. Pure relocation; server toplevel drv hash unchanged.
 - 2026-06-09: Dashboard access moved from static tailnet port `:25445` to name-based vhost `market-intelligence.hwc.iheartwoodcraft.com` under the shared `*.hwc.iheartwoodcraft.com` wildcard cert (rendered through the vhost `static` renderer; assets cached immutably). See `domains/networking/README.md`.
