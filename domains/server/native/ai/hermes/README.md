@@ -126,6 +126,7 @@ into this module is pending.
 
 ## Changelog
 
+- **2026-06-29** — Bumped freshness watermark — only change since the previous entry is the Law-12 README sweep on `parts/bootstrap/` (16e4c598), recording the strip-types parameter-property fix. No code change at the hermes module level.
 - **2026-06-09** — Caddy routes migrated to name-based vhosts under the shared
   `*.hwc.iheartwoodcraft.com` wildcard cert: app at `hermes.hwc.iheartwoodcraft.com`
   (was `:25443`) and the market-trials dashboard at
