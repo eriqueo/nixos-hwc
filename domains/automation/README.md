@@ -64,6 +64,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-06-29: `inbox-janitor` v2 (ee483025): drainer rewritten to route on intrinsic attributes into ~6 flat buckets via `~/000_inbox/_inbox-routing.yaml`; hexagonal split (`classify()` core + I/O edges); adds `agent/` bucket and Syncthing rescan to fix index lag. `sr-gauntlet` decoupled from `~/700_datax` dev tree (a804ae1b) — now points at service-owned `/var/lib/sr-gauntlet/{datax,jt-mcp}` clones + 0600 datax.env. nightly-builds + refinery hardening from the 2026-06-24 batch retro (#69, 523e9c9f) plus reconcile-script generator (#70), differential-vs-BASE verdict contract (051c836b), reclaim-on-rerun + worktree idempotency (543d26fb/0b29c191), morning-review actually produces verdicts (a08fb99b), morning PR-review agent (344e53f0), and BRANCH parse takes first match only (e40ee92c). Refinery UI work landed alongside (Finished page b3b88720, two-axis board 5793e91d, exit ramp 11f4af0e, inline per-card controls d742c112, HWC palette + SR2 cards 604a23bf, Card Standard v0.1 cd90cd41) and refinery README de-advertises dormant ollama adapter (e68682e1).
 - 2026-06-18: Add `inbox-janitor/` — server-only systemd timer (every 30 min) that drains
   loose files at the root of `~/000_inbox/downloads` per the declarative rule table
   `~/000_inbox/_inbox-routing.yaml`: datax stays resident, business/tech/personal drain to

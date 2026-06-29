@@ -14,4 +14,5 @@ cloud/
 ```
 
 ## Changelog
+- 2026-06-29: Charter refactor: added `default.nix` (5e27cd37); orphan `options.nix` deleted in efd7063e; options sweep (0f8f427c).
 - 2026-02-28: Added README for Charter Law 12 compliance

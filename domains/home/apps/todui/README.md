@@ -41,6 +41,7 @@ todui/
 - khal + vdirsyncer are put on todui's PATH via `extraRuntimePackages`.
 
 ## Changelog
+- 2026-06-29: Unified keymap factory wired in (4a801db6) — todui's `keymap.json` is now staged from `hwc.home.keymap.grammar` via `to-todui.nix` so the same grammar drives todui's list-app bare verbs as khalt/workbench.
 - 2026-06-12: Launcher integration — `xdg.desktopEntries.todui` (`kitty -e
   todui`, terminal=false) so it appears in wofi/rofi `drun`; Hyprland keybind
   `SUPER+T` added in `domains/home/apps/hyprland/parts/behavior.nix` (gated on

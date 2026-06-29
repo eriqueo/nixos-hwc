@@ -125,3 +125,6 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 │   └── session.json   ← created on login
 └── package.json
 ```
+
+## Changelog
+- 2026-06-29: Hardened login + Playwright pinning sweep — wait for logged-in UI not just password-form gone (b0f85a37), poll for login state to survive passkey redirects (2553d6ca), detect via `c_user` cookie not DOM (6049454a), switch to `launchPersistentContext` with `--profile` (be985dab), `shell.nix` for Playwright on NixOS (8131b82a/ee0b817c), pin playwright 1.59.1 to match the image (dc5e9996), and auto-detect login completion (77c4cbf2). Also: HWC lead-scoring prompt/classifier wired in (d20220f9) and Claude Code session now allows ssh/python3 (3cf8ef82).

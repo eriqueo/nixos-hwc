@@ -36,6 +36,8 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-06-29 (b): Watermark bump — child READMEs under `native/ai/hermes/` were refreshed by the Law-12 sweep (c8044703). No code change at this level.
+- 2026-06-29: lead-scout unit pins `CLAUDE_BIN` + `SKIP_FRONTEND_BUILD` (f4a119d3) — the hardened service PATH only ships node, so the in-app `which claude` fallback found nothing; late-binding `CLAUDE_BIN` and skipping the boot-time frontend build keeps the unit deterministic.
 - 2026-06-19: Added `deploy/` — `hwc.server.deploy` provides an interactive `deploy`
   CLI (on PATH, server only). Auto-discovers app repos under `appsDir` (default
   `~/600_apps`) that carry an executable `deploy.sh`, presents an `fzf` picker (or

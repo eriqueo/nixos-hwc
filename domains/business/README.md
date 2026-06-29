@@ -28,6 +28,7 @@ business/
 ```
 
 ## Changelog
+- 2026-06-29: `morning-briefing` rewritten to gather locally in bash instead of through a headless Claude+MCP pass (b2466860) and the `is-system-running` fallback no longer concatenates onto the previous value (4d2fc19e). Both were stability fixes for the 6am briefing.
 - 2026-06-19: Moved `datax-monitor` checkout `~/projects/datax-monitor` →
   `~/600_apps/datax-monitor` to match every other app (lead-scout, todui, khalt,
   sr_analyzer…). Updated the `projectDir` default in `datax-monitor/index.nix`

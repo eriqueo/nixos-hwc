@@ -24,4 +24,5 @@ orchestration/
 - `media-orchestrator.py` — Media pipeline event handler
 
 ## Changelog
+- 2026-06-29: Module converted to a directory module (Law 9/10) as part of the cross-domain leaf-module refactor (aea7be73). No behaviour change.
 - 2026-03-26: audiobook-copier workspace path updated from workspace/hooks/ to workspace/automation/hooks/ (domain alignment)

@@ -73,4 +73,5 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-06-29: Secret defaults rewired from `hwc.secrets.api.couchdbAdmin{Username,Password}File` to the kebab-case `hwc.secrets.api."couchdb-admin-{username,password}"` accessor (1da0a031), matching the secrets generator's actual key shape.
 - 2026-03-25: Created README per Law 12

@@ -45,6 +45,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-06-29: Workbench/Ctrl-leader UX pass: `Ctrl=workbench layer` (Ctrl+j/k cycle tabs), in-app shortcuts demoted to Alt (05399dd6); yazi preview-seek `<C-j>/<C-k>` → `<A-j>/<A-k>` (9f6880a4); yazi which-key arrow separator + role colours, nvim which-key standard popup look (0c0111c8/8b8560f8); zellij meta-leader floating `zellij-which` card (848c8967) + stable plugin path + grid wasm bump (84a2bb27) + `session_serialization=false` so recreated sessions start fresh (1cb9b44b); SUPER+drag move/resize on floating windows (80000f16); centre file-picker popups (9ac7899a); nvim fzf-lua as primary finder (828b4bc1); HM ssh module disabled on stable to drop the deprecation (773d8315); new `apps/pave-query-builder` consumed as private flake input (81d9b30d) with `schemaPath` baked unconditionally for pure flake eval (c26d7c75) and a one-click GraphiQL launcher (c7327c36); `apps/tetro` added (ce89f557).
 - 2026-06-12: apps/qutebrowser fleshed out from empty scaffold — generated
   config.py with hwc-palette theming (parts/appearance.nix: tabs, statusbar,
   completion, hints, messages, downloads), Space-leader keybindings matching

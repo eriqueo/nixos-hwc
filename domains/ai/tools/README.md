@@ -27,11 +27,13 @@ tools/
 ├── default.nix                 # Import wrapper
 ├── parts/
 │   ├── ollama-wrapper.sh       # Thermal-aware AI wrapper
-│   └── charter-search.sh       # Charter context extraction
+│   ├── charter-search.sh       # Charter context extraction
+│   └── grebuild-docs.sh        # grebuild docs helper
 └── README.md
 ```
 
 ## Changelog
+- 2026-06-29: AI refactor (5e27cd37) moved `framework/parts/{ollama-wrapper,charter-search,grebuild-docs}.sh` under `tools/parts/`, added `default.nix`, and populated `index.nix`/`options.nix`; laptop-cleanup tweak (504019a7); orphan `options.nix` removed again in efd7063e. Structure block re-added `grebuild-docs.sh`.
 - 2026-04-12: Remove dead scripts (grebuild-docs, readme-butler, changelog-writer, setup-changelog-model) and post-rebuild-ai-docs service.
 - 2026-03-18: Add README butler script to automate AI-driven changelog generation in grebuild workflow.
 - 2026-03-14: Fix AI tooling by using pre-increment to avoid set -e exit on first domain.

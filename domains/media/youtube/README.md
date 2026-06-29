@@ -98,7 +98,7 @@ hwc.server.native.youtube.videos = {
 | `yt-videos-worker` | - | Background video downloader |
 
 ## Changelog
-
+- 2026-06-29: Tailnet rename sweep `hwc → hwc-server` propagated through this dir (22bbbb48); Law 3 path-sweep finish for derivable hardcodes via `hwc.paths` (6001f937). Earlier (92cbf2ac) the yt-transcripts/yt-videos API parts were heavily slimmed (~530 LOC removed) with the videos-api default consolidated into `index.nix`.
 - 2026-03-26: Workspace source moved from workspace/youtube-services/ to workspace/media/youtube-services/ (domain alignment); all nix refs updated
 - 2026-03-04: Namespace migration hwc.server.native.youtube.* → hwc.media.youtube.*
 - 2026-02-27: Initial domain creation with legacy API, transcripts API, and videos API
