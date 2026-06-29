@@ -104,5 +104,6 @@ hwc.business.paperless = {
 
 ## Changelog
 
+- 2026-06-29: Tailnet rename sweep (22bbbb48) — `hwc → hwc-server` in module references; integration spec doc added (2c59868b) and idempotent Paperless setup script for HWC tags/types/correspondents (a8bd133f).
 - 2026-03-25: Created README per Law 12
 - 2026-03-04: Namespace migration hwc.server.containers.paperless → hwc.business.paperless
