@@ -68,7 +68,11 @@ ini_path = Path("${iniPath}")
 text = ini_path.read_text()
 lines = text.splitlines()
 
-target_hosts = ["gluetun", "sabnzbd"]
+# Reverse-proxy serving host (this machine's tailnet FQDN). Caddy forwards the
+# original Host header (header_up Host {host}), so SABnzbd's host_whitelist must
+# include it or it returns "Hostname verification failed". Derived from the same
+# late-bound rootHost Caddy serves under, so a tailnet rename propagates here too.
+target_hosts = ["gluetun", "sabnzbd", "${config.hwc.networking.shared.rootHost}"]
 updated = False
 found = False
 new_lines = []
