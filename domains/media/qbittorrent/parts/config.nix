@@ -9,6 +9,17 @@ let
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/qbittorrent/config";
   qbtConfigDir = "${configPath}/qBittorrent";
+  qbtConfPath = "${qbtConfigDir}/qBittorrent.conf";
+
+  # Privacy hardening keys (BitTorrent session) enforced when privacy.enable.
+  # Empty set when disabled, so the script leaves qBittorrent's own defaults be.
+  privacySettings = lib.optionalAttrs cfg.privacy.enable {
+    "Session\\AnonymousModeEnabled" = "true";
+    "Session\\DHTEnabled"           = "false";
+    "Session\\LSDEnabled"           = "false";
+    "Session\\PeXEnabled"           = "false";
+  };
+  privacySettingsJson = builtins.toJSON privacySettings;
 
   # Generate categories.json content from Nix options
   categoriesJson = builtins.toJSON (
@@ -26,6 +37,56 @@ ${categoriesJson}
 EOF
 
     chown -R 1000:100 "${qbtConfigDir}/categories.json"
+  '';
+
+  # Enforce the privacy-hardening session keys under [BitTorrent] in
+  # qBittorrent.conf. qBittorrent rewrites this file on exit, so the settings
+  # are re-applied before every start (mirrors sabnzbd's host_whitelist enforce).
+  # Only the listed keys are touched; every other line is preserved verbatim.
+  enforcePrivacyScript = pkgs.writeShellScript "qbittorrent-enforce-privacy" ''
+    set -euo pipefail
+
+    SETTINGS_JSON='${privacySettingsJson}'
+
+    ${pkgs.python3}/bin/python3 - "$SETTINGS_JSON" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+conf = Path("${qbtConfPath}")
+settings = json.loads(sys.argv[1])
+if not settings:
+    sys.exit(0)
+
+lines = conf.read_text().splitlines() if conf.exists() else []
+
+section = "[BitTorrent]"
+start = next((i for i, l in enumerate(lines) if l.strip() == section), None)
+if start is None:
+    if lines and lines[-1].strip() != "":
+        lines.append("")
+    lines.append(section)
+    start = len(lines) - 1
+
+# Section runs until the next [header] or EOF.
+end = next((i for i in range(start + 1, len(lines))
+            if lines[i].lstrip().startswith("[")), len(lines))
+
+remaining = dict(settings)
+for i in range(start + 1, end):
+    key = lines[i].split("=", 1)[0].strip()
+    if key in remaining:
+        lines[i] = f"{key}={remaining.pop(key)}"
+
+for offset, (key, val) in enumerate(remaining.items()):
+    lines.insert(end + offset, f"{key}={val}")
+
+conf.write_text("\n".join(lines) + "\n")
+PY
+
+    if [ -f "${qbtConfPath}" ]; then
+      chown 1000:100 "${qbtConfPath}"
+    fi
   '';
 in
 {
@@ -82,6 +143,7 @@ in
       systemd.services.podman-qbittorrent = {
         serviceConfig.ExecStartPre = [
           "+${enforceCategoriesScript}"  # + prefix runs as root
+          "+${enforcePrivacyScript}"
         ];
         after = if cfg.network.mode == "vpn"
           then [ "podman-gluetun.service" "mnt-hot.mount" ]
