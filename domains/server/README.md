@@ -19,6 +19,7 @@ domains/server/
 │       ├── lead-scout/    # Lead Scout MCP + HTTP
 │       └── llama-cpp/     # llama.cpp inference (GPU + CPU)
 ├── services/
+│   ├── bloxels-cv/       # Bloxels grid photo classifier (path watcher on inbox-mobile)
 │   ├── inbox-processor/  # Phone capture processor (Whisper + Tesseract)
 │   └── radicale/         # Self-hosted CalDAV (tasks.hwc.*, two-way task sync)
 ├── media/        # Media profile toggle wiring
@@ -36,6 +37,13 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-07-03: Added `services/bloxels-cv/` — `hwc.server.services.bloxelsCv`, a
+  systemd path watcher on `inbox-mobile/bloxels` (phone Syncthing share). Each
+  dropped photo of the printed 13×13 Bloxels grid runs `bloxels-capture` (from
+  the private `bloxels-cv` flake input; ArUco detect → perspective rectify →
+  CIELAB nearest-color classify) and writes `results/<photo>/{grid.json,debug.png,log.txt}`
+  back into the share; photos archive to `done/<date>/` or `failed/<date>/`.
+  Same input/oneshot anatomy as `inbox-processor`.
 - 2026-06-19: Added `deploy/` — `hwc.server.deploy` provides an interactive `deploy`
   CLI (on PATH, server only). Auto-discovers app repos under `appsDir` (default
   `~/600_apps`) that carry an executable `deploy.sh`, presents an `fzf` picker (or

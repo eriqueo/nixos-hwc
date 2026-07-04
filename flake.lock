@@ -68,6 +68,26 @@
         "type": "github"
       }
     },
+    "bloxels-cv": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1783124965,
+        "narHash": "sha256-Mq/+ijcYc2BmKrtvyS+7cwlT5A7TIh2QbEpxqko9ycI=",
+        "owner": "eriqueo",
+        "repo": "bloxels-cv",
+        "rev": "59c937b12e2f123668e451a6bd8a1d38664d0677",
+        "type": "github"
+      },
+      "original": {
+        "owner": "eriqueo",
+        "repo": "bloxels-cv",
+        "type": "github"
+      }
+    },
     "claude-cowork": {
       "inputs": {
         "nixpkgs": [
@@ -525,6 +545,7 @@
         "aerc": "aerc",
         "agenix": "agenix",
         "agenix-stable": "agenix-stable",
+        "bloxels-cv": "bloxels-cv",
         "claude-cowork": "claude-cowork",
         "codex": "codex",
         "home-manager": "home-manager_3",
