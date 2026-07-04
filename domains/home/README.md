@@ -45,6 +45,11 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-07-03: apps/waybar — lid-close default flipped to **suspend**: removed
+  the `hwc-lid-state-init` user service that created `/run/user/$UID/hwc-lid-ignore`
+  at login (which made lid close a no-op by default and was easy to mistake for
+  armed). The state file now only exists when the waybar lid-toggle explicitly
+  disables sleep; acpid handler semantics unchanged (absent = suspend).
 - 2026-06-12: apps/qutebrowser fleshed out from empty scaffold — generated
   config.py with hwc-palette theming (parts/appearance.nix: tabs, statusbar,
   completion, hints, messages, downloads), Space-leader keybindings matching
