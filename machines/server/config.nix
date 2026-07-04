@@ -29,6 +29,7 @@
     ../../domains/server/native/ai/llama-cpp/index.nix # llama.cpp inference (GPU + CPU + embed)
     ../../domains/server/native/ai/persona-daemon/index.nix # Persona-aware HTTP daemon + SQLite memory
     ../../domains/server/services/inbox-processor/index.nix # Phone capture processor (Whisper + Tesseract)
+    ../../domains/server/services/bloxels-cv/index.nix # Bloxels grid photo classifier (path watcher)
     ../../domains/server/services/radicale/index.nix # Self-hosted CalDAV (tasks.hwc.*)
     ../../domains/server/deploy/index.nix # `deploy` — one-step deploy CLI for 600_apps
   ];
@@ -126,6 +127,15 @@
     brainInboxPath = "${config.hwc.paths.brain."server-replica"}/inbox";
     processedPath = "${config.hwc.paths.brain."inbox-mobile"}/processed";
     whisperModel = "base.en";
+  };
+
+  # Bloxels CV — classify phone photos of the printed 13x13 Bloxels grid.
+  # Watches inbox-mobile/bloxels; writes results/<photo>/{grid.json,debug.png}
+  # back into the share so Syncthing returns them to the phone.
+  hwc.server.services.bloxelsCv = {
+    enable = true;
+    package = inputs.bloxels-cv.packages.${pkgs.system}.default;
+    watchPath = "${config.hwc.paths.brain."inbox-mobile"}/bloxels";
   };
 
   # Radicale — self-hosted CalDAV for two-way task sync with list creation

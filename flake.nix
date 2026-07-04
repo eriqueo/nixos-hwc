@@ -152,6 +152,18 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # bloxels-cv — CV pipeline: phone photo of the printed 13×13 Bloxels grid →
+    # classified color matrix (grid.json + debug.png). Consumed by
+    # domains/server/services/bloxels-cv (systemd path watcher on the phone's
+    # inbox-mobile Syncthing share). Same shared-remote model as
+    # todui/khalt/workbench: private GitHub repo via a github: input. Ship: push
+    # to eriqueo/bloxels-cv → `nix flake update bloxels-cv` → rebuild. Iterate
+    # via its devShell (`nix develop` + `python test_pipeline.py`).
+    bloxels-cv = {
+      url = "github:eriqueo/bloxels-cv";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # zellij-which — custom zellij plugin (Rust→wasm): the meta-layer which-key
     # card. Its own private repo + flake (rust-overlay wasm toolchain), consumed
     # by domains/home/apps/zellij as the floating meta menu. Ship: push to
