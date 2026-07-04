@@ -101,7 +101,7 @@ in
     #   - /dev/input/event3  "Lid Switch"      — dedicated lid switch device
     #   - /dev/input/event10 "SNSL002D Touchpad" — the touchpad itself also emits SW_LID
     #
-    # Four-layer fix:
+    # Five-layer fix:
     # 1. Kernel: button.lid_init_state=open (boot.kernelParams) — suppresses
     #    the spurious initial "lid closed" ACPI report on boot/resume.
     # 2. Udev: LIBINPUT_IGNORE_DEVICE=1 on the dedicated Lid Switch device.
@@ -111,6 +111,11 @@ in
     # 4. Resume hook: rebind the i2c_hid_acpi driver after every resume so
     #    Hyprland re-opens the device with the quirk applied fresh, clearing
     #    the stale SW_LID=1 state the driver retains from the lid-close event.
+    # 5. acpid lid-open hook: same rebind, for lid closes that did NOT suspend
+    #    (waybar lid-toggle set to ignore). With no resume, layer 4 never runs
+    #    and the stale SW_LID=1 kills two-finger scroll until the next resume.
+    #    Redundant-but-harmless alongside layer 4 on a real resume: bind/unbind
+    #    failures are swallowed and the device ends up bound either way.
     services.udev.extraRules = lib.mkBefore ''
       KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Lid Switch", ENV{LIBINPUT_IGNORE_DEVICE}="1"
       # Rival 3 Wireless: the keyboard HID interface (event7) also has pointer
@@ -137,6 +142,18 @@ in
       sleep 0.3
       echo "i2c-SNSL002D:00" > /sys/bus/i2c/drivers/i2c_hid_acpi/bind || true
     '';
+
+    # Layer 5: same rebind on lid open via acpid (see comment above). acpid
+    # itself is enabled per-machine (machines/laptop/config.nix); a handler
+    # without the daemon is inert elsewhere.
+    services.acpid.handlers."hwc-sensel-rebind" = {
+      event = "button/lid LID open";
+      action = ''
+        echo "i2c-SNSL002D:00" > /sys/bus/i2c/drivers/i2c_hid_acpi/unbind || true
+        sleep 0.3
+        echo "i2c-SNSL002D:00" > /sys/bus/i2c/drivers/i2c_hid_acpi/bind || true
+      '';
+    };
 
     #==========================================================================
     # FAN CONTROL (ThinkPad)

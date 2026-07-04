@@ -69,8 +69,8 @@
 
   # Lid-close suspend: handled here via acpid, NOT logind inhibitors.
   # State file: /run/user/1000/hwc-lid-ignore
-  #   - present  → lid close does nothing (default on login)
-  #   - absent   → lid close triggers suspend
+  #   - absent   → lid close triggers suspend (default — nothing creates it)
+  #   - present  → lid close does nothing
   # Toggle is managed by waybar-lid-toggle (writes/deletes the file — no D-Bus).
   services.acpid = {
     enable = true;

@@ -47,22 +47,10 @@ in
 
     xdg.configFile."waybar/style.css".text = appearance;
 
-    # Lid state init: create the ignore-file on session start so lid close is
-    # disabled by default (same default as the old inhibitor service).
-    # acpid reads the file; toggle just writes/deletes it — no D-Bus, no logind.
-    systemd.user.services.hwc-lid-state-init = {
-      Unit = {
-        Description = "Initialize lid sleep state (disabled by default)";
-        After = [ "graphical-session.target" ];
-        PartOf = [ "graphical-session.target" ];
-      };
-      Service = {
-        Type = "oneshot";
-        ExecStart = "${pkgs.coreutils}/bin/touch %t/hwc-lid-ignore";
-        RemainAfterExit = true;
-      };
-      Install = { WantedBy = [ "graphical-session.target" ]; };
-    };
+    # Lid sleep state: no init service — the ignore-file simply doesn't exist
+    # after login, so lid close suspends by default. waybar-lid-toggle creates/
+    # deletes /run/user/$UID/hwc-lid-ignore to flip it — no D-Bus, no logind.
+    # acpid reads the file (machines/laptop/config.nix hwc-lid-close handler).
 
     # Restart waybar after Home Manager activation (rebuild switch).
     # HM reloads the daemon but doesn't restart changed services by default.
