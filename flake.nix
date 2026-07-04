@@ -29,16 +29,6 @@
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-25.11";
 
-    # Pinned nixpkgs solely to source tailscale 1.98.2 via overlay.
-    # 1.98.0 in the main nixpkgs has a MagicDNS regression on link-change
-    # (drops the per-tailnet self-route on suspend/resume, leaving only the
-    # global ts.net split-DNS rule -> NXDOMAIN for *.ocelot-wahoo.ts.net).
-    # Fixed upstream in 1.98.2. Scoped to one package via overlay to avoid
-    # a wide nixpkgs jump (8-day delta OOMed the laptop on rebuild).
-    # REMOVE WHEN: locked `nixpkgs` has tailscale >= 1.98.2 (check at each
-    # `nix flake update`: nix eval .#nixosConfigurations.hwc-laptop.pkgs.tailscale.version)
-    nixpkgs-tailscale.url = "github:NixOS/nixpkgs/64c08a7ca051951c8eae34e3e3cb1e202fe36786";
-
     nixvirt = {
         url = "github:AshleyYakeley/NixVirt";
         inputs.nixpkgs.follows = "nixpkgs";
@@ -191,12 +181,6 @@
       system       = prev.stdenv.hostPlatform.system;
     };
 
-    # Overlay: replace tailscale with the build from nixpkgs-tailscale.
-    # See `nixpkgs-tailscale` input comment for the rationale.
-    tailscaleOverlay = final: prev: {
-      tailscale = inputs.nixpkgs-tailscale.legacyPackages.${prev.stdenv.hostPlatform.system}.tailscale;
-    };
-
     # Add the overlay here - this is the safest approach
     mkPkgs = system: nixpkgsInput:
       import nixpkgsInput {
@@ -262,10 +246,6 @@
     # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)
     pkgs = mkPkgs system nixpkgs;
 
-    # Laptop-only pkgs: same as `pkgs` plus the tailscale 1.98.2 overlay.
-    # Server/xps stay untouched (different channel, not affected by the bug).
-    pkgs-laptop = pkgs.extend tailscaleOverlay;
-
     # pkgs-stable (25.11 - claude-code now available natively)
     pkgs-stable = mkPkgs system nixpkgs-stable;
 
@@ -295,8 +275,8 @@
       laptop = {
         channel   = "unstable";
         roles     = [ "base" "desktop" ];
-        nixosPkgs = pkgs-laptop;       # unstable + tailscale 1.98.2 overlay
-        hmPkgs    = pkgs-laptop;
+        nixosPkgs = pkgs;
+        hmPkgs    = pkgs;
         hmBackupExt  = "hm-bak";
         extraModules = [ inputs.nixvirt.nixosModules.default ];
       };
