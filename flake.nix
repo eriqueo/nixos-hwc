@@ -212,6 +212,7 @@
         };
         overlays = [
           silenceDeprecatedAliases
+          rcloneOverlay   # iCloud-capable rclone 1.74.1 (HM lane on stable machines)
           # Expose the cowork-capable Claude Desktop package (package-only flake,
           # no overlay of its own) under pkgs for the home app module.
           (final: prev: {
@@ -236,12 +237,17 @@
     # current Cloudflare edge protocol to keep the tunnel healthy.
     cloudflaredOverlay = import ./overlays/cloudflared.nix { nixpkgs-unstable = nixpkgs; };
 
+    # Rclone overlay - backport from unstable to stable
+    # Stable 25.11's rclone 1.72.1 can't authenticate to iCloud Drive
+    # (SRP auth fix landed in 1.74.0); unstable tracks 1.74.1. See overlay file.
+    rcloneOverlay = import ./overlays/rclone.nix { nixpkgs-unstable = nixpkgs; };
+
     # Pkgs helper with optional overlays (server uses this)
     # CUDA enabled - using cache.nixos-cuda.org for pre-built binaries
     mkPkgsWithOverlays = system: nixpkgsInput: extraOverlays:
       import nixpkgsInput {
         inherit system;
-        overlays = [ silenceDeprecatedAliases claudeCodeOverlay cloudflaredOverlay ] ++ extraOverlays;
+        overlays = [ silenceDeprecatedAliases claudeCodeOverlay cloudflaredOverlay rcloneOverlay ] ++ extraOverlays;
         config = {
           allowUnfree = true;
           nvidia.acceptLicense = true;
