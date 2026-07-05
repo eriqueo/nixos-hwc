@@ -4,6 +4,8 @@
 **Method**: five parallel deep audits (charter-lint compliance, docs/ inventory, workspace/ inventory, domains/ dead-code sweep, briefing-stack overlap) plus a process-layer review.
 **Verdict in one line**: the architecture is genuinely good; the failure modes are all in *finishing* — migrations that copy instead of move, enforcement that was never wired up, and rebuilds that start before the last integration step of the previous build completes.
 
+> **Updated 2026-07-05 with live verification results from hwc-server** (read-only run, 2026-07-04 evening). Corrections are applied inline; new live-only findings are in Part 5. Laptop-side items (workbench usage, tuxedo hash) are still pending a run on hwc-laptop.
+
 ---
 
 ## Part 1 — The five root patterns
@@ -82,7 +84,7 @@ Root `CLAUDE.md → AGENTS.md` was a **dangling symlink** (the file moved to `do
 - **PASS**: Law 7 (lane purity), Law 14 (flake self-ref), Law 10 structure (zero `options.nix` files), Law 16 (machine names / role imports / options in profiles).
 - **FAIL, real**: Law 13 — 21 tracked files >2 MB (website images, dedupe.sh, a 2.2 MB checked-in JSON cache `estimator/scripts/jt_catalog_cache.json`). Law 5 (intended) — 9 raw-container modules lack exception annotations, incl. `mkInfraContainer.nix` itself. Law 12 (intended) — secrets/server/system/notifications READMEs missing required sections; 52% of sub-modules have no README at all.
 - **FAIL, lint-bug (code is clean)**: Laws 1, 2, 4, 16-derivations — all fire on comments/prose/fallback patterns. One borderline real Law 3 hit: `domains/automation/refinery/index.nix:128` hard-defaults `/home/eric/700_datax/sr_gauntlet`.
-- **Law 15 substance**: `podman.autoPrune` ✓, `SystemMaxUse` ✓, **`nix.gc` absent entirely**, and `:latest` floating tags are the norm across ~20 container modules (charter says pinned).
+- **Law 15 substance**: `podman.autoPrune` ✓, `SystemMaxUse` ✓, and `:latest` floating tags are the norm across ~20 container modules (charter says pinned). `nix.gc`: **corrected by live check** — a weekly `nix-gc.timer` IS active on the server, but nothing prunes old generations (no `--delete-older-than` anywhere in the repo): **169 system generations retained**, `/nix/store` at 77 GB.
 - **Duplicate systemd services**: all benign merges except `recyclarr-sync`, genuinely split across `parts/config.nix:147` and `parts/setup.nix:8` — worth a look.
 
 ### 2.3 Dead and parked code in domains/
@@ -99,7 +101,7 @@ Plus deliberately parked: `hwc.ai.mcp` (mkForce false; superseded), beets/tdarr/
 
 Broken references: `domains/media/youtube/parts/legacy-api.nix` points at `workspace/media/youtube-services/transcript-formatter` — **does not exist** (real path: `workspace/projects/productivity/transcript-formatter`). todui READMEs reference deleted `workspace/home/tasq/`.
 
-Live risks found on the way: `tuxedo/parts/package.nix:29` ships `PLACEHOLDER — replace with the real hash`; `recyclarr` silently falls back to `PLACEHOLDER_*_API_KEY` when secrets are unreadable; the website's appointment-calculator posts to an archived n8n webhook and **404s silently** (`website/index.nix:74`).
+Live risks found on the way: `tuxedo/parts/package.nix:29` ships `PLACEHOLDER — replace with the real hash` (laptop verification pending); the website's appointment-calculator webhook **404s live** (verified: `webhook/calculator-appointment` → 404; the sibling `webhook/calculator-lead` → 200 and works — one inactive n8n workflow, not a dead calculator). ~~recyclarr falls back to placeholder API keys~~ — **refuted by live check**: recyclarr synced clean the morning of verification, no placeholder/401/403 in 14 days of journal; the fallback code path exists but is not being hit.
 
 ### 2.4 Complexity outliers (overengineering candidates)
 
@@ -143,7 +145,7 @@ Tracked at root and should not be: `.backups/` (old machine snapshots), `.cache/
 ### Phase 1 — Make enforcement real (this is the highest-leverage structural fix)
 
 8. Wire the (now-fixed) lints into `checks.x86_64-linux.charter-law<N>` in flake.nix so `nix flake check` is the gate — charter §3.3, promised, never built. Until a law is wired, demote it to a guideline in the charter. This single change converts the charter from aspiration to mechanism.
-9. Add `nix.gc` (Law 15). Pin the ~20 `:latest` image tags, or amend Law 15 to say what you actually practice.
+9. Add generation pruning to the existing GC (`nix.gc.options = "--delete-older-than 30d"` or equivalent — 169 generations are currently retained). Pin the ~20 `:latest` image tags, or amend Law 15 to say what you actually practice.
 10. Law 12 rescope: require READMEs at top-level domains only; sub-module READMEs optional. `workspace/tools/readme-freshness.sh` + `domains/automation/readme-freshness` already exist — point them at the reduced scope and let the changelog requirement be checked, not remembered.
 
 ### Phase 2 — Kill the duplicates with a decision each (needs Eric)
@@ -173,4 +175,41 @@ Tracked at root and should not be: `.backups/` (old machine snapshots), `.cache/
 
 ---
 
-*Full agent-level evidence (file:line for every claim) available in the session that produced this report. This document follows its own rules: it supersedes and consolidates; the individual findings above should not be re-committed as separate reports.*
+## Part 5 — Live verification addendum (hwc-server, 2026-07-04)
+
+A read-only verification run on hwc-server checked every falsifiable claim above. Scorecard: most findings confirmed (dangling symlink, abandoned Next.js app, healthy MCP gateway and briefing pipeline, dead `kids`/`firestick` fleet references); one refuted (recyclarr placeholders — removed above); three refined (webhook, nix.gc, appointment calculator — corrected above). It also surfaced findings only a live system can show:
+
+### Pattern 6: The deploy loop doesn't close (the biggest finding of the whole audit)
+
+- **The running system is ~5 weeks behind the repo.** Live generation 1092 was built **2026-05-30**; repo HEAD is **2026-07-03**. The entire July-3 batch — qbittorrent VPN hardening, sabnzbd Caddy whitelist, rclone backport, llama.cpp rewiring — is committed but **not deployed**.
+- **The booted system is older still** (April 7 build): a switch happened May 30 without a reboot since.
+- **Local `main` is 1 commit ahead of origin** (unpushed), despite `.claude/`'s auto-push tooling existing precisely to prevent this.
+- Same shape elsewhere: `dedupe.sh` was generated (60k lines, 138 GiB reclaimable) and **never executed** — the duplicates are all still on disk; 169 generations accumulate because pruning was never configured; uptime-kuma still monitors Organizr, which is deliberately parked (`enable = false`).
+
+This is Pattern 3 (rebuild-instead-of-finish) extended to operations: artifacts get *produced* — commits, scripts, monitors, timers — but the terminal step (rebuild, reboot, run, prune, retire) doesn't execute, and nothing makes the gap visible. The charter governs the repo; **nothing governs the distance between the repo and the machine.**
+
+**Recommended fix (small, uses existing infra)**: add a *config-drift tile* to the morning briefing — HEAD vs running-generation age, unpushed commit count, booted-vs-current generation mismatch. The pipeline (`run.sh` → `briefing.json` → `hwc_morning_brief` → dashboard/workbench) already exists; this is one more section in `run.sh`. Drift you see every morning at 6am is drift that closes.
+
+### Other live-only findings
+
+1. **Caddy access logging is dead** since the tailnet rename (2026-06-02): per-vhost logs stale since 2025-11-14, zero request lines in the journal. Route-level usage analytics are currently impossible — re-enable per-vhost access logs (also a prerequisite for retiring unused routes with confidence).
+2. **Recurring Caddy TLS/ARI error** every ~5h: missing cert metadata JSON for `*.hwc.iheartwoodcraft.com`.
+3. **uptime-kuma reports 5 monitors down**: Ollama (:11434 — consistent with the undeployed llama.cpp rewiring commits), Organizr (parked service, stale monitor), Samba, NFS, Estimator (:13443). Zero failed systemd units — the gaps are all at the reachability layer.
+4. **Notifications usage measured: 33 messages in 30 days** (~1/day) through the 2,154-line dispatcher+gotify+bridge+igotify stack. The §2.4 overengineering verdict is now quantified.
+5. **Fleet corrections**: no `kids` machine exists on the tailnet at all; `firestick` has been offline 149 days; hwc-tablet 173d, raspberrypi 87d. Charter Law-16 lints and `.backups/` reference machines that don't exist — update the lint word-list.
+6. Working tree on the server is **clean** (0 modified/untracked) — repo-vs-runtime drift is entirely deploy-lag and origin-sync, not dirty checkouts.
+
+### Added action items
+
+- **Phase 0**: push the unpushed commit; rebuild + reboot hwc-server (July-3 batch, incl. security-relevant qbittorrent VPN hardening, is not live); add `nix.gc` generation pruning; remove/repoint the Organizr uptime-kuma monitor; fix the wildcard-cert metadata error.
+- **Phase 1**: config-drift tile in the morning briefing (see above); re-enable Caddy access logs.
+- **Phase 2**: decide on `dedupe.sh` — run it (after review) or delete it; retire dead fleet entries (kids, firestick, tablet) from lints, backups, and tailnet.
+- **Still pending on hwc-laptop**: workbench real usage (V5), tuxedo placeholder hash (V9), laptop git/units state.
+
+### Principle 7 (addition to Part 4)
+
+7. **The repo is not the system.** Every artifact needs its terminal step executed — a commit isn't real until rebuilt, a rebuild until rebooted, a script until run, a monitor until its target exists. Make the gap observable (drift tile) rather than relying on memory.
+
+---
+
+*Full agent-level evidence (file:line for every claim) available in the session that produced this report, plus the 2026-07-04 hwc-server verification report. This document follows its own rules: it supersedes and consolidates; the individual findings above should not be re-committed as separate reports.*
