@@ -58,3 +58,5 @@ domains/business/datax/dashboard/dashboard.json
 domains/business/morning-briefing/logs/*.log
 domains/business/morning-briefing/output/*.json
 domains/business/morning-briefing/dashboard/briefing.json
+.backups/
+.wrangler/
