@@ -41,6 +41,9 @@ todui/
 - khal + vdirsyncer are put on todui's PATH via `extraRuntimePackages`.
 
 ## Changelog
+- 2026-07-05: radicalePwPath rewritten from if/has-attr chain to `lib.attrByPath`
+  (same semantics; conforms to the Law-1 whitelisted patterns so the v12.2 lint
+  passes clean).
 - 2026-06-12: Launcher integration — `xdg.desktopEntries.todui` (`kitty -e
   todui`, terminal=false) so it appears in wofi/rofi `drun`; Hyprland keybind
   `SUPER+T` added in `domains/home/apps/hyprland/parts/behavior.nix` (gated on
