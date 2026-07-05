@@ -1,0 +1,70 @@
+# Phased Remediation Plan — Handoff to Local Agent
+
+**Companion to**: `workspace/plans/2026-07-05-systems-process-audit.md` (read it first — it has the evidence for every item here).
+**Branch**: `claude/systems-processes-audit-o06wuy` (Phase 0 is implemented there, **unverified by nix** — the sandbox that wrote it had no `nix` binary).
+**Executor**: an agent running ON the machines (hwc-server / hwc-laptop) with the ability to build, switch, observe, and roll back.
+**Owner of decisions marked 🧑**: Eric. Do not decide those unilaterally — ask, with the tradeoff summarized in two sentences.
+
+## Standing rules (from CHARTER.md doctrine + this audit's lessons)
+
+1. `hostname` before every `nixos-rebuild`. Commit before every switch. Never switch on a failing build.
+2. **Verify loop for every item**: build → switch (or `hms`) → observe (`systemctl --failed`, affected service health, journal) → only then check the box here and move on. An item without an observation is not done.
+3. One item at a time. Small commits, conventional-commit style, update the touched domain's README changelog (Law 12).
+4. After each phase: run the §3.1 lint suite (fixed in Charter v12.2) and `nix flake check`; record results in this file under the phase heading.
+5. If something breaks: roll back (`nixos-rebuild switch --rollback` / previous generation), record what broke here, and stop that item — don't route around it with a new build (that's Pattern 3; the audit exists because of it).
+6. Keep this file updated as you go — it is the single source of progress truth. Check boxes, add one-line observations with dates.
+
+---
+
+## Phase 0-verify — validate and land what the sandbox already changed  ⬅ START HERE
+
+The sandbox made these changes textually but could not eval them. Nothing here should change behavior except where noted; your job is to prove that.
+
+- [ ] **0v.1 Reconcile fleet git state.** Both machines previously held different unpushed commits on `main` (server `bd8af2fa`, laptop `b827c3da`). Get both pushed/rebased so `main` is linear and both machines agree with origin, THEN fetch the audit branch. Do not merge the audit branch until main is reconciled.
+- [ ] **0v.2 Eval check.** On either machine: `git fetch && git checkout claude/systems-processes-audit-o06wuy && nix flake check` (or `nixos-rebuild dry-build --flake .#hwc-server` and `.#hwc-laptop`). Specific changes to watch:
+  - `flake.nix` — `hwc-graph` graph_dir repointed `workspace/nixos/graph` → `workspace/nixos-dev/graph` (old dir deleted). Verify: `nix run .#...` or run `hwc-graph` after switch.
+  - `domains/media/youtube/index.nix` + `machines/server/config.nix` + `domains/monitoring/prometheus/index.nix` — `legacyApi` option removed everywhere. Watch for any straggler reference the sandbox's `rg` missed.
+  - `domains/home/apps/todui/index.nix` — `radicalePwPath` rewritten to `lib.attrByPath`. Must resolve to the same path on NixOS *and* eval clean standalone (`hms` dry run).
+  - `domains/media/orchestration/media-orchestrator/index.nix` — cp paths repointed to `workspace/automation/hooks/` (module is never-enabled; eval-only risk).
+- [ ] **0v.3 Server verify.** `sudo nixos-rebuild dry-build --flake .#hwc-server` on the branch → if clean, merge branch to main, switch, then: `systemctl --failed` (expect 0), `sudo podman ps -q | wc -l` (expect 39), `curl -s localhost:6200/health`, morning-briefing timer still scheduled, prometheus unit healthy (its scrape config changed — confirm it parses: `systemctl status prometheus` + targets page).
+- [ ] **0v.4 Laptop verify.** `hms` (HM-only changes: todui, tuxedo comment) then `sudo nixos-rebuild switch --flake .#hwc-laptop` for the flake/system side. Verify: `todui` launches and radicale sync works; `tuxedo --version` still runs; `hwc-graph` runs.
+- [ ] **0v.5 Lint suite.** Run all Charter v12.2 §3.1 lints; expect: Laws 1/2/3(≈)/4/7/10/14/16 clean or known-fallback-only; Law 5 reports 9 files (real, backlog); Law 12 reports 4 READMEs (real, backlog); Law 13 reports website assets + jt_catalog_cache (real, Phase 2). Record the counts here.
+- [ ] **0v.6 Deferred Phase-0 leftovers** (runtime-side, from the audit addenda):
+  - [ ] Find where the live `nix-gc.timer` comes from (it runs weekly on the server but no `nix.gc` exists in the repo — profile? nh? manual unit?). Then add declarative pruning: `nix.gc = { automatic = true; options = "--delete-older-than 30d"; }` (or align with whatever the existing timer is) + confirm generation count starts dropping from 169.
+  - [ ] Remove/repoint the Organizr uptime-kuma monitor (service is deliberately parked).
+  - [ ] Fix the Caddy wildcard-cert metadata error (`wildcard_.hwc.iheartwoodcraft.com.json` missing — recurring TLS/ARI error every ~5h).
+  - [ ] 🧑 Schedule reboot windows for BOTH machines (server kernel from April 7; laptop's NVML mismatch + failed nvidia CDI unit clears on reboot).
+
+## Phase 1 — make enforcement real
+
+- [ ] **1.1 Wire lints into `nix flake check`** (Charter §3.3, promised since v12.0). Wrap each §3.1 lint in `pkgs.runCommand` under `checks.x86_64-linux.charter-law<N>`. Suggested: start with the always-clean ones (2, 4, 7, 14, 16) so the check is green on day one; add 5/12/13 as they're burned down (or implement them as warnings first). Verify: `nix flake check` passes locally; document in CHARTER §3.3 + version bump to v12.3.
+- [ ] **1.2 Burn down Law 5**: add `# HWC-EXCEPTION(Law 5)` annotations (with justification) or convert to mkContainer for the 9 raw-container modules (gotify server + igotify, frigate + exporter, cadvisor, homepage, uptime-kuma, cloudbeaver, mkInfraContainer itself).
+- [ ] **1.3 Burn down Law 12 sections**: add missing Purpose/Boundaries/Structure to secrets/, server/, system/, notifications/ READMEs.
+- [ ] **1.4 🧑 Law 12 rescope decision**: keep per-subdomain README requirement (52% missing) or rescope to top-level domains only? Then align `readme-freshness` tooling to the chosen scope and wire it into the flake checks.
+- [ ] **1.5 🧑 Image pinning**: pin the ~20 `:latest` container tags to versions/digests (Law 15), or amend Law 15 to document a deliberate float-with-autoPrune policy. Either is defensible; pick one and make charter match practice.
+- [ ] **1.6 Re-enable Caddy per-vhost access logs** (dead since the 2026-06-02 tailnet rename). Prerequisite for Phase 2 route-retirement decisions and any future usage auditing.
+- [ ] **1.7 Update Law 16 lint word-list / `.backups` references for fleet reality**: no `kids` machine exists; firestick offline 149d (see 2.8).
+
+## Phase 2 — kill the duplicates (one decision each, most need 🧑)
+
+- [ ] **2.1 🧑 Morning briefing: one producer.** Recommended: keep the bash pipeline (`domains/business/morning-briefing`) as sole producer of `briefing.json`; keep `hwc_morning_brief` as sole presenter; delete or reduce `hwc_morning_status` to reading the same JSON; tombstone the Next.js repo (`~/600_apps/morning-briefing` + its GitHub repo README: one line, "superseded by domains/business/morning-briefing, kept for reference"). Verify: workbench brief tile + dashboard still render next morning.
+- [ ] **2.2 🧑 Dead modules**: delete or deliberately enable `hwc.networking.pihole`, `hwc.ai.tools`, `hwc.ai.cloud`, `hwc.automation.n8n.mcpBridge`, `hwc.media.orchestration.mediaOrchestrator`, and remove `domains/ai/.nanoclaw-disabled/`. Git history keeps them; "might need later" is not a reason to keep evaluating them.
+- [ ] **2.3 🧑 Website eviction**: move `domains/business/website/site_files` (183 MB, ~630 images) to its own repo; nixos-hwc keeps the Caddy route + service config and consumes the site as a flake input or deploy artifact. THEN (separate, destructive, coordinate with Eric): `git filter-repo` to purge the blobs and shrink .git from ~174 MB. Also fix the silently-404ing appointment webhook (activate/recreate the n8n workflow or remove the calculator's appointment path).
+- [ ] **2.4 🧑 Evict `workspace/projects/`** (13 standalone apps incl. youtube-services-full, estimate-automation, mailbot, bible-plan) to their own repos or an `~/apps` graveyard outside nixos-hwc.
+- [ ] **2.5 🧑 dedupe.sh decision**: `workspace/media/manifests/dedupe.sh` (138 GiB reclaimable, DRY_RUN default, generated 2026-06-24). Regenerate against current library state, review, run with DRY_RUN=0 — or delete it. Don't let it sit another quarter.
+- [ ] **2.6 Notifications rightsizing** (2,154 lines / ~1 msg/day — quantified): there's already a gotify-decommission plan in `workspace/plans/2026-06-11-gotify-decommission.md`. 🧑 Execute or explicitly reject it.
+- [ ] **2.7 Investigate system76-scheduler crash-loop on laptop** (224 SIGABRT coredumps/48h behind an `active` unit). Fix, disable, or report upstream; add a coredump-rate check to monitoring so this class of failure is visible.
+- [ ] **2.8 🧑 Fleet retirement**: remove firestick (149d offline), tablet (173d), raspberrypi (87d) from tailnet/lints/backups if truly dead.
+
+## Phase 3 — process changes so it doesn't regrow
+
+- [ ] **3.1 Config-drift tile in the morning briefing** (the audit's highest-leverage small build): add a section to `run.sh` computing — HEAD vs `/run/current-system` provenance, `booted-system` vs `current-system` (reboot pending), unpushed commit count, system generation count, and (once 1.1 lands) `nix flake check` pass/fail. Flows automatically into briefing.json → hwc_morning_brief → dashboard + workbench. Machine-computed, replacing the generation-table misreadings that happened twice during this audit.
+- [ ] **3.2 Enable the auto-push mechanism** (`.claude/setup-autopush.sh` or a post-commit hook) on BOTH machines — the divergent-unpushed-commits incident is the proof it's needed.
+- [ ] **3.3 Update stale docs that poisoned this audit**: rewrite or delete `workbench/MORNING-HANDOFF.md` (claims workbench never fetched a live tile; false since ~Jul 3). Sweep `~/.claude/CLAUDE.md` and `.claude/README.md` claims against reality (MCP server lists etc.).
+- [ ] **3.4 🧑 Adopt the principles** (audit Part 4 + Principle 7) into CHARTER doctrine — one short paragraph each, version bump. Especially: migrations end with `git rm`; enforced-or-guideline; done = deployed + used; the repo is not the system.
+
+## Progress log
+
+*(executor appends dated one-liners here)*
+
+- 2026-07-05: Phase 0 implemented in sandbox (5 commits on this branch), UNVERIFIED by nix — see 0v.
