@@ -227,7 +227,9 @@ in
       # of the *.<vhostDomain> wildcard cert used by mode = "vhost" routes.
       package = pkgs.caddy.withPlugins {
         plugins = [ "github.com/caddy-dns/desec@v1.1.0" ];
-        hash = "sha256-+HNd7cR6/psjZATMw80QxDjSisasyxTwOCYB6OnlfKM=";
+        # FOD hash tracks the vendored Go deps of caddy+plugin; it changes
+        # whenever the nixpkgs caddy version bumps (last: 2026-07 input update).
+        hash = "sha256-YiJYSM6JLgPlQ3MOtD0EqM5Tdr3RzsyC2L4RMPf42PI=";
       };
       extraConfig = ''
         # Primary HTTPS listener — serves subpath routes + MCP over tailnet.
