@@ -48,7 +48,7 @@ The morning briefing is the type specimen. There are **five surfaces and three i
 
 The history reads clearly: the Next.js app stalled (probably at deployment), so the bash pipeline was built as a workaround; the MCP path had a headless-permission issue, so `run.sh` re-implemented the gather in bash *"specifically because the MCP path fails under headless permission mode"* (its own comments). Each blocker was routed around with a fresh build instead of being fixed.
 
-Workbench shows the same signature from the other side: hexagonal architecture, 120 passing tests, 3,465 lines of test code, zero `NotImplementedError` — and per `MORNING-HANDOFF.md` it has **never round-tripped one live MCP response or spawned one real zellij pane**. All six remaining items on its handoff list are integration steps. It is beautifully engineered and not yet *used*.
+Workbench initially looked like the same signature from the other side — `MORNING-HANDOFF.md` states it has "never round-tripped one live MCP response or spawned one real zellij pane." **Live verification refuted this**: on the laptop, workbench is deployed via HM, aliased into the shell, had a zellij session alive for 1.5 days at check time, and its state file holds a calendar tile fetched live from the gateway on 2026-07-03. The last mile *was* finished — **the handoff doc is just stale**, which is its own lesson (Pattern 5): the audit inherited a false conclusion from the repo's own outdated documentation.
 
 **The pattern: energy goes into greenfield architecture (fun) and stops at integration/deployment (unglamorous). "Done" needs to be redefined as *deployed and used*, not code-complete.**
 
@@ -101,7 +101,7 @@ Plus deliberately parked: `hwc.ai.mcp` (mkForce false; superseded), beets/tdarr/
 
 Broken references: `domains/media/youtube/parts/legacy-api.nix` points at `workspace/media/youtube-services/transcript-formatter` — **does not exist** (real path: `workspace/projects/productivity/transcript-formatter`). todui READMEs reference deleted `workspace/home/tasq/`.
 
-Live risks found on the way: `tuxedo/parts/package.nix:29` ships `PLACEHOLDER — replace with the real hash` (laptop verification pending); the website's appointment-calculator webhook **404s live** (verified: `webhook/calculator-appointment` → 404; the sibling `webhook/calculator-lead` → 200 and works — one inactive n8n workflow, not a dead calculator). ~~recyclarr falls back to placeholder API keys~~ — **refuted by live check**: recyclarr synced clean the morning of verification, no placeholder/401/403 in 14 days of journal; the fallback code path exists but is not being hit.
+Live risks found on the way: ~~tuxedo placeholder hash~~ — **refuted by laptop check**: the module is the todo.txt TUI (not the hardware daemon), it's enabled in the desktop profile, builds, and runs v2026.6.2 — a `fetchurl` with a wrong hash can't build, so the sha256 is real and only the "PLACEHOLDER" *comment* is stale (delete the comment, `tuxedo/parts/package.nix:29`); the website's appointment-calculator webhook **404s live** (verified: `webhook/calculator-appointment` → 404; the sibling `webhook/calculator-lead` → 200 and works — one inactive n8n workflow, not a dead calculator). ~~recyclarr falls back to placeholder API keys~~ — **refuted by live check**: recyclarr synced clean the morning of verification, no placeholder/401/403 in 14 days of journal; the fallback code path exists but is not being hit.
 
 ### 2.4 Complexity outliers (overengineering candidates)
 
@@ -111,7 +111,7 @@ Live risks found on the way: `tuxedo/parts/package.nix:29` ships `PLACEHOLDER �
 | `mail/` | 46 files | Every component split into parts/. Fragmentation cost now exceeds navigation benefit. |
 | `paths/paths.nix` | 640 lines, 1 file | The opposite drift — the only monolith in the repo. |
 | Law 12 as written | per-subdomain READMEs, 4 sections + changelog | 52% missing proves the contract exceeds manual capacity. Reduce scope (top-level domains only) or automate — don't keep a law that's half-false. |
-| workbench | full hexagonal core, 2 shells, 18 test files | For a personal TUI that hasn't fetched a live tile. Architecture is ahead of usage by two steps. |
+| workbench | full hexagonal core, 2 shells, 18 test files | ~~"hasn't fetched a live tile"~~ — refuted: in active daily use on the laptop (live session, real tile fetches). The remaining question is only whether the architecture is heavier than a personal tool needs, and that's a judgment call, not a defect. |
 
 ### 2.5 Pattern drift in domains/
 
@@ -151,7 +151,7 @@ Tracked at root and should not be: `.backups/` (old machine snapshots), `.cache/
 ### Phase 2 — Kill the duplicates with a decision each (needs Eric)
 
 11. **Morning briefing — pick one producer.** Recommendation: keep the bash pipeline (#2) as the single producer of `briefing.json` for now (it works and runs in prod); keep `hwc_morning_brief` as the only presentation tool; **delete `hwc_morning_status`** or reduce it to reading the same `briefing.json`; archive the Next.js repo with a one-line README tombstone ("superseded by domains/business/morning-briefing; kept for reference"). If the web dashboard is still wanted later, revive it *against briefing.json*, not with its own fetch layer.
-12. **Finish workbench's last mile instead of adding anything to it**: point it at the live `:6200` gateway, verify one real tile, test one real zellij pane. Its handoff list is six integration items; that's the whole remaining project. No new hubs until a live tile renders.
+12. ~~Finish workbench's last mile~~ — **already done** (live verification: deployed, live session, real tile fetches). Remaining: update the stale `MORNING-HANDOFF.md` to reflect reality or delete it (it actively misled this audit), apply/discard the `nix/staged-for-nixos/` staging, and close the 2 khalt xfails or drop them.
 13. **Move the website out of nixos-hwc** into its own repo (it half-is one already — `site_files` is treated as a sub-repo path). Config repo keeps the Caddy route + a fetcher/flake input. Optionally rewrite history afterward (`git filter-repo` on `domains/business/website/site_files`) to reclaim the 174 MB `.git` — destructive, coordinate before doing it.
 14. **Evict `workspace/projects/`** (13 apps) to their own repos or a single `~/apps` archive outside nixos-hwc. workspace/ shrinks to its load-bearing set: `nixos-dev/`, `plans/`, `tools/`, `automation/hooks/`, `system/secret-manager.sh`, `utilities/lints/`, `home/scraper/`, `media/youtube-services/`.
 15. Dead modules: delete `pihole`, `ai/tools`, `ai/cloud`, `n8n.mcpBridge`, `mediaOrchestrator`, and `.nanoclaw-disabled/` (git keeps them forever), or enable them deliberately this week. "I might want it" is what git history is for.
@@ -211,7 +211,18 @@ And the correction episode itself proves the second half of the problem: **runti
 - **Phase 0**: ~~push the unpushed commit; rebuild~~ (done 2026-07-05; rebuild was a verified no-op — config was already live); **schedule a reboot window for hwc-server** (kernel/initrd date to April 7); add `nix.gc` generation pruning; remove/repoint the Organizr uptime-kuma monitor; fix the wildcard-cert metadata error.
 - **Phase 1**: config-drift tile in the morning briefing (see above); re-enable Caddy access logs.
 - **Phase 2**: decide on `dedupe.sh` — run it (after review) or delete it; retire dead fleet entries (kids, firestick, tablet) from lints, backups, and tailnet.
-- **Still pending on hwc-laptop**: workbench real usage (V5), tuxedo placeholder hash (V9), laptop git/units state.
+
+### Laptop verification addendum (hwc-laptop, 2026-07-05)
+
+The laptop half completed the picture and overturned two more sandbox findings (workbench and tuxedo — corrected inline above). New findings only the laptop could show:
+
+1. **Divergent unpushed history across the fleet (new, real, needs action).** At verification time the server was ahead of origin with one commit (`bd8af2fa`, rclone backport) and the laptop ahead with a *different* one (`b827c3da`, flake update) — neither existing in the other's repo, laptop's origin ref stale. Whichever pushes second gets rejected and needs a fetch+rebase. Two machines committing to the same `main` with no push discipline is a standing merge-conflict generator — and `.claude/`'s auto-push tooling exists precisely for this but evidently isn't installed/active on either machine. **Fix: actually enable the autopush hook (or a post-commit push) on both machines, and make "unpushed commits" a drift-tile metric.**
+2. **The dangling `CLAUDE.md` symlink is fleet-wide and *committed*** — the symlink is git-tracked, `AGENTS.md` exists on neither machine, so project instructions loaded on no machine and in every clone. Confirms the repo-level fix on this branch was the right one (merge it).
+3. **Reboot-pending is a fleet habit, not a server quirk.** Laptop: current gen July 3, booted gen June 28 — and the gap has a concrete cost: `nvidia-container-toolkit-cdi-generator.service` is failed with an NVML driver/library mismatch (userspace driver 595.84 vs the older running kernel module). Clears on reboot. Both machines run switched-not-rebooted as steady state.
+4. **Monitoring blind spot: unit state ≠ process health.** `system76-scheduler` dumped core **224 times in 48 hours** (SIGABRT, `panic_cannot_unwind`) while its unit reported `active (running)` throughout — invisible to `systemctl --failed`, just like the server's five down kuma monitors behind zero failed units. Worth a coredump-count check in monitoring, and its own investigation.
+5. **Config-deploy discipline is actually fine fleet-wide**: laptop gen 1398 was built from HEAD ~95 minutes after the commit; the server (per the 2026-07-05 correction) was also current. The real hygiene gaps are **reboots and pushes**, not rebuilds.
+
+**Verification scoreboard, final**: across both machines, live checking refuted or materially corrected **5 sandbox findings** (recyclarr placeholders, tuxedo hash, workbench abandonment, server deploy-lag, nix.gc absence) and confirmed the rest. Two of the five errors were inherited from the repo's own stale docs (`MORNING-HANDOFF.md`) or stale comments (tuxedo). The lesson for future audits is now Principle 7's corollary: **verify against the machine, and keep docs/comments honest enough that they don't poison the next audit.**
 
 ### Principle 7 (addition to Part 4)
 
