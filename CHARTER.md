@@ -1,10 +1,10 @@
-# HWC Architecture Charter v12.1
+# HWC Architecture Charter v12.2
 
 **Owner**: Eric
 **Scope**: `nixos-hwc/` — all machines, domains, profiles, Home Manager, and supporting files
 **Goal**: Deterministic, maintainable, reproducible NixOS configuration via strict domain separation, explicit APIs, and mechanical enforcement.
 **Philosophy**: This document defines **enforceable architectural laws**. Implementation details and domain-specific guidance live in domain READMEs (Law 12). A law that cannot be checked mechanically is a guideline and is labeled as such. A law that references infrastructure that does not exist is a bug in the charter.
-**Last revised**: 2026-06-09
+**Last revised**: 2026-07-05
 
 ---
 
@@ -153,7 +153,7 @@ Litmus: declares any `hwc.*` option → directory. Only sets packages/programs/s
 
 Separate `options.nix` files are forbidden — the v11.0 migration eliminated the pattern; the 18 stragglers found in the 2026-06-09 audit were inlined the same day (lint now returns zero).
 
-**Tracked violations (burn-down list, not precedent)**: ~21 single-file leaf modules still declare options (e.g. `domains/networking/reverseProxy.nix`, `domains/system/mounts.nix`, `domains/notifications/gotify/*.nix`). Each needs conversion to a directory module per Law 9 — a naming + import-site refactor to do deliberately, one domain at a time. List: `rg -l 'mkOption' domains --type nix -g '!**/index.nix' -g '!domains/paths/paths.nix' -g '!**/sys.nix'`.
+**Tracked violations (burn-down list, not precedent)**: 2 files remain as of 2026-07-05 (`domains/system/mcp/parts/jt.nix`, `domains/secrets/declarations/caddy.nix`) — the v12.1 text claimed ~21; the migration is essentially complete. List: `rg -l 'mkOption' domains --type nix -g '!**/index.nix' -g '!domains/paths/paths.nix' -g '!**/sys.nix'`.
 
 **Violation**: `mkOption` anywhere else, including `parts/*.nix`.
 
@@ -269,20 +269,23 @@ are governed by Law 16; membership lives in the `flake.nix` machines table.
 
 ```bash
 # Law 1 — osConfig safety
-rg 'osConfig\.' domains/home --type nix | rg -v 'osConfig\.hwc or \{\}|attrByPath|osConfig \? hwc|lib\.mkIf isNixOS'
+# (v12.2 fix: whitelist generalized — any `osConfig ? x` guard and any `osConfig.<path> or <fallback>`
+#  is crash-safe with osConfig = {}; the old whitelist only accepted the hwc-specific spellings)
+rg 'osConfig\.' domains/home --type nix | rg -v 'osConfig\.[a-zA-Z0-9_.]+ or |attrByPath|osConfig \?|lib\.mkIf isNixOS|#'
 
 # Law 2 — phantom namespaces (folders that don't exist)
-rg 'hwc\.(services|features|alerts|infrastructure)\.' domains
+rg 'hwc\.(services|features|alerts|infrastructure)\.' domains --type nix
 
 # Law 3 — hardcoded paths
 rg '"/mnt/|"/home/eric/|"/opt/' domains --type nix --glob '!domains/paths/**' --glob '!*.md'
 
-# Law 4 — permission model
-rg 'PGID.*=.*"?1000' domains
+# Law 4 — permission model (anchored to the assigned value, not prose/comments)
+rg 'PGID\s*=\s*"?1000"?\s*;' domains --type nix
 ./workspace/utilities/lints/permission-lint.sh
 
 # Law 5 — raw container blocks
-rg 'oci-containers\.containers\.' domains --glob '!**/mkContainer.nix' -l | xargs -r rg -L 'HWC-EXCEPTION\(Law 5\)'
+# (v12.2 fix: `rg -L` means --follow, not files-without-match; the old lint always passed vacuously)
+rg 'oci-containers\.containers\.' domains --glob '!**/mkContainer.nix' -l | xargs -r rg --files-without-match 'HWC-EXCEPTION\(Law 5\)'
 
 # Law 7 — lane purity
 rg 'import.*sys\.nix' domains/home/*/index.nix
@@ -293,7 +296,8 @@ rg 'mkOption' domains --type nix --glob '!**/index.nix' --glob '!domains/paths/p
 
 # Law 12 — README presence + sections
 for d in domains/*/; do [ -f "$d/README.md" ] || echo "Missing: $d/README.md"; done
-rg -L '^## Purpose|^## Boundaries|^## Structure|^## Changelog' domains/*/README.md
+# (v12.2 fix: same -L bug as Law 5 — check each required section's absence explicitly)
+for s in Purpose Boundaries Structure Changelog; do rg --files-without-match "^## $s" domains/*/README.md; done
 
 # Law 13 — repo hygiene
 git ls-files | xargs -I{} du -k "{}" 2>/dev/null | awk '$1>2048' | rg -v '\.age|docs/.*\.(png|jpg)'
@@ -302,7 +306,7 @@ git ls-files | xargs -I{} du -k "{}" 2>/dev/null | awk '$1>2048' | rg -v '\.age|
 rg 'github:eriqueo/nixos-hwc' flake.nix
 
 # Law 16 — layer purity (profiles & machines)
-rg 'mkDerivation|fetchurl|writeShellScript' profiles/
+rg 'mkDerivation|fetchurl|writeShellScript' profiles/ --glob '!README.md'
 rg -i '\b(laptop|xps|kids|firestick|hwc-server)\b' profiles/ --glob '!README.md'
 rg 'import.*profiles/' profiles/
 rg 'mkOption|mkEnableOption' profiles/
@@ -354,6 +358,7 @@ Every exception requires: in-code annotation, removal condition when temporary, 
 - A version entry may claim a migration complete **only after its lint passes** (Doctrine §0.4).
 
 **Version History** (excerpt):
+- **v12.2 (2026-07-05)**: Lint repair pass from the 2026-07-05 systems audit (`workspace/plans/2026-07-05-systems-process-audit.md`). Fixed two vacuously-passing lints (Laws 5 & 12 used `rg -L`, which is `--follow`, not `--files-without-match` — they could never report a violation). Fixed three never-empty lints: Law 2 now `--type nix` (was firing on README prose), Law 4 regex anchored to assigned values (was matching its own "not 1000!" comment), Law 16 derivations lint excludes README.md. Law 1 whitelist generalized to any `osConfig ?` guard / `osConfig.<path> or <fallback>`. Law 10 burn-down corrected from "~21" to the actual 2 remaining files. No law semantics changed — this release makes the existing laws checkable.
 - **v12.1 (2026-06-11)**: Roles architecture. profiles/ restructured into role folders (base, desktop, server, business, monitoring, gaming, appliance, mail) with sys/home lane halves; machine membership moved to a machines registry in flake.nix (channel + roles + pkgs per machine); HM bootstrap moved from profiles into flake glue; standalone homeConfigurations generated for every machine. Added Law 16 (Layer Purity: profiles & machines) with lints in §3.1 and a layer note in the domain map. Backup value-defaults absorbed into domains/data option defaults; hwc.home.{shell,development} renamed under hwc.home.core.* (Law 2).
 - **v12.0 (2026-06-09)**: Full coherence pass from the 2026-06-09 audit. Fixed v11.2/v11.0 header/footer mismatch and duplicate "Section 5" numbering. Domain map rewritten to match disk (16 domains: added mail, notifications, server; removed phantom alerts). Law 2 self-contradiction fixed (`hwc.networking` is valid; the law is the mapping, not a list). Law 3 corrected to reference `paths.nix` (not `index.nix`). Law 4 de-fictionalized (`identity.nix` never existed; literals are the standard) and now documents the secrets generator. Law 7 extended to forbid orphaned `sys.nix`. Removed all references to the never-built `readme-butler`. Added Law 13 (Repo Hygiene), Law 14 (Flake Input Discipline), Law 15 (Runtime Hygiene). Added duplicate-systemd-service lint. Declared `nix flake check` as the target enforcement gate.
 - **v11.2 (2026-05-20)**: documented dual HM activation paths; removed orphaned `profiles/home.nix`.
@@ -362,4 +367,4 @@ Every exception requires: in-code annotation, removal condition when temporary, 
 - **v10.x (2026-01/02)**: paths domain added, Law 2 strictness, Laws 9–12, infrastructure→system migration.
 - **v9.x (2026-01-10)**: laws + mechanical validation focus.
 
-**End of Charter v12.1**
+**End of Charter v12.2**

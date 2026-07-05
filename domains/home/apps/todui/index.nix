@@ -28,11 +28,9 @@ let
   radicaleUser = lib.attrByPath [ "hwc" "mail" "tasks" "radicale" "username" ]
     "eric" config;
   # Same osConfig.age handshake as domains/mail/tasks so it resolves under
-  # standalone HM eval too (osConfig may be {}).
-  radicalePwPath =
-    if (osConfig ? age) && ((osConfig.age.secrets or {}) ? radicale-htpasswd)
-    then osConfig.age.secrets.radicale-htpasswd.path
-    else "/run/agenix/radicale-htpasswd";
+  # standalone HM eval too (osConfig may be {}). Law-1 pattern: attrByPath.
+  radicalePwPath = lib.attrByPath [ "age" "secrets" "radicale-htpasswd" "path" ]
+    "/run/agenix/radicale-htpasswd" osConfig;
 
   # System theme palette → todui (it derives its UI roles from these tokens).
   paletteColors = lib.filterAttrs (_: v: builtins.isString v)
