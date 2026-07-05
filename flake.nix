@@ -419,6 +419,59 @@
     };
 
     #========================================================================
+    # CHECKS — Charter §3.1 lints wired into `nix flake check` (§3.3, v12.3).
+    # Each check runs a "must return empty" lint over the flake source and
+    # fails the build on any hit. Only laws whose lints are currently clean
+    # are wired (green on day one); Laws 3/5/12/13 join as their backlogs
+    # are burned down (see workspace/plans/2026-07-05-phase-plan-handoff.md).
+    #========================================================================
+    checks.${system} = let
+      mkCharterLint = name: cmds: pkgs.runCommand "charter-${name}" {
+        nativeBuildInputs = [ pkgs.ripgrep pkgs.fd ];
+      } ''
+        cd ${self}
+        fail=0
+        ${lib.concatMapStringsSep "\n" (cmd: ''
+          hits=$(${cmd} || true)
+          if [ -n "$hits" ]; then
+            echo "CHARTER LINT ${name} FAILED — must return empty:" >&2
+            echo "  \$ ${lib.escapeShellArg cmd}" >&2
+            echo "$hits" >&2
+            fail=1
+          fi
+        '') cmds}
+        [ "$fail" = 0 ] || exit 1
+        touch $out
+      '';
+    in {
+      charter-law1 = mkCharterLint "law1-osconfig-safety" [
+        "rg 'osConfig\\.' domains/home --type nix | rg -v 'osConfig\\.[a-zA-Z0-9_.]+ or |attrByPath|osConfig \\?|lib\\.mkIf isNixOS|#'"
+      ];
+      charter-law2 = mkCharterLint "law2-phantom-namespaces" [
+        "rg 'hwc\\.(services|features|alerts|infrastructure)\\.' domains --type nix"
+      ];
+      charter-law4 = mkCharterLint "law4-permission-model" [
+        "rg 'PGID\\s*=\\s*\"?1000\"?\\s*;' domains --type nix"
+      ];
+      charter-law7 = mkCharterLint "law7-lane-purity" [
+        "rg 'import.*sys\\.nix' domains/home/*/index.nix"
+      ];
+      charter-law10 = mkCharterLint "law10-unit-anatomy" [
+        "fd options.nix domains"
+      ];
+      charter-law14 = mkCharterLint "law14-flake-self-ref" [
+        # [-] character class keeps this lint from matching its own definition
+        "rg 'github:eriqueo/nixos[-]hwc' flake.nix"
+      ];
+      charter-law16 = mkCharterLint "law16-layer-purity" [
+        "rg 'mkDerivation|fetchurl|writeShellScript' profiles/ --glob '!README.md'"
+        "rg -i '\\b(laptop|xps|kids|firestick|hwc-server)\\b' profiles/ --glob '!README.md'"
+        "rg 'import.*profiles/' profiles/"
+        "rg 'mkOption|mkEnableOption' profiles/"
+      ];
+    };
+
+    #========================================================================
     # GENERATED OUTPUTS — one nixosConfiguration + one standalone
     # homeConfiguration per machine in the registry.
     # Standalone HM usage: home-manager switch --flake ~/.nixos#eric@$(hostname)

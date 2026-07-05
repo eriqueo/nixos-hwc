@@ -1,4 +1,4 @@
-# HWC Architecture Charter v12.2
+# HWC Architecture Charter v12.3
 
 **Owner**: Eric
 **Scope**: `nixos-hwc/` — all machines, domains, profiles, Home Manager, and supporting files
@@ -320,8 +320,19 @@ rg -o 'systemd\.services\.[a-zA-Z0-9_-]+' domains -r '$0' --no-filename | sort |
 - Container PUID/PGID: defaults in `mkContainer`
 - Inter-module dependencies: VALIDATION sections (Law 6)
 
-### 3.3 Target state: `nix flake check` as the enforcement gate
-Wrap each §3.1 lint in a `pkgs.runCommand` exposed under `checks.x86_64-linux.charter-law<N>`, so the entire charter is enforced by `nix flake check` locally and in CI. Until this lands, §3.1 is run manually before structural commits.
+### 3.3 `nix flake check` as the enforcement gate (live since v12.3)
+Each clean §3.1 lint is wrapped in a `pkgs.runCommand` exposed under
+`checks.x86_64-linux.charter-law<N>` in `flake.nix`, so those laws are enforced
+by `nix flake check` locally and in CI.
+
+**Wired (enforced)**: Laws 1, 2, 4, 7, 10, 14, 16 — their lints are clean today,
+so the gate is green from day one and any regression fails the check.
+
+**Not yet wired (guideline until burned down)**: Law 3 (15 path-literal
+fallbacks), Law 5 (9 un-annotated container modules), Law 12 (4 READMEs missing
+sections), Law 13 (21 tracked files >2 MB — website assets, Phase 2). Per the
+enforced-or-guideline principle, these remain manual §3.1 lints until their
+backlogs reach zero, at which point each gets wired and stops regressing.
 
 ---
 
@@ -358,6 +369,7 @@ Every exception requires: in-code annotation, removal condition when temporary, 
 - A version entry may claim a migration complete **only after its lint passes** (Doctrine §0.4).
 
 **Version History** (excerpt):
+- **v12.3 (2026-07-05)**: §3.3 enforcement gate BUILT (promised since v12.0): Laws 1, 2, 4, 7, 10, 14, 16 wired into `nix flake check` as `checks.x86_64-linux.charter-law<N>` derivations in flake.nix. Laws 3/5/12/13 stay manual guidelines until their backlogs burn down (tracked in `workspace/plans/2026-07-05-phase-plan-handoff.md`). Law 14's wired regex uses `nixos[-]hwc` so the lint can't match its own definition.
 - **v12.2 (2026-07-05)**: Lint repair pass from the 2026-07-05 systems audit (`workspace/plans/2026-07-05-systems-process-audit.md`). Fixed two vacuously-passing lints (Laws 5 & 12 used `rg -L`, which is `--follow`, not `--files-without-match` — they could never report a violation). Fixed three never-empty lints: Law 2 now `--type nix` (was firing on README prose), Law 4 regex anchored to assigned values (was matching its own "not 1000!" comment), Law 16 derivations lint excludes README.md. Law 1 whitelist generalized to any `osConfig ?` guard / `osConfig.<path> or <fallback>`. Law 10 burn-down corrected from "~21" to the actual 2 remaining files. No law semantics changed — this release makes the existing laws checkable.
 - **v12.1 (2026-06-11)**: Roles architecture. profiles/ restructured into role folders (base, desktop, server, business, monitoring, gaming, appliance, mail) with sys/home lane halves; machine membership moved to a machines registry in flake.nix (channel + roles + pkgs per machine); HM bootstrap moved from profiles into flake glue; standalone homeConfigurations generated for every machine. Added Law 16 (Layer Purity: profiles & machines) with lints in §3.1 and a layer note in the domain map. Backup value-defaults absorbed into domains/data option defaults; hwc.home.{shell,development} renamed under hwc.home.core.* (Law 2).
 - **v12.0 (2026-06-09)**: Full coherence pass from the 2026-06-09 audit. Fixed v11.2/v11.0 header/footer mismatch and duplicate "Section 5" numbering. Domain map rewritten to match disk (16 domains: added mail, notifications, server; removed phantom alerts). Law 2 self-contradiction fixed (`hwc.networking` is valid; the law is the mapping, not a list). Law 3 corrected to reference `paths.nix` (not `index.nix`). Law 4 de-fictionalized (`identity.nix` never existed; literals are the standard) and now documents the secrets generator. Law 7 extended to forbid orphaned `sys.nix`. Removed all references to the never-built `readme-butler`. Added Law 13 (Repo Hygiene), Law 14 (Flake Input Discipline), Law 15 (Runtime Hygiene). Added duplicate-systemd-service lint. Declared `nix flake check` as the target enforcement gate.
