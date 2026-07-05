@@ -100,19 +100,7 @@ in
               targets = [ "localhost:9100" ];
             }];
           }
-        ]++ lib.optional ((config.hwc.media.youtube.legacyApi.enable or false) && cfg.blackbox.enable) {
-                job_name = "transcript-api-health";
-                metrics_path = "/probe";
-                params = { module = [ "http_health_check" ]; };
-                static_configs = [{
-                  targets = [ "http://localhost:${toString config.hwc.media.youtube.legacyApi.port}/health" ];
-                }];
-                relabel_configs = [
-                  { source_labels = [ "__address__" ]; target_label = "__param_target"; }
-                  { source_labels = [ "__param_target" ]; target_label = "instance"; }
-                  { target_label = "__address__"; replacement = "localhost:9115"; }
-                ];
-              }
+        ]
         ++ cfg.scrapeConfigs; # Include scrape configs added by other modules
 
         # Alert rules organized by severity (P5/P4/P3)

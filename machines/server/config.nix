@@ -950,12 +950,8 @@
     network.mode = "host";
   };
 
-  # YouTube services
-  hwc.media.youtube.legacyApi = {
-    enable = lib.mkDefault false; # Superseded by yt-transcripts-api v2
-    port = 8099;
-    dataDir = "/home/eric/01-documents/01-vaults/04-transcripts";
-  };
+  # YouTube services (legacy transcript API removed 2026-07-05 — superseded by
+  # yt-transcripts-api v2; its scriptDir had pointed at a nonexistent path)
   hwc.media.youtube.transcripts = {
     enable = lib.mkDefault true;
     port = 8100;

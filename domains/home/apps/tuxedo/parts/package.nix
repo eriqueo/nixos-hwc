@@ -26,7 +26,6 @@ stdenv.mkDerivation rec {
 
   src = fetchurl {
     url = "https://github.com/webstonehq/tuxedo/releases/download/v${version}/tuxedo-v${version}-x86_64-unknown-linux-gnu.tar.gz";
-    # PLACEHOLDER — replace with the real hash (see header comment for the command).
     sha256 = "1mh9gliz23piv4sk6lzz4js06qyz8vr4xdrkjfbhj2bvrhkbpf9i";
   };
 

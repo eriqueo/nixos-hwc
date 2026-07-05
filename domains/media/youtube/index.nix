@@ -37,16 +37,9 @@
         description = "Preferred transcript languages in priority order";
       };
     };
-    legacyApi = {
-      enable = lib.mkEnableOption "Legacy YouTube transcript API";
-      port = lib.mkOption { type = lib.types.port; default = 5000; };
-      dataDir = lib.mkOption { type = lib.types.path; default = "${config.hwc.paths.user.home}/01-documents/01-vaults/04-transcripts"; };
-      apiKeys = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; };
-    };
   };
 
   imports = [
-    ./parts/legacy-api.nix
     ./parts/yt-transcripts-api
   ];
 
