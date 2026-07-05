@@ -325,12 +325,12 @@ Each clean §3.1 lint is wrapped in a `pkgs.runCommand` exposed under
 `checks.x86_64-linux.charter-law<N>` in `flake.nix`, so those laws are enforced
 by `nix flake check` locally and in CI.
 
-**Wired (enforced)**: Laws 1, 2, 4, 7, 10, 14, 16 — their lints are clean today,
-so the gate is green from day one and any regression fails the check.
+**Wired (enforced)**: Laws 1, 2, 4, 5, 7, 10, 12, 14, 16 — their lints are
+clean, so the gate is green and any regression fails the check. (Laws 5 and 12
+were burned down and wired the same day v12.3 landed.)
 
 **Not yet wired (guideline until burned down)**: Law 3 (15 path-literal
-fallbacks), Law 5 (9 un-annotated container modules), Law 12 (4 READMEs missing
-sections), Law 13 (21 tracked files >2 MB — website assets, Phase 2). Per the
+fallbacks), Law 13 (21 tracked files >2 MB — website assets, Phase 2). Per the
 enforced-or-guideline principle, these remain manual §3.1 lints until their
 backlogs reach zero, at which point each gets wired and stops regressing.
 
