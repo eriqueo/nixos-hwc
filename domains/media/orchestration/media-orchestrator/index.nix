@@ -26,10 +26,11 @@ in
         set -e
         mkdir -p ${cfgRoot}/scripts ${hotRoot}/events
 
-        # Deploy automation scripts from workspace
-        cp ${workspaceDir}/hooks/media-orchestrator.py ${cfgRoot}/scripts/
-        cp ${workspaceDir}/hooks/qbt-finished.sh ${cfgRoot}/scripts/
-        cp ${workspaceDir}/hooks/sab-finished.py ${cfgRoot}/scripts/
+        # Deploy automation scripts from workspace (automation/hooks is the
+        # canonical copy — the stale workspace/hooks fork was removed 2026-07-05)
+        cp ${workspaceDir}/automation/hooks/media-orchestrator.py ${cfgRoot}/scripts/
+        cp ${workspaceDir}/automation/hooks/qbt-finished.sh ${cfgRoot}/scripts/
+        cp ${workspaceDir}/automation/hooks/sab-finished.py ${cfgRoot}/scripts/
         chmod +x ${cfgRoot}/scripts/*.py ${cfgRoot}/scripts/*.sh
 
         chown -R 1000:1000 ${cfgRoot}/scripts ${hotRoot}/events

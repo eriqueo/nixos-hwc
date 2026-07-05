@@ -70,6 +70,7 @@ workspace/media/
 
 ## Changelog
 
+- 2026-07-05: Removed `youtube.legacyApi` entirely (option block, `parts/legacy-api.nix`, server config stanza, prometheus scrape block) — superseded by yt-transcripts-api v2, never enabled, and its scriptDir pointed at a path deleted in the 2026-03 workspace restructure. media-orchestrator's deploy step repointed from the removed stale `workspace/hooks/` fork to the canonical `workspace/automation/hooks/`.
 - 2026-06-09: Law 9/10 — `orchestration/media-orchestrator.nix` → `orchestration/media-orchestrator/index.nix` (pure relocation).
 - 2026-06-09: Law 3 finish — youtube transcripts outputDirectory derives from `hwc.paths.media.root` (null-safe); legacyApi dataDir derives from `hwc.paths.user.home`. Drv hash unchanged.
 - 2026-03-26: workspace/youtube-services/ moved to workspace/media/youtube-services/ (domain alignment); audiobook-copier path updated to workspace/automation/hooks/

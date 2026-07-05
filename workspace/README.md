@@ -1,8 +1,10 @@
 # HWC Workspace Directory
 
-**Domain-Aligned Script & Project Organization**
-
-Workspace mirrors the `domains/` hierarchy. Each top-level folder corresponds to the domain it serves.
+**Runtime-editable scripts and repo tooling.** Folders loosely mirror the
+`domains/` hierarchy where a domain reference exists. Rule of thumb: if a
+path in here is not referenced from a `.nix` file, a shell alias, or
+CHARTER.md, it is a deletion candidate — the 2026-07-05 audit removed a
+full layer of copy-not-move reorg debris on exactly that test.
 
 ---
 
@@ -10,94 +12,57 @@ Workspace mirrors the `domains/` hierarchy. Each top-level folder corresponds to
 
 ```
 workspace/
-├── ai/              # domains/ai/ — bible automation, AI docs, prompts
-├── automation/      # domains/automation/ — event hooks, n8n helpers
-├── business/        # domains/business/ — estimator, calculator, API, estimate-automation
-├── home/            # domains/home/ — scraper, mail, photo-dedup, SEO scraper
-├── media/           # domains/media/ — youtube-services, media scripts, cleanup tools
-├── monitoring/      # domains/monitoring/ — health checks, status scripts
-├── nixos-dev/       # Repo development tools (not a domain)
-├── system/          # domains/system/ — diagnostics, setup, system utilities
-└── tools/           # Repo-wide linters & meta-tools (readme-freshness.sh, web-speed.sh)
+├── ai/              # domains/ai/ — bible automation (canonical copy), AI docs
+├── automation/      # domains/automation + media orchestration hooks (CANONICAL
+│                    #   hooks dir — referenced by domains/media/orchestration/*)
+├── home/            # domains/home — scraper (nix-wired), mail, photo-dedup
+├── media/           # domains/media — youtube-services (nix-wired), beets helpers,
+│                    #   manifests/ (generated reorg/dedupe scripts, see its README)
+├── monitoring/      # health-check scripts (NOT nix-wired; overlaps domains/monitoring —
+│                    #   candidates for retirement as declarative coverage grows)
+├── nixos-dev/       # Repo dev tools: charter-lint, grebuild, add-home-app,
+│                    #   graph/ (referenced by flake.nix hwc-graph), audits, lints
+├── plans/           # Dated architecture proposals (CHARTER §6) + audit reports
+├── projects/        # Standalone app code parked here — Phase-2 eviction candidates
+│                    #   (each wants its own repo; see 2026-07-05 audit)
+├── system/          # secret-manager.sh (the `secret` alias), secrets-parity,
+│                    #   couchdb/zfs utilities, diagnostics/, setup/
+├── tools/           # readme-freshness.sh (Law-12 drift detector), web-speed.sh
+└── utilities/       # lints/ (charter lints incl. permission-lint.sh — CHARTER §3.1),
+                     #   audit/ (drift.py), setup-uptime-kuma.py
 ```
 
----
+Load-bearing paths (verified 2026-07-05 — do not move without updating the
+referencing site):
 
-## Folder Descriptions
-
-### ai/ — AI & ML Support
-Bible automation scripts, AI documentation, prompt libraries.
-
-### automation/ — Event-Driven Automation
-- **hooks/** — download completion hooks (qbt, sabnzbd, slskd), media orchestrator, audiobook copier
-- n8n-mcp-wrapper.sh
-
-### business/ — Business Tools
-- **bathroom-calculator/** — calculator PWA
-- **estimator-pwa/** — estimator frontend (referenced by `domains/business/estimator/`)
-- **remodel-api/** — backend API (referenced by `domains/business/parts/api.nix`)
-- **estimate-automation/** — estimation pipeline
-
-### home/ — User-Facing Tools
-- **scraper/** — social media scraper (referenced by `domains/home/apps/scraper/`)
-- **website_seo_scraper/** — SEO analysis tool
-- **mail/** — mailbot
-- **photo-dedup/** — duplicate photo finder (referenced by shell alias)
-
-### media/ — Media Management
-- **youtube-services/** — YT packages & transcript formatter (referenced by `domains/media/youtube/`)
-- **scripts/** — beets helpers, media organizer, migration scripts
-- **hooks/** — media-specific hooks
-- **config-examples/** — reference configurations
-- **cleanup-raw-files/** — raw file cleanup tool
-- **n8n-workflows/** — media-related n8n workflow configs
-
-### monitoring/ — System Health
-Health check scripts: disk, GPU, journal errors, caddy, frigate, immich, media automation, service summaries.
-
-### nixos-dev/ — Repository Development Tools
-- Charter compliance (charter-lint.sh, autofix.sh)
-- Build workflow (grebuild.sh)
-- Module scaffolding (add-home-app.sh)
-- Config analysis (graph/, nixos-translator/)
-- Audit & linting tools
-
-### system/ — System Infrastructure
-- **diagnostics/** — troubleshooting tools, network diagnostics, config validation, GPU checks
-- **setup/** — one-time deployment scripts (age keys, monitoring, permissions)
-- System utilities: couchdb migration, secret manager, ZFS snapshots, container validation
-  - `secret-manager.sh` (the `secret` alias) — add/edit/lookup agenix secrets; encrypts
-    **multi-recipient** to `everyone` and no longer edits declarations (the generated
-    secrets layer auto-mounts every `parts/**.age`).
-  - `secrets-parity.sh` — asserts every `.age` has a recipient rule + a mount and the
-    counts line up (run after adding/removing a secret).
-
----
-
-## Three-Tier Architecture
-
-### Tier 1: User Commands (Nix Derivations)
-**Location**: `domains/home/environment/shell/parts/*.nix`
-Wrapped Nix derivations in PATH. Examples: `grebuild`, `journal-errors`, `charter-lint`
-
-### Tier 2: Workspace Scripts (Implementation)
-**Location**: `workspace/*/`
-Editable at runtime without NixOS rebuilds. This is where most scripts live.
-
-### Tier 3: Domain-Specific Scripts
-**Location**: `domains/*/scripts/` or `domains/*/parts/`
-Tightly coupled to specific services — not promoted to workspace.
+| Path | Referenced by |
+|---|---|
+| `nixos-dev/graph/` | `flake.nix` (hwc-graph package) |
+| `nixos-dev/add-home-app.sh`, `nixos-dev/graph/hwc_graph.py` | `domains/home/core/shell/parts/zsh-init.nix` |
+| `automation/hooks/*` | `domains/media/orchestration/{media-orchestrator,audiobook-copier}` |
+| `home/scraper/*.py` | `domains/home/apps/scraper` |
+| `media/youtube-services/` | `domains/media/youtube/parts/yt-transcripts-api` |
+| `tools/readme-freshness.sh` | `domains/automation/readme-freshness` |
+| `system/secret-manager.sh` | `secret` alias (`domains/home/core/shell/parts/aliases.nix`) |
+| `utilities/lints/permission-lint.sh` | `CHARTER.md` §3.1 (Law 4) |
+| `plans/` | `CHARTER.md` §6 (proposals convention) |
 
 ---
 
 ## Changelog
 
-- 2026-06-12: Added `tools/readme-freshness.sh` — Law-12 drift detector. Scans
-  every `domains/**/README.md` and flags ones whose newest commit is older than
-  the newest commit touching sibling tracked files. Exit 0 = clean, 1 = stale,
-  2 = usage error. Pure bash + git, no network.
-- 2026-06-09: `secret-manager.sh` now encrypts multi-recipient (`age -R` to all host
-  pubkeys + eric) and drops the auto-declaration step; added `secrets-parity.sh`
-  (generator consistency check). See `domains/secrets/README.md`.
-- 2026-03-25: Restructured to mirror domains/ hierarchy, consolidated duplicates, eliminated stale folders
-- 2025-12-10: Reorganized from arbitrary categories to purpose-driven structure
+- 2026-07-05: Audit cleanup (see `plans/2026-07-05-systems-process-audit.md`).
+  Deleted reorg-debris duplicates: `hooks/` + `media/hooks/` (stale forks of
+  `automation/hooks/`), `diagnostics/` + `setup/` (dups of `system/*`),
+  `bible/` (subset of `ai/bible/`), `nixos/` (fork of `nixos-dev/`; flake
+  graph ref repointed), 9 `utilities/*` scripts duplicated from `system/` and
+  `nixos-dev/` (incl. the stale divergent `utilities/secret-manager.sh`),
+  `claude_plans/` (session scratch), `prompts/`, `migrations/`. Added
+  `media/manifests/` (generated ops scripts moved out of docs/). README
+  rewritten to match reality (old version described a `business/` dir that
+  didn't exist and omitted half the tree).
+- 2026-06-12: Added `tools/readme-freshness.sh` — Law-12 drift detector.
+- 2026-06-09: `secret-manager.sh` multi-recipient encryption; added
+  `secrets-parity.sh`. See `domains/secrets/README.md`.
+- 2026-03-25: Restructured to mirror domains/ hierarchy.
+- 2025-12-10: Reorganized from arbitrary categories to purpose-driven structure.
