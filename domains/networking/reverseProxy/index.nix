@@ -168,6 +168,15 @@ let
         propagation_timeout 600s
       }
       encode zstd gzip
+      # Access log for all name-based vhosts; per-route split via the host field.
+      log {
+        output file /var/log/caddy/access-vhosts.log {
+          roll_size 50MiB
+          roll_keep 5
+          roll_keep_for 30d
+        }
+        format json
+      }
       ${concatStringsSep "\n" (map renderVhostRoute vhostRoutes)}
     }
   '';
@@ -241,6 +250,17 @@ in
             alpn h2 http/1.1
           }
           encode zstd gzip
+
+          # Access log (route-level analytics derive from the host+uri fields).
+          # Size-capped rolling — caddy logs once filled the disk here.
+          log {
+            output file /var/log/caddy/access-root.log {
+              roll_size 50MiB
+              roll_keep 5
+              roll_keep_for 30d
+            }
+            format json
+          }
 
           # MCP routes — proxy to hwc-sys Express server (priority over subpath routes)
           @mcp_routes {
