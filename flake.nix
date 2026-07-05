@@ -462,6 +462,10 @@
       charter-law10 = mkCharterLint "law10-unit-anatomy" [
         "fd options.nix domains"
       ];
+      charter-law12 = mkCharterLint "law12-readme-contract" [
+        "for d in domains/*/; do [ -f \"$d/README.md\" ] || echo \"Missing: $d/README.md\"; done"
+        "for s in Purpose Boundaries Structure Changelog; do rg --files-without-match \"^## $s\" domains/*/README.md; done"
+      ];
       charter-law14 = mkCharterLint "law14-flake-self-ref" [
         # [-] character class keeps this lint from matching its own definition
         "rg 'github:eriqueo/nixos[-]hwc' flake.nix"

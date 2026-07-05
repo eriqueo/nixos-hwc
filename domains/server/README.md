@@ -1,11 +1,13 @@
 # Server Domain
 
-## Scope & Boundary
+## Purpose
 - Server-lane workloads: containers plus native services for media, AI, automation, networking, and supporting jobs.
+
+## Boundaries
 - Namespaces follow folder paths (`hwc.server.containers.*`, `hwc.server.native.*`); container defaults come from `_shared` helpers.
 - Uses mkContainer (see `domains/server/containers/_shared/`) for OCI hygiene and Charter compliance (PUID/PGID 1000/100).
 
-## Layout
+## Structure
 ```
 domains/server/
 ├── containers/   # OCI services (mkContainer-based)
@@ -37,6 +39,7 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-07-05: Law 12 burn-down — restructured headings to the required contract (`## Purpose` / `## Boundaries` / `## Structure`); content unchanged, headings renamed/split from the old Scope-&-Boundary/Layout form.
 - 2026-07-03: Added `services/bloxels-cv/` — `hwc.server.services.bloxelsCv`, a
   systemd path watcher on `inbox-mobile/bloxels` (phone Syncthing share). Each
   dropped photo of the printed 13×13 Bloxels grid runs `bloxels-capture` (from

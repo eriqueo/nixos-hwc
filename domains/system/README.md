@@ -1,11 +1,13 @@
 # System Domain
 
-## Scope & Boundary
+## Purpose
 - Core OS lane: accounts, networking, filesystem scaffolding, base services, and packages other domains rely on.
+
+## Boundaries
 - Namespaces match paths (`hwc.system.*`, `hwc.filesystem.*` shortcut for core/filesystem) per Charter Law 2.
 - No Home Manager logic lives here; cross-lane assertions are guarded so the system lane stands alone.
 
-## Layout
+## Structure
 ```
 domains/system/
 ├── core/
@@ -36,6 +38,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-07-05: Law 12 burn-down — restructured headings to the required contract (`## Purpose` / `## Boundaries` / `## Structure`); content unchanged, headings renamed/split from the old Scope-&-Boundary/Layout form.
 - 2026-07-03: `hardware/` — Sensel touchpad fix extended to five layers: new acpid `hwc-sensel-rebind` handler rebinds `i2c_hid_acpi` on lid **open**, covering lid closes that never suspended (waybar lid-toggle in ignore mode), where the layer-4 resume hook never runs and the stale SW_LID=1 kills two-finger scroll. acpid daemon itself is still enabled per-machine (laptop only); the handler is inert where acpid is off.
 - 2026-06-11: `hardware/` — new `powerScripts.enable` flag carries the perf-mode/balanced-mode CPU-governor toggle scripts (moved from machines/laptop/config.nix, closing its TODO). Laptop delta is order-only (sorted systemPackages set identical); other machines byte-identical.
 - 2026-06-11: `core/` — new `hwc.system.core.nixld.guiLibs.enable` flag carries the X11/GTK/audio nix-ld library set; desktop and gaming roles flip it instead of duplicating the 22-package list. All 5 toplevels byte-identical (proven no-op).

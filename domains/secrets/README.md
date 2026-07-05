@@ -1,11 +1,13 @@
 # Secrets Domain
 
-## Scope & Boundary
+## Purpose
 - Single source of truth for agenix declarations and the read-only facade consumed by other domains.
+
+## Boundaries
 - Namespaces: `hwc.secrets.*` for toggles/hardening, `hwc.secrets.api.*` for decrypted paths exposed to consumers.
 - No secret values live in Nix; declarations point to encrypted files kept outside the repo.
 
-## Layout
+## Structure
 ```
 domains/secrets/
 ├── index.nix            # Aggregator (imports declarations, API, emergency, hardening)
@@ -47,6 +49,7 @@ domains/secrets/
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-07-05: Law 12 burn-down — restructured headings to the required contract (`## Purpose` / `## Boundaries` / `## Structure`); content unchanged, headings renamed/split from the old Scope-&-Boundary/Layout form.
 - 2026-06-18: Added `datax-monitor-fb-email` + `datax-monitor-fb-key` — the Firebase service-account client email + private key (`\n`-escaped) for the `datax-monitor` dashboard (`domains/business/datax-monitor`). Standard `root:secrets / 0440`, recipients = everyone. Read at service start by the `read_secret` wrapper into `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` (the app un-escapes `\n`). `FIREBASE_PROJECT_ID` (`jt-supercharged-db`) is not secret — set as a literal unit env. OpenSearch enrichment **reuses** the existing `opensearch-{host,user,pw}` (same as dxlog) — no new OpenSearch secret. Encrypted directly to the `everyone` recipient set, so adding them did NOT trigger a full `agenix -r` rekey (two-file diff). Values replicate exactly what the working `~/projects/datax-monitor/.env` already uses (verified by a live 542-execution ingest).
 - 2026-06-17: Added `github-flake-token` — a scoped read+write fine-grained GitHub PAT (Contents:rw on `eriqueo/{todui,khalt,workbench}`) whose plaintext is a single `access-tokens = github.com=…` line. Standard `root:secrets / 0440`, recipients = everyone. Consumed at **eval time** via `nix.extraOptions = "!include /run/agenix/github-flake-token"` (`profiles/base/sys.nix`) so the root `nixos-rebuild` evaluator can fetch the three private app flake inputs (`github:eriqueo/<app>`). Encrypted directly to the `everyone` recipient set, so adding it did NOT trigger a full `agenix -r` rekey (one-file diff). Replaces the old `git+file:///600_apps/<app>` local-clone inputs — see memory `feedback_app_dev_build_pattern`.
 - 2026-06-15: Added `cloudflare-api-key` — the scoped Cloudflare **API token** (`CLOUDFLARE_API_TOKEN`) used by `wrangler` to deploy the `hwc-mcp-gateway` Worker non-interactively (no OAuth login). Standard `root:secrets / 0440`, recipients = everyone. Consumed at deploy time only via a `direnv` `.envrc` in `~/600_apps/hwc-mcp-gateway` that exports it from `/run/agenix/cloudflare-api-key` (eric reads it through the `secrets` group). Not used by any running service.
