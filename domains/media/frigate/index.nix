@@ -240,6 +240,10 @@ LABELMAP_EOF
     };
 
     # Frigate container
+    # HWC-EXCEPTION(Law 5): NVR needs device/GPU access mkContainer does not model
+    # Justification: privileged devices (coral/GPU), shm sizing, and camera-network specifics; media-app helper assumptions (PUID/PGID linuxserver images) do not hold
+    # Plan: permanent by design (revisit if an infra-shaped helper grows to fit)
+    # Revocable: yes
     virtualisation.oci-containers.containers.frigate = {
       image = cfg.image;
       autoStart = true;

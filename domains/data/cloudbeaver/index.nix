@@ -45,6 +45,10 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     # Container definition
+    # HWC-EXCEPTION(Law 5): infra container, not a media app
+    # Justification: DB admin UI attached to the postgres network; mkContainer media/PUID model does not apply
+    # Plan: permanent by design (revisit if an infra-shaped helper grows to fit)
+    # Revocable: yes
     virtualisation.oci-containers.containers.cloudbeaver = {
       image = cfg.image;
       autoStart = true;

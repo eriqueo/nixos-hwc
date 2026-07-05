@@ -61,6 +61,10 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     # Homepage container
+    # HWC-EXCEPTION(Law 5): infra container, not a media app
+    # Justification: dashboard serving config from nix-generated files; no media mounts, PUID/PGID, or VPN netns
+    # Plan: permanent by design (revisit if an infra-shaped helper grows to fit)
+    # Revocable: yes
     virtualisation.oci-containers.containers.homepage = {
       image = cfg.image;
       autoStart = true;

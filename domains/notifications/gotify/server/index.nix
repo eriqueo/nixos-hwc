@@ -93,6 +93,10 @@ in
 
   config = lib.mkIf cfg.enable {
     # Container configuration
+    # HWC-EXCEPTION(Law 5): infra container, not a media app
+    # Justification: notification hub with own state volume + tailscale-serve exposure; no media mounts or PUID/PGID
+    # Plan: permanent by design (revisit if an infra-shaped helper grows to fit)
+    # Revocable: yes
     virtualisation.oci-containers.containers.gotify = {
       image = cfg.image;
       ports = [ "127.0.0.1:${toString cfg.internalPort}:80" ];

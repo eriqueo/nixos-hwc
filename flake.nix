@@ -453,6 +453,9 @@
       charter-law4 = mkCharterLint "law4-permission-model" [
         "rg 'PGID\\s*=\\s*\"?1000\"?\\s*;' domains --type nix"
       ];
+      charter-law5 = mkCharterLint "law5-container-standard" [
+        "rg 'oci-containers\\.containers\\.' domains --glob '!**/mkContainer.nix' -l | xargs -r rg --files-without-match 'HWC-EXCEPTION\\(Law 5\\)'"
+      ];
       charter-law7 = mkCharterLint "law7-lane-purity" [
         "rg 'import.*sys\\.nix' domains/home/*/index.nix"
       ];

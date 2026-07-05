@@ -42,6 +42,7 @@ notifications/
 | `hwc.notifications.send.cli.enable` | Enable hwc-alert CLI |
 
 ## Changelog
+- 2026-07-05: Law 5 burn-down — added `HWC-EXCEPTION(Law 5)` annotation blocks (reason/justification/plan/revocable) to this domain's raw `oci-containers` module(s); infra-shaped containers are sanctioned exceptions to the mkContainer rule. Comments only, no behavior change.
 
 - 2026-06-12: Added the `discord-nightly-builds` channel (`#nightly-builds`, secret `discord-webhook-nightly-builds`) and a `topic=nightly-builds` route in `notify/parts/`. The automation domain's nightly-builds runner and readme-freshness report POST here; channel + route stay Nix data, the webhook URL is an agenix secretRef.
 - 2026-06-11: `gotify/server/` — token auto-discovery (agenix secrets named `gotify-{universe}-{domain}` → `tokens."universe:domain"`) moved from machines/server/config.nix into the `tokens` option default; still overridable per machine. All 5 toplevels byte-identical (proven no-op).

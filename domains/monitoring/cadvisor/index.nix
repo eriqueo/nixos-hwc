@@ -31,6 +31,10 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     # cAdvisor container for container metrics
+    # HWC-EXCEPTION(Law 5): infra container, not a media app
+    # Justification: needs --privileged + whole-host ro mounts (/,/sys,/var/run) for container metrics; mkContainer PUID/PGID + media-network model does not apply
+    # Plan: permanent by design (revisit if an infra-shaped helper grows to fit)
+    # Revocable: yes
     virtualisation.oci-containers.containers.cadvisor = {
       image = "gcr.io/cadvisor/cadvisor:latest";
       autoStart = true;

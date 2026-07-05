@@ -47,6 +47,7 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+- 2026-07-05: Law 5 burn-down — added `HWC-EXCEPTION(Law 5)` annotation blocks (reason/justification/plan/revocable) to this domain's raw `oci-containers` module(s); infra-shaped containers are sanctioned exceptions to the mkContainer rule. Comments only, no behavior change.
 
 - 2026-06-11: Add mkSimpleApp.nix (one-package HM app modules) and hm.nix
   (cross-lane helpers: isNixOSHost, osCfgOr, sysLaneAssert).

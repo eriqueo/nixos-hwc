@@ -54,6 +54,10 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     # Uptime Kuma container
+    # HWC-EXCEPTION(Law 5): infra container, not a media app
+    # Justification: monitoring service with own state volume and localhost port; no media mounts, PUID/PGID, or VPN netns
+    # Plan: permanent by design (revisit if an infra-shaped helper grows to fit)
+    # Revocable: yes
     virtualisation.oci-containers.containers.uptime-kuma = {
       image = cfg.image;
       autoStart = true;

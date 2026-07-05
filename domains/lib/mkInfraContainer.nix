@@ -103,6 +103,10 @@ rec {
     in lib.mkMerge [
       # Container definition
       {
+        # HWC-EXCEPTION(Law 5): this IS the sanctioned infra-container helper
+        # Justification: peer of mkContainer for infrastructure-shaped containers (gluetun etc.); the raw definition is the helper itself, same status as mkContainer
+        # Plan: permanent by design (revisit if an infra-shaped helper grows to fit)
+        # Revocable: yes
         virtualisation.oci-containers.containers.${name} = containerDef;
       }
 

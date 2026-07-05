@@ -29,6 +29,10 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     # Frigate exporter container
+    # HWC-EXCEPTION(Law 5): metrics sidecar of the frigate container
+    # Justification: tiny exporter joined to frigate; no media mounts, PUID/PGID, or VPN netns
+    # Plan: permanent by design (revisit if an infra-shaped helper grows to fit)
+    # Revocable: yes
     virtualisation.oci-containers.containers.frigate-exporter = {
       image = "ghcr.io/blakeblackshear/frigate-prometheus-exporter:latest";
       autoStart = true;

@@ -50,6 +50,7 @@ monitoring/
 ```
 
 ## Changelog
+- 2026-07-05: Law 5 burn-down — added `HWC-EXCEPTION(Law 5)` annotation blocks (reason/justification/plan/revocable) to this domain's raw `oci-containers` module(s); infra-shaped containers are sanctioned exceptions to the mkContainer rule. Comments only, no behavior change.
 
 - 2026-07-05: Dropped the `transcript-api-health` blackbox scrape (guarded on `youtube.legacyApi.enable`, which was removed from domains/media — the option was never true, so the job never rendered).
 - 2026-06-04: Retired the duplicate script-based disk alerter (`alerts/` `sources.diskSpace`); Prometheus is now the sole disk-alert owner. Salvaged its critical-on-data-volumes logic into `HighDiskUsage` (95% P5), which now matches `/|/mnt/.*` instead of root-only — so a full `/mnt/media` or `/mnt/hot` raises P5, not just P4.

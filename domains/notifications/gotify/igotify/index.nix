@@ -38,6 +38,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # HWC-EXCEPTION(Law 5): infra container, not a media app
+    # Justification: gotify sidecar; same infra shape as the gotify server module
+    # Plan: permanent by design (revisit if an infra-shaped helper grows to fit)
+    # Revocable: yes
     virtualisation.oci-containers.containers.igotify-assistant = {
       image = cfg.image;
       autoStart = true;
