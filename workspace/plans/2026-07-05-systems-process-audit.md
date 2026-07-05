@@ -179,16 +179,23 @@ Tracked at root and should not be: `.backups/` (old machine snapshots), `.cache/
 
 A read-only verification run on hwc-server checked every falsifiable claim above. Scorecard: most findings confirmed (dangling symlink, abandoned Next.js app, healthy MCP gateway and briefing pipeline, dead `kids`/`firestick` fleet references); one refuted (recyclarr placeholders — removed above); three refined (webhook, nix.gc, appointment calculator — corrected above). It also surfaced findings only a live system can show:
 
-### Pattern 6: The deploy loop doesn't close (the biggest finding of the whole audit)
+### Pattern 6: The terminal step doesn't execute — and runtime state is hard to read
 
-- **The running system is ~5 weeks behind the repo.** Live generation 1092 was built **2026-05-30**; repo HEAD is **2026-07-03**. The entire July-3 batch — qbittorrent VPN hardening, sabnzbd Caddy whitelist, rclone backport, llama.cpp rewiring — is committed but **not deployed**.
-- **The booted system is older still** (April 7 build): a switch happened May 30 without a reboot since.
-- **Local `main` is 1 commit ahead of origin** (unpushed), despite `.claude/`'s auto-push tooling existing precisely to prevent this.
-- Same shape elsewhere: `dedupe.sh` was generated (60k lines, 138 GiB reclaimable) and **never executed** — the duplicates are all still on disk; 169 generations accumulate because pruning was never configured; uptime-kuma still monitors Organizr, which is deliberately parked (`enable = false`).
+> **Correction (2026-07-05, post-rebuild)**: the first version of this section claimed the running system was ~5 weeks behind the repo ("generation 1092, built 2026-05-30, July-3 commits not deployed"). That was a **misreading of `nixos-rebuild list-generations` output** by the verification run — generation 1092 was `Current=False`; the actual current generation was **1257, built 2026-07-03, already containing HEAD**. A verification rebuild produced a bit-identical store path and created no new generation: **the config deploy loop was closed all along.** The corrected evidence is below.
 
-This is Pattern 3 (rebuild-instead-of-finish) extended to operations: artifacts get *produced* — commits, scripts, monitors, timers — but the terminal step (rebuild, reboot, run, prune, retire) doesn't execute, and nothing makes the gap visible. The charter governs the repo; **nothing governs the distance between the repo and the machine.**
+What genuinely doesn't close:
 
-**Recommended fix (small, uses existing infra)**: add a *config-drift tile* to the morning briefing — HEAD vs running-generation age, unpushed commit count, booted-vs-current generation mismatch. The pipeline (`run.sh` → `briefing.json` → `hwc_morning_brief` → dashboard/workbench) already exists; this is one more section in `run.sh`. Drift you see every morning at 6am is drift that closes.
+- **Reboot pending since April.** `booted-system` is an **April-7** build while `current-system` is July-3: the box has been `switch`ed forward for ~3 months without a reboot, so userland is current but the **kernel/initrd are 3 months old** — including any kernel security fixes since.
+- **`dedupe.sh` was generated (60k lines, 138 GiB reclaimable) and never executed** — the duplicates are all still on disk.
+- **169 system generations retained** — GC runs weekly but pruning was never configured.
+- **uptime-kuma still monitors Organizr**, a service deliberately parked (`enable = false`) — monitors outlive the things they watch.
+- **1 commit sat unpushed on the server** despite `.claude/`'s auto-push tooling existing precisely to prevent this (since resolved).
+
+This is Pattern 3 (rebuild-instead-of-finish) extended to operations: artifacts get *produced* — scripts, monitors, timers, closures — but the terminal step (reboot, run, prune, retire) doesn't execute, and nothing makes the gap visible.
+
+And the correction episode itself proves the second half of the problem: **runtime state is genuinely hard to read by hand.** The sandbox audit couldn't see it at all; a careful live agent misread it; the truth only surfaced when a rebuild came back bit-identical. Human eyeballs on `list-generations` are not a reliable instrument.
+
+**Recommended fix (small, uses existing infra, now better-motivated)**: add a *config-drift tile* to the morning briefing — computed, not read: HEAD commit vs `/run/current-system` provenance, unpushed commit count, **booted-vs-current mismatch (reboot pending)**, generation count. The pipeline (`run.sh` → `briefing.json` → `hwc_morning_brief` → dashboard/workbench) already exists; this is one more section in `run.sh`. A machine-checked drift number can't be misread the way generation tables can.
 
 ### Other live-only findings
 
@@ -197,11 +204,11 @@ This is Pattern 3 (rebuild-instead-of-finish) extended to operations: artifacts 
 3. **uptime-kuma reports 5 monitors down**: Ollama (:11434 — consistent with the undeployed llama.cpp rewiring commits), Organizr (parked service, stale monitor), Samba, NFS, Estimator (:13443). Zero failed systemd units — the gaps are all at the reachability layer.
 4. **Notifications usage measured: 33 messages in 30 days** (~1/day) through the 2,154-line dispatcher+gotify+bridge+igotify stack. The §2.4 overengineering verdict is now quantified.
 5. **Fleet corrections**: no `kids` machine exists on the tailnet at all; `firestick` has been offline 149 days; hwc-tablet 173d, raspberrypi 87d. Charter Law-16 lints and `.backups/` reference machines that don't exist — update the lint word-list.
-6. Working tree on the server is **clean** (0 modified/untracked) — repo-vs-runtime drift is entirely deploy-lag and origin-sync, not dirty checkouts.
+6. Working tree on the server is **clean** (0 modified/untracked), and per the 2026-07-05 correction the config was already deployed — the only repo-vs-runtime gaps are the pending reboot (April kernel) and the since-resolved unpushed commit, not dirty checkouts or deploy lag.
 
 ### Added action items
 
-- **Phase 0**: push the unpushed commit; rebuild + reboot hwc-server (July-3 batch, incl. security-relevant qbittorrent VPN hardening, is not live); add `nix.gc` generation pruning; remove/repoint the Organizr uptime-kuma monitor; fix the wildcard-cert metadata error.
+- **Phase 0**: ~~push the unpushed commit; rebuild~~ (done 2026-07-05; rebuild was a verified no-op — config was already live); **schedule a reboot window for hwc-server** (kernel/initrd date to April 7); add `nix.gc` generation pruning; remove/repoint the Organizr uptime-kuma monitor; fix the wildcard-cert metadata error.
 - **Phase 1**: config-drift tile in the morning briefing (see above); re-enable Caddy access logs.
 - **Phase 2**: decide on `dedupe.sh` — run it (after review) or delete it; retire dead fleet entries (kids, firestick, tablet) from lints, backups, and tailnet.
 - **Still pending on hwc-laptop**: workbench real usage (V5), tuxedo placeholder hash (V9), laptop git/units state.
