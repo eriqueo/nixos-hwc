@@ -39,6 +39,16 @@ nightly-builds run-now pattern exactly. The board sets
 
 ## Changelog
 
+- **2026-07-06**: Decoupled from the `~/700_datax` dev tree (editing moves
+  laptop-only). Source worktrees now build from service-owned clones of the
+  official elstruck repos at `/var/lib/sr-gauntlet/{datax,jt-mcp}`
+  (`SRG_DATAX_REPO`/`SRG_JTMCP_REPO`, origin=elstruck, fetch-only, throwaway
+  `/tmp` worktrees), and the Firestore-admin + OpenSearch creds read by
+  `aggregate-context.mjs`/`opensearch-query.mjs` come from
+  `/var/lib/sr-gauntlet/datax.env` (`SRG_DATAX_ENV`, a trimmed 0600 copy of the
+  7 keys), replacing `~/700_datax/datax/.env.local`. Clones + cred file are
+  provisioned imperatively (secrets stay off the Nix store); this change only
+  rewired the unit env + header docs.
 - **2026-06-16**: Auto-investigation + run-now. Timer changed from daily 06:30
   to a **15-min poll** (Persistent=false) so new SR tickets are investigated on
   arrival (the ledger makes idle ticks cheap). Added the **run-now drain**:

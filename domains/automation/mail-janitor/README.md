@@ -37,6 +37,13 @@ mail-janitor/
   keeping); refine the pattern lists in `janitor.py` as new junk surfaces.
 
 ## Changelog
+- 2026-07-06: Two same-day follow-ups to the 06-24 (b) work. (1) `trashSenders` deny
+  list is now fed into the classifier via `MJ_DENY` (from
+  `hwc.mail.notmuch.rules.trashSenders`) — marketing/lead-gen senders with
+  personal-looking from-addresses that the heuristics missed now classify as NOISE (one
+  source of truth across notmuch, Gmail filters, and the janitor). (2) The security
+  PRESERVE allowlist now matches the full address, not just the local-part, so
+  `watchguardsecurity.net`/`verify.bluehost.com` (keyword in the domain) are preserved.
 - 2026-06-24 (b): PRESERVE allowlist (`.gov` filings, `calendar.*` invites, security/
   account alerts) — fixes NOISE false-positives. New **TRIAGE** tier: newsletters
   (`newsletter@`/`news@`/`digest`…) → `Newsletters-Triage` label instead of trash;

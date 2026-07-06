@@ -83,3 +83,7 @@ All webhook endpoints require `x-api-key` header matching `ESTIMATOR_API_KEY` en
 - Workflows: `/home/eric/.nixos/domains/automation/n8n/parts/workflows/`
 - Estimator App: `/home/eric/.nixos/workspace/projects/react/heartwood-assembler/`
 - Server Config: `/home/eric/.nixos/machines/server/config.nix`
+
+## Changelog
+
+- 2026-07-06: Mechanical hostname rename in `NEXT-SESSION.md` — `hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net` (n8n UI URL + the three test curl endpoints for `jt-customers`/`jt-jobs`/`estimate-push`). Part of the tree-wide server tailnet-node rename (the old name no longer resolves). No functional/workflow change.
