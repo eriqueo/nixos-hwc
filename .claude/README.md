@@ -31,10 +31,11 @@ bash .claude/setup-mcp-for-machine.sh
 
 This creates a symlink `.mcp.json` → appropriate config based on hostname.
 
-**Laptop MCP servers:**
-- `filesystem` - Your workspace + config dirs
+**Laptop MCP servers** (per `.mcp.laptop.json`, 2026-07-05):
 - `git` - Git operations
-- `brave-search`, `github`, `sequential-thinking`, `time`, `fetch`, `memory`
+- `github`, `sequential-thinking`, `time`, `fetch`, `memory`
+- (`filesystem` and `brave-search` exist in the config but are DISABLED —
+  `_DISABLED` prefix; direct Read/Write/rg tools replaced filesystem MCP)
 
 **Server MCP servers (adds):**
 - `postgres` - Query databases (immich, heartwood_business)
