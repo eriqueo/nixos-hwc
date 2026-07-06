@@ -3,7 +3,7 @@
 # Networking domain — reverse proxy, VPN, DNS, podman network infrastructure.
 # Provides the backbone that other domains depend on for service routing.
 #
-# Namespace: hwc.networking.{hosts,reverseProxy,gluetun,pihole,vpn}.*
+# Namespace: hwc.networking.{hosts,reverseProxy,gluetun,vpn}.*
 
 { lib, config, ... }:
 
@@ -28,9 +28,6 @@
 
     # VPN container (gluetun)
     ./gluetun/index.nix
-
-    # DNS container (pihole)
-    ./pihole/index.nix
 
     # ProtonVPN CLI service — MOVED from domains/system/services/vpn
     ./vpn/index.nix

@@ -117,7 +117,6 @@
   # AI domain — laptop profile for conservative thermal limits
   hwc.ai = {
     profiles.selected = "laptop";
-    tools.enable = false;
   };
 
   hwc.ai.mcp = {

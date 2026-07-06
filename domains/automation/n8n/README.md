@@ -15,7 +15,6 @@ n8n workflow automation platform running as a Podman container. Handles alert ro
 domains/automation/n8n/
 ├── index.nix          # Option definitions, firewall rules, container orchestration
 ├── sys.nix            # Container definition, env file generation, tmpfiles
-├── mcp-bridge.nix     # MCP HTTP bridge for Claude.ai access (port 6201)
 ├── README.md          # This file
 └── parts/
     ├── estimator-integration/  # Estimator webhook integration
@@ -57,39 +56,12 @@ hwc.automation.n8n = {
     passwordHashFile = config.age.secrets.n8n-owner-password-hash.path;
   };
 
-  # MCP bridge — exposes n8n workflows to Claude.ai
-  mcpBridge.enable = true;
 };
 ```
 
-## MCP Bridge (Claude.ai Access)
+## MCP Access
 
-The MCP bridge exposes n8n's workflows as MCP tools via Streamable HTTP, allowing Claude.ai to trigger and manage workflows.
-
-### Architecture
-
-```
-Claude.ai → mcp.heartwoodcraft.me → cloudflared → localhost:6200 → hwc-sys Express → /n8n/* proxy → n8n-mcp :6201 → n8n API :5678
-```
-
-### How it works
-
-1. **n8n-mcp bridge** (`hwc-n8n-mcp.service`) runs the `n8n-mcp` npm package in HTTP mode on port 6201. It connects to n8n's REST API on port 5678 and translates n8n operations into MCP tools.
-
-2. **hwc-sys Express proxy** (`hwc-sys-mcp.service`) reverse-proxies `/n8n/*` requests to port 6201, injecting the internal auth token via `Authorization` header. It also returns clean empty 404s for `/n8n/.well-known/*` probes that Claude.ai makes during connection setup.
-
-3. **Cloudflare Tunnel** (`cloudflared-tunnel-*.service`) routes `mcp.heartwoodcraft.me` from the public internet to `localhost:6200` (the Express proxy). No port forwarding, no public IP exposure on the server itself.
-
-### Declarative setup
-
-All components are fully declarative in NixOS config:
-
-- `mcp-bridge.nix` — bridge service, npm install + patch (ExecStartPre), env file generation
-- `domains/system/mcp/index.nix` — Express proxy env vars (`HWC_N8N_MCP_PORT`, `HWC_N8N_MCP_AUTH_TOKEN`)
-- `domains/system/mcp/src/src/index.ts` — `/n8n/*` proxy route and `.well-known` stub
-- `domains/networking/cloudflared/` — public ingress mapping for `mcp.heartwoodcraft.me` and `n8n.heartwoodcraft.me`
-
-The npm package (`n8n-mcp@2.40.5`) is installed and patched automatically on service start via `ExecStartPre`. The patch adds `enableJsonResponse: true` to the StreamableHTTPServerTransport constructor, which is required for Claude.ai compatibility (expects `application/json`, not `text/event-stream`).
+n8n's MCP tooling now runs as a **stdio backend of the unified gateway** (`hwc-sys-mcp`, port 6200) — see `domains/system/mcp/`. The old standalone HTTP bridge (port 6201, `mcp-bridge.nix`) was removed 2026-07-05.
 
 ### Namespace
 
@@ -148,6 +120,8 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 - `hwc-n8n-mcp-env.service` — generates bridge env file from agenix secrets
 
 ## Changelog
+
+- 2026-07-05: Removed `mcp-bridge/` module (audit 2.2: never enabled; superseded by n8n-mcp running as a stdio backend of the unified `hwc-sys-mcp` gateway). README's stale bridge architecture section replaced.
 
 - 2026-05-31: Add `hwcLeadsHmacFile` secret option + `NODE_FUNCTION_ALLOW_BUILTIN=crypto` container env so the thin-shell `work_calculator_lead` workflow can HMAC-sign POST /leads at the n8n boundary. Phase 2.6 Move A cutover — calculator-lead workflow shrunk from 23 nodes to 4 (Webhook → Build LeadInput → POST /leads → Respond). v2 fat workflow archived at `domains/business/leads/parts/workflows/work_calculator_lead-v2-fat-archive-2026-05-31.json` as rollback.
 - 2026-05-22: Remove Tailscale Funnel — public access migrated to Cloudflare Tunnel (n8n.heartwoodcraft.me). Remove funnel options and systemd services. Caddy :18080/:10080 listeners removed.

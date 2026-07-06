@@ -524,9 +524,6 @@
   hwc.ai = {
     # Explicit server profile selection
     profiles.selected = "server";
-
-    # AI CLI tools disabled on server (headless environment)
-    tools.enable = false;
   };
 
   # MCP (Model Context Protocol) server infrastructure

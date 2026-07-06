@@ -11,7 +11,6 @@ Event-driven media pipeline automation: audiobook processing and media file orch
 ```
 orchestration/
 ├── index.nix              # Aggregator
-├── media-orchestrator.nix # Media pipeline orchestration service
 ├── README.md              # This file
 └── audiobook-copier/
     ├── index.nix          # Audiobook copier deployment + service
@@ -21,7 +20,7 @@ orchestration/
 
 ### Workspace Source (`workspace/automation/hooks/`)
 - `audiobook-copier.py` — Deployed to downloads/scripts/ by systemd install service
-- `media-orchestrator.py` — Media pipeline event handler
 
 ## Changelog
+- 2026-07-05: Removed `media-orchestrator/` module (audit 2.2: never enabled; cp-path repoint in the July audit was eval-only). audiobook-copier is now the domain's only member.
 - 2026-03-26: audiobook-copier workspace path updated from workspace/hooks/ to workspace/automation/hooks/ (domain alignment)

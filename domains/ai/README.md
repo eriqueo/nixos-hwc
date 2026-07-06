@@ -2,11 +2,11 @@
 
 ## Purpose
 
-AI infrastructure including cloud API integration, MCP servers, CLI tools, persona CLIs over local llama.cpp, and agent orchestration. (Local llama.cpp inference services live in `domains/server/native/ai/`.)
+AI infrastructure: MCP servers, persona CLIs over local llama.cpp, and agent orchestration. (Local llama.cpp inference services live in `domains/server/native/ai/`.)
 
 ## Boundaries
 
-- **Manages**: MCP servers, AI CLI tools, hardware profile detection, persona CLIs (`hwc-llm`)
+- **Manages**: MCP servers, hardware profile detection, persona CLIs (`hwc-llm`)
 - **Does NOT manage**: GPU drivers (→ `domains/infrastructure/hardware/gpu`), container runtime (→ `domains/server/`), secrets for API keys (→ `domains/secrets/`)
 
 ## Structure
@@ -15,21 +15,15 @@ AI infrastructure including cloud API integration, MCP servers, CLI tools, perso
 domains/ai/
 ├── index.nix           # Domain aggregator
 ├── agent/              # HTTP tool agent
-├── cloud/              # Cloud AI API integration (Anthropic, OpenAI)
 ├── mcp/                # Model Context Protocol servers
-├── nanoclaw/           # NanoClaw AI agent orchestrator (Slack)
 ├── personas/           # `hwc-llm` persona CLI wrapping llama.cpp endpoints
-├── profiles/           # Hardware profile detection and defaults
-└── tools/              # AI CLI tools (charter-search, ai-doc, ai-commit)
+└── profiles/           # Hardware profile detection and defaults
 ```
 
 Boundaries: this listing reflects what `ai/index.nix` actually imports. Any other directory you see in the tree (e.g. `anything-llm/`, `open-webui/`, `router/`) used to live here and has been removed as dead code.
 
 ## CLI Tools
 
-- `ai-doc` - Generate documentation with AI
-- `ai-commit` - AI-assisted commit messages
-- `charter-search` - Search Charter compliance patterns
 - `hwc-llm` - Persona-aware CLI wrapping local llama.cpp (LFM2-2.6B GPU / LFM2-24B-A2B CPU); see `personas/`
 
 ## Hardware Profiles
@@ -40,6 +34,8 @@ Auto-detects and configures based on available hardware:
 - **CPU-only**: Optimized CPU inference
 
 ## Changelog
+
+- 2026-07-05: Removed `tools/` and `cloud/` (audit 2.2). `cloud` was never enabled anywhere; `tools` (charter-search/ai-doc/ai-commit/ai-lint) was enabled on the laptop but had zero shell-history usage ever — dead by the "deployed + used" principle. Laptop enable block removed. Recover from git history if needed.
 
 - 2026-06-27: Retired the `ollama/` domain (container LLM stack: podman-ollama + pull/health/disk/model-health/idle/thermal timers). Broken since a Jul-2025 dangling `/var/lib/ollama → private/ollama` symlink and superseded by the native llama.cpp + persona-daemon stack (`domains/server/native/ai/`). Removed the import, the server `:11434` firewall hole, all `hwc.ai.ollama.*` refs (server/laptop/xps), and the laptop waybar-toggle `podman-ollama` sudo grant. The laptop waybar widget self-disables (`behavior.nix` reads the option via `attrByPath … false`). Local-LLM provider intent parked at `brain wiki/nixos/idea-refinery-local-llm-provider.md`.
 - 2026-06-27: Retired `local-workflows/` wholesale (fileCleanup/autoDoc/chatCli + orphaned `api/` FastAPI client). All three were dead or superseded: fileCleanup collided with `inbox-janitor` (and was a destructive mover with its dryRun guard off), autoDoc's `post-rebuild-ai-docs` duplicated `grebuild-docs`/readme-freshness, and chatCli was redundant with `hwc-llm` + persona-daemon. Removed the import + all `hwc.ai.local-workflows.*` refs (server/laptop/xps). Part of the ollama-stack retirement (see next entry).

@@ -92,8 +92,6 @@
           "home-admin"     = api."gotify-home-admin" or null;
         };
     };
-    # MCP bridge — disabled: n8n-mcp is now a stdio backend of the unified gateway (hwc-sys-mcp)
-    mcpBridge.enable = false;
     # Non-secret workflow configuration
     extraEnv = {
       # work_lead_response: Twilio sender number

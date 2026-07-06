@@ -34,7 +34,6 @@ networking/
 │   ├── options.nix
 │   ├── sys.nix
 │   └── parts/
-└── pihole/             # DNS container
     ├── index.nix
     ├── options.nix
     ├── sys.nix
@@ -42,6 +41,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-07-05: Remove `pihole/` module (audit 2.2: never enabled from any machine; recover from git history if needed).
 - 2026-07-05: Re-enable Caddy access logs (dead since the 2026-06-02 tailnet rename): JSON `log` directives on the root-host and wildcard-vhost site blocks → `/var/log/caddy/access-{root,vhosts}.log`, 50MiB roll / keep 5 / 30d (size-capped because caddy logs once filled the disk). Route-level analytics derive from the logged host+uri fields.
 - 2026-07-05: Bump `caddy.withPlugins` FOD hash in `reverseProxy/index.nix` — the 2026-07 flake input update changed caddy 2.11.4's vendored Go deps, breaking the pinned `caddy-src-with-plugins` hash (server build failure). Hash-only change; desec plugin pin unchanged.
 - 2026-06-18: Add `monitor` vhost route (`routes.nix`) → `http://127.0.0.1:4400` — the datax-monitor dashboard (`monitor.hwc.iheartwoodcraft.com`, one Hono server serving SPA + `/api`). Name-based vhost on the existing `*.hwc.iheartwoodcraft.com` wildcard cert, tailnet-only; no new DNS/cert/firewall port. Same shape as the `lead-scout` route.

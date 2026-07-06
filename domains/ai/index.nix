@@ -6,14 +6,11 @@
   #==========================================================================
   imports = [
     ./profiles          # Hardware profile detection and defaults
-    ./tools             # AI CLI tools (charter-search, ai-doc, ai-commit, etc.)
     ./mcp               # Model Context Protocol servers
-    ./cloud             # Cloud AI API integration
     ./agent             # HTTP tool agent
     ./personas          # `hwc-llm` persona CLI for local llama.cpp services
-    # ./nanoclaw — disabled 2026-05-29; superseded by hwc.server.ai.hermes
-    # (Hermes Agent is the upstream successor to OpenClaw/NanoClaw).
-    # Module moved to .nanoclaw-disabled/. Remove fully in a later cleanup pass.
+    # tools/cloud/nanoclaw removed 2026-07-05 (never enabled — audit item 2.2);
+    # recover from git history if ever needed.
   ];
 
   #==========================================================================

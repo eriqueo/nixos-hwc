@@ -340,12 +340,8 @@
   hwc.ai = {
     # Profile selection (auto-detects laptop based on RAM/GPU)
     profiles.selected = "auto";
-
-    # AI CLI tools (charter-search, ai-doc, ai-commit, ai-lint)
-    tools = {
-      enable = true;
-      logging.enable = true;
-    };
+    # ai.tools removed 2026-07-05 (audit 2.2): was enabled here but zero
+    # shell-history usage ever — dead by the "deployed + used" principle.
   };
 
   # Local llama.cpp inference (reuses the server module in-place). Laptop runs
