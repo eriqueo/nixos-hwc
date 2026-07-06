@@ -142,3 +142,13 @@ To register the agent as a tool in Open WebUI:
    - Headers: `Content-Type: application/json`
 
 Then users can invoke system commands through the chat interface.
+
+## Changelog
+
+- 2026-07-06: No behavioral changes since the integration guide landed. Since then the
+  module has only seen mechanical edits: options moved inline from a legacy
+  `options.nix` into `index.nix` (the split `options.nix` was deleted), Law 3 path
+  abstraction for the MCP-drafts directory, and the `hwc.ocelot-wahoo.ts.net` →
+  `hwc-server.ocelot-wahoo.ts.net` tailnet rename sweep in `hwc-ai-agent.py`.
+- 2025-12-05: Sprint 5 integration — agent/router/MCP services enabled with proper
+  systemd dependencies plus the Local Workflows HTTP API.
