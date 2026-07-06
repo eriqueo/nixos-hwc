@@ -492,6 +492,7 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-07-06**: `hwc_morning_status` (`tools/morning-status.ts`) rewritten as a **reader** of the daily `briefing.json` (Doctrine §0.8 one-producer) rather than composing its own infra snapshot — the briefing pipeline is now the single producer, with `run.sh` Step 5 rendering it to plain text and mailing it via msmtp at 6am MT. The Next.js briefing repo was tombstoned. In the same commit `index.nix` retargeted the `hwc_website_*` read-write paths + `.trash` tmpfiles rule from `domains/business/website/site_files/` to `/opt/business/website-site/`.
 - **2026-06-27**: Added **`hwc_morning_brief`** (`tools/morning-brief.ts`) — a rich
   companion to the infra-only `hwc_morning_status`. It reads the structured
   `briefing.json` written daily at 6am MT by the `morning-briefing.service`

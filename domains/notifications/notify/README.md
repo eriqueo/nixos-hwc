@@ -293,6 +293,7 @@ Hardening: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome=read-only`, `
 
 ## Changelog
 
+- **2026-07-06**: Rewired the two alert gaps left by the gotify decommission and hardened the dispatcher (`index.nix`). Gluetun restart/recovery events now route to `topic=monitoring` (#hwc-alerts) and mail-health criticals to priority 1 (Discord ×2 + email fanout, alongside the Slack webhook); all callers fail-soft with curl timeouts. Dispatcher: `Restart=always`, `StartLimitIntervalSec=0`, a 5-min liveness watchdog that restarts on a twice-dead `/health`, and `--max-time` on CLI curls.
 - **2026-06-12**: Added the `discord-nightly-builds` channel (`#nightly-builds`, secretRef `discord-webhook-nightly-builds`) and a `topic=nightly-builds` route in `parts/`. Used by the automation domain's nightly-builds runner (per-card verdict) and the weekly readme-freshness report.
 - **2026-05-31 (Phase 1.7)**: Shipped `hwc-notify` CLI (`pkgs.writeShellApplication`) and `hwc_notify` MCP tool (`domains/system/mcp/src/src/tools/notify.ts`). MCP gateway tool count 14 → 15.
 - **2026-05-31 (Phase 1.6)**: Added `POST /webhook/alertmanager` with Zod schema + pure converter. Alertmanager cut over from n8n to hwc-notify; `n8n-webhook` receiver removed; n8n `home:admin:alert-manager` workflow deactivated (preserved as rollback). Gotify-bridge receiver kept for iOS push.

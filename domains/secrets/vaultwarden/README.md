@@ -18,7 +18,7 @@ vaultwarden/
 | Option | Default | Description |
 |--------|---------|-------------|
 | `enable` | `false` | Enable Vaultwarden |
-| `image` | `docker.io/vaultwarden/server:latest` | Container image |
+| `image` | `docker.io/vaultwarden/server:1.35.4` | Container image (critical-tier pin, Law 15 v12.4) |
 | `port` | `8222` | Internal container port mapping |
 | `reverseProxy.port` | `15443` | External Tailscale HTTPS port |
 | `network.mode` | `"media"` | Podman network mode |
@@ -33,5 +33,6 @@ vaultwarden/
 - Caddy reverse proxy via `networking/routes.nix`
 
 ## Changelog
+- 2026-07-06: Pinned the `image` default from `:latest` to `docker.io/vaultwarden/server:1.35.4` (Law 15 v12.4 critical tier — password vault; set to the currently-running version so the switch is behavior-neutral). A follow-up commit fixed the pin comment that had swallowed the `mkOption` closing brace.
 - 2026-06-09: Access moved from tailnet port `:15443` to name-based vhost `vaultwarden.hwc.iheartwoodcraft.com` (shared `*.hwc.iheartwoodcraft.com` wildcard cert). Container `DOMAIN` env updated to the new origin — Vaultwarden pins WebAuthn/passkeys to `DOMAIN`, so it must equal the browser URL. `reverseProxy.port` is now vestigial (vhost opens only :443). See `domains/networking/README.md`.
 - 2026-03-26: Initial scaffolding — container, env file, reverse proxy, secret integration
