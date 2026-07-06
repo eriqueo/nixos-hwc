@@ -17,7 +17,7 @@ in
     images = {
       core = lib.mkOption {
         type = lib.types.str;
-        default = "docker.io/fireflyiii/core:v6.4.22";  # critical tier (Law 15 v12.4): financial data — pinned
+        default = "docker.io/fireflyiii/core:version-6.4.22";  # critical tier (Law 15 v12.4): financial data — pinned
         description = "Firefly III core container image";
       };
 
