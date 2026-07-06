@@ -213,10 +213,41 @@ in
         '';
       };
 
-      # PostgreSQL listens on 10.89.0.1 (Podman network gateway) — wait for it
+      # PostgreSQL listens on 10.89.0.1 (Podman network gateway) — wait for it.
+      #
+      # Ordering on init-media-network is NOT sufficient (same finding as
+      # redis-main below): that unit creates the network *object*, but the
+      # podman1 bridge and its 10.89.0.1 gateway IP only appear on the host
+      # when the first attached container starts. Unlike redis, postgres does
+      # NOT fail when 10.89.0.1 is absent — it starts successfully bound to
+      # localhost only and *silently drops* the missing listen address, so
+      # `Restart=on-failure` can never heal it. Boot 2026-07-06 hit exactly
+      # this: postgres came up 127.0.0.1-only, and paperless + firefly
+      # (DBHOST=10.89.0.1) crash-looped/errored on "connection refused" all
+      # morning until a manual `systemctl restart postgresql` rebound it.
+      #
+      # Fix: block startup until the gateway IP exists, so postgres binds it.
+      # net-only containers (jellyfin/sonarr/qbittorrent — no After=postgresql)
+      # bring the bridge up independently, so this cannot deadlock against the
+      # postgres-dependent containers. The wait is best-effort — it exits 0 on
+      # timeout so a pathological boot degrades to the old behavior rather than
+      # hanging the unit.
       systemd.services.postgresql = lib.mkIf cfg.postgresql.containerNetwork.enable {
         after = [ "init-media-network.service" ];
         wants = [ "init-media-network.service" ];
+        serviceConfig.ExecStartPre = [
+          ("+" + pkgs.writeShellScript "wait-for-media-gateway" ''
+            for i in $(seq 1 60); do
+              if ${pkgs.iproute2}/bin/ip -o -4 addr show | ${pkgs.gnugrep}/bin/grep -q ' 10\.89\.0\.1/'; then
+                echo "media-network gateway 10.89.0.1 is up (after ''${i} tries)"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "WARN: media-network gateway 10.89.0.1 never appeared in 120s; starting postgres localhost-only" >&2
+            exit 0
+          '')
+        ];
       };
 
       # NixOS's postgresql module uses systemd namespace sandboxing with
