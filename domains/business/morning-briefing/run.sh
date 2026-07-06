@@ -120,12 +120,49 @@ if [ -x "${KHAL_BIN}" ]; then
 fi
 EV_COUNT=$(echo "${CAL_JSON}" | jq '.events | length' 2>/dev/null || echo 0)
 
+# -- config drift (2026-07-05 audit, Pattern 6): COMPUTED, not read by eye.
+#    Two generation-table misreadings during the audit are why this exists. --
+NIXOS_REPO="/home/eric/.nixos"
+HEAD_REV=$(git -C "${NIXOS_REPO}" rev-parse HEAD 2>/dev/null || echo "")
+DEPLOYED_REV=$(cat /run/current-system/configuration-revision 2>/dev/null || echo "")
+UNPUSHED=$(git -C "${NIXOS_REPO}" log --oneline "@{u}.." 2>/dev/null | wc -l | tr -d ' ')
+DIRTY=$(git -C "${NIXOS_REPO}" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+BOOTED_KERNEL=$(readlink /run/booted-system/kernel 2>/dev/null || echo "?booted")
+CURRENT_KERNEL=$(readlink /run/current-system/kernel 2>/dev/null || echo "?current")
+if [ "${BOOTED_KERNEL}" = "${CURRENT_KERNEL}" ]; then REBOOT_PENDING=false; else REBOOT_PENDING=true; fi
+GEN_COUNT=$(ls -d /nix/var/nix/profiles/system-*-link 2>/dev/null | wc -l | tr -d ' ')
+COREDUMPCTL="/run/current-system/sw/bin/coredumpctl"; [ -x "${COREDUMPCTL}" ] || COREDUMPCTL="coredumpctl"
+CORE_24H=$("${COREDUMPCTL}" list --since "-24h" --no-pager -q 2>/dev/null | wc -l | tr -d ' ')
+DRIFT_JSON=$(jq -n \
+  --arg head "${HEAD_REV}" \
+  --arg deployed "${DEPLOYED_REV}" \
+  --argjson unpushed "${UNPUSHED:-0}" \
+  --argjson dirty "${DIRTY:-0}" \
+  --argjson reboot_pending "${REBOOT_PENDING}" \
+  --argjson generations "${GEN_COUNT:-0}" \
+  --argjson coredumps_24h "${CORE_24H:-0}" '
+  { head_rev: (if $head == "" then null else $head end)
+  , deployed_rev: (if $deployed == "" then null else $deployed end)
+  , deployed_matches_head: (if $head == "" or $deployed == "" then null else ($head == $deployed) end)
+  , unpushed_commits: $unpushed
+  , dirty_files: $dirty
+  , reboot_pending: $reboot_pending
+  , generations: $generations
+  , coredumps_24h: $coredumps_24h
+  }' 2>/dev/null || echo '{}')
+echo "${DRIFT_JSON}" | jq empty 2>/dev/null || DRIFT_JSON='{}'
+
 # -- alerts: computed from what we actually gathered (CLAUDE.md rules subset) --
 ALERTS_JSON=$(jq -n \
   --argjson failed "${SERVICES_FAILED}" \
-  --argjson worst "${WORST:-0}" '
+  --argjson worst "${WORST:-0}" \
+  --argjson drift "${DRIFT_JSON}" '
   [ (if $failed > 0 then {level:"critical", section:"system", message:"\($failed) failed service(s)"} else empty end)
   , (if $worst >= 90 then {level:"critical", section:"system", message:"Storage at \($worst)% on a mount"} else empty end)
+  , (if ($drift.reboot_pending // false) then {level:"warning", section:"config_drift", message:"Reboot pending: booted kernel differs from current generation"} else empty end)
+  , (if ($drift.unpushed_commits // 0) > 0 then {level:"warning", section:"config_drift", message:"\($drift.unpushed_commits) unpushed commit(s) on ~/.nixos"} else empty end)
+  , (if ($drift.deployed_matches_head == false) then {level:"warning", section:"config_drift", message:"Deployed system was not built from current HEAD"} else empty end)
+  , (if ($drift.coredumps_24h // 0) >= 50 then {level:"warning", section:"config_drift", message:"\($drift.coredumps_24h) coredumps in 24h — a unit may be crash-looping behind an active status"} else empty end)
   ]' 2>/dev/null || echo '[]')
 echo "${ALERTS_JSON}" | jq empty 2>/dev/null || ALERTS_JSON='[]'
 
@@ -140,10 +177,12 @@ if jq -n \
   --argjson services_failed "${SERVICES_FAILED}" \
   --argjson unread "${UNREAD}" \
   --argjson inbox_unread "${INBOX_UNREAD}" \
-  --argjson alerts "${ALERTS_JSON}" '
+  --argjson alerts "${ALERTS_JSON}" \
+  --argjson drift "${DRIFT_JSON}" '
   {
     generated_at: $now,
     sections: {
+      config_drift: $drift,
       calendar: $cal,
       jobs: { active: [] },
       leads: { new_count: 0, items: [] },

@@ -21,7 +21,9 @@ in
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
       environment.HOME = paths.user.home;
-      path = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.nodejs_22 pkgs.notmuch ];
+      # git: config-drift tile (HEAD/unpushed/dirty). coredumpctl comes from
+      # systemd which is always on the base PATH via /run/current-system.
+      path = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.nodejs_22 pkgs.notmuch pkgs.git ];
       serviceConfig = {
         Type = "oneshot";
         User = lib.mkForce "eric";

@@ -28,6 +28,7 @@ business/
 ```
 
 ## Changelog
+- 2026-07-05: morning-briefing grows a `config_drift` section (audit Pattern 6): HEAD vs deployed rev (`system.configurationRevision` now recorded by flake glue), unpushed/dirty counts, booted-vs-current kernel (reboot pending), generation count, 24h coredump count — plus matching warning alerts. Machine-computed replacement for the generation-table misreadings that happened twice during the audit. `git` added to the unit PATH.
 - 2026-06-19: Moved `datax-monitor` checkout `~/projects/datax-monitor` →
   `~/600_apps/datax-monitor` to match every other app (lead-scout, todui, khalt,
   sr_analyzer…). Updated the `projectDir` default in `datax-monitor/index.nix`

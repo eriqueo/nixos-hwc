@@ -342,6 +342,10 @@
         };
         modules = [
           { nixpkgs.hostPlatform = sysArch; }
+          # Record the git rev the system was built from → /run/current-system/
+          # configuration-revision. Feeds the morning-briefing config-drift tile
+          # (deployed-vs-HEAD); null on dirty-tree builds, which is itself signal.
+          { system.configurationRevision = self.rev or self.dirtyRev or null; }
           ch.agenix.nixosModules.default
         ] ++ (m.extraModules or [ ]) ++ [
           ch.hm.nixosModules.home-manager
