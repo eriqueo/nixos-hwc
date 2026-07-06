@@ -32,6 +32,7 @@ let
     GNUPG_DIR="''${GNUPGHOME:-$HOME/.gnupg}"
     STATE_DIR="${stateDir}"
     WEBHOOK_URL="${cfg.webhook.url}"
+    NOTIFY_URL="${if cfg.notify.url != null then cfg.notify.url else ""}"
     SYNC_MAX_AGE_MIN="${toString cfg.syncMaxAgeMin}"
     FRESHNESS_HOURS="${toString cfg.freshnessHours}"
     BRIDGE_IMAP_PORT="${toString cfg.bridge.imapPort}"
@@ -93,6 +94,21 @@ let
         -d "$payload" "$WEBHOOK_URL" >/dev/null 2>&1 || true
     }
 
+    # hwc-notify dispatcher — criticals fan out (priority 1 = both Discord
+    # channels + email) so "mail down 30+ min" pages again after the gotify
+    # decommission (2026-07-06). Fail-soft: never break the health check.
+    send_notify() {
+      local title="$1" body="$2"
+      [[ -z "$NOTIFY_URL" ]] && return 0
+      ${pkgs.jq}/bin/jq -nc \
+        --arg t "$title" \
+        --arg b "$body ($(${pkgs.hostname}/bin/hostname))" \
+        '{topic:"monitoring", source:"mail-health", title:$t, body:$b, priority:1, tags:["mail","critical"]}' \
+        | ${pkgs.curl}/bin/curl -sf --max-time 8 -X POST \
+            -H "Content-Type: application/json" \
+            -d @- "$NOTIFY_URL/notify" >/dev/null 2>&1 || true
+    }
+
     # Route alert to the right channel based on severity
     alert() {
       local level="$1" title="$2" body="$3"
@@ -107,6 +123,7 @@ let
 
       if [[ "$level" == "critical" ]]; then
         send_webhook "critical" "$body"
+        send_notify "$title" "$body"
       else
         # Warnings go to Slack only (don't wake you up)
         send_webhook "warning" "$body"
@@ -333,6 +350,19 @@ in
         default = "";
         description = "n8n webhook URL for Slack-routed warnings";
         example = "https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/mail-health";
+      };
+    };
+
+    notify = {
+      url = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = ''
+          hwc-notify base URL. Criticals POST here with priority 1
+          (Discord fanout + email). Loopback on hwc-server; the Caddy
+          tailnet port (:29443) from other machines. null = disabled.
+        '';
+        example = "http://127.0.0.1:11600";
       };
     };
 

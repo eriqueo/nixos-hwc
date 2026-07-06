@@ -10,6 +10,8 @@
   # Mail-health webhook endpoint — names this machine (Law 16 keeps
   # hostnames out of roles; the rest of the mail menu is in the mail role).
   hwc.mail.health.webhook.url = "https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/mail-health";
+  # Criticals also page via hwc-notify (priority-1 fanout: Discord ×2 + email).
+  hwc.mail.health.notify.url = "http://127.0.0.1:11600";
 
   # Calendar → Radicale (self-hosted CalDAV, same backend as tasks). Retires
   # the iCloud account pairs the mail role declares (vdirsyncer no longer

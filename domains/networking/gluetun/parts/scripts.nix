@@ -15,6 +15,14 @@ let
     RECOVERY_FILE="/var/lib/hwc/gluetun-health/last-recovery"
     CHECK_INTERVAL=${toString hcCfg.checkInterval}
     FAILURES_BEFORE_RESTART=${toString hcCfg.failuresBeforeRestart}
+    NOTIFY_URL="${if hcCfg.notifyUrl != null then hcCfg.notifyUrl else ""}"
+
+    # Alert via hwc-notify (replaced gotify 2026-07-06). Fail-soft: a down or
+    # slow dispatcher must never break the health check itself.
+    notify() { # $1=priority $2=title $3=body
+      [ -n "$NOTIFY_URL" ] || return 0
+      ${pkgs.jq}/bin/jq -nc --arg t "$2" --arg b "$3" --argjson p "$1"         '{topic:"monitoring", source:"gluetun-health", title:$t, body:$b, priority:$p, tags:["vpn"]}'         | ${pkgs.curl}/bin/curl -fsS --max-time 8 -X POST -H 'content-type: application/json'             -d @- "$NOTIFY_URL/notify" >/dev/null 2>&1 || echo "WARN: hwc-notify unreachable (alert dropped)"
+    }
 
     mkdir -p /var/lib/hwc/gluetun-health
 
@@ -32,6 +40,7 @@ let
 
       if [ "$FAILURES" -ge "$FAILURES_BEFORE_RESTART" ]; then
         echo "Restarting gluetun after $FAILURES consecutive failures..."
+        notify 2 "gluetun auto-restart (API unreachable)" "Control API failed $FAILURES consecutive checks; restarting podman-gluetun."
         ${pkgs.systemd}/bin/systemctl restart podman-gluetun.service
         echo "0" > "$STATE_FILE"
         date -Iseconds > "$RECOVERY_FILE"
@@ -49,6 +58,7 @@ let
 
       if [ "$FAILURES" -ge "$FAILURES_BEFORE_RESTART" ]; then
         echo "Restarting gluetun after $FAILURES consecutive port forwarding failures..."
+        notify 2 "gluetun auto-restart (port forwarding lost)" "Forwarded port was 0 for $FAILURES consecutive checks; restarting podman-gluetun."
         ${pkgs.systemd}/bin/systemctl restart podman-gluetun.service
         echo "0" > "$STATE_FILE"
         date -Iseconds > "$RECOVERY_FILE"
@@ -59,6 +69,7 @@ let
     # All checks passed — reset failure counter
     if [ "$FAILURES" -gt 0 ]; then
       echo "RECOVERED after $FAILURES failures (port: $FORWARDED_PORT)"
+      notify 3 "gluetun recovered" "VPN healthy again after $FAILURES failed checks (forwarded port: $FORWARDED_PORT)."
       echo "0" > "$STATE_FILE"
     else
       echo "OK: port $FORWARDED_PORT"

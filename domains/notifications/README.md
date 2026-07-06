@@ -35,6 +35,7 @@ notifications/
 | `hwc.notifications.send.cli.enable` | Enable hwc-alert CLI |
 
 ## Changelog
+- 2026-07-06: hwc-notify robustness: Restart=always + StartLimitIntervalSec=0 (no failed-state lockout), liveness watchdog timer (5-min /health probe, double-check then restart — catches hangs Restart= can't see), --max-time on every CLI curl so callers can't hang.
 - 2026-07-06: Gotify stack decommissioned per 2026-06-11 plan (server/igotify/bridge/send modules, secrets, alertmanager receiver, client configs). hwc-notify (Discord+SMTP) is the sole alert path.
 - 2026-07-05: Law 12 burn-down — restructured headings to the required contract (`## Purpose` / `## Boundaries` / `## Structure`); content unchanged, headings renamed/split from the old Scope-&-Boundary/Layout form.
 - 2026-07-05: Law 5 burn-down — added `HWC-EXCEPTION(Law 5)` annotation blocks (reason/justification/plan/revocable) to this domain's raw `oci-containers` module(s); infra-shaped containers are sanctioned exceptions to the mkContainer rule. Comments only, no behavior change.

@@ -43,6 +43,16 @@ in
         default = 3;
         description = "Consecutive failures before auto-restarting gluetun";
       };
+
+      notifyUrl = mkOption {
+        type = types.nullOr types.str;
+        default = "http://127.0.0.1:11600";
+        description = ''
+          hwc-notify base URL for restart/recovery alerts (topic=monitoring
+          → #hwc-alerts). null disables alerting; auto-restart is unaffected.
+          Replaced the gotify alert channel (decommissioned 2026-07-06).
+        '';
+      };
     };
   };
 

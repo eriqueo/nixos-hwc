@@ -232,7 +232,7 @@ EOF
             --arg topic "$topic" --arg title "$title" --arg body "$body" \
             --arg source "$source" --argjson priority "$priority" --argjson tags "$tags" \
             '{topic: $topic, title: $title, body: $body, priority: $priority, source: $source, tags: $tags}')
-          curl -fsS -X POST -H 'content-type: application/json' -d "$payload" "$base/notify" | jq
+          curl -fsS --max-time 10 -X POST -H 'content-type: application/json' -d "$payload" "$base/notify" | jq
           ;;
         recent)
           limit=50
@@ -246,13 +246,13 @@ EOF
               *) echo "unknown flag: $1" >&2; usage ;;
             esac
           done
-          curl -fsS "$base/audit/recent?limit=$limit$q" | jq
+          curl -fsS --max-time 10 "$base/audit/recent?limit=$limit$q" | jq
           ;;
         status)
-          curl -fsS "$base/circuit/status" | jq
+          curl -fsS --max-time 10 "$base/circuit/status" | jq
           ;;
         health)
-          curl -fsS "$base/health" | jq
+          curl -fsS --max-time 10 "$base/health" | jq
           ;;
         --help|-h|help) usage ;;
         *) echo "unknown subcommand: $subcmd" >&2; usage ;;
@@ -401,6 +401,8 @@ in
         NODE_ENV = "production";
       };
 
+      unitConfig.StartLimitIntervalSec = 0;
+
       serviceConfig = {
         Type = "simple";
         # --experimental-sqlite enables node:sqlite (Node 22.5+).
@@ -409,7 +411,10 @@ in
         ExecStart = "${pkgs.nodejs_22}/bin/node --experimental-sqlite --no-warnings ${mainJs}";
         User = lib.mkForce cfg.user;
         Group = "users";
-        Restart = "on-failure";
+        # "always" (not on-failure): a clean-exit bug must not leave the
+        # dispatcher down. StartLimitIntervalSec=0: never lock into "failed"
+        # after a restart burst (the redis-main boot-race lesson, 2026-07-06).
+        Restart = "always";
         RestartSec = "5s";
 
         StateDirectory = "hwc/notify";
@@ -436,6 +441,40 @@ in
 
     # Expose the deps-update + user CLIs on the system PATH.
     environment.systemPackages = [ notify-deps-update notify-cli ];
+
+    #========================================================================
+    # WATCHDOG — catches hangs Restart= can't see (process alive, HTTP dead)
+    #========================================================================
+    systemd.timers.hwc-notify-watchdog = {
+      description = "hwc-notify liveness probe timer";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnBootSec = "3min";
+        OnUnitActiveSec = "5min";
+        Persistent = false;
+      };
+    };
+
+    systemd.services.hwc-notify-watchdog = {
+      description = "hwc-notify liveness probe (restart on dead /health)";
+      after = [ "hwc-notify.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        # Root: needs systemctl restart. Probe twice before acting so a
+        # single slow GC pause doesn't bounce the service.
+        ExecStart = pkgs.writeShellScript "hwc-notify-watchdog" ''
+          probe() {
+            ${pkgs.curl}/bin/curl -fsS --max-time 10 \
+              "http://${cfg.bindAddr}:${toString cfg.port}/health" >/dev/null 2>&1
+          }
+          if probe; then exit 0; fi
+          sleep 15
+          if probe; then exit 0; fi
+          echo "hwc-notify /health dead twice in 15s - restarting"
+          ${pkgs.systemd}/bin/systemctl restart hwc-notify.service
+        '';
+      };
+    };
 
     #========================================================================
     # CADDY REVERSE PROXY — port mode over tailnet
