@@ -313,11 +313,20 @@ in
         };
       };
 
-      # Redis binds to 10.89.0.1 (Podman network gateway) which isn't available
-      # until the container network is created — wait for it
+      # Redis binds to 10.89.0.1 (Podman network gateway). Ordering on
+      # init-media-network is not sufficient: podman creates the network
+      # object there, but the gateway IP only appears on the host when the
+      # first attached container starts. Boot 2026-07-05 hit exactly this —
+      # bind failed once and the unit stayed dead. Retry until the bridge
+      # exists instead.
       systemd.services.redis-main = {
         after = [ "init-media-network.service" ];
         wants = [ "init-media-network.service" ];
+        serviceConfig = {
+          Restart = "on-failure";
+          RestartSec = "5s";
+        };
+        unitConfig.StartLimitIntervalSec = 0;
       };
     })
 
