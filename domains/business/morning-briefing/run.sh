@@ -357,5 +357,64 @@ if [ -f "${OUTPUT_DIR}/briefing.json" ]; then
   fi
 fi
 
+# ── Step 5: Email delivery (2026-07-06, audit 2.1: Eric wants email + workbench)
+# Renders briefing.json to a plain-text email and sends via msmtp's default
+# account (proton-hwc → eric@iheartwoodcraft.com). Best-effort: a send failure
+# logs a WARN but never fails the briefing run.
+MSMTP_BIN="$(command -v msmtp || echo /etc/profiles/per-user/eric/bin/msmtp)"
+if [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
+  log "STEP 5: Emailing briefing..."
+  EMAIL_BODY=$(jq -r '
+    def sec(x): "\n== " + x + " ==\n";
+    "Morning Briefing — " + (.generated_at // "unknown")
+    + (if (.alerts // []) | length > 0 then
+        sec("ALERTS (" + ((.alerts | length) | tostring) + ")")
+        + ([.alerts[] | "[" + .level + "] " + .section + ": " + .message] | join("\n"))
+      else "\n\nNo alerts. All green." end)
+    + (if .sections.config_drift then
+        sec("CONFIG DRIFT")
+        + "reboot pending: " + ((.sections.config_drift.reboot_pending // false) | tostring)
+        + " · unpushed: " + ((.sections.config_drift.unpushed_commits // 0) | tostring)
+        + " · dirty: " + ((.sections.config_drift.dirty_files // 0) | tostring)
+        + " · generations: " + ((.sections.config_drift.generation_count // 0) | tostring)
+        + " · coredumps 24h: " + ((.sections.config_drift.coredumps_24h // 0) | tostring)
+      else "" end)
+    + (if .sections.system then
+        sec("SYSTEM")
+        + "services: " + ((.sections.system.services_active // 0) | tostring) + " active / "
+        + ((.sections.system.services_failed // 0) | tostring) + " failed · containers: "
+        + ((.sections.system.containers_running // 0) | tostring) + " running"
+        + ((.sections.system.storage // []) | map("\n  " + .mount + ": " + ((.percent // 0) | tostring) + "% used, " + (.available // "?") + " free") | join(""))
+      else "" end)
+    + (if (.sections.calendar.events // []) | length > 0 then
+        sec("TODAY / THIS WEEK")
+        + ([.sections.calendar.events[] | "  " + (.date // "") + " " + (.startTime // "") + " " + (.summary // "")] | join("\n"))
+      else "" end)
+    + (if .mail_triage then
+        sec("MAIL")
+        + "urgent: " + ((.mail_triage.urgent // []) | length | tostring)
+        + " · review: " + ((.mail_triage.review // []) | length | tostring)
+        + " · noise: " + ((.mail_triage.noise // []) | length | tostring)
+        + (((.mail_triage.urgent // [])[:5]) | map("\n  ! " + (.subject // .from // "?")) | join(""))
+      else "" end)
+    + "\n\nDashboard: https://briefing.hwc.iheartwoodcraft.com\n"
+  ' "${OUTPUT_DIR}/briefing.json" 2>/dev/null) || EMAIL_BODY=""
+  if [ -n "${EMAIL_BODY}" ]; then
+    ALERT_COUNT=$(jq -r '(.alerts // []) | length' "${OUTPUT_DIR}/briefing.json" 2>/dev/null || echo "?")
+    SUBJECT="Morning Briefing $(date +%Y-%m-%d)"
+    [ "${ALERT_COUNT}" != "0" ] && SUBJECT="${SUBJECT} — ${ALERT_COUNT} alert(s)"
+    if printf 'Subject: %s\nFrom: eric@iheartwoodcraft.com\nTo: eric@iheartwoodcraft.com\n\n%s\n' \
+        "${SUBJECT}" "${EMAIL_BODY}" | "${MSMTP_BIN}" eric@iheartwoodcraft.com 2>>"${LOG_FILE}"; then
+      log "OK: Briefing emailed"
+    else
+      log "WARN: msmtp send failed (briefing still on dashboard/workbench)"
+    fi
+  else
+    log "WARN: email render produced empty body — skipped send"
+  fi
+else
+  log "STEP 5: SKIP (no briefing.json or msmtp missing)"
+fi
+
 tail -100 "${LOG_FILE}" > "${LOG_FILE}.tmp" && mv "${LOG_FILE}.tmp" "${LOG_FILE}"
 log "DONE"

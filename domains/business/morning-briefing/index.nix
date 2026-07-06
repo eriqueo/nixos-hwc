@@ -23,7 +23,8 @@ in
       environment.HOME = paths.user.home;
       # git: config-drift tile (HEAD/unpushed/dirty). coredumpctl comes from
       # systemd which is always on the base PATH via /run/current-system.
-      path = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.nodejs_22 pkgs.notmuch pkgs.git ];
+      # pass+gnupg: msmtp's passwordeval for the Step-5 email (proton bridge).
+      path = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.nodejs_22 pkgs.notmuch pkgs.git pkgs.msmtp pkgs.pass pkgs.gnupg ];
       serviceConfig = {
         Type = "oneshot";
         User = lib.mkForce "eric";

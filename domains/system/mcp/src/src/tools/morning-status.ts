@@ -1,145 +1,119 @@
 /**
- * hwc_morning_status — composite morning briefing tool.
+ * hwc_morning_status — reader over the morning briefing (one producer per fact).
  *
- * Combines: health_check + journal_errors(1h) + mail_health + storage_status(disk) + calendar_list(today)
- * Returns compact text briefing. Sub-call failures show "unavailable" rather than failing the whole tool.
+ * 2026-07-06 (audit 2.1): this tool no longer computes anything. The bash
+ * pipeline in domains/business/morning-briefing/run.sh is the SOLE producer
+ * of briefing.json; this tool (like hwc_morning_brief and the dashboard) is
+ * a consumer that renders the same file. Duplicate producers drift.
  */
 
+import { readFile, stat } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
-import { executeHealthCheck } from "./monitoring.js";
-import { executeMailHealth } from "./mail.js";
-import { khalList } from "./calendar.js";
-import { safeExec } from "../executors/shell.js";
+
+const BRIEFING_PATH =
+  "/home/eric/.nixos/domains/business/morning-briefing/output/briefing.json";
+const STALE_HOURS = 26;
 
 export function morningStatusTool(): ToolDef {
   return {
     name: "hwc_morning_status",
     description:
-      "Combined morning briefing. Runs health_check + journal_errors(1h) + mail_health + storage + calendar(today) in one call. " +
-      "Returns compact text summary. Sub-call failures show 'unavailable' rather than failing the whole tool.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        timezone: {
-          type: "string",
-          description: "IANA timezone for calendar date (default: America/Denver)",
-        },
-      },
-    },
-    handler: async (args): Promise<ToolResult> => {
-      const tz = (args.timezone as string) || "America/Denver";
+      "Compact text summary of the daily morning briefing (briefing.json, produced 06:00 by the " +
+      "morning-briefing pipeline). Reader only — same data as hwc_morning_brief and the dashboard. " +
+      "Flags staleness if the briefing is older than 26h.",
+    inputSchema: { type: "object", properties: {} },
+    handler: async (): Promise<ToolResult> => {
+      let raw: string;
+      let mtime: Date | null = null;
+      try {
+        raw = await readFile(BRIEFING_PATH, "utf-8");
+        mtime = (await stat(BRIEFING_PATH)).mtime;
+      } catch {
+        return {
+          status: "error",
+          message:
+            "briefing.json not found — the morning-briefing pipeline has not produced output " +
+            `(expected at ${BRIEFING_PATH}; timer runs 06:00).`,
+        };
+      }
+
+      let b: Record<string, any>;
+      try {
+        b = JSON.parse(raw);
+      } catch {
+        return { status: "error", message: "briefing.json exists but is not valid JSON." };
+      }
+
       const lines: string[] = [];
-      const today = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+      const generated = b.generated_at ?? "unknown";
+      lines.push(`=== HWC Morning Status — generated ${generated} ===`);
 
-      lines.push(`=== HWC Morning Status — ${today} ===`);
-
-      // ── Services health ──────────────────────────────────────
-      try {
-        const health = await executeHealthCheck(["services", "containers"]);
-        const data = health.data as Record<string, unknown> | undefined;
-        const components = data?.components as Array<{ name: string; status: string; message: string }> | undefined;
-        if (components) {
-          const services = components.find((c) => c.name === "services");
-          const containers = components.find((c) => c.name === "containers");
-          const svcLine = services ? `${services.status === "green" ? "OK" : "WARN"} ${services.message}` : "unavailable";
-          const ctrLine = containers ? `${containers.status === "green" ? "OK" : "WARN"} ${containers.message}` : "unavailable";
-          lines.push(`Services: ${svcLine}`);
-          lines.push(`Containers: ${ctrLine}`);
-        } else {
-          lines.push(`Health: ${health.message}`);
-        }
-      } catch {
-        lines.push("Services: unavailable");
+      const ageHours = mtime ? (Date.now() - mtime.getTime()) / 3_600_000 : null;
+      if (ageHours !== null && ageHours > STALE_HOURS) {
+        lines.push(`STALE: briefing is ${ageHours.toFixed(0)}h old — pipeline may have failed.`);
       }
 
-      // ── Journal errors (1h) ──────────────────────────────────
-      try {
-        const result = await safeExec("journalctl", [
-          "--since", "1h ago",
-          "-p", "err",
-          "--no-pager",
-          "-n", "50",
-          "-o", "short",
-        ], { timeout: 10000 });
-        const errorLines = result.stdout.split("\n").filter(Boolean);
-        if (errorLines.length === 0) {
-          lines.push("Errors (1h): none");
-        } else {
-          lines.push(`Errors (1h): ${errorLines.length} journal errors — check hwc_monitoring action=errors for details`);
-        }
-      } catch {
-        lines.push("Errors (1h): unavailable");
+      const alerts: Array<{ level: string; section: string; message: string }> = b.alerts ?? [];
+      lines.push(
+        alerts.length === 0
+          ? "Alerts: none"
+          : `Alerts (${alerts.length}): ` +
+              alerts.map((a) => `[${a.level}] ${a.section}: ${a.message}`).join(" · ")
+      );
+
+      const sys = b.sections?.system;
+      if (sys) {
+        const storage = (sys.storage ?? [])
+          .map((s: any) => `${s.mount} ${s.percent}%`)
+          .join(" | ");
+        lines.push(
+          `Services: ${sys.services_active ?? "?"} active / ${sys.services_failed ?? "?"} failed · ` +
+            `Containers: ${sys.containers_running ?? "?"} running` +
+            (storage ? ` · Storage: ${storage}` : "")
+        );
       }
 
-      // ── Mail health ──────────────────────────────────────────
-      try {
-        const mail = await executeMailHealth();
-        const mailData = mail.data as Record<string, unknown> | undefined;
-        const notmuch = mailData?.notmuch as Record<string, unknown> | undefined;
-        const unread = notmuch?.unread;
-        const bridgeOk = (mailData?.bridge as Record<string, unknown>)?.active === true;
-        const syncOk = (mailData?.sync as Record<string, unknown>)?.healthy === true;
-        const mailStatus = bridgeOk && syncOk ? "healthy" : "degraded";
-        lines.push(`Mail: ${mailStatus}${unread !== undefined ? ` | ${unread} unread` : ""}`);
-      } catch {
-        lines.push("Mail: unavailable");
+      const drift = b.sections?.config_drift;
+      if (drift) {
+        lines.push(
+          `Drift: reboot_pending=${drift.reboot_pending ?? "?"} unpushed=${drift.unpushed_commits ?? "?"} ` +
+            `dirty=${drift.dirty_files ?? "?"} generations=${drift.generation_count ?? "?"} ` +
+            `coredumps_24h=${drift.coredumps_24h ?? "?"}`
+        );
       }
 
-      // ── Storage ──────────────────────────────────────────────
-      try {
-        const dfResult = await safeExec("df", [
-          "-h", "--output=target,pcent",
-          "/", "/mnt/hot", "/mnt/media",
-        ], { timeout: 5000 });
-        const dfLines = dfResult.stdout.split("\n").filter(Boolean).slice(1);
-        const mounts = dfLines.map((line) => {
-          const parts = line.trim().split(/\s+/);
-          return `${parts[0]} ${parts[1]}`;
-        }).filter(Boolean);
-        lines.push(`Storage: ${mounts.join(" | ")}`);
-      } catch {
-        try {
-          const dfResult = await safeExec("df", ["-h", "--output=target,pcent", "/"], { timeout: 5000 });
-          const dfLines = dfResult.stdout.split("\n").filter(Boolean).slice(1);
-          const parts = dfLines[0]?.trim().split(/\s+/) || [];
-          lines.push(`Storage: / ${parts[1] || "unavailable"}`);
-        } catch {
-          lines.push("Storage: unavailable");
-        }
+      const mail = b.sections?.mail;
+      const triage = b.mail_triage;
+      if (mail || triage) {
+        const t = triage
+          ? ` · triage: ${(triage.urgent ?? []).length} urgent / ${(triage.review ?? []).length} review / ${(triage.noise ?? []).length} noise`
+          : "";
+        lines.push(`Mail: ${mail?.healthy === false ? "DEGRADED" : "healthy"} · ${mail?.inbox_unread ?? mail?.unread ?? "?"} unread${t}`);
       }
 
-      // ── Calendar today ───────────────────────────────────────
-      try {
-        const events = await khalList(today, today);
-        if (events.length === 0) {
-          lines.push("Calendar today: no events");
-        } else {
-          const eventSummaries = events
-            .slice(0, 5)
-            .map((e) => `${e.startTime || "all-day"} ${e.summary}`)
-            .join(", ");
-          lines.push(`Calendar today: ${events.length} event${events.length !== 1 ? "s" : ""} — ${eventSummaries}${events.length > 5 ? "..." : ""}`);
-        }
-      } catch {
-        lines.push("Calendar today: unavailable");
-      }
+      const events: any[] = b.sections?.calendar?.events ?? [];
+      lines.push(
+        events.length === 0
+          ? "Calendar: no events"
+          : `Calendar (${events.length}): ` +
+              events
+                .slice(0, 5)
+                .map((e) => `${e.date ?? ""} ${e.startTime ?? "all-day"} ${e.summary ?? ""}`.trim())
+                .join(", ") + (events.length > 5 ? "…" : "")
+      );
 
       const briefing = lines.join("\n");
-
-      // Universal Result Contract view (text): the header line is the greeting,
-      // the per-section lines (Services/Errors/Mail/Storage/Calendar) are the
-      // highlights. lines[0] is the "=== HWC Morning Status — <date> ===" header.
       const [header, ...sections] = lines;
       return {
         status: "ok",
-        message: `Morning status for ${today}`,
-        data: { briefing, date: today },
+        message: `Morning status (briefing generated ${generated})`,
+        data: { briefing, generated_at: generated, alerts_count: alerts.length },
         view: contract("text", "Morning Briefing", {
-          greeting: header ?? `HWC Morning Status — ${today}`,
+          greeting: header ?? "HWC Morning Status",
           summary: `${sections.length} section${sections.length !== 1 ? "s" : ""}`,
           highlights: sections,
-        }, { date: today, source: "hwc_morning_status" }),
+        }, { generated_at: generated, source: "briefing.json" }),
       };
     },
   };
