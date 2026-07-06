@@ -18,3 +18,4 @@ Configures the Hyprland Wayland window manager as the desktop session: full `way
 
 ## Changelog
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).
+- 2026-07-06: `parts/behavior.nix` — SUPER+SHIFT+B keybind repointed `gpu-launch librewolf-hwc` → `gpu-launch firefox-hwc` (part of the repo-wide librewolf → firefox migration).
