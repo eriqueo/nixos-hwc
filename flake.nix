@@ -192,11 +192,6 @@
           # Allow insecure qtwebengine for jellyfin-media-player
           permittedInsecurePackages = [
             "qtwebengine-5.15.19"
-            # nixpkgs marked librewolf insecure 2026-06 ("lacks an active
-            # committer"), not for a CVE. Permitted to keep the browser
-            # working; whether to migrate off LibreWolf is Eric's call.
-            "librewolf-152.0.2-1"
-            "librewolf-unwrapped-152.0.2-1"
           ];
         };
         overlays = [

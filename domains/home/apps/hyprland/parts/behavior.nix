@@ -29,7 +29,7 @@ in {
       "${mod} SHIFT,R,exec,hyprctl reload"
       "${mod} SHIFT,Q,exit"
       "${mod},B,exec,gpu-launch chromium-hwc"
-      "${mod} SHIFT,B,exec,gpu-launch librewolf-hwc"
+      "${mod} SHIFT,B,exec,gpu-launch firefox-hwc"
       "${mod},M,exec,kitty -e btop"
       "${mod},O,exec,gpu-launch obsidian"
       "${mod},E,exec,kitty -e ssh -t server aerc"

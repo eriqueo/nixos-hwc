@@ -22,11 +22,9 @@
       kitty.enable = true;
       yazi.enable = true;
       hyprland.enable = true;
-      # Browser: was firefox.enable = true (copy-paste from prior gaming
-      # config). domains/home/apps/firefox/ never landed in this repo —
-      # the codebase uses LibreWolf as the daily Firefox-engine browser.
-      # Swapped 2026-05-31 to a module that actually exists.
-      librewolf.enable = true;
+      # Browser: firefox module (2026-07-06 migration off LibreWolf, which
+      # went unmaintained/insecure-flagged in nixpkgs).
+      firefox.enable = true;
 
       # base/home.nix CLI extras not wanted on the kids machine
       gpg.enable = false;

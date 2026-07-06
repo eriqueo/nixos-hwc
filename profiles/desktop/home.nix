@@ -39,7 +39,7 @@
 
       # Web Browsers
       chromium.enable = lib.mkDefault true;
-      librewolf.enable = lib.mkDefault true;
+      firefox.enable = lib.mkDefault true;
 
       # Mail Clients
       neomutt.enable = lib.mkDefault false;

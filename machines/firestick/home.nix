@@ -39,7 +39,7 @@
   # Trim everything non-essential for travel use.
   hwc.home.apps = {
     chromium.enable = false;
-    librewolf.enable = false;
+    firefox.enable = false;
     qutebrowser.enable = false;
     obsidian.enable = false;
     onlyoffice-desktopeditors.enable = false;

@@ -2,18 +2,18 @@
 
 let
   # IMPORTANT: Same hybrid-GPU constraint as chromium-hwc — on this laptop
-  # Hyprland renders on the Intel iGPU, so LibreWolf must too. Cross-GPU
+  # Hyprland renders on the Intel iGPU, so Firefox must too. Cross-GPU
   # DMA-BUF imports fail with EGL_BAD_MATCH inside Mesa and can take down
   # the compositor (see parts/launcher.nix in domains/home/apps/chromium
   # for the full history). We therefore strip any inherited NVIDIA PRIME
   # env vars and pin VA-API to the Intel iHD driver when present.
   #
-  # Firefox/LibreWolf hardware accel is driven primarily by about:config
-  # prefs (see parts/appearance.nix: gfx.webrender.all, media.ffmpeg.vaapi,
+  # Firefox hardware accel is driven primarily by about:config prefs
+  # (see parts/appearance.nix: gfx.webrender.all, media.ffmpeg.vaapi,
   # widget.dmabuf, etc.). This wrapper just ensures the *environment* the
   # browser inherits doesn't route it onto the wrong render node.
 
-  launcher = pkgs.writeShellScriptBin "librewolf-hwc" ''
+  launcher = pkgs.writeShellScriptBin "firefox-hwc" ''
     set -u
 
     # Strip NVIDIA PRIME / GLX vendor overrides so libglvnd doesn't try
@@ -30,7 +30,7 @@ let
     # Force libva onto Intel iHD when an Intel iGPU is present AND the
     # driver is installed. Without this, a system-wide LIBVA_DRIVER_NAME=
     # nvidia (typical on hybrid laptops where the dGPU is the nominal type)
-    # makes LibreWolf's HW video decode fail because we render on Intel.
+    # makes Firefox's HW video decode fail because we render on Intel.
     # NO-OP on machines without an Intel iGPU or without the iHD driver.
     intel_present=0
     for n in /dev/dri/renderD*; do
@@ -45,7 +45,7 @@ let
       export LIBVA_DRIVER_NAME=iHD
     fi
 
-    exec librewolf "$@"
+    exec ${pkgs.firefox}/bin/firefox "$@"
   '';
 in
 {

@@ -446,7 +446,7 @@ in
           case "$CURRENT_MODE" in
             "performance")
               case "$1" in
-                blender|gimp|inkscape|kdenlive|obs|steam|wine|chromium|firefox|librewolf|godot|krita)
+                blender|gimp|inkscape|kdenlive|obs|steam|wine|chromium|firefox|godot|krita)
                   # Use nvidia-offload environment variables
                   if command -v nvidia-smi >/dev/null 2>&1; then
                     export __NV_PRIME_RENDER_OFFLOAD=1

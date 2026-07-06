@@ -45,6 +45,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-07-06: Browser migration: `apps/librewolf/` → `apps/firefox/` (librewolf unmaintained in nixpkgs, insecure-flagged). Same theme/launcher architecture; hardening prefs ported minus FPP +AllTargets; `firefox-hwc` replaces `librewolf-hwc` (hyprland keybind updated); insecure-package permit dropped from flake.nix.
 - 2026-07-03: apps/waybar — lid-close default flipped to **suspend**: removed
   the `hwc-lid-state-init` user service that created `/run/user/$UID/hwc-lid-ignore`
   at login (which made lid close a no-op by default and was easy to mistake for

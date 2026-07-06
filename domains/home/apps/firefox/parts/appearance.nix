@@ -10,10 +10,8 @@
   "media.rdd-vpx.enabled" = true;
   "network.http.http3.enabled" = true;
   "network.trr.mode" = 0;
-  # Disk cache: LibreWolf default is false (memory-only) for privacy.
-  # On a session that persists logins (step 4) the privacy delta is small,
-  # and the perf win is large: pages don't refetch unchanged assets every
-  # navigation. JobTread/claude.ai/youtube all benefit noticeably.
+  # Disk cache on (Firefox default, pinned): pages don't refetch unchanged
+  # assets every navigation. JobTread/claude.ai/youtube all benefit.
   "browser.cache.disk.enable" = true;
   "widget.dmabuf.force-enabled" = true;
   "media.ffmpeg.dmabuf-textures.enabled" = true;
