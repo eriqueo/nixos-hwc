@@ -1,4 +1,4 @@
-# HWC Architecture Charter v12.3
+# HWC Architecture Charter v12.4
 
 **Owner**: Eric
 **Scope**: `nixos-hwc/` — all machines, domains, profiles, Home Manager, and supporting files
@@ -14,6 +14,13 @@
 2. **Temporary means tracked**: every wrapper, alias, pin, or migration shim carries an in-code annotation (§4) stating its removal condition. An untracked "temporary" thing is permanent cruft.
 3. **Never switch on a failing build.** Commit before rebuild.
 4. **Migrations finish.** A version-history entry claiming a migration is complete must be true (`v11.0` claimed `options.nix` elimination; 16 files remained for three months). Declare completion only after the relevant lint passes.
+5. **A migration ends with `git rm`.** Copy-then-forget is how every duplicate in this repo was born. The old path is deleted in the same change (or the same tracked plan) that lands the new one.
+6. **Enforced or guideline — nothing in between.** If a rule isn't wired into `nix flake check`, it is explicitly labeled a guideline. An always-red or never-run lint is worse than none: it teaches you to ignore red.
+7. **Done means deployed and used.** Code-complete with fixtures is 3/4 built, and 3/4-built is the most expensive state — full maintenance cost, zero value. A feature's definition of done includes its terminal step: switched, rebooted, run, consumed.
+8. **One producer per fact.** Every piece of information (morning status, health, leads) has exactly one producer; everything else consumes its output. Two producers of the same fact is a standing drift generator.
+9. **Config repo holds config.** Anything with its own build/test lifecycle gets its own repo and enters as a flake input (todui is the precedent).
+10. **AI output is ephemeral until promoted.** One living doc per topic, edited in place; everything else is scratch and gets deleted, not archived.
+11. **The repo is not the system.** A commit isn't real until rebuilt, a rebuild until rebooted, a script until run, a monitor until its target exists. Make the gap observable (the morning-briefing drift tile) rather than relying on memory. Verify against the machine; keep docs and comments honest enough that they don't poison the next audit.
 
 ---
 
@@ -169,11 +176,16 @@ Service domains (§2) may depend on each other (no cycles) and on paths/lib/syst
 
 ### Law 12: Domain Documentation Contract
 
-Every domain and subdomain has a `README.md` with, in order: `## Purpose` (1–3 sentences), `## Boundaries` (✅ manages / ❌ does not → redirects), `## Structure`, `## Changelog` (newest first, one line per change, prunable after 6 months).
+README scope (v12.4, hybrid — decided in the 2026-07-05 audit follow-up):
 
-A commit touching a domain updates that README's Structure + Changelog. Enforcement: pre-commit hook and the `/cp`–commit workflow. (No automation tool is currently implemented; if one lands, it gets named here in a version bump — the charter does not reference tools that do not exist.)
+- **Required**: every **top-level domain** (`domains/<d>/README.md`), plus a per-module README in the two high-churn trees: `domains/server/containers/<c>/` and `domains/home/apps/<a>/`.
+- **Optional**: READMEs anywhere else (sub-domains, parts/). Welcome but not linted.
 
-**Violation**: missing README/section, changelog older than the last structural commit.
+Each required README has, in order: `## Purpose` (1–3 sentences), `## Boundaries` (✅ manages / ❌ does not → redirects), `## Structure`, `## Changelog` (newest first, one line per change, prunable after 6 months).
+
+A commit touching a domain updates that README's Structure + Changelog. Enforcement: the `charter-law12` flake check (presence + sections at required scope) plus the `/cp`–commit workflow.
+
+**Violation**: missing required README/section, changelog older than the last structural commit.
 
 ### Law 13: Repository Hygiene (new in v12)
 
@@ -198,7 +210,7 @@ The repo is a **configuration** repo. Tracked content is Nix, source code, docs,
 
 State that grows must have a declared bound, in Nix:
 
-- **Container images**: `virtualisation.podman.autoPrune` enabled; images pinned to tags or digests, not floating `:latest`, so upgrades are git diffs.
+- **Container images** (two-tier policy, v12.4): **critical tier** — anything holding data or hard to recover (databases, immich, frigate, paperless-class apps) is pinned to a version tag so upgrades are git diffs and rollback is possible. **Utility tier** — stateless/easily-recreated services (arr-stack helpers, dashboards) MAY float `:latest` under `virtualisation.podman.autoPrune`; the float is a deliberate, documented choice, not neglect. Each container's tier is evident from its tag: pinned = critical, `:latest` = utility. (Guideline, per Doctrine §0.6 — no lint wired.)
 - **Generations / store**: `nix.gc` with explicit `--delete-older-than`; `auto-optimise-store` on.
 - **Journals**: `SystemMaxUse` set.
 - **Dumps/exports**: compressed at creation, rotated by timer (Law 8), long-term retention delegated to borg.
@@ -294,8 +306,12 @@ rg 'import.*sys\.nix' domains/home/*/index.nix
 fd options.nix domains
 rg 'mkOption' domains --type nix --glob '!**/index.nix' --glob '!domains/paths/paths.nix' --glob '!**/sys.nix'
 
-# Law 12 — README presence + sections
-for d in domains/*/; do [ -f "$d/README.md" ] || echo "Missing: $d/README.md"; done
+# Law 12 — README presence + sections (v12.4 hybrid scope: top-level domains
+# + per-module in the high-churn trees; _shared/ helper dirs exempt)
+for d in domains/*/ domains/server/containers/*/ domains/home/apps/*/; do
+  case "$d" in */_shared/) continue;; esac
+  [ -f "$d/README.md" ] || echo "Missing: $d/README.md"
+done
 # (v12.2 fix: same -L bug as Law 5 — check each required section's absence explicitly)
 for s in Purpose Boundaries Structure Changelog; do rg --files-without-match "^## $s" domains/*/README.md; done
 
@@ -369,6 +385,7 @@ Every exception requires: in-code annotation, removal condition when temporary, 
 - A version entry may claim a migration complete **only after its lint passes** (Doctrine §0.4).
 
 **Version History** (excerpt):
+- **v12.4 (2026-07-06)**: Doctrine expanded with the seven audit principles (§0.5–0.11: migrations end with git rm; enforced-or-guideline; done = deployed + used; one producer per fact; config repo holds config; AI output ephemeral until promoted; the repo is not the system). Law 12 rescoped to the hybrid contract (top-level domains + per-module READMEs in server/containers and home/apps; 54 module READMEs added in the same change so the lint wires green). Law 15 image policy replaced with the two-tier pin/float contract (critical tier pinned: vaultwarden 1.35.4, n8n 2.10.3, audiobookshelf 2.32.1, firefly v6.4.22 + pico 1.10.1; immich/frigate/authentik/lidarr/slskd were already pinned; utility tier floats deliberately). Decisions recorded in `workspace/plans/2026-07-05-phase-plan-handoff.md`.
 - **v12.3 (2026-07-05)**: §3.3 enforcement gate BUILT (promised since v12.0): Laws 1, 2, 4, 7, 10, 14, 16 wired into `nix flake check` as `checks.x86_64-linux.charter-law<N>` derivations in flake.nix. Laws 3/5/12/13 stay manual guidelines until their backlogs burn down (tracked in `workspace/plans/2026-07-05-phase-plan-handoff.md`). Law 14's wired regex uses `nixos[-]hwc` so the lint can't match its own definition.
 - **v12.2 (2026-07-05)**: Lint repair pass from the 2026-07-05 systems audit (`workspace/plans/2026-07-05-systems-process-audit.md`). Fixed two vacuously-passing lints (Laws 5 & 12 used `rg -L`, which is `--follow`, not `--files-without-match` — they could never report a violation). Fixed three never-empty lints: Law 2 now `--type nix` (was firing on README prose), Law 4 regex anchored to assigned values (was matching its own "not 1000!" comment), Law 16 derivations lint excludes README.md. Law 1 whitelist generalized to any `osConfig ?` guard / `osConfig.<path> or <fallback>`. Law 10 burn-down corrected from "~21" to the actual 2 remaining files. No law semantics changed — this release makes the existing laws checkable.
 - **v12.1 (2026-06-11)**: Roles architecture. profiles/ restructured into role folders (base, desktop, server, business, monitoring, gaming, appliance, mail) with sys/home lane halves; machine membership moved to a machines registry in flake.nix (channel + roles + pkgs per machine); HM bootstrap moved from profiles into flake glue; standalone homeConfigurations generated for every machine. Added Law 16 (Layer Purity: profiles & machines) with lints in §3.1 and a layer note in the domain map. Backup value-defaults absorbed into domains/data option defaults; hwc.home.{shell,development} renamed under hwc.home.core.* (Law 2).
@@ -379,4 +396,4 @@ Every exception requires: in-code annotation, removal condition when temporary, 
 - **v10.x (2026-01/02)**: paths domain added, Law 2 strictness, Laws 9–12, infrastructure→system migration.
 - **v9.x (2026-01-10)**: laws + mechanical validation focus.
 
-**End of Charter v12.2**
+**End of Charter v12.4**

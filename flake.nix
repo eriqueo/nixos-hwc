@@ -467,7 +467,8 @@
         "fd options.nix domains"
       ];
       charter-law12 = mkCharterLint "law12-readme-contract" [
-        "for d in domains/*/; do [ -f \"$d/README.md\" ] || echo \"Missing: $d/README.md\"; done"
+        # v12.4 hybrid scope: top-level domains + high-churn module trees
+        "for d in domains/*/ domains/server/containers/*/ domains/home/apps/*/; do [ -d \"$d\" ] || continue; case \"$d\" in */_shared/) continue;; esac; [ -f \"$d/README.md\" ] || echo \"Missing: $d/README.md\"; done"
         "for s in Purpose Boundaries Structure Changelog; do rg --files-without-match \"^## $s\" domains/*/README.md; done"
       ];
       charter-law14 = mkCharterLint "law14-flake-self-ref" [
