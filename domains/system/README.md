@@ -38,6 +38,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-07-06: mcp: website tmpfiles/ReadWritePaths repointed to /opt/business/website-site (website eviction).
 - 2026-07-06: mcp: hwc_morning_status rewritten as a pure reader of briefing.json (one producer per fact, Doctrine §0.8) — no longer computes health/mail/storage/calendar itself; flags >26h staleness.
 - 2026-07-05: Law 12 burn-down — restructured headings to the required contract (`## Purpose` / `## Boundaries` / `## Structure`); content unchanged, headings renamed/split from the old Scope-&-Boundary/Layout form.
 - 2026-07-03: `hardware/` — Sensel touchpad fix extended to five layers: new acpid `hwc-sensel-rebind` handler rebinds `i2c_hid_acpi` on lid **open**, covering lid closes that never suspended (waybar lid-toggle in ignore mode), where the layer-4 resume hook never runs and the stale SW_LID=1 kills two-finger scroll. acpid daemon itself is still enabled per-machine (laptop only); the handler is inert where acpid is off.

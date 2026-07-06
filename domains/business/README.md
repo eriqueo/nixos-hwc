@@ -28,6 +28,7 @@ business/
 ```
 
 ## Changelog
+- 2026-07-06: Website evicted (audit 2.3): site_files (183 MB, CMS-mutated 11ty working tree) → own repo eriqueo/hwc-website, runtime clone at /opt/business/website-site; siteDir/mcp/web-build refs repointed. History purge (filter-repo) same change-set.
 - 2026-07-06: morning-briefing: Step 5 email delivery added (briefing.json → plain-text render → msmtp proton-hwc → eric@iheartwoodcraft.com, best-effort); unit PATH gains msmtp/pass/gnupg. Audit 2.1: bash pipeline is now the SOLE briefing producer.
 - 2026-07-06: paperless: declare consume/export/staging/media dirs via tmpfiles (bind-mount sources vanished from /mnt/hot → 1600-restart crash-loop). Pin firefly core v6.4.22 + pico 1.10.1 (Law 15 v12.4 critical tier).
 - 2026-07-05: morning-briefing grows a `config_drift` section (audit Pattern 6): HEAD vs deployed rev (`system.configurationRevision` now recorded by flake glue), unpushed/dirty counts, booted-vs-current kernel (reboot pending), generation count, 24h coredump count — plus matching warning alerts. Machine-computed replacement for the generation-table misreadings that happened twice during the audit. `git` added to the unit PATH.
