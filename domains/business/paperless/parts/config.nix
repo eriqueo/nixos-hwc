@@ -91,6 +91,18 @@ in
     })
 
     {
+      # Bind-mount sources must exist or podman fails with statfs errors —
+      # found 2026-07-06 crash-looping (1600+ restarts) after export/staging
+      # vanished from /mnt/hot. Declare them instead of hand-creating.
+      systemd.tmpfiles.rules =
+        lib.map (d: "d ${d} 0775 eric users - -")
+          (lib.filter (d: d != null) [
+            cfg.storage.consumeDir
+            cfg.storage.exportDir
+            cfg.storage.stagingDir
+            cfg.storage.mediaDir
+          ]);
+
       # Generate environment file from secrets before container starts
       systemd.services.paperless-env = {
         description = "Generate Paperless-NGX environment file";

@@ -64,6 +64,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-07-06: n8n image pinned to 2.10.3 (Law 15 v12.4 critical tier: workflow DB).
 - 2026-06-18: Add `inbox-janitor/` — server-only systemd timer (every 30 min) that drains
   loose files at the root of `~/000_inbox/downloads` per the declarative rule table
   `~/000_inbox/_inbox-routing.yaml`: datax stays resident, business/tech/personal drain to

@@ -17,13 +17,13 @@ in
     images = {
       core = lib.mkOption {
         type = lib.types.str;
-        default = "docker.io/fireflyiii/core:latest";
+        default = "docker.io/fireflyiii/core:v6.4.22";  # critical tier (Law 15 v12.4): financial data — pinned
         description = "Firefly III core container image";
       };
 
       pico = lib.mkOption {
         type = lib.types.str;
-        default = "cioraneanu/firefly-pico:latest";
+        default = "cioraneanu/firefly-pico:1.10.1";  # critical tier (Law 15 v12.4): financial data — pinned
         description = "Firefly-Pico mobile companion container image";
       };
     };

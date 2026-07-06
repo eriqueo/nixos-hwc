@@ -20,7 +20,7 @@ in
 
     image = mkOption {
       type = types.str;
-      default = "ghcr.io/advplyr/audiobookshelf:latest";
+      default = "ghcr.io/advplyr/audiobookshelf:2.32.1";  # critical tier (Law 15 v12.4): library state — pinned
       description = "Container image for Audiobookshelf";
     };
 

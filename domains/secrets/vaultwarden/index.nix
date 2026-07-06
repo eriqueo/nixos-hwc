@@ -26,7 +26,7 @@ in
 {
   options.hwc.secrets.vaultwarden = {
     enable = lib.mkEnableOption "Vaultwarden self-hosted password manager";
-    image = lib.mkOption { type = lib.types.str; default = "docker.io/vaultwarden/server:latest"; };
+    image = lib.mkOption { type = lib.types.str; default = "docker.io/vaultwarden/server:1.35.4";  # critical tier (Law 15 v12.4): password vault — pinned };
     port = lib.mkOption { type = lib.types.port; default = 8222; };
     reverseProxy.port = lib.mkOption { type = lib.types.port; default = 15443; };
     network.mode = lib.mkOption { type = lib.types.enum [ "media" "host" ]; default = "media"; };
