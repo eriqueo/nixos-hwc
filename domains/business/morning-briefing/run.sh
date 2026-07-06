@@ -124,7 +124,11 @@ EV_COUNT=$(echo "${CAL_JSON}" | jq '.events | length' 2>/dev/null || echo 0)
 #    Two generation-table misreadings during the audit are why this exists. --
 NIXOS_REPO="/home/eric/.nixos"
 HEAD_REV=$(git -C "${NIXOS_REPO}" rev-parse HEAD 2>/dev/null || echo "")
-DEPLOYED_REV=$(cat /run/current-system/configuration-revision 2>/dev/null || echo "")
+# nixos-version reads the rev baked in by flake glue (system.configurationRevision);
+# there is no /run/current-system/configuration-revision file on this release.
+NIXOS_VERSION_BIN="/run/current-system/sw/bin/nixos-version"; [ -x "${NIXOS_VERSION_BIN}" ] || NIXOS_VERSION_BIN="nixos-version"
+DEPLOYED_REV=$("${NIXOS_VERSION_BIN}" --configuration-revision 2>/dev/null | grep -v '^$' || echo "")
+[ "${DEPLOYED_REV}" = "null" ] && DEPLOYED_REV=""
 UNPUSHED=$(git -C "${NIXOS_REPO}" log --oneline "@{u}.." 2>/dev/null | wc -l | tr -d ' ')
 DIRTY=$(git -C "${NIXOS_REPO}" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
 BOOTED_KERNEL=$(readlink /run/booted-system/kernel 2>/dev/null || echo "?booted")
