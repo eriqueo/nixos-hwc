@@ -15,11 +15,9 @@ Gaming services including retro emulation (RetroArch) and WebDAV-based save sync
 domains/gaming/
 ├── index.nix           # Domain aggregator
 ├── retroarch/          # RetroArch emulator + Sunshine streaming
-│   ├── index.nix
-│   └── options.nix
+│   └── index.nix       # Options + implementation (options.nix folded in)
 └── webdav/             # dufs WebDAV server for save sync
-    ├── index.nix
-    └── options.nix
+    └── index.nix       # Options + implementation (options.nix folded in)
 ```
 
 ## Configuration
@@ -44,3 +42,4 @@ hwc.gaming.webdav = {
 
 - 2026-03-04: Namespace migration hwc.server.native.{retroarch,webdav} → hwc.gaming.*
 - 2026-03-04: Created gaming domain, moved retroarch and webdav from domains/server/native/
+- 2026-07-06: retroarch & webdav — `options.nix` folded back into each `index.nix` (options + implementation now co-located); the separate `options.nix` files were deleted. Also part of the `domains/server/` deletion sweep and the hwc.paths hardcoded-path refactor (retroarch romsDir/systemDir). Structure block corrected. No option or behaviour change.

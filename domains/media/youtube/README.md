@@ -1,12 +1,13 @@
-# domains/server/native/youtube/
+# domains/media/youtube/
 
 ## Purpose
 
-YouTube content acquisition APIs for transcript extraction and video downloads. Provides REST APIs with background workers for async job processing, PostgreSQL integration for deduplication, and rate limiting.
+YouTube transcript extraction API (job-based) with a background worker for async
+processing, PostgreSQL integration for deduplication, and rate limiting.
 
 ## Boundaries
 
-- **Manages**: YouTube transcript extraction (legacy API, new job-based API), video downloads via yt-dlp, output format configuration, rate limiting, API key management
+- **Manages**: YouTube transcript extraction (job-based API + worker), output format configuration, rate limiting, API key management
 - **Does NOT manage**: PostgreSQL database (-> `domains/server/databases`), monitoring metrics (-> `domains/server/native/monitoring`), reverse proxy routes (-> `domains/server/routes.nix`)
 
 ## Structure
@@ -14,45 +15,18 @@ YouTube content acquisition APIs for transcript extraction and video downloads. 
 ```
 domains/media/youtube/
 ├── README.md           # This file
-├── index.nix           # Domain aggregator
-├── options.nix         # hwc.media.youtube.* options
+├── index.nix           # Domain aggregator + hwc.media.youtube.* options
 └── parts/
-    ├── legacy-api.nix  # Original transcript API (FastAPI, direct output)
-    ├── yt-transcripts-api/
-    │   └── default.nix # New job-based transcript API with worker
-    └── yt-videos-api/
-        └── default.nix # Video download API with atomic finalization
-```
-
-### Workspace Support (`workspace/media/youtube-services/`)
-
-```
-workspace/media/youtube-services/
-├── packages/
-│   ├── yt_core/             # Shared library (SQLAlchemy, Pydantic models)
-│   ├── yt_transcripts_api/  # Transcript extraction API + worker
-│   └── yt_videos_api/       # Video download API + worker
-├── transcript-formatter/    # Obsidian transcript formatter (Ollama/Qwen)
-├── DEPLOYMENT.md
-└── pyproject.toml
+    └── yt-transcripts-api/
+        └── default.nix # Job-based transcript API with worker
 ```
 
 ## Configuration
 
-### Legacy Transcript API
+### Transcripts API (Job-based)
 
 ```nix
-hwc.server.native.youtube.legacyApi = {
-  enable = true;
-  port = 5000;  # Default: 5000
-  dataDir = "/path/to/transcripts";
-};
-```
-
-### New Transcripts API (Job-based)
-
-```nix
-hwc.server.native.youtube.transcripts = {
+hwc.media.youtube.transcripts = {
   enable = true;
   port = 8100;
   workers = 4;
@@ -66,39 +40,22 @@ hwc.server.native.youtube.transcripts = {
 };
 ```
 
-### Videos API
-
-```nix
-hwc.server.native.youtube.videos = {
-  enable = true;
-  port = 8101;
-  workers = 2;
-  outputDirectory = "/mnt/media/youtube";
-  containerPolicy = "webm";  # or "mp4", "mkv"
-  qualityPreference = "best";
-  embedMetadata = true;
-  embedCoverArt = true;
-};
-```
-
 ## Dependencies
 
-- PostgreSQL (`hwc.server.databases.postgresql`) - Required for job-based APIs
+- PostgreSQL (`hwc.server.databases.postgresql`) - Required for the job-based API
 - YouTube API key (optional) - Only needed for playlist/channel expansion
-- Secrets: `youtube-transcripts-db-url`, `youtube-videos-db-url`, `youtube-api-key` (optional)
+- Secrets: `youtube-transcripts-db-url`, `youtube-api-key` (optional)
 
 ## Services
 
 | Service | Port | Description |
 |---------|------|-------------|
-| `transcript-api` | 5000 | Legacy transcript extraction |
 | `yt-transcripts-api` | 8100 | Job-based transcript extraction |
 | `yt-transcripts-worker` | - | Background transcript processor |
-| `yt-videos-api` | 8101 | Video download job submission |
-| `yt-videos-worker` | - | Background video downloader |
 
 ## Changelog
 
+- 2026-07-06: Structure/Configuration/Services rewritten to match reality — the videos API (`parts/yt-videos-api/`) and the legacy transcript API (`parts/legacy-api.nix`) are both gone, leaving only `yt-transcripts-api`. Reflects: the 2026-04-12 "lots" commit that gutted `yt-videos-api/default.nix` and trimmed `index.nix`, the 2026-06-09 Law 3 path sweep (derive from `hwc.paths`), the 2026-06-02 server tailnet rename (`hwc` → `hwc-server` in `yt-transcripts-api/default.nix`), and the 2026-07-05 cleanup that removed `legacy-api.nix` entirely (never enabled, superseded by yt-transcripts-api v2, scriptDir pointed at a nonexistent path) along with its prometheus scrape block and server-config stanza.
 - 2026-03-26: Workspace source moved from workspace/youtube-services/ to workspace/media/youtube-services/ (domain alignment); all nix refs updated
 - 2026-03-04: Namespace migration hwc.server.native.youtube.* → hwc.media.youtube.*
 - 2026-02-27: Initial domain creation with legacy API, transcripts API, and videos API

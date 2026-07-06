@@ -51,4 +51,5 @@ hwc.data.cloudbeaver = {
 
 ## Changelog
 
+- 2026-07-06: Law 5 burn-down — added the §4 `HWC-EXCEPTION(Law 5)` annotation block to the raw `oci-containers` module; CloudBeaver is an infra-shaped container that doesn't fit the media-app `mkContainer` model. Comment only, no behavior change. (Law 5 now enforced via `checks.charter-law5`.)
 - 2026-03-25: Created README per Law 12

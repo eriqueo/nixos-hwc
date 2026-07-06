@@ -120,8 +120,24 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 ├── index.mjs    CLI, browser lifecycle, scroll loop, comment expansion
 ├── parse.mjs    FB GraphQL response parsers (ported from API Monitor)
 ├── store.mjs    SQLite persistence layer
+├── classify.py  HWC residential-remodel lead classifier
+├── shell.nix    Playwright/Chromium dev shell for NixOS laptop
 ├── data/
-│   ├── posts.db       ← created on first run
-│   └── session.json   ← created on login
+│   ├── posts.db         ← created on first run
+│   └── browser-profile/ ← persistent Chromium profile (created on login)
 └── package.json
 ```
+
+## Changelog
+
+- 2026-07-06: Login-detection & session hardening arc — switched to Playwright
+  `launchPersistentContext` with a `--profile` flag (replacing the JSON
+  `--session`/`session.json` model), detect login via the `c_user` cookie
+  rather than fragile DOM checks, plus a run of login-detection fixes. Added
+  `shell.nix` (Playwright/Chromium dev shell for the NixOS laptop) and
+  repurposed the classifier for **HWC lead scoring**: `classify.py` now emits the
+  residential-remodel schema (hot_lead/warm_lead/monitor/competitor with
+  project_signal, service_match, urgency, contractor_request, budget_signal,
+  sentiment), and a `fbClassifier.promptFile` Nix option (Nix-store-safe path)
+  drives `PROMPT_FILE` — the HWC Bozeman prompt itself stays local-only, not
+  tracked in git. Playwright pinned to 1.59.1.

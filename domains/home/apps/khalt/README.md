@@ -35,6 +35,12 @@ domains/home/apps/khalt/
 
 ## Changelog
 
+- **2026-07-06**: Wired into the new unified keymap factory (`domains/home/keymap`).
+  When `hwc.home.keymap.grammar` is present, the generated `[keybindings]` block
+  from `keymap/parts/to-khalt.nix` (list-app bare verbs: `a`=add, `e`=edit,
+  `d`=delete, Enter=open — shared with todui) is appended to `programs.khalt.configText`.
+  Guarded with `lib.optionalString` so khalt still evaluates when the keymap
+  module isn't imported.
 - **2026-06-15**: `[calendars]` now renders the Radicale-synced calendar
   (`calendars-radicale/`) when `hwc.mail.calendar.radicale.enable` is set, and
   drops the stale iCloud account calendars in that case (mirrors

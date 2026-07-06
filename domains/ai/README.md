@@ -35,6 +35,7 @@ Auto-detects and configures based on available hardware:
 
 ## Changelog
 
+- 2026-07-06: Law 12 child-README sweep — refreshed the `agent/`, `mcp/`, `personas/`, and `profiles/` module READMEs to match current code (options inlined into each `index.nix`, `mcp/heartwood/` removal, persona-daemon RAG fields, dropped per-eval "AI Profile" warning). No `ai/`-index code change; this entry records the sub-tree doc refresh.
 - 2026-07-05: Removed `tools/` and `cloud/` (audit 2.2). `cloud` was never enabled anywhere; `tools` (charter-search/ai-doc/ai-commit/ai-lint) was enabled on the laptop but had zero shell-history usage ever — dead by the "deployed + used" principle. Laptop enable block removed. Recover from git history if needed.
 
 - 2026-06-27: Retired the `ollama/` domain (container LLM stack: podman-ollama + pull/health/disk/model-health/idle/thermal timers). Broken since a Jul-2025 dangling `/var/lib/ollama → private/ollama` symlink and superseded by the native llama.cpp + persona-daemon stack (`domains/server/native/ai/`). Removed the import, the server `:11434` firewall hole, all `hwc.ai.ollama.*` refs (server/laptop/xps), and the laptop waybar-toggle `podman-ollama` sudo grant. The laptop waybar widget self-disables (`behavior.nix` reads the option via `attrByPath … false`). Local-LLM provider intent parked at `brain wiki/nixos/idea-refinery-local-llm-provider.md`.

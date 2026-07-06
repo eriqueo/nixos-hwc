@@ -21,6 +21,9 @@ core/
 ```
 
 ## Changelog
+- 2026-07-06: shell/parts/aliases.nix — repointed the `web-build` alias from
+  the in-repo `domains/business/website/site_files` to `/opt/business/website-site`
+  (swept in with the fleet-wide gotify decommission commit).
 - 2026-06-26: shell/parts/ssh.nix — set `enableDefaultConfig = false` on the
   stable (HM 25.11) branch to silence the `programs.ssh` default-values
   deprecation; the `matchBlocks."*"` block already replicates HM's defaults.

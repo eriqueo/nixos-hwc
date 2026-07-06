@@ -39,6 +39,7 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-07-06: Law 12 child-README sweep — refreshed the `native/ai/hermes/parts/bootstrap`, `native/ai/market-intelligence`, and `native/ai/persona-daemon` module READMEs to match current code (strip-types compat fix, `options.nix` inlining). No server-index code change.
 - 2026-07-05: Law 12 burn-down — restructured headings to the required contract (`## Purpose` / `## Boundaries` / `## Structure`); content unchanged, headings renamed/split from the old Scope-&-Boundary/Layout form.
 - 2026-07-03: Added `services/bloxels-cv/` — `hwc.server.services.bloxelsCv`, a
   systemd path watcher on `inbox-mobile/bloxels` (phone Syncthing share). Each

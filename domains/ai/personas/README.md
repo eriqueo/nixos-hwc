@@ -38,11 +38,13 @@ Rebuild and the persona becomes available. The list is derived from
 
 ```
 library/
+  _defaults.nix          # Per-persona schema defaults (useMemory/useKnowledge/knowledgeTopK)
   classifier.{nix,md}    # GPU label classification
   extractor.{nix,md}     # GPU JSON extraction
   coder.{nix,md}         # GPU code-first
   assistant.{nix,md}     # GPU general
   thinker.{nix,md}       # CPU multi-step reasoning
+default.nix              # Import wrapper
 index.nix                # Inline options + library load + hwc-llm wrapper
 README.md
 ```
@@ -59,6 +61,17 @@ README.md
 
 ## Changelog
 
+- 2026-07-06: Fixed an orphan option-set in `index.nix` that broke `nix flake check` —
+  the `hwc.server.ai.personaDaemon.personaManifestFile` set is now gated on the daemon
+  module being in scope (only hwc-server imports persona-daemon), so hwc-laptop/hwc-xps
+  eval cleanly.
+- 2026-05-29 (persona-daemon Phase 2–3): Personas extended for the new
+  `hwc.server.ai.personaDaemon` (Deno HTTP daemon on `127.0.0.1:11550`, delivering the
+  Roadmap Phase 2/3 goals). Added `library/_defaults.nix` with three new per-persona
+  fields — `useMemory`, `useKnowledge`, `knowledgeTopK`. assistant/coder/thinker set
+  `useMemory=true` and (after the RAG commit) `useKnowledge=true` (topK 6/6/10);
+  classifier/extractor stay stateless. `hwc-llm` gained `--conversation`,
+  `--new-conversation`, `--print-id`.
 - 2026-05-29: Initial module. 5 personas (classifier, extractor, coder,
   assistant, thinker). Stateless CLI wrapping `llama-gpu` (port 11500)
   and `llama-cpu` (port 11501).

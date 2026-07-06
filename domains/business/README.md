@@ -28,6 +28,7 @@ business/
 ```
 
 ## Changelog
+- 2026-07-06: Website eviction landed in-tree — `website/site_files` is now a symlink to the runtime clone at `/opt/business/website-site`; the CMS-mutated 11ty dist that used to live here is parked under `website/site_files.pre-eviction-leftovers/` (old built `dist/` incl. `.htaccess` redirect map + rendered pages) pending removal.
 - 2026-07-06: morning-briefing email sender switched eric@ → office@iheartwoodcraft.com (`-a proton-office`): self-sent mail gets Proton's sent+auto-archive treatment and never reaches the Inbox (found on the first live 06:00 run; SMTP had been 250-OK all along).
 - 2026-07-06: Website evicted (audit 2.3): site_files (183 MB, CMS-mutated 11ty working tree) → own repo eriqueo/hwc-website, runtime clone at /opt/business/website-site; siteDir/mcp/web-build refs repointed. History purge (filter-repo) same change-set.
 - 2026-07-06: morning-briefing: Step 5 email delivery added (briefing.json → plain-text render → msmtp proton-hwc → eric@iheartwoodcraft.com, best-effort); unit PATH gains msmtp/pass/gnupg. Audit 2.1: bash pipeline is now the SOLE briefing producer.

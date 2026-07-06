@@ -11,17 +11,17 @@ Model Context Protocol servers for AI tool integration.
 ```
 mcp/
 ├── default.nix    # Import wrapper
-├── index.nix      # MCP infrastructure (mkMcpService, proxy, filesystem server)
-└── heartwood/     # JT MCP Server — unified business system interface
-    ├── index.nix  # NixOS module (systemd service, options, validation)
-    └── README.md  # Heartwood-specific docs
+└── index.nix      # MCP infrastructure (mkMcpService, proxy, filesystem server)
 ```
 
 ## Notes
-- JT MCP source code is deployed to `/opt/business/jt-mcp` at runtime (not in workspace)
-- The old `workspace/projects/jt-mcp/` was removed during the 2026-03-26 workspace restructure
+- The `heartwood/` (JT MCP) subdomain was removed — the Heartwood MCP now lives in
+  `domains/business/mcp/`.
 
 ## Changelog
+- 2026-07-06: Removed the re-introduced `heartwood/` dead tree (index.nix + default.nix +
+  README) — Heartwood MCP had already moved to `domains/business/mcp/`. Structure block
+  corrected to drop the stale subdomain.
 - 2026-03-26: jt-mcp decoupled from parent hwc.ai.mcp.enable — now standalone; enabled directly in server config
 - 2026-03-25: Added heartwood/ subdomain — JT MCP Server (Phase 1: 63 JT tools)
 - 2026-02-28: Added README for Charter Law 12 compliance

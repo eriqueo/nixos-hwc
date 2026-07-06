@@ -19,6 +19,8 @@ domains/automation/n8n/
 └── parts/
     ├── estimator-integration/  # Estimator webhook integration
     │   └── README.md
+    ├── migrations/             # Postgres schema migration SQL (hwc/estimates/leads/notifications)
+    │   └── README.md
     └── workflows/              # n8n workflow JSON definitions
         └── README.md
 ```
@@ -32,7 +34,7 @@ domains/automation/n8n/
 ```nix
 hwc.automation.n8n = {
   enable = true;
-  image = "docker.io/n8nio/n8n:latest";
+  image = "docker.io/n8nio/n8n:2.10.3";  # critical tier (Law 15): pinned
   port = 5678;
   webhookUrl = "https://n8n.heartwoodcraft.me";
   dataDir = "/var/lib/hwc/n8n";
@@ -121,6 +123,11 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
+- 2026-07-06: Gotify stack decommissioned (audit 2.6) — the `GOTIFY_TOKEN_*` env
+  injection was dropped from the container (`index.nix` + `sys.nix`); hwc-notify
+  (Discord+SMTP) is now the sole alert path. Also pinned the n8n image to `2.10.3`
+  (Law 15 critical tier, behavior-neutral — was the running version). Structure block
+  gains the `parts/migrations/` SQL dir.
 - 2026-07-05: Removed `mcp-bridge/` module (audit 2.2: never enabled; superseded by n8n-mcp running as a stdio backend of the unified `hwc-sys-mcp` gateway). README's stale bridge architecture section replaced.
 
 - 2026-05-31: Add `hwcLeadsHmacFile` secret option + `NODE_FUNCTION_ALLOW_BUILTIN=crypto` container env so the thin-shell `work_calculator_lead` workflow can HMAC-sign POST /leads at the n8n boundary. Phase 2.6 Move A cutover — calculator-lead workflow shrunk from 23 nodes to 4 (Webhook → Build LeadInput → POST /leads → Respond). v2 fat workflow archived at `domains/business/leads/parts/workflows/work_calculator_lead-v2-fat-archive-2026-05-31.json` as rollback.

@@ -691,6 +691,7 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+- 2026-07-06: Charter Law 5 burn-down — added the §4 HWC-EXCEPTION annotation block to `index.nix` and `exporter/index.nix` (both are raw oci-containers modules that don't fit mkContainer's media-app model; mkInfraContainer is the sanctioned infra helper). Documentation/comment-only; no functional change. Part of annotating all 9 raw-container modules so the Law 5 lint graduates to an enforced `checks.charter-law5`.
 - 2026-04-12: Extract cleanup timer/service into parts/cleanup.nix with configurable retention options
 - 2026-04-14: Re-enable cobra_cam_1 4K recording — original GPU heat was from ollama, not Frigate. Record uses go2rtc passthrough (no GPU decode).
 - 2026-04-12: Reduce detection load — drop FPS (5→3 cobra, 3→2 reolink), lower reolink detect resolution (640×360→480×270). GPU temp 74°C→61°C.

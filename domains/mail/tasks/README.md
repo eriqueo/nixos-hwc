@@ -89,6 +89,16 @@ credential: the shared `radicale-htpasswd` agenix secret (password =
 stay CLI-visible. Deploy order + phone CalDAV setup: see the radicale README.
 
 ## Changelog
+- 2026-07-06: Documenting the 2026-06-15 tasks-pair Radicale fixes.
+  (1) `vdirsyncer-pair-radicale.nix` — the password fetch ran `sh -c "cut …"`,
+  but the systemd *user* service PATH is only coreutils (no `sh`), so the whole
+  vdirsyncer run exited 1 and BOTH khalt and todui sync died; switched to running
+  `cut` directly (later to a username-keyed awk lookup once the shared htpasswd
+  gained a `cal:` line, so the tasks pair extracts the `eric` line by username).
+  (2) `index.nix` — the accounts/tasks assertions were relaxed so the calendar
+  domain can run Radicale-only (no iCloud account). Note: the "Radicale backend"
+  section above still describes the old `cut -d: -f2-` credential fetch; the live
+  mechanism is now the username-keyed awk lookup.
 - 2026-06-11: Phase C plumbing — optional `radicale` sub-options + second
   vdirsyncer pair part (off by default; flip in machines/laptop/home.nix after
   the server deploy). todoman path glob parameterized (`tasks*/*` with radicale).
