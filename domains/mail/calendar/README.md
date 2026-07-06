@@ -51,6 +51,18 @@ domains/mail/calendar/
 
 ## Changelog
 
+- **2026-07-06**: Documenting the 2026-06-15 Radicale refinement chain (post the
+  initial cutover below). (1) `index.nix` now exposes only khalt's `khal`/`ikhal`
+  via a `khalt-khal-cli` symlink derivation instead of installing the whole khalt
+  package — avoids the buildEnv `bin/khalt` collision with the khalt HM module.
+  (2) The calendar Radicale pair was briefly pinned to the single `migrated`
+  collection to stop it grabbing the tasks VTODO collections, then given its own
+  Radicale principal (`hwc.mail.calendar.radicale.username` defaults to `cal`) so
+  owner_only rights keep calendar and tasks in separate collection home-sets and
+  each pair stays dynamic. Password fetch switched to a username-keyed awk lookup
+  (gawk added to the vdirsyncer service PATH) because the shared htpasswd now
+  carries a `cal:` line. **Not activated until the `cal:` line exists in the
+  htpasswd secret.**
 - **2026-06-15**: Calendar → Radicale. Added `hwc.mail.calendar.radicale.*`
   (enable/url/username/color); when on, `vdirsyncer.nix` suppresses the iCloud
   account pairs and emits `[pair calendar_radicale]` (VEVENT, "from a"/"from b",

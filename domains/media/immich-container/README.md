@@ -12,9 +12,10 @@ Immich photo management with NVIDIA CUDA GPU acceleration for ML operations (Sma
 ## Structure
 
 ```
-domains/server/containers/immich/
-├── index.nix           # Container definition with GPU config
-├── options.nix         # hwc.server.containers.immich.* options
+domains/media/immich-container/
+├── index.nix           # Domain aggregator + hwc.media.immich.* options
+├── parts/
+│   └── config.nix      # Container + ML service definition, volumes, GPU config
 └── sys.nix             # System-lane packages
 ```
 
@@ -79,6 +80,7 @@ journalctl -u immich-machine-learning | grep -i "onnx\|cuda"  # CUDA provider
 
 ## Changelog
 
+- 2026-07-06: Corrected the Structure block to match reality (options live in `index.nix`; the container/ML definition is `parts/config.nix`; there is no `options.nix`). Also documenting the 2026-03-29 mount change: `parts/config.nix` replaced the stale read-only `/mnt/media/pictures` mount with `${config.hwc.paths.photos}/external:/mnt/media/photos/external:ro` (new external library, 34K laptop-only photos) on both the server and ML containers.
 - 2026-03-27: Fixed Prometheus metrics port mappings — added host-side port publishing for apiPort (8091) and microservicesPort (8092) which were only set as container env vars but never exposed, causing false ServiceDown alerts
 - 2026-02-26: Created README per Law 12 (migrated from docs/infrastructure/)
 - 2025-11-21: Initial GPU optimization implementation
