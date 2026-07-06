@@ -73,6 +73,7 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-07-06: Law 12 child-README sweep — refreshed the `calendar/` and `tasks/` module READMEs to match current code (separate Radicale principals for calendar vs tasks, vdirsyncer repair). No mail-index code change.
 - 2026-07-06: mail-health criticals rewired to hwc-notify priority 1 (Discord ×2 + email fanout) alongside the existing Slack webhook; new `notify.url` option (server sets loopback :11600). Closes the paging gap left by the gotify decommission.
 - 2026-07-06: msmtp logfile → ~/.local/state/msmtp.log; the old ~/.config/msmtp/msmtp.log was itself an HM store file (read-only), so msmtp warned on every single send.
 - 2026-07-06: Gotify decommission — mail health critical alerts no longer push via hwc-gotify-send (`hwc.mail.health.gotify.tokenFile` removed); criticals now route to the n8n webhook → Slack path alongside warnings.

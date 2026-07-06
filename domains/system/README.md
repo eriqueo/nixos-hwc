@@ -38,6 +38,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-07-06: Law 12 child-README sweep — refreshed the `mcp/` module README to match current code (briefing.json reader rewrite, website-path retarget). No system-index code change beyond the mcp entries below.
 - 2026-07-06: mcp: website tmpfiles/ReadWritePaths repointed to /opt/business/website-site (website eviction).
 - 2026-07-06: mcp: hwc_morning_status rewritten as a pure reader of briefing.json (one producer per fact, Doctrine §0.8) — no longer computes health/mail/storage/calendar itself; flags >26h staleness.
 - 2026-07-05: Law 12 burn-down — restructured headings to the required contract (`## Purpose` / `## Boundaries` / `## Structure`); content unchanged, headings renamed/split from the old Scope-&-Boundary/Layout form.

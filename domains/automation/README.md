@@ -64,6 +64,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-07-06: Law 12 child-README sweep — refreshed the `mail-janitor/`, `n8n/` (plus `n8n/parts/estimator-integration` and `n8n/parts/migrations`), and `sr-gauntlet/` module READMEs to match current code. No automation-index code change.
 - 2026-07-06: Gotify decommission — removed the n8n `secrets.gotifyTokenFiles` option and its GOTIFY_TOKEN_* env injection from n8n sys.nix (runtime `sys:router:notify` workflow edit tracked in the decommission handoff).
 - 2026-07-06: n8n image pinned to 2.10.3 (Law 15 v12.4 critical tier: workflow DB).
 - 2026-06-18: Add `inbox-janitor/` — server-only systemd timer (every 30 min) that drains

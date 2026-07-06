@@ -45,6 +45,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-07-06: Law 12 child-README sweep — refreshed the `apps/` (plus `apps/hyprland`, `apps/khalt`, `apps/nvim`) and `core/` module READMEs to match current code (librewolf→firefox migration, unified keymap factory, which-key restyle). No home-index code change.
 - 2026-07-06: shell: web-build alias repointed to /opt/business/website-site (website eviction).
 - 2026-07-06: Browser migration: `apps/librewolf/` → `apps/firefox/` (librewolf unmaintained in nixpkgs, insecure-flagged). Same theme/launcher architecture; hardening prefs ported minus FPP +AllTargets; `firefox-hwc` replaces `librewolf-hwc` (hyprland keybind updated); insecure-package permit dropped from flake.nix.
 - 2026-07-03: apps/waybar — lid-close default flipped to **suspend**: removed

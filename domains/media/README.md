@@ -69,6 +69,7 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-07-06: Law 12 child-README sweep — refreshed the `frigate/`, `immich-container/`, and `youtube/` module READMEs to match current code (Law 5 exception annotation, external-library mount swap, legacy/videos-API removal). No media-index code change.
 - 2026-07-06: audiobookshelf image pinned to 2.32.1 (Law 15 v12.4 critical tier: library state).
 - 2026-07-05: Law 5 burn-down — added `HWC-EXCEPTION(Law 5)` annotation blocks (reason/justification/plan/revocable) to this domain's raw `oci-containers` module(s); infra-shaped containers are sanctioned exceptions to the mkContainer rule. Comments only, no behavior change.
 

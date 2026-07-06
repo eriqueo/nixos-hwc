@@ -126,6 +126,7 @@ into this module is pending.
 
 ## Changelog
 
+- **2026-07-06** — Law 12 child-README sweep — refreshed the `parts/bootstrap/` README (dropped parameter-property shorthand for `--experimental-strip-types` compat). No change to this module's own code.
 - **2026-06-09** — Caddy routes migrated to name-based vhosts under the shared
   `*.hwc.iheartwoodcraft.com` wildcard cert: app at `hermes.hwc.iheartwoodcraft.com`
   (was `:25443`) and the market-trials dashboard at
