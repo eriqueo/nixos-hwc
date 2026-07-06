@@ -1,0 +1,84 @@
+# Browser cache lifetimes
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/x-icon "access plus 1 year"
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType font/ttf "access plus 1 year"
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType text/javascript "access plus 1 month"
+  ExpiresDefault "access plus 7 days"
+</IfModule>
+
+RewriteEngine On
+
+# Page-level redirects
+RewriteRule ^bathroom/?$ /bathroom/remodeling/ [R=301,L]
+RewriteRule ^bathroom/renovation/?$ /bathroom/remodeling/ [R=301,L]
+RewriteRule ^basement/?$ /basement/remodeling/ [R=301,L]
+RewriteRule ^basement/renovation/?$ /basement/remodeling/ [R=301,L]
+
+# Blog posts moved under /blog/ prefix
+RewriteRule ^3d-design-previews-see-your-remodel-before-we-build-it/?$ /blog/3d-design-previews-see-your-remodel-before-we-build-it/ [R=301,L]
+RewriteRule ^are-bathroom-renovations-tax-deductible/?$ /blog/are-bathroom-renovations-tax-deductible/ [R=301,L]
+RewriteRule ^can-i-get-a-free-deck-design-from-lowes/?$ /blog/can-i-get-a-free-deck-design-from-lowes/ [R=301,L]
+RewriteRule ^common-bathroom-remodel-mistakes-in-bozeman-mt/?$ /blog/common-bathroom-remodel-mistakes-in-bozeman-mt/ [R=301,L]
+RewriteRule ^common-bathroom-renovation-mistakes-in-bozeman-mt/?$ /blog/common-bathroom-renovation-mistakes-in-bozeman-mt/ [R=301,L]
+RewriteRule ^do-i-need-permits-to-finish-a-basement-in-bozeman-mt/?$ /blog/do-i-need-permits-to-finish-a-basement-in-bozeman-mt/ [R=301,L]
+RewriteRule ^does-a-finished-basement-increase-home-insurance/?$ /blog/does-a-finished-basement-increase-home-insurance/ [R=301,L]
+RewriteRule ^does-home-depot-do-bathroom-remodels/?$ /blog/does-home-depot-do-bathroom-remodels/ [R=301,L]
+RewriteRule ^does-home-depot-renovate-basements/?$ /blog/does-home-depot-renovate-basements/ [R=301,L]
+RewriteRule ^how-expensive-is-it-to-redo-a-basement/?$ /blog/how-expensive-is-it-to-redo-a-basement/ [R=301,L]
+RewriteRule ^how-long-does-a-full-home-remodel-take/?$ /blog/how-long-does-a-full-home-remodel-take/ [R=301,L]
+RewriteRule ^how-much-does-a-10x20-deck-cost-in-bozeman-mt/?$ /blog/how-much-does-a-10x20-deck-cost-in-bozeman-mt/ [R=301,L]
+RewriteRule ^how-much-does-a-contractor-charge-to-finish-a-basement-in-bozeman-mt/?$ /blog/how-much-does-a-contractor-charge-to-finish-a-basement-in-bozeman-mt/ [R=301,L]
+RewriteRule ^how-to-choose-a-remodeling-contractor-in-bozeman/?$ /blog/how-to-choose-a-remodeling-contractor-in-bozeman/ [R=301,L]
+RewriteRule ^is-a-12x20-deck-big-enough-for-a-bozeman-home/?$ /blog/is-a-12x20-deck-big-enough-for-a-bozeman-home/ [R=301,L]
+RewriteRule ^is-a-deck-collapse-covered-by-homeowners-insurance/?$ /blog/is-a-deck-collapse-covered-by-homeowners-insurance/ [R=301,L]
+RewriteRule ^is-it-cheaper-to-build-or-buy-a-deck-in-bozeman-mt/?$ /blog/is-it-cheaper-to-build-or-buy-a-deck-in-bozeman-mt/ [R=301,L]
+RewriteRule ^is-it-worth-finishing-a-basement-in-bozeman-mt/?$ /blog/is-it-worth-finishing-a-basement-in-bozeman-mt/ [R=301,L]
+RewriteRule ^is-it-worth-renovating-a-basement/?$ /blog/is-it-worth-renovating-a-basement/ [R=301,L]
+RewriteRule ^is-remodeling-cheaper-than-building-a-new-home-in-bozeman-mt/?$ /blog/is-remodeling-cheaper-than-building-a-new-home-in-bozeman-mt/ [R=301,L]
+RewriteRule ^should-i-hire-a-contractor-to-finish-my-basement-in-bozeman-mt/?$ /blog/should-i-hire-a-contractor-to-finish-my-basement-in-bozeman-mt/ [R=301,L]
+RewriteRule ^what-accounts-for-90-of-deck-collapses/?$ /blog/what-accounts-for-90-of-deck-collapses/ [R=301,L]
+RewriteRule ^what-adds-the-most-value-to-a-bathroom/?$ /blog/what-adds-the-most-value-to-a-bathroom/ [R=301,L]
+RewriteRule ^what-are-common-basement-finishing-problems/?$ /blog/what-are-common-basement-finishing-problems/ [R=301,L]
+RewriteRule ^what-are-hidden-renovation-costs/?$ /blog/what-are-hidden-renovation-costs/ [R=301,L]
+RewriteRule ^what-are-the-4-types-of-decks-for-bozeman-homes/?$ /blog/what-are-the-4-types-of-decks-for-bozeman-homes/ [R=301,L]
+RewriteRule ^what-are-the-latest-remodeling-trends/?$ /blog/what-are-the-latest-remodeling-trends/ [R=301,L]
+RewriteRule ^what-are-the-trends-for-home-remodel-in-2025/?$ /blog/what-are-the-trends-for-home-remodel-in-2025/ [R=301,L]
+RewriteRule ^what-color-flooring-makes-a-bathroom-look-bigger/?$ /blog/what-color-flooring-makes-a-bathroom-look-bigger/ [R=301,L]
+RewriteRule ^what-comes-first-when-remodeling-a-house/?$ /blog/what-comes-first-when-remodeling-a-house/ [R=301,L]
+RewriteRule ^what-do-i-wish-i-knew-before-finishing-the-basement/?$ /blog/what-do-i-wish-i-knew-before-finishing-the-basement/ [R=301,L]
+RewriteRule ^what-does-a-bathroom-remodel-cost-in-bozeman/?$ /blog/what-does-a-bathroom-remodel-cost-in-bozeman/ [R=301,L]
+RewriteRule ^what-does-a-full-remodel-include/?$ /blog/what-does-a-full-remodel-include/ [R=301,L]
+RewriteRule ^what-does-it-cost-to-finish-a-basement-in-bozeman/?$ /blog/what-does-it-cost-to-finish-a-basement-in-bozeman/ [R=301,L]
+RewriteRule ^what-flooring-is-best-for-a-bathroom-in-bozeman-mt/?$ /blog/what-flooring-is-best-for-a-bathroom-in-bozeman-mt/ [R=301,L]
+RewriteRule ^what-flooring-is-urine-proof-best-options-for-bozeman-homes/?$ /blog/what-flooring-is-urine-proof-best-options-for-bozeman-homes/ [R=301,L]
+RewriteRule ^what-happens-during-remodeling-in-bozeman-mt/?$ /blog/what-happens-during-remodeling-in-bozeman-mt/ [R=301,L]
+RewriteRule ^what-is-a-reasonable-budget-for-a-bathroom-remodel-in-bozeman-mt/?$ /blog/what-is-a-reasonable-budget-for-a-bathroom-remodel-in-bozeman-mt/ [R=301,L]
+RewriteRule ^what-is-the-best-foundation-for-a-deck-in-bozeman-mt/?$ /blog/what-is-the-best-foundation-for-a-deck-in-bozeman-mt/ [R=301,L]
+RewriteRule ^what-is-the-best-time-to-renovate-a-bathroom-in-bozeman-mt/?$ /blog/what-is-the-best-time-to-renovate-a-bathroom-in-bozeman-mt/ [R=301,L]
+RewriteRule ^what-is-the-best-time-to-renovate-in-bozeman-mt/?$ /blog/what-is-the-best-time-to-renovate-in-bozeman-mt/ [R=301,L]
+RewriteRule ^what-is-the-biggest-deck-you-can-build-without-a-permit-in-bozeman-mt/?$ /blog/what-is-the-biggest-deck-you-can-build-without-a-permit-in-bozeman-mt/ [R=301,L]
+RewriteRule ^what-is-the-difference-between-renovation-and-remodeling/?$ /blog/what-is-the-difference-between-renovation-and-remodeling/ [R=301,L]
+RewriteRule ^what-is-universal-design-the-7-principles-explained-for-homeowners/?$ /blog/what-is-universal-design-the-7-principles-explained-for-homeowners/ [R=301,L]
+RewriteRule ^what-to-ask-a-contractor-before-a-remodel-in-bozeman-mt/?$ /blog/what-to-ask-a-contractor-before-a-remodel-in-bozeman-mt/ [R=301,L]
+RewriteRule ^what-to-expect-during-a-bathroom-remodel-in-bozeman/?$ /blog/what-to-expect-during-a-bathroom-remodel-in-bozeman/ [R=301,L]
+RewriteRule ^when-not-to-renovate-a-house-in-bozeman-mt/?$ /blog/when-not-to-renovate-a-house-in-bozeman-mt/ [R=301,L]
+RewriteRule ^when-should-you-not-finish-a-basement-in-bozeman-mt/?$ /blog/when-should-you-not-finish-a-basement-in-bozeman-mt/ [R=301,L]
+
+# Dropped WordPress posts — redirect to homepage
+RewriteRule ^what-salary-typically-affords-a-300000-house/?$ / [R=301,L]
+RewriteRule ^at-what-point-is-a-house-not-worth-fixing/?$ / [R=301,L]
+RewriteRule ^what-is-the-30-rule-in-remodeling/?$ / [R=301,L]
+RewriteRule ^what-is-the-smartest-way-to-pay-for-home-improvements-in-bozeman-mt/?$ / [R=301,L]
+RewriteRule ^what-should-you-not-skimp-on-when-building-a-house/?$ / [R=301,L]
+RewriteRule ^how-do-people-afford-to-finish-a-basement-in-bozeman-mt/?$ / [R=301,L]
+RewriteRule ^what-is-the-most-expensive-part-of-a-home-renovation-in-bozeman-mt/?$ / [R=301,L]
+RewriteRule ^what-is-the-most-popular-home-renovation/?$ / [R=301,L]
+RewriteRule ^top-remodeling-tips-for-bozeman-homeowners-from-bathrooms-to-basements/?$ / [R=301,L]

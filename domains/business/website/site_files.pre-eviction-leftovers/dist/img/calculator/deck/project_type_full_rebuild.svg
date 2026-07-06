@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80">
+
+  <line x1="10" y1="72" x2="90" y2="72" stroke="#8B8070" stroke-width="2"/>
+  <line x1="20" y1="58" x2="20" y2="72" stroke="#5C4A1E" stroke-width="3"/>  <line x1="55" y1="58" x2="55" y2="72" stroke="#5C4A1E" stroke-width="3"/>  <line x1="88" y1="58" x2="88" y2="72" stroke="#5C4A1E" stroke-width="3"/>
+  <rect x="12" y="50" width="78" height="9" fill="#C4956A" stroke="#8B6D3F" stroke-width="1.5"/>
+  <line x1="27" y1="50" x2="27" y2="59" stroke="#8B6D3F" stroke-width="0.8"/>  <line x1="42" y1="50" x2="42" y2="59" stroke="#8B6D3F" stroke-width="0.8"/>  <line x1="57" y1="50" x2="57" y2="59" stroke="#8B6D3F" stroke-width="0.8"/>  <line x1="72" y1="50" x2="72" y2="59" stroke="#8B6D3F" stroke-width="0.8"/>
+  <line x1="12" y1="50" x2="90" y2="59" stroke="#C0392B" stroke-width="2.5"/>  <line x1="90" y1="50" x2="12" y2="59" stroke="#C0392B" stroke-width="2.5"/>
+  <path d="M50,32 A14,14 0 1,1 36,32" fill="none" stroke="#8B6D3F" stroke-width="2.5"/>
+  <polygon points="32,28 32,36 40,32" fill="#8B6D3F"/>
+</svg>

@@ -1,0 +1,32 @@
+/* Calculator pages — full-page calculator experience */
+
+/* Remove page-level padding so the calculator controls its own spacing */
+.section:has(#calculator-root),
+.section:has(#deck-calculator-root) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+#calculator-root,
+#deck-calculator-root {
+  min-height: 70vh;
+}
+
+/* Remove the narrow constraint — let the React app handle its own max-width */
+.page-content:has(#calculator-root),
+.page-content:has(#deck-calculator-root) {
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Hide empty h1 and its underline */
+.page-content > h1:empty,
+.page-content > h1:first-child:empty {
+  display: none;
+}
+/* Also hide the copper underline that page-simple adds after h1 */
+.page-content > h1:empty + hr,
+.page-content > hr:first-of-type {
+  display: none;
+}

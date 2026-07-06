@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80">
+
+  <line x1="10" y1="68" x2="90" y2="68" stroke="#8B8070" stroke-width="2"/>
+  <line x1="20" y1="60" x2="20" y2="68" stroke="#5C4A1E" stroke-width="3"/>  <line x1="80" y1="60" x2="80" y2="68" stroke="#5C4A1E" stroke-width="3"/>
+  <rect x="12" y="52" width="76" height="9" fill="#C4956A" stroke="#8B6D3F" stroke-width="1.5"/>
+  <line x1="32" y1="52" x2="32" y2="61" stroke="#8B6D3F" stroke-width="0.8"/>  <line x1="52" y1="52" x2="52" y2="61" stroke="#8B6D3F" stroke-width="0.8"/>  <line x1="72" y1="52" x2="72" y2="61" stroke="#8B6D3F" stroke-width="0.8"/>
+  <line x1="12" y1="33" x2="12" y2="52" stroke="#5C4A1E" stroke-width="3"/>  <line x1="88" y1="33" x2="88" y2="52" stroke="#5C4A1E" stroke-width="3"/>
+  <line x1="12" y1="33" x2="88" y2="33" stroke="#5C4A1E" stroke-width="2"/>
+  <rect x="13" y="34" width="75" height="17" fill="#B8D4E8" fill-opacity="0.4" stroke="#6A9AB8" stroke-width="0.8"/>
+  <text x="50" y="76" fill="#5C4A1E" font-size="9" font-weight="600" text-anchor="middle" font-family="sans-serif">Glass panels</text>
+</svg>
