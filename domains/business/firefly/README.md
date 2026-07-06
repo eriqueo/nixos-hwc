@@ -31,8 +31,8 @@ hwc.business.firefly = {
   enable = true;
 
   images = {
-    core = "docker.io/fireflyiii/core:latest";
-    pico = "cioraneanu/firefly-pico:latest";
+    core = "docker.io/fireflyiii/core:version-6.4.22";  # pinned (Law 15 v12.4 critical tier)
+    pico = "cioraneanu/firefly-pico:1.10.1";            # pinned (Law 15 v12.4 critical tier)
   };
 
   settings = {
@@ -97,6 +97,7 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
+- 2026-07-06: Pinned both image defaults off `:latest` (Law 15 v12.4 critical tier — financial data): core `docker.io/fireflyiii/core:version-6.4.22` (upstream tag scheme is `version-6.4.22`, not `v6.4.22`) and pico `cioraneanu/firefly-pico:1.10.1`, set to the currently-running versions so the switch is behavior-neutral.
 - 2026-06-09: Access moved from dedicated tailnet ports (Firefly `:10443`, Pico `:11443`) to name-based vhosts `firefly.hwc.iheartwoodcraft.com` / `firefly-pico.hwc.iheartwoodcraft.com` under the shared `*.hwc.iheartwoodcraft.com` wildcard cert (no per-service listener / firewall hole). Both `appUrl`s updated to match — Firefly's `APP_URL` and Pico's app URL must equal the browser origin. See `domains/networking/README.md`.
 - 2026-03-25: Created README per Law 12
 - 2026-03-04: Namespace migration hwc.server.containers.firefly → hwc.business.firefly

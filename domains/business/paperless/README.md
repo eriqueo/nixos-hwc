@@ -104,5 +104,7 @@ hwc.business.paperless = {
 
 ## Changelog
 
+- 2026-07-06: Declare all container storage dirs via tmpfiles in `parts/config.nix` — paperless was crash-looping (1600+ restarts) after a reboot because the `/mnt/hot/documents/{export,staging}` bind-mount sources had vanished and were never declared. Also pinned critical-tier images (Law 15 v12.4) to their currently-running versions (behavior-neutral): n8n 2.10.3, vaultwarden 1.35.4, audiobookshelf 2.32.1, firefly v6.4.22, firefly-pico 1.10.1.
+- 2026-06-02: Tailnet rename sweep — `hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net` in `paperless_integration_spec.md` (mechanical).
 - 2026-03-25: Created README per Law 12
 - 2026-03-04: Namespace migration hwc.server.containers.paperless → hwc.business.paperless
