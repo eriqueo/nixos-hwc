@@ -47,7 +47,7 @@ let
     auth on
     tls on
     tls_trust_file /etc/ssl/certs/ca-bundle.crt
-    logfile ~/.config/msmtp/msmtp.log
+    logfile ~/.local/state/msmtp.log
 
     ${lib.concatStringsSep "\n\n" (map msmtpBlock vals)}
 
@@ -59,6 +59,8 @@ in
   packages = [ pkgs.msmtp ];
   files = {
     ".config/msmtp/config".text = configText;
-    ".config/msmtp/msmtp.log".text = "";
+    # NB: do NOT declare the logfile itself — HM files are read-only store
+    # symlinks, so msmtp could never write it ("cannot open: Permission
+    # denied" on every send, 2026-07-06). Log lives in ~/.local/state now.
   };
 }
