@@ -19,7 +19,7 @@
     ../../domains/networking/index.nix
     ../../domains/data/index.nix
     ../../domains/media/index.nix
-    ../../domains/notifications/index.nix # Notification delivery (gotify, webhooks, CLI)
+    ../../domains/notifications/index.nix # Notification delivery (webhooks, CLI)
     ../../domains/gaming/index.nix # Retroarch emulation + WebDAV save sync
     ../../domains/server/containers/_shared/directories.nix
     ../../domains/server/native/ai/lead-scout/index.nix # Lead Scout MCP + HTTP
@@ -317,19 +317,6 @@
 
   # MQTT broker (Frigate -> n8n bridge) comes from the business role.
 
-  # Gotify notification system CLI client for server alerts
-  # Per-app tokens: each service gets its own gotify application token
-  hwc.notifications.send.gotify = {
-    enable = true;
-    serverUrl = config.hwc.networking.hosts.url {
-      server = "main";
-      port = 2586;
-    }; # Self-hosted via Tailscale HTTPS
-    defaultTokenFile = config.hwc.secrets.api."gotify-token-alerts" or null;
-    defaultPriority = 7; # Higher priority for server alerts
-    hostTag = true; # Prepends "[host: hwc-server]" to messages
-  };
-
   # Notifications delivery infrastructure
   hwc.notifications = {
     enable = true;
@@ -614,25 +601,6 @@
 
   # CouchDB for Obsidian LiveSync comes from the server role.
 
-  # Gotify notification server (notifications domain)
-  # Self-hosted for privacy - lead data stays on our infrastructure
-  # enable/port/dataDir come from the server role; token auto-discovery
-  # (agenix "gotify-{universe}-{domain}" → tokens) is the module's default.
-  # This machine only adds the admin credential.
-  hwc.notifications.gotify.adminPasswordFile =
-    config.hwc.secrets.api."gotify-admin-password" or null;
-
-  # iGotify Notification Assistant (bridges Gotify → APNs for iOS push notifications)
-  hwc.notifications.gotify.igotify.enable = true;
-
-  # Alertmanager → gotify bridge (forwards Prometheus alerts to phone via gotify)
-  hwc.notifications.gotify.bridge = {
-    enable = true;
-    port = 9095;
-    gotifyUrl = "http://localhost:2587";
-    # tokenFile defaults to gotify.tokens."home:admin"
-  };
-
   # Frigate NVR (Config-First Pattern with GPU Acceleration)
   # Access: https://hwc-server.ocelot-wahoo.ts.net:5443 (via Caddy)
   # Charter v7.0 Section 19 compliant - TensorRT CUDA support
@@ -810,7 +778,6 @@
     healthCheck = {
       enable = lib.mkDefault true;
       checkInterval = 300; # every 5 minutes
-      failuresBeforeAlert = 2; # alert after 10 min down
       failuresBeforeRestart = 3; # auto-restart after 15 min down
     };
   };

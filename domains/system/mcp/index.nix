@@ -225,7 +225,7 @@ in
     #--------------------------------------------------------------------------
     systemd.tmpfiles.rules = [
       "d /run/hwc-sys-mcp 0750 eric users -"
-      "d ${paths.nixos}/domains/business/website/site_files/.trash 0750 eric users -"
+      "d /opt/business/website-site/.trash 0750 eric users -"
     ];
 
     #--------------------------------------------------------------------------
@@ -328,8 +328,8 @@ in
             "${paths.user.home}/.local/share/vdirsyncer"
             "${paths.user.home}/.local/share/khal"
             # Website content editing via hwc_website_* tools
-            "${paths.nixos}/domains/business/website/site_files/src"
-            "${paths.nixos}/domains/business/website/site_files/.trash"
+            "/opt/business/website-site/src"
+            "/opt/business/website-site/.trash"
             # CMS app editing via hwc_cms_* tools (scope: cms)
             cmsAppPath
             # Calculator app editing via hwc_cms_* tools (scope: calculator)

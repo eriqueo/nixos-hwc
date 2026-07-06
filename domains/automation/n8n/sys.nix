@@ -42,11 +42,6 @@ let
     ${lib.optionalString (cfg.secrets.hwcLeadsHmacFile != null) ''
       echo "HWC_LEADS_HMAC_SECRET=$(cat ${cfg.secrets.hwcLeadsHmacFile})" >> ${secretsEnvFile}
     ''}
-
-    ${lib.concatStringsSep "\n" (lib.mapAttrsToList (key: path:
-      let envName = "GOTIFY_TOKEN_" + lib.toUpper (builtins.replaceStrings ["-"] ["_"] key);
-      in ''echo "${envName}=$(cat ${path})" >> ${secretsEnvFile}''
-    ) cfg.secrets.gotifyTokenFiles)}
   '';
 
   # Check if any secrets are configured
@@ -55,8 +50,7 @@ let
             || cfg.secrets.slackWebhookUrlFile != null
             || cfg.secrets.discordWebhookUrlFile != null
             || cfg.secrets.anthropicApiKeyFile != null
-            || cfg.secrets.hwcLeadsHmacFile != null
-            || cfg.secrets.gotifyTokenFiles != {};
+            || cfg.secrets.hwcLeadsHmacFile != null;
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [

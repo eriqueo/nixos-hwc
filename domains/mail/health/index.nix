@@ -5,23 +5,17 @@
 #   GPG → pass → Bridge → mbsync → mail freshness
 #
 # Alert routing:
-#   - Critical (mail down 30+ min): hwc-gotify-send → phone push
-#   - Warning (single failure): n8n webhook → Slack
+#   - Critical (mail down 30+ min) + Warning (single failure): n8n webhook → Slack
 #   - Auto-remediation: stale GPG locks cleaned automatically
 #
 # Boundaries:
 #   - Owns: health check script, systemd timer, alert routing, state tracking
-#   - Depends on: mail domain (accounts, bridge, mbsync, notmuch paths), hwc-gotify-send
+#   - Depends on: mail domain (accounts, bridge, mbsync, notmuch paths)
 #   - Does NOT touch: mail data, configs, or services (read-only + GPG lock cleanup)
 { config, lib, pkgs, osConfig ? {}, ... }:
 let
   cfg = config.hwc.mail.health;
   mailCfg = config.hwc.mail;
-
-  # Safe agenix secret access
-  gotifyTokenDefault =
-    let hasSecret = (osConfig ? age) && (osConfig.age.secrets ? gotify-token-mail);
-    in if hasSecret then osConfig.age.secrets.gotify-token-mail.path else "";
 
   maildirRoot =
     let nmRoot = (mailCfg.notmuch or {}).maildirRoot or "";
@@ -37,7 +31,6 @@ let
     MAILDIR="${maildirRoot}"
     GNUPG_DIR="''${GNUPGHOME:-$HOME/.gnupg}"
     STATE_DIR="${stateDir}"
-    GOTIFY_TOKEN_FILE="${cfg.gotify.tokenFile}"
     WEBHOOK_URL="${cfg.webhook.url}"
     SYNC_MAX_AGE_MIN="${toString cfg.syncMaxAgeMin}"
     FRESHNESS_HOURS="${toString cfg.freshnessHours}"
@@ -84,14 +77,7 @@ let
 
     # ─── Alert senders ───────────────────────────────────────────
 
-    # Critical: phone push via hwc-gotify-send (already in PATH on server)
-    send_gotify() {
-      local title="$1" body="$2" priority="''${3:-10}"
-      hwc-gotify-send --token-file "$GOTIFY_TOKEN_FILE" --priority "$priority" \
-        "$title" "$body" 2>/dev/null || true
-    }
-
-    # Warning: n8n webhook → Slack channel
+    # n8n webhook → Slack channel
     send_webhook() {
       local severity="$1" body="$2"
       [[ -z "$WEBHOOK_URL" ]] && return 0
@@ -120,7 +106,6 @@ let
       fi
 
       if [[ "$level" == "critical" ]]; then
-        send_gotify "$title" "$body" 10
         send_webhook "critical" "$body"
       else
         # Warnings go to Slack only (don't wake you up)
@@ -341,14 +326,6 @@ in
   # ════════════════════════════════════════════════════════════════
   options.hwc.mail.health = {
     enable = lib.mkEnableOption "mail infrastructure health monitoring";
-
-    gotify = {
-      tokenFile = lib.mkOption {
-        type = lib.types.str;
-        default = gotifyTokenDefault;
-        description = "Path to gotify app token file for critical mail alerts (uses hwc-gotify-send)";
-      };
-    };
 
     webhook = {
       url = lib.mkOption {

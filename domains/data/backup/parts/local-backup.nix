@@ -280,17 +280,6 @@ EOF
         ${pkgs.libnotify}/bin/notify-send "Backup Complete" "Local backup completed successfully ($BACKUP_SIZE)" --urgency=normal
       ''}
 
-      # Send success notification (gotify)
-      ${lib.optionalString (config.hwc.notifications.send.gotify.enable or false && cfg.notifications.gotify.enable && cfg.notifications.gotify.onSuccess) ''
-        hwc-gotify-send ${lib.optionalString (cfg.notifications.gotify.tokenFile != null) "--token-file ${cfg.notifications.gotify.tokenFile}"} --priority 3 \
-          "[$HOSTNAME] Backup Success" \
-          "Local backup completed successfully.
-Type: $BACKUP_TYPE
-Size: $BACKUP_SIZE
-Total backups: $TOTAL_BACKUPS
-Log: $LOG_FILE" || log "Warning: Failed to send gotify notification"
-      ''}
-
       # Send success notification (Slack via alerts domain)
       ${lib.optionalString (config.hwc.monitoring.alerts.enable or false && config.hwc.monitoring.alerts.sources.backup.enable or false && config.hwc.monitoring.alerts.sources.backup.onSuccess or false) ''
         hwc-backup-notify success "local" "Type: $BACKUP_TYPE, Size: $BACKUP_SIZE, Total backups: $TOTAL_BACKUPS" \
@@ -305,19 +294,6 @@ Log: $LOG_FILE" || log "Warning: Failed to send gotify notification"
       # Send failure notification (desktop)
       ${lib.optionalString (cfg.notifications.enable && cfg.notifications.onFailure) ''
         ${pkgs.libnotify}/bin/notify-send "Backup Failed" "Local backup encountered errors. Check logs: $LOG_FILE" --urgency=critical
-      ''}
-
-      # Send failure notification (gotify)
-      ${lib.optionalString (config.hwc.notifications.send.gotify.enable or false && cfg.notifications.gotify.enable && cfg.notifications.gotify.onFailure) ''
-        hwc-gotify-send ${lib.optionalString (cfg.notifications.gotify.tokenFile != null) "--token-file ${cfg.notifications.gotify.tokenFile}"} --priority 10 \
-          "[$HOSTNAME] Backup FAILED" \
-          "Local backup encountered errors!
-Type: $BACKUP_TYPE
-Hostname: $HOSTNAME
-Destination: $BACKUP_DEST
-Log: $LOG_FILE
-
-Check the logs for details." || log_error "Warning: Failed to send gotify notification"
       ''}
 
       # Send failure notification (Slack via alerts domain)

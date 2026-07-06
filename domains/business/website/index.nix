@@ -41,7 +41,7 @@ in
 
     siteDir = lib.mkOption {
       type = lib.types.path;
-      default = "${paths.nixos}/domains/business/website/site_files";
+      default = "/opt/business/website-site";  # own repo (eriqueo/hwc-website) since 2026-07-06 — CMS-mutated working tree, evicted from nixos-hwc (audit 2.3)
       description = "Path to the 11ty site repo (content source)";
     };
 

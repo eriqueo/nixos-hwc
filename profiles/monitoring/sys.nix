@@ -48,8 +48,6 @@
 
   # Alertmanager — alert routing to:
   #   hwc-notify     : hexagonal dispatcher (Discord + SMTP + future channels)
-  #   gotify-bridge  : iOS push relay (kept independent so Bridge outages
-  #                    don't lose phone alerts)
   #
   # The n8n `home:admin:alert-manager` workflow was deactivated
   # 2026-05-31 after Phase 1.6 cutover. The workflow row is preserved in
@@ -61,11 +59,6 @@
       {
         name = "hwc-notify";
         url = "http://localhost:11600/webhook/alertmanager";
-        sendResolved = true;
-      }
-      {
-        name = "gotify-bridge";
-        url = "http://localhost:9095";
         sendResolved = true;
       }
     ];

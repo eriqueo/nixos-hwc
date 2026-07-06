@@ -73,6 +73,7 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-07-06: Gotify decommission — mail health critical alerts no longer push via hwc-gotify-send (`hwc.mail.health.gotify.tokenFile` removed); criticals now route to the n8n webhook → Slack path alongside warnings.
 - 2026-06-24: aerc now builds from the **forked `github:eriqueo/aerc`** flake input
   instead of `pkgs.aerc` — a **zero-change canary** (the fork's `flake.nix` is
   `pkgs.aerc.overrideAttrs { src = self; }` pinned to the `0.21.0` tag, so

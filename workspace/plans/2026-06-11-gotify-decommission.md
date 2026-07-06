@@ -1,7 +1,7 @@
 # Gotify Decommission
 
 **Date**: 2026-06-11
-**Status**: DECIDED by Eric ("I don't use gotify anymore") — not yet executed
+**Status**: EXECUTED 2026-07-06 (repo side; runtime archive + n8n workflow edit tracked in handoff)
 **Replacement**: hwc-notify has been the primary alert path since the
 2026-05-31 Phase 1.6 cutover (Discord + SMTP); gotify was kept as the iOS
 push relay. Eric no longer uses it.

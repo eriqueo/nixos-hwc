@@ -61,9 +61,11 @@ sudo nixos-rebuild switch --flake ~/.nixos#hwc-server
 1. No failed units: `systemctl --failed` (expect none; sd-switch may restart
    user units — that's the intended new behavior).
 2. Critical services active:
-   `systemctl is-active caddy postgresql couchdb gotify-bridge n8n jellyfin`
+   `systemctl is-active caddy postgresql couchdb n8n jellyfin`
    and containers: `podman ps --format '{{.Names}} {{.Status}}'` — expect
-   gotify, immich stack, frigate, the arr stack, etc. Up.
+   immich stack, frigate, the arr stack, etc. Up. (Gotify decommissioned
+   2026-07-06 — gotify/igotify/bridge units and containers should be GONE,
+   not failed.)
 3. Monitoring: `systemctl is-active prometheus grafana` (or their actual
    unit names — check `systemctl list-units | rg -i 'prometheus|grafana'`).
 4. Mail timers: `systemctl --user list-timers` as eric (expect mail health /
@@ -87,11 +89,9 @@ sudo nixos-rebuild switch --flake ~/.nixos#hwc-server
    env; cursor theme = Nordzy (`rg -i nordzy ~/.config/gtk-3.0/settings.ini`
    or `dconf read /org/gnome/desktop/interface/cursor-theme` equivalent —
    headless box, GTK file is the check).
-10. Gotify tokens still resolve (auto-discovery moved into the module —
-    behavior should be identical): `systemctl status gotify-bridge` healthy,
-    and a test notification if Eric wants:
-    `hwc-alert -u home -d admin -t test -m "server rebuild OK"` (if the CLI
-    is enabled).
+10. (Removed 2026-07-06: gotify decommissioned; alerting is hwc-notify
+    Discord+SMTP only. A test notification if Eric wants:
+    `hwc-notify send monitoring "[P3] test" "server rebuild OK" --priority 3`.)
 
 ## 4. Report
 

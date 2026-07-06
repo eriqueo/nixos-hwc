@@ -8,7 +8,7 @@
   ".." = "cd .."; "..." = "cd ../.."; "...." = "cd ../../..";
   "df" = "df -h"; "du" = "du -h"; "free" = "free -h";
   "aliases" = "cd ~/.nixos && nvim domains/home/core/shell/index.nix";
-  "web-build" = "cd ${nixosPath}/domains/business/website/site_files && npx @11ty/eleventy";
+  "web-build" = "cd /opt/business/website-site && npx @11ty/eleventy";
   "htop" = "btop"; "open" = "xdg-open";
   "web-deploy" = "curl -s -X POST -H 'x-api-key: '$(cat /run/agenix/cms-api-key) http://localhost:8095/api/deploy | jq .";
   "web-speed" = "${ws}/tools/web-speed.sh";

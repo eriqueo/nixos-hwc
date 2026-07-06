@@ -172,33 +172,6 @@ in
         default = true;
         description = "Show notification on backup failure";
       };
-
-      # gotify integration for cross-machine notifications
-      gotify = {
-        enable = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable gotify notifications (requires hwc.notifications.send.gotify.enable)";
-        };
-
-        tokenFile = lib.mkOption {
-          type = lib.types.nullOr lib.types.path;
-          default = null;
-          description = "Path to gotify app token file for backup notifications";
-        };
-
-        onSuccess = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = "Send gotify notification on successful backup";
-        };
-
-        onFailure = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Send gotify notification on backup failure";
-        };
-      };
     };
 
     #==========================================================================

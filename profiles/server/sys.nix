@@ -1,7 +1,7 @@
 # profiles/server/sys.nix — server role, NixOS lane
 #
 # Infra-serving bundle shared by all serving machines (containers, CouchDB,
-# gotify server, ZFS hygiene, passwordless service management, server
+# ZFS hygiene, passwordless service management, server
 # firewall posture). Anything one machine diverges on is overridden in its
 # machine file (role values use mkDefault where override is expected).
 #
@@ -53,13 +53,6 @@
   # Refinery — read-only Kanban board for the gauntlet hopper (port 8060,
   # behind Caddy as refinery.hwc.iheartwoodcraft.com).
   hwc.automation.refinery.enable = lib.mkDefault true;
-
-  # Gotify notification server — machine files add token/admin wiring
-  hwc.notifications.gotify = {
-    enable = lib.mkDefault true;
-    port = lib.mkDefault 2586;
-    dataDir = lib.mkDefault "/var/lib/hwc/gotify";
-  };
 
   # Passwordless service management for eric (waybar/agent tooling)
   hwc.system.core.session = {

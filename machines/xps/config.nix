@@ -88,15 +88,6 @@
 
   services.thermald.enable = true;
 
-  hwc.notifications.send.gotify = {
-    enable = false;
-    # Cross-host reference to the primary server — named explicitly via the
-    # registry, NOT derived from this box's hostname.
-    serverUrl = config.hwc.networking.hosts.url { server = "main"; port = 2586; };
-    defaultPriority = 7;
-    hostTag = true;
-  };
-
   # hwc.data.backup — configure when /mnt/backup is mounted
 
   # GPU — Intel integrated only; uncomment if NVIDIA MX150 is detected
@@ -140,7 +131,7 @@
   # Reverse proxy for local services
   hwc.networking.reverseProxy.enable = true;
 
-  # CouchDB for Obsidian LiveSync + gotify server come from the server role.
+  # CouchDB for Obsidian LiveSync comes from the server role.
 
   # exportarr disabled — no *arr services on this machine
   hwc.monitoring.exportarr.enable = lib.mkForce false;

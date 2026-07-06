@@ -12,12 +12,8 @@ Delivery infrastructure — how messages reach humans.
 ```
 notifications/
 ├── index.nix                    # Domain aggregator, webhook config, _internal exports
-├── gotify/
-│   ├── server.nix               # Gotify notification server container
-│   ├── bridge.nix               # Alertmanager → Gotify bridge
-│   └── igotify.nix              # iOS push notification relay (APNs)
+├── notify/                      # hwc-notify hexagonal dispatcher (Discord + SMTP)
 ├── send/
-│   ├── gotify.nix               # hwc-gotify-send CLI tool
 │   ├── slack-webhook.nix        # Webhook sender scripts (retry, fallback)
 │   └── cli.nix                  # hwc-alert CLI tool
 ├── health.nix                   # Webhook endpoint health check timer
@@ -26,7 +22,7 @@ notifications/
 
 ## Boundaries
 
-**Owns:** All outbound notification delivery — Gotify server, webhook sending, CLI tools, health checks.
+**Owns:** All outbound notification delivery — hwc-notify dispatcher, webhook sending, CLI tools, health checks.
 
 **Does NOT own:** Alert detection/thresholds (monitoring/alerts), workflow automation (automation/n8n).
 
@@ -36,13 +32,10 @@ notifications/
 |--------|-------------|
 | `hwc.notifications.enable` | Enable notification delivery |
 | `hwc.notifications.webhook.baseUrl` | n8n webhook base URL |
-| `hwc.notifications.gotify.enable` | Enable Gotify server container |
-| `hwc.notifications.gotify.bridge.enable` | Enable Alertmanager→Gotify bridge |
-| `hwc.notifications.gotify.igotify.enable` | Enable iOS push relay |
-| `hwc.notifications.send.gotify.enable` | Enable hwc-gotify-send CLI |
 | `hwc.notifications.send.cli.enable` | Enable hwc-alert CLI |
 
 ## Changelog
+- 2026-07-06: Gotify stack decommissioned per 2026-06-11 plan (server/igotify/bridge/send modules, secrets, alertmanager receiver, client configs). hwc-notify (Discord+SMTP) is the sole alert path.
 - 2026-07-05: Law 12 burn-down — restructured headings to the required contract (`## Purpose` / `## Boundaries` / `## Structure`); content unchanged, headings renamed/split from the old Scope-&-Boundary/Layout form.
 - 2026-07-05: Law 5 burn-down — added `HWC-EXCEPTION(Law 5)` annotation blocks (reason/justification/plan/revocable) to this domain's raw `oci-containers` module(s); infra-shaped containers are sanctioned exceptions to the mkContainer rule. Comments only, no behavior change.
 

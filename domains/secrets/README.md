@@ -49,6 +49,7 @@ domains/secrets/
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-07-06: Gotify decommission — removed all `gotify-*` secrets from parts/services/ (admin password, per-app taxonomy tokens, host/app tokens). Declarations were auto-generated from the parts/ walk, so no declaration edits needed.
 - 2026-07-06: vaultwarden image pinned to 1.35.4 (Law 15 v12.4 critical tier: password vault).
 - 2026-07-05: Law 12 burn-down — restructured headings to the required contract (`## Purpose` / `## Boundaries` / `## Structure`); content unchanged, headings renamed/split from the old Scope-&-Boundary/Layout form.
 - 2026-06-18: Added `datax-monitor-fb-email` + `datax-monitor-fb-key` — the Firebase service-account client email + private key (`\n`-escaped) for the `datax-monitor` dashboard (`domains/business/datax-monitor`). Standard `root:secrets / 0440`, recipients = everyone. Read at service start by the `read_secret` wrapper into `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` (the app un-escapes `\n`). `FIREBASE_PROJECT_ID` (`jt-supercharged-db`) is not secret — set as a literal unit env. OpenSearch enrichment **reuses** the existing `opensearch-{host,user,pw}` (same as dxlog) — no new OpenSearch secret. Encrypted directly to the `everyone` recipient set, so adding them did NOT trigger a full `agenix -r` rekey (two-file diff). Values replicate exactly what the working `~/projects/datax-monitor/.env` already uses (verified by a live 542-execution ingest).

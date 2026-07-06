@@ -30,7 +30,7 @@ in
     };
 
     healthCheck = {
-      enable = mkEnableOption "VPN + port forwarding health monitor with Gotify alerts";
+      enable = mkEnableOption "VPN + port forwarding health monitor with auto-restart";
 
       checkInterval = mkOption {
         type = types.int;
@@ -42,12 +42,6 @@ in
         type = types.int;
         default = 3;
         description = "Consecutive failures before auto-restarting gluetun";
-      };
-
-      failuresBeforeAlert = mkOption {
-        type = types.int;
-        default = 2;
-        description = "Consecutive failures before sending a Gotify alert";
       };
     };
   };

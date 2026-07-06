@@ -50,6 +50,7 @@ monitoring/
 ```
 
 ## Changelog
+- 2026-07-06: Gotify decommission — dropped the stale gotify references from uptime-kuma header comments; the alertmanager `gotify-bridge` receiver was removed in profiles/monitoring/sys.nix (hwc-notify is now the sole receiver).
 - 2026-07-05: Law 5 burn-down — added `HWC-EXCEPTION(Law 5)` annotation blocks (reason/justification/plan/revocable) to this domain's raw `oci-containers` module(s); infra-shaped containers are sanctioned exceptions to the mkContainer rule. Comments only, no behavior change.
 
 - 2026-07-05: Dropped the `transcript-api-health` blackbox scrape (guarded on `youtube.legacyApi.enable`, which was removed from domains/media — the option was never true, so the job never rendered).

@@ -128,16 +128,6 @@ in
         '';
       };
 
-      gotifyTokenFiles = lib.mkOption {
-        type = lib.types.attrsOf lib.types.path;
-        default = {};
-        description = ''
-          Map of Gotify app key → agenix secret path.
-          Keys use taxonomy format: "hwc-ops", "hwc-financial", "home-admin", etc.
-          Each becomes env var GOTIFY_TOKEN_{UPPER_KEY} in n8n.
-        '';
-        example = { "hwc-ops" = "/run/agenix/gotify-hwc-ops"; };
-      };
     };
 
     owner = {

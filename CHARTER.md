@@ -261,7 +261,7 @@ the flake machines table.
 | `media/` | jellyfin, *arr, frigate, immich, downloaders | HM configs |
 | `monitoring/` | prometheus, grafana, alertmanager, exporters | alert *delivery* (→ notifications) |
 | `networking/` | Caddy reverse proxy + ALL routes, VPN/gluetun, tailscale, podman networks | HM configs |
-| `notifications/` | hwc-notify dispatcher, gotify, channels/routing data | metric collection (→ monitoring) |
+| `notifications/` | hwc-notify dispatcher, channels/routing data | metric collection (→ monitoring) |
 | `server/` | server-native AI services (hermes, llama-cpp, lead-scout, …), container gateway pieces | HM configs |
 
 Boundary rule of thumb: **monitoring decides *when* to alert; notifications decides *how* it reaches you.**

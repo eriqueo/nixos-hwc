@@ -260,9 +260,9 @@ hwc-notify send monitoring "[P3] self-test" "ping from hwc-notify CLI."
 hwc-notify recent --limit 1
 ```
 
-Alertmanager integration is wired via `profiles/monitoring.nix` → `hwc.monitoring.alertmanager.webhookReceivers`. The `hwc-notify` receiver runs alongside `gotify-bridge`. Adding/removing receivers there reconfigures Alertmanager on the next rebuild.
+Alertmanager integration is wired via `profiles/monitoring.nix` → `hwc.monitoring.alertmanager.webhookReceivers`. Since the 2026-07-06 gotify decommission, `hwc-notify` is the sole receiver. Adding/removing receivers there reconfigures Alertmanager on the next rebuild.
 
-If `hwc-notify` is down, Alertmanager will retry (its own backoff) but won't affect the parallel `gotify-bridge` sink. iOS push continues independently.
+If `hwc-notify` is down, Alertmanager will retry (its own backoff) until it recovers; there is no parallel push sink anymore.
 
 ## Charter compliance
 

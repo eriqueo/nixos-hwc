@@ -32,7 +32,7 @@ in
 {
   # OPTIONS
   options.hwc.notifications = {
-    enable = lib.mkEnableOption "Notification delivery infrastructure (webhooks, gotify, CLI)";
+    enable = lib.mkEnableOption "Notification delivery infrastructure (webhooks, CLI)";
 
     #==========================================================================
     # WEBHOOK CONFIGURATION
@@ -139,10 +139,6 @@ in
   };
 
   imports = [
-    ./gotify/server/index.nix        # gotify notification server
-    ./gotify/bridge/index.nix        # Alertmanager → gotify bridge
-    ./gotify/igotify/index.nix       # iOS push notification relay
-    ./send/gotify/index.nix          # hwc-gotify-send CLI tool
     ./health.nix                     # webhook health check timer
     ./notify/index.nix               # hwc-notify (Phase 0 scaffold, Phase 1 impl)
   ];

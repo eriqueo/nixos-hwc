@@ -1,12 +1,11 @@
 # domains/monitoring/uptime-kuma/index.nix
 #
-# Uptime Kuma - Self-hosted uptime monitoring with gotify notifications
+# Uptime Kuma - Self-hosted uptime monitoring
 #
 # NAMESPACE: hwc.monitoring.uptime-kuma.*
 #
 # DEPENDENCIES:
 #   - hwc.networking.shared.routes (for Caddy reverse proxy)
-#   - gotify (for push notifications, configured manually post-deploy)
 #
 # PORTS:
 #   - Internal: 3010 (container HTTP)
