@@ -403,8 +403,11 @@ if [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
     ALERT_COUNT=$(jq -r '(.alerts // []) | length' "${OUTPUT_DIR}/briefing.json" 2>/dev/null || echo "?")
     SUBJECT="Morning Briefing $(date +%Y-%m-%d)"
     [ "${ALERT_COUNT}" != "0" ] && SUBJECT="${SUBJECT} — ${ALERT_COUNT} alert(s)"
-    if printf 'Subject: %s\nFrom: eric@iheartwoodcraft.com\nTo: eric@iheartwoodcraft.com\n\n%s\n' \
-        "${SUBJECT}" "${EMAIL_BODY}" | "${MSMTP_BIN}" eric@iheartwoodcraft.com 2>>"${LOG_FILE}"; then
+    # From office@, NOT eric@: self-sent mail (eric→eric) gets Proton's
+    # sent+auto-archive treatment and never shows in the Inbox (found 2026-07-06,
+    # first live run). office@ is an alias on the same bridge; lands in Inbox.
+    if printf 'Subject: %s\nFrom: office@iheartwoodcraft.com\nTo: eric@iheartwoodcraft.com\n\n%s\n' \
+        "${SUBJECT}" "${EMAIL_BODY}" | "${MSMTP_BIN}" -a proton-office eric@iheartwoodcraft.com 2>>"${LOG_FILE}"; then
       log "OK: Briefing emailed"
     else
       log "WARN: msmtp send failed (briefing still on dashboard/workbench)"
