@@ -1,5 +1,43 @@
 # Phased Remediation Plan — Handoff to Local Agent
 
+## ⬅ START HERE after the reboot (written 2026-07-05 for cold pickup)
+
+All autonomous work is DONE and deployed (Phases 0–3, every unmarked item).
+What remains is Eric's decision queue + post-reboot verification. In order:
+
+**A. Post-reboot verification (5 min, either do it or tell a fresh Claude
+session: "read workspace/plans/2026-07-05-phase-plan-handoff.md and run the
+post-reboot verification"):**
+1. Both machines: `systemctl --failed` → expect **0** (the laptop's
+   `nvidia-container-toolkit-cdi-generator` failure should be GONE — it was the
+   NVML kernel/userspace mismatch).
+2. Laptop: `coredumpctl list --since "-1h" | grep -c system76` → expect **0**
+   (the scheduler crash-loop was root-caused to the same mismatch; if it still
+   crashes after reboot, THEN disable it in `machines/laptop/config.nix:89`
+   and report upstream — see item 2.7).
+3. Server: `sudo podman ps -q | wc -l` → expect 39; `curl -s localhost:6200/health`.
+4. Tomorrow ≥06:00: check the morning briefing — the `config_drift` section
+   should show `reboot_pending: false` and the reboot warning gone.
+
+**B. Two 10-second manual items the agent was permission-blocked from:**
+- Run `./.claude/setup-autopush.sh` in `~/.nixos` on BOTH machines (3.2).
+  (It overwrites the laptop's perms-fix post-commit hook — merge if you care.)
+- Pause/delete the **Organizr** monitor (id 34) in uptime-kuma's web UI (0v.6).
+
+**C. Decision queue (each is one decision; the items below have the detail):**
+1.4 Law 12 rescope · 1.5 image pinning vs float · LibreWolf stay-or-migrate
+(permit is in place, no urgency) · 2.1 morning-briefing single producer ·
+2.2 dead modules · 2.3 website eviction · 2.4 workspace/projects eviction ·
+2.5 dedupe.sh · 2.6 gotify decommission · 2.8 fleet retirement (+1.7 rides
+on it) · 3.4 charter principles adoption.
+
+To resume with an agent: open a session in `~/.nixos` and say
+*"Read workspace/plans/2026-07-05-phase-plan-handoff.md. Do section A, then
+walk me through section C one decision at a time."* Everything an agent needs
+is in this file + the audit file next to it; no chat context required.
+
+---
+
 **Companion to**: `workspace/plans/2026-07-05-systems-process-audit.md` (read it first — it has the evidence for every item here).
 **Branch**: `claude/systems-processes-audit-o06wuy` (Phase 0 is implemented there, **unverified by nix** — the sandbox that wrote it had no `nix` binary).
 **Executor**: an agent running ON the machines (hwc-server / hwc-laptop) with the ability to build, switch, observe, and roll back.
