@@ -328,6 +328,7 @@
     # domains/notifications/notify and the architecture note in
     # wiki/nixos/hwc-notify-architecture.md.
     notify.enable = true;
+    canary.enable = true;  # daily deadman probe over Discord + SMTP
   };
 
   # README freshness — weekly Law-12 drift report (Mon 09:00) → #nightly-builds

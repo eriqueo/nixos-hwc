@@ -74,7 +74,6 @@
     secrets = {
       estimatorApiKeyFile = config.age.secrets.estimator-api-key.path;
       jobtreadGrantKeyFile = config.age.secrets.jobtread-grant-key.path;
-      slackWebhookUrlFile = config.age.secrets.slack-webhook-url.path;
       discordWebhookUrlFile = config.age.secrets.discord-webhook-url.path;
       anthropicApiKeyFile = config.age.secrets.nanoclaw-anthropic-key.path;
       hwcLeadsHmacFile = config.age.secrets.hwc-leads-hmac-secret.path;

@@ -49,6 +49,7 @@ domains/secrets/
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-07-07: Notification unification — removed `parts/services/slack-webhook-url.age` (the `$env.SLACK_WEBHOOK_URL` n8n injection is gone; no active workflow used it). Dropped its `mountOverrides` entry in `declarations/generated.nix`. The `nanoclaw-slack-*` + `slack-signing-secret` secrets are untouched (nanoclaw bot / Slack app, not the notification path).
 - 2026-07-06: Gotify decommission — removed all `gotify-*` secrets from parts/services/ (admin password, per-app taxonomy tokens, host/app tokens). Declarations were auto-generated from the parts/ walk, so no declaration edits needed.
 - 2026-07-06: vaultwarden image pinned to 1.35.4 (Law 15 v12.4 critical tier: password vault).
 - 2026-07-05: Law 12 burn-down — restructured headings to the required contract (`## Purpose` / `## Boundaries` / `## Structure`); content unchanged, headings renamed/split from the old Scope-&-Boundary/Layout form.

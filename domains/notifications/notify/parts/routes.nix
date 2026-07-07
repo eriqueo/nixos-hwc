@@ -80,4 +80,14 @@
     match    = { topic = "jt-estimate"; };
     channels = [ "discord-hwc-alerts" ];
   }
+
+  {
+    # Delivery canary — exercises BOTH a Discord adapter and the SMTP
+    # adapter every run so a silently-dead channel is caught actively,
+    # not discovered when a real critical fails to arrive. See
+    # domains/notifications/canary.nix.
+    name     = "delivery-canary";
+    match    = { topic = "canary"; };
+    channels = [ "discord-hwc-alerts" "smtp-office" ];
+  }
 ]

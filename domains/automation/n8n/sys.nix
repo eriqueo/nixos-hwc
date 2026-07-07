@@ -27,10 +27,6 @@ let
       echo "JOBTREAD_GRANT_KEY=$(cat ${cfg.secrets.jobtreadGrantKeyFile})" >> ${secretsEnvFile}
     ''}
 
-    ${lib.optionalString (cfg.secrets.slackWebhookUrlFile != null) ''
-      echo "SLACK_WEBHOOK_URL=$(cat ${cfg.secrets.slackWebhookUrlFile})" >> ${secretsEnvFile}
-    ''}
-
     ${lib.optionalString (cfg.secrets.discordWebhookUrlFile != null) ''
       echo "DISCORD_WEBHOOK_URL=$(cat ${cfg.secrets.discordWebhookUrlFile})" >> ${secretsEnvFile}
     ''}
@@ -47,7 +43,6 @@ let
   # Check if any secrets are configured
   hasSecrets = cfg.secrets.estimatorApiKeyFile != null
             || cfg.secrets.jobtreadGrantKeyFile != null
-            || cfg.secrets.slackWebhookUrlFile != null
             || cfg.secrets.discordWebhookUrlFile != null
             || cfg.secrets.anthropicApiKeyFile != null
             || cfg.secrets.hwcLeadsHmacFile != null;

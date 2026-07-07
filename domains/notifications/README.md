@@ -11,12 +11,12 @@ Delivery infrastructure — how messages reach humans.
 
 ```
 notifications/
-├── index.nix                    # Domain aggregator, webhook config, _internal exports
+├── index.nix                    # Domain aggregator, send.cli options, _internal exports
+├── canary.nix                   # delivery deadman probe (Discord + SMTP, daily timer)
 ├── notify/                      # hwc-notify hexagonal dispatcher (Discord + SMTP)
 ├── send/
-│   ├── slack-webhook.nix        # Webhook sender scripts (retry, fallback)
-│   └── cli.nix                  # hwc-alert CLI tool
-├── health.nix                   # Webhook endpoint health check timer
+│   ├── notify-scripts.nix       # smartd/service/backup notifiers → hwc-alert wrappers
+│   └── cli.nix                  # hwc-alert CLI → :11600/notify
 └── README.md
 ```
 
@@ -31,10 +31,12 @@ notifications/
 | Option | Description |
 |--------|-------------|
 | `hwc.notifications.enable` | Enable notification delivery |
-| `hwc.notifications.webhook.baseUrl` | n8n webhook base URL |
 | `hwc.notifications.send.cli.enable` | Enable hwc-alert CLI |
+| `hwc.notifications.canary.enable` | Enable the delivery deadman probe |
+| `hwc.notifications.canary.interval` | Canary cadence (OnCalendar, default `daily`) |
 
 ## Changelog
+- 2026-07-07: Notification unification (Slack eradication). `send/cli.nix` `hwc-alert` now POSTs the native NotificationInput shape to `:11600/notify` (severity→priority, endpoint→source) instead of the n8n Slack webhook; `send/slack-webhook.nix` deleted. `send/notify-scripts.nix` replaces it — smartd/service-failure/backup notifiers are thin `hwc-alert` wrappers (same script names, so `monitoring/alerts` + `data/backup` callers are untouched). Deleted `health.nix` (n8n-webhook health timer — obsolete; hwc-notify has its own watchdog) and the `webhook.*` options + the n8n-required/baseUrl assertions. New `canary.nix`: a daily deadman probe that POSTs a synthetic notify routed to both Discord and SMTP and fails loud (non-zero unit + sentinel + wall) if any adapter doesn't deliver — closes the silent-drop gap the premortem flagged. Log dir → `2775 root:users` so interactive `hwc-alert` can write.
 - 2026-07-06: hwc-notify robustness: Restart=always + StartLimitIntervalSec=0 (no failed-state lockout), liveness watchdog timer (5-min /health probe, double-check then restart — catches hangs Restart= can't see), --max-time on every CLI curl so callers can't hang.
 - 2026-07-06: Gotify stack decommissioned per 2026-06-11 plan (server/igotify/bridge/send modules, secrets, alertmanager receiver, client configs). hwc-notify (Discord+SMTP) is the sole alert path.
 - 2026-07-05: Law 12 burn-down — restructured headings to the required contract (`## Purpose` / `## Boundaries` / `## Structure`); content unchanged, headings renamed/split from the old Scope-&-Boundary/Layout form.
