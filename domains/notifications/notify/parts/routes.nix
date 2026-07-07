@@ -34,7 +34,7 @@
     # plus email so the alert survives Discord outages and ends up in the
     # mail archive for postmortems.
     match    = { priority = 1; };
-    channels = [ "discord-hwc-alerts" "discord-hwc-leads" "smtp-eric" ];
+    channels = [ "discord-hwc-alerts" "discord-hwc-leads" "smtp-office" ];
   }
 
   {
@@ -47,5 +47,37 @@
     name     = "nightly-builds-to-builds-channel";
     match    = { topic = "nightly-builds"; };
     channels = [ "discord-nightly-builds" ];
+  }
+
+  # ── Explicit routes for the n8n workflows migrated off Slack ───────────
+  # (jellyfin, voice-log, weekly/bozeman events, jt estimate). Each has a
+  # named topic so it routes deliberately instead of falling through to
+  # defaultChannels. All land on #hwc-alerts today — the only general
+  # Discord channel — but the named topic makes re-homing a one-line edit
+  # once per-domain channels exist. A priority=1 on any of these still hits
+  # p1-fanout first (declared above), so criticals fan out to email too.
+
+  {
+    name     = "media-to-alerts";           # home:media:jellyfin-alert
+    match    = { topic = "media"; };
+    channels = [ "discord-hwc-alerts" ];
+  }
+
+  {
+    name     = "voice-log-to-alerts";        # hwc:ops:voice-log
+    match    = { topic = "voice-log"; };
+    channels = [ "discord-hwc-alerts" ];
+  }
+
+  {
+    name     = "events-to-alerts";           # home:social weekly + bozeman aggregator
+    match    = { topic = "events"; };
+    channels = [ "discord-hwc-alerts" ];
+  }
+
+  {
+    name     = "jt-estimate-to-alerts";      # hwc:ops:jt:estimate-push
+    match    = { topic = "jt-estimate"; };
+    channels = [ "discord-hwc-alerts" ];
   }
 ]

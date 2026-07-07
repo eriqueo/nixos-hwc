@@ -50,25 +50,32 @@
   }
 
   # SMTP via Proton Bridge on loopback. Bridge listens on 127.0.0.1:1025
-  # without TLS for local clients (per the existing msmtp config); auth
-  # is PLAIN with the proton-bridge-password agenix secret.
+  # for local clients; auth is PLAIN with the proton-bridge-password
+  # agenix secret (Proton Bridge shares one password across every address
+  # on the account, so the same secret authenticates office@ and eric@).
+  #
+  # from = office@, to = eric@: sending FROM a different address than the
+  # recipient stops Proton from applying its sent-mail auto-archive to the
+  # message, so criticals land in Eric's Inbox instead of Archive. Derived
+  # from the working `proton-office` msmtp account (domains/mail/accounts).
   {
-    id        = "smtp-eric";
-    name      = "email → eric@iheartwoodcraft.com (SMTP / Proton Bridge)";
+    id        = "smtp-office";
+    name      = "email office@ → eric@iheartwoodcraft.com (SMTP / Proton Bridge)";
     adapter   = "smtp";
     secretRef = "proton-bridge-password";
     params = {
       host       = "127.0.0.1";
       port       = 1025;
-      # Bridge requires STARTTLS even on loopback per the rendered
-      # ~/.config/msmtp/config (`tls on; tls_starttls on; tls_certcheck off`).
-      # The cert is self-signed; our adapter sets `rejectUnauthorized: false`
-      # which is the nodemailer equivalent of msmtp's tls_certcheck off.
-      requireTls = true;
-      # Bridge auths against the *send address*, not the Proton account
-      # name. Confirmed against the working msmtp account `proton-hwc`.
-      login      = "eric@iheartwoodcraft.com";
-      from       = "eric@iheartwoodcraft.com";
+      # No STARTTLS on loopback — matches the ONLY proven-working Proton
+      # Bridge SMTP config on this host, the `proton-office` msmtp account
+      # (`tls off; tls_starttls off`). The prior requireTls=true was never
+      # exercised (0 priority=1 dispatches in the audit history), so there
+      # was no working baseline to preserve.
+      requireTls = false;
+      # Bridge auths against the *send address*. Confirmed against the
+      # working msmtp account `proton-office` (user office@iheartwoodcraft.com).
+      login      = "office@iheartwoodcraft.com";
+      from       = "office@iheartwoodcraft.com";
       to         = "eric@iheartwoodcraft.com";
       timeoutMs  = 10000;
     };
