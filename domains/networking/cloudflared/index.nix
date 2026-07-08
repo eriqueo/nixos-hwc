@@ -59,10 +59,19 @@ in
     };
 
     extraIngress = lib.mkOption {
-      type = lib.types.attrsOf lib.types.str;
+      type = lib.types.attrsOf (lib.types.either lib.types.str (lib.types.attrsOf lib.types.str));
       default = {};
-      description = "Additional hostname → service ingress rules";
-      example = { "status.heartwoodcraft.me" = "http://localhost:3000"; };
+      description = ''
+        Additional hostname → service ingress rules. A plain string routes
+        the whole hostname; an attrset ({ service; path; }) routes only
+        request paths matching the regex — unmatched paths fall through to
+        the tunnel default (404). Path form passes through to the nixpkgs
+        services.cloudflared ingress submodule.
+      '';
+      example = {
+        "status.heartwoodcraft.me" = "http://localhost:3000";
+        "api.iheartwoodcraft.com" = { service = "http://localhost:5678"; path = "^/webhook/"; };
+      };
     };
   };
 

@@ -57,7 +57,7 @@ in
     # of truth for "where do leads go" — change here, rebuild + redeploy.
     leadsWebhookUrl = lib.mkOption {
       type = lib.types.str;
-      default = "https://n8n.heartwoodcraft.me/webhook/calculator-lead";
+      default = "https://api.iheartwoodcraft.com/webhook/calculator-lead";
       description = ''
         URL the calculator app POSTs lead submissions to. MUST be publicly
         reachable — site visitors' browsers call it directly. The previous
@@ -71,7 +71,7 @@ in
     };
     leadsAppointmentWebhookUrl = lib.mkOption {
       type = lib.types.str;
-      default = "https://n8n.heartwoodcraft.me/webhook/calculator-appointment";
+      default = "https://api.iheartwoodcraft.com/webhook/calculator-appointment";
       description = ''
         URL the calculator's "schedule a call" flow POSTs to. Same public
         reachability requirement as leadsWebhookUrl. Handled by the

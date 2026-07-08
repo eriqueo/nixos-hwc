@@ -714,14 +714,14 @@
     credentialsFile = config.age.secrets.cloudflared-tunnel-credentials.path;
     # n8n.heartwoodcraft.me handled by `domain` option default → localhost:n8nPort.
     #
-    # Phase 4.6 migration in progress (2026-06-01): the *.api.iheartwoodcraft.com
-    # hostnames are added in parallel so a flip to the production domain is
-    # one option-default change away. They will receive traffic the moment
-    # the operator (a) delegates `api.iheartwoodcraft.com` from Hostinger
-    # (where the apex zone lives) to Cloudflare via NS records and (b)
-    # creates the per-host CNAMEs against the existing tunnel. Until DNS
-    # is provisioned, these mappings are inert — the tunnel accepts
-    # connections only for hostnames the public DNS actually points at it.
+    # Phase 4.6 outcome (2026-07-07): the planned *.api.iheartwoodcraft.com
+    # subzone is impossible on the free plan (Cloudflare subdomain zones are
+    # Enterprise-only) and proxied two-level names aren't covered by
+    # Universal SSL. Production-domain ingress instead rides the ONE-level
+    # hostname api.iheartwoodcraft.com (proxied CNAME → tunnel, created
+    # 2026-07-07) with PATH routing: only /webhook/* reaches n8n; all other
+    # paths fall through to the tunnel's 404 default, so the n8n UI is not
+    # publicly exposed. mcp/leads/brain can join later as path routes.
     # See wiki/nixos/iheartwoodcraft-com-backend-migration.md.
     extraIngress = {
       "mcp.heartwoodcraft.me" = "http://localhost:6200";
@@ -734,10 +734,8 @@
       # auth of its own. Local target is hwc.business.dataxMonitor on :4400.
       "monitor.heartwoodcraft.me" = "http://localhost:4400";
 
-      "n8n.api.iheartwoodcraft.com" = "http://localhost:5678";
-      "mcp.api.iheartwoodcraft.com" = "http://localhost:6200";
-      "leads.api.iheartwoodcraft.com" = "http://localhost:8420";
-      "brain.api.iheartwoodcraft.com" = "http://localhost:9876";
+      # Production-domain webhook ingress (calculator lead/appointment).
+      "api.iheartwoodcraft.com" = { service = "http://localhost:5678"; path = "^/webhook/"; };
 
       # hwc-mcp-gateway origins — internal hostnames the OAuth gateway Worker
       # proxies to (machine-to-machine via an Access service token). Distinct

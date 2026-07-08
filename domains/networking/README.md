@@ -41,6 +41,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-07-07: cloudflared Phase 4.6 landed as path routing, not a subzone: `api.iheartwoodcraft.com` (proxied CNAME → tunnel) routes only `^/webhook/` to n8n:5678; other paths 404. The planned *.api.iheartwoodcraft.com subzone is Enterprise-only on Cloudflare and proxied two-level names lack Universal SSL coverage. extraIngress now accepts `{ service; path; }` attrsets alongside plain strings. Stale n8n/mcp/leads/brain.api CNAMEs deleted.
 - 2026-07-06: gluetun health check alerts rewired to hwc-notify (topic=monitoring → #hwc-alerts): auto-restart and recovery events POST to :11600 with an 8s timeout, fail-soft. Closes the alert gap left by the gotify decommission; new `healthCheck.notifyUrl` option (null disables).
 - 2026-07-06: Gotify decommission — gluetun health check no longer sends gotify alerts (removed `healthCheck.failuresBeforeAlert` and the hwc-gotify-send calls); auto-restart behavior unchanged. Alerting via hwc-notify is a follow-up if wanted.
 - 2026-07-05: Remove `pihole/` module (audit 2.2: never enabled from any machine; recover from git history if needed).
