@@ -83,10 +83,16 @@ in
       # Umami connects as role "umami" from the podman subnet (trust auth).
       # ensureDatabases owns the db as postgres, so create the role and hand
       # over the schema.
+      # NOTE: deliberately self-contained — current nixpkgs runs the ensure*
+      # logic in postgresql-setup.service, so postgresql.service's postStart
+      # has NO $PSQL preamble anymore. (The older hwc modules' $PSQL lines in
+      # this hook are all dead code saved only by their `|| true`.) Absolute
+      # binary paths + a private variable keep this block working regardless.
       systemd.services.postgresql.postStart = lib.mkAfter ''
-        $PSQL -tAc "SELECT 1 FROM pg_roles WHERE rolname='umami'" | grep -q 1 || \
-          $PSQL -c "CREATE ROLE umami LOGIN"
-        $PSQL -c "ALTER DATABASE ${cfg.databaseName} OWNER TO umami" || true
+        UMAMI_PSQL="${config.services.postgresql.package}/bin/psql"
+        $UMAMI_PSQL -tAc "SELECT 1 FROM pg_roles WHERE rolname='umami'" | ${pkgs.gnugrep}/bin/grep -q 1 || \
+          $UMAMI_PSQL -c "CREATE ROLE umami LOGIN" || true
+        $UMAMI_PSQL -c "ALTER DATABASE ${cfg.databaseName} OWNER TO umami" || true
       '';
 
       # Start after postgres is up (container network + db)
