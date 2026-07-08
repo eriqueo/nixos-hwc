@@ -45,8 +45,14 @@
   # Paperless-NGX document management
   hwc.business.paperless.enable = lib.mkDefault true;
 
-  # Morning briefing — daily Claude Code agent (6am MT)
+  # Morning briefing — 6am compiles + emails; midday/evening runs only refresh
+  # the dashboard data (run.sh skips the Step-5 email after 9am)
   hwc.business.morningBriefing.enable = true;
+  hwc.business.morningBriefing.onCalendar = [
+    "*-*-* 06:00:00"
+    "*-*-* 12:00:00"
+    "*-*-* 17:00:00"
+  ];
 
   # Umami web analytics — cookieless analytics for iheartwoodcraft.com
   # (public collect endpoint rides the cloudflared tunnel at

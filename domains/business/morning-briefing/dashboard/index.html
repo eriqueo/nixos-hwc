@@ -235,8 +235,22 @@
   .footer{font-family:var(--mono);font-size:11px;color:var(--faint);text-align:center;
     padding:20px 0 0;border-top:1px solid var(--border);margin-top:20px;letter-spacing:.5px}
 
+  /* Links */
+  a{color:inherit}
+  .lnk{color:var(--amber);text-decoration:none;border-bottom:1px solid transparent}
+  .lnk:hover{border-bottom-color:var(--amber)}
+  .sec-link{font-family:var(--mono);font-size:12px;color:var(--amber-dim);text-decoration:none;letter-spacing:.5px}
+  .sec-link:hover{color:var(--amber)}
+  .cal-day{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;
+    color:var(--amber-dim);padding:10px 0 4px;border-bottom:1px solid var(--border)}
+  .cal-day.today{color:var(--amber)}
+  .failed-unit{font-family:var(--mono);font-size:13px;color:var(--red);padding:2px 0}
+  .status-tag{font-family:var(--mono);font-size:11px;padding:1px 6px;border-radius:2px;
+    background:var(--surface2);border:1px solid var(--border);color:var(--dim)}
+
   /* Misc */
   .empty{font-family:var(--mono);font-size:13px;color:var(--dim);padding:10px 0}
+  .empty-hint{font-family:var(--mono);font-size:12px;color:var(--faint);padding:4px 0 0}
   .err-box{background:var(--red-bg);border:1px solid #4a3030;border-radius:4px;padding:20px;text-align:center;margin:40px 0}
   .err-box h2{font-family:var(--mono);font-size:15px;color:var(--red);margin-bottom:8px}
   .err-box p{font-size:14px;color:var(--dim)}
@@ -291,6 +305,10 @@ function fmtDay(d){
 function stColor(p){return p>=90?'red':p>=75?'yellow':'green'}
 function fmtShortDate(iso){
   if(!iso)return'';
+  // Date-only strings must not round-trip through Date() — UTC midnight
+  // renders as the previous day in Denver.
+  const m=String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m)return`${+m[2]}/${+m[3]}`;
   const d=new Date(iso);
   return`${d.getMonth()+1}/${d.getDate()}`;
 }
@@ -403,18 +421,46 @@ function makeThread(t,bucket){
   return wrap;
 }
 
-// ── Calendar section ─────────────────────────────────────────────────────────
+// ── Calendar section (7-day window, grouped by day) ─────────────────────────
+function localYmd(d){
+  return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function dayLabel(ymdStr){
+  const today=localYmd(new Date());
+  const tmr=new Date();tmr.setDate(tmr.getDate()+1);
+  if(ymdStr===today)return'Today';
+  if(ymdStr===localYmd(tmr))return'Tomorrow';
+  const[y,m,d]=ymdStr.split('-').map(Number);
+  const dt=new Date(y,m-1,d);
+  return`${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()]} ${m}/${d}`;
+}
 function makeCalendar(cal){
-  const evts=cal.events||[],sec=$('div',{class:'section'});
-  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Calendar'),$('span',{class:'sec-count'},`${evts.length}`)));
-  if(!evts.length)sec.appendChild($('div',{class:'empty'},'No events today'));
-  else evts.forEach(ev=>{
-    const time=ev.allDay
-      ?$('div',{class:'ev-time'},$('span',{class:'ev-allday'},'ALL DAY'))
-      :$('div',{class:'ev-time'},fmtTime(ev.start)||'');
-    const info=$('div',{class:'ev-info'},$('div',{class:'ev-title'},ev.summary));
-    if(ev.location)info.appendChild($('div',{class:'ev-loc'},ev.location));
-    sec.appendChild($('div',{class:'ev'},time,info));
+  const evts=(cal.events||[]).slice().sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  const sec=$('div',{class:'section'});
+  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Calendar'),$('span',{class:'sec-count'},'7 days · '+evts.length)));
+  if(!evts.length){sec.appendChild($('div',{class:'empty'},'No events in the next 7 days'));return sec}
+  const byDay=new Map();
+  evts.forEach(ev=>{
+    const day=ev.date||(ev.start||'').split('T')[0]||'?';
+    if(!byDay.has(day))byDay.set(day,[]);
+    byDay.get(day).push(ev);
+  });
+  const today=localYmd(new Date());
+  [...byDay.keys()].sort().forEach(day=>{
+    sec.appendChild($('div',{class:`cal-day${day===today?' today':''}`},dayLabel(day)));
+    byDay.get(day).forEach(ev=>{
+      const time=ev.allDay
+        ?$('div',{class:'ev-time'},$('span',{class:'ev-allday'},'ALL DAY'))
+        :$('div',{class:'ev-time'},fmtTime(ev.start)||'');
+      const info=$('div',{class:'ev-info'},$('div',{class:'ev-title'},ev.summary));
+      if(ev.location){
+        const loc=/^https?:\/\//.test(ev.location)
+          ?$('a',{class:'lnk',href:ev.location,target:'_blank',style:'font-size:13px'},'join link →')
+          :$('span',null,ev.location);
+        info.appendChild($('div',{class:'ev-loc'},loc));
+      }
+      sec.appendChild($('div',{class:'ev'},time,info));
+    });
   });
   return sec;
 }
@@ -432,6 +478,7 @@ function makeMailTile(triage,liveThreads,mailHealth){
 
   if(merged.error){
     sec.appendChild($('div',{class:'empty'},`Triage unavailable: ${merged.error}`));
+    sec.appendChild($('div',{class:'empty-hint'},'diagnose on hwc-server: domains/business/morning-briefing/logs/run.log (+ mail-triage-raw.log)'));
     appendMailHealth(sec,mailHealth);
     return sec;
   }
@@ -528,11 +575,11 @@ function makeSnapshot(snap){
   const weekLabel=snap.week_start?`Week of ${new Date(snap.week_start).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`:'This Week';
   sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Weekly Snapshot'),$('span',{class:'sec-count'},weekLabel)));
   const g=$('div',{class:'snap-grid'});
-  [{val:snap.active_job_count||0,label:'Active Jobs'},
-   {val:snap.leads_received_this_week||0,label:'Leads'},
-   {val:snap.estimates_sent_this_week||0,label:'Estimates Sent'},
-   {val:snap.invoices_outstanding_amount!=null?'$'+snap.invoices_outstanding_amount.toLocaleString():'$0',
-    label:`Outstanding (${snap.invoices_outstanding||0})`,raw:snap.invoices_outstanding_amount||0}
+  [{val:snap.active_job_count!=null?snap.active_job_count:'—',label:'Active Jobs'},
+   {val:snap.leads_received_this_week!=null?snap.leads_received_this_week:'—',label:'Leads This Week'},
+   {val:snap.estimates_sent_this_week!=null?snap.estimates_sent_this_week:'—',label:'Estimates Sent'},
+   {val:snap.invoices_outstanding_amount!=null?'$'+Math.round(snap.invoices_outstanding_amount).toLocaleString():'—',
+    label:`Outstanding (${snap.invoices_outstanding!=null?snap.invoices_outstanding:'—'})`,raw:snap.invoices_outstanding_amount||0}
   ].forEach(i=>{
     const val=typeof i.val==='string'?i.val:`${i.val}`;
     const numVal=i.raw!=null?i.raw:(typeof i.val==='number'?i.val:0);
@@ -617,16 +664,16 @@ function makeBackup(bak){
 // ── Tasks section ────────────────────────────────────────────────────────────
 function makeTasks(tasks){
   const sec=$('div',{class:'section'});
-  const overdueArr=tasks.overdue||[],todayArr=tasks.due_today||[],weekArr=tasks.due_this_week||[];
+  const overdueArr=tasks.overdue||[],todayArr=tasks.due_today||[],weekArr=tasks.due_this_week||[],unschedArr=tasks.unscheduled||[];
   const total=overdueArr.length+todayArr.length+weekArr.length;
-  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Tasks'),$('span',{class:'sec-count'},`${total}`)));
-  if(total===0){sec.appendChild($('div',{class:'empty'},'No tasks scheduled'));return sec}
+  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Tasks'),$('span',{class:'sec-count'},`${total}${unschedArr.length?` (+${unschedArr.length} unscheduled)`:''}`)));
+  if(total===0&&unschedArr.length===0){sec.appendChild($('div',{class:'empty'},'No tasks scheduled'));return sec}
   function makeTaskItem(t,isOverdue){
     const item=$('div',{class:'task-item'}),done=t.completed===true;
     item.appendChild($('span',{class:`task-check${done?' done':''}`},done?'[x]':'[ ]'));
     const info=$('div',{class:'task-info'});
     info.appendChild($('div',{class:`task-name${done?' done':''}`},t.name));
-    const jobStr=[t.job_name,t.job_number?`#${t.job_number}`:''].filter(Boolean).join(' ');
+    const jobStr=[t.job_name,t.job_number?`#${t.job_number}`:'',t.list].filter(Boolean).join(' ');
     if(jobStr)info.appendChild($('div',{class:'task-job'},jobStr));
     item.appendChild(info);
     if(t.due_date)item.appendChild($('span',{class:`task-due${isOverdue?' overdue':''}`},fmtShortDate(t.due_date)));
@@ -648,7 +695,8 @@ function makeTasks(tasks){
   }
   [makeGroup('Overdue',overdueArr,'overdue',false),
    makeGroup('Due Today',todayArr,'today',false),
-   makeGroup('This Week',weekArr,'',true)
+   makeGroup('This Week',weekArr,'',true),
+   makeGroup('Unscheduled',unschedArr,'',true)
   ].forEach(g=>{if(g)sec.appendChild(g)});
   return sec;
 }
@@ -678,16 +726,27 @@ function makeRecentDocs(docs){
 }
 
 // ── Jobs section ─────────────────────────────────────────────────────────────
+function jobLink(name,url,cls){
+  return url?$('a',{class:`${cls} lnk`,href:url,target:'_blank'},name):$('span',{class:cls},name);
+}
 function makeJobs(jobs){
   const all=jobs.active||[],real=all.filter(j=>!j.is_test),tc=all.length-real.length;
   const sec=$('div',{class:'section'});
-  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Active Jobs'),$('span',{class:'sec-count'},`${real.length}`)));
-  if(!real.length)sec.appendChild($('div',{class:'empty'},'No active jobs'));
+  sec.appendChild($('div',{class:'sec-hdr'},
+    $('span',null,'Active Jobs'),
+    $('a',{class:'sec-link',href:'https://app.jobtread.com',target:'_blank'},`${real.length} \u00b7 JobTread \u2192`)));
+  if(!real.length){
+    sec.appendChild($('div',{class:'empty'},jobs.ok?'No open jobs in JobTread':'No job data'));
+    if(!jobs.ok)sec.appendChild($('div',{class:'empty-hint'},'gather did not run \u2014 check alerts above'));
+  }
   else real.forEach(j=>{
     const el=$('div',{class:'job'});
-    el.appendChild($('div',{class:'job-top'},$('span',{class:'job-name'},j.name),$('span',{class:'job-num'},`#${j.number}`)));
+    el.appendChild($('div',{class:'job-top'},jobLink(j.name,j.url,'job-name'),$('span',{class:'job-num'},`#${j.number}`)));
     const meta=[j.account,j.city].filter(Boolean).join(' \u2014 ');
-    el.appendChild($('div',{class:'job-meta'},$('span',{class:'job-phase'},j.phase||j.status||''),meta?` ${meta}`:''));
+    el.appendChild($('div',{class:'job-meta'},
+      $('span',{class:'job-phase'},j.phase||''),
+      j.status?$('span',{class:'status-tag'},j.status):null,
+      meta?` ${meta}`:''));
     if(j.description)el.appendChild($('div',{style:'font-size:13px;color:var(--dim);margin-top:4px'},j.description));
     sec.appendChild(el);
   });
@@ -698,12 +757,14 @@ function makeJobs(jobs){
 // ── Leads section ────────────────────────────────────────────────────────────
 function makeLeads(leads){
   const sec=$('div',{class:'section'});
-  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'New Leads'),$('span',{class:'sec-count'},`${leads.new_count}`)));
+  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'New Leads'),$('span',{class:'sec-count'},`${leads.new_count||0}`)));
+  if(!(leads.items||[]).length){sec.appendChild($('div',{class:'empty'},'No new leads'));return sec}
   leads.items.forEach(l=>{
     const ac=l.days_old>5?'urgent':l.days_old>2?'old':'';
+    const meta=[l.job_name,l.job_type].filter(Boolean).join(' \u2014 ');
     sec.appendChild($('div',{class:'lead'},
-      $('div',{class:'lead-name'},l.name),
-      $('div',{class:'lead-meta'},l.job_type?`${l.job_type} \u2014 `:'',$('span',{class:`lead-age ${ac}`},`${l.days_old}d old`))
+      $('div',null,jobLink(l.name,l.url,'lead-name')),
+      $('div',{class:'lead-meta'},meta?`${meta} \u2014 `:'',$('span',{class:`lead-age ${ac}`},`${l.days_old}d old`))
     ));
   });
   return sec;
@@ -712,12 +773,18 @@ function makeLeads(leads){
 // ── Overdue section ──────────────────────────────────────────────────────────
 function makeOverdue(overdue){
   const sec=$('div',{class:'section'});
-  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Overdue Documents'),$('span',{class:'sec-count'},`${overdue.count}`)));
-  if(overdue.total_amount)sec.appendChild($('div',{class:'overdue-total'},`${overdue.total_amount.toLocaleString()} outstanding`));
-  (overdue.items||[]).forEach(i=>sec.appendChild($('div',{class:'overdue-item'},
-    $('span',{class:'overdue-name'},i.name||i.description||'Document'),
-    i.amount?$('span',{class:'overdue-amt'},`${i.amount.toLocaleString()}`):null
-  )));
+  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Overdue Invoices'),$('span',{class:'sec-count'},`${overdue.count}`)));
+  if(!overdue.count){sec.appendChild($('div',{class:'empty'},'Nothing overdue'));return sec}
+  if(overdue.total_amount)sec.appendChild($('div',{class:'overdue-total'},`$${Math.round(overdue.total_amount).toLocaleString()} outstanding`));
+  (overdue.items||[]).forEach(i=>{
+    const days=i.days_past_due!=null?` · ${i.days_past_due}d past due`:'';
+    const label=[i.job_name||i.name,i.account].filter(Boolean).join(' — ');
+    const info=$('div',null,jobLink(label,i.url,'overdue-name'));
+    info.appendChild($('div',{style:'font-size:12px;color:var(--dim)'},`${i.name||'Document'}${days}`));
+    const row=$('div',{class:'overdue-item'},info);
+    if(i.amount)row.appendChild($('span',{class:'overdue-amt'},`$${Math.round(i.amount).toLocaleString()}`));
+    sec.appendChild(row);
+  });
   return sec;
 }
 
@@ -734,9 +801,13 @@ function makeSystem(sys){
     $('div',{class:`sys-val ${sys.services_failed?'bad':'ok'}`},`${sys.services_active}`),
     $('div',{class:'sys-label'},'Services')));
   g.appendChild($('div',{class:'sys-card'},
-    $('div',{class:`sys-val ${sys.containers_stopped?'bad':'ok'}`},`${sys.containers_running}`),
+    $('div',{class:`sys-val ${sys.containers_stopped?'bad':'ok'}`},sys.containers_running!=null?`${sys.containers_running}`:'—'),
     $('div',{class:'sys-label'},'Containers')));
   sec.appendChild(g);
+  // Failed unit NAMES — a red count you can't act on is what this replaces
+  if(sys.failed_units&&sys.failed_units.length){
+    sys.failed_units.forEach(u=>sec.appendChild($('div',{class:'failed-unit'},'✗ '+u)));
+  }
   if(sys.storage&&sys.storage.length)sys.storage.forEach(st=>{
     sec.appendChild($('div',{class:'storage-row'},
       $('span',{class:'storage-mount'},st.mount),
@@ -744,6 +815,8 @@ function makeSystem(sys){
       $('span',{class:'storage-pct'},`${st.percent}%`),
       $('span',{class:'storage-avail'},st.available)));
   });
+  sec.appendChild($('div',{style:'margin-top:10px'},
+    $('a',{class:'sec-link',href:'https://grafana.hwc.iheartwoodcraft.com',target:'_blank'},'Grafana →')));
   return sec;
 }
 
@@ -782,16 +855,20 @@ function render(data,liveThreads){
   if(s.calendar){_sectionCount++;grid.appendChild(tile(makeCalendar(s.calendar)))}
   if(data.mail_triage||s.mail){_sectionCount++;grid.appendChild(tile(makeMailTile(data.mail_triage,liveThreads,s.mail)))}
   if(s.tasks){_sectionCount++;grid.appendChild(tile(makeTasks(s.tasks)))}
+  // Leads + overdue render even when empty: "Nothing overdue" is information,
+  // a silently missing tile is not.
+  if(s.leads){_sectionCount++;grid.appendChild(tile(makeLeads(s.leads)))}
+  if(s.overdue){_sectionCount++;grid.appendChild(tile(makeOverdue(s.overdue)))}
   if(s.jobs){_sectionCount++;grid.appendChild(tile(makeJobs(s.jobs)))}
   if(s.system){_sectionCount++;grid.appendChild(tile(makeSystem(s.system)))}
   if(s.weather){_sectionCount++;grid.appendChild(tile(makeWeather(s.weather)))}
   if(s.weekly_snapshot){_sectionCount++;grid.appendChild(tile(makeSnapshot(s.weekly_snapshot)))}
   if(s.website&&Object.keys(s.website).length){_sectionCount++;grid.appendChild(tile(makeWebsite(s.website)))}
-  if(s.leads&&s.leads.items&&s.leads.items.length){_sectionCount++;grid.appendChild(tile(makeLeads(s.leads)))}
-  if(s.overdue&&s.overdue.count>0){_sectionCount++;grid.appendChild(tile(makeOverdue(s.overdue)))}
   if(s.recent_documents){const d=makeRecentDocs(s.recent_documents);if(d){_sectionCount++;grid.appendChild(tile(d))}}
-  if(s.backup){_sectionCount++;grid.appendChild(tile(makeBackup(s.backup)))}
-  if(s.comms){_sectionCount++;grid.appendChild(tile(makeComms(s.comms)))}
+  if(s.backup&&Object.keys(s.backup).length){_sectionCount++;grid.appendChild(tile(makeBackup(s.backup)))}
+  // A comms tile with no source is four zeros pretending to be data — skip it.
+  const commsAlive=s.comms&&(s.comms.source&&s.comms.source!=='none'||(s.comms.items||[]).length>0);
+  if(commsAlive){_sectionCount++;grid.appendChild(tile(makeComms(s.comms)))}
 
   app.appendChild(grid);
   renderFooter(data);

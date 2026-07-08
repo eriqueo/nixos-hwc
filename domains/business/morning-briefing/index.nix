@@ -9,9 +9,13 @@ in
   options.hwc.business.morningBriefing = {
     enable = lib.mkEnableOption "Morning briefing agent (Claude Code CLI + MCP)";
     onCalendar = lib.mkOption {
-      type = lib.types.str;
+      type = with lib.types; either str (listOf str);
       default = "*-*-* 06:00:00";
-      description = "systemd calendar expression for when to run the briefing";
+      description = ''
+        systemd calendar expression(s). A list adds midday/evening dashboard
+        refreshes; run.sh only emails on the pre-9am run, so extra firings
+        never re-send the briefing email.
+      '';
     };
   };
 
@@ -33,7 +37,8 @@ in
         Group = "users";
         WorkingDirectory = agentDir;
         ExecStart = "${agentDir}/run.sh";
-        TimeoutSec = 300;
+        # Step 1b (gateway gather, ≤120s) + Step 2 (claude triage) both fit
+        TimeoutSec = 420;
         StandardOutput = "journal";
         StandardError = "journal";
         NoNewPrivileges = true;

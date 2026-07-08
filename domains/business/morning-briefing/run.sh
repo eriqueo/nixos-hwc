@@ -72,6 +72,15 @@ KHAL_BIN="/etc/profiles/per-user/eric/bin/khal"
 # -- system: service counts + overall state (systemctl is read-only/always-safe) --
 SERVICES_ACTIVE=$("${SYSTEMCTL}" list-units --type=service --state=running --no-legend 2>/dev/null | wc -l | tr -d ' ' || echo 0)
 SERVICES_FAILED=$("${SYSTEMCTL}" list-units --type=service --state=failed --no-legend 2>/dev/null | wc -l | tr -d ' ' || echo 0)
+# Failed unit NAMES, not just a count — "1 failed service(s)" with no name is
+# an alert you can't act on (2026-07-08 usability pass).
+FAILED_UNITS_JSON=$("${SYSTEMCTL}" list-units --type=service --state=failed --no-legend --plain 2>/dev/null \
+  | awk '{print $1}' | jq -R -s 'split("\n") | map(select(length>0))' 2>/dev/null || echo '[]')
+echo "${FAILED_UNITS_JSON}" | jq empty 2>/dev/null || FAILED_UNITS_JSON='[]'
+# Containers = running podman-*.service units (works as eric; podman ps would
+# need the root socket). The dashboard used to render literal "undefined" here.
+CONTAINERS_RUNNING=$("${SYSTEMCTL}" list-units --type=service --state=running --no-legend --plain 'podman-*' 2>/dev/null | wc -l | tr -d ' ' || echo 0)
+[ -n "${CONTAINERS_RUNNING}" ] || CONTAINERS_RUNNING=0
 # NB: `is-system-running` EXITS NON-ZERO when not "running" (e.g. "degraded"),
 # so a `|| echo` fallback would fire ON TOP of the real output and concatenate
 # ("degraded\nunknown"). Capture the output, swallow the exit with `|| true`,
@@ -101,18 +110,22 @@ INBOX_UNREAD=$(notmuch count "tag:inbox and tag:unread" 2>/dev/null || echo 0)
 [ -n "${UNREAD}" ] || UNREAD=0
 [ -n "${INBOX_UNREAD}" ] || INBOX_UNREAD=0
 
-# -- calendar: today's events via khal, parsed with jq. (NOT python3 — it is not
-#    on the unit PATH [bash coreutils jq nodejs notmuch], which is why the old
-#    injector silently failed and left the agent's denied calendar in place.) --
+# -- calendar: THIS WEEK's events via khal, parsed with jq. (NOT python3 — it is
+#    not on the unit PATH [bash coreutils jq nodejs notmuch], which is why the
+#    old injector silently failed.) A today-only window hid the whole week
+#    behind "No events today" (2026-07-08 usability pass) — gather 7 days and
+#    let the dashboard group by day. khal repeats day-header lines in list
+#    output; the length>=5 filter drops them. --
 CAL_JSON='{"events": []}'
 if [ -x "${KHAL_BIN}" ]; then
   CAL_JSON=$("${KHAL_BIN}" list \
     --format='{start-date}T{start-time}|{end-date}T{end-time}|{title}|{location}|{all-day}' \
-    today today 2>/dev/null \
+    today 7d 2>/dev/null \
     | jq -R -s 'split("\n") | map(select(length>0)) | map(split("|")) | map(select(length>=5)) | map({
         summary: .[2],
         start: .[0],
         end: .[1],
+        date: (.[0] | split("T")[0]),
         location: (if .[3] == "" then null else .[3] end),
         allDay: (.[4] | ascii_downcase == "true")
       }) | { events: . }' 2>/dev/null || echo '{"events": []}')
@@ -159,9 +172,10 @@ echo "${DRIFT_JSON}" | jq empty 2>/dev/null || DRIFT_JSON='{}'
 # -- alerts: computed from what we actually gathered (CLAUDE.md rules subset) --
 ALERTS_JSON=$(jq -n \
   --argjson failed "${SERVICES_FAILED}" \
+  --argjson failed_units "${FAILED_UNITS_JSON}" \
   --argjson worst "${WORST:-0}" \
   --argjson drift "${DRIFT_JSON}" '
-  [ (if $failed > 0 then {level:"critical", section:"system", message:"\($failed) failed service(s)"} else empty end)
+  [ (if $failed > 0 then {level:"critical", section:"system", message:"\($failed) failed service(s): \($failed_units | join(", "))"} else empty end)
   , (if $worst >= 90 then {level:"critical", section:"system", message:"Storage at \($worst)% on a mount"} else empty end)
   , (if ($drift.reboot_pending // false) then {level:"warning", section:"config_drift", message:"Reboot pending: booted kernel differs from current generation"} else empty end)
   , (if ($drift.unpushed_commits // 0) > 0 then {level:"warning", section:"config_drift", message:"\($drift.unpushed_commits) unpushed commit(s) on ~/.nixos"} else empty end)
@@ -229,6 +243,64 @@ if [ -z "${UMAMI_TOKEN}" ]; then
   ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq '. + [{level:"warning",section:"website",message:"Umami analytics unreachable — visitor tracking data may be lost"}]' 2>/dev/null || echo "${ALERTS_JSON}")
 fi
 
+# -- weather: open-meteo (keyless, HTTPS) → Bozeman forecast. Best-effort: any
+#    failure keeps the explicit "not gathered" placeholder instead of zeros. --
+WX_JSON='{"location":"Bozeman, MT","current_temp_f":null,"high_f":null,"low_f":null,"conditions":"","precipitation_chance":null,"wind_mph":null,"outdoor_work_ok":true,"notes":"weather fetch failed"}'
+WX_RAW=$("${CURL_BIN}" -s -m 15 "https://api.open-meteo.com/v1/forecast?latitude=45.6793&longitude=-111.0373&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FDenver&forecast_days=1" 2>/dev/null || echo "")
+if [ -n "${WX_RAW}" ] && echo "${WX_RAW}" | jq -e '.current.temperature_2m' >/dev/null 2>&1; then
+  WX_JSON=$(echo "${WX_RAW}" | jq '
+    def cond(c): if c == null then "Unknown"
+      elif c == 0 then "Clear" elif c <= 2 then "Partly cloudy" elif c == 3 then "Overcast"
+      elif c <= 48 then "Fog" elif c <= 57 then "Drizzle" elif c <= 67 then "Rain"
+      elif c <= 77 then "Snow" elif c <= 82 then "Rain showers" elif c <= 86 then "Snow showers"
+      else "Thunderstorm" end;
+    {
+      location: "Bozeman, MT",
+      current_temp_f: .current.temperature_2m,
+      high_f: .daily.temperature_2m_max[0],
+      low_f: .daily.temperature_2m_min[0],
+      conditions: cond(.daily.weather_code[0] // .current.weather_code),
+      precipitation_chance: (.daily.precipitation_probability_max[0] // 0),
+      wind_mph: ((.current.wind_speed_10m // 0) | round),
+      outdoor_work_ok: (((.daily.temperature_2m_max[0] // 50) >= 20)
+        and ((.current.wind_speed_10m // 0) <= 30)
+        and ((.daily.precipitation_probability_max[0] // 0) < 60)),
+      notes: ""
+    }' 2>/dev/null || echo "${WX_JSON}")
+  echo "${WX_JSON}" | jq empty 2>/dev/null || WX_JSON='{"location":"Bozeman, MT","outdoor_work_ok":true,"notes":"weather fetch failed"}'
+fi
+
+# -- backup: borg unit status via systemctl show (same unit hwc_storage_status
+#    reads). archive_count/total_size need repo access — left null here. --
+BACKUP_JSON='{}'
+BK_UNIT="borgbackup-job-hwc-backup"
+BK_RESULT=$("${SYSTEMCTL}" show "${BK_UNIT}.service" -p Result --value 2>/dev/null || echo "")
+BK_EXITCODE=$("${SYSTEMCTL}" show "${BK_UNIT}.service" -p ExecMainStatus --value 2>/dev/null || echo "")
+BK_LAST_RAW=$("${SYSTEMCTL}" show "${BK_UNIT}.service" -p ExecMainExitTimestamp --value 2>/dev/null || echo "")
+BK_NEXT_RAW=$("${SYSTEMCTL}" show "${BK_UNIT}.timer" -p NextElapseUSecRealtime --value 2>/dev/null || echo "")
+BK_LAST=""; [ -n "${BK_LAST_RAW}" ] && BK_LAST=$(date -Iseconds -d "${BK_LAST_RAW}" 2>/dev/null || echo "")
+BK_NEXT=""; [ -n "${BK_NEXT_RAW}" ] && BK_NEXT=$(date -Iseconds -d "${BK_NEXT_RAW}" 2>/dev/null || echo "")
+if [ -n "${BK_RESULT}" ]; then
+  BK_STATUS="error"
+  if [ "${BK_RESULT}" = "success" ] && [ "${BK_EXITCODE:-1}" = "0" ]; then BK_STATUS="success"; fi
+  BACKUP_JSON=$(jq -n \
+    --arg status "${BK_STATUS}" --arg unit "${BK_UNIT}" \
+    --arg last "${BK_LAST}" --arg next "${BK_NEXT}" --arg result "${BK_RESULT}" '
+    { exit_status: $status, unit: $unit, service_result: $result
+    , last_run: (if $last == "" then null else $last end)
+    , next_scheduled: (if $next == "" then null else $next end)
+    , archive_count: null, total_size: null }' 2>/dev/null || echo '{}')
+  echo "${BACKUP_JSON}" | jq empty 2>/dev/null || BACKUP_JSON='{}'
+  if [ "${BK_STATUS}" = "error" ]; then
+    ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq --arg r "${BK_RESULT}" '. + [{level:"critical",section:"backup",message:("Borg backup unit result: " + $r)}]' 2>/dev/null || echo "${ALERTS_JSON}")
+  elif [ -n "${BK_LAST}" ]; then
+    BK_AGE_H=$(( ( $(date +%s) - $(date -d "${BK_LAST}" +%s 2>/dev/null || date +%s) ) / 3600 ))
+    if [ "${BK_AGE_H}" -gt 26 ] 2>/dev/null; then
+      ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq --argjson h "${BK_AGE_H}" '. + [{level:"warning",section:"backup",message:"Last backup ran \($h)h ago (>26h)"}]' 2>/dev/null || echo "${ALERTS_JSON}")
+    fi
+  fi
+fi
+
 # -- assemble briefing.json atomically: build .tmp, validate, then mv --
 if jq -n \
   --arg now "$(date -Iseconds)" \
@@ -238,11 +310,15 @@ if jq -n \
   --argjson storage "${STORAGE_JSON}" \
   --argjson services_active "${SERVICES_ACTIVE}" \
   --argjson services_failed "${SERVICES_FAILED}" \
+  --argjson failed_units "${FAILED_UNITS_JSON}" \
+  --argjson containers "${CONTAINERS_RUNNING}" \
   --argjson unread "${UNREAD}" \
   --argjson inbox_unread "${INBOX_UNREAD}" \
   --argjson alerts "${ALERTS_JSON}" \
   --argjson drift "${DRIFT_JSON}" \
-  --argjson website "${WEBSITE_JSON}" '
+  --argjson website "${WEBSITE_JSON}" \
+  --argjson weather "${WX_JSON}" \
+  --argjson backup "${BACKUP_JSON}" '
   {
     generated_at: $now,
     sections: {
@@ -256,20 +332,22 @@ if jq -n \
         state: $sys_state,
         services_active: $services_active,
         services_failed: $services_failed,
+        failed_units: $failed_units,
+        containers_running: $containers,
         storage: $storage
       },
       mail: { healthy: true, unread: $unread, inbox_unread: $inbox_unread,
               summary: "\($inbox_unread) inbox unread (\($unread) total)" },
       website: $website,
-      weather: { location: "Bozeman, MT", outdoor_work_ok: true, notes: "not gathered" },
+      weather: $weather,
       comms: { source: "none", items: [] },
       weekly_snapshot: {},
-      backup: {},
+      backup: $backup,
       tasks: { due_today: [], due_this_week: [], overdue: [] },
       recent_documents: { items: [] }
     },
     alerts: $alerts,
-    notes: "JobTread sections pending a local data source (see README). System/mail/calendar are live."
+    notes: "System/mail/calendar/weather/backup gathered locally; jobs/leads/overdue/tasks via gateway (Step 1b)."
   }' > "${OUTPUT_DIR}/briefing.json.tmp" 2>>"${LOG_FILE}" \
   && jq empty "${OUTPUT_DIR}/briefing.json.tmp" 2>/dev/null; then
   mv "${OUTPUT_DIR}/briefing.json.tmp" "${OUTPUT_DIR}/briefing.json"
@@ -281,6 +359,31 @@ fi
 
 STEP1_END=$(date +%s)
 log "STEP 1: completed in $((STEP1_END - STEP1_START))s"
+
+# ── Step 1b: Live business data via the local MCP gateway ────────────────────
+# JobTread jobs/leads/overdue + CalDAV tasks, fetched by gather-live.mjs over
+# loopback JSON-RPC (:6200/mcp) — no Claude, no permission prompts. Best-effort:
+# gather errors surface as dashboard alerts; sections it couldn't fetch keep
+# the Step-1 placeholders.
+log "STEP 1b: Live gather via gateway..."
+LIVE_JSON=$(timeout 120 node "${AGENT_DIR}/gather-live.mjs" 2>>"${LOG_FILE}" || echo "")
+if [ -n "${LIVE_JSON}" ] && echo "${LIVE_JSON}" | jq empty 2>/dev/null && [ -f "${OUTPUT_DIR}/briefing.json" ]; then
+  if jq --argjson live "${LIVE_JSON}" '
+      .sections = (.sections * ($live.sections // {}))
+      | .alerts += ($live.alerts // [])
+      | .alerts += [($live.errors // [])[] | {level:"warning", section:"gather", message:("live gather failed: " + .section + " — " + .message)}]
+    ' "${OUTPUT_DIR}/briefing.json" > "${OUTPUT_DIR}/briefing.json.tmp" 2>>"${LOG_FILE}" \
+    && jq empty "${OUTPUT_DIR}/briefing.json.tmp" 2>/dev/null; then
+    mv "${OUTPUT_DIR}/briefing.json.tmp" "${OUTPUT_DIR}/briefing.json"
+    LIVE_SUMMARY=$(echo "${LIVE_JSON}" | jq -r '"jobs: \(.sections.jobs.active // [] | length) · leads: \(.sections.leads.new_count // "?") · overdue: \(.sections.overdue.count // "?") · task buckets: \((.sections.tasks.overdue // [] | length) + (.sections.tasks.due_today // [] | length) + (.sections.tasks.due_this_week // [] | length)) · errors: \(.errors | length)"' 2>/dev/null || echo "?")
+    log "STEP 1b: OK (${LIVE_SUMMARY})"
+  else
+    log "STEP 1b: ERROR merging live data — keeping Step 1 briefing"
+    rm -f "${OUTPUT_DIR}/briefing.json.tmp"
+  fi
+else
+  log "STEP 1b: WARN gather-live.mjs produced no valid JSON — placeholders kept"
+fi
 
 # ── Step 2: Mail triage ───────────────────────────────────────────────────────
 log "STEP 2: Mail triage..."
@@ -340,19 +443,32 @@ else
     }
 
     if [ -n "${TRIAGE_RAW}" ]; then
-      # Extract JSON object: strip markdown fences, preamble, and postamble
-      TRIAGE_CLEAN=$(echo "${TRIAGE_RAW}" | tr -d '\r' \
-        | sed -n '/^[[:space:]]*{/,/^[[:space:]]*}[[:space:]]*$/p')
-      if echo "${TRIAGE_CLEAN}" | jq empty 2>/dev/null; then
+      # Extract the JSON object with node (on the unit PATH), not a sed line
+      # range: the old '/^{/,/^}$/' range broke on single-line JSON, fenced
+      # output, and postamble — the recurring "invalid JSON from claude"
+      # (2026-07-08). Try, in order: whole output · fenced block · first "{"
+      # to last "}".
+      TRIAGE_CLEAN=$(echo "${TRIAGE_RAW}" | node -e '
+        const s = require("fs").readFileSync(0, "utf8");
+        const tryParse = (t) => { try { return JSON.stringify(JSON.parse(t)); } catch { return null; } };
+        let r = tryParse(s);
+        if (!r) { const m = s.match(/```(?:json)?\s*([\s\S]*?)```/); if (m) r = tryParse(m[1]); }
+        if (!r) { const a = s.indexOf("{"), b = s.lastIndexOf("}"); if (a >= 0 && b > a) r = tryParse(s.slice(a, b + 1)); }
+        if (r) process.stdout.write(r); else process.exit(1);
+      ' 2>/dev/null) || TRIAGE_CLEAN=""
+      if [ -n "${TRIAGE_CLEAN}" ] && echo "${TRIAGE_CLEAN}" | jq empty 2>/dev/null; then
         echo "${TRIAGE_CLEAN}" > "${MAIL_TRIAGE_JSON}"
         U=$(echo "${TRIAGE_CLEAN}" | jq '.stats.urgent_count' 2>/dev/null || echo "?")
         R=$(echo "${TRIAGE_CLEAN}" | jq '.stats.review_count' 2>/dev/null || echo "?")
         N=$(echo "${TRIAGE_CLEAN}" | jq '.stats.noise_count'  2>/dev/null || echo "?")
         log "mail-triage: OK (${U} urgent, ${R} review, ${N} noise)"
       else
-        log "WARN: Mail triage returned invalid JSON — first 200 chars of raw:"
+        # Keep the FULL raw output for diagnosis — 200 chars was never enough
+        # to see why parsing failed.
+        echo "${TRIAGE_RAW}" > "${AGENT_DIR}/logs/mail-triage-raw.log"
+        log "WARN: Mail triage returned invalid JSON — full raw saved to logs/mail-triage-raw.log; first 200 chars:"
         log "$(echo "${TRIAGE_RAW}" | head -c 200)"
-        write_empty_triage "invalid JSON from claude"
+        write_empty_triage "invalid JSON from claude (raw saved to logs/mail-triage-raw.log)"
       fi
     fi
   fi
@@ -422,8 +538,13 @@ fi
 # Renders briefing.json to a plain-text email and sends via msmtp's default
 # account (proton-hwc → eric@iheartwoodcraft.com). Best-effort: a send failure
 # logs a WARN but never fails the briefing run.
+# Only the MORNING run emails (timer may also fire midday/evening to refresh
+# the dashboard — those must not re-send). FORCE_EMAIL=1 overrides for testing.
 MSMTP_BIN="$(command -v msmtp || echo /etc/profiles/per-user/eric/bin/msmtp)"
-if [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
+HOUR_NOW=$(date +%H)
+if [ "${FORCE_EMAIL:-0}" != "1" ] && [ "${HOUR_NOW#0}" -ge 9 ] 2>/dev/null; then
+  log "STEP 5: SKIP (refresh run at ${HOUR_NOW}:xx — email only sent on the pre-9am run)"
+elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
   log "STEP 5: Emailing briefing..."
   EMAIL_BODY=$(jq -r '
     def sec(x): "\n== " + x + " ==\n";
@@ -437,7 +558,7 @@ if [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
         + "reboot pending: " + ((.sections.config_drift.reboot_pending // false) | tostring)
         + " · unpushed: " + ((.sections.config_drift.unpushed_commits // 0) | tostring)
         + " · dirty: " + ((.sections.config_drift.dirty_files // 0) | tostring)
-        + " · generations: " + ((.sections.config_drift.generation_count // 0) | tostring)
+        + " · generations: " + ((.sections.config_drift.generations // 0) | tostring)
         + " · coredumps 24h: " + ((.sections.config_drift.coredumps_24h // 0) | tostring)
       else "" end)
     + (if .sections.system then
@@ -448,15 +569,45 @@ if [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
         + ((.sections.system.storage // []) | map("\n  " + .mount + ": " + ((.percent // 0) | tostring) + "% used, " + (.available // "?") + " free") | join(""))
       else "" end)
     + (if (.sections.calendar.events // []) | length > 0 then
-        sec("TODAY / THIS WEEK")
-        + ([.sections.calendar.events[] | "  " + (.date // "") + " " + (.startTime // "") + " " + (.summary // "")] | join("\n"))
+        sec("THIS WEEK")
+        + ([.sections.calendar.events[] | "  " + (.date // ((.start // "") | split("T")[0]) // "")
+            + " " + (if .allDay then "all-day" else ((.start // "") | split("T")[1] // "") end)
+            + "  " + (.summary // "")
+            + (if .location then " — " + .location else "" end)] | join("\n"))
       else "" end)
+    + (if (.sections.tasks // {}) | ((.overdue // []) + (.due_today // []) + (.due_this_week // [])) | length > 0 then
+        sec("TASKS")
+        + ((((.sections.tasks.overdue // []) | map("  ! OVERDUE " + (.due_date // "") + "  " + .name))
+          + ((.sections.tasks.due_today // []) | map("  · today  " + .name))
+          + ((.sections.tasks.due_this_week // []) | map("  · " + (.due_date // "") + "  " + .name))) | join("\n"))
+      else "" end)
+    + (if (.sections.leads.items // []) | length > 0 then
+        sec("LEADS (" + ((.sections.leads.items | length) | tostring) + ")")
+        + ([.sections.leads.items[] | "  " + .name
+            + (if (.job_type // "") != "" then " — " + .job_type else "" end)
+            + " (" + (.days_old | tostring) + "d old)"] | join("\n"))
+      else "" end)
+    + (if (.sections.overdue.count // 0) > 0 then
+        sec("OVERDUE INVOICES — $" + ((.sections.overdue.total_amount // 0) | round | tostring))
+        + ([.sections.overdue.items[] | "  $" + ((.amount // 0) | round | tostring) + "  " + (.job_name // .name)
+            + (if .days_past_due then " (" + (.days_past_due | tostring) + "d past due)" else "" end)] | join("\n"))
+      else "" end)
+    + (if (.sections.jobs.active // []) | length > 0 then
+        sec("ACTIVE JOBS (" + ((.sections.jobs.active | length) | tostring) + ")")
+        + ([.sections.jobs.active[] | "  #" + (.number // "?") + " " + .name + " — " + (.phase // "?") + " / " + (.status // "?")] | join("\n"))
+      else "" end)
+    # mail_triage buckets live under .buckets.* — the old .mail_triage.urgent
+    # path never existed, which is why the email stopped carrying a mail
+    # summary (2026-07-08).
     + (if .mail_triage then
         sec("MAIL")
-        + "urgent: " + ((.mail_triage.urgent // []) | length | tostring)
-        + " · review: " + ((.mail_triage.review // []) | length | tostring)
-        + " · noise: " + ((.mail_triage.noise // []) | length | tostring)
-        + (((.mail_triage.urgent // [])[:5]) | map("\n  ! " + (.subject // .from // "?")) | join(""))
+        + "urgent: " + ((.mail_triage.buckets.urgent // []) | length | tostring)
+        + " · review: " + ((.mail_triage.buckets.review // []) | length | tostring)
+        + " · noise: " + ((.mail_triage.buckets.noise // []) | length | tostring)
+        + (if .mail_triage.error then "\n  triage error: " + .mail_triage.error else "" end)
+        + (((.mail_triage.buckets.urgent // [])[:5]) | map("\n  ! " + (.from_name // .from_address // "?") + ": " + (.subject // "?")
+            + (if .summary then "\n      " + .summary else "" end)) | join(""))
+        + (((.mail_triage.buckets.review // [])[:5]) | map("\n  · " + (.from_name // .from_address // "?") + ": " + (.subject // "?")) | join(""))
       else "" end)
     + (if .sections.website and (.sections.website | length > 0) then
         sec("WEBSITE")

@@ -18,7 +18,9 @@ Dashboard: `https://hwc-server.ocelot-wahoo.ts.net:16443`
 
 ```
 index.nix              # NixOS module: systemd service + timer
-run.sh                 # 4-step pipeline (see below)
+run.sh                 # 5-step pipeline (see below)
+gather-live.mjs        # Step 1b: JobTread jobs/leads/overdue + CalDAV tasks via
+                       #   the local MCP gateway (:6200/mcp, StreamableHTTP)
 CLAUDE.md              # Agent prompt: data schema, alert rules, MCP sources
 prompts/
   mail-triage.txt      # Mail triage prompt: bucket rules, known senders
@@ -30,6 +32,7 @@ output/
   mail-triage.json     # Step 2 output before merge
 logs/
   run.log              # Rolling log (last 100 lines)
+  mail-triage-raw.log  # Full raw Claude output from the last FAILED triage parse
 ```
 
 ## Pipeline
@@ -37,22 +40,31 @@ logs/
 | Step | What | How |
 |------|------|-----|
 | 0 | Pre-flight | Check claude binary exists (still needed for Step 2 mail triage) |
-| 1 | Local gather | bash assembles `briefing.json` directly: `systemctl` (services), `df` (storage), `notmuch` (mail), `khal`→`jq` (calendar). Alerts computed locally. JobTread sections = placeholders. **No Claude, no MCP.** |
-| 2 | Mail triage | `notmuch search` → `claude --print` classifies into urgent/review/noise (pure reasoning, no tool calls) |
+| 1 | Local gather | bash assembles `briefing.json` directly: `systemctl` (services incl. failed unit NAMES, podman-* container count, borg backup unit), `df` (storage), `notmuch` (mail), `khal`→`jq` (calendar, 7-day window), `curl` open-meteo (weather). Alerts computed locally. **No Claude, no MCP.** |
+| 1b | Live gather | `node gather-live.mjs` → local MCP gateway (`:6200/mcp`, plain JSON-RPC, no permissions): `jt_jobs` (jobs + leads + weekly snapshot), `jt_documents list_overdue` (overdue invoices), `hwc_tasks_list` (CalDAV tasks). Best-effort: per-section failures become dashboard alerts, placeholders kept. |
+| 2 | Mail triage | `notmuch search` → `claude --print` classifies into urgent/review/noise (pure reasoning, no tool calls). JSON extracted with node (direct → fenced → brace-span); full raw saved to `logs/mail-triage-raw.log` on parse failure. |
 | 2b | Persist buckets | `notmuch tag` stamps each classified thread with `triage/<bucket>` (removes other `triage/*`) |
 | 3 | Merge | `jq` injects mail_triage into briefing.json |
 | 4 | Publish | Dashboard reads via symlink; no-op if symlink exists |
+| 5 | Email | Plain-text render (alerts, calendar, tasks, leads, overdue invoices, jobs, mail triage w/ summaries, website) via msmtp from office@. **Only sent on the pre-9am run** — midday/evening timer firings refresh the dashboard without re-emailing (`FORCE_EMAIL=1` overrides). |
 
 Step 1 builds `briefing.json` atomically (`.tmp` → validate with `jq empty` → `mv`); on any failure the previous briefing is kept. `generated_at` is stamped from `date -Iseconds`. The calendar is parsed with `jq` (NOT `python3`, which is not on the unit PATH — the old `python3` injector silently failed).
 
-### JobTread follow-up
+### JobTread / tasks data (Step 1b)
 
-`sections.{jobs,leads,overdue,tasks,recent_documents}` are emitted as empty
-placeholders. JobTread data is fetched from the JT API by `jt-mcp` (no obvious
-local file), so a future pass must pick a source: read a local JT cache if one
-exists, or have `run.sh` `curl` the local gateway (`localhost:6200/mcp`, no
-Claude permission needed) for `jt_jobs`/`jt_tasks`/`jt_documents`/`hwc_leads` and
-assemble with `jq`. Until then the brief tile shows live system/mail/calendar.
+Done 2026-07-08 — `gather-live.mjs` implements the follow-up this section used
+to describe: it speaks StreamableHTTP JSON-RPC to the local gateway and fills
+`sections.{jobs,leads,overdue,tasks,weekly_snapshot}`. Notes:
+
+- **tasks** come from `hwc_tasks_list` (Radicale CalDAV — Eric's real
+  reminders), NOT JobTread: JT tasks for this org are template groups with no
+  due dates, while the CalDAV store is what todui/Apple Reminders show.
+- `weekly_snapshot.estimates_sent_this_week` stays `null` (renders "—"):
+  `jt_documents list` has no created-since filter and returns oldest-first, so
+  a cheap "this week" query isn't available.
+- `recent_documents` stays empty for the same reason.
+- Every job/lead/invoice carries a `url` → `https://app.jobtread.com/jobs/<id>`
+  so the dashboard can deep-link.
 
 ### Tag-backed triage buckets (persisted moves)
 
@@ -132,6 +144,25 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-07-08** — **Usability pass: real data + drill-down.** The dashboard was
+  rendering placeholders as if they were data (0 jobs, 0 leads, $0 outstanding,
+  "No tasks", weather "not gathered", backup UNKNOWN, containers literally
+  "undefined") while $9.3k of overdue invoices, 2 stale leads, 3 overdue tasks
+  and a week of calendar events existed in the sources. Changes: **(1) Step 1b**
+  `gather-live.mjs` fills jobs/leads/overdue/tasks/weekly-snapshot from the
+  local MCP gateway; **(2) Step 1** now also gathers weather (open-meteo),
+  borg backup unit status, podman container count, failed service *names*, and
+  a 7-day calendar window; **(3) mail triage** JSON extraction rewritten (node:
+  direct → fenced → brace-span; the old sed line-range was the recurring
+  "invalid JSON from claude") with full raw output saved on failure; **(4)
+  email** fixed — `.mail_triage.urgent` → `.buckets.urgent` (the reason the
+  email lost its mail summary), calendar fields fixed, tasks/leads/overdue/jobs
+  sections added, only sends on the pre-9am run; **(5) dashboard** — day-grouped
+  week calendar, JobTread deep links on jobs/leads/invoices, Grafana link,
+  failed-unit names, honest empty states ("Nothing overdue" vs silent absence),
+  comms tile hidden while sourceless, null-safe containers/estimates; **(6)
+  timer** — profiles/business adds 12:00/17:00 dashboard-refresh runs
+  (`onCalendar` now accepts a list), service timeout 300→420s.
 - **2026-06-27** — **Step 1 no longer uses Claude/MCP.** The headless 6am run can't get tool-permission approvals (`~/.claude` `defaultMode=acceptEdits` doesn't cover Bash/MCP), so every MCP gather was auto-denied → briefings full of bogus `[CRITICAL] permission denied` alerts. Rewrote Step 1 to gather system/mail/calendar directly in bash (`systemctl`/`df`/`notmuch`/`khal`→`jq`), compute alerts locally, and assemble `briefing.json` atomically. Fixed the calendar injector (`python3` → `jq`; python3 isn't on the unit PATH). JobTread sections are placeholders pending a local source (see "JobTread follow-up"). Claude is kept only for Step 2 mail-triage reasoning. Deploy = `git pull` on the server + a manual run (run.sh is read from the live repo path; no nixos rebuild).
 - **2026-04-12** — Update tool references for MCP consolidation: `hwc_calendar_week`→`hwc_calendar_list` (range=week), `hwc_storage_backup_status`→`hwc_storage_status`. Rename heartwood-mcp→jt-mcp in docs.
 - **2026-04-09** — Add backup status, tasks due, and recent documents sections. Expand mail triage with known noise senders (nextdoor, quora, zillow, angi, thumbtack, yelp) and review senders (Quo, Stripe, QuickBooks, JobTread). Add reasoning rules for 'sent' tag and flagged+work threads. Dashboard: add backup row, collapsible tasks view, recent docs with type badges, footer with section count, keyboard 'r' refresh, fade-in animation, prominent day-of-week header. Pipeline: add pre-flight check, post-step-1 validation, per-step timing. New alert rules: backup errors, stale backups, overdue tasks, incomplete tasks after 3pm
