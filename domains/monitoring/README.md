@@ -50,6 +50,7 @@ monitoring/
 ```
 
 ## Changelog
+- 2026-07-07: Website + lead-pipeline monitoring — the blackbox exporter (enabled but previously probing nothing) gained three probe modules (CORS-preflight OPTIONS, unsigned-POST-expects-401, 200-or-401) and five probe jobs: public site pages/GEO artifacts, api.iheartwoodcraft.com webhook ingress, hwc-leads HMAC liveness, n8n /healthz, CMS API. New `website_alerts` rule group (P5: page down, webhook ingress down = leads being lost, leads service down, n8n down; P4: CMS down, cert expiry <14d; P3: slow responses). Alerts route via the existing alertmanager → hwc-notify receiver.
 - 2026-07-06: Gotify decommission — dropped the stale gotify references from uptime-kuma header comments; the alertmanager `gotify-bridge` receiver was removed in profiles/monitoring/sys.nix (hwc-notify is now the sole receiver).
 - 2026-07-05: Law 5 burn-down — added `HWC-EXCEPTION(Law 5)` annotation blocks (reason/justification/plan/revocable) to this domain's raw `oci-containers` module(s); infra-shaped containers are sanctioned exceptions to the mkContainer rule. Comments only, no behavior change.
 

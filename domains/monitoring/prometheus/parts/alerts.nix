@@ -8,6 +8,85 @@
 {
   groups = [
     #========================================================================
+    # WEBSITE + LEAD PIPELINE (blackbox probes — see prometheus/index.nix)
+    #========================================================================
+    {
+      name = "website_alerts";
+      rules = [
+        {
+          alert = "WebsitePageDown";
+          expr = ''probe_success{job="probe-website"} == 0'';
+          for = "5m";
+          labels = { severity = "P5"; category = "website"; };
+          annotations = {
+            summary = "Website page down: {{ $labels.instance }}";
+            description = "Blackbox probe has failed for 5+ minutes. iheartwoodcraft.com (or this page/asset) is unreachable or not returning 200.";
+          };
+        }
+        {
+          alert = "WebhookIngressDown";
+          expr = ''probe_success{job="probe-webhook-ingress"} == 0'';
+          for = "5m";
+          labels = { severity = "P5"; category = "leads"; };
+          annotations = {
+            summary = "Calculator webhook ingress down: {{ $labels.instance }}";
+            description = "CORS preflight through Cloudflare → tunnel → n8n has failed for 5+ minutes. Calculator submissions from site visitors are being LOST right now. Check cloudflared-tunnel and podman-n8n services.";
+          };
+        }
+        {
+          alert = "LeadsServiceDown";
+          expr = ''probe_success{job="probe-leads-service"} == 0'';
+          for = "5m";
+          labels = { severity = "P5"; category = "leads"; };
+          annotations = {
+            summary = "hwc-leads service down or HMAC misbehaving";
+            description = "Unsigned POST to 127.0.0.1:11650/leads is not returning 401. Leads reaching n8n cannot be persisted/pushed to JobTread. Check hwc-leads.service.";
+          };
+        }
+        {
+          alert = "N8nEngineDown";
+          expr = ''probe_success{job="probe-n8n"} == 0'';
+          for = "5m";
+          labels = { severity = "P5"; category = "leads"; };
+          annotations = {
+            summary = "n8n engine down";
+            description = "n8n /healthz has failed for 5+ minutes — all webhook workflows (calculator leads/appointments and everything else) are dead. Check podman-n8n.service.";
+          };
+        }
+        {
+          alert = "CmsApiDown";
+          expr = ''probe_success{job="probe-cms"} == 0'';
+          for = "10m";
+          labels = { severity = "P4"; category = "website"; };
+          annotations = {
+            summary = "Heartwood CMS API down";
+            description = "CMS on :8095 unreachable for 10+ minutes. Site stays up (static on Hostinger) but edits/deploys are blocked. Check heartwood-cms.service.";
+          };
+        }
+        {
+          alert = "WebsiteSSLCertExpiringSoon";
+          expr = ''(probe_ssl_earliest_cert_expiry{job=~"probe-website|probe-webhook-ingress"} - time()) < 14 * 86400'';
+          for = "1h";
+          labels = { severity = "P4"; category = "website"; };
+          annotations = {
+            summary = "TLS cert expiring soon: {{ $labels.instance }}";
+            description = "Certificate expires in {{ $value | humanizeDuration }}.";
+          };
+        }
+        {
+          alert = "WebsiteSlowResponse";
+          expr = ''avg_over_time(probe_duration_seconds{job="probe-website"}[15m]) > 3'';
+          for = "15m";
+          labels = { severity = "P3"; category = "website"; };
+          annotations = {
+            summary = "Website slow: {{ $labels.instance }}";
+            description = "Average probe duration over 15m is {{ $value | humanize }}s (threshold 3s).";
+          };
+        }
+      ];
+    }
+
+    #========================================================================
     # P5 - CRITICAL ALERTS
     #========================================================================
     {

@@ -77,6 +77,42 @@ in
                 valid_status_codes = [ 200 ];
               };
             };
+            # CORS preflight — proves the public webhook ingress chain
+            # (Cloudflare proxy → tunnel → n8n webhook) end to end without
+            # creating a lead. n8n answers preflights with 204.
+            http_options_2xx = {
+              prober = "http";
+              timeout = "15s";
+              http = {
+                method = "OPTIONS";
+                headers = {
+                  "Origin" = "https://iheartwoodcraft.com";
+                  "Access-Control-Request-Method" = "POST";
+                };
+                valid_status_codes = [ 200 204 ];
+              };
+            };
+            # Unsigned POST — a 401 proves hwc-leads is up AND its HMAC
+            # verification is active, without persisting anything.
+            http_post_401 = {
+              prober = "http";
+              timeout = "15s";
+              http = {
+                method = "POST";
+                headers = { "Content-Type" = "application/json"; };
+                body = "{}";
+                valid_status_codes = [ 401 ];
+              };
+            };
+            # Auth-walled services: reachable = 200 or 401.
+            http_2xx_or_401 = {
+              prober = "http";
+              timeout = "15s";
+              http = {
+                method = "GET";
+                valid_status_codes = [ 200 401 ];
+              };
+            };
           };
         });
       };
@@ -101,6 +137,55 @@ in
             }];
           }
         ]
+        # Blackbox probes — website + lead-pipeline health (see parts/alerts.nix
+        # "website" group for the alerts these feed). All share the standard
+        # blackbox relabel dance: target URL becomes ?target= param + instance
+        # label; the scrape itself hits the local exporter on :9115.
+        ++ (lib.optionals cfg.blackbox.enable (
+          let
+            blackboxRelabel = [
+              { source_labels = [ "__address__" ]; target_label = "__param_target"; }
+              { source_labels = [ "__param_target" ]; target_label = "instance"; }
+              { target_label = "__address__"; replacement = "localhost:9115"; }
+            ];
+            probeJob = name: module: interval: targets: {
+              job_name = name;
+              metrics_path = "/probe";
+              scrape_interval = interval;
+              params.module = [ module ];
+              static_configs = [{ inherit targets; }];
+              relabel_configs = blackboxRelabel;
+            };
+          in [
+            # Public website pages + GEO artifacts (through Cloudflare, like a visitor)
+            (probeJob "probe-website" "http_health_check" "60s" [
+              "https://iheartwoodcraft.com/"
+              "https://iheartwoodcraft.com/calculator/"
+              "https://iheartwoodcraft.com/deck-calculator/"
+              "https://iheartwoodcraft.com/contact/"
+              "https://iheartwoodcraft.com/sitemap.xml"
+              "https://iheartwoodcraft.com/robots.txt"
+              "https://iheartwoodcraft.com/llms.txt"
+              "https://iheartwoodcraft.com/js/calculator.bundle.js"
+            ])
+            # Public webhook ingress (Cloudflare proxy → tunnel → n8n) via CORS preflight
+            (probeJob "probe-webhook-ingress" "http_options_2xx" "60s" [
+              "https://api.iheartwoodcraft.com/webhook/calculator-lead"
+              "https://api.iheartwoodcraft.com/webhook/calculator-appointment"
+            ])
+            # hwc-leads liveness + HMAC enforcement (401 on unsigned POST)
+            (probeJob "probe-leads-service" "http_post_401" "30s" [
+              "http://127.0.0.1:11650/leads"
+            ])
+            # n8n engine + CMS API (auth-walled: 200 or 401 = alive)
+            (probeJob "probe-n8n" "http_health_check" "30s" [
+              "http://127.0.0.1:5678/healthz"
+            ])
+            (probeJob "probe-cms" "http_2xx_or_401" "60s" [
+              "http://127.0.0.1:8095/api/health"
+            ])
+          ]
+        ))
         ++ cfg.scrapeConfigs; # Include scrape configs added by other modules
 
         # Alert rules organized by severity (P5/P4/P3)
