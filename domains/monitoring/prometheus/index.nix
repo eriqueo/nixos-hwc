@@ -74,6 +74,7 @@ in
               timeout = "15s";
               http = {
                 method = "GET";
+                preferred_ip_protocol = "ip4";
                 valid_status_codes = [ 200 ];
               };
             };
@@ -85,6 +86,7 @@ in
               timeout = "15s";
               http = {
                 method = "OPTIONS";
+                preferred_ip_protocol = "ip4";
                 headers = {
                   "Origin" = "https://iheartwoodcraft.com";
                   "Access-Control-Request-Method" = "POST";
@@ -99,6 +101,7 @@ in
               timeout = "15s";
               http = {
                 method = "POST";
+                preferred_ip_protocol = "ip4";
                 headers = { "Content-Type" = "application/json"; };
                 body = "{}";
                 valid_status_codes = [ 401 ];
@@ -110,6 +113,7 @@ in
               timeout = "15s";
               http = {
                 method = "GET";
+                preferred_ip_protocol = "ip4";
                 valid_status_codes = [ 200 401 ];
               };
             };
