@@ -93,6 +93,7 @@ in
         $UMAMI_PSQL -tAc "SELECT 1 FROM pg_roles WHERE rolname='umami'" | ${pkgs.gnugrep}/bin/grep -q 1 || \
           $UMAMI_PSQL -c "CREATE ROLE umami LOGIN" || true
         $UMAMI_PSQL -c "ALTER DATABASE ${cfg.databaseName} OWNER TO umami" || true
+        $UMAMI_PSQL -d ${cfg.databaseName} -c "ALTER SCHEMA public OWNER TO umami" || true
       '';
 
       # Start after postgres is up (container network + db)
