@@ -48,6 +48,11 @@
   # Morning briefing — daily Claude Code agent (6am MT)
   hwc.business.morningBriefing.enable = true;
 
+  # Umami web analytics — cookieless analytics for iheartwoodcraft.com
+  # (public collect endpoint rides the cloudflared tunnel at
+  # stats.iheartwoodcraft.com; see machines/server/config.nix extraIngress)
+  hwc.business.umami.enable = lib.mkDefault true;
+
   # Heartwood Estimate Assembler — React PWA
   # Port 13443 is pre-allocated outside the hwc-publish range (intentional —
   # the estimator is a first-class named app, not an ad-hoc published slot).

@@ -737,6 +737,9 @@
       # Production-domain webhook ingress (calculator lead/appointment).
       "api.iheartwoodcraft.com" = { service = "http://localhost:5678"; path = "^/webhook/"; };
 
+      # Umami analytics — script.js + /api/send must be visitor-reachable.
+      "stats.iheartwoodcraft.com" = "http://localhost:3009";
+
       # hwc-mcp-gateway origins — internal hostnames the OAuth gateway Worker
       # proxies to (machine-to-machine via an Access service token). Distinct
       # from the bare brain./leads./mcp. names above, which stay owned by the

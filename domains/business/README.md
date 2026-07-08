@@ -28,6 +28,7 @@ business/
 ```
 
 ## Changelog
+- 2026-07-07: New `umami/` module (hwc.business.umami) — cookieless self-hosted web analytics for iheartwoodcraft.com. Podman container (mkContainer, media-network) on loopback :3009, Postgres db `umami` (role created in postStart, trust auth over the 10.89.0.1 gateway), agenix `umami-env` (APP_SECRET + DATABASE_URL). Public collect endpoint via cloudflared at stats.iheartwoodcraft.com (proxied CNAME → tunnel).
 - 2026-07-06: morning-briefing email sender switched eric@ → office@iheartwoodcraft.com (`-a proton-office`): self-sent mail gets Proton's sent+auto-archive treatment and never reaches the Inbox (found on the first live 06:00 run; SMTP had been 250-OK all along).
 - 2026-07-06: Website evicted (audit 2.3): site_files (183 MB, CMS-mutated 11ty working tree) → own repo eriqueo/hwc-website, runtime clone at /opt/business/website-site; siteDir/mcp/web-build refs repointed. History purge (filter-repo) same change-set.
 - 2026-07-06: morning-briefing: Step 5 email delivery added (briefing.json → plain-text render → msmtp proton-hwc → eric@iheartwoodcraft.com, best-effort); unit PATH gains msmtp/pass/gnupg. Audit 2.1: bash pipeline is now the SOLE briefing producer.

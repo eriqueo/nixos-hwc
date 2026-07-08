@@ -24,5 +24,6 @@
     ./website/index.nix
     ./morning-briefing/index.nix
     ./leads/index.nix          # hwc-leads (Phase 0 scaffold, Phase 2 impl)
+    ./umami/index.nix          # Umami web analytics (stats.iheartwoodcraft.com)
   ];
 }
