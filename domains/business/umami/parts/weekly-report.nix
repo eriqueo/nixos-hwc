@@ -37,9 +37,10 @@ let
     PAGES=$(curl -s -m 15 -H "$AUTH" "$UMAMI_URL/api/websites/$WID/metrics?type=path&startAt=$WEEK_MS&endAt=$NOW_MS&limit=10")
     REFS=$(curl -s -m 15 -H "$AUTH" "$UMAMI_URL/api/websites/$WID/metrics?type=referrer&startAt=$WEEK_MS&endAt=$NOW_MS&limit=10")
 
-    LEADS_THIS=$("$PSQL" -d hwc -tAc "SELECT count(*) FROM hwc.calculator_leads WHERE created_at > now() - interval '7 days'" 2>/dev/null | tr -d ' ')
-    LEADS_PREV=$("$PSQL" -d hwc -tAc "SELECT count(*) FROM hwc.calculator_leads WHERE created_at BETWEEN now() - interval '14 days' AND now() - interval '7 days'" 2>/dev/null | tr -d ' ')
-    LEADS_ROWS=$("$PSQL" -d hwc -tAc "SELECT to_char(created_at,'Mon DD')||'  '||calculator||'  '||coalesce(nullif(contact_name,'''),'(no name)')||'  \$'||estimate_low||'-'||estimate_high||'  '||status FROM hwc.calculator_leads WHERE created_at > now() - interval '7 days' ORDER BY created_at DESC" 2>/dev/null)
+    # hwc.leads is the live store hwc-leads writes (hwc.calculator_leads is legacy)
+    LEADS_THIS=$("$PSQL" -d hwc -tAc "SELECT count(*) FROM hwc.leads WHERE created_at > now() - interval '7 days'" 2>/dev/null | tr -d ' ')
+    LEADS_PREV=$("$PSQL" -d hwc -tAc "SELECT count(*) FROM hwc.leads WHERE created_at BETWEEN now() - interval '14 days' AND now() - interval '7 days'" 2>/dev/null | tr -d ' ')
+    LEADS_ROWS=$("$PSQL" -d hwc -tAc "SELECT to_char(created_at,'Mon DD')||'  '||source||'  '||coalesce(nullif(contact_name,'''),'(no name)')||'  '||status FROM hwc.leads WHERE created_at > now() - interval '7 days' ORDER BY created_at DESC" 2>/dev/null)
     [ -n "$LEADS_THIS" ] || LEADS_THIS=0
     [ -n "$LEADS_PREV" ] || LEADS_PREV=0
 

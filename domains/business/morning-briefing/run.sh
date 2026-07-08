@@ -198,8 +198,10 @@ if [ -n "${UMAMI_TOKEN}" ]; then
   echo "${STATS_7D}" | jq empty 2>/dev/null || STATS_7D='{}'
   echo "${TOP_PAGES}" | jq empty 2>/dev/null || TOP_PAGES='[]'
 fi
-LEADS_24=$("${PSQL_BIN}" -d hwc -tAc "SELECT count(*) FROM hwc.calculator_leads WHERE created_at > now() - interval '1 day'" 2>/dev/null | tr -d ' ')
-LEADS_7D=$("${PSQL_BIN}" -d hwc -tAc "SELECT count(*) FROM hwc.calculator_leads WHERE created_at > now() - interval '7 days'" 2>/dev/null | tr -d ' ')
+# hwc.leads is the live store hwc-leads writes; hwc.calculator_leads is the
+# legacy table only UPDATEd by the appointment workflow.
+LEADS_24=$("${PSQL_BIN}" -d hwc -tAc "SELECT count(*) FROM hwc.leads WHERE created_at > now() - interval '1 day'" 2>/dev/null | tr -d ' ')
+LEADS_7D=$("${PSQL_BIN}" -d hwc -tAc "SELECT count(*) FROM hwc.leads WHERE created_at > now() - interval '7 days'" 2>/dev/null | tr -d ' ')
 [ -n "${LEADS_24}" ] || LEADS_24=0
 [ -n "${LEADS_7D}" ] || LEADS_7D=0
 WEBSITE_JSON=$(jq -n \
