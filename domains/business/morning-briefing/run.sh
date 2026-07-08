@@ -193,7 +193,7 @@ if [ -n "${UMAMI_TOKEN}" ]; then
   STATS_7D=$("${CURL_BIN}" -s -m 10 -H "Authorization: Bearer ${UMAMI_TOKEN}" \
     "${UMAMI_URL}/api/websites/${UMAMI_WID}/stats?startAt=${WEEK_MS}&endAt=${NOW_MS}" 2>/dev/null || echo '{}')
   TOP_PAGES=$("${CURL_BIN}" -s -m 10 -H "Authorization: Bearer ${UMAMI_TOKEN}" \
-    "${UMAMI_URL}/api/websites/${UMAMI_WID}/metrics?type=url&startAt=${WEEK_MS}&endAt=${NOW_MS}&limit=3" 2>/dev/null || echo '[]')
+    "${UMAMI_URL}/api/websites/${UMAMI_WID}/metrics?type=path&startAt=${WEEK_MS}&endAt=${NOW_MS}&limit=3" 2>/dev/null || echo '[]')
   echo "${STATS_24}" | jq empty 2>/dev/null || STATS_24='{}'
   echo "${STATS_7D}" | jq empty 2>/dev/null || STATS_7D='{}'
   echo "${TOP_PAGES}" | jq empty 2>/dev/null || TOP_PAGES='[]'
@@ -211,11 +211,11 @@ WEBSITE_JSON=$(jq -n \
   --arg ok "$([ -n "${UMAMI_TOKEN}" ] && echo true || echo false)" '
   {
     analytics_ok: ($ok == "true"),
-    visitors_24h: ($s24.visitors.value // 0),
-    pageviews_24h: ($s24.pageviews.value // 0),
-    visitors_7d: ($s7.visitors.value // 0),
-    pageviews_7d: ($s7.pageviews.value // 0),
-    visits_7d: ($s7.visits.value // 0),
+    visitors_24h: ($s24.visitors // 0),
+    pageviews_24h: ($s24.pageviews // 0),
+    visitors_7d: ($s7.visitors // 0),
+    pageviews_7d: ($s7.pageviews // 0),
+    visits_7d: ($s7.visits // 0),
     leads_24h: $leads24,
     leads_7d: $leads7,
     top_pages_7d: ([$pages] | flatten | map(select(type=="object")) | map({url: (.x // "?"), views: (.y // 0)})),

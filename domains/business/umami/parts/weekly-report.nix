@@ -22,7 +22,6 @@ let
 
     NOW_MS=$(( $(date +%s) * 1000 ))
     WEEK_MS=$(( NOW_MS - 7 * 86400000 ))
-    PREV_MS=$(( NOW_MS - 14 * 86400000 ))
 
     LOGIN=$(jq -n --rawfile pw "$PW_FILE" '{username:"admin",password:($pw|rtrimstr("\n"))}')
     TOKEN=$(curl -s -m 15 -X POST "$UMAMI_URL/api/auth/login" -H "content-type: application/json" -d "$LOGIN" | jq -r '.token // empty')
@@ -32,9 +31,10 @@ let
     fi
     AUTH="Authorization: Bearer $TOKEN"
 
+    # Umami v3: stats returns flat numbers plus a `comparison` object for the
+    # preceding same-length window — no second call needed.
     THIS=$(curl -s -m 15 -H "$AUTH" "$UMAMI_URL/api/websites/$WID/stats?startAt=$WEEK_MS&endAt=$NOW_MS")
-    PREV=$(curl -s -m 15 -H "$AUTH" "$UMAMI_URL/api/websites/$WID/stats?startAt=$PREV_MS&endAt=$WEEK_MS")
-    PAGES=$(curl -s -m 15 -H "$AUTH" "$UMAMI_URL/api/websites/$WID/metrics?type=url&startAt=$WEEK_MS&endAt=$NOW_MS&limit=10")
+    PAGES=$(curl -s -m 15 -H "$AUTH" "$UMAMI_URL/api/websites/$WID/metrics?type=path&startAt=$WEEK_MS&endAt=$NOW_MS&limit=10")
     REFS=$(curl -s -m 15 -H "$AUTH" "$UMAMI_URL/api/websites/$WID/metrics?type=referrer&startAt=$WEEK_MS&endAt=$NOW_MS&limit=10")
 
     LEADS_THIS=$("$PSQL" -d hwc -tAc "SELECT count(*) FROM hwc.calculator_leads WHERE created_at > now() - interval '7 days'" 2>/dev/null | tr -d ' ')
@@ -44,20 +44,20 @@ let
     [ -n "$LEADS_PREV" ] || LEADS_PREV=0
 
     BODY=$(jq -nr \
-      --argjson this "$THIS" --argjson prev "$PREV" \
+      --argjson this "$THIS" \
       --argjson pages "$PAGES" --argjson refs "$REFS" \
       --argjson lt "$LEADS_THIS" --argjson lp "$LEADS_PREV" '
-      def n(x): (x // 0);
       def delta(cur; old):
         if old == 0 then (if cur > 0 then " (new)" else "" end)
         else " (" + (if cur >= old then "+" else "" end) + (((cur - old) / old * 100) | round | tostring) + "%)" end;
       def row: "  " + ((.y // 0) | tostring) + "  " + (.x // "(direct)");
-      "HEARTWOOD CRAFT — WEBSITE WEEK IN REVIEW\n"
+      ($this.comparison // {}) as $prev
+      | "HEARTWOOD CRAFT — WEBSITE WEEK IN REVIEW\n"
       + "Last 7 days vs the 7 before\n"
       + "\n== TRAFFIC ==\n"
-      + "visitors:  " + (n($this.visitors.value)  | tostring) + delta(n($this.visitors.value);  n($prev.visitors.value)) + "\n"
-      + "visits:    " + (n($this.visits.value)    | tostring) + delta(n($this.visits.value);    n($prev.visits.value)) + "\n"
-      + "pageviews: " + (n($this.pageviews.value) | tostring) + delta(n($this.pageviews.value); n($prev.pageviews.value)) + "\n"
+      + "visitors:  " + (($this.visitors // 0)  | tostring) + delta($this.visitors // 0;  $prev.visitors // 0) + "\n"
+      + "visits:    " + (($this.visits // 0)    | tostring) + delta($this.visits // 0;    $prev.visits // 0) + "\n"
+      + "pageviews: " + (($this.pageviews // 0) | tostring) + delta($this.pageviews // 0; $prev.pageviews // 0) + "\n"
       + "\n== CALCULATOR LEADS ==\n"
       + "this week: " + ($lt | tostring) + delta($lt; $lp) + "  (previous week: " + ($lp | tostring) + ")\n"
       + "\n== TOP PAGES ==\n"
