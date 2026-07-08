@@ -543,6 +543,39 @@ function makeSnapshot(snap){
   sec.appendChild(g);return sec;
 }
 
+// ── Website section (umami + calculator leads) ──────────────────────────────
+function makeWebsite(w){
+  const sec=$('div',{class:'section'});
+  const hdr=$('div',{class:'sec-hdr'},$('span',null,'Website'),$('span',{class:'sec-count'},'7 days'));
+  sec.appendChild(hdr);
+  const g=$('div',{class:'snap-grid'});
+  [{val:w.visitors_24h||0,label:'Visitors 24h'},
+   {val:w.visitors_7d||0,label:'Visitors 7d'},
+   {val:w.pageviews_7d||0,label:'Views 7d'},
+   {val:w.leads_7d||0,label:'Calc Leads 7d'}
+  ].forEach(i=>{
+    g.appendChild($('div',{class:'snap-card'},
+      $('div',{class:`snap-val${(i.val===0)?' zero':''}`},`${i.val}`),
+      $('div',{class:'snap-label'},i.label)));
+  });
+  sec.appendChild(g);
+  if(w.top_pages_7d&&w.top_pages_7d.length){
+    const list=$('div',null);
+    w.top_pages_7d.slice(0,3).forEach(p=>{
+      list.appendChild($('div',{class:'item'},
+        $('span',{class:'item-title'},p.url),
+        $('span',{class:'item-meta'},` ${p.views} views`)));
+    });
+    sec.appendChild(list);
+  }
+  const link=$('a',{href:'https://stats.iheartwoodcraft.com',target:'_blank',class:'item-meta'},'full analytics →');
+  sec.appendChild($('div',{style:'margin-top:6px'},link));
+  if(w.analytics_ok===false){
+    sec.appendChild($('div',{class:'alert alert-warning'},'Umami unreachable — showing zeros'));
+  }
+  return sec;
+}
+
 // ── Comms section ────────────────────────────────────────────────────────────
 function makeComms(comms){
   const sec=$('div',{class:'section'});
@@ -753,6 +786,7 @@ function render(data,liveThreads){
   if(s.system){_sectionCount++;grid.appendChild(tile(makeSystem(s.system)))}
   if(s.weather){_sectionCount++;grid.appendChild(tile(makeWeather(s.weather)))}
   if(s.weekly_snapshot){_sectionCount++;grid.appendChild(tile(makeSnapshot(s.weekly_snapshot)))}
+  if(s.website&&Object.keys(s.website).length){_sectionCount++;grid.appendChild(tile(makeWebsite(s.website)))}
   if(s.leads&&s.leads.items&&s.leads.items.length){_sectionCount++;grid.appendChild(tile(makeLeads(s.leads)))}
   if(s.overdue&&s.overdue.count>0){_sectionCount++;grid.appendChild(tile(makeOverdue(s.overdue)))}
   if(s.recent_documents){const d=makeRecentDocs(s.recent_documents);if(d){_sectionCount++;grid.appendChild(tile(d))}}

@@ -24,6 +24,8 @@ let
   inherit (helpers) mkContainer;
 in
 {
+  imports = [ ./parts/weekly-report.nix ];
+
   #==========================================================================
   # OPTIONS
   #==========================================================================
@@ -46,6 +48,12 @@ in
       type = lib.types.str;
       default = "umami";
       description = "PostgreSQL database for Umami";
+    };
+
+    websiteId = lib.mkOption {
+      type = lib.types.str;
+      default = "02d2b023-55a7-4a24-8064-0d97e4801284";
+      description = "Umami website UUID for iheartwoodcraft.com (created 2026-07-07 via API; used by the tracking snippet, morning briefing, and weekly report)";
     };
   };
 

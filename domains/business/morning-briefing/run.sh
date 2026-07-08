@@ -170,6 +170,63 @@ ALERTS_JSON=$(jq -n \
   ]' 2>/dev/null || echo '[]')
 echo "${ALERTS_JSON}" | jq empty 2>/dev/null || ALERTS_JSON='[]'
 
+# -- website: umami analytics (loopback :3009) + calculator leads (postgres) --
+# Best-effort: any failure leaves an empty section, never fails the briefing.
+UMAMI_URL="http://127.0.0.1:3009"
+UMAMI_WID="02d2b023-55a7-4a24-8064-0d97e4801284"
+UMAMI_PW_FILE="/run/agenix/umami-admin-password"
+CURL_BIN="$(command -v curl || echo /etc/profiles/per-user/eric/bin/curl)"
+PSQL_BIN="/run/current-system/sw/bin/psql"; [ -x "${PSQL_BIN}" ] || PSQL_BIN="psql"
+UMAMI_TOKEN=""
+if [ -r "${UMAMI_PW_FILE}" ] && [ -x "${CURL_BIN}" ]; then
+  UMAMI_LOGIN=$(jq -n --rawfile pw "${UMAMI_PW_FILE}" '{username:"admin",password:($pw|rtrimstr("\n"))}' 2>/dev/null || echo "")
+  [ -n "${UMAMI_LOGIN}" ] && UMAMI_TOKEN=$("${CURL_BIN}" -s -m 10 -X POST "${UMAMI_URL}/api/auth/login" \
+    -H "content-type: application/json" -d "${UMAMI_LOGIN}" | jq -r '.token // empty' 2>/dev/null || echo "")
+fi
+STATS_24='{}'; STATS_7D='{}'; TOP_PAGES='[]'
+if [ -n "${UMAMI_TOKEN}" ]; then
+  NOW_MS=$(( $(date +%s) * 1000 ))
+  DAY_MS=$(( NOW_MS - 86400000 ))
+  WEEK_MS=$(( NOW_MS - 7 * 86400000 ))
+  STATS_24=$("${CURL_BIN}" -s -m 10 -H "Authorization: Bearer ${UMAMI_TOKEN}" \
+    "${UMAMI_URL}/api/websites/${UMAMI_WID}/stats?startAt=${DAY_MS}&endAt=${NOW_MS}" 2>/dev/null || echo '{}')
+  STATS_7D=$("${CURL_BIN}" -s -m 10 -H "Authorization: Bearer ${UMAMI_TOKEN}" \
+    "${UMAMI_URL}/api/websites/${UMAMI_WID}/stats?startAt=${WEEK_MS}&endAt=${NOW_MS}" 2>/dev/null || echo '{}')
+  TOP_PAGES=$("${CURL_BIN}" -s -m 10 -H "Authorization: Bearer ${UMAMI_TOKEN}" \
+    "${UMAMI_URL}/api/websites/${UMAMI_WID}/metrics?type=url&startAt=${WEEK_MS}&endAt=${NOW_MS}&limit=3" 2>/dev/null || echo '[]')
+  echo "${STATS_24}" | jq empty 2>/dev/null || STATS_24='{}'
+  echo "${STATS_7D}" | jq empty 2>/dev/null || STATS_7D='{}'
+  echo "${TOP_PAGES}" | jq empty 2>/dev/null || TOP_PAGES='[]'
+fi
+LEADS_24=$("${PSQL_BIN}" -d hwc -tAc "SELECT count(*) FROM hwc.calculator_leads WHERE created_at > now() - interval '1 day'" 2>/dev/null | tr -d ' ')
+LEADS_7D=$("${PSQL_BIN}" -d hwc -tAc "SELECT count(*) FROM hwc.calculator_leads WHERE created_at > now() - interval '7 days'" 2>/dev/null | tr -d ' ')
+[ -n "${LEADS_24}" ] || LEADS_24=0
+[ -n "${LEADS_7D}" ] || LEADS_7D=0
+WEBSITE_JSON=$(jq -n \
+  --argjson s24 "${STATS_24}" \
+  --argjson s7 "${STATS_7D}" \
+  --argjson pages "${TOP_PAGES}" \
+  --argjson leads24 "${LEADS_24}" \
+  --argjson leads7 "${LEADS_7D}" \
+  --arg ok "$([ -n "${UMAMI_TOKEN}" ] && echo true || echo false)" '
+  {
+    analytics_ok: ($ok == "true"),
+    visitors_24h: ($s24.visitors.value // 0),
+    pageviews_24h: ($s24.pageviews.value // 0),
+    visitors_7d: ($s7.visitors.value // 0),
+    pageviews_7d: ($s7.pageviews.value // 0),
+    visits_7d: ($s7.visits.value // 0),
+    leads_24h: $leads24,
+    leads_7d: $leads7,
+    top_pages_7d: ([$pages] | flatten | map(select(type=="object")) | map({url: (.x // "?"), views: (.y // 0)})),
+    dashboard: "https://stats.iheartwoodcraft.com"
+  }' 2>/dev/null || echo '{}')
+echo "${WEBSITE_JSON}" | jq empty 2>/dev/null || WEBSITE_JSON='{}'
+# Alert if analytics is unreachable (tracking data being lost)
+if [ -z "${UMAMI_TOKEN}" ]; then
+  ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq '. + [{level:"warning",section:"website",message:"Umami analytics unreachable — visitor tracking data may be lost"}]' 2>/dev/null || echo "${ALERTS_JSON}")
+fi
+
 # -- assemble briefing.json atomically: build .tmp, validate, then mv --
 if jq -n \
   --arg now "$(date -Iseconds)" \
@@ -182,7 +239,8 @@ if jq -n \
   --argjson unread "${UNREAD}" \
   --argjson inbox_unread "${INBOX_UNREAD}" \
   --argjson alerts "${ALERTS_JSON}" \
-  --argjson drift "${DRIFT_JSON}" '
+  --argjson drift "${DRIFT_JSON}" \
+  --argjson website "${WEBSITE_JSON}" '
   {
     generated_at: $now,
     sections: {
@@ -200,6 +258,7 @@ if jq -n \
       },
       mail: { healthy: true, unread: $unread, inbox_unread: $inbox_unread,
               summary: "\($inbox_unread) inbox unread (\($unread) total)" },
+      website: $website,
       weather: { location: "Bozeman, MT", outdoor_work_ok: true, notes: "not gathered" },
       comms: { source: "none", items: [] },
       weekly_snapshot: {},
@@ -396,6 +455,17 @@ if [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
         + " · review: " + ((.mail_triage.review // []) | length | tostring)
         + " · noise: " + ((.mail_triage.noise // []) | length | tostring)
         + (((.mail_triage.urgent // [])[:5]) | map("\n  ! " + (.subject // .from // "?")) | join(""))
+      else "" end)
+    + (if .sections.website and (.sections.website | length > 0) then
+        sec("WEBSITE")
+        + "visitors 24h: " + ((.sections.website.visitors_24h // 0) | tostring)
+        + " · pageviews 24h: " + ((.sections.website.pageviews_24h // 0) | tostring)
+        + " · 7d: " + ((.sections.website.visitors_7d // 0) | tostring) + " visitors / "
+        + ((.sections.website.pageviews_7d // 0) | tostring) + " views"
+        + "\ncalculator leads: " + ((.sections.website.leads_24h // 0) | tostring) + " today · "
+        + ((.sections.website.leads_7d // 0) | tostring) + " this week"
+        + ((.sections.website.top_pages_7d // [])[:3] | map("\n  " + .url + " (" + (.views | tostring) + ")") | join(""))
+        + "\nfull analytics: https://stats.iheartwoodcraft.com"
       else "" end)
     + "\n\nDashboard: https://briefing.hwc.iheartwoodcraft.com\n"
   ' "${OUTPUT_DIR}/briefing.json" 2>/dev/null) || EMAIL_BODY=""
