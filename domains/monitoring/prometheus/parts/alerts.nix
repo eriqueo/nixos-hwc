@@ -64,6 +64,16 @@
           };
         }
         {
+          alert = "UmamiDown";
+          expr = ''probe_success{job="probe-umami"} == 0'';
+          for = "10m";
+          labels = { severity = "P4"; category = "website"; };
+          annotations = {
+            summary = "Umami analytics down: {{ $labels.instance }}";
+            description = "Analytics collection is failing — visitor data is being lost (site itself unaffected). Check podman-umami and the stats.iheartwoodcraft.com tunnel route.";
+          };
+        }
+        {
           alert = "WebsiteSSLCertExpiringSoon";
           expr = ''(probe_ssl_earliest_cert_expiry{job=~"probe-website|probe-webhook-ingress"} - time()) < 14 * 86400'';
           for = "1h";

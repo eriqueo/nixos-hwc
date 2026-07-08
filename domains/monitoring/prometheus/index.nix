@@ -188,6 +188,11 @@ in
             (probeJob "probe-cms" "http_2xx_or_401" "60s" [
               "http://127.0.0.1:8095/api/health"
             ])
+            # Umami analytics — local heartbeat + public collect ingress
+            (probeJob "probe-umami" "http_health_check" "60s" [
+              "http://127.0.0.1:3009/api/heartbeat"
+              "https://stats.iheartwoodcraft.com/api/heartbeat"
+            ])
           ]
         ))
         ++ cfg.scrapeConfigs; # Include scrape configs added by other modules
