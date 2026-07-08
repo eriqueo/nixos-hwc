@@ -57,22 +57,26 @@ in
     # of truth for "where do leads go" — change here, rebuild + redeploy.
     leadsWebhookUrl = lib.mkOption {
       type = lib.types.str;
-      default = "https://hwc-server.ocelot-wahoo.ts.net/webhook/calculator-lead";
+      default = "https://n8n.heartwoodcraft.me/webhook/calculator-lead";
       description = ''
-        URL the calculator app POSTs lead submissions to. Today this hits
-        the n8n thin-shell workflow (work_calculator_lead) which HMAC-signs
-        + forwards to hwc-leads. A future direct-POST cutover would point
-        this at the public Caddy hwc-leads route.
+        URL the calculator app POSTs lead submissions to. MUST be publicly
+        reachable — site visitors' browsers call it directly. The previous
+        hwc-server.ocelot-wahoo.ts.net default was tailnet-only and silently
+        lost every public lead (2026-07-07 plumbing audit). Now the
+        Cloudflare-tunnel n8n ingress: the thin-shell workflow
+        (work_calculator_lead) HMAC-signs + forwards to hwc-leads on
+        loopback :11650. A future direct-POST cutover would point this at
+        a public hwc-leads route.
       '';
     };
     leadsAppointmentWebhookUrl = lib.mkOption {
       type = lib.types.str;
-      default = "https://hwc-server.ocelot-wahoo.ts.net/webhook/calculator-appointment";
+      default = "https://n8n.heartwoodcraft.me/webhook/calculator-appointment";
       description = ''
-        URL the calculator's "schedule a call" flow POSTs to. Note: the
-        work_calculator_appointment n8n workflow was archived during
-        Phase 0; submissions to this URL currently 404 (caught silently
-        by the calc). Replace with a real route during Move B or beyond.
+        URL the calculator's "schedule a call" flow POSTs to. Same public
+        reachability requirement as leadsWebhookUrl. Handled by the
+        work_calculator_appointment n8n workflow (re-activated 2026-05-08):
+        Postgres status update + confirmation email w/ ICS + khal event.
       '';
     };
   };

@@ -20,5 +20,6 @@ domains/business/website/
 Application files live at `/opt/business/heartwood-cms/` (not in the NixOS repo).
 
 ## Changelog
+- 2026-07-07: leadsWebhookUrl/leadsAppointmentWebhookUrl defaults switched from the tailnet-only hwc-server.ocelot-wahoo.ts.net (unreachable for public visitors — every calculator lead was silently lost) to the public Cloudflare-tunnel ingress n8n.heartwoodcraft.me. Note: the CMS deploy action does NOT run the vite calculator build despite the env-injection comment — the bundle is built manually and committed to the site repo.
 - 2026-04-01: Rename heartwood-site to site_files, update paths in index.nix
 - 2026-03-30: Initial creation — systemd service for Heartwood CMS Dashboard
