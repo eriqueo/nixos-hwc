@@ -268,6 +268,25 @@ export function makeCalculator(data) {
       lo = lo * (1 - ratio) + deckLo * mm;
       hi = hi * (1 - ratio) + deckHi * mm;
 
+      // Generic data-driven hooks — calculator JSON can add steps without
+      // engine changes. stepMultipliers: { stepId: { value: m | [mLo, mHi] } }
+      // scales the running range; stepAdds: { stepId: { value: [aLo, aHi] } }
+      // adds flat amounts. Unknown/missing selections are no-ops.
+      Object.entries(P.stepMultipliers || {}).forEach(([stepId, byValue]) => {
+        const m = byValue?.[state[stepId]];
+        if (m == null) return;
+        const [mLo, mHi] = Array.isArray(m) ? m : [m, m];
+        lo *= mLo;
+        hi *= mHi;
+      });
+      Object.entries(P.stepAdds || {}).forEach(([stepId, byValue]) => {
+        const a = byValue?.[state[stepId]];
+        if (a == null) return;
+        const [aLo, aHi] = Array.isArray(a) ? a : [a, a];
+        lo += aLo;
+        hi += aHi;
+      });
+
       // Railing is per linear foot × perimeter (driven by deck size).
       if (state.railing && state.railing !== "none") {
         const [rL, rH] = P.railingPerFoot?.[state.railing] || [0, 0];
