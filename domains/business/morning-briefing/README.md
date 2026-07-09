@@ -144,6 +144,9 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-07-08c** — unit PATH: added `gawk` + `gnugrep` (run.sh:78 uses `awk`,
+  :143 uses `grep`; neither is in coreutils — the first post-deploy timer run
+  died with "awk: command not found").
 - **2026-07-08b** — **Deploy fixes from live verification.** (1) `jt_jobs`
   search `limit: 100` → `50`: JobTread's Pave API rejects the query above
   ~size 50 with the nested JOB_FIELDS as `HTTP 413` (query complexity, not

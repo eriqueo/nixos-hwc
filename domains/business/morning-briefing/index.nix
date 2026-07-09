@@ -30,7 +30,7 @@ in
       # pass+gnupg: msmtp's passwordeval for the Step-5 email (proton bridge).
       # curl: website tile (umami stats via loopback API). postgresql client
       # comes from /run/current-system/sw/bin (absolute path in run.sh).
-      path = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.nodejs_22 pkgs.notmuch pkgs.git pkgs.msmtp pkgs.pass pkgs.gnupg pkgs.curl ];
+      path = [ pkgs.bash pkgs.coreutils pkgs.gawk pkgs.gnugrep pkgs.jq pkgs.nodejs_22 pkgs.notmuch pkgs.git pkgs.msmtp pkgs.pass pkgs.gnupg pkgs.curl ];
       serviceConfig = {
         Type = "oneshot";
         User = lib.mkForce "eric";
