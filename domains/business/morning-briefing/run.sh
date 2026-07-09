@@ -149,7 +149,8 @@ CURRENT_KERNEL=$(readlink /run/current-system/kernel 2>/dev/null || echo "?curre
 if [ "${BOOTED_KERNEL}" = "${CURRENT_KERNEL}" ]; then REBOOT_PENDING=false; else REBOOT_PENDING=true; fi
 GEN_COUNT=$(ls -d /nix/var/nix/profiles/system-*-link 2>/dev/null | wc -l | tr -d ' ')
 COREDUMPCTL="/run/current-system/sw/bin/coredumpctl"; [ -x "${COREDUMPCTL}" ] || COREDUMPCTL="coredumpctl"
-CORE_24H=$("${COREDUMPCTL}" list --since "-24h" --no-pager -q 2>/dev/null | wc -l | tr -d ' ')
+# coredumpctl exits 1 when there are NO coredumps — don't let pipefail kill us.
+CORE_24H=$({ "${COREDUMPCTL}" list --since "-24h" --no-pager -q 2>/dev/null || true; } | wc -l | tr -d ' ')
 DRIFT_JSON=$(jq -n \
   --arg head "${HEAD_REV}" \
   --arg deployed "${DEPLOYED_REV}" \
