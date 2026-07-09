@@ -107,7 +107,9 @@ function customField(job, name) {
 }
 
 async function gatherJobs() {
-  const raw = await callTool("jt_jobs", { action: "search", status: "open", format: "json", limit: 100 });
+  // Pave rejects size>~50 with the nested JOB_FIELDS as HTTP 413 (query
+  // complexity, not body bytes). 18 open jobs today; 50 keeps headroom.
+  const raw = await callTool("jt_jobs", { action: "search", status: "open", format: "json", limit: 50 });
   if (!Array.isArray(raw)) throw new Error("jt_jobs returned non-array");
   const mapped = raw.map((j) => ({
     id: j.id,
@@ -121,7 +123,9 @@ async function gatherJobs() {
     description: j.description || null,
     created_at: j.createdAt || null,
     url: JT_JOB_URL(j.id),
-    is_test: /test/i.test(j.name || ""),
+    // Test data marks itself in the job name, the account name ("Token Test
+    // Client"), or a "TT-" job-name prefix.
+    is_test: /test/i.test(`${j.name || ""} ${j.location?.account?.name || ""}`) || /^TT-/.test(j.name || ""),
   }));
 
   const lost = (j) => /closed\s*lost/i.test(j.status);
@@ -130,7 +134,7 @@ async function gatherJobs() {
   out.sections.jobs = { ok: true, active };
 
   const leads = mapped
-    .filter((j) => /1\.\s*Contacted/i.test(j.phase) && /new\s*lead/i.test(j.status))
+    .filter((j) => !j.is_test && /1\.\s*Contacted/i.test(j.phase) && /new\s*lead/i.test(j.status))
     .map((j) => ({
       name: j.account || j.name,
       job_name: j.name,
@@ -189,9 +193,9 @@ async function gatherOverdue() {
 
 async function gatherTasks() {
   const raw = await callTool("hwc_tasks_list", { status: "active" });
-  const items = raw?.data?.items ?? [];
+  const items = raw?.data?.tasks ?? [];
   const week = plusDays(7);
-  const task = (t) => ({ name: t.label, due_date: t.due || null, list: t.list || "", completed: false });
+  const task = (t) => ({ name: t.summary, due_date: t.due || null, list: t.list || "", completed: false });
   const overdue = [], due_today = [], due_this_week = [], unscheduled = [];
   for (const t of items) {
     if (!t.due) { unscheduled.push(task(t)); continue; }

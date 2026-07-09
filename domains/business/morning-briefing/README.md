@@ -144,6 +144,14 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-07-08b** — **Deploy fixes from live verification.** (1) `jt_jobs`
+  search `limit: 100` → `50`: JobTread's Pave API rejects the query above
+  ~size 50 with the nested JOB_FIELDS as `HTTP 413` (query complexity, not
+  body bytes) — this killed both jobs AND leads sections. (2) `gatherTasks`
+  read `data.items[].label` but `hwc_tasks_list` returns `data.tasks[].summary`
+  — overdue tasks were always empty. (3) `is_test` now also matches the
+  account name and a `TT-` job prefix ("TT-Full Kitchen Remodel" / "Token Test
+  Client"), and leads exclude test jobs.
 - **2026-07-08** — **Usability pass: real data + drill-down.** The dashboard was
   rendering placeholders as if they were data (0 jobs, 0 leads, $0 outstanding,
   "No tasks", weather "not gathered", backup UNKNOWN, containers literally
