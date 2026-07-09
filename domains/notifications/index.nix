@@ -131,7 +131,11 @@ in
       delaycompress = true;
       missingok = true;
       notifempty = true;
-      create = "0644 root root";
+      # The parent dir is intentionally group-writable (2775 root:users, above);
+      # without `su` logrotate refuses the whole glob and the unit exits 1
+      # (the recurring "1 failed service(s)" briefing alert).
+      su = "root users";
+      create = "0664 root users";
     };
   };
 }
