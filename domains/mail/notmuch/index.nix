@@ -42,13 +42,16 @@ in
     postNewHook = lib.mkOption { type = lib.types.lines; default = ""; };
     savedSearches = lib.mkOption { type = lib.types.attrsOf lib.types.str; default = {}; };
     installDashboard = lib.mkOption { type = lib.types.bool; default = false; };
-    rules = {
-      newsletterSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = [ "newsletter@" "news@" "updates@" "digest@" "list@" "mailer@" ]; };
-      notificationSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = [ "no-reply@" "noreply@" "notifications@" "notices@" "github.com" ]; };
-      financeSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = [ "amazon.com" "paypal.com" "stripe.com" "squareup.com" "intuit.com" "quickbooks" "chase.com" "bankofamerica.com" ]; };
-      actionSubjects = lib.mkOption { type = lib.types.listOf lib.types.str; default = [ "invoice" "quote" "proposal" "estimate" "RFP" "action required" "approve" "signature" "past due" ]; };
-      trashSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; description = "Senders whose mail is auto-trashed on arrival (+trash -inbox -unread, scoped to tag:new)."; };
-      archiveSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; description = "Senders whose mail is auto-archived on arrival (+archive -inbox, kept but out of inbox; scoped to tag:new)."; };
+    # Defaults come from the canonical taxonomy (domains/mail/taxonomy/) —
+    # edit data.nix there, NOT these options; a direct override here silently
+    # re-forks the vocabulary (see docs/plans/unified-triage-architecture.md).
+    rules = let tax = (import ../taxonomy/lib.nix { inherit lib; }).derived; in {
+      newsletterSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = tax.newsletterSenders; };
+      notificationSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = tax.notificationSenders; };
+      financeSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = tax.financeSenders; };
+      actionSubjects = lib.mkOption { type = lib.types.listOf lib.types.str; default = tax.actionSubjects; };
+      trashSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = tax.trashSenders; description = "Senders whose mail is auto-trashed on arrival (+trash -inbox -unread, scoped to tag:new). Default: taxonomy senders.trash."; };
+      archiveSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = tax.archiveSenders; description = "Senders whose mail is auto-archived on arrival (+archive -inbox, kept but out of inbox; scoped to tag:new). Default: taxonomy senders.archive."; };
     };
   };
 

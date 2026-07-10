@@ -3,6 +3,7 @@
  */
 
 import { execFile, spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { readFile, stat, readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -21,31 +22,74 @@ const MBSYNC_SUCCESS_MARKER = join(HOME, ".cache/mbsync-last-success");
 const MAILDIR = join(HOME, "400_mail/Maildir");
 const SYNC_MAIL = join(HOME, ".local/bin/sync-mail");
 
-const CATEGORY_TAGS = [
-  "office", "work", "hwcmt",
-  "finance", "bank", "insurance",
-  "personal", "family", "eriqueokeefe",
-  "admin", "coaching",
-  "tech", "aerc", "website",
-];
+/* ─── Taxonomy (canonical, baked from nixos-hwc domains/mail/taxonomy/) ────
+ * The tag vocabulary is loaded at startup from HWC_MAIL_TAXONOMY_FILE — a
+ * store-path JSON the gateway's NixOS module bakes from the same data.nix
+ * that generates the notmuch rules, aerc tags, and the triage prompt (see
+ * docs/plans/unified-triage-architecture.md). The literals below are a
+ * boot-robustness fallback ONLY (env unset / file unreadable), never the
+ * source of truth — a warning is logged whenever the fallback is used. */
+interface MailTaxonomy {
+  triage: { buckets: string[]; tagPrefix: string };
+  categories: string[];
+  flags: string[];
+  /** Flags bulk clear operations must never remove (e.g. `keep`). */
+  protectedFlags?: string[];
+}
 
-const FLAG_TAGS = ["action", "pending"];
+const FALLBACK_TAXONOMY: MailTaxonomy = {
+  triage: { buckets: ["urgent", "review", "noise"], tagPrefix: "triage/" },
+  categories: [
+    "office", "work", "hwcmt",
+    "finance", "bank", "insurance",
+    "personal", "family", "eriqueokeefe",
+    "admin", "coaching",
+    "tech", "aerc", "website",
+  ],
+  flags: ["action", "pending"],
+  protectedFlags: [],
+};
+
+function loadTaxonomy(): MailTaxonomy {
+  const file = process.env.HWC_MAIL_TAXONOMY_FILE;
+  if (!file) {
+    log.warn("mail: HWC_MAIL_TAXONOMY_FILE unset — using compiled-in fallback taxonomy");
+    return FALLBACK_TAXONOMY;
+  }
+  try {
+    const parsed = JSON.parse(readFileSync(file, "utf8"));
+    if (
+      !Array.isArray(parsed?.triage?.buckets) || parsed.triage.buckets.length === 0 ||
+      typeof parsed?.triage?.tagPrefix !== "string" ||
+      !Array.isArray(parsed?.categories) || !Array.isArray(parsed?.flags)
+    ) {
+      throw new Error("missing/invalid triage.buckets, triage.tagPrefix, categories, or flags");
+    }
+    log.info(`mail: taxonomy loaded from ${file}`);
+    return parsed as MailTaxonomy;
+  } catch (err) {
+    log.warn(`mail: failed to load taxonomy from ${file} (${String(err)}) — using compiled-in fallback`);
+    return FALLBACK_TAXONOMY;
+  }
+}
+
+const TAXONOMY = loadTaxonomy();
+const CATEGORY_TAGS = TAXONOMY.categories;
+const FLAG_TAGS = TAXONOMY.flags;
 const JUNK_TAGS = ["important", "flagged", "starred"];
 
 /* ─── Triage buckets (tag-backed) ──────────────────────────────────────────
  * The Mail-triage kanban's "move between columns" must PERSIST, so the bucket
- * is a notmuch tag `triage/<bucket>`. This is the SINGLE source of truth for
- * the bucket→tag mapping, shared by:
+ * is a notmuch tag `triage/<bucket>`. The bucket→tag mapping is shared by:
  *   - the morning-briefing pipeline (writes triage/<bucket> when it classifies)
  *   - replace-triage-bucket here (remove other triage/* + add the target)
  *   - hwc_mail_triage (re-buckets cached threads by their live triage/* tag)
- * Keep these names in lockstep with mail-triage.ts TRIAGE_BUCKETS + the
- * pipeline's run.sh. */
-export const TRIAGE_BUCKETS = ["urgent", "review", "noise"] as const;
-export type TriageBucket = (typeof TRIAGE_BUCKETS)[number];
+ * All of them derive from the taxonomy, so they cannot drift. */
+export const TRIAGE_BUCKETS: readonly string[] = TAXONOMY.triage.buckets;
+export type TriageBucket = string;
 /** notmuch tag for a triage bucket, e.g. "urgent" → "triage/urgent". */
 export function triageTag(bucket: string): string {
-  return `triage/${bucket}`;
+  return `${TAXONOMY.triage.tagPrefix}${bucket}`;
 }
 /** Tag ops that REPLACE the triage bucket: drop every triage/* then add target. */
 function replaceTriageOps(target: TriageBucket): string[] {
@@ -63,29 +107,14 @@ const SAVED_SEARCHES: Record<string, string> = {
   trash: "tag:trash",
   spam: "tag:spam",
   important: "tag:important AND NOT tag:trash",
-  action: "(tag:action AND NOT tag:trash) AND tag:inbox",
-  pending: "(tag:pending AND NOT tag:trash) AND tag:inbox",
-  office: "(tag:office AND NOT tag:trash) AND tag:inbox",
-  work: "(tag:work AND NOT tag:trash) AND tag:inbox",
-  hwcmt: "(tag:hwcmt AND NOT tag:trash) AND tag:inbox",
-  finance: "(tag:finance AND NOT tag:trash) AND tag:inbox",
-  bank: "(tag:bank AND NOT tag:trash) AND tag:inbox",
-  insurance: "(tag:insurance AND NOT tag:trash) AND tag:inbox",
-  personal: "(tag:personal AND NOT tag:trash) AND tag:inbox",
-  family: "(tag:family AND NOT tag:trash) AND tag:inbox",
-  eriqueokeefe: "(tag:eriqueokeefe AND NOT tag:trash) AND tag:inbox",
-  admin: "(tag:admin AND NOT tag:trash) AND tag:inbox",
-  coaching: "(tag:coaching AND NOT tag:trash) AND tag:inbox",
-  tech: "(tag:tech AND NOT tag:trash) AND tag:inbox",
-  website: "(tag:website AND NOT tag:trash) AND tag:inbox",
-  "label:work": "tag:work AND NOT tag:trash",
-  "label:finance": "tag:finance AND NOT tag:trash",
-  "label:coaching": "tag:coaching AND NOT tag:trash",
-  "label:tech": "tag:tech AND NOT tag:trash",
-  "label:bank": "tag:bank AND NOT tag:trash",
-  "label:insurance": "tag:insurance AND NOT tag:trash",
-  "label:personal": "tag:personal AND NOT tag:trash",
-  "label:hwcmt": "tag:hwcmt AND NOT tag:trash",
+  // Per-tag searches generated from the taxonomy (flags + categories), so a
+  // vocabulary change lands here without touching this file.
+  ...Object.fromEntries(
+    [...FLAG_TAGS, ...CATEGORY_TAGS].map((t) => [t, `(tag:${t} AND NOT tag:trash) AND tag:inbox`]),
+  ),
+  ...Object.fromEntries(
+    CATEGORY_TAGS.map((t) => [`label:${t}`, `tag:${t} AND NOT tag:trash`]),
+  ),
   "label:hide": "tag:hide",
   unified: "tag:inbox",
   "inbox:hwc": "tag:inbox AND tag:hwc",
@@ -245,7 +274,13 @@ function exclusiveCategoryOps(category: string): string[] {
 }
 
 function clearAllCustomOps(): string[] {
-  return [...CATEGORY_TAGS, ...FLAG_TAGS, ...JUNK_TAGS].map((t) => `-${t}`);
+  // Protected flags (e.g. `keep`, the family/friends preservation tag) are
+  // never stripped by bulk clears — the keep-shield and the mail-janitor's
+  // exclusions depend on them surviving.
+  const protectedFlags = TAXONOMY.protectedFlags ?? [];
+  return [...CATEGORY_TAGS, ...FLAG_TAGS, ...JUNK_TAGS]
+    .filter((t) => !protectedFlags.includes(t))
+    .map((t) => `-${t}`);
 }
 
 function flattenShow(data: unknown): unknown[] {

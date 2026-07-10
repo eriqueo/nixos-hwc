@@ -28,6 +28,14 @@ let
 
   srcDir = "${paths.nixos}/domains/system/mcp/src";
 
+  # Mail taxonomy — build-time import of the canonical registry
+  # (domains/mail/taxonomy/, see docs/plans/unified-triage-architecture.md).
+  # Baked to a store-path JSON that mail.ts loads at startup, so the gateway's
+  # tag vocabulary comes from the same commit as the notmuch rules and the
+  # triage prompt — no runtime handoff between the HM and system lanes.
+  mailTaxonomyJson = pkgs.writeText "mail-taxonomy.json"
+    (import ../../mail/taxonomy/lib.nix { inherit lib; }).jsonText;
+
   # JT config (options from parts/jt.nix)
   jtCfg = config.hwc.system.mcp.jt;
 
@@ -270,6 +278,10 @@ in
 
         # CMS app path for hwc_cms_* tools
         HWC_CMS_APP_PATH = cmsAppPath;
+
+        # Canonical mail taxonomy (categories/flags/triage buckets) for
+        # hwc_mail — store path, rebuilt with the config (see let-binding).
+        HWC_MAIL_TAXONOMY_FILE = "${mailTaxonomyJson}";
 
         # datax_* tools (workbench DataX hub). The gateway consumes the live SR
         # board from the sr_analyzer container (loopback) and overlays the SR

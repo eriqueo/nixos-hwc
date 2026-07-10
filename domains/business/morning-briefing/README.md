@@ -144,6 +144,14 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-07-09f** — **Triage prompt derives from the mail taxonomy.**
+  `prompts/mail-triage.txt` is now a template (`@KNOWN_SENDERS@`
+  placeholder); `index.nix` renders it with the known noise/review sender
+  lists generated from `domains/mail/taxonomy/` and passes the store path via
+  `MAIL_PROMPT` (run.sh falls back to the raw template only on direct shell
+  invocation). One sender edit in the taxonomy now updates the notmuch rules,
+  the gateway, aerc, AND this prompt together
+  (docs/plans/unified-triage-architecture.md).
 - **2026-07-09e** — **Ops digest: Kuma → blackbox probes.** `ops.kuma_failing`
   (journal scrape of the decommissioned Uptime Kuma) replaced by
   `ops.services_down` from Prometheus: services with `probe_success == 0`

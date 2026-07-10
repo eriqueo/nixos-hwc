@@ -4,6 +4,19 @@ let
   cfg = config.hwc.business.morningBriefing;
   paths = config.hwc.paths;
   agentDir = "${paths.nixos}/domains/business/morning-briefing";
+
+  # Mail-triage prompt: reasoning template (prompts/mail-triage.txt) + the
+  # known-senders section generated from the canonical taxonomy
+  # (domains/mail/taxonomy/ — same data.nix the notmuch rules and the MCP
+  # gateway derive from; docs/plans/unified-triage-architecture.md). Rendered
+  # to a store path at build and handed to run.sh via MAIL_PROMPT, so the 6am
+  # run always classifies with the vocabulary of the deployed commit.
+  taxonomy = import ../../mail/taxonomy/lib.nix { inherit lib; };
+  mailTriagePrompt = pkgs.writeText "mail-triage-prompt.txt"
+    (builtins.replaceStrings
+      [ "@KNOWN_SENDERS@" ]
+      [ taxonomy.promptFragment ]
+      (builtins.readFile ./prompts/mail-triage.txt));
 in
 {
   options.hwc.business.morningBriefing = {
@@ -25,6 +38,7 @@ in
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
       environment.HOME = paths.user.home;
+      environment.MAIL_PROMPT = "${mailTriagePrompt}";
       # git: config-drift tile (HEAD/unpushed/dirty). coredumpctl comes from
       # systemd which is always on the base PATH via /run/current-system.
       # pass+gnupg: msmtp's passwordeval for the Step-5 email (proton bridge).

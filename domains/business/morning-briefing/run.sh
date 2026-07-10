@@ -533,7 +533,12 @@ fi
 log "STEP 2: Mail triage..."
 STEP2_START=$(date +%s)
 
-MAIL_PROMPT="${PROMPTS_DIR}/mail-triage.txt"
+# MAIL_PROMPT is normally set by index.nix to the store-path prompt rendered
+# from prompts/mail-triage.txt + the taxonomy's known-senders section
+# (domains/mail/taxonomy/). The repo file is a TEMPLATE with a
+# @KNOWN_SENDERS@ placeholder — the fallback below only fires on direct
+# shell invocation and triages without the known-senders lists.
+MAIL_PROMPT="${MAIL_PROMPT:-${PROMPTS_DIR}/mail-triage.txt}"
 MAIL_TRIAGE_JSON="${OUTPUT_DIR}/mail-triage.json"
 WINDOW_HOURS=48
 

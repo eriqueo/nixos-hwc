@@ -492,6 +492,13 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-07-09**: `hwc_mail` tag vocabulary (categories/flags/triage buckets +
+  per-tag saved searches) now loads at startup from `HWC_MAIL_TAXONOMY_FILE`
+  — a store-path JSON baked by `index.nix` from the canonical
+  `domains/mail/taxonomy/` registry (drift-kill;
+  docs/plans/unified-triage-architecture.md). Compiled-in constants remain
+  only as a logged boot fallback. Requires `npm run build` + service restart
+  on deploy.
 - **2026-06-27**: Added **`hwc_morning_brief`** (`tools/morning-brief.ts`) — a rich
   companion to the infra-only `hwc_morning_status`. It reads the structured
   `briefing.json` written daily at 6am MT by the `morning-briefing.service`

@@ -79,32 +79,7 @@ Eric's tag taxonomy from notmuch/afew:
 - `flagged` = manually flagged (treat as higher priority if from real person)
 - `attachment` = has attachment
 
-Known noise senders (always assign to noise bucket, suggested_action: trash):
-- alignable.com
-- thecontractorfight.com, profitabletradie.com, theprofessionalbuilder.com, bf10x.hubspotemail.net
-- stantaylor.com
-- mg.homedepot.com, your.cvs.com, emailinfo.bestbuy.com
-- mail.instagram.com
-- bniconnectglobal.com
-- Any sender matching "*estimat*", "*takeoff*", "*bid*" @gmail.com cold outreach pattern
-- nextdoor.com
-- quora.com (digest emails)
-- zillow.com (marketing)
-- angi.com, angieslist.com (lead spam)
-- thumbtack.com (notifications)
-- yelp.com (business promotions)
-
-Known review senders (always assign to review):
-- ollama (tech newsletter)
-- Bozeman Area Chamber of Commerce
-- Google Local Services Ads (lsa.google.com, google.com notifications)
-- GitHub (unless CI failure from eriqueo/* repo → urgent)
-- iCloud (system/security notifications)
-- MxToolbox (deliverability summary)
-- Quo/OpenPhone (quo.com, openphone.com) — business phone notifications
-- Stripe (stripe.com) — payment processing
-- QuickBooks (intuit.com) — accounting
-- JobTread (jobtread.com) — project management
+@KNOWN_SENDERS@
 
 ## Reasoning discipline
 

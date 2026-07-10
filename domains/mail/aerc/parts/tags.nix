@@ -1,36 +1,39 @@
-# Single source of truth for aerc tag definitions.
+# aerc tag definitions — PRESENTATION layer over the canonical taxonomy.
 # Imported by config.nix (queries, stylesets, column templates) and binds.nix (keybindings).
 #
-# COLOR SYSTEM: Tags are grouped by semantic domain. Each group shares one
-# hwc palette color so you can instantly identify a tag's category at a glance.
-# Secondary tags within a group use dim=true to differentiate.
+# Tag VOCABULARY (categories, flags, groups, displays, spaceKeys) comes from
+# domains/mail/taxonomy/data.nix — the single source of truth shared with the
+# notmuch rules, the MCP gateway, and the triage prompt. Edit the taxonomy,
+# not this file. This file owns only what is aerc-specific: mapping each
+# group's palette ROLE to a hex color from the active theme, and the exclusive
+# <Space>m marking / styleset command generation.
 #
-#   Business (accent/copper-orange)  — office, work, hwcmt
-#   Money    (info/blue)             — finance, bank, insurance
-#   Personal (accentAlt/muted-red)   — personal, family, eriqueokeefe
-#   Growth   (success/sage-green)    — admin, coaching
-#   System   (fg3/muted-gray)        — tech, aerc, website
-#   Flags    (error/red, warning/amber) — action, pending
-#
-# ALL category marking is exclusive under <Space>m leader.
-# Display names use tag_key format for visual cue in sidebar (e.g. "finance_f").
-#
-# CUSTOM TAGS: User-defined tags live in tags-custom.json (same directory).
-# Add tags there via the aerc-new-tag script (<Space>M in aerc), then run `hms`.
+# CUSTOM TAGS: User-defined tags live in tags-custom.json (same directory) —
+# deliberately OUTSIDE the taxonomy. Add tags there via the aerc-new-tag
+# script (<Space>M in aerc), then run `hms`.
 { lib, colors ? {} }:
 let
   c = colors;
+  taxonomy = (import ../../taxonomy/lib.nix { inherit lib; }).data;
 
-  # Palette-derived group colors with hwc fallbacks
-  group = {
-    business = "#${c.accent    or "d08770"}";  # copper-orange — HWC brand
-    money    = "#${c.info      or "5e81ac"}";  # blue — cool/financial
-    personal = "#${c.warningBright or "fcbb74"}";  # bright amber — warm/personal
-    growth   = "#${c.success   or "a3be8c"}";  # sage green — development
-    system   = "#${c.fg3       or "50626f"}";  # muted gray — low noise
-    urgent   = "#${c.error     or "bf616a"}";  # red — demands attention
-    waiting  = "#${c.warning   or "cf995f"}";  # amber — needs follow-up
+  # Palette role → hex, with hwc fallbacks. The taxonomy assigns each group a
+  # ROLE (accent/info/…); the theme decides what that role looks like.
+  roleColor = {
+    accent        = "#${c.accent        or "d08770"}";  # copper-orange — HWC brand
+    info          = "#${c.info          or "5e81ac"}";  # blue — cool/financial
+    warningBright = "#${c.warningBright or "fcbb74"}";  # bright amber — warm/personal
+    success       = "#${c.success       or "a3be8c"}";  # sage green — development
+    fg3           = "#${c.fg3           or "50626f"}";  # muted gray — low noise
+    error         = "#${c.error         or "bf616a"}";  # red — demands attention
+    warning       = "#${c.warning       or "cf995f"}";  # amber — needs follow-up
   };
+
+  # group name (business/money/…) → hex, via the taxonomy's role assignment
+  group = lib.mapAttrs (_: role: roleColor.${role} or roleColor.fg3) taxonomy.groups;
+
+  # Taxonomy entry → aerc tag record (drop the group key, resolve its color)
+  colorize = fallback: t:
+    (removeAttrs t [ "group" ]) // { color = group.${t.group} or fallback; };
 
   # Read custom tags from JSON sidecar (user-managed, not in Nix)
   customFile = ./tags-custom.json;
@@ -39,43 +42,11 @@ let
   customFlags = map (t: t // { color = group.${t.group} or group.urgent; }) (customData.flags or []);
 
   # Category tags are mutually exclusive — assigning one removes the others.
-  categoryTags = [
-    # ── Business (copper-orange) ──
-    { tag = "office";       color = group.business; display = "office_o";       spaceKey = "o"; }
-    { tag = "work";         color = group.business; display = "work_w";         spaceKey = "w"; }
-    { tag = "hwcmt";        color = group.business; display = "hwcmt_h";        spaceKey = "h"; dim = true;
-      query = "(to:heartwoodcraftmt@gmail.com OR from:heartwoodcraftmt@gmail.com) AND NOT tag:trash"; }
-
-    # ── Money (blue) ──
-    { tag = "finance";      color = group.money;    display = "finance_f";      spaceKey = "f"; }
-    { tag = "bank";         color = group.money;    display = "bank_b";         spaceKey = "b"; }
-    { tag = "insurance";    color = group.money;    display = "insurance_$";    spaceKey = "$"; dim = true; }
-
-    # ── Personal (muted red) ──
-    { tag = "personal";     color = group.personal; display = "personal_p";     spaceKey = "p"; }
-    { tag = "family";       color = group.personal; display = "family_y";       spaceKey = "y"; }
-    { tag = "eriqueokeefe"; color = group.personal; display = "eriqueokeefe_e"; spaceKey = "e";
-      query = "(to:eriqueokeefe@gmail.com OR from:eriqueokeefe@gmail.com) AND NOT tag:trash"; }
-
-    # ── Growth (sage green) ──
-    { tag = "admin";        color = group.growth;   display = "admin_n";        spaceKey = "n"; }
-    { tag = "coaching";     color = group.growth;   display = "coaching_c";     spaceKey = "c"; }
-
-    # ── System (muted gray) ──
-    { tag = "tech";         color = group.system;   display = "tech_t";         spaceKey = "t"; }
-    { tag = "aerc";         color = group.system;   display = "aerc_~";         spaceKey = "`"; }
-    { tag = "website";      color = group.system;   display = "website_@";      spaceKey = "@"; }
-  ] ++ customCategories;
+  categoryTags = (map (colorize group.system) taxonomy.categories) ++ customCategories;
 
   # Flag tags coexist with categories (not exclusive) and are NOT inbox-scoped,
   # so their virtual folders show the full tagged set across all folders.
-  flagTags = [
-    { tag = "action";  color = group.urgent;  display = "action_!";  spaceKey = "!"; bold = true; }
-    { tag = "pending"; color = group.waiting;  display = "pending_?"; spaceKey = "?"; }
-    # Protected family/friends correspondence (preserved from Gmail All Mail,
-    # 2007+). Non-inbox-scoped so the folder shows the whole archive.
-    { tag = "keep";    color = group.growth;   display = "keep_k";    spaceKey = "k"; }
-  ] ++ customFlags;
+  flagTags = (map (colorize group.urgent) taxonomy.flags) ++ customFlags;
 
   allTags = flagTags ++ categoryTags;
 

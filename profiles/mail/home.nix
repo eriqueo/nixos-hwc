@@ -45,34 +45,10 @@
       newTags = [ "unread" "inbox" ];
       excludeFolders = [ "trash" "spam" "[Gmail]/All Mail" ];
 
-      # Go-forward classification, derived from the 2026-06 Gmail backlog audit.
-      # Scoped to tag:new (only future mail) and never touches tag:keep
-      # (family/friends). See domains/mail/notmuch/parts/rules.nix.
-      rules = {
-        # Pure noise — auto-trashed on arrival.
-        trashSenders = [
-          # lead-gen platforms
-          "angi.com" "angieslist.com" "homeadvisor.com" "wix.com"
-          # marketing drip / cold social
-          "linkedin.com" "nextdoor.com" "semrush.com" "jonloomer.com"
-          "trainsemail.com" "thinkr.org" "constructionconsulting.co"
-          "contractorcto.com" "nextlevelsystems.co" "qemailserver.com"
-          "ccsend.com"
-        ];
-        # Low-value-but-keepable — auto-archived (out of inbox, kept in All Mail).
-        archiveSenders = [
-          # retail / suppliers (receipts tracked in QB/JobTread; keep findable)
-          "amazon.com" "sherwin.com" "harborfreight.com" "homedepot.com"
-          "bruntworkwear.com" "fergusonhome.com" "bestbuy.com" "soundcore.com"
-          "jossandmain.com" "plumdragonherbs.com" "hibid.com"
-          # coaching / industry
-          "builttobuildacademy.com" "narihq.org" "agingcare.com"
-          "thecontractorfight.com"
-          # bulk / SaaS marketing
-          "mailchimpapp.com" "zapier.com" "supadata.ai" "beehiiv.com"
-          "sage.com" "perplexity.ai" "vimeo.com"
-        ];
-      };
+      # Classification rules (trash/archive/newsletter/notification/finance
+      # senders) come from the canonical taxonomy at domains/mail/taxonomy/
+      # — edit data.nix there, not here. The lists here were moved verbatim
+      # on 2026-07-09 (drift-kill; docs/plans/unified-triage-architecture.md).
 
       savedSearches = {
         inbox = "tag:inbox and not tag:archived";
