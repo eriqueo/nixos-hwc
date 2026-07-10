@@ -72,11 +72,11 @@ in
       ];
     };
 
-    # Register with Prometheus. cAdvisor can't resolve podman container NAMES
-    # (name="" — the Docker factory doesn't map libpod scopes), but the
-    # systemd-managed oci-containers each run in a /system.slice/podman-<name>.service
-    # cgroup with the name in the path. Extract it into a `container` label so
-    # dashboards can group by a friendly name. Non-container cgroups get no label.
+    # Register with Prometheus. NOTE: cAdvisor cannot resolve podman container
+    # NAMES (its Docker factory can't map machine.slice/libpod-*.scope cgroups,
+    # and the /system.slice/podman-<name>.service cgroup holds only conmon, not
+    # the container). Per-container CPU/mem with names comes from the dedicated
+    # podman-exporter instead; cAdvisor here provides host/system cgroup metrics.
     hwc.monitoring.prometheus.scrapeConfigs = [
       {
         job_name = "cadvisor";
@@ -84,14 +84,6 @@ in
           targets = [ "localhost:${toString cfg.port}" ];
         }];
         scrape_interval = "30s";
-        metric_relabel_configs = [
-          {
-            source_labels = [ "id" ];
-            regex = "/system\\.slice/podman-(.+)\\.service";
-            target_label = "container";
-            replacement = "$1";
-          }
-        ];
       }
     ];
 

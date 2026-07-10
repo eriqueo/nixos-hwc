@@ -21,6 +21,7 @@
     ./grafana/index.nix
     ./alertmanager/index.nix
     ./cadvisor/index.nix
+    ./podman-exporter/index.nix
     ./exportarr/index.nix
     ./homepage/index.nix
     ./alerts/index.nix            # Alert sources, thresholds, severity mapping

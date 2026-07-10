@@ -28,8 +28,11 @@
     blackbox.enable = lib.mkDefault true;
   };
 
-  # cAdvisor - Container metrics
+  # cAdvisor - host/system cgroup metrics
   hwc.monitoring.cadvisor.enable = lib.mkDefault true;
+
+  # podman-exporter - named per-container CPU/mem/net (what cAdvisor can't do)
+  hwc.monitoring.podman-exporter.enable = lib.mkDefault true;
 
   # Exportarr - Arr apps metrics (Sonarr/Radarr/Lidarr/Prowlarr)
   hwc.monitoring.exportarr.enable = lib.mkDefault true;
