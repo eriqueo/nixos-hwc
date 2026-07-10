@@ -109,6 +109,10 @@ in
     services.grafana-image-renderer = lib.mkIf cfg.imageRenderer.enable {
       enable = true;
       provisionGrafana = true;
+      # Default 8081 collides with a podman container (conmon) already on
+      # 127.0.0.1:8081. 8181 is clear. provisionGrafana derives Grafana's
+      # rendering server_url from this addr, so both sides stay in sync.
+      settings.server.addr = "localhost:8181";
     };
 
     # Prometheus datasource provisioning
