@@ -361,9 +361,12 @@ KUMA_FAIL_JSON=$({ "${JOURNALCTL}" SYSLOG_IDENTIFIER=uptime-kuma --since "${OPS_
 echo "${KUMA_FAIL_JSON}" | jq empty 2>/dev/null || KUMA_FAIL_JSON='[]'
 
 # Top journal error sources — catches silent crash-loops (the vdirsyncer
-# every-15-min failure ran for hours with nothing surfacing it).
+# every-15-min failure ran for hours with nothing surfacing it). podman-*
+# units are EXCLUDED: containers write INFO logs to stderr, which the journal
+# stamps priority=err — authentik alone "errors" 2400×/day that way, drowning
+# real signal. Container breakage surfaces via Kuma + service_failures instead.
 ERR_TOP_JSON=$({ "${JOURNALCTL}" -p err --since "${OPS_SINCE}" --no-pager -q -o json 2>/dev/null || true; } \
-  | jq -s 'map(._SYSTEMD_UNIT // .SYSLOG_IDENTIFIER // "kernel") | group_by(.) | map({unit: .[0], errors: length}) | sort_by(-.errors) | .[:5]' 2>/dev/null || echo '[]')
+  | jq -s 'map(._SYSTEMD_UNIT // .SYSLOG_IDENTIFIER // "kernel") | map(select(startswith("podman-") | not)) | group_by(.) | map({unit: .[0], errors: length}) | sort_by(-.errors) | .[:5]' 2>/dev/null || echo '[]')
 echo "${ERR_TOP_JSON}" | jq empty 2>/dev/null || ERR_TOP_JSON='[]'
 
 # Prometheus: scrape targets down + disk days-to-full forecast (predictive
@@ -375,7 +378,7 @@ echo "${PROM_DOWN_JSON}" | jq empty 2>/dev/null || PROM_DOWN_JSON='[]'
 DISK_FORECAST_JSON=$("${CURL_BIN}" -sG -m 10 "${PROM_URL}/api/v1/query" \
   --data-urlencode 'query=node_filesystem_avail_bytes{mountpoint=~"/|/mnt/hot|/mnt/media"} / - deriv(node_filesystem_avail_bytes{mountpoint=~"/|/mnt/hot|/mnt/media"}[24h]) / 86400' 2>/dev/null \
   | jq '[.data.result[]? | {mount: (.metric.mountpoint // "?"), days_to_full: (.value[1] | tonumber? // null)}
-        | select(.days_to_full != null and .days_to_full > 0 and .days_to_full < 3650)
+        | select(.days_to_full != null and .days_to_full > 0 and .days_to_full < 365)
         | .days_to_full |= round] | sort_by(.days_to_full)' 2>/dev/null || echo '[]')
 echo "${DISK_FORECAST_JSON}" | jq empty 2>/dev/null || DISK_FORECAST_JSON='[]'
 
