@@ -49,11 +49,20 @@ in
         "/sys:/sys:ro"
         "/var/lib/containers:/var/lib/containers:ro"
         "/dev/disk:/dev/disk:ro"
+        # Podman's Docker-compatible API socket → enables cAdvisor's docker
+        # manager so it enumerates containers and labels cgroup metrics with
+        # their NAME (podman runs oci-containers as machine.slice/libpod-*.scope;
+        # without this cAdvisor only sees the root cgroup id=/ and name="").
+        "/run/podman/podman.sock:/var/run/docker.sock:ro"
       ];
 
       extraOptions = [
         "--privileged"
         "--device=/dev/kmsg"
+        # Only report container cgroups (drop host raw-cgroup noise) now that
+        # the docker manager can identify them.
+        "--docker_only=true"
+        "--store_container_labels=false"
       ];
     };
 
