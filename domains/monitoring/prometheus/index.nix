@@ -117,6 +117,25 @@ in
                 valid_status_codes = [ 200 401 ];
               };
             };
+            # "Alive" semantics for internal service liveness — a service that
+            # is up but answers with a login redirect (302) or auth wall
+            # (401/403) is still REACHABLE. Avoids false-reds from per-app
+            # redirect/auth quirks; this is up/down, not content validation.
+            http_reachable = {
+              prober = "http";
+              timeout = "15s";
+              http = {
+                method = "GET";
+                preferred_ip_protocol = "ip4";
+                valid_status_codes = [ 200 201 204 301 302 307 308 401 403 ];
+              };
+            };
+            # Raw TCP connect — for datastores/daemons with no HTTP surface.
+            tcp_connect = {
+              prober = "tcp";
+              timeout = "10s";
+              tcp = { preferred_ip_protocol = "ip4"; };
+            };
           };
         });
       };
@@ -160,7 +179,72 @@ in
               static_configs = [{ inherit targets; }];
               relabel_configs = blackboxRelabel;
             };
+            # Data-driven internal-service liveness. Each entry carries a human
+            # `service` label so the Grafana "Service Health" dashboard reads by
+            # name, not raw URL. Add a service = add one line here (single source
+            # of truth — this REPLACES the hand-maintained Uptime Kuma monitors).
+            serviceProbeJob = name: module: services: {
+              job_name = name;
+              metrics_path = "/probe";
+              scrape_interval = "60s";
+              params.module = [ module ];
+              static_configs = map (s: {
+                targets = [ s.url ];
+                labels = { service = s.name; };
+              }) services;
+              relabel_configs = blackboxRelabel;
+            };
+            # HTTP-reachable services (up = any "alive" status code).
+            httpServices = [
+              # Infra / observability
+              { name = "Caddy";          url = "http://127.0.0.1:2019/config/"; }
+              { name = "Prometheus";     url = "http://127.0.0.1:9090/-/healthy"; }
+              { name = "Alertmanager";   url = "http://127.0.0.1:9093/-/healthy"; }
+              { name = "Grafana";        url = "http://127.0.0.1:3000/api/health"; }
+              { name = "Homepage";       url = "http://127.0.0.1:3080/"; }
+              # Business / apps
+              { name = "Vaultwarden";    url = "http://127.0.0.1:8222/alive"; }
+              { name = "Authentik";      url = "http://127.0.0.1:9200/-/health/live/"; }
+              { name = "Paperless-NGX";  url = "http://127.0.0.1:8102/api/"; }
+              { name = "Firefly III";    url = "http://127.0.0.1:8085/"; }
+              { name = "Firefly-Pico";   url = "http://127.0.0.1:8086/"; }
+              { name = "CloudBeaver";    url = "http://127.0.0.1:8978/"; }
+              { name = "Heartwood MCP";  url = "http://127.0.0.1:6200/health"; }
+              { name = "AI Agent";       url = "http://127.0.0.1:6020/"; }
+              { name = "CouchDB";        url = "http://127.0.0.1:5984/"; }
+              # Media stack
+              { name = "Jellyfin";       url = "http://127.0.0.1:8096/health"; }
+              { name = "Jellyseerr";     url = "http://127.0.0.1:5055/api/v1/status"; }
+              { name = "Immich";         url = "http://127.0.0.1:2283/api/server/ping"; }
+              { name = "Sonarr";         url = "http://127.0.0.1:8989/sonarr/ping"; }
+              { name = "Radarr";         url = "http://127.0.0.1:7878/radarr/ping"; }
+              { name = "Lidarr";         url = "http://127.0.0.1:8686/lidarr/ping"; }
+              { name = "Readarr";        url = "http://127.0.0.1:8787/readarr/ping"; }
+              { name = "Prowlarr";       url = "http://127.0.0.1:9696/prowlarr/ping"; }
+              { name = "Navidrome";      url = "http://127.0.0.1:4533/ping"; }
+              { name = "Audiobookshelf"; url = "http://127.0.0.1:13378/healthcheck"; }
+              { name = "SABnzbd";        url = "http://127.0.0.1:8081/"; }
+              { name = "qBittorrent";    url = "http://127.0.0.1:8080/"; }
+              { name = "slskd";          url = "http://127.0.0.1:5031/"; }
+              { name = "Pinchflat";      url = "http://127.0.0.1:8945/"; }
+              { name = "LazyLibrarian";  url = "http://127.0.0.1:5299/books"; }
+              { name = "Calibre";        url = "http://127.0.0.1:8083/"; }
+              { name = "Frigate NVR";    url = "http://127.0.0.1:5001/"; }
+              { name = "Gluetun VPN";    url = "http://127.0.0.1:8000/v1/publicip/ip"; }
+            ];
+            # TCP datastores / daemons (up = connect succeeds).
+            tcpServices = [
+              { name = "PostgreSQL";     url = "127.0.0.1:5432"; }
+              { name = "Redis";          url = "127.0.0.1:6379"; }
+              { name = "Immich Redis";   url = "127.0.0.1:6380"; }
+              { name = "Mosquitto";      url = "127.0.0.1:1883"; }
+              { name = "SSH";            url = "127.0.0.1:22"; }
+            ];
           in [
+            # Internal service liveness (replaces Uptime Kuma monitors)
+            (serviceProbeJob "probe-services-http" "http_reachable" httpServices)
+            (serviceProbeJob "probe-services-tcp"  "tcp_connect"    tcpServices)
+
             # Public website pages + GEO artifacts (through Cloudflare, like a visitor)
             (probeJob "probe-website" "http_health_check" "60s" [
               "https://iheartwoodcraft.com/"

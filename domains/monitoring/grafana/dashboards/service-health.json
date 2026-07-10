@@ -1,0 +1,146 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 0,
+  "schemaVersion": 38,
+  "tags": ["hwc", "blackbox", "uptime"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "browser",
+  "title": "Service Health",
+  "uid": "service-health",
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Services Up",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "count(probe_success{service=~\".+\"} == 1)", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "green" },
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value", "graphMode": "none", "textMode": "value", "justifyMode": "center"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Services Down",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "count(probe_success{service=~\".+\"} == 0) or vector(0)", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background", "graphMode": "none", "textMode": "value", "justifyMode": "center"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Public Site",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "min(probe_success{job=\"probe-website\"})", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [ { "type": "value", "options": { "0": { "text": "DOWN", "index": 1 }, "1": { "text": "OK", "index": 0 } } } ],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background", "graphMode": "none", "textMode": "value", "justifyMode": "center"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Service Status",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 4 },
+      "targets": [
+        { "refId": "A", "expr": "probe_success{service=~\".+\"}", "legendFormat": "{{service}}", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [ { "type": "value", "options": { "0": { "text": "DOWN", "index": 1 }, "1": { "text": "UP", "index": 0 } } } ],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "auto", "wideLayout": true
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Probe Latency (HTTP services)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        { "refId": "A", "expr": "probe_duration_seconds{job=\"probe-services-http\"} * 1000", "legendFormat": "{{service}}" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 0, "showPoints": "never" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "TLS Certificate Expiry (public sites)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        { "refId": "A", "expr": "(probe_ssl_earliest_cert_expiry{job=\"probe-website\"} - time()) / 86400", "instant": true, "format": "table" }
+      ],
+      "transformations": [
+        { "id": "organize", "options": {
+          "excludeByName": { "Time": true, "Value": false, "job": true, "__name__": true },
+          "renameByName": { "instance": "Site", "Value": "Days until expiry" }
+        } }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto" },
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "yellow", "value": 14 }, { "color": "green", "value": 30 } ] }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Days until expiry" },
+            "properties": [ { "id": "unit", "value": "d" }, { "id": "custom.cellOptions", "value": { "type": "color-background" } }, { "id": "decimals", "value": 0 } ] }
+        ]
+      },
+      "options": { "showHeader": true, "cellHeight": "sm" }
+    }
+  ]
+}
