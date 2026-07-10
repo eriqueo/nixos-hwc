@@ -84,7 +84,7 @@ in
 
     [default]
     ${if cfg.radicale.enable
-      then "default_calendar = migrated"   # the one calendar availability reads
+      then "default_calendar = hwc"   # khal names the calendar by its displayname
       else "default_calendar = 06A30686-742B-4681-BBE9-BB15C7E9A54F"}
     highlight_event_days = true
 

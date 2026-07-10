@@ -17,9 +17,10 @@ let
 
   dataDir = "~/.local/share/vdirsyncer";
 
-  # `busy` — one-liner to block time on the calendar the booking form reads
-  # (default_calendar=migrated), then push to Radicale immediately so
-  # availability updates now instead of on the ~15-min vdirsyncer timer.
+  # `busy` — one-liner to block time on the "hwc" calendar the booking form
+  # reads (Radicale cal/migrated; khal names it by displayname "hwc"), then
+  # push to Radicale immediately so availability updates now instead of on the
+  # ~15-min vdirsyncer timer.
   busyScript = pkgs.writeShellScriptBin "busy" ''
     if [ $# -eq 0 ]; then
       echo "usage: busy <start> [end|duration] [summary]"
@@ -27,7 +28,7 @@ let
       echo "        busy 2026-07-20 9:00 30m Call: Alden"
       exit 1
     fi
-    ${khalCli}/bin/khal new -a migrated "$@" || exit 1
+    ${khalCli}/bin/khal new -a hwc "$@" || exit 1
     if ${pkgs.vdirsyncer}/bin/vdirsyncer sync calendar_radicale >/dev/null 2>&1; then
       echo "✓ blocked + synced — availability is updated"
     else
