@@ -174,6 +174,29 @@ function buildBackends(): Array<{ backend: StdioBackend; lazy: boolean }> {
     log.info("n8n-mcp backend skipped (HWC_N8N_ENTRY_POINT not set)");
   }
 
+  // hwc-crm (front-of-funnel CRM tools) — spawned as a python stdio child.
+  // A thin MCP client over the hwc-crm HTTP API (loopback :11660).
+  const crmPython = process.env.HWC_CRM_MCP_PYTHON;
+  const crmSrcDir = process.env.HWC_CRM_SRC_DIR;
+  if (crmPython && crmSrcDir) {
+    backends.push({
+      backend: new StdioBackend({
+        name: "hwc-crm",
+        command: crmPython,
+        args: ["-m", "hwc_crm.integrations.mcp_server"],
+        env: {
+          PYTHONPATH: `${crmSrcDir}/src`,
+          HWC_CRM_URL: process.env.HWC_CRM_URL || "http://127.0.0.1:11660",
+        },
+        cwd: crmSrcDir,
+      }),
+      lazy: false,
+    });
+    log.info("Configured hwc-crm backend", { srcDir: crmSrcDir });
+  } else {
+    log.info("hwc-crm backend skipped (HWC_CRM_MCP_PYTHON / HWC_CRM_SRC_DIR not set)");
+  }
+
   return backends;
 }
 

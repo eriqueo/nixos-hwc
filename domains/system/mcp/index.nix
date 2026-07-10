@@ -28,6 +28,11 @@ let
 
   srcDir = "${paths.nixos}/domains/system/mcp/src";
 
+  # hwc-crm stdio backend: a thin python MCP client over the hwc-crm HTTP API.
+  # Needs the official MCP SDK (FastMCP) + httpx; run from the live checkout.
+  crmSrcDir = "${paths.user.home}/600_apps/hwc-crm";
+  crmMcpPython = pkgs.python3.withPackages (ps: with ps; [ mcp httpx ]);
+
   # Mail taxonomy — build-time import of the canonical registry
   # (domains/mail/taxonomy/, see docs/plans/unified-triage-architecture.md).
   # Baked to a store-path JSON that mail.ts loads at startup, so the gateway's
@@ -306,6 +311,11 @@ in
         HWC_N8N_ENTRY_POINT = "${n8nMcpInstallDir}/node_modules/n8n-mcp/dist/mcp/index.js";
         N8N_API_URL = "http://localhost:${toString n8nPort}";
 
+        # stdio backend: hwc-crm (front-of-funnel CRM tools over loopback :11660)
+        HWC_CRM_MCP_PYTHON = "${crmMcpPython}/bin/python3";
+        HWC_CRM_SRC_DIR = crmSrcDir;
+        HWC_CRM_URL = "http://127.0.0.1:${toString config.hwc.business.crm.port}";
+
         # Node.js path for spawning child processes
         HWC_NODE_PATH = "${pkgs.nodejs_22}/bin/node";
 
@@ -372,6 +382,8 @@ in
             jtCfg.srcDir
             # n8n-mcp npm package
             n8nMcpInstallDir
+            # hwc-crm source (python stdio backend reads src/)
+            crmSrcDir
           ];
           ProtectKernelTunables = true;
           ProtectKernelModules = true;

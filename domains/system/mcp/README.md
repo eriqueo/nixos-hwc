@@ -7,6 +7,7 @@ Unified MCP gateway (v0.3.2) aggregating 121 tools from three sources. Connects 
 | hwc-sys (local, in-process) | 44 | Direct function calls | Always |
 | jt-mcp (JobTread) | 56 | stdio child process | Lazy (`hwc_connect_jt_mcp`) |
 | n8n-mcp (workflow automation) | 21 | stdio child process | Lazy (`hwc_connect_n8n_mcp`) |
+| hwc-crm (front-of-funnel CRM) | 8 | python stdio child | Always (`crm_*`) |
 
 ## Connection Guide
 
@@ -492,6 +493,10 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-07-10**: Add `hwc-crm` stdio backend (8 `crm_*` tools) — a python
+  MCP client (`python3.withPackages [mcp httpx]`) over the hwc-crm HTTP API on
+  loopback :11660. Gated on `HWC_CRM_MCP_PYTHON` + `HWC_CRM_SRC_DIR`;
+  non-lazy. See `domains/business/crm`.
 - **2026-07-10**: Triage Surface Contract writes (unified-triage Phases 3–5):
   `hwc_mail_triage` accepts `{action: triage-<bucket>|move|archive|trash|
   flag-action, id[, target]}` (notmuch tag ops) + `retriage` (touches
