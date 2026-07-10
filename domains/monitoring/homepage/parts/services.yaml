@@ -1,21 +1,23 @@
 - Business:
-    - JobTread MCP:
-        icon: mdi-api
-        href: https://hwc-server.ocelot-wahoo.ts.net:16100
-        description: Heartwood MCP Server
-        ping: host.containers.internal:16100
-    - Estimator API:
-        icon: mdi-calculator
-        href: http://localhost:8099/docs
-        description: Remodel pricing API
+    - MCP Gateway:
+        icon: mdi-transit-connection-variant
+        href: http://hwc-server.ocelot-wahoo.ts.net:6200/health
+        description: Unified system / JT / n8n / CRM MCP
         widget:
           type: customapi
-          url: http://host.containers.internal:8099/health
+          url: http://host.containers.internal:6200/health
           refreshInterval: 30000
           mappings:
             - field: status
               label: Status
               format: text
+            - field: tools
+              label: Tools
+              format: number
+    - CRM:
+        icon: mdi-account-group
+        href: https://crm.hwc.iheartwoodcraft.com
+        description: Front-of-funnel CRM (hwc-leads)
     - n8n:
         icon: n8n
         href: https://hwc-server.ocelot-wahoo.ts.net:2443
@@ -126,6 +128,10 @@
         description: YouTube archiver
         server: localhost
         container: pinchflat
+    - slskd:
+        icon: mdi-download-network
+        href: https://slskd.hwc.iheartwoodcraft.com
+        description: Soulseek client
 
 - Home:
     - Frigate:
@@ -161,7 +167,19 @@
     - Cameras:
         icon: grafana
         href: https://grafana.hwc.iheartwoodcraft.com/d/cameras
-        description: Frigate FPS / detection / GPU (Grafana)
+        description: Frigate FPS / detection / storage (Grafana)
+    - Refinery:
+        icon: mdi-factory
+        href: https://refinery.hwc.iheartwoodcraft.com
+        description: Refinement engine board
+    - DataX Monitor:
+        icon: mdi-monitor-dashboard
+        href: https://monitor.hwc.iheartwoodcraft.com
+        description: Agent-execution diagnostics
+    - Tasks:
+        icon: mdi-calendar-check
+        href: https://tasks.hwc.iheartwoodcraft.com
+        description: Radicale CalDAV / tasks
     - Lead Scout:
         icon: mdi-radar
         href: https://lead-scout.hwc.iheartwoodcraft.com
