@@ -144,6 +144,7 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-07-09c** — **Journal-error floor (`OPS_ERR_FLOOR=5`).** The ops digest's top-5 journal-error list now drops units below 5 errors in-window, suppressing single-activation blips (`init.scope`, `run-*.scope`, one-off `nixos-rebuild-switch-to-configuration`) that read as noise. A real crash-loop clears 5 trivially, so signal is unaffected.
 - **2026-07-09b** — **HTML email with per-section deep links.** Step 5 now
   sends multipart/alternative: a styled HTML part (cards, colored alert boxes)
   where every section header links to the system it reports on — System→

@@ -365,8 +365,11 @@ echo "${KUMA_FAIL_JSON}" | jq empty 2>/dev/null || KUMA_FAIL_JSON='[]'
 # units are EXCLUDED: containers write INFO logs to stderr, which the journal
 # stamps priority=err — authentik alone "errors" 2400×/day that way, drowning
 # real signal. Container breakage surfaces via Kuma + service_failures instead.
+# OPS_ERR_FLOOR: drop units with a trivial one-off count (single activation
+# blips like init.scope ×3, run-*.scope ×4) — a crash-loop clears this easily.
+OPS_ERR_FLOOR=5
 ERR_TOP_JSON=$({ "${JOURNALCTL}" -p err --since "${OPS_SINCE}" --no-pager -q -o json 2>/dev/null || true; } \
-  | jq -s 'map(._SYSTEMD_UNIT // .SYSLOG_IDENTIFIER // "kernel") | map(select(startswith("podman-") | not)) | group_by(.) | map({unit: .[0], errors: length}) | sort_by(-.errors) | .[:5]' 2>/dev/null || echo '[]')
+  | jq -s --argjson floor "${OPS_ERR_FLOOR}" 'map(._SYSTEMD_UNIT // .SYSLOG_IDENTIFIER // "kernel") | map(select(startswith("podman-") | not)) | group_by(.) | map({unit: .[0], errors: length}) | map(select(.errors >= $floor)) | sort_by(-.errors) | .[:5]' 2>/dev/null || echo '[]')
 echo "${ERR_TOP_JSON}" | jq empty 2>/dev/null || ERR_TOP_JSON='[]'
 
 # Prometheus: scrape targets down + disk days-to-full forecast (predictive
