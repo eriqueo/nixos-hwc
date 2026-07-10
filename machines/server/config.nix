@@ -746,6 +746,13 @@
       # stays tailnet-private (unmatched paths fall through to the 404 default).
       "crm.iheartwoodcraft.com" = { service = "http://localhost:11660"; path = "^/hooks/(contact|appointment|availability)"; };
 
+      # hwc-leads report viewer API — public so customers can open the report
+      # link emailed to them off-tailnet. PATH-locked to the read-only, already
+      # sanitised GET /api/reports/<id> (no email/phone/full name/attribution);
+      # the leads capture POST + admin stay tailnet-private. Needs DNS CNAME
+      # reports → tunnel. hwc-leads listens on :11650.
+      "reports.iheartwoodcraft.com" = { service = "http://localhost:11650"; path = "^/api/reports/"; };
+
       # hwc-mcp-gateway origins — internal hostnames the OAuth gateway Worker
       # proxies to (machine-to-machine via an Access service token). Distinct
       # from the bare brain./leads./mcp. names above, which stay owned by the
