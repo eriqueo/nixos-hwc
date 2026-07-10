@@ -51,6 +51,11 @@ domains/mail/calendar/
 
 ## Changelog
 
+- **2026-07-10**: Booking accuracy. Set khal `default_calendar = migrated`
+  (the VEVENT calendar the hwc-crm availability endpoint reads) when Radicale is
+  on, so quick-adds never prompt. Added a `busy` command (`home.packages`):
+  `busy <start> [end|dur] [summary]` → `khal new -a migrated` + immediate
+  `vdirsyncer sync` so availability updates now, not on the ~15-min timer.
 - **2026-06-15**: Calendar → Radicale. Added `hwc.mail.calendar.radicale.*`
   (enable/url/username/color); when on, `vdirsyncer.nix` suppresses the iCloud
   account pairs and emits `[pair calendar_radicale]` (VEVENT, "from a"/"from b",

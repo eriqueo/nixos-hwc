@@ -83,8 +83,9 @@ in
     longdatetimeformat = %Y-%m-%d %H:%M %A
 
     [default]
-    ${lib.optionalString (!cfg.radicale.enable)
-      "default_calendar = 06A30686-742B-4681-BBE9-BB15C7E9A54F"}
+    ${if cfg.radicale.enable
+      then "default_calendar = migrated"   # the one calendar availability reads
+      else "default_calendar = 06A30686-742B-4681-BBE9-BB15C7E9A54F"}
     highlight_event_days = true
 
     [view]

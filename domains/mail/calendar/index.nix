@@ -17,6 +17,24 @@ let
 
   dataDir = "~/.local/share/vdirsyncer";
 
+  # `busy` — one-liner to block time on the calendar the booking form reads
+  # (default_calendar=migrated), then push to Radicale immediately so
+  # availability updates now instead of on the ~15-min vdirsyncer timer.
+  busyScript = pkgs.writeShellScriptBin "busy" ''
+    if [ $# -eq 0 ]; then
+      echo "usage: busy <start> [end|duration] [summary]"
+      echo "  e.g.  busy tomorrow 14:00 3h Job site — Smith"
+      echo "        busy 2026-07-20 9:00 30m Call: Alden"
+      exit 1
+    fi
+    ${khalCli}/bin/khal new -a migrated "$@" || exit 1
+    if ${pkgs.vdirsyncer}/bin/vdirsyncer sync calendar_radicale >/dev/null 2>&1; then
+      echo "✓ blocked + synced — availability is updated"
+    else
+      echo "✓ blocked — availability updates on the next sync (≤15 min)"
+    fi
+  '';
+
   # Handshake: safe access to agenix secrets
   isNixOSHost = osConfig ? hwc;
   osCfg = if isNixOSHost then osConfig else {};
@@ -164,7 +182,7 @@ in
       # khal); pkgs.khal is retired. The standard ~/.config/khal/config below
       # is what khaltPkg's `khal` reads, so waybar/todui/ics-watcher/the MCP
       # all run on the fork.
-      home.packages = [ pkgs.vdirsyncer khalCli parser.emailToKhalScript ];
+      home.packages = [ pkgs.vdirsyncer khalCli parser.emailToKhalScript busyScript ];
 
       xdg.configFile = {
           "vdirsyncer/config".text = vdirsyncer.config;
