@@ -46,3 +46,7 @@ Ingress: Caddy vhost `hwc-crm.hwc.iheartwoodcraft.com` (tailnet-private).
   ExecStartPre, hourly persistent tick timer, vhost route, agenix secrets
   (JT grant key; Proton Bridge password when smtp transport selected).
   Enabled in profiles/business. See app repo BUILD-NOTES.md / DECISIONS.md.
+- **2026-07-10** — Deployed to hwc-server: service healthy, migration applied,
+  smoke test passed. Go-live: `emailTransport = "smtp"` (Proton Bridge loopback)
+  set in profiles/business; live sends still DB-gated by
+  `hwc.crm_settings.sequences_enabled`.

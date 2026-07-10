@@ -24,6 +24,9 @@
 
   # hwc-crm — front-of-funnel (stages/sequences/board) on hwc-leads (2026-07-10).
   hwc.business.crm.enable = true;
+  # Go-live: real sequence email via Proton Bridge loopback (same path as
+  # hwc-leads). Sends are still gated by hwc.crm_settings.sequences_enabled.
+  hwc.business.crm.emailTransport = "smtp";
 
   hwc.business.website.enable = true;
 
