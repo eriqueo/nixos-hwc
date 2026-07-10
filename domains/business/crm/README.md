@@ -50,3 +50,10 @@ Ingress: Caddy vhost `crm.hwc.iheartwoodcraft.com` (tailnet-private).
   smoke test passed. Go-live: `emailTransport = "smtp"` (Proton Bridge loopback)
   set in profiles/business; live sends still DB-gated by
   `hwc.crm_settings.sequences_enabled`.
+- **2026-07-10** — Appointment flow: `hwc.business.crm.calendar.*` writes
+  calculator "Request a call" appointments to the Radicale calendar (loopback,
+  `cal/migrated`) with day-before + hour-before VALARMs → syncs to khal +
+  iPhone, and emails the customer an `.ics` invite. The `cal` password is
+  extracted from the shared `radicale-htpasswd` into `/run/hwc-crm/caldav-pw`
+  by a root `ExecStartPre` (RuntimeDirectory). Public path widened to
+  `/hooks/(contact|appointment)`.

@@ -45,6 +45,13 @@ let
       export HWC_CRM_SMTP_FROM="${cfg.smtp.from}"
       export HWC_CRM_SMTP_PASSWORD_FILE="${config.age.secrets.${cfg.smtp.passwordSecretRef}.path}"
     ''}
+    ${lib.optionalString cfg.calendar.enable ''
+      export HWC_CRM_CALDAV_URL="${cfg.calendar.caldavUrl}"
+      export HWC_CRM_CALDAV_USER="${cfg.calendar.user}"
+      export HWC_CRM_CALDAV_PASSWORD_FILE="/run/hwc-crm/caldav-pw"
+      export HWC_CRM_CALDAV_COLLECTION="${cfg.calendar.collection}"
+      export HWC_CRM_ORGANIZER_EMAIL="${cfg.calendar.organizerEmail}"
+    ''}
     exec ${pythonEnv}/bin/python3 -m hwc_crm.api.app
   '';
 
@@ -53,6 +60,18 @@ let
       ${config.services.postgresql.package}/bin/psql "${cfg.postgresDsn}" \
         -v ON_ERROR_STOP=1 -q -f "$f"
     done
+  '';
+
+  # Extract just the `cal:` line's password from the shared radicale htpasswd
+  # into a service-private runtime file (the vdirsyncer pattern). Runs as root
+  # (ExecStartPre "+") because the htpasswd is root-readable only.
+  caldavPwGen = pkgs.writeShellScript "hwc-crm-caldav-pw" ''
+    umask 077
+    ${pkgs.gawk}/bin/awk -F: -v u=${cfg.calendar.user} \
+      '$1==u{match($0,/:/);print substr($0,RSTART+1)}' \
+      /run/agenix/radicale-htpasswd > /run/hwc-crm/caldav-pw
+    ${pkgs.coreutils}/bin/chown ${cfg.user}:users /run/hwc-crm/caldav-pw
+    ${pkgs.coreutils}/bin/chmod 0400 /run/hwc-crm/caldav-pw
   '';
 in
 {
@@ -130,6 +149,23 @@ in
       };
       onCalendar = lib.mkOption { type = lib.types.str; default = "hourly"; };
     };
+
+    calendar = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Write appointment events to the self-hosted Radicale CalDAV server
+          (loopback) so they sync to khal + iPhone, and email the customer an
+          .ics invite. The `cal` password is extracted from the shared
+          radicale htpasswd at start (no new secret).
+        '';
+      };
+      caldavUrl = lib.mkOption { type = lib.types.str; default = "http://127.0.0.1:5232"; };
+      user = lib.mkOption { type = lib.types.str; default = "cal"; };
+      collection = lib.mkOption { type = lib.types.str; default = "cal/migrated"; };
+      organizerEmail = lib.mkOption { type = lib.types.str; default = "eric@iheartwoodcraft.com"; };
+    };
   };
 
   #============================================================================
@@ -168,7 +204,11 @@ in
         Type = "exec";
         User = lib.mkForce cfg.user;
         Group = "users";
-        ExecStartPre = "${migrate}";   # additive + idempotent (tested)
+        RuntimeDirectory = "hwc-crm";   # /run/hwc-crm for the caldav pw file
+        RuntimeDirectoryMode = "0750";
+        ExecStartPre =
+          lib.optional cfg.calendar.enable "+${caldavPwGen}"  # root: reads htpasswd
+          ++ [ "${migrate}" ];                                # eric: additive + idempotent
         ExecStart = "${crmWrapper}";
         Restart = "always";
         RestartSec = "5s";

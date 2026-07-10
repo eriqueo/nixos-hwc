@@ -71,12 +71,15 @@ in
     };
     leadsAppointmentWebhookUrl = lib.mkOption {
       type = lib.types.str;
-      default = "https://api.iheartwoodcraft.com/webhook/calculator-appointment";
+      default = "https://crm.iheartwoodcraft.com/hooks/appointment";
       description = ''
-        URL the calculator's "schedule a call" flow POSTs to. Same public
-        reachability requirement as leadsWebhookUrl. Handled by the
-        work_calculator_appointment n8n workflow (re-activated 2026-05-08):
-        Postgres status update + confirmation email w/ ICS + khal event.
+        URL the calculator's "schedule a call" flow POSTs to (fire-and-forget,
+        no-cors). Cutover 2026-07-10 from the broken work_calculator_appointment
+        n8n path (wrote status='appointment_requested' to legacy
+        hwc.calculator_leads, violating its CHECK) to hwc-crm's
+        /hooks/appointment: appends to the funnel lead, forces schedule_estimate,
+        writes a khal/Radicale event (day-before + hour-before VALARMs) and
+        emails the customer an .ics invite. Path-locked Cloudflare ingress.
       '';
     };
   };

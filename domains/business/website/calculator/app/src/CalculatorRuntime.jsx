@@ -294,7 +294,10 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
       source_page: window.location.pathname,
       ...getAttribution()
     };
-    try { await fetch(webhookApptUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); } catch {}
+    // Cross-origin fire-and-forget: no-cors + text/plain is a "simple" request
+    // (no CORS preflight), so it reaches crm.iheartwoodcraft.com/hooks/appointment
+    // even though we can't read the opaque response.
+    try { await fetch(webhookApptUrl, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) }); } catch {}
     setSubmitting(false);
     fade(() => setPhase("submitted"));
   };
