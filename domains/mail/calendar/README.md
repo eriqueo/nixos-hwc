@@ -56,6 +56,14 @@ domains/mail/calendar/
   on, so quick-adds never prompt. Added a `busy` command (`home.packages`):
   `busy <start> [end|dur] [summary]` → `khal new -a migrated` + immediate
   `vdirsyncer sync` so availability updates now, not on the ~15-min timer.
+- **2026-07-10** (follow-up): Set the calendar's CalDAV displayname to `hwc`
+  (was blank → clients showed the raw collection id "migrated"). khal identifies
+  calendars BY displayname, so `default_calendar` and the `busy` command now use
+  `-a hwc` (superseding the `-a migrated` above), while the Radicale collection
+  PATH stays `cal/migrated` — the hwc-crm availability endpoint + event PUTs use
+  the URL path and are unaffected. Displayname was set on the local vdir side and
+  pushed via `vdirsyncer metasync` (pair `conflict_resolution = "b wins"` = local
+  wins on push). iPhone/khal now display "hwc".
 - **2026-06-15**: Calendar → Radicale. Added `hwc.mail.calendar.radicale.*`
   (enable/url/username/color); when on, `vdirsyncer.nix` suppresses the iCloud
   account pairs and emits `[pair calendar_radicale]` (VEVENT, "from a"/"from b",

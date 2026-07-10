@@ -36,8 +36,15 @@ crm/
 | `.smtp.passwordSecretRef` | `proton-bridge-password` | agenix. |
 | `.jtGrantKeyRef` | `jobtread-grant-key` | Manual-lead JT create. |
 | `.tick.enable` / `.tick.onCalendar` | true / hourly | Persistent timer. |
+| `.calendar.enable` | false | Write appointment events to Radicale. |
+| `.calendar.caldavUrl` | loopback Radicale | CalDAV base URL. |
+| `.calendar.user` | `cal` | Radicale user (pw from `radicale-htpasswd`). |
+| `.calendar.collection` | `cal/migrated` | Collection PATH (displayname `hwc`). |
+| `.calendar.organizerEmail` | — | ORGANIZER on the `.ics` invite. |
 
-Ingress: Caddy vhost `crm.hwc.iheartwoodcraft.com` (tailnet-private).
+Ingress: Caddy vhost `crm.hwc.iheartwoodcraft.com` (tailnet-private) for the
+board UI + admin API; public Cloudflare Tunnel exposes ONLY
+`^/hooks/(contact|appointment|availability)`.
 
 ## Changelog
 
@@ -57,3 +64,14 @@ Ingress: Caddy vhost `crm.hwc.iheartwoodcraft.com` (tailnet-private).
   extracted from the shared `radicale-htpasswd` into `/run/hwc-crm/caldav-pw`
   by a root `ExecStartPre` (RuntimeDirectory). Public path widened to
   `/hooks/(contact|appointment)`.
+- **2026-07-10** — Public intake surface completed: `/hooks/contact` (web-form
+  mirror → CRM append), `/hooks/appointment` (appointment → CRM append +
+  Radicale calendar event + customer `.ics` invite), and `GET /hooks/availability`
+  (Calendly-style free/busy computed from the Radicale calendar: Mon–Fri 9–4 MT
+  minus real conflicts, 30-min slots). The `calendar` collection's CalDAV
+  displayname is `hwc` while its PATH stays `cal/migrated` — the availability
+  query + event PUTs use the URL PATH, so they are unaffected by the displayname.
+  `hwc.business.crm.calendar.*` options (enable/caldavUrl/user/collection/
+  organizerEmail) write events on loopback; the `cal` password is extracted from
+  the shared `radicale-htpasswd` into `/run/hwc-crm/caldav-pw`. Public ingress
+  path is `^/hooks/(contact|appointment|availability)`.
