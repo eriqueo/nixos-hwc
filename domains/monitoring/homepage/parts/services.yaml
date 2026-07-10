@@ -145,7 +145,15 @@
     - Service Health:
         icon: grafana
         href: https://grafana.hwc.iheartwoodcraft.com/d/service-health
-        description: Status monitoring (Grafana)
+        description: Service up/down (Grafana)
+    - Server Overview:
+        icon: grafana
+        href: https://grafana.hwc.iheartwoodcraft.com/d/server-overview
+        description: CPU / RAM / disk / temp (Grafana)
+    - Media Library:
+        icon: grafana
+        href: https://grafana.hwc.iheartwoodcraft.com/d/media-library
+        description: Movies / series / music (Grafana)
     - Lead Scout:
         icon: mdi-radar
         href: https://lead-scout.hwc.iheartwoodcraft.com

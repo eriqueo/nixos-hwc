@@ -5,7 +5,7 @@
   "schemaVersion": 38,
   "tags": ["hwc", "blackbox", "uptime"],
   "templating": { "list": [] },
-  "time": { "from": "now-6h", "to": "now" },
+  "time": { "from": "now-3h", "to": "now" },
   "timezone": "browser",
   "title": "Service Health",
   "uid": "service-health",
