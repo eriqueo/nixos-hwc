@@ -1,0 +1,90 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 38,
+  "tags": ["hwc", "podman", "containers"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "browser",
+  "title": "Containers",
+  "uid": "containers",
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Running",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "count(podman_container_state == 2)", "instant": true } ],
+      "fieldConfig": { "defaults": { "decimals": 0, "color": { "mode": "fixed", "fixedColor": "green" } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none", "textMode": "value", "justifyMode": "center" }
+    },
+    {
+      "id": 2, "type": "stat", "title": "Not running",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "count(podman_container_state != 2) or vector(0)", "instant": true } ],
+      "fieldConfig": { "defaults": { "decimals": 0, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none", "textMode": "value", "justifyMode": "center" }
+    },
+    {
+      "id": 3, "type": "stat", "title": "Total RAM used",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "sum(podman_container_mem_usage_bytes)", "instant": true } ],
+      "fieldConfig": { "defaults": { "unit": "bytes", "decimals": 1, "color": { "mode": "fixed", "fixedColor": "text" } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "none", "graphMode": "none", "textMode": "value", "justifyMode": "center" }
+    },
+    {
+      "id": 4, "type": "stat", "title": "Total CPU",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "sum(rate(podman_container_cpu_seconds_total[5m]))", "instant": true } ],
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 2, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 4 }, { "color": "red", "value": 8 } ] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none", "textMode": "value", "justifyMode": "center" }
+    },
+    {
+      "id": 5, "type": "bargauge", "title": "Memory by container (top 18)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 13, "w": 12, "x": 0, "y": 4 },
+      "targets": [ { "refId": "A", "expr": "topk(18, podman_container_mem_usage_bytes)", "legendFormat": "{{name}}", "instant": true } ],
+      "fieldConfig": { "defaults": { "unit": "bytes", "decimals": 0, "min": 0, "color": { "mode": "continuous-GrYlRd" } }, "overrides": [] },
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "valueMode": "text", "showUnfilled": true, "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 6, "type": "bargauge", "title": "CPU by container (top 18)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 13, "w": 12, "x": 12, "y": 4 },
+      "targets": [ { "refId": "A", "expr": "topk(18, rate(podman_container_cpu_seconds_total[5m]))", "legendFormat": "{{name}}", "instant": true } ],
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 3, "min": 0, "color": { "mode": "continuous-GrYlRd" } }, "overrides": [] },
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "valueMode": "text", "showUnfilled": true, "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "Memory over time (top 10)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 17 },
+      "targets": [ { "refId": "A", "expr": "topk(10, podman_container_mem_usage_bytes)", "legendFormat": "{{name}}" } ],
+      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "stacking": { "mode": "normal" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true, "calcs": ["lastNotNull"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "CPU over time (top 10)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 17 },
+      "targets": [ { "refId": "A", "expr": "topk(10, rate(podman_container_cpu_seconds_total[5m]))", "legendFormat": "{{name}}" } ],
+      "fieldConfig": { "defaults": { "unit": "none", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 6, "showPoints": "never", "gradientMode": "opacity" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true, "calcs": ["lastNotNull"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "Network throughput (top 8 by rate)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 26 },
+      "targets": [
+        { "refId": "A", "expr": "topk(8, rate(podman_container_net_input_total[5m]) * 8)", "legendFormat": "{{name}} rx" },
+        { "refId": "B", "expr": "topk(8, rate(podman_container_net_output_total[5m]) * 8)", "legendFormat": "{{name}} tx" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bps", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 4, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    }
+  ]
+}

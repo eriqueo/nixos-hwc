@@ -154,6 +154,10 @@
         icon: grafana
         href: https://grafana.hwc.iheartwoodcraft.com/d/media-library
         description: Movies / series / music (Grafana)
+    - Containers:
+        icon: grafana
+        href: https://grafana.hwc.iheartwoodcraft.com/d/containers
+        description: Per-container CPU / RAM / net (Grafana)
     - Lead Scout:
         icon: mdi-radar
         href: https://lead-scout.hwc.iheartwoodcraft.com
