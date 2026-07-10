@@ -142,15 +142,12 @@ No shared central database — the contract is shared, the stores are not.
   category) and `<Space>gU/gR/gN` go-to-folder binds. Cheat sheet + which-key
   group label updated.
 
-**Finding (Phase 2): notmuch tag DBs are per-machine.** The briefing/gateway
-stamp `triage/*` on the SERVER DB; the laptop DB has none of them, so laptop
-aerc's triage folders are empty and its set-triage keys don't reach the
-board. Cross-machine tag convergence today is only via Proton folder/label
-state (afew MailMover) and per-machine deterministic rules. Decision needed:
-(a) **muchsync** laptop↔server (purpose-built notmuch tag sync — the real
-fix for "every surface, every machine, same tags"), or (b) declare the
-server DB canonical and treat laptop aerc as read-mostly. Until then, aerc
-triage is fully functional on the server.
+**Note (Phase 2): the server notmuch DB is canonical BY DESIGN.** notmuch
+tag DBs are per-machine, but that's a non-issue here: all mail interaction
+happens on hwc-server — the "aerc" used from the laptop is an SSH alias into
+the server's aerc, and the briefing/gateway write there too. The laptop's
+local notmuch DB (and its empty triage folders) is vestigial; every real
+surface hits the one server DB. No tag sync (muchsync etc.) is needed.
 
 ### Phase 3 — workbench live + verbs
 - Laptop `gateway_url` → server gateway over Tailscale (kills the mail tile

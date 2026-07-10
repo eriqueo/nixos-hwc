@@ -76,9 +76,9 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 - 2026-07-09 (b): aerc joins triage (unified-triage Phase 2) — `triage/*`
   virtual folders (taxonomy-generated, tree-nested, inbox-scoped) +
   `<Space>tu/tr/tn` set-bucket binds (replace-set, same semantics as the
-  gateway's `hwc_mail set-triage`) + `<Space>gU/gR/gN` go-tos. NOTE: notmuch
-  tag DBs are per-machine — triage tags currently live on hwc-server only
-  (see docs/plans/unified-triage-architecture.md Phase 2 finding).
+  gateway's `hwc_mail set-triage`) + `<Space>gU/gR/gN` go-tos. The server
+  notmuch DB is canonical by design (laptop "aerc" is an SSH alias into the
+  server's aerc), so no cross-machine tag sync is needed.
 - 2026-07-09: New `taxonomy/` library (pure data + derivations) — single
   source of truth for tag vocabulary, triage buckets, and sender
   dispositions. `notmuch` rule defaults, `aerc/parts/tags.nix`, the MCP
