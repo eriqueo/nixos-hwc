@@ -76,6 +76,23 @@ in
           plugins = "${cfg.dataDir}/plugins";
         };
 
+        # No login prompt — grafana.hwc.* is tailnet-only, so the tailnet IS the
+        # auth (same rationale as the Uptime Kuma disableAuth). Anonymous users
+        # land straight on the dashboards with Admin rights (edit/save); the
+        # login form is hidden. The admin_password below still backs API +
+        # dashboard provisioning; append ?forceLogin=true to reach the form.
+        "auth.anonymous" = {
+          enabled = true;
+          org_name = "Main Org.";
+          org_role = "Admin";
+        };
+        auth = {
+          disable_login_form = true;
+        };
+        users = {
+          allow_sign_up = false;
+        };
+
         security = lib.mkIf (cfg.adminPasswordFile != null) {
           admin_password = "$__file{${cfg.adminPasswordFile}}";
         };
