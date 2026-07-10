@@ -1,7 +1,9 @@
 # domains/server/native/ai/brain-mcp/index.nix
 #
 # Brain MCP Server — native Deno systemd service
-# Exposes 6 MCP tools: read_note, write_note, list_notes, search_notes, lint_wiki, append_to_inbox
+# Exposes the vault CRUD/refactor tools (read/write/list/search_notes, lint,
+# inbox, delete/move/replace/frontmatter/commit) plus semantic retrieval
+# (search_semantic, related_notes — brainvec index + llama-embed on :11502).
 # Binds to 127.0.0.1:9876 (Tailscale tunnel added in Phase 12).
 { config, lib, pkgs, ... }:
 let
@@ -49,6 +51,24 @@ in
       default = 23443;
       description = "External Caddy HTTPS port for brain-mcp access via Tailscale (Phase 12)";
     };
+
+    brainvecIndex = lib.mkOption {
+      type = lib.types.str;
+      default = "/home/eric/.cache/brainvec/index.jsonl";
+      description = "brainvec semantic index consumed by search_semantic/related_notes (built by hwc.server.ai.brainvec)";
+    };
+
+    embedBaseUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "http://127.0.0.1:11502/v1";
+      description = "OpenAI-compatible embeddings endpoint for query-time embedding (llama-embed)";
+    };
+
+    embedModel = lib.mkOption {
+      type = lib.types.str;
+      default = "nomic-embed-text-v1.5";
+      description = "Embedding model label — must match the index's embedId prefix";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -71,6 +91,10 @@ in
         BRAIN_VAULT_ROOT = cfg.vaultPath;
         BRAIN_MCP_PORT = toString cfg.port;
         BRAIN_MCP_KEY_FILE = cfg.apiKeyFile;
+        BRAINVEC_INDEX = cfg.brainvecIndex;
+        BRAINVEC_EMBED_BASE_URL = cfg.embedBaseUrl;
+        BRAINVEC_EMBED_MODEL = cfg.embedModel;
+        BRAINVEC_EMBED_PREFIX_QUERY = "search_query: ";
         DENO_DIR = "/var/cache/brain-mcp/deno";
         HOME = "/home/${cfg.user}";
         PATH = lib.mkForce "/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";
@@ -78,7 +102,9 @@ in
 
       serviceConfig = {
         Type = "simple";
-        ExecStart = "${deno} run --allow-read --allow-write=${cfg.vaultPath} --allow-net=0.0.0.0:${toString cfg.port} --allow-run=rg,git,flock --allow-env ${server}";
+        # allow-net: the listen port + outbound to llama-embed for query-time
+        # embedding (search_semantic).
+        ExecStart = "${deno} run --allow-read --allow-write=${cfg.vaultPath} --allow-net=0.0.0.0:${toString cfg.port},127.0.0.1:11502 --allow-run=rg,git,flock --allow-env ${server}";
         WorkingDirectory = cfg.vaultPath;
         User = lib.mkForce cfg.user;
         Group = "users";

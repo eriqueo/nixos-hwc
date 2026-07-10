@@ -108,6 +108,7 @@
       enable = true;
       includeConfigDir = false;   # don't expose ~/.config to Claude
       includeServerTools = false; # no server MCP tools on laptop
+      brain.enable = true;        # vault CRUD + semantic search over the tailnet (brain-mcp :23443)
       n8n = {
         enable = true;
         # accessToken is set via agenix secret injection or overridden locally.

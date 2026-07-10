@@ -91,6 +91,18 @@ in
       enable = lib.mkOption { type = lib.types.bool; default = false; description = "Enable MCP configuration file generation for Claude Desktop"; };
       includeConfigDir = lib.mkOption { type = lib.types.bool; default = false; description = "Include user config directory in filesystem MCP server (laptop only)"; };
       includeServerTools = lib.mkOption { type = lib.types.bool; default = false; description = "Include server-specific MCP tools (postgres, prometheus, puppeteer)"; };
+      brain = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Include the brain MCP server (vault CRUD + semantic search) as a native HTTP entry — tailnet-gated, no token (brain-mcp dropped Bearer auth 2026-05-22)";
+        };
+        url = lib.mkOption {
+          type = lib.types.str;
+          default = "https://hwc-server.ocelot-wahoo.ts.net:23443/mcp";
+          description = "brain-mcp streamable-HTTP endpoint (Caddy tailnet route)";
+        };
+      };
       n8n = {
         enable = lib.mkOption {
           type = lib.types.bool;
@@ -264,6 +276,13 @@ in
           memory = {
             command = "npx";
             args = [ "-y" "@modelcontextprotocol/server-memory" ];
+          };
+        } // lib.optionalAttrs cfg.mcp.brain.enable {
+          # Native streamable-HTTP entry (Claude Code supports type=http).
+          # No auth header: brain-mcp is tailnet-gated (Bearer removed 2026-05-22).
+          brain = {
+            type = "http";
+            url = cfg.mcp.brain.url;
           };
         } // lib.optionalAttrs (cfg.mcp.n8n.enable && cfg.mcp.n8n.accessToken != "") {
           n8n-mcp = {

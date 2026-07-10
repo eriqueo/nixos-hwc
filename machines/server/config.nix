@@ -24,6 +24,7 @@
     ../../domains/server/containers/_shared/directories.nix
     ../../domains/server/native/ai/lead-scout/index.nix # Lead Scout MCP + HTTP
     ../../domains/server/native/ai/brain-mcp/index.nix # Brain MCP Server (Deno)
+    ../../domains/server/native/ai/brainvec/index.nix # brainvec semantic-index ingest (vault embeddings)
     ../../domains/server/native/ai/hermes/index.nix # Hermes Agent (Nous Research)
     ../../domains/server/native/ai/market-intelligence/index.nix # Market Intelligence (earnings signals + dashboard)
     ../../domains/server/native/ai/llama-cpp/index.nix # llama.cpp inference (GPU + CPU + embed)
@@ -117,6 +118,7 @@
 
   # Brain MCP Server — vault filesystem tools (read/write/search/lint) on port 9876
   hwc.server.ai.brainMcp.enable = true;
+  hwc.server.ai.brainvec.enable = true; # semantic index behind vault-sync (feeds brain-mcp search_semantic)
 
   # Phone Capture Processor (Phase 10: Whisper STT + Tesseract OCR)
   # Watches inbox-mobile/{audio,screenshots} and writes markdown to brain/inbox/

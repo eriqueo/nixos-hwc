@@ -4,7 +4,8 @@
  *
  * MCP server exposing the brain vault as filesystem + refactoring tools via
  * Streamable HTTP transport. Read/capture: read_note, write_note, list_notes,
- * search_notes, lint_wiki, append_to_inbox, inbox_capture. Refactoring (git-
+ * search_notes, lint_wiki, append_to_inbox, inbox_capture. Semantic (brainvec
+ * index + llama-embed): search_semantic, related_notes. Refactoring (git-
  * checkpointed): delete_note, move_note, replace_in_notes, update_frontmatter,
  * commit_vault.
  * Protocol: JSON-RPC 2.0 over HTTP POST (MCP spec 2024-11-05).
@@ -19,6 +20,13 @@ const VAULT_ROOT = resolve(Deno.env.get("BRAIN_VAULT_ROOT") ?? "/home/eric/900_v
 const PORT = parseInt(Deno.env.get("BRAIN_MCP_PORT") ?? "9876");
 const HOST = Deno.env.get("BRAIN_MCP_HOST") ?? "0.0.0.0";
 const KEY_FILE = Deno.env.get("BRAIN_MCP_KEY_FILE") ?? "/run/agenix/brain-mcp-api-key";
+// Semantic search: the brainvec index (built by brainvec-ingest.timer) + the
+// local llama-embed backend for query-time embedding. Both optional — the
+// tools degrade to actionable messages when either is absent.
+const BRAINVEC_INDEX = Deno.env.get("BRAINVEC_INDEX") ?? "/home/eric/.cache/brainvec/index.jsonl";
+const EMBED_BASE_URL = Deno.env.get("BRAINVEC_EMBED_BASE_URL") ?? "http://127.0.0.1:11502/v1";
+const EMBED_MODEL = Deno.env.get("BRAINVEC_EMBED_MODEL") ?? "nomic-embed-text-v1.5";
+const EMBED_PREFIX_QUERY = Deno.env.get("BRAINVEC_EMBED_PREFIX_QUERY") ?? "search_query: ";
 
 let API_KEY: string;
 try {
@@ -216,6 +224,76 @@ async function withCheckpoint<T>(
   }
 }
 
+// ── Semantic index (brainvec) ────────────────────────────────────────────────
+// Lazy, mtime-cached load of the brainvec JSONL index. cosine/topK are a
+// deliberate ~15-line port of brainvec/lib.mjs (separate repo, node — a Deno
+// import would couple deployments; duplication accepted and noted there).
+interface VecEntry {
+  path: string;
+  title: string | null;
+  type: string | null;
+  embedId: string;
+  vector: number[];
+}
+let vecCache: { mtime: number; entries: VecEntry[] } | null = null;
+
+async function loadVecIndex(): Promise<VecEntry[] | null> {
+  let stat;
+  try {
+    stat = await Deno.stat(BRAINVEC_INDEX);
+  } catch {
+    return null;
+  }
+  const mtime = stat.mtime?.getTime() ?? 0;
+  if (vecCache && vecCache.mtime === mtime) return vecCache.entries;
+  const entries: VecEntry[] = [];
+  for (const line of (await Deno.readTextFile(BRAINVEC_INDEX)).split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      entries.push(JSON.parse(line));
+    } catch { /* skip corrupt line */ }
+  }
+  vecCache = { mtime, entries };
+  return entries;
+}
+
+function cosine(a: number[], b: number[]): number {
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1);
+}
+
+function vecTopK(queryVec: number[], entries: VecEntry[], k: number) {
+  return entries
+    .map((e) => ({ path: e.path, title: e.title, type: e.type, score: cosine(queryVec, e.vector) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, k);
+}
+
+async function embedQuery(text: string): Promise<number[]> {
+  const res = await fetch(`${EMBED_BASE_URL}/embeddings`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ model: EMBED_MODEL, input: [EMBED_PREFIX_QUERY + text.slice(0, 2000)] }),
+    signal: AbortSignal.timeout(20_000),
+  });
+  const data = await res.json().catch(() => null);
+  const vec = data?.data?.[0]?.embedding;
+  if (!res.ok || !vec) throw new Error(`embed backend ${res.status}`);
+  return vec;
+}
+
+function formatHits(hits: Array<{ path: string; title: string | null; type: string | null; score: number }>): string {
+  if (!hits.length) return "No semantic matches.";
+  return hits
+    .map((h, i) => `${String(i + 1).padStart(2)}. ${h.score.toFixed(4)}  ${h.path}${h.title ? `  — ${h.title}` : ""}${h.type ? `  [${h.type}]` : ""}`)
+    .join("\n") + "\n(scores are cosine similarity ∈ [-1,1]; treat hits as leads, verify content)";
+}
+
 // ── MCP tool definitions ─────────────────────────────────────────────────────
 const TOOL_DEFS = [
   {
@@ -261,6 +339,31 @@ const TOOL_DEFS = [
         folder: { type: "string", description: "Optional subfolder to limit search scope" }
       },
       required: ["query"]
+    }
+  },
+  {
+    name: "search_semantic",
+    description: "Semantic (meaning-based) search over the vault's brainvec embedding index. Use for concept/topic queries; complements search_notes (keyword/regex, better for exact strings and identifiers).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Natural-language query" },
+        k: { type: "number", description: "Max results (default 10)" },
+        folder: { type: "string", description: "Optional vault-relative folder prefix filter (e.g. datax/wiki)" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "related_notes",
+    description: "Notes semantically nearest to an existing note (link discovery, fold-target matching). Uses the note's stored vector — no embedding backend needed.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Vault-relative note path (e.g. tech/wiki/nixos/secrets.md)" },
+        k: { type: "number", description: "Max results (default 10)" }
+      },
+      required: ["path"]
     }
   },
   {
@@ -414,6 +517,43 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
       // Make paths relative to vault root for cleaner output
       const output = raw.replaceAll(VAULT_ROOT + "/", "");
       return { content: [{ type: "text", text: output || "No matches found." }] };
+    }
+
+    case "search_semantic": {
+      const entries = await loadVecIndex();
+      if (!entries || !entries.length) {
+        return { content: [{ type: "text", text: `Semantic index not found/empty at ${BRAINVEC_INDEX} — run brainvec-ingest on the server (systemctl start brainvec-ingest), or use search_notes (keyword) instead.` }] };
+      }
+      // Model-drift guard: mixed-model cosine is garbage; be loud about it.
+      const foreign = entries.filter((e) => !e.embedId?.startsWith(EMBED_MODEL)).length;
+      if (foreign > entries.length / 2) {
+        return { content: [{ type: "text", text: `Semantic index was built with a different embedding model (${entries[0]?.embedId}) than this server queries with (${EMBED_MODEL}) — re-run ingest with --force. Use search_notes meanwhile.` }] };
+      }
+      let queryVec: number[];
+      try {
+        queryVec = await embedQuery(String(args.query));
+      } catch {
+        return { content: [{ type: "text", text: `Embedding backend down (${EMBED_BASE_URL}, llama-embed) — semantic search unavailable; use search_notes (keyword) instead.` }] };
+      }
+      const k = args.k ? Number(args.k) : 10;
+      const folder = args.folder ? String(args.folder).replace(/\/$/, "") + "/" : null;
+      const pool = folder ? entries.filter((e) => e.path.startsWith(folder)) : entries;
+      return { content: [{ type: "text", text: formatHits(vecTopK(queryVec, pool, k)) }] };
+    }
+
+    case "related_notes": {
+      const entries = await loadVecIndex();
+      if (!entries || !entries.length) {
+        return { content: [{ type: "text", text: `Semantic index not found/empty at ${BRAINVEC_INDEX} — run brainvec-ingest on the server first.` }] };
+      }
+      const rel = String(args.path).replace(/^\//, "");
+      const self = entries.find((e) => e.path === rel) ?? entries.find((e) => e.path.endsWith(rel));
+      if (!self) {
+        return { content: [{ type: "text", text: `Note not in the semantic index: ${rel} (new/renamed since the last ingest tick? next *:5/15 run picks it up).` }] };
+      }
+      const k = args.k ? Number(args.k) : 10;
+      const hits = vecTopK(self.vector, entries.filter((e) => e.path !== self.path), k);
+      return { content: [{ type: "text", text: formatHits(hits) }] };
     }
 
     case "lint_wiki": {
