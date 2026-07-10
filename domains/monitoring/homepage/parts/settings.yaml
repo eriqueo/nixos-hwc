@@ -3,15 +3,21 @@ theme: dark
 color: zinc
 headerStyle: clean
 layout:
-  Business:
+  HWC:
     style: row
     columns: 4
-  Infrastructure:
+  DataX:
     style: row
-    columns: 4
-  Media:
+    columns: 3
+  Projects:
     style: row
-    columns: 4
+    columns: 3
   Home:
     style: row
     columns: 3
+  Media:
+    style: row
+    columns: 4
+  Utilities:
+    style: row
+    columns: 4

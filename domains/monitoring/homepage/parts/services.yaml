@@ -1,4 +1,34 @@
-- Business:
+- HWC:
+    - CRM:
+        icon: mdi-account-group
+        href: https://crm.hwc.iheartwoodcraft.com
+        description: Front-of-funnel CRM (hwc-leads)
+    - Estimator:
+        icon: mdi-calculator-variant
+        href: https://estimator.hwc.iheartwoodcraft.com
+        description: Remodel pricing PWA
+    - Bathroom Calculator:
+        icon: mdi-calculator
+        href: https://calculator.hwc.iheartwoodcraft.com
+        description: Bathroom estimate widget
+    - Heartwood CMS:
+        icon: mdi-pencil
+        href: https://heartwood-cms.hwc.iheartwoodcraft.com
+        description: Content management
+    - Lead Scout:
+        icon: mdi-radar
+        href: https://lead-scout.hwc.iheartwoodcraft.com
+        description: Lead intelligence
+    - Morning Briefing:
+        icon: mdi-sunny
+        href: https://briefing.hwc.iheartwoodcraft.com
+        description: Daily ops dashboard
+    - n8n:
+        icon: n8n
+        href: https://hwc-server.ocelot-wahoo.ts.net:2443
+        description: Workflow automation
+        server: localhost
+        container: n8n
     - MCP Gateway:
         icon: mdi-transit-connection-variant
         href: http://hwc-server.ocelot-wahoo.ts.net:6200/health
@@ -14,16 +44,6 @@
             - field: tools
               label: Tools
               format: number
-    - CRM:
-        icon: mdi-account-group
-        href: https://crm.hwc.iheartwoodcraft.com
-        description: Front-of-funnel CRM (hwc-leads)
-    - n8n:
-        icon: n8n
-        href: https://hwc-server.ocelot-wahoo.ts.net:2443
-        description: Workflow automation
-        server: localhost
-        container: n8n
     - Paperless:
         icon: paperless-ngx
         href: https://hwc-server.ocelot-wahoo.ts.net/docs
@@ -31,43 +51,51 @@
         server: localhost
         container: paperless
 
-- Infrastructure:
-    - Caddy:
-        icon: caddy
-        description: Reverse proxy
-        ping: host.containers.internal:80
-    - Authentik:
-        icon: authentik
-        href: https://hwc-server.ocelot-wahoo.ts.net:15543
-        description: SSO / Identity
+- DataX:
+    - SR Analyzer:
+        icon: mdi-clipboard-list
+        href: https://sr_analyzer.hwc.iheartwoodcraft.com
+        description: DataX SR triage
+    - DataX Monitor:
+        icon: mdi-monitor-dashboard
+        href: https://monitor.hwc.iheartwoodcraft.com
+        description: Agent-execution diagnostics
+    - Refinery:
+        icon: mdi-factory
+        href: https://refinery.hwc.iheartwoodcraft.com
+        description: Refinement engine board
+
+- Projects:
+    - Hermes:
+        icon: mdi-chart-line
+        href: https://hermes.hwc.iheartwoodcraft.com
+        description: Market trials agent
+    - Market Trials:
+        icon: mdi-finance
+        href: https://market-dashboard.hwc.iheartwoodcraft.com
+        description: Paper-trading dashboard
+    - Market Intelligence:
+        icon: mdi-chart-box
+        href: https://market-intelligence.hwc.iheartwoodcraft.com
+        description: Earnings signals
+
+- Home:
+    - Frigate:
+        icon: frigate
+        href: https://frigate.hwc.iheartwoodcraft.com
+        description: NVR / cameras
         server: localhost
-        container: authentik-server
-    - Grafana:
+        container: frigate
+    - Immich:
+        icon: immich
+        href: https://immich.hwc.iheartwoodcraft.com
+        description: Photos
+        server: localhost
+        container: immich-server
+    - Cameras:
         icon: grafana
-        href: https://grafana.hwc.iheartwoodcraft.com
-        description: Metrics dashboards
-    - Prometheus:
-        icon: prometheus
-        href: http://localhost:9090
-        description: Metrics collection
-    - Vaultwarden:
-        icon: vaultwarden
-        href: https://vaultwarden.hwc.iheartwoodcraft.com
-        description: Password manager
-        server: localhost
-        container: vaultwarden
-    - Firefly III:
-        icon: firefly-iii
-        href: https://firefly.hwc.iheartwoodcraft.com
-        description: Finance
-        server: localhost
-        container: firefly
-    - CloudBeaver:
-        icon: mdi-database
-        href: https://cloudbeaver.hwc.iheartwoodcraft.com
-        description: DB management
-        server: localhost
-        container: cloudbeaver
+        href: https://grafana.hwc.iheartwoodcraft.com/d/cameras
+        description: Frigate FPS / detection / storage (Grafana)
 
 - Media:
     - Jellyfin:
@@ -98,6 +126,12 @@
         description: Music
         server: localhost
         container: lidarr
+    - Readarr:
+        icon: readarr
+        href: https://hwc-server.ocelot-wahoo.ts.net/readarr
+        description: Books
+        server: localhost
+        container: readarr
     - Prowlarr:
         icon: prowlarr
         href: https://hwc-server.ocelot-wahoo.ts.net/prowlarr
@@ -110,18 +144,16 @@
         description: Music streaming
         server: localhost
         container: navidrome
-    - Readarr:
-        icon: readarr
-        href: https://hwc-server.ocelot-wahoo.ts.net/readarr
-        description: Books
-        server: localhost
-        container: readarr
     - Audiobookshelf:
         icon: audiobookshelf
         href: https://hwc-server.ocelot-wahoo.ts.net/audiobookshelf
         description: Audiobooks
         server: localhost
         container: audiobookshelf
+    - Calibre:
+        icon: calibre
+        href: https://calibre.hwc.iheartwoodcraft.com
+        description: E-book library
     - Pinchflat:
         icon: mdi-youtube
         href: https://pinchflat.hwc.iheartwoodcraft.com
@@ -132,22 +164,16 @@
         icon: mdi-download-network
         href: https://slskd.hwc.iheartwoodcraft.com
         description: Soulseek client
+    - Media Library:
+        icon: grafana
+        href: https://grafana.hwc.iheartwoodcraft.com/d/media-library
+        description: Movies / series / music (Grafana)
 
-- Home:
-    - Frigate:
-        icon: frigate
-        href: https://frigate.hwc.iheartwoodcraft.com
-        description: NVR / cameras
-        server: localhost
-        container: frigate
-    - Immich:
-        icon: immich
-        href: https://immich.hwc.iheartwoodcraft.com
-        description: Photos
-        server: localhost
-        container: immich-server
-
-- Apps & Tools:
+- Utilities:
+    - Grafana:
+        icon: grafana
+        href: https://grafana.hwc.iheartwoodcraft.com
+        description: Metrics dashboards
     - Service Health:
         icon: grafana
         href: https://grafana.hwc.iheartwoodcraft.com/d/service-health
@@ -156,70 +182,46 @@
         icon: grafana
         href: https://grafana.hwc.iheartwoodcraft.com/d/server-overview
         description: CPU / RAM / disk / temp (Grafana)
-    - Media Library:
-        icon: grafana
-        href: https://grafana.hwc.iheartwoodcraft.com/d/media-library
-        description: Movies / series / music (Grafana)
     - Containers:
         icon: grafana
         href: https://grafana.hwc.iheartwoodcraft.com/d/containers
         description: Per-container CPU / RAM / net (Grafana)
-    - Cameras:
-        icon: grafana
-        href: https://grafana.hwc.iheartwoodcraft.com/d/cameras
-        description: Frigate FPS / detection / storage (Grafana)
-    - Refinery:
-        icon: mdi-factory
-        href: https://refinery.hwc.iheartwoodcraft.com
-        description: Refinement engine board
-    - DataX Monitor:
-        icon: mdi-monitor-dashboard
-        href: https://monitor.hwc.iheartwoodcraft.com
-        description: Agent-execution diagnostics
+    - Prometheus:
+        icon: prometheus
+        href: http://localhost:9090
+        description: Metrics collection
+    - Authentik:
+        icon: authentik
+        href: https://hwc-server.ocelot-wahoo.ts.net:15543
+        description: SSO / Identity
+        server: localhost
+        container: authentik-server
+    - Vaultwarden:
+        icon: vaultwarden
+        href: https://vaultwarden.hwc.iheartwoodcraft.com
+        description: Password manager
+        server: localhost
+        container: vaultwarden
+    - CloudBeaver:
+        icon: mdi-database
+        href: https://cloudbeaver.hwc.iheartwoodcraft.com
+        description: DB management
+        server: localhost
+        container: cloudbeaver
+    - Firefly III:
+        icon: firefly-iii
+        href: https://firefly.hwc.iheartwoodcraft.com
+        description: Finance
+        server: localhost
+        container: firefly
+    - Caddy:
+        icon: caddy
+        description: Reverse proxy
+        ping: host.containers.internal:80
     - Tasks:
         icon: mdi-calendar-check
         href: https://tasks.hwc.iheartwoodcraft.com
         description: Radicale CalDAV / tasks
-    - Lead Scout:
-        icon: mdi-radar
-        href: https://lead-scout.hwc.iheartwoodcraft.com
-        description: Lead intelligence
-    - Hermes:
-        icon: mdi-chart-line
-        href: https://hermes.hwc.iheartwoodcraft.com
-        description: Market trials
-    - SR Analyzer:
-        icon: mdi-clipboard-list
-        href: https://sr_analyzer.hwc.iheartwoodcraft.com
-        description: DataX SR triage
-    - Heartwood CMS:
-        icon: mdi-pencil
-        href: https://heartwood-cms.hwc.iheartwoodcraft.com
-        description: Content management
-    - Calibre:
-        icon: calibre
-        href: https://calibre.hwc.iheartwoodcraft.com
-        description: E-book library
-    - Estimator:
-        icon: mdi-calculator-variant
-        href: https://estimator.hwc.iheartwoodcraft.com
-        description: Remodel pricing PWA
-    - Bathroom Calculator:
-        icon: mdi-calculator
-        href: https://calculator.hwc.iheartwoodcraft.com
-        description: Bathroom estimate widget
-    - Morning Briefing:
-        icon: mdi-sunny
-        href: https://briefing.hwc.iheartwoodcraft.com
-        description: Daily ops dashboard
-    - Market Trials:
-        icon: mdi-finance
-        href: https://market-dashboard.hwc.iheartwoodcraft.com
-        description: Paper-trading dashboard
-    - Market Intelligence:
-        icon: mdi-chart-box
-        href: https://market-intelligence.hwc.iheartwoodcraft.com
-        description: Earnings signals
     - YT Transcripts:
         icon: mdi-youtube
         href: https://yt-transcripts-api.hwc.iheartwoodcraft.com/docs
