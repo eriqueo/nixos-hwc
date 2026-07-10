@@ -794,11 +794,11 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
     --arg repo "https://github.com/eriqueo/nixos-hwc" '
     def h: tostring | @html;
     def link(u; t): "<a href=\"" + u + "\" style=\"color:#b07d3f;text-decoration:none\">" + t + "</a>";
-    def card(title; url; label; body):
+    def card(title; url; linktext; body):
       "<div style=\"background:#ffffff;border:1px solid #e6e1d8;border-radius:10px;padding:14px 18px;margin:0 0 12px\">"
       + "<div style=\"font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#8a8378;margin-bottom:8px\">"
       + title
-      + (if url != "" then "<span style=\"float:right;text-transform:none;letter-spacing:0\">" + link(url; label + " &rarr;") + "</span>" else "" end)
+      + (if url != "" then "<span style=\"float:right;text-transform:none;letter-spacing:0\">" + link(url; linktext + " &rarr;") + "</span>" else "" end)
       + "</div>" + body + "</div>";
     def item(s): "<div style=\"padding:3px 0;font-size:14px;line-height:1.45;color:#2d2a26\">" + s + "</div>";
     def meta(s): "<span style=\"color:#8a8378;font-size:13px\">" + s + "</span>";
