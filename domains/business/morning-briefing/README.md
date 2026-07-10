@@ -144,6 +144,12 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-07-09e** — **Ops digest: Kuma → blackbox probes.** `ops.kuma_failing`
+  (journal scrape of the decommissioned Uptime Kuma) replaced by
+  `ops.services_down` from Prometheus: services with `probe_success == 0`
+  right now (critical alert) and services >1% downtime over 24h (warning).
+  All Kuma links (ops card/tile, alert routing, email footer) now point to
+  the Grafana Service Health dashboard (`grafana/d/service-health`).
 - **2026-07-09d** — **Journal-error floor (`OPS_ERR_FLOOR=5`).** The ops digest's top-5 journal-error list now drops units below 5 errors in-window, suppressing single-activation blips (`init.scope`, `run-*.scope`, one-off `nixos-rebuild-switch-to-configuration`) that read as noise. A real crash-loop clears 5 trivially, so signal is unaffected.
 - **2026-07-09c** — **Email ↔ dashboard parity.** The HTML email now uses the
   dashboard palette verbatim (bg `#1d2021`, surface `#282828`, text `#d5c4a1`,

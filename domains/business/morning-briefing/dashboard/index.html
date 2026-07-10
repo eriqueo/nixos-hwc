@@ -673,21 +673,24 @@ function makeBackup(bak){
 
 // ── Ops section (overnight digest — since previous evening) ─────────────────
 function makeOps(ops){
-  const svc=ops.service_failures||[],kuma=ops.kuma_failing||[],errs=ops.journal_errors_top||[],
+  const svc=ops.service_failures||[],probes=ops.services_down||[],errs=ops.journal_errors_top||[],
         down=ops.prometheus_targets_down||[],disk=ops.disk_forecast||[],nb=ops.nightly_builds_finished||[];
-  const quiet=!svc.length&&!kuma.length&&!errs.length&&!down.length&&!nb.length;
+  const quiet=!svc.length&&!probes.length&&!errs.length&&!down.length&&!nb.length;
   const sec=$('div',{class:'section'});
   const sinceLabel=ops.since?`since ${(ops.since||'').slice(5,16)}`:'';
   sec.appendChild($('div',{class:'sec-hdr'},
     $('span',null,'Overnight Ops'),
-    $('a',{class:'sec-link',href:'https://uptime-kuma.hwc.iheartwoodcraft.com',target:'_blank'},`${sinceLabel} · Kuma →`)));
+    $('a',{class:'sec-link',href:'https://grafana.hwc.iheartwoodcraft.com/d/service-health',target:'_blank'},`${sinceLabel} · Service Health →`)));
   if(quiet){
     sec.appendChild($('div',{class:'empty'},'Quiet night — no failures, no probe drops, no errors'));
   }else{
     svc.forEach(f=>sec.appendChild($('div',{class:'failed-unit'},`✗ ${f.service} failed @ ${(f.time||'').slice(11,16)}`)));
-    kuma.forEach(k=>sec.appendChild($('div',{class:'item'},
-      $('span',{class:'item-title'},`~ ${k.monitor}`),
-      $('span',{class:'item-meta'},` ${k.failed_probes} failed probes`))));
+    probes.forEach(p=>{
+      if(p.down_now)sec.appendChild($('div',{class:'failed-unit'},`✗ ${p.service} — down now`));
+      else sec.appendChild($('div',{class:'item'},
+        $('span',{class:'item-title'},`~ ${p.service}`),
+        $('span',{class:'item-meta'},` ${p.downtime_pct_24h||0}% downtime 24h`)));
+    });
     down.forEach(d=>sec.appendChild($('div',{class:'item'},
       $('span',{class:'item-title'},`~ target down: ${d.job}`),
       $('span',{class:'item-meta'},` ${d.instance}`))));
@@ -893,7 +896,7 @@ function render(data,liveThreads){
 
   // Alerts (full-width above grid) — each links to the surface it reports on,
   // same routing as the email render (run.sh aurl()).
-  const ALERT_URL={ops:'https://uptime-kuma.hwc.iheartwoodcraft.com',
+  const ALERT_URL={ops:'https://grafana.hwc.iheartwoodcraft.com/d/service-health',
     leads:'https://app.jobtread.com',overdue:'https://app.jobtread.com',jobs:'https://app.jobtread.com',
     website:'https://stats.iheartwoodcraft.com',
     system:'https://grafana.hwc.iheartwoodcraft.com',backup:'https://grafana.hwc.iheartwoodcraft.com',

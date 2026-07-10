@@ -142,10 +142,10 @@
         container: immich-server
 
 - Apps & Tools:
-    - Uptime Kuma:
-        icon: uptime-kuma
-        href: https://uptime-kuma.hwc.iheartwoodcraft.com
-        description: Status monitoring
+    - Service Health:
+        icon: grafana
+        href: https://grafana.hwc.iheartwoodcraft.com/d/service-health
+        description: Status monitoring (Grafana)
     - Lead Scout:
         icon: mdi-radar
         href: https://lead-scout.hwc.iheartwoodcraft.com

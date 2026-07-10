@@ -23,7 +23,6 @@
     ./cadvisor/index.nix
     ./exportarr/index.nix
     ./homepage/index.nix
-    ./uptime-kuma/index.nix
     ./alerts/index.nix            # Alert sources, thresholds, severity mapping
   ];
   #==========================================================================

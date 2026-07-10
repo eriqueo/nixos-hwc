@@ -350,21 +350,33 @@ SVC_FAIL_JSON=$({ grep -h '^\[20' /var/log/hwc/notifications/service-failures.lo
   | jq -R -s 'split("\n") | map(select(length>0)) | map(split("|") | {time: .[0], service: .[1]})' 2>/dev/null || echo '[]')
 echo "${SVC_FAIL_JSON}" | jq empty 2>/dev/null || SVC_FAIL_JSON='[]'
 
-# Uptime Kuma probe failures, deduped per monitor:
-#   ... [MONITOR] WARN: Monitor #46 'Ollama': Failing: connect ECONNREFUSED ...
-KUMA_FAIL_JSON=$({ "${JOURNALCTL}" SYSLOG_IDENTIFIER=uptime-kuma --since "${OPS_SINCE}" --no-pager -q 2>/dev/null || true; } \
-  | { grep -F '[MONITOR] WARN' || true; } \
-  | awk -F"'" 'NF >= 3 { print $2 }' \
-  | sort | uniq -c \
-  | awk '{ n=$1; $1=""; sub(/^ /, ""); print n "|" $0 }' \
-  | jq -R -s 'split("\n") | map(select(length>0)) | map(split("|") | {monitor: .[1], failed_probes: (.[0]|tonumber)}) | sort_by(-.failed_probes)' 2>/dev/null || echo '[]')
-echo "${KUMA_FAIL_JSON}" | jq empty 2>/dev/null || KUMA_FAIL_JSON='[]'
+# Service liveness from the declarative blackbox probes (probe-services-*,
+# ~37 services, each with a human `service` label) — replaced the Uptime Kuma
+# journal scrape when Kuma was decommissioned (2026-07-09). Two views merged
+# per service: down RIGHT NOW (probe_success == 0) and >1% downtime over 24h.
+PROM_URL="http://127.0.0.1:9090"
+SVC_DOWN_NOW=$("${CURL_BIN}" -sG -m 10 "${PROM_URL}/api/v1/query" \
+  --data-urlencode 'query=probe_success{job=~"probe-services-.*"} == 0' 2>/dev/null \
+  | jq '[.data.result[]? | {service: (.metric.service // .metric.instance // "?")}]' 2>/dev/null || echo '[]')
+echo "${SVC_DOWN_NOW}" | jq empty 2>/dev/null || SVC_DOWN_NOW='[]'
+SVC_FLAKY=$("${CURL_BIN}" -sG -m 10 "${PROM_URL}/api/v1/query" \
+  --data-urlencode 'query=(1 - avg_over_time(probe_success{job=~"probe-services-.*"}[24h])) * 100 > 1' 2>/dev/null \
+  | jq '[.data.result[]? | {service: (.metric.service // .metric.instance // "?"), pct: (.value[1] | tonumber? // 0 | round)}]' 2>/dev/null || echo '[]')
+echo "${SVC_FLAKY}" | jq empty 2>/dev/null || SVC_FLAKY='[]'
+SERVICES_DOWN_JSON=$(jq -n --argjson now "${SVC_DOWN_NOW}" --argjson flaky "${SVC_FLAKY}" '
+  ($now | map(.service)) as $downset |
+  ($flaky | map({service, down_now: (.service as $x | $downset | index($x) != null), downtime_pct_24h: .pct})) as $f |
+  ($f | map(.service)) as $flakyset |
+  ($now | map(select(.service as $x | ($flakyset | index($x)) == null))
+        | map({service, down_now: true, downtime_pct_24h: null})) as $extra |
+  ($f + $extra) | sort_by(-(.downtime_pct_24h // 100))' 2>/dev/null || echo '[]')
+echo "${SERVICES_DOWN_JSON}" | jq empty 2>/dev/null || SERVICES_DOWN_JSON='[]'
 
 # Top journal error sources — catches silent crash-loops (the vdirsyncer
 # every-15-min failure ran for hours with nothing surfacing it). podman-*
 # units are EXCLUDED: containers write INFO logs to stderr, which the journal
 # stamps priority=err — authentik alone "errors" 2400×/day that way, drowning
-# real signal. Container breakage surfaces via Kuma + service_failures instead.
+# real signal. Container breakage surfaces via probes + service_failures instead.
 # OPS_ERR_FLOOR: drop units with a trivial one-off count (single activation
 # blips like init.scope ×3, run-*.scope ×4) — a crash-loop clears this easily.
 OPS_ERR_FLOOR=5
@@ -374,7 +386,6 @@ echo "${ERR_TOP_JSON}" | jq empty 2>/dev/null || ERR_TOP_JSON='[]'
 
 # Prometheus: scrape targets down + disk days-to-full forecast (predictive
 # beats the static df percent). Both best-effort against loopback :9090.
-PROM_URL="http://127.0.0.1:9090"
 PROM_DOWN_JSON=$("${CURL_BIN}" -sG -m 10 "${PROM_URL}/api/v1/query" --data-urlencode 'query=up == 0' 2>/dev/null \
   | jq '[.data.result[]? | {job: (.metric.job // "?"), instance: (.metric.instance // "?")}]' 2>/dev/null || echo '[]')
 echo "${PROM_DOWN_JSON}" | jq empty 2>/dev/null || PROM_DOWN_JSON='[]'
@@ -395,14 +406,14 @@ echo "${NB_JSON}" | jq empty 2>/dev/null || NB_JSON='[]'
 OPS_JSON=$(jq -n \
   --arg since "${OPS_SINCE}" \
   --argjson svc "${SVC_FAIL_JSON}" \
-  --argjson kuma "${KUMA_FAIL_JSON}" \
+  --argjson probes "${SERVICES_DOWN_JSON}" \
   --argjson errs "${ERR_TOP_JSON}" \
   --argjson down "${PROM_DOWN_JSON}" \
   --argjson disk "${DISK_FORECAST_JSON}" \
   --argjson nb "${NB_JSON}" '
   { since: $since
   , service_failures: $svc
-  , kuma_failing: $kuma
+  , services_down: $probes
   , journal_errors_top: $errs
   , prometheus_targets_down: $down
   , disk_forecast: $disk
@@ -413,13 +424,15 @@ echo "${OPS_JSON}" | jq empty 2>/dev/null || OPS_JSON='{}'
 # Ops alerts (append, same pattern as website/backup)
 ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq \
   --argjson svc "${SVC_FAIL_JSON}" \
-  --argjson kuma "${KUMA_FAIL_JSON}" \
+  --argjson probes "${SERVICES_DOWN_JSON}" \
   --argjson down "${PROM_DOWN_JSON}" \
   --argjson disk "${DISK_FORECAST_JSON}" '
   . + (if ($svc | length) > 0 then [{level:"warning", section:"ops",
         message:"\($svc | length) service failure event(s) since yesterday evening: \($svc | map(.service) | unique | join(", "))"}] else [] end)
-    + (if ($kuma | length) > 0 then [{level:"warning", section:"ops",
-        message:"Uptime Kuma: \($kuma | length) monitor(s) failing probes: \($kuma | map(.monitor) | join(", "))"}] else [] end)
+    + (if ($probes | map(select(.down_now)) | length) > 0 then [{level:"critical", section:"ops",
+        message:"\($probes | map(select(.down_now)) | length) service(s) failing liveness probes NOW: \($probes | map(select(.down_now)) | map(.service) | join(", "))"}] else [] end)
+    + (if ($probes | map(select(.down_now | not)) | length) > 0 then [{level:"warning", section:"ops",
+        message:"Flaky overnight (>1% downtime, up now): \($probes | map(select(.down_now | not)) | map("\(.service) (\(.downtime_pct_24h)%)") | join(", "))"}] else [] end)
     + (if ($down | length) > 0 then [{level:"warning", section:"ops",
         message:"\($down | length) Prometheus target(s) down: \($down | map(.job) | unique | join(", "))"}] else [] end)
     + (if ($disk | map(select(.days_to_full <= 14)) | length) > 0 then [{level:"critical", section:"ops",
@@ -711,13 +724,13 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
     + (if .sections.ops then
         (.sections.ops as $o |
         (if (($o.service_failures // []) | length) > 0
-          or (($o.kuma_failing // []) | length) > 0
+          or (($o.services_down // []) | length) > 0
           or (($o.prometheus_targets_down // []) | length) > 0
           or (($o.journal_errors_top // []) | length) > 0
           or (($o.disk_forecast // []) | length) > 0 then
           sec("OVERNIGHT OPS (since " + ($o.since // "?") + ")")
           + (($o.service_failures // []) | map("\n  ! service failed: " + .service + " @ " + .time) | join(""))
-          + (($o.kuma_failing // []) | map("\n  ~ kuma: " + .monitor + " (" + (.failed_probes | tostring) + " failed probes)") | join(""))
+          + (($o.services_down // []) | map("\n  ~ probe: " + .service + (if .down_now then " DOWN NOW" else " (" + ((.downtime_pct_24h // 0) | tostring) + "% downtime 24h)" end)) | join(""))
           + (($o.prometheus_targets_down // []) | map("\n  ~ target down: " + .job + " @ " + .instance) | join(""))
           + (($o.journal_errors_top // []) | map("\n  · journal errors: " + .unit + " ×" + (.errors | tostring)) | join(""))
           + (($o.disk_forecast // [])[:3] | map("\n  · " + .mount + " full in ~" + (.days_to_full | tostring) + "d at current growth") | join(""))
@@ -792,7 +805,7 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
     --arg dash "https://briefing.hwc.iheartwoodcraft.com" \
     --arg jt "https://app.jobtread.com" \
     --arg grafana "https://grafana.hwc.iheartwoodcraft.com" \
-    --arg kuma "https://uptime-kuma.hwc.iheartwoodcraft.com" \
+    --arg svchealth "https://grafana.hwc.iheartwoodcraft.com/d/service-health" \
     --arg stats "https://stats.iheartwoodcraft.com" \
     --arg repo "https://github.com/eriqueo/nixos-hwc" '
     # Theme = the dashboard palette verbatim (dashboard/index.html :root):
@@ -812,7 +825,7 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
     def meta(s): "<span style=\"color:#a7aaad;font-size:13px\">" + s + "</span>";
     def red(s): "<span style=\"color:#bf616a;font-weight:600\">" + s + "</span>";
     def aurl(s):
-      if s == "ops" then $kuma
+      if s == "ops" then $svchealth
       elif s == "leads" or s == "overdue" or s == "jobs" then $jt
       elif s == "website" then $stats
       elif s == "system" or s == "backup" then $grafana
@@ -907,14 +920,16 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
 
     + (if $s.ops then ($s.ops as $o |
         (($o.service_failures // []) | length) as $nsvc |
-        (($o.kuma_failing // []) | length) as $nkuma |
+        (($o.services_down // []) | length) as $nkuma |
         (($o.journal_errors_top // []) | length) as $nerr |
         (($o.prometheus_targets_down // []) | length) as $ndown |
         (($o.nightly_builds_finished // []) | length) as $nnb |
-        card("Overnight Ops &middot; since " + ((($o.since // "")[5:16])|h); $kuma; "Uptime Kuma";
+        card("Overnight Ops &middot; since " + ((($o.since // "")[5:16])|h); $svchealth; "Service Health";
           (if ($nsvc + $nkuma + $nerr + $ndown + $nnb) == 0 then item(meta("Quiet night — no failures, no probe drops, no errors")) else
             (($o.service_failures // []) | map(item(red("&#10007; " + (.service|h)) + " " + meta("failed @ " + ((.time // "")[11:16])))) | join(""))
-            + (($o.kuma_failing // []) | map(item("~ " + (.monitor|h) + " " + meta(((.failed_probes|tostring)|h) + " failed probes"))) | join(""))
+            + (($o.services_down // []) | map(item(
+                (if .down_now then red("&#10007; " + (.service|h)) + " " + meta("down now")
+                 else "~ " + (.service|h) + " " + meta(((.downtime_pct_24h // 0)|tostring) + "% downtime 24h") end))) | join(""))
             + (($o.prometheus_targets_down // []) | map(item("~ target down: " + (.job|h) + " " + meta((.instance // "")|h))) | join(""))
             + (($o.journal_errors_top // []) | map(item((.unit|h) + " " + meta(((.errors|tostring)|h) + " journal errors"))) | join(""))
             + (if $nnb > 0 then item("<strong>Built overnight:</strong> " + (($o.nightly_builds_finished // []) | map(h) | join(", "))) else "" end)
@@ -953,7 +968,7 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
 
     + "<div style=\"text-align:center;padding:10px 0 4px;font-size:12px;color:#a7aaad\">"
     + link($dash; "dashboard") + " &nbsp;&middot;&nbsp; " + link($grafana; "grafana")
-    + " &nbsp;&middot;&nbsp; " + link($kuma; "uptime kuma") + " &nbsp;&middot;&nbsp; " + link($jt; "jobtread")
+    + " &nbsp;&middot;&nbsp; " + link($svchealth; "service health") + " &nbsp;&middot;&nbsp; " + link($jt; "jobtread")
     + " &nbsp;&middot;&nbsp; " + link($stats; "analytics")
     + "</div></div></div>"
   ' "${OUTPUT_DIR}/briefing.json" 2>>"${LOG_FILE}") || EMAIL_HTML=""

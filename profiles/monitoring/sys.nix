@@ -1,8 +1,9 @@
 # profiles/monitoring/sys.nix — monitoring role, NixOS lane
 #
 # Pure observability: prometheus, blackbox, cadvisor, grafana, homepage,
-# uptime-kuma, alertmanager + receivers. (The n8n/automation stack lives
-# in the business role.)
+# alertmanager + receivers. (The n8n/automation stack lives in the
+# business role. Uptime Kuma decommissioned 2026-07-09 — the declarative
+# blackbox probes + Grafana service-health dashboard replaced it.)
 #
 # WARNING: References age secrets (grafana-admin-password). All machines
 # using this role MUST have their host key as a recipient in the
@@ -42,9 +43,6 @@
 
   # Homepage - Service dashboard
   hwc.monitoring.homepage.enable = lib.mkDefault true;
-
-  # Uptime Kuma - Uptime monitoring
-  hwc.monitoring.uptime-kuma.enable = lib.mkDefault true;
 
   # Alertmanager — alert routing to:
   #   hwc-notify     : hexagonal dispatcher (Discord + SMTP + future channels)
