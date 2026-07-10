@@ -144,6 +144,16 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-07-09b** — **HTML email with per-section deep links.** Step 5 now
+  sends multipart/alternative: a styled HTML part (cards, colored alert boxes)
+  where every section header links to the system it reports on — System→
+  Grafana, Overnight Ops→Uptime Kuma, Leads/Invoices/Jobs→JobTread (each item
+  deep-links to its job), Website→Umami, Mail/Tasks→dashboard, alerts carry a
+  per-section "view" link — plus a footer link row. The plain-text render
+  rides along as the fallback part (and stays notmuch-searchable). Degrades
+  to plain-only with a logged WARN if the jq HTML render fails. Gotchas hit:
+  `label` is a reserved jq keyword; jq array literals take commas not
+  semicolons; no single quotes inside the bash-single-quoted jq program.
 - **2026-07-09** — **Overnight-ops digest + alert-fatigue pass.** New
   `sections.ops` gathered in Step 1 from data already on the box, windowed
   to "since yesterday 17:00": **(1)** service-failure EVENTS from
