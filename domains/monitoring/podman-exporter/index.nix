@@ -59,6 +59,10 @@ in
 
       extraOptions = [
         "--security-opt=label=disable"
+        # The image defaults to a non-root user, but /run/podman/podman.sock is
+        # root:root 0660. Rootful podman runs without a userns, so uid 0 in the
+        # container IS host root → it can read the socket.
+        "--user=0"
       ];
     };
 
