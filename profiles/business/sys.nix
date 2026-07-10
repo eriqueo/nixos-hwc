@@ -22,6 +22,9 @@
   # Unified lead pipeline (Phase 2, in progress 2026-05-31).
   hwc.business.leads.enable = true;
 
+  # hwc-crm — front-of-funnel (stages/sequences/board) on hwc-leads (2026-07-10).
+  hwc.business.crm.enable = true;
+
   hwc.business.website.enable = true;
 
   # hwc-publish: deploy static apps instantly, no rebuild needed.
