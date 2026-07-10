@@ -1,7 +1,7 @@
 {
   "annotations": { "list": [] },
   "editable": true,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "schemaVersion": 38,
   "tags": ["hwc", "blackbox", "uptime"],
   "templating": { "list": [] },
@@ -14,12 +14,10 @@
     {
       "id": 1,
       "type": "stat",
-      "title": "Services Up",
+      "title": "Up",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "targets": [
-        { "refId": "A", "expr": "count(probe_success{service=~\".+\"} == 1)", "instant": true }
-      ],
+      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "count(probe_success{service=~\".+\"} == 1)", "instant": true } ],
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "fixed", "fixedColor": "green" },
@@ -35,12 +33,10 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "Services Down",
+      "title": "Down",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "targets": [
-        { "refId": "A", "expr": "count(probe_success{service=~\".+\"} == 0) or vector(0)", "instant": true }
-      ],
+      "gridPos": { "h": 4, "w": 5, "x": 5, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "count(probe_success{service=~\".+\"} == 0) or vector(0)", "instant": true } ],
       "fieldConfig": {
         "defaults": {
           "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] }
@@ -55,12 +51,10 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Public Site",
+      "title": "Public site",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 0 },
-      "targets": [
-        { "refId": "A", "expr": "min(probe_success{job=\"probe-website\"})", "instant": true }
-      ],
+      "gridPos": { "h": 4, "w": 5, "x": 10, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "min(probe_success{job=\"probe-website\"})", "instant": true } ],
       "fieldConfig": {
         "defaults": {
           "mappings": [ { "type": "value", "options": { "0": { "text": "DOWN", "index": 1 }, "1": { "text": "OK", "index": 0 } } } ],
@@ -76,37 +70,64 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Service Status",
+      "title": "Slowest probe",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 4 },
-      "targets": [
-        { "refId": "A", "expr": "probe_success{service=~\".+\"}", "legendFormat": "{{service}}", "instant": true }
-      ],
+      "gridPos": { "h": 4, "w": 9, "x": 15, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "max(probe_duration_seconds{job=\"probe-services-http\"}) * 1000", "instant": true } ],
       "fieldConfig": {
         "defaults": {
-          "mappings": [ { "type": "value", "options": { "0": { "text": "DOWN", "index": 1 }, "1": { "text": "UP", "index": 0 } } } ],
-          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+          "unit": "ms", "decimals": 0,
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 500 }, { "color": "red", "value": 2000 } ] }
         },
         "overrides": []
       },
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "auto", "wideLayout": true
+        "colorMode": "value", "graphMode": "none", "textMode": "value", "justifyMode": "center"
       }
     },
     {
       "id": 5,
-      "type": "timeseries",
-      "title": "Probe Latency (HTTP services)",
+      "type": "state-timeline",
+      "title": "Service status",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 16 },
+      "gridPos": { "h": 20, "w": 24, "x": 0, "y": 4 },
+      "targets": [
+        { "refId": "A", "expr": "probe_success{service=~\".+\"}", "legendFormat": "{{service}}", "range": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": { "fillOpacity": 90, "lineWidth": 0 },
+          "mappings": [ { "type": "value", "options": { "0": { "text": "DOWN", "color": "red", "index": 1 }, "1": { "text": "UP", "color": "green", "index": 0 } } } ],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "alignValue": "center",
+        "rowHeight": 0.9,
+        "perPage": 40,
+        "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+        "tooltip": { "mode": "single", "sort": "none" }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Probe latency (HTTP)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 9, "w": 14, "x": 0, "y": 24 },
       "targets": [
         { "refId": "A", "expr": "probe_duration_seconds{job=\"probe-services-http\"} * 1000", "legendFormat": "{{service}}" }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "ms",
-          "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 0, "showPoints": "never" }
+          "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 6, "showPoints": "never", "gradientMode": "opacity" }
         },
         "overrides": []
       },
@@ -116,19 +137,20 @@
       }
     },
     {
-      "id": 6,
+      "id": 7,
       "type": "table",
-      "title": "TLS Certificate Expiry (public sites)",
+      "title": "TLS certificate expiry (public sites)",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 16 },
+      "gridPos": { "h": 9, "w": 10, "x": 14, "y": 24 },
       "targets": [
         { "refId": "A", "expr": "(probe_ssl_earliest_cert_expiry{job=\"probe-website\"} - time()) / 86400", "instant": true, "format": "table" }
       ],
       "transformations": [
         { "id": "organize", "options": {
-          "excludeByName": { "Time": true, "Value": false, "job": true, "__name__": true },
-          "renameByName": { "instance": "Site", "Value": "Days until expiry" }
-        } }
+          "excludeByName": { "Time": true, "job": true, "__name__": true },
+          "renameByName": { "instance": "Site", "Value": "Days left" }
+        } },
+        { "id": "sortBy", "options": { "fields": "", "sort": [ { "field": "Days left" } ] } }
       ],
       "fieldConfig": {
         "defaults": {
@@ -136,11 +158,11 @@
           "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "yellow", "value": 14 }, { "color": "green", "value": 30 } ] }
         },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "Days until expiry" },
-            "properties": [ { "id": "unit", "value": "d" }, { "id": "custom.cellOptions", "value": { "type": "color-background" } }, { "id": "decimals", "value": 0 } ] }
+          { "matcher": { "id": "byName", "options": "Days left" },
+            "properties": [ { "id": "unit", "value": "d" }, { "id": "decimals", "value": 0 }, { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "gradient" } } ] }
         ]
       },
-      "options": { "showHeader": true, "cellHeight": "sm" }
+      "options": { "showHeader": true, "cellHeight": "sm", "footer": { "show": false } }
     }
   ]
 }
