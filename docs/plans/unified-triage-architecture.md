@@ -149,19 +149,30 @@ the server's aerc, and the briefing/gateway write there too. The laptop's
 local notmuch DB (and its empty triage folders) is vestigial; every real
 surface hits the one server DB. No tag sync (muchsync etc.) is needed.
 
-### Phase 3 — workbench live + verbs
-- Laptop `gateway_url` → server gateway over Tailscale (kills the mail tile
-  fixtures fallback; config only).
-- `card_actions` on the mail hub already exist (archive/delete/tag/move);
-  migrate them from the legacy mail-specific write path to the generic
-  `{action,id}` path so mail is contract-conformant like nightly.toml.
-- Add `board_actions = ["retriage"]` once Phase 4 lands.
+### Phase 3 — workbench live + verbs · IMPLEMENTED 2026-07-10
+- Laptop `gateway_url` was ALREADY wired (`WORKBENCH_GATEWAY_URL=
+  http://hwc-server:6200` via HM env) — non-issue, like the aerc alias.
+- Mail kanban migrated to the generic path: `hubs/mail.toml` declares
+  `card_actions` (a=archive, d/x=trash confirm-gated, t=flag-action,
+  u/r/n=triage-<bucket>) + `confirm_actions`; H/L moves dispatch
+  `{action:"move", id, target}` to the tile source. `hwc_mail_triage`
+  implements the verbs (notmuch tag ops); board reads drop de-inboxed
+  threads. The mail-specific host route (`_dispatch_mail_write`) is deleted.
+- Two latent write-safety bugs fixed: fixture fallback no longer applies to
+  writes (a failed write raised, not faked), and a kanban with no
+  `card_actions` is truly read-only (static a/d/t keys used to fire hwc_mail
+  writes from ANY board).
 
-### Phase 4 — on-demand classification
-- Gateway grows `hwc_mail action=retriage`: classify unread threads with no
-  `triage/*` tag (same prompt artifact the 6am run uses, `claude --print`),
-  stamp tags, return the refreshed board. The 6am batch remains the baseline;
-  retriage handles the intraday residue.
+### Phase 4 — on-demand classification · IMPLEMENTED 2026-07-10
+- Classification logic extracted ONCE to
+  `morning-briefing/triage-mail.sh` (`baseline` = the old Steps 2/2b/3;
+  `delta` = classify ONLY unread threads with no `triage/*` tag, append to
+  the cached board — manual moves survive).
+- `mail-retriage.service` (own sandbox, same env pattern) runs `delta`;
+  a systemd **path unit** watches `~/.cache/hwc/retriage.request`, which the
+  gateway (`hwc_mail_triage action=retriage`) touches — fire-and-forget, no
+  sudo/polkit, the LLM run never enters the gateway's sandbox.
+- `hubs/mail.toml`: `board_actions = ["retriage"]`, hub key `R`.
 
 ### Phase 5 — conform the other domains + the web surface
 - Leads: wrap `leads_classify`/status into the contract (board/summary/verbs).

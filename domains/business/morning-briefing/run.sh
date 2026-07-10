@@ -529,148 +529,27 @@ else
   log "STEP 1b: WARN gather-live.mjs produced no valid JSON — placeholders kept"
 fi
 
-# ── Step 2: Mail triage ───────────────────────────────────────────────────────
-log "STEP 2: Mail triage..."
-STEP2_START=$(date +%s)
-
+# ── Steps 2/2b/3: Mail triage (classify → tag → merge) ──────────────────────
+# The classify/parse/tag/merge logic lives ONCE in triage-mail.sh, shared with
+# the on-demand mail-retriage.service (unified-triage Phase 4). `baseline`
+# mode reproduces the old Steps 2/2b/3 exactly: classify all unread inbox
+# threads in the window, replace mail-triage.json, stamp triage/<bucket>
+# tags, replace .mail_triage in briefing.json.
+#
 # MAIL_PROMPT is normally set by index.nix to the store-path prompt rendered
 # from prompts/mail-triage.txt + the taxonomy's known-senders section
 # (domains/mail/taxonomy/). The repo file is a TEMPLATE with a
-# @KNOWN_SENDERS@ placeholder — the fallback below only fires on direct
-# shell invocation and triages without the known-senders lists.
-MAIL_PROMPT="${MAIL_PROMPT:-${PROMPTS_DIR}/mail-triage.txt}"
-MAIL_TRIAGE_JSON="${OUTPUT_DIR}/mail-triage.json"
-WINDOW_HOURS=48
-
-write_empty_triage() {
-  local reason="${1:-}"
-  local err_line=""
-  [ -n "${reason}" ] && err_line="\"error\": \"${reason}\","
-  cat > "${MAIL_TRIAGE_JSON}" <<EOF
-{
-  "generated_at": "$(date -Iseconds)",
-  "query_window_hours": ${WINDOW_HOURS},
-  "total_unread": 0,
-  ${err_line}
-  "buckets": { "urgent": [], "review": [], "noise": [] },
-  "stats": { "urgent_count": 0, "review_count": 0, "noise_count": 0 }
-}
-EOF
-}
-
-if [ ! -f "${MAIL_PROMPT}" ]; then
-  log "WARN: mail-triage.txt not found — skipping"
-  write_empty_triage "prompt file not found"
+# @KNOWN_SENDERS@ placeholder — triage-mail.sh's fallback only fires on
+# direct shell invocation and triages without the known-senders lists.
+log "STEP 2: Mail triage (triage-mail.sh baseline)..."
+STEP2_START=$(date +%s)
+if MAIL_PROMPT="${MAIL_PROMPT:-}" CLAUDE_BIN="${CLAUDE_BIN}" "${AGENT_DIR}/triage-mail.sh" baseline; then
+  log "STEP 2: OK"
 else
-  MAIL_JSON=$(notmuch search \
-    --format=json \
-    --limit=30 \
-    "tag:inbox AND tag:unread AND date:${WINDOW_HOURS}h..today" \
-    2>/dev/null || echo "[]")
-
-  THREAD_COUNT=$(echo "${MAIL_JSON}" | jq 'length' 2>/dev/null || echo "0")
-  log "mail-triage: ${THREAD_COUNT} unread threads"
-
-  if [ "${THREAD_COUNT}" -eq 0 ]; then
-    write_empty_triage ""
-  else
-    TRIAGE_INPUT="$(mktemp /tmp/mail-triage-XXXXXX.txt)"
-    cat "${MAIL_PROMPT}" > "${TRIAGE_INPUT}"
-    printf '\n\n' >> "${TRIAGE_INPUT}"
-    echo "${MAIL_JSON}" >> "${TRIAGE_INPUT}"
-
-    TRIAGE_RAW=$("${CLAUDE_BIN}" \
-      --print \
-      -p "$(cat "${TRIAGE_INPUT}")" \
-      2>/dev/null); TRIAGE_EXIT=$?
-    rm -f "${TRIAGE_INPUT}"
-
-    [ ${TRIAGE_EXIT} -ne 0 ] && {
-      log "WARN: Mail triage failed (exit ${TRIAGE_EXIT})"
-      write_empty_triage "claude call failed"
-      TRIAGE_RAW=""
-    }
-
-    if [ -n "${TRIAGE_RAW}" ]; then
-      # Extract the JSON object with node (on the unit PATH), not a sed line
-      # range: the old '/^{/,/^}$/' range broke on single-line JSON, fenced
-      # output, and postamble — the recurring "invalid JSON from claude"
-      # (2026-07-08). Try, in order: whole output · fenced block · first "{"
-      # to last "}".
-      TRIAGE_CLEAN=$(echo "${TRIAGE_RAW}" | node -e '
-        const s = require("fs").readFileSync(0, "utf8");
-        const tryParse = (t) => { try { return JSON.stringify(JSON.parse(t)); } catch { return null; } };
-        let r = tryParse(s);
-        if (!r) { const m = s.match(/```(?:json)?\s*([\s\S]*?)```/); if (m) r = tryParse(m[1]); }
-        if (!r) { const a = s.indexOf("{"), b = s.lastIndexOf("}"); if (a >= 0 && b > a) r = tryParse(s.slice(a, b + 1)); }
-        if (r) process.stdout.write(r); else process.exit(1);
-      ' 2>/dev/null) || TRIAGE_CLEAN=""
-      if [ -n "${TRIAGE_CLEAN}" ] && echo "${TRIAGE_CLEAN}" | jq empty 2>/dev/null; then
-        echo "${TRIAGE_CLEAN}" > "${MAIL_TRIAGE_JSON}"
-        U=$(echo "${TRIAGE_CLEAN}" | jq '.stats.urgent_count' 2>/dev/null || echo "?")
-        R=$(echo "${TRIAGE_CLEAN}" | jq '.stats.review_count' 2>/dev/null || echo "?")
-        N=$(echo "${TRIAGE_CLEAN}" | jq '.stats.noise_count'  2>/dev/null || echo "?")
-        log "mail-triage: OK (${U} urgent, ${R} review, ${N} noise)"
-      else
-        # Keep the FULL raw output for diagnosis — 200 chars was never enough
-        # to see why parsing failed.
-        echo "${TRIAGE_RAW}" > "${AGENT_DIR}/logs/mail-triage-raw.log"
-        log "WARN: Mail triage returned invalid JSON — full raw saved to logs/mail-triage-raw.log; first 200 chars:"
-        log "$(echo "${TRIAGE_RAW}" | head -c 200)"
-        write_empty_triage "invalid JSON from claude (raw saved to logs/mail-triage-raw.log)"
-      fi
-    fi
-  fi
+  log "WARN: triage-mail.sh baseline reported failure (see [triage-baseline] log lines)"
 fi
-
 STEP2_END=$(date +%s)
-STEP2_ELAPSED=$((STEP2_END - STEP2_START))
-log "STEP 2: completed in ${STEP2_ELAPSED}s"
-
-# ── Step 2b: Persist triage buckets as notmuch tags ──────────────────────────
-# "Move between columns" in the Mail-triage kanban must PERSIST, so the bucket
-# is a notmuch tag `triage/<bucket>` (single source of truth: mail.ts
-# TRIAGE_BUCKETS). Stamp each classified thread with its bucket tag, removing
-# any stale triage/* first, so hwc_mail_triage reflects the daily baseline and
-# later workbench moves (hwc_mail set-triage) layer on top. Best-effort: a
-# notmuch failure here never fails the briefing.
-NOTMUCH_BIN="/etc/profiles/per-user/eric/bin/notmuch"
-command -v notmuch >/dev/null 2>&1 && NOTMUCH_BIN="$(command -v notmuch)"
-if [ -x "${NOTMUCH_BIN}" ] && [ -f "${MAIL_TRIAGE_JSON}" ]; then
-  log "STEP 2b: Persisting triage/<bucket> tags..."
-  TAGGED=0
-  for bucket in urgent review noise; do
-    # All triage tag ops for this bucket: add triage/<bucket>, remove the others.
-    case "${bucket}" in
-      urgent) OPS=(+triage/urgent -triage/review -triage/noise) ;;
-      review) OPS=(-triage/urgent +triage/review -triage/noise) ;;
-      noise)  OPS=(-triage/urgent -triage/review +triage/noise) ;;
-    esac
-    while IFS= read -r tid; do
-      [ -z "${tid}" ] && continue
-      if "${NOTMUCH_BIN}" tag "${OPS[@]}" -- "thread:${tid}" 2>/dev/null; then
-        TAGGED=$((TAGGED + 1))
-      fi
-    done < <(jq -r --arg b "${bucket}" '.buckets[$b][]?.thread_id // empty' "${MAIL_TRIAGE_JSON}" 2>/dev/null)
-  done
-  log "STEP 2b: tagged ${TAGGED} threads with triage/<bucket>"
-else
-  log "STEP 2b: SKIP (notmuch missing or no triage JSON)"
-fi
-
-# ── Step 3: Merge ─────────────────────────────────────────────────────────────
-log "STEP 3: Merging..."
-
-if [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -f "${MAIL_TRIAGE_JSON}" ]; then
-  jq --slurpfile triage "${MAIL_TRIAGE_JSON}" \
-    '. + {"mail_triage": $triage[0]}' \
-    "${OUTPUT_DIR}/briefing.json" \
-    > "${OUTPUT_DIR}/briefing.json.tmp" \
-  && mv "${OUTPUT_DIR}/briefing.json.tmp" "${OUTPUT_DIR}/briefing.json"
-  log "OK: Merge complete"
-else
-  log "WARN: Skipping merge — missing files"
-fi
+log "STEP 2: completed in $((STEP2_END - STEP2_START))s"
 
 # ── Step 4: Publish to dashboard/ ────────────────────────────────────────────
 if [ -f "${OUTPUT_DIR}/briefing.json" ]; then

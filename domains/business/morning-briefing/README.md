@@ -144,6 +144,13 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-07-10** — **On-demand retriage (unified-triage Phase 4).** Steps
+  2/2b/3 extracted verbatim into `triage-mail.sh` (mode `baseline`); new mode
+  `delta` classifies ONLY unread threads with no `triage/*` tag and appends
+  them to the cached board (manual moves survive). New
+  `mail-retriage.service` + path unit watching `~/.cache/hwc/retriage.request`
+  — the MCP gateway's `hwc_mail_triage action=retriage` touches it,
+  fire-and-forget.
 - **2026-07-09f** — **Triage prompt derives from the mail taxonomy.**
   `prompts/mail-triage.txt` is now a template (`@KNOWN_SENDERS@`
   placeholder); `index.nix` renders it with the known noise/review sender

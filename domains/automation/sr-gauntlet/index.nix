@@ -27,7 +27,10 @@
 #   - /var/lib/sr-gauntlet/{datax,jt-mcp} — service-owned clones of the official
 #     elstruck repos (worktree sources, origin/main). Set up once, fetch-only;
 #     decoupled from Eric's ~/700_datax dev worktrees.
-#   - /var/lib/sr-gauntlet/datax.env — trimmed 0600 cred file (7 keys)
+#   - /var/lib/sr-gauntlet/datax.env — trimmed 0600 cred file (9 keys: 7
+#     required NEXT_PUBLIC_FIREBASE_* + OPENSEARCH_*, plus optional
+#     SRG_PUSH_URL/SRG_PUSH_SECRET for report push into the datax admin UI —
+#     push is skipped gracefully while those two are absent)
 #   - Claude Code CLI authenticated for the eric user
 #   - hwc-notify on 127.0.0.1:11600 (run summaries; best-effort)
 
@@ -58,15 +61,18 @@ let
     # long-running service from the interactive dev tree (laptop-only editing).
     SRG_DATAX_REPO = "/var/lib/sr-gauntlet/datax";
     SRG_JTMCP_REPO = "/var/lib/sr-gauntlet/jt-mcp";
-    # aggregate-context.mjs + opensearch-query.mjs read Firestore-admin +
-    # OpenSearch creds from this file. A trimmed, service-owned copy of the 7
-    # keys they use (was ~/700_datax/datax/.env.local — gone with the dev tree).
-    # Plain 0600 file, eric-owned; refresh it by hand if those secrets rotate.
+    # aggregate-context.mjs + opensearch-query.mjs + push-report.mjs read
+    # Firestore-admin, OpenSearch, and datax-push creds from this file (was
+    # ~/700_datax/datax/.env.local — gone with the dev tree). Plain 0600 file,
+    # eric-owned; refresh by hand on rotation — run.sh's check-creds.mjs
+    # preflight now alerts Discord with the NAME of any missing key.
     SRG_DATAX_ENV = "/var/lib/sr-gauntlet/datax.env";
   };
   srgPath = [
     pkgs.bash pkgs.coreutils pkgs.git pkgs.openssh
-    pkgs.nodejs_22 pkgs.python3 pkgs.jq pkgs.ripgrep
+    # python3 retired 2026-07: the ledger/prompt/verdict heredocs it served are
+    # now node subcommands in the pipeline's lib.mjs (single implementation).
+    pkgs.nodejs_22 pkgs.jq pkgs.ripgrep
     pkgs.curl  # Discord webhook delivery + hwc-notify
   ];
 

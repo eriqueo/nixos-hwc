@@ -17,7 +17,7 @@
  */
 
 import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
 import { mcpError } from "../errors.js";
@@ -178,7 +178,7 @@ function verbTagOps(verb: string, target?: string): string[] | null {
   return null;
 }
 
-const WRITE_VERBS = ["move", "archive", "trash", "flag-action"] as const;
+const WRITE_VERBS = ["move", "archive", "trash", "flag-action", "retriage"] as const;
 
 /** Apply tag ops to thread:<id>. Resolves an error string or null on success. */
 function notmuchTagThread(id: string, ops: string[]): Promise<string | null> {
@@ -268,6 +268,36 @@ export function mailTriageTools(): ToolDef[] {
       },
       handler: async (args): Promise<ToolResult> => {
         const action = (args.action as string) || "board";
+
+        // ── retriage: cardless board verb — fire-and-forget ─────────────────
+        // Touch the trigger file; the mail-retriage systemd path unit starts
+        // triage-mail.sh `delta` (classify + tag + merge, ~1-2 min). This
+        // keeps the LLM run out of the gateway's process/sandbox entirely.
+        if (action === "retriage") {
+          const trigger = process.env.HWC_RETRIAGE_TRIGGER;
+          if (!trigger) {
+            return mcpError({
+              type: "UNAVAILABLE",
+              message: "HWC_RETRIAGE_TRIGGER is not set — retriage trigger unavailable",
+              suggestion: "Deploy the morning-briefing module's mail-retriage units (unified-triage Phase 4)",
+            });
+          }
+          try {
+            await writeFile(trigger, `${new Date().toISOString()}\n`);
+          } catch (err) {
+            return mcpError({
+              type: "COMMAND_FAILED",
+              message: `could not touch retriage trigger ${trigger}`,
+              error: String(err).slice(0, 300),
+            });
+          }
+          return {
+            status: "ok",
+            message:
+              "retriage requested — mail-retriage.service will classify unclassified unread threads (~1-2 min); refresh the board to see them",
+            data: { action: "retriage", trigger },
+          };
+        }
 
         // ── writes: {action, id[, target]} — the generic card_actions path ──
         if (action !== "board" && action !== "summary") {

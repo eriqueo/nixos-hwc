@@ -79,5 +79,58 @@ in
         RandomizedDelaySec = "30s";
       };
     };
+
+    # ── On-demand mail retriage (unified-triage Phase 4) ─────────────────────
+    # triage-mail.sh `delta`: classify ONLY unread inbox threads with no
+    # triage/* tag and append them to the cached board — never re-buckets
+    # already-classified threads, so manual moves survive (unlike the 6am
+    # baseline, which deliberately re-stamps everything).
+    #
+    # Trigger: the MCP gateway (hwc_mail_triage action=retriage) touches
+    # ~/.cache/hwc/retriage.request — a file the gateway's sandbox can already
+    # write — and the path unit below starts the service. No sudo/polkit
+    # needed, and the gateway's hardening stays untouched.
+    systemd.services.mail-retriage = {
+      description = "Mail retriage — classify unclassified unread threads on demand";
+      environment.HOME = paths.user.home;
+      environment.MAIL_PROMPT = "${mailTriagePrompt}";
+      path = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.nodejs_22 pkgs.notmuch ];
+      serviceConfig = {
+        Type = "oneshot";
+        User = lib.mkForce "eric";
+        Group = "users";
+        WorkingDirectory = agentDir;
+        ExecStart = "${agentDir}/triage-mail.sh delta";
+        TimeoutSec = 300;
+        StandardOutput = "journal";
+        StandardError = "journal";
+        NoNewPrivileges = true;
+        ProtectSystem = "strict";
+        ProtectKernelTunables = true;
+        ProtectKernelModules = true;
+        ProtectControlGroups = true;
+        ReadWritePaths = [
+          "${agentDir}/output"
+          "${agentDir}/logs"
+          paths.user.claude
+          "/tmp"
+        ];
+      };
+    };
+
+    systemd.paths.mail-retriage = {
+      description = "Watch for gateway retriage requests";
+      wantedBy = [ "multi-user.target" ];
+      pathConfig = {
+        PathModified = "${paths.user.home}/.cache/hwc/retriage.request";
+        Unit = "mail-retriage.service";
+      };
+    };
+
+    # The trigger file (and its dir) must exist for PathModified to arm.
+    systemd.tmpfiles.rules = [
+      "d ${paths.user.home}/.cache/hwc 0755 eric users -"
+      "f ${paths.user.home}/.cache/hwc/retriage.request 0644 eric users -"
+    ];
   };
 }

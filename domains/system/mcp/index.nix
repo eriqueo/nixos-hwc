@@ -283,6 +283,11 @@ in
         # hwc_mail — store path, rebuilt with the config (see let-binding).
         HWC_MAIL_TAXONOMY_FILE = "${mailTaxonomyJson}";
 
+        # Retriage trigger file (hwc_mail_triage action=retriage touches it;
+        # the mail-retriage path unit in business/morning-briefing watches it).
+        # Lives under ~/.cache, already in this unit's ReadWritePaths.
+        HWC_RETRIAGE_TRIGGER = "${paths.user.home}/.cache/hwc/retriage.request";
+
         # datax_* tools (workbench DataX hub). The gateway consumes the live SR
         # board from the sr_analyzer container (loopback) and overlays the SR
         # gauntlet's investigation ledger — it never touches Firestore directly,
