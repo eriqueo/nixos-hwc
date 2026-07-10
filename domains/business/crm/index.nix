@@ -151,6 +151,32 @@ in
       onCalendar = lib.mkOption { type = lib.types.str; default = "hourly"; };
     };
 
+    leadscoutIngest = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Periodic lead_scout → CRM ingest: pulls hot/warm classified FB
+          posts from the datax Postgres (READ-ONLY) onto the funnel board.
+          Idempotent — already-ingested posts are skipped silently (D22);
+          hot leads get next_action_date = today. facebook_scrape is never
+          auto-emailed (D13).
+        '';
+      };
+      onCalendar = lib.mkOption { type = lib.types.str; default = "*:00/30"; };
+      sinceDays = lib.mkOption {
+        type = lib.types.int;
+        default = 14;
+        description = "Rescan window; the skip pre-filter makes overlap free.";
+      };
+      profile = lib.mkOption { type = lib.types.str; default = "hwc_bozeman_v1"; };
+      dataxDsn = lib.mkOption {
+        type = lib.types.str;
+        default = "postgresql:///datax";
+        description = "lead_scout's datax DB, unix-socket peer auth (read-only by contract).";
+      };
+    };
+
     calendar = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -252,6 +278,39 @@ in
         OnCalendar = cfg.tick.onCalendar;
         Persistent = true;
         RandomizedDelaySec = "60s";
+      };
+    };
+
+    # lead_scout → funnel board ingest (D22). Persistent=true → a missed
+    # window fires on boot; Requires=postgresql so the boot catch-up run
+    # can't race the DB. OnFailure → Discord via the alerts notifier, so
+    # lead_scout schema drift is loud instead of a silent lead drought.
+    systemd.services.hwc-crm-leadscout-ingest = lib.mkIf cfg.leadscoutIngest.enable {
+      description = "hwc-crm lead_scout ingest (hot/warm FB posts onto the funnel board)";
+      after = [ "postgresql.service" ];
+      requires = [ "postgresql.service" ];
+      onFailure = lib.mkIf (config.hwc.monitoring.alerts.enable or false)
+        [ "hwc-service-failure-notifier@hwc-crm-leadscout-ingest.service" ];
+      environment = {
+        PYTHONPATH = "${cfg.projectDir}/src";
+        HWC_CRM_PG_DSN = cfg.postgresDsn;
+        HWC_CRM_DATAX_DSN = cfg.leadscoutIngest.dataxDsn;
+      };
+      serviceConfig = {
+        Type = "oneshot";
+        User = lib.mkForce cfg.user;
+        Group = "users";
+        ExecStart = "${pythonEnv}/bin/python3 -m hwc_crm.integrations.leadscout_ingest"
+          + " --since-days ${toString cfg.leadscoutIngest.sinceDays}"
+          + " --profile ${cfg.leadscoutIngest.profile}";
+      };
+    };
+    systemd.timers.hwc-crm-leadscout-ingest = lib.mkIf cfg.leadscoutIngest.enable {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = cfg.leadscoutIngest.onCalendar;
+        Persistent = true;
+        RandomizedDelaySec = "120s";
       };
     };
 

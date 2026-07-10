@@ -21,7 +21,8 @@ hard guard on first-contact sends.
 ```
 crm/
 ├── README.md      # This file.
-└── index.nix      # hwc.business.crm.* options + service + tick timer + route.
+└── index.nix      # hwc.business.crm.* options + service + tick timer
+                   #   + lead_scout ingest timer + route.
 ```
 
 ## NixOS options
@@ -36,6 +37,10 @@ crm/
 | `.smtp.passwordSecretRef` | `proton-bridge-password` | agenix. |
 | `.jtGrantKeyRef` | `jobtread-grant-key` | Manual-lead JT create. |
 | `.tick.enable` / `.tick.onCalendar` | true / hourly | Persistent timer. |
+| `.leadscoutIngest.enable` | true | lead_scout → funnel board ingest timer. |
+| `.leadscoutIngest.onCalendar` | `*:00/30` | Every 30 min, persistent. |
+| `.leadscoutIngest.sinceDays` / `.profile` | 14 / `hwc_bozeman_v1` | Rescan window + classifier profile. |
+| `.leadscoutIngest.dataxDsn` | `postgresql:///datax` | READ-ONLY by contract. |
 | `.calendar.enable` | false | Write appointment events to Radicale. |
 | `.calendar.caldavUrl` | loopback Radicale | CalDAV base URL. |
 | `.calendar.user` | `cal` | Radicale user (pw from `radicale-htpasswd`). |
@@ -75,3 +80,11 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
   organizerEmail) write events on loopback; the `cal` password is extracted from
   the shared `radicale-htpasswd` into `/run/hwc-crm/caldav-pw`. Public ingress
   path is `^/hooks/(contact|appointment|availability)`.
+- **2026-07-10** — Automated lead_scout funnel (app D22):
+  `hwc-crm-leadscout-ingest` oneshot + 30-min persistent timer pulls hot/warm
+  classified FB posts from datax (READ-ONLY) onto the funnel board. The app's
+  `ingest()` pre-filters already-known posts (no `duplicate_submission` event
+  spam under rescans); hot leads get `next_action_date = today`; payload now
+  carries lead_scout's situation/angle/scores and the board renders a hot/warm
+  badge. `OnFailure` → `hwc-service-failure-notifier@` (Discord via
+  hwc-notify) so datax schema drift is loud, not a silent lead drought.
