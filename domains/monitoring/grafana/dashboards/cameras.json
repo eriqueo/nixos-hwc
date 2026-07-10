@@ -16,8 +16,8 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
       "targets": [ { "refId": "A", "expr": "count(frigate_camera_fps)", "instant": true } ],
-      "fieldConfig": { "defaults": { "decimals": 0, "unit": "none", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }, "mappings": [ { "type": "range", "options": { "from": 0, "to": 0, "result": { "text": "DOWN", "color": "red" } } } ] }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "center" }
+      "fieldConfig": { "defaults": { "decimals": 0, "unit": "none", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }, "mappings": [ { "type": "range", "options": { "from": 0, "to": 0, "result": { "text": "DOWN", "color": "red" } } }, { "type": "range", "options": { "from": 1, "to": 9999, "result": { "text": "UP", "color": "green" } } } ] }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none", "textMode": "value", "justifyMode": "center" }
     },
     {
       "id": 2, "type": "stat", "title": "Cameras online",
@@ -76,14 +76,14 @@
       "options": { "orientation": "horizontal", "displayMode": "gradient", "valueMode": "text", "showUnfilled": true, "reduceOptions": { "calcs": ["lastNotNull"] } }
     },
     {
-      "id": 9, "type": "timeseries", "title": "GPU utilisation (%)",
+      "id": 9, "type": "timeseries", "title": "Frigate CPU & memory (whole process)",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 12 },
       "targets": [
-        { "refId": "A", "expr": "frigate_gpu_usage_percent", "legendFormat": "GPU {{gpu_name}}" },
-        { "refId": "B", "expr": "frigate_gpu_mem_usage_percent", "legendFormat": "GPU mem {{gpu_name}}" }
+        { "refId": "A", "expr": "frigate_cpu_usage_percent{pid=\"frigate.full_system\"}", "legendFormat": "CPU %" },
+        { "refId": "B", "expr": "frigate_mem_usage_percent{pid=\"frigate.full_system\"}", "legendFormat": "Memory %" }
       ],
-      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 0, "min": 0, "max": 100, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never" } }, "overrides": [] },
+      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never" } }, "overrides": [] },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } }
     },
     {
@@ -95,12 +95,12 @@
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single" } }
     },
     {
-      "id": 11, "type": "timeseries", "title": "Camera stream bandwidth",
+      "id": 11, "type": "timeseries", "title": "Skipped FPS by camera (dropped frames — should stay 0)",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
-      "targets": [ { "refId": "A", "expr": "frigate_bandwidth_usages_kBps * 1024", "legendFormat": "{{camera_name}}" } ],
-      "fieldConfig": { "defaults": { "unit": "Bps", "decimals": 0, "min": 0, "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "stacking": { "mode": "normal" } } }, "overrides": [] },
-      "options": { "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["lastNotNull"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+      "targets": [ { "refId": "A", "expr": "frigate_skipped_fps", "legendFormat": "{{camera_name}}" } ],
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 1, "min": 0, "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "stacking": { "mode": "normal" } }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
     },
     {
       "id": 12, "type": "bargauge", "title": "Surveillance storage used",
