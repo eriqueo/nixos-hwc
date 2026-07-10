@@ -795,16 +795,22 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
     --arg kuma "https://uptime-kuma.hwc.iheartwoodcraft.com" \
     --arg stats "https://stats.iheartwoodcraft.com" \
     --arg repo "https://github.com/eriqueo/nixos-hwc" '
+    # Theme = the dashboard palette verbatim (dashboard/index.html :root):
+    #   bg #1d2021 · surface #282828 · border #32373c · text #d5c4a1
+    #   dim #a7aaad · amber #cf995f (links) · amber-dim #b0814d
+    #   red #bf616a (bg #2d2426, alert text #d08080) · warning text #fcbb74
+    # Section order mirrors the dashboard grid.
     def h: tostring | @html;
-    def link(u; t): "<a href=\"" + u + "\" style=\"color:#b07d3f;text-decoration:none\">" + t + "</a>";
+    def link(u; t): "<a href=\"" + u + "\" style=\"color:#cf995f;text-decoration:none\">" + t + "</a>";
     def card(title; url; linktext; body):
-      "<div style=\"background:#ffffff;border:1px solid #e6e1d8;border-radius:10px;padding:14px 18px;margin:0 0 12px\">"
-      + "<div style=\"font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#8a8378;margin-bottom:8px\">"
+      "<div style=\"background:#282828;border:1px solid #32373c;border-radius:6px;padding:14px 18px;margin:0 0 12px\">"
+      + "<div style=\"font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#a7aaad;padding-bottom:8px;border-bottom:1px solid #32373c;margin-bottom:10px\">"
       + title
       + (if url != "" then "<span style=\"float:right;text-transform:none;letter-spacing:0\">" + link(url; linktext + " &rarr;") + "</span>" else "" end)
       + "</div>" + body + "</div>";
-    def item(s): "<div style=\"padding:3px 0;font-size:14px;line-height:1.45;color:#2d2a26\">" + s + "</div>";
-    def meta(s): "<span style=\"color:#8a8378;font-size:13px\">" + s + "</span>";
+    def item(s): "<div style=\"padding:3px 0;font-size:14px;line-height:1.45;color:#d5c4a1\">" + s + "</div>";
+    def meta(s): "<span style=\"color:#a7aaad;font-size:13px\">" + s + "</span>";
+    def red(s): "<span style=\"color:#bf616a;font-weight:600\">" + s + "</span>";
     def aurl(s):
       if s == "ops" then $kuma
       elif s == "leads" or s == "overdue" or s == "jobs" then $jt
@@ -814,29 +820,84 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
       else $dash end;
 
     .sections as $s |
-    "<div style=\"margin:0;padding:18px 10px;background:#f4f1ec\">"
+    "<div style=\"margin:0;padding:18px 10px;background:#1d2021\">"
     + "<div style=\"max-width:640px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif\">"
 
-    + "<div style=\"padding:6px 2px 14px\">"
-    + "<div style=\"font-size:20px;font-weight:700;color:#2d2a26\">" + ($slot|h) + " Briefing</div>"
-    + "<div style=\"font-size:13px;color:#8a8378;margin-top:2px\">" + ((.generated_at // "" | split("T")[0])|h)
-    + " &nbsp;&middot;&nbsp; " + link($dash; "open dashboard") + "</div></div>"
+    + "<div style=\"padding:6px 2px 16px;text-align:center;border-bottom:1px solid #32373c;margin-bottom:14px\">"
+    + "<div style=\"font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#b0814d\">Heartwood Briefing</div>"
+    + "<div style=\"font-size:22px;font-weight:700;color:#cf995f;margin-top:4px\">" + ($slot|h) + " &middot; " + ((.generated_at // "" | split("T")[0])|h) + "</div>"
+    + "<div style=\"font-size:13px;color:#a7aaad;margin-top:4px\">" + link($dash; "open dashboard") + "</div></div>"
 
     + (if (.alerts // []) | length > 0 then
         (.alerts | map(
-          (if .level == "critical" then ["#fdecea", "#b3261e"] else ["#fdf6e3", "#7a5d10"] end) as $c |
-          "<div style=\"background:" + $c[0] + ";color:" + $c[1] + ";border-radius:8px;padding:9px 12px;margin:0 0 8px;font-size:13.5px;line-height:1.4\">"
+          (if .level == "critical" then ["#2d2426", "#bf616a", "#d08080"] else ["#2d2a24", "#cf995f", "#fcbb74"] end) as $c |
+          "<div style=\"background:" + $c[0] + ";border:1px solid " + $c[1] + ";color:" + $c[2] + ";border-radius:6px;padding:9px 12px;margin:0 0 8px;font-size:13.5px;line-height:1.4\">"
           + "<strong>" + ((.section // "")|h) + "</strong> &middot; " + ((.message // "")|h)
-          + " &nbsp;" + link(aurl(.section // ""); "view")
+          + " &nbsp;" + link(aurl(.section // ""); "view &rarr;")
           + "</div>") | join(""))
       else card("Alerts"; ""; ""; item("No alerts. All green.")) end)
+
+    + (if ($s.calendar.events // []) | length > 0 then
+        card("Calendar"; ""; "";
+          ($s.calendar.events | map(
+            item(meta(((.date // ((.start // "") | split("T")[0]))|h)
+                + " " + (if .allDay then "all-day" else (((.start // "") | split("T")[1] // "")|h) end)) + " &nbsp;"
+              + (.summary|h)
+              + (if (.location // "") | startswith("http") then " &middot; " + link(.location; "join link &rarr;")
+                 elif (.location // "") != "" then " " + meta((.location|h)) else "" end))) | join("")))
+      else "" end)
+
+    + (if .mail_triage then
+        card("Mail"; $dash; "triage";
+          item("urgent " + ((.mail_triage.buckets.urgent // []) | length | tostring)
+            + " &middot; review " + ((.mail_triage.buckets.review // []) | length | tostring)
+            + " &middot; noise " + ((.mail_triage.buckets.noise // []) | length | tostring)
+            + (if $s.mail.summary then " &middot; " + meta(($s.mail.summary|h)) else "" end))
+          + (if .mail_triage.error then item(red("triage error: " + (.mail_triage.error|h))) else "" end)
+          + (((.mail_triage.buckets.urgent // [])[:5]) | map(
+              item(red("!") + " " + ((.from_name // .from_address // "?")|h) + ": " + ((.subject // "?")|h)
+                + (if .summary then "<br><span style=\"color:#a7aaad;font-size:13px;padding-left:14px\">" + (.summary|h) + "</span>" else "" end))) | join(""))
+          + (((.mail_triage.buckets.review // [])[:5]) | map(
+              item(meta("&middot;") + " " + ((.from_name // .from_address // "?")|h) + ": " + ((.subject // "?")|h))) | join("")))
+      else "" end)
+
+    + (if ($s.tasks // {}) | ((.overdue // []) + (.due_today // []) + (.due_this_week // [])) | length > 0 then
+        card("Tasks"; $dash; "dashboard";
+          (($s.tasks.overdue // []) | map(item(red("OVERDUE") + " " + meta(((.due_date // "")|h)) + " &nbsp;" + (.name|h))) | join(""))
+          + (($s.tasks.due_today // []) | map(item("<strong>today</strong> &nbsp;" + (.name|h))) | join(""))
+          + (($s.tasks.due_this_week // []) | map(item(meta(((.due_date // "")|h)) + " &nbsp;" + (.name|h))) | join("")))
+      else "" end)
+
+    + (if ($s.leads.items // []) | length > 0 then
+        card("New Leads (" + (($s.leads.items | length | tostring)|h) + ")"; $jt; "JobTread";
+          ($s.leads.items | map(
+            item((if .url then link(.url; (.name|h)) else (.name|h) end)
+              + (if (.job_type // "") != "" then " " + meta((.job_type|h)) else "" end)
+              + " " + meta(((.days_old|tostring)|h) + "d old"))) | join("")))
+      else "" end)
+
+    + (if ($s.overdue.count // 0) > 0 then
+        card("Overdue Invoices &middot; $" + ((($s.overdue.total_amount // 0) | round | tostring)|h); $jt; "JobTread";
+          ($s.overdue.items | map(
+            item("<strong style=\"color:#fcbb74\">$" + (((.amount // 0) | round | tostring)|h) + "</strong> &nbsp;"
+              + (if .url then link(.url; ((.job_name // .name)|h)) else ((.job_name // .name)|h) end)
+              + (if .days_past_due then " " + meta(((.days_past_due|tostring)|h) + "d past due") else "" end))) | join("")))
+      else "" end)
+
+    + (if ($s.jobs.active // []) | length > 0 then
+        card("Active Jobs (" + (($s.jobs.active | length | tostring)|h) + ")"; $jt; "JobTread";
+          ($s.jobs.active | map(
+            item(meta("#" + ((.number // "?")|h)) + " &nbsp;"
+              + (if .url then link(.url; (.name|h)) else (.name|h) end)
+              + " " + meta(((.phase // "?")|h) + " / " + ((.status // "?")|h)))) | join("")))
+      else "" end)
 
     + (if $s.system then
         card("System"; $grafana; "Grafana";
           item(((($s.system.services_active // 0)|tostring)|h) + " services &middot; "
             + ((($s.system.services_failed // 0)|tostring)|h) + " failed &middot; "
             + ((($s.system.containers_running // 0)|tostring)|h) + " containers")
-          + (($s.system.failed_units // []) | map(item("<span style=\"color:#b3261e\">&#10007; " + (.|h) + "</span>")) | join(""))
+          + (($s.system.failed_units // []) | map(item(red("&#10007; " + (.|h)))) | join(""))
           + (($s.system.storage // []) | map(item((.mount|h) + " " + meta(((.percent // 0)|tostring) + "% used"))) | join(""))
           + (if $s.backup.exit_status then
               item("backup: borg " + (($s.backup.exit_status // "?")|h)
@@ -852,7 +913,7 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
         (($o.nightly_builds_finished // []) | length) as $nnb |
         card("Overnight Ops &middot; since " + ((($o.since // "")[5:16])|h); $kuma; "Uptime Kuma";
           (if ($nsvc + $nkuma + $nerr + $ndown + $nnb) == 0 then item(meta("Quiet night — no failures, no probe drops, no errors")) else
-            (($o.service_failures // []) | map(item("<span style=\"color:#b3261e\">&#10007; " + (.service|h) + "</span> " + meta("failed @ " + ((.time // "")[11:16])))) | join(""))
+            (($o.service_failures // []) | map(item(red("&#10007; " + (.service|h)) + " " + meta("failed @ " + ((.time // "")[11:16])))) | join(""))
             + (($o.kuma_failing // []) | map(item("~ " + (.monitor|h) + " " + meta(((.failed_probes|tostring)|h) + " failed probes"))) | join(""))
             + (($o.prometheus_targets_down // []) | map(item("~ target down: " + (.job|h) + " " + meta((.instance // "")|h))) | join(""))
             + (($o.journal_errors_top // []) | map(item((.unit|h) + " " + meta(((.errors|tostring)|h) + " journal errors"))) | join(""))
@@ -861,59 +922,23 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
           + (($o.disk_forecast // [])[:3] | map(item((.mount|h) + " " + meta("full in ~" + ((.days_to_full|tostring)|h) + "d at current growth"))) | join(""))))
       else "" end)
 
-    + (if ($s.calendar.events // []) | length > 0 then
-        card("This Week"; ""; "";
-          ($s.calendar.events | map(
-            item(meta(((.date // ((.start // "") | split("T")[0]))|h)
-                + " " + (if .allDay then "all-day" else (((.start // "") | split("T")[1] // "")|h) end)) + " &nbsp;"
-              + (.summary|h)
-              + (if (.location // "") | startswith("http") then " &middot; " + link(.location; "join link")
-                 elif (.location // "") != "" then " " + meta((.location|h)) else "" end))) | join("")))
+    + (if $s.weather and $s.weather.current_temp_f != null then
+        card("Weather"; ""; "";
+          item(((($s.weather.current_temp_f | round | tostring))|h) + "&deg; now &middot; "
+            + (if $s.weather.high_f != null and $s.weather.low_f != null then
+                ((($s.weather.high_f | round | tostring))|h) + "&deg;/" + ((($s.weather.low_f | round | tostring))|h) + "&deg; &middot; " else "" end)
+            + (($s.weather.conditions // "")|h)
+            + " &middot; " + meta(((($s.weather.precipitation_chance // 0)|tostring)|h) + "% precip &middot; "
+              + ((($s.weather.wind_mph // 0)|tostring)|h) + " mph wind"))
+          + (if $s.weather.outdoor_work_ok == false then item(red("&#9888; not ideal for outdoor work")) else "" end))
       else "" end)
 
-    + (if ($s.tasks // {}) | ((.overdue // []) + (.due_today // []) + (.due_this_week // [])) | length > 0 then
-        card("Tasks"; $dash; "dashboard";
-          (($s.tasks.overdue // []) | map(item("<span style=\"color:#b3261e;font-weight:600\">OVERDUE</span> " + meta(((.due_date // "")|h)) + " &nbsp;" + (.name|h))) | join(""))
-          + (($s.tasks.due_today // []) | map(item("<strong>today</strong> &nbsp;" + (.name|h))) | join(""))
-          + (($s.tasks.due_this_week // []) | map(item(meta(((.due_date // "")|h)) + " &nbsp;" + (.name|h))) | join("")))
-      else "" end)
-
-    + (if ($s.leads.items // []) | length > 0 then
-        card("Leads (" + (($s.leads.items | length | tostring)|h) + ")"; $jt; "JobTread";
-          ($s.leads.items | map(
-            item((if .url then link(.url; (.name|h)) else (.name|h) end)
-              + (if (.job_type // "") != "" then " " + meta((.job_type|h)) else "" end)
-              + " " + meta(((.days_old|tostring)|h) + "d old"))) | join("")))
-      else "" end)
-
-    + (if ($s.overdue.count // 0) > 0 then
-        card("Overdue Invoices &middot; $" + ((($s.overdue.total_amount // 0) | round | tostring)|h); $jt; "JobTread";
-          ($s.overdue.items | map(
-            item("<strong>$" + (((.amount // 0) | round | tostring)|h) + "</strong> &nbsp;"
-              + (if .url then link(.url; ((.job_name // .name)|h)) else ((.job_name // .name)|h) end)
-              + (if .days_past_due then " " + meta(((.days_past_due|tostring)|h) + "d past due") else "" end))) | join("")))
-      else "" end)
-
-    + (if ($s.jobs.active // []) | length > 0 then
-        card("Active Jobs (" + (($s.jobs.active | length | tostring)|h) + ")"; $jt; "JobTread";
-          ($s.jobs.active | map(
-            item(meta("#" + ((.number // "?")|h)) + " &nbsp;"
-              + (if .url then link(.url; (.name|h)) else (.name|h) end)
-              + " " + meta(((.phase // "?")|h) + " / " + ((.status // "?")|h)))) | join("")))
-      else "" end)
-
-    + (if .mail_triage then
-        card("Mail"; $dash; "triage";
-          item("urgent " + ((.mail_triage.buckets.urgent // []) | length | tostring)
-            + " &middot; review " + ((.mail_triage.buckets.review // []) | length | tostring)
-            + " &middot; noise " + ((.mail_triage.buckets.noise // []) | length | tostring)
-            + (if $s.mail.summary then " &middot; " + meta(($s.mail.summary|h)) else "" end))
-          + (if .mail_triage.error then item("<span style=\"color:#b3261e\">triage error: " + (.mail_triage.error|h) + "</span>") else "" end)
-          + (((.mail_triage.buckets.urgent // [])[:5]) | map(
-              item("<span style=\"color:#b3261e;font-weight:600\">!</span> " + ((.from_name // .from_address // "?")|h) + ": " + ((.subject // "?")|h)
-                + (if .summary then "<br><span style=\"color:#8a8378;font-size:13px;padding-left:14px\">" + (.summary|h) + "</span>" else "" end))) | join(""))
-          + (((.mail_triage.buckets.review // [])[:5]) | map(
-              item(meta("&middot;") + " " + ((.from_name // .from_address // "?")|h) + ": " + ((.subject // "?")|h))) | join("")))
+    + (if $s.weekly_snapshot and ($s.weekly_snapshot | length) > 0 then
+        card("Weekly Snapshot"; ""; "";
+          item("active jobs " + (($s.weekly_snapshot.active_job_count // "&mdash;")|tostring)
+            + " &middot; leads this week " + (($s.weekly_snapshot.leads_received_this_week // "&mdash;")|tostring)
+            + " &middot; outstanding $" + ((($s.weekly_snapshot.invoices_outstanding_amount // 0) | round | tostring)|h)
+            + " (" + (($s.weekly_snapshot.invoices_outstanding // 0)|tostring) + ")"))
       else "" end)
 
     + (if $s.website and ($s.website | length > 0) then
@@ -926,7 +951,7 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
           + (($s.website.top_pages_7d // [])[:3] | map(item(meta((.url|h) + " — " + ((.views|tostring)|h) + " views"))) | join("")))
       else "" end)
 
-    + "<div style=\"text-align:center;padding:10px 0 4px;font-size:12px;color:#8a8378\">"
+    + "<div style=\"text-align:center;padding:10px 0 4px;font-size:12px;color:#a7aaad\">"
     + link($dash; "dashboard") + " &nbsp;&middot;&nbsp; " + link($grafana; "grafana")
     + " &nbsp;&middot;&nbsp; " + link($kuma; "uptime kuma") + " &nbsp;&middot;&nbsp; " + link($jt; "jobtread")
     + " &nbsp;&middot;&nbsp; " + link($stats; "analytics")

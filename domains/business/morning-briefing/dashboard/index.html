@@ -678,7 +678,9 @@ function makeOps(ops){
   const quiet=!svc.length&&!kuma.length&&!errs.length&&!down.length&&!nb.length;
   const sec=$('div',{class:'section'});
   const sinceLabel=ops.since?`since ${(ops.since||'').slice(5,16)}`:'';
-  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Overnight Ops'),$('span',{class:'sec-count'},sinceLabel)));
+  sec.appendChild($('div',{class:'sec-hdr'},
+    $('span',null,'Overnight Ops'),
+    $('a',{class:'sec-link',href:'https://uptime-kuma.hwc.iheartwoodcraft.com',target:'_blank'},`${sinceLabel} · Kuma →`)));
   if(quiet){
     sec.appendChild($('div',{class:'empty'},'Quiet night — no failures, no probe drops, no errors'));
   }else{
@@ -800,7 +802,9 @@ function makeJobs(jobs){
 // ── Leads section ────────────────────────────────────────────────────────────
 function makeLeads(leads){
   const sec=$('div',{class:'section'});
-  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'New Leads'),$('span',{class:'sec-count'},`${leads.new_count||0}`)));
+  sec.appendChild($('div',{class:'sec-hdr'},
+    $('span',null,'New Leads'),
+    $('a',{class:'sec-link',href:'https://app.jobtread.com',target:'_blank'},`${leads.new_count||0} · JobTread →`)));
   if(!(leads.items||[]).length){sec.appendChild($('div',{class:'empty'},'No new leads'));return sec}
   leads.items.forEach(l=>{
     const ac=l.days_old>5?'urgent':l.days_old>2?'old':'';
@@ -816,7 +820,9 @@ function makeLeads(leads){
 // ── Overdue section ──────────────────────────────────────────────────────────
 function makeOverdue(overdue){
   const sec=$('div',{class:'section'});
-  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Overdue Invoices'),$('span',{class:'sec-count'},`${overdue.count}`)));
+  sec.appendChild($('div',{class:'sec-hdr'},
+    $('span',null,'Overdue Invoices'),
+    $('a',{class:'sec-link',href:'https://app.jobtread.com',target:'_blank'},`${overdue.count} · JobTread →`)));
   if(!overdue.count){sec.appendChild($('div',{class:'empty'},'Nothing overdue'));return sec}
   if(overdue.total_amount)sec.appendChild($('div',{class:'overdue-total'},`$${Math.round(overdue.total_amount).toLocaleString()} outstanding`));
   (overdue.items||[]).forEach(i=>{
@@ -885,10 +891,21 @@ function render(data,liveThreads){
     $('div',{class:'hdr-updated',html:`updated <span class="${ago.cls}">${ago.text}</span>`})
   ));
 
-  // Alerts (full-width above grid)
+  // Alerts (full-width above grid) — each links to the surface it reports on,
+  // same routing as the email render (run.sh aurl()).
+  const ALERT_URL={ops:'https://uptime-kuma.hwc.iheartwoodcraft.com',
+    leads:'https://app.jobtread.com',overdue:'https://app.jobtread.com',jobs:'https://app.jobtread.com',
+    website:'https://stats.iheartwoodcraft.com',
+    system:'https://grafana.hwc.iheartwoodcraft.com',backup:'https://grafana.hwc.iheartwoodcraft.com',
+    config_drift:'https://github.com/eriqueo/nixos-hwc'};
   if(data.alerts&&data.alerts.length){
     const a=$('div',{class:'alerts'});
-    data.alerts.forEach(al=>a.appendChild($('div',{class:`alert alert-${al.level}`},al.message)));
+    data.alerts.forEach(al=>{
+      const el=$('div',{class:`alert alert-${al.level}`},al.message);
+      const u=ALERT_URL[al.section];
+      if(u){el.appendChild(document.createTextNode(' '));el.appendChild($('a',{class:'lnk',href:u,target:'_blank'},'view →'))}
+      a.appendChild(el);
+    });
     app.appendChild(a);
   }
 
