@@ -1,20 +1,26 @@
 /**
- * hwc_mail_triage — read the CACHED mail-triage from the morning-briefing pipeline.
+ * hwc_mail_triage — the mail domain's Triage Surface Contract tool.
  *
- * READ-ONLY: this tool does NOT run notmuch or Claude. It reads the briefing
- * JSON produced daily by domains/business/morning-briefing (run.sh injects a
- * `.mail_triage` key into output/briefing.json — see that dir's CLAUDE.md/run.sh)
- * and reshapes the cached triage into the Universal Result Contract.
+ * READS (board/summary) come from the CACHED mail-triage produced daily by
+ * domains/business/morning-briefing (run.sh injects a `.mail_triage` key into
+ * output/briefing.json), re-bucketed by the LIVE notmuch triage/* tags so
+ * moves persist, and filtered to threads still in the inbox.
+ *
+ * WRITES are the generic workbench card_actions verbs ({action, id[,target]}):
+ * triage-<bucket> / move (replace the triage/* tag set), archive, trash,
+ * flag-action — all plain notmuch tag ops on `thread:<id>`, the same store
+ * aerc and the briefing read. Never runs Claude.
  *
  * Path is late-bound from env HWC_BRIEFING_JSON, defaulting to the real
  * pipeline output path. Missing/unparseable file or section → EMPTY-but-valid
- * result; the tool NEVER throws.
+ * result for reads; writes fail loud (a workbench write must never fake success).
  */
 
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
+import { mcpError } from "../errors.js";
 import { TRIAGE_BUCKETS, triageTag } from "./mail.js";
 
 /** Default briefing output path (run.sh writes here, then injects .mail_triage). */
@@ -116,11 +122,15 @@ function notmuchThreadIds(query: string): Promise<Set<string>> {
 
 /**
  * Re-bucket the cached triage by the LIVE notmuch `triage/<bucket>` tags so a
- * workbench "move between columns" (which retags via hwc_mail set-triage)
- * survives a refresh WITHOUT re-running the daily briefing. The briefing
- * remains the content source (subject/summary/sender); the tag is the source
- * of truth for PLACEMENT. A thread carrying no triage/* tag (never moved)
- * keeps its cached bucket. notmuch unavailable → cached buckets unchanged.
+ * workbench "move between columns" (a triage/* retag) survives a refresh
+ * WITHOUT re-running the daily briefing. The briefing remains the content
+ * source (subject/summary/sender); the tag is the source of truth for
+ * PLACEMENT. A thread carrying no triage/* tag (never moved) keeps its cached
+ * bucket. Threads no longer in the inbox (archived/trashed since the cache
+ * was written — including via this tool's own verbs) are dropped, so an
+ * archive durably removes the card instead of resurrecting on refresh.
+ * notmuch unavailable → cached buckets unchanged (defensive: never empty the
+ * board because a shell-out failed).
  */
 async function reflectLiveBuckets(
   cached: Record<Bucket, TriageThread[]>,
@@ -132,16 +142,67 @@ async function reflectLiveBuckets(
     if (ids.size === 0) continue;
     for (const id of ids) liveBucketOf.set(id, bucket as Bucket);
   }
-  if (liveBucketOf.size === 0) return cached;
+
+  // Live inbox membership: a cached thread that left the inbox leaves the
+  // board. An empty set means notmuch failed (a truly empty inbox still
+  // returns the board's threads only if they match) — keep everything then.
+  const inboxIds = await notmuchThreadIds("tag:inbox AND NOT tag:trash");
 
   const out: Record<Bucket, TriageThread[]> = { urgent: [], review: [], noise: [] };
   for (const bucket of TRIAGE_BUCKETS) {
     for (const thread of cached[bucket as Bucket]) {
+      if (inboxIds.size > 0 && !inboxIds.has(thread.thread_id)) continue;
       const live = liveBucketOf.get(thread.thread_id) ?? (bucket as Bucket);
       out[live].push(thread);
     }
   }
   return out;
+}
+
+/* ─── Write verbs (generic workbench card_actions path) ──────────────────── */
+
+/** Tag ops per verb. triage-<bucket> and move replace the triage/* set. */
+function verbTagOps(verb: string, target?: string): string[] | null {
+  const bucketOf = (b: string): string[] | null =>
+    (TRIAGE_BUCKETS as readonly string[]).includes(b)
+      ? [
+          ...TRIAGE_BUCKETS.filter((o) => o !== b).map((o) => `-${triageTag(o)}`),
+          `+${triageTag(b)}`,
+        ]
+      : null;
+  if (verb === "move") return target ? bucketOf(target) : null;
+  if (verb.startsWith("triage-")) return bucketOf(verb.slice("triage-".length));
+  if (verb === "archive") return ["+archive", "-inbox"];
+  if (verb === "trash") return ["+trash", "-inbox", "-unread"];
+  if (verb === "flag-action") return ["+action"];
+  return null;
+}
+
+const WRITE_VERBS = ["move", "archive", "trash", "flag-action"] as const;
+
+/** Apply tag ops to thread:<id>. Resolves an error string or null on success. */
+function notmuchTagThread(id: string, ops: string[]): Promise<string | null> {
+  return new Promise((resolve) => {
+    const tryBin = (i: number): void => {
+      if (i >= NOTMUCH_CANDIDATES.length) {
+        resolve("notmuch binary not found");
+        return;
+      }
+      execFile(
+        NOTMUCH_CANDIDATES[i],
+        ["tag", ...ops, "--", `thread:${id}`],
+        { timeout: 10_000 },
+        (err, _stdout, stderr) => {
+          if (err && (err as NodeJS.ErrnoException).code === "ENOENT") {
+            tryBin(i + 1);
+            return;
+          }
+          resolve(err ? (stderr || String(err)).slice(0, 300) : null);
+        },
+      );
+    };
+    tryBin(0);
+  });
 }
 
 /** Map a thread to a kanban card. */
@@ -173,23 +234,75 @@ export function mailTriageTools(): ToolDef[] {
     {
       name: "hwc_mail_triage",
       description:
-        "Read the CACHED mail triage from the morning-briefing pipeline (output/briefing.json .mail_triage). " +
-        "READ-ONLY: does not run notmuch or Claude — reflects the last daily briefing run. " +
-        "action=board (default) returns a kanban of Urgent/Review/Noise columns; action=summary returns a compact text overview. " +
-        "If no triage has been produced yet, returns an empty-but-valid result.",
+        "Mail triage board (Triage Surface Contract). READS: action=board (default) returns a kanban of " +
+        "Urgent/Review/Noise columns from the cached morning-briefing triage, re-bucketed by the live " +
+        "notmuch triage/* tags and filtered to threads still in the inbox; action=summary returns a compact " +
+        "text overview. WRITES (per-card verbs, require id): action=triage-urgent|triage-review|triage-noise " +
+        "or action=move with target=<bucket> replace the thread's triage/* tag set; action=archive|trash " +
+        "de-inbox the thread; action=flag-action adds the +action flag. Writes hit the same notmuch tags " +
+        "aerc and the briefing read. Never runs Claude.",
       inputSchema: {
         type: "object",
         properties: {
           action: {
             type: "string",
-            enum: ["board", "summary"],
+            enum: [
+              "board", "summary",
+              ...TRIAGE_BUCKETS.map((b) => `triage-${b}`),
+              ...WRITE_VERBS,
+            ],
             default: "board",
-            description: "board = kanban of triage buckets; summary = compact text counts + top urgent subjects",
+            description:
+              "board/summary = reads; triage-<bucket>, move (+target), archive, trash, flag-action = per-thread writes (require id)",
+          },
+          id: {
+            type: "string",
+            description: "[writes] notmuch thread id (hex, no 'thread:' prefix) — the kanban card id",
+          },
+          target: {
+            type: "string",
+            enum: [...TRIAGE_BUCKETS],
+            description: "[move] destination bucket (the kanban column id)",
           },
         },
       },
       handler: async (args): Promise<ToolResult> => {
         const action = (args.action as string) || "board";
+
+        // ── writes: {action, id[, target]} — the generic card_actions path ──
+        if (action !== "board" && action !== "summary") {
+          const id = String(args.id ?? "").replace(/^thread:/, "").trim();
+          if (!/^[0-9a-f]+$/i.test(id)) {
+            return mcpError({
+              type: "VALIDATION_ERROR",
+              message: `write '${action}' needs a notmuch thread id (hex), got ${JSON.stringify(args.id ?? null)}`,
+              suggestion: "Pass the kanban card id as `id`",
+            });
+          }
+          const ops = verbTagOps(action, args.target as string | undefined);
+          if (ops === null) {
+            return mcpError({
+              type: "VALIDATION_ERROR",
+              message: `unknown verb or missing/invalid target for '${action}'`,
+              suggestion: `Verbs: ${TRIAGE_BUCKETS.map((b) => `triage-${b}`).join(", ")}, move (target=${TRIAGE_BUCKETS.join("|")}), archive, trash, flag-action`,
+            });
+          }
+          const err = await notmuchTagThread(id, ops);
+          if (err !== null) {
+            return mcpError({
+              type: "COMMAND_FAILED",
+              message: `notmuch tag failed for thread:${id}`,
+              error: err,
+            });
+          }
+          return {
+            status: "ok",
+            message: `${action} → thread:${id} (${ops.join(" ")})`,
+            data: { action, id, ops },
+          };
+        }
+
+        // ── reads ──
         const triage = await loadTriage(briefingPath);
 
         // Reflect any persisted moves: re-bucket cached threads by their live
