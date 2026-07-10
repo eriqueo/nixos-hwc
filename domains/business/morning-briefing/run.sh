@@ -674,6 +674,11 @@ if [ "${FORCE_EMAIL:-0}" != "1" ] && [ "${HOUR_NOW#0}" -ge 9 ] 2>/dev/null; then
   log "STEP 5: SKIP (refresh run at ${HOUR_NOW}:xx — email only sent on the pre-9am run)"
 elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
   log "STEP 5: Emailing briefing..."
+  # Slot-stamped: normally only the pre-9am run emails, but a FORCE_EMAIL
+  # midday/evening send should not masquerade as the morning one.
+  SLOT="Morning"
+  if [ "${HOUR_NOW#0}" -ge 15 ] 2>/dev/null; then SLOT="Evening"
+  elif [ "${HOUR_NOW#0}" -ge 11 ] 2>/dev/null; then SLOT="Midday"; fi
   EMAIL_BODY=$(jq -r '
     def sec(x): "\n== " + x + " ==\n";
     "Morning Briefing — " + (.generated_at // "unknown")
@@ -774,21 +779,177 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
       else "" end)
     + "\n\nDashboard: https://briefing.hwc.iheartwoodcraft.com\n"
   ' "${OUTPUT_DIR}/briefing.json" 2>/dev/null) || EMAIL_BODY=""
+
+  # HTML render — the part mail clients actually show. Every section header
+  # links to the system it reports on (JobTread / Grafana / Kuma / Umami /
+  # dashboard) and every job, lead and invoice deep-links into JobTread.
+  # The plain-text render above rides along as the multipart fallback.
+  EMAIL_HTML=$(jq -r \
+    --arg slot "${SLOT}" \
+    --arg dash "https://briefing.hwc.iheartwoodcraft.com" \
+    --arg jt "https://app.jobtread.com" \
+    --arg grafana "https://grafana.hwc.iheartwoodcraft.com" \
+    --arg kuma "https://uptime-kuma.hwc.iheartwoodcraft.com" \
+    --arg stats "https://stats.iheartwoodcraft.com" \
+    --arg repo "https://github.com/eriqueo/nixos-hwc" '
+    def h: tostring | @html;
+    def link(u; t): "<a href=\"" + u + "\" style=\"color:#b07d3f;text-decoration:none\">" + t + "</a>";
+    def card(title; url; label; body):
+      "<div style=\"background:#ffffff;border:1px solid #e6e1d8;border-radius:10px;padding:14px 18px;margin:0 0 12px\">"
+      + "<div style=\"font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#8a8378;margin-bottom:8px\">"
+      + title
+      + (if url != "" then "<span style=\"float:right;text-transform:none;letter-spacing:0\">" + link(url; label + " &rarr;") + "</span>" else "" end)
+      + "</div>" + body + "</div>";
+    def item(s): "<div style=\"padding:3px 0;font-size:14px;line-height:1.45;color:#2d2a26\">" + s + "</div>";
+    def meta(s): "<span style=\"color:#8a8378;font-size:13px\">" + s + "</span>";
+    def aurl(s):
+      if s == "ops" then $kuma
+      elif s == "leads" or s == "overdue" or s == "jobs" then $jt
+      elif s == "website" then $stats
+      elif s == "system" or s == "backup" then $grafana
+      elif s == "config_drift" then $repo
+      else $dash end;
+
+    .sections as $s |
+    "<div style=\"margin:0;padding:18px 10px;background:#f4f1ec\">"
+    + "<div style=\"max-width:640px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif\">"
+
+    + "<div style=\"padding:6px 2px 14px\">"
+    + "<div style=\"font-size:20px;font-weight:700;color:#2d2a26\">" + ($slot|h) + " Briefing</div>"
+    + "<div style=\"font-size:13px;color:#8a8378;margin-top:2px\">" + ((.generated_at // "" | split("T")[0])|h)
+    + " &nbsp;&middot;&nbsp; " + link($dash; "open dashboard") + "</div></div>"
+
+    + (if (.alerts // []) | length > 0 then
+        (.alerts | map(
+          (if .level == "critical" then ["#fdecea"; "#b3261e"] else ["#fdf6e3"; "#7a5d10"] end) as $c |
+          "<div style=\"background:" + $c[0] + ";color:" + $c[1] + ";border-radius:8px;padding:9px 12px;margin:0 0 8px;font-size:13.5px;line-height:1.4\">"
+          + "<strong>" + ((.section // "")|h) + "</strong> &middot; " + ((.message // "")|h)
+          + " &nbsp;" + link(aurl(.section // ""); "view")
+          + "</div>") | join(""))
+      else card("Alerts"; ""; ""; item("No alerts. All green.")) end)
+
+    + (if $s.system then
+        card("System"; $grafana; "Grafana";
+          item(((($s.system.services_active // 0)|tostring)|h) + " services &middot; "
+            + ((($s.system.services_failed // 0)|tostring)|h) + " failed &middot; "
+            + ((($s.system.containers_running // 0)|tostring)|h) + " containers")
+          + (($s.system.failed_units // []) | map(item("<span style=\"color:#b3261e\">&#10007; " + (.|h) + "</span>")) | join(""))
+          + (($s.system.storage // []) | map(item((.mount|h) + " " + meta(((.percent // 0)|tostring) + "% used"))) | join(""))
+          + (if $s.backup.exit_status then
+              item("backup: borg " + (($s.backup.exit_status // "?")|h)
+                + (if $s.backup.postgres then " &middot; postgres " + (($s.backup.postgres.exit_status // "?")|h) else "" end))
+            else "" end))
+      else "" end)
+
+    + (if $s.ops then ($s.ops as $o |
+        (($o.service_failures // []) | length) as $nsvc |
+        (($o.kuma_failing // []) | length) as $nkuma |
+        (($o.journal_errors_top // []) | length) as $nerr |
+        (($o.prometheus_targets_down // []) | length) as $ndown |
+        (($o.nightly_builds_finished // []) | length) as $nnb |
+        card("Overnight Ops &middot; since " + ((($o.since // "")[5:16])|h); $kuma; "Uptime Kuma";
+          (if ($nsvc + $nkuma + $nerr + $ndown + $nnb) == 0 then item(meta("Quiet night — no failures, no probe drops, no errors")) else
+            (($o.service_failures // []) | map(item("<span style=\"color:#b3261e\">&#10007; " + (.service|h) + "</span> " + meta("failed @ " + ((.time // "")[11:16])))) | join(""))
+            + (($o.kuma_failing // []) | map(item("~ " + (.monitor|h) + " " + meta(((.failed_probes|tostring)|h) + " failed probes"))) | join(""))
+            + (($o.prometheus_targets_down // []) | map(item("~ target down: " + (.job|h) + " " + meta((.instance // "")|h))) | join(""))
+            + (($o.journal_errors_top // []) | map(item((.unit|h) + " " + meta(((.errors|tostring)|h) + " journal errors"))) | join(""))
+            + (if $nnb > 0 then item("<strong>Built overnight:</strong> " + (($o.nightly_builds_finished // []) | map(h) | join(", "))) else "" end)
+          end)
+          + (($o.disk_forecast // [])[:3] | map(item((.mount|h) + " " + meta("full in ~" + ((.days_to_full|tostring)|h) + "d at current growth"))) | join(""))))
+      else "" end)
+
+    + (if ($s.calendar.events // []) | length > 0 then
+        card("This Week"; ""; "";
+          ($s.calendar.events | map(
+            item(meta(((.date // ((.start // "") | split("T")[0]))|h)
+                + " " + (if .allDay then "all-day" else (((.start // "") | split("T")[1] // "")|h) end)) + " &nbsp;"
+              + (.summary|h)
+              + (if (.location // "") | startswith("http") then " &middot; " + link(.location; "join link")
+                 elif (.location // "") != "" then " " + meta((.location|h)) else "" end))) | join("")))
+      else "" end)
+
+    + (if ($s.tasks // {}) | ((.overdue // []) + (.due_today // []) + (.due_this_week // [])) | length > 0 then
+        card("Tasks"; $dash; "dashboard";
+          (($s.tasks.overdue // []) | map(item("<span style=\"color:#b3261e;font-weight:600\">OVERDUE</span> " + meta(((.due_date // "")|h)) + " &nbsp;" + (.name|h))) | join(""))
+          + (($s.tasks.due_today // []) | map(item("<strong>today</strong> &nbsp;" + (.name|h))) | join(""))
+          + (($s.tasks.due_this_week // []) | map(item(meta(((.due_date // "")|h)) + " &nbsp;" + (.name|h))) | join("")))
+      else "" end)
+
+    + (if ($s.leads.items // []) | length > 0 then
+        card("Leads (" + (($s.leads.items | length | tostring)|h) + ")"; $jt; "JobTread";
+          ($s.leads.items | map(
+            item((if .url then link(.url; (.name|h)) else (.name|h) end)
+              + (if (.job_type // "") != "" then " " + meta((.job_type|h)) else "" end)
+              + " " + meta(((.days_old|tostring)|h) + "d old"))) | join("")))
+      else "" end)
+
+    + (if ($s.overdue.count // 0) > 0 then
+        card("Overdue Invoices &middot; $" + ((($s.overdue.total_amount // 0) | round | tostring)|h); $jt; "JobTread";
+          ($s.overdue.items | map(
+            item("<strong>$" + (((.amount // 0) | round | tostring)|h) + "</strong> &nbsp;"
+              + (if .url then link(.url; ((.job_name // .name)|h)) else ((.job_name // .name)|h) end)
+              + (if .days_past_due then " " + meta(((.days_past_due|tostring)|h) + "d past due") else "" end))) | join("")))
+      else "" end)
+
+    + (if ($s.jobs.active // []) | length > 0 then
+        card("Active Jobs (" + (($s.jobs.active | length | tostring)|h) + ")"; $jt; "JobTread";
+          ($s.jobs.active | map(
+            item(meta("#" + ((.number // "?")|h)) + " &nbsp;"
+              + (if .url then link(.url; (.name|h)) else (.name|h) end)
+              + " " + meta(((.phase // "?")|h) + " / " + ((.status // "?")|h)))) | join("")))
+      else "" end)
+
+    + (if .mail_triage then
+        card("Mail"; $dash; "triage";
+          item("urgent " + ((.mail_triage.buckets.urgent // []) | length | tostring)
+            + " &middot; review " + ((.mail_triage.buckets.review // []) | length | tostring)
+            + " &middot; noise " + ((.mail_triage.buckets.noise // []) | length | tostring)
+            + (if $s.mail.summary then " &middot; " + meta(($s.mail.summary|h)) else "" end))
+          + (if .mail_triage.error then item("<span style=\"color:#b3261e\">triage error: " + (.mail_triage.error|h) + "</span>") else "" end)
+          + (((.mail_triage.buckets.urgent // [])[:5]) | map(
+              item("<span style=\"color:#b3261e;font-weight:600\">!</span> " + ((.from_name // .from_address // "?")|h) + ": " + ((.subject // "?")|h)
+                + (if .summary then "<br><span style=\"color:#8a8378;font-size:13px;padding-left:14px\">" + (.summary|h) + "</span>" else "" end))) | join(""))
+          + (((.mail_triage.buckets.review // [])[:5]) | map(
+              item(meta("&middot;") + " " + ((.from_name // .from_address // "?")|h) + ": " + ((.subject // "?")|h))) | join("")))
+      else "" end)
+
+    + (if $s.website and ($s.website | length > 0) then
+        card("Website"; $stats; "Umami";
+          item(((($s.website.visitors_24h // 0)|tostring)|h) + " visitors 24h &middot; "
+            + ((($s.website.visitors_7d // 0)|tostring)|h) + " visitors / "
+            + ((($s.website.pageviews_7d // 0)|tostring)|h) + " views 7d")
+          + item("calculator leads: " + ((($s.website.leads_24h // 0)|tostring)|h) + " today &middot; "
+            + ((($s.website.leads_7d // 0)|tostring)|h) + " this week")
+          + (($s.website.top_pages_7d // [])[:3] | map(item(meta((.url|h) + " — " + ((.views|tostring)|h) + " views"))) | join("")))
+      else "" end)
+
+    + "<div style=\"text-align:center;padding:10px 0 4px;font-size:12px;color:#8a8378\">"
+    + link($dash; "dashboard") + " &nbsp;&middot;&nbsp; " + link($grafana; "grafana")
+    + " &nbsp;&middot;&nbsp; " + link($kuma; "uptime kuma") + " &nbsp;&middot;&nbsp; " + link($jt; "jobtread")
+    + " &nbsp;&middot;&nbsp; " + link($stats; "analytics")
+    + "</div></div></div>"
+  ' "${OUTPUT_DIR}/briefing.json" 2>>"${LOG_FILE}") || EMAIL_HTML=""
   if [ -n "${EMAIL_BODY}" ]; then
     ALERT_COUNT=$(jq -r '(.alerts // []) | length' "${OUTPUT_DIR}/briefing.json" 2>/dev/null || echo "?")
-    # Slot-stamped subject: normally only the pre-9am run emails, but a
-    # FORCE_EMAIL midday/evening send should not masquerade as the morning one.
-    SLOT="Morning"
-    if [ "${HOUR_NOW#0}" -ge 15 ] 2>/dev/null; then SLOT="Evening"
-    elif [ "${HOUR_NOW#0}" -ge 11 ] 2>/dev/null; then SLOT="Midday"; fi
     SUBJECT="${SLOT} Briefing $(date +%Y-%m-%d)"
     [ "${ALERT_COUNT}" != "0" ] && SUBJECT="${SUBJECT} — ${ALERT_COUNT} alert(s)"
     # From office@, NOT eric@: self-sent mail (eric→eric) gets Proton's
     # sent+auto-archive treatment and never shows in the Inbox (found 2026-07-06,
     # first live run). office@ is an alias on the same bridge; lands in Inbox.
-    if printf 'Subject: %s\nFrom: office@iheartwoodcraft.com\nTo: eric@iheartwoodcraft.com\n\n%s\n' \
-        "${SUBJECT}" "${EMAIL_BODY}" | "${MSMTP_BIN}" -a proton-office eric@iheartwoodcraft.com 2>>"${LOG_FILE}"; then
-      log "OK: Briefing emailed"
+    # multipart/alternative: HTML is what clients show; the plain render is the
+    # fallback (and what notmuch/aerc searches). If the HTML render failed,
+    # degrade to plain-only rather than skipping the send.
+    BOUNDARY="hwc-briefing-$(date +%s)"
+    if [ -n "${EMAIL_HTML}" ]; then
+      MSG=$(printf 'Subject: %s\nFrom: office@iheartwoodcraft.com\nTo: eric@iheartwoodcraft.com\nMIME-Version: 1.0\nContent-Type: multipart/alternative; boundary="%s"\n\n--%s\nContent-Type: text/plain; charset=utf-8\n\n%s\n\n--%s\nContent-Type: text/html; charset=utf-8\n\n%s\n\n--%s--\n' \
+        "${SUBJECT}" "${BOUNDARY}" "${BOUNDARY}" "${EMAIL_BODY}" "${BOUNDARY}" "${EMAIL_HTML}" "${BOUNDARY}")
+    else
+      log "WARN: HTML render failed — sending plain-text only"
+      MSG=$(printf 'Subject: %s\nFrom: office@iheartwoodcraft.com\nTo: eric@iheartwoodcraft.com\n\n%s\n' \
+        "${SUBJECT}" "${EMAIL_BODY}")
+    fi
+    if printf '%s\n' "${MSG}" | "${MSMTP_BIN}" -a proton-office eric@iheartwoodcraft.com 2>>"${LOG_FILE}"; then
+      log "OK: Briefing emailed (${SLOT}, html: $([ -n "${EMAIL_HTML}" ] && echo yes || echo no))"
     else
       log "WARN: msmtp send failed (briefing still on dashboard/workbench)"
     fi
