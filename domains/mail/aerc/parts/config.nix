@@ -29,6 +29,10 @@ let
     growth         = tag:inbox AND (tag:admin OR tag:coaching) AND NOT tag:trash
     system         = tag:inbox AND (tag:tech OR tag:website) AND NOT tag:trash
 
+    # ── Triage buckets (tag-backed; shared with the workbench kanban and the
+    # morning briefing — placement IS the live triage/* tag) ──
+${triageQueries}
+
     # ── Bulk / review ──
     all            = tag:inbox AND NOT tag:trash
     newsletters    = tag:inbox AND tag:newsletter AND NOT tag:trash
@@ -58,7 +62,7 @@ ${tagQueries}
     outgoing            = ${pkgs.msmtp}/bin/msmtp
     default             = focus
     enable-folders-sort = true
-    folders-sort        = focus,today,week,people,action_!,pending_?,family,keep,business,money,growth,system,all,newsletters,notifications,inbox_i,unread_u,important,drafts,sent_s,Archive_a,trash_d,spam_z
+    folders-sort        = focus,today,week,people,${lib.concatMapStringsSep "," tags.triageTag tags.triageBuckets},action_!,pending_?,family,keep,business,money,growth,system,all,newsletters,notifications,inbox_i,unread_u,important,drafts,sent_s,Archive_a,trash_d,spam_z
   '';
 
   accountsFile = pkgs.writeText "aerc-accounts.conf" accountsConf;
@@ -72,6 +76,15 @@ ${tagQueries}
   # Category tag names for inbox-scoped queries
   categoryNames = builtins.listToAttrs (map (t: { name = t.tag; value = true; }) tags.categoryTags);
   isCategoryTag = t: categoryNames ? ${t.tag};
+
+  # Triage bucket folders — names contain "/" so dirlist-tree nests them under
+  # one "triage" node. Inbox-scoped to mirror the workbench board's window.
+  triageQueries = lib.concatStringsSep "\n" (map (b:
+    let name = tags.triageTag b;
+        n = 18 - builtins.stringLength name;
+        pad = if n > 0 then lib.fixedWidthString n " " "" else "";
+    in "    ${name}${pad} = tag:${tags.triageTag b} AND tag:inbox AND NOT tag:trash"
+  ) tags.triageBuckets);
 
   # Derive notmuch query-map entries from tagDefs
   # Category tags are inbox-scoped (only show active items); flag tags show all
@@ -144,7 +157,7 @@ in
       which-key-delay = 350ms
       # Labels for group (prefix) keys in the popover, so <Space>g shows
       # "go: folders" not "+20". Mirrors domains/home/keymap/grammar.nix groups.
-      which-key-groups = g:go (folders), m:mark (tags), f:find, s:sort, t:toggle, b:buffer, y:yank, d:delete, w:window, p:project, o:open, q:quit
+      which-key-groups = g:go (folders), m:mark (tags), f:find, s:sort, t:toggle/triage, b:buffer, y:yank, d:delete, w:window, p:project, o:open, q:quit
       styleset-name = hwc
       dirlist-left = {{.Style .Folder .Folder}}
       dirlist-tree = true

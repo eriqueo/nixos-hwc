@@ -13,6 +13,19 @@ let
     "      <Space>m${t.spaceKey} = :modify-labels +${t.tag}<Enter> # +${t.tag}"
   ) tags.flagTags);
 
+  # ── Triage set-bucket bindings under <Space>t (t = toggle/triage group) ──
+  # Replace-set semantics identical to the gateway's hwc_mail set-triage, so a
+  # keypress here moves the same card on the workbench kanban. <Space>mt is
+  # taken (tech category), hence the t group. Keys: first letter of bucket.
+  triageBinds = lib.concatStringsSep "\n" (map (b:
+    "      <Space>t${builtins.substring 0 1 b} = :modify-labels ${tags.setTriageCmd b}<Enter> # triage: ${b}"
+  ) tags.triageBuckets);
+
+  # Go-to triage folders: uppercase first letter (<Space>gt is tech's folder)
+  triageGoBinds = lib.concatStringsSep "\n" (map (b:
+    "      <Space>g${lib.toUpper (builtins.substring 0 1 b)} = :cf ${tags.triageTag b}<Enter> # ${tags.triageTag b}"
+  ) tags.triageBuckets);
+
   # Space-leader go-to-folder bindings
   goToBinds = lib.concatStringsSep "\n" (
     lib.filter (s: s != "") (map (t:
@@ -49,6 +62,10 @@ let
     ${flagHelp}
     -- categories (exclusive) --
     ${catHelp}
+
+    TRIAGE  -  Space t ... (mark)  /  Space g U|R|N (go to folder)
+    Space t u  → urgent   Space t r  → review   Space t n  → noise
+    (replace-set on the triage/* tags — moves the workbench kanban card too)
 
     FILTER / SORT / VIEW
     Space f f  filter        Space f s  search      Space f t  trash-sender
@@ -125,6 +142,9 @@ in
       <Space>g_ = :cf hide_my_email<Enter> # hide-my-email
 ${goToBinds}
 
+      # Triage folders (tag-backed buckets, shared with workbench kanban)
+${triageGoBinds}
+
       # Flexible path
       X = :mv<space>
       Y = :cp<space>
@@ -134,6 +154,9 @@ ${goToBinds}
       <Space>fs = :search<space> # search
       <Space>sd = :sort -r date<Enter> # sort by date
       <Space>tt = :toggle-threads<Enter> # toggle threads
+
+      # Triage bucket marking (replace-set, same semantics as workbench moves)
+${triageBinds}
 
       # Auto-trash sender management
       <Space>ft = :pipe -b -m ${config.home.homeDirectory}/.local/bin/aerc-trash-sender<Enter>:modify-labels +trash -inbox -unread<Enter> # trash sender

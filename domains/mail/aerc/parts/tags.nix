@@ -90,7 +90,19 @@ let
       removes = lib.concatMapStringsSep " " (n: "-${n}") allToClear;
     in removes;
 
+  # ── Triage buckets (tag-backed, from the taxonomy) ──
+  # Same replace-set semantics as the gateway's hwc_mail set-triage: add the
+  # target triage/<bucket> tag, drop every other triage/* tag. This is what
+  # lets an aerc keypress move a card on the workbench kanban and vice versa.
+  triageBuckets = taxonomy.triage.buckets;
+  triageTag = b: "${taxonomy.triage.tagPrefix}${b}";
+  setTriageCmd = b:
+    "+${taxonomy.triage.tagPrefix}${b}"
+    + lib.concatMapStrings (o: " -${taxonomy.triage.tagPrefix}${o}")
+        (lib.filter (o: o != b) taxonomy.triage.buckets);
+
 in {
   inherit categoryTags flagTags allTags tagStyle categoryNames exclusiveCmd clearFlagsCmd clearAllCmd;
   inherit group tagStyleLines;
+  inherit triageBuckets triageTag setTriageCmd;
 }

@@ -133,10 +133,24 @@ No shared central database — the contract is shared, the stores are not.
 
 ## Part 3 — Surface work (config-level, phased)
 
-### Phase 2 — aerc joins triage (HM-only, small)
-- Virtual folders for `triage/urgent|review|noise` from the taxonomy.
-- `<Space>t u/r/n` keybinds → `set-triage` semantics via `notmuch tag`
-  (same replace-set the gateway uses).
+### Phase 2 — aerc joins triage · IMPLEMENTED 2026-07-09
+- Virtual folders `triage/urgent|review|noise` generated from the taxonomy
+  (nested under one "triage" dirlist-tree node, inbox-scoped to mirror the
+  kanban's window), in folders-sort after `people`.
+- `<Space>tu/tr/tn` set-bucket keybinds (replace-set, identical semantics to
+  the gateway's `set-triage`; `<Space>mt`/`<Space>gt` were taken by the tech
+  category) and `<Space>gU/gR/gN` go-to-folder binds. Cheat sheet + which-key
+  group label updated.
+
+**Finding (Phase 2): notmuch tag DBs are per-machine.** The briefing/gateway
+stamp `triage/*` on the SERVER DB; the laptop DB has none of them, so laptop
+aerc's triage folders are empty and its set-triage keys don't reach the
+board. Cross-machine tag convergence today is only via Proton folder/label
+state (afew MailMover) and per-machine deterministic rules. Decision needed:
+(a) **muchsync** laptop↔server (purpose-built notmuch tag sync — the real
+fix for "every surface, every machine, same tags"), or (b) declare the
+server DB canonical and treat laptop aerc as read-mostly. Until then, aerc
+triage is fully functional on the server.
 
 ### Phase 3 — workbench live + verbs
 - Laptop `gateway_url` → server gateway over Tailscale (kills the mail tile

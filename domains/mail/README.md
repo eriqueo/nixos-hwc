@@ -73,6 +73,12 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-07-09 (b): aerc joins triage (unified-triage Phase 2) — `triage/*`
+  virtual folders (taxonomy-generated, tree-nested, inbox-scoped) +
+  `<Space>tu/tr/tn` set-bucket binds (replace-set, same semantics as the
+  gateway's `hwc_mail set-triage`) + `<Space>gU/gR/gN` go-tos. NOTE: notmuch
+  tag DBs are per-machine — triage tags currently live on hwc-server only
+  (see docs/plans/unified-triage-architecture.md Phase 2 finding).
 - 2026-07-09: New `taxonomy/` library (pure data + derivations) — single
   source of truth for tag vocabulary, triage buckets, and sender
   dispositions. `notmuch` rule defaults, `aerc/parts/tags.nix`, the MCP
