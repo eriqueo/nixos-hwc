@@ -113,6 +113,73 @@ export async function fetchBoard(
   return { phases, tickets };
 }
 
+/** Shared JSON-body request for the write endpoints. Throws on transport or
+ * non-2xx (the caller surfaces it as a tool error — writes fail loud). */
+async function sendJson(
+  url: string,
+  method: "PATCH" | "POST" | "DELETE",
+  body: unknown,
+  timeoutMs: number,
+): Promise<unknown> {
+  let resp: Response;
+  try {
+    resp = await fetch(url, {
+      method,
+      headers: body === undefined ? {} : { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(`sr_analyzer unreachable at ${url}: ${reason}`);
+  }
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => "");
+    throw new Error(`sr_analyzer ${method} ${url} → HTTP ${resp.status}: ${text.slice(0, 200)}`);
+  }
+  return resp.status === 204 ? null : resp.json().catch(() => null);
+}
+
+/** PATCH <base>/api/tickets/:id/move — move a ticket to another phase
+ * (toIndex 0 = top of the column; the board sorts by updatedAt anyway). */
+export async function moveTicket(
+  baseUrl: string,
+  ticketId: string,
+  toPhaseId: string,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): Promise<unknown> {
+  return sendJson(
+    `${baseUrl.replace(/\/$/, "")}/api/tickets/${encodeURIComponent(ticketId)}/move`,
+    "PATCH",
+    { toPhaseId, toIndex: 0 },
+    timeoutMs,
+  );
+}
+
+/** DELETE <base>/api/tickets/:id — remove a ticket from the board. */
+export async function deleteTicket(
+  baseUrl: string,
+  ticketId: string,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): Promise<unknown> {
+  return sendJson(
+    `${baseUrl.replace(/\/$/, "")}/api/tickets/${encodeURIComponent(ticketId)}`,
+    "DELETE",
+    undefined,
+    timeoutMs,
+  );
+}
+
+/** POST <base>/api/triage/all — re-run the analyzer's own triage pass over
+ * all tickets (its rules engine, not an LLM in this process). Can take a few
+ * seconds on a big board, so give it a longer leash. */
+export async function triageAll(
+  baseUrl: string,
+  timeoutMs: number = 30_000,
+): Promise<unknown> {
+  return sendJson(`${baseUrl.replace(/\/$/, "")}/api/triage/all`, "POST", {}, timeoutMs);
+}
+
 /** GET <base>/api/import/datax/status → last-observed Firestore sync.
  * This is the reachability signal the API-Health tile reads: a fresh
  * `lastRunAt` means the poller successfully read Firestore recently. */

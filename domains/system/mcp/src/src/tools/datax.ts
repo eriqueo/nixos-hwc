@@ -13,12 +13,15 @@
  * (see executors/sr-analyzer.ts + executors/sr-gauntlet-ledger.ts).
  */
 
-import { catchError } from "../errors.js";
+import { catchError, mcpError } from "../errors.js";
 import { contract } from "../result.js";
 import type { ToolDef, ToolResult } from "../types.js";
 import {
   fetchBoard,
   fetchImportStatus,
+  moveTicket,
+  deleteTicket,
+  triageAll,
   type AnalyzerTicket,
 } from "../executors/sr-analyzer.js";
 import { loadLedger } from "../executors/sr-gauntlet-ledger.js";
@@ -75,13 +78,29 @@ export function dataxTools(analyzerUrl: string, ledgerPath: string): ToolDef[] {
     {
       name: "datax_support_requests",
       description:
-        "DataX support-request board as a kanban: live tickets from sr_analyzer " +
-        "grouped by phase (New/Open/…), each card badged with the SR gauntlet's " +
-        "investigation date when it has been auto-investigated. Closed/Archive " +
-        "phases hidden unless includeClosed. Backs the workbench DataX hub.",
+        "DataX support-request board (Triage Surface Contract). READ (default action=board): live tickets " +
+        "from sr_analyzer as a kanban grouped by phase (New/Open/…), each card badged with the SR gauntlet's " +
+        "investigation date when auto-investigated; Closed/Archive phases hidden unless includeClosed. " +
+        "WRITES: action=move with id+target=<phase id> moves a ticket between phases (the kanban column " +
+        "move); action=delete with id removes a ticket; action=retriage re-runs the analyzer's own triage " +
+        "pass over all tickets. Backs the workbench DataX hub.",
       inputSchema: {
         type: "object",
         properties: {
+          action: {
+            type: "string",
+            enum: ["board", "move", "delete", "retriage"],
+            default: "board",
+            description: "board = read; move (id+target) / delete (id) / retriage = writes",
+          },
+          id: {
+            type: "string",
+            description: "[move/delete] ticket id (the kanban card id)",
+          },
+          target: {
+            type: "string",
+            description: "[move] destination phase id (the kanban column id)",
+          },
           includeClosed: {
             type: "boolean",
             description: "Include the Closed/Archive phases (default false).",
@@ -93,6 +112,57 @@ export function dataxTools(analyzerUrl: string, ledgerPath: string): ToolDef[] {
         },
       },
       handler: async (args): Promise<ToolResult> => {
+        const action = (args.action as string) || "board";
+
+        // ── writes: the generic workbench card_actions/board_actions path ──
+        if (action !== "board") {
+          try {
+            if (action === "retriage") {
+              const result = await triageAll(analyzerUrl);
+              return {
+                status: "ok",
+                message: "sr_analyzer triage pass re-run over all tickets",
+                data: { action, result },
+              };
+            }
+            const id = String(args.id ?? "").trim();
+            if (!id) {
+              return mcpError({
+                type: "VALIDATION_ERROR",
+                message: `write '${action}' needs a ticket id`,
+                suggestion: "Pass the kanban card id as `id`",
+              });
+            }
+            if (action === "move") {
+              const target = String(args.target ?? "").trim();
+              if (!target) {
+                return mcpError({
+                  type: "VALIDATION_ERROR",
+                  message: "move needs target=<phase id> (the kanban column id)",
+                });
+              }
+              const result = await moveTicket(analyzerUrl, id, target);
+              return { status: "ok", message: `moved ${id} → phase ${target}`, data: { action, id, target, result } };
+            }
+            if (action === "delete") {
+              await deleteTicket(analyzerUrl, id);
+              return { status: "ok", message: `deleted ticket ${id}`, data: { action, id } };
+            }
+            return mcpError({
+              type: "VALIDATION_ERROR",
+              message: `unknown action "${action}"`,
+            });
+          } catch (err) {
+            return catchError(
+              "NETWORK_ERROR",
+              `sr_analyzer ${action} failed`,
+              err,
+              `Check the sr_analyzer container is up at ${analyzerUrl}.`,
+            );
+          }
+        }
+
+        // ── read: the kanban board ──
         const includeClosed = args.includeClosed === true;
         const limit =
           typeof args.limit === "number" && args.limit > 0

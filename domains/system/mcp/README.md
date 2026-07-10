@@ -492,6 +492,13 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-07-10**: Triage Surface Contract writes (unified-triage Phases 3–5):
+  `hwc_mail_triage` accepts `{action: triage-<bucket>|move|archive|trash|
+  flag-action, id[, target]}` (notmuch tag ops) + `retriage` (touches
+  `HWC_RETRIAGE_TRIGGER` → mail-retriage.service); board reads drop
+  de-inboxed threads. `datax_support_requests` accepts `move` (phase move via
+  sr_analyzer PATCH /tickets/:id/move), `delete`, `retriage`
+  (POST /triage/all). Both back the workbench's generic card_actions path.
 - **2026-07-09**: `hwc_mail` tag vocabulary (categories/flags/triage buckets +
   per-tag saved searches) now loads at startup from `HWC_MAIL_TAXONOMY_FILE`
   — a store-path JSON baked by `index.nix` from the canonical

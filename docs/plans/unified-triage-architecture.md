@@ -175,10 +175,19 @@ surface hits the one server DB. No tag sync (muchsync etc.) is needed.
 - `hubs/mail.toml`: `board_actions = ["retriage"]`, hub key `R`.
 
 ### Phase 5 — conform the other domains + the web surface
-- Leads: wrap `leads_classify`/status into the contract (board/summary/verbs).
-- DataX SRs: sr_analyzer already has board + statuses; add `set-triage`-shaped
-  verb mapping to its status/typeId moves (the datax hub kanban then gets
-  `card_actions` for free).
+- **DataX SRs · IMPLEMENTED 2026-07-10.** `datax_support_requests` grew the
+  contract writes: `move` (id + target=phase id → sr_analyzer
+  `PATCH /tickets/:id/move`), `delete` (confirm-gated, for spam/dupe SRs),
+  and `retriage` (`POST /triage/all`, the analyzer's own rules pass).
+  `hubs/datax.toml` declares `card_actions`/`confirm_actions`/
+  `board_actions` — H/L now move SRs between phases from the workbench,
+  persisted in the analyzer's store.
+- **Leads · ASSESSED OUT (2026-07-10).** No leads board exists anywhere, and
+  the lead-scout statuses (received/pending_jt/complete) are pipeline
+  plumbing states — not triage buckets a human moves things between. Eric's
+  real lead workflow lives in JobTread's stages. Forcing a kanban onto the
+  plumbing would be conformance theater; revisit only if a genuine lead
+  triage workflow emerges outside JT.
 - Briefing web: the static dashboard stays read-only; interactivity = wire up
   the existing Next.js app at `~/600_apps/morning-briefing` (it already has
   MCP-backed tile implementations). Decision gate: run its own premortem;
