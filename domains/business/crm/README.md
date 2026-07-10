@@ -37,7 +37,7 @@ crm/
 | `.jtGrantKeyRef` | `jobtread-grant-key` | Manual-lead JT create. |
 | `.tick.enable` / `.tick.onCalendar` | true / hourly | Persistent timer. |
 
-Ingress: Caddy vhost `hwc-crm.hwc.iheartwoodcraft.com` (tailnet-private).
+Ingress: Caddy vhost `crm.hwc.iheartwoodcraft.com` (tailnet-private).
 
 ## Changelog
 

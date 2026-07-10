@@ -214,9 +214,9 @@ in
       };
     };
 
-    # Tailnet-private vhost: hwc-crm.hwc.iheartwoodcraft.com
+    # Tailnet-private vhost: crm.hwc.iheartwoodcraft.com
     hwc.networking.shared.routes = [{
-      name = "hwc-crm";
+      name = "crm";
       mode = "vhost";
       upstream = "http://${cfg.bindAddr}:${toString cfg.port}";
     }];
