@@ -207,6 +207,28 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
   const [reportUrl, setReportUrl] = useState(null);
   const [reportId, setReportId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  // Availability-aware booking: real free slots from hwc-crm for the picked date.
+  const [slots, setSlots] = useState(null);          // null=none loaded, []=no slots
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const crmBase = (webhookApptUrl || "").replace(/\/hooks\/appointment.*$/, "");
+  const fmtSlot = (s) => {
+    const [h, m] = s.split(":").map(Number);
+    const ap = h < 12 ? "AM" : "PM";
+    const h12 = ((h + 11) % 12) + 1;
+    return `${h12}:${String(m).padStart(2, "0")} ${ap}`;
+  };
+  const loadSlots = async (date) => {
+    setContact((c) => ({ ...c, preferred_date: date, preferred_time: "" }));
+    setSlots(null);
+    if (!date || !crmBase) return;
+    setSlotsLoading(true);
+    try {
+      const r = await fetch(`${crmBase}/hooks/availability?date=${date}`);
+      const j = await r.json();
+      setSlots(Array.isArray(j.slots) ? j.slots : []);
+    } catch { setSlots([]); }
+    setSlotsLoading(false);
+  };
 
   const cur = STEPS[step];
   const [lo, hi] = calculateRange(state);
@@ -422,14 +444,17 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
                 <input type="email" placeholder="Email address" value={contact.email} onChange={(e) => setContact((c) => ({ ...c, email: e.target.value }))} style={inputStyle} onFocus={(e) => (e.target.style.borderColor = T.copper)} onBlur={(e) => (e.target.style.borderColor = T.border)} />
                 <input type="tel" placeholder="Phone number" value={contact.phone} onChange={(e) => setContact((c) => ({ ...c, phone: e.target.value }))} style={inputStyle} onFocus={(e) => (e.target.style.borderColor = T.copper)} onBlur={(e) => (e.target.style.borderColor = T.border)} />
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>Preferred call time (optional)</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>Pick a time (Mountain Time · Mon–Fri)</div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <input type="date" value={contact.preferred_date || ""} onChange={(e) => setContact((c) => ({ ...c, preferred_date: e.target.value }))} min={new Date().toISOString().split("T")[0]} style={{ ...inputStyle, flex: 1 }} />
-                    <select value={contact.preferred_time || ""} onChange={(e) => setContact((c) => ({ ...c, preferred_time: e.target.value }))} style={{ ...inputStyle, flex: 1 }}>
-                      <option value="">Time...</option>
-                      <option value="morning">Morning (9–12)</option>
-                      <option value="afternoon">Afternoon (12–5)</option>
-                      <option value="evening">Evening (5–7)</option>
+                    <input type="date" value={contact.preferred_date || ""} onChange={(e) => loadSlots(e.target.value)} min={new Date().toISOString().split("T")[0]} style={{ ...inputStyle, flex: 1 }} />
+                    <select value={contact.preferred_time || ""} onChange={(e) => setContact((c) => ({ ...c, preferred_time: e.target.value }))} disabled={!slots || slots.length === 0} style={{ ...inputStyle, flex: 1, cursor: slots && slots.length ? "pointer" : "not-allowed" }}>
+                      <option value="">
+                        {slotsLoading ? "Loading times…"
+                          : slots === null ? "Pick a date first"
+                          : slots.length === 0 ? "No times — try another day"
+                          : "Select a time…"}
+                      </option>
+                      {(slots || []).map((s) => <option key={s} value={s}>{fmtSlot(s)}</option>)}
                     </select>
                   </div>
                 </div>
