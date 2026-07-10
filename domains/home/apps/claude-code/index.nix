@@ -81,7 +81,15 @@ in
         Unit.Description = "Fast-forward-pull the shared claude-config repo";
         Service = {
           Type = "oneshot";
-          ExecStart = "${pkgs.git}/bin/git -C ${cfg.shareConfig.repoPath} pull --ff-only";
+          # Fetch, then fast-forward ONLY when strictly behind. A diverged/ahead
+          # or dirty tree is a clean no-op (exit 0) — matching the receive-only
+          # intent — instead of `pull --ff-only`'s loud exit-128 every interval.
+          ExecStart = pkgs.writeShellScript "claude-config-pull" ''
+            set -eu
+            ${pkgs.git}/bin/git -C ${cfg.shareConfig.repoPath} fetch --quiet
+            ${pkgs.git}/bin/git -C ${cfg.shareConfig.repoPath} merge --ff-only '@{u}' \
+              || echo "claude-config: non-ff (diverged/ahead/dirty) — skipping pull"
+          '';
         };
       };
       systemd.user.timers.claude-config-pull = {

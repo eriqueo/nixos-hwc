@@ -11,4 +11,5 @@ Installs the Claude Code CLI (Nix package + Obsidian MCP cert trust) and, indepe
 - `index.nix` — options (`enable`, `shareConfig.{enable,repoPath,items,autoPull}`), package + cert var, symlink generation, auto-pull timer, assertions.
 
 ## Changelog
+- 2026-07-09: `claude-config-pull` ExecStart now fetches then `merge --ff-only @{u}`, treating a diverged/ahead/dirty tree as a clean no-op (exit 0) instead of `pull --ff-only`'s exit-128 failure every interval — was generating ~96 failed-oneshot journal errors/day under `user@1000.service`.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).
