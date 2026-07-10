@@ -2,6 +2,19 @@
 
 This directory contains production-ready n8n workflow JSON files that can be imported directly into the n8n UI.
 
+> **Retired 2026-07-09** — the three monitoring/alert workflows below were removed
+> as redundant with the Prometheus/Alertmanager → hwc-notify stack:
+> - `03-system-monitoring-alertmanager-router` — superseded by Alertmanager's
+>   native routing (fan-out to hwc-notify). Was already inactive; deleted.
+> - `05-cross-service-health-monitor` — HTTP health checks now covered by the
+>   blackbox exporter + Grafana "Service Health" dashboard; its ntfy/Slack notify
+>   targets were stale (ntfy/gotify decommissioned). Deleted. **Note:** it also
+>   had an SSH auto-restart self-heal — if that's wanted back, do it declaratively
+>   as systemd `Restart=`/`OnFailure=` policies, not n8n-over-SSH.
+> - `11-mail-health-alert-router` — the mail-health checker (`domains/mail/health`)
+>   now posts straight to hwc-notify; the n8n hop was pure forwarding middleware.
+>   Repointed + orphaned; delete the empty shell in the n8n UI.
+
 ## Workflows
 
 ### 01-media-pipeline-orchestration.json
