@@ -57,18 +57,18 @@ in
       ];
 
       # cAdvisor binary args (entrypoint flags, NOT podman flags).
-      # podman runs oci-containers as machine.slice/libpod-*.scope under cgroup
-      # v2. --docker_only hid them (the Docker factory can't map libpod scopes),
-      # so scope the raw factory to machine.slice — that surfaces each container
-      # cgroup by id; the dashboard relabels the libpod hash to a short name.
       cmd = [
-        "--raw_cgroup_prefix_whitelist=/machine.slice"
         "--store_container_labels=false"
       ];
 
       extraOptions = [
         "--privileged"
         "--device=/dev/kmsg"
+        # CRITICAL for podman: without this, podman gives cAdvisor its OWN cgroup
+        # namespace, so /sys/fs/cgroup inside shows tmpfs (empty) and it only
+        # reports the root cgroup id=/. Sharing the host cgroup namespace lets it
+        # read every container's machine.slice/libpod-*.scope stats.
+        "--cgroupns=host"
       ];
     };
 
