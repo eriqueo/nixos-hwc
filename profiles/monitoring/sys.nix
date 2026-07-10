@@ -47,10 +47,11 @@
   # Alertmanager — alert routing to:
   #   hwc-notify     : hexagonal dispatcher (Discord + SMTP + future channels)
   #
-  # The n8n `home:admin:alert-manager` workflow was deactivated
-  # 2026-05-31 after Phase 1.6 cutover. The workflow row is preserved in
-  # n8n's DB as the rollback path (re-activate + re-add the receiver
-  # entry below to restore the old path). Don't delete it.
+  # The n8n `home:admin:alert-manager` workflow was deactivated 2026-05-31
+  # after Phase 1.6 cutover and DELETED from n8n 2026-07-09 (along with the
+  # cross-service-health + mail-health routers) — Alertmanager → hwc-notify is
+  # the sole path now. Rollback = rebuild the workflow from the git history of
+  # domains/automation/n8n/parts/workflows/.
   hwc.monitoring.alertmanager = {
     enable = lib.mkDefault true;
     webhookReceivers = [

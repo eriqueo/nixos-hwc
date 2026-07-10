@@ -466,7 +466,6 @@ curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/calculator-lead
 **Request Schema:**
 ```json
 {
-<<<<<<< HEAD
   "name": "John Smith",
   "phone": "4065551234",
   "email": "john@example.com",
