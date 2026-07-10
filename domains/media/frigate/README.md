@@ -691,6 +691,7 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+- 2026-07-10: **Frigate exporter actually works now + enabled.** The `frigate.exporter` module referenced `ghcr.io/blakeblackshear/frigate-prometheus-exporter` — an image that never existed (403), so it was dead on arrival and left disabled. Repointed to the maintained `docker.io/rhysbailey/prometheus-frigate-exporter` (bairhys/prometheus-frigate-exporter, serves `/metrics` on container port **9100**, host-mapped 9192), fixed `frigateUrl` to `http://host.containers.internal:5000` (the exporter runs on the podman bridge; Frigate is `--network=host`, so `localhost` couldn't reach it), and flipped `exporter.enable = true`. Feeds the new Grafana **Cameras** dashboard (`/d/cameras`): per-camera FPS/detection, onnx inference speed, GPU util, CPU-by-camera, stream bandwidth, surveillance storage.
 - 2026-04-12: Extract cleanup timer/service into parts/cleanup.nix with configurable retention options
 - 2026-04-14: Re-enable cobra_cam_1 4K recording — original GPU heat was from ollama, not Frigate. Record uses go2rtc passthrough (no GPU decode).
 - 2026-04-12: Reduce detection load — drop FPS (5→3 cobra, 3→2 reolink), lower reolink detect resolution (640×360→480×270). GPU temp 74°C→61°C.

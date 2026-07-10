@@ -158,6 +158,10 @@
         icon: grafana
         href: https://grafana.hwc.iheartwoodcraft.com/d/containers
         description: Per-container CPU / RAM / net (Grafana)
+    - Cameras:
+        icon: grafana
+        href: https://grafana.hwc.iheartwoodcraft.com/d/cameras
+        description: Frigate FPS / detection / GPU (Grafana)
     - Lead Scout:
         icon: mdi-radar
         href: https://lead-scout.hwc.iheartwoodcraft.com

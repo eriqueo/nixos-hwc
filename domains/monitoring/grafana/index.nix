@@ -54,6 +54,8 @@ in
         description = "Path to dashboard JSON files";
       };
     };
+
+    imageRenderer.enable = lib.mkEnableOption "Grafana image renderer (headless-Chromium panel/dashboard PNGs)" // { default = true; };
   };
 
   #==========================================================================
@@ -97,6 +99,16 @@ in
           admin_password = "$__file{${cfg.adminPasswordFile}}";
         };
       };
+    };
+
+    # Image renderer — a headless-Chromium sidecar plugin that turns panels and
+    # dashboards into PNGs (enables the render API + /render/... URLs used for
+    # alert screenshots and programmatic dashboard capture). provisionGrafana
+    # wires server_url (renderer) + callback_url (http://127.0.0.1:3000) into
+    # Grafana's [rendering] settings automatically.
+    services.grafana-image-renderer = lib.mkIf cfg.imageRenderer.enable {
+      enable = true;
+      provisionGrafana = true;
     };
 
     # Prometheus datasource provisioning

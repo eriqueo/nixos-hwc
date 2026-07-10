@@ -20,8 +20,10 @@ in
   #==========================================================================
   options.hwc.media.frigate.exporter = {
     enable = lib.mkEnableOption "Frigate Prometheus exporter";
-    port = lib.mkOption { type = lib.types.port; default = 9192; description = "Frigate exporter metrics port"; };
-    frigateUrl = lib.mkOption { type = lib.types.str; default = "http://localhost:5000"; description = "Frigate API URL"; };
+    port = lib.mkOption { type = lib.types.port; default = 9192; description = "Frigate exporter metrics port (host side; container listens on 9100)"; };
+    # Frigate runs --network=host on port 5000; this exporter runs on the podman
+    # bridge, so it reaches the stats API via the host gateway alias, not localhost.
+    frigateUrl = lib.mkOption { type = lib.types.str; default = "http://host.containers.internal:5000"; description = "Frigate API URL (reachable from the exporter container)"; };
   };
 
   #==========================================================================
@@ -34,11 +36,14 @@ in
     # Plan: permanent by design (revisit if an infra-shaped helper grows to fit)
     # Revocable: yes
     virtualisation.oci-containers.containers.frigate-exporter = {
-      image = "ghcr.io/blakeblackshear/frigate-prometheus-exporter:latest";
+      # bairhys/prometheus-frigate-exporter — the maintained image. (The former
+      # ghcr.io/blakeblackshear/frigate-prometheus-exporter never existed → 403.)
+      # It reads $FRIGATE_STATS_URL and serves /metrics on container port 9100.
+      image = "docker.io/rhysbailey/prometheus-frigate-exporter:latest";
       autoStart = true;
 
       ports = [
-        "127.0.0.1:${toString cfg.port}:9192"
+        "127.0.0.1:${toString cfg.port}:9100"
       ];
 
       environment = {

@@ -627,7 +627,7 @@
     # Firewall settings
     firewall.tailscaleOnly = true;
 
-    exporter.enable = false;
+    exporter.enable = true;   # frigate-prometheus-exporter → Grafana "Cameras" dashboard
 
     # Automated surveillance cleanup (backup enforcement for Frigate retention)
     cleanup.enable = true;
