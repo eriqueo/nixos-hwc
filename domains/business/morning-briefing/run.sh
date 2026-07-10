@@ -821,7 +821,7 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
 
     + (if (.alerts // []) | length > 0 then
         (.alerts | map(
-          (if .level == "critical" then ["#fdecea"; "#b3261e"] else ["#fdf6e3"; "#7a5d10"] end) as $c |
+          (if .level == "critical" then ["#fdecea", "#b3261e"] else ["#fdf6e3", "#7a5d10"] end) as $c |
           "<div style=\"background:" + $c[0] + ";color:" + $c[1] + ";border-radius:8px;padding:9px 12px;margin:0 0 8px;font-size:13.5px;line-height:1.4\">"
           + "<strong>" + ((.section // "")|h) + "</strong> &middot; " + ((.message // "")|h)
           + " &nbsp;" + link(aurl(.section // ""); "view")
