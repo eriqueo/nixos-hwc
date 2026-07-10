@@ -7,10 +7,10 @@
 { lib, ... }:
 
 {
-  # Mail-health webhook endpoint — names this machine (Law 16 keeps
-  # hostnames out of roles; the rest of the mail menu is in the mail role).
-  hwc.mail.health.webhook.url = "https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/mail-health";
-  # Criticals also page via hwc-notify (priority-1 fanout: Discord ×2 + email).
+  # Mail-health alerts route via hwc-notify only (priority-1 fanout: Discord ×2
+  # + email). The old n8n webhook → Slack hop was redundant middleware — the
+  # n8n workflow just forwarded to this same :11600/notify — so it was retired
+  # 2026-07-09. Leaving webhook.url unset makes send_webhook a no-op.
   hwc.mail.health.notify.url = "http://127.0.0.1:11600";
 
   # Calendar → Radicale (self-hosted CalDAV, same backend as tasks). Retires
