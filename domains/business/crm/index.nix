@@ -24,6 +24,7 @@ let
 
   pythonEnv = pkgs.python3.withPackages (ps: with ps; [
     fastapi uvicorn psycopg jinja2 httpx pydantic email-validator
+    icalendar tzdata
   ]);
 
   crmWrapper = pkgs.writeShellScript "hwc-crm-wrapper" ''
