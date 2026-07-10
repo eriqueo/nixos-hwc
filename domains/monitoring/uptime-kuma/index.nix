@@ -83,6 +83,24 @@ in
       "d ${cfg.dataDir} 0750 root root -"
     ];
 
+    # Auth OFF, baked in: uptime-kuma.hwc.* is tailnet-only (Caddy vhost over
+    # Tailscale), so the login page is pure friction — the tailnet IS the auth,
+    # same trust model as every other .hwc.* internal UI. Kuma has no env-var
+    # for this (its own docs point proxy users at the disableAuth setting in
+    # the DB), so upsert it before every container start: survives rebuilds,
+    # image updates, and volume recreation. Skips silently on a brand-new
+    # empty volume (no kuma.db yet — Kuma's first boot creates it, and the
+    # next unit start bakes the setting).
+    systemd.services.podman-uptime-kuma.serviceConfig.ExecStartPre = [
+      (pkgs.writeShellScript "uptime-kuma-disable-auth" ''
+        db="${cfg.dataDir}/kuma.db"
+        [ -f "$db" ] || exit 0
+        ${pkgs.sqlite}/bin/sqlite3 "$db" \
+          "INSERT INTO setting (key, value, type) VALUES ('disableAuth', 'true', 'general')
+           ON CONFLICT(key) DO UPDATE SET value = 'true';" || true
+      '')
+    ];
+
     # Caddy reverse proxy route
     hwc.networking.shared.routes = [
       {
