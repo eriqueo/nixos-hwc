@@ -654,11 +654,54 @@ function makeBackup(bak){
   const statusCls=bak.exit_status==='success'?'badge-ok':bak.exit_status==='warning'?'badge-warn':'badge-err';
   sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Backup'),$('span',{class:'sec-count'},bak.total_size||'')));
   const row=$('div',{class:'bak-row'});
+  row.appendChild($('span',{class:'bak-detail'},'borg'));
   row.appendChild($('span',{class:`badge ${statusCls}`},bak.exit_status||'unknown'));
   if(bak.last_run){const ago=timeAgo(bak.last_run);row.appendChild($('span',{class:'bak-detail'},`Last: ${ago.text}`))}
   if(bak.archive_count!=null)row.appendChild($('span',{class:'bak-detail'},`${bak.archive_count} archives`));
   if(bak.next_scheduled){const next=fmtTime(bak.next_scheduled);if(next)row.appendChild($('span',{class:'bak-detail'},`Next: ${next}`))}
-  sec.appendChild(row);return sec;
+  sec.appendChild(row);
+  if(bak.postgres){
+    const pg=bak.postgres,pgCls=pg.exit_status==='success'?'badge-ok':'badge-err';
+    const pgRow=$('div',{class:'bak-row'});
+    pgRow.appendChild($('span',{class:'bak-detail'},'postgres'));
+    pgRow.appendChild($('span',{class:`badge ${pgCls}`},pg.exit_status||'unknown'));
+    if(pg.last_run){const ago=timeAgo(pg.last_run);pgRow.appendChild($('span',{class:'bak-detail'},`Last: ${ago.text}`))}
+    sec.appendChild(pgRow);
+  }
+  return sec;
+}
+
+// ── Ops section (overnight digest — since previous evening) ─────────────────
+function makeOps(ops){
+  const svc=ops.service_failures||[],kuma=ops.kuma_failing||[],errs=ops.journal_errors_top||[],
+        down=ops.prometheus_targets_down||[],disk=ops.disk_forecast||[],nb=ops.nightly_builds_finished||[];
+  const quiet=!svc.length&&!kuma.length&&!errs.length&&!down.length&&!nb.length;
+  const sec=$('div',{class:'section'});
+  const sinceLabel=ops.since?`since ${(ops.since||'').slice(5,16)}`:'';
+  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Overnight Ops'),$('span',{class:'sec-count'},sinceLabel)));
+  if(quiet){
+    sec.appendChild($('div',{class:'empty'},'Quiet night — no failures, no probe drops, no errors'));
+  }else{
+    svc.forEach(f=>sec.appendChild($('div',{class:'failed-unit'},`✗ ${f.service} failed @ ${(f.time||'').slice(11,16)}`)));
+    kuma.forEach(k=>sec.appendChild($('div',{class:'item'},
+      $('span',{class:'item-title'},`~ ${k.monitor}`),
+      $('span',{class:'item-meta'},` ${k.failed_probes} failed probes`))));
+    down.forEach(d=>sec.appendChild($('div',{class:'item'},
+      $('span',{class:'item-title'},`~ target down: ${d.job}`),
+      $('span',{class:'item-meta'},` ${d.instance}`))));
+    errs.forEach(e=>sec.appendChild($('div',{class:'item'},
+      $('span',{class:'item-title'},e.unit),
+      $('span',{class:'item-meta'},` ${e.errors} journal errors`))));
+    if(nb.length){
+      sec.appendChild($('div',{class:'cal-day'},'Built overnight'));
+      nb.forEach(n=>sec.appendChild($('div',{class:'item'},$('span',{class:'item-title'},`· ${n}`))));
+    }
+  }
+  // Disk forecast renders even on a quiet night — it's a trend, not an event.
+  disk.slice(0,3).forEach(d=>sec.appendChild($('div',{class:'item'},
+    $('span',{class:'item-title'},`${d.mount}`),
+    $('span',{class:'item-meta'},` full in ~${d.days_to_full}d at current growth`))));
+  return sec;
 }
 
 // ── Tasks section ────────────────────────────────────────────────────────────
@@ -861,6 +904,7 @@ function render(data,liveThreads){
   if(s.overdue){_sectionCount++;grid.appendChild(tile(makeOverdue(s.overdue)))}
   if(s.jobs){_sectionCount++;grid.appendChild(tile(makeJobs(s.jobs)))}
   if(s.system){_sectionCount++;grid.appendChild(tile(makeSystem(s.system)))}
+  if(s.ops&&Object.keys(s.ops).length){_sectionCount++;grid.appendChild(tile(makeOps(s.ops)))}
   if(s.weather){_sectionCount++;grid.appendChild(tile(makeWeather(s.weather)))}
   if(s.weekly_snapshot){_sectionCount++;grid.appendChild(tile(makeSnapshot(s.weekly_snapshot)))}
   if(s.website&&Object.keys(s.website).length){_sectionCount++;grid.appendChild(tile(makeWebsite(s.website)))}

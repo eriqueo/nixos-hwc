@@ -151,12 +151,23 @@ async function gatherJobs() {
   const leadsThisWeek = mapped.filter((j) => j.created_at && new Date(j.created_at) >= ws).length;
   out._snapshot = { active_job_count: active.length, leads_received_this_week: leadsThisWeek, week_start: ws.toISOString() };
 
-  const stale = leads.filter((l) => l.days_old > 2);
-  if (stale.length) {
+  // Split by age so the alert stays actionable: a lead a few days old needs a
+  // first touch TODAY; one sitting 5+ weeks is backlog hygiene — naming the
+  // same four people every morning trains Eric to ignore the whole alert.
+  const needsTouch = leads.filter((l) => l.days_old > 2 && l.days_old <= 14);
+  const backlog = leads.filter((l) => l.days_old > 14);
+  if (needsTouch.length) {
     out.alerts.push({
       level: "warning",
       section: "leads",
-      message: `${stale.length} lead(s) sitting in "1. Contacted" >2 days: ${stale.map((l) => `${l.name} (${l.days_old}d)`).join(", ")}`,
+      message: `${needsTouch.length} lead(s) need a first touch (in "1. Contacted" >2 days): ${needsTouch.map((l) => `${l.name} (${l.days_old}d)`).join(", ")}`,
+    });
+  }
+  if (backlog.length) {
+    out.alerts.push({
+      level: "warning",
+      section: "leads",
+      message: `${backlog.length} stale lead(s) >14d in "1. Contacted" (oldest ${backlog[0].days_old}d) — review for Closed Lost`,
     });
   }
   // By Wednesday with zero new leads this week → flag it (CLAUDE.md alert rule)

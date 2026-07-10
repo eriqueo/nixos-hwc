@@ -144,7 +144,30 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
-- **2026-07-08c** — unit PATH: added `gawk` + `gnugrep` (run.sh:78 uses `awk`,
+- **2026-07-09** — **Overnight-ops digest + alert-fatigue pass.** New
+  `sections.ops` gathered in Step 1 from data already on the box, windowed
+  to "since yesterday 17:00": **(1)** service-failure EVENTS from
+  `/var/log/hwc/notifications/service-failures.log` (a 2am crash→auto-restart
+  is invisible to the live `systemctl --failed` snapshot); **(2)** Uptime Kuma
+  probe failures deduped per monitor (journal `SYSLOG_IDENTIFIER=uptime-kuma`);
+  **(3)** top-5 journal error sources (catches silent crash-loops like the
+  vdirsyncer every-15-min failure); **(4)** Prometheus `up==0` targets +
+  disk days-to-full forecast (`deriv` over 24h); **(5)** nightly-builds cards
+  landed in `_finished/` overnight. Each feeds a dashboard "Overnight Ops"
+  tile, email section, and warning alerts (critical if a disk fills <14d).
+  Also: **postgres backup** unit status next to borg (+critical alert on
+  failure); **mail unread delta** vs previous run via `output/.state.json`
+  (absolute "1374 unread" is invisible; the movement isn't); **config-drift
+  alert grace** — only fires once HEAD↔deployed divergence has persisted 12h
+  (script-only commits no longer cry wolf until the next rebuild); **subject
+  slot-stamped** (Morning/Midday/Evening); **lead alerts split** — 2–14d leads
+  named as "needs first touch", >14d collapsed to one backlog line suggesting
+  Closed Lost review (naming the same four people every morning trains the
+  alert to be ignored). `estimates_sent_this_week` stays null: jt_documents
+  has no created-since filter or sort, and jt-mcp at /opt/business is a
+  deployed copy, not a repo — needs an upstream jt-mcp change. Comms stays
+  parked: no Quo/OpenPhone API secret exists on the box. Unit PATH gains
+  `findutils` (nightly-builds mtime scan). — unit PATH: added `gawk` + `gnugrep` (run.sh:78 uses `awk`,
   :143 uses `grep`; neither is in coreutils — the first post-deploy timer run
   died with "awk: command not found").
 - **2026-07-08b** — **Deploy fixes from live verification.** (1) `jt_jobs`

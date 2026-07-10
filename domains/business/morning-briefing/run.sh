@@ -109,6 +109,13 @@ UNREAD=$(notmuch count tag:unread 2>/dev/null || echo 0)
 INBOX_UNREAD=$(notmuch count "tag:inbox and tag:unread" 2>/dev/null || echo 0)
 [ -n "${UNREAD}" ] || UNREAD=0
 [ -n "${INBOX_UNREAD}" ] || INBOX_UNREAD=0
+# Delta vs the previous run — an absolute "1374 unread" is a number Eric has
+# stopped seeing; the day-over-day movement is the readable signal.
+STATE_FILE="${OUTPUT_DIR}/.state.json"
+PREV_INBOX_UNREAD=$(jq -r '.inbox_unread // empty' "${STATE_FILE}" 2>/dev/null || echo "")
+MAIL_DELTA=null
+[ -n "${PREV_INBOX_UNREAD}" ] && MAIL_DELTA=$(( INBOX_UNREAD - PREV_INBOX_UNREAD ))
+jq -n --argjson u "${INBOX_UNREAD}" '{inbox_unread: $u}' > "${STATE_FILE}" 2>/dev/null || true
 
 # -- calendar: THIS WEEK's events via khal, parsed with jq. (NOT python3 — it is
 #    not on the unit PATH [bash coreutils jq nodejs notmuch], which is why the
@@ -137,6 +144,12 @@ EV_COUNT=$(echo "${CAL_JSON}" | jq '.events | length' 2>/dev/null || echo 0)
 #    Two generation-table misreadings during the audit are why this exists. --
 NIXOS_REPO="/home/eric/.nixos"
 HEAD_REV=$(git -C "${NIXOS_REPO}" rev-parse HEAD 2>/dev/null || echo "")
+# Age of HEAD: the drift alert only fires once the divergence has persisted
+# 12h — otherwise every script-only/HM-only commit cries wolf until the next
+# routine rebuild.
+HEAD_TS=$(git -C "${NIXOS_REPO}" log -1 --format=%ct 2>/dev/null || echo "")
+HEAD_AGE_H=0
+[ -n "${HEAD_TS}" ] && HEAD_AGE_H=$(( ( $(date +%s) - HEAD_TS ) / 3600 ))
 # nixos-version reads the rev baked in by flake glue (system.configurationRevision);
 # there is no /run/current-system/configuration-revision file on this release.
 NIXOS_VERSION_BIN="/run/current-system/sw/bin/nixos-version"; [ -x "${NIXOS_VERSION_BIN}" ] || NIXOS_VERSION_BIN="nixos-version"
@@ -158,7 +171,8 @@ DRIFT_JSON=$(jq -n \
   --argjson dirty "${DIRTY:-0}" \
   --argjson reboot_pending "${REBOOT_PENDING}" \
   --argjson generations "${GEN_COUNT:-0}" \
-  --argjson coredumps_24h "${CORE_24H:-0}" '
+  --argjson coredumps_24h "${CORE_24H:-0}" \
+  --argjson head_age_hours "${HEAD_AGE_H:-0}" '
   { head_rev: (if $head == "" then null else $head end)
   , deployed_rev: (if $deployed == "" then null else $deployed end)
   , deployed_matches_head: (if $head == "" or $deployed == "" then null else ($head == $deployed) end)
@@ -167,6 +181,7 @@ DRIFT_JSON=$(jq -n \
   , reboot_pending: $reboot_pending
   , generations: $generations
   , coredumps_24h: $coredumps_24h
+  , head_age_hours: $head_age_hours
   }' 2>/dev/null || echo '{}')
 echo "${DRIFT_JSON}" | jq empty 2>/dev/null || DRIFT_JSON='{}'
 
@@ -180,7 +195,7 @@ ALERTS_JSON=$(jq -n \
   , (if $worst >= 90 then {level:"critical", section:"system", message:"Storage at \($worst)% on a mount"} else empty end)
   , (if ($drift.reboot_pending // false) then {level:"warning", section:"config_drift", message:"Reboot pending: booted kernel differs from current generation"} else empty end)
   , (if ($drift.unpushed_commits // 0) > 0 then {level:"warning", section:"config_drift", message:"\($drift.unpushed_commits) unpushed commit(s) on ~/.nixos"} else empty end)
-  , (if ($drift.deployed_matches_head == false) then {level:"warning", section:"config_drift", message:"Deployed system was not built from current HEAD"} else empty end)
+  , (if ($drift.deployed_matches_head == false and ($drift.head_age_hours // 0) >= 12) then {level:"warning", section:"config_drift", message:"Deployed system was not built from current HEAD (drift has persisted \($drift.head_age_hours)h)"} else empty end)
   , (if ($drift.coredumps_24h // 0) >= 50 then {level:"warning", section:"config_drift", message:"\($drift.coredumps_24h) coredumps in 24h — a unit may be crash-looping behind an active status"} else empty end)
   ]' 2>/dev/null || echo '[]')
 echo "${ALERTS_JSON}" | jq empty 2>/dev/null || ALERTS_JSON='[]'
@@ -302,6 +317,110 @@ if [ -n "${BK_RESULT}" ]; then
   fi
 fi
 
+# -- backup: postgres dump unit, same pattern as borg (02:35 nightly) --
+PG_UNIT="postgresql-db-backup"
+PG_RESULT=$("${SYSTEMCTL}" show "${PG_UNIT}.service" -p Result --value 2>/dev/null || echo "")
+PG_EXITCODE=$("${SYSTEMCTL}" show "${PG_UNIT}.service" -p ExecMainStatus --value 2>/dev/null || echo "")
+PG_LAST_RAW=$("${SYSTEMCTL}" show "${PG_UNIT}.service" -p ExecMainExitTimestamp --value 2>/dev/null || echo "")
+PG_LAST=""; [ -n "${PG_LAST_RAW}" ] && PG_LAST=$(date -Iseconds -d "${PG_LAST_RAW}" 2>/dev/null || echo "")
+if [ -n "${PG_RESULT}" ]; then
+  PG_STATUS="error"
+  if [ "${PG_RESULT}" = "success" ] && [ "${PG_EXITCODE:-1}" = "0" ]; then PG_STATUS="success"; fi
+  BACKUP_JSON=$(echo "${BACKUP_JSON}" | jq \
+    --arg status "${PG_STATUS}" --arg unit "${PG_UNIT}" --arg last "${PG_LAST}" --arg result "${PG_RESULT}" '
+    . + { postgres: { exit_status: $status, unit: $unit, service_result: $result
+        , last_run: (if $last == "" then null else $last end) } }' 2>/dev/null || echo "${BACKUP_JSON}")
+  echo "${BACKUP_JSON}" | jq empty 2>/dev/null || BACKUP_JSON='{}'
+  if [ "${PG_STATUS}" = "error" ]; then
+    ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq --arg r "${PG_RESULT}" '. + [{level:"critical",section:"backup",message:("Postgres backup unit result: " + $r)}]' 2>/dev/null || echo "${ALERTS_JSON}")
+  fi
+fi
+
+# -- ops digest: what happened SINCE THE PREVIOUS EVENING, from data already on
+#    the box. The live systemctl snapshot above can't see a service that
+#    crashed at 2am and auto-restarted; these sources can. Every pipeline head
+#    is ||-true-guarded — pipefail + "no data" must never kill the briefing. --
+JOURNALCTL="/run/current-system/sw/bin/journalctl"; [ -x "${JOURNALCTL}" ] || JOURNALCTL="journalctl"
+OPS_SINCE=$(date -d 'yesterday 17:00' '+%Y-%m-%d %H:%M:%S' 2>/dev/null || date '+%Y-%m-%d 00:00:00')
+
+# Service-failure EVENTS from the notify wrapper's log (crash→restart visible).
+# Log lines look like: [2026-07-07 21:12:41] Service failure: postgresql
+SVC_FAIL_JSON=$({ grep -h '^\[20' /var/log/hwc/notifications/service-failures.log 2>/dev/null || true; } \
+  | awk -v since="${OPS_SINCE}" -F'[][]' '$2 >= since && index($0, "Service failure: ") { split($0, a, "Service failure: "); print $2 "|" a[2] }' \
+  | jq -R -s 'split("\n") | map(select(length>0)) | map(split("|") | {time: .[0], service: .[1]})' 2>/dev/null || echo '[]')
+echo "${SVC_FAIL_JSON}" | jq empty 2>/dev/null || SVC_FAIL_JSON='[]'
+
+# Uptime Kuma probe failures, deduped per monitor:
+#   ... [MONITOR] WARN: Monitor #46 'Ollama': Failing: connect ECONNREFUSED ...
+KUMA_FAIL_JSON=$({ "${JOURNALCTL}" SYSLOG_IDENTIFIER=uptime-kuma --since "${OPS_SINCE}" --no-pager -q 2>/dev/null || true; } \
+  | { grep -F '[MONITOR] WARN' || true; } \
+  | awk -F"'" 'NF >= 3 { print $2 }' \
+  | sort | uniq -c \
+  | awk '{ n=$1; $1=""; sub(/^ /, ""); print n "|" $0 }' \
+  | jq -R -s 'split("\n") | map(select(length>0)) | map(split("|") | {monitor: .[1], failed_probes: (.[0]|tonumber)}) | sort_by(-.failed_probes)' 2>/dev/null || echo '[]')
+echo "${KUMA_FAIL_JSON}" | jq empty 2>/dev/null || KUMA_FAIL_JSON='[]'
+
+# Top journal error sources — catches silent crash-loops (the vdirsyncer
+# every-15-min failure ran for hours with nothing surfacing it).
+ERR_TOP_JSON=$({ "${JOURNALCTL}" -p err --since "${OPS_SINCE}" --no-pager -q -o json 2>/dev/null || true; } \
+  | jq -s 'map(._SYSTEMD_UNIT // .SYSLOG_IDENTIFIER // "kernel") | group_by(.) | map({unit: .[0], errors: length}) | sort_by(-.errors) | .[:5]' 2>/dev/null || echo '[]')
+echo "${ERR_TOP_JSON}" | jq empty 2>/dev/null || ERR_TOP_JSON='[]'
+
+# Prometheus: scrape targets down + disk days-to-full forecast (predictive
+# beats the static df percent). Both best-effort against loopback :9090.
+PROM_URL="http://127.0.0.1:9090"
+PROM_DOWN_JSON=$("${CURL_BIN}" -sG -m 10 "${PROM_URL}/api/v1/query" --data-urlencode 'query=up == 0' 2>/dev/null \
+  | jq '[.data.result[]? | {job: (.metric.job // "?"), instance: (.metric.instance // "?")}]' 2>/dev/null || echo '[]')
+echo "${PROM_DOWN_JSON}" | jq empty 2>/dev/null || PROM_DOWN_JSON='[]'
+DISK_FORECAST_JSON=$("${CURL_BIN}" -sG -m 10 "${PROM_URL}/api/v1/query" \
+  --data-urlencode 'query=node_filesystem_avail_bytes{mountpoint=~"/|/mnt/hot|/mnt/media"} / - deriv(node_filesystem_avail_bytes{mountpoint=~"/|/mnt/hot|/mnt/media"}[24h]) / 86400' 2>/dev/null \
+  | jq '[.data.result[]? | {mount: (.metric.mountpoint // "?"), days_to_full: (.value[1] | tonumber? // null)}
+        | select(.days_to_full != null and .days_to_full > 0 and .days_to_full < 3650)
+        | .days_to_full |= round] | sort_by(.days_to_full)' 2>/dev/null || echo '[]')
+echo "${DISK_FORECAST_JSON}" | jq empty 2>/dev/null || DISK_FORECAST_JSON='[]'
+
+# Nightly-builds gauntlet: cards that landed in _finished/ since yesterday
+# evening (the 01:30 run completes hours before the 6am briefing).
+NB_DIR="/home/eric/900_vaults/brain/_inbox/nightly_builds/_finished"
+NB_JSON=$({ find "${NB_DIR}" -mindepth 1 -maxdepth 1 -newermt "${OPS_SINCE}" -printf '%f\n' 2>/dev/null || true; } \
+  | jq -R -s 'split("\n") | map(select(length>0)) | sort' 2>/dev/null || echo '[]')
+echo "${NB_JSON}" | jq empty 2>/dev/null || NB_JSON='[]'
+
+OPS_JSON=$(jq -n \
+  --arg since "${OPS_SINCE}" \
+  --argjson svc "${SVC_FAIL_JSON}" \
+  --argjson kuma "${KUMA_FAIL_JSON}" \
+  --argjson errs "${ERR_TOP_JSON}" \
+  --argjson down "${PROM_DOWN_JSON}" \
+  --argjson disk "${DISK_FORECAST_JSON}" \
+  --argjson nb "${NB_JSON}" '
+  { since: $since
+  , service_failures: $svc
+  , kuma_failing: $kuma
+  , journal_errors_top: $errs
+  , prometheus_targets_down: $down
+  , disk_forecast: $disk
+  , nightly_builds_finished: $nb
+  }' 2>/dev/null || echo '{}')
+echo "${OPS_JSON}" | jq empty 2>/dev/null || OPS_JSON='{}'
+
+# Ops alerts (append, same pattern as website/backup)
+ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq \
+  --argjson svc "${SVC_FAIL_JSON}" \
+  --argjson kuma "${KUMA_FAIL_JSON}" \
+  --argjson down "${PROM_DOWN_JSON}" \
+  --argjson disk "${DISK_FORECAST_JSON}" '
+  . + (if ($svc | length) > 0 then [{level:"warning", section:"ops",
+        message:"\($svc | length) service failure event(s) since yesterday evening: \($svc | map(.service) | unique | join(", "))"}] else [] end)
+    + (if ($kuma | length) > 0 then [{level:"warning", section:"ops",
+        message:"Uptime Kuma: \($kuma | length) monitor(s) failing probes: \($kuma | map(.monitor) | join(", "))"}] else [] end)
+    + (if ($down | length) > 0 then [{level:"warning", section:"ops",
+        message:"\($down | length) Prometheus target(s) down: \($down | map(.job) | unique | join(", "))"}] else [] end)
+    + (if ($disk | map(select(.days_to_full <= 14)) | length) > 0 then [{level:"critical", section:"ops",
+        message:"Disk filling fast: \($disk | map(select(.days_to_full <= 14)) | map("\(.mount) full in ~\(.days_to_full)d") | join(", "))"}] else [] end)
+  ' 2>/dev/null || echo "${ALERTS_JSON}")
+echo "${ALERTS_JSON}" | jq empty 2>/dev/null || ALERTS_JSON='[]'
+
 # -- assemble briefing.json atomically: build .tmp, validate, then mv --
 if jq -n \
   --arg now "$(date -Iseconds)" \
@@ -315,6 +434,8 @@ if jq -n \
   --argjson containers "${CONTAINERS_RUNNING}" \
   --argjson unread "${UNREAD}" \
   --argjson inbox_unread "${INBOX_UNREAD}" \
+  --argjson mail_delta "${MAIL_DELTA}" \
+  --argjson ops "${OPS_JSON}" \
   --argjson alerts "${ALERTS_JSON}" \
   --argjson drift "${DRIFT_JSON}" \
   --argjson website "${WEBSITE_JSON}" \
@@ -338,7 +459,10 @@ if jq -n \
         storage: $storage
       },
       mail: { healthy: true, unread: $unread, inbox_unread: $inbox_unread,
-              summary: "\($inbox_unread) inbox unread (\($unread) total)" },
+              unread_delta: $mail_delta,
+              summary: ("\($inbox_unread) inbox unread"
+                + (if $mail_delta != null then " (\(if $mail_delta >= 0 then "+" else "" end)\($mail_delta) since last run)" else "" end)) },
+      ops: $ops,
       website: $website,
       weather: $weather,
       comms: { source: "none", items: [] },
@@ -568,6 +692,29 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
         + ((.sections.system.services_failed // 0) | tostring) + " failed · containers: "
         + ((.sections.system.containers_running // 0) | tostring) + " running"
         + ((.sections.system.storage // []) | map("\n  " + .mount + ": " + ((.percent // 0) | tostring) + "% used, " + (.available // "?") + " free") | join(""))
+        + (if .sections.backup.exit_status then
+            "\n  backup: borg " + .sections.backup.exit_status
+            + (if .sections.backup.postgres then " · postgres " + .sections.backup.postgres.exit_status else "" end)
+          else "" end)
+      else "" end)
+    + (if .sections.ops then
+        (.sections.ops as $o |
+        (if (($o.service_failures // []) | length) > 0
+          or (($o.kuma_failing // []) | length) > 0
+          or (($o.prometheus_targets_down // []) | length) > 0
+          or (($o.journal_errors_top // []) | length) > 0
+          or (($o.disk_forecast // []) | length) > 0 then
+          sec("OVERNIGHT OPS (since " + ($o.since // "?") + ")")
+          + (($o.service_failures // []) | map("\n  ! service failed: " + .service + " @ " + .time) | join(""))
+          + (($o.kuma_failing // []) | map("\n  ~ kuma: " + .monitor + " (" + (.failed_probes | tostring) + " failed probes)") | join(""))
+          + (($o.prometheus_targets_down // []) | map("\n  ~ target down: " + .job + " @ " + .instance) | join(""))
+          + (($o.journal_errors_top // []) | map("\n  · journal errors: " + .unit + " ×" + (.errors | tostring)) | join(""))
+          + (($o.disk_forecast // [])[:3] | map("\n  · " + .mount + " full in ~" + (.days_to_full | tostring) + "d at current growth") | join(""))
+        else "" end)
+        + (if (($o.nightly_builds_finished // []) | length) > 0 then
+            sec("BUILT OVERNIGHT")
+            + (($o.nightly_builds_finished // []) | map("  · " + .) | join("\n"))
+          else "" end))
       else "" end)
     + (if (.sections.calendar.events // []) | length > 0 then
         sec("THIS WEEK")
@@ -605,6 +752,7 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
         + "urgent: " + ((.mail_triage.buckets.urgent // []) | length | tostring)
         + " · review: " + ((.mail_triage.buckets.review // []) | length | tostring)
         + " · noise: " + ((.mail_triage.buckets.noise // []) | length | tostring)
+        + (if .sections.mail.summary then " · " + .sections.mail.summary else "" end)
         + (if .mail_triage.error then "\n  triage error: " + .mail_triage.error else "" end)
         + (((.mail_triage.buckets.urgent // [])[:5]) | map("\n  ! " + (.from_name // .from_address // "?") + ": " + (.subject // "?")
             + (if .summary then "\n      " + .summary else "" end)) | join(""))
@@ -625,7 +773,12 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
   ' "${OUTPUT_DIR}/briefing.json" 2>/dev/null) || EMAIL_BODY=""
   if [ -n "${EMAIL_BODY}" ]; then
     ALERT_COUNT=$(jq -r '(.alerts // []) | length' "${OUTPUT_DIR}/briefing.json" 2>/dev/null || echo "?")
-    SUBJECT="Morning Briefing $(date +%Y-%m-%d)"
+    # Slot-stamped subject: normally only the pre-9am run emails, but a
+    # FORCE_EMAIL midday/evening send should not masquerade as the morning one.
+    SLOT="Morning"
+    if [ "${HOUR_NOW#0}" -ge 15 ] 2>/dev/null; then SLOT="Evening"
+    elif [ "${HOUR_NOW#0}" -ge 11 ] 2>/dev/null; then SLOT="Midday"; fi
+    SUBJECT="${SLOT} Briefing $(date +%Y-%m-%d)"
     [ "${ALERT_COUNT}" != "0" ] && SUBJECT="${SUBJECT} — ${ALERT_COUNT} alert(s)"
     # From office@, NOT eric@: self-sent mail (eric→eric) gets Proton's
     # sent+auto-archive treatment and never shows in the Inbox (found 2026-07-06,
