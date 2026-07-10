@@ -740,6 +740,12 @@
       # Umami analytics — script.js + /api/send must be visitor-reachable.
       "stats.iheartwoodcraft.com" = "http://localhost:3009";
 
+      # hwc-crm public contact intake — the website's JobTread web-form embed
+      # mirrors submissions here so they land on the funnel board. PATH-locked
+      # to /hooks/contact ONLY; the rest of hwc-crm (board UI, transitions)
+      # stays tailnet-private (unmatched paths fall through to the 404 default).
+      "crm.iheartwoodcraft.com" = { service = "http://localhost:11660"; path = "^/hooks/contact"; };
+
       # hwc-mcp-gateway origins — internal hostnames the OAuth gateway Worker
       # proxies to (machine-to-machine via an Access service token). Distinct
       # from the bare brain./leads./mcp. names above, which stay owned by the
