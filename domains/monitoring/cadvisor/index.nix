@@ -56,13 +56,17 @@ in
         "/run/podman/podman.sock:/var/run/docker.sock:ro"
       ];
 
-      extraOptions = [
-        "--privileged"
-        "--device=/dev/kmsg"
+      # cAdvisor binary args (entrypoint flags, NOT podman flags).
+      cmd = [
         # Only report container cgroups (drop host raw-cgroup noise) now that
         # the docker manager can identify them.
         "--docker_only=true"
         "--store_container_labels=false"
+      ];
+
+      extraOptions = [
+        "--privileged"
+        "--device=/dev/kmsg"
       ];
     };
 
