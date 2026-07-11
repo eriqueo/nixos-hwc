@@ -38,6 +38,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-07-11: usb-automount: mount root now `config.hwc.paths.removableMedia` (default `/mnt`, unchanged) instead of a hardcoded `/mnt` literal (Law 3 migration).
 - 2026-07-06: mcp: website tmpfiles/ReadWritePaths repointed to /opt/business/website-site (website eviction).
 - 2026-07-06: mcp: hwc_morning_status rewritten as a pure reader of briefing.json (one producer per fact, Doctrine §0.8) — no longer computes health/mail/storage/calendar itself; flags >26h staleness.
 - 2026-07-05: Law 12 burn-down — restructured headings to the required contract (`## Purpose` / `## Boundaries` / `## Structure`); content unchanged, headings renamed/split from the old Scope-&-Boundary/Layout form.

@@ -34,7 +34,7 @@ let
     # Skip if this device is already mounted
     ${pkgs.util-linux}/bin/findmnt -n "$DEVICE" >/dev/null 2>&1 && exit 0
 
-    MOUNT="/mnt/$LABEL"
+    MOUNT="${config.hwc.paths.removableMedia}/$LABEL"
     mkdir -p "$MOUNT"
     trap '${pkgs.util-linux}/bin/mountpoint -q "$MOUNT" || rmdir "$MOUNT" 2>/dev/null || true' EXIT
 
