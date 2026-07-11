@@ -130,8 +130,8 @@ const STYLE = `<style>
   .md pre.code{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
   .md blockquote{border-left:3px solid var(--line);margin:6px 0;padding-left:10px;color:var(--dim)}
   .md a{color:var(--acc2);overflow-wrap:anywhere}
-  /* OKF vault cross-links: styled but non-navigable (board can't resolve vault paths yet) */
-  .md .vlink{color:var(--acc2);border-bottom:1px dotted var(--acc2);cursor:help;overflow-wrap:anywhere}
+  /* OKF vault cross-links: obsidian://open deep links into the brain vault */
+  .md .vlink{color:var(--acc2);border-bottom:1px dotted var(--acc2);overflow-wrap:anywhere}
   /* SR tabbed detail (mirrors the SR2/datax ticket-editor); the SR list is the shared kanban */
   .srtabs{max-width:860px;margin:0 auto;padding:0 18px}
   .srtabs > input{display:none}

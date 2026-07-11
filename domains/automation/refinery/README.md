@@ -49,6 +49,7 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-07-11: **Board vault links are now Obsidian deep links.** The markdown renderer promotes OKF vault cross-links (`[text](path.md)`) and legacy `[[wikilinks]]` from non-navigable `.vlink` spans to `obsidian://open?vault=brain&file=…` anchors (vault name overridable via `$REFINERY_OBSIDIAN_VAULT`; heading anchors dropped — the plain obsidian URI has no heading support; full path stays on hover). Closes the 2026-06-15 follow-up "render wikilinks as obsidian:// links". Tests updated (5/5 markdown tests green; the 2 pre-existing failures in review/http-shell suites are untouched).
 - 2026-07-11: `srGauntletDir` default derives from `hwc.paths.user.home` (`${paths.user.home}/700_datax/sr_gauntlet`) instead of a hardcoded `/home/eric` literal (Law 3 migration, value unchanged).
 - **2026-06-27** — De-advertised the dormant `ollama` triage provider in the
   `triageProvider` option description after the container ollama stack was retired

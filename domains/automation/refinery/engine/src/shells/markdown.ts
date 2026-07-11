@@ -12,22 +12,39 @@ function esc(s: string): string {
   );
 }
 
+// Obsidian deep-link for a vault path or note name. Obsidian resolves `file=`
+// by path or bare note name within the vault, so both OKF paths and legacy
+// wikilink targets map cleanly. Heading anchors are dropped (the plain
+// obsidian:// URI has no heading support). Vault name is late-bound.
+const OBSIDIAN_VAULT = process.env.REFINERY_OBSIDIAN_VAULT ?? "brain";
+function obsidianHref(target: string): string {
+  const file = target.replace(/^\//, "").replace(/#[^#]*$/, "").replace(/\.md$/, "");
+  return `obsidian://open?vault=${encodeURIComponent(OBSIDIAN_VAULT)}&amp;file=${encodeURIComponent(file)}`;
+}
+
 function inline(s: string): string {
   return s
     .replace(/`([^`]+)`/g, "<code>$1</code>")
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>")
+    // Legacy wikilinks: [[target]] / [[target|label]] — deprecated by the OKF
+    // link standard but still present in older goal/card bodies.
+    .replace(
+      /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
+      (_m, target: string, label?: string) =>
+        `<a class="vlink" href="${obsidianHref(target)}" title="${target}">${label ?? target}</a>`,
+    )
     // External links: [text](http...) — href already escaped; only allow http(s).
     .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2">$1</a>')
     // OKF vault cross-links: [text](relative/path.md[#anchor]) — standard
-    // markdown links into the vault (the OKF link standard; wikilinks are
-    // deprecated). The board is home-masked and can't read arbitrary vault
-    // paths, and a relative href would 404 against /project/… — so render them
-    // as styled, non-navigable spans (path on hover) rather than dead links.
-    // A vault note viewer can promote these to real links later.
+    // markdown links into the vault. The board is home-masked and can't read
+    // arbitrary vault paths, so link out to Obsidian instead: an
+    // obsidian://open deep link opens the note on any machine with the vault
+    // (full path stays on hover).
     .replace(
       /\[([^\]]+)\]\(([^)\s]+\.md(?:#[^)\s]*)?)\)/g,
-      '<span class="vlink" title="$2">$1</span>',
+      (_m, text: string, path: string) =>
+        `<a class="vlink" href="${obsidianHref(path)}" title="${path}">${text}</a>`,
     );
 }
 
