@@ -107,7 +107,7 @@ in
       serviceConfig = {
         Type = "oneshot";
         ExecStart = "${canaryScript}/bin/hwc-notify-canary";
-        User = "eric";
+        User = lib.mkForce "eric";
         Group = "users";
       };
     };

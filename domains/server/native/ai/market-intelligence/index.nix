@@ -36,7 +36,7 @@ let
     wants = [ "network-online.target" ];
     serviceConfig = {
       Type = "oneshot";
-      User = "eric";
+      User = lib.mkForce "eric";
       Group = "users";
       WorkingDirectory = cfg.dataDir;
       ExecStart = "${runScript subcommand}";

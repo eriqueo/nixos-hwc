@@ -224,7 +224,7 @@ in
         description = "Process audio files from phone inbox via Whisper STT";
         serviceConfig = {
           Type = "oneshot";
-          User = "eric";
+          User = lib.mkForce "eric";
           Group = "users";
           ExecStart = processAudioScript;
           StateDirectory = "inbox-processor";
@@ -244,7 +244,7 @@ in
         description = "Process screenshot files from phone inbox via Tesseract OCR";
         serviceConfig = {
           Type = "oneshot";
-          User = "eric";
+          User = lib.mkForce "eric";
           Group = "users";
           ExecStart = processScreenshotScript;
           StateDirectory = "inbox-processor";

@@ -83,7 +83,7 @@ in
       description = "Classify Bloxels grid photos via bloxels-capture";
       serviceConfig = {
         Type = "oneshot";
-        User = "eric";
+        User = lib.mkForce "eric";
         Group = "users";
         ExecStart = processScript;
         NoNewPrivileges = true;

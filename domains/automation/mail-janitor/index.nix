@@ -99,7 +99,7 @@ in
       path = [ pkgs.python3 ];
       serviceConfig = {
         Type = "oneshot";
-        User = "eric";
+        User = lib.mkForce "eric";
         Group = "users";
         SupplementaryGroups = [ "secrets" ];   # read /run/agenix/gmail-*-password
         WorkingDirectory = agentDir;

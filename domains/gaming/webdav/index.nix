@@ -145,7 +145,7 @@ in
         RestartSec = "5s";
 
         # Run as eric user for access to RetroArch directories
-        User = "eric";
+        User = lib.mkForce "eric";
         Group = "users";
 
         # Security hardening
