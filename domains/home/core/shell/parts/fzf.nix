@@ -1,12 +1,19 @@
 # domains/home/core/shell/parts/fzf.nix
 # fzf program config — colors from the active palette via `col`.
-{ col }:
-{
+# Widget option API differs between HM 25.11 (stable: fileWidgetCommand /
+# historyWidgetOptions) and 26.05+ (unstable: fileWidget.command /
+# historyWidget.options) — same pattern as ssh.nix.
+{ col, nixosApiVersion }:
+(if nixosApiVersion == "stable" then {
+  fileWidgetCommand = "fd --type f --hidden --follow --exclude .git";
+  historyWidgetOptions = [ "--exact" ];
+} else {
+  fileWidget.command = "fd --type f --hidden --follow --exclude .git";
+  historyWidget.options = [ "--exact" ];
+}) // {
   enable = true;
   enableZshIntegration = true;
   defaultCommand = "fd --type f --hidden --follow --exclude .git";
-  fileWidget.command = "fd --type f --hidden --follow --exclude .git";
-  historyWidget.options = [ "--exact" ];
   defaultOptions = [
     "--height 40%" "--reverse" "--border"
     "--color=bg+:#${col "bg3" "32373c"},bg:#${col "bg" "282828"},spinner:#${col "success" "a3be8c"},hl:#${col "info" "5e81ac"}"

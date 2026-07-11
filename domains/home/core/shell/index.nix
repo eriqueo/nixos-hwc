@@ -162,7 +162,7 @@ in
       };
     };
 
-    programs.fzf = import ./parts/fzf.nix { inherit col; };
+    programs.fzf = import ./parts/fzf.nix { inherit col nixosApiVersion; };
 
     programs.zoxide = lib.mkIf cfg.modernUnix {
       enable = true;
