@@ -151,26 +151,26 @@ in
       { mime = "application/{pdf,doc,rtf,vnd.*}", fg = "${hex c.fileDocument}" },
 
       # Code files (specific extensions)
-      { name = "*.nix", fg = "${hex c.fileCode}" },
-      { name = "*.{py,js,json,toml,yaml,yml}", fg = "${hex c.fileCode}" },
-      { name = "*.rs", fg = "${hex c.fileCode}" },
-      { name = "*.ts", fg = "${hex c.fileCode}" },
-      { name = "*.md", fg = "${hex c.fileDocument}" },
-      { name = "*.lua", fg = "${hex c.fileCode}" },
-      { name = "*.sh", fg = "${hex c.fileExec}" },
-      { name = "*.{c,cpp,h,go}", fg = "${hex c.fileCode}" },
+      { url = "*.nix", fg = "${hex c.fileCode}" },
+      { url = "*.{py,js,json,toml,yaml,yml}", fg = "${hex c.fileCode}" },
+      { url = "*.rs", fg = "${hex c.fileCode}" },
+      { url = "*.ts", fg = "${hex c.fileCode}" },
+      { url = "*.md", fg = "${hex c.fileDocument}" },
+      { url = "*.lua", fg = "${hex c.fileCode}" },
+      { url = "*.sh", fg = "${hex c.fileExec}" },
+      { url = "*.{c,cpp,h,go}", fg = "${hex c.fileCode}" },
 
       # Broken links
-      { name = "*", is = "orphan", fg = "${hex c.fileOrphan}" },
+      { url = "*", is = "orphan", fg = "${hex c.fileOrphan}" },
 
       # Executables
-      { name = "*", is = "exec", fg = "${hex c.fileExec}" },
+      { url = "*", is = "exec", fg = "${hex c.fileExec}" },
 
       # Directories
-      { name = "*/", fg = "${hex c.fileDir}" },
+      { url = "*/", fg = "${hex c.fileDir}" },
 
       # Fallback for regular files
-      { name = "*", fg = "${hex c.fg1}" },
+      { url = "*", fg = "${hex c.fg1}" },
     ]
   '';
 
