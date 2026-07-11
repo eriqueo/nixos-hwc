@@ -15,7 +15,8 @@ domains/server/
 │   └── arka/       # Arka MCP Gateway (live, imported by machines/server/config.nix)
 ├── native/
 │   └── ai/
-│       ├── brain-mcp/     # Brain MCP server (Deno)
+│       ├── brain-mcp/     # Brain MCP server (Deno) — vault CRUD + semantic search
+│       ├── brainvec/      # brainvec semantic-index ingest (vault embeddings via llama-embed)
 │       ├── hermes/        # Hermes Agent (Nous Research)
 │       ├── jobber-mcp/    # Jobber MCP server
 │       ├── lead-scout/    # Lead Scout MCP + HTTP
@@ -39,6 +40,7 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-07-10: Added `native/ai/brainvec/` — semantic-index ingest of the brain vault (code in `github.com/eriqueo/brainvec`, cloned to `~/600_apps/brainvec`; oneshot + `*:5/15` timer behind vault-sync; embeds via llama-embed :11502 with nomic task prefixes). brain-mcp gained `search_semantic`/`related_notes` over that index (allow-net +127.0.0.1:11502) — 14 tools total, reachable from laptop `.mcp.json`, tailnet, and claude.ai.
 - 2026-07-05: Law 12 burn-down — restructured headings to the required contract (`## Purpose` / `## Boundaries` / `## Structure`); content unchanged, headings renamed/split from the old Scope-&-Boundary/Layout form.
 - 2026-07-03: Added `services/bloxels-cv/` — `hwc.server.services.bloxelsCv`, a
   systemd path watcher on `inbox-mobile/bloxels` (phone Syncthing share). Each
