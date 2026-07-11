@@ -25,11 +25,6 @@
     then ../../.. + "/${hc.assetPathRel}"
     else null;
 
-  # Get screenshots path from osConfig if available, fallback to default
-  # Note: attrByPath returns the value even if null, so we need explicit null handling
-  # screenshotsPath = lib.attrByPath ["hwc" "paths" "screenshots"] null osConfig;
-  # screenshotsDir = if screenshotsPath != null then screenshotsPath else "/home/eric/500_media/510_pictures/screenshots";
-
   #============================================================================
   # AUTOSTART — apps and services launched once when Hyprland starts.
   #

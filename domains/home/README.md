@@ -44,6 +44,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-07-11: Law 3 migration — shell + scraper `nixosPath` standalone-HM fallback now derives from `config.home.homeDirectory` (gpu-screen-recorder escape-hatch precedent) instead of a `/home/eric` literal; hyprland session.nix stale commented-out screenshots fallback removed; yazi keymap.nix dead `? "/mnt/media"` default param dropped (index.nix always passes `mediaRoot`). Rendered values unchanged.
 
 - 2026-07-06: shell: web-build alias repointed to /opt/business/website-site (website eviction).
 - 2026-07-06: Browser migration: `apps/librewolf/` → `apps/firefox/` (librewolf unmaintained in nixpkgs, insecure-flagged). Same theme/launcher architecture; hardening prefs ported minus FPP +AllTargets; `firefox-hwc` replaces `librewolf-hwc` (hyprland keybind updated); insecure-package permit dropped from flake.nix.

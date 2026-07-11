@@ -19,4 +19,5 @@ palette-driven theme, bundled Lua plugins, and a preview/tooling package set.
 - `parts/plugins/*.yazi/main.lua` — vendored Lua plugins
 
 ## Changelog
+- 2026-07-11: keymap.nix dead `? "/mnt/media"` default param dropped — `index.nix` always passes `mediaRoot` (Law 3 audit cleanup, rendered keymap unchanged). The `/mnt/media` standalone-HM fallback in index.nix stays: it is the documented Law 3 escape hatch and not derivable from HM context.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

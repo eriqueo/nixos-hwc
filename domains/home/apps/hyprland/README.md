@@ -17,4 +17,5 @@ Configures the Hyprland Wayland window manager as the desktop session: full `way
 - `parts/theme.nix` — palette→Hyprland colors, gaps/borders/blur/shadow, animations, dwindle, misc.
 
 ## Changelog
+- 2026-07-11: session.nix — removed stale commented-out screenshots-path fallback (superseded by `hwc.paths.screenshots`; Law 3 audit cleanup, no functional change).
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).
