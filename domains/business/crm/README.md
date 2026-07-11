@@ -39,7 +39,8 @@ crm/
 | `.tick.enable` / `.tick.onCalendar` | true / hourly | Persistent timer. |
 | `.leadscoutIngest.enable` | true | lead_scout → funnel board ingest timer. |
 | `.leadscoutIngest.onCalendar` | `*:00/30` | Every 30 min, persistent. |
-| `.leadscoutIngest.sinceDays` / `.profile` | 14 / `hwc_bozeman_v1` | Rescan window + classifier profile. |
+| `.leadscoutIngest.sinceDays` | 14 | Rescan window (skip pre-filter makes overlap free). |
+| `.leadscoutIngest.routes` | job + network | Route table: profile→pipeline+source+tiers+emailPrefix (JSON env). |
 | `.leadscoutIngest.dataxDsn` | `postgresql:///datax` | READ-ONLY by contract. |
 | `.calendar.enable` | false | Write appointment events to Radicale. |
 | `.calendar.caldavUrl` | loopback Radicale | CalDAV base URL. |
@@ -88,3 +89,16 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
   carries lead_scout's situation/angle/scores and the board renders a hot/warm
   badge. `OnFailure` → `hwc-service-failure-notifier@` (Discord via
   hwc-notify) so datax schema drift is loud, not a silent lead drought.
+- **2026-07-10** — Multi-pipeline CRM (app D23): hwc-crm now hosts multiple
+  funnels over one store — `job` (unchanged) + `network`
+  (connect → conversation → meet → active/pass, ungated) — discriminated by
+  `hwc.leads.pipeline` (app migration 002, applied by ExecStartPre). The
+  single-profile `leadscoutIngest.profile` option became
+  `leadscoutIngest.routes`: a data-driven route table (profile → pipeline +
+  source + tier sets + placeholder-email prefix) rendered to
+  `HWC_CRM_INGEST_ROUTES` JSON; one timer iterates all routes. Default
+  routes: `hwc_bozeman_v1`→job (byte-identical to the pre-D23 behavior) and
+  `hwc_network_v1`→network (`source=network_scrape`, never auto-emailed per
+  D13). Board UI gained pipeline tabs; `crm_*` MCP tools gained `pipeline`
+  params. Adding another funnel = app registry entry + CHECK migration +
+  one route here.

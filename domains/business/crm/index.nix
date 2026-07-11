@@ -169,7 +169,63 @@ in
         default = 14;
         description = "Rescan window; the skip pre-filter makes overlap free.";
       };
-      profile = lib.mkOption { type = lib.types.str; default = "hwc_bozeman_v1"; };
+      routes = lib.mkOption {
+        type = lib.types.listOf (lib.types.submodule {
+          options = {
+            profile = lib.mkOption {
+              type = lib.types.str;
+              description = "lead_scout classifier_profiles.id to pull from.";
+            };
+            pipeline = lib.mkOption {
+              type = lib.types.enum [ "job" "network" ];
+              description = "hwc-crm pipeline the leads land in.";
+            };
+            source = lib.mkOption {
+              type = lib.types.str;
+              description = "hwc.leads.source value (must be in the source CHECK).";
+            };
+            ingestTiers = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              description = "lead_scout classification tiers to ingest.";
+            };
+            nextActionTiers = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              description = "Tiers that get next_action_date = today on creation.";
+            };
+            emailPrefix = lib.mkOption {
+              type = lib.types.str;
+              description = ''
+                Placeholder-email prefix — the dedupe NAMESPACE. Must be
+                unique per route: profiles share scrape sources, so the same
+                post classified under two profiles must yield two leads.
+              '';
+            };
+          };
+        });
+        default = [
+          {
+            profile = "hwc_bozeman_v1";
+            pipeline = "job";
+            source = "facebook_scrape";
+            ingestTiers = [ "hot_lead" "warm_lead" ];
+            nextActionTiers = [ "hot_lead" ];
+            emailPrefix = "fb";
+          }
+          {
+            profile = "hwc_network_v1";
+            pipeline = "network";
+            source = "network_scrape";
+            ingestTiers = [ "hot_connect" "warm_connect" ];
+            nextActionTiers = [ "hot_connect" ];
+            emailPrefix = "net";
+          }
+        ];
+        description = ''
+          lead_scout → CRM route table (app D23): one route per classifier
+          profile feeding one pipeline. Rendered to HWC_CRM_INGEST_ROUTES as
+          JSON; one timer iterates all routes.
+        '';
+      };
       dataxDsn = lib.mkOption {
         type = lib.types.str;
         default = "postgresql:///datax";
@@ -295,14 +351,21 @@ in
         PYTHONPATH = "${cfg.projectDir}/src";
         HWC_CRM_PG_DSN = cfg.postgresDsn;
         HWC_CRM_DATAX_DSN = cfg.leadscoutIngest.dataxDsn;
+        HWC_CRM_INGEST_ROUTES = builtins.toJSON (map (r: {
+          profile = r.profile;
+          pipeline = r.pipeline;
+          source = r.source;
+          ingest_tiers = r.ingestTiers;
+          next_action_tiers = r.nextActionTiers;
+          email_prefix = r.emailPrefix;
+        }) cfg.leadscoutIngest.routes);
       };
       serviceConfig = {
         Type = "oneshot";
         User = lib.mkForce cfg.user;
         Group = "users";
         ExecStart = "${pythonEnv}/bin/python3 -m hwc_crm.integrations.leadscout_ingest"
-          + " --since-days ${toString cfg.leadscoutIngest.sinceDays}"
-          + " --profile ${cfg.leadscoutIngest.profile}";
+          + " --since-days ${toString cfg.leadscoutIngest.sinceDays}";
       };
     };
     systemd.timers.hwc-crm-leadscout-ingest = lib.mkIf cfg.leadscoutIngest.enable {
