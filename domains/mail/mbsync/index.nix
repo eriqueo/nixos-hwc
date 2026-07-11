@@ -10,7 +10,7 @@ let
   afewPkg  = import ../afew/package.nix { inherit lib pkgs; cfg = afewCfg; };
   maildirRoot =
     let base = (config.hwc.mail.notmuch or {}).maildirRoot or "";
-    in if base != "" then base else "${config.hwc.paths.user.mail or "/home/eric/400_mail"}/Maildir";
+    in if base != "" then base else "${config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail"}/Maildir";
   svc      = import ./parts/service.nix {
     inherit lib pkgs afewPkg;
     haveProton = render.haveProton;

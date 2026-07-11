@@ -103,7 +103,7 @@ in
     services.syncthing = {
       enable = true;
       user = "eric";
-      dataDir = "/home/eric";
+      dataDir = config.hwc.paths.user.home;
       openDefaultPorts = true;
       overrideDevices = true;
       overrideFolders = true;

@@ -41,6 +41,7 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 
 ## Changelog
 - 2026-07-11: inbox-processor (audio + screenshots) and bloxels-cv — `User = lib.mkForce "eric"` per the native-services Architecture Law (was bare; no-op today, verified by before/after eval).
+- 2026-07-11: brainvec `cacheDir` + brain-mcp `brainvecIndex` defaults derive from `hwc.paths.user.home` instead of hardcoded `/home/eric/.cache/brainvec` literals (Law 3 migration, values unchanged).
 - 2026-07-10: Added `native/ai/brainvec/` — semantic-index ingest of the brain vault (code in `github.com/eriqueo/brainvec`, cloned to `~/600_apps/brainvec`; oneshot + `*:5/15` timer behind vault-sync; embeds via llama-embed :11502 with nomic task prefixes). brain-mcp gained `search_semantic`/`related_notes` over that index (allow-net +127.0.0.1:11502) — 14 tools total, reachable from laptop `.mcp.json`, tailnet, and claude.ai.
 - 2026-07-05: Law 12 burn-down — restructured headings to the required contract (`## Purpose` / `## Boundaries` / `## Structure`); content unchanged, headings renamed/split from the old Scope-&-Boundary/Layout form.
 - 2026-07-03: Added `services/bloxels-cv/` — `hwc.server.services.bloxelsCv`, a

@@ -24,4 +24,5 @@ scraper/
 - `scrape-comments` — Run comment analysis
 
 ## Changelog
+- 2026-07-11: `nixosPath` standalone fallback derives from `config.home.homeDirectory` instead of a `/home/eric` literal (Law 3, value unchanged).
 - 2026-03-26: Workspace source moved from workspace/hwc/social_media_scraper/ to workspace/home/scraper/ (domain alignment)

@@ -1,5 +1,5 @@
 # domains/home/apps/yazi/parts/keymap.nix
-{ mediaRoot ? "/mnt/media" }:
+{ mediaRoot }:
 {
   # Keymap configuration for Yazi - Neovim-style bindings
   "yazi/keymap.toml" = {

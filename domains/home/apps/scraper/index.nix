@@ -4,8 +4,10 @@ let
   cfg = config.hwc.home.apps.scraper;
   enabled = cfg.enable;
 
-  # Handshake protocol for standalone compatibility
-  nixosPath = lib.attrByPath [ "hwc" "paths" "nixos" ] "/home/eric/.nixos" osConfig;
+  # Handshake protocol for standalone compatibility (home-derived fallback, Law 3)
+  nixosPath =
+    let p = lib.attrByPath [ "hwc" "paths" "nixos" ] null osConfig;
+    in if p != null then p else "${config.home.homeDirectory}/.nixos";
 
   pythonEnv = pkgs.python3.withPackages (ps: with ps; [
     pandas

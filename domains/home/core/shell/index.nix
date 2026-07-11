@@ -12,8 +12,10 @@ let
   cfg = config.hwc.home.core.shell;
   ws = "$HWC_WORKSPACE_ROOT";
   # Law 3 + Law 1: derive from system paths when hosted on NixOS, with a
-  # literal fallback so the module evaluates with osConfig = {}.
-  nixosPath = lib.attrByPath [ "hwc" "paths" "nixos" ] "/home/eric/.nixos" osConfig;
+  # home-derived fallback so the module evaluates with osConfig = {}.
+  nixosPath =
+    let p = lib.attrByPath [ "hwc" "paths" "nixos" ] null osConfig;
+    in if p != null then p else "${config.home.homeDirectory}/.nixos";
 
   # Theme tokens (guarded read — Law 1). Fallbacks are the palette's own
   # values so the module renders identically without the theme module.

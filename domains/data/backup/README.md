@@ -86,6 +86,7 @@ hwc.data.backup = {
 - `cloud-backup.service` / `cloud-backup.timer` — rclone to Proton Drive
 
 ## Changelog
+- 2026-07-11: local.mountPoint default is now `config.hwc.paths.backup` directly — the dead `or "/mnt/backup"` fallback removed (paths.nix is always imported; default value unchanged). Law 3 migration.
 - 2026-07-06: Gotify decommission — removed `hwc.data.backup.notifications.gotify.*` options and the gotify success/failure branches from local-backup; desktop (libnotify) and Slack/alerts notification paths unchanged.
 
 - 2026-06-10: Absorb the value defaults formerly set by profiles/core.nix

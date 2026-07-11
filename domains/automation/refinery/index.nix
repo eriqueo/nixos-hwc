@@ -125,7 +125,7 @@ in
 
     srGauntletDir = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
-      default = "/home/eric/700_datax/sr_gauntlet";
+      default = "${paths.user.home}/700_datax/sr_gauntlet";
       description = "sr_gauntlet dir — read-only mirror of its investigations/";
     };
 
