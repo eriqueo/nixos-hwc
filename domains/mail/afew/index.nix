@@ -7,7 +7,7 @@ let
 
   mailRoot =
     let base = nmCfg.maildirRoot or "";
-    in if base != "" then base else "${config.hwc.paths.user.mail or "/home/eric/400_mail"}/Maildir";
+    in if base != "" then base else "${config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail"}/Maildir";
 
   rules = nmCfg.rules or {};
 
