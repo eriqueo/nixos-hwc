@@ -5,8 +5,8 @@
   enable = true;
   enableZshIntegration = true;
   defaultCommand = "fd --type f --hidden --follow --exclude .git";
-  fileWidgetCommand = "fd --type f --hidden --follow --exclude .git";
-  historyWidgetOptions = [ "--exact" ];
+  fileWidget.command = "fd --type f --hidden --follow --exclude .git";
+  historyWidget.options = [ "--exact" ];
   defaultOptions = [
     "--height 40%" "--reverse" "--border"
     "--color=bg+:#${col "bg3" "32373c"},bg:#${col "bg" "282828"},spinner:#${col "success" "a3be8c"},hl:#${col "info" "5e81ac"}"

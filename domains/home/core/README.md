@@ -21,6 +21,9 @@ core/
 ```
 
 ## Changelog
+- 2026-07-11: shell/parts/fzf.nix — renamed `fileWidgetCommand` →
+  `fileWidget.command` and `historyWidgetOptions` → `historyWidget.options`
+  (HM option renames); values unchanged, silences two eval warnings.
 - 2026-06-26: shell/parts/ssh.nix — set `enableDefaultConfig = false` on the
   stable (HM 25.11) branch to silence the `programs.ssh` default-values
   deprecation; the `matchBlocks."*"` block already replicates HM's defaults.
