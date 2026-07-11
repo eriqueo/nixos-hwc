@@ -14,13 +14,14 @@
 #   * ../../keymap/parts/to-zellij.nix — derives 1-based GoToTab indices from the
 #                                   tab order below (hubs first, then tools).
 #
-# TAB ORDER is hubs ++ tools:  1 hwc · 2 datax · 3 server · 4 brief ·
-#                              5 tasks · 6 cal · 7 files · 8 mail · 9 edit
+# TAB ORDER is hubs ++ tools:  1 hwc · 2 crm · 3 datax · 4 server · 5 brief ·
+#                              6 tasks · 7 cal · 8 files · 9 mail · 10 edit
 # Change a name/order in ONE place; layout, host, and keymap follow on rebuild.
 {
   # Hub-pages: each is `workbench --hub <id>` full-screen; tab name == hub id.
   # Order = leftmost tabs. The first one is the landing tab (focus=true).
-  hubs = [ "hwc" "datax" "server" "brief" ];
+  # crm sits second to match its hub `order=15` (between hwc=10 and datax=20).
+  hubs = [ "hwc" "crm" "datax" "server" "brief" ];
 
   # Tool tabs: launch-target -> tab name (the standing tab the host jumps to).
   todui = "tasks";

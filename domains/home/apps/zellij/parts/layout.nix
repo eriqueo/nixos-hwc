@@ -53,7 +53,7 @@ in
             children
             pane size=1 borderless=true { plugin location="zellij:status-bar"; }
         }
-        // Hub-pages (data-driven from tabs.hubs): hwc · datax · server · brief.
+        // Hub-pages (data-driven from tabs.hubs): hwc · crm · datax · server · brief.
         // The first is the landing tab. Each is a single-hub workbench page.
 ${hubTabs}
         // Tasks + calendar: Eric's first-class TUIs, auto-started (always-on peers).

@@ -182,6 +182,7 @@ rec {
   meta = [
     # Hub-pages (each its own workbench --hub <id> tab).
     { key = "h"; intent = "hub-hwc";    desc = "HWC";    target = "hwc"; }
+    { key = "r"; intent = "hub-crm";    desc = "CRM";    target = "crm"; }
     { key = "x"; intent = "hub-datax";  desc = "DataX";  target = "datax"; }
     { key = "v"; intent = "hub-server"; desc = "Server"; target = "server"; }
     { key = "b"; intent = "hub-brief";  desc = "Brief";  target = "brief"; }

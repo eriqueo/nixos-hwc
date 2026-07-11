@@ -20,7 +20,7 @@ let
   # GoToTab <index>, NOT GoToTabName, so the index MUST match the tab order in
   # domains/home/apps/zellij/parts/layout.nix. Derived from the SAME tabs.nix the
   # layout emits from (hubs first, then tools) so the two can never drift:
-  #   1 hwc · 2 datax · 3 server · 4 brief · 5 tasks · 6 cal · 7 files · 8 mail · 9 edit
+  #   1 hwc · 2 crm · 3 datax · 4 server · 5 brief · 6 tasks · 7 cal · 8 files · 9 mail · 10 edit
   tabs = import ../../apps/zellij/parts/tabs.nix;
   hubCount = builtins.length tabs.hubs;
   hubIndex = lib.listToAttrs (lib.imap1 (i: h: { name = h; value = i; }) tabs.hubs);
