@@ -56,6 +56,8 @@ hwc.data.syncthing = {
 
 ## Changelog
 
+- 2026-07-11: `dataDir` now `config.hwc.paths.user.home` instead of hardcoded `/home/eric` (Law 3 migration, value unchanged).
+
 - 2026-04-12: Created module, extracted from machines/server/config.nix and machines/laptop/config.nix
 - 2026-06-15: Add declarative per-folder `.stignore` provisioning (`folders.<name>.ignores` +
   `syncthing-stignore` oneshot). Root-cause fix for the brain-vault git/Syncthing clobber: the
