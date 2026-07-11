@@ -126,7 +126,9 @@
   # networking.hostName ("hwc-xps") + the shared tailnetSuffix — no override
   # needed. See domains/networking/{hosts,reverseProxy}.nix.
 
-  hwc.data.backup.enable = true;
+  # Off until /mnt/backup is mounted and a local/cloud method is configured —
+  # enabled-with-no-methods was a no-op that only emitted an eval warning.
+  hwc.data.backup.enable = false;
 
   # Reverse proxy for local services
   hwc.networking.reverseProxy.enable = true;
