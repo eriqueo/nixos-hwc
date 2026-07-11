@@ -22,8 +22,8 @@
       };
       outputDirectory = lib.mkOption {
         type = lib.types.path;
-        # media.root is server-only (null elsewhere); fall back to its default
-        default = "${if config.hwc.paths.media.root != null then config.hwc.paths.media.root else "/mnt/media"}/transcripts";
+        # media.root is non-null on every host that imports this domain (server role)
+        default = "${config.hwc.paths.media.root}/transcripts";
         description = "Directory for transcript output files";
       };
       defaultFormat = lib.mkOption {
