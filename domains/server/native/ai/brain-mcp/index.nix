@@ -54,7 +54,7 @@ in
 
     brainvecIndex = lib.mkOption {
       type = lib.types.str;
-      default = "/home/eric/.cache/brainvec/index.jsonl";
+      default = "${paths.user.home}/.cache/brainvec/index.jsonl";
       description = "brainvec semantic index consumed by search_semantic/related_notes (built by hwc.server.ai.brainvec)";
     };
 

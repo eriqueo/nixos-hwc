@@ -81,7 +81,7 @@ in
 
     cacheDir = lib.mkOption {
       type = lib.types.str;
-      default = "/home/eric/.cache/brainvec";
+      default = "${paths.user.home}/.cache/brainvec";
       description = "Index location (index.jsonl + meta.json); disposable, rebuildable";
     };
 
