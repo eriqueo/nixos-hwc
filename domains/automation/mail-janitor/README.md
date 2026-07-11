@@ -37,6 +37,7 @@ mail-janitor/
   keeping); refine the pattern lists in `janitor.py` as new junk surfaces.
 
 ## Changelog
+- 2026-07-11: `User = lib.mkForce "eric"` per the native-services Architecture Law (was bare; no-op today, verified by before/after eval).
 - 2026-06-24 (b): PRESERVE allowlist (`.gov` filings, `calendar.*` invites, security/
   account alerts) — fixes NOISE false-positives. New **TRIAGE** tier: newsletters
   (`newsletter@`/`news@`/`digest`…) → `Newsletters-Triage` label instead of trash;

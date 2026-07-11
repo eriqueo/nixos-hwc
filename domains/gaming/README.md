@@ -42,5 +42,6 @@ hwc.gaming.webdav = {
 
 ## Changelog
 
+- 2026-07-11: webdav — `User = lib.mkForce "eric"` per the native-services Architecture Law (was bare; no-op today, verified by before/after eval).
 - 2026-03-04: Namespace migration hwc.server.native.{retroarch,webdav} → hwc.gaming.*
 - 2026-03-04: Created gaming domain, moved retroarch and webdav from domains/server/native/
