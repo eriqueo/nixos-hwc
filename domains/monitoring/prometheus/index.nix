@@ -212,6 +212,12 @@ in
               { name = "Heartwood MCP";  url = "http://127.0.0.1:6200/health"; }
               { name = "AI Agent";       url = "http://127.0.0.1:6020/"; }
               { name = "CouchDB";        url = "http://127.0.0.1:5984/"; }
+              # Local AI — llama.cpp trio (brainvec embeds via :11502; personas/
+              # refinery chat via :11500/:11501). /health is 200 only when the
+              # model is loaded, 503 while loading — exactly the liveness we want.
+              { name = "llama.cpp GPU";   url = "http://127.0.0.1:11500/health"; }
+              { name = "llama.cpp CPU";   url = "http://127.0.0.1:11501/health"; }
+              { name = "llama.cpp Embed"; url = "http://127.0.0.1:11502/health"; }
               # Media stack
               { name = "Jellyfin";       url = "http://127.0.0.1:8096/health"; }
               { name = "Jellyseerr";     url = "http://127.0.0.1:5055/api/v1/status"; }
