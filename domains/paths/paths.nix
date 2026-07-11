@@ -203,6 +203,12 @@ in
       description = "Backup destination";
     };
 
+    removableMedia = mkOption {
+      type = types.path;
+      default = "/mnt";
+      description = "Mount root for removable drives (usb-automount mounts at <removableMedia>/<label>)";
+    };
+
     photos = mkOption {
       type = types.nullOr types.path;
       default =
