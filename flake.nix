@@ -76,6 +76,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # INVARIANT (all 600_apps app inputs below): `github:` only — NEVER git+file/
+    # path. Their checkouts must be single `origin → git@github.com:eriqueo/<name>`
+    # on every machine (no local-hub remotes, no stray ~/git/<app>.git hubs).
+    # Enforced by ~/600_apps/productivity-scripts/repo-remote-audit.sh (run on
+    # laptop AND server). See memory `repo-remote-invariant`.
+    #
     # todui — standalone VTODO task TUI (todoman-free, own engine). Sourced from a
     # SHARED REMOTE (private GitHub repo), NOT a local clone: a github: input pins a
     # rev that exists on every machine, so it can't ghost-rev like the old
