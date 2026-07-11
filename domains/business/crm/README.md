@@ -53,6 +53,7 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 `^/hooks/(contact|appointment|availability)`.
 
 ## Changelog
+- 2026-07-11: `projectDir` default derives from `hwc.paths.user.home` (`${paths.user.home}/600_apps/hwc-crm`, brainvec precedent) instead of a hardcoded `/home/eric` literal (Law 3 migration, value unchanged).
 
 - **2026-07-10** — Initial module: hwc-crm service (Python/FastAPI from
   nixpkgs `python3.withPackages`, run-from-checkout), additive migration as

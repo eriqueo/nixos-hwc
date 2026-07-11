@@ -84,7 +84,7 @@ in
 
     projectDir = lib.mkOption {
       type = lib.types.str;
-      default = "/home/eric/600_apps/hwc-crm";
+      default = "${paths.user.home}/600_apps/hwc-crm";
       description = "Live checkout of the hwc-crm repo (lead-scout pattern).";
     };
 
