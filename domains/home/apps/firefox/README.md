@@ -22,4 +22,7 @@ parts/launcher.nix   # firefox-hwc wrapper (Intel iGPU pin, NVIDIA env strip)
 ```
 
 ## Changelog
+- 2026-07-11: index.nix — pinned `programs.firefox.configPath =
+  ".mozilla/firefox"` (legacy location, where the live `hwc` profile lives);
+  silences the HM legacy-default eval warning without migrating the profile.
 - 2026-07-06: Module created — migration from librewolf (unmaintained in nixpkgs, insecure-flagged 2026-06). Same theme/launcher architecture; hardening prefs ported minus FPP +AllTargets (site-breakage history).

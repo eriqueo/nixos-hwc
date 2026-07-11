@@ -25,6 +25,10 @@ in
       enable = true;
       package = pkgs.firefox;
 
+      # Pin the legacy profile location explicitly. The live profile lives at
+      # ~/.mozilla/firefox/hwc; do NOT migrate it to the XDG path.
+      configPath = ".mozilla/firefox";
+
       profiles.hwc = {
         isDefault = true;
 
