@@ -20,6 +20,7 @@ import { morningStatusTool } from "./morning-status.js";
 import { morningBriefTool } from "./morning-brief.js";
 import { mailTriageTools } from "./mail-triage.js";
 import { nightlyReviewTools } from "./nightly-review.js";
+import { refineryTools } from "./refinery.js";
 import { notifyTools } from "./notify.js";
 import { leadsTools } from "./leads.js";
 import { tasksTools } from "./tasks.js";
@@ -51,6 +52,7 @@ export function allTools(config: ServerConfig): ToolDef[] {
     ...dataxTools(config.dataxAnalyzerUrl, config.dataxLedgerPath),
     ...mailTriageTools(),
     ...nightlyReviewTools(),
+    ...refineryTools(),
     // Composite tools
     morningStatusTool(),
     morningBriefTool(),

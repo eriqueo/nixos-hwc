@@ -440,6 +440,23 @@ ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq \
   ' 2>/dev/null || echo "${ALERTS_JSON}")
 echo "${ALERTS_JSON}" | jq empty 2>/dev/null || ALERTS_JSON='[]'
 
+# -- refinery: the refinement-engine board, triaged like mail. Reads the item
+#    store directly (one .md per Item, canonical JSON in a fenced block) — a
+#    local file read, no service round-trip. Buckets: action = parked/failed/
+#    ready-to-promote (needs Eric), active = in-flight pipeline work, hopper =
+#    raw ideas. gather-refinery.mjs emits {} on any failure, so it never breaks
+#    the briefing; the section simply renders empty. --
+REFINERY_ITEMS_DIR="${REFINERY_ITEMS_DIR:-/var/lib/refinery/items}"
+REFINERY_JSON=$(REFINERY_ITEMS_DIR="${REFINERY_ITEMS_DIR}" node "${AGENT_DIR}/gather-refinery.mjs" 2>>"${LOG_FILE}" || echo '{}')
+echo "${REFINERY_JSON}" | jq empty 2>/dev/null || REFINERY_JSON='{}'
+# Alert only on FAILED items — parked is normal "waiting on a decision", not an
+# error; a broken gate/executor run is what's worth surfacing.
+REFINERY_FAILED=$(echo "${REFINERY_JSON}" | jq '[.buckets.action[]? | select(.state=="failed")] | length' 2>/dev/null || echo 0)
+if [ "${REFINERY_FAILED:-0}" -gt 0 ] 2>/dev/null; then
+  ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq --argjson n "${REFINERY_FAILED}" '. + [{level:"warning",section:"refinery",message:"\($n) refinery item(s) in a failed state"}]' 2>/dev/null || echo "${ALERTS_JSON}")
+  echo "${ALERTS_JSON}" | jq empty 2>/dev/null || ALERTS_JSON='[]'
+fi
+
 # -- assemble briefing.json atomically: build .tmp, validate, then mv --
 if jq -n \
   --arg now "$(date -Iseconds)" \
@@ -459,7 +476,8 @@ if jq -n \
   --argjson drift "${DRIFT_JSON}" \
   --argjson website "${WEBSITE_JSON}" \
   --argjson weather "${WX_JSON}" \
-  --argjson backup "${BACKUP_JSON}" '
+  --argjson backup "${BACKUP_JSON}" \
+  --argjson refinery "${REFINERY_JSON}" '
   {
     generated_at: $now,
     sections: {
@@ -482,6 +500,7 @@ if jq -n \
               summary: ("\($inbox_unread) inbox unread"
                 + (if $mail_delta != null then " (\(if $mail_delta >= 0 then "+" else "" end)\($mail_delta) since last run)" else "" end)) },
       ops: $ops,
+      refinery: $refinery,
       website: $website,
       weather: $weather,
       comms: { source: "none", items: [] },
@@ -666,6 +685,17 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
             + (if .summary then "\n      " + .summary else "" end)) | join(""))
         + (((.mail_triage.buckets.review // [])[:5]) | map("\n  · " + (.from_name // .from_address // "?") + ": " + (.subject // "?")) | join(""))
       else "" end)
+    + (if (.sections.refinery.counts.total // 0) > 0 then
+        sec("REFINERY")
+        + "action: " + ((.sections.refinery.counts.action // 0) | tostring)
+        + " · active: " + ((.sections.refinery.counts.active // 0) | tostring)
+        + " · hopper: " + ((.sections.refinery.counts.hopper // 0) | tostring)
+        + (((.sections.refinery.buckets.action // [])[:6]) | map("\n  ! " + (.title // .id)
+            + " [" + (.label // .state // "?") + (if .pipeline and .pipeline != "untriaged" then " · " + .pipeline else "" end) + "]"
+            + (if .reason then "\n      " + .reason else "" end)) | join(""))
+        + (((.sections.refinery.buckets.active // [])[:5]) | map("\n  · " + (.title // .id)
+            + " [" + (.pipeline // "?") + (if .step then " · " + .step else "" end) + "]") | join(""))
+      else "" end)
     + (if .sections.website and (.sections.website | length > 0) then
         sec("WEBSITE")
         + "visitors 24h: " + ((.sections.website.visitors_24h // 0) | tostring)
@@ -691,6 +721,7 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
     --arg grafana "https://grafana.hwc.iheartwoodcraft.com" \
     --arg svchealth "https://grafana.hwc.iheartwoodcraft.com/d/service-health" \
     --arg stats "https://stats.iheartwoodcraft.com" \
+    --arg refinery "https://refinery.hwc.iheartwoodcraft.com" \
     --arg repo "https://github.com/eriqueo/nixos-hwc" '
     # Theme = the dashboard palette verbatim (dashboard/index.html :root):
     #   bg #1d2021 · surface #282828 · border #32373c · text #d5c4a1
@@ -714,6 +745,7 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
       elif s == "website" then $stats
       elif s == "system" or s == "backup" then $grafana
       elif s == "config_drift" then $repo
+      elif s == "refinery" then $refinery
       else $dash end;
 
     .sections as $s |
@@ -756,6 +788,22 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
                 + (if .summary then "<br><span style=\"color:#a7aaad;font-size:13px;padding-left:14px\">" + (.summary|h) + "</span>" else "" end))) | join(""))
           + (((.mail_triage.buckets.review // [])[:5]) | map(
               item(meta("&middot;") + " " + ((.from_name // .from_address // "?")|h) + ": " + ((.subject // "?")|h))) | join("")))
+      else "" end)
+
+    + (if ($s.refinery.counts.total // 0) > 0 then
+        card("Refinery"; ($s.refinery.url // $refinery); "board";
+          item("action " + ((($s.refinery.counts.action // 0)|tostring)|h)
+            + " &middot; active " + ((($s.refinery.counts.active // 0)|tostring)|h)
+            + " &middot; hopper " + ((($s.refinery.counts.hopper // 0)|tostring)|h))
+          + (($s.refinery.buckets.action // [])[:6] | map(
+              item((if .state == "failed" then red("&#10007;") else red("!") end) + " "
+                + (if .url then link(.url; ((.title // .id)|h)) else ((.title // .id)|h) end)
+                + " " + meta("[" + ((.label // .state // "?")|h) + (if .pipeline and .pipeline != "untriaged" then " &middot; " + (.pipeline|h) else "" end) + "]")
+                + (if .reason then "<br><span style=\"color:#a7aaad;font-size:13px;padding-left:14px\">" + (.reason|h) + "</span>" else "" end))) | join(""))
+          + (($s.refinery.buckets.active // [])[:5] | map(
+              item(meta("&middot;") + " "
+                + (if .url then link(.url; ((.title // .id)|h)) else ((.title // .id)|h) end)
+                + " " + meta("[" + ((.pipeline // "?")|h) + (if .step then " &middot; " + (.step|h) else "" end) + "]"))) | join("")))
       else "" end)
 
     + (if ($s.tasks // {}) | ((.overdue // []) + (.due_today // []) + (.due_this_week // [])) | length > 0 then
@@ -853,7 +901,7 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
     + "<div style=\"text-align:center;padding:10px 0 4px;font-size:12px;color:#a7aaad\">"
     + link($dash; "dashboard") + " &nbsp;&middot;&nbsp; " + link($grafana; "grafana")
     + " &nbsp;&middot;&nbsp; " + link($svchealth; "service health") + " &nbsp;&middot;&nbsp; " + link($jt; "jobtread")
-    + " &nbsp;&middot;&nbsp; " + link($stats; "analytics")
+    + " &nbsp;&middot;&nbsp; " + link($stats; "analytics") + " &nbsp;&middot;&nbsp; " + link($refinery; "refinery")
     + "</div></div></div>"
   ' "${OUTPUT_DIR}/briefing.json" 2>>"${LOG_FILE}") || EMAIL_HTML=""
   if [ -n "${EMAIL_BODY}" ]; then

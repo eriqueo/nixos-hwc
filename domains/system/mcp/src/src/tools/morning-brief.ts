@@ -71,7 +71,7 @@ export function morningBriefTool(): ToolDef {
     description:
       "Rich morning briefing. Reads the structured briefing.json produced daily at 6am MT " +
       "(calendar, jobs, leads, overdue, system, mail, weather, comms, weekly snapshot, backup, " +
-      "tasks, recent documents, plus alerts and mail triage) and returns it shaped for the " +
+      "tasks, recent documents, refinery board, plus alerts and mail triage) and returns it shaped for the " +
       "workbench brief tile (greeting/summary/highlights inline) and detail modal (full body). " +
       "Every section is optional; a missing or stale briefing is flagged rather than failing.",
     inputSchema: { type: "object", properties: {} },
@@ -149,6 +149,9 @@ export function morningBriefTool(): ToolDef {
       const backup = asObj(sections["backup"]);
       const tasks = asObj(sections["tasks"]);
       const recentDocs = asObj(sections["recent_documents"]);
+      const refinery = asObj(sections["refinery"]);
+      const refCounts = asObj(refinery["counts"]);
+      const refBuckets = asObj(refinery["buckets"]);
 
       const events = asArr(calendar["events"]);
       const dueToday = asArr(tasks["due_today"]);
@@ -186,6 +189,8 @@ export function morningBriefTool(): ToolDef {
       if (backupStatus && backupStatus !== "unknown") {
         highlights.push(`💾 backup: ${backupStatus}${backup["last_run"] ? ` (${asStr(backup["last_run"])})` : ""}`);
       }
+      const refActionN = num(refCounts["action"]) ?? 0;
+      if (refActionN > 0) highlights.push(`⚗ refinery: ${refActionN} item${refActionN !== 1 ? "s" : ""} need attention`);
 
       // ── body (full markdown for the detail modal) ───────────────────────
       const md: string[] = [];
@@ -312,6 +317,26 @@ export function morningBriefTool(): ToolDef {
         for (const item of urgent) mailLines.push(`  - 🔴 ${item}`);
       }
       section("Mail", mailLines);
+
+      // Refinery — the refinement-engine board, triaged action/active/hopper
+      const refLines: string[] = [];
+      if ((num(refCounts["total"]) ?? 0) > 0) {
+        refLines.push(
+          `Action: **${num(refCounts["action"]) ?? 0}** · active: ${num(refCounts["active"]) ?? 0} · hopper: ${num(refCounts["hopper"]) ?? 0}`,
+        );
+        for (const raw of asArr(refBuckets["action"]).slice(0, 8)) {
+          const o = asObj(raw);
+          const t = pick(o, "title", "id");
+          const st = pick(o, "state");
+          const label = pick(o, "label", "state");
+          const pl = pick(o, "pipeline");
+          const reason = pick(o, "reason");
+          const tag = st === "failed" ? "✗" : "!";
+          const meta = [label, pl && pl !== "untriaged" ? pl : ""].filter(Boolean).join(" · ");
+          refLines.push(`- ${tag} ${t}${meta ? ` _(${meta})_` : ""}${reason ? ` — ${reason}` : ""}`);
+        }
+      }
+      section("Refinery", refLines);
 
       // Recent documents
       section("Recent Documents", bullets(asArr(recentDocs["items"])).map((d) => `- ${d}`));
