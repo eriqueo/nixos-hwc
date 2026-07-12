@@ -127,6 +127,16 @@ export function leadsTools(): ToolDef[] {
                 e && typeof e.low === "number" && typeof e.high === "number"
                   ? `$${Math.round(e.low / 1000)}k–${Math.round(e.high / 1000)}k`
                   : "";
+              // Source CLASS prefix — same vocabulary as hwc-crm's board.py:
+              // inbound (came to us: form/call/referral) vs scouted (we found
+              // them: lead_scout ingest). hwc.leads holds BOTH once the CRM
+              // ingest promotes scraped leads, so an unclassed Source column
+              // silently blurs the two populations.
+              const INBOUND = new Set(["contact", "calculator", "appointment", "phone", "referral", "website"]);
+              const SCOUTED = new Set(["facebook_scrape", "network_scrape"]);
+              const classedSource = (s: string): string =>
+                INBOUND.has(s) ? `inbound · ${s}` : SCOUTED.has(s) ? `scouted · ${s}` : s;
+              const crmUiBase = (process.env.HWC_CRM_UI_URL || "https://crm.hwc.iheartwoodcraft.com").replace(/\/$/, "");
               return {
                 status: "ok",
                 message: "recent leads",
@@ -140,9 +150,12 @@ export function leadsTools(): ToolDef[] {
                     kind: "lead",
                     id: r.id ?? "",
                     Name: r.payload?.contact?.name ?? "",
-                    Source: r.payload?.source ?? "",
+                    Source: classedSource(r.payload?.source ?? ""),
                     Estimate: fmtEstimate(r.payload?.calc?.estimate),
                     Status: r.status ?? "",
+                    // Non-column extra: rides into the row's entity data bag —
+                    // the CRM drawer deep link for click-to-action surfaces.
+                    url: r.id ? `${crmUiBase}/?lead=${r.id}` : "",
                   })),
                 }, { count: data?.data?.count ?? leadRows.length, httpStatus: data?.httpStatus, source: "hwc_leads" }),
               };

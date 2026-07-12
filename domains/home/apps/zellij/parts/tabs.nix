@@ -15,13 +15,16 @@
 #                                   tab order below (hubs first, then tools).
 #
 # TAB ORDER is hubs ++ tools:  1 hwc · 2 crm · 3 datax · 4 server · 5 brief ·
-#                              6 tasks · 7 cal · 8 files · 9 mail · 10 edit
+#                              6 refinery · 7 tasks · 8 cal · 9 files · 10 mail ·
+#                              11 edit
 # Change a name/order in ONE place; layout, host, and keymap follow on rebuild.
 {
   # Hub-pages: each is `workbench --hub <id>` full-screen; tab name == hub id.
   # Order = leftmost tabs. The first one is the landing tab (focus=true).
   # crm sits second to match its hub `order=15` (between hwc=10 and datax=20).
-  hubs = [ "hwc" "crm" "datax" "server" "brief" ];
+  # refinery last of the hubs, matching its hub `order=45` (mail hub is a tool
+  # tab here, so refinery closes out the hub-page run).
+  hubs = [ "hwc" "crm" "datax" "server" "brief" "refinery" ];
 
   # Tool tabs: launch-target -> tab name (the standing tab the host jumps to).
   todui = "tasks";
