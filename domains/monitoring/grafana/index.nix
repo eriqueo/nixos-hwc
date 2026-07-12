@@ -149,6 +149,14 @@ in
       };
     };
 
+    # Upstream module declares users.users.grafana with home = dataDir and
+    # createHome = true; NixOS activation then re-chowns the dir to
+    # grafana:grafana 0700 on EVERY rebuild, locking out the unit below
+    # (which runs as eric) — grafana kept serving stale caches but couldn't
+    # open grafana.db ("permission denied", /api/health 503). The grafana
+    # system user is unused here, so stop activation from claiming the dir.
+    users.users.grafana.createHome = lib.mkForce false;
+
     # Run grafana as eric user for simplified permissions
     systemd.services.grafana = {
       serviceConfig = {
