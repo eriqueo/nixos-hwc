@@ -153,6 +153,13 @@ $errdetail
 A branch may have pushed without a PR — run \`gh pr list\` and open any missing ones."
     fi
     if command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+      # hwc-notify's schema caps title at 200 and body at 4000 chars and
+      # REJECTS oversized payloads (400) — a long errdetail list made the
+      # whole morning digest silently vanish (observed 2026-07-11/12, daily
+      # "schema validation failed: body too_big" in the hwc-notify journal).
+      # Truncate at the edge; the archived JSON keeps the full detail.
+      title="$(printf '%s' "$title" | head -c 197)"
+      body="$(printf '%s' "$body" | head -c 3800)"
       payload=$(jq -nc --arg t "$title" --arg b "$body" --argjson p "$prio" \
         '{topic:"nightly-builds", title:$t, body:$b, priority:$p, source:"nightly-builds", tags:["nightly-builds","morning-review"]}')
       curl -fsS -m 8 -X POST -H 'content-type: application/json' \

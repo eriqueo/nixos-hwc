@@ -62,17 +62,36 @@ let
       SERVICE_NAME="''${SERVICE_NAME%.service}"
       log "Service failure: $SERVICE_NAME"
 
-      # A short recent-log snippet for the notification body.
+      # A short recent-log snippet for the notification body — captured NOW,
+      # before the grace sleep, so it shows the state at failure time.
       LOGS=$(journalctl -u "$SERVICE_NAME" -n 12 --no-pager 2>&1 | tail -12 || echo "Could not get logs")
 
-      ${alert} "Service Failed: $SERVICE_NAME" \
-        "Service $SERVICE_NAME failed. Recent logs:"$'\n'"$LOGS" \
-        -s critical -e services \
-        -f "service=$SERVICE_NAME" \
-        || {
-          log "  WARNING: hwc-alert failed; wall fallback"
-          echo "SERVICE FAILURE: $SERVICE_NAME - check journalctl -u $SERVICE_NAME" | wall 2>/dev/null || true
-        }
+      # Outcome-aware severity (2026-07-12 alert audit): most OnFailure hits
+      # are stop artifacts of an orchestrated restart (the gluetun self-heal
+      # SIGKILLs qbittorrent and segfaults mousehole on the way down) or
+      # crashes that Restart= heals in seconds. Those used to page P1
+      # (discord + email fan-out). Give the unit a grace window; only a unit
+      # that is STILL not active gets the critical page — a recovered one
+      # sends a warning-level note instead.
+      sleep 30
+      STATE=$(systemctl is-active "$SERVICE_NAME" 2>/dev/null || true)
+      if [ "$STATE" = "active" ] || [ "$STATE" = "activating" ]; then
+        log "  recovered within grace window (state: $STATE) — warning, not page"
+        ${alert} "Service crashed & auto-recovered: $SERVICE_NAME" \
+          "Service $SERVICE_NAME failed but is $STATE again (self-healed within 30s). No action needed unless it recurs. Logs at failure:"$'\n'"$LOGS" \
+          -s warning -e services \
+          -f "service=$SERVICE_NAME" -f "recovered=true" \
+          || log "  WARNING: hwc-alert failed, logged locally only"
+      else
+        ${alert} "Service Failed: $SERVICE_NAME" \
+          "Service $SERVICE_NAME failed and is still $STATE. Act: journalctl -u $SERVICE_NAME -n 50, then systemctl restart $SERVICE_NAME. Recent logs:"$'\n'"$LOGS" \
+          -s critical -e services \
+          -f "service=$SERVICE_NAME" \
+          || {
+            log "  WARNING: hwc-alert failed; wall fallback"
+            echo "SERVICE FAILURE: $SERVICE_NAME - check journalctl -u $SERVICE_NAME" | wall 2>/dev/null || true
+          }
+      fi
     '';
   };
 

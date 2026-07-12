@@ -349,6 +349,21 @@ SVC_FAIL_JSON=$({ grep -h '^\[20' /var/log/hwc/notifications/service-failures.lo
   | awk -v since="${OPS_SINCE}" -F'[][]' '$2 >= since && index($0, "Service failure: ") { split($0, a, "Service failure: "); print $2 "|" a[2] }' \
   | jq -R -s 'split("\n") | map(select(length>0)) | map(split("|") | {time: .[0], service: .[1]})' 2>/dev/null || echo '[]')
 echo "${SVC_FAIL_JSON}" | jq empty 2>/dev/null || SVC_FAIL_JSON='[]'
+# Annotate each failure event with whether the unit is active NOW. A crash
+# systemd (or the gluetun self-heal) already recovered is history, not an
+# incident — 2026-07-12 the orchestrated VPN-stack restart reported
+# "2 service failure event(s)" for units that were healthy, indistinguishable
+# from a real outage. Recovered vs still-down get separate alerts below.
+SVC_FAIL_ANNOTATED=$(echo "${SVC_FAIL_JSON}" | jq -r '.[] | [.time, .service] | @tsv' 2>/dev/null \
+  | while IFS=$'\t' read -r t s; do
+      [ -n "${s}" ] || continue
+      state=$("${SYSTEMCTL}" is-active "${s}" 2>/dev/null) || true
+      jq -cn --arg time "${t}" --arg service "${s}" --arg state "${state:-unknown}" \
+        '{time:$time, service:$service, active_now:($state=="active")}'
+    done | jq -s '.' 2>/dev/null || echo '')
+if [ -n "${SVC_FAIL_ANNOTATED}" ] && echo "${SVC_FAIL_ANNOTATED}" | jq empty 2>/dev/null; then
+  SVC_FAIL_JSON="${SVC_FAIL_ANNOTATED}"
+fi
 
 # Service liveness from the declarative blackbox probes (probe-services-*,
 # ~37 services, each with a human `service` label) — replaced the Uptime Kuma
@@ -427,8 +442,12 @@ ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq \
   --argjson probes "${SERVICES_DOWN_JSON}" \
   --argjson down "${PROM_DOWN_JSON}" \
   --argjson disk "${DISK_FORECAST_JSON}" '
-  . + (if ($svc | length) > 0 then [{level:"warning", section:"ops",
-        message:"\($svc | length) service failure event(s) since yesterday evening: \($svc | map(.service) | unique | join(", "))"}] else [] end)
+  . + (($svc | map(select(.active_now == false))) as $dead
+       | if ($dead | length) > 0 then [{level:"critical", section:"ops",
+        message:"\($dead | length) service(s) failed overnight and are STILL DOWN: \($dead | map(.service) | unique | join(", ")) — systemctl status <unit>"}] else [] end)
+    + (($svc | map(select(.active_now != false))) as $rec
+       | if ($rec | length) > 0 then [{level:"info", section:"ops",
+        message:"\($rec | length) service(s) crashed and auto-recovered overnight (no action unless recurring): \($rec | map(.service) | unique | join(", "))"}] else [] end)
     + (if ($probes | map(select(.down_now)) | length) > 0 then [{level:"critical", section:"ops",
         message:"\($probes | map(select(.down_now)) | length) service(s) failing liveness probes NOW: \($probes | map(select(.down_now)) | map(.service) | join(", "))"}] else [] end)
     + (if ($probes | map(select(.down_now | not)) | length) > 0 then [{level:"warning", section:"ops",

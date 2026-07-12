@@ -174,17 +174,22 @@
         }
 
         # Frigate - Camera offline
+        # The avg_over_time guard silences cameras that are deliberately
+        # disabled (cobra_cam_2 exports 0 fps permanently and kept this alert
+        # firing forever): only a camera that was alive over the last day can
+        # go "offline". Label is camera_name, NOT camera — the bare {{
+        # $labels.camera }} rendered an empty name in Discord.
         {
           alert = "FrigateCameraOffline";
-          expr = "frigate_camera_fps < 1";
+          expr = "frigate_camera_fps < 1 and avg_over_time(frigate_camera_fps[1d]) > 0.5";
           for = "5m";
           labels = {
-            severity = "P5";
+            severity = "P4";
             category = "frigate";
           };
           annotations = {
-            summary = "Frigate camera {{ $labels.camera }} is offline";
-            description = "Camera {{ $labels.camera }} FPS is {{ $value | humanize }} (threshold: < 1)";
+            summary = "Frigate camera {{ $labels.camera_name }} is offline";
+            description = "Camera {{ $labels.camera_name }} FPS is {{ $value | humanize }} (was alive over the last day) — check the camera/stream, then podman logs frigate";
           };
         }
 
@@ -265,17 +270,23 @@
         }
 
         # Frigate - Low camera FPS
+        # Threshold is RELATIVE to the camera's own 1-day baseline, not a
+        # fixed 10: detect fps is deliberately 2-5 per camera (frigate
+        # parts/config.nix), so `< 10` fired permanently on every camera and
+        # re-spammed Discord each repeat_interval — same disease as the
+        # ModerateDiskUsage 75%→82% fix below. The >= 1 guard leaves
+        # dead/disabled cameras to FrigateCameraOffline.
         {
           alert = "FrigateLowFPS";
-          expr = "frigate_camera_fps < 10";
+          expr = "frigate_camera_fps < 0.5 * avg_over_time(frigate_camera_fps[1d]) and frigate_camera_fps >= 1";
           for = "10m";
           labels = {
-            severity = "P4";
+            severity = "P3";
             category = "frigate";
           };
           annotations = {
-            summary = "Frigate camera {{ $labels.camera }} has low FPS";
-            description = "Camera {{ $labels.camera }} FPS is {{ $value | humanize }} (threshold: < 10)";
+            summary = "Frigate camera {{ $labels.camera_name }} has degraded FPS";
+            description = "Camera {{ $labels.camera_name }} FPS is {{ $value | humanize }}, below half its 1-day baseline — stream is struggling, check camera/network";
           };
         }
 

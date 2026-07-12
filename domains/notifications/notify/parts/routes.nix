@@ -30,11 +30,13 @@
 
   {
     name     = "p1-fanout";
-    # Critical alerts go everywhere — both Discord channels for fast eyes
-    # plus email so the alert survives Discord outages and ends up in the
-    # mail archive for postmortems.
+    # Critical alerts hit the alerts channel plus email so the alert
+    # survives Discord outages and ends up in the mail archive for
+    # postmortems. #hwc-leads is deliberately NOT here: it used to be, and
+    # every mousehole/qbittorrent crash paged the leads channel — ops noise
+    # in a channel that must stay leads-only (2026-07-12 alert audit).
     match    = { priority = 1; };
-    channels = [ "discord-hwc-alerts" "discord-hwc-leads" "smtp-office" ];
+    channels = [ "discord-hwc-alerts" "smtp-office" ];
   }
 
   {

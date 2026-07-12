@@ -22,15 +22,22 @@ import type {
  */
 export function severityToPriority(severity: string | undefined): Priority {
   switch ((severity ?? "").toLowerCase()) {
+    // The Prometheus rules in domains/monitoring/prometheus/parts/alerts.nix
+    // speak an INVERTED P-scale (P5=Critical, P4=Warning, P3=Info — see its
+    // header). Before these cases existed every alertmanager alert fell
+    // through to the default and dispatched at priority 3, erasing the tiers.
+    case "p5":
     case "critical":
     case "page":
       return 1;
     case "high":
     case "error":
       return 2;
+    case "p4":
     case "warning":
     case "warn":
       return 3;
+    case "p3":
     case "info":
     case "notice":
       return 4;
