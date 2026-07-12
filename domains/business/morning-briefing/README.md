@@ -144,6 +144,18 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-07-12** — **Refinery section + honest service-failure alerts.**
+  New refinery board section (gather-refinery.mjs reads the item store
+  directly; buckets action/active/hopper; renders in briefing JSON, email,
+  and the TUI brief; alerts only on `failed` items). Separately, the ops
+  service-failure events are now annotated with `active_now`
+  (`systemctl is-active` at gather time): units that crashed but recovered
+  report as **info** "auto-recovered, no action unless recurring" while only
+  still-down units alert **critical** with a `systemctl status` pointer —
+  the 2026-07-12 briefing had reported the gluetun self-heal's restart of
+  mousehole/qbittorrent as "2 service failure event(s)", indistinguishable
+  from a live outage.
+
 - **2026-07-10** — **On-demand retriage (unified-triage Phase 4).** Steps
   2/2b/3 extracted verbatim into `triage-mail.sh` (mode `baseline`); new mode
   `delta` classifies ONLY unread threads with no `triage/*` tag and appends

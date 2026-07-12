@@ -57,6 +57,13 @@ domains/automation/nightly-builds/
 `reviewLlmProvider`, `maxCards`, `vaultDir`, `repoDir`, `enableRebuildButton`.
 
 ## Changelog
+- **2026-07-12** — **Morning-review digest was silently dropped when large.**
+  hwc-notify's schema caps title at 200 / body at 4000 chars and 400-rejects
+  oversized payloads; a long `errdetail` list pushed the digest body past the
+  cap, so the notify vanished daily (journal: "schema validation failed:
+  body too_big", 07:49 on 07-11 and 07-12) with only a WARN in the unit log.
+  The review wrapper now truncates title/body at the edge before POSTing —
+  the archived `_runs/*.json` keeps full detail.
 - **2026-06-24** — Requeue hygiene + branch-parse robustness (found while running
   the post-hardening batch live):
   - **BRANCH parse takes the first match only** (`head -1`). `rg -m1` stops after
