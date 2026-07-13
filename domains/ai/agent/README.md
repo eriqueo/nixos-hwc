@@ -142,3 +142,12 @@ To register the agent as a tool in Open WebUI:
    - Headers: `Content-Type: application/json`
 
 Then users can invoke system commands through the chat interface.
+
+## Changelog
+
+- 2026-07-13: Module restructure — split `options.nix` folded inline into `index.nix`
+  and the FastAPI app extracted to `hwc-ai-agent.py`; legacy `options.nix` removed
+  (part of the AI-domain inline-options cleanup). Law 3 path abstraction and the
+  Sprint 5 router/agent/discovery wiring landed in the same window. Server tailnet
+  rename `hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net` swept in
+  (mechanical).
