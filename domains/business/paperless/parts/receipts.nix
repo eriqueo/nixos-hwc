@@ -25,19 +25,27 @@ let
   receiptExts = [ "pdf" "jpg" "jpeg" "png" "heic" "webp" ];
   globsFor = dir: lib.concatMap (e: [ "${dir}/*.${e}" "${dir}/*.${lib.toUpper e}" ]) receiptExts;
 
+  # MUST fully drain the watched folder before exiting: the PathExistsGlob
+  # unit re-fires as long as a matching file exists, so a skip-and-exit
+  # here loops the service into its start limit. Files still being written
+  # (Syncthing temp→rename, direct copies) are waited out in-process.
   moverScript = pkgs.writeShellScript "paperless-receipts-mover" ''
     set -euo pipefail
     shopt -s nullglob nocaseglob
     moved=0
-    for f in ${lib.concatMapStringsSep " " (e: "${cfg.receipts.mobileDir}/*.${e}") receiptExts}; do
-      base=$(basename "$f")
-      # Skip files Syncthing is still writing (it renames when complete,
-      # but a partial match window exists for direct copies).
-      if [ -n "$(find "$f" -newermt '-5 seconds' 2>/dev/null)" ]; then
-        continue
-      fi
-      mv -n "$f" "${consumeDir}/receipt_$(date +%Y%m%d-%H%M%S)_$base"
-      moved=$((moved+1))
+    for attempt in 1 2 3 4 5 6; do
+      remaining=0
+      for f in ${lib.concatMapStringsSep " " (e: "${cfg.receipts.mobileDir}/*.${e}") receiptExts}; do
+        # Wait out files modified in the last 5 seconds (still syncing)
+        if [ -n "$(find "$f" -newermt '-5 seconds' 2>/dev/null)" ]; then
+          remaining=$((remaining+1))
+          continue
+        fi
+        mv -n "$f" "${consumeDir}/receipt_$(date +%Y%m%d-%H%M%S)_$(basename "$f")"
+        moved=$((moved+1))
+      done
+      [ "$remaining" -eq 0 ] && break
+      sleep 5
     done
     echo "paperless-receipts-mover: moved $moved file(s) to consume."
   '';
@@ -83,6 +91,9 @@ in
 
       systemd.services.paperless-receipts-mover = {
         description = "Move phone receipt drops into the paperless consume dir";
+        # The drain loop makes rapid re-triggers legitimate (each run empties
+        # the folder); don't let a burst of Syncthing arrivals wedge the unit.
+        startLimitIntervalSec = 0;
         serviceConfig = {
           Type = "oneshot";
           User = lib.mkForce "eric";
