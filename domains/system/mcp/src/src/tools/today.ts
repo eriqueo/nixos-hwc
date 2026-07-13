@@ -204,8 +204,11 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
   for (const a of b.alerts ?? []) {
     if (a.level !== "critical" && a.level !== "warning") continue;
     if (a.section === "refinery") continue; // itemized above, don't double-count
+    // Strip numbers before slugging: "Grafana (89%)" and "Grafana (63%)" are
+    // the same underlying problem — a fluctuating figure must not mint a new
+    // id every run or dismissals never stick.
     items.push({
-      id: `system:${slug(String(a.message ?? a.section ?? "alert"))}`,
+      id: `system:${slug(String(a.message ?? a.section ?? "alert").replace(/[\d.,%]+/g, ""))}`,
       source: "system",
       title: String(a.message ?? "System alert"),
       why: a.level === "critical" ? "critical — something is down right now" : "recurring warning — worth a look",
