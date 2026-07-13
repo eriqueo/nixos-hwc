@@ -140,17 +140,27 @@ let
           header Access-Control-Allow-Methods "GET, OPTIONS"
           header Access-Control-Allow-Headers "Content-Type"
           header /assets/* Cache-Control "public, max-age=31536000, immutable"
-          ${lib.optionalString (r ? api) ''
+          ${if (r ? api) then ''
           # Same-origin API proxy (optional `api = { path; upstream; }` on a
           # static vhost) — lets a served SPA call a loopback service without
-          # CORS or a second vhost. More-specific handle wins over file_server.
+          # CORS or a second vhost. The static half sits in a sibling catch-all
+          # handle: bare try_files is a REWRITE and would run before `handle`
+          # in Caddy's directive order, turning POST ${r.api.path} into
+          # /index.html (file_server → 405). Sibling handles are mutually
+          # exclusive and most-specific-path wins, which is what we want.
           handle ${r.api.path}* {
             reverse_proxy ${r.api.upstream}
           }
-          ''}
+          handle {
+            root * ${r.root}
+            try_files {path} /index.html
+            file_server
+          }
+          '' else ''
           root * ${r.root}
           try_files {path} /index.html
           file_server
+          ''}
         ''
         else mkProxyBlock r;
     in ''
