@@ -389,7 +389,12 @@ export function todayTools(): ToolDef[] {
         const live = all.filter((i) => !(i.id in state.dismissed));
         for (const i of live) i.report = await reportFor(i);
         live.sort(rank);
-        const queue = live.slice(0, TOP_N);
+        // Every red makes the queue — a red squeezed out by the cap is an
+        // invisible emergency. The cap only limits how many ambers pad it out.
+        const reds = live.filter((i) => i.severity === "red");
+        const queue = reds.length >= TOP_N
+          ? reds
+          : live.slice(0, TOP_N);
         const spillover = live.length - queue.length;
         const generatedAt = String(briefing.generated_at ?? "");
 

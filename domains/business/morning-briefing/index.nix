@@ -160,7 +160,11 @@ in
       description = "Watch for queued today-dispatch cards";
       wantedBy = [ "multi-user.target" ];
       pathConfig = {
-        DirectoryNotEmpty = "${agentDir}/output/dispatch";
+        # PathExistsGlob, NOT DirectoryNotEmpty: only actual prompt cards may
+        # fire the runner. A stray non-.md file under DirectoryNotEmpty
+        # re-fired the runner in a tight loop until systemd's start-rate limit
+        # killed BOTH units (observed 2026-07-12 23:39, start-limit-hit).
+        PathExistsGlob = "${agentDir}/output/dispatch/*.md";
         Unit = "today-dispatch.service";
       };
     };
