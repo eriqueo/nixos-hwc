@@ -73,4 +73,5 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-07-13: Admin secret defaults now look up the kebab-case keys `hwc.secrets.api."couchdb-admin-username"` / `"couchdb-admin-password"` (were the camelCase `couchdbAdmin*File` attrs), with `or null` fallback — tracks the generated secrets namespace. Matches the paths this README already documents.
 - 2026-03-25: Created README per Law 12
