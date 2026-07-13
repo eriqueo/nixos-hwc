@@ -18,7 +18,7 @@ apps/
 ├── gpu-screen-recorder/  # Call/screen recording (gsr-toggle script + sys.nix capture wrapper)
 ├── hyprland/       # Wayland compositor
 ├── kitty/          # Terminal emulator
-├── librewolf/      # Privacy browser
+├── firefox/        # Privacy browser (migrated from librewolf)
 ├── mpv/            # Media player
 ├── obsidian/       # Note-taking
 ├── xournalpp/      # PDF annotator / handwritten notes
@@ -30,6 +30,7 @@ apps/
 ```
 
 ## Changelog
+- 2026-07-13: Batch of app-level changes (details in each app's own README). **firefox** replaces **librewolf** (unmaintained/insecure in nixpkgs; same hardening minus FPP +AllTargets); configPath pinned to legacy `.mozilla/firefox`. **yazi** filetype rules keyed on `url=` not `name=`. **zellij** gains CRM + refinery workbench hub tabs. **nvim** which-key HWC standard popup look. **hyprland** SUPER+drag move/resize + centered file-picker popups. **pave** one-click GraphiQL launcher + unconditional schemaPath bake. New **tetro** terminal tetromino game. **waybar/hardware** rebind Sensel lid-open, default lid-close to suspend. **claude-code** pull no-ops on non-ff instead of failing every 15min. Plus Law 3 homeDirectory-derived fallbacks, 52 module READMEs added (Law 12 v12.4), and reorg-debris cleanup.
 - 2026-06-19: **pave-query-builder — new external-flake app + HWC adapter**. Trap-safe Pave (JobTread API) query builder (TUI + CLI), its own repo at `~/600_apps/pave-query-builder` consumed as the `pave-query-builder` flake input (same shared-remote model as todui/khalt/workbench). Thin translator imports the app's `homeManagerModules.pave-query-builder` and feeds it the jt-mcp schema path when present; mutation guardrail left at the app default (HWC test org only). Enabled in `profiles/desktop/home.nix`. Launcher: `kitty -e pave-query`.
 - 2026-06-19: **zellij — `session_serialization false`**. zellij's default serializes sessions to disk for resurrection; combined with the default `on_force_close "detach"`, that's why a closed workbench window left a live `--server` process that could resurrect STALE. Since workbench is fully rebuilt from its KDL layout on every open, nothing is worth resurrecting — disabling serialization makes every recreate (incl. `wb-reload`/SUPER+W) structurally fresh. `on_force_close` deliberately left at `detach` to keep the accidental-close reattach safety net.
 - 2026-06-19: **workbench — `wb-reload` promoted from shell alias to a real binary**. The SUPER+W keybind now runs `kitty -e wb-reload` to reload the zellij session fresh every launch (kill named session → recreate), but `kitty -e` execs its arg directly and can't see zsh aliases, so the old alias silently did nothing. Added a `writeShellScriptBin "wb-reload"` to `apps/workbench/index.nix` (on `home.packages`) as the single source of truth; removed the duplicate alias from `core/shell/parts/aliases.nix`. Resolves from both the keybind and interactive shells.

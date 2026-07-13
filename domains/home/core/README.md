@@ -21,6 +21,8 @@ core/
 ```
 
 ## Changelog
+- 2026-07-13: shell/index.nix — Law 3 sweep: path fallbacks now derive from
+  `homeDirectory`, dead path literals dropped (no behavior change).
 - 2026-07-11: shell/parts/fzf.nix — renamed `fileWidgetCommand` →
   `fileWidget.command` and `historyWidgetOptions` → `historyWidget.options`
   (HM option renames); values unchanged, silences two eval warnings.
