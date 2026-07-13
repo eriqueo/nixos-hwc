@@ -27,6 +27,8 @@ let
     discord-webhook-hwc-alerts = { owner = "eric"; };
     discord-webhook-hwc-leads  = { owner = "eric"; };
     discord-webhook-nightly-builds = { owner = "eric"; };
+    discord-webhook-media      = { owner = "eric"; };
+    discord-webhook-frigate    = { owner = "eric"; };
     hwc-leads-hmac-secret      = { owner = "eric"; };
     slack-signing-secret       = { owner = "eric"; };
     grafana-admin-password     = { owner = "eric"; };

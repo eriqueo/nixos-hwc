@@ -49,6 +49,28 @@
     };
   }
 
+  {
+    id        = "discord-media";
+    name      = "#media (Discord)";
+    adapter   = "discord";
+    secretRef = "discord-webhook-media";
+    params = {
+      username  = "HWC Media";
+      timeoutMs = 5000;
+    };
+  }
+
+  {
+    id        = "discord-frigate";
+    name      = "#frigate (Discord)";
+    adapter   = "discord";
+    secretRef = "discord-webhook-frigate";
+    params = {
+      username  = "HWC Cameras";
+      timeoutMs = 5000;
+    };
+  }
+
   # SMTP via Proton Bridge on loopback. Bridge listens on 127.0.0.1:1025
   # for local clients; auth is PLAIN with the proton-bridge-password
   # agenix secret (Proton Bridge shares one password across every address

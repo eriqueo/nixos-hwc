@@ -60,9 +60,22 @@
   # p1-fanout first (declared above), so criticals fan out to email too.
 
   {
-    name     = "media-to-alerts";           # home:media:jellyfin-alert
+    name     = "media-to-media-channel";    # radarr/jellyfin grabs & alerts
+    # Media grabs are informational, not ops alerts — they lived in
+    # #hwc-alerts only because it was the sole general channel (see the
+    # re-homing note above). #media exists now (2026-07-12).
     match    = { topic = "media"; };
-    channels = [ "discord-hwc-alerts" ];
+    channels = [ "discord-media" ];
+  }
+
+  {
+    name     = "frigate-to-frigate-channel";
+    # Frigate camera-health alerts (alertmanager category=frigate becomes
+    # topic=frigate). Detection events from the n8n frigate-detect workflow
+    # post to the same #frigate channel via its webhook directly (they need
+    # snapshot image uploads the dispatcher doesn't do).
+    match    = { topic = "frigate"; };
+    channels = [ "discord-frigate" ];
   }
 
   {
