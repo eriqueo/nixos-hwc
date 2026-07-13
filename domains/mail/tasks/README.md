@@ -89,6 +89,22 @@ credential: the shared `radicale-htpasswd` agenix secret (password =
 stay CLI-visible. Deploy order + phone CalDAV setup: see the radicale README.
 
 ## Changelog
+- 2026-07-13: separate Radicale principals for calendar (`cal`) vs tasks (`eric`)
+  so each pair's dynamic discovery no longer grabs the other's collections. The
+  shared htpasswd gains a `cal:` line, so `vdirsyncer-pair-radicale.nix` now
+  extracts THIS user's password by username via a colon-safe `awk` fetch (gawk is
+  on the service PATH) instead of a bare `cut -f2-`. (Not activated until the
+  `cal:` line exists in the secret.)
+- 2026-07-13: Radicale (VEVENT) calendar backend added + plain khal retired
+  (`domains/mail/calendar/`); the tasks account/email assertion relaxed to fire
+  only when `hwc.mail.tasks.icloud.enable` (Radicale-only setups may have no
+  iCloud account at all).
+- 2026-07-13: repaired vdirsyncer (`vdirsyncer.service` was exiting 1, killing
+  both khalt calendar and todui tasks sync). Two fixes in
+  `vdirsyncer-pair-radicale.nix`: run `cut` directly (no `sh -c` — the user
+  service PATH has coreutils but not bash), and switch the iCloud pair to
+  server-authoritative `["from a"]` so a stale local-only collection no longer
+  404s every run. One-time `vdirsyncer discover` needed after deploy.
 - 2026-06-11: Phase C plumbing — optional `radicale` sub-options + second
   vdirsyncer pair part (off by default; flip in machines/laptop/home.nix after
   the server deploy). todoman path glob parameterized (`tasks*/*` with radicale).
