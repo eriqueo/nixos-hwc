@@ -17,6 +17,7 @@ Board link: {{URL}}
 4. If READY-TO-PROMOTE: summarize what was shaped, flag anything the premortem
    gate raised, and state what promoting will kick off.
 
-Write the report to the REPORT_PATH in this card's header. End with NEXT
-ACTION: the single verb Eric should dispatch (run / resume / promote / delete)
-and why. Under 60 lines, findings first.
+Your final stdout IS the report (the runner writes it to REPORT_PATH) — do not
+create files anywhere; scratch goes to /tmp only. End with NEXT ACTION: the
+single verb Eric should dispatch (run / resume / promote / delete) and why.
+Under 60 lines, findings first.

@@ -14,5 +14,6 @@ actually needed), find the root cause or the concrete options, and write a
 report that ends with a NEXT ACTION section: the single next step, who/what
 performs it, and the exact command or link if one exists.
 
-Write the report as plain markdown to the REPORT_PATH given in this card's
-header comment. Keep it under 80 lines. No preamble — findings first.
+Your final stdout IS the report (the runner writes it to REPORT_PATH) — do
+not create files anywhere; if you must stage scratch data, use /tmp only.
+Keep it under 80 lines. No preamble — findings first.

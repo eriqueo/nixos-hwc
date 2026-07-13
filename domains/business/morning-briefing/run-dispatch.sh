@@ -52,3 +52,13 @@ for card in "${DISPATCH_DIR}"/*.md; do
     log "ERROR: claude run failed for ${name} — card left in queue for retry"
   fi
 done
+
+# Sweep non-card strays (an agent scratch file, a partial write): anything
+# left that isn't a queued .md card keeps DirectoryNotEmpty armed and makes
+# the path unit re-fire this runner forever. Quarantine, don't delete.
+for stray in "${DISPATCH_DIR}"/*; do
+  [ -e "${stray}" ] || continue
+  case "${stray}" in *.md) continue ;; esac
+  mv "${stray}" "${DONE_DIR}/stray-$(basename "${stray}")"
+  log "WARN: quarantined stray ${stray##*/} from dispatch/"
+done

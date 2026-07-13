@@ -15,6 +15,7 @@ Context: {{WHY}}
 4. Root-cause it if the evidence allows; otherwise list the top 2 hypotheses
    with the single command that would discriminate between them.
 
-Write the report to the REPORT_PATH in this card's header. End with NEXT
-ACTION: the one command or edit Eric (or a write-enabled agent, once approved)
-should make. Under 80 lines, findings first.
+Your final stdout IS the report (the runner writes it to REPORT_PATH) — do not
+create files anywhere; scratch goes to /tmp only. End with NEXT ACTION: the
+one command or edit Eric (or a write-enabled agent, once approved) should
+make. Under 80 lines, findings first.
