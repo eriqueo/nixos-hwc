@@ -51,4 +51,5 @@ hwc.data.cloudbeaver = {
 
 ## Changelog
 
+- 2026-07-13: Law 5 burn-down — added the `HWC-EXCEPTION(Law 5)` annotation block (infra container, not a media app; mkContainer's media/PUID model does not apply) to the raw `oci-containers` module. Comment only, no behavior change.
 - 2026-03-25: Created README per Law 12

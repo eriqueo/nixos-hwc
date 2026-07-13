@@ -41,6 +41,9 @@ automation/
 ├── sr-gauntlet/   # Daily DataX SR investigation schedule (hwc.automation.srGauntlet.*)
 │   ├── index.nix  # systemd service/timer (06:30 daily) wrapping ~/700_datax/sr_gauntlet/run.sh
 │   └── README.md  # Containment model + pointer to the pipeline repo
+├── mail-janitor/  # Mail-tag housekeeping timer (hwc.automation.mailJanitor.*) — own README
+├── refinery/    # Substance-agnostic refinement engine board/runner — own README
+├── vault-sync/  # Brain-vault git sync timers — own README
 └── n8n/         # n8n workflow automation
     ├── index.nix     # Options + firewall rules
     ├── sys.nix       # Container definition via mkContainer
@@ -64,6 +67,16 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-07-13: Alert-actionability pass (2026-07-12 audit) — `nightly-builds/index.nix`
+  morning-review digest now truncates at the hwc-notify 4000-char edge instead of
+  silently vanishing when errdetail overflowed the cap (full detail kept in the
+  archive). Also in this window: `sr-gauntlet/index.nix` grew the optional
+  `SRG_PUSH_URL`/`SRG_PUSH_SECRET` cred pair (7→9-key datax.env, push skipped
+  gracefully while absent) for report push into the datax admin UI; refinery board
+  vault links became `obsidian://open` deep links; `refinery` and `mail-janitor`
+  `User = "eric"` declarations gained `lib.mkForce` (Law compliance); `refinery`
+  srGauntletDir derived via `hwc.paths.user.home` (Law 3). Structure block updated
+  to list the `mail-janitor/`, `refinery/`, and `vault-sync/` subdirs.
 - 2026-07-06: Gotify decommission — removed the n8n `secrets.gotifyTokenFiles` option and its GOTIFY_TOKEN_* env injection from n8n sys.nix (runtime `sys:router:notify` workflow edit tracked in the decommission handoff).
 - 2026-07-06: n8n image pinned to 2.10.3 (Law 15 v12.4 critical tier: workflow DB).
 - 2026-06-18: Add `inbox-janitor/` — server-only systemd timer (every 30 min) that drains

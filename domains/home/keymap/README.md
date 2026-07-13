@@ -92,6 +92,11 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 
 ## Changelog
 
+- 2026-07-13 — **CRM hub jump.** Added meta key `r` (`Ctrl+Space r`) → CRM hub in
+  `grammar.nix`, second in hub order (between hwc and datax). The layout KDL,
+  `GoToTab` indices, and `WORKBENCH_TABS` all derive from the shared `tabs.hubs`
+  list, so they stay coherent (tab order now: hwc · crm · datax · server · brief ·
+  tasks · cal · files · mail · edit).
 - 2026-06-26 — **Ctrl = workbench layer; in-app side-nav → Alt.** zellij now
   binds `Ctrl j`/`Ctrl k` to cycle tabs directly (plus `Ctrl Space` = meta card),
   so Ctrl is the workbench/meta layer. In-app two-column nav moved off Ctrl onto

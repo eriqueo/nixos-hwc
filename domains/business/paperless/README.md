@@ -104,5 +104,7 @@ hwc.business.paperless = {
 
 ## Changelog
 
+- 2026-07-13: Storage dirs (consume/export/staging/media) now declared via `systemd.tmpfiles.rules` in `parts/config.nix` — the bind-mount sources vanished from `/mnt/hot` after a reboot and podman crash-looped (1600+ restarts) with statfs errors. Same commit pinned the container image to a critical-tier version (Law 15 v12.4).
+- 2026-06-02: Server tailnet rename swept through (`hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net`) — mechanical.
 - 2026-03-25: Created README per Law 12
 - 2026-03-04: Namespace migration hwc.server.containers.paperless → hwc.business.paperless

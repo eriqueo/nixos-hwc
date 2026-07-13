@@ -38,6 +38,7 @@ Rebuild and the persona becomes available. The list is derived from
 
 ```
 library/
+  _defaults.nix          # Shared persona defaults merged into each persona
   classifier.{nix,md}    # GPU label classification
   extractor.{nix,md}     # GPU JSON extraction
   coder.{nix,md}         # GPU code-first
@@ -59,6 +60,12 @@ README.md
 
 ## Changelog
 
+- 2026-07-13: Phase 2/3 wiring — `hwc-llm` now routes through persona-daemon when
+  `--conversation` is given (SQLite conversation memory), and the module hands its
+  JSON manifest to `hwc.server.ai.personaDaemon.personaManifestFile` when the daemon
+  is enabled (gated so hosts without the daemon still eval). Added
+  `library/_defaults.nix` (shared persona defaults) and pointed each persona at it.
+  Fixed an orphan option-set that broke `nix flake check` on hosts lacking the daemon.
 - 2026-05-29: Initial module. 5 personas (classifier, extractor, coder,
   assistant, thinker). Stateless CLI wrapping `llama-gpu` (port 11500)
   and `llama-cpu` (port 11501).

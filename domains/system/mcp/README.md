@@ -493,6 +493,15 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-07-13**: `hwc_today` fixes (follow-up to the Today Queue). Every red
+  item now makes the queue — the ≤7 cap only limits ambers. The path unit that
+  triggers the dispatch runner fires only on `*.md` cards
+  (`PathExistsGlob` instead of `DirectoryNotEmpty`, which a stray file re-fired
+  into systemd's start-rate limit); refinery alerts get their `view→` link.
+  System-item ids are now stable — numbers are stripped before slugging.
+  `index.nix` grants the gateway RW on `morning-briefing/output` (dismiss state,
+  dispatch cards, report checks all live there; `ProtectSystem=strict` +
+  read-only `paths.nixos` had made every `hwc_today` write EROFS).
 - **2026-07-12**: Add `hwc_today` — the Today Queue (Triage Surface Contract).
   Derives a ranked ≤7-item action list from the morning briefing's
   briefing.json (invoices/tasks/leads/refinery/nightly/alerts/mail); verbs:

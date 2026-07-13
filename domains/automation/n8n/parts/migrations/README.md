@@ -12,6 +12,7 @@ SQL migration files for the `hwc` PostgreSQL database. Applied in order against 
 ```
 migrations/
   001-estimates-table.sql    # Initial estimates table (early prototype)
+  002-calculator-leads.sql   # hwc.calculator_leads — website calculator lead archive
   002-full-hwc-schema.sql    # Full production schema: all 11 tables, 5 views, seed data
 ```
 
@@ -27,4 +28,5 @@ sudo -u postgres psql -d hwc -f 002-full-hwc-schema.sql
 ```
 
 ## Changelog
+- 2026-07-13: Added `002-calculator-leads.sql` (hwc.calculator_leads archive, backing the work_calculator_lead n8n workflow). A `003-notification-events.sql` migration was added and then removed as part of the notifications refactor that eradicated Slack/gotify in favor of hwc-notify as the sole path.
 - 2026-03-26: Added 002-full-hwc-schema.sql — full production schema with JT reference tables, cost catalog, project state, estimates, leads, daily logs, workflow log, and views

@@ -69,6 +69,11 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-07-13: youtube `transcripts.outputDirectory` default simplified to
+  `${config.hwc.paths.media.root}/transcripts` — the dead `/mnt/media` null-safe
+  fallback removed (media.root is non-null on every server-role host that imports
+  this domain). Law 3, value unchanged. (Frigate exporter/dashboard work in the
+  same window lives under `frigate/`.)
 - 2026-07-06: audiobookshelf image pinned to 2.32.1 (Law 15 v12.4 critical tier: library state).
 - 2026-07-05: Law 5 burn-down — added `HWC-EXCEPTION(Law 5)` annotation blocks (reason/justification/plan/revocable) to this domain's raw `oci-containers` module(s); infra-shaped containers are sanctioned exceptions to the mkContainer rule. Comments only, no behavior change.
 

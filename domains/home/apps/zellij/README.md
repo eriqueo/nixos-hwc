@@ -19,4 +19,5 @@ meta-leader which-key plugin when the unified keymap grammar is present.
 - `parts/tabs.nix` — canonical hub + tool tab set (order = GoToTab indices)
 
 ## Changelog
+- 2026-07-13: Added workbench hub-page tabs to the layout. `crm` hub tab (parts/tabs.nix + layout.nix) with meta jump key `r` (Ctrl+Space r), and a `refinery` hub tab (hubs run 1-6, tools shift to 7-11). Layout KDL, GoToTab indices, and WORKBENCH_TABS all derive from the one hubs list so they stay coherent.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

@@ -333,6 +333,17 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-07-13: unified-triage Phase 2 — added `<Space>tu/tr/tn` set-bucket binds
+  (replace-set on `triage/*` tags, matching the gateway's `hwc_mail` set-triage,
+  so an aerc keypress moves the workbench card) plus `<Space>gU/gR/gN`
+  go-to-folder binds; cheat sheet + which-key group updated. Note: notmuch tag
+  DBs are per-machine, so triage tags live on hwc-server and laptop aerc's triage
+  view is empty pending a muchsync decision.
+- 2026-07-13: canonical taxonomy — `parts/tags.nix` now sources its
+  categories/flags from the new build-time `domains/mail/taxonomy/` registry
+  (single vocabulary shared with notmuch rules, the MCP gateway, and the morning
+  briefing); the palette role→hex mapping stays in aerc. Rendered aerc config
+  verified byte-identical — no behavior change.
 - 2026-06-26: folder nav `<C-j>/<C-k>` → `<A-j>/<A-k>` (next/prev-folder). Ctrl is now the workbench/zellij layer (Ctrl+j/k cycle tabs), so in-app side-column nav moved to Alt to avoid the collision.
 - 2026-06-26: which-key footer legend (`esc close · ⌫ back`) on the bottom border + Backspace walks up one chord level (forked aerc, app/whichkey.go + app/aerc.go); new themeable `whichkey_legend` style.
 - 2026-06-26: which-key popover redesign (forked aerc) — compact content-sized box (was edge-to-edge), `key → label` rows with nvim arrow, group keys read `domain +N` (e.g. `buffer +7`); styleset reworked to a raised slate card (bg3, lighter than terminal) with an inverted cream title chip and copper border, plus interior padding + a minimum box size. Code in `github:eriqueo/aerc` (app/whichkey.go, app/aerc.go); colors in `parts/appearance.nix`.
