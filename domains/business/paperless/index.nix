@@ -126,6 +126,36 @@ in
       };
     };
 
+    # Mail ingest: expose Proton Bridge IMAP (loopback-only) on the podman
+    # gateway so the paperless container's mail fetcher can poll it.
+    mailIngest = {
+      enable = lib.mkEnableOption "IMAP proxy for paperless mail ingest (Proton Bridge → podman gateway)" // { default = true; };
+
+      gatewayAddr = lib.mkOption {
+        type = lib.types.str;
+        default = "10.89.0.1";
+        description = "Podman media-network gateway address to bind the IMAP proxy on";
+      };
+
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 1143;
+        description = "IMAP port (same on loopback source and gateway bind)";
+      };
+    };
+
+    # Phone receipts: watch the Syncthing mobile-inbox receipts folder and
+    # move drops into the consume dir for OCR ingestion.
+    receipts = {
+      enable = lib.mkEnableOption "mobile receipts folder → paperless consume" // { default = true; };
+
+      mobileDir = lib.mkOption {
+        type = lib.types.str;
+        default = "/mnt/vaults/inbox-mobile/receipts";
+        description = "Phone-synced folder watched for receipt photos/PDFs";
+      };
+    };
+
     admin = {
       user = lib.mkOption {
         type = lib.types.str;
@@ -195,6 +225,7 @@ in
     ./sys.nix
     ./parts/config.nix
     ./parts/directories.nix
+    ./parts/receipts.nix
   ];
 
   #=========================================================================
