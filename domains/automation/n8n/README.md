@@ -121,6 +121,11 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
+- 2026-07-13: Retired 3 monitoring/alert workflows redundant with the
+  Prometheus→hwc-notify path — `03 alertmanager-router`, `05 cross-service-health`,
+  `11 mail-health-router` deleted from the running instance and their parked JSON
+  snapshots removed from `parts/workflows/`. Also cleaned committed merge-conflict
+  markers out of `parts/workflows/README.md`.
 - 2026-07-07: Notification unification — retired the `sys:router:notify` workflow (live + repo `parts/workflows/sys-router-notify.json`); its sole caller (`home:media:jellyfin-alert`) and the other Slack-sending workflows (mail-health, voice-log, weekly-events, bozeman-aggregator, jt:estimate-push) now POST the native shape directly to `http://127.0.0.1:11600/notify` (n8n runs host-networked, so loopback reaches hwc-notify). Removed the `slackWebhookUrlFile` option + the `SLACK_WEBHOOK_URL` env injection from `sys.nix` (no active workflow consumed it; the two retained Slack workflows — `frigate-detect` images + `bozeman-events-approval` interactive — use OAuth creds, not the webhook env, and are tracked exceptions pending the Discord-bot gateway). Dropped `parts/migrations/003-notification-events.sql` and the live `hwc.notification_events` table (0 readers).
 - 2026-07-05: Removed `mcp-bridge/` module (audit 2.2: never enabled; superseded by n8n-mcp running as a stdio backend of the unified `hwc-sys-mcp` gateway). README's stale bridge architecture section replaced.
 

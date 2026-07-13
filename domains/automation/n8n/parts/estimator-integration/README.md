@@ -83,3 +83,7 @@ All webhook endpoints require `x-api-key` header matching `ESTIMATOR_API_KEY` en
 - Workflows: `/home/eric/.nixos/domains/automation/n8n/parts/workflows/`
 - Estimator App: `/home/eric/.nixos/workspace/projects/react/heartwood-assembler/`
 - Server Config: `/home/eric/.nixos/machines/server/config.nix`
+
+## Changelog
+
+- 2026-07-13: Mechanical tailnet rename sweep — `hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net` in this part's docs (part of the tree-wide rename).

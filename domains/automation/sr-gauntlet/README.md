@@ -39,6 +39,15 @@ nightly-builds run-now pattern exactly. The board sets
 
 ## Changelog
 
+- **2026-07-13**: Decoupled the long-running service from Eric's `~/700_datax`
+  dev tree — source clones now point at service-owned `/var/lib/sr-gauntlet/{datax,jt-mcp}`
+  (official elstruck repos, fetch-only, `origin/main` worktrees in `/tmp`), and
+  creds move to a trimmed 0600 `/var/lib/sr-gauntlet/datax.env` (now 9 keys:
+  the required Firebase/OpenSearch set plus optional `SRG_PUSH_URL`/`SRG_PUSH_SECRET`
+  for report push into the datax admin UI, skipped gracefully when absent).
+  `check-creds.mjs` preflight alerts Discord with the name of any missing key.
+  Dropped `python3` from the unit PATH — the ledger/prompt/verdict heredocs it
+  served are now node subcommands in the pipeline's `lib.mjs`.
 - **2026-06-16**: Auto-investigation + run-now. Timer changed from daily 06:30
   to a **15-min poll** (Persistent=false) so new SR tickets are investigated on
   arrival (the ledger makes idle ticks cheap). Added the **run-now drain**:
