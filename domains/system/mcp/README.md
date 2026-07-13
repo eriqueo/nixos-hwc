@@ -493,6 +493,15 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-07-12**: Add `hwc_today` — the Today Queue (Triage Surface Contract).
+  Derives a ranked ≤7-item action list from the morning briefing's
+  briefing.json (invoices/tasks/leads/refinery/nightly/alerts/mail); verbs:
+  `dismiss` (state file, 30d TTL), `complete` (task items — delegates to
+  hwc_tasks_update), `agent` (queues the item's pre-written read-only
+  diagnosis card to the briefing's dispatch dir). Consumed by the web
+  briefing's TODAY panel (via the vhost `/mcp` proxy), the 6am email, and the
+  workbench `today` tile.
+
 - **2026-07-10**: Add `hwc-crm` stdio backend (8 `crm_*` tools) — a python
   MCP client (`python3.withPackages [mcp httpx]`) over the hwc-crm HTTP API on
   loopback :11660. Gated on `HWC_CRM_MCP_PYTHON` + `HWC_CRM_SRC_DIR`;

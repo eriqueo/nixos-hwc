@@ -206,7 +206,8 @@ async function gatherTasks() {
   const raw = await callTool("hwc_tasks_list", { status: "active" });
   const items = raw?.data?.tasks ?? [];
   const week = plusDays(7);
-  const task = (t) => ({ name: t.summary, due_date: t.due || null, list: t.list || "", completed: false });
+  // uid rides along so hwc_today's `complete` verb can address the CalDAV item
+  const task = (t) => ({ name: t.summary, uid: t.uid || null, due_date: t.due || null, list: t.list || "", completed: false });
   const overdue = [], due_today = [], due_this_week = [], unscheduled = [];
   for (const t of items) {
     if (!t.due) { unscheduled.push(task(t)); continue; }

@@ -144,6 +144,23 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-07-12** — **Today Queue: the briefing becomes actionable.** New
+  gateway tool `hwc_today` derives one ranked action list (≤7 items + spillover)
+  from briefing.json's own sections — overdue invoices, overdue CalDAV tasks
+  (gather-live now carries `uid`), stale leads (>14d), refinery action bucket,
+  finished nightly builds, system alerts, urgent mail. Step 2c
+  (`gather-today.mjs`) injects it as `sections.today`; the dashboard renders a
+  TODAY panel with verb buttons (dismiss / complete / ⚡agent) dispatched
+  same-origin via the briefing vhost's new `/mcp` proxy (routes.nix `api`
+  attr); the email renders it at the top; the workbench gets a `today` tile in
+  brief.toml on the same contract. The `agent` verb queues the item's
+  PRE-WRITTEN prompt (prompts/today/<source>.txt, interpolated at gather time
+  — Eric reads exactly what will run) into output/dispatch/, where the
+  today-dispatch path unit runs it READ-ONLY headless (allowlist in
+  run-dispatch.sh) and writes the report to output/reports/ (served via the
+  dashboard `reports/` symlink; done cards → output/dispatch-done/). Dismiss
+  state: output/today-state.json, 30d TTL.
+
 - **2026-07-12** — **Refinery section + honest service-failure alerts.**
   New refinery board section (gather-refinery.mjs reads the item store
   directly; buckets action/active/hopper; renders in briefing JSON, email,

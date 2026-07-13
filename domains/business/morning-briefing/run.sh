@@ -589,6 +589,27 @@ fi
 STEP2_END=$(date +%s)
 log "STEP 2: completed in $((STEP2_END - STEP2_START))s"
 
+# ── Step 2c: Today Queue ─────────────────────────────────────────────────────
+# hwc_today (gateway) derives the ranked action queue from the briefing just
+# written (incl. mail triage) + its dismiss state; inject it as sections.today
+# so the dashboard and email render it statically. Best-effort: {} on failure
+# and the TODAY block simply doesn't render.
+TODAY_JSON=$(timeout 30 node "${AGENT_DIR}/gather-today.mjs" 2>>"${LOG_FILE}" || echo '{}')
+echo "${TODAY_JSON}" | jq empty 2>/dev/null || TODAY_JSON='{}'
+if [ "$(echo "${TODAY_JSON}" | jq '.items? | length' 2>/dev/null || echo 0)" -gt 0 ] 2>/dev/null; then
+  if jq --argjson today "${TODAY_JSON}" '.sections.today = $today' \
+      "${OUTPUT_DIR}/briefing.json" > "${OUTPUT_DIR}/briefing.json.tmp" 2>>"${LOG_FILE}" \
+      && jq empty "${OUTPUT_DIR}/briefing.json.tmp" 2>/dev/null; then
+    mv "${OUTPUT_DIR}/briefing.json.tmp" "${OUTPUT_DIR}/briefing.json"
+    log "STEP 2c: OK Today queue injected ($(echo "${TODAY_JSON}" | jq '.items | length') items)"
+  else
+    rm -f "${OUTPUT_DIR}/briefing.json.tmp"
+    log "STEP 2c: WARN today injection produced invalid JSON — briefing kept without it"
+  fi
+else
+  log "STEP 2c: today queue empty or gateway unreachable — skipped"
+fi
+
 # ── Step 4: Publish to dashboard/ ────────────────────────────────────────────
 if [ -f "${OUTPUT_DIR}/briefing.json" ]; then
   # Use symlink if not already linked; otherwise cp with --remove-destination
@@ -599,6 +620,10 @@ if [ -f "${OUTPUT_DIR}/briefing.json" ]; then
     log "OK: Published to dashboard/"
   fi
 fi
+# Today-queue agent reports: serve output/reports/ through the dashboard vhost
+# (same symlink pattern as briefing.json).
+mkdir -p "${OUTPUT_DIR}/reports" "${OUTPUT_DIR}/dispatch"
+[ -L "${DASHBOARD_DIR}/reports" ] || ln -sfn "${OUTPUT_DIR}/reports" "${DASHBOARD_DIR}/reports"
 
 # ── Step 5: Email delivery (2026-07-06, audit 2.1: Eric wants email + workbench)
 # Renders briefing.json to a plain-text email and sends via msmtp's default
@@ -620,6 +645,15 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
   EMAIL_BODY=$(jq -r '
     def sec(x): "\n== " + x + " ==\n";
     "Morning Briefing — " + (.generated_at // "unknown")
+    + (if ((.sections.today.items // []) | length) > 0 then
+        sec("TODAY — do these (" + ((.sections.today.items | length) | tostring)
+            + (if (.sections.today.spillover // 0) > 0 then " +" + ((.sections.today.spillover) | tostring) + " waiting" else "" end) + ")")
+        + ([.sections.today.items[] |
+            (if .severity == "red" then "[!] " else "[ ] " end)
+            + .title + " — " + .why + " (~" + ((.effort_min // 10) | tostring) + " min)"
+            + (if .report then "\n      report ready: " + .report else "" end)]
+           | join("\n"))
+      else "" end)
     + (if (.alerts // []) | length > 0 then
         sec("ALERTS (" + ((.alerts | length) | tostring) + ")")
         + ([.alerts[] | "[" + .level + "] " + .section + ": " + .message] | join("\n"))

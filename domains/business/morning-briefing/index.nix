@@ -127,10 +127,50 @@ in
       };
     };
 
+    # ── Today-queue agent dispatch (hwc_today `agent` verb) ──────────────────
+    # hwc_today queues a pre-written, Eric-approved prompt card into
+    # output/dispatch/; this unit runs it through a READ-ONLY headless claude
+    # (allowlist in run-dispatch.sh) and writes the report to output/reports/,
+    # where the dashboard's reports/ symlink serves it. Same path-unit pattern
+    # as mail-retriage above.
+    systemd.services.today-dispatch = {
+      description = "Today queue — run queued read-only diagnosis cards";
+      environment.HOME = paths.user.home;
+      path = [ pkgs.bash pkgs.coreutils pkgs.gnugrep pkgs.jq pkgs.git pkgs.ripgrep ];
+      serviceConfig = {
+        Type = "oneshot";
+        User = lib.mkForce "eric";
+        Group = "users";
+        WorkingDirectory = agentDir;
+        ExecStart = "${agentDir}/run-dispatch.sh";
+        TimeoutSec = 1800; # up to ~3 cards a run at the 600s per-card budget
+        StandardOutput = "journal";
+        StandardError = "journal";
+        NoNewPrivileges = true;
+        ReadWritePaths = [
+          "${agentDir}/output"
+          "${agentDir}/logs"
+          paths.user.claude
+          "/tmp"
+        ];
+      };
+    };
+
+    systemd.paths.today-dispatch = {
+      description = "Watch for queued today-dispatch cards";
+      wantedBy = [ "multi-user.target" ];
+      pathConfig = {
+        DirectoryNotEmpty = "${agentDir}/output/dispatch";
+        Unit = "today-dispatch.service";
+      };
+    };
+
     # The trigger file (and its dir) must exist for PathModified to arm.
     systemd.tmpfiles.rules = [
       "d ${paths.user.home}/.cache/hwc 0755 eric users -"
       "f ${paths.user.home}/.cache/hwc/retriage.request 0644 eric users -"
+      "d ${agentDir}/output/dispatch 0755 eric users -"
+      "d ${agentDir}/output/reports 0755 eric users -"
     ];
   };
 }

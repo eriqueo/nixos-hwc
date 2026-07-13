@@ -295,11 +295,14 @@ in
       upstream = "http://127.0.0.1:8095";
     }
 
-    # Morning Briefing — daily dashboard for Heartwood Craft ops
+    # Morning Briefing — daily dashboard for Heartwood Craft ops.
+    # api: same-origin /mcp proxy to the local gateway so the TODAY queue's
+    # action buttons (dismiss/complete/agent via hwc_today) work from the SPA.
     {
       name = "briefing";
       mode = "vhost";
       root = "${nixosDir}/domains/business/morning-briefing/dashboard";
+      api = { path = "/mcp"; upstream = "http://127.0.0.1:6200"; };
     }
 
     # Refinery — read-only Kanban board for the gauntlet hopper, name-based

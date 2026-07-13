@@ -21,6 +21,7 @@ import { morningBriefTool } from "./morning-brief.js";
 import { mailTriageTools } from "./mail-triage.js";
 import { nightlyReviewTools } from "./nightly-review.js";
 import { refineryTools } from "./refinery.js";
+import { todayTools } from "./today.js";
 import { notifyTools } from "./notify.js";
 import { leadsTools } from "./leads.js";
 import { tasksTools } from "./tasks.js";
@@ -53,6 +54,7 @@ export function allTools(config: ServerConfig): ToolDef[] {
     ...mailTriageTools(),
     ...nightlyReviewTools(),
     ...refineryTools(),
+    ...todayTools(),
     // Composite tools
     morningStatusTool(),
     morningBriefTool(),

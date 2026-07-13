@@ -50,6 +50,24 @@
 
   /* Alerts */
   .alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+  /* TODAY queue — the ranked action list above the grid */
+  .today{margin-bottom:24px;border:1px solid var(--border);border-radius:8px;background:var(--surface,rgba(255,255,255,.02))}
+  .today-hdr{display:flex;justify-content:space-between;align-items:baseline;padding:12px 16px;border-bottom:1px solid var(--border);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent,#d8a657)}
+  .today-spill{font-size:11px;opacity:.6;text-transform:none;letter-spacing:0}
+  .today-item{display:flex;gap:10px;align-items:flex-start;padding:10px 16px;border-bottom:1px solid var(--border)}
+  .today-item:last-child{border-bottom:none}
+  .today-sev{flex:none;width:8px;height:8px;border-radius:50%;margin-top:6px}
+  .sev-red{background:#e06c60}.sev-amber{background:#d8a657}
+  .today-body{flex:1;min-width:0}
+  .today-title{font-weight:600}
+  .today-why{font-size:12px;opacity:.75;margin-top:2px}
+  .today-meta{font-size:11px;opacity:.5;margin-top:2px}
+  .today-verbs{display:flex;gap:6px;flex-wrap:wrap;flex:none}
+  .today-btn{font:inherit;font-size:11px;padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface2,rgba(255,255,255,.05));color:inherit;cursor:pointer}
+  .today-btn:hover{border-color:var(--accent,#d8a657)}
+  .today-btn:disabled{opacity:.4;cursor:default}
+  .today-btn.primary{border-color:var(--accent,#d8a657)}
+  .today-done{font-size:11px;opacity:.6;padding:4px 0}
   .alert{font-family:var(--mono);font-size:13px;padding:10px 12px;border-left:3px solid;border-radius:2px}
   .alert-critical{background:var(--red-bg);border-color:var(--red);color:#d08080}
   .alert-warning{background:var(--yellow-bg);border-color:var(--yellow);color:#fcbb74}
@@ -877,6 +895,75 @@ function tile(section){const t=$('div',{class:'tile'});t.appendChild(section);re
 
 // ── Main render ───────────────────────────────────────────────────────────────
 let _sectionCount=0;
+// ── Today Queue: gateway MCP dispatch (same-origin /mcp proxy → :6200) ───────
+const MCP_URL='./mcp';
+const _mcp={sid:null,seq:0};
+async function mcpRpc(method,params){
+  const body={jsonrpc:'2.0',method,params};
+  const notif=method.startsWith('notifications/');
+  if(!notif)body.id=++_mcp.seq;
+  const headers={'content-type':'application/json',accept:'application/json, text/event-stream'};
+  if(_mcp.sid)headers['mcp-session-id']=_mcp.sid;
+  headers['mcp-protocol-version']='2025-06-18';
+  const r=await fetch(MCP_URL,{method:'POST',headers,body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
+  const sid=r.headers.get('mcp-session-id');if(sid)_mcp.sid=sid;
+  if(notif||r.status===202)return null;
+  const text=await r.text();
+  if(!r.ok)throw new Error(`gateway ${r.status}`);
+  let msg=null;
+  if((r.headers.get('content-type')||'').includes('text/event-stream')){
+    for(const line of text.split('\n')){
+      if(!line.startsWith('data:'))continue;
+      try{const j=JSON.parse(line.slice(5).trim());if(j&&(j.id===body.id||j.result!==undefined||j.error))msg=j}catch{}
+    }
+  }else{msg=JSON.parse(text)}
+  if(!msg)throw new Error('no rpc response');
+  if(msg.error)throw new Error(msg.error.message||'rpc error');
+  return msg.result;
+}
+async function todayVerb(action,id){
+  if(!_mcp.sid){
+    await mcpRpc('initialize',{protocolVersion:'2025-06-18',capabilities:{},clientInfo:{name:'briefing-dashboard',version:'1.0'}});
+    await mcpRpc('notifications/initialized',{});
+  }
+  const r=await mcpRpc('tools/call',{name:'hwc_today',arguments:{action,id}});
+  const text=(r.content||[]).find(c=>c.type==='text')?.text??'';
+  if(r.isError)throw new Error(text.slice(0,120)||'tool error');
+  return JSON.parse(text);
+}
+function makeToday(t){
+  const box=$('div',{class:'today'});
+  const spill=(t.spillover||0)>0?$('span',{class:'today-spill'},`+${t.spillover} waiting`):null;
+  const hdr=$('div',{class:'today-hdr'},$('span',null,`Today — do these (${(t.items||[]).length})`));
+  if(spill)hdr.appendChild(spill);
+  box.appendChild(hdr);
+  (t.items||[]).forEach(it=>{
+    const verbs=$('div',{class:'today-verbs'});
+    const row=$('div',{class:'today-item'},
+      $('div',{class:`today-sev sev-${it.severity==='red'?'red':'amber'}`}),
+      $('div',{class:'today-body'},
+        $('div',{class:'today-title'},it.title),
+        $('div',{class:'today-why'},it.why||''),
+        $('div',{class:'today-meta'},`${it.source} · ~${it.effort_min||10} min${it.age_days?` · ${it.age_days}d`:''}${it.report?' · report ready':''}`)),
+      verbs);
+    const setDone=label=>{verbs.innerHTML='';verbs.appendChild($('span',{class:'today-done'},`✓ ${label}`))};
+    const btn=(label,fn,cls='')=>{const b=$('button',{class:`today-btn ${cls}`},label);
+      b.onclick=async()=>{verbs.querySelectorAll('.today-btn').forEach(x=>x.disabled=true);
+        try{await fn();setDone(label)}catch(e){verbs.querySelectorAll('.today-btn').forEach(x=>x.disabled=false);
+          verbs.insertBefore($('span',{class:'today-done'},'failed — retry'),verbs.firstChild)}};
+      return b};
+    if(it.url)verbs.appendChild((()=>{const a=$('a',{class:'today-btn primary',href:it.url,target:'_blank'},'open →');return a})());
+    if(it.report)verbs.appendChild($('a',{class:'today-btn primary',href:it.report,target:'_blank'},'report →'));
+    (it.verbs||[]).forEach(v=>{
+      if(v==='complete')verbs.appendChild(btn('✓ done',()=>todayVerb('complete',it.id),'primary'));
+      if(v==='agent')verbs.appendChild(btn('⚡ agent',()=>todayVerb('agent',it.id)));
+      if(v==='dismiss')verbs.appendChild(btn('dismiss',()=>todayVerb('dismiss',it.id)));
+    });
+    box.appendChild(row);
+  });
+  return box;
+}
+
 function render(data,liveThreads){
   app.innerHTML='';_sectionCount=0;
   if(data.error){
@@ -911,6 +998,9 @@ function render(data,liveThreads){
     });
     app.appendChild(a);
   }
+
+  // TODAY queue (full-width, above the grid — the "do these" list)
+  if(s.today&&(s.today.items||[]).length){app.appendChild(makeToday(s.today))}
 
   // Dashboard grid
   const grid=$('div',{class:'dashboard-grid'});

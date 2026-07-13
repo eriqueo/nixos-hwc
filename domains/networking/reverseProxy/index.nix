@@ -140,6 +140,14 @@ let
           header Access-Control-Allow-Methods "GET, OPTIONS"
           header Access-Control-Allow-Headers "Content-Type"
           header /assets/* Cache-Control "public, max-age=31536000, immutable"
+          ${lib.optionalString (r ? api) ''
+          # Same-origin API proxy (optional `api = { path; upstream; }` on a
+          # static vhost) — lets a served SPA call a loopback service without
+          # CORS or a second vhost. More-specific handle wins over file_server.
+          handle ${r.api.path}* {
+            reverse_proxy ${r.api.upstream}
+          }
+          ''}
           root * ${r.root}
           try_files {path} /index.html
           file_server
