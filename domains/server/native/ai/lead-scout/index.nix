@@ -94,6 +94,18 @@ in
         retained (datax-discord-webhook.age) to avoid re-encryption.
       '';
     };
+
+    channelMap = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      example = { hwc_bozeman_v1 = "discord-webhook-hwc-business"; };
+      description = ''
+        Per-profile Discord routing: classifier profile id → agenix secret
+        NAME of that profile's webhook. Rendered into the app's
+        DISCORD_WEBHOOK_FILE_MAP env (JSON of profileId → secret path);
+        profiles not listed fall through to discordWebhookSecret.
+      '';
+    };
   };
 
   #============================================================================
@@ -125,6 +137,12 @@ in
         PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromiumBin;
         PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
         DISCORD_WEBHOOK_FILE = config.age.secrets.${cfg.discordWebhookSecret}.path;
+      } // lib.optionalAttrs (cfg.channelMap != { }) {
+        # Per-profile channel routing (src/notifications/discord.ts
+        # resolveWebhookUrl): JSON of profileId → webhook secret path.
+        DISCORD_WEBHOOK_FILE_MAP = builtins.toJSON
+          (lib.mapAttrs (_: secretName: config.age.secrets.${secretName}.path) cfg.channelMap);
+      } // {
 
         # The classifier shells out to the `claude` CLI. Upstream lead_scout
         # used to hardcode /etc/profiles/per-user/eric/bin/claude as a fallback;

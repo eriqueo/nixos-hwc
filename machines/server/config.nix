@@ -112,6 +112,12 @@
 
   # Lead Scout — Facebook group lead scraper/classifier, MCP + HTTP on port 8420
   hwc.server.ai.leadScout.enable = true;
+  # HWC-business classifier profiles post to #hwc (business channel);
+  # DataX profiles stay on the default datax-discord-webhook (#jt-pros).
+  hwc.server.ai.leadScout.channelMap = {
+    hwc_bozeman_v1 = "discord-webhook-hwc-business";
+    hwc_network_v1 = "discord-webhook-hwc-business";
+  };
 
   # `deploy` — interactive one-step deploy CLI; auto-discovers ~/600_apps/*/deploy.sh
   hwc.server.deploy.enable = true;
