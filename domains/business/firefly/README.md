@@ -97,6 +97,7 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
+- 2026-07-13: Pinned the Firefly core image to the critical tier (Law 15 v12.4, financial data): first pinned to `v6.4.22`, then corrected to the actual upstream tag scheme `version-6.4.22`. Behavior-neutral (matches the currently-running version).
 - 2026-06-09: Access moved from dedicated tailnet ports (Firefly `:10443`, Pico `:11443`) to name-based vhosts `firefly.hwc.iheartwoodcraft.com` / `firefly-pico.hwc.iheartwoodcraft.com` under the shared `*.hwc.iheartwoodcraft.com` wildcard cert (no per-service listener / firewall hole). Both `appUrl`s updated to match — Firefly's `APP_URL` and Pico's app URL must equal the browser origin. See `domains/networking/README.md`.
 - 2026-03-25: Created README per Law 12
 - 2026-03-04: Namespace migration hwc.server.containers.firefly → hwc.business.firefly

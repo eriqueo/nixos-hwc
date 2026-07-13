@@ -121,7 +121,20 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 ├── parse.mjs    FB GraphQL response parsers (ported from API Monitor)
 ├── store.mjs    SQLite persistence layer
 ├── data/
-│   ├── posts.db       ← created on first run
-│   └── session.json   ← created on login
+│   ├── posts.db            ← created on first run
+│   └── browser-profile/    ← persistent Chromium profile (created on login)
+├── shell.nix    Playwright/Chromium dev shell for NixOS
+├── Containerfile
 └── package.json
 ```
+
+## Changelog
+
+- 2026-07-13: Login/session model reworked. Switched to
+  `chromium.launchPersistentContext` with a `--profile <dir>` flag (default
+  `./data/browser-profile`) — the old `--session`/`session.json` state file is
+  gone; the whole browser profile persists instead. Login completion is now
+  detected by polling for the `c_user` cookie (survives passkey redirects)
+  rather than watching the DOM / password form. Added `shell.nix` (system
+  Chromium for Playwright on NixOS) and pinned Playwright to 1.59.1 to match the
+  container image; `jobber-mcp` project path updated to `300_tech/320_projects`.

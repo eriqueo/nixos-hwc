@@ -144,6 +144,14 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-07-13** — **Today-dispatch stability.** The dispatch path unit now
+  fires only on `*.md` cards (`PathExistsGlob`) instead of `DirectoryNotEmpty`
+  — a stray non-`.md` scratch file kept the unit armed and re-fired the runner
+  into systemd's start-rate limit (killing both units); `run-dispatch.sh` also
+  quarantines strays into `dispatch-done/`, and the `today/` prompt templates
+  now state that stdout IS the report and forbid file creation outside `/tmp`.
+  Also: `hwc_today` never squeezes out red items (the ≤7 cap limits only
+  ambers), and dashboard refinery alerts get their `view →` link.
 - **2026-07-12** — **Today Queue: the briefing becomes actionable.** New
   gateway tool `hwc_today` derives one ranked action list (≤7 items + spillover)
   from briefing.json's own sections — overdue invoices, overdue CalDAV tasks
