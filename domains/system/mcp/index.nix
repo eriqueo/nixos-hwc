@@ -367,6 +367,11 @@ in
             # its own RW entry on the nightly_builds dir.
             "/var/lib/refinery"
             "${paths.user.home}/900_vaults/brain/_inbox/nightly_builds"
+            # hwc_today: dismiss state (today-state.json), agent-verb prompt
+            # cards (dispatch/), and report presence checks live in the
+            # briefing's output dir. paths.nixos below is ReadOnly; this
+            # more-specific RW entry wins for the output subdir.
+            "${paths.nixos}/domains/business/morning-briefing/output"
           ];
           SupplementaryGroups = [ "podman" ];
           ReadOnlyPaths = [
