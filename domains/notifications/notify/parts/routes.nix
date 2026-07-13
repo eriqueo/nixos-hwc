@@ -97,6 +97,15 @@
   }
 
   {
+    name     = "finance-to-alerts";         # firefly-digest daily summary +
+    # any future firefly webhook/bill alerts. Lands on #hwc-alerts like the
+    # other single-channel topics; re-home to a #finance channel when one
+    # exists (one-line edit, same pattern as media-to-media-channel).
+    match    = { topic = "finance"; };
+    channels = [ "discord-hwc-alerts" ];
+  }
+
+  {
     # Delivery canary — exercises BOTH a Discord adapter and the SMTP
     # adapter every run so a silently-dead channel is caught actively,
     # not discovered when a real critical fails to arrive. See

@@ -20,8 +20,9 @@ let
   # Network configuration
   mediaNetworkName = "media-network";
 
-  # Secret file path
+  # Secret file paths
   appKeyFile = config.age.secrets.firefly-app-key.path;
+  cronTokenFile = config.age.secrets.firefly-cron-token.path;
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
@@ -134,6 +135,40 @@ in
     }))
 
     #=========================================================================
+    # DATA IMPORTER CONTAINER (CSV / SimpleFIN / GoCardless)
+    #=========================================================================
+    # No access token is baked in: the importer prompts for a Firefly III
+    # personal access token per session in its UI. Stateless — no volume.
+    (lib.mkIf cfg.importer.enable (mkContainer {
+      name = "firefly-importer";
+      image = cfg.images.importer;
+      networkMode = if cfg.network.mode == "media" then "media" else "host";
+      gpuEnable = false;
+      timeZone = cfg.settings.timezone;
+
+      memory = "512m";
+      cpus = "0.5";
+      memorySwap = "1g";
+
+      extraOptions = lib.optionals (cfg.network.mode != "host") [
+        "--network-alias=firefly-importer"
+      ];
+
+      ports = lib.optionals (cfg.network.mode != "host") [
+        "127.0.0.1:${toString cfg.importer.internalPort}:8080"
+      ];
+
+      environment = {
+        FIREFLY_III_URL = cfg.importer.fireflyUrl;
+        VANITY_URL = cfg.settings.appUrl;
+        APP_URL = cfg.importer.appUrl;
+        TRUSTED_PROXIES = cfg.settings.trustedProxies;
+      };
+
+      dependsOn = [ "firefly" ];
+    }))
+
+    #=========================================================================
     # SYSTEMD SERVICE DEPENDENCIES
     #=========================================================================
     {
@@ -149,6 +184,7 @@ in
           preStart = lib.mkAfter ''
             APP_KEY=$(cat ${appKeyFile})
             echo "APP_KEY=base64:$APP_KEY" > ${fireflyEnvFile}
+            echo "STATIC_CRON_TOKEN=$(cat ${cronTokenFile})" >> ${fireflyEnvFile}
             chmod 644 ${fireflyEnvFile}
           '';
         };
@@ -169,6 +205,8 @@ in
         cfg.reverseProxy.coreInternalPort
       ] ++ lib.optionals cfg.pico.enable [
         cfg.reverseProxy.picoInternalPort
+      ] ++ lib.optionals cfg.importer.enable [
+        cfg.importer.internalPort
       ];
     }
 
@@ -195,6 +233,10 @@ in
         {
           assertion = !cfg.enable || config.age.secrets ? firefly-app-key;
           message = "hwc.business.firefly requires firefly-app-key secret to be defined in domains/secrets/declarations/services.nix";
+        }
+        {
+          assertion = !cfg.enable || config.age.secrets ? firefly-cron-token;
+          message = "hwc.business.firefly requires firefly-cron-token secret (domains/secrets/parts/services/firefly-cron-token.age)";
         }
         {
           assertion = cfg.reverseProxy.corePort != cfg.reverseProxy.picoPort;

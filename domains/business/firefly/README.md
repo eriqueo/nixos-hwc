@@ -17,7 +17,8 @@ domains/business/firefly/
 ├── sys.nix            # PostgreSQL database grants
 ├── README.md          # This file
 └── parts/
-    └── config.nix     # Container definitions, storage, systemd deps, firewall, validation
+    ├── config.nix     # Container definitions, storage, systemd deps, firewall, validation
+    └── automation.nix # firefly-cron + firefly-digest timers
 ```
 
 ## Namespace
@@ -87,15 +88,21 @@ hwc.business.firefly = {
 |---------|-----|---------------|
 | Firefly III | `https://firefly.hwc.iheartwoodcraft.com` | 8085 |
 | Firefly-Pico | `https://firefly-pico.hwc.iheartwoodcraft.com` | 8086 |
+| Data Importer | `https://firefly-import.hwc.iheartwoodcraft.com` | 8087 |
 
 Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Systemd Units
 
-- `podman-firefly.service` — main Firefly III container (generates env file with APP_KEY in preStart)
+- `podman-firefly.service` — main Firefly III container (generates env file with APP_KEY + STATIC_CRON_TOKEN in preStart)
 - `podman-firefly-pico.service` — Pico mobile companion (depends on firefly)
+- `podman-firefly-importer.service` — data importer (CSV/SimpleFIN; stateless, PAT pasted per session in its UI)
+- `firefly-cron.timer` — daily 03:10 hit on `/api/v1/cron/<token>` (recurring transactions, bill warnings, auto-budgets fire nowhere without this)
+- `firefly-digest.timer` — daily 07:15 finance digest (balances, bills due 7d, yesterday's transactions) → hwc-notify `topic=finance` → #hwc-alerts. Skips with a journal note until a PAT exists at `/run/agenix/firefly-pat` (drop `firefly-pat.age` in `domains/secrets/parts/services/` to arm it).
 
 ## Changelog
+
+- 2026-07-13: Automation build-out — `firefly-cron-token` secret + daily cron timer, `firefly-importer` container + `firefly-import` vhost (:8087), `firefly-digest` timer posting to hwc-notify (`finance-to-alerts` route), PAT-gated until `firefly-pat.age` is provisioned.
 
 - 2026-06-09: Access moved from dedicated tailnet ports (Firefly `:10443`, Pico `:11443`) to name-based vhosts `firefly.hwc.iheartwoodcraft.com` / `firefly-pico.hwc.iheartwoodcraft.com` under the shared `*.hwc.iheartwoodcraft.com` wildcard cert (no per-service listener / firewall hole). Both `appUrl`s updated to match — Firefly's `APP_URL` and Pico's app URL must equal the browser origin. See `domains/networking/README.md`.
 - 2026-03-25: Created README per Law 12

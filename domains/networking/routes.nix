@@ -253,6 +253,13 @@ in
       upstream = "http://127.0.0.1:8086";
     }
 
+    # Firefly III data importer (CSV / SimpleFIN) - name-based vhost
+    {
+      name = "firefly-import";
+      mode = "vhost";
+      upstream = "http://127.0.0.1:8087";
+    }
+
     # Paperless-NGX - document management (preserve path)
     {
       name = "paperless";

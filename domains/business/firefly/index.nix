@@ -26,6 +26,12 @@ in
         default = "cioraneanu/firefly-pico:1.10.1";  # critical tier (Law 15 v12.4): financial data — pinned
         description = "Firefly-Pico mobile companion container image";
       };
+
+      importer = lib.mkOption {
+        type = lib.types.str;
+        default = "docker.io/fireflyiii/data-importer:version-2.3.4";  # critical tier (Law 15 v12.4): financial data — pinned
+        description = "Firefly III data importer container image";
+      };
     };
 
     # Firefly III settings
@@ -72,6 +78,62 @@ in
         type = lib.types.str;
         default = "http://firefly:8080";
         description = "Internal URL to Firefly III (container network)";
+      };
+    };
+
+    # Data importer (CSV / SimpleFIN / GoCardless → Firefly III)
+    importer = {
+      enable = lib.mkEnableOption "Firefly III data importer" // { default = true; };
+
+      appUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "https://firefly-import.${config.hwc.networking.shared.vhostDomain}";
+        description = "External URL for the data importer";
+      };
+
+      fireflyUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "http://firefly:8080";
+        description = "Internal URL to Firefly III (container network)";
+      };
+
+      internalPort = lib.mkOption {
+        type = lib.types.port;
+        default = 8087;
+        description = "Internal HTTP port for the data importer container";
+      };
+    };
+
+    # Automation timers (cron + daily digest into hwc-notify)
+    automation = {
+      cron = {
+        enable = lib.mkEnableOption "Firefly III daily cron (recurring transactions, bills, auto-budgets)" // { default = true; };
+
+        onCalendar = lib.mkOption {
+          type = lib.types.str;
+          default = "*-*-* 03:10:00";
+          description = "systemd OnCalendar spec for the Firefly cron hit";
+        };
+      };
+
+      digest = {
+        enable = lib.mkEnableOption "daily finance digest posted to hwc-notify" // { default = true; };
+
+        onCalendar = lib.mkOption {
+          type = lib.types.str;
+          default = "*-*-* 07:15:00";
+          description = "systemd OnCalendar spec for the finance digest";
+        };
+
+        patFile = lib.mkOption {
+          type = lib.types.str;
+          default = "/run/agenix/firefly-pat";
+          description = ''
+            Path to a Firefly III personal access token. The digest exits
+            cleanly (with a journal note) until this file exists, so the
+            timer can ship before the token is provisioned.
+          '';
+        };
       };
     };
 
@@ -194,6 +256,7 @@ in
   imports = [
     ./sys.nix
     ./parts/config.nix
+    ./parts/automation.nix
   ];
 
   #==========================================================================
