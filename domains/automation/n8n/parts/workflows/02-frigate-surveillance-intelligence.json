@@ -1,38 +1,44 @@
 {
-  "name": "home:security:frigate-detect",
   "id": "mNJKL8puSZpWhsR2",
+  "name": "home:security:frigate-detect",
   "nodes": [
     {
       "id": "fce42fc9-c05c-44f4-9aba-d63c98b30eb5",
       "name": "Webhook Trigger",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [-1440, -32],
-      "webhookId": "frigate-events",
       "parameters": {
         "httpMethod": "POST",
+        "options": {},
         "path": "frigate-events"
-      }
+      },
+      "position": [
+        -1440,
+        -32
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "webhookId": "frigate-events"
     },
     {
+      "alwaysOutputData": false,
       "id": "64d640e9-bd2f-4ff7-8129-a97ec808f90f",
       "name": "Parse & Filter Events",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [-1248, -32],
       "parameters": {
-        "jsCode": "// Parse and filter Frigate events with smart priority + cooldown dedup\nconst body = $input.item.json.body || $input.item.json;\n\n// CRITICAL: Only process 'end' events for one notification per detection\nconst eventType = body.type;\nif (eventType !== 'end') {\n  return [];\n}\n\nconst event = body.after || body;\nconst date = new Date();\nconst hour = date.getHours();\nconst nowMs = date.getTime();\nconst formattedTime = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });\nconst formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });\n\nconst isDaytime = hour >= 7 && hour < 22;\nconst isNight = !isDaytime;\n\nconst eventId = event.id;\nconst camera = event.camera;\nconst object = event.label;\nconst score = event.top_score || 0;\n\nconst cameraNames = {\n  'cobra_cam_1': 'Front Door',\n  'cobra_cam_2': 'Driveway',\n  'cobra_cam_3': 'Backyard',\n  'cobra_cam_4': 'Carport'\n};\nconst cameraName = cameraNames[camera] || camera;\n\n// --- Hard filters ---\nif (score < 0.6) return [];\nif (['plant', 'tree'].includes(object)) return [];\n\n// Drop daytime cars entirely — never interesting\nif (object === 'car' && isDaytime) return [];\n\n// Higher confidence threshold for non-person objects\nif (object !== 'person' && score < 0.85) return [];\n\n// --- Cooldown dedup (per camera+object) ---\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.cooldowns) staticData.cooldowns = {};\n\n// Purge stale entries older than 1 hour\nfor (const key of Object.keys(staticData.cooldowns)) {\n  if (nowMs - staticData.cooldowns[key] > 3600000) {\n    delete staticData.cooldowns[key];\n  }\n}\n\nconst cooldownKey = `${camera}:${object}`;\nconst cooldownMs = object === 'person' ? 120000 : 300000; // 2min person, 5min other\n\nif (staticData.cooldowns[cooldownKey] && (nowMs - staticData.cooldowns[cooldownKey]) < cooldownMs) {\n  return []; // Still in cooldown — suppress\n}\nstaticData.cooldowns[cooldownKey] = nowMs;\n\n// --- Priority assignment ---\nlet priority = 2;\nlet isPerson = false;\n\nif (object === 'person') {\n  isPerson = true;\n  priority = isNight ? 5 : 4;\n} else if (object === 'car' && isNight && camera === 'cobra_cam_3') {\n  isPerson = true;\n  priority = 5;\n} else {\n  priority = 2;\n}\n\nreturn [\n  {\n    json: {\n      eventId,\n      camera,\n      cameraName,\n      object,\n      score,\n      priority,\n      isPerson,\n      isNight,\n      formattedTime,\n      formattedDate,\n      timestamp: date.toISOString()\n    }\n  }\n];\n"
-      }
+        "jsCode": "// Parse and filter Frigate events with smart priority + cooldown dedup\nconst body = $input.item.json.body || $input.item.json;\n\n// CRITICAL: Only process 'end' events for one notification per detection\nconst eventType = body.type;\nif (eventType !== 'end') {\n  return [];\n}\n\nconst event = body.after || body;\nconst date = new Date();\nconst hour = date.getHours();\nconst nowMs = date.getTime();\nconst formattedTime = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });\nconst formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });\n\nconst isDaytime = hour >= 7 && hour < 22;\nconst isNight = !isDaytime;\n\nconst eventId = event.id;\nconst camera = event.camera;\nconst object = event.label;\nconst score = event.top_score || 0;\n\n// Names match the actual frigate config (domains/media/frigate/parts/config.nix).\n// The old map (Front Door/Driveway/Backyard/Carport + a nonexistent\n// cobra_cam_4) mislabeled every notification.\nconst cameraNames = {\n  'cobra_cam_1': 'Carport',\n  'cobra_cam_2': 'Side Yard',\n  'cobra_cam_3': 'Front Porch',\n  'reolink': 'Front Yard'\n};\nconst cameraName = cameraNames[camera] || camera;\n\n// Two links: the direct clip (zoned events are retained as alerts, so the\n// mp4 always materializes \u2014 though finalization can lag the notification by\n// up to a minute) and the Frigate UI event page as the always-resolves\n// fallback (explore?event_id is supported by the 0.16 web bundle).\nconst clipUrl = `https://frigate.hwc.iheartwoodcraft.com/api/events/${eventId}/clip.mp4`;\n// HLS variant for iOS: the mp4 endpoint streams ffmpeg output chunked with no\n// byte-range support, which iPhone AVPlayer refuses; the nginx vod module\n// serves the same event as HLS with range support, which iOS plays natively.\nconst hlsUrl = `https://frigate.hwc.iheartwoodcraft.com/vod/event/${eventId}/master.m3u8`;\nconst eventUrl = `https://frigate.hwc.iheartwoodcraft.com/explore?event_id=${eventId}`;\n\n// --- Hard filters ---\nif (score < 0.6) return [];\nif (['plant', 'tree'].includes(object)) return [];\n\n// Zone gate: only events that entered a configured zone notify. Matches\n// frigate's own review.alerts.required_zones semantics (street cars and\n// sidewalk passersby stay silent \u2014 reolink logged 17 zoneless cars in 43min\n// one night), and because zoned events are retained as ALERTS (motion, 14d)\n// rather than detections (active_objects, effectively clipless), every\n// notified event is guaranteed to have recorded footage behind its link.\nconst zones = event.entered_zones || [];\nif (zones.length === 0) return [];\nconst zone = zones.join(', ');\n\n// Drop daytime cars entirely \u2014 never interesting\nif (object === 'car' && isDaytime) return [];\n\n// Higher confidence threshold for non-person objects\nif (object !== 'person' && score < 0.85) return [];\n\n// --- Cooldown dedup (per camera+object) ---\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.cooldowns) staticData.cooldowns = {};\n\n// Purge stale entries older than 1 hour\nfor (const key of Object.keys(staticData.cooldowns)) {\n  if (nowMs - staticData.cooldowns[key] > 3600000) {\n    delete staticData.cooldowns[key];\n  }\n}\n\nconst cooldownKey = `${camera}:${object}`;\nconst cooldownMs = object === 'person' ? 120000 : 300000; // 2min person, 5min other\n\nif (staticData.cooldowns[cooldownKey] && (nowMs - staticData.cooldowns[cooldownKey]) < cooldownMs) {\n  return []; // Still in cooldown \u2014 suppress\n}\nstaticData.cooldowns[cooldownKey] = nowMs;\n\n// --- Priority assignment ---\nlet priority = 2;\nlet isPerson = false;\n\nif (object === 'person') {\n  isPerson = true;\n  priority = isNight ? 5 : 4;\n} else if (['car', 'truck'].includes(object) && isNight && camera === 'reolink') {\n  // Night vehicle on the front yard. reolink is the ONLY camera that\n  // tracks car/truck \u2014 the old cobra_cam_3 condition could never fire.\n  isPerson = true;\n  priority = 5;\n} else {\n  priority = 2;\n}\n\nreturn [\n  {\n    json: {\n      eventId,\n      camera,\n      cameraName,\n      zone,\n      object,\n      score,\n      priority,\n      isPerson,\n      isNight,\n      clipUrl,\n      hlsUrl,\n      eventUrl,\n      formattedTime,\n      formattedDate,\n      timestamp: date.toISOString()\n    }\n  }\n];\n"
+      },
+      "position": [
+        -1248,
+        -32
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
     },
     {
       "id": "70f0441c-5856-4146-b3b4-7f1a54f54868",
       "name": "Person or Other",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.4,
-      "position": [-1040, -32],
-      "alwaysOutputData": false,
       "parameters": {
-        "options": { "fallbackOutput": 1 },
+        "options": {
+          "fallbackOutput": 1
+        },
         "rules": {
           "values": [
             {
@@ -42,11 +48,19 @@
                   {
                     "id": "28ea1378-5bd4-4c9b-b99d-d79098c888c7",
                     "leftValue": "={{ $json.isPerson }}",
-                    "operator": { "operation": "true", "type": "boolean" },
+                    "operator": {
+                      "operation": "true",
+                      "type": "boolean"
+                    },
                     "rightValue": true
                   }
                 ],
-                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 }
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                }
               }
             },
             {
@@ -56,15 +70,98 @@
                   {
                     "id": "9400ce80-a756-4c4c-87d0-d79410365dc2",
                     "leftValue": "={{ $json.isPerson }}",
-                    "operator": { "operation": "false", "type": "boolean" },
+                    "operator": {
+                      "operation": "false",
+                      "type": "boolean"
+                    },
                     "rightValue": false
                   }
                 ],
-                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 }
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                }
               }
             }
           ]
         }
+      },
+      "position": [
+        -1040,
+        -32
+      ],
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4
+    },
+    {
+      "id": "7f5ac99a-bfa5-4fda-bf58-8d29c4264738",
+      "name": "Fetch Event Snapshot",
+      "parameters": {
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        },
+        "url": "=http://127.0.0.1:5000/api/events/{{ $json.eventId }}/snapshot.jpg"
+      },
+      "position": [
+        -624,
+        -192
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "name": "Upload Snapshot to Person Channel",
+      "id": "9b7d0d8a-1cad-4654-8e15-1f187c8dcd51",
+      "position": [
+        -576,
+        -192
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/webhooks/REDACTED-live-value-in-n8n-see-agenix-discord-webhook-frigate",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "payload_json",
+              "value": "={{ JSON.stringify({ content:\n($('Parse & Filter Events').item.json.priority === 5 ? '\ud83d\udd34 **' : '\ud83d\udfe1 **') + $('Parse & Filter Events').item.json.object + ' \u2014 ' + $('Parse & Filter Events').item.json.cameraName + ' (' + $('Parse & Filter Events').item.json.zone + ')**\\n' +\n'Time: ' + $('Parse & Filter Events').item.json.formattedTime + ' \u00b7 ' + $('Parse & Filter Events').item.json.formattedDate + '\\n' +\n'Confidence: ' + ($('Parse & Filter Events').item.json.score * 100).toFixed(0) + '%\\n' +\n'Clip: ' + $('Parse & Filter Events').item.json.clipUrl + '\\n' +\n'Phone: ' + $('Parse & Filter Events').item.json.hlsUrl + '\\n' +\n'Event: ' + $('Parse & Filter Events').item.json.eventUrl\n}) }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "files[0]",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "name": "Text to Other Channel",
+      "id": "281477d9-c2fb-47f5-891e-538cadfdd35e",
+      "position": [
+        -832,
+        128
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/webhooks/REDACTED-live-value-in-n8n-see-agenix-discord-webhook-frigate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content:\n'\u26aa ' + $('Parse & Filter Events').item.json.object + ' \u2014 ' + $('Parse & Filter Events').item.json.cameraName + ' (' + $('Parse & Filter Events').item.json.zone + ')\\n' +\n'Time: ' + $('Parse & Filter Events').item.json.formattedTime + ' \u00b7 ' + $('Parse & Filter Events').item.json.formattedDate + '\\n' +\n'Confidence: ' + ($('Parse & Filter Events').item.json.score * 100).toFixed(0) + '%\\n' +\n'Clip: ' + $('Parse & Filter Events').item.json.clipUrl + '\\n' +\n'Phone: ' + $('Parse & Filter Events').item.json.hlsUrl + '\\n' +\n'Event: ' + $('Parse & Filter Events').item.json.eventUrl\n}) }}",
+        "options": {}
       }
     },
     {
@@ -72,19 +169,13 @@
       "name": "Wait for Snapshot",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [-832, -192],
-      "parameters": { "amount": 2, "unit": "seconds" }
-    },
-    {
-      "id": "7f5ac99a-bfa5-4fda-bf58-8d29c4264738",
-      "name": "Fetch Event Snapshot",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [-624, -192],
-      "onError": "continueRegularOutput",
+      "position": [
+        -832,
+        -192
+      ],
       "parameters": {
-        "url": "=http://127.0.0.1:5000/api/events/{{ $json.eventId }}/snapshot.jpg",
-        "options": { "response": { "response": { "responseFormat": "file" } } }
+        "amount": 2,
+        "unit": "seconds"
       }
     },
     {
@@ -92,7 +183,10 @@
       "name": "Snapshot OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [-416, -192],
+      "position": [
+        -416,
+        -192
+      ],
       "parameters": {
         "conditions": {
           "combinator": "and",
@@ -100,83 +194,154 @@
             {
               "id": "check-binary",
               "leftValue": "={{ Object.keys($binary || {}).length > 0 }}",
-              "operator": { "type": "boolean", "operation": "true", "singleValue": true },
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
               "rightValue": true
             }
           ],
-          "options": { "version": 3, "leftValue": "", "caseSensitive": true, "typeValidation": "strict" }
+          "options": {
+            "version": 3,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          }
         }
       }
     },
     {
-      "id": "9b7d0d8a-1cad-4654-8e15-1f187c8dcd51",
-      "name": "Upload Snapshot to Person Channel",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 2.4,
-      "position": [-576, -192],
-      "parameters": {
-        "authentication": "oAuth2",
-        "resource": "file",
-        "options": {
-          "channelId": "C0AL9A2MPHD",
-          "initialComment": "=Date:     {{ $json.formattedDate }}\nCamera:   {{ $json.cameraName }}\nObject:   {{ $json.object }}\nTime:     {{ $json.formattedTime }}\nPriority: {{ $json.priority === 5 ? '\ud83d\udd34 High' : '\u26a0\ufe0f meh' }}\nEvent:    {{ $json.eventId }}\nConfidence: {{ ($json.score * 100).toFixed(0) }}%"
-        }
-      }
-    },
-    {
-      "id": "5b9bb905-a435-48b5-934f-777005a5b4c8",
       "name": "Text to Person Channel (No Snapshot)",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 2.4,
-      "position": [-176, -112],
+      "id": "5b9bb905-a435-48b5-934f-777005a5b4c8",
+      "position": [
+        -176,
+        -112
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
       "parameters": {
-        "authentication": "oAuth2",
-        "channelId": "C0AL9A2MPHD",
-        "select": "=channel",
-        "text": "=\ud83d\udcf7 Snapshot unavailable\nDate:     {{ $json.formattedDate }}\nCamera:   {{ $json.cameraName }}\nObject:   {{ $json.object }}\nTime:     {{ $json.formattedTime }}\nPriority: {{ $json.priority === 5 ? '\ud83d\udd34 High' : '\u26a0\ufe0f meh' }}\nEvent:    {{ $json.eventId }}\nConfidence: {{ ($json.score * 100).toFixed(0) }}%"
-      }
-    },
-    {
-      "id": "281477d9-c2fb-47f5-891e-538cadfdd35e",
-      "name": "Text to Other Channel",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 2.4,
-      "position": [-832, 128],
-      "parameters": {
-        "authentication": "oAuth2",
-        "channelId": "C0AL9A3F3JT",
-        "select": "=channel",
-        "text": "=Date:     {{ $json.formattedDate }}\nCamera:   {{ $json.cameraName }}\nObject:   {{ $json.object }}\nTime:     {{ $json.formattedTime }}\nPriority: \u26a0\ufe0f Low\nEvent:    {{ $json.eventId }}\nConfidence: {{ ($json.score * 100).toFixed(0) }}%"
+        "method": "POST",
+        "url": "https://discord.com/api/webhooks/REDACTED-live-value-in-n8n-see-agenix-discord-webhook-frigate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content:\n($('Parse & Filter Events').item.json.priority === 5 ? '\ud83d\udd34 **' : '\ud83d\udfe1 **') + $('Parse & Filter Events').item.json.object + ' \u2014 ' + $('Parse & Filter Events').item.json.cameraName + ' (' + $('Parse & Filter Events').item.json.zone + ')**\\n' +\n'(snapshot unavailable)\\n' +\n'Time: ' + $('Parse & Filter Events').item.json.formattedTime + ' \u00b7 ' + $('Parse & Filter Events').item.json.formattedDate + '\\n' +\n'Confidence: ' + ($('Parse & Filter Events').item.json.score * 100).toFixed(0) + '%\\n' +\n'Clip: ' + $('Parse & Filter Events').item.json.clipUrl + '\\n' +\n'Phone: ' + $('Parse & Filter Events').item.json.hlsUrl + '\\n' +\n'Event: ' + $('Parse & Filter Events').item.json.eventUrl\n}) }}",
+        "options": {}
       }
     }
   ],
   "connections": {
     "Webhook Trigger": {
-      "main": [[{ "node": "Parse & Filter Events", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Parse & Filter Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parse & Filter Events": {
-      "main": [[{ "node": "Person or Other", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Person or Other",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Person or Other": {
       "main": [
-        [{ "node": "Wait for Snapshot", "type": "main", "index": 0 }],
-        [{ "node": "Text to Other Channel", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Wait for Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Text to Other Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Wait for Snapshot": {
-      "main": [[{ "node": "Fetch Event Snapshot", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Fetch Event Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Fetch Event Snapshot": {
-      "main": [[{ "node": "Snapshot OK?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Snapshot OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Snapshot OK?": {
       "main": [
-        [{ "node": "Upload Snapshot to Person Channel", "type": "main", "index": 0 }],
-        [{ "node": "Text to Person Channel (No Snapshot)", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Upload Snapshot to Person Channel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Text to Person Channel (No Snapshot)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
-  "settings": { "executionOrder": "v1" },
-  "tags": ["detection", "frigate", "home", "security"],
-  "updatedAt": "2026-04-25T00:00:00.000Z"
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "tags": [
+    {
+      "updatedAt": "2026-03-31T17:00:22.045Z",
+      "createdAt": "2026-03-31T17:00:22.045Z",
+      "id": "LKn2J1F3SsugO3eC",
+      "name": "detection"
+    },
+    {
+      "updatedAt": "2025-12-08T22:03:07.192Z",
+      "createdAt": "2025-12-08T22:03:07.192Z",
+      "id": "PJKLwMe7n0MN1Z6I",
+      "name": "frigate"
+    },
+    {
+      "updatedAt": "2026-03-31T17:00:22.015Z",
+      "createdAt": "2026-03-31T17:00:22.015Z",
+      "id": "YUKynlg4SzbH71Eo",
+      "name": "home"
+    },
+    {
+      "updatedAt": "2025-12-08T22:04:03.512Z",
+      "createdAt": "2025-12-08T22:04:03.512Z",
+      "id": "by9wIDitYTviPqPs",
+      "name": "security"
+    }
+  ],
+  "updatedAt": "2026-07-15T22:59:52.484Z"
 }
