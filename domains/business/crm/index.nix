@@ -68,7 +68,7 @@ let
     done
   '';
 
-  # Extract just the `cal:` line's password from the shared radicale htpasswd
+  # Extract just the calendar user's password from the shared radicale htpasswd
   # into a service-private runtime file (the vdirsyncer pattern). Runs as root
   # (ExecStartPre "+") because the htpasswd is root-readable only.
   caldavPwGen = pkgs.writeShellScript "hwc-crm-caldav-pw" ''
@@ -280,13 +280,15 @@ in
         description = ''
           Write appointment events to the self-hosted Radicale CalDAV server
           (loopback) so they sync to khal + iPhone, and email the customer an
-          .ics invite. The `cal` password is extracted from the shared
-          radicale htpasswd at start (no new secret).
+          .ics invite. The calendar user's password is extracted from the
+          shared radicale htpasswd at start (no new secret).
         '';
       };
       caldavUrl = lib.mkOption { type = lib.types.str; default = "http://127.0.0.1:5232"; };
-      user = lib.mkOption { type = lib.types.str; default = "cal"; };
-      collection = lib.mkOption { type = lib.types.str; default = "cal/migrated"; };
+      # Single-principal consolidation (2026-07-16): calendar + rolodex both
+      # live under `eric`, the phone's one login. `cal` is retired.
+      user = lib.mkOption { type = lib.types.str; default = "eric"; };
+      collection = lib.mkOption { type = lib.types.str; default = "eric/migrated"; };
       organizerEmail = lib.mkOption { type = lib.types.str; default = "eric@iheartwoodcraft.com"; };
     };
   };

@@ -136,13 +136,17 @@ in
 
       username = lib.mkOption {
         type = lib.types.str;
-        default = "cal";
+        default = "eric";
         description = ''
-          Radicale username for the CALENDAR principal — deliberately distinct
-          from the tasks user (eric). Radicale's owner_only rights give each user
-          its own collection home-set, so calendar (cal) and tasks (eric) no
-          longer discover each other's collections. Requires a matching
-          `cal:<password>` line in the radicale-htpasswd secret.
+          Radicale username for the calendar principal. Consolidated to the
+          single `eric` principal (2026-07-16) so ONE iPhone CalDAV account
+          carries calendar + reminders and one CardDAV account carries the
+          CRM rolodex. The former split (calendar under a separate `cal`
+          user to stop cross-discovery) is superseded: this pair pins
+          `collections = ["migrated"]`, so the only leak is the tasks pair
+          discovering the calendar collection — VTODO-filtered and empty, a
+          cosmetic extra list at worst. Requires a matching
+          `eric:<password>` line in the radicale-htpasswd secret.
         '';
       };
 
