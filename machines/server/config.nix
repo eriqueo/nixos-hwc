@@ -23,6 +23,7 @@
     ../../domains/gaming/index.nix # Retroarch emulation + WebDAV save sync
     ../../domains/server/containers/_shared/directories.nix
     ../../domains/server/native/ai/lead-scout/index.nix # Lead Scout MCP + HTTP
+    ../../domains/server/native/ai/home-scout/index.nix # Home Scout MCP + HTTP + ingest timers
     ../../domains/server/native/ai/brain-mcp/index.nix # Brain MCP Server (Deno)
     ../../domains/server/native/ai/brainvec/index.nix # brainvec semantic-index ingest (vault embeddings)
     ../../domains/server/native/ai/hermes/index.nix # Hermes Agent (Nous Research)
@@ -112,6 +113,7 @@
 
   # Lead Scout — Facebook group lead scraper/classifier, MCP + HTTP on port 8420
   hwc.server.ai.leadScout.enable = true;
+  hwc.server.ai.homeScout.enable = true;
   # HWC-business classifier profiles post to #hwc (business channel);
   # DataX profiles stay on the default datax-discord-webhook (#jt-pros).
   hwc.server.ai.leadScout.channelMap = {

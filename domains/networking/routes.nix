@@ -330,6 +330,15 @@ in
       upstream = "http://127.0.0.1:8420";
     }
 
+    # home_scout — real estate intelligence dashboard, name-based vhost
+    # (home-scout.hwc.iheartwoodcraft.com). Proxies to the unified home-scout
+    # server on :8421 (serves SPA + REST API + /mcp).
+    {
+      name = "home-scout";
+      mode = "vhost";
+      upstream = "http://127.0.0.1:8421";
+    }
+
     # datax-monitor — DX1 agent-execution diagnostic dashboard, name-based vhost
     # (monitor.hwc.iheartwoodcraft.com). One Hono server on :4400 serves both the
     # React SPA (ui/dist) and the REST API (/api/*). Module:
