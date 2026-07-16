@@ -30,6 +30,10 @@
     # and reuses the icloud account above.
     tasks.enable = true;
 
+    # CardDAV rolodex (khard + aerc completion) against the CRM-owned
+    # eric/contacts address book — bidirectional peer of the iPhone account.
+    contacts.enable = true;
+
     health = {
       enable = true;
       # webhook.url names a concrete host — it lives in the machine one-off

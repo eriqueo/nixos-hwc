@@ -56,6 +56,10 @@
     radicale.enable = true;
   };
 
+  # CardDAV rolodex (khard + aerc completion) against the CRM-owned
+  # eric/contacts address book — bidirectional peer of the iPhone account.
+  hwc.mail.contacts.enable = true;
+
   # Tasks: VTODO sync via todoman/todui, riding the calendar vdirsyncer
   # config + timer above. The laptop wires mail per-machine (no mail role),
   # so tasks is enabled here rather than in profiles/mail/home.nix.

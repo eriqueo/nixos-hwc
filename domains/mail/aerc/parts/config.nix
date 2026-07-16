@@ -183,7 +183,11 @@ in
       editor = ${pkgs.neovim}/bin/nvim
       lf-editor = true
       empty-subject-warning = true
-      address-book-cmd = notmuch address --format=text --output=recipients "%s"
+      # CRM rolodex completion when mail/contacts is on (khard + notmuch
+      # history via mail-addresses); plain notmuch history otherwise.
+      address-book-cmd = ${if (config.hwc.mail.contacts.enable or false)
+        then ''mail-addresses "%s"''
+        else ''notmuch address --format=text --output=recipients "%s"''}
       file-picker-cmd = ${pkgs.yazi}/bin/yazi --chooser-file %s
       [filters]
       text/html = ${aercPkg}/libexec/aerc/filters/html
