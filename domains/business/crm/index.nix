@@ -53,6 +53,11 @@ let
       export HWC_CRM_CALDAV_COLLECTION="${cfg.calendar.collection}"
       export HWC_CRM_ORGANIZER_EMAIL="${cfg.calendar.organizerEmail}"
     ''}
+    ${lib.optionalString (cfg.calendar.enable && cfg.rolodex.enable) ''
+      export HWC_CRM_CARDDAV_USER="${cfg.rolodex.user}"
+      export HWC_CRM_CARDDAV_PASSWORD_FILE="/run/hwc-crm/carddav-pw"
+      export HWC_CRM_CARDDAV_COLLECTION="${cfg.rolodex.collection}"
+    ''}
     exec ${pythonEnv}/bin/python3 -m hwc_crm.api.app
   '';
 
@@ -73,6 +78,13 @@ let
       /run/agenix/radicale-htpasswd > /run/hwc-crm/caldav-pw
     ${pkgs.coreutils}/bin/chown ${cfg.user}:users /run/hwc-crm/caldav-pw
     ${pkgs.coreutils}/bin/chmod 0400 /run/hwc-crm/caldav-pw
+    ${lib.optionalString cfg.rolodex.enable ''
+      ${pkgs.gawk}/bin/awk -F: -v u=${cfg.rolodex.user} \
+        '$1==u{match($0,/:/);print substr($0,RSTART+1)}' \
+        /run/agenix/radicale-htpasswd > /run/hwc-crm/carddav-pw
+      ${pkgs.coreutils}/bin/chown ${cfg.user}:users /run/hwc-crm/carddav-pw
+      ${pkgs.coreutils}/bin/chmod 0400 /run/hwc-crm/carddav-pw
+    ''}
   '';
 in
 {
@@ -233,6 +245,34 @@ in
       };
     };
 
+    rolodex = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Bidirectional CardDAV rolodex (app D26): CRM contacts sync to a
+          Radicale address book under the PHONE's radicale user, so the
+          existing iPhone account (user eric) sees them. Rides on
+          calendar.enable (same Radicale + htpasswd). The sync timer pulls
+          phone edits/creations back into the CRM.
+        '';
+      };
+      user = lib.mkOption {
+        type = lib.types.str;
+        default = "eric";
+        description = "radicale-htpasswd user owning the address book (the phone's login).";
+      };
+      collection = lib.mkOption {
+        type = lib.types.str;
+        default = "eric/contacts";
+      };
+      sync.onCalendar = lib.mkOption {
+        type = lib.types.str;
+        default = "*:0/15";
+        description = "Bidirectional reconcile cadence (phone → CRM latency).";
+      };
+    };
+
     calendar = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -376,6 +416,32 @@ in
         RandomizedDelaySec = "120s";
       };
     };
+
+    # Bidirectional rolodex reconcile (app D26): pulls phone edits/creations
+    # into the CRM, pushes missing cards, honors phone deletions.
+    systemd.services.hwc-crm-rolodex-sync =
+      lib.mkIf (cfg.calendar.enable && cfg.rolodex.enable) {
+        description = "hwc-crm rolodex sync (CardDAV ↔ CRM contacts)";
+        after = [ "hwc-crm.service" ];
+        requires = [ "hwc-crm.service" ];
+        onFailure = lib.mkIf (config.hwc.monitoring.alerts.enable or false)
+          [ "hwc-service-failure-notifier@hwc-crm-rolodex-sync.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          User = lib.mkForce cfg.user;
+          Group = "users";
+          ExecStart = "${pkgs.curl}/bin/curl -sf -X POST http://${cfg.bindAddr}:${toString cfg.port}/internal/rolodex/sync";
+        };
+      };
+    systemd.timers.hwc-crm-rolodex-sync =
+      lib.mkIf (cfg.calendar.enable && cfg.rolodex.enable) {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = cfg.rolodex.sync.onCalendar;
+          Persistent = true;
+          RandomizedDelaySec = "60s";
+        };
+      };
 
     # Tailnet-private vhost: crm.hwc.iheartwoodcraft.com
     hwc.networking.shared.routes = [{
