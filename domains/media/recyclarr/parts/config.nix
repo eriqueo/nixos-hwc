@@ -27,6 +27,9 @@ let
           type: series
 
         # Quality profiles
+        # HD-1080p prefers 1080p but falls back through 720p down to
+        # DVD/SDTV so old or obscure shows (DVD-only releases) still
+        # download, then upgrade automatically when 1080p appears.
         quality_profiles:
           - name: HD-1080p
             reset_unmatched_scores:
@@ -42,6 +45,20 @@ let
                   - WEBDL-1080p
                   - WEBRip-1080p
               - name: HDTV-1080p
+              - name: Bluray-720p
+              - name: WEB-720p
+                qualities:
+                  - WEBDL-720p
+                  - WEBRip-720p
+              - name: HDTV-720p
+              - name: SD-Fallback
+                qualities:
+                  - Bluray-576p
+                  - Bluray-480p
+                  - DVD
+                  - WEBDL-480p
+                  - WEBRip-480p
+                  - SDTV
 
         # Custom formats from TRaSH Guides
         custom_formats:
@@ -66,6 +83,8 @@ let
           type: movie
 
         # Quality profiles
+        # Same fallback ladder as Sonarr: prefer 1080p, accept anything
+        # down to DVD/SDTV, upgrade automatically when better appears.
         quality_profiles:
           - name: HD-1080p
             reset_unmatched_scores:
@@ -81,6 +100,20 @@ let
                   - WEBDL-1080p
                   - WEBRip-1080p
               - name: HDTV-1080p
+              - name: Bluray-720p
+              - name: WEB-720p
+                qualities:
+                  - WEBDL-720p
+                  - WEBRip-720p
+              - name: HDTV-720p
+              - name: SD-Fallback
+                qualities:
+                  - Bluray-576p
+                  - Bluray-480p
+                  - DVD
+                  - WEBDL-480p
+                  - WEBRip-480p
+                  - SDTV
 
         # Custom formats from TRaSH Guides
         custom_formats:

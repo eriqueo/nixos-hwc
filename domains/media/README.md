@@ -69,6 +69,7 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-07-16: recyclarr — HD-1080p profiles (Sonarr + Radarr) extended with a full fallback ladder (720p → SD/DVD) with upgrade-until-Bluray-1080p, so DVD-only content (e.g. Look Around You) downloads instead of being rejected with "DVD is not wanted in profile". Jellyseerr defaults + existing library migrated to the managed profile via API (runtime state, not in repo).
 - 2026-07-16: jellyfin-native — revived declarative user-policy service with `apiKeyFile` (agenix path, replaces the removed plaintext `apiKey` option) and new per-user `passwordless`/`hidden`/`admin`/`ensure`+`passwordFile` options. Jellyfin 10.11 forbids passwordless admins, so server config now ensures a hidden `admin` account (jellyfin-admin-password.age) and demotes eric + Kids to regular passwordless tap-to-sign-in profiles.
 - 2026-07-06: audiobookshelf image pinned to 2.32.1 (Law 15 v12.4 critical tier: library state).
 - 2026-07-05: Law 5 burn-down — added `HWC-EXCEPTION(Law 5)` annotation blocks (reason/justification/plan/revocable) to this domain's raw `oci-containers` module(s); infra-shaped containers are sanctioned exceptions to the mkContainer rule. Comments only, no behavior change.
