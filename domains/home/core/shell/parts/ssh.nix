@@ -24,6 +24,8 @@ if nixosApiVersion == "stable" then {
     hostname     = host.hostname;
     user         = host.user;
     forwardAgent = host.forwardAgent;
+  } // lib.optionalAttrs (host.proxyCommand != null) {
+    proxyCommand = host.proxyCommand;
   }) cfg.ssh.matchBlocks);
 } else {
   enable = true;
@@ -43,10 +45,12 @@ if nixosApiVersion == "stable" then {
         ControlPersist = "no";
       };
     }
-    (lib.mapAttrs' (name: host: lib.nameValuePair "Host ${name}" {
+    (lib.mapAttrs' (name: host: lib.nameValuePair "Host ${name}" ({
       HostName     = host.hostname;
       User         = host.user;
       ForwardAgent = host.forwardAgent;
-    }) cfg.ssh.matchBlocks)
+    } // lib.optionalAttrs (host.proxyCommand != null) {
+      ProxyCommand = host.proxyCommand;
+    })) cfg.ssh.matchBlocks)
   ];
 }

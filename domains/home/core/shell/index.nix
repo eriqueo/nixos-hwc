@@ -80,10 +80,23 @@ in
             hostname = lib.mkOption { type = lib.types.str; description = "Hostname or IP address"; };
             user = lib.mkOption { type = lib.types.str; default = "eric"; description = "Username for SSH connection"; };
             forwardAgent = lib.mkOption { type = lib.types.bool; default = true; description = "Enable SSH agent forwarding"; };
+            proxyCommand = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Optional ProxyCommand (e.g. cloudflared Access ssh for hosts behind a Cloudflare tunnel).";
+            };
           };
         });
         default = {
           server = { hostname = "100.114.232.124"; user = "eric"; forwardAgent = true; };
+          # Elliott's lil-box (DataX), reachable only via Cloudflare Access.
+          # Agent forwarding OFF: never forward your ssh-agent into a third party's box.
+          lil-box = {
+            hostname = "lil-box.icebanditbox.com";
+            user = "eric";
+            forwardAgent = false;
+            proxyCommand = "cloudflared access ssh --hostname %h";
+          };
         };
         description = "SSH host configurations";
       };

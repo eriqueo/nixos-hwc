@@ -21,6 +21,11 @@ core/
 ```
 
 ## Changelog
+- 2026-07-17: shell — extended the `hwc.home.core.shell.ssh.matchBlocks` DSL
+  with an optional `proxyCommand` field (translated in both API branches of
+  parts/ssh.nix) and declared the `lil-box` host (Elliott's DataX box, reached
+  via `cloudflared access ssh`; `forwardAgent = false`). Enables plain
+  `ssh lil-box` on both hosts.
 - 2026-07-11: shell/parts/fzf.nix — renamed `fileWidgetCommand` →
   `fileWidget.command` and `historyWidgetOptions` → `historyWidget.options`
   (HM option renames); values unchanged, silences two eval warnings.
