@@ -493,6 +493,13 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-07-17**: `hwc_refinery` becomes a full remote surface for claude.ai:
+  new verbs `intake` (capture an idea → hopper + brain backlog), `amend`
+  (answer a parked item's asks and re-arm it), `stage` (mature an idea
+  captured→shaping→ready), `promote` (push a ready idea into a pipeline,
+  default project-ideation), and `detail` (full item JSON — history, parked
+  reason, verdicts — for tracking/resuming progress). Buckets now skip
+  `archived: true` items (the board's new exit ramp; they live on /finished).
 - **2026-07-12**: Add `hwc_today` — the Today Queue (Triage Surface Contract).
   Derives a ranked ≤7-item action list from the morning briefing's
   briefing.json (invoices/tasks/leads/refinery/nightly/alerts/mail); verbs:

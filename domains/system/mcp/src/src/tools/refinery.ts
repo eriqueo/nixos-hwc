@@ -18,7 +18,8 @@
  * WRITES are the generic workbench card_actions verbs ({action, id}) proxied
  * to the board service's form-POST routes on loopback (the gateway and the
  * board share hwc-server): run → /run, park/resume → /status, delete →
- * /delete. The board owns the state machine; this tool never edits item files.
+ * /delete, intake → /intake, amend → /amend, stage → /stage, promote →
+ * /promote. The board owns the state machine; this tool never edits item files.
  */
 
 import { readdir, readFile } from "node:fs/promises";
@@ -65,6 +66,8 @@ interface RefineryItem {
   state?: string;
   parkedReason?: string;
   payload?: Record<string, unknown>;
+  archived?: boolean;
+  history?: Array<{ step?: string; status?: string; at?: string; note?: string }>;
 }
 
 /** Same fenced-block extraction the engine's markdown-store uses. */
@@ -95,6 +98,7 @@ function labelOf(it: RefineryItem): string {
 type Bucket = "action" | "active" | "hopper";
 
 function bucketOf(it: RefineryItem): Bucket | null {
+  if (it.archived === true) return null; // exit-ramped to /finished — off the working board
   const untriaged = it.pipeline === UNTRIAGED;
   if (it.state === "parked" || it.state === "failed") return "action";
   if (untriaged && it.stage === "ready") return "action"; // matured idea awaiting promote
@@ -141,27 +145,88 @@ export function refineryTools(): ToolDef[] {
       description:
         "Refinement engine board, triaged like mail. Reads the engine's item store " +
         "(/var/lib/refinery/items) and buckets items: action (failed / parked / ready-to-promote — " +
-        "needs Eric), active (in-flight pipeline work), hopper (raw untriaged ideas). " +
-        "action=board (default) returns the kanban; action=summary a one-line rollup. " +
-        "Writes (need id): run (run the item's pipeline now), park / resume (manual " +
-        "state override), delete. Column moves are rejected — the board's columns are " +
-        "derived triage buckets, not stored lanes.",
+        "needs Eric), active (in-flight pipeline work), hopper (raw untriaged ideas; archived " +
+        "items are excluded). action=board (default) returns the kanban; action=summary a " +
+        "one-line rollup; action=detail (need id) the full item — history, parked reason, " +
+        "gate verdicts — for tracking/resuming an item's progress. " +
+        "Writes: intake (need text) captures a new idea into the hopper + brain backlog; " +
+        "amend (need id+note) answers a parked item's asks and re-arms it; stage (need " +
+        "id+target: captured|shaping|ready) matures an idea; promote (need id; optional " +
+        "target=pipeline, default project-ideation) pushes a ready idea into refinement; " +
+        "run / park / resume / delete (need id) as before. Column moves are rejected — " +
+        "the board's columns are derived triage buckets, not stored lanes.",
       inputSchema: {
         type: "object",
         properties: {
           action: {
             type: "string",
-            enum: ["board", "summary", "run", "park", "resume", "delete", "move"],
+            enum: ["board", "summary", "detail", "intake", "amend", "stage", "promote", "run", "park", "resume", "delete", "move"],
             description:
               "board (default): kanban of action/active/hopper · summary: text rollup · " +
-              "run/park/resume/delete: write verbs (need id)",
+              "detail: full item by id · intake/amend/stage/promote/run/park/resume/delete: write verbs",
           },
-          id: { type: "string", description: "Item id (write verbs)" },
-          target: { type: "string", description: "move only (always rejected — derived columns)" },
+          id: { type: "string", description: "Item id (detail + write verbs)" },
+          text: { type: "string", description: "intake: the idea sentence · amend: alias for note" },
+          note: { type: "string", description: "amend: the answer/decision that unblocks the parked item" },
+          target: {
+            type: "string",
+            description: "stage: captured|shaping|ready · promote: pipeline id (default project-ideation) · move: always rejected",
+          },
         },
       },
       handler: async (args: Record<string, unknown>): Promise<ToolResult> => {
         const action = String(args["action"] ?? "board");
+
+        // ── intake: capture a new idea (no id — the board mints one and also
+        // appends it to the brain backlog) ─────────────────────────────────
+        if (action === "intake") {
+          const text = String(args["text"] ?? "").trim();
+          if (!text) return mcpError({ type: "VALIDATION_ERROR", message: "intake: text is required" });
+          try {
+            await boardPost("/intake", { text });
+          } catch (err) {
+            return mcpError({ type: "NETWORK_ERROR", message: `refinery intake failed: ${err instanceof Error ? err.message : String(err)}` });
+          }
+          return { status: "ok", message: `refinery intake: "${text.slice(0, 80)}" — landed in the hopper (and the brain backlog)`, data: { url: BOARD_URL } };
+        }
+
+        // ── amend / stage / promote: the edit verbs (board-owned state machine) ──
+        if (action === "amend" || action === "stage" || action === "promote") {
+          const id = String(args["id"] ?? "");
+          if (!id) return mcpError({ type: "VALIDATION_ERROR", message: `${action}: id is required` });
+          try {
+            if (action === "amend") {
+              const note = String(args["note"] ?? args["text"] ?? "").trim();
+              if (!note) return mcpError({ type: "VALIDATION_ERROR", message: "amend: note is required" });
+              await boardPost("/amend", { id, note });
+            } else if (action === "stage") {
+              const to = String(args["target"] ?? "");
+              if (!["captured", "shaping", "ready"].includes(to)) {
+                return mcpError({ type: "VALIDATION_ERROR", message: "stage: target must be captured|shaping|ready" });
+              }
+              await boardPost("/stage", { id, toStage: to });
+            } else {
+              await boardPost("/promote", { id, pipeline: String(args["target"] ?? "project-ideation") });
+            }
+          } catch (err) {
+            return mcpError({ type: "NETWORK_ERROR", message: `refinery ${action} failed: ${err instanceof Error ? err.message : String(err)}` });
+          }
+          return { status: "ok", message: `refinery ${action}: ${id}`, data: { url: `${BOARD_URL}/project/${encodeURIComponent(id)}` } };
+        }
+
+        // ── detail: one item, in full — history + parked reason + verdicts ──
+        if (action === "detail") {
+          const id = String(args["id"] ?? "");
+          if (!id) return mcpError({ type: "VALIDATION_ERROR", message: "detail: id is required" });
+          const items = await loadItems();
+          const it = (items ?? []).find((i) => i.id === id);
+          if (!it) return mcpError({ type: "VALIDATION_ERROR", message: `no item "${id}" in the store` });
+          return {
+            status: "ok",
+            message: `${it.id}: ${labelOf(it)}${it.pipeline && it.pipeline !== UNTRIAGED ? ` · ${it.pipeline} @ ${it.step ?? "?"}` : ""}`,
+            data: { item: it, url: `${BOARD_URL}/project/${encodeURIComponent(it.id)}` },
+          };
+        }
 
         // ── writes: proxy the board's own POST routes ──────────────────────
         if (action in WRITE_VERBS || action === "move") {
