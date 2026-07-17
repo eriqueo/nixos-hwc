@@ -46,6 +46,7 @@
       yazi.enable = lib.mkDefault true;
       herdr.enable = lib.mkDefault true;
       codex.enable = lib.mkDefault true;
+      pi.enable = lib.mkDefault true;
       aider.enable = lib.mkDefault true;
       gemini-cli.enable = lib.mkDefault true;
     };
