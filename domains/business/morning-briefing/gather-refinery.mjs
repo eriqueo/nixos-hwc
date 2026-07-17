@@ -95,13 +95,14 @@ async function main() {
   const hopper = [];
   for (const it of items) {
     if (it.archived === true) continue; // exit-ramped to /finished — not briefing material
-    const untriaged = it.pipeline === UNTRIAGED;
-    if (it.state === "parked" || it.state === "failed") {
+    // Untriaged FIRST: brain-sourced ideas carry state:"parked" by design
+    // (parked-for-triage) — state-based bucketing would misfile the hopper
+    // as action items. Only a matured (ready) idea is an action.
+    if (it.pipeline === UNTRIAGED) {
+      if (it.stage === "ready") action.push(card(it)); // awaiting a promote decision
+      else hopper.push(card(it));
+    } else if (it.state === "parked" || it.state === "failed") {
       action.push(card(it));
-    } else if (untriaged && it.stage === "ready") {
-      action.push(card(it)); // matured idea awaiting a promote decision
-    } else if (untriaged) {
-      hopper.push(card(it));
     } else if (it.state === "pending" || it.state === "running" || it.state === "passed") {
       active.push(card(it));
     }

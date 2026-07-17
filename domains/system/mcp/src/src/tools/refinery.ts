@@ -99,10 +99,11 @@ type Bucket = "action" | "active" | "hopper";
 
 function bucketOf(it: RefineryItem): Bucket | null {
   if (it.archived === true) return null; // exit-ramped to /finished — off the working board
-  const untriaged = it.pipeline === UNTRIAGED;
+  // Untriaged FIRST: brain-sourced ideas carry state:"parked" by design
+  // (parked-for-triage), so state-based bucketing would misfile the whole
+  // hopper as action items. Only a matured (ready) idea is an action.
+  if (it.pipeline === UNTRIAGED) return it.stage === "ready" ? "action" : "hopper";
   if (it.state === "parked" || it.state === "failed") return "action";
-  if (untriaged && it.stage === "ready") return "action"; // matured idea awaiting promote
-  if (untriaged) return "hopper";
   if (it.state === "pending" || it.state === "running" || it.state === "passed") return "active";
   return null;
 }
