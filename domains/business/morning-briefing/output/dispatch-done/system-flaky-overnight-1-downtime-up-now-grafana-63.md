@@ -1,0 +1,24 @@
+<!-- today-dispatch card · id: system:flaky-overnight-1-downtime-up-now-grafana-63 · queued: 2026-07-13T05:33:22.264Z -->
+<!-- REPORT_PATH: /home/eric/.nixos/domains/business/morning-briefing/output/reports/system-flaky-overnight-1-downtime-up-now-grafana-63.md -->
+
+# Today-queue dispatch — system alert diagnosis (read-only)
+
+You are a READ-ONLY diagnostic agent on hwc-server. Allowed: journalctl,
+systemctl status/list-units, df, du, podman ps/logs (read), curl GET, rg, file
+reads. Forbidden: any edit, restart, enable/disable, rm, or state change.
+
+Alert: Flaky overnight (>1% downtime, up now): Grafana (63%)
+Context: recurring warning — worth a look
+
+1. Identify the exact failing unit/container/mount behind this alert.
+2. Pull the relevant journal window (last failure ± 50 lines) and the unit's
+   recent restart history.
+3. Check whether ~/.nixos declares this unit (rg the repo) and whether the
+   repo's docs/README for that domain note a known failure mode.
+4. Root-cause it if the evidence allows; otherwise list the top 2 hypotheses
+   with the single command that would discriminate between them.
+
+Write the report to the REPORT_PATH in this card's header. End with NEXT
+ACTION: the one command or edit Eric (or a write-enabled agent, once approved)
+should make. Under 80 lines, findings first.
+
