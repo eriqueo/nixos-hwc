@@ -22,13 +22,26 @@ const DIR = process.env.REFINERY_ITEMS_DIR || "/var/lib/refinery/items";
 const BASE = process.env.REFINERY_URL || "https://refinery.hwc.iheartwoodcraft.com";
 const UNTRIAGED = "untriaged";
 
-// Same fenced-block extraction the engine's markdown-store uses.
+// Same fenced-block extraction the engine's markdown-store uses — INCLUDING
+// its legacy-field migration (genre/phase/phaseStatus → pipeline/step-or-stage/
+// state). The engine migrates lazily on load, so untouched item files still
+// carry the old names; reading them raw made those items invisible here.
 function extractItem(md) {
   const m = md.match(/```json\n([\s\S]*?)\n```/);
   if (!m) return null;
   try {
     const it = JSON.parse(m[1]);
-    return it && typeof it === "object" && it.id ? it : null;
+    if (!it || typeof it !== "object" || !it.id) return null;
+    if (it.pipeline === undefined && it.genre !== undefined) it.pipeline = it.genre;
+    if (it.state === undefined && it.phaseStatus !== undefined) it.state = it.phaseStatus;
+    if (it.step === undefined && it.stage === undefined && typeof it.phase === "string") {
+      if (it.pipeline === UNTRIAGED) {
+        it.stage = ["captured", "shaping", "ready"].includes(it.phase) ? it.phase : "captured";
+      } else {
+        it.step = it.phase;
+      }
+    }
+    return it;
   } catch {
     return null;
   }

@@ -70,13 +70,26 @@ interface RefineryItem {
   history?: Array<{ step?: string; status?: string; at?: string; note?: string }>;
 }
 
-/** Same fenced-block extraction the engine's markdown-store uses. */
+/** Same fenced-block extraction the engine's markdown-store uses — INCLUDING
+ * its legacy-field migration (genre/phase/phaseStatus → pipeline/step-or-stage/
+ * state). The engine migrates lazily on load, so untouched item files still
+ * carry the old names; reading them raw made those items invisible here. */
 function extractItem(md: string): RefineryItem | null {
   const m = md.match(/```json\n([\s\S]*?)\n```/);
   if (!m) return null;
   try {
-    const it = JSON.parse(m[1]) as RefineryItem;
-    return it && typeof it === "object" && it.id ? it : null;
+    const raw = JSON.parse(m[1]) as Record<string, unknown>;
+    if (!raw || typeof raw !== "object" || !raw["id"]) return null;
+    if (raw["pipeline"] === undefined && raw["genre"] !== undefined) raw["pipeline"] = raw["genre"];
+    if (raw["state"] === undefined && raw["phaseStatus"] !== undefined) raw["state"] = raw["phaseStatus"];
+    if (raw["step"] === undefined && raw["stage"] === undefined && typeof raw["phase"] === "string") {
+      if (raw["pipeline"] === UNTRIAGED) {
+        raw["stage"] = ["captured", "shaping", "ready"].includes(raw["phase"]) ? raw["phase"] : "captured";
+      } else {
+        raw["step"] = raw["phase"];
+      }
+    }
+    return raw as unknown as RefineryItem;
   } catch {
     return null;
   }
