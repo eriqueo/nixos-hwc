@@ -849,11 +849,13 @@
       upstream = "localhost:8096";
     };
     gpu.enable = true;
-    # apiKey + users policy removed 2026-06-11: the only consumer
-    # (jellyfin-apply-policies) enforced MaxActiveSessions=0, which is the
-    # Jellyfin default. Key was plaintext in git history — rotate it in the
-    # Jellyfin UI. If policy management is wanted later, convert the module
-    # option to an agenix apiKeyFile first.
+    # Policy management revived 2026-07-16 via the agenix apiKeyFile the
+    # 2026-06-11 removal note asked for (plaintext apiKey option is gone).
+    apiKeyFile = config.age.secrets.jellyfin-api-key.path;
+    users = {
+      eric = { passwordless = true; hidden = false; };
+      Kids = { passwordless = true; hidden = false; };
+    };
   };
 
   # RetroArch emulation with Sunshine game streaming

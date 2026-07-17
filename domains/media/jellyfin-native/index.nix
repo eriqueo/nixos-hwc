@@ -93,11 +93,13 @@ in
     users = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule {
         options.maxActiveSessions = lib.mkOption { type = lib.types.int; default = 0; description = "Maximum active sessions (0 = unlimited)"; };
+        options.passwordless = lib.mkOption { type = lib.types.bool; default = false; description = "Remove the user's password so sign-in requires no credentials"; };
+        options.hidden = lib.mkOption { type = with lib.types; nullOr bool; default = null; description = "Show/hide the user tile on the login screen (null = leave as-is)"; };
       });
       default = {};
       description = "User policy overrides applied via API after startup";
     };
-    apiKey = lib.mkOption { type = lib.types.str; default = ""; description = "Jellyfin API key for policy management"; };
+    apiKeyFile = lib.mkOption { type = lib.types.str; default = ""; description = "Path to a file containing the Jellyfin API key (e.g. an agenix mount) for policy management"; };
   };
 
   #==========================================================================
@@ -203,7 +205,7 @@ in
     ];
 
     # Apply user policies via API after Jellyfin starts
-    systemd.services.jellyfin-apply-policies = lib.mkIf (cfg.users != {} && cfg.apiKey != "") {
+    systemd.services.jellyfin-apply-policies = lib.mkIf (cfg.users != {} && cfg.apiKeyFile != "") {
       description = "Apply Jellyfin user policies";
       after = [ "jellyfin.service" ];
       requires = [ "jellyfin.service" ];
@@ -220,33 +222,48 @@ in
 
           # Get user ID
           USER_ID=$(${pkgs.curl}/bin/curl -sf "http://127.0.0.1:8096/Users" \
-            -H "X-Emby-Token: ${cfg.apiKey}" | \
+            -H "X-Emby-Token: $TOKEN" | \
             ${pkgs.jq}/bin/jq -r '.[] | select(.Name == "${username}") | .Id')
 
           if [ -z "$USER_ID" ] || [ "$USER_ID" = "null" ]; then
             echo "User ${username} not found, skipping"
           else
-            # Get current policy
-            POLICY=$(${pkgs.curl}/bin/curl -sf "http://127.0.0.1:8096/Users/$USER_ID" \
-              -H "X-Emby-Token: ${cfg.apiKey}" | \
-              ${pkgs.jq}/bin/jq '.Policy')
+            # Get current user (policy + password state)
+            USER_JSON=$(${pkgs.curl}/bin/curl -sf "http://127.0.0.1:8096/Users/$USER_ID" \
+              -H "X-Emby-Token: $TOKEN")
 
-            # Update MaxActiveSessions
-            UPDATED_POLICY=$(echo "$POLICY" | ${pkgs.jq}/bin/jq '.MaxActiveSessions = ${toString userCfg.maxActiveSessions}')
+            # Update policy fields
+            UPDATED_POLICY=$(echo "$USER_JSON" | ${pkgs.jq}/bin/jq '.Policy
+              | .MaxActiveSessions = ${toString userCfg.maxActiveSessions}${
+                lib.optionalString (userCfg.hidden != null)
+                  "\n              | .IsHidden = ${lib.boolToString userCfg.hidden}"}')
 
             # Apply policy
             ${pkgs.curl}/bin/curl -sf -X POST "http://127.0.0.1:8096/Users/$USER_ID/Policy" \
-              -H "X-Emby-Token: ${cfg.apiKey}" \
+              -H "X-Emby-Token: $TOKEN" \
               -H "Content-Type: application/json" \
               -d "$UPDATED_POLICY"
 
             echo "Policy applied for ${username}"
+
+            ${lib.optionalString userCfg.passwordless ''
+            # Remove password so sign-in requires no credentials
+            if [ "$(echo "$USER_JSON" | ${pkgs.jq}/bin/jq -r '.HasPassword')" = "true" ]; then
+              ${pkgs.curl}/bin/curl -sf -X POST "http://127.0.0.1:8096/Users/$USER_ID/Password" \
+                -H "X-Emby-Token: $TOKEN" \
+                -H "Content-Type: application/json" \
+                -d '{"ResetPassword": true}'
+              echo "Password removed for ${username}"
+            fi
+            ''}
           fi
         '';
       in ''
+        TOKEN=$(cat ${cfg.apiKeyFile})
+
         # Wait for Jellyfin to be ready
         for i in $(seq 1 30); do
-          if ${pkgs.curl}/bin/curl -sf "http://127.0.0.1:8096/System/Info" -H "X-Emby-Token: ${cfg.apiKey}" > /dev/null 2>&1; then
+          if ${pkgs.curl}/bin/curl -sf "http://127.0.0.1:8096/System/Info" -H "X-Emby-Token: $TOKEN" > /dev/null 2>&1; then
             break
           fi
           echo "Waiting for Jellyfin to be ready..."
