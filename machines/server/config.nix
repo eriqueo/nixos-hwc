@@ -853,8 +853,16 @@
     # 2026-06-11 removal note asked for (plaintext apiKey option is gone).
     apiKeyFile = config.age.secrets.jellyfin-api-key.path;
     users = {
-      eric = { passwordless = true; hidden = false; };
-      Kids = { passwordless = true; hidden = false; };
+      # Jellyfin forbids passwordless admins, so admin lives in a dedicated
+      # hidden account and the two profiles are regular tap-to-sign-in users.
+      admin = {
+        ensure = true;
+        passwordFile = config.age.secrets.jellyfin-admin-password.path;
+        admin = true;
+        hidden = true;
+      };
+      eric = { admin = false; passwordless = true; hidden = false; };
+      Kids = { admin = false; passwordless = true; hidden = false; };
     };
   };
 

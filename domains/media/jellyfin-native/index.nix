@@ -93,8 +93,11 @@ in
     users = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule {
         options.maxActiveSessions = lib.mkOption { type = lib.types.int; default = 0; description = "Maximum active sessions (0 = unlimited)"; };
-        options.passwordless = lib.mkOption { type = lib.types.bool; default = false; description = "Remove the user's password so sign-in requires no credentials"; };
+        options.passwordless = lib.mkOption { type = lib.types.bool; default = false; description = "Remove the user's password so sign-in requires no credentials (Jellyfin forbids this for administrators)"; };
         options.hidden = lib.mkOption { type = with lib.types; nullOr bool; default = null; description = "Show/hide the user tile on the login screen (null = leave as-is)"; };
+        options.admin = lib.mkOption { type = with lib.types; nullOr bool; default = null; description = "Grant/revoke administrator (null = leave as-is)"; };
+        options.ensure = lib.mkOption { type = lib.types.bool; default = false; description = "Create the user via API if it does not exist"; };
+        options.passwordFile = lib.mkOption { type = lib.types.str; default = ""; description = "Path to a file with the initial password used when the user is created via ensure"; };
       });
       default = {};
       description = "User policy overrides applied via API after startup";
@@ -217,6 +220,23 @@ in
       };
 
       script = let
+        ensureUser = username: userCfg: ''
+          USER_ID=$(${pkgs.curl}/bin/curl -sf "http://127.0.0.1:8096/Users" \
+            -H "X-Emby-Token: $TOKEN" | \
+            ${pkgs.jq}/bin/jq -r '.[] | select(.Name == "${username}") | .Id')
+
+          if [ -z "$USER_ID" ] || [ "$USER_ID" = "null" ]; then
+            echo "Creating user: ${username}"
+            ${pkgs.jq}/bin/jq -n --arg pw "$(cat ${userCfg.passwordFile})" \
+              '{Name: "${username}", Password: $pw}' | \
+              ${pkgs.curl}/bin/curl -sf -X POST "http://127.0.0.1:8096/Users/New" \
+                -H "X-Emby-Token: $TOKEN" \
+                -H "Content-Type: application/json" \
+                -d @- > /dev/null
+            echo "User ${username} created"
+          fi
+        '';
+
         applyUserPolicy = username: userCfg: ''
           echo "Applying policy for user: ${username}"
 
@@ -236,7 +256,9 @@ in
             UPDATED_POLICY=$(echo "$USER_JSON" | ${pkgs.jq}/bin/jq '.Policy
               | .MaxActiveSessions = ${toString userCfg.maxActiveSessions}${
                 lib.optionalString (userCfg.hidden != null)
-                  "\n              | .IsHidden = ${lib.boolToString userCfg.hidden}"}')
+                  "\n              | .IsHidden = ${lib.boolToString userCfg.hidden}"}${
+                lib.optionalString (userCfg.admin != null)
+                  "\n              | .IsAdministrator = ${lib.boolToString userCfg.admin}"}')
 
             # Apply policy
             ${pkgs.curl}/bin/curl -sf -X POST "http://127.0.0.1:8096/Users/$USER_ID/Policy" \
@@ -258,6 +280,12 @@ in
             ''}
           fi
         '';
+      in let
+        # Admin grants must apply before demotions so the server never
+        # passes through a zero-admin state (Jellyfin also forbids
+        # passwordless admins, so demote-then-strip ordering matters).
+        userList = lib.mapAttrsToList lib.nameValuePair cfg.users;
+        ordered = lib.partition (u: u.value.admin == true) userList;
       in ''
         TOKEN=$(cat ${cfg.apiKeyFile})
 
@@ -270,7 +298,9 @@ in
           sleep 2
         done
 
-        ${lib.concatStringsSep "\n" (lib.mapAttrsToList applyUserPolicy cfg.users)}
+        ${lib.concatStringsSep "\n" (map (u: ensureUser u.name u.value) (lib.filter (u: u.value.ensure) userList))}
+
+        ${lib.concatStringsSep "\n" (map (u: applyUserPolicy u.name u.value) (ordered.right ++ ordered.wrong))}
       '';
     };
 
@@ -285,6 +315,14 @@ in
       {
         assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.enable;
         message = "hwc.media.jellyfin.gpu requires hwc.system.hardware.gpu.enable = true";
+      }
+      {
+        assertion = lib.all (u: !(u.passwordless && u.admin == true)) (lib.attrValues cfg.users);
+        message = "hwc.media.jellyfin.users: Jellyfin forbids passwordless administrators — set admin = false (or null on a non-admin user) alongside passwordless = true";
+      }
+      {
+        assertion = lib.all (u: !u.ensure || u.passwordFile != "") (lib.attrValues cfg.users);
+        message = "hwc.media.jellyfin.users: ensure = true requires passwordFile";
       }
       # NOTE: Secret assertions removed (2026-02-08)
       # User initialization via secrets is incompatible with Jellyfin 10.9.11+ EF Core.
