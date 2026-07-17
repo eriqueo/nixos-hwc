@@ -520,6 +520,12 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
     }
 
     case "search_semantic": {
+      // Degenerate-input guard: an empty/blank query embeds only the task
+      // prefix and returns high-scoring garbage (~0.76, above real hits).
+      const query = String(args.query ?? "").trim();
+      if (query.length < 3) {
+        return { content: [{ type: "text", text: "search_semantic needs a non-empty query (≥3 chars)." }] };
+      }
       const entries = await loadVecIndex();
       if (!entries || !entries.length) {
         return { content: [{ type: "text", text: `Semantic index not found/empty at ${BRAINVEC_INDEX} — run brainvec-ingest on the server (systemctl start brainvec-ingest), or use search_notes (keyword) instead.` }] };
@@ -531,14 +537,20 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
       }
       let queryVec: number[];
       try {
-        queryVec = await embedQuery(String(args.query));
+        queryVec = await embedQuery(query);
       } catch {
         return { content: [{ type: "text", text: `Embedding backend down (${EMBED_BASE_URL}, llama-embed) — semantic search unavailable; use search_notes (keyword) instead.` }] };
       }
       const k = args.k ? Number(args.k) : 10;
       const folder = args.folder ? String(args.folder).replace(/\/$/, "") + "/" : null;
       const pool = folder ? entries.filter((e) => e.path.startsWith(folder)) : entries;
-      return { content: [{ type: "text", text: formatHits(vecTopK(queryVec, pool, k)) }] };
+      const hits = vecTopK(queryVec, pool, k);
+      let text = formatHits(hits);
+      // Observed bands: true hits ≥0.68, true negatives ≤0.58 — flag the gap.
+      if (hits.length && hits[0].score < 0.6) {
+        text += "\n(top score < 0.60 — likely nothing directly relevant in the vault; treat as weak leads or use search_notes)";
+      }
+      return { content: [{ type: "text", text }] };
     }
 
     case "related_notes": {
