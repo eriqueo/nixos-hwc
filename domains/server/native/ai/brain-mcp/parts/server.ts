@@ -867,6 +867,10 @@ async function handleRpc(req: RpcReq): Promise<RpcResp | null> {
 
       case "tools/call": {
         const p = req.params as { name: string; arguments?: ToolArgs };
+        // One line per call into journald — the only adoption telemetry we have
+        // (e.g. "are agents actually using search_semantic, or falling back to rg?").
+        const argHint = p.arguments?.query ?? p.arguments?.path ?? p.arguments?.folder ?? "";
+        console.log(`[tool] ${p.name} ${String(argHint).slice(0, 120)}`);
         const result = await callTool(p.name, p.arguments ?? {});
         return { jsonrpc: "2.0", id, result };
       }
