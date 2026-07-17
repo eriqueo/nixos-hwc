@@ -94,6 +94,7 @@ async function main() {
   const active = [];
   const hopper = [];
   for (const it of items) {
+    if (it.archived === true) continue; // exit-ramped to /finished — not briefing material
     const untriaged = it.pipeline === UNTRIAGED;
     if (it.state === "parked" || it.state === "failed") {
       action.push(card(it));

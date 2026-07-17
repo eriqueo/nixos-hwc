@@ -144,6 +144,9 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-07-17** — `gather-refinery.mjs` skips items with `archived: true` —
+  the refinery board's new exit ramp sweeps aged-out passed items off the
+  working board, and they should leave the briefing's buckets at the same time.
 - **2026-07-12** — **Today Queue: the briefing becomes actionable.** New
   gateway tool `hwc_today` derives one ranked action list (≤7 items + spillover)
   from briefing.json's own sections — overdue invoices, overdue CalDAV tasks
