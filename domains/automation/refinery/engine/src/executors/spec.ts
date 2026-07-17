@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { z } from "zod";
 import { Item, Executor, ExecutorResult } from "../contracts.js";
 import { LlmPort } from "../gates/llm-port.js";
-import { parseVerdict } from "../gates/verdict.js";
+import { completeVerdict } from "../gates/verdict.js";
 
 export const SpecSchema = z.object({
   goal: z.string().min(1),
@@ -90,8 +90,7 @@ export function makeSpecExecutor(
   return {
     id: "spec",
     async run(item: Item): Promise<ExecutorResult> {
-      const raw = await llm.complete(SPEC_PROMPT(item));
-      const spec = parseVerdict(raw, SpecSchema, "spec");
+      const spec = await completeVerdict(llm, SPEC_PROMPT(item), SpecSchema, "spec");
       const markdown = specToMarkdown(spec);
       mkdirSync(cfg.scratchDir, { recursive: true });
       const specPath = join(cfg.scratchDir, `${item.id}-spec.md`);

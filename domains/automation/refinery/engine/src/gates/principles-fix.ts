@@ -5,7 +5,7 @@ import { z } from "zod";
 import { GateDecision, GateModule, GateVerdict, Item } from "../contracts.js";
 import { LlmPort } from "./llm-port.js";
 import { readTraits } from "./traits.js";
-import { BaseVerdictSchema, buildGatePrompt, decisionOf, parseVerdict } from "./verdict.js";
+import { BaseVerdictSchema, buildGatePrompt, completeVerdict, decisionOf } from "./verdict.js";
 
 export const PrinciplesFixVerdictSchema = BaseVerdictSchema.extend({
   violations: z.array(z.string().min(1)),
@@ -32,8 +32,7 @@ export function makePrinciplesFixGate(llm: LlmPort): GateModule {
     id: "principles-fix",
     applies: (item: Item) => readTraits(item).mode === "brownfield",
     async run(item: Item): Promise<GateVerdict> {
-      const raw = await llm.complete(buildGatePrompt(SPEC, item));
-      const v = parseVerdict(raw, PrinciplesFixVerdictSchema, "principles-fix");
+      const v = await completeVerdict(llm, buildGatePrompt(SPEC, item), PrinciplesFixVerdictSchema, "principles-fix");
       return { verdict: v.reason, output: v };
     },
     decide(verdict: GateVerdict): GateDecision {

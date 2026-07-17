@@ -57,6 +57,23 @@ interface CardCtx {
   profiles: ResolvedPipeline[];
   enabled: ResolvedPipeline[];
   back: string;
+  now?: number; // ms epoch for age rendering; defaults to wall clock
+}
+
+// ── age helpers: history timestamps → card-face age ──
+const STALE_AFTER_MS = 14 * 86_400_000; // an idea untouched this long wears the stale skin
+function createdAtOf(item: Item): number {
+  return item.history.length ? Date.parse(item.history[0]!.at) : NaN;
+}
+function updatedAtOf(item: Item): number {
+  return item.history.length ? Date.parse(item.history[item.history.length - 1]!.at) : NaN;
+}
+function ageLabel(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return "";
+  const d = Math.floor(ms / 86_400_000);
+  if (d >= 1) return `${d}d`;
+  const h = Math.floor(ms / 3_600_000);
+  return h >= 1 ? `${h}h` : "new";
 }
 
 const STYLE = `<style>
@@ -93,6 +110,23 @@ const STYLE = `<style>
   .card{display:block;background:var(--elev);border:1px solid var(--line);border-left:4px solid var(--dim);border-radius:8px;padding:9px 11px;transition:box-shadow .12s,border-color .12s}
   .card:hover{border-color:var(--acc);box-shadow:0 0 0 1px color-mix(in srgb,var(--acc) 45%,transparent)}
   .card.nightly{border:1px dashed var(--warn);border-left-width:4px}
+  .card.stale{opacity:.72;border-left-style:dotted}
+  .badge.age{margin-left:auto;background:transparent;border-color:var(--line);color:var(--muted)}
+  .badge.age.old{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent)}
+  a.badge:hover{border-color:var(--acc);color:var(--acc)}
+  /* board section headers + the GET filter bar + the folded done shelf */
+  .secthdr{width:100%;margin:10px 0 2px;font-size:14px;color:var(--ink);display:flex;gap:8px;align-items:baseline}
+  .secthdr .count{font-size:12px}
+  .secthdr a{color:var(--acc2)}
+  .filterbar{display:flex;gap:8px;padding:8px 18px;border-bottom:1px solid var(--line);align-items:center}
+  .filterbar select,.filterbar input[type=text]{font-size:12px;padding:5px 8px}
+  .filterbar input[type=text]{flex:1;max-width:340px}
+  .filterbar button{font-size:12px;padding:5px 10px}
+  details.donefold{width:100%}
+  details.donefold summary{cursor:pointer;list-style:none}
+  details.donefold summary::-webkit-details-marker{display:none}
+  details.donefold summary .count::after{content:" ▸"}
+  details.donefold[open] summary .count::after{content:" ▾"}
   .badges{display:flex;gap:6px;margin-bottom:5px;flex-wrap:wrap;align-items:center}
   .badge{font-size:10px;padding:1px 6px;border-radius:4px;background:var(--line);color:var(--dim);border:1px solid transparent}
   .badge.type{font-weight:700;text-transform:uppercase;letter-spacing:.05em}
@@ -375,6 +409,21 @@ function cardLink(item: Item, ctx: CardCtx): string {
   const goalBadge = goal ? `<span class="badge">${esc(goal)}</span>` : "";
   const stepBadge = isIdea || !item.step ? "" : `<span class="badge">${esc(item.step)}</span>`;
   const reportBadge = hasReport ? `<span class="badge" title="has REPORT">📄</span>` : "";
+  // Lineage: a chained successor links back to the spec item it was built from.
+  const parentId = typeof pl.parent === "string" ? pl.parent : "";
+  const lineageBadge = parentId
+    ? `<a class="badge" href="/project/${esc(parentId)}" title="chained from ${esc(parentId)}">⛓ spec</a>`
+    : "";
+  // Age: time since the last history entry (mirror cards without history show
+  // nothing). Stale skin for an idea untouched past the threshold.
+  const now = ctx.now ?? Date.now();
+  const updatedAge = now - updatedAtOf(item);
+  const createdAge = now - createdAtOf(item);
+  const age = ageLabel(updatedAge);
+  const isStale = isIdea && Number.isFinite(createdAge) && createdAge >= STALE_AFTER_MS;
+  const ageBadge = age
+    ? `<span class="badge age${isStale ? " old" : ""}" title="last activity">${isStale ? "stale · " : ""}${age}</span>`
+    : "";
 
   const bar = total > 0
     ? `<div class="bar"><span style="width:${Math.round((doneN / total) * 100)}%"></span></div><div class="kv" style="font-size:11px;margin-top:3px">${doneN}/${total} steps done</div>`
@@ -391,8 +440,8 @@ function cardLink(item: Item, ctx: CardCtx): string {
 
   // Card is a container (not a link) so it can hold interactive controls; the
   // title is the click-through to the detail page.
-  return `<div class="card${isNightly ? " nightly" : ""}" style="${skin}">
-    <div class="badges">${domainTag}${pipelineBadge}${goalBadge}${stepBadge}${reportBadge}${moon}</div>
+  return `<div class="card${isNightly ? " nightly" : ""}${isStale ? " stale" : ""}" style="${skin}">
+    <div class="badges">${domainTag}${pipelineBadge}${goalBadge}${stepBadge}${reportBadge}${lineageBadge}${moon}${ageBadge}</div>
     <a class="title" href="/project/${esc(item.id)}">${esc(title)}</a>
     ${why}
     ${bar}
@@ -412,7 +461,11 @@ function laneBoard(
 ): string {
   const cols = lanes
     .map((lane) => {
-      const inLane = projects.filter((p) => keyOf(p) === lane.key);
+      // Oldest-activity-first inside every lane: attention debt surfaces at the
+      // top instead of hiding under fresher cards. NaN (no history) sinks last.
+      const inLane = projects
+        .filter((p) => keyOf(p) === lane.key)
+        .sort((a, b) => (updatedAtOf(a) || Infinity) - (updatedAtOf(b) || Infinity));
       const body = inLane.length ? inLane.map((p) => cardLink(p, ctx)).join("") : `<div class="empty">—</div>`;
       return `<section class="col"><h2>${esc(lane.label)} <span class="count">${inLane.length}</span></h2><div class="cards">${body}</div></section>`;
     })
@@ -454,37 +507,96 @@ export function renderHopperPage(
   return layout("hopper", body);
 }
 
-/** Board: the two stacked kanbans on one page (the assembly-line view). The
- *  intake box, then **Hopper** (untriaged IDEAS in maturation-stage lanes) on
- *  top, then **Development** (triaged PROJECTS in state lanes) below. One page,
- *  two boards — an idea matures in the Hopper, gets promoted, then runs through
- *  the pipeline in Development. Each board reuses laneBoard; section headers name
- *  them. */
+export interface BoardFilter {
+  domain: string;
+  pipeline: string;
+  q: string;
+}
+export interface BoardOpts {
+  filter?: BoardFilter;
+  archivedCount?: number;
+  now?: number; // test override for age rendering
+}
+
+/** The board filter bar: plain GET form → server-side filtering, no client JS.
+ *  Selects auto-submit; a Clear link appears whenever a filter is active. */
+function filterBar(filter: BoardFilter, profiles: ResolvedPipeline[], domains: DomainRegistry): string {
+  const active = filter.domain || filter.pipeline || filter.q;
+  const domOpts = [`<option value="">domain: all</option>`, ...[...domains.domains, domains.fallback].map(
+    (d) => `<option value="${esc(d.key)}"${d.key === filter.domain ? " selected" : ""}>${esc(d.label)}</option>`,
+  )].join("");
+  const pipeOpts = [`<option value="">pipeline: all</option>`, ...profiles.map(
+    (p) => `<option value="${esc(p.pipeline)}"${p.pipeline === filter.pipeline ? " selected" : ""}>${esc(p.label)}</option>`,
+  )].join("");
+  return `<form class="filterbar" method="get" action="/">
+  <select name="domain" onchange="this.form.submit()">${domOpts}</select>
+  <select name="pipeline" onchange="this.form.submit()">${pipeOpts}</select>
+  <input type="text" name="q" value="${esc(filter.q)}" placeholder="filter by text…">
+  <button type="submit">filter</button>
+  ${active ? `<a class="kv" href="/">✕ clear</a>` : ""}
+</form>`;
+}
+
+/** Board: one page, attention-first (the assembly-line view, reordered by what
+ *  needs the human). Intake + filter bar on top, then:
+ *   1. **Needs You** — parked + failed projects, full width. The reason the
+ *      page exists; never buried mid-scroll.
+ *   2. **Active** — pending/running projects (the machine's side of the desk).
+ *   3. **Hopper** — untriaged ideas in maturation-stage lanes.
+ *   4. **Recently done** — passed items still inside the archive-grace window,
+ *      folded shut; archived items live on /finished, linked by count.
+ */
 export function renderBoard(
   ideas: Item[],
   projects: Item[],
   profiles: ResolvedPipeline[],
   enabled: ResolvedPipeline[] = [],
   domains: DomainRegistry = emptyRegistry,
+  opts: BoardOpts = {},
 ): string {
-  const hopperCtx: CardCtx = { domains, profiles, enabled, back: "/" };
-  const devCtx: CardCtx = { domains, profiles, enabled, back: "/" };
-  const hopperBoard = ideas.length
-    ? laneBoard(ideas, hopperCtx, HOPPER_STAGES, stageOf)
-    : '<div class="empty" style="padding:16px">no ideas waiting — capture one above</div>';
-  const devBoard = projects.length
-    ? laneBoard(projects, devCtx, STATUS_LANES, statusOf)
-    : '<div class="empty" style="padding:16px">no projects yet — promote a Ready idea from the Hopper</div>';
+  const filter = opts.filter ?? { domain: "", pipeline: "", q: "" };
+  const ctx: CardCtx = { domains, profiles, enabled, back: "/", now: opts.now };
+  const byAge = (a: Item, b: Item) => (updatedAtOf(a) || Infinity) - (updatedAtOf(b) || Infinity);
+
+  const needsYou = projects.filter((p) => p.state === "parked" || p.state === "failed").sort(byAge);
+  const activeItems = projects.filter((p) => p.state === "pending" || p.state === "running");
+  const done = projects.filter((p) => p.state === "passed").sort((a, b) => byAge(b, a));
+
+  const needsYouSection = `
+  <h2 class="secthdr">Needs You <span class="count">${needsYou.length}</span> <span class="kv" style="font-weight:400">parked or failed — each card says what to decide</span></h2>
+  ${needsYou.length ? `<div class="grid" style="padding:0">${needsYou.map((p) => cardLink(p, ctx)).join("")}</div>` : '<div class="empty" style="padding:10px">nothing needs you — the machine is either working or waiting for ideas</div>'}`;
+
+  const activeSection = `
+  <h2 class="secthdr">Active <span class="count">${activeItems.length}</span> <span class="kv" style="font-weight:400">spec → build, gate by gate</span></h2>
+  ${activeItems.length
+    ? laneBoard(activeItems, ctx, [{ key: "pending", label: "In Pipeline" }, { key: "running", label: "Running" }], statusOf)
+    : '<div class="empty" style="padding:10px">no projects in flight — promote a Ready idea below</div>'}`;
+
+  const hopperSection = `
+  <h2 class="secthdr">Hopper — ideas <span class="count">${ideas.length}</span> <span class="kv" style="font-weight:400">capture → shape → promote</span></h2>
+  ${ideas.length
+    ? laneBoard(ideas, ctx, HOPPER_STAGES, stageOf)
+    : '<div class="empty" style="padding:10px">no ideas waiting — capture one above</div>'}`;
+
+  const archivedNote = (opts.archivedCount ?? 0) > 0
+    ? ` · <a href="/finished">${opts.archivedCount} archived</a>`
+    : "";
+  const doneSection = done.length || archivedNote
+    ? `<details class="donefold"><summary class="secthdr">Recently done <span class="count">${done.length}</span> <span class="kv" style="font-weight:400">auto-archives to <a href="/finished">Finished</a> after the grace window${archivedNote}</span></summary>
+       ${done.length ? `<div class="grid" style="padding:0">${done.map((p) => cardLink(p, ctx)).join("")}</div>` : ""}</details>`
+    : "";
+
   const body = `
 <form class="intake" method="post" action="/intake">
   <input type="text" name="text" placeholder="Capture an idea — it lands in the Hopper (and the brain backlog); shape it, then promote it when Ready…" required autofocus>
   <button type="submit">→ hopper</button>
 </form>
-<div class="wrap" style="flex-direction:column">
-  <h2 style="width:100%;margin:0 0 2px;font-size:14px;color:var(--ink)">Hopper — ideas <span class="kv" style="font-weight:400">capture → shape → promote</span></h2>
-  ${hopperBoard}
-  <h2 style="width:100%;margin:14px 0 2px;font-size:14px;color:var(--ink)">Development — projects <span class="kv" style="font-weight:400">spec → build, gate by gate</span></h2>
-  ${devBoard}
+${filterBar(filter, profiles, domains)}
+<div class="wrap" style="flex-direction:column;gap:6px">
+  ${needsYouSection}
+  ${activeSection}
+  ${hopperSection}
+  ${doneSection}
 </div>`;
   return layout("flow", body);
 }
@@ -987,12 +1099,20 @@ export function renderFinished(
   profiles: ResolvedPipeline[] = [],
   enabled: ResolvedPipeline[] = [],
   domains: DomainRegistry = emptyRegistry,
+  archived: Item[] = [],
 ): string {
   const ctx: CardCtx = { domains, profiles, enabled, back: "/finished" };
   const cards = finished.map((p) => cardLink(p, ctx)).join("");
+  // Archived engine items — the board's exit ramp lands here. A lane move on the
+  // detail page (or the card's status select) revives one back to the board.
+  const archivedSection = archived.length
+    ? `<h2 class="secthdr" style="padding:0 4px">Archived items <span class="count">${archived.length}</span> <span class="kv" style="font-weight:400">passed engine items swept off the board — change status to revive</span></h2>
+       <div class="grid" style="padding:0;width:100%">${archived.map((p) => cardLink(p, ctx)).join("")}</div>`
+    : "";
   const body = `
 <div class="intake"><span class="kv">${finished.length} finished project${finished.length === 1 ? "" : "s"} — graduated off the gauntlet. Open one to send it back with amendments.</span></div>
-<div class="wrap">${finished.length ? cards : '<div class="empty" style="padding:24px">no finished projects yet</div>'}</div>`;
+<div class="wrap" style="flex-direction:column">${finished.length ? `<div style="display:flex;gap:12px;flex-wrap:wrap">${cards}</div>` : '<div class="empty" style="padding:24px">no finished projects yet</div>'}
+${archivedSection}</div>`;
   return layout("finished", body);
 }
 

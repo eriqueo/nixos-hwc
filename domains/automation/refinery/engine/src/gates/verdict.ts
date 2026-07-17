@@ -9,6 +9,7 @@
 import { z } from "zod";
 import { Item } from "../contracts.js";
 import { InvalidGateVerdictError } from "../errors.js";
+import { LlmPort } from "./llm-port.js";
 
 export const BaseVerdictSchema = z.object({
   decision: z.enum(["pass", "park", "fail"]),
@@ -42,6 +43,35 @@ export function parseVerdict<T extends z.ZodTypeAny>(
     throw new InvalidGateVerdictError(gateId, JSON.stringify(result.error.issues));
   }
   return result.data;
+}
+
+/**
+ * Ask the LLM for a verdict and parse it — with ONE self-repair round. LLMs
+ * routinely return near-miss JSON (an enum synonym like severity "critical"
+ * where the schema says low|medium|high — the failure that killed a real run);
+ * feeding the validation error back and re-asking recovers most of these.
+ * A second miss still fails loud with the structured error.
+ */
+export async function completeVerdict<T extends z.ZodTypeAny>(
+  llm: LlmPort,
+  prompt: string,
+  schema: T,
+  gateId: string,
+): Promise<z.infer<T>> {
+  const raw = await llm.complete(prompt);
+  try {
+    return parseVerdict(raw, schema, gateId);
+  } catch (e) {
+    const repair = [
+      prompt,
+      "",
+      `Your previous response was rejected: ${(e as Error).message}`,
+      "Previous response:",
+      raw,
+      "Respond again with ONLY a corrected JSON object that matches the required shape exactly — fix the reported issues, change nothing else.",
+    ].join("\n");
+    return parseVerdict(await llm.complete(repair), schema, gateId);
+  }
 }
 
 export interface GatePromptSpec {

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { GateDecision, GateModule, GateVerdict, Item } from "../contracts.js";
 import { LlmPort } from "./llm-port.js";
 import { readTraits } from "./traits.js";
-import { BaseVerdictSchema, buildGatePrompt, decisionOf, parseVerdict } from "./verdict.js";
+import { BaseVerdictSchema, buildGatePrompt, completeVerdict, decisionOf } from "./verdict.js";
 
 export const FenceVerdictSchema = BaseVerdictSchema.extend({
   hypotheses: z.array(z.string().min(1)),
@@ -32,8 +32,7 @@ export function makeChestertonsFenceGate(llm: LlmPort): GateModule {
     id: "chestertons-fence",
     applies: (item: Item) => readTraits(item).touchesExistingCode === true,
     async run(item: Item): Promise<GateVerdict> {
-      const raw = await llm.complete(buildGatePrompt(SPEC, item));
-      const v = parseVerdict(raw, FenceVerdictSchema, "chestertons-fence");
+      const v = await completeVerdict(llm, buildGatePrompt(SPEC, item), FenceVerdictSchema, "chestertons-fence");
       return { verdict: v.reason, output: v };
     },
     decide(verdict: GateVerdict): GateDecision {

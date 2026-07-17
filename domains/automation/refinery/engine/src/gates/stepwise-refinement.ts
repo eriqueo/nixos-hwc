@@ -5,7 +5,7 @@ import { z } from "zod";
 import { GateDecision, GateModule, GateVerdict, Item } from "../contracts.js";
 import { LlmPort } from "./llm-port.js";
 import { readTraits } from "./traits.js";
-import { BaseVerdictSchema, buildGatePrompt, decisionOf, parseVerdict } from "./verdict.js";
+import { BaseVerdictSchema, buildGatePrompt, completeVerdict, decisionOf } from "./verdict.js";
 
 export const StepwiseVerdictSchema = BaseVerdictSchema.extend({
   steps: z.array(z.string().min(1)).min(1),
@@ -30,8 +30,7 @@ export function makeStepwiseRefinementGate(llm: LlmPort): GateModule {
     id: "stepwise-refinement",
     applies: (item: Item) => readTraits(item).trivial !== true,
     async run(item: Item): Promise<GateVerdict> {
-      const raw = await llm.complete(buildGatePrompt(SPEC, item));
-      const v = parseVerdict(raw, StepwiseVerdictSchema, "stepwise-refinement");
+      const v = await completeVerdict(llm, buildGatePrompt(SPEC, item), StepwiseVerdictSchema, "stepwise-refinement");
       return { verdict: v.reason, output: v };
     },
     decide(verdict: GateVerdict): GateDecision {

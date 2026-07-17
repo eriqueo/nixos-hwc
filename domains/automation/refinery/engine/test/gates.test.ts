@@ -159,3 +159,41 @@ test("end-to-end parks at the first gate that returns park, leaving later gates 
   assert.deepEqual(result.stoppedBy, { step: "premortem", reason: "parked" });
   assert.equal(result.item.parkedReason, "needs a human call");
 });
+
+// ── completeVerdict: one self-repair round on a near-miss verdict ──
+
+import { z } from "zod";
+import { completeVerdict } from "../src/gates/verdict.js";
+
+test("completeVerdict repairs a near-miss verdict by re-asking with the validation error", async () => {
+  const schema = z.object({
+    decision: z.enum(["pass", "park", "fail"]),
+    reason: z.string().min(1),
+    severity: z.enum(["low", "medium", "high"]),
+  });
+  const prompts: string[] = [];
+  const llm = {
+    async complete(prompt: string) {
+      prompts.push(prompt);
+      // First answer uses an enum synonym (the real brain-10p8cry failure);
+      // the repair round returns the corrected value.
+      return prompts.length === 1
+        ? JSON.stringify({ decision: "pass", reason: "ok", severity: "critical" })
+        : JSON.stringify({ decision: "pass", reason: "ok", severity: "high" });
+    },
+  };
+  const v = await completeVerdict(llm, "judge this", schema, "test-gate");
+  assert.equal(v.severity, "high");
+  assert.equal(prompts.length, 2, "exactly one repair round");
+  assert.match(prompts[1]!, /rejected/, "repair prompt carries the validation error");
+  assert.match(prompts[1]!, /critical/, "repair prompt echoes the bad response");
+});
+
+test("completeVerdict fails loud when the repair round also misses", async () => {
+  const schema = z.object({ decision: z.enum(["pass", "park", "fail"]), reason: z.string().min(1) });
+  const llm = { async complete() { return JSON.stringify({ decision: "yolo", reason: "nope" }); } };
+  await assert.rejects(
+    () => completeVerdict(llm, "judge this", schema, "test-gate"),
+    (e: Error) => e instanceof InvalidGateVerdictError,
+  );
+});

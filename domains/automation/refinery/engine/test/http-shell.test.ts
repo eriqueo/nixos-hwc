@@ -1036,7 +1036,7 @@ test("renderProjectDetail on a done spec shows 'build this' + the auto-build tog
   assert.ok(!noNext.includes('action="/build"'), "no build button when the pipeline has no next");
 });
 
-test("renderBoard shows both a Hopper section and a Development section", () => {
+test("renderBoard is attention-first: Needs You, Active, Hopper sections", () => {
   const profiles = [
     { pipeline: "project-ideation", label: "Project Ideation", source: "http-intake",
       gates: ["stepwise-refinement", "premortem"], executorMode: "none", executors: ["spec"],
@@ -1049,11 +1049,122 @@ test("renderBoard shows both a Hopper section and a Development section", () => 
     { id: "p1", pipeline: "project-ideation", step: "premortem", state: "pending", payload: { title: "a project" }, history: [] },
   ];
   const html = renderBoard(ideas, projects, profiles, profiles, DOMAINS);
+  assert.ok(html.includes("Needs You"), "Needs You section header comes first");
+  assert.ok(html.indexOf("Needs You") < html.indexOf("Hopper — ideas"), "attention before hopper");
   assert.ok(html.includes("Hopper — ideas"), "Hopper section header");
-  assert.ok(html.includes("Development — projects"), "Development section header");
   assert.ok(html.includes("raw idea"), "an idea card in the Hopper");
-  assert.ok(html.includes("a project") && html.includes('href="/project/p1"'), "a project card in Development");
+  assert.ok(html.includes("a project") && html.includes('href="/project/p1"'), "a pending project in Active");
   assert.ok(html.includes('action="/intake"'), "intake box at the top");
   assert.ok(html.includes(">Captured<"), "Hopper stage lanes");
-  assert.ok(html.includes(">In Pipeline<"), "Development status lanes");
+  assert.ok(html.includes(">In Pipeline<"), "Active status lanes");
+  assert.ok(html.includes('method="get" action="/"'), "GET filter bar present");
+});
+
+test("renderBoard routes parked/failed to Needs You and folds passed into Recently done", () => {
+  const profiles = [
+    { pipeline: "project-ideation", label: "Project Ideation", source: "http-intake",
+      gates: ["stepwise-refinement", "premortem"], executorMode: "none", executors: ["spec"],
+      enabled: true, llmProvider: "claude-cli", color: "#a3be8c" },
+  ];
+  const projects: Item[] = [
+    { id: "pk", pipeline: "project-ideation", step: "premortem", state: "parked", parkedReason: "needs a decision",
+      payload: { title: "parked thing" }, history: [{ step: "premortem", status: "parked", at: "2026-07-01T00:00:00Z" }] },
+    { id: "dn", pipeline: "project-ideation", step: "spec", state: "passed",
+      payload: { title: "done thing" }, history: [{ step: "spec", status: "passed", at: "2026-07-14T00:00:00Z" }] },
+  ];
+  const html = renderBoard([], projects, profiles, profiles, DOMAINS, { archivedCount: 5, now: Date.parse("2026-07-15T00:00:00Z") });
+  const needsYou = html.indexOf("Needs You");
+  const doneFold = html.indexOf("Recently done");
+  assert.ok(needsYou >= 0 && doneFold >= 0, "both sections render");
+  const parkedPos = html.indexOf("parked thing");
+  const donePos = html.indexOf("done thing");
+  assert.ok(needsYou < parkedPos && parkedPos < doneFold, "parked card sits in Needs You");
+  assert.ok(donePos > doneFold, "passed card sits in the folded done shelf");
+  assert.ok(html.includes("5 archived"), "archived count links to /finished");
+  assert.ok(html.includes(">1d<") || html.includes("1d</span>"), "age badge rendered from history");
+});
+
+// ── archive sweep: the exit ramp for passed engine items ──
+
+test("sweepArchive: aged-out passed items archive, fresh ones stay, manual move revives", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"));
+  try {
+    const shell = createShell(cfg);
+    const old: Item = {
+      id: "old1", pipeline: "project-ideation", step: "spec", state: "passed",
+      payload: { title: "old passed" },
+      history: [{ step: "spec", status: "passed", at: "2026-06-01T00:00:00Z" }], // 14d before fixedClock
+    };
+    const fresh: Item = {
+      id: "fresh1", pipeline: "project-ideation", step: "spec", state: "passed",
+      payload: { title: "fresh passed" },
+      history: [{ step: "spec", status: "passed", at: "2026-06-14T00:00:00Z" }], // 1d before fixedClock
+    };
+    await shell.store.save(old);
+    await shell.store.save(fresh);
+    await shell.sweepArchive();
+
+    const oldAfter = (await shell.store.load("old1"))!;
+    const freshAfter = (await shell.store.load("fresh1"))!;
+    assert.equal(oldAfter.archived, true, "aged-out passed item archived");
+    assert.ok(oldAfter.archivedAt, "archive stamped");
+    assert.notEqual(freshAfter.archived, true, "fresh passed item stays on the board");
+
+    // A manual lane move revives the archived item.
+    await shell.setStatus("old1", "pending");
+    const revived = (await shell.store.load("old1"))!;
+    assert.notEqual(revived.archived, true, "status move clears archived");
+    assert.equal(revived.archivedAt, undefined);
+  } finally {
+    cleanup();
+  }
+});
+
+test("sweepArchive: a chain-complete parent archives regardless of age", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"), { chain: true });
+  try {
+    const shell = createShell(cfg);
+    const parent: Item = {
+      id: "par1", pipeline: "project-ideation", step: "spec", state: "passed",
+      payload: { title: "spec done" },
+      history: [{ step: "spec", status: "passed", at: "2026-06-14T23:00:00Z" }], // fresh
+    };
+    const successor: Item = {
+      id: "par1-build", pipeline: "build", step: "admission-gates", state: "pending",
+      payload: { title: "build: spec done", parent: "par1" },
+      history: [{ step: "triage", status: "entered", at: "2026-06-14T23:30:00Z" }],
+    };
+    await shell.store.save(parent);
+    await shell.store.save(successor);
+    await shell.sweepArchive();
+
+    assert.equal((await shell.store.load("par1"))!.archived, true, "parent archived: successor carries the story");
+    assert.notEqual((await shell.store.load("par1-build"))!.archived, true, "successor stays");
+  } finally {
+    cleanup();
+  }
+});
+
+test("chainTo inherits the parent's classified domain (successors are not Misc)", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"), { runLlm: runStub("pass"), chain: true });
+  try {
+    // A domains registry whose "kidpix" domain matches the parent's input prefix.
+    const domainsFile = join(cfg.capsPath, "..", "domains.yaml");
+    writeFileSync(domainsFile, `domains:\n  - key: kidpix\n    label: KidPix\n    color: "#b16286"\n    match: [kidpix]\nfallback:\n  key: misc\n  label: Misc\n  color: "#a7aaad"\n  match: []\n`);
+    const shell = createShell({ ...cfg, domainsFile });
+    const ready: Item = {
+      id: "kp1", pipeline: "project-ideation", step: "stepwise-refinement", state: "pending",
+      payload: { title: "kidpix: funny sounds", input: "kidpix: funny custom sounds for erasers" },
+      chain: true, history: [],
+    };
+    await shell.store.save(ready);
+    await shell.runItem("kp1");
+
+    const successor = (await shell.store.load("kp1-build"))!;
+    assert.ok(successor, "successor chained");
+    const pl = successor.payload as { domain?: string };
+    assert.equal(pl.domain, "kidpix", "successor carries the parent's classified domain");
+  } finally {
+    cleanup();
+  }
 });

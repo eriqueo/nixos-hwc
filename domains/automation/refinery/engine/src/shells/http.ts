@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
 import { Item } from "../contracts.js";
 import { MarkdownItemStore } from "../stores/markdown-store.js";
 import { PipelineCatalog } from "../pipelines/catalog.js";
-import { loadDomains } from "../domains.js";
+import { loadDomains, domainOf } from "../domains.js";
 import { resolveLlm } from "../adapters/resolver.js";
 import { triageSentence, makeTriagedItem, UNTRIAGED } from "../triage.js";
 import { rewind, runPass } from "../runner.js";
@@ -44,6 +44,7 @@ export interface HttpShellConfig {
   runLlm?: LlmPort; // test override for the pipeline runner; prod resolves per pipeline
   nativeRepo?: string; // default target repo for native pipelines (REFINERY_NATIVE_REPO); payload.repo overrides
   nativeTimeoutMs?: number; // headless-claude timeout for a native run (REFINERY_NATIVE_TIMEOUT)
+  archiveAfterDays?: number; // passed items older than this leave the board for /finished (REFINERY_ARCHIVE_DAYS; default 7)
 }
 
 export function configFromEnv(): HttpShellConfig {
@@ -66,6 +67,7 @@ export function configFromEnv(): HttpShellConfig {
     nativeRunNowSpoolDir: process.env.REFINERY_NATIVE_RUNNOW_SPOOL || `${base}/native-run`,
     nativeRepo: process.env.REFINERY_NATIVE_REPO,
     nativeTimeoutMs: process.env.REFINERY_NATIVE_TIMEOUT ? Number(process.env.REFINERY_NATIVE_TIMEOUT) : undefined,
+    archiveAfterDays: process.env.REFINERY_ARCHIVE_DAYS ? Number(process.env.REFINERY_ARCHIVE_DAYS) : undefined,
     clock: () => new Date().toISOString(),
   };
 }
@@ -202,6 +204,39 @@ export function createShell(cfg: HttpShellConfig) {
     if (cfg.vaultDir) appendBrainIdea(cfg.vaultDir, text);
   }
 
+  /** The exit ramp for engine items: sweep passed items off the working board.
+   *  Two triggers — (a) chain complete: the item's declared successor exists, so
+   *  its spec has been consumed and the successor card carries the lineage;
+   *  (b) aged out: passed and untouched for archiveAfterDays. Archived items
+   *  stay in the store and render on /finished; any manual status move revives
+   *  them. Best-effort like syncBrain — a sweep hiccup never 500s a render. */
+  async function sweepArchive(): Promise<void> {
+    try {
+      const afterMs = (cfg.archiveAfterDays ?? 7) * 86_400_000;
+      const items = await store.list();
+      const now = Date.parse(cfg.clock());
+      for (const item of items) {
+        if (item.state !== "passed" || item.archived || item.pipeline === UNTRIAGED) continue;
+        const next = catalog.get(item.pipeline)?.next;
+        const chainComplete = next ? items.some((i) => i.id === `${item.id}-${next}`) : false;
+        const lastAt = item.history.length ? Date.parse(item.history[item.history.length - 1]!.at) : NaN;
+        const agedOut = Number.isFinite(lastAt) && Number.isFinite(now) && now - lastAt >= afterMs;
+        if (!chainComplete && !agedOut) continue;
+        await store.save({
+          ...item,
+          archived: true,
+          archivedAt: cfg.clock(),
+          history: [...item.history, {
+            step: item.step ?? "archive", status: "entered", at: cfg.clock(),
+            note: chainComplete ? "archived: chain complete (successor exists)" : "archived: passed and aged out",
+          }],
+        });
+      }
+    } catch {
+      /* best-effort: the board renders whatever state the sweep reached */
+    }
+  }
+
   /** Reconcile the store against the brain vault's ideas (best-effort, like
    *  intake: a vault read/write hiccup must never 500 a page render). */
   async function syncBrain(): Promise<void> {
@@ -246,7 +281,10 @@ export function createShell(cfg: HttpShellConfig) {
         input: buildAsk,
         spec,
         repo: parentPayload.repo,
-        domain: parentPayload.domain,
+        // Inherit the parent's domain identity: an explicit override wins, else
+        // the parent's classified domain — otherwise the successor's input (the
+        // spec deliverable, no "prefix:" head) always classifies to Misc.
+        domain: typeof parentPayload.domain === "string" ? parentPayload.domain : domainOf(parent, domains).key,
         parent: parent.id,
         chain: parent.chain,
         traits: next.defaultTraits,
@@ -384,6 +422,10 @@ export function createShell(cfg: HttpShellConfig) {
     await store.save({
       ...item,
       state: s,
+      // A manual lane move revives an archived item — the human is explicitly
+      // putting it back to work, so it returns to the board.
+      archived: undefined,
+      archivedAt: undefined,
       parkedReason: s === "parked" ? (item.parkedReason ?? "manually parked on the board") : undefined,
       history: [...item.history, { step: item.step ?? "triage", status: s, at: cfg.clock(), note: "status set on board" }],
     });
@@ -525,17 +567,39 @@ export function createShell(cfg: HttpShellConfig) {
         if (method === "GET" && url === "/") {
           // The combined board: Hopper (untriaged ideas) stacked over Development
           // (triaged projects). Pull the latest brain ideas in first (the interval
-          // sync in serve.ts handles the idle case).
+          // sync in serve.ts handles the idle case), then run the archive sweep
+          // so finished work leaves the board instead of piling up in Done.
           await syncBrain();
+          await sweepArchive();
           const [items, profiles, enabled] = [await store.list(), catalog.list(), catalog.enabled()];
-          const ideas = items.filter((i) => i.pipeline === UNTRIAGED);
-          // Development: store projects + nightly-build mirror cards (SRs have their own page).
+          // Server-side board filter (?domain=&pipeline=&q=) — plain GET params,
+          // no client JS. Applies to ideas, projects and mirror cards alike.
+          const params = new URLSearchParams((req.url ?? "").split("?")[1] ?? "");
+          const filter = {
+            domain: (params.get("domain") ?? "").trim(),
+            pipeline: (params.get("pipeline") ?? "").trim(),
+            q: (params.get("q") ?? "").trim(),
+          };
+          const matches = (i: Item): boolean => {
+            if (filter.domain && domainOf(i, domains).key !== filter.domain) return false;
+            if (filter.pipeline && i.pipeline !== filter.pipeline) return false;
+            if (filter.q) {
+              const pl = (i.payload && typeof i.payload === "object" ? i.payload : {}) as Record<string, unknown>;
+              const hay = `${i.id} ${typeof pl.title === "string" ? pl.title : ""} ${typeof pl.input === "string" ? pl.input : ""}`.toLowerCase();
+              if (!hay.includes(filter.q.toLowerCase())) return false;
+            }
+            return true;
+          };
+          const ideas = items.filter((i) => i.pipeline === UNTRIAGED).filter(matches);
+          // Development: store projects + nightly-build mirror cards (SRs have
+          // their own page). Archived items live on /finished, not here.
           const projects = [
-            ...items.filter((i) => i.pipeline !== UNTRIAGED),
+            ...items.filter((i) => i.pipeline !== UNTRIAGED && i.archived !== true),
             ...mirror().filter((m) => !m.id.startsWith(SR_PREFIX)),
-          ];
+          ].filter(matches);
+          const archivedCount = items.filter((i) => i.archived === true).length;
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          res.end(renderBoard(ideas, projects, profiles, enabled, domains));
+          res.end(renderBoard(ideas, projects, profiles, enabled, domains, { filter, archivedCount }));
           return;
         }
         if (method === "GET" && url === "/nightly") {
@@ -549,12 +613,15 @@ export function createShell(cfg: HttpShellConfig) {
           return;
         }
         if (method === "GET" && url === "/finished") {
-          // Graduated nightly-build projects (off the gauntlet). Read straight
-          // from the same vault the /nightly mirror reads.
+          // Graduated nightly-build projects (off the gauntlet) + archived
+          // engine items (the board's exit ramp), newest archive first.
           const [profiles, enabled] = [catalog.list(), catalog.enabled()];
           const finished = cfg.vaultDir ? finishedProjects(cfg.vaultDir) : [];
+          const archived = (await store.list())
+            .filter((i) => i.archived === true)
+            .sort((a, b) => (b.archivedAt ?? "").localeCompare(a.archivedAt ?? ""));
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          res.end(renderFinished(finished, profiles, enabled, domains));
+          res.end(renderFinished(finished, profiles, enabled, domains, archived));
           return;
         }
         if (method === "GET" && url === "/reference") {
@@ -792,5 +859,5 @@ export function createShell(cfg: HttpShellConfig) {
     })();
   });
 
-  return { server, store, catalog, domains, intake, intakeIdea, syncBrain, amend, doRewind, setStatus, setStage, setDomain, setRepo, setChain, buildNow, chainTo, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow, requestNativeRunNow };
+  return { server, store, catalog, domains, intake, intakeIdea, syncBrain, sweepArchive, amend, doRewind, setStatus, setStage, setDomain, setRepo, setChain, buildNow, chainTo, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow, requestNativeRunNow };
 }

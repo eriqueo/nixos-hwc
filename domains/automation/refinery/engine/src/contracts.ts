@@ -51,6 +51,12 @@ export const ItemSchema = z.object({
   // project-ideation spec → build). Off (default) stops at this pipeline's
   // result for human review. Toggled on the board (POST /chain).
   chain: z.boolean().optional(),
+  // archived: the exit ramp for engine items. A passed item that has aged out
+  // (or whose chain is complete) leaves the working board and appears on
+  // /finished instead — passed is a result, archived is the shelf. Set by the
+  // board's archive sweep; cleared by any manual status move (revival).
+  archived: z.boolean().optional(),
+  archivedAt: z.string().optional(),
 });
 export type Item = z.infer<typeof ItemSchema>;
 
