@@ -902,7 +902,9 @@ test("build.yaml loads via the catalog as a terminal (next-less) pipeline; proje
   assert.ok(build, "build pipeline on disk");
   assert.equal(build!.executorMode, "write");
   assert.deepEqual(build!.executors, ["native"]);
-  assert.equal(build!.gates[0], "chestertons-fence");
+  // Single admission-gates gate since 5a5880ae: the spec was already vetted in
+  // ideation, so build only asks "safe to run unattended?" before native execute.
+  assert.deepEqual(build!.gates, ["admission-gates"]);
   assert.equal(build!.next, undefined, "build is terminal — no next");
   assert.equal(build!.defaultTraits?.mode, "brownfield");
 

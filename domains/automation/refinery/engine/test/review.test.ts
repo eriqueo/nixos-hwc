@@ -225,12 +225,16 @@ test("runMorningReview continues past a single card error and collects it", asyn
     const cfg: MorningReviewConfig = { vaultDir: v.root, defaultRepo: "/repo" };
     const { github } = stubGitHub();
     const { store } = memStore();
-    // LLM throws only for the second card (tests), succeeds for the first.
+    // LLM fails persistently for the second card, succeeds for the first. The
+    // runner retries each card 3x (withRetry, since cfe83d1c), so a throw must
+    // survive every attempt to land in summary.errors — calls 2..4 all belong
+    // to the second card. Costs ~8s of backoff sleep; that's the price of
+    // exercising the real error-collection path.
     let call = 0;
     const flakyLlm: LlmPort = {
       async complete() {
         call += 1;
-        if (call === 2) throw new Error("llm boom");
+        if (call >= 2) throw new Error("llm boom");
         return JSON.stringify(GOOD_VERDICT);
       },
     };
