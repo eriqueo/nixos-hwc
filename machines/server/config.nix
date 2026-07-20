@@ -114,6 +114,10 @@
   # Lead Scout — Facebook group lead scraper/classifier, MCP + HTTP on port 8420
   hwc.server.ai.leadScout.enable = true;
   hwc.server.ai.homeScout.enable = true;
+  # home_scout runs from the scout monorepo (eriqueo/scout) as of 2026-07-19;
+  # the old ~/600_apps/home_scout clone is retained temporarily as rollback.
+  hwc.server.ai.homeScout.projectDir = "/home/eric/600_apps/scout/apps/home-scout";
+  hwc.server.ai.homeScout.workspaceRoot = "/home/eric/600_apps/scout";
   # HWC-business classifier profiles post to #hwc (business channel);
   # DataX profiles stay on the default datax-discord-webhook (#jt-pros).
   hwc.server.ai.leadScout.channelMap = {

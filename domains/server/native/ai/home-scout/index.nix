@@ -15,7 +15,7 @@
 let
   cfg = config.hwc.server.ai.homeScout;
   node = "/run/current-system/sw/bin/node";
-  tsx  = "${cfg.projectDir}/node_modules/tsx/dist/cli.mjs";
+  tsx  = "${cfg.workspaceRoot}/node_modules/tsx/dist/cli.mjs";
   cli  = "${cfg.projectDir}/src/cli.ts";
 
   # homeharvest is not in nixpkgs; pure-python wheel with nixpkgs-available deps.
@@ -96,6 +96,16 @@ in
       type = lib.types.path;
       default = "${config.hwc.paths.user.home}/600_apps/home_scout";
       description = "Path to the home_scout project directory";
+    };
+
+    workspaceRoot = lib.mkOption {
+      type = lib.types.path;
+      default = cfg.projectDir;
+      description = ''
+        Root whose node_modules carries hoisted tooling (tsx). Equal to
+        projectDir for a standalone checkout; the monorepo root when
+        projectDir is an app inside the scout workspace.
+      '';
     };
 
     databaseUrl = lib.mkOption {
