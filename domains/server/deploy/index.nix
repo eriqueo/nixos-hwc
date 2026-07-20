@@ -12,8 +12,9 @@
 # The dispatcher is deliberately dumb: it discovers + picks + execs. The actual
 # deploy logic lives WITH each app as `<repo>/deploy.sh` (late binding — adding a
 # deployable app is just dropping a deploy.sh in its repo, no Nix edit). The
-# toolchain apps need (node/npm, git, sudo+systemctl, podman-compose) is provided
+# toolchain apps need (node/npm, git, systemctl, podman-compose) is provided
 # here via runtimeInputs so every exec'd recipe inherits a reliable PATH.
+# sudo comes from /run/wrappers/bin via the ambient PATH, never from the store.
 
 { config, lib, pkgs, ... }:
 
@@ -42,9 +43,14 @@ in
       (pkgs.writeShellApplication {
         name = "deploy";
         # Toolchain inherited by exec'd recipes (they run in this augmented PATH).
+        # NO pkgs.sudo here: a nix-store sudo can never work (no setuid bit) and
+        # it shadows the real /run/wrappers/bin/sudo — which broke every
+        # non-interactive `ssh hwc-server "deploy <app>"` at the restart step.
+        # Recipes get the setuid wrapper from the ambient PATH (present in both
+        # interactive and ssh sessions).
         runtimeInputs = [
           pkgs.fzf pkgs.coreutils pkgs.findutils pkgs.gnugrep pkgs.bash
-          pkgs.git pkgs.nodejs pkgs.sudo pkgs.systemd pkgs.podman-compose
+          pkgs.git pkgs.nodejs pkgs.systemd pkgs.podman-compose
         ];
         text = ''
           set -euo pipefail
