@@ -769,6 +769,16 @@
       # reports → tunnel. hwc-leads listens on :11650.
       "reports.iheartwoodcraft.com" = { service = "http://localhost:11650"; path = "^/api/reports/"; };
 
+      # heartwoodcraft.me retirement (Phase 1, 2026-07-19): .com twins of the
+      # remaining .me hostnames, same upstreams — parallel until callers flip
+      # (claude.ai connectors, DataX monitor collaborators), then the .me
+      # entries drop. brain./monitor. are Access-gated on the Cloudflare side.
+      # See brain: tech/development/builds/heartwoodcraft_me_retirement.md
+      "mcp.iheartwoodcraft.com" = "http://localhost:6200";
+      "leads.iheartwoodcraft.com" = "http://localhost:8420";
+      "brain.iheartwoodcraft.com" = "http://localhost:9876";
+      "monitor.iheartwoodcraft.com" = "http://localhost:4400";
+
       # hwc-mcp-gateway origins — internal hostnames the OAuth gateway Worker
       # proxies to (machine-to-machine via an Access service token). Distinct
       # from the bare brain./leads./mcp. names above, which stay owned by the
