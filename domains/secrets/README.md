@@ -49,6 +49,7 @@ domains/secrets/
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-07-19: Rotated `cloudflare-api-key` — the old token was orphaned (visible in no dashboard token list, User or Account, so it could not be edited to add permissions). Replaced with a new account-owned token (`cfat_…`) carrying the old zone scopes plus **Zone → Analytics → Read** (needed for GraphQL threat/traffic analytics; first consumer: the heartwoodcraft.me retirement investigation). Same secret name/path, recipients = everyone (encrypted directly with `age`, no full rekey). Note: `agenix -e` with `EDITOR="cp src"` silently produced an empty payload — verify with `age -d | wc -c` after any scripted edit.
 - 2026-07-07: Notification unification — removed `parts/services/slack-webhook-url.age` (the `$env.SLACK_WEBHOOK_URL` n8n injection is gone; no active workflow used it). Dropped its `mountOverrides` entry in `declarations/generated.nix`. The `nanoclaw-slack-*` + `slack-signing-secret` secrets are untouched (nanoclaw bot / Slack app, not the notification path).
 - 2026-07-06: Gotify decommission — removed all `gotify-*` secrets from parts/services/ (admin password, per-app taxonomy tokens, host/app tokens). Declarations were auto-generated from the parts/ walk, so no declaration edits needed.
 - 2026-07-06: vaultwarden image pinned to 1.35.4 (Law 15 v12.4 critical tier: password vault).
