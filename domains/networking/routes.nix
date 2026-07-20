@@ -339,6 +339,15 @@ in
       upstream = "http://127.0.0.1:8421";
     }
 
+    # research_scout — research/paper intelligence dashboard, name-based vhost
+    # (research-scout.hwc.iheartwoodcraft.com). Proxies to the unified
+    # research-scout server on :8422 (serves SPA + REST API + /mcp).
+    {
+      name = "research-scout";
+      mode = "vhost";
+      upstream = "http://127.0.0.1:8422";
+    }
+
     # datax-monitor — DX1 agent-execution diagnostic dashboard, name-based vhost
     # (monitor.hwc.iheartwoodcraft.com). One Hono server on :4400 serves both the
     # React SPA (ui/dist) and the REST API (/api/*). Module:

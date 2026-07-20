@@ -24,6 +24,7 @@
     ../../domains/server/containers/_shared/directories.nix
     ../../domains/server/native/ai/lead-scout/index.nix # Lead Scout MCP + HTTP
     ../../domains/server/native/ai/home-scout/index.nix # Home Scout MCP + HTTP + ingest timers
+    ../../domains/server/native/ai/research-scout/index.nix # Research Scout MCP + HTTP + arXiv ingest timer
     ../../domains/server/native/ai/brain-mcp/index.nix # Brain MCP Server (Deno)
     ../../domains/server/native/ai/brainvec/index.nix # brainvec semantic-index ingest (vault embeddings)
     ../../domains/server/native/ai/hermes/index.nix # Hermes Agent (Nous Research)
@@ -120,6 +121,9 @@
   hwc.server.ai.homeScout.workspaceRoot = "/home/eric/600_apps/scout";
   hwc.server.ai.leadScout.projectDir = "/home/eric/600_apps/scout/apps/lead-scout";
   hwc.server.ai.leadScout.workspaceRoot = "/home/eric/600_apps/scout";
+  # Research Scout — research/paper intelligence, MCP + HTTP on port 8422.
+  # projectDir/workspaceRoot defaults already point at the scout monorepo.
+  hwc.server.ai.researchScout.enable = true;
   # HWC-business classifier profiles post to #hwc (business channel);
   # DataX profiles stay on the default datax-discord-webhook (#jt-pros).
   hwc.server.ai.leadScout.channelMap = {
