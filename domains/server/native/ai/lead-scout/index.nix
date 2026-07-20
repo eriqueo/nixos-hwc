@@ -11,48 +11,15 @@
 let
   cfg = config.hwc.server.ai.leadScout;
   node = "/run/current-system/sw/bin/node";
-  tsx  = "${cfg.projectDir}/node_modules/tsx/dist/cli.mjs";
+  tsx  = "${cfg.workspaceRoot}/node_modules/tsx/dist/cli.mjs";
   cli  = "${cfg.projectDir}/src/cli.ts";
 
   chromiumBin = "${pkgs.chromium}/bin/chromium";
 
-  # One-shot deploy: pull, install deps, build frontend, restart service.
-  # Available as `lead-scout-deploy` in PATH on the server.
-  lead-scout-deploy = pkgs.writeShellApplication {
-    name = "lead-scout-deploy";
-    runtimeInputs = [ pkgs.nodejs pkgs.bash pkgs.git pkgs.coreutils pkgs.systemd pkgs.sudo ];
-    text = ''
-      set -euo pipefail
-      PROJECT_DIR="${cfg.projectDir}"
-
-      echo "[deploy] cd ''${PROJECT_DIR}"
-      cd "''${PROJECT_DIR}"
-
-      echo "[deploy] git pull --ff-only"
-      git pull --ff-only
-
-      echo "[deploy] backend: npm install"
-      npm install --silent
-
-      echo "[deploy] frontend: npm install && npm run build"
-      pushd frontend >/dev/null
-      npm install --silent
-      npm run build
-      popd >/dev/null
-
-      echo "[deploy] sudo systemctl restart lead-scout"
-      sudo systemctl restart lead-scout
-
-      sleep 3
-      if systemctl is-active --quiet lead-scout; then
-        echo "[deploy] OK -- lead-scout active"
-      else
-        echo "[deploy] FAILED -- lead-scout did not restart cleanly" >&2
-        systemctl status lead-scout --no-pager | head -15 >&2
-        exit 1
-      fi
-    '';
-  };
+  # The old inline `lead-scout-deploy` command (pull + npm install + frontend
+  # build + restart) is retired: it predated the standard `deploy` dispatcher
+  # and its per-repo layout assumptions are wrong for the scout monorepo.
+  # Deploys go through ~/600_apps/scout/deploy.sh (`deploy scout`).
 in
 {
   #============================================================================
@@ -71,6 +38,16 @@ in
       type = lib.types.path;
       default = "${config.hwc.paths.user.home}/600_apps/lead_scout";
       description = "Path to the lead_scout project directory";
+    };
+
+    workspaceRoot = lib.mkOption {
+      type = lib.types.path;
+      default = cfg.projectDir;
+      description = ''
+        Root whose node_modules carries hoisted tooling (tsx). Equal to
+        projectDir for a standalone checkout; the monorepo root when
+        projectDir is an app inside the scout workspace.
+      '';
     };
 
     databaseUrl = lib.mkOption {
@@ -114,7 +91,7 @@ in
   config = lib.mkIf cfg.enable {
     # Chromium kept on global PATH so interactive `npm run scrape` from a user
     # shell can find it; the service itself uses PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.
-    environment.systemPackages = [ lead-scout-deploy pkgs.chromium ];
+    environment.systemPackages = [ pkgs.chromium ];
 
     # Discord webhook secret (cfg.discordWebhookSecret = "datax-discord-webhook")
     # consumed by the in-process classifier (src/notifications/discord.ts). It is
