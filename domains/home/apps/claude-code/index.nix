@@ -32,8 +32,18 @@ in
       };
       items = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [ "skills" "agents" "commands" "CLAUDE.md" "engineering-principles" ];
-        description = "Entries under repoPath to symlink into ~/.claude/.";
+        default = [
+          "skills"
+          "agents"
+          "commands"
+          "CLAUDE.md"
+          "engineering-principles"
+          # Individual files, not the hooks/ dir — ~/.claude/hooks also holds
+          # host-local hooks (herdr-agent-state.sh) that must stay unmanaged.
+          "hooks/principles-primer.sh"
+          "hooks/principles-gate.sh"
+        ];
+        description = "Entries under repoPath to symlink into ~/.claude/ (nested paths symlink single files).";
       };
       autoPull = {
         enable = lib.mkOption {
