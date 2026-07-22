@@ -32,6 +32,7 @@ let
     export HWC_CRM_BIND_ADDR="${cfg.bindAddr}"
     export HWC_CRM_PORT="${toString cfg.port}"
     export HWC_CRM_PG_DSN="${cfg.postgresDsn}"
+    export HWC_CRM_NOTIFY_URL="${cfg.notifyUrl}"
     export HWC_CRM_LOG_LEVEL="${cfg.logLevel}"
     export HWC_CRM_EMAIL_TRANSPORT="${cfg.emailTransport}"
     export HWC_CRM_SPOOL_DIR="${cfg.statePath}/spool"
@@ -114,6 +115,16 @@ in
       type = lib.types.str;
       default = "postgresql:///hwc";
       description = "Unix-socket peer auth as the service user (same as hwc-leads).";
+    };
+
+    notifyUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "http://127.0.0.1:11600";  # hwc-notify loopback
+      description = ''
+        hwc-notify base URL. Web-form contact leads POST a topic="leads"
+        notification here so they land in #hwc-leads (Discord) — the same
+        signal hwc-leads fires for calculator/appointment captures.
+      '';
     };
 
     logLevel = lib.mkOption {

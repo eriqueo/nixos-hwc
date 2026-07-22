@@ -33,6 +33,7 @@ crm/
 | `.projectDir` | `/home/eric/600_apps/hwc-crm` | Live checkout. |
 | `.port` | `11660` | Loopback (11600 notify, 11650 leads). |
 | `.postgresDsn` | `postgresql:///hwc` | Socket peer auth as eric. |
+| `.notifyUrl` | `http://127.0.0.1:11600` | hwc-notify base; web-form leads ping #hwc-leads. |
 | `.emailTransport` | `file` | Flip to `smtp` (Proton Bridge) to go live. |
 | `.smtp.passwordSecretRef` | `proton-bridge-password` | agenix. |
 | `.jtGrantKeyRef` | `jobtread-grant-key` | Manual-lead JT create. |
@@ -53,6 +54,21 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 `^/hooks/(contact|appointment|availability)`.
 
 ## Changelog
+- **2026-07-22** — Web-form contact leads now ping #hwc-leads (Discord).
+  Leads entering via `crm.iheartwoodcraft.com/hooks/contact` (the JobTread
+  web-form-embed mirror) landed on the funnel board but never notified anyone
+  — only hwc-leads' calculator/appointment captures pinged hwc-notify. The app
+  (`~/600_apps/hwc-crm`) gained a `NotifyClient` adapter that POSTs a
+  `topic="leads"` payload to hwc-notify on new (non-duplicate) contact leads,
+  stamping `notify_sent_at` (NULL-guarded — no double-ping). New
+  `.notifyUrl` option → `HWC_CRM_NOTIFY_URL` (default matches the Python
+  fallback, so the ping was already live on service restart; the export just
+  makes it declarative). A tick reconciliation sweep (`_notify_unannounced`,
+  mirroring `_t0_retry`) backstops the inline ping — any lead with
+  `notify_sent_at IS NULL` for a web-form source (contact/appointment) is
+  announced on the next tick, so a crashed inline POST or a future
+  forgotten insert path can't silently drop a lead again. The drip was never
+  broken — both missed real leads were already enrolled in `contact_followup`.
 - 2026-07-11: `projectDir` default derives from `hwc.paths.user.home` (`${paths.user.home}/600_apps/hwc-crm`, brainvec precedent) instead of a hardcoded `/home/eric` literal (Law 3 migration, value unchanged).
 
 - **2026-07-10** — Initial module: hwc-crm service (Python/FastAPI from
