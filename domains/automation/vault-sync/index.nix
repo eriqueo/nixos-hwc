@@ -44,7 +44,7 @@ let
       #    in Tier-2; git add -A skips the embedded raw-import repos by design.
       if [ -n "$(git status --porcelain)" ]; then
         git add -A
-        git commit -m "vault-sync: server auto-commit $(date -Iminutes)" || true
+        git commit -m "vault-sync: ${config.networking.hostName} auto-commit $(date -Iminutes)" || true
       fi
 
       # 2. Integrate hub (laptop) changes. --autostash guards any stray

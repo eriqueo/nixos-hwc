@@ -51,6 +51,12 @@ hwc.automation.vaultSync.watch.enable = true;      # debounce 3s (watch.debounce
   checkpoint commits can never collide on `index.lock`.
 - **Order**: commit local changes → `pull --no-rebase --autostash` → `push`. A merge that
   conflicts is aborted (not left half-applied) and retried next cycle.
+- **Attributable commit messages**: the auto-commit message interpolates
+  `${config.networking.hostName}` (`vault-sync: <host> auto-commit <ts>`) so hub history shows
+  which clone authored each commit. Previously the literal was hardcoded `server`, so every
+  laptop commit masqueraded as a server commit — hub history was useless for provenance and a
+  recon misread it as a stalled laptop→hub transport. The string is metadata only; nothing routes
+  on it.
 - **`git add -A` is safe**: the raw-import dirs (`business/wiki/06-contractor`,
   `_library/04-transcripts`) are embedded repos and are skipped; per-device state
   (`.stignore`, `.obsidian/plugins/*/data.json`) is gitignored.
@@ -63,3 +69,6 @@ hwc.automation.vaultSync.watch.enable = true;      # debounce 3s (watch.debounce
 - 2026-06-15: Added optional event-driven `brain-vault-watch` service (`watch.enable`,
   `watch.debounceSec`) — pushes within seconds of any vault CRUD via a debounced `inotifywait`
   loop that runs the same sync script. Enabled on the laptop; server stays timer-only.
+- 2026-07-22: Auto-commit message now interpolates `${config.networking.hostName}` instead of the
+  hardcoded `server` literal, so hub history is attributable per clone. Requires a rebuild on each
+  host to take effect (message is baked at build time).
