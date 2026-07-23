@@ -6,7 +6,8 @@
 #   1. home-scout.service — unified HTTP + MCP server on port 8421
 #      (classify sweeps / notify / digest crons run in-process via node-cron)
 #   2. systemd timers running the Python ingesters (homeharvest daily,
-#      cadastral + redfin monthly) from <projectDir>/ingest
+#      cadastral + redfin monthly, school boundaries weekly) from
+#      <projectDir>/ingest
 #   3. Postgres database `home_scout` on the shared instance
 #
 # Notifications go to the hwc-notify loopback dispatcher (:11600/notify) —
@@ -45,6 +46,23 @@ let
     ps.requests
   ]);
 
+  # ── School boundary layers ────────────────────────────────────────────
+  # Rendered into [[schools.layers]] TOML blocks. Values are typed by Nix and
+  # emitted as TOML scalars/arrays, so a layer is declared once here rather
+  # than hand-written into a config file on the server.
+  tomlValue = v:
+    if builtins.isString v then ''"${v}"''
+    else if builtins.isList v then "[ ${lib.concatMapStringsSep ", " (x: ''"${x}"'') v} ]"
+    else if builtins.isBool v then (if v then "true" else "false")
+    else builtins.toString v;
+
+  renderLayer = layer: ''
+    [[schools.layers]]
+    ${lib.concatStringsSep "\n" (
+      lib.mapAttrsToList (k: v: "${k} = ${tomlValue v}") layer
+    )}
+  '';
+
   ingestToml = pkgs.writeText "home-scout-ingest.toml" ''
     [harvest]
     locations = [ ${lib.concatMapStringsSep ", " (l: ''"${l}"'') cfg.locations} ]
@@ -57,6 +75,8 @@ let
 
     [redfin]
     regions = [ ${lib.concatMapStringsSep ", " (r: ''"${r}"'') cfg.redfinRegions} ]
+
+    ${lib.concatMapStringsSep "\n" renderLayer cfg.schoolLayers}
   '';
 
   ingestEnv = {
@@ -142,6 +162,84 @@ in
       type = lib.types.listOf lib.types.str;
       default = [ "Bozeman, MT" "Belgrade, MT" "Livingston, MT" ];
       description = "Redfin city regions kept from the monthly market tracker load";
+    };
+
+    schoolLayers = lib.mkOption {
+      type = lib.types.listOf (lib.types.attrsOf lib.types.anything);
+      description = ''
+        School boundary layers fetched by the monthly schools timer, as
+        [[schools.layers]] TOML blocks.
+
+        Montana does not have one "school district" per address. Most of the
+        state is covered by paired ELEMENTARY (K-8) and SECONDARY (9-12)
+        districts; a handful of communities (Big Sky, West Yellowstone) are
+        UNIFIED K-12 instead. Elementary and unified coverage are mutually
+        exclusive, verified against the live service, so the `district` level
+        is fed by BOTH — every address resolves to exactly one district, and
+        grouping by district is complete rather than covering only the two
+        unified towns.
+
+        Two source tiers, resolved by `priority` (higher wins where they
+        overlap; find_containing in the geometry engine picks the max):
+
+        * MSDI (priority 0) — the same keyless Montana State Library ArcGIS
+          server the cadastral ingest uses. Statewide DISTRICT-level coverage
+          for every address. All 395 features fetched (no county filter): the
+          set is small, and a county filter would drop districts straddling a
+          line near Big Sky and Bridger Canyon.
+        * BSD7 (priority 10) — Bozeman School District 7's own attendance
+          boundaries, published as a Google My Map (KML export). These give
+          the ACTUAL school (Longfellow vs Whittier, Bozeman High vs Gallatin
+          High) for addresses inside Bozeman, and win over the MSDI district
+          there; outside Bozeman only MSDI covers the point, so it still wins.
+      '';
+      default =
+        let
+          boundaries =
+            "https://gisservicemt.gov/arcgis/rest/services/MSDI_Framework/Boundaries/MapServer";
+          # ~50m of generalisation. District lines follow section lines and
+          # rivers at metre resolution; that detail cannot change which side
+          # of a boundary a house sits on, and dropping it cuts the payload
+          # by an order of magnitude.
+          simplify = 0.0005;
+          layer = key: level: id: {
+            inherit key level;
+            source = "msdi";
+            url = "${boundaries}/${toString id}/query";
+            name_field = [ "NAME" ];
+            id_field = "SDLEA";
+            county_field = "County_Name";
+            max_allowable_offset = simplify;
+            state = "MT";
+          };
+          # BSD7's My Map. `mid` is the map id; if the district rebuilds the
+          # map Google mints a new mid and the fetch fails loudly (zero
+          # features -> failed run), which is the signal to refresh it here.
+          bsd7Kml =
+            "https://www.google.com/maps/d/kml?mid=1vd1pcm6zfcbXoYrRdVyJ8BmF_0IzZp8Z&forcekml=1";
+          bsd7 = key: level: folder: {
+            inherit key level folder;
+            source = "bsd7";
+            driver = "kml";
+            url = bsd7Kml;
+            name_field = [ "name" ];
+            strip_name_code = true; # "Longfellow Elementary School (LO)" -> drop "(LO)"
+            priority = 10;
+            county = "Gallatin";
+            state = "MT";
+          };
+        in [
+          (layer "msdi_elementary" "elementary" 5)
+          (layer "msdi_secondary" "high" 4)
+          # Both of these write level=district; zone ids stay distinct
+          # (msdi:district:<SDLEA>) and the two layers never overlap.
+          (layer "msdi_unified_district" "district" 6)
+          (layer "msdi_elementary_district" "district" 5)
+          # BSD7 attendance zones (Bozeman only) — win over MSDI where present.
+          (bsd7 "bsd7_elementary" "elementary" "Bozeman PK-5 Elementary Boundaries")
+          (bsd7 "bsd7_middle" "middle" "Bozeman 6-8 Middle School Boundaries")
+          (bsd7 "bsd7_high" "high" "Bozeman 9-12 High School Boundaries")
+        ];
     };
   };
 
@@ -266,6 +364,27 @@ in
       timerConfig = {
         OnCalendar = "*-*-04 04:00:00";
         RandomizedDelaySec = "2h";
+        Persistent = true;
+      };
+    };
+
+    # School boundaries change on a redistricting cadence (years), but new
+    # listings arrive daily and need assigning. The run is cheap when nothing
+    # moved — it re-scans only listings whose boundary or coordinates changed
+    # — so it goes weekly rather than monthly.
+    systemd.services.home-scout-schools = {
+      description = "Home Scout school district boundary load + listing assignment";
+      after = [ "network-online.target" "postgresql.service" ];
+      environment = ingestEnv;
+      serviceConfig = ingestServiceDefaults // {
+        ExecStart = "${ingestPython}/bin/python -m homescout_ingest.schools_run";
+      };
+    };
+    systemd.timers.home-scout-schools = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "Sun *-*-* 05:00:00";
+        RandomizedDelaySec = "1h";
         Persistent = true;
       };
     };
