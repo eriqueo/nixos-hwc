@@ -8,6 +8,7 @@
 
 {
   imports = [
+    ./brain-sweep/index.nix
     ./inbox-janitor/index.nix
     ./mail-janitor/index.nix
     ./mqtt/index.nix

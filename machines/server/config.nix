@@ -368,6 +368,12 @@
   # an flock on <vault>/.git/.sync.lock.
   hwc.automation.vaultSync.enable = true;
 
+  # Brain janitor — nightly mechanical sweep of the vault (brain sweep --report,
+  # CLI at ~/600_apps/brain). Detector, not fixer: writes a dated drift report to
+  # _inbox/janitor/ under the shared .git/.sync.lock flock; pings hwc-notify only
+  # on alert-level drift or failure. vault-sync carries the report to the hub.
+  hwc.automation.brainSweep.enable = true;
+
   # Inbox janitor — every 30 min, drain loose files at the root of
   # ~/000_inbox/downloads per ~/000_inbox/_inbox-routing.yaml (datax stays,
   # business/tech/personal drain to the home PARA dirs, secrets/junk quarantine,
