@@ -46,18 +46,20 @@ let
     ps.requests
   ]);
 
-  # ── School boundary layers ────────────────────────────────────────────
-  # Rendered into [[schools.layers]] TOML blocks. Values are typed by Nix and
-  # emitted as TOML scalars/arrays, so a layer is declared once here rather
-  # than hand-written into a config file on the server.
+  # ── Layer-spec rendering ──────────────────────────────────────────────
+  # School and overlay layers are declared once here as typed Nix attrsets and
+  # emitted as [[<section>]] TOML blocks, so a layer is data in this module,
+  # not hand-written config on the server. tomlValue recurses into lists so a
+  # numeric list (a spatial envelope) and a string list (name_field) both
+  # render correctly.
   tomlValue = v:
     if builtins.isString v then ''"${v}"''
-    else if builtins.isList v then "[ ${lib.concatMapStringsSep ", " (x: ''"${x}"'') v} ]"
+    else if builtins.isList v then "[ ${lib.concatMapStringsSep ", " tomlValue v} ]"
     else if builtins.isBool v then (if v then "true" else "false")
     else builtins.toString v;
 
-  renderLayer = layer: ''
-    [[schools.layers]]
+  renderLayer = section: layer: ''
+    [[${section}]]
     ${lib.concatStringsSep "\n" (
       lib.mapAttrsToList (k: v: "${k} = ${tomlValue v}") layer
     )}
@@ -76,7 +78,9 @@ let
     [redfin]
     regions = [ ${lib.concatMapStringsSep ", " (r: ''"${r}"'') cfg.redfinRegions} ]
 
-    ${lib.concatMapStringsSep "\n" renderLayer cfg.schoolLayers}
+    ${lib.concatMapStringsSep "\n" (renderLayer "schools.layers") cfg.schoolLayers}
+
+    ${lib.concatMapStringsSep "\n" (renderLayer "overlays.layers") cfg.overlayLayers}
   '';
 
   ingestEnv = {
@@ -241,6 +245,61 @@ in
           (bsd7 "bsd7_high" "high" "Bozeman 9-12 High School Boundaries")
         ];
     };
+
+    overlayLayers = lib.mkOption {
+      type = lib.types.listOf (lib.types.attrsOf lib.types.anything);
+      description = ''
+        Generic spatial-overlay layers fetched by the weekly overlays timer,
+        rendered as [[overlays.layers]] TOML. Each is a polygon layer whose
+        containing value becomes a filterable listing attribute
+        (listings.overlays->>'<attribute>'). Every endpoint here was verified
+        live (see scout/docs/public-data-apis.md). Add a layer → a new filter
+        appears in the UI, no code change.
+      '';
+      default =
+        let
+          bz = "https://gisweb.bozeman.net/arcgis/rest/services";
+          # Gallatin valley envelope — required for the national FEMA layer,
+          # harmless for the city layers (which are already small).
+          valley = [ (-111.9) 44.7 (-110.3) 46.3 ];
+        in [
+          {
+            key = "fema_flood"; attribute = "flood_zone"; source = "fema";
+            url = "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28/query";
+            value_field = [ "FLD_ZONE" ]; out_fields = "FLD_ZONE,OBJECTID";
+            envelope = valley; max_allowable_offset = 0.0003;
+          }
+          {
+            key = "bozeman_zoning"; attribute = "zoning"; source = "bozeman";
+            url = "${bz}/Open_Data/Zoning/FeatureServer/0/query";
+            value_field = [ "ZONING" ]; out_fields = "ZONING,OBJECTID";
+          }
+          {
+            key = "bozeman_future_land_use"; attribute = "future_land_use"; source = "bozeman";
+            url = "${bz}/Open_Data/Future_Land_Use/FeatureServer/0/query";
+            value_field = [ "MPMAP" ]; out_fields = "MPMAP,OBJECTID";
+          }
+          {
+            key = "bozeman_historic_district"; attribute = "historic_district"; source = "bozeman";
+            url = "${bz}/Public/Historic_Structures/FeatureServer/2/query";
+            value_field = [ "NAME" ]; out_fields = "NAME,OBJECTID";
+          }
+          {
+            # Presence-only overlay: the NCOD polygon carries no attributes, so
+            # a constant marks "inside the Neighborhood Conservation Overlay".
+            key = "bozeman_ncod"; attribute = "ncod"; source = "bozeman";
+            url = "${bz}/Public/Historic_Structures/FeatureServer/3/query";
+            value_const = "yes"; out_fields = "OBJECTID";
+          }
+          {
+            # STR_TYPE_3 = is a non-owner-occupied (investment) short-term
+            # rental allowed by zoning here — the STR question buyers ask.
+            key = "bozeman_str_investment"; attribute = "str_investment_ok"; source = "bozeman";
+            url = "${bz}/Public/Short_Term_Rentals/MapServer/0/query";
+            value_field = [ "STR_TYPE_3" ]; out_fields = "STR_TYPE_3,OBJECTID";
+          }
+        ];
+    };
   };
 
   #============================================================================
@@ -384,6 +443,26 @@ in
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = "Sun *-*-* 05:00:00";
+        RandomizedDelaySec = "1h";
+        Persistent = true;
+      };
+    };
+
+    # Generic spatial overlays (flood, zoning, future land use, historic,
+    # NCOD, STR). Same weekly cadence as schools, offset an hour so the two
+    # boundary loads don't hammer the DB at once.
+    systemd.services.home-scout-overlays = {
+      description = "Home Scout spatial-overlay load + listing assignment";
+      after = [ "network-online.target" "postgresql.service" ];
+      environment = ingestEnv;
+      serviceConfig = ingestServiceDefaults // {
+        ExecStart = "${ingestPython}/bin/python -m homescout_ingest.overlays_run";
+      };
+    };
+    systemd.timers.home-scout-overlays = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "Sun *-*-* 06:00:00";
         RandomizedDelaySec = "1h";
         Persistent = true;
       };
