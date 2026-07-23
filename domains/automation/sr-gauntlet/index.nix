@@ -31,7 +31,12 @@
 #     required NEXT_PUBLIC_FIREBASE_* + OPENSEARCH_*, plus optional
 #     SRG_PUSH_URL/SRG_PUSH_SECRET for report push into the datax admin UI —
 #     push is skipped gracefully while those two are absent)
-#   - Claude Code CLI authenticated for the eric user
+#   - sr-gauntlet-claude-oauth agenix secret — a dedicated long-lived Claude
+#     subscription token (`claude setup-token`), formatted as a single env line
+#     `CLAUDE_CODE_OAUTH_TOKEN=<token>` and sourced via EnvironmentFile. Replaces
+#     the old reliance on the interactive ~/.claude/.credentials.json OAuth token,
+#     whose ~8h rotation caused 5 straight 401 failures once the server went a
+#     day without an interactive Claude session (2026-07-21/22).
 #   - hwc-notify on 127.0.0.1:11600 (run summaries; best-effort)
 
 { config, lib, pkgs, ... }:
@@ -46,6 +51,11 @@ let
   # run-now pattern. MUST match the board's REFINERY_SR_RUNNOW_SPOOL
   # (domains/automation/refinery/index.nix).
   spoolDir = "/var/lib/refinery/sr-run-now";
+
+  # Service-owned Claude Code config dir — deliberately holds NO credentials.json
+  # so CLAUDE_CODE_OAUTH_TOKEN is the sole credential (see srgEnv below). Single
+  # producer for the path: consumed by srgEnv.CLAUDE_CONFIG_DIR + the tmpfiles rule.
+  claudeConfigDir = "/var/lib/sr-gauntlet/claude-config";
 
   # Env + tool path shared by the daily run and the run-now drain (same needs).
   srgEnv = {
@@ -67,7 +77,33 @@ let
     # eric-owned; refresh by hand on rotation — run.sh's check-creds.mjs
     # preflight now alerts Discord with the NAME of any missing key.
     SRG_DATAX_ENV = "/var/lib/sr-gauntlet/datax.env";
+    # Isolate Claude Code's config dir to a service-owned location that holds NO
+    # interactive credentials.json. This is load-bearing: with HOME=/home/eric,
+    # Claude Code reads ~/.claude/.credentials.json and PREFERS it over
+    # CLAUDE_CODE_OAUTH_TOKEN (verified empirically — a bogus env token still
+    # authed off the on-disk creds). Pointing CLAUDE_CONFIG_DIR at an empty dir
+    # forces the dedicated token below to be the ONLY credential, and
+    # permanently removes the interactive↔headless contention on the shared
+    # credentials file that caused the original 401 lapse.
+    CLAUDE_CONFIG_DIR = claudeConfigDir;
   };
+  # Long-lived Claude Code subscription token (agenix), sourced as an
+  # EnvironmentFile so it NEVER enters the Nix store (unlike `environment=`).
+  # The .age plaintext is a single line `CLAUDE_CODE_OAUTH_TOKEN=<token>`.
+  #
+  # Why this exists: the headless `claude -p` in run.sh previously relied on the
+  # interactive OAuth token in ~/.claude/.credentials.json. That token has an
+  # ~8h access lifetime with a rotating refresh token; Eric's interactive
+  # sessions kept it fresh, so the unattended timer only failed once the server
+  # went a day without one (5 straight 401s, 2026-07-21/22). A dedicated
+  # long-lived subscription token (via `claude setup-token`) decouples the
+  # service from interactive session rotation while staying on the Max sub
+  # (no per-token API billing). MUST be paired with the isolated CLAUDE_CONFIG_DIR
+  # above, otherwise the on-disk interactive creds shadow this token and the fix
+  # is inert. Both units source it read-first at each run, so rotation needs no
+  # restart — the next oneshot tick picks up the new value.
+  claudeOauthEnvFile = config.age.secrets.sr-gauntlet-claude-oauth.path;
+
   srgPath = [
     pkgs.bash pkgs.coreutils pkgs.git pkgs.openssh
     # python3 retired 2026-07: the ledger/prompt/verdict heredocs it served are
@@ -131,6 +167,9 @@ in
     # refinery board — also eric — can drop request files there).
     systemd.tmpfiles.rules = [
       "d ${spoolDir} 0775 eric users - -"
+      # Isolated Claude config dir (rationale at the claudeConfigDir binding).
+      # 0700 eric: only the gauntlet reads/writes it.
+      "d ${claudeConfigDir} 0700 eric users - -"
     ];
 
     systemd.services.sr-gauntlet = {
@@ -145,6 +184,9 @@ in
         Group = "users";
         WorkingDirectory = cfg.gauntletDir;
         ExecStart = "${cfg.gauntletDir}/run.sh";
+        # Dedicated long-lived Claude subscription token (see claudeOauthEnvFile).
+        # Read by PID1 as root at unit setup, before the drop to User=eric.
+        EnvironmentFile = claudeOauthEnvFile;
         # maxSrs * 30 min agent budget + fetch/context overhead
         TimeoutSec = 3 * 3600;
         StandardOutput = "journal";
@@ -183,6 +225,8 @@ in
         Group = "users";
         WorkingDirectory = cfg.gauntletDir;
         ExecStart = "${runnowDrain}";
+        # Same dedicated subscription token as the poll timer (see claudeOauthEnvFile).
+        EnvironmentFile = claudeOauthEnvFile;
         TimeoutSec = 3 * 3600;
         StandardOutput = "journal";
         StandardError = "journal";
