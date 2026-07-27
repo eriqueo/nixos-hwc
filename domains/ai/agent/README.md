@@ -142,3 +142,6 @@ To register the agent as a tool in Open WebUI:
    - Headers: `Content-Type: application/json`
 
 Then users can invoke system commands through the chat interface.
+
+## Changelog
+- 2026-06-02: Mechanical sweep — updated server tailnet references in `hwc-ai-agent.py` for the `hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net` rename (56c1f6c8).
