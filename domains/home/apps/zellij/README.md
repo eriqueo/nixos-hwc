@@ -19,4 +19,6 @@ meta-leader which-key plugin when the unified keymap grammar is present.
 - `parts/tabs.nix` — canonical hub + tool tab set (order = GoToTab indices)
 
 ## Changelog
+- 2026-07-12: `parts/tabs.nix` — added the **refinery** hub tab (hubs now run 1-6, tools shift to 7-11); the layout KDL, GoToTab indices, and `WORKBENCH_TABS` all derive from the one tab list so they stay coherent.
+- 2026-07-11: `parts/tabs.nix` + `parts/layout.nix` — added the **crm** hub tab (second, between hwc and datax, matching its hub order); new meta jump key `r` (Ctrl+Space r) → CRM. The CRM manifest had shipped in the workbench flake but had no tab, so it was unreachable.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

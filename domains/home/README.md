@@ -44,6 +44,15 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-07-19: Aggregate app-lane activity (details in the child app READMEs):
+  new `apps/pi/` (pi coding agent wired to DataX DX1); `apps/librewolf/` →
+  `apps/firefox/` browser migration; new `apps/tetro/`; claude-code
+  principle-enforcement hooks synced via `shareConfig.items`; zellij gained the
+  workbench CRM + refinery hub tabs (with matching `keymap` grammar entries);
+  nvim which-key restyled; yazi `[filetype]` `name=`→`url=` parse fix.
+  core/shell: added an optional `proxyCommand` field to the
+  `hwc.home.core.shell.ssh.matchBlocks` DSL and declared the DataX `lil-box`
+  host reachable only via Cloudflare Access (`forwardAgent` off).
 - 2026-07-11: Law 3 migration — shell + scraper `nixosPath` standalone-HM fallback now derives from `config.home.homeDirectory` (gpu-screen-recorder escape-hatch precedent) instead of a `/home/eric` literal; hyprland session.nix stale commented-out screenshots fallback removed; yazi keymap.nix dead `? "/mnt/media"` default param dropped (index.nix always passes `mediaRoot`). Rendered values unchanged.
 
 - 2026-07-06: shell: web-build alias repointed to /opt/business/website-site (website eviction).
