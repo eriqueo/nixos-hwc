@@ -89,6 +89,15 @@ credential: the shared `radicale-htpasswd` agenix secret (password =
 stay CLI-visible. Deploy order + phone CalDAV setup: see the radicale README.
 
 ## Changelog
+- 2026-06-15: Radicale password fetch hardened for the multi-user htpasswd. The
+  calendar backend added a `cal:` line to the shared `radicale-htpasswd` secret,
+  so the tasks pair's bare `cut -d: -f2-` would have emitted every line. Switched
+  to a username-matched, colon-safe `awk -F:` one-liner (runs directly, no shell;
+  gawk is on the vdirsyncer service PATH) in `parts/vdirsyncer-pair-radicale.nix`.
+  Companion to the calendar/tasks principal split (calendar → `cal`, tasks stays
+  its own principal) so the two never cross-discover collections. (`a22a309a`
+  first repaired the sync run; `2c4664b0` did the principal split. The later
+  `cal`→`eric` calendar consolidation, `7485823d`, did not touch tasks.)
 - 2026-06-11: Phase C plumbing — optional `radicale` sub-options + second
   vdirsyncer pair part (off by default; flip in machines/laptop/home.nix after
   the server deploy). todoman path glob parameterized (`tasks*/*` with radicale).
