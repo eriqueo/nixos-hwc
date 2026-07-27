@@ -16,6 +16,7 @@ finance, business databases, website/CMS, and the daily morning briefing.
 ```
 business/
 ├── index.nix          # Domain aggregator
+├── crm/               # hwc.business.crm — hwc-crm front-of-funnel CRM (+ CardDAV rolodex)
 ├── databases/         # hwc.business.databases — business PostgreSQL layer
 ├── datax/             # hwc.business.datax — legacy postgres role/db (lead_scout)
 ├── datax-monitor/     # hwc.business.dataxMonitor — DX1 diagnostic dashboard on :4400
@@ -24,10 +25,12 @@ business/
 ├── leads/             # hwc.business.leads — unified lead pipeline
 ├── morning-briefing/  # hwc.business.morningBriefing — 6am Claude agent
 ├── paperless/         # hwc.business.paperless — Paperless-NGX documents
+├── umami/             # hwc.business.umami — cookieless web analytics
 └── website/           # hwc.business.website — Heartwood CMS + 11ty + webapps
 ```
 
 ## Changelog
+- 2026-07-27: New `crm/` subdomain (`hwc.business.crm`) — hwc-crm front-of-funnel service layered on hwc-leads: module born, SMTP go-live over Proton Bridge, board vhost renamed `hwc-crm` → `crm`, appointment/availability booking flow (calculator repointed to real time slots), a 30-min lead_scout → funnel-board ingest timer with a multi-pipeline route table (`HWC_CRM_INGEST_ROUTES`), CardDAV rolodex wiring (eric creds/collection + 15-min sync, Radicale calendar consolidated under the eric principal), `HWC_CRM_NOTIFY_URL` for web-form lead pings, and a Law-3 `projectDir` fix via `hwc.paths.user.home`. Also: firefly automation build-out (cron timer, data importer, finance digest); website-metrics lead counts now read the live `hwc.leads` store (not legacy `calculator_leads`) and umami v3 API shapes fixed. `umami/` added to the Structure block.
 - 2026-07-07: Website metrics reporting — morning-briefing gains a `website` section (umami visitors/pageviews 24h+7d, top pages, calculator-lead counts from hwc.calculator_leads) in briefing.json, the dashboard, and the daily email; new umami/parts/weekly-report.nix sends a Monday 07:00 week-over-week email (traffic deltas, top pages/referrers, lead detail) via msmtp from office@. Umami option websiteId added.
 - 2026-07-07: New `umami/` module (hwc.business.umami) — cookieless self-hosted web analytics for iheartwoodcraft.com. Podman container (mkContainer, media-network) on loopback :3009, Postgres db `umami` (role created in postStart, trust auth over the 10.89.0.1 gateway), agenix `umami-env` (APP_SECRET + DATABASE_URL). Public collect endpoint via cloudflared at stats.iheartwoodcraft.com (proxied CNAME → tunnel).
 - 2026-07-06: morning-briefing email sender switched eric@ → office@iheartwoodcraft.com (`-a proton-office`): self-sent mail gets Proton's sent+auto-archive treatment and never reaches the Inbox (found on the first live 06:00 run; SMTP had been 250-OK all along).

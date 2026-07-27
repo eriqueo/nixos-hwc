@@ -4,7 +4,7 @@
 Self-contained email domain: client UI, accounts, sync, indexing, sending, and bridge services.
 
 ## Boundaries
-- Manages: aerc UI, accounts, IMAP sync (mbsync), SMTP (msmtp), indexing (notmuch), tagging (afew), Proton Bridge (user + system services), calendar sync, address book
+- Manages: aerc UI, accounts, IMAP sync (mbsync), SMTP (msmtp), indexing (notmuch), tagging (afew), Proton Bridge (user + system services), calendar sync, tasks sync, contacts (khard + CardDAV), address book, taxonomy registry
 - Does NOT manage: Other mail clients (neomutt, betterbird) → `apps/`
 
 ## Structure
@@ -44,6 +44,13 @@ mail/
 │   └── parts/
 │       ├── vdirsyncer-pair.nix # [pair tasks] fragment (item_types = ["VTODO"])
 │       └── todoman-config.nix  # ~/.config/todoman/config.py
+├── contacts/
+│   └── index.nix              # khard + vdirsyncer CardDAV pair on the CRM rolodex;
+│                              #   provides mail-addresses (khard + notmuch history)
+├── taxonomy/                  # Pure-data registry (no module): tags, buckets, sender
+│                              #   dispositions — build-time source for notmuch/aerc/MCP
+│   ├── data.nix
+│   └── lib.nix
 ├── mbsync/
 │   ├── index.nix              # mbsync module
 │   └── parts/
@@ -73,6 +80,19 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-07-16: `calendar/` consolidated under the `eric` Radicale principal —
+  retired the separate `cal` principal. One phone CalDAV account (`eric`) now
+  carries calendar + reminders; fixes CRM appointments never reaching the phone.
+  See `calendar/README.md`. (Tasks' Radicale password fetch was hardened to a
+  username-matched awk one-liner during the earlier `cal`/`eric` split — see
+  `tasks/README.md`.)
+- 2026-07-16: New `contacts/` module (tasks-pattern sibling) — a two-way
+  `contacts_radicale` CardDAV pair on the shared vdirsyncer config/timer against
+  the CRM-owned `eric/contacts` address book, `khard` wired to the synced vdir,
+  and a `mail-addresses` provider (khard + notmuch history, deduped) that aerc's
+  `address-book-cmd` now consumes. Enabled in the mail profile (server) + laptop
+  machine; machine edits sync back to Radicale where the CRM reconcile folds them
+  into leads.
 - 2026-07-11: mbsync/afew: maildir-root fallback literal `/home/eric/400_mail` replaced with the `${config.home.homeDirectory}/400_mail` derivation (aerc precedent; Law 3 migration, rendered value unchanged).
 - 2026-07-09 (b): aerc joins triage (unified-triage Phase 2) — `triage/*`
   virtual folders (taxonomy-generated, tree-nested, inbox-scoped) +

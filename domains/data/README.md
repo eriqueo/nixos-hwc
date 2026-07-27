@@ -17,13 +17,16 @@ data/
 ├── index.nix       # Domain aggregator
 ├── README.md       # This file
 ├── databases/      # PostgreSQL management
-├── backup/         # Rsync + Borg backup automation
+├── backup/         # Rsync backup automation
+├── borg/           # Borg deduplicating encrypted backups
+├── cloudbeaver/    # Web-based PostgreSQL admin UI (container)
 ├── storage/        # Storage mount management
 ├── syncthing/      # Bidirectional file sync over Tailscale
 └── couchdb/        # CouchDB for Obsidian LiveSync
 ```
 
 ## Changelog
+- 2026-07-27: Law 3 sweep — `syncthing` dataDir and `backup` mountPoint now derive from `hwc.paths` instead of hardcoded strings (commit `24d869b5`). Structure block updated to list the existing `borg/` and `cloudbeaver/` subdomains.
 - 2026-07-05: Law 5 burn-down — added `HWC-EXCEPTION(Law 5)` annotation blocks (reason/justification/plan/revocable) to this domain's raw `oci-containers` module(s); infra-shaped containers are sanctioned exceptions to the mkContainer rule. Comments only, no behavior change.
 - 2026-06-09: Law 3 finish — databases per-DB backup outputDir default derives from `hwc.paths.user.home`. Drv hash unchanged.
 - 2026-04-12: Add syncthing module (hwc.data.syncthing.*), extracted from machine configs

@@ -144,6 +144,15 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-07-17** — **Refinery bucket fixes in `gather-refinery.mjs`.** (1)
+  Untriaged brain-sourced ideas carry `state:"parked"` by design, so the
+  parked-first bucket order misfiled the whole hopper as *action* items; the
+  gatherer now checks `pipeline=untriaged` first and only a `stage=ready` idea
+  counts as action. (2) Items untouched since the genre/phase → pipeline/
+  step-stage rename still carry the old field names in their raw JSON (the
+  engine migrates lazily on load); the gatherer reads the store raw, so it now
+  ports the store's minimal field migration — items like the parked
+  vimeo-scraper were previously invisible to the action bucket.
 - **2026-07-17** — `gather-refinery.mjs` skips items with `archived: true` —
   the refinery board's new exit ramp sweeps aged-out passed items off the
   working board, and they should leave the briefing's buckets at the same time.

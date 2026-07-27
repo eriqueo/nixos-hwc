@@ -18,9 +18,10 @@ apps/
 ├── gpu-screen-recorder/  # Call/screen recording (gsr-toggle script + sys.nix capture wrapper)
 ├── hyprland/       # Wayland compositor
 ├── kitty/          # Terminal emulator
-├── librewolf/      # Privacy browser
+├── firefox/        # Privacy browser (replaces librewolf)
 ├── mpv/            # Media player
 ├── obsidian/       # Note-taking
+├── pi/             # pi coding agent (wired to DataX DX1)
 ├── xournalpp/      # PDF annotator / handwritten notes
 ├── waybar/         # Status bar
 ├── tuxedo/         # todo.txt TUI (keyboard-driven task manager)
@@ -30,6 +31,13 @@ apps/
 ```
 
 ## Changelog
+- 2026-07-19: **claude-code — principle-enforcement hooks via `shareConfig.items`**. `hooks/principles-{primer,gate}.sh` now symlink from `~/.claude-config` as individual files (the `hooks/` dir itself stays unmanaged so it can carry host-local hooks). Pure data change; `settings.json` PreToolUse wiring stays per-host.
+- 2026-07-17: **pi — new app, declarative pi coding agent wired to DataX DX1**. Vendored `@earendil-works/pi-coding-agent` (v0.80.7, `buildNpmPackage`) wired to the DX1 model (mycloud/RunPod). `models.json` is an immutable store symlink with the API key injected at request time via pi's `!cat /run/agenix/pi-dx1-api-key` indirection (key never in the store); `settings.json` is seeded-writable (tuxedo pattern). Enabled fleet-wide in `profiles/base/home.nix`.
+- 2026-07-11: **librewolf → firefox migration**. `apps/librewolf/` replaced by `apps/firefox/` (librewolf unmaintained/insecure-flagged in nixpkgs); same theme/launcher architecture, hardening prefs ported minus FPP `+AllTargets`; `firefox-hwc` replaces `librewolf-hwc`.
+- 2026-07-11: **yazi** `[filetype]` glob rules key on `url=` not `name=` — fixes a parse error that dropped yazi to preset settings (see `yazi/README.md`).
+- 2026-07-11..07-12: **zellij** gained the workbench **crm** and **refinery** hub tabs (see `zellij/README.md`); the unified **keymap** grammar gained the matching CRM meta jump (see `keymap/README.md`).
+- 2026-06-26: **nvim** which-key.nvim restyled to the HWC standard popup (double border, palette-themed, no red group colour — see `nvim/README.md`).
+- 2026-06-19: **tetro — new app**, terminal tetromino game.
 - 2026-06-19: **pave-query-builder — new external-flake app + HWC adapter**. Trap-safe Pave (JobTread API) query builder (TUI + CLI), its own repo at `~/600_apps/pave-query-builder` consumed as the `pave-query-builder` flake input (same shared-remote model as todui/khalt/workbench). Thin translator imports the app's `homeManagerModules.pave-query-builder` and feeds it the jt-mcp schema path when present; mutation guardrail left at the app default (HWC test org only). Enabled in `profiles/desktop/home.nix`. Launcher: `kitty -e pave-query`.
 - 2026-06-19: **zellij — `session_serialization false`**. zellij's default serializes sessions to disk for resurrection; combined with the default `on_force_close "detach"`, that's why a closed workbench window left a live `--server` process that could resurrect STALE. Since workbench is fully rebuilt from its KDL layout on every open, nothing is worth resurrecting — disabling serialization makes every recreate (incl. `wb-reload`/SUPER+W) structurally fresh. `on_force_close` deliberately left at `detach` to keep the accidental-close reattach safety net.
 - 2026-06-19: **workbench — `wb-reload` promoted from shell alias to a real binary**. The SUPER+W keybind now runs `kitty -e wb-reload` to reload the zellij session fresh every launch (kill named session → recreate), but `kitty -e` execs its arg directly and can't see zsh aliases, so the old alias silently did nothing. Added a `writeShellScriptBin "wb-reload"` to `apps/workbench/index.nix` (on `home.packages`) as the single source of truth; removed the duplicate alias from `core/shell/parts/aliases.nix`. Resolves from both the keybind and interactive shells.

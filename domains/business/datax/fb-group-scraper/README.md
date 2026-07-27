@@ -114,14 +114,23 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 - **Comment depth:** The `comments` mode scrolls each post's comment section, then runs up to 5 passes clicking "N Replies" / "View more replies" buttons to capture nested threads. Captures depth-0 (top-level), depth-1 (replies), and depth-2+ (reply chains). FB's reply button selectors change occasionally — if expansion stops working, the script still captures preview comments from the feed response and any top-level comments that loaded.
 - **NixOS:** `better-sqlite3` requires native compilation. On NixOS, you may need `nix-shell -p python3 gcc gnumake` or add the appropriate build inputs.
 
+## Changelog
+
+- 2026-05-21: Switched login/session handling to Playwright's `launchPersistentContext` with a `--profile <path>` flag (default `./data/browser-profile`), replacing the saved-`session.json` model — login state now lives in a persistent browser profile. Login detection reworked to be robust: polls for the logged-in UI (not just the password form disappearing), survives passkey redirects, and finally keys off the `c_user` cookie rather than DOM state (no Enter-press needed). Pinned Playwright to 1.59.1 to match the container image (Containerfile). A helper `shell.nix` for Playwright on NixOS was added (8b1715d8/c1723479) and later removed (5da97868); the `store.mjs` file this README previously listed was never a tracked file — persistence lives in `index.mjs`.
+
 ## Structure
 
 ```
-├── index.mjs    CLI, browser lifecycle, scroll loop, comment expansion
-├── parse.mjs    FB GraphQL response parsers (ported from API Monitor)
-├── store.mjs    SQLite persistence layer
-├── data/
-│   ├── posts.db       ← created on first run
-│   └── session.json   ← created on login
-└── package.json
+├── index.mjs        CLI, browser lifecycle, scroll loop, comment expansion, SQLite persistence
+├── parse.mjs        FB GraphQL response parsers (ported from API Monitor)
+├── Containerfile    Playwright container image (pinned to match the npm playwright version)
+├── package.json
+├── package-lock.json
+└── data/            ← created at runtime
+    ├── posts.db            (SQLite, created on first run)
+    └── browser-profile/    (persistent Chromium profile, created on --login)
 ```
+
+> Note: the auth flow above (`--login --headed` writing `session.json`) predates the
+> switch to `launchPersistentContext` — see the Changelog. Login now saves a
+> persistent browser profile under `--profile` (default `./data/browser-profile`).

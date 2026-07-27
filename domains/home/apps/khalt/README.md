@@ -35,6 +35,10 @@ domains/home/apps/khalt/
 
 ## Changelog
 
+- **2026-06-15**: Wired into the unified keymap factory (`domains/home/keymap`) —
+  index.nix now appends `to-khalt`'s `[keybindings]` block to the generated
+  config so khalt inherits the shared list verbs (add/delete/view). Guarded
+  no-op if the grammar is absent.
 - **2026-06-15**: `[calendars]` now renders the Radicale-synced calendar
   (`calendars-radicale/`) when `hwc.mail.calendar.radicale.enable` is set, and
   drops the stale iCloud account calendars in that case (mirrors

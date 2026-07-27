@@ -57,3 +57,10 @@ The actual installation runs as a one-shot systemd service
 
 Missing or invalid values produce a `CONFIG_INVALID` `HermesDeployError` with
 a clear list of which vars are missing.
+
+## Changelog
+- 2026-05-29: `HermesDeployError` rewritten with explicit field declarations +
+  manual constructor assignment (parameter-property shorthand became a runtime
+  SyntaxError under Node 22 `--experimental-strip-types`), and its codes extracted
+  into a named `HermesDeployErrorCode` union so adding a code touches one spot;
+  `tsc --noEmit` stays clean (`3f4601be`).

@@ -51,4 +51,5 @@ hwc.data.cloudbeaver = {
 
 ## Changelog
 
+- 2026-07-27: Law 5 burn-down — added an `HWC-EXCEPTION(Law 5)` annotation block to the raw `oci-containers.cloudbeaver` definition (infra container attached to the postgres network; mkContainer media/PUID model does not apply). Comments only, no behavior change.
 - 2026-03-25: Created README per Law 12

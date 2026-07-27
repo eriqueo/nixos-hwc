@@ -333,6 +333,22 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-07-16: `address-book-cmd` now uses the `mail-addresses` helper (khard +
+  notmuch history, deduped) from the new `domains/mail/contacts` module when
+  contacts is enabled (`parts/config.nix`).
+- 2026-07-09 (b): Triage folders + set-bucket binds (unified-triage Phase 2).
+  `triage/urgent|review|noise` virtual folders (inbox-scoped, nested under one
+  `triage` dirlist node, in `folders-sort` after people); `<Space>tu/tr/tn`
+  set-bucket binds (replace-set on `triage/*`, same semantics as the gateway's
+  `hwc_mail set-triage`); `<Space>gU/gR/gN` go-tos; cheat sheet + which-key group
+  updated (`parts/binds.nix`, `config.nix`, `tags.nix`). Note: notmuch tag DBs
+  are per-machine — triage tags live on hwc-server, so laptop aerc's triage view
+  is empty pending a muchsync-vs-canonical decision.
+- 2026-07-09: `parts/tags.nix` categories/flags now derive from the new canonical
+  `domains/mail/taxonomy` (data.nix + lib.nix) at build time, killing the
+  four-way vocabulary drift between notmuch rules, the triage prompt, aerc tags,
+  and the MCP gateway. Palette role→hex stays in aerc; rendered config verified
+  byte-identical (behavior-preserving).
 - 2026-06-26: folder nav `<C-j>/<C-k>` → `<A-j>/<A-k>` (next/prev-folder). Ctrl is now the workbench/zellij layer (Ctrl+j/k cycle tabs), so in-app side-column nav moved to Alt to avoid the collision.
 - 2026-06-26: which-key footer legend (`esc close · ⌫ back`) on the bottom border + Backspace walks up one chord level (forked aerc, app/whichkey.go + app/aerc.go); new themeable `whichkey_legend` style.
 - 2026-06-26: which-key popover redesign (forked aerc) — compact content-sized box (was edge-to-edge), `key → label` rows with nvim arrow, group keys read `domain +N` (e.g. `buffer +7`); styleset reworked to a raised slate card (bg3, lighter than terminal) with an inverted cream title chip and copper border, plus interior padding + a minimum box size. Code in `github:eriqueo/aerc` (app/whichkey.go, app/aerc.go); colors in `parts/appearance.nix`.

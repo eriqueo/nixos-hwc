@@ -105,6 +105,7 @@ hwc.business.paperless = {
 
 ## Changelog
 
+- 2026-07-27: `paperless-receipts-mover` now fully drains the watched folder before exiting (bounded 6-attempt retry loop, waiting out still-syncing files in-process) and the service sets `startLimitIntervalSec = 0` — a skip-and-exit on freshly-arriving files had been re-firing the `PathExistsGlob` path unit into the start-limit window.
 - 2026-07-13: Receipt/statement intake — `paperless-imap-proxy` (socat, Proton Bridge 127.0.0.1:1143 → podman gateway 10.89.0.1:1143) so the container's mail fetcher can poll `eric@iheartwoodcraft.com` mailboxes; `paperless-receipts-mover` path unit + 15-min sweep moving photo/PDF drops from the phone-synced `/mnt/vaults/inbox-mobile/receipts/` into the consume dir. Mail account + receipt/statement rules configured in Paperless via API (DB-owned, not Nix).
 - 2026-03-25: Created README per Law 12
 - 2026-03-04: Namespace migration hwc.server.containers.paperless → hwc.business.paperless

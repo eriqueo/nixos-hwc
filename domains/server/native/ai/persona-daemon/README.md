@@ -123,6 +123,7 @@ deno task dev
 
 ## Changelog
 
+- 2026-06-09: Law 10 migration — `options.nix` inlined into `index.nix` (pure relocation, no semantic change; part of the fleet-wide inlining of the 18 remaining stragglers, `703ea3a2`).
 - 2026-06-09: Caddy route migrated from port-mode `:28443` to name-based vhost `persona-daemon.hwc.iheartwoodcraft.com` (shared `*.hwc.iheartwoodcraft.com` wildcard cert, no firewall port). See `domains/networking/README.md`.
 - 2026-06-02: vault path follows the move from `/mnt/vaults/brain` to
   `/home/eric/900_vaults/brain`. Only the `vaultPath` option's doc/default

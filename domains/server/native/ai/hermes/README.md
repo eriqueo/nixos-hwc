@@ -126,6 +126,7 @@ into this module is pending.
 
 ## Changelog
 
+- **2026-07-27** — Law 12 changelog backfill — the `parts/bootstrap/` README gained a `## Changelog` section documenting the already-committed `HermesDeployError` strip-types rewrite. Docs only; no functional change.
 - **2026-06-09** — Caddy routes migrated to name-based vhosts under the shared
   `*.hwc.iheartwoodcraft.com` wildcard cert: app at `hermes.hwc.iheartwoodcraft.com`
   (was `:25443`) and the market-trials dashboard at
