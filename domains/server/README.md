@@ -43,6 +43,7 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-07-27: Law 12 changelog backfill — the `native/ai/hermes/` subtree READMEs were refreshed to catch up their changelogs with already-committed changes. Docs only; no functional change in this domain.
 - 2026-07-22: Home Scout real-estate intelligence pipeline added and extended — new `native/ai/home-scout/` (hardened `:8421` tsx unit, `home_scout` Postgres db/role, Caddy vhost `home-scout.hwc.iheartwoodcraft.com`, hwc-notify, no secrets; app repo `github:eriqueo/home_scout`), initially a homeharvest/cadastral/redfin ingest set (`d4e5dc61`), then school-zone ingest timer + BSD7 attendance-zone layers (`a3fcd9e3`) and overlay ingest timer + FEMA/Bozeman overlay layers (`cf55a48e`).
 - 2026-07-20: Added `native/ai/research-scout/` — third scout app (research intelligence, `:8422` tsx unit, `research_scout` Postgres db/role, daily 05:15 arXiv ingest timer, Caddy vhost `research-scout.hwc.iheartwoodcraft.com`, hwc-notify via loopback; mirrors home-scout, no secret) (`278c9208`).
 - 2026-07-19: lead-scout and home-scout now run from the scout monorepo (`~/600_apps/scout/apps/*`, `workspaceRoot` for hoisted tsx); the legacy inline `lead-scout-deploy` command is retired in favor of the deploy dispatcher + `scout/deploy.sh` (`993b1893`, `dc7e2c7b`). deploy dispatcher also drops `pkgs.sudo` from `runtimeInputs` (`4f029473`).

@@ -70,6 +70,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-07-27: Law 12 changelog backfill — the `n8n/` subtree READMEs were refreshed to catch up their changelogs with already-committed changes. Docs only; no functional change in this domain.
 - 2026-07-22: Add `brain-sweep/` — server-only oneshot service + nightly timer running `brain sweep --report` (CLI at `~/600_apps/brain`) under the shared `<vault>/.git/.sync.lock` flock, writing a dated drift report to the vault's `_inbox/janitor/`. Detector, not fixer — edits no note. Fail-soft `hwc-notify` ping only on alert-level drift or failure. Code-in-checkout + nix-only-schedules pattern (brainvec precedent); namespace `hwc.automation.brainSweep`, enabled in `machines/server/config.nix`.
 - 2026-07-06: Gotify decommission — removed the n8n `secrets.gotifyTokenFiles` option and its GOTIFY_TOKEN_* env injection from n8n sys.nix (runtime `sys:router:notify` workflow edit tracked in the decommission handoff).
 - 2026-07-06: n8n image pinned to 2.10.3 (Law 15 v12.4 critical tier: workflow DB).
