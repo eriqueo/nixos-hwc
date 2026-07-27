@@ -73,4 +73,5 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-07-27: Secret defaults now resolve via quoted `hwc.secrets.api."couchdb-admin-username"` / `"couchdb-admin-password"` with an `or null` fallback, replacing the old `couchdbAdmin*File` attribute names (commit `17b9283b`). Mechanical rename to match the generated secrets namespace; no behavior change.
 - 2026-03-25: Created README per Law 12
