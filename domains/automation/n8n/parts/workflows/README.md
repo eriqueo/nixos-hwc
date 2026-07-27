@@ -565,5 +565,12 @@ See the main implementation guide for curl test commands for each workflow.
 
 ---
 
-**Last Updated:** 2026-03-24
+## Changelog
+
+- 2026-07-15: `02-frigate-surveillance-intelligence.json` — Discord alerts now carry an iOS-playable HLS link. Frigate's `clip.mp4` streams chunked with no byte-range support, which iOS AVPlayer refuses; messages now include both a Clip (mp4, desktop) and a Phone (HLS via the nginx vod endpoint, iOS) link. Live workflow updated via n8n API and the repo export re-synced from live (had drifted — predated snapshot upload + priority-channel routing), Discord webhook URL redacted (19c98a04).
+- 2026-07-09: Retired the three monitoring/alert workflows (03/05/11) as redundant with the Prometheus/Alertmanager → hwc-notify stack — see the note at the top of this file.
+
+---
+
+**Last Updated:** 2026-07-15
 **Author:** Eric (with Claude assistance)

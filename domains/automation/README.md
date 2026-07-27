@@ -18,6 +18,12 @@ readme-freshness weekly Law-12 drift report.
 automation/
 ├── index.nix    # Domain aggregator
 ├── README.md    # This file
+├── brain-sweep/    # Server-only nightly `brain sweep --report` drift janitor (hwc.automation.brainSweep.*)
+│   ├── index.nix   # Options + systemd oneshot service/timer under the vault flock; detector-only
+│   └── README.md   # Rationale + rollout
+├── mail-janitor/   # Mail-vault maintenance timer (hwc.automation.mailJanitor.*)
+├── refinery/       # Refinery engine schedules (nightly run + run-now spool)
+├── vault-sync/     # Brain-vault git auto-commit/pull timers (hwc.automation.vaultSync.*)
 ├── inbox-janitor/  # Server-only timer draining ~/000_inbox/downloads (hwc.automation.inboxJanitor.*)
 │   ├── index.nix   # Options + systemd oneshot service/timer (every 30m); dryRun default on
 │   ├── janitor.py  # Engine: pure classify() core + I/O edges; reads ~/000_inbox/_inbox-routing.yaml
@@ -64,6 +70,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-07-22: Add `brain-sweep/` — server-only oneshot service + nightly timer running `brain sweep --report` (CLI at `~/600_apps/brain`) under the shared `<vault>/.git/.sync.lock` flock, writing a dated drift report to the vault's `_inbox/janitor/`. Detector, not fixer — edits no note. Fail-soft `hwc-notify` ping only on alert-level drift or failure. Code-in-checkout + nix-only-schedules pattern (brainvec precedent); namespace `hwc.automation.brainSweep`, enabled in `machines/server/config.nix`.
 - 2026-07-06: Gotify decommission — removed the n8n `secrets.gotifyTokenFiles` option and its GOTIFY_TOKEN_* env injection from n8n sys.nix (runtime `sys:router:notify` workflow edit tracked in the decommission handoff).
 - 2026-07-06: n8n image pinned to 2.10.3 (Law 15 v12.4 critical tier: workflow DB).
 - 2026-06-18: Add `inbox-janitor/` — server-only systemd timer (every 30 min) that drains
