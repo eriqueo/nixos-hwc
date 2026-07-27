@@ -38,6 +38,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-07-17: `mcp/` — refinery + morning-briefing work: `hwc_refinery` gained triage plus intake/amend/stage/promote/detail write verbs, a Today Queue (`hwc_today` gateway tool + actionable TODAY panel), a refinery board section threaded into the briefing/email/TUI brief, and two store-read fixes (lazy-migrate legacy genre/phase item fields; untriaged ideas route to the hopper, not action). See `domains/system/mcp/README.md`.
 - 2026-07-11: usb-automount: mount root now `config.hwc.paths.removableMedia` (default `/mnt`, unchanged) instead of a hardcoded `/mnt` literal (Law 3 migration).
 - 2026-07-06: mcp: website tmpfiles/ReadWritePaths repointed to /opt/business/website-site (website eviction).
 - 2026-07-06: mcp: hwc_morning_status rewritten as a pure reader of briefing.json (one producer per fact, Doctrine §0.8) — no longer computes health/mail/storage/calendar itself; flags >26h staleness.

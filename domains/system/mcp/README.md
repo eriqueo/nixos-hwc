@@ -493,6 +493,13 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-07-17**: Two store-read fixes shared with the briefing gatherer:
+  legacy items untouched since the genre/phase→pipeline/step-stage/state
+  rename are lazy-migrated when read raw (so parked items like vimeo-scraper
+  stop being invisible to `hwc_refinery` and the briefing), and untriaged
+  (`pipeline=untriaged`) brain ideas now land in the hopper instead of the
+  action bucket — only a `stage=ready` idea counts as action (`14a61fe4`,
+  `55636756`).
 - **2026-07-17**: `hwc_refinery` becomes a full remote surface for claude.ai:
   new verbs `intake` (capture an idea → hopper + brain backlog), `amend`
   (answer a parked item's asks and re-arm it), `stage` (mature an idea

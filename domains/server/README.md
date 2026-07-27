@@ -15,12 +15,15 @@ domains/server/
 │   └── arka/       # Arka MCP Gateway (live, imported by machines/server/config.nix)
 ├── native/
 │   └── ai/
-│       ├── brain-mcp/     # Brain MCP server (Deno) — vault CRUD + semantic search
-│       ├── brainvec/      # brainvec semantic-index ingest (vault embeddings via llama-embed)
-│       ├── hermes/        # Hermes Agent (Nous Research)
-│       ├── jobber-mcp/    # Jobber MCP server
-│       ├── lead-scout/    # Lead Scout MCP + HTTP
-│       └── llama-cpp/     # llama.cpp inference (GPU + CPU)
+│       ├── brain-mcp/            # Brain MCP server (Deno) — vault CRUD + semantic search
+│       ├── brainvec/            # brainvec semantic-index ingest (vault embeddings via llama-embed)
+│       ├── hermes/             # Hermes Agent (Nous Research)
+│       ├── home-scout/         # Home Scout real-estate intelligence (:8421 + Python ingest timers)
+│       ├── lead-scout/         # Lead Scout MCP + HTTP (runs from scout monorepo)
+│       ├── llama-cpp/          # llama.cpp inference (GPU + CPU)
+│       ├── market-intelligence/ # Market intelligence service
+│       ├── persona-daemon/     # Persona daemon
+│       └── research-scout/     # Research Scout (:8422 + arXiv ingest timer)
 ├── services/
 │   ├── bloxels-cv/       # Bloxels grid photo classifier (path watcher on inbox-mobile)
 │   ├── inbox-processor/  # Phone capture processor (Whisper + Tesseract)
@@ -40,6 +43,10 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-07-22: Home Scout real-estate intelligence pipeline added and extended — new `native/ai/home-scout/` (hardened `:8421` tsx unit, `home_scout` Postgres db/role, Caddy vhost `home-scout.hwc.iheartwoodcraft.com`, hwc-notify, no secrets; app repo `github:eriqueo/home_scout`), initially a homeharvest/cadastral/redfin ingest set (`d4e5dc61`), then school-zone ingest timer + BSD7 attendance-zone layers (`a3fcd9e3`) and overlay ingest timer + FEMA/Bozeman overlay layers (`cf55a48e`).
+- 2026-07-20: Added `native/ai/research-scout/` — third scout app (research intelligence, `:8422` tsx unit, `research_scout` Postgres db/role, daily 05:15 arXiv ingest timer, Caddy vhost `research-scout.hwc.iheartwoodcraft.com`, hwc-notify via loopback; mirrors home-scout, no secret) (`278c9208`).
+- 2026-07-19: lead-scout and home-scout now run from the scout monorepo (`~/600_apps/scout/apps/*`, `workspaceRoot` for hoisted tsx); the legacy inline `lead-scout-deploy` command is retired in favor of the deploy dispatcher + `scout/deploy.sh` (`993b1893`, `dc7e2c7b`). deploy dispatcher also drops `pkgs.sudo` from `runtimeInputs` (`4f029473`).
+- 2026-07-17: brain-mcp adoption telemetry — each tool call logs to journald (`ed59cade`); `search_semantic` now guards degenerate queries and emits a low-score hint (`aacc643a`).
 - 2026-07-12: lead-scout gains `channelMap` (profile id → webhook secret name), rendered into the app's `DISCORD_WEBHOOK_FILE_MAP` env — HWC-business classifier profiles (`hwc_bozeman_v1`, `hwc_network_v1`, set in machines/server/config.nix) post to #hwc via the new `discord-webhook-hwc-business` secret while DataX profiles stay on `datax-discord-webhook` (#jt-pros). Context: the bare "N notable posts" Discord messages were the app's stale hardcoded card taxonomy — the tier-driven fix sat uncommitted on hwc-laptop since 2026-06-17 and was committed/deployed to `~/600_apps/lead_scout` today (lead_scout baa1538); cards now carry posts, tags, links, and unanswered flags.
 - 2026-07-11: inbox-processor (audio + screenshots) and bloxels-cv — `User = lib.mkForce "eric"` per the native-services Architecture Law (was bare; no-op today, verified by before/after eval).
 - 2026-07-11: brainvec `cacheDir` + brain-mcp `brainvecIndex` defaults derive from `hwc.paths.user.home` instead of hardcoded `/home/eric/.cache/brainvec` literals (Law 3 migration, values unchanged).
