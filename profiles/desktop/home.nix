@@ -120,18 +120,7 @@
     };
   };
 }
-# HM 26.05 changed defaults for these options; pinning to legacy values
-# preserves current behavior and silences eval warnings on the unstable
-# lane. The options do not exist in HM stable 25.11, so the block is
-# guarded on nixosApiVersion — unguarded it breaks eval for stable-lane
-# machines (stable-lane eval regression from commit fce96f45).
-#
-# History: `configType` and `setSessionVariables` were briefly absent from
-# the HM-as-module wiring path (setting them errored at module-merge —
-# removed 2026-05-31). The 2026-05 nixpkgs/HM bump restored them to module
-# mode, so they are pinned here once more — re-added 2026-06-10.
-// lib.optionalAttrs (nixosApiVersion == "unstable") {
-  gtk.gtk4.theme = config.gtk.theme;
-  wayland.windowManager.hyprland.configType = "hyprlang";
-  xdg.userDirs.setSessionVariables = true;
-}
+# The HM 26.05 stateVersion-default pins used to live here. They moved to
+# profiles/base/home.nix on 2026-07-29 — the warnings also fire on unstable
+# machines that carry no desktop role, and base is the only role every
+# machine carries.

@@ -6,7 +6,7 @@
 # REPLACES: the CLI-shared portion of profiles/home-session.nix
 # USED BY: every machine (see the machines table in flake.nix)
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, nixosApiVersion ? "unstable", ... }:
 
 {
   imports = [
@@ -51,4 +51,36 @@
       gemini-cli.enable = lib.mkDefault true;
     };
   };
+
+  #======================================================================
+  # HM 26.05 STATEVERSION-DEFAULT PINS
+  #======================================================================
+  # HM 26.05 flipped the defaults of these three options; because
+  # home.stateVersion is 24.05 we still get the legacy value, and HM warns
+  # on every eval until the option is explicitly defined. Pinning the legacy
+  # values preserves current behavior, silences the warnings, and makes the
+  # eventual stateVersion bump a no-op rather than a silent behavior change.
+  #
+  # The options do not exist in HM stable 25.11, so the block is guarded on
+  # nixosApiVersion — unguarded it breaks eval for stable-lane machines
+  # (stable-lane eval regression from commit fce96f45).
+  #
+  # HISTORY: `configType` and `setSessionVariables` were briefly absent from
+  # the HM-as-module wiring path (setting them errored at module-merge —
+  # removed 2026-05-31). The 2026-05 nixpkgs/HM bump restored them to module
+  # mode, so they were pinned again in profiles/desktop/home.nix on
+  # 2026-06-10. Moved here 2026-07-29: the warnings also fire on unstable
+  # machines that carry no desktop role (gaming- and appliance-only role
+  # sets), and base is the only role every machine carries. Harmless on
+  # machines with no graphical session — the
+  # options are declared unconditionally by HM, and nothing is generated
+  # unless the corresponding program is enabled.
+  #
+  # mkDefault is enough to silence the warning: HM attaches it to the option
+  # *default* via lib.warn, so any definition at any priority stops it being
+  # forced.
+} // lib.optionalAttrs (nixosApiVersion == "unstable") {
+  gtk.gtk4.theme = lib.mkDefault config.gtk.theme;
+  wayland.windowManager.hyprland.configType = lib.mkDefault "hyprlang";
+  xdg.userDirs.setSessionVariables = lib.mkDefault true;
 }

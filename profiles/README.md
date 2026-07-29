@@ -34,6 +34,16 @@ mail/        home.nix             # server — hwc.mail menu (Phase C)
 
 ## Changelog
 
+- 2026-07-29: the HM 26.05 stateVersion-default pins (`gtk.gtk4.theme`,
+  `wayland.windowManager.hyprland.configType`,
+  `xdg.userDirs.setSessionVariables`) moved from `desktop/home.nix` to
+  `base/home.nix`. The warnings fire on any unstable-lane machine, including
+  role sets with no desktop half, and base is the only role every machine
+  carries. Still guarded on `nixosApiVersion == "unstable"` (the options do
+  not exist in HM stable 25.11) and now set with `mkDefault`. Behavior-
+  preserving: the HM generation drv is byte-identical before/after on every
+  unstable machine — the pins only stop HM forcing the warning-carrying
+  option default.
 - 2026-06-11: desktop/sys.nix + gaming/sys.nix — verbatim nix-ld GUI lib
   lists replaced by the `hwc.system.core.nixld.guiLibs.enable` flag
   (list now lives once in domains/system/core).
