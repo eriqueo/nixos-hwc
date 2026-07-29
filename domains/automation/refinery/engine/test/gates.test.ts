@@ -49,6 +49,12 @@ const ALL_IDS = [
   "blast-radius",
   "premortem",
   "admission-gates",
+  "temporary-tracked",
+  "bounded-capacity",
+  "effect-category",
+  "wired-or-labeled",
+  "promotion-rule",
+  "session-output-routed",
 ];
 
 test("registry resolves every canonical gate id", () => {

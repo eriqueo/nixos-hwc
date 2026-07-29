@@ -14,10 +14,19 @@ import { makeChestertonsFenceGate } from "./chestertons-fence.js";
 import { makeBlastRadiusGate } from "./blast-radius.js";
 import { makePremortemGate } from "./premortem.js";
 import { makeAdmissionGatesGate } from "./admission-gates.js";
+import { makeTemporaryTrackedGate } from "./temporary-tracked.js";
+import { makeBoundedCapacityGate } from "./bounded-capacity.js";
+import { makeEffectCategoryGate } from "./effect-category.js";
+import { makeWiredOrLabeledGate } from "./wired-or-labeled.js";
+import { makePromotionRuleGate } from "./promotion-rule.js";
+import { makeSessionOutputRoutedGate } from "./session-output-routed.js";
 
 export type GateFactory = (llm: LlmPort) => GateModule;
 
-/** Every discipline gate, in canonical pipeline order. */
+/** Every discipline gate, in canonical pipeline order. The rev 3 governing
+ *  cluster (2026-07-29 backlog burn-down) appends after the original seven;
+ *  a gate only fires for pipelines that list its id, so registration alone
+ *  changes no live pipeline. */
 export const GATE_FACTORIES: GateFactory[] = [
   makeStepwiseRefinementGate,
   makePrinciplesCreateGate,
@@ -26,6 +35,12 @@ export const GATE_FACTORIES: GateFactory[] = [
   makeBlastRadiusGate,
   makePremortemGate,
   makeAdmissionGatesGate,
+  makeTemporaryTrackedGate,
+  makeBoundedCapacityGate,
+  makeEffectCategoryGate,
+  makeWiredOrLabeledGate,
+  makePromotionRuleGate,
+  makeSessionOutputRoutedGate,
 ];
 
 /** Build all gate modules as an ordered array (what runPass consumes). */
@@ -52,3 +67,9 @@ export * from "./chestertons-fence.js";
 export * from "./blast-radius.js";
 export * from "./premortem.js";
 export * from "./admission-gates.js";
+export * from "./temporary-tracked.js";
+export * from "./bounded-capacity.js";
+export * from "./effect-category.js";
+export * from "./wired-or-labeled.js";
+export * from "./promotion-rule.js";
+export * from "./session-output-routed.js";
