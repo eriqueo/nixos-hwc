@@ -10,8 +10,8 @@
  * sources — humans don't see the CSS-hidden input, bots fill it. If
  * present and non-empty, the schema rejects.
  *
- * Per engineering-principles/creating-systems.md §4 (Contracts before
- * code): every byte of an inbound /leads payload is parsed by this
+ * Per engineering-principles.md Principle 2 (Parse, Don't Validate —
+ * contracts at boundaries): every byte of an inbound /leads payload is parsed by this
  * schema before core touches it. HMAC verification happens FIRST (on
  * raw bytes), then JSON parsing, then this schema.
  */

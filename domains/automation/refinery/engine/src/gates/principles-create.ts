@@ -1,5 +1,6 @@
 // Gate: principles-create. Applies to greenfield items (builds something new).
-// Discipline: ~/.claude/engineering-principles/creating-systems.md.
+// Discipline: ~/.claude/engineering-principles/engineering-principles.md,
+// Part II (Creating Systems).
 
 import { z } from "zod";
 import { GateDecision, GateModule, GateVerdict, Item } from "../contracts.js";
@@ -14,12 +15,13 @@ export type PrinciplesVerdict = z.infer<typeof PrinciplesVerdictSchema>;
 
 const SPEC = {
   discipline: "principles-create",
-  source: "~/.claude/engineering-principles/creating-systems.md",
+  source: "~/.claude/engineering-principles/engineering-principles.md (Part II — Creating Systems)",
   guidance:
     "Audit the design against the creating-systems canon: (1) hexagonal — core " +
     "knows nothing about HTTP/FS/APIs; (2) data-driven rendering; (3) environment " +
     "agnosticism / late binding; (4) contracts before code (schemas at boundaries); " +
-    "(5) declarative over imperative; (6) MCP as integration surface; (7) structured " +
+    "(5) declarative over imperative; (6) uniform integration surface — one intent = " +
+    "one command (MCP is an instance, not the principle); (7) structured " +
     "errors + observability. List each violation found.",
   decisionRule:
     "pass if no violations; park if a principle can't be assessed from the payload " +

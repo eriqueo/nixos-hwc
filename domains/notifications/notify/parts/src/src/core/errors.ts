@@ -1,7 +1,7 @@
 /**
  * Structured errors.
  *
- * Per engineering-principles/creating-systems.md §7: error CLASSES with
+ * Per engineering-principles.md Principle 19 (Errors as Values): error CLASSES with
  * specific CODES, never bare string messages. Shells map these to HTTP
  * status / MCP error_type; core throws them; adapters wrap upstream
  * failures with context.

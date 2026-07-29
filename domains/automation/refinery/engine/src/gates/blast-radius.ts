@@ -1,5 +1,6 @@
 // Gate: blast-radius. Applies to brownfield items in write-mode execution.
-// Discipline: fixing-systems #2 — map every reference/dependency before changing.
+// Discipline: engineering-principles Part IV A §2 — map every
+// reference/dependency before changing.
 
 import { z } from "zod";
 import { GateDecision, GateModule, GateVerdict, Item } from "../contracts.js";
@@ -14,7 +15,7 @@ export type BlastRadiusVerdict = z.infer<typeof BlastRadiusVerdictSchema>;
 
 const SPEC = {
   discipline: "blast-radius",
-  source: "~/.claude/engineering-principles/fixing-systems.md (#2)",
+  source: "~/.claude/engineering-principles/engineering-principles.md (Part IV A §2 — Blast Radius)",
   guidance:
     "Before a single line changes, enumerate everywhere its effects are felt: every " +
     "caller, dependent, and shared utility the change touches. Assume every change has " +

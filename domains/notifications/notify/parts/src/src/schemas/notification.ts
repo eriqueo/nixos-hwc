@@ -1,8 +1,8 @@
 /**
  * Notification schema — the single contract at every shell boundary.
  *
- * Per engineering-principles/creating-systems.md §4 (Contracts Before
- * Code): every byte crossing a trust boundary is parsed by this schema
+ * Per engineering-principles.md Principle 2 (Parse, Don't Validate —
+ * Contracts at Boundaries): every byte crossing a trust boundary is parsed by this schema
  * before core touches it. HTTP request bodies, CLI arg payloads, MCP
  * tool inputs all go through `parseNotificationInput` (lenient — fills
  * defaults like a generated id and occurredAt) or `parseNotification`

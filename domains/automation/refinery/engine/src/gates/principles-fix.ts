@@ -1,5 +1,6 @@
 // Gate: principles-fix. Applies to brownfield items (modifies what exists).
-// Discipline: ~/.claude/engineering-principles/fixing-systems.md.
+// Discipline: ~/.claude/engineering-principles/engineering-principles.md,
+// Part IV A (Fixing).
 
 import { z } from "zod";
 import { GateDecision, GateModule, GateVerdict, Item } from "../contracts.js";
@@ -14,7 +15,7 @@ export type PrinciplesFixVerdict = z.infer<typeof PrinciplesFixVerdictSchema>;
 
 const SPEC = {
   discipline: "principles-fix",
-  source: "~/.claude/engineering-principles/fixing-systems.md",
+  source: "~/.claude/engineering-principles/engineering-principles.md (Part IV A — Fixing)",
   guidance:
     "Audit the change against the fixing-systems canon: (1) Chesterton's Fence — " +
     "understand why the code exists before touching it; (2) blast-radius — map every " +

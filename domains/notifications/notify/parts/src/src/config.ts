@@ -6,8 +6,8 @@
  * hardcoded paths, ports, secret locations. The NixOS module fills the
  * env from `hwc.notifications.notify.*` options.
  *
- * Per engineering-principles/creating-systems.md §3: "Declare once, derive
- * everywhere."
+ * Per engineering-principles.md Principle 16 (Late Binding): "Declare once,
+ * derive everywhere."
  */
 
 import { readFileSync } from "node:fs";

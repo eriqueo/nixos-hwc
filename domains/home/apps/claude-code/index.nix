@@ -42,6 +42,7 @@ in
           # host-local hooks (herdr-agent-state.sh) that must stay unmanaged.
           "hooks/principles-primer.sh"
           "hooks/principles-gate.sh"
+          "hooks/principles-lint.sh"
         ];
         description = "Entries under repoPath to symlink into ~/.claude/ (nested paths symlink single files).";
       };

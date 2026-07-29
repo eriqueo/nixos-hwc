@@ -11,6 +11,7 @@ Installs the Claude Code CLI (Nix package + Obsidian MCP cert trust) and, indepe
 - `index.nix` — options (`enable`, `shareConfig.{enable,repoPath,items,autoPull}`), package + cert var, symlink generation, auto-pull timer, assertions.
 
 ## Changelog
+- 2026-07-29: `shareConfig.items` gains `hooks/principles-lint.sh` — the digest drift check named in the principles doc's Appendix C (rev 3). Invoked loud-but-non-fatal at the top of principles-primer.sh; the primer also gains Part VI genre injection (`HWC_SESSION_GENRE=create|fix|ops|docs` selects a digest subset; unset/unknown → full primer, unchanged behavior).
 - 2026-07-19: `shareConfig.items` gains `hooks/principles-{primer,gate}.sh` as per-file symlinks — the principle-enforcement hooks now ride claude-config to every host (whole `hooks/` dir stays unmanaged: it holds host-local hooks like herdr-agent-state.sh). settings.json PreToolUse wiring remains per-host by design.
 - 2026-07-09: `claude-config-pull` ExecStart now fetches then `merge --ff-only @{u}`, treating a diverged/ahead/dirty tree as a clean no-op (exit 0) instead of `pull --ff-only`'s exit-128 failure every interval — was generating ~96 failed-oneshot journal errors/day under `user@1000.service`.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).
