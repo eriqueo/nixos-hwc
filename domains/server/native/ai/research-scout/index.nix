@@ -86,6 +86,19 @@ in
       description = "hwc-notify dispatcher base URL (POSTs to /notify)";
     };
 
+    refineryIntakeUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "http://127.0.0.1:8060/intake";
+      description = "Refinery engine intake endpoint (weekly-digest distilled ideas)";
+    };
+
+    brainVaultDir = lib.mkOption {
+      type = lib.types.path;
+      default = if config.hwc.paths.brain.vault != null then config.hwc.paths.brain.vault
+                else "${config.hwc.paths.user.home}/900_vaults/brain";
+      description = "Brain vault clone the weekly-digest brain sink writes into (_library/research_feed)";
+    };
+
     arxivCategories = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ "cs.AI" "cs.CL" "cs.LG" "cs.SE" "cs.MA" "cs.IR" "cs.DB" "stat.ML" ];
@@ -129,6 +142,10 @@ in
         LOG_LEVEL = "info";
         NODE_ENV = "production";
         HWC_NOTIFY_URL = cfg.notifyUrl;
+        # Weekly-digest export sinks (behavior knobs live in the app's
+        # digest_sinks setting; these are the host endpoints only).
+        REFINERY_INTAKE_URL = cfg.refineryIntakeUrl;
+        BRAIN_VAULT_DIR = toString cfg.brainVaultDir;
         # The classifier shells out to the `claude` CLI (scout precedent:
         # unit PATH carries only nodejs, so the binary must be declared).
         CLAUDE_BIN = "/etc/profiles/per-user/${cfg.user}/bin/claude";
@@ -159,7 +176,9 @@ in
         RestrictSUIDSGID       = true;
         LockPersonality        = true;
 
-        ReadWritePaths = [ "/tmp" ];
+        # Vault subtree writable through ProtectHome=read-only — the digest
+        # brain sink writes _library/research_feed notes there.
+        ReadWritePaths = [ "/tmp" (toString cfg.brainVaultDir) ];
       };
     };
 
