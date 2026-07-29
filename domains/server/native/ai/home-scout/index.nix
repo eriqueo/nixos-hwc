@@ -379,6 +379,7 @@ in
     systemd.services.home-scout-harvest = {
       description = "Home Scout daily HomeHarvest ingest";
       after = [ "network-online.target" "postgresql.service" ];
+      wants = [ "network-online.target" ];
       environment = ingestEnv;
       serviceConfig = ingestServiceDefaults // {
         ExecStart = "${ingestPython}/bin/python -m homescout_ingest.homeharvest_run";
@@ -396,6 +397,7 @@ in
     systemd.services.home-scout-cadastral = {
       description = "Home Scout monthly MT cadastral parcel load";
       after = [ "network-online.target" "postgresql.service" ];
+      wants = [ "network-online.target" ];
       environment = ingestEnv;
       serviceConfig = ingestServiceDefaults // {
         ExecStart = "${ingestPython}/bin/python -m homescout_ingest.cadastral_run";
@@ -413,6 +415,7 @@ in
     systemd.services.home-scout-redfin = {
       description = "Home Scout monthly Redfin market trends load";
       after = [ "network-online.target" "postgresql.service" ];
+      wants = [ "network-online.target" ];
       environment = ingestEnv;
       serviceConfig = ingestServiceDefaults // {
         ExecStart = "${ingestPython}/bin/python -m homescout_ingest.redfin_run";
@@ -434,6 +437,7 @@ in
     systemd.services.home-scout-schools = {
       description = "Home Scout school district boundary load + listing assignment";
       after = [ "network-online.target" "postgresql.service" ];
+      wants = [ "network-online.target" ];
       environment = ingestEnv;
       serviceConfig = ingestServiceDefaults // {
         ExecStart = "${ingestPython}/bin/python -m homescout_ingest.schools_run";
@@ -454,6 +458,7 @@ in
     systemd.services.home-scout-overlays = {
       description = "Home Scout spatial-overlay load + listing assignment";
       after = [ "network-online.target" "postgresql.service" ];
+      wants = [ "network-online.target" ];
       environment = ingestEnv;
       serviceConfig = ingestServiceDefaults // {
         ExecStart = "${ingestPython}/bin/python -m homescout_ingest.overlays_run";
