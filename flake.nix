@@ -202,6 +202,8 @@
         };
         overlays = [
           silenceDeprecatedAliases
+          pandasStubsOverlay   # TEMP: skip pandas-stubs tests (upstream pytest-9.1.1 breakage)
+          openimagedenoiseCudaOverlay   # TEMP: OIDN CUDA device broken on 2026-07-25 nixpkgs
           rcloneOverlay   # iCloud-capable rclone 1.74.1 (HM lane on stable machines)
           # Expose the cowork-capable Claude Desktop package (package-only flake,
           # no overlay of its own) under pkgs for the home app module.
@@ -232,12 +234,23 @@
     # (SRP auth fix landed in 1.74.0); unstable tracks 1.74.1. See overlay file.
     rcloneOverlay = import ./overlays/rclone.nix { nixpkgs-unstable = nixpkgs; };
 
+    # pandas-stubs overlay — TEMPORARY (tracked). Skips pandas-stubs' failing test
+    # phase on the 2026-07-25 nixpkgs (upstream pytest-9.1.1 deprecation-as-error
+    # that otherwise fails the whole HM user-environment). See the file header for
+    # the removal condition.
+    pandasStubsOverlay = import ./overlays/pandas-stubs.nix;
+
+    # openimagedenoise CUDA overlay — TEMPORARY (tracked), same 2026-07-25 nixpkgs
+    # breakage batch. Forces OIDN_DEVICE_CUDA off so blender-gpu's openimagedenoise
+    # builds CPU-only (its CUDA device fails to configure on this rev). See file header.
+    openimagedenoiseCudaOverlay = import ./overlays/openimagedenoise-cuda.nix;
+
     # Pkgs helper with optional overlays (server uses this)
     # CUDA enabled - using cache.nixos-cuda.org for pre-built binaries
     mkPkgsWithOverlays = system: nixpkgsInput: extraOverlays:
       import nixpkgsInput {
         inherit system;
-        overlays = [ silenceDeprecatedAliases claudeCodeOverlay cloudflaredOverlay rcloneOverlay ] ++ extraOverlays;
+        overlays = [ silenceDeprecatedAliases pandasStubsOverlay openimagedenoiseCudaOverlay claudeCodeOverlay cloudflaredOverlay rcloneOverlay ] ++ extraOverlays;
         config = {
           allowUnfree = true;
           nvidia.acceptLicense = true;
