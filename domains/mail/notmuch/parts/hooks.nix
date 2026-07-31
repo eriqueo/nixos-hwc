@@ -44,16 +44,26 @@ let
     ${nm} tag -trash -- 'tag:keep AND tag:trash'
   '';
 
-  # Shield: server-generated intelligence briefs are self-addressed (sent from an
-  # HWC address to your own inbox), so a copy lands in proton/Sent and the
-  # `+sent -inbox` rule above de-inboxes them — then MailMover archives them.
-  # Reassert inbox (and clear sent/archive) so these stay where you read them.
+  # Shield: self-addressed mail (sent from an HWC address TO an HWC address) is
+  # something you wrote to yourself to read — reports, digests, agent output,
+  # notes. A copy lands in proton/Sent, the `+sent -inbox` rule above de-inboxes
+  # it, and MailMover then archives it. Reassert inbox (and clear sent/archive).
+  #
+  # The match is STRUCTURAL, not a subject allowlist. An earlier revision matched
+  # `subject:"weekly brief" OR subject:"Weekly Intelligence Digest"`, so every new
+  # kind of self-sent mail silently vanished into the archive until someone added
+  # its subject here and rebuilt. Self-addressing is the authoritative signal:
+  # if it was sent to you, you meant to read it — the subject is irrelevant.
+  #
+  # Known, accepted: notmuch's `to:` matches To *and* Cc, so outgoing mail where
+  # you Cc'd yourself also stays in the inbox. That is the deliberate trade for
+  # never losing a self-sent message again.
   digestShield = ''
-    # Shield: self-sent MI weekly briefs/digests stay in the inbox.
+    # Shield: any self-addressed HWC mail stays in the inbox.
     # Scoped by folder residency (NOT tag:new — new.tags has no 'new' tag, and
     # afew strips it anyway). Idempotent: re-asserts inbox on the live Sent-copy
-    # of a self-sent digest that hasn't already been archived.
-    ${nm} tag +inbox -archive -sent -- '(from:eric@iheartwoodcraft.com OR from:office@iheartwoodcraft.com OR from:admin@iheartwoodcraft.com) AND (subject:"weekly brief" OR subject:"Weekly Intelligence Digest") AND path:proton/Sent/** AND NOT path:proton/Archive/**'
+    # of a self-sent message that hasn't already been archived.
+    ${nm} tag +inbox -archive -sent -- '(from:eric@iheartwoodcraft.com OR from:office@iheartwoodcraft.com OR from:admin@iheartwoodcraft.com) AND (to:eric@iheartwoodcraft.com OR to:office@iheartwoodcraft.com OR to:admin@iheartwoodcraft.com) AND path:proton/Sent/** AND NOT path:proton/Archive/**'
   '';
 
   # Strip the transient "new" tag after all processing is done
