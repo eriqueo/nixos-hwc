@@ -13,6 +13,14 @@
   hwc.home.apps.codex.package =
     pkgs.callPackage ../../domains/home/apps/codex/parts/package.nix { };
 
+  # Blender pinned to the official upstream binary. pkgs.blender.override
+  # { cudaSupport = true; } is a variant Hydra never builds, so the default path
+  # recompiles blender + its CUDA-context deps (~30 min) on every nixpkgs bump.
+  # The upstream tarball bundles those deps and ships the CUDA/OptiX Cycles
+  # kernels — verified enumerating this laptop's RTX 2000 Ada on both backends.
+  hwc.home.apps.blender.package =
+    pkgs.callPackage ../../domains/home/apps/blender/parts/package.nix { };
+
   # Apps enabled on this machine specifically
   hwc.home.apps = {
     calcurse.enable = true;

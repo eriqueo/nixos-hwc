@@ -8,11 +8,15 @@ let
   osCfg = hmLib.osCfgOr osConfig;
   gpuCfg = lib.attrByPath [ "hwc" "system" "hardware" "gpu" ] { type = "none"; enable = false; } osCfg;
 
-  blenderPackage = pkgs.blender.override {
-    cudaSupport = cfg.cudaSupport && (gpuCfg.type == "nvidia");
-    
-    rocmSupport = cfg.rocmSupport && (gpuCfg.type == "amd");
-  };
+  # Explicit package wins; otherwise fall back to nixpkgs' blender built for the
+  # detected GPU. Mirrors the codex module's `package` option.
+  blenderPackage =
+    if cfg.package != null then cfg.package
+    else pkgs.blender.override {
+      cudaSupport = cfg.cudaSupport && (gpuCfg.type == "nvidia");
+
+      rocmSupport = cfg.rocmSupport && (gpuCfg.type == "amd");
+    };
 
   blenderGpuWrapper = pkgs.writeShellScriptBin "blender-gpu" ''
     #!/usr/bin/env bash
@@ -28,6 +32,18 @@ in
   #==========================================================================
   options.hwc.home.apps.blender = {
     enable = lib.mkEnableOption "Blender 3D creation suite";
+
+    package = lib.mkOption {
+      type = lib.types.nullOr lib.types.package;
+      default = null;
+      description = ''
+        Blender package to use. If null, uses `pkgs.blender` overridden per
+        cudaSupport/rocmSupport — which on an nvidia host is a non-cached variant
+        and rebuilds from source (~30 min) on every nixpkgs bump. Set this to
+        `pkgs.callPackage ./parts/package.nix { }` for the official upstream
+        binary instead (CUDA + OptiX kernels included, no compile).
+      '';
+    };
 
     cudaSupport = lib.mkOption {
       type = lib.types.bool;
