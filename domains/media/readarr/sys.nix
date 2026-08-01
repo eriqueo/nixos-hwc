@@ -18,7 +18,18 @@ in
       ports = [ "127.0.0.1:8787:8787" ];
       volumes = [
         "${configPath}:/config"
-        "${config.hwc.paths.media.root}/books:/books"
+        # /books MUST denote the same host directory here as it does in the
+        # calibre container, which mounts hwc.paths.media.books/ebooks at
+        # /books. Readarr asks the calibre content server where it files
+        # imports, gets back a path in *calibre's* namespace (/books/calibre),
+        # and then resolves it in its own — so if the two disagree the check
+        # fails and imports land nowhere. Mounting media.books here (one level
+        # up) made /books mean two different things and broke every book import
+        # from 2026-02-27 onward.
+        "${config.hwc.paths.media.books}/ebooks:/books"
+        # Audiobooks are not part of the calibre library, so they get their own
+        # token rather than being smuggled in under /books.
+        "${config.hwc.paths.media.audiobooks}:/audiobooks"
         "${config.hwc.paths.hot.root}/downloads:/downloads"
       ];
       environment = {
