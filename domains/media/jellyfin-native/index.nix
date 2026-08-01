@@ -9,6 +9,28 @@ let
     withNvenc  = true;
   };
 
+  # Transcode pacing — a COUPLED PAIR, enforced by an assertion in IMPLEMENTATION.
+  #
+  # EnableSegmentDeletion evicts HLS segments relative to the transcoder's write
+  # head, not the player's position. EnableThrottling is the only thing that pins
+  # that head near the player. With throttling off the head runs ~11x realtime and
+  # reaches EOF of a feature film in ~8 min, leaving the keep-window parked past
+  # where the client is actually watching. The client then requests an already-
+  # evicted segment and Jellyfin logs
+  #   "cannot serve <id>N.ts as it doesn't exist and no transcode is running"
+  # then tears down the session — playback stops mid-film with nothing shown to
+  # the user. Diagnosed 2026-07-31 (Roku client, 81-min film, died at 14:00).
+  #
+  # Disk is not scarce on hwc-server, so segment deletion buys nothing here. The
+  # transcode cache is REPLACEABLE data, bounded by the tmpfiles rule in
+  # IMPLEMENTATION, which only reaps files too old to belong to a live session.
+  transcode = {
+    enableThrottling = false;
+    enableSegmentDeletion = false;
+    throttleDelaySeconds = 180;
+    segmentKeepSeconds = 720;
+  };
+
   encodingXml = pkgs.writeText "jellyfin-encoding.xml" ''
     <?xml version="1.0" encoding="utf-8"?>
     <EncodingOptions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -18,10 +40,10 @@ let
       <DownMixAudioBoost>2</DownMixAudioBoost>
       <DownMixStereoAlgorithm>None</DownMixStereoAlgorithm>
       <MaxMuxingQueueSize>2048</MaxMuxingQueueSize>
-      <EnableThrottling>false</EnableThrottling>
-      <ThrottleDelaySeconds>180</ThrottleDelaySeconds>
-      <EnableSegmentDeletion>true</EnableSegmentDeletion>
-      <SegmentKeepSeconds>720</SegmentKeepSeconds>
+      <EnableThrottling>${lib.boolToString transcode.enableThrottling}</EnableThrottling>
+      <ThrottleDelaySeconds>${toString transcode.throttleDelaySeconds}</ThrottleDelaySeconds>
+      <EnableSegmentDeletion>${lib.boolToString transcode.enableSegmentDeletion}</EnableSegmentDeletion>
+      <SegmentKeepSeconds>${toString transcode.segmentKeepSeconds}</SegmentKeepSeconds>
       <HardwareAccelerationType>nvenc</HardwareAccelerationType>
       <VaapiDevice>/dev/dri/renderD128</VaapiDevice>
       <QsvDevice />
@@ -205,6 +227,18 @@ in
       "d /var/lib/hwc/jellyfin/data 0750 eric users -"
       "d /var/lib/hwc/jellyfin/log 0750 eric users -"
       "d /var/cache/hwc/jellyfin 0750 eric users -"
+
+      # Transcode cache: REPLACEABLE data, bounded here rather than by Jellyfin's
+      # EnableSegmentDeletion (which evicts segments a live session still needs —
+      # see the `transcode` attrset above). 12h is far longer than any single
+      # title, so this can never race an in-flight session; systemd-tmpfiles-clean
+      # runs daily, making the practical ceiling ~12-36h.
+      #
+      # The X line protects Jellyfin's own ownership marker for this directory —
+      # it is written once at startup and would otherwise age out, leaving
+      # Jellyfin's "Clean Transcode Directory" task unable to identify the dir.
+      "X /var/cache/hwc/jellyfin/transcodes/.jellyfin-transcode"
+      "d /var/cache/hwc/jellyfin/transcodes 0750 eric users 12h"
     ];
 
     # Apply user policies via API after Jellyfin starts
@@ -323,6 +357,20 @@ in
       {
         assertion = lib.all (u: !u.ensure || u.passwordFile != "") (lib.attrValues cfg.users);
         message = "hwc.media.jellyfin.users: ensure = true requires passwordFile";
+      }
+      {
+        # Guards the coupled transcode-pacing pair — see the `transcode` attrset.
+        assertion = transcode.enableSegmentDeletion -> transcode.enableThrottling;
+        message = ''
+          hwc.media.jellyfin: EnableSegmentDeletion=true requires EnableThrottling=true.
+          Segment deletion evicts HLS segments relative to the transcoder's write head,
+          not the player's position. Without throttling the head outruns the client and
+          playback dies mid-file with "cannot serve <id>N.ts as it doesn't exist and no
+          transcode is running", with no error surfaced to the viewer.
+          Fix in domains/media/jellyfin-native/index.nix (the `transcode` attrset): either
+          leave enableSegmentDeletion = false, or set enableThrottling = true and keep
+          segmentKeepSeconds well above throttleDelaySeconds.
+        '';
       }
       # NOTE: Secret assertions removed (2026-02-08)
       # User initialization via secrets is incompatible with Jellyfin 10.9.11+ EF Core.
