@@ -45,39 +45,56 @@ lines are preserved verbatim.
 
 ---
 
-## Privacy hardening (`privacy.enable`, default `true`)
+## Privacy hardening (`privacy.*`, master switch default `true`)
 
-Because qBittorrent runs behind the VPN, peer **discovery** is deliberately
-disabled so it can't announce to or find peers outside the tunnel. When
-`privacy.enable = true`, the enforce script pins these under `[BitTorrent]`:
+qBittorrent runs inside gluetun's network namespace, so **the tunnel is the
+privacy boundary** — every packet the client sends already egresses from the VPN
+exit IP. The toggles below tune peer discovery on top of that; they are not what
+keeps the host IP off the wire.
+
+When `privacy.enable = true`, the enforce script pins these under `[BitTorrent]`:
 
 ```ini
-Session\AnonymousModeEnabled=true
-Session\DHTEnabled=false
-Session\LSDEnabled=false
-Session\PeXEnabled=false
+Session\AnonymousModeEnabled=true    # privacy.anonymousMode
+Session\DHTEnabled=true              # privacy.dht
+Session\PeXEnabled=true              # privacy.pex
+Session\LSDEnabled=false             # privacy.lsd
 ```
 
-- **DHT** (distributed hash table), **LSD** (local service discovery) and **PeX**
-  (peer exchange) are all off — none of them respect the VPN boundary cleanly.
-- **Anonymous mode** on — strips the client fingerprint from announces.
+| Option | Default | Why |
+|---|---|---|
+| `anonymousMode` | `true` | Strips the client fingerprint from announces. Free — no effect on discovery. |
+| `dht` | `true` | **Required for magnet links.** A magnet carries no metadata; without a peer source the torrent parks in `metaDL` at 0% forever. |
+| `pex` | `true` | Second discovery path when a magnet's trackers are dead. |
+| `lsd` | `false` | Multicast LAN discovery. Useless in a container namespace, and the one mechanism that could address a non-tunnelled interface. |
 
-**Trade-off (important):** DHT-only *magnet* links cannot bootstrap and surface in
-Sonarr/Radarr queues as:
+### Why DHT and PeX are on (changed 2026-08-01)
+
+They were originally all off, on the reasoning that discovery protocols "don't
+respect the VPN boundary." That reasoning does not survive contact with how the
+container is wired: DHT/PeX traffic leaves through `tun0` like everything else,
+so the address exposed to the swarm is the VPN exit, not the host.
+
+The cost was concrete — six magnets sat at 0% in `metaDL` with every tracker in
+their announce list dead (rarbg, coppersurfer, leechers-paradise et al. are all
+defunct), surfacing in Radarr/Sonarr as:
 
 > `qBittorrent cannot resolve magnet link with DHT disabled`
 
-This is expected, not a bug. Tracker-backed torrents (with working trackers) and
-usenet (via SABnzbd) are unaffected. Prefer indexers that provide `.torrent`
-files or well-trackered magnets; steer clear of DHT-only sources.
+**Private trackers are unaffected either way.** Torrents carrying the BEP-27
+`private` flag have DHT/PeX/LSD disabled *per-torrent* by libtorrent regardless
+of the global setting, so turning these on cannot violate a private tracker's
+rules.
 
-To disable the hardening (e.g. if ever run outside a VPN):
+To disable the hardening entirely (e.g. if ever run outside a VPN):
 
 ```nix
 hwc.media.qbittorrent.privacy.enable = false;
 ```
 
-The script then leaves qBittorrent's own defaults untouched.
+The script then leaves qBittorrent's own defaults untouched. Individual toggles
+can also be flipped without disabling the whole block, e.g.
+`hwc.media.qbittorrent.privacy.dht = false;`.
 
 ---
 
@@ -99,6 +116,14 @@ journalctl -u podman-qbittorrent -f
 
 ## Changelog
 
+- **2026-08-01**: Split `privacy.enable` into per-protocol toggles
+  (`anonymousMode`/`dht`/`pex`/`lsd`) and turned **DHT + PeX back on** by
+  default. The blanket-off posture was redundant with the gluetun tunnel (the
+  actual privacy boundary) while costing magnet-link support outright — six
+  torrents were stranded in `metaDL` at 0%. Private torrents are governed
+  per-torrent by libtorrent's `private` flag, so private trackers are not
+  implicated. The enforced conf keys now derive from the options rather than a
+  hardcoded set, so a toggle and its key cannot drift.
 - **2026-07-03**: Made the DHT/LSD/PeX-off + anonymous-mode privacy hardening
   declarative via `privacy.enable` + a `qbittorrent-enforce-privacy` ExecStartPre
   script, and documented the rationale + magnet-link trade-off. Previously the

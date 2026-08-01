@@ -13,12 +13,16 @@ let
 
   # Privacy hardening keys (BitTorrent session) enforced when privacy.enable.
   # Empty set when disabled, so the script leaves qBittorrent's own defaults be.
-  privacySettings = lib.optionalAttrs cfg.privacy.enable {
-    "Session\\AnonymousModeEnabled" = "true";
-    "Session\\DHTEnabled"           = "false";
-    "Session\\LSDEnabled"           = "false";
-    "Session\\PeXEnabled"           = "false";
-  };
+  # One producer: each conf key is named here exactly once and its value comes
+  # from the matching option, so the toggle and the enforced key cannot drift.
+  privacySettings = lib.optionalAttrs cfg.privacy.enable (
+    lib.mapAttrs (_: lib.boolToString) {
+      "Session\\AnonymousModeEnabled" = cfg.privacy.anonymousMode;
+      "Session\\DHTEnabled"           = cfg.privacy.dht;
+      "Session\\LSDEnabled"           = cfg.privacy.lsd;
+      "Session\\PeXEnabled"           = cfg.privacy.pex;
+    }
+  );
   privacySettingsJson = builtins.toJSON privacySettings;
 
   # Generate categories.json content from Nix options
