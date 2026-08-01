@@ -718,9 +718,14 @@
     defaults.monitored = "-a -o on -s (S/../.././02|L/../../6/03)";
   };
 
-  # Enhanced logging for server
+  # Enhanced logging for server.
+  # SystemMaxUse and MaxRetentionSec are both ceilings and journald evicts on
+  # whichever binds first — at 1G the size cap won every time, leaving ~2 days
+  # of history and making the 1month retention target unreachable. That gap
+  # cost us the forensic window when files vanished from hot storage. 8G is
+  # ~1.7% of the 468G root and lets the retention target actually govern.
   services.journald.extraConfig = ''
-    SystemMaxUse=1G
+    SystemMaxUse=8G
     RuntimeMaxUse=200M
     SystemMaxFileSize=100M
     MaxRetentionSec=1month
