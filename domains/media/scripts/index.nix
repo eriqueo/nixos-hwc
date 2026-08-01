@@ -12,6 +12,10 @@ let
   cfg = config.hwc.media.scripts;
   paths = config.hwc.paths;
   qbtPort = config.hwc.media.downloaders.qbittorrent.webPort;
+  sabPort = config.hwc.media.downloaders.sabnzbd.webPort;
+  # Read at runtime, never interpolated into the script: /nix/store is
+  # world-readable and this file holds SABnzbd's API key.
+  sabIni = "${config.hwc.paths.apps.root}/sabnzbd/config/sabnzbd.ini";
 
   sweepScript = pkgs.writeScript "hot-sweep" ''
     #!${pkgs.python3}/bin/python3
@@ -19,6 +23,8 @@ let
     import json, os, shutil, subprocess, sys, time, urllib.request
 
     QBT = "http://127.0.0.1:${toString qbtPort}"
+    SAB = "http://127.0.0.1:${toString sabPort}"
+    SAB_INI = "${sabIni}"
     HOT = "${paths.hot.downloads}"
     COLD_AUDIOBOOKS = "${paths.media.audiobooks}"
     CATEGORIES = ["tv", "movies", "music"]
@@ -42,14 +48,60 @@ let
             return None
 
 
-    def sweep_category(cat):
-        """Remove orphaned downloads for a category (not in qBt = safe to delete)."""
+    def sab_api_key():
+        """Read SABnzbd's API key from its ini at runtime (never baked into the store)."""
+        with open(SAB_INI) as f:
+            for line in f:
+                if line.startswith("api_key"):
+                    return line.split("=", 1)[1].strip()
+        raise RuntimeError(f"no api_key in {SAB_INI}")
+
+
+    def sab_active():
+        """Names SABnzbd owns: queued/downloading plus everything in its history.
+
+        SABnzbd writes into the SAME category dirs as qBittorrent, so a sweep
+        that only consults qBt treats every usenet download as an orphan and
+        deletes it out from under the importer. History is included because a
+        completed job stays on disk until the *arr imports it and tells SAB to
+        clean up. Returns None if the API is unreachable so the caller can bail.
+        """
+        try:
+            key = sab_api_key()
+            names = set()
+            for mode in ("queue", "history"):
+                url = f"{SAB}/api?mode={mode}&output=json&apikey={key}&limit=0"
+                with urllib.request.urlopen(url, timeout=10) as r:
+                    section = json.loads(r.read()).get(mode, {})
+                for slot in section.get("slots", []):
+                    for field in ("storage", "filename", "name", "nzb_name"):
+                        val = slot.get(field)
+                        if val:
+                            names.add(os.path.basename(val.rstrip("/")))
+                    # SAB strips the .nzb suffix when it names the output dir.
+                    for n in list(names):
+                        if n.lower().endswith(".nzb"):
+                            names.add(n[:-4])
+            return names
+        except Exception as e:
+            print(f"SKIP sweep: SABnzbd API error: {e}")
+            return None
+
+
+    def sweep_category(cat, sab_names):
+        """Remove orphaned downloads for a category.
+
+        Safe to delete only when BOTH download clients disclaim the entry. If
+        either client is unreachable we already bailed before getting here —
+        never delete on a partial view of who owns what.
+        """
         cat_dir = os.path.join(HOT, cat)
         if not os.path.isdir(cat_dir):
             return
         active = qbt_active(cat)
         if active is None:
             return  # API down — don't touch anything
+        active = active | sab_names
         for name in os.listdir(cat_dir):
             if name in active:
                 continue
@@ -105,8 +157,15 @@ let
 
 
     if __name__ == "__main__":
-        for cat in CATEGORIES:
-            sweep_category(cat)
+        sab_names = sab_active()
+        if sab_names is None:
+            # No view of SABnzbd's holdings — sweeping now would delete its
+            # in-flight downloads. Books copy and stray logging are read-only
+            # and stay safe to run.
+            print("SKIP all categories: SABnzbd unreachable")
+        else:
+            for cat in CATEGORIES:
+                sweep_category(cat, sab_names)
         sweep_books()
         log_strays()
   '';
