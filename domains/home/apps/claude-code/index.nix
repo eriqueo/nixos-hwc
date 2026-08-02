@@ -58,6 +58,20 @@ in
           description = "systemd OnUnitActiveSec cadence for the auto-pull timer.";
         };
       };
+      wireGateHooks = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Self-heal the four gate-hook entries (enforce-tools, premortem-gate,
+          track-evidence, claim-guard) and the skill-description char budget
+          into ~/.claude/settings.json at every activation. Append-only jq
+          merge keyed on script filename: existing entries, permissions, and
+          runtime-written keys (model, etc.) are never edited or removed, so
+          Claude Code's own writes to the file survive. principles-lint.sh
+          Check 4 independently verifies the same five wiring points at each
+          session's first code edit. Inert unless shareConfig.enable.
+        '';
+      };
     };
   };
 
@@ -113,6 +127,72 @@ in
         Install.WantedBy = [ "timers.target" ];
       };
     })
+
+    # Self-heal the enforcement wiring into ~/.claude/settings.json. The gate
+    # SCRIPTS sync everywhere via the repo pull timer, but settings.json is
+    # host-local mutable state that Claude Code itself rewrites at runtime —
+    # found scripts-present-but-unwired on hwc-server 2026-08-02. Append-only
+    # and idempotent: entries are matched by script filename, added when
+    # missing, never edited or removed; a pre-heal backup is kept. Claude Code
+    # stays the primary writer of the file (runtime prefs); this merge only
+    # converges the wiring, so a concurrent write settles at next activation.
+    (lib.mkIf (cfg.shareConfig.enable && cfg.shareConfig.wireGateHooks) (
+      let
+        hookCmd = name: "bash ${cfg.shareConfig.repoPath}/hooks/${name}";
+        wireFile = pkgs.writeText "claude-gate-hook-wiring.json" (builtins.toJSON {
+          enforceTools = {
+            matcher = "Bash|Edit|Write";
+            hooks = [ { type = "command"; command = hookCmd "enforce-tools.sh"; timeout = 10; statusMessage = "Tool policy"; } ];
+          };
+          premortemGate = {
+            matcher = "ExitPlanMode";
+            hooks = [ { type = "command"; command = hookCmd "premortem-gate.sh"; timeout = 10; statusMessage = "Premortem gate"; } ];
+          };
+          trackEvidence = {
+            matcher = "Grep|Glob|Bash";
+            hooks = [ { type = "command"; command = hookCmd "track-evidence.sh"; timeout = 10; } ];
+          };
+          turnStamp = {
+            matcher = "*";
+            hooks = [ { type = "command"; command = "${hookCmd "track-evidence.sh"} turn"; timeout = 10; } ];
+          };
+          claimGuard = {
+            matcher = "*";
+            hooks = [ { type = "command"; command = hookCmd "claim-guard.sh"; timeout = 15; statusMessage = "Claim guard"; } ];
+          };
+        });
+        healJq = pkgs.writeText "claude-settings-heal.jq" ''
+          def has_cmd($ev; $frag):
+            [.hooks[$ev][]?.hooks[]?.command // empty] | map(contains($frag)) | any;
+          def ensure($ev; $frag; $entry):
+            if has_cmd($ev; $frag) then . else .hooks[$ev] = ((.hooks[$ev] // []) + [$entry]) end;
+          $wire[0] as $w
+          | ensure("PreToolUse"; "enforce-tools.sh"; $w.enforceTools)
+          | ensure("PreToolUse"; "premortem-gate.sh"; $w.premortemGate)
+          | ensure("PostToolUse"; "track-evidence.sh"; $w.trackEvidence)
+          | ensure("UserPromptSubmit"; "track-evidence.sh"; $w.turnStamp)
+          | ensure("Stop"; "claim-guard.sh"; $w.claimGuard)
+          | .env.SLASH_COMMAND_TOOL_CHAR_BUDGET = (.env.SLASH_COMMAND_TOOL_CHAR_BUDGET // "30000")
+        '';
+        emptyJson = pkgs.writeText "claude-settings-empty.json" "{}";
+      in {
+        home.activation.claudeGateHookWiring = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          _s="${config.home.homeDirectory}/.claude/settings.json"
+          _src="$_s"; [ -f "$_s" ] || _src=${emptyJson}
+          _tmp=$(${pkgs.coreutils}/bin/mktemp "$_s.heal.XXXXXX" 2>/dev/null) || _tmp=""
+          if [ -n "$_tmp" ] && ${pkgs.jq}/bin/jq --slurpfile wire ${wireFile} -f ${healJq} "$_src" > "$_tmp" 2>/dev/null; then
+            if ! ${pkgs.diffutils}/bin/cmp -s "$_tmp" "$_s" 2>/dev/null; then
+              [ -f "$_s" ] && run ${pkgs.coreutils}/bin/cp "$_s" "$_s.pre-heal.bak"
+              run ${pkgs.coreutils}/bin/mv "$_tmp" "$_s"
+              echo "claude-code: gate-hook wiring healed into $_s (backup: $_s.pre-heal.bak)"
+            fi
+          else
+            echo "claude-code: $_s is not valid JSON — wiring NOT healed, fix it by hand" >&2
+          fi
+          ${pkgs.coreutils}/bin/rm -f "$_s".heal.* 2>/dev/null || true
+        '';
+      }
+    ))
 
     #========================================================================
     # VALIDATION
