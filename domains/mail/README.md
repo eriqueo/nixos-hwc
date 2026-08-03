@@ -44,6 +44,12 @@ mail/
 │   └── parts/
 │       ├── vdirsyncer-pair.nix # [pair tasks] fragment (item_types = ["VTODO"])
 │       └── todoman-config.nix  # ~/.config/todoman/config.py
+├── contacts/
+│   └── index.nix              # khard + contacts_radicale CardDAV pair on the CRM rolodex
+├── taxonomy/                  # Pure-data registry (data.nix + lib.nix, no module):
+│                              #   tags, triage buckets, sender rules — imported at
+│                              #   build time by notmuch, aerc, the MCP gateway, briefing
+├── protonmail-bridge-cert/    # Bridge cert export helper
 ├── mbsync/
 │   ├── index.nix              # mbsync module
 │   └── parts/
@@ -73,6 +79,22 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-07-31: `digestShield` now matches structurally — from-self AND to-self —
+  instead of a hardcoded subject allowlist ("weekly brief" / "Weekly
+  Intelligence Digest"). Anything else sent from an HWC address to an HWC
+  address fell through to the generic `+sent -inbox` rule and was silently
+  archived by afew's MailMover. Accepted trade (annotated in-code): notmuch's
+  `to:` covers Cc, so outgoing mail where you Cc'd yourself now stays inboxed.
+- 2026-07-16: New `contacts/` module (tasks-pattern sibling) — contributes a
+  two-way `contacts_radicale` pair to the shared vdirsyncer config/timer against
+  the CRM-owned `eric/contacts` address book, installs khard against the synced
+  vdir, and provides `mail-addresses` (khard + notmuch history, deduped) which
+  aerc's `address-book-cmd` uses when contacts is enabled.
+- 2026-07-16: Radicale consolidated under the `eric` principal — the calendar
+  collection moved to `eric/migrated`, so one CalDAV account carries calendar +
+  reminders and one CardDAV account carries contacts. The old `cal`/`eric` split
+  is retired; the calendar pair pins `collections = ["migrated"]`. Also fixes
+  CRM appointments never reaching the phone.
 - 2026-07-11: mbsync/afew: maildir-root fallback literal `/home/eric/400_mail` replaced with the `${config.home.homeDirectory}/400_mail` derivation (aerc precedent; Law 3 migration, rendered value unchanged).
 - 2026-07-09 (b): aerc joins triage (unified-triage Phase 2) — `triage/*`
   virtual folders (taxonomy-generated, tree-nested, inbox-scoped) +
