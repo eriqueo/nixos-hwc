@@ -41,6 +41,10 @@ networking/
 ```
 
 ## Changelog
+- 2026-07-20: Added `research-scout` name-based vhost
+  (`research-scout.hwc.iheartwoodcraft.com`) → `http://127.0.0.1:8422`, the
+  unified research-scout server that serves SPA + REST API + `/mcp`. Third
+  scout app, mirroring the home-scout route.
 - 2026-07-19: heartwoodcraft.me retirement Phase 1 — added `.com` twin tunnel ingress hostnames `mcp`/`leads`/`brain`/`monitor`.iheartwoodcraft.com (in `machines/server/config.nix` `extraIngress`), same upstreams as their `.me` twins (:6200/:8420/:9876/:4400). Parallel operation until callers (claude.ai connectors, DataX monitor collaborators) flip, then the `.me` entries drop. DNS CNAMEs → tunnel + Access policy clones for `brain`/`monitor` handled on the Cloudflare side. Plan: brain `tech/development/builds/heartwoodcraft_me_retirement.md`.
 - 2026-07-13: Added `firefly-import` vhost → `http://127.0.0.1:8087` (Firefly III data importer, CSV/SimpleFIN).
 - 2026-07-12: Static vhosts accept an optional `api = { path; upstream; }` attr — renders a more-specific `handle <path>*` reverse_proxy inside the vhost so a served SPA can call a loopback service same-origin (no CORS, no second vhost). First user: `briefing` proxies `/mcp` → gateway :6200 for the Today-queue action buttons.

@@ -92,6 +92,12 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 
 ## Changelog
 
+- 2026-07-11 — **CRM hub added to the meta map.** New jump key `r`
+  (`Ctrl+Space r`) → CRM in `grammar.nix`'s `meta` list, placed second to match
+  the hub order. `to-zellij.nix`'s GoToTab index comment updated accordingly
+  (1 hwc · 2 crm · 3 datax · 4 server · 5 brief · 6 tasks · 7 cal · 8 files ·
+  9 mail · 10 edit) — the indices themselves derive from
+  `apps/zellij/parts/tabs.nix`, so they can't drift.
 - 2026-06-26 — **Ctrl = workbench layer; in-app side-nav → Alt.** zellij now
   binds `Ctrl j`/`Ctrl k` to cycle tabs directly (plus `Ctrl Space` = meta card),
   so Ctrl is the workbench/meta layer. In-app two-column nav moved off Ctrl onto

@@ -493,6 +493,15 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-07-17**: `tools/refinery.ts` — port the store's minimal field
+  migration into the raw reader. Items untouched since the
+  `genre/phase/phaseStatus` → `pipeline/step-stage/state` rename still carry the
+  old names in their canonical JSON (the engine migrates lazily on load), so
+  `hwc_refinery` read straight past them and they were silently invisible.
+- **2026-07-17**: `tools/refinery.ts` — check `pipeline=untriaged` before the
+  parked-first bucket order. Brain-sourced ideas carry `state:"parked"` by
+  design, so the whole hopper was being reported as action items; only a
+  `stage=ready` idea counts as action now.
 - **2026-07-17**: `hwc_refinery` becomes a full remote surface for claude.ai:
   new verbs `intake` (capture an idea → hopper + brain backlog), `amend`
   (answer a parked item's asks and re-arm it), `stage` (mature an idea

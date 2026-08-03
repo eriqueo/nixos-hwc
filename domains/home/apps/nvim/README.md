@@ -26,6 +26,8 @@ nvim/
 ├── index.nix           # Main aggregator, deploys lua via xdg.configFile
 ├── README.md           # This file
 └── parts/
+    ├── appearance.nix  # Palette → colorscheme + WhichKey* highlight groups
+    ├── .luarc.json     # lua-language-server settings for this config
     └── lua/
         ├── core/
         │   ├── init.lua        # Entry point, requires all modules
@@ -60,3 +62,4 @@ nvim/
 - 2026-06-02: Migrate `nvim-treesitter-textobjects` block to the new `main`-branch API (`require("nvim-treesitter-textobjects").setup` + explicit keymaps). Fixes "module 'nvim-treesitter.configs' not found" startup error caused by the v1.0 rewrite removing the legacy entry point.
 - 2026-06-09: Added `IogaMaster/tuxedo.nvim` — floating todo.txt popup, companion to the tuxedo CLI (`hwc.home.apps.tuxedo`). Lazy-loaded on `:Tuxedo` / `<leader>td`.
 - 2026-06-24: Added `ibhagwan/fzf-lua` as the primary fuzzy finder and repointed the file/content/buffer keymaps (`ff`/`fg`/`fb`/`fr`/`fn`/`fs`) at it. Telescope's Lua-side result pipeline crawls and mis-filters past ~40k entries even with `fzf-native`; fzf-lua offloads filtering to the native `fzf` binary and stays instant on large trees (e.g. content vaults). Telescope retained for help/commands/keymaps/resume pickers. New file `parts/lua/plugins/fzf-lua.lua` deployed via `xdg.configFile`.
+- 2026-06-26: which-key.nvim configured properly (was a bare `setup()`): modern preset, double-line border, `key → desc` rows via `icons.separator`, no per-mapping icons. The `WhichKey*` highlight groups are themed from the palette in `parts/appearance.nix` (raised bg3 card, copper border, inverted cream title chip, copper keys, cool-accent groups), so the default red group colour is gone. Mirrors the aerc which-key card.

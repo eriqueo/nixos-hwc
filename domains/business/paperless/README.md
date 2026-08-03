@@ -16,10 +16,13 @@ domains/business/paperless/
 ├── index.nix              # Option definitions + imports
 ├── sys.nix                # System packages (tesseract, poppler-utils)
 ├── README.md              # This file
-└── parts/
-    ├── config.nix         # Container definition, env generation, DB grants, cleanup timer
-    ├── directories.nix    # tmpfiles rules for storage directories
-    └── receipts.nix       # IMAP proxy (mail ingest) + phone-receipts → consume mover
+├── paperless_integration_spec.md  # Intake/tagging integration spec
+├── parts/
+│   ├── config.nix         # Container definition, env generation, DB grants, cleanup timer
+│   ├── directories.nix    # tmpfiles rules for storage directories
+│   └── receipts.nix       # IMAP proxy (mail ingest) + phone-receipts → consume mover
+└── scripts/
+    └── setup-paperless.sh # One-off post-deploy setup helper
 ```
 
 ## Namespace
@@ -105,6 +108,10 @@ hwc.business.paperless = {
 
 ## Changelog
 
+- 2026-07-13: `parts/receipts.nix` — the receipts mover now drains the folder
+  before exiting. Skip-and-exit on still-syncing files kept re-firing the
+  `PathExistsGlob` unit into its start limit; the mover waits fresh files out
+  in-process (bounded retry) and the service drops its start-limit window.
 - 2026-07-13: Receipt/statement intake — `paperless-imap-proxy` (socat, Proton Bridge 127.0.0.1:1143 → podman gateway 10.89.0.1:1143) so the container's mail fetcher can poll `eric@iheartwoodcraft.com` mailboxes; `paperless-receipts-mover` path unit + 15-min sweep moving photo/PDF drops from the phone-synced `/mnt/vaults/inbox-mobile/receipts/` into the consume dir. Mail account + receipt/statement rules configured in Paperless via API (DB-owned, not Nix).
 - 2026-03-25: Created README per Law 12
 - 2026-03-04: Namespace migration hwc.server.containers.paperless → hwc.business.paperless

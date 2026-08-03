@@ -73,4 +73,8 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-03-31: Admin credential defaults re-keyed to the generated secrets index
+  — `config.hwc.secrets.api."couchdb-admin-username"` /
+  `"couchdb-admin-password"` (with `or null`) instead of the old
+  `couchdbAdminUsernameFile` / `couchdbAdminPasswordFile` attributes.
 - 2026-03-25: Created README per Law 12

@@ -19,4 +19,9 @@ meta-leader which-key plugin when the unified keymap grammar is present.
 - `parts/tabs.nix` — canonical hub + tool tab set (order = GoToTab indices)
 
 ## Changelog
+- 2026-07-12: `parts/tabs.nix` — refinery tab added to the canonical tab set
+  (shipped with the refinery write verbs).
+- 2026-07-11: `parts/tabs.nix` + `parts/layout.nix` — CRM hub tab added to the
+  workbench layout, with the matching `domains/home/keymap` grammar entry and
+  `to-zellij.nix` GoToTab index shift.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

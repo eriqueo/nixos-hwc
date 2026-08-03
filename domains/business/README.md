@@ -16,6 +16,7 @@ finance, business databases, website/CMS, and the daily morning briefing.
 ```
 business/
 ├── index.nix          # Domain aggregator
+├── crm/               # hwc.business.crm — front-of-funnel CRM board on hwc-leads
 ├── databases/         # hwc.business.databases — business PostgreSQL layer
 ├── datax/             # hwc.business.datax — legacy postgres role/db (lead_scout)
 ├── datax-monitor/     # hwc.business.dataxMonitor — DX1 diagnostic dashboard on :4400
@@ -24,10 +25,37 @@ business/
 ├── leads/             # hwc.business.leads — unified lead pipeline
 ├── morning-briefing/  # hwc.business.morningBriefing — 6am Claude agent
 ├── paperless/         # hwc.business.paperless — Paperless-NGX documents
+├── umami/             # hwc.business.umami — cookieless web analytics
 └── website/           # hwc.business.website — Heartwood CMS + 11ty + webapps
 ```
 
 ## Changelog
+- 2026-07-22: crm — new `.notifyUrl` option exporting `HWC_CRM_NOTIFY_URL`, so
+  web-form contact leads (`crm.iheartwoodcraft.com/hooks/contact`) ping
+  #hwc-leads via hwc-notify. Mirrors `hwc-leads`' `HWC_LEADS_NOTIFY_URL`.
+- 2026-07-17: morning-briefing `gather-refinery.mjs` — bucket untriaged refinery
+  ideas to hopper rather than action (brain-sourced ideas carry `state:parked`
+  by design), and port the store's lazy field migration into the raw reader so
+  items still on the pre-rename `genre/phase/phaseStatus` names stop being
+  invisible to the briefing.
+- 2026-07-16: crm rolodex CardDAV wiring (eric creds, collection, 15-min sync
+  timer); calendar consolidated under the `eric` Radicale principal, `cal`
+  retired.
+- 2026-07-13: paperless — receipts mover now drains the folder before exiting
+  (bounded in-process retry on still-syncing files) instead of skip-and-exit,
+  which was re-firing the `PathExistsGlob` unit into its start limit.
+- 2026-07-13: firefly automation build-out — cron timer, data importer, finance
+  digest.
+- 2026-07-12 → 2026-07-13: briefing Today Queue (`hwc_today` gateway tool +
+  actionable TODAY panel), refinery board section in briefing/email/TUI, and
+  the dispatch runner sweeping stray files with templates routing scratch to
+  `/tmp`.
+- 2026-07-10 → 2026-07-11: crm build-out — `hwc-crm` module on hwc-leads, SMTP
+  go-live via Proton Bridge, board vhost renamed `hwc-crm` → `crm`, appointment
+  /availability booking flow with the calculator repointed, lead_scout → funnel
+  ingest timer plus the `leadscoutIngest.routes` table
+  (`HWC_CRM_INGEST_ROUTES`), and `projectDir` moved onto `hwc.paths.user.home`
+  (Law 3).
 - 2026-07-07: Website metrics reporting — morning-briefing gains a `website` section (umami visitors/pageviews 24h+7d, top pages, calculator-lead counts from hwc.calculator_leads) in briefing.json, the dashboard, and the daily email; new umami/parts/weekly-report.nix sends a Monday 07:00 week-over-week email (traffic deltas, top pages/referrers, lead detail) via msmtp from office@. Umami option websiteId added.
 - 2026-07-07: New `umami/` module (hwc.business.umami) — cookieless self-hosted web analytics for iheartwoodcraft.com. Podman container (mkContainer, media-network) on loopback :3009, Postgres db `umami` (role created in postStart, trust auth over the 10.89.0.1 gateway), agenix `umami-env` (APP_SECRET + DATABASE_URL). Public collect endpoint via cloudflared at stats.iheartwoodcraft.com (proxied CNAME → tunnel).
 - 2026-07-06: morning-briefing email sender switched eric@ → office@iheartwoodcraft.com (`-a proton-office`): self-sent mail gets Proton's sent+auto-archive treatment and never reaches the Inbox (found on the first live 06:00 run; SMTP had been 250-OK all along).

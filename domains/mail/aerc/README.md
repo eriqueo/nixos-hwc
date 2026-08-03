@@ -17,14 +17,15 @@ Single-account email workflow: all addresses (eric@iheartwoodcraft.com, eriqueo@
 ```
 aerc/
   index.nix              # Module entry — enable toggle, packages, shell aliases, activation
+  package.nix            # Forked aerc derivation (github:eriqueo/aerc)
   parts/
-    tags.nix             # Single source of truth for tag definitions (colors, keys, queries)
+    tags.nix             # Tag definitions, sourced from domains/mail/taxonomy
+    tags-custom.json     # Local tag overrides
     config.nix           # aerc.conf, accounts.conf, notmuch-queries, stylesets, templates
     binds.nix            # binds.conf (keybindings) + ov pager config
-    theme.nix            # hwc-theme styleset (Gruvbox-inspired, palette-driven)
-    session.nix          # Shell environment helpers (legacy, mostly moved to index.nix)
+    appearance.nix       # hwc-theme styleset (Gruvbox-inspired, palette-driven)
     sieve.nix            # Server-side sieve filter rules
-    behavior.nix         # Reference behavior documentation (not imported)
+    sieve-filters.nix    # Sieve filter rule set
 ```
 
 ## Architecture
@@ -333,6 +334,20 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-07-16: `address-book-cmd` now points at `mail-addresses` (khard +
+  notmuch history, deduped) when the new `domains/mail/contacts` module is
+  enabled.
+- 2026-07-09: **Triage folders + set-bucket binds** (unified-triage Phase 2) —
+  `triage/urgent|review|noise` virtual folders (inbox-scoped, nested under one
+  `triage` dirlist-tree node), `<Space>tu/tr/tn` replace-set binds with the same
+  semantics as the gateway's `hwc_mail set-triage`, and `<Space>gU/gR/gN`
+  go-to-folder binds. Note: notmuch tag DBs are per-machine, so triage tags live
+  on hwc-server and laptop aerc's triage view is empty pending a
+  muchsync-vs-server-canonical decision.
+- 2026-07-09: `parts/tags.nix` now sources categories/flags from the new
+  `domains/mail/taxonomy` pure-data registry instead of defining its own
+  vocabulary (palette role→hex stays here). Rendered aerc config verified
+  byte-identical.
 - 2026-06-26: folder nav `<C-j>/<C-k>` → `<A-j>/<A-k>` (next/prev-folder). Ctrl is now the workbench/zellij layer (Ctrl+j/k cycle tabs), so in-app side-column nav moved to Alt to avoid the collision.
 - 2026-06-26: which-key footer legend (`esc close · ⌫ back`) on the bottom border + Backspace walks up one chord level (forked aerc, app/whichkey.go + app/aerc.go); new themeable `whichkey_legend` style.
 - 2026-06-26: which-key popover redesign (forked aerc) — compact content-sized box (was edge-to-edge), `key → label` rows with nvim arrow, group keys read `domain +N` (e.g. `buffer +7`); styleset reworked to a raised slate card (bg3, lighter than terminal) with an inverted cream title chip and copper border, plus interior padding + a minimum box size. Code in `github:eriqueo/aerc` (app/whichkey.go, app/aerc.go); colors in `parts/appearance.nix`.

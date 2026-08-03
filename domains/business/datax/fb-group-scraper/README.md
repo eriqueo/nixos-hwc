@@ -117,11 +117,23 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 ## Structure
 
 ```
-├── index.mjs    CLI, browser lifecycle, scroll loop, comment expansion
-├── parse.mjs    FB GraphQL response parsers (ported from API Monitor)
-├── store.mjs    SQLite persistence layer
+├── index.mjs         CLI, browser lifecycle, scroll loop, comment expansion
+├── parse.mjs         FB GraphQL response parsers (ported from API Monitor)
+├── Containerfile     Playwright image build
 ├── data/
 │   ├── posts.db       ← created on first run
 │   └── session.json   ← created on login
-└── package.json
+├── package.json
+└── package-lock.json
 ```
+
+## Changelog
+- 2026-08-03: Structure block corrected — it listed a `store.mjs` that does not
+  exist in this tree and omitted `Containerfile`/`package-lock.json`.
+- 2026-05-21: `shell.nix` removed (5da97868) — the Playwright-on-NixOS dev shell
+  added on 2026-05-11 is gone; use the Containerfile image or a
+  `nix-shell -p chromium` equivalent for local login runs.
+- 2026-05-11: Login flow hardened — `launchPersistentContext` + `--profile`
+  flag, login detected via the `c_user` cookie rather than DOM state, polling
+  that survives passkey redirects, and Playwright pinned to 1.59.1 to match the
+  image version.

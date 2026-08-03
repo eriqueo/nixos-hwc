@@ -22,6 +22,13 @@ automation/
 │   ├── index.nix   # Options + systemd oneshot service/timer (every 30m); dryRun default on
 │   ├── janitor.py  # Engine: pure classify() core + I/O edges; reads ~/000_inbox/_inbox-routing.yaml
 │   └── README.md   # Single-writer rationale + rollout
+├── brain-sweep/   # Nightly brain-vault drift janitor (hwc.automation.brainSweep.*)
+│   ├── index.nix  # Oneshot + timer running `brain sweep --report` under the vault flock
+│   └── README.md  # Detector-not-fixer rationale
+├── mail-janitor/  # Mail hygiene timer (hwc.automation.mailJanitor.*)
+│   ├── index.nix
+│   ├── janitor.py
+│   └── README.md
 ├── mqtt/        # MQTT broker for event-driven automation
 │   └── index.nix
 ├── nightly-builds/  # Overnight gauntlet-card runner (headless Claude Code)
@@ -38,13 +45,22 @@ automation/
 │   └── run.sh         # Stage 1: lint + POST summary. Stage 2 (autoFix): headless
 │                      #   Claude runs the `readme-refresh` skill in a worktree, the
 │                      #   launcher hard-verifies READMEs-only, pushes + opens a PR
-├── sr-gauntlet/   # Daily DataX SR investigation schedule (hwc.automation.srGauntlet.*)
-│   ├── index.nix  # systemd service/timer (06:30 daily) wrapping ~/700_datax/sr_gauntlet/run.sh
+├── refinery/      # Substance-agnostic refinement engine (hwc.automation.refinery.*)
+│   ├── index.nix    # Options + systemd units + board vhost wiring
+│   ├── engine/      # TypeScript engine (core/gates/executors/shells + tests)
+│   ├── pipelines/   # Pipeline definitions
+│   ├── gauntlets/   # Gauntlet definitions
+│   ├── domains.yaml # Domain table
+│   └── README.md
+├── sr-gauntlet/   # DataX SR investigation schedule (hwc.automation.srGauntlet.*)
+│   ├── index.nix  # systemd service/timer (`onCalendar`) wrapping ~/700_datax/sr_gauntlet/run.sh
 │   └── README.md  # Containment model + pointer to the pipeline repo
+├── vault-sync/    # Brain-vault git sync timer (hwc.automation.vaultSync.*)
+│   ├── index.nix
+│   └── README.md
 └── n8n/         # n8n workflow automation
     ├── index.nix     # Options + firewall rules
     ├── sys.nix       # Container definition via mkContainer
-    ├── mcp-bridge.nix # n8n-mcp HTTP bridge
     └── parts/
         ├── migrations/  # SQL migrations for workflow data
         └── workflows/   # JSON workflow definitions + docs
@@ -64,6 +80,38 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-08-03: Law 12 sweep — this file's Structure block was missing
+  `brain-sweep/`, `mail-janitor/`, `refinery/` and `vault-sync/` and still
+  listed the deleted `n8n/mcp-bridge.nix`; the `n8n/` sub-READMEs were
+  refreshed in the same pass. Docs only.
+- 2026-07-29: refinery — six governing-cluster gates added (temporary-tracked R5,
+  bounded-capacity P13, effect-category P14, wired-or-labeled R4, promotion-rule
+  P10, session-output-routed R8). Registered in `GATE_FACTORIES` but listed by no
+  pipeline yaml, so every live pipeline is unchanged until one opts in. Same
+  commit-day principles rev-3 propagation touched the gate source citations.
+- 2026-07-22: Add `brain-sweep/` — nightly oneshot + timer running
+  `brain sweep --report` (CLI at `~/600_apps/brain`) under the shared vault
+  `.sync.lock`, writing dated drift reports to `_inbox/janitor/`. Detector, not
+  fixer; fail-soft hwc-notify ping only on alert-level drift or failure.
+  Namespace `hwc.automation.brainSweep`, enabled in `machines/server/config.nix`.
+- 2026-07-22: sr-gauntlet — dedicated Claude subscription token plus an isolated
+  `CLAUDE_CONFIG_DIR` (on-disk creds were shadowing the env token).
+- 2026-07-22: vault-sync — auto-commits attributed to
+  `${config.networking.hostName}` instead of a generic identity.
+- 2026-07-17: refinery — attention-first board, an archival exit ramp, and
+  verdict self-repair; two stale tests asserting the superseded behavior fixed.
+- 2026-07-15: n8n `frigate-detect` workflow now attaches an iOS-playable HLS link
+  to its Discord alerts.
+- 2026-07-11: refinery `srGauntletDir` derived from `hwc.paths.user.home` (Law 3);
+  board vault links became `obsidian://` deep links; `User = "eric"` declarations
+  gained `lib.mkForce` in the services sweep.
+- 2026-07-09: n8n — retired 3 monitoring/alert workflows made redundant by
+  Prometheus→hwc-notify (`03-system-monitoring-alertmanager-router`,
+  `05-cross-service-health-monitor`, `11-mail-health-alert-router`); removed
+  committed merge-conflict markers and a stale rollback comment.
+- 2026-07-07: Slack/gotify eradicated — hwc-notify is the sole delivery path.
+  Dropped `sys-router-notify.json` and the `003-notification-events.sql`
+  migration from n8n; gotify env injection removed from `n8n/sys.nix`.
 - 2026-07-06: Gotify decommission — removed the n8n `secrets.gotifyTokenFiles` option and its GOTIFY_TOKEN_* env injection from n8n sys.nix (runtime `sys:router:notify` workflow edit tracked in the decommission handoff).
 - 2026-07-06: n8n image pinned to 2.10.3 (Law 15 v12.4 critical tier: workflow DB).
 - 2026-06-18: Add `inbox-janitor/` — server-only systemd timer (every 30 min) that drains

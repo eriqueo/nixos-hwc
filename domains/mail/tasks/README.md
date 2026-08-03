@@ -89,6 +89,15 @@ credential: the shared `radicale-htpasswd` agenix secret (password =
 stay CLI-visible. Deploy order + phone CalDAV setup: see the radicale README.
 
 ## Changelog
+- 2026-06-15: `parts/vdirsyncer-pair-radicale.nix` — the tasks pair now extracts
+  its own user's htpasswd line by username via a quote-free, colon-safe awk
+  one-liner. The shared htpasswd gained a second (`cal:`) line when calendar got
+  its own Radicale principal, which broke the old single-line `cut -f2-` fetch.
+- 2026-06-15: `parts/vdirsyncer-pair-radicale.nix` — password fetch runs `cut`
+  directly instead of through `sh -c`; the vdirsyncer service PATH carries
+  coreutils but not bash, so `sh` wasn't found and khalt/todui sync was dead.
+- 2026-06-15: `index.nix` picked up the Radicale-VEVENT calendar backend change
+  (plain khal retired).
 - 2026-06-11: Phase C plumbing — optional `radicale` sub-options + second
   vdirsyncer pair part (off by default; flip in machines/laptop/home.nix after
   the server deploy). todoman path glob parameterized (`tasks*/*` with radicale).

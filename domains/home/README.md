@@ -20,7 +20,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ```
 domains/home/
-├── apps/    # 50 app modules, auto-imported via readDir (index.nix per app,
+├── apps/    # 58 app modules, auto-imported via readDir (index.nix per app,
 │            # optional sys.nix system half, parts/ for split config)
 ├── core/    # shell/ (CLI env, zsh, aliases — parts/), development/, xdg-dirs.nix
 └── theme/   # palettes/ (deep-nord, gruv, hwc), templates/gtk.nix, fonts/
@@ -44,6 +44,37 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-08-02: claude-code — `shareConfig.wireGateHooks` (default true, inert
+  without `shareConfig.enable`) adds a home-activation step that jq-merges the
+  five enforcement-hook wiring points into `~/.claude/settings.json`
+  (enforce-tools + premortem-gate in PreToolUse, track-evidence in PostToolUse +
+  UserPromptSubmit, claim-guard in Stop) plus `SLASH_COMMAND_TOOL_CHAR_BUDGET`.
+  The hook *scripts* already synced via the pull timer, but the wiring was
+  host-local hand-edited state with no producer — hwc-server was found
+  scripts-present-but-unwired. Append-only, idempotent, keyed on script
+  filename; invalid JSON aborts loudly with a pre-heal backup kept.
+- 2026-07-30: apps/blender — pinned to the official upstream portable tarball
+  (autoPatchelf'd 5.2.0) instead of `pkgs.blender.override { cudaSupport = true; }`,
+  a variant Hydra never builds and that recompiled Blender plus its CUDA deps
+  from source on every nixpkgs bump.
+- 2026-07-29: apps/codex — pinned CLI 0.101.0 → 0.146.0; upstream flipped the
+  x86_64-linux asset from dynamic `-gnu` to static-pie `-musl`, so
+  autoPatchelfHook and the glibc/openssl/zlib/libcap inputs were dropped.
+- 2026-07-19: claude-code — `hooks/principles-{primer,gate}.sh` now sync from
+  claude-config as individual `shareConfig.items` entries; the `hooks/` dir
+  itself stays unmanaged so host-local hooks survive.
+- 2026-07-17: New `apps/pi/` — the pi coding agent (vendored buildNpmPackage,
+  v0.80.7) wired to the DataX DX1 model, with the API key injected at request
+  time via pi's `!cat /run/agenix/pi-dx1-api-key` indirection so it never enters
+  the store. Enabled fleet-wide in `profiles/base/home.nix`.
+- 2026-07-17: shell — `ssh.matchBlocks` DSL gained an optional `proxyCommand`
+  field; declared the lil-box host reachable only via Cloudflare Access
+  (`forwardAgent` deliberately off).
+- 2026-07-11 → 2026-07-12: zellij/workbench gained a CRM hub tab and a refinery
+  tab; yazi filetype rules switched to `url=` from `name=`; firefox `configPath`
+  pinned to the legacy `.mozilla/firefox`; fzf widget option names gated on
+  `nixosApiVersion` after the upstream `fileWidget.command` /
+  `historyWidget.options` renames.
 - 2026-07-11: Law 3 migration — shell + scraper `nixosPath` standalone-HM fallback now derives from `config.home.homeDirectory` (gpu-screen-recorder escape-hatch precedent) instead of a `/home/eric` literal; hyprland session.nix stale commented-out screenshots fallback removed; yazi keymap.nix dead `? "/mnt/media"` default param dropped (index.nix always passes `mediaRoot`). Rendered values unchanged.
 
 - 2026-07-06: shell: web-build alias repointed to /opt/business/website-site (website eviction).

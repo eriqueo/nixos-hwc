@@ -51,4 +51,8 @@ hwc.data.cloudbeaver = {
 
 ## Changelog
 
+- 2026-07-05: Law 5 burn-down — `index.nix` gained an `HWC-EXCEPTION(Law 5)`
+  annotation block (reason/justification/plan/revocable) covering its raw
+  `oci-containers` use, and the `charter-law5` check was wired up. Comments
+  only, no behavior change.
 - 2026-03-25: Created README per Law 12

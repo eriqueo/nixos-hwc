@@ -33,5 +33,10 @@ vaultwarden/
 - Caddy reverse proxy via `networking/routes.nix`
 
 ## Changelog
+- 2026-07-06: Image pinned `vaultwarden/server:latest` → `1.35.4` (Law 15 v12.4
+  critical tier — password vault; set to the running version, so the switch was
+  behavior-neutral). A follow-up commit the same day moved the pin comment onto
+  its own line: inline after `default = "…";` it had swallowed the `mkOption`
+  closing brace.
 - 2026-06-09: Access moved from tailnet port `:15443` to name-based vhost `vaultwarden.hwc.iheartwoodcraft.com` (shared `*.hwc.iheartwoodcraft.com` wildcard cert). Container `DOMAIN` env updated to the new origin — Vaultwarden pins WebAuthn/passkeys to `DOMAIN`, so it must equal the browser URL. `reverseProxy.port` is now vestigial (vhost opens only :443). See `domains/networking/README.md`.
 - 2026-03-26: Initial scaffolding — container, env file, reverse proxy, secret integration

@@ -51,6 +51,13 @@ domains/mail/calendar/
 
 ## Changelog
 
+- **2026-07-16**: Radicale consolidated under the `eric` principal —
+  `hwc.mail.calendar.radicale.username` now defaults to `eric` (was `cal`), with
+  the collection moved server-side to `eric/migrated`. One phone CalDAV account
+  now carries calendar + reminders. The old cal/eric cross-discovery guard is
+  superseded: this pair pins `collections = ["migrated"]`; the only remaining
+  leak is the tasks pair discovering the VTODO-empty calendar collection
+  (cosmetic). Also fixes CRM appointments never reaching the phone.
 - **2026-07-10**: Booking accuracy. Set khal `default_calendar = migrated`
   (the VEVENT calendar the hwc-crm availability endpoint reads) when Radicale is
   on, so quick-adds never prompt. Added a `busy` command (`home.packages`):

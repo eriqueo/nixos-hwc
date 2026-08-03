@@ -10,27 +10,32 @@
 ## Structure
 ```
 domains/system/
+├── index.nix             # Domain aggregator
 ├── core/
-│   ├── filesystem.nix    # Filesystem tmpfiles; options at hwc.system.core.filesystem (alias: hwc.filesystem)
+│   ├── index.nix         # Core options (packages, identity, session)
 │   ├── packages.nix      # Base/server/security package bundles (hwc.system.core.packages.*)
-│   ├── paths.nix         # Path source of truth (hwc.paths.*)
-│   ├── polkit.nix (moved to services/polkit)
-│   ├── thermal.nix
-│   └── validation.nix    # Domain-wide assertions
-├── mcp/                  # HWC Infrastructure MCP Server (25 tools, 5 resources)
-│   ├── index.nix         # NixOS module, systemd service, Caddy route
-│   ├── parts/caddy.nix   # Reverse-proxy route (port 6243 → 6200)
-│   └── src/              # TypeScript source (Node.js, MCP SDK)
-└── (storage/ and users/ subdirs removed; live config uses flat users.nix
-   and mounts.nix at the top level)
+│   ├── coredump.nix      # Coredump policy
+│   ├── login/            # greetd/session policy (hwc.system.core.session)
+│   └── authentik/        # Authentik identity provider
+├── gpu/                  # GPU enablement
+├── hardware/             # Hardware knobs
+├── mounts/               # Storage-tier mounts (hwc.system.mounts.*)
+├── networking/           # System-lane networking
+├── usb-automount/        # Removable-media automount (hwc.paths.removableMedia)
+├── users/                # User declarations (hwc.system.users.*)
+└── mcp/                  # HWC Infrastructure MCP Server (44 hwc-sys tools, 5 resources)
+    ├── index.nix         # NixOS module, systemd service, Caddy route
+    ├── parts/caddy.nix   # Reverse-proxy route (port 6243 → 6200)
+    └── src/              # TypeScript source (Node.js, MCP SDK)
 ```
 
+Path definitions live in `domains/paths/paths.nix`, not here (Law 3).
+
 ## Subdomain Notes
-- **filesystem.nix** – Creates tmpfiles scaffolding from `hwc.paths.*` plus extra dirs (`hwc.filesystem.structure.dirs` alias).
 - **Services** – Backup lives in `domains/data/`, monitoring in `domains/monitoring/`, ntfy/notifications in `domains/notifications/`, networking in `domains/networking/`. Display/login/session policies are in `core/login.nix` under `hwc.system.core.session`.
 - **packages.nix** – Core package bundles (base/server/security) under `hwc.system.core.packages.*` (declared in `core/index.nix`, implemented in `core/packages.nix`).
-- **users.nix** – Top-level flat file; declares `hwc.system.users.*` and `hwc.system.core.identity.*`.
-- **mounts.nix** – Top-level flat file; declares storage-tier mounts (`hwc.system.mounts.*`).
+- **users/** – Declares `hwc.system.users.*` and `hwc.system.core.identity.*`.
+- **mounts/** – Declares storage-tier mounts (`hwc.system.mounts.*`).
 - **mcp/** – HWC Infrastructure MCP Server exposing system/container/network/config state as MCP tools. See `domains/system/mcp/README.md`.
 
 ## Usage
@@ -38,6 +43,20 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-08-03: Structure block corrected — it still described `core/` files that
+  moved or no longer exist (`filesystem.nix`, `paths.nix` → `domains/paths/`,
+  `polkit.nix`, `thermal.nix`, `validation.nix`) and flat `users.nix`/
+  `mounts.nix` that are directories; added the `gpu`/`hardware`/`networking`/
+  `usb-automount` subdomains and refreshed the MCP tool count.
+- 2026-07-17: mcp — `hwc_refinery` gained the write verbs
+  (`intake`/`amend`/`stage`/`promote`/`detail`), then two same-week fixes to
+  `tools/refinery.ts`: untriaged ideas bucket to hopper rather than action, and
+  the raw reader migrates pre-rename `genre/phase/phaseStatus` item fields so
+  those items stop being invisible. See `mcp/README.md` for detail.
+- 2026-07-12 → 2026-07-13: mcp — `hwc_today` gateway tool added for the Today
+  Queue (with stable system-item ids: numbers stripped before slugging, and a
+  gateway RW grant on `morning-briefing/output` so it can write), plus the
+  `hwc_refinery` triage tool.
 - 2026-07-11: usb-automount: mount root now `config.hwc.paths.removableMedia` (default `/mnt`, unchanged) instead of a hardcoded `/mnt` literal (Law 3 migration).
 - 2026-07-06: mcp: website tmpfiles/ReadWritePaths repointed to /opt/business/website-site (website eviction).
 - 2026-07-06: mcp: hwc_morning_status rewritten as a pure reader of briefing.json (one producer per fact, Doctrine §0.8) — no longer computes health/mail/storage/calendar itself; flags >26h staleness.
