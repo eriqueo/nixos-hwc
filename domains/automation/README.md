@@ -80,6 +80,10 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-08-03: Law 12 sweep — this file's Structure block was missing
+  `brain-sweep/`, `mail-janitor/`, `refinery/` and `vault-sync/` and still
+  listed the deleted `n8n/mcp-bridge.nix`; the `n8n/` sub-READMEs were
+  refreshed in the same pass. Docs only.
 - 2026-07-29: refinery — six governing-cluster gates added (temporary-tracked R5,
   bounded-capacity P13, effect-category P14, wired-or-labeled R4, promotion-rule
   P10, session-output-routed R8). Registered in `GATE_FACTORIES` but listed by no
