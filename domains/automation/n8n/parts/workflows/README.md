@@ -57,20 +57,9 @@ This directory contains production-ready n8n workflow JSON files that can be imp
 
 ---
 
-### 03-system-monitoring-alertmanager-router.json
-**Purpose:** Central alert processing with enrichment and smart routing
-
-**Trigger:** Webhook `/webhook/alertmanager` (already configured)
-
-**Features:**
-- Receives alerts from Prometheus Alertmanager
-- Parses and deduplicates alerts (1-hour window)
-- Branches by category (system/service/container) for enrichment
-- Queries Prometheus, systemctl, or podman inspect for context
-- Generates rich notifications with remediation suggestions
-- Routes by severity: P5 → Slack + ntfy, P4 → ntfy, P3 → ntfy
-
-**Service Configuration:** Already configured in Alertmanager
+### 03-system-monitoring-alertmanager-router.json — RETIRED 2026-07-09
+Deleted. Alert processing and routing is now Prometheus → `hwc-notify`
+(`domains/notifications/`), which made this workflow redundant.
 
 ---
 
@@ -94,22 +83,9 @@ This directory contains production-ready n8n workflow JSON files that can be imp
 
 ---
 
-### 05-cross-service-health-monitor.json
-**Purpose:** Proactive health monitoring with automated remediation
-
-**Trigger:** Schedule every 5 minutes
-
-**Features:**
-- Health checks for: Jellyfin, Immich, Frigate, ntfy, n8n, Prometheus, Alertmanager
-- Systemd checks for: Caddy, Tailscale
-- Parallel execution of all checks
-- Automatic remediation attempts (service restart via Script Executor)
-- **Critical service protection:** Never auto-restarts caddy, sshd, tailscaled
-- Detects restart loops (>3 restarts in 10 minutes)
-- Smart notifications:
-  - Auto-fix successful: ntfy (hwc-monitoring, P3)
-  - Auto-fix failed: ntfy + Slack (hwc-alerts, P4)
-  - Manual intervention needed: ntfy + Slack (hwc-critical, P5)
+### 05-cross-service-health-monitor.json — RETIRED 2026-07-09
+Deleted alongside `03-*` and `11-mail-health-alert-router.json`; Prometheus
+blackbox/service checks plus `hwc-notify` cover this.
 
 ---
 
@@ -562,6 +538,15 @@ See the main implementation guide for curl test commands for each workflow.
 - **Master Plan:** `/home/eric/.claude/plans/cozy-pondering-fog.md`
 - **n8n Module:** `/home/eric/.nixos/domains/server/n8n/index.nix`
 - **Script Wrappers:** `/home/eric/.local/bin/`
+
+---
+
+## Changelog
+- 2026-07-15: `02-frigate-surveillance-intelligence.json` — Discord detection
+  alerts now carry an iOS-playable HLS link.
+- 2026-08-03: Doc correction — this file still described `03-*` and `05-*`,
+  deleted back on 2026-07-09 (29fa0a39, redundant with Prometheus → hwc-notify,
+  along with `11-mail-health-alert-router.json`). Marked retired.
 
 ---
 
