@@ -123,6 +123,10 @@ deno task dev
 
 ## Changelog
 
+- 2026-06-09: Law 10 — `options.nix` deleted and its 145 lines of option
+  declarations inlined into `index.nix` (part of the repo-wide sweep that
+  inlined the last 18 `options.nix` files). Structure/behavior otherwise
+  unchanged.
 - 2026-06-09: Caddy route migrated from port-mode `:28443` to name-based vhost `persona-daemon.hwc.iheartwoodcraft.com` (shared `*.hwc.iheartwoodcraft.com` wildcard cert, no firewall port). See `domains/networking/README.md`.
 - 2026-06-02: vault path follows the move from `/mnt/vaults/brain` to
   `/home/eric/900_vaults/brain`. Only the `vaultPath` option's doc/default
