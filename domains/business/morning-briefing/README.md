@@ -144,6 +144,16 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-07-17** — `gather-refinery.mjs` migrates legacy item fields when
+  reading the store raw. Items untouched since the
+  `genre/phase/phaseStatus` → `pipeline/step-stage/state` rename still carry
+  the old names on disk (the engine migrates lazily on load), so the raw reader
+  saw nothing — the parked vimeo-scraper item never reached the action bucket.
+- **2026-07-17** — Untriaged refinery ideas now bucket to hopper, not action.
+  Brain-sourced ideas carry `state: "parked"` by design, so the parked-first
+  bucket order was misfiling the entire hopper as action items (summary read
+  "5 action / 0 hopper" against the board's 3+7). `pipeline=untriaged` is
+  checked first; only a `stage=ready` idea counts as action.
 - **2026-07-17** — `gather-refinery.mjs` skips items with `archived: true` —
   the refinery board's new exit ramp sweeps aged-out passed items off the
   working board, and they should leave the briefing's buckets at the same time.
