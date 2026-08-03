@@ -142,3 +142,25 @@ To register the agent as a tool in Open WebUI:
    - Headers: `Content-Type: application/json`
 
 Then users can invoke system commands through the chat interface.
+
+## Structure
+```
+agent/
+├── default.nix       # Import wrapper
+├── index.nix         # NixOS module: inline options, systemd service, hardening
+└── hwc-ai-agent.py   # FastAPI whitelist agent (read verbatim into the wrapper script)
+```
+
+## Changelog
+- 2026-06-02: `hwc-ai-agent.py` swept for the server tailnet rename
+  (`hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net`).
+- 2026-03-06: Law 10 — `options.nix` deleted, options declared inline in
+  `index.nix` ("options move pt 1"). The delete was re-applied in 4f199955
+  after the tree was re-introduced.
+- 2026-01-18: Law 3 — the agent script's baked-in paths now come from
+  `config.hwc.paths.*` instead of literals.
+- 2026-01-08: `default.nix` renamed to `index.nix`; `default.nix` is now a
+  bare import wrapper (charter unit anatomy).
+- 2025-12-03 → 2025-12-04: Sprint 5 — agent wired into the AI domain with
+  service dependencies, and the Python agent gained the local-workflows HTTP
+  API endpoints.

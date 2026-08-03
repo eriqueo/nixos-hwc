@@ -38,6 +38,7 @@ Rebuild and the persona becomes available. The list is derived from
 
 ```
 library/
+  _defaults.nix          # Default field values every persona merges over
   classifier.{nix,md}    # GPU label classification
   extractor.{nix,md}     # GPU JSON extraction
   coder.{nix,md}         # GPU code-first
@@ -59,6 +60,17 @@ README.md
 
 ## Changelog
 
+- 2026-05-31: Gate the `hwc.server.ai.personaDaemon.personaManifestFile` set on
+  `options.hwc.server.ai ? personaDaemon` — personas is imported by every host
+  but persona-daemon only by hwc-server, so the unguarded set broke
+  `nix flake check` on the others.
+- 2026-05-29: Persona schema extended for persona-daemon (Phase 2/3 of the
+  roadmap below). New `library/_defaults.nix` supplies defaults every persona
+  merges over, adding `useMemory`, `useKnowledge`, `knowledgeTopK`.
+  `assistant`/`coder`/`thinker` get memory + brain-vault RAG (topK 6/6/10);
+  `classifier`/`extractor` stay stateless. `hwc-llm` gains
+  `--new-conversation`, `--conversation <id>`, `--print-id`, which route
+  through the daemon instead of hitting a backend directly.
 - 2026-05-29: Initial module. 5 personas (classifier, extractor, coder,
   assistant, thinker). Stateless CLI wrapping `llama-gpu` (port 11500)
   and `llama-cpu` (port 11501).
