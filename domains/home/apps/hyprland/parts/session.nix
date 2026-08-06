@@ -3,6 +3,7 @@
   config,
   lib,
   pkgs,
+  card ? "",
   osConfig ? {},
   ...
 }: let
@@ -65,6 +66,32 @@
     if a ? workspace
     then "[workspace ${toString a.workspace} silent] ${a.cmd}"
     else a.cmd;
+
+  #============================================================================
+  # KEYBIND LEGEND VIEWER (SUPER+?) — the session package for the card that
+  # parts/theme.nix paints from parts/behavior.nix's records. Floated by the
+  # `hypr-keybinds` windowrule in behavior.nix.
+  #============================================================================
+  cardFile = pkgs.writeText "hyprland-keybinds-card" (card + "\n");
+
+  keybindsViewer = pkgs.writeShellScriptBin "hyprland-keybinds-viewer" ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Toggle: a second SUPER+? dismisses the card instead of stacking another
+    # window. Without this, holding the chord buries the desktop in legends.
+    if ${pkgs.hyprland}/bin/hyprctl clients -j 2>/dev/null \
+      | ${pkgs.jq}/bin/jq -e '.[] | select(.class == "hypr-keybinds")' >/dev/null 2>&1; then
+      ${pkgs.hyprland}/bin/hyprctl dispatch closewindow class:hypr-keybinds
+      exit 0
+    fi
+
+    # -R renders the baked ANSI colours; less gives `/` search and `q` to close.
+    exec ${pkgs.kitty}/bin/kitty \
+      --class hypr-keybinds \
+      --title "Hyprland Keybinds" \
+      -e ${pkgs.less}/bin/less -R --mouse ${cardFile}
+  '';
 in {
   # FLAT KEYS (NO nested `settings = {}`!)
   execOnce = map mkExec autostart;
@@ -78,7 +105,7 @@ in {
     # "HWC_SCREENSHOTS_DIR,${screenshotsDir}"
   ];
 
-  packages = [];
+  packages = [keybindsViewer];
 
   files = lib.mkIf (hyprcursorSource != null) {
     ".local/share/icons/${hyprcursorName}".source = hyprcursorSource;

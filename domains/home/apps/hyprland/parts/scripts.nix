@@ -199,36 +199,16 @@ with pkgs;
     fi
   '')
 
-  #============================================================================
-  # KEYBINDS VIEWER - Display all Hyprland keybindings in searchable wofi
-  #============================================================================
-  (writeShellScriptBin "hyprland-keybinds-viewer" ''
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    # Get keybinds as JSON and format for display
-    KEYBINDS=$(${hyprland}/bin/hyprctl binds -j | ${jq}/bin/jq -r '
-      .[] |
-      .modmask as $m |
-      # Build modifier string from bitmask
-      (
-        [
-          (if ($m % 2) == 1 then "SHIFT" else empty end),
-          (if (($m / 4 | floor) % 2) == 1 then "CTRL" else empty end),
-          (if (($m / 8 | floor) % 2) == 1 then "ALT" else empty end),
-          (if (($m / 64 | floor) % 2) == 1 then "SUPER" else empty end)
-        ] | join("+")
-      ) as $mods |
-      (if ($mods | length) > 0 then $mods + "+" else "" end) +
-      .key +
-      " -> " +
-      .dispatcher +
-      (if (.arg | length) > 0 then " " + .arg else "" end)
-    ' | sort)
-
-    # Display in wofi
-    echo "$KEYBINDS" | ${wofi}/bin/wofi --dmenu --prompt "Keybindings:" --lines 20 --width 600
-  '')
+  # NOTE: `hyprland-keybinds-viewer` used to live here, reading `hyprctl binds -j`.
+  # It has moved to the HOME lane (parts/keybinds-viewer.nix, wired in index.nix)
+  # for two reasons, both permanent:
+  #   1. `hyprctl binds -j` emits MALFORMED JSON in Hyprland 0.56.0 — keys and
+  #      values are misaligned (`"keycode": RETURN`, `"allow_input_capture": ,`)
+  #      — so jq failed to parse and the viewer silently showed nothing.
+  #   2. It could only ever print `exec hyprland-monitor-toggle`, never
+  #      "Swap external monitor side". Descriptions do not exist at runtime.
+  # The replacement renders from parts/keybinds.nix at build time and is themed
+  # from hwc.home.theme.colors, which the system lane cannot read.
 
   #============================================================================
   # REFINERY INTAKE - pop a textbox, POST the sentence to the refinery /intake

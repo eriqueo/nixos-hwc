@@ -5,9 +5,13 @@ let
   hmLib = import ../../../lib/hm.nix { inherit lib; };
   isNixOSHost = hmLib.isNixOSHost osConfig;
 
-  theme      = import ./parts/theme.nix      { inherit config lib pkgs; };
+  # behavior declares the bindings once and returns them two ways: `settings`
+  # (what Hyprland loads) and `keybinds` (structured records). theme paints
+  # those records into the SUPER+? legend `card`; session wraps the card in the
+  # viewer package. One declaration, so the legend can't drift from the keys.
   behavior   = import ./parts/behavior.nix   { inherit config lib pkgs; };
-  session    = import ./parts/session.nix    { inherit config lib pkgs; osConfig = osConfig; };
+  theme      = import ./parts/theme.nix      { inherit config lib pkgs; keybinds = behavior.keybinds; };
+  session    = import ./parts/session.nix    { inherit config lib pkgs; card = theme.card; osConfig = osConfig; };
 
   hw = if builtins.pathExists ./parts/hardware.nix
        then import ./parts/hardware.nix { inherit lib pkgs; }
@@ -101,6 +105,11 @@ in
       enable  = true;
       package = pkgs.hyprland;
 
+      # Submaps (e.g. `resize`) are declared alongside the global binds in
+      # parts/behavior.nix. HM emits the `submap = <name>` / `submap = reset`
+      # framing itself, so ordering is not our problem.
+      submaps = behavior.submaps;
+
       settings = lib.mkMerge [
         {
           debug = {
@@ -113,12 +122,12 @@ in
         (lib.optionalAttrs (hw ? input     && hw.input     != null) { input     = hw.input;     })
         (lib.optionalAttrs (hw ? device    && hw.device    != null) { device    = hw.device;    })
 
-        behavior
+        behavior.settings
 
         (lib.optionalAttrs (session ? execOnce && session.execOnce != null) { "exec-once" = session.execOnce; })
         (lib.optionalAttrs (session ? env      && session.env      != null) { env         = session.env;      })
 
-        theme
+        theme.settings
       ];
     };
 
