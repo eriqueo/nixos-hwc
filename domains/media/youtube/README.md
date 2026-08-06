@@ -98,6 +98,7 @@ hwc.server.native.youtube.videos = {
 | `yt-videos-worker` | - | Background video downloader |
 
 ## Changelog
+- 2026-08-06: Transcripts UI v4 — multi-box URL input (`+ URL` / remove rows, no more comma/newline paste), playlist URLs expand (`fetch_playlist` via `yt-dlp --flat-playlist`) with each playlist saved to its own titled subfolder, and a save-location picker: new `outputRoots` option is a whitelist of base dirs (default `<media.root>/transcripts` + `media.youtube`) surfaced as a UI dropdown + free-text subfolder. `ReadWritePaths`/tmpfiles now derive from `outputRoots` (was single `outputDirectory`); base is validated against the whitelist and the subfolder is sanitized so no path escapes its root. `fetch_transcript` retries once on the intermittent datacenter-IP rate-limit. New `/config` endpoint feeds the dropdown; `/transcript` (n8n) unchanged.
 - 2026-08-06: Renamed the transcript service `yt-transcripts-api` → `transcripts` everywhere — systemd unit (`transcripts.service`), StateDirectory (`hwc/transcripts`), parts folder (`parts/transcripts/`), and the Caddy vhost (now `transcripts.hwc.iheartwoodcraft.com`). Old empty StateDirectory `hwc/yt-transcripts-api` orphaned. Loopback :8100 unchanged, so n8n callers unaffected.
 - 2026-07-11: `transcripts.outputDirectory` default is now `${config.hwc.paths.media.root}/transcripts` — the dead `/mnt/media` fallback removed (media.root is non-null on every server-role host that imports this domain). Law 3 migration, value unchanged.
 

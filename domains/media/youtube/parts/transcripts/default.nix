@@ -27,6 +27,10 @@ let
 
   pythonPath = pkgs.python3Packages.makePythonPath pythonPackages;
 
+  # The set of writable save locations, default first. Sandbox writability
+  # (ReadWritePaths) and the UI dropdown both derive from this one list.
+  outputRoots = lib.unique ([ cfg.outputDirectory ] ++ cfg.outputRoots);
+
   apiWrapper = pkgs.writeShellScript "transcripts-wrapper" ''
     set -euo pipefail
 
@@ -35,6 +39,7 @@ let
     export YT_TRANSCRIPTS_HOST="127.0.0.1"
     export YT_TRANSCRIPTS_PORT="${toString cfg.port}"
     export YT_TRANSCRIPTS_OUTPUT_DIR="${cfg.outputDirectory}"
+    export YT_TRANSCRIPTS_OUTPUT_ROOTS="${lib.concatStringsSep ":" (map toString outputRoots)}"
     export YT_TRANSCRIPTS_DEFAULT_MODE="${cfg.defaultFormat}"
     export YT_TRANSCRIPTS_LANGUAGES="${lib.concatStringsSep "," cfg.languages}"
 
@@ -91,14 +96,14 @@ in
         ProtectKernelTunables = true;
         ProtectControlGroups = true;
         SystemCallArchitectures = "native";
-        ReadWritePaths = [ cfg.outputDirectory ];
+        # Grant write access to every whitelisted save location, not just the
+        # default — the UI lets the user pick any of these as the base.
+        ReadWritePaths = outputRoots;
       };
     };
 
-    # Ensure output directory exists
-    systemd.tmpfiles.rules = [
-      "d ${cfg.outputDirectory} 0755 eric users -"
-    ];
+    # Ensure every save-location root exists
+    systemd.tmpfiles.rules = map (d: "d ${toString d} 0755 eric users -") outputRoots;
 
     # Provide n8n integration script system-wide
     environment.systemPackages = [ n8nScript ];

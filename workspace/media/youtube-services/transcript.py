@@ -67,6 +67,38 @@ async def fetch_metadata(video_id: str) -> VideoMeta:
     )
 
 
+# ---------------------------------------------------------------------------
+# Playlist expansion via yt-dlp (flat listing — IDs + title only, no per-video calls)
+# ---------------------------------------------------------------------------
+@dataclass
+class PlaylistInfo:
+    title: str
+    video_ids: list[str]
+
+
+async def fetch_playlist(url: str) -> PlaylistInfo:
+    """Expand a playlist URL into its video IDs + the playlist title.
+
+    Uses `--flat-playlist` so this is one cheap call that does NOT fetch each
+    video; per-video metadata/transcripts are fetched later, one at a time.
+    """
+    proc = await asyncio.create_subprocess_exec(
+        "yt-dlp", "--flat-playlist", "--dump-single-json", "--no-warnings", "-q", url,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=45)
+    if proc.returncode != 0:
+        raise RuntimeError(f"yt-dlp playlist fetch failed: {stderr.decode().strip()}")
+
+    import json
+    info = json.loads(stdout)
+    entries = info.get("entries") or []
+    video_ids = [e["id"] for e in entries if isinstance(e, dict) and e.get("id")]
+    title = info.get("title") or info.get("id") or "playlist"
+    return PlaylistInfo(title=title, video_ids=video_ids)
+
+
 def format_duration(seconds: int) -> str:
     h, r = divmod(seconds, 3600)
     m, s = divmod(r, 60)
@@ -85,18 +117,28 @@ class Segment:
     duration: float
 
 
-async def fetch_transcript(video_id: str, langs: list[str] | None = None) -> list[Segment]:
-    """Fetch transcript segments. Tries youtube-transcript-api first, yt-dlp VTT fallback."""
+async def fetch_transcript(video_id: str, langs: list[str] | None = None, attempts: int = 2) -> list[Segment]:
+    """Fetch transcript segments. Tries youtube-transcript-api first, yt-dlp VTT fallback.
+
+    Both sources are rate-limited from a datacenter IP and fail intermittently,
+    so each source is retried `attempts` times with a short backoff before we
+    conclude no transcript exists — a genuinely caption-less video still fails
+    fast (both sources return empty, not raise), but a transient block recovers.
+    """
     if langs is None:
         langs = ["en", "en-US", "en-GB"]
 
-    segments = await _try_youtube_transcript_api(video_id, langs)
-    if segments:
-        return segments
+    for attempt in range(attempts):
+        segments = await _try_youtube_transcript_api(video_id, langs)
+        if segments:
+            return segments
 
-    segments = await _try_ytdlp_vtt(video_id, langs)
-    if segments:
-        return segments
+        segments = await _try_ytdlp_vtt(video_id, langs)
+        if segments:
+            return segments
+
+        if attempt < attempts - 1:
+            await asyncio.sleep(2)
 
     raise RuntimeError("No transcript available for this video")
 
