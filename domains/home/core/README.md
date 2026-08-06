@@ -17,10 +17,18 @@ core/
 │   ├── index.nix      #   git, ssh, MCP config (options + wiring)
 │   └── parts/         #   aliases, ssh, zsh-init, prompt, fzf
 ├── development/       # hwc.home.core.development — language toolchains
+├── repo-hooks/        # hwc.home.core.repoHooks — pins core.hooksPath to a
+│                      #   repo-tracked hooks dir (.githooks) at activation
 └── xdg-dirs.nix       # XDG user directory layout (000_inbox, 100_hwc, …)
 ```
 
 ## Changelog
+- 2026-08-06: repo-hooks — new module. Git hooks were hand-placed per host
+  (laptop pointed hooksPath at its own .git/hooks; server had /dev/null);
+  now ~/.nixos ships tracked .githooks/ (pre-commit = the nine charter-law
+  flake checks; post-commit = auto-push) and every host's activation
+  self-heals core.hooksPath to it, claude-code-wiring style (02b0895b).
+  Enabled fleet-wide via profiles/base/home.nix.
 - 2026-07-17: shell — extended the `hwc.home.core.shell.ssh.matchBlocks` DSL
   with an optional `proxyCommand` field (translated in both API branches of
   parts/ssh.nix) and declared the `lil-box` host (Elliott's DataX box, reached

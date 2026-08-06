@@ -40,6 +40,12 @@
     # Development Environment
     core.development.enable = lib.mkDefault true;
 
+    # Declared git hooks — every host pins ~/.nixos to its tracked .githooks/
+    core.repoHooks = {
+      enable = lib.mkDefault true;
+      repos = [ { path = "${config.home.homeDirectory}/.nixos"; } ];
+    };
+
     # CLI apps
     apps = {
       gpg.enable = lib.mkDefault true;

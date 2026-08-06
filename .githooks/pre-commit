@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Charter gate — the nine charter-law flake checks must pass before any commit.
+# NB: `nix flake check --no-build` does NOT run these; only a real build does.
+# Tracked in-repo (.githooks/); core.hooksPath is pointed here on every host by
+# the hwc.home.core.repoHooks activation, so clones get the gate identically.
+# Emergency bypass: `git commit --no-verify` (leaves a visible reflog trace).
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+checks=(charter-law1 charter-law2 charter-law4 charter-law5 charter-law7
+        charter-law10 charter-law12 charter-law14 charter-law16)
+targets=()
+for c in "${checks[@]}"; do targets+=(".#checks.x86_64-linux.$c"); done
+
+echo "pre-commit: running ${#checks[@]} charter checks…"
+if ! nix build --no-link "${targets[@]}"; then
+  echo >&2
+  echo "pre-commit: charter checks FAILED — commit refused." >&2
+  echo "Reproduce one: nix build --no-link .#checks.x86_64-linux.charter-law<N>" >&2
+  echo "Emergency bypass: git commit --no-verify" >&2
+  exit 1
+fi

@@ -12,6 +12,7 @@
     ./xdg-dirs.nix
     ./shell/index.nix
     ./development/index.nix
+    ./repo-hooks/index.nix
   ];
 
   #==========================================================================

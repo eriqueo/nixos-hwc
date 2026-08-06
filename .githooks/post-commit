@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Auto-push after every commit, so an SSH/session failure can't strand work.
+# Replaces the undeclared per-host .git/hooks/post-commit (whose Claude-proxy
+# detection branch was dead code). Post-commit cannot block — always exit 0,
+# but fail LOUDLY so a stranded commit is never silent.
+branch=$(git branch --show-current)
+[ -n "$branch" ] || exit 0  # detached HEAD (rebase/bisect) — nothing to push
+if git push origin "$branch"; then
+  echo "post-commit: pushed $branch to origin"
+else
+  echo "post-commit: PUSH FAILED — commits are LOCAL ONLY. Run: git push origin $branch" >&2
+fi
+exit 0
