@@ -219,7 +219,7 @@ in
     # YouTube Transcripts API - FastAPI transcript extraction service
     # (n8n calls this via loopback :8100, not the public URL)
     {
-      name = "yt-transcripts-api";
+      name = "transcripts";
       mode = "vhost";
       upstream = "http://127.0.0.1:8100";
     }

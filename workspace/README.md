@@ -41,7 +41,7 @@ referencing site):
 | `nixos-dev/add-home-app.sh`, `nixos-dev/graph/hwc_graph.py` | `domains/home/core/shell/parts/zsh-init.nix` |
 | `automation/hooks/*` | `domains/media/orchestration/{media-orchestrator,audiobook-copier}` |
 | `home/scraper/*.py` | `domains/home/apps/scraper` |
-| `media/youtube-services/` | `domains/media/youtube/parts/yt-transcripts-api` |
+| `media/youtube-services/` | `domains/media/youtube/parts/transcripts` |
 | `tools/readme-freshness.sh` | `domains/automation/readme-freshness` |
 | `system/secret-manager.sh` | `secret` alias (`domains/home/core/shell/parts/aliases.nix`) |
 | `utilities/lints/permission-lint.sh` | `CHARTER.md` §3.1 (Law 4) |

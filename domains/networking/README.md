@@ -41,6 +41,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-08-06: Renamed vhost route `yt-transcripts-api` → `transcripts` (`routes.nix`) — public URL is now `transcripts.hwc.iheartwoodcraft.com` (was `yt-transcripts-api.hwc.iheartwoodcraft.com`). Upstream loopback :8100 unchanged; served under the same `*.hwc.iheartwoodcraft.com` wildcard cert, no new DNS/cert/port. Companion systemd-unit rename in `domains/media/youtube`.
 - 2026-07-19: heartwoodcraft.me retirement Phase 1 — added `.com` twin tunnel ingress hostnames `mcp`/`leads`/`brain`/`monitor`.iheartwoodcraft.com (in `machines/server/config.nix` `extraIngress`), same upstreams as their `.me` twins (:6200/:8420/:9876/:4400). Parallel operation until callers (claude.ai connectors, DataX monitor collaborators) flip, then the `.me` entries drop. DNS CNAMEs → tunnel + Access policy clones for `brain`/`monitor` handled on the Cloudflare side. Plan: brain `tech/development/builds/heartwoodcraft_me_retirement.md`.
 - 2026-07-13: Added `firefly-import` vhost → `http://127.0.0.1:8087` (Firefly III data importer, CSV/SimpleFIN).
 - 2026-07-12: Static vhosts accept an optional `api = { path; upstream; }` attr — renders a more-specific `handle <path>*` reverse_proxy inside the vhost so a served SPA can call a loopback service same-origin (no CORS, no second vhost). First user: `briefing` proxies `/mcp` → gateway :6200 for the Today-queue action buttons.

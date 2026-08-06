@@ -1,4 +1,4 @@
-# domains/media/youtube/parts/yt-transcripts-api/default.nix
+# domains/media/youtube/parts/transcripts/default.nix
 #
 # YOUTUBE TRANSCRIPTS API — single FastAPI service for transcript extraction
 #
@@ -8,7 +8,7 @@
 #   - Single FastAPI process
 #   - youtube-transcript-api for captions, yt-dlp for metadata only
 #   - No LLM, no spaCy, no PostgreSQL
-#   - Caddy reverse proxy at hwc-server.ocelot-wahoo.ts.net:3443
+#   - Caddy vhost at transcripts.hwc.iheartwoodcraft.com (upstream 127.0.0.1:8100)
 
 { config, lib, pkgs, ... }:
 
@@ -27,7 +27,7 @@ let
 
   pythonPath = pkgs.python3Packages.makePythonPath pythonPackages;
 
-  apiWrapper = pkgs.writeShellScript "yt-transcripts-api-wrapper" ''
+  apiWrapper = pkgs.writeShellScript "transcripts-wrapper" ''
     set -euo pipefail
 
     export PYTHONPATH="${pythonPath}:${scriptDir}"
@@ -65,7 +65,7 @@ in
 {
   config = lib.mkIf cfg.enable {
 
-    systemd.services.yt-transcripts-api = {
+    systemd.services.transcripts = {
       description = "YouTube Transcripts API";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ];
@@ -80,7 +80,7 @@ in
         User = lib.mkForce "eric";
         Group = lib.mkForce "users";
 
-        StateDirectory = "hwc/yt-transcripts-api";
+        StateDirectory = "hwc/transcripts";
 
         # Hardening
         NoNewPrivileges = true;

@@ -224,5 +224,5 @@
         description: Radicale CalDAV / tasks
     - YT Transcripts:
         icon: mdi-youtube
-        href: https://yt-transcripts-api.hwc.iheartwoodcraft.com/docs
+        href: https://transcripts.hwc.iheartwoodcraft.com/docs
         description: Transcript API

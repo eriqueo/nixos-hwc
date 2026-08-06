@@ -522,7 +522,7 @@ Domain: `hwc-server.ocelot-wahoo.ts.net`
 | 1443          | calibre          | http://127.0.0.1:8083           | Desktop KasmVNC |
 | 2443          | n8n              | http://127.0.0.1:5678           | Workflow automation |
 | 2586          | gotify           | http://127.0.0.1:2587           | Push notifications |
-| 3443          | yt-transcripts-api | http://127.0.0.1:8100         | YouTube transcript API |
+| 3443          | transcripts      | http://127.0.0.1:8100           | YouTube transcript API |
 | 4443          | grafana          | http://127.0.0.1:3000           | Monitoring dashboards |
 | 5043          | mousehole        | http://127.0.0.1:5010           | MAM seedbox IP updater |
 | 5443          | frigate          | http://127.0.0.1:5000           | NVR (GPU/CUDA) |

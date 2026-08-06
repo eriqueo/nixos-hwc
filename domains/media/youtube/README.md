@@ -18,8 +18,8 @@ domains/media/youtube/
 ├── options.nix         # hwc.media.youtube.* options
 └── parts/
     ├── legacy-api.nix  # Original transcript API (FastAPI, direct output)
-    ├── yt-transcripts-api/
-    │   └── default.nix # New job-based transcript API with worker
+    ├── transcripts/
+    │   └── default.nix # Job-based transcript API with worker
     └── yt-videos-api/
         └── default.nix # Video download API with atomic finalization
 ```
@@ -92,12 +92,13 @@ hwc.server.native.youtube.videos = {
 | Service | Port | Description |
 |---------|------|-------------|
 | `transcript-api` | 5000 | Legacy transcript extraction |
-| `yt-transcripts-api` | 8100 | Job-based transcript extraction |
+| `transcripts` | 8100 | Job-based transcript extraction |
 | `yt-transcripts-worker` | - | Background transcript processor |
 | `yt-videos-api` | 8101 | Video download job submission |
 | `yt-videos-worker` | - | Background video downloader |
 
 ## Changelog
+- 2026-08-06: Renamed the transcript service `yt-transcripts-api` → `transcripts` everywhere — systemd unit (`transcripts.service`), StateDirectory (`hwc/transcripts`), parts folder (`parts/transcripts/`), and the Caddy vhost (now `transcripts.hwc.iheartwoodcraft.com`). Old empty StateDirectory `hwc/yt-transcripts-api` orphaned. Loopback :8100 unchanged, so n8n callers unaffected.
 - 2026-07-11: `transcripts.outputDirectory` default is now `${config.hwc.paths.media.root}/transcripts` — the dead `/mnt/media` fallback removed (media.root is non-null on every server-role host that imports this domain). Law 3 migration, value unchanged.
 
 - 2026-03-26: Workspace source moved from workspace/youtube-services/ to workspace/media/youtube-services/ (domain alignment); all nix refs updated

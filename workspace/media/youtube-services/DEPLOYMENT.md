@@ -58,7 +58,7 @@ sudo nixos-rebuild switch --flake .#hwc-server
 
 ```bash
 # Check API servers
-systemctl status yt-transcripts-api
+systemctl status transcripts
 systemctl status yt-videos-api
 
 # Check workers
@@ -66,7 +66,7 @@ systemctl status yt-transcripts-worker
 systemctl status yt-videos-worker
 
 # Check database setup
-systemctl status yt-transcripts-api-setup
+systemctl status transcripts-setup
 systemctl status yt-videos-api-setup
 ```
 
@@ -150,7 +150,7 @@ curl https://hwc-server.ts.net/api/videos/jobs/{job_id}
 
 ```bash
 # View logs
-journalctl -u yt-transcripts-api -f
+journalctl -u transcripts -f
 journalctl -u yt-transcripts-worker -f
 journalctl -u yt-videos-api -f
 journalctl -u yt-videos-worker -f
@@ -191,4 +191,4 @@ sudo -u postgres psql youtube_services -c "SELECT * FROM yt_videos.jobs LIMIT 10
 
 **Date Created**: 2026-01-02
 **Configuration Version**: Phase 4 Complete
-**Services**: yt-transcripts-api v0.1.0, yt-videos-api v0.1.0
+**Services**: transcripts v0.1.0, yt-videos-api v0.1.0
