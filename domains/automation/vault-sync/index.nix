@@ -56,8 +56,11 @@ let
         exit 1
       fi
 
-      # 3. Publish to the hub. Non-fatal if it fails (next cycle retries).
-      git push || echo "vault-sync: push failed — will retry next cycle" >&2
+      # 3. Publish to the hub. FATAL on failure: the unit must go red so
+      #    OnFailure notifies — a swallowed push once left the hub silently
+      #    stale while divergence built up (2026-08 investigation). The next
+      #    timer cycle still retries.
+      git push || { echo "vault-sync: PUSH FAILED — hub not updated" >&2; exit 1; }
     '';
   };
 
@@ -152,6 +155,10 @@ in
       description = "Brain vault git sync (commit + pull + push to hub)";
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
+      # Push/pull failure must be loud: without this the hub goes stale
+      # silently and the laptop diverges for days before anyone notices.
+      onFailure = lib.mkIf (config.hwc.monitoring.alerts.enable or false)
+        [ "hwc-service-failure-notifier@brain-vault-sync.service" ];
       serviceConfig = {
         Type = "oneshot";
         User = cfg.user;

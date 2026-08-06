@@ -64,6 +64,10 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-08-06: vault-sync — push failure is now FATAL (`exit 1`) instead of a
+  swallowed `|| echo`, and the unit carries `OnFailure = hwc-service-failure-notifier@`.
+  A rejected push previously exited 0, so the hub could go stale for days with
+  zero alerts while the janitor logged rising drift.
 - 2026-07-06: Gotify decommission — removed the n8n `secrets.gotifyTokenFiles` option and its GOTIFY_TOKEN_* env injection from n8n sys.nix (runtime `sys:router:notify` workflow edit tracked in the decommission handoff).
 - 2026-07-06: n8n image pinned to 2.10.3 (Law 15 v12.4 critical tier: workflow DB).
 - 2026-06-18: Add `inbox-janitor/` — server-only systemd timer (every 30 min) that drains
