@@ -83,19 +83,10 @@ let
 
 in
 {
-  options.hwc.notifications.canary = {
-    enable = lib.mkEnableOption "hwc-notify delivery canary (deadman probe over Discord + SMTP)";
-
-    interval = lib.mkOption {
-      type = lib.types.str;
-      default = "daily";
-      description = ''
-        systemd OnCalendar expression for the canary cadence. Default
-        "daily" — one heartbeat notification per day proving the Discord
-        and SMTP (critical email) paths are both alive.
-      '';
-    };
-  };
+  # Options (`enable`, `interval`) are declared in ./index.nix, not here:
+  # Law 10 puts mkOption only in index.nix, and Law 9 forbids a leaf module
+  # from declaring hwc.* options at all. This file is implementation only.
+  # Moved 2026-08-06 (Charter v12.6 Law 10 burn-down).
 
   config = lib.mkIf (config.hwc.notifications.enable && canary.enable) {
     environment.systemPackages = [ canaryScript ];

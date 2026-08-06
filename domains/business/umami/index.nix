@@ -55,6 +55,29 @@ in
       default = "02d2b023-55a7-4a24-8064-0d97e4801284";
       description = "Umami website UUID for iheartwoodcraft.com (created 2026-07-07 via API; used by the tracking snippet, morning briefing, and weekly report)";
     };
+
+    #========================================================================
+    # WEEKLY REPORT (implementation: ./parts/weekly-report.nix)
+    # Declared here, not in parts/: Law 10 — "mkOption anywhere else,
+    # including parts/*.nix" is the violation. Moved 2026-08-06.
+    #========================================================================
+    weeklyReport = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Weekly website-metrics email (Umami + calculator leads)";
+      };
+      onCalendar = lib.mkOption {
+        type = lib.types.str;
+        default = "Mon 07:00";
+        description = "systemd OnCalendar spec (local server time)";
+      };
+      recipient = lib.mkOption {
+        type = lib.types.str;
+        default = "eric@iheartwoodcraft.com";
+        description = "Report recipient";
+      };
+    };
   };
 
   #==========================================================================

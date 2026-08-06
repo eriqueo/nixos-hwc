@@ -1,10 +1,10 @@
-# HWC Architecture Charter v12.4
+# HWC Architecture Charter v12.6
 
 **Owner**: Eric
 **Scope**: `nixos-hwc/` — all machines, domains, profiles, Home Manager, and supporting files
 **Goal**: Deterministic, maintainable, reproducible NixOS configuration via strict domain separation, explicit APIs, and mechanical enforcement.
 **Philosophy**: This document defines **enforceable architectural laws**. Implementation details and domain-specific guidance live in domain READMEs (Law 12). A law that cannot be checked mechanically is a guideline and is labeled as such. A law that references infrastructure that does not exist is a bug in the charter.
-**Last revised**: 2026-07-05
+**Last revised**: 2026-08-06
 
 ---
 
@@ -21,6 +21,27 @@
 9. **Config repo holds config.** Anything with its own build/test lifecycle gets its own repo and enters as a flake input (todui is the precedent).
 10. **AI output is ephemeral until promoted.** One living doc per topic, edited in place; everything else is scratch and gets deleted, not archived.
 11. **The repo is not the system.** A commit isn't real until rebuilt, a rebuild until rebooted, a script until run, a monitor until its target exists. Make the gap observable (the morning-briefing drift tile) rather than relying on memory. Verify against the machine; keep docs and comments honest enough that they don't poison the next audit.
+12. **Enforcement triggers must be observable.** A rule gated on a self-assessment — "if touching architecture", "if this is a refactor", "if it's non-trivial" — is consulted only *after* the work has been classified, and the classification is the thing that fails first. It fails hardest on the changes that most need the rule, because those are the ones that feel routine. Prefer a trigger derivable from the event itself: a file path, an extension, a tool name, a directory that already has contents, a diff that touches a return shape. §0.13 catalogues what the judgment-gated form produces.
+
+### 0.13 Self-Exemption Patterns
+
+<!-- BEGIN SELF-EXEMPTION -->
+Known rationalizations that route around §0 and §1. Each is stated as the thought, then the fact that defeats it. These are not hypotheticals — every one below has a recorded instance in this repo.
+
+- **"I'm adding, not changing — so this isn't architectural."** Creating a file in a populated directory *is* a structural change; so is altering what a file returns. Additive work is where the charter is skipped most, precisely because it feels safe.
+- **"This is a separate concern, so it deserves its own file."** That is the exact instinct that produced `options.nix`, spread it to 18+ files, survived a falsely-declared-complete migration (§0.4), and took three months to kill. Separation of concerns justifies a boundary, never automatically a *file*.
+- **"I read the relevant files."** Relevance was decided by the plan already formed, so the read confirms the plan instead of testing it. Before adding to a module directory, read **every** file in it — the set is bounded and small; that is what makes the rule cheap.
+- **"The lint passes."** A wired check is a proxy for a law, not the law. `charter-law10` runs `fd options.nix` — a *filename* match, weaker than the `mkOption` content check the same law specifies in §3.1. Passing the proxy is not compliance.
+- **"It follows the existing pattern."** The pattern may itself be a tracked violation. `add-home-app` scaffolds `options.nix`, which Law 10 forbids. Precedent in this repo is evidence, never authority — check it against the law.
+- **"It builds."** / **"`nix flake check` is green."** That proves evaluation, not correctness and not compliance. The gate covers nine laws; nothing in it inspects file placement.
+- **"It's a small change."** Size is not a category that exempts process. The cost of a structural mistake is unrelated to its diff size.
+- **"That's out of scope."** Scope discipline governs what you **change**. It never governs what you **read**.
+
+**Unconditional preconditions** (no self-assessment; they fire on the event):
+1. Creating a file in a directory that already contains files → name the existing sibling you ruled out, and why it couldn't hold this.
+2. Changing what a module or part **returns/exports** → that is architecture. The charter applies.
+3. Editing anything under `domains/` → read the module's whole directory first.
+<!-- END SELF-EXEMPTION -->
 
 ---
 
@@ -158,11 +179,13 @@ Litmus: declares any `hwc.*` option → directory. Only sets packages/programs/s
 - `sys.nix` (only `hwc.system.apps.*`, per Law 7),
 - `domains/paths/paths.nix` (the single primitive-module exception; carries its own justifying header).
 
-Separate `options.nix` files are forbidden — the v11.0 migration eliminated the pattern; the 18 stragglers found in the 2026-06-09 audit were inlined the same day (lint now returns zero).
+Separate `options.nix` files are forbidden — the v11.0 migration eliminated the pattern; the 18 stragglers found in the 2026-06-09 audit were inlined the same day.
 
-**Tracked violations (burn-down list, not precedent)**: 2 files remain as of 2026-07-05 (`domains/system/mcp/parts/jt.nix`, `domains/secrets/declarations/caddy.nix`) — the v12.1 text claimed ~21; the migration is essentially complete. List: `rg -l 'mkOption' domains --type nix -g '!**/index.nix' -g '!domains/paths/paths.nix' -g '!**/sys.nix'`.
+Files that must declare an option outside these locations carry an `HWC-EXCEPTION(Law 10)` annotation per §4; the wired lint honors it. Two exist and are correct, not debt: `domains/secrets/declarations/caddy.nix` (hand-written cert mounts, the documented Law 4 generator exception) and `domains/lib/mkSimpleApp.nix` (a module *factory* — the option it builds belongs to the caller's `index.nix`, which declares it by calling with its own folder name, so the declaration is still where Law 10 intends).
 
-**Violation**: `mkOption` anywhere else, including `parts/*.nix`.
+**Burn-down: COMPLETE as of v12.6 (2026-08-06)**, verified against the corrected check. The v12.2–v12.5 text claimed "2 files remain" while quoting a lint that was wrong three ways — it matched the word in **comments** (`jt.nix`, whose only hit was its own note that "parts/ must stay pure of mkOption"), **missed `mkEnableOption` entirely** (that string does not contain the substring `mkOption`, so `domains/lib/mkSimpleApp.nix` was never listed), and **ignored §4 annotations** (so the already-annotated `caddy.nix` counted as debt). Two real violations were found and inlined: `domains/notifications/canary.nix` (also a Law 9 breach — a leaf declaring options) and `domains/business/umami/parts/weekly-report.nix`.
+
+**Violation**: `mkOption` or `mkEnableOption` **assigned** anywhere else, including `parts/*.nix`, without an `HWC-EXCEPTION(Law 10)` annotation.
 
 ### Law 11: Domain Evaluation Order
 
@@ -302,9 +325,11 @@ rg 'oci-containers\.containers\.' domains --glob '!**/mkContainer.nix' -l | xarg
 # Law 7 — lane purity
 rg 'import.*sys\.nix' domains/home/*/index.nix
 
-# Law 10 — option locality (separate options.nix forbidden)
+# Law 10 — option locality (v12.6: this is now the WIRED check, verified
+# red-on-seeded-violation. The previous content lint matched comments, missed
+# mkEnableOption, and ignored §4 annotations — see Law 10's burn-down note.)
 fd options.nix domains
-rg 'mkOption' domains --type nix --glob '!**/index.nix' --glob '!domains/paths/paths.nix' --glob '!**/sys.nix'
+rg -l '^[^#]*=[[:space:]]*(lib\.)?mk(Option|EnableOption)\b' domains --type nix -g '!**/index.nix' -g '!**/sys.nix' -g '!domains/paths/paths.nix' | xargs -r rg --files-without-match 'HWC-EXCEPTION\(Law 10\)'
 
 # Law 12 — README presence + sections (v12.4 hybrid scope: top-level domains
 # + per-module in the high-churn trees; _shared/ helper dirs exempt)
@@ -385,6 +410,8 @@ Every exception requires: in-code annotation, removal condition when temporary, 
 - A version entry may claim a migration complete **only after its lint passes** (Doctrine §0.4).
 
 **Version History** (excerpt):
+- **v12.6 (2026-08-06)**: Law 10 burn-down COMPLETE and its check repaired. `charter-law10` was wired as `fd options.nix domains` — a FILENAME match — while §3.1 documented a content check; a file could declare options freely so long as it wasn't named options.nix, and the gate stayed green. The documented content lint was itself wrong three ways: matched the word in comments (jt.nix's own "parts/ must stay pure of mkOption" note), missed `mkEnableOption` (that string does not contain the substring `mkOption`, hiding domains/lib/mkSimpleApp.nix), and ignored the §4 exception protocol (counting the already-annotated caddy.nix as debt). Corrected check anchors to an assignment after a comment-free prefix, matches both constructors, and filters via `--files-without-match 'HWC-EXCEPTION\\(Law 10\\)'` (same shape as law5). Verified RED against five seeded violations through the real derivation, then green. Two real violations inlined: domains/notifications/canary.nix (also Law 9 — a leaf declaring options) and domains/business/umami/parts/weekly-report.nix. mkSimpleApp.nix gained the §4 annotation it always warranted. Also converted four judgement-gated rules to observable triggers (claude-config hooks): `path-conventions.sh` (agent-output inbox, brain vault, SKILL.md access-mode) and `charter-gate.sh` (domain README not staged with its domain → Law 12; `hms` against a system-or-mixed tree). Both compute the violation and stay silent otherwise. STILL OPEN: add-home-app scaffolds options.nix, which Law 10 forbids — the skill now generates a lint failure, tracked for v12.7.
+- **v12.5 (2026-08-06)**: Doctrine §0.12 (enforcement triggers must be observable) and §0.13 (self-exemption patterns) added, from the 2026-08-06 process audit. Cause: the pointer "Read CHARTER.md if touching architecture" in docs/AGENTS.md is correct progressive disclosure and still failed — its trigger is a self-assessment made before the agent knows enough to make it, and additive work never feels architectural. Delivery is now `hooks/nixos-primer.sh` (claude-config), PreToolUse on Write|Edit, triggered by the file's PATH sitting in a repo with CHARTER.md + flake.nix — an observable fact. It injects the charter version, the §0.13 block (extracted, not copied — §0.8), and a LIVE `ls domains/` map. The hand-written "## Repo Map" in docs/AGENTS.md was deleted in the same change: it listed 9 of 16 domains and omitted domains/home/keymap/. KNOWN-RED, not yet fixed: charter-law10's wired check is `fd options.nix` (a filename match) while §3.1 specifies an `mkOption` content check — the latter returns 4 files (jt.nix, caddy.nix, notifications/canary.nix, business/umami/parts/weekly-report.nix), so the §6 "lint pass" precondition is met only against the weaker proxy. add-home-app still scaffolds options.nix. Both tracked for v12.6.
 - **v12.4 (2026-07-06)**: Doctrine expanded with the seven audit principles (§0.5–0.11: migrations end with git rm; enforced-or-guideline; done = deployed + used; one producer per fact; config repo holds config; AI output ephemeral until promoted; the repo is not the system). Law 12 rescoped to the hybrid contract (top-level domains + per-module READMEs in server/containers and home/apps; 54 module READMEs added in the same change so the lint wires green). Law 15 image policy replaced with the two-tier pin/float contract (critical tier pinned: vaultwarden 1.35.4, n8n 2.10.3, audiobookshelf 2.32.1, firefly v6.4.22 + pico 1.10.1; immich/frigate/authentik/lidarr/slskd were already pinned; utility tier floats deliberately). Decisions recorded in `workspace/plans/2026-07-05-phase-plan-handoff.md`.
 - **v12.3 (2026-07-05)**: §3.3 enforcement gate BUILT (promised since v12.0): Laws 1, 2, 4, 7, 10, 14, 16 wired into `nix flake check` as `checks.x86_64-linux.charter-law<N>` derivations in flake.nix. Laws 3/5/12/13 stay manual guidelines until their backlogs burn down (tracked in `workspace/plans/2026-07-05-phase-plan-handoff.md`). Law 14's wired regex uses `nixos[-]hwc` so the lint can't match its own definition.
 - **v12.2 (2026-07-05)**: Lint repair pass from the 2026-07-05 systems audit (`workspace/plans/2026-07-05-systems-process-audit.md`). Fixed two vacuously-passing lints (Laws 5 & 12 used `rg -L`, which is `--follow`, not `--files-without-match` — they could never report a violation). Fixed three never-empty lints: Law 2 now `--type nix` (was firing on README prose), Law 4 regex anchored to assigned values (was matching its own "not 1000!" comment), Law 16 derivations lint excludes README.md. Law 1 whitelist generalized to any `osConfig ?` guard / `osConfig.<path> or <fallback>`. Law 10 burn-down corrected from "~21" to the actual 2 remaining files. No law semantics changed — this release makes the existing laws checkable.
@@ -396,4 +423,4 @@ Every exception requires: in-code annotation, removal condition when temporary, 
 - **v10.x (2026-01/02)**: paths domain added, Law 2 strictness, Laws 9–12, infrastructure→system migration.
 - **v9.x (2026-01-10)**: laws + mechanical validation focus.
 
-**End of Charter v12.4**
+**End of Charter v12.6**

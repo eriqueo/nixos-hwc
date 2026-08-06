@@ -28,6 +28,7 @@ business/
 ```
 
 ## Changelog
+- 2026-08-06: Law 10 burn-down — `umami/parts/weekly-report.nix`'s option block (`enable`, `onCalendar`, `recipient`) moved into `umami/index.nix`; the part is implementation only. Law 10 names "mkOption anywhere else, including `parts/*.nix`" as the violation. Namespace `hwc.business.umami.weeklyReport.*` unchanged. Surfaced by the corrected charter-law10 check (v12.6).
 - 2026-07-07: Website metrics reporting — morning-briefing gains a `website` section (umami visitors/pageviews 24h+7d, top pages, calculator-lead counts from hwc.calculator_leads) in briefing.json, the dashboard, and the daily email; new umami/parts/weekly-report.nix sends a Monday 07:00 week-over-week email (traffic deltas, top pages/referrers, lead detail) via msmtp from office@. Umami option websiteId added.
 - 2026-07-07: New `umami/` module (hwc.business.umami) — cookieless self-hosted web analytics for iheartwoodcraft.com. Podman container (mkContainer, media-network) on loopback :3009, Postgres db `umami` (role created in postStart, trust auth over the 10.89.0.1 gateway), agenix `umami-env` (APP_SECRET + DATABASE_URL). Public collect endpoint via cloudflared at stats.iheartwoodcraft.com (proxied CNAME → tunnel).
 - 2026-07-06: morning-briefing email sender switched eric@ → office@iheartwoodcraft.com (`-a proton-office`): self-sent mail gets Proton's sent+auto-archive treatment and never reaches the Inbox (found on the first live 06:00 run; SMTP had been 250-OK all along).

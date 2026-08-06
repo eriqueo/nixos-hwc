@@ -80,23 +80,10 @@ $LEADS_ROWS"
   '';
 in
 {
-  options.hwc.business.umami.weeklyReport = {
-    enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Weekly website-metrics email (Umami + calculator leads)";
-    };
-    onCalendar = lib.mkOption {
-      type = lib.types.str;
-      default = "Mon 07:00";
-      description = "systemd OnCalendar spec (local server time)";
-    };
-    recipient = lib.mkOption {
-      type = lib.types.str;
-      default = "eric@iheartwoodcraft.com";
-      description = "Report recipient";
-    };
-  };
+  # Options (`enable`, `onCalendar`, `recipient`) are declared in ../index.nix,
+  # not here: Law 10 names "mkOption anywhere else, including parts/*.nix" as
+  # the violation. This file is implementation only.
+  # Moved 2026-08-06 (Charter v12.6 Law 10 burn-down).
 
   config = lib.mkIf (cfg.enable && cfg.weeklyReport.enable) {
     systemd.services.umami-weekly-report = {

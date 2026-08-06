@@ -160,6 +160,28 @@ in
             matcher = "*";
             hooks = [ { type = "command"; command = hookCmd "claim-guard.sh"; timeout = 15; statusMessage = "Claim guard"; } ];
           };
+          # Charter primer. Fires on the EDIT (path-derived: the file sits in a
+          # repo with CHARTER.md + flake.nix at its root), never on the agent's
+          # judgement that the work is "architectural" — Charter §0.12. Injects
+          # the live `ls domains/` map, so no hand-written repo map can drift.
+          nixosPrimer = {
+            matcher = "Write|Edit";
+            hooks = [ { type = "command"; command = hookCmd "nixos-primer.sh"; timeout = 10; statusMessage = "Charter primer"; } ];
+          };
+          # Conventions whose trigger is the WRITE PATH (agent-output inbox,
+          # brain vault, SKILL.md). Prose in CLAUDE.md that never needed a
+          # judgement call to fire — only a look at the destination.
+          pathConventions = {
+            matcher = "Write|Edit";
+            hooks = [ { type = "command"; command = hookCmd "path-conventions.sh"; timeout = 10; statusMessage = "Path conventions"; } ];
+          };
+          # Charter rules checked at the moment of action: domain README staged
+          # with its domain (Law 12), and `hms` against a system-or-mixed tree.
+          # Both COMPUTE the violation and stay silent when there is none.
+          charterGate = {
+            matcher = "Bash|mcp__git__git_commit";
+            hooks = [ { type = "command"; command = hookCmd "charter-gate.sh"; timeout = 15; statusMessage = "Charter gate"; } ];
+          };
         });
         healJq = pkgs.writeText "claude-settings-heal.jq" ''
           def has_cmd($ev; $frag):
@@ -172,6 +194,9 @@ in
           | ensure("PostToolUse"; "track-evidence.sh"; $w.trackEvidence)
           | ensure("UserPromptSubmit"; "track-evidence.sh"; $w.turnStamp)
           | ensure("Stop"; "claim-guard.sh"; $w.claimGuard)
+          | ensure("PreToolUse"; "nixos-primer.sh"; $w.nixosPrimer)
+          | ensure("PreToolUse"; "path-conventions.sh"; $w.pathConventions)
+          | ensure("PreToolUse"; "charter-gate.sh"; $w.charterGate)
           | .env.SLASH_COMMAND_TOOL_CHAR_BUDGET = (.env.SLASH_COMMAND_TOOL_CHAR_BUDGET // "30000")
         '';
         emptyJson = pkgs.writeText "claude-settings-empty.json" "{}";

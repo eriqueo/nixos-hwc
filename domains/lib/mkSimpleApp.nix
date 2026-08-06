@@ -1,5 +1,14 @@
 # domains/lib/mkSimpleApp.nix
 #
+# HWC-EXCEPTION(Law 10): mkEnableOption outside an index.nix
+# Justification: this is a module FACTORY, not a module. The option it builds
+#   belongs to the caller's domains/home/apps/<name>/index.nix, which declares
+#   it by calling this with its own folder name — so the declaration is still
+#   at the index.nix the reader would look in, exactly as Law 10 intends.
+#   Same class of exception as domains/paths/paths.nix.
+# Plan: permanent by design (see CHARTER.md §4)
+# Revocable: yes (if the factory is inlined back into each caller)
+#
 # Helper for one-package Home Manager app modules: an enable toggle that
 # installs a single package. Preserves Charter shape — the caller's
 # index.nix lives in domains/home/apps/<name>/ and passes its own folder

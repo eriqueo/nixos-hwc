@@ -472,7 +472,19 @@
         "rg 'import.*sys\\.nix' domains/home/*/index.nix"
       ];
       charter-law10 = mkCharterLint "law10-unit-anatomy" [
+        # (a) the filename form the v11.0 migration eliminated.
         "fd options.nix domains"
+        # (b) the CONTENT check Law 10 actually specifies. Until v12.6 only (a)
+        # was wired, so a file could declare options freely as long as it wasn't
+        # named options.nix — the gate was green while §3.1's own documented
+        # lint returned four files. That lint was itself wrong three ways, all
+        # fixed here: it matched the word in COMMENTS (jt.nix's "parts/ must
+        # stay pure of mkOption" note), it MISSED mkEnableOption entirely
+        # ('mkEnableOption' does not contain the substring 'mkOption'), and it
+        # ignored the §4 exception protocol. Anchoring to `= mk...` after a
+        # comment-free prefix fixes 1, the alternation fixes 2, and the
+        # --files-without-match filter (same shape as law5) fixes 3.
+        "rg -l '^[^#]*=[[:space:]]*(lib\\.)?mk(Option|EnableOption)\\b' domains --type nix -g '!**/index.nix' -g '!**/sys.nix' -g '!domains/paths/paths.nix' | xargs -r rg --files-without-match 'HWC-EXCEPTION\\(Law 10\\)'"
       ];
       charter-law12 = mkCharterLint "law12-readme-contract" [
         # v12.4 hybrid scope: top-level domains + high-churn module trees

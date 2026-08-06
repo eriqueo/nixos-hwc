@@ -54,6 +54,25 @@ in
     };
 
     #==========================================================================
+    # DELIVERY CANARY (implementation: ./canary.nix)
+    # Declared here, not in canary.nix: Law 10 (mkOption only in index.nix) and
+    # Law 9 (a leaf module never declares hwc.* options). Moved 2026-08-06.
+    #==========================================================================
+    canary = {
+      enable = lib.mkEnableOption "hwc-notify delivery canary (deadman probe over Discord + SMTP)";
+
+      interval = lib.mkOption {
+        type = lib.types.str;
+        default = "daily";
+        description = ''
+          systemd OnCalendar expression for the canary cadence. Default
+          "daily" — one heartbeat notification per day proving the Discord
+          and SMTP (critical email) paths are both alive.
+        '';
+      };
+    };
+
+    #==========================================================================
     # INTERNAL OPTIONS (for cross-domain access)
     #==========================================================================
     _internal = {

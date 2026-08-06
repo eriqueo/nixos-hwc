@@ -47,6 +47,7 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+- 2026-08-06: `mkSimpleApp.nix` gained the `HWC-EXCEPTION(Law 10)` annotation it always warranted — it is a module FACTORY, so the `mkEnableOption` it builds belongs to the caller's `domains/home/apps/<name>/index.nix`, which declares it by calling with its own folder name. Same exception class as `domains/paths/paths.nix`. Not new debt: the old Law 10 lint never saw this file at all, because `mkEnableOption` does not contain the substring `mkOption`. The corrected v12.6 check matches both constructors and honors §4 annotations.
 - 2026-07-05: Law 5 burn-down — added `HWC-EXCEPTION(Law 5)` annotation blocks (reason/justification/plan/revocable) to this domain's raw `oci-containers` module(s); infra-shaped containers are sanctioned exceptions to the mkContainer rule. Comments only, no behavior change.
 
 - 2026-06-11: Add mkSimpleApp.nix (one-package HM app modules) and hm.nix
