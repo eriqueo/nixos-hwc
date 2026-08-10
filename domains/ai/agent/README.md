@@ -15,22 +15,20 @@ Provides a safe, auditable interface for Open WebUI to execute system commands w
 - **Systemd hardening**: Runs with strict security restrictions
 - **Output truncation**: Limits output size to prevent DoS
 
+## Structure
+
+```
+agent/
+├── default.nix       # Import wrapper
+├── index.nix         # NixOS module — inline options + systemd unit + hardening
+└── hwc-ai-agent.py   # FastAPI whitelisted-command API
+```
+
 ## Integration Steps
 
-### 1. Add agent import to domains/ai/default.nix
+### 1. Import
 
-After PRs 1-2 are merged, add this line to the imports in `domains/ai/default.nix`:
-
-```nix
-imports = [
-  ./options.nix
-  ./ollama/default.nix
-  ./open-webui/default.nix
-  ./local-workflows/default.nix
-  ./mcp/default.nix
-  ./agent/default.nix  # ADD THIS LINE
-];
-```
+Already wired: `domains/ai/index.nix` imports `./agent`.
 
 ### 2. Enable agent on server
 
@@ -142,3 +140,16 @@ To register the agent as a tool in Open WebUI:
    - Headers: `Content-Type: application/json`
 
 Then users can invoke system commands through the chat interface.
+
+## Changelog
+
+- 2026-06-02: Tailnet rename sweep — `hwc.ocelot-wahoo.ts.net` →
+  `hwc-server.ocelot-wahoo.ts.net` in `hwc-ai-agent.py` (56c1f6c8).
+- 2026-05-21: Deleted the re-introduced `options.nix` orphan (4f199955). Options
+  had already been inlined into `index.nix` (Law 10) by the 2026-03-06 options
+  move; the file came back through a merge and did nothing.
+- 2026-01-18: Law 3 path abstraction in `index.nix` (af11efbd).
+- 2026-01-08: `default.nix` → `index.nix` rename (9fa4a532); `default.nix` is now
+  the import wrapper.
+- 2025-12-04: Local Workflows HTTP API endpoints added to `hwc-ai-agent.py`
+  (27161ccb).
