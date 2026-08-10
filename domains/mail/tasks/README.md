@@ -89,6 +89,16 @@ credential: the shared `radicale-htpasswd` agenix secret (password =
 stay CLI-visible. Deploy order + phone CalDAV setup: see the radicale README.
 
 ## Changelog
+- 2026-06-15: Radicale pair password extraction moved from `cut -d: -f2-` to an
+  `awk -F: -v u=<username>` program that selects this user's htpasswd line
+  (2c4664b0) — the calendar backend added a second (`cal:`) line, so the bare
+  `cut` emitted every password. The same file had just dropped its `sh -c`
+  wrapper because the vdirsyncer service PATH carries coreutils but not bash
+  (a22a309a).
+- 2026-06-15: The "account must name an existing calendar account with an email"
+  assertion now applies only while `hwc.mail.tasks.icloud.enable` is true — the
+  Radicale-only path reuses neither the Apple ID nor the calendar email
+  (0aedb366).
 - 2026-06-11: Phase C plumbing — optional `radicale` sub-options + second
   vdirsyncer pair part (off by default; flip in machines/laptop/home.nix after
   the server deploy). todoman path glob parameterized (`tasks*/*` with radicale).
