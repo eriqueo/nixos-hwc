@@ -69,6 +69,11 @@ hwc.automation.vaultSync.watch.enable = true;      # debounce 3s (watch.debounce
 - 2026-06-15: Added optional event-driven `brain-vault-watch` service (`watch.enable`,
   `watch.debounceSec`) — pushes within seconds of any vault CRUD via a debounced `inotifywait`
   loop that runs the same sync script. Enabled on the laptop; server stays timer-only.
+- 2026-08-06: Push failure is now **fatal** — `git push` failing exits 1 instead of logging
+  and continuing, and the unit gains `OnFailure =
+  hwc-service-failure-notifier@brain-vault-sync.service` (gated on
+  `hwc.monitoring.alerts.enable`). A swallowed push had left the hub silently stale while
+  divergence built up. The next timer cycle still retries (3552a4ce).
 - 2026-07-22: Auto-commit message now interpolates `${config.networking.hostName}` instead of the
   hardcoded `server` literal, so hub history is attributable per clone. Requires a rebuild on each
   host to take effect (message is baked at build time).

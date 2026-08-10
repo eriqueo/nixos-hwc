@@ -333,6 +333,14 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-07-16: `address-book-cmd` follows `hwc.mail.contacts.enable` — `mail-addresses`
+  (khard CRM rolodex + notmuch history) when contacts is on, plain
+  `notmuch address` otherwise (b4f466e6).
+- 2026-07-09: Triage folders + set-bucket keybinds (unified-triage Phase 2) —
+  taxonomy-generated `triage/*` virtual folders (tree-nested, inbox-scoped),
+  `<Space>tu/tr/tn` replace-set binds and `<Space>gU/gR/gN` go-tos (d31fdad3).
+  `parts/tags.nix` now derives from the new `domains/mail/taxonomy/` registry
+  instead of carrying its own vocabulary (02c72431).
 - 2026-06-26: folder nav `<C-j>/<C-k>` → `<A-j>/<A-k>` (next/prev-folder). Ctrl is now the workbench/zellij layer (Ctrl+j/k cycle tabs), so in-app side-column nav moved to Alt to avoid the collision.
 - 2026-06-26: which-key footer legend (`esc close · ⌫ back`) on the bottom border + Backspace walks up one chord level (forked aerc, app/whichkey.go + app/aerc.go); new themeable `whichkey_legend` style.
 - 2026-06-26: which-key popover redesign (forked aerc) — compact content-sized box (was edge-to-edge), `key → label` rows with nvim arrow, group keys read `domain +N` (e.g. `buffer +7`); styleset reworked to a raised slate card (bg3, lighter than terminal) with an inverted cream title chip and copper border, plus interior padding + a minimum box size. Code in `github:eriqueo/aerc` (app/whichkey.go, app/aerc.go); colors in `parts/appearance.nix`.

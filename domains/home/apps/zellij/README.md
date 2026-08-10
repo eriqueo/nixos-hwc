@@ -19,4 +19,11 @@ meta-leader which-key plugin when the unified keymap grammar is present.
 - `parts/tabs.nix` — canonical hub + tool tab set (order = GoToTab indices)
 
 ## Changelog
+- 2026-07-12: `refinery` added to `parts/tabs.nix` hubs (last hub, matching its
+  hub `order=45`) — tab order is now 1 hwc · 2 crm · 3 datax · 4 server · 5 brief ·
+  6 refinery · 7 tasks · 8 cal · 9 files · 10 mail · 11 edit (8cc83fb1).
+- 2026-07-11: `crm` hub tab added second (matching hub `order=15`), shifting every
+  later `GoToTab` index; `parts/layout.nix` updated in the same commit and the
+  keymap generator re-derives its indices from `tabs.nix`, so the two can't drift
+  (f73fa9b3).
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

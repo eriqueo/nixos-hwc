@@ -51,6 +51,13 @@ domains/mail/calendar/
 
 ## Changelog
 
+- **2026-07-16**: `radicale.username` default `cal` → `eric` — calendar and tasks
+  consolidate onto one Radicale principal so a single iPhone CalDAV account
+  carries calendar + reminders (and one CardDAV account the CRM rolodex). The
+  earlier split existed to stop cross-discovery; this pair pins
+  `collections = ["migrated"]`, so the only remaining leak is the tasks pair
+  seeing the VTODO-filtered (empty) calendar collection. Needs a matching
+  `eric:<password>` line in the radicale-htpasswd secret (7485823d).
 - **2026-07-10**: Booking accuracy. Set khal `default_calendar = migrated`
   (the VEVENT calendar the hwc-crm availability endpoint reads) when Radicale is
   on, so quick-adds never prompt. Added a `busy` command (`home.packages`):

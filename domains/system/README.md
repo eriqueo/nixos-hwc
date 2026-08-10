@@ -38,6 +38,15 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-07-17: mcp: `hwc_refinery` gained the write verbs (`intake`, `amend`,
+  `stage`, `promote`, `detail`) (4b087a6c), and its raw item reader picked up the
+  engine's legacy-field migration plus untriaged-before-state bucketing
+  (55636756, 14a61fe4). See `mcp/README.md` for the full entries.
+- 2026-07-12/13: mcp: new `hwc_today` gateway tool behind the briefing's TODAY
+  panel — stable system-item ids (numbers stripped before slugging), a
+  `PathExistsGlob` dispatch trigger, and RW on `morning-briefing/output` for the
+  gateway unit (381577fe, dfcb5fba, 7c268f35, 1c75f752). `hwc_refinery` triage +
+  write verbs and the leads source class landed alongside (94da5287, 8cc83fb1).
 - 2026-07-11: usb-automount: mount root now `config.hwc.paths.removableMedia` (default `/mnt`, unchanged) instead of a hardcoded `/mnt` literal (Law 3 migration).
 - 2026-07-06: mcp: website tmpfiles/ReadWritePaths repointed to /opt/business/website-site (website eviction).
 - 2026-07-06: mcp: hwc_morning_status rewritten as a pure reader of briefing.json (one producer per fact, Doctrine §0.8) — no longer computes health/mail/storage/calendar itself; flags >26h staleness.

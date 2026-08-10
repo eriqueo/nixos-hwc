@@ -20,9 +20,11 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ```
 domains/home/
-├── apps/    # 50 app modules, auto-imported via readDir (index.nix per app,
+├── apps/    # 58 app modules, auto-imported via readDir (index.nix per app,
 │            # optional sys.nix system half, parts/ for split config)
-├── core/    # shell/ (CLI env, zsh, aliases — parts/), development/, xdg-dirs.nix
+├── core/    # shell/ (CLI env, zsh, aliases — parts/), development/,
+│            # repo-hooks/, xdg-dirs.nix
+├── keymap/  # One grammar → per-app keybinding generators (parts/to-*.nix)
 └── theme/   # palettes/ (deep-nord, gruv, hwc), templates/gtk.nix, fonts/
 ```
 
@@ -44,6 +46,27 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-08-06: core/ gained `repo-hooks/` — `hwc.home.core.repoHooks` installs the
+  tracked `.githooks/` and self-heals `core.hooksPath` at activation (90f17da3).
+  apps/hyprland grew a SUPER+? keybind legend generated from the binds themselves
+  (0e264779). apps/claude-code self-heals its gate-hook wiring into
+  `settings.json` at activation (02b0895b) and picks up the v12.6 hook set
+  (e0fe528a).
+- 2026-07-30: apps/blender pins the official upstream binary via a new
+  `parts/package.nix` instead of building from source (dda73c70).
+- 2026-07-29: apps/codex pinned CLI 0.101.0 → 0.146.0 (static musl) (0508b01e);
+  engineering-principles rev-3 propagation through claude-code (edcb6413).
+- 2026-07-19: apps/claude-code syncs the principle-enforcement hooks via
+  `shareConfig.items` (9c51be99).
+- 2026-07-17: new `apps/pi/` — declarative pi coding agent wired to DataX DX1
+  (dfd9eabf); core/shell declares the `lil-box` ssh host through cloudflared
+  Access (6751845a).
+- 2026-07-12: apps/zellij tab set gained the `refinery` hub (8cc83fb1), after
+  `crm` on 2026-07-11 (f73fa9b3) — keymap indices follow from `tabs.nix`.
+- 2026-07-11: apps/yazi filetype rules use `url =` not the removed `name =`
+  (67c01e5a); apps/firefox `configPath` pinned to the legacy `.mozilla/firefox`
+  (954203d1); core/shell fzf widget option renames gated on `nixosApiVersion`
+  (22afa751, 17b160f4).
 - 2026-07-11: Law 3 migration — shell + scraper `nixosPath` standalone-HM fallback now derives from `config.home.homeDirectory` (gpu-screen-recorder escape-hatch precedent) instead of a `/home/eric` literal; hyprland session.nix stale commented-out screenshots fallback removed; yazi keymap.nix dead `? "/mnt/media"` default param dropped (index.nix always passes `mediaRoot`). Rendered values unchanged.
 
 - 2026-07-06: shell: web-build alias repointed to /opt/business/website-site (website eviction).
@@ -164,16 +187,17 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 Options live under `hwc.home.apps.<name>.*`; defaults come from the role
 home halves (`profiles/base/home.nix`, `profiles/desktop/home.nix`);
 per-machine adjustments go in `machines/<host>/home.nix`. Current set
-(52 modules):
+(58 modules):
 ```
-aider, analysis, betterbird, blender, bottles-unwrapped, calcure,
-calcurse, chromium, claude-code, claude-desktop, codex, dt, dxlog,
-freecad, gemini-cli, google-cloud-sdk, gpg, herdr, hyprland, imv,
-ipcalc, jellyfin-media-player, kitty, librewolf, localsend, markitdown,
+aider, analysis, blender, bottles-unwrapped, calcure, calcurse, chromium,
+claude-code, claude-desktop, codex, dt, dxlog, exodos, firefox, freecad,
+gemini-cli, google-cloud-sdk, gpg, gpu-screen-recorder, herdr, hyprland,
+imv, ipcalc, jellyfin-media-player, khalt, kitty, localsend, markitdown,
 mpv, n8n, neomutt, nvim, obsidian, onlyoffice-desktopeditors, opencode,
-proton-authenticator, proton-mail, proton-pass, qbittorrent, qutebrowser,
-scraper, slack, slack-cli, swaync, thunar, thunderbird, tmux, transcript-formatter,
-tuxedo, wasistlos, waybar, whisper-cpp, xournalpp, yazi
+pave-query-builder, pi, proton-authenticator, proton-mail, proton-pass,
+qbittorrent, qutebrowser, scraper, slack, slack-cli, swaync, tetro,
+thunar, tmux, todui, tuxedo, wasistlos, waybar, whisper-cpp, workbench,
+xournalpp, yazi, zellij
 ```
 Update this list whenever `domains/home/apps/` gains or loses a module.
 

@@ -57,23 +57,6 @@ This directory contains production-ready n8n workflow JSON files that can be imp
 
 ---
 
-### 03-system-monitoring-alertmanager-router.json
-**Purpose:** Central alert processing with enrichment and smart routing
-
-**Trigger:** Webhook `/webhook/alertmanager` (already configured)
-
-**Features:**
-- Receives alerts from Prometheus Alertmanager
-- Parses and deduplicates alerts (1-hour window)
-- Branches by category (system/service/container) for enrichment
-- Queries Prometheus, systemctl, or podman inspect for context
-- Generates rich notifications with remediation suggestions
-- Routes by severity: P5 → Slack + ntfy, P4 → ntfy, P3 → ntfy
-
-**Service Configuration:** Already configured in Alertmanager
-
----
-
 ### 04-ai-ml-service-orchestration.json
 **Purpose:** Coordinate Immich photo processing, Ollama enrichment, and scheduled AI tasks
 
@@ -91,25 +74,6 @@ This directory contains production-ready n8n workflow JSON files that can be imp
 - Provides AI enrichment endpoint for other workflows via Ollama
 - Triggers scheduled Immich maintenance jobs
 - Sends notifications to ntfy (hwc-ai, P1-P2)
-
----
-
-### 05-cross-service-health-monitor.json
-**Purpose:** Proactive health monitoring with automated remediation
-
-**Trigger:** Schedule every 5 minutes
-
-**Features:**
-- Health checks for: Jellyfin, Immich, Frigate, ntfy, n8n, Prometheus, Alertmanager
-- Systemd checks for: Caddy, Tailscale
-- Parallel execution of all checks
-- Automatic remediation attempts (service restart via Script Executor)
-- **Critical service protection:** Never auto-restarts caddy, sshd, tailscaled
-- Detects restart loops (>3 restarts in 10 minutes)
-- Smart notifications:
-  - Auto-fix successful: ntfy (hwc-monitoring, P3)
-  - Auto-fix failed: ntfy + Slack (hwc-alerts, P4)
-  - Manual intervention needed: ntfy + Slack (hwc-critical, P5)
 
 ---
 
@@ -365,7 +329,7 @@ curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/estimate-push \
 
 ---
 
-### 10-calculator-lead.json (work_calculator_lead)
+### 09-calculator-lead.json (work_calculator_lead)
 **Purpose:** Process bathroom remodel calculator submissions, create full JobTread customer/job records, archive to Postgres, and notify via Slack
 
 **Workflow ID:** `SoLwmxgkMILrOYbP`
@@ -458,7 +422,7 @@ curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/calculator-lead
 
 ---
 
-### 09-lead-response.json (work_lead_response)
+### 10-lead-response.json (work_lead_response)
 **Purpose:** Automated lead response workflow with push notifications via self-hosted ntfy
 
 **Trigger:** Webhook `POST /webhook/new-lead`
@@ -517,6 +481,16 @@ curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/new-lead \
 
 ---
 
+### 12-voice-log.json (work_voice_log)
+**Purpose:** Turn a dictated jobsite transcript into a JobTread daily log
+
+**Trigger:** Webhook `POST /webhook/daily-log` (responseMode: responseNode)
+
+Undocumented until this entry; exported from the n8n UI on 2026-03-28 (eacd981f)
+and active there. Read the JSON for the current node graph.
+
+---
+
 ## Import Instructions
 
 1. Access n8n: `https://hwc-server.ocelot-wahoo.ts.net:2443`
@@ -565,5 +539,22 @@ See the main implementation guide for curl test commands for each workflow.
 
 ---
 
-**Last Updated:** 2026-03-24
+## Changelog
+
+- 2026-07-15: `02-frigate-surveillance-intelligence.json` — Discord alerts now carry
+  an iOS-playable HLS link, and the export was re-serialized in n8n's current key
+  order (19c98a04).
+- 2026-08-10: Doc-only reconciliation against the files actually present — dropped
+  the `03-system-monitoring-alertmanager-router` and `05-cross-service-health-monitor`
+  sections (both deleted 2026-07-09, see the note at the top), un-swapped the
+  `09`/`10` headings to match `09-calculator-lead.json` / `10-lead-response.json`,
+  and added the missing `12-voice-log.json` entry.
+- 2026-07-09: Retired the three monitoring/alert workflows — see the note at the
+  top of this file.
+- 2026-03-28: `12-voice-log.json` (work_voice_log) exported into the directory
+  (eacd981f).
+
+---
+
+**Last Updated:** 2026-08-10
 **Author:** Eric (with Claude assistance)

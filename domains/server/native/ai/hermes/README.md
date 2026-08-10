@@ -126,6 +126,10 @@ into this module is pending.
 
 ## Changelog
 
+- **2026-08-10** — `parts/bootstrap/README.md` gained a Changelog section
+  recording the 2026-05-29 `HermesDeployError` rewrite (explicit fields instead
+  of parameter-property shorthand, which `--experimental-strip-types` does not
+  synthesize). Docs only.
 - **2026-06-09** — Caddy routes migrated to name-based vhosts under the shared
   `*.hwc.iheartwoodcraft.com` wildcard cert: app at `hermes.hwc.iheartwoodcraft.com`
   (was `:25443`) and the market-trials dashboard at

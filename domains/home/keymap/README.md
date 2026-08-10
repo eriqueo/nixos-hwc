@@ -92,6 +92,10 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 
 ## Changelog
 
+- 2026-07-11 — `grammar.nix` meta layer gained the CRM hub (`r` → `hub-crm`,
+  target `crm`), and `parts/to-zellij.nix`'s tab-index comment was updated to the
+  new order (1 hwc · 2 crm · 3 datax · …). The indices themselves are derived from
+  `apps/zellij/parts/tabs.nix`, so only the comment needed the edit (f73fa9b3).
 - 2026-06-26 — **Ctrl = workbench layer; in-app side-nav → Alt.** zellij now
   binds `Ctrl j`/`Ctrl k` to cycle tabs directly (plus `Ctrl Space` = meta card),
   so Ctrl is the workbench/meta layer. In-app two-column nav moved off Ctrl onto

@@ -33,6 +33,8 @@ mail/
 │       ├── files.nix          # keychain.json + setup script
 │       ├── runtime.nix        # Env vars, PATH handling
 │       └── service.nix        # systemd user service unit
+├── contacts/index.nix         # khard + vdirsyncer CardDAV pair on the CRM rolodex
+├── taxonomy/                  # Pure data: tag vocabulary, triage buckets, sender rules
 ├── calendar/
 │   ├── index.nix              # khal + vdirsyncer integration; extraVdirsyncerPairs option
 │   └── parts/
@@ -73,6 +75,18 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-07-31: notmuch self-addressed shield is **structural**, not a subject
+  allowlist — any mail from an HWC address to an HWC address in `proton/Sent/**`
+  keeps `+inbox -archive -sent`. The old
+  `subject:"weekly brief" OR "Weekly Intelligence Digest"` match meant every new
+  kind of self-sent mail silently archived until its subject was added and the
+  config rebuilt. Accepted trade: notmuch's `to:` also matches Cc, so outgoing
+  mail you Cc'd yourself on stays in the inbox (752a05c4).
+- 2026-07-16: New `contacts/` module — khard + a vdirsyncer CardDAV pair against
+  the CRM rolodex; aerc's address-book command repointed at it (b4f466e6).
+  Calendar consolidated onto the single `eric` Radicale principal, retiring the
+  separate `cal` user, so one iPhone CalDAV account carries calendar + reminders
+  (7485823d).
 - 2026-07-11: mbsync/afew: maildir-root fallback literal `/home/eric/400_mail` replaced with the `${config.home.homeDirectory}/400_mail` derivation (aerc precedent; Law 3 migration, rendered value unchanged).
 - 2026-07-09 (b): aerc joins triage (unified-triage Phase 2) — `triage/*`
   virtual folders (taxonomy-generated, tree-nested, inbox-scoped) +

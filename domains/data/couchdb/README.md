@@ -73,4 +73,8 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-03-31: Secret lookup follows the generated `hwc.secrets.api` attribute
+  names — `hwc.secrets.api."couchdb-admin-username"` / `."couchdb-admin-password"`
+  with an `or null` fallback, replacing the old `couchdbAdmin*File` camelCase
+  attrs (17b9283b).
 - 2026-03-25: Created README per Law 12

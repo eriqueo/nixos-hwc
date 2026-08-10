@@ -10,26 +10,49 @@ User application configuration via Home Manager.
 ## Structure
 ```
 apps/
-├── aerc/           # Email client
 ├── aider/          # AI coding assistant
-├── blender/        # 3D modeling
-├── chromium/       # Browser
+├── blender/        # 3D modeling (pinned upstream binary, parts/package.nix)
+├── chromium/       # Browser (default http/https handler)
+├── firefox/        # Hardened browser (replaced librewolf, 2026-07-06)
 ├── freecad/        # CAD software
 ├── gpu-screen-recorder/  # Call/screen recording (gsr-toggle script + sys.nix capture wrapper)
 ├── hyprland/       # Wayland compositor
+├── khalt/          # Calendar TUI fork (external flake input; HWC translator)
 ├── kitty/          # Terminal emulator
-├── librewolf/      # Privacy browser
 ├── mpv/            # Media player
 ├── obsidian/       # Note-taking
+├── pi/             # pi coding agent wired to DataX DX1
 ├── xournalpp/      # PDF annotator / handwritten notes
 ├── waybar/         # Status bar
 ├── tuxedo/         # todo.txt TUI (keyboard-driven task manager)
 ├── todui/          # VTODO task TUI (external flake input; HWC adapter only)
 ├── pave-query-builder/  # Pave/JobTread API query TUI+CLI (external flake input; HWC adapter only)
-└── ... (30+ apps)
+├── workbench/      # zellij-hosted hub workspace
+├── zellij/         # Multiplexer + workbench layout/tab set
+└── ... (58 apps total — see domains/home/README.md for the full list)
 ```
 
 ## Changelog
+- 2026-08-10: Structure block reconciled with the tree — `aerc/` (deleted
+  2026-06-11, lives at `domains/mail/aerc/`) and `librewolf/` (migrated to
+  `firefox/` 2026-07-06) removed; khalt, pi, workbench, zellij added; the
+  "30+ apps" tail corrected to 58.
+- 2026-08-06: claude-code self-heals its gate-hook wiring into `settings.json`
+  at activation (02b0895b) and tracks the charter v12.6 hook set (e0fe528a);
+  hyprland gained a SUPER+? keybind legend generated from the binds (0e264779).
+- 2026-07-30: blender pins the official upstream binary — no source build
+  (dda73c70).
+- 2026-07-29: codex pinned CLI 0.101.0 → 0.146.0, static musl (0508b01e).
+- 2026-07-19: claude-code syncs the principle-enforcement hooks through
+  `shareConfig.items` (9c51be99).
+- 2026-07-17: new `pi/` module — declarative pi coding agent wired to DataX DX1
+  (dfd9eabf).
+- 2026-07-12: zellij tab set gained the `refinery` hub (8cc83fb1); `crm` landed
+  the day before (f73fa9b3).
+- 2026-07-11: yazi filetype rules use `url =` not `name =` (67c01e5a); firefox
+  `configPath` pinned to legacy `.mozilla/firefox` (954203d1).
+- 2026-07-06: 52 module READMEs added for the Law 12 v12.4 hybrid-scope
+  burn-down (bda9087f); librewolf → firefox migration (1855a16f).
 - 2026-06-19: **pave-query-builder — new external-flake app + HWC adapter**. Trap-safe Pave (JobTread API) query builder (TUI + CLI), its own repo at `~/600_apps/pave-query-builder` consumed as the `pave-query-builder` flake input (same shared-remote model as todui/khalt/workbench). Thin translator imports the app's `homeManagerModules.pave-query-builder` and feeds it the jt-mcp schema path when present; mutation guardrail left at the app default (HWC test org only). Enabled in `profiles/desktop/home.nix`. Launcher: `kitty -e pave-query`.
 - 2026-06-19: **zellij — `session_serialization false`**. zellij's default serializes sessions to disk for resurrection; combined with the default `on_force_close "detach"`, that's why a closed workbench window left a live `--server` process that could resurrect STALE. Since workbench is fully rebuilt from its KDL layout on every open, nothing is worth resurrecting — disabling serialization makes every recreate (incl. `wb-reload`/SUPER+W) structurally fresh. `on_force_close` deliberately left at `detach` to keep the accidental-close reattach safety net.
 - 2026-06-19: **workbench — `wb-reload` promoted from shell alias to a real binary**. The SUPER+W keybind now runs `kitty -e wb-reload` to reload the zellij session fresh every launch (kill named session → recreate), but `kitty -e` execs its arg directly and can't see zsh aliases, so the old alias silently did nothing. Added a `writeShellScriptBin "wb-reload"` to `apps/workbench/index.nix` (on `home.packages`) as the single source of truth; removed the duplicate alias from `core/shell/parts/aliases.nix`. Resolves from both the keybind and interactive shells.
