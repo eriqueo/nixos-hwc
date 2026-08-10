@@ -17,13 +17,22 @@ data/
 ├── index.nix       # Domain aggregator
 ├── README.md       # This file
 ├── databases/      # PostgreSQL management
-├── backup/         # Rsync + Borg backup automation
+├── backup/         # Rsync backup automation
+├── borg/           # Borg repository + prune/check timers
+├── cloudbeaver/    # CloudBeaver DB admin UI container
 ├── storage/        # Storage mount management
 ├── syncthing/      # Bidirectional file sync over Tailscale
 └── couchdb/        # CouchDB for Obsidian LiveSync
 ```
 
 ## Changelog
+- 2026-07-11: Law 3 — syncthing `dataDir` and the backup `mountPoint` now derive
+  from `config.hwc.paths.*` instead of literals (24d869b5).
+- 2026-07-06: Boot-race fixes in `databases/` — postgres gained a
+  wait-for-gateway `ExecStartPre` and redis-main retries until the podman
+  gateway IP (10.89.0.1) exists (d2e74a97, 1474884a). Gotify decommission
+  removed `hwc.data.backup.notifications.gotify.*` and its branches from
+  local-backup (c3440a16).
 - 2026-07-05: Law 5 burn-down — added `HWC-EXCEPTION(Law 5)` annotation blocks (reason/justification/plan/revocable) to this domain's raw `oci-containers` module(s); infra-shaped containers are sanctioned exceptions to the mkContainer rule. Comments only, no behavior change.
 - 2026-06-09: Law 3 finish — databases per-DB backup outputDir default derives from `hwc.paths.user.home`. Drv hash unchanged.
 - 2026-04-12: Add syncthing module (hwc.data.syncthing.*), extracted from machine configs

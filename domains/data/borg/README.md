@@ -14,9 +14,7 @@ Borg deduplicating encrypted backup service. Provides block-level deduplication,
 ```
 domains/data/borg/
 ├── index.nix          # Options, Borg job config, integrity checks, CLI tools
-├── README.md          # This file
-└── parts/
-    └── scripts.nix    # Additional helper scripts
+└── README.md          # This file
 ```
 
 ## Namespace
@@ -80,6 +78,9 @@ hwc.data.borg = {
 
 ## Changelog
 
+- 2026-05-21: Deleted `parts/scripts.nix` (5da97868) — an unimported leftover
+  holding `mkBorgWrapper` / `mkListBackupsScript` helpers that `index.nix` had
+  already inlined. Structure block updated to match; no behaviour change.
 - 2026-04-04: Update failure notification ref from `hwc.alerts.enable` to `hwc.monitoring.alerts.enable` (domain redistribution)
 - 2026-04-03: Fix backup timeout — increase to 12h (compact on 240GB repo), raise compact threshold to 25%, exclude regenerable Prometheus/Jellyfin data
 - 2026-03-25: Created README per Law 12

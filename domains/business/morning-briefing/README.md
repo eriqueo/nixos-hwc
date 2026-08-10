@@ -18,18 +18,26 @@ Dashboard: `https://hwc-server.ocelot-wahoo.ts.net:16443`
 
 ```
 index.nix              # NixOS module: systemd service + timer
-run.sh                 # 5-step pipeline (see below)
+run.sh                 # Pipeline driver (see below)
+run-dispatch.sh        # Dashboard "⚡agent" dispatch runner
+triage-mail.sh         # Mail-triage step, split out of run.sh
 gather-live.mjs        # Step 1b: JobTread jobs/leads/overdue + CalDAV tasks via
                        #   the local MCP gateway (:6200/mcp, StreamableHTTP)
+gather-refinery.mjs    # Refinery board → action/active/hopper buckets
+gather-today.mjs       # Step 2c: injects the ranked TODAY queue
 CLAUDE.md              # Agent prompt: data schema, alert rules, MCP sources
 prompts/
   mail-triage.txt      # Mail triage prompt: bucket rules, known senders
+  today/               # Per-kind dispatch prompts (generic, refinery, system)
 dashboard/
   index.html           # Static SPA dashboard (dark theme, pull-to-refresh)
   briefing.json        # Symlink → ../output/briefing.json
+  reports/             # Symlink → /home/eric/.nixos/…/morning-briefing/output/reports
 output/
   briefing.json        # Final merged output (main + mail triage)
   mail-triage.json     # Step 2 output before merge
+  reports/             # Dispatch run reports, served through the dashboard vhost
+  dispatch-done/       # Reports moved here once the dispatch completes
 logs/
   run.log              # Rolling log (last 100 lines)
   mail-triage-raw.log  # Full raw Claude output from the last FAILED triage parse
@@ -144,6 +152,15 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-07-17** — `gather-refinery.mjs` now applies the engine's own legacy-field
+  migration when it reads item files raw (`genre`→`pipeline`,
+  `phaseStatus`→`state`, `phase`→`step`-or-`stage`). The engine migrates lazily on
+  load, so untouched items still carry the old names and were invisible to the
+  briefing (55636756).
+- **2026-07-17** — Untriaged items are bucketed by `pipeline` **before** `state`:
+  brain-sourced ideas carry `state: "parked"` by design (parked-for-triage), so
+  state-first bucketing filed the whole hopper as action items. Only an untriaged
+  item at `stage: "ready"` counts as an action (14a61fe4).
 - **2026-07-17** — `gather-refinery.mjs` skips items with `archived: true` —
   the refinery board's new exit ramp sweeps aged-out passed items off the
   working board, and they should leave the briefing's buckets at the same time.
