@@ -64,6 +64,11 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-08-10: Law 12 refresh of this domain's READMEs — `vault-sync` (2026-08-06
+  fatal-push change), `n8n/parts/{migrations,workflows,estimator-integration}`.
+  The workflows README was reconciled with the files actually present (two
+  retired workflows still documented, `09`/`10` headings swapped,
+  `12-voice-log.json` undocumented). Docs only.
 - 2026-08-06: vault-sync — push failure is now FATAL (`exit 1`) instead of a
   swallowed `|| echo`, and the unit carries `OnFailure = hwc-service-failure-notifier@`.
   A rejected push previously exited 0, so the hub could go stale for days with
