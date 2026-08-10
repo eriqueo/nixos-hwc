@@ -57,3 +57,12 @@ The actual installation runs as a one-shot systemd service
 
 Missing or invalid values produce a `CONFIG_INVALID` `HermesDeployError` with
 a clear list of which vars are missing.
+
+## Changelog
+
+- 2026-05-29: `HermesDeployError` declares its `code` / `detail` fields
+  explicitly instead of using TypeScript parameter-property shorthand, and the
+  code union moved out to an exported `HermesDeployErrorCode` type (3f4601be).
+  `--experimental-strip-types` only strips annotations — it will not synthesize
+  the field assignments the shorthand implies, so the shorthand form left both
+  fields undefined at runtime.

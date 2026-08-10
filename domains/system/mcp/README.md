@@ -493,6 +493,13 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-07-17**: `hwc_refinery`'s raw item reader (`extractItem` in
+  `tools/refinery.ts`) applies the engine's own legacy-field migration —
+  `genre`→`pipeline`, `phaseStatus`→`state`, `phase`→`step`-or-`stage`. The
+  engine migrates lazily on load, so untouched item files still carry the old
+  names and were invisible to the tool (55636756). Bucketing also now tests
+  `pipeline === untriaged` **before** `state`, since brain-sourced ideas are
+  `parked` by design and were being reported as action items (14a61fe4).
 - **2026-07-17**: `hwc_refinery` becomes a full remote surface for claude.ai:
   new verbs `intake` (capture an idea → hopper + brain backlog), `amend`
   (answer a parked item's asks and re-arm it), `stage` (mature an idea
