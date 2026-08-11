@@ -22,6 +22,7 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { Item, ItemStore } from "../contracts.js";
+import { contentId, normalizeText as norm } from "../identity.js";
 import { UNTRIAGED } from "../triage.js";
 
 export const BRAIN_PREFIX = "brain-";
@@ -35,29 +36,11 @@ export interface BrainIdea {
   goalId: string; // "(root)" or a goal folder name
 }
 
-/** Normalize a list line OR a raw idea to its comparison key: drop the leading
- *  "- ", strip html comments, trim, lowercase. Matching is case-insensitive so
- *  trivial capitalization drift doesn't orphan an item. */
-function norm(s: string): string {
-  return s
-    .replace(/^\s*-\s+/, "")
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .trim()
-    .toLowerCase();
-}
-
-/** Stable djb2 hash → base36. Deterministic across runs (no Date.now): an
- *  unchanged idea line keeps its id, which is what makes the sync idempotent. */
-function hash(s: string): string {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = (((h << 5) + h) ^ s.charCodeAt(i)) >>> 0;
-  return h.toString(36);
-}
-
 /** The id an idea text maps to. Hashing the normalized text means an edit to an
- *  idea is treated as a new idea (the old untriaged one is reconciled away). */
+ *  idea is treated as a new idea (the old untriaged one is reconciled away).
+ *  normalize+hash live in ../identity.ts (one producer, shared with /intake). */
 export function ideaId(text: string): string {
-  return `${BRAIN_PREFIX}${hash(norm(text))}`;
+  return contentId(BRAIN_PREFIX, text);
 }
 
 export function isBrainIdea(item: Item): boolean {

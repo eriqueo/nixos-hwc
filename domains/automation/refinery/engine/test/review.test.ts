@@ -189,6 +189,44 @@ test("runMorningReview opens a PR for each done card with a run dir, skips non-d
     const refactor = saved.find((s) => s.cardSlug === "refactor")!;
     assert.equal(refactor.prNumber !== null, true);
     assert.equal(refactor.prUrl !== null, true);
+
+    // Two-way pointer: the PR url lands in the card's `pr:` frontmatter (data,
+    // not prose), so the vault card and the PrReview both point at the PR.
+    const card1 = readFileSync(join(v.root, "_inbox/nightly_builds/estimator/01-refactor.md"), "utf8");
+    assert.match(card1, new RegExp(`^pr: ${refactor.prUrl}$`, "m"), "reviewed card carries pr:");
+    const tests = saved.find((s) => s.cardSlug === "tests")!;
+    const card2 = readFileSync(join(v.root, "_inbox/nightly_builds/estimator/02-tests.md"), "utf8");
+    assert.match(card2, new RegExp(`^pr: ${tests.prUrl}$`, "m"), "second card carries pr:");
+    // ...and the project mirror derives typed pr evidence from that field.
+    const proj = nightlyCardProjects(v.root)[0]!;
+    assert.ok(
+      proj.evidence?.some((e) => e.kind === "pr" && e.ref === refactor.prUrl),
+      "mirror item carries the pr as typed evidence",
+    );
+  } finally {
+    v.cleanup();
+  }
+});
+
+test("runMorningReview backfills a skipped card's pr: from its stored record", async () => {
+  const v = vaultWithDoneCards();
+  try {
+    const cfg: MorningReviewConfig = { vaultDir: v.root, defaultRepo: "/repo" };
+    const { github } = stubGitHub();
+    const { store, saved } = memStore();
+    // A record from a pass BEFORE the card write-back existed: prUrl stored,
+    // card frontmatter still empty.
+    saved.push({ id: "estimator/refactor", prUrl: "https://github.test/pr/42" } as PrReview);
+    const summary = await runMorningReview(cfg, {
+      facts: stubFacts(),
+      github,
+      store,
+      llm: stubLlm(GOOD_VERDICT),
+      clock: () => "2026-06-17T08:00:00Z",
+    });
+    assert.equal(summary.skipped, 1);
+    const card = readFileSync(join(v.root, "_inbox/nightly_builds/estimator/01-refactor.md"), "utf8");
+    assert.match(card, /^pr: https:\/\/github\.test\/pr\/42$/m, "skip path backfills the pointer");
   } finally {
     v.cleanup();
   }
@@ -318,6 +356,11 @@ test("runMorningReview graduates a project whose every step is done", async () =
     assert.equal(fin.length, 1);
     assert.equal((fin[0].payload as { goal: string }).goal, "done-proj");
     assert.equal(fin[0].state, "passed");
+    // Graduation is the recorded decision that the need was met — the derived
+    // outcome is distinct from the execution state (case-ledger law 3).
+    assert.equal(fin[0].outcome, "need_met", "graduated project outcome = need_met");
+    // Active (ungraduated) projects never claim need_met — checked in
+    // nightly-cards.test.ts where an active fixture exists.
     assert.ok(
       existsSync(join(v.root, "_inbox", "nightly_builds", "_finished", "done-proj", "01-a.md")),
     );

@@ -60,8 +60,34 @@ test("runNative finalizes a clean native run → item passed with executorResult
   assert.equal(last.step, "native");
   assert.equal(last.status, "passed");
   assert.equal(last.note, SUCCEEDED.detail);
+  // The pushed branch is typed evidence on the Item (data, not prose).
+  assert.equal(done.evidence?.length, 1);
+  assert.equal(done.evidence![0]!.kind, "branch");
+  assert.equal(done.evidence![0]!.ref, SUCCEEDED.branch);
+  assert.ok(done.evidence![0]!.at, "evidence carries the run timestamp");
   // persisted, not just returned
   assert.equal((await store.load("ar1"))!.state, "passed");
+});
+
+test("runNative re-run does not duplicate branch evidence (idempotent join)", async () => {
+  resetClock();
+  const store = new InMemoryItemStore();
+  await store.save(appItem());
+  const deps = { store, catalog: catalogStub, buildExecutor: () => stubExecutor(SUCCEEDED), clock: fixedClock };
+  await runNative({ id: "ar1" }, deps);
+  const again = await runNative({ id: "ar1" }, deps);
+  assert.equal(again.evidence?.length, 1, "same (kind, ref) appended once across re-runs");
+});
+
+test("runNative records no branch evidence when nothing was pushed", async () => {
+  resetClock();
+  const store = new InMemoryItemStore();
+  await store.save(appItem());
+  const done = await runNative(
+    { id: "ar1" },
+    { store, catalog: catalogStub, buildExecutor: () => stubExecutor(FAILED), clock: fixedClock },
+  );
+  assert.equal(done.evidence, undefined, "an unpushed branch name is not a join to the world");
 });
 
 test("runNative finalizes a failed native run → item failed", async () => {

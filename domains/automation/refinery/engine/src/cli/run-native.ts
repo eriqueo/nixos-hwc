@@ -12,7 +12,7 @@
 // payload, state passed/failed, a history entry).
 
 import { Clock } from "../runner.js";
-import { Executor, Item, ItemStore, Pipeline } from "../contracts.js";
+import { EvidenceRef, Executor, Item, ItemStore, Pipeline, withEvidence } from "../contracts.js";
 
 /** Minimal pipeline lookup port — the catalog narrowed to what runNative needs. */
 export interface PipelineLookup {
@@ -52,8 +52,13 @@ export async function runNative(
     const executor = deps.buildExecutor(pipeline, item);
     const result = await executor.run(item);
     const status = result.outcome === "succeeded" ? "passed" : "failed";
+    // Typed evidence, not prose (case-ledger): a pushed branch is a join to the
+    // world the Item must carry as data. withEvidence dedupes by (kind, ref) so
+    // a re-spooled run never duplicates the entry.
+    const evidence: EvidenceRef[] =
+      result.branch && result.pushed ? [{ kind: "branch", ref: result.branch, at }] : [];
     const done: Item = {
-      ...item,
+      ...withEvidence(item, evidence),
       payload: { ...basePayload, executorResult: result },
       state: status,
       history: [...item.history, { step: executor.id, status, at, note: result.detail }],

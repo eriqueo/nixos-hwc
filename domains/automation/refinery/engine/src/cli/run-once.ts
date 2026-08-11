@@ -7,12 +7,14 @@
 
 import { Clock, runPass } from "../runner.js";
 import {
+  EvidenceRef,
   ExecutorResult,
   GateModule,
   Item,
   Executor,
   ItemStore,
   Pipeline,
+  withEvidence,
 } from "../contracts.js";
 
 export interface PipelineDeps {
@@ -80,8 +82,20 @@ export async function runPipelineOnce(
     result.item.payload && typeof result.item.payload === "object"
       ? (result.item.payload as Record<string, unknown>)
       : {};
+  // Typed evidence, not prose (case-ledger): a pushed branch and a written
+  // spec/report are joins the Item carries as data. Deduped by (kind, ref).
+  const evidence: EvidenceRef[] = [];
+  if (integrated.branch && integrated.pushed) {
+    evidence.push({ kind: "branch", ref: integrated.branch, at });
+  }
+  const out = (integrated.output && typeof integrated.output === "object"
+    ? integrated.output
+    : {}) as Record<string, unknown>;
+  if (typeof out.specPath === "string" && out.specPath) {
+    evidence.push({ kind: "report", ref: out.specPath, at });
+  }
   const done: Item = {
-    ...result.item,
+    ...withEvidence(result.item, evidence),
     payload: { ...basePayload, executorResult: integrated },
     state: integrated.outcome === "succeeded" ? "passed" : "failed",
     history: [

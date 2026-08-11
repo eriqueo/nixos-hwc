@@ -106,6 +106,29 @@ test("intake never fails — a triage LLM error drops the idea into the hopper u
   }
 });
 
+test("intake is content-addressed: the same sentence converges onto ONE item", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"));
+  try {
+    const shell = createShell(cfg);
+    const id1 = await shell.intake("an engine that refines ideas");
+    // Capitalization/whitespace drift is the same sentence (normalized hash).
+    const id2 = await shell.intake("  An Engine That Refines Ideas ");
+    assert.equal(id1, id2, "re-submission returns the existing item's id");
+    assert.ok(id1.startsWith("in-"), "content-derived id, never slug-<epoch>");
+
+    const items = await shell.store.list();
+    assert.equal(items.length, 1, "no duplicate item minted");
+    const item = items[0]!;
+    assert.equal(item.pipeline, "project-ideation", "first triage preserved, not re-run");
+    const last = item.history.at(-1)!;
+    assert.equal(last.status, "entered");
+    assert.match(last.note!, /re-submitted via intake/);
+    assert.ok(last.at, "re-submission event carries a timestamp");
+  } finally {
+    cleanup();
+  }
+});
+
 test("intake of an unclassifiable sentence parks an untriaged item", async () => {
   const { cfg, cleanup } = setup(triageStub("nonsense-genre", 0.99));
   try {
@@ -929,6 +952,15 @@ test("a passed spec item with chain:true auto-creates a successor build item via
     // build item was created and kicked.
     const parent = (await shell.store.load("chain1"))!;
     assert.equal(parent.state, "passed", "spec pass");
+    // Case-ledger law 3: state stays `passed` (what the executor did); outcome
+    // records that the successor now carries the need forward.
+    assert.equal(parent.outcome, "superseded", "chained parent outcome = superseded");
+    assert.match(parent.history.at(-1)!.note!, /superseded by chain1-build/);
+    // The spec executor's written spec is typed evidence on the parent, as data.
+    assert.ok(
+      parent.evidence?.some((e) => e.kind === "report" && e.ref.endsWith("chain1-spec.md")),
+      "spec path recorded as report evidence",
+    );
 
     const successor = (await shell.store.load("chain1-build"))!;
     assert.ok(successor, "successor build item created with deterministic id");
@@ -1108,6 +1140,10 @@ test("sweepArchive: aged-out passed items archive, fresh ones stay, manual move 
     const freshAfter = (await shell.store.load("fresh1"))!;
     assert.equal(oldAfter.archived, true, "aged-out passed item archived");
     assert.ok(oldAfter.archivedAt, "archive stamped");
+    // Law 3: a timer is not a verified result — archiving by age records NO
+    // outcome (absent = unknown), and the history note says so.
+    assert.equal(oldAfter.outcome, undefined, "aged-out archive does not invent an outcome");
+    assert.match(oldAfter.history.at(-1)!.note!, /outcome stays unknown/);
     assert.notEqual(freshAfter.archived, true, "fresh passed item stays on the board");
 
     // A manual lane move revives the archived item.
@@ -1138,7 +1174,11 @@ test("sweepArchive: a chain-complete parent archives regardless of age", async (
     await shell.store.save(successor);
     await shell.sweepArchive();
 
-    assert.equal((await shell.store.load("par1"))!.archived, true, "parent archived: successor carries the story");
+    const parAfter = (await shell.store.load("par1"))!;
+    assert.equal(parAfter.archived, true, "parent archived: successor carries the story");
+    // The successor exists, so `superseded` is genuinely knowable — the sweep
+    // backfills it for parents chained before chainTo stamped outcomes.
+    assert.equal(parAfter.outcome, "superseded", "chain-complete archive records superseded");
     assert.notEqual((await shell.store.load("par1-build"))!.archived, true, "successor stays");
   } finally {
     cleanup();

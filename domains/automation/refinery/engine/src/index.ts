@@ -1,4 +1,5 @@
 export * from "./contracts.js";
+export * from "./identity.js";
 export * from "./errors.js";
 export * from "./pipeline.js";
 export * from "./runner.js";

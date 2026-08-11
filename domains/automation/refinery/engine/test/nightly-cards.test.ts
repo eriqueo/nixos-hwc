@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX } from "../src/sources/nightly-cards.js";
+import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, hasActiveStep, readProjectMode, setProjectMode, setCardPr, NB_PREFIX } from "../src/sources/nightly-cards.js";
 
 function vault(): { root: string; cleanup: () => void } {
   const root = mkdtempSync(join(tmpdir(), "refinery-nb-"));
@@ -120,6 +120,61 @@ test("project mode round-trips through _goal.md (default nightly)", () => {
     // flip back
     setProjectMode(v.root, "estimator", "nightly");
     assert.equal(readProjectMode(v.root, "estimator"), "nightly");
+  } finally {
+    v.cleanup();
+  }
+});
+
+// ── setCardPr + derived evidence (case-ledger: joins as data, not prose) ─────
+
+test("setCardPr writes/updates a card's pr: frontmatter and is idempotent", () => {
+  const v = vault();
+  try {
+    const path = join(v.root, "_inbox/nightly_builds/estimator/01-a.md");
+    // append: the fixture card has no pr: line
+    assert.equal(setCardPr(v.root, "estimator", "01-a.md", "https://github.test/pr/9"), true);
+    assert.match(readFileSync(path, "utf8"), /^pr: https:\/\/github\.test\/pr\/9$/m);
+    // idempotent: same value again leaves the file byte-identical
+    const before = readFileSync(path, "utf8");
+    assert.equal(setCardPr(v.root, "estimator", "01-a.md", "https://github.test/pr/9"), true);
+    assert.equal(readFileSync(path, "utf8"), before);
+    // replace: a different url overwrites the existing line, no duplicate
+    assert.equal(setCardPr(v.root, "estimator", "01-a.md", "https://github.test/pr/10"), true);
+    const after = readFileSync(path, "utf8");
+    assert.match(after, /^pr: https:\/\/github\.test\/pr\/10$/m);
+    assert.equal(after.match(/^pr:/gm)!.length, 1);
+    // missing card / traversal-ish args → false, no throw
+    assert.equal(setCardPr(v.root, "estimator", "99-nope.md", "u"), false);
+    assert.equal(setCardPr(v.root, "_finished", "01-a.md", "u"), false);
+    assert.equal(setCardPr(v.root, "estimator", "../01-a.md", "u"), false);
+  } finally {
+    v.cleanup();
+  }
+});
+
+test("the project mirror derives typed evidence from step run:/pr: fields", () => {
+  const v = vault();
+  try {
+    // Give the done step a dated run and a pr (as the morning review writes it).
+    const path = join(v.root, "_inbox/nightly_builds/estimator/01-a.md");
+    writeFileSync(
+      path,
+      "---\ntitle: 01-a\nstep: '1 of 3'\nstatus: done\nrun: runs/2026-06-17-estimator-a/\npr: https://github.test/pr/9\n---\nbody a",
+    );
+    const proj = nightlyCardProjects(v.root)[0];
+    assert.ok(proj.evidence, "mirror item carries evidence");
+    assert.deepEqual(
+      proj.evidence!.filter((e) => e.kind === "pr"),
+      [{ kind: "pr", ref: "https://github.test/pr/9", at: "2026-06-17" }],
+      "pr: frontmatter becomes a typed pr ref with the run date",
+    );
+    assert.ok(
+      proj.evidence!.some((e) => e.kind === "run" && e.ref === "runs/2026-06-17-estimator-a/"),
+      "run: frontmatter becomes a typed run ref",
+    );
+    // An ACTIVE project never claims need_met — outcome only derives from
+    // graduation (_finished/ location).
+    assert.equal(proj.outcome, undefined);
   } finally {
     v.cleanup();
   }

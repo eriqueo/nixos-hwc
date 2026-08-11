@@ -8,6 +8,7 @@ import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { Item } from "../contracts.js";
+import { intakeId } from "../identity.js";
 import { MarkdownItemStore } from "../stores/markdown-store.js";
 import { PipelineCatalog } from "../pipelines/catalog.js";
 import { loadDomains, domainOf } from "../domains.js";
@@ -89,10 +90,6 @@ function readBody(req: IncomingMessage): Promise<URLSearchParams> {
   });
 }
 
-function slug(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "item";
-}
-
 function redirectTo(res: ServerResponse, location: string): void {
   res.writeHead(303, { location });
   res.end();
@@ -167,7 +164,28 @@ export function createShell(cfg: HttpShellConfig) {
     writeFileSync(join(cfg.nativeRunNowSpoolDir, safe), `${safe}\n`);
   };
 
-  async function intake(text: string): Promise<void> {
+  async function intake(text: string): Promise<string> {
+    // Case-ledger law 1: the id is a content fingerprint (`in-<djb2(normalized
+    // text)>`, ../identity.ts — the discipline brain-ideas already used), never
+    // `slug-<Date.now()>`: the same sentence resubmitted converges onto ONE
+    // item instead of forking a duplicate forever. Legacy `slug-<epoch>` ids on
+    // disk stay valid — they are just ids and never collide with `in-`.
+    const id = intakeId(text);
+    const existing = await store.load(id);
+    if (existing) {
+      // Re-submission: record the event on the existing item (with timestamp)
+      // and return its id — never mint a duplicate, never re-triage.
+      await store.save({
+        ...existing,
+        history: [...existing.history, {
+          step: existing.step ?? existing.stage ?? "triage",
+          status: "entered",
+          at: cfg.clock(),
+          note: "re-submitted via intake — converged onto this item (content-addressed id)",
+        }],
+      });
+      return id;
+    }
     const enabled = catalog.enabled();
     const options = enabled.map((p) => ({ pipeline: p.pipeline, label: p.label }));
     // Triage is best-effort: if the LLM is unavailable (no key, claude binary
@@ -183,13 +201,13 @@ export function createShell(cfg: HttpShellConfig) {
     }
     const pipeline = catalog.get(decision.pipeline);
     const firstStep = pipeline?.gates[0] ?? "triage";
-    const id = `${slug(text)}-${Date.now()}`;
     await store.save(
       makeTriagedItem(id, text, decision, firstStep, cfg.clock, pipeline?.defaultTraits),
     );
     // Event-driven pipelines (e.g. incoming SR tickets) run on arrival; manual
     // pipelines (project-ideation) wait for the board's Run button.
     if (pipeline?.autoRun) void kickRun(id);
+    return id;
   }
 
   /** Hopper intake: capture a raw idea as UNTRIAGED (no triage — it stays an
@@ -222,13 +240,23 @@ export function createShell(cfg: HttpShellConfig) {
         const lastAt = item.history.length ? Date.parse(item.history[item.history.length - 1]!.at) : NaN;
         const agedOut = Number.isFinite(lastAt) && Number.isFinite(now) && now - lastAt >= afterMs;
         if (!chainComplete && !agedOut) continue;
+        // Record the outcome honestly (case-ledger law 3: state ≠ outcome).
+        // Chain-complete: the successor exists, so `superseded` is genuinely
+        // knowable — backfill it when unset (chainTo stamps it for new chains;
+        // this is the read-old/write-new half for items chained before that).
+        // Aged-out: a timer is NOT a verified result — the outcome stays
+        // whatever it already was (absent = unknown), stated in the note.
+        const outcome = item.outcome ?? (chainComplete ? "superseded" : undefined);
         await store.save({
           ...item,
+          outcome,
           archived: true,
           archivedAt: cfg.clock(),
           history: [...item.history, {
             step: item.step ?? "archive", status: "entered", at: cfg.clock(),
-            note: chainComplete ? "archived: chain complete (successor exists)" : "archived: passed and aged out",
+            note: chainComplete
+              ? "archived: chain complete (successor exists) — outcome superseded"
+              : `archived: passed and aged out — outcome stays ${item.outcome ?? "unknown"} (a timer is not a verified result)`,
           }],
         });
       }
@@ -293,6 +321,18 @@ export function createShell(cfg: HttpShellConfig) {
       history: [{ step: "triage", status: "entered", at: cfg.clock(), note: `chained from ${parent.id}` }],
     };
     await store.save(successor);
+    // The successor now carries this work forward, so the parent's outcome is
+    // knowable today: superseded (case-ledger law 3 — distinct from its
+    // `passed` execution state). Recorded once, here (chainTo is idempotent by
+    // successor id); sweepArchive only backfills pre-existing chains.
+    await store.save({
+      ...parent,
+      outcome: "superseded",
+      history: [...parent.history, {
+        step: parent.step ?? "chain", status: "entered", at: cfg.clock(),
+        note: `superseded by ${successorId}`,
+      }],
+    });
     // Kick the successor: for a native `build` successor this runs the gates
     // in-board then spools native execution (the existing native branch). A
     // missing repo doesn't crash — the native runner fails clean asking for one.
