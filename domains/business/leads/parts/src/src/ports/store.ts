@@ -13,10 +13,22 @@ import type { Lead, LeadStatus } from "../core/types.js";
 import type { Report } from "../core/report.js";
 
 export interface SaveResult {
-  /** True when a NEW row was written; false when the lead_id already existed. */
+  /** True when a NEW row was written; false when this person already had a case. */
   readonly inserted: boolean;
   /** SERIAL row id from hwc.calculator_leads (only present for inserted=true). */
   readonly rowId?: number;
+  /**
+   * The case this submission belongs to (D33). Equals `lead.id` on an insert;
+   * on a duplicate it is the id of the EXISTING case, and callers must use it
+   * for every downstream effect. Using `lead.id` instead would attach the
+   * report, JT graph and notification to a row that was never written.
+   */
+  readonly leadId: string;
+  /** The existing case's source + last submission time — only when !inserted. */
+  readonly existing?: {
+    readonly source: string;
+    readonly receivedAt: string;
+  };
 }
 
 export interface RecentQuery {
@@ -33,6 +45,12 @@ export interface JtIdUpdate {
 }
 
 export interface LeadStore {
+  /**
+   * Assert the store satisfies the D33 case-identity contract. Called once at
+   * boot; throwing here must stop the service rather than degrade it.
+   */
+  verifySchema(): Promise<void>;
+
   /**
    * Idempotent insert. ON CONFLICT (lead_id) DO NOTHING.
    *

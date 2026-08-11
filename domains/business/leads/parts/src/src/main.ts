@@ -30,6 +30,17 @@ import type { CustomerEmailClient } from "./ports/customer-email.js";
 
 const MAX_BODY_BYTES = 64 * 1024;
 
+/**
+ * D33 — how long a same-source resubmission counts as "already acknowledged".
+ * Chelsea Heveran's two calculator runs were 3 seconds apart; a duplicate
+ * submission is minutes-scale, not months-scale. Kept short deliberately so a
+ * returning customer with a new project still receives their summary — the
+ * fingerprint identifies the person, and suppressing on identity alone would
+ * silently stop emailing repeat customers, a worse failure than the one this
+ * closes because nobody would ever see it.
+ */
+const DUP_ACK_WINDOW_HOURS = 48;
+
 function readRawBody(req: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
@@ -57,7 +68,10 @@ function writeJson(res: ServerResponse, status: number, body: unknown): void {
   res.end(payload);
 }
 
-function main(): void {
+// async as of D33: the boot-time schema precondition must resolve BEFORE
+// server.listen, or the service accepts captures during the window in which
+// it cannot yet prove it can dedupe them.
+async function main(): Promise<void> {
   const config = loadConfig();
   const log = makeStderrLogger({
     minLevel: config.logLevel,
@@ -96,6 +110,19 @@ function main(): void {
     dsn: config.postgresDsn,
     log: log.child({ component: "postgres" }),
   });
+
+  // D33: refuse to run half-alive. Without hwc-crm migration 009 this service
+  // still accepts leads perfectly well — it just silently mints a new case per
+  // submission again, and nobody notices until a customer gets the same email
+  // twice. A dependency that fails invisibly has to be checked at boot.
+  try {
+    await store.verifySchema();
+  } catch (err) {
+    log.error("schema precondition failed", {
+      err: err instanceof Error ? err.message : String(err),
+    });
+    process.exit(1);
+  }
 
   const reportStore: ReportStore = makePostgresReportStore({
     dsn: config.postgresDsn,
@@ -255,10 +282,12 @@ function main(): void {
         // calculator submission with a reportId — only calculator leads
         // have a customer-facing report URL.
         const report = buildReportFromLead(lead);
+        let saved;
         try {
-          await store.save(lead, report);
-          reqLog.info("lead persisted", {
-            leadId: lead.id,
+          saved = await store.save(lead, report);
+          reqLog.info(saved.inserted ? "lead persisted" : "lead deduped into existing case", {
+            leadId: saved.leadId,
+            submittedId: lead.id,
             reportId: report?.id,
           });
         } catch (err) {
@@ -272,6 +301,35 @@ function main(): void {
           return;
         }
 
+        // ── 5a. Which case did this submission land on? (D33) ──
+        // Everything downstream — JT, notify, the customer email, the response
+        // body — must address the RESOLVED case. lead.id names a row that was
+        // never written when this was a repeat submission.
+        const caseLead = { ...lead, id: saved.leadId };
+        const caseId = saved.leadId;
+
+        // Re-sending the T+0 acknowledgment is the thing the customer actually
+        // experiences as "you emailed me twice", so it is gated on more than
+        // just "we've seen this address". A fingerprint identifies a PERSON,
+        // not a project: the same customer starting a genuinely new job months
+        // later must still get their summary, or the site looks broken. Skip
+        // only a same-source resubmission inside the window.
+        const hoursSince = saved.existing
+          ? (Date.now() - Date.parse(saved.existing.receivedAt)) / 3_600_000
+          : Infinity;
+        const suppressEmail =
+          saved.existing !== undefined
+          && saved.existing.source === lead.payload.source
+          && hoursSince < DUP_ACK_WINDOW_HOURS;
+
+        if (suppressEmail) {
+          reqLog.info("suppressing duplicate T+0 ack", {
+            leadId: caseId,
+            source: lead.payload.source,
+            hoursSinceLast: Math.round(hoursSince * 10) / 10,
+          });
+        }
+
         // ── 6. JT graph creation (Phase 2.4) ──
         // Idempotent on the row's existing JT IDs; saves whatever was
         // created back to the DB even on partial failure so a future
@@ -282,7 +340,14 @@ function main(): void {
         let nextStatus: "complete" | "pending_jt" | "validated" = "validated";
 
         if (jt) {
-          const result = await jt.createGraph(lead, {});
+          // On a resubmission the case may already own a JT graph. createGraph
+          // is idempotent on the ids it is GIVEN, so hand it what the existing
+          // case has — passing {} would build a second JobTread job for the
+          // same customer, the same duplication one layer over.
+          const priorIds = saved.inserted
+            ? {}
+            : ((await store.byId(caseId).catch(() => undefined))?.jt ?? {});
+          const result = await jt.createGraph(caseLead, priorIds);
           jtIds = {
             ...(result.ids.accountId  ? { accountId:  result.ids.accountId  } : {}),
             ...(result.ids.locationId ? { locationId: result.ids.locationId } : {}),
@@ -294,7 +359,7 @@ function main(): void {
             jtError = result.error;
             jtRetryable = result.retryable;
             reqLog.warn("jt graph partial", {
-              leadId: lead.id,
+              leadId: caseId,
               failedAt: result.failedAt,
               retryable: result.retryable,
               ids: jtIds,
@@ -303,10 +368,10 @@ function main(): void {
 
           // Persist whatever happened.
           try {
-            await store.updateJtIds(lead.id, jtIds, nextStatus);
+            await store.updateJtIds(caseId, jtIds, nextStatus);
           } catch (err) {
             reqLog.error("jt id update failed", {
-              leadId: lead.id,
+              leadId: caseId,
               err: err instanceof Error ? err.message : String(err),
             });
           }
@@ -315,7 +380,7 @@ function main(): void {
         // ── 7. hwc-notify ping ──
         // Pass the lead with its newly minted JT IDs so the
         // notification body can include the JT job deep-link.
-        const leadWithJt = { ...lead, jt: jtIds };
+        const leadWithJt = { ...caseLead, jt: jtIds };
         let notifyOk = false;
         let notifyMsg: string | undefined;
         try {
@@ -324,50 +389,53 @@ function main(): void {
           notifyOk = r.ok;
           notifyMsg = r.ok ? undefined : r.message;
           if (r.ok) {
-            try { await store.markNotified(lead.id); } catch { /* logged separately */ }
-            reqLog.info("hwc-notify ping ok", { leadId: lead.id, notificationId: r.notificationId });
+            try { await store.markNotified(caseId); } catch { /* logged separately */ }
+            reqLog.info("hwc-notify ping ok", { leadId: caseId, notificationId: r.notificationId });
           } else {
-            reqLog.warn("hwc-notify ping failed", { leadId: lead.id, err: r.message });
+            reqLog.warn("hwc-notify ping failed", { leadId: caseId, err: r.message });
           }
         } catch (err) {
           notifyOk = false;
           notifyMsg = err instanceof Error ? err.message : String(err);
-          reqLog.warn("hwc-notify ping threw", { leadId: lead.id, err: notifyMsg });
+          reqLog.warn("hwc-notify ping threw", { leadId: caseId, err: notifyMsg });
         }
 
         // ── 8. Customer email ──
         let emailOk = false;
         let emailMsg: string | undefined;
-        if (emailClient) {
+        if (emailClient && !suppressEmail) {
           try {
             const rendered = renderCustomerEmail(leadWithJt);
             const r = await emailClient.send(rendered);
             emailOk = r.ok;
             emailMsg = r.ok ? undefined : r.message;
             if (r.ok) {
-              try { await store.markEmailSent(lead.id); } catch { /* logged separately */ }
-              reqLog.info("customer email sent", { leadId: lead.id, messageId: r.messageId });
+              try { await store.markEmailSent(caseId); } catch { /* logged separately */ }
+              reqLog.info("customer email sent", { leadId: caseId, messageId: r.messageId });
             } else {
-              reqLog.warn("customer email failed", { leadId: lead.id, err: r.message });
+              reqLog.warn("customer email failed", { leadId: caseId, err: r.message });
             }
           } catch (err) {
             emailOk = false;
             emailMsg = err instanceof Error ? err.message : String(err);
-            reqLog.warn("customer email threw", { leadId: lead.id, err: emailMsg });
+            reqLog.warn("customer email threw", { leadId: caseId, err: emailMsg });
           }
         }
 
         writeJson(res, 202, {
-          leadId: lead.id,
+          leadId: caseId,
+          ...(saved.inserted ? {} : { duplicateOf: caseId, submittedId: lead.id }),
           source: lead.payload.source,
           status: nextStatus,
           receivedAt: lead.receivedAt,
           jt: jtIds,
           ...(jtError ? { jtError, jtRetryable } : {}),
           notify: { ok: notifyOk, ...(notifyMsg ? { message: notifyMsg } : {}) },
-          email: emailClient
-            ? { ok: emailOk, ...(emailMsg ? { message: emailMsg } : {}) }
-            : { ok: false, message: "disabled" },
+          email: !emailClient
+            ? { ok: false, message: "disabled" }
+            : suppressEmail
+              ? { ok: false, message: "suppressed: duplicate submission" }
+              : { ok: emailOk, ...(emailMsg ? { message: emailMsg } : {}) },
           message:
             "lead processed; partial-failure recovery via Phase 2.7 replay endpoint.",
         });
@@ -589,4 +657,8 @@ function main(): void {
   process.on("SIGINT", () => shutdown("SIGINT"));
 }
 
-main();
+main().catch((err: unknown) => {
+  // Nothing above this point has a logger guaranteed to exist, so stderr it is.
+  console.error("hwc-leads failed to start:", err);
+  process.exit(1);
+});

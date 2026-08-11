@@ -90,6 +90,37 @@ const INSERT_SQL = `
   RETURNING id
 `;
 
+/**
+ * D33 — resolve the CASE this submission belongs to before writing a row.
+ *
+ * hwc.lead_fingerprint is defined by hwc-crm's migration 009 and is the single
+ * definition of lead identity; calling it here rather than re-deriving
+ * lower(email) in TypeScript is the whole point, since a second copy of the
+ * normalisation rule is what let one person become two cases in the first
+ * place.
+ *
+ * Excludes archived cases (a returning customer opens a fresh one) and merged
+ * ones (superseded — resolving to a merged-away row would hand the caller a
+ * case that is no longer live).
+ */
+const RESOLVE_CASE_SQL = `
+  SELECT id::text AS id, source, received_at::text AS received_at
+    FROM hwc.leads
+   WHERE fingerprint = hwc.lead_fingerprint($1, $2)
+     AND fingerprint IS NOT NULL
+     AND archived_at IS NULL
+     AND merged_into IS NULL
+   ORDER BY received_at DESC
+   LIMIT 1
+`;
+
+const VERIFY_SCHEMA_SQL = `
+  SELECT to_regprocedure('hwc.lead_fingerprint(text,text)') IS NOT NULL AS has_fn,
+         EXISTS (SELECT 1 FROM information_schema.columns
+                  WHERE table_schema = 'hwc' AND table_name = 'leads'
+                    AND column_name = 'merged_into') AS has_merged_into
+`;
+
 const INSERT_REPORT_SQL = `
   INSERT INTO hwc.reports (report_id, lead_id, payload, template_id)
   VALUES ($1, $2::uuid, $3::jsonb, $4)
@@ -103,17 +134,34 @@ const SELECT_BY_ID_SQL = `
   WHERE id = $1::uuid
 `;
 
-export function makePostgresLeadStore(opts: PostgresLeadStoreOpts): LeadStore {
-  const pool = new pg.Pool({ connectionString: opts.dsn, max: 10 });
+/**
+ * Resolve-then-write, in one transaction (D33).
+ *
+ * The old fast path (no report → bare INSERT, no transaction) is gone on
+ * purpose: identity resolution and the write have to be atomic, or two
+ * simultaneous submissions both read "no case yet" and both insert. Lead
+ * volume is a handful a day, so a transaction per capture costs nothing.
+ *
+ * The report always attaches to the RESOLVED case, never to lead.id — on a
+ * duplicate, lead.id names a row that was never written, and a report hung off
+ * it would violate the FK or orphan the customer's estimate URL.
+ */
+async function saveOnce(pool: pg.Pool, lead: Lead, report?: Report): Promise<SaveResult> {
+  const contact = lead.payload.contact;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
 
-  pool.on("error", (err: Error) => {
-    opts.log.error("postgres pool error", { err: err.message });
-  });
+    const hit = (await client.query<{ id: string; source: string; received_at: string }>(
+      RESOLVE_CASE_SQL, [contact.email, contact.phone ?? null])).rows[0];
 
-  return {
-    async save(lead: Lead, report?: Report): Promise<SaveResult> {
-      const contact = lead.payload.contact;
-      const leadParams = [
+    let leadId = lead.id;
+    let inserted = false;
+
+    if (hit) {
+      leadId = hit.id;
+    } else {
+      const leadRes = await client.query<{ id: string }>(INSERT_SQL, [
         lead.id,                          // $1  id
         lead.payload.source,              // $2  source
         lead.status,                      // $3  status
@@ -123,33 +171,71 @@ export function makePostgresLeadStore(opts: PostgresLeadStoreOpts): LeadStore {
         contact.email,                    // $7  contact_email
         contact.phone ?? null,            // $8  contact_phone
         contact.notes ?? null,            // $9  contact_notes
-      ];
+      ]);
+      inserted = leadRes.rowCount !== 0;
+    }
 
-      // Fast path: no report → single statement, no tx ceremony.
-      if (!report) {
-        const result = await pool.query<{ id: string }>(INSERT_SQL, leadParams);
-        return { inserted: result.rowCount !== 0 };
+    if (report) {
+      await client.query(INSERT_REPORT_SQL, [
+        report.id,                        // $1  report_id
+        leadId,                           // $2  lead_id — resolved, not lead.id
+        JSON.stringify(report.payload),   // $3  payload
+        report.templateId,                // $4  template_id
+      ]);
+    }
+
+    await client.query("COMMIT");
+    return {
+      inserted,
+      leadId,
+      ...(hit ? { existing: { source: hit.source, receivedAt: hit.received_at } } : {}),
+    };
+  } catch (err) {
+    try { await client.query("ROLLBACK"); } catch { /* swallowed — primary error is what matters */ }
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export function makePostgresLeadStore(opts: PostgresLeadStoreOpts): LeadStore {
+  const pool = new pg.Pool({ connectionString: opts.dsn, max: 10 });
+
+  pool.on("error", (err: Error) => {
+    opts.log.error("postgres pool error", { err: err.message });
+  });
+
+  return {
+    async verifySchema(): Promise<void> {
+      // Boot-time dependency check. The fingerprint function and merged_into
+      // column ship in hwc-crm's migration 009, which this service does not
+      // own and cannot apply. Running without them would not fail loudly — it
+      // would quietly resume minting a fresh case per submission, which is
+      // exactly the bug D33 exists to close. Refuse to start half-alive.
+      const r = await pool.query<{ has_fn: boolean; has_merged_into: boolean }>(
+        VERIFY_SCHEMA_SQL);
+      const row = r.rows[0];
+      if (!row?.has_fn || !row?.has_merged_into) {
+        throw new Error(
+          "hwc.leads is missing D33 case identity (hwc.lead_fingerprint / " +
+          "leads.merged_into). Apply hwc-crm migration 009 before starting " +
+          "hwc-leads; starting without it silently re-forks duplicate leads.");
       }
+    },
 
-      // Slow path: lead + report in one transaction. Both succeed or
-      // both roll back; no orphan reports possible from a partial crash.
-      const client = await pool.connect();
+    async save(lead: Lead, report?: Report): Promise<SaveResult> {
+      // One retry: a 23505 on the fingerprint index means a concurrent
+      // submission created this person's case between our SELECT and INSERT.
+      // That is the race the unique index exists to catch, and the correct
+      // response is to re-resolve and attach to the winner, not to error.
       try {
-        await client.query("BEGIN");
-        const leadRes = await client.query<{ id: string }>(INSERT_SQL, leadParams);
-        await client.query(INSERT_REPORT_SQL, [
-          report.id,                        // $1  report_id
-          report.leadId,                    // $2  lead_id
-          JSON.stringify(report.payload),   // $3  payload
-          report.templateId,                // $4  template_id
-        ]);
-        await client.query("COMMIT");
-        return { inserted: leadRes.rowCount !== 0 };
+        return await saveOnce(pool, lead, report);
       } catch (err) {
-        try { await client.query("ROLLBACK"); } catch { /* swallowed — primary error is what matters */ }
-        throw err;
-      } finally {
-        client.release();
+        if ((err as { code?: string }).code !== "23505") throw err;
+        opts.log.info("lead save lost the fingerprint race; re-resolving", {
+          leadId: lead.id,
+        });
+        return await saveOnce(pool, lead, report);
       }
     },
 
