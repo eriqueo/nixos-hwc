@@ -155,11 +155,13 @@ async function saveOnce(pool: pg.Pool, lead: Lead, report?: Report): Promise<Sav
     const hit = (await client.query<{ id: string; source: string; received_at: string }>(
       RESOLVE_CASE_SQL, [contact.email, contact.phone ?? null])).rows[0];
 
-    let leadId = lead.id;
-    let inserted = false;
-
+    let result: SaveResult;
     if (hit) {
-      leadId = hit.id;
+      result = {
+        kind: "matched",
+        leadId: hit.id,
+        existing: { source: hit.source, receivedAt: hit.received_at },
+      };
     } else {
       const leadRes = await client.query<{ id: string }>(INSERT_SQL, [
         lead.id,                          // $1  id
@@ -172,24 +174,30 @@ async function saveOnce(pool: pg.Pool, lead: Lead, report?: Report): Promise<Sav
         contact.phone ?? null,            // $8  contact_phone
         contact.notes ?? null,            // $9  contact_notes
       ]);
-      inserted = leadRes.rowCount !== 0;
+      if (leadRes.rowCount === 0) {
+        // ON CONFLICT (id) fired while no live case matched the fingerprint.
+        // lead.id is server-minted per request (schemas/lead.ts buildLead), so
+        // this means a uuid4 collision. Refuse rather than invent a third
+        // outcome: the old code returned inserted=false here, which callers
+        // read as "existing case" and used to skip the customer's email.
+        throw new Error(
+          `lead ${lead.id} already exists but matched no live case — ` +
+          `refusing to guess whether this capture was already acknowledged`);
+      }
+      result = { kind: "inserted", leadId: lead.id };
     }
 
     if (report) {
       await client.query(INSERT_REPORT_SQL, [
         report.id,                        // $1  report_id
-        leadId,                           // $2  lead_id — resolved, not lead.id
+        result.leadId,                    // $2  lead_id — resolved, not lead.id
         JSON.stringify(report.payload),   // $3  payload
         report.templateId,                // $4  template_id
       ]);
     }
 
     await client.query("COMMIT");
-    return {
-      inserted,
-      leadId,
-      ...(hit ? { existing: { source: hit.source, receivedAt: hit.received_at } } : {}),
-    };
+    return result;
   } catch (err) {
     try { await client.query("ROLLBACK"); } catch { /* swallowed — primary error is what matters */ }
     throw err;

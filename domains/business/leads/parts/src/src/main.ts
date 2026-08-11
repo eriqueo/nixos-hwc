@@ -285,7 +285,8 @@ async function main(): Promise<void> {
         let saved;
         try {
           saved = await store.save(lead, report);
-          reqLog.info(saved.inserted ? "lead persisted" : "lead deduped into existing case", {
+          reqLog.info(saved.kind === "inserted"
+            ? "lead persisted" : "lead deduped into existing case", {
             leadId: saved.leadId,
             submittedId: lead.id,
             reportId: report?.id,
@@ -314,11 +315,11 @@ async function main(): Promise<void> {
         // not a project: the same customer starting a genuinely new job months
         // later must still get their summary, or the site looks broken. Skip
         // only a same-source resubmission inside the window.
-        const hoursSince = saved.existing
+        const hoursSince = saved.kind === "matched"
           ? (Date.now() - Date.parse(saved.existing.receivedAt)) / 3_600_000
           : Infinity;
         const suppressEmail =
-          saved.existing !== undefined
+          saved.kind === "matched"
           && saved.existing.source === lead.payload.source
           && hoursSince < DUP_ACK_WINDOW_HOURS;
 
@@ -344,7 +345,7 @@ async function main(): Promise<void> {
           // is idempotent on the ids it is GIVEN, so hand it what the existing
           // case has — passing {} would build a second JobTread job for the
           // same customer, the same duplication one layer over.
-          const priorIds = saved.inserted
+          const priorIds = saved.kind === "inserted"
             ? {}
             : ((await store.byId(caseId).catch(() => undefined))?.jt ?? {});
           const result = await jt.createGraph(caseLead, priorIds);
@@ -424,7 +425,9 @@ async function main(): Promise<void> {
 
         writeJson(res, 202, {
           leadId: caseId,
-          ...(saved.inserted ? {} : { duplicateOf: caseId, submittedId: lead.id }),
+          ...(saved.kind === "matched"
+            ? { duplicateOf: caseId, submittedId: lead.id }
+            : {}),
           source: lead.payload.source,
           status: nextStatus,
           receivedAt: lead.receivedAt,

@@ -12,24 +12,37 @@
 import type { Lead, LeadStatus } from "../core/types.js";
 import type { Report } from "../core/report.js";
 
-export interface SaveResult {
-  /** True when a NEW row was written; false when this person already had a case. */
-  readonly inserted: boolean;
-  /** SERIAL row id from hwc.calculator_leads (only present for inserted=true). */
-  readonly rowId?: number;
-  /**
-   * The case this submission belongs to (D33). Equals `lead.id` on an insert;
-   * on a duplicate it is the id of the EXISTING case, and callers must use it
-   * for every downstream effect. Using `lead.id` instead would attach the
-   * report, JT graph and notification to a row that was never written.
-   */
-  readonly leadId: string;
-  /** The existing case's source + last submission time — only when !inserted. */
-  readonly existing?: {
-    readonly source: string;
-    readonly receivedAt: string;
-  };
-}
+/**
+ * What a capture did, as a tagged union (D33).
+ *
+ * Was `{ inserted: boolean; existing?: {...} }`, which let
+ * `{ inserted: true, existing: {...} }` be constructed — meaningless — and,
+ * worse, quietly permitted "neither": no fingerprint match AND a no-op insert.
+ * Callers read that as "fresh lead" and re-sent the acknowledgment. Modelling
+ * the outcomes as variants means a new one breaks every consumer that forgot
+ * it instead of falling through a boolean.
+ *
+ * `leadId` is on both arms because it is what every downstream effect must
+ * address: on `matched` it is the EXISTING case, and using the submitted
+ * `lead.id` there would attach the report, JT graph and notification to a row
+ * that was never written.
+ */
+export type SaveResult =
+  | {
+      readonly kind: "inserted";
+      readonly leadId: string;
+      /** SERIAL row id from hwc.calculator_leads. */
+      readonly rowId?: number;
+    }
+  | {
+      readonly kind: "matched";
+      readonly leadId: string;
+      /** The case this collapsed into: its source and last submission time. */
+      readonly existing: {
+        readonly source: string;
+        readonly receivedAt: string;
+      };
+    };
 
 export interface RecentQuery {
   readonly limit?: number;
