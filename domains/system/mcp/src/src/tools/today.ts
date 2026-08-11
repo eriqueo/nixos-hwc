@@ -14,24 +14,47 @@
  * point is "do these today", not another unbounded list.
  *
  * WRITES (Triage Surface Contract verbs, {action, id}):
- *   dismiss  — drop the item until its source stops emitting it (state file).
- *   complete — task items only: delegated to hwc_tasks_update (CalDAV).
+ *   dismiss  — snooze the item's case: optional `reason` recorded; wakes if a
+ *              system: item resurfaces WORSE than at dismissal, else on the
+ *              30-day expiry (TTL is the fallback, not the mechanism).
+ *   complete — task items only: delegated to hwc_tasks_update (CalDAV);
+ *              resolves the case (reopens if the item survives a NEWER gather
+ *              — the completion demonstrably didn't take).
  *   agent    — queue a PRE-WRITTEN prompt card (interpolated from
  *              prompts/today/<source>.txt at gather time — Eric reads exactly
  *              what will run before he taps) into output/dispatch/. A systemd
  *              path unit runs it read-only; the report lands in
  *              output/reports/ and the item links it on the next read.
  *
- * State (dismissals, dispatch log) lives in output/today-state.json beside
- * briefing.json — same eric-owned dir, pruned at 30 days.
+ * READS also include action=delta: what changed since the last briefing run
+ * (new / reopened / worsened / resolved case ids with one-line summaries) so
+ * the brief can say what CHANGED, not restate state.
+ *
+ * State is a case ledger (engineering-principles Principle 21; spec in brain
+ * _library/ai-ml/case_ledger_pattern.md) in output/today-state.json beside
+ * briefing.json — same eric-owned dir. v2 schema {schemaVersion, cases}; v1
+ * {dismissed, dispatched} files migrate transparently on read (today-ledger's
+ * migrateState). The pure state machine lives in today-ledger.ts; this file
+ * owns all I/O and is the single writer of the state file.
  */
 
-import { readFile, writeFile, mkdir, access } from "node:fs/promises";
+import { readFile, writeFile, rename, mkdir, access } from "node:fs/promises";
 import { join } from "node:path";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
 import { mcpError, catchError } from "../errors.js";
 import { tasksTools } from "./tasks.js";
+import {
+  migrateState,
+  reconcile,
+  bumpSurfaced,
+  snoozeCase,
+  resolveCase,
+  recordAction,
+  computeDelta,
+  type LedgerState,
+  type ObservedItem,
+} from "./today-ledger.js";
 
 const BRIEFING_DIR =
   process.env.HWC_BRIEFING_DIR ||
@@ -43,8 +66,8 @@ const REPORTS_DIR = join(BRIEFING_DIR, "output", "reports");
 const TEMPLATE_DIR = join(BRIEFING_DIR, "prompts", "today");
 
 const TOP_N = 7;
-const DISMISS_TTL_DAYS = 30;
 const STALE_LEAD_DAYS = 14;
+const DAY_MS = 86_400_000;
 
 type Severity = "red" | "amber";
 type Verb = "dismiss" | "complete" | "agent";
@@ -64,31 +87,23 @@ interface TodayItem {
   report: string | null;
 }
 
-interface TodayState {
-  dismissed: Record<string, string>; // id → ISO date dismissed
-  dispatched: Record<string, string>; // id → ISO date queued
-}
+/* ── state (case ledger — pure machine in today-ledger.ts) ────────── */
 
-/* ── state ────────────────────────────────────────────────────────── */
-
-async function loadState(): Promise<TodayState> {
+async function loadState(now: Date): Promise<LedgerState> {
+  let raw: unknown = null;
   try {
-    const raw = JSON.parse(await readFile(STATE_PATH, "utf8"));
-    return {
-      dismissed: raw.dismissed ?? {},
-      dispatched: raw.dispatched ?? {},
-    };
+    raw = JSON.parse(await readFile(STATE_PATH, "utf8"));
   } catch {
-    return { dismissed: {}, dispatched: {} };
+    /* first run or unreadable → empty ledger */
   }
+  return migrateState(raw, now);
 }
 
-async function saveState(state: TodayState): Promise<void> {
-  const cutoff = Date.now() - DISMISS_TTL_DAYS * 86400_000;
-  for (const [id, iso] of Object.entries(state.dismissed)) {
-    if (new Date(iso).getTime() < cutoff) delete state.dismissed[id];
-  }
-  await writeFile(STATE_PATH, JSON.stringify(state, null, 2));
+/** Atomic per the briefing pipeline's .tmp → mv idiom. */
+async function saveState(state: LedgerState): Promise<void> {
+  const tmp = STATE_PATH + ".tmp";
+  await writeFile(tmp, JSON.stringify(state, null, 2));
+  await rename(tmp, STATE_PATH);
 }
 
 /* ── derivation from briefing.json ────────────────────────────────── */
@@ -305,24 +320,37 @@ export function todayTools(): ToolDef[] {
         "briefing's sections: overdue invoices, overdue tasks, stale leads, refinery items " +
         "needing a decision, finished nightly builds, system alerts, urgent mail. " +
         `action=board (default) returns the top ${TOP_N} with a spillover count; ` +
-        "action=summary a one-line rollup. Writes (need id): dismiss (hide until the " +
-        "source clears), complete (task items — CalDAV), agent (queue the item's " +
+        "action=summary a one-line rollup; action=delta what changed since the last " +
+        "run (new/reopened/worsened/resolved cases). Writes (need id): dismiss " +
+        "(snooze the case — optional reason; wakes if a system item resurfaces worse, " +
+        "else on 30d expiry), complete (task items — CalDAV), agent (queue the item's " +
         "pre-written read-only diagnosis prompt for the dispatch runner).",
       inputSchema: {
         type: "object",
         properties: {
           action: {
             type: "string",
-            enum: ["board", "summary", "dismiss", "complete", "agent"],
+            enum: ["board", "summary", "delta", "dismiss", "complete", "agent"],
             description:
               `board (default): ranked top ${TOP_N} · summary: text rollup · ` +
-              "dismiss/complete/agent: write verbs (need id)",
+              "delta: changes since last run · dismiss/complete/agent: write verbs (need id)",
           },
           id: { type: "string", description: "Item id (write verbs), e.g. task:<uid>" },
+          reason: {
+            type: "string",
+            description: "dismiss only: why — recorded on the case for later runs",
+          },
+          since: {
+            type: "string",
+            description:
+              "delta only: ISO cutoff. Omitted → since the previous parameterless " +
+              "delta call (the briefing runs advance this cursor).",
+          },
         },
       },
       handler: async (args: Record<string, unknown>): Promise<ToolResult> => {
         const action = String(args["action"] ?? "board");
+        const now = new Date();
 
         let briefing: Record<string, any>;
         try {
@@ -331,8 +359,24 @@ export function todayTools(): ToolDef[] {
           return catchError("NOT_FOUND", "briefing.json unreadable — has the briefing run?", err);
         }
 
-        const state = await loadState();
+        const state = await loadState(now);
         const all = deriveItems(briefing);
+
+        // Lifecycle pass: fold this render's observations into the ledger.
+        // observedAt gates reopen-after-resolution (a completed item lingering
+        // in the SAME briefing must not reopen); sweepAbsent guards a degraded
+        // briefing (error marker / empty) from mass-resolving open cases.
+        const genMs = Date.parse(String(briefing.generated_at ?? ""));
+        const observed: ObservedItem[] = all.map((i) => ({
+          id: i.id,
+          title: i.title,
+          severity: i.severity,
+          source: i.source,
+        }));
+        const visibleIds = reconcile(state, observed, now, {
+          ...(Number.isFinite(genMs) ? { observedAt: new Date(genMs) } : {}),
+          sweepAbsent: all.length > 0 && !briefing.error,
+        });
 
         // ── writes ─────────────────────────────────────────────────
         if (action === "dismiss" || action === "complete" || action === "agent") {
@@ -341,7 +385,15 @@ export function todayTools(): ToolDef[] {
           const item = all.find((i) => i.id === id);
 
           if (action === "dismiss") {
-            state.dismissed[id] = new Date().toISOString();
+            snoozeCase(
+              state,
+              id,
+              {
+                ...(args["reason"] !== undefined ? { reason: String(args["reason"]) } : {}),
+                ...(item ? { severityAtSnooze: item.severity, title: item.title } : {}),
+              },
+              now,
+            );
             await saveState(state);
             return { status: "ok", message: `dismissed: ${id}` };
           }
@@ -364,7 +416,10 @@ export function todayTools(): ToolDef[] {
             }
             const res = await completeTask(id.slice("task:".length));
             if (res.status === "ok") {
-              state.dismissed[id] = new Date().toISOString(); // clear immediately, don't wait for re-gather
+              // Resolve the case immediately — don't wait for re-gather. If the
+              // item survives a NEWER briefing, reconcile reopens it (the
+              // completion demonstrably didn't take).
+              resolveCase(state, id, "completed via CalDAV (hwc_tasks_update)", now);
               await saveState(state);
             }
             return res;
@@ -373,7 +428,7 @@ export function todayTools(): ToolDef[] {
           // action === "agent"
           try {
             const cardPath = await queueDispatch(item);
-            state.dispatched[id] = new Date().toISOString();
+            recordAction(state, id, `agent dispatch queued (card ${cardPath})`, now);
             await saveState(state);
             return {
               status: "ok",
@@ -385,8 +440,32 @@ export function todayTools(): ToolDef[] {
           }
         }
 
+        // ── delta: what changed since the last run ─────────────────
+        if (action === "delta") {
+          const sinceArg = args["since"] !== undefined ? String(args["since"]) : undefined;
+          if (sinceArg !== undefined && !Number.isFinite(Date.parse(sinceArg))) {
+            return mcpError({ type: "VALIDATION_ERROR", message: `delta: unparsable since "${sinceArg}"` });
+          }
+          const sinceMs = sinceArg !== undefined
+            ? Date.parse(sinceArg)
+            : state.lastDeltaAt !== undefined && Number.isFinite(Date.parse(state.lastDeltaAt))
+              ? Date.parse(state.lastDeltaAt)
+              : now.getTime() - DAY_MS;
+          const delta = computeDelta(state, new Date(sinceMs));
+          if (sinceArg === undefined) state.lastDeltaAt = now.toISOString(); // advance the cursor
+          await saveState(state); // persists reconcile results + cursor
+          const counts =
+            `${delta.new.length} new · ${delta.reopened.length} reopened · ` +
+            `${delta.worsened.length} worsened · ${delta.resolved.length} resolved`;
+          return {
+            status: "ok",
+            message: `Changed since ${delta.since}: ${counts}`,
+            data: delta,
+          };
+        }
+
         // ── reads ──────────────────────────────────────────────────
-        const live = all.filter((i) => !(i.id in state.dismissed));
+        const live = all.filter((i) => visibleIds.has(i.id));
         for (const i of live) i.report = await reportFor(i);
         live.sort(rank);
         // Every red makes the queue — a red squeezed out by the cap is an
@@ -397,6 +476,12 @@ export function todayTools(): ToolDef[] {
           : live.slice(0, TOP_N);
         const spillover = live.length - queue.length;
         const generatedAt = String(briefing.generated_at ?? "");
+
+        // This render surfaced the queue's items: counter always, observation
+        // event bounded to one per case per day. Persisting here also lands
+        // the reconcile pass (reopens/resolves) from this read.
+        bumpSurfaced(state, queue.map((i) => i.id), now);
+        await saveState(state);
 
         if (action === "summary") {
           const reds = queue.filter((i) => i.severity === "red").length;
