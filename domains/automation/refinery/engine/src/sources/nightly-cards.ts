@@ -10,7 +10,7 @@
 
 import { readFileSync, writeFileSync, readdirSync, existsSync, statSync, renameSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { Item } from "../contracts.js";
+import { EvidenceRef, Item } from "../contracts.js";
 
 export const NB_PREFIX = "nb:";
 export const NIGHTLY_BUILD_PIPELINE = "nightly-build";
@@ -126,11 +126,28 @@ function buildProjectItem(dir: string, goalId: string, finished: boolean): Item 
   const { step, state, parkedReason } = projectState(steps);
   const done = steps.filter((s) => isDone(s.status)).length;
   const queuedCount = steps.filter((s) => isQueuedish(s.status)).length;
+  // Typed evidence derived from the steps' frontmatter joins (`run:` dir,
+  // `pr:` url — the latter written back by the morning review): the card
+  // fields stay for display; evidence[] is the canonical data form every
+  // consumer reads. `at` = the run dir's date (RUN_NAME is
+  // "<date>-<goal>-<slug>"); a run-less pr entry gets no better timestamp than
+  // that either, so both fall back to "(undated)" rather than fabricating now().
+  const evidence: EvidenceRef[] = [];
+  for (const s of steps) {
+    const at = /(\d{4}-\d{2}-\d{2})/.exec(s.run)?.[1] ?? "(undated)";
+    if (s.run) evidence.push({ kind: "run", ref: s.run, at });
+    if (s.pr) evidence.push({ kind: "pr", ref: s.pr, at });
+  }
   return {
     id: `${finished ? FINISHED_PREFIX : NB_PREFIX}${goalId}`,
     pipeline: NIGHTLY_BUILD_PIPELINE,
     step,
     state: finished ? "passed" : state,
+    // Graduation (the morning-review exit ramp) is the recorded decision that
+    // the need was met; the durable record is the _finished/ location, and this
+    // projection derives outcome from it (case-ledger law 3: outcome ≠ state).
+    outcome: finished ? "need_met" : undefined,
+    evidence: evidence.length ? evidence : undefined,
     parkedReason: finished ? undefined : parkedReason,
     payload: {
       title,
@@ -248,6 +265,27 @@ function setStatus(vaultDir: string, goalId: string, file: string, newStatus: st
   const newFm = /^status:.*$/m.test(m[1])
     ? m[1].replace(/^status:.*$/m, `status: ${newStatus}`)
     : `${m[1]}\nstatus: ${newStatus}`;
+  writeFileSync(path, text.replace(m[1], newFm));
+  return true;
+}
+
+/** Write a step card's `pr:` frontmatter field — the vault half of the two-way
+ *  Item↔PR pointer the morning review establishes (the PrReview JSON carries
+ *  prUrl; the card carries `pr:`; the project mirror derives typed evidence
+ *  from it). Replace-or-append like setStatus/setProjectMode; idempotent — an
+ *  unchanged value writes nothing (vault files are git-synced, so no mtime
+ *  churn). Returns false when the card or its frontmatter is missing. */
+export function setCardPr(vaultDir: string, goalId: string, file: string, url: string): boolean {
+  if (goalId.startsWith("_") || goalId.includes("/") || file.includes("/")) return false;
+  const path = join(vaultDir, "_inbox", "nightly_builds", goalId, file);
+  if (!existsSync(path)) return false;
+  const text = readFileSync(path, "utf8");
+  const m = /^---\n([\s\S]*?)\n---/.exec(text);
+  if (!m) return false;
+  if (frontmatter(text).pr === url) return true; // already recorded — idempotent
+  const newFm = /^pr:.*$/m.test(m[1])
+    ? m[1].replace(/^pr:.*$/m, `pr: ${url}`)
+    : `${m[1]}\npr: ${url}`;
   writeFileSync(path, text.replace(m[1], newFm));
   return true;
 }

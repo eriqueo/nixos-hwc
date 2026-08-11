@@ -18,6 +18,7 @@ import {
   nightlyCardProjects,
   isProjectComplete,
   graduateProject,
+  setCardPr,
   type NbStep,
 } from "../sources/nightly-cards.js";
 import { PrReview } from "./contract.js";
@@ -58,6 +59,7 @@ interface DoneCard {
   id: string; // "<goal>/<slug>"
   goal: string;
   cardSlug: string;
+  file: string; // "NN-<slug>.md" — needed to write the `pr:` field back
   title: string;
   repo: string;
   branch: string;
@@ -115,6 +117,7 @@ export function listDoneCards(cfg: MorningReviewConfig): DoneCard[] {
         id: `${goal}/${slug}`,
         goal,
         cardSlug: slug,
+        file: f,
         title: fm.title || `${goal}/${slug}`,
         repo: fm.repo || cfg.defaultRepo,
         branch: deriveBranch(body, goal, slug, fm.run),
@@ -188,9 +191,13 @@ export async function runMorningReview(
     try {
       // Idempotent skip: a step already reviewed keeps its record and PR — never
       // re-judged. This (not a date window) is what keeps the pass from
-      // re-sweeping older done work every morning.
-      if (await ports.store.load(card.id)) {
+      // re-sweeping older done work every morning. Backfill the card's `pr:`
+      // from the stored record (read-old/write-new): cards reviewed before the
+      // write-back existed gain the pointer without being re-reviewed.
+      const prior = await ports.store.load(card.id);
+      if (prior) {
         summary.skipped += 1;
+        if (prior.prUrl) setCardPr(cfg.vaultDir, card.goal, card.file, prior.prUrl);
         continue;
       }
 
@@ -251,6 +258,16 @@ export async function runMorningReview(
       summary.reviewed += 1;
       summary.byVerdict[persisted.verdict] += 1;
       summary.items.push(persisted);
+
+      // The stated-but-unimplemented two-way pointer, now real: the PR url is
+      // written into the card's `pr:` frontmatter (data, not prose), and the
+      // project mirror derives typed `{kind:"pr"}` evidence from that field —
+      // so the vault card and the board Item both point at the PR. Idempotent
+      // (setCardPr no-ops on an unchanged value); a failed write is recorded,
+      // not swallowed — the review record exists but the card pointer doesn't.
+      if (persisted.prUrl && !setCardPr(cfg.vaultDir, card.goal, card.file, persisted.prUrl)) {
+        summary.errors.push({ id: card.id, error: "review persisted but card `pr:` write-back failed" });
+      }
     } catch (e) {
       summary.errors.push({ id: card.id, error: (e as Error).message });
     }
