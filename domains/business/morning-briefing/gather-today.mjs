@@ -68,10 +68,28 @@ async function main() {
   if (r.isError) throw new Error(text.slice(0, 200) || "hwc_today error");
   const parsed = JSON.parse(text);
   const data = parsed.data ?? {};
+
+  // Case-ledger delta: what changed since the previous briefing run (each
+  // parameterless delta call advances the cursor, so 3×/day this is exactly
+  // run-over-run). Additive `changes` key — run.sh's jq templates and the
+  // dashboard read only items/spillover, so this degrades to null harmlessly.
+  // The shape guard also covers a not-yet-updated gateway, whose unknown
+  // action would fall through to a board payload.
+  let changes = null;
+  try {
+    const d = await rpc("tools/call", { name: "hwc_today", arguments: { action: "delta" } });
+    const dText = (d.content || []).find((c) => c.type === "text")?.text ?? "";
+    if (!d.isError) {
+      const dData = JSON.parse(dText).data ?? {};
+      if (Array.isArray(dData.new) && Array.isArray(dData.reopened)) changes = dData;
+    }
+  } catch { /* board still ships without the delta */ }
+
   process.stdout.write(JSON.stringify({
     items: data.items ?? [],
     spillover: data.spillover ?? 0,
     generated_at: data.generated_at ?? null,
+    changes,
   }));
 }
 

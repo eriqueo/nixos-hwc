@@ -21,6 +21,8 @@ index.nix              # NixOS module: systemd service + timer
 run.sh                 # 5-step pipeline (see below)
 gather-live.mjs        # Step 1b: JobTread jobs/leads/overdue + CalDAV tasks via
                        #   the local MCP gateway (:6200/mcp, StreamableHTTP)
+gather-today.mjs       # Step 2c: hwc_today board + case-ledger delta →
+                       #   sections.today (items/spillover/changes)
 CLAUDE.md              # Agent prompt: data schema, alert rules, MCP sources
 prompts/
   mail-triage.txt      # Mail triage prompt: bucket rules, known senders
@@ -144,6 +146,19 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-08-10** — **Today Queue state becomes a case ledger** (engineering-
+  principles Principle 21; spec: brain `_library/ai-ml/case_ledger_pattern.md`).
+  `output/today-state.json` upgrades to `{schemaVersion: 2, cases}` — per-item
+  cases with lifecycle (`open|snoozed|resolved`), event history (≤30), and
+  surfaced/reopen counters; the old `{dismissed, dispatched}` file migrates in
+  place on the gateway's first read. Dismissals now carry an optional reason
+  and a wake condition (a `system:` alert resurfacing WORSE reopens
+  immediately; otherwise the 30d expiry — TTL demoted to fallback).
+  `gather-today.mjs` additionally fetches `hwc_today action=delta` and injects
+  it as `sections.today.changes` (new/reopened/worsened/resolved since the
+  previous run) — additive key; run.sh, email, and dashboard renders are
+  untouched and may consume it later. Ledger logic + tests live in the
+  gateway package (`domains/system/mcp/src`).
 - **2026-07-17** — `gather-refinery.mjs` skips items with `archived: true` —
   the refinery board's new exit ramp sweeps aged-out passed items off the
   working board, and they should leave the briefing's buckets at the same time.
