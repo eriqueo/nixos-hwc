@@ -443,6 +443,8 @@ domains/system/mcp/
       tools/
         index.ts                   # Aggregates all tool modules into one array
         registry.ts                # ToolRegistry class (name→handler Map)
+        today.ts                   # hwc_today (board/summary/delta + verbs)
+        today-ledger.ts            # pure case-ledger state machine (no I/O)
         config.ts                  # 8 config tools
         services.ts                # 6 service tools
         monitoring.ts              # 4 monitoring tools
@@ -493,6 +495,21 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-08-10**: `hwc_today` state becomes a **case ledger** (Principle 21;
+  spec: brain `_library/ai-ml/case_ledger_pattern.md`). `today-state.json` v2
+  `{schemaVersion: 2, cases}` — per-case lifecycle `open|snoozed|resolved`,
+  capped 30-event history, `timesSurfaced`/`timesReopened`; v1
+  `{dismissed, dispatched}` files migrate transparently on first read; writes
+  are atomic (`.tmp` → rename). `dismiss` gains optional `reason` and is now a
+  snooze with a wake condition — a `system:` item resurfacing WORSE than at
+  dismissal reopens immediately, everything else on the 30d expiry (TTL is the
+  fallback, not the mechanism). `complete` resolves the case and reconcile
+  reopens it if the item survives a NEWER gather (the completion didn't take).
+  New read `action=delta`: new/reopened/worsened/resolved case ids with
+  one-line summaries since the last run — the briefing's "what changed" view
+  (gather-today.mjs injects it as `sections.today.changes`). Pure state
+  machine in `tools/today-ledger.ts` (`now` injected, no fs); vitest suite in
+  `src/tests/today-ledger.test.ts`. External verb/board contracts unchanged.
 - **2026-07-17**: `hwc_refinery` becomes a full remote surface for claude.ai:
   new verbs `intake` (capture an idea → hopper + brain backlog), `amend`
   (answer a parked item's asks and re-arm it), `stage` (mature an idea
@@ -670,9 +687,14 @@ domains/system/mcp/
         │   ├── mail.ts
         │   ├── calendar.ts
         │   ├── media.ts
-        │   └── build.ts
+        │   ├── build.ts
+        │   ├── today.ts                   # hwc_today — Today Queue (board/summary/delta + verbs)
+        │   └── today-ledger.ts            # pure case-ledger state machine behind hwc_today
         ├── transforms/
         │   └── n8n.ts
         └── resources/
             └── index.ts
 ```
+
+Tests: `src/tests/today-ledger.test.ts` (vitest — `npm test`; excluded from
+the dist build by tsconfig).
