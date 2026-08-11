@@ -54,6 +54,23 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 `^/hooks/(contact|appointment|availability)`.
 
 ## Changelog
+- **2026-08-11** — **A failed migration now stops the boot.** The
+  `hwc-crm-migrate` ExecStartPre loop had no `set -e`, so its exit status was
+  whichever `psql` ran last and a migration could fail on every single start
+  with the unit still coming up green. That is not hypothetical: migrations
+  001 and 002 had been failing for months (they re-declared CHECK vocabularies
+  that later migrations superseded, and the stale lists no longer matched live
+  data), and the only trace was a journal line nobody was looking for. Because
+  both files are `BEGIN/COMMIT` wrapped the failures rolled back harmlessly —
+  which is precisely why they went unnoticed, while everything after the
+  failing line in those files quietly stopped being re-asserted. Added
+  `set -euo pipefail`; a half-migrated system of record should refuse to run
+  rather than serve traffic against a schema it could not finish asserting.
+  Data-dependent migrations that legitimately cannot apply yet must warn and
+  converge instead of erroring (see hwc-crm `migrations/010`, which skips its
+  unique index while duplicate cases remain). Fix on the repo side is hwc-crm
+  D34: one owner per constraint, plus a test asserting the migration set is
+  re-runnable against the full live vocabulary.
 - **2026-07-22** — Web-form contact leads now ping #hwc-leads (Discord).
   Leads entering via `crm.iheartwoodcraft.com/hooks/contact` (the JobTread
   web-form-embed mirror) landed on the funnel board but never notified anyone

@@ -62,7 +62,19 @@ let
     exec ${pythonEnv}/bin/python3 -m hwc_crm.api.app
   '';
 
+  # `set -e` is the point, not boilerplate. Without it this loop's exit status
+  # was whichever psql ran last, so a migration could fail on EVERY boot and
+  # the unit still started green — which is exactly what happened: 001 and 002
+  # failed for months (superseded CHECK vocabularies, hwc-crm D34) and the only
+  # trace was a journal line nobody was looking for. A half-migrated system of
+  # record should refuse to run, not serve traffic against a schema it could
+  # not finish asserting.
+  #
+  # Data-dependent migrations that legitimately cannot apply yet must WARN and
+  # converge rather than error — see migrations/010, which skips its unique
+  # index while duplicate cases remain instead of taking the CRM down.
   migrate = pkgs.writeShellScript "hwc-crm-migrate" ''
+    set -euo pipefail
     for f in ${cfg.projectDir}/migrations/*.sql; do
       ${config.services.postgresql.package}/bin/psql "${cfg.postgresDsn}" \
         -v ON_ERROR_STOP=1 -q -f "$f"
