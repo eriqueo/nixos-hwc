@@ -220,31 +220,34 @@
 
     ssh.enable = true;
     tailscale.enable = true;
-    # Registration is declarative: the secret holds a reusable, tagged Tailscale
-    # auth key (tskey-auth-…), created with Tags = tag:server and Ephemeral off.
-    # The node therefore registers as a tagged device, and tagged devices are
-    # exempt from node-key expiry — the actual fix for the 2026-08-07 outage,
-    # where the untagged node hit the tailnet's 6-month key expiry and dropped
-    # off (ssh failed "Network is unreachable"; recovered over LAN).
+    # Registration is declarative: the secret holds a Tailscale OAuth *client
+    # secret* (tskey-client-…) with the single scope `auth_keys: write` bound to
+    # tag:server. The node mints its own registration key and comes up tagged,
+    # and tagged devices have node-key expiry disabled — the fix for the
+    # 2026-08-07 outage, where the untagged node hit the tailnet's 6-month key
+    # expiry and dropped off (ssh failed "Network is unreachable"; recovered
+    # over LAN). Unlike an auth key, which caps at 90 days, a client secret has
+    # no expiry, so re-registration stays unattended indefinitely. This is why
+    # it replaced the tagged auth key that briefly lived here.
     #
-    # Reusable matters: extraUpFlags only runs when the backend is NeedsLogin /
-    # NeedsMachineAuth / Stopped, but that recurs (the cutover itself, any
-    # reinstall). A single-use key would be consumed by the first registration
-    # and drop the host back to manual auth on the next one.
-    #
-    # Deliberately NO authKeyParameters: the ?preauthorized=…&ephemeral=… query
-    # form is valid only when appended to an OAuth *client* secret. A plain auth
-    # key carries reusable/ephemeral/tags baked in at creation, so appending the
-    # query string would corrupt the key.
-    #
-    # TEMPORARY-BY-CONSTRUCTION: this key expires 2026-11-10 (90d, Tailscale's
-    # maximum). The running node is unaffected — being tagged, it never expires
-    # — but a re-registration after that date needs a fresh key. Removal
-    # condition: swap the secret for a Tailscale OAuth client secret, which
-    # never expires, and restore an authKeyParameters block alongside it.
+    # This only ever fires when the backend is NeedsLogin / NeedsMachineAuth /
+    # Stopped — a logout, a reinstall, a rebuilt box. A healthy node never
+    # touches it.
     tailscale.authKeyFile = config.age.secrets."tailscale-authkey".path;
+    # NOT cosmetic. Per tailscale.com/kb/1215, on the OAuth path `ephemeral`
+    # defaults to TRUE and `preauthorized` to FALSE — so omitting these would
+    # register hwc-server as an ephemeral node (deleted by Tailscale whenever it
+    # goes offline) that is also awaiting manual approval. Both must be stated.
+    tailscale.authKeyParameters = {
+      preauthorized = true;   # usable immediately, no manual device approval
+      ephemeral = false;      # persists across reboots and offline periods
+    };
     # --reset makes this config authoritative rather than merging into whatever
     # prefs the last interactive `tailscale up` happened to leave behind.
+    # --advertise-tags is REQUIRED on the OAuth path, not belt-and-braces: the
+    # client's auth_keys scope is bound to a tag set, and kb/1215 states you
+    # must pass one of those tags to --advertise-tags. Dropping it breaks
+    # registration outright.
     tailscale.extraUpFlags = [
       "--reset"
       "--advertise-tags=tag:server"
