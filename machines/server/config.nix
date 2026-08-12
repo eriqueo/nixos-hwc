@@ -220,7 +220,26 @@
 
     ssh.enable = true;
     tailscale.enable = true;
-    tailscale.extraUpFlags = ["--advertise-tags=tag:server" "--accept-routes"];
+    # Registration is declarative: the secret holds a Tailscale OAuth *client*
+    # secret (tskey-client-…), not an auth key. Client secrets never expire,
+    # where auth keys cap at 90 days — so the node can always re-register itself
+    # unattended. Because the client mints keys scoped to tag:server, the node
+    # comes up as a tagged device, and tagged devices are exempt from node-key
+    # expiry entirely. That is the actual fix for the 2026-08-07 outage: the
+    # untagged node hit the tailnet's 6-month key expiry and dropped off.
+    tailscale.authKeyFile = config.age.secrets."tailscale-authkey".path;
+    tailscale.authKeyParameters = {
+      preauthorized = true;   # device is usable without manual approval
+      ephemeral = false;      # persists across reboots / offline periods
+    };
+    # --reset makes this config authoritative rather than merging into whatever
+    # prefs the last interactive `tailscale up` happened to leave behind.
+    tailscale.extraUpFlags = [
+      "--reset"
+      "--advertise-tags=tag:server"
+      "--accept-routes"
+      "--hostname=hwc-server"
+    ];
     # firewall.level = "server" comes from the server role
     firewall.extraTcpPorts = [
       22000 # Syncthing sync

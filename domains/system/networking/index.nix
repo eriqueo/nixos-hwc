@@ -35,13 +35,50 @@ in
       authKeyFile = lib.mkOption {
         type = types.nullOr types.path;
         default = null;
-        description = "Path to a file containing TS_AUTHKEY (optional).";
+        description = ''
+          Path to a file containing TS_AUTHKEY (optional). Setting this is what
+          creates upstream's `tailscaled-autoconnect.service`; without it
+          `extraUpFlags` below is inert and the node must be registered by hand.
+        '';
+      };
+      authKeyParameters = lib.mkOption {
+        type = types.submodule {
+          options = {
+            ephemeral = lib.mkOption {
+              type = types.nullOr types.bool;
+              default = null;
+              description = "Register as an ephemeral node (removed when offline).";
+            };
+            preauthorized = lib.mkOption {
+              type = types.nullOr types.bool;
+              default = null;
+              description = "Skip manual device approval on registration.";
+            };
+            baseURL = lib.mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = "Base URL for the Tailscale API.";
+            };
+          };
+        };
+        default = {};
+        example = { preauthorized = true; ephemeral = false; };
+        description = ''
+          Query parameters appended after the auth key. Required when
+          `authKeyFile` holds an OAuth *client secret* rather than a plain auth
+          key: client secrets never expire, but carry no preauthorized/ephemeral
+          disposition of their own, so it must be stated here.
+          See https://tailscale.com/kb/1215/oauth-clients
+        '';
       };
       extraUpFlags = lib.mkOption {
         type = types.listOf types.str;
         default = [];
         example = [ "--operator=eric" "--advertise-exit-node" ];
-        description = "Extra flags for `tailscale up`.";
+        description = ''
+          Extra flags for `tailscale up`. Only applied when `authKeyFile` is
+          set — upstream gates the autoconnect unit on it.
+        '';
       };
     };
 
@@ -146,6 +183,7 @@ in
     services.tailscale = lib.mkIf cfg.tailscale.enable {
       enable = true;
       authKeyFile = cfg.tailscale.authKeyFile;
+      authKeyParameters = cfg.tailscale.authKeyParameters;
       extraUpFlags = cfg.tailscale.extraUpFlags;
     };
 
@@ -273,6 +311,27 @@ in
     # =========================
     # Safety assertions
     # =========================
+
+    # Upstream gates `tailscaled-autoconnect.service` — the only thing that ever
+    # runs `tailscale up` — on authKeyFile being non-null. Without it both
+    # extraUpFlags and authKeyParameters are silently dropped, so a config can
+    # claim a tag or a DNS mode it has never actually applied. That drift is what
+    # let hwc-server sit untagged (and therefore key-expiring) for months while
+    # config.nix declared --advertise-tags=tag:server. Warn, don't assert:
+    # hwc-laptop and the appliance profile carry the same inert flags today, and
+    # failing their builds is a separate cleanup.
+    warnings = lib.optional
+      (cfg.tailscale.enable
+        && cfg.tailscale.authKeyFile == null
+        && (cfg.tailscale.extraUpFlags != []
+            || lib.any (v: v != null) (lib.attrValues cfg.tailscale.authKeyParameters)))
+      ''
+        hwc.system.networking.tailscale: extraUpFlags/authKeyParameters are set but
+        authKeyFile is null, so upstream never creates tailscaled-autoconnect.service
+        and these flags are inert: ${lib.concatStringsSep " " cfg.tailscale.extraUpFlags}
+        Either set authKeyFile, or drop the flags and register the node by hand.
+      '';
+
     assertions = [
       {
         assertion = cfg.tailscale.enable -> (cfg.firewall.level != "off");
