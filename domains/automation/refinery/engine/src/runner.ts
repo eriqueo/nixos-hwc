@@ -1,4 +1,5 @@
 import {
+  appendItemEvent,
   GateModule,
   Item,
   ItemStore,
@@ -83,6 +84,19 @@ export async function runPass(
     // payload so the UI can surface WHY a gate passed/parked/failed — the
     // runner used to keep only the token string. Keyed by step.
     const payload = withVerdict(item.payload, gate.id, decision, verdict.verdict, verdict.output);
+    // Write-both: the mutable slot above stays the current-state read, while
+    // the judgment is ALSO appended as a versioned event. A gate that runs
+    // twice (park-and-resume re-enters it) used to erase its own first
+    // verdict; now version 2 lands beside version 1.
+    item = appendItemEvent(item, {
+      type: "judgment",
+      at: clock(),
+      actor: gate.id,
+      step: gate.id,
+      verdict: verdict.verdict,
+      decision,
+      output: verdict.output,
+    });
     if (decision === "pass") {
       item = {
         ...item,

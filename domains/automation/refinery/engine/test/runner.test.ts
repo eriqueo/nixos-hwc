@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Pipeline } from "../src/contracts.js";
+import { currentJudgment, judgmentsFor, Pipeline } from "../src/contracts.js";
 import { InMemoryItemStore } from "../src/store-memory.js";
 import { rewind, runPass } from "../src/runner.js";
 import { fixedClock, makeItem, resetClock, stubGate } from "./helpers.js";
@@ -206,4 +206,56 @@ test("runPass throws UnknownStepError when item.phase isn't in pipeline", async 
     () => runPass(item, pipeline, gates, { store, clock: fixedClock }),
     /step not present in pipeline gates: ghost/,
   );
+});
+
+// ─── Judgment events (case-ledger law 2): the wiring, not just the helper ───
+
+test("runPass appends a versioned judgment event per gate, beside the legacy slot", async () => {
+  resetClock();
+  const store = new InMemoryItemStore();
+  const item = makeItem();
+  const gates = [stubGate({ id: "g1" }), stubGate({ id: "g2" }), stubGate({ id: "g3" })];
+  const result = await runPass(item, pipeline, gates, { store, clock: fixedClock });
+
+  const judgments = (result.item.events ?? []).filter((e) => e.type === "judgment");
+  assert.deepEqual(judgments.map((e) => e.step), ["g1", "g2", "g3"]);
+  assert.equal(judgments.every((e) => e.version === 1), true, "each gate's first verdict is v1");
+  assert.equal(judgments.every((e) => e.decision === "pass"), true);
+  assert.equal(judgments.every((e) => typeof e.at === "string" && e.at.length > 0), true);
+
+  // Write-both: the legacy current-state slot is still populated.
+  const verdicts = (result.item.payload as { verdicts?: Record<string, unknown> }).verdicts ?? {};
+  assert.deepEqual(Object.keys(verdicts).sort(), ["g1", "g2", "g3"]);
+
+  const saved = await store.load("item-1");
+  assert.equal((saved!.events ?? []).filter((e) => e.type === "judgment").length, 3,
+    "events are persisted, not just returned");
+});
+
+test("a gate that runs twice records BOTH verdicts — the destructive upsert is retired", async () => {
+  resetClock();
+  const store = new InMemoryItemStore();
+  // Run 1: g2 parks. Run 2 (park-and-resume re-enters g2, which the GateModule
+  // contract explicitly permits) it passes. The old payload.verdicts slot kept
+  // only the second; the event log must keep both.
+  const parking = await runPass(
+    makeItem(),
+    pipeline,
+    [stubGate({ id: "g1" }), stubGate({ id: "g2", decision: "park", verdictLabel: "needs-input" }), stubGate({ id: "g3" })],
+    { store, clock: fixedClock },
+  );
+  assert.equal(parking.item.state, "parked");
+
+  const resumed = await runPass(
+    { ...parking.item, state: "pending" },
+    pipeline,
+    [stubGate({ id: "g1" }), stubGate({ id: "g2", verdictLabel: "resolved" }), stubGate({ id: "g3" })],
+    { store, clock: fixedClock },
+  );
+
+  const g2 = judgmentsFor(resumed.item, "g2");
+  assert.deepEqual(g2.map((j) => j.version), [1, 2], "both verdicts survive, versioned in order");
+  assert.deepEqual(g2.map((j) => j.decision), ["park", "pass"]);
+  assert.equal(g2[0]!.verdict, "needs-input", "the FIRST verdict is still readable");
+  assert.equal(currentJudgment(resumed.item, "g2")!.verdict, "resolved");
 });

@@ -7,6 +7,7 @@
 
 import { Clock, runPass } from "../runner.js";
 import {
+  appendItemEvent,
   EvidenceRef,
   ExecutorResult,
   GateModule,
@@ -94,8 +95,21 @@ export async function runPipelineOnce(
   if (typeof out.specPath === "string" && out.specPath) {
     evidence.push({ kind: "report", ref: out.specPath, at });
   }
+  // Write-both: executorResult stays the current-state slot the board reads,
+  // and the executor's self-verdict is ALSO appended as a versioned judgment.
+  // A re-run used to overwrite the previous result outright.
+  const withJudgment = appendItemEvent(withEvidence(result.item, evidence), {
+    type: "judgment",
+    at,
+    actor: deps.integrate.id,
+    step: deps.integrate.id,
+    verdict: integrated.verdict ?? integrated.outcome,
+    decision: integrated.outcome,
+    note: integrated.detail,
+    output: integrated.output,
+  });
   const done: Item = {
-    ...withEvidence(result.item, evidence),
+    ...withJudgment,
     payload: { ...basePayload, executorResult: integrated },
     state: integrated.outcome === "succeeded" ? "passed" : "failed",
     history: [

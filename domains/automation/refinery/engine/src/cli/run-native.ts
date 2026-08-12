@@ -12,7 +12,7 @@
 // payload, state passed/failed, a history entry).
 
 import { Clock } from "../runner.js";
-import { EvidenceRef, Executor, Item, ItemStore, Pipeline, withEvidence } from "../contracts.js";
+import { appendItemEvent, EvidenceRef, Executor, Item, ItemStore, Pipeline, withEvidence } from "../contracts.js";
 
 /** Minimal pipeline lookup port — the catalog narrowed to what runNative needs. */
 export interface PipelineLookup {
@@ -57,8 +57,20 @@ export async function runNative(
     // a re-spooled run never duplicates the entry.
     const evidence: EvidenceRef[] =
       result.branch && result.pushed ? [{ kind: "branch", ref: result.branch, at }] : [];
+    // Write-both, same contract as run-once: executorResult stays the
+    // current-state slot; the self-verdict is ALSO a versioned judgment event,
+    // so a re-spooled run no longer erases the previous result.
     const done: Item = {
-      ...withEvidence(item, evidence),
+      ...appendItemEvent(withEvidence(item, evidence), {
+        type: "judgment",
+        at,
+        actor: executor.id,
+        step: executor.id,
+        verdict: result.verdict ?? result.outcome,
+        decision: result.outcome,
+        note: result.detail,
+        output: result.output,
+      }),
       payload: { ...basePayload, executorResult: result },
       state: status,
       history: [...item.history, { step: executor.id, status, at, note: result.detail }],

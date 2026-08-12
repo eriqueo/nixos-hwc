@@ -9,7 +9,7 @@
 // Cards are click-through; all actions live on the detail page. Plain
 // form-posts (POST → 303); no client framework.
 
-import { Item, Pipeline } from "../contracts.js";
+import { currentJudgment, Item, judgmentsFor, Pipeline } from "../contracts.js";
 import { PrReview } from "../review/contract.js";
 import { ResolvedPipeline } from "../pipelines/catalog.js";
 import { DomainRegistry, domainOf } from "../domains.js";
@@ -655,7 +655,8 @@ export function renderProjectDetail(
     const steps = pipelineSteps(pipeline); // gates + executor id
     const states = stepStates(item, steps);
     const pl = obj(item.payload);
-    const verdicts = obj(pl.verdicts);
+    // (payload.verdicts is no longer read directly here — judgmentsFor folds
+    // events first and falls back to that slot itself.)
     const execResult = obj(pl.executorResult);
     const triage = obj(pl.triage);
     const executorId = pipeline.executors[0] ?? "";
@@ -677,13 +678,30 @@ export function renderProjectDetail(
       : `<div class="kv">no triage record</div>`;
     const triageNode = node("Triage", "passed", triageBody);
 
-    // Gate nodes — each gate's full verdict from payload.verdicts[step].
+    // Gate nodes — each gate's verdict trail, events-first with the
+    // payload.verdicts[step] fallback (judgmentsFor). Showing the whole trail
+    // rather than only the newest is the point of versioning judgments: a gate
+    // that parked then passed on re-run now shows both, instead of the second
+    // verdict silently erasing the first.
     const gateNodes = pipeline.gates
       .map((g) => {
-        const v = obj(verdicts[g]);
+        const trail = judgmentsFor(item, g);
         const st = states.get(g) ?? "pending";
-        const body = Object.keys(v).length
-          ? `${v.decision != null ? `<div><b>decision:</b> ${esc(String(v.decision))}</div>` : ""}${v.reason != null ? `<div><b>reason:</b> ${esc(String(v.reason))}</div>` : ""}${prettyOutput(v.output)}`
+        const current = trail.length ? trail[trail.length - 1]! : null;
+        const priorTrail =
+          trail.length > 1
+            ? `<div class="kv" style="margin-top:8px">earlier verdicts for this gate:</div>` +
+              trail
+                .slice(0, -1)
+                .reverse()
+                .map(
+                  (j) =>
+                    `<div class="hist">v${j.version}${j.at ? ` · ${esc(j.at)}` : ""} · ${esc(String(j.decision ?? "?"))}${j.verdict ? ` — ${esc(j.verdict)}` : ""}</div>`,
+                )
+                .join("")
+            : "";
+        const body = current
+          ? `${current.decision != null ? `<div><b>decision:</b> ${esc(String(current.decision))}</div>` : ""}${current.verdict != null ? `<div><b>reason:</b> ${esc(String(current.verdict))}</div>` : ""}${trail.length > 1 ? `<div class="kv">verdict v${current.version} of ${trail.length}</div>` : ""}${prettyOutput(current.output)}${priorTrail}`
           : st === "skipped"
             ? `<div class="kv">skipped — this gate did not apply to the item</div>`
             : `<div class="kv">no verdict recorded for this step</div>`;
@@ -719,13 +737,15 @@ export function renderProjectDetail(
       return `<div class="kv">No human action needed at this step (${esc(item.state)}).</div>`;
     }
     // The gate that parked this step records its verdict (incl. `asks` — the
-    // concrete decisions the human must make) at payload.verdicts[step].output.
-    const pv = obj(obj(obj(item.payload).verdicts)[item.step ?? ""]);
-    const rawAsks = obj(pv.output).asks;
+    // concrete decisions the human must make) in its judgment output. Read
+    // events-first via judgmentsFor, which falls back to the legacy
+    // payload.verdicts[step] slot for items written before the event log.
+    const pv = currentJudgment(item, item.step ?? "");
+    const rawAsks = obj(pv?.output).asks;
     const asks = Array.isArray(rawAsks) ? rawAsks.filter((a) => typeof a === "string") as string[] : [];
     const askList = asks.length
       ? `<div class="asks"><div class="askhdr">To unblock, decide:</div><ol>${asks.map((a) => `<li>${esc(a)}</li>`).join("")}</ol></div>`
-      : `<div class="kv" style="margin-bottom:8px">This step needs a human call — answer below to re-arm and continue, or rewind to revisit an earlier step. (No structured asks recorded${pv.output ? "" : "; this item ran before asks were captured — re-run to get them"}.)</div>`;
+      : `<div class="kv" style="margin-bottom:8px">This step needs a human call — answer below to re-arm and continue, or rewind to revisit an earlier step. (No structured asks recorded${pv?.output ? "" : "; this item ran before asks were captured — re-run to get them"}.)</div>`;
     return `${askList}
          <form class="act" method="post" action="/amend">
            <input type="hidden" name="id" value="${esc(item.id)}">
