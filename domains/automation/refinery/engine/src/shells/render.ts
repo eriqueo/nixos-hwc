@@ -678,6 +678,31 @@ export function renderProjectDetail(
       : `<div class="kv">no triage record</div>`;
     const triageNode = node("Triage", "passed", triageBody);
 
+    // Earlier verdicts for a step, newest first — the point of versioning
+    // judgments. One producer: gates AND the executor both render through it,
+    // because both now append judgment events (runner.ts, run-once, run-native).
+    const priorTrail = (trail: ReturnType<typeof judgmentsFor>, label: string): string =>
+      trail.length > 1
+        ? `<div class="kv" style="margin-top:8px">earlier verdicts for this ${label}:</div>` +
+          trail
+            .slice(0, -1)
+            .reverse()
+            .map(
+              (j) =>
+                `<div class="hist">v${j.version}${j.at ? ` · ${esc(j.at)}` : ""} · ${esc(String(j.decision ?? "?"))}${j.verdict ? ` — ${esc(j.verdict)}` : ""}</div>`,
+            )
+            .join("")
+        : "";
+    // "v2 of 2" only reads right while no judgment has been compacted away.
+    // Past that, version and count diverge, so show the count honestly.
+    const trailCount = (trail: ReturnType<typeof judgmentsFor>): string => {
+      if (trail.length <= 1) return "";
+      const current = trail[trail.length - 1]!;
+      return current.version === trail.length
+        ? `<div class="kv">verdict v${current.version} of ${trail.length}</div>`
+        : `<div class="kv">verdict v${current.version} · ${trail.length} kept (older ones compacted)</div>`;
+    };
+
     // Gate nodes — each gate's verdict trail, events-first with the
     // payload.verdicts[step] fallback (judgmentsFor). Showing the whole trail
     // rather than only the newest is the point of versioning judgments: a gate
@@ -688,20 +713,8 @@ export function renderProjectDetail(
         const trail = judgmentsFor(item, g);
         const st = states.get(g) ?? "pending";
         const current = trail.length ? trail[trail.length - 1]! : null;
-        const priorTrail =
-          trail.length > 1
-            ? `<div class="kv" style="margin-top:8px">earlier verdicts for this gate:</div>` +
-              trail
-                .slice(0, -1)
-                .reverse()
-                .map(
-                  (j) =>
-                    `<div class="hist">v${j.version}${j.at ? ` · ${esc(j.at)}` : ""} · ${esc(String(j.decision ?? "?"))}${j.verdict ? ` — ${esc(j.verdict)}` : ""}</div>`,
-                )
-                .join("")
-            : "";
         const body = current
-          ? `${current.decision != null ? `<div><b>decision:</b> ${esc(String(current.decision))}</div>` : ""}${current.verdict != null ? `<div><b>reason:</b> ${esc(String(current.verdict))}</div>` : ""}${trail.length > 1 ? `<div class="kv">verdict v${current.version} of ${trail.length}</div>` : ""}${prettyOutput(current.output)}${priorTrail}`
+          ? `${current.decision != null ? `<div><b>decision:</b> ${esc(String(current.decision))}</div>` : ""}${current.verdict != null ? `<div><b>reason:</b> ${esc(String(current.verdict))}</div>` : ""}${trailCount(trail)}${prettyOutput(current.output)}${priorTrail(trail, "gate")}`
           : st === "skipped"
             ? `<div class="kv">skipped — this gate did not apply to the item</div>`
             : `<div class="kv">no verdict recorded for this step</div>`;
@@ -709,10 +722,14 @@ export function renderProjectDetail(
       })
       .join(arrow);
 
-    // Executor node — payload.executorResult.
+    // Executor node — payload.executorResult for the rich current-state fields
+    // (branch/pushed/pristine), PLUS the executor's own judgment trail. Both
+    // executor finalizers append judgments; without this the trail was written
+    // and read by nothing, so a re-run's earlier result stayed invisible.
     const branch = typeof execResult.branch === "string" ? execResult.branch : "";
+    const execTrail = executorId ? judgmentsFor(item, executorId) : [];
     const execBody = Object.keys(execResult).length
-      ? `${execResult.outcome != null ? `<div><b>outcome:</b> ${esc(String(execResult.outcome))}</div>` : ""}${execResult.verdict != null ? `<div><b>verdict:</b> ${esc(String(execResult.verdict))}</div>` : ""}${branch ? `<div><b>branch:</b> ${esc(branch)}</div>` : ""}${"pushed" in execResult ? `<div><b>pushed:</b> ${String(execResult.pushed)}</div>` : ""}${"pristine" in execResult ? `<div><b>pristine:</b> ${String(execResult.pristine)}</div>` : ""}${"reportPresent" in execResult ? `<div><b>report:</b> ${String(execResult.reportPresent)}</div>` : ""}${execResult.detail != null ? `<div><b>detail:</b> ${esc(String(execResult.detail))}</div>` : ""}${prettyOutput(execResult.output)}`
+      ? `${execResult.outcome != null ? `<div><b>outcome:</b> ${esc(String(execResult.outcome))}</div>` : ""}${execResult.verdict != null ? `<div><b>verdict:</b> ${esc(String(execResult.verdict))}</div>` : ""}${branch ? `<div><b>branch:</b> ${esc(branch)}</div>` : ""}${"pushed" in execResult ? `<div><b>pushed:</b> ${String(execResult.pushed)}</div>` : ""}${"pristine" in execResult ? `<div><b>pristine:</b> ${String(execResult.pristine)}</div>` : ""}${"reportPresent" in execResult ? `<div><b>report:</b> ${String(execResult.reportPresent)}</div>` : ""}${execResult.detail != null ? `<div><b>detail:</b> ${esc(String(execResult.detail))}</div>` : ""}${trailCount(execTrail)}${prettyOutput(execResult.output)}${priorTrail(execTrail, "executor")}`
       : `<div class="kv">not yet executed</div>`;
     const execNode = executorId
       ? node(`Executor · ${executorId}`, states.get(executorId) ?? "pending", execBody)
