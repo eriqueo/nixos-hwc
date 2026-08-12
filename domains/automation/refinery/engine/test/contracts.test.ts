@@ -184,6 +184,26 @@ test("compactEvents sheds oldest judgments only when the log is all judgments", 
   assert.equal(kept[kept.length - 1]!.version, ITEM_EVENT_CAP + 3, "the newest is always kept");
 });
 
+test("compactEvents never drops the event just appended", () => {
+  // Regression: the "oldest non-judgments first" scan used to treat the NEWEST
+  // event as a drop candidate, so appending an action to a log already full of
+  // judgments returned an item silently missing that action — the first
+  // operator action on a mature item, discarded with no signal.
+  let item = ItemSchema.parse(base) as Item;
+  for (let i = 0; i < ITEM_EVENT_CAP; i++) {
+    item = appendItemEvent(item, judgment("spec", `v${i}`, `j${i}`));
+  }
+  assert.equal(item.events!.length, ITEM_EVENT_CAP);
+
+  item = appendItemEvent(item, { type: "action", at: "t-new", actor: "human", note: "dismissed" });
+  assert.equal(item.events!.length, ITEM_EVENT_CAP);
+  const last = item.events![item.events!.length - 1]!;
+  assert.equal(last.type, "action", "the appended action is present and newest");
+  assert.equal(last.note, "dismissed");
+  // It cost the OLDEST judgment, not itself.
+  assert.equal(item.events!.some((e) => e.verdict === "v0"), false);
+});
+
 test("appendItemEvent keeps an item at the cap without unbounded growth", () => {
   let item = ItemSchema.parse(base) as Item;
   for (let i = 0; i < ITEM_EVENT_CAP * 2; i++) {
