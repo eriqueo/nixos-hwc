@@ -33,7 +33,7 @@ Service tokens are created in: Cloudflare Zero Trust → Access → Service Cred
 
 ## Internal path (Tailscale / localhost)
 
-- URL: `http://server:9876/mcp` (Tailscale alias `server`, IP `100.114.232.124`) or `http://127.0.0.1:9876/mcp` on the server itself.
+- URL: `http://server:9876/mcp` (Tailscale alias `server`) or `http://127.0.0.1:9876/mcp` on the server itself. The alias resolves via `hwc.networking.hosts.ips.main` — don't copy the literal address into docs, it changes when the node re-registers (it moved once already, 2026-08-12).
 - Reachable from: only the server's localhost and Tailscale tailnet devices.
 - Auth: **none** at the app level. Trust boundary is the Tailscale identity layer (only paired devices can connect).
 - Use case: laptop Claude Code, Charter-internal tooling, debugging.

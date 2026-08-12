@@ -11,6 +11,10 @@
 let
   cfg = config.hwc.home.core.shell;
   ws = "$HWC_WORKSPACE_ROOT";
+  hmLib = import ../../../lib/hm.nix { inherit lib; };
+  # Tailnet addresses from hwc.networking.hosts (Law 1 fallback lives in hmLib,
+  # the single HM-lane copy). Never retype a tailnet IP here.
+  fleet = hmLib.fleet osConfig;
   # Law 3 + Law 1: derive from system paths when hosted on NixOS, with a
   # home-derived fallback so the module evaluates with osConfig = {}.
   nixosPath =
@@ -88,7 +92,7 @@ in
           };
         });
         default = {
-          server = { hostname = "100.114.232.124"; user = "eric"; forwardAgent = true; };
+          server = { hostname = fleet.ips.main; user = "eric"; forwardAgent = true; };
           # Elliott's lil-box (DataX), reachable only via Cloudflare Access.
           # Agent forwarding OFF: never forward your ssh-agent into a third party's box.
           lil-box = {
@@ -219,7 +223,7 @@ in
         size = 5000;
         save = 5000;
       };
-      shellAliases = (import ./parts/aliases.nix { inherit ws nixosPath; }) // cfg.aliases;
+      shellAliases = (import ./parts/aliases.nix { inherit ws nixosPath fleet; }) // cfg.aliases;
       initContent = import ./parts/zsh-init.nix { inherit config; };
     };
 

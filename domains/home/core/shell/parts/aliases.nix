@@ -1,7 +1,8 @@
 # domains/home/core/shell/parts/aliases.nix
 # Default shell aliases. ws = workspace root env var reference;
-# nixosPath = resolved hwc.paths.nixos (Law 3 with Law-1 fallback).
-{ ws, nixosPath }:
+# nixosPath = resolved hwc.paths.nixos (Law 3 with Law-1 fallback);
+# fleet = tailnet addresses from hwc.networking.hosts (same pattern, via hmLib).
+{ ws, nixosPath, fleet }:
 {
   "ll" = "eza -l"; "la" = "eza -lh"; "lt" = "eza --tree --level=2";
   "cd" = "z"; "cdi" = "zi"; "cz" = "z"; "czz" = "zi";
@@ -16,7 +17,7 @@
   "nixsearch" = "nix search nixpkgs"; "nixclean" = "nix-collect-garbage -d";
   "checkup" = "$HWC_NIXOS_DIR/scripts/system-checkup.sh"; "speedtest" = "speedtest-cli";
   "myip" = "curl -s ifconfig.me"; "reload" = "source ~/.zshrc";
-  "server" = "ssh eric@100.114.232.124"; "xps" = "ssh eric@100.126.80.42";
+  "server" = "ssh eric@${fleet.ips.main}"; "xps" = "ssh eric@${fleet.ips.xps}";
   "vpnon" = "sudo systemctl start wg-quick-protonvpn"; "vpnoff" = "sudo systemctl stop wg-quick-protonvpn";
   "vpnstatus" = "sudo wg show protonvpn 2>/dev/null || echo 'VPN disconnected'";
   "website" = "ssh -i ~/.ssh/hostinger_deploy -p 65002 u930853409@194.195.84.13";

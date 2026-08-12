@@ -195,7 +195,9 @@
     enable = true;
     devices."hwc-server" = {
       id = "5UCUDT4-CUUGX7U-F2XVLET-SE3QGCA-JRYGXK3-45MQOBP-SYMQZM7-O653IAA";
-      addresses = [ "tcp://100.114.232.124:22000" ];  # Server Tailscale IP
+      # Tailnet IP from the host registry, not retyped — see
+      # domains/networking/hosts/index.nix for why these values move.
+      addresses = [ "tcp://${config.hwc.networking.hosts.ips.main}:22000" ];
     };
     folders = {
       "000_inbox"    = { path = "/home/eric/000_inbox";    devices = [ "hwc-server" ]; };
@@ -369,9 +371,12 @@
     package = pkgs.postgresql_17;
   };
 
-  # Static hosts for local services (remains unchanged).
+  # Static hosts for local services. Deliberately IP-pinned rather than MagicDNS:
+  # these must resolve when *.ts.net lookups fail (see the NXDOMAIN-after-resume
+  # failure mode noted in domains/networking/hosts/index.nix). Address comes from
+  # the registry so a re-registered server is a one-line change.
   networking.hosts = {
-    "100.114.232.124" = [
+    "${config.hwc.networking.hosts.ips.main}" = [
       "sonarr.local" "radarr.local" "prowlarr.local" "jellyfin.local"
       "lidarr.local" "qbittorrent.local" "grafana.local" "dashboard.local"
       "prometheus.local" "caddy.local" "server.local" "hwc.local"
