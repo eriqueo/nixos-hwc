@@ -220,18 +220,29 @@
 
     ssh.enable = true;
     tailscale.enable = true;
-    # Registration is declarative: the secret holds a Tailscale OAuth *client*
-    # secret (tskey-client-…), not an auth key. Client secrets never expire,
-    # where auth keys cap at 90 days — so the node can always re-register itself
-    # unattended. Because the client mints keys scoped to tag:server, the node
-    # comes up as a tagged device, and tagged devices are exempt from node-key
-    # expiry entirely. That is the actual fix for the 2026-08-07 outage: the
-    # untagged node hit the tailnet's 6-month key expiry and dropped off.
+    # Registration is declarative: the secret holds a reusable, tagged Tailscale
+    # auth key (tskey-auth-…), created with Tags = tag:server and Ephemeral off.
+    # The node therefore registers as a tagged device, and tagged devices are
+    # exempt from node-key expiry — the actual fix for the 2026-08-07 outage,
+    # where the untagged node hit the tailnet's 6-month key expiry and dropped
+    # off (ssh failed "Network is unreachable"; recovered over LAN).
+    #
+    # Reusable matters: extraUpFlags only runs when the backend is NeedsLogin /
+    # NeedsMachineAuth / Stopped, but that recurs (the cutover itself, any
+    # reinstall). A single-use key would be consumed by the first registration
+    # and drop the host back to manual auth on the next one.
+    #
+    # Deliberately NO authKeyParameters: the ?preauthorized=…&ephemeral=… query
+    # form is valid only when appended to an OAuth *client* secret. A plain auth
+    # key carries reusable/ephemeral/tags baked in at creation, so appending the
+    # query string would corrupt the key.
+    #
+    # TEMPORARY-BY-CONSTRUCTION: this key expires 2026-11-10 (90d, Tailscale's
+    # maximum). The running node is unaffected — being tagged, it never expires
+    # — but a re-registration after that date needs a fresh key. Removal
+    # condition: swap the secret for a Tailscale OAuth client secret, which
+    # never expires, and restore an authKeyParameters block alongside it.
     tailscale.authKeyFile = config.age.secrets."tailscale-authkey".path;
-    tailscale.authKeyParameters = {
-      preauthorized = true;   # device is usable without manual approval
-      ephemeral = false;      # persists across reboots / offline periods
-    };
     # --reset makes this config authoritative rather than merging into whatever
     # prefs the last interactive `tailscale up` happened to leave behind.
     tailscale.extraUpFlags = [
