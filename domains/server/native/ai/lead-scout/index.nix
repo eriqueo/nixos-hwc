@@ -148,6 +148,11 @@ in
         Restart          = "on-failure";
         RestartSec       = "5s";
 
+        # Backstop for the app's own 10s SIGTERM drain; deliberately NOT
+        # SuccessExitStatus=143. Rationale in domains/server/README.md
+        # (2026-08-15) — it governs all three scouts, so it lives one layer up.
+        TimeoutStopSec   = "30s";
+
         # Security hardening
         NoNewPrivileges      = true;
         PrivateTmp           = true;
