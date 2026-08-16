@@ -33,7 +33,8 @@ in
         "${config.hwc.paths.hot.root}/downloads:/downloads"
       ];
       environment = {
-        READARR__URLBASE = "/readarr";
+        # Empty = served at root; readarr.hwc.iheartwoodcraft.com is a vhost.
+        READARR__URLBASE = "";
       };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ "prowlarr" ];
     })

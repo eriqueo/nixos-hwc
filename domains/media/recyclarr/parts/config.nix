@@ -19,7 +19,7 @@ let
     ${lib.optionalString cfg.services.sonarr.enable ''
     sonarr:
       tv:
-        base_url: http://localhost:8989/sonarr
+        base_url: http://localhost:8989
         api_key: !secret sonarr_api_key
 
         # Quality definitions from TRaSH Guides
@@ -75,7 +75,7 @@ let
     ${lib.optionalString cfg.services.radarr.enable ''
     radarr:
       movies:
-        base_url: http://localhost:7878/radarr
+        base_url: http://localhost:7878
         api_key: !secret radarr_api_key
 
         # Quality definitions from TRaSH Guides
@@ -134,7 +134,7 @@ let
     ${lib.optionalString cfg.services.lidarr.enable ''
     lidarr:
       music:
-        base_url: http://localhost:8686/lidarr
+        base_url: http://localhost:8686
         api_key: !secret lidarr_api_key
 
         # Quality definitions

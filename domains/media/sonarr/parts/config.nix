@@ -8,7 +8,7 @@ let
   enforceScript = arrConfig.mkArrConfigScript {
     name = "sonarr";
     inherit configPath;
-    urlBase = "/sonarr";
+    urlBase = "";  # vhost at sonarr.<vhostDomain>; no path prefix
   };
   webhookScript = arrConfig.mkArrWebhookScript {
     name = "sonarr";

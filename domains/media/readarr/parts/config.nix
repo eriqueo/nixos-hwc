@@ -10,10 +10,11 @@ let
     CONFIG_FILE="${configPath}/config.xml"
     mkdir -p "${configPath}"
 
-    # Only set UrlBase if config exists (don't interfere with first-run setup)
+    # Clear UrlBase if config exists (don't interfere with first-run setup).
+    # Empty = served at root; readarr.<vhostDomain> is a vhost, not a subpath.
     if [ -f "$CONFIG_FILE" ]; then
       ${pkgs.gnused}/bin/sed -i \
-        -e 's|<UrlBase>[^<]*</UrlBase>|<UrlBase>/readarr</UrlBase>|' \
+        -e 's|<UrlBase>[^<]*</UrlBase>|<UrlBase></UrlBase>|' \
         "$CONFIG_FILE"
     fi
   '';

@@ -8,7 +8,7 @@ let
   enforceScript = arrConfig.mkArrConfigScript {
     name = "prowlarr";
     inherit configPath;
-    urlBase = "/prowlarr";
+    urlBase = "";  # vhost at prowlarr.<vhostDomain>; no path prefix
   };
 in
 {

@@ -22,12 +22,13 @@ let
     prowlarr = 9696;
   };
 
-  # URL bases for all Arr apps
+  # Loopback API roots. No path prefix: the *arr apps run with an empty
+  # URL base (they are name-based vhosts, not subpaths).
   appUrls = {
-    sonarr = "http://127.0.0.1:8989/sonarr";
-    radarr = "http://127.0.0.1:7878/radarr";
-    lidarr = "http://127.0.0.1:8686/lidarr";
-    prowlarr = "http://127.0.0.1:9696/prowlarr";
+    sonarr = "http://127.0.0.1:8989";
+    radarr = "http://127.0.0.1:7878";
+    lidarr = "http://127.0.0.1:8686";
+    prowlarr = "http://127.0.0.1:9696";
   };
 in
 {

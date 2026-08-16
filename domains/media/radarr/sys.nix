@@ -22,7 +22,8 @@ in
         "${config.hwc.paths.hot.root}/downloads:/downloads"
       ];
       environment = {
-        RADARR__URLBASE = "/radarr";
+        # Empty = served at root; radarr.hwc.iheartwoodcraft.com is a vhost.
+        RADARR__URLBASE = "";
       };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ "prowlarr" ];
     })

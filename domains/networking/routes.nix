@@ -4,6 +4,18 @@ let
   nixosDir = config.hwc.paths.nixos;
 in
 {
+  # Routing standard: `mode = "vhost"` is the default for any new route —
+  # served at <name>.<vhostDomain> behind the *.hwc.iheartwoodcraft.com
+  # wildcard cert. It avoids the whole class of subpath breakage (apps that
+  # ignore their URL base, absolute asset paths, WebSocket upgrades) and keeps
+  # one service = one hostname.
+  #
+  # `mode = "subpath"` is now the exception and needs a reason. The remaining
+  # subpath routes below are each held for a stated cause: an external consumer
+  # pins the URL (webhook, couchdb, mcp), or the route is a deliberate
+  # convenience alias for a service that already has a vhost (jellyseerr-subpath).
+  # The rest are simply un-migrated — converting one means clearing its in-app
+  # URL base in the same change, or it will redirect to a path that no longer routes.
   hwc.networking.shared.routes = [
     # Jellyfin - name-based vhost (jellyfin.hwc.iheartwoodcraft.com)
     {
@@ -87,54 +99,37 @@ in
       upstream = "http://127.0.0.1:5031";
     }
 
-    # Sonarr - preserve path (URL base set in app)
+    # *arr stack - name-based vhosts. The in-app URL base is cleared in each
+    # app's sys.nix (<APP>__URLBASE) and parts/config.nix (config.xml), so these
+    # serve at root; nothing here may reintroduce a path prefix.
     {
       name = "sonarr";
-      mode = "subpath";
-      path = "/sonarr";
+      mode = "vhost";
       upstream = "http://127.0.0.1:8989";
-      needsUrlBase = true;
-      headers = { "X-Forwarded-Prefix" = "/sonarr"; };
     }
 
-    # Radarr - preserve path (URL base set in app)
     {
       name = "radarr";
-      mode = "subpath";
-      path = "/radarr";
+      mode = "vhost";
       upstream = "http://127.0.0.1:7878";
-      needsUrlBase = true;
-      headers = { "X-Forwarded-Prefix" = "/radarr"; };
     }
 
-    # Lidarr - preserve path (URL base set in app)
     {
       name = "lidarr";
-      mode = "subpath";
-      path = "/lidarr";
+      mode = "vhost";
       upstream = "http://127.0.0.1:8686";
-      needsUrlBase = true;
-      headers = { "X-Forwarded-Prefix" = "/lidarr"; };
     }
 
-    # Readarr - preserve path (URL base set in app)
     {
       name = "readarr";
-      mode = "subpath";
-      path = "/readarr";
+      mode = "vhost";
       upstream = "http://127.0.0.1:8787";
-      needsUrlBase = true;
-      headers = { "X-Forwarded-Prefix" = "/readarr"; };
     }
 
-    # Prowlarr - preserve path (URL base set in app)
     {
       name = "prowlarr";
-      mode = "subpath";
-      path = "/prowlarr";
+      mode = "vhost";
       upstream = "http://127.0.0.1:9696";
-      needsUrlBase = true;
-      headers = { "X-Forwarded-Prefix" = "/prowlarr"; };
     }
 
     # LazyLibrarian (books) - preserve path (Web Root setting in app)

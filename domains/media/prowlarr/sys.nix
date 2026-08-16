@@ -18,7 +18,8 @@ in
       ports = [ "127.0.0.1:9696:9696" ];
       volumes = [ "${configPath}:/config" ];
       environment = {
-        PROWLARR__URLBASE = "/prowlarr";
+        # Empty = served at root; prowlarr.hwc.iheartwoodcraft.com is a vhost.
+        PROWLARR__URLBASE = "";
       };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];
     })

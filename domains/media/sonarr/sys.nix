@@ -22,7 +22,8 @@ in
         "${config.hwc.paths.hot.root}/downloads:/downloads"
       ];
       environment = {
-        SONARR__URLBASE = "/sonarr";
+        # Empty = served at root; sonarr.hwc.iheartwoodcraft.com is a vhost.
+        SONARR__URLBASE = "";
       };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ "prowlarr" ];
     })

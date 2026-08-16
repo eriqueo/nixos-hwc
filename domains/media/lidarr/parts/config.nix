@@ -8,7 +8,7 @@ let
   enforceScript = arrConfig.mkArrConfigScript {
     name = "lidarr";
     inherit configPath;
-    urlBase = "/lidarr";
+    urlBase = "";  # vhost at lidarr.<vhostDomain>; no path prefix
   };
   webhookScript = arrConfig.mkArrWebhookScript {
     name = "lidarr";

@@ -22,7 +22,8 @@ in
         "${config.hwc.paths.hot.root}/downloads:/downloads"
       ];
       environment = {
-        LIDARR__URLBASE = "/lidarr";
+        # Empty = served at root; lidarr.hwc.iheartwoodcraft.com is a vhost.
+        LIDARR__URLBASE = "";
       };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ "prowlarr" ];
     })

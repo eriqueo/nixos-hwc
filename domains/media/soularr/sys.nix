@@ -34,7 +34,7 @@ in
         serviceConfig.ExecStartPre = pkgs.writeShellScript "wait-for-lidarr" ''
           for i in 1 1 2 3 5 8; do
             if ${pkgs.curl}/bin/curl -sf -H "X-Api-Key: $(cat ${config.age.secrets.lidarr-api-key.path})" \
-              "http://localhost:8686/lidarr/api/v1/system/status" >/dev/null 2>&1; then
+              "http://localhost:8686/api/v1/system/status" >/dev/null 2>&1; then
               echo "Lidarr is ready"
               exit 0
             fi

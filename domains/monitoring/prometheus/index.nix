@@ -222,11 +222,12 @@ in
               { name = "Jellyfin";       url = "http://127.0.0.1:8096/health"; }
               { name = "Jellyseerr";     url = "http://127.0.0.1:5055/api/v1/status"; }
               { name = "Immich";         url = "http://127.0.0.1:2283/api/server/ping"; }
-              { name = "Sonarr";         url = "http://127.0.0.1:8989/sonarr/ping"; }
-              { name = "Radarr";         url = "http://127.0.0.1:7878/radarr/ping"; }
-              { name = "Lidarr";         url = "http://127.0.0.1:8686/lidarr/ping"; }
-              { name = "Readarr";        url = "http://127.0.0.1:8787/readarr/ping"; }
-              { name = "Prowlarr";       url = "http://127.0.0.1:9696/prowlarr/ping"; }
+              # *arr apps run with an empty URL base (vhosts, not subpaths)
+              { name = "Sonarr";         url = "http://127.0.0.1:8989/ping"; }
+              { name = "Radarr";         url = "http://127.0.0.1:7878/ping"; }
+              { name = "Lidarr";         url = "http://127.0.0.1:8686/ping"; }
+              { name = "Readarr";        url = "http://127.0.0.1:8787/ping"; }
+              { name = "Prowlarr";       url = "http://127.0.0.1:9696/ping"; }
               { name = "Navidrome";      url = "http://127.0.0.1:4533/ping"; }
               { name = "Audiobookshelf"; url = "http://127.0.0.1:13378/healthcheck"; }
               { name = "SABnzbd";        url = "http://127.0.0.1:8081/"; }
