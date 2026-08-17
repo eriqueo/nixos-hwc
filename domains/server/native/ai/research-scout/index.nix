@@ -187,6 +187,19 @@ in
         # The classifier shells out to the `claude` CLI (scout precedent:
         # unit PATH carries only nodejs, so the binary must be declared).
         CLAUDE_BIN = "/etc/profiles/per-user/${cfg.user}/bin/claude";
+        # Item scoring runs on the self-hosted DX1 model via its OpenAI-
+        # compatible endpoint — 60 abstracts a day is a volume job, and it was
+        # burning the Claude subscription. The suggestions sink deliberately
+        # stays on claude-cli (its digest_sinks setting), because deciding what
+        # is worth changing is the one call here where reasoning is the product.
+        #
+        # The key is read from the agenix mount rather than an EnvironmentFile:
+        # systemd's `environment` cannot read a file, and an EnvironmentFile
+        # would mean a second plaintext copy. The service user is in `secrets`,
+        # so it can read the 0440 root:secrets mount directly.
+        OPENAI_API_KEY_FILE = "/run/agenix/pi-dx1-api-key";
+        OPENAI_BASE_URL = "https://dx1.datax.to/v1";
+        OPENAI_MODEL = "dx1";
         # Hardened unit must never write frontend/dist — deploy prebuilds it.
         SKIP_FRONTEND_BUILD = "1";
       };
