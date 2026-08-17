@@ -88,10 +88,17 @@
       dockerCompat = lib.mkDefault true;
       defaultNetwork.settings.dns_enabled = lib.mkDefault true;
       # Old :latest pulls accumulate ~1GB/week without this (2026-06-09 audit
-      # found 19GB unused); --all removes any image no container references
+      # found 19GB unused). Superseded :latest layers go UNTAGGED on re-pull, so
+      # a plain prune still reclaims them — which is what that audit measured.
+      #
+      # --all was removed 2026-08-16: it drops any image no *running* container
+      # references, so a container stopped across the timer loses its image and
+      # the next `--pull missing` start silently fetches current :latest. It ate
+      # recyclarr's image on 2026-08-10; with the arrs on :latest that path is a
+      # forward-only DB migration (Radarr 6.3.0) against zero backups.
       autoPrune = {
         enable = lib.mkDefault true;
-        flags = [ "--all" ];
+        flags = [ ];
         dates = lib.mkDefault "weekly";
       };
     };
