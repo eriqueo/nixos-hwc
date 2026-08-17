@@ -41,6 +41,10 @@ automation/
 ├── sr-gauntlet/   # Daily DataX SR investigation schedule (hwc.automation.srGauntlet.*)
 │   ├── index.nix  # systemd service/timer (06:30 daily) wrapping ~/700_datax/sr_gauntlet/run.sh
 │   └── README.md  # Containment model + pointer to the pipeline repo
+├── dx1-gauntlet/  # DX1 case-ledger investigation schedule (hwc.automation.dx1Gauntlet.*)
+│   ├── index.nix  # systemd service/timer (daily, strangler-fig) wrapping
+│   │              #   ~/700_datax/dx1_gauntlet/run.sh + the /dx1 run-now drain
+│   └── README.md  # Containment model + provisioning gate (enable=false until checkout exists)
 └── n8n/         # n8n workflow automation
     ├── index.nix     # Options + firewall rules
     ├── sys.nix       # Container definition via mkContainer
@@ -64,6 +68,15 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-08-16: Add `dx1-gauntlet/` — sr-gauntlet's sibling for DX1 health-ledger
+  case investigations (pipeline repo `~/700_datax/dx1_gauntlet`). Ships with
+  `enable = false` in `machines/server/config.nix` (strangler-fig: the board's
+  /dx1 page + run-now spool are live and missing-tolerant; the schedule waits
+  on the pipeline checkout being provisioned on the server). Shares
+  sr-gauntlet's service clones, cred files, claude-config dir, and agenix
+  Claude token (one credential, two consumers). Timer default is DAILY with
+  `Persistent = true` — deliberately lower cadence than sr-gauntlet while the
+  gauntlet earns trust.
 - 2026-08-06: vault-sync — push failure is now FATAL (`exit 1`) instead of a
   swallowed `|| echo`, and the unit carries `OnFailure = hwc-service-failure-notifier@`.
   A rejected push previously exited 0, so the hub could go stale for days with

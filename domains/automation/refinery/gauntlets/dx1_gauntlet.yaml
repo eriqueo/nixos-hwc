@@ -1,0 +1,31 @@
+# The DX1 case-investigation gauntlet, described as a dispatch contract. The
+# refinery triggers the STANDALONE dx1_gauntlet (its run.sh owns the Firestore
+# case fetch, read-only worktrees, credential phase separation, ledger dedup)
+# and reads the per-case REPORT back. The refinery never reimplements any of
+# that. Display-side wiring (the /dx1 board page) lives in the engine's
+# GAUNTLET_VIEWS shim (src/sources/gauntlet-views.ts), sibling of this file.
+#
+# This is wiring DATA only: nothing here executes run.sh. Going live (the board
+# spawning the trigger) is a later, human-reviewed step.
+#
+# Run-dir contract (verified against the live runner 2026-08-16; the board's
+# mirror in gauntlet-views.ts reads exactly this):
+#   investigations/<caseFingerprint>_<stateHash>/   (fingerprint keeps its ":")
+#     case.json  — queue snapshot: { caseFingerprint, stateHash, agentId,
+#                  agentName, orgId, orgName, family, triage, state, … }
+#     REPORT.md  — the investigation report
+#     context.md — the aggregated evidence pack
+#   state/ledger.json — { [fp]: { caseFingerprint, stateHash, verdict,
+#                  investigatedAt, run } } — the verdict source.
+#   {id} below = the raw case fingerprint (run.sh --id <fingerprint>). Run-now
+#   SPOOL filenames encode ":" as "+" (filesystem-safe); the runnow drain
+#   decodes "+" back to ":" before invoking run.sh.
+id: dx1_gauntlet
+trigger:
+  command: /home/eric/700_datax/dx1_gauntlet/run.sh
+  args: ["--id", "{id}"]
+  timeoutMs: 1800000 # 30 min per case — matches sr_gauntlet's agent budget
+resultsDir: /home/eric/700_datax/dx1_gauntlet/investigations/{id}
+reportFile: REPORT.md
+verdictPattern: "DX1-VERDICT: (diagnosed|inconclusive|not-reproducible)"
+successVerdicts: ["diagnosed", "inconclusive", "not-reproducible"]

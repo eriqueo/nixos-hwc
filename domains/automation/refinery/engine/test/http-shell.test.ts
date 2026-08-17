@@ -4,6 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readdirSync,
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createShell, HttpShellConfig } from "../src/shells/http.js";
+import { gauntletViewByKey } from "../src/sources/gauntlet-views.js";
 import { renderFlowBoard, renderHopperPage, renderNightly, renderFinished, renderFinishedProject, renderSr, renderSrDetail, renderProjectDetail, renderReference, renderReviews, renderBoard } from "../src/shells/render.js";
 import { PrReview } from "../src/review/contract.js";
 import { LlmPort } from "../src/gates/llm-port.js";
@@ -42,6 +43,7 @@ function setup(
       triageProvider: "claude-cli",
       runNowSpoolDir: join(root, "run-now"),
       srRunNowSpoolDir: join(root, "sr-run-now"),
+      dx1RunNowSpoolDir: join(root, "dx1-run-now"),
       nativeRunNowSpoolDir: join(root, "native-run"),
       clock: fixedClock,
       triageLlm,
@@ -689,6 +691,22 @@ test("requestSrRunNow drops a clean srId verbatim into the spool", () => {
   }
 });
 
+test("requestGauntletRunNow (dx1) encodes fingerprint colons as '+' in the spool filename", () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"));
+  try {
+    const shell = createShell(cfg);
+    shell.requestGauntletRunNow(gauntletViewByKey("dx1")!, "agent:22Nm:abc:D2_deadbeef");
+    const files = readdirSync(cfg.dx1RunNowSpoolDir);
+    assert.deepEqual(files, ["agent+22Nm+abc+D2_deadbeef"]);
+    assert.equal(
+      readFileSync(join(cfg.dx1RunNowSpoolDir, "agent+22Nm+abc+D2_deadbeef"), "utf8").trim(),
+      "agent+22Nm+abc+D2_deadbeef",
+    );
+  } finally {
+    cleanup();
+  }
+});
+
 test("renderSrDetail shows a re-investigate button only when the SR carries an srId", () => {
   const withId: Item = {
     id: "sr:2026-06-15-abc", pipeline: "datax-sr", step: "done", state: "passed",
@@ -744,6 +762,7 @@ test("app-refinement: the board runs gates in-process, then SPOOLS native execut
     triageProvider: "claude-cli",
     runNowSpoolDir: join(root, "run-now"),
     srRunNowSpoolDir: join(root, "sr-run-now"),
+      dx1RunNowSpoolDir: join(root, "dx1-run-now"),
     nativeRunNowSpoolDir,
     clock: fixedClock,
     triageLlm: triageStub("app-refinement"),
@@ -793,7 +812,7 @@ test("the board refuses to native-run an external-gauntlet pipeline (double-exec
   const cfg: HttpShellConfig = {
     port: 0, itemsDir: join(root, "items"), pipelinesDir, pipelineStatePath: join(root, "s.json"),
     capsPath: join(root, "c.json"), scratchDir: join(root, "specs"), triageProvider: "claude-cli",
-    runNowSpoolDir: join(root, "rn"), srRunNowSpoolDir: join(root, "srn"), nativeRunNowSpoolDir: join(root, "nrn"), clock: fixedClock,
+    runNowSpoolDir: join(root, "rn"), srRunNowSpoolDir: join(root, "srn"), dx1RunNowSpoolDir: join(root, "dx1rn"), nativeRunNowSpoolDir: join(root, "nrn"), clock: fixedClock,
     triageLlm: triageStub("nightly-build"), runLlm: runStub("pass"), nativeRepo: "/tmp/x",
   };
   try {
