@@ -152,11 +152,13 @@
   .fleet .sub td:first-child{padding-left:26px}
   .fleet .fam{display:inline-block;border:1px solid;border-radius:8px;padding:0 6px;font-size:11px;margin:0 2px 2px 0;white-space:nowrap}
   .fleet .up{color:var(--ok)} .fleet .down{color:var(--err)}
-  .fleet details{display:inline} .fleet summary{cursor:pointer;color:var(--ink)}
-  .fleet details .members{margin:6px 0 2px;font-size:11px;color:var(--fg)}
-  .fleet details .members div{padding:1px 0}
-  .fleet details .members b{color:var(--ink);font-weight:600}
-  .fleet details .members .quiet{color:var(--muted)}
+  .fleet .mtoggle{cursor:pointer;color:var(--acc);user-select:none}
+  .fleet tr.mem td{font-size:11px;color:var(--fg);border-bottom:1px dotted var(--line)}
+  .fleet tr.mem td:first-child{padding-left:26px}
+  .fleet tr.mem b{color:var(--ink);font-weight:600}
+  .fleet tr.mem a{color:var(--fg)}
+  .fleet tr.mem.quiet td{color:var(--muted)}
+  .fleet tr.mem.quiet b{color:var(--muted)}
   .fleet .method{color:var(--muted);font-size:12px;max-width:900px;margin:18px auto 30px;padding:0 18px;border-top:1px solid var(--line)}
   .fleet .method p{margin:8px 0}
   /* sort/filter enhancer chrome (JS-injected; absent without JS) */
@@ -269,17 +271,39 @@
                             : table.appendChild(r);
             });
         });
-        const applyFilter = (q) => {
+        // Member-row collapse: server renders member rows EXPANDED (no-JS pages
+        // stay complete); JS collapses them and the ▾/▸ toggles (main row + the
+        // diverged sub-row both carry one) reveal them per group.
+        const expanded = new Set();
+        let query = "";
+        const applyVisibility = () => {
             for (const g of readGroups()) {
-                // A match anywhere in the group (member expansion included) keeps the
+                // A match anywhere in the group (member rows included) keeps the
                 // whole group visible.
                 const hay = esc(g.rows.map((r) => r.textContent || "").join(" "));
-                const show = !q || hay.indexOf(q) !== -1;
-                for (const r of g.rows)
-                    r.style.display = show ? "" : "none";
+                const groupShown = !query || hay.indexOf(query) !== -1;
+                for (const r of g.rows) {
+                    const isMem = r.classList.contains("mem");
+                    r.style.display = groupShown && (!isMem || expanded.has(g.root.dataset.group || "")) ? "" : "none";
+                }
             }
         };
-        table.parentElement.insertBefore(makeFilterInput("filter rows…", applyFilter), table);
+        table.querySelectorAll(".mtoggle").forEach((tg) => {
+            tg.addEventListener("click", () => {
+                const gid = tg.dataset.group || "";
+                if (expanded.has(gid))
+                    expanded.delete(gid);
+                else
+                    expanded.add(gid);
+                table.querySelectorAll(`.mtoggle[data-group="${gid}"]`).forEach((x) => {
+                    x.textContent = expanded.has(gid) ? "▾" : "▸";
+                });
+                applyVisibility();
+            });
+            tg.textContent = "▸"; // JS present → start collapsed
+        });
+        applyVisibility();
+        table.parentElement.insertBefore(makeFilterInput("filter rows…", (q) => { query = q; applyVisibility(); }), table);
     });
     // ── lane boards (gauntlet run lists) ─────────────────────────────────────
     document.querySelectorAll('div[data-enhance="lanes"]').forEach((wrapEl) => {

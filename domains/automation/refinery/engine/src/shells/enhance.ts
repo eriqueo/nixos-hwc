@@ -124,16 +124,36 @@ export function boardEnhancer(hooksOnly?: boolean): EnhancerHooks | void {
       });
     });
 
-    const applyFilter = (q: string) => {
+    // Member-row collapse: server renders member rows EXPANDED (no-JS pages
+    // stay complete); JS collapses them and the ▾/▸ toggles (main row + the
+    // diverged sub-row both carry one) reveal them per group.
+    const expanded = new Set<string>();
+    let query = "";
+    const applyVisibility = () => {
       for (const g of readGroups()) {
-        // A match anywhere in the group (member expansion included) keeps the
+        // A match anywhere in the group (member rows included) keeps the
         // whole group visible.
-        const hay = esc(g.rows.map((r) => r.textContent || "").join(" "));
-        const show = !q || hay.indexOf(q) !== -1;
-        for (const r of g.rows) r.style.display = show ? "" : "none";
+        const hay = esc(g.rows.map((r: El) => r.textContent || "").join(" "));
+        const groupShown = !query || hay.indexOf(query) !== -1;
+        for (const r of g.rows) {
+          const isMem = r.classList.contains("mem");
+          r.style.display = groupShown && (!isMem || expanded.has(g.root.dataset.group || "")) ? "" : "none";
+        }
       }
     };
-    table.parentElement!.insertBefore(makeFilterInput("filter rows…", applyFilter), table);
+    table.querySelectorAll(".mtoggle").forEach((tg: El) => {
+      tg.addEventListener("click", () => {
+        const gid = tg.dataset.group || "";
+        if (expanded.has(gid)) expanded.delete(gid); else expanded.add(gid);
+        table.querySelectorAll(`.mtoggle[data-group="${gid}"]`).forEach((x: El) => {
+          x.textContent = expanded.has(gid) ? "▾" : "▸";
+        });
+        applyVisibility();
+      });
+      tg.textContent = "▸"; // JS present → start collapsed
+    });
+    applyVisibility();
+    table.parentElement!.insertBefore(makeFilterInput("filter rows…", (q: string) => { query = q; applyVisibility(); }), table);
   });
 
   // ── lane boards (gauntlet run lists) ─────────────────────────────────────

@@ -20,7 +20,7 @@ import { makeSpecExecutor } from "../executors/spec.js";
 import { runPipelineOnce } from "../cli/run-once.js";
 import { LlmPort } from "../gates/llm-port.js";
 import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX, finishedProjects, reopenProject, parseFinishedId, FINISHED_PREFIX } from "../sources/nightly-cards.js";
-import { readFleetSnapshots } from "../sources/dx1-fleet.js";
+import { ledgerAgentRuns, readDx1LedgerEntries, readFleetSnapshots } from "../sources/dx1-fleet.js";
 import { gauntletInvestigationProjects, readRunBundle, readRunFile } from "../sources/gauntlet-investigations.js";
 import { GAUNTLET_VIEWS, GauntletView, buildGauntletExport, gauntletViewByKey, gauntletViewForId } from "../sources/gauntlet-views.js";
 import { syncBrainIdeas, makeIdeaItem, ideaId, isBrainIdea, appendBrainIdea, removeBrainIdea, promoteBrainIdea } from "../sources/brain-ideas.js";
@@ -745,8 +745,10 @@ export function createShell(cfg: HttpShellConfig) {
           const dx1 = gauntletViewByKey("dx1");
           const dir = dx1 ? viewDir(dx1) : undefined;
           const snaps = dir ? readFleetSnapshots(dir) : { latest: null, previous: null };
+          // Ledger join: agentId → run, for the member rows' investigation links.
+          const agentRuns = dir ? ledgerAgentRuns(readDx1LedgerEntries(dir)) : new Map<string, { run: string }>();
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          res.end(renderDx1Fleet(snaps.latest, snaps.previous, cfg.clock()));
+          res.end(renderDx1Fleet(snaps.latest, snaps.previous, cfg.clock(), agentRuns));
           return;
         }
 

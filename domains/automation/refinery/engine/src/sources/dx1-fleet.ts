@@ -145,3 +145,55 @@ export const FLEET_FAMILY_FALLBACK = "#a7aaad"; // board --dim
 export function fleetFamilyColor(family: string): string {
   return FLEET_FAMILY_COLORS[family] ?? FLEET_FAMILY_FALLBACK;
 }
+
+// ── dx1_gauntlet ledger — ONE reader, two consumers ─────────────────────────
+// state/ledger.json is written by the runner (lib.mjs ledger-ok/-fail). The
+// gauntlet mirror joins verdicts by run name (gauntlet-views runExtras) and
+// the fleet view joins investigation links by agent id — both read through
+// here so the parse/shape lives once.
+
+export interface Dx1LedgerEntry {
+  caseFingerprint: string;
+  stateHash?: string;
+  verdict?: string;
+  investigatedAt?: string;
+  run: string;
+}
+
+export function readDx1LedgerEntries(dx1Dir: string): Dx1LedgerEntry[] {
+  const path = join(dx1Dir, "state", "ledger.json");
+  if (!existsSync(path)) return [];
+  let raw: Record<string, unknown>;
+  try {
+    raw = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+  } catch {
+    return [];
+  }
+  const out: Dx1LedgerEntry[] = [];
+  for (const v of Object.values(raw)) {
+    if (!v || typeof v !== "object") continue;
+    const e = v as Record<string, unknown>;
+    if (typeof e.caseFingerprint !== "string" || typeof e.run !== "string") continue;
+    out.push({
+      caseFingerprint: e.caseFingerprint,
+      stateHash: typeof e.stateHash === "string" ? e.stateHash : undefined,
+      verdict: typeof e.verdict === "string" ? e.verdict : undefined,
+      investigatedAt: typeof e.investigatedAt === "string" ? e.investigatedAt : undefined,
+      run: e.run,
+    });
+  }
+  return out;
+}
+
+/** agentId → its latest investigated run, keyed off the fingerprint's agent
+ * segment (`agent:<orgId>:<agentId>:<family>`). Feeds the fleet member rows'
+ * "investigation →" links. */
+export function ledgerAgentRuns(entries: Dx1LedgerEntry[]): Map<string, { run: string; verdict?: string }> {
+  const out = new Map<string, { run: string; verdict?: string }>();
+  for (const e of entries) {
+    const parts = e.caseFingerprint.split(":");
+    const agentId = parts[0] === "agent" ? parts[2] : undefined;
+    if (agentId) out.set(agentId, { run: e.run, verdict: e.verdict });
+  }
+  return out;
+}

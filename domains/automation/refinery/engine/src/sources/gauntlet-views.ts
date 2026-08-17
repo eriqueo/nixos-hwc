@@ -7,9 +7,8 @@
 // carries the EXECUTOR knobs; this carries the DISPLAY knobs. Two axes, two
 // tables, one producer each.
 
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { Item } from "../contracts.js";
+import { readDx1LedgerEntries } from "./dx1-fleet.js";
 
 /** A CSS-only tab on the detail page backed by files in the run dir. A
  * single-file tab renders the content bare; a multi-file tab (dx1 Evidence =
@@ -223,25 +222,16 @@ const DX1_VIEW: GauntletView = {
     source: "dx1_gauntlet investigation",
   }),
   // Verdicts live in the runner's ledger, not case.json — join by run name.
+  // Ledger parse lives in dx1-fleet.ts (one reader, also feeding the fleet
+  // view's investigation links).
   runExtras: (gauntletDir) => {
     const out = new Map<string, Record<string, unknown>>();
-    const ledgerPath = join(gauntletDir, "state", "ledger.json");
-    if (!existsSync(ledgerPath)) return out;
-    let ledger: Record<string, unknown> = {};
-    try {
-      ledger = JSON.parse(readFileSync(ledgerPath, "utf8")) as Record<string, unknown>;
-    } catch {
-      return out;
-    }
-    for (const entry of Object.values(ledger)) {
-      if (!entry || typeof entry !== "object") continue;
-      const e = entry as Record<string, unknown>;
-      if (typeof e.run === "string" && typeof e.verdict === "string" && e.verdict) {
-        out.set(e.run, {
-          verdict: e.verdict,
-          ...(typeof e.investigatedAt === "string" ? { investigatedAt: e.investigatedAt } : {}),
-        });
-      }
+    for (const e of readDx1LedgerEntries(gauntletDir)) {
+      if (!e.verdict) continue;
+      out.set(e.run, {
+        verdict: e.verdict,
+        ...(e.investigatedAt ? { investigatedAt: e.investigatedAt } : {}),
+      });
     }
     return out;
   },

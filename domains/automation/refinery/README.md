@@ -51,6 +51,25 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-08-17 (d): **Fleet members as aligned table rows + agent links; diverged
+  forks reachable.** Member expansions are real `<tr class="mem">` rows in the
+  cohort grid (col 1 = bold client + agent name, id·ratio demoted to a mono
+  second line; Tasks/Clean%/needs-help+err ("1+0")/runtime ("0.7m")/stalls/burn
+  under their columns; quiet = dim all-em-dash "no runs in window"; legacy
+  snapshots degrade). **divergedMembers render as full ⑂ rows** — verified NOT
+  a subset of members in the live snapshot, so the old flag-only logic never
+  surfaced them (Eric's "no way to investigate the diverged forks"); the
+  diverged sub-row carries its own ▾ toggle so forks are one click away. Agent
+  names link to the datax dx1-health executions drill (target=_blank); members
+  whose agentId appears in a ledger fingerprint get an "investigation →" link
+  to the run's board detail (ledger parse unified into dx1-fleet.ts
+  `readDx1LedgerEntries` — one reader now feeding runExtras verdicts AND these
+  links). CSS-only `<details>` replaced (details-in-tbody is invalid HTML)
+  with server-rendered-EXPANDED rows the enhancer collapses behind ▾/▸
+  toggles — no-JS pages stay complete; group-travel sort/filter untouched
+  (member rows share the cohort's data-group; groups still sort by the parent
+  row's cells). Goldens regenerated (delta = the enhancer script + fleet CSS
+  blocks, content byte-identical after normalizing). 200/200 tests.
 - 2026-08-17 (c): **Sortable + filterable columns — one shared enhancer.**
   New `engine/src/shells/enhance.ts`: a single self-contained vanilla-JS
   enhancement (no deps/CDN; inline via `boardEnhancer.toString()` — the

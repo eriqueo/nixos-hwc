@@ -231,11 +231,13 @@ const STYLE = `<style>
   .fleet .sub td:first-child{padding-left:26px}
   .fleet .fam{display:inline-block;border:1px solid;border-radius:8px;padding:0 6px;font-size:11px;margin:0 2px 2px 0;white-space:nowrap}
   .fleet .up{color:var(--ok)} .fleet .down{color:var(--err)}
-  .fleet details{display:inline} .fleet summary{cursor:pointer;color:var(--ink)}
-  .fleet details .members{margin:6px 0 2px;font-size:11px;color:var(--fg)}
-  .fleet details .members div{padding:1px 0}
-  .fleet details .members b{color:var(--ink);font-weight:600}
-  .fleet details .members .quiet{color:var(--muted)}
+  .fleet .mtoggle{cursor:pointer;color:var(--acc);user-select:none}
+  .fleet tr.mem td{font-size:11px;color:var(--fg);border-bottom:1px dotted var(--line)}
+  .fleet tr.mem td:first-child{padding-left:26px}
+  .fleet tr.mem b{color:var(--ink);font-weight:600}
+  .fleet tr.mem a{color:var(--fg)}
+  .fleet tr.mem.quiet td{color:var(--muted)}
+  .fleet tr.mem.quiet b{color:var(--muted)}
   .fleet .method{color:var(--muted);font-size:12px;max-width:900px;margin:18px auto 30px;padding:0 18px;border-top:1px solid var(--line)}
   .fleet .method p{margin:8px 0}
   /* sort/filter enhancer chrome (JS-injected; absent without JS) */
@@ -1103,46 +1105,64 @@ function fleetFamiliesHtml(fams: Record<string, number> | null | undefined): str
     .join("");
 }
 
-function fleetMembersHtml(t: FleetTemplate): string {
-  const diverged = new Set((t.divergedMembers ?? []).map((m) => m.id));
+/** Datax dx1-health executions drill for an agent — the same link vocabulary
+ * the gauntlet reports use. */
+const DX1_HEALTH_AGENT_URL = "https://datax.to/x/admin/dx1-health?tab=executions&agent=";
 
-  // Small/mono suffix: Eric tracks agents by id elsewhere — keep id + ratio,
-  // demoted; the raw orgDocId is gone from the row entirely.
-  const suffix = (m: FleetMember) =>
-    `<span class="kv">${esc(m.id ?? "")} · ratio ${typeof m.ratio === "number" ? m.ratio.toFixed(2) : "?"}${diverged.has(m.id) ? " · DIVERGED" : ""}</span>`;
-  const flag = (m: FleetMember) => (diverged.has(m.id) ? "⑂ " : "");
-
-  // Pre-2026-08-17 snapshots carry neither org nor stats — legacy row shape.
+/** Member rows as REAL table rows aligned under the cohort columns (col 1 =
+ * client + agent, then Tasks / Clean%pooled / — / needs-help+err / runtime
+ * med / stalls / — / burn). Assigned members AND diverged forks (⑂) both
+ * render — actives by tasks desc first, then quiet, then legacy. Each row
+ * shares the cohort's data-group so sorting/filtering travel whole; the
+ * enhancer collapses them behind the ▾ toggle (no-JS = expanded = complete). */
+function fleetMemberRows(
+  t: FleetTemplate,
+  agentRuns: Map<string, { run: string; verdict?: string }>,
+): string {
   const isLegacy = (m: FleetMember) => !("org" in m) && !("stats" in m);
-  const legacyRow = (m: FleetMember) =>
-    `<div>${flag(m)}${esc(m.name ?? "?")} <span class="kv">${esc(m.id ?? "")} · org ${esc(m.orgDocId ?? "?")} · ratio ${typeof m.ratio === "number" ? m.ratio.toFixed(2) : "?"}${diverged.has(m.id) ? " · DIVERGED" : ""}</span></div>`;
+  const combined: { m: FleetMember; fork: boolean }[] = [
+    ...(t.members ?? []).map((m) => ({ m, fork: false })),
+    ...(t.divergedMembers ?? []).map((m) => ({ m, fork: true })),
+  ];
+  const sorted = combined
+    .map((x, i) => ({ ...x, i, tasks: !isLegacy(x.m) && x.m.stats ? x.m.stats.tasks : -1 }))
+    .sort((a, b) => b.tasks - a.tasks || a.i - b.i);
 
-  const row = (m: FleetMember): string => {
-    if (isLegacy(m)) return legacyRow(m);
+  const dash = `<span class="kv">—</span>`;
+  const rows = sorted.map(({ m, fork }) => {
+    const inv = m.id ? agentRuns.get(m.id) : undefined;
+    const nameLink = m.id
+      ? `<a href="${DX1_HEALTH_AGENT_URL}${encodeURIComponent(m.id)}" target="_blank" rel="noopener" title="dx1-health executions for this agent">${esc(m.name ?? "?")}</a>`
+      : esc(m.name ?? "?");
+    const invLink = inv
+      ? ` · <a href="/project/${encodeURIComponent(`dx1:${inv.run}`)}" title="gauntlet investigation${inv.verdict ? ` — ${esc(inv.verdict)}` : ""}">investigation →</a>`
+      : "";
+    const suffix = `<div class="kv">${esc(m.id ?? "")} · ratio ${typeof m.ratio === "number" ? m.ratio.toFixed(2) : "?"}${invLink}</div>`;
+    const flag = fork ? "⑂ " : "";
+
+    if (isLegacy(m)) {
+      // Pre-2026-08-17 snapshot: no org/stats — name + suffix, numerics em-dash.
+      return `<tr class="mem" data-group="${esc(t.rootId)}"><td>${flag}${nameLink}${suffix}</td>${`<td class="n">${dash}</td>`.repeat(7)}<td>${dash}</td><td class="n">${dash}</td></tr>`;
+    }
     const org = `<b>${esc(m.org ?? "(org unknown)")}</b>`;
     const s = m.stats;
     if (!s) {
-      // stats: null = NO RUNS IN WINDOW — a state, not zeros; rendered dim.
-      return `<div class="quiet">${flag(m)}${org} — ${esc(m.name ?? "?")} · no runs in window ${suffix(m)}</div>`;
+      return `<tr class="mem quiet" data-group="${esc(t.rootId)}"><td>${flag}${org} — ${nameLink} <span class="kv">no runs in window</span>${suffix}</td>${`<td class="n">${dash}</td>`.repeat(7)}<td>${dash}</td><td class="n">${dash}</td></tr>`;
     }
-    const bits = [
-      `${s.tasks} tasks`,
-      typeof s.cleanPct === "number" ? `${s.cleanPct.toFixed(1)}% clean` : "",
-      `${s.needsHelp} needs-help`,
-      s.errors > 0 ? `${s.errors} err` : "",
-      `${s.stalls} stalls`,
-      typeof s.runtimeMedianMin === "number" ? `${s.runtimeMedianMin.toFixed(1)}m med` : "",
-      typeof s.burnMaxM === "number" ? `≤${s.burnMaxM.toFixed(2)}M` : "",
-    ].filter(Boolean).join(" · ");
-    return `<div>${flag(m)}${org} — ${esc(m.name ?? "?")} · ${bits} ${suffix(m)}</div>`;
-  };
-
-  // Active members (by tasks desc) lead; quiet/legacy follow in snapshot order.
-  const members = [...(t.members ?? [])]
-    .map((m, i) => ({ m, i, tasks: !isLegacy(m) && m.stats ? m.stats.tasks : -1 }))
-    .sort((a, b) => b.tasks - a.tasks || a.i - b.i)
-    .map((x) => x.m);
-  return members.map(row).join("");
+    return `<tr class="mem" data-group="${esc(t.rootId)}">
+      <td>${flag}${org} — ${nameLink}${suffix}</td>
+      <td class="n">${dash}</td>
+      <td class="n">${s.tasks}</td>
+      <td class="n">${typeof s.cleanPct === "number" ? `${s.cleanPct.toFixed(1)}%` : "—"}</td>
+      <td class="n">${dash}</td>
+      <td class="n" title="${s.needsHelp} needs-help + ${s.errors} errors">${s.needsHelp}+${s.errors}</td>
+      <td class="n">${typeof s.runtimeMedianMin === "number" ? `${s.runtimeMedianMin.toFixed(1)}m` : "—"}</td>
+      <td class="n">${s.stalls}</td>
+      <td>${dash}</td>
+      <td class="n">${typeof s.burnMaxM === "number" ? `≤${s.burnMaxM.toFixed(2)}M` : "—"}</td>
+    </tr>`;
+  });
+  return rows.join("\n    ");
 }
 
 function fleetRateCells(r: FleetRates, deltaHtml = ""): string {
@@ -1167,6 +1187,7 @@ export function renderDx1Fleet(
   latest: FleetSnapshot | null,
   previous: FleetSnapshot | null,
   now: string,
+  agentRuns: Map<string, { run: string; verdict?: string }> = new Map(),
 ): string {
   if (!latest) {
     const body = `<div class="fleet"><h2>DX1 fleet cohort health</h2>
@@ -1183,19 +1204,27 @@ export function renderDx1Fleet(
   const rows = cohorts
     .map((t) => {
       const untouched = t.cohortSize - (t.divergedForks ?? 0);
-      const nameCell = `<details><summary>${esc(t.name)}</summary><div class="members">${fleetMembersHtml(t)}</div></details>
-        <span class="kv">${esc(t.author ?? "")}${typeof t.downloads === "number" ? ` · ${t.downloads}↓` : ""}</span>`;
+      const memberCount = (t.members?.length ?? 0) + (t.divergedMembers?.length ?? 0);
+      // ▾ server-rendered EXPANDED (no-JS pages are complete); the enhancer
+      // collapses member rows on load and wires the toggle.
+      const toggle = memberCount
+        ? `<span class="mtoggle" data-group="${esc(t.rootId)}" title="show/hide the ${memberCount} member agents">▾</span> `
+        : "";
+      const nameCell = `${toggle}${esc(t.name)}
+        <div class="kv">${esc(t.author ?? "")}${typeof t.downloads === "number" ? ` · ${t.downloads}↓` : ""}${memberCount ? ` · ${memberCount} members` : ""}</div>`;
       const main = `<tr data-group="${esc(t.rootId)}">
       <td>${nameCell}</td>
       <td class="n" title="${untouched} untouched (${t.byteIdentical ?? 0} byte-identical) / ${t.divergedForks ?? 0} diverged">${t.cohortSize}${(t.divergedForks ?? 0) > 0 ? ` <span class="kv">(${untouched}/${t.divergedForks}⑂)</span>` : ""}</td>${fleetRateCells(t.rates, fleetDeltaHtml(cohortCleanDelta(t, previous)))}
     </tr>`;
+      // The diverged sub-row carries its own toggle: "diverged forks · 3" to
+      // the actual three ⑂ agents is one click.
       const sub = t.divergedRates
         ? `<tr class="sub" data-group="${esc(t.rootId)}">
-      <td>↳ diverged forks</td>
+      <td>${memberCount ? `<span class="mtoggle" data-group="${esc(t.rootId)}" title="show/hide member agents (⑂ = diverged)">▾</span> ` : ""}↳ diverged forks</td>
       <td class="n">${t.divergedRates.agents}</td>${fleetRateCells(t.divergedRates)}
     </tr>`
         : "";
-      return main + sub;
+      return main + sub + (memberCount ? `\n    ${fleetMemberRows(t, agentRuns)}` : "");
     })
     .join("\n    ");
 

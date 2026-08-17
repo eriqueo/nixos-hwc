@@ -35,12 +35,15 @@ function snapshot(date: string, clean = 88.8): FleetSnapshot {
           { id: "a3", name: "Receipt Processor", orgDocId: "orgC", ratio: 1, org: "Ogden Decks", stats: null },
           { id: "a1", name: "Bill Payable Entry", orgDocId: "orgA", ratio: 0.94, org: "FTD Homes",
             stats: { tasks: 7, cleanPct: 85.7, needsHelp: 1, errors: 0, stalls: 0, runtimeMedianMin: 0.7, burnMaxM: null } },
-          { id: "a2", name: "Receipts B (fork)", orgDocId: "orgB", ratio: 0.41, org: null,
-            stats: { tasks: 2, cleanPct: 50, needsHelp: 0, errors: 1, stalls: 1, runtimeMedianMin: 3.2, burnMaxM: 1.1 } },
           // Legacy shape (pre-2026-08-17 snapshot): no org/stats keys at all.
           { id: "a4", name: "Receipts Legacy", orgDocId: "orgD", ratio: 0.88 },
         ],
-        divergedMembers: [{ id: "a2", name: "Receipts B (fork)", orgDocId: "orgB", ratio: 0.41 }],
+        // Diverged forks are a SEPARATE list (verified against the live
+        // snapshot — NOT a subset of members) and must render as full rows.
+        divergedMembers: [
+          { id: "a2", name: "Receipts B (fork)", orgDocId: "orgB", ratio: 0.41, org: "RD Electric LLC",
+            stats: { tasks: 2, cleanPct: 50, needsHelp: 0, errors: 1, stalls: 1, runtimeMedianMin: 3.2, burnMaxM: 1.1 } },
+        ],
         rates: {
           agents: 27, agentsWithTasks: 10, tasks: 116,
           cleanPooledPct: clean, cleanPooledExclQuotaPct: clean,
@@ -103,16 +106,32 @@ test("renderDx1Fleet: header totals, Landis row numbers, diverged sub-row, famil
   assert.ok(html.includes("≤0.27M / ≤1.75M"), "token burn labeled as upper bound");
   assert.ok(html.includes("↳ diverged forks") && html.includes("92.8%"), "diverged sub-row");
   assert.ok(/border-color:#fbbf24[^>]*>P5×1/.test(html), "P5 family badge with catalog color");
-  assert.ok(html.includes("DIVERGED"), "diverged member flagged in the expansion");
-  // Member rows lead with the client and their numbers.
-  assert.ok(html.includes("<b>FTD Homes</b> — Bill Payable Entry · 7 tasks · 85.7% clean · 1 needs-help · 0 stalls · 0.7m med"), "active member stat line");
-  assert.ok(/class="quiet">[^<]*<b>Ogden Decks<\/b> — Receipt Processor · no runs in window/.test(html), "quiet member dim, stated as a state");
-  assert.ok(html.includes("<b>(org unknown)</b>"), "null org labeled");
-  assert.ok(html.includes("1 err") && html.includes("≤1.10M"), "errors + burn shown when present");
-  assert.ok(!/members">[\s\S]*org orgA/.test(html), "raw orgDocId gone from new-shape rows");
-  assert.ok(html.includes("Receipts Legacy") && html.includes("org orgD"), "legacy member renders the old row");
-  // Active-by-tasks-desc before quiet: FTD (7) then fork (2) then Ogden/legacy.
-  const order = ["FTD Homes", "Receipts B (fork)", "Ogden Decks", "Receipts Legacy"].map((s) => html.indexOf(s));
+  // Member rows are REAL table rows aligned under the cohort columns.
+  const memRows = html.match(/<tr class="mem[^"]*" data-group="x9vAYFxKAroRjcnRlaMQ">[\s\S]*?<\/tr>/g) ?? [];
+  assert.equal(memRows.length, 4, "3 assigned + 1 diverged fork all render as rows");
+  const ftd = memRows.find((r) => r.includes("FTD Homes"))!;
+  const cells = [...ftd.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((m) => m[1]!.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+  assert.equal(cells.length, 10, "member row spans all 10 columns");
+  assert.deepEqual(cells.slice(1, 8), ["—", "7", "85.7%", "—", "1+0", "0.7m", "0"], "numbers under their designated columns");
+  assert.ok(cells[9] === "—", "no burn → em dash");
+  // Agent name links to the dx1-health executions drill.
+  assert.ok(ftd.includes('href="https://datax.to/x/admin/dx1-health?tab=executions&agent=a1"') && ftd.includes('target="_blank"'));
+  // id + ratio demoted to the second-line mono suffix.
+  assert.ok(ftd.includes("a1 · ratio 0.94"));
+  // Diverged fork: full row, ⑂ flag, own org + stats in the grid.
+  const fork = memRows.find((r) => r.includes("RD Electric LLC"))!;
+  assert.ok(fork.includes("⑂") && fork.includes("≤1.10M") && fork.includes("0+1"), "fork row flagged with aligned stats");
+  // Quiet member: dim row, all numerics em-dash, state named.
+  const quiet = memRows.find((r) => r.includes("Ogden Decks"))!;
+  assert.ok(quiet.includes('class="mem quiet"') && quiet.includes("no runs in window"));
+  assert.ok(!/data-group="x9vAYFxKAroRjcnRlaMQ"[^>]*>[\s\S]{0,400}orgA/.test(ftd), "raw orgDocId gone");
+  // Legacy member renders name + suffix with em-dash numerics, no crash.
+  const legacy = memRows.find((r) => r.includes("Receipts Legacy"))!;
+  assert.ok(legacy.includes("a4 · ratio 0.88"));
+  // Both toggles present: cohort row + diverged sub-row, same group.
+  assert.equal((html.match(/mtoggle" data-group="x9vAYFxKAroRjcnRlaMQ"/g) ?? []).length, 2, "main + sub-row toggles");
+  // Actives first by tasks desc (FTD 7 > fork 2), then quiet, then legacy.
+  const order = ["FTD Homes", "RD Electric LLC", "Ogden Decks", "Receipts Legacy"].map((s) => html.indexOf(s));
   assert.ok(order[0]! < order[1]! && order[1]! < order[2]! && order[2]! < order[3]!, "actives first, tasks desc");
   assert.ok(html.includes("outcome/health rates, NOT task quality"), "method honesty rendered");
   assert.ok(html.includes("concurrent tasks bleed into the delta"), "token-burn caveat rendered");
@@ -127,4 +146,25 @@ test("renderDx1Fleet: trend arrow when a previous snapshot exists; empty state w
 
   const empty = renderDx1Fleet(null, null, "2026-08-17T12:00:00Z");
   assert.ok(empty.includes("no fleet snapshots yet"));
+});
+
+test("ledgerAgentRuns: agentId keyed off the fingerprint's agent segment", async () => {
+  const { ledgerAgentRuns } = await import("../src/sources/dx1-fleet.js");
+  const runs = ledgerAgentRuns([
+    { caseFingerprint: "agent:22PU:8MapVUD0NuEuuvolwkq8:D2", run: "agent:22PU:8MapVUD0NuEuuvolwkq8:D2_dcf9", verdict: "diagnosed" },
+    { caseFingerprint: "platform:failure-rate", run: "x" }, // non-agent fingerprint ignored
+  ]);
+  assert.deepEqual(runs.get("8MapVUD0NuEuuvolwkq8"), { run: "agent:22PU:8MapVUD0NuEuuvolwkq8:D2_dcf9", verdict: "diagnosed" });
+  assert.equal(runs.size, 1);
+});
+
+test("member investigation link renders only for agents with a ledger run", () => {
+  const runs = new Map([["a1", { run: "agent:o:a1:D2_h1", verdict: "diagnosed" }]]);
+  const html = renderDx1Fleet(snapshot("2026-08-17"), null, "2026-08-17T12:00:00Z", runs);
+  const memRows = html.match(/<tr class="mem[^"]*"[\s\S]*?<\/tr>/g) ?? [];
+  const ftd = memRows.find((r) => r.includes("FTD Homes"))!;
+  assert.ok(ftd.includes(`href="/project/${encodeURIComponent("dx1:agent:o:a1:D2_h1")}"`), "investigation link to the run detail");
+  assert.ok(ftd.includes("investigation →"));
+  const quiet = memRows.find((r) => r.includes("Ogden Decks"))!;
+  assert.ok(!quiet.includes("investigation →"), "no ledger run → no link");
 });
