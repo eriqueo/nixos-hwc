@@ -13,6 +13,7 @@ import { currentJudgment, Item, judgmentsFor, Pipeline } from "../contracts.js";
 import { PrReview } from "../review/contract.js";
 import { ResolvedPipeline } from "../pipelines/catalog.js";
 import { DomainRegistry, domainOf } from "../domains.js";
+import { FleetMember, FleetRates, FleetSnapshot, FleetTemplate, cohortCleanDelta, fleetFamilyColor } from "../sources/dx1-fleet.js";
 import { GAUNTLET_VIEWS, GauntletRunBundle, GauntletView, detailsExportMd, gauntletViewByKey, tabMd } from "../sources/gauntlet-views.js";
 import { mdToHtml } from "./markdown.js";
 
@@ -218,6 +219,22 @@ const STYLE = `<style>
   .node .ndot.skipped{background:transparent;border:1px solid var(--muted)}
   .node .nbody{padding:0 12px 10px;font-size:12px;color:var(--dim)}
   .node .nbody b{color:var(--fg)}
+  /* fleet cohort-health table (/dx1/fleet) — dx1-health Agents-tab feel */
+  .fleet{max-width:1240px;margin:0 auto;padding:0 18px}
+  .fleet .meta{color:var(--dim);font-size:13px;margin:6px 0 14px}
+  .fleet table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+  .fleet th{color:var(--dim);font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .fleet td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  .fleet th.n,.fleet td.n{text-align:right}
+  .fleet .sub td{color:var(--dim);border-bottom:1px dashed var(--line)}
+  .fleet .sub td:first-child{padding-left:26px}
+  .fleet .fam{display:inline-block;border:1px solid;border-radius:8px;padding:0 6px;font-size:11px;margin:0 2px 2px 0;white-space:nowrap}
+  .fleet .up{color:var(--ok)} .fleet .down{color:var(--err)}
+  .fleet details{display:inline} .fleet summary{cursor:pointer;color:var(--ink)}
+  .fleet details .members{margin:6px 0 2px;font-size:11px;color:var(--dim)}
+  .fleet details .members div{padding:1px 0}
+  .fleet .method{color:var(--muted);font-size:12px;max-width:900px;margin:18px auto 30px;padding:0 18px;border-top:1px solid var(--line)}
+  .fleet .method p{margin:8px 0}
 </style>`;
 
 function layout(active: string, body: string): string {
@@ -957,12 +974,15 @@ export function renderGauntletBoard(
   // Gauntlet cards are read-only mirrors (no inline controls); run-now lives on detail.
   const ctx: CardCtx = { domains, profiles, enabled: [], back: `/${view.key}` };
   const board = laneBoard(items, ctx, lanes, laneOf);
+  const viewLinks = (view.links ?? [])
+    .map((l) => ` <a class="kv" href="${esc(l.href)}">${esc(l.label)}</a>`)
+    .join("");
   const body = `
 <form class="intake" method="post" action="/${view.key}/config">
   <label class="kv">${esc(view.capLabel)}</label>
   <input type="number" name="maxPerNight" min="0" value="${maxPerRun}" style="width:90px">
   <button type="submit">save</button>
-  <span class="kv">${items.length} investigations · ${esc(view.capNote)}</span>
+  <span class="kv">${items.length} investigations · ${esc(view.capNote)}</span>${viewLinks}
 </form>
 <div class="wrap">${items.length ? board : `<div class="empty" style="padding:24px">${esc(view.emptyText)}</div>`}</div>`;
   return layout(view.key, body);
@@ -1034,6 +1054,120 @@ export function renderGauntletDetail(
   ${panels}
 </div>`;
   return layout(view.key, body);
+}
+
+// ── /dx1/fleet — cohort-health table over the daily fleet snapshot ──────────
+// Bespoke-but-shimmed (see dx1-fleet.ts header): dx1-specific analytics, no
+// second consumer yet, so it does not stretch the GauntletView registry.
+// Visual model: the datax dx1-health Agents tab (dense table + family badges),
+// re-expressed in the board's server-rendered idiom.
+
+function fleetPct(v: number | undefined | null): string {
+  return typeof v === "number" ? `${v.toFixed(1)}%` : "—";
+}
+function fleetNum(v: number | undefined | null): string {
+  return typeof v === "number" ? String(v) : "—";
+}
+
+function fleetDeltaHtml(delta: number | null): string {
+  if (delta === null || Math.abs(delta) < 0.05) return "";
+  const up = delta > 0;
+  return ` <span class="${up ? "up" : "down"}" title="clean% vs previous snapshot">${up ? "↑" : "↓"}${Math.abs(delta).toFixed(1)}</span>`;
+}
+
+function fleetFamiliesHtml(fams: Record<string, number> | null | undefined): string {
+  if (!fams || Object.keys(fams).length === 0) return `<span class="kv">—</span>`;
+  return Object.entries(fams)
+    .sort((a, b) => b[1] - a[1])
+    .map(([f, n]) => `<span class="fam" style="border-color:${fleetFamilyColor(f)};color:${fleetFamilyColor(f)}">${esc(f)}×${n}</span>`)
+    .join("");
+}
+
+function fleetMembersHtml(t: FleetTemplate): string {
+  const diverged = new Set((t.divergedMembers ?? []).map((m) => m.id));
+  const row = (m: FleetMember) =>
+    `<div>${diverged.has(m.id) ? "⑂ " : ""}${esc(m.name ?? "?")} <span class="kv">${esc(m.id ?? "")} · org ${esc(m.orgDocId ?? "?")} · ratio ${typeof m.ratio === "number" ? m.ratio.toFixed(2) : "?"}${diverged.has(m.id) ? " · DIVERGED" : ""}</span></div>`;
+  return (t.members ?? []).map(row).join("");
+}
+
+function fleetRateCells(r: FleetRates, deltaHtml = ""): string {
+  const rt = r.runtime;
+  const burn = r.tokenBurnUpperBound336h;
+  return `
+      <td class="n">${fleetNum(r.tasks)}</td>
+      <td class="n">${fleetPct(r.cleanPooledExclQuotaPct)}${deltaHtml}</td>
+      <td class="n">${fleetPct(r.cleanMedianPct)}</td>
+      <td class="n">${fleetPct(r.needsHelpErrExclQuotaPct)}</td>
+      <td class="n">${rt ? `${rt.medianMin.toFixed(1)} / ${rt.p90Min.toFixed(1)}` : "—"}</td>
+      <td class="n" title="stall events (tasks with a stall)">${fleetNum(r.stallEvents)}${typeof r.tasksWithStall === "number" ? ` <span class="kv">(${r.tasksWithStall})</span>` : ""}</td>
+      <td>${fleetFamiliesHtml(r.engineFamilies7d)}</td>
+      <td class="n" title="UPPER BOUND — subscription-cumulative deltas, concurrent tasks bleed in">${burn ? `≤${burn.medianM.toFixed(2)}M / ≤${burn.maxM.toFixed(2)}M <span class="kv">(n=${burn.tasksMeasured})</span>` : "—"}</td>`;
+}
+
+/** Fleet cohort-health table: one row per template cohort (tasks desc), an
+ * indented diverged-forks sub-row where present, CSS-only member expansion,
+ * clean%% trend arrows vs the previous snapshot, and the method notes
+ * rendered verbatim — the honesty block is part of the page, not decoration. */
+export function renderDx1Fleet(
+  latest: FleetSnapshot | null,
+  previous: FleetSnapshot | null,
+  now: string,
+): string {
+  if (!latest) {
+    const body = `<div class="fleet"><h2>DX1 fleet cohort health</h2>
+<div class="empty" style="padding:24px">no fleet snapshots yet — dx1_gauntlet writes state/fleet-history/YYYY-MM-DD.json daily</div>
+<a href="/dx1" class="kv">← DX1</a></div>`;
+    return layout("dx1", body);
+  }
+
+  const ageDays = latest.generatedAt
+    ? Math.max(0, Math.floor((new Date(now).getTime() - new Date(latest.generatedAt).getTime()) / 86_400_000))
+    : null;
+  const cohorts = [...latest.templates].sort((a, b) => (b.rates.tasks ?? 0) - (a.rates.tasks ?? 0));
+
+  const rows = cohorts
+    .map((t) => {
+      const untouched = t.cohortSize - (t.divergedForks ?? 0);
+      const nameCell = `<details><summary>${esc(t.name)}</summary><div class="members">${fleetMembersHtml(t)}</div></details>
+        <span class="kv">${esc(t.author ?? "")}${typeof t.downloads === "number" ? ` · ${t.downloads}↓` : ""}</span>`;
+      const main = `<tr>
+      <td>${nameCell}</td>
+      <td class="n" title="${untouched} untouched (${t.byteIdentical ?? 0} byte-identical) / ${t.divergedForks ?? 0} diverged">${t.cohortSize}${(t.divergedForks ?? 0) > 0 ? ` <span class="kv">(${untouched}/${t.divergedForks}⑂)</span>` : ""}</td>${fleetRateCells(t.rates, fleetDeltaHtml(cohortCleanDelta(t, previous)))}
+    </tr>`;
+      const sub = t.divergedRates
+        ? `<tr class="sub">
+      <td>↳ diverged forks</td>
+      <td class="n">${t.divergedRates.agents}</td>${fleetRateCells(t.divergedRates)}
+    </tr>`
+        : "";
+      return main + sub;
+    })
+    .join("\n    ");
+
+  const m = latest.method ?? {};
+  const methodLines = ["note", "runtime", "tokenBurn", "engineFamilies", "similarity"]
+    .filter((k) => typeof m[k] === "string")
+    .map((k) => `<p><b>${esc(k)}:</b> ${esc(String(m[k]))}</p>`)
+    .join("\n");
+  const thresholds = [
+    typeof m.assignThreshold === "number" ? `assign ≥ ${m.assignThreshold}` : "",
+    typeof m.divergedFloor === "number" ? `diverged ≥ ${m.divergedFloor}` : "",
+  ].filter(Boolean).join(" · ");
+
+  const body = `<div class="fleet">
+  <a href="/dx1" class="kv">← DX1</a>
+  <h2>DX1 fleet cohort health</h2>
+  <div class="meta">snapshot ${esc(latest.date)}${ageDays !== null ? ` (${ageDays === 0 ? "today" : `${ageDays}d old`})` : ""} · ${latest.windowDays ?? "?"}d window · ${latest.fleet?.productionAgents ?? "?"} production agents · ${cohorts.length} cohorts · ${latest.fleet?.unassignedCount ?? "?"} unassigned${previous ? ` · trend vs ${esc(previous.date)}` : " · no previous snapshot — no trend yet"}</div>
+  <table>
+    <tr><th>Template cohort</th><th class="n">Agents</th><th class="n">Tasks</th><th class="n">Clean %<br><span style="font-weight:400">pooled excl-quota</span></th><th class="n">Clean %<br><span style="font-weight:400">median</span></th><th class="n">Needs-help+err %</th><th class="n">Runtime min<br><span style="font-weight:400">med / p90</span></th><th class="n">Stalls</th><th>Engine families 7d</th><th class="n">Token burn<br><span style="font-weight:400">med / max</span></th></tr>
+    ${rows}
+  </table>
+  <div class="method">
+    <p><b>Method${thresholds ? ` (${esc(thresholds)})` : ""}:</b> these are cohort <b>outcome/health rates, NOT task quality</b>.</p>
+${methodLines}
+  </div>
+</div>`;
+  return layout("dx1", body);
 }
 
 export interface SrFiles {

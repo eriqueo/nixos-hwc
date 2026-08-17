@@ -18,12 +18,10 @@ import { Item } from "../src/contracts.js";
 const golden = (name: string) =>
   readFileSync(fileURLToPath(new URL(`../../test/golden/${name}`, import.meta.url)), "utf8");
 
-// The single intended nav change: the DX1 tab (inactive on SR pages).
-const DX1_TAB = '<a href="/dx1" class="">DX1</a>';
-const stripDx1Tab = (html: string) => {
-  assert.ok(html.includes(DX1_TAB), "DX1 nav tab present");
-  return html.replace(DX1_TAB, "");
-};
+// Goldens carry the current chrome (DX1 nav tab + fleet CSS) as of the
+// 2026-08-17 regeneration — each regeneration was diffed first (nav tab, then
+// the .fleet style block; content never changed) — so every comparison is
+// straight byte equality.
 
 const SR_ITEMS: Item[] = [
   { id: "sr:2026-08-10-abc123", pipeline: "datax-sr", step: "investigated", state: "passed",
@@ -36,16 +34,12 @@ const SR_ITEMS: Item[] = [
       readonly: true, source: "sr_gauntlet investigation" }, history: [] },
 ];
 
-test("parity — SR board via the generic component is byte-identical (modulo the DX1 nav tab)", () => {
-  assert.equal(stripDx1Tab(renderSr(SR_ITEMS, 5, [], undefined)), golden("golden-sr-board.html"));
-  assert.equal(stripDx1Tab(renderSr([], 5, [], undefined)), golden("golden-sr-board-empty.html"));
+test("parity — SR board via the generic component is byte-identical to the goldens", () => {
+  assert.equal(renderSr(SR_ITEMS, 5, [], undefined), golden("golden-sr-board.html"));
+  assert.equal(renderSr([], 5, [], undefined), golden("golden-sr-board-empty.html"));
 });
 
-test("parity — SR detail is byte-identical to the export-buttons goldens", () => {
-  // Detail goldens REGENERATED 2026-08-16 when the export-download row landed
-  // (reviewed delta vs the pre-refactor capture: the DX1 nav tab + the one
-  // export row — nothing else). They now include both, so no normalization:
-  // straight byte equality guards all future refactors.
+test("parity — SR detail is byte-identical to the goldens", () => {
   const full = renderSrDetail(SR_ITEMS[0]!, { gameplan: "# Report\n\nfix **this**", thread: "- msg", context: "ctx here" });
   assert.equal(full, golden("golden-sr-detail-full.html"));
   const empty = renderSrDetail(SR_ITEMS[1]!, { gameplan: null, thread: null, context: null });

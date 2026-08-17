@@ -66,6 +66,9 @@ export interface GauntletView {
   laneField: string;
   /** Run-now form: field name + copy. null = gauntlet has no run-now. */
   runNow: { field: string; button: string; title: (id: string) => string; caption: string } | null;
+  /** Extra links rendered beside the cap form (dx1: the fleet view). A view
+   * without links renders exactly as before — byte-parity preserved. */
+  links?: { href: string; label: string }[];
   /** File-backed tabs, in order; the composed "details" tab is appended by the renderer. */
   tabs: GauntletTab[];
   /** Detail context file folded into the Details tab (below the meta rows) as
@@ -188,6 +191,7 @@ const DX1_VIEW: GauntletView = {
     title: (id) => `run the DX1 gauntlet on case ${id} now`,
     caption: "forces a fresh investigation of this case; the report updates when it finishes",
   },
+  links: [{ href: "/dx1/fleet", label: "📊 fleet cohort health" }],
   tabs: [
     { key: "gameplan", label: "Report", files: ["REPORT.md"], empty: "no REPORT.md for this investigation yet" },
     // Evidence = the pack the agent started from + the cited dossier it wrote.

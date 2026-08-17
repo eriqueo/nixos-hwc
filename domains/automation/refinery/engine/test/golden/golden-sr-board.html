@@ -141,9 +141,25 @@
   .node .ndot.skipped{background:transparent;border:1px solid var(--muted)}
   .node .nbody{padding:0 12px 10px;font-size:12px;color:var(--dim)}
   .node .nbody b{color:var(--fg)}
+  /* fleet cohort-health table (/dx1/fleet) — dx1-health Agents-tab feel */
+  .fleet{max-width:1240px;margin:0 auto;padding:0 18px}
+  .fleet .meta{color:var(--dim);font-size:13px;margin:6px 0 14px}
+  .fleet table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+  .fleet th{color:var(--dim);font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .fleet td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  .fleet th.n,.fleet td.n{text-align:right}
+  .fleet .sub td{color:var(--dim);border-bottom:1px dashed var(--line)}
+  .fleet .sub td:first-child{padding-left:26px}
+  .fleet .fam{display:inline-block;border:1px solid;border-radius:8px;padding:0 6px;font-size:11px;margin:0 2px 2px 0;white-space:nowrap}
+  .fleet .up{color:var(--ok)} .fleet .down{color:var(--err)}
+  .fleet details{display:inline} .fleet summary{cursor:pointer;color:var(--ink)}
+  .fleet details .members{margin:6px 0 2px;font-size:11px;color:var(--dim)}
+  .fleet details .members div{padding:1px 0}
+  .fleet .method{color:var(--muted);font-size:12px;max-width:900px;margin:18px auto 30px;padding:0 18px;border-top:1px solid var(--line)}
+  .fleet .method p{margin:8px 0}
 </style></head><body>
 <header><h1>🛠 Refinery</h1><nav>
-  <a href="/" class="">Board</a><a href="/nightly" class="">Overnight</a><a href="/finished" class="">Finished</a><a href="/sr" class="active">SR</a><a href="/reviews" class="">Reviews</a><a href="/reference" class="">Reference</a>
+  <a href="/" class="">Board</a><a href="/nightly" class="">Overnight</a><a href="/finished" class="">Finished</a><a href="/sr" class="active">SR</a><a href="/dx1" class="">DX1</a><a href="/reviews" class="">Reviews</a><a href="/reference" class="">Reference</a>
 </nav></header>
 
 <form class="intake" method="post" action="/sr/config">

@@ -20,10 +20,11 @@ import { makeSpecExecutor } from "../executors/spec.js";
 import { runPipelineOnce } from "../cli/run-once.js";
 import { LlmPort } from "../gates/llm-port.js";
 import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX, finishedProjects, reopenProject, parseFinishedId, FINISHED_PREFIX } from "../sources/nightly-cards.js";
+import { readFleetSnapshots } from "../sources/dx1-fleet.js";
 import { gauntletInvestigationProjects, readRunBundle, readRunFile } from "../sources/gauntlet-investigations.js";
 import { GAUNTLET_VIEWS, GauntletView, buildGauntletExport, gauntletViewByKey, gauntletViewForId } from "../sources/gauntlet-views.js";
 import { syncBrainIdeas, makeIdeaItem, ideaId, isBrainIdea, appendBrainIdea, removeBrainIdea, promoteBrainIdea } from "../sources/brain-ideas.js";
-import { renderBoard, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderGauntletBoard, renderGauntletDetail, renderProjectDetail, renderReport, renderReference, renderReviews, HOPPER_STAGE_KEYS } from "./render.js";
+import { renderBoard, renderDx1Fleet, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderGauntletBoard, renderGauntletDetail, renderProjectDetail, renderReport, renderReference, renderReviews, HOPPER_STAGE_KEYS } from "./render.js";
 import { FileReviewsStore, resolveReviewsDir } from "../stores/reviews-store.js";
 
 export interface HttpShellConfig {
@@ -734,6 +735,18 @@ export function createShell(cfg: HttpShellConfig) {
             "content-disposition": `attachment; filename="${out.filename}"`,
           });
           res.end(out.markdown);
+          return;
+        }
+
+        // Fleet cohort health — the daily dx1_gauntlet fleet snapshot as a
+        // table (bespoke view; see dx1-fleet.ts). Missing snapshot dir →
+        // empty state, never an error.
+        if (method === "GET" && url === "/dx1/fleet") {
+          const dx1 = gauntletViewByKey("dx1");
+          const dir = dx1 ? viewDir(dx1) : undefined;
+          const snaps = dir ? readFleetSnapshots(dir) : { latest: null, previous: null };
+          res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+          res.end(renderDx1Fleet(snaps.latest, snaps.previous, cfg.clock()));
           return;
         }
 

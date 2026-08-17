@@ -51,6 +51,26 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-08-17: **/dx1/fleet — fleet cohort-health table.** New view over the
+  daily `dx1_gauntlet` snapshot (`state/fleet-history/YYYY-MM-DD.json`,
+  already inside the board's RO `state/` bind), visually modeled on the datax
+  dx1-health Agents tab: one row per template cohort (tasks desc) with
+  cohort split (untouched/diverged⑂), clean%% pooled-excl-quota + median,
+  needs-help+err%%, runtime med/p90, stalls, engine-family badges (colors
+  frozen from datax `family-catalog.ts`), token burn labeled `≤` (upper
+  bound); indented diverged-forks sub-row; CSS-only `<details>` member
+  expansion (org = orgDocId — names aren't in the snapshot); clean%% trend
+  arrows vs the second-latest snapshot (degrades with one); the method
+  block's honesty notes ("outcome/health rates, NOT task quality", token-burn
+  caveat) rendered as a footer, not dropped. Missing dir / corrupt day →
+  empty state / skip-to-older, never an error. **Bespoke-but-shimmed** by
+  choice (`sources/dx1-fleet.ts` header): dx1-specific analytics with no
+  second consumer — the GauntletView registry keeps driving run-dir mirrors
+  only; the /dx1 page links to the view via the new optional
+  `GauntletView.links` field (sr renders byte-identically without it).
+  Parity goldens regenerated (reviewed delta: the `.fleet` style block +
+  the DX1 nav tab now baked in) and ALL parity assertions tightened to
+  straight byte equality. 193/193 tests.
 - 2026-08-16 (b): **Gauntlet detail: Evidence composition + exports.** Tabs
   are now multi-file (`GauntletTab.files[]`): dx1's Evidence renders
   context.md + FINDINGS.md as named sections (present files render, absent
