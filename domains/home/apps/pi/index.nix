@@ -71,13 +71,13 @@ in
     dx1 = {
       baseUrl = lib.mkOption {
         type = lib.types.str;
-        default = "https://eanzbnhtt3ji8t-8000.proxy.runpod.net/v1";
+        default = "https://dx1.datax.to/v1";
         description = ''
-          OpenAI-compatible base URL of the DX1 deployment. This is the RunPod
-          pod-proxy URL for pod `eanzbnhtt3ji8t` ("DX1 on RTX6000"). The pod ID
-          — and thus this URL — is STABLE across Stop/Start; it changes only if
-          the pod is terminated and recreated. If that happens, update this one
-          line and rebuild.
+          OpenAI-compatible base URL of the DX1 deployment: the LiteLLM proxy,
+          which is the stable client-side entry point and survives the pod being
+          terminated and recreated. It previously pointed at the RunPod
+          pod-proxy URL for pod `eanzbnhtt3ji8t` ("DX1 on RTX6000"), which went
+          dead when that pod was stopped and DX1 migrated to an H100 pod.
         '';
       };
 
@@ -151,6 +151,6 @@ in
     ];
 
     warnings = lib.optional (lib.hasInfix "proxy.runpod.net" cfg.dx1.baseUrl)
-      "hwc.home.apps.pi: dx1.baseUrl points at a RunPod pod-proxy URL — stable across Stop/Start, but if pod eanzbnhtt3ji8t is terminated & recreated the URL changes and DX1 will 404 until you update dx1.baseUrl.";
+      "hwc.home.apps.pi: dx1.baseUrl points at a RunPod pod-proxy URL — stable across Stop/Start, but it dies when that pod is terminated or replaced, and pi then 404s on every request. Prefer the LiteLLM proxy https://dx1.datax.to/v1, which survives pod migration.";
   };
 }
