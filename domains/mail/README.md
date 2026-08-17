@@ -15,14 +15,24 @@ mail/
 │   ├── index.nix              # Account definitions (proton, gmail-personal, gmail-business)
 │   └── helpers.nix            # Shared helpers (loginOf, rolesFor, passCmd, etc.)
 ├── abook/index.nix            # Address book config
+├── contacts/index.nix         # khard + vdirsyncer CardDAV pair on the CRM rolodex
+├── taxonomy/                  # Canonical tag/bucket/sender registry (pure data)
+│   ├── data.nix               #   vocabulary, triage buckets, sender dispositions
+│   ├── lib.nix                #   derivations consumed by notmuch/aerc/MCP
+│   └── README.md
+├── parts/common.nix           # Shared cross-module helpers
+├── protonmail-bridge-cert/sys.nix  # Bridge cert export (system lane)
 ├── aerc/
 │   ├── index.nix              # aerc module (enable toggle, packages, activation)
+│   ├── package.nix            # forked github:eriqueo/aerc flake input
 │   └── parts/
 │       ├── config.nix         # aerc.conf, accounts.conf, queries, stylesets, templates
 │       ├── binds.nix          # Keybindings + ov pager config
-│       ├── tags.nix           # Single source of truth for tag definitions
-│       ├── theme.nix          # Palette-driven styleset (Gruvbox)
-│       └── sieve.nix          # Server-side sieve filters
+│       ├── tags.nix           # Tag definitions, derived from taxonomy/
+│       ├── tags-custom.json   # Hand-maintained tag overrides
+│       ├── appearance.nix     # Palette-driven styleset + which-key card colours
+│       ├── sieve.nix          # Server-side sieve filters
+│       └── sieve-filters.nix  # Filter rule set
 ├── afew/
 │   ├── index.nix              # afew config generation (filters, MailMover)
 │   └── package.nix            # afew package derivation
@@ -73,6 +83,19 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-08-17: Structure block corrected — it omitted `contacts/`, `taxonomy/`,
+  `parts/common.nix` and `protonmail-bridge-cert/sys.nix`, and the `aerc/parts/`
+  listing still named `theme.nix`, `session.nix` and `behavior.nix` (all gone) while
+  missing `appearance.nix`, `sieve-filters.nix`, `tags-custom.json` and `package.nix`.
+- 2026-07-31: `752a05c4` — the digest shield generalized. `notmuch/parts/hooks.nix`
+  (+17/-7) now shields **all** self-addressed mail from archive instead of matching a
+  subject allowlist ("weekly brief" / "Weekly Intelligence Digest"). The allowlist only
+  ever covered the digests that had already been noticed; any new self-sent mail hit the
+  same `proton/Sent` → MailMover-archives path.
+- 2026-07-16: `b4f466e6` — new **`contacts/`** module (+146): khard plus a vdirsyncer
+  CardDAV pair against the hwc-crm rolodex; `aerc/parts/config.nix` repointed at it.
+  `7485823d` consolidated the calendar under the `eric` Radicale principal and retired
+  the separate `cal` principal (`calendar/index.nix` +10/-6).
 - 2026-07-11: mbsync/afew: maildir-root fallback literal `/home/eric/400_mail` replaced with the `${config.home.homeDirectory}/400_mail` derivation (aerc precedent; Law 3 migration, rendered value unchanged).
 - 2026-07-09 (b): aerc joins triage (unified-triage Phase 2) — `triage/*`
   virtual folders (taxonomy-generated, tree-nested, inbox-scoped) +
