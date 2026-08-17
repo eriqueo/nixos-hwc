@@ -15,6 +15,30 @@ This directory contains production-ready n8n workflow JSON files that can be imp
 >   now posts straight to hwc-notify; the n8n hop was pure forwarding middleware.
 >   Repointed + orphaned; delete the empty shell in the n8n UI.
 
+## Structure
+
+The files actually tracked here, as of 2026-08-17:
+
+```
+workflows/
+├── 01-media-pipeline-orchestration.json         # documented below
+├── 01-media-pipeline-orchestration-FIXED.json   # "Media Pipeline Orchestration" — undocumented variant
+├── 02-frigate-surveillance-intelligence.json    # documented below
+├── 04-ai-ml-service-orchestration.json          # documented below
+├── 06-universal-script-executor.json            # documented below
+├── 07-transcript-orchestrator.json              # documented below
+├── 08a-jt-data-provider.json                    # documented below
+├── 08b-estimate-router.json                     # documented below
+├── 09-calculator-lead.json                      # work_calculator_lead
+├── 10-lead-response.json                        # work_lead_response
+├── 12-voice-log.json                            # work_voice_log — undocumented
+└── README.md
+```
+
+Two known gaps, recorded rather than guessed at: `01-…-FIXED.json` and
+`12-voice-log.json` have no section below. `03`, `05` and `11` have sections below
+but no file — those are the three retired above, kept as an audit trail.
+
 ## Workflows
 
 ### 01-media-pipeline-orchestration.json
@@ -365,7 +389,7 @@ curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/estimate-push \
 
 ---
 
-### 10-calculator-lead.json (work_calculator_lead)
+### 09-calculator-lead.json (work_calculator_lead)
 **Purpose:** Process bathroom remodel calculator submissions, create full JobTread customer/job records, archive to Postgres, and notify via Slack
 
 **Workflow ID:** `SoLwmxgkMILrOYbP`
@@ -458,7 +482,7 @@ curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/calculator-lead
 
 ---
 
-### 09-lead-response.json (work_lead_response)
+### 10-lead-response.json (work_lead_response)
 **Purpose:** Automated lead response workflow with push notifications via self-hosted ntfy
 
 **Trigger:** Webhook `POST /webhook/new-lead`
@@ -565,5 +589,21 @@ See the main implementation guide for curl test commands for each workflow.
 
 ---
 
-**Last Updated:** 2026-03-24
+## Changelog
+
+- 2026-08-17: Added `## Structure` + this changelog (Law 12 backfill). Renumbered two
+  section headings to match the files on disk — the calculator-lead section was headed
+  `10-` against `09-calculator-lead.json`, and the lead-response section `09-` against
+  `10-lead-response.json` (confirmed from each JSON's own `name`: `work_calculator_lead`
+  and `work_lead_response`). Content unchanged; only the numbers were swapped.
+- 2026-07-15: `19c98a04` — `02-frigate-surveillance-intelligence.json` re-synced from
+  live (+248/-83) for the iOS-playable HLS link work. The exported copy had drifted
+  badly: it predated snapshot upload and priority-channel routing. Discord webhook URL
+  is redacted in the export (live value in n8n; secret at agenix `discord-webhook-frigate`).
+- 2026-07-09: Retired `03`, `05` and `11` as redundant with the Prometheus/Alertmanager
+  → hwc-notify stack — see the banner at the top of this file.
+
+---
+
+**Last Updated:** 2026-08-17
 **Author:** Eric (with Claude assistance)
