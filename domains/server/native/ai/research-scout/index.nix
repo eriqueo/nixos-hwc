@@ -135,11 +135,21 @@ in
 
     arxivCategories = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [ "cs.AI" "cs.CL" "cs.LG" "cs.SE" "cs.MA" "cs.IR" "cs.DB" "stat.ML" ];
+      default = [ "cs.AI" "cs.CL" "cs.SE" "cs.MA" "cs.IR" "cs.DB" ];
       description = ''
-        Bootstrap seed for the arXiv category list (G0-calibrated 2026-07-19).
+        Bootstrap seed for the arXiv category list (G0-calibrated 2026-07-19;
+        cs.LG and stat.ML dropped 2026-08-16 on measured yield).
+
         Insert-only: the DB ingest_sources table owns the live set; curate
-        via the Settings UI / research_sources_* tools, not here.
+        via the Settings UI / research_sources_* tools, not here. This seed
+        only governs a fresh install, so a change here must be matched by a
+        toggle on any host already running.
+
+        Yield over the week to 2026-08-16, llm_engineering_v1: cs.LG scored
+        428 items for 10 read_now (2.3%) and stat.ML 23 for 0 (0%) — together
+        39% of the scoring volume for 9% of the hits. cs.IR by contrast hit
+        20%. The dropped categories are the ones where the classifier spends
+        the most and finds the least.
       '';
     };
   };
