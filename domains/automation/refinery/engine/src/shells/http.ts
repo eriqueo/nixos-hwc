@@ -704,8 +704,11 @@ export function createShell(cfg: HttpShellConfig) {
         // Per-tab + combined markdown downloads for a gauntlet run:
         // GET /<view>/export/<part>?id=<itemId>. Composition lives in
         // gauntlet-views.ts (buildGauntletExport — one producer); this route
-        // only reads the bundle and serves the file as an attachment.
-        const exportMatch = method === "GET" ? url.match(/^\/([a-z0-9]+)\/export\/([A-Za-z0-9_-]+)$/) : null;
+        // only reads the bundle and serves the file as an attachment. HEAD is
+        // honored too (curl -I; Node suppresses the body itself).
+        const exportMatch = method === "GET" || method === "HEAD"
+          ? url.match(/^\/([a-z0-9]+)\/export\/([A-Za-z0-9_-]+)$/)
+          : null;
         if (exportMatch) {
           const view = gauntletViewByKey(exportMatch[1]!);
           const dir = view ? viewDir(view) : undefined;
