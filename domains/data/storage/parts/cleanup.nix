@@ -14,8 +14,12 @@ let
     ${lib.concatMapStringsSep "\n" (path: ''
       if [ -d "${path}" ]; then
         echo "Cleaning ${path}..."
-        find "${path}" -type f -mtime +${toString cfg.retentionDays} -delete || true
-        find "${path}" -type d -empty -delete || true
+        # -mindepth 1 keeps both sweeps INSIDE the directory. Without it, find's
+        # start point is itself a match, so an emptied path deleted its own root
+        # — taking bind-mount targets with it (slskd held a link-count-0 inode
+        # from this) and leaving services writing into an unlinked directory.
+        find "${path}" -mindepth 1 -type f -mtime +${toString cfg.retentionDays} -delete || true
+        find "${path}" -mindepth 1 -type d -empty -delete || true
         echo "Cleaned ${path}"
       else
         echo "Directory ${path} does not exist, skipping"

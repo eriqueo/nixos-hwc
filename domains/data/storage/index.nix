@@ -25,11 +25,21 @@ in
           "${config.hwc.paths.hot.root}/processing/sonarr-temp"
           "${config.hwc.paths.hot.root}/processing/radarr-temp"
           "${config.hwc.paths.hot.root}/processing/lidarr-temp"
-          "${config.hwc.paths.hot.downloads}/incomplete"
           "/var/tmp/hwc"
           "/var/cache/hwc"
         ];
-        description = "Paths to clean up temporary files from";
+        description = ''
+          Paths to sweep for temporary files older than retentionDays.
+
+          Entries must be SCRATCH directories whose contents no running service
+          owns. An active download directory does not qualify: a multi-day
+          download's part-file crosses the mtime threshold while it is still
+          live, and the sweep deletes it out from under the downloader.
+
+          `''${hot.downloads}/incomplete` was removed 2026-08-16 for exactly
+          that reason — it is qBittorrent's TempPath and the intended home for
+          SABnzbd's incomplete dir, and the sweep was already pruning both.
+        '';
       };
     };
 

@@ -38,7 +38,6 @@ hwc.data.storage = {
       "/mnt/hot/processing/sonarr-temp"
       "/mnt/hot/processing/radarr-temp"
       "/mnt/hot/processing/lidarr-temp"
-      "/mnt/hot/downloads/incomplete"
       "/var/tmp/hwc"
       "/var/cache/hwc"
     ];
@@ -50,6 +49,13 @@ hwc.data.storage = {
   };
 };
 ```
+
+## What `cleanup.paths` may contain
+
+Scratch directories only — ones whose contents no running service owns. The
+sweep is `find -mtime +retentionDays -delete`, which cannot tell a stale
+leftover from a live multi-day download whose part-file has simply aged past
+the threshold. Active download directories therefore do not belong here.
 
 ## Monitoring Thresholds
 
@@ -69,4 +75,12 @@ Root partition >90% triggers a `user.crit` syslog entry.
 
 ## Changelog
 
+- 2026-08-16: Stopped the cleanup sweep eating live download state. Two
+  independent bugs: (1) `${hot.downloads}/incomplete` was in the default
+  `paths` — it is qBittorrent's `TempPath` and the intended home for SABnzbd's
+  incomplete dir, so the `-mtime +7` sweep was pruning in-progress downloads;
+  removed from the default and documented the admission rule above.
+  (2) both `find` calls in `parts/cleanup.nix` lacked `-mindepth 1`, so the
+  start point matched itself and an emptied path deleted its own root —
+  the source of slskd's link-count-0 inode.
 - 2026-03-25: Created README per Law 12
