@@ -92,6 +92,11 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 
 ## Changelog
 
+- 2026-07-11 — `f73fa9b3`: `grammar.nix` gains the **CRM** hub entry (+1) and
+  `parts/to-zellij.nix` follows, landed with the matching tab in
+  `apps/zellij/parts/tabs.nix`. This is the derive-indices-from-tabs.nix design from
+  2026-06-18 doing its job: adding a hub is one grammar line plus one tab line, and the
+  `GoToTab` indices can't drift apart.
 - 2026-06-26 — **Ctrl = workbench layer; in-app side-nav → Alt.** zellij now
   binds `Ctrl j`/`Ctrl k` to cycle tabs directly (plus `Ctrl Space` = meta card),
   so Ctrl is the workbench/meta layer. In-app two-column nav moved off Ctrl onto

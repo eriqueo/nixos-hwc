@@ -72,3 +72,7 @@ hwc.automation.vaultSync.watch.enable = true;      # debounce 3s (watch.debounce
 - 2026-07-22: Auto-commit message now interpolates `${config.networking.hostName}` instead of the
   hardcoded `server` literal, so hub history is attributable per clone. Requires a rebuild on each
   host to take effect (message is baked at build time).
+- 2026-08-06: `3552a4ce` — a failed push is now **fatal**. The sync script's swallowed
+  `|| echo` became `exit 1`, and the unit gained
+  `OnFailure = hwc-service-failure-notifier@`. Previously a rejected push exited 0, so the
+  hub could go stale for days with no alert while the janitor logged rising drift.

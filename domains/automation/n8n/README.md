@@ -17,7 +17,14 @@ domains/automation/n8n/
 ├── sys.nix            # Container definition, env file generation, tmpfiles
 ├── README.md          # This file
 └── parts/
-    ├── estimator-integration/  # Estimator webhook integration
+    ├── estimator-integration/  # Estimator webhook integration (docs only)
+    │   ├── CHANGELOG.md
+    │   ├── NEXT-SESSION.md
+    │   └── README.md
+    ├── migrations/             # SQL migrations for the `hwc` Postgres database
+    │   ├── 001-estimates-table.sql
+    │   ├── 002-calculator-leads.sql
+    │   ├── 002-full-hwc-schema.sql
     │   └── README.md
     └── workflows/              # n8n workflow JSON definitions
         └── README.md
@@ -61,18 +68,7 @@ hwc.automation.n8n = {
 
 ## MCP Access
 
-n8n's MCP tooling now runs as a **stdio backend of the unified gateway** (`hwc-sys-mcp`, port 6200) — see `domains/system/mcp/`. The old standalone HTTP bridge (port 6201, `mcp-bridge.nix`) was removed 2026-07-05.
-
-### Namespace
-
-`hwc.automation.n8n.mcpBridge.*`
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `enable` | bool | false | Enable the MCP HTTP bridge |
-| `port` | port | 6201 | HTTP listen port |
-| `host` | string | "127.0.0.1" | Bind address |
-| `authTokenFile` | path or null | null | agenix secret for AUTH_TOKEN (uses static internal token if null) |
+n8n's MCP tooling now runs as a **stdio backend of the unified gateway** (`hwc-sys-mcp`, port 6200) — see `domains/system/mcp/`. The old standalone HTTP bridge (port 6201, `mcp-bridge.nix`) was removed 2026-07-05; there is no `hwc.automation.n8n.mcpBridge.*` namespace in this module any more.
 
 ### Claude.ai Connection URL
 
@@ -99,9 +95,9 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Dependencies
 
-- **agenix secrets**: encryption key, owner password hash, various API keys, n8n-api-key (for MCP bridge)
+- **agenix secrets**: encryption key, owner password hash, various API keys, n8n-api-key
 - **Cloudflare Tunnel** (`domains/networking/cloudflared`) — public ingress for `n8n.heartwoodcraft.me` and `mcp.heartwoodcraft.me`
-- **hwc-sys-mcp** — Express server proxies `/n8n/*` to the MCP bridge
+- **hwc-sys-mcp** (`domains/system/mcp/`) — runs n8n-mcp as a stdio backend and serves `/n8n/*`
 
 ## Access
 
@@ -111,16 +107,22 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 | n8n UI (tailnet) | `https://hwc-server.ocelot-wahoo.ts.net:2443` (Caddy port route) |
 | n8n webhook (public) | `https://n8n.heartwoodcraft.me/webhook/...` |
 | n8n MCP (Claude.ai) | `https://mcp.heartwoodcraft.me/n8n/mcp` |
-| n8n MCP (internal) | `http://127.0.0.1:6201/mcp` |
 
 ## Systemd Units
 
 - `podman-n8n.service` — main n8n container (generates secrets env file in preStart)
-- `hwc-n8n-mcp.service` — MCP HTTP bridge (npm install + patch + run)
-- `hwc-n8n-mcp-env.service` — generates bridge env file from agenix secrets
+
+(This module defines exactly one unit. `hwc-n8n-mcp.service` / `hwc-n8n-mcp-env.service` went away with the bridge on 2026-07-05; the MCP surface is now owned by `domains/system/mcp/`.)
 
 ## Changelog
 
+- 2026-08-17: Law 12 sweep. Structure block gained `parts/migrations/` (present but
+  never listed) and the real contents of `parts/estimator-integration/`. Removed the
+  bridge leftovers the 2026-07-05 entry claimed to have replaced but didn't: the
+  `hwc.automation.n8n.mcpBridge.*` namespace + options table, the `:6201` access row,
+  and the two `hwc-n8n-mcp*` systemd units. Verified against the module — `rg` over
+  `domains/automation/n8n/` finds no `mcpBridge`/`6201` reference and exactly one
+  `systemd.services.*` (`podman-n8n`).
 - 2026-07-15: `frigate-detect` Discord messages gain a `Phone:` HLS link (`/vod/event/<id>/master.m3u8`) alongside the existing `Clip:` mp4 — Frigate's `/api/events/<id>/clip.mp4` generates the clip on the fly and streams it chunked with no byte-range support, which iOS AVPlayer refuses to play; the nginx vod endpoint serves the same event as HLS, which iOS plays natively (desktop keeps the mp4 link — Firefox won't play bare m3u8). Live workflow updated via API; repo export `parts/workflows/02-frigate-surveillance-intelligence.json` re-synced from live (it had drifted badly — the exported copy predated snapshot upload + priority-channel routing) with the Discord webhook URL redacted (no raw webhooks in git; live value in n8n, secret also at agenix `discord-webhook-frigate`).
 - 2026-07-07: Notification unification — retired the `sys:router:notify` workflow (live + repo `parts/workflows/sys-router-notify.json`); its sole caller (`home:media:jellyfin-alert`) and the other Slack-sending workflows (mail-health, voice-log, weekly-events, bozeman-aggregator, jt:estimate-push) now POST the native shape directly to `http://127.0.0.1:11600/notify` (n8n runs host-networked, so loopback reaches hwc-notify). Removed the `slackWebhookUrlFile` option + the `SLACK_WEBHOOK_URL` env injection from `sys.nix` (no active workflow consumed it; the two retained Slack workflows — `frigate-detect` images + `bozeman-events-approval` interactive — use OAuth creds, not the webhook env, and are tracked exceptions pending the Discord-bot gateway). Dropped `parts/migrations/003-notification-events.sql` and the live `hwc.notification_events` table (0 readers).
 - 2026-07-05: Removed `mcp-bridge/` module (audit 2.2: never enabled; superseded by n8n-mcp running as a stdio backend of the unified `hwc-sys-mcp` gateway). README's stale bridge architecture section replaced.

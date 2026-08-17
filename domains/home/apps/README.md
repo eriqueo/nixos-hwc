@@ -8,28 +8,72 @@ User application configuration via Home Manager.
 - Does NOT manage: System deps → `system/apps/` (via sys.nix), services → `server/`
 
 ## Structure
+
+`index.nix` auto-imports every subdirectory via `readDir`, so this list IS the module
+set — 58 apps as of 2026-08-17:
+
 ```
-apps/
-├── aerc/           # Email client
-├── aider/          # AI coding assistant
-├── blender/        # 3D modeling
-├── chromium/       # Browser
-├── freecad/        # CAD software
-├── gpu-screen-recorder/  # Call/screen recording (gsr-toggle script + sys.nix capture wrapper)
-├── hyprland/       # Wayland compositor
-├── kitty/          # Terminal emulator
-├── librewolf/      # Privacy browser
-├── mpv/            # Media player
-├── obsidian/       # Note-taking
-├── xournalpp/      # PDF annotator / handwritten notes
-├── waybar/         # Status bar
-├── tuxedo/         # todo.txt TUI (keyboard-driven task manager)
-├── todui/          # VTODO task TUI (external flake input; HWC adapter only)
-├── pave-query-builder/  # Pave/JobTread API query TUI+CLI (external flake input; HWC adapter only)
-└── ... (30+ apps)
+aider          analysis       blender        bottles-unwrapped  calcure
+calcurse       chromium       claude-code    claude-desktop     codex
+dt             dxlog          exodos         firefox            freecad
+gemini-cli     google-cloud-sdk  gpg         gpu-screen-recorder  herdr
+hyprland       imv            ipcalc         jellyfin-media-player  khalt
+kitty          localsend      markitdown     mpv                n8n
+neomutt        nvim           obsidian       onlyoffice-desktopeditors  opencode
+pave-query-builder  pi        proton-authenticator  proton-mail  proton-pass
+qbittorrent    qutebrowser    scraper        slack              slack-cli
+swaync         tetro          thunar         tmux               todui
+tuxedo         wasistlos      waybar         whisper-cpp        workbench
+xournalpp      yazi           zellij
 ```
 
+Each app is `index.nix` (options declared inline, Law 10) plus an optional `sys.nix`
+system half and a `parts/` dir for split config. One-package apps use
+`domains/lib/mkSimpleApp.nix`.
+
 ## Changelog
+- 2026-08-17: Structure block replaced. It listed 16 apps and "... (30+ apps)", and
+  three of the 16 — `aerc/`, `librewolf/` and the implied set — no longer exist
+  (`aerc/` deleted 2026-06-11 as a duplicate of `domains/mail/aerc/`; `librewolf/`
+  became `firefox/` on 2026-07-06). Replaced with the full 58-entry set read from the
+  directory, since `index.nix` imports by `readDir` and any hand-curated subset drifts.
+- 2026-08-16: **pi** — `9e15bd2e` repoints DX1 at the LiteLLM proxy instead of a dead
+  RunPod pod; `457c4391` loads the Claude skill tree and enforces tool guards (new
+  `parts/guards.ts`, +92); `eee9162f` adds `parts/AGENTS.md` global instructions (+62).
+- 2026-08-06: `0e264779` — **hyprland** gains a SUPER+? keybind legend generated from
+  the binds themselves. `e0fe528a` (charter v12.6) touched this tree in the Law 10
+  sweep.
+- 2026-08-02: `02b0895b` — **claude-code** self-heals its gate-hook wiring into
+  `settings.json` at activation. This is the pattern `core/repo-hooks` was later
+  modelled on.
+- 2026-07-30: `dda73c70` — **blender** pinned to the official upstream binary, dropping
+  the source build.
+- 2026-07-29: `0508b01e` — **codex** pinned CLI bumped 0.101.0 → 0.146.0 (static musl).
+  `edcb6413` propagated principles rev 3 through **claude-code**.
+- 2026-07-19: `9c51be99` — **claude-code** syncs the principle-enforcement hooks via
+  `shareConfig.items`.
+- 2026-07-17: `dfd9eabf` — new **pi** app: declarative pi coding agent wired to DataX DX1.
+- 2026-07-12: `8cc83fb1` — **zellij** refinery tab. 2026-07-11: `f73fa9b3` **zellij** +
+  **workbench** CRM hub tab; `67c01e5a` **yazi** filetype rules `name=` → `url=`;
+  `954203d1` **firefox** `configPath` pinned to the legacy `.mozilla/firefox`;
+  `b36ee614` Law 3 sweep across the tree (homeDirectory-derived fallbacks, dead path
+  literals dropped).
+- 2026-07-09: `f5fcf138` — **claude-code**'s `claude-config-pull` no-ops on a non-ff
+  pull instead of failing every 15 minutes.
+- 2026-07-06: `1855a16f` — **librewolf → firefox** migration with equivalent hardening.
+  `bda9087f` added 52 module READMEs for the Law 12 v12.4 hybrid-scope burn-down.
+- 2026-07-03: `80ec0fe4` — **waybar** lid handling: rebind Sensel on lid open, default
+  lid close to suspend.
+- 2026-06-26: which-key standardization across the tree — `4dc7c806` **yazi** arrow
+  separator + role colours, `eff098eb` **nvim** double-border popup, `cde9d715`
+  **zellij** meta-leader `zellij-which` floating card, `e79e2c45` **zellij** stable
+  plugin path + grid wasm bump, `f224e3cf` **yazi** preview seek `<C-j>/<C-k>` →
+  `<A-j>/<A-k>`. `996efcca` made fzf-lua **nvim**'s primary finder.
+- 2026-06-22: `79ea5375` adds **tetro** (terminal tetromino game); `36c4fb6b` gives
+  **pave-query-builder** a one-click GraphiQL web-shell launcher; `d0aad588` +
+  `d6f57fd7` add SUPER+drag move/resize and centered file-picker popups to **hyprland**.
+- 2026-06-19: `eceadd49` — **pave-query-builder** bakes `schemaPath` unconditionally
+  (`pathExists` is false under pure flake eval).
 - 2026-06-19: **pave-query-builder — new external-flake app + HWC adapter**. Trap-safe Pave (JobTread API) query builder (TUI + CLI), its own repo at `~/600_apps/pave-query-builder` consumed as the `pave-query-builder` flake input (same shared-remote model as todui/khalt/workbench). Thin translator imports the app's `homeManagerModules.pave-query-builder` and feeds it the jt-mcp schema path when present; mutation guardrail left at the app default (HWC test org only). Enabled in `profiles/desktop/home.nix`. Launcher: `kitty -e pave-query`.
 - 2026-06-19: **zellij — `session_serialization false`**. zellij's default serializes sessions to disk for resurrection; combined with the default `on_force_close "detach"`, that's why a closed workbench window left a live `--server` process that could resurrect STALE. Since workbench is fully rebuilt from its KDL layout on every open, nothing is worth resurrecting — disabling serialization makes every recreate (incl. `wb-reload`/SUPER+W) structurally fresh. `on_force_close` deliberately left at `detach` to keep the accidental-close reattach safety net.
 - 2026-06-19: **workbench — `wb-reload` promoted from shell alias to a real binary**. The SUPER+W keybind now runs `kitty -e wb-reload` to reload the zellij session fresh every launch (kill named session → recreate), but `kitty -e` execs its arg directly and can't see zsh aliases, so the old alias silently did nothing. Added a `writeShellScriptBin "wb-reload"` to `apps/workbench/index.nix` (on `home.packages`) as the single source of truth; removed the duplicate alias from `core/shell/parts/aliases.nix`. Resolves from both the keybind and interactive shells.

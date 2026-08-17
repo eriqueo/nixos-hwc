@@ -16,18 +16,30 @@ finance, business databases, website/CMS, and the daily morning briefing.
 ```
 business/
 ├── index.nix          # Domain aggregator
+├── crm/               # hwc.business.crm — front-of-funnel CRM
 ├── databases/         # hwc.business.databases — business PostgreSQL layer
-├── datax/             # hwc.business.datax — legacy postgres role/db (lead_scout)
+├── datax/             # hwc.business.datax — legacy postgres role/db (lead_scout),
+│                      #   plus fb-group-scraper / fb-classifier / fb-monitor-bak
 ├── datax-monitor/     # hwc.business.dataxMonitor — DX1 diagnostic dashboard on :4400
 ├── estimator/         # hwc.business.estimator — React PWA on :13443
 ├── firefly/           # hwc.business.firefly — Firefly III finance
 ├── leads/             # hwc.business.leads — unified lead pipeline
 ├── morning-briefing/  # hwc.business.morningBriefing — 6am Claude agent
 ├── paperless/         # hwc.business.paperless — Paperless-NGX documents
+├── umami/             # hwc.business.umami — cookieless self-hosted web analytics
 └── website/           # hwc.business.website — Heartwood CMS + 11ty + webapps
 ```
 
 ## Changelog
+- 2026-08-17: Structure block corrected — `crm/` and `umami/` were both missing, though
+  `umami/` has its own changelog entry here from 2026-07-07 and `crm/` from 2026-08-11.
+- 2026-08-11: `bbd1efab` — a failed CRM migration now stops the boot (`set -euo pipefail`
+  in `crm/index.nix`); it previously carried on with a half-migrated schema.
+- 2026-08-11: leads — `70926e98` resolves the case **before** writing it (hwc-crm D33,
+  P21 law 1; `store-postgres.ts` +148, `main.ts` +118, `ports/store.ts`), and
+  `7b1508db` recasts `SaveResult` as a tagged union to close the replay gap.
+- 2026-08-10: `b424c8c2` — morning-briefing injects the case-ledger delta as
+  `sections.today.changes` (`gather-today.mjs` +18).
 - 2026-08-06: Law 10 burn-down — `umami/parts/weekly-report.nix`'s option block (`enable`, `onCalendar`, `recipient`) moved into `umami/index.nix`; the part is implementation only. Law 10 names "mkOption anywhere else, including `parts/*.nix`" as the violation. Namespace `hwc.business.umami.weeklyReport.*` unchanged. Surfaced by the corrected charter-law10 check (v12.6).
 - 2026-07-07: Website metrics reporting — morning-briefing gains a `website` section (umami visitors/pageviews 24h+7d, top pages, calculator-lead counts from hwc.calculator_leads) in briefing.json, the dashboard, and the daily email; new umami/parts/weekly-report.nix sends a Monday 07:00 week-over-week email (traffic deltas, top pages/referrers, lead detail) via msmtp from office@. Umami option websiteId added.
 - 2026-07-07: New `umami/` module (hwc.business.umami) — cookieless self-hosted web analytics for iheartwoodcraft.com. Podman container (mkContainer, media-network) on loopback :3009, Postgres db `umami` (role created in postStart, trust auth over the 10.89.0.1 gateway), agenix `umami-env` (APP_SECRET + DATABASE_URL). Public collect endpoint via cloudflared at stats.iheartwoodcraft.com (proxied CNAME → tunnel).

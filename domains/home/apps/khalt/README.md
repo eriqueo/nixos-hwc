@@ -35,6 +35,10 @@ domains/home/apps/khalt/
 
 ## Changelog
 
+- **2026-06-15**: `64ecd635` — wired into the unified keymap factory. `index.nix` (+8)
+  appends `to-khalt`'s generated `[keybindings]` block to the config, so khalt's list
+  verbs come from `domains/home/keymap/grammar.nix` rather than being hand-written here.
+  Guarded (`km ? …`), so it is a no-op when the grammar is absent.
 - **2026-06-15**: `[calendars]` now renders the Radicale-synced calendar
   (`calendars-radicale/`) when `hwc.mail.calendar.radicale.enable` is set, and
   drops the stale iCloud account calendars in that case (mirrors

@@ -19,4 +19,9 @@ meta-leader which-key plugin when the unified keymap grammar is present.
 - `parts/tabs.nix` — canonical hub + tool tab set (order = GoToTab indices)
 
 ## Changelog
+- 2026-07-12: `8cc83fb1` — `parts/tabs.nix` gains a **refinery** tab (+5/-2), landed
+  alongside the refinery engine's write verbs and the leads source class.
+- 2026-07-11: `f73fa9b3` — `parts/tabs.nix` gains a **CRM** hub tab and
+  `parts/layout.nix` follows. Because `tabs.nix` is the single source of truth for tab
+  order, `domains/home/keymap` picked up the matching `GoToTab` index in the same commit.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

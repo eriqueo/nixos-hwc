@@ -83,3 +83,26 @@ All webhook endpoints require `x-api-key` header matching `ESTIMATOR_API_KEY` en
 - Workflows: `/home/eric/.nixos/domains/automation/n8n/parts/workflows/`
 - Estimator App: `/home/eric/.nixos/workspace/projects/react/heartwood-assembler/`
 - Server Config: `/home/eric/.nixos/machines/server/config.nix`
+
+## Structure
+
+Documentation only — this directory ships no Nix, SQL or workflow JSON.
+
+```
+estimator-integration/
+├── CHANGELOG.md
+├── NEXT-SESSION.md   # Working notes for the next session on this integration
+└── README.md         # This file
+```
+
+## Changelog
+
+- 2026-08-17: Added `## Structure` + this changelog (Law 12 backfill — the file had
+  neither). Flagged the stale `SLACK_WEBHOOK_URL` reference: the option
+  (`slackWebhookUrlFile`) and its env injection were removed from `n8n/sys.nix` on
+  2026-07-07 (`fbd92674`), so the "Environment Variables → N8N" list above is one
+  entry out of date. The `jt:estimate-push` workflow now POSTs the native shape to
+  `http://127.0.0.1:11600/notify` instead of Slack.
+- 2026-06-02: `56c1f6c8` — `NEXT-SESSION.md` swept for the server tailnet rename
+  `hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net` (4 occurrences).
+  Mechanical; no behaviour change.

@@ -57,3 +57,30 @@ The actual installation runs as a one-shot systemd service
 
 Missing or invalid values produce a `CONFIG_INVALID` `HermesDeployError` with
 a clear list of which vars are missing.
+
+## Structure
+
+```
+bootstrap/
+├── cli.ts             # inbound shell — argv parsing, env → Config, dispatch
+├── core.ts            # pure: status / doctor / upgrade / bootstrap
+├── adapters.ts        # outbound: node:fs, node:child_process, agenix readability
+├── types.ts           # Ports + HermesDeployError / HermesDeployErrorCode
+├── package.json       # editor support + ad-hoc tsc only (not used at runtime)
+├── package-lock.json
+├── tsconfig.json
+├── .gitignore
+└── README.md
+```
+
+## Changelog
+
+- 2026-08-17: Added `## Structure` + this changelog (Law 12 backfill — the file had
+  neither; the Architecture block listed 4 of the 9 files).
+- 2026-05-29: `3f4601be` — dropped TypeScript **parameter-property shorthand** from
+  `HermesDeployError` in `types.ts`. Node 22's `--experimental-strip-types` only strips
+  type annotations; it does not synthesize the field assignments a
+  `constructor(public readonly code: …)` implies, so `code` and `detail` were arriving
+  `undefined` at runtime. The union is now the named `HermesDeployErrorCode` type and
+  the fields are declared and assigned explicitly. Directly protects the no-build-step
+  runtime contract documented above.

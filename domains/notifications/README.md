@@ -36,6 +36,11 @@ notifications/
 | `hwc.notifications.canary.interval` | Canary cadence (OnCalendar, default `daily`) |
 
 ## Changelog
+- 2026-08-16: Research-scout output routed to email rather than Discord — `8f07d78b`
+  adds a research-suggestions route and lifts the notification body cap off 4000 in
+  `notify/parts/src/src/schemas/notification.ts`; `7242eef0` adds the weekly-digest
+  route. Both are `notify/parts/routes.nix` data rows plus one schema relaxation; see
+  `notify/README.md`.
 - 2026-08-06: Law 10 burn-down — `canary.nix`'s option block (`enable`, `interval`) moved into `index.nix`. It was a double violation: Law 10 (mkOption only in index.nix) and Law 9 (a leaf module never declares `hwc.*` options). `canary.nix` is now implementation only; the namespace `hwc.notifications.canary.*` is unchanged, so no consumer moves. Surfaced by the corrected charter-law10 check (v12.6) — the old wired check was `fd options.nix`, a filename match that could never see this.
 - 2026-07-13: New `finance-to-alerts` route — `topic=finance` (firefly-digest daily summary, future Firefly webhooks) → #hwc-alerts; re-home to a #finance channel when one exists.
 - 2026-07-12: **#media + #frigate Discord channels.** Two new webhook channels (`discord-media`, `discord-frigate`; agenix secrets `discord-webhook-media` / `discord-webhook-frigate`, recipients=everyone, owner=eric). `topic=media` (radarr/jellyfin grabs) re-homed from #hwc-alerts to #media; new `topic=frigate` route sends camera-health alerts (alertmanager `category=frigate`) to #frigate. Detection events ALSO now land in #frigate: the live n8n `home:security:frigate-detect` workflow was migrated off Slack — its three send nodes now POST the Discord webhook directly (snapshot upload as multipart `files[0]`), with the stale camera-name map corrected (cam_1=Carport, cam_3=Front Porch, reolink=Front Yard), a clip deep-link in every message, and the night-vehicle escalation retargeted to reolink (the only camera tracking car/truck). NB: the repo copy `automation/n8n/parts/workflows/02-frigate-surveillance-intelligence.json` is a stale reference — the live workflow is n8n-DB-owned.

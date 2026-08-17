@@ -293,6 +293,14 @@ Hardening: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome=read-only`, `
 
 ## Changelog
 
+- **2026-08-16**: `7242eef0` — new route sending the research-scout **weekly digest** to
+  email (`parts/routes.nix` +12). Digest bodies are long-form, so Discord was the wrong
+  sink for them.
+- **2026-08-16**: `8f07d78b` — the body cap came off 4000. `src/schemas/notification.ts`
+  (+9/-1) relaxed the hard limit that was silently truncating long-form content at the
+  parse boundary, and `parts/routes.nix` (+9) routes research suggestions to email. The
+  cap was a Discord-shaped constraint baked into the shared schema; per-channel limits
+  belong in the channel adapter, not in the contract every caller is parsed against.
 - **2026-07-29**: Comment-only — principle citations in `src/config.ts`, `src/core/errors.ts`, `src/schemas/notification.ts` updated from the retired `creating-systems.md §3/§7/§4` split-doc sections to rev 3 numbers in the single canonical doc (Principle 16 Late Binding, 19 Errors as Values, 2 Parse Don't Validate). No behavior change.
 - **2026-07-07 (notification unification, M1)**: SMTP channel `smtp-eric` → `smtp-office` — `login`/`from` = `office@iheartwoodcraft.com`, `to` = `eric@` (unchanged), same `proton-bridge-password` secret (Proton Bridge shares one password across account addresses). Fixes the `from==to` self-send that made Proton auto-archive criticals; a live `priority=1` now lands in Eric's **Inbox**, verified `proton/inbox/new/` (not Archive). `requireTls` `true` → `false` to match the only proven-working Bridge path (the `proton-office` msmtp account); the prior `true` had never delivered (0 `priority=1` dispatches in audit history). Added explicit `parts/routes.nix` rules (`media`, `voice-log`, `events`, `jt-estimate` → `#hwc-alerts`) so the n8n workflows migrating off Slack route deliberately instead of falling through to `defaultChannels`. First half of retiring the n8n `sys:router:notify` + Slack/gotify eradication; `/notify` keeps its native `NotificationInputSchema` as the parse boundary (taxonomy stays a docs-level naming convention, not code — no live caller emitted it).
 - **2026-06-12**: Added the `discord-nightly-builds` channel (`#nightly-builds`, secretRef `discord-webhook-nightly-builds`) and a `topic=nightly-builds` route in `parts/`. Used by the automation domain's nightly-builds runner (per-card verdict) and the weekly readme-freshness report.

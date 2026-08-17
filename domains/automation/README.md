@@ -45,6 +45,23 @@ automation/
 │   ├── index.nix  # systemd service/timer (daily, strangler-fig) wrapping
 │   │              #   ~/700_datax/dx1_gauntlet/run.sh + the /dx1 run-now drain
 │   └── README.md  # Containment model + provisioning gate (enable=false until checkout exists)
+├── brain-sweep/   # Nightly brain-vault drift report (hwc.automation.brainSweep.*)
+│   ├── index.nix  # Options + systemd service/timer wrapping the `brain sweep` CLI
+│   └── README.md
+├── mail-janitor/  # Mail triage/retention sweep (hwc.automation.mailJanitor.*)
+│   ├── index.nix  # Options + systemd service/timer
+│   ├── janitor.py # Engine
+│   └── README.md
+├── vault-sync/    # Brain-vault git commit+pull+push against the bare hub
+│   ├── index.nix  # hwc.automation.vaultSync.* — sync service + timer + inotify watcher
+│   └── README.md
+├── refinery/      # Substance-agnostic refinement engine (hwc.automation.refinery.*)
+│   ├── index.nix  # Options + service wiring
+│   ├── engine/    # TypeScript engine (hexagonal: src/shells, src/sources, test/golden)
+│   ├── pipelines/ # Pipeline definitions
+│   ├── gauntlets/ # Gauntlet view configs (sr_gauntlet.yaml, dx1_gauntlet.yaml)
+│   ├── domains.yaml
+│   └── README.md
 └── n8n/         # n8n workflow automation
     ├── index.nix     # Options + firewall rules
     ├── sys.nix       # Container definition via mkContainer
@@ -68,6 +85,16 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-08-17: Structure block corrected — it listed 6 of the 10 sub-modules. Added
+  `brain-sweep/`, `mail-janitor/`, `vault-sync/` and `refinery/`, all of which have
+  existed here for some time without appearing in the listing.
+- 2026-08-16: refinery board — `/dx1/fleet` fleet cohort-health table over the daily
+  snapshot (`2ec13b81`: new `sources/dx1-fleet.ts` + test, render/http wiring, goldens
+  re-baselined); gauntlet **detail Evidence composition + per-tab and combined exports**
+  (`6fd37888`: `sources/gauntlet-views.ts` +128, export routes in `shells/http.ts`,
+  `gauntlets/dx1_gauntlet.yaml` updated); and `4e9b6acd` — export routes now honor
+  `HEAD`, which had been returning 404 to `curl -I`. See `refinery/README.md` for the
+  per-change detail; this entry records that the domain moved.
 - 2026-08-16: Add `dx1-gauntlet/` — sr-gauntlet's sibling for DX1 health-ledger
   case investigations (pipeline repo `~/700_datax/dx1_gauntlet`). Ships with
   `enable = false` in `machines/server/config.nix` (strangler-fig: the board's
