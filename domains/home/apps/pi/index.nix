@@ -117,6 +117,35 @@ in
       default = { };
       description = "Extra ~/.pi/agent/settings.json keys merged over defaultProvider/defaultModel.";
     };
+
+    skillPaths = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ "~/.claude/skills" ];
+      description = ''
+        Directories pi loads Agent Skills from, written to the `skills` array
+        in settings.json. pi implements the Agent Skills standard, so the
+        Claude Code skill tree is consumed as-is — one tree, two harnesses, no
+        second copy to drift.
+
+        settings.json is pi-owned at runtime, so these are merged in
+        append-only at every activation rather than seeded once (seeding alone
+        would never reach a machine whose settings.json already exists). Same
+        jq-merge shape the claude-code module uses for its gate-hook wiring.
+      '';
+    };
+
+    guards.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Install parts/guards.ts as a pi extension (~/.pi/agent/extensions/,
+        auto-discovered — no settings entry). Blocks grep/sed, confirms
+        destructive git and nixos-rebuild, and refuses unbounded reads of
+        large files. Port of the Claude Code enforce-tools PreToolUse hook:
+        rules the model cannot decline, which is the half of the contract that
+        survives being run against a smaller model.
+      '';
+    };
   };
 
   #==========================================================================
@@ -129,15 +158,43 @@ in
     # models.json: deterministic, pi never writes it → immutable store symlink.
     home.file.".pi/agent/models.json".text = builtins.toJSON cfg.models;
 
+    # guards.ts: deterministic, pi never writes it → immutable store symlink.
+    # Extensions in ~/.pi/agent/extensions/ are auto-discovered, so this needs
+    # no settings.json entry at all.
+    home.file.".pi/agent/extensions/hwc-guards.ts" = lib.mkIf cfg.guards.enable {
+      source = ./parts/guards.ts;
+    };
+
     # settings.json: pi rewrites it at runtime → seed once, writable, then pi
     # owns it. Mirrors the tuxedo seed-if-absent pattern; works under both
     # HM-as-module and HM-as-flake.
+    #
+    # skillPaths is the exception to "pi owns it after seeding": it is a Nix-
+    # declared resource path, not runtime state, and seeding cannot reach a
+    # machine whose settings.json already exists. So it is merged append-only
+    # on every activation — entries pi or Eric added by hand are preserved, and
+    # every other key in the file is untouched.
     home.activation.piSeedSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       _piAgentDir=${lib.escapeShellArg "${config.home.homeDirectory}/.pi/agent"}
       run mkdir -p "$_piAgentDir"
       if [ ! -e "$_piAgentDir/settings.json" ]; then
         run install -m 0644 ${settingsSeed} "$_piAgentDir/settings.json"
       fi
+      ${lib.optionalString (cfg.skillPaths != [ ]) ''
+        _piS="$_piAgentDir/settings.json"
+        _piTmp=$(${pkgs.coreutils}/bin/mktemp "$_piS.skills.XXXXXX" 2>/dev/null) || _piTmp=""
+        if [ -n "$_piTmp" ] && ${pkgs.jq}/bin/jq \
+            --argjson want ${lib.escapeShellArg (builtins.toJSON cfg.skillPaths)} \
+            '.skills = ((.skills // []) + $want | unique)' "$_piS" > "$_piTmp" 2>/dev/null; then
+          if ! ${pkgs.diffutils}/bin/cmp -s "$_piTmp" "$_piS" 2>/dev/null; then
+            run ${pkgs.coreutils}/bin/mv "$_piTmp" "$_piS"
+            echo "pi: skill paths merged into $_piS"
+          fi
+        else
+          echo "pi: $_piS is not valid JSON — skills NOT wired, fix it by hand" >&2
+        fi
+        ${pkgs.coreutils}/bin/rm -f "$_piS".skills.* 2>/dev/null || true
+      ''}
     '';
 
     #========================================================================
