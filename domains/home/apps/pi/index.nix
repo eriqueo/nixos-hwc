@@ -134,6 +134,22 @@ in
       '';
     };
 
+    contextFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = ./parts/AGENTS.md;
+      description = ''
+        Global instructions, installed as ~/.pi/agent/AGENTS.md. Set to null to
+        install none.
+
+        Deliberately short, and shorter than ~/.claude/CLAUDE.md. Always-loaded
+        instruction volume degrades compliance across every rule, not just the
+        newest one, and DX1 has less headroom for that than Claude does. So
+        this file carries only what cannot be enforced mechanically
+        (parts/guards.ts) or loaded on demand (skills, per-repo CLAUDE.md,
+        which pi discovers from cwd and its ancestors).
+      '';
+    };
+
     guards.enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -157,6 +173,11 @@ in
     # pi reads ~/.pi/agent/*, not XDG.
     # models.json: deterministic, pi never writes it → immutable store symlink.
     home.file.".pi/agent/models.json".text = builtins.toJSON cfg.models;
+
+    # AGENTS.md: deterministic, pi never writes it → immutable store symlink.
+    home.file.".pi/agent/AGENTS.md" = lib.mkIf (cfg.contextFile != null) {
+      source = cfg.contextFile;
+    };
 
     # guards.ts: deterministic, pi never writes it → immutable store symlink.
     # Extensions in ~/.pi/agent/extensions/ are auto-discovered, so this needs

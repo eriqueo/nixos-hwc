@@ -14,6 +14,7 @@ parts/package.nix  # pinned buildNpmPackage of the pi monorepo (vendored from
                    # nixpkgs; hwc-server's stable channel has no pi-coding-agent)
 parts/guards.ts    # pi extension: tool_call guards, port of the Claude Code
                    # enforce-tools PreToolUse hook
+parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
 ```
 
 ## Design decisions
@@ -51,6 +52,16 @@ parts/guards.ts    # pi extension: tool_call guards, port of the Claude Code
   reliably, so rules worth keeping belong in the extension, not in AGENTS.md.
   Extensions in `~/.pi/agent/extensions/` are auto-discovered, so this needs
   no settings entry.
+- **AGENTS.md is short on purpose.** `contextFile` → `parts/AGENTS.md` is
+  deliberately shorter than `~/.claude/CLAUDE.md` and is *not* a copy of it.
+  Always-loaded instruction volume degrades compliance across every rule, and
+  DX1 has less headroom for that than Claude. It carries only what cannot be
+  enforced mechanically (guards.ts) or loaded on demand — skills, and the
+  per-repo `CLAUDE.md` that pi already discovers from cwd and its ancestors.
+  Its content is DX1-shaped: halt condition, quote-the-output-before-claiming,
+  read narrowly, no JSON-literal tool args. Those four map to the observed DX1
+  failure modes (runaway loops, phantom tool calls, compaction→fabrication,
+  tool call rendered as a code block).
 - **Vendored package, not overridden.** hwc-server rides nixpkgs-stable
   (25.11) which lacks `pi-coding-agent`, so parts/package.nix carries the
   full derivation (based on nixpkgs' 0.80.2 expression, bumped to 0.80.7).
@@ -66,6 +77,7 @@ Bump `version` + both hashes in `parts/package.nix`.
 
 ## Changelog
 
+- 2026-08-16: Added `contextFile` → `parts/AGENTS.md`.
 - 2026-08-16: Added `skillPaths` (default `~/.claude/skills`, append-only jq
   merge into the pi-owned settings.json) and `guards.enable` with
   `parts/guards.ts`. Both verified live: `pi -p` reports the skills loaded,
