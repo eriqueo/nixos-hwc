@@ -357,6 +357,43 @@ def republish(touched: set[Path], cfg: dict, log) -> None:
 
 # ============================================================ ORCHESTRATION ===
 
+def report_unexpected_dirs(cfg: dict, log) -> list:
+    """Name top-level dirs under downloads/ that no rule produces and no skip
+    entry claims.
+
+    The default drain walks loose root files only, and `preview_skip_dirs`
+    silently protects everything it lists — so a directory nobody declared is
+    not merely unhandled, it is *invisible*. Two agent-made bundles
+    (sr-remediation-*) and three abandoned v1 domain folders accumulated 433
+    files that way over two months before anyone looked. Reporting is the whole
+    fix: agents must not create dirs under downloads/, and this is what makes
+    the next violation show up in a day instead of a quarter.
+
+    Report-only by design — never moves, never fails the drain. Where a stray
+    dir *should* go depends on what it is, which is a judgement the router
+    cannot make (see the module docstring on semantics-from-filenames).
+    """
+    dl = Path(cfg["meta"]["inbox_root"]) / "downloads"
+    known = {d.rstrip("/") for d in cfg.get("preview_skip_dirs", [])}
+    for r in list(cfg.get("rules", [])) + list(cfg.get("quarantine", [])):
+        known.add(Path(r["dest"]).parts[0])
+    known.add(Path(cfg["fallback"]["dest"]).parts[0])
+
+    strays = []
+    try:
+        entries = sorted(dl.iterdir())
+    except OSError:
+        return strays
+    for p in entries:
+        if not p.is_dir() or p.name.startswith(".") or p.name in known:
+            continue
+        n = sum(1 for f in p.rglob("*") if f.is_file())
+        strays.append(p)
+        log(f"  UNEXPECTED DIR: {p.name}/ ({n} files) — no rule routes here and "
+            f"nothing walks it; agents must not create dirs under downloads/")
+    return strays
+
+
 def run(cfg: dict, apply: bool, all_mode: bool, log, locations: Optional[list] = None) -> dict:
     stats: dict[str, int] = {}
     touched: set[Path] = set()
@@ -391,6 +428,8 @@ def run(cfg: dict, apply: bool, all_mode: bool, log, locations: Optional[list] =
     log(f"{'APPLIED' if apply else 'DRY-RUN'} {'(--all: whole tree)' if all_mode else '(loose root only)'}: {n} file(s)")
     for b in sorted(stats, key=lambda k: -stats[k]):
         log(f"  {stats[b]:5}  {b}/")
+    if not locations and not all_mode:
+        report_unexpected_dirs(cfg, log)
     if apply:
         republish(touched, cfg, log)
     return stats

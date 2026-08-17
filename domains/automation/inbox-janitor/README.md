@@ -96,6 +96,27 @@ hwc.automation.inboxJanitor.enable = true;
 hwc.automation.inboxJanitor.dryRun = false;   # after watching journalctl -u inbox-janitor
 ```
 
+## Where a file goes (the write-side rule)
+
+The router can only see intrinsic attributes, so it cannot tell a spec from a
+scratch report — both are `.md`. That judgement belongs to whoever writes the
+file. One question decides it: **does this thing already have a home?**
+
+| Kind | Destination |
+|---|---|
+| Durable knowledge — worth looking up later, independent of the task | the **brain vault**, routed domain-first. Never the inbox. |
+| Work product for a project that exists | **that project's home** — the repo, or `~/100_hwc` / `~/200_personal` / `~/300_tech` (each has its own `*_inbox`). Never the inbox. |
+| Scratch — reports, diagnoses, audits, dumps | `downloads/agent/`, flat, derived name, expected to die there (60d → `_stale/`) |
+| Arrivals from outside (browser downloads) | `downloads/` root; the janitor sorts by type. Not agents' concern. |
+
+**Agents never create a directory under `downloads/`.** If output is big enough
+to want a folder, it is a project by definition and belongs in a project home.
+This one line would have prevented every structural mess this module has had:
+the `sr-remediation-*` bundles at root, the bundles inside `agent/`, and the v1
+domain folders. `report_unexpected_dirs()` is its check — a stray dir at root is
+otherwise *invisible*, since the default drain walks loose files only and
+`preview_skip_dirs` silently protects whatever it lists.
+
 ## Agent-output lifecycle
 
 `downloads/agent/` is scratch with a terminal state, governed by three rules of
@@ -122,6 +143,14 @@ distinct live gdrive investigations share `datax__ops__gdrive__` — so inferrin
 from filenames would delete parallel work while sounding precise.
 
 ## Changelog
+- 2026-08-16 (b): Added `report_unexpected_dirs()` — the default drain now names
+  any top-level dir under `downloads/` that no rule produces and no skip entry
+  claims. Report-only; never moves, never fails the drain. Finished the v1→PARA
+  migration `index.nix` has described since v1: `business/`, `personal/` and the
+  non-media `hwc/` subdirs drained to `~/100_hwc/100_inbox` and
+  `~/200_personal/200_inbox` (`hwc_media/`'s 357 photos held back pending a
+  considered destination); `events/`, `disconnect/`, `_quarantine/` and a stray
+  `.claude/` retired. Top level went from 16 entries to 8.
 - 2026-08-16: Fixed the self-collision that duplicated files to `_2` on any
   `--from`/`--all` re-run (in-place guard in `run()`); restores the documented
   idempotence invariant for re-runs. Rule table gains `agent-stale` (60d →
