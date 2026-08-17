@@ -13,6 +13,7 @@ import { currentJudgment, Item, judgmentsFor, Pipeline } from "../contracts.js";
 import { PrReview } from "../review/contract.js";
 import { ResolvedPipeline } from "../pipelines/catalog.js";
 import { DomainRegistry, domainOf } from "../domains.js";
+import { GAUNTLET_VIEWS, GauntletView, gauntletViewByKey } from "../sources/gauntlet-views.js";
 import { mdToHtml } from "./markdown.js";
 
 function esc(s: string): string {
@@ -226,7 +227,7 @@ function layout(active: string, body: string): string {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Refinery</title>${STYLE}</head><body>
 <header><h1>🛠 Refinery</h1><nav>
-  ${tab("/", "Board", "flow")}${tab("/nightly", "Overnight", "nightly")}${tab("/finished", "Finished", "finished")}${tab("/sr", "SR", "sr")}${tab("/reviews", "Reviews", "reviews")}${tab("/reference", "Reference", "reference")}
+  ${tab("/", "Board", "flow")}${tab("/nightly", "Overnight", "nightly")}${tab("/finished", "Finished", "finished")}${GAUNTLET_VIEWS.map((v) => tab(`/${v.key}`, v.label, v.key)).join("")}${tab("/reviews", "Reviews", "reviews")}${tab("/reference", "Reference", "reference")}
 </nav></header>
 ${body}
 </body></html>`;
@@ -936,32 +937,96 @@ export function renderProjectDetail(
   return layout("", body);
 }
 
-/** SR page: investigations as a status-lane kanban (cards = customer + question
- *  → tabbed detail). Lanes are the distinct SR statuses (data-driven), so a new
- *  status needs no renderer edit. */
-export function renderSr(
-  srs: Item[],
-  maxPerNight: number,
+/** Gauntlet page: one component over a GauntletView shim (gauntlet-views.ts).
+ *  Investigations as a status-lane kanban (cards → tabbed detail). Lanes are
+ *  the distinct values of the view's lane field (data-driven), so a new lane
+ *  value needs no renderer edit — and a new GAUNTLET needs only a new shim. */
+export function renderGauntletBoard(
+  view: GauntletView,
+  items: Item[],
+  maxPerRun: number,
   profiles: ResolvedPipeline[],
   domains: DomainRegistry = emptyRegistry,
 ): string {
-  const srStatusOf = (item: Item): string => {
+  const laneOf = (item: Item): string => {
     const p = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
-    return typeof p.srStatus === "string" && p.srStatus ? p.srStatus : "investigated";
+    const v = p[view.laneField];
+    return typeof v === "string" && v ? v : view.laneFallback;
   };
-  const lanes = [...new Set(srs.map(srStatusOf))].sort().map((s) => ({ key: s, label: s }));
-  // SR cards are read-only mirrors (no inline controls); run-now lives on detail.
-  const ctx: CardCtx = { domains, profiles, enabled: [], back: "/sr" };
-  const board = laneBoard(srs, ctx, lanes, srStatusOf);
+  const lanes = [...new Set(items.map(laneOf))].sort().map((s) => ({ key: s, label: s }));
+  // Gauntlet cards are read-only mirrors (no inline controls); run-now lives on detail.
+  const ctx: CardCtx = { domains, profiles, enabled: [], back: `/${view.key}` };
+  const board = laneBoard(items, ctx, lanes, laneOf);
   const body = `
-<form class="intake" method="post" action="/sr/config">
-  <label class="kv">Max SRs per run:</label>
-  <input type="number" name="maxPerNight" min="0" value="${maxPerNight}" style="width:90px">
+<form class="intake" method="post" action="/${view.key}/config">
+  <label class="kv">${esc(view.capLabel)}</label>
+  <input type="number" name="maxPerNight" min="0" value="${maxPerRun}" style="width:90px">
   <button type="submit">save</button>
-  <span class="kv">${srs.length} investigations · sr_gauntlet runs @ 06:30 (this cap)</span>
+  <span class="kv">${items.length} investigations · ${esc(view.capNote)}</span>
 </form>
-<div class="wrap">${srs.length ? board : '<div class="empty" style="padding:24px">no SR investigations yet — the gauntlet writes them under sr_gauntlet/investigations/</div>'}</div>`;
-  return layout("sr", body);
+<div class="wrap">${items.length ? board : `<div class="empty" style="padding:24px">${esc(view.emptyText)}</div>`}</div>`;
+  return layout(view.key, body);
+}
+
+/** Gauntlet detail: the SR2 modal layout — header (category / subject /
+ *  question) + file tabs + a composed Details tab (CSS-only). The first tab
+ *  (the report) is the default so it's the thing you land on. */
+export function renderGauntletDetail(
+  view: GauntletView,
+  item: Item,
+  files: Record<string, string | null>,
+): string {
+  const head = view.headerOf(item);
+
+  // Force a fresh investigation now (<view>-gauntlet-runnow drains the spool →
+  // run.sh --id). The board only writes the request.
+  const runNow = view.runNow && head.runId
+    ? `<form method="post" action="/${view.key}/run-now" style="margin-top:8px">
+         <input type="hidden" name="${esc(view.runNow.field)}" value="${esc(head.runId)}">
+         <input type="hidden" name="id" value="${esc(item.id)}">
+         <button type="submit" title="${esc(view.runNow.title(head.runId))}">${esc(view.runNow.button)}</button>
+         <span class="kv">${esc(view.runNow.caption)}</span>
+       </form>`
+    : "";
+
+  const context = files.__context ?? null;
+  const detailsMd = [
+    view.detailsMd(item),
+    "",
+    context ? `## Customer context\n\n${context}` : `_no ${view.contextFile}_`,
+  ].filter(Boolean).join("\n");
+
+  const panel = (md: string | null, empty: string) =>
+    `<div class="md">${md ? mdToHtml(md) : `<p class="kv">${empty}</p>`}</div>`;
+
+  const tabs = [...view.tabs, { key: "details", label: "Details", file: "", empty: "" }];
+  const radios = tabs
+    .map((t, i) => `<input type="radio" name="srt" id="srt-${esc(t.key)}"${i === 0 ? " checked" : ""}>`)
+    .join("\n  ");
+  const labels = tabs.map((t) => `<label for="srt-${esc(t.key)}">${esc(t.label)}</label>`).join("\n    ");
+  const panels = tabs
+    .map((t) =>
+      t.key === "details"
+        ? `<div class="panel" id="srp-details">${panel(detailsMd, "")}</div>`
+        : `<div class="panel" id="srp-${esc(t.key)}">${panel(files[t.key] ?? null, t.empty)}</div>`,
+    )
+    .join("\n  ");
+
+  const body = `<div class="srtabs">
+  ${radios}
+  <div class="srhead">
+    <a href="/${view.key}" class="kv">← ${esc(view.label)}</a>
+    <div class="cat">${esc(head.cat)}</div>
+    <h2>${esc(head.title)}</h2>
+    <div class="q">${esc(head.question)}</div>
+    ${runNow}
+  </div>
+  <div class="srtabbar">
+    ${labels}
+  </div>
+  ${panels}
+</div>`;
+  return layout(view.key, body);
 }
 
 export interface SrFiles {
@@ -970,62 +1035,23 @@ export interface SrFiles {
   context: string | null; // context.md (customer pack)
 }
 
-/** SR detail: the SR2 modal layout — header (category / customer / question) +
- *  Gameplan / Thread / Details tabs (CSS-only). The solution (REPORT) is the
- *  default tab so it's the thing you land on. */
+/** SR page — the SR shim over the generic gauntlet board (parity-gated). */
+export function renderSr(
+  srs: Item[],
+  maxPerNight: number,
+  profiles: ResolvedPipeline[],
+  domains: DomainRegistry = emptyRegistry,
+): string {
+  return renderGauntletBoard(gauntletViewByKey("sr")!, srs, maxPerNight, profiles, domains);
+}
+
+/** SR detail — the SR shim over the generic gauntlet detail (parity-gated). */
 export function renderSrDetail(item: Item, files: SrFiles): string {
-  const p = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
-  const customer = typeof p.customer === "string" && p.customer ? p.customer : (typeof p.srId === "string" ? p.srId : item.id);
-  const question = typeof p.title === "string" ? p.title : "";
-  const cat = typeof p.srStatus === "string" && p.srStatus ? p.srStatus : "investigated";
-  const email = typeof p.email === "string" ? p.email : "";
-  const phase = typeof p.srPhase === "string" ? p.srPhase : "";
-  const srId = typeof p.srId === "string" ? p.srId : "";
-
-  // Force a fresh investigation of this SR now (sr-gauntlet-runnow drains the
-  // spool → run.sh --id). The board only writes the request.
-  const runNow = srId
-    ? `<form method="post" action="/sr/run-now" style="margin-top:8px">
-         <input type="hidden" name="srId" value="${esc(srId)}">
-         <input type="hidden" name="id" value="${esc(item.id)}">
-         <button type="submit" title="run the SR gauntlet on ${esc(srId)} now">▶ re-investigate now</button>
-         <span class="kv">forces a fresh investigation; the report updates when it finishes</span>
-       </form>`
-    : "";
-
-  const detailsMd = [
-    `**Customer:** ${customer}`,
-    email ? `**Email:** ${email}` : "",
-    `**Status:** ${cat}${phase ? ` · phase ${phase}` : ""}`,
-    typeof p.run === "string" ? `**Run:** ${p.run}` : "",
-    "",
-    files.context ? `## Customer context\n\n${files.context}` : "_no context.md_",
-  ].filter(Boolean).join("\n");
-
-  const panel = (md: string | null, empty: string) =>
-    `<div class="md">${md ? mdToHtml(md) : `<p class="kv">${empty}</p>`}</div>`;
-
-  const body = `<div class="srtabs">
-  <input type="radio" name="srt" id="srt-gameplan" checked>
-  <input type="radio" name="srt" id="srt-thread">
-  <input type="radio" name="srt" id="srt-details">
-  <div class="srhead">
-    <a href="/sr" class="kv">← SR</a>
-    <div class="cat">${esc(cat)}</div>
-    <h2>${esc(customer)}</h2>
-    <div class="q">${esc(question)}</div>
-    ${runNow}
-  </div>
-  <div class="srtabbar">
-    <label for="srt-gameplan">Gameplan</label>
-    <label for="srt-thread">Thread</label>
-    <label for="srt-details">Details</label>
-  </div>
-  <div class="panel" id="srp-gameplan">${panel(files.gameplan, "no REPORT.md for this investigation yet")}</div>
-  <div class="panel" id="srp-thread">${panel(files.thread, "no thread (sr.md) captured")}</div>
-  <div class="panel" id="srp-details">${panel(detailsMd, "")}</div>
-</div>`;
-  return layout("sr", body);
+  return renderGauntletDetail(gauntletViewByKey("sr")!, item, {
+    gameplan: files.gameplan,
+    thread: files.thread,
+    __context: files.context,
+  });
 }
 
 interface NbStepView {

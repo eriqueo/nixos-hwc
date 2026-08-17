@@ -1,0 +1,172 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Refinery</title><style>
+  /* HWC brand palette (domains/home/theme/palettes/hwc.nix) — gruvbox-anchored,
+     blue-shifted, copper-orange accent. bg0..3 depth, fg0..3, semantic status. */
+  :root{
+    --bg:#1d2021;--panel:#282828;--elev:#2c3338;--line:#32373c;
+    --ink:#ebdbb2;--fg:#d5c4a1;--dim:#a7aaad;--muted:#50626f;
+    --acc:#d08770;--acc2:#5e81ac;--ok:#a3be8c;--warn:#cf995f;--err:#bf616a;
+  }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 ui-sans-serif,system-ui,sans-serif}
+  a{color:var(--fg);text-decoration:none}
+  header{padding:12px 18px;border-bottom:1px solid var(--line);display:flex;gap:16px;align-items:baseline}
+  header h1{margin:0;font-size:17px;color:var(--ink)}
+  nav a{color:var(--dim);margin-right:14px;font-size:13px}
+  nav a.active{color:var(--ink);border-bottom:2px solid var(--acc);padding-bottom:2px}
+  button{background:var(--elev);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer}
+  button:hover{border-color:var(--acc)}
+  input[type=text],input[type=number],select,textarea{background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
+  .intake{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line);align-items:center}
+  .intake input[type=text]{flex:1}
+  .wrap{display:flex;gap:12px;padding:14px;align-items:flex-start}
+  .swatch{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .board{display:flex;gap:12px;flex:1;overflow-x:auto}
+  .col{background:var(--panel);border:1px solid var(--line);border-radius:8px;min-width:230px;flex:1}
+  .col h2{margin:0;padding:10px 12px;font-size:13px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;text-transform:uppercase;letter-spacing:.04em;color:var(--dim)}
+  .count{background:var(--elev);border-radius:10px;padding:0 8px;color:var(--dim);font-weight:600}
+  .cards{padding:8px;display:flex;flex-direction:column;gap:8px}
+  /* Hopper: ideas have no status lane → a responsive card grid (SR2-style faces) */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;padding:14px}
+  .empty{color:var(--muted);text-align:center;padding:8px}
+  /* Card — SR2 face: type-tinted fill via color-mix, type-color left edge, hover ring */
+  .card{display:block;background:var(--elev);border:1px solid var(--line);border-left:4px solid var(--dim);border-radius:8px;padding:9px 11px;transition:box-shadow .12s,border-color .12s}
+  .card:hover{border-color:var(--acc);box-shadow:0 0 0 1px color-mix(in srgb,var(--acc) 45%,transparent)}
+  .card.nightly{border:1px dashed var(--warn);border-left-width:4px}
+  .card.stale{opacity:.72;border-left-style:dotted}
+  .badge.age{margin-left:auto;background:transparent;border-color:var(--line);color:var(--muted)}
+  .badge.age.old{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent)}
+  a.badge:hover{border-color:var(--acc);color:var(--acc)}
+  /* board section headers + the GET filter bar + the folded done shelf */
+  .secthdr{width:100%;margin:10px 0 2px;font-size:14px;color:var(--ink);display:flex;gap:8px;align-items:baseline}
+  .secthdr .count{font-size:12px}
+  .secthdr a{color:var(--acc2)}
+  .filterbar{display:flex;gap:8px;padding:8px 18px;border-bottom:1px solid var(--line);align-items:center}
+  .filterbar select,.filterbar input[type=text]{font-size:12px;padding:5px 8px}
+  .filterbar input[type=text]{flex:1;max-width:340px}
+  .filterbar button{font-size:12px;padding:5px 10px}
+  details.donefold{width:100%}
+  details.donefold summary{cursor:pointer;list-style:none}
+  details.donefold summary::-webkit-details-marker{display:none}
+  details.donefold summary .count::after{content:" ▸"}
+  details.donefold[open] summary .count::after{content:" ▾"}
+  .badges{display:flex;gap:6px;margin-bottom:5px;flex-wrap:wrap;align-items:center}
+  .badge{font-size:10px;padding:1px 6px;border-radius:4px;background:var(--line);color:var(--dim);border:1px solid transparent}
+  .badge.type{font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+  .moon{font-size:12px}
+  .title{display:block;font-size:13px;color:var(--ink);font-weight:600;overflow-wrap:anywhere}
+  a.title:hover{color:var(--acc)}
+  .reason{margin-top:5px;font-size:12px;color:var(--acc)}
+  .asks{margin:4px 0 12px;border-left:3px solid var(--warn);padding:6px 0 6px 12px;background:color-mix(in srgb,var(--warn) 8%,transparent)}
+  .asks .askhdr{font-size:12px;font-weight:700;color:var(--warn);text-transform:uppercase;letter-spacing:.04em}
+  .asks ol{margin:6px 0 0 18px;padding:0}
+  .asks li{margin:4px 0;color:var(--ink);font-size:13px}
+  .card .why{margin-top:2px;font-size:12px;color:var(--dim);overflow-wrap:anywhere}
+  /* inline per-card controls (SR2-style quick actions) */
+  .ccrow{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;align-items:center}
+  .cc{display:inline-flex;gap:4px;margin:0}
+  .ccrow select,.cc select,.ccrow button,.cc button{font-size:11px;padding:3px 6px;border-radius:5px;line-height:1.1}
+  .ccrow select,.cc select{max-width:130px}
+  .ccrow .danger:hover,.cc .danger:hover{border-color:var(--err);color:var(--err)}
+  /* detail + nightly */
+  .detail{max-width:760px;margin:18px auto;padding:0 18px}
+  .detail h2{font-size:15px;border-bottom:1px solid var(--line);padding-bottom:6px;margin-top:22px}
+  .kv{color:var(--dim);font-size:13px}
+  pre{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px;overflow-x:auto;font-size:12px}
+  .act{display:flex;gap:6px;margin:8px 0;align-items:center;flex-wrap:wrap}
+  .act input[type=text]{flex:1;min-width:200px}
+  .act textarea{flex:1 0 100%;min-width:200px;resize:vertical;font:inherit}
+  .hist{font-size:12px;color:var(--dim)}
+  /* rendered markdown (reports, card bodies) — wraps, doesn't clip */
+  .md{max-width:840px;line-height:1.55}
+  .md h2,.md h3,.md h4,.md h5{margin:16px 0 6px;font-size:14px;color:var(--ink)}
+  .md p{margin:8px 0;overflow-wrap:anywhere}
+  .md ul,.md ol{margin:6px 0 6px 20px}
+  .md li{margin:3px 0}
+  .md code{background:var(--line);padding:1px 4px;border-radius:3px;font-size:12px}
+  .md pre.code{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+  .md blockquote{border-left:3px solid var(--line);margin:6px 0;padding-left:10px;color:var(--dim)}
+  .md a{color:var(--acc2);overflow-wrap:anywhere}
+  /* OKF vault cross-links: obsidian://open deep links into the brain vault */
+  .md .vlink{color:var(--acc2);border-bottom:1px dotted var(--acc2);overflow-wrap:anywhere}
+  /* SR tabbed detail (mirrors the SR2/datax ticket-editor); the SR list is the shared kanban */
+  .srtabs{max-width:860px;margin:0 auto;padding:0 18px}
+  .srtabs > input{display:none}
+  .srhead{padding:14px 0 4px}
+  .srhead .cat{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--acc2);font-weight:700}
+  .srhead h2{margin:2px 0;font-size:18px;border:0}
+  .srhead .q{color:var(--dim);font-size:13px}
+  .srtabbar{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:10px}
+  .srtabs label{padding:8px 14px;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;font-size:13px}
+  .srtabs .panel{display:none;padding:14px 0}
+  #srt-gameplan:checked ~ .srtabbar label[for=srt-gameplan],
+  #srt-thread:checked ~ .srtabbar label[for=srt-thread],
+  #srt-details:checked ~ .srtabbar label[for=srt-details]{color:var(--ink);border-bottom-color:var(--acc)}
+  #srt-gameplan:checked ~ #srp-gameplan,
+  #srt-thread:checked ~ #srp-thread,
+  #srt-details:checked ~ #srp-details{display:block}
+  /* project step progress */
+  .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}
+  .bar > span{display:block;height:100%;background:var(--done,var(--ok))}
+  .steps{margin-top:8px}
+  .step{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
+  .step .n{color:var(--dim);width:22px;flex:none}
+  .step .ti{flex:1;overflow-wrap:anywhere}
+  .step .st{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--line);color:var(--dim)}
+  .step .st.done{color:var(--bg);background:var(--ok)}
+  .step .st.queued,.step .st.running{color:var(--bg);background:var(--acc)}
+  /* per-card gate-dot progress strip: one dot per pipeline step, in order */
+  .gate-dots{display:flex;gap:5px;margin-top:7px;align-items:center;flex-wrap:wrap}
+  .gate-dot{width:9px;height:9px;border-radius:50%;background:var(--dim);flex:none}
+  .gate-dot.passed{background:var(--ok)}
+  .gate-dot.parked{background:var(--warn)}
+  .gate-dot.failed{background:var(--err)}
+  .gate-dot.running{background:var(--acc)}
+  .gate-dot.pending{background:var(--dim)}
+  .gate-dot.skipped{background:transparent;border:1px solid var(--muted)}
+  .gate-dot.current{box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--ink)}
+  /* item pipeline node strip (detail page): Triage → gates → executor → Done */
+  .nodes{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  .node{border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+  .node summary{display:flex;gap:8px;align-items:center;padding:8px 10px;cursor:pointer;list-style:none}
+  .node summary::-webkit-details-marker{display:none}
+  .node .nlab{flex:1;color:var(--ink);font-size:13px}
+  .node .arrow{color:var(--muted)}
+  .node .ndot{width:10px;height:10px;border-radius:50%;background:var(--dim);flex:none}
+  .node .ndot.passed{background:var(--ok)}
+  .node .ndot.parked{background:var(--warn)}
+  .node .ndot.failed{background:var(--err)}
+  .node .ndot.running{background:var(--acc)}
+  .node .ndot.skipped{background:transparent;border:1px solid var(--muted)}
+  .node .nbody{padding:0 12px 10px;font-size:12px;color:var(--dim)}
+  .node .nbody b{color:var(--fg)}
+</style></head><body>
+<header><h1>🛠 Refinery</h1><nav>
+  <a href="/" class="">Board</a><a href="/nightly" class="">Overnight</a><a href="/finished" class="">Finished</a><a href="/sr" class="active">SR</a><a href="/reviews" class="">Reviews</a><a href="/reference" class="">Reference</a>
+</nav></header>
+
+<form class="intake" method="post" action="/sr/config">
+  <label class="kv">Max SRs per run:</label>
+  <input type="number" name="maxPerNight" min="0" value="5" style="width:90px">
+  <button type="submit">save</button>
+  <span class="kv">2 investigations · sr_gauntlet runs @ 06:30 (this cap)</span>
+</form>
+<div class="wrap"><div class="board"><section class="col"><h2>investigated <span class="count">1</span></h2><div class="cards"><div class="card" style="border-left-color:#a7aaad;background:color-mix(in srgb,#a7aaad 12%,var(--elev))">
+    <div class="badges"><span class="badge type" style="color:#a7aaad;background:color-mix(in srgb,#a7aaad 18%,transparent);border-color:color-mix(in srgb,#a7aaad 40%,transparent)">Misc</span><span class="badge" title="pipeline">datax-sr</span><span class="badge">investigated</span></div>
+    <a class="title" href="/project/sr:2026-08-09-def456">Cannot connect Dropbox</a>
+    
+    
+    
+    
+    
+  </div></div></section><section class="col"><h2>new <span class="count">1</span></h2><div class="cards"><div class="card" style="border-left-color:#a7aaad;background:color-mix(in srgb,#a7aaad 12%,var(--elev))">
+    <div class="badges"><span class="badge type" style="color:#a7aaad;background:color-mix(in srgb,#a7aaad 18%,transparent);border-color:color-mix(in srgb,#a7aaad 40%,transparent)">Misc</span><span class="badge" title="pipeline">datax-sr</span><span class="badge">investigated</span><span class="badge" title="has REPORT">📄</span></div>
+    <a class="title" href="/project/sr:2026-08-10-abc123">Jane Builder</a>
+    <div class="why">Agent keeps failing on receipts</div>
+    
+    
+    
+    
+  </div></div></section></div></div>
+</body></html>

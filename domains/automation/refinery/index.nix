@@ -129,6 +129,12 @@ in
       description = "sr_gauntlet dir — read-only mirror of its investigations/";
     };
 
+    dx1GauntletDir = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = "${paths.user.home}/700_datax/dx1_gauntlet";
+      description = "dx1_gauntlet dir — read-only mirror of its investigations/ + state/ (verdict ledger)";
+    };
+
     # The dormant `ollama` adapter (engine/src/adapters/ollama.ts) is retained
     # but no longer advertised here: the container ollama stack was retired
     # 2026-06-27. Local-LLM provider intent parked:
@@ -185,19 +191,25 @@ in
           # sr-gauntlet-runnow path unit (domains/automation/sr-gauntlet) drains
           # it and runs `run.sh --id <srId>`. Also under the StateDirectory.
           "REFINERY_SR_RUNNOW_SPOOL=/var/lib/refinery/sr-run-now"
+          # DX1 twin: /dx1 "▶ re-investigate now" drops a "+"-encoded case
+          # fingerprint here; dx1-gauntlet-runnow (domains/automation/
+          # dx1-gauntlet) drains it. Also under the StateDirectory.
+          "REFINERY_DX1_RUNNOW_SPOOL=/var/lib/refinery/dx1-run-now"
           "REFINERY_TRIAGE_PROVIDER=${cfg.triageProvider}"
           # claude-cli triage shells out to headless `claude`, which reads the
           # Claude subscription creds from $HOME/.claude (bound read-only below).
           "HOME=${paths.user.home}"
         ] ++ lib.optional (cfg.claudeBin != null) "REFINERY_CLAUDE_BIN=${cfg.claudeBin}"
           ++ lib.optional (cfg.vaultDir != null) "REFINERY_VAULT_DIR=${cfg.vaultDir}"
-          ++ lib.optional (cfg.srGauntletDir != null) "REFINERY_SR_GAUNTLET_DIR=${cfg.srGauntletDir}";
+          ++ lib.optional (cfg.srGauntletDir != null) "REFINERY_SR_GAUNTLET_DIR=${cfg.srGauntletDir}"
+          ++ lib.optional (cfg.dx1GauntletDir != null) "REFINERY_DX1_GAUNTLET_DIR=${cfg.dx1GauntletDir}";
         Restart = "on-failure";
         RestartSec = 5;
         # State in /var/lib/refinery (StateDirectory). Home is masked (tmpfs);
         # only the exact paths the board touches are bound back:
         #   - vault _inbox/nightly_builds: READ-WRITE (queue/unqueue flips card status)
-        #   - vault runs/ + sr_gauntlet investigations/: READ-ONLY (mirror + REPORTs)
+        #   - vault runs/ + sr_gauntlet investigations/ + dx1_gauntlet
+        #     investigations/ + state/: READ-ONLY (mirrors + REPORTs + verdict ledger)
         #   - ~/.claude + ~/.claude.json: READ-ONLY (claude-cli triage creds)
         # ProtectHome MUST be "tmpfs" (not true) so bind targets can be created
         # under the masked home.
@@ -208,6 +220,14 @@ in
         BindReadOnlyPaths =
           (lib.optional (cfg.vaultDir != null) "-${cfg.vaultDir}/runs")
           ++ (lib.optional (cfg.srGauntletDir != null) "-${cfg.srGauntletDir}/investigations")
+          # dx1 mirror: run dirs + state/ (ledger.json is the verdict source
+          # the /dx1 lanes read). Leading "-": tolerated missing until the
+          # runner checkout is provisioned on this host — /dx1 renders its
+          # empty state instead of erroring.
+          ++ (lib.optionals (cfg.dx1GauntletDir != null) [
+               "-${cfg.dx1GauntletDir}/investigations"
+               "-${cfg.dx1GauntletDir}/state"
+             ])
           # claude-cli triage authenticates with Eric's Claude subscription (no
           # API key). Bind ~/.claude (creds + config) READ-ONLY back over the
           # masked home — the host refreshes the OAuth token in place and the dir

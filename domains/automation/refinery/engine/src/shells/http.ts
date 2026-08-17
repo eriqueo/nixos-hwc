@@ -20,9 +20,10 @@ import { makeSpecExecutor } from "../executors/spec.js";
 import { runPipelineOnce } from "../cli/run-once.js";
 import { LlmPort } from "../gates/llm-port.js";
 import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX, finishedProjects, reopenProject, parseFinishedId, FINISHED_PREFIX } from "../sources/nightly-cards.js";
-import { srInvestigationProjects, readRunFile, SR_PREFIX } from "../sources/sr-investigations.js";
+import { gauntletInvestigationProjects, readRunFile } from "../sources/gauntlet-investigations.js";
+import { GAUNTLET_VIEWS, GauntletView, gauntletViewByKey, gauntletViewForId } from "../sources/gauntlet-views.js";
 import { syncBrainIdeas, makeIdeaItem, ideaId, isBrainIdea, appendBrainIdea, removeBrainIdea, promoteBrainIdea } from "../sources/brain-ideas.js";
-import { renderBoard, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderSr, renderSrDetail, renderProjectDetail, renderReport, renderReference, renderReviews, HOPPER_STAGE_KEYS } from "./render.js";
+import { renderBoard, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderGauntletBoard, renderGauntletDetail, renderProjectDetail, renderReport, renderReference, renderReviews, HOPPER_STAGE_KEYS } from "./render.js";
 import { FileReviewsStore, resolveReviewsDir } from "../stores/reviews-store.js";
 
 export interface HttpShellConfig {
@@ -36,9 +37,11 @@ export interface HttpShellConfig {
   triageProvider: string;
   vaultDir?: string; // brain vault — nightly-builds card mirror + queue write-back
   srGauntletDir?: string; // sr_gauntlet dir — SR investigation mirror
+  dx1GauntletDir?: string; // dx1_gauntlet dir — DX1 case-investigation mirror
   reviewsDir?: string; // morning PR-review records (REFINERY_REVIEWS_DIR); default under the state base
   runNowSpoolDir: string; // "Run now" / IMMEDIATE drops a <goal> request file here; a systemd.path twin of run.sh drains it
   srRunNowSpoolDir: string; // SR "re-investigate now" drops an <srId> request file here; sr-gauntlet-runnow.path drains it
+  dx1RunNowSpoolDir: string; // DX1 "re-investigate now" drops a <caseFingerprint> request file here; dx1-gauntlet-runnow.path drains it
   nativeRunNowSpoolDir: string; // board-owned native pipelines (app-refinement): after a clean gate pass the board drops an <itemId> file here; refinery-run-native.path drains it
   clock: () => string;
   triageLlm?: LlmPort; // test override; production resolves from triageProvider
@@ -62,9 +65,11 @@ export function configFromEnv(): HttpShellConfig {
     triageProvider: process.env.REFINERY_TRIAGE_PROVIDER || "claude-cli",
     vaultDir: process.env.REFINERY_VAULT_DIR,
     srGauntletDir: process.env.REFINERY_SR_GAUNTLET_DIR,
+    dx1GauntletDir: process.env.REFINERY_DX1_GAUNTLET_DIR,
     reviewsDir: process.env.REFINERY_REVIEWS_DIR || `${base}/reviews`,
     runNowSpoolDir: process.env.REFINERY_RUNNOW_SPOOL || `${base}/run-now`,
     srRunNowSpoolDir: process.env.REFINERY_SR_RUNNOW_SPOOL || `${base}/sr-run-now`,
+    dx1RunNowSpoolDir: process.env.REFINERY_DX1_RUNNOW_SPOOL || `${base}/dx1-run-now`,
     nativeRunNowSpoolDir: process.env.REFINERY_NATIVE_RUNNOW_SPOOL || `${base}/native-run`,
     nativeRepo: process.env.REFINERY_NATIVE_REPO,
     nativeTimeoutMs: process.env.REFINERY_NATIVE_TIMEOUT ? Number(process.env.REFINERY_NATIVE_TIMEOUT) : undefined,
@@ -109,8 +114,11 @@ export function createShell(cfg: HttpShellConfig) {
   // Per-gauntlet "max per run" caps — the single runtime source of truth that
   // both run.sh files read (with their env value as fallback). Refinery is the
   // control plane; the GUI writes these.
-  type CapKind = "nightly" | "sr";
-  const CAP_DEFAULTS: Record<CapKind, number> = { nightly: 1, sr: 5 };
+  type CapKind = string; // "nightly" + one kind per gauntlet view key
+  const CAP_DEFAULTS: Record<string, number> = {
+    nightly: 1,
+    ...Object.fromEntries(GAUNTLET_VIEWS.map((v) => [v.key, v.capDefault])),
+  };
   const readCaps = (): Record<string, number> => {
     if (!existsSync(cfg.capsPath)) return {};
     try {
@@ -121,7 +129,7 @@ export function createShell(cfg: HttpShellConfig) {
   };
   const readCap = (kind: CapKind): number => {
     const v = readCaps()[kind];
-    return typeof v === "number" && v >= 0 ? v : CAP_DEFAULTS[kind];
+    return typeof v === "number" && v >= 0 ? v : (CAP_DEFAULTS[kind] ?? 0);
   };
   const writeCap = (kind: CapKind, n: number): void => {
     mkdirSync(dirname(cfg.capsPath), { recursive: true });
@@ -141,15 +149,30 @@ export function createShell(cfg: HttpShellConfig) {
     writeFileSync(join(cfg.runNowSpoolDir, safe), `${safe}\n`);
   };
 
-  // SR "re-investigate now": same hardened-board pattern — drop an <srId> file
-  // in the SR spool; sr-gauntlet-runnow.path runs `run.sh --id <srId>` out of
-  // band. srId is a Firestore doc id; sanitize hard to keep it a bare filename.
-  const requestSrRunNow = (srId: string): void => {
-    const safe = srId.replace(/[^A-Za-z0-9._-]/g, "");
+  // Per-gauntlet wiring the shims can't carry themselves (host paths from env):
+  // the mirror dir and the run-now spool. A view with no dir configured still
+  // renders (empty board); a view with no spool has no run-now.
+  const viewDir = (view: GauntletView): string | undefined =>
+    ({ sr: cfg.srGauntletDir, dx1: cfg.dx1GauntletDir })[view.key];
+  const viewSpool = (view: GauntletView): string | undefined =>
+    ({ sr: cfg.srRunNowSpoolDir, dx1: cfg.dx1RunNowSpoolDir })[view.key];
+
+  // Gauntlet "re-investigate now": same hardened-board pattern — drop an <id>
+  // file in the view's spool; the gauntlet's *-runnow.path unit runs
+  // `run.sh --id <id>` out of band. The id is a Firestore doc id / case
+  // fingerprint; sanitize hard to keep it a bare filename. Case fingerprints
+  // contain ":" (agent:<org>:<agent>:<family>) — spool filenames encode ":" as
+  // "+" (both sides of the contract: the drain decodes "+" back to ":").
+  const requestGauntletRunNow = (view: GauntletView, id: string): void => {
+    const spool = viewSpool(view);
+    if (!spool) return;
+    const safe = id.replace(/:/g, "+").replace(/[^A-Za-z0-9._+-]/g, "");
     if (!safe || safe === "." || safe === "..") return;
-    mkdirSync(cfg.srRunNowSpoolDir, { recursive: true });
-    writeFileSync(join(cfg.srRunNowSpoolDir, safe), `${safe}\n`);
+    mkdirSync(spool, { recursive: true });
+    writeFileSync(join(spool, safe), `${safe}\n`);
   };
+  const requestSrRunNow = (srId: string): void =>
+    requestGauntletRunNow(gauntletViewByKey("sr")!, srId);
 
   // Board-owned native execution: the hardened board runs the gates in-process,
   // then drops the item id in this spool. A privileged systemd.path twin drains
@@ -593,10 +616,13 @@ export function createShell(cfg: HttpShellConfig) {
           return;
         }
         // Read-only mirror of the live gauntlets: nightly-builds vault cards +
-        // sr_gauntlet investigations.
+        // each gauntlet view's investigations (sr_gauntlet, dx1_gauntlet).
         const mirror = (): Item[] => [
           ...(cfg.vaultDir ? nightlyCardProjects(cfg.vaultDir) : []),
-          ...(cfg.srGauntletDir ? srInvestigationProjects(cfg.srGauntletDir) : []),
+          ...GAUNTLET_VIEWS.flatMap((v) => {
+            const dir = viewDir(v);
+            return dir ? gauntletInvestigationProjects(v, dir) : [];
+          }),
         ];
 
         if (method === "GET" && url === "/hopper") {
@@ -631,11 +657,12 @@ export function createShell(cfg: HttpShellConfig) {
             return true;
           };
           const ideas = items.filter((i) => i.pipeline === UNTRIAGED).filter(matches);
-          // Development: store projects + nightly-build mirror cards (SRs have
-          // their own page). Archived items live on /finished, not here.
+          // Development: store projects + nightly-build mirror cards (gauntlet
+          // investigations have their own pages). Archived items live on
+          // /finished, not here.
           const projects = [
             ...items.filter((i) => i.pipeline !== UNTRIAGED && i.archived !== true),
-            ...mirror().filter((m) => !m.id.startsWith(SR_PREFIX)),
+            ...mirror().filter((m) => !gauntletViewForId(m.id)),
           ].filter(matches);
           const archivedCount = items.filter((i) => i.archived === true).length;
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
@@ -674,13 +701,15 @@ export function createShell(cfg: HttpShellConfig) {
           res.end(renderReviews(await listReviews()));
           return;
         }
-        if (method === "GET" && url === "/sr") {
+        // One page per gauntlet view (/sr, /dx1) — same component, two shims.
+        const viewForPage = method === "GET" ? gauntletViewByKey(url.slice(1)) : null;
+        if (viewForPage) {
           const profiles = catalog.list();
-          const srs = mirror()
-            .filter((m) => m.id.startsWith(SR_PREFIX))
+          const runs = mirror()
+            .filter((m) => m.id.startsWith(viewForPage.prefix))
             .sort((a, b) => b.id.localeCompare(a.id));
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          res.end(renderSr(srs, readCap("sr"), profiles, domains));
+          res.end(renderGauntletBoard(viewForPage, runs, readCap(viewForPage.key), profiles, domains));
           return;
         }
         if (method === "GET" && url.startsWith("/project/")) {
@@ -696,21 +725,24 @@ export function createShell(cfg: HttpShellConfig) {
             res.end("no such project");
             return;
           }
+          const detailView = gauntletViewForId(id);
+          const detailDir = detailView ? viewDir(detailView) : undefined;
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
           if (id.startsWith(FINISHED_PREFIX)) {
             res.end(renderFinishedProject(item));
           } else if (id.startsWith(NB_PREFIX)) {
             res.end(renderNightlyProject(item));
-          } else if (id.startsWith(SR_PREFIX) && cfg.srGauntletDir) {
-            // SR items render in the SR2-style tabbed layout (Gameplan/Thread/Details).
+          } else if (detailView && detailDir) {
+            // Gauntlet items render in the SR2-style tabbed layout (report /
+            // secondary file / Details) — one component over the view shim.
             const run = typeof (item.payload as { run?: unknown }).run === "string"
               ? (item.payload as { run: string }).run
               : "";
-            res.end(renderSrDetail(item, {
-              gameplan: readRunFile(cfg.srGauntletDir, run, "REPORT.md"),
-              thread: readRunFile(cfg.srGauntletDir, run, "sr.md"),
-              context: readRunFile(cfg.srGauntletDir, run, "context.md"),
-            }));
+            const files: Record<string, string | null> = Object.fromEntries(
+              detailView.tabs.map((t) => [t.key, readRunFile(detailDir, run, t.file)]),
+            );
+            files.__context = readRunFile(detailDir, run, detailView.contextFile);
+            res.end(renderGauntletDetail(detailView, item, files));
           } else {
             res.end(renderProjectDetail(item, catalog.list(), catalog.enabled(), domains));
           }
@@ -730,8 +762,10 @@ export function createShell(cfg: HttpShellConfig) {
             const run = item && typeof (item.payload as { run?: unknown }).run === "string"
               ? (item.payload as { run: string }).run
               : "";
-            if (item && run && id.startsWith(SR_PREFIX) && cfg.srGauntletDir) {
-              report = readReport(cfg.srGauntletDir, run);
+            const reportView = gauntletViewForId(id);
+            const reportDir = reportView ? viewDir(reportView) : undefined;
+            if (item && run && reportDir) {
+              report = readReport(reportDir, run);
             }
             title = item ? String((item.payload as { title?: unknown }).title ?? id) : id;
           }
@@ -870,19 +904,22 @@ export function createShell(cfg: HttpShellConfig) {
             if (Number.isFinite(n) && n >= 0) writeCap("nightly", Math.floor(n));
             return redirectTo(res, "/nightly");
           }
-          if (url === "/sr/config") {
+          // Per-gauntlet cap + run-now endpoints (/sr/config, /dx1/run-now, …).
+          const gauntletPost = GAUNTLET_VIEWS.find((v) => url.startsWith(`/${v.key}/`));
+          if (gauntletPost && url === `/${gauntletPost.key}/config`) {
             const n = Number(body.get("maxPerNight"));
-            if (Number.isFinite(n) && n >= 0) writeCap("sr", Math.floor(n));
-            return redirectTo(res, "/sr");
+            if (Number.isFinite(n) && n >= 0) writeCap(gauntletPost.key, Math.floor(n));
+            return redirectTo(res, `/${gauntletPost.key}`);
           }
-          if (url === "/sr/run-now") {
-            // Force a fresh investigation of one SR now. The SR mirror item
-            // carries the real Firestore srId in its payload; the form passes it
-            // directly (mirror items aren't in the store). The board only writes
-            // the spool request — sr-gauntlet-runnow.path runs run.sh --id.
-            const srId = (body.get("srId") ?? "").trim();
-            if (srId) requestSrRunNow(srId);
-            return redirectTo(res, id ? `/project/${encodeURIComponent(id)}` : "/sr");
+          if (gauntletPost && url === `/${gauntletPost.key}/run-now` && gauntletPost.runNow) {
+            // Force a fresh investigation now. The mirror item carries the real
+            // id (Firestore srId / case fingerprint) in its payload; the form
+            // passes it directly (mirror items aren't in the store). The board
+            // only writes the spool request — the gauntlet's *-runnow.path unit
+            // runs run.sh --id out of band.
+            const runId = (body.get(gauntletPost.runNow.field) ?? "").trim();
+            if (runId) requestGauntletRunNow(gauntletPost, runId);
+            return redirectTo(res, id ? `/project/${encodeURIComponent(id)}` : `/${gauntletPost.key}`);
           }
           if (url === "/profiles/toggle") {
             const pipelineId = body.get("pipeline") ?? "";
@@ -899,5 +936,5 @@ export function createShell(cfg: HttpShellConfig) {
     })();
   });
 
-  return { server, store, catalog, domains, intake, intakeIdea, syncBrain, sweepArchive, amend, doRewind, setStatus, setStage, setDomain, setRepo, setChain, buildNow, chainTo, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow, requestNativeRunNow };
+  return { server, store, catalog, domains, intake, intakeIdea, syncBrain, sweepArchive, amend, doRewind, setStatus, setStage, setDomain, setRepo, setChain, buildNow, chainTo, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow, requestGauntletRunNow, requestNativeRunNow };
 }

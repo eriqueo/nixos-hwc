@@ -51,3 +51,12 @@ test("registry loads sr_gauntlet.yaml; getGauntlet returns it with the live SR v
   assert.match(sr!.trigger.command, /sr_gauntlet\/run\.sh$/);
   assert.equal(getGauntlet(map, "nope"), null);
 });
+
+test("registry loads dx1_gauntlet.yaml with the tri-state DX1 verdict vocabulary", () => {
+  const map = loadGauntlets(GAUNTLETS_DIR);
+  const dx1 = getGauntlet(map, "dx1_gauntlet");
+  assert.ok(dx1, "dx1_gauntlet contract present in the registry");
+  assert.match(dx1!.verdictPattern, /DX1-VERDICT: \(diagnosed\|inconclusive\|not-reproducible\)/);
+  assert.deepEqual(dx1!.successVerdicts, ["diagnosed", "inconclusive", "not-reproducible"]);
+  assert.match(dx1!.trigger.command, /dx1_gauntlet\/run\.sh$/);
+});
