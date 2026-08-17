@@ -23,6 +23,12 @@ core/
 ```
 
 ## Changelog
+- 2026-08-12: `f77f3788` — shell no longer hardcodes tailnet IPs. `shell/index.nix` and
+  `shell/parts/aliases.nix` read `hmLib.fleet osConfig` (new helper in
+  `domains/lib/hm.nix`), which resolves `hwc.networking.hosts.ips` on NixOS hosts and
+  falls back to literals only for standalone HM; `parts/aliases.nix` takes a new `fleet`
+  argument, mirroring the `nixosPath` registry-with-Law-1-fallback pattern already there.
+  One producer for the fact, four consumers killed.
 - 2026-08-06: repo-hooks — new module. Git hooks were hand-placed per host
   (laptop pointed hooksPath at its own .git/hooks; server had /dev/null);
   now ~/.nixos ships tracked .githooks/ (pre-commit = the nine charter-law

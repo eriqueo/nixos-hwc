@@ -20,9 +20,11 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ```
 domains/home/
-├── apps/    # 50 app modules, auto-imported via readDir (index.nix per app,
+├── apps/    # 58 app modules, auto-imported via readDir (index.nix per app,
 │            # optional sys.nix system half, parts/ for split config)
-├── core/    # shell/ (CLI env, zsh, aliases — parts/), development/, xdg-dirs.nix
+├── core/    # shell/ (CLI env, zsh, aliases — parts/), development/,
+│            # repo-hooks/, xdg-dirs.nix
+├── keymap/  # hwc.home.keymap — grammar.nix → per-app keybind generators
 └── theme/   # palettes/ (deep-nord, gruv, hwc), templates/gtk.nix, fonts/
 ```
 
@@ -44,6 +46,16 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-08-17: Structure + Applications corrected. The tree listing said "50 app
+  modules" (actually 58) and omitted `keymap/` and `core/repo-hooks/`. The
+  "Applications (current modules)" list of 52 names had gone stale in both
+  directions — it still named `betterbird`, `librewolf`, `thunderbird` and
+  `transcript-formatter`, all deleted, and omitted the ~10 added since. Replaced
+  with a pointer to `apps/README.md`, since `apps/index.nix` imports by `readDir`
+  and two hand-maintained copies of one fact is what produced the drift.
+- 2026-08-16: `apps/pi/` — `9e15bd2e` repoints DX1 at the LiteLLM proxy instead of a
+  dead RunPod pod; `457c4391` loads the Claude skill tree and enforces tool guards
+  (new `parts/guards.ts`); `eee9162f` adds `parts/AGENTS.md` global instructions.
 - 2026-08-12: `core/shell/` — the `server` ssh matchBlock and the `server`/`xps` aliases no longer carry hardcoded Tailscale IPs; both read `hmLib.fleet osConfig` (new helper in `domains/lib/hm.nix`), which resolves `hwc.networking.hosts.ips` on NixOS hosts and falls back to literals only for standalone HM. `parts/aliases.nix` takes a new `fleet` argument, mirroring the existing `nixosPath` registry-with-Law-1-fallback pattern already in that file. Rendered values change (`100.114.232.124` → `100.77.195.118`) because hwc-server re-registered on a new tailnet address that day — which is the point: the address now lives in one place instead of four.
 - 2026-07-11: Law 3 migration — shell + scraper `nixosPath` standalone-HM fallback now derives from `config.home.homeDirectory` (gpu-screen-recorder escape-hatch precedent) instead of a `/home/eric` literal; hyprland session.nix stale commented-out screenshots fallback removed; yazi keymap.nix dead `? "/mnt/media"` default param dropped (index.nix always passes `mediaRoot`). Rendered values unchanged.
 
@@ -164,19 +176,10 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 ## Applications (current modules)
 Options live under `hwc.home.apps.<name>.*`; defaults come from the role
 home halves (`profiles/base/home.nix`, `profiles/desktop/home.nix`);
-per-machine adjustments go in `machines/<host>/home.nix`. Current set
-(52 modules):
-```
-aider, analysis, betterbird, blender, bottles-unwrapped, calcure,
-calcurse, chromium, claude-code, claude-desktop, codex, dt, dxlog,
-freecad, gemini-cli, google-cloud-sdk, gpg, herdr, hyprland, imv,
-ipcalc, jellyfin-media-player, kitty, librewolf, localsend, markitdown,
-mpv, n8n, neomutt, nvim, obsidian, onlyoffice-desktopeditors, opencode,
-proton-authenticator, proton-mail, proton-pass, qbittorrent, qutebrowser,
-scraper, slack, slack-cli, swaync, thunar, thunderbird, tmux, transcript-formatter,
-tuxedo, wasistlos, waybar, whisper-cpp, xournalpp, yazi
-```
-Update this list whenever `domains/home/apps/` gains or loses a module.
+per-machine adjustments go in `machines/<host>/home.nix`. The canonical list
+lives in **`apps/README.md`** — `apps/index.nix` imports by `readDir`, so the
+directory is the source of truth and a second hand-maintained copy here only
+drifts. Current count: 58 modules.
 
 ### Workspace Support (`workspace/home/`)
 
