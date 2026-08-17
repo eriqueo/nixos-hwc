@@ -14,6 +14,7 @@ import { PrReview } from "../review/contract.js";
 import { ResolvedPipeline } from "../pipelines/catalog.js";
 import { DomainRegistry, domainOf } from "../domains.js";
 import { FleetMember, FleetRates, FleetSnapshot, FleetTemplate, cohortCleanDelta, fleetFamilyColor } from "../sources/dx1-fleet.js";
+import { ENHANCER_SCRIPT } from "./enhance.js";
 import { GAUNTLET_VIEWS, GauntletRunBundle, GauntletView, detailsExportMd, gauntletViewByKey, tabMd } from "../sources/gauntlet-views.js";
 import { mdToHtml } from "./markdown.js";
 
@@ -237,6 +238,14 @@ const STYLE = `<style>
   .fleet details .members .quiet{color:var(--muted)}
   .fleet .method{color:var(--muted);font-size:12px;max-width:900px;margin:18px auto 30px;padding:0 18px;border-top:1px solid var(--line)}
   .fleet .method p{margin:8px 0}
+  /* sort/filter enhancer chrome (JS-injected; absent without JS) */
+  .tfilter{background:var(--elev);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 9px;font-size:12px;margin:8px 8px 8px 0;min-width:200px}
+  .fleet .tfilter{display:block}
+  th .arr{color:var(--acc);font-size:10px}
+  .lanebar{max-width:1500px;margin:0 auto;padding:0 18px;display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+  .laneb{font-size:12px;padding:4px 9px;color:var(--dim)}
+  .laneb.on{color:var(--ink);border-color:var(--acc)}
+  .cardw{display:contents}
 </style>`;
 
 function layout(active: string, body: string): string {
@@ -249,6 +258,7 @@ function layout(active: string, body: string): string {
   ${tab("/", "Board", "flow")}${tab("/nightly", "Overnight", "nightly")}${tab("/finished", "Finished", "finished")}${GAUNTLET_VIEWS.map((v) => tab(`/${v.key}`, v.label, v.key)).join("")}${tab("/reviews", "Reviews", "reviews")}${tab("/reference", "Reference", "reference")}
 </nav></header>
 ${body}
+${ENHANCER_SCRIPT}
 </body></html>`;
 }
 
@@ -478,7 +488,12 @@ function laneBoard(
   ctx: CardCtx,
   lanes: { key: string; label: string }[],
   keyOf: (item: Item) => string,
+  // Optional per-card wrapper attributes (gauntlet pages: data-date for the
+  // enhancer's in-lane sort). Absent → cards render exactly as before.
+  attrsOf?: (item: Item) => string,
 ): string {
+  const card = (p: Item) =>
+    attrsOf ? `<div class="cardw"${attrsOf(p)}>${cardLink(p, ctx)}</div>` : cardLink(p, ctx);
   const cols = lanes
     .map((lane) => {
       // Oldest-activity-first inside every lane: attention debt surfaces at the
@@ -486,7 +501,7 @@ function laneBoard(
       const inLane = projects
         .filter((p) => keyOf(p) === lane.key)
         .sort((a, b) => (updatedAtOf(a) || Infinity) - (updatedAtOf(b) || Infinity));
-      const body = inLane.length ? inLane.map((p) => cardLink(p, ctx)).join("") : `<div class="empty">—</div>`;
+      const body = inLane.length ? inLane.map(card).join("") : `<div class="empty">—</div>`;
       return `<section class="col"><h2>${esc(lane.label)} <span class="count">${inLane.length}</span></h2><div class="cards">${body}</div></section>`;
     })
     .join("");
@@ -975,7 +990,10 @@ export function renderGauntletBoard(
   const lanes = [...new Set(items.map(laneOf))].sort().map((s) => ({ key: s, label: s }));
   // Gauntlet cards are read-only mirrors (no inline controls); run-now lives on detail.
   const ctx: CardCtx = { domains, profiles, enabled: [], back: `/${view.key}` };
-  const board = laneBoard(items, ctx, lanes, laneOf);
+  // Card wrappers carry the run date so the enhancer can sort within lanes
+  // (lanes themselves ARE the verdict axis; the lane toggles are the verdict
+  // filter).
+  const board = laneBoard(items, ctx, lanes, laneOf, (i) => ` data-date="${esc(view.sortDate?.(i) ?? "")}"`);
   const viewLinks = (view.links ?? [])
     .map((l) => ` <a class="kv" href="${esc(l.href)}">${esc(l.label)}</a>`)
     .join("");
@@ -986,7 +1004,7 @@ export function renderGauntletBoard(
   <button type="submit">save</button>
   <span class="kv">${items.length} investigations · ${esc(view.capNote)}</span>${viewLinks}
 </form>
-<div class="wrap">${items.length ? board : `<div class="empty" style="padding:24px">${esc(view.emptyText)}</div>`}</div>`;
+<div class="wrap"${items.length ? ' data-enhance="lanes"' : ""}>${items.length ? board : `<div class="empty" style="padding:24px">${esc(view.emptyText)}</div>`}</div>`;
   return layout(view.key, body);
 }
 
@@ -1167,12 +1185,12 @@ export function renderDx1Fleet(
       const untouched = t.cohortSize - (t.divergedForks ?? 0);
       const nameCell = `<details><summary>${esc(t.name)}</summary><div class="members">${fleetMembersHtml(t)}</div></details>
         <span class="kv">${esc(t.author ?? "")}${typeof t.downloads === "number" ? ` · ${t.downloads}↓` : ""}</span>`;
-      const main = `<tr>
+      const main = `<tr data-group="${esc(t.rootId)}">
       <td>${nameCell}</td>
       <td class="n" title="${untouched} untouched (${t.byteIdentical ?? 0} byte-identical) / ${t.divergedForks ?? 0} diverged">${t.cohortSize}${(t.divergedForks ?? 0) > 0 ? ` <span class="kv">(${untouched}/${t.divergedForks}⑂)</span>` : ""}</td>${fleetRateCells(t.rates, fleetDeltaHtml(cohortCleanDelta(t, previous)))}
     </tr>`;
       const sub = t.divergedRates
-        ? `<tr class="sub">
+        ? `<tr class="sub" data-group="${esc(t.rootId)}">
       <td>↳ diverged forks</td>
       <td class="n">${t.divergedRates.agents}</td>${fleetRateCells(t.divergedRates)}
     </tr>`
@@ -1195,7 +1213,7 @@ export function renderDx1Fleet(
   <a href="/dx1" class="kv">← DX1</a>
   <h2>DX1 fleet cohort health</h2>
   <div class="meta">snapshot ${esc(latest.date)}${ageDays !== null ? ` (${ageDays === 0 ? "today" : `${ageDays}d old`})` : ""} · ${latest.windowDays ?? "?"}d window · ${latest.fleet?.productionAgents ?? "?"} production agents · ${cohorts.length} cohorts · ${latest.fleet?.unassignedCount ?? "?"} unassigned${previous ? ` · trend vs ${esc(previous.date)}` : " · no previous snapshot — no trend yet"}</div>
-  <table>
+  <table data-enhance="table">
     <tr><th>Template cohort</th><th class="n">Agents</th><th class="n">Tasks</th><th class="n">Clean %<br><span style="font-weight:400">pooled excl-quota</span></th><th class="n">Clean %<br><span style="font-weight:400">median</span></th><th class="n">Needs-help+err %</th><th class="n">Runtime min<br><span style="font-weight:400">med / p90</span></th><th class="n">Stalls</th><th>Engine families 7d</th><th class="n">Token burn<br><span style="font-weight:400">med / max</span></th></tr>
     ${rows}
   </table>

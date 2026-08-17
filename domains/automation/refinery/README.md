@@ -51,6 +51,24 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-08-17 (c): **Sortable + filterable columns — one shared enhancer.**
+  New `engine/src/shells/enhance.ts`: a single self-contained vanilla-JS
+  enhancement (no deps/CDN; inline via `boardEnhancer.toString()` — the
+  stringified function IS the shipped script, and `boardEnhancer(true)`
+  returns the same inner functions for node tests: one producer).
+  `data-enhance="table"` (fleet): click-to-sort headers (arrow span — never
+  rewrites the two-line header markup), numeric-aware on leading numbers
+  ("≤0.27M", "1.2 / 2.8", "27 (22/5⑂)"; "—"/empty last in both directions),
+  JS-injected text filter; rows sharing `data-group` (cohort + diverged
+  sub-row) travel together for sort AND filter (a member-expansion match
+  keeps the cohort visible). `data-enhance="lanes"` (/sr + /dx1 run lists —
+  kept as kanban: the lanes ARE the verdict axis, so lane toggle buttons are
+  the verdict filter): text filter over cards, per-lane date sort via
+  `.cardw[data-date]` wrappers (`GauntletView.sortDate`: sr = run-dir date
+  prefix; dx1 = ledger investigatedAt joined in runExtras, dateless last).
+  Progressive enhancement: server output complete without JS; every control
+  is JS-injected, no dead widgets. Goldens regenerated (reviewed delta:
+  wrap flag + .cardw wrappers + the inline script + 8 CSS lines). 198/198.
 - 2026-08-17 (b): **Fleet member rows lead with the client.** The expansion
   was id soup; the regenerated snapshot now carries per-member `org` (client
   display name / "JT <id>" fallback / null → "(org unknown)") and `stats`

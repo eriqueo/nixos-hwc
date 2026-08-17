@@ -159,6 +159,14 @@
   .fleet details .members .quiet{color:var(--muted)}
   .fleet .method{color:var(--muted);font-size:12px;max-width:900px;margin:18px auto 30px;padding:0 18px;border-top:1px solid var(--line)}
   .fleet .method p{margin:8px 0}
+  /* sort/filter enhancer chrome (JS-injected; absent without JS) */
+  .tfilter{background:var(--elev);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 9px;font-size:12px;margin:8px 8px 8px 0;min-width:200px}
+  .fleet .tfilter{display:block}
+  th .arr{color:var(--acc);font-size:10px}
+  .lanebar{max-width:1500px;margin:0 auto;padding:0 18px;display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+  .laneb{font-size:12px;padding:4px 9px;color:var(--dim)}
+  .laneb.on{color:var(--ink);border-color:var(--acc)}
+  .cardw{display:contents}
 </style></head><body>
 <header><h1>🛠 Refinery</h1><nav>
   <a href="/" class="">Board</a><a href="/nightly" class="">Overnight</a><a href="/finished" class="">Finished</a><a href="/sr" class="active">SR</a><a href="/dx1" class="">DX1</a><a href="/reviews" class="">Reviews</a><a href="/reference" class="">Reference</a>
@@ -194,4 +202,174 @@
 <h3>Customer context</h3>
 <p>ctx here</p></div></div>
 </div>
+<script>(function boardEnhancer(hooksOnly) {
+    // Leading number of a cell, numeric-aware for the board's shapes:
+    // "88.8%" → 88.8 · "≤0.27M / ≤1.75M (n=3)" → 0.27 · "1.2 / 2.8" → 1.2 ·
+    // "27 (22/5⑂)" → 27 · "—"/"" → null (sorts last in BOTH directions).
+    function sortKeyFromText(s) {
+        const m = s.replace(/[≤,]/g, "").match(/-?\d+(\.\d+)?/);
+        return m ? parseFloat(m[0]) : null;
+    }
+    function compareKeys(a, b, dir) {
+        if (a === null && b === null)
+            return 0;
+        if (a === null)
+            return 1; // empties last regardless of direction
+        if (b === null)
+            return -1;
+        return (a - b) * dir;
+    }
+    // Sort row GROUPS (a cohort row + its sub-rows), never raw rows. Groups
+    // with a numeric key sort numerically; when fewer than half the groups
+    // parse numeric, fall back to locale text (empties still last).
+    function sortGroups(groups, dir) {
+        const numeric = groups.filter((g) => g.key !== null).length * 2 >= groups.length && groups.length > 0;
+        return [...groups].sort((x, y) => numeric
+            ? compareKeys(x.key, y.key, dir)
+            : (x.text === "" ? 1 : y.text === "" ? -1 : x.text.localeCompare(y.text) * dir));
+    }
+    if (hooksOnly)
+        return { sortKeyFromText, compareKeys, sortGroups };
+    const esc = (s) => s.toLowerCase();
+    function makeFilterInput(placeholder, apply) {
+        const input = document.createElement("input");
+        input.className = "tfilter";
+        input.type = "search";
+        input.placeholder = placeholder;
+        input.addEventListener("input", () => apply(esc(input.value)));
+        return input;
+    }
+    // ── tables ────────────────────────────────────────────────────────────────
+    document.querySelectorAll('table[data-enhance="table"]').forEach((tableEl) => {
+        const table = tableEl;
+        const headRow = table.querySelector("tr");
+        if (!headRow)
+            return;
+        const headers = Array.from(headRow.querySelectorAll("th"));
+        const dataRows = () => Array.from(table.querySelectorAll("tr")).slice(1);
+        // Row groups: a row plus every following row sharing its data-group — the
+        // travel unit for both sorting and filtering. Rows without data-group are
+        // their own group (plain tables enhance row-by-row).
+        function readGroups() {
+            const out = [];
+            for (const r of dataRows()) {
+                const prev = out[out.length - 1];
+                if (prev && r.dataset.group && r.dataset.group === prev.root.dataset.group)
+                    prev.rows.push(r);
+                else
+                    out.push({ root: r, rows: [r] });
+            }
+            return out;
+        }
+        let sortCol = -1;
+        let dir = 1;
+        headers.forEach((th, i) => {
+            th.style.cursor = "pointer";
+            th.title = "click to sort";
+            th.addEventListener("click", () => {
+                dir = sortCol === i ? (dir * -1) : 1;
+                sortCol = i;
+                // Arrow lives in its own span — never rewrite th content (fleet
+                // headers carry two-line markup).
+                headers.forEach((h, j) => {
+                    let arr = h.querySelector(".arr");
+                    if (!arr) {
+                        arr = document.createElement("span");
+                        arr.className = "arr";
+                        h.appendChild(arr);
+                    }
+                    arr.textContent = j === i ? (dir === 1 ? " ▲" : " ▼") : "";
+                });
+                const groups = readGroups().map((g) => {
+                    const cell = g.root.cells[i];
+                    const text = cell ? cell.textContent.trim() : "";
+                    return { key: sortKeyFromText(text), text: esc(text), rows: g.rows };
+                });
+                for (const g of sortGroups(groups, dir))
+                    for (const r of g.rows)
+                        table.tBodies[0]
+                            ? table.tBodies[0].appendChild(r)
+                            : table.appendChild(r);
+            });
+        });
+        const applyFilter = (q) => {
+            for (const g of readGroups()) {
+                // A match anywhere in the group (member expansion included) keeps the
+                // whole group visible.
+                const hay = esc(g.rows.map((r) => r.textContent || "").join(" "));
+                const show = !q || hay.indexOf(q) !== -1;
+                for (const r of g.rows)
+                    r.style.display = show ? "" : "none";
+            }
+        };
+        table.parentElement.insertBefore(makeFilterInput("filter rows…", applyFilter), table);
+    });
+    // ── lane boards (gauntlet run lists) ─────────────────────────────────────
+    document.querySelectorAll('div[data-enhance="lanes"]').forEach((wrapEl) => {
+        const wrap = wrapEl;
+        const cols = Array.from(wrap.querySelectorAll("section.col"));
+        if (!cols.length)
+            return;
+        const cards = (col) => Array.from(col.querySelectorAll(".cardw"));
+        const bar = document.createElement("div");
+        bar.className = "lanebar";
+        let query = "";
+        const laneOff = new Set();
+        const apply = () => {
+            for (const col of cols) {
+                const lane = col.querySelector("h2")?.childNodes[0]?.textContent?.trim() ?? "";
+                col.style.display = laneOff.has(lane) ? "none" : "";
+                for (const c of cards(col)) {
+                    c.style.display = !query || esc(c.textContent || "").indexOf(query) !== -1 ? "" : "none";
+                }
+            }
+        };
+        bar.appendChild(makeFilterInput("filter runs…", (q) => { query = q; apply(); }));
+        for (const col of cols) {
+            const lane = col.querySelector("h2")?.childNodes[0]?.textContent?.trim() ?? "";
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className = "laneb on";
+            b.textContent = lane;
+            b.addEventListener("click", () => {
+                if (laneOff.has(lane))
+                    laneOff.delete(lane);
+                else
+                    laneOff.add(lane);
+                b.className = laneOff.has(lane) ? "laneb" : "laneb on";
+                apply();
+            });
+            bar.appendChild(b);
+        }
+        const sortBtn = document.createElement("button");
+        sortBtn.type = "button";
+        sortBtn.className = "laneb";
+        let dateDir = -1; // newest first
+        const applySort = () => {
+            sortBtn.textContent = dateDir === -1 ? "date ▼" : "date ▲";
+            for (const col of cols) {
+                const parent = col.querySelector(".cards");
+                if (!parent)
+                    continue;
+                const sorted = cards(col).sort((a, b) => {
+                    const da = a.dataset.date || "";
+                    const db = b.dataset.date || "";
+                    if (!da && !db)
+                        return 0;
+                    if (!da)
+                        return 1; // dateless last both directions
+                    if (!db)
+                        return -1;
+                    return da < db ? -1 * dateDir : da > db ? dateDir : 0;
+                });
+                for (const c of sorted)
+                    parent.appendChild(c);
+            }
+        };
+        sortBtn.addEventListener("click", () => { dateDir = (dateDir * -1); applySort(); });
+        bar.appendChild(sortBtn);
+        applySort();
+        wrap.parentElement.insertBefore(bar, wrap);
+    });
+})();</script>
 </body></html>

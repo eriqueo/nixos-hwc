@@ -69,6 +69,9 @@ export interface GauntletView {
   /** Extra links rendered beside the cap form (dx1: the fleet view). A view
    * without links renders exactly as before — byte-parity preserved. */
   links?: { href: string; label: string }[];
+  /** Sortable date for a run card (ISO-ish string; "" = unknown, sorts last).
+   * Feeds the card wrapper's data-date for the enhancer's in-lane sort. */
+  sortDate?: (item: Item) => string;
   /** File-backed tabs, in order; the composed "details" tab is appended by the renderer. */
   tabs: GauntletTab[];
   /** Detail context file folded into the Details tab (below the meta rows) as
@@ -154,6 +157,11 @@ const SR_VIEW: GauntletView = {
       typeof p.run === "string" ? `**Run:** ${p.run}` : "",
     ].filter(Boolean).join("\n");
   },
+  // sr run dirs are date-prefixed (investigations/<YYYY-MM-DD>-<srId>/).
+  sortDate: (item) => {
+    const m = str(pl(item).run).match(/investigations\/(\d{4}-\d{2}-\d{2})-/);
+    return m ? m[1]! : "";
+  },
 };
 
 // ── DX1 — case-ledger investigations (dx1_gauntlet), same component ─────────
@@ -229,7 +237,10 @@ const DX1_VIEW: GauntletView = {
       if (!entry || typeof entry !== "object") continue;
       const e = entry as Record<string, unknown>;
       if (typeof e.run === "string" && typeof e.verdict === "string" && e.verdict) {
-        out.set(e.run, { verdict: e.verdict });
+        out.set(e.run, {
+          verdict: e.verdict,
+          ...(typeof e.investigatedAt === "string" ? { investigatedAt: e.investigatedAt } : {}),
+        });
       }
     }
     return out;
@@ -254,6 +265,9 @@ const DX1_VIEW: GauntletView = {
       typeof p.run === "string" ? `**Run:** ${p.run}` : "",
     ].filter(Boolean).join("\n");
   },
+  // dx1 run dirs carry no date — the ledger's investigatedAt (joined in
+  // runExtras) is the date; runs without a ledger entry sort last.
+  sortDate: (item) => str(pl(item).investigatedAt),
 };
 
 /** The view registry — page order is nav order. */
