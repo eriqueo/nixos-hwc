@@ -154,3 +154,8 @@ into this module is pending.
 - **2026-05-29** — Initial Phase 1 scaffold. Native systemd, install + gateway
   units, TypeScript hermes-deploy CLI (hexagonal-lite, Node 22
   --experimental-strip-types).
+- **2026-05-29** — `3f4601be`: `parts/bootstrap/types.ts` dropped TypeScript
+  parameter-property shorthand from `HermesDeployError` — Node 22's
+  `--experimental-strip-types` does not synthesize the implied field assignments, so
+  `code`/`detail` were `undefined` at runtime. Same-day follow-up to the scaffold above;
+  `parts/bootstrap/README.md` gained Structure + Changelog sections on 2026-08-17.
