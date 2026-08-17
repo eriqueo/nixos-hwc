@@ -63,7 +63,9 @@ hwc.data.couchdb = {
 
 ## Dependencies
 
-- **agenix secrets**: `couchdb-admin-username`, `couchdb-admin-password` (via `hwc.secrets.api`)
+- **agenix secrets**: `couchdb-admin-username`, `couchdb-admin-password` — looked up as
+  `config.hwc.secrets.api."couchdb-admin-username"` / `"couchdb-admin-password"`, each
+  guarded with `or null`, unless overridden via `secrets.adminUsername` / `secrets.adminPassword`
 
 ## Systemd Units
 
@@ -73,4 +75,10 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-03-31: `17b9283b` — the admin-credential fallbacks moved from camelCase attrs
+  (`hwc.secrets.api.couchdbAdminUsernameFile` / `…PasswordFile`) to quoted kebab-case
+  lookups with an `or null` guard (`hwc.secrets.api."couchdb-admin-username"` /
+  `"couchdb-admin-password"`), matching the agenix secret names. Option descriptions
+  updated to match; the `secrets.adminUsername` / `secrets.adminPassword` overrides are
+  unchanged.
 - 2026-03-25: Created README per Law 12

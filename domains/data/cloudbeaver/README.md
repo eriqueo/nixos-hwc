@@ -51,4 +51,9 @@ hwc.data.cloudbeaver = {
 
 ## Changelog
 
+- 2026-07-05: `434614ed` — Law 5 burn-down. `index.nix` gained an
+  `HWC-EXCEPTION(Law 5)` annotation block (reason/justification/plan/revocable) on the
+  raw `virtualisation.oci-containers.containers.cloudbeaver` definition: this is an
+  infra-shaped container, not a media app, so mkContainer's media/PUID model does not
+  apply. Comments only — no behaviour change. Same change wired the `charter-law5` check.
 - 2026-03-25: Created README per Law 12
