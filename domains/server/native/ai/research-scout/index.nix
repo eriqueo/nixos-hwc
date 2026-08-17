@@ -99,6 +99,40 @@ in
       description = "Brain vault clone the weekly-digest brain sink writes into (_library/research_feed)";
     };
 
+    workflowContextVaultDirs = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [
+        "${config.hwc.paths.user.home}/900_vaults/brain/tech/wiki"
+        "${config.hwc.paths.user.home}/900_vaults/brain/_charter"
+      ];
+      description = ''
+        Vault subtrees the weekly workflow-suggestions sink reads to learn
+        which systems the reader runs. Scanned recursively for .md, bounded
+        per-file and in total by the app.
+
+        Deliberately narrow: the sink's value is a small, current input the
+        model can reason over, so this points at the documented-systems
+        subtrees rather than the whole vault. Read-only — the unit keeps
+        ProtectHome=read-only and this path is not in ReadWritePaths.
+      '';
+    };
+
+    workflowContextFiles = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [
+        "${config.hwc.paths.user.home}/.claude/CLAUDE.md"
+        "${config.hwc.paths.user.home}/600_apps/scout/CLAUDE.md"
+        "${config.hwc.paths.user.home}/700_datax/CLAUDE.md"
+        "${config.hwc.paths.user.home}/.nixos/CLAUDE.md"
+      ];
+      description = ''
+        Individual files included whole in the suggestions grounding — the
+        repo CLAUDE.md files, which state conventions and constraints in
+        force. Missing paths are skipped, not errors, so this list can name
+        repos that are not checked out on every host.
+      '';
+    };
+
     arxivCategories = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ "cs.AI" "cs.CL" "cs.LG" "cs.SE" "cs.MA" "cs.IR" "cs.DB" "stat.ML" ];
@@ -146,6 +180,10 @@ in
         # digest_sinks setting; these are the host endpoints only).
         REFINERY_INTAKE_URL = cfg.refineryIntakeUrl;
         BRAIN_VAULT_DIR = toString cfg.brainVaultDir;
+        # Grounding for the weekly workflow-suggestions email. Colon-joined,
+        # PATH-style; the app skips entries that do not exist on this host.
+        WORKFLOW_CONTEXT_VAULT_DIRS = lib.concatStringsSep ":" cfg.workflowContextVaultDirs;
+        WORKFLOW_CONTEXT_FILES = lib.concatStringsSep ":" cfg.workflowContextFiles;
         # The classifier shells out to the `claude` CLI (scout precedent:
         # unit PATH carries only nodejs, so the binary must be declared).
         CLAUDE_BIN = "/etc/profiles/per-user/${cfg.user}/bin/claude";

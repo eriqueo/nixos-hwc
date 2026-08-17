@@ -42,7 +42,14 @@ const TopicSchema = z
 export const NotificationInputSchema = z.object({
   id: z.string().min(1).max(128).optional(),
   title: z.string().min(1).max(200),
-  body: z.string().max(4000).default(""),
+  // 4000 was a Discord-shaped bound applied to every channel, and it made
+  // long-form email undeliverable: research_scout's weekly digest failed 6/6
+  // sends over three weeks with a 400, silently, because a 60-paper markdown
+  // body is ~5x this. Discord is not the constraint it looked like — the
+  // Discord adapter already truncates body to the 4096 embed limit itself
+  // (adapters/channel-discord.ts), so a long body degrades there instead of
+  // failing everywhere. 64k bounds the request without capping mail.
+  body: z.string().max(64000).default(""),
   priority: PrioritySchema.default(3),
   topic: TopicSchema,
   source: z.string().min(1).max(64).default("manual"),

@@ -106,6 +106,15 @@
   }
 
   {
+    # research_scout's weekly workflow-suggestions email. Email only, by
+    # design: this replaced a 22-40/day per-article push stream, so putting
+    # it on a chat channel would rebuild the noise it exists to remove.
+    name     = "research-suggestions-to-email";
+    match    = { topic = "research-suggestions"; };
+    channels = [ "smtp-office" ];
+  }
+
+  {
     # Delivery canary — exercises BOTH a Discord adapter and the SMTP
     # adapter every run so a silently-dead channel is caught actively,
     # not discovered when a real critical fails to arrive. See
