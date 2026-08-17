@@ -231,8 +231,10 @@ const STYLE = `<style>
   .fleet .fam{display:inline-block;border:1px solid;border-radius:8px;padding:0 6px;font-size:11px;margin:0 2px 2px 0;white-space:nowrap}
   .fleet .up{color:var(--ok)} .fleet .down{color:var(--err)}
   .fleet details{display:inline} .fleet summary{cursor:pointer;color:var(--ink)}
-  .fleet details .members{margin:6px 0 2px;font-size:11px;color:var(--dim)}
+  .fleet details .members{margin:6px 0 2px;font-size:11px;color:var(--fg)}
   .fleet details .members div{padding:1px 0}
+  .fleet details .members b{color:var(--ink);font-weight:600}
+  .fleet details .members .quiet{color:var(--muted)}
   .fleet .method{color:var(--muted);font-size:12px;max-width:900px;margin:18px auto 30px;padding:0 18px;border-top:1px solid var(--line)}
   .fleet .method p{margin:8px 0}
 </style>`;
@@ -1085,9 +1087,44 @@ function fleetFamiliesHtml(fams: Record<string, number> | null | undefined): str
 
 function fleetMembersHtml(t: FleetTemplate): string {
   const diverged = new Set((t.divergedMembers ?? []).map((m) => m.id));
-  const row = (m: FleetMember) =>
-    `<div>${diverged.has(m.id) ? "⑂ " : ""}${esc(m.name ?? "?")} <span class="kv">${esc(m.id ?? "")} · org ${esc(m.orgDocId ?? "?")} · ratio ${typeof m.ratio === "number" ? m.ratio.toFixed(2) : "?"}${diverged.has(m.id) ? " · DIVERGED" : ""}</span></div>`;
-  return (t.members ?? []).map(row).join("");
+
+  // Small/mono suffix: Eric tracks agents by id elsewhere — keep id + ratio,
+  // demoted; the raw orgDocId is gone from the row entirely.
+  const suffix = (m: FleetMember) =>
+    `<span class="kv">${esc(m.id ?? "")} · ratio ${typeof m.ratio === "number" ? m.ratio.toFixed(2) : "?"}${diverged.has(m.id) ? " · DIVERGED" : ""}</span>`;
+  const flag = (m: FleetMember) => (diverged.has(m.id) ? "⑂ " : "");
+
+  // Pre-2026-08-17 snapshots carry neither org nor stats — legacy row shape.
+  const isLegacy = (m: FleetMember) => !("org" in m) && !("stats" in m);
+  const legacyRow = (m: FleetMember) =>
+    `<div>${flag(m)}${esc(m.name ?? "?")} <span class="kv">${esc(m.id ?? "")} · org ${esc(m.orgDocId ?? "?")} · ratio ${typeof m.ratio === "number" ? m.ratio.toFixed(2) : "?"}${diverged.has(m.id) ? " · DIVERGED" : ""}</span></div>`;
+
+  const row = (m: FleetMember): string => {
+    if (isLegacy(m)) return legacyRow(m);
+    const org = `<b>${esc(m.org ?? "(org unknown)")}</b>`;
+    const s = m.stats;
+    if (!s) {
+      // stats: null = NO RUNS IN WINDOW — a state, not zeros; rendered dim.
+      return `<div class="quiet">${flag(m)}${org} — ${esc(m.name ?? "?")} · no runs in window ${suffix(m)}</div>`;
+    }
+    const bits = [
+      `${s.tasks} tasks`,
+      typeof s.cleanPct === "number" ? `${s.cleanPct.toFixed(1)}% clean` : "",
+      `${s.needsHelp} needs-help`,
+      s.errors > 0 ? `${s.errors} err` : "",
+      `${s.stalls} stalls`,
+      typeof s.runtimeMedianMin === "number" ? `${s.runtimeMedianMin.toFixed(1)}m med` : "",
+      typeof s.burnMaxM === "number" ? `≤${s.burnMaxM.toFixed(2)}M` : "",
+    ].filter(Boolean).join(" · ");
+    return `<div>${flag(m)}${org} — ${esc(m.name ?? "?")} · ${bits} ${suffix(m)}</div>`;
+  };
+
+  // Active members (by tasks desc) lead; quiet/legacy follow in snapshot order.
+  const members = [...(t.members ?? [])]
+    .map((m, i) => ({ m, i, tasks: !isLegacy(m) && m.stats ? m.stats.tasks : -1 }))
+    .sort((a, b) => b.tasks - a.tasks || a.i - b.i)
+    .map((x) => x.m);
+  return members.map(row).join("");
 }
 
 function fleetRateCells(r: FleetRates, deltaHtml = ""): string {

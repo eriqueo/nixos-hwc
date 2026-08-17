@@ -51,6 +51,16 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-08-17 (b): **Fleet member rows lead with the client.** The expansion
+  was id soup; the regenerated snapshot now carries per-member `org` (client
+  display name / "JT <id>" fallback / null → "(org unknown)") and `stats`
+  (null = NO RUNS IN WINDOW — a state, rendered dim, never zeros). Active
+  members sort first by tasks desc with a stat line (tasks · clean% ·
+  needs-help · err-when->0 · stalls · runtime med · ≤burn); agentId + ratio
+  demoted to the mono suffix (Eric tracks by id elsewhere); raw orgDocId
+  dropped from the row. Pre-2026-08-17 snapshots (no org/stats keys) render
+  the old row — defensive, no crash. Goldens regenerated (reviewed delta:
+  4 changed `.fleet` CSS lines, nothing else). 193/193 tests.
 - 2026-08-17: **/dx1/fleet — fleet cohort-health table.** New view over the
   daily `dx1_gauntlet` snapshot (`state/fleet-history/YYYY-MM-DD.json`,
   already inside the board's RO `state/` bind), visually modeled on the datax

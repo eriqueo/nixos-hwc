@@ -18,6 +18,22 @@ export interface FleetMember {
   name?: string;
   orgDocId?: string;
   ratio?: number;
+  /** Client display name (companyName, "JT <orgID>" fallback, or null).
+   * Absent on pre-2026-08-17 snapshots — render degrades to the old row. */
+  org?: string | null;
+  /** Per-agent window stats; null = NO RUNS IN WINDOW (a state, not zeros).
+   * Absent on pre-2026-08-17 snapshots. */
+  stats?: FleetMemberStats | null;
+}
+
+export interface FleetMemberStats {
+  tasks: number;
+  cleanPct: number | null;
+  needsHelp: number;
+  errors: number;
+  stalls: number;
+  runtimeMedianMin: number | null;
+  burnMaxM: number | null;
 }
 
 export interface FleetRuntime {

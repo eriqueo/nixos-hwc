@@ -31,8 +31,14 @@ function snapshot(date: string, clean = 88.8): FleetSnapshot {
         byteIdentical: 11,
         divergedForks: 5,
         members: [
-          { id: "a1", name: "Receipts A", orgDocId: "orgA", ratio: 1 },
-          { id: "a2", name: "Receipts B (fork)", orgDocId: "orgB", ratio: 0.41 },
+          // Quiet first in snapshot order — the renderer must sort actives up.
+          { id: "a3", name: "Receipt Processor", orgDocId: "orgC", ratio: 1, org: "Ogden Decks", stats: null },
+          { id: "a1", name: "Bill Payable Entry", orgDocId: "orgA", ratio: 0.94, org: "FTD Homes",
+            stats: { tasks: 7, cleanPct: 85.7, needsHelp: 1, errors: 0, stalls: 0, runtimeMedianMin: 0.7, burnMaxM: null } },
+          { id: "a2", name: "Receipts B (fork)", orgDocId: "orgB", ratio: 0.41, org: null,
+            stats: { tasks: 2, cleanPct: 50, needsHelp: 0, errors: 1, stalls: 1, runtimeMedianMin: 3.2, burnMaxM: 1.1 } },
+          // Legacy shape (pre-2026-08-17 snapshot): no org/stats keys at all.
+          { id: "a4", name: "Receipts Legacy", orgDocId: "orgD", ratio: 0.88 },
         ],
         divergedMembers: [{ id: "a2", name: "Receipts B (fork)", orgDocId: "orgB", ratio: 0.41 }],
         rates: {
@@ -98,6 +104,16 @@ test("renderDx1Fleet: header totals, Landis row numbers, diverged sub-row, famil
   assert.ok(html.includes("↳ diverged forks") && html.includes("92.8%"), "diverged sub-row");
   assert.ok(/border-color:#fbbf24[^>]*>P5×1/.test(html), "P5 family badge with catalog color");
   assert.ok(html.includes("DIVERGED"), "diverged member flagged in the expansion");
+  // Member rows lead with the client and their numbers.
+  assert.ok(html.includes("<b>FTD Homes</b> — Bill Payable Entry · 7 tasks · 85.7% clean · 1 needs-help · 0 stalls · 0.7m med"), "active member stat line");
+  assert.ok(/class="quiet">[^<]*<b>Ogden Decks<\/b> — Receipt Processor · no runs in window/.test(html), "quiet member dim, stated as a state");
+  assert.ok(html.includes("<b>(org unknown)</b>"), "null org labeled");
+  assert.ok(html.includes("1 err") && html.includes("≤1.10M"), "errors + burn shown when present");
+  assert.ok(!/members">[\s\S]*org orgA/.test(html), "raw orgDocId gone from new-shape rows");
+  assert.ok(html.includes("Receipts Legacy") && html.includes("org orgD"), "legacy member renders the old row");
+  // Active-by-tasks-desc before quiet: FTD (7) then fork (2) then Ogden/legacy.
+  const order = ["FTD Homes", "Receipts B (fork)", "Ogden Decks", "Receipts Legacy"].map((s) => html.indexOf(s));
+  assert.ok(order[0]! < order[1]! && order[1]! < order[2]! && order[2]! < order[3]!, "actives first, tasks desc");
   assert.ok(html.includes("outcome/health rates, NOT task quality"), "method honesty rendered");
   assert.ok(html.includes("concurrent tasks bleed into the delta"), "token-burn caveat rendered");
   // Tasks-desc sort: Receipt Processor (116) before Quiet Template (0).
