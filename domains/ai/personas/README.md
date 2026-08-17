@@ -38,11 +38,13 @@ Rebuild and the persona becomes available. The list is derived from
 
 ```
 library/
+  _defaults.nix          # Shared persona defaults (schema-merge base)
   classifier.{nix,md}    # GPU label classification
   extractor.{nix,md}     # GPU JSON extraction
   coder.{nix,md}         # GPU code-first
   assistant.{nix,md}     # GPU general
   thinker.{nix,md}       # CPU multi-step reasoning
+default.nix              # Import wrapper
 index.nix                # Inline options + library load + hwc-llm wrapper
 README.md
 ```
@@ -59,6 +61,10 @@ README.md
 
 ## Changelog
 
+- 2026-08-17: Structure block corrected — `library/_defaults.nix` and `default.nix` were missing from the listing.
+- 2026-05-31: `40d9e2a3` — repaired orphan option-sets in `index.nix` that were breaking `nix flake check` (+15/-8).
+- 2026-05-29: `007b5ab9` (persona-daemon 3/4) — `assistant`, `coder` and `thinker` gained the knowledge/RAG flag over the brain vault.
+- 2026-05-29: `d5e5d002` (persona-daemon 2/4) — `index.nix` rewired to route through the Deno HTTP daemon with SQLite-backed conversation memory (+125/-31), and `library/_defaults.nix` added as the schema-merge base every persona now inherits from. This is the Phase 2/3 work the Roadmap below anticipated.
 - 2026-05-29: Initial module. 5 personas (classifier, extractor, coder,
   assistant, thinker). Stateless CLI wrapping `llama-gpu` (port 11500)
   and `llama-cpu` (port 11501).
