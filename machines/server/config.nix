@@ -395,15 +395,17 @@
   # credential sources only exist on hwc-server.
   hwc.automation.srGauntlet.enable = true;
 
-  # DX1 Gauntlet — case-ledger investigations, sr-gauntlet's sibling. The
-  # board page (/dx1) and its run-now spool ship now (refinery reads are
-  # missing-tolerant); the SCHEDULE stays off until the pipeline checkout is
-  # provisioned on this host. Flip to true once:
-  #   1. ~/700_datax/dx1_gauntlet exists here (clone/rsync from the laptop —
-  #      the repo has no remote yet),
-  #   2. /var/lib/sr-gauntlet/{datax,jt-mcp,datax.env} are present (already
-  #      true — shared with sr-gauntlet).
-  hwc.automation.dx1Gauntlet.enable = false;
+  # DX1 Gauntlet — case-ledger investigations, sr-gauntlet's sibling.
+  # Enabled 2026-08-17 after the flip conditions were met and verified:
+  #   1. ~/700_datax/dx1_gauntlet on this host (Syncthing; node_modules is
+  #      sync-ignored and was npm-ci'd here by hand — redo after a
+  #      package.json change),
+  #   2. /var/lib/sr-gauntlet/{datax,jt-mcp,datax.env} present (shared with
+  #      sr-gauntlet),
+  #   3. run.sh allowlists CLAUDE_CONFIG_DIR/CLAUDE_CODE_OAUTH_TOKEN through
+  #      its env -i scrub (the unit-supplied agenix token would otherwise be
+  #      stripped and headless auth would fail).
+  hwc.automation.dx1Gauntlet.enable = true;
 
   # Brain vault git sync — Tier-2 transport. Every 15 min: commit local vault
   # changes, pull the hub (laptop's commits), push server changes up. Replaces
