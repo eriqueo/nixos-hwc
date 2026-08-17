@@ -538,11 +538,45 @@
         fi
       fi
 
+      # Dumping *arr SQLite databases...
+      #
+      # Retention class: CRITICAL. These hold every library mapping, quality
+      # profile, indexer, history and blocklist for the media stack, and until
+      # 2026-08-16 they were in ZERO borg archives — /opt is not a source, and
+      # each app's own Backups/ zips sit on the same NVMe as the DB they would
+      # restore. That gap is the gate on the arr upgrade window: Radarr 6.3.0 /
+      # Sonarr 4.0.19 migrations are forward-only, and "restore the DB and
+      # revert the tag" is their only rollback.
+      #
+      # Dumped via `.backup` rather than adding /opt to sources: the DBs are
+      # WAL-mode, so a file-level copy can capture a torn page whose WAL is
+      # missing, and borg runs with failOnWarnings=false — a "file changed
+      # while reading" warning records the job as SUCCESS. `.backup` takes a
+      # read lock and emits a checkpointed, self-consistent single file.
+      # /var/lib/backups IS a borg source, so the dumps ride the existing job.
+      SQLITE=/run/current-system/sw/bin/sqlite3
+      for app in radarr sonarr lidarr prowlarr readarr; do
+        SRC="/opt/$app/config/$app.db"
+        [ -f "$SRC" ] || continue
+        # logs.db and cache.db are deliberately skipped — regenerable, and the
+        # log DB churns every scrape, which poisons borg dedup for no recovery value.
+        if $SQLITE "$SRC" ".backup '$DUMP_DIR/$app-$DATE.db'" 2>/dev/null; then
+          # Trust the dump only if it reads back as a valid database.
+          if [ "$($SQLITE "$DUMP_DIR/$app-$DATE.db" 'PRAGMA integrity_check;' 2>/dev/null)" != "ok" ]; then
+            echo "$app dump failed integrity_check - removing"
+            rm -f "$DUMP_DIR/$app-$DATE.db"
+          fi
+        else
+          echo "$app dump failed"
+        fi
+      done
+
       # Cleanup old dumps (keep 14 days - Borg handles long-term retention)
       # *.sql matches legacy uncompressed dumps until they age out
       find "$DUMP_DIR" -name "*.sql" -mtime +14 -delete 2>/dev/null || true
       find "$DUMP_DIR" -name "*.sql.gz" -mtime +14 -delete 2>/dev/null || true
       find "$DUMP_DIR" -name "*.json" -mtime +14 -delete 2>/dev/null || true
+      find "$DUMP_DIR" -name "*.db" -mtime +14 -delete 2>/dev/null || true
       echo "Database dumps complete"
     '';
 
