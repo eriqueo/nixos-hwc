@@ -42,7 +42,7 @@ in
         # Generate config.ini with API keys
         cat > "$CONFIG_FILE" <<EOF
 [Lidarr]
-host_url = http://lidarr:8686/lidarr
+host_url = http://lidarr:8686
 api_key = $LIDARR_API_KEY
 download_dir = /downloads/music
 
