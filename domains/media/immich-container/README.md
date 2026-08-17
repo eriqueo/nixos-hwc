@@ -1,4 +1,4 @@
-# domains/server/containers/immich/
+# domains/media/immich-container/
 
 ## Purpose
 
@@ -12,9 +12,9 @@ Immich photo management with NVIDIA CUDA GPU acceleration for ML operations (Sma
 ## Structure
 
 ```
-domains/server/containers/immich/
-├── index.nix           # Container definition with GPU config
-├── options.nix         # hwc.server.containers.immich.* options
+domains/media/immich-container/
+├── index.nix           # Options (inline, Law 10) + module entry
+├── parts/config.nix    # Container definition with GPU config, volumes, env
 └── sys.nix             # System-lane packages
 ```
 
@@ -79,6 +79,16 @@ journalctl -u immich-machine-learning | grep -i "onnx\|cuda"  # CUDA provider
 
 ## Changelog
 
+- 2026-08-17: Header and Structure corrected — both still described this module as
+  `domains/server/containers/immich/` with an `options.nix`. It lives at
+  `domains/media/immich-container/`, options are inline in `index.nix` per Law 10, and
+  the container definition is in `parts/config.nix`. The `hwc.server.containers.immich.*`
+  namespace shown under Configuration is likewise from the old location — check
+  `index.nix` before copying it.
+- 2026-03-29: `0a0f7414` — external-library mount for laptop photos. The read-only
+  volume `${hwc.paths.media.root}/pictures:/mnt/media/pictures` was replaced with
+  `${hwc.paths.photos}/external:/mnt/media/photos/external`; the pictures mount was
+  unused. `39e3a8c3` touched the same file in the Kuma change.
 - 2026-03-27: Fixed Prometheus metrics port mappings — added host-side port publishing for apiPort (8091) and microservicesPort (8092) which were only set as container env vars but never exposed, causing false ServiceDown alerts
 - 2026-02-26: Created README per Law 12 (migrated from docs/infrastructure/)
 - 2025-11-21: Initial GPU optimization implementation
