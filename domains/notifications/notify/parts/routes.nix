@@ -115,6 +115,18 @@
   }
 
   {
+    # research_scout's weekly digest — long-form reading, so email, same as
+    # the suggestions above. This route is NOT optional: the digest was
+    # previously rejected at the 4000-char body cap, and raising that cap
+    # would otherwise have dropped a 60-paper markdown into #hwc-alerts
+    # every Monday via defaultChannels. Unrouted long-form is how an ops
+    # channel becomes unreadable.
+    name     = "research-scout-digest-to-email";
+    match    = { topic = "research-scout"; };
+    channels = [ "smtp-office" ];
+  }
+
+  {
     # Delivery canary — exercises BOTH a Discord adapter and the SMTP
     # adapter every run so a silently-dead channel is caught actively,
     # not discovered when a real critical fails to arrive. See
