@@ -185,6 +185,57 @@ export function readDx1LedgerEntries(dx1Dir: string): Dx1LedgerEntry[] {
   return out;
 }
 
+// ── Live cases feed — state/cases.json (refreshed by every fetch-cases run) ──
+// The Investigations tab's "what do I do here" answer: the live dx1Cases with
+// the runner's own queue/skip verdicts, each with a force-investigate button.
+
+export interface Dx1CaseRow {
+  fingerprint: string;
+  agentId?: string;
+  agentName?: string;
+  orgId?: string;
+  orgName?: string;
+  family?: string;
+  triage?: string;
+  state?: string;
+  peakWindowFailures?: number;
+  lastWindowFailures?: number;
+  lastSeen?: string;
+  relatedSrIds?: string[];
+  /** "queue" | "skip: <reason>" — the runner's qualification verdict. */
+  status?: string;
+  investigated?: boolean;
+}
+
+export interface Dx1CasesFile {
+  generatedAt?: string;
+  cases: Dx1CaseRow[];
+}
+
+export function readDx1CasesFile(dx1Dir: string): Dx1CasesFile | null {
+  const path = join(dx1Dir, "state", "cases.json");
+  if (!existsSync(path)) return null;
+  try {
+    const raw = JSON.parse(readFileSync(path, "utf8")) as Dx1CasesFile;
+    return raw && Array.isArray(raw.cases) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The runner's status token in PLAIN WORDS (the raw reason is kept as a
+ * suffix only when no mapping matches). */
+export function caseStatusLabel(c: Dx1CaseRow): string {
+  const s = c.status ?? "";
+  if (s === "queue") return "queued for the next run";
+  const reason = s.startsWith("skip: ") ? s.slice(6) : s;
+  const peak = reason.match(/^peak=(\d+) < (\d+)$/);
+  if (peak) return `below threshold (${peak[1]} of ${peak[2]} failures)`;
+  if (reason === "state=resolved") return c.investigated ? "resolved — already investigated" : "resolved";
+  if (/hash|unchanged/.test(reason)) return "already investigated — unchanged";
+  return reason || "—";
+}
+
 /** agentId → its latest investigated run, keyed off the fingerprint's agent
  * segment (`agent:<orgId>:<agentId>:<family>`). Feeds the fleet member rows'
  * "investigation →" links. */

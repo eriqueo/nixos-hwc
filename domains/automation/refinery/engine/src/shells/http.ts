@@ -20,11 +20,11 @@ import { makeSpecExecutor } from "../executors/spec.js";
 import { runPipelineOnce } from "../cli/run-once.js";
 import { LlmPort } from "../gates/llm-port.js";
 import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX, finishedProjects, reopenProject, parseFinishedId, FINISHED_PREFIX } from "../sources/nightly-cards.js";
-import { ledgerAgentRuns, readDx1LedgerEntries, readFleetSnapshots } from "../sources/dx1-fleet.js";
+import { ledgerAgentRuns, readDx1CasesFile, readDx1LedgerEntries, readFleetSnapshots } from "../sources/dx1-fleet.js";
 import { gauntletInvestigationProjects, readRunBundle, readRunFile } from "../sources/gauntlet-investigations.js";
 import { GAUNTLET_VIEWS, GauntletView, buildGauntletExport, gauntletViewByKey, gauntletViewForId } from "../sources/gauntlet-views.js";
 import { syncBrainIdeas, makeIdeaItem, ideaId, isBrainIdea, appendBrainIdea, removeBrainIdea, promoteBrainIdea } from "../sources/brain-ideas.js";
-import { renderBoard, renderDx1Fleet, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderGauntletBoard, renderGauntletDetail, renderProjectDetail, renderReport, renderReference, renderReviews, HOPPER_STAGE_KEYS } from "./render.js";
+import { renderBoard, renderDx1CasesPanel, renderDx1Fleet, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderGauntletBoard, renderGauntletDetail, renderProjectDetail, renderReport, renderReference, renderReviews, HOPPER_STAGE_KEYS } from "./render.js";
 import { FileReviewsStore, resolveReviewsDir } from "../stores/reviews-store.js";
 
 export interface HttpShellConfig {
@@ -759,8 +759,21 @@ export function createShell(cfg: HttpShellConfig) {
           const runs = mirror()
             .filter((m) => m.id.startsWith(viewForPage.prefix))
             .sort((a, b) => b.id.localeCompare(a.id));
+          // dx1's Investigations tab leads with the LIVE cases panel (the
+          // runner's state/cases.json) so the page answers "what do I do
+          // here" — every case shows its queue/skip verdict + a force button.
+          let topPanel: string | undefined;
+          if (viewForPage.key === "dx1") {
+            const dir = viewDir(viewForPage);
+            const runIdByFingerprint = new Map<string, string>();
+            for (const r of runs) {
+              const fp = (r.payload as { caseFingerprint?: unknown }).caseFingerprint;
+              if (typeof fp === "string" && fp && !runIdByFingerprint.has(fp)) runIdByFingerprint.set(fp, r.id);
+            }
+            topPanel = renderDx1CasesPanel(dir ? readDx1CasesFile(dir) : null, runIdByFingerprint, cfg.clock());
+          }
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          res.end(renderGauntletBoard(viewForPage, runs, readCap(viewForPage.key), profiles, domains));
+          res.end(renderGauntletBoard(viewForPage, runs, readCap(viewForPage.key), profiles, domains, topPanel));
           return;
         }
         if (method === "GET" && url.startsWith("/project/")) {

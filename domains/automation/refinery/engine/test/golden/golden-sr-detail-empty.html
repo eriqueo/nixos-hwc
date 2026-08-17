@@ -161,6 +161,27 @@
   .fleet tr.mem.quiet b{color:var(--muted)}
   .fleet .method{color:var(--muted);font-size:12px;max-width:900px;margin:18px auto 30px;padding:0 18px;border-top:1px solid var(--line)}
   .fleet .method p{margin:8px 0}
+  /* DX1 section chrome: one header + tab bar shared by both pages */
+  .sechdr{max-width:1240px;margin:14px auto 4px;padding:0 18px;display:flex;align-items:baseline;gap:18px}
+  .sechdr h2{margin:0;font-size:16px;color:var(--ink)}
+  .subtabs a{color:var(--dim);margin-right:14px;font-size:13px;padding-bottom:3px}
+  .subtabs a.active{color:var(--ink);border-bottom:2px solid var(--acc)}
+  .sechdr .cfg{margin-left:auto;position:relative}
+  .sechdr .cfg summary{cursor:pointer;list-style:none;color:var(--dim)}
+  .sechdr .cfg[open] summary{color:var(--ink)}
+  .sechdr .cfg .cfgform{position:absolute;right:0;top:22px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;z-index:5;white-space:nowrap}
+  .secblock{max-width:1240px;margin:10px auto;padding:0}
+  .sechead{max-width:1240px;margin:14px auto 6px;padding:0 18px;font-size:13px;color:var(--ink)}
+  .secblock .wrap{margin-top:0}
+  .secblock table{margin:0 18px;width:calc(100% - 36px)}
+  table.cases{border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+  table.cases th{color:var(--dim);font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  table.cases td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.cases th.n,table.cases td.n{text-align:right}
+  table.cases b{color:var(--ink);font-weight:600}
+  table.cases .fam{display:inline-block;border:1px solid;border-radius:8px;padding:0 6px;font-size:11px;white-space:nowrap}
+  table.cases button{font-size:11px;padding:3px 8px}
+  .fleet tr.mem.divider td{color:var(--warn);border-bottom:1px solid var(--line);font-size:11px}
   /* sort/filter enhancer chrome (JS-injected; absent without JS) */
   .tfilter{background:var(--elev);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 9px;font-size:12px;margin:8px 8px 8px 0;min-width:200px}
   .fleet .tfilter{display:block}

@@ -51,6 +51,25 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-08-17 (e): **DX1 design pass (hwc-ui workbench register).** (1) One DX1
+  section, two tabs: /dx1 (Investigations) + /dx1/fleet share a `sechdr`
+  header with a subtabs bar (`GauntletView.section` — registry-driven; sr
+  keeps its classic layout, content byte-identical modulo one blank line).
+  (2) Investigations answers "what do I do here": new **Live cases panel** at
+  the top reading the runner's `state/cases.json` — org+agent lead (ids
+  demoted), family badge, state, peak fails, last seen, the runner's
+  queue/skip verdict in plain words (`caseStatusLabel`), a **▶ investigate
+  button per case** (run-now spool; --id forces past qualification), and a
+  report→ link for cases with a completed run; the finished-runs kanban
+  demoted to "Completed investigations" below; the cap form moved to a ⚙
+  settings corner. (3) **One Clean % column** (pooled excl-quota); per-agent
+  median now a tooltip on the value. (4) **Diverged-caret bug fixed** —
+  reproduced in a headless DOM drive: BOTH carets toggled one shared group
+  state, so after expanding via the cohort caret the diverged caret
+  collapsed all member rows ("everything disappears"); now ONE caret per
+  cohort, forks grouped after a `⑂ diverged forks (n)` divider row carrying
+  the aggregate inside the single expansion. (5) Cases table uses the same
+  enhancer (sortable/filterable) + shared table styling. 202/202 tests.
 - 2026-08-17 (d): **Fleet members as aligned table rows + agent links; diverged
   forks reachable.** Member expansions are real `<tr class="mem">` rows in the
   cohort grid (col 1 = bold client + agent name, id·ratio demoted to a mono
