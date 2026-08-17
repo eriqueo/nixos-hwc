@@ -365,6 +365,16 @@ def run(cfg: dict, apply: bool, all_mode: bool, log, locations: Optional[list] =
         m = gather(path)
         dec = classify(m, cfg)
         new_name = target_name(m, dec, cfg)
+        # Already in its correct bucket: done, not a conflict. Without this,
+        # unique() compares the file against ITSELF — `t.exists()` is true for
+        # its own path — and rename_new "resolves" that by duplicating it to
+        # foo_2.md, again to foo_3.md on the next pass. Only reachable via
+        # --from/--all re-runs over a populated bucket, which is exactly how the
+        # *_2.* files in downloads/agent/ got there. Harmless for the default
+        # loose-root drain (root is never a bucket), so the blast radius of this
+        # guard is the re-run path only.
+        if dec.dest.resolve() == path.parent.resolve() and new_name == m.name:
+            continue
         bucket = dec.dest.name
         stats[bucket] = stats.get(bucket, 0) + 1
         n += 1

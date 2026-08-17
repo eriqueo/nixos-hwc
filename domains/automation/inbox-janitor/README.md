@@ -16,7 +16,13 @@ file at the root of `downloads/`** into a small set of **intrinsic-attribute buc
 - **secrets** → `downloads/_secrets/` (quarantine; never renamed, never drained off-host).
 - **unmatched** → `downloads/_review/` (fail-loud; a human/LLM routes by hand).
 
-Organized bucket folders are never swept, so the pass is idempotent.
+Organized bucket folders are never swept by the default drain, so the pass is
+idempotent. A `--from`/`--all` re-run *does* walk them, and `run()` holds that
+invariant there with an in-place guard: a file already sitting in its correct
+bucket under its correct name is skipped. Without the guard `unique()` compares
+the file against itself (`t.exists()` is true for its own path) and `rename_new`
+"resolves" the collision by duplicating it to `foo_2.md` — then `foo_3.md` next
+pass. The `*_2.*` files in `downloads/agent/` are that bug's artifacts.
 
 ## Why intrinsic attributes (the v2 rewrite)
 
@@ -90,7 +96,39 @@ hwc.automation.inboxJanitor.enable = true;
 hwc.automation.inboxJanitor.dryRun = false;   # after watching journalctl -u inbox-janitor
 ```
 
+## Agent-output lifecycle
+
+`downloads/agent/` is scratch with a terminal state, governed by three rules of
+descending mechanical confidence:
+
+1. **Naming** — agent output is named by derivation, `<domain>__<class>__<scoping_nouns>`,
+   per the brain vault's `_charter/conversation_naming.md` (the same form handoffs
+   use). The bucket stays flat: a derived name sorts itself into domain/class
+   groups, so no folder tree is needed. Off-convention names route to
+   `agent/_unsorted/` so they are visible rather than blending into the pile.
+2. **Staleness** — `.md` untouched for 60d moves to `agent/_stale/`, a bounded
+   holding pen. Revived by touching it (age stops matching) or by renaming it to
+   the convention. **There is no delete tier and no automatic deletion**; see the
+   rule-table comment for why the premortem cut it.
+3. **Completion** — *a guideline, not a rule, and labeled as one*: session output
+   is scratch until folded into the one living doc for its topic, then deleted
+   rather than archived. Nothing enforces this; 303 accumulated files are the
+   evidence that it is not self-enforcing. Only the authoring agent can know a
+   file is done, so no sweeper attempts to infer it.
+
+Supersession is deliberately **not** detected mechanically. A shared
+`domain__class__scope` prefix looks like a supersession signal and is not — four
+distinct live gdrive investigations share `datax__ops__gdrive__` — so inferring it
+from filenames would delete parallel work while sounding precise.
+
 ## Changelog
+- 2026-08-16: Fixed the self-collision that duplicated files to `_2` on any
+  `--from`/`--all` re-run (in-place guard in `run()`); restores the documented
+  idempotence invariant for re-runs. Rule table gains `agent-stale` (60d →
+  `_stale/`, no delete tier) and splits `agent` into convention-compliant vs
+  `_unsorted`, plus skip entries for the bundles inside `agent/`. Motivated by a
+  brain-vault add/add conflict that red-lined `brain-vault-sync`, whose root
+  cause was date-first naming carrying no aboutness.
 - 2026-06-26: **v2** — declarative rewrite. Routes on intrinsic attributes
   (extension/mimetype) into ~6 flat buckets instead of semantic domain/class folders;
   `_review` dropped from ~44 % to ~1 %. Names preserved as-is (no date prefix). Added
