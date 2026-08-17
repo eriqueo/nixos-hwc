@@ -10,13 +10,29 @@
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { Item } from "../contracts.js";
-import { GauntletView } from "./gauntlet-views.js";
+import { GauntletRunBundle, GauntletView, RunFile } from "./gauntlet-views.js";
 
 /** Read a file from an investigation run dir relative to baseDir (traversal-guarded). */
 export function readRunFile(baseDir: string, run: string, name: string): string | null {
   if (!run || run.includes("..") || run.startsWith("/")) return null;
   const path = join(baseDir, run.replace(/\/$/, ""), name);
   return existsSync(path) ? readFileSync(path, "utf8") : null;
+}
+
+/** Read everything a view's detail page + exports need off one run dir:
+ * per-tab present files, the Details context appendix, and the raw detail
+ * files. One reader, shared by the detail route and the export route. */
+export function readRunBundle(view: GauntletView, baseDir: string, run: string): GauntletRunBundle {
+  const present = (names: string[]): RunFile[] =>
+    names.flatMap((name) => {
+      const content = readRunFile(baseDir, run, name);
+      return content === null ? [] : [{ name, content }];
+    });
+  return {
+    tabs: Object.fromEntries(view.tabs.map((t) => [t.key, present(t.files)])),
+    context: view.contextFile ? readRunFile(baseDir, run, view.contextFile) : null,
+    detail: present(view.detailFiles ?? []),
+  };
 }
 
 /** Read a gauntlet's completed investigations as read-only mirror Items. */

@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { renderSr, renderSrDetail, renderGauntletBoard, renderGauntletDetail } from "../src/shells/render.js";
-import { gauntletViewByKey } from "../src/sources/gauntlet-views.js";
+import { buildGauntletExport, gauntletViewByKey } from "../src/sources/gauntlet-views.js";
 import { gauntletInvestigationProjects } from "../src/sources/gauntlet-investigations.js";
 import { Item } from "../src/contracts.js";
 
@@ -41,11 +41,15 @@ test("parity — SR board via the generic component is byte-identical (modulo th
   assert.equal(stripDx1Tab(renderSr([], 5, [], undefined)), golden("golden-sr-board-empty.html"));
 });
 
-test("parity — SR detail via the generic component is byte-identical (modulo the DX1 nav tab)", () => {
+test("parity — SR detail is byte-identical to the export-buttons goldens", () => {
+  // Detail goldens REGENERATED 2026-08-16 when the export-download row landed
+  // (reviewed delta vs the pre-refactor capture: the DX1 nav tab + the one
+  // export row — nothing else). They now include both, so no normalization:
+  // straight byte equality guards all future refactors.
   const full = renderSrDetail(SR_ITEMS[0]!, { gameplan: "# Report\n\nfix **this**", thread: "- msg", context: "ctx here" });
-  assert.equal(stripDx1Tab(full), golden("golden-sr-detail-full.html"));
+  assert.equal(full, golden("golden-sr-detail-full.html"));
   const empty = renderSrDetail(SR_ITEMS[1]!, { gameplan: null, thread: null, context: null });
-  assert.equal(stripDx1Tab(empty), golden("golden-sr-detail-empty.html"));
+  assert.equal(empty, golden("golden-sr-detail-empty.html"));
 });
 
 test("dx1 board: verdict lanes, empty state, cap form on /dx1", () => {
@@ -112,13 +116,83 @@ test("dx1 detail: report default tab, evidence tab, case meta in Details, run-no
       verdict: "diagnosed", family: "D2", triage: "platform", agentName: "Receipt Bot", orgName: "Acme",
       run: "investigations/agent+o+a+D2_h1/", hasReport: true, readonly: true }, history: [],
   };
-  const html = renderGauntletDetail(view, item, { gameplan: "## Diagnosis", thread: "evidence pack", __context: "evidence pack" });
+  const html = renderGauntletDetail(view, item, {
+    tabs: {
+      gameplan: [{ name: "REPORT.md", content: "## Diagnosis" }],
+      thread: [
+        { name: "context.md", content: "evidence pack" },
+        { name: "FINDINGS.md", content: "## Established\n\ncited dossier" },
+      ],
+    },
+    context: null,
+    detail: [{ name: "verdict.json", content: '{"impact":"High"}' }],
+  });
   assert.ok(html.includes('id="srt-gameplan" checked'), "report is the default tab");
   assert.ok(html.includes(">Report</label>") && html.includes(">Evidence</label>") && html.includes(">Details</label>"));
   assert.ok(html.includes("agent:o:a:D2"), "fingerprint shown");
   assert.ok(html.includes('action="/dx1/run-now"'), "run-now form");
   assert.ok(html.includes('name="caseId"') && html.includes('value="agent:o:a:D2"'), "fingerprint carried in the form");
 
+  assert.ok(html.includes("FINDINGS.md"), "dossier section named in the Evidence tab");
+  assert.ok(html.includes("cited dossier"), "dossier content rendered");
+  assert.ok(html.includes("verdict.json"), "verdict.json fenced into Details");
+  assert.ok(html.includes('href="/dx1/export/all?id='), "combined export link");
+
+  const emptyBundle = { tabs: {}, context: null, detail: [] };
   const noId: Item = { ...item, payload: { title: "x", readonly: true } };
-  assert.ok(!renderGauntletDetail(view, noId, {}).includes('action="/dx1/run-now"'), "no fingerprint → no button");
+  assert.ok(!renderGauntletDetail(view, noId, emptyBundle).includes('action="/dx1/run-now"'), "no fingerprint → no button");
+  // Pre-rework run (no FINDINGS.md): Evidence renders context.md alone, no error.
+  const preRework = renderGauntletDetail(view, item, {
+    tabs: { gameplan: [], thread: [{ name: "context.md", content: "pack only" }] },
+    context: null,
+    detail: [],
+  });
+  assert.ok(preRework.includes("pack only"));
+});
+
+test("buildGauntletExport: per-tab, details, and combined compositions", () => {
+  const view = gauntletViewByKey("dx1")!;
+  const item: Item = {
+    id: "dx1:agent:o:a:D2_h1", pipeline: "dx1-case", step: "investigated", state: "passed",
+    payload: { title: "Receipt Bot · D2", caseFingerprint: "agent:o:a:D2", stateHash: "h1",
+      verdict: "diagnosed", family: "D2", triage: "platform", agentName: "Receipt Bot", orgName: "Acme",
+      run: "investigations/agent:o:a:D2_h1/", hasReport: true, readonly: true }, history: [],
+  };
+  const bundle = {
+    tabs: {
+      gameplan: [{ name: "REPORT.md", content: "# Brief" }],
+      thread: [
+        { name: "context.md", content: "the pack" },
+        { name: "FINDINGS.md", content: "## Established" },
+      ],
+    },
+    context: null,
+    detail: [{ name: "verdict.json", content: '{"impact":"High"}\n' }],
+  };
+
+  const report = buildGauntletExport(view, item, bundle, "gameplan")!;
+  assert.equal(report.filename, "agent+o+a+D2_h1-gameplan.md");
+  assert.equal(report.markdown, "# Brief"); // single-file tab: bare content
+
+  const evidence = buildGauntletExport(view, item, bundle, "thread")!;
+  assert.ok(evidence.markdown.startsWith("# context.md\n\nthe pack"));
+  assert.ok(evidence.markdown.includes("# FINDINGS.md\n\n## Established"), "dossier sectioned after the pack");
+
+  const details = buildGauntletExport(view, item, bundle, "details")!;
+  assert.ok(details.markdown.includes("**Case:** `agent:o:a:D2`"));
+  assert.ok(details.markdown.includes("## verdict.json") && details.markdown.includes('```json'));
+
+  const all = buildGauntletExport(view, item, bundle, "all")!;
+  assert.equal(all.filename, "agent+o+a+D2_h1-all.md");
+  for (const chunk of ["# Report\n", "# Brief", "# Evidence\n", "# FINDINGS.md", "# Details\n", "## verdict.json"]) {
+    assert.ok(all.markdown.includes(chunk), `combined export carries ${JSON.stringify(chunk)}`);
+  }
+
+  // Pre-rework run: FINDINGS.md absent → evidence exports context.md alone.
+  const sparse = { ...bundle, tabs: { ...bundle.tabs, thread: [{ name: "context.md", content: "the pack" }] } };
+  assert.equal(buildGauntletExport(view, item, sparse, "thread")!.markdown, "the pack");
+  // Nothing at all → placeholder body, never a 404 from a rendered button.
+  const empty = { tabs: {}, context: null, detail: [] };
+  assert.ok(buildGauntletExport(view, item, empty, "thread")!.markdown.startsWith("_no evidence"));
+  assert.equal(buildGauntletExport(view, item, bundle, "nope"), null);
 });

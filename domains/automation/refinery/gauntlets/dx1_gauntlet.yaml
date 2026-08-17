@@ -8,15 +8,20 @@
 # This is wiring DATA only: nothing here executes run.sh. Going live (the board
 # spawning the trigger) is a later, human-reviewed step.
 #
-# Run-dir contract (verified against the live runner 2026-08-16; the board's
-# mirror in gauntlet-views.ts reads exactly this):
+# Run-dir contract (runner README "Interface contract", re-verified 2026-08-16
+# post-rework; the board's mirror in gauntlet-views.ts reads exactly this):
 #   investigations/<caseFingerprint>_<stateHash>/   (fingerprint keeps its ":")
-#     case.json  — queue snapshot: { caseFingerprint, stateHash, agentId,
-#                  agentName, orgId, orgName, family, triage, state, … }
-#     REPORT.md  — the investigation report
-#     context.md — the aggregated evidence pack
+#     case.json    — queue snapshot: { caseFingerprint, stateHash, agentId,
+#                    agentName, orgId, orgName, family, triage, state, … }
+#     REPORT.md    — the BRIEF (status line + TL;DR)
+#     FINDINGS.md  — the DOSSIER (cited; absent on pre-rework runs)
+#     context.md   — the aggregated evidence pack
+#     verdict.json — machine verdict fields
 #   state/ledger.json — { [fp]: { caseFingerprint, stateHash, verdict,
 #                  investigatedAt, run } } — the verdict source.
+#   Board mapping: Report = REPORT.md · Evidence = context.md + FINDINGS.md
+#   (present files render; gaps skip) · Details = case.json/verdict.json/run
+#   metadata. Every tab + a combined file downloads via /dx1/export/<part>.
 #   {id} below = the raw case fingerprint (run.sh --id <fingerprint>). Run-now
 #   SPOOL filenames encode ":" as "+" (filesystem-safe); the runnow drain
 #   decodes "+" back to ":" before invoking run.sh.

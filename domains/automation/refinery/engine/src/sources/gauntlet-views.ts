@@ -11,12 +11,31 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Item } from "../contracts.js";
 
-/** A CSS-only tab on the detail page backed by a file in the run dir. */
+/** A CSS-only tab on the detail page backed by files in the run dir. A
+ * single-file tab renders the content bare; a multi-file tab (dx1 Evidence =
+ * context.md + FINDINGS.md) renders each PRESENT file as a named section —
+ * absent files are simply skipped, never an error. */
 export interface GauntletTab {
   key: string; // radio id suffix (srt-<key>)
   label: string;
-  file: string; // filename within the run dir
-  empty: string; // placeholder when the file is absent
+  files: string[]; // filenames within the run dir, render order
+  empty: string; // placeholder when none of the files exist
+}
+
+/** A run-dir file read for the detail page / exports. */
+export interface RunFile {
+  name: string;
+  content: string;
+}
+
+/** Everything the detail page + exports read off one run dir. */
+export interface GauntletRunBundle {
+  /** Present files per tab key, in the tab's declared order. */
+  tabs: Record<string, RunFile[]>;
+  /** view.contextFile content (SR's Details appendix), if configured+present. */
+  context: string | null;
+  /** view.detailFiles contents (dx1's case.json/verdict.json), present only. */
+  detail: RunFile[];
 }
 
 export interface GauntletDetailHeader {
@@ -49,8 +68,12 @@ export interface GauntletView {
   runNow: { field: string; button: string; title: (id: string) => string; caption: string } | null;
   /** File-backed tabs, in order; the composed "details" tab is appended by the renderer. */
   tabs: GauntletTab[];
-  /** Detail context file folded into the Details tab (below the meta rows). */
-  contextFile: string;
+  /** Detail context file folded into the Details tab (below the meta rows) as
+   * "## Customer context". SR only; dx1's Details stays technical. */
+  contextFile?: string;
+  /** Raw run-dir files appended to the Details tab (and its export) as fenced
+   * blocks — dx1: case.json + verdict.json. Absent files are skipped. */
+  detailFiles?: string[];
   /** meta JSON (+ run dir facts) → mirror Item payload. */
   payloadFromMeta: (meta: Record<string, unknown>, runName: string, hasReport: boolean) => Record<string, unknown>;
   /** Optional per-run payload enrichment read ONCE per listing from gauntlet
@@ -90,8 +113,8 @@ const SR_VIEW: GauntletView = {
     caption: "forces a fresh investigation; the report updates when it finishes",
   },
   tabs: [
-    { key: "gameplan", label: "Gameplan", file: "REPORT.md", empty: "no REPORT.md for this investigation yet" },
-    { key: "thread", label: "Thread", file: "sr.md", empty: "no thread (sr.md) captured" },
+    { key: "gameplan", label: "Gameplan", files: ["REPORT.md"], empty: "no REPORT.md for this investigation yet" },
+    { key: "thread", label: "Thread", files: ["sr.md"], empty: "no thread (sr.md) captured" },
   ],
   contextFile: "context.md",
   payloadFromMeta: (meta, runName, hasReport) => ({
@@ -131,13 +154,15 @@ const SR_VIEW: GauntletView = {
 };
 
 // ── DX1 — case-ledger investigations (dx1_gauntlet), same component ─────────
-// Run-dir contract (verified against the live runner's run.sh/lib.mjs,
-// 2026-08-16; see gauntlets/dx1_gauntlet.yaml):
+// Run-dir contract (runner README "Interface contract", re-verified
+// 2026-08-16 post-rework; see gauntlets/dx1_gauntlet.yaml):
 //   investigations/<caseFingerprint>_<stateHash>/   (fingerprint keeps its ":")
-//     case.json  — { caseFingerprint, stateHash, agentId, agentName, orgId,
-//                    orgName, family, triage, state, … } (queue snapshot)
-//     REPORT.md  — the investigation report (verdict token in agent output)
-//     context.md — the aggregated evidence pack
+//     case.json    — { caseFingerprint, stateHash, agentId, agentName, orgId,
+//                      orgName, family, triage, state, … } (queue snapshot)
+//     REPORT.md    — the BRIEF (status line + TL;DR)
+//     FINDINGS.md  — the DOSSIER (cited; absent on pre-rework runs)
+//     context.md   — the aggregated evidence pack
+//     verdict.json — machine verdict fields (impact/faultDomains/confidence/…)
 //   state/ledger.json — { [fingerprint]: { caseFingerprint, stateHash,
 //     verdict, investigatedAt, run } } — the VERDICT source; joined onto the
 //     mirror by run name (runExtras). A run without a ledger entry (failed or
@@ -164,10 +189,14 @@ const DX1_VIEW: GauntletView = {
     caption: "forces a fresh investigation of this case; the report updates when it finishes",
   },
   tabs: [
-    { key: "gameplan", label: "Report", file: "REPORT.md", empty: "no REPORT.md for this investigation yet" },
-    { key: "thread", label: "Evidence", file: "context.md", empty: "no evidence pack (context.md) captured" },
+    { key: "gameplan", label: "Report", files: ["REPORT.md"], empty: "no REPORT.md for this investigation yet" },
+    // Evidence = the pack the agent started from + the cited dossier it wrote.
+    // FINDINGS.md is absent on pre-rework runs — present files render, gaps skip.
+    { key: "thread", label: "Evidence", files: ["context.md", "FINDINGS.md"], empty: "no evidence (context.md / FINDINGS.md) captured" },
   ],
-  contextFile: "context.md",
+  // Details stays technical (case.json / verdict.json / run metadata) — the
+  // evidence pack lives in the Evidence tab, not duplicated here.
+  detailFiles: ["case.json", "verdict.json"],
   payloadFromMeta: (meta, runName, hasReport) => ({
     title: [str(meta.agentName), str(meta.family)].filter(Boolean).join(" · ") || runName,
     caseFingerprint: str(meta.caseFingerprint),
@@ -233,4 +262,71 @@ export function gauntletViewByKey(key: string): GauntletView | null {
 /** The view whose id-prefix matches an item id (detail/report routing). */
 export function gauntletViewForId(id: string): GauntletView | null {
   return GAUNTLET_VIEWS.find((v) => id.startsWith(v.prefix)) ?? null;
+}
+
+// ── Exports — one producer for the download compositions ───────────────────
+// Registry-driven: every gauntlet detail page offers per-tab downloads plus a
+// combined file. Pure markdown assembly over the run bundle; the HTTP shell
+// only serves the result with Content-Disposition: attachment.
+
+const langOf = (name: string): string => (name.endsWith(".json") ? "json" : "");
+
+/** A tab's markdown body: its present files, multi-file tabs section-headed.
+ * Shared by the detail panel (via mdToHtml) and the export — one composition. */
+export function tabMd(tab: GauntletTab, bundle: GauntletRunBundle): string | null {
+  const files = bundle.tabs[tab.key] ?? [];
+  if (files.length === 0) return null;
+  // Section headers only when there is more than one PRESENT file — a
+  // pre-rework dx1 run (context.md alone, no FINDINGS.md) renders bare, like
+  // any single-file tab.
+  if (files.length === 1) return files[0]!.content;
+  return files.map((f) => `# ${f.name}\n\n${f.content}`).join("\n\n---\n\n");
+}
+
+/** The Details tab as markdown (meta rows + context appendix + raw files) —
+ * the same composition the renderer shows, shared so the export can't drift. */
+export function detailsExportMd(view: GauntletView, item: Item, bundle: GauntletRunBundle): string {
+  const parts = [view.detailsMd(item)];
+  if (view.contextFile) {
+    parts.push(bundle.context ? `## Customer context\n\n${bundle.context}` : `_no ${view.contextFile}_`);
+  }
+  for (const f of bundle.detail) {
+    parts.push(`## ${f.name}\n\n\`\`\`${langOf(f.name)}\n${f.content.trimEnd()}\n\`\`\``);
+  }
+  // Single-\n join: byte-compatible with the pre-export SR Details panel
+  // (the old renderer joined with "\n"; markdown treats both the same here).
+  return parts.filter(Boolean).join("\n");
+}
+
+/** Compose one export. part = a tab key, "details", or "all". Null when the
+ * part is unknown; an empty part still exports (placeholder body) so the
+ * button never 404s on a sparse run dir. */
+export function buildGauntletExport(
+  view: GauntletView,
+  item: Item,
+  bundle: GauntletRunBundle,
+  part: string,
+): { filename: string; markdown: string } | null {
+  const run = pl(item).run;
+  const runName = typeof run === "string"
+    ? run.replace(/^investigations\//, "").replace(/\/$/, "")
+    : item.id.slice(view.prefix.length);
+  // ":" (case fingerprints) is unfriendly in download filenames on some OSes —
+  // same "+" encoding as the run-now spool.
+  const base = runName.replace(/:/g, "+").replace(/[^A-Za-z0-9._+-]/g, "") || view.key;
+  const name = (p: string) => `${base}-${p}.md`;
+
+  const tab = view.tabs.find((t) => t.key === part);
+  if (tab) return { filename: name(part), markdown: tabMd(tab, bundle) ?? `_${tab.empty}_` };
+  if (part === "details") return { filename: name(part), markdown: detailsExportMd(view, item, bundle) };
+  if (part === "all") {
+    const head = view.headerOf(item);
+    const sections = [
+      `# ${head.title}${head.question ? ` — ${head.question}` : ""}`,
+      ...view.tabs.map((t) => `# ${t.label}\n\n${tabMd(t, bundle) ?? `_${t.empty}_`}`),
+      `# Details\n\n${detailsExportMd(view, item, bundle)}`,
+    ];
+    return { filename: name("all"), markdown: sections.join("\n\n---\n\n") };
+  }
+  return null;
 }

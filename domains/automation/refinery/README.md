@@ -51,6 +51,20 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-08-16 (b): **Gauntlet detail: Evidence composition + exports.** Tabs
+  are now multi-file (`GauntletTab.files[]`): dx1's Evidence renders
+  context.md + FINDINGS.md as named sections (present files render, absent
+  skip — pre-rework runs keep working); its Details tab goes technical
+  (case.json + verdict.json fenced via `detailFiles`, context no longer
+  duplicated there). New registry-driven downloads on every gauntlet detail
+  page: per-tab + a combined markdown file, served by
+  `GET /<view>/export/<part>?id=…` with `Content-Disposition: attachment`
+  (composition = `buildGauntletExport` in gauntlet-views.ts, one producer
+  shared with the panels via `tabMd`/`detailsExportMd`; one run-bundle reader
+  `readRunBundle` shared by the detail + export routes). SR gains the same
+  buttons from its shim; detail parity goldens deliberately REGENERATED to
+  include the export row (reviewed delta = nav tab + export row only, then
+  the assertion tightened to straight byte equality). 189/189 tests.
 - 2026-08-16: **Gauntlet pages generalized — GauntletPage(shim), /dx1 added.**
   The bespoke SR page became one component driven by a per-gauntlet view shim
   (`engine/src/sources/gauntlet-views.ts`: key, lanes field, tabs, run-now

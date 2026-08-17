@@ -20,8 +20,8 @@ import { makeSpecExecutor } from "../executors/spec.js";
 import { runPipelineOnce } from "../cli/run-once.js";
 import { LlmPort } from "../gates/llm-port.js";
 import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX, finishedProjects, reopenProject, parseFinishedId, FINISHED_PREFIX } from "../sources/nightly-cards.js";
-import { gauntletInvestigationProjects, readRunFile } from "../sources/gauntlet-investigations.js";
-import { GAUNTLET_VIEWS, GauntletView, gauntletViewByKey, gauntletViewForId } from "../sources/gauntlet-views.js";
+import { gauntletInvestigationProjects, readRunBundle, readRunFile } from "../sources/gauntlet-investigations.js";
+import { GAUNTLET_VIEWS, GauntletView, buildGauntletExport, gauntletViewByKey, gauntletViewForId } from "../sources/gauntlet-views.js";
 import { syncBrainIdeas, makeIdeaItem, ideaId, isBrainIdea, appendBrainIdea, removeBrainIdea, promoteBrainIdea } from "../sources/brain-ideas.js";
 import { renderBoard, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderGauntletBoard, renderGauntletDetail, renderProjectDetail, renderReport, renderReference, renderReviews, HOPPER_STAGE_KEYS } from "./render.js";
 import { FileReviewsStore, resolveReviewsDir } from "../stores/reviews-store.js";
@@ -701,6 +701,39 @@ export function createShell(cfg: HttpShellConfig) {
           res.end(renderReviews(await listReviews()));
           return;
         }
+        // Per-tab + combined markdown downloads for a gauntlet run:
+        // GET /<view>/export/<part>?id=<itemId>. Composition lives in
+        // gauntlet-views.ts (buildGauntletExport — one producer); this route
+        // only reads the bundle and serves the file as an attachment.
+        const exportMatch = method === "GET" ? url.match(/^\/([a-z0-9]+)\/export\/([A-Za-z0-9_-]+)$/) : null;
+        if (exportMatch) {
+          const view = gauntletViewByKey(exportMatch[1]!);
+          const dir = view ? viewDir(view) : undefined;
+          const params = new URLSearchParams((req.url ?? "").split("?")[1] ?? "");
+          const id = params.get("id") ?? "";
+          const item = view && id.startsWith(view.prefix) ? mirror().find((m) => m.id === id) : undefined;
+          if (!view || !dir || !item) {
+            res.writeHead(404, { "content-type": "text/plain" });
+            res.end("no such export");
+            return;
+          }
+          const run = typeof (item.payload as { run?: unknown }).run === "string"
+            ? (item.payload as { run: string }).run
+            : "";
+          const out = buildGauntletExport(view, item, readRunBundle(view, dir, run), exportMatch[2]!);
+          if (!out) {
+            res.writeHead(404, { "content-type": "text/plain" });
+            res.end("no such export part");
+            return;
+          }
+          res.writeHead(200, {
+            "content-type": "text/markdown; charset=utf-8",
+            "content-disposition": `attachment; filename="${out.filename}"`,
+          });
+          res.end(out.markdown);
+          return;
+        }
+
         // One page per gauntlet view (/sr, /dx1) — same component, two shims.
         const viewForPage = method === "GET" ? gauntletViewByKey(url.slice(1)) : null;
         if (viewForPage) {
@@ -734,15 +767,12 @@ export function createShell(cfg: HttpShellConfig) {
             res.end(renderNightlyProject(item));
           } else if (detailView && detailDir) {
             // Gauntlet items render in the SR2-style tabbed layout (report /
-            // secondary file / Details) — one component over the view shim.
+            // evidence / Details) — one component over the view shim; one
+            // bundle reader shared with the export route.
             const run = typeof (item.payload as { run?: unknown }).run === "string"
               ? (item.payload as { run: string }).run
               : "";
-            const files: Record<string, string | null> = Object.fromEntries(
-              detailView.tabs.map((t) => [t.key, readRunFile(detailDir, run, t.file)]),
-            );
-            files.__context = readRunFile(detailDir, run, detailView.contextFile);
-            res.end(renderGauntletDetail(detailView, item, files));
+            res.end(renderGauntletDetail(detailView, item, readRunBundle(detailView, detailDir, run)));
           } else {
             res.end(renderProjectDetail(item, catalog.list(), catalog.enabled(), domains));
           }

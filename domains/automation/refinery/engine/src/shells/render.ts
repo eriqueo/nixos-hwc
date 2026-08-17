@@ -13,7 +13,7 @@ import { currentJudgment, Item, judgmentsFor, Pipeline } from "../contracts.js";
 import { PrReview } from "../review/contract.js";
 import { ResolvedPipeline } from "../pipelines/catalog.js";
 import { DomainRegistry, domainOf } from "../domains.js";
-import { GAUNTLET_VIEWS, GauntletView, gauntletViewByKey } from "../sources/gauntlet-views.js";
+import { GAUNTLET_VIEWS, GauntletRunBundle, GauntletView, detailsExportMd, gauntletViewByKey, tabMd } from "../sources/gauntlet-views.js";
 import { mdToHtml } from "./markdown.js";
 
 function esc(s: string): string {
@@ -974,7 +974,7 @@ export function renderGauntletBoard(
 export function renderGauntletDetail(
   view: GauntletView,
   item: Item,
-  files: Record<string, string | null>,
+  bundle: GauntletRunBundle,
 ): string {
   const head = view.headerOf(item);
 
@@ -989,17 +989,23 @@ export function renderGauntletDetail(
        </form>`
     : "";
 
-  const context = files.__context ?? null;
-  const detailsMd = [
-    view.detailsMd(item),
-    "",
-    context ? `## Customer context\n\n${context}` : `_no ${view.contextFile}_`,
-  ].filter(Boolean).join("\n");
+  // Per-tab + combined downloads, served by GET /<view>/export/<part>?id=…
+  // (Content-Disposition attachment). Registry-driven — every gauntlet gets
+  // the same buttons; compositions live in gauntlet-views.ts (one producer).
+  const exportHref = (part: string) =>
+    `/${view.key}/export/${encodeURIComponent(part)}?id=${encodeURIComponent(item.id)}`;
+  const exportRow = `<div class="kv" style="margin-top:8px">⬇ export: ${[
+    ...view.tabs.map((t) => `<a href="${exportHref(t.key)}">${esc(t.label.toLowerCase())}</a>`),
+    `<a href="${exportHref("details")}">details</a>`,
+    `<a href="${exportHref("all")}">all</a>`,
+  ].join(" · ")}</div>`;
+
+  const detailsMd = detailsExportMd(view, item, bundle);
 
   const panel = (md: string | null, empty: string) =>
     `<div class="md">${md ? mdToHtml(md) : `<p class="kv">${empty}</p>`}</div>`;
 
-  const tabs = [...view.tabs, { key: "details", label: "Details", file: "", empty: "" }];
+  const tabs = [...view.tabs, { key: "details", label: "Details", files: [], empty: "" }];
   const radios = tabs
     .map((t, i) => `<input type="radio" name="srt" id="srt-${esc(t.key)}"${i === 0 ? " checked" : ""}>`)
     .join("\n  ");
@@ -1008,7 +1014,7 @@ export function renderGauntletDetail(
     .map((t) =>
       t.key === "details"
         ? `<div class="panel" id="srp-details">${panel(detailsMd, "")}</div>`
-        : `<div class="panel" id="srp-${esc(t.key)}">${panel(files[t.key] ?? null, t.empty)}</div>`,
+        : `<div class="panel" id="srp-${esc(t.key)}">${panel(tabMd(t, bundle), t.empty)}</div>`,
     )
     .join("\n  ");
 
@@ -1020,6 +1026,7 @@ export function renderGauntletDetail(
     <h2>${esc(head.title)}</h2>
     <div class="q">${esc(head.question)}</div>
     ${runNow}
+    ${exportRow}
   </div>
   <div class="srtabbar">
     ${labels}
@@ -1048,9 +1055,12 @@ export function renderSr(
 /** SR detail — the SR shim over the generic gauntlet detail (parity-gated). */
 export function renderSrDetail(item: Item, files: SrFiles): string {
   return renderGauntletDetail(gauntletViewByKey("sr")!, item, {
-    gameplan: files.gameplan,
-    thread: files.thread,
-    __context: files.context,
+    tabs: {
+      gameplan: files.gameplan === null ? [] : [{ name: "REPORT.md", content: files.gameplan }],
+      thread: files.thread === null ? [] : [{ name: "sr.md", content: files.thread }],
+    },
+    context: files.context,
+    detail: [],
   });
 }
 
