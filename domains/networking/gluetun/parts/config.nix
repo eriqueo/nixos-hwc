@@ -54,13 +54,34 @@ in
         mkdir -p ${cfgRoot}
         WG_PRIVATE_KEY=$(cat ${config.age.secrets.vpn-wireguard-private-key.path})
         cat > ${cfgRoot}/.env <<EOF
-# WireGuard config for ProtonVPN P2P server (US-UT#52) with NAT-PMP
+# ProtonVPN WireGuard + NAT-PMP port forwarding.
+#
+# Server pin, and why it is a known weakness: VPN_SERVICE_PROVIDER=custom means
+# gluetun talks to exactly ONE server and can never fail over. On 2026-08-18
+# 19:20 the previous pin (US-CO#243 / 95.173.221.158, mislabelled "US-UT#52" in
+# this comment for months) stopped answering handshakes. gluetun then restarted
+# the tunnel 4,219 times in 24h against the same dead peer, and the stack was
+# down ~33h. Verified during that outage: the private key, the account and
+# egress were all fine — three other Proton servers handshook instantly with
+# this same key while this one refused.
+#
+# If this pin dies again the symptom is identical: `wg show` inside the netns
+# reads "0 B received", and journalctl shows the healthcheck restart loop.
+# Re-point below to any port-forward-capable Proton WireGuard server; the
+# current list is in the container at /gluetun/servers.json:
+#   podman exec gluetun cat /gluetun/servers.json \
+#     | jq -r '.protonvpn.servers[] | select(.vpn=="wireguard" and .port_forward
+#              and .country=="United States") | "\(.server_name) \(.ips[0]) \(.wgpubkey)"'
+# Proper failover (VPN_SERVICE_PROVIDER=protonvpn, which rotates servers on
+# failure) is the real fix and is tracked separately — it rotates correctly but
+# needs healthcheck tuning that was not verified during this incident.
 VPN_SERVICE_PROVIDER=custom
 VPN_TYPE=wireguard
 WIREGUARD_PRIVATE_KEY=$WG_PRIVATE_KEY
 WIREGUARD_ADDRESSES=10.2.0.2/32
-WIREGUARD_PUBLIC_KEY="g98KJeIEtR9wbwgVmmaQXR9rEPV+T2RJWf2UE4gB1Ss="
-WIREGUARD_ENDPOINT_IP=95.173.221.158
+# US-VA#1 (Ashburn), port-forward capable. Handshake verified 2026-08-19.
+WIREGUARD_PUBLIC_KEY="zAIZj//t14xuriUMSlWk4/J2jox6I/JMzHL1Y3D/WUE="
+WIREGUARD_ENDPOINT_IP=185.156.46.33
 WIREGUARD_ENDPOINT_PORT=51820
 WIREGUARD_PERSISTENT_KEEPALIVE_INTERVAL=25s
 VPN_PORT_FORWARDING=on
