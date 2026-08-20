@@ -10,12 +10,20 @@ in
   # ignore their URL base, absolute asset paths, WebSocket upgrades) and keeps
   # one service = one hostname.
   #
-  # `mode = "subpath"` is now the exception and needs a reason. The remaining
-  # subpath routes below are each held for a stated cause: an external consumer
-  # pins the URL (webhook, couchdb, mcp), or the route is a deliberate
-  # convenience alias for a service that already has a vhost (jellyseerr-subpath).
-  # The rest are simply un-migrated — converting one means clearing its in-app
-  # URL base in the same change, or it will redirect to a path that no longer routes.
+  # `mode = "subpath"` is now the exception and needs a reason. As of 2026-08-20
+  # there are exactly FOUR subpath routes left and none of them are merely
+  # un-migrated — every app that could move, has:
+  #   webhook, couchdb, mcp   — an off-server consumer pins the URL (n8n's
+  #                             external webhooks + CF tunnel; Obsidian LiveSync
+  #                             on the phone; the laptop's .claude.json). The
+  #                             blocker is the consumer, not the app: all three
+  #                             would serve fine at the root of a vhost.
+  #   jellyseerr-subpath      — deliberate convenience alias; jellyseerr already
+  #                             has its own vhost.
+  # Adding a subpath route therefore needs a *consumer* you cannot reach, not a
+  # preference. And converting one still means clearing the app's in-app URL
+  # base in the SAME commit — never a rebuild apart — or it redirects to a path
+  # that no longer routes. See the domain README for what that cost each app.
   hwc.networking.shared.routes = [
     # Jellyfin - name-based vhost (jellyfin.hwc.iheartwoodcraft.com)
     {
