@@ -970,6 +970,14 @@
   # cannot reproduce the leak — what it still needs is the tunnel to attach to.
   # REMOVE WHEN: hwc.networking.gluetun.instances.gluetun-slskd exists (needs a
   # second Proton WireGuard key + agenix secret) and the leak sweep passes.
+  #
+  # CHECK THIS FIRST, it is the assumption the whole design rests on and it is
+  # UNVERIFIED: that Proton will forward a port on a SECOND simultaneous
+  # WireGuard session on this account. Bring the new config up in a throwaway
+  # gluetun on a spare control port while the live tunnel is up, and confirm
+  # /v1/portforward returns a non-zero port on BOTH. If it does not, a second
+  # tunnel buys nothing and the choice collapses back to "who gets the one
+  # port" — qBittorrent's seeding or slskd's search/browse/uploads.
   # soularr goes with it: it has an assertion requiring slskd enabled, and with
   # slskd down it has nothing to hand a grab to.
   hwc.media.slskd.enable = false;
