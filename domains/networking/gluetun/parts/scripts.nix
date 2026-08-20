@@ -185,8 +185,11 @@ in
       # State dirs are created in parts/config.nix. The old singleton location
       # goes away here: what it held (a failure counter) is derived state that
       # the first check rebuilds, so the migration is a delete, not a move.
-      # `R`, not `R!`: the `!` form runs only at boot, so on a switch the old
-      # directory would sit there looking like live state until the next reboot.
+      # `R`, not `R!`: `R!` is boot-only, while plain `R` also fires on any
+      # `systemd-tmpfiles --remove` run. Neither fires on a plain switch —
+      # NixOS activation runs `--create`, not `--remove` — so the honest
+      # statement is "gone by next boot, or immediately if you run
+      # `systemd-tmpfiles --remove`", which is what was done on hwc-server.
       systemd.tmpfiles.rules =
         lib.optionals (instances != {}) [ "R /var/lib/hwc/gluetun-health - - - - -" ];
 
