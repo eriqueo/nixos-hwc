@@ -256,14 +256,14 @@ in
       upstream = "http://127.0.0.1:8087";
     }
 
-    # Paperless-NGX - document management (preserve path)
+    # Paperless-NGX - name-based vhost. Django validates request Origin against
+    # PAPERLESS_CSRF_TRUSTED_ORIGINS, so this route and the origin built in
+    # domains/business/paperless/parts/config.nix must name the same host or
+    # reads keep working while every write fails CSRF.
     {
       name = "paperless";
-      mode = "subpath";
-      path = "/docs";
+      mode = "vhost";
       upstream = "http://127.0.0.1:8102";
-      needsUrlBase = true;
-      headers = { "X-Forwarded-Prefix" = "/docs"; };
     }
 
     # Generic webhook endpoint - forwards to n8n for external integrations (Slack, etc.)

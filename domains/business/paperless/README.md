@@ -64,7 +64,7 @@ hwc.business.paperless = {
   admin.user = "eric";
   admin.email = "eric@hwc.local";
 
-  reverseProxy.path = "/docs";
+  reverseProxy.path = "";   # vhost at paperless.<vhostDomain>; no prefix
 
   resources.memory = "4g";
   resources.cpus = "2.0";
@@ -105,6 +105,7 @@ hwc.business.paperless = {
 
 ## Changelog
 
+- 2026-08-20: Moved off the `/docs` subpath onto `paperless.hwc.iheartwoodcraft.com`. Three settings had to move together, and the reason is Django rather than routing: `PAPERLESS_URL`, `PAPERLESS_CORS_ALLOWED_ORIGINS` and `PAPERLESS_CSRF_TRUSTED_ORIGINS` all derive from one `paperlessUrlBase`, which previously pointed at `reverseProxy.domain` (the tailnet root host). Django checks the request Origin against the CSRF list on every unsafe method, so serving paperless under a name absent from that list leaves **reads working and every write failing** — logins, uploads, tag edits — with a 200 on `GET /` the whole time. Verification for this app is therefore an authenticated POST, not a status code. `reverseProxy.path` now defaults to `""` and `PAPERLESS_FORCE_SCRIPT_NAME` is emitted only when it is non-empty, so the prefix deployment stays available without a code change; when set it must match the route's `path` exactly, since Django prefixes every generated URL with it.
 - 2026-07-13: Receipt/statement intake — `paperless-imap-proxy` (socat, Proton Bridge 127.0.0.1:1143 → podman gateway 10.89.0.1:1143) so the container's mail fetcher can poll `eric@iheartwoodcraft.com` mailboxes; `paperless-receipts-mover` path unit + 15-min sweep moving photo/PDF drops from the phone-synced `/mnt/vaults/inbox-mobile/receipts/` into the consume dir. Mail account + receipt/statement rules configured in Paperless via API (DB-owned, not Nix).
 - 2026-03-25: Created README per Law 12
 - 2026-03-04: Namespace migration hwc.server.containers.paperless → hwc.business.paperless

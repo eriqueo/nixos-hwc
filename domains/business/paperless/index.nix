@@ -173,8 +173,15 @@ in
     reverseProxy = {
       path = lib.mkOption {
         type = lib.types.str;
-        default = "/docs";
-        description = "Reverse proxy subpath";
+        default = "";
+        description = ''
+          Reverse proxy subpath. Empty is correct for the current name-based
+          vhost (paperless.<vhostDomain>), where paperless serves at root; the
+          option stays so it can be put back behind a prefix without a code
+          change. When non-empty it emits PAPERLESS_FORCE_SCRIPT_NAME, which
+          Django uses to prefix every generated URL — so it must match the
+          route's `path` exactly or the app links to pages that do not route.
+        '';
       };
     };
 

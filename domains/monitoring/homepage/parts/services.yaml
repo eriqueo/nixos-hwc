@@ -46,7 +46,7 @@
               format: number
     - Paperless:
         icon: paperless-ngx
-        href: https://hwc-server.ocelot-wahoo.ts.net/docs
+        href: https://paperless.hwc.iheartwoodcraft.com
         description: Document management
         server: localhost
         container: paperless

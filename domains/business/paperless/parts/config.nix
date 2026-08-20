@@ -7,7 +7,12 @@ let
   envFile = "${envDir}/paperless.env";
 
   ocrLanguages = lib.concatStringsSep "+" cfg.ocr.languages;
-  paperlessUrlBase = "https://${config.hwc.networking.reverseProxy.domain}";
+  # Paperless' own origin. This is NOT cosmetic: Django validates the Origin of
+  # every unsafe request against PAPERLESS_CSRF_TRUSTED_ORIGINS below, so if
+  # this drifts from the host Caddy actually serves paperless under, GETs keep
+  # returning 200 and every login/upload POST fails "CSRF verification failed".
+  # A status-code smoke test cannot see that — it has to be an authenticated POST.
+  paperlessUrlBase = "https://paperless.${config.hwc.networking.shared.vhostDomain}";
 
   generateEnvScript = pkgs.writeShellScript "generate-paperless-env" ''
     set -euo pipefail
@@ -24,7 +29,8 @@ let
     PAPERLESS_ADMIN_EMAIL=${cfg.admin.email}
 
     PAPERLESS_URL=${paperlessUrlBase}
-    PAPERLESS_FORCE_SCRIPT_NAME=${cfg.reverseProxy.path}
+    ${lib.optionalString (cfg.reverseProxy.path != "") ''
+    PAPERLESS_FORCE_SCRIPT_NAME=${cfg.reverseProxy.path}''}
     PAPERLESS_CORS_ALLOWED_ORIGINS=${paperlessUrlBase}
     PAPERLESS_CSRF_TRUSTED_ORIGINS=${paperlessUrlBase}
 
