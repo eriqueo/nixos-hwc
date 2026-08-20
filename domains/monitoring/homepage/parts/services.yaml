@@ -140,7 +140,7 @@
         container: prowlarr
     - Navidrome:
         icon: navidrome
-        href: https://hwc-server.ocelot-wahoo.ts.net/music
+        href: https://navidrome.hwc.iheartwoodcraft.com
         description: Music streaming
         server: localhost
         container: navidrome

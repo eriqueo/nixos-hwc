@@ -41,14 +41,13 @@ in
       headers = { "X-Forwarded-Prefix" = "/jellyseerr"; };
     }
 
-    # Navidrome - preserve path (URL base set in app)
+    # Navidrome - name-based vhost. ND_BASEURL is cleared in the same commit
+    # (domains/media/navidrome-container/sys.nix): navidrome 302s root to its
+    # base, so a stale "/music" would bounce every request off this vhost.
     {
       name = "navidrome";
-      mode = "subpath";
-      path = "/music";
+      mode = "vhost";
       upstream = "http://127.0.0.1:4533";
-      needsUrlBase = true;
-      headers = { "X-Forwarded-Prefix" = "/music"; };
     }
 
     # Immich - name-based vhost (subpath-hostile; host derived from request)
@@ -132,14 +131,14 @@ in
       upstream = "http://127.0.0.1:9696";
     }
 
-    # LazyLibrarian (books) - preserve path (Web Root setting in app)
+    # LazyLibrarian (books) - name-based vhost. `hwc.media.books.httpRoot` is
+    # cleared in the same commit; unlike the SPA-backed apps, LazyLibrarian
+    # genuinely 404s at "/" while its http_root is set, so the two halves
+    # cannot be staged across separate rebuilds in either order.
     {
       name = "books";
-      mode = "subpath";
-      path = "/books";
+      mode = "vhost";
       upstream = "http://127.0.0.1:5299";
-      needsUrlBase = true;
-      headers = { "X-Forwarded-Prefix" = "/books"; };
     }
 
     # Audiobookshelf - name-based vhost. The old `needsUrlBase = true` claimed a

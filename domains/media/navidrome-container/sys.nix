@@ -21,7 +21,11 @@ in
         "${config.hwc.paths.media.root}/music:/music:ro"  # Music library for streaming
       ];
       environment = {
-        ND_BASEURL = "/music";  # Required for Caddy subpath routing
+        # Empty: navidrome serves at the root of its own vhost
+        # (navidrome.<vhostDomain>). A non-empty base here does not just add a
+        # prefix — navidrome 302s root to it, so a stale value would bounce
+        # every vhost request to a path the vhost does not route.
+        ND_BASEURL = "";
       };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];
     })

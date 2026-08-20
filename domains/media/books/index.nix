@@ -35,8 +35,13 @@ in
 
     httpRoot = lib.mkOption {
       type = lib.types.str;
-      default = "/books";
-      description = "HTTP root path for reverse proxy (e.g., /books)";
+      default = "";
+      description = ''
+        HTTP root path for reverse proxy. Empty is correct for the current
+        name-based vhost (books.<vhostDomain>), where LazyLibrarian serves at
+        root. A non-empty value makes it 404 everything at "/", so it must
+        change in the same commit as the route mode, never before or after.
+      '';
     };
   };
 
