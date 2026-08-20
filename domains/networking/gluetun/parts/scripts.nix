@@ -185,8 +185,10 @@ in
       # State dirs are created in parts/config.nix. The old singleton location
       # goes away here: what it held (a failure counter) is derived state that
       # the first check rebuilds, so the migration is a delete, not a move.
+      # `R`, not `R!`: the `!` form runs only at boot, so on a switch the old
+      # directory would sit there looking like live state until the next reboot.
       systemd.tmpfiles.rules =
-        lib.optionals (instances != {}) [ "R! /var/lib/hwc/gluetun-health - - - - -" ];
+        lib.optionals (instances != {}) [ "R /var/lib/hwc/gluetun-health - - - - -" ];
 
       systemd.timers = lib.mapAttrs' (name: i:
         lib.nameValuePair "${name}-health-check" {

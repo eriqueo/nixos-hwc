@@ -42,12 +42,14 @@ in
   nix = {
     settings = {
       experimental-features = [ "nix-command" "flakes" ];
-      substituters = [
-        "https://cache.nixos.org"
-      ];
-      trusted-public-keys = [
-        "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-      ];
+      # cache.nixos.org and its key are NixOS defaults for this option, so
+      # declaring them here did not add a cache — it added a SECOND entry for
+      # the same one. The two spellings differ only by a trailing slash, which
+      # is why nothing deduplicated them and why the effective list read
+      # "cache.nixos.org  cache.nixos-cuda.org  cache.nixos.org/" on both hosts.
+      # Left to the default; extra substituters (e.g. the CUDA cache in
+      # domains/system/gpu) append to it as before.
+      trusted-public-keys = [ ];
       auto-optimise-store = true;
       trusted-users = [ "root" "eric" ];
     };
