@@ -66,7 +66,14 @@ let
     ''}
 
     ${lib.optionalString (cleanupDirs != []) ''
-      ${pkgs.findutils}/bin/find ${cleanupDirsStr} -type d -empty -delete 2>/dev/null || true
+      # -mindepth 1 keeps the prune INSIDE each dir. Without it find's start
+      # point is itself a match, so staging/ and export/ — normally empty —
+      # deleted themselves every night. They are podman bind-mount sources, so
+      # the next container start died with
+      #   Error: statfs /mnt/hot/documents/export: no such file or directory
+      # (2026-07-06 crash loop, again 2026-08-20). Same shape already burned
+      # media-cleanup via slskd; see domains/data/storage/parts/cleanup.nix:17.
+      ${pkgs.findutils}/bin/find ${cleanupDirsStr} -mindepth 1 -type d -empty -delete 2>/dev/null || true
     ''}
   '';
 
@@ -97,17 +104,11 @@ in
     })
 
     {
-      # Bind-mount sources must exist or podman fails with statfs errors —
-      # found 2026-07-06 crash-looping (1600+ restarts) after export/staging
-      # vanished from /mnt/hot. Declare them instead of hand-creating.
-      systemd.tmpfiles.rules =
-        lib.map (d: "d ${d} 0775 eric users - -")
-          (lib.filter (d: d != null) [
-            cfg.storage.consumeDir
-            cfg.storage.exportDir
-            cfg.storage.stagingDir
-            cfg.storage.mediaDir
-          ]);
+      # Storage dirs (incl. the bind-mount sources) are declared once, in
+      # parts/directories.nix. A second producer for the same four paths used
+      # to live here; systemd-tmpfiles kept the first line and logged
+      # "Duplicate line for path ..., ignoring", so its 0775 never applied and
+      # the block only looked like it was doing something.
 
       # Generate environment file from secrets before container starts
       systemd.services.paperless-env = {
