@@ -146,7 +146,7 @@
         container: navidrome
     - Audiobookshelf:
         icon: audiobookshelf
-        href: https://hwc-server.ocelot-wahoo.ts.net/audiobookshelf
+        href: https://audiobookshelf.hwc.iheartwoodcraft.com
         description: Audiobooks
         server: localhost
         container: audiobookshelf

@@ -82,14 +82,14 @@ in
       upstream = "http://127.0.0.1:8081";
     }
 
-    # qBittorrent - strip path (app expects root despite URL_BASE)
+    # qBittorrent - name-based vhost. No app-side change was needed: it already
+    # expected root (the old route stripped /qbt rather than passing it), and
+    # `WebUI\ServerDomains=*` in qBittorrent.conf already accepts any forwarded
+    # Host — unlike SABnzbd, which had to have its allowlist widened.
     {
       name = "qbittorrent";
-      mode = "subpath";
-      path = "/qbt";
+      mode = "vhost";
       upstream = "http://127.0.0.1:8080";
-      needsUrlBase = false;
-      headers = { "X-Forwarded-Prefix" = "/qbt"; };
     }
 
     # slskd - name-based vhost
@@ -142,14 +142,16 @@ in
       headers = { "X-Forwarded-Prefix" = "/books"; };
     }
 
-    # Audiobookshelf - audiobook and podcast server
+    # Audiobookshelf - name-based vhost. The old `needsUrlBase = true` claimed a
+    # "hardcoded /audiobookshelf/ base path"; that was wrong. No base path is
+    # configured anywhere (no ROUTER_BASE_PATH in the container env), and the
+    # app answers 200 at BOTH / and /audiobookshelf/ on :13378 because its SPA
+    # serves index.html for any path — which is exactly what made the false
+    # claim look true. Root is the real mount point, so no app-side change.
     {
       name = "audiobookshelf";
-      mode = "subpath";
-      path = "/audiobookshelf";
+      mode = "vhost";
       upstream = "http://127.0.0.1:13378";
-      needsUrlBase = true;  # Audiobookshelf has hardcoded /audiobookshelf/ base path
-      headers = { "X-Forwarded-Prefix" = "/audiobookshelf"; };
     }
 
     # Mousehole - MAM seedbox IP updater (runs through Gluetun VPN)
@@ -166,14 +168,14 @@ in
       upstream = "http://127.0.0.1:8083";
     }
 
-    # Calibre content server - subpath for ebook access
+    # Calibre content server - name-based vhost. No app-side change: the old
+    # route stripped /calibre, so the server was already answering at root.
+    # Distinct from the `calibre` vhost above (:8083, calibre-web) — two
+    # different services, two names, do not collapse them.
     {
       name = "calibre-server";
-      mode = "subpath";
-      path = "/calibre";
+      mode = "vhost";
       upstream = "http://127.0.0.1:8090";
-      needsUrlBase = false;  # Content server works without URL base
-      headers = { "X-Forwarded-Prefix" = "/calibre"; };
     }
 
     # CouchDB (Obsidian LiveSync) - strip /sync prefix
