@@ -68,11 +68,19 @@ ini_path = Path("${iniPath}")
 text = ini_path.read_text()
 lines = text.splitlines()
 
-# Reverse-proxy serving host (this machine's tailnet FQDN). Caddy forwards the
-# original Host header (header_up Host {host}), so SABnzbd's host_whitelist must
-# include it or it returns "Hostname verification failed". Derived from the same
-# late-bound rootHost Caddy serves under, so a tailnet rename propagates here too.
-target_hosts = ["gluetun", "sabnzbd", "${config.hwc.networking.shared.rootHost}"]
+# Reverse-proxy serving hosts. Caddy forwards the original Host header
+# (header_up Host {host}), so SABnzbd's host_whitelist must include every name
+# it is served under or it returns "Hostname verification failed" — which reads
+# as "SAB is down" and is nothing of the sort. Both names are late-bound:
+#   * rootHost              — this machine's tailnet FQDN (legacy subpath era)
+#   * sabnzbd.<vhostDomain> — the name-based vhost (current standard)
+# so a tailnet rename or a subzone change propagates here without an edit.
+target_hosts = [
+    "gluetun",
+    "sabnzbd",
+    "${config.hwc.networking.shared.rootHost}",
+    "sabnzbd.${config.hwc.networking.shared.vhostDomain}",
+]
 updated = False
 found = False
 new_lines = []
@@ -87,6 +95,13 @@ for line in lines:
                 items.append(host)
                 updated = True
         line = "host_whitelist = " + ", ".join(items)
+    # SABnzbd is served at the ROOT of its own vhost, so it must carry no URL
+    # base. A stale `url_base = /sab` makes it 301 every request to a path the
+    # vhost does not route — an infinite redirect that looks like a proxy bug.
+    elif line.startswith("url_base = "):
+        if line.split("=", 1)[1].strip() not in ("", '""'):
+            line = 'url_base = ""'
+            updated = True
     new_lines.append(line)
 
 if not found:

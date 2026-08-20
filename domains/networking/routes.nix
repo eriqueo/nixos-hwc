@@ -72,14 +72,14 @@ in
       upstream = "http://127.0.0.1:3000";
     }
 
-    # Sabnzbd - preserve path (URL base set in app)
+    # SABnzbd - name-based vhost. Two app-side facts move WITH this route and
+    # cannot lag it (domains/media/sabnzbd/parts/config.nix): `url_base` must be
+    # cleared, and `host_whitelist` must gain sabnzbd.<vhostDomain> or SAB
+    # answers every request with "Hostname verification failed".
     {
       name = "sabnzbd";
-      mode = "subpath";
-      path = "/sab";
+      mode = "vhost";
       upstream = "http://127.0.0.1:8081";
-      needsUrlBase = true;
-      headers = { "X-Forwarded-Prefix" = "/sab"; };
     }
 
     # qBittorrent - strip path (app expects root despite URL_BASE)
