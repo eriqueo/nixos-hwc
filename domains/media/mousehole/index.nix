@@ -2,6 +2,7 @@
 { lib, config, pkgs, ... }:
 
 let
+  helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
   cfg = config.hwc.media.mousehole;
 in
 {
@@ -31,11 +32,12 @@ in
     #==========================================================================
     # VALIDATION
     #==========================================================================
-    assertions = [
-      {
-        assertion = config.hwc.networking.gluetun.enable;
-        message = "mousehole requires gluetun to be enabled (runs inside VPN tunnel)";
-      }
-    ];
+    # mousehole has no network.mode option — it is unconditionally a passenger
+    # of the main tunnel (sys.nix pins networkMode = "vpn").
+    assertions = helpers.mkVpnAssertions {
+      name = "mousehole";
+      networkMode = "vpn";
+      gluetunInstances = config.hwc.networking.gluetun.instances;
+    };
   };
 }

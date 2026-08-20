@@ -411,6 +411,18 @@ DISK_FORECAST_JSON=$("${CURL_BIN}" -sG -m 10 "${PROM_URL}/api/v1/query" \
         | .days_to_full |= round] | sort_by(.days_to_full)' 2>/dev/null || echo '[]')
 echo "${DISK_FORECAST_JSON}" | jq empty 2>/dev/null || DISK_FORECAST_JSON='[]'
 
+# VPN tunnels: each gluetun instance's health state machine publishes
+# status.json (see domains/networking/gluetun — hwc.networking.gluetun.stateRoot).
+# The check alerts ONLY on transitions, so a tunnel that went degraded at 21:00
+# and is still degraded at 06:00 has been silent all night by design; this is
+# where that silence gets a voice. A 33-hour outage in Aug 2026 went unactioned
+# behind 43 identical alerts — the fix is one alert there and the standing state
+# here, not more alerts.
+VPN_JSON=$({ cat /var/lib/hwc/gluetun/*/status.json 2>/dev/null || true; } \
+  | jq -s 'map({instance, state, reason, forwarded_port, restart_count,
+                degraded_since, last_check})' 2>/dev/null || echo '[]')
+echo "${VPN_JSON}" | jq empty 2>/dev/null || VPN_JSON='[]'
+
 # Nightly-builds gauntlet: cards that landed in _finished/ since yesterday
 # evening (the 01:30 run completes hours before the 6am briefing).
 NB_DIR="/home/eric/900_vaults/brain/_inbox/nightly_builds/_finished"
@@ -425,6 +437,7 @@ OPS_JSON=$(jq -n \
   --argjson errs "${ERR_TOP_JSON}" \
   --argjson down "${PROM_DOWN_JSON}" \
   --argjson disk "${DISK_FORECAST_JSON}" \
+  --argjson vpn "${VPN_JSON}" \
   --argjson nb "${NB_JSON}" '
   { since: $since
   , service_failures: $svc
@@ -432,6 +445,7 @@ OPS_JSON=$(jq -n \
   , journal_errors_top: $errs
   , prometheus_targets_down: $down
   , disk_forecast: $disk
+  , vpn_tunnels: $vpn
   , nightly_builds_finished: $nb
   }' 2>/dev/null || echo '{}')
 echo "${OPS_JSON}" | jq empty 2>/dev/null || OPS_JSON='{}'
@@ -441,8 +455,18 @@ ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq \
   --argjson svc "${SVC_FAIL_JSON}" \
   --argjson probes "${SERVICES_DOWN_JSON}" \
   --argjson down "${PROM_DOWN_JSON}" \
+  --argjson vpn "${VPN_JSON}" \
   --argjson disk "${DISK_FORECAST_JSON}" '
-  . + (($svc | map(select(.active_now == false))) as $dead
+  . + (($vpn | map(select(.state == "failed"))) as $vfailed
+       | if ($vfailed | length) > 0 then [{level:"critical", section:"ops",
+        message:"VPN auto-recovery EXHAUSTED: \($vfailed | map("\(.instance) (\(.reason)) — \(.restart_count) restarts, down \((now - .degraded_since) / 3600 | floor)h") | join("; ")) — the download stack has no egress until this is fixed"}] else [] end)
+    + (($vpn | map(select(.state == "degraded"))) as $vdeg
+       | if ($vdeg | length) > 0 then [{level:"warning", section:"ops",
+        message:"VPN degraded and self-healing: \($vdeg | map("\(.instance) (\(.reason)), down \((now - .degraded_since) / 60 | floor)m") | join("; "))"}] else [] end)
+    + (($vpn | map(select(.state == "healthy" and ((now - .last_check) > 3600)))) as $vstale
+       | if ($vstale | length) > 0 then [{level:"warning", section:"ops",
+        message:"VPN health check has not run in over an hour: \($vstale | map(.instance) | join(", ")) — the monitor itself may be dead"}] else [] end)
+    + (($svc | map(select(.active_now == false))) as $dead
        | if ($dead | length) > 0 then [{level:"critical", section:"ops",
         message:"\($dead | length) service(s) failed overnight and are STILL DOWN: \($dead | map(.service) | unique | join(", ")) — systemctl status <unit>"}] else [] end)
     + (($svc | map(select(.active_now != false))) as $rec

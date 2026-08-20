@@ -99,11 +99,11 @@ in
     # ASSERTIONS AND VALIDATION
     #=========================================================================
     {
-      assertions = [
-        {
-          assertion = cfg.network.mode != "vpn" || config.hwc.networking.gluetun.enable;
-          message = "qBittorrent with VPN networking requires gluetun container to be enabled";
-        }
+      assertions = helpers.mkVpnAssertions {
+        name = "qBittorrent";
+        networkMode = cfg.network.mode;
+        gluetunInstances = config.hwc.networking.gluetun.instances;
+      } ++ [
         {
           assertion = paths.hot != null;
           message = "qBittorrent requires hwc.paths.hot to be configured for downloads";

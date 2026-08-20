@@ -11,8 +11,13 @@
 let
   cfg = config.hwc.media.scripts;
   paths = config.hwc.paths;
-  qbtPort = config.hwc.media.downloaders.qbittorrent.webPort;
-  sabPort = config.hwc.media.downloaders.sabnzbd.webPort;
+  # Read the ports from the modules that actually run these containers. They
+  # used to come from hwc.media.downloaders.*, a module whose config block was
+  # dead (its enable was never set anywhere) but whose options were still live —
+  # so these two values were declared in one place and used by a container
+  # defined in another, free to drift.
+  qbtPort = config.hwc.media.qbittorrent.webPort;
+  sabPort = config.hwc.media.sabnzbd.webPort;
   # Read at runtime, never interpolated into the script: /nix/store is
   # world-readable and this file holds SABnzbd's API key.
   sabIni = "${config.hwc.paths.apps.root}/sabnzbd/config/sabnzbd.ini";

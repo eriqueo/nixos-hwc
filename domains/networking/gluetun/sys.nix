@@ -5,7 +5,7 @@ let
   cfg = config.hwc.networking.gluetun;
 in
 {
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf (lib.any (i: i.enable) (lib.attrValues cfg.instances)) {
     # System-lane support - actual container definition is in parts/config.nix
     # to avoid conflicts with the detailed implementation
     virtualisation.oci-containers.backend = "podman";

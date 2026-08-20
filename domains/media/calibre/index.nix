@@ -1,6 +1,7 @@
 { lib, config, pkgs, ... }:
 
 let
+  helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
   cfg = config.hwc.media.calibre;
   paths = config.hwc.paths;
 in
@@ -35,11 +36,11 @@ in
     #==========================================================================
     # VALIDATION
     #==========================================================================
-    assertions = [
-      {
-        assertion = cfg.network.mode != "vpn" || config.hwc.networking.gluetun.enable;
-        message = "calibre container with VPN mode requires gluetun to be enabled";
-      }
+    assertions = helpers.mkVpnAssertions {
+      name = "calibre";
+      networkMode = cfg.network.mode;
+      gluetunInstances = config.hwc.networking.gluetun.instances;
+    } ++ [
       {
         assertion = config.hwc.paths.hot.root != null;
         message = "calibre container requires hwc.paths.hot.root to be defined (for downloads)";

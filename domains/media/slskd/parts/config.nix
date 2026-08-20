@@ -4,7 +4,19 @@ let
   cfg = config.hwc.media.slskd;
 
   # Script to generate slskd config from secrets at runtime
+  # The Soulseek listen port follows the VPN's NAT-PMP forwarded port, which
+  # Proton rotates. The tunnel's port-sync publishes it to one file and restarts
+  # this generator; this is the only place that writes slskd.yml, so the port
+  # cannot be written by two producers and drift. Off-VPN (or before the first
+  # sync) it falls back to the static port.
+  portFile = "${config.hwc.networking.gluetun.stateRoot}/${cfg.vpnInstance}/forwarded-port";
+
   generateConfigScript = pkgs.writeShellScript "generate-slskd-config" ''
+    LISTEN_PORT=${toString cfg.listenPort}
+    if [ -s "${portFile}" ]; then
+      LISTEN_PORT=$(cat "${portFile}")
+    fi
+
     WEB_USERNAME=$(cat ${config.age.secrets.slskd-web-username.path})
     WEB_PASSWORD=$(cat ${config.age.secrets.slskd-web-password.path})
     SOULSEEK_USERNAME=$(cat ${config.age.secrets.slskd-soulseek-username.path})
@@ -46,7 +58,7 @@ soulseek:
   password: $SOULSEEK_PASSWORD
   description: "A slskd user. https://github.com/slskd/slskd"
   listen_ip_address: "0.0.0.0"
-  listen_port: 50300
+  listen_port: $LISTEN_PORT
 EOF
   '';
 in

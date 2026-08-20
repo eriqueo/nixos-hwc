@@ -119,11 +119,11 @@ in
     # ASSERTIONS AND VALIDATION
     #=========================================================================
     {
-      assertions = [
-        {
-          assertion = cfg.network.mode != "vpn" || config.hwc.networking.gluetun.enable;
-          message = "SABnzbd with VPN networking requires gluetun container to be enabled";
-        }
+      assertions = helpers.mkVpnAssertions {
+        name = "SABnzbd";
+        networkMode = cfg.network.mode;
+        gluetunInstances = config.hwc.networking.gluetun.instances;
+      } ++ [
         {
           assertion = paths.hot != null;
           message = "SABnzbd requires hwc.paths.hot to be configured for downloads and events";

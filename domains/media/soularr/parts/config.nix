@@ -2,8 +2,18 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.media.soularr;
+  slskdCfg = config.hwc.media.slskd;
   appsRoot = config.hwc.paths.apps.root;
   soularrRoot = "${appsRoot}/soularr";
+
+  # soularr sits on media-network; slskd does not. Once slskd moved into the
+  # tunnel's netns it stopped having an interface — and therefore a DNS name —
+  # of its own, so the address is the TUNNEL's alias. Derived from slskd's own
+  # options so the two cannot drift when the instance is renamed.
+  slskdUrl =
+    if slskdCfg.network.mode == "vpn"
+    then "http://${slskdCfg.vpnInstance}:5030"
+    else "http://slskd:5030";
 in
 {
   config = lib.mkIf cfg.enable {
@@ -47,7 +57,7 @@ api_key = $LIDARR_API_KEY
 download_dir = /downloads/music
 
 [Slskd]
-host_url = http://slskd:5030
+host_url = ${slskdUrl}
 api_key = $SLSKD_API_KEY
 download_dir = /downloads/music
 

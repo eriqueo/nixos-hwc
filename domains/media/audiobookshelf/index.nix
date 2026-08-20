@@ -3,6 +3,7 @@
 
 let
   inherit (lib) mkOption mkEnableOption types;
+  helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
   cfg = config.hwc.media.audiobookshelf;
   paths = config.hwc.paths;
 in
@@ -65,11 +66,11 @@ in
     #==========================================================================
     # VALIDATION
     #==========================================================================
-    assertions = [
-      {
-        assertion = cfg.network.mode != "vpn" || config.hwc.networking.gluetun.enable;
-        message = "audiobookshelf container with VPN mode requires gluetun to be enabled";
-      }
+    assertions = helpers.mkVpnAssertions {
+      name = "audiobookshelf";
+      networkMode = cfg.network.mode;
+      gluetunInstances = config.hwc.networking.gluetun.instances;
+    } ++ [
       {
         assertion = config.hwc.paths.media.root != null;
         message = "audiobookshelf container requires hwc.paths.media.root to be defined";

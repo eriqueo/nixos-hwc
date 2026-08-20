@@ -5,9 +5,10 @@
 { lib, pkgs }:
 
 rec {
-  # mkInfraContainer - Creates infrastructure container with full control over
-  # network mode, capabilities, devices, and integrated systemd services
-  mkInfraContainer =
+  # containerDefOf — the podman definition itself, with no systemd wiring.
+  # Single producer for both entry points below; they differ only in how many
+  # containers they wire, never in what a container IS.
+  containerDefOf =
     { name                    # Container name
     , image                   # OCI image
 
@@ -36,16 +37,9 @@ rec {
     , cpus ? "1.0"
     , memorySwap ? "4g"
 
-    # Infrastructure-specific
-    , preStartScript ? null   # Script to run before container (generates env files, etc.)
-    , preStartDeps ? []       # Systemd services to wait for (e.g., "agenix.service")
-    , postStartScript ? null  # Script to run after container starts
-    , assertions ? []         # Pass-through assertions
-    , firewallTcp ? []        # Open TCP ports
-    , firewallUdp ? []        # Open UDP ports
-    , systemdAfter ? []       # Additional systemd after deps
-    , systemdWants ? []       # Additional systemd wants deps
-    , systemdRequires ? []    # Additional systemd requires deps
+    # Systemd/firewall wiring is the caller's business, not the definition's;
+    # accepted and ignored here so both entry points can pass one arg set.
+    , ...
     }:
     let
       # Build network options
@@ -81,12 +75,6 @@ rec {
         "--memory-swap=${memorySwap}"
       ];
 
-      # Pre-start service name
-      preStartServiceName = "${name}-setup";
-
-      # Container service name (podman convention)
-      containerServiceName = "podman-${name}";
-
       # Build container definition
       containerDef = {
         inherit image dependsOn;
@@ -99,6 +87,31 @@ rec {
         volumes = volumes;
       } // lib.optionalAttrs (user != null) { inherit user; }
         // lib.optionalAttrs (cmd != []) { inherit cmd; };
+    in containerDef;
+
+  # mkInfraContainer - Creates infrastructure container with full control over
+  # network mode, capabilities, devices, and integrated systemd services
+  mkInfraContainer =
+    args@{ name
+    , preStartScript ? null
+    , preStartDeps ? []
+    , postStartScript ? null
+    , assertions ? []
+    , firewallTcp ? []
+    , firewallUdp ? []
+    , systemdAfter ? []
+    , systemdWants ? []
+    , systemdRequires ? []
+    , ...
+    }:
+    let
+      containerDef = containerDefOf args;
+
+      # Pre-start service name
+      preStartServiceName = "${name}-setup";
+
+      # Container service name (podman convention)
+      containerServiceName = "podman-${name}";
 
     in lib.mkMerge [
       # Container definition
@@ -156,4 +169,72 @@ rec {
         inherit assertions;
       })
     ];
+
+  # mkInfraContainers — the same thing for a SET of containers whose membership
+  # comes from config (gluetun's tunnel instances).
+  #
+  # Why a second entry point instead of `mkMerge (map mkInfraContainer …)`: a
+  # module's `config` may be a plain attrset, or an mkIf/mkMerge whose contents
+  # do NOT depend on config. The module system calls pushDownProperties on
+  # mkIf/mkMerge before config is fixed, so a merge list built by mapping over a
+  # config-derived attrset is infinite recursion — which is exactly what the
+  # first attempt at multi-instance gluetun hit. The fix is shape, not cleverness:
+  # this returns a plain attrset whose top-level names are literals, so only the
+  # VALUES depend on config, and those are forced later, safely.
+  #
+  #   specs :: attrset of container-name -> the same argument set mkInfraContainer
+  #            takes (minus `name`, which is the key)
+  #
+  # Returns a module fragment; merge extra services into it at the caller with
+  # lib.mkMerge on the systemd.services VALUE (not at the top level).
+  mkInfraContainers = specs:
+    let
+      named = lib.mapAttrs (name: args: args // { inherit name; }) specs;
+
+      setupServices = lib.concatMapAttrs (name: a:
+        lib.optionalAttrs (a.preStartScript or null != null) {
+          "${name}-setup" = {
+            description = "Setup for ${name} container";
+            before = [ "podman-${name}.service" ];
+            wantedBy = [ "podman-${name}.service" ];
+            wants = a.preStartDeps or [];
+            after = a.preStartDeps or [];
+            serviceConfig = {
+              Type = "oneshot";
+              RemainAfterExit = false;
+            };
+            script = a.preStartScript;
+          };
+        }) named;
+
+      containerServices = lib.mapAttrs' (name: a:
+        lib.nameValuePair "podman-${name}" (
+          {
+            after = (a.systemdAfter or [])
+              ++ lib.optional (a.preStartScript or null != null) "${name}-setup.service";
+            wants = a.systemdWants or [];
+            requires = a.systemdRequires or [];
+          }
+          // lib.optionalAttrs (a.postStartScript or null != null) {
+            postStart = a.postStartScript;
+          }
+        )) named;
+    in
+    {
+      # HWC-EXCEPTION(Law 5): this IS the sanctioned infra-container helper
+      # Justification: same status as mkInfraContainer above — the raw definition
+      # lives in the helper. This entry point exists only because the singular
+      # one cannot express a config-derived SET without infinite recursion.
+      # Plan: permanent by design
+      # Revocable: yes
+      virtualisation.oci-containers.containers =
+        lib.mapAttrs (_: a: containerDefOf a) named;
+
+      systemd.services = setupServices // containerServices;
+
+      networking.firewall = {
+        allowedTCPPorts = lib.concatLists (lib.mapAttrsToList (_: a: a.firewallTcp or []) named);
+        allowedUDPPorts = lib.concatLists (lib.mapAttrsToList (_: a: a.firewallUdp or []) named);
+      };
+    };
 }

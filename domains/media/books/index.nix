@@ -1,6 +1,7 @@
 { lib, config, pkgs, ... }:
 
 let
+  helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
   cfg = config.hwc.media.books;
 in
 {
@@ -55,11 +56,10 @@ in
     #==========================================================================
     # VALIDATION
     #==========================================================================
-    assertions = [
-      {
-        assertion = cfg.network.mode != "vpn" || config.hwc.networking.gluetun.enable;
-        message = "books container with VPN mode requires gluetun to be enabled";
-      }
-    ];
+    assertions = helpers.mkVpnAssertions {
+      name = "books";
+      networkMode = cfg.network.mode;
+      gluetunInstances = config.hwc.networking.gluetun.instances;
+    };
   };
 }

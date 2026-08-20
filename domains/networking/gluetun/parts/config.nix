@@ -1,172 +1,218 @@
-# gluetun container configuration
+# gluetun container configuration — one container per tunnel instance
 { lib, config, pkgs, ... }:
 let
   # Import infrastructure container helper
   infraHelpers = import ../../../lib/mkInfraContainer.nix { inherit lib pkgs; };
-  inherit (infraHelpers) mkInfraContainer;
+  inherit (infraHelpers) mkInfraContainers;
 
   cfg = config.hwc.networking.gluetun;
   appsRoot = config.hwc.paths.apps.root;
-  cfgRoot = "${appsRoot}/gluetun";
-  mediaNetworkName = "media-network";
-in
-{
-  config = lib.mkIf cfg.enable (lib.mkMerge [
-    # Container definition using mkInfraContainer
-    (mkInfraContainer {
-      name = "gluetun";
-      image = cfg.image;
+  instances = lib.filterAttrs (_: i: i.enable) cfg.instances;
 
-      # Network configuration
-      networkMode = "media-network";
-      networkAliases = [ "gluetun" ];
+  # Instance "gluetun" resolves to the pre-existing ${appsRoot}/gluetun, so the
+  # multi-instance conversion did not move the live tunnel's servers.json or
+  # state. No special case — the name IS the directory.
+  dataDir = name: "${appsRoot}/${name}";
+  stateDir = name: "${cfg.stateRoot}/${name}";
 
-      # Infrastructure capabilities
-      capabilities = [ "NET_ADMIN" "SYS_MODULE" ];
-      devices = [ "/dev/net/tun:/dev/net/tun" ];
-      privileged = true;
+  #==========================================================================
+  # CONTAINER — one per instance
+  #==========================================================================
+  tunnelSpec = name: i: {
+    image = i.image;
 
-      # Ports exposed through gluetun for VPN-dependent containers
-      ports = [
-        "127.0.0.1:8080:8080"  # qBittorrent UI (Caddy proxies to localhost)
-        "127.0.0.1:8081:8085"  # SABnzbd (container uses 8085 internally)
-        "127.0.0.1:5010:5010"  # Mousehole (MAM IP updater)
-        "127.0.0.1:8000:8000"  # Gluetun control server (port forwarding status)
-      ];
+    # The tunnel itself sits on the media network; its passengers sit in ITS
+    # netns and are reachable from the media network at i.networkAlias.
+    networkMode = "media-network";
+    networkAliases = [ i.networkAlias ];
 
-      # Volume mounts
-      volumes = [ "${cfgRoot}:/gluetun" ];
+    capabilities = [ "NET_ADMIN" "SYS_MODULE" ];
+    devices = [ "/dev/net/tun:/dev/net/tun" ];
+    privileged = true;
 
-      # Environment from agenix-generated file
-      environmentFiles = [ "${cfgRoot}/.env" ];
+    # Every port belonging to a container in this netns, plus the control
+    # server (container side is always 8000).
+    ports = i.ports ++ [ "127.0.0.1:${toString i.controlPort}:8000" ];
 
-      # Static environment
-      environment = {
-        TZ = config.time.timeZone or "America/Denver";
-        DOT = "off";  # Disable DNS over TLS - was causing timeouts
-        DNS_ADDRESS = "1.1.1.1";  # Use Cloudflare DNS
-        # Disable control server auth so port-sync service can query forwarded port
-        HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE = ''{"auth":"none"}'';
-      };
+    volumes = [ "${dataDir name}:/gluetun" ];
 
-      # Pre-start script to generate env file from agenix secrets
-      preStartScript = ''
-        mkdir -p ${cfgRoot}
-        WG_PRIVATE_KEY=$(cat ${config.age.secrets.vpn-wireguard-private-key.path})
-        cat > ${cfgRoot}/.env <<EOF
-# ProtonVPN WireGuard + NAT-PMP port forwarding.
+    environmentFiles = [ "${dataDir name}/.env" ];
+
+    environment = {
+      TZ = config.time.timeZone or "America/Denver";
+      DOT = "off";                # DNS over TLS was causing timeouts
+      DNS_ADDRESS = i.dns;
+      # Control server auth off so port-sync and the health check can query the
+      # forwarded port over loopback.
+      HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE = ''{"auth":"none"}'';
+    };
+
+    # Env file is generated from agenix at start; the private key never lands
+    # in the nix store.
+    preStartScript = ''
+      mkdir -p ${dataDir name}
+      WG_PRIVATE_KEY=$(cat ${config.age.secrets.${i.privateKeySecret}.path})
+      cat > ${dataDir name}/.env <<EOF
+# GENERATED — edit domains/networking/gluetun, not this file.
+# ProtonVPN WireGuard + NAT-PMP port forwarding for instance '${name}'.
 #
-# Server pin, and why it is a known weakness: VPN_SERVICE_PROVIDER=custom means
-# gluetun talks to exactly ONE server and can never fail over. On 2026-08-18
-# 19:20 the previous pin (US-CO#243 / 95.173.221.158, mislabelled "US-UT#52" in
-# this comment for months) stopped answering handshakes. gluetun then restarted
-# the tunnel 4,219 times in 24h against the same dead peer, and the stack was
-# down ~33h. Verified during that outage: the private key, the account and
-# egress were all fine — three other Proton servers handshook instantly with
-# this same key while this one refused.
+# Pinned server: ${if i.wireguard.serverLabel != "" then i.wireguard.serverLabel else "(unlabelled)"}
 #
-# If this pin dies again the symptom is identical: `wg show` inside the netns
-# reads "0 B received", and journalctl shows the healthcheck restart loop.
-# Re-point below to any port-forward-capable Proton WireGuard server; the
-# current list is in the container at /gluetun/servers.json:
-#   podman exec gluetun cat /gluetun/servers.json \
+# VPN_SERVICE_PROVIDER=custom talks to exactly ONE server and can never fail
+# over. If this pin dies the symptom is: `wg show` inside the netns reads
+# "0 B received", and the health check escalates to `failed` after its backoff
+# rather than restarting forever. Re-point hwc.networking.gluetun.instances.
+# ${name}.wireguard.* at any port-forward-capable Proton WireGuard server; the
+# current list is inside the container at /gluetun/servers.json:
+#   podman exec ${name} cat /gluetun/servers.json \
 #     | jq -r '.protonvpn.servers[] | select(.vpn=="wireguard" and .port_forward
 #              and .country=="United States") | "\(.server_name) \(.ips[0]) \(.wgpubkey)"'
-# Proper failover (VPN_SERVICE_PROVIDER=protonvpn, which rotates servers on
-# failure) is the real fix and is tracked separately — it rotates correctly but
-# needs healthcheck tuning that was not verified during this incident.
 VPN_SERVICE_PROVIDER=custom
 VPN_TYPE=wireguard
 WIREGUARD_PRIVATE_KEY=$WG_PRIVATE_KEY
-WIREGUARD_ADDRESSES=10.2.0.2/32
-# US-VA#1 (Ashburn), port-forward capable. Handshake verified 2026-08-19.
-WIREGUARD_PUBLIC_KEY="zAIZj//t14xuriUMSlWk4/J2jox6I/JMzHL1Y3D/WUE="
-WIREGUARD_ENDPOINT_IP=185.156.46.33
-WIREGUARD_ENDPOINT_PORT=51820
-WIREGUARD_PERSISTENT_KEEPALIVE_INTERVAL=25s
-VPN_PORT_FORWARDING=on
+WIREGUARD_ADDRESSES=${i.wireguard.addresses}
+WIREGUARD_PUBLIC_KEY="${i.wireguard.publicKey}"
+WIREGUARD_ENDPOINT_IP=${i.wireguard.endpointIp}
+WIREGUARD_ENDPOINT_PORT=${toString i.wireguard.endpointPort}
+WIREGUARD_PERSISTENT_KEEPALIVE_INTERVAL=${i.wireguard.keepalive}
+VPN_PORT_FORWARDING=${if i.portForwarding.enable then "on" else "off"}
 VPN_PORT_FORWARDING_PROVIDER=protonvpn
 HEALTH_VPN_DURATION_INITIAL=30s
 HEALTH_TARGET_ADDRESS=1.1.1.1:443
 EOF
-        chmod 600 ${cfgRoot}/.env
-        chown root:root ${cfgRoot}/.env
-      '';
-      preStartDeps = [ "agenix.service" ];
+      chmod 600 ${dataDir name}/.env
+      chown root:root ${dataDir name}/.env
+    '';
+    preStartDeps = [ "agenix.service" ];
 
-      # Systemd dependencies
-      systemdAfter = [ "network-online.target" "init-media-network.service" ];
-      systemdWants = [ "network-online.target" ];
-    })
+    systemdAfter = [ "network-online.target" "init-media-network.service" ];
+    systemdWants = [ "network-online.target" ];
+  };
 
-    # Port forwarding sync service - keeps qBittorrent in sync with Gluetun's forwarded port
-    # This is separate because it's a long-running service, not a oneshot
-    (lib.mkIf (cfg.portForwarding.enable && cfg.portForwarding.syncToQbittorrent) {
-      systemd.services.gluetun-port-sync = {
-        description = "Sync Gluetun forwarded port to qBittorrent";
-        after = [ "podman-gluetun.service" "podman-qbittorrent.service" ];
-        requires = [ "podman-gluetun.service" ];
-        wantedBy = [ "multi-user.target" ];
+  #==========================================================================
+  # PORT SYNC — the forwarded port is dynamic; the client must follow it
+  #==========================================================================
+  # Proton rotates the NAT-PMP port. A client left on a stale port keeps
+  # working outbound and silently stops accepting inbound, which looks exactly
+  # like health — the same absence-of-evidence trap that hid the slskd leak for
+  # six weeks. So the port is published to ONE file per instance, and each
+  # client's follower reads that file.
+  portFile = name: "${stateDir name}/forwarded-port";
 
-        path = with pkgs; [ curl jq gawk ];
+  # qBittorrent: live preference update over its API, no restart needed.
+  syncQbittorrent = name: i: ''
+    QBT_API="http://127.0.0.1:${toString config.hwc.media.qbittorrent.webPort}"
+    SID=$(curl -sf -c - "$QBT_API/api/v2/auth/login" \
+      --data "username=admin&password=il0wwlm?" 2>/dev/null | awk '/SID/ {print $NF}' || true)
 
-        serviceConfig = {
-          Type = "simple";
-          Restart = "always";
-          RestartSec = 30;
-        };
+    if [ -n "$SID" ]; then
+      curl -sf -b "SID=$SID" "$QBT_API/api/v2/app/setPreferences" \
+        --data "json={\"listen_port\":$FORWARDED_PORT}" && \
+        echo "Updated qBittorrent listening port to $FORWARDED_PORT" || \
+        echo "Failed to update qBittorrent port"
+    else
+      echo "Could not authenticate with qBittorrent"
+    fi
+  '';
 
-        script = ''
-          set -euo pipefail
+  # slskd: its listen port lives in slskd.yml, which is generated from agenix
+  # secrets by slskd-config-generator. Rather than rewriting the generated file
+  # behind the generator's back (two producers of one line), the generator reads
+  # the port file — so re-running it and restarting the container is the whole
+  # sync. Restart only on change, so a steady port costs nothing.
+  syncSlskd = name: i: ''
+    echo "Regenerating slskd config for port $FORWARDED_PORT and restarting slskd"
+    systemctl restart slskd-config-generator.service
+    systemctl restart podman-slskd.service
+  '';
 
-          GLUETUN_API="http://127.0.0.1:8000"
-          QBT_API="http://127.0.0.1:8080"
-          CHECK_INTERVAL=${toString cfg.portForwarding.checkInterval}
-          LAST_PORT=""
+  syncImpl = {
+    qbittorrent = syncQbittorrent;
+    slskd = syncSlskd;
+  };
 
-          echo "Starting Gluetun port forwarding sync service..."
+  mkPortSync = name: i: {
+    "${name}-port-sync" = {
+      description = "Sync ${name} forwarded port to ${i.portForwarding.syncTo}";
+      # Ordered after the client too: the loop recovers either way, but starting
+      # before it exists means a guaranteed failed auth on every boot.
+      after = [ "podman-${name}.service" "podman-${i.portForwarding.syncTo}.service" ];
+      requires = [ "podman-${name}.service" ];
+      wantedBy = [ "multi-user.target" ];
 
-          # Wait for Gluetun to be ready
-          while ! curl -sf "$GLUETUN_API/v1/portforward" >/dev/null 2>&1; do
-            echo "Waiting for Gluetun API..."
-            sleep 10
-          done
+      path = with pkgs; [ curl jq gawk systemd ];
 
-          while true; do
-            # Get current forwarded port from Gluetun
-            FORWARDED_PORT=$(curl -sf "$GLUETUN_API/v1/portforward" | jq -r '.port // empty')
-
-            if [ -z "$FORWARDED_PORT" ] || [ "$FORWARDED_PORT" = "0" ]; then
-              echo "No forwarded port available yet, waiting..."
-              sleep $CHECK_INTERVAL
-              continue
-            fi
-
-            # Only update if port changed
-            if [ "$FORWARDED_PORT" != "$LAST_PORT" ]; then
-              echo "Port changed: $LAST_PORT -> $FORWARDED_PORT"
-
-              # Get qBittorrent SID (login)
-              SID=$(curl -sf -c - "$QBT_API/api/v2/auth/login" \
-                --data "username=admin&password=il0wwlm?" 2>/dev/null | awk '/SID/ {print $NF}' || true)
-
-              if [ -n "$SID" ]; then
-                # Update qBittorrent listening port
-                curl -sf -b "SID=$SID" "$QBT_API/api/v2/app/setPreferences" \
-                  --data "json={\"listen_port\":$FORWARDED_PORT}" && \
-                  echo "Updated qBittorrent listening port to $FORWARDED_PORT" || \
-                  echo "Failed to update qBittorrent port"
-              else
-                echo "Could not authenticate with qBittorrent"
-              fi
-
-              LAST_PORT="$FORWARDED_PORT"
-            fi
-
-            sleep $CHECK_INTERVAL
-          done
-        '';
+      serviceConfig = {
+        Type = "simple";
+        Restart = "always";
+        RestartSec = 30;
       };
-    })
-  ]);
+
+      script = ''
+        set -euo pipefail
+
+        GLUETUN_API="http://127.0.0.1:${toString i.controlPort}"
+        CHECK_INTERVAL=${toString i.portForwarding.checkInterval}
+        PORT_FILE="${portFile name}"
+        LAST_PORT=""
+
+        mkdir -p "$(dirname "$PORT_FILE")"
+        echo "Starting ${name} port forwarding sync..."
+
+        while ! curl -sf "$GLUETUN_API/v1/portforward" >/dev/null 2>&1; do
+          echo "Waiting for ${name} control API..."
+          sleep 10
+        done
+
+        while true; do
+          FORWARDED_PORT=$(curl -sf "$GLUETUN_API/v1/portforward" | jq -r '.port // empty')
+
+          if [ -z "$FORWARDED_PORT" ] || [ "$FORWARDED_PORT" = "0" ]; then
+            echo "No forwarded port available yet, waiting..."
+            sleep $CHECK_INTERVAL
+            continue
+          fi
+
+          if [ "$FORWARDED_PORT" != "$LAST_PORT" ]; then
+            echo "Port changed: $LAST_PORT -> $FORWARDED_PORT"
+            # Publish first, then act: the follower reads this file, and a crash
+            # between the two leaves the file authoritative rather than stale.
+            printf '%s' "$FORWARDED_PORT" > "$PORT_FILE"
+
+            ${(syncImpl.${i.portForwarding.syncTo}) name i}
+
+            LAST_PORT="$FORWARDED_PORT"
+          fi
+
+          sleep $CHECK_INTERVAL
+        done
+      '';
+    };
+  };
+  tunnels = mkInfraContainers (lib.mapAttrs tunnelSpec instances);
+
+  portSyncServices = lib.concatMapAttrs
+    (name: i: lib.optionalAttrs
+      (i.portForwarding.enable && i.portForwarding.syncTo != null)
+      (mkPortSync name i))
+    instances;
+in
+{
+  # NOTE ON SHAPE: `config` here is a PLAIN attrset, and it has to stay one.
+  # A top-level lib.mkIf/lib.mkMerge whose contents are derived from `config`
+  # (here: the instance set) is forced by the module system's pushDownProperties
+  # before config is fixed — infinite recursion, which is exactly what the first
+  # multi-instance attempt hit. Keep the top-level names literal and let the
+  # VALUES depend on config; mkIf belongs inside a value, never around this set.
+  config = {
+    virtualisation = tunnels.virtualisation;
+
+    systemd.services = lib.mkMerge [ tunnels.systemd.services portSyncServices ];
+
+    systemd.tmpfiles.rules =
+      lib.optionals (instances != {}) (
+        [ "d ${cfg.stateRoot} 0755 root root -" ]
+        ++ lib.mapAttrsToList (name: _: "d ${stateDir name} 0755 root root -") instances
+      );
+  };
 }

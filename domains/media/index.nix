@@ -42,7 +42,6 @@
     ./youtube/index.nix
 
     # ── Infrastructure ─────────────────────────────────────────
-    ./downloaders/index.nix
     ./orchestration/index.nix
     ./media-native/index.nix
     ./scripts/index.nix

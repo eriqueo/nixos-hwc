@@ -903,17 +903,39 @@
   #============================================================================
 
   # Download stack (VPN + clients)
-  hwc.networking.gluetun = {
+  hwc.networking.gluetun.instances.gluetun = {
     enable = lib.mkDefault true;
+    privateKeySecret = "vpn-wireguard-private-key";
+
+    # US-VA#1 (Ashburn), port-forward capable. Handshake verified 2026-08-19,
+    # replacing US-CO#243 / 95.173.221.158 after it stopped answering handshakes
+    # on 2026-08-18 19:20 and took the download stack down for ~33h.
+    wireguard = {
+      serverLabel = "US-VA#1 (Ashburn)";
+      publicKey = "zAIZj//t14xuriUMSlWk4/J2jox6I/JMzHL1Y3D/WUE=";
+      endpointIp = "185.156.46.33";
+      addresses = "10.2.0.2/32";
+    };
+
+    controlPort = 8000;
+
+    # Published on behalf of the containers living in this netns; they cannot
+    # publish their own.
+    ports = [
+      "127.0.0.1:8080:8080"  # qBittorrent UI (Caddy proxies to localhost)
+      "127.0.0.1:8081:8085"  # SABnzbd (container uses 8085 internally)
+      "127.0.0.1:5010:5010"  # Mousehole (MAM IP updater)
+    ];
+
     portForwarding = {
       enable = lib.mkDefault true;
-      syncToQbittorrent = lib.mkDefault true;
+      syncTo = "qbittorrent";
       checkInterval = 60;
     };
     healthCheck = {
       enable = lib.mkDefault true;
-      checkInterval = 300; # every 5 minutes
-      failuresBeforeRestart = 3; # auto-restart after 15 min down
+      checkInterval = 300;        # every 5 minutes
+      failuresBeforeRestart = 3;  # first auto-restart after 15 min down
     };
   };
   hwc.media.qbittorrent.enable = lib.mkDefault true;
@@ -938,15 +960,16 @@
   # Media discovery + download management
   hwc.media.jellyseerr.enable = lib.mkDefault true;
   # HOLD 2026-08-20 — slskd is OFF because it egresses on the real IP.
-  # It has never been inside the tunnel: hwc.media.slskd.network.mode defaults
-  # to "media", so mkContainer gives it --network=media-network while gluetun,
-  # qBittorrent and SABnzbd share one netns. Verified by podman inspect: slskd
-  # held its own SandboxKey and moved ~29.4 GB out / 15.5 GB in that way over
-  # six weeks. `systemctl stop podman-slskd` does not hold — a rebuild or reboot
-  # starts it leaking again, which is exactly what happened between 08-19 and
-  # 08-20 — so the hold is declarative.
-  # REMOVE WHEN: slskd runs in its own gluetun instance (gluetun-slskd) with its
-  # own Proton key and forwarded port, and the leak sweep in the plan passes.
+  # It had never been inside the tunnel: network.mode used to default to "media",
+  # so mkContainer gave it --network=media-network while gluetun, qBittorrent and
+  # SABnzbd shared one netns. Verified by podman inspect — slskd held its own
+  # SandboxKey and moved ~29.4 GB out / 15.5 GB in that way over six weeks.
+  # `systemctl stop podman-slskd` does not hold (a rebuild or reboot restarts it,
+  # which is what happened between 08-19 and 08-20), so the hold is declarative.
+  # The default is now "vpn" and clearnet is a build failure, so re-enabling
+  # cannot reproduce the leak — what it still needs is the tunnel to attach to.
+  # REMOVE WHEN: hwc.networking.gluetun.instances.gluetun-slskd exists (needs a
+  # second Proton WireGuard key + agenix secret) and the leak sweep passes.
   # soularr goes with it: it has an assertion requiring slskd enabled, and with
   # slskd down it has nothing to hand a grab to.
   hwc.media.slskd.enable = false;
