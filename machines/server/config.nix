@@ -937,8 +937,20 @@
 
   # Media discovery + download management
   hwc.media.jellyseerr.enable = lib.mkDefault true;
-  hwc.media.slskd.enable = lib.mkDefault true;
-  hwc.media.soularr.enable = lib.mkDefault true;
+  # HOLD 2026-08-20 — slskd is OFF because it egresses on the real IP.
+  # It has never been inside the tunnel: hwc.media.slskd.network.mode defaults
+  # to "media", so mkContainer gives it --network=media-network while gluetun,
+  # qBittorrent and SABnzbd share one netns. Verified by podman inspect: slskd
+  # held its own SandboxKey and moved ~29.4 GB out / 15.5 GB in that way over
+  # six weeks. `systemctl stop podman-slskd` does not hold — a rebuild or reboot
+  # starts it leaking again, which is exactly what happened between 08-19 and
+  # 08-20 — so the hold is declarative.
+  # REMOVE WHEN: slskd runs in its own gluetun instance (gluetun-slskd) with its
+  # own Proton key and forwarded port, and the leak sweep in the plan passes.
+  # soularr goes with it: it has an assertion requiring slskd enabled, and with
+  # slskd down it has nothing to hand a grab to.
+  hwc.media.slskd.enable = false;
+  hwc.media.soularr.enable = false;
 
   # Video transcoding (disabled — high resource usage)
   hwc.media.tdarr.enable = false;
