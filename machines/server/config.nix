@@ -986,6 +986,13 @@
   #   reallocates. gluetun-slskd therefore needs its OWN Proton WireGuard key
   #   and its own agenix secret — not a reuse of vpn-wireguard-private-key.
   #
+  #   That is causal, not correlational, and the control is in the same run:
+  #   all three changes fell inside the ~90s the two sessions overlapped, and
+  #   gluetun logged each one itself ("ERROR [port forwarding] external port
+  #   changed"). The moment the second session was torn down the port sat at
+  #   36809 for 13 consecutive samples across ~10 minutes with no further
+  #   change. Overlap → churn, no overlap → stable, one variable.
+  #
   #   NOT verified, and inferred rather than measured: that two DISTINCT keys
   #   hold two STABLE ports. Per-session allocation is proven and the churn was
   #   tied to key reuse, so distinct keys should be the well-supported case —
