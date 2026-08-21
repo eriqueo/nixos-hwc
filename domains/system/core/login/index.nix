@@ -99,26 +99,34 @@ in
             export WLR_NO_HARDWARE_CURSORS=1
             export HYPRLAND_LOG_WLR=1
 
-            # Pin the compositor to the Intel iGPU. Aquamarine enumerates every
-            # DRM card it finds, so without this Hyprland also opens the NVIDIA
-            # node and holds it for the life of the session. That card carries
-            # no connectors on this machine (all of eDP-1/DP-*/HDMI-A-1 hang off
-            # the i915 card), so it renders nothing — it just pins the dGPU
-            # awake at ~11W and makes runtime suspend unreachable:
-            # runtime_suspended_time read 0 against 5.5 days of uptime, i.e. the
-            # GPU had never once suspended despite DynamicPowerManagement=2 and
-            # power/control=auto both being correct.
+            # DO NOT set AQ_DRM_DEVICES here without testing it first from a TTY.
+            # Tried 2026-08-21 and reverted the same hour — it does not boot:
             #
-            # Addressed by-path, not cardN: DRM numbering is not stable across
-            # boots, and on this box the NVIDIA card enumerates first (card0),
-            # so a hardcoded card1 would silently invert after a reshuffle.
+            #   export AQ_DRM_DEVICES=/dev/dri/by-path/pci-0000:00:02.0-card
             #
-            # Unlike the PRIME vars below, this does not route libglvnd or libva
-            # anywhere — it only narrows which DRM device the backend opens, so
-            # it does not reintroduce the mixed-vendor EGL problem described
-            # there. Per-process NVIDIA offload (gpu-launch, blender-offload) is
-            # unaffected; those go through the render node, not the compositor.
-            export AQ_DRM_DEVICES=/dev/dri/by-path/pci-0000:00:02.0-card
+            # Hyprland 0.56 aborted in CCompositor::initServer (throwError →
+            # SIGABRT), twice, and greetd gave up with "greeter exited without
+            # creating a session". Aquamarine rejects the value outright rather
+            # than falling back to enumeration, so a bad value is not degraded
+            # behaviour, it is an unbootable desktop. The by-path form is the
+            # prime suspect (a symlink, not a real device node) but that was
+            # never confirmed — /dev/dri/card1 is untried.
+            #
+            # The underlying problem is real and still unfixed: aquamarine
+            # enumerates every DRM card, so Hyprland opens the NVIDIA node and
+            # holds it for the life of the session. That card has no connectors
+            # here (eDP-1 and every DP-*/HDMI-A-1 hang off the i915 card), so it
+            # renders nothing and only pins the dGPU awake at ~11W — about 40%
+            # of a 27.8W idle draw. runtime_suspended_time read 0 against 5.5
+            # days of uptime, despite DynamicPowerManagement=2, power/control=
+            # auto, and hardware.nvidia.powerManagement.finegrained = true all
+            # being correct. The power config is not the fault; the compositor's
+            # device enumeration is.
+            #
+            # To retry safely: log in on a bare TTY, stop greetd, and run
+            # `AQ_DRM_DEVICES=<candidate> Hyprland` by hand. A failure there
+            # costs a shell prompt, not the session. Only land a value here once
+            # it has actually started a compositor.
 
             # NVIDIA PRIME env (__NV_PRIME_RENDER_OFFLOAD, __GLX_VENDOR_LIBRARY_NAME,
             # __VK_LAYER_NV_optimus, LIBVA_DRIVER_NAME=nvidia) is intentionally NOT
