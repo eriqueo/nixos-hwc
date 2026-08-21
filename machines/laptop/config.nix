@@ -225,10 +225,26 @@
   # non-interactively (passphraseless key / Tailscale SSH) for the eric-run
   # service to push. Verify after rebuild: `systemctl start brain-vault-sync`.
   hwc.automation.vaultSync.enable = true;
-  # Event-driven: push within ~3s of any vault CRUD (Claude Code / CLI /
-  # Obsidian), instead of waiting up to the 15-min timer. The timer stays on for
-  # the periodic pull + as a backstop.
-  hwc.automation.vaultSync.watch.enable = true;
+  # Watcher DISABLED 2026-08-20. It pushed within ~3s of any vault CRUD, which
+  # was right when humans (Obsidian/CLI) were the write source. Agents are now
+  # the dominant one — 475 of 621 vault commits in the last 30 days were
+  # `vault-sync: hwc-laptop auto-commit`, peaking at 125 in a day — and an agent
+  # mid-edit-sequence produces incoherent intermediate states (a rename half
+  # applied, a pointer updated before its target). At a 3s debounce the watcher
+  # does not merely fail to help there; it commits the half-state under a generic
+  # message and pushes it to the hub. Observed twice on 2026-08-20: four edits
+  # became two commits in the same minute, so the reasoning had to land as a
+  # separate annotation commit.
+  #
+  # The 15-min timer stays on and is longer than most edit bursts, so it covers
+  # the real case. A lock was considered and rejected: it would need every write
+  # path (Write/Edit/brain-mcp/cloud connector) as a participant, and its failure
+  # mode inverts — an agent that dies holding it stops the vault syncing SILENTLY,
+  # which is worse than a wrong commit message under R3.
+  #
+  # Re-enable only if the vault stops being agent-written, or alongside a lock
+  # that has a timeout and a staleness surface. hwc-server never ran the watcher.
+  hwc.automation.vaultSync.watch.enable = false;
 
   # Seagate Backup Plus Drive — NTFS via ntfs3 kernel driver
   # UUID-based so it works regardless of device enumeration order (/dev/sdb vs /dev/sdc etc.)

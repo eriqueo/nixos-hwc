@@ -29,8 +29,9 @@ domains/automation/vault-sync/
 # Server: timer-only is fine (overnight automation + brain-mcp commit on their own).
 hwc.automation.vaultSync.enable = true;            # every 15 min by default
 
-# Laptop: add the event-driven watcher so interactive edits push in seconds.
-hwc.automation.vaultSync.watch.enable = true;      # debounce 3s (watch.debounceSec)
+# Laptop: timer-only too, as of 2026-08-20. The watcher is OFF on both hosts —
+# see the Changelog. Enable it only where a HUMAN is the dominant write source.
+hwc.automation.vaultSync.watch.enable = false;     # debounce 3s (watch.debounceSec)
 ```
 
 ## Design Decisions
@@ -63,6 +64,19 @@ hwc.automation.vaultSync.watch.enable = true;      # debounce 3s (watch.debounce
 
 ## Changelog
 
+- 2026-08-20: **Watcher disabled on hwc-laptop** (`watch.enable = false`); both hosts are
+  now timer-only. The 3s debounce was correct when humans were the dominant write source;
+  agents now are — 475 of 621 vault commits in the prior 30 days were
+  `vault-sync: hwc-laptop auto-commit`, peaking at 125 in one day. An agent mid-edit
+  produces incoherent intermediate states, and at 3s the watcher commits and pushes the
+  half-state under a generic message (observed twice on 2026-08-20: four edits became two
+  commits in the same minute). The existing flock serializes git-against-git — timer,
+  watcher, brain-mcp — but an agent editing files is not a participant and holds nothing,
+  so the lock never covered this. A new agent-scoped lock was rejected: it needs every
+  write path as a participant, and its failure mode inverts to a SILENT sync stall, worse
+  than a wrong commit message under R3. The 15-min timer is longer than most edit bursts
+  and still provides the periodic pull. Re-enable only if the vault stops being
+  agent-written, or alongside a lock with a timeout and a staleness surface.
 - 2026-06-15: Created. Replaces Syncthing as the laptop↔server vault transport (Tier-2
   migration). Root-cause fix follow-on to the declarative `.stignore` work in
   domains/data/syncthing.
