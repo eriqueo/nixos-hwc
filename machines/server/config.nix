@@ -971,13 +971,28 @@
   # REMOVE WHEN: hwc.networking.gluetun.instances.gluetun-slskd exists (needs a
   # second Proton WireGuard key + agenix secret) and the leak sweep passes.
   #
-  # CHECK THIS FIRST, it is the assumption the whole design rests on and it is
-  # UNVERIFIED: that Proton will forward a port on a SECOND simultaneous
-  # WireGuard session on this account. Bring the new config up in a throwaway
-  # gluetun on a spare control port while the live tunnel is up, and confirm
-  # /v1/portforward returns a non-zero port on BOTH. If it does not, a second
-  # tunnel buys nothing and the choice collapses back to "who gets the one
-  # port" — qBittorrent's seeding or slskd's search/browse/uploads.
+  # The assumption the design rests on was TESTED LIVE on 2026-08-20, twice, with
+  # a throwaway gluetun on control port 8099 alongside the live tunnel:
+  #
+  #   VERIFIED: Proton allocates the forwarded port PER SESSION, not per account.
+  #   The second tunnel (US-GA#222) got its own port — 48542, then 38710 on a
+  #   later run — while the live tunnel simultaneously held one. So a second
+  #   tunnel does buy slskd an inbound port; the design is sound.
+  #
+  #   RULED OUT: sharing this key between the two tunnels. Both test runs used
+  #   the SAME private key, and with two sessions on one key the NAT-PMP leases
+  #   fight: over three minutes the live tunnel's port walked 42384 → 43212 →
+  #   56838 → 36809 while the secondary went 38710 → 42937. Each renewal
+  #   reallocates. gluetun-slskd therefore needs its OWN Proton WireGuard key
+  #   and its own agenix secret — not a reuse of vpn-wireguard-private-key.
+  #
+  #   NOT verified, and inferred rather than measured: that two DISTINCT keys
+  #   hold two STABLE ports. Per-session allocation is proven and the churn was
+  #   tied to key reuse, so distinct keys should be the well-supported case —
+  #   but watch the first day of `gluetun-slskd-port-sync` logs for the same
+  #   walk before trusting it. Churn is survivable (port-sync tracked all three
+  #   changes and qBittorrent followed within 60s each time) but it means
+  #   inbound keeps moving, which is most of what the port was for.
   # soularr goes with it: it has an assertion requiring slskd enabled, and with
   # slskd down it has nothing to hand a grab to.
   hwc.media.slskd.enable = false;
