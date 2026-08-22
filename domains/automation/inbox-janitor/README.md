@@ -143,6 +143,28 @@ distinct live gdrive investigations share `datax__ops__gdrive__` — so inferrin
 from filenames would delete parallel work while sounding precise.
 
 ## Changelog
+- 2026-08-22: **`downloads/agent/` reorganized to `agent/<project>/<file>` and two
+  reports added.** The flat bucket + `<domain>__<class>__<nouns>` filename convention
+  measured **23% conformance (68 of 290 files) with zero near-misses** — no file used
+  `__` with the wrong vocabulary, so nobody half-remembered the rule; they had never
+  been shown it. `path-conventions.sh` matched `downloads/agent/*` and fell through
+  with no rule, enforcing the directory and never the name (R4: enforced or guideline,
+  nothing in between). It now enforces the project shape at write time.
+  `report_agent_layout()` names loose files at agent/ root — under the new layout a
+  directory is expected and a loose file is the violation, inverting
+  `report_unexpected_dirs()`. `report_dangling_agent_citations()` names references to
+  `downloads/agent/<path>` whose target is gone; it is the check the 2026-08-16
+  premortem was missing when it observed that agent/ "already loses referenced
+  artifacts on its own" — seven were dangling on first run, including a git bundle
+  kept as a pre-migration backup and the only copy of ready-to-send customer reply
+  drafts (three recovered from Syncthing versions). Tombstoned references (`[LOST`,
+  `~~…~~`, "deleted") are skipped so the check goes quiet once a loss is acknowledged.
+  Neither report deletes: the premortem's argument against a scheduled deleter here
+  still stands. `preview_skip_dirs` now lists `agent` itself rather than seven
+  individual bundles — **load-bearing**, not tidiness: without it a `--all` sweep
+  matches every project file against `agent-unsorted` and flattens 357 files into
+  `_unsorted/` in one run (measured). The `agent-stale`/`agent` rules were retired
+  with the flat layout; `_stale/` was emptied (79 files, none referenced).
 - 2026-08-16 (b): Added `report_unexpected_dirs()` — the default drain now names
   any top-level dir under `downloads/` that no rule produces and no skip entry
   claims. Report-only; never moves, never fails the drain. Finished the v1→PARA
