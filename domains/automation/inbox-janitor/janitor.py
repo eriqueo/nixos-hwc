@@ -394,6 +394,109 @@ def report_unexpected_dirs(cfg: dict, log) -> list:
     return strays
 
 
+def report_agent_layout(cfg: dict, log) -> list:
+    """Report loose files sitting at the ROOT of downloads/agent/.
+
+    Since 2026-08-22 agent output is addressed `agent/<project>/<file>` — the
+    project directory is the unit, not a derived filename. That inverts the old
+    rule: a directory under agent/ is now EXPECTED, and a loose file at agent/
+    root is the violation, because it is output nobody scoped to a project.
+
+    Report-only, like report_unexpected_dirs. Which project a stray belongs to
+    is a judgement the router cannot make (module docstring: semantics-from-
+    filenames measured ~44% wrong); only the authoring agent knows.
+    """
+    agent = Path(cfg["meta"]["inbox_root"]) / "downloads/agent"
+    strays = []
+    try:
+        strays = sorted(p for p in agent.iterdir()
+                        if p.is_file() and not p.name.startswith("."))
+    except OSError:
+        return []
+    if strays:
+        log(f"  LOOSE AT agent/ ROOT: {len(strays)} file(s) — agent output belongs "
+            f"in agent/<project>/, not at the root:")
+        for p in strays[:20]:
+            log(f"    {p.name}")
+        if len(strays) > 20:
+            log(f"    … and {len(strays) - 20} more")
+    return strays
+
+
+# Agent session scratch that MENTIONS agent/ paths without citing them. Excluded
+# from the citation scan: transcripts and run journals quote paths the agent was
+# merely considering, so counting them makes every file look referenced (measured
+# 2026-08-22: 24 false "dangling" hits vs 4 real ones).
+_CITE_EXCLUDE = ["--glob", "!**/.git/**", "--glob", "!**/*.jsonl",
+                 "--glob", "!**/tool-results/**", "--glob", "!**/workflows/**"]
+
+_CITE_ROOTS = ["900_vaults/brain", ".claude/projects", "700_datax", ".nixos"]
+
+# Markers an author writes when they already know the target is gone. Matched on
+# the citing LINE, so annotating a dead reference in place is what retires it —
+# no second list to keep in sync with the notes themselves (one producer).
+_TOMBSTONE = re.compile(
+    r"\[LOST|\*\*LOST|\bdeleted\b|delete on sight|no longer exists|"
+    r"applied and deleted|~~", re.I)
+
+
+def report_dangling_agent_citations(cfg: dict, log) -> list:
+    """Report references to downloads/agent/<path> whose target does not exist.
+
+    This is the check the 2026-08-16 premortem was missing. That premortem
+    refused a scheduled delete tier because "agent/ already loses referenced
+    artifacts on its own" — true, and the reason it stayed true is that nothing
+    ever looked. Seven references were dangling when this was first run
+    (2026-08-22), including a git bundle held as a pre-migration backup and the
+    only copy of ready-to-send customer reply drafts.
+
+    Report-only, and deliberately NOT a delete trigger: the premortem's argument
+    against automated deletion here still stands. This makes the loss visible in
+    a day instead of never, which is the whole fix.
+    """
+    import subprocess
+    home = Path.home()
+    inbox = Path(cfg["meta"]["inbox_root"])
+    pat = r"downloads/agent/[A-Za-z0-9_./+()-]+\.[A-Za-z0-9]+"
+    refs: dict[str, set] = {}
+    for rel in _CITE_ROOTS:
+        root = home / rel
+        if not root.exists():
+            continue
+        try:
+            r = subprocess.run(["rg", "--no-heading", "--with-filename",
+                                *_CITE_EXCLUDE, pat, str(root)],
+                               capture_output=True, text=True, timeout=300)
+        except (OSError, subprocess.SubprocessError) as e:
+            log(f"  citation scan WARN: {rel}: {e}")
+            continue
+        for line in r.stdout.splitlines():
+            src, _, content = line.partition(":")
+            if not content:
+                continue
+            # A reference the author already marked dead is a tombstone, not a
+            # dangling pointer. Without this the check re-reports the same known
+            # losses forever, and this config's own note is right that a check
+            # which cries wolf is a check that gets ignored.
+            if _TOMBSTONE.search(content):
+                continue
+            for hit in re.findall(pat, content):
+                refs.setdefault(hit.split("downloads/agent/", 1)[1], set()).add(src)
+
+    dangling = []
+    for target in sorted(refs):
+        if not (inbox / "downloads/agent" / target).exists():
+            dangling.append(target)
+    if dangling:
+        log(f"  DANGLING AGENT CITATIONS: {len(dangling)} referenced file(s) do not exist:")
+        for t in dangling:
+            srcs = sorted(refs[t])
+            log(f"    agent/{t}")
+            for s in srcs[:3]:
+                log(f"       cited by {s}")
+    return dangling
+
+
 def run(cfg: dict, apply: bool, all_mode: bool, log, locations: Optional[list] = None) -> dict:
     stats: dict[str, int] = {}
     touched: set[Path] = set()
@@ -430,6 +533,8 @@ def run(cfg: dict, apply: bool, all_mode: bool, log, locations: Optional[list] =
         log(f"  {stats[b]:5}  {b}/")
     if not locations and not all_mode:
         report_unexpected_dirs(cfg, log)
+        report_agent_layout(cfg, log)
+        report_dangling_agent_citations(cfg, log)
     if apply:
         republish(touched, cfg, log)
     return stats
