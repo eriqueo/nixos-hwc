@@ -1,5 +1,5 @@
 // Gate: wired-or-labeled. Applies to non-trivial items.
-// Discipline: ~/.claude/engineering-principles/engineering-principles.md,
+// Discipline: ~/.claude/engineering-principles.md,
 // Part III (Governing) — R4, Enforced or Guideline — Nothing in Between.
 
 import { z } from "zod";
@@ -15,7 +15,7 @@ export type WiredOrLabeledVerdict = z.infer<typeof WiredOrLabeledVerdictSchema>;
 
 const SPEC = {
   discipline: "wired-or-labeled",
-  source: "~/.claude/engineering-principles/engineering-principles.md (Part III — R4, Enforced or Guideline)",
+  source: "~/.claude/engineering-principles.md (Part III — R4, Enforced or Guideline)",
   guidance:
     "If the change introduces a rule, standard, or convention, it must either " +
     "ship a mechanical check (lint, flake check, hook, test) or be explicitly " +

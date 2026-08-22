@@ -1,6 +1,6 @@
 // Gate: bounded-capacity. Applies to non-trivial items (greenfield designs and
 // brownfield changes can both add unbounded growth).
-// Discipline: ~/.claude/engineering-principles/engineering-principles.md,
+// Discipline: ~/.claude/engineering-principles.md,
 // Part II — Principle 13, Bounded Capacity.
 
 import { z } from "zod";
@@ -16,7 +16,7 @@ export type BoundedCapacityVerdict = z.infer<typeof BoundedCapacityVerdictSchema
 
 const SPEC = {
   discipline: "bounded-capacity",
-  source: "~/.claude/engineering-principles/engineering-principles.md (Part II — Principle 13, Bounded Capacity)",
+  source: "~/.claude/engineering-principles.md (Part II — Principle 13, Bounded Capacity)",
   guidance:
     "Everything that grows needs an explicit limit and a designed behavior at " +
     "the limit. Flow: every queue, buffer, pool, retry loop, and fan-out gets a " +

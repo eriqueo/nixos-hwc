@@ -2,7 +2,7 @@
 
 You are running headless in a disposable git worktree. **The worktree you are in
 IS the app to refine.** This is a brownfield refactor of an existing, working app
-toward Eric's engineering principles (`~/.claude/engineering-principles/*`). Your
+toward Eric's engineering principles (`~/.claude/engineering-principles.md`). Your
 prime directive: **do not break working behavior.** Make the smallest correct
 change; never bundle unrelated edits.
 

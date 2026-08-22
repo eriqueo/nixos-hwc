@@ -1,6 +1,6 @@
 // Gate: session-output-routed. Applies to write-mode items (the ones that
 // land reports, plans, and scratch artifacts).
-// Discipline: ~/.claude/engineering-principles/engineering-principles.md,
+// Discipline: ~/.claude/engineering-principles.md,
 // Part III (Governing) — R8, Ephemeral Until Promoted.
 
 import { z } from "zod";
@@ -16,7 +16,7 @@ export type SessionOutputRoutedVerdict = z.infer<typeof SessionOutputRoutedVerdi
 
 const SPEC = {
   discipline: "session-output-routed",
-  source: "~/.claude/engineering-principles/engineering-principles.md (Part III — R8, Ephemeral Until Promoted)",
+  source: "~/.claude/engineering-principles.md (Part III — R8, Ephemeral Until Promoted)",
   guidance:
     "Session and agent output (reports, plans, analyses, scratch files) is " +
     "ephemeral until merged into the one living document for its topic — then " +

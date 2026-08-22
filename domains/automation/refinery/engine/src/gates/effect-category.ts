@@ -1,5 +1,5 @@
 // Gate: effect-category. Applies to non-trivial items.
-// Discipline: ~/.claude/engineering-principles/engineering-principles.md,
+// Discipline: ~/.claude/engineering-principles.md,
 // Part II — Principle 14, Effects Are Idempotent, Keyed, or Marked.
 
 import { z } from "zod";
@@ -15,7 +15,7 @@ export type EffectCategoryVerdict = z.infer<typeof EffectCategoryVerdictSchema>;
 
 const SPEC = {
   discipline: "effect-category",
-  source: "~/.claude/engineering-principles/engineering-principles.md (Part II — Principle 14, Effects Are Idempotent, Keyed, or Marked)",
+  source: "~/.claude/engineering-principles.md (Part II — Principle 14, Effects Are Idempotent, Keyed, or Marked)",
   guidance:
     "Every externally visible effect (email, API mutation, payment, file write) " +
     "must be classified as exactly one of three things, decided before any retry " +

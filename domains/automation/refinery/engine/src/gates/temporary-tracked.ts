@@ -1,6 +1,6 @@
 // Gate: temporary-tracked. Applies to non-trivial items (a trivial rename
 // doesn't introduce shims).
-// Discipline: ~/.claude/engineering-principles/engineering-principles.md,
+// Discipline: ~/.claude/engineering-principles.md,
 // Part III (Governing) — R5, Temporary Means Tracked.
 
 import { z } from "zod";
@@ -16,7 +16,7 @@ export type TemporaryTrackedVerdict = z.infer<typeof TemporaryTrackedVerdictSche
 
 const SPEC = {
   discipline: "temporary-tracked",
-  source: "~/.claude/engineering-principles/engineering-principles.md (Part III — R5, Temporary Means Tracked)",
+  source: "~/.claude/engineering-principles.md (Part III — R5, Temporary Means Tracked)",
   guidance:
     "Audit the change for temporary artifacts: every shim, pin, wrapper, " +
     "workaround, feature flag, and principle exception must carry an annotation " +

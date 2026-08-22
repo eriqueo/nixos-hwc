@@ -1,6 +1,6 @@
 // Gate: promotion-rule. Applies to write-mode items (only landed diffs can
 // duplicate sibling lines).
-// Discipline: ~/.claude/engineering-principles/engineering-principles.md,
+// Discipline: ~/.claude/engineering-principles.md,
 // Part II — Principle 10, Layers with a Promotion Rule.
 
 import { z } from "zod";
@@ -16,7 +16,7 @@ export type PromotionRuleVerdict = z.infer<typeof PromotionRuleVerdictSchema>;
 
 const SPEC = {
   discipline: "promotion-rule",
-  source: "~/.claude/engineering-principles/engineering-principles.md (Part II — Principle 10, Layers with a Promotion Rule)",
+  source: "~/.claude/engineering-principles.md (Part II — Principle 10, Layers with a Promotion Rule)",
   guidance:
     "A line a second instance would copy verbatim belongs one layer up. If this " +
     "change copies lines from a same-layer sibling (a second machine file, " +

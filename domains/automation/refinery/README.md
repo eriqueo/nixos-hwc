@@ -51,6 +51,7 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-08-22: Gate `source:` citations re-pointed to the flattened principles path (`~/.claude/engineering-principles.md`; the one-file `engineering-principles/` directory was removed in nixos-hwc cfff0993 / claude-config f745727). Nine gates, 17 string occurrences, plus the `app-refinement.md` prompt's `engineering-principles/*` glob. Citation text only — no gate logic touched. dist/ rebuilt; 202/202.
 - 2026-08-17 (e): **DX1 design pass (hwc-ui workbench register).** (1) One DX1
   section, two tabs: /dx1 (Investigations) + /dx1/fleet share a `sechdr`
   header with a subtabs bar (`GauntletView.section` — registry-driven; sr

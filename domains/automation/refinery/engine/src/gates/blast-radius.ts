@@ -15,7 +15,7 @@ export type BlastRadiusVerdict = z.infer<typeof BlastRadiusVerdictSchema>;
 
 const SPEC = {
   discipline: "blast-radius",
-  source: "~/.claude/engineering-principles/engineering-principles.md (Part IV A §2 — Blast Radius)",
+  source: "~/.claude/engineering-principles.md (Part IV A §2 — Blast Radius)",
   guidance:
     "Before a single line changes, enumerate everywhere its effects are felt: every " +
     "caller, dependent, and shared utility the change touches. Assume every change has " +

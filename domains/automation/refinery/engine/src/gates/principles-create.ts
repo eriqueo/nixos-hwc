@@ -1,5 +1,5 @@
 // Gate: principles-create. Applies to greenfield items (builds something new).
-// Discipline: ~/.claude/engineering-principles/engineering-principles.md,
+// Discipline: ~/.claude/engineering-principles.md,
 // Part II (Creating Systems).
 
 import { z } from "zod";
@@ -15,7 +15,7 @@ export type PrinciplesVerdict = z.infer<typeof PrinciplesVerdictSchema>;
 
 const SPEC = {
   discipline: "principles-create",
-  source: "~/.claude/engineering-principles/engineering-principles.md (Part II — Creating Systems)",
+  source: "~/.claude/engineering-principles.md (Part II — Creating Systems)",
   guidance:
     "Audit the design against the creating-systems canon: (1) hexagonal — core " +
     "knows nothing about HTTP/FS/APIs; (2) data-driven rendering; (3) environment " +
