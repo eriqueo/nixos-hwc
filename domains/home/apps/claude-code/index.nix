@@ -37,7 +37,7 @@ in
           "agents"
           "commands"
           "CLAUDE.md"
-          "engineering-principles"
+          "engineering-principles.md"
           # Individual files, not the hooks/ dir — ~/.claude/hooks also holds
           # host-local hooks (herdr-agent-state.sh) that must stay unmanaged.
           "hooks/principles-primer.sh"
