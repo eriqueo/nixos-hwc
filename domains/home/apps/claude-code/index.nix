@@ -182,6 +182,31 @@ in
             matcher = "Bash|mcp__git__git_commit";
             hooks = [ { type = "command"; command = hookCmd "charter-gate.sh"; timeout = 15; statusMessage = "Charter gate"; } ];
           };
+          # Standing instructions: PREVENTION. A rule that binds every response
+          # has no triggering task, so the memory index's pointer is never
+          # opened — measured 2026-08-22, 42 of 53 sessions since the rule was
+          # written never named its file. `inject` puts the rule TEXT in the
+          # turn; `sync` regenerates the block in CLAUDE.md, which is the only
+          # surface a SUBAGENT loads. Both are needed: sync alone cannot reach
+          # the session already running.
+          standingInject = {
+            matcher = "*";
+            hooks = [ { type = "command"; command = "${hookCmd "standing-instructions.sh"} inject"; timeout = 10; statusMessage = "Standing instructions"; } ];
+          };
+          standingSync = {
+            matcher = "*";
+            hooks = [ { type = "command"; command = "${hookCmd "standing-instructions.sh"} sync"; timeout = 10; } ];
+          };
+          # Standing instructions: ENFORCEMENT. Checks the one arithmetic rule
+          # in ASD-STE100 (sentence length), never vocabulary — a guard that
+          # fires on judgment calls is wallpaper. Wired on BOTH Stop and
+          # SubagentStop; SubagentStop is what makes this reach a subagent at
+          # all. The guard asks the memory whether the rule is live, so
+          # unmarking the memory silences it without touching this file.
+          ste100Guard = {
+            matcher = "*";
+            hooks = [ { type = "command"; command = hookCmd "ste100-guard.sh"; timeout = 15; statusMessage = "Standing instruction"; } ];
+          };
         });
         healJq = pkgs.writeText "claude-settings-heal.jq" ''
           def has_cmd($ev; $frag):
@@ -197,6 +222,10 @@ in
           | ensure("PreToolUse"; "nixos-primer.sh"; $w.nixosPrimer)
           | ensure("PreToolUse"; "path-conventions.sh"; $w.pathConventions)
           | ensure("PreToolUse"; "charter-gate.sh"; $w.charterGate)
+          | ensure("UserPromptSubmit"; "standing-instructions.sh inject"; $w.standingInject)
+          | ensure("UserPromptSubmit"; "standing-instructions.sh sync"; $w.standingSync)
+          | ensure("Stop"; "ste100-guard.sh"; $w.ste100Guard)
+          | ensure("SubagentStop"; "ste100-guard.sh"; $w.ste100Guard)
           | .env.SLASH_COMMAND_TOOL_CHAR_BUDGET = (.env.SLASH_COMMAND_TOOL_CHAR_BUDGET // "30000")
         '';
         emptyJson = pkgs.writeText "claude-settings-empty.json" "{}";
