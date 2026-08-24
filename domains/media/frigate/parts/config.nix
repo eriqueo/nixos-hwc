@@ -78,6 +78,25 @@ let
       labelmap_path = "/labelmap/coco-80.txt";
     };
 
+    # Global motion tuning.
+    #
+    # Measured 2026-08-24 against the live recordings DB: every segment carried
+    # motion > 0 on cobra_cam_1 (23.1 motion hours of 23.1 recorded) and reolink
+    # (24.0 of 24.0), while real objects appeared in 0.3 and 1.6 hours. At the
+    # Frigate defaults (threshold 30, contour_area 10, improve_contrast true)
+    # sensor noise registers as motion, so `record.retain.mode = "motion"` thins
+    # nothing and the 3-day window holds the full ~495 GB of continuous footage.
+    #
+    # contour_area is the minimum motion blob size in pixels; 10 is the Frigate
+    # default and catches single-pixel night noise. improve_contrast amplifies
+    # that noise further after dark — Frigate's documented remedy for constant
+    # night motion is to turn it off.
+    motion = {
+      threshold = 40;        # was default 30 — pixel-change sensitivity
+      contour_area = 40;     # was default 10 — reject noise-sized blobs
+      improve_contrast = false;
+    };
+
     record = {
       enabled = true;
       retain = {
