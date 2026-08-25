@@ -58,21 +58,31 @@ CONFIG_XML = "/opt/radarr/config/config.xml"
 BASE = "http://127.0.0.1:7878/api/v3"
 
 # Cap for FUTURE grabs, in MB per minute of runtime, written by --set-max-size.
-# A 120-minute film at 40 MB/min lands near 4.8 GB, about 5.3 Mb/s of video.
-# Qualities absent from this map keep whatever maxSize they already have.
+# Qualities absent from this map keep whatever maxSize they already have —
+# Remux-1080p and Remux-2160p are deliberately absent, because the profiles
+# exclude remuxes outright and a cap there would only make them look permitted.
+#
+# EVERY VALUE MUST EXCEED THAT QUALITY'S minSize. Radarr treats minSize as a
+# floor for accepting a release, so a maxSize below it makes the quality
+# ungrabbable rather than merely capped. A first attempt on 2026-08-24 set
+# Bluray-1080p to 45 against a minSize of 50.8 and did exactly that.
+#
+# The numbers come from live release sizes measured the same day, not from
+# taste: a good 1080p Bluray encode runs 50-90 MB/min, while the REMUX files
+# that caused the problem run 160-275 MB/min. The caps sit between the two.
 FUTURE_MAX_SIZE = {
-    "HDTV-720p": 20.0,
-    "WEBDL-720p": 20.0,
-    "WEBRip-720p": 20.0,
-    "Bluray-720p": 25.0,
-    "HDTV-1080p": 35.0,
-    "WEBDL-1080p": 40.0,
-    "WEBRip-1080p": 40.0,
-    "Bluray-1080p": 45.0,
-    "HDTV-2160p": 70.0,
-    "WEBDL-2160p": 80.0,
-    "WEBRip-2160p": 80.0,
-    "Bluray-2160p": 100.0,
+    "HDTV-720p": 35.0,
+    "WEBDL-720p": 35.0,
+    "WEBRip-720p": 35.0,
+    "Bluray-720p": 45.0,
+    "HDTV-1080p": 60.0,
+    "WEBDL-1080p": 70.0,
+    "WEBRip-1080p": 70.0,
+    "Bluray-1080p": 90.0,
+    "HDTV-2160p": 130.0,
+    "WEBDL-2160p": 130.0,
+    "WEBRip-2160p": 130.0,
+    "Bluray-2160p": 160.0,
 }
 
 MB = 1024 * 1024
@@ -272,26 +282,69 @@ def cmd_report(args, movies, profiles):
 
 
 def cmd_set_max_size(args, key):
+    """Cap future grabs, one definition at a time, then read back.
+
+    Written per item (PUT qualitydefinition/{id}, 202) rather than through the
+    bulk qualitydefinition/update. Both work; the per-item form is used because
+    a failure names the one definition that failed instead of leaving the whole
+    batch ambiguous.
+
+    The read-back at the end is the point. On 2026-08-24 a bulk write was read
+    back too soon, reported as "not persisted", and acted on — the values had
+    in fact been written. Trust the read-back, and take it after the writes.
+    """
     defs = api_list(key, "qualitydefinition")
-    changed = []
+    changed, refused = [], []
     for d in defs:
         name = d["quality"]["name"]
         want = FUTURE_MAX_SIZE.get(name)
         if want is None or d.get("maxSize") == want:
             continue
-        changed.append((name, d.get("maxSize"), want))
-        d["maxSize"] = want
+        # minSize is a floor for ACCEPTING a release. A maxSize at or below it
+        # leaves no size that satisfies both, so the quality stops being
+        # grabbable at all. Refuse rather than write an unusable definition.
+        floor = d.get("minSize") or 0
+        if want <= floor:
+            refused.append((name, floor, want))
+            continue
+        changed.append((name, d.get("maxSize"), want, d["id"], d))
+
+    for name, floor, want in refused:
+        print(f"  REFUSED {name:<16} maxSize {want} is not above minSize {floor}")
+    if refused:
+        print("  A maxSize below minSize makes that quality ungrabbable. "
+              "Raise it in FUTURE_MAX_SIZE.\n")
     if not changed:
-        print("quality definitions already capped; nothing to do")
-        return
+        print("no usable changes to make")
+        return 1 if refused else 0
+
     print("maxSize (MB/min) changes:")
-    for name, old, new in changed:
+    for name, old, new, _id, _d in changed:
         print(f"  {name:<16} {str(old):>8} -> {new}")
     if not args.yes:
         print("\ndry run. Re-run with --yes to write these.")
-        return
-    api(key, "qualitydefinition/update", method="PUT", body=defs)
-    print(f"\nwrote {len(changed)} quality definitions. Future grabs are capped.")
+        return 0
+
+    wrote = 0
+    for name, _old, new, qid, body in changed:
+        body["maxSize"] = new
+        try:
+            api(key, f"qualitydefinition/{qid}", method="PUT", body=body)
+        except RadarrError as e:
+            print(f"  FAILED {name}: {e}")
+            continue
+        wrote += 1
+
+    # Read back rather than trusting the write — that is the whole reason the
+    # bulk endpoint went unnoticed.
+    after = {d["quality"]["name"]: d.get("maxSize") for d in api_list(key, "qualitydefinition")}
+    bad = [n for n, _o, new, _i, _b in changed if after.get(n) != new]
+    print(f"\nwrote {wrote} of {len(changed)} quality definitions.")
+    if bad:
+        print(f"NOT PERSISTED: {', '.join(bad)} — read back different from what was sent")
+        return 1
+    print("Verified by read-back. Future grabs are capped.")
+    return 0
 
 
 def cmd_apply(args, key, movies, profiles):
@@ -388,9 +441,9 @@ def main():
 
     try:
         if args.set_max_size:
-            cmd_set_max_size(args, key)
+            rc = cmd_set_max_size(args, key)
             if not args.apply:
-                return 0
+                return rc
         movies = api_list(key, "movie")
         profiles = {p["id"]: p for p in api_list(key, "qualityprofile")}
         if args.apply:
