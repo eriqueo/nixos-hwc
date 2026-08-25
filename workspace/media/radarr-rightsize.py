@@ -221,6 +221,15 @@ def pick_release(key, cand, max_rate, require_in_profile, allow_lower_res, shrin
         q = (r.get("quality") or {}).get("quality") or {}
         if not allow_lower_res and (q.get("resolution") or 0) < cur_res:
             continue
+        # Cross-check the parsed quality against the release TITLE. Radarr
+        # derives quality from the name, and a mis-named release defeats the
+        # floor: on 2026-08-25 "The.Third.Man.1949.BluRay.480.Plus.Commentaries"
+        # parsed as Bluray-720p and passed a 720p floor. When the title states a
+        # resolution of its own, believe the lower of the two.
+        if not allow_lower_res:
+            claimed = [int(m) for m in re.findall(r"\b(480|576|720|1080|2160)p?\b", r.get("title") or "")]
+            if claimed and max(claimed) < cur_res:
+                continue
         if require_in_profile and not profile_allows(cand["profile"], q.get("name")):
             continue
         eligible.append(r)
@@ -386,15 +395,19 @@ def cmd_apply(args, key, movies, profiles):
             f"{c['size'] / GB:.1f} -> {newsize:.1f} GB  {tier:<9} "
             f"[{(rel.get('quality') or {}).get('quality', {}).get('name')}] {rel.get('title', '')[:52]}"
         )
-        print(line)
+        # Print AFTER the grab succeeds, never before. Printing first made a
+        # failed grab read as a successful one: batch 3 on 2026-08-25 showed six
+        # GRAB lines and reported "grabbed: 5", and only the queue said which
+        # five were real.
         if args.yes:
             try:
                 api(key, "release", method="POST", body={"guid": rel["guid"], "indexerId": rel["indexerId"]})
             except RadarrError as e:
-                print(f"      FAILED: {e}")
+                print(f"FAIL  {title:<44} grab rejected: {e}")
                 skipped += 1
                 time.sleep(args.delay)
                 continue
+        print(line)
         acted += 1
         time.sleep(args.delay)
 
