@@ -938,6 +938,47 @@
       failuresBeforeRestart = 3;  # first auto-restart after 15 min down
     };
   };
+
+  # Second tunnel, for slskd only. Proton forwards exactly one port per
+  # WireGuard SESSION, so slskd cannot share the tunnel above and still hold an
+  # inbound Soulseek port. Both facts were measured live on 2026-08-20: a second
+  # session does get its own port, and two sessions sharing ONE key make the
+  # NAT-PMP leases fight until neither port is stable. Hence its own key.
+  hwc.networking.gluetun.instances.gluetun-slskd = {
+    enable = lib.mkDefault true;
+    privateKeySecret = "vpn-wireguard-private-key-slskd";
+
+    wireguard = {
+      serverLabel = "US-UT#52";
+      publicKey = "fDSDNxB7yfHbaemo7cAFMWBsEm31bVAAradL4hbBEG0=";
+      endpointIp = "74.63.204.210";
+      # IPv4 only, though the Proton config also lists 2a07:b944::2:2/128. The
+      # media podman network carries no IPv6, and the working tunnel above drops
+      # the v6 address the same way. 10.2.0.2/32 duplicating the other tunnel's
+      # address is expected — Proton assigns it per config, and the two live in
+      # separate network namespaces, so they never meet.
+      addresses = "10.2.0.2/32";
+    };
+
+    controlPort = 8001;   # 8000 belongs to the qBittorrent tunnel
+
+    # slskd cannot publish its own ports from inside this netns.
+    ports = [
+      "127.0.0.1:5030:5030"  # slskd web UI
+    ];
+
+    portForwarding = {
+      enable = lib.mkDefault true;
+      syncTo = "slskd";
+      checkInterval = 60;
+    };
+    healthCheck = {
+      enable = lib.mkDefault true;
+      checkInterval = 300;
+      failuresBeforeRestart = 3;
+    };
+  };
+
   hwc.media.qbittorrent.enable = lib.mkDefault true;
   hwc.media.sabnzbd.enable = lib.mkDefault true;
   hwc.media.mousehole.enable = lib.mkDefault true;
@@ -959,51 +1000,26 @@
 
   # Media discovery + download management
   hwc.media.jellyseerr.enable = lib.mkDefault true;
-  # HOLD 2026-08-20 — slskd is OFF because it egresses on the real IP.
-  # It had never been inside the tunnel: network.mode used to default to "media",
-  # so mkContainer gave it --network=media-network while gluetun, qBittorrent and
-  # SABnzbd shared one netns. Verified by podman inspect — slskd held its own
-  # SandboxKey and moved ~29.4 GB out / 15.5 GB in that way over six weeks.
-  # `systemctl stop podman-slskd` does not hold (a rebuild or reboot restarts it,
-  # which is what happened between 08-19 and 08-20), so the hold is declarative.
-  # The default is now "vpn" and clearnet is a build failure, so re-enabling
-  # cannot reproduce the leak — what it still needs is the tunnel to attach to.
-  # REMOVE WHEN: hwc.networking.gluetun.instances.gluetun-slskd exists (needs a
-  # second Proton WireGuard key + agenix secret) and the leak sweep passes.
+  # slskd was held OFF from 2026-08-20 to 2026-08-24 because it egressed on the
+  # real IP: network.mode used to default to "media", so it held its own
+  # SandboxKey and moved ~29.4 GB out / 15.5 GB in over six weeks while every
+  # sibling downloader was tunnelled. The hold's REMOVE WHEN condition is now
+  # met — gluetun-slskd exists above with its own Proton key. The leak itself
+  # can no longer recur by configuration: network.mode defaults to "vpn" and
+  # clearnet is a build failure (domains/media/slskd/index.nix).
   #
-  # The assumption the design rests on was TESTED LIVE on 2026-08-20, twice, with
-  # a throwaway gluetun on control port 8099 alongside the live tunnel:
+  # STILL UNVERIFIED, carried forward from that investigation: that two DISTINCT
+  # keys hold two STABLE forwarded ports. Per-session allocation was proven live,
+  # and the port churn was tied to two sessions sharing ONE key — so distinct
+  # keys are the well-supported case, but they have never been measured. Watch
+  # the first day of gluetun-slskd-port-sync logs for the 42384 → 43212 → 56838
+  # walk before trusting it. Churn is survivable; it just means inbound keeps
+  # moving, which is most of what the port was for.
   #
-  #   VERIFIED: Proton allocates the forwarded port PER SESSION, not per account.
-  #   The second tunnel (US-GA#222) got its own port — 48542, then 38710 on a
-  #   later run — while the live tunnel simultaneously held one. So a second
-  #   tunnel does buy slskd an inbound port; the design is sound.
-  #
-  #   RULED OUT: sharing this key between the two tunnels. Both test runs used
-  #   the SAME private key, and with two sessions on one key the NAT-PMP leases
-  #   fight: over three minutes the live tunnel's port walked 42384 → 43212 →
-  #   56838 → 36809 while the secondary went 38710 → 42937. Each renewal
-  #   reallocates. gluetun-slskd therefore needs its OWN Proton WireGuard key
-  #   and its own agenix secret — not a reuse of vpn-wireguard-private-key.
-  #
-  #   That is causal, not correlational, and the control is in the same run:
-  #   all three changes fell inside the ~90s the two sessions overlapped, and
-  #   gluetun logged each one itself ("ERROR [port forwarding] external port
-  #   changed"). The moment the second session was torn down the port sat at
-  #   36809 for 13 consecutive samples across ~10 minutes with no further
-  #   change. Overlap → churn, no overlap → stable, one variable.
-  #
-  #   NOT verified, and inferred rather than measured: that two DISTINCT keys
-  #   hold two STABLE ports. Per-session allocation is proven and the churn was
-  #   tied to key reuse, so distinct keys should be the well-supported case —
-  #   but watch the first day of `gluetun-slskd-port-sync` logs for the same
-  #   walk before trusting it. Churn is survivable (port-sync tracked all three
-  #   changes and qBittorrent followed within 60s each time) but it means
-  #   inbound keeps moving, which is most of what the port was for.
-  # soularr goes with it: it has an assertion requiring slskd enabled, and with
-  # slskd down it has nothing to hand a grab to.
-  hwc.media.slskd.enable = false;
-  hwc.media.soularr.enable = false;
+  # soularr follows slskd: it asserts slskd is enabled, and with slskd down it
+  # has nothing to hand a grab to.
+  hwc.media.slskd.enable = lib.mkDefault true;
+  hwc.media.soularr.enable = lib.mkDefault true;
 
   # Video transcoding (disabled — high resource usage)
   hwc.media.tdarr.enable = false;
