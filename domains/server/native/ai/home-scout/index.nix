@@ -315,12 +315,9 @@ in
       }];
     };
 
-    # Register for per-database dumps (business/databases precedent). Found by
-    # the same 2026-08-26 premortem that caught research_scout: the dump job
-    # covered datax, datax_monitor and hwc only, and home_scout's listings,
-    # events, parcels and school zones had no backup at all. The ingest is
-    # re-runnable, but the event history and the classifier's verdicts are not.
-    hwc.data.databases.postgresql.backup.perDatabase.databases = [ "home_scout" ];
+    # No per-database backup registration, deliberately — see the same note in
+    # domains/server/native/ai/research-scout/index.nix. home_scout is already
+    # in the nightly pg_dumpall the borg pre-hook writes to /var/lib/backups.
 
     # Local (peer/ident) access for the service user running as `eric` via
     # DATABASE_URL role home_scout requires a password-less local grant; the

@@ -179,17 +179,22 @@ in
       $PSQL -tAc 'GRANT ${dbName} TO ${cfg.user}' || true
     '';
 
-    # Register for per-database dumps (business/databases precedent: the module
-    # that owns the database declares its own backup, so enabling the app and
-    # backing it up cannot drift apart).
+    # NO per-database backup registration here, deliberately (Law 15: exactly
+    # one mechanism per backup concern).
     #
-    # 2026-08-26: found by premortem. The dump job covered datax, datax_monitor
-    # and hwc only. research_scout was on the root nvme, which is in no borg
-    # source path, with no ZFS snapshot — 8,489 items, 6,214 classifications,
-    # 226 deep-read briefs and 2,586 cases had NO backup of any kind, and the
-    # classifications could not be recomputed without repaying the LLM spend.
-    # The dumps land in /var/lib/backups, which borg already carries.
-    hwc.data.databases.postgresql.backup.perDatabase.databases = [ dbName ];
+    # 2026-08-26: a premortem claimed research_scout had no backup, because
+    # postgresql-db-backup dumps only datax/datax_monitor/hwc and the Postgres
+    # data dir is in no borg source path. That claim was WRONG and the
+    # registration it justified was reverted the same day. The borg job's own
+    # pre-hook runs `pg_dumpall` into /var/lib/backups, which IS a borg source;
+    # `CREATE DATABASE research_scout` is present in
+    # /var/lib/backups/postgresql-2026-08-26.sql.gz, and that file is inside
+    # archive hwc-server-hwc-backup-2026-08-26T02:19:57. Verify there, not in
+    # postgresql-db-backup, before concluding a database here is unprotected.
+    #
+    # Registering a second dump would write the same fact twice into
+    # /home/eric/backups/postgres, which is NOT a borg source — extra disk on
+    # the exact drive whose loss is the scenario, and zero added durability.
 
     #--------------------------------------------------------------------------
     # Unified server
