@@ -74,6 +74,41 @@ in
           session's first code edit. Inert unless shareConfig.enable.
         '';
       };
+
+      # PER-HOOK ARMING. Before this option existed, a hook could not be
+      # disarmed anywhere durable. The heal is append-only, so deleting an entry
+      # from ~/.claude/settings.json only survived until the next activation put
+      # it back — measured 2026-08-25: claim-guard was deliberately unwired on
+      # 2026-08-23, three documents and the script's own header recorded the
+      # disarm, and Home Manager had silently re-armed it (harness-live-state.md
+      # D1). Correct matching alone does not fix that; it only makes the heal
+      # re-append the RIGHT thing.
+      #
+      # Setting a flag false does NOT delete a live entry. It stops the heal
+      # restoring one, so a hand-deletion finally sticks. Deleting the entry
+      # stays a separate, deliberate act.
+      #
+      # EVERY FLAG DEFAULTS TO TRUE, which is the live state measured on
+      # 2026-08-25: all 13 canonical entries were present in settings.json. This
+      # option changes what is EXPRESSIBLE, never what is armed.
+      gateHooks = lib.mkOption {
+        type = lib.types.attrsOf lib.types.bool;
+        default = {
+          enforceTools = true;
+          premortemGate = true;
+          trackEvidence = true;
+          turnStamp = true;
+          claimGuard = true;
+          nixosPrimer = true;
+          pathConventions = true;
+          charterGate = true;
+          standingInject = true;
+          standingSync = true;
+          ste100Guard = true;
+          memoryStaleness = true;
+        };
+        description = "Per-hook arming for the settings.json heal. False stops the heal restoring that entry; it never removes a live one. Defaults match the state measured live on 2026-08-25.";
+      };
     };
   };
 
@@ -140,27 +175,45 @@ in
     # converges the wiring, so a concurrent write settles at next activation.
     (lib.mkIf (cfg.shareConfig.enable && cfg.shareConfig.wireGateHooks) (
       let
-        hookCmd = name: "bash ${cfg.shareConfig.repoPath}/hooks/${name}";
+        # THE `bash -n` WRAPPER IS PART OF THE COMMAND, not decoration.
+        # enforce-tools.sh fails CLOSED and matches Bash|Edit|Write, so an
+        # unclosed `if` in a hook blocks the very tools needed to repair it. That
+        # class bricked this laptop twice inside one hour on 2026-08-23 and Eric
+        # had to run the fix by hand (MISTAKES.md:361). The wrapper makes a
+        # syntax error cost ENFORCEMENT instead of every tool on the machine.
+        #
+        # 21 of the 24 entries in settings.json already carried this wrapper. The
+        # three that did not — claim-guard and the two standing-instructions
+        # duplicates — are exactly the three the heal itself wrote, because
+        # hookCmd emitted a bare command. Emitting the wrapper here closes that
+        # gap at the producer.
+        hookCmd = name:
+          let p = "${cfg.shareConfig.repoPath}/hooks/${name}";
+          in "bash -n '${p}' 2>/dev/null && bash '${p}'";
+        # Arguments sit between the command and the `|| exit 0` tail, matching the
+        # shape of the wrapped entries already in settings.json.
+        hookCmdArgs = name: args: "${hookCmd name} ${args} || exit 0";
+        hookCmd' = name: "${hookCmd name} || exit 0";
         wireFile = pkgs.writeText "claude-gate-hook-wiring.json" (builtins.toJSON {
           enforceTools = {
             matcher = "Bash|Edit|Write";
-            hooks = [ { type = "command"; command = hookCmd "enforce-tools.sh"; timeout = 10; statusMessage = "Tool policy"; } ];
+            hooks = [ { type = "command"; command = hookCmd' "enforce-tools.sh"; timeout = 10; statusMessage = "Tool policy"; } ];
           };
           premortemGate = {
             matcher = "ExitPlanMode";
-            hooks = [ { type = "command"; command = hookCmd "premortem-gate.sh"; timeout = 10; statusMessage = "Premortem gate"; } ];
+            hooks = [ { type = "command"; command = hookCmd' "premortem-gate.sh"; timeout = 10; statusMessage = "Premortem gate"; } ];
           };
           trackEvidence = {
             matcher = "Grep|Glob|Bash";
-            hooks = [ { type = "command"; command = hookCmd "track-evidence.sh"; timeout = 10; } ];
+            hooks = [ { type = "command"; command = hookCmd' "track-evidence.sh"; timeout = 10; } ];
           };
           turnStamp = {
             matcher = "*";
-            hooks = [ { type = "command"; command = "${hookCmd "track-evidence.sh"} turn"; timeout = 10; } ];
+            hooks = [ { type = "command"; command = hookCmdArgs "track-evidence.sh" "turn"; timeout = 10; } ];
           };
           claimGuard = {
             matcher = "*";
-            hooks = [ { type = "command"; command = hookCmd "claim-guard.sh"; timeout = 15; statusMessage = "Claim guard"; } ];
+            hooks = [ { type = "command"; command = hookCmd' "claim-guard.sh"; timeout = 15; statusMessage = "Claim guard"; } ];
           };
           # Charter primer. Fires on the EDIT (path-derived: the file sits in a
           # repo with CHARTER.md + flake.nix at its root), never on the agent's
@@ -168,21 +221,21 @@ in
           # the live `ls domains/` map, so no hand-written repo map can drift.
           nixosPrimer = {
             matcher = "Write|Edit";
-            hooks = [ { type = "command"; command = hookCmd "nixos-primer.sh"; timeout = 10; statusMessage = "Charter primer"; } ];
+            hooks = [ { type = "command"; command = hookCmd' "nixos-primer.sh"; timeout = 10; statusMessage = "Charter primer"; } ];
           };
           # Conventions whose trigger is the WRITE PATH (agent-output inbox,
           # brain vault, SKILL.md). Prose in CLAUDE.md that never needed a
           # judgement call to fire — only a look at the destination.
           pathConventions = {
             matcher = "Write|Edit";
-            hooks = [ { type = "command"; command = hookCmd "path-conventions.sh"; timeout = 10; statusMessage = "Path conventions"; } ];
+            hooks = [ { type = "command"; command = hookCmd' "path-conventions.sh"; timeout = 10; statusMessage = "Path conventions"; } ];
           };
           # Charter rules checked at the moment of action: domain README staged
           # with its domain (Law 12), and `hms` against a system-or-mixed tree.
           # Both COMPUTE the violation and stay silent when there is none.
           charterGate = {
             matcher = "Bash|mcp__git__git_commit";
-            hooks = [ { type = "command"; command = hookCmd "charter-gate.sh"; timeout = 15; statusMessage = "Charter gate"; } ];
+            hooks = [ { type = "command"; command = hookCmd' "charter-gate.sh"; timeout = 15; statusMessage = "Charter gate"; } ];
           };
           # Standing instructions: PREVENTION. A rule that binds every response
           # has no triggering task, so the memory index's pointer is never
@@ -193,11 +246,11 @@ in
           # the session already running.
           standingInject = {
             matcher = "*";
-            hooks = [ { type = "command"; command = "${hookCmd "standing-instructions.sh"} inject"; timeout = 10; statusMessage = "Standing instructions"; } ];
+            hooks = [ { type = "command"; command = hookCmdArgs "standing-instructions.sh" "inject"; timeout = 10; statusMessage = "Standing instructions"; } ];
           };
           standingSync = {
             matcher = "*";
-            hooks = [ { type = "command"; command = "${hookCmd "standing-instructions.sh"} sync"; timeout = 10; } ];
+            hooks = [ { type = "command"; command = hookCmdArgs "standing-instructions.sh" "sync"; timeout = 10; } ];
           };
           # Standing instructions: ENFORCEMENT. Checks the one arithmetic rule
           # in ASD-STE100 (sentence length), never vocabulary — a guard that
@@ -207,7 +260,7 @@ in
           # unmarking the memory silences it without touching this file.
           ste100Guard = {
             matcher = "*";
-            hooks = [ { type = "command"; command = hookCmd "ste100-guard.sh"; timeout = 15; statusMessage = "Standing instruction"; } ];
+            hooks = [ { type = "command"; command = hookCmd' "ste100-guard.sh"; timeout = 15; statusMessage = "Standing instruction"; } ];
           };
           # Memory decay: a memory is not wrong when it is written, it goes wrong
           # afterwards. memory-lint.sh guards the WRITE; nothing guarded the READ.
@@ -219,37 +272,25 @@ in
           # remote — a fork's idea of prod is never treated as the truth.
           memoryStaleness = {
             matcher = "*";
-            hooks = [ { type = "command"; command = hookCmd "memory-staleness.sh"; timeout = 25; statusMessage = "Memory staleness"; } ];
+            hooks = [ { type = "command"; command = hookCmd' "memory-staleness.sh"; timeout = 25; statusMessage = "Memory staleness"; } ];
           };
         });
-        healJq = pkgs.writeText "claude-settings-heal.jq" ''
-          def has_cmd($ev; $frag):
-            [.hooks[$ev][]?.hooks[]?.command // empty] | map(contains($frag)) | any;
-          def ensure($ev; $frag; $entry):
-            if has_cmd($ev; $frag) then . else .hooks[$ev] = ((.hooks[$ev] // []) + [$entry]) end;
-          $wire[0] as $w
-          | ensure("PreToolUse"; "enforce-tools.sh"; $w.enforceTools)
-          | ensure("PreToolUse"; "premortem-gate.sh"; $w.premortemGate)
-          | ensure("PostToolUse"; "track-evidence.sh"; $w.trackEvidence)
-          | ensure("UserPromptSubmit"; "track-evidence.sh"; $w.turnStamp)
-          | ensure("Stop"; "claim-guard.sh"; $w.claimGuard)
-          | ensure("PreToolUse"; "nixos-primer.sh"; $w.nixosPrimer)
-          | ensure("PreToolUse"; "path-conventions.sh"; $w.pathConventions)
-          | ensure("PreToolUse"; "charter-gate.sh"; $w.charterGate)
-          | ensure("UserPromptSubmit"; "standing-instructions.sh inject"; $w.standingInject)
-          | ensure("UserPromptSubmit"; "standing-instructions.sh sync"; $w.standingSync)
-          | ensure("Stop"; "ste100-guard.sh"; $w.ste100Guard)
-          | ensure("SubagentStop"; "ste100-guard.sh"; $w.ste100Guard)
-          | ensure("SessionStart"; "memory-staleness.sh"; $w.memoryStaleness)
-          | .env.SLASH_COMMAND_TOOL_CHAR_BUDGET = (.env.SLASH_COMMAND_TOOL_CHAR_BUDGET // "30000")
-        '';
+        # The filter lives in its own file so `settings-heal.test.sh` runs the
+        # SAME BYTES the activation runs. Embedded in this Nix string it could
+        # not be exercised without a rebuild, and a copy inside the test would be
+        # a second producer of the same logic — the defect class this repo calls
+        # vacuous-check. Ruled out keeping it here for exactly that reason;
+        # README.md is the only other file in this directory and is prose.
+        healJq = pkgs.writeText "claude-settings-heal.jq" (builtins.readFile ./settings-heal.jq);
+        enableFile = pkgs.writeText "claude-gate-hook-enable.json"
+          (builtins.toJSON cfg.shareConfig.gateHooks);
         emptyJson = pkgs.writeText "claude-settings-empty.json" "{}";
       in {
         home.activation.claudeGateHookWiring = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
           _s="${config.home.homeDirectory}/.claude/settings.json"
           _src="$_s"; [ -f "$_s" ] || _src=${emptyJson}
           _tmp=$(${pkgs.coreutils}/bin/mktemp "$_s.heal.XXXXXX" 2>/dev/null) || _tmp=""
-          if [ -n "$_tmp" ] && ${pkgs.jq}/bin/jq --slurpfile wire ${wireFile} -f ${healJq} "$_src" > "$_tmp" 2>/dev/null; then
+          if [ -n "$_tmp" ] && ${pkgs.jq}/bin/jq --slurpfile wire ${wireFile} --slurpfile enable ${enableFile} -f ${healJq} "$_src" > "$_tmp" 2>/dev/null; then
             if ! ${pkgs.diffutils}/bin/cmp -s "$_tmp" "$_s" 2>/dev/null; then
               [ -f "$_s" ] && run ${pkgs.coreutils}/bin/cp "$_s" "$_s.pre-heal.bak"
               run ${pkgs.coreutils}/bin/mv "$_tmp" "$_s"
