@@ -963,8 +963,11 @@
     controlPort = 8001;   # 8000 belongs to the qBittorrent tunnel
 
     # slskd cannot publish its own ports from inside this netns.
+    # Host side is 5031, not 5030: domains/networking/routes.nix already sends the
+    # slskd vhost to http://127.0.0.1:5031. Publishing on 5030 leaves that upstream
+    # with nothing listening, which is exactly what happened on 2026-08-25.
     ports = [
-      "127.0.0.1:5030:5030"  # slskd web UI
+      "127.0.0.1:5031:5030"  # slskd web UI -> Caddy vhost upstream
     ];
 
     portForwarding = {
