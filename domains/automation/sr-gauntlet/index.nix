@@ -25,8 +25,10 @@
 # DEPENDENCIES:
 #   - ~/700_datax/sr_gauntlet checkout (the pipeline)
 #   - /var/lib/sr-gauntlet/{datax,jt-mcp} — service-owned clones of the official
-#     elstruck repos (worktree sources, origin/main). Set up once, fetch-only;
-#     decoupled from Eric's ~/700_datax dev worktrees.
+#     upstream repos ContractorCTO/datax and ContractorCTO/dx-mcp (worktree
+#     sources, origin/main; the org renamed from elstruck on 2026-08-25 and
+#     jt-mcp became dx-mcp — the local directory names were left alone). Set up
+#     once, fetch-only; decoupled from Eric's ~/700_datax dev worktrees.
 #   - /var/lib/sr-gauntlet/datax.env — trimmed 0600 cred file (9 keys: 7
 #     required NEXT_PUBLIC_FIREBASE_* + OPENSEARCH_*, plus optional
 #     SRG_PUSH_URL/SRG_PUSH_SECRET for report push into the datax admin UI —
@@ -65,7 +67,7 @@ let
     # derive everywhere). Without this the script falls back to a stale default
     # path and fetch FATALs with ENOENT.
     SRG_ENV_FILE = "${paths.user.home}/600_apps/sr_analyzer/.env";
-    # Service-owned source clones (origin = official elstruck, pinned to main),
+    # Service-owned source clones (origin = official ContractorCTO, pinned to main),
     # NOT Eric's ~/700_datax dev worktrees. run.sh fetches origin/main from these
     # and builds throwaway /tmp worktrees — nothing edits them. Decouples the
     # long-running service from the interactive dev tree (laptop-only editing).
