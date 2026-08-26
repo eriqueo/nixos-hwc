@@ -16,6 +16,13 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.server.ai.researchScout;
+
+  # One producer for the database name. It was spelled four times (option
+  # default, ensureDatabases, ensureUsers, the grant); the per-database backup
+  # registration below is the fifth consumer, which is where a repeated
+  # literal stops being harmless.
+  dbName = "research_scout";
+
   node = "/run/current-system/sw/bin/node";
   tsx  = "${cfg.workspaceRoot}/node_modules/tsx/dist/cli.mjs";
   cli  = "${cfg.projectDir}/src/cli.ts";
@@ -70,7 +77,7 @@ in
 
     databaseUrl = lib.mkOption {
       type = lib.types.str;
-      default = "postgresql://research_scout@localhost/research_scout";
+      default = "postgresql://${dbName}@localhost/${dbName}";
       description = "PostgreSQL connection string";
     };
 
@@ -160,17 +167,29 @@ in
   config = lib.mkIf cfg.enable {
     # Database on the shared Postgres instance
     services.postgresql = {
-      ensureDatabases = [ "research_scout" ];
+      ensureDatabases = [ dbName ];
       ensureUsers = [{
-        name = "research_scout";
+        name = dbName;
         ensureDBOwnership = true;
       }];
     };
 
     # Peer auth with role switching (home-scout precedent).
     systemd.services.postgresql.postStart = lib.mkAfter ''
-      $PSQL -tAc 'GRANT research_scout TO ${cfg.user}' || true
+      $PSQL -tAc 'GRANT ${dbName} TO ${cfg.user}' || true
     '';
+
+    # Register for per-database dumps (business/databases precedent: the module
+    # that owns the database declares its own backup, so enabling the app and
+    # backing it up cannot drift apart).
+    #
+    # 2026-08-26: found by premortem. The dump job covered datax, datax_monitor
+    # and hwc only. research_scout was on the root nvme, which is in no borg
+    # source path, with no ZFS snapshot — 8,489 items, 6,214 classifications,
+    # 226 deep-read briefs and 2,586 cases had NO backup of any kind, and the
+    # classifications could not be recomputed without repaying the LLM spend.
+    # The dumps land in /var/lib/backups, which borg already carries.
+    hwc.data.databases.postgresql.backup.perDatabase.databases = [ dbName ];
 
     #--------------------------------------------------------------------------
     # Unified server
@@ -180,6 +199,12 @@ in
       after = [ "network-online.target" "postgresql.service" ];
       wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
+      # 2026-08-26 premortem: alerts.sources.serviceFailures.autoDetect covers a
+      # hardcoded list that no scout unit is on, so Restart=on-failure retried
+      # forever in silence. Declare the notifier in the module that owns the
+      # unit (crm leadscout-ingest precedent).
+      onFailure = lib.mkIf (config.hwc.monitoring.alerts.enable or false)
+        [ "hwc-service-failure-notifier@research-scout.service" ];
 
       environment = {
         DATABASE_URL = cfg.databaseUrl;
@@ -255,6 +280,13 @@ in
       description = "Research Scout daily arXiv ingest";
       after = [ "network-online.target" "postgresql.service" ];
       wants = [ "network-online.target" ];
+      # A oneshot that exits non-zero leaves no process to notice. Zero new
+      # items is also a NORMAL arXiv weekend (2026-08-19, 08-22, 08-23 each
+      # recorded 12 completed classify runs with items_selected = 0), so the
+      # symptom carries no signal. The notifier is the only thing that
+      # separates "broke" from "quiet".
+      onFailure = lib.mkIf (config.hwc.monitoring.alerts.enable or false)
+        [ "hwc-service-failure-notifier@research-scout-arxiv.service" ];
       environment = ingestEnv;
       serviceConfig = {
         Type = "oneshot";

@@ -25,6 +25,7 @@ const PUBLIC_URL =
   "https://research-scout.hwc.iheartwoodcraft.com";
 const TIMEOUT_MS = Number(process.env.RESEARCH_SCOUT_TIMEOUT_MS || 8000);
 const TOP_N = 3;
+const STALE_INGEST_HOURS = Number(process.env.RESEARCH_SCOUT_STALE_HOURS || 36);
 
 async function callTool(tool, body = {}) {
   const res = await fetch(`${BASE}/api/${tool}`, {
@@ -94,6 +95,36 @@ async function main() {
     // No snapshot yet is the normal early state, not an error.
   }
 
+  // Ingest AGE, never item count. 2026-08-26 premortem: zero new items is a
+  // normal arXiv weekend (2026-08-19, 08-22 and 08-23 each recorded 12
+  // completed classify runs with items_selected = 0), so a count cannot tell
+  // "broke" from "quiet". A completed ingest run lands every day regardless of
+  // how many papers it found, so its age is the unambiguous signal.
+  let health = null;
+  try {
+    const stats = await callTool("research_stats");
+    const runs = stats?._structured?.recentIngestRuns ?? stats?.recentIngestRuns ?? [];
+    const done = runs
+      .filter((r) => r.status === "completed" && r.completed_at)
+      .map((r) => Date.parse(r.completed_at))
+      .filter((t) => Number.isFinite(t));
+    if (done.length > 0) {
+      const last = Math.max(...done);
+      const ageHours = (Date.now() - last) / 3_600_000;
+      health = {
+        lastIngestAt: new Date(last).toISOString(),
+        ingestAgeHours: Math.round(ageHours * 10) / 10,
+        // Daily timer + 30min RandomizedDelaySec; 36h clears one late run
+        // without waiting a whole second day to complain.
+        staleIngest: ageHours > STALE_INGEST_HOURS,
+      };
+    } else {
+      health = { lastIngestAt: null, ingestAgeHours: null, staleIngest: true };
+    }
+  } catch {
+    // research_stats failing must not lose the queue section.
+  }
+
   process.stdout.write(
     JSON.stringify({
       url: PUBLIC_URL,
@@ -101,6 +132,7 @@ async function main() {
       counts: { awaiting, profiles: profiles.length, showing: queue.length },
       queue,
       lessons,
+      health,
     })
   );
 }

@@ -785,8 +785,16 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
             + " [" + (.pipeline // "?") + (if .step then " · " + .step else "" end) + "]") | join(""))
       else "" end)
     + (if ((.sections.research.counts.awaiting // 0) > 0
-           or ((.sections.research.lessons.themes // []) | length) > 0) then
+           or ((.sections.research.lessons.themes // []) | length) > 0
+           or (.sections.research.health.staleIngest // false)) then
         sec("RESEARCH")
+        + (if (.sections.research.health.staleIngest // false) then
+            "!! INGEST STALE — last completed run "
+            + (if .sections.research.health.ingestAgeHours
+               then ((.sections.research.health.ingestAgeHours | floor) | tostring) + "h ago"
+               else "never" end)
+            + " (expected daily). Check research-scout-arxiv.service.\n"
+          else "" end)
         + ((.sections.research.counts.awaiting // 0) | tostring) + " article(s) waiting to be read"
         + (((.sections.research.queue // [])[:3]) | map("\n  · " + (.title // "?")
             + (if .tier then " [" + .tier + "]" else "" end)

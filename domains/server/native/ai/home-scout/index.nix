@@ -315,6 +315,13 @@ in
       }];
     };
 
+    # Register for per-database dumps (business/databases precedent). Found by
+    # the same 2026-08-26 premortem that caught research_scout: the dump job
+    # covered datax, datax_monitor and hwc only, and home_scout's listings,
+    # events, parcels and school zones had no backup at all. The ingest is
+    # re-runnable, but the event history and the classifier's verdicts are not.
+    hwc.data.databases.postgresql.backup.perDatabase.databases = [ "home_scout" ];
+
     # Local (peer/ident) access for the service user running as `eric` via
     # DATABASE_URL role home_scout requires a password-less local grant; the
     # role is LOGIN by ensureUsers. Allow eric to connect as home_scout over
