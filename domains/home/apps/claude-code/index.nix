@@ -62,13 +62,15 @@ in
         type = lib.types.bool;
         default = true;
         description = ''
-          Self-heal the four gate-hook entries (enforce-tools, premortem-gate,
-          track-evidence, claim-guard) and the skill-description char budget
-          into ~/.claude/settings.json at every activation. Append-only jq
+          Self-heal every gate-hook entry (enforce-tools, premortem-gate,
+          track-evidence ×2, claim-guard, nixos-primer, path-conventions,
+          charter-gate, standing-instructions ×2, ste100-guard ×2,
+          memory-staleness) and the skill-description char budget into
+          ~/.claude/settings.json at every activation. Append-only jq
           merge keyed on script filename: existing entries, permissions, and
           runtime-written keys (model, etc.) are never edited or removed, so
           Claude Code's own writes to the file survive. principles-lint.sh
-          Check 4 independently verifies the same five wiring points at each
+          Check 4 independently verifies five of those wiring points at each
           session's first code edit. Inert unless shareConfig.enable.
         '';
       };
@@ -207,6 +209,18 @@ in
             matcher = "*";
             hooks = [ { type = "command"; command = hookCmd "ste100-guard.sh"; timeout = 15; statusMessage = "Standing instruction"; } ];
           };
+          # Memory decay: a memory is not wrong when it is written, it goes wrong
+          # afterwards. memory-lint.sh guards the WRITE; nothing guarded the READ.
+          # Measured 2026-08-25 on the DataX store: 29 of 32 cited commit SHAs had
+          # reached upstream/prod, so every "merged, deploy owed" sentence had become
+          # an instruction to skip owed work. This re-tests the store against the
+          # FETCHED upstream ref at session start and prints only what git refutes.
+          # Silent when nothing is refuted, and silent in any repo with no upstream
+          # remote — a fork's idea of prod is never treated as the truth.
+          memoryStaleness = {
+            matcher = "*";
+            hooks = [ { type = "command"; command = hookCmd "memory-staleness.sh"; timeout = 25; statusMessage = "Memory staleness"; } ];
+          };
         });
         healJq = pkgs.writeText "claude-settings-heal.jq" ''
           def has_cmd($ev; $frag):
@@ -226,6 +240,7 @@ in
           | ensure("UserPromptSubmit"; "standing-instructions.sh sync"; $w.standingSync)
           | ensure("Stop"; "ste100-guard.sh"; $w.ste100Guard)
           | ensure("SubagentStop"; "ste100-guard.sh"; $w.ste100Guard)
+          | ensure("SessionStart"; "memory-staleness.sh"; $w.memoryStaleness)
           | .env.SLASH_COMMAND_TOOL_CHAR_BUDGET = (.env.SLASH_COMMAND_TOOL_CHAR_BUDGET // "30000")
         '';
         emptyJson = pkgs.writeText "claude-settings-empty.json" "{}";
