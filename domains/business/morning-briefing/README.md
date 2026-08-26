@@ -23,6 +23,11 @@ gather-live.mjs        # Step 1b: JobTread jobs/leads/overdue + CalDAV tasks via
                        #   the local MCP gateway (:6200/mcp, StreamableHTTP)
 gather-today.mjs       # Step 2c: hwc_today board + case-ledger delta →
                        #   sections.today (items/spillover/changes)
+gather-refinery.mjs    # Step 1c: refinery item store (local .md read) →
+                       #   sections.refinery (action/active/hopper buckets)
+gather-research.mjs    # Step 1c: research-scout review lane over loopback REST
+                       #   (:8422/api/<tool>) → sections.research (articles
+                       #   awaiting review + the standing themes report)
 CLAUDE.md              # Agent prompt: data schema, alert rules, MCP sources
 prompts/
   mail-triage.txt      # Mail triage prompt: bucket rules, known senders
@@ -44,6 +49,7 @@ logs/
 | 0 | Pre-flight | Check claude binary exists (still needed for Step 2 mail triage) |
 | 1 | Local gather | bash assembles `briefing.json` directly: `systemctl` (services incl. failed unit NAMES, podman-* container count, borg backup unit), `df` (storage), `notmuch` (mail), `khal`→`jq` (calendar, 7-day window), `curl` open-meteo (weather). Alerts computed locally. **No Claude, no MCP.** |
 | 1b | Live gather | `node gather-live.mjs` → local MCP gateway (`:6200/mcp`, plain JSON-RPC, no permissions): `jt_jobs` (jobs + leads + weekly snapshot), `jt_documents list_overdue` (overdue invoices), `hwc_tasks_list` (CalDAV tasks). Best-effort: per-section failures become dashboard alerts, placeholders kept. |
+| 1c | Local-app gather | `node gather-refinery.mjs` (refinery `.md` item store) and `node gather-research.mjs` (research-scout REST on `:8422`). Both emit `{}` on any failure and are `|| echo '{}'`-guarded, so each degrades independently — one app being down never costs the other its section. `gather-research.mjs` reads the lessons snapshot with `generate:false`, so the briefing spends no LLM calls. |
 | 2 | Mail triage | `notmuch search` → `claude --print` classifies into urgent/review/noise (pure reasoning, no tool calls). JSON extracted with node (direct → fenced → brace-span); full raw saved to `logs/mail-triage-raw.log` on parse failure. |
 | 2b | Persist buckets | `notmuch tag` stamps each classified thread with `triage/<bucket>` (removes other `triage/*`) |
 | 3 | Merge | `jq` injects mail_triage into briefing.json |
@@ -101,6 +107,8 @@ in Step 2b) and in `mail-triage.ts` must stay in lockstep with it.
 | Backup | Borg via HWC | `hwc_storage_status` | After System |
 | Mail Triage | notmuch + Claude | Step 2 pipeline | After Backup |
 | Comms | Quo/OpenPhone | Placeholder (future) | After Mail |
+| Refinery | Refinery item store | N/A (local file read) | After Mail triage |
+| Research | research-scout `:8422` | N/A (loopback REST) | After Refinery |
 
 ## NixOS Options
 
@@ -145,6 +153,22 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 **Mail triage empty**: If notmuch returns 0 threads, an empty triage is written (not an error). Check `notmuch count tag:inbox AND tag:unread` to verify mail state. Mail sync issues: check `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+
+- **2026-08-25** — **New `research` section** (`gather-research.mjs` →
+  `sections.research`). Reports how many articles wait in research-scout's
+  human review lane, the top few with links, and the standing themes report
+  over the takeaways Eric has already written. Notes:
+  - **Loopback REST, not MCP** (`:8422/api/<tool>`), for the same reason every
+    other gather here is local: the 6am headless run cannot get MCP
+    tool-permission approvals, and an MCP gather returns permission-denied.
+  - **Never generates.** The lessons snapshot is read with `generate:false`, so
+    the briefing costs zero LLM calls; generating one is a deliberate act from
+    the dashboard or `research-scout review-report`.
+  - Emits `{}` on any failure and is `|| echo '{}'`-guarded, so research-scout
+    being down renders the section empty rather than breaking the briefing —
+    verified by running the gather with the service unreachable.
+  - Needs no rebuild: `run.sh` and the gathers execute in place from the live
+    checkout, and `nodejs_22` is already on the unit `path`.
 
 - **2026-08-10** — **Today Queue state becomes a case ledger** (engineering-
   principles Principle 21; spec: brain `_library/ai-ml/case_ledger_pattern.md`).

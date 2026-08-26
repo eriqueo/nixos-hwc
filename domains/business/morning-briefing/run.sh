@@ -500,6 +500,15 @@ if [ "${REFINERY_FAILED:-0}" -gt 0 ] 2>/dev/null; then
   echo "${ALERTS_JSON}" | jq empty 2>/dev/null || ALERTS_JSON='[]'
 fi
 
+# -- research: research-scout's review lane. How many articles wait for Eric to
+#    read, the top few, and the standing themes report over the takeaways he has
+#    already written. Loopback REST to the unified server (:8422/api/<tool>) —
+#    NOT MCP, for the same permission reason every other gather here is local.
+#    Reads the lessons snapshot with generate:false, so the briefing never
+#    spends an LLM call. gather-research.mjs emits {} on any failure. --
+RESEARCH_JSON=$(timeout 30 node "${AGENT_DIR}/gather-research.mjs" 2>>"${LOG_FILE}" || echo '{}')
+echo "${RESEARCH_JSON}" | jq empty 2>/dev/null || RESEARCH_JSON='{}'
+
 # -- assemble briefing.json atomically: build .tmp, validate, then mv --
 if jq -n \
   --arg now "$(date -Iseconds)" \
@@ -520,7 +529,8 @@ if jq -n \
   --argjson website "${WEBSITE_JSON}" \
   --argjson weather "${WX_JSON}" \
   --argjson backup "${BACKUP_JSON}" \
-  --argjson refinery "${REFINERY_JSON}" '
+  --argjson refinery "${REFINERY_JSON}" \
+  --argjson research "${RESEARCH_JSON}" '
   {
     generated_at: $now,
     sections: {
@@ -544,6 +554,7 @@ if jq -n \
                 + (if $mail_delta != null then " (\(if $mail_delta >= 0 then "+" else "" end)\($mail_delta) since last run)" else "" end)) },
       ops: $ops,
       refinery: $refinery,
+      research: $research,
       website: $website,
       weather: $weather,
       comms: { source: "none", items: [] },
@@ -772,6 +783,22 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
             + (if .reason then "\n      " + .reason else "" end)) | join(""))
         + (((.sections.refinery.buckets.active // [])[:5]) | map("\n  · " + (.title // .id)
             + " [" + (.pipeline // "?") + (if .step then " · " + .step else "" end) + "]") | join(""))
+      else "" end)
+    + (if ((.sections.research.counts.awaiting // 0) > 0
+           or ((.sections.research.lessons.themes // []) | length) > 0) then
+        sec("RESEARCH")
+        + ((.sections.research.counts.awaiting // 0) | tostring) + " article(s) waiting to be read"
+        + (((.sections.research.queue // [])[:3]) | map("\n  · " + (.title // "?")
+            + (if .tier then " [" + .tier + "]" else "" end)
+            + (if .url then "\n      " + .url else "" end)) | join(""))
+        + (if .sections.research.lessons then
+            "\nlessons: " + ((.sections.research.lessons.kept // 0) | tostring) + " kept / "
+            + ((.sections.research.lessons.skipped // 0) | tostring) + " skipped"
+            + (if .sections.research.lessons.status == "below_floor"
+               then " · not enough yet for themes"
+               else ((.sections.research.lessons.themes // []) | map("\n  ~ " + .) | join("")) end)
+          else "" end)
+        + "\nreview: " + (.sections.research.url // "https://research-scout.hwc.iheartwoodcraft.com")
       else "" end)
     + (if .sections.website and (.sections.website | length > 0) then
         sec("WEBSITE")

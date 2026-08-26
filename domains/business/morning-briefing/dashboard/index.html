@@ -609,6 +609,51 @@ function makeSnapshot(snap){
 }
 
 // ── Website section (umami + calculator leads) ──────────────────────────────
+function makeResearch(r){
+  const sec=$('div',{class:'section'});
+  const waiting=(r.counts&&r.counts.awaiting)||0;
+  sec.appendChild($('div',{class:'sec-hdr'},
+    $('span',null,'Research'),
+    $('span',{class:'sec-count'},`${waiting} to read`)));
+  if(r.available===false){
+    sec.appendChild($('div',{class:'alert alert-warning'},'research-scout unreachable'));
+    return sec;
+  }
+  const q=r.queue||[];
+  if(q.length){
+    const list=$('div',null);
+    q.slice(0,3).forEach(it=>{
+      const row=$('div',{class:'item'});
+      row.appendChild(it.url
+        ? $('a',{class:'item-title',href:it.url,target:'_blank'},it.title)
+        : $('span',{class:'item-title'},it.title));
+      if(it.tier)row.appendChild($('span',{class:'item-meta'},` ${it.tier}`));
+      list.appendChild(row);
+    });
+    sec.appendChild(list);
+  }else{
+    // waiting>0 with an empty list means a per-profile queue call failed while
+    // the total survived — say that rather than claiming the queue is clear.
+    sec.appendChild($('div',{class:'item-meta'},
+      waiting?'Could not list the queue.':'Nothing waiting.'));
+  }
+  const l=r.lessons;
+  if(l){
+    // below_floor is a deliberate state, not a failure: the report withholds
+    // themes rather than inventing them. Say so plainly.
+    const note=(l.status==='below_floor')
+      ? `${l.kept||0} takeaways \u00b7 not enough yet for themes`
+      : `${l.kept||0} kept \u00b7 ${l.skipped||0} skipped`;
+    sec.appendChild($('div',{class:'item-meta',style:'margin-top:6px'},note));
+    (l.themes||[]).slice(0,3).forEach(t=>{
+      sec.appendChild($('div',{class:'item'},$('span',{class:'item-title'},t)));
+    });
+  }
+  const url=r.url||'https://research-scout.hwc.iheartwoodcraft.com';
+  sec.appendChild($('div',{style:'margin-top:6px'},
+    $('a',{href:url,target:'_blank',class:'item-meta'},'review \u2192')));
+  return sec;
+}
 function makeWebsite(w){
   const sec=$('div',{class:'section'});
   const hdr=$('div',{class:'sec-hdr'},$('span',null,'Website'),$('span',{class:'sec-count'},'7 days'));
@@ -988,7 +1033,8 @@ function render(data,liveThreads){
     website:'https://stats.iheartwoodcraft.com',
     system:'https://grafana.hwc.iheartwoodcraft.com',backup:'https://grafana.hwc.iheartwoodcraft.com',
     config_drift:'https://github.com/eriqueo/nixos-hwc',
-    refinery:'https://refinery.hwc.iheartwoodcraft.com'};
+    refinery:'https://refinery.hwc.iheartwoodcraft.com',
+    research:'https://research-scout.hwc.iheartwoodcraft.com'};
   if(data.alerts&&data.alerts.length){
     const a=$('div',{class:'alerts'});
     data.alerts.forEach(al=>{
@@ -1019,6 +1065,7 @@ function render(data,liveThreads){
   if(s.weather){_sectionCount++;grid.appendChild(tile(makeWeather(s.weather)))}
   if(s.weekly_snapshot){_sectionCount++;grid.appendChild(tile(makeSnapshot(s.weekly_snapshot)))}
   if(s.website&&Object.keys(s.website).length){_sectionCount++;grid.appendChild(tile(makeWebsite(s.website)))}
+  if(s.research&&Object.keys(s.research).length){_sectionCount++;grid.appendChild(tile(makeResearch(s.research)))}
   if(s.recent_documents){const d=makeRecentDocs(s.recent_documents);if(d){_sectionCount++;grid.appendChild(tile(d))}}
   if(s.backup&&Object.keys(s.backup).length){_sectionCount++;grid.appendChild(tile(makeBackup(s.backup)))}
   // A comms tile with no source is four zeros pretending to be data — skip it.
