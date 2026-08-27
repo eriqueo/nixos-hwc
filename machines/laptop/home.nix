@@ -39,6 +39,9 @@
     dt.enable = true;
     dxlog.enable = true;
     doctl.enable = true;
+    # `brain <cmd>` — the vault janitor/fixer CLI. Not in the base role: it needs the
+    # ~/600_apps/brain checkout and the vault, which only laptop + server carry.
+    brain.enable = true;
     gpu-screen-recorder.enable = true;  # gsr-toggle / SHIFT+PRINT call recording
     whisper-cpp = {
       enable = true;

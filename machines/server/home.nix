@@ -24,6 +24,12 @@
   # MCP gateway points HWC_KHAL_BIN / HWC_KHALT_CONFIG at. No TUI use here.
   hwc.home.apps.khalt.enable = true;
 
+  # `brain <cmd>` — the vault janitor/fixer CLI. The nightly sweep already runs the same
+  # checkout through hwc.automation.brainSweep (system lane, one subcommand). This puts the
+  # full CLI on PATH for interactive use. Not in the base role: it needs the
+  # ~/600_apps/brain checkout and the vault, which only laptop + server carry.
+  hwc.home.apps.brain.enable = true;
+
   # Claude Code: server runs claude from an ad-hoc npm global, so do NOT enable
   # the Nix package/Obsidian-cert here. Opt into the shared, version-controlled
   # skill/agent/command/CLAUDE.md set only — symlinked from ~/.claude-config.
