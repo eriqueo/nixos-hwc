@@ -10,6 +10,16 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.server.ai.leadScout;
+
+  # One producer for the database name (research-scout precedent). Renamed from
+  # `datax` on 2026-08-26: the scraper was built under a project called datax in
+  # 2026-05 and the database kept that birth name for three months. It holds
+  # fb_posts, fb_comments, post_classifications and scrape_sources — lead-scout
+  # tables, all of them, and no DataX table. Do not confuse it with
+  # `datax_monitor`, which IS DataX monitoring and is a different database
+  # (domains/business/datax-monitor).
+  dbName = "lead_scout";
+
   node = "/run/current-system/sw/bin/node";
   tsx  = "${cfg.workspaceRoot}/node_modules/tsx/dist/cli.mjs";
   cli  = "${cfg.projectDir}/src/cli.ts";
@@ -52,11 +62,7 @@ in
 
     databaseUrl = lib.mkOption {
       type = lib.types.str;
-      # Renamed from `datax` on 2026-08-26. The scraper was built under a
-      # project called datax in 2026-05 and the database kept that birth name
-      # for three months. Nothing here relates to the DataX product; see
-      # domains/business/datax/index.nix for the full account.
-      default = "postgresql://lead_scout@localhost/lead_scout";
+      default = "postgresql://${dbName}@localhost/${dbName}";
       description = "PostgreSQL connection string";
     };
 
@@ -93,6 +99,70 @@ in
   # IMPLEMENTATION
   #============================================================================
   config = lib.mkIf cfg.enable {
+    #--------------------------------------------------------------------------
+    # Database on the shared Postgres instance
+    #--------------------------------------------------------------------------
+    # Moved here on 2026-08-26 from domains/business/datax/{index,database}.nix,
+    # which was deleted. That module's name violated Law 2: after the database
+    # rename it owned nothing called datax. home-scout and research-scout each
+    # declare their own database inline; lead-scout now does the same.
+    #
+    # ensureDBOwnership runs `ALTER DATABASE lead_scout OWNER TO lead_scout` on
+    # every postgresql start. lead_scout was owned by `postgres` (the other two
+    # scout databases are owned by their own role), so this DOES change live
+    # state once. Verified safe before writing it: all 18 tables and every
+    # sequence in lead_scout.public are ALREADY owned by the lead_scout role,
+    # so no object ownership moves and no privilege is withdrawn — `postgres`
+    # is a superuser and keeps full access, and `eric` (also superuser, the
+    # role hwc.business.crm's read-only ingest connects as) is unaffected.
+    # What the role GAINS is schema public's UC via pg_database_owner, which is
+    # how home_scout and research_scout get CREATE for their app migrations.
+    services.postgresql = {
+      ensureDatabases = [ dbName ];
+      ensureUsers = [{
+        name = dbName;
+        ensureDBOwnership = true;
+      }];
+    };
+
+    # Peer auth with role switching (home-scout precedent).
+    systemd.services.postgresql.postStart = lib.mkAfter ''
+      $PSQL -tAc 'GRANT ${dbName} TO ${cfg.user}' || true
+    '';
+
+    # The old module's six raw GRANT/ALTER DEFAULT PRIVILEGES statements are
+    # deliberately NOT carried over. They were written when the role did not own
+    # the objects; it does now, and an owner's privileges are implicit. Checked
+    # against the live cluster: the only relacl entries are self-grants
+    # (`lead_scout=arwdDxt/lead_scout`), pg_default_acl is empty, and the one
+    # substantive grant — CREATE on schema public — is what ensureDBOwnership
+    # supplies above. Nothing the app queries depends on them.
+    #
+    # The old module's `$PSQL -f fb-monitor-bak/schema.sql` is also NOT carried
+    # over. That file is the original 2026-05 three-table fb-monitor schema
+    # (fb_posts/fb_comments/fb_capture_log, all CREATE TABLE IF NOT EXISTS). The
+    # app owns its schema now via ~/600_apps/scout/apps/lead-scout/src/db/
+    # migrations and the live `_migrations` table; the database has 18 tables
+    # and the file's columns are stale. It is a no-op today and a hazard on a
+    # rebuilt cluster, where it would seed a wrong fb_posts ahead of migration 1.
+
+    # NO per-database backup registration, matching home-scout and
+    # research-scout.
+    #
+    # This block was written to KEEP the registration, reasoning that dropping
+    # it would silently retire a running backup. That reasoning was correct when
+    # written and went stale within the hour: postgresql-db-backup was retired
+    # wholesale later the same day (machines/server/config.nix,
+    # `backup.perDatabase.enable = false`) because it wrote to
+    # /home/eric/backups/postgres, a path in no borg source. A registration into
+    # a disabled option is dead config that reads as a backup, so it is removed
+    # rather than left to mislead.
+    #
+    # lead_scout IS backed up, by the mechanism that covers every database: the
+    # borg pre-hook's nightly `pg_dumpall` into /var/lib/backups, which borg
+    # carries. Verify there — `zcat /var/lib/backups/postgresql-<date>.sql.gz |
+    # rg '^CREATE DATABASE'` — not in postgresql-db-backup.
+
     # Chromium kept on global PATH so interactive `npm run scrape` from a user
     # shell can find it; the service itself uses PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.
     environment.systemPackages = [ pkgs.chromium ];

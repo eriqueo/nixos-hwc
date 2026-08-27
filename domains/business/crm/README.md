@@ -42,7 +42,7 @@ crm/
 | `.leadscoutIngest.onCalendar` | `*:00/30` | Every 30 min, persistent. |
 | `.leadscoutIngest.sinceDays` | 14 | Rescan window (skip pre-filter makes overlap free). |
 | `.leadscoutIngest.routes` | job + network | Route table: profile→pipeline+source+tiers+emailPrefix (JSON env). |
-| `.leadscoutIngest.dataxDsn` | `postgresql:///datax` | READ-ONLY by contract. |
+| `.leadscoutIngest.dataxDsn` | `postgresql:///lead_scout` | READ-ONLY by contract. Option name kept; the database was renamed 2026-08-26. |
 | `.calendar.enable` | false | Write appointment events to Radicale. |
 | `.calendar.caldavUrl` | loopback Radicale | CalDAV base URL. |
 | `.calendar.user` | `cal` | Radicale user (pw from `radicale-htpasswd`). |

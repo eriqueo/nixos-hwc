@@ -41,9 +41,9 @@
   # Business database layer (hwc PostgreSQL database)
   hwc.business.databases.enable = lib.mkDefault true;
 
-  # DataX — legacy postgres role + db that lead_scout connects to.
-  # (FB scrape/classify pipeline migrated to hwc.server.ai.leadScout in 2026-05.)
-  hwc.business.datax.enable = true;
+  # The lead_scout postgres role + database moved out on 2026-08-26:
+  # hwc.server.ai.leadScout now declares its own, the way home-scout and
+  # research-scout already do. `hwc.business.datax` no longer exists.
 
   # DataX Monitor — DX1 agent-execution diagnostic dashboard (monitor.hwc.iheartwoodcraft.com)
   hwc.business.dataxMonitor.enable = true;

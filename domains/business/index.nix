@@ -16,7 +16,6 @@
 {
   imports = [
     ./databases/index.nix
-    ./datax/index.nix
     ./datax-monitor/index.nix  # DX1 agent-execution diagnostic dashboard
     ./estimator/index.nix
     ./firefly/index.nix
