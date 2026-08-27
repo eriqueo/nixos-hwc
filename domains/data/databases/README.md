@@ -71,10 +71,27 @@ hwc.data.databases = {
 
 ## Backup Services
 
-| Service | Type | Output | Schedule |
-|---------|------|--------|----------|
-| `postgresql-backup` | pg_dumpall | `${paths.backup}/postgresql-YYYYMMDD.sql` | Configurable |
-| `postgresql-db-backup` | Per-DB pg_dump | `~/backups/postgres/<db>_YYYY-MM-DD.sql.gz` | 2:30 AM daily |
+| Service | Type | Output | Schedule | Status |
+|---------|------|--------|----------|--------|
+| `postgresql-backup` | pg_dumpall | `${paths.backup}/postgresql-YYYYMMDD.sql` | Configurable | available |
+| `postgresql-db-backup` | Per-DB pg_dump | `~/backups/postgres/<db>_YYYY-MM-DD.sql.gz` | 2:30 AM daily | **disabled on hwc-server** |
+
+**Where the real backup comes from.** Neither service above is what protects
+hwc-server's databases. The borg job's own pre-hook (`machines/server/config.nix`,
+`preBackupScript`) runs `pg_dumpall` into `/var/lib/backups`, which IS a borg
+source — so every database lands in a deduplicated off-drive archive nightly.
+Check there before concluding a database is unprotected:
+
+```
+zcat /var/lib/backups/postgresql-<date>.sql.gz | rg '^CREATE DATABASE'
+borg list ::<archive> | rg 'var/lib/backups/postgresql'
+```
+
+`postgresql-db-backup` was disabled on 2026-08-26 (Law 15: one mechanism per
+backup concern). It covered 3 of 14 databases and wrote to
+`/home/eric/backups/postgres`, which is in no borg source — 445 MB sitting on
+the drive whose loss it existed to survive. The module still works and can be
+re-enabled; if you do, point `outputDir` at a path borg actually carries.
 
 ## Consumers
 

@@ -1163,13 +1163,33 @@
     extensions = ps: [ps.pgvector ps.vectorchord];
     sharedPreloadLibraries = ["vchord"];
 
-    backup.perDatabase = {
-      enable = true;
-      # Per-database list managed by consumer modules (e.g. hwc.business.databases)
-      # outputDir = "/home/eric/backups/postgres";  # default
-      # retentionDays = 30;  # default
-      # schedule = "*-*-* 02:30:00";  # default (2:30 AM)
-    };
+    # RETIRED 2026-08-26. Law 15: exactly one mechanism per backup concern.
+    #
+    # This job dumped three of the fourteen databases (lead_scout,
+    # datax_monitor, hwc) into /home/eric/backups/postgres — a path that is in
+    # NO borg source. Borg carries /mnt/media/photos, /var/lib/hwc and
+    # /var/lib/backups, so 445 MB across 94 files sat on the exact drive whose
+    # loss it existed to survive. The 2026-06-09 server audit already flagged
+    # the same directory at 31 MB and 61 files; nothing acted, and it grew.
+    #
+    # The surviving mechanism is strictly better on every axis: the borg job's
+    # own pre-hook runs `pg_dumpall` into /var/lib/backups, which IS a borg
+    # source. It covers EVERY database, not three, and the archive is
+    # deduplicated and off-drive. Verified before retiring this one —
+    # `CREATE DATABASE research_scout` and `home_scout` are both present in
+    # /var/lib/backups/postgresql-2026-08-26.sql.gz, and that file is inside
+    # archive hwc-server-hwc-backup-2026-08-26T02:19:57.
+    #
+    # What is lost: restoring ONE database now means extracting it from a
+    # ~509 MB pg_dumpall rather than opening an 8 MB per-database file. That is
+    # a real ergonomic cost, accepted deliberately. The alternative — pointing
+    # outputDir at /var/lib/backups — would put two mechanisms on one concern
+    # and write the same rows into borg twice.
+    #
+    # /home/eric/backups/postgres is left in place; the 445 MB already there is
+    # Eric's to delete. Nothing reads it programmatically (searched: only docs
+    # and this comment reference the path).
+    backup.perDatabase.enable = false;
   };
 
   # Redis (used by Paperless-NGX for async task queue)
