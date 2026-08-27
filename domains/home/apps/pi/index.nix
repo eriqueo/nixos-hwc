@@ -26,20 +26,70 @@ let
     defaultModel = cfg.defaultModel;
   } // cfg.settings));
 
+  # Append-only jq merge of one LIST-valued key inside the pi-owned
+  # settings.json. Nix declares resource paths and the model ring; pi owns every
+  # other key and rewrites the file at runtime. Seeding alone never reaches a
+  # machine whose settings.json already exists, so these merge at every
+  # activation instead. Entries pi or Eric added by hand survive.
+  mergeList = key: values: ''
+    _piS="$_piAgentDir/settings.json"
+    _piTmp=$(${pkgs.coreutils}/bin/mktemp "$_piS.${key}.XXXXXX" 2>/dev/null) || _piTmp=""
+    if [ -n "$_piTmp" ] && ${pkgs.jq}/bin/jq \
+        --arg key ${lib.escapeShellArg key} \
+        --argjson want ${lib.escapeShellArg (builtins.toJSON values)} \
+        '.[$key] = (((.[$key] // []) + $want) | unique)' "$_piS" > "$_piTmp" 2>/dev/null; then
+      if ! ${pkgs.diffutils}/bin/cmp -s "$_piTmp" "$_piS" 2>/dev/null; then
+        run ${pkgs.coreutils}/bin/mv "$_piTmp" "$_piS"
+        echo "pi: ${key} merged into $_piS"
+      fi
+    else
+      echo "pi: $_piS is not valid JSON — ${key} NOT wired, fix it by hand" >&2
+    fi
+    ${pkgs.coreutils}/bin/rm -f "$_piS".${key}.* 2>/dev/null || true
+  '';
+
   defaultModels = {
-    providers.${cfg.defaultProvider} = {
-      baseUrl = cfg.dx1.baseUrl;
-      api = cfg.dx1.api;
-      # pi resolves "!cmd" at request time — key stays out of the store.
-      apiKey = "!cat ${cfg.dx1.apiKeyFile}";
-      models = [
-        {
-          id = cfg.defaultModel;
-          name = "DX1";
-          contextWindow = cfg.dx1.contextWindow;
-          maxTokens = cfg.dx1.maxTokens;
-        }
-      ];
+    providers = {
+      ${cfg.defaultProvider} = {
+        baseUrl = cfg.dx1.baseUrl;
+        api = cfg.dx1.api;
+        # pi resolves "!cmd" at request time — key stays out of the store.
+        apiKey = "!cat ${cfg.dx1.apiKeyFile}";
+        models = [
+          {
+            id = cfg.defaultModel;
+            name = "DX1";
+            contextWindow = cfg.dx1.contextWindow;
+            maxTokens = cfg.dx1.maxTokens;
+          }
+        ];
+      };
+    }
+    # DeepSeek is a declared provider rather than a built-in login, for the
+    # same reason DX1 is: the key reaches pi through `!cat` off an agenix
+    # mount and never enters the Nix store. `pi --list-models` shows only
+    # providers that hold credentials, so this entry is what makes DeepSeek
+    # appear at all.
+    // lib.optionalAttrs cfg.deepseek.enable {
+      deepseek = {
+        baseUrl = "https://api.deepseek.com/v1";
+        api = "openai-completions";
+        apiKey = "!cat ${cfg.deepseek.apiKeyFile}";
+        models = [
+          {
+            id = "deepseek-chat";
+            name = "DeepSeek V3";
+            contextWindow = 131072;
+            maxTokens = 8192;
+          }
+          {
+            id = "deepseek-reasoner";
+            name = "DeepSeek R1";
+            contextWindow = 131072;
+            maxTokens = 65536;
+          }
+        ];
+      };
     };
   };
 in
@@ -134,6 +184,49 @@ in
       '';
     };
 
+    enabledModels = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [
+        "mycloud/dx1"
+        "anthropic/claude-opus-4-6"
+        "openai/gpt-5.3-codex"
+      ];
+      description = ''
+        Model patterns pi cycles through on Ctrl+P, written to the
+        `enabledModels` array in settings.json. Same append-only merge as
+        skillPaths, for the same reason: the file is pi-owned at runtime.
+
+        DX1 comes first because it is the only route that costs nothing per
+        token. Anthropic and OpenAI are subscription logins (`pi /login`), but
+        Anthropic bills a third-party harness per token as extra usage rather
+        than against the Claude plan — pi prints that warning at startup. So
+        Claude Code stays the cheap way to run Claude, and Claude in pi is the
+        deliberate, paid choice.
+
+        A pattern naming a provider with no credentials is inert, not an error:
+        pi skips it. Add "deepseek/deepseek-chat" once deepseek.enable is on.
+      '';
+    };
+
+    deepseek = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Add DeepSeek to models.json as a fourth route. OFF by default and
+          deliberately so: pi resolves the key with `!cat`, and a missing agenix
+          mount makes every DeepSeek request fail at request time rather than at
+          activation. Provision the secret first, then set this to true.
+        '';
+      };
+
+      apiKeyFile = lib.mkOption {
+        type = lib.types.str;
+        default = "/run/agenix/pi-deepseek-api-key";
+        description = "Runtime path of the DeepSeek API key (agenix mount, root:secrets 0440).";
+      };
+    };
+
     contextFile = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = ./parts/AGENTS.md;
@@ -160,6 +253,29 @@ in
         large files. Port of the Claude Code enforce-tools PreToolUse hook:
         rules the model cannot decline, which is the half of the contract that
         survives being run against a smaller model.
+
+        Also carries the port of the write-guard PreToolUse hook: a write to an
+        existing file, a delete, and a `git checkout`/`git restore` over
+        uncommitted changes are all blocked until the session has looked at the
+        target.
+      '';
+    };
+
+    stopGuards.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Install parts/stop-guards.ts as a pi extension. Port of two Claude Code
+        Stop hooks: the ASD-STE100 sentence-length ceiling, and the self-caught
+        channel of the mistake ledger.
+
+        A SEPARATE FILE FROM guards.ts, and separate on purpose. guards.ts runs
+        on `tool_call` and BLOCKS — the model gets no vote. This one runs on
+        `agent_end`, which carries no result type in pi 0.80.7 and therefore
+        cannot reject a turn; it queues a correcting follow-up turn instead,
+        with pi.sendMessage(..., triggerTurn). Blocking and nagging are
+        different contracts with different failure modes, so each gets its own
+        switch. One file could not carry two switches.
       '';
     };
   };
@@ -186,6 +302,10 @@ in
       source = ./parts/guards.ts;
     };
 
+    home.file.".pi/agent/extensions/hwc-stop-guards.ts" = lib.mkIf cfg.stopGuards.enable {
+      source = ./parts/stop-guards.ts;
+    };
+
     # settings.json: pi rewrites it at runtime → seed once, writable, then pi
     # owns it. Mirrors the tuxedo seed-if-absent pattern; works under both
     # HM-as-module and HM-as-flake.
@@ -201,21 +321,8 @@ in
       if [ ! -e "$_piAgentDir/settings.json" ]; then
         run install -m 0644 ${settingsSeed} "$_piAgentDir/settings.json"
       fi
-      ${lib.optionalString (cfg.skillPaths != [ ]) ''
-        _piS="$_piAgentDir/settings.json"
-        _piTmp=$(${pkgs.coreutils}/bin/mktemp "$_piS.skills.XXXXXX" 2>/dev/null) || _piTmp=""
-        if [ -n "$_piTmp" ] && ${pkgs.jq}/bin/jq \
-            --argjson want ${lib.escapeShellArg (builtins.toJSON cfg.skillPaths)} \
-            '.skills = ((.skills // []) + $want | unique)' "$_piS" > "$_piTmp" 2>/dev/null; then
-          if ! ${pkgs.diffutils}/bin/cmp -s "$_piTmp" "$_piS" 2>/dev/null; then
-            run ${pkgs.coreutils}/bin/mv "$_piTmp" "$_piS"
-            echo "pi: skill paths merged into $_piS"
-          fi
-        else
-          echo "pi: $_piS is not valid JSON — skills NOT wired, fix it by hand" >&2
-        fi
-        ${pkgs.coreutils}/bin/rm -f "$_piS".skills.* 2>/dev/null || true
-      ''}
+      ${lib.optionalString (cfg.skillPaths != [ ]) (mergeList "skills" cfg.skillPaths)}
+      ${lib.optionalString (cfg.enabledModels != [ ]) (mergeList "enabledModels" cfg.enabledModels)}
     '';
 
     #========================================================================

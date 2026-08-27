@@ -13,7 +13,9 @@ index.nix          # hwc.home.apps.pi — options + models.json/settings.json re
 parts/package.nix  # pinned buildNpmPackage of the pi monorepo (vendored from
                    # nixpkgs; hwc-server's stable channel has no pi-coding-agent)
 parts/guards.ts    # pi extension: tool_call guards, port of the Claude Code
-                   # enforce-tools PreToolUse hook
+                   # enforce-tools + write-guard PreToolUse hooks
+parts/stop-guards.ts # pi extension: agent_end guards, port of ste100-guard and
+                   # the self-caught channel of mistake-guard
 parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
 ```
 
@@ -66,6 +68,27 @@ parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
   (25.11) which lacks `pi-coding-agent`, so parts/package.nix carries the
   full derivation (based on nixpkgs' 0.80.2 expression, bumped to 0.80.7).
 
+- **pi owns its packages; Nix owns its rules.** Extensions and skills that come
+  from npm or git are installed with `pi install npm:<name>`, which writes the
+  `packages` array in the pi-owned settings.json. Nix does not declare that
+  array. Two writers on one list is how a declarative file and an imperative
+  command fight, and pi's own updater (`pi update --all`) is the reason to let
+  pi win. What Nix keeps is the part pi cannot re-derive: the model ring, the
+  skill tree path, and the two guard extensions.
+- **Two guard extensions, two switches.** `guards.enable` installs
+  `parts/guards.ts`, which runs on `tool_call` and BLOCKS — the model gets no
+  vote. `stopGuards.enable` installs `parts/stop-guards.ts`, which runs on
+  `agent_end`. `agent_end` carries no result type in pi 0.80.7, so an extension
+  cannot reject a turn there; it queues a correcting follow-up turn instead,
+  with `pi.sendMessage(..., {triggerTurn:true, deliverAs:"followUp"})`. The user
+  sees the finished answer first, then the correction turn. That is the one
+  behavioural difference from a Claude Code Stop hook, and pi 0.80.7 offers no
+  way to close it.
+- **Claude in pi is not covered by the Claude plan.** Anthropic gates Pro/Max
+  quota to its own clients. pi prints a warning at startup and bills a
+  third-party harness per token as extra usage. So `enabledModels` puts
+  `mycloud/dx1` first, and Claude Code stays the cheap way to run Claude.
+
 ## Updating pi
 
 ```
@@ -77,6 +100,15 @@ Bump `version` + both hashes in `parts/package.nix`.
 
 ## Changelog
 
+- 2026-08-26: Daily-driver wave. Added `enabledModels` (Ctrl+P ring:
+  `mycloud/dx1`, `anthropic/claude-opus-4-6`, `openai/gpt-5.3-codex`) and
+  `deepseek.enable` (off by default — a missing agenix mount fails at request
+  time, not at activation). Generalized the skills jq merge into `mergeList`,
+  now shared by `skills` and `enabledModels`. Added `stopGuards.enable` with
+  `parts/stop-guards.ts`. Extended `parts/guards.ts` with the write-guard port.
+  Added the ASD-STE100 standing instruction and the look-before-you-destroy rule
+  to `parts/AGENTS.md`. Packages installed imperatively and left pi-owned:
+  `pi-mcp-adapter`, `pi-subagents`, `pi-web-access`, `pi-lens`.
 - 2026-08-16: Added `contextFile` → `parts/AGENTS.md`.
 - 2026-08-16: Added `skillPaths` (default `~/.claude/skills`, append-only jq
   merge into the pi-owned settings.json) and `guards.enable` with
