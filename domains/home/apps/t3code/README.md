@@ -44,6 +44,26 @@ There is no `parts/`. This module packages no source.
   evaluator to import a path it cannot see. `mkOutOfStoreSymlink` is the
   Home Manager idiom for exactly that case.
 
+- **The autostart service starts the APP, not a second server.**
+  `apps/desktop/src/app/DesktopApp.ts:79` always starts its own backend: it
+  probes upward for a free port and never attaches to a running one. A separate
+  `t3 serve` unit against the same `~/.t3` would put two writers on one
+  event-sourced SQLite store. Starting the app itself keeps one backend, one
+  database and one thread history, and still gives the always-running behaviour
+  a service is wanted for.
+
+- **`port` is set, and Tailscale Serve is not.** `T3CODE_PORT` reaches the
+  desktop backend and fixes its port — measured 2026-08-26 with `T3CODE_PORT=3891`,
+  which produced `baseUrl: http://127.0.0.1:3891/`. A fixed port matters because
+  the phone app's pairing does not survive a moving port number.
+  `T3CODE_TAILSCALE_SERVE` does NOT reach it: that variable belongs to the
+  headless `t3 serve` CLI (`apps/server/src/cli/config.ts:134`), while the
+  desktop app owns exposure as a persisted UI setting over the IPC channels
+  `desktop:set-server-exposure-mode` and `desktop:set-tailscale-serve-enabled`
+  (`apps/desktop/src/ipc/channels.ts:38`). The launcher exported the variable,
+  the app started, and `tailscale serve status` still said `No serve config`.
+  **Turn Tailscale Serve on in Settings → Connections.**
+
 ## Rebuilding after a pull
 
 ```
@@ -66,6 +86,10 @@ is not managed here.
 
 ## Changelog
 
+- 2026-08-26: Added `port` (default 3773 in the desktop profile) and
+  `autoStart` (systemd user service on `graphical-session.target`). A
+  `tailscaleServe` option was built, measured to do nothing, and removed rather
+  than shipped — see the design note above.
 - 2026-08-26: Created. Launcher + nixpkgs Electron shim + desktop entry;
   enabled in `profiles/desktop/home.nix`. Verified live: `t3code` reached
   `backend ready` and `main window created`.

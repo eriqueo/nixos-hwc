@@ -52,6 +52,10 @@ let
       ln -sfn "$(command -v electron)" "$SHIM/electron"
       export ELECTRON_OVERRIDE_DIST_PATH="$SHIM"
 
+      ${lib.optionalString (cfg.port != null) ''
+        export T3CODE_PORT=${toString cfg.port}
+      ''}
+
       cd "$REPO"
       exec node "$START" "$@"
     '';
@@ -94,6 +98,43 @@ in
       '';
     };
 
+    port = lib.mkOption {
+      type = lib.types.nullOr lib.types.port;
+      default = null;
+      description = ''
+        Fixed port for the app's own backend (`T3CODE_PORT`). Leave null and the
+        app scans upward from its default for a free port, which means the phone
+        app must be re-paired whenever the number moves. Set a port to keep the
+        pairing stable.
+      '';
+    };
+
+    # NO tailscaleServe OPTION, deliberately. `T3CODE_TAILSCALE_SERVE` is read
+    # by the headless `t3 serve` CLI only (apps/server/src/cli/config.ts:134).
+    # The DESKTOP app owns server exposure as a persisted UI setting, driven
+    # over the IPC channels `desktop:set-server-exposure-mode` and
+    # `desktop:set-tailscale-serve-enabled` (apps/desktop/src/ipc/channels.ts:38).
+    # Measured 2026-08-26: the launcher exported the variable, the app started,
+    # and `tailscale serve status` still reported "No serve config". An option
+    # here would be a switch wired to nothing. Turn Tailscale Serve on in
+    # Settings -> Connections instead.
+
+    autoStart = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Start the app with the graphical session, as a systemd user service.
+
+        THE SERVICE STARTS THE APP, NOT A SECOND SERVER, and that distinction is
+        the whole design. `apps/desktop/src/app/DesktopApp.ts` always starts its
+        own backend — it probes for a free port and never attaches to a running
+        one. A separate `t3 serve` unit against the same `~/.t3` would therefore
+        put two writers on one event-sourced SQLite store. Starting the app
+        itself keeps one backend, one database and one thread history, and still
+        gives the always-running behaviour a service is wanted for.
+      '';
+    };
+
     desktopEntry.enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -108,6 +149,20 @@ in
     # electronPackage is listed as well as referenced, so it is a GC root even
     # if the launcher script is never run.
     home.packages = [ launcher cfg.electronPackage ];
+
+    systemd.user.services.t3code = lib.mkIf cfg.autoStart {
+      Unit = {
+        Description = "T3 Code (autostart)";
+        PartOf = [ "graphical-session.target" ];
+        After = [ "graphical-session.target" ];
+      };
+      Service = {
+        ExecStart = lib.getExe launcher;
+        Restart = "on-failure";
+        RestartSec = 5;
+      };
+      Install.WantedBy = [ "graphical-session.target" ];
+    };
 
     xdg.desktopEntries.t3code = lib.mkIf cfg.desktopEntry.enable {
       name = "T3 Code";

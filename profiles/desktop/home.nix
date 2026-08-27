@@ -62,7 +62,11 @@
 
       # Agent harness control plane — drives claude/codex/opencode in one window.
       # Runs the fork's own build in ~/600_apps/t3code; Nix supplies Electron.
-      t3code.enable = lib.mkDefault true;
+      t3code = {
+        enable = lib.mkDefault true;
+        autoStart = lib.mkDefault true;
+        port = lib.mkDefault 3773;          # stable, so a phone pairing survives
+      };
 
       # Terminal Multiplexer
       tmux.enable = lib.mkDefault true;
