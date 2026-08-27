@@ -60,6 +60,10 @@
       blender.enable = lib.mkDefault true;
       freecad.enable = lib.mkDefault false;
 
+      # Agent harness control plane — drives claude/codex/opencode in one window.
+      # Runs the fork's own build in ~/600_apps/t3code; Nix supplies Electron.
+      t3code.enable = lib.mkDefault true;
+
       # Terminal Multiplexer
       tmux.enable = lib.mkDefault true;
       zellij.enable = lib.mkDefault true;   # workbench's pane host
