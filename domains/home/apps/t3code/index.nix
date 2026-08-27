@@ -109,15 +109,26 @@ in
       '';
     };
 
-    # NO tailscaleServe OPTION, deliberately. `T3CODE_TAILSCALE_SERVE` is read
-    # by the headless `t3 serve` CLI only (apps/server/src/cli/config.ts:134).
-    # The DESKTOP app owns server exposure as a persisted UI setting, driven
-    # over the IPC channels `desktop:set-server-exposure-mode` and
-    # `desktop:set-tailscale-serve-enabled` (apps/desktop/src/ipc/channels.ts:38).
+    # NO tailscaleServe OPTION, and the reason is a deliberate upstream choice
+    # rather than an oversight. `rg -c T3CODE_TAILSCALE_SERVE apps packages
+    # scripts` returns exactly two files. One reads it: the headless `t3 serve`
+    # CLI (apps/server/src/cli/config.ts:134). The other DELETES it:
+    # DESKTOP_BACKEND_ENV_NAMES (apps/desktop/src/backend/DesktopBackendConfiguration.ts:77)
+    # feeds `backendChildEnvPatch`, which maps every name in the list to
+    # `undefined` and so strips it from the backend child's environment before
+    # the desktop app spawns that child.
+    #
+    # The desktop app therefore supplies its own exposure settings, persisted in
+    # the UI and driven over the IPC channels `desktop:set-server-exposure-mode`
+    # and `desktop:set-tailscale-serve-enabled` (apps/desktop/src/ipc/channels.ts:38).
     # Measured 2026-08-26: the launcher exported the variable, the app started,
-    # and `tailscale serve status` still reported "No serve config". An option
-    # here would be a switch wired to nothing. Turn Tailscale Serve on in
-    # Settings -> Connections instead.
+    # and `tailscale serve status` still reported "No serve config".
+    #
+    # `port` survives the same strip because the desktop reads T3CODE_PORT in
+    # its OWN process and passes the value down, which is why 3891 was honoured
+    # in the test and the tailscale flag was not.
+    #
+    # Turn Tailscale Serve on in Settings -> Connections.
 
     autoStart = lib.mkOption {
       type = lib.types.bool;

@@ -56,12 +56,18 @@ There is no `parts/`. This module packages no source.
   desktop backend and fixes its port — measured 2026-08-26 with `T3CODE_PORT=3891`,
   which produced `baseUrl: http://127.0.0.1:3891/`. A fixed port matters because
   the phone app's pairing does not survive a moving port number.
-  `T3CODE_TAILSCALE_SERVE` does NOT reach it: that variable belongs to the
-  headless `t3 serve` CLI (`apps/server/src/cli/config.ts:134`), while the
-  desktop app owns exposure as a persisted UI setting over the IPC channels
-  `desktop:set-server-exposure-mode` and `desktop:set-tailscale-serve-enabled`
-  (`apps/desktop/src/ipc/channels.ts:38`). The launcher exported the variable,
-  the app started, and `tailscale serve status` still said `No serve config`.
+  `T3CODE_TAILSCALE_SERVE` is stripped on the way down, and that is upstream's
+  deliberate choice. `rg -c T3CODE_TAILSCALE_SERVE apps packages scripts`
+  returns exactly two files. One reads it — the headless `t3 serve` CLI at
+  `apps/server/src/cli/config.ts:134`. The other deletes it:
+  `DESKTOP_BACKEND_ENV_NAMES`
+  (`apps/desktop/src/backend/DesktopBackendConfiguration.ts:77`) feeds
+  `backendChildEnvPatch`, which maps every name in that list to `undefined` and
+  strips it from the backend child's environment. The desktop app supplies its
+  own exposure settings instead, over `desktop:set-server-exposure-mode` and
+  `desktop:set-tailscale-serve-enabled` (`apps/desktop/src/ipc/channels.ts:38`).
+  Measured: the launcher exported the variable, the app started, and
+  `tailscale serve status` still said `No serve config`.
   **Turn Tailscale Serve on in Settings → Connections.**
 
 ## Rebuilding after a pull
