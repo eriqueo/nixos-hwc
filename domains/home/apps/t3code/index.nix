@@ -168,7 +168,24 @@ in
         After = [ "graphical-session.target" ];
       };
       Service = {
+        # THE BACKEND ESCAPES THIS UNIT'S CGROUP, so systemd's own KillMode
+        # cannot reach it. Measured 2026-08-26: after `systemctl --user stop
+        # t3code`, the backend was still alive holding port 3773, and
+        # /proc/<pid>/cgroup read
+        # `…/app.slice/app-electron-1473967.scope` — a sibling scope, not
+        # t3code.service. Electron moves its child there. The orphan then made
+        # the next app launch start a SECOND backend against the same
+        # ~/.t3 SQLite store, and the app failed with
+        # "Primary environment request failed during fetch-session-state
+        # (HTTP 500)".
+        #
+        # So the unit sweeps by command line instead of by cgroup. The pattern
+        # names this repo's own bin.mjs, so a second checkout is untouched.
+        # `-` prefixes are required: pkill exits 1 when nothing matches, which
+        # is the normal case and must not fail the unit.
+        ExecStartPre = "-${pkgs.procps}/bin/pkill -f ${lib.escapeShellArg "${cfg.repo}/apps/server/dist/bin.mjs"}";
         ExecStart = lib.getExe launcher;
+        ExecStopPost = "-${pkgs.procps}/bin/pkill -f ${lib.escapeShellArg "${cfg.repo}/apps/server/dist/bin.mjs"}";
         Restart = "on-failure";
         RestartSec = 5;
       };

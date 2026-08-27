@@ -92,6 +92,16 @@ is not managed here.
 
 ## Changelog
 
+- 2026-08-26: Fixed an orphaned-backend leak the autostart service caused.
+  Electron moves the backend it spawns into a sibling systemd scope
+  (`…/app.slice/app-electron-<pid>.scope`), so `systemctl --user stop t3code`
+  killed the app and left the backend alive holding port 3773. The next launch
+  started a SECOND backend on the same `~/.t3` store, and the app failed with
+  `Primary environment request failed during fetch-session-state (HTTP 500)`.
+  The unit now sweeps by command line in `ExecStartPre` and `ExecStopPost`,
+  because systemd's own `KillMode` cannot reach a process outside the unit's
+  cgroup. Verified: stop leaves 0 backends and frees the port; start gives
+  exactly 1 backend, 1 window and `HTTP 200`.
 - 2026-08-26: Added `port` (default 3773 in the desktop profile) and
   `autoStart` (systemd user service on `graphical-session.target`). A
   `tailscaleServe` option was built, measured to do nothing, and removed rather
