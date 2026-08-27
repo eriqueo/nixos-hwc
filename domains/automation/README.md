@@ -68,6 +68,18 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-08-26: **Headless `claude -p` auth failures now fail the run, across the
+  domain.** The CLI writes `Failed to authenticate. API Error: 401 ...` to stdout
+  and **exits 0**, so every consumer here read a dead credential as a clean run.
+  The user OAuth token expired 2026-08-19 (`refreshToken` was an empty string,
+  so renewal was impossible) and 16-20 runs/day failed silently for eight days.
+  Touched `nightly-builds/run.sh` (both call sites), `readme-freshness/run.sh`,
+  and `refinery/engine` (single definition in `errors.ts`; `authFailed` on
+  `ClaudeRunResult`). `sr-gauntlet`/`dx1-gauntlet` got the same guard in their
+  own repos (`~/700_datax/*_gauntlet/run.sh`) — they run on a separate OAuth
+  secret (`/run/agenix/sr-gauntlet-claude-oauth`) and stayed healthy throughout,
+  which is why the outage looked partial. Detection is anchored at line start so
+  an agent quoting the error does not trip it.
 - 2026-08-16: Add `dx1-gauntlet/` — sr-gauntlet's sibling for DX1 health-ledger
   case investigations (pipeline repo `~/700_datax/dx1_gauntlet`). Ships with
   `enable = false` in `machines/server/config.nix` (strangler-fig: the board's
