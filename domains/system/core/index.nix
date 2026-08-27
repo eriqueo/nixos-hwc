@@ -52,6 +52,7 @@
     ../../paths/paths.nix
     ./login/index.nix
     ./coredump.nix
+    ./nix-build-limits.nix
     ./authentik/index.nix
   ];
 
