@@ -33,6 +33,13 @@ export interface ClaudeRunResult {
   exitCode: number;
   stdout: string;
   timedOut: boolean;
+  /**
+   * The CLI reported an auth failure and exited 0. Distinguished from a plain
+   * failure because it is never the card's fault and never worth retrying: the
+   * credential is dead until a human re-authenticates. Optional so existing
+   * stub ports in the test suite stay valid; absent means "not an auth failure".
+   */
+  authFailed?: boolean;
 }
 
 export interface ClaudePort {

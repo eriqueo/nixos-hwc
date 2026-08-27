@@ -38,6 +38,22 @@ notify() {
     || echo "WARN: notify POST failed ($NOTIFY_URL)"
 }
 
+# claude_auth_ok <logfile> — returns 1 when the captured output shows an auth
+# failure. The CLI prints "Failed to authenticate. API Error: 401 ..." to stdout
+# and STILL EXITS 0, so exit status alone reads a dead credential as a clean
+# run that simply made no commits. That is how the 2026-08-19 OAuth expiry ran
+# unnoticed for eight days.
+claude_auth_ok() {
+  local logfile="$1" matcher
+  [ -r "$logfile" ] || return 0
+  if command -v rg >/dev/null 2>&1; then matcher="rg -q"; else matcher="grep -q"; fi
+  $matcher '^Failed to authenticate\. API Error: 40[13]' "$logfile" 2>/dev/null || return 0
+  echo "FATAL: claude auth failure (credential expired or invalid) — see $logfile"
+  notify 1 "🔑 Claude credential dead — readme-freshness" \
+    "Headless claude returned an auth error and exited 0. Re-authenticate on hwc-server: run \`claude\`, then /login. Verify with \`claude -p PONG\`. Log: $logfile"
+  return 1
+}
+
 # Count stale dirs from a linter stderr summary line ("STALE: n / total ...").
 stale_count() { rg -o 'STALE: ([0-9]+)' -r '$1' <<<"$1" | head -1; }
 
@@ -102,6 +118,13 @@ AGENT_EXIT=$?
 ELAPSED=$(( $(date +%s) - START ))
 VERDICT=$(rg -o 'NIGHTLY-VERDICT: (success|failure)' -r '$1' "$WT/.agent-output.log" 2>/dev/null | tail -1)
 echo "agent exited $AGENT_EXIT after ${ELAPSED}s verdict=${VERDICT:-none}"
+
+# A dead credential lands in the "no commits" branch below, which reports at
+# priority 2 and exits 0. Catch it first and fail the unit.
+if ! claude_auth_ok "$WT/.agent-output.log"; then
+  git worktree remove --force "$WT" 2>/dev/null
+  exit 1
+fi
 
 # Any commits at all?
 if [ -z "$(git -C "$WT" log --oneline "$BASE"..HEAD 2>/dev/null)" ]; then

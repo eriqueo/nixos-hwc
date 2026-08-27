@@ -129,11 +129,20 @@ export function makeNativeExecutor(
         const verdictOk = verdict !== null && cfg.successVerdicts.includes(verdict);
         const modeOk = cfg.executorMode === "write" ? true : pristine === true;
         const succeeded =
-          res.exitCode === 0 && !res.timedOut && reportPresent && verdictOk && modeOk;
+          res.exitCode === 0 &&
+          !res.timedOut &&
+          !res.authFailed &&
+          reportPresent &&
+          verdictOk &&
+          modeOk;
 
-        const detail = succeeded
-          ? `${cfg.executorMode} run succeeded (verdict=${verdict})`
-          : `run failed: exit=${res.exitCode} timedOut=${res.timedOut} verdict=${verdict ?? "none"} report=${reportPresent ? "yes" : "no"}${cfg.executorMode === "read-only" ? ` pristine=${pristine}` : ""}`;
+        // An auth failure is not the card's fault. Name the credential so the
+        // run does not read as "the agent produced nothing useful".
+        const detail = res.authFailed
+          ? "run failed: claude credential expired or invalid (CLI reported an auth error and exited 0) — re-authenticate on hwc-server, then verify with `claude -p PONG`"
+          : succeeded
+            ? `${cfg.executorMode} run succeeded (verdict=${verdict})`
+            : `run failed: exit=${res.exitCode} timedOut=${res.timedOut} verdict=${verdict ?? "none"} report=${reportPresent ? "yes" : "no"}${cfg.executorMode === "read-only" ? ` pristine=${pristine}` : ""}`;
 
         return {
           outcome: succeeded ? "succeeded" : "failed",

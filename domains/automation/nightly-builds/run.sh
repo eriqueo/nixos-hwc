@@ -74,6 +74,22 @@ notify() {
     || log "WARN: notify POST failed ($NOTIFY_URL)"
 }
 
+# claude_auth_ok <logfile> — returns 1 when the captured output shows an auth
+# failure. The CLI prints "Failed to authenticate. API Error: 401 ..." to stdout
+# and STILL EXITS 0, so exit status alone reads a dead credential as a clean
+# run. That is exactly how the 2026-08-19 OAuth expiry ran unnoticed for eight
+# days. Callers must abort the run — every later claude call fails identically.
+claude_auth_ok() {
+  local logfile="$1" matcher
+  [ -r "$logfile" ] || return 0
+  if command -v rg >/dev/null 2>&1; then matcher="rg -q"; else matcher="grep -q"; fi
+  $matcher '^Failed to authenticate\. API Error: 40[13]' "$logfile" 2>/dev/null || return 0
+  log "FATAL: claude auth failure (credential expired or invalid) — see $logfile"
+  notify 1 "🔑 Claude credential dead — nightly-builds" \
+    "Headless claude returned an auth error and exited 0. Re-authenticate on hwc-server: run \`claude\`, then /login. Verify with \`claude -p PONG\`. Log: $logfile"
+  return 1
+}
+
 # ── Lock ─────────────────────────────────────────────────────────────────────
 if [ -f "$LOCK_FILE" ]; then
   pid=$(cat "$LOCK_FILE" 2>/dev/null || echo "")
@@ -165,6 +181,8 @@ $NEW_IDEAS"
                "Drafted from $COUNT new idea(s). Review _inbox/nightly_builds/ at morning review and flip draft → queued for anything ready (that flip is the Phase-4 gate)."; } \
         || { log "WARN: card-smith failed — ideas left in place"; \
              notify 2 "⚠️ Card-smith failed" "Card-smith pass errored on $COUNT idea(s); they were left under ## new. See runs/_card-smith-$DATE.log."; }
+      # Abort on a dead credential: Phase B would fail identically and silently.
+      claude_auth_ok "$RUNS_DIR/_card-smith-$DATE.log" || exit 1
     fi
   else
     log "PHASE A: no new ideas"
@@ -321,6 +339,9 @@ PYEOF
   AGENT_EXIT=$?
   ELAPSED=$(( $(date +%s) - START ))
   log "PHASE B: agent exited $AGENT_EXIT after ${ELAPSED}s"
+  # A dead credential yields exit 0 with an empty branch. Abort before the push
+  # and report paths interpret that as "the agent chose to change nothing".
+  claude_auth_ok "$RUN_DIR/agent-output.log" || exit 1
 
   # Push whatever was committed (a failed run's partial branch is still
   # reviewable — gate 8). Only push if the branch has commits beyond base.

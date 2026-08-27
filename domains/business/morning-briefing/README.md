@@ -154,6 +154,16 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-08-26** — **Auth failure no longer masquerades as output.** `claude -p`
+  writes its 401 to stdout and exits 0. In `run-dispatch.sh` that took the
+  success branch: the auth error was written as the report body and the card was
+  moved to `dispatch-done/` — the card was destroyed, not just skipped. In
+  `triage-mail.sh` it fell through to the JSON parse and degraded to an empty
+  triage, indistinguishable from a quiet inbox. Both now detect the line (pure
+  bash `case` — this domain's PATH has no `rg`), leave the card queued, and
+  `exit 1`. There is no notify wire here by design; a failed unit surfaces in the
+  next briefing's `services_failed`, which is the channel this domain already
+  consumes.
 - **2026-08-25** — **New `research` section** (`gather-research.mjs` →
   `sections.research`). Reports how many articles wait in research-scout's
   human review lane, the top few with links, and the standing themes report

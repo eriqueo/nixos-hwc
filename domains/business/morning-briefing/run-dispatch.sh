@@ -26,6 +26,19 @@ CLAUDE_BIN="${CLAUDE_BIN:-/etc/profiles/per-user/eric/bin/claude}"
 
 log() { echo "[$(date '+%F %T')] $*" >> "${LOG_FILE}"; }
 
+# claude_auth_failed <text> — true when stdout is the CLI's auth-failure line.
+# The CLI prints "Failed to authenticate. API Error: 401 ..." to stdout and
+# STILL EXITS 0, so the success branch below would otherwise write that error
+# text as the report and consume the card. That is how the 2026-08-19 OAuth
+# expiry went unnoticed for eight days. Pure bash: this script has no rg.
+claude_auth_failed() {
+  case "$1" in
+    "Failed to authenticate. API Error: 401"*) return 0 ;;
+    "Failed to authenticate. API Error: 403"*) return 0 ;;
+  esac
+  return 1
+}
+
 mkdir -p "${DONE_DIR}" "${REPORTS_DIR}" "$(dirname "${LOG_FILE}")"
 
 # Read-only tool grant. Bash patterns are prefix-matched by the CLI.
@@ -45,6 +58,13 @@ for card in "${DISPATCH_DIR}"/*.md; do
       --allowedTools "${ALLOWED_TOOLS}" \
       --output-format text \
       < "${card}" 2>>"${LOG_FILE}"); then
+    # Leave the card queued and fail the unit — every later card fails the same
+    # way, and a failed unit surfaces in tomorrow's briefing (services_failed).
+    if claude_auth_failed "${output}"; then
+      log "FATAL: claude auth failure (credential expired or invalid) — ${name} left in queue"
+      log "FATAL: re-authenticate on hwc-server: run \`claude\`, then /login; verify with \`claude -p PONG\`"
+      exit 1
+    fi
     printf '%s\n\n---\n*dispatched %s · card: %s*\n' "${output}" "$(date -Iseconds)" "${name}" > "${report_path}"
     mv "${card}" "${DONE_DIR}/${name}"
     log "OK: ${name} ($(wc -l < "${report_path}") lines)"

@@ -8,6 +8,7 @@
 
 import { execFile } from "node:child_process";
 import { ClaudePort, ClaudeRunResult } from "../executors/ports.js";
+import { isClaudeAuthFailure } from "../errors.js";
 
 export interface ClaudeHeadlessConfig {
   bin?: string; // default $REFINERY_CLAUDE_BIN or "claude"
@@ -32,7 +33,11 @@ export function makeClaudeHeadless(cfg: ClaudeHeadlessConfig = {}): ClaudePort {
             const e = err as (Error & { killed?: boolean; code?: number | string }) | null;
             const timedOut = e?.killed === true;
             const exitCode = typeof e?.code === "number" ? e.code : e ? 1 : 0;
-            resolve({ exitCode, stdout: (stdout ?? "").toString(), timedOut });
+            const out = (stdout ?? "").toString();
+            // Auth failure arrives as exit 0 with the error on stdout — flag it
+            // so the executor can name the cause instead of reporting a generic
+            // "no verdict, no report" run. See errors.ts § CLAUDE_AUTH_FAILURE_RE.
+            resolve({ exitCode, stdout: out, timedOut, authFailed: isClaudeAuthFailure(out) });
           },
         );
       });

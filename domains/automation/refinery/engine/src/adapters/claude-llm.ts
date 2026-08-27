@@ -5,6 +5,7 @@
 
 import { execFile } from "node:child_process";
 import { LlmPort } from "../gates/llm-port.js";
+import { ClaudeAuthError, isClaudeAuthFailure } from "../errors.js";
 
 export interface ClaudeLlmConfig {
   bin?: string; // default: $REFINERY_CLAUDE_BIN or "claude"
@@ -24,8 +25,13 @@ export function makeClaudeLlm(cfg: ClaudeLlmConfig = {}): LlmPort {
           ["-p", prompt, "--dangerously-skip-permissions", ...extra],
           { timeout, maxBuffer: 32 * 1024 * 1024 },
           (err, stdout) => {
-            if (err) reject(err);
-            else resolve(stdout.toString());
+            if (err) return reject(err);
+            const out = stdout.toString();
+            // Exit 0 with the auth error on stdout. Reject rather than hand a
+            // caller an error message dressed as a completion — the morning
+            // review would otherwise store it as the model's answer.
+            if (isClaudeAuthFailure(out)) return reject(new ClaudeAuthError(out));
+            resolve(out);
           },
         );
       });

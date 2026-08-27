@@ -57,6 +57,14 @@ domains/automation/nightly-builds/
 `reviewLlmProvider`, `maxCards`, `vaultDir`, `repoDir`, `enableRebuildButton`.
 
 ## Changelog
+- **2026-08-26** — **Headless auth failure now fails the run.** `claude -p`
+  prints `Failed to authenticate. API Error: 401 ...` to **stdout and exits 0**,
+  so both call sites (card-smith, Phase B) read a dead credential as a clean run
+  that simply produced no branch. The user OAuth token expired 2026-08-19 and
+  16–20 runs/day failed silently for eight days before anyone noticed. `run.sh`
+  gained `claude_auth_ok <logfile>`; both sites now notify at priority 1 and
+  `exit 1`. Detection is anchored (`^Failed to authenticate\. API Error: 40[13]`)
+  so an agent quoting the error mid-line does not trip it.
 - **2026-07-12** — **Morning-review digest was silently dropped when large.**
   hwc-notify's schema caps title at 200 / body at 4000 chars and 400-rejects
   oversized payloads; a long `errdetail` list pushed the digest body past the

@@ -7,6 +7,7 @@ import {
   parseNativeVerdict,
   NativeConfig,
 } from "../src/executors/native.js";
+import { isClaudeAuthFailure } from "../src/errors.js";
 import { makeItem } from "./helpers.js";
 
 // ── Stub ports that record calls ───────────────────────────────────────────
@@ -111,6 +112,44 @@ test("parseNativeVerdict reads both verdict patterns and takes the last match", 
   const sr = "SR-VERDICT: inconclusive\n";
   assert.equal(parseNativeVerdict(sr, /SR-VERDICT: (investigated|inconclusive)/), "inconclusive");
   assert.equal(parseNativeVerdict("nothing here", /SR-VERDICT: (\w+)/), null);
+});
+
+// The 2026-08-19 regression: the CLI prints its auth failure to stdout and
+// exits 0, so every exit-code check read a dead credential as a clean run for
+// eight days. These pin the detector and the executor's handling of it.
+test("isClaudeAuthFailure: matches the CLI's real 401 line, not a mention of it", () => {
+  const real =
+    "Failed to authenticate. API Error: 401 OAuth access token has expired. Re-authenticate to continue.";
+  assert.equal(isClaudeAuthFailure(real), true);
+  assert.equal(isClaudeAuthFailure("\n  " + real), true, "leading whitespace tolerated");
+  assert.equal(isClaudeAuthFailure(real.replace("401", "403")), true);
+  assert.equal(isClaudeAuthFailure("NIGHTLY-VERDICT: success"), false);
+  assert.equal(isClaudeAuthFailure(""), false);
+  assert.equal(
+    isClaudeAuthFailure("The log said Failed to authenticate. API Error: 401 here."),
+    false,
+    "a quoted mention mid-line must not trip the detector",
+  );
+  assert.equal(
+    isClaudeAuthFailure("Failed to authenticate. API Error: 4011"),
+    false,
+    "word boundary: 4011 is not 401",
+  );
+});
+
+test("auth failure: exit 0 + verdict + report still fails, and names the credential", async () => {
+  const { git } = stubGit({ hasCommits: true });
+  // Worst case for the old code: everything else looks like a clean success.
+  const { claude } = stubClaude({
+    exitCode: 0,
+    stdout: "NIGHTLY-VERDICT: success",
+    authFailed: true,
+  });
+  const eff = makeNativeExecutor(writeCfg(), { git, claude, report: reportPort(true) });
+
+  const r = await eff.run(makeItem());
+  assert.equal(r.outcome, "failed", "authFailed must veto an otherwise-passing run");
+  assert.match(r.detail, /credential expired or invalid/);
 });
 
 test("write mode: pushes the branch when there are commits and succeeds on a success verdict", async () => {

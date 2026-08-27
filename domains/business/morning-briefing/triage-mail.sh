@@ -140,6 +140,19 @@ if [ ${TRIAGE_EXIT} -ne 0 ]; then
   exit 1
 fi
 
+# An expired credential prints "Failed to authenticate. API Error: 401 ..." to
+# stdout and STILL EXITS 0. Without this check the text falls through to the
+# JSON parse below and degrades to an empty triage — indistinguishable from a
+# quiet inbox. That is how the 2026-08-19 OAuth expiry went unnoticed.
+case "${TRIAGE_RAW}" in
+  "Failed to authenticate. API Error: 40"[13]*)
+    log "FATAL: claude auth failure (credential expired or invalid)"
+    log "FATAL: re-authenticate on hwc-server: run \`claude\`, then /login; verify with \`claude -p PONG\`"
+    write_empty_triage "claude credential expired"
+    exit 1
+    ;;
+esac
+
 # Extract the JSON object with node: whole output · fenced block · brace span
 # (same tolerant parse the 6am run stabilized on — see run.sh history 2026-07-08).
 TRIAGE_CLEAN=$(echo "${TRIAGE_RAW}" | node -e '

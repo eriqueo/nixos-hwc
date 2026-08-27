@@ -42,6 +42,32 @@ export class UnknownStepError extends RefineryError {
   }
 }
 
+/**
+ * The headless CLI prints its auth failure to STDOUT and STILL EXITS 0, so
+ * exit-code checks read a dead credential as a clean, empty run. That is how
+ * the 2026-08-19 OAuth expiry went unnoticed for eight days. Both `claude -p`
+ * adapters (ClaudePort in claude-headless.ts, LlmPort in claude-llm.ts) match
+ * against this one definition — do not re-spell the signature at a call site.
+ */
+export const CLAUDE_AUTH_FAILURE_RE = /^Failed to authenticate\. API Error: 40[13]\b/;
+
+/** True when `stdout` is the CLI's auth-failure line. */
+export function isClaudeAuthFailure(stdout: string): boolean {
+  return CLAUDE_AUTH_FAILURE_RE.test(stdout.trimStart());
+}
+
+export class ClaudeAuthError extends RefineryError {
+  readonly stdout: string;
+  constructor(stdout: string) {
+    super(
+      "E_CLAUDE_AUTH",
+      "claude credential expired or invalid (the CLI reported an auth error and exited 0)",
+    );
+    this.name = "ClaudeAuthError";
+    this.stdout = stdout;
+  }
+}
+
 export class InvalidGateVerdictError extends RefineryError {
   readonly gateId: string;
   readonly detail: string;
