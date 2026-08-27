@@ -357,8 +357,22 @@
   # the 8GB VRAM, and CPU inference is the fan-noise condition we're avoiding).
   #   GPU:   LFM2-2.6B Q4 (~1.5 GB)  127.0.0.1:11500  (alias lfm2-2.6b)
   #   Embed: nomic-embed-text-v1.5   127.0.0.1:11502
+  #
+  # DISABLED 2026-08-26 pending the cache-miss investigation. The
+  # `cudaSupport = true` override below is the reason this machine has to
+  # build the whole CUDA stack from source: it rewrites the derivation hash
+  # of llama-cpp and of every CUDA dependency (opencv, whisper-cpp, cudnn,
+  # triton, nccl), so cache.nixos-cuda.org — which only holds the stock
+  # recipes — matches none of them. That local rebuild is what OOM-killed
+  # the desktop today (see domains/system/core/nix-build-limits.nix). The
+  # memory cap added the same day contains the blast radius; it does not
+  # stop the rebuild from being triggered, so the trigger goes off here.
+  # Removal condition: either the laptop moves to a pkgs set with global
+  # cudaSupport (matching the server's stable-cuda set, so the cache hits),
+  # or we accept and schedule the source build. Re-enable by flipping
+  # `enable` back to true — nothing else in this block was changed.
   hwc.server.ai.llamaCpp = {
-    enable = true;
+    enable = false;
     # pkgs-laptop has no global cudaSupport (unlike the server's stable-cuda
     # set), so force the CUDA backend per-package — otherwise -ngl is silently
     # ignored and inference falls back to the CPU. cudaCapabilities stays null:
