@@ -1,7 +1,8 @@
 {
   "mcpServers": {
     "_filesystem_DISABLED": {
-      "_comment": "Disabled: redundant with built-in Read/Write/Edit/Glob/Grep tools",
+      "_comment": "Disabled: redundant with built-in Read/Write/Edit/Glob/Grep tools. The _DISABLED name is a human label and disables nothing; pi-mcp-adapter honours the `disabled` field, so both are set.",
+      "disabled": true,
       "command": "npx",
       "args": [
         "-y",
@@ -16,7 +17,8 @@
       "args": ["mcp-server-git", "--repository", "/home/eric/.nixos"]
     },
     "_brave-search_DISABLED": {
-      "_comment": "Disabled: redundant with built-in WebSearch tool",
+      "_comment": "Disabled: redundant with built-in WebSearch tool. See _filesystem_DISABLED for why `disabled` is set as well as the name.",
+      "disabled": true,
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-brave-search"],
       "env": {
