@@ -52,7 +52,11 @@ in
 
     databaseUrl = lib.mkOption {
       type = lib.types.str;
-      default = "postgresql://datax@localhost/datax";
+      # Renamed from `datax` on 2026-08-26. The scraper was built under a
+      # project called datax in 2026-05 and the database kept that birth name
+      # for three months. Nothing here relates to the DataX product; see
+      # domains/business/datax/index.nix for the full account.
+      default = "postgresql://lead_scout@localhost/lead_scout";
       description = "PostgreSQL connection string";
     };
 

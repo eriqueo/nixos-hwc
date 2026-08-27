@@ -261,10 +261,13 @@ in
           JSON; one timer iterates all routes.
         '';
       };
+      # Option name kept as dataxDsn for now: renaming a public option is a
+      # separate breaking change from renaming the database it points at.
+      # The database itself was renamed datax -> lead_scout on 2026-08-26.
       dataxDsn = lib.mkOption {
         type = lib.types.str;
-        default = "postgresql:///datax";
-        description = "lead_scout's datax DB, unix-socket peer auth (read-only by contract).";
+        default = "postgresql:///lead_scout";
+        description = "lead_scout's database, unix-socket peer auth (read-only by contract).";
       };
     };
 
