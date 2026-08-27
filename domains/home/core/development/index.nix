@@ -51,7 +51,7 @@ in
     home.packages = with pkgs; [
       git-lfs
       gh
-      doctl
+      # doctl: see domains/home/apps/doctl (agenix-authenticated wrapper).
       wireguard-tools
       bun            # runtime for claude-code's Discord channel MCP server (.mcp.json: `command: "bun"`)
 

@@ -38,6 +38,7 @@
     markitdown.enable = true;
     dt.enable = true;
     dxlog.enable = true;
+    doctl.enable = true;
     gpu-screen-recorder.enable = true;  # gsr-toggle / SHIFT+PRINT call recording
     whisper-cpp = {
       enable = true;

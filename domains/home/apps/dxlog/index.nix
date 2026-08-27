@@ -49,7 +49,11 @@ in
       dxlogScript
       pkgs.curl
       pkgs.jq
-      pkgs.doctl
+      # doctl (used by `dxlog live`) comes from domains/home/apps/doctl, which
+      # wraps it with the agenix token. Installing pkgs.doctl here would
+      # collide on bin/doctl.
     ];
+
+    hwc.home.apps.doctl.enable = true;
   };
 }
