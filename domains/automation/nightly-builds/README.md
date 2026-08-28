@@ -57,6 +57,24 @@ domains/automation/nightly-builds/
 `reviewLlmProvider`, `maxCards`, `vaultDir`, `repoDir`, `enableRebuildButton`.
 
 ## Changelog
+- **2026-08-28** — **The card's `pr:` field now records what actually happened.**
+  Both the `done` and the `blocked` arms wrote `branch \`x\` (pushed…)`
+  unconditionally, one line after the launcher had already logged the truth. The
+  2026-08-26 value audit found two live hits: `nixos-self-defense/03-container-pgid-audit`
+  (2026-07-29) recorded a pushed `nixos/pgid-audit` that never existed on origin —
+  the log said `no commits on nixos/pgid-audit` — and four cards in the 2026-06-18
+  kidpix batch recorded `(pushed)` after origin rejected the push as
+  non-fast-forward. A card naming a branch that does not exist poisons every later
+  audit, which is exactly how the audit's own merge count needed three cross-checks.
+  `run.sh` now sets `PUSH_STATE` (`pushed` / `push-failed` / `no-commits`) at the
+  push site and composes the field through a new `pr_field` helper; the three
+  Discord fallback bodies stopped claiming a push too. The `failed` arm now writes
+  `pr:` as well — it previously left the field empty, so a reviewer could not tell
+  a failure that pushed partial work (gate 8: reviewable) from one that pushed
+  nothing. The refinery engine is unaffected: `review/run.ts:92` derives the branch
+  from the card **body**, never from this field, and overwrites `pr:` with the PR
+  URL once it opens one. Verified against a real remote — all three states
+  reproduce, and the no-commits branch is absent from `git ls-remote`.
 - **2026-08-26** — **Headless auth failure now fails the run.** `claude -p`
   prints `Failed to authenticate. API Error: 401 ...` to **stdout and exits 0**,
   so both call sites (card-smith, Phase B) read a dead credential as a clean run

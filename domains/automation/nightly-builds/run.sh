@@ -143,6 +143,26 @@ if mm:
 PYEOF
 }
 
+# pr_field <context> — compose the card's `pr:` value from PUSH_STATE, which the
+# push block below sets per card. NEVER write an unconditional "(pushed)": the
+# launcher already knows whether the push happened, and a card naming a branch
+# that does not exist poisons every later audit. Live hits, both found by the
+# 2026-08-26 value audit:
+#   - 2026-07-29 nixos-self-defense/03-container-pgid-audit recorded
+#     "branch `nixos/pgid-audit` (pushed)" while the log said "no commits on
+#     nixos/pgid-audit" one line earlier; the branch never reached origin.
+#   - The 2026-06-18 kidpix batch recorded "(pushed)" on four cards whose push
+#     origin rejected as non-fast-forward.
+# Reads the loop-local BRANCH / WT / PUSH_STATE at call time (bash dynamic scope).
+pr_field() { # pr_field <context-phrase> -> prints the `pr:` value
+  local ctx="$1"
+  case "$PUSH_STATE" in
+    pushed)      echo "branch \`$BRANCH\` (pushed; $ctx)" ;;
+    push-failed) echo "branch \`$BRANCH\` (NOT pushed — origin rejected the push; commits are local only in $WT; $ctx)" ;;
+    *)           echo "no branch — the agent committed nothing ($ctx)" ;;
+  esac
+}
+
 # ── Phase A: card-smith ──────────────────────────────────────────────────────
 # Skipped entirely on a targeted run — "Run now" executes an existing card, it
 # does not draft new ones.
@@ -345,11 +365,21 @@ PYEOF
 
   # Push whatever was committed (a failed run's partial branch is still
   # reviewable — gate 8). Only push if the branch has commits beyond base.
+  # PUSH_STATE records what actually happened, for pr_field to report. The three
+  # states are pushed / push-failed / no-commits. Do not collapse them: the
+  # difference between "origin rejected the push" and "the agent committed
+  # nothing" is what a morning reviewer needs, and it is the only thing that
+  # tells a later audit whether the branch exists at all.
   if [ -n "$(git -C "$WT" log --oneline "$BASE"..HEAD 2>/dev/null)" ]; then
-    git -C "$WT" push -u origin "$BRANCH" >>"$LOG_FILE" 2>&1 \
-      && log "PHASE B: pushed $BRANCH to origin" \
-      || log "WARN: push failed — branch remains local in $WT"
+    if git -C "$WT" push -u origin "$BRANCH" >>"$LOG_FILE" 2>&1; then
+      PUSH_STATE=pushed
+      log "PHASE B: pushed $BRANCH to origin"
+    else
+      PUSH_STATE=push-failed
+      log "WARN: push failed — branch remains local in $WT"
+    fi
   else
+    PUSH_STATE=no-commits
     log "PHASE B: no commits on $BRANCH"
   fi
 
@@ -370,13 +400,13 @@ PYEOF
   REPORT_PRESENT=$([ -f "$RUN_DIR/REPORT.md" ] && echo yes || echo no)
   if [ "$AGENT_EXIT" -eq 0 ] && [ "$REPORT_PRESENT" = yes ] && [ "$VERDICT" = "success" ]; then
     set_field "$CARD" status done
-    set_field "$CARD" pr "branch \`$BRANCH\` (pushed; open PR at morning review)"
+    set_field "$CARD" pr "$(pr_field 'open PR at morning review')"
     log "PHASE B: card $SLUG done"
     # Rich Discord post: verdict header + Success-criteria + full REPORT.md
     # attached. Falls back to a metadata-only notify() if the sender can't run.
     "$AGENT_DIR/send-report.sh" "$RUN_DIR" done "$ELAPSED" "$BRANCH" "$GOAL/$SLUG" >>"$LOG_FILE" 2>&1 \
       || notify 5 "✅ $GOAL/$SLUG — done (${ELAPSED}s)" \
-        "Branch \`$BRANCH\` pushed to origin. Open the PR at morning review.
+        "$(pr_field 'open the PR at morning review')
 Report: runs/$RUN_NAME/REPORT.md"
   elif [ "$AGENT_EXIT" -eq 0 ] && [ "$REPORT_PRESENT" = yes ] && [ "$VERDICT" = "blocked" ]; then
     # Venue-blocked: the work is committed and the card's own checks pass, but
@@ -384,22 +414,26 @@ Report: runs/$RUN_NAME/REPORT.md"
     # decides at morning review (usually: open/merge the pushed branch). The
     # board treats `blocked: …` as a force-queueable, non-dead-end state.
     set_field "$CARD" status "blocked: done-condition unverifiable in venue — see report"
-    set_field "$CARD" pr "branch \`$BRANCH\` (pushed; venue could not confirm — human decides)"
+    set_field "$CARD" pr "$(pr_field 'venue could not confirm — human decides')"
     log "PHASE B: card $SLUG BLOCKED (venue) — see $RUN_DIR/REPORT.md"
     "$AGENT_DIR/send-report.sh" "$RUN_DIR" blocked "$ELAPSED" "$BRANCH" "$GOAL/$SLUG" >>"$LOG_FILE" 2>&1 \
       || notify 3 "⚠️ $GOAL/$SLUG — blocked: venue can't confirm (${ELAPSED}s)" \
         "Code committed + the card's own checks pass, but the done-condition can't be evaluated in this venue.
-Branch \`$BRANCH\` pushed (reviewable). A human decides at morning review.
+$(pr_field 'a human decides at morning review')
 Report: runs/$RUN_NAME/REPORT.md"
   else
     set_field "$CARD" status "failed: exit=$AGENT_EXIT verdict=${VERDICT:-none} report=$REPORT_PRESENT"
+    # A failed card records its branch fate too. The old code left `pr:` empty,
+    # so a reviewer could not tell a failure that pushed partial work (gate 8:
+    # reviewable) from one that pushed nothing.
+    set_field "$CARD" pr "$(pr_field 'failed run — partial work is reviewable, gate 8')"
     log "PHASE B: card $SLUG FAILED — see $RUN_DIR/agent-output.log"
     # If a (partial) REPORT.md exists, post it richly — the failure report is
     # exactly what you want to read. Otherwise fall back to metadata notify().
     "$AGENT_DIR/send-report.sh" "$RUN_DIR" failed "$ELAPSED" "$BRANCH" "$GOAL/$SLUG" >>"$LOG_FILE" 2>&1 \
       || notify 2 "❌ $GOAL/$SLUG — failed (${ELAPSED}s)" \
         "exit=$AGENT_EXIT verdict=${VERDICT:-none} report=$REPORT_PRESENT
-Any partial commits were pushed to \`$BRANCH\` (reviewable, gate 8).
+$(pr_field 'partial work is reviewable, gate 8')
 Logs: runs/$RUN_NAME/agent-output.log"
   fi
   # Worktree is left in place for morning inspection; next run recreates it.
