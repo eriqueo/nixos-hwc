@@ -67,7 +67,9 @@ domains/automation/nightly-builds/
   non-fast-forward. A card naming a branch that does not exist poisons every later
   audit, which is exactly how the audit's own merge count needed three cross-checks.
   `run.sh` now sets `PUSH_STATE` (`pushed` / `push-failed` / `no-commits`) at the
-  push site and composes the field through a new `pr_field` helper; the three
+  push site and composes the field through a new `pr_field` helper — every input
+  is a parameter, the three states are matched exhaustively, and an unknown state
+  logs an ERROR and records itself verbatim rather than defaulting quietly; the three
   Discord fallback bodies stopped claiming a push too. The `failed` arm now writes
   `pr:` as well — it previously left the field empty, so a reviewer could not tell
   a failure that pushed partial work (gate 8: reviewable) from one that pushed

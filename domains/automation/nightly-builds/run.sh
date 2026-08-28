@@ -143,8 +143,8 @@ if mm:
 PYEOF
 }
 
-# pr_field <context> — compose the card's `pr:` value from PUSH_STATE, which the
-# push block below sets per card. NEVER write an unconditional "(pushed)": the
+# pr_field — compose the card's `pr:` value from the push state that the push
+# block below records per card. NEVER write an unconditional "(pushed)": the
 # launcher already knows whether the push happened, and a card naming a branch
 # that does not exist poisons every later audit. Live hits, both found by the
 # 2026-08-26 value audit:
@@ -153,13 +153,18 @@ PYEOF
 #     nixos/pgid-audit" one line earlier; the branch never reached origin.
 #   - The 2026-06-18 kidpix batch recorded "(pushed)" on four cards whose push
 #     origin rejected as non-fast-forward.
-# Reads the loop-local BRANCH / WT / PUSH_STATE at call time (bash dynamic scope).
-pr_field() { # pr_field <context-phrase> -> prints the `pr:` value
-  local ctx="$1"
-  case "$PUSH_STATE" in
-    pushed)      echo "branch \`$BRANCH\` (pushed; $ctx)" ;;
-    push-failed) echo "branch \`$BRANCH\` (NOT pushed — origin rejected the push; commits are local only in $WT; $ctx)" ;;
-    *)           echo "no branch — the agent committed nothing ($ctx)" ;;
+# Every input arrives as a parameter — the helper reads no loop-local global, so
+# it is callable and testable on its own. The three states are exhaustive and the
+# fallback is LOUD: a typo in the state must not silently record "no branch",
+# which is the same class of quiet-wrong-answer this whole change removes.
+pr_field() { # pr_field <state> <branch> <worktree> <context-phrase> -> the `pr:` value
+  local state="$1" branch="$2" wt="$3" ctx="$4"
+  case "$state" in
+    pushed)      echo "branch \`$branch\` (pushed; $ctx)" ;;
+    push-failed) echo "branch \`$branch\` (NOT pushed — origin rejected the push; commits are local only in $wt; $ctx)" ;;
+    no-commits)  echo "no branch — the agent committed nothing ($ctx)" ;;
+    *)           log "ERROR: pr_field got unknown push state '$state' — card records it verbatim"
+                 echo "UNKNOWN push state '$state' — inspect runs/ and \`git ls-remote\` ($ctx)" ;;
   esac
 }
 
@@ -400,13 +405,13 @@ PYEOF
   REPORT_PRESENT=$([ -f "$RUN_DIR/REPORT.md" ] && echo yes || echo no)
   if [ "$AGENT_EXIT" -eq 0 ] && [ "$REPORT_PRESENT" = yes ] && [ "$VERDICT" = "success" ]; then
     set_field "$CARD" status done
-    set_field "$CARD" pr "$(pr_field 'open PR at morning review')"
+    set_field "$CARD" pr "$(pr_field "$PUSH_STATE" "$BRANCH" "$WT" 'open PR at morning review')"
     log "PHASE B: card $SLUG done"
     # Rich Discord post: verdict header + Success-criteria + full REPORT.md
     # attached. Falls back to a metadata-only notify() if the sender can't run.
     "$AGENT_DIR/send-report.sh" "$RUN_DIR" done "$ELAPSED" "$BRANCH" "$GOAL/$SLUG" >>"$LOG_FILE" 2>&1 \
       || notify 5 "✅ $GOAL/$SLUG — done (${ELAPSED}s)" \
-        "$(pr_field 'open the PR at morning review')
+        "$(pr_field "$PUSH_STATE" "$BRANCH" "$WT" 'open the PR at morning review')
 Report: runs/$RUN_NAME/REPORT.md"
   elif [ "$AGENT_EXIT" -eq 0 ] && [ "$REPORT_PRESENT" = yes ] && [ "$VERDICT" = "blocked" ]; then
     # Venue-blocked: the work is committed and the card's own checks pass, but
@@ -414,26 +419,26 @@ Report: runs/$RUN_NAME/REPORT.md"
     # decides at morning review (usually: open/merge the pushed branch). The
     # board treats `blocked: …` as a force-queueable, non-dead-end state.
     set_field "$CARD" status "blocked: done-condition unverifiable in venue — see report"
-    set_field "$CARD" pr "$(pr_field 'venue could not confirm — human decides')"
+    set_field "$CARD" pr "$(pr_field "$PUSH_STATE" "$BRANCH" "$WT" 'venue could not confirm — human decides')"
     log "PHASE B: card $SLUG BLOCKED (venue) — see $RUN_DIR/REPORT.md"
     "$AGENT_DIR/send-report.sh" "$RUN_DIR" blocked "$ELAPSED" "$BRANCH" "$GOAL/$SLUG" >>"$LOG_FILE" 2>&1 \
       || notify 3 "⚠️ $GOAL/$SLUG — blocked: venue can't confirm (${ELAPSED}s)" \
         "Code committed + the card's own checks pass, but the done-condition can't be evaluated in this venue.
-$(pr_field 'a human decides at morning review')
+$(pr_field "$PUSH_STATE" "$BRANCH" "$WT" 'a human decides at morning review')
 Report: runs/$RUN_NAME/REPORT.md"
   else
     set_field "$CARD" status "failed: exit=$AGENT_EXIT verdict=${VERDICT:-none} report=$REPORT_PRESENT"
     # A failed card records its branch fate too. The old code left `pr:` empty,
     # so a reviewer could not tell a failure that pushed partial work (gate 8:
     # reviewable) from one that pushed nothing.
-    set_field "$CARD" pr "$(pr_field 'failed run — partial work is reviewable, gate 8')"
+    set_field "$CARD" pr "$(pr_field "$PUSH_STATE" "$BRANCH" "$WT" 'failed run — partial work is reviewable, gate 8')"
     log "PHASE B: card $SLUG FAILED — see $RUN_DIR/agent-output.log"
     # If a (partial) REPORT.md exists, post it richly — the failure report is
     # exactly what you want to read. Otherwise fall back to metadata notify().
     "$AGENT_DIR/send-report.sh" "$RUN_DIR" failed "$ELAPSED" "$BRANCH" "$GOAL/$SLUG" >>"$LOG_FILE" 2>&1 \
       || notify 2 "❌ $GOAL/$SLUG — failed (${ELAPSED}s)" \
         "exit=$AGENT_EXIT verdict=${VERDICT:-none} report=$REPORT_PRESENT
-$(pr_field 'partial work is reviewable, gate 8')
+$(pr_field "$PUSH_STATE" "$BRANCH" "$WT" 'partial work is reviewable, gate 8')
 Logs: runs/$RUN_NAME/agent-output.log"
   fi
   # Worktree is left in place for morning inspection; next run recreates it.
