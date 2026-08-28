@@ -105,13 +105,18 @@ facts, each measured on the live cluster 2026-08-28:
    unreachable.
 2. **`eric` is a Postgres superuser** (`rolsuper = t`), and a superuser bypasses
    every privilege check.
-3. **`eric` also owns the objects** in `hwc`, `datax_monitor`, `firefly`,
-   `firefly_pico` and `paperless` — 81, 68 and 15 tables in the last three, whose
-   *databases* are owned by `postgres`. Owners' privileges are implicit.
+3. **`eric` owns every table** in `datax_monitor`, `firefly`, `firefly_pico`
+   and `paperless` — 6, 81, 15 and 68 tables respectively. `hwc` is mixed:
+   `eric` owns 10 tables and `postgres` owns 31. This ownership is additional
+   evidence for four databases, not part of the general access invariant;
+   `eric`'s superuser status is what makes the deleted grants redundant across
+   all five.
 
-So a `GRANT … TO eric` is a no-op three times over. This matches the standing
-single-user exception in `~/.claude/engineering-principles.md` (Principle 5):
-isolation here comes from the machine boundary, not from in-database roles.
+So a `GRANT … TO eric` is a no-op at least twice over everywhere (trusted
+authentication plus superuser), with ownership supplying a third reason for
+the objects Eric owns. This matches the standing single-user exception in
+`~/.claude/engineering-principles.md` (Principle 5): isolation here comes from
+the machine boundary, not from in-database roles.
 
 **Who connects as what:**
 
@@ -191,10 +196,12 @@ it, these three sit in the nightly `pg_dumpall` and cost only disk.
 - `domains/media/paperless/` - PostgreSQL + Redis
 - `domains/business/firefly/` - PostgreSQL
 - `domains/business/databases/` - PostgreSQL (hwc database — see that module's README for schema docs)
-- `profiles/server.nix` - n8n uses PostgreSQL
+- n8n workflows use PostgreSQL nodes for application databases, but n8n's own
+  state is SQLite; the leftover `n8n` database is not its configured store.
 
 ## Changelog
 
+- 2026-08-28: Corrected the access audit after a live owner census: `hwc` has 10 `eric`-owned and 31 `postgres`-owned tables; superuser access, not blanket object ownership, is the general reason the deleted grants were redundant. Clarified that n8n's own store is SQLite even though workflows access other PostgreSQL databases.
 - 2026-07-06: postgresql: add a best-effort `ExecStartPre` that waits (≤120s, exits 0 on timeout) for the podman gateway `10.89.0.1` before start. Same boot race as redis-main, but postgres does NOT fail when the address is absent — it starts localhost-only and silently drops the missing listen address, so `Restart=on-failure` can't heal it. The 2026-07-06 boot left postgres 127.0.0.1-only; paperless crash-looped (17k+ "connection refused", 0 successful starts) and firefly errored all morning until a manual restart rebound `10.89.0.1`. net-only containers (jellyfin/sonarr/qbittorrent) bring the bridge up independently, so the wait can't deadlock against postgres-dependent containers.
 - 2026-07-05: redis-main: add `Restart=on-failure` + `RestartSec=5s` + unlimited start burst. Ordering on init-media-network is insufficient — the podman gateway IP (10.89.0.1) only appears when the first attached container starts; the 2026-07-05 reboot left redis dead on a one-shot bind failure.
 - 2026-05-22: Promoted `package` to an option (default `postgresql_15` for server cluster safety). Assertion now checks `version` vs `package.version` for drift instead of hardcoding 15.x. Laptop runs v17, server stays on v15. Added tmpfiles rule for custom `dataDir` (NixOS module only auto-creates the default `/var/lib/postgresql`).

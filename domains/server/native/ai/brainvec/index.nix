@@ -39,7 +39,7 @@ let
 
   ingestScript = pkgs.writeShellApplication {
     name = "brainvec-ingest";
-    runtimeInputs = [ pkgs.nodejs_22 pkgs.git ];
+    runtimeInputs = [ pkgs.nodejs_22 pkgs.git pkgs.openssh ];
     text = ''
       set -uo pipefail
       REPO=${lib.escapeShellArg (toString cfg.repoDir)}
@@ -47,8 +47,14 @@ let
         echo "brainvec checkout missing — run: git clone git@github.com:eriqueo/brainvec.git $REPO"
         exit 0
       fi
-      # Keep the checkout current (sr-gauntlet precedent); never block on it.
-      git -C "$REPO" pull --ff-only 2>/dev/null || true
+      # Keep the checkout current (sr-gauntlet precedent). Home Manager's
+      # immutable .ssh/config is store-owned, which OpenSSH rejects as an
+      # explicit user config; bypass it while retaining the default keys and
+      # known_hosts. A transient pull failure must not block indexing the
+      # available checkout, but it must be visible rather than silently stale.
+      if ! GIT_SSH_COMMAND="ssh -F /dev/null" git -C "$REPO" pull --ff-only; then
+        echo "WARNING: brainvec checkout update failed; indexing existing $(git -C "$REPO" rev-parse --short HEAD)" >&2
+      fi
       exec node "$REPO/ingest.mjs" "$@"
     '';
   };
