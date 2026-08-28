@@ -94,18 +94,30 @@ in
       # command-not-found. Full audit in domains/data/databases/README.md
       # (2026-08-28).
       #
-      # Nothing is restored here, and nothing is declared either. Immich connects
-      # as its own role `immich`, which owns the `immich` database; the app has
-      # never touched these grants. Their only purpose was to let `eric` read the
-      # database from a psql prompt, and `eric` is a superuser, so the access was
-      # already unconditional.
+      # The grants are not restored. Immich connects as its own role `immich`,
+      # which owns the `immich` database, so the app never touched them. Their
+      # only purpose was to let `eric` read the database from a psql prompt, and
+      # `eric` is a superuser, so that access was already unconditional.
       #
-      # KNOWN GAP, deliberately not closed in this change: neither the `immich`
-      # database nor the `immich` role is declared anywhere in this repo. Both
-      # exist on the live cluster by hand. A rebuilt cluster would not reproduce
-      # them. Tracked with the other undeclared roles and databases in
-      # domains/data/databases/README.md rather than fixed blind here, because
-      # `ensureDBOwnership` on a live database is a state change, not a cleanup.
+      # The database and its OWNING role are now declared. Neither was declared
+      # anywhere in this repo before 2026-08-28 — both existed on the live cluster
+      # by hand, and a rebuilt cluster would not have reproduced either. The audit
+      # that deleted the dead grants is what surfaced that gap.
+      #
+      # The owner is `cfg.database.name`, NOT `cfg.database.user`. Those are two
+      # different facts and this module's options do not distinguish them:
+      # machines/server/config.nix:1133 sets `database.user = "eric"` (the role the
+      # container CONNECTS as, via trust auth), while the live `immich` database
+      # and every object in it are owned by a separate `immich` role. Declaring
+      # ownership from `database.user` would emit
+      # `ALTER DATABASE immich OWNER TO eric` — a live ownership change wearing a
+      # cleanup's clothes. NixOS's own ensureDBOwnership assertion caught that on
+      # the first eval; the name below is what reproduces live state unchanged.
+      hwc.data.databases.postgresql.databases = [ cfg.database.name ];
+      services.postgresql.ensureUsers = [{
+        name = cfg.database.name;
+        ensureDBOwnership = true;
+      }];
     }
 
     #=========================================================================

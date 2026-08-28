@@ -50,6 +50,14 @@ in
     # user, declared once for the whole cluster in
     # domains/data/databases/index.nix — one producer per fact.
     #
+    # `business_user` IS declared here, because this module owns it: schema.sql
+    # (lines 772-774) and migrations/001-catalog-schema-split.sql grant to that
+    # role by name, and nothing else in the repo mentions it. The role existed on
+    # the live cluster by hand until 2026-08-28; a rebuilt cluster would have run
+    # those grants against a role that does not exist. No ensureDBOwnership —
+    # `eric` owns this database and its objects, and business_user is a grantee.
+    services.postgresql.ensureUsers = [{ name = "business_user"; }];
+    #
     # No postStart grant block and no per-database backup registration.
     #
     # Four `$PSQL` GRANT lines used to sit here and none ever ran: `$PSQL` is

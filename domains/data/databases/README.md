@@ -163,19 +163,27 @@ rg -o '^\s*\$[A-Z_]+ ' <that store path> | sort | uniq -c   # expect only $UMAMI
 rg -n '^\s*\$PSQL ' domains machines profiles               # expect 0 hits
 ```
 
-### Known gap — declared state is not actual state
+### Drift the dead code was masking — closed 2026-08-28
 
-The audit surfaced drift the dead code was masking. On hwc-server:
+Deleting the dead statements exposed roles and databases that live on hwc-server
+and were declared nowhere. A rebuilt cluster would not have reproduced them.
 
-- **Roles that exist but are declared nowhere:** `immich`, `n8n`, `business_user`.
-- **Databases that exist but are declared nowhere:** `immich`, `n8n`,
-  `youtube_transcripts`, `youtube_videos`.
+**Closed.** Each was claimed by the module that uses it:
 
-A rebuilt cluster would not reproduce any of them. This is recorded rather than
-fixed, because `ensureDBOwnership` on a live database rewrites ownership — a state
-change, not a cleanup — and each one needs its owning module to claim it. Restore
-from the borg `pg_dumpall` carries ownership, so this is a config-reproducibility
-gap, not a data-loss gap.
+| Name | Claimed by | Declaration |
+|---|---|---|
+| `eric` role | `domains/data/databases/index.nix` | `ensureUsers`, no ownership |
+| `immich` role + database | `domains/media/immich-container/parts/config.nix` | `ensureUsers` with `ensureDBOwnership` (reproduces live state — `immich` already owns it) |
+| `business_user` role | `domains/business/databases/index.nix` | `ensureUsers`, no ownership — `schema.sql:772-774` grants to it by name |
+| `authentik` role | `domains/system/core/authentik/parts/config.nix` | `ensureUsers` with `ensureDBOwnership` |
+
+**Left in place, and not a gap — three leftovers with no consumer.** The `n8n`
+database and `n8n` role are residue: `domains/automation/n8n/sys.nix:77` sets
+`DB_TYPE = "sqlite"`, so n8n has not used Postgres since that switch. Nothing in
+the repo references `youtube_transcripts` or `youtube_videos` at all. Declaring
+any of the three would be inventing a consumer. **Dropping them is a decision
+about live data, so it belongs to Eric, not to a cleanup commit.** Until he makes
+it, these three sit in the nightly `pg_dumpall` and cost only disk.
 
 ## Consumers
 
