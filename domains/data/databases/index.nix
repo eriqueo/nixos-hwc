@@ -189,6 +189,20 @@ in
 
         ensureDatabases = cfg.postgresql.databases;
 
+        # One producer for "the primary user has a Postgres login role."
+        #
+        # `eric` connects to hwc, datax_monitor, firefly, firefly_pico and
+        # paperless, and owns the objects in all five. Until 2026-08-28 that role
+        # was created by a `CREATE ROLE` buried in datax-monitor's postStart,
+        # which never ran (`$PSQL` undefined — see this directory's README), so
+        # the role existed only because someone made it by hand. Three app
+        # modules then each declared it, which is three producers for one fact.
+        # It is declared here instead, once, in the module that owns Postgres.
+        #
+        # No `ensureDBOwnership`: `eric` is a superuser and already owns what it
+        # needs. Setting it would rewrite live database ownership.
+        ensureUsers = [{ name = config.hwc.system.users.user.name or "eric"; }];
+
         settings = lib.mkMerge [
           {
             listen_addresses = lib.mkForce (

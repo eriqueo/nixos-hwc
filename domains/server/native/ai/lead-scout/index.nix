@@ -125,10 +125,10 @@ in
       }];
     };
 
-    # Peer auth with role switching (home-scout precedent).
-    systemd.services.postgresql.postStart = lib.mkAfter ''
-      $PSQL -tAc 'GRANT ${dbName} TO ${cfg.user}' || true
-    '';
+    # NO postStart grant — the `GRANT ${dbName} TO eric` line here was dead
+    # (`$PSQL` undefined, `|| true` swallowing it) and unnecessary (trust auth
+    # plus a superuser `eric`). Removed 2026-08-28; see
+    # domains/data/databases/README.md.
 
     # The old module's six raw GRANT/ALTER DEFAULT PRIVILEGES statements are
     # deliberately NOT carried over. They were written when the role did not own

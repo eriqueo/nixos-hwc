@@ -137,17 +137,16 @@ in
         cfg.database.name
       ];
 
-      # Ensure database privileges for Paperless user
-      systemd.services.postgresql.postStart = lib.mkAfter ''
-        $PSQL -d ${cfg.database.name} -c "GRANT ALL PRIVILEGES ON DATABASE ${cfg.database.name} TO ${cfg.database.user};" || true
-        $PSQL -d ${cfg.database.name} -c "GRANT USAGE, CREATE ON SCHEMA public TO ${cfg.database.user};" || true
-        $PSQL -d ${cfg.database.name} -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ${cfg.database.user};" || true
-        $PSQL -d ${cfg.database.name} -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ${cfg.database.user};" || true
-        $PSQL -d ${cfg.database.name} -c "GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO ${cfg.database.user};" || true
-        $PSQL -d ${cfg.database.name} -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${cfg.database.user};" || true
-        $PSQL -d ${cfg.database.name} -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ${cfg.database.user};" || true
-        $PSQL -d ${cfg.database.name} -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO ${cfg.database.user};" || true
-      '';
+      # No postStart privilege block. Eight `$PSQL` GRANT/ALTER DEFAULT PRIVILEGES
+      # lines used to sit here and none of them ever ran: `$PSQL` is undefined in
+      # the generated postgresql post-start script and `|| true` swallowed the
+      # command-not-found (audit 2026-08-28, domains/data/databases/README.md).
+      #
+      # They are not restored, because they were never load-bearing. Paperless
+      # connects as `${cfg.database.user}`, which is `eric` — a Postgres superuser
+      # who also owns all 68 tables in this database. A grant to the owner grants
+      # nothing. `pg_class.relacl` in `paperless` holds zero rows, which is the
+      # measurement that proves no grant here has ever taken effect.
 
       # Cleanup timer for auto-managed staging/export
       systemd.services.paperless-cleanup = lib.mkIf cfg.retention.cleanup.enable {

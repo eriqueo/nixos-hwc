@@ -46,16 +46,21 @@ in
     # Ensure the business database exists
     services.postgresql.ensureDatabases = [ cfg.databaseName ];
 
-    # Register for per-database backups
-    hwc.data.databases.postgresql.backup.perDatabase.databases = [ cfg.databaseName ];
-
-    # Grant eric full access to business database (peer auth from MCP service)
-    systemd.services.postgresql.postStart = lib.mkAfter ''
-      $PSQL -d ${cfg.databaseName} -c "GRANT ALL PRIVILEGES ON DATABASE ${cfg.databaseName} TO ${cfg.user};" || true
-      $PSQL -d ${cfg.databaseName} -c "GRANT USAGE, CREATE ON SCHEMA public TO ${cfg.user};" || true
-      $PSQL -d ${cfg.databaseName} -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ${cfg.user};" || true
-      $PSQL -d ${cfg.databaseName} -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${cfg.user};" || true
-    '';
+    # The login role for `${cfg.user}` is NOT declared here. It is the primary
+    # user, declared once for the whole cluster in
+    # domains/data/databases/index.nix — one producer per fact.
+    #
+    # No postStart grant block and no per-database backup registration.
+    #
+    # Four `$PSQL` GRANT lines used to sit here and none ever ran: `$PSQL` is
+    # undefined in the generated postgresql post-start script and `|| true`
+    # swallowed the command-not-found (audit 2026-08-28, see
+    # domains/data/databases/README.md). They were not load-bearing either —
+    # `${cfg.user}` is a superuser AND the owner of this database.
+    #
+    # postgresql-db-backup was retired 2026-08-26 (Law 15), so registering into
+    # it would be dead config reading as a backup. `hwc` rides the borg
+    # pre-hook's nightly pg_dumpall into /var/lib/backups.
 
     # VALIDATION
     assertions = [

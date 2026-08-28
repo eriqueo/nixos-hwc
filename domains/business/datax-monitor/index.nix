@@ -181,17 +181,23 @@ in
     # --- Postgres database + login role -------------------------------------
     services.postgresql.ensureDatabases = [ cfg.databaseName ];
 
-    systemd.services.postgresql.postStart = lib.mkAfter ''
-      $PSQL -c "DO \$\$ BEGIN
-        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${cfg.databaseUser}') THEN
-          CREATE ROLE ${cfg.databaseUser} LOGIN;
-        END IF;
-      END \$\$;" || true
-      $PSQL -d ${cfg.databaseName} -c "GRANT ALL PRIVILEGES ON DATABASE ${cfg.databaseName} TO ${cfg.databaseUser};" || true
-      $PSQL -d ${cfg.databaseName} -c "GRANT USAGE, CREATE ON SCHEMA public TO ${cfg.databaseUser};" || true
-    '';
+    # The login role is declared, not scripted — but NOT here.
+    #
+    # This module used to CREATE ROLE `${cfg.databaseUser}` and GRANT through
+    # `$PSQL` in postgresql.postStart. `$PSQL` is undefined in the generated
+    # post-start script and `|| true` swallowed every failure, so none of it ever
+    # ran (audit 2026-08-28, domains/data/databases/README.md). The role exists
+    # on the live cluster only because someone made it by hand — this module's
+    # dead CREATE ROLE was the closest thing the repo had to a declaration.
+    #
+    # It now lives in domains/data/databases/index.nix, which owns Postgres and
+    # declares the primary user's role once for the whole cluster. The GRANTs are
+    # not carried over: `${cfg.databaseUser}` is a superuser who owns
+    # datax_monitor's objects, so a grant to it grants nothing new.
 
-    hwc.data.databases.postgresql.backup.perDatabase.databases = [ cfg.databaseName ];
+    # No per-database backup registration: postgresql-db-backup was retired
+    # 2026-08-26 (Law 15), so a registration into it is dead config that reads
+    # as a backup. datax_monitor rides the borg pre-hook's nightly pg_dumpall.
 
     # --- Migration (oneshot, before the API) --------------------------------
     systemd.services.datax-monitor-migrate = {

@@ -87,25 +87,25 @@ in
     # POSTGRESQL DATABASE SETUP
     #=========================================================================
     {
-      systemd.services.postgresql.postStart = lib.mkAfter ''
-        $PSQL -d ${cfg.database.name} -c "GRANT ALL PRIVILEGES ON DATABASE ${cfg.database.name} TO eric;" || true
-        $PSQL -d ${cfg.database.name} -c "GRANT USAGE, CREATE ON SCHEMA public TO eric;" || true
-        $PSQL -d ${cfg.database.name} -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO eric;" || true
-        $PSQL -d ${cfg.database.name} -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO eric;" || true
-        $PSQL -d ${cfg.database.name} -c "GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO eric;" || true
-        $PSQL -d ${cfg.database.name} -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO eric;" || true
-        $PSQL -d ${cfg.database.name} -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO eric;" || true
-        $PSQL -d ${cfg.database.name} -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO eric;" || true
-
-        # Grant access to vectors schema (created by pgvector extension)
-        $PSQL -d ${cfg.database.name} -c "GRANT USAGE, CREATE ON SCHEMA vectors TO eric;" || true
-        $PSQL -d ${cfg.database.name} -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA vectors TO eric;" || true
-        $PSQL -d ${cfg.database.name} -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA vectors TO eric;" || true
-        $PSQL -d ${cfg.database.name} -c "GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA vectors TO eric;" || true
-        $PSQL -d ${cfg.database.name} -c "ALTER DEFAULT PRIVILEGES IN SCHEMA vectors GRANT ALL ON TABLES TO eric;" || true
-        $PSQL -d ${cfg.database.name} -c "ALTER DEFAULT PRIVILEGES IN SCHEMA vectors GRANT ALL ON SEQUENCES TO eric;" || true
-        $PSQL -d ${cfg.database.name} -c "ALTER DEFAULT PRIVILEGES IN SCHEMA vectors GRANT ALL ON FUNCTIONS TO eric;" || true
-      '';
+      # Fifteen `$PSQL` GRANT / ALTER DEFAULT PRIVILEGES lines used to sit here —
+      # the eight-line block for schema `public`, then seven more for the
+      # pgvector `vectors` schema — and not one ever ran. `$PSQL` is undefined in
+      # the generated postgresql post-start script and `|| true` swallowed the
+      # command-not-found. Full audit in domains/data/databases/README.md
+      # (2026-08-28).
+      #
+      # Nothing is restored here, and nothing is declared either. Immich connects
+      # as its own role `immich`, which owns the `immich` database; the app has
+      # never touched these grants. Their only purpose was to let `eric` read the
+      # database from a psql prompt, and `eric` is a superuser, so the access was
+      # already unconditional.
+      #
+      # KNOWN GAP, deliberately not closed in this change: neither the `immich`
+      # database nor the `immich` role is declared anywhere in this repo. Both
+      # exist on the live cluster by hand. A rebuilt cluster would not reproduce
+      # them. Tracked with the other undeclared roles and databases in
+      # domains/data/databases/README.md rather than fixed blind here, because
+      # `ensureDBOwnership` on a live database is a state change, not a cleanup.
     }
 
     #=========================================================================

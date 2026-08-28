@@ -116,13 +116,28 @@ in
     }
     {
       hwc.data.databases.postgresql.databases = [ cfg.database.name ];
-      systemd.services.postgresql.postStart = lib.mkAfter ''
-        $PSQL -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${cfg.database.user}') THEN CREATE ROLE ${cfg.database.user} WITH LOGIN PASSWORD 'placeholder'; END IF; END \$\$;" || true
-        $PSQL -d ${cfg.database.name} -c "GRANT ALL PRIVILEGES ON DATABASE ${cfg.database.name} TO ${cfg.database.user};" || true
-        $PSQL -d ${cfg.database.name} -c "GRANT USAGE, CREATE ON SCHEMA public TO ${cfg.database.user};" || true
-        $PSQL -d ${cfg.database.name} -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${cfg.database.user};" || true
-        $PSQL -d ${cfg.database.name} -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ${cfg.database.user};" || true
-      '';
+
+      # The role and its database ownership are DECLARED, not scripted.
+      #
+      # This block used to CREATE ROLE and issue four GRANTs through `$PSQL` in
+      # postgresql.postStart. `$PSQL` is undefined in the generated post-start
+      # script and every line ended in `|| true`, so none of it ever ran — the
+      # `authentik` role exists on the live cluster only because someone created
+      # it by hand. Of the ten modules that wrote postStart, this was the only
+      # one whose dead code was load-bearing: a rebuilt cluster would have had
+      # the authentik DATABASE and no authentik ROLE. Audit and the full
+      # 54-statement count in domains/data/databases/README.md (2026-08-28).
+      #
+      # ensureDBOwnership reproduces the live state exactly — `authentik` already
+      # owns the `authentik` database — and an owner's privileges are implicit,
+      # so the four GRANT/ALTER DEFAULT PRIVILEGES lines have no work left to do.
+      # The dropped `PASSWORD 'placeholder'` is not a regression: authentik
+      # reaches Postgres over the podman bridge, and pg_hba matches
+      # `host all all 10.89.0.0/16 trust` before any md5 rule.
+      services.postgresql.ensureUsers = [{
+        name = cfg.database.user;
+        ensureDBOwnership = true;
+      }];
     }
     {
       assertions = [

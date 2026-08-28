@@ -93,6 +93,90 @@ backup concern). It covered 3 of 14 databases and wrote to
 the drive whose loss it existed to survive. The module still works and can be
 re-enabled; if you do, point `outputDir` at a path borg actually carries.
 
+## The access model — read this before adding a GRANT
+
+**There is no privilege system here to speak of, and that is deliberate.** Three
+facts, each measured on the live cluster 2026-08-28:
+
+1. **`pg_hba.conf` opens with `local all all trust`**, followed by `trust` for
+   `127.0.0.1/32`, `::1/128` and `10.89.0.0/16` (the podman bridge). The first
+   matching rule wins, so **every local and every container connection may assume
+   any role without a password.** The `md5` rules below those lines are
+   unreachable.
+2. **`eric` is a Postgres superuser** (`rolsuper = t`), and a superuser bypasses
+   every privilege check.
+3. **`eric` also owns the objects** in `hwc`, `datax_monitor`, `firefly`,
+   `firefly_pico` and `paperless` — 81, 68 and 15 tables in the last three, whose
+   *databases* are owned by `postgres`. Owners' privileges are implicit.
+
+So a `GRANT … TO eric` is a no-op three times over. This matches the standing
+single-user exception in `~/.claude/engineering-principles.md` (Principle 5):
+isolation here comes from the machine boundary, not from in-database roles.
+
+**Who connects as what:**
+
+| Database | App connects as | Database owner | Objects owned by |
+|---|---|---|---|
+| `hwc`, `datax_monitor` | `eric` | `eric` | `eric` |
+| `firefly`, `firefly_pico` | `eric` | `postgres` | `eric` |
+| `paperless` | `eric` | `postgres` | `eric` |
+| `immich` | `immich` | `immich` | `immich` |
+| `authentik` | `authentik` | `authentik` | `authentik` |
+| `umami` | `umami` | `umami` | `umami` |
+| `lead_scout`, `home_scout`, `research_scout` | own role | own role | own role |
+
+**Declare roles with `services.postgresql.ensureUsers`. Never script SQL into
+`systemd.services.postgresql.postStart`.** Two reasons, both structural:
+
+- `postgresql-setup.service` is ordered `After=postgresql.service`, so `postStart`
+  runs **before** `ensureDatabases` and `ensureUsers` have created anything. On a
+  fresh cluster every statement targets a database that does not exist yet.
+- `ExecStartPost` reports `ignore_errors=no`. A non-zero exit there fails
+  `postgresql.service` and takes every dependent service down with it. That is why
+  the old statements all ended in `|| true` — and why they were invisible.
+
+### The 2026-08-28 audit — 54 dead statements
+
+Ten modules wrote `postgresql.postStart`. The generated script held **58
+variable-invoked `psql` call sites: 54 used `$PSQL`, which is never assigned
+anywhere in the script.** Older nixpkgs `postgresql` modules defined that
+variable; the pinned 15.x module does not. Each line expanded to `-c "…"`, failed
+command-not-found, and `|| true` swallowed it. `set -e` cannot help, because
+`|| true` is precisely the construct that disarms it.
+
+Spread of the dead statements: immich 15, firefly 16, paperless 8, authentik 5,
+`hwc` 4, datax_monitor 3, the three scouts 3. The only working block was
+`umami`'s, which assigns its own `UMAMI_PSQL` to an absolute `psql` path — the
+fossil of someone hitting this bug and repairing one call site.
+
+**They were deleted, not repaired.** Repairing them would have applied 54 grants
+for the first time, and every one grants access the grantee already has. One
+exception was load-bearing: authentik's `CREATE ROLE`, whose failure meant a
+rebuilt cluster would have had the `authentik` database and no `authentik` role.
+That one became `ensureUsers` with `ensureDBOwnership`.
+
+Verify the repair by reading the **generated** script, never the Nix source:
+
+```
+systemctl cat postgresql.service | rg ExecStartPost
+rg -o '^\s*\$[A-Z_]+ ' <that store path> | sort | uniq -c   # expect only $UMAMI_PSQL
+rg -n '^\s*\$PSQL ' domains machines profiles               # expect 0 hits
+```
+
+### Known gap — declared state is not actual state
+
+The audit surfaced drift the dead code was masking. On hwc-server:
+
+- **Roles that exist but are declared nowhere:** `immich`, `n8n`, `business_user`.
+- **Databases that exist but are declared nowhere:** `immich`, `n8n`,
+  `youtube_transcripts`, `youtube_videos`.
+
+A rebuilt cluster would not reproduce any of them. This is recorded rather than
+fixed, because `ensureDBOwnership` on a live database rewrites ownership — a state
+change, not a cleanup — and each one needs its owning module to claim it. Restore
+from the borg `pg_dumpall` carries ownership, so this is a config-reproducibility
+gap, not a data-loss gap.
+
 ## Consumers
 
 - `domains/media/immich/` - PostgreSQL + Redis

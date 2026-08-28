@@ -319,15 +319,15 @@ in
     # domains/server/native/ai/research-scout/index.nix. home_scout is already
     # in the nightly pg_dumpall the borg pre-hook writes to /var/lib/backups.
 
-    # Local (peer/ident) access for the service user running as `eric` via
-    # DATABASE_URL role home_scout requires a password-less local grant; the
-    # role is LOGIN by ensureUsers. Allow eric to connect as home_scout over
-    # localhost trust is NOT set up here — the app connects as home_scout via
-    # unix socket only if user matches. Keep it simple: grant the eric role
-    # membership in home_scout so peer auth works with role switching.
-    systemd.services.postgresql.postStart = lib.mkAfter ''
-      $PSQL -tAc 'GRANT home_scout TO ${cfg.user}' || true
-    '';
+    # NO postStart grant. The `GRANT home_scout TO eric` line that used to sit
+    # here never ran: `$PSQL` is not defined in the generated postgresql
+    # post-start script, and the trailing `|| true` swallowed the resulting
+    # command-not-found. Removed 2026-08-28 with the other 53 dead statements —
+    # rationale and the audit in domains/data/databases/README.md.
+    #
+    # Nothing depended on it. `local all all trust` in pg_hba means any local
+    # connection may assume any role without a password, and `eric` is a
+    # superuser besides. The role itself is created by ensureUsers above.
 
     #--------------------------------------------------------------------------
     # Unified server
