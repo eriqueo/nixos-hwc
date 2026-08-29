@@ -26,7 +26,19 @@
 let
   cfg = config.hwc.automation.nightlyBuilds;
   paths = config.hwc.paths;
-  agentDir = "${paths.nixos}/domains/automation/nightly-builds";
+
+  # Immutable runner closure: services execute the same run.sh/prompts/sender
+  # that were evaluated into the generation, never whichever branch happens to
+  # be checked out in ~/.nixos when the timer fires.
+  nightlyRunner = pkgs.runCommand "nightly-builds-runner" { } ''
+    mkdir -p $out/prompts
+    cp ${./run.sh} $out/run.sh
+    cp ${./send-report.sh} $out/send-report.sh
+    cp ${./prompts/card-smith.md} $out/prompts/card-smith.md
+    cp ${./prompts/run-wrapper.md} $out/prompts/run-wrapper.md
+    chmod +x $out/run.sh $out/send-report.sh
+    patchShebangs $out/run.sh $out/send-report.sh
+  '';
 
   # Shared spool dir for the refinery board's "▶ Run now" / IMMEDIATE mode: the
   # (sandboxed) board drops a <goal> request file here; the path-triggered
@@ -257,7 +269,7 @@ A branch may have pushed without a PR — run \`gh pr list\` and open any missin
       goal="$(basename "$f")"
       rm -f "$f"
       echo "run-now: executing nightly-builds for goal '$goal'"
-      NB_ONLY_GOAL="$goal" ${agentDir}/run.sh || echo "run-now: run.sh exited $? for '$goal'"
+      NB_ONLY_GOAL="$goal" ${nightlyRunner}/run.sh || echo "run-now: run.sh exited $? for '$goal'"
     done
   '';
 in
@@ -368,8 +380,8 @@ in
         Type = "oneshot";
         User = lib.mkForce "eric";
         Group = "users";
-        WorkingDirectory = agentDir;
-        ExecStart = "${agentDir}/run.sh";
+        WorkingDirectory = cfg.repoDir;
+        ExecStart = "${nightlyRunner}/run.sh";
         # Whole-run ceiling for the oneshot (all queued cards, sequential).
         # Per-card execution is bounded inside run.sh by NB_CARD_TIMEOUT (5h);
         # this must comfortably exceed one card + overhead, and give a small
@@ -415,7 +427,7 @@ in
         Type = "oneshot";
         User = lib.mkForce "eric";
         Group = "users";
-        WorkingDirectory = agentDir;
+        WorkingDirectory = cfg.repoDir;
         ExecStart = "${runnowDrain}";
         # One targeted card is bounded by run.sh's NB_CARD_TIMEOUT (5h); allow a
         # little headroom. A queued backlog of requests drains sequentially.
@@ -454,7 +466,7 @@ in
         Type = "oneshot";
         User = lib.mkForce "eric";
         Group = "users";
-        WorkingDirectory = agentDir;
+        WorkingDirectory = cfg.repoDir;
         ExecStart = "${reviewRun}";
         # Review is bounded LLM work over a handful of branches; an hour is ample
         # headroom and keeps a wedged run from lingering.

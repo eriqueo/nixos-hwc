@@ -28,7 +28,7 @@ domains/automation/nightly-builds/
 ├── index.nix         # Options + units: nightly-builds(.timer), -runnow(.path),
 │                     #   -review(.timer), and the opt-in privileged -rebuild(.path).
 │                     #   tmpfiles for the run-now / reviews / rebuild spools.
-├── run.sh            # Nightly launcher: approved-idea card-smith + queued-card runner
+├── run.sh            # Nightly launcher, packaged with its prompts/sender into an immutable store closure
 │                     #   (per-card timeout = the card's declared minute budget +50%)
 ├── send-report.sh    # Rich per-card Discord report (REPORT.md attached)
 ├── gen-index.sh      # Assemble a shared index README from per-card index.d/*.md
@@ -63,6 +63,10 @@ switching providers does not require changing runner code.
 
 ## Changelog
 
+- **2026-08-28 (c)** — The timer and run-now service now execute an immutable
+  Nix-store runner closure containing `run.sh`, both prompts, and
+  `send-report.sh`. A checkout changing branches or being temporarily dirty can
+  no longer change the code an already-activated nightly generation executes.
 - **2026-08-28 (b)** — The human approval point is now unambiguous: moving an
   idea from `## backlog` to `## new` is approval to run it. Card-smith queues a
   card automatically only when all eight gates pass; unresolved cards remain
