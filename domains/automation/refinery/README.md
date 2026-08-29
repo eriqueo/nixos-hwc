@@ -58,7 +58,8 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
   Why it matters, My recommendation, deliberate GitHub review/merge, and folded
   technical evidence. `Requeue tonight` updates the exact persisted card file,
   reopens graduated projects when necessary, and fails loud if the source is
-  missing. Production-route tests cover encoded IDs and the vault/store write.
+  missing. Historical `/project/<review-id>` links redirect to the owned review
+  route. Production-route tests cover encoded IDs and the vault/store write.
 - 2026-08-28 (c): **Terminal morning-review cases are visible and actionable.**
   The Reviews page reads the durable `_attempts/` case records and renders
   `Dead` and `Already merged` lanes. Successful review records now retain the

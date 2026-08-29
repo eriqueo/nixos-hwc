@@ -974,6 +974,9 @@ test("review routes resolve encoded ids and requeue the exact source card", asyn
     const detail = await fetch(`${base}/review/${encodeURIComponent("my-goal/fix-x")}`);
     assert.equal(detail.status, 200, "review id resolves through the review store");
     assert.match(await detail.text(), /My recommendation/);
+    const legacy = await fetch(`${base}/project/${encodeURIComponent("my-goal/fix-x")}`, { redirect: "manual" });
+    assert.equal(legacy.status, 303, "pre-fix project links remain usable");
+    assert.equal(legacy.headers.get("location"), "/review/my-goal%2Ffix-x");
 
     const requeued = await fetch(`${base}/review/requeue`, {
       method: "POST",
