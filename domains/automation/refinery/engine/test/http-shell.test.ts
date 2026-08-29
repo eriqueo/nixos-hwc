@@ -349,7 +349,9 @@ test("renderProjectDetail shows actions + nightly toggle; renderNightly is a sta
     history: [], schedule: "nightly",
   };
   const n = renderNightly([parked, mirror], 1, profiles, profiles);
-  assert.ok(n.includes('class="board"'), "nightly is a status-lane kanban");
+  assert.ok(n.includes("2 need a decision before tonight") && n.includes("0 ready · cap 1"), "executive queue summary");
+  assert.ok(n.indexOf("Decide before tonight") < n.indexOf("Ready for tonight"), "exceptions precede ready work");
+  assert.ok(n.includes("Ready for tonight") && n.includes("Not queued"), "nightly is grouped by decision relevance");
   assert.ok(n.includes("a project") && n.includes('href="/project/d1"'), "project as a click-through card");
   assert.ok(n.includes('action="/card/queue"') && n.includes("✅ queue"), "mirror card queues inline");
   assert.ok(n.includes('formaction="/card/run-now"'), "mirror card runs inline");
@@ -465,9 +467,10 @@ test("renderFinished is a plain grid of click-through cards; renderFinishedProje
   };
 
   const grid = renderFinished([finished], [], []);
-  assert.ok(grid.includes('class="wrap"') && !grid.includes('class="board"'), "finished is a plain grid, not a lane board");
+  assert.ok(grid.includes("Nothing needs you here") && grid.includes("Completed work"), "archive is framed as handled work");
+  assert.ok(grid.includes('class="grid"') && !grid.includes('class="board"'), "finished is a plain grid, not a lane board");
   assert.ok(grid.includes('href="/project/nbf:my-goal"'), "finished card clicks through to its detail");
-  assert.ok(grid.includes("1 finished project"), "header count");
+  assert.ok(grid.includes("1 finished · 0 archived"), "header count");
   assert.ok(renderFinished([], [], []).includes("no finished projects yet"), "empty state");
 
   const d = renderFinishedProject(finished);
@@ -893,6 +896,9 @@ test("renderReference renders the glossary + the live pipelines", () => {
     assert.ok(html.includes(term), `glossary has ${term}`);
   }
   assert.ok(html.includes("<h2>Glossary</h2>") && html.includes("<h2>Live pipelines</h2>"), "two sections");
+  assert.ok(html.includes("How Refinery works") && html.includes("Use this page when a label is unfamiliar"), "plain-English orientation first");
+  assert.ok(html.indexOf("How Refinery works") < html.indexOf("Glossary"), "orientation precedes technical vocabulary");
+  assert.ok(html.includes("<details") && html.includes("Technical pipeline catalog"), "pipeline internals folded");
   // live pipelines: label, gates in order, executor, enabled
   assert.ok(html.includes("App Refinement") && html.includes("Project Ideation"), "pipeline labels");
   assert.ok(html.includes("chestertons-fence") && html.includes("premortem"), "gates listed");
@@ -1158,7 +1164,7 @@ test("renderProjectDetail on a done spec shows 'build this' + the auto-build tog
   assert.ok(!noNext.includes('action="/build"'), "no build button when the pipeline has no next");
 });
 
-test("renderBoard is attention-first: Needs You, Active, Hopper sections", () => {
+test("renderBoard is attention-first: Decide now, In motion, and ideas sections", () => {
   const profiles = [
     { pipeline: "project-ideation", label: "Project Ideation", source: "http-intake",
       gates: ["stepwise-refinement", "premortem"], executorMode: "none", executors: ["spec"],
@@ -1171,8 +1177,9 @@ test("renderBoard is attention-first: Needs You, Active, Hopper sections", () =>
     { id: "p1", pipeline: "project-ideation", step: "premortem", state: "pending", payload: { title: "a project" }, history: [] },
   ];
   const html = renderBoard(ideas, projects, profiles, profiles, DOMAINS);
-  assert.ok(html.includes("Needs You"), "Needs You section header comes first");
-  assert.ok(html.indexOf("Needs You") < html.indexOf("Hopper — ideas"), "attention before hopper");
+  assert.ok(html.includes("Nothing needs your decision") && html.includes("1 project in motion"), "CEO summary leads the board");
+  assert.ok(html.includes("Decide now"), "decision section comes first");
+  assert.ok(html.indexOf("Decide now") < html.indexOf("Hopper — ideas"), "attention before hopper");
   assert.ok(html.includes("Hopper — ideas"), "Hopper section header");
   assert.ok(html.includes("raw idea"), "an idea card in the Hopper");
   assert.ok(html.includes("a project") && html.includes('href="/project/p1"'), "a pending project in Active");
@@ -1182,7 +1189,7 @@ test("renderBoard is attention-first: Needs You, Active, Hopper sections", () =>
   assert.ok(html.includes('method="get" action="/"'), "GET filter bar present");
 });
 
-test("renderBoard routes parked/failed to Needs You and folds passed into Recently done", () => {
+test("renderBoard routes parked/failed to Decide now and folds passed into Recently done", () => {
   const profiles = [
     { pipeline: "project-ideation", label: "Project Ideation", source: "http-intake",
       gates: ["stepwise-refinement", "premortem"], executorMode: "none", executors: ["spec"],
@@ -1195,12 +1202,14 @@ test("renderBoard routes parked/failed to Needs You and folds passed into Recent
       payload: { title: "done thing" }, history: [{ step: "spec", status: "passed", at: "2026-07-14T00:00:00Z" }] },
   ];
   const html = renderBoard([], projects, profiles, profiles, DOMAINS, { archivedCount: 5, now: Date.parse("2026-07-15T00:00:00Z") });
-  const needsYou = html.indexOf("Needs You");
+  assert.ok(html.includes("1 decision needs you"), "attention count is explicit");
+  const needsYou = html.indexOf("Decide now");
   const doneFold = html.indexOf("Recently done");
   assert.ok(needsYou >= 0 && doneFold >= 0, "both sections render");
   const parkedPos = html.indexOf("parked thing");
   const donePos = html.indexOf("done thing");
-  assert.ok(needsYou < parkedPos && parkedPos < doneFold, "parked card sits in Needs You");
+  assert.ok(needsYou < parkedPos && parkedPos < doneFold, "parked card sits in Decide now");
+  assert.ok(html.includes("Review decision") && html.includes("More actions"), "card presents one primary decision action and folds secondary controls");
   assert.ok(donePos > doneFold, "passed card sits in the folded done shelf");
   assert.ok(html.includes("5 archived"), "archived count links to /finished");
   assert.ok(html.includes(">1d<") || html.includes("1d</span>"), "age badge rendered from history");

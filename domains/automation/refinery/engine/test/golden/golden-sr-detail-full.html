@@ -16,6 +16,7 @@
   nav a.active{color:var(--ink);border-bottom:2px solid var(--acc);padding-bottom:2px}
   button{background:var(--elev);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer}
   button:hover{border-color:var(--acc)}
+  .btn{display:inline-flex;align-items:center;background:var(--elev);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px}.btn.primary{background:color-mix(in srgb,var(--acc) 18%,var(--elev));border-color:var(--acc)}.btn:hover{border-color:var(--acc);color:var(--ink)}
   input[type=text],input[type=number],select,textarea{background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
   .intake{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line);align-items:center}
@@ -190,11 +191,25 @@
   .laneb{font-size:12px;padding:4px 9px;color:var(--dim)}
   .laneb.on{color:var(--ink);border-color:var(--acc)}
   .cardw{display:contents}
+  /* Executive workbench hierarchy: answer situation → meaning → action before evidence. */
+  .exec-page{width:100%;max-width:1240px;margin:0 auto;padding:16px 18px 28px}
+  .exec-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:9px;padding:14px 16px;margin-bottom:14px}
+  .exec-hero h2{margin:0 0 3px;color:var(--ink);font-size:17px}.exec-hero p{margin:0;color:var(--dim);max-width:760px}
+  .exec-stat{font:600 12px/1.3 ui-monospace,monospace;color:var(--ink);text-align:right;white-space:nowrap}
+  .exec-section{margin-top:15px}.exec-section>h2{font-size:13px;color:var(--ink);margin:0 0 8px}
+  .exec-fold{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}.exec-fold>summary{cursor:pointer;list-style:none;color:var(--dim);font-size:13px;min-height:44px;display:flex;align-items:center}
+  .exec-fold>summary::-webkit-details-marker{display:none}.exec-fold>summary::before{content:"▸ ";color:var(--acc);margin-right:5px}.exec-fold[open]>summary::before{content:"▾ "}
+  .decision-note{border-left:3px solid var(--warn);padding:8px 11px;background:color-mix(in srgb,var(--warn) 7%,transparent);color:var(--fg);font-size:12px;margin:7px 0}
+  .card-actions{margin-top:8px;display:flex;gap:8px;align-items:center}.card-actions>.btn{padding:4px 8px}.card-more{flex:1}.card-more>summary{cursor:pointer;list-style:none;color:var(--dim);font-size:11px;min-height:30px;display:flex;align-items:center}.card-more>summary::-webkit-details-marker{display:none}.card-more>summary::before{content:"＋ ";color:var(--acc)}
+  @media(max-width:760px){header{align-items:flex-start;flex-direction:column;gap:8px}nav{display:flex;overflow-x:auto;width:100%}nav a{min-height:44px;display:flex;align-items:center;white-space:nowrap}.exec-page{padding:12px}.exec-hero{grid-template-columns:1fr}.exec-stat{text-align:left}.wrap{padding:8px 0}.grid{grid-template-columns:1fr;padding:0}.ccrow button,.ccrow select,.btn{min-height:44px}}
 </style></head><body>
 <header><h1>🛠 Refinery</h1><nav>
   <a href="/" class="">Board</a><a href="/nightly" class="">Overnight</a><a href="/finished" class="">Finished</a><a href="/sr" class="active">SR</a><a href="/dx1" class="">DX1</a><a href="/reviews" class="">Reviews</a><a href="/reference" class="">Reference</a>
 </nav></header>
-<div class="srtabs">
+<main class="exec-page" style="max-width:900px">
+  <section class="exec-hero"><div><h2>What happened</h2><p>Jane Builder: Agent keeps failing on receipts</p></div><div class="exec-stat">new</div></section>
+  <section class="decision-note"><b>Recommended action:</b> Use the report as the decision record. Re-run only if the underlying case has materially changed.</section>
+  <div class="srtabs">
   <input type="radio" name="srt" id="srt-gameplan" checked>
   <input type="radio" name="srt" id="srt-thread">
   <input type="radio" name="srt" id="srt-details">
@@ -224,7 +239,7 @@
   <div class="panel" id="srp-details"><div class="md"><p><strong>Customer:</strong> Jane Builder <strong>Email:</strong> jane@example.com <strong>Status:</strong> new · phase engaged <strong>Run:</strong> investigations/2026-08-10-abc123/</p>
 <h3>Customer context</h3>
 <p>ctx here</p></div></div>
-</div>
+</div></main>
 <script>(function boardEnhancer(hooksOnly) {
     // Leading number of a cell, numeric-aware for the board's shapes:
     // "88.8%" → 88.8 · "≤0.27M / ≤1.75M (n=3)" → 0.27 · "1.2 / 2.8" → 1.2 ·

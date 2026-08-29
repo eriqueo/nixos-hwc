@@ -15,8 +15,12 @@ import { buildGauntletExport, gauntletViewByKey } from "../src/sources/gauntlet-
 import { gauntletInvestigationProjects } from "../src/sources/gauntlet-investigations.js";
 import { Item } from "../src/contracts.js";
 
-const golden = (name: string) =>
-  readFileSync(fileURLToPath(new URL(`../../test/golden/${name}`, import.meta.url)), "utf8");
+const goldenPath = (name: string) => fileURLToPath(new URL(`../../test/golden/${name}`, import.meta.url));
+const assertGolden = (name: string, actual: string) => {
+  const path = goldenPath(name);
+  if (process.env.UPDATE_GOLDENS === "1") writeFileSync(path, actual);
+  assert.equal(actual, readFileSync(path, "utf8"));
+};
 
 // Goldens carry the current chrome (DX1 nav tab + fleet CSS) as of the
 // 2026-08-17 regeneration — each regeneration was diffed first (nav tab, then
@@ -35,15 +39,15 @@ const SR_ITEMS: Item[] = [
 ];
 
 test("parity — SR board via the generic component is byte-identical to the goldens", () => {
-  assert.equal(renderSr(SR_ITEMS, 5, [], undefined), golden("golden-sr-board.html"));
-  assert.equal(renderSr([], 5, [], undefined), golden("golden-sr-board-empty.html"));
+  assertGolden("golden-sr-board.html", renderSr(SR_ITEMS, 5, [], undefined));
+  assertGolden("golden-sr-board-empty.html", renderSr([], 5, [], undefined));
 });
 
 test("parity — SR detail is byte-identical to the goldens", () => {
   const full = renderSrDetail(SR_ITEMS[0]!, { gameplan: "# Report\n\nfix **this**", thread: "- msg", context: "ctx here" });
-  assert.equal(full, golden("golden-sr-detail-full.html"));
+  assertGolden("golden-sr-detail-full.html", full);
   const empty = renderSrDetail(SR_ITEMS[1]!, { gameplan: null, thread: null, context: null });
-  assert.equal(empty, golden("golden-sr-detail-empty.html"));
+  assertGolden("golden-sr-detail-empty.html", empty);
 });
 
 test("dx1 board: verdict lanes, empty state, cap form on /dx1", () => {
@@ -60,6 +64,8 @@ test("dx1 board: verdict lanes, empty state, cap form on /dx1", () => {
         source: "dx1_gauntlet investigation" }, history: [] },
   ];
   const html = renderGauntletBoard(view, cases, 3, [], undefined);
+  assert.ok(html.includes("What needs attention") && html.includes("Completed investigations"), "executive hierarchy");
+  assert.ok(html.includes("history") && html.includes("<details"), "completed run history is folded");
   assert.ok(html.includes(">diagnosed <span"), "verdict lane");
   assert.ok(html.includes(">pending <span"), "missing verdict → pending lane");
   assert.ok(html.includes('action="/dx1/config"') && html.includes('value="3"'), "cap form");
@@ -125,6 +131,7 @@ test("dx1 detail: report default tab, evidence tab, case meta in Details, run-no
   assert.ok(html.includes(">Report</label>") && html.includes(">Evidence</label>") && html.includes(">Details</label>"));
   assert.ok(html.includes("agent:o:a:D2"), "fingerprint shown");
   assert.ok(html.includes('action="/dx1/run-now"'), "run-now form");
+  assert.ok(html.includes("What happened") && html.includes("Recommended action"), "detail translates evidence before tabs");
   assert.ok(html.includes('name="caseId"') && html.includes('value="agent:o:a:D2"'), "fingerprint carried in the form");
 
   assert.ok(html.includes("FINDINGS.md"), "dossier section named in the Evidence tab");

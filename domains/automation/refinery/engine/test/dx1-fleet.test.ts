@@ -99,6 +99,9 @@ test("cohortCleanDelta: latest vs previous by rootId; degrades to null", () => {
 test("renderDx1Fleet: header totals, Landis row numbers, diverged sub-row, families, method honesty", () => {
   const html = renderDx1Fleet(snapshot("2026-08-17"), null, "2026-08-17T12:00:00Z");
   assert.ok(html.includes("330 production agents") && html.includes("2 cohorts") && html.includes("144 unassigned"));
+  assert.ok(html.includes("Fleet health at a glance") && html.includes("What I recommend"), "executive interpretation leads the fleet page");
+  assert.ok(html.indexOf("Fleet health at a glance") < html.indexOf("Template cohort"), "interpretation precedes dense table");
+  assert.ok(html.includes("Full cohort data") && html.includes("<details"), "dense fleet evidence is folded");
   assert.ok(html.includes("snapshot 2026-08-17 (today)"));
   assert.ok(html.includes("no previous snapshot — no trend yet"), "single snapshot degrades cleanly");
   assert.ok(html.includes("Receipt Processor") && html.includes("Mike Landis"));

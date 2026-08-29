@@ -95,6 +95,7 @@ const STYLE = `<style>
   nav a.active{color:var(--ink);border-bottom:2px solid var(--acc);padding-bottom:2px}
   button{background:var(--elev);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer}
   button:hover{border-color:var(--acc)}
+  .btn{display:inline-flex;align-items:center;background:var(--elev);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px}.btn.primary{background:color-mix(in srgb,var(--acc) 18%,var(--elev));border-color:var(--acc)}.btn:hover{border-color:var(--acc);color:var(--ink)}
   input[type=text],input[type=number],select,textarea{background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
   .intake{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line);align-items:center}
@@ -269,6 +270,17 @@ const STYLE = `<style>
   .laneb{font-size:12px;padding:4px 9px;color:var(--dim)}
   .laneb.on{color:var(--ink);border-color:var(--acc)}
   .cardw{display:contents}
+  /* Executive workbench hierarchy: answer situation → meaning → action before evidence. */
+  .exec-page{width:100%;max-width:1240px;margin:0 auto;padding:16px 18px 28px}
+  .exec-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:9px;padding:14px 16px;margin-bottom:14px}
+  .exec-hero h2{margin:0 0 3px;color:var(--ink);font-size:17px}.exec-hero p{margin:0;color:var(--dim);max-width:760px}
+  .exec-stat{font:600 12px/1.3 ui-monospace,monospace;color:var(--ink);text-align:right;white-space:nowrap}
+  .exec-section{margin-top:15px}.exec-section>h2{font-size:13px;color:var(--ink);margin:0 0 8px}
+  .exec-fold{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}.exec-fold>summary{cursor:pointer;list-style:none;color:var(--dim);font-size:13px;min-height:44px;display:flex;align-items:center}
+  .exec-fold>summary::-webkit-details-marker{display:none}.exec-fold>summary::before{content:"▸ ";color:var(--acc);margin-right:5px}.exec-fold[open]>summary::before{content:"▾ "}
+  .decision-note{border-left:3px solid var(--warn);padding:8px 11px;background:color-mix(in srgb,var(--warn) 7%,transparent);color:var(--fg);font-size:12px;margin:7px 0}
+  .card-actions{margin-top:8px;display:flex;gap:8px;align-items:center}.card-actions>.btn{padding:4px 8px}.card-more{flex:1}.card-more>summary{cursor:pointer;list-style:none;color:var(--dim);font-size:11px;min-height:30px;display:flex;align-items:center}.card-more>summary::-webkit-details-marker{display:none}.card-more>summary::before{content:"＋ ";color:var(--acc)}
+  @media(max-width:760px){header{align-items:flex-start;flex-direction:column;gap:8px}nav{display:flex;overflow-x:auto;width:100%}nav a{min-height:44px;display:flex;align-items:center;white-space:nowrap}.exec-page{padding:12px}.exec-hero{grid-template-columns:1fr}.exec-stat{text-align:left}.wrap{padding:8px 0}.grid{grid-template-columns:1fr;padding:0}.ccrow button,.ccrow select,.btn{min-height:44px}}
 </style>`;
 
 function layout(active: string, body: string): string {
@@ -283,6 +295,10 @@ function layout(active: string, body: string): string {
 ${body}
 ${ENHANCER_SCRIPT}
 </body></html>`;
+}
+
+function executiveHero(headline: string, meaning: string, stat = ""): string {
+  return `<section class="exec-hero"><div><h2>${esc(headline)}</h2><p>${esc(meaning)}</p></div>${stat ? `<div class="exec-stat">${esc(stat)}</div>` : ""}</section>`;
 }
 
 // ONE card renderer for every surface (Card Standard v0.1: compact face →
@@ -490,6 +506,9 @@ function cardLink(item: Item, ctx: CardCtx): string {
   // SR2 ticket-card edge: domain-color left border + faint domain-tinted fill,
   // color-mix over --elev so the tint reads on the dark surface.
   const skin = `border-left-color:${c};background:color-mix(in srgb,${c} 12%,var(--elev))`;
+  const needsDecision = item.state === "parked" || item.state === "failed";
+  const controls = controlsFor(item, ctx);
+  const actionLabel = needsDecision ? "Review decision" : isIdea ? "Shape idea" : "Open";
 
   // Card is a container (not a link) so it can hold interactive controls; the
   // title is the click-through to the detail page.
@@ -500,7 +519,7 @@ function cardLink(item: Item, ctx: CardCtx): string {
     ${bar}
     ${gateDots(item, ctx)}
     ${item.parkedReason ? `<div class="reason">${esc(item.parkedReason)}</div>` : ""}
-    ${controlsFor(item, ctx)}
+    <div class="card-actions"><a class="btn${needsDecision ? " primary" : ""}" href="/project/${esc(item.id)}">${actionLabel}</a>${controls ? `<details class="card-more"><summary>More actions</summary>${controls}</details>` : ""}</div>
   </div>`;
 }
 
@@ -621,11 +640,11 @@ export function renderBoard(
   const done = projects.filter((p) => p.state === "passed").sort((a, b) => byAge(b, a));
 
   const needsYouSection = `
-  <h2 class="secthdr">Needs You <span class="count">${needsYou.length}</span> <span class="kv" style="font-weight:400">parked or failed — each card says what to decide</span></h2>
+  <h2 class="secthdr">Decide now <span class="count">${needsYou.length}</span> <span class="kv" style="font-weight:400">each card names the blocked decision</span></h2>
   ${needsYou.length ? `<div class="grid" style="padding:0">${needsYou.map((p) => cardLink(p, ctx)).join("")}</div>` : '<div class="empty" style="padding:10px">nothing needs you — the machine is either working or waiting for ideas</div>'}`;
 
   const activeSection = `
-  <h2 class="secthdr">Active <span class="count">${activeItems.length}</span> <span class="kv" style="font-weight:400">spec → build, gate by gate</span></h2>
+  <h2 class="secthdr">In motion <span class="count">${activeItems.length}</span> <span class="kv" style="font-weight:400">the machine is handling these</span></h2>
   ${activeItems.length
     ? laneBoard(activeItems, ctx, [{ key: "pending", label: "In Pipeline" }, { key: "running", label: "Running" }], statusOf)
     : '<div class="empty" style="padding:10px">no projects in flight — promote a Ready idea below</div>'}`;
@@ -650,12 +669,17 @@ export function renderBoard(
   <button type="submit">→ hopper</button>
 </form>
 ${filterBar(filter, profiles, domains)}
-<div class="wrap" style="flex-direction:column;gap:6px">
+<main class="exec-page">
+  ${executiveHero(
+    needsYou.length ? `${needsYou.length} decision${needsYou.length === 1 ? "" : "s"} need${needsYou.length === 1 ? "s" : ""} you` : "Nothing needs your decision",
+    needsYou.length ? "Resolve the cards below first. Work already moving and unshaped ideas are separated so they do not compete for attention." : "Refinery can keep moving without you. Active work and new ideas are available below when you want context.",
+    `${activeItems.length} project${activeItems.length === 1 ? "" : "s"} in motion · ${ideas.length} idea${ideas.length === 1 ? "" : "s"}`,
+  )}
   ${needsYouSection}
-  ${activeSection}
-  ${hopperSection}
+  <details class="exec-fold"><summary>In motion <span class="count">${activeItems.length}</span></summary>${activeSection}</details>
+  <details class="exec-fold"><summary>Ideas waiting to be shaped <span class="count">${ideas.length}</span></summary>${hopperSection}</details>
   ${doneSection}
-</div>`;
+</main>`;
   return layout("flow", body);
 }
 
@@ -669,16 +693,26 @@ export function renderNightly(
   domains: DomainRegistry = emptyRegistry,
 ): string {
   const ctx: CardCtx = { domains, profiles, enabled, back: "/nightly" };
-  const queuedProjects = nightly.filter((i) => ((i.payload as { queuedCount?: number })?.queuedCount ?? 0) > 0).length;
-  const board = laneBoard(nightly, ctx, STATUS_LANES, statusOf);
+  const ready = nightly.filter((i) => ((i.payload as { queuedCount?: number })?.queuedCount ?? 0) > 0);
+  const decisions = nightly.filter((i) => i.state === "parked" || i.state === "failed").filter((i) => !ready.includes(i));
+  const waiting = nightly.filter((i) => !ready.includes(i) && !decisions.includes(i));
   const body = `
 <form class="intake" method="post" action="/nightly/config">
   <label class="kv">Max cards per night:</label>
   <input type="number" name="maxPerNight" min="0" value="${maxPerNight}" style="width:90px">
   <button type="submit">save</button>
-  <span class="kv">${nightly.length} projects · ${queuedProjects} with a step queued · run.sh runs up to ${maxPerNight} queued cards @ 01:30</span>
+  <span class="kv">safety cap for the 01:30 run</span>
 </form>
-<div class="wrap">${nightly.length ? board : '<div class="empty" style="padding:24px">no nightly-build projects</div>'}</div>`;
+<main class="exec-page">
+  ${executiveHero(
+    decisions.length ? `${decisions.length} need${decisions.length === 1 ? "s" : ""} a decision before tonight` : `${ready.length} project${ready.length === 1 ? "" : "s"} ready for tonight`,
+    decisions.length ? "Clear the exceptions below. Queued work can run unattended after that." : ready.length ? "The overnight queue is ready. No intervention is required unless you want to change priority or run something now." : "Nothing is queued for the overnight run.",
+    `${ready.length} ready · cap ${maxPerNight}`,
+  )}
+  <section class="exec-section"><h2>Decide before tonight <span class="count">${decisions.length}</span></h2>${decisions.length ? `<div class="grid" style="padding:0">${decisions.map((i) => cardLink(i, ctx)).join("")}</div>` : '<div class="empty">nothing blocking tonight</div>'}</section>
+  <section class="exec-section"><h2>Ready for tonight <span class="count">${ready.length}</span></h2>${ready.length ? `<div class="grid" style="padding:0">${ready.map((i) => cardLink(i, ctx)).join("")}</div>` : '<div class="empty">nothing queued</div>'}</section>
+  <details class="exec-fold"><summary>Not queued <span class="count">${waiting.length}</span></summary>${waiting.length ? `<div class="grid" style="padding:10px 0 0">${waiting.map((i) => cardLink(i, ctx)).join("")}</div>` : '<div class="empty">nothing waiting</div>'}</details>
+</main>`;
   return layout("nightly", body);
 }
 
@@ -972,8 +1006,13 @@ export function renderProjectDetail(
     <span class="kv">removes this ${isIdea ? "idea" : "project"} from the board</span>
   </form>`;
 
-  const body = `<div class="detail">
+  const detailHeadline = item.state === "parked" || item.state === "failed"
+    ? "A decision is blocking this work"
+    : item.state === "passed" ? "This work is complete" : item.state === "running" ? "Refinery is working on this" : "This work is ready to move";
+  const detailMeaning = item.parkedReason || (input ? String(input) : `${titleOf(item)} is currently ${item.state}.`);
+  const body = `<main class="exec-page" style="max-width:820px">
   <a href="/" class="kv">← board</a>
+  ${executiveHero(detailHeadline, detailMeaning, `${item.state} · ${item.step ?? item.stage ?? "—"}`)}
   <h2><span class="swatch" style="background:${esc(color)}"></span> ${esc(titleOf(item))}</h2>
   <div class="kv">${isIdea ? "idea (untriaged)" : `project · ${esc(item.pipeline)}`}${goal ? ` · goal: <b>${esc(goal)}</b>` : ""} · step <b>${esc(item.step ?? item.stage ?? "—")}</b> · ${esc(item.state)} ${isNightly ? "· 🌙 nightly" : ""}</div>
   ${item.parkedReason ? `<div class="reason">${esc(item.parkedReason)}</div>` : ""}
@@ -981,16 +1020,13 @@ export function renderProjectDetail(
 
   ${actions}
 
-  ${cardBody ? `<h2>Card</h2><div class="md">${mdToHtml(cardBody)}</div>` : ""}
-
-  ${pipelineNodes}
-
-  <h2>Payload</h2>
-  <pre>${esc(JSON.stringify(item.payload, null, 2))}</pre>
-
-  <h2>Timeline</h2>
-  ${timeline}
-</div>`;
+  <details class="exec-fold"><summary>Technical evidence</summary>
+    ${cardBody ? `<h2>Card</h2><div class="md">${mdToHtml(cardBody)}</div>` : ""}
+    ${pipelineNodes}
+    <h2>Payload</h2><pre>${esc(JSON.stringify(item.payload, null, 2))}</pre>
+    <h2>Timeline</h2>${timeline}
+  </details>
+</main>`;
   return layout("", body);
 }
 
@@ -1027,21 +1063,34 @@ export function renderGauntletBoard(
   <span class="kv">${items.length} investigations · ${esc(view.capNote)}</span>
 </form>`;
   const kanban = `<div class="wrap"${items.length ? ' data-enhance="lanes"' : ""}>${items.length ? board : `<div class="empty" style="padding:24px">${esc(view.emptyText)}</div>`}</div>`;
+  const pendingCount = items.filter((i) => laneOf(i) === view.laneFallback).length;
+  const unresolvedItems = items.filter((i) => laneOf(i) === view.laneFallback);
+  const resolvedItems = items.filter((i) => laneOf(i) !== view.laneFallback);
+  const boardFor = (subset: Item[]): string => subset.length
+    ? `<div class="wrap" data-enhance="lanes">${laneBoard(subset, ctx, lanes, laneOf, (i) => ` data-date="${esc(view.sortDate?.(i) ?? "")}"`)}</div>`
+    : '<div class="empty">nothing here</div>';
+  const summary = executiveHero(
+    pendingCount ? `${pendingCount} investigation${pendingCount === 1 ? "" : "s"} still unresolved` : "Nothing needs your decision",
+    pendingCount ? "Review unresolved investigations first. Completed reports remain available as history." : "Completed investigations are reference material. Start or repeat a run only when the live situation warrants it.",
+    `${items.length} investigation record${items.length === 1 ? "" : "s"}`,
+  );
 
   if (view.section) {
     // Sectioned layout (dx1): shared header + tab bar, cases panel on top,
     // finished runs below, cap control demoted to the ⚙ settings corner.
     const body = `${sectionHeader(view.section, "runs", `<details class="cfg"><summary title="settings">⚙</summary>${capForm("intake cfgform")}</details>`)}
-${topPanel ?? ""}
-<div class="secblock"><h3 class="sechead">Completed investigations</h3>
+<main class="exec-page">${summary}<section class="exec-section"><h2>What needs attention</h2>${topPanel ?? '<div class="empty">no live case feed</div>'}</section>
+<details class="exec-fold"><summary>Completed investigations — history <span class="count">${items.length}</span></summary><div class="secblock"><h3 class="sechead">Completed investigations</h3>
 ${items.length ? "" : `<div class="kv" style="padding:0 18px">${esc(view.emptyText)} — force one from the cases table above.</div>`}
-${kanban}</div>`;
+${kanban}</div></details></main>`;
     return layout(view.key, body);
   }
 
-  const body = `
-${capForm("intake")}
-${kanban}`;
+  const body = `<main class="exec-page">${summary}
+<section class="exec-section"><h2>What needs attention</h2>${boardFor(unresolvedItems)}</section>
+<details class="exec-fold"><summary>Completed investigations — history <span class="count">${resolvedItems.length}</span></summary>${boardFor(resolvedItems)}</details>
+<details class="exec-fold"><summary>Run settings</summary>${capForm("intake")}</details>
+</main>`;
   return layout(view.key, body);
 }
 
@@ -1112,7 +1161,13 @@ export function renderGauntletDetail(
     )
     .join("\n  ");
 
-  const body = `<div class="srtabs">
+  const recommendation = head.cat === view.laneFallback
+    ? `Review the report, then use ${view.runNow?.button ?? "the run control"} if the evidence is stale or incomplete.`
+    : "Use the report as the decision record. Re-run only if the underlying case has materially changed.";
+  const body = `<main class="exec-page" style="max-width:900px">
+  ${executiveHero("What happened", `${head.title}: ${head.question || "an investigation record is available"}`, head.cat)}
+  <section class="decision-note"><b>Recommended action:</b> ${esc(recommendation)}</section>
+  <div class="srtabs">
   ${radios}
   <div class="srhead">
     <a href="/${view.key}" class="kv">← ${esc(view.label)}</a>
@@ -1126,7 +1181,7 @@ export function renderGauntletDetail(
     ${labels}
   </div>
   ${panels}
-</div>`;
+</div></main>`;
   return layout(view.key, body);
 }
 
@@ -1329,6 +1384,18 @@ export function renderDx1Fleet(
     ? Math.max(0, Math.floor((new Date(now).getTime() - new Date(latest.generatedAt).getTime()) / 86_400_000))
     : null;
   const cohorts = [...latest.templates].sort((a, b) => (b.rates.tasks ?? 0) - (a.rates.tasks ?? 0));
+  const measured = cohorts.filter((c) => typeof c.rates.cleanPooledExclQuotaPct === "number" && (c.rates.tasks ?? 0) > 0);
+  const taskTotal = measured.reduce((n, c) => n + (c.rates.tasks ?? 0), 0);
+  const clean = taskTotal
+    ? measured.reduce((n, c) => n + (c.rates.cleanPooledExclQuotaPct ?? 0) * (c.rates.tasks ?? 0), 0) / taskTotal
+    : null;
+  const weakest = [...measured].sort((a, b) => (a.rates.cleanPooledExclQuotaPct ?? 101) - (b.rates.cleanPooledExclQuotaPct ?? 101))[0];
+  const unassigned = latest.fleet?.unassignedCount ?? 0;
+  const recommendation = weakest && (weakest.rates.cleanPooledExclQuotaPct ?? 100) < 90
+    ? `Inspect ${weakest.name} first; it has the lowest measured clean rate (${fleetPct(weakest.rates.cleanPooledExclQuotaPct)}).`
+    : unassigned > 0
+      ? `Cohort outcomes look stable; review the ${unassigned} unassigned agents when capacity allows.`
+      : "No fleet intervention is indicated by this snapshot.";
 
   const rows = cohorts
     .map((t) => {
@@ -1361,7 +1428,10 @@ export function renderDx1Fleet(
     typeof m.divergedFloor === "number" ? `diverged ≥ ${m.divergedFloor}` : "",
   ].filter(Boolean).join(" · ");
 
-  const body = `${dx1FleetHeader()}<div class="fleet">
+  const body = `${dx1FleetHeader()}<main class="exec-page">
+  ${executiveHero("Fleet health at a glance", clean === null ? "No task outcomes are available in the latest snapshot." : `${fleetPct(clean)} of measured tasks completed cleanly across the cohort fleet.`, `${latest.fleet?.productionAgents ?? "?"} agents · ${cohorts.length} cohorts`)}
+  <section class="decision-note"><b>What I recommend:</b> ${esc(recommendation)}</section>
+  <details class="exec-fold"><summary>Full cohort data <span class="count">${cohorts.length}</span></summary><div class="fleet" style="padding:10px 0 0">
   <div class="meta">snapshot ${esc(latest.date)}${ageDays !== null ? ` (${ageDays === 0 ? "today" : `${ageDays}d old`})` : ""} · ${latest.windowDays ?? "?"}d window · ${latest.fleet?.productionAgents ?? "?"} production agents · ${cohorts.length} cohorts · ${latest.fleet?.unassignedCount ?? "?"} unassigned${previous ? ` · trend vs ${esc(previous.date)}` : " · no previous snapshot — no trend yet"}</div>
   <table data-enhance="table">
     <tr><th>Template cohort</th><th class="n">Agents</th><th class="n">Tasks</th><th class="n" title="pooled over the cohort's tasks, quota errors excluded; hover a value for the per-agent median">Clean %</th><th class="n">Needs-help+err %</th><th class="n">Runtime min<br><span style="font-weight:400">med / p90</span></th><th class="n">Stalls</th><th>Engine families 7d</th><th class="n">Token burn<br><span style="font-weight:400">med / max</span></th></tr>
@@ -1371,7 +1441,7 @@ export function renderDx1Fleet(
     <p><b>Method${thresholds ? ` (${esc(thresholds)})` : ""}:</b> these are cohort <b>outcome/health rates, NOT task quality</b>.</p>
 ${methodLines}
   </div>
-</div>`;
+</div></details></main>`;
   return layout("dx1", body);
 }
 
@@ -1479,8 +1549,11 @@ export function renderNightlyProject(item: Item): string {
        <span class="kv">now: <b>${mode === "immediate" ? "⚡ immediate (queue → runs now)" : "🌙 nightly (queue → waits for 01:30)"}</b></span>
      </form>`;
 
-  const body = `<div class="detail">
+  const nightlyHeadline = allDone ? "This project is complete" : queuedCount > 0 ? "This project is ready to run" : nextBlocked ? "A blocked step needs your decision" : "This project is not queued";
+  const nightlyMeaning = allDone ? "No action is required." : queuedCount > 0 ? `The next step will run ${mode === "immediate" ? "immediately" : "in the 01:30 batch"}.` : nextBlocked ? "Force-queue only if you deliberately accept the blocked condition." : "Queue the next step or run it now.";
+  const body = `<main class="exec-page" style="max-width:820px">
   <a href="/nightly" class="kv">← nightly</a>
+  ${executiveHero(nightlyHeadline, nightlyMeaning, `${done}/${total} steps done`)}
   <h2><span class="swatch" style="background:${color}"></span> ${esc(titleOf(item))} <span class="badge">${mode === "immediate" ? "⚡ immediate" : "🌙 nightly"}</span></h2>
   <div class="kv">project · nightly-build · goal <b>${esc(goalId)}</b> · ${done}/${total} steps</div>
   <div class="bar"><span style="width:${pct}%"></span></div>
@@ -1494,11 +1567,9 @@ export function renderNightlyProject(item: Item): string {
   <h2>Mode</h2>
   ${modeControl}
 
-  <h2>Steps</h2>
-  <div class="steps">${stepRows || '<div class="empty">no steps</div>'}</div>
-
-  ${goalBody ? `<h2>Goal</h2><div class="md">${mdToHtml(goalBody)}</div>` : ""}
-</div>`;
+  <details class="exec-fold"><summary>Steps and goal</summary><div class="steps">${stepRows || '<div class="empty">no steps</div>'}</div>
+  ${goalBody ? `<h2>Goal</h2><div class="md">${mdToHtml(goalBody)}</div>` : ""}</details>
+</main>`;
   return layout("nightly", body);
 }
 
@@ -1521,10 +1592,11 @@ export function renderFinished(
     ? `<h2 class="secthdr" style="padding:0 4px">Archived items <span class="count">${archived.length}</span> <span class="kv" style="font-weight:400">passed engine items swept off the board — change status to revive</span></h2>
        <div class="grid" style="padding:0;width:100%">${archived.map((p) => cardLink(p, ctx)).join("")}</div>`
     : "";
-  const body = `
-<div class="intake"><span class="kv">${finished.length} finished project${finished.length === 1 ? "" : "s"} — graduated off the gauntlet. Open one to send it back with amendments.</span></div>
-<div class="wrap" style="flex-direction:column">${finished.length ? `<div style="display:flex;gap:12px;flex-wrap:wrap">${cards}</div>` : '<div class="empty" style="padding:24px">no finished projects yet</div>'}
-${archivedSection}</div>`;
+  const body = `<main class="exec-page">
+${executiveHero("Nothing needs you here", "This is completed work. Open an item only to review the record or deliberately send it back with amendments.", `${finished.length} finished · ${archived.length} archived`)}
+<details class="exec-fold"><summary>Completed work <span class="count">${finished.length}</span></summary>${finished.length ? `<div class="grid" style="padding:10px 0 0">${cards}</div>` : '<div class="empty" style="padding:24px">no finished projects yet</div>'}</details>
+${archivedSection ? `<details class="exec-fold"><summary>Archived engine items <span class="count">${archived.length}</span></summary>${archivedSection}</details>` : ""}
+</main>`;
   return layout("finished", body);
 }
 
@@ -1576,20 +1648,18 @@ export function renderFinishedProject(item: Item): string {
        <span class="kv">reopens this project on the gauntlet; a non-empty note becomes a fresh queued step</span>
      </form>`;
 
-  const body = `<div class="detail">
+  const body = `<main class="exec-page" style="max-width:820px">
   <a href="/finished" class="kv">← finished</a>
+  ${executiveHero("No action needed", "This project completed every step. Send it back only when you have a specific amendment.", `${done}/${total} steps complete`)}
   <h2><span class="swatch" style="background:${color}"></span> ${esc(titleOf(item))} <span class="badge">✓ finished</span></h2>
   <div class="kv">project · nightly-build · goal <b>${esc(goalId)}</b> · ${done}/${total} steps</div>
   <div class="bar"><span style="width:${pct}%"></span></div>
 
-  <h2>Steps</h2>
-  <div class="steps">${stepRows || '<div class="empty">no steps</div>'}</div>
-
   <h2>Send back with amendments</h2>
   ${sendback}
-
-  ${goalBody ? `<h2>Goal</h2><div class="md">${mdToHtml(goalBody)}</div>` : ""}
-</div>`;
+  <details class="exec-fold"><summary>Completed steps and original goal</summary><div class="steps">${stepRows || '<div class="empty">no steps</div>'}</div>
+  ${goalBody ? `<h2>Goal</h2><div class="md">${mdToHtml(goalBody)}</div>` : ""}</details>
+</main>`;
   return layout("finished", body);
 }
 
@@ -1629,18 +1699,20 @@ export function renderReference(pipelines: ResolvedPipeline[]): string {
         )
         .join("")
     : `<tr><td colspan="4" class="empty">no pipelines on disk</td></tr>`;
-  const body = `<div class="detail" style="max-width:920px">
+  const body = `<main class="exec-page" style="max-width:920px">
+  ${executiveHero("How Refinery works", "Use this page when a label is unfamiliar. Work enters as an idea, is routed through checks, then either asks for your decision or completes through an executor.", `${pipelines.filter((p) => p.enabled).length} active pipelines`)}
+  <section class="decision-note"><b>In plain English:</b> Board shows decisions and work in motion. Overnight controls unattended work. Reviews are merge decisions. SR and DX1 are investigation workspaces. Finished is history.</section>
   <h2>Glossary</h2>
   <table style="width:100%;border-collapse:collapse" class="ref">
     <thead><tr><th style="text-align:left;padding:6px 8px;color:var(--dim)">Term</th><th style="text-align:left;padding:6px 8px;color:var(--dim)">Definition</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
-  <h2>Live pipelines</h2>
+  <details class="exec-fold"><summary>Technical pipeline catalog <span class="count">${pipelines.length}</span></summary><h2>Live pipelines</h2>
   <table style="width:100%;border-collapse:collapse" class="ref">
     <thead><tr><th style="text-align:left;padding:6px 8px;color:var(--dim)">Pipeline</th><th style="text-align:left;padding:6px 8px;color:var(--dim)">Gates (in order)</th><th style="text-align:left;padding:6px 8px;color:var(--dim)">Executor</th><th style="text-align:left;padding:6px 8px;color:var(--dim)">Enabled</th></tr></thead>
     <tbody>${plRows}</tbody>
-  </table>
-</div>`;
+  </table></details>
+</main>`;
   return layout("reference", body);
 }
 
