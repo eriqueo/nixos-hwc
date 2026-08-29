@@ -55,8 +55,20 @@ domains/automation/nightly-builds/
 
 `hwc.automation.nightlyBuilds.*` — `enable`, `onCalendar`, `reviewOnCalendar`,
 `reviewLlmProvider`, `maxCards`, `vaultDir`, `repoDir`, `enableRebuildButton`.
+`reviewLlmProvider` is a closed choice (`claude-cli`, `anthropic-api`, or
+`ollama`). `claude-cli` reuses the SR/DX1 OAuth EnvironmentFile and isolated
+Claude config directory. For a non-CLI provider, set
+`reviewLlmEnvironmentFile` only when that adapter needs credential variables;
+switching providers does not require changing runner code.
 
 ## Changelog
+
+- **2026-08-28** — Morning review provider selection is now a closed Nix
+  vocabulary. The default `claude-cli` adapter reuses the existing
+  `sr-gauntlet-claude-oauth` EnvironmentFile and isolated config directory;
+  non-CLI adapters can receive their own optional EnvironmentFile through
+  `reviewLlmEnvironmentFile`. The engine's existing provider resolver remains
+  the single runtime switch point.
 - **2026-08-28** — **The card's `pr:` field now records what actually happened.**
   Both the `done` and the `blocked` arms wrote `branch \`x\` (pushed…)`
   unconditionally, one line after the launcher had already logged the truth. The

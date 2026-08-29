@@ -69,6 +69,11 @@ let
   # reads). Lives under the refinery StateDirectory so the board (also eric) can
   # read it; created group-writable via tmpfiles below.
   reviewsDir = "/var/lib/refinery/reviews";
+  sharedClaudeConfigDir = "/var/lib/sr-gauntlet/claude-config";
+  reviewCredentialFile =
+    if cfg.reviewLlmProvider == "claude-cli"
+    then config.age.secrets.sr-gauntlet-claude-oauth.path
+    else cfg.reviewLlmEnvironmentFile;
 
   # Env for the review pass: late-bound vault + repo + reviews dir + provider.
   # HOME is set so headless `claude` (claude-cli) and `gh` find their creds.
@@ -78,6 +83,10 @@ let
     REFINERY_DEFAULT_REPO = toString cfg.repoDir;
     REFINERY_REVIEWS_DIR = reviewsDir;
     REFINERY_LLM_PROVIDER = cfg.reviewLlmProvider;
+  } // lib.optionalAttrs (cfg.reviewLlmProvider == "claude-cli") {
+    # Reuse the same subscription credential and isolated config home as the
+    # SR/DX1 gauntlets. EnvironmentFile below supplies CLAUDE_CODE_OAUTH_TOKEN.
+    CLAUDE_CONFIG_DIR = sharedClaudeConfigDir;
   } // lib.optionalAttrs (config.hwc.automation.refinery.claudeBin != null) {
     # The claude-cli LlmPort shells out to `claude`, which is NOT on the service
     # PATH. Point it at the same headless binary the refinery board uses, else
@@ -273,9 +282,21 @@ in
     };
 
     reviewLlmProvider = lib.mkOption {
-      type = lib.types.str;
+      type = lib.types.enum [ "claude-cli" "anthropic-api" "ollama" ];
       default = "claude-cli";
       description = "LLM provider for the morning-review pass (claude-cli | anthropic-api | ollama).";
+    };
+
+    reviewLlmEnvironmentFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "/run/agenix/anthropic-api-key-env";
+      description = ''
+        Optional systemd EnvironmentFile for non-Claude-CLI providers. The
+        claude-cli provider always reuses sr-gauntlet-claude-oauth; Ollama needs
+        no credential; anthropic-api expects ANTHROPIC_API_KEY or
+        REFINERY_ANTHROPIC_API_KEY in this file.
+      '';
     };
 
     # PRIVILEGED, off-by-default. Gates the root rebuild-request consumer: the
@@ -441,6 +462,8 @@ in
         StandardOutput = "journal";
         StandardError = "journal";
         NoNewPrivileges = true;
+      } // lib.optionalAttrs (reviewCredentialFile != null) {
+        EnvironmentFile = reviewCredentialFile;
       };
     };
 
