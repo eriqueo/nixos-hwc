@@ -19,6 +19,10 @@ domains/system/
 │   └── validation.nix    # Domain-wide assertions
 ├── networking/
 │   └── index.nix         # SSH, Tailscale, NFS, Samba, firewall, wait-online (hwc.system.networking.*)
+├── hardware/
+│   └── index.nix         # Audio/input/Sensel/fan/peripheral hardware capabilities
+├── gpu/
+│   └── index.nix         # Graphics stack, PRIME offload, and boot-scoped wrapped-launch policy
 ├── mcp/                  # HWC Infrastructure MCP Server (25 tools, 5 resources)
 │   ├── index.nix         # NixOS module, systemd service, Caddy route
 │   ├── parts/caddy.nix   # Reverse-proxy route (port 6243 → 6200)
@@ -40,6 +44,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-08-28: `gpu/` + laptop power wiring — replaced five-second `nvidia-smi` status polling with passive PCI runtime-PM reads and moved launcher preference/one-shot state from global `/tmp` into the user's boot-scoped runtime directory. Enabled TLP's native profile daemon on hwc-laptop; battery policy now uses EPP `power` plus the firmware `low-power` profile. Lid ignore remains an AC-only request: unplug clears it, and the root acpid close handler independently reads physical AC before honoring it.
 - 2026-08-12: `networking/` — Tailscale registration made declarative. New `tailscale.authKeyParameters` option (`ephemeral`/`preauthorized`/`baseURL`), passed through to `services.tailscale`; the wrapper previously dropped it, which made OAuth-client registration inexpressible. Also added a `warnings` entry that fires when `extraUpFlags`/`authKeyParameters` are set while `authKeyFile` is null: upstream gates `tailscaled-autoconnect.service` (the only thing that ever runs `tailscale up`) on `authKeyFile`, so those flags are silently inert without it. That silence is what let hwc-server declare `--advertise-tags=tag:server` for months while actually registering untagged, inheriting the tailnet's 6-month key expiry and dropping off on 2026-08-07. Warn rather than assert: hwc-laptop (`--accept-dns`) and the appliance profile (`--ssh`) carry the same inert flags today and failing their builds is a separate cleanup. Verified red on hwc-laptop before shipping.
 - 2026-07-11: usb-automount: mount root now `config.hwc.paths.removableMedia` (default `/mnt`, unchanged) instead of a hardcoded `/mnt` literal (Law 3 migration).
 - 2026-07-06: mcp: website tmpfiles/ReadWritePaths repointed to /opt/business/website-site (website eviction).

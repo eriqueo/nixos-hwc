@@ -16,6 +16,7 @@ in
   #============================================================================
   options.hwc.system.apps.waybar = {
     enable = lib.mkEnableOption "Waybar system dependencies and validation";
+    powerHub.enable = lib.mkEnableOption "Waybar power hub backed by TLP profiles";
   };
 
   #============================================================================
@@ -38,6 +39,10 @@ in
         {
           assertion = config.hwc.system.networking.enable;
           message = "waybar's network module requires hwc.system.networking.enable = true (for NetworkManager)";
+        }
+        {
+          assertion = !cfg.powerHub.enable || config.services.tlp.pd.enable;
+          message = "waybar's power hub requires services.tlp.pd.enable for the native profile D-Bus API";
         }
       ];
     })

@@ -9,6 +9,8 @@ let
   gsrCfg = config.hwc.home.apps.gpu-screen-recorder or { enable = false; };
   gsrEnabled = gsrCfg.enable or false;
 
+  powerHubEnabled = lib.attrByPath [ "hwc" "system" "apps" "waybar" "powerHub" "enable" ] false osConfig;
+
   commonModules = {
     modules-left = [ "custom/ws-enter" "hyprland/workspaces" "hyprland/submap" "custom/workspace-link" ];
     modules-center = [ "custom/khal" "clock" "custom/weather" ];
@@ -16,6 +18,7 @@ let
       "custom/sep-pre"
     ] ++ lib.optionals ollamaEnabled [ "custom/ollama" ]
       ++ lib.optionals dtEnabled [ "custom/dt" ]
+      ++ lib.optionals powerHubEnabled [ "custom/power-hub" ]
       ++ [
       "custom/gpu" "idle_inhibitor" "custom/lid-sleep"
     ] ++ lib.optionals gsrEnabled [ "custom/recording" ]
@@ -93,7 +96,13 @@ let
     };
   };
 
-  commonWidgetsBase = ollamaWidget // dtWidget // gsrWidget // {
+  powerHubWidget = lib.optionalAttrs powerHubEnabled {
+    # Aggregates authoritative status while actions remain owned by TLP, the
+    # lid policy, brightnessctl, and the GPU-launch capability respectively.
+    "custom/power-hub" = { format = "{}"; exec = "waybar-power-hub-status"; return-type = "json"; interval = 5; on-click = "waybar-power-hub-menu"; };
+  };
+
+  commonWidgetsBase = ollamaWidget // dtWidget // gsrWidget // powerHubWidget // {
     "hyprland/submap" = { format = "mode: {}"; max-length = 12; tooltip = false; };
     "hyprland/window" = {
       format = "{title}";
@@ -135,13 +144,12 @@ let
       format = "{temperatureC}°C";
       format-critical = "{temperatureC}°C!";
     };
-    "custom/power-profile" = { format = "{}"; exec = "waybar-power-profile"; return-type = "json"; interval = 10; on-click = "waybar-power-profile-toggle"; };
     "custom/disk-space" = { format = "{}"; exec = "waybar-disk-space"; return-type = "json"; interval = 30; on-click = "baobab"; };
     "custom/battery" = { format = "{}"; exec = "waybar-battery-health"; return-type = "json"; interval = 5; on-click = "waybar-power-settings"; };
     "custom/proton-auth" = { format = "Auth"; tooltip = "Proton Authenticator (SUPER+A)"; on-click = "proton-authenticator-toggle"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
     "custom/power" = { format = "Pwr"; tooltip = "Shutdown"; on-click = "wlogout"; };
-    "custom/lid-sleep" = { format = "{}"; exec = "waybar-lid-status"; return-type = "json"; interval = 5; on-click = "waybar-lid-toggle"; };
+    "custom/lid-sleep" = { format = "{}"; exec = "waybar-lid-status"; return-type = "json"; interval = 5; on-click = "waybar-power-hub-menu"; };
     "custom/workspace-link" = { format = "{}"; exec = "waybar-workspace-link-status"; return-type = "json"; interval = "once"; signal = 8; on-click = "waybar-workspace-link-toggle"; };
 
     "custom/khal" = {

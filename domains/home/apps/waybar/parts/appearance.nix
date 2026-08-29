@@ -94,7 +94,7 @@ window#waybar {
 
 /* === BASE MODULE STYLE === */
 #cpu, #memory, #temperature, #custom-network, #pulseaudio,
-#custom-battery, #custom-gpu, #custom-ollama, #custom-dt, #idle_inhibitor, #mpd, #tray,
+#custom-battery, #custom-power-hub, #custom-gpu, #custom-ollama, #custom-dt, #idle_inhibitor, #mpd, #tray,
 #custom-notification, #custom-power, #custom-disk-space, #backlight, #bluetooth,
 #custom-lid-sleep, #custom-proton-auth, #custom-recording, #hyprland-language {
   padding: 8px 6px;
@@ -111,7 +111,7 @@ window#waybar {
 /* === COLOR GROUPS — opaque computed (50% blend over #32302f, required for powerline) === */
 
 /* Toggles — teal #576f69 */
-#custom-gpu, #custom-ollama, #custom-dt, #idle_inhibitor, #custom-lid-sleep, #custom-recording {
+#custom-power-hub, #custom-gpu, #custom-ollama, #custom-dt, #idle_inhibitor, #custom-lid-sleep, #custom-recording {
   background-color: #576f69;
 }
 
@@ -173,7 +173,7 @@ window#waybar {
 
 /* === HOVER — universal === */
 #cpu:hover, #memory:hover, #temperature:hover, #custom-network:hover, #pulseaudio:hover,
-#custom-battery:hover, #clock:hover, #custom-gpu:hover, #custom-ollama:hover, #custom-dt:hover,
+#custom-battery:hover, #clock:hover, #custom-power-hub:hover, #custom-gpu:hover, #custom-ollama:hover, #custom-dt:hover,
 #idle_inhibitor:hover, #mpd:hover, #tray:hover, #custom-notification:hover,
 #custom-power:hover, #custom-disk-space:hover, #backlight:hover, #bluetooth:hover,
 #custom-weather:hover, #custom-khal:hover, #custom-lid-sleep:hover, #custom-proton-auth:hover,

@@ -20,7 +20,7 @@ in
   config = lib.mkIf cfg.enable {
     # Use regular chromium with proprietary codecs enabled for video playback.
     # chromium-hwc is a wrapper that picks Intel (ANGLE-GL) vs NVIDIA
-    # (ANGLE-Vulkan + PRIME) flags based on /tmp/gpu-mode (see gpu-toggle).
+    # (ANGLE-Vulkan + PRIME) flags based on the user-runtime gpu-launch policy.
     home.packages = [
       (pkgs.chromium.override {
         enableWideVine = true;  # Includes H.264/AAC codecs + WideVine DRM

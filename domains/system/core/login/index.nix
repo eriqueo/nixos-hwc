@@ -139,7 +139,7 @@ in
             # DMA-BUF imports (WebGL contexts, GL-accelerated clients).
             #
             # NVIDIA offload is per-process. Use one of:
-            #   gpu-launch <app>      — mode-aware (reads /tmp/gpu-mode)
+            #   gpu-launch <app>      — reads the user-runtime launch policy
             #   blender-offload       — Blender-specific NVIDIA dGPU launcher
             # Both in domains/system/gpu/index.nix.
 

@@ -23,6 +23,7 @@ core/
 ```
 
 ## Changelog
+- 2026-08-28: `login/index.nix` documentation now describes `gpu-launch`'s boot-scoped user-runtime policy. The Intel-only Aquamarine restriction remains deliberately unconfigured: the prior by-path value failed graphical login and the dynamically resolved real DRM node still requires the documented bare-TTY test before it may enter greetd.
 - 2026-02-28: Added README for Charter Law 12 compliance
 - 2026-03-12: Inlined options.nix into index.nix for identity, polkit, session, shell; removed separate options.nix files
 - 2026-03-26: Added Authentik SSO/Identity Provider module

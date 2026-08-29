@@ -68,17 +68,23 @@
   };
 
   # Lid-close suspend: handled here via acpid, NOT logind inhibitors.
-  # State file: /run/user/1000/hwc-lid-ignore
+  # State file: /run/user/1000/hwc/lid-ignore-request
   #   - absent   → lid close triggers suspend (default — nothing creates it)
-  #   - present  → lid close does nothing
-  # Toggle is managed by waybar-lid-toggle (writes/deletes the file — no D-Bus).
+  #   - present  → lid close does nothing, but ONLY while AC is online
+  # Waybar manages the request. The root handler derives effective policy from
+  # the authoritative AC signal at close time; a stale request can never keep
+  # the laptop awake on battery.
   services.acpid = {
     enable = true;
     handlers."hwc-lid-close" = {
       event = "button/lid LID close";
       action = ''
-        STATE="/run/user/1000/hwc-lid-ignore"
-        if [[ ! -f "$STATE" ]]; then
+        STATE="/run/user/1000/hwc/lid-ignore-request"
+        AC_ONLINE=$(cat /sys/class/power_supply/AC/online 2>/dev/null || echo 0)
+        if [[ "$AC_ONLINE" != "1" ]]; then
+          ${pkgs.coreutils}/bin/rm -f "$STATE"
+          ${pkgs.systemd}/bin/systemctl suspend
+        elif [[ ! -f "$STATE" ]]; then
           ${pkgs.systemd}/bin/systemctl suspend
         fi
       '';
@@ -313,7 +319,10 @@
   # System-lane dependencies for home apps (co-located sys.nix files)
   # These are enabled separately because system evaluates before Home Manager
   hwc.system.apps.hyprland.enable = true;   # Startup script, helper scripts
-  hwc.system.apps.waybar.enable = true;     # System dependency validation
+  hwc.system.apps.waybar = {
+    enable = true;                          # System dependency validation
+    powerHub.enable = true;
+  };
   hwc.system.apps.chromium.enable = true;   # System integration (dconf, dbus)
   hwc.system.apps.gpu-screen-recorder.enable = true;  # setcap gsr-kms-server (Wayland capture)
 
@@ -419,6 +428,10 @@
   # Power management: TLP handles thermal + power (thermald conflicts with TLP)
   services.tlp = {
     enable = true;
+    # TLP remains the sole power-policy producer. Its native D-Bus daemon lets
+    # the active desktop session select performance/balanced/power-saver
+    # without passwordless sudo or a competing sysfs writer.
+    pd.enable = true;
     settings = {
       # CPU performance settings
       CPU_SCALING_GOVERNOR_ON_AC = "powersave";
@@ -430,7 +443,8 @@
 
       # Add CPU energy/performance preferences
       CPU_ENERGY_PERF_POLICY_ON_AC = "balance_power";  # Changed from "performance" to reduce heat
-      CPU_ENERGY_PERF_POLICY_ON_BAT = "balance-power";
+      CPU_ENERGY_PERF_POLICY_ON_BAT = "power";
+      PLATFORM_PROFILE_ON_BAT = "low-power";
 
       # Boost control (disable turbo on AC too — Meteor Lake turbo bursts spike
       # temps past the fan trip points and slam the fan to max; capping heat at
@@ -478,6 +492,10 @@
 
   # Device rules: kyber scheduler on NVMe
   services.udev.extraRules = lib.mkAfter ''
+    # Clear the AC-only lid-ignore request as soon as unplug is observed. The
+    # acpid close handler repeats the AC check because udev delivery is not a
+    # synchronization primitive and must not be the safety boundary.
+    SUBSYSTEM=="power_supply", KERNEL=="AC", ATTR{online}=="0", RUN+="${pkgs.coreutils}/bin/rm -f /run/user/1000/hwc/lid-ignore-request"
     ACTION=="add|change", KERNEL=="nvme*n*", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="kyber"
   '';
 

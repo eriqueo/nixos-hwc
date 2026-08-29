@@ -382,39 +382,49 @@ in
     # --- Laptop helpers (optional) --------------------------------------------
     (lib.mkIf cfg.powerManagement.smartToggle {
       environment.systemPackages = with pkgs; [
+        (pkgs.writeShellScriptBin "gpu-set-policy" ''
+          #!/usr/bin/env bash
+          case "''${1:-}" in
+            intel|performance) POLICY="$1" ;;
+            *)
+              echo "usage: gpu-set-policy {intel|performance}" >&2
+              exit 2
+              ;;
+          esac
+
+          RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc"
+          mkdir -p "$RUNTIME_DIR"
+          printf '%s\n' "$POLICY" > "$RUNTIME_DIR/gpu-launch-policy"
+          ${lib.optionalString cfg.powerManagement.toggleNotifications ''
+            ${pkgs.libnotify}/bin/notify-send "GPU Launch Policy" "Wrapped launches: $POLICY" -i gpu-card
+          ''}
+        '')
+
         (pkgs.writeShellScriptBin "gpu-toggle" ''
           #!/usr/bin/env bash
-          GPU_MODE_FILE="/tmp/gpu-mode"
+          RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc"
+          GPU_MODE_FILE="$RUNTIME_DIR/gpu-launch-policy"
+          mkdir -p "$RUNTIME_DIR"
           CURRENT_MODE=$(cat "$GPU_MODE_FILE" 2>/dev/null || echo "intel")
 
           case "$CURRENT_MODE" in
             "intel")
-              echo "performance" > "$GPU_MODE_FILE"
-              ${lib.optionalString cfg.powerManagement.toggleNotifications ''
-                ${pkgs.libnotify}/bin/notify-send "GPU Mode" "Switched to Performance Mode ⚡" -i gpu-card
-              ''}
+              exec gpu-set-policy performance
               ;;
             "performance")
-              echo "intel" > "$GPU_MODE_FILE"
-              ${lib.optionalString cfg.powerManagement.toggleNotifications ''
-                ${pkgs.libnotify}/bin/notify-send "GPU Mode" "Switched to Intel Mode 󰢮" -i gpu-card
-              ''}
+              exec gpu-set-policy intel
               ;;
             *)
-              echo "intel" > "$GPU_MODE_FILE"
-              ${lib.optionalString cfg.powerManagement.toggleNotifications ''
-                ${pkgs.libnotify}/bin/notify-send "GPU Mode" "Reset to Intel Mode 󰢮" -i gpu-card
-              ''}
+              exec gpu-set-policy intel
               ;;
           esac
-
-          # Note: Waybar auto-updates via interval (5s), no signal needed
-          # Previous pkill -SIGUSR1 caused waybar crashes - removed
         '')
 
         (pkgs.writeShellScriptBin "gpu-next" ''
           #!/usr/bin/env bash
-          touch /tmp/gpu-next-nvidia
+          RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc"
+          mkdir -p "$RUNTIME_DIR"
+          touch "$RUNTIME_DIR/gpu-next-nvidia"
           echo "Next application will use NVIDIA GPU"
           ${lib.optionalString cfg.powerManagement.toggleNotifications ''
             ${pkgs.libnotify}/bin/notify-send "GPU Override" "Next app will use NVIDIA dGPU" -i gpu-card
@@ -428,10 +438,11 @@ in
             exit 1
           fi
 
-          GPU_MODE_FILE="/tmp/gpu-mode"
+          RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc"
+          GPU_MODE_FILE="$RUNTIME_DIR/gpu-launch-policy"
           CURRENT_MODE=$(cat "$GPU_MODE_FILE" 2>/dev/null || echo "intel")
 
-          NEXT_NVIDIA_FILE="/tmp/gpu-next-nvidia"
+          NEXT_NVIDIA_FILE="$RUNTIME_DIR/gpu-next-nvidia"
           if [[ -f "$NEXT_NVIDIA_FILE" ]]; then
             rm "$NEXT_NVIDIA_FILE"
             # Use nvidia-offload environment variables
@@ -480,13 +491,9 @@ in
 
         (pkgs.writeShellScriptBin "gpu-status" ''
           #!/usr/bin/env bash
-          GPU_MODE_FILE="/tmp/gpu-mode"
+          RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc"
+          GPU_MODE_FILE="$RUNTIME_DIR/gpu-launch-policy"
           DEFAULT_MODE="intel"
-
-          if [[ ! -f "$GPU_MODE_FILE" ]]; then
-            echo "$DEFAULT_MODE" > "$GPU_MODE_FILE"
-          fi
-
           CURRENT_MODE=$(cat "$GPU_MODE_FILE" 2>/dev/null || echo "$DEFAULT_MODE")
 
           # Hardcoded GPU names (glxinfo removed to prevent CPU temperature spikes)
@@ -494,28 +501,31 @@ in
           NVIDIA_GPU="NVIDIA RTX 2000 Ada"
 
           ${lib.optionalString (cfg.type == "nvidia") ''
-            NVIDIA_POWER=$(nvidia-smi --query-gpu=power.draw --format=csv,noheader,nounits 2>/dev/null | head -1 || echo "0")
-            NVIDIA_TEMP=$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -1 || echo "0")
+            NVIDIA_STATE="unavailable"
+            for device in /sys/bus/pci/devices/*; do
+              [[ "$(cat "$device/vendor" 2>/dev/null || true)" == "0x10de" ]] || continue
+              [[ "$(cat "$device/class" 2>/dev/null || true)" == 0x03* ]] || continue
+              NVIDIA_STATE=$(cat "$device/power/runtime_status" 2>/dev/null || echo "unknown")
+              break
+            done
           ''}
 
           case "$CURRENT_MODE" in
             "intel")
               ICON="iGPU"
               CLASS="intel"
-              TOOLTIP="Intel Mode: $INTEL_GPU"
-              ;;
-            "nvidia")
-              ICON="dGPU"
-              CLASS="nvidia"
               ${lib.optionalString (cfg.type == "nvidia") ''
-                TOOLTIP="NVIDIA Mode: $NVIDIA_GPU\nPower: $NVIDIA_POWER W | Temp: $NVIDIA_TEMP°C"
+                TOOLTIP="Wrapped launches: Intel\n$NVIDIA_GPU runtime: $NVIDIA_STATE"
+              ''}
+              ${lib.optionalString (cfg.type != "nvidia") ''
+                TOOLTIP="Wrapped launches: $INTEL_GPU"
               ''}
               ;;
             "performance")
               ICON="GPU+"
               CLASS="performance"
               ${lib.optionalString (cfg.type == "nvidia") ''
-                TOOLTIP="Performance Mode: Auto-GPU Selection\nNVIDIA: $NVIDIA_POWER W | $NVIDIA_TEMP°C"
+                TOOLTIP="Wrapped launches: NVIDIA for allowlisted apps\n$NVIDIA_GPU runtime: $NVIDIA_STATE"
               ''}
               ;;
             *)

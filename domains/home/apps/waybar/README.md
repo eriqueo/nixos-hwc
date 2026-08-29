@@ -2,7 +2,8 @@
 
 ## Purpose
 Configures the Waybar status bar for Hyprland: module layout, Gruvbox-Material
-CSS, generated helper scripts (network, GPU, lid-sleep, weather, etc.), and a
+CSS, generated helper scripts (network, passive power/GPU status, AC-gated
+lid policy, weather, etc.), and a
 hardened systemd user service that waits for Hyprland IPC before launching.
 
 ## Boundaries
@@ -13,10 +14,11 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 ## Structure
 - `index.nix` — options, packages, programs.waybar, systemd service, assertions
 - `sys.nix` — system-lane option + hardware/network assertions
-- `parts/behavior.nix` — module layout and per-widget settings
+- `parts/behavior.nix` — module layout and per-widget settings; laptop power hub is gated by the system-lane capability
 - `parts/appearance.nix` — curated Gruvbox-Material CSS (palette feed is backlog)
 - `parts/packages.nix` — waybar + module dependency packages
 - `parts/scripts.nix` — writeShellScriptBin helpers incl. waybar-launch
 
 ## Changelog
+- 2026-08-28: Added the laptop-only power hub: native TLP profile selection, brightness presets, explicit AC-gated lid policy, wrapped-launch GPU policy, and passive sysfs battery/dGPU telemetry. Removed the unreachable power-profile widget and blind lid toggle; retained old GPU/lid widgets temporarily for live parity verification.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).
