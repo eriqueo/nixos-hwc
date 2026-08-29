@@ -6,6 +6,35 @@
 
 { config, lib, pkgs, modulesPath, ... }:
 
+let
+  # One producer for the charger-transition policy. The selector accepts an
+  # alternate sysfs file so its input parsing can be tested without changing
+  # the real power source.
+  selectPowerProfile = pkgs.writeShellScript "hwc-select-power-profile" ''
+    set -eu
+    AC_ONLINE_PATH="''${1:-/sys/class/power_supply/AC/online}"
+
+    if [[ ! -r "$AC_ONLINE_PATH" ]]; then
+      echo "hwc-select-power-profile: unreadable AC state: $AC_ONLINE_PATH" >&2
+      exit 66
+    fi
+
+    case "$(cat "$AC_ONLINE_PATH")" in
+      0) printf '%s\n' power-saver ;;
+      1) printf '%s\n' balanced ;;
+      *)
+        echo "hwc-select-power-profile: invalid AC state in $AC_ONLINE_PATH" >&2
+        exit 65
+        ;;
+    esac
+  '';
+
+  applyPowerSourcePolicy = pkgs.writeShellScript "hwc-apply-power-source-policy" ''
+    set -eu
+    PROFILE="$(${selectPowerProfile} "''${1:-/sys/class/power_supply/AC/online}")"
+    exec ${pkgs.tlp}/bin/tlp "$PROFILE"
+  '';
+in
 {
   ##############################################################################
   ##  MACHINE: HWC-LAPTOP
@@ -76,6 +105,10 @@
   # the laptop awake on battery.
   services.acpid = {
     enable = true;
+    handlers."hwc-power-source" = {
+      event = "ac_adapter.*";
+      action = "${applyPowerSourcePolicy}";
+    };
     handlers."hwc-lid-close" = {
       event = "button/lid LID close";
       action = ''
@@ -433,6 +466,13 @@
     # without passwordless sudo or a competing sysfs writer.
     pd.enable = true;
     settings = {
+      # Charger transitions are owned by applyPowerSourcePolicy: SAV on
+      # battery, BAL on AC. Disable TLP's built-in PRF/BAL writer so the two
+      # policies cannot race. Manual Waybar choices persist until the next
+      # physical charger transition.
+      TLP_AUTO_SWITCH = 0;
+      TLP_DEFAULT_MODE = "BAL";
+
       # CPU performance settings
       CPU_SCALING_GOVERNOR_ON_AC = "powersave";
       CPU_SCALING_GOVERNOR_ON_BAT = "powersave";
@@ -464,6 +504,11 @@
       SATA_LINKPWR_ON_BAT = "med_power_with_dipm";
     };
   };
+
+  # Apply the same charger policy on boot, when no ACPI transition is
+  # guaranteed to fire. This extends TLP's existing privileged service rather
+  # than creating a second privileged daemon.
+  systemd.services.tlp.postStart = "${applyPowerSourcePolicy}";
 
   #============================================================================
   # PERFORMANCE TUNING (32GB RAM, dual NVMe system)
