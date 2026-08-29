@@ -29,6 +29,7 @@ in
   #==========================================================================
   options.hwc.home.apps.waybar = {
     enable = lib.mkEnableOption "Waybar status bar";
+    powerHub.enable = lib.mkEnableOption "laptop power controls and passive telemetry";
   };
 
   #==========================================================================
@@ -86,6 +87,10 @@ in
       {
         assertion = !cfg.enable || config.hwc.home.apps.swaync.enable;
         message = "waybar requires swaync for notification center (custom/notification widget)";
+      }
+      {
+        assertion = !cfg.powerHub.enable || !isNixOSHost || lib.attrByPath [ "hwc" "system" "apps" "waybar" "powerHub" "enable" ] false osConfig;
+        message = "waybar power hub home lane requires hwc.system.apps.waybar.powerHub.enable on NixOS";
       }
     ];
 

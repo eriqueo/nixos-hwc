@@ -9,7 +9,7 @@ let
   gsrCfg = config.hwc.home.apps.gpu-screen-recorder or { enable = false; };
   gsrEnabled = gsrCfg.enable or false;
 
-  powerHubEnabled = lib.attrByPath [ "hwc" "system" "apps" "waybar" "powerHub" "enable" ] false osConfig;
+  powerHubEnabled = config.hwc.home.apps.waybar.powerHub.enable;
 
   commonModules = {
     modules-left = [ "custom/ws-enter" "hyprland/workspaces" "hyprland/submap" "custom/workspace-link" ];

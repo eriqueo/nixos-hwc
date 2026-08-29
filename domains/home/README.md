@@ -22,7 +22,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 domains/home/
 ├── apps/    # 50 app modules, auto-imported via readDir (index.nix per app,
 │            # optional sys.nix system half, parts/ for split config); Waybar's
-│            # laptop-only power hub is declared in its co-located system half
+│            # laptop-only power hub has paired home/system flags for HM parity
 ├── core/    # shell/ (CLI env, zsh, aliases — parts/), development/, xdg-dirs.nix
 └── theme/   # palettes/ (deep-nord, gruv, hwc), templates/gtk.nix, fonts/
 ```

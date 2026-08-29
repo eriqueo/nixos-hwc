@@ -43,6 +43,7 @@
     # ~/600_apps/brain checkout and the vault, which only laptop + server carry.
     brain.enable = true;
     gpu-screen-recorder.enable = true;  # gsr-toggle / SHIFT+PRINT call recording
+    waybar.powerHub.enable = true;
     whisper-cpp = {
       enable = true;
       cuda = true;
