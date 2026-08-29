@@ -821,6 +821,10 @@ export function createShell(cfg: HttpShellConfig) {
             : null;
           const item = (await store.load(id)) ?? mirror().find((m) => m.id === id) ?? finishedItem;
           if (!item) {
+            // Compatibility for review cards emitted before /review/:id had an
+            // owned detail route. Old links used /project/<review-id>; preserve
+            // bookmarks/history while keeping project and review stores distinct.
+            if (await loadReview(id)) return redirectTo(res, `/review/${encodeURIComponent(id)}`);
             res.writeHead(404, { "content-type": "text/plain" });
             res.end("no such project");
             return;
