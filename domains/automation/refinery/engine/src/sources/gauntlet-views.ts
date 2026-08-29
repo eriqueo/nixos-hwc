@@ -125,6 +125,9 @@ const SR_VIEW: GauntletView = {
     const p = pl(item);
     if (p.ledgerCurrent !== true) return "history";
     if (p.ledgerState === "failed") return "needs-review";
+    // Pre-contract ledger entries have no decision.json. They are bounded
+    // legacy history, not 200+ invented review tasks during rollout.
+    if (typeof p.valid !== "boolean") return "history";
     if (p.valid !== true) return "needs-review";
     const attention = str(p.attention);
     return ["act", "watch", "none"].includes(attention) ? attention : "needs-review";

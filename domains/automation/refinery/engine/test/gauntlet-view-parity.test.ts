@@ -35,12 +35,15 @@ test("SR board: executive decisions drive attention, watch, and folded history",
       attention: "watch", headline: "Intermittent sync delay", meaning: "No customer action is blocked",
       recommendation: "Monitor the next sync", owner: "eric", urgency: "this-week" } },
     { ...SR_ITEMS[1]!, id: "sr:old", payload: { ...(SR_ITEMS[1]!.payload as Record<string, unknown>), headline: "Old investigation" } },
+    { ...SR_ITEMS[1]!, id: "sr:legacy-current", payload: { ...(SR_ITEMS[1]!.payload as Record<string, unknown>),
+      ledgerCurrent: true, ledgerState: "completed", headline: "Legacy current investigation" } },
   ];
   const html = renderGauntletBoard(view, items, 5, [], undefined);
   assert.ok(html.includes("1 investigation still unresolved"), "only actionable work reaches the headline");
   assert.ok(html.includes("Needs you") && html.includes("Watchlist"), "human lanes are named by meaning");
   assert.ok(html.includes("Customer cannot finish setup") && html.includes("Ask DataX to repair the integration"));
   assert.ok(html.includes("No action and history") && html.includes("Old investigation"), "old runs stay folded history");
+  assert.ok(html.includes("Legacy current investigation"), "pre-contract current runs are bounded history, not invented review work");
 });
 
 test("SR detail: decision first, DataX action, re-run, then full evidence", () => {
