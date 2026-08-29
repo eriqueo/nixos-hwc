@@ -344,7 +344,7 @@ export async function runMorningReview(
             body: prBody(review),
           }));
 
-        const rec: PrReview = { ...review, prUrl: pr.url, prNumber: pr.number };
+        const rec: PrReview = { ...review, cardFile: card.file, prUrl: pr.url, prNumber: pr.number };
         await ports.store.save(rec);
         return { persisted: rec, openedNew: !existing };
       }, bodyAttempts, saveFailure, retryDelay);

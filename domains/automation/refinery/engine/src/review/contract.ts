@@ -33,6 +33,8 @@ export const PrReviewSchema = z.object({
   id: z.string().min(1), // "<goal>/<cardSlug>"
   goal: z.string().min(1),
   cardSlug: z.string().min(1),
+  /** Exact source filename; optional only for records written before v1 cases. */
+  cardFile: z.string().min(1).optional(),
   title: z.string().min(1),
   repo: z.string().min(1),
   branch: z.string().min(1),

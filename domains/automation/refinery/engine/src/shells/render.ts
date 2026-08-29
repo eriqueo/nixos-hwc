@@ -10,7 +10,7 @@
 // form-posts (POST → 303); no client framework.
 
 import { currentJudgment, Item, judgmentsFor, Pipeline } from "../contracts.js";
-import { PrReview } from "../review/contract.js";
+import { PrReview, ReviewCase } from "../review/contract.js";
 import { ResolvedPipeline } from "../pipelines/catalog.js";
 import { DomainRegistry, domainOf } from "../domains.js";
 import { Dx1CasesFile, FleetMember, FleetRates, FleetSnapshot, FleetTemplate, caseStatusLabel, cohortCleanDelta, fleetFamilyColor } from "../sources/dx1-fleet.js";
@@ -1675,14 +1675,29 @@ function reviewCard(r: PrReview): string {
 /** Reviews: morning PR reviews grouped into lanes by status. Each card shows
  *  title, repo, verdict, recommendation, a PR link, and risks. Empty → an
  *  empty state (the reviews dir may be absent / unwritten). */
-export function renderReviews(reviews: PrReview[]): string {
-  if (!reviews.length) {
+export function renderReviews(reviews: PrReview[], cases: ReviewCase[] = []): string {
+  if (!reviews.length && !cases.length) {
     return layout("reviews", `<div class="wrap"><div class="empty" style="padding:24px">no PR reviews yet — the morning review pass writes them after the overnight run pushes branches</div></div>`);
   }
   const cols = REVIEW_LANES.map((lane) => {
     const inLane = reviews.filter((r) => r.status === lane.key);
     const body = inLane.length ? inLane.map(reviewCard).join("") : `<div class="empty">—</div>`;
     return `<section class="col"><h2>${esc(lane.label)} <span class="count">${inLane.length}</span></h2><div class="cards">${body}</div></section>`;
+  }).join("") + ([
+    { key: "dead" as const, label: "Dead" },
+    { key: "already-merged" as const, label: "Already Merged" },
+  ]).map((lane) => {
+    const inLane = cases.filter((c) => c.state === lane.key);
+    const body = inLane.length ? inLane.map((c) => {
+      const last = c.attempts[c.attempts.length - 1];
+      return `<div class="card" style="border-left-color:var(--acc2)">
+        <div class="badges"><span class="badge type">${esc(c.state)}</span><span class="badge">${c.attempts.length}/${c.maxAttempts} attempts</span></div>
+        <div class="title">${esc(c.title)}</div>
+        <div class="reason">${last ? esc(last.message) : "branch was already integrated"}</div>
+        <div class="why"><span class="kv">${esc(c.branch)}</span></div>
+      </div>`;
+    }).join("") : `<div class="empty">—</div>`;
+    return `<section class="col"><h2>${lane.label} <span class="count">${inLane.length}</span></h2><div class="cards">${body}</div></section>`;
   }).join("");
   return layout("reviews", `<div class="wrap"><div class="board">${cols}</div></div>`);
 }

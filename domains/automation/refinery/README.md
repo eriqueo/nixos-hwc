@@ -52,6 +52,11 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-08-28 (c): **Terminal morning-review cases are visible and actionable.**
+  The Reviews page reads the durable `_attempts/` case records and renders
+  `Dead` and `Already merged` lanes. Successful review records now retain the
+  exact source `cardFile`, preserving historical underscore names for remote
+  requeue controls while remaining compatible with older records.
 - 2026-08-28 (b): **Morning review now terminates merged and persistently failing cases.**
   Before any LLM call, the orchestrator refreshes origin and checks both direct
   ancestry and GitHub's merged-PR record; stale/failed lookups become errors,

@@ -495,6 +495,12 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-08-28**: Nightly review controls now expose refinery's durable
+  `Dead` and `Already merged` cases and can requeue them by their exact source
+  card filename. Corrected two production identity assumptions at the same
+  boundary: MCP record IDs now use the refinery backend's hyphen mapping, and
+  legacy records resolve numbered `NN-slug.md` / `NN_slug.md` card files
+  instead of looking for a nonexistent unnumbered filename.
 - **2026-08-10**: `hwc_today` state becomes a **case ledger** (Principle 21;
   spec: brain `_library/ai-ml/case_ledger_pattern.md`). `today-state.json` v2
   `{schemaVersion: 2, cases}` — per-case lifecycle `open|snoozed|resolved`,
@@ -677,6 +683,7 @@ domains/system/mcp/
         │   ├── registry.ts
         │   ├── morning-status.ts          # hwc_morning_status (infra-only composite)
         │   ├── morning-brief.ts           # hwc_morning_brief (rich briefing.json reshaper)
+        │   ├── nightly-review.ts          # Nightly review board/actions + terminal attempt cases
         │   ├── datax.ts
         │   ├── config.ts
         │   ├── services.ts
