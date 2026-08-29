@@ -30,6 +30,22 @@ const TopicSchema = z
   .max(64)
   .regex(/^[a-z0-9][a-z0-9-]*$/, "topic must be a lowercase kebab-case slug");
 
+const ExploreLabelSchema = z.string().min(1).max(80);
+const ExploreTargetSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("url"), label: ExploreLabelSchema, target: z.string().url() }),
+  z.object({ kind: z.literal("file"), label: ExploreLabelSchema, target: z.string().startsWith("/").max(1024) }),
+  z.object({ kind: z.literal("conversation"), label: ExploreLabelSchema, target: z.string().min(1).max(1024) }),
+  z.object({ kind: z.literal("command"), label: ExploreLabelSchema, target: z.string().min(1).max(1024) }),
+  z.object({ kind: z.literal("record"), label: ExploreLabelSchema, target: z.string().min(1).max(1024) }),
+]);
+
+export const ExecutiveBriefSchema = z.object({
+  kind: z.enum(["action", "decision", "watch", "handled", "fyi"]),
+  meaning: z.string().min(1).max(1000),
+  recommendation: z.string().min(1).max(500),
+  explore: ExploreTargetSchema,
+});
+
 // NOTE: a "strict canonical" NotificationSchema for replay / audit-log
 // reads will land in Phase 1.5 when those use-cases exist. For now the
 // only schema in play is the lenient input shape below.
@@ -50,6 +66,7 @@ export const NotificationInputSchema = z.object({
   // (adapters/channel-discord.ts), so a long body degrades there instead of
   // failing everywhere. 64k bounds the request without capping mail.
   body: z.string().max(64000).default(""),
+  executive: ExecutiveBriefSchema.optional(),
   priority: PrioritySchema.default(3),
   topic: TopicSchema,
   source: z.string().min(1).max(64).default("manual"),
@@ -70,6 +87,7 @@ export function parseNotificationInput(raw: unknown): Notification {
     id: input.id ?? randomUUID(),
     title: input.title,
     body: input.body,
+    ...(input.executive !== undefined ? { executive: input.executive } : {}),
     priority: input.priority,
     topic: input.topic,
     source: input.source,
@@ -97,6 +115,7 @@ export function safeParseNotificationInput(raw: unknown): ParseResult<Notificati
       id: input.id ?? randomUUID(),
       title: input.title,
       body: input.body,
+      ...(input.executive !== undefined ? { executive: input.executive } : {}),
       priority: input.priority,
       topic: input.topic,
       source: input.source,

@@ -346,6 +346,12 @@ export function todayTools(): ToolDef[] {
               "delta only: ISO cutoff. Omitted → since the previous parameterless " +
               "delta call (the briefing runs advance this cursor).",
           },
+          limit: {
+            type: "number",
+            minimum: 1,
+            maximum: 100,
+            description: "board only: explicit exploration depth; default keeps the bounded workbench view",
+          },
         },
       },
       handler: async (args: Record<string, unknown>): Promise<ToolResult> => {
@@ -471,9 +477,14 @@ export function todayTools(): ToolDef[] {
         // Every red makes the queue — a red squeezed out by the cap is an
         // invisible emergency. The cap only limits how many ambers pad it out.
         const reds = live.filter((i) => i.severity === "red");
-        const queue = reds.length >= TOP_N
-          ? reds
-          : live.slice(0, TOP_N);
+        const requestedLimit = args["limit"] === undefined ? undefined : Number(args["limit"]);
+        if (requestedLimit !== undefined &&
+            (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > 100)) {
+          return mcpError({ type: "VALIDATION_ERROR", message: "limit must be an integer from 1 to 100" });
+        }
+        const queue = requestedLimit !== undefined
+          ? live.slice(0, requestedLimit)
+          : reds.length >= TOP_N ? reds : live.slice(0, TOP_N);
         const spillover = live.length - queue.length;
         const generatedAt = String(briefing.generated_at ?? "");
 

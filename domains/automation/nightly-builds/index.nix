@@ -139,6 +139,8 @@ let
     ARCHIVE="$ARCHIVE_DIR/$(date +%Y-%m-%d-%H%M%S)-morning-review.json"
     cp "$OUT" "$ARCHIVE" 2>/dev/null && echo "morning-review: archived summary -> $ARCHIVE"
     nerr="$(jq -r '(.errors // []) | length' "$OUT" 2>/dev/null || echo 0)"
+    action_count="$(jq -r '[(.opened // 0), (.byVerdict["merge-ready"] // 0), (.byVerdict["needs-work"] // 0), (.byVerdict.reject // 0)] | add' "$OUT" 2>/dev/null || echo 0)"
+    graduated_count="$(jq -r '(.graduated // []) | length' "$OUT" 2>/dev/null || echo 0)"
     # The CLI prints a JSON summary to stdout and a human line to stderr (both
     # captured above). Pull the digest fields with jq; degrade to a raw tail if
     # the output isn't the expected JSON (e.g. an early fatal).
@@ -153,10 +155,22 @@ let
     if [ -z "$summary" ]; then
       summary="morning-review exited $rc; output: $(tail -c 400 "$OUT")"
       prio=2; title="⚠️ Morning review — incomplete"
+      meaning="The automated review did not finish, so its decisions may be incomplete."
+      recommendation="Open Nightly Builds and inspect the failed run before merging anything."
     elif [ "$rc" -eq 0 ]; then
-      prio=4; title="🔎 Morning review — $summary"
+      if [ "''${action_count:-0}" -gt 0 ] 2>/dev/null; then
+        prio=3; title="🔎 Nightly builds are ready for your review"
+        meaning="''${action_count} item(s) need a merge, requeue, rebuild, or rejection decision; ''${graduated_count} completed automatically."
+        recommendation="Open Nightly Builds and decide the priority items."
+      else
+        prio=5; title="✅ No nightly-build decision needs you"
+        meaning="The morning review found no item requiring action; ''${graduated_count} completed automatically."
+        recommendation="No action needed."
+      fi
     else
-      prio=2; title="⚠️ Morning review (exit $rc) — $summary"
+      prio=2; title="⚠️ Nightly-build review needs intervention"
+      meaning="The automated review exited with an error, so one or more items may be stranded."
+      recommendation="Open Nightly Builds, inspect the failed items, and recover any missing pull request."
     fi
     body="$summary
 Review them in workbench → Nightly Builds hub (live: merge / requeue / rebuild)."
@@ -165,6 +179,8 @@ Review them in workbench → Nightly Builds hub (live: merge / requeue / rebuild
     # let a swallowed count hide a branch that pushed but never got a PR.
     if [ "''${nerr:-0}" -gt 0 ] 2>/dev/null; then
       prio=2; title="⚠️ Morning review — ''${nerr} review error(s)"
+      meaning="''${nerr} item(s) failed during review and a pushed branch may not have a pull request."
+      recommendation="Inspect the archived errors, then open or recover any missing pull request."
       errdetail="$(jq -r '(.errors // []) | map("• \(.id // .step // "?"): \(.error // .message // .)") | join("\n")' "$OUT" 2>/dev/null)"
       body="$summary
 
@@ -181,8 +197,12 @@ A branch may have pushed without a PR — run \`gh pr list\` and open any missin
       # Truncate at the edge; the archived JSON keeps the full detail.
       title="$(printf '%s' "$title" | head -c 197)"
       body="$(printf '%s' "$body" | head -c 3800)"
-      payload=$(jq -nc --arg t "$title" --arg b "$body" --argjson p "$prio" \
-        '{topic:"nightly-builds", title:$t, body:$b, priority:$p, source:"nightly-builds", tags:["nightly-builds","morning-review"]}')
+      payload=$(jq -nc --arg t "$title" --arg b "$body" --arg meaning "$meaning" \
+        --arg recommendation "$recommendation" --argjson p "$prio" \
+        '{topic:"nightly-builds", title:$t, body:$b, priority:$p, source:"nightly-builds",
+          tags:["nightly-builds","morning-review"], executive:{kind:(if $p <= 2 then "action" elif $p == 3 then "decision" elif $p == 5 then "handled" else "watch" end),
+          meaning:$meaning, recommendation:$recommendation,
+          explore:{kind:"url",label:"Open Nightly Builds",target:"https://refinery.hwc.iheartwoodcraft.com/overnight"}}}')
       curl -fsS -m 8 -X POST -H 'content-type: application/json' \
         -d "$payload" "$NOTIFY_URL" >/dev/null 2>&1 \
         && echo "morning-review: notify sent" \

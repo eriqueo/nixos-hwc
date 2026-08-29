@@ -356,7 +356,10 @@ describe("hwc_today wiring (temp HWC_BRIEFING_DIR)", () => {
           ],
         },
       },
-      alerts: [{ level, section: "system", message: "Grafana disk (89%)" }],
+      alerts: [
+        { level, section: "system", message: "Grafana disk (89%)" },
+        { level: "warning", section: "system", message: "Backup has not completed" },
+      ],
     });
   }
 
@@ -390,6 +393,11 @@ describe("hwc_today wiring (temp HWC_BRIEFING_DIR)", () => {
     expect(disk1.cases[INVOICE_ID].state).toBe("snoozed");
     expect(disk1.cases[SYSTEM_ID].state).toBe("open");
     expect(disk1.cases[SYSTEM_ID].timesSurfaced).toBe(1);
+
+    const bounded = await handler({ action: "board", limit: 1 });
+    expect((bounded.data as any).items).toHaveLength(1);
+    const invalidLimit = await handler({ action: "board", limit: 0 });
+    expect(invalidLimit).toMatchObject({ status: "error", error_type: "VALIDATION_ERROR" });
 
     // dismiss with reason → same external message as v1, reason + wake recorded
     const res = await handler({ action: "dismiss", id: SYSTEM_ID, reason: "cleanup scheduled" });

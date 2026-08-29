@@ -63,7 +63,9 @@ async function main() {
     clientInfo: { name: "gather-today", version: "1.0.0" },
   });
   await rpc("notifications/initialized", {});
-  const r = await rpc("tools/call", { name: "hwc_today", arguments: { action: "board" } });
+  // Gather enough depth for the dashboard's explicit "show all" exploration
+  // path; the initial render remains capped independently.
+  const r = await rpc("tools/call", { name: "hwc_today", arguments: { action: "board", limit: 50 } });
   const text = (r.content || []).find((c) => c.type === "text")?.text ?? "";
   if (r.isError) throw new Error(text.slice(0, 200) || "hwc_today error");
   const parsed = JSON.parse(text);

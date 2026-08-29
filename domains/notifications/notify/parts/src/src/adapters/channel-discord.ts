@@ -2,8 +2,8 @@
  * Discord webhook adapter.
  *
  * Builds an embed from a Notification and POSTs it to a Discord
- * channel webhook. Color is mapped from priority; topic + tags become
- * embed fields. The webhook URL is a secret — read at startup from
+ * channel webhook. Color is mapped from priority; routing metadata is demoted
+ * to the footer. The webhook URL is a secret — read at startup from
  * an agenix-mounted file path, never logged.
  *
  * `send` resolves with a DeliveryResult (never rejects); the HTTP shell
@@ -29,6 +29,8 @@ interface DiscordEmbed {
   color: number;
   timestamp: string;
   fields: ReadonlyArray<{ name: string; value: string; inline?: boolean }>;
+  footer: { text: string };
+  url?: string;
 }
 
 interface DiscordWebhookPayload {
@@ -53,6 +55,36 @@ function truncate(s: string, max: number): string {
   return s.slice(0, max - 1) + "…";
 }
 
+function renderExplore(notif: Notification): string | undefined {
+  const explore = notif.executive?.explore;
+  if (!explore) return undefined;
+  if (explore.kind === "url") return `[${explore.label}](${explore.target})`;
+  if (explore.kind === "command") return `${explore.label}: \`${explore.target}\``;
+  return `${explore.label}: ${explore.target}`;
+}
+
+/** Pure production rendering decision, exported for contract tests. */
+export function renderDiscordEmbed(notif: Notification): DiscordEmbed {
+  const executive = notif.executive;
+  const fields: Array<{ name: string; value: string; inline?: boolean }> = [];
+  if (executive) {
+    fields.push({ name: "Recommendation", value: truncate(executive.recommendation, 1024) });
+    const explore = renderExplore(notif);
+    if (explore) fields.push({ name: "Explore", value: truncate(explore, 1024) });
+  }
+  const metadata = [notif.source, notif.topic, ...notif.tags].filter(Boolean).join(" · ");
+  const url = executive?.explore.kind === "url" ? executive.explore.target : undefined;
+  return {
+    title: truncate(notif.title, 256),
+    description: truncate(executive?.meaning ?? notif.body, 4096),
+    color: COLOR_BY_PRIORITY[notif.priority],
+    timestamp: notif.occurredAt,
+    fields,
+    footer: { text: truncate(metadata, 2048) },
+    ...(url !== undefined ? { url } : {}),
+  };
+}
+
 export function makeDiscordChannel(opts: DiscordChannelOpts): Channel {
   const username = opts.username ?? "HWC Alerts";
   const timeoutMs = opts.timeoutMs ?? 5000;
@@ -65,29 +97,9 @@ export function makeDiscordChannel(opts: DiscordChannelOpts): Channel {
     async send(notif: Notification): Promise<DeliveryResult> {
       const startedAt = Date.now();
 
-      // Build mutable then freeze into the embed; the embed's `fields`
-      // is readonly to callers, but we own construction here.
-      const fields: Array<{ name: string; value: string; inline?: boolean }> = [
-        { name: "Topic", value: truncate(notif.topic, 1024), inline: true },
-        { name: "Source", value: truncate(notif.source, 1024), inline: true },
-      ];
-      if (notif.tags.length > 0) {
-        fields.push({
-          name: "Tags",
-          value: truncate(notif.tags.join(", "), 1024),
-          inline: false,
-        });
-      }
-
       const payload: DiscordWebhookPayload = {
         username,
-        embeds: [{
-          title: truncate(notif.title, 256),
-          description: truncate(notif.body, 4096),
-          color: COLOR_BY_PRIORITY[notif.priority],
-          timestamp: notif.occurredAt,
-          fields,
-        }],
+        embeds: [renderDiscordEmbed(notif)],
       };
 
       const ac = new AbortController();
