@@ -2,7 +2,7 @@
 # domains/automation/nightly-builds/run.sh
 #
 # Nightly gauntlet-card launcher. Two phases:
-#   A. card-smith — draft new cards from _ideas.md (drafts only, never queued)
+#   A. card-smith — turn human-approved `## new` ideas into runnable cards
 #   B. runner     — execute up to NB_MAX_CARDS cards with `status: queued`
 #
 # Each card runs in a disposable git worktree under /tmp/nightly/, with
@@ -170,7 +170,7 @@ pr_field() { # pr_field <state> <branch> <worktree> <context-phrase> -> the `pr:
 
 # ── Phase A: card-smith ──────────────────────────────────────────────────────
 # Skipped entirely on a targeted run — "Run now" executes an existing card, it
-# does not draft new ones.
+# does not author new ones.
 if [ -n "$ONLY_GOAL" ]; then
   log "PHASE A: skipped (targeted run for '$ONLY_GOAL')"
 elif [ -f "$IDEAS_FILE" ]; then
@@ -188,7 +188,7 @@ PYEOF
     COUNT=$(echo "$NEW_IDEAS" | wc -l)
     log "PHASE A: card-smith — $COUNT new idea(s)"
     if [ "$DRY_RUN" -eq 1 ]; then
-      log "DRY: would draft cards for:"; echo "$NEW_IDEAS" | tee -a "$LOG_FILE"
+      log "DRY: would author and queue valid cards for:"; echo "$NEW_IDEAS" | tee -a "$LOG_FILE"
     else
       SMITH_PROMPT="$(cat "$AGENT_DIR/prompts/card-smith.md")
 
@@ -202,8 +202,8 @@ $NEW_IDEAS"
         --dangerously-skip-permissions) \
         > "$RUNS_DIR/_card-smith-$DATE.log" 2>&1 \
         && { log "PHASE A: card-smith done (log: runs/_card-smith-$DATE.log)"; \
-             notify 4 "🛠 Card-smith: $COUNT idea(s) drafted" \
-               "Drafted from $COUNT new idea(s). Review _inbox/nightly_builds/ at morning review and flip draft → queued for anything ready (that flip is the Phase-4 gate)."; } \
+             notify 4 "🛠 Card-smith: $COUNT approved idea(s) processed" \
+               "Ideas already approved by moving backlog → new were authored as cards. Gate-clean cards were queued automatically; blocked cards remain visible for human decisions."; } \
         || { log "WARN: card-smith failed — ideas left in place"; \
              notify 2 "⚠️ Card-smith failed" "Card-smith pass errored on $COUNT idea(s); they were left under ## new. See runs/_card-smith-$DATE.log."; }
       # Abort on a dead credential: Phase B would fail identically and silently.
@@ -220,9 +220,9 @@ fi
 # Targeted run: only this project's queued step(s). Normal run: every queued
 # card across all projects, capped at MAX_CARDS.
 if [ -n "$ONLY_GOAL" ]; then
-  QUEUED=$(rg -l '^status: queued' "$NB_DIR/$ONLY_GOAL"/[0-9][0-9]-*.md 2>/dev/null | sort | head -n "$MAX_CARDS")
+  QUEUED=$(rg -l '^status: queued' "$NB_DIR/$ONLY_GOAL"/[0-9][0-9][-_]*.md 2>/dev/null | sort | head -n "$MAX_CARDS")
 else
-  QUEUED=$(rg -l '^status: queued' "$NB_DIR"/*/[0-9][0-9]-*.md 2>/dev/null | sort | head -n "$MAX_CARDS")
+  QUEUED=$(rg -l '^status: queued' "$NB_DIR"/*/[0-9][0-9][-_]*.md 2>/dev/null | sort | head -n "$MAX_CARDS")
 fi
 if [ -z "$QUEUED" ]; then
   log "PHASE B: no queued cards"
@@ -267,12 +267,18 @@ for CARD in $QUEUED; do
   # record and graduates the project on stale data (live-hit 2026-06-24: the
   # reconcile-script requeue left a record pointing at closed PR #65, so the v2
   # work was skipped and the goal graduated unreviewed). Filename mirrors the
-  # engine's safeReviewId("<goal>/<slug>"): the slug drops its NN- prefix and the
-  # id's "/" becomes "-". Goals/slugs are kebab, so this matches exactly.
-  CARD_SLUG="${SLUG#[0-9][0-9]-}"
+  # engine's safeReviewId("<goal>/<slug>"): discovery has already established
+  # the filename vocabulary as exactly two digits plus '-' or '_', so removing
+  # the first three characters handles both historical forms without guessing.
+  # The id's "/" becomes "-". Goals/slugs are kebab, so this matches exactly.
+  CARD_SLUG="${SLUG:3}"
   STALE_REC="$REVIEWS_DIR/${GOAL}-${CARD_SLUG}.json"
+  STALE_CASE="$REVIEWS_DIR/_attempts/${GOAL}-${CARD_SLUG}.json"
   if [ -f "$STALE_REC" ]; then
     rm -f "$STALE_REC" && log "PHASE B: cleared stale review record ($STALE_REC) — card is being rebuilt"
+  fi
+  if [ -f "$STALE_CASE" ]; then
+    rm -f "$STALE_CASE" && log "PHASE B: cleared stale review attempt state ($STALE_CASE) — card is being rebuilt"
   fi
 
   if [ "$DRY_RUN" -eq 1 ]; then
