@@ -59,6 +59,23 @@ export function makeGitHubCli(cfg: GitHubCliConfig = {}): GitHubPort {
   const gh = makeGh(bin, timeout);
 
   return {
+    async isMerged({ repo, branch }): Promise<boolean> {
+      const r = await gh(repo, [
+        "pr",
+        "list",
+        "--head",
+        branch,
+        "--state",
+        "merged",
+        "--json",
+        "url,number",
+      ]);
+      if (r.exitCode !== 0) {
+        throw new Error(`gh pr list --state merged failed (exit ${r.exitCode}): ${r.stderr.trim()}`);
+      }
+      return PrListSchema.parse(JSON.parse(r.stdout || "[]")).length > 0;
+    },
+
     async existingPr({ repo, branch }): Promise<{ url: string; number: number } | null> {
       const r = await gh(repo, [
         "pr",

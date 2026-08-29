@@ -40,6 +40,7 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `engine/src/executors/` | Executors (`Executor`s): `gauntlet` — the thin port to a **standalone** gauntlet (trigger via `ProcessPort`, read its report+verdict back via `ResultReader`, map to `ExecutorResult`); the modular seam that keeps the engine from absorbing each gauntlet's code. `native` — the in-process executor (mode-parameterized worktree → headless-claude → verdict → report → push/pristine; git/claude/report injected) for a pipeline with no standalone runner. `spec` — the project-ideation terminal step (LLM → `SpecSchema` → markdown spec to scratch). |
 | `engine/src/gauntlets/` | The gauntlet dispatch contract: `GauntletContract` schema (`{trigger, resultsDir, reportFile, verdictPattern, successVerdicts}`, Zod) + `parseGauntletContract`; `ProcessPort`/`ResultReader` ports (real `nodeProcessPort`/`fsResultReader`, stubbed in tests); `loadGauntlets` registry over `gauntlets/*.yaml`. A standalone gauntlet becomes one YAML file. |
 | `engine/src/stores/` | `MarkdownItemStore` (`ItemStore`): one `.md` per item — board-readable frontmatter + a canonical ```json block for lossless round-trip. |
+| `engine/src/sources/nightly-cards.ts` | Nightly-builds vault projection plus the shared `NN-slug.md` / `NN_slug.md` filename parser consumed by the board mirror and morning-review discovery. |
 | `engine/src/adapters/` | `LlmPort` adapters — `claude-cli` (headless `claude -p`), `anthropic-api` (raw-fetch Messages API), `ollama` (local daemon) — plus `resolveLlm(provider)` mapping a pipeline's `llmProvider` to the adapter. All late-bound from env. |
 | `engine/src/pipelines/` | `PipelineCatalog` — lead_scout-style registry: disk scan of `pipelines/*.yaml` + a writable `enabled` overlay (so toggling never rewrites a repo file). `list`/`get`/`enabled`/`setEnabled`. `gauntlet-config.ts` holds the per-gauntlet executor knobs (verdict token, success verdicts) not on the Pipeline schema. |
 | `engine/src/sources/` | `SourcePort` — inbound intake boundary (a pipeline's `source` field names the adapter). Concrete adapters (vault card scan, Firestore SR fetch) are a later human-gated step. |
@@ -51,6 +52,24 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-08-28 (c): **Terminal morning-review cases are visible and actionable.**
+  The Reviews page reads the durable `_attempts/` case records and renders
+  `Dead` and `Already merged` lanes. Successful review records now retain the
+  exact source `cardFile`, preserving historical underscore names for remote
+  requeue controls while remaining compatible with older records.
+- 2026-08-28 (b): **Morning review now terminates merged and persistently failing cases.**
+  Before any LLM call, the orchestrator refreshes origin and checks both direct
+  ancestry and GitHub's merged-PR record; stale/failed lookups become errors,
+  never a guessed skip. Non-success cases persist as versioned `_attempts/`
+  records with append-only error events. Three failed external attempts marks a
+  case `dead`; later passes make zero external calls. `already-merged`, `dead`,
+  and successful reviews are terminal for project graduation. Retry delays are
+  injected at the CLI composition root with jitter, so core tests are immediate.
+- 2026-08-28: **Morning review discovers production underscore card names.**
+  `parseNightlyCardFilename` is now the one engine producer of the card filename
+  vocabulary used by both the board mirror and review discovery. It accepts the
+  historical `NN-slug.md` form and live `NN_slug.md` form; the review wiring test
+  uses the production-shaped `01_mkforce_user_eric_native_services.md` filename.
 - 2026-08-26: **Claude auth failure is now a first-class engine error.** The headless CLI reports an expired credential on stdout and exits 0, so `claude-headless.ts` returned `{exitCode:0}` and `claude-llm.ts` resolved the error text as a completion — the morning review would have stored it as the model's answer. `errors.ts` now owns the single definition (`CLAUDE_AUTH_FAILURE_RE`, `isClaudeAuthFailure`, `ClaudeAuthError`); it lives there rather than in a new `adapters/claude-auth.ts` because the two consumers sit at different layers (ClaudePort, LlmPort) and an adapter-local file would force one adapter to import from another. `ClaudeRunResult` gained an optional `authFailed` flag (optional so existing stub ports stay valid); `native.ts` vetoes `succeeded` on it and names the credential in `detail`. Two tests added and seed-verified — removing the veto fails exactly one. 204/204.
 - 2026-08-22: Gate `source:` citations re-pointed to the flattened principles path (`~/.claude/engineering-principles.md`; the one-file `engineering-principles/` directory was removed in nixos-hwc cfff0993 / claude-config f745727). Nine gates, 17 string occurrences, plus the `app-refinement.md` prompt's `engineering-principles/*` glob. Citation text only — no gate logic touched. dist/ rebuilt; 202/202.
 - 2026-08-17 (e): **DX1 design pass (hwc-ui workbench register).** (1) One DX1

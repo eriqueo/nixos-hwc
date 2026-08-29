@@ -110,7 +110,11 @@ export function createShell(cfg: HttpShellConfig) {
   // Listing is lazy + dir-guarded so the page renders an empty state when the
   // reviews dir doesn't exist yet (don't create it on a GET).
   const reviewsDir = resolveReviewsDir(cfg.reviewsDir);
-  const listReviews = async () => (existsSync(reviewsDir) ? new FileReviewsStore(reviewsDir).list() : []);
+  const listReviews = async () => {
+    if (!existsSync(reviewsDir)) return { reviews: [], cases: [] };
+    const reviews = new FileReviewsStore(reviewsDir);
+    return { reviews: await reviews.list(), cases: await reviews.listCases() };
+  };
 
   // Per-gauntlet "max per run" caps — the single runtime source of truth that
   // both run.sh files read (with their env value as fallback). Refinery is the
@@ -699,7 +703,8 @@ export function createShell(cfg: HttpShellConfig) {
         }
         if (method === "GET" && url === "/reviews") {
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          res.end(renderReviews(await listReviews()));
+          const reviewData = await listReviews();
+          res.end(renderReviews(reviewData.reviews, reviewData.cases));
           return;
         }
         // Per-tab + combined markdown downloads for a gauntlet run:

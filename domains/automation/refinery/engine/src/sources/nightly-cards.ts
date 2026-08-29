@@ -1,7 +1,7 @@
 // Read-only mirror of the live nightly-builds gauntlet, grouped by PROJECT.
 //
 // Structure in the vault: _inbox/nightly_builds/<goal>/ is a PROJECT (with a
-// _goal.md describing it); each NN-*.md inside is a STEP of that project
+// _goal.md describing it); each NN-*.md or NN_*.md inside is a STEP of that project
 // (frontmatter: step "N of M", status, run, pr). So one project card carries
 // its ordered steps + a progress (done/total), instead of N confusing
 // step-cards. The vault stays the source of truth — run.sh @ 01:30 executes
@@ -14,6 +14,16 @@ import { EvidenceRef, Item } from "../contracts.js";
 
 export const NB_PREFIX = "nb:";
 export const NIGHTLY_BUILD_PIPELINE = "nightly-build";
+
+/**
+ * The production nightly-card filename vocabulary. Historical/card-smith cards
+ * use both `NN-slug.md` and `NN_slug.md`; every engine consumer must parse them
+ * here so board projection and morning-review discovery cannot drift apart.
+ */
+export function parseNightlyCardFilename(file: string): { n: string; slug: string } | null {
+  const match = /^(\d{2})[-_](.+)\.md$/.exec(file);
+  return match ? { n: match[1], slug: match[2] } : null;
+}
 
 // The exit ramp. A project is work-in-flight while it lives directly under
 // _inbox/nightly_builds/<goal>/. When every step is `done` it GRADUATES off the
@@ -57,10 +67,11 @@ export function parseNbId(id: string): string | null {
 function readSteps(goalDir: string): NbStep[] {
   const steps: NbStep[] = [];
   for (const f of readdirSync(goalDir)) {
-    if (!/^\d\d-/.test(f) || !f.endsWith(".md")) continue;
+    const cardName = parseNightlyCardFilename(f);
+    if (!cardName) continue;
     const fm = frontmatter(readFileSync(join(goalDir, f), "utf8"));
     steps.push({
-      n: f.slice(0, 2),
+      n: cardName.n,
       file: f,
       title: fm.title || f.replace(/\.md$/, ""),
       status: fm.status || "draft",

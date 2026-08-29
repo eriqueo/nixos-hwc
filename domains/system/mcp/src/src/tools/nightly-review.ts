@@ -19,7 +19,7 @@
  */
 
 import { execFile } from "node:child_process";
-import { readFile, writeFile, readdir, mkdir } from "node:fs/promises";
+import { readFile, writeFile, readdir, mkdir, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
@@ -50,6 +50,7 @@ interface Review {
   id: string;
   goal: string;
   cardSlug: string;
+  cardFile?: string;
   title: string;
   repo: string;
   branch: string;
@@ -67,6 +68,20 @@ interface Review {
   risks: string[];
   status: ReviewStatus;
   reportRelPath: string | null;
+}
+
+interface ReviewCase {
+  version: 1;
+  id: string;
+  goal: string;
+  cardSlug: string;
+  cardFile: string;
+  title: string;
+  repo: string;
+  branch: string;
+  state: "retryable" | "dead" | "already-merged";
+  maxAttempts: number;
+  attempts: Array<{ attempt: number; at: string; code: string; message: string }>;
 }
 
 const VERDICTS: Verdict[] = ["merge-ready", "needs-work", "reject"];
@@ -110,6 +125,7 @@ function parseReview(raw: unknown): Review | null {
     id: r.id,
     goal: r.goal,
     cardSlug: r.cardSlug,
+    cardFile: isStr(r.cardFile) ? r.cardFile : undefined,
     title: r.title,
     repo: r.repo,
     branch: r.branch,
@@ -134,9 +150,9 @@ function parseReview(raw: unknown): Review | null {
 /*  Filesystem helpers                                              */
 /* ════════════════════════════════════════════════════════════════ */
 
-/** Same id→filename mapping the backend uses: non-safe chars → "_". */
+/** Same id→filename mapping the backend uses: unsafe runs → "-". */
 function safeId(id: string): string {
-  return id.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return id.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "review";
 }
 
 function reviewPath(id: string): string {
@@ -177,6 +193,36 @@ async function loadReview(id: string): Promise<Review | null> {
 /** Persist a review back to its file (status flips). */
 async function saveReview(review: Review): Promise<void> {
   await writeFile(reviewPath(review.id), JSON.stringify(review, null, 2) + "\n", "utf-8");
+}
+
+const CASES_DIR = join(REVIEWS_DIR, "_attempts");
+
+function parseCase(raw: unknown): ReviewCase | null {
+  if (!raw || typeof raw !== "object") return null;
+  const c = raw as Record<string, unknown>;
+  if (c.version !== 1 || !isStr(c.id) || !isStr(c.goal) || !isStr(c.cardSlug) || !isStr(c.cardFile)) return null;
+  if (!isStr(c.title) || !isStr(c.repo) || !isStr(c.branch)) return null;
+  if (!(["retryable", "dead", "already-merged"] as unknown[]).includes(c.state)) return null;
+  if (typeof c.maxAttempts !== "number" || !Array.isArray(c.attempts)) return null;
+  return c as unknown as ReviewCase;
+}
+
+async function loadAllCases(): Promise<ReviewCase[]> {
+  try {
+    const files = (await readdir(CASES_DIR)).filter((f) => f.endsWith(".json"));
+    const cases = await Promise.all(files.map(async (f) => parseCase(JSON.parse(await readFile(join(CASES_DIR, f), "utf-8")))));
+    return cases.filter((c): c is ReviewCase => c !== null);
+  } catch {
+    return [];
+  }
+}
+
+async function loadCase(id: string): Promise<ReviewCase | null> {
+  try {
+    return parseCase(JSON.parse(await readFile(join(CASES_DIR, `${safeId(id)}.json`), "utf-8")));
+  } catch {
+    return null;
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════ */
@@ -228,8 +274,21 @@ function gh(args: string[]): Promise<{ exitCode: number; stdout: string; stderr:
  * refinery's setStatus (read → frontmatter regex replace → write). Returns
  * false when the file or its frontmatter block is absent.
  */
-async function setCardQueued(goal: string, cardSlug: string): Promise<boolean> {
-  const path = join(VAULT_DIR, "_inbox", "nightly_builds", goal, `${cardSlug}.md`);
+async function setCardQueued(goal: string, cardSlug: string, cardFile?: string): Promise<boolean> {
+  const goalDir = join(VAULT_DIR, "_inbox", "nightly_builds", goal);
+  let resolvedFile = cardFile;
+  if (!resolvedFile) {
+    try {
+      resolvedFile = (await readdir(goalDir)).find((f) => {
+        const m = /^\d{2}[-_](.+)\.md$/.exec(f);
+        return m?.[1] === cardSlug;
+      });
+    } catch {
+      return false;
+    }
+  }
+  if (!resolvedFile || resolvedFile.includes("/")) return false;
+  const path = join(goalDir, resolvedFile);
   let text: string;
   try {
     text = await readFile(path, "utf-8");
@@ -257,6 +316,8 @@ const LANES = [
   { id: "requeued", title: "Re-queued" },
   { id: "merged", title: "Merged" },
   { id: "rejected", title: "Rejected" },
+  { id: "dead", title: "Dead" },
+  { id: "already-merged", title: "Already merged" },
 ] as const;
 
 /** Map a review to its lane id. Terminal status wins over verdict. */
@@ -344,10 +405,27 @@ export function nightlyReviewTools(): ToolDef[] {
         /* ── board ──────────────────────────────────────────────── */
         if (action === "board") {
           const { reviews, malformed } = await loadAllReviews();
+          const cases = await loadAllCases();
+          const terminalCases = cases.filter((x) => x.state !== "retryable");
           const byLane = new Map<string, ReturnType<typeof toCard>[]>();
           for (const lane of LANES) byLane.set(lane.id, []);
           for (const review of reviews) {
             byLane.get(laneOf(review))!.push(toCard(review));
+          }
+          for (const c of terminalCases) {
+            byLane.get(c.state)!.push({
+              id: c.id,
+              kind: "pr",
+              label: c.title,
+              priority: c.state === "dead" ? "critical" : "low",
+              sender: c.goal,
+              summary: c.attempts.at(-1)?.message ?? "branch already integrated",
+              branch: c.branch,
+              prUrl: null,
+              prNumber: null,
+              diffstat: { files: 0, insertions: 0, deletions: 0 },
+              mergeable: null,
+            });
           }
           const columns = LANES.map((lane) => ({
             id: lane.id,
@@ -357,8 +435,8 @@ export function nightlyReviewTools(): ToolDef[] {
           const malformedNote = malformed > 0 ? ` (${malformed} malformed record(s) skipped)` : "";
           return {
             status: "ok",
-            message: `Nightly PR review: ${reviews.length} card(s)${malformedNote}`,
-            data: { reviewed: reviews.length, malformed },
+            message: `Nightly PR review: ${reviews.length} reviewed, ${terminalCases.length} terminal case(s)${malformedNote}`,
+            data: { reviewed: reviews.length, terminalCases: terminalCases.length, retryableCases: cases.length - terminalCases.length, malformed },
             view: contract(
               "kanban",
               "Nightly PR Review",
@@ -458,13 +536,21 @@ export function nightlyReviewTools(): ToolDef[] {
               return mcpError({ type: "VALIDATION_ERROR", message: "id is required for action=requeue" });
             }
             const review = await loadReview(id);
-            if (!review) {
+            const reviewCase = review ? null : await loadCase(id);
+            if (!review && !reviewCase) {
               return mcpError({ type: "NOT_FOUND", message: `No review found for id '${id}'`, suggestion: "Use action=board to list available review ids", context: { id } });
             }
+            if (reviewCase) {
+              const flipped = await setCardQueued(reviewCase.goal, reviewCase.cardSlug, reviewCase.cardFile);
+              if (!flipped) return mcpError({ type: "NOT_FOUND", message: `Source card not found: ${reviewCase.cardFile}` });
+              await unlink(join(CASES_DIR, `${safeId(id)}.json`));
+              return { status: "ok", message: `Re-queued ${reviewCase.goal}/${reviewCase.cardSlug} and cleared ${reviewCase.state} review state`, data: { id, cardQueued: true, cleared: reviewCase.state } };
+            }
+            if (!review) throw new Error("unreachable: review missing after case handling");
             // Flip the source card back to queued (the queue gate). Hard fail if
             // the card is gone — requeue without re-queuing the card is a no-op
             // the user would mistake for success.
-            const flipped = await setCardQueued(review.goal, review.cardSlug);
+            const flipped = await setCardQueued(review.goal, review.cardSlug, review.cardFile);
             if (!flipped) {
               return mcpError({ type: "NOT_FOUND", message: `Source card not found: _inbox/nightly_builds/${review.goal}/${review.cardSlug}.md`, suggestion: "The card may have been moved or renamed; cannot re-queue", context: { goal: review.goal, cardSlug: review.cardSlug } });
             }

@@ -4,9 +4,9 @@
 // load so save→load is exact regardless of who wrote the file. The directory is
 // late-bound (env REFINERY_REVIEWS_DIR, default /var/lib/refinery/reviews).
 
-import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, rmSync, renameSync } from "node:fs";
 import { join } from "node:path";
-import { PrReview, PrReviewSchema, safeReviewId } from "../review/contract.js";
+import { PrReview, PrReviewSchema, ReviewCase, ReviewCaseSchema, safeReviewId } from "../review/contract.js";
 import { ReviewsStore } from "../review/ports.js";
 
 export const DEFAULT_REVIEWS_DIR = "/var/lib/refinery/reviews";
@@ -17,8 +17,11 @@ export function resolveReviewsDir(dir?: string): string {
 }
 
 export class FileReviewsStore implements ReviewsStore {
+  private readonly casesDir: string;
+
   constructor(private readonly dir: string = resolveReviewsDir()) {
     mkdirSync(this.dir, { recursive: true });
+    this.casesDir = join(this.dir, "_attempts");
   }
 
   private pathFor(id: string): string {
@@ -48,6 +51,37 @@ export class FileReviewsStore implements ReviewsStore {
 
   async delete(id: string): Promise<void> {
     const path = this.pathFor(id);
+    if (existsSync(path)) rmSync(path);
+  }
+
+  private casePathFor(id: string): string {
+    return join(this.casesDir, `${safeReviewId(id)}.json`);
+  }
+
+  async saveCase(c: ReviewCase): Promise<void> {
+    const valid = ReviewCaseSchema.parse(c);
+    mkdirSync(this.casesDir, { recursive: true });
+    const path = this.casePathFor(valid.id);
+    const tmp = `${path}.tmp`;
+    writeFileSync(tmp, JSON.stringify(valid, null, 2));
+    renameSync(tmp, path);
+  }
+
+  async loadCase(id: string): Promise<ReviewCase | null> {
+    const path = this.casePathFor(id);
+    if (!existsSync(path)) return null;
+    return ReviewCaseSchema.parse(JSON.parse(readFileSync(path, "utf8")));
+  }
+
+  async listCases(): Promise<ReviewCase[]> {
+    if (!existsSync(this.casesDir)) return [];
+    return readdirSync(this.casesDir)
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => ReviewCaseSchema.parse(JSON.parse(readFileSync(join(this.casesDir, f), "utf8"))));
+  }
+
+  async deleteCase(id: string): Promise<void> {
+    const path = this.casePathFor(id);
     if (existsSync(path)) rmSync(path);
   }
 }

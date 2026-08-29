@@ -19,9 +19,10 @@ import {
   isProjectComplete,
   graduateProject,
   setCardPr,
+  parseNightlyCardFilename,
   type NbStep,
 } from "../sources/nightly-cards.js";
-import { PrReview } from "./contract.js";
+import { PrReview, ReviewCase } from "./contract.js";
 import { GitFactsPort, GitHubPort, ReviewsStore } from "./ports.js";
 import { reviewBranch, ReviewInput } from "./reviewer.js";
 
@@ -30,6 +31,8 @@ export interface MorningReviewConfig {
   defaultRepo: string;
   /** Only review cards whose run dir / report matches this date (YYYY-MM-DD); omit to take all done cards. */
   date?: string;
+  /** Total external attempts before a case becomes terminal dead. */
+  maxAttempts?: number;
 }
 
 export interface MorningReviewPorts {
@@ -38,6 +41,8 @@ export interface MorningReviewPorts {
   store: ReviewsStore;
   llm: LlmPort;
   clock?: () => string;
+  /** Composition-root retry delay (production adds jitter; tests can run immediately). */
+  retryDelay?: (failedAttempt: number) => Promise<void>;
 }
 
 export interface MorningReviewSummary {
@@ -46,6 +51,10 @@ export interface MorningReviewSummary {
    *  this is what lets the pass re-run safely without re-reviewing or re-sweeping
    *  old work, replacing the old date-window band-aid). */
   skipped: number;
+  /** Done branches already integrated into base; skipped before any LLM call. */
+  alreadyMerged: number;
+  dead: number;
+  retryable: number;
   opened: number;
   /** Projects that graduated off the gauntlet this pass (all steps done). */
   graduated: string[];
@@ -59,7 +68,7 @@ interface DoneCard {
   id: string; // "<goal>/<slug>"
   goal: string;
   cardSlug: string;
-  file: string; // "NN-<slug>.md" — needed to write the `pr:` field back
+  file: string; // "NN[-_]<slug>.md" — needed to write the `pr:` field back
   title: string;
   repo: string;
   branch: string;
@@ -105,13 +114,14 @@ export function listDoneCards(cfg: MorningReviewConfig): DoneCard[] {
     const dir = join(base, goal);
     if (!statSync(dir).isDirectory()) continue;
     for (const f of readdirSync(dir)) {
-      if (!/^\d\d-/.test(f) || !f.endsWith(".md")) continue;
+      const cardName = parseNightlyCardFilename(f);
+      if (!cardName) continue;
       const text = readFileSync(join(dir, f), "utf8");
       const fm = frontmatter(text);
       if (!isDone(fm.status || "")) continue;
       if (!fm.run) continue; // a done card with no run dir produced no branch to review
       if (cfg.date && !fm.run.includes(cfg.date)) continue;
-      const slug = f.replace(/^\d\d-/, "").replace(/\.md$/, "");
+      const slug = cardName.slug;
       const body = bodyOf(text);
       out.push({
         id: `${goal}/${slug}`,
@@ -146,20 +156,25 @@ function prBody(review: PrReview): string {
   return lines.join("\n");
 }
 
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-
 /** Retry an async op a few times with exponential backoff. Per-card review hits
  *  transient LLM / gh failures (the 2026-06-24 pass lost 3/10 cards this way);
  *  one retry pass recovers most of them. The op must be idempotent — the review
  *  body is (read-only facts, existingPr-before-createPr, overwriting store.save). */
-async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  attempts: number,
+  onFailure: (error: Error, attempt: number) => Promise<void>,
+  delay: (failedAttempt: number) => Promise<void>,
+): Promise<T> {
   let lastErr: unknown;
   for (let i = 0; i < attempts; i++) {
     try {
       return await fn();
     } catch (e) {
       lastErr = e;
-      if (i < attempts - 1) await sleep(2000 * 3 ** i); // 2s, then 6s
+      const error = e instanceof Error ? e : new Error(String(e));
+      await onFailure(error, i + 1);
+      if (i < attempts - 1) await delay(i + 1);
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
@@ -175,11 +190,16 @@ export async function runMorningReview(
   ports: MorningReviewPorts,
 ): Promise<MorningReviewSummary> {
   const now = ports.clock ?? (() => new Date().toISOString());
+  const maxAttempts = cfg.maxAttempts ?? 3;
+  const retryDelay = ports.retryDelay ?? (async () => undefined);
   const cards = listDoneCards(cfg);
 
   const summary: MorningReviewSummary = {
     reviewed: 0,
     skipped: 0,
+    alreadyMerged: 0,
+    dead: 0,
+    retryable: 0,
     opened: 0,
     graduated: [],
     byVerdict: { "merge-ready": 0, "needs-work": 0, reject: 0 },
@@ -201,12 +221,87 @@ export async function runMorningReview(
         continue;
       }
 
+      let reviewCase = await ports.store.loadCase(card.id);
+      if (reviewCase?.state === "dead") {
+        summary.dead += 1;
+        continue;
+      }
+      if (reviewCase?.state === "already-merged") {
+        summary.alreadyMerged += 1;
+        continue;
+      }
+
+      const saveFailure = async (error: Error): Promise<void> => {
+        const attempts = reviewCase?.attempts ?? [];
+        const nextAttempt = attempts.length + 1;
+        const nextAttempts = [
+          ...attempts,
+          { attempt: nextAttempt, at: now(), code: error.name || "Error", message: error.message },
+        ];
+        reviewCase = {
+          version: 1,
+          id: card.id,
+          goal: card.goal,
+          cardSlug: card.cardSlug,
+          cardFile: card.file,
+          title: card.title,
+          repo: card.repo,
+          branch: card.branch,
+          state: nextAttempt >= maxAttempts ? "dead" : "retryable",
+          maxAttempts,
+          attempts: nextAttempts,
+        };
+        await ports.store.saveCase(reviewCase);
+      };
+
+      const remainingAttempts = Math.max(0, maxAttempts - (reviewCase?.attempts.length ?? 0));
+      if (remainingAttempts === 0) {
+        summary.dead += 1;
+        continue;
+      }
+
+      // Terminal preflight before any LLM or PR effect. Direct ancestry catches
+      // merge commits; GitHub's merged-PR record catches squash/rebase merges.
+      // Any refresh/query failure flows to summary.errors rather than guessing
+      // from stale refs or an empty diff.
+      const { base, merged } = await withRetry(async () => {
+        const resolvedBase = await ports.facts.resolveBase(card.repo);
+        const mergedByAncestry = await ports.facts.isMerged({
+          repo: card.repo,
+          base: resolvedBase,
+          branch: card.branch,
+        });
+        const mergedByGitHub = mergedByAncestry
+          ? false
+          : await ports.github.isMerged({ repo: card.repo, branch: card.branch });
+        return { base: resolvedBase, merged: mergedByAncestry || mergedByGitHub };
+      }, remainingAttempts, saveFailure, retryDelay);
+      if (merged) {
+        const mergedCase: ReviewCase = {
+          version: 1,
+          id: card.id,
+          goal: card.goal,
+          cardSlug: card.cardSlug,
+          cardFile: card.file,
+          title: card.title,
+          repo: card.repo,
+          branch: card.branch,
+          state: "already-merged",
+          maxAttempts,
+          attempts: reviewCase?.attempts ?? [],
+        };
+        await ports.store.saveCase(mergedCase);
+        summary.alreadyMerged += 1;
+        continue;
+      }
+
       // Per-card retry with backoff: the LLM review + gh calls fail transiently
       // (the 2026-06-24 pass lost 3/10 this way). Retry the whole side-effecting
       // body — facts are read-only, existingPr makes PR creation idempotent, and
       // store.save overwrites — so a retry never double-acts.
+      const attemptsAfterPreflight = reviewCase?.attempts.length ?? 0;
+      const bodyAttempts = Math.max(1, maxAttempts - attemptsAfterPreflight);
       const { persisted, openedNew } = await withRetry(async () => {
-        const base = await ports.facts.resolveBase(card.repo);
         const [diffstat, commits, mergeable] = await Promise.all([
           ports.facts.diffstat({ repo: card.repo, base, branch: card.branch }),
           ports.facts.commits({ repo: card.repo, base, branch: card.branch }),
@@ -249,10 +344,12 @@ export async function runMorningReview(
             body: prBody(review),
           }));
 
-        const rec: PrReview = { ...review, prUrl: pr.url, prNumber: pr.number };
+        const rec: PrReview = { ...review, cardFile: card.file, prUrl: pr.url, prNumber: pr.number };
         await ports.store.save(rec);
         return { persisted: rec, openedNew: !existing };
-      });
+      }, bodyAttempts, saveFailure, retryDelay);
+
+      await ports.store.deleteCase(card.id);
 
       if (openedNew) summary.opened += 1;
       summary.reviewed += 1;
@@ -269,6 +366,9 @@ export async function runMorningReview(
         summary.errors.push({ id: card.id, error: "review persisted but card `pr:` write-back failed" });
       }
     } catch (e) {
+      const c = await ports.store.loadCase(card.id).catch(() => null);
+      if (c?.state === "dead") summary.dead += 1;
+      else if (c?.state === "retryable") summary.retryable += 1;
       summary.errors.push({ id: card.id, error: (e as Error).message });
     }
   }
@@ -287,9 +387,12 @@ export async function runMorningReview(
     // run dir produced no branch and don't block graduation.
     const reviewableIds = payload.steps
       .filter((s) => s.run)
-      .map((s) => `${payload.goal}/${s.file.replace(/^\d\d-/, "").replace(/\.md$/, "")}`);
-    const records = await Promise.all(reviewableIds.map((id) => ports.store.load(id)));
-    if (!records.every((r) => r != null)) continue; // an errored/unreviewed step — keep it on the active board
+      .map((s) => `${payload.goal}/${parseNightlyCardFilename(s.file)?.slug ?? s.file}`);
+    const terminals = await Promise.all(reviewableIds.map(async (id) => {
+      const [review, c] = await Promise.all([ports.store.load(id), ports.store.loadCase(id)]);
+      return review != null || c?.state === "dead" || c?.state === "already-merged";
+    }));
+    if (!terminals.every(Boolean)) continue; // retryable/unreviewed step — keep it active
     if (graduateProject(cfg.vaultDir, payload.goal)) {
       summary.graduated.push(payload.goal);
     }

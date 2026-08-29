@@ -26,7 +26,19 @@
 let
   cfg = config.hwc.automation.nightlyBuilds;
   paths = config.hwc.paths;
-  agentDir = "${paths.nixos}/domains/automation/nightly-builds";
+
+  # Immutable runner closure: services execute the same run.sh/prompts/sender
+  # that were evaluated into the generation, never whichever branch happens to
+  # be checked out in ~/.nixos when the timer fires.
+  nightlyRunner = pkgs.runCommand "nightly-builds-runner" { } ''
+    mkdir -p $out/prompts
+    cp ${./run.sh} $out/run.sh
+    cp ${./send-report.sh} $out/send-report.sh
+    cp ${./prompts/card-smith.md} $out/prompts/card-smith.md
+    cp ${./prompts/run-wrapper.md} $out/prompts/run-wrapper.md
+    chmod +x $out/run.sh $out/send-report.sh
+    patchShebangs $out/run.sh $out/send-report.sh
+  '';
 
   # Shared spool dir for the refinery board's "▶ Run now" / IMMEDIATE mode: the
   # (sandboxed) board drops a <goal> request file here; the path-triggered
@@ -69,6 +81,11 @@ let
   # reads). Lives under the refinery StateDirectory so the board (also eric) can
   # read it; created group-writable via tmpfiles below.
   reviewsDir = "/var/lib/refinery/reviews";
+  sharedClaudeConfigDir = "/var/lib/sr-gauntlet/claude-config";
+  reviewCredentialFile =
+    if cfg.reviewLlmProvider == "claude-cli"
+    then config.age.secrets.sr-gauntlet-claude-oauth.path
+    else cfg.reviewLlmEnvironmentFile;
 
   # Env for the review pass: late-bound vault + repo + reviews dir + provider.
   # HOME is set so headless `claude` (claude-cli) and `gh` find their creds.
@@ -78,6 +95,10 @@ let
     REFINERY_DEFAULT_REPO = toString cfg.repoDir;
     REFINERY_REVIEWS_DIR = reviewsDir;
     REFINERY_LLM_PROVIDER = cfg.reviewLlmProvider;
+  } // lib.optionalAttrs (cfg.reviewLlmProvider == "claude-cli") {
+    # Reuse the same subscription credential and isolated config home as the
+    # SR/DX1 gauntlets. EnvironmentFile below supplies CLAUDE_CODE_OAUTH_TOKEN.
+    CLAUDE_CONFIG_DIR = sharedClaudeConfigDir;
   } // lib.optionalAttrs (config.hwc.automation.refinery.claudeBin != null) {
     # The claude-cli LlmPort shells out to `claude`, which is NOT on the service
     # PATH. Point it at the same headless binary the refinery board uses, else
@@ -248,7 +269,7 @@ A branch may have pushed without a PR — run \`gh pr list\` and open any missin
       goal="$(basename "$f")"
       rm -f "$f"
       echo "run-now: executing nightly-builds for goal '$goal'"
-      NB_ONLY_GOAL="$goal" ${agentDir}/run.sh || echo "run-now: run.sh exited $? for '$goal'"
+      NB_ONLY_GOAL="$goal" ${nightlyRunner}/run.sh || echo "run-now: run.sh exited $? for '$goal'"
     done
   '';
 in
@@ -273,9 +294,21 @@ in
     };
 
     reviewLlmProvider = lib.mkOption {
-      type = lib.types.str;
+      type = lib.types.enum [ "claude-cli" "anthropic-api" "ollama" ];
       default = "claude-cli";
       description = "LLM provider for the morning-review pass (claude-cli | anthropic-api | ollama).";
+    };
+
+    reviewLlmEnvironmentFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "/run/agenix/anthropic-api-key-env";
+      description = ''
+        Optional systemd EnvironmentFile for non-Claude-CLI providers. The
+        claude-cli provider always reuses sr-gauntlet-claude-oauth; Ollama needs
+        no credential; anthropic-api expects ANTHROPIC_API_KEY or
+        REFINERY_ANTHROPIC_API_KEY in this file.
+      '';
     };
 
     # PRIVILEGED, off-by-default. Gates the root rebuild-request consumer: the
@@ -347,8 +380,8 @@ in
         Type = "oneshot";
         User = lib.mkForce "eric";
         Group = "users";
-        WorkingDirectory = agentDir;
-        ExecStart = "${agentDir}/run.sh";
+        WorkingDirectory = cfg.repoDir;
+        ExecStart = "${nightlyRunner}/run.sh";
         # Whole-run ceiling for the oneshot (all queued cards, sequential).
         # Per-card execution is bounded inside run.sh by NB_CARD_TIMEOUT (5h);
         # this must comfortably exceed one card + overhead, and give a small
@@ -394,7 +427,7 @@ in
         Type = "oneshot";
         User = lib.mkForce "eric";
         Group = "users";
-        WorkingDirectory = agentDir;
+        WorkingDirectory = cfg.repoDir;
         ExecStart = "${runnowDrain}";
         # One targeted card is bounded by run.sh's NB_CARD_TIMEOUT (5h); allow a
         # little headroom. A queued backlog of requests drains sequentially.
@@ -433,7 +466,7 @@ in
         Type = "oneshot";
         User = lib.mkForce "eric";
         Group = "users";
-        WorkingDirectory = agentDir;
+        WorkingDirectory = cfg.repoDir;
         ExecStart = "${reviewRun}";
         # Review is bounded LLM work over a handful of branches; an hour is ample
         # headroom and keeps a wedged run from lingering.
@@ -441,6 +474,8 @@ in
         StandardOutput = "journal";
         StandardError = "journal";
         NoNewPrivileges = true;
+      } // lib.optionalAttrs (reviewCredentialFile != null) {
+        EnvironmentFile = reviewCredentialFile;
       };
     };
 

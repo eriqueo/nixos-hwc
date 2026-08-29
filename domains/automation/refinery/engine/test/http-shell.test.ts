@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { createShell, HttpShellConfig } from "../src/shells/http.js";
 import { gauntletViewByKey } from "../src/sources/gauntlet-views.js";
 import { renderFlowBoard, renderHopperPage, renderNightly, renderFinished, renderFinishedProject, renderSr, renderSrDetail, renderProjectDetail, renderReference, renderReviews, renderBoard } from "../src/shells/render.js";
-import { PrReview } from "../src/review/contract.js";
+import { PrReview, ReviewCase } from "../src/review/contract.js";
 import { LlmPort } from "../src/gates/llm-port.js";
 import { Item } from "../src/contracts.js";
 import { UNTRIAGED } from "../src/triage.js";
@@ -929,6 +929,17 @@ test("renderReviews groups PrReviews into status lanes; empty state otherwise", 
 
   const empty = renderReviews([]);
   assert.ok(empty.includes("no PR reviews yet"), "empty state");
+});
+
+test("renderReviews exposes dead and already-merged terminal cases", () => {
+  const base: ReviewCase = {
+    version: 1, id: "g/dead", goal: "g", cardSlug: "dead", cardFile: "01_dead.md",
+    title: "Dead review", repo: "/repo", branch: "nightly/dead", state: "dead",
+    maxAttempts: 3, attempts: [{ attempt: 1, at: "2026-08-28T00:00:00Z", code: "Error", message: "auth failed" }],
+  };
+  const html = renderReviews([], [base, { ...base, id: "g/merged", title: "Merged work", state: "already-merged", attempts: [] }]);
+  assert.ok(html.includes("Dead review") && html.includes("auth failed"));
+  assert.ok(html.includes("Merged work") && html.includes("Already Merged"));
 });
 
 // ── idea → spec → build assembly line: build pipeline, chaining, two kanbans ──
