@@ -52,6 +52,14 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-08-28 (b): **Morning review now terminates merged and persistently failing cases.**
+  Before any LLM call, the orchestrator refreshes origin and checks both direct
+  ancestry and GitHub's merged-PR record; stale/failed lookups become errors,
+  never a guessed skip. Non-success cases persist as versioned `_attempts/`
+  records with append-only error events. Three failed external attempts marks a
+  case `dead`; later passes make zero external calls. `already-merged`, `dead`,
+  and successful reviews are terminal for project graduation. Retry delays are
+  injected at the CLI composition root with jitter, so core tests are immediate.
 - 2026-08-28: **Morning review discovers production underscore card names.**
   `parseNightlyCardFilename` is now the one engine producer of the card filename
   vocabulary used by both the board mirror and review discovery. It accepts the

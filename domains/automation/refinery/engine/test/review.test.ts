@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readFileSync
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { LlmPort } from "../src/gates/llm-port.js";
-import { safeReviewId, PrReview } from "../src/review/contract.js";
+import { safeReviewId, PrReview, ReviewCase } from "../src/review/contract.js";
 import { reviewBranch, ReviewInput } from "../src/review/reviewer.js";
 import { runMorningReview, MorningReviewConfig } from "../src/review/run.js";
 import { GitFactsPort, GitHubPort, ReviewsStore } from "../src/review/ports.js";
@@ -33,6 +33,7 @@ const GOOD_VERDICT = {
 function stubFacts(over: Partial<Record<string, unknown>> = {}): GitFactsPort {
   return {
     async resolveBase() { return (over.base as string) ?? "origin/main"; },
+    async isMerged() { return (over.merged as boolean) ?? false; },
     async diffstat() { return { files: 2, insertions: 40, deletions: 5 }; },
     async commits() { return ["fix: validate inputs", "test: add cases"]; },
     async isMergeable() { return (over.mergeable as boolean) ?? true; },
@@ -47,6 +48,7 @@ function stubGitHub(existingBranches: string[] = []): { github: GitHubPort; call
   const calls: GhCalls = { created: [], existingFor: new Set(existingBranches) };
   let n = 100;
   const github: GitHubPort = {
+    async isMerged({ branch }) { return calls.existingFor.has(`merged:${branch}`); },
     async existingPr({ branch }) {
       return calls.existingFor.has(branch)
         ? { url: `https://github.test/pr/exist-${branch}`, number: 7 }
@@ -63,8 +65,9 @@ function stubGitHub(existingBranches: string[] = []): { github: GitHubPort; call
   return { github, calls };
 }
 
-function memStore(): { store: ReviewsStore; saved: PrReview[] } {
+function memStore(): { store: ReviewsStore; saved: PrReview[]; cases: ReviewCase[] } {
   const saved: PrReview[] = [];
+  const cases: ReviewCase[] = [];
   const store: ReviewsStore = {
     async save(r) { saved.push(r); },
     async load(id) { return saved.find((s) => s.id === id) ?? null; },
@@ -73,8 +76,19 @@ function memStore(): { store: ReviewsStore; saved: PrReview[] } {
       const i = saved.findIndex((s) => s.id === id);
       if (i >= 0) saved.splice(i, 1);
     },
+    async saveCase(c) {
+      const i = cases.findIndex((x) => x.id === c.id);
+      if (i >= 0) cases[i] = c;
+      else cases.push(c);
+    },
+    async loadCase(id) { return cases.find((c) => c.id === id) ?? null; },
+    async listCases() { return [...cases]; },
+    async deleteCase(id) {
+      const i = cases.findIndex((c) => c.id === id);
+      if (i >= 0) cases.splice(i, 1);
+    },
   };
-  return { store, saved };
+  return { store, saved, cases };
 }
 
 const baseInput = (over: Partial<ReviewInput> = {}): ReviewInput => ({
@@ -252,6 +266,68 @@ test("runMorningReview reuses an already-open PR instead of double-opening", asy
     assert.deepEqual(calls.created.map((c) => c.branch), [
       "nightly/2026-06-17-estimator-tests",
     ]);
+  } finally {
+    v.cleanup();
+  }
+});
+
+test("runMorningReview skips an already-merged branch before any LLM or PR effect", async () => {
+  const v = vaultWithDoneCards();
+  try {
+    const cfg: MorningReviewConfig = { vaultDir: v.root, defaultRepo: "/repo" };
+    const { github, calls } = stubGitHub();
+    const { store } = memStore();
+    let llmCalls = 0;
+    const llm: LlmPort = {
+      async complete() {
+        llmCalls += 1;
+        return JSON.stringify(GOOD_VERDICT);
+      },
+    };
+    const facts = stubFacts();
+    const originalIsMerged = facts.isMerged;
+    facts.isMerged = async (opts) =>
+      opts.branch === "nightly/2026-06-17-estimator-mkforce"
+        ? true
+        : originalIsMerged(opts);
+
+    const summary = await runMorningReview(cfg, { facts, github, store, llm });
+
+    assert.equal(summary.alreadyMerged, 1);
+    assert.equal(summary.reviewed, 1);
+    assert.equal(llmCalls, 1, "only the reviewable branch reaches the LLM");
+    assert.deepEqual(calls.created.map((c) => c.branch), [
+      "nightly/2026-06-17-estimator-tests",
+    ]);
+  } finally {
+    v.cleanup();
+  }
+});
+
+test("runMorningReview dead-letters a persistent failure after three durable attempts", async () => {
+  const v = vaultWithDoneCards();
+  try {
+    const cfg: MorningReviewConfig = { vaultDir: v.root, defaultRepo: "/repo", maxAttempts: 3 };
+    const { github } = stubGitHub();
+    const { store, cases } = memStore();
+    let llmCalls = 0;
+    const llm: LlmPort = {
+      async complete() {
+        llmCalls += 1;
+        throw new Error("persistent auth failure");
+      },
+    };
+
+    const first = await runMorningReview(cfg, { facts: stubFacts(), github, store, llm });
+    assert.equal(first.dead, 2, "both cards exhaust their bounded attempts");
+    assert.equal(first.retryable, 0);
+    assert.equal(cases.length, 2);
+    assert.ok(cases.every((c) => c.state === "dead" && c.attempts.length === 3));
+    assert.equal(llmCalls, 6);
+
+    const second = await runMorningReview(cfg, { facts: stubFacts(), github, store, llm });
+    assert.equal(second.dead, 2);
+    assert.equal(llmCalls, 6, "dead cases make no future LLM calls");
   } finally {
     v.cleanup();
   }

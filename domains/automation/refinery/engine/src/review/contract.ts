@@ -53,6 +53,34 @@ export const PrReviewSchema = z.object({
 });
 export type PrReview = z.infer<typeof PrReviewSchema>;
 
+export const ReviewAttemptEventSchema = z.object({
+  attempt: z.number().int().positive(),
+  at: z.string().min(1),
+  code: z.string().min(1),
+  message: z.string().min(1),
+});
+export type ReviewAttemptEvent = z.infer<typeof ReviewAttemptEventSchema>;
+
+export const ReviewCaseStateSchema = z.enum(["retryable", "dead", "already-merged"]);
+export type ReviewCaseState = z.infer<typeof ReviewCaseStateSchema>;
+
+/** Durable non-success state for one review case. Successful reviews retain the
+ * existing PrReview contract; retry/dead/merged facts live under _attempts/. */
+export const ReviewCaseSchema = z.object({
+  version: z.literal(1),
+  id: z.string().min(1),
+  goal: z.string().min(1),
+  cardSlug: z.string().min(1),
+  cardFile: z.string().min(1),
+  title: z.string().min(1),
+  repo: z.string().min(1),
+  branch: z.string().min(1),
+  state: ReviewCaseStateSchema,
+  maxAttempts: z.number().int().positive(),
+  attempts: z.array(ReviewAttemptEventSchema),
+});
+export type ReviewCase = z.infer<typeof ReviewCaseSchema>;
+
 /**
  * Sanitize a review id ("<goal>/<slug>") into a filename-safe token: "/" and
  * any character outside [A-Za-z0-9._-] collapse to "-". Used by the filesystem

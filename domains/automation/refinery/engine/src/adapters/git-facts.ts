@@ -64,11 +64,22 @@ export function makeGitFacts(cfg: GitFactsConfig = {}): GitFactsPort {
 
   return {
     async resolveBase(repo: string): Promise<string> {
-      // Refresh remotes; tolerate fetch failure (offline) like the execute effector.
-      await git(repo, ["fetch", "--quiet", "origin"]).catch(() => undefined);
+      // Review decisions must never use stale remote state. A fetch failure is
+      // surfaced to the orchestrator before any LLM call.
+      const fetched = await git(repo, ["fetch", "--quiet", "origin"]);
+      if (fetched.exitCode !== 0) {
+        throw new Error(`git fetch failed (exit ${fetched.exitCode}): ${fetched.stderr.trim()}`);
+      }
       const head = await git(repo, ["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"]);
       const name = head.stdout.trim().replace(/^origin\//, "");
       return name ? `origin/${name}` : "origin/main";
+    },
+
+    async isMerged({ repo, base, branch }): Promise<boolean> {
+      const r = await git(repo, ["merge-base", "--is-ancestor", ref(branch), base]);
+      if (r.exitCode === 0) return true;
+      if (r.exitCode === 1) return false;
+      throw new Error(`git merge-base failed (exit ${r.exitCode}): ${r.stderr.trim()}`);
     },
 
     async diffstat({ repo, base, branch }): Promise<Diffstat> {

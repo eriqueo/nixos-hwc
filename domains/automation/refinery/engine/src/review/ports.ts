@@ -6,12 +6,14 @@
 // ../stores (reviews-store.ts). The LlmPort the reviewer consults is the
 // existing engine port (../gates/llm-port.js) — not redefined here.
 
-import { PrReview, Diffstat } from "./contract.js";
+import { PrReview, ReviewCase, Diffstat } from "./contract.js";
 
 /** Read-only git facts about a pushed branch relative to its base. */
 export interface GitFactsPort {
   /** Fetch origin; return the base ref to compare against ("origin/main"). */
   resolveBase(repo: string): Promise<string>;
+  /** Authoritative ancestry check after resolveBase refreshed origin. */
+  isMerged(opts: { repo: string; base: string; branch: string }): Promise<boolean>;
   /** `git diff --shortstat base..branch` → file/line counts. */
   diffstat(opts: { repo: string; base: string; branch: string }): Promise<Diffstat>;
   /** `git log --oneline base..branch` → commit subjects (newest first). */
@@ -22,6 +24,8 @@ export interface GitFactsPort {
 
 /** The GitHub PR lifecycle (shelled to `gh` in production). */
 export interface GitHubPort {
+  /** Whether GitHub records this head branch as merged (covers squash/rebase PRs). */
+  isMerged(opts: { repo: string; branch: string }): Promise<boolean>;
   /** Open a PR for an already-pushed branch. Returns its url + number. */
   createPr(opts: {
     repo: string;
@@ -44,4 +48,8 @@ export interface ReviewsStore {
   load(id: string): Promise<PrReview | null>;
   list(): Promise<PrReview[]>;
   delete(id: string): Promise<void>;
+  saveCase(c: ReviewCase): Promise<void>;
+  loadCase(id: string): Promise<ReviewCase | null>;
+  listCases(): Promise<ReviewCase[]>;
+  deleteCase(id: string): Promise<void>;
 }

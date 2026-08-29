@@ -29,11 +29,17 @@ async function main(): Promise<void> {
   const cfg: MorningReviewConfig = { vaultDir, defaultRepo, date };
 
   const llm = resolveLlm(process.env.REFINERY_LLM_PROVIDER);
+  const retryDelay = async (failedAttempt: number): Promise<void> => {
+    const baseMs = 2000 * 3 ** (failedAttempt - 1);
+    const jitterMs = Math.floor(Math.random() * 500);
+    await new Promise((resolve) => setTimeout(resolve, baseMs + jitterMs));
+  };
   const summary = await runMorningReview(cfg, {
     facts: makeGitFacts(),
     github: makeGitHubCli(),
     store: new FileReviewsStore(resolveReviewsDir()),
     llm,
+    retryDelay,
   });
 
   // Machine-readable summary on stdout for the notifier wrapper.
