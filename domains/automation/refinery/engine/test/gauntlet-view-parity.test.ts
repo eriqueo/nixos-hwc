@@ -28,13 +28,13 @@ const SR_ITEMS: Item[] = [
 test("SR board: executive decisions drive attention, watch, and folded history", () => {
   const view = gauntletViewByKey("sr")!;
   const items: Item[] = [
-    { ...SR_ITEMS[0]!, payload: { ...SR_ITEMS[0]!.payload, ledgerCurrent: true, ledgerState: "completed", valid: true,
+    { ...SR_ITEMS[0]!, payload: { ...(SR_ITEMS[0]!.payload as Record<string, unknown>), ledgerCurrent: true, ledgerState: "completed", valid: true,
       attention: "act", headline: "Customer cannot finish setup", meaning: "Revenue is blocked today",
       recommendation: "Ask DataX to repair the integration", owner: "datax-team", urgency: "today" } },
-    { ...SR_ITEMS[1]!, payload: { ...SR_ITEMS[1]!.payload, ledgerCurrent: true, ledgerState: "completed", valid: true,
+    { ...SR_ITEMS[1]!, payload: { ...(SR_ITEMS[1]!.payload as Record<string, unknown>), ledgerCurrent: true, ledgerState: "completed", valid: true,
       attention: "watch", headline: "Intermittent sync delay", meaning: "No customer action is blocked",
       recommendation: "Monitor the next sync", owner: "eric", urgency: "this-week" } },
-    { ...SR_ITEMS[1]!, id: "sr:old", payload: { ...SR_ITEMS[1]!.payload, headline: "Old investigation" } },
+    { ...SR_ITEMS[1]!, id: "sr:old", payload: { ...(SR_ITEMS[1]!.payload as Record<string, unknown>), headline: "Old investigation" } },
   ];
   const html = renderGauntletBoard(view, items, 5, [], undefined);
   assert.ok(html.includes("1 investigation still unresolved"), "only actionable work reaches the headline");
@@ -45,7 +45,7 @@ test("SR board: executive decisions drive attention, watch, and folded history",
 
 test("SR detail: decision first, DataX action, re-run, then full evidence", () => {
   const view = gauntletViewByKey("sr")!;
-  const item: Item = { ...SR_ITEMS[0]!, payload: { ...SR_ITEMS[0]!.payload, ledgerCurrent: true,
+  const item: Item = { ...SR_ITEMS[0]!, payload: { ...(SR_ITEMS[0]!.payload as Record<string, unknown>), ledgerCurrent: true,
     valid: true, attention: "act", headline: "Customer cannot finish setup", meaning: "Revenue is blocked today",
     recommendation: "Ask DataX to repair the integration" } };
   const html = renderGauntletDetail(view, item, {
