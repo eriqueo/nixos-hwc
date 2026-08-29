@@ -2,6 +2,14 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.claude-code;
+  claimcheckPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.jsonschema ]);
+  claimcheckPackage = pkgs.writeShellApplication {
+    name = "claimcheck";
+    text = ''
+      exec ${claimcheckPython}/bin/python3 \
+        "${cfg.shareConfig.repoPath}/claimcheck/bin/claimcheck" "$@"
+    '';
+  };
 in
 {
   #==========================================================================
@@ -132,6 +140,10 @@ in
     # Live symlinks from the shared config repo into ~/.claude/. Independent of
     # the package so headless hosts can share skills without the Nix binary.
     (lib.mkIf cfg.shareConfig.enable {
+      # claimcheck's JSON schemas are executable policy, not documentation.
+      # Own the validator runtime here so a host cannot appear wired while its
+      # Artifact hook blocks every report on an undeclared Python dependency.
+      home.packages = [ claimcheckPackage ];
       home.file = lib.listToAttrs (map (item:
         lib.nameValuePair ".claude/${item}" {
           source = config.lib.file.mkOutOfStoreSymlink "${cfg.shareConfig.repoPath}/${item}";
