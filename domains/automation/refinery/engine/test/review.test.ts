@@ -133,11 +133,11 @@ function vaultWithDoneCards(): { root: string; cleanup: () => void } {
   const root = mkdtempSync(join(tmpdir(), "refinery-review-"));
   const g = join(root, "_inbox", "nightly_builds", "estimator");
   mkdirSync(g, { recursive: true });
-  // one done card with an explicit branch in the body, with a run dir
+  // A real production-shaped underscore card with an explicit branch and run.
   writeFileSync(
-    join(g, "01-refactor.md"),
-    "---\ntitle: Refactor estimator\nstatus: done\nrun: runs/2026-06-17-estimator-refactor/\nrepo: /repo\n---\n" +
-      "Open a PR to branch `nightly/2026-06-17-estimator-refactor`.\nMake it validate inputs.",
+    join(g, "01_mkforce_user_eric_native_services.md"),
+    "---\ntitle: Refactor estimator\nstatus: done\nrun: runs/2026-06-17-estimator-mkforce/\nrepo: /repo\n---\n" +
+      "Open a PR to branch `nightly/2026-06-17-estimator-mkforce`.\nMake it validate inputs.",
   );
   // a second done card with NO branch in body → derived nightly/<run-name>
   writeFileSync(
@@ -155,7 +155,7 @@ function vaultWithDoneCards(): { root: string; cleanup: () => void } {
     "---\ntitle: No run\nstatus: done\n---\nbody",
   );
   // REPORT for the first card
-  const rd = join(root, "runs", "2026-06-17-estimator-refactor");
+  const rd = join(root, "runs", "2026-06-17-estimator-mkforce");
   mkdirSync(rd, { recursive: true });
   writeFileSync(join(rd, "REPORT.md"), "Estimator now validates inputs.");
   return { root, cleanup: () => rmSync(root, { recursive: true, force: true }) };
@@ -182,17 +182,17 @@ test("runMorningReview opens a PR for each done card with a run dir, skips non-d
     // explicit branch honored; second derived from run-name
     const branches = calls.created.map((c) => c.branch).sort();
     assert.deepEqual(branches, [
-      "nightly/2026-06-17-estimator-refactor",
+      "nightly/2026-06-17-estimator-mkforce",
       "nightly/2026-06-17-estimator-tests",
     ]);
     assert.equal(saved.length, 2);
-    const refactor = saved.find((s) => s.cardSlug === "refactor")!;
+    const refactor = saved.find((s) => s.cardSlug === "mkforce_user_eric_native_services")!;
     assert.equal(refactor.prNumber !== null, true);
     assert.equal(refactor.prUrl !== null, true);
 
     // Two-way pointer: the PR url lands in the card's `pr:` frontmatter (data,
     // not prose), so the vault card and the PrReview both point at the PR.
-    const card1 = readFileSync(join(v.root, "_inbox/nightly_builds/estimator/01-refactor.md"), "utf8");
+    const card1 = readFileSync(join(v.root, "_inbox/nightly_builds/estimator/01_mkforce_user_eric_native_services.md"), "utf8");
     assert.match(card1, new RegExp(`^pr: ${refactor.prUrl}$`, "m"), "reviewed card carries pr:");
     const tests = saved.find((s) => s.cardSlug === "tests")!;
     const card2 = readFileSync(join(v.root, "_inbox/nightly_builds/estimator/02-tests.md"), "utf8");
@@ -216,7 +216,7 @@ test("runMorningReview backfills a skipped card's pr: from its stored record", a
     const { store, saved } = memStore();
     // A record from a pass BEFORE the card write-back existed: prUrl stored,
     // card frontmatter still empty.
-    saved.push({ id: "estimator/refactor", prUrl: "https://github.test/pr/42" } as PrReview);
+    saved.push({ id: "estimator/mkforce_user_eric_native_services", prUrl: "https://github.test/pr/42" } as PrReview);
     const summary = await runMorningReview(cfg, {
       facts: stubFacts(),
       github,
@@ -225,7 +225,7 @@ test("runMorningReview backfills a skipped card's pr: from its stored record", a
       clock: () => "2026-06-17T08:00:00Z",
     });
     assert.equal(summary.skipped, 1);
-    const card = readFileSync(join(v.root, "_inbox/nightly_builds/estimator/01-refactor.md"), "utf8");
+    const card = readFileSync(join(v.root, "_inbox/nightly_builds/estimator/01_mkforce_user_eric_native_services.md"), "utf8");
     assert.match(card, /^pr: https:\/\/github\.test\/pr\/42$/m, "skip path backfills the pointer");
   } finally {
     v.cleanup();
@@ -236,7 +236,7 @@ test("runMorningReview reuses an already-open PR instead of double-opening", asy
   const v = vaultWithDoneCards();
   try {
     const cfg: MorningReviewConfig = { vaultDir: v.root, defaultRepo: "/repo" };
-    const { github, calls } = stubGitHub(["nightly/2026-06-17-estimator-refactor"]);
+    const { github, calls } = stubGitHub(["nightly/2026-06-17-estimator-mkforce"]);
     const { store } = memStore();
     const summary = await runMorningReview(cfg, {
       facts: stubFacts(),
@@ -299,7 +299,7 @@ test("runMorningReview skips a done card that already has a review record (idemp
     const { github, calls } = stubGitHub();
     const { store, saved } = memStore();
     // Pre-seed a record for the first card — a prior morning already reviewed it.
-    saved.push({ id: "estimator/refactor" } as PrReview);
+    saved.push({ id: "estimator/mkforce_user_eric_native_services" } as PrReview);
     const summary = await runMorningReview(cfg, {
       facts: stubFacts(),
       github,

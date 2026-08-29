@@ -19,6 +19,7 @@ import {
   isProjectComplete,
   graduateProject,
   setCardPr,
+  parseNightlyCardFilename,
   type NbStep,
 } from "../sources/nightly-cards.js";
 import { PrReview } from "./contract.js";
@@ -59,7 +60,7 @@ interface DoneCard {
   id: string; // "<goal>/<slug>"
   goal: string;
   cardSlug: string;
-  file: string; // "NN-<slug>.md" — needed to write the `pr:` field back
+  file: string; // "NN[-_]<slug>.md" — needed to write the `pr:` field back
   title: string;
   repo: string;
   branch: string;
@@ -105,13 +106,14 @@ export function listDoneCards(cfg: MorningReviewConfig): DoneCard[] {
     const dir = join(base, goal);
     if (!statSync(dir).isDirectory()) continue;
     for (const f of readdirSync(dir)) {
-      if (!/^\d\d-/.test(f) || !f.endsWith(".md")) continue;
+      const cardName = parseNightlyCardFilename(f);
+      if (!cardName) continue;
       const text = readFileSync(join(dir, f), "utf8");
       const fm = frontmatter(text);
       if (!isDone(fm.status || "")) continue;
       if (!fm.run) continue; // a done card with no run dir produced no branch to review
       if (cfg.date && !fm.run.includes(cfg.date)) continue;
-      const slug = f.replace(/^\d\d-/, "").replace(/\.md$/, "");
+      const slug = cardName.slug;
       const body = bodyOf(text);
       out.push({
         id: `${goal}/${slug}`,
@@ -287,7 +289,7 @@ export async function runMorningReview(
     // run dir produced no branch and don't block graduation.
     const reviewableIds = payload.steps
       .filter((s) => s.run)
-      .map((s) => `${payload.goal}/${s.file.replace(/^\d\d-/, "").replace(/\.md$/, "")}`);
+      .map((s) => `${payload.goal}/${parseNightlyCardFilename(s.file)?.slug ?? s.file}`);
     const records = await Promise.all(reviewableIds.map((id) => ports.store.load(id)));
     if (!records.every((r) => r != null)) continue; // an errored/unreviewed step — keep it on the active board
     if (graduateProject(cfg.vaultDir, payload.goal)) {
