@@ -381,7 +381,14 @@
     # domains/notifications/notify and the architecture note in
     # wiki/nixos/hwc-notify-architecture.md.
     notify.enable = true;
-    canary.enable = true;  # daily deadman probe over Discord + SMTP
+    # Disabled 2026-08-29. The canary's design used its own success message as
+    # the human-visible heartbeat: a daily Discord post + email saying nothing
+    # was wrong. Eric read that as pure noise, and it was — the script already
+    # checks the dispatch result itself, so nobody needs to read the message.
+    # Meanwhile the failure path was silent (hwc-notify-canary was never added
+    # to monitoringServices, so no OnFailure notifier fired). Loud when fine,
+    # quiet when broken: backwards, so it is off until it is rebuilt that way.
+    canary.enable = false;
   };
 
   # README freshness — weekly Law-12 drift report (Mon 09:00) → #nightly-builds
