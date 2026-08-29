@@ -240,19 +240,21 @@ test("promote turns an untriaged idea into a project at its profile's first phas
   }
 });
 
-test("renderSr lists SR investigations linking to their REPORT + has a max cap form", () => {
+test("renderSr lists typed SR decisions with an executive lane + cap form", () => {
   const profiles = [
     { pipeline: "datax-sr", label: "DataX SR", source: "sr", gates: ["premortem"], executorMode: "read-only",
       executors: ["native"], enabled: true, llmProvider: "claude-cli", color: "#83a598" },
   ];
   const srs: Item[] = [
     { id: "sr:2026-06-12-abc", pipeline: "datax-sr", step: "investigated", state: "passed",
-      payload: { title: "Customer X cannot sync", customer: "Acme Co", srStatus: "engaged", run: "investigations/2026-06-12-abc/", hasReport: true, readonly: true, source: "sr_gauntlet investigation" }, history: [] },
+      payload: { title: "Customer X cannot sync", customer: "Acme Co", srStatus: "engaged", run: "investigations/2026-06-12-abc/", hasReport: true, readonly: true, source: "sr_gauntlet investigation",
+        ledgerCurrent: true, ledgerState: "completed", valid: true, attention: "act",
+        headline: "Customer cannot sync", meaning: "Their launch is blocked", recommendation: "Repair the integration" }, history: [] },
   ];
   const html = renderSr(srs, 5, profiles);
   assert.ok(html.includes('class="board"'), "status-lane kanban");
-  assert.ok(html.includes("Acme Co") && html.includes("Customer X cannot sync"), "customer (who) + question (why)");
-  assert.ok(html.includes("engaged"), "lane labeled by SR status (data-driven)");
+  assert.ok(html.includes("Customer cannot sync") && html.includes("Their launch is blocked"), "decision + business meaning");
+  assert.ok(html.includes("Needs you"), "typed decision drives the human lane");
   assert.ok(html.includes('href="/project/sr:2026-06-12-abc"'), "card → tabbed detail");
   assert.ok(html.includes('action="/sr/config"') && html.includes('value="5"'));
 });

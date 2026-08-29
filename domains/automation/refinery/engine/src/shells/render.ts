@@ -524,8 +524,8 @@ function cardLink(item: Item, ctx: CardCtx): string {
   const needsDecision = item.state === "parked" || item.state === "failed";
   const controls = controlsFor(item, ctx);
   const attention = typeof pl.attention === "string" ? pl.attention : "";
-  const actionLabel = attention === "act" ? "Open & act" : attention === "needs-review" || needsDecision
-    ? "Review" : attention === "watch" ? "Open" : isIdea ? "Shape idea" : "View record";
+  const actionLabel = attention === "act" ? "Open & act" : attention === "needs-review"
+    ? "Review" : needsDecision ? "Review decision" : attention === "watch" ? "Open" : isIdea ? "Shape idea" : "View record";
 
   // Card is a container (not a link) so it can hold interactive controls; the
   // title is the click-through to the detail page.
