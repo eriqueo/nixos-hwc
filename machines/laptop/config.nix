@@ -29,10 +29,43 @@ let
     esac
   '';
 
+  # Returns a brightness target only when the current value exceeds the battery
+  # ceiling. Empty output means preserve the user's current (already lower)
+  # choice. The sysfs directory is injectable for focused tests.
+  selectBrightnessClamp = pkgs.writeShellScript "hwc-select-brightness-clamp" ''
+    set -eu
+    BACKLIGHT_PATH="''${1:-/sys/class/backlight/intel_backlight}"
+    CEILING_PERCENT="''${2:-60}"
+
+    if [[ ! -r "$BACKLIGHT_PATH/brightness" || ! -r "$BACKLIGHT_PATH/max_brightness" ]]; then
+      exit 0
+    fi
+
+    CURRENT=$(cat "$BACKLIGHT_PATH/brightness")
+    MAXIMUM=$(cat "$BACKLIGHT_PATH/max_brightness")
+    case "$CURRENT:$MAXIMUM:$CEILING_PERCENT" in
+      *[!0-9:]*|*::*|:*) exit 65 ;;
+    esac
+    if [[ "$MAXIMUM" -eq 0 || "$CEILING_PERCENT" -gt 100 ]]; then
+      exit 65
+    fi
+
+    if [[ $((CURRENT * 100)) -gt $((MAXIMUM * CEILING_PERCENT)) ]]; then
+      printf '%s%%\n' "$CEILING_PERCENT"
+    fi
+  '';
+
   applyPowerSourcePolicy = pkgs.writeShellScript "hwc-apply-power-source-policy" ''
     set -eu
     PROFILE="$(${selectPowerProfile} "''${1:-/sys/class/power_supply/AC/online}")"
-    exec ${pkgs.tlp}/bin/tlp "$PROFILE"
+    ${pkgs.tlp}/bin/tlp "$PROFILE"
+
+    if [[ "$PROFILE" == "power-saver" ]]; then
+      TARGET="$(${selectBrightnessClamp})"
+      if [[ -n "$TARGET" ]]; then
+        ${pkgs.brightnessctl}/bin/brightnessctl --device=intel_backlight set "$TARGET"
+      fi
+    fi
   '';
 in
 {
