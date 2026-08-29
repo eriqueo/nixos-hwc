@@ -22,6 +22,21 @@ in
       default = {};
       description = "Additional environment variables for Codex CLI";
     };
+
+    sharedSkillSource = lib.mkOption {
+      type = lib.types.str;
+      default = "${config.home.homeDirectory}/.claude-config/skills";
+      description = "Shared Agent Skills source tree used for selected Codex skill symlinks.";
+    };
+
+    sharedSkills = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [
+        "herdr"
+        "project-director"
+      ];
+      description = "Shared skills exposed to Codex from sharedSkillSource; the source files stay single-copy.";
+    };
   };
 
   #==========================================================================
@@ -34,6 +49,15 @@ in
 
     # Create config directory
     xdg.configFile."codex/.keep".text = "";
+
+    # Claude and Pi already consume the shared skill tree directly. Codex has
+    # its own skill root, so expose only the cross-harness orchestration skills
+    # as out-of-store symlinks instead of copying a second source tree.
+    home.file = lib.listToAttrs (map (skill:
+      lib.nameValuePair ".codex/skills/${skill}" {
+        source = config.lib.file.mkOutOfStoreSymlink "${cfg.sharedSkillSource}/${skill}";
+      }
+    ) cfg.sharedSkills);
 
     #========================================================================
     # VALIDATION
