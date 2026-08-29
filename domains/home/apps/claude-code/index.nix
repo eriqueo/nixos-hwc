@@ -63,7 +63,7 @@ in
         default = true;
         description = ''
           Self-heal every gate-hook entry (enforce-tools, premortem-gate,
-          track-evidence ×2, claim-guard, nixos-primer, path-conventions,
+          track-evidence ×2, optional claim-guard, nixos-primer, path-conventions,
           charter-gate, standing-instructions ×2, ste100-guard ×2,
           memory-staleness) and the skill-description char budget into
           ~/.claude/settings.json at every activation. Append-only jq
@@ -88,9 +88,10 @@ in
       # restoring one, so a hand-deletion finally sticks. Deleting the entry
       # stays a separate, deliberate act.
       #
-      # EVERY FLAG DEFAULTS TO TRUE, which is the live state measured on
-      # 2026-08-25: all 13 canonical entries were present in settings.json. This
-      # option changes what is EXPRESSIBLE, never what is armed.
+      # claimGuard defaults false after Eric explicitly disarmed it on
+      # 2026-08-28. Its 2026-08-23 measurement found 19 blocks in 60 transcripts
+      # and zero measured true positives; Home Manager had silently re-armed it.
+      # The other flags retain the live defaults measured on 2026-08-25.
       gateHooks = lib.mkOption {
         type = lib.types.attrsOf lib.types.bool;
         default = {
@@ -98,7 +99,7 @@ in
           premortemGate = true;
           trackEvidence = true;
           turnStamp = true;
-          claimGuard = true;
+          claimGuard = false;
           nixosPrimer = true;
           pathConventions = true;
           charterGate = true;
@@ -107,7 +108,7 @@ in
           ste100Guard = true;
           memoryStaleness = true;
         };
-        description = "Per-hook arming for the settings.json heal. False stops the heal restoring that entry; it never removes a live one. Defaults match the state measured live on 2026-08-25.";
+        description = "Per-hook arming for the settings.json heal. False stops the heal restoring that entry; it never removes a live one. claimGuard defaults false by explicit decision; other defaults match the state measured live on 2026-08-25.";
       };
     };
   };
