@@ -419,21 +419,6 @@ in
     pkill -RTMIN+8 -x '\.waybar-wrapped|waybar' || true
   '';
 
-  "lid-status" = sh "waybar-lid-status" ''
-    STATE="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc/lid-ignore-request"
-    AC_ONLINE=$(cat /sys/class/power_supply/AC/online 2>/dev/null || echo 0)
-    if [[ "$AC_ONLINE" == "1" && -f "$STATE" ]]; then
-      printf '{"text":"Lid","class":"sleep-disabled","tooltip":"Lid Close: Ignore\\nClick to enable sleep"}\n'
-    else
-      if [[ "$AC_ONLINE" == "1" ]]; then
-        TOOLTIP="Lid Close: Sleep"
-      else
-        TOOLTIP="Lid Close: Sleep (required on battery)"
-      fi
-      jq -cn --arg tooltip "$TOOLTIP" '{text:"Lid",class:"sleep-enabled",tooltip:$tooltip}'
-    fi
-  '';
-
   "lid-set" = sh "waybar-lid-set" ''
     POLICY="''${1:-}"
     RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc"

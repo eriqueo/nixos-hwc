@@ -20,5 +20,5 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 - `parts/scripts.nix` — writeShellScriptBin helpers incl. waybar-launch
 
 ## Changelog
-- 2026-08-28: Added the laptop-only power hub: native TLP profile selection, brightness presets, explicit AC-gated lid policy, wrapped-launch GPU policy, and passive sysfs battery/dGPU telemetry. Removed the unreachable power-profile widget and blind lid toggle; retained old GPU/lid widgets temporarily for live parity verification.
+- 2026-08-28: Added the laptop-only power hub: native TLP profile selection, brightness presets, explicit AC-gated lid policy, wrapped-launch GPU policy, and passive sysfs battery/dGPU telemetry. Removed the unreachable power-profile widget, blind lid toggle, and superseded standalone GPU/lid widgets after live parity verification.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

@@ -93,9 +93,8 @@ in
     # - kitty, wofi, btop: Runtime availability ensured via scriptPkgs inclusion (line 15, 19)
     # - wlogout: Called by custom/power widget, must be installed system-wide or in home packages
     #
-    # GPU scripts dependency: waybar-gpu-status widget calls gpu-toggle (from infrastructure.hardware.gpu)
-    # This dependency is enforced at runtime - gpu-toggle must exist in PATH
-    # Infrastructure GPU module provides: gpu-toggle, gpu-status, gpu-launch, gpu-next
+    # GPU scripts dependency: the power hub calls gpu-set-policy/gpu-next from
+    # the system GPU capability; gpu-launch remains the application boundary.
     # Note: Cross-domain assertions (HM -> System) can't be enforced at build time
     #       Runtime failure will occur if infrastructure.hardware.gpu.powerManagement.smartToggle is not enabled
   };

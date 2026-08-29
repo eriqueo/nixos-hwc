@@ -20,7 +20,7 @@ let
       ++ lib.optionals dtEnabled [ "custom/dt" ]
       ++ lib.optionals powerHubEnabled [ "custom/power-hub" ]
       ++ [
-      "custom/gpu" "idle_inhibitor" "custom/lid-sleep"
+      "idle_inhibitor"
     ] ++ lib.optionals gsrEnabled [ "custom/recording" ]
       ++ [
       "custom/sep-1"
@@ -132,7 +132,6 @@ let
       tooltip-format = "<tt><small>{calendar}</small></tt>";
     };
 
-    "custom/gpu" = { format = "{}"; exec = "gpu-status"; return-type = "json"; interval = 5; on-click = "gpu-toggle"; };
     idle_inhibitor = { format = "{icon}"; format-icons = { activated = "Awake"; deactivated = "Idle"; }; };
     pulseaudio = { format = "{icon} {volume}%"; format-muted = "󰝟 Muted"; format-icons = { default = ["󰕿" "󰖀" "󰖁"]; }; on-click = "pavucontrol"; };
     "custom/network" = { format = "{}"; exec = "waybar-network-status"; return-type = "json"; interval = 5; on-click = "waybar-network-settings"; };
@@ -149,7 +148,6 @@ let
     "custom/proton-auth" = { format = "Auth"; tooltip = "Proton Authenticator (SUPER+A)"; on-click = "proton-authenticator-toggle"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
     "custom/power" = { format = "Pwr"; tooltip = "Shutdown"; on-click = "wlogout"; };
-    "custom/lid-sleep" = { format = "{}"; exec = "waybar-lid-status"; return-type = "json"; interval = 5; on-click = "waybar-power-hub-menu"; };
     "custom/workspace-link" = { format = "{}"; exec = "waybar-workspace-link-status"; return-type = "json"; interval = "once"; signal = 8; on-click = "waybar-workspace-link-toggle"; };
 
     "custom/khal" = {
