@@ -1644,32 +1644,56 @@ export function renderReference(pipelines: ResolvedPipeline[]): string {
   return layout("reference", body);
 }
 
-// PR-review lanes, by status (the canon set from review/contract.ts). A new
-// status would need a lane added here, but the set is closed (Zod enum).
-const REVIEW_LANES: { key: PrReview["status"]; label: string }[] = [
-  { key: "needs-you", label: "Needs You" },
-  { key: "merged", label: "Merged" },
-  { key: "requeued", label: "Requeued" },
-  { key: "rejected", label: "Rejected" },
-];
+// Review-only presentation rules stay scoped to this surface so unrelated
+// gauntlet parity snapshots do not change when the executive view evolves.
+const REVIEW_STYLE = `<style>
+  .review-page{max-width:1180px;margin:0 auto;padding:18px}
+  .review-summary{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+  .review-summary strong{display:block;color:var(--ink);font-size:16px}.review-summary .kv{max-width:680px}
+  .decision-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+  .review-card{min-height:0;padding:12px 14px}.review-card .context{margin-top:6px;color:var(--fg);font-size:12px}
+  .review-card .decision{margin-top:7px;color:var(--ink);font-size:13px}.review-card .decision b{color:var(--warn)}
+  .review-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:10px}.review-actions form{margin:0}
+  .btn{display:inline-flex;align-items:center;background:var(--elev);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px}
+  .btn.primary{background:color-mix(in srgb,var(--acc) 18%,var(--elev));border-color:var(--acc);color:var(--ink)}.btn:hover{border-color:var(--acc);color:var(--ink)}
+  .handled{margin-top:18px;border-top:1px solid var(--line);padding-top:10px}.handled>summary{cursor:pointer;color:var(--dim);font-size:13px;list-style:none}
+  .handled>summary::-webkit-details-marker{display:none}.handled>summary::before{content:"▸ ";color:var(--acc)}.handled[open]>summary::before{content:"▾ "}
+  .review-detail .decision-block{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:8px;padding:12px 14px;margin:12px 0}
+  .review-detail .decision-block h2{margin:0 0 5px;border:0;padding:0;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim)}
+  .review-evidence{margin-top:18px;border-top:1px solid var(--line);padding-top:10px}.review-evidence summary{cursor:pointer;color:var(--dim)}
+  @media(max-width:720px){.review-summary{align-items:flex-start;flex-direction:column}.decision-grid{grid-template-columns:1fr}.review-page{padding:12px}.review-actions .btn,.review-actions button{min-height:44px}}
+</style>`;
 
 function reviewCard(r: PrReview): string {
-  const prLink = r.prUrl
-    ? `<a class="md" style="color:var(--acc2)" href="${esc(r.prUrl)}" rel="noreferrer">${esc(r.prUrl)}</a>`
-    : `<span class="kv">no PR yet</span>`;
-  const risks = r.risks.length
-    ? `<ul style="margin:6px 0 0 16px;padding:0">${r.risks.map((x) => `<li class="kv">${esc(x)}</li>`).join("")}</ul>`
+  const merge = r.verdict === "merge-ready" && r.prUrl
+    ? `<a class="btn primary" href="${esc(r.prUrl)}" target="_blank" rel="noreferrer noopener">Review &amp; merge</a>`
     : "";
-  return `<div class="card" style="border-left-color:var(--acc2)">
+  const requeue = r.status === "needs-you"
+    ? `<form method="post" action="/review/requeue"><input type="hidden" name="id" value="${esc(r.id)}"><button type="submit">Requeue tonight</button></form>`
+    : "";
+  return `<article class="card review-card" style="border-left-color:var(--acc2)">
     <div class="badges">
       <span class="badge type">${esc(r.verdict)}</span>
-      <span class="badge" title="repo">${esc(r.repo)}</span>
+      <span class="badge">${esc(r.goal)}</span>
     </div>
-    <a class="title" href="/project/${esc(r.id)}">${esc(r.title)}</a>
-    ${r.recommendation ? `<div class="reason">${esc(r.recommendation)}</div>` : ""}
-    <div class="why" style="margin-top:6px">${prLink}</div>
-    ${risks}
-  </div>`;
+    <a class="title" href="/review/${encodeURIComponent(r.id)}">${esc(r.title)}</a>
+    ${r.whatItMeans ? `<div class="context">${esc(r.whatItMeans)}</div>` : ""}
+    ${r.recommendation ? `<div class="decision"><b>Recommendation:</b> ${esc(r.recommendation)}</div>` : ""}
+    <div class="review-actions">${merge}${requeue}<a class="btn" href="/review/${encodeURIComponent(r.id)}">Details</a></div>
+  </article>`;
+}
+
+function caseCard(c: ReviewCase): string {
+  const last = c.attempts[c.attempts.length - 1];
+  const needsDecision = c.state === "dead";
+  return `<article class="card review-card" style="border-left-color:${needsDecision ? "var(--err)" : "var(--ok)"}">
+    <div class="badges"><span class="badge type">${needsDecision ? "needs attention" : "handled"}</span><span class="badge">${esc(c.goal)}</span></div>
+    <a class="title" href="/review/${encodeURIComponent(c.id)}">${esc(c.title)}</a>
+    <div class="context">${needsDecision ? "The automated review could not finish." : "This branch was already part of the main codebase."}</div>
+    <div class="decision"><b>${needsDecision ? "Recommendation:" : "Outcome:"}</b> ${needsDecision ? "Requeue after checking the last failure." : "No action needed."}</div>
+    <div class="review-actions">${needsDecision ? `<form method="post" action="/review/requeue"><input type="hidden" name="id" value="${esc(c.id)}"><button type="submit">Requeue tonight</button></form>` : ""}<a class="btn" href="/review/${encodeURIComponent(c.id)}">Details</a></div>
+    ${last && needsDecision ? `<span class="kv">Last issue: ${esc(last.message)}</span>` : ""}
+  </article>`;
 }
 
 /** Reviews: morning PR reviews grouped into lanes by status. Each card shows
@@ -1679,27 +1703,57 @@ export function renderReviews(reviews: PrReview[], cases: ReviewCase[] = []): st
   if (!reviews.length && !cases.length) {
     return layout("reviews", `<div class="wrap"><div class="empty" style="padding:24px">no PR reviews yet — the morning review pass writes them after the overnight run pushes branches</div></div>`);
   }
-  const cols = REVIEW_LANES.map((lane) => {
-    const inLane = reviews.filter((r) => r.status === lane.key);
-    const body = inLane.length ? inLane.map(reviewCard).join("") : `<div class="empty">—</div>`;
-    return `<section class="col"><h2>${esc(lane.label)} <span class="count">${inLane.length}</span></h2><div class="cards">${body}</div></section>`;
-  }).join("") + ([
-    { key: "dead" as const, label: "Dead" },
-    { key: "already-merged" as const, label: "Already Merged" },
-  ]).map((lane) => {
-    const inLane = cases.filter((c) => c.state === lane.key);
-    const body = inLane.length ? inLane.map((c) => {
-      const last = c.attempts[c.attempts.length - 1];
-      return `<div class="card" style="border-left-color:var(--acc2)">
-        <div class="badges"><span class="badge type">${esc(c.state)}</span><span class="badge">${c.attempts.length}/${c.maxAttempts} attempts</span></div>
-        <div class="title">${esc(c.title)}</div>
-        <div class="reason">${last ? esc(last.message) : "branch was already integrated"}</div>
-        <div class="why"><span class="kv">${esc(c.branch)}</span></div>
-      </div>`;
-    }).join("") : `<div class="empty">—</div>`;
-    return `<section class="col"><h2>${lane.label} <span class="count">${inLane.length}</span></h2><div class="cards">${body}</div></section>`;
-  }).join("");
-  return layout("reviews", `<div class="wrap"><div class="board">${cols}</div></div>`);
+  const decisions = reviews.filter((r) => r.status === "needs-you");
+  const dead = cases.filter((c) => c.state === "dead");
+  const handledReviews = reviews.filter((r) => r.status !== "needs-you");
+  const alreadyMerged = cases.filter((c) => c.state === "already-merged");
+  const attentionCount = decisions.length + dead.length;
+  const attention = [...decisions.map(reviewCard), ...dead.map(caseCard)].join("");
+  const handled = [...handledReviews.map(reviewCard), ...alreadyMerged.map(caseCard)].join("");
+  const summary = attentionCount === 1 ? "1 decision needs you" : `${attentionCount} decisions need you`;
+  return layout("reviews", `${REVIEW_STYLE}<main class="review-page">
+    <section class="review-summary"><div><strong>${summary}</strong><div class="kv">Everything else is handled. Open a card only when you want the supporting evidence.</div></div><a class="btn" href="/nightly">View overnight queue</a></section>
+    <h2 class="secthdr">Decide now <span class="count">${attentionCount}</span></h2>
+    <div class="decision-grid">${attention || `<div class="empty">nothing needs you right now</div>`}</div>
+    <details class="handled"><summary>Handled <span class="count">${handledReviews.length + alreadyMerged.length}</span></summary><div class="decision-grid" style="margin-top:10px">${handled || `<div class="empty">nothing handled yet</div>`}</div></details>
+  </main>`);
+}
+
+/** One review, translated for a human decision. Machine evidence remains
+ * available in a native disclosure rather than competing with the decision. */
+export function renderReviewDetail(item: PrReview | ReviewCase): string {
+  if ("version" in item) {
+    const last = item.attempts[item.attempts.length - 1];
+    const needsDecision = item.state === "dead";
+    const actions = needsDecision
+      ? `<form method="post" action="/review/requeue"><input type="hidden" name="id" value="${esc(item.id)}"><button type="submit">Requeue tonight</button></form>`
+      : `<span class="kv">No action needed.</span>`;
+    return layout("reviews", `${REVIEW_STYLE}<main class="detail review-detail"><a href="/reviews" class="kv">← reviews</a><h1>${esc(item.title)}</h1>
+      <div class="decision-block"><h2>What happened</h2><div>${needsDecision ? "The automated review stopped after repeated failures." : "The branch was already included in the main codebase."}</div></div>
+      <div class="decision-block"><h2>My recommendation</h2><div>${needsDecision ? "Check the last failure, then requeue it for another overnight pass." : "No action needed."}</div></div>
+      <div class="review-actions">${actions}</div>
+      <details class="review-evidence"><summary>Technical evidence</summary><p class="kv">Branch: ${esc(item.branch)}</p><p class="kv">Last issue: ${esc(last?.message ?? "none — Git/GitHub reported the branch already integrated")}</p></details>
+    </main>`);
+  }
+  const merge = item.verdict === "merge-ready" && item.prUrl
+    ? `<a class="btn primary" href="${esc(item.prUrl)}" target="_blank" rel="noreferrer noopener">Review &amp; merge</a>`
+    : "";
+  const requeue = item.status === "needs-you"
+    ? `<form method="post" action="/review/requeue"><input type="hidden" name="id" value="${esc(item.id)}"><button type="submit">Requeue tonight</button></form>`
+    : "";
+  return layout("reviews", `${REVIEW_STYLE}<main class="detail review-detail"><a href="/reviews" class="kv">← reviews</a><h1>${esc(item.title)}</h1>
+    <div class="badges"><span class="badge type">${esc(item.verdict)}</span><span class="badge">${esc(item.goal)}</span></div>
+    <div class="decision-block"><h2>What happened</h2><div>${esc(item.whatWasDone)}</div></div>
+    <div class="decision-block"><h2>Why it matters</h2><div>${esc(item.whatItMeans)}</div></div>
+    <div class="decision-block"><h2>My recommendation</h2><div>${esc(item.recommendation)}</div></div>
+    <div class="review-actions">${merge}${requeue}${item.prUrl ? `<a class="btn" href="${esc(item.prUrl)}" target="_blank" rel="noreferrer noopener">Open PR</a>` : ""}</div>
+    <details class="review-evidence"><summary>Technical evidence</summary>
+      <p class="kv">Repository: ${esc(item.repo)} · Branch: ${esc(item.branch)} · Base: ${esc(item.base)}</p>
+      <p class="kv">Change size: ${item.diffstat.files} files, +${item.diffstat.insertions}, −${item.diffstat.deletions} · Mergeable: ${item.mergeable == null ? "unknown" : item.mergeable ? "yes" : "no"}</p>
+      ${item.risks.length ? `<h2>Risks</h2><ul>${item.risks.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
+      ${item.commits.length ? `<h2>Commits</h2><ul>${item.commits.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}
+    </details>
+  </main>`);
 }
 
 /** Render a run's REPORT.md (plain — escaped <pre>). */

@@ -19,12 +19,12 @@ import { gateList } from "../gates/index.js";
 import { makeSpecExecutor } from "../executors/spec.js";
 import { runPipelineOnce } from "../cli/run-once.js";
 import { LlmPort } from "../gates/llm-port.js";
-import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX, finishedProjects, reopenProject, parseFinishedId, FINISHED_PREFIX } from "../sources/nightly-cards.js";
+import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, requeueReviewCard, NB_PREFIX, finishedProjects, reopenProject, parseFinishedId, FINISHED_PREFIX } from "../sources/nightly-cards.js";
 import { ledgerAgentRuns, readDx1CasesFile, readDx1LedgerEntries, readFleetSnapshots } from "../sources/dx1-fleet.js";
 import { gauntletInvestigationProjects, readRunBundle, readRunFile } from "../sources/gauntlet-investigations.js";
 import { GAUNTLET_VIEWS, GauntletView, buildGauntletExport, gauntletViewByKey, gauntletViewForId } from "../sources/gauntlet-views.js";
 import { syncBrainIdeas, makeIdeaItem, ideaId, isBrainIdea, appendBrainIdea, removeBrainIdea, promoteBrainIdea } from "../sources/brain-ideas.js";
-import { renderBoard, renderDx1CasesPanel, renderDx1Fleet, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderGauntletBoard, renderGauntletDetail, renderProjectDetail, renderReport, renderReference, renderReviews, HOPPER_STAGE_KEYS } from "./render.js";
+import { renderBoard, renderDx1CasesPanel, renderDx1Fleet, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderGauntletBoard, renderGauntletDetail, renderProjectDetail, renderReport, renderReference, renderReviews, renderReviewDetail, HOPPER_STAGE_KEYS } from "./render.js";
 import { FileReviewsStore, resolveReviewsDir } from "../stores/reviews-store.js";
 
 export interface HttpShellConfig {
@@ -106,14 +106,33 @@ export function createShell(cfg: HttpShellConfig) {
   const catalog = new PipelineCatalog({ dir: cfg.pipelinesDir, statePath: cfg.pipelineStatePath });
   const domains = loadDomains(cfg.domainsFile);
 
-  // Morning PR reviews are read-only here (the morning-review CLI writes them).
-  // Listing is lazy + dir-guarded so the page renders an empty state when the
-  // reviews dir doesn't exist yet (don't create it on a GET).
+  // Morning PR reviews are written by the morning-review CLI. This HTTP shell
+  // reads them and owns one human action: requeueing the exact source card.
+  // Listing is lazy + dir-guarded so a GET never creates state.
   const reviewsDir = resolveReviewsDir(cfg.reviewsDir);
   const listReviews = async () => {
     if (!existsSync(reviewsDir)) return { reviews: [], cases: [] };
     const reviews = new FileReviewsStore(reviewsDir);
     return { reviews: await reviews.list(), cases: await reviews.listCases() };
+  };
+  const loadReview = async (id: string) => {
+    if (!existsSync(reviewsDir)) return null;
+    const reviews = new FileReviewsStore(reviewsDir);
+    return (await reviews.load(id)) ?? (await reviews.loadCase(id));
+  };
+  const requeueReview = async (id: string): Promise<boolean> => {
+    if (!cfg.vaultDir || !existsSync(reviewsDir)) return false;
+    const reviews = new FileReviewsStore(reviewsDir);
+    const review = await reviews.load(id);
+    const reviewCase = review ? null : await reviews.loadCase(id);
+    const source = review ?? reviewCase;
+    if (!source || !requeueReviewCard(cfg.vaultDir, source.goal, source.cardSlug, source.cardFile)) return false;
+    if (review) {
+      await reviews.save({ ...review, status: "requeued" });
+    } else {
+      await reviews.deleteCase(id);
+    }
+    return true;
   };
 
   // Per-gauntlet "max per run" caps — the single runtime source of truth that
@@ -707,6 +726,18 @@ export function createShell(cfg: HttpShellConfig) {
           res.end(renderReviews(reviewData.reviews, reviewData.cases));
           return;
         }
+        if (method === "GET" && url.startsWith("/review/")) {
+          const id = decodeURIComponent(url.slice("/review/".length));
+          const review = await loadReview(id);
+          if (!review) {
+            res.writeHead(404, { "content-type": "text/plain" });
+            res.end("no such review");
+            return;
+          }
+          res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+          res.end(renderReviewDetail(review));
+          return;
+        }
         // Per-tab + combined markdown downloads for a gauntlet run:
         // GET /<view>/export/<part>?id=<itemId>. Composition lives in
         // gauntlet-views.ts (buildGauntletExport — one producer); this route
@@ -908,6 +939,14 @@ export function createShell(cfg: HttpShellConfig) {
           if (url === "/delete") {
             await deleteItem(id);
             return redirectTo(res, back || "/");
+          }
+          if (url === "/review/requeue") {
+            if (!id || !(await requeueReview(id))) {
+              res.writeHead(409, { "content-type": "text/plain; charset=utf-8" });
+              res.end("Could not requeue this review: its exact source card or review record is missing.");
+              return;
+            }
+            return redirectTo(res, back || "/reviews");
           }
           if (url === "/card/queue") {
             // GUI for the Phase-4 gate: queue/unqueue a project's next step in

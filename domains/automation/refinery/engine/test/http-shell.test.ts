@@ -3,14 +3,16 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { once } from "node:events";
 import { createShell, HttpShellConfig } from "../src/shells/http.js";
 import { gauntletViewByKey } from "../src/sources/gauntlet-views.js";
-import { renderFlowBoard, renderHopperPage, renderNightly, renderFinished, renderFinishedProject, renderSr, renderSrDetail, renderProjectDetail, renderReference, renderReviews, renderBoard } from "../src/shells/render.js";
+import { renderFlowBoard, renderHopperPage, renderNightly, renderFinished, renderFinishedProject, renderSr, renderSrDetail, renderProjectDetail, renderReference, renderReviews, renderReviewDetail, renderBoard } from "../src/shells/render.js";
 import { PrReview, ReviewCase } from "../src/review/contract.js";
 import { LlmPort } from "../src/gates/llm-port.js";
 import { Item } from "../src/contracts.js";
 import { UNTRIAGED } from "../src/triage.js";
 import { fixedClock } from "./helpers.js";
+import { FileReviewsStore } from "../src/stores/reviews-store.js";
 
 function setup(
   triageLlm: LlmPort,
@@ -910,21 +912,21 @@ function prReviewFixture(over: Partial<PrReview> = {}): PrReview {
   };
 }
 
-test("renderReviews groups PrReviews into status lanes; empty state otherwise", () => {
+test("renderReviews is an executive decision surface, not an expanded evidence dump", () => {
   const reviews = [
     prReviewFixture(),
     prReviewFixture({ id: "g/2", title: "Merged change", status: "merged", verdict: "merge-ready", prUrl: "https://github.com/eriqueo/x/pull/43" }),
     prReviewFixture({ id: "g/3", title: "Rejected change", status: "rejected", verdict: "reject", prUrl: null }),
   ];
   const html = renderReviews(reviews);
-  assert.ok(html.includes('class="board"'), "lane board");
-  assert.ok(html.includes(">Needs You ") && html.includes(">Merged ") && html.includes(">Rejected "), "status lanes");
+  assert.ok(html.includes("1 decision needs you"), "top-line attention count");
+  assert.ok(html.includes("Decide now") && html.includes("Handled"), "attention-first sections");
   assert.ok(html.includes("Fix the X bug") && html.includes("Merged change") && html.includes("Rejected change"), "cards");
-  assert.ok(html.includes("eriqueo/x"), "repo shown");
-  assert.ok(html.includes("merge it"), "recommendation shown");
-  assert.ok(html.includes('href="https://github.com/eriqueo/x/pull/42"'), "PR link");
-  assert.ok(html.includes("touches the hot path"), "risk shown");
-  assert.ok(html.includes("no PR yet"), "null prUrl → no-PR placeholder");
+  assert.ok(html.includes('href="/review/my-goal%2Ffix-x"'), "card routes to review detail, not project store");
+  assert.ok(html.includes("merge it"), "one-line recommendation shown");
+  assert.ok(html.includes("Review &amp; merge"), "merge-ready card has one clear primary action");
+  assert.ok(html.includes('action="/review/requeue"'), "non-merge decision has a requeue action");
+  assert.ok(html.includes("<details") && html.includes("Handled"), "terminal work is collapsed by default");
   assert.ok(html.includes("class=\"active\">Reviews"), "Reviews nav active");
 
   const empty = renderReviews([]);
@@ -939,7 +941,62 @@ test("renderReviews exposes dead and already-merged terminal cases", () => {
   };
   const html = renderReviews([], [base, { ...base, id: "g/merged", title: "Merged work", state: "already-merged", attempts: [] }]);
   assert.ok(html.includes("Dead review") && html.includes("auth failed"));
-  assert.ok(html.includes("Merged work") && html.includes("Already Merged"));
+  assert.ok(html.includes("Merged work") && html.includes("No action needed"));
+});
+
+test("renderReviewDetail keeps the decision first and evidence on demand", () => {
+  const html = renderReviewDetail(prReviewFixture());
+  assert.ok(html.includes("What happened") && html.includes("fixed it"));
+  assert.ok(html.includes("Why it matters") && html.includes("no more crash"));
+  assert.ok(html.includes("My recommendation") && html.includes("merge it"));
+  assert.ok(html.includes("Review &amp; merge") && html.includes('action="/review/requeue"'));
+  assert.ok(html.includes("Technical evidence") && html.includes("touches the hot path"));
+  assert.ok(html.indexOf("My recommendation") < html.indexOf("Technical evidence"), "decision precedes evidence");
+});
+
+test("review routes resolve encoded ids and requeue the exact source card", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"));
+  const root = join(cfg.itemsDir, "..");
+  const vaultDir = join(root, "vault");
+  const reviewsDir = join(root, "reviews");
+  const goalDir = join(vaultDir, "_inbox/nightly_builds/my-goal");
+  mkdirSync(goalDir, { recursive: true });
+  writeFileSync(join(goalDir, "01_fix_x.md"), "---\ntitle: Fix X\nstatus: done\n---\nbody");
+  const reviews = new FileReviewsStore(reviewsDir);
+  await reviews.save(prReviewFixture({ cardFile: "01_fix_x.md", cardSlug: "fix_x" }));
+  const shell = createShell({ ...cfg, vaultDir, reviewsDir });
+  shell.server.listen(0, "127.0.0.1");
+  await once(shell.server, "listening");
+  const address = shell.server.address();
+  assert.ok(address && typeof address === "object");
+  const base = `http://127.0.0.1:${address.port}`;
+  try {
+    const detail = await fetch(`${base}/review/${encodeURIComponent("my-goal/fix-x")}`);
+    assert.equal(detail.status, 200, "review id resolves through the review store");
+    assert.match(await detail.text(), /My recommendation/);
+
+    const requeued = await fetch(`${base}/review/requeue`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ id: "my-goal/fix-x" }),
+    });
+    assert.equal(requeued.status, 303);
+    assert.equal(requeued.headers.get("location"), "/reviews");
+    assert.match(readFileSync(join(goalDir, "01_fix_x.md"), "utf8"), /^status: queued$/m);
+    assert.equal((await reviews.load("my-goal/fix-x"))?.status, "requeued", "review state follows the authoritative card write");
+
+    const missing = await fetch(`${base}/review/requeue`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ id: "missing/review" }),
+    });
+    assert.equal(missing.status, 409, "missing source never reports success");
+  } finally {
+    shell.server.close();
+    await once(shell.server, "close");
+    cleanup();
+  }
 });
 
 // ── idea → spec → build assembly line: build pipeline, chaining, two kanbans ──

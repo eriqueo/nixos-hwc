@@ -268,6 +268,7 @@ export function reopenProject(
 
 /** Flip one step card's status (the queue gate). goalId + step file. */
 function setStatus(vaultDir: string, goalId: string, file: string, newStatus: string): boolean {
+  if (goalId.startsWith("_") || goalId.includes("/") || file.includes("/")) return false;
   const path = join(vaultDir, "_inbox", "nightly_builds", goalId, file);
   if (!existsSync(path)) return false;
   const text = readFileSync(path, "utf8");
@@ -278,6 +279,32 @@ function setStatus(vaultDir: string, goalId: string, file: string, newStatus: st
     : `${m[1]}\nstatus: ${newStatus}`;
   writeFileSync(path, text.replace(m[1], newFm));
   return true;
+}
+
+/** Requeue the exact card that produced a review. New records carry cardFile;
+ * legacy records resolve through the shared filename parser by card slug. */
+export function requeueReviewCard(
+  vaultDir: string,
+  goalId: string,
+  cardSlug: string,
+  cardFile?: string,
+): boolean {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(goalId) || goalId === ".." || cardFile?.includes("/")) return false;
+  const activeDir = join(vaultDir, "_inbox", "nightly_builds", goalId);
+  const finishedDir = join(vaultDir, "_inbox", "nightly_builds", FINISHED_DIR, goalId);
+  const sourceDir = existsSync(activeDir) ? activeDir : existsSync(finishedDir) ? finishedDir : null;
+  if (!sourceDir) return false;
+  const resolved = cardFile ?? readdirSync(sourceDir).find((file) => parseNightlyCardFilename(file)?.slug === cardSlug);
+  const parsed = resolved ? parseNightlyCardFilename(resolved) : null;
+  if (!resolved || parsed?.slug !== cardSlug || !existsSync(join(sourceDir, resolved))) return false;
+  // A fully-reviewed project may already have graduated. Requeue is the
+  // explicit reversal of that lifecycle decision: reopen the folder first,
+  // then put the exact reviewed step back on the runner's active queue.
+  if (sourceDir === finishedDir) {
+    if (existsSync(activeDir)) return false;
+    renameSync(finishedDir, activeDir);
+  }
+  return setStatus(vaultDir, goalId, resolved, "queued");
 }
 
 /** Write a step card's `pr:` frontmatter field — the vault half of the two-way
