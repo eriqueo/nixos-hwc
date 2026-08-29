@@ -63,9 +63,10 @@ in
         default = true;
         description = ''
           Self-heal every gate-hook entry (enforce-tools, premortem-gate,
-          track-evidence ×2, optional claim-guard, nixos-primer, path-conventions,
-          charter-gate, standing-instructions ×2, ste100-guard ×2,
-          memory-staleness) and the skill-description char budget into
+          claimcheck Artifact publication, track-evidence ×2, optional
+          claim-guard, nixos-primer, path-conventions, charter-gate,
+          standing-instructions ×2, ste100-guard ×2, memory-staleness) and the
+          skill-description char budget into
           ~/.claude/settings.json at every activation. Append-only jq
           merge keyed on script filename: existing entries, permissions, and
           runtime-written keys (model, etc.) are never edited or removed, so
@@ -97,6 +98,7 @@ in
         default = {
           enforceTools = true;
           premortemGate = true;
+          claimcheckArtifact = true;
           trackEvidence = true;
           turnStamp = true;
           claimGuard = false;
@@ -108,7 +110,7 @@ in
           ste100Guard = true;
           memoryStaleness = true;
         };
-        description = "Per-hook arming for the settings.json heal. False stops the heal restoring that entry; it never removes a live one. claimGuard defaults false by explicit decision; other defaults match the state measured live on 2026-08-25.";
+        description = "Per-hook arming for the settings.json heal. False stops the heal restoring that entry; it never removes a live one. claimGuard defaults false by explicit decision; claimcheckArtifact was added from the measured 2026-08-29 publication failure; other defaults match the state measured live on 2026-08-25.";
       };
     };
   };
@@ -203,6 +205,14 @@ in
           premortemGate = {
             matcher = "ExitPlanMode";
             hooks = [ { type = "command"; command = hookCmd' "premortem-gate.sh"; timeout = 10; statusMessage = "Premortem gate"; } ];
+          };
+          # Textual Artifact publication is the measured decision point the
+          # notification audit crossed. The hook replays two SQLite-only plans
+          # and recompiles the bytes before allowing publication. Images stay
+          # outside this claim-provenance control.
+          claimcheckArtifact = {
+            matcher = "Artifact";
+            hooks = [ { type = "command"; command = hookCmd' "claimcheck-artifact-gate.sh"; timeout = 30; statusMessage = "Claim provenance"; } ];
           };
           trackEvidence = {
             matcher = "Grep|Glob|Bash";

@@ -4,13 +4,14 @@
 Installs the Claude Code CLI (Nix package + Obsidian MCP cert trust) and, independently, symlinks the shared `~/.claude-config` git repo (skills/agents/commands/CLAUDE.md/engineering-principles.md) into `~/.claude/` so all hosts share one config. Enable via `hwc.home.apps.claude-code.enable`; `shareConfig.enable` can be turned on standalone (e.g. hwc-server, which runs claude from npm).
 
 ## Boundaries
-- ✅ `pkgs.claude-code`, `NODE_EXTRA_CA_CERTS` pointing at the Obsidian Local REST API cert, `mkOutOfStoreSymlink` links for `shareConfig.items`, optional `claude-config-pull` user service+timer (ff-only pull, default 15min), append-only self-heal of the four gate-hook entries into `~/.claude/settings.json` at activation (`shareConfig.wireGateHooks`).
+- ✅ `pkgs.claude-code`, `NODE_EXTRA_CA_CERTS` pointing at the Obsidian Local REST API cert, `mkOutOfStoreSymlink` links for `shareConfig.items`, optional `claude-config-pull` user service+timer (ff-only pull, default 15min), append-only self-heal of the gate-hook entries into `~/.claude/settings.json` at activation (`shareConfig.wireGateHooks`).
 - ❌ Does not manage the claude-config repo contents or clone it; does not touch host-local `~/.claude/{plans,docs,memory}`; never auto-commits/pushes the config repo; never edits or removes existing settings.json entries (heal is append-only — Claude Code stays the file's primary writer).
 
 ## Structure
-- `index.nix` — options (`enable`, `shareConfig.{enable,repoPath,items,autoPull,wireGateHooks}`), package + cert var, symlink generation, auto-pull timer, settings.json gate-hook heal activation (thirteen entries), assertions.
+- `index.nix` — options (`enable`, `shareConfig.{enable,repoPath,items,autoPull,wireGateHooks}`), package + cert var, symlink generation, auto-pull timer, settings.json gate-hook heal activation (fourteen entries), assertions.
 
 ## Changelog
+- 2026-08-29: `claimcheckArtifact` defaults on. Home activation now preserves the `Artifact` PreToolUse gate that replays both claim plans and recompiles textual reports before publication; images remain outside this control. The settings-heal fixture removes the entry and proves the wiring detector fails before exercising the real producer.
 - 2026-08-28: `shareConfig.gateHooks.claimGuard` now defaults false and the live
   Stop entry was removed. Eric explicitly disarmed it after the measured
   2026-08-23 result (19 blocks / 60 transcripts, zero measured true positives).

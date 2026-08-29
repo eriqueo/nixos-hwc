@@ -65,6 +65,7 @@ $wire[0] as $w
 | $enable[0] as $en
 | ensure("PreToolUse";      $w.enforceTools;      $en.enforceTools)
 | ensure("PreToolUse";      $w.premortemGate;     $en.premortemGate)
+| ensure("PreToolUse";      $w.claimcheckArtifact; $en.claimcheckArtifact)
 | ensure("PostToolUse";     $w.trackEvidence;     $en.trackEvidence)
 | ensure("UserPromptSubmit"; $w.turnStamp;        $en.turnStamp)
 | ensure("Stop";            $w.claimGuard;        $en.claimGuard)

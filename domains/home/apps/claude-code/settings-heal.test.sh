@@ -27,8 +27,13 @@ PASS=0; FAIL=0
 CANON="bash /home/eric/.claude-config/hooks/claim-guard.sh"
 
 # The wiring entry the module would append, in its WRAPPED emitted form.
-WIRE=$(jq -n --arg c "bash -n '/home/eric/.claude-config/hooks/claim-guard.sh' 2>/dev/null && bash '/home/eric/.claude-config/hooks/claim-guard.sh' || exit 0" '
-{ claimGuard: { matcher: "*", hooks: [ { type: "command", command: $c, timeout: 15, statusMessage: "Claim guard" } ] } }')
+WIRE=$(jq -n \
+  --arg c "bash -n '/home/eric/.claude-config/hooks/claim-guard.sh' 2>/dev/null && bash '/home/eric/.claude-config/hooks/claim-guard.sh' || exit 0" \
+  --arg a "bash -n '/home/eric/.claude-config/hooks/claimcheck-artifact-gate.sh' 2>/dev/null && bash '/home/eric/.claude-config/hooks/claimcheck-artifact-gate.sh' || exit 0" '
+{
+  claimGuard: { matcher: "*", hooks: [ { type: "command", command: $c, timeout: 15, statusMessage: "Claim guard" } ] },
+  claimcheckArtifact: { matcher: "Artifact", hooks: [ { type: "command", command: $a, timeout: 30, statusMessage: "Claim provenance" } ] }
+}')
 
 # Every other key the filter references must exist, or jq errors on a null entry.
 FULLWIRE=$(jq -n --argjson w "$WIRE" '
@@ -41,7 +46,7 @@ FULLWIRE=$(jq -n --argjson w "$WIRE" '
 # Only claimGuard is enabled, so each case tests exactly one ensure() call.
 ONLY_CLAIM=$(jq -n '
   { claimGuard: true }
-  + ( [ "enforceTools","premortemGate","trackEvidence","turnStamp","nixosPrimer",
+  + ( [ "enforceTools","premortemGate","claimcheckArtifact","trackEvidence","turnStamp","nixosPrimer",
         "pathConventions","charterGate","standingInject","standingSync",
         "ste100Guard","memoryStaleness" ] | map({key:., value:false}) | from_entries )')
 
@@ -80,7 +85,7 @@ run_case "added redirect changes the cmd" append "bash /home/eric/.claude-config
 run_case "2>/dev/null moved to the tail"  append "bash -n '/home/eric/.claude-config/hooks/claim-guard.sh' && bash '/home/eric/.claude-config/hooks/claim-guard.sh' 2>/dev/null || exit 0"
 
 echo "== the disarm flag =="
-DISARM=$(jq -n '[ "claimGuard","enforceTools","premortemGate","trackEvidence","turnStamp","nixosPrimer","pathConventions","charterGate","standingInject","standingSync","ste100Guard","memoryStaleness" ] | map({key:., value:false}) | from_entries')
+DISARM=$(jq -n '[ "claimGuard","enforceTools","premortemGate","claimcheckArtifact","trackEvidence","turnStamp","nixosPrimer","pathConventions","charterGate","standingInject","standingSync","ste100Guard","memoryStaleness" ] | map({key:., value:false}) | from_entries')
 n=$(jq -n '{hooks:{Stop:[]}}' \
     | jq --argjson wire "[$FULLWIRE]" --argjson enable "[$DISARM]" -f "$JQF" \
     | jq '[.hooks.Stop[]?.hooks[]?] | length')
@@ -88,6 +93,21 @@ if [ "$n" = "0" ]; then
   printf '  ok   %-42s disarmed hook is not appended\n' "all flags false"; PASS=$((PASS+1))
 else
   printf '  FAIL %-42s expected 0 appended, got %s\n' "all flags false" "$n"; FAIL=$((FAIL+1))
+fi
+
+echo "== claimcheck Artifact wiring =="
+ONLY_ARTIFACT=$(jq -n '
+  [ "claimGuard","enforceTools","premortemGate","claimcheckArtifact","trackEvidence","turnStamp",
+    "nixosPrimer","pathConventions","charterGate","standingInject","standingSync",
+    "ste100Guard","memoryStaleness" ]
+  | map({key:., value:(. == "claimcheckArtifact")}) | from_entries')
+artifact_entry=$(jq -n '{hooks:{PreToolUse:[]}}' \
+  | jq --argjson wire "[$FULLWIRE]" --argjson enable "[$ONLY_ARTIFACT]" -f "$JQF" \
+  | jq -r '.hooks.PreToolUse[]? | select(.matcher == "Artifact") | .hooks[0].command')
+if [[ "$artifact_entry" == *claimcheck-artifact-gate.sh* ]]; then
+  printf '  ok   %-42s Artifact matcher added\n' "claimcheck enabled"; PASS=$((PASS+1))
+else
+  printf '  FAIL %-42s Artifact matcher missing\n' "claimcheck enabled"; FAIL=$((FAIL+1))
 fi
 n=$(jq -n '{hooks:{Stop:[]}}' \
     | jq --argjson wire "[$FULLWIRE]" --argjson enable "[$ONLY_CLAIM]" -f "$JQF" \
