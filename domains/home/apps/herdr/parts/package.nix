@@ -1,16 +1,13 @@
-{ stdenv, lib, fetchurl, autoPatchelfHook }:
+{ stdenv, lib, fetchurl }:
 
 stdenv.mkDerivation rec {
   pname   = "herdr";
-  version = "0.6.2";
+  version = "0.8.2";
 
   src = fetchurl {
-    url = "https://github.com/ogulcancelik/herdr/releases/download/v${version}/herdr-linux-x86_64";
-    hash = "sha256-nuhReKCg2x/RUkMo6RvDe1fCVADuuk0Ka7LxvrY6AIk=";
+    url = "https://github.com/herdrdev/herdr/releases/download/v${version}/herdr-linux-x86_64";
+    hash = "sha256-l2FQoU1JDJSyQ+ouGn6y37Z/EuNrGC25CTb2co5q7PQ=";
   };
-
-  nativeBuildInputs = [ autoPatchelfHook ];
-  buildInputs       = [ stdenv.cc.cc.lib ];
 
   dontUnpack    = true;
   dontConfigure = true;
