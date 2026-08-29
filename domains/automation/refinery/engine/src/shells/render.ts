@@ -32,6 +32,14 @@ function titleOf(item: Item): string {
     : item.id;
 }
 
+function compactText(value: string, max = 220): string {
+  const oneLine = value.replace(/\s+/g, " ").trim();
+  if (oneLine.length <= max) return oneLine;
+  const cut = oneLine.slice(0, max - 1);
+  const boundary = cut.lastIndexOf(" ");
+  return `${cut.slice(0, boundary > max * 0.7 ? boundary : cut.length).trimEnd()}…`;
+}
+
 const LANES: { status: Item["state"]; label: string }[] = [
   { status: "pending", label: "In Pipeline" },
   { status: "running", label: "Running" },
@@ -137,7 +145,7 @@ const STYLE = `<style>
   .moon{font-size:12px}
   .title{display:block;font-size:13px;color:var(--ink);font-weight:600;overflow-wrap:anywhere}
   a.title:hover{color:var(--acc)}
-  .reason{margin-top:5px;font-size:12px;color:var(--acc)}
+  .reason{margin-top:5px;font-size:12px;color:var(--acc);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
   .asks{margin:4px 0 12px;border-left:3px solid var(--warn);padding:6px 0 6px 12px;background:color-mix(in srgb,var(--warn) 8%,transparent)}
   .asks .askhdr{font-size:12px;font-weight:700;color:var(--warn);text-transform:uppercase;letter-spacing:.04em}
   .asks ol{margin:6px 0 0 18px;padding:0}
@@ -518,7 +526,7 @@ function cardLink(item: Item, ctx: CardCtx): string {
     ${why}
     ${bar}
     ${gateDots(item, ctx)}
-    ${item.parkedReason ? `<div class="reason">${esc(item.parkedReason)}</div>` : ""}
+    ${item.parkedReason ? `<div class="reason">${esc(compactText(item.parkedReason))}</div>` : ""}
     <div class="card-actions"><a class="btn${needsDecision ? " primary" : ""}" href="/project/${esc(item.id)}">${actionLabel}</a>${controls ? `<details class="card-more"><summary>More actions</summary>${controls}</details>` : ""}</div>
   </div>`;
 }

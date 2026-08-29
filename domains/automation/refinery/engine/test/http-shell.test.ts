@@ -1215,6 +1215,15 @@ test("renderBoard routes parked/failed to Decide now and folds passed into Recen
   assert.ok(html.includes(">1d<") || html.includes("1d</span>"), "age badge rendered from history");
 });
 
+test("decision cards preview long agent explanations instead of becoming document walls", () => {
+  const tail = "TAIL_SHOULD_ONLY_EXIST_ON_DETAIL";
+  const reason = `${"This explanation is verbose and machine-oriented. ".repeat(8)}${tail}`;
+  const item: Item = { id: "long", pipeline: "project-ideation", step: "premortem", state: "parked", parkedReason: reason, payload: { title: "Busy CEO decision" }, history: [] };
+  const board = renderBoard([], [item], [FLOW_PROFILE], [FLOW_PROFILE], DOMAINS);
+  assert.ok(board.includes("…") && !board.includes(tail), "card face is a short preview");
+  assert.ok(renderProjectDetail(item, [FLOW_PROFILE], [FLOW_PROFILE], DOMAINS).includes(tail), "full explanation remains on detail");
+});
+
 // ── archive sweep: the exit ramp for passed engine items ──
 
 test("sweepArchive: aged-out passed items archive, fresh ones stay, manual move revives", async () => {
