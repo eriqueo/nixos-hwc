@@ -124,6 +124,12 @@ const SR_VIEW: GauntletView = {
   laneOf: (item) => {
     const p = pl(item);
     if (p.ledgerCurrent !== true) return "history";
+    // The source SR's current lifecycle outranks the historical run result.
+    // Keep failed evidence, but never present closed/deleted work as a live
+    // CEO decision. `unknown` deliberately falls through and stays visible.
+    if (["closed", "missing"].includes(str(p.sourceDisposition))) {
+      return p.ledgerState === "failed" ? "historical-failure" : "history";
+    }
     if (p.ledgerState === "failed") return "needs-review";
     // Pre-contract ledger entries have no decision.json. They are bounded
     // legacy history, not 200+ invented review tasks during rollout.
@@ -137,6 +143,7 @@ const SR_VIEW: GauntletView = {
     "needs-review": "Needs review",
     watch: "Watch",
     none: "No action",
+    "historical-failure": "Historical failure",
     history: "History",
   },
   attentionLanes: ["act", "needs-review"],

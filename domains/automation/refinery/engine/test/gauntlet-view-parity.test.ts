@@ -85,6 +85,43 @@ test("SR mirror: decision JSON and authoritative ledger distinguish current work
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
+test("SR lifecycle: only failures whose source request is still live need review", () => {
+  const root = mkdtempSync(join(tmpdir(), "srg-life-"));
+  try {
+    const runs = {
+      live: "2026-08-29-live",
+      closed: "2026-08-29-closed",
+      deleted: "2026-08-29-deleted",
+    };
+    for (const [id, run] of Object.entries(runs)) {
+      mkdirSync(join(root, "investigations", run), { recursive: true });
+      writeFileSync(join(root, "investigations", run, "sr.json"), JSON.stringify({ id, title: `${id} request` }));
+    }
+    mkdirSync(join(root, "state"), { recursive: true });
+    writeFileSync(join(root, "state", "ledger.json"), JSON.stringify(Object.fromEntries(
+      Object.entries(runs).map(([id, run]) => [id, { run, failed: true }]),
+    )));
+    writeFileSync(join(root, "state", "sr-cache.json"), JSON.stringify({
+      watermark: "2026-08-29T12:00:00Z",
+      srs: { live: { status: "open" }, closed: { status: "closed" } },
+    }));
+
+    const view = gauntletViewByKey("sr")!;
+    const items = gauntletInvestigationProjects(view, root);
+    const bySr = (id: string) => items.find((item) => (item.payload as Record<string, unknown>).srId === id)!;
+    assert.equal(view.laneOf!(bySr("live")), "needs-review");
+    assert.equal(view.laneOf!(bySr("closed")), "historical-failure");
+    assert.equal(view.laneOf!(bySr("deleted")), "historical-failure");
+    const html = renderGauntletBoard(view, items, 5, [], undefined);
+    assert.ok(html.includes("1 investigation still unresolved"), "rendered headline counts only live work");
+    assert.ok(html.includes("Historical failure"), "closed/deleted evidence remains inspectable in history");
+
+    rmSync(join(root, "state", "sr-cache.json"));
+    const unavailable = gauntletInvestigationProjects(view, root);
+    assert.ok(unavailable.every((item) => view.laneOf!(item) === "needs-review"), "unavailable cache fails visible");
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
 test("dx1 board: verdict lanes, empty state, cap form on /dx1", () => {
   const view = gauntletViewByKey("dx1")!;
   const cases: Item[] = [

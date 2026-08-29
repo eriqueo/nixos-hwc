@@ -52,6 +52,15 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+
+- 2026-08-29 (d): **SR failures now follow the source request lifecycle.**
+  Refinery enriches the current SR ledger from the gauntlet's existing
+  `state/sr-cache.json`: failed runs stay inspectable evidence, but closed or
+  deleted/pruned source requests are filed under folded **Historical failure**
+  instead of inflating **Needs review**. A missing or malformed cache fails
+  conservatively—failures remain visible. The production lane resolver and
+  rendered executive headline are pinned for live, closed, missing, and
+  unavailable source states.
 - 2026-08-29 (c): **SR investigations are now an executive decision surface.**
   Refinery consumes the runner's typed decision and authoritative current-run
   ledger state, separating Needs you, Needs review, Watch, No action, and

@@ -43,18 +43,45 @@ export function gauntletInvestigationProjects(view: GauntletView, gauntletDir: s
   // SR's ledger is the authority for which run is current and whether it
   // completed. Old run directories remain useful history, never fresh work.
   if (view.key === "sr") {
+    const cachePath = join(gauntletDir, "state", "sr-cache.json");
+    let sourceRecords: Record<string, unknown> | null = null;
+    let sourceAsOf = "";
+    if (existsSync(cachePath)) {
+      try {
+        const cache = JSON.parse(readFileSync(cachePath, "utf8")) as Record<string, unknown>;
+        if (cache.srs && typeof cache.srs === "object" && !Array.isArray(cache.srs)) {
+          sourceRecords = cache.srs as Record<string, unknown>;
+          sourceAsOf = typeof cache.watermark === "string" ? cache.watermark : "";
+        }
+      } catch { /* unavailable cache must not hide a live failed investigation */ }
+    }
     const ledgerPath = join(gauntletDir, "state", "ledger.json");
     if (existsSync(ledgerPath)) {
       try {
         const ledger = JSON.parse(readFileSync(ledgerPath, "utf8")) as Record<string, unknown>;
-        for (const raw of Object.values(ledger)) {
+        for (const [srId, raw] of Object.entries(ledger)) {
           if (!raw || typeof raw !== "object") continue;
           const entry = raw as Record<string, unknown>;
           if (typeof entry.run !== "string" || !entry.run) continue;
+          const source = sourceRecords?.[srId];
+          const sourceRecord = source && typeof source === "object" && !Array.isArray(source)
+            ? source as Record<string, unknown>
+            : null;
+          const status = typeof sourceRecord?.status === "string" ? sourceRecord.status.toLowerCase() : "";
+          const phase = typeof sourceRecord?.phaseId === "string" ? sourceRecord.phaseId.toLowerCase() : "";
+          const sourceDisposition = sourceRecords === null
+            ? "unknown"
+            : sourceRecord === null
+              ? "missing"
+              : status === "closed" || phase === "closed"
+                ? "closed"
+                : "live";
           extras.set(entry.run, {
             ...(extras.get(entry.run) ?? {}),
             ledgerCurrent: true,
             ledgerState: entry.failed === true ? "failed" : entry.provenance ? "completed" : "legacy",
+            sourceDisposition,
+            ...(sourceAsOf ? { sourceAsOf } : {}),
           });
         }
       } catch { /* malformed ledger leaves every run as bounded history */ }
