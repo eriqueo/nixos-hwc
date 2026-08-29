@@ -447,12 +447,18 @@ in
     esac
   '';
 
-  "power-hub-status" = sh "waybar-power-hub-status" ''
+  "power-status" = sh "hwc-power-status" ''
+    OUTPUT_MODE="''${1:-json}"
+    case "$OUTPUT_MODE" in
+      json|--waybar) ;;
+      *) echo "usage: hwc-power-status [--waybar]" >&2; exit 64 ;;
+    esac
+
     PROFILE=$(powerprofilesctl get 2>/dev/null || echo unknown)
     AC_ONLINE=$(cat /sys/class/power_supply/AC/online 2>/dev/null || echo 0)
-    POWER_UW=$(cat /sys/class/power_supply/BAT0/power_now 2>/dev/null || echo 0)
     ENERGY_UWH=$(cat /sys/class/power_supply/BAT0/energy_now 2>/dev/null || echo 0)
     CAPACITY=$(cat /sys/class/power_supply/BAT0/capacity 2>/dev/null || echo unknown)
+    CHARGE_STOP=$(cat /sys/class/power_supply/BAT0/charge_control_end_threshold 2>/dev/null || echo unknown)
     PLATFORM=$(cat /sys/firmware/acpi/platform_profile 2>/dev/null || echo unknown)
     EPP=$(cat /sys/devices/system/cpu/cpufreq/policy0/energy_performance_preference 2>/dev/null || echo unknown)
     TURBO=$(cat /sys/devices/system/cpu/intel_pstate/no_turbo 2>/dev/null || echo unknown)
@@ -474,8 +480,32 @@ in
       break
     done
 
+    BRIGHTNESS="unknown"
+    if [[ -r /sys/class/backlight/intel_backlight/brightness && -r /sys/class/backlight/intel_backlight/max_brightness ]]; then
+      BRIGHTNESS_NOW=$(cat /sys/class/backlight/intel_backlight/brightness)
+      BRIGHTNESS_MAX=$(cat /sys/class/backlight/intel_backlight/max_brightness)
+      if [[ "$BRIGHTNESS_NOW" =~ ^[0-9]+$ && "$BRIGHTNESS_MAX" =~ ^[1-9][0-9]*$ ]]; then
+        BRIGHTNESS=$(awk -v current="$BRIGHTNESS_NOW" -v maximum="$BRIGHTNESS_MAX" 'BEGIN { printf "%.0f", current * 100 / maximum }')
+      fi
+    fi
+
+    # The battery controller updates power_now in steps. Use a short bounded
+    # median instead of presenting one volatile sample as a reliable estimate.
+    POWER_UW=0
+    if [[ "$SOURCE" == "battery" ]]; then
+      SAMPLES=()
+      for _ in 1 2 3 4 5; do
+        SAMPLE=$(cat /sys/class/power_supply/BAT0/power_now 2>/dev/null || echo 0)
+        [[ "$SAMPLE" =~ ^[0-9]+$ ]] && SAMPLES+=("$SAMPLE")
+        sleep 0.4
+      done
+      if [[ ''${#SAMPLES[@]} -gt 0 ]]; then
+        POWER_UW=$(printf '%s\n' "''${SAMPLES[@]}" | sort -n | awk '{ values[NR]=$1 } END { print values[int((NR+1)/2)] }')
+      fi
+    fi
+
     POWER_W=$(awk -v uw="$POWER_UW" 'BEGIN { printf "%.1f", uw / 1000000 }')
-    if [[ "$POWER_UW" =~ ^[0-9]+$ && "$POWER_UW" -gt 0 ]]; then
+    if [[ "$SOURCE" == "battery" && "$POWER_UW" -gt 0 && "$ENERGY_UWH" =~ ^[0-9]+$ ]]; then
       HOURS=$(awk -v e="$ENERGY_UWH" -v p="$POWER_UW" 'BEGIN { printf "%.1f", e / p }')
     else
       HOURS="unknown"
@@ -488,9 +518,21 @@ in
       *) ICON="Pwr?"; CLASS="unknown" ;;
     esac
 
-    TOOLTIP="Power: $PROFILE ($SOURCE)\nDraw: $POWER_W W | $CAPACITY% | $HOURS h\nPlatform: $PLATFORM | EPP: $EPP | no_turbo: $TURBO\nLid close: $LID_POLICY\nWrapped launches: $GPU_POLICY\nNVIDIA runtime: $NVIDIA_STATE"
-    jq -cn --arg text "$ICON" --arg class "$CLASS" --arg tooltip "$TOOLTIP" \
-      '{text:$text,class:$class,tooltip:$tooltip}'
+    STATUS=$(jq -cn \
+      --arg source "$SOURCE" --arg profile "$PROFILE" --arg capacity "$CAPACITY" \
+      --arg powerW "$POWER_W" --arg runtimeHours "$HOURS" --arg brightness "$BRIGHTNESS" \
+      --arg chargeStop "$CHARGE_STOP" --arg platform "$PLATFORM" --arg epp "$EPP" \
+      --arg turbo "$TURBO" --arg lidPolicy "$LID_POLICY" --arg gpuPolicy "$GPU_POLICY" \
+      --arg nvidiaState "$NVIDIA_STATE" \
+      '{schemaVersion:1,source:$source,profile:$profile,capacityPct:$capacity,powerW:$powerW,runtimeHours:$runtimeHours,brightnessPct:$brightness,chargeStopPct:$chargeStop,platformProfile:$platform,energyPreference:$epp,noTurbo:$turbo,lidPolicy:$lidPolicy,gpuLaunchPolicy:$gpuPolicy,nvidiaRuntimeState:$nvidiaState}')
+
+    if [[ "$OUTPUT_MODE" == "--waybar" ]]; then
+      TOOLTIP="power: $PROFILE ($SOURCE)\ndraw: $POWER_W W · $CAPACITY% · $HOURS h\nbrightness: $BRIGHTNESS% · charge ceiling: $CHARGE_STOP%\nplatform: $PLATFORM · epp: $EPP · no_turbo: $TURBO\nlid close: $LID_POLICY\nwrapped launches: $GPU_POLICY\nnvidia runtime: $NVIDIA_STATE"
+      jq -cn --arg text "$ICON" --arg class "$CLASS" --arg tooltip "$TOOLTIP" \
+        '{text:$text,class:$class,tooltip:$tooltip}'
+    else
+      jq . <<<"$STATUS"
+    fi
   '';
 
   "power-hub-menu" = sh "waybar-power-hub-menu" ''

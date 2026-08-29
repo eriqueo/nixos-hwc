@@ -99,7 +99,7 @@ let
   powerHubWidget = lib.optionalAttrs powerHubEnabled {
     # Aggregates authoritative status while actions remain owned by TLP, the
     # lid policy, brightnessctl, and the GPU-launch capability respectively.
-    "custom/power-hub" = { format = "{}"; exec = "waybar-power-hub-status"; return-type = "json"; interval = 5; on-click = "waybar-power-hub-menu"; };
+    "custom/power-hub" = { format = "{}"; exec = "hwc-power-status --waybar"; return-type = "json"; interval = 10; on-click = "waybar-power-hub-menu"; };
   };
 
   commonWidgetsBase = ollamaWidget // dtWidget // gsrWidget // powerHubWidget // {
