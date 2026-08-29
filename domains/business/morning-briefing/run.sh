@@ -1042,9 +1042,14 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
     + "</div></div></div>"
   ' "${OUTPUT_DIR}/briefing.json" 2>>"${LOG_FILE}") || EMAIL_HTML=""
   if [ -n "${EMAIL_BODY}" ]; then
-    ALERT_COUNT=$(jq -r '(.alerts // []) | length' "${OUTPUT_DIR}/briefing.json" 2>/dev/null || echo "?")
+    NEEDS_COUNT=$(jq -r '[((.sections.today.items // []) | length), 5] | min' "${OUTPUT_DIR}/briefing.json" 2>/dev/null || echo 0)
+    ALERT_COUNT=$(jq -r '(.alerts // []) | length' "${OUTPUT_DIR}/briefing.json" 2>/dev/null || echo 0)
     SUBJECT="${SLOT} Briefing $(date +%Y-%m-%d)"
-    [ "${ALERT_COUNT}" != "0" ] && SUBJECT="${SUBJECT} — ${ALERT_COUNT} alert(s)"
+    if [ "${NEEDS_COUNT}" -gt 0 ] 2>/dev/null; then
+      SUBJECT="${SUBJECT} — ${NEEDS_COUNT} need you"
+    elif [ "${ALERT_COUNT}" -gt 0 ] 2>/dev/null; then
+      SUBJECT="${SUBJECT} — ${ALERT_COUNT} to watch"
+    fi
     # From office@, NOT eric@: self-sent mail (eric→eric) gets Proton's
     # sent+auto-archive treatment and never shows in the Inbox (found 2026-07-06,
     # first live run). office@ is an alias on the same bridge; lands in Inbox.
