@@ -63,6 +63,10 @@ switching providers does not require changing runner code.
 
 ## Changelog
 
+- **2026-08-29** — The consolidated morning-review notification now uses an
+  outcome-first title, plain-English meaning, explicit recommendation, and an
+  Explore link to Refinery’s Nightly Builds view. Raw counters remain evidence.
+
 - **2026-08-28 (c)** — The timer and run-now service now execute an immutable
   Nix-store runner closure containing `run.sh`, both prompts, and
   `send-report.sh`. A checkout changing branches or being temporarily dirty can

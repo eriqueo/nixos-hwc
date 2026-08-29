@@ -66,6 +66,9 @@
   .today-btn{font:inherit;font-size:11px;padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface2,rgba(255,255,255,.05));color:inherit;cursor:pointer}
   .today-btn:hover{border-color:var(--accent,#d8a657)}
   .today-btn:disabled{opacity:.4;cursor:default}
+  .today-item.extra{display:none}
+  .today.expanded .today-item.extra{display:flex}
+  .today-more{display:block;width:100%;padding:10px 16px;border:0;border-top:1px solid var(--border);background:transparent;color:var(--amber);font:600 12px var(--sans);text-align:left;cursor:pointer}
   .today-btn.primary{border-color:var(--accent,#d8a657)}
   .today-done{font-size:11px;opacity:.6;padding:4px 0}
   .alert{font-family:var(--mono);font-size:13px;padding:10px 12px;border-left:3px solid;border-radius:2px}
@@ -978,13 +981,14 @@ async function todayVerb(action,id){
 }
 function makeToday(t){
   const box=$('div',{class:'today'});
-  const spill=(t.spillover||0)>0?$('span',{class:'today-spill'},`+${t.spillover} waiting`):null;
-  const hdr=$('div',{class:'today-hdr'},$('span',null,`Today — do these (${(t.items||[]).length})`));
+  const items=t.items||[],initial=5,hidden=Math.max(0,items.length-initial),waiting=hidden+(t.spillover||0);
+  const spill=waiting>0?$('span',{class:'today-spill'},`+${waiting} available to explore`):null;
+  const hdr=$('div',{class:'today-hdr'},$('span',null,`Needs you — ${Math.min(items.length,initial)} priority item${Math.min(items.length,initial)===1?'':'s'}`));
   if(spill)hdr.appendChild(spill);
   box.appendChild(hdr);
-  (t.items||[]).forEach(it=>{
+  items.forEach((it,index)=>{
     const verbs=$('div',{class:'today-verbs'});
-    const row=$('div',{class:'today-item'},
+    const row=$('div',{class:`today-item${index>=initial?' extra':''}`},
       $('div',{class:`today-sev sev-${it.severity==='red'?'red':'amber'}`}),
       $('div',{class:'today-body'},
         $('div',{class:'today-title'},it.title),
@@ -997,8 +1001,8 @@ function makeToday(t){
         try{await fn();setDone(label)}catch(e){verbs.querySelectorAll('.today-btn').forEach(x=>x.disabled=false);
           verbs.insertBefore($('span',{class:'today-done'},'failed — retry'),verbs.firstChild)}};
       return b};
-    if(it.url)verbs.appendChild((()=>{const a=$('a',{class:'today-btn primary',href:it.url,target:'_blank'},'open →');return a})());
-    if(it.report)verbs.appendChild($('a',{class:'today-btn primary',href:it.report,target:'_blank'},'report →'));
+    if(it.url)verbs.appendChild((()=>{const a=$('a',{class:'today-btn primary',href:it.url,target:'_blank'},'explore →');return a})());
+    if(it.report)verbs.appendChild($('a',{class:'today-btn primary',href:it.report,target:'_blank'},'explore report →'));
     (it.verbs||[]).forEach(v=>{
       if(v==='complete')verbs.appendChild(btn('✓ done',()=>todayVerb('complete',it.id),'primary'));
       if(v==='agent')verbs.appendChild(btn('⚡ agent',()=>todayVerb('agent',it.id)));
@@ -1006,6 +1010,8 @@ function makeToday(t){
     });
     box.appendChild(row);
   });
+  if(hidden>0){const more=$('button',{class:'today-more'},`Explore ${hidden} more item${hidden===1?'':'s'} ↓`);
+    more.onclick=()=>{const open=box.classList.toggle('expanded');more.textContent=open?'Show only priorities ↑':`Explore ${hidden} more item${hidden===1?'':'s'} ↓`};box.appendChild(more)}
   return box;
 }
 
@@ -1026,8 +1032,10 @@ function render(data,liveThreads){
     $('div',{class:'hdr-updated',html:`updated <span class="${ago.cls}">${ago.text}</span>`})
   ));
 
-  // Alerts (full-width above grid) — each links to the surface it reports on,
-  // same routing as the email render (run.sh aurl()).
+  // Needs-you comes first. Alerts represented by a visible action source are
+  // not repeated; unmatched transition signals remain in the watchlist.
+  if(s.today&&(s.today.items||[]).length){app.appendChild(makeToday(s.today))}
+
   const ALERT_URL={ops:'https://grafana.hwc.iheartwoodcraft.com/d/service-health',
     leads:'https://app.jobtread.com',overdue:'https://app.jobtread.com',jobs:'https://app.jobtread.com',
     website:'https://stats.iheartwoodcraft.com',
@@ -1035,9 +1043,13 @@ function render(data,liveThreads){
     config_drift:'https://github.com/eriqueo/nixos-hwc',
     refinery:'https://refinery.hwc.iheartwoodcraft.com',
     research:'https://research-scout.hwc.iheartwoodcraft.com'};
-  if(data.alerts&&data.alerts.length){
+  const SOURCE_SECTION={invoice:'overdue',lead:'leads',task:'tasks',system:'system',refinery:'refinery',nightly:'nightly-builds',mail:'mail'};
+  const represented=new Set(((s.today&&s.today.items)||[]).map(it=>SOURCE_SECTION[it.source]).filter(Boolean));
+  const watchlist=(data.alerts||[]).filter(al=>!represented.has(al.section));
+  if(watchlist.length){
     const a=$('div',{class:'alerts'});
-    data.alerts.forEach(al=>{
+    a.appendChild($('div',{class:'sec-hdr'},$('span',null,'Watchlist')));
+    watchlist.forEach(al=>{
       const el=$('div',{class:`alert alert-${al.level}`},al.message);
       const u=ALERT_URL[al.section];
       if(u){el.appendChild(document.createTextNode(' '));el.appendChild($('a',{class:'lnk',href:u,target:'_blank'},'view →'))}
@@ -1045,9 +1057,6 @@ function render(data,liveThreads){
     });
     app.appendChild(a);
   }
-
-  // TODAY queue (full-width, above the grid — the "do these" list)
-  if(s.today&&(s.today.items||[]).length){app.appendChild(makeToday(s.today))}
 
   // Dashboard grid
   const grid=$('div',{class:'dashboard-grid'});

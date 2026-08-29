@@ -21,8 +21,8 @@ index.nix              # NixOS module: systemd service + timer
 run.sh                 # 5-step pipeline (see below)
 gather-live.mjs        # Step 1b: JobTread jobs/leads/overdue + CalDAV tasks via
                        #   the local MCP gateway (:6200/mcp, StreamableHTTP)
-gather-today.mjs       # Step 2c: hwc_today board + case-ledger delta →
-                       #   sections.today (items/spillover/changes)
+gather-today.mjs       # Step 2c: expanded hwc_today board + case-ledger delta →
+                       #   sections.today (bounded view, explorable depth, changes)
 gather-refinery.mjs    # Step 1c: refinery item store (local .md read) →
                        #   sections.refinery (action/active/hopper buckets)
 gather-research.mjs    # Step 1c: research-scout review lane over loopback REST
@@ -153,6 +153,11 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 **Mail triage empty**: If notmuch returns 0 threads, an empty triage is written (not an error). Check `notmuch count tag:inbox AND tag:unread` to verify mail state. Mail sync issues: check `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+
+- **2026-08-29** — **CEO information hierarchy.** Dashboard and email lead with
+  a bounded `Needs you` list, keep deeper queue items behind an explicit Explore
+  route, and suppress an alert only when a visible Today item already represents
+  that source. Unmatched transition signals remain in a linked Watchlist.
 
 - **2026-08-26** — **Auth failure no longer masquerades as output.** `claude -p`
   writes its 401 to stdout and exits 0. In `run-dispatch.sh` that took the

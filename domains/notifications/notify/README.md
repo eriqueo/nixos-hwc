@@ -79,7 +79,20 @@ notify/
                 ├── notification.ts              # Lenient input + canonical Zod.
                 ├── runtime-config.ts            # channels + routes JSON contract.
                 └── alertmanager.ts              # AM webhook v4 schema.
+            └── __tests__/
+                └── executive-contract.test.ts   # Executive parsing + channel wiring.
 ```
+
+## Executive information contract
+
+`NotificationInput.executive` is the additive typed implementation of Engineering
+Principle 22. New human-facing operational messages supply `kind`, `meaning`,
+`recommendation`, and one typed `explore` route (`url`, `file`, `conversation`,
+`command`, or `record`). The title remains the outcome.
+
+Discord and SMTP render those facts in the same order. Discord demotes source,
+topic, and tags to its footer. Legacy title/body payloads remain accepted during
+the expand-first migration so producers can move independently.
 
 ## Runtime
 
@@ -292,6 +305,10 @@ Hardening: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome=read-only`, `
 | 1.7 | ✅ deployed   | `hwc-notify` CLI + `hwc_notify` MCP tool. |
 
 ## Changelog
+
+- **2026-08-29** — Added the executive information payload and wired it through
+  Discord and SMTP. Contract tests pin legacy compatibility, exploration-target
+  validation, and production channel rendering.
 
 - **2026-07-29**: Comment-only — principle citations in `src/config.ts`, `src/core/errors.ts`, `src/schemas/notification.ts` updated from the retired `creating-systems.md §3/§7/§4` split-doc sections to rev 3 numbers in the single canonical doc (Principle 16 Late Binding, 19 Errors as Values, 2 Parse Don't Validate). No behavior change.
 - **2026-07-07 (notification unification, M1)**: SMTP channel `smtp-eric` → `smtp-office` — `login`/`from` = `office@iheartwoodcraft.com`, `to` = `eric@` (unchanged), same `proton-bridge-password` secret (Proton Bridge shares one password across account addresses). Fixes the `from==to` self-send that made Proton auto-archive criticals; a live `priority=1` now lands in Eric's **Inbox**, verified `proton/inbox/new/` (not Archive). `requireTls` `true` → `false` to match the only proven-working Bridge path (the `proton-office` msmtp account); the prior `true` had never delivered (0 `priority=1` dispatches in audit history). Added explicit `parts/routes.nix` rules (`media`, `voice-log`, `events`, `jt-estimate` → `#hwc-alerts`) so the n8n workflows migrating off Slack route deliberately instead of falling through to `defaultChannels`. First half of retiring the n8n `sys:router:notify` + Slack/gotify eradication; `/notify` keeps its native `NotificationInputSchema` as the parse boundary (taxonomy stays a docs-level naming convention, not code — no live caller emitted it).

@@ -11,6 +11,21 @@
 /** Priority levels — same numeric scheme as Alertmanager / iOS push. */
 export type Priority = 1 | 2 | 3 | 4 | 5;
 
+export type ExploreTarget =
+  | { readonly kind: "url"; readonly label: string; readonly target: string }
+  | { readonly kind: "file"; readonly label: string; readonly target: string }
+  | { readonly kind: "conversation"; readonly label: string; readonly target: string }
+  | { readonly kind: "command"; readonly label: string; readonly target: string }
+  | { readonly kind: "record"; readonly label: string; readonly target: string };
+
+/** Outcome-first human presentation. Optional during expand-first migration. */
+export interface ExecutiveBrief {
+  readonly kind: "action" | "decision" | "watch" | "handled" | "fyi";
+  readonly meaning: string;
+  readonly recommendation: string;
+  readonly explore: ExploreTarget;
+}
+
 /**
  * A Notification is the atomic unit the dispatcher routes and delivers.
  * Every inbound message — HTTP, CLI, Alertmanager webhook — is parsed
@@ -23,6 +38,8 @@ export interface Notification {
   readonly title: string;
   /** Body text. Markdown-ish; channel adapters render appropriately. */
   readonly body: string;
+  /** Human decision surface; adapters render this before routing metadata. */
+  readonly executive?: ExecutiveBrief;
   /** 1 = critical (red) … 5 = info (green). */
   readonly priority: Priority;
   /** Routing topic — "monitoring", "leads", "backup", etc. Free-form slug. */

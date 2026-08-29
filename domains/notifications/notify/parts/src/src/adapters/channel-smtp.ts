@@ -41,9 +41,16 @@ export interface SmtpChannelOpts {
 }
 
 /** Render a Notification as a plain-text email body. */
-function renderBody(notif: Notification): string {
+export function renderBody(notif: Notification): string {
   const lines: string[] = [];
-  lines.push(notif.body || "(no body)");
+  if (notif.executive) {
+    lines.push(notif.executive.meaning);
+    lines.push("");
+    lines.push(`Recommendation: ${notif.executive.recommendation}`);
+    lines.push(`Explore: ${notif.executive.explore.label} — ${notif.executive.explore.target}`);
+  } else {
+    lines.push(notif.body || "(no body)");
+  }
   lines.push("");
   lines.push("—");
   lines.push(`Priority:   ${PRIORITY_LABEL[notif.priority]}`);

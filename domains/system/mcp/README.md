@@ -495,6 +495,10 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-08-29** — `hwc_today action=board` accepts an optional validated
+  `limit` (1–100). The default workbench behavior is unchanged; Morning Briefing
+  uses expanded depth to support progressive disclosure and a real Explore path.
+
 - **2026-08-28**: Nightly review controls now expose refinery's durable
   `Dead` and `Already merged` cases and can requeue them by their exact source
   card filename. Corrected two production identity assumptions at the same

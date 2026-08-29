@@ -677,22 +677,31 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
   SLOT="Morning"
   if [ "${HOUR_NOW#0}" -ge 15 ] 2>/dev/null; then SLOT="Evening"
   elif [ "${HOUR_NOW#0}" -ge 11 ] 2>/dev/null; then SLOT="Midday"; fi
-  EMAIL_BODY=$(jq -r '
+  EMAIL_BODY=$(jq -r --arg dash "https://briefing.hwc.iheartwoodcraft.com" '
     def sec(x): "\n== " + x + " ==\n";
+    ((.sections.today.items // []) | map(
+      if .source == "invoice" then "overdue" elif .source == "lead" then "leads"
+      elif .source == "task" then "tasks" elif .source == "system" then "system"
+      elif .source == "refinery" then "refinery" elif .source == "mail" then "mail"
+      else .source end) | unique) as $represented |
+    ((.alerts // []) | map(select(.section as $section | ($represented | index($section)) == null))) as $watch |
     "Morning Briefing — " + (.generated_at // "unknown")
     + (if ((.sections.today.items // []) | length) > 0 then
-        sec("TODAY — do these (" + ((.sections.today.items | length) | tostring)
-            + (if (.sections.today.spillover // 0) > 0 then " +" + ((.sections.today.spillover) | tostring) + " waiting" else "" end) + ")")
-        + ([.sections.today.items[] |
+        sec("NEEDS YOU — top " + ([.sections.today.items[:5][]] | length | tostring))
+        + ([.sections.today.items[:5][] |
             (if .severity == "red" then "[!] " else "[ ] " end)
             + .title + " — " + .why + " (~" + ((.effort_min // 10) | tostring) + " min)"
+            + (if .url then "\n      Explore: " + .url else "" end)
             + (if .report then "\n      report ready: " + .report else "" end)]
            | join("\n"))
+        + (if ((.sections.today.items | length) - 5 + (.sections.today.spillover // 0)) > 0 then
+            "\n\nExplore " + (((.sections.today.items | length) - 5 + (.sections.today.spillover // 0)) | tostring)
+            + " more: " + $dash else "" end)
       else "" end)
-    + (if (.alerts // []) | length > 0 then
-        sec("ALERTS (" + ((.alerts | length) | tostring) + ")")
-        + ([.alerts[] | "[" + .level + "] " + .section + ": " + .message] | join("\n"))
-      else "\n\nNo alerts. All green." end)
+    + (if ($watch | length) > 0 then
+        sec("WATCHLIST (" + (($watch | length) | tostring) + ")")
+        + ([$watch[] | "[" + .level + "] " + .message + "\n      Explore: " + $dash] | join("\n"))
+      else "\n\nNo additional watch items." end)
     + (if .sections.config_drift then
         sec("CONFIG DRIFT")
         + "reboot pending: " + ((.sections.config_drift.reboot_pending // false) | tostring)
@@ -861,6 +870,12 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
       else $dash end;
 
     .sections as $s |
+    (($s.today.items // []) | map(
+      if .source == "invoice" then "overdue" elif .source == "lead" then "leads"
+      elif .source == "task" then "tasks" elif .source == "system" then "system"
+      elif .source == "refinery" then "refinery" elif .source == "mail" then "mail"
+      else .source end) | unique) as $represented |
+    ((.alerts // []) | map(select(.section as $section | ($represented | index($section)) == null))) as $watch |
     "<div style=\"margin:0;padding:18px 10px;background:#1d2021\">"
     + "<div style=\"max-width:640px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif\">"
 
@@ -869,14 +884,24 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
     + "<div style=\"font-size:22px;font-weight:700;color:#cf995f;margin-top:4px\">" + ($slot|h) + " &middot; " + ((.generated_at // "" | split("T")[0])|h) + "</div>"
     + "<div style=\"font-size:13px;color:#a7aaad;margin-top:4px\">" + link($dash; "open dashboard") + "</div></div>"
 
-    + (if (.alerts // []) | length > 0 then
-        (.alerts | map(
+    + (if ($s.today.items // []) | length > 0 then
+        card("Needs you &middot; top " + (([$s.today.items[:5][]] | length | tostring)|h); $dash; "explore all";
+          ($s.today.items[:5] | map(
+            item((if .severity == "red" then red("!") else meta("&middot;") end) + " "
+              + (if .url then link(.url; ((.title // "item")|h)) else ((.title // "item")|h) end)
+              + "<br><span style=\"color:#a7aaad;font-size:13px;padding-left:14px\">" + ((.why // "")|h) + "</span>")) | join(""))
+          + (if (($s.today.items | length) - 5 + ($s.today.spillover // 0)) > 0 then
+              item(link($dash; "Explore " + ((($s.today.items | length) - 5 + ($s.today.spillover // 0))|tostring) + " more &rarr;")) else "" end))
+      else card("Needs you"; $dash; "dashboard"; item("No action needed.")) end)
+
+    + (if ($watch | length) > 0 then
+        ($watch | map(
           (if .level == "critical" then ["#2d2426", "#bf616a", "#d08080"] else ["#2d2a24", "#cf995f", "#fcbb74"] end) as $c |
           "<div style=\"background:" + $c[0] + ";border:1px solid " + $c[1] + ";color:" + $c[2] + ";border-radius:6px;padding:9px 12px;margin:0 0 8px;font-size:13.5px;line-height:1.4\">"
           + "<strong>" + ((.section // "")|h) + "</strong> &middot; " + ((.message // "")|h)
           + " &nbsp;" + link(aurl(.section // ""); "view &rarr;")
           + "</div>") | join(""))
-      else card("Alerts"; ""; ""; item("No alerts. All green.")) end)
+      else "" end)
 
     + (if ($s.calendar.events // []) | length > 0 then
         card("Calendar"; ""; "";
