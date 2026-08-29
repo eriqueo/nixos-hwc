@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, renameSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, hasActiveStep, readProjectMode, setProjectMode, setCardPr, NB_PREFIX } from "../src/sources/nightly-cards.js";
+import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, hasActiveStep, readProjectMode, setProjectMode, setCardPr, requeueReviewCard, NB_PREFIX } from "../src/sources/nightly-cards.js";
 
 function vault(): { root: string; cleanup: () => void } {
   const root = mkdtempSync(join(tmpdir(), "refinery-nb-"));
@@ -147,6 +147,35 @@ test("setCardPr writes/updates a card's pr: frontmatter and is idempotent", () =
     assert.equal(setCardPr(v.root, "estimator", "99-nope.md", "u"), false);
     assert.equal(setCardPr(v.root, "_finished", "01-a.md", "u"), false);
     assert.equal(setCardPr(v.root, "estimator", "../01-a.md", "u"), false);
+  } finally {
+    v.cleanup();
+  }
+});
+
+test("requeueReviewCard targets the exact persisted filename and supports legacy records", () => {
+  const v = vault();
+  try {
+    const goal = join(v.root, "_inbox/nightly_builds/estimator");
+    writeFileSync(join(goal, "04_live_name.md"), "---\ntitle: live\nstatus: done\n---\nbody");
+    assert.equal(requeueReviewCard(v.root, "estimator", "live_name", "04_live_name.md"), true);
+    assert.match(readFileSync(join(goal, "04_live_name.md"), "utf8"), /^status: queued$/m);
+    assert.equal(requeueReviewCard(v.root, "estimator", "a"), true, "legacy record resolves numbered card by slug");
+    assert.match(readFileSync(join(goal, "01-a.md"), "utf8"), /^status: queued$/m);
+    assert.equal(requeueReviewCard(v.root, "estimator", "a", "../01-a.md"), false, "path traversal rejected");
+  } finally {
+    v.cleanup();
+  }
+});
+
+test("requeueReviewCard reopens a graduated project before queueing its reviewed card", () => {
+  const v = vault();
+  try {
+    const active = join(v.root, "_inbox/nightly_builds/estimator");
+    const finished = join(v.root, "_inbox/nightly_builds/_finished/estimator");
+    mkdirSync(join(v.root, "_inbox/nightly_builds/_finished"), { recursive: true });
+    renameSync(active, finished);
+    assert.equal(requeueReviewCard(v.root, "estimator", "a", "01-a.md"), true);
+    assert.match(readFileSync(join(active, "01-a.md"), "utf8"), /^status: queued$/m);
   } finally {
     v.cleanup();
   }
