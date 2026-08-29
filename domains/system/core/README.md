@@ -15,7 +15,7 @@ core/
 │   └── parts/
 │       └── config.nix
 ├── login/           # greetd + tuigreet, hyprStart session wrapper
-│   └── index.nix    # (hwc.system.core.session.*)
+│   └── index.nix    # session policy, guarded compositor DRM preference
 ├── coredump.nix     # systemd-coredump retention caps
 ├── nix-build-limits.nix # nix-daemon MemoryHigh/MemoryMax cgroup ceiling
 ├── index.nix        # Core aggregator
@@ -23,6 +23,7 @@ core/
 ```
 
 ## Changelog
+- 2026-08-28: `login/index.nix` adds an opt-in compositor DRM preference that resolves a real `cardN` node from stable PCI identity at login, verifies vendor/connector/character-device/uniqueness invariants, and leaves Aquamarine's normal enumeration untouched on resolution failure. A pinned compositor that exits nonzero during the bounded startup window retries exactly once without the preference. `hwc-laptop` records the Intel PCI/vendor identity but leaves the feature disabled until a controlled logout/TTY acceptance test; no running session is changed by this commit.
 - 2026-08-28: `login/index.nix` documentation now describes `gpu-launch`'s boot-scoped user-runtime policy. The Intel-only Aquamarine restriction remains deliberately unconfigured: the prior by-path value failed graphical login and the dynamically resolved real DRM node still requires the documented bare-TTY test before it may enter greetd.
 - 2026-02-28: Added README for Charter Law 12 compliance
 - 2026-03-12: Inlined options.nix into index.nix for identity, polkit, session, shell; removed separate options.nix files

@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.hwc.system.core.session;
@@ -23,9 +28,17 @@ in
 
       extraRules = lib.mkOption {
         type = with lib.types; listOf attrs;
-        default = [];
+        default = [ ];
         example = [
-          { users = [ "eric" ]; commands = [ { command = "/run/current-system/sw/bin/podman"; options = [ "NOPASSWD" ]; } ]; }
+          {
+            users = [ "eric" ];
+            commands = [
+              {
+                command = "/run/current-system/sw/bin/podman";
+                options = [ "NOPASSWD" ];
+              }
+            ];
+          }
         ];
         description = "Additional sudo rules for specific commands without password.";
       };
@@ -53,6 +66,28 @@ in
         default = true;
         description = "Always keep a getty on tty2 so Ctrl+Alt+F2 gives a text login (lockout prevention).";
       };
+
+      preferredDrmDevice = {
+        enable = lib.mkEnableOption "runtime-resolved compositor DRM device preference";
+
+        pciAddress = lib.mkOption {
+          type = lib.types.strMatching "[0-9a-fA-F]{4}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}\\.[0-7]";
+          default = "0000:00:02.0";
+          description = "PCI address whose connected DRM card should be preferred by Aquamarine.";
+        };
+
+        vendorId = lib.mkOption {
+          type = lib.types.strMatching "0x[0-9a-fA-F]{4}";
+          default = "0x8086";
+          description = "Expected PCI vendor ID; prevents a PCI topology change from selecting the wrong GPU.";
+        };
+
+        fallbackWindowSeconds = lib.mkOption {
+          type = lib.types.ints.between 1 60;
+          default = 15;
+          description = "Retry unpinned once when a pinned compositor exits nonzero inside this startup window.";
+        };
+      };
     };
 
     # --- Linger Sub-Module ---
@@ -61,7 +96,7 @@ in
 
       users = lib.mkOption {
         type = with lib.types; listOf str;
-        default = [];
+        default = [ ];
         example = [ "eric" ];
         description = "List of users to enable linger for.";
       };
@@ -92,6 +127,43 @@ in
 
       settings =
         let
+          resolveDrmDevice = pkgs.writeShellScript "resolve-preferred-drm-device" ''
+            set -eu
+
+            sys_root="''${1:-/sys}"
+            dev_root="''${2:-/dev}"
+            pci_address="''${3:-${cfg.loginManager.preferredDrmDevice.pciAddress}}"
+            vendor_id="''${4:-${cfg.loginManager.preferredDrmDevice.vendorId}}"
+            candidates=""
+            count=0
+
+            for card in "$sys_root"/class/drm/card[0-9]*; do
+              [ -d "$card" ] || continue
+              card_name=$(${pkgs.coreutils}/bin/basename "$card")
+              device_path=$(${pkgs.coreutils}/bin/readlink -f "$card/device") || continue
+              [ "$(${pkgs.coreutils}/bin/basename "$device_path")" = "$pci_address" ] || continue
+              [ -r "$card/device/vendor" ] || continue
+              [ "$(${pkgs.coreutils}/bin/tr '[:upper:]' '[:lower:]' < "$card/device/vendor")" = "$(printf '%s' "$vendor_id" | ${pkgs.coreutils}/bin/tr '[:upper:]' '[:lower:]')" ] || continue
+              [ -c "$dev_root/dri/$card_name" ] || continue
+
+              connector_count=0
+              for connector in "$sys_root"/class/drm/"$card_name"-*; do
+                [ -e "$connector" ] && connector_count=$((connector_count + 1))
+              done
+              [ "$connector_count" -gt 0 ] || continue
+
+              candidates="$dev_root/dri/$card_name"
+              count=$((count + 1))
+            done
+
+            if [ "$count" -ne 1 ]; then
+              echo "HWC_POWER_DRM_RESOLUTION_FAILED code=drm_candidate_count count=$count pci=$pci_address vendor=$vendor_id" >&2
+              exit 65
+            fi
+
+            printf '%s\n' "$candidates"
+          '';
+
           hyprStart = pkgs.writeShellScript "start-hyprland-session" ''
             export XDG_SESSION_TYPE=wayland
             export XDG_CURRENT_DESKTOP=Hyprland
@@ -99,34 +171,12 @@ in
             export WLR_NO_HARDWARE_CURSORS=1
             export HYPRLAND_LOG_WLR=1
 
-            # DO NOT set AQ_DRM_DEVICES here without testing it first from a TTY.
-            # Tried 2026-08-21 and reverted the same hour — it does not boot:
-            #
-            #   export AQ_DRM_DEVICES=/dev/dri/by-path/pci-0000:00:02.0-card
-            #
-            # Hyprland 0.56 aborted in CCompositor::initServer (throwError →
-            # SIGABRT), twice, and greetd gave up with "greeter exited without
-            # creating a session". Aquamarine rejects the value outright rather
-            # than falling back to enumeration, so a bad value is not degraded
-            # behaviour, it is an unbootable desktop. The by-path form is the
-            # prime suspect (a symlink, not a real device node) but that was
-            # never confirmed — /dev/dri/card1 is untried.
-            #
-            # The underlying problem is real and still unfixed: aquamarine
-            # enumerates every DRM card, so Hyprland opens the NVIDIA node and
-            # holds it for the life of the session. That card has no connectors
-            # here (eDP-1 and every DP-*/HDMI-A-1 hang off the i915 card), so it
-            # renders nothing and only pins the dGPU awake at ~11W — about 40%
-            # of a 27.8W idle draw. runtime_suspended_time read 0 against 5.5
-            # days of uptime, despite DynamicPowerManagement=2, power/control=
-            # auto, and hardware.nvidia.powerManagement.finegrained = true all
-            # being correct. The power config is not the fault; the compositor's
-            # device enumeration is.
-            #
-            # To retry safely: log in on a bare TTY, stop greetd, and run
-            # `AQ_DRM_DEVICES=<candidate> Hyprland` by hand. A failure there
-            # costs a shell prompt, not the session. Only land a value here once
-            # it has actually started a compositor.
+            # Aquamarine accepts colon-delimited DRM paths and canonicalizes
+            # symlinks, but a prior static by-path preference still aborted
+            # Hyprland 0.56 during startup. Resolve the real card node from a
+            # stable PCI identity at login, and only export it after verifying
+            # vendor, connector presence, a character device, and uniqueness.
+            # Resolution failure deliberately leaves normal enumeration intact.
 
             # NVIDIA PRIME env (__NV_PRIME_RENDER_OFFLOAD, __GLX_VENDOR_LIBRARY_NAME,
             # __VK_LAYER_NV_optimus, LIBVA_DRIVER_NAME=nvidia) is intentionally NOT
@@ -161,7 +211,29 @@ in
             # Secret Service and portals resolve. The user bus exists pre-login
             # via user lingering; the fallback covers an unset XDG_RUNTIME_DIR.
             export DBUS_SESSION_BUS_ADDRESS="unix:path=''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}/bus"
-            exec ${pkgs.hyprland}/bin/start-hyprland
+
+            drm_pinned=0
+            ${lib.optionalString cfg.loginManager.preferredDrmDevice.enable ''
+              if resolved_drm=$(${resolveDrmDevice}); then
+                export AQ_DRM_DEVICES="$resolved_drm"
+                drm_pinned=1
+              else
+                echo "HWC_POWER_DRM_FALLBACK code=resolution_failed action=normal_enumeration" >&2
+              fi
+            ''}
+
+            started_at=$(${pkgs.coreutils}/bin/date +%s)
+            ${pkgs.hyprland}/bin/start-hyprland
+            status=$?
+
+            elapsed=$(($(${pkgs.coreutils}/bin/date +%s) - started_at))
+            if [ "$drm_pinned" -eq 1 ] && [ "$status" -ne 0 ] && [ "$elapsed" -lt ${toString cfg.loginManager.preferredDrmDevice.fallbackWindowSeconds} ]; then
+              echo "HWC_POWER_DRM_FALLBACK code=pinned_start_failed status=$status elapsed=$elapsed action=retry_unpinned" >&2
+              unset AQ_DRM_DEVICES
+              exec ${pkgs.hyprland}/bin/start-hyprland
+            fi
+
+            exit "$status"
           '';
 
           # Crash-resilient auto-login: restarts Hyprland after crash,
@@ -203,13 +275,17 @@ in
           # When autoLoginUser is set: default_session auto-restarts Hyprland
           # (with crash-loop protection that falls back to tuigreet).
           # When autoLoginUser is null: default_session is tuigreet as before.
-          default_session = if (cfg.loginManager.autoLoginUser != null) then {
-            user = cfg.loginManager.autoLoginUser;
-            command = "${hyprAutoRestart}";
-          } else {
-            user = "greeter";
-            command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --remember-user-session --asterisks --cmd ${hyprStart}";
-          };
+          default_session =
+            if (cfg.loginManager.autoLoginUser != null) then
+              {
+                user = cfg.loginManager.autoLoginUser;
+                command = "${hyprAutoRestart}";
+              }
+            else
+              {
+                user = "greeter";
+                command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --remember-user-session --asterisks --cmd ${hyprStart}";
+              };
         }
         // lib.optionalAttrs (cfg.loginManager.autoLoginUser != null) {
           initial_session = {
@@ -239,7 +315,9 @@ in
     #=========================================================================
 
     users.users = lib.mkIf cfg.linger.enable (
-      lib.genAttrs cfg.linger.users (_: { linger = true; })
+      lib.genAttrs cfg.linger.users (_: {
+        linger = true;
+      })
     );
 
     #=========================================================================
@@ -255,13 +333,14 @@ in
 
     assertions = [
       {
-        assertion = (cfg.loginManager.autoLoginUser == null)
-                 || (lib.hasAttr cfg.loginManager.autoLoginUser config.users.users);
+        assertion =
+          (cfg.loginManager.autoLoginUser == null)
+          || (lib.hasAttr cfg.loginManager.autoLoginUser config.users.users);
         message = "Login manager: autoLoginUser '${cfg.loginManager.autoLoginUser}' is not a defined user.";
       }
       {
-        assertion = (!cfg.linger.enable)
-                 || (lib.all (u: lib.hasAttr u config.users.users) cfg.linger.users);
+        assertion =
+          (!cfg.linger.enable) || (lib.all (u: lib.hasAttr u config.users.users) cfg.linger.users);
         message = "Lingering: one or more users in the linger list are not defined users.";
       }
     ];
