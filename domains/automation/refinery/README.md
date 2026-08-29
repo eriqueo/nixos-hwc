@@ -52,6 +52,11 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-08-29 (c): **SR investigations are now an executive decision surface.**
+  Refinery consumes the runner's typed decision and authoritative current-run
+  ledger state, separating Needs you, Needs review, Watch, No action, and
+  folded history. Detail pages provide a configured DataX deep link alongside
+  re-investigate and full evidence. The sandbox gets read-only SR ledger access.
 - 2026-08-29 (b): **Every Refinery tab now uses the executive decision hierarchy.** Board, Overnight, Finished, SR, DX1 Investigations, DX1 Fleet, Reference, and their owned detail pages lead with the situation, why it matters, and the recommended action. Work that needs Eric stays open; machine work, completed investigations, archive records, pipeline internals, raw payloads, and the nine-column fleet table are folded by default. Card faces expose one primary action, fold secondary controls, and cap agent explanations to a short preview while retaining the full text on detail. Existing POST actions and detail/export URLs remain authoritative and tested. Fleet derives one task-weighted clean-rate headline and names the weakest cohort instead of requiring table interpretation. Desktop, 390px, and live-data Chromium screenshots verified the hierarchy; 212/212 engine tests pass.
 - 2026-08-29: **Reviews are now an executive decision surface.** `/reviews`
   leads with one attention count and compact decision cards; handled work is

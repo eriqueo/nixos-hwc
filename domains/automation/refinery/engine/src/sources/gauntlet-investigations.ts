@@ -40,6 +40,26 @@ export function gauntletInvestigationProjects(view: GauntletView, gauntletDir: s
   const base = join(gauntletDir, "investigations");
   if (!existsSync(base)) return [];
   const extras = view.runExtras?.(gauntletDir) ?? new Map<string, Record<string, unknown>>();
+  // SR's ledger is the authority for which run is current and whether it
+  // completed. Old run directories remain useful history, never fresh work.
+  if (view.key === "sr") {
+    const ledgerPath = join(gauntletDir, "state", "ledger.json");
+    if (existsSync(ledgerPath)) {
+      try {
+        const ledger = JSON.parse(readFileSync(ledgerPath, "utf8")) as Record<string, unknown>;
+        for (const raw of Object.values(ledger)) {
+          if (!raw || typeof raw !== "object") continue;
+          const entry = raw as Record<string, unknown>;
+          if (typeof entry.run !== "string" || !entry.run) continue;
+          extras.set(entry.run, {
+            ...(extras.get(entry.run) ?? {}),
+            ledgerCurrent: true,
+            ledgerState: entry.failed === true ? "failed" : entry.provenance ? "completed" : "legacy",
+          });
+        }
+      } catch { /* malformed ledger leaves every run as bounded history */ }
+    }
+  }
   const out: Item[] = [];
   for (const runName of readdirSync(base)) {
     const dir = join(base, runName);
@@ -53,12 +73,23 @@ export function gauntletInvestigationProjects(view: GauntletView, gauntletDir: s
       meta = {};
     }
     const hasReport = existsSync(join(dir, "REPORT.md"));
+    const filePayload = Object.fromEntries((view.payloadFiles ?? []).flatMap((name) => {
+      const path = join(dir, name);
+      if (!existsSync(path)) return [];
+      try {
+        const parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
+        return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+          ? Object.entries(parsed as Record<string, unknown>)
+          : [];
+      } catch { return []; }
+    }));
+    const enriched = { ...view.payloadFromMeta(meta, runName, hasReport), ...filePayload, ...(extras.get(runName) ?? {}) };
     out.push({
       id: `${view.prefix}${runName}`,
       pipeline: view.pipeline,
       step: view.step,
-      state: "passed", // a completed investigation
-      payload: { ...view.payloadFromMeta(meta, runName, hasReport), ...(extras.get(runName) ?? {}) },
+      state: enriched.ledgerState === "failed" ? "failed" : "passed",
+      payload: enriched,
       history: [],
     });
   }

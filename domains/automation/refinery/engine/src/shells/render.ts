@@ -473,6 +473,9 @@ function cardLink(item: Item, ctx: CardCtx): string {
   const goal = typeof pl.goal === "string" ? pl.goal : "";
   const customer = typeof pl.customer === "string" ? pl.customer : "";
   const question = typeof pl.title === "string" ? pl.title : "";
+  const decisionHeadline = typeof pl.headline === "string" ? pl.headline : "";
+  const decisionMeaning = typeof pl.meaning === "string" ? pl.meaning : "";
+  const decisionRecommendation = typeof pl.recommendation === "string" ? pl.recommendation : "";
   const hasReport = pl.hasReport === true;
   const total = typeof pl.stepsTotal === "number" ? pl.stepsTotal : 0;
   const doneN = typeof pl.stepsDone === "number" ? pl.stepsDone : 0;
@@ -508,15 +511,21 @@ function cardLink(item: Item, ctx: CardCtx): string {
 
   // Title = who/what; for an SR the customer is the "who" and the question the
   // "why it matters". Otherwise the payload title (or id) is the title.
-  const title = customer || titleOf(item);
-  const why = customer && question ? `<div class="why">${esc(question)}</div>` : "";
+  const title = decisionHeadline || customer || titleOf(item);
+  const whyText = decisionMeaning || (customer && question ? question : "");
+  const why = whyText ? `<div class="why">${esc(whyText)}</div>` : "";
+  const recommendation = decisionRecommendation
+    ? `<div class="reason"><b>Do this:</b> ${esc(decisionRecommendation)}</div>`
+    : "";
 
   // SR2 ticket-card edge: domain-color left border + faint domain-tinted fill,
   // color-mix over --elev so the tint reads on the dark surface.
   const skin = `border-left-color:${c};background:color-mix(in srgb,${c} 12%,var(--elev))`;
   const needsDecision = item.state === "parked" || item.state === "failed";
   const controls = controlsFor(item, ctx);
-  const actionLabel = needsDecision ? "Review decision" : isIdea ? "Shape idea" : "Open";
+  const attention = typeof pl.attention === "string" ? pl.attention : "";
+  const actionLabel = attention === "act" ? "Open & act" : attention === "needs-review" || needsDecision
+    ? "Review" : attention === "watch" ? "Open" : isIdea ? "Shape idea" : "View record";
 
   // Card is a container (not a link) so it can hold interactive controls; the
   // title is the click-through to the detail page.
@@ -524,6 +533,7 @@ function cardLink(item: Item, ctx: CardCtx): string {
     <div class="badges">${domainTag}${pipelineBadge}${goalBadge}${stepBadge}${reportBadge}${lineageBadge}${moon}${ageBadge}</div>
     <a class="title" href="/project/${esc(item.id)}">${esc(title)}</a>
     ${why}
+    ${recommendation}
     ${bar}
     ${gateDots(item, ctx)}
     ${item.parkedReason ? `<div class="reason">${esc(compactText(item.parkedReason))}</div>` : ""}
@@ -1052,11 +1062,16 @@ export function renderGauntletBoard(
   topPanel?: string,
 ): string {
   const laneOf = (item: Item): string => {
+    if (view.laneOf) return view.laneOf(item);
     const p = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
     const v = p[view.laneField];
     return typeof v === "string" && v ? v : view.laneFallback;
   };
-  const lanes = [...new Set(items.map(laneOf))].sort().map((s) => ({ key: s, label: s }));
+  const laneFor = (subset: Item[]) => [...new Set(subset.map(laneOf))].sort().map((s) => ({
+    key: s,
+    label: view.laneLabels?.[s] ?? s,
+  }));
+  const lanes = laneFor(items);
   // Gauntlet cards are read-only mirrors (no inline controls); run-now lives on detail.
   const ctx: CardCtx = { domains, profiles, enabled: [], back: `/${view.key}` };
   // Card wrappers carry the run date so the enhancer can sort within lanes
@@ -1071,11 +1086,14 @@ export function renderGauntletBoard(
   <span class="kv">${items.length} investigations · ${esc(view.capNote)}</span>
 </form>`;
   const kanban = `<div class="wrap"${items.length ? ' data-enhance="lanes"' : ""}>${items.length ? board : `<div class="empty" style="padding:24px">${esc(view.emptyText)}</div>`}</div>`;
-  const pendingCount = items.filter((i) => laneOf(i) === view.laneFallback).length;
-  const unresolvedItems = items.filter((i) => laneOf(i) === view.laneFallback);
-  const resolvedItems = items.filter((i) => laneOf(i) !== view.laneFallback);
+  const attentionKeys = view.attentionLanes ?? [view.laneFallback];
+  const watchKeys = view.watchLanes ?? [];
+  const attentionItems = items.filter((i) => attentionKeys.includes(laneOf(i)));
+  const watchItems = items.filter((i) => watchKeys.includes(laneOf(i)));
+  const historyItems = items.filter((i) => !attentionKeys.includes(laneOf(i)) && !watchKeys.includes(laneOf(i)));
+  const pendingCount = attentionItems.length;
   const boardFor = (subset: Item[]): string => subset.length
-    ? `<div class="wrap" data-enhance="lanes">${laneBoard(subset, ctx, lanes, laneOf, (i) => ` data-date="${esc(view.sortDate?.(i) ?? "")}"`)}</div>`
+    ? `<div class="wrap" data-enhance="lanes">${laneBoard(subset, ctx, laneFor(subset), laneOf, (i) => ` data-date="${esc(view.sortDate?.(i) ?? "")}"`)}</div>`
     : '<div class="empty">nothing here</div>';
   const summary = executiveHero(
     pendingCount ? `${pendingCount} investigation${pendingCount === 1 ? "" : "s"} still unresolved` : "Nothing needs your decision",
@@ -1095,8 +1113,9 @@ ${kanban}</div></details></main>`;
   }
 
   const body = `<main class="exec-page">${summary}
-<section class="exec-section"><h2>What needs attention</h2>${boardFor(unresolvedItems)}</section>
-<details class="exec-fold"><summary>Completed investigations — history <span class="count">${resolvedItems.length}</span></summary>${boardFor(resolvedItems)}</details>
+<section class="exec-section"><h2>What needs attention</h2>${boardFor(attentionItems)}</section>
+${watchItems.length ? `<section class="exec-section"><h2>Watchlist</h2>${boardFor(watchItems)}</section>` : ""}
+<details class="exec-fold"><summary>No action and history <span class="count">${historyItems.length}</span></summary>${boardFor(historyItems)}</details>
 <details class="exec-fold"><summary>Run settings</summary>${capForm("intake")}</details>
 </main>`;
   return layout(view.key, body);
@@ -1126,6 +1145,7 @@ export function renderGauntletDetail(
   view: GauntletView,
   item: Item,
   bundle: GauntletRunBundle,
+  dataxBaseUrl?: string,
 ): string {
   const head = view.headerOf(item);
 
@@ -1169,12 +1189,25 @@ export function renderGauntletDetail(
     )
     .join("\n  ");
 
-  const recommendation = head.cat === view.laneFallback
+  const payload = obj(item.payload);
+  const decisionHeadline = typeof payload.headline === "string" ? payload.headline : "";
+  const decisionMeaning = typeof payload.meaning === "string" ? payload.meaning : "";
+  const decisionRecommendation = typeof payload.recommendation === "string" ? payload.recommendation : "";
+  const recommendation = decisionRecommendation || (head.cat === view.laneFallback
     ? `Review the report, then use ${view.runNow?.button ?? "the run control"} if the evidence is stale or incomplete.`
-    : "Use the report as the decision record. Re-run only if the underlying case has materially changed.";
+    : "Use the report as the decision record. Re-run only if the underlying case has materially changed.");
+  let dataxAction = "";
+  if (view.key === "sr" && dataxBaseUrl && head.runId) {
+    try {
+      const href = new URL("/x/admin/sr2", dataxBaseUrl);
+      href.searchParams.set("requestId", head.runId);
+      dataxAction = `<a class="btn primary" href="${esc(href.toString())}">Open SR in DataX</a>`;
+    } catch { /* invalid configured origin: omit the action instead of guessing */ }
+  }
   const body = `<main class="exec-page" style="max-width:900px">
-  ${executiveHero("What happened", `${head.title}: ${head.question || "an investigation record is available"}`, head.cat)}
+  ${executiveHero(decisionHeadline || "What happened", decisionMeaning || `${head.title}: ${head.question || "an investigation record is available"}`, head.cat)}
   <section class="decision-note"><b>Recommended action:</b> ${esc(recommendation)}</section>
+  ${dataxAction ? `<div class="card-actions">${dataxAction}</div>` : ""}
   <div class="srtabs">
   ${radios}
   <div class="srhead">

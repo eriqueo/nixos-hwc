@@ -14,7 +14,8 @@ replies — the human reviews each `investigations/<date>-<srId>/REPORT.md`.
 
 ```
 sr-gauntlet/
-└── index.nix    # hwc.automation.srGauntlet.{enable,onCalendar,maxSrs,gauntletDir}
+└── index.nix    # hwc.automation.srGauntlet.{enable,onCalendar,maxSrs,gauntletDir,
+                 # refineryBaseUrl,dataxBaseUrl}
                  # systemd service `sr-gauntlet` (oneshot, User=eric) + poll
                  # timer (default every 15 min) for auto-investigation, PLUS
                  # the run-now drain (service + path unit) behind the refinery
@@ -52,6 +53,8 @@ units re-read it each run, so no restart is needed.
 
 ## Changelog
 
+- **2026-08-29**: Added late-bound Refinery and DataX origins to every run so
+  typed executive decisions link to their decision surface and source ticket.
 - **2026-07-22**: **Dedicated Claude subscription token.** The gauntlet had 5
   consecutive investigations fail with `401` (2026-07-21/22) — every one died at
   the `claude -p` exec. Root cause: the headless agent was relying on the

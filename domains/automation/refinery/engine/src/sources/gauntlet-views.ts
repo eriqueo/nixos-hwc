@@ -63,6 +63,12 @@ export interface GauntletView {
   laneFallback: string; // lane when laneOf yields nothing
   /** Payload field the lane keying reads (data-driven lanes). */
   laneField: string;
+  /** Optional semantic lane resolver. Used when the display decision is not a
+   * raw field (SR: current-run + typed executive decision). */
+  laneOf?: (item: Item) => string;
+  laneLabels?: Record<string, string>;
+  attentionLanes?: string[];
+  watchLanes?: string[];
   /** Run-now form: field name + copy. null = gauntlet has no run-now. */
   runNow: { field: string; button: string; title: (id: string) => string; caption: string } | null;
   /** Sortable date for a run card (ISO-ish string; "" = unknown, sorts last).
@@ -81,6 +87,8 @@ export interface GauntletView {
   /** Raw run-dir files appended to the Details tab (and its export) as fenced
    * blocks — dx1: case.json + verdict.json. Absent files are skipped. */
   detailFiles?: string[];
+  /** Run-dir JSON objects merged into the display payload after metadata. */
+  payloadFiles?: string[];
   /** meta JSON (+ run dir facts) → mirror Item payload. */
   payloadFromMeta: (meta: Record<string, unknown>, runName: string, hasReport: boolean) => Record<string, unknown>;
   /** Optional per-run payload enrichment read ONCE per listing from gauntlet
@@ -111,8 +119,25 @@ const SR_VIEW: GauntletView = {
   capLabel: "Max SRs per run:",
   capNote: "sr_gauntlet runs @ 06:30 (this cap)",
   emptyText: "no SR investigations yet — the gauntlet writes them under sr_gauntlet/investigations/",
-  laneField: "srStatus",
-  laneFallback: "investigated",
+  laneField: "attention",
+  laneFallback: "history",
+  laneOf: (item) => {
+    const p = pl(item);
+    if (p.ledgerCurrent !== true) return "history";
+    if (p.ledgerState === "failed") return "needs-review";
+    if (p.valid !== true) return "needs-review";
+    const attention = str(p.attention);
+    return ["act", "watch", "none"].includes(attention) ? attention : "needs-review";
+  },
+  laneLabels: {
+    act: "Needs you",
+    "needs-review": "Needs review",
+    watch: "Watch",
+    none: "No action",
+    history: "History",
+  },
+  attentionLanes: ["act", "needs-review"],
+  watchLanes: ["watch"],
   runNow: {
     field: "srId",
     button: "▶ re-investigate now",
@@ -120,10 +145,11 @@ const SR_VIEW: GauntletView = {
     caption: "forces a fresh investigation; the report updates when it finishes",
   },
   tabs: [
-    { key: "gameplan", label: "Gameplan", files: ["REPORT.md"], empty: "no REPORT.md for this investigation yet" },
+    { key: "gameplan", label: "Full investigation", files: ["REPORT.md"], empty: "no REPORT.md for this investigation yet" },
     { key: "thread", label: "Thread", files: ["sr.md"], empty: "no thread (sr.md) captured" },
   ],
   contextFile: "context.md",
+  payloadFiles: ["decision.json"],
   payloadFromMeta: (meta, runName, hasReport) => ({
     title: str(meta.title) || str(meta.id) || runName,
     srId: str(meta.id),

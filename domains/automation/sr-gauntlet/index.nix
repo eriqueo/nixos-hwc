@@ -63,6 +63,8 @@ let
   srgEnv = {
     HOME = paths.user.home;
     SRG_MAX_SRS = toString cfg.maxSrs;
+    SRG_REFINERY_BASE_URL = cfg.refineryBaseUrl;
+    SRG_DATAX_BASE_URL = cfg.dataxBaseUrl;
     # Late-bind Firestore creds from sr_analyzer's single .env (declare once,
     # derive everywhere). Without this the script falls back to a stale default
     # path and fetch FATALs with ENOENT.
@@ -161,6 +163,18 @@ in
       type = lib.types.path;
       default = "${paths.user.home}/700_datax/sr_gauntlet";
       description = "sr_gauntlet pipeline checkout (run.sh lives here)";
+    };
+
+    refineryBaseUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "https://refinery.hwc.iheartwoodcraft.com";
+      description = "Refinery origin used for investigation exploration links";
+    };
+
+    dataxBaseUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "https://datax.to";
+      description = "DataX origin used for support-request deep links";
     };
   };
 

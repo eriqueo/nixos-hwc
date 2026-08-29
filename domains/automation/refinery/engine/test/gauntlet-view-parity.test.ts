@@ -6,26 +6,13 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { fileURLToPath } from "node:url";
-import { renderSr, renderSrDetail, renderGauntletBoard, renderGauntletDetail } from "../src/shells/render.js";
+import { renderGauntletBoard, renderGauntletDetail } from "../src/shells/render.js";
 import { buildGauntletExport, gauntletViewByKey } from "../src/sources/gauntlet-views.js";
 import { gauntletInvestigationProjects } from "../src/sources/gauntlet-investigations.js";
 import { Item } from "../src/contracts.js";
-
-const goldenPath = (name: string) => fileURLToPath(new URL(`../../test/golden/${name}`, import.meta.url));
-const assertGolden = (name: string, actual: string) => {
-  const path = goldenPath(name);
-  if (process.env.UPDATE_GOLDENS === "1") writeFileSync(path, actual);
-  assert.equal(actual, readFileSync(path, "utf8"));
-};
-
-// Goldens carry the current chrome (DX1 nav tab + fleet CSS) as of the
-// 2026-08-17 regeneration — each regeneration was diffed first (nav tab, then
-// the .fleet style block; content never changed) — so every comparison is
-// straight byte equality.
 
 const SR_ITEMS: Item[] = [
   { id: "sr:2026-08-10-abc123", pipeline: "datax-sr", step: "investigated", state: "passed",
@@ -38,16 +25,61 @@ const SR_ITEMS: Item[] = [
       readonly: true, source: "sr_gauntlet investigation" }, history: [] },
 ];
 
-test("parity — SR board via the generic component is byte-identical to the goldens", () => {
-  assertGolden("golden-sr-board.html", renderSr(SR_ITEMS, 5, [], undefined));
-  assertGolden("golden-sr-board-empty.html", renderSr([], 5, [], undefined));
+test("SR board: executive decisions drive attention, watch, and folded history", () => {
+  const view = gauntletViewByKey("sr")!;
+  const items: Item[] = [
+    { ...SR_ITEMS[0]!, payload: { ...SR_ITEMS[0]!.payload, ledgerCurrent: true, ledgerState: "completed", valid: true,
+      attention: "act", headline: "Customer cannot finish setup", meaning: "Revenue is blocked today",
+      recommendation: "Ask DataX to repair the integration", owner: "datax-team", urgency: "today" } },
+    { ...SR_ITEMS[1]!, payload: { ...SR_ITEMS[1]!.payload, ledgerCurrent: true, ledgerState: "completed", valid: true,
+      attention: "watch", headline: "Intermittent sync delay", meaning: "No customer action is blocked",
+      recommendation: "Monitor the next sync", owner: "eric", urgency: "this-week" } },
+    { ...SR_ITEMS[1]!, id: "sr:old", payload: { ...SR_ITEMS[1]!.payload, headline: "Old investigation" } },
+  ];
+  const html = renderGauntletBoard(view, items, 5, [], undefined);
+  assert.ok(html.includes("1 investigation still unresolved"), "only actionable work reaches the headline");
+  assert.ok(html.includes("Needs you") && html.includes("Watchlist"), "human lanes are named by meaning");
+  assert.ok(html.includes("Customer cannot finish setup") && html.includes("Ask DataX to repair the integration"));
+  assert.ok(html.includes("No action and history") && html.includes("Old investigation"), "old runs stay folded history");
 });
 
-test("parity — SR detail is byte-identical to the goldens", () => {
-  const full = renderSrDetail(SR_ITEMS[0]!, { gameplan: "# Report\n\nfix **this**", thread: "- msg", context: "ctx here" });
-  assertGolden("golden-sr-detail-full.html", full);
-  const empty = renderSrDetail(SR_ITEMS[1]!, { gameplan: null, thread: null, context: null });
-  assertGolden("golden-sr-detail-empty.html", empty);
+test("SR detail: decision first, DataX action, re-run, then full evidence", () => {
+  const view = gauntletViewByKey("sr")!;
+  const item: Item = { ...SR_ITEMS[0]!, payload: { ...SR_ITEMS[0]!.payload, ledgerCurrent: true,
+    valid: true, attention: "act", headline: "Customer cannot finish setup", meaning: "Revenue is blocked today",
+    recommendation: "Ask DataX to repair the integration" } };
+  const html = renderGauntletDetail(view, item, {
+    tabs: { gameplan: [{ name: "REPORT.md", content: "# Full report" }], thread: [] }, context: null, detail: [],
+  }, "https://datax.example/base");
+  assert.ok(html.includes("Customer cannot finish setup") && html.includes("Revenue is blocked today"));
+  assert.ok(html.includes("Ask DataX to repair the integration"));
+  assert.ok(html.includes("https://datax.example/x/admin/sr2?requestId=abc123"), "ticket id is encoded into the owned DataX route");
+  assert.ok(html.includes('action="/sr/run-now"') && html.includes("Full investigation"));
+});
+
+test("SR mirror: decision JSON and authoritative ledger distinguish current work from history", () => {
+  const root = mkdtempSync(join(tmpdir(), "srg-"));
+  try {
+    for (const run of ["2026-08-28-abc123", "2026-08-29-abc123"]) {
+      mkdirSync(join(root, "investigations", run), { recursive: true });
+      writeFileSync(join(root, "investigations", run, "sr.json"), JSON.stringify({ id: "abc123", title: "Setup blocked" }));
+      writeFileSync(join(root, "investigations", run, "REPORT.md"), "# report");
+    }
+    writeFileSync(join(root, "investigations", "2026-08-29-abc123", "decision.json"), JSON.stringify({
+      valid: true, attention: "act", headline: "Setup is blocked", meaning: "Customer cannot launch",
+      recommendation: "Repair the integration", actionKind: "fix", owner: "datax-team", urgency: "today",
+    }));
+    mkdirSync(join(root, "state"), { recursive: true });
+    writeFileSync(join(root, "state", "ledger.json"), JSON.stringify({ abc123: {
+      run: "2026-08-29-abc123", investigatedAt: "2026-08-29", provenance: { schemaVersion: 1 },
+    } }));
+    const items = gauntletInvestigationProjects(gauntletViewByKey("sr")!, root);
+    const current = items.find((i) => i.id.endsWith("2026-08-29-abc123"))!;
+    const old = items.find((i) => i.id.endsWith("2026-08-28-abc123"))!;
+    assert.equal((current.payload as Record<string, unknown>).ledgerCurrent, true);
+    assert.equal((current.payload as Record<string, unknown>).attention, "act");
+    assert.equal((old.payload as Record<string, unknown>).ledgerCurrent, undefined);
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
 test("dx1 board: verdict lanes, empty state, cap form on /dx1", () => {

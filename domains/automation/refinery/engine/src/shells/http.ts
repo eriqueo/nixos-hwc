@@ -39,6 +39,7 @@ export interface HttpShellConfig {
   vaultDir?: string; // brain vault — nightly-builds card mirror + queue write-back
   srGauntletDir?: string; // sr_gauntlet dir — SR investigation mirror
   dx1GauntletDir?: string; // dx1_gauntlet dir — DX1 case-investigation mirror
+  dataxBaseUrl?: string; // canonical DataX origin for SR decision deep links
   reviewsDir?: string; // morning PR-review records (REFINERY_REVIEWS_DIR); default under the state base
   runNowSpoolDir: string; // "Run now" / IMMEDIATE drops a <goal> request file here; a systemd.path twin of run.sh drains it
   srRunNowSpoolDir: string; // SR "re-investigate now" drops an <srId> request file here; sr-gauntlet-runnow.path drains it
@@ -67,6 +68,7 @@ export function configFromEnv(): HttpShellConfig {
     vaultDir: process.env.REFINERY_VAULT_DIR,
     srGauntletDir: process.env.REFINERY_SR_GAUNTLET_DIR,
     dx1GauntletDir: process.env.REFINERY_DX1_GAUNTLET_DIR,
+    dataxBaseUrl: process.env.REFINERY_DATAX_BASE_URL,
     reviewsDir: process.env.REFINERY_REVIEWS_DIR || `${base}/reviews`,
     runNowSpoolDir: process.env.REFINERY_RUNNOW_SPOOL || `${base}/run-now`,
     srRunNowSpoolDir: process.env.REFINERY_SR_RUNNOW_SPOOL || `${base}/sr-run-now`,
@@ -843,7 +845,7 @@ export function createShell(cfg: HttpShellConfig) {
             const run = typeof (item.payload as { run?: unknown }).run === "string"
               ? (item.payload as { run: string }).run
               : "";
-            res.end(renderGauntletDetail(detailView, item, readRunBundle(detailView, detailDir, run)));
+            res.end(renderGauntletDetail(detailView, item, readRunBundle(detailView, detailDir, run), cfg.dataxBaseUrl));
           } else {
             res.end(renderProjectDetail(item, catalog.list(), catalog.enabled(), domains));
           }

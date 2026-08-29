@@ -135,6 +135,12 @@ in
       description = "dx1_gauntlet dir — read-only mirror of its investigations/ + state/ (verdict ledger)";
     };
 
+    dataxBaseUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "https://datax.to";
+      description = "Canonical DataX origin used for actionable SR deep links";
+    };
+
     # The dormant `ollama` adapter (engine/src/adapters/ollama.ts) is retained
     # but no longer advertised here: the container ollama stack was retired
     # 2026-06-27. Local-LLM provider intent parked:
@@ -196,6 +202,7 @@ in
           # dx1-gauntlet) drains it. Also under the StateDirectory.
           "REFINERY_DX1_RUNNOW_SPOOL=/var/lib/refinery/dx1-run-now"
           "REFINERY_TRIAGE_PROVIDER=${cfg.triageProvider}"
+          "REFINERY_DATAX_BASE_URL=${cfg.dataxBaseUrl}"
           # claude-cli triage shells out to headless `claude`, which reads the
           # Claude subscription creds from $HOME/.claude (bound read-only below).
           "HOME=${paths.user.home}"
@@ -219,7 +226,10 @@ in
         BindPaths = lib.optional (cfg.vaultDir != null) "-${cfg.vaultDir}/_inbox/nightly_builds";
         BindReadOnlyPaths =
           (lib.optional (cfg.vaultDir != null) "-${cfg.vaultDir}/runs")
-          ++ (lib.optional (cfg.srGauntletDir != null) "-${cfg.srGauntletDir}/investigations")
+          ++ (lib.optionals (cfg.srGauntletDir != null) [
+               "-${cfg.srGauntletDir}/investigations"
+               "-${cfg.srGauntletDir}/state"
+             ])
           # dx1 mirror: run dirs + state/ (ledger.json is the verdict source
           # the /dx1 lanes read). Leading "-": tolerated missing until the
           # runner checkout is provisioned on this host — /dx1 renders its
