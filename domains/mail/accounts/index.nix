@@ -5,14 +5,22 @@ let
   isNixOSHost = osConfig ? hwc;
   osCfg = if isNixOSHost then osConfig else {};
 
-  # Safe access to age secrets (only available on NixOS hosts)
+  # Handshake: safe access to agenix secrets (mirrors calendar/index.nix and
+  # tasks/index.nix). Use osConfig.age.secrets path when HM evaluates as a
+  # NixOS module (sudo nixos-rebuild). Fall back to the canonical agenix
+  # runtime path so standalone HM (`hms`) doesn't rewrite ~/.mbsyncrc with
+  # /dev/null — the secret file exists at this path regardless of HM eval mode.
+  # /dev/null was the old fallback: it produced an empty PassCmd, which made
+  # mbsync skip both Gmail accounts and exit 1 every 10 minutes with nothing in
+  # the config to show for it. A wrong path that fails at runtime is worse than
+  # no branch at all.
   gmailPersonalSecretPath = if (osCfg ? age) && (osCfg.age.secrets ? gmail-personal-password)
                             then osCfg.age.secrets.gmail-personal-password.path
-                            else "/dev/null";  # Fallback path on non-NixOS (user must override)
+                            else "/run/agenix/gmail-personal-password";
 
   gmailBusinessSecretPath = if (osCfg ? age) && (osCfg.age.secrets ? gmail-business-password)
                             then osCfg.age.secrets.gmail-business-password.path
-                            else "/dev/null";  # Fallback path on non-NixOS (user must override)
+                            else "/run/agenix/gmail-business-password";
 in
 {
   #==========================================================================

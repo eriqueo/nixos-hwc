@@ -73,6 +73,17 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-08-30: `accounts/index.nix` Gmail agenix handshake no longer falls back to
+  `/dev/null`. Under standalone HM (`hms`) there is no `osConfig`, so both Gmail
+  `PassCmd`s rendered `tr -d "\n" < /dev/null`, mbsync skipped both accounts with
+  "PassCmd produced no output", and `mbsync.service` exited 1 every 10 minutes on
+  hwc-server (first failure 2026-08-26 15:54). Fallback is now the canonical
+  runtime path `/run/agenix/gmail-{personal,business}-password`, matching the
+  handshake `calendar/index.nix` and `tasks/index.nix` already use and the literal
+  `domains/automation/mail-janitor/index.nix` already hardcodes. Also deleted the
+  dead `parts/common.nix` — byte-identical to `accounts/helpers.nix`, zero
+  importers since it was added, and a second producer of `passCmd` that a fix
+  could have landed in harmlessly.
 - 2026-07-11: mbsync/afew: maildir-root fallback literal `/home/eric/400_mail` replaced with the `${config.home.homeDirectory}/400_mail` derivation (aerc precedent; Law 3 migration, rendered value unchanged).
 - 2026-07-09 (b): aerc joins triage (unified-triage Phase 2) — `triage/*`
   virtual folders (taxonomy-generated, tree-nested, inbox-scoped) +
