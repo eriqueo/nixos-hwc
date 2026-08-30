@@ -23,6 +23,7 @@ core/
 ```
 
 ## Changelog
+- 2026-08-30: `core/shell/` — starship zsh init moved from HM's `enableZshIntegration` into `parts/zsh-init.nix` (`_hwc_starship_init`). `starship init zsh` bakes the first `starship` on PATH, which is `~/.nix-profile/bin/starship` after any `hms`; the next `nixos-rebuild switch` removes that profile entry and every open shell printed `no such file or directory: ~/.nix-profile/bin/starship` three times per prompt. Init now forces the lookup to `/etc/profiles/per-user/$USER/bin/starship`, which both activation lanes leave in place. `_hwc_reinit_prompt` reuses the same helper.
 - 2026-08-06: repo-hooks — new module. Git hooks were hand-placed per host
   (laptop pointed hooksPath at its own .git/hooks; server had /dev/null);
   now ~/.nixos ships tracked .githooks/ (pre-commit = the nine charter-law

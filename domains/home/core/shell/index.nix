@@ -241,6 +241,10 @@ in
     # Starship prompt — powerline style, palette colors (parts/prompt.nix)
     programs.starship = lib.mkIf cfg.zsh.starship {
       enable = true;
+      # HM's integration runs `starship init zsh` with the ambient PATH, which
+      # bakes ~/.nix-profile/bin/starship after an `hms` and breaks every shell
+      # on the next nixos-rebuild. parts/zsh-init.nix owns the init instead.
+      enableZshIntegration = false;
       settings = import ./parts/prompt.nix { inherit lib col; };
     };
 

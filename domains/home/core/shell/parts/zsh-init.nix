@@ -14,26 +14,39 @@
         _hwc_hash_refresh() { hash -r; }
         add-zsh-hook precmd _hwc_hash_refresh
 
-        # Rebind the running shell's prompt to a live starship binary.
-        # `starship init zsh` bakes the ABSOLUTE path of the binary that ran it
-        # into the prompt hook functions (e.g. __starship_get_time, PROMPT2). A
-        # shell that baked ~/.nix-profile/bin/starship dies on every prompt after
-        # an HM-as-module activation, because activation WIPES ~/.nix-profile —
-        # and `hash -r` can't fix it (it only re-resolves bare command names, not
-        # an absolute path literal inside a function). Re-running init after a
-        # rebuild rebakes the path via PATH, which now lands on the stable
-        # /etc/profiles/per-user/$USER/bin/starship symlink (repopulated every
-        # activation, never wiped). Guarded so hosts with starship disabled skip it.
-        # Call sites gate this on `[[ -o interactive ]]`: re-baking a prompt only
-        # makes sense in an interactive session. A non-interactive caller (deploy
-        # script, CI, or an agent running `hms`) has no prompt to fix, so the call
-        # is skipped — which also keeps it working where a function-snapshot might
-        # omit this "private" helper.
+        # Starship prompt init — owned here, not by HM's enableZshIntegration.
+        # `starship init zsh` bakes an ABSOLUTE path into the prompt hooks
+        # (__starship_get_time, PROMPT, RPROMPT), and the path it bakes is the
+        # FIRST `starship` on PATH — not the binary that ran init (verified
+        # 2026-08-30 against starship 1.26.0). PATH puts ~/.nix-profile/bin
+        # ahead of /etc/profiles/per-user/$USER/bin, and `hms` (HM-as-flake)
+        # populates ~/.nix-profile, so every shell opened after an `hms` baked
+        # ~/.nix-profile/bin/starship. The next nixos-rebuild switch
+        # (HM-as-module, useUserPackages) removes home-manager-path from
+        # ~/.nix-profile, and each of those shells then printed
+        # "no such file or directory: ~/.nix-profile/bin/starship" three times
+        # per prompt (time + PROMPT + RPROMPT). `hash -r` can't fix a literal
+        # path inside a function, and the old _hwc_reinit_prompt only fixed the
+        # one shell that ran the rebuild — and re-baked the same wipeable path
+        # whenever it ran after an `hms`.
+        # Fix: force the PATH lookup during init to the per-user profile
+        # symlink, which both activation lanes leave in place. Falls back to
+        # whatever `starship` is on PATH for hosts without that profile.
+        _hwc_starship_init() {
+          local bin=/etc/profiles/per-user/$USER/bin/starship
+          [[ -x $bin ]] || bin=$(command -v starship) || return 0
+          eval "$(PATH=''${bin:h}:$PATH "$bin" init zsh)"
+        }
+        if [[ $TERM != "dumb" ]]; then
+          _hwc_starship_init
+        fi
+
+        # Rebind the running shell's prompt after a rebuild. Call sites gate
+        # this on `[[ -o interactive ]]`: a non-interactive caller (deploy
+        # script, CI, an agent running `hms`) has no prompt to fix.
         _hwc_reinit_prompt() {
           hash -r
-          if command -v starship >/dev/null 2>&1; then
-            eval "$(starship init zsh)"
-          fi
+          _hwc_starship_init
         }
 
         # NixOS rebuild shortcuts (dynamic hostname)
