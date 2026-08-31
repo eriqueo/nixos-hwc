@@ -68,6 +68,9 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-08-31: Law 12 sweep — the `n8n/` README and its `parts/*` READMEs were
+  brought current with their contents (`e05cdb7d`, `17c9d203`). Documentation
+  only; no workflow, SQL or Nix change.
 - 2026-08-29: **Refinery board turned decision-first.** SR investigations now
   lead with the decision rather than the narrative (`adfb7724`), every tab was
   reworked as an executive surface (`2a399abd`), reviews became a decision
