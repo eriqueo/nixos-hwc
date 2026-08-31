@@ -154,6 +154,15 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-08-29b** — **Email subject is decision-first.** The subject read
+  "N alert(s)" — a count of things to watch, in the slot where the decision
+  belongs. It now reads `— N need you` from `sections.today.items` (capped at
+  5, matching the bounded Needs-you list) and only falls back to `— N to watch`
+  from the alert count when nothing needs a decision; with neither, the subject
+  stays bare. Both counts now default to `0` rather than `?`, so a `jq` failure
+  can no longer produce a subject claiming an unknown number of alerts
+  (`7f332a78`).
+
 - **2026-08-29** — **CEO information hierarchy.** Dashboard and email lead with
   a bounded `Needs you` list, keep deeper queue items behind an explicit Explore
   route, and suppress an alert only when a visible Today item already represents
