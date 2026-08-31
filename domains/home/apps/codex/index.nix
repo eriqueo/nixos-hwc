@@ -32,6 +32,7 @@ in
     sharedSkills = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [
+        "delegate"
         "herdr"
         "project-director"
       ];
