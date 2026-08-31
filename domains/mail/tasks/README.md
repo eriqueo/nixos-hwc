@@ -89,6 +89,23 @@ credential: the shared `radicale-htpasswd` agenix secret (password =
 stay CLI-visible. Deploy order + phone CalDAV setup: see the radicale README.
 
 ## Changelog
+- 2026-06-15: **Separate Radicale principals — tasks keeps `eric`, calendar
+  moves to `cal`.** The two pairs shared one Radicale user, so each pair's
+  dynamic discovery grabbed the other's collections (cosmetic empty
+  cross-lists); Radicale's `owner_only` rights now put each user in its own
+  collection home-set. Mechanically this forced a change here: the shared
+  htpasswd gained a `cal:` line, which broke the old single-line `cut -f2-`
+  fetch, so `parts/vdirsyncer-pair-radicale.nix` extracts *its* user's password
+  by username with a quote-free, colon-safe `awk` one-liner, and `gawk` joined
+  the vdirsyncer service PATH (coreutils has no `awk`) (`2c4664b0`). Tasks
+  stays fully dynamic. Superseded 2026-07-16 — see `domains/mail/calendar`,
+  which consolidated back onto `eric`.
+- 2026-06-15: Follow-on from the calendar Radicale backend landing
+  (`0aedb366`) and the vdirsyncer repair (`a22a309a`): `vdirsyncer.service` had
+  been exiting 1 on every run, killing both khalt and todui sync, because the
+  Radicale password fetch shelled out via `sh -c` and the systemd *user*
+  service PATH is `makeBinPath [ coreutils ]` — no shell, and that one failure
+  aborted the whole sync. `cut` is now invoked directly.
 - 2026-06-11: Phase C plumbing — optional `radicale` sub-options + second
   vdirsyncer pair part (off by default; flip in machines/laptop/home.nix after
   the server deploy). todoman path glob parameterized (`tasks*/*` with radicale).

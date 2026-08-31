@@ -68,6 +68,29 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-08-28: **immich — dead postgres grants deleted; the database and its
+  owning role finally declared.** `immich-container/parts/config.nix` carried
+  fifteen `$PSQL` GRANT / ALTER DEFAULT PRIVILEGES lines (eight for schema
+  `public`, seven for the pgvector `vectors` schema) and none ever ran:
+  `$PSQL` is undefined in the generated postgresql post-start script and
+  `|| true` swallowed each command-not-found (`e82ca994`). They were not
+  restored — immich connects as its own `immich` role, which owns the database,
+  and the grants' only purpose was `eric`'s psql access, which superuser
+  already covers. The follow-on declared what the dead grants had been hiding
+  (`53e84228`): the `immich` database and its owning role existed on the live
+  cluster by hand and a rebuilt cluster would not have reproduced either.
+  Ownership is declared from `cfg.database.name`, **not** `cfg.database.user` —
+  the module conflates the connecting role (`eric`, per
+  `machines/server/config.nix:1133`) with the owning role (`immich`), and
+  deriving from `database.user` emitted `ALTER DATABASE immich OWNER TO eric`,
+  a live ownership change wearing a cleanup's clothes. NixOS's own
+  `ensureDBOwnership` assertion caught it on the first eval. Rationale in
+  `domains/data/databases/README.md`.
+- 2026-08-24: frigate — global motion block added (`threshold 40`,
+  `contour_area 40`, `improve_contrast false`) so `record.retain.mode =
+  "motion"` actually thins recordings. At the defaults, sensor noise counted as
+  motion on every segment, so the 3-day window held the full ~495 GB of
+  continuous footage. Full account in `frigate/README.md` (`4a1d5afa`).
 - 2026-08-20: **slskd was never inside the VPN, and now cannot leave it silently.** `hwc.media.slskd.network.mode` defaulted to `"media"` from the day the module was written, so `mkContainer` gave it `--network=media-network` while gluetun, qBittorrent and SABnzbd shared a netns — confirmed by `podman inspect`, where slskd held its own `SandboxKey`. It egressed on the house IP for roughly six weeks, ~29.4 GB out / 15.5 GB in. What made this invisible is worth more than the fix: `downloaders/parts/downloaders.nix` contained `"podman-slskd".after = [ "podman-gluetun.service" ]` and a `SLSKD: (TODO: implement)` note, which read like partial wiring — but `hwc.media.downloaders.enable` was never set anywhere, so that module's entire `config` block was **dead code**, ordering nothing. A module that appears to do the thing is worse than one that obviously does not. The module is deleted (`git rm`); its only live contribution was two `webPort` options that `media/scripts` read, now taken from `hwc.media.qbittorrent.webPort` and `hwc.media.sabnzbd.webPort`, i.e. from the modules that actually define those containers. The default is now `"vpn"`, and an assertion makes `"media"` a **build failure** unless `allowClearnet = true` is set deliberately — seeded and confirmed red both ways before shipping (undeclared tunnel instance, and clearnet mode). slskd is held disabled on hwc-server until its tunnel instance exists.
 - 2026-08-20: the eight hand-copied `cfg.network.mode != "vpn" || config.hwc.networking.gluetun.enable` assertions (calibre, books, audiobookshelf, mousehole, sabnzbd, qbittorrent, and the deleted downloaders module) collapse into `helpers.mkVpnAssertions`. Same predicate written eight ways was the smaller problem; the real one is that all eight only checked that *a* tunnel was enabled, which with more than one tunnel is worse than no check — a container could name a tunnel that does not exist and still pass. The helper takes the instance set and asserts the specific tunnel is both declared and enabled. `mkContainer` gained `vpnContainer`, and deliberately still has **no** fallback branch for `"vpn"`: a wrong tunnel name must break the container, never quietly un-tunnel it, which is the failure this whole entry is about.
 - 2026-08-20: frigate — `frigate-cleanup` could delete the container's own bind-mount source (unscoped `find <root> -type d -empty -delete`, third instance of that shape after paperless and slskd/`media-cleanup`), and a wrong `basePath` derivation meant its mp4 retention sweeps had never run at all. Prune now scoped with `-mindepth 1`; retention sweeps left commented out because repointing them alone would start a first-ever deletion pass at thresholds tighter than Frigate's native retention. Full account in `frigate/README.md`.
