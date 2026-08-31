@@ -73,4 +73,9 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-03-31: Secret lookups switched from the camelCase attrs
+  `hwc.secrets.api.couchdbAdmin{Username,Password}File` to the kebab-case keys
+  `hwc.secrets.api."couchdb-admin-{username,password}"`, each guarded with
+  `or null` (`17b9283b`). Option descriptions updated to match. This tracks the
+  secrets domain's move to names derived from the `.age` filenames.
 - 2026-03-25: Created README per Law 12
