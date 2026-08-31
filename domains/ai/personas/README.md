@@ -38,11 +38,13 @@ Rebuild and the persona becomes available. The list is derived from
 
 ```
 library/
+  _defaults.nix          # Shared per-persona defaults
   classifier.{nix,md}    # GPU label classification
   extractor.{nix,md}     # GPU JSON extraction
   coder.{nix,md}         # GPU code-first
   assistant.{nix,md}     # GPU general
   thinker.{nix,md}       # CPU multi-step reasoning
+default.nix              # Import wrapper
 index.nix                # Inline options + library load + hwc-llm wrapper
 README.md
 ```
@@ -59,6 +61,12 @@ README.md
 
 ## Changelog
 
+- 2026-05-31: Fixed orphaned option-sets that broke `nix flake check`
+  (`40d9e2a3`).
+- 2026-05-29: Persona library reworked alongside the persona-daemon work
+  (commits 2/4 and 3/4, `d5e5d002`/`007b5ab9`) — added `library/_defaults.nix`
+  so each persona file only overrides what differs, and expanded `index.nix`
+  to load against those defaults.
 - 2026-05-29: Initial module. 5 personas (classifier, extractor, coder,
   assistant, thinker). Stateless CLI wrapping `llama-gpu` (port 11500)
   and `llama-cpu` (port 11501).
