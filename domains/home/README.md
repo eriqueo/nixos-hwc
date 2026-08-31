@@ -44,6 +44,15 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-08-30: `core/shell/` — the zsh prompt now execs a fixed starship path.
+  `starship init zsh` bakes in whichever `starship` is first on `PATH`; after
+  `hms` that is `~/.nix-profile/bin/starship`, which the next
+  `nixos-rebuild switch` removes, so every already-open shell printed
+  "no such file or directory" three times per prompt. `parts/zsh-init.nix` now
+  owns the init and forces the lookup to
+  `/etc/profiles/per-user/$USER/bin/starship`, a path both activation lanes
+  keep (`8a187e45`). Same dual-path class of bug as the stale-hash `hash -r`
+  precmd already in this file.
 - 2026-08-12: `core/shell/` — the `server` ssh matchBlock and the `server`/`xps` aliases no longer carry hardcoded Tailscale IPs; both read `hmLib.fleet osConfig` (new helper in `domains/lib/hm.nix`), which resolves `hwc.networking.hosts.ips` on NixOS hosts and falls back to literals only for standalone HM. `parts/aliases.nix` takes a new `fleet` argument, mirroring the existing `nixosPath` registry-with-Law-1-fallback pattern already in that file. Rendered values change (`100.114.232.124` → `100.77.195.118`) because hwc-server re-registered on a new tailnet address that day — which is the point: the address now lives in one place instead of four.
 - 2026-07-11: Law 3 migration — shell + scraper `nixosPath` standalone-HM fallback now derives from `config.home.homeDirectory` (gpu-screen-recorder escape-hatch precedent) instead of a `/home/eric` literal; hyprland session.nix stale commented-out screenshots fallback removed; yazi keymap.nix dead `? "/mnt/media"` default param dropped (index.nix always passes `mediaRoot`). Rendered values unchanged.
 

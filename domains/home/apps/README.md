@@ -30,6 +30,25 @@ apps/
 ```
 
 ## Changelog
+- 2026-08-30: **herdr bumped 0.6.2 → 0.8.2** (`31dbb61b`) — upstream latest
+  stable, released 2026-08-19. Only the version string and the `fetchurl` hash
+  in `herdr/parts/package.nix` change; the derivation shape is untouched.
+- 2026-08-29: **claude-code — claimcheck Artifact gate persisted, then given a
+  runtime.** A new `claimcheckArtifact` gate-hook flag (default true) wires
+  `claimcheck-artifact-gate.sh` on the `Artifact` matcher, so textual Artifact
+  publication — the decision point the notification audit crossed — replays the
+  SQLite-only plans and recompiles the bytes before publishing; images stay
+  outside this claim-provenance control (`66e276e1`). The follow-on declared
+  the validator's runtime (`529b9f91`): a `claimcheck` shell wrapper over
+  `python3.withPackages [ jsonschema ]` now ships with `shareConfig`, because
+  the schemas are executable policy and a host could otherwise look wired while
+  its Artifact hook blocked every report on an undeclared Python dependency.
+- 2026-08-28: **claude-code — `claimGuard` stays disarmed.**
+  `shareConfig.gateHooks.claimGuard` now defaults false and the live Stop entry
+  was removed, after the measured 2026-08-23 result: 19 blocks across 60
+  transcripts, zero measured true positives (`df17a857`). The per-hook flag
+  remains so a future measured implementation can be re-armed deliberately;
+  Home Manager no longer silently restores it.
 - 2026-08-26: **doctl — new app; agenix-authenticated DigitalOcean CLI**. `doctl auth init` validates against `cloud.digitalocean.com/v1/oauth/token/info` and returned 401 for a token that same endpoint accepted over curl (doctl 1.160.1), so the `config.yaml` auth path is unusable. A `writeShellScriptBin "doctl"` wrapper reads `/run/agenix/digitalocean-access-token`, exports `DIGITALOCEAN_ACCESS_TOKEN`, and execs `${pkgs.doctl}/bin/doctl` — the token stays out of `config.yaml`, the shell environment, and shell history. The bare `pkgs.doctl` was removed from `core/development/` and from `apps/dxlog/`, which would otherwise collide on `bin/doctl`; `dxlog` now enables this module instead, which also repaired `dxlog live` (verified: the tail connects and holds open). Enabled on hwc-laptop. hwc-server has no `doctl` consumer, so the `core/development` removal is not a regression there.
 - 2026-06-19: **pave-query-builder — new external-flake app + HWC adapter**. Trap-safe Pave (JobTread API) query builder (TUI + CLI), its own repo at `~/600_apps/pave-query-builder` consumed as the `pave-query-builder` flake input (same shared-remote model as todui/khalt/workbench). Thin translator imports the app's `homeManagerModules.pave-query-builder` and feeds it the jt-mcp schema path when present; mutation guardrail left at the app default (HWC test org only). Enabled in `profiles/desktop/home.nix`. Launcher: `kitty -e pave-query`.
 - 2026-06-19: **zellij — `session_serialization false`**. zellij's default serializes sessions to disk for resurrection; combined with the default `on_force_close "detach"`, that's why a closed workbench window left a live `--server` process that could resurrect STALE. Since workbench is fully rebuilt from its KDL layout on every open, nothing is worth resurrecting — disabling serialization makes every recreate (incl. `wb-reload`/SUPER+W) structurally fresh. `on_force_close` deliberately left at `detach` to keep the accidental-close reattach safety net.
