@@ -80,6 +80,16 @@ in
           set — upstream gates the autoconnect unit on it.
         '';
       };
+      extraSetFlags = lib.mkOption {
+        type = types.listOf types.str;
+        default = [];
+        example = [ "--accept-dns" "--operator=eric" ];
+        description = ''
+          Extra flags for `tailscale set`. Applied by upstream's
+          `tailscaled-set.service` after tailscaled starts, without requiring an
+          auth key or re-registering the node.
+        '';
+      };
     };
 
     # ---- NFS ----
@@ -185,6 +195,7 @@ in
       authKeyFile = cfg.tailscale.authKeyFile;
       authKeyParameters = cfg.tailscale.authKeyParameters;
       extraUpFlags = cfg.tailscale.extraUpFlags;
+      extraSetFlags = cfg.tailscale.extraSetFlags;
     };
 
     # =========================

@@ -187,7 +187,10 @@
     firewall.extraTcpPorts = [ 56037 ];
     firewall.extraUdpPorts = [ 56037 ];
     tailscale.enable = true;
-    tailscale.extraUpFlags = [ "--accept-dns" ];
+    # Keep DNS acceptance declarative and let T3 Code manage tailnet-only Serve.
+    # `extraSetFlags` works for an already-registered node; `extraUpFlags` does
+    # not run here because this laptop deliberately has no authKeyFile.
+    tailscale.extraSetFlags = [ "--accept-dns" "--operator=eric" ];
   };
 
   # Syncthing — bidirectional home folder sync with hwc-server
