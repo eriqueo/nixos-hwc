@@ -19,4 +19,11 @@ meta-leader which-key plugin when the unified keymap grammar is present.
 - `parts/tabs.nix` — canonical hub + tool tab set (order = GoToTab indices)
 
 ## Changelog
+- 2026-07-12: Added the **refinery** hub-page tab to `parts/tabs.nix`; the hub
+  run now spans tabs 1–6 and the tool tabs shift to 7–11 (`8cc83fb1`).
+- 2026-07-11: Added the **crm** hub tab, second in `tabs.hubs` to match its hub
+  `order = 15` between hwc and datax. The CRM hub manifest had shipped in the
+  workbench flake with no zellij tab, so it was unreachable. The layout KDL,
+  the `GoToTab` indices and `WORKBENCH_TABS` all derive from that one list, so
+  they stay coherent (`f73fa9b3`).
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

@@ -565,5 +565,20 @@ See the main implementation guide for curl test commands for each workflow.
 
 ---
 
-**Last Updated:** 2026-03-24
+## Changelog
+
+- 2026-07-15: `02-frigate-surveillance-intelligence.json` — Discord alerts now
+  carry an iOS-playable HLS link alongside the mp4 clip (`19c98a04`). Frigate's
+  `/api/events/<id>/clip.mp4` streams chunked with no byte-range support and
+  iOS AVPlayer requires 206 partial content, so phones could never play it;
+  the nginx vod HLS endpoint supports ranges and plays natively. Messages now
+  carry both **Clip** (mp4, desktop) and **Phone** (HLS, iOS). The repo export
+  was re-synced from the live workflow — it had drifted behind the snapshot
+  upload and priority-channel routing — with the Discord webhook URL redacted.
+- 2026-07-09: Retired the three monitoring/alert workflows described in the
+  note at the top of this file.
+
+---
+
+**Last Updated:** 2026-07-15
 **Author:** Eric (with Claude assistance)

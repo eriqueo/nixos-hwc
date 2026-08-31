@@ -48,6 +48,26 @@ monitoring/
 ```
 
 ## Changelog
+- 2026-08-26: **`alerts/` — the failure-notifier list named seven units that do
+  not exist.** `autoDetectedServices` had 18 entries; `backup`, `backup-local`,
+  `backup-cloud`, `frigate`, `receipts-ocr`, `podman-immich` and `jt-mcp` name
+  nothing on hwc-server. The module comment claimed this was harmless because
+  "systemd will gracefully handle `OnFailure=` for non-existent services", and
+  that is the hazard: the list feeds a `lib.listToAttrs` that **creates**
+  `systemd.services.<name>`, so NixOS emitted unit files carrying only
+  `OnFailure=` and no `ExecStart`, which systemd rejects
+  (`systemctl show -p LoadState --value backup.service` → `bad-setting`).
+  `backup` did not merely cover nothing — it generated a broken unit while
+  reading, for months, as backup coverage. Eight live timer-driven units that
+  had no notifier at all were added, each verified `loaded` with an empty
+  `OnFailure` first: brainvec-ingest, hwc-crm-tick, storage-monitor,
+  inbox-janitor, morning-briefing, nightly-builds, llama-embed.
+  `postgresql-db-backup` was nearly added too — an eval caught that the same
+  commit retires that job, which would have reproduced the exact stub-unit
+  defect being removed. The list stays hand-maintained and now carries a
+  comment saying a name here CREATES a unit; deriving it from
+  `config.systemd.services` is the principled fix, blocked on infinite
+  recursion and named rather than pretended away (`85b60856`).
 - 2026-08-20: homepage — Paperless tile repointed to `paperless.hwc.iheartwoodcraft.com`, the last of the three tiles that pinned a retired subpath. All homepage hrefs now name either a vhost or a deliberately-held subpath; none point at a path that no longer routes.
 - 2026-08-20: prometheus — LazyLibrarian blackbox probe de-pinned from the retired URL base (`:5299/books` → `:5299/`), and the Navidrome homepage tile repointed to its vhost. Same failure shape the 2026-08-15 entry recorded for the \*arr probes and worth restating because it recurred within a week: the `http_reachable` module's "up" set includes 4xx, so once `http_root` was cleared this probe would have kept reporting LazyLibrarian **up** while getting a 404 from a path that no longer exists. A probe that cannot fail is worse than no probe — it occupies the dashboard slot where a real signal would go.
 - 2026-08-20: homepage — Audiobookshelf tile repointed to `audiobookshelf.hwc.iheartwoodcraft.com` alongside its route flip in `networking/routes.nix`. Dashboard hrefs are the one consumer of a route change that fails **completely silently**: nothing probes them, so a tile pointing at a retired subpath just 404s the next person who clicks it, months later. Moving the tile in the same commit as the route is the only thing that keeps them honest. The `/docs` (paperless) and `/music` (navidrome) tiles are deliberately left on the old subpath — those apps still carry an in-app URL base and have not migrated yet.

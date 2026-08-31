@@ -116,6 +116,15 @@ journalctl -u podman-qbittorrent -f
 
 ## Changelog
 
+- **2026-08-20**: Gluetun went multi-instance
+  (`hwc.networking.gluetun.instances.<name>.*` replaces the flat singleton).
+  The hand-copied `cfg.network.mode != "vpn" || gluetun.enable` assertion in
+  `parts/config.nix` is now `helpers.mkVpnAssertions`, which checks the
+  *specific* tunnel this container joins is declared and enabled — with more
+  than one tunnel, "is some tunnel on" was worse than no check at all. The
+  remaining path assertions are unchanged. qBittorrent keeps the forwarded port
+  on the original `gluetun` instance; slskd is what needed the second tunnel
+  (`0f102aa4`).
 - **2026-08-01**: Split `privacy.enable` into per-protocol toggles
   (`anonymousMode`/`dht`/`pex`/`lsd`) and turned **DHT + PeX back on** by
   default. The blanket-off posture was redundant with the gluetun tunnel (the

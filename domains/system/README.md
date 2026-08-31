@@ -10,13 +10,13 @@
 ## Structure
 ```
 domains/system/
-├── core/
-│   ├── filesystem.nix    # Filesystem tmpfiles; options at hwc.system.core.filesystem (alias: hwc.filesystem)
-│   ├── packages.nix      # Base/server/security package bundles (hwc.system.core.packages.*)
-│   ├── paths.nix         # Path source of truth (hwc.paths.*)
-│   ├── polkit.nix (moved to services/polkit)
-│   ├── thermal.nix
-│   └── validation.nix    # Domain-wide assertions
+├── core/                 # See core/README.md for the full listing
+│   ├── authentik/        # SSO/Identity Provider (hwc.system.core.authentik.*)
+│   ├── login/            # greetd + tuigreet, hyprStart session wrapper
+│   ├── coredump.nix      # systemd-coredump retention caps
+│   ├── nix-build-limits.nix # nix-daemon MemoryHigh/MemoryMax cgroup ceiling
+│   ├── index.nix         # Core aggregator
+│   └── packages.nix      # Base/server/security package bundles (hwc.system.core.packages.*)
 ├── networking/
 │   └── index.nix         # SSH, Tailscale, NFS, Samba, firewall, wait-online (hwc.system.networking.*)
 ├── mcp/                  # HWC Infrastructure MCP Server (25 tools, 5 resources)
@@ -40,6 +40,45 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-08-29: `mcp/` — `today.ts` and `nightly-review.ts` reworked for the
+  notifications CEO information contract and to expose terminal review cases
+  (`dc0fce28`, `cd7ab4dd`); `tests/today-ledger.test.ts` updated alongside.
+  Detail in `mcp/README.md`.
+- 2026-08-28: `core/authentik/` — dead `$PSQL` `CREATE ROLE` + GRANTs in
+  `postgresql.postStart` replaced by a declared `ensureUsers` entry with
+  `ensureDBOwnership` (`e82ca994`). Detail in `core/authentik/README.md`.
+- 2026-08-26: **`core/nix-build-limits.nix` — a nix build took the desktop with
+  it, so `nix-daemon` is now capped in bytes** (`1d73dde8`). A local CUDA
+  rebuild ran 37 concurrent `cc1plus` at ~800 MB each plus 15 `cicc`/`cudafe++`
+  front ends: NixOS ships `max-jobs = auto` (22 here) with `cores = 0` (all 22
+  per job), so the real ceiling is 484 compilers, not 22. Anonymous memory hit
+  24 GB against 30 GB RAM and the kernel global OOM killer ran for 12 minutes,
+  taking a dozen Chromium tabs, `dbus-broker`, both portals, waybar, swaync and
+  finally `systemd --user`. Hyprland survived because `session-2.scope` sits
+  outside `user@1000.service`, which is why the symptom read as "the bar
+  vanished" rather than a compositor crash. Capping `max-jobs`/`cores` was the
+  rejected alternative — a job count is a guess at compiler RSS, which ranges
+  ~50 MB to ~3 GB, so a cap low enough to survive a CUDA build wastes most
+  cores on every ordinary build and still constrains nothing in bytes.
+  `MemoryHigh` throttles and forces reclaim so an expensive build slows instead
+  of dying; `MemoryMax` is the hard stop and lands the kill inside the build
+  cgroup. Expressed as percentages so the laptop and the server share one
+  number.
+- 2026-08-21: `core/login/` — **`AQ_DRM_DEVICES` tried, then reverted**
+  (`36f74438`, reverted by `e3d820f2`). Aquamarine enumerates every DRM card,
+  so Hyprland opened the NVIDIA node alongside the Intel one and held it for
+  the session; that card has no connectors on this laptop (eDP-1 and every
+  DP-\*/HDMI-A-1 hang off i915), so it rendered nothing and pinned the dGPU
+  awake at ~11 W of a 27.8 W idle draw. The power config was never at fault —
+  `DynamicPowerManagement=2`, `power/control=auto` and `finegrained=true` were
+  already correct; the tell was `runtime_suspended_time` reading 0 against 5.5
+  days of uptime. The fix did not boot: Hyprland 0.56 aborted in
+  `CCompositor::initServer` on both greetd attempts, because Aquamarine rejects
+  an unusable value outright rather than falling back to enumeration — a wrong
+  value here is an unbootable desktop, not a degraded one. The by-path form is
+  the prime suspect (a symlink rather than a real device node) but was never
+  confirmed, and `/dev/dri/card1` is untried. The diagnosis and a retry
+  procedure survive as a comment; the ~11 W dGPU pin remains open.
 - 2026-08-12: `networking/` — Tailscale registration made declarative. New `tailscale.authKeyParameters` option (`ephemeral`/`preauthorized`/`baseURL`), passed through to `services.tailscale`; the wrapper previously dropped it, which made OAuth-client registration inexpressible. Also added a `warnings` entry that fires when `extraUpFlags`/`authKeyParameters` are set while `authKeyFile` is null: upstream gates `tailscaled-autoconnect.service` (the only thing that ever runs `tailscale up`) on `authKeyFile`, so those flags are silently inert without it. That silence is what let hwc-server declare `--advertise-tags=tag:server` for months while actually registering untagged, inheriting the tailnet's 6-month key expiry and dropping off on 2026-08-07. Warn rather than assert: hwc-laptop (`--accept-dns`) and the appliance profile (`--ssh`) carry the same inert flags today and failing their builds is a separate cleanup. Verified red on hwc-laptop before shipping.
 - 2026-07-11: usb-automount: mount root now `config.hwc.paths.removableMedia` (default `/mnt`, unchanged) instead of a hardcoded `/mnt` literal (Law 3 migration).
 - 2026-07-06: mcp: website tmpfiles/ReadWritePaths repointed to /opt/business/website-site (website eviction).

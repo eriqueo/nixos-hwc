@@ -142,3 +142,27 @@ To register the agent as a tool in Open WebUI:
    - Headers: `Content-Type: application/json`
 
 Then users can invoke system commands through the chat interface.
+
+## Structure
+
+```
+agent/
+├── default.nix       # Import wrapper
+├── index.nix         # NixOS module — inline options, systemd unit, hardening
+├── hwc-ai-agent.py   # FastAPI whitelisted command-execution service
+└── README.md
+```
+
+## Changelog
+
+- 2026-06-02: Tailnet rename sweep — the discovery endpoint's advertised URLs
+  moved from `hwc.ocelot-wahoo.ts.net` to `hwc-server.ocelot-wahoo.ts.net`
+  (`56c1f6c8`). Mechanical string replacement in `hwc-ai-agent.py`; no
+  behavior change.
+- 2026-05-21: Dead-tree and orphan cleanup across `domains/ai` (`4f199955`).
+- 2026-03-06: Law 10 compliance — `options.nix` deleted and its option
+  declarations inlined into `index.nix` (`0f8f427c`).
+- Earlier (2025-12 → 2026-01): module restructured to charter unit anatomy —
+  the FastAPI service was lifted out of an inline Nix string into
+  `hwc-ai-agent.py`, `index.nix` became the implementation and `default.nix`
+  the import wrapper; path abstraction (Law 3) applied.

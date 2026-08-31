@@ -126,6 +126,9 @@ into this module is pending.
 
 ## Changelog
 
+- **2026-08-31** — Law 12 sweep: `parts/bootstrap/README.md` gained a
+  changelog recording the 2026-05-29 strip-types fix to `types.ts`
+  (`bd1a6d72`). Documentation only; no code change.
 - **2026-06-09** — Caddy routes migrated to name-based vhosts under the shared
   `*.hwc.iheartwoodcraft.com` wildcard cert: app at `hermes.hwc.iheartwoodcraft.com`
   (was `:25443`) and the market-trials dashboard at

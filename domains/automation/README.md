@@ -68,6 +68,26 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-08-31: Law 12 sweep — the `n8n/` README and its `parts/*` READMEs were
+  brought current with their contents (`e05cdb7d`, `17c9d203`). Documentation
+  only; no workflow, SQL or Nix change.
+- 2026-08-29: **Refinery board turned decision-first.** SR investigations now
+  lead with the decision rather than the narrative (`adfb7724`), every tab was
+  reworked as an executive surface (`2a399abd`), reviews became a decision
+  surface with legacy `/review` links redirected (`42dcc88c`, `b2b56144`), and
+  decision cards are held brief (`5327cef7`). Follow-ups retired stale SR
+  failures and folded pre-decision SR history (`4957b835`, `b00528e1`), with
+  the shell/fixture tests realigned (`75d204bd`, `766ce10b`). Landed against
+  the new notifications CEO information contract (`dc0fce28`). Detail lives in
+  `refinery/README.md`.
+- 2026-08-28: **nightly-builds runner packaged immutably** (`404fa985`) —
+  plus approved-card queueing and underscore-named card discovery/execution
+  (`770b1034`, `1439d67b`, `cd7ab4dd`), review-LLM credentials (`e29b9193`),
+  and two reporting-truth fixes: `pr_field` now takes its inputs and matches
+  states exhaustively (`50a31ae5`), and a card's `pr:` records the real branch
+  fate instead of a blanket "(pushed)" (`0067e063`). Morning review is bounded
+  and skips merged branches (`3b3e54b1`). Detail lives in
+  `nightly-builds/README.md` and `sr-gauntlet/README.md`.
 - 2026-08-26: **Headless `claude -p` auth failures now fail the run, across the
   domain.** The CLI writes `Failed to authenticate. API Error: 401 ...` to stdout
   and **exits 0**, so every consumer here read a dead credential as a clean run.

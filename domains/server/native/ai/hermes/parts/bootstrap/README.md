@@ -57,3 +57,15 @@ The actual installation runs as a one-shot systemd service
 
 Missing or invalid values produce a `CONFIG_INVALID` `HermesDeployError` with
 a clear list of which vars are missing.
+
+## Changelog
+
+- 2026-05-29: `types.ts` — dropped TypeScript's parameter-property shorthand
+  for strip-types compatibility (`3f4601be`). Node 22's
+  `--experimental-strip-types` removes type annotations only; it does not
+  synthesize the field-assignment half of `constructor(public readonly foo: T)`,
+  so the shorthand became a runtime `SyntaxError` under the strip-only runtime
+  this CLI actually uses. `HermesDeployError` now declares its fields
+  explicitly and assigns them in the constructor body, and
+  `HermesDeployErrorCode` was extracted as a named union so adding a code
+  touches one place. `tsc --noEmit` stays clean.

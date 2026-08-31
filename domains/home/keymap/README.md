@@ -92,6 +92,10 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 
 ## Changelog
 
+- 2026-07-11 — **New meta jump key `r` → CRM.** `grammar.nix` gained the entry
+  and `parts/to-zellij.nix` renders it, following the CRM hub tab landing in
+  the zellij layout. One grammar line drives the KDL, the `GoToTab` index and
+  `WORKBENCH_TABS` together (`f73fa9b3`).
 - 2026-06-26 — **Ctrl = workbench layer; in-app side-nav → Alt.** zellij now
   binds `Ctrl j`/`Ctrl k` to cycle tabs directly (plus `Ctrl Space` = meta card),
   so Ctrl is the workbench/meta layer. In-app two-column nav moved off Ctrl onto

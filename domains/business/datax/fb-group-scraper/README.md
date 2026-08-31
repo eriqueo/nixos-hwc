@@ -117,11 +117,41 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 ## Structure
 
 ```
-├── index.mjs    CLI, browser lifecycle, scroll loop, comment expansion
-├── parse.mjs    FB GraphQL response parsers (ported from API Monitor)
-├── store.mjs    SQLite persistence layer
-├── data/
-│   ├── posts.db       ← created on first run
-│   └── session.json   ← created on login
-└── package.json
+├── index.mjs         CLI, browser lifecycle, scroll loop, comment expansion
+├── parse.mjs         FB GraphQL response parsers (ported from API Monitor)
+├── Containerfile     Playwright base image for the containerized run
+├── package.json
+├── package-lock.json
+└── data/             ← not tracked; created at runtime
+    ├── posts.db      ← created on first run
+    └── session.json  ← created on login
 ```
+
+`store.mjs` was listed here but has never been tracked in git — SQLite
+persistence lives in `index.mjs`. Corrected 2026-08-31.
+
+## Changelog
+
+> Status: `domains/business/datax/` holds unreferenced 2026-05 leftovers — the
+> `hwc.business.datax` module was deleted 2026-08-26. See
+> `domains/business/README.md`. Nothing below has run since.
+
+- 2026-05-21: `shell.nix` deleted (`5da97868`). It had been added ten days
+  earlier to run Playwright's interactive login against the system Chromium on
+  the NixOS laptop (`8b1715d8`, `c1723479`).
+- 2026-05-15: `package-lock.json` regenerated for the Playwright 1.59.1
+  install, as a side-effect of the HWC lead-scoring work in the sibling
+  `fb-classifier/` (`80d78d4a`).
+- 2026-05-13: `index.mjs` carried along by the jobber-mcp project-path sweep
+  (`aa12b637`, `2d15e31f`, `5cf2ab77`, `b6f1fc59`).
+- 2026-05-11: Playwright pinned to an exact `1.59.1` (was `^1.49.0`) with the
+  `Containerfile` base image moved to
+  `mcr.microsoft.com/playwright:v1.59.1-noble` so library and browser build
+  match (`96bcad2c`).
+- 2026-05-11: Login handling reworked in `index.mjs`. The scraper switched to
+  `launchPersistentContext` with a `--profile` flag (`14bb2b86`), and login
+  completion is now auto-detected by polling for the `c_user` cookie rather
+  than watching the DOM — the password form disappearing was not the same as
+  being logged in, and passkey redirects broke the old wait (`c000f1b2`,
+  `a215218e`, `be21c3c0`). The interactive Enter-press is no longer required
+  (`c03a3c62`).

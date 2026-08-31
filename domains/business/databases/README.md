@@ -85,6 +85,22 @@ After enabling and rebuilding:
 
 ## Changelog
 
+- 2026-08-28: Declared `business_user` via `services.postgresql.ensureUsers`
+  (`53e84228`). `schema.sql:772-774` and
+  `migrations/001-catalog-schema-split.sql` grant to that role by name and
+  nothing else in the repo mentions it, so this module owns it; until now it
+  existed on the live cluster by hand and a rebuilt cluster would have run
+  those grants against a nonexistent role. No `ensureDBOwnership` — `eric`
+  owns this database and its objects; `business_user` is a grantee.
+- 2026-08-28: Deleted the four `$PSQL` GRANT lines from `postStart`
+  (`e82ca994`). None ever ran: `$PSQL` is undefined in the generated
+  postgresql post-start script and `|| true` swallowed the command-not-found.
+  They were not load-bearing either — `eric` is a superuser and owns this
+  database. The per-database backup registration went with them:
+  `postgresql-db-backup` was retired 2026-08-26, so registering into it would
+  be dead config reading as a backup; `hwc` rides the borg pre-hook's nightly
+  `pg_dumpall` into `/var/lib/backups`. Full rationale in
+  `domains/data/databases/README.md`.
 - 2026-05-01: Added export scripts, estimate_templates table, 70 catalog items with Craftsman/JT rates
 - 2026-04-12: Created index.nix module (hwc.business.databases.*), wired into business domain
 - 2026-03-24: Granted n8n postgres user access to hwc schema

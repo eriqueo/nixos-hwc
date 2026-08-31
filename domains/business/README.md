@@ -27,6 +27,21 @@ business/
 ```
 
 ## Changelog
+- 2026-08-29: morning-briefing rebuilt around the notifications CEO information
+  contract (`dc0fce28`) — `gather-today.mjs`, `run.sh` and the dashboard now
+  lead with what needs a decision. The email subject followed (`7f332a78`):
+  it reads "N need you" from `sections.today.items` (capped at 5) and falls
+  back to "N to watch" from the alert count, replacing the flat "N alert(s)".
+  Detail in `morning-briefing/README.md`.
+- 2026-08-28: **Postgres postStart purge reached this domain.** `databases`,
+  `firefly` and `paperless` each carried `$PSQL` GRANT blocks that never ran —
+  `$PSQL` is undefined in the generated post-start script and `|| true`
+  swallowed the command-not-found (`e82ca994`). Deleted rather than repaired,
+  because every grant targeted a role that already owned the objects. The
+  follow-on (`53e84228`) declared `business_user` in `databases/index.nix` —
+  `schema.sql` and `001-catalog-schema-split.sql` grant to it by name and
+  nothing else in the repo mentions it, so it was the module's to claim. The
+  rationale lives in `domains/data/databases/README.md`.
 - 2026-08-28: Corrected the DataX-leftovers audit: `fb-group-scraper/node_modules` is a 15 MB ignored working-tree artifact, not checked-in content; the tracked scraper sources remain unreferenced.
 - 2026-08-26: `datax/` module deleted — `hwc.business.datax` is gone. The module owned the postgres role + database that lead-scout connects to, and after `ALTER DATABASE datax RENAME TO lead_scout` (85b44464) its name named nothing it owned, which is a Law 2 break. The role + database declaration moved into `domains/server/native/ai/lead-scout/index.nix`, where home-scout and research-scout already keep theirs. Two behaviour changes went with the move, both verified against the live cluster first: `ensureDBOwnership = true` now aligns lead_scout's database owner with its role (every table in it was already owned by that role, so nothing moved), and the old module's six raw GRANTs plus its `fb-monitor-bak/schema.sql` apply were dropped as redundant and stale. The per-database backup registration was dropped, matching the other two scouts — `postgresql-db-backup` was retired wholesale the same day (85b60856), so a registration into it would have been dead config reading as a backup. lead_scout is covered by the borg pre-hook's nightly `pg_dumpall` into `/var/lib/backups`, which carries every database. The `datax/` directory still holds unreferenced 2026-05 scraper leftovers (`dashboard/`, `fb-classifier/`, `fb-group-scraper/`, `fb-monitor-bak/`); its 15 MB `node_modules` is ignored and untracked, not checked in. Removing these leftovers is a separate change.
 - 2026-08-20: morning briefing reads `/var/lib/hwc/gluetun/*/status.json` and surfaces VPN tunnel state (`failed` → critical, `degraded` → warning, plus a stale-monitor warning if a check has not run in an hour). This is the second half of making the gluetun health check alert on transitions rather than state: transition-only alerting means a tunnel that degraded at 21:00 and is still down at 06:00 is deliberately silent overnight, and something has to hold that standing state. The briefing is where Eric actually looks, so it holds it — the same reasoning as the existing still-down vs auto-recovered split for service failures.

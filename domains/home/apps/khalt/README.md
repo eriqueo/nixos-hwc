@@ -35,6 +35,11 @@ domains/home/apps/khalt/
 
 ## Changelog
 
+- **2026-06-15b**: Wired into the new unified keymap factory
+  (`domains/home/keymap`) — `index.nix` gained a guarded block that sources
+  khalt's list-verbs from `grammar.nix` instead of declaring them here, so the
+  Space-inside-app layer comes from the one grammar every app reads. A no-op
+  when the grammar is absent (`64ecd635`).
 - **2026-06-15**: `[calendars]` now renders the Radicale-synced calendar
   (`calendars-radicale/`) when `hwc.mail.calendar.radicale.enable` is set, and
   drops the stale iCloud account calendars in that case (mirrors

@@ -36,6 +36,17 @@ notifications/
 | `hwc.notifications.canary.interval` | Canary cadence (OnCalendar, default `daily`) |
 
 ## Changelog
+- 2026-08-29: **Executive information contract established** (`dc0fce28`).
+  `NotificationInput.executive` is the additive typed implementation of
+  Engineering Principle 22: a new human-facing operational message supplies
+  `kind`, `meaning`, `recommendation`, and one typed `explore` route (`url`,
+  `file`, `conversation`, `command`, or `record`), with the title still
+  carrying the outcome. The Discord and SMTP adapters render those facts in the
+  same order, and Discord demotes source, topic and tags to its footer. Legacy
+  title/body payloads stay accepted through the expand-first migration so
+  producers can move independently. New `__tests__/executive-contract.test.ts`
+  pins legacy compatibility, exploration-target validation, and production
+  channel rendering. Detail in `notify/README.md`.
 - 2026-08-29: Canary **disabled** on hwc-server (`machines/server/config.nix`). The probe worked, but its notification polarity was inverted. Success was loud — a daily Discord post plus an email announcing that nothing was wrong — while `canaryScript` already reads `succeeded == attempted` from the dispatch result itself, so no human ever needed to read that message. Failure was the quiet case: `hwc-notify-canary` was never added to `monitoredServices` in `domains/monitoring/alerts/index.nix`, so no `OnFailure=` notifier fired, and a failed probe left only a sentinel file, a `wall`, and a red `systemctl --failed` that nobody watches. The 2026-07-07 design note ("the canary message itself is the human-visible heartbeat") is the origin of the defect: it made Eric the monitor for a check that monitors itself. Re-enable only alongside (1) `"hwc-notify-canary"` in `monitoredServices`, and (2) canary success routed to destinations nobody reads — a `#canary` webhook and a filtered mail subaddress — so the probe still exercises both adapters without paging a human to say things are fine. Both-adapters-dead remains outside this scheme and needs an external watcher (Uptime Kuma). `canary.nix` and its options are left in place, unchanged.
 - 2026-08-06: Law 10 burn-down — `canary.nix`'s option block (`enable`, `interval`) moved into `index.nix`. It was a double violation: Law 10 (mkOption only in index.nix) and Law 9 (a leaf module never declares `hwc.*` options). `canary.nix` is now implementation only; the namespace `hwc.notifications.canary.*` is unchanged, so no consumer moves. Surfaced by the corrected charter-law10 check (v12.6) — the old wired check was `fd options.nix`, a filename match that could never see this.
 - 2026-07-13: New `finance-to-alerts` route — `topic=finance` (firefly-digest daily summary, future Firefly webhooks) → #hwc-alerts; re-home to a #finance channel when one exists.

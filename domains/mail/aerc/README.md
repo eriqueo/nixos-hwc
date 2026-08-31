@@ -333,6 +333,27 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-07-16: `address-book-cmd` now points at `mail-addresses` (khard +
+  deduped notmuch history) when the new `domains/mail/contacts` module is
+  enabled, so completion reads the CRM-owned Radicale address book rather than
+  notmuch alone (`b4f466e6`).
+- 2026-07-09: **Triage folders + set-bucket keybinds** (unified-triage Phase 2,
+  `d31fdad3`). aerc now reads and writes the same tag-backed buckets as the
+  workbench kanban and the morning briefing: `triage/urgent|review|noise`
+  virtual folders (inbox-scoped, nested under one `triage` dirlist-tree node,
+  placed after people in folders-sort); `<Space>tu/tr/tn` set-bucket binds that
+  replace-set the `triage/*` tags with semantics identical to the gateway's
+  `hwc_mail set-triage`, so an aerc keypress moves the workbench card
+  (`<Space>mt`/`<Space>gt` were already taken by the tech category); and
+  `<Space>gU/gR/gN` go-to-folder binds. Cheat sheet and which-key group
+  updated. **Known limitation:** notmuch tag DBs are per-machine and the triage
+  tags live on hwc-server, so laptop aerc's triage view is empty pending a
+  muchsync-vs-server-canonical decision.
+- 2026-07-09: `parts/tags.nix` now sources its categories and flags from the
+  new build-time registry at `domains/mail/taxonomy/` instead of declaring them
+  locally, ending the four-way vocabulary drift between notmuch rules, the
+  mail-triage prompt, aerc, and the MCP gateway. Palette role→hex mapping stays
+  here. The rendered aerc config was verified byte-identical (`02c72431`).
 - 2026-06-26: folder nav `<C-j>/<C-k>` → `<A-j>/<A-k>` (next/prev-folder). Ctrl is now the workbench/zellij layer (Ctrl+j/k cycle tabs), so in-app side-column nav moved to Alt to avoid the collision.
 - 2026-06-26: which-key footer legend (`esc close · ⌫ back`) on the bottom border + Backspace walks up one chord level (forked aerc, app/whichkey.go + app/aerc.go); new themeable `whichkey_legend` style.
 - 2026-06-26: which-key popover redesign (forked aerc) — compact content-sized box (was edge-to-edge), `key → label` rows with nvim arrow, group keys read `domain +N` (e.g. `buffer +7`); styleset reworked to a raised slate card (bg3, lighter than terminal) with an inverted cream title chip and copper border, plus interior padding + a minimum box size. Code in `github:eriqueo/aerc` (app/whichkey.go, app/aerc.go); colors in `parts/appearance.nix`.
