@@ -23,6 +23,12 @@ core/
 ```
 
 ## Changelog
+- 2026-08-28: `authentik/parts/config.nix` — the dead `$PSQL` `CREATE ROLE` +
+  four GRANTs in `postgresql.postStart` were replaced by a declared
+  `ensureUsers` entry with `ensureDBOwnership` (`e82ca994`). This was the only
+  one of ten `postStart` blocks in the repo whose dead code was load-bearing: a
+  rebuilt cluster would have had the authentik database and no authentik role.
+  Detail in `authentik/README.md`.
 - 2026-02-28: Added README for Charter Law 12 compliance
 - 2026-03-12: Inlined options.nix into index.nix for identity, polkit, session, shell; removed separate options.nix files
 - 2026-03-26: Added Authentik SSO/Identity Provider module
