@@ -1,7 +1,8 @@
 # domains/home/apps/pi/index.nix
 #
 # pi coding agent wired to DataX's DX1 model (RunPod-served, exposed as the
-# "mycloud" provider). Declarative replacement for the imperative
+# "mycloud" provider) and DX2 (its own proxy, exposed as the "dx2" provider).
+# Declarative replacement for the imperative
 # setup-pi.sh install on datax-box: pinned package (parts/package.nix) +
 # ~/.pi/agent/ config rendered from Nix, with a deliberate split:
 #
@@ -61,6 +62,25 @@ let
             name = "DX1";
             contextWindow = cfg.dx1.contextWindow;
             maxTokens = cfg.dx1.maxTokens;
+          }
+        ];
+      };
+    }
+    # DX2 is a SEPARATE provider, not a second model inside `mycloud`: it is
+    # served from its own LiteLLM proxy (dx2.datax.to) and authenticated with
+    # its own key, and a pi provider carries exactly one baseUrl and one
+    # apiKey. Same `!cat` indirection, so the key stays out of the store.
+    // lib.optionalAttrs cfg.dx2.enable {
+      dx2 = {
+        baseUrl = cfg.dx2.baseUrl;
+        api = cfg.dx2.api;
+        apiKey = "!cat ${cfg.dx2.apiKeyFile}";
+        models = [
+          {
+            id = "dx2";
+            name = "DX2";
+            contextWindow = cfg.dx2.contextWindow;
+            maxTokens = cfg.dx2.maxTokens;
           }
         ];
       };
@@ -156,6 +176,61 @@ in
       };
     };
 
+    dx2 = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Add DX2 to models.json as the `dx2` provider. ON, unlike
+          `deepseek.enable`, because the key is already provisioned:
+          `domains/secrets/parts/infrastructure/dx2-api-key.age` mounts at
+          `apiKeyFile` on every host that evaluates the secrets domain. pi
+          resolves the key with `!cat` at request time, so a host without the
+          mount fails per-request rather than at activation.
+        '';
+      };
+
+      baseUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "https://dx2.datax.to/v1";
+        description = ''
+          OpenAI-compatible base URL of the DX2 deployment — its own LiteLLM
+          proxy, the same stable client-side entry point shape as DX1 and for
+          the same reason: it survives the serving pod being replaced.
+        '';
+      };
+
+      api = lib.mkOption {
+        type = lib.types.str;
+        default = "openai-completions";
+        description = "pi API dialect for the DX2 provider.";
+      };
+
+      apiKeyFile = lib.mkOption {
+        type = lib.types.str;
+        default = "/run/agenix/dx2-api-key";
+        description = ''
+          Runtime path of the DX2 API key (agenix mount, root:secrets 0440).
+          The name is derived from the .age path by
+          domains/secrets/parts/lib.nix: `infrastructure/dx2-api-key.age` ->
+          `dx2-api-key`. It carries no `pi-` prefix because the key is the
+          model's, not this harness's — T3 Code reaches the same DX2 endpoint.
+        '';
+      };
+
+      contextWindow = lib.mkOption {
+        type = lib.types.int;
+        default = 262144;
+        description = "DX2 context window in tokens.";
+      };
+
+      maxTokens = lib.mkOption {
+        type = lib.types.int;
+        default = 65536;
+        description = "DX2 max output tokens.";
+      };
+    };
+
     models = lib.mkOption {
       type = lib.types.attrs;
       default = defaultModels;
@@ -188,6 +263,7 @@ in
       type = lib.types.listOf lib.types.str;
       default = [
         "mycloud/dx1"
+        "dx2/dx2"
         "anthropic/claude-opus-4-6"
         "openai/gpt-5.3-codex"
       ];
@@ -196,8 +272,8 @@ in
         `enabledModels` array in settings.json. Same append-only merge as
         skillPaths, for the same reason: the file is pi-owned at runtime.
 
-        DX1 comes first because it is the only route that costs nothing per
-        token. Anthropic and OpenAI are subscription logins (`pi /login`), but
+        The DataX models come first because they are the only routes that cost
+        nothing per token. Anthropic and OpenAI are subscription logins (`pi /login`), but
         Anthropic bills a third-party harness per token as extra usage rather
         than against the Claude plan — pi prints that warning at startup. So
         Claude Code stays the cheap way to run Claude, and Claude in pi is the
@@ -335,7 +411,13 @@ in
       }
     ];
 
-    warnings = lib.optional (lib.hasInfix "proxy.runpod.net" cfg.dx1.baseUrl)
-      "hwc.home.apps.pi: dx1.baseUrl points at a RunPod pod-proxy URL — stable across Stop/Start, but it dies when that pod is terminated or replaced, and pi then 404s on every request. Prefer the LiteLLM proxy https://dx1.datax.to/v1, which survives pod migration.";
+    # Same trap for every DataX-served provider, so the message has one
+    # producer and each provider supplies only its own option name and URL.
+    warnings = lib.concatMap
+      ({ opt, url, proxy }:
+        lib.optional (lib.hasInfix "proxy.runpod.net" url)
+          "hwc.home.apps.pi: ${opt}.baseUrl points at a RunPod pod-proxy URL — stable across Stop/Start, but it dies when that pod is terminated or replaced, and pi then 404s on every request. Prefer the LiteLLM proxy ${proxy}, which survives pod migration.")
+      ([ { opt = "dx1"; url = cfg.dx1.baseUrl; proxy = "https://dx1.datax.to/v1"; } ]
+        ++ lib.optional cfg.dx2.enable { opt = "dx2"; url = cfg.dx2.baseUrl; proxy = "https://dx2.datax.to/v1"; });
   };
 }

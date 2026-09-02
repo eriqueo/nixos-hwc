@@ -1,7 +1,8 @@
 # hwc.home.apps.pi
 
 pi coding agent (`@earendil-works/pi-coding-agent`) pinned at **v0.80.7**,
-wired to DataX's **DX1** model as the `mycloud` provider. Declarative
+wired to DataX's **DX1** model as the `mycloud` provider and **DX2** as the
+`dx2` provider. Declarative
 replacement for the imperative `setup-pi.sh` install on datax-box
 (`/home/projects/bin/pi` + hand-written `~/.pi/agent/*.json` + `.bashrc` PATH
 edits).
@@ -33,7 +34,14 @@ parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
   indirection — `"apiKey": "!cat /run/agenix/pi-dx1-api-key"` — resolved at
   request time. The key lives in
   `domains/secrets/parts/home/pi-dx1-api-key.age` (default mount
-  root:secrets 0440; eric reads via the `secrets` group).
+  root:secrets 0440; eric reads via the `secrets` group). DX2 does the same
+  off `domains/secrets/parts/infrastructure/dx2-api-key.age` →
+  `/run/agenix/dx2-api-key`.
+- **DX2 is a provider, not a second model.** A pi provider carries one
+  `baseUrl` and one `apiKey`, and DX2 is served from its own proxy
+  (`dx2.datax.to`) under its own key — so it cannot be a second entry in
+  `mycloud.models`. `dx2.enable` is ON, unlike `deepseek.enable`, because the
+  key is already provisioned.
 - **Endpoint = the LiteLLM proxy, not the pod.** `dx1.baseUrl` is
   `https://dx1.datax.to/v1`. This is the same client-side entry point the
   DataX app uses; it survives DX1 moving between RunPod pods. Pointing at a
@@ -100,6 +108,12 @@ Bump `version` + both hashes in `parts/package.nix`.
 
 ## Changelog
 
+- 2026-09-01: Added the **DX2** provider — `dx2.enable` (on by default),
+  `dx2.baseUrl` `https://dx2.datax.to/v1`, key via `!cat
+  /run/agenix/dx2-api-key` off
+  `domains/secrets/parts/infrastructure/dx2-api-key.age`. `dx2/dx2` joins the
+  `enabledModels` ring; DX1 stays the default model. The pod-proxy warning now
+  iterates over both DataX providers instead of naming dx1 twice.
 - 2026-08-26: Daily-driver wave. Added `enabledModels` (Ctrl+P ring:
   `mycloud/dx1`, `anthropic/claude-opus-4-6`, `openai/gpt-5.3-codex`) and
   `deepseek.enable` (off by default — a missing agenix mount fails at request
