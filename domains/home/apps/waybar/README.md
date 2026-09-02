@@ -1,8 +1,8 @@
 # waybar
 
 ## Purpose
-Configures the Waybar status bar for Hyprland: module layout, Gruvbox-Material
-CSS, generated helper scripts (network, GPU, lid-sleep, weather, etc.), and a
+Configures the Waybar status bar for Hyprland: module layout, palette-driven
+HWC CSS, generated helper scripts (network, GPU, lid-sleep, weather, etc.), and a
 hardened systemd user service that waits for Hyprland IPC before launching.
 
 ## Boundaries
@@ -14,9 +14,10 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 - `index.nix` — options, packages, programs.waybar, systemd service, assertions
 - `sys.nix` — system-lane option + hardware/network assertions
 - `parts/behavior.nix` — module layout and per-widget settings
-- `parts/appearance.nix` — curated Gruvbox-Material CSS (palette feed is backlog)
+- `parts/appearance.nix` — HWC-branded CSS mapped onto shared theme tokens
 - `parts/packages.nix` — waybar + module dependency packages
 - `parts/scripts.nix` — writeShellScriptBin helpers incl. waybar-launch
 
 ## Changelog
+- 2026-09-02: Waybar now consumes the active HWC theme palette; opaque powerline section seams and selector structure are preserved.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

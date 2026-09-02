@@ -44,6 +44,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-02: `apps/waybar/` now maps its CSS onto the materialized HWC theme colors, so palette changes restyle the bar while opaque powerline seams remain intact.
 - 2026-08-31: `apps/codex/` now exposes the shared `delegate` skill for Herdr-free Claude Code, Codex, and DX1 worker calls from T3 sessions.
 - 2026-08-31: `apps/codex/` now exposes the shared Herdr and Project Director skills through out-of-store symlinks, keeping Claude and Codex on one orchestration-skill source.
 - 2026-08-12: `core/shell/` — the `server` ssh matchBlock and the `server`/`xps` aliases no longer carry hardcoded Tailscale IPs; both read `hmLib.fleet osConfig` (new helper in `domains/lib/hm.nix`), which resolves `hwc.networking.hosts.ips` on NixOS hosts and falls back to literals only for standalone HM. `parts/aliases.nix` takes a new `fleet` argument, mirroring the existing `nixosPath` registry-with-Law-1-fallback pattern already in that file. Rendered values change (`100.114.232.124` → `100.77.195.118`) because hwc-server re-registered on a new tailnet address that day — which is the point: the address now lives in one place instead of four.
