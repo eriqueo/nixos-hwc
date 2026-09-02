@@ -44,6 +44,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-02: `apps/t3code/` now remains active after Electron single-instance handoff and opts out of in-place `sd-switch` restarts, preventing `hms` from killing its own agent harness.
 - 2026-09-02: `apps/waybar/` now maps its CSS onto the materialized HWC theme colors, so palette changes restyle the bar while opaque powerline seams remain intact.
 - 2026-08-31: `apps/codex/` now exposes the shared `delegate` skill for Herdr-free Claude Code, Codex, and DX1 worker calls from T3 sessions.
 - 2026-08-31: `apps/codex/` now exposes the shared Herdr and Project Director skills through out-of-store symlinks, keeping Claude and Codex on one orchestration-skill source.

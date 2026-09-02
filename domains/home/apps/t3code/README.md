@@ -52,6 +52,13 @@ There is no `parts/`. This module packages no source.
   database and one thread history, and still gives the always-running behaviour
   a service is wanted for.
 
+- **Home Manager switches keep the running harness.** T3 carries the agent
+  invoking `hms`, so restarting its unit during activation aborts the command
+  that is applying the generation. `RemainAfterExit` keeps a successful
+  Electron single-instance handoff active, and `X-SwitchMethod=keep-old`
+  defers future unit changes until an explicit restart. The existing backend
+  sweep still runs for an intentional service restart or stop.
+
 - **`port` is set, and Tailscale Serve is not.** `T3CODE_PORT` reaches the
   desktop backend and fixes its port — measured 2026-08-26 with `T3CODE_PORT=3891`,
   which produced `baseUrl: http://127.0.0.1:3891/`. A fixed port matters because
@@ -92,6 +99,7 @@ is not managed here.
 
 ## Changelog
 
+- 2026-09-02: `hms` no longer starts the inactive T3 service and kills the backend carrying its own activation. Successful single-instance handoff stays active; unit changes wait for an explicit restart.
 - 2026-08-26: Fixed an orphaned-backend leak the autostart service caused.
   Electron moves the backend it spawns into a sibling systemd scope
   (`…/app.slice/app-electron-<pid>.scope`), so `systemctl --user stop t3code`

@@ -166,6 +166,9 @@ in
         Description = "T3 Code (autostart)";
         PartOf = [ "graphical-session.target" ];
         After = [ "graphical-session.target" ];
+        # T3 carries the agent running `hms`; switching this unit in place
+        # severs that command. Apply unit changes on the next explicit restart.
+        X-SwitchMethod = "keep-old";
       };
       Service = {
         # THE BACKEND ESCAPES THIS UNIT'S CGROUP, so systemd's own KillMode
@@ -186,6 +189,10 @@ in
         ExecStartPre = "-${pkgs.procps}/bin/pkill -f ${lib.escapeShellArg "${cfg.repo}/apps/server/dist/bin.mjs"}";
         ExecStart = lib.getExe launcher;
         ExecStopPost = "-${pkgs.procps}/bin/pkill -f ${lib.escapeShellArg "${cfg.repo}/apps/server/dist/bin.mjs"}";
+        # Electron's single-instance handoff exits successfully when the app is
+        # already open. Keep the unit active so sd-switch does not start it on
+        # every `hms` and fire the backend cleanup hooks around that no-op.
+        RemainAfterExit = true;
         Restart = "on-failure";
         RestartSec = 5;
       };
