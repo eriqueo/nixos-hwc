@@ -13,11 +13,14 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 ## Structure
 - `index.nix` — options, packages, programs.waybar, systemd service, assertions
 - `sys.nix` — system-lane option + hardware/network assertions
-- `parts/behavior.nix` — module layout and per-widget settings
+- `parts/behavior.nix` — module layout, shared realized height, per-widget settings
 - `parts/appearance.nix` — HWC-branded CSS mapped onto shared theme tokens
 - `parts/packages.nix` — waybar + module dependency packages
 - `parts/scripts.nix` — writeShellScriptBin helpers incl. waybar-launch
 
 ## Changelog
+- 2026-09-02: Both output configs now request the 37 px height already imposed
+  by the shared GTK CSS, eliminating ignored 32/36 px requests without changing
+  the rendered bar size.
 - 2026-09-02: Waybar now consumes the active HWC theme palette; opaque powerline section seams and selector structure are preserved, and CSS comments describe palette semantics rather than Gruvbox-specific hues.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

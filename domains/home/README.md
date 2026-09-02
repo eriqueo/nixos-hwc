@@ -44,6 +44,10 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-02: Removed three noisy desktop warnings without changing realized
+  behavior: T3's out-of-store checkout is validated at activation instead of
+  pure evaluation, graphical cursor generation is explicitly enabled, and both
+  Waybar outputs declare their existing 37 px GTK minimum.
 - 2026-09-02: `apps/t3code/` now remains active after Electron single-instance handoff and opts out of in-place `sd-switch` restarts, preventing `hms` from killing its own agent harness.
 - 2026-09-02: `apps/waybar/` now maps its CSS and comments onto materialized HWC theme semantics, so palette changes restyle the bar while opaque powerline seams remain intact.
 - 2026-08-31: `apps/codex/` now exposes the shared `delegate` skill for Herdr-free Claude Code, Codex, and DX1 worker calls from T3 sessions.

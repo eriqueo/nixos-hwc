@@ -8,7 +8,7 @@ fork `eriqueo/t3code`, checked out at `~/600_apps/t3code`.
 ## Structure
 
 ```
-index.nix   # hwc.home.apps.t3code — launcher, Electron shim, desktop entry
+index.nix   # launcher, Electron shim, desktop entry, activation-time repo check
 README.md   # this file
 ```
 
@@ -99,6 +99,9 @@ is not managed here.
 
 ## Changelog
 
+- 2026-09-02: Moved local-fork validation from pure Nix evaluation to Home
+  Manager activation, where the out-of-store checkout is visible. Valid
+  checkouts no longer produce a false warning; missing checkouts still do.
 - 2026-09-02: `hms` no longer starts the inactive T3 service and kills the backend carrying its own activation. Successful single-instance handoff stays active; unit changes wait for an explicit restart.
 - 2026-08-26: Fixed an orphaned-backend leak the autostart service caused.
   Electron moves the backend it spawns into a sibling systemd scope

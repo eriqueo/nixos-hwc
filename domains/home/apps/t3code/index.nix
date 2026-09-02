@@ -221,8 +221,12 @@ in
     #========================================================================
     # VALIDATION
     #========================================================================
-    warnings =
-      lib.optional (!builtins.pathExists "${cfg.repo}/apps/desktop/package.json")
-        "hwc.home.apps.t3code: ${cfg.repo} does not look like the T3 Code fork. Clone eriqueo/t3code there, or set hwc.home.apps.t3code.repo.";
+    # cfg.repo is deliberately outside the flake, so pure evaluation cannot
+    # inspect it. Check the live filesystem during activation instead.
+    home.activation.t3codeRepoCheck = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      if [ ! -f ${lib.escapeShellArg "${cfg.repo}/apps/desktop/package.json"} ]; then
+        echo "hwc.home.apps.t3code: ${cfg.repo} does not look like the T3 Code fork. Clone eriqueo/t3code there, or set hwc.home.apps.t3code.repo." >&2
+      fi
+    '';
   };
 }

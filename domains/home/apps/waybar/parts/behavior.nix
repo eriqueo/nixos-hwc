@@ -10,6 +10,10 @@ let
   gsrEnabled = gsrCfg.enable or false;
 
   commonModules = {
+    # GTK computes a 37 px minimum from the shared 16 px text and 8 px padding.
+    # Both bars already render at this height; declare it to avoid ignored
+    # per-output requests and Waybar's warning on every start.
+    height = 37;
     modules-left = [ "custom/ws-enter" "hyprland/workspaces" "hyprland/submap" "custom/workspace-link" ];
     modules-center = [ "custom/khal" "clock" "custom/weather" ];
     modules-right = [
@@ -175,7 +179,6 @@ let
     output = "__EXTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
-    height = 32;
     spacing = 0;
     tray = { spacing = 10; icon-size = 18; };
   };
@@ -191,7 +194,6 @@ in
     output = "__INTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
-    height = 36;
     spacing = 0;
     tray = { spacing = 12; icon-size = 20; };
   } // commonModules // internalWidgets)
