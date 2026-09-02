@@ -36,7 +36,7 @@ window#waybar {
   border: none;
 }
 
-/* Empty: same teal bg, dimmed via opacity so section stays uniform for powerline */
+/* Empty: same section background, dimmed via opacity so powerline stays uniform */
 #workspaces button.empty {
   background-color: #${colors.sectionB};
   color: #${colors.bg1};
@@ -67,7 +67,7 @@ window#waybar {
   margin: 8px 4px;
 }
 
-/* === CLOCK & WEATHER — cohesive with active workspace === */
+/* === CLOCK & WEATHER — palette accent underline === */
 #clock, #custom-weather, #custom-khal {
   padding: 8px 10px;
   min-height: 0;

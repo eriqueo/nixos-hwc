@@ -19,5 +19,5 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 - `parts/scripts.nix` — writeShellScriptBin helpers incl. waybar-launch
 
 ## Changelog
-- 2026-09-02: Waybar now consumes the active HWC theme palette; opaque powerline section seams and selector structure are preserved.
+- 2026-09-02: Waybar now consumes the active HWC theme palette; opaque powerline section seams and selector structure are preserved, and CSS comments describe palette semantics rather than Gruvbox-specific hues.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).
