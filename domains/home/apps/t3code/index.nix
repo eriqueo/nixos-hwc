@@ -79,12 +79,16 @@ in
 
     electronPackage = lib.mkOption {
       type = lib.types.package;
-      default = pkgs.electron;
+      default = pkgs.electron_43;
       description = ''
         Electron used at run time. Keep the MAJOR version matched to
         apps/desktop/package.json — main.cjs is compiled against that ABI.
-        Measured 2026-08-26: the fork asks for 41.5.0 and nixpkgs' 41.9.1 runs
-        it correctly ("backend ready", "main window created").
+        Pinned to the MAJOR explicitly, not to `pkgs.electron`, so a nixpkgs
+        bump cannot silently move the ABI out from under a built fork.
+
+        Measured 2026-09-03: the fork asks for 43.4.1 and nixpkgs' 43.1.0 runs
+        it. Was 41.5.0/41.9.1 until the upstream rebase that brought in
+        claude-fable-5-1; the desktop Electron pin moved 41 -> 43 with it.
       '';
     };
 

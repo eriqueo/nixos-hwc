@@ -92,6 +92,15 @@ is not managed here.
 
 ## Changelog
 
+- 2026-09-03: `electronPackage` default moved from `pkgs.electron` to
+  `pkgs.electron_43`, following the fork's rebase onto upstream
+  `pingdotgg/t3code` main. The desktop app's pin went 41.5.0 -> 43.4.1, and
+  `main.cjs` is compiled against that ABI, so the floating `pkgs.electron`
+  (41.9.1) would no longer run it. Pinned to the MAJOR attribute now rather
+  than the floating alias, so a nixpkgs bump cannot move the ABI on its own.
+  The rebase is what makes Claude Fable 5.1 selectable: upstream moved model
+  slugs out of `ClaudeProvider.ts` and into `model-manifest.json`, which
+  carries `claude-fable-5-1`. The old checkout hardcoded `claude-fable-5`.
 - 2026-08-26: Fixed an orphaned-backend leak the autostart service caused.
   Electron moves the backend it spawns into a sibling systemd scope
   (`…/app.slice/app-electron-<pid>.scope`), so `systemctl --user stop t3code`
