@@ -49,6 +49,14 @@
     desktop.enable = false;
     serve.enable = true;
     serve.port = 3773;
+    # 0.0.0.0, not loopback, and this matches what hwc-laptop already does:
+    # its desktop app runs serverExposureMode = "network-accessible" and its
+    # phone pairing is the tailnet IP, not a hostname. The firewall is what
+    # bounds this — `trustedInterfaces` carries tailscale0
+    # (domains/system/networking/index.nix), so the port answers on the tailnet
+    # and nothing forwards it from outside. The Caddy vhost stays as the second
+    # door: it is the one with a trusted certificate.
+    serve.host = "0.0.0.0";
   };
 
   # Headless: no font deployment (overrides nothing today — the desktop
