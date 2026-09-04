@@ -307,9 +307,9 @@ in
     # browser profile for explicitly approved Facebook comments.
     systemd.services.lead-scout-discord-approvals = lib.mkIf cfg.discordApprovals.enable {
       description = "Lead Scout Discord reply approval bot";
-      after = [ "agenix.service" "network-online.target" "postgresql.service" ];
+      after = [ "network-online.target" "postgresql.service" ];
       wants = [ "network-online.target" ];
-      requires = [ "agenix.service" "postgresql.service" ];
+      requires = [ "postgresql.service" ];
       wantedBy = [ "multi-user.target" ];
 
       # Five failed starts in five minutes leave the unit visibly failed. This
