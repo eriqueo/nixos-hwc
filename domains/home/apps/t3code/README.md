@@ -156,6 +156,11 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
+- 2026-09-04: `hwc-xps` now overrides `desktop.electronPackage` with
+  `electron_43` from the flake's locked unstable nixpkgs input. XPS remains on
+  stable for its system and Home Manager package set; only this runtime crosses
+  the boundary because stable removed Electron 43 while the fork still pins
+  43.4.1. The override carries a removal check for the next desktop-major move.
 - 2026-09-03: **Split into two shapes so hwc-server can run the same harness
   headless.** Options moved under `desktop.*` (`electronPackage`, `port`,
   `autoStart`, `desktopEntry`) and a new `serve.*` block added
