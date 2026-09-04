@@ -130,6 +130,16 @@
     hwc_bozeman_v1 = "discord-webhook-hwc-business";
     hwc_network_v1 = "discord-webhook-hwc-business";
   };
+  # Interactive review cards reuse the existing private hwc-bot application.
+  # The bot is deliberately a separate service: Discord availability cannot
+  # take down Lead Scout's scraper, classifier, HTTP API, or MCP server.
+  hwc.server.ai.leadScout.discordApprovals = {
+    enable = true;
+    botTokenSecret = "hermes-discord-bot-token";
+    guildId = "1503422144829460592";
+    channelId = "1503607114042576936";
+    allowedUserId = "1501391621521150075";
+  };
 
   # `deploy` — interactive one-step deploy CLI; auto-discovers ~/600_apps/*/deploy.sh
   hwc.server.deploy.enable = true;
