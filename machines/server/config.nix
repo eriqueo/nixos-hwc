@@ -144,7 +144,7 @@
       enable = true;
       botTokenSecret = "hwc-lead-scout-bot-token";
       guildId = "1503422144829460592";
-      channelId = "1545526825340641400";
+      channelId = "1545506724750958602";
       allowedUserId = "1501391621521150075";
       profileIds = [
         "hwc_bozeman_v1"
