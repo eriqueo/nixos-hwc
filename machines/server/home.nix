@@ -38,6 +38,19 @@
     autoPull.enable = true;  # ff-pull ~/.claude-config from the bare repo (zero-touch receive)
   };
 
+  # T3 Code, headless shape. Same fork and same module as the laptop, minus
+  # Electron: `t3 serve` on loopback, fronted by the Caddy vhost
+  # t3.hwc.iheartwoodcraft.com (domains/networking/routes.nix), so the phone
+  # reaches it over the tailnet while the laptop is off. desktop.enable = false
+  # is required, not tidiness — the module asserts the two shapes never coexist,
+  # because both would write the same ~/.t3 SQLite store.
+  hwc.home.apps.t3code = {
+    enable = true;
+    desktop.enable = false;
+    serve.enable = true;
+    serve.port = 3773;
+  };
+
   # Headless: no font deployment (overrides nothing today — the desktop
   # role is what turns fonts on — but states the intent explicitly).
   hwc.home.theme.fonts.enable = false;

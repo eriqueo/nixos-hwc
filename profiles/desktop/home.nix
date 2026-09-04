@@ -60,12 +60,14 @@
       blender.enable = lib.mkDefault true;
       freecad.enable = lib.mkDefault false;
 
-      # Agent harness control plane — drives claude/codex/opencode in one window.
+      # Agent harness control plane — drives claude/codex/pi in one window.
       # Runs the fork's own build in ~/600_apps/t3code; Nix supplies Electron.
+      # The desktop shape here. The same module's headless `serve` shape is a
+      # machine-level opt-in, and the two are mutually exclusive per machine.
       t3code = {
         enable = lib.mkDefault true;
-        autoStart = lib.mkDefault true;
-        port = lib.mkDefault 3773;          # stable, so a phone pairing survives
+        desktop.autoStart = lib.mkDefault true;
+        desktop.port = lib.mkDefault 3773;  # stable, so a phone pairing survives
       };
 
       # Terminal Multiplexer

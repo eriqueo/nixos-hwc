@@ -394,6 +394,25 @@ in
       upstream = "http://127.0.0.1:11501";
     }
 
+    # T3 Code headless server — the agent harness, reachable from the phone
+    # while the laptop is off. Backed by hwc.home.apps.t3code.serve (HM lane),
+    # which binds 127.0.0.1:3773 and nothing wider.
+    #
+    # Vhost rather than Tailscale Serve, and that is a measured choice: this
+    # machine registers with --advertise-tags=tag:server and no --operator=eric,
+    # so `tailscale serve` cannot be driven by the user-owned service without
+    # ACL work. The wildcard cert and the tailscale-only firewall already give
+    # the same property — trusted HTTPS, tailnet-only — with nothing new to own.
+    #
+    # The pairing URL the app prints at startup is a loopback URL and is
+    # useless here. Mint one for this hostname instead:
+    #   t3 auth pairing create --base-url https://t3.<vhostDomain>
+    {
+      name = "t3";
+      mode = "vhost";
+      upstream = "http://127.0.0.1:3773";
+    }
+
   ] ++ lib.optionals (config.hwc.secrets.vaultwarden.enable or false) [
     # Vaultwarden - name-based vhost (DOMAIN updated in vaultwarden module)
     {

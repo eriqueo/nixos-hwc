@@ -485,6 +485,16 @@
       "/mnt/media/photos" # Immich photos (CRITICAL)
       "/var/lib/hwc" # Service state directories
       "/var/lib/backups" # Database dumps
+      # T3 Code state (CRITICAL). Holds the event-sourced SQLite store — every
+      # project, thread and turn — plus the server signing key and the pairing
+      # credentials. Losing the key invalidates every paired client, and the
+      # store is not regenerable from anything. Only userdata/ is listed:
+      # ~/.t3/caches and ~/.t3/worktrees are REPLACEABLE.
+      #
+      # The store is copied live, so a WAL-torn snapshot is possible; the
+      # -shm/-wal siblings travel with it, which is what makes recovery likely
+      # rather than certain. Stop t3-serve.service before a restore-critical run.
+      "/home/eric/.t3/userdata"
     ];
 
     excludePatterns = [
