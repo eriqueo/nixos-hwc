@@ -53,6 +53,9 @@
   # Refinery — read-only Kanban board for the gauntlet hopper (port 8060,
   # behind Caddy as refinery.hwc.iheartwoodcraft.com).
   hwc.automation.refinery.enable = lib.mkDefault true;
+  # 2026-09-04: the Refinery runs as the eriqueo/refinery container image (one
+  # artifact for this host and a droplet). Native mode remains selectable.
+  hwc.automation.refinery.mode = lib.mkDefault "container";
 
   # Passwordless service management for eric (waybar/agent tooling)
   hwc.system.core.session = {
