@@ -357,10 +357,12 @@ in
 
     defaultChannels = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [ "discord-hwc-alerts" ];
+      default = [ "discord-ops" ];
       description = ''
-        Channels to dispatch to when no routing rule matches. Empty list
-        means "drop on the floor" (audit log still records the receipt).
+        Channels to dispatch to when no routing rule matches. Unknown topics
+        remain visible in #ops and retain matchedRule=null in the audit log so
+        routing drift is measurable. An empty list would silently accept and
+        drop the notification.
       '';
     };
   };

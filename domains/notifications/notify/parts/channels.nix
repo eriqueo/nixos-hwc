@@ -17,19 +17,9 @@
 
 [
   {
-    id        = "discord-hwc-alerts";
-    name      = "#hwc-alerts (Discord)";
-    adapter   = "discord";
-    secretRef = "discord-webhook-hwc-alerts";
-    params = {
-      username  = "HWC Alerts";
-      timeoutMs = 5000;
-    };
-  }
-
-  {
     id        = "discord-hwc-leads";
-    name      = "#hwc-leads (Discord)";
+    # Stable audit id retained across the #hwc-leads → #leads rename.
+    name      = "#leads (Discord)";
     adapter   = "discord";
     secretRef = "discord-webhook-hwc-leads";
     params = {
@@ -40,7 +30,8 @@
 
   {
     id        = "discord-nightly-builds";
-    name      = "#nightly-builds (Discord)";
+    # Stable audit id retained across the #nightly-builds → #builds rename.
+    name      = "#builds (Discord)";
     adapter   = "discord";
     secretRef = "discord-webhook-nightly-builds";
     params = {
@@ -62,11 +53,100 @@
 
   {
     id        = "discord-frigate";
-    name      = "#frigate (Discord)";
+    # Stable audit id retained across the #frigate → #cameras rename.
+    name      = "#cameras (Discord)";
     adapter   = "discord";
     secretRef = "discord-webhook-frigate";
     params = {
       username  = "HWC Cameras";
+      timeoutMs = 5000;
+    };
+  }
+
+  {
+    id        = "discord-ops";
+    name      = "#ops (Discord)";
+    adapter   = "discord";
+    secretRef = "discord-webhook-ops";
+    params = {
+      username  = "HWC Ops";
+      timeoutMs = 5000;
+    };
+  }
+
+  {
+    id        = "discord-website";
+    name      = "#website (Discord)";
+    adapter   = "discord";
+    secretRef = "discord-webhook-website";
+    params = {
+      username  = "HWC Website";
+      timeoutMs = 5000;
+    };
+  }
+
+  {
+    id        = "discord-finance";
+    name      = "#finance (Discord)";
+    adapter   = "discord";
+    secretRef = "discord-webhook-finance";
+    params = {
+      username  = "HWC Finance";
+      timeoutMs = 5000;
+    };
+  }
+
+  {
+    id        = "discord-events";
+    name      = "#events (Discord)";
+    adapter   = "discord";
+    secretRef = "discord-webhook-events";
+    params = {
+      username  = "HWC Events";
+      timeoutMs = 5000;
+    };
+  }
+
+  {
+    id        = "discord-home-scout";
+    name      = "#home-scout (Discord)";
+    adapter   = "discord";
+    secretRef = "discord-webhook-home-scout";
+    params = {
+      username  = "Home Scout";
+      timeoutMs = 5000;
+    };
+  }
+
+  {
+    id        = "discord-research-scout";
+    name      = "#research-scout (Discord)";
+    adapter   = "discord";
+    secretRef = "discord-webhook-research-scout";
+    params = {
+      username  = "Research Scout";
+      timeoutMs = 5000;
+    };
+  }
+
+  {
+    id        = "discord-lead-scout";
+    name      = "#lead-scout (Discord)";
+    adapter   = "discord";
+    secretRef = "discord-webhook-lead-scout";
+    params = {
+      username  = "Lead Scout";
+      timeoutMs = 5000;
+    };
+  }
+
+  {
+    id        = "discord-canary";
+    name      = "#canary (Discord)";
+    adapter   = "discord";
+    secretRef = "discord-webhook-canary";
+    params = {
+      username  = "HWC Delivery Canary";
       timeoutMs = 5000;
     };
   }

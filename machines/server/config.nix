@@ -123,11 +123,11 @@
   # Research Scout — research/paper intelligence, MCP + HTTP on port 8422.
   # projectDir/workspaceRoot defaults already point at the scout monorepo.
   hwc.server.ai.researchScout.enable = true;
-  # HWC-business classifier profiles post to #hwc (business channel);
+  # HWC classifier profiles post to #lead-scout;
   # DataX profiles stay on the default datax-discord-webhook (#jt-pros).
   hwc.server.ai.leadScout.channelMap = {
-    hwc_bozeman_v1 = "discord-webhook-hwc-business";
-    hwc_network_v1 = "discord-webhook-hwc-business";
+    hwc_bozeman_v1 = "discord-webhook-lead-scout";
+    hwc_network_v1 = "discord-webhook-lead-scout";
   };
   # Each review program owns a private bot identity and isolated Gateway unit.
   # HWC approvals remain review-only in the app and cannot publish a reply.
@@ -144,7 +144,7 @@
       enable = true;
       botTokenSecret = "hwc-lead-scout-bot-token";
       guildId = "1503422144829460592";
-      channelId = "1526078082971209839";
+      channelId = "1545526825340641400";
       allowedUserId = "1501391621521150075";
       profileIds = [
         "hwc_bozeman_v1"

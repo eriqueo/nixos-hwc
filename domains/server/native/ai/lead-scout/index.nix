@@ -206,7 +206,7 @@ in
       type = lib.types.attrsOf lib.types.str;
       default = { };
       example = {
-        hwc_bozeman_v1 = "discord-webhook-hwc-business";
+        hwc_bozeman_v1 = "discord-webhook-lead-scout";
       };
       description = ''
         Per-profile Discord routing: classifier profile id → agenix secret
