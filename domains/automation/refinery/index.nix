@@ -156,9 +156,33 @@ in
       default = "/etc/profiles/per-user/eric/bin/claude";
       description = "Headless claude binary for the claude-cli triage provider";
     };
+
+    # 2026-09-04: the engine moved to its own repo (eriqueo/refinery) and ships
+    # as a container image so hwc-server and a droplet run one artifact.
+    # "native" keeps the Nix-built units in this file; "container" runs the
+    # image via mkContainer (parts/container.nix) on the same port and state dir.
+    mode = lib.mkOption {
+      type = lib.types.enum [ "native" "container" ];
+      default = "native";
+      description = "How the board runs: Nix-built units (native) or the eriqueo/refinery image (container)";
+    };
+
+    image = lib.mkOption {
+      type = lib.types.str;
+      default = "ghcr.io/eriqueo/refinery:main";
+      description = "Container image for mode = container; a locally built tag works with imagePull = never";
+    };
+
+    imagePull = lib.mkOption {
+      type = lib.types.enum [ "always" "missing" "never" "newer" ];
+      default = "missing";
+      description = "podman pull policy for the Refinery image";
+    };
   };
 
-  config = lib.mkIf cfg.enable {
+  imports = [ ./parts/container.nix ];
+
+  config = lib.mkIf (cfg.enable && cfg.mode == "native") {
     systemd.services.refinery-board = {
       description = "Refinery interactive engine board + intake";
       wantedBy = [ "multi-user.target" ];

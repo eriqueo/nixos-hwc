@@ -32,6 +32,7 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 ## Structure
 | Path | Purpose |
 |---|---|
+| `parts/container.nix` | **Container mode** (`hwc.automation.refinery.mode = "container"`, 2026-09-04): runs the `eriqueo/refinery` image (`ghcr.io/eriqueo/refinery`) via `mkContainer` on the same port and `/var/lib/refinery` state dir, with the vault and gauntlet mirrors as volumes and the agenix `refinery-env` file for secrets and host values. The engine's source of truth is now that repo; the `engine/` tree here is the native-mode fallback until it is deleted. Host switch runbook: `deploy/README.md` in the repo. |
 | `index.nix` | Module: options + the `:8060` service. Builds the **engine** package (buildNpmPackage → esbuild bundles **two** entry points: `serve.ts`→`server.js` for the board, and `cli/morning-review.ts`→`morning-review.js` wrapped as `bin/refinery-morning-review`). Pipelines baked to the store, mutable state in `/var/lib/refinery`. Hardened (ProtectHome=tmpfs + vault bound read-only for `/hopper`). Exposes a read-only `package` option so the **nightly-builds** morning-review pass runs the CLI without rebuilding the engine. |
 | `engine/src/cli/morning-review.ts` | The morning PR-review CLI shell. Late-binds config from env (`REFINERY_VAULT_DIR`, `REFINERY_DEFAULT_REPO`, `REFINERY_REVIEWS_DIR`, `REFINERY_LLM_PROVIDER`, optional `REFINERY_REVIEW_DATE`), wires real git/gh/fs/LLM adapters, runs the orchestrator, prints a JSON summary to stdout. Driven by `nightly-builds-review.service` (timer in the **nightly-builds** domain). |
 | `engine/src/shells/` | HTTP shell over the core: `http.ts` owns the routes and mutation handlers; `render.ts` gives every Refinery landing/detail surface the same executive hierarchy (situation → meaning → recommended action, with machine state/history folded) while preserving plain form-posts and CSS-only progressive disclosure; `serve.ts` is the service entry. |
@@ -52,6 +53,14 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-09-04: **Container mode.** The engine was extracted with history into
+  `eriqueo/refinery` (CI: tests + image to GHCR). `mode = "container"` runs that
+  image through `mkContainer` (`parts/container.nix`) with one env file
+  (`refinery-env`, agenix) and the same state dir, so hwc-server and a droplet
+  run one artifact. New in the image: an inline native-run drain, a DataX
+  remediation poller (queue → item → PR on the fork), a DX1 agent and DX1 gate
+  provider. Native mode is unchanged and remains the default until the container
+  is verified on this host.
 
 - 2026-08-29 (d): **SR failures now follow the source request lifecycle.**
   Refinery enriches the current SR ledger from the gauntlet's existing

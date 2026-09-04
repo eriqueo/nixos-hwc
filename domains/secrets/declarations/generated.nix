@@ -23,6 +23,9 @@ let
   # explicit declarations (proven by the parity harness).
   mountOverrides = {
     # User-owned (read by services running as eric) — mode/group unchanged.
+    # refinery-env: read by the Refinery container running as uid 1000 (eric);
+    # holds tokens, so owner-only.
+    refinery-env               = { owner = "eric"; mode = "0400"; };
     discord-webhook-url        = { owner = "eric"; };
     discord-webhook-hwc-alerts = { owner = "eric"; };
     discord-webhook-hwc-leads  = { owner = "eric"; };
