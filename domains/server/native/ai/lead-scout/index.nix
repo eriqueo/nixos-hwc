@@ -7,7 +7,12 @@
 # Scrape/classify scheduling is owned by the in-process cron scheduler
 # (src/shells/scheduler.ts) driven by the scrape_sources DB table.
 # Per-source schedules are managed via the UI/MCP — no NixOS timers.
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.hwc.server.ai.leadScout;
 
@@ -21,23 +26,46 @@ let
   dbName = "lead_scout";
 
   node = "/run/current-system/sw/bin/node";
-  tsx  = "${cfg.workspaceRoot}/node_modules/tsx/dist/cli.mjs";
-  cli  = "${cfg.projectDir}/src/cli.ts";
+  tsx = "${cfg.workspaceRoot}/node_modules/tsx/dist/cli.mjs";
+  cli = "${cfg.projectDir}/src/cli.ts";
   claudeModel = "opus";
 
   chromiumBin = "${pkgs.chromium}/bin/chromium";
 
-  botTokenFile = "/run/agenix/${cfg.discordApprovals.botTokenSecret}";
+  enabledApprovalBots = lib.filterAttrs (_: bot: bot.enable) cfg.discordApprovalBots;
+  approvalBotTokenFile = bot: "/run/agenix/${bot.botTokenSecret}";
+  approvalBotUnitName =
+    programId:
+    if programId == "datax-jtpros" then
+      "lead-scout-discord-approvals"
+    else
+      "lead-scout-discord-approvals-${programId}";
+
+  approvalProfileIds = lib.concatMap (programId: enabledApprovalBots.${programId}.profileIds) (
+    builtins.attrNames enabledApprovalBots
+  );
+  approvalRouteEntries = lib.concatMap (
+    programId:
+    let
+      bot = enabledApprovalBots.${programId};
+    in
+    map (profileId: {
+      name = profileId;
+      value = {
+        tokenFile = approvalBotTokenFile bot;
+        channelId = bot.channelId;
+        inherit programId;
+      };
+    }) bot.profileIds
+  ) (builtins.attrNames enabledApprovalBots);
+  approvalRoutes = builtins.listToAttrs approvalRouteEntries;
 
   # Discord is a control plane for explicit human approval, not a dependency
   # of the HTTP/MCP server. The main unit only needs this environment to author
   # review cards; the separate gateway unit owns buttons and modals. Keeping the
   # shared protocol in one attrset prevents sender/consumer configuration drift.
-  discordApprovalEnvironment = lib.optionalAttrs cfg.discordApprovals.enable {
-    DISCORD_BOT_TOKEN_FILE = botTokenFile;
-    DISCORD_APPROVAL_GUILD_ID = cfg.discordApprovals.guildId;
-    DISCORD_APPROVAL_CHANNEL_ID = cfg.discordApprovals.channelId;
-    DISCORD_APPROVAL_ALLOWED_USER_ID = cfg.discordApprovals.allowedUserId;
+  discordApprovalEnvironment = lib.optionalAttrs (enabledApprovalBots != { }) {
+    DISCORD_APPROVAL_BOT_FILE_MAP = builtins.toJSON approvalRoutes;
   };
 
   # systemd restart delays are deterministic. Add 0–5 seconds at the
@@ -46,6 +74,78 @@ let
   discordRestartJitter = pkgs.writeShellScript "lead-scout-discord-approval-restart-jitter" ''
     exec ${pkgs.coreutils}/bin/sleep "$((RANDOM % 6))"
   '';
+
+  approvalBotServices = lib.mapAttrs' (
+    programId: bot:
+    lib.nameValuePair (approvalBotUnitName programId) {
+      description = "Lead Scout Discord reply approval bot (${programId})";
+      after = [
+        "network-online.target"
+        "postgresql.service"
+      ];
+      wants = [ "network-online.target" ];
+      requires = [ "postgresql.service" ];
+      wantedBy = [ "multi-user.target" ];
+
+      # Five failed starts in five minutes leave the unit visibly failed. This
+      # sheds reconnect churn during a sustained Discord/configuration outage;
+      # an operator or the next deployment can restart it explicitly.
+      startLimitIntervalSec = 300;
+      startLimitBurst = 5;
+
+      environment = {
+        DATABASE_URL = cfg.databaseUrl;
+        LOG_LEVEL = "info";
+        NODE_ENV = "production";
+        CLAUDE_MODEL = claudeModel;
+        PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromiumBin;
+        PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+        DISCORD_BOT_TOKEN_FILE = approvalBotTokenFile bot;
+        DISCORD_APPROVAL_GUILD_ID = bot.guildId;
+        DISCORD_APPROVAL_CHANNEL_ID = bot.channelId;
+        DISCORD_APPROVAL_ALLOWED_USER_ID = bot.allowedUserId;
+        REPLY_REVIEW_PROGRAM_ID = programId;
+      };
+
+      path = [ pkgs.nodejs ];
+
+      serviceConfig = {
+        Type = "simple";
+        ExecStartPre = [
+          "${pkgs.coreutils}/bin/test -f ${cli}"
+          "${pkgs.coreutils}/bin/test -f ${tsx}"
+          "${pkgs.coreutils}/bin/test -r ${approvalBotTokenFile bot}"
+          "${pkgs.coreutils}/bin/test -s ${approvalBotTokenFile bot}"
+          discordRestartJitter
+        ];
+        ExecStart = "${node} ${tsx} ${cli} discord:approvals";
+        WorkingDirectory = cfg.projectDir;
+        User = lib.mkForce "eric";
+        Group = "users";
+        Restart = "on-failure";
+        RestartSec = "15s";
+        TimeoutStopSec = "30s";
+
+        NoNewPrivileges = true;
+        PrivateTmp = true;
+        ProtectSystem = "strict";
+        ProtectHome = "read-only";
+        ProtectKernelTunables = true;
+        ProtectKernelModules = true;
+        ProtectControlGroups = true;
+        SystemCallArchitectures = "native";
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
+        RestrictSUIDSGID = true;
+        LockPersonality = true;
+
+        ReadWritePaths = [
+          "${cfg.projectDir}/data"
+          "/tmp"
+        ];
+      };
+    }
+  ) enabledApprovalBots;
   # The old inline `lead-scout-deploy` command (pull + npm install + frontend
   # build + restart) is retired: it predated the standard `deploy` dispatcher
   # and its per-repo layout assumptions are wrong for the scout monorepo.
@@ -105,7 +205,9 @@ in
     channelMap = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      example = { hwc_bozeman_v1 = "discord-webhook-hwc-business"; };
+      example = {
+        hwc_bozeman_v1 = "discord-webhook-hwc-business";
+      };
       description = ''
         Per-profile Discord routing: classifier profile id → agenix secret
         NAME of that profile's webhook. Rendered into the app's
@@ -114,36 +216,39 @@ in
       '';
     };
 
-    discordApprovals = {
-      enable = lib.mkEnableOption "Discord approval controls for DataX reply evaluations";
-
-      botTokenSecret = lib.mkOption {
-        type = lib.types.str;
-        default = "hermes-discord-bot-token";
-        description = ''
-          agenix secret NAME containing the Discord bot token. The application
-          reads it through DISCORD_BOT_TOKEN_FILE; the token never enters the
-          Nix store or a systemd environment value.
-        '';
-      };
-
-      guildId = lib.mkOption {
-        type = lib.types.str;
-        default = "";
-        description = "Only this Discord guild may issue reply-review actions.";
-      };
-
-      channelId = lib.mkOption {
-        type = lib.types.str;
-        default = "";
-        description = "Discord channel where interactive reply-review cards are sent.";
-      };
-
-      allowedUserId = lib.mkOption {
-        type = lib.types.str;
-        default = "";
-        description = "Only this Discord user may approve, edit, skip, or give feedback.";
-      };
+    discordApprovalBots = lib.mkOption {
+      default = { };
+      description = ''
+        Profile-scoped Discord approval bots keyed by the application's review
+        program id. Each enabled bot gets an isolated Gateway service and token.
+      '';
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            enable = lib.mkEnableOption "this Discord reply-review bot";
+            botTokenSecret = lib.mkOption {
+              type = lib.types.str;
+              description = "Generated agenix secret name containing only this bot token.";
+            };
+            guildId = lib.mkOption {
+              type = lib.types.str;
+              description = "Only this Discord guild may issue review actions.";
+            };
+            channelId = lib.mkOption {
+              type = lib.types.str;
+              description = "Discord channel where this program's review cards are sent.";
+            };
+            allowedUserId = lib.mkOption {
+              type = lib.types.str;
+              description = "Only this Discord user may act on review cards.";
+            };
+            profileIds = lib.mkOption {
+              type = lib.types.nonEmptyListOf lib.types.str;
+              description = "Classifier profiles delivered through this bot.";
+            };
+          };
+        }
+      );
     };
   };
 
@@ -171,10 +276,12 @@ in
     # how home_scout and research_scout get CREATE for their app migrations.
     services.postgresql = {
       ensureDatabases = [ dbName ];
-      ensureUsers = [{
-        name = dbName;
-        ensureDBOwnership = true;
-      }];
+      ensureUsers = [
+        {
+          name = dbName;
+          ensureDBOwnership = true;
+        }
+      ];
     };
 
     # NO postStart grant — the `GRANT ${dbName} TO eric` line here was dead
@@ -224,171 +331,112 @@ in
     # now mounted by the generated secrets layer from
     # parts/services/datax-discord-webhook.age — no inline age.secrets here.
 
-    systemd.services.lead-scout = {
-      description = "Lead Scout MCP + HTTP Server";
-      after = [ "network-online.target" "postgresql.service" ];
-      wants = [ "network-online.target" ];
-      wantedBy = [ "multi-user.target" ];
-
-      environment = {
-        DATABASE_URL  = cfg.databaseUrl;
-        LOG_LEVEL     = "info";
-        NODE_ENV      = "production";
-        # Playwright defaults to its bundled chromium under
-        # ~/.cache/ms-playwright, which is a generic-Linux dynamic binary
-        # NixOS can't load. Point it at the Nix-built chromium.
-        PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromiumBin;
-        PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
-        DISCORD_WEBHOOK_FILE = config.age.secrets.${cfg.discordWebhookSecret}.path;
-      } // discordApprovalEnvironment // lib.optionalAttrs (cfg.channelMap != { }) {
-        # Per-profile channel routing (src/notifications/discord.ts
-        # resolveWebhookUrl): JSON of profileId → webhook secret path.
-        DISCORD_WEBHOOK_FILE_MAP = builtins.toJSON
-          (lib.mapAttrs (_: secretName: config.age.secrets.${secretName}.path) cfg.channelMap);
-      } // {
-
-        # The classifier shells out to the `claude` CLI. Upstream lead_scout
-        # used to hardcode /etc/profiles/per-user/eric/bin/claude as a fallback;
-        # it now late-binds via CLAUDE_BIN → `which claude` → candidate paths.
-        # This unit's PATH carries only nodejs (no `claude`), so we MUST declare
-        # the binary here or classification silently fails to spawn it.
-        CLAUDE_BIN = "/etc/profiles/per-user/eric/bin/claude";
-        CLAUDE_MODEL = claudeModel;
-
-        # The server (ExecStart → `serve`) can auto-build the frontend on boot if
-        # dist/ is stale, but this unit is hardened (ProtectSystem = "strict";
-        # only data/ + /tmp are writable) so a build write to frontend/dist would
-        # crash startup. Deploy (lead-scout-deploy) prebuilds the frontend; the
-        # service must never try. Hence skip the in-process build entirely.
-        SKIP_FRONTEND_BUILD = "1";
-      };
-
-      # Needed so detached subprocesses spawned by /api/pipeline tool
-      # handlers (mcp/tools.ts) can resolve bare `node` via $PATH.
-      path = [ pkgs.nodejs ];
-
-      serviceConfig = {
-        Type             = "simple";
-        ExecStart        = "${node} ${tsx} ${cli} serve --port ${toString cfg.port}";
-        WorkingDirectory = cfg.projectDir;
-        User             = cfg.user;
-        Restart          = "on-failure";
-        RestartSec       = "5s";
-
-        # Backstop for the app's own 10s SIGTERM drain; deliberately NOT
-        # SuccessExitStatus=143. Rationale in domains/server/README.md
-        # (2026-08-15) — it governs all three scouts, so it lives one layer up.
-        TimeoutStopSec   = "30s";
-
-        # Security hardening
-        NoNewPrivileges      = true;
-        PrivateTmp           = true;
-        ProtectSystem        = "strict";
-        ProtectHome          = "read-only";
-        ProtectKernelTunables  = true;
-        ProtectKernelModules   = true;
-        ProtectControlGroups   = true;
-        SystemCallArchitectures = "native";
-        RestrictNamespaces     = true;
-        RestrictRealtime       = true;
-        RestrictSUIDSGID       = true;
-        LockPersonality        = true;
-
-        # Read/write access needed for browser profile and data
-        ReadWritePaths = [
-          "${cfg.projectDir}/data"
-          "/tmp"
+    systemd.services = {
+      lead-scout = {
+        description = "Lead Scout MCP + HTTP Server";
+        after = [
+          "network-online.target"
+          "postgresql.service"
         ];
+        wants = [ "network-online.target" ];
+        wantedBy = [ "multi-user.target" ];
+
+        environment = {
+          DATABASE_URL = cfg.databaseUrl;
+          LOG_LEVEL = "info";
+          NODE_ENV = "production";
+          # Playwright defaults to its bundled chromium under
+          # ~/.cache/ms-playwright, which is a generic-Linux dynamic binary
+          # NixOS can't load. Point it at the Nix-built chromium.
+          PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromiumBin;
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+          DISCORD_WEBHOOK_FILE = config.age.secrets.${cfg.discordWebhookSecret}.path;
+        }
+        // discordApprovalEnvironment
+        // lib.optionalAttrs (cfg.channelMap != { }) {
+          # Per-profile channel routing (src/notifications/discord.ts
+          # resolveWebhookUrl): JSON of profileId → webhook secret path.
+          DISCORD_WEBHOOK_FILE_MAP = builtins.toJSON (
+            lib.mapAttrs (_: secretName: config.age.secrets.${secretName}.path) cfg.channelMap
+          );
+        }
+        // {
+
+          # The classifier shells out to the `claude` CLI. Upstream lead_scout
+          # used to hardcode /etc/profiles/per-user/eric/bin/claude as a fallback;
+          # it now late-binds via CLAUDE_BIN → `which claude` → candidate paths.
+          # This unit's PATH carries only nodejs (no `claude`), so we MUST declare
+          # the binary here or classification silently fails to spawn it.
+          CLAUDE_BIN = "/etc/profiles/per-user/eric/bin/claude";
+          CLAUDE_MODEL = claudeModel;
+
+          # The server (ExecStart → `serve`) can auto-build the frontend on boot if
+          # dist/ is stale, but this unit is hardened (ProtectSystem = "strict";
+          # only data/ + /tmp are writable) so a build write to frontend/dist would
+          # crash startup. Deploy (lead-scout-deploy) prebuilds the frontend; the
+          # service must never try. Hence skip the in-process build entirely.
+          SKIP_FRONTEND_BUILD = "1";
+        };
+
+        # Needed so detached subprocesses spawned by /api/pipeline tool
+        # handlers (mcp/tools.ts) can resolve bare `node` via $PATH.
+        path = [ pkgs.nodejs ];
+
+        serviceConfig = {
+          Type = "simple";
+          ExecStart = "${node} ${tsx} ${cli} serve --port ${toString cfg.port}";
+          WorkingDirectory = cfg.projectDir;
+          User = cfg.user;
+          Restart = "on-failure";
+          RestartSec = "5s";
+
+          # Backstop for the app's own 10s SIGTERM drain; deliberately NOT
+          # SuccessExitStatus=143. Rationale in domains/server/README.md
+          # (2026-08-15) — it governs all three scouts, so it lives one layer up.
+          TimeoutStopSec = "30s";
+
+          # Security hardening
+          NoNewPrivileges = true;
+          PrivateTmp = true;
+          ProtectSystem = "strict";
+          ProtectHome = "read-only";
+          ProtectKernelTunables = true;
+          ProtectKernelModules = true;
+          ProtectControlGroups = true;
+          SystemCallArchitectures = "native";
+          RestrictNamespaces = true;
+          RestrictRealtime = true;
+          RestrictSUIDSGID = true;
+          LockPersonality = true;
+
+          # Read/write access needed for browser profile and data
+          ReadWritePaths = [
+            "${cfg.projectDir}/data"
+            "/tmp"
+          ];
+        };
       };
-    };
-
-    # Discord Gateway sidecar. It can fail or exhaust its bounded restart budget
-    # without affecting lead-scout.service, while still sharing the app's DB and
-    # browser profile for explicitly approved Facebook comments.
-    systemd.services.lead-scout-discord-approvals = lib.mkIf cfg.discordApprovals.enable {
-      description = "Lead Scout Discord reply approval bot";
-      after = [ "network-online.target" "postgresql.service" ];
-      wants = [ "network-online.target" ];
-      requires = [ "postgresql.service" ];
-      wantedBy = [ "multi-user.target" ];
-
-      # Five failed starts in five minutes leave the unit visibly failed. This
-      # sheds reconnect churn during a sustained Discord/configuration outage;
-      # an operator or the next deployment can restart it explicitly.
-      startLimitIntervalSec = 300;
-      startLimitBurst = 5;
-
-      environment = {
-        DATABASE_URL = cfg.databaseUrl;
-        LOG_LEVEL = "info";
-        NODE_ENV = "production";
-        CLAUDE_MODEL = claudeModel;
-        PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromiumBin;
-        PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
-      } // discordApprovalEnvironment;
-
-      path = [ pkgs.nodejs ];
-
-      serviceConfig = {
-        Type = "simple";
-        ExecStartPre = [
-          "${pkgs.coreutils}/bin/test -f ${cli}"
-          "${pkgs.coreutils}/bin/test -f ${tsx}"
-          "${pkgs.coreutils}/bin/test -r ${botTokenFile}"
-          "${pkgs.coreutils}/bin/test -s ${botTokenFile}"
-          discordRestartJitter
-        ];
-        ExecStart = "${node} ${tsx} ${cli} discord:approvals";
-        WorkingDirectory = cfg.projectDir;
-        User = lib.mkForce cfg.user;
-        Group = lib.mkForce "users";
-        Restart = "on-failure";
-        RestartSec = "15s";
-
-        # The app drains its Gateway client and Postgres pool on SIGTERM. This
-        # is a deadline backstop, not a success-status mask.
-        TimeoutStopSec = "30s";
-
-        NoNewPrivileges = true;
-        PrivateTmp = true;
-        ProtectSystem = "strict";
-        ProtectHome = "read-only";
-        ProtectKernelTunables = true;
-        ProtectKernelModules = true;
-        ProtectControlGroups = true;
-        SystemCallArchitectures = "native";
-        RestrictNamespaces = true;
-        RestrictRealtime = true;
-        RestrictSUIDSGID = true;
-        LockPersonality = true;
-
-        ReadWritePaths = [
-          "${cfg.projectDir}/data"
-          "/tmp"
-        ];
-      };
-    };
+    }
+    // approvalBotServices;
 
     # VALIDATION
     assertions = [
       {
-        assertion =
-          !cfg.discordApprovals.enable
-          || builtins.hasAttr cfg.discordApprovals.botTokenSecret config.age.secrets;
-        message = "Lead Scout Discord approvals are enabled but their botTokenSecret has no generated agenix mount.";
+        assertion = builtins.length approvalProfileIds == builtins.length (lib.unique approvalProfileIds);
+        message = "Lead Scout Discord approval profileIds must be owned by exactly one bot.";
       }
-      {
-        assertion = !cfg.discordApprovals.enable || cfg.discordApprovals.guildId != "";
-        message = "Lead Scout Discord approvals require discordApprovals.guildId.";
-      }
-      {
-        assertion = !cfg.discordApprovals.enable || cfg.discordApprovals.channelId != "";
-        message = "Lead Scout Discord approvals require discordApprovals.channelId.";
-      }
-      {
-        assertion = !cfg.discordApprovals.enable || cfg.discordApprovals.allowedUserId != "";
-        message = "Lead Scout Discord approvals require discordApprovals.allowedUserId.";
-      }
-    ];
+    ]
+    ++ lib.concatLists (
+      lib.mapAttrsToList (programId: bot: [
+        {
+          assertion = builtins.hasAttr bot.botTokenSecret config.age.secrets;
+          message = "Lead Scout Discord bot ${programId} has no generated agenix token mount.";
+        }
+        {
+          assertion = bot.guildId != "" && bot.channelId != "" && bot.allowedUserId != "";
+          message = "Lead Scout Discord bot ${programId} requires guildId, channelId, and allowedUserId.";
+        }
+      ]) enabledApprovalBots
+    );
   };
 }

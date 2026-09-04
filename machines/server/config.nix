@@ -8,7 +8,8 @@
   pkgs,
   inputs ? null,
   ...
-}: {
+}:
+{
   imports = [
     ./hardware.nix
 
@@ -80,9 +81,7 @@
       # Data directory is PostgreSQL 15 format - upgrading breaks compatibility
       assertion =
         !config.services.postgresql.enable
-        || (
-          lib.hasPrefix "15." config.services.postgresql.package.version
-        );
+        || (lib.hasPrefix "15." config.services.postgresql.package.version);
       message = ''
         ============================================================
         POSTGRESQL VERSION PIN VIOLATION
@@ -130,15 +129,28 @@
     hwc_bozeman_v1 = "discord-webhook-hwc-business";
     hwc_network_v1 = "discord-webhook-hwc-business";
   };
-  # Interactive review cards reuse the existing private hwc-bot application.
-  # The bot is deliberately a separate service: Discord availability cannot
-  # take down Lead Scout's scraper, classifier, HTTP API, or MCP server.
-  hwc.server.ai.leadScout.discordApprovals = {
-    enable = true;
-    botTokenSecret = "hermes-discord-bot-token";
-    guildId = "1503422144829460592";
-    channelId = "1503607114042576936";
-    allowedUserId = "1501391621521150075";
+  # Each review program owns a private bot identity and isolated Gateway unit.
+  # HWC approvals remain review-only in the app and cannot publish a reply.
+  hwc.server.ai.leadScout.discordApprovalBots = {
+    datax-jtpros = {
+      enable = true;
+      botTokenSecret = "hermes-discord-bot-token";
+      guildId = "1503422144829460592";
+      channelId = "1503607114042576936";
+      allowedUserId = "1501391621521150075";
+      profileIds = [ "datax_jtpros" ];
+    };
+    hwc = {
+      enable = true;
+      botTokenSecret = "hwc-lead-scout-bot-token";
+      guildId = "1503422144829460592";
+      channelId = "1526078082971209839";
+      allowedUserId = "1501391621521150075";
+      profileIds = [
+        "hwc_bozeman_v1"
+        "hwc_network_v1"
+      ];
+    };
   };
 
   # `deploy` — interactive one-step deploy CLI; auto-discovers ~/600_apps/*/deploy.sh
@@ -177,14 +189,14 @@
   };
 
   # ZFS support for backup drives
-  boot.supportedFilesystems = ["zfs"];
+  boot.supportedFilesystems = [ "zfs" ];
   boot.zfs.forceImportRoot = false;
   boot.zfs.forceImportAll = false;
 
   # Note: boot.initrd.systemd.fido2 doesn't exist in stable 24.05 (added in later versions)
 
   # ZFS configuration (scrub/trim hygiene comes from the server role)
-  boot.zfs.extraPools = ["backup-pool"]; # Auto-import backup pool on boot
+  boot.zfs.extraPools = [ "backup-pool" ]; # Auto-import backup pool on boot
 
   # Charter v10.1 path configuration (hostname-based defaults)
   # Server hostname detection provides all correct defaults:
@@ -249,8 +261,8 @@
     # register hwc-server as an ephemeral node (deleted by Tailscale whenever it
     # goes offline) that is also awaiting manual approval. Both must be stated.
     tailscale.authKeyParameters = {
-      preauthorized = true;   # usable immediately, no manual device approval
-      ephemeral = false;      # persists across reboots and offline periods
+      preauthorized = true; # usable immediately, no manual device approval
+      ephemeral = false; # persists across reboots and offline periods
     };
     # --reset makes this config authoritative rather than merging into whatever
     # prefs the last interactive `tailscale up` happened to leave behind.
@@ -323,23 +335,23 @@
     folders = {
       "000_inbox" = {
         path = "/home/eric/000_inbox";
-        devices = ["hwc-laptop"];
+        devices = [ "hwc-laptop" ];
       };
       "100_hwc" = {
         path = "/home/eric/100_hwc";
-        devices = ["hwc-laptop"];
+        devices = [ "hwc-laptop" ];
       };
       "200_personal" = {
         path = "/home/eric/200_personal";
-        devices = ["hwc-laptop"];
+        devices = [ "hwc-laptop" ];
       };
       "300_tech" = {
         path = "/home/eric/300_tech";
-        devices = ["hwc-laptop"];
+        devices = [ "hwc-laptop" ];
       };
       "700_datax" = {
         path = "/home/eric/700_datax";
-        devices = ["hwc-laptop"];
+        devices = [ "hwc-laptop" ];
       };
       # 600_apps: removed from Syncthing 2026-06-16. Each app inside is now its
       # own git repo (server hub for workbench/todui/khalt; GitHub for
@@ -353,7 +365,7 @@
         # feed the receive-only phone mirror, so the server is the sole sender
         # (sendonly) and the laptop is NOT a peer. sendonly guarantees a stale
         # phone can never push vault changes back and clobber the source.
-        devices = ["hwc-phone"];
+        devices = [ "hwc-phone" ];
         type = "sendonly";
         # Vault is a git repo: .git MUST be excluded or Syncthing replicates
         # git internals and a stale peer can clobber committed history.
@@ -368,12 +380,12 @@
       };
       "screenshots" = {
         path = "/home/eric/500_media/510_pictures/screenshots";
-        devices = ["hwc-laptop"];
+        devices = [ "hwc-laptop" ];
       };
       # Phone capture inbox (Phase 9: Mobius Sync). Phone device added after pairing.
       "inbox-mobile" = {
         path = "/mnt/vaults/inbox-mobile";
-        devices = ["hwc-phone"];
+        devices = [ "hwc-phone" ];
       };
     };
   };
@@ -452,7 +464,7 @@
   # label are never touched. Ships dryRun=true — watch the Discord report +
   # journal, then set hwc.automation.mailJanitor.dryRun = false to let it act.
   hwc.automation.mailJanitor.enable = true;
-  hwc.automation.mailJanitor.dryRun = false;  # active after dry-run verified 2026-06-24
+  hwc.automation.mailJanitor.dryRun = false; # active after dry-run verified 2026-06-24
   # Unified lead pipeline comes from the business role.
 
   # Alert sources — what to monitor (thresholds, triggers)
@@ -679,7 +691,7 @@
     # Local llama-cpp rebuild with sm_61 added — required because the cached
     # CUDA binary at cache.nixos-cuda.org targets sm_75+ only and aborts on
     # the Quadro P1000 (compute 6.1) with "no kernel image is available".
-    cudaCapabilities = ["6.1"];
+    cudaCapabilities = [ "6.1" ];
     gpu.enable = true;
     cpu = {
       enable = true;
@@ -694,7 +706,11 @@
       # returns 500 "tools param requires --jinja flag" without it). --alias
       # gives the endpoint a stable model name instead of the raw GGUF path,
       # so Hermes' chat completions request can use model="lfm2-24b".
-      extraArgs = ["--jinja" "--alias" "lfm2-24b"];
+      extraArgs = [
+        "--jinja"
+        "--alias"
+        "lfm2-24b"
+      ];
     };
     embed.enable = true; # powers RAG retrieval over /mnt/vaults/brain (persona-daemon, Phase 2.5)
   };
@@ -759,7 +775,7 @@
     # Firewall settings
     firewall.tailscaleOnly = true;
 
-    exporter.enable = true;   # frigate-prometheus-exporter → Grafana "Cameras" dashboard
+    exporter.enable = true; # frigate-prometheus-exporter → Grafana "Cameras" dashboard
 
     # Automated surveillance cleanup (backup enforcement for Frigate retention)
     cleanup.enable = true;
@@ -785,7 +801,7 @@
   # enables lingering so rootless podman containers run when not logged in.
   hwc.system.core.session = {
     linger.enable = true;
-    linger.users = ["eric"];
+    linger.users = [ "eric" ];
   };
   # X11 services disabled for headless server
   # services.xserver.enable = true;
@@ -872,7 +888,10 @@
       "monitor.heartwoodcraft.me" = "http://localhost:4400";
 
       # Production-domain webhook ingress (calculator lead/appointment).
-      "api.iheartwoodcraft.com" = { service = "http://localhost:5678"; path = "^/webhook/"; };
+      "api.iheartwoodcraft.com" = {
+        service = "http://localhost:5678";
+        path = "^/webhook/";
+      };
 
       # Umami analytics — script.js + /api/send must be visitor-reachable.
       "stats.iheartwoodcraft.com" = "http://localhost:3009";
@@ -881,14 +900,20 @@
       # mirrors submissions here so they land on the funnel board. PATH-locked
       # to /hooks/contact ONLY; the rest of hwc-crm (board UI, transitions)
       # stays tailnet-private (unmatched paths fall through to the 404 default).
-      "crm.iheartwoodcraft.com" = { service = "http://localhost:11660"; path = "^/hooks/(contact|appointment|availability)"; };
+      "crm.iheartwoodcraft.com" = {
+        service = "http://localhost:11660";
+        path = "^/hooks/(contact|appointment|availability)";
+      };
 
       # hwc-leads report viewer API — public so customers can open the report
       # link emailed to them off-tailnet. PATH-locked to the read-only, already
       # sanitised GET /api/reports/<id> (no email/phone/full name/attribution);
       # the leads capture POST + admin stay tailnet-private. Needs DNS CNAME
       # reports → tunnel. hwc-leads listens on :11650.
-      "reports.iheartwoodcraft.com" = { service = "http://localhost:11650"; path = "^/api/reports/"; };
+      "reports.iheartwoodcraft.com" = {
+        service = "http://localhost:11650";
+        path = "^/api/reports/";
+      };
 
       # heartwoodcraft.me retirement (Phase 1, 2026-07-19): .com twins of the
       # remaining .me hostnames, same upstreams — parallel until callers flip
@@ -949,9 +974,9 @@
     # Published on behalf of the containers living in this netns; they cannot
     # publish their own.
     ports = [
-      "127.0.0.1:8080:8080"  # qBittorrent UI (Caddy proxies to localhost)
-      "127.0.0.1:8081:8085"  # SABnzbd (container uses 8085 internally)
-      "127.0.0.1:5010:5010"  # Mousehole (MAM IP updater)
+      "127.0.0.1:8080:8080" # qBittorrent UI (Caddy proxies to localhost)
+      "127.0.0.1:8081:8085" # SABnzbd (container uses 8085 internally)
+      "127.0.0.1:5010:5010" # Mousehole (MAM IP updater)
     ];
 
     portForwarding = {
@@ -961,8 +986,8 @@
     };
     healthCheck = {
       enable = lib.mkDefault true;
-      checkInterval = 300;        # every 5 minutes
-      failuresBeforeRestart = 3;  # first auto-restart after 15 min down
+      checkInterval = 300; # every 5 minutes
+      failuresBeforeRestart = 3; # first auto-restart after 15 min down
     };
   };
 
@@ -987,14 +1012,14 @@
       addresses = "10.2.0.2/32";
     };
 
-    controlPort = 8001;   # 8000 belongs to the qBittorrent tunnel
+    controlPort = 8001; # 8000 belongs to the qBittorrent tunnel
 
     # slskd cannot publish its own ports from inside this netns.
     # Host side is 5031, not 5030: domains/networking/routes.nix already sends the
     # slskd vhost to http://127.0.0.1:5031. Publishing on 5030 leaves that upstream
     # with nothing listening, which is exactly what happened on 2026-08-25.
     ports = [
-      "127.0.0.1:5031:5030"  # slskd web UI -> Caddy vhost upstream
+      "127.0.0.1:5031:5030" # slskd web UI -> Caddy vhost upstream
     ];
 
     portForwarding = {
@@ -1082,8 +1107,16 @@
         admin = true;
         hidden = true;
       };
-      eric = { admin = false; passwordless = true; hidden = false; };
-      Kids = { admin = false; passwordless = true; hidden = false; };
+      eric = {
+        admin = false;
+        passwordless = true;
+        hidden = false;
+      };
+      Kids = {
+        admin = false;
+        passwordless = true;
+        hidden = false;
+      };
     };
   };
 
@@ -1187,8 +1220,11 @@
 
     # Server-only: Immich vector search + Podman media-network integration
     containerNetwork.enable = true;
-    extensions = ps: [ps.pgvector ps.vectorchord];
-    sharedPreloadLibraries = ["vchord"];
+    extensions = ps: [
+      ps.pgvector
+      ps.vectorchord
+    ];
+    sharedPreloadLibraries = [ "vchord" ];
 
     # RETIRED 2026-08-26. Law 15: exactly one mechanism per backup concern.
     #
