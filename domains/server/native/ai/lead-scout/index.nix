@@ -105,7 +105,7 @@ in
     channelMap = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      example = { hwc_bozeman_v1 = "discord-webhook-hwc-business"; };
+      example = { hwc_bozeman_v1 = "discord-webhook-lead-scout"; };
       description = ''
         Per-profile Discord routing: classifier profile id → agenix secret
         NAME of that profile's webhook. Rendered into the app's

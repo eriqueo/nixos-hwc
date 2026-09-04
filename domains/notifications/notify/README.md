@@ -50,7 +50,7 @@ notify/
 ├── index.nix                # Charter Law 6 module (OPTIONS / IMPL / VALIDATION).
 └── parts/
     ├── channels.nix         # Default channel registry (data).
-    ├── routes.nix           # Default routing rules (data).
+    ├── routes.nix           # Canonical topic ownership table + generated P1 rules.
     └── src/                 # TypeScript service.
         ├── package.json     # type=module, zod + nodemailer runtime deps.
         ├── tsconfig.json    # ES2023, NodeNext, strict, declaration false.
@@ -210,25 +210,21 @@ Channels are pure Nix data in `parts/channels.nix`. To add (e.g.) a second SMTP 
 }
 ```
 
-Then optionally add a routing rule that references it in `parts/routes.nix`. Commit + rebuild. No TS code change needed.
+Then optionally add a topic row that references it in `parts/routes.nix`. Commit + rebuild. No TS code change needed.
 
-If the new channel uses a secret that isn't already in agenix, add it to `domains/secrets/declarations/services.nix` first (and `secrets.nix` for recipients).
+For a Discord channel, encrypt its webhook as `domains/secrets/parts/services/discord-webhook/<channel>.age` and use `discord-webhook-<channel>` as the `secretRef`. The secrets generator creates both the recipient rule and the default `root:secrets`/`0440` mount; do not add a hand-written declaration.
 
 ## Adding / changing a routing rule
 
-Rules are pure Nix data in `parts/routes.nix`. First-rule-wins. An empty `match` is a catch-all. To send `priority=2` alerts about a specific source to a custom channel:
+Known topics are registered once in the `topicRoutes` table in `parts/routes.nix`. Each row generates its ordinary route and its P1 route; P1 keeps the domain destination and adds SMTP. To register a new domain topic:
 
 ```nix
-{
-  name     = "kitchen-leads-fanout";
-  match    = { source = "calculator"; priority = 2; };
-  channels = [ "discord-hwc-leads" "smtp-eric" ];
-}
+{ topic = "kitchen"; channels = [ "discord-kitchen" ]; }
 ```
 
-Insert before any conflicting catch-all. Commit + rebuild.
+The small leading rule list is reserved for intentional exceptions such as calculator leads and the delivery canary. The router remains first-rule-wins, so place any new exception before the generated rules. Commit + rebuild.
 
-If no rule matches a notification, the dispatcher falls back to `defaultChannels`. The eval-time cross-ref assertion in `index.nix` guarantees every channel id in routes/defaultChannels exists in `cfg.channels`.
+If no rule matches, the dispatcher sends the notification to `defaultChannels` (`#ops`) and records `matchedRule=null`. That makes unknown topics visible and queryable instead of silently accepting them with zero deliveries. The eval-time cross-ref assertion in `index.nix` guarantees every channel id in routes/defaultChannels exists in `cfg.channels`.
 
 ## Audit log
 
@@ -266,7 +262,7 @@ systemctl is-active hwc-notify.service
 # Wired channels?
 hwc-notify health
 
-# Send a self-test (lands in #hwc-alerts via monitoring-to-alerts rule):
+# Send a self-test (lands in #ops through the monitoring topic route):
 hwc-notify send monitoring "[P3] self-test" "ping from hwc-notify CLI."
 
 # Verify the audit row:
@@ -305,6 +301,8 @@ Hardening: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome=read-only`, `
 | 1.7 | ✅ deployed   | `hwc-notify` CLI + `hwc_notify` MCP tool. |
 
 ## Changelog
+
+- **2026-09-04**: Replaced the general `#hwc-alerts` destination with domain-owned channels. `topicRoutes` is now the single topic/destination vocabulary and generates P1 rules ahead of ordinary rules; a known P1 reaches its domain channel plus `smtp-office`, leads stay isolated, and an unknown P1 reaches `#ops` plus SMTP. Unknown non-P1 traffic falls through visibly to `#ops` with no matched rule. Research digest and suggestion topics now also reach `#research-scout` while retaining email as their complete long-form copy. Added dedicated routes for website, finance, events, all three scouts, and canary; the canary timer remains disabled.
 
 - **2026-08-29** — Added the executive information payload and wired it through
   Discord and SMTP. Contract tests pin legacy compatibility, exploration-target

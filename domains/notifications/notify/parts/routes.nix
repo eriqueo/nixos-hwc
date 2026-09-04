@@ -1,138 +1,92 @@
 # domains/notifications/notify/parts/routes.nix
 #
-# Default routing rules — pure data. First-rule-wins; if no rule matches
-# a notification, the dispatcher falls back to defaultChannels (see
-# hwc.notifications.notify.defaultChannels).
+# Default routing rules — pure data. First rule wins.
 #
-# Each rule:
-#   { name     — label shown in logs / dispatch response
-#     match    — { topic? source? priority? }  (every set field is an
-#                exact-match; empty {} = catchall)
-#     channels — list of channel ids declared in parts/channels.nix
-#   }
+# `topicRoutes` is the single producer for the known topic vocabulary and its
+# destinations. Each row generates two rules:
+#   - priority 1 → the domain channel(s) plus SMTP
+#   - any other priority → the domain channel(s)
 #
-# Phase 1.3 keeps the matcher to exact equality on three fields. Regex,
-# tags-any, priority-at-most can land in a later chunk when a routing
-# case demands them.
+# This keeps a critical alert in the channel that owns the topic while retaining
+# the independent email path. A later generic P1 rule handles unknown critical
+# topics. Unknown non-P1 topics fall through to defaultChannels (#ops), leaving
+# matchedRule=null in the audit log so routing drift remains measurable.
 
+let
+  topicRoutes = [
+    { topic = "automation";           channels = [ "discord-ops" ]; }
+    # Historical hwc-crm-build emitters used `builds`; current gauntlets use
+    # `nightly-builds`. Both are the same operator action domain.
+    { topic = "builds";               channels = [ "discord-nightly-builds" ]; }
+    { topic = "containers";           channels = [ "discord-ops" ]; }
+    { topic = "events";               channels = [ "discord-events" ]; }
+    { topic = "finance";              channels = [ "discord-finance" ]; }
+    { topic = "frigate";              channels = [ "discord-frigate" ]; }
+    { topic = "home-scout";           channels = [ "discord-home-scout" ]; }
+    { topic = "immich";               channels = [ "discord-media" ]; }
+    { topic = "jt-estimate";          channels = [ "discord-hwc-leads" ]; }
+    { topic = "lead-scout";           channels = [ "discord-lead-scout" ]; }
+    { topic = "media";                channels = [ "discord-media" ]; }
+    { topic = "monitoring";           channels = [ "discord-ops" ]; }
+    { topic = "nightly-builds";       channels = [ "discord-nightly-builds" ]; }
+    { topic = "persona-daemon";       channels = [ "discord-ops" ]; }
+    # Keep email as the complete long-form copy; Discord truncates embeds at
+    # 4096 characters. The dedicated channel adds a scan-friendly scout view.
+    { topic = "research-scout";       channels = [ "discord-research-scout" "smtp-office" ]; }
+    { topic = "research-suggestions"; channels = [ "discord-research-scout" "smtp-office" ]; }
+    { topic = "service";              channels = [ "discord-ops" ]; }
+    { topic = "system";               channels = [ "discord-ops" ]; }
+    { topic = "voice-log";            channels = [ "discord-ops" ]; }
+    { topic = "website";              channels = [ "discord-website" ]; }
+  ];
+
+  withCriticalEmail = channels:
+    if builtins.elem "smtp-office" channels
+    then channels
+    else channels ++ [ "smtp-office" ];
+
+  criticalRule = route: {
+    name = "${route.topic}-p1-to-domain-and-email";
+    match = { inherit (route) topic; priority = 1; };
+    channels = withCriticalEmail route.channels;
+  };
+
+  topicRule = route: {
+    name = "${route.topic}-to-domain";
+    match = { inherit (route) topic; };
+    inherit (route) channels;
+  };
+in
 [
+  # Business leads stay isolated even when marked P1. This preserves the
+  # deliberate boundary that prevents operations incidents from paging the
+  # channel whose silence is itself a business signal.
   {
-    name     = "leads-source-to-leads-channel";
-    match    = { source = "calculator"; };
+    name = "calculator-source-to-leads";
+    match = { source = "calculator"; };
+    channels = [ "discord-hwc-leads" ];
+  }
+  {
+    name = "leads-topic-to-leads";
+    match = { topic = "leads"; };
     channels = [ "discord-hwc-leads" ];
   }
 
+  # Canary deliberately exercises Discord and SMTP together. Its timer remains
+  # disabled until an independent off-host watcher exists.
   {
-    name     = "lead-topic-to-leads-channel";
-    match    = { topic = "leads"; };
-    channels = [ "discord-hwc-leads" ];
-  }
-
-  {
-    name     = "p1-fanout";
-    # Critical alerts hit the alerts channel plus email so the alert
-    # survives Discord outages and ends up in the mail archive for
-    # postmortems. #hwc-leads is deliberately NOT here: it used to be, and
-    # every mousehole/qbittorrent crash paged the leads channel — ops noise
-    # in a channel that must stay leads-only (2026-07-12 alert audit).
-    match    = { priority = 1; };
-    channels = [ "discord-hwc-alerts" "smtp-office" ];
-  }
-
-  {
-    name     = "monitoring-to-alerts";
-    match    = { topic = "monitoring"; };
-    channels = [ "discord-hwc-alerts" ];
-  }
-
-  {
-    name     = "nightly-builds-to-builds-channel";
-    match    = { topic = "nightly-builds"; };
-    channels = [ "discord-nightly-builds" ];
-  }
-
-  # ── Explicit routes for the n8n workflows migrated off Slack ───────────
-  # (jellyfin, voice-log, weekly/bozeman events, jt estimate). Each has a
-  # named topic so it routes deliberately instead of falling through to
-  # defaultChannels. All land on #hwc-alerts today — the only general
-  # Discord channel — but the named topic makes re-homing a one-line edit
-  # once per-domain channels exist. A priority=1 on any of these still hits
-  # p1-fanout first (declared above), so criticals fan out to email too.
-
-  {
-    name     = "media-to-media-channel";    # radarr/jellyfin grabs & alerts
-    # Media grabs are informational, not ops alerts — they lived in
-    # #hwc-alerts only because it was the sole general channel (see the
-    # re-homing note above). #media exists now (2026-07-12).
-    match    = { topic = "media"; };
-    channels = [ "discord-media" ];
-  }
-
-  {
-    name     = "frigate-to-frigate-channel";
-    # Frigate camera-health alerts (alertmanager category=frigate becomes
-    # topic=frigate). Detection events from the n8n frigate-detect workflow
-    # post to the same #frigate channel via its webhook directly (they need
-    # snapshot image uploads the dispatcher doesn't do).
-    match    = { topic = "frigate"; };
-    channels = [ "discord-frigate" ];
-  }
-
-  {
-    name     = "voice-log-to-alerts";        # hwc:ops:voice-log
-    match    = { topic = "voice-log"; };
-    channels = [ "discord-hwc-alerts" ];
-  }
-
-  {
-    name     = "events-to-alerts";           # home:social weekly + bozeman aggregator
-    match    = { topic = "events"; };
-    channels = [ "discord-hwc-alerts" ];
-  }
-
-  {
-    name     = "jt-estimate-to-alerts";      # hwc:ops:jt:estimate-push
-    match    = { topic = "jt-estimate"; };
-    channels = [ "discord-hwc-alerts" ];
-  }
-
-  {
-    name     = "finance-to-alerts";         # firefly-digest daily summary +
-    # any future firefly webhook/bill alerts. Lands on #hwc-alerts like the
-    # other single-channel topics; re-home to a #finance channel when one
-    # exists (one-line edit, same pattern as media-to-media-channel).
-    match    = { topic = "finance"; };
-    channels = [ "discord-hwc-alerts" ];
-  }
-
-  {
-    # research_scout's weekly workflow-suggestions email. Email only, by
-    # design: this replaced a 22-40/day per-article push stream, so putting
-    # it on a chat channel would rebuild the noise it exists to remove.
-    name     = "research-suggestions-to-email";
-    match    = { topic = "research-suggestions"; };
-    channels = [ "smtp-office" ];
-  }
-
-  {
-    # research_scout's weekly digest — long-form reading, so email, same as
-    # the suggestions above. This route is NOT optional: the digest was
-    # previously rejected at the 4000-char body cap, and raising that cap
-    # would otherwise have dropped a 60-paper markdown into #hwc-alerts
-    # every Monday via defaultChannels. Unrouted long-form is how an ops
-    # channel becomes unreadable.
-    name     = "research-scout-digest-to-email";
-    match    = { topic = "research-scout"; };
-    channels = [ "smtp-office" ];
-  }
-
-  {
-    # Delivery canary — exercises BOTH a Discord adapter and the SMTP
-    # adapter every run so a silently-dead channel is caught actively,
-    # not discovered when a real critical fails to arrive. See
-    # domains/notifications/canary.nix.
-    name     = "delivery-canary";
-    match    = { topic = "canary"; };
-    channels = [ "discord-hwc-alerts" "smtp-office" ];
+    name = "delivery-canary";
+    match = { topic = "canary"; };
+    channels = [ "discord-canary" "smtp-office" ];
   }
 ]
+++ map criticalRule topicRoutes
+++ [
+  # A new P1 topic must still page even before its owner registers it below.
+  {
+    name = "unregistered-p1-to-ops-and-email";
+    match = { priority = 1; };
+    channels = [ "discord-ops" "smtp-office" ];
+  }
+]
+++ map topicRule topicRoutes

@@ -11,7 +11,7 @@
 #
 # Severity → priority uses hwc-notify's convention (critical→1 … info→3);
 # endpoint → source; -f k=v → context. topic is "monitoring" so alerts
-# route to #hwc-alerts (and criticals fan out to email via p1-fanout).
+# route to #ops; critical monitoring alerts also fan out to email.
 
 { pkgs, lib, config }:
 
@@ -77,7 +77,7 @@ Options:
   -h, --help               Show this help
 
 Severity → priority (hwc-notify convention):
-  critical  → 1   (fans out to #hwc-alerts, #hwc-leads, and email via p1-fanout)
+  critical  → 1   (routes to #ops and email; business leads stay isolated)
   warning   → 2
   info      → 3
 
