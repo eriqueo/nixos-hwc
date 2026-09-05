@@ -52,6 +52,8 @@ let
   leadControlTokenFile = "/run/agenix/${toString leadScout.controlTokenSecret}";
   researchScout = config.hwc.server.ai.researchScout;
   researchControlTokenFile = "/run/agenix/${toString researchScout.controlTokenSecret}";
+  crm = config.hwc.business.crm;
+  crmControlTokenFile = "/run/agenix/${toString crm.controlTokenSecretRef}";
   targets =
     lib.optionalAttrs cfg.targets.leadScout {
       lead = {
@@ -66,11 +68,18 @@ let
         tokenFile = researchControlTokenFile;
         profile = cfg.targets.researchScout.profile;
       };
+    }
+    // lib.optionalAttrs cfg.targets.crm.enable {
+      crm = {
+        url = "http://${crm.bindAddr}:${toString crm.port}";
+        tokenFile = crmControlTokenFile;
+      };
     };
   targetTokenFiles = map (target: target.tokenFile) (builtins.attrValues targets);
   targetUnits =
     lib.optional cfg.targets.leadScout "lead-scout.service"
-    ++ lib.optional cfg.targets.researchScout.enable "research-scout.service";
+    ++ lib.optional cfg.targets.researchScout.enable "research-scout.service"
+    ++ lib.optional cfg.targets.crm.enable "hwc-crm.service";
 
   # Deterministic systemd restart delays plus 0–5 s of jitter, so a Discord
   # outage does not restart every Gateway client in lock-step.
@@ -115,6 +124,8 @@ in
         description = "Research Scout classifier profile whose review queue /next serves.";
       };
     };
+
+    targets.crm.enable = lib.mkEnableOption "the hwc-crm adapter (next actions: note, snooze, disqualify via its control API)";
   };
 
   #============================================================================
@@ -208,6 +219,13 @@ in
           !cfg.targets.researchScout.enable
           || (researchScout.enable && researchScout.controlTokenSecret != null);
         message = "hwc-control-bot targets Research Scout, so hwc.server.ai.researchScout must be enabled with a controlTokenSecret.";
+      }
+      {
+        assertion =
+          !cfg.targets.crm.enable
+          || (crm.enable && crm.controlTokenSecretRef != null
+            && builtins.hasAttr crm.controlTokenSecretRef config.age.secrets);
+        message = "hwc-control-bot targets hwc-crm, so hwc.business.crm must be enabled with a controlTokenSecretRef that has an agenix mount.";
       }
     ];
   };

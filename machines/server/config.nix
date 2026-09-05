@@ -143,7 +143,10 @@
       enable = true;
       profile = "llm_engineering_v1";
     };
+    # CRM next actions: note, snooze, disqualify only (no sends, no JT).
+    targets.crm.enable = true;
   };
+  hwc.business.crm.controlTokenSecretRef = "hwc-control-crm-token";
   hwc.server.ai.leadScout.discordApprovalBots = {
     datax-jtpros = {
       enable = true;

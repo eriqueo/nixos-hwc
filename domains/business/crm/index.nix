@@ -40,6 +40,9 @@ let
     ${lib.optionalString (cfg.jtGrantKeyRef != null) ''
       export HWC_CRM_JT_GRANT_FILE="${config.age.secrets.${cfg.jtGrantKeyRef}.path}"
     ''}
+    ${lib.optionalString (cfg.controlTokenSecretRef != null) ''
+      export HWC_CRM_CONTROL_TOKEN_FILE="${config.age.secrets.${cfg.controlTokenSecretRef}.path}"
+    ''}
     ${lib.optionalString (cfg.emailTransport == "smtp") ''
       export HWC_CRM_SMTP_HOST="${cfg.smtp.host}"
       export HWC_CRM_SMTP_PORT="${toString cfg.smtp.port}"
@@ -168,6 +171,18 @@ in
       type = lib.types.nullOr lib.types.str;
       default = "jobtread-grant-key";
       description = "agenix secret for manual-lead JT graph creation. null disables.";
+    };
+
+    controlTokenSecretRef = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "hwc-control-crm-token";
+      description = ''
+        agenix secret NAME of the bearer token accepted ONLY by the app's
+        /api/control/v1/* routes (the HWC Discord control bot: note, snooze,
+        disqualify). It authorizes nothing else — not sends, sequences, JT,
+        or the board API. null leaves those routes answering 503 (fail closed).
+      '';
     };
 
     statePath = lib.mkOption {
@@ -336,6 +351,10 @@ in
       {
         assertion = cfg.emailTransport != "smtp" || config.age.secrets ? ${cfg.smtp.passwordSecretRef};
         message = "hwc-crm smtp transport needs agenix secret '${cfg.smtp.passwordSecretRef}'";
+      }
+      {
+        assertion = cfg.controlTokenSecretRef == null || config.age.secrets ? ${cfg.controlTokenSecretRef};
+        message = "hwc.business.crm.controlTokenSecretRef '${toString cfg.controlTokenSecretRef}' is not a declared agenix secret";
       }
     ];
 
