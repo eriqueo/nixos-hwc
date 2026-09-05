@@ -13,7 +13,8 @@ shell's aerc alias, browser via `gpu-launch chromium-hwc-workbench`).
 - ❌ Pane grid/theme belong to `domains/home/apps/zellij/`; keymap grammar to `domains/home/keymap/`
 
 ## Structure
-- `index.nix` — imports the flake's HM module; options + programs.workbench wiring, wb-reload, keymap staging
+- `index.nix` — imports the flake's HM module; options + programs.workbench wiring, wb-reload, keymap staging, shared standing-tool destinations
 
 ## Changelog
+- 2026-09-04: Derive standing-tool destinations from the structured Zellij table; mail client tab is aerc.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

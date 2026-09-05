@@ -14,7 +14,7 @@ index.nix              Options hwc.home.keymap.{enable,leader,metaLeader,grammar
 grammar.nix            THE file you edit. Groups, shared Space bindings, per-app
                        major modes, list-app bare verbs, two-column nav, meta map.
 parts/
-  to-zellij.nix        meta -> zellij keybinds KDL (inter-app Alt+Space layer)
+  to-zellij.nix        namespaced meta destinations -> zellij keybinds KDL (inter-app Alt+Space layer)
   to-yazi.nix          grammar -> keymap.toml [mgr] fragment
   to-nvim.nix          grammar -> lua (Space layer + which-key groups)
   to-aerc.nix          grammar -> binds.conf fragment (composes with tags.nix)
@@ -91,6 +91,7 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 - todui/khalt/workbench log a missing/unread `*_KEYMAP` rather than failing silent.
 
 ## Changelog
+- 2026-09-04: Use hub:/tool: destinations, retain m for aerc, and add R for refinery; unresolved destinations fail evaluation.
 
 - 2026-06-26 — **Ctrl = workbench layer; in-app side-nav → Alt.** zellij now
   binds `Ctrl j`/`Ctrl k` to cycle tabs directly (plus `Ctrl Space` = meta card),

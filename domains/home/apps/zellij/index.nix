@@ -30,9 +30,10 @@ let
   # assumed local `aerc`. Derived from the single declaration in the shell
   # domain (on the laptop: "ssh -t server aerc"; falls back to "aerc").
   mailCommand = (config.hwc.home.core.shell.aliases or {}).aerc or "aerc";
-  layout      = import ./parts/layout.nix { inherit lib mailCommand; };
+  tabs = import ./parts/tabs.nix { inherit lib; workbenchSource = inputs.workbench; };
+  layout = import ./parts/layout.nix { inherit lib mailCommand tabs; };
 
-  # INTER-APP meta layer (Alt+Space). Generated from the unified keymap grammar
+  # INTER-APP meta layer (Ctrl+Space). Generated from the unified keymap grammar
   # when it is present (profiles/desktop imports domains/home/keymap). Guarded:
   # if the keymap module is not imported, this is "" and zellij keeps its prior
   # default keybinds — so this wiring is safe whether or not keymap is enabled.
@@ -48,7 +49,7 @@ let
   zellijWhichPath = "${config.home.homeDirectory}/.config/zellij/plugins/zellij-which.wasm";
   metaKeybinds = lib.optionalString (km ? meta)
     (import ../../keymap/parts/to-zellij.nix {
-      inherit lib colors;
+      inherit lib colors tabs;
       grammar = km;
       pluginWasm = zellijWhichPath;
     }).keybinds;
@@ -81,7 +82,7 @@ in
       "zellij/config.kdl".text = ''
         // Auto-generated from the ${colors.name or "system"} palette.
         // Intra-app Space leader lives in each app; zellij owns ONLY the
-        // inter-app meta layer (Alt+Space), generated below from the unified
+        // inter-app meta layer (Ctrl+Space), generated below from the unified
         // keymap grammar (domains/home/keymap). When that grammar is absent the
         // meta block is empty and zellij falls back to its defaults.
         theme "hwc"

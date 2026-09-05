@@ -5,7 +5,7 @@
 # Implements the INTER-APP (meta) layer. `clear-defaults=true` strips zellij's
 # entire default keymap — this is the fix for the silent collisions (default
 # Ctrl+t/p/n/s were being eaten before aerc/yazi). The ONLY globally-intercepted
-# chord becomes the meta-leader (Alt+Space), which switches zellij into the
+# chord becomes the meta-leader (Ctrl+Space), which switches zellij into the
 # `tmux` mode (repurposed as our transient "meta" mode); a single key then jumps
 # or navigates and drops back to Normal. Everything else flows to the focused
 # pane untouched — so Space stays each app's intra-app leader and Ctrl+j/k reach
@@ -13,22 +13,12 @@
 #
 # Pure function: returns { keybinds = "<kdl>"; }.
 
-{ lib, grammar, pluginWasm ? null, colors ? {} }:
+{ lib, grammar, tabs, pluginWasm ? null, colors ? {} }:
 
 let
-  # meta `target` -> zellij tab INDEX (1-based). zellij keybinds only support
-  # GoToTab <index>, NOT GoToTabName, so the index MUST match the tab order in
-  # domains/home/apps/zellij/parts/layout.nix. Derived from the SAME tabs.nix the
-  # layout emits from (hubs first, then tools) so the two can never drift:
-  #   1 hwc · 2 crm · 3 datax · 4 server · 5 brief · 6 tasks · 7 cal · 8 files · 9 mail · 10 edit
-  tabs = import ../../apps/zellij/parts/tabs.nix;
-  hubCount = builtins.length tabs.hubs;
-  hubIndex = lib.listToAttrs (lib.imap1 (i: h: { name = h; value = i; }) tabs.hubs);
-  # tool meta-targets, in the order layout.nix emits the tool tabs.
-  toolTargets = [ "todui" "khalt" "files" "mail" "edit" ];
-  toolIndex = lib.listToAttrs
-    (lib.imap1 (i: t: { name = t; value = hubCount + i; }) toolTargets);
-  tabFor = hubIndex // toolIndex;
+  # Namespaced destinations and indices come from the layout's shared data.
+  tabFor = tabs.tabFor;
+  targets = map (entry: entry.target) (lib.filter (entry: entry ? target) grammar.meta);
 
   # nav intent -> zellij action (tab jumps use GoToTab <index>, handled separately)
   navAction = {
@@ -146,7 +136,7 @@ let
             bind "Down" { MoveFocus "Down"; }
             bind "Enter" { SwitchToMode "Normal"; }
         }
-        // Scrollback reader (Ctrl+b s). clear-defaults strips zellij's own scroll
+        // Scrollback reader (meta leader then s). clear-defaults strips zellij's own scroll
         // mode, so re-supply the essentials here — without it you cannot read
         // output that scrolled past. Esc/leader returns to Normal.
         scroll {
@@ -162,4 +152,6 @@ let
     }
   '';
 in
+assert lib.assertMsg (lib.all (target: builtins.hasAttr target tabFor) targets)
+  "workbench: unresolved grammar destination";
 { inherit keybinds; }

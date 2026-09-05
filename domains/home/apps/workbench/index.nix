@@ -31,9 +31,10 @@ let
   # Standing-tab map (navigate-to-tab, not spawn-duplicate): launch-target ->
   # tab name, the TOOL tabs only. Imported from the SAME source the zellij layout
   # emits its tab names from, so the host can never navigate to a tab name the
-  # layout doesn't use. `hubs` is dropped — hub-pages are their own tabs, not
-  # tool launch targets.
-  layoutTabs = removeAttrs (import ../zellij/parts/tabs.nix) [ "hubs" ];
+  # layout uses. Hub pages are separate from tool launch targets.
+  layoutTabs = (import ../zellij/parts/tabs.nix {
+    inherit lib; workbenchSource = inputs.workbench;
+  }).launcherTabs;
 
   # Unified keymap grammar → staged as ~/.config/workbench/keymap.json. The host
   # has a real chord state machine but its grammar is still hard-coded; the
@@ -127,7 +128,7 @@ in
       extraRuntimePackages = with pkgs; [
         zellij        # the multiplexer workbench drives
         yazi          # peer pane: files
-        neovim        # peer pane: editor (nvim --listen)
+        neovim        # peer pane: editor
         # mail (aerc) is NOT a local binary here — see launchers.aerc above.
         # Only bake a local aerc when no remote alias redirects it.
         # todui + khalt come from their own HM modules already on PATH.

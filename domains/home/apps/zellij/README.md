@@ -3,7 +3,7 @@
 ## Purpose
 Configures zellij as workbench's pane host: installs the package, writes a
 palette-derived KDL theme and config directly (bypassing `programs.zellij`),
-ships the `workbench` layout of hub/tool tabs, and wires the Alt+Space
+ships the `workbench` layout of hub/tool tabs, and wires the Ctrl+Space
 meta-leader which-key plugin when the unified keymap grammar is present.
 
 ## Boundaries
@@ -16,7 +16,8 @@ meta-leader which-key plugin when the unified keymap grammar is present.
 - `index.nix` — options, packages, config.kdl/layout/plugin via xdg.configFile
 - `parts/appearance.nix` — palette → KDL themes block
 - `parts/layout.nix` — workbench pane-grid KDL (late-bound mail command)
-- `parts/tabs.nix` — canonical hub + tool tab set (order = GoToTab indices)
+- `parts/tabs.nix` — validated hub destinations + structured tool tab set (order = GoToTab indices)
 
 ## Changelog
+- 2026-09-04: Namespace hub/tool destinations; derive tools from one ordered table and reject name, destination, order, and hub-command collisions.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

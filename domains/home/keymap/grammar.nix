@@ -175,23 +175,24 @@ rec {
   #--------------------------------------------------------------------------
   # The meta layer (metaLeader -> zellij `meta` mode -> one key). `target` is the
   # logical hub-page/tool to focus (mapped to the layout's tab index in
-  # to-zellij.nix). HUB jumps (h/x/v/b → hwc/datax/server/brief) + TOOL jumps
+  # to-zellij.nix). Namespaced HUB jumps + TOOL jumps
   # (t/c/m/f/e) are all disjoint from each other AND from the nav/utility letters
   # (n/p/]/[/w/z/s/d/Q) — no internal collision.
   #--------------------------------------------------------------------------
   meta = [
     # Hub-pages (each its own workbench --hub <id> tab).
-    { key = "h"; intent = "hub-hwc";    desc = "HWC";    target = "hwc"; }
-    { key = "r"; intent = "hub-crm";    desc = "CRM";    target = "crm"; }
-    { key = "x"; intent = "hub-datax";  desc = "DataX";  target = "datax"; }
-    { key = "v"; intent = "hub-server"; desc = "Server"; target = "server"; }
-    { key = "b"; intent = "hub-brief";  desc = "Brief";  target = "brief"; }
+    { key = "h"; intent = "hub-hwc";    desc = "HWC";    target = "hub:hwc"; }
+    { key = "r"; intent = "hub-crm";    desc = "CRM";    target = "hub:crm"; }
+    { key = "x"; intent = "hub-datax";  desc = "DataX";  target = "hub:datax"; }
+    { key = "v"; intent = "hub-server"; desc = "Server"; target = "hub:server"; }
+    { key = "b"; intent = "hub-brief";  desc = "Brief";  target = "hub:brief"; }
+    { key = "R"; intent = "hub-refinery"; desc = "Refinery"; target = "hub:refinery"; }
     # Tool tabs.
-    { key = "t"; intent = "tasks";    desc = "Tasks (todui)";  target = "todui"; }
-    { key = "c"; intent = "calendar"; desc = "Calendar (khalt)"; target = "khalt"; }
-    { key = "m"; intent = "mail";     desc = "Mail (aerc)";    target = "mail"; }
-    { key = "f"; intent = "files";    desc = "Files (yazi)";   target = "files"; }
-    { key = "e"; intent = "edit";     desc = "Edit (nvim)";    target = "edit"; }
+    { key = "t"; intent = "tasks";    desc = "Tasks (todui)";  target = "tool:todui"; }
+    { key = "c"; intent = "calendar"; desc = "Calendar (khalt)"; target = "tool:khalt"; }
+    { key = "m"; intent = "mail";     desc = "Mail (aerc)";    target = "tool:aerc"; }
+    { key = "f"; intent = "files";    desc = "Files (yazi)";   target = "tool:yazi"; }
+    { key = "e"; intent = "edit";     desc = "Edit (nvim)";    target = "tool:nvim"; }
     # tab navigation (n/p AND ]/[ — every tool tab is single-pane, so next/prev
     # *tab* is what you actually want; pane focus lives behind the pane-picker).
     # j/k CYCLE left/right and STAY in meta mode (press repeatedly to walk the
