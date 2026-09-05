@@ -116,6 +116,18 @@ in
       description = "Port the Home Scout HTTP/MCP server listens on";
     };
 
+    controlTokenSecret = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "hwc-control-home-scout-token";
+      description = ''
+        agenix secret NAME of the bearer token accepted ONLY by the app's
+        named /api/control/v1/* routes (the HWC control bot's listing-review
+        adapter). It authorizes nothing else. null leaves the control API
+        answering 503 `unavailable` (fail closed).
+      '';
+    };
+
     projectDir = lib.mkOption {
       type = lib.types.path;
       default = "${config.hwc.paths.user.home}/600_apps/home_scout";
@@ -348,6 +360,11 @@ in
         CLAUDE_BIN = "/etc/profiles/per-user/${cfg.user}/bin/claude";
         # Hardened unit must never write frontend/dist — deploy prebuilds it.
         SKIP_FRONTEND_BUILD = "1";
+      }
+      // lib.optionalAttrs (cfg.controlTokenSecret != null) {
+        # Bearer token for /api/control/v1/* only (src/shells/control-routes.ts);
+        # read once at the app's composition root.
+        HOME_SCOUT_CONTROL_TOKEN_FILE = "/run/agenix/${cfg.controlTokenSecret}";
       };
 
       path = [ pkgs.nodejs ];
@@ -481,5 +498,13 @@ in
         Persistent = true;
       };
     };
+
+    # VALIDATION
+    assertions = [
+      {
+        assertion = cfg.controlTokenSecret == null || builtins.hasAttr cfg.controlTokenSecret config.age.secrets;
+        message = "Home Scout controlTokenSecret ${toString cfg.controlTokenSecret} has no generated agenix mount.";
+      }
+    ];
   };
 }

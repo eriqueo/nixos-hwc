@@ -145,8 +145,14 @@
     };
     # CRM next actions: note, snooze, disqualify only (no sends, no JT).
     targets.crm.enable = true;
+    # Home listing reviews: interested / pass / wrong tier on the remodel lens.
+    targets.homeScout = {
+      enable = true;
+      profile = "hwc_remodel_v1";
+    };
   };
   hwc.business.crm.controlTokenSecretRef = "hwc-control-crm-token";
+  hwc.server.ai.homeScout.controlTokenSecret = "hwc-control-home-scout-token";
   hwc.server.ai.leadScout.discordApprovalBots = {
     datax-jtpros = {
       enable = true;

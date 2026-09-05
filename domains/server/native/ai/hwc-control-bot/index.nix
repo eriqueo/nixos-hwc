@@ -54,6 +54,8 @@ let
   researchControlTokenFile = "/run/agenix/${toString researchScout.controlTokenSecret}";
   crm = config.hwc.business.crm;
   crmControlTokenFile = "/run/agenix/${toString crm.controlTokenSecretRef}";
+  homeScout = config.hwc.server.ai.homeScout;
+  homeControlTokenFile = "/run/agenix/${toString homeScout.controlTokenSecret}";
   targets =
     lib.optionalAttrs cfg.targets.leadScout {
       lead = {
@@ -74,12 +76,20 @@ let
         url = "http://${crm.bindAddr}:${toString crm.port}";
         tokenFile = crmControlTokenFile;
       };
+    }
+    // lib.optionalAttrs cfg.targets.homeScout.enable {
+      home = {
+        url = "http://127.0.0.1:${toString homeScout.port}";
+        tokenFile = homeControlTokenFile;
+        profile = cfg.targets.homeScout.profile;
+      };
     };
   targetTokenFiles = map (target: target.tokenFile) (builtins.attrValues targets);
   targetUnits =
     lib.optional cfg.targets.leadScout "lead-scout.service"
     ++ lib.optional cfg.targets.researchScout.enable "research-scout.service"
-    ++ lib.optional cfg.targets.crm.enable "hwc-crm.service";
+    ++ lib.optional cfg.targets.crm.enable "hwc-crm.service"
+    ++ lib.optional cfg.targets.homeScout.enable "home-scout.service";
 
   # Deterministic systemd restart delays plus 0–5 s of jitter, so a Discord
   # outage does not restart every Gateway client in lock-step.
@@ -126,6 +136,15 @@ in
     };
 
     targets.crm.enable = lib.mkEnableOption "the hwc-crm adapter (next actions: note, snooze, disqualify via its control API)";
+
+    targets.homeScout = {
+      enable = lib.mkEnableOption "the Home Scout adapter (listing review lane via its control API)";
+      profile = lib.mkOption {
+        type = lib.types.str;
+        default = "hwc_remodel_v1";
+        description = "Home Scout classifier profile whose review queue /next serves.";
+      };
+    };
   };
 
   #============================================================================
@@ -226,6 +245,12 @@ in
           || (crm.enable && crm.controlTokenSecretRef != null
             && builtins.hasAttr crm.controlTokenSecretRef config.age.secrets);
         message = "hwc-control-bot targets hwc-crm, so hwc.business.crm must be enabled with a controlTokenSecretRef that has an agenix mount.";
+      }
+      {
+        assertion =
+          !cfg.targets.homeScout.enable
+          || (homeScout.enable && homeScout.controlTokenSecret != null);
+        message = "hwc-control-bot targets Home Scout, so hwc.server.ai.homeScout must be enabled with a controlTokenSecret.";
       }
     ];
   };
