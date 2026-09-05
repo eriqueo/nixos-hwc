@@ -151,6 +151,8 @@
       enable = true;
       profile = "home_buy_bozeman";
     };
+    # One post at 07:30, only when the counts moved since the last one.
+    summary.enable = true;
   };
   hwc.business.crm.controlTokenSecretRef = "hwc-control-crm-token";
   hwc.server.ai.homeScout.controlTokenSecret = "hwc-control-home-scout-token";

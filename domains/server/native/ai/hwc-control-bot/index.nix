@@ -69,6 +69,10 @@ let
         url = "http://127.0.0.1:${toString researchScout.port}";
         tokenFile = researchControlTokenFile;
         profile = cfg.targets.researchScout.profile;
+        # A takeaway runs the router LLM and the brain sink after the durable
+        # append; 35 s measured 2026-09-05 (a 20 s default read as `uncertain`
+        # for a review that had in fact landed).
+        writeTimeoutMs = 90000;
       };
     }
     // lib.optionalAttrs cfg.targets.crm.enable {
@@ -149,6 +153,15 @@ in
         '';
       };
     };
+
+    summary = {
+      enable = lib.mkEnableOption "the bounded daily summary (one channel post, only when counts changed)";
+      onCalendar = lib.mkOption {
+        type = lib.types.str;
+        default = "*-*-* 07:30:00";
+        description = "systemd OnCalendar for the summary run (host local time).";
+      };
+    };
   };
 
   #============================================================================
@@ -213,6 +226,39 @@ in
         LockPersonality = true;
 
         ReadWritePaths = [ "/tmp" ];
+      };
+    };
+
+    # The bounded daily summary: a oneshot over Discord's REST API (no
+    # Gateway session, so it never competes with the running bot for the
+    # token). It posts at most one message, and only when the counts moved
+    # since the previous summary — alerts on transitions, never on backlog.
+    systemd.services.hwc-control-bot-summary = lib.mkIf cfg.summary.enable {
+      description = "HWC control bot daily summary (one post, only on change)";
+      after = [ "network-online.target" ] ++ targetUnits;
+      wants = [ "network-online.target" ];
+      environment = config.systemd.services.hwc-control-bot.environment;
+      path = [ pkgs.nodejs ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${node} ${tsx} ${cli} summary";
+        WorkingDirectory = cfg.projectDir;
+        User = "eric";
+        Group = "users";
+        TimeoutStartSec = "120s";
+        NoNewPrivileges = true;
+        PrivateTmp = true;
+        ProtectSystem = "strict";
+        ProtectHome = "read-only";
+        ReadWritePaths = [ "/tmp" ];
+      };
+    };
+    systemd.timers.hwc-control-bot-summary = lib.mkIf cfg.summary.enable {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = cfg.summary.onCalendar;
+        RandomizedDelaySec = "5min";
+        Persistent = true;
       };
     };
 
