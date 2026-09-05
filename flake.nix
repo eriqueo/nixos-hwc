@@ -456,6 +456,39 @@
         touch $out
       '';
     in {
+      # Exercise the actual laptop module wiring, not a second layout renderer.
+      workbench-navigation = let
+        home = self.homeConfigurations."eric@hwc-laptop".config;
+        navigation = import ./domains/home/apps/zellij/parts/tabs.nix {
+          inherit lib; hubRegistry = inputs.workbench.hubRegistry;
+        };
+        layout = home.xdg.configFile."zellij/layouts/workbench.kdl".text;
+        configKdl = home.xdg.configFile."zellij/config.kdl".text;
+        captures = pattern: text: map builtins.head
+          (builtins.filter builtins.isList (builtins.split pattern text));
+        names = captures ''tab name="([^"]+)"'' layout;
+        hubCommands = captures ''args "--hub" "([^"]+)"'' layout;
+        focused = captures ''tab name="([^"]+)" focus=true'' layout;
+        grammar = home.hwc.home.keymap.grammar;
+        jumps = lib.filter (entry: entry ? target) grammar.meta;
+        destinationFor = key: (builtins.head (lib.filter (entry: entry.key == key) jumps)).target;
+      in
+      assert lib.assertMsg (names == map (tab: tab.name) navigation.destinations)
+        "workbench check: generated tab names/order differ from navigation";
+      assert lib.assertMsg (hubCommands == map (hub: hub.slug) navigation.hubTabs)
+        "workbench check: generated hub commands differ from registry";
+      assert lib.assertMsg (focused == [ navigation.landingHub ])
+        "workbench check: generated landing tab differs from registry";
+      assert lib.assertMsg (home.programs.workbench.defaultHub == navigation.landingHub
+        && home.programs.workbench.tabs == navigation.launcherTabs)
+        "workbench check: launcher destinations differ from layout";
+      assert lib.assertMsg (lib.all (entry: lib.hasInfix
+        "${entry.key}|goto-tab|${toString navigation.tabFor.${entry.target}}|${entry.desc}" configKdl) jumps)
+        "workbench check: generated grammar indices differ from navigation";
+      assert lib.assertMsg (destinationFor "m" == "tool:aerc" && destinationFor "i" == "hub:mail"
+        && destinationFor "R" == "hub:refinery" && destinationFor "N" == "hub:nightly")
+        "workbench check: mail/refinery/nightly shortcuts changed destination";
+      pkgs.runCommand "workbench-navigation" {} ''touch "$out"'';
       charter-law1 = mkCharterLint "law1-osconfig-safety" [
         "rg 'osConfig\\.' domains/home --type nix | rg -v 'osConfig\\.[a-zA-Z0-9_.]+ or |attrByPath|osConfig \\?|lib\\.mkIf isNixOS|#'"
       ];

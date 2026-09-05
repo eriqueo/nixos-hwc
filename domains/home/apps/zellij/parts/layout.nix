@@ -24,11 +24,11 @@ let
     (" args " + lib.concatMapStringsSep " " (a: "\"${a}\"") mailArgs + ";");
 
   # Nix owns the transport command; navigation data owns the names and order.
-  hubTab = i: hub: ''
-        tab name="${hub.name}"${lib.optionalString (i == 0) " focus=true"} {
+  hubTab = hub: ''
+        tab name="${hub.name}"${lib.optionalString hub.landing " focus=true"} {
             pane name="${hub.name}" { command "workbench"; args "--hub" "${hub.slug}"; }
         }'';
-  hubTabs = lib.concatStringsSep "\n" (lib.imap0 hubTab tabs.hubTabs);
+  hubTabs = lib.concatStringsSep "\n" (map hubTab tabs.hubTabs);
   toolTab = tool: ''
         tab name="${tool.name}" {
             pane name="${tool.target}" { command "${if tool.target == "aerc" then mailBin else tool.target}";${lib.optionalString (tool.target == "aerc") mailArgsKdl}${lib.optionalString tool.suspended " start_suspended true;"} }

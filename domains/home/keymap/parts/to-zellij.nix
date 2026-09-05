@@ -152,6 +152,8 @@ let
     }
   '';
 in
+assert lib.assertMsg (builtins.length grammar.meta == builtins.length (lib.unique (map (entry: entry.key) grammar.meta)))
+  "workbench: duplicate meta shortcut";
 assert lib.assertMsg (lib.all (target: builtins.hasAttr target tabFor) targets)
   "workbench: unresolved grammar destination";
 { inherit keybinds; }

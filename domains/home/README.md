@@ -22,7 +22,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 domains/home/
 ├── apps/    # 50 app modules, auto-imported via readDir (index.nix per app,
 │            # optional sys.nix system half, parts/ for split config)
-├── keymap/  # shared grammar; validated hub/tool navigation destinations
+├── keymap/  # shared grammar; registry hub/tool navigation destinations
 ├── core/    # shell/ (CLI env, zsh, aliases — parts/), development/, xdg-dirs.nix
 └── theme/   # palettes/ (deep-nord, gruv, hwc), templates/gtk.nix, fonts/
 ```
@@ -45,6 +45,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-04: Workbench registry owns hub deployment order and landing; generated laptop layout/navigation parity is checked by the workbench-navigation flake check.
 - 2026-09-04: Zellij layout, Workbench standing tools, and keymap share validated navigation destinations; the independent mail client tab is named aerc.
 - 2026-08-31: `apps/codex/` now exposes the shared `delegate` skill for Herdr-free Claude Code, Codex, and DX1 worker calls from T3 sessions.
 - 2026-08-31: `apps/codex/` now exposes the shared Herdr and Project Director skills through out-of-store symlinks, keeping Claude and Codex on one orchestration-skill source.

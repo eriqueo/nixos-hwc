@@ -1,13 +1,9 @@
 # Shared navigation data for layout, keymap, and Workbench standing tools.
-{ lib, workbenchSource }:
+{ lib, hubRegistry }:
 let
-  # Transitional deployment list: remove when the versioned hubRegistry input
-  # supplies deployment order. Validate commands against the packaged manifests.
-  hubs = [ "hwc" "crm" "datax" "server" "brief" "refinery" ];
-  manifestDir = workbenchSource + "/hubs";
-  registered = map (file:
-    (builtins.fromTOML (builtins.readFile (manifestDir + "/${file}"))).id
-  ) (lib.filter (lib.hasSuffix ".toml") (builtins.attrNames (builtins.readDir manifestDir)));
+  # Application facts arrive through one versioned, system-independent input.
+  registryHubs = hubRegistry.hubs;
+  orderedHubs = lib.sort (a: b: a.deploymentOrder < b.deploymentOrder) registryHubs;
 
   # The target, final name, order, and launch policy are defined together.
   tools = {
@@ -22,18 +18,26 @@ let
       inherit target;
       destination = "tool:${target}";
     }) tools);
-  hubTabs = map (slug: { name = slug; destination = "hub:${slug}"; inherit slug; }) hubs;
+  hubTabs = map (hub: {
+    name = hub.slug;
+    destination = "hub:${hub.slug}";
+    inherit (hub) slug landing;
+  }) orderedHubs;
   destinations = hubTabs ++ toolTabs;
   keys = map (tab: tab.destination) destinations;
   names = map (tab: tab.name) destinations;
   unique = xs: builtins.length xs == builtins.length (lib.unique xs);
 in
+assert lib.assertMsg (hubRegistry.schemaVersion == 1) "workbench: unsupported hub registry schema version";
+assert lib.assertMsg (unique (map (hub: hub.deploymentOrder) registryHubs)) "workbench: duplicate hub deployment order";
+assert lib.assertMsg (builtins.length (lib.filter (hub: hub.landing) registryHubs) == 1)
+  "workbench: exactly one landing hub is required";
 assert lib.assertMsg (unique keys) "workbench: duplicate navigation destination";
 assert lib.assertMsg (unique names) "workbench: duplicate final tab name";
 assert lib.assertMsg (unique (map (tab: tab.order) toolTabs)) "workbench: duplicate tool order";
-assert lib.assertMsg (lib.all (slug: lib.elem slug registered) hubs) "workbench: unregistered hub command";
 {
-  inherit hubs hubTabs toolTabs destinations;
+  inherit hubTabs toolTabs destinations;
+  landingHub = (builtins.head (lib.filter (hub: hub.landing) hubTabs)).slug;
   tabFor = builtins.listToAttrs (lib.imap1 (index: tab: {
     name = tab.destination; value = index;
   }) destinations);

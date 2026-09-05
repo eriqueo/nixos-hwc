@@ -187,6 +187,8 @@ rec {
     { key = "v"; intent = "hub-server"; desc = "Server"; target = "hub:server"; }
     { key = "b"; intent = "hub-brief";  desc = "Brief";  target = "hub:brief"; }
     { key = "R"; intent = "hub-refinery"; desc = "Refinery"; target = "hub:refinery"; }
+    { key = "i"; intent = "hub-mail"; desc = "Inbox (Workbench)"; target = "hub:mail"; }
+    { key = "N"; intent = "hub-nightly"; desc = "Nightly"; target = "hub:nightly"; }
     # Tool tabs.
     { key = "t"; intent = "tasks";    desc = "Tasks (todui)";  target = "tool:todui"; }
     { key = "c"; intent = "calendar"; desc = "Calendar (khalt)"; target = "tool:khalt"; }

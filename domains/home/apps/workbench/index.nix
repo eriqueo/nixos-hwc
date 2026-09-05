@@ -2,7 +2,7 @@
 #
 # THIN TRANSLATOR — wires the standalone `workbench` flake's HM module into the
 # HWC namespace and feeds it the system theme palette + the MCP gateway URL +
-# the Nix-generated hubs dir. Same model as the khalt/todui translators:
+# the packaged manifest registry. Same model as the khalt/todui translators:
 # the app ships a generic `programs.workbench` module; HWC supplies the values.
 #
 # NAMESPACE: hwc.home.apps.workbench.*   (Charter Law 2: namespace = folder)
@@ -32,9 +32,9 @@ let
   # tab name, the TOOL tabs only. Imported from the SAME source the zellij layout
   # emits its tab names from, so the host can never navigate to a tab name the
   # layout uses. Hub pages are separate from tool launch targets.
-  layoutTabs = (import ../zellij/parts/tabs.nix {
-    inherit lib; workbenchSource = inputs.workbench;
-  }).launcherTabs;
+  navigation = import ../zellij/parts/tabs.nix {
+    inherit lib; hubRegistry = inputs.workbench.hubRegistry;
+  };
 
   # Unified keymap grammar → staged as ~/.config/workbench/keymap.json. The host
   # has a real chord state machine but its grammar is still hard-coded; the
@@ -85,9 +85,9 @@ in
       type = lib.types.str;
       default = "";
       description = ''
-        Directory of Nix-generated hub manifests (*.toml). Empty = the packaged
-        hubs/ in the workbench flake. Set this to a generated path once hubs are
-        produced from Nix data.
+        Optional custom hub manifests (*.toml). Empty uses the packaged hubs/
+        that produce the Workbench flake registry. Custom hubs do not change
+        the deployed Zellij tab set.
       '';
     };
   };
@@ -109,8 +109,8 @@ in
       gatewayUrl = cfg.gatewayUrl;
       offline = cfg.offline;
       hubsDir = cfg.hubsDir;
-      defaultHub = "hwc";   # land on the HWC (woodcraft) hub, not DataX (alpha-first)
-      tabs = layoutTabs;    # plain jumps navigate to the tool's standing tab
+      defaultHub = navigation.landingHub;   # application-owned landing designation
+      tabs = navigation.launcherTabs;    # plain jumps navigate to the tool's standing tab
 
       # Peer launch overrides (late binding). Mail runs wherever the shell alias
       # says — on the laptop that's the server over ssh, so DON'T bake a local
