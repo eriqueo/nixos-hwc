@@ -19,6 +19,7 @@ domains/server/
 │       ├── brainvec/      # brainvec semantic-index ingest (vault embeddings via llama-embed)
 │       ├── hermes/        # Hermes Agent (Nous Research)
 │       ├── home-scout/    # Home Scout MCP + HTTP, plus five timer-driven ingests
+│       ├── hwc-control-bot/ # HWC Discord control bot (/next over the apps' control APIs)
 │       ├── lead-scout/    # Lead Scout MCP + HTTP, plus profile-scoped Discord review bots
 │       ├── llama-cpp/     # llama.cpp inference (GPU + CPU)
 │       ├── market-intelligence/  # Market-intelligence jobs
@@ -44,6 +45,7 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 
 ## Changelog
 
+- 2026-09-04: New `native/ai/hwc-control-bot/` (`hwc.server.ai.hwcControlBot.*`): one private Discord control surface (`/next`) over the HWC apps' named `/api/control/v1/*` routes. It owns no database; every action is keyed by the Discord interaction id and applied by the owning app. Its Discord identity is not repeated: `hwc.server.ai.leadScout.discordApprovalBots.<program>.gateway = "hwc-control-bot"` delegates that program's Gateway (buttons/modals) to this unit, so `lead-scout/` no longer renders `lead-scout-discord-approvals-hwc` and the token has exactly one Gateway client; card delivery (REST) is unchanged. The target registry (adapter URL + token mount + service dependency) is rendered once into `HWC_CONTROL_TARGETS`. Lead Scout gained `controlTokenSecret` (new agenix `hwc-control-lead-scout-token`, standard `root:secrets/0440`, recipients = everyone, 64-byte hex plaintext verified by `age -d | wc -c`), rendered as `LEAD_SCOUT_CONTROL_TOKEN_FILE`; the token authorizes only the control routes, which answer 503 when it is unset. App side: scout `feat/hwc-control-bot`.
 - 2026-09-04: `native/ai/lead-scout/` generalized the single DataX approval sidecar into a profile-scoped bot set. Each reply-review program gets an isolated Gateway unit, token, channel, reviewer boundary, and classifier-profile routes; DataX retains its existing unit name while the new HWC unit owns both HWC Lead Scout profiles.
 - 2026-09-04: Lead Scout's two HWC classifier profiles (`hwc_bozeman_v1`, `hwc_network_v1`) now use the declarative `discord-webhook-lead-scout` destination (`#lead-scout`). DataX profiles remain on the default `datax-discord-webhook` destination (`#jt-pros`), and interactive DataX review cards remain in `#jt-pros`.
 - 2026-09-04: `native/ai/lead-scout/` gained an isolated Discord Gateway sidecar for human-approved DataX reply posting. The main service receives the same bot/channel config so it can author interactive review cards, while the sidecar alone consumes button/modal actions; it has boot-time file/secret checks, jittered retries with a five-failures-per-five-minutes ceiling, and a 30-second graceful-stop deadline. Both units pin subsequent Claude calls to Opus. The existing webhook routing remains as fallback, and the bot token stays in the generated agenix mount.

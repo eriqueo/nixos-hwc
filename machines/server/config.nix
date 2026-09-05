@@ -24,6 +24,7 @@
     ../../domains/gaming/index.nix # Retroarch emulation + WebDAV save sync
     ../../domains/server/containers/_shared/directories.nix
     ../../domains/server/native/ai/lead-scout/index.nix # Lead Scout MCP + HTTP
+    ../../domains/server/native/ai/hwc-control-bot/index.nix # HWC Discord control bot (/next)
     ../../domains/server/native/ai/home-scout/index.nix # Home Scout MCP + HTTP + ingest timers
     ../../domains/server/native/ai/research-scout/index.nix # Research Scout MCP + HTTP + arXiv ingest timer
     ../../domains/server/native/ai/brain-mcp/index.nix # Brain MCP Server (Deno)
@@ -129,8 +130,12 @@
     hwc_bozeman_v1 = "discord-webhook-lead-scout";
     hwc_network_v1 = "discord-webhook-lead-scout";
   };
-  # Each review program owns a private bot identity and isolated Gateway unit.
-  # HWC approvals remain review-only in the app and cannot publish a reply.
+  # Each review program owns a private bot identity. DataX keeps its own
+  # Gateway unit; the HWC bot's Gateway is consumed by hwc-control-bot (one
+  # `/next` surface over Lead Scout, CRM, Research, Home). HWC approvals
+  # remain review-only in the app and cannot publish a reply.
+  hwc.server.ai.leadScout.controlTokenSecret = "hwc-control-lead-scout-token";
+  hwc.server.ai.hwcControlBot.enable = true;
   hwc.server.ai.leadScout.discordApprovalBots = {
     datax-jtpros = {
       enable = true;
@@ -150,6 +155,7 @@
         "hwc_bozeman_v1"
         "hwc_network_v1"
       ];
+      gateway = "hwc-control-bot";
     };
   };
 

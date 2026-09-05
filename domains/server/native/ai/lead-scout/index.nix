@@ -33,6 +33,14 @@ let
   chromiumBin = "${pkgs.chromium}/bin/chromium";
 
   enabledApprovalBots = lib.filterAttrs (_: bot: bot.enable) cfg.discordApprovalBots;
+  # Only bots whose Gateway this module owns get an approval unit here. A bot
+  # delegated to the HWC control bot (gateway = "hwc-control-bot") still gets
+  # its card-delivery route below — delivery is REST, not Gateway — but its
+  # buttons and modals are consumed by domains/server/native/ai/hwc-control-bot,
+  # so rendering a second Gateway client for the same token is refused.
+  gatewayOwnedBots = lib.filterAttrs (_: bot: bot.gateway == "lead-scout") enabledApprovalBots;
+  delegatedBots = lib.filterAttrs (_: bot: bot.gateway == "hwc-control-bot") enabledApprovalBots;
+  controlTokenFile = "/run/agenix/${toString cfg.controlTokenSecret}";
   approvalBotTokenFile = bot: "/run/agenix/${bot.botTokenSecret}";
   approvalBotUnitName =
     programId:
@@ -145,7 +153,7 @@ let
         ];
       };
     }
-  ) enabledApprovalBots;
+  ) gatewayOwnedBots;
   # The old inline `lead-scout-deploy` command (pull + npm install + frontend
   # build + restart) is retired: it predated the standard `deploy` dispatcher
   # and its per-repo layout assumptions are wrong for the scout monorepo.
@@ -216,11 +224,25 @@ in
       '';
     };
 
+    controlTokenSecret = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "hwc-control-lead-scout-token";
+      description = ''
+        agenix secret NAME of the bearer token accepted ONLY by the app's
+        named /api/control/v1/* routes (the HWC control bot's adapter). It
+        authorizes nothing else: not the general API, not review-card
+        delivery, not any publisher. null leaves the control API answering
+        503 `unavailable` (fail closed).
+      '';
+    };
+
     discordApprovalBots = lib.mkOption {
       default = { };
       description = ''
         Profile-scoped Discord approval bots keyed by the application's review
-        program id. Each enabled bot gets an isolated Gateway service and token.
+        program id. Each enabled bot gets an isolated Gateway service and token,
+        unless its `gateway` delegates the Gateway to the HWC control bot.
       '';
       type = lib.types.attrsOf (
         lib.types.submodule {
@@ -245,6 +267,19 @@ in
             profileIds = lib.mkOption {
               type = lib.types.nonEmptyListOf lib.types.str;
               description = "Classifier profiles delivered through this bot.";
+            };
+            gateway = lib.mkOption {
+              type = lib.types.enum [
+                "lead-scout"
+                "hwc-control-bot"
+              ];
+              default = "lead-scout";
+              description = ''
+                Which service consumes this bot's Discord Gateway (buttons and
+                modals). `lead-scout` renders a per-program approval unit here;
+                `hwc-control-bot` delegates to hwc.server.ai.hwcControlBot, which
+                must then be enabled. Card delivery is unaffected either way.
+              '';
             };
           };
         }
@@ -353,6 +388,11 @@ in
           DISCORD_WEBHOOK_FILE = config.age.secrets.${cfg.discordWebhookSecret}.path;
         }
         // discordApprovalEnvironment
+        // lib.optionalAttrs (cfg.controlTokenSecret != null) {
+          # Bearer token for /api/control/v1/* only (src/shells/control-routes.ts);
+          # read once at the app's composition root.
+          LEAD_SCOUT_CONTROL_TOKEN_FILE = controlTokenFile;
+        }
         // lib.optionalAttrs (cfg.channelMap != { }) {
           # Per-profile channel routing (src/notifications/discord.ts
           # resolveWebhookUrl): JSON of profileId → webhook secret path.
@@ -424,6 +464,16 @@ in
       {
         assertion = builtins.length approvalProfileIds == builtins.length (lib.unique approvalProfileIds);
         message = "Lead Scout Discord approval profileIds must be owned by exactly one bot.";
+      }
+      {
+        assertion =
+          delegatedBots == { }
+          || (config.hwc.server.ai ? hwcControlBot && config.hwc.server.ai.hwcControlBot.enable);
+        message = "Lead Scout bot(s) ${lib.concatStringsSep ", " (builtins.attrNames delegatedBots)} delegate their Gateway to hwc-control-bot, which is not enabled — their buttons would have no consumer.";
+      }
+      {
+        assertion = cfg.controlTokenSecret == null || builtins.hasAttr cfg.controlTokenSecret config.age.secrets;
+        message = "Lead Scout controlTokenSecret ${toString cfg.controlTokenSecret} has no generated agenix mount.";
       }
     ]
     ++ lib.concatLists (
