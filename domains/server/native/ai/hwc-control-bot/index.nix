@@ -141,8 +141,12 @@ in
       enable = lib.mkEnableOption "the Home Scout adapter (listing review lane via its control API)";
       profile = lib.mkOption {
         type = lib.types.str;
-        default = "hwc_remodel_v1";
-        description = "Home Scout classifier profile whose review queue /next serves.";
+        default = "home_buy_bozeman";
+        description = ''
+          Home Scout classifier profile whose review queue /next serves. The
+          lane records Interested / Pass, so it should be a buying lens, not
+          the business (remodel-lead) lens.
+        '';
       };
     };
   };

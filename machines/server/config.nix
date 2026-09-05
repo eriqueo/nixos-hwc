@@ -145,10 +145,11 @@
     };
     # CRM next actions: note, snooze, disqualify only (no sends, no JT).
     targets.crm.enable = true;
-    # Home listing reviews: interested / pass / wrong tier on the remodel lens.
+    # Home listing reviews: interested / pass / wrong tier on Eric's BUYING
+    # lens. The remodel lens is a business signal, not a preference to record.
     targets.homeScout = {
       enable = true;
-      profile = "hwc_remodel_v1";
+      profile = "home_buy_bozeman";
     };
   };
   hwc.business.crm.controlTokenSecretRef = "hwc-control-crm-token";
