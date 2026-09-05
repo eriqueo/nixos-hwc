@@ -50,15 +50,27 @@ let
 
   # ── Target registry ──
   leadControlTokenFile = "/run/agenix/${toString leadScout.controlTokenSecret}";
-  targets = lib.optionalAttrs cfg.targets.leadScout {
-    lead = {
-      url = "http://127.0.0.1:${toString leadScout.port}";
-      tokenFile = leadControlTokenFile;
-      program = programId;
+  researchScout = config.hwc.server.ai.researchScout;
+  researchControlTokenFile = "/run/agenix/${toString researchScout.controlTokenSecret}";
+  targets =
+    lib.optionalAttrs cfg.targets.leadScout {
+      lead = {
+        url = "http://127.0.0.1:${toString leadScout.port}";
+        tokenFile = leadControlTokenFile;
+        program = programId;
+      };
+    }
+    // lib.optionalAttrs cfg.targets.researchScout.enable {
+      research = {
+        url = "http://127.0.0.1:${toString researchScout.port}";
+        tokenFile = researchControlTokenFile;
+        profile = cfg.targets.researchScout.profile;
+      };
     };
-  };
   targetTokenFiles = map (target: target.tokenFile) (builtins.attrValues targets);
-  targetUnits = lib.optional cfg.targets.leadScout "lead-scout.service";
+  targetUnits =
+    lib.optional cfg.targets.leadScout "lead-scout.service"
+    ++ lib.optional cfg.targets.researchScout.enable "research-scout.service";
 
   # Deterministic systemd restart delays plus 0–5 s of jitter, so a Discord
   # outage does not restart every Gateway client in lock-step.
@@ -93,6 +105,15 @@ in
         hwc.server.ai.leadScout's control API, authenticated with its
         controlTokenSecret. Disabling removes the domain from /next.
       '';
+    };
+
+    targets.researchScout = {
+      enable = lib.mkEnableOption "the Research Scout adapter (review lane via its control API)";
+      profile = lib.mkOption {
+        type = lib.types.str;
+        default = "llm_engineering_v1";
+        description = "Research Scout classifier profile whose review queue /next serves.";
+      };
     };
   };
 
@@ -181,6 +202,12 @@ in
           || leadScout.controlTokenSecret == null
           || builtins.hasAttr leadScout.controlTokenSecret config.age.secrets;
         message = "hwc-control-bot: Lead Scout control token secret ${toString leadScout.controlTokenSecret} has no generated agenix mount.";
+      }
+      {
+        assertion =
+          !cfg.targets.researchScout.enable
+          || (researchScout.enable && researchScout.controlTokenSecret != null);
+        message = "hwc-control-bot targets Research Scout, so hwc.server.ai.researchScout must be enabled with a controlTokenSecret.";
       }
     ];
   };

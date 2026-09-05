@@ -135,7 +135,15 @@
   # `/next` surface over Lead Scout, CRM, Research, Home). HWC approvals
   # remain review-only in the app and cannot publish a reply.
   hwc.server.ai.leadScout.controlTokenSecret = "hwc-control-lead-scout-token";
-  hwc.server.ai.hwcControlBot.enable = true;
+  hwc.server.ai.researchScout.controlTokenSecret = "hwc-control-research-scout-token";
+  hwc.server.ai.hwcControlBot = {
+    enable = true;
+    # Research reviews: the one lane with a human review queue today.
+    targets.researchScout = {
+      enable = true;
+      profile = "llm_engineering_v1";
+    };
+  };
   hwc.server.ai.leadScout.discordApprovalBots = {
     datax-jtpros = {
       enable = true;

@@ -81,6 +81,18 @@ in
       description = "PostgreSQL connection string";
     };
 
+    controlTokenSecret = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "hwc-control-research-scout-token";
+      description = ''
+        agenix secret NAME of the bearer token accepted ONLY by the app's
+        named /api/control/v1/* routes (the HWC control bot's review-lane
+        adapter). It authorizes nothing else. null leaves the control API
+        answering 503 `unavailable` (fail closed).
+      '';
+    };
+
     user = lib.mkOption {
       type = lib.types.str;
       default = "eric";
@@ -242,6 +254,11 @@ in
         OPENAI_MODEL = "dx1";
         # Hardened unit must never write frontend/dist — deploy prebuilds it.
         SKIP_FRONTEND_BUILD = "1";
+      }
+      // lib.optionalAttrs (cfg.controlTokenSecret != null) {
+        # Bearer token for /api/control/v1/* only (src/shells/control-routes.ts);
+        # read once at the app's composition root.
+        RESEARCH_SCOUT_CONTROL_TOKEN_FILE = "/run/agenix/${cfg.controlTokenSecret}";
       };
 
       path = [ pkgs.nodejs ];
@@ -315,5 +332,13 @@ in
         Persistent = true;
       };
     };
+
+    # VALIDATION
+    assertions = [
+      {
+        assertion = cfg.controlTokenSecret == null || builtins.hasAttr cfg.controlTokenSecret config.age.secrets;
+        message = "Research Scout controlTokenSecret ${toString cfg.controlTokenSecret} has no generated agenix mount.";
+      }
+    ];
   };
 }
