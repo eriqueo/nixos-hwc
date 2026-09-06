@@ -32,6 +32,7 @@
     ../../domains/server/native/ai/hermes/index.nix # Hermes Agent (Nous Research)
     ../../domains/server/native/ai/market-intelligence/index.nix # Market Intelligence (earnings signals + dashboard)
     ../../domains/server/native/ai/llama-cpp/index.nix # llama.cpp inference (GPU + CPU + embed)
+    ../../domains/server/native/ai/whisper/index.nix # whisper.cpp speech-to-text server (GPU)
     ../../domains/server/native/ai/persona-daemon/index.nix # Persona-aware HTTP daemon + SQLite memory
     ../../domains/server/services/inbox-processor/index.nix # Phone capture processor (Whisper + Tesseract)
     ../../domains/server/services/bloxels-cv/index.nix # Bloxels grid photo classifier (path watcher)
@@ -194,7 +195,6 @@
     screenshotsInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/screenshots";
     brainInboxPath = "${config.hwc.paths.brain."server-replica"}/inbox";
     processedPath = "${config.hwc.paths.brain."inbox-mobile"}/processed";
-    whisperModel = "base.en";
   };
 
   # Bloxels CV — classify phone photos of the printed 13x13 Bloxels grid.
@@ -739,6 +739,16 @@
       ];
     };
     embed.enable = true; # powers RAG retrieval over /mnt/vaults/brain (persona-daemon, Phase 2.5)
+  };
+
+  # whisper.cpp speech-to-text — resident whisper-server on 127.0.0.1:11503,
+  # OpenAI-compatible /v1/audio/transcriptions, vhost `whisper` on the tailnet.
+  # Same sm_61 rebuild as llama-cpp: the cached binary has no Pascal kernels
+  # and every model above base.en died with "IM2COL failed" (2026-09-05).
+  # Model sits beside llama-gpu in the P1000's ~1.4 GB of free VRAM.
+  hwc.server.ai.whisper = {
+    enable = true;
+    cudaCapabilities = [ "6.1" ];
   };
 
   # hwc-llm — persona CLI that wraps the llama-server endpoints with a

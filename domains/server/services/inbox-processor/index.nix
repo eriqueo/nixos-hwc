@@ -40,16 +40,15 @@ in
       description = "Path to move processed source files (organized by date)";
     };
 
-    whisperModel = lib.mkOption {
+    whisperUrl = lib.mkOption {
       type = lib.types.str;
-      default = "base.en";
-      description = "Whisper model to use (tiny.en, base.en, small.en, medium.en)";
-    };
-
-    whisperModelsDir = lib.mkOption {
-      type = lib.types.str;
-      default = "/var/lib/whisper-models";
-      description = "Directory where Whisper GGML model files are stored";
+      default = "http://127.0.0.1:${toString (config.hwc.server.ai.whisper.port or 11503)}";
+      description = ''
+        Base URL of the resident whisper-server (hwc.server.ai.whisper).
+        Transcription is POST <whisperUrl>/v1/audio/transcriptions. Replaced
+        the per-file `whisper-cli --no-gpu base.en` on 2026-09-05: the resident
+        server keeps the model loaded and runs on the GPU.
+      '';
     };
   };
 
@@ -75,8 +74,8 @@ in
         message = "hwc.server.services.inboxProcessor.processedPath must be set";
       }
       {
-        assertion = cfg.whisperModelsDir != "";
-        message = "hwc.server.services.inboxProcessor.whisperModelsDir must be set";
+        assertion = config.hwc.server.ai.whisper.enable or false;
+        message = "hwc.server.services.inboxProcessor needs hwc.server.ai.whisper.enable = true (audio captures are transcribed by the resident whisper-server).";
       }
     ];
   };

@@ -12,7 +12,8 @@ let
   cfg = config.hwc.server.services.inboxProcessor;
 
   # Store paths — evaluated at Nix build time
-  whispercli  = "${pkgs.whisper-cpp}/bin/whisper-cli";
+  curlBin     = "${pkgs.curl}/bin/curl";
+  jqBin       = "${pkgs.jq}/bin/jq";
   tesseractBin = "${pkgs.tesseract}/bin/tesseract";
   coreutils   = "${pkgs.coreutils}/bin";
   gnused      = "${pkgs.gnused}/bin/sed";
@@ -26,9 +27,9 @@ let
     AUDIO_DIR="${cfg.audioInboxPath}"
     BRAIN_INBOX="${cfg.brainInboxPath}"
     PROCESSED_DIR="${cfg.processedPath}"
-    MODELS_DIR="${cfg.whisperModelsDir}"
-    MODEL_FILE="$MODELS_DIR/ggml-${cfg.whisperModel}.bin"
-    WHISPER_CLI="${whispercli}"
+    WHISPER_URL="${cfg.whisperUrl}/v1/audio/transcriptions"
+    CURL="${curlBin}"
+    JQ="${jqBin}"
     COREUTILS="${coreutils}"
     SED="${gnused}"
 
@@ -48,25 +49,19 @@ let
 
       echo "Processing audio: $f"
 
-      transcript_text="(transcript unavailable)"
-      if [ -f "$MODEL_FILE" ] && [ -x "$WHISPER_CLI" ]; then
-        tmpdir=$("$COREUTILS/mktemp" -d)
-        # whisper-cli flags: -m model, -f file, -otxt output-txt, -of output-file-prefix, -np no-prints
-        "$WHISPER_CLI" \
-          --no-gpu \
-          -m "$MODEL_FILE" \
-          -f "$f" \
-          -otxt \
-          -of "$tmpdir/transcript" \
-          -np 2>/dev/null || true
-
-        if [ -f "$tmpdir/transcript.txt" ]; then
-          transcript_text=$("$COREUTILS/cat" "$tmpdir/transcript.txt")
-        fi
-        "$COREUTILS/rm" -rf "$tmpdir"
-      else
-        echo "WARNING: Whisper model not found at $MODEL_FILE -- writing stub"
-      fi
+      # Transcribe via the resident whisper-server. On any failure (server
+      # down, non-2xx, malformed JSON, empty text) the file is left in place
+      # and NOT archived, so the next path trigger retries it instead of
+      # burying a stub note in the vault. `-f` makes curl fail on HTTP errors;
+      # `--convert` on the server handles m4a/mp3/ogg via ffmpeg.
+      transcript_text=$("$CURL" -sf \
+          --connect-timeout 5 --max-time 600 \
+          -F "file=@$f" -F response_format=json \
+          "$WHISPER_URL" 2>/dev/null \
+        | "$JQ" -er '.text | select(type == "string" and length > 0)' 2>/dev/null) || {
+        echo "WARNING: transcription failed for $f (whisper-server at $WHISPER_URL); left pending"
+        continue
+      }
 
       # Write markdown to brain inbox
       printf '%s\n' \
@@ -170,18 +165,8 @@ in
     # SYSTEM PACKAGES
     #==========================================================================
     environment.systemPackages = [
-      pkgs.whisper-cpp   # whisper-cli binary
       pkgs.tesseract     # tesseract OCR binary
     ];
-
-    #==========================================================================
-    # WHISPER MODEL DIRECTORY
-    #==========================================================================
-    system.activationScripts.whisper-models-dir = lib.stringAfter [ "users" ] ''
-      mkdir -p ${cfg.whisperModelsDir}
-      chown eric:users ${cfg.whisperModelsDir}
-      chmod 755 ${cfg.whisperModelsDir}
-    '';
 
     #==========================================================================
     # REQUIRED DIRECTORIES (pre-created so ReadWritePaths does not fail)
@@ -221,20 +206,21 @@ in
     #==========================================================================
     systemd.services = {
       inbox-processor-audio = {
-        description = "Process audio files from phone inbox via Whisper STT";
+        description = "Process audio files from phone inbox via whisper-server";
+        # Ordering only: readiness is proven per request by curl -f + jq.
+        after = [ "whisper-server.service" ];
+        wants = [ "whisper-server.service" ];
         serviceConfig = {
           Type = "oneshot";
           User = lib.mkForce "eric";
           Group = "users";
           ExecStart = processAudioScript;
           StateDirectory = "inbox-processor";
-          # Security hardening (minimal — whisper-cpp needs full tmp access)
           NoNewPrivileges = true;
           ReadWritePaths = [
             cfg.audioInboxPath
             cfg.brainInboxPath
             cfg.processedPath
-            cfg.whisperModelsDir
             "/var/lib/inbox-processor"
           ];
         };

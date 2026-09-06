@@ -47,6 +47,7 @@
       enable = true;
       cuda = true;
       models = [ "medium.en" "large-v3" ];
+      dictate.enable = true;  # whisper-dictate / SUPER+SHIFT+SPACE push-to-talk
     };
 
     # The MCP gateway runs on hwc-server (localhost:6200 there), not the laptop.

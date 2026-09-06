@@ -24,10 +24,11 @@ domains/server/
 │       ├── llama-cpp/     # llama.cpp inference (GPU + CPU)
 │       ├── market-intelligence/  # Market-intelligence jobs
 │       ├── persona-daemon/       # Persona daemon
-│       └── research-scout/       # Research Scout MCP + HTTP, plus the arXiv ingest timer
+│       ├── research-scout/       # Research Scout MCP + HTTP, plus the arXiv ingest timer
+│       └── whisper/       # whisper.cpp speech-to-text server (GPU, OpenAI-compatible)
 ├── services/
 │   ├── bloxels-cv/       # Bloxels grid photo classifier (path watcher on inbox-mobile)
-│   ├── inbox-processor/  # Phone capture processor (Whisper + Tesseract)
+│   ├── inbox-processor/  # Phone capture processor (whisper-server + Tesseract)
 │   └── radicale/         # Self-hosted CalDAV (tasks.hwc.*, two-way task sync)
 ├── media/        # Media profile toggle wiring
 └── n8n/          # Workflow/profile pieces for n8n
@@ -45,6 +46,7 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 
 ## Changelog
 
+- 2026-09-05: Added `native/ai/whisper/` — resident `whisper-server` (whisper.cpp) on `127.0.0.1:11503`, OpenAI-compatible `/v1/audio/transcriptions`, published as the `whisper` vhost. Why now and why this shape: the cached `whisper-cpp` binary has no sm_61 kernels, so on the Quadro P1000 every model above base.en died with `IM2COL failed`; `cudaCapabilities = [ "6.1" ]` reuses llama-cpp's CMake-arch override. CPU was measured and rejected (small.en 5 s, medium.en 17 s per 11 s clip; encoder is compute-bound, RAM irrelevant). Model weights are a hash-pinned `fetchurl` against one Hugging Face revision and referenced by store path in `ExecStart` — no lazy download, no symlink dir. `services/inbox-processor/` now POSTs each phone capture to that server instead of running `whisper-cli --no-gpu base.en` per file; on any failure (server down, non-2xx, empty text) the file stays in the inbox for the next trigger rather than being archived behind a stub note. Dropped `whisperModel`/`whisperModelsDir` and the `/var/lib/whisper-models` activation script; added `whisperUrl` (defaults to the whisper module's port) and an assertion that the module is enabled.
 - 2026-09-05: `native/ai/hwc-control-bot/` slice 5 — `summary = { enable; onCalendar }` renders a oneshot `hwc-control-bot-summary` unit + timer (default 07:30, 5-minute jitter, Persistent). It runs `cli.ts summary` over Discord's REST API, posts at most one channel message, and only when the per-domain counts moved since the bot's previous summary (found by its marker line in the channel — no bot database). The Research target carries `writeTimeoutMs = 90000`: a takeaway measured 35 s end to end and the 20 s default reported a landed review as `uncertain`.
 - 2026-09-05: `native/ai/hwc-control-bot/` slice 4 — `targets.homeScout = { enable; profile }` adds Home Scout's listing review lane (URL from `homeScout.port`, token mount, `home-scout.service` as a soft dependency). `native/ai/home-scout/` gained `controlTokenSecret` (new agenix `hwc-control-home-scout-token`), exported as `HOME_SCOUT_CONTROL_TOKEN_FILE` for its `/api/control/v1/reviews` routes only: Interested / Pass (preference events, kept out of the classifier prompt by the app's versioned policy) and Wrong tier (the existing manual override). Machine config enables the target for `hwc_remodel_v1`.
 - 2026-09-05: `native/ai/hwc-control-bot/` slice 3 — `targets.crm.enable` adds hwc-crm's next-action queue to the registry (URL from `hwc.business.crm.{bindAddr,port}`, token mount from its new `controlTokenSecretRef`, `hwc-crm.service` as a soft dependency). The CRM side (`domains/business/crm/`) gained `controlTokenSecretRef` (new agenix `hwc-control-crm-token`, same shape and verification as the others), exported as `HWC_CRM_CONTROL_TOKEN_FILE` for its `/api/control/v1/*` routes only: note, snooze, disqualify with the D25 reason registry; no sends, sequences, JT, or stage forces.

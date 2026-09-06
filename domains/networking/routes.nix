@@ -413,6 +413,15 @@ in
       upstream = "http://127.0.0.1:3773";
     }
 
+  ] ++ lib.optionals (config.hwc.server.ai.whisper.enable or false) [
+    # whisper.cpp speech-to-text — OpenAI-compatible POST
+    # /v1/audio/transcriptions. Reached from the phone (iOS Shortcut) over the
+    # tailnet; the port is the service's own option, not a second copy.
+    {
+      name = "whisper";
+      mode = "vhost";
+      upstream = "http://127.0.0.1:${toString config.hwc.server.ai.whisper.port}";
+    }
   ] ++ lib.optionals (config.hwc.secrets.vaultwarden.enable or false) [
     # Vaultwarden - name-based vhost (DOMAIN updated in vaultwarden module)
     {
