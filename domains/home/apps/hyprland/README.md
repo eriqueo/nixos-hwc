@@ -22,6 +22,11 @@ Every binding is declared **once** in `parts/behavior.nix`, as a record carrying
 It is deliberately *not* read from `hyprctl binds -j`: that API emits malformed JSON in Hyprland 0.56.0 (keys and values misaligned — `"keycode": RETURN`, `"allow_input_capture": ,`), and carries no descriptions, so the best it could ever print is `exec hyprland-monitor-toggle`.
 
 ## Changelog
+- 2026-09-05: `behavior.nix` — added the SUPER+SHIFT+SPACE dictation bind
+  (`exec,whisper-dictate`), emitted only when both
+  `hwc.home.apps.whisper-cpp.enable` and `.dictate.enable` are set (47e9a941).
+  Same record-with-description shape as the `gsr-toggle` bind beside it, so it
+  shows up in the SUPER+? legend for free.
 - 2026-08-06: SUPER+? keybind legend. `behavior.nix` restructured to return `{ settings, keybinds, submaps }` — bindings are now records carrying descriptions, with the live binds derived from them; `theme.nix` gained the `card` renderer (palette→ANSI, HWC which-key look) alongside its Hyprland colors; `session.nix` gained the viewer package in its previously-empty `packages`. Added the `resize` submap: `SUPER,R,submap,resize` had been live with **no `submap = resize` block defined anywhere**, so it entered an empty submap that swallowed every key and rebound no exit — a keyboard softlock until Hyprland restarted. Now has h/j/k/l + arrow resize (`binde`, repeats while held) and escape/return exits. Removed the dead `hyprland-keybinds-viewer` from `scripts.nix`. Bind parity verified against the live `hyprland.conf`: no binds lost.
 - 2026-07-11: session.nix — removed stale commented-out screenshots-path fallback (superseded by `hwc.paths.screenshots`; Law 3 audit cleanup, no functional change).
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

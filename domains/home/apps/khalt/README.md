@@ -35,6 +35,13 @@ domains/home/apps/khalt/
 
 ## Changelog
 
+- **2026-06-15**: **Unified keymap factory** (64ecd635). khalt now renders a
+  `[keybindings]` block from `hwc.home.keymap.grammar` via
+  `../../keymap/parts/to-khalt.nix` — the list-app bare verbs (`a` add, `e`
+  edit, `d` delete, Enter open) shared with todui, so one grammar drives both.
+  Appended between the generated config and `extraConfig`, and guarded on
+  `grammar ? listVerbs` so khalt still evaluates when the keymap module is not
+  imported.
 - **2026-06-15**: `[calendars]` now renders the Radicale-synced calendar
   (`calendars-radicale/`) when `hwc.mail.calendar.radicale.enable` is set, and
   drops the stale iCloud account calendars in that case (mirrors

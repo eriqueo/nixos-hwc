@@ -10,26 +10,55 @@ User application configuration via Home Manager.
 ## Structure
 ```
 apps/
-├── aerc/           # Email client
 ├── aider/          # AI coding assistant
 ├── blender/        # 3D modeling
 ├── chromium/       # Browser
+├── claude-code/    # Claude Code CLI + settings healing
+├── codex/          # Codex CLI (shares the orchestration skills)
 ├── freecad/        # CAD software
 ├── gpu-screen-recorder/  # Call/screen recording (gsr-toggle script + sys.nix capture wrapper)
+├── herdr/          # Terminal multiplexer for coding agents
 ├── hyprland/       # Wayland compositor
 ├── kitty/          # Terminal emulator
-├── librewolf/      # Privacy browser
 ├── mpv/            # Media player
 ├── obsidian/       # Note-taking
+├── pi/             # Pi agent (DataX providers)
+├── t3code/         # T3 Code (Electron)
+├── whisper-cpp/    # Speech-to-text; push-to-talk dictation on the laptop
 ├── xournalpp/      # PDF annotator / handwritten notes
 ├── waybar/         # Status bar
+├── workbench/      # zellij-based workbench + hub registry
 ├── tuxedo/         # todo.txt TUI (keyboard-driven task manager)
 ├── todui/          # VTODO task TUI (external flake input; HWC adapter only)
 ├── pave-query-builder/  # Pave/JobTread API query TUI+CLI (external flake input; HWC adapter only)
-└── ... (30+ apps)
+└── ... (60+ apps)
 ```
 
+`aerc` lives in `domains/mail/aerc/`, not here.
+
 ## Changelog
+- 2026-09-05: **whisper-cpp — push-to-talk dictation on hwc-laptop** (47e9a941).
+  `hwc.home.apps.whisper-cpp.dictate` ships a `whisper-dictate` toggle: the
+  recorder runs as a transient user unit with a flock around transitions, the
+  transcript always lands on the clipboard, and `wtype` types at the cursor only
+  if focus is unchanged. `hyprland/parts/behavior.nix` binds it to
+  SUPER+SHIFT+SPACE, gated on both `whisper-cpp.enable` and `dictate.enable`.
+  The server half (`hwc.server.ai.whisper`, resident on `127.0.0.1:11503`) is a
+  separate module under `domains/server/native/ai/`.
+- 2026-09-04: **workbench — laptop navigation consumes the hub registry**
+  (d949f7b9), after the hub and tool navigation were namespaced (74fd60de).
+  Touches `workbench/index.nix` and the `zellij` layout/tabs parts.
+- 2026-09-03/04: **t3code** — Electron pinned to 43 for the upstream rebase
+  (9c53e4bf), then sourced from unstable on the XPS (e9bef656); a headless T3
+  Code shape added for hwc-server (728af4e2).
+- 2026-09-01: **pi — DX2 added as a second DataX provider** (dae669c7).
+- 2026-08-31: **cross-provider `delegate` skill exposed** (39436da8), following
+  the codex orchestration-skill share on 2026-08-29 (49e3c697).
+- 2026-08-30: **herdr bumped 0.6.2 → 0.8.2** (31dbb61b).
+- 2026-08-28/29: **claude-code** — the claim guard stays disarmed (df17a857);
+  the claimcheck Artifact gate is now persisted (66e276e1) and its validator
+  runtime declared so the gate can actually run (529b9f91). `settings-heal.jq`
+  and its test script updated in step.
 - 2026-08-26: **doctl — new app; agenix-authenticated DigitalOcean CLI**. `doctl auth init` validates against `cloud.digitalocean.com/v1/oauth/token/info` and returned 401 for a token that same endpoint accepted over curl (doctl 1.160.1), so the `config.yaml` auth path is unusable. A `writeShellScriptBin "doctl"` wrapper reads `/run/agenix/digitalocean-access-token`, exports `DIGITALOCEAN_ACCESS_TOKEN`, and execs `${pkgs.doctl}/bin/doctl` — the token stays out of `config.yaml`, the shell environment, and shell history. The bare `pkgs.doctl` was removed from `core/development/` and from `apps/dxlog/`, which would otherwise collide on `bin/doctl`; `dxlog` now enables this module instead, which also repaired `dxlog live` (verified: the tail connects and holds open). Enabled on hwc-laptop. hwc-server has no `doctl` consumer, so the `core/development` removal is not a regression there.
 - 2026-06-19: **pave-query-builder — new external-flake app + HWC adapter**. Trap-safe Pave (JobTread API) query builder (TUI + CLI), its own repo at `~/600_apps/pave-query-builder` consumed as the `pave-query-builder` flake input (same shared-remote model as todui/khalt/workbench). Thin translator imports the app's `homeManagerModules.pave-query-builder` and feeds it the jt-mcp schema path when present; mutation guardrail left at the app default (HWC test org only). Enabled in `profiles/desktop/home.nix`. Launcher: `kitty -e pave-query`.
 - 2026-06-19: **zellij — `session_serialization false`**. zellij's default serializes sessions to disk for resurrection; combined with the default `on_force_close "detach"`, that's why a closed workbench window left a live `--server` process that could resurrect STALE. Since workbench is fully rebuilt from its KDL layout on every open, nothing is worth resurrecting — disabling serialization makes every recreate (incl. `wb-reload`/SUPER+W) structurally fresh. `on_force_close` deliberately left at `detach` to keep the accidental-close reattach safety net.
