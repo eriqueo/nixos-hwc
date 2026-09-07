@@ -565,5 +565,12 @@ See the main implementation guide for curl test commands for each workflow.
 
 ---
 
+## Changelog
+
+- 2026-07-15: `02-frigate-surveillance-intelligence.json` — Discord alerts now
+  carry an iOS-playable HLS link (19c98a04).
+
+---
+
 **Last Updated:** 2026-03-24
 **Author:** Eric (with Claude assistance)
