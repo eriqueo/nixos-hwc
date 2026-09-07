@@ -142,3 +142,25 @@ To register the agent as a tool in Open WebUI:
    - Headers: `Content-Type: application/json`
 
 Then users can invoke system commands through the chat interface.
+
+## Structure
+
+```
+agent/
+├── default.nix        # Import wrapper (`import ./index.nix`)
+├── index.nix          # hwc.ai.agent options + systemd service (Law 10: options inline)
+├── hwc-ai-agent.py    # FastAPI agent, read into a writeScriptBin at eval time
+└── README.md
+```
+
+## Changelog
+
+- 2026-06-02: Tailnet rename swept through `hwc-ai-agent.py` —
+  `hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net` (56c1f6c8).
+- 2026-05-21: Removed the orphaned `options.nix`; options now live in
+  `index.nix` per Law 10 (4f199955, following the earlier `0f8f427c`
+  options move).
+- Earlier: `default.nix` reduced to an import wrapper, the Python agent
+  extracted from the Nix module into `hwc-ai-agent.py`, and paths switched
+  to `config.hwc.paths.*` for Law 3 compliance (af11efbd).
+- 2025-12-02: Initial agent module and this integration guide.
