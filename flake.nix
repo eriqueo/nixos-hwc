@@ -489,6 +489,174 @@
         && destinationFor "R" == "hub:refinery" && destinationFor "N" == "hub:nightly")
         "workbench check: mail/refinery/nightly shortcuts changed destination";
       pkgs.runCommand "workbench-navigation" {} ''touch "$out"'';
+      # ── Prometheus tier ladders are mutually exclusive ──────────────────
+      # Parses the ACTUAL rule expressions (not a second copy of the numbers)
+      # and proves no sample value can satisfy two tiers of one family. Before
+      # the 2026-09-07 change a 96%-full filesystem matched Moderate, Elevated
+      # and High at once and sent three messages about one fact.
+      alert-tier-exclusivity = let
+        alertRules = import ./domains/monitoring/prometheus/parts/alerts.nix { inherit lib; };
+        allRules = lib.concatMap (g: g.rules) alertRules.groups;
+        ruleNamed = name:
+          let hits = lib.filter (r: r.alert == name) allRules;
+          in if hits == [] then null else builtins.head hits;
+        # Expressions are multi-line; flatten before matching so `.` never has
+        # to cross a newline.
+        flat = s: lib.concatStringsSep " " (lib.splitString "\n" s);
+        boundsOf = name:
+          let
+            rule = ruleNamed name;
+            e = flat rule.expr;
+            lower = builtins.match ".*> ([0-9.]+).*" e;
+            upper = builtins.match ".*<= ([0-9.]+).*" e;
+          in
+            assert lib.assertMsg (rule != null)
+              "alert-tier-exclusivity: no rule named ${name} — a rename silently empties this check";
+            assert lib.assertMsg (lower != null)
+              "alert-tier-exclusivity: ${name} has no `> N` lower bound to parse";
+            {
+              inherit name;
+              lower = lib.toInt (builtins.head lower);
+              upper = if upper == null then null else lib.toInt (builtins.head upper);
+            };
+        # Ordered high tier first. Only the top tier may be unbounded above.
+        families = {
+          cpu    = [ "HighCPUUsage" "ElevatedCPUUsage" ];
+          memory = [ "HighMemoryUsage" "ElevatedMemoryUsage" ];
+          disk   = [ "HighDiskUsage" "ElevatedDiskUsage" "ModerateDiskUsage" ];
+        };
+        # Every threshold in use, each ±1, plus the ends of the scale. Bounds are
+        # whole numbers, so integer samples cross every boundary exactly.
+        samples = [ 0 50 69 70 71 81 82 83 84 85 86 89 90 91 94 95 96 99 100 ];
+        matches = b: v: v > b.lower && (b.upper == null || v <= b.upper);
+        overlaps = lib.concatLists (lib.mapAttrsToList (family: names:
+          let bounds = map boundsOf names;
+          in lib.concatMap (v:
+            let hit = lib.filter (b: matches b v) bounds;
+            in lib.optional (lib.length hit > 1)
+              "${family}: sample ${toString v} matches ${
+                lib.concatStringsSep " + " (map (b: b.name) hit)}"
+          ) samples
+        ) families);
+        unboundedLowTiers = lib.concatLists (lib.mapAttrsToList (family: names:
+          map (b: "${family}: ${b.name} has no upper bound but is not the top tier")
+            (lib.filter (b: b.upper == null) (map boundsOf (builtins.tail names)))
+        ) families);
+        problems = overlaps ++ unboundedLowTiers;
+      in
+      assert lib.assertMsg (problems == [])
+        "alert tier ladders overlap:\n  ${lib.concatStringsSep "\n  " problems}";
+      pkgs.runCommand "alert-tier-exclusivity" {} ''touch "$out"'';
+
+      # ── The alert rules are valid PromQL, per Prometheus' own parser ────
+      # alert-tier-exclusivity proves the tier NUMBERS cannot overlap. It cannot
+      # prove the expressions PARSE — it reads them as strings with
+      # builtins.match, so a rule file Prometheus rejects passes it clean. The
+      # 2026-09-07 tier work introduced chained comparisons (`> 82 <= 85`), a
+      # form this repo had never shipped, and an unparseable rule file does not
+      # degrade gracefully: prometheus.service refuses to start, which takes
+      # every alert — and therefore the whole notification path — with it.
+      # Checked against the FILES THE SERVER WILL LOAD (read off the evaluated
+      # config) rather than a second rendering of parts/alerts.nix, so this
+      # cannot pass on a copy while the deployed file is broken.
+      alert-rules-parse = let
+        ruleFiles = self.nixosConfigurations."hwc-server".config.services.prometheus.ruleFiles;
+      in
+      assert lib.assertMsg (ruleFiles != [])
+        "alert-rules-parse: hwc-server declares no prometheus ruleFiles — this check has no subject and would pass empty";
+      pkgs.runCommand "alert-rules-parse" {
+        nativeBuildInputs = [ pkgs.prometheus ];
+      } ''
+        promtool check rules ${lib.concatMapStringsSep " " toString ruleFiles}
+        touch $out
+      '';
+
+      # ── Every OnFailure= notifier points at a unit that exists ──────────
+      # Derived from the EVALUATED hwc-server config, so it needs no second
+      # copy of the monitored list. A name that resolves to no ExecStart is a
+      # stub unit: it reads as coverage and delivers nothing (seven such dead
+      # entries were found by hand on 2026-08-26).
+      alert-onfailure-units = let
+        server = self.nixosConfigurations."hwc-server".config;
+        onFailureOf = svc:
+          let v = (svc.unitConfig or {}).OnFailure or null;
+          in if v == null then ""
+             else if builtins.isList v then lib.concatStringsSep " " v
+             else toString v;
+        monitored = lib.filter
+          (n: lib.hasInfix "hwc-service-failure-notifier@" (onFailureOf server.systemd.services.${n}))
+          (builtins.attrNames server.systemd.services);
+        unitText = n:
+          let t = (server.systemd.units."${n}.service" or {}).text or null;
+          in if t == null then "" else t;
+        dead = lib.filter (n: !(lib.hasInfix "ExecStart=" (unitText n))) monitored;
+      in
+      assert lib.assertMsg (dead == [])
+        ("monitored units with no ExecStart (OnFailure= on these is a silent no-op): "
+         + lib.concatStringsSep ", " dead);
+      pkgs.runCommand "alert-onfailure-units" {} ''touch "$out"'';
+
+      # ── The SR gauntlet units can actually run `flock` ──────────────────
+      # run.sh serializes the poll timer against the run-now drain with flock,
+      # which NixOS' default service PATH does not provide: without
+      # pkgs.util-linux on srgPath both units exit 1 at the lock line, before
+      # any investigation. Resolved against the PATH systemd will really set
+      # (read off the rendered unit files of the evaluated hwc-server config),
+      # not against the srgPath list, so this cannot pass on a package that is
+      # named but never reaches the unit.
+      sr-gauntlet-flock = let
+        server = self.nixosConfigurations."hwc-server".config;
+        units = [ "sr-gauntlet.service" "sr-gauntlet-runnow.service" ];
+        unitFile = n: pkgs.writeText "check-${n}" server.systemd.units.${n}.text;
+      in
+      assert lib.assertMsg server.hwc.automation.srGauntlet.enable
+        "sr-gauntlet-flock: srGauntlet is disabled on hwc-server — this check has no subject and would pass empty";
+      pkgs.runCommand "sr-gauntlet-flock" {} ''
+        fail=0
+        ${lib.concatMapStringsSep "\n" (n: ''
+          unitPath=""
+          while IFS= read -r line; do
+            case "$line" in
+              Environment=*PATH=*) unitPath="''${line#*PATH=}"; unitPath="''${unitPath%\"}" ;;
+            esac
+          done < ${unitFile n}
+          if [ -z "$unitPath" ]; then
+            echo "FAIL: ${n} sets no PATH — srgPath is not reaching the unit." >&2
+            fail=1
+          elif ! ( PATH="$unitPath"; command -v flock >/dev/null ); then
+            echo "FAIL: ${n} has no flock on its PATH. run.sh takes its lock with" >&2
+            echo "      flock; the unit exits 1 before any work. Add pkgs.util-linux" >&2
+            echo "      to srgPath in domains/automation/sr-gauntlet/index.nix." >&2
+            fail=1
+          fi
+        '') units}
+        [ "$fail" = 0 ] || exit 1
+        touch $out
+      '';
+
+      # ── A quiet nightly-builds morning stays quiet ──────────────────────
+      # The no-action branch of the morning review must record and send
+      # nothing. Two directions: the P5 "nothing needs you" card must not come
+      # back, and the POST must stay behind the nb_notify gate.
+      nightly-review-silent = pkgs.runCommand "nightly-review-silent" {
+        nativeBuildInputs = [ pkgs.ripgrep ];
+      } ''
+        cd ${self}
+        src=domains/automation/nightly-builds/index.nix
+        fail=0
+        if rg -q 'prio=5' "$src"; then
+          echo "FAIL: the morning review has a P5 branch again — a morning with no" >&2
+          echo "      decision must send nothing, not a card saying so." >&2
+          fail=1
+        fi
+        rg -q 'nb_notify=0' "$src" || {
+          echo "FAIL: no nb_notify=0 branch — the no-action path is not silent." >&2; fail=1; }
+        rg -q 'if \[ "\$nb_notify" = 1 \]' "$src" || {
+          echo "FAIL: the notify POST is no longer gated on nb_notify." >&2; fail=1; }
+        [ "$fail" = 0 ] || exit 1
+        touch $out
+      '';
+
       charter-law1 = mkCharterLint "law1-osconfig-safety" [
         "rg 'osConfig\\.' domains/home --type nix | rg -v 'osConfig\\.[a-zA-Z0-9_.]+ or |attrByPath|osConfig \\?|lib\\.mkIf isNixOS|#'"
       ];

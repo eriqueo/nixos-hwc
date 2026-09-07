@@ -27,6 +27,25 @@ export interface ExecutiveBrief {
 }
 
 /**
+ * Tagged transition/dedup input. Present ONLY on notifications built by the
+ * Alertmanager converter (`core/from-alertmanager.ts`); the `/notify` input
+ * schema does not accept it, so nothing a caller can POST is ever gated.
+ *
+ * `key` is deliberately independent of firing/resolved: one alert instance has
+ * ONE key across its whole life, which is what makes "resolved for something we
+ * never announced" and "firing → resolved" classifiable. The notification `id`
+ * keeps its status suffix and is unchanged.
+ */
+export interface TransitionTag {
+  /** Status-independent identity of the alert instance. */
+  readonly key: string;
+  /** Which side of the alert lifecycle this observation is. */
+  readonly state: AlertState;
+}
+
+export type AlertState = "firing" | "resolved";
+
+/**
  * A Notification is the atomic unit the dispatcher routes and delivers.
  * Every inbound message — HTTP, CLI, Alertmanager webhook — is parsed
  * into this shape before core touches it.
@@ -52,6 +71,8 @@ export interface Notification {
   readonly context: Readonly<Record<string, unknown>>;
   /** ISO-8601 timestamp of when the notification was *generated*, not received. */
   readonly occurredAt: string;
+  /** Alertmanager-only transition/dedup tag. Absent ⇒ never gated. */
+  readonly transition?: TransitionTag;
 }
 
 /** Result of a single channel delivery attempt. */

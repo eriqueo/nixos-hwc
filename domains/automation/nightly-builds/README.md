@@ -42,7 +42,7 @@ domains/automation/nightly-builds/
 |---|---|---|---|
 | `nightly-builds.service` + `.timer` | eric | `onCalendar` (01:30) | run queued cards in worktrees |
 | `nightly-builds-runnow.service` + `.path` | eric | refinery run-now spool | targeted single-goal run |
-| `nightly-builds-review.service` + `.timer` | eric | `reviewOnCalendar` (07:30) | run `refinery-morning-review`, open PRs, write `/var/lib/refinery/reviews`, one digest notify |
+| `nightly-builds-review.service` + `.timer` | eric | `reviewOnCalendar` (07:30) | run `refinery-morning-review`, open PRs, write `/var/lib/refinery/reviews`, one digest notify **when something needs a decision** (nothing to decide ⇒ journal + archived JSON only) |
 | `nightly-builds-rebuild.service` + `.path` | **root** | rebuild-request spool | PRIVILEGED, opt-in: `nixos-rebuild switch` for an allowlisted host |
 
 ### Spools (all under `/var/lib/refinery`, group-writable for the eric-run board/MCP)
@@ -62,6 +62,14 @@ Claude config directory. For a non-CLI provider, set
 switching providers does not require changing runner code.
 
 ## Changelog
+
+- **2026-09-07** — A morning with no decision now sends nothing. The P5 card
+  "No nightly-build decision needs you" is gone; the run logs
+  `morning-review: no decision needs you ...` and keeps the full CLI JSON in
+  `reviews/_runs/`. Decision digests, incomplete runs, non-zero exits and
+  per-record review errors still notify exactly as before. One `nb_notify` flag
+  gates the POST, and the `nightly-review-silent` flake check fails if either the
+  gate or a P5 branch returns.
 
 - **2026-08-29** — The consolidated morning-review notification now uses an
   outcome-first title, plain-English meaning, explicit recommendation, and an

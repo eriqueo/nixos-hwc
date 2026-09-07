@@ -114,6 +114,12 @@ let
     # now node subcommands in the pipeline's lib.mjs (single implementation).
     pkgs.nodejs_22 pkgs.jq pkgs.ripgrep
     pkgs.curl  # Discord webhook delivery + hwc-notify
+    # run.sh serializes the poll timer against the run-now drain with `flock`.
+    # NixOS' default service PATH does not carry it, so without util-linux both
+    # units die at the lock line (exit 1) before any work. Single producer:
+    # srgPath feeds sr-gauntlet AND sr-gauntlet-runnow, so it must be here, not
+    # on one unit. Guarded by the `sr-gauntlet-flock` flake check.
+    pkgs.util-linux
   ];
 
   # Drains the run-now spool: for each requested SR, consume the request file

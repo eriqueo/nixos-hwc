@@ -55,13 +55,15 @@ notify/
         ├── package.json     # type=module, zod + nodemailer runtime deps.
         ├── tsconfig.json    # ES2023, NodeNext, strict, declaration false.
         └── src/
-            ├── main.ts                          # Entry — HTTP server, wiring.
+            ├── main.ts                          # Entry — HTTP server, composition root (binds the clock).
             ├── config.ts                        # Late-binding env loader.
             ├── core/
-            │   ├── types.ts                     # Notification, DeliveryResult, DispatchResult.
+            │   ├── types.ts                     # Notification, TransitionTag, DeliveryResult, DispatchResult.
+            │   ├── pipeline.ts                  # reserve → route → dispatch → audit → settle, once per notification.
             │   ├── dispatch.ts                  # Pure: notification × channels[] → result.
             │   ├── router.ts                    # Pure: route(notif, rules, defaults).
             │   ├── circuit.ts                   # CircuitBreaker (in-memory).
+            │   ├── transition.ts                # Pure: is this alert news? (decideTransition).
             │   ├── from-alertmanager.ts         # Pure: Alertmanager payload → Notifications.
             │   └── errors.ts                    # Structured NotifyError + codes.
             ├── ports/
@@ -72,16 +74,20 @@ notify/
             │   ├── channel-discord.ts           # Discord webhook embed.
             │   ├── channel-smtp.ts              # nodemailer / Proton Bridge.
             │   ├── channel-logonly.ts           # Dev / fallback.
-            │   ├── audit-sqlite.ts              # node:sqlite (Node 22 built-in).
-            │   ├── audit-noop.ts                # Disabled-mode AuditLog.
+            │   ├── audit-sqlite.ts              # node:sqlite — audit rows, transition state, retention.
+            │   ├── audit-noop.ts                # Disabled-mode AuditPort.
             │   └── log-stderr.ts                # Structured JSON to stderr.
             └── schemas/
                 ├── notification.ts              # Lenient input + canonical Zod.
                 ├── runtime-config.ts            # channels + routes JSON contract.
                 └── alertmanager.ts              # AM webhook v4 schema.
             └── __tests__/
-                └── executive-contract.test.ts   # Executive parsing + channel wiring.
+                ├── executive-contract.test.ts   # Executive parsing + channel wiring.
+                └── transition-shadow.test.ts    # Decision states, keys, store, retention.
 ```
+
+The tests run inside the Nix build (`doCheck = true` in `index.nix`, which calls
+`npm run test`), so a red test fails `nixos-rebuild`, not a report nobody reads.
 
 ## Executive information contract
 
@@ -228,7 +234,11 @@ If no rule matches, the dispatcher sends the notification to `defaultChannels` (
 
 ## Audit log
 
-Schema lives in `adapters/audit-sqlite.ts`. Two tables: `notifications` (one row per dispatched Notification) and `deliveries` (one row per per-channel attempt). The DB is at `${stateDir}/audit.sqlite` (default `/var/lib/hwc/notify/audit.sqlite`). WAL mode; foreign-keyed; prepared statements; BEGIN/COMMIT around each `record()`.
+Schema lives in `adapters/audit-sqlite.ts`. Three tables: `notifications` (one row per dispatched Notification), `deliveries` (one row per per-channel attempt), and `alert_transitions` (one row per alert instance — the decision engine's state). The DB is at `${stateDir}/audit.sqlite` (default `/var/lib/hwc/notify/audit.sqlite`). WAL mode; foreign-keyed; prepared statements; BEGIN/COMMIT around each `record()`.
+
+A notification id that arrives again does **not** rewrite its row (`ON CONFLICT DO NOTHING`); only new delivery rows are added. The first sighting is the true one, so "when did this start" stays answerable and a retry reads as a retry.
+
+**Retention — AUTO-MANAGED (Charter Law 8).** `notifications` + `deliveries` are dropped after 90 days; `alert_transitions` rows in the *resolved* state after 30. Firing rows are never swept: deleting one would make the next repeat look like a brand-new alert. The sweep runs in-process (at startup, then daily) with an injected clock, and there is no `VACUUM` anywhere — a whole-file rewrite does not belong on a request path. It is deliberately not a separate systemd timer: a second process writing this single-writer WAL file is the failure the sweep exists to avoid. Bounds are `NOTIFICATION_RETENTION_DAYS` / `RESOLVED_TRANSITION_RETENTION_DAYS`, covered by `__tests__/transition-shadow.test.ts`.
 
 Queries:
 
@@ -241,6 +251,53 @@ hwc-notify recent --status failed
 
 # Direct SQL for ad-hoc exploration:
 sudo sqlite3 /var/lib/hwc/notify/audit.sqlite "SELECT id, title, topic, priority FROM notifications ORDER BY received_at DESC LIMIT 10"
+```
+
+## Transition decision engine (SHADOW)
+
+Alertmanager re-POSTs a firing alert once per `repeat_interval` for as long as
+it stays firing, and POSTs again when it resolves. Today each of those is a
+Discord message. This engine answers one question per notification — does this
+say something the previous one did not? — and, in this slice, only records the
+answer.
+
+- **Where it runs**: `core/pipeline.ts`, once per notification, immediately
+  before routing. Not per channel: a P1 that fans out to Discord *and* SMTP is
+  one decision, and the research digest's Discord+email pair stays intact. Both
+  HTTP handlers go through that one function, so a handler cannot dispatch
+  without passing the gate — it has no `dispatch` of its own to call.
+- **What it keys on**: `notification.transition.key`, set only by
+  `core/from-alertmanager.ts` and independent of firing/resolved, so one alert
+  instance has one key for its whole life. The notification `id` is unchanged
+  (it still carries the status suffix — the audit trail is per observation).
+  Anything without that block — every `/notify`, CLI and MCP message — is never
+  evaluated, so a human-sent alert can never be deduplicated away.
+- **Classes** (`core/transition.ts`, pure): `new-firing`, `state-transition`,
+  `failed-delivery-retry` (bounded at 3 attempts per state),
+  `priority-reminder` (P1/P2 only, after 24h), `unknown-resolved` (a resolve for
+  something we never announced — noise), `unchanged`, `retry-exhausted`,
+  `already-reserved`.
+- **Ordering**: the decision and its claim are written in one transaction
+  *before* the external effect, with no `await` inside it; delivery outcome is
+  settled after. A 207 partial counts as failed and retryable — this slice keeps
+  one state per notification, not per channel. A claim left open by a crash
+  expires after five minutes and counts as a failed attempt; without that
+  expiry, one crash would mute that alert permanently. A duplicate observation
+  arriving while the claim is live writes **nothing** — the expiry is measured
+  from `last_decided_at`, so stamping it on every duplicate would push the
+  deadline forward indefinitely and reinstate exactly that permanent mute.
+- **Mode**: `hwc.notifications.notify.transitionMode`, default `shadow`.
+  `shadow` records the decision + reason and routes exactly as before; `off`
+  skips the engine. There is no enforcing mode yet, on purpose — enforcement is
+  a later change, made after reading the recorded decisions against real
+  traffic. `repeat_interval` is untouched either way.
+
+Inspect it with `hwc-notify health` (reports `transitionMode`), the journal's
+`transition decision (shadow — routing unchanged)` lines, or:
+
+```bash
+sudo sqlite3 /var/lib/hwc/notify/audit.sqlite \
+  "SELECT key, state, delivery_attempts, delivered, last_reason FROM alert_transitions ORDER BY last_decided_at DESC LIMIT 20"
 ```
 
 ## Circuit breaker
@@ -301,6 +358,36 @@ Hardening: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome=read-only`, `
 | 1.7 | ✅ deployed   | `hwc-notify` CLI + `hwc_notify` MCP tool. |
 
 ## Changelog
+
+- **2026-09-07**: Transition decision engine, shadow only. `core/transition.ts`
+  (pure) classifies each Alertmanager notification; `adapters/audit-sqlite.ts`
+  holds the state in the same database and the same writer as the audit log, and
+  reserves the attempt atomically before dispatch. The converter tags
+  notifications with a status-independent key while leaving the notification id
+  byte-for-byte unchanged. Nothing is suppressed: `transitionMode` defaults to
+  `shadow`, and notifications without a transition block are never evaluated.
+  Same change: the audit log stopped rewriting a notification row on re-arrival
+  (`INSERT OR REPLACE` → `ON CONFLICT DO NOTHING`; the REPLACE also collided with
+  the foreign key from `deliveries`, so those writes were failing into the catch
+  and being logged, not stored), gained bounded retention with an injected clock
+  (90d audit / 30d resolved transitions, no VACUUM), and the package now runs its
+  TypeScript tests in `checkPhase` so a red test fails the build.
+
+  Same day, review pass: the six dispatch steps moved out of the two HTTP
+  handlers into `core/pipeline.ts` — they were byte-identical copies of an
+  ORDERING contract, and the tests pinned what the gate decided while proving
+  nothing about whether it was called (deleting both calls left all 22 cases
+  green). `__tests__/pipeline-wiring.test.ts` now asserts the exact event
+  sequence. Two fixes fell out of the same read: a duplicate observation
+  arriving during a live claim no longer rewrites the row — it was stamping
+  `last_decided_at`, which is the reservation's own expiry clock, so a steady
+  drip of repeats could keep a crashed attempt claimed forever, and it was
+  overwriting `last_reason`, which `settleTransition` then wrote back, recording
+  delivered announcements as suppressions. The `checkPhase` and the systemd
+  `ExecStart` now name one Node version instead of two (`nodejs_22`), and
+  `checks.alert-rules-parse` runs `promtool` over the rule files the server
+  actually loads — `alert-tier-exclusivity` reads those expressions as strings
+  and cannot tell valid PromQL from a rule file Prometheus will refuse.
 
 - **2026-09-04**: Replaced the general `#hwc-alerts` destination with domain-owned channels. `topicRoutes` is now the single topic/destination vocabulary and generates P1 rules ahead of ordinary rules; a known P1 reaches its domain channel plus `smtp-office`, leads stay isolated, and an unknown P1 reaches `#ops` plus SMTP. Unknown non-P1 traffic falls through visibly to `#ops` with no matched rule. Research digest and suggestion topics now also reach `#research-scout` while retaining email as their complete long-form copy. Added dedicated routes for website, finance, events, all three scouts, and canary; the canary timer remains disabled.
 

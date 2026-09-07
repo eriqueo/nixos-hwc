@@ -45,6 +45,15 @@ let
   # Deriving it from config.systemd.services is the principled fix and is
   # blocked on the infinite recursion the NOTE above describes; left as a known
   # gap rather than pretended away.
+  #
+  # NOT A DEADMAN. Every entry here delivers through hwc-notify, so this list
+  # cannot cover hwc-notify itself: an OnFailure= on the dispatcher would ask
+  # the dispatcher to report its own death, and the one failure mode that
+  # matters — the dispatcher down, or both adapters dead — is exactly the case
+  # where nothing is sent. That gap needs a watcher OFF this host and is
+  # deliberately not filled here; the disabled canary
+  # (domains/notifications/canary.nix, off since 2026-08-29) is untouched by
+  # this change and is not that watcher either.
   autoDetectedServices = [
     # Web / infra
     "caddy"
@@ -77,6 +86,21 @@ let
     "morning-briefing"
     "nightly-builds"
     "llama-embed"
+
+    # Added 2026-09-07 — three more timer-driven units that were running with
+    # no notifier. All three are declared with an ExecStart in a module that is
+    # enabled on hwc-server (home-scout: domains/server/native/ai/home-scout,
+    # hwc.server.ai.homeScout.enable = true; recyclarr:
+    # domains/media/recyclarr/parts/config.nix, hwc.media.recyclarr.enable =
+    # true), so none of them creates the ExecStart-less stub the note above
+    # describes. That is not a claim you have to take on trust: the
+    # `alert-onfailure-units` flake check derives the monitored set from the
+    # evaluated hwc-server config and fails if any monitored name resolves to a
+    # unit without an ExecStart. It reads the FINAL config from outside this
+    # module, so it does not hit the recursion that blocks deriving this list.
+    "home-scout-schools"
+    "home-scout-overlays"
+    "recyclarr-sync"
   ];
 
   # Get final list of services to monitor
