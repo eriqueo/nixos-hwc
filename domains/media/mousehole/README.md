@@ -194,5 +194,13 @@ Cadence should match `checkInterval` (default 5 min).
 
 ## Changelog
 
+- **2026-08-20**: Gluetun went multi-instance (0f102aa4), so this module's
+  hand-written `config.hwc.networking.gluetun.enable` assertion was replaced by
+  `helpers.mkVpnAssertions`. The old check only asked whether *a* tunnel was
+  enabled; with more than one tunnel that is worse than no check, because a
+  container could name a tunnel that does not exist and still pass. mousehole
+  has no `network.mode` option — it is unconditionally a passenger of the main
+  tunnel (`sys.nix` pins `networkMode = "vpn"`), so the helper is called with
+  that literal.
 - **2026-06-29**: Initial README. Service has been live and healthy on hwc-server
   since 2026-06-11 (5-min IP checks, idle steady state).

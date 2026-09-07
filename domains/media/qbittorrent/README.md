@@ -116,6 +116,15 @@ journalctl -u podman-qbittorrent -f
 
 ## Changelog
 
+- **2026-08-20**: `parts/config.nix` — the hand-written "is gluetun enabled"
+  assertion collapsed into `helpers.mkVpnAssertions` when gluetun went
+  multi-instance (0f102aa4). The helper checks that the **specific** tunnel this
+  container joins is both declared and enabled; the old
+  `cfg.network.mode != "vpn" || gluetun.enable` form only proved some tunnel
+  existed somewhere. The module's other assertions are appended unchanged.
+  qBittorrent continues to hold the forwarded port on the `gluetun` instance —
+  Proton forwards exactly one per WireGuard session, which is what forced the
+  multi-instance shape in the first place.
 - **2026-08-01**: Split `privacy.enable` into per-protocol toggles
   (`anonymousMode`/`dht`/`pex`/`lsd`) and turned **DHT + PeX back on** by
   default. The blanket-off posture was redundant with the gluetun tunnel (the
