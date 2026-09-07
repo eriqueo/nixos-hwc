@@ -141,6 +141,13 @@ let
     nerr="$(jq -r '(.errors // []) | length' "$OUT" 2>/dev/null || echo 0)"
     action_count="$(jq -r '[(.opened // 0), (.byVerdict["merge-ready"] // 0), (.byVerdict["needs-work"] // 0), (.byVerdict.reject // 0)] | add' "$OUT" 2>/dev/null || echo 0)"
     graduated_count="$(jq -r '(.graduated // []) | length' "$OUT" 2>/dev/null || echo 0)"
+    # Silence contract (2026-09-07): a morning where nothing needs Eric sends
+    # NOTHING. nb_notify is the single gate on the POST below; every branch that
+    # carries a decision, a failure, or a review error sets it back to 1. The
+    # journal + the archived CLI JSON stay the audit record either way, so the
+    # quiet morning is still inspectable — it just doesn't page.
+    nb_notify=1
+    prio=""; title=""; meaning=""; recommendation=""
     # The CLI prints a JSON summary to stdout and a human line to stderr (both
     # captured above). Pull the digest fields with jq; degrade to a raw tail if
     # the output isn't the expected JSON (e.g. an early fatal).
@@ -163,9 +170,12 @@ let
         meaning="''${action_count} item(s) need a merge, requeue, rebuild, or rejection decision; ''${graduated_count} completed automatically."
         recommendation="Open Nightly Builds and decide the priority items."
       else
-        prio=5; title="✅ No nightly-build decision needs you"
-        meaning="The morning review found no item requiring action; ''${graduated_count} completed automatically."
-        recommendation="No action needed."
+        # Nothing needs Eric. The old P5 card ("No nightly-build decision needs
+        # you") said exactly that, every morning, to a human who then had to read
+        # it to learn there was nothing to read — the same inverted polarity that
+        # got the delivery canary disabled on 2026-08-29. Record and stay silent.
+        nb_notify=0
+        echo "morning-review: no decision needs you (action_count=0 graduated=''${graduated_count}); no card sent. Audit: $ARCHIVE"
       fi
     else
       prio=2; title="⚠️ Nightly-build review needs intervention"
@@ -178,6 +188,7 @@ Review them in workbench → Nightly Builds hub (live: merge / requeue / rebuild
     # that quotes the per-record errors and points at the archived JSON — never
     # let a swallowed count hide a branch that pushed but never got a PR.
     if [ "''${nerr:-0}" -gt 0 ] 2>/dev/null; then
+      nb_notify=1
       prio=2; title="⚠️ Morning review — ''${nerr} review error(s)"
       meaning="''${nerr} item(s) failed during review and a pushed branch may not have a pull request."
       recommendation="Inspect the archived errors, then open or recover any missing pull request."
@@ -189,7 +200,7 @@ $errdetail
 
 A branch may have pushed without a PR — run \`gh pr list\` and open any missing ones."
     fi
-    if command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+    if [ "$nb_notify" = 1 ] && command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
       # hwc-notify's schema caps title at 200 and body at 4000 chars and
       # REJECTS oversized payloads (400) — a long errdetail list made the
       # whole morning digest silently vanish (observed 2026-07-11/12, daily

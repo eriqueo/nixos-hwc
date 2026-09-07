@@ -53,6 +53,12 @@ units re-read it each run, so no restart is needed.
 
 ## Changelog
 
+- **2026-09-07**: Added `pkgs.util-linux` to `srgPath`. `run.sh` serializes the
+  poll timer against the run-now drain with `flock`, which is absent from the
+  default service PATH, so both units exited 1 at the lock line before doing any
+  work. One shared path list, so one edit covers both units; the
+  `sr-gauntlet-flock` flake check resolves `flock` against the rendered unit
+  PATH and fails if it disappears.
 - **2026-08-29**: Added late-bound Refinery and DataX origins to every run so
   typed executive decisions link to their decision surface and source ticket.
 - **2026-07-22**: **Dedicated Claude subscription token.** The gauntlet had 5

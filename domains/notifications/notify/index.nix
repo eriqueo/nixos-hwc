@@ -149,6 +149,14 @@ let
   # ────────────────────────────────────────────────────────────────────
   # Hermetic Nix-built TS service.
   # ────────────────────────────────────────────────────────────────────
+  #
+  # ONE producer for the Node version. The service and its tests must run on
+  # the same runtime: the audit-log tests import node:sqlite behind
+  # `--experimental-sqlite`, a flag whose meaning is version-specific, so a
+  # checkPhase on pkgs.nodejs (whatever the channel defaults to) while
+  # ExecStart pins nodejs_22 would be testing a runtime nothing ships on.
+  notifyNodejs = pkgs.nodejs_22;
+
   hwc-notify-pkg = pkgs.buildNpmPackage {
     pname = "hwc-notify";
     version = "0.1.0";
@@ -160,9 +168,28 @@ let
         in base != "node_modules" && base != "dist" && base != ".gitignore";
     };
 
+    nodejs = notifyNodejs;
+
     npmDepsHash = "sha256-aHTyFXqcdaOZHHwdyriSJqXFvrlFHVKZXPt4z0JvQ54=";
     npmBuildScript = "build";
     dontNpmPrune = false;
+
+    # The TypeScript tests run as part of the package build, so a red test is a
+    # failed `nixos-rebuild` rather than a note somebody meant to read.
+    # `doCheck` + `checkPhase` are stdenv's own contract (buildNpmPackage is
+    # stdenv.mkDerivation underneath) and are named here rather than a
+    # buildNpmPackage-specific test attribute, so this does not depend on a
+    # helper attribute nobody verified. The command has ONE producer: the
+    # package.json `test` script, which carries the `--experimental-sqlite` flag
+    # the audit-log tests need (the same flag the systemd unit passes).
+    # checkPhase runs after buildPhase and before installPhase, so dist/ exists
+    # and devDependencies are not yet pruned.
+    doCheck = true;
+    checkPhase = ''
+      runHook preCheck
+      npm run test
+      runHook postCheck
+    '';
   };
 
   mainJs = "${hwc-notify-pkg}/lib/node_modules/hwc-notify/dist/main.js";
@@ -318,8 +345,37 @@ in
       type = lib.types.path;
       default = "${paths.state}/notify";
       description = ''
-        Directory holding service state (audit log SQLite DB, dedup cache).
+        Directory holding service state (audit log SQLite DB, transition state).
         systemd StateDirectory creates this owned by user:users at 0750.
+
+        RETENTION (Charter Law 8): AUTO-MANAGED. audit.sqlite holds three
+        AUTO-MANAGED tables — `notifications` and `deliveries` are swept after
+        90 days, `alert_transitions` rows in the resolved state after 30 days.
+        The sweep runs inside hwc-notify (at startup, then daily); it is
+        deliberately NOT a separate systemd timer, because a second process
+        writing this single-writer WAL database is the failure mode the sweep
+        is supposed to avoid. Bounds live in adapters/audit-sqlite.ts as
+        NOTIFICATION_RETENTION_DAYS / RESOLVED_TRANSITION_RETENTION_DAYS and
+        are covered by the package's own tests.
+      '';
+    };
+
+    transitionMode = lib.mkOption {
+      type = lib.types.enum [ "off" "shadow" ];
+      default = "shadow";
+      description = ''
+        Alertmanager transition decision engine.
+
+        "shadow" (default): for every Alertmanager notification the service
+        records a decision (new firing / unknown resolved / state transition /
+        failed-delivery retry / P1-P2 reminder / unchanged) and its reason, then
+        routes the notification exactly as it always did. Nothing is suppressed
+        and no channel behaviour changes. "off" skips the engine entirely.
+
+        There is no enforcing mode yet, by design: enforcement is a separate
+        change, made after the recorded decisions have been read against real
+        traffic. Notifications without an Alertmanager transition block (every
+        /notify, CLI and MCP message) are never evaluated at all.
       '';
     };
 
@@ -398,6 +454,7 @@ in
         HWC_NOTIFY_STATE_DIR           = cfg.statePath;
         HWC_NOTIFY_LOG_LEVEL           = cfg.logLevel;
         HWC_NOTIFY_RUNTIME_CONFIG_FILE = "${runtimeConfigFile}";
+        HWC_NOTIFY_TRANSITION_MODE     = cfg.transitionMode;
 
         PATH = lib.mkForce "/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";
         NODE_ENV = "production";
@@ -410,7 +467,7 @@ in
         # --experimental-sqlite enables node:sqlite (Node 22.5+).
         # --no-warnings silences the "experimental feature" notice;
         # we'll drop both flags when sqlite goes stable.
-        ExecStart = "${pkgs.nodejs_22}/bin/node --experimental-sqlite --no-warnings ${mainJs}";
+        ExecStart = "${notifyNodejs}/bin/node --experimental-sqlite --no-warnings ${mainJs}";
         User = lib.mkForce cfg.user;
         Group = "users";
         # "always" (not on-failure): a clean-exit bug must not leave the

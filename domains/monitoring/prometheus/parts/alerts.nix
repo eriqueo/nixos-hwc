@@ -2,6 +2,19 @@
 #
 # Prometheus Alert Rules - Organized by Severity
 # P5 = Critical, P4 = Warning, P3 = Info
+#
+# TIER LADDERS (CPU / memory / disk) ARE MUTUALLY EXCLUSIVE AT THE EXPRESSION.
+# Every tier below the top one carries an explicit upper bound equal to the next
+# tier's lower bound (`> lower ... <= upper`), so one sample can satisfy at most
+# one tier in its family. Before that, a 96%-full disk matched Moderate (>82),
+# Elevated (>85) AND High (>95) at once and each fired its own alert with its
+# own repeat_interval — three messages for one fact. Bounds are half-open on the
+# low side and closed on the high side, so the boundary value itself (exactly
+# 85.0) belongs to the LOWER tier and no value falls through a gap.
+# Mechanically checked by `checks.x86_64-linux.alert-tier-exclusivity` in
+# flake.nix, which parses these expressions and proves no sample matches twice.
+# Alertmanager inhibition is deliberately NOT used: it would suppress a delivery
+# while leaving three alerts firing, which hides the overlap instead of removing it.
 
 { lib, ... }:
 
@@ -219,10 +232,12 @@
       name = "warning_alerts";
       rules = [
         # System - Elevated CPU usage
+        # Upper bound 90 = HighCPUUsage's lower bound: a 95% sample is Critical
+        # only, never Critical AND Elevated. Threshold and `for` unchanged.
         {
           alert = "ElevatedCPUUsage";
           expr = ''
-            100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 70
+            100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 70 <= 90
           '';
           for = "15m";
           labels = {
@@ -236,10 +251,12 @@
         }
 
         # System - Elevated memory usage
+        # Upper bound 95 = HighMemoryUsage's lower bound (see the ladder note in
+        # this file's header). Threshold and `for` unchanged.
         {
           alert = "ElevatedMemoryUsage";
           expr = ''
-            (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
+            (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80 <= 95
           '';
           for = "15m";
           labels = {
@@ -253,10 +270,13 @@
         }
 
         # System - Elevated disk usage
+        # Upper bound 95 = HighDiskUsage's lower bound. A 96%-full /mnt/media is
+        # now Critical only; it used to be Critical + Elevated + Moderate at once.
+        # Threshold and `for` unchanged.
         {
           alert = "ElevatedDiskUsage";
           expr = ''
-            100 - ((node_filesystem_avail_bytes{mountpoint=~"/|/mnt/.*"} * 100) / node_filesystem_size_bytes{mountpoint=~"/|/mnt/.*"}) > 85
+            100 - ((node_filesystem_avail_bytes{mountpoint=~"/|/mnt/.*"} * 100) / node_filesystem_size_bytes{mountpoint=~"/|/mnt/.*"}) > 85 <= 95
           '';
           for = "30m";
           labels = {
@@ -348,10 +368,11 @@
         # state), so a 75% threshold fired permanently and re-sent to Discord
         # every repeat_interval (4h) with no actionable signal. 82% sits above
         # the baseline and below the Elevated (85%) tier.
+        # Upper bound 85 = ElevatedDiskUsage's lower bound.
         {
           alert = "ModerateDiskUsage";
           expr = ''
-            100 - ((node_filesystem_avail_bytes{mountpoint=~"/|/mnt/.*"} * 100) / node_filesystem_size_bytes{mountpoint=~"/|/mnt/.*"}) > 82
+            100 - ((node_filesystem_avail_bytes{mountpoint=~"/|/mnt/.*"} * 100) / node_filesystem_size_bytes{mountpoint=~"/|/mnt/.*"}) > 82 <= 85
           '';
           for = "1h";
           labels = {

@@ -21,7 +21,13 @@ monitoring/
 ├── prometheus/         # Metrics collection + alert rules
 │   ├── index.nix
 │   ├── options.nix
-│   └── parts/alerts.nix
+│   └── parts/alerts.nix  # CPU/memory/disk tier ladders are mutually exclusive
+│                         #   (`> lower <= upper`); the numbers are proved
+│                         #   disjoint by the `alert-tier-exclusivity` flake
+│                         #   check, which reads the expressions as STRINGS —
+│                         #   `alert-rules-parse` runs promtool over the rule
+│                         #   files hwc-server actually loads, which is the only
+│                         #   thing that proves they are valid PromQL
 ├── grafana/            # Dashboards + visualization
 │   ├── index.nix
 │   ├── options.nix
@@ -44,10 +50,12 @@ monitoring/
 │       ├── docker.yaml
 │       └── bookmarks.yaml
 └── alerts/             # Alert sources, thresholds, severity mapping
-    └── index.nix
+    └── index.nix       # incl. the OnFailure= notifier list; every name in it
+                        #   is checked by the `alert-onfailure-units` flake check
 ```
 
 ## Changelog
+- 2026-09-07: **CPU, memory and disk alerts stopped double-reporting, and three more units got a failure notifier.** What happened: each tier below the top one now carries an upper bound equal to the next tier's threshold (`> 82 <= 85`, `> 85 <= 95`, and so on), so a 96%-full filesystem raises the Critical alert only. It used to raise Critical, Elevated and Moderate together, and each repeated on its own schedule — three messages, one fact, and the Critical one was the hardest to spot. Thresholds, `for` windows, labels, names and annotations are unchanged, and Alertmanager inhibition was deliberately not used: inhibition hides a duplicate delivery while leaving three alerts firing. Also added `home-scout-schools`, `home-scout-overlays` and `recyclarr-sync` to the OnFailure= list — three timer-driven units that could fail with nobody told. What to do: nothing; the change is declarative. Where to inspect: `prometheus/parts/alerts.nix` (the ladder note in its header), `alerts/index.nix`, and `nix build .#checks.x86_64-linux.alert-tier-exclusivity` / `.alert-onfailure-units`, which fail if a ladder overlaps again or if a monitored name resolves to a unit with no ExecStart. Note the limit of the notifier list: it delivers through hwc-notify, so it can never cover hwc-notify itself. That gap needs a watcher off this host and is still open.
 - 2026-08-20: homepage — Paperless tile repointed to `paperless.hwc.iheartwoodcraft.com`, the last of the three tiles that pinned a retired subpath. All homepage hrefs now name either a vhost or a deliberately-held subpath; none point at a path that no longer routes.
 - 2026-08-20: prometheus — LazyLibrarian blackbox probe de-pinned from the retired URL base (`:5299/books` → `:5299/`), and the Navidrome homepage tile repointed to its vhost. Same failure shape the 2026-08-15 entry recorded for the \*arr probes and worth restating because it recurred within a week: the `http_reachable` module's "up" set includes 4xx, so once `http_root` was cleared this probe would have kept reporting LazyLibrarian **up** while getting a 404 from a path that no longer exists. A probe that cannot fail is worse than no probe — it occupies the dashboard slot where a real signal would go.
 - 2026-08-20: homepage — Audiobookshelf tile repointed to `audiobookshelf.hwc.iheartwoodcraft.com` alongside its route flip in `networking/routes.nix`. Dashboard hrefs are the one consumer of a route change that fails **completely silently**: nothing probes them, so a tile pointing at a retired subpath just 404s the next person who clicks it, months later. Moving the tile in the same commit as the route is the only thing that keeps them honest. The `/docs` (paperless) and `/music` (navidrome) tiles are deliberately left on the old subpath — those apps still carry an in-app URL base and have not migrated yet.

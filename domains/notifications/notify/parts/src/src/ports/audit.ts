@@ -13,7 +13,12 @@ import type {
   Notification,
   DeliveryResult,
   Priority,
+  TransitionTag,
 } from "../core/types.js";
+import type {
+  TransitionDecision,
+  TransitionState,
+} from "../core/transition.js";
 
 export interface AuditRecord {
   readonly notification: Notification;
@@ -60,3 +65,56 @@ export interface AuditLog {
   recent(query: RecentQuery): RecentNotification[];
   close(): void;
 }
+
+export interface ReserveTransitionInput {
+  readonly tag: TransitionTag;
+  readonly priority: Priority;
+  /** Epoch ms, injected by the caller. */
+  readonly now: number;
+}
+
+export interface SettleTransitionInput {
+  readonly tag: TransitionTag;
+  /** Epoch ms, injected by the caller. */
+  readonly now: number;
+  /** Did every routed channel accept the notification? (207 ⇒ false.) */
+  readonly delivered: boolean;
+}
+
+/** Rows removed by one retention sweep. */
+export interface CleanupCounts {
+  readonly notifications: number;
+  readonly deliveries: number;
+  readonly transitions: number;
+}
+
+/**
+ * Durable state for the transition decision engine.
+ *
+ * It lives on the AuditLog port, and in the same adapter and the same SQLite
+ * file, on purpose: a second store would be a second writer to a single-writer
+ * WAL database, and the two would disagree about the same notifications the
+ * first time one of them failed a write.
+ */
+export interface TransitionStore {
+  /**
+   * Decide, and — when the decision announces — claim the attempt, in ONE
+   * transaction that completes before any external effect happens. Two
+   * observations of the same key cannot both hold the claim; the second is
+   * classified `already-reserved`.
+   *
+   * Returns null when the store failed. Null is the absence of a decision, not
+   * a decision to suppress — a caller that ever gates on this must treat null
+   * as "route normally".
+   */
+  reserveTransition(input: ReserveTransitionInput): TransitionDecision | null;
+  /** Release the claim and record the delivery outcome. Call after dispatch. */
+  settleTransition(input: SettleTransitionInput): void;
+  /** Current durable state for a key, or null. */
+  getTransition(key: string): TransitionState | null;
+  /** Bounded retention sweep. `now` is injected so the path is testable. */
+  cleanup(now: number): CleanupCounts;
+}
+
+/** What the shells actually hold: one object, one database, one writer. */
+export type AuditPort = AuditLog & TransitionStore;

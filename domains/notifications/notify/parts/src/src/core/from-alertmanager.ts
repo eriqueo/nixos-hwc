@@ -106,8 +106,16 @@ function alertToNotification(
   const baseId = alert.fingerprint || `${labels.alertname || "unknown"}-${alert.startsAt}`;
   const id = `alertmanager-${baseId}-${alert.status}`;
 
+  // Transition key: the SAME baseId, without the status suffix. The id above is
+  // unchanged (byte-for-byte) because the audit trail is per-observation; the
+  // key is per-alert-instance because "is this news?" is a question about the
+  // alert, not about one side of its lifecycle. Only this converter sets the
+  // block, so only Alertmanager traffic is ever gated.
+  const transition = { key: `alertmanager:${baseId}`, state: alert.status };
+
   return {
     id,
+    transition,
     title,
     body,
     priority,

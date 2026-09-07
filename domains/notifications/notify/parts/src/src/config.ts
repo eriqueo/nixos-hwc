@@ -12,6 +12,7 @@
 
 import { readFileSync } from "node:fs";
 import { parseRuntimeConfig, type RuntimeConfig } from "./schemas/runtime-config.js";
+import type { TransitionMode } from "./core/transition.js";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -26,6 +27,12 @@ export interface ServiceConfig {
   readonly runtimeConfigFile: string;
   /** Parsed + cross-referenced channels and routes from runtimeConfigFile. */
   readonly runtimeConfig: RuntimeConfig;
+  /**
+   * Transition decision engine mode. "shadow" records a decision + reason for
+   * every Alertmanager notification and changes nothing about routing; "off"
+   * skips the engine. There is no enforcing mode in this slice.
+   */
+  readonly transitionMode: TransitionMode;
 }
 
 function readStr(name: string, fallback?: string): string {
@@ -52,6 +59,13 @@ function readLogLevel(name: string, fallback: LogLevel): LogLevel {
   throw new Error(`env: ${name} must be debug|info|warn|error, got: ${v}`);
 }
 
+function readTransitionMode(name: string, fallback: TransitionMode): TransitionMode {
+  const v = process.env[name];
+  if (!v) return fallback;
+  if (v === "off" || v === "shadow") return v;
+  throw new Error(`env: ${name} must be off|shadow, got: ${v}`);
+}
+
 /** Read + parse the runtime-config JSON written by the NixOS module. */
 function loadRuntimeConfig(filepath: string): RuntimeConfig {
   let raw: unknown;
@@ -76,5 +90,6 @@ export function loadConfig(): ServiceConfig {
     version: "0.1.0",
     runtimeConfigFile,
     runtimeConfig: loadRuntimeConfig(runtimeConfigFile),
+    transitionMode: readTransitionMode("HWC_NOTIFY_TRANSITION_MODE", "shadow"),
   };
 }

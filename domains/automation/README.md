@@ -26,7 +26,10 @@ automation/
 │   └── index.nix
 ├── nightly-builds/  # Overnight gauntlet-card runner (headless Claude Code)
 │   ├── index.nix    # Options + systemd service/timer (hwc.automation.nightlyBuilds.*);
-│   │                #   passes NB_DISCORD_WEBHOOK_FILE (agenix discord-webhook-nightly-builds)
+│   │                #   passes NB_DISCORD_WEBHOOK_FILE (agenix discord-webhook-nightly-builds).
+│   │                #   The morning review sends nothing when no decision needs
+│   │                #   Eric — one nb_notify gate, checked by the
+│   │                #   `nightly-review-silent` flake check
 │   ├── run.sh       # Launcher: card-smith pass + queued-card execution in git worktrees
 │   ├── send-report.sh  # Per-card Discord post: verdict header + Success-criteria + full
 │   │                #   REPORT.md attached (one message). hwc-notify is the metadata fallback
@@ -68,6 +71,29 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-09-07: **The SR gauntlet units now carry `flock`.** What happened:
+  `pkgs.util-linux` was added to `sr-gauntlet/index.nix`'s shared `srgPath`, so
+  both the poll service and the run-now drain get `flock`. Why it matters:
+  `run.sh` takes its lock with `flock`, and NixOS' default service PATH does not
+  include it — both units exited 1 at the lock line, before any investigation.
+  What to do: nothing; the fix is in the unit PATH and needs a rebuild. Where to
+  inspect: `systemctl show sr-gauntlet -p Environment` on hwc-server. `nix build
+  .#checks.x86_64-linux.sr-gauntlet-flock` reads the PATH off the rendered unit
+  files and fails if `flock` is not resolvable on either unit.
+- 2026-09-07: **A quiet nightly-builds morning is now silent.** What happened:
+  when the morning review finds nothing that needs a decision, it no longer
+  posts the P5 "No nightly-build decision needs you" card. Why it matters: that
+  card arrived most mornings and said, at some length, that there was nothing to
+  read — the same inverted polarity that got the delivery canary switched off on
+  2026-08-29, and it trained Eric to skim the channel where the real decisions
+  land. Decision digests, incomplete runs, non-zero exits and per-record review
+  errors all still notify, unchanged. What to do: nothing. Where to inspect: the
+  run writes `morning-review: no decision needs you ...` to the journal
+  (`journalctl -u nightly-builds-review`) and keeps the full CLI JSON under
+  `/var/lib/refinery/reviews/_runs/`, so a silent morning is still auditable. A
+  single `nb_notify` flag gates the POST; `nix build
+  .#checks.x86_64-linux.nightly-review-silent` fails if the gate or a P5 branch
+  comes back.
 - 2026-08-26: **Headless `claude -p` auth failures now fail the run, across the
   domain.** The CLI writes `Failed to authenticate. API Error: 401 ...` to stdout
   and **exits 0**, so every consumer here read a dead credential as a clean run.

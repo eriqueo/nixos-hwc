@@ -22,12 +22,11 @@ import { makeSmtpChannel } from "./adapters/channel-smtp.js";
 import { makeSqliteAuditLog } from "./adapters/audit-sqlite.js";
 import { safeParseNotificationInput } from "./schemas/notification.js";
 import { AlertmanagerWebhookSchema } from "./schemas/alertmanager.js";
-import { dispatch } from "./core/dispatch.js";
-import { route } from "./core/router.js";
 import { CircuitBreaker } from "./core/circuit.js";
 import { webhookToNotifications } from "./core/from-alertmanager.js";
+import { dispatchNotification, type PipelineDeps } from "./core/pipeline.js";
 import type { Notification } from "./core/types.js";
-import type { AuditLog } from "./ports/audit.js";
+import type { AuditPort } from "./ports/audit.js";
 import { join as pathJoin } from "node:path";
 import type { Channel } from "./ports/channel.js";
 import type { Logger } from "./ports/log.js";
@@ -153,7 +152,7 @@ function main(): void {
   });
 
   const channelMap = buildChannelMap(config, log);
-  const auditLog: AuditLog = makeSqliteAuditLog({
+  const auditLog: AuditPort = makeSqliteAuditLog({
     dbPath: pathJoin(config.stateDir, "audit.sqlite"),
     log: log.child({ component: "audit" }),
   });
@@ -168,7 +167,30 @@ function main(): void {
     routes: config.runtimeConfig.routes.length,
     defaultChannels: config.runtimeConfig.defaultChannels,
     auditDb: pathJoin(config.stateDir, "audit.sqlite"),
+    transitionMode: config.transitionMode,
   });
+
+  // ── Retention sweep (Charter Law 8: AUTO-MANAGED) ────────────────────
+  // Once at startup, then daily. In-process on purpose: an external cleanup
+  // timer would be a second writer against the same single-writer WAL file.
+  // unref() so a pending timer never holds the process open during shutdown.
+  auditLog.cleanup(Date.now());
+  setInterval(() => auditLog.cleanup(Date.now()), 24 * 60 * 60 * 1000).unref();
+
+  // ── Composition root for the dispatch pipeline ───────────────────────
+  // Every notification — /notify and every alert in an Alertmanager batch —
+  // goes through core/pipeline.ts, which owns the reserve → route → dispatch →
+  // audit → settle ordering. The clock is bound HERE and nowhere below: core
+  // takes `now` as a parameter so the ordering is testable without wall time.
+  const pipeline: PipelineDeps = {
+    audit: auditLog,
+    channels: channelMap,
+    routes: config.runtimeConfig.routes,
+    defaultChannels: config.runtimeConfig.defaultChannels,
+    transitionMode: config.transitionMode,
+    breaker,
+    now: () => Date.now(),
+  };
 
   const startedAt = new Date();
 
@@ -191,6 +213,9 @@ function main(): void {
         })),
         routes: config.runtimeConfig.routes.length,
         defaultChannels: config.runtimeConfig.defaultChannels,
+        // Additive: lets an operator confirm the gate is in shadow without
+        // reading the journal.
+        transitionMode: config.transitionMode,
       });
       return;
     }
@@ -222,43 +247,11 @@ function main(): void {
         }
 
         const notif = parsed.value;
-        const decision = route(
-          notif,
-          config.runtimeConfig.routes,
-          config.runtimeConfig.defaultChannels,
-        );
-        const targets = decision.channelIds
-          .map((id) => channelMap.get(id))
-          .filter((c): c is Channel => c !== undefined);
-
-        reqLog.info("dispatching notification", {
-          notificationId: notif.id,
-          topic: notif.topic,
-          priority: notif.priority,
-          source: notif.source,
-          matchedRule: decision.matchedRule,
-          channelIds: targets.map((c) => c.id),
-        });
-
-        const receivedAt = new Date().toISOString();
-        const result = await dispatch(notif, targets, { breaker });
-        reqLog.info("dispatch complete", {
-          notificationId: notif.id,
-          attempted: result.attempted,
-          succeeded: result.succeeded,
-          failed: result.failed,
-        });
-
-        auditLog.record({
-          notification: notif,
-          matchedRule: decision.matchedRule,
-          receivedAt,
-          results: result.results,
-        });
+        const { result, matchedRule } = await dispatchNotification(pipeline, notif, reqLog);
 
         writeJson(res, statusFromDispatch(result.attempted, result.succeeded), {
           ...result,
-          matchedRule: decision.matchedRule,
+          matchedRule,
         });
       })();
       return;
@@ -304,27 +297,12 @@ function main(): void {
         // not per-batch.
         const perAlert = await Promise.all(
           notifs.map(async (notif) => {
-            const decision = route(
-              notif,
-              config.runtimeConfig.routes,
-              config.runtimeConfig.defaultChannels,
-            );
-            const targets = decision.channelIds
-              .map((id) => channelMap.get(id))
-              .filter((c): c is NonNullable<typeof c> => c !== undefined);
-            const receivedAt = new Date().toISOString();
-            const result = await dispatch(notif, targets, { breaker });
-            auditLog.record({
-              notification: notif,
-              matchedRule: decision.matchedRule,
-              receivedAt,
-              results: result.results,
-            });
+            const { result, matchedRule } = await dispatchNotification(pipeline, notif, reqLog);
             return {
               ...result,
               title: notif.title,
               priority: notif.priority,
-              matchedRule: decision.matchedRule,
+              matchedRule,
             };
           }),
         );
