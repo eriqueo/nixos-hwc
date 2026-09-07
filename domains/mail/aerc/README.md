@@ -333,6 +333,14 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-07-16: `parts/config.nix` picked up the new contacts domain — khard as
+  the address-book source, backed by a vdirsyncer CardDAV pair on the CRM
+  rolodex (b4f466e6).
+- 2026-07-09: **Triage folders + set-bucket keybinds** (unified-triage Phase 2,
+  d31fdad3) — new binds in `parts/binds.nix` and matching folder config. Landed
+  on top of the canonical-taxonomy change the same day (02c72431), which made
+  one registry the single producer of tags, buckets and sender rules;
+  `parts/tags.nix` was rewritten to read from it rather than hand-listing tags.
 - 2026-06-26: folder nav `<C-j>/<C-k>` → `<A-j>/<A-k>` (next/prev-folder). Ctrl is now the workbench/zellij layer (Ctrl+j/k cycle tabs), so in-app side-column nav moved to Alt to avoid the collision.
 - 2026-06-26: which-key footer legend (`esc close · ⌫ back`) on the bottom border + Backspace walks up one chord level (forked aerc, app/whichkey.go + app/aerc.go); new themeable `whichkey_legend` style.
 - 2026-06-26: which-key popover redesign (forked aerc) — compact content-sized box (was edge-to-edge), `key → label` rows with nvim arrow, group keys read `domain +N` (e.g. `buffer +7`); styleset reworked to a raised slate card (bg3, lighter than terminal) with an inverted cream title chip and copper border, plus interior padding + a minimum box size. Code in `github:eriqueo/aerc` (app/whichkey.go, app/aerc.go); colors in `parts/appearance.nix`.

@@ -68,6 +68,18 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-08-28: `immich-container/parts/config.nix` — the module's fifteen dead
+  `$PSQL` postStart statements were deleted (e82ca994), and the follow-on
+  (53e84228) declared the `immich` role and database it turned out nobody
+  declared: `ensureUsers` + `ensureDBOwnership`, with the owner taken from
+  `cfg.database.name` and **not** `cfg.database.user`. That distinction is the
+  whole reason it was a two-commit change — `database.user` is `eric` on the
+  server, so owning from it emitted `ALTER DATABASE immich OWNER TO eric`, a
+  live ownership change wearing a cleanup's clothes. NixOS's own
+  `ensureDBOwnership` assertion caught it on the first eval. Full audit in
+  `domains/data/databases/README.md`.
+- 2026-08-24: frigate — motion tuned so `record.retain.mode = "motion"` actually
+  thins recordings (4a1d5afa). See `frigate/README.md`.
 - 2026-08-20: **slskd was never inside the VPN, and now cannot leave it silently.** `hwc.media.slskd.network.mode` defaulted to `"media"` from the day the module was written, so `mkContainer` gave it `--network=media-network` while gluetun, qBittorrent and SABnzbd shared a netns — confirmed by `podman inspect`, where slskd held its own `SandboxKey`. It egressed on the house IP for roughly six weeks, ~29.4 GB out / 15.5 GB in. What made this invisible is worth more than the fix: `downloaders/parts/downloaders.nix` contained `"podman-slskd".after = [ "podman-gluetun.service" ]` and a `SLSKD: (TODO: implement)` note, which read like partial wiring — but `hwc.media.downloaders.enable` was never set anywhere, so that module's entire `config` block was **dead code**, ordering nothing. A module that appears to do the thing is worse than one that obviously does not. The module is deleted (`git rm`); its only live contribution was two `webPort` options that `media/scripts` read, now taken from `hwc.media.qbittorrent.webPort` and `hwc.media.sabnzbd.webPort`, i.e. from the modules that actually define those containers. The default is now `"vpn"`, and an assertion makes `"media"` a **build failure** unless `allowClearnet = true` is set deliberately — seeded and confirmed red both ways before shipping (undeclared tunnel instance, and clearnet mode). slskd is held disabled on hwc-server until its tunnel instance exists.
 - 2026-08-20: the eight hand-copied `cfg.network.mode != "vpn" || config.hwc.networking.gluetun.enable` assertions (calibre, books, audiobookshelf, mousehole, sabnzbd, qbittorrent, and the deleted downloaders module) collapse into `helpers.mkVpnAssertions`. Same predicate written eight ways was the smaller problem; the real one is that all eight only checked that *a* tunnel was enabled, which with more than one tunnel is worse than no check — a container could name a tunnel that does not exist and still pass. The helper takes the instance set and asserts the specific tunnel is both declared and enabled. `mkContainer` gained `vpnContainer`, and deliberately still has **no** fallback branch for `"vpn"`: a wrong tunnel name must break the container, never quietly un-tunnel it, which is the failure this whole entry is about.
 - 2026-08-20: frigate — `frigate-cleanup` could delete the container's own bind-mount source (unscoped `find <root> -type d -empty -delete`, third instance of that shape after paperless and slskd/`media-cleanup`), and a wrong `basePath` derivation meant its mp4 retention sweeps had never run at all. Prune now scoped with `-mindepth 1`; retention sweeps left commented out because repointing them alone would start a first-ever deletion pass at thresholds tighter than Frigate's native retention. Full account in `frigate/README.md`.
