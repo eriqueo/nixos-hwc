@@ -565,7 +565,7 @@
       assert lib.assertMsg (ruleFiles != [])
         "alert-rules-parse: hwc-server declares no prometheus ruleFiles — this check has no subject and would pass empty";
       pkgs.runCommand "alert-rules-parse" {
-        nativeBuildInputs = [ pkgs.prometheus ];
+        nativeBuildInputs = [ pkgs.prometheus.cli ];
       } ''
         promtool check rules ${lib.concatMapStringsSep " " toString ruleFiles}
         touch $out
