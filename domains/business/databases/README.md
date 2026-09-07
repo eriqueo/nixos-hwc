@@ -85,6 +85,14 @@ After enabling and rebuilding:
 
 ## Changelog
 
+- 2026-08-28: `business_user` is now **declared** here (53e84228). The role
+  existed only by hand on hwc-server; `schema.sql:772-774` and
+  `migrations/001-catalog-schema-split.sql` grant to it by name, and nothing
+  else in the repo mentions it — so a rebuilt cluster would have run those
+  grants against a nonexistent role. Declared via `ensureUsers`, without
+  `ensureDBOwnership`. Follow-on to the same day's deletion of 54 dead `$PSQL`
+  statements across ten modules (e82ca994); the full audit lives in
+  `domains/data/databases/README.md`.
 - 2026-05-01: Added export scripts, estimate_templates table, 70 catalog items with Craftsman/JT rates
 - 2026-04-12: Created index.nix module (hwc.business.databases.*), wired into business domain
 - 2026-03-24: Granted n8n postgres user access to hwc schema

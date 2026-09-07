@@ -54,6 +54,15 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 `^/hooks/(contact|appointment|availability)`.
 
 ## Changelog
+- **2026-09-05** — **hwc-control-bot slice 3: CRM next-action target**
+  (d7b055fb). New `controlTokenSecretRef` option names an agenix secret
+  (`hwc-control-crm-token`) whose bearer token is exported as
+  `HWC_CRM_CONTROL_TOKEN_FILE` and accepted **only** by the app's
+  `/api/control/v1` routes — `note`, `snooze`, `disqualify`. No sends, no
+  sequences, no JT writes, no stage forces. `null` (the default) leaves the
+  control surface off. The control bot's own registry entry lives in
+  `domains/server/native/ai/`; it derives the URL from this module's
+  `bindAddr`/`port` and takes `hwc-crm.service` as a soft dependency.
 - **2026-08-11** — **A failed migration now stops the boot.** The
   `hwc-crm-migrate` ExecStartPre loop had no `set -e`, so its exit status was
   whichever `psql` ran last and a migration could fail on every single start
