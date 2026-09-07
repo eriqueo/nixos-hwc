@@ -117,11 +117,33 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 ## Structure
 
 ```
-├── index.mjs    CLI, browser lifecycle, scroll loop, comment expansion
-├── parse.mjs    FB GraphQL response parsers (ported from API Monitor)
-├── store.mjs    SQLite persistence layer
-├── data/
-│   ├── posts.db       ← created on first run
-│   └── session.json   ← created on login
-└── package.json
+├── index.mjs          CLI, browser lifecycle, scroll loop, comment expansion,
+│                        SQLite persistence
+├── parse.mjs          FB GraphQL response parsers (ported from API Monitor)
+├── Containerfile      mcr.microsoft.com/playwright:v1.59.1-noble
+├── package.json       playwright pinned to 1.59.1 (must match the image)
+├── package-lock.json
+└── data/              ← untracked, created at runtime
+    ├── posts.db         ← created on first run
+    └── session.json     ← created on login
 ```
+
+> **Status:** these sources are 2026-05 leftovers and are not referenced by any
+> module — `hwc.business.datax` was deleted on 2026-08-26. See
+> `domains/business/README.md`.
+
+## Changelog
+
+- 2026-05-21: Deleted `shell.nix` (5da97868). The NixOS-laptop Playwright shell
+  it provided (added 8b1715d8, pointed at the system chromium in c1723479) is
+  gone; use `nix-shell -p` directly.
+- 2026-05-21: Login handling reworked across four passes — wait for the
+  logged-in UI rather than "password form gone" (c000f1b2), poll for login
+  state so passkey redirects survive (a215218e), detect login via the `c_user`
+  cookie instead of the DOM (be21c3c0), and drop the manual Enter press
+  (c03a3c62). Browser launch switched to `launchPersistentContext` with a
+  `--profile` flag (14bb2b86).
+- 2026-05-21: Pinned playwright to exactly `1.59.1` in `package.json` and moved
+  the Containerfile base image from `v1.49.0-noble` to `v1.59.1-noble` so the
+  library and the browser bundle match (96bcad2c).
+- 2026-05-11: README last refreshed before this batch.

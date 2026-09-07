@@ -51,6 +51,10 @@ domains/mail/calendar/
 
 ## Changelog
 
+- **2026-07-16**: **Radicale calendar consolidated under the `eric` principal;
+  the `cal` principal is retired** (7485823d). The 2026-06-15 split that gave
+  calendar its own `cal` principal separate from tasks' `eric` is reversed —
+  one principal now holds both. `index.nix` updated accordingly.
 - **2026-07-10**: Booking accuracy. Set khal `default_calendar = migrated`
   (the VEVENT calendar the hwc-crm availability endpoint reads) when Radicale is
   on, so quick-adds never prompt. Added a `busy` command (`home.packages`):

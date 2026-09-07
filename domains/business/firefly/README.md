@@ -102,6 +102,16 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
+- 2026-08-28: `sys.nix` — deleted all sixteen `$PSQL` GRANT / ALTER DEFAULT
+  PRIVILEGES lines (eight per database) as part of the cluster-wide dead-grant
+  cleanup (e82ca994). `$PSQL` is undefined in the generated postgresql
+  post-start script and every line ended in `|| true`, so none of them ever
+  ran. They were not restored: firefly and firefly-pico connect as
+  `database.user` (= `eric`), a superuser who already owns all 81 firefly and
+  15 firefly_pico tables, so a grant to the owner grants nothing. The login
+  role stays declared once for the whole cluster in
+  `domains/data/databases/index.nix`, not here. Full audit in
+  `domains/data/databases/README.md`.
 - 2026-07-13: Automation build-out — `firefly-cron-token` secret + daily cron timer, `firefly-importer` container + `firefly-import` vhost (:8087), `firefly-digest` timer posting to hwc-notify (`finance-to-alerts` route), PAT-gated until `firefly-pat.age` is provisioned.
 
 - 2026-06-09: Access moved from dedicated tailnet ports (Firefly `:10443`, Pico `:11443`) to name-based vhosts `firefly.hwc.iheartwoodcraft.com` / `firefly-pico.hwc.iheartwoodcraft.com` under the shared `*.hwc.iheartwoodcraft.com` wildcard cert (no per-service listener / firewall hole). Both `appUrl`s updated to match — Firefly's `APP_URL` and Pico's app URL must equal the browser origin. See `domains/networking/README.md`.

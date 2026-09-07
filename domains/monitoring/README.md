@@ -48,6 +48,17 @@ monitoring/
 ```
 
 ## Changelog
+- 2026-08-26: **`alerts/index.nix` — `autoDetectedServices` named seven units
+  that do not exist** (85b60856): `backup`, `backup-local`, `backup-cloud`,
+  `frigate`, `receipts-ocr`, `podman-immich`, `jt-mcp`, out of 18 entries. The
+  module comment claimed systemd handles `OnFailure=` for non-existent services
+  gracefully. It does not, and the mechanism is worse than a no-op: this list
+  feeds a `lib.listToAttrs` that **creates** `systemd.services.<name>` carrying
+  only `unitConfig.OnFailure` and no `ExecStart`, which systemd rejects —
+  `systemctl show -p LoadState --value backup.service` returns `bad-setting`.
+  So each phantom name generated a broken unit while reading, in the config, as
+  coverage. Verified by hand against the live server. The backup half of the
+  same commit is recorded in `domains/data/README.md`.
 - 2026-08-20: homepage — Paperless tile repointed to `paperless.hwc.iheartwoodcraft.com`, the last of the three tiles that pinned a retired subpath. All homepage hrefs now name either a vhost or a deliberately-held subpath; none point at a path that no longer routes.
 - 2026-08-20: prometheus — LazyLibrarian blackbox probe de-pinned from the retired URL base (`:5299/books` → `:5299/`), and the Navidrome homepage tile repointed to its vhost. Same failure shape the 2026-08-15 entry recorded for the \*arr probes and worth restating because it recurred within a week: the `http_reachable` module's "up" set includes 4xx, so once `http_root` was cleared this probe would have kept reporting LazyLibrarian **up** while getting a 404 from a path that no longer exists. A probe that cannot fail is worse than no probe — it occupies the dashboard slot where a real signal would go.
 - 2026-08-20: homepage — Audiobookshelf tile repointed to `audiobookshelf.hwc.iheartwoodcraft.com` alongside its route flip in `networking/routes.nix`. Dashboard hrefs are the one consumer of a route change that fails **completely silently**: nothing probes them, so a tile pointing at a retired subpath just 404s the next person who clicks it, months later. Moving the tile in the same commit as the route is the only thing that keeps them honest. The `/docs` (paperless) and `/music` (navidrome) tiles are deliberately left on the old subpath — those apps still carry an in-app URL base and have not migrated yet.

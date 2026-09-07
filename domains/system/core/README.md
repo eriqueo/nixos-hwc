@@ -23,6 +23,13 @@ core/
 ```
 
 ## Changelog
+- 2026-08-28: `authentik/parts/config.nix` — the module's five dead `$PSQL`
+  postStart statements were replaced by a declared `ensureUsers` entry with
+  `ensureDBOwnership` (e82ca994). Authentik's `CREATE ROLE` was the one
+  load-bearing statement among the 54 dead ones deleted repo-wide that day: it
+  never ran, so a rebuilt cluster would have had the authentik database and no
+  authentik role. Details in `authentik/README.md`; full audit in
+  `domains/data/databases/README.md`.
 - 2026-02-28: Added README for Charter Law 12 compliance
 - 2026-03-12: Inlined options.nix into index.nix for identity, polkit, session, shell; removed separate options.nix files
 - 2026-03-26: Added Authentik SSO/Identity Provider module

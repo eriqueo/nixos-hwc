@@ -154,6 +154,13 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-08-29** — **Decision-first email subject** (7f332a78). The subject line
+  now leads with `N need you` (count of Today items, capped at 5) and falls back
+  to `N to watch` (alert count) only when nothing needs Eric. Previously it
+  appended `N alert(s)` unconditionally, so a quiet day and a demanding one read
+  the same in the inbox list. The `?` fallback became `0` so the arithmetic
+  comparisons can't be fed a non-number.
+
 - **2026-08-29** — **CEO information hierarchy.** Dashboard and email lead with
   a bounded `Needs you` list, keep deeper queue items behind an explicit Explore
   route, and suppress an alert only when a visible Today item already represents

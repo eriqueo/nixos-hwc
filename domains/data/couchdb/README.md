@@ -73,4 +73,9 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-03-31: Secret lookups moved to the kebab-case secrets attrset
+  (17b9283b) — `hwc.secrets.api.couchdbAdmin{Username,Password}File` became
+  `hwc.secrets.api."couchdb-admin-{username,password}" or null`. The trailing
+  `or null` means a missing secret now yields `null` instead of an evaluation
+  error; option descriptions updated to match.
 - 2026-03-25: Created README per Law 12

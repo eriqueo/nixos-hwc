@@ -18,6 +18,14 @@ readme-freshness weekly Law-12 drift report.
 automation/
 ├── index.nix    # Domain aggregator
 ├── README.md    # This file
+├── brain-sweep/    # Nightly brain-vault drift report (hwc.automation.brainSweep.*)
+├── mail-janitor/   # Mail housekeeping timer (hwc.automation.mailJanitor.*)
+├── vault-sync/     # Brain-vault git hub sync timer (push failure is fatal)
+├── refinery/       # Refinery engine — substance-agnostic refinement board
+│   ├── index.nix   # Options + native/container mode selection
+│   ├── parts/container.nix  # mode = "container": eriqueo/refinery image via mkContainer
+│   ├── engine/     # TypeScript engine (adapters / review / shells / sources / stores + tests)
+│   └── README.md   # Engine-specific docs
 ├── inbox-janitor/  # Server-only timer draining ~/000_inbox/downloads (hwc.automation.inboxJanitor.*)
 │   ├── index.nix   # Options + systemd oneshot service/timer (every 30m); dryRun default on
 │   ├── janitor.py  # Engine: pure classify() core + I/O edges; reads ~/000_inbox/_inbox-routing.yaml
@@ -68,6 +76,28 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-09-07: Law 12 sweep — refreshed the stale READMEs under
+  `n8n/parts/{estimator-integration,migrations,workflows}`. Documentation only.
+- 2026-09-04: refinery gained a **container mode** beside native (56a7c41a). The
+  engine now lives in `eriqueo/refinery` and ships as one image for every host;
+  `mode = "container"` runs it through `mkContainer` on the same port and state
+  dir with the agenix `refinery-env` file. `native` stays the default until the
+  container is verified on hwc-server. Adds `refinery/parts/container.nix`.
+- 2026-08-29: refinery SR investigations became **decision-first** (adfb7724),
+  with pre-decision SR history folded in (b00528e1) and stale SR failures retired
+  (4957b835); shell expectations and executive fixtures re-typed to match
+  (75d204bd, 766ce10b). Every tab is now an executive surface (2a399abd), decision
+  cards are kept brief (5327cef7), reviews are a decision surface (42dcc88c) with
+  legacy review links redirected (b2b56144) and terminal review cases exposed
+  (cd7ab4dd). Same day: the notifications **CEO information contract** landed
+  (dc0fce28).
+- 2026-08-28: nightly-builds runner **packaged as an immutable derivation**
+  (404fa985) — `run.sh` no longer executes from the repo working copy. Also:
+  queue approved cards and run underscore-named ones (770b1034, 1439d67b),
+  review-LLM credentials configured (e29b9193), morning review bounded and
+  merged branches skipped (3b3e54b1), and `pr_field` now takes its inputs
+  explicitly and matches states exhaustively so a card's `pr:` records the real
+  branch fate rather than "(pushed)" (50a31ae5, 0067e063).
 - 2026-08-26: **Headless `claude -p` auth failures now fail the run, across the
   domain.** The CLI writes `Failed to authenticate. API Error: 401 ...` to stdout
   and **exits 0**, so every consumer here read a dead credential as a clean run.

@@ -38,14 +38,19 @@ Rebuild and the persona becomes available. The list is derived from
 
 ```
 library/
+  _defaults.nix          # Per-field defaults every persona merges from
   classifier.{nix,md}    # GPU label classification
   extractor.{nix,md}     # GPU JSON extraction
   coder.{nix,md}         # GPU code-first
   assistant.{nix,md}     # GPU general
   thinker.{nix,md}       # CPU multi-step reasoning
+default.nix              # Import wrapper
 index.nix                # Inline options + library load + hwc-llm wrapper
 README.md
 ```
+
+Underscore-prefixed files in `library/` are support files, not personas —
+`personaNames` filters them out.
 
 ## Roadmap
 
@@ -59,6 +64,15 @@ README.md
 
 ## Changelog
 
+- 2026-05-31: Fixed orphan option-sets that broke `nix flake check`
+  (40d9e2a3) — `config` now builds through `lib.mkMerge`.
+- 2026-05-29: persona-daemon commits 2/4 and 3/4 (d5e5d002, 007b5ab9) landed
+  the Phase 2/3 client side here: added `library/_defaults.nix` (all personas
+  merge from it, including the new `useMemory` / `useKnowledge` /
+  `knowledgeTopK` gates the daemon consumes), a `daemonUrl` option
+  (`127.0.0.1:11550`), and `--conversation` / `--new-conversation` /
+  `--print-id` flags on `hwc-llm` that route through persona-daemon. The
+  stateless path is unchanged and does not depend on the daemon.
 - 2026-05-29: Initial module. 5 personas (classifier, extractor, coder,
   assistant, thinker). Stateless CLI wrapping `llama-gpu` (port 11500)
   and `llama-cpu` (port 11501).

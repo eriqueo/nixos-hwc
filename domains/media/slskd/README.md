@@ -423,6 +423,31 @@ shares.directories = [
 
 ---
 
+## Changelog
+
+- 2026-08-20: **slskd was never inside the VPN, and now cannot leave it
+  silently** (0f102aa4). `network.mode` had defaulted to `"media"` since the
+  module was written, so `mkContainer` gave slskd `--network=media-network`
+  while gluetun, qBittorrent and SABnzbd shared a netns — `podman inspect`
+  confirmed slskd held its own `SandboxKey`. It egressed on the house IP for
+  roughly six weeks (~29.4 GB out / 15.5 GB in). Changes here:
+  `index.nix` imports `../../lib/mkContainer.nix` and uses
+  `helpers.mkVpnAssertions` (which checks the *specific* tunnel is declared and
+  enabled, not merely that some tunnel exists), the default flips to `"vpn"`,
+  and `"media"` is now a **build failure** unless `allowClearnet = true` is set
+  deliberately. Both assertions were seeded and confirmed red before shipping.
+  `sys.nix` and `parts/config.nix` updated for the multi-instance gluetun shape
+  — slskd needs its own tunnel because it must keep an inbound Soulseek port
+  and Proton forwards exactly one port per WireGuard session, which qBittorrent
+  already holds on the existing tunnel. slskd stays **disabled on hwc-server**
+  until that second instance exists (needs a second Proton WireGuard key +
+  agenix secret). The sibling `domains/media/downloaders` module was deleted in
+  the same commit: it read like slskd was ordered after gluetun, but
+  `hwc.media.downloaders.enable` was never set anywhere, so its whole `config`
+  block was dead code. Domain-level account in `domains/media/README.md`.
+
+---
+
 **Last Updated**: 2025-11-06
 **Architecture Version**: HWC 6.0
 **Module Version**: Container with runtime secret injection

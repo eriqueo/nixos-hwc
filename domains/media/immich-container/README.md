@@ -79,6 +79,22 @@ journalctl -u immich-machine-learning | grep -i "onnx\|cuda"  # CUDA provider
 
 ## Changelog
 
+- 2026-08-28: `parts/config.nix` — deleted this module's fifteen dead `$PSQL`
+  postStart statements (e82ca994; `$PSQL` is unassigned under the pinned
+  postgresql 15.x module and `|| true` hid every command-not-found), then
+  declared the `immich` role **and** database that nothing in the repo had been
+  declaring (53e84228): `ensureUsers` + `ensureDBOwnership`. The owner is taken
+  from `cfg.database.name`, not `cfg.database.user` — this module's options do
+  not distinguish the connection role from the owning role, and
+  `machines/server/config.nix` sets `database.user = "eric"` while the live
+  database and its objects are owned by a separate `immich` role. Owning from
+  `database.user` emitted `ALTER DATABASE immich OWNER TO eric`; NixOS's own
+  `ensureDBOwnership` assertion caught it on the first eval, which is why this
+  arrived as two commits. Full audit in `domains/data/databases/README.md`.
+- 2026-03-29: Replaced the stale read-only `/mnt/media/pictures` mount (the
+  directory had been deleted and was empty) with `/mnt/media/photos/external`
+  for the new external library of 34K laptop-only photos — updated in both the
+  server and ML containers (0a0f7414).
 - 2026-03-27: Fixed Prometheus metrics port mappings — added host-side port publishing for apiPort (8091) and microservicesPort (8092) which were only set as container env vars but never exposed, causing false ServiceDown alerts
 - 2026-02-26: Created README per Law 12 (migrated from docs/infrastructure/)
 - 2025-11-21: Initial GPU optimization implementation
