@@ -14,6 +14,7 @@ import { readFileSync } from "node:fs";
 import nodemailer, { type Transporter } from "nodemailer";
 import type { Channel } from "../ports/channel.js";
 import type { Notification, DeliveryResult, Priority } from "../core/types.js";
+import { detailBody } from "../core/types.js";
 
 const PRIORITY_LABEL: Record<Priority, string> = {
   1: "P1 CRITICAL",
@@ -48,6 +49,14 @@ export function renderBody(notif: Notification): string {
     lines.push("");
     lines.push(`Recommendation: ${notif.executive.recommendation}`);
     lines.push(`Explore: ${notif.executive.explore.label} — ${notif.executive.explore.target}`);
+    // Email is the long-form copy: the digest keeps its full text under a
+    // label, after the decision, and is never truncated here.
+    const detail = detailBody(notif);
+    if (detail !== undefined) {
+      lines.push("");
+      lines.push("Details:");
+      lines.push(detail);
+    }
   } else {
     lines.push(notif.body || "(no body)");
   }

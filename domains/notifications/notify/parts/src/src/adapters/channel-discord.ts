@@ -13,7 +13,8 @@
  */
 
 import type { Channel } from "../ports/channel.js";
-import type { Notification, DeliveryResult, Priority } from "../core/types.js";
+import type { Notification, DeliveryResult, ExploreTarget, Priority } from "../core/types.js";
+import { detailBody } from "../core/types.js";
 
 const COLOR_BY_PRIORITY: Record<Priority, number> = {
   1: 0xe74c3c, // red — critical
@@ -49,10 +50,53 @@ export interface DiscordChannelOpts {
   readonly timeoutMs?: number;
 }
 
-/** Discord caps embed.description at 4096 and field.value at 1024. */
+/**
+ * Discord's documented per-embed caps. `TOTAL` is the sum of title +
+ * description + field names + field values + footer across the embed; exceeding
+ * it is a 400, so the Details budget below is computed against it rather than
+ * assumed.
+ */
+const LIMIT = {
+  TITLE: 256,
+  DESCRIPTION: 4096,
+  FIELD_VALUE: 1024,
+  FOOTER: 2048,
+  TOTAL: 6000,
+} as const;
+
+/**
+ * The executive path caps the description at the schema's own `meaning` bound
+ * instead of the 4096 embed bound. Same output for anything that came through
+ * `parseNotificationInput` (meaning is already ≤ 1000), and it makes the
+ * Details budget provable: title 256 + meaning 1000 + recommendation 500 +
+ * explore 1024 + field names 28 + footer 2048 = 4856 worst case, leaving 1144
+ * — more than the 1024 field allowance — for Details.
+ */
+const MEANING_LIMIT = 1000;
+
+const DETAIL_FIELD_NAME = "Details";
+
 function truncate(s: string, max: number): string {
   if (s.length <= max) return s;
   return s.slice(0, max - 1) + "…";
+}
+
+/**
+ * Fit the body detail into `budget` characters, saying so when it does not fit.
+ *
+ * A digest that quietly stops mid-sentence reads like the digest ended. The
+ * notice names the full length and repeats the exact explore location, so the
+ * reader can tell detail was cut and where the whole of it lives — the same
+ * target the Explore field and the embed URL already carry.
+ */
+function fitDetail(detail: string, budget: number, explore: ExploreTarget): string {
+  if (detail.length <= budget) return detail;
+  const notice = `\n… [truncated — full ${detail.length} characters at: ${explore.target}]`;
+  const kept = budget - notice.length;
+  // Degenerate only if the explore target alone exceeds the field: keep the
+  // fact of truncation over any prefix of the detail.
+  if (kept < 1) return truncate(`[truncated — full detail at: ${explore.target}]`, budget);
+  return detail.slice(0, kept) + notice;
 }
 
 function renderExplore(notif: Notification): string | undefined {
@@ -67,20 +111,47 @@ function renderExplore(notif: Notification): string | undefined {
 export function renderDiscordEmbed(notif: Notification): DiscordEmbed {
   const executive = notif.executive;
   const fields: Array<{ name: string; value: string; inline?: boolean }> = [];
-  if (executive) {
-    fields.push({ name: "Recommendation", value: truncate(executive.recommendation, 1024) });
-    const explore = renderExplore(notif);
-    if (explore) fields.push({ name: "Explore", value: truncate(explore, 1024) });
-  }
   const metadata = [notif.source, notif.topic, ...notif.tags].filter(Boolean).join(" · ");
+  const title = truncate(notif.title, LIMIT.TITLE);
+  const footer = truncate(metadata, LIMIT.FOOTER);
+  // Legacy (no executive): the body is the whole message and stays the
+  // description, byte-for-byte as before.
+  const description = executive
+    ? truncate(executive.meaning, MEANING_LIMIT)
+    : truncate(notif.body, LIMIT.DESCRIPTION);
+
+  if (executive) {
+    fields.push({ name: "Recommendation", value: truncate(executive.recommendation, LIMIT.FIELD_VALUE) });
+    const explore = renderExplore(notif);
+    if (explore) fields.push({ name: "Explore", value: truncate(explore, LIMIT.FIELD_VALUE) });
+
+    // Decision first, then the long form. A field rather than more
+    // description keeps "Details" labelled and keeps Explore above it.
+    const detail = detailBody(notif);
+    if (detail !== undefined) {
+      const used =
+        title.length +
+        description.length +
+        footer.length +
+        DETAIL_FIELD_NAME.length +
+        fields.reduce((n, f) => n + f.name.length + f.value.length, 0);
+      const budget = Math.max(0, Math.min(LIMIT.FIELD_VALUE, LIMIT.TOTAL - used));
+      // budget is ≥ 1024 for any schema-parsed notification (see MEANING_LIMIT);
+      // the guard is for hand-built Notifications that ignore those bounds.
+      if (budget > 0) {
+        fields.push({ name: DETAIL_FIELD_NAME, value: fitDetail(detail, budget, executive.explore) });
+      }
+    }
+  }
+
   const url = executive?.explore.kind === "url" ? executive.explore.target : undefined;
   return {
-    title: truncate(notif.title, 256),
-    description: truncate(executive?.meaning ?? notif.body, 4096),
+    title,
+    description,
     color: COLOR_BY_PRIORITY[notif.priority],
     timestamp: notif.occurredAt,
     fields,
-    footer: { text: truncate(metadata, 2048) },
+    footer: { text: footer },
     ...(url !== undefined ? { url } : {}),
   };
 }
