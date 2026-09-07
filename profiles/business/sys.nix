@@ -92,6 +92,8 @@
       estimatorApiKeyFile = config.age.secrets.estimator-api-key.path;
       jobtreadGrantKeyFile = config.age.secrets.jobtread-grant-key.path;
       discordWebhookUrlFile = config.age.secrets.discord-webhook-url.path;
+      # Camera channel — shared with hwc-notify's discord-frigate channel.
+      discordWebhookFrigateFile = config.age.secrets.discord-webhook-frigate.path;
       anthropicApiKeyFile = config.age.secrets.nanoclaw-anthropic-key.path;
       hwcLeadsHmacFile = config.age.secrets.hwc-leads-hmac-secret.path;
     };

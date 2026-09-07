@@ -528,6 +528,21 @@
         # [-] character class keeps this lint from matching its own definition
         "rg 'github:eriqueo/nixos[-]hwc' flake.nix"
       ];
+      # Tracked n8n workflow JSON is a REDACTED DERIVED EXPORT of live n8n
+      # (domains/automation/n8n/parts/workflows/README.md). This runs the same
+      # scanner the export tool refuses to write past, so a raw webhook, bearer
+      # token, API key or unrecognised credential-shaped literal cannot reach
+      # git through a hand-pasted export. The rule table lives in the tool, not
+      # here — one producer — and is exercised by
+      # workspace/automation/test_n8n_workflow_export.py.
+      n8n-workflow-secret-literals = pkgs.runCommand "n8n-workflow-secret-literals" {
+        nativeBuildInputs = [ pkgs.python3 ];
+      } ''
+        cd ${self}
+        python3 workspace/automation/n8n-workflow-export.py \
+          scan --dir domains/automation/n8n/parts/workflows
+        touch $out
+      '';
       charter-law16 = mkCharterLint "law16-layer-purity" [
         "rg 'mkDerivation|fetchurl|writeShellScript' profiles/ --glob '!README.md'"
         "rg -i '\\b(laptop|xps|kids|firestick|hwc-server)\\b' profiles/ --glob '!README.md'"

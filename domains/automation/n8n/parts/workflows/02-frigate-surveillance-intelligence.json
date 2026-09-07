@@ -127,7 +127,7 @@
       "typeVersion": 4.1,
       "parameters": {
         "method": "POST",
-        "url": "https://discord.com/api/webhooks/REDACTED-live-value-in-n8n-see-agenix-discord-webhook-frigate",
+        "url": "={{ $env.DISCORD_WEBHOOK_FRIGATE_URL }}",
         "sendBody": true,
         "contentType": "multipart-form-data",
         "bodyParameters": {
@@ -157,7 +157,7 @@
       "typeVersion": 4.1,
       "parameters": {
         "method": "POST",
-        "url": "https://discord.com/api/webhooks/REDACTED-live-value-in-n8n-see-agenix-discord-webhook-frigate",
+        "url": "={{ $env.DISCORD_WEBHOOK_FRIGATE_URL }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ content:\n'\u26aa ' + $('Parse & Filter Events').item.json.object + ' \u2014 ' + $('Parse & Filter Events').item.json.cameraName + ' (' + $('Parse & Filter Events').item.json.zone + ')\\n' +\n'Time: ' + $('Parse & Filter Events').item.json.formattedTime + ' \u00b7 ' + $('Parse & Filter Events').item.json.formattedDate + '\\n' +\n'Confidence: ' + ($('Parse & Filter Events').item.json.score * 100).toFixed(0) + '%\\n' +\n'Clip: ' + $('Parse & Filter Events').item.json.clipUrl + '\\n' +\n'Phone: ' + $('Parse & Filter Events').item.json.hlsUrl + '\\n' +\n'Event: ' + $('Parse & Filter Events').item.json.eventUrl\n}) }}",
@@ -222,7 +222,7 @@
       "typeVersion": 4.1,
       "parameters": {
         "method": "POST",
-        "url": "https://discord.com/api/webhooks/REDACTED-live-value-in-n8n-see-agenix-discord-webhook-frigate",
+        "url": "={{ $env.DISCORD_WEBHOOK_FRIGATE_URL }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ content:\n($('Parse & Filter Events').item.json.priority === 5 ? '\ud83d\udd34 **' : '\ud83d\udfe1 **') + $('Parse & Filter Events').item.json.object + ' \u2014 ' + $('Parse & Filter Events').item.json.cameraName + ' (' + $('Parse & Filter Events').item.json.zone + ')**\\n' +\n'(snapshot unavailable)\\n' +\n'Time: ' + $('Parse & Filter Events').item.json.formattedTime + ' \u00b7 ' + $('Parse & Filter Events').item.json.formattedDate + '\\n' +\n'Confidence: ' + ($('Parse & Filter Events').item.json.score * 100).toFixed(0) + '%\\n' +\n'Clip: ' + $('Parse & Filter Events').item.json.clipUrl + '\\n' +\n'Phone: ' + $('Parse & Filter Events').item.json.hlsUrl + '\\n' +\n'Event: ' + $('Parse & Filter Events').item.json.eventUrl\n}) }}",

@@ -1,6 +1,76 @@
 # n8n Workflow Definitions
 
-This directory contains production-ready n8n workflow JSON files that can be imported directly into the n8n UI.
+## Source of truth
+
+**Live n8n is the source of truth for workflow behaviour.** The JSON in this
+directory is a **deterministic, redacted, derived export** of a live workflow —
+kept in git so changes are reviewable and so a lost instance can be rebuilt.
+
+It is not a second place to edit. The old instruction here ("edit in the UI,
+then export back to keep in sync") made this directory a second producer of the
+same fact, and it drifted exactly as you would expect: the frigate export
+predated a snapshot-upload rewrite by months, while the live workflow still
+held a raw Discord webhook URL that every future export had to scrub correctly.
+
+**Never hand-edit a file here to change behaviour.** Change the live workflow,
+export it, and regenerate:
+
+```bash
+# 1. export from n8n (UI: … → Download, or the n8n CLI) to a scratch path
+# 2. canonicalize into this directory — writes NOTHING if a secret survives
+python3 workspace/automation/n8n-workflow-export.py canonicalize \
+  --in /tmp/live-export.json \
+  --out domains/automation/n8n/parts/workflows/<file>.json
+```
+
+The tool drops volatile fields (`updatedAt`, `versionId`, `activeVersion`,
+`staticData`, `shared`, …), sorts deterministically, and **fails closed** on any
+Discord/Slack webhook, bearer token, API key, or unrecognised credential-shaped
+literal. `--redact` replaces *known* shapes with a placeholder and still fails on
+anything it does not recognise — silently concealing a new secret is the failure
+it exists to prevent. Each generated file carries an `_hwc` block with the source
+workflow id/name and its own rebuild command (no timestamp, so regeneration is
+byte-stable). The scan is wired into `nix flake check` as
+`n8n-workflow-secret-literals`.
+
+Secrets belong in the container env, referenced from the workflow as
+`={{ $env.NAME }}` — see `domains/automation/n8n/index.nix` (`secrets.*`) and
+`sys.nix`. Adding a secret option there is what makes `$env.NAME` resolve.
+
+### Regeneration status
+
+`01-media-pipeline-orchestration.json` is a canonical export of live workflow
+`home:media:jellyfin-alert` (`n14heZ9wzJ8Uyemo`). It carries the `_hwc` marker and
+was regenerated after the 2026-09-07 production exercise.
+
+Every other JSON predates the canonicalizer and is hand-maintained, of unknown
+fidelity to live: none carries an `_hwc` block, and several still hold volatile
+fields (`updatedAt`, `versionId`) the tool drops. They are scanned (clean) but
+not canonical.
+
+`02-frigate-surveillance-intelligence.json` is the freshest — re-synced from
+live on 2026-07-15 with its webhook redacted, then hand-edited on 2026-09-07 to
+replace that placeholder with `={{ $env.DISCORD_WEBHOOK_FRIGATE_URL }}` — but it
+is still a hand edit, not a regeneration, so it is the first candidate for a
+real re-export.
+
+Regenerate opportunistically, one live export at a time. Do **not** run the tool
+over a tracked file to make it look canonical: canonicalizing a stale artifact
+launders the drift into a generated-looking one and stamps it with an `_hwc`
+provenance block that live never produced. `--in` takes a fresh export from n8n,
+always.
+
+**Completed expand/contract: the duplicate media pipeline.** On 2026-09-07 the
+live workflow was backed up, repaired, replayed, exported, and canonicalized to
+`01-media-pipeline-orchestration.json`. The replay finished successfully with
+switch outputs `[0,1,0]` for the Sonarr event and one hwc-notify audit row. The
+superseded `01-media-pipeline-orchestration-FIXED.json` was then deleted. Git
+history is the rollback for that stale artifact; the WAL-safe live database and
+workflow backups were the rollback for the production edit.
+
+---
+
+The files below can be imported directly into the n8n UI.
 
 > **Retired 2026-07-09** — the three monitoring/alert workflows below were removed
 > as redundant with the Prometheus/Alertmanager → hwc-notify stack:
@@ -18,22 +88,23 @@ This directory contains production-ready n8n workflow JSON files that can be imp
 ## Workflows
 
 ### 01-media-pipeline-orchestration.json
-**Purpose:** Automate download-to-library pipeline with post-processing and notifications
+**Purpose:** Refresh and verify Jellyfin after Radarr or Sonarr downloads, then
+send one result through hwc-notify.
 
-**Trigger:** Webhook `/webhook/media-pipeline?source={radarr|sonarr|lidarr}`
+**Trigger:** Webhook `/webhook/media-pipeline?source={radarr|sonarr}`
 
 **Features:**
-- Handles downloads from Radarr (movies), Sonarr (TV), Lidarr (music)
+- Handles Radarr movies and Sonarr TV episodes; unknown sources take one warning branch
 - 30-second file settlement delay
 - Triggers Jellyfin library refresh for movies/TV
-- Calls Script Executor for Beets music import
-- Sends success notifications to ntfy (hwc-media, P2)
-- Sends failure notifications to ntfy + Slack (hwc-alerts, P4)
+- Waits for indexing, then verifies the title through Jellyfin's item search
+- Routes each event to exactly one media-type branch; the switch does not emit
+  empty items on nonmatching outputs
+- Sends the success or workflow error through hwc-notify, not ntfy or Slack
 
 **Service Configuration Required:**
 - Radarr: Settings → Connect → Webhook
 - Sonarr: Settings → Connect → Webhook
-- Lidarr: Settings → Connect → Webhook
 
 ---
 
@@ -50,7 +121,13 @@ This directory contains production-ready n8n workflow JSON files that can be imp
   - P2 (Info): Animals, packages, bicycles
 - Filters low-confidence detections (<60%)
 - Fetches high-resolution snapshots
-- Routes notifications by priority (ntfy + Slack for P5)
+- Posts to Discord's camera channel via `={{ $env.DISCORD_WEBHOOK_FRIGATE_URL }}`
+  (`hwc.automation.n8n.secrets.discordWebhookFrigateFile` → agenix
+  `discord-webhook-frigate`, the same secret hwc-notify's `discord-frigate`
+  channel reads). Three nodes post directly rather than through hwc-notify
+  because the person-detection post is a **multipart/form-data snapshot
+  upload** and the hwc-notify dispatcher carries no attachment. Rotating the
+  secret restarts `podman-n8n` via `restartTriggers`.
 
 **Service Configuration Required:**
 - Edit `/home/eric/.nixos/domains/server/frigate/config/config.yml` to add webhook URL
@@ -365,7 +442,7 @@ curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/estimate-push \
 
 ---
 
-### 10-calculator-lead.json (work_calculator_lead)
+### 09-calculator-lead.json (work_calculator_lead)
 **Purpose:** Process bathroom remodel calculator submissions, create full JobTread customer/job records, archive to Postgres, and notify via Slack
 
 **Workflow ID:** `SoLwmxgkMILrOYbP`
@@ -458,7 +535,7 @@ curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/calculator-lead
 
 ---
 
-### 09-lead-response.json (work_lead_response)
+### 10-lead-response.json (work_lead_response)
 **Purpose:** Automated lead response workflow with push notifications via self-hosted ntfy
 
 **Trigger:** Webhook `POST /webhook/new-lead`
@@ -517,6 +594,17 @@ curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/new-lead \
 
 ---
 
+### 12-voice-log.json (work_voice_log)
+**Purpose:** Daily voice-log intake (accepts a transcript, validates it).
+
+**Trigger:** Webhook `POST /webhook/daily-log`
+
+Both lines are read off the tracked file (`name`, webhook `path`); the file was
+previously undocumented here. Everything else is left blank rather than guessed —
+fill it in from a real export, not from reading this stale JSON.
+
+---
+
 ## Import Instructions
 
 1. Access n8n: `https://hwc-server.ocelot-wahoo.ts.net:2443`
@@ -548,11 +636,16 @@ See the main implementation guide for curl test commands for each workflow.
 
 ## Maintenance
 
-**Version Control:** These JSON files are tracked in git for version control and reproducibility.
+**Version Control:** These JSON files are tracked in git as deterministic
+redacted exports — see [Source of truth](#source-of-truth) above for the one
+supported update path. Editing a file here changes nothing in n8n.
 
-**Backup:** Regular exports recommended via n8n UI → Settings → Export
+**Backup:** the n8n SQLite DB (`/var/lib/hwc/n8n`) is the real backup surface;
+these exports are review artifacts, not a restore mechanism for credentials.
 
-**Updates:** Edit workflows in n8n UI, then export back to this directory to keep in sync.
+**Checks:** `python3 workspace/automation/n8n-workflow-export.py scan --dir
+domains/automation/n8n/parts/workflows` (wired as the `n8n-workflow-secret-literals`
+flake check); unit tests at `workspace/automation/test_n8n_workflow_export.py`.
 
 ---
 
