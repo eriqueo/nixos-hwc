@@ -75,6 +75,28 @@ export interface Notification {
   readonly transition?: TransitionTag;
 }
 
+/**
+ * The body text a channel should render as its Details section, or undefined
+ * when there is nothing to add.
+ *
+ * The executive brief is a summary, not a replacement: producers like
+ * research_scout put the digest itself in `body`, and rendering only `meaning`
+ * deleted it. A body that is the meaning again (whitespace aside) is the same
+ * sentence twice, so it is dropped rather than repeated.
+ *
+ * Lives here, beside the Notification it interrogates, because it is one rule
+ * that Discord and SMTP must answer identically. Not in `channel-discord.ts`
+ * (SMTP would have to import an adapter), not in a new `core/detail.ts` (a
+ * file for a single predicate), not in `router.ts` / `dispatch.ts` (those
+ * choose destinations, not content).
+ */
+export function detailBody(notif: Notification): string | undefined {
+  const body = notif.body.trim();
+  if (body === "") return undefined;
+  if (notif.executive !== undefined && body === notif.executive.meaning.trim()) return undefined;
+  return body;
+}
+
 /** Result of a single channel delivery attempt. */
 export interface DeliveryResult {
   readonly channelId: string;

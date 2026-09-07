@@ -100,6 +100,15 @@ Discord and SMTP render those facts in the same order. Discord demotes source,
 topic, and tags to its footer. Legacy title/body payloads remain accepted during
 the expand-first migration so producers can move independently.
 
+The brief summarises the body; it does not replace it. After meaning,
+recommendation, and explore, a non-empty `body` is rendered as **Details** — a
+Discord embed field, a labelled section in email. A body that is the `meaning`
+again (whitespace aside) is dropped rather than repeated; `core/types.ts`
+`detailBody` is the one rule both adapters ask. Email carries the body whole.
+Discord bounds the Details field at its 1024-character limit, inside the 6000
+embed total, and when it cuts it says so and names the explore target, so a
+long digest degrades visibly instead of ending mid-sentence.
+
 ## Runtime
 
 Hermetic Nix-built derivation via `pkgs.buildNpmPackage`. `nixos-rebuild` runs `npm ci` offline against a hash-pinned `package-lock.json`, then `npm run build` (tsc → `dist/`). The output is a single Nix store path containing the compiled JS + a populated `node_modules/`.
@@ -358,6 +367,20 @@ Hardening: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome=read-only`, `
 | 1.7 | ✅ deployed   | `hwc-notify` CLI + `hwc_notify` MCP tool. |
 
 ## Changelog
+
+- **2026-09-07**: The executive brief stopped deleting the body. Since
+  2026-08-29 a notification with an `executive` block rendered `meaning` in
+  place of `body` on Discord and instead of it on SMTP, so every producer that
+  put its long form in `body` — research_scout's digest above all — lost that
+  content the moment it adopted the common format. Both adapters now render
+  meaning → recommendation → explore → **Details**, where Details is the body:
+  a Discord field (bounded at the 1024 field limit, inside the 6000 embed
+  total, with a truncation notice naming the explore target) and a labelled
+  section in the untruncated email. `core/types.ts` gained `detailBody`, the
+  single rule both adapters ask — it drops a body that only repeats the
+  meaning, whitespace aside, so nothing is printed twice. Notifications without
+  an `executive` block render byte-for-byte as before, which the contract tests
+  now pin for both channels.
 
 - **2026-09-07**: Transition decision engine, shadow only. `core/transition.ts`
   (pure) classifies each Alertmanager notification; `adapters/audit-sqlite.ts`
