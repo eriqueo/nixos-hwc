@@ -105,6 +105,21 @@ in
         description = "Path to file containing DISCORD_WEBHOOK_URL (via agenix)";
       };
 
+      discordWebhookFrigateFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = ''
+          Path to file containing DISCORD_WEBHOOK_FRIGATE_URL (via agenix).
+          The camera channel's webhook, consumed by the `home:security:frigate-detect`
+          workflow's three direct Discord posts. Those stay direct (rather than
+          going through hwc-notify) because the person-detection post is a
+          multipart/form-data snapshot upload and hwc-notify's dispatcher takes
+          no attachment. Pair with the same agenix entry hwc-notify's
+          `discord-frigate` channel consumes (`discord-webhook-frigate`) — one
+          secret, two consumers.
+        '';
+      };
+
       anthropicApiKeyFile = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
         default = null;

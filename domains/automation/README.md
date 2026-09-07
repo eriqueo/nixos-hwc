@@ -46,12 +46,13 @@ automation/
 │   │              #   ~/700_datax/dx1_gauntlet/run.sh + the /dx1 run-now drain
 │   └── README.md  # Containment model + provisioning gate (enable=false until checkout exists)
 └── n8n/         # n8n workflow automation
-    ├── index.nix     # Options + firewall rules
-    ├── sys.nix       # Container definition via mkContainer
-    ├── mcp-bridge.nix # n8n-mcp HTTP bridge
+    ├── index.nix     # Options (incl. secrets.*) + firewall rules
+    ├── sys.nix       # Container via mkContainer; secrets env file +
+    │                 #   restartTriggers on the .age sources (rotation)
     └── parts/
         ├── migrations/  # SQL migrations for workflow data
-        └── workflows/   # JSON workflow definitions + docs
+        └── workflows/   # DERIVED redacted exports of the live workflows
+                         #   (live n8n is the source of truth — see its README)
 ```
 
 ### Workspace Support (`workspace/automation/`)
@@ -64,10 +65,26 @@ workspace/automation/
 │   ├── qbt-finished.sh       # qBittorrent completion hook
 │   ├── sab-finished.py       # SABnzbd completion hook
 │   └── slskd-verify.sh       # SLSKD verification
-└── n8n-mcp-wrapper.sh        # MCP wrapper for n8n
+├── n8n-mcp-wrapper.sh        # MCP wrapper for n8n
+├── n8n-workflow-export.py    # Canonicalize an operator-supplied n8n export into
+│                             #   parts/workflows/; fails closed on any surviving
+│                             #   secret. Never connects to n8n. `scan` mode is
+│                             #   the `n8n-workflow-secret-literals` flake check
+└── test_n8n_workflow_export.py  # python3 -m unittest discover -s workspace/automation
 ```
 
 ## Changelog
+- 2026-09-07: n8n alert integrity — Frigate's Discord webhook is now injected as
+  `DISCORD_WEBHOOK_FRIGATE_URL` from the existing agenix `discord-webhook-frigate`
+  (new `hwc.automation.n8n.secrets.discordWebhookFrigateFile`), the tracked
+  frigate workflow references `$env` instead of a URL, and `podman-n8n` restarts
+  on secret rotation. Tracked workflow JSON is now declared a **derived redacted
+  export** of live n8n rather than a hand-synced twin; the generator/scanner is
+  `workspace/automation/n8n-workflow-export.py` (+ tests), wired into
+  `nix flake check` as `n8n-workflow-secret-literals`. The live media workflow
+  is the first canonical export; its stale `*-FIXED.json` sibling was removed
+  after a production replay proved one Sonarr branch and one notification. See
+  `n8n/parts/workflows/README.md` for the export procedure and evidence.
 - 2026-08-26: **Headless `claude -p` auth failures now fail the run, across the
   domain.** The CLI writes `Failed to authenticate. API Error: 401 ...` to stdout
   and **exits 0**, so every consumer here read a dead credential as a clean run.

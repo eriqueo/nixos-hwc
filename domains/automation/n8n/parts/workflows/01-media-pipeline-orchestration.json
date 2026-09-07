@@ -1,269 +1,631 @@
 {
-  "name": "Media Pipeline Orchestration",
-  "nodes": [
-    {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "media-pipeline",
-        "responseMode": "onReceived",
-        "options": {}
-      },
-      "id": "webhook-trigger",
-      "name": "Webhook Trigger",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [250, 300],
-      "webhookId": "media-pipeline"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Parse event data from webhook\nconst queryParams = $node[\"Webhook Trigger\"].parameter.options.queryParameters || {};\nconst source = queryParams.source || new URL($input.item.json.url || '').searchParams.get('source') || 'unknown';\nconst event = $input.item.json;\n\n// Extract media information based on source\nlet title, path, quality;\n\nif (source === 'radarr') {\n  title = event.movie?.title || event.remoteMovie?.title || 'Unknown Movie';\n  path = event.movieFile?.path || event.movie?.path || '/unknown';\n  quality = event.movieFile?.quality?.quality?.name || event.quality || 'Unknown';\n} else if (source === 'sonarr') {\n  const seriesTitle = event.series?.title || 'Unknown Series';\n  const episodeInfo = event.episodes?.length > 0 \n    ? `S${String(event.episodes[0].seasonNumber).padStart(2, '0')}E${String(event.episodes[0].episodeNumber).padStart(2, '0')}`\n    : '';\n  title = `${seriesTitle} ${episodeInfo}`.trim();\n  path = event.episodeFile?.path || event.series?.path || '/unknown';\n  quality = event.episodeFile?.quality?.quality?.name || 'Unknown';\n} else if (source === 'lidarr') {\n  title = event.album?.title || event.artist?.name || 'Unknown Album';\n  path = event.trackFiles?.[0]?.path || event.album?.path || '/unknown';\n  quality = event.trackFiles?.[0]?.quality?.quality?.name || event.quality || 'Unknown';\n}\n\nreturn {\n  json: {\n    mediaType: source,\n    title: title,\n    path: path,\n    quality: quality,\n    timestamp: new Date().toISOString(),\n    eventType: event.eventType || 'Download'\n  }\n};"
-      },
-      "id": "parse-event",
-      "name": "Parse Event Data",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [450, 300]
-    },
-    {
-      "parameters": {
-        "amount": 30,
-        "unit": "seconds"
-      },
-      "id": "wait-settlement",
-      "name": "Wait for File Settlement",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1,
-      "position": [650, 300]
-    },
-    {
-      "parameters": {
-        "mode": "rules",
-        "rules": {
-          "rules": [
-            {
-              "conditions": {
-                "string": [
-                  {
-                    "value1": "={{ $json.mediaType }}",
-                    "value2": "radarr"
-                  }
-                ]
-              },
-              "renameOutput": true,
-              "outputKey": "movies"
-            },
-            {
-              "conditions": {
-                "string": [
-                  {
-                    "value1": "={{ $json.mediaType }}",
-                    "value2": "sonarr"
-                  }
-                ]
-              },
-              "renameOutput": true,
-              "outputKey": "tv"
-            },
-            {
-              "conditions": {
-                "string": [
-                  {
-                    "value1": "={{ $json.mediaType }}",
-                    "value2": "lidarr"
-                  }
-                ]
-              },
-              "renameOutput": true,
-              "outputKey": "music"
-            }
-          ]
-        }
-      },
-      "id": "branch-by-type",
-      "name": "Branch by Media Type",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 2,
-      "position": [850, 300]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://127.0.0.1:8096/Library/Refresh",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-MediaBrowser-Token",
-              "value": "={{ $env.JELLYFIN_API_KEY }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "jellyfin-refresh-movies",
-      "name": "Jellyfin Refresh (Movies)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1050, 200]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://127.0.0.1:8096/Library/Refresh",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-MediaBrowser-Token",
-              "value": "={{ $env.JELLYFIN_API_KEY }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "jellyfin-refresh-tv",
-      "name": "Jellyfin Refresh (TV)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1050, 300]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/script-executor",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "script_name",
-              "value": "beets-import"
-            },
-            {
-              "name": "args",
-              "value": "={{ [$json.path] }}"
-            },
-            {
-              "name": "async",
-              "value": true
-            },
-            {
-              "name": "requester",
-              "value": "workflow-1-media-pipeline"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "script-exec-music",
-      "name": "Script Executor (Music)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1050, 400]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Build sys:router:notify payload for download completion\nconst { mediaType, title, quality, path, timestamp } = $json;\n\nconst mediaLabel = {\n  radarr: 'Movie',\n  sonarr: 'TV Show',\n  lidarr: 'Music'\n}[mediaType] || 'Media';\n\nreturn {\n  json: {\n    universe: 'home',\n    domain: 'media',\n    source: mediaType,\n    category: 'content',\n    severity: 'info',\n    summary: `New ${mediaLabel}: ${title}`,\n    action_hint: 'none',\n    timestamp: timestamp,\n    metadata: { quality, path }\n  }\n};"
-      },
-      "id": "generate-notification",
-      "name": "Build Notify Payload",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1250, 300]
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "sys-router-notify",
-          "mode": "name"
-        },
-        "options": {}
-      },
-      "id": "send-notify",
-      "name": "Route via sys:router:notify",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1,
-      "position": [1450, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Build sys:router:notify payload for pipeline error\nconst error = $input.item.json.error || 'Unknown error';\n\nreturn {\n  json: {\n    universe: 'hwc',\n    domain: 'ops',\n    source: 'media-pipeline',\n    category: 'workflow',\n    severity: 'warning',\n    summary: `Media Pipeline error: ${error}`,\n    action_hint: 'retry-workflow',\n    timestamp: new Date().toISOString(),\n    metadata: { workflow: 'Media Pipeline Orchestration', error }\n  }\n};"
-      },
-      "id": "error-notification",
-      "name": "Build Error Payload",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1050, 500]
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "sys-router-notify",
-          "mode": "name"
-        },
-        "options": {}
-      },
-      "id": "send-error-notify",
-      "name": "Route Error via sys:router:notify",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1,
-      "position": [1250, 500]
-    }
-  ],
+  "_hwc": {
+    "generatedBy": "workspace/automation/n8n-workflow-export.py",
+    "note": "GENERATED \u2014 deterministic redacted export of the live n8n workflow. Live n8n is the source of truth; do not hand-edit. Re-export and rerun the rebuild command instead.",
+    "rebuild": "python3 workspace/automation/n8n-workflow-export.py canonicalize --in <live-export.json> --out domains/automation/n8n/parts/workflows/01-media-pipeline-orchestration.json",
+    "sourceWorkflowId": "n14heZ9wzJ8Uyemo",
+    "sourceWorkflowName": "home:media:jellyfin-alert"
+  },
   "connections": {
-    "Webhook Trigger": {
-      "main": [[{ "node": "Parse Event Data", "type": "main", "index": 0 }]]
-    },
-    "Parse Event Data": {
-      "main": [[{ "node": "Wait for File Settlement", "type": "main", "index": 0 }]]
-    },
-    "Wait for File Settlement": {
-      "main": [[{ "node": "Branch by Media Type", "type": "main", "index": 0 }]]
-    },
     "Branch by Media Type": {
       "main": [
-        [{ "node": "Jellyfin Refresh (Movies)", "type": "main", "index": 0 }],
-        [{ "node": "Jellyfin Refresh (TV)", "type": "main", "index": 0 }],
-        [{ "node": "Script Executor (Music)", "type": "main", "index": 0 }]
+        [
+          {
+            "index": 0,
+            "node": "Get Libraries (Movies)",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Get Libraries (TV)",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Unknown Media Type",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Check Index Result": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Generate Notification",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Choose Movie Library": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Jellyfin Refresh (Movies)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Choose TV Library": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Jellyfin Refresh (TV)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Error Notification": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Send Error via Notify Router",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Error Notification",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Generate Notification": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Send via Notify Router",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Get Libraries (Movies)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Choose Movie Library",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Get Libraries (TV)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Choose TV Library",
+            "type": "main"
+          }
+        ]
       ]
     },
     "Jellyfin Refresh (Movies)": {
-      "main": [[{ "node": "Build Notify Payload", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Restore Context (Movies)",
+            "type": "main"
+          }
+        ]
+      ]
     },
     "Jellyfin Refresh (TV)": {
-      "main": [[{ "node": "Build Notify Payload", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Restore Context (TV)",
+            "type": "main"
+          }
+        ]
+      ]
     },
-    "Script Executor (Music)": {
-      "main": [[{ "node": "Build Notify Payload", "type": "main", "index": 0 }]]
+    "Parse Event": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Wait for File Settlement",
+            "type": "main"
+          }
+        ]
+      ]
     },
-    "Build Notify Payload": {
-      "main": [[{ "node": "Route via sys:router:notify", "type": "main", "index": 0 }]]
+    "Restore Context (Movies)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Wait for Indexing",
+            "type": "main"
+          }
+        ]
+      ]
     },
-    "Build Error Payload": {
-      "main": [[{ "node": "Route Error via sys:router:notify", "type": "main", "index": 0 }]]
+    "Restore Context (TV)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Wait for Indexing",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Unknown Media Type": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Send Unknown via Notify Router",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Verify Indexed": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Check Index Result",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Wait for File Settlement": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Branch by Media Type",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Wait for Indexing": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Verify Indexed",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Parse Event",
+            "type": "main"
+          }
+        ]
+      ]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "staticData": null,
-  "tags": [
+  "description": null,
+  "id": "n14heZ9wzJ8Uyemo",
+  "name": "home:media:jellyfin-alert",
+  "nodes": [
     {
-      "name": "media",
-      "id": "media-tag"
+      "id": "fbe64060-0eac-4fd9-9c36-68564ecb0917",
+      "name": "Branch by Media Type",
+      "parameters": {
+        "dataType": "string",
+        "fallbackOutput": "=unknown",
+        "rules": {
+          "rules": [
+            {
+              "outputKey": "movies",
+              "value2": "radarr"
+            },
+            {
+              "outputKey": "tv",
+              "value2": "sonarr"
+            },
+            {
+              "operation": "regex",
+              "outputKey": "unknown",
+              "value2": ".*"
+            }
+          ]
+        },
+        "value1": "={{ $json.mediaType }}"
+      },
+      "position": [
+        -256,
+        784
+      ],
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2
     },
     {
-      "name": "automation",
-      "id": "automation-tag"
+      "id": "a999fddf-490c-480f-9498-dcaf41728dca",
+      "name": "Check Index Result",
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\nconst items = result.Items || [];\nconst found = items.length > 0;\nconst prev = $('Parse Event').first().json;\nreturn { json: { ...prev, indexed: found, jellyfinItemCount: items.length } };"
+      },
+      "position": [
+        1424,
+        752
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "9f987ab1-b0b0-467a-97d8-c4c7e90f2490",
+      "name": "Choose Movie Library",
+      "parameters": {
+        "jsCode": "const items = $input.item.json;\nconst arr = Array.isArray(items) ? items : [];\nconst lib = arr.find(l => l.CollectionType && l.CollectionType.toLowerCase() === 'movies') || arr[0] || null;\nconst prev = $('Parse Event').first().json;\nreturn { json: { ...prev, libraryId: lib ? lib.ItemId : null, libraryName: lib ? lib.Name : null } };"
+      },
+      "position": [
+        224,
+        624
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "3187f82a-d0d3-4448-9750-1bd65249ed57",
+      "name": "Choose TV Library",
+      "parameters": {
+        "jsCode": "const items = $input.item.json;\nconst arr = Array.isArray(items) ? items : [];\nconst lib = arr.find(l => l.CollectionType && l.CollectionType.toLowerCase() === 'tvshows') || arr[0] || null;\nconst prev = $('Parse Event').first().json;\nreturn { json: { ...prev, libraryId: lib ? lib.ItemId : null, libraryName: lib ? lib.Name : null } };"
+      },
+      "position": [
+        224,
+        864
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "957df931-e876-4060-9b2d-7fb5074b07fe",
+      "name": "Error Notification",
+      "parameters": {
+        "jsCode": "const err = $input.item.json || {};\nreturn {\n  json: {\n    universe: 'home',\n    domain: 'media',\n    source: 'media-pipeline',\n    category: 'workflow',\n    severity: 'warning',\n    summary: 'Media Pipeline Error',\n    timestamp: new Date().toISOString(),\n    action_hint: 'retry-workflow',\n    metadata: { error: JSON.stringify(err).substring(0, 500) }\n  }\n};"
+      },
+      "position": [
+        1664,
+        1024
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "69c81484-d460-4a55-b563-a38829f6bd29",
+      "name": "Error Trigger",
+      "parameters": {},
+      "position": [
+        1424,
+        1024
+      ],
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1
+    },
+    {
+      "id": "b36cceb7-cd8d-47d1-8897-cd8a1a7e4a6a",
+      "name": "Generate Notification",
+      "parameters": {
+        "jsCode": "const { mediaType, title, quality, path, indexed } = $json;\nconst mediaLabel = { radarr: 'Movie', sonarr: 'TV Show' }[mediaType] || 'Media';\nconst indexStatus = indexed ? 'Indexed in Jellyfin' : 'Not yet indexed';\nreturn {\n  json: {\n    universe: 'home',\n    domain: 'media',\n    source: mediaType,\n    category: 'content',\n    severity: 'info',\n    summary: `New ${mediaLabel}: ${title}`,\n    timestamp: new Date().toISOString(),\n    action_hint: 'none',\n    metadata: { title, quality, path, indexed, indexStatus }\n  }\n};"
+      },
+      "position": [
+        1664,
+        752
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2j2AbzmoZxsYTfAN",
+          "name": "jellyfin_api_key"
+        }
+      },
+      "id": "63267f06-0c29-41fe-ac84-a82a6cf6478c",
+      "name": "Get Libraries (Movies)",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {},
+        "sendHeaders": true,
+        "url": "http://127.0.0.1:8096/Library/VirtualFolders"
+      },
+      "position": [
+        -16,
+        624
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2j2AbzmoZxsYTfAN",
+          "name": "jellyfin_api_key"
+        }
+      },
+      "id": "2509bc21-0325-484b-b74d-992f5f4b81b3",
+      "name": "Get Libraries (TV)",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {},
+        "url": "http://127.0.0.1:8096/Library/VirtualFolders"
+      },
+      "position": [
+        -16,
+        864
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2j2AbzmoZxsYTfAN",
+          "name": "jellyfin_api_key"
+        }
+      },
+      "id": "c822e039-c26e-479b-9e80-0af3bd3be3a2",
+      "name": "Jellyfin Refresh (Movies)",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "jsonBody": "={{ JSON.stringify({ Ids: [$json.libraryId] }) }}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "http://127.0.0.1:8096/Library/Refresh"
+      },
+      "position": [
+        464,
+        624
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2j2AbzmoZxsYTfAN",
+          "name": "jellyfin_api_key"
+        }
+      },
+      "id": "ed317125-9836-4a03-91ac-4afcd97f801b",
+      "name": "Jellyfin Refresh (TV)",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "jsonBody": "={{ JSON.stringify({ Ids: [$json.libraryId] }) }}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "http://127.0.0.1:8096/Library/Refresh"
+      },
+      "position": [
+        464,
+        864
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4
+    },
+    {
+      "id": "223866c2-fc1a-484e-b11a-e1bb47d308c9",
+      "name": "Parse Event",
+      "parameters": {
+        "jsCode": "// Normalize incoming *arr webhook into a standard shape\nconst body = $input.item.json.body || $input.item.json || {};\nconst query = $input.item.json.query || {};\nlet source = (query.source || body.source || '').toString().toLowerCase();\nif (!source) {\n  if (body.movie || body.remoteMovie) source = 'radarr';\n  else if (body.series || body.episodes) source = 'sonarr';\n  else source = 'unknown';\n}\nlet title = '', path = '', quality = '', eventType = body.eventType || 'Download', searchTitle = '', itemType = '';\nif (source === 'radarr') {\n  title = body?.movie?.title || body?.remoteMovie?.title || '';\n  path = body?.movieFile?.path || body?.movie?.path || '';\n  quality = body?.movieFile?.quality?.quality?.name || '';\n  searchTitle = title; itemType = 'Movie';\n} else if (source === 'sonarr') {\n  const seriesTitle = body?.series?.title || '';\n  const ep = (body?.episodes && body.episodes[0]) || {};\n  const epNum = ep.seasonNumber != null ? `S${String(ep.seasonNumber).padStart(2,'0')}E${String(ep.episodeNumber).padStart(2,'0')}` : '';\n  title = `${seriesTitle} ${epNum}`.trim();\n  path = body?.episodeFile?.path || ''; quality = body?.episodeFile?.quality?.quality?.name || '';\n  searchTitle = seriesTitle; itemType = 'Series';\n} else {\n  title = body?.title || 'Unknown'; path = body?.path || ''; quality = body?.quality || '';\n  searchTitle = title; itemType = 'Movie';\n}\nreturn { json: { mediaType: source, title, searchTitle, itemType, path, quality, eventType } };"
+      },
+      "position": [
+        -736,
+        784
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "b0996ce8-5393-422f-bc91-7e8e28874a9d",
+      "name": "Restore Context (Movies)",
+      "parameters": {
+        "jsCode": "const prev = $('Parse Event').first().json;\nreturn { json: prev };"
+      },
+      "position": [
+        704,
+        624
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "d84c066c-8582-4e42-8703-99db5a8fad03",
+      "name": "Restore Context (TV)",
+      "parameters": {
+        "jsCode": "const prev = $('Parse Event').first().json;\nreturn { json: prev };"
+      },
+      "position": [
+        704,
+        864
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "3406deee-807d-4dc7-b8a7-0e78efcdc8f4",
+      "name": "Send Error via Notify Router",
+      "parameters": {
+        "contentType": "json",
+        "jsonBody": "={\n  \"topic\": \"media\",\n  \"source\": {{ JSON.stringify($json.source || \"jellyfin\") }},\n  \"priority\": {{ ({\"critical\":1,\"warning\":2,\"info\":3,\"debug\":4})[$json.severity] || 3 }},\n  \"tags\": [\"media\"],\n  \"title\": {{ JSON.stringify($json.summary || \"Jellyfin notification\") }},\n  \"body\": {{ JSON.stringify($json.metadata ? Object.entries($json.metadata).map(function(e){return e[0]+\": \"+e[1];}).join(\"\\n\") : \"\") }}\n}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "http://127.0.0.1:11600/notify"
+      },
+      "position": [
+        1904,
+        1024
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1
+    },
+    {
+      "id": "dc3ca102-5b31-407d-a2d0-b7d59386dcdc",
+      "name": "Send Unknown via Notify Router",
+      "parameters": {
+        "contentType": "json",
+        "jsonBody": "={\n  \"topic\": \"media\",\n  \"source\": {{ JSON.stringify($json.source || \"jellyfin\") }},\n  \"priority\": {{ ({\"critical\":1,\"warning\":2,\"info\":3,\"debug\":4})[$json.severity] || 3 }},\n  \"tags\": [\"media\"],\n  \"title\": {{ JSON.stringify($json.summary || \"Jellyfin notification\") }},\n  \"body\": {{ JSON.stringify($json.metadata ? Object.entries($json.metadata).map(function(e){return e[0]+\": \"+e[1];}).join(\"\\n\") : \"\") }}\n}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "http://127.0.0.1:11600/notify"
+      },
+      "position": [
+        224,
+        1072
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1
+    },
+    {
+      "id": "93eeb478-73ec-407c-a709-01c6deeb7f36",
+      "name": "Send via Notify Router",
+      "parameters": {
+        "contentType": "json",
+        "jsonBody": "={\n  \"topic\": \"media\",\n  \"source\": {{ JSON.stringify($json.source || \"jellyfin\") }},\n  \"priority\": {{ ({\"critical\":1,\"warning\":2,\"info\":3,\"debug\":4})[$json.severity] || 3 }},\n  \"tags\": [\"media\"],\n  \"title\": {{ JSON.stringify($json.summary || \"Jellyfin notification\") }},\n  \"body\": {{ JSON.stringify($json.metadata ? Object.entries($json.metadata).map(function(e){return e[0]+\": \"+e[1];}).join(\"\\n\") : \"\") }}\n}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "http://127.0.0.1:11600/notify"
+      },
+      "position": [
+        1904,
+        752
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1
+    },
+    {
+      "id": "856a24c0-9a20-444d-942f-a7a513f3e28e",
+      "name": "Unknown Media Type",
+      "parameters": {
+        "jsCode": "const prev = $('Parse Event').first().json;\nreturn {\n  json: {\n    universe: 'home',\n    domain: 'media',\n    source: 'media-pipeline',\n    category: 'workflow',\n    severity: 'warning',\n    summary: `Unknown media type: ${prev.mediaType}`,\n    timestamp: new Date().toISOString(),\n    action_hint: 'none',\n    metadata: { mediaType: prev.mediaType, title: prev.title, path: prev.path }\n  }\n};"
+      },
+      "position": [
+        -16,
+        1072
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2j2AbzmoZxsYTfAN",
+          "name": "jellyfin_api_key"
+        }
+      },
+      "id": "e2ac757c-3433-494b-b775-10d830b2a61b",
+      "name": "Verify Indexed",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {},
+        "url": "=http://127.0.0.1:8096/Items?SearchTerm={{ encodeURIComponent($json.searchTitle) }}&IncludeItemTypes={{ $json.itemType }}&Recursive=true"
+      },
+      "position": [
+        1184,
+        752
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4
+    },
+    {
+      "id": "f6ea7db3-19bd-4539-9582-ccc8e668eb50",
+      "name": "Wait for File Settlement",
+      "parameters": {
+        "amount": 30
+      },
+      "position": [
+        -496,
+        784
+      ],
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "webhookId": "media-pipeline-wait"
+    },
+    {
+      "id": "e0b344e6-30e0-43f3-9f56-d24b96b24824",
+      "name": "Wait for Indexing",
+      "parameters": {
+        "amount": 15
+      },
+      "position": [
+        944,
+        752
+      ],
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "webhookId": "media-pipeline-index-wait"
+    },
+    {
+      "id": "3b9e8509-7c8c-400e-9678-f1e4df5c3742",
+      "name": "Webhook Trigger",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "media-pipeline"
+      },
+      "position": [
+        -976,
+        784
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "webhookId": "media-pipeline"
     }
   ],
-  "triggerCount": 1,
-  "updatedAt": "2026-04-05T00:00:00.000Z",
-  "versionId": "2"
+  "settings": {
+    "availableInMCP": false,
+    "binaryMode": "separate",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionOrder": "v1"
+  },
+  "tags": []
 }

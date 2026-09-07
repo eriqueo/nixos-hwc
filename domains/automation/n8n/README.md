@@ -14,14 +14,21 @@ n8n workflow automation platform running as a Podman container. Handles alert ro
 ```
 domains/automation/n8n/
 ├── index.nix          # Option definitions, firewall rules, container orchestration
-├── sys.nix            # Container definition, env file generation, tmpfiles
+├── sys.nix            # Container definition, env file generation (+ rotation
+│                      #   restartTriggers on the .age sources), tmpfiles
 ├── README.md          # This file
 └── parts/
     ├── estimator-integration/  # Estimator webhook integration
     │   └── README.md
-    └── workflows/              # n8n workflow JSON definitions
-        └── README.md
+    ├── migrations/             # SQL migrations for workflow data
+    └── workflows/              # DERIVED redacted exports of live workflows
+        ├── README.md           #   source-of-truth contract + export procedure
+        └── *.json              #   regenerated, never hand-edited
 ```
+
+Workflow tooling lives beside the other operator-run n8n script in
+`workspace/automation/` (`n8n-workflow-export.py` + its tests) — it is not part
+of the system closure, so it does not belong under `domains/`.
 
 ## Namespace
 
@@ -45,8 +52,11 @@ hwc.automation.n8n = {
   secrets = {
     estimatorApiKeyFile = config.age.secrets.estimator-api-key.path;
     jobtreadGrantKeyFile = config.age.secrets.jobtread-grant-key.path;
-    slackWebhookUrlFile = config.age.secrets.slack-webhook-url.path;
+    discordWebhookUrlFile = config.age.secrets.discord-webhook-url.path;
+    # → DISCORD_WEBHOOK_FRIGATE_URL, consumed by home:security:frigate-detect
+    discordWebhookFrigateFile = config.age.secrets.discord-webhook-frigate.path;
     anthropicApiKeyFile = config.age.secrets.anthropic-api-key.path;
+    hwcLeadsHmacFile = config.age.secrets.hwc-leads-hmac-secret.path;
   };
 
   owner = {
@@ -121,6 +131,30 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
+- 2026-09-07: **Frigate webhook moved out of the workflow JSON, and tracked
+  workflows became derived exports.** New `secrets.discordWebhookFrigateFile`
+  option → `DISCORD_WEBHOOK_FRIGATE_URL` in the container env (reuses the
+  existing agenix `discord-webhook-frigate`, the same secret hwc-notify's
+  `discord-frigate` channel reads — one secret, two consumers); wired at the
+  composition root in `profiles/business/sys.nix`. The three direct Discord
+  posts in `02-frigate-surveillance-intelligence.json` now read
+  `={{ $env.DISCORD_WEBHOOK_FRIGATE_URL }}` instead of carrying a URL; they stay
+  direct because the person-detection post is a multipart/form-data snapshot
+  upload and hwc-notify carries no attachment. `podman-n8n` gained
+  `restartTriggers` on every consumed secret's `.age` source: the env file is
+  written in `ExecStartPre`, so before this a rotated secret kept serving the old
+  bytes until someone remembered to restart by hand (the footgun
+  `domains/business/leads/index.nix` documents). `hasSecrets` and the env-file
+  generator now derive from one `secretFiles` list, so a future secret cannot be
+  added to one and missed by the other. Tooling:
+  `workspace/automation/n8n-workflow-export.py` (deterministic canonicalize +
+  fail-closed secret scan, no live n8n connection, explicit in/out/clock) with
+  tests, wired into `nix flake check` as `n8n-workflow-secret-literals`.
+  Docs now declare live n8n the source of truth and the tracked JSON derived.
+  The repaired live media workflow was canonicalized into
+  `01-media-pipeline-orchestration.json`, and the divergent
+  `01-media-pipeline-orchestration-FIXED.json` copy was deleted after the live
+  Sonarr replay produced one branch and one notification.
 - 2026-07-15: `frigate-detect` Discord messages gain a `Phone:` HLS link (`/vod/event/<id>/master.m3u8`) alongside the existing `Clip:` mp4 — Frigate's `/api/events/<id>/clip.mp4` generates the clip on the fly and streams it chunked with no byte-range support, which iOS AVPlayer refuses to play; the nginx vod endpoint serves the same event as HLS, which iOS plays natively (desktop keeps the mp4 link — Firefox won't play bare m3u8). Live workflow updated via API; repo export `parts/workflows/02-frigate-surveillance-intelligence.json` re-synced from live (it had drifted badly — the exported copy predated snapshot upload + priority-channel routing) with the Discord webhook URL redacted (no raw webhooks in git; live value in n8n, secret also at agenix `discord-webhook-frigate`).
 - 2026-07-07: Notification unification — retired the `sys:router:notify` workflow (live + repo `parts/workflows/sys-router-notify.json`); its sole caller (`home:media:jellyfin-alert`) and the other Slack-sending workflows (mail-health, voice-log, weekly-events, bozeman-aggregator, jt:estimate-push) now POST the native shape directly to `http://127.0.0.1:11600/notify` (n8n runs host-networked, so loopback reaches hwc-notify). Removed the `slackWebhookUrlFile` option + the `SLACK_WEBHOOK_URL` env injection from `sys.nix` (no active workflow consumed it; the two retained Slack workflows — `frigate-detect` images + `bozeman-events-approval` interactive — use OAuth creds, not the webhook env, and are tracked exceptions pending the Discord-bot gateway). Dropped `parts/migrations/003-notification-events.sql` and the live `hwc.notification_events` table (0 readers).
 - 2026-07-05: Removed `mcp-bridge/` module (audit 2.2: never enabled; superseded by n8n-mcp running as a stdio backend of the unified `hwc-sys-mcp` gateway). README's stale bridge architecture section replaced.

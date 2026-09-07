@@ -3,6 +3,20 @@
 **Created:** 2025-12-08
 **Related Plan:** `/home/eric/.claude/plans/cozy-pondering-fog.md`
 
+> **HISTORICAL (2026-09-07).** This is the original build-out record. It predates
+> the `domains/server/n8n/` → `domains/automation/n8n/` move, the retirement of
+> workflows 03/05/11, and the ntfy/gotify decommission, so its paths and its
+> notification targets are stale.
+>
+> **It also describes the wrong direction of travel.** It treats the tracked JSON
+> as the thing you deploy ("import all 6 workflows"). That is no longer the
+> contract: **live n8n is the source of truth**, and the tracked JSON is a
+> deterministic redacted *export* of it. Import-from-file is now only a
+> disaster-recovery move, not the normal update path.
+>
+> Authoritative: `domains/automation/n8n/parts/workflows/README.md`.
+> Keep this file for the history; do not follow its procedures.
+
 This guide provides step-by-step instructions for building the 6 n8n automation workflows in the n8n UI.
 
 ---
