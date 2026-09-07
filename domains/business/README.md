@@ -30,6 +30,9 @@ business/
 ```
 
 ## Changelog
+- 2026-09-07: Law 12 sweep — refreshed the stale READMEs under `crm/`,
+  `databases/`, `datax/fb-group-scraper/`, `firefly/`, `morning-briefing/` and
+  `paperless/`. Documentation only; no module changed.
 - 2026-09-05: `crm/` gained `controlTokenSecretRef` for hwc-control-bot slice 3
   (d7b055fb) — see that module's README.
 - 2026-08-29: `morning-briefing/` — email subject is now decision-first

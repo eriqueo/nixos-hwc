@@ -68,6 +68,9 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-09-07: Law 12 sweep — refreshed the stale READMEs under `frigate/`,
+  `immich-container/`, `mousehole/`, `qbittorrent/` and `slskd/` (the last of
+  which had no `## Changelog` section at all). Documentation only.
 - 2026-08-28: `immich-container/parts/config.nix` — the module's fifteen dead
   `$PSQL` postStart statements were deleted (e82ca994), and the follow-on
   (53e84228) declared the `immich` role and database it turned out nobody

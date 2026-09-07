@@ -126,6 +126,8 @@ into this module is pending.
 
 ## Changelog
 
+- **2026-09-07** — Law 12 sweep: refreshed the stale README under
+  `parts/bootstrap/`. Documentation only; no module changed.
 - **2026-06-09** — Caddy routes migrated to name-based vhosts under the shared
   `*.hwc.iheartwoodcraft.com` wildcard cert: app at `hermes.hwc.iheartwoodcraft.com`
   (was `:25443`) and the market-trials dashboard at

@@ -76,6 +76,8 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-09-07: Law 12 sweep — refreshed the stale READMEs under
+  `n8n/parts/{estimator-integration,migrations,workflows}`. Documentation only.
 - 2026-09-04: refinery gained a **container mode** beside native (56a7c41a). The
   engine now lives in `eriqueo/refinery` and ships as one image for every host;
   `mode = "container"` runs it through `mkContainer` on the same port and state
