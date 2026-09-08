@@ -9,6 +9,16 @@ let
   gsrCfg = config.hwc.home.apps.gpu-screen-recorder or { enable = false; };
   gsrEnabled = gsrCfg.enable or false;
 
+  dictateEnabled = (config.hwc.home.apps.whisper-cpp.enable or false)
+    && (config.hwc.home.apps.whisper-cpp.dictate.enable or false);
+  # Consume the same structured record as Hyprland and its keybind legend.
+  dictateCommand = "whisper-dictate";
+  hyprlandBehavior = import ../../hyprland/parts/behavior.nix { inherit config lib pkgs; };
+  dictateBind = lib.findFirst (b: b.act == "exec,${dictateCommand}") null
+    (lib.concatMap (g: g.binds) hyprlandBehavior.keybinds);
+  dictateShortcut = if dictateBind == null then "" else
+    "\nShortcut: ${lib.replaceStrings [ " " ] [ "+" ] dictateBind.mods}+${dictateBind.key}";
+
   commonModules = {
     modules-left = [ "custom/ws-enter" "hyprland/workspaces" "hyprland/submap" "custom/workspace-link" ];
     modules-center = [ "custom/khal" "clock" "custom/weather" ];
@@ -19,6 +29,7 @@ let
       ++ [
       "custom/gpu" "idle_inhibitor" "custom/lid-sleep"
     ] ++ lib.optionals gsrEnabled [ "custom/recording" ]
+      ++ lib.optionals dictateEnabled [ "custom/dictation" ]
       ++ [
       "custom/sep-1"
       "pulseaudio" "bluetooth" "custom/network"
@@ -93,7 +104,16 @@ let
     };
   };
 
-  commonWidgetsBase = ollamaWidget // dtWidget // gsrWidget // {
+  dictateWidget = lib.optionalAttrs dictateEnabled {
+    "custom/dictation" = {
+      format = "󰍬";
+      tooltip = true;
+      tooltip-format = "Dictation: click to start / stop recording${dictateShortcut}\nText goes to the clipboard; typing requires unchanged window focus.";
+      on-click = dictateCommand;
+    };
+  };
+
+  commonWidgetsBase = ollamaWidget // dtWidget // gsrWidget // dictateWidget // {
     "hyprland/submap" = { format = "mode: {}"; max-length = 12; tooltip = false; };
     "hyprland/window" = {
       format = "{title}";
