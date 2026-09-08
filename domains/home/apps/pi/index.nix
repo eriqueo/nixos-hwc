@@ -85,6 +85,17 @@ let
             name = "DX2";
             contextWindow = cfg.dx2.contextWindow;
             maxTokens = cfg.dx2.maxTokens;
+            reasoning = true;
+            thinkingLevelMap = {
+              off = null;
+              minimal = null;
+              low = "low";
+              medium = "medium";
+              high = null;
+              xhigh = "xhigh";
+              max = null;
+            };
+            compat.supportsReasoningEffort = true;
           }
         ];
       };

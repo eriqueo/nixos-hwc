@@ -41,6 +41,11 @@ parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
   (`dx2.datax.to`) while sharing DX1's credential. Its distinct base URL keeps
   it out of `mycloud.models`. `dx2.enable` is ON, unlike `deepseek.enable`,
   because the shared key is already provisioned.
+- **DX2 reasoning levels match the endpoint.** The model advertises reasoning
+  to pi and maps only `low`, `medium`, and `xhigh`, the values accepted by the
+  DX2 API. Unsupported levels are hidden instead of producing retry loops.
+  Pi's mutable `defaultThinkingLevel` is currently `medium`; `Shift+Tab` or
+  `--thinking` can select another supported level for a session.
 - **Endpoint = the LiteLLM proxy, not the pod.** `dx1.baseUrl` is
   `https://dx1.datax.to/v1`. This is the same client-side entry point the
   DataX app uses; it survives DX1 moving between RunPod pods. Pointing at a
@@ -107,6 +112,9 @@ Bump `version` + both hashes in `parts/package.nix`.
 
 ## Changelog
 
+- 2026-09-08: Declared DX2 as a reasoning model and mapped its supported
+  `low`, `medium`, and `xhigh` thinking levels. Unsupported levels are hidden;
+  Pi's existing `medium` default now reaches DX2 as `reasoning_effort`.
 - 2026-09-08: DX2 now reads `/run/agenix/pi-dx1-api-key`, matching the live
   endpoint's accepted credential, and uses the endpoint's advertised `llm`
   model slug (`dx2/llm`). Removed the superseded dedicated DX2 secret after
