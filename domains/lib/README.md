@@ -19,6 +19,7 @@ any domain (media, networking, data, etc.) can use them without depending on the
 ```
 lib/
 ├── README.md              # This file
+├── hm.nix                 # HM handshakes, fleet data, runtime Radicale password argv
 ├── mkContainer.nix        # Application containers (media apps, *arr services)
 ├── mkInfraContainer.nix   # Infrastructure containers (gluetun, pihole)
 └── arr-config.nix         # *arr-specific config.xml enforcement
@@ -47,6 +48,8 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+- 2026-09-07: `hm.nix` owns the runtime Radicale password selector for todui and
+  the tasks, calendar, and contacts sync clients; callers render shell or JSON argv.
 - 2026-08-20: `mkInfraContainer.nix` split into `containerDefOf` (the podman definition) + `mkInfraContainer` (single, unchanged behavior for its callers) + `mkInfraContainers` (a config-derived SET). The plural entry point exists for a module-system reason, not a taste one: a module's `config` may be an `mkIf`/`mkMerge` only when its contents do not depend on `config`, because `pushDownProperties` forces them before `config` is fixed — so `mkMerge (map mkInfraContainer <config-derived list>)` is infinite recursion. The plural form returns a plain attrset with literal top-level names, so only the values are config-derived. `mkContainer.nix` gained `vpnContainer` (which tunnel `"vpn"` mode joins) and `mkVpnAssertions`, the one producer of the "this container's tunnel exists and is enabled" check that was previously hand-copied into eight modules.
 - 2026-08-12: `hm.nix` gained `fleet osConfig` → `{ ips, fqdn }`, reading `hwc.networking.hosts` on NixOS hosts with literal fallbacks for standalone HM (Law 1 forbids assuming `osConfig`). Per decision 3 of `workspace/plans/2026-06-11-registry-magic-strings.md`, this file is deliberately the **single HM-lane copy** of the fleet's tailnet addresses — the system lane's copy is the registry's own option defaults. Two producers, one per lane, both greppable; the alternative was the status quo of one copy per consumer, which is what let a single hwc-server re-registration break four files at once on 2026-08-12. First consumers: `domains/home/core/shell/index.nix` and its `parts/aliases.nix`.
 - 2026-08-06: `mkSimpleApp.nix` gained the `HWC-EXCEPTION(Law 10)` annotation it always warranted — it is a module FACTORY, so the `mkEnableOption` it builds belongs to the caller's `domains/home/apps/<name>/index.nix`, which declares it by calling with its own folder name. Same exception class as `domains/paths/paths.nix`. Not new debt: the old Law 10 lint never saw this file at all, because `mkEnableOption` does not contain the substring `mkOption`. The corrected v12.6 check matches both constructors and honors §4 annotations.

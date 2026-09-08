@@ -49,7 +49,7 @@ let
   };
 
   radicalePair = import ./parts/vdirsyncer-pair-radicale.nix {
-    inherit dataDir;
+    inherit lib dataDir;
     url = cfg.radicale.url;
     username = cfg.radicale.username;
     secretPath = radicalePwPath;

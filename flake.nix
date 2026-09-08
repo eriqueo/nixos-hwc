@@ -456,7 +456,6 @@
         touch $out
       '';
     in {
-      # Exercise the actual laptop module wiring, not a second layout renderer.
       # Credential checks use fake secrets; no server or real secret is accessed.
       radicale-client-auth = let
         home = self.homeConfigurations."eric@hwc-laptop".config;
@@ -500,6 +499,7 @@
         touch $out
       '';
 
+      # Exercise the actual laptop module wiring, not a second layout renderer.
       workbench-navigation = let
         home = self.homeConfigurations."eric@hwc-laptop".config;
         navigation = import ./domains/home/apps/zellij/parts/tabs.nix {

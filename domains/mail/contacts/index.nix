@@ -22,6 +22,10 @@
 
 let
   cfg = config.hwc.mail.contacts;
+  passwordArgs = (import ../../lib/hm.nix { inherit lib; }).radicalePasswordArgs {
+    username = cfg.username;
+    secretPath = radicalePwPath;
+  };
 
   dataDir = "~/.local/share/vdirsyncer";
 
@@ -51,9 +55,8 @@ let
     type = "carddav"
     url = "${cfg.url}"
     username = "${cfg.username}"
-    # Same quote-free awk password extraction as the calendar/tasks pairs:
-    # pick this user's line from the shared multi-user htpasswd secret.
-    password.fetch = ["command", "awk", "-F:", "-v", "u=${cfg.username}", "$1==u{match($0,/:/);print substr($0,RSTART+1)}", "${radicalePwPath}"]
+    # Same user-scoped selector as the calendar/tasks pairs and todui.
+    password.fetch = ${builtins.toJSON ([ "command" ] ++ passwordArgs)}
 
     [storage contacts_radicale_local]
     type = "filesystem"

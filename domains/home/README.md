@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+`apps/todui` uses the shared Radicale password selector in `domains/lib/hm.nix`.
+
 ```
 domains/home/
 ├── apps/    # 50 app modules, auto-imported via readDir (index.nix per app,
@@ -45,6 +47,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-07: Fix todui list-deletion authentication with a user-scoped secret
+  command, verified through the laptop configuration by `radicale-client-auth`.
 - 2026-09-07: Waybar's existing app structure now includes a conditional dictation launcher and a shortcut tooltip derived from Hyprland's binding record.
 - 2026-09-05: `apps/whisper-cpp/` gained `dictate` — a `whisper-dictate` push-to-talk toggle bound to SUPER+SHIFT+SPACE in `apps/hyprland/parts/behavior.nix` (gated on `dictate.enable`, like `gsr-toggle`). Press to record (`pw-record` as its own transient user unit, the gsr precedent, so `systemctl is-active` is the exact state), press again to transcribe on the local GPU with `dictate.model` (default medium.en). Text goes to the clipboard always and is typed with `wtype` only if the focused window is the one that had focus when recording started — transcription takes seconds and focus can move. All transitions run under one `flock`; a press during transcription is refused; a take under 0.5 s is discarded. Model URLs now pin one Hugging Face revision instead of `/resolve/main/`. Enabled on `machines/laptop/home.nix`.
 - 2026-09-04: Workbench registry owns hub deployment order and landing; generated laptop layout/navigation parity is checked by the workbench-navigation flake check.

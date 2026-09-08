@@ -84,8 +84,8 @@ the self-hosted Radicale server (`domains/server/services/radicale/`, Caddy
 vhost tasks.hwc.iheartwoodcraft.com). Unlike iCloud it auto-discovers
 collections both ways, so locally created lists (todui `N`) are created
 server-side. Local vdir: `~/.local/share/vdirsyncer/tasks-radicale/`;
-credential: the shared `radicale-htpasswd` agenix secret (password =
-`cut -d: -f2-`). todoman's path glob widens to `tasks*/*` so both backends
+credential: the configured user's entry in the shared `radicale-htpasswd`
+agenix secret, selected by `domains/lib/hm.nix`. todoman's path glob widens to `tasks*/*` so both backends
 stay CLI-visible. Deploy order + phone CalDAV setup: see the radicale README.
 
 ## Changelog

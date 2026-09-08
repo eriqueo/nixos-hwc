@@ -27,7 +27,7 @@ owns its own engine, tests, packaging, and release cadence.
 todui/
 └── index.nix     # imports inputs.todui.homeManagerModules.todui;
                   #   options hwc.home.apps.todui.enable;
-                  #   maps theme palette + radicale creds + paths → programs.todui
+                  #   maps theme palette + shared user-scoped creds + paths → programs.todui
 ```
 
 ## Integration points
@@ -37,10 +37,15 @@ todui/
 - Radicale: `hwc.mail.tasks.radicale.{url,username}` + the `radicale-htpasswd`
   agenix secret → `programs.todui.radicale.*` (enables in-app list deletion via
   CalDAV DELETE).
+- Password selection uses `domains/lib/hm.nix`'s `radicalePasswordArgs`, shared
+  with vdirsyncer. Only the configured user's entry is read from the multi-user
+  secret. The wrapper includes an absolute gawk path and shell-escaped arguments.
 - Paths/sync: derived from `hwc.mail.tasks.radicale.enable` and the vdir root.
 - khal + vdirsyncer are put on todui's PATH via `extraRuntimePackages`.
 
 ## Changelog
+- 2026-09-07: Fix list-deletion HTTP 401 caused by reading every user's password;
+  use the shared selector and add `radicale-client-auth` to the flake checks.
 - 2026-07-05: radicalePwPath rewritten from if/has-attr chain to `lib.attrByPath`
   (same semantics; conforms to the Law-1 whitelisted patterns so the v12.2 lint
   passes clean).

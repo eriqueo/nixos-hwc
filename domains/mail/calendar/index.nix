@@ -58,6 +58,7 @@ let
 
   radicalePair = lib.optionalString cfg.radicale.enable
     (import ./parts/vdirsyncer-pair-radicale.nix {
+      inherit lib;
       inherit dataDir;
       url = cfg.radicale.url;
       username = cfg.radicale.username;
