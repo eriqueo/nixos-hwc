@@ -46,6 +46,15 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 
 ## Changelog
 
+- 2026-09-07: `native/ai/hwc-control-bot/` gained the Events transport target.
+  It accepts bounded, bearer-authenticated card deliveries on loopback port 8789,
+  sends application-owned cards to `#events`, authorizes Add to Calendar / Ignore
+  buttons to the configured guild, channel, and user, and forwards actions to
+  n8n. n8n remains the event and calendar state owner. The service stops event
+  intake and drains both card sends and interactions against its existing
+  shutdown deadline. Machine config enables the target with a dedicated agenix
+  token and a soft dependency on `podman-n8n.service`; app side: scout
+  `feat/discord-event-curation`.
 - 2026-09-05: Added `native/ai/whisper/` — resident `whisper-server` (whisper.cpp) on `127.0.0.1:11503`, OpenAI-compatible `/v1/audio/transcriptions`, published as the `whisper` vhost. Why now and why this shape: the cached `whisper-cpp` binary has no sm_61 kernels, so on the Quadro P1000 every model above base.en died with `IM2COL failed`; `cudaCapabilities = [ "6.1" ]` reuses llama-cpp's CMake-arch override. CPU was measured and rejected (small.en 5 s, medium.en 17 s per 11 s clip; encoder is compute-bound, RAM irrelevant). Model weights are a hash-pinned `fetchurl` against one Hugging Face revision and referenced by store path in `ExecStart` — no lazy download, no symlink dir. `services/inbox-processor/` now POSTs each phone capture to that server instead of running `whisper-cli --no-gpu base.en` per file; on any failure (server down, non-2xx, empty text) the file stays in the inbox for the next trigger rather than being archived behind a stub note. Dropped `whisperModel`/`whisperModelsDir` and the `/var/lib/whisper-models` activation script; added `whisperUrl` (defaults to the whisper module's port) and an assertion that the module is enabled.
 - 2026-09-05: `native/ai/hwc-control-bot/` slice 5 — `summary = { enable; onCalendar }` renders a oneshot `hwc-control-bot-summary` unit + timer (default 07:30, 5-minute jitter, Persistent). It runs `cli.ts summary` over Discord's REST API, posts at most one channel message, and only when the per-domain counts moved since the bot's previous summary (found by its marker line in the channel — no bot database). The Research target carries `writeTimeoutMs = 90000`: a takeaway measured 35 s end to end and the 20 s default reported a landed review as `uncertain`.
 - 2026-09-05: `native/ai/hwc-control-bot/` slice 4 — `targets.homeScout = { enable; profile }` adds Home Scout's listing review lane (URL from `homeScout.port`, token mount, `home-scout.service` as a soft dependency). `native/ai/home-scout/` gained `controlTokenSecret` (new agenix `hwc-control-home-scout-token`), exported as `HOME_SCOUT_CONTROL_TOKEN_FILE` for its `/api/control/v1/reviews` routes only: Interested / Pass (preference events, kept out of the classifier prompt by the app's versioned policy) and Wrong tier (the existing manual override). Machine config enables the target for `hwc_remodel_v1`.

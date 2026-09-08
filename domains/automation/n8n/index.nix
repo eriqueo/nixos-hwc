@@ -137,6 +137,16 @@ in
         '';
       };
 
+      eventControlTokenFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = ''
+          Path to the bearer token shared with hwc-control-bot for the private
+          event-card and event-action loopback protocol. Exposed to workflows
+          as HWC_EVENT_CONTROL_TOKEN.
+        '';
+      };
+
     };
 
     owner = {

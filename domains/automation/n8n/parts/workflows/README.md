@@ -594,6 +594,23 @@ curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/new-lead \
 
 ---
 
+### 11-weekly-events.json (home:social:weekly-events)
+
+**Purpose:** Gather the next Bozeman weekend's events, curate them, and deliver
+only selected candidates as interactive Discord cards in `#events`.
+
+**Features:**
+- Versioned deterministic curation (`bozeman-v1`) with explicit score parts and reasons
+- Decisions are `selected`, `needs_review`, or `withheld`; selected delivery is capped at 40 per run
+- A content-derived SHA-256 fingerprint deduplicates sources and keys the case ledger
+- Curation judgments and delivery reservations are stored before Discord effects
+- A compact run summary goes through hwc-notify; selected cards go through the authenticated hwc-control-bot loopback ingress
+
+**State:** `003-event-case-ledger.sql` declares the AUTO-MANAGED 180-day case,
+judgment, delivery, interaction, and human-event records.
+
+---
+
 ### 12-voice-log.json (work_voice_log)
 **Purpose:** Daily voice-log intake (accepts a transcript, validates it).
 
@@ -602,6 +619,23 @@ curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/new-lead \
 Both lines are read off the tracked file (`name`, webhook `path`); the file was
 previously undocumented here. Everything else is left blank rather than guessed —
 fill it in from a real export, not from reading this stale JSON.
+
+---
+
+### 13-weekly-event-actions.json (home:social:event-actions)
+
+**Purpose:** Receive authorized Discord Add to Calendar / Ignore actions and
+apply each interaction at most once through the event case ledger.
+
+**Trigger:** Private loopback webhooks `POST /webhook/hwc-events-control` and
+`GET /webhook/hwc-events-control-health`.
+
+**Features:**
+- Constant-time bearer validation and exact edge parsing
+- Atomic interaction reservation before any calendar write
+- Deterministic ICS filename and UID keyed by the event fingerprint
+- Reuses the existing SSH credential and calendar inbox watcher
+- Reports `added` only after the watcher moves the ICS into its authoritative processed directory; otherwise reports `queued`
 
 ---
 
@@ -624,11 +658,13 @@ Configure these in n8n UI (Settings → Credentials):
 - `ESTIMATOR_API_KEY`: Shared secret for estimator webhook authentication
 - `POSTGRES_REST_URL`: PostgREST endpoint (e.g., `http://127.0.0.1:3001`)
 - JobTread API Bearer token (configured as HTTP Header Auth credential)
+- `HWC_EVENT_CONTROL_TOKEN`: agenix-backed bearer shared with hwc-control-bot
 
 Credentials are accessed via environment variables in workflows:
 - `{{ $env.JELLYFIN_API_KEY }}`
 - `{{ $env.IMMICH_API_KEY }}`
 - `{{ $env.SLACK_WEBHOOK_URL }}`
+- `{{ $env.HWC_EVENT_CONTROL_TOKEN }}`
 
 ## Testing
 

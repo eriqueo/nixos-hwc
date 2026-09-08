@@ -152,6 +152,13 @@
       enable = true;
       profile = "home_buy_bozeman";
     };
+    # Curated Bozeman event cards and Add / Ignore actions live in #events.
+    # n8n owns the ledger and calendar effect; this bot owns Discord transport.
+    targets.events = {
+      enable = true;
+      channelId = "1545506587815313560";
+      controlTokenSecret = "hwc-control-events-token";
+    };
     # One post at 07:30, only when the counts moved since the last one.
     summary.enable = true;
   };
