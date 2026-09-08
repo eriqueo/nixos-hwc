@@ -34,14 +34,13 @@ parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
   indirection — `"apiKey": "!cat /run/agenix/pi-dx1-api-key"` — resolved at
   request time. The key lives in
   `domains/secrets/parts/home/pi-dx1-api-key.age` (default mount
-  root:secrets 0440; eric reads via the `secrets` group). DX2 does the same
-  off `domains/secrets/parts/infrastructure/dx2-api-key.age` →
-  `/run/agenix/dx2-api-key`.
+  root:secrets 0440; eric reads via the `secrets` group). DX2 consumes that
+  same mount because its endpoint accepts the DX1 credential.
 - **DX2 is a provider, not a second model.** A pi provider carries one
-  `baseUrl` and one `apiKey`, and DX2 is served from its own proxy
-  (`dx2.datax.to`) under its own key — so it cannot be a second entry in
-  `mycloud.models`. `dx2.enable` is ON, unlike `deepseek.enable`, because the
-  key is already provisioned.
+  `baseUrl` and one `apiKey`, and DX2 is served from its own endpoint
+  (`dx2.datax.to`) while sharing DX1's credential. Its distinct base URL keeps
+  it out of `mycloud.models`. `dx2.enable` is ON, unlike `deepseek.enable`,
+  because the shared key is already provisioned.
 - **Endpoint = the LiteLLM proxy, not the pod.** `dx1.baseUrl` is
   `https://dx1.datax.to/v1`. This is the same client-side entry point the
   DataX app uses; it survives DX1 moving between RunPod pods. Pointing at a
@@ -108,6 +107,9 @@ Bump `version` + both hashes in `parts/package.nix`.
 
 ## Changelog
 
+- 2026-09-08: DX2 now reads `/run/agenix/pi-dx1-api-key`, matching the live
+  endpoint's accepted credential. The old DX2 secret remains provisioned
+  pending separate removal after the live Pi probe passes.
 - 2026-09-01: Added the **DX2** provider — `dx2.enable` (on by default),
   `dx2.baseUrl` `https://dx2.datax.to/v1`, key via `!cat
   /run/agenix/dx2-api-key` off

@@ -67,9 +67,10 @@ let
       };
     }
     # DX2 is a SEPARATE provider, not a second model inside `mycloud`: it is
-    # served from its own LiteLLM proxy (dx2.datax.to) and authenticated with
-    # its own key, and a pi provider carries exactly one baseUrl and one
-    # apiKey. Same `!cat` indirection, so the key stays out of the store.
+    # served from its own endpoint (dx2.datax.to) but accepts the same DataX
+    # key as DX1. A pi provider carries exactly one baseUrl and one apiKey, so
+    # DX2 remains separate. Same `!cat` indirection keeps the key out of the
+    # store.
     // lib.optionalAttrs cfg.dx2.enable {
       dx2 = {
         baseUrl = cfg.dx2.baseUrl;
@@ -182,11 +183,10 @@ in
         default = true;
         description = ''
           Add DX2 to models.json as the `dx2` provider. ON, unlike
-          `deepseek.enable`, because the key is already provisioned:
-          `domains/secrets/parts/infrastructure/dx2-api-key.age` mounts at
-          `apiKeyFile` on every host that evaluates the secrets domain. pi
-          resolves the key with `!cat` at request time, so a host without the
-          mount fails per-request rather than at activation.
+          `deepseek.enable`, because the shared DataX key is already
+          provisioned for DX1. pi resolves the key with `!cat` at request time,
+          so a host without the mount fails per-request rather than at
+          activation.
         '';
       };
 
@@ -194,9 +194,9 @@ in
         type = lib.types.str;
         default = "https://dx2.datax.to/v1";
         description = ''
-          OpenAI-compatible base URL of the DX2 deployment — its own LiteLLM
-          proxy, the same stable client-side entry point shape as DX1 and for
-          the same reason: it survives the serving pod being replaced.
+          OpenAI-compatible base URL of the DX2 deployment. This endpoint
+          selects the DX2 deployment directly; it is not the DX1 LiteLLM
+          proxy.
         '';
       };
 
@@ -208,13 +208,11 @@ in
 
       apiKeyFile = lib.mkOption {
         type = lib.types.str;
-        default = "/run/agenix/dx2-api-key";
+        default = "/run/agenix/pi-dx1-api-key";
         description = ''
-          Runtime path of the DX2 API key (agenix mount, root:secrets 0440).
-          The name is derived from the .age path by
-          domains/secrets/parts/lib.nix: `infrastructure/dx2-api-key.age` ->
-          `dx2-api-key`. It carries no `pi-` prefix because the key is the
-          model's, not this harness's — T3 Code reaches the same DX2 endpoint.
+          Runtime path of the shared DataX API key (agenix mount,
+          root:secrets 0440). DX2's endpoint accepts the same credential as
+          DX1, so both providers consume the existing pi-dx1-api-key mount.
         '';
       };
 
