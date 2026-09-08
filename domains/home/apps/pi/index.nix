@@ -21,6 +21,9 @@
 let
   cfg = config.hwc.home.apps.pi;
   piPkg = if cfg.package != null then cfg.package else pkgs.callPackage ./parts/package.nix { };
+  dx2ProviderId = "dx2";
+  dx2ModelId = "llm";
+  dx2QualifiedModel = "${dx2ProviderId}/${dx2ModelId}";
 
   settingsSeed = pkgs.writeText "pi-settings.json" (builtins.toJSON ({
     defaultProvider = cfg.defaultProvider;
@@ -72,13 +75,13 @@ let
     # DX2 remains separate. Same `!cat` indirection keeps the key out of the
     # store.
     // lib.optionalAttrs cfg.dx2.enable {
-      dx2 = {
+      ${dx2ProviderId} = {
         baseUrl = cfg.dx2.baseUrl;
         api = cfg.dx2.api;
         apiKey = "!cat ${cfg.dx2.apiKeyFile}";
         models = [
           {
-            id = "dx2";
+            id = dx2ModelId;
             name = "DX2";
             contextWindow = cfg.dx2.contextWindow;
             maxTokens = cfg.dx2.maxTokens;
@@ -261,7 +264,7 @@ in
       type = lib.types.listOf lib.types.str;
       default = [
         "mycloud/dx1"
-        "dx2/dx2"
+        dx2QualifiedModel
         "anthropic/claude-opus-4-6"
         "openai/gpt-5.3-codex"
       ];
