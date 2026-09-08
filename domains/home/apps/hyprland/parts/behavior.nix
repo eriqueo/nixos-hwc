@@ -46,8 +46,9 @@
   dtToggleBind = dtCfg.hyprland.toggleBind or null;
   toduiEnabled = config.hwc.home.apps.todui.enable or false;
   gsrEnabled = config.hwc.home.apps.gpu-screen-recorder.enable or false;
-  dictateEnabled = (config.hwc.home.apps.whisper-cpp.enable or false)
-    && (config.hwc.home.apps.whisper-cpp.dictate.enable or false);
+  dictateEnabled = config.hwc.home.apps.hwc-dictation.enable or false;
+  dictateCommand = "hwc-dictation record toggle";
+  dictateCancelCommand = "hwc-dictation record cancel";
 
   # Directional and per-workspace families are mechanical — generate them, so a
   # missing arrow or workspace variant is impossible.
@@ -174,7 +175,8 @@
           {mods = "SHIFT"; key = "PRINT"; act = "exec,gsr-toggle"; desc = "Start / stop screen recording";}
         ]
         ++ lib.optionals dictateEnabled [
-          {mods = "${mod} SHIFT"; key = "SPACE"; act = "exec,whisper-dictate"; desc = "Dictate: start / stop, types at cursor + clipboard";}
+          {mods = "${mod} SHIFT"; key = "ESCAPE"; act = "exec,${dictateCancelCommand}"; desc = "Cancel dictation";}
+          {mods = "${mod} SHIFT"; key = "SPACE"; act = "exec,${dictateCommand}"; desc = "Dictate: start / stop recording";}
         ]
         ++ [
           {mods = ""; key = "XF86AudioRaiseVolume";  act = "exec,wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+";   desc = "Volume up";}
@@ -261,7 +263,8 @@
     };
   };
 in {
-  inherit keybinds;
+  # Waybar uses the same commands as these compositor bindings.
+  inherit keybinds dictateCommand dictateCancelCommand;
 
   submaps = lib.listToAttrs (map mkSubmap submapGroups);
 

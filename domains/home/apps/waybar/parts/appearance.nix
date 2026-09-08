@@ -5,6 +5,7 @@ let
   # from palette tokens is a redesign, logged as backlog (2026-06-10 audit
   # 6c). The palette's section tokens (sectionA-D) now exist for that work.
   theme = config.hwc.home.theme or {};
+  c = theme.colors;
   uiFont = (theme.fonts or {}).ui or "Hack Nerd Font";
 in
 ''
@@ -118,6 +119,13 @@ window#waybar {
 /* recording status-classes (driven by `gsr-status` JSON `class` field) */
 #custom-recording.recording { color: #ea6962; font-weight: bold; }  /* red — recording live */
 #custom-recording.off       { opacity: 0.55; }                      /* dimmed — idle */
+
+/* Dictation states come from the daemon's versioned snapshot. */
+#custom-dictation.recording { color: #${c.error}; }
+#custom-dictation.transcribing, #custom-dictation.delivering { color: #${c.warning}; }
+#custom-dictation.clipboard_ready, #custom-dictation.paste_dispatched { color: #${c.success}; }
+#custom-dictation.failed { color: #${c.error}; }
+#custom-dictation.unavailable { opacity: 0.55; }
 
 /* dt status-classes (driven by `dt status --waybar` JSON `class` field) */
 #custom-dt.active { color: #a9b665; font-weight: bold; }   /* green — clocked in */

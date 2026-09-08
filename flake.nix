@@ -82,6 +82,13 @@
     # Enforced by ~/600_apps/productivity-scripts/repo-remote-audit.sh (run on
     # laptop AND server). See memory `repo-remote-invariant`.
     #
+    # Owned Voxtype fork. App code is published to the shared private remote
+    # before this input is locked and the desktop is switched.
+    hwc-dictation = {
+      url = "github:eriqueo/hwc-dictation?ref=hwc/main";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # todui — standalone VTODO task TUI (todoman-free, own engine). Sourced from a
     # SHARED REMOTE (private GitHub repo), NOT a local clone: a github: input pins a
     # rev that exists on every machine, so it can't ghost-rev like the old

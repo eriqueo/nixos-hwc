@@ -5,7 +5,8 @@
 # this file adjusts only what is unique to this machine.
 # Shared between NixOS module (nixos-rebuild) and standalone (home-manager switch).
 
-{ lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
+let dictationModel = "base.en"; in
 
 {
   # Codex pinned to the upstream release binary (faster-moving than the
@@ -43,11 +44,14 @@
     # ~/600_apps/brain checkout and the vault, which only laptop + server carry.
     brain.enable = true;
     gpu-screen-recorder.enable = true;  # gsr-toggle / SHIFT+PRINT call recording
+    hwc-dictation = {
+      enable = true;
+      model = "${config.hwc.home.apps.whisper-cpp.modelsDir}/ggml-${dictationModel}.bin";
+    };
     whisper-cpp = {
       enable = true;
       cuda = true;
-      models = [ "medium.en" "large-v3" ];
-      dictate.enable = true;  # whisper-dictate / SUPER+SHIFT+SPACE push-to-talk
+      models = [ dictationModel "medium.en" "large-v3" ];
     };
 
     # The MCP gateway runs on hwc-server (localhost:6200 there), not the laptop.

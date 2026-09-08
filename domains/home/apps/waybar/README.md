@@ -13,11 +13,12 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 ## Structure
 - `index.nix` — options, packages, programs.waybar, systemd service, assertions
 - `sys.nix` — system-lane option + hardware/network assertions
-- `parts/behavior.nix` — module layout and per-widget settings, including a conditional dictation microphone that uses the existing toggle and derives its tooltip shortcut from Hyprland's binding record
+- `parts/behavior.nix` — module layout and per-widget settings, including daemon-driven dictation status and a tooltip shortcut derived from Hyprland's binding record
 - `parts/appearance.nix` — curated Gruvbox-Material CSS (palette feed is backlog)
 - `parts/packages.nix` — waybar + module dependency packages
 - `parts/scripts.nix` — writeShellScriptBin helpers incl. waybar-launch
 
 ## Changelog
+- 2026-09-07: Replaced the static microphone with versioned daemon status; shortcut text comes from the Hyprland binding, right-click cancels, and middle-click acknowledges the result.
 - 2026-09-07: added a clickable dictation microphone on both bar layouts when whisper dictation is enabled; hover shows the configured shortcut and click starts/stops the existing recorder.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).
