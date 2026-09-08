@@ -107,6 +107,8 @@ export interface ServerConfig {
   };
   workspace: string;
   hostname: string;
+  umamiWebsiteId: string;
+  umamiDatabase: string;
   cmsAppPath: string;
   /** Base URL of the sr_analyzer SR-board service the datax_* tools consume. */
   dataxAnalyzerUrl: string;

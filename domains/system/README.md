@@ -40,6 +40,10 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- Workbench daily/business views: bounded urgent/review mail digest with verified
+  inbox membership, explicit seven-day khal range, and read-only Umami aggregates.
+  The configured Umami website ID/database are passed to the gateway by Nix.
 - 2026-08-31: `networking/` — pass `tailscale.extraSetFlags` through to upstream's `services.tailscale.extraSetFlags`, then move hwc-laptop's inert `--accept-dns` declaration onto that path and add `--operator=eric`. The resulting `tailscaled-set.service` applies both settings to the already-registered node without reconnecting it; operator access lets the user-owned T3 Code desktop process configure tailnet-only Tailscale Serve.
 - 2026-08-12: `networking/` — Tailscale registration made declarative. New `tailscale.authKeyParameters` option (`ephemeral`/`preauthorized`/`baseURL`), passed through to `services.tailscale`; the wrapper previously dropped it, which made OAuth-client registration inexpressible. Also added a `warnings` entry that fires when `extraUpFlags`/`authKeyParameters` are set while `authKeyFile` is null: upstream gates `tailscaled-autoconnect.service` (the only thing that ever runs `tailscale up`) on `authKeyFile`, so those flags are silently inert without it. That silence is what let hwc-server declare `--advertise-tags=tag:server` for months while actually registering untagged, inheriting the tailnet's 6-month key expiry and dropping off on 2026-08-07. Warn rather than assert: hwc-laptop (`--accept-dns`) and the appliance profile (`--ssh`) carry the same inert flags today and failing their builds is a separate cleanup. Verified red on hwc-laptop before shipping.
 - 2026-07-11: usb-automount: mount root now `config.hwc.paths.removableMedia` (default `/mnt`, unchanged) instead of a hardcoded `/mnt` literal (Law 3 migration).

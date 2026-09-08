@@ -103,12 +103,14 @@ function eventsToView(
   meta: Record<string, unknown>,
 ): ResultEnvelope {
   return contract("list", title, {
+    ...(meta.start_date ? { start_date: meta.start_date } : {}),
     items: events.map((e) => ({
       kind: "event",
       id: `${e.date}|${e.startTime ?? "all-day"}|${e.summary}`,
       label: e.summary,
       time: e.allDay ? "all-day" : (e.startTime ?? ""),
       date: e.date,
+      ...(e.endTime ? {end_time:e.endTime} : {}),
       ...(e.location ? { location: e.location } : {}),
     })),
   }, { ...meta, source: "hwc_calendar" });
@@ -161,10 +163,8 @@ export async function khalList(start: string, end: string): Promise<CalendarEven
     "--format", "{start-time}|{end-time}|{title}|{location}",
     start,
     end,
-  ]);
-  if (exitCode !== 0 && stderr) {
-    log.warn("khal list failed", { stderr, exitCode });
-  }
+  ], { timeout: 3500 });
+  if (exitCode !== 0) throw new Error(`khal list failed: ${stderr}`);
   return parseKhalOutput(stdout);
 }
 
@@ -347,16 +347,11 @@ export function calendarTools(): ToolDef[] {
             }
 
             if (range === "week") {
-              const bin = await khalBin();
-              const { stdout, stderr, exitCode } = await runBin(bin, [
-                ...khalConfigArgs(),
-                "list",
-                "--format", "{start-time}|{end-time}|{title}|{location}",
-                "today",
-                "week",
-              ]);
-              if (exitCode !== 0 && stderr) log.warn("khal list week failed", { stderr });
-              const events = parseKhalOutput(stdout);
+              const startDate = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+              const end = new Date(`${startDate}T12:00:00Z`);
+              end.setUTCDate(end.getUTCDate() + 6);
+              const endDate = end.toISOString().slice(0,10);
+              const events = await khalList(startDate, endDate);
               const byDate: Record<string, CalendarEvent[]> = {};
               for (const ev of events) {
                 if (!byDate[ev.date]) byDate[ev.date] = [];
@@ -366,7 +361,7 @@ export function calendarTools(): ToolDef[] {
                 status: "ok",
                 message: `${events.length} event${events.length !== 1 ? "s" : ""} this week`,
                 data: { range: "week", timezone: tz, event_count: events.length, by_date: byDate, events },
-                view: eventsToView(events, "This Week", { range: "week", timezone: tz, event_count: events.length }),
+                view: eventsToView(events, "Next 7 days", { range: "week", start_date: startDate, timezone: tz, event_count: events.length }),
               };
             }
 
