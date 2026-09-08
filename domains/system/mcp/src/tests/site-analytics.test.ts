@@ -24,3 +24,10 @@ it("failed analytics remains a failure",async()=>{
  const query=async()=>({exitCode:1,stderr:"unavailable",stdout:""});
  expect((await siteAnalyticsTools(id,"umami",query)[0].handler({})).status).toBe("error");
 });
+
+it("parses PostgreSQL multiline aggregate output and command tags",async()=>{
+ const query=async()=>({exitCode:0,stderr:"",stdout:'BEGIN\nSET\n{"visits":86,"pageviews":109,"previous_visits":79,"pages":[{"url_path":"/","views":21},\n {"url_path":"/contact/","views":7}]}\nCOMMIT\n'});
+ const result=await siteAnalyticsTools(id,"umami",query)[0].handler({});
+ expect(result.status).toBe("ok");
+ expect(result.view!.data).toMatchObject({greeting:"86 visits · 109 page views"});
+});

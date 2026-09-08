@@ -31,8 +31,8 @@ export function siteAnalyticsTools(websiteId: string, database: string, query: Q
         const result = await query(sql,database,{timeout:4000});
         if (result.exitCode !== 0) throw Error("query failed");
         // psql -q suppresses transaction tags; tolerate existing executor's command tags.
-        const raw = result.stdout.split("\n").find(line => line.trim().startsWith("{"));
-        if (!raw) throw Error("missing result");
+        const raw = result.stdout.split("\n")
+          .filter(line => !["BEGIN", "SET", "COMMIT"].includes(line.trim())).join("\n");
         const data = JSON.parse(raw);
         if (![data.visits,data.pageviews,data.previous_visits].every(n=>Number.isInteger(n)&&n>=0) || !Array.isArray(data.pages))
           throw Error("invalid aggregate");

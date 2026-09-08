@@ -41,6 +41,9 @@ domains/system/
 
 ## Changelog
 
+- Parse complete multiline PostgreSQL analytics JSON; live verification exposed
+  embedded newlines in the top-pages aggregate.
+
 - Workbench daily/business views: bounded urgent/review mail digest with verified
   inbox membership, explicit seven-day khal range, and read-only Umami aggregates.
   The configured Umami website ID/database are passed to the gateway by Nix.
