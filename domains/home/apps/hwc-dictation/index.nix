@@ -75,8 +75,8 @@ in {
         Environment = "PATH=${lib.makeBinPath [ app.osd-gtk4 pkgs.hyprland pkgs.wtype pkgs.wl-clipboard pkgs.libnotify pkgs.pulseaudio ]}";
         UMask = "0077";
         Restart = "no";
-        # Allow the daemon's five-second drain to finish before systemd kills it.
-        TimeoutStopSec = 7;
+        # Allow the five-second engine drain and bounded OSD drain before group kill.
+        TimeoutStopSec = 10;
         KillMode = "control-group";
       };
       Install.WantedBy = [ "graphical-session.target" ];
