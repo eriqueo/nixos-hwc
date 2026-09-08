@@ -495,6 +495,13 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- Parse complete multiline PostgreSQL analytics JSON; live verification exposed
+  embedded newlines in the top-pages aggregate.
+
+- Workbench daily/business views: bounded urgent/review mail digest with verified
+  inbox membership, explicit seven-day khal range, and read-only Umami aggregates.
+  The configured Umami website ID/database are passed to the gateway by Nix.
+
 - **2026-08-29** — `hwc_today action=board` accepts an optional validated
   `limit` (1–100). The default workbench behavior is unchanged; Morning Briefing
   uses expanded depth to support progressive disclosure and a real Explore path.
@@ -650,6 +657,16 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **2026-04-02**: Root podman fix, parameter validation, `.mcp.json` registration, Phase 1-3 foundation.
 
 ## Structure
+
+`src/src/tools/site-analytics.ts` reads only seven-day visits/page views and five
+page aggregates from the configured Umami website, with a fourteen-day comparison
+scan and a four-second command deadline. It uses existing peer-authenticated
+PostgreSQL access; no new secret or caller-supplied SQL is exposed.
+`mail-triage.ts` adds `action=digest`: eight urgent/review items, explicit overflow,
+and the cached triage timestamp. Four notmuch reads run concurrently with 3.5-second
+deadlines. An empty inbox removes cached cards; command failure returns an error.
+`calendar.ts` returns `start_date` for seven consecutive days so empty days render.
+Tests in `src/tests/` exercise registered tools and their failure boundaries.
 
 ```
 domains/system/mcp/

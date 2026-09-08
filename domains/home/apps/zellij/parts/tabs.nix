@@ -3,7 +3,7 @@
 let
   # Application facts arrive through one versioned, system-independent input.
   registryHubs = hubRegistry.hubs;
-  orderedHubs = lib.sort (a: b: a.deploymentOrder < b.deploymentOrder) registryHubs;
+  orderedHubs = lib.sort (a: b: a.deploymentOrder < b.deploymentOrder) (lib.filter (hub: hub.defaultTab) registryHubs);
 
   # The target, final name, order, and launch policy are defined together.
   tools = {
@@ -28,7 +28,10 @@ let
   names = map (tab: tab.name) destinations;
   unique = xs: builtins.length xs == builtins.length (lib.unique xs);
 in
-assert lib.assertMsg (hubRegistry.schemaVersion == 1) "workbench: unsupported hub registry schema version";
+assert lib.assertMsg (hubRegistry.schemaVersion == 2) "workbench: unsupported hub registry schema version";
+assert lib.assertMsg (unique (map (hub: hub.slug) registryHubs)) "workbench: duplicate hub slug";
+assert lib.assertMsg (lib.all (hub: builtins.isBool hub.defaultTab && (!hub.landing || hub.defaultTab)) registryHubs)
+  "workbench: landing hub must be a default tab";
 assert lib.assertMsg (unique (map (hub: hub.deploymentOrder) registryHubs)) "workbench: duplicate hub deployment order";
 assert lib.assertMsg (builtins.length (lib.filter (hub: hub.landing) registryHubs) == 1)
   "workbench: exactly one landing hub is required";

@@ -12,8 +12,7 @@
  * aerc and the briefing read. Never runs Claude.
  *
  * Path is late-bound from env HWC_BRIEFING_JSON, defaulting to the real
- * pipeline output path. Missing/unparseable file or section → EMPTY-but-valid
- * result for reads; writes fail loud (a workbench write must never fake success).
+ * pipeline output path. Missing/unparseable file or failed live search → coded read failure; writes fail loud (a workbench write must never fake success).
  */
 
 import { execFile } from "node:child_process";
@@ -86,25 +85,25 @@ function bucketThreads(triage: MailTriage | null, bucket: Bucket): TriageThread[
 
 const NOTMUCH_CANDIDATES = ["notmuch", "/etc/profiles/per-user/eric/bin/notmuch"];
 
-/** Run notmuch search returning bare thread ids (no "thread:" prefix). Empty on any failure. */
+/** Run notmuch search returning bare thread ids (no "thread:" prefix). Rejects on command failure. */
 function notmuchThreadIds(query: string): Promise<Set<string>> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const tryBin = (i: number): void => {
       if (i >= NOTMUCH_CANDIDATES.length) {
-        resolve(new Set());
+        reject(new Error("notmuch binary not found"));
         return;
       }
       execFile(
         NOTMUCH_CANDIDATES[i],
         ["search", "--output=threads", query],
-        { timeout: 5000, maxBuffer: 2 * 1024 * 1024 },
+        { timeout: 3500, maxBuffer: 2 * 1024 * 1024 },
         (err, stdout) => {
           if (err && (err as NodeJS.ErrnoException).code === "ENOENT") {
             tryBin(i + 1);
             return;
           }
           if (err) {
-            resolve(new Set());
+            reject(err);
             return;
           }
           const ids = new Set<string>();
@@ -129,29 +128,29 @@ function notmuchThreadIds(query: string): Promise<Set<string>> {
  * bucket. Threads no longer in the inbox (archived/trashed since the cache
  * was written — including via this tool's own verbs) are dropped, so an
  * archive durably removes the card instead of resurrecting on refresh.
- * notmuch unavailable → cached buckets unchanged (defensive: never empty the
- * board because a shell-out failed).
+ * notmuch unavailable → coded failure; a successful empty inbox empties the board.
  */
-async function reflectLiveBuckets(
+export async function reflectLiveBuckets(
   cached: Record<Bucket, TriageThread[]>,
+  search: (query: string) => Promise<Set<string>> = notmuchThreadIds,
 ): Promise<Record<Bucket, TriageThread[]>> {
-  // thread_id → live bucket (from the triage/* tags). Only tagged threads appear.
+  // Four bounded read-only searches run together, below the gateway's 5s budget.
+  // Rejection is different from a successful empty inbox: never resurrect mail.
+  const sets = await Promise.all([
+    ...TRIAGE_BUCKETS.map(bucket => search(`tag:${triageTag(bucket)}`)),
+    search("tag:inbox AND NOT tag:trash"),
+  ]);
+  const inboxIds = sets[TRIAGE_BUCKETS.length];
   const liveBucketOf = new Map<string, Bucket>();
-  for (const bucket of TRIAGE_BUCKETS) {
-    const ids = await notmuchThreadIds(`tag:${triageTag(bucket)}`);
-    if (ids.size === 0) continue;
-    for (const id of ids) liveBucketOf.set(id, bucket as Bucket);
-  }
-
-  // Live inbox membership: a cached thread that left the inbox leaves the
-  // board. An empty set means notmuch failed (a truly empty inbox still
-  // returns the board's threads only if they match) — keep everything then.
-  const inboxIds = await notmuchThreadIds("tag:inbox AND NOT tag:trash");
-
+  TRIAGE_BUCKETS.forEach((bucket, index) => {
+    for (const id of sets[index]) liveBucketOf.set(id, bucket as Bucket);
+  });
+  const seen = new Set<string>();
   const out: Record<Bucket, TriageThread[]> = { urgent: [], review: [], noise: [] };
   for (const bucket of TRIAGE_BUCKETS) {
     for (const thread of cached[bucket as Bucket]) {
-      if (inboxIds.size > 0 && !inboxIds.has(thread.thread_id)) continue;
+      if (!inboxIds.has(thread.thread_id) || seen.has(thread.thread_id)) continue;
+      seen.add(thread.thread_id);
       const live = liveBucketOf.get(thread.thread_id) ?? (bucket as Bucket);
       out[live].push(thread);
     }
@@ -215,6 +214,7 @@ function toCard(thread: TriageThread, bucket: Bucket) {
     sender: thread.from_name,
     summary: thread.summary,
     suggested_action: thread.suggested_action,
+    urgency_reason: thread.urgency_reason,
     date: thread.date_relative,
   };
 }
@@ -227,8 +227,10 @@ function clockFromIso(iso: string | undefined): string {
   return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
-export function mailTriageTools(): ToolDef[] {
-  const briefingPath = process.env.HWC_BRIEFING_JSON || DEFAULT_BRIEFING_JSON;
+export function mailTriageTools(
+  briefingPath = process.env.HWC_BRIEFING_JSON || DEFAULT_BRIEFING_JSON,
+  search: (query: string) => Promise<Set<string>> = notmuchThreadIds,
+): ToolDef[] {
 
   return [
     {
@@ -237,7 +239,7 @@ export function mailTriageTools(): ToolDef[] {
         "Mail triage board (Triage Surface Contract). READS: action=board (default) returns a kanban of " +
         "Urgent/Review/Noise columns from the cached morning-briefing triage, re-bucketed by the live " +
         "notmuch triage/* tags and filtered to threads still in the inbox; action=summary returns a compact " +
-        "text overview. WRITES (per-card verbs, require id): action=triage-urgent|triage-review|triage-noise " +
+        "text overview; action=digest returns up to eight urgent/review threads with actions. WRITES (per-card verbs, require id): action=triage-urgent|triage-review|triage-noise " +
         "or action=move with target=<bucket> replace the thread's triage/* tag set; action=archive|trash " +
         "de-inbox the thread; action=flag-action adds the +action flag. Writes hit the same notmuch tags " +
         "aerc and the briefing read. Never runs Claude.",
@@ -247,7 +249,7 @@ export function mailTriageTools(): ToolDef[] {
           action: {
             type: "string",
             enum: [
-              "board", "summary",
+              "board", "summary", "digest",
               ...TRIAGE_BUCKETS.map((b) => `triage-${b}`),
               ...WRITE_VERBS,
             ],
@@ -300,7 +302,7 @@ export function mailTriageTools(): ToolDef[] {
         }
 
         // ── writes: {action, id[, target]} — the generic card_actions path ──
-        if (action !== "board" && action !== "summary") {
+        if (action !== "board" && action !== "summary" && action !== "digest") {
           const id = String(args.id ?? "").replace(/^thread:/, "").trim();
           if (!/^[0-9a-f]+$/i.test(id)) {
             return mcpError({
@@ -335,13 +337,17 @@ export function mailTriageTools(): ToolDef[] {
         // ── reads ──
         const triage = await loadTriage(briefingPath);
 
+        if (!triage) return mcpError({ type: "UNAVAILABLE", message: "Mail digest is unavailable. Open aerc or run mail triage." });
         // Reflect any persisted moves: re-bucket cached threads by their live
         // triage/* notmuch tag so a workbench column move survives a refresh.
-        const reflected = await reflectLiveBuckets({
+        let reflected: Record<Bucket, TriageThread[]>;
+        try { reflected = await reflectLiveBuckets({
           urgent: bucketThreads(triage, "urgent"),
           review: bucketThreads(triage, "review"),
           noise: bucketThreads(triage, "noise"),
-        });
+        }, search); } catch {
+          return mcpError({ type: "COMMAND_FAILED", message: "Cannot verify inbox membership. Open aerc or refresh." });
+        }
         const urgent = reflected.urgent;
         const review = reflected.review;
         const noise = reflected.noise;
@@ -364,6 +370,18 @@ export function mailTriageTools(): ToolDef[] {
             noise_count: noiseCount,
           },
         };
+
+        if (action === "digest") {
+          // Eight visible items, urgent first; overflow is explicit and opens in aerc.
+          const items = [...urgent.map(t => toCard(t, "urgent")),
+                         ...review.map(t => toCard(t, "review"))];
+          return { status: "ok", message: "Actionable mail", data: compact,
+            view: contract("list", "Mail needing attention", {
+              items: items.slice(0, 8), total: items.length,
+              remaining: Math.max(0, items.length - 8),
+              summary: `${urgentCount} urgent · ${reviewCount} to review · triaged ${generatedAt ?? "unknown"}`,
+            }, { generated_at: generatedAt, source: "hwc_mail_triage" }) };
+        }
 
         if (action === "summary") {
           const highlights = urgent.slice(0, 5).map((t) => t.subject);

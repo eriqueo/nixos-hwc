@@ -13,6 +13,8 @@ import { networkTools } from "./network.js";
 import { mailTools } from "./mail.js";
 import { mediaTools } from "./media.js";
 import { calendarTools } from "./calendar.js";
+import { siteAnalyticsTools } from "./site-analytics.js";
+import { psqlRaw } from "../executors/psql.js";
 import { websiteTools } from "./website.js";
 import { cmsTools } from "./cms.js";
 import { estimatorTools } from "./estimator.js";
@@ -43,6 +45,7 @@ export function allTools(config: ServerConfig): ToolDef[] {
     ...calendarTools(),
     ...tasksTools(),
     ...websiteTools(config.nixosConfigPath),
+    ...siteAnalyticsTools(config.umamiWebsiteId, config.umamiDatabase, psqlRaw),
     ...cmsTools([
       { name: "cms", path: config.cmsAppPath, description: "Heartwood CMS app (Express backend + vanilla JS frontend)" },
       { name: "calculator", path: `${config.nixosConfigPath}/domains/business/website/calculator/app`, description: "Cost calculator app (Vite + React)" },
