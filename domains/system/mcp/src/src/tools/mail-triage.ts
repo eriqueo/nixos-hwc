@@ -8,7 +8,7 @@
  *
  * WRITES are the generic workbench card_actions verbs ({action, id[,target]}):
  * triage-<bucket> / move (replace the triage/* tag set), archive, trash,
- * flag-action — all plain notmuch tag ops on `thread:<id>`, the same store
+ * mark-read, flag-action — all plain notmuch tag ops on `thread:<id>`, the same store
  * aerc and the briefing read. Never runs Claude.
  *
  * Path is late-bound from env HWC_BRIEFING_JSON, defaulting to the real
@@ -20,7 +20,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
 import { mcpError } from "../errors.js";
-import { TRIAGE_BUCKETS, triageTag } from "./mail.js";
+import { TRIAGE_BUCKETS, triageTag, mailTagActions } from "./mail.js";
 
 /** Default briefing output path (run.sh writes here, then injects .mail_triage). */
 const DEFAULT_BRIEFING_JSON =
@@ -85,8 +85,10 @@ function bucketThreads(triage: MailTriage | null, bucket: Bucket): TriageThread[
 
 const NOTMUCH_CANDIDATES = ["notmuch", "/etc/profiles/per-user/eric/bin/notmuch"];
 
-/** Run notmuch search returning bare thread ids (no "thread:" prefix). Rejects on command failure. */
-function notmuchThreadIds(query: string): Promise<Set<string>> {
+type Inbox = Map<string, Set<string>>;
+
+/** One scan, bounded at 3.5s/2MiB; never fan out per bucket under the gateway CPU quota. */
+function notmuchInbox(): Promise<Inbox> {
   return new Promise((resolve, reject) => {
     const tryBin = (i: number): void => {
       if (i >= NOTMUCH_CANDIDATES.length) {
@@ -95,7 +97,7 @@ function notmuchThreadIds(query: string): Promise<Set<string>> {
       }
       execFile(
         NOTMUCH_CANDIDATES[i],
-        ["search", "--output=threads", query],
+        ["search", "--format=json", "--output=summary", "tag:inbox AND NOT tag:trash"],
         { timeout: 3500, maxBuffer: 2 * 1024 * 1024 },
         (err, stdout) => {
           if (err && (err as NodeJS.ErrnoException).code === "ENOENT") {
@@ -106,12 +108,19 @@ function notmuchThreadIds(query: string): Promise<Set<string>> {
             reject(err);
             return;
           }
-          const ids = new Set<string>();
-          for (const line of (stdout || "").split("\n")) {
-            const id = line.trim().replace(/^thread:/, "");
-            if (id) ids.add(id);
-          }
-          resolve(ids);
+          try {
+            const rows: unknown = JSON.parse(stdout);
+            if (!Array.isArray(rows)) throw Error("Invalid notmuch summary");
+            const inbox: Inbox = new Map();
+            for (const row of rows) {
+              if (!row || typeof row.thread !== "string" || !Array.isArray(row.tags)
+                  || !row.tags.every((tag: unknown) => typeof tag === "string")) {
+                throw Error("Invalid notmuch thread/tags");
+              }
+              inbox.set(row.thread, new Set(row.tags));
+            }
+            resolve(inbox);
+          } catch (error) { reject(error); }
         },
       );
     };
@@ -132,27 +141,20 @@ function notmuchThreadIds(query: string): Promise<Set<string>> {
  */
 export async function reflectLiveBuckets(
   cached: Record<Bucket, TriageThread[]>,
-  search: (query: string) => Promise<Set<string>> = notmuchThreadIds,
+  readInbox: () => Promise<Inbox> = notmuchInbox,
+  unreadOnly = false,
 ): Promise<Record<Bucket, TriageThread[]>> {
-  // Four bounded read-only searches run together, below the gateway's 5s budget.
-  // Rejection is different from a successful empty inbox: never resurrect mail.
-  const sets = await Promise.all([
-    ...TRIAGE_BUCKETS.map(bucket => search(`tag:${triageTag(bucket)}`)),
-    search("tag:inbox AND NOT tag:trash"),
-  ]);
-  const inboxIds = sets[TRIAGE_BUCKETS.length];
-  const liveBucketOf = new Map<string, Bucket>();
-  TRIAGE_BUCKETS.forEach((bucket, index) => {
-    for (const id of sets[index]) liveBucketOf.set(id, bucket as Bucket);
-  });
+  const inbox = await readInbox();
   const seen = new Set<string>();
   const out: Record<Bucket, TriageThread[]> = { urgent: [], review: [], noise: [] };
   for (const bucket of TRIAGE_BUCKETS) {
     for (const thread of cached[bucket as Bucket]) {
-      if (!inboxIds.has(thread.thread_id) || seen.has(thread.thread_id)) continue;
+      const tags = inbox.get(thread.thread_id);
+      if (!tags || seen.has(thread.thread_id) || (unreadOnly && !tags.has("unread"))) continue;
       seen.add(thread.thread_id);
-      const live = liveBucketOf.get(thread.thread_id) ?? (bucket as Bucket);
-      out[live].push(thread);
+      // Keep the established last-bucket precedence if a thread has multiple tags.
+      const live = [...TRIAGE_BUCKETS].reverse().find(b => tags.has(triageTag(b))) as Bucket | undefined;
+      out[live ?? (bucket as Bucket)].push(thread);
     }
   }
   return out;
@@ -171,13 +173,13 @@ function verbTagOps(verb: string, target?: string): string[] | null {
       : null;
   if (verb === "move") return target ? bucketOf(target) : null;
   if (verb.startsWith("triage-")) return bucketOf(verb.slice("triage-".length));
-  if (verb === "archive") return ["+archive", "-inbox"];
-  if (verb === "trash") return ["+trash", "-inbox", "-unread"];
+  if (verb === "archive" || verb === "trash") return mailTagActions()[verb];
+  if (verb === "mark-read") return mailTagActions().read;
   if (verb === "flag-action") return ["+action"];
   return null;
 }
 
-const WRITE_VERBS = ["move", "archive", "trash", "flag-action", "retriage"] as const;
+const WRITE_VERBS = ["move", "archive", "trash", "mark-read", "flag-action", "retriage"] as const;
 
 /** Apply tag ops to thread:<id>. Resolves an error string or null on success. */
 function notmuchTagThread(id: string, ops: string[]): Promise<string | null> {
@@ -229,7 +231,7 @@ function clockFromIso(iso: string | undefined): string {
 
 export function mailTriageTools(
   briefingPath = process.env.HWC_BRIEFING_JSON || DEFAULT_BRIEFING_JSON,
-  search: (query: string) => Promise<Set<string>> = notmuchThreadIds,
+  readInbox: () => Promise<Inbox> = notmuchInbox,
 ): ToolDef[] {
 
   return [
@@ -241,7 +243,7 @@ export function mailTriageTools(
         "notmuch triage/* tags and filtered to threads still in the inbox; action=summary returns a compact " +
         "text overview; action=digest returns up to eight urgent/review threads with actions. WRITES (per-card verbs, require id): action=triage-urgent|triage-review|triage-noise " +
         "or action=move with target=<bucket> replace the thread's triage/* tag set; action=archive|trash " +
-        "de-inbox the thread; action=flag-action adds the +action flag. Writes hit the same notmuch tags " +
+        "de-inbox the thread; action=mark-read removes unread and clears it from the digest; action=flag-action adds the +action flag. Writes hit the same notmuch tags " +
         "aerc and the briefing read. Never runs Claude.",
       inputSchema: {
         type: "object",
@@ -255,7 +257,7 @@ export function mailTriageTools(
             ],
             default: "board",
             description:
-              "board/summary = reads; triage-<bucket>, move (+target), archive, trash, flag-action = per-thread writes (require id)",
+              "board/summary/digest = reads; triage-<bucket>, move (+target), archive, trash, mark-read, flag-action = per-thread writes (require id)",
           },
           id: {
             type: "string",
@@ -316,7 +318,7 @@ export function mailTriageTools(
             return mcpError({
               type: "VALIDATION_ERROR",
               message: `unknown verb or missing/invalid target for '${action}'`,
-              suggestion: `Verbs: ${TRIAGE_BUCKETS.map((b) => `triage-${b}`).join(", ")}, move (target=${TRIAGE_BUCKETS.join("|")}), archive, trash, flag-action`,
+              suggestion: `Verbs: ${TRIAGE_BUCKETS.map((b) => `triage-${b}`).join(", ")}, move (target=${TRIAGE_BUCKETS.join("|")}), archive, trash, mark-read, flag-action`,
             });
           }
           const err = await notmuchTagThread(id, ops);
@@ -345,7 +347,7 @@ export function mailTriageTools(
           urgent: bucketThreads(triage, "urgent"),
           review: bucketThreads(triage, "review"),
           noise: bucketThreads(triage, "noise"),
-        }, search); } catch {
+        }, readInbox, action === "digest"); } catch {
           return mcpError({ type: "COMMAND_FAILED", message: "Cannot verify inbox membership. Open aerc or refresh." });
         }
         const urgent = reflected.urgent;

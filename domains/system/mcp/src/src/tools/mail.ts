@@ -86,6 +86,17 @@ const JUNK_TAGS = ["important", "flagged", "starred"];
  *   - hwc_mail_triage (re-buckets cached threads by their live triage/* tag)
  * All of them derive from the taxonomy, so they cannot drift. */
 export const TRIAGE_BUCKETS: readonly string[] = TAXONOMY.triage.buckets;
+
+/** Shared named tag effects for the mail and triage transports. */
+export function mailTagActions(): Record<string, string[]> {
+  const trash = ["+trash", "-inbox", "-unread"];
+  return {
+    archive: ["+archive", "-inbox"], trash, delete: trash,
+    untrash: ["-trash", "+inbox"], spam: ["+spam", "-inbox", "-unread"],
+    unspam: ["-spam", "+inbox"], read: ["-unread"], unread: ["+unread"],
+    "clear-categories": clearAllCustomOps(),
+  };
+}
 export type TriageBucket = string;
 /** notmuch tag for a triage bucket, e.g. "urgent" → "triage/urgent". */
 export function triageTag(bucket: string): string {
@@ -679,18 +690,7 @@ export function mailTools(): ToolDef[] {
               ops = replaceTriageOps(target as TriageBucket);
               mode = `triage:${target}`;
             } else if (actionName) {
-              const actionMap: Record<string, string[]> = {
-                archive: ["+archive", "-inbox"],
-                // delete is an alias for trash (the kanban's destructive path).
-                trash: ["+trash", "-inbox", "-unread"],
-                delete: ["+trash", "-inbox", "-unread"],
-                untrash: ["-trash", "+inbox"],
-                spam: ["+spam", "-inbox", "-unread"],
-                unspam: ["-spam", "+inbox"],
-                read: ["-unread"],
-                unread: ["+unread"],
-                "clear-categories": clearAllCustomOps(),
-              };
+              const actionMap = mailTagActions();
               ops = actionMap[actionName];
               if (!ops) {
                 return mcpError({ type: "VALIDATION_ERROR", message: `Unknown action '${actionName}'. Valid: ${Object.keys(actionMap).join(", ")}`, suggestion: "Use one of the supported actions" });

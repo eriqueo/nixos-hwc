@@ -495,6 +495,12 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-09-08: Triage reads use one notmuch JSON snapshot (3.5 seconds, 2 MiB)
+  for inbox membership and live bucket tags. This reduces subprocess competition
+  with khal. Mark read clears unread and removes the thread from the digest;
+  the full board retains read inbox threads. Archive/Trash reuse `mail.ts` tag
+  policy. Writes stay outside automatic replay.
+
 - Parse complete multiline PostgreSQL analytics JSON; live verification exposed
   embedded newlines in the top-pages aggregate.
 
@@ -663,8 +669,9 @@ page aggregates from the configured Umami website, with a fourteen-day compariso
 scan and a four-second command deadline. It uses existing peer-authenticated
 PostgreSQL access; no new secret or caller-supplied SQL is exposed.
 `mail-triage.ts` adds `action=digest`: eight urgent/review items, explicit overflow,
-and the cached triage timestamp. Four notmuch reads run concurrently with 3.5-second
-deadlines. An empty inbox removes cached cards; command failure returns an error.
+and the cached triage timestamp. One notmuch JSON snapshot supplies membership
+and tags within 3.5 seconds and 2 MiB; failure returns a coded error. An empty
+inbox removes cached cards. Only the digest filters read threads.
 `calendar.ts` returns `start_date` for seven consecutive days so empty days render.
 Tests in `src/tests/` exercise registered tools and their failure boundaries.
 
