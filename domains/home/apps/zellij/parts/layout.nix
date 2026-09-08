@@ -37,8 +37,8 @@ let
 in
 {
   workbenchKdl = ''
-    // Flat tab set — peer TUIs, NONE mounted in-process. Every workbench HUB is
-    // its own tab (`workbench --hub <id>`), and each TOOL is its own tab; uniform
+    // Flat tab set — peer TUIs, NONE mounted in-process. Every Workbench hub
+    // with defaultTab has its own tab (`workbench --hub <id>`), and each TOOL is its own tab; uniform
     // whether a tab is a hub-page or a tool. The old single multi-hub "home" tab
     // is gone. Navigate with the meta-leader then a jump key, or Ctrl+j/k.
     layout {

@@ -283,6 +283,9 @@ in
 
         # CMS app path for hwc_cms_* tools
         HWC_CMS_APP_PATH = cmsAppPath;
+        # Application-owned Umami identity; read-only aggregate tool uses peer auth.
+        HWC_UMAMI_WEBSITE_ID = config.hwc.business.umami.websiteId;
+        HWC_UMAMI_DATABASE = config.hwc.business.umami.databaseName;
 
         # Canonical mail taxonomy (categories/flags/triage buckets) for
         # hwc_mail — store path, rebuilt with the config (see let-binding).

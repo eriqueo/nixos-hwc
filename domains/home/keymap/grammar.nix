@@ -184,7 +184,6 @@ rec {
     { key = "h"; intent = "hub-hwc";    desc = "HWC";    target = "hub:hwc"; }
     { key = "r"; intent = "hub-crm";    desc = "CRM";    target = "hub:crm"; }
     { key = "x"; intent = "hub-datax";  desc = "DataX";  target = "hub:datax"; }
-    { key = "v"; intent = "hub-server"; desc = "Server"; target = "hub:server"; }
     { key = "b"; intent = "hub-brief";  desc = "Brief";  target = "hub:brief"; }
     { key = "R"; intent = "hub-refinery"; desc = "Refinery"; target = "hub:refinery"; }
     { key = "i"; intent = "hub-mail"; desc = "Inbox (Workbench)"; target = "hub:mail"; }

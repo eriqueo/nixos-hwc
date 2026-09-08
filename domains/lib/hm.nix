@@ -13,6 +13,14 @@
 { lib }:
 
 rec {
+  # Runtime htpasswd selection shared by todui and the CalDAV/CardDAV clients.
+  # Return argv: callers serialize as shell arguments or vdirsyncer JSON.
+  # Read only the configured user's entry and preserve colons in the password.
+  radicalePasswordArgs = { username, secretPath, awk ? "awk" }: [
+    awk "-F:" "-v" "u=${username}"
+    "$1==u{match($0,/:/);print substr($0,RSTART+1)}" secretPath
+  ];
+
   # True when evaluated inside nixos-rebuild (HM-as-module) on an HWC host.
   isNixOSHost = osConfig: osConfig ? hwc;
 

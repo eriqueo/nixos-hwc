@@ -18,7 +18,13 @@
 # calendar its own Radicale principal; explicit scoping is the pragmatic fix.)
 # The password is field 2+ of the agenix htpasswd secret shared with the server.
 
-{ url, username, secretPath, dataDir }:
+{ lib, url, username, secretPath, dataDir }:
+
+let
+  passwordArgs = (import ../../../lib/hm.nix { inherit lib; }).radicalePasswordArgs {
+    inherit username secretPath;
+  };
+in
 
 ''
   [pair calendar_radicale]
@@ -35,13 +41,8 @@
   type = "caldav"
   url = "${url}"
   username = "${username}"
-  # Extract THIS user's password from the (now multi-user) htpasswd, by username:
-  # awk picks the `${username}:…` line and prints everything after the first
-  # colon (colon-safe). Keyed by username so the calendar (cal) and tasks (eric)
-  # pull their own line from the shared file. Quote-free awk program so it
-  # survives the nix→vdirsyncer→awk layers; runs directly (no shell) — gawk is on
-  # the vdirsyncer service PATH (parts/service.nix).
-  password.fetch = ["command", "awk", "-F:", "-v", "u=${username}", "$1==u{match($0,/:/);print substr($0,RSTART+1)}", "${secretPath}"]
+  # Same user-scoped selector as todui. gawk is on the sync service PATH.
+  password.fetch = ${builtins.toJSON ([ "command" ] ++ passwordArgs)}
   item_types = ["VEVENT"]
 
   [storage calendar_radicale_local]

@@ -16,6 +16,7 @@
 
 let
   cfg = config.hwc.home.apps.todui;
+  hmLib = import ../../../lib/hm.nix { inherit lib; };
 
   # Follow the enabled tasks backend (same HM eval as hwc.mail.tasks). iCloud
   # CalDAV died 2026-06-11; Radicale is the backend. Falls back to the generic
@@ -71,7 +72,11 @@ in
       radicale.url = lib.optionalString radicaleOn radicaleUrl;
       radicale.username = lib.optionalString radicaleOn radicaleUser;
       radicale.passwordCommand =
-        lib.optionalString radicaleOn "cut -d: -f2- ${radicalePwPath}";
+        lib.optionalString radicaleOn (lib.escapeShellArgs (hmLib.radicalePasswordArgs {
+          username = radicaleUser;
+          secretPath = radicalePwPath;
+          awk = "${pkgs.gawk}/bin/awk";
+        }));
 
       palette = paletteColors;
       extraRuntimePackages = [ pkgs.khal pkgs.vdirsyncer ];
