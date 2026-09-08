@@ -409,11 +409,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1788848626,
-        "narHash": "sha256-DFPD5MH9kFb+l3TjRPoIz2iAp+yR/nu1dhh+3Yv6IFM=",
+        "lastModified": 1788885259,
+        "narHash": "sha256-i1/ajIOVsYLd/J2wSueXx0BKq70hodyYIwxce0MM9lk=",
         "owner": "eriqueo",
         "repo": "hwc-dictation",
-        "rev": "f1ceee7f90f241f027e2d41577e0965dc4ac5c8b",
+        "rev": "0b661987f389d7dbd918fe75e4d4fcf6ea1a5fbd",
         "type": "github"
       },
       "original": {
