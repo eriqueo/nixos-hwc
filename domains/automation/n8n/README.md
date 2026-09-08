@@ -57,8 +57,6 @@ hwc.automation.n8n = {
     discordWebhookFrigateFile = config.age.secrets.discord-webhook-frigate.path;
     anthropicApiKeyFile = config.age.secrets.anthropic-api-key.path;
     hwcLeadsHmacFile = config.age.secrets.hwc-leads-hmac-secret.path;
-    # → HWC_EVENT_CONTROL_TOKEN, shared only with hwc-control-bot
-    eventControlTokenFile = config.age.secrets.hwc-control-events-token.path;
   };
 
   owner = {
@@ -133,17 +131,12 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
-- 2026-09-07: Replaced the Bozeman events Slack approval loop with curated,
-  interactive Discord cards. `home:social:weekly-events` now applies versioned,
-  deterministic relevance rules, caps selected cards at 40, routes overflow and
-  borderline candidates to `needs_review`, records append-only judgments in the
-  180-day event case ledger, and reserves each Discord delivery before the
-  effect. `home:social:event-actions` reuses the old approval workflow ID and
-  handles idempotent Add to Calendar / Ignore actions; calendar success is based
-  on the existing ICS watcher's moved-file signal. New
-  `secrets.eventControlTokenFile` exposes `HWC_EVENT_CONTROL_TOKEN` to n8n for
-  the private loopback protocol with hwc-control-bot. The obsolete event
-  aggregator is retired only after this path is exercised.
+- 2026-09-08: Event discovery, curation and calendar review moved to Event Scout
+  in the Scout monorepo (`apps/event-scout`). Removed the two event workflow
+  exports, the unused event ledger migration and n8n's event bearer mount.
+  These files remain recoverable from git history. The calendar watcher and
+  other n8n workflows are retained.
+
 - 2026-09-07: **Frigate webhook moved out of the workflow JSON, and tracked
   workflows became derived exports.** New `secrets.discordWebhookFrigateFile`
   option → `DISCORD_WEBHOOK_FRIGATE_URL` in the container env (reuses the

@@ -96,7 +96,6 @@
       discordWebhookFrigateFile = config.age.secrets.discord-webhook-frigate.path;
       anthropicApiKeyFile = config.age.secrets.nanoclaw-anthropic-key.path;
       hwcLeadsHmacFile = config.age.secrets.hwc-leads-hmac-secret.path;
-      eventControlTokenFile = config.hwc.secrets.api."hwc-control-events-token";
     };
     # Non-secret workflow configuration
     extraEnv = {

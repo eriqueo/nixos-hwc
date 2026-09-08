@@ -17,6 +17,7 @@ domains/server/
 │   └── ai/
 │       ├── brain-mcp/     # Brain MCP server (Deno) — vault CRUD + semantic search
 │       ├── brainvec/      # brainvec semantic-index ingest (vault embeddings via llama-embed)
+│       ├── event-scout/   # Local events: curated queue, Discord cards, calendar actions
 │       ├── hermes/        # Hermes Agent (Nous Research)
 │       ├── home-scout/    # Home Scout MCP + HTTP, plus five timer-driven ingests
 │       ├── hwc-control-bot/ # HWC Discord control bot (/next over the apps' control APIs)
@@ -45,6 +46,12 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+
+- 2026-09-08: Event Scout replaces the n8n event producer/action workflows. New
+  `hwc.server.native.ai.event-scout` retains the complete folder namespace;
+  private vhost and loopback port come from its module. Daily bounded discovery,
+  PostgreSQL case memory and calendar import use the Scout monorepo. The control
+  bot now derives its target URL/token from Event Scout, with no n8n dependency.
 
 - 2026-09-07: `native/ai/hwc-control-bot/` gained the Events transport target.
   It accepts bounded, bearer-authenticated card deliveries on loopback port 8789,

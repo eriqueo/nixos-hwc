@@ -51,6 +51,9 @@ domains/secrets/
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-09-08: `hwc-control-events-token` now belongs to Event Scout and the HWC
+  control bot only. Removed its n8n environment exposure; the encrypted payload
+  and standard permissions are unchanged.
 - 2026-09-07: Added `hwc-control-events-token` for the private loopback protocol
   between n8n and hwc-control-bot. It is separate from the Home Scout token so
   either trust boundary can rotate without disrupting the other. The generated
