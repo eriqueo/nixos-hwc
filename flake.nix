@@ -457,6 +457,49 @@
       '';
     in {
       # Exercise the actual laptop module wiring, not a second layout renderer.
+      # Credential checks use fake secrets; no server or real secret is accessed.
+      radicale-client-auth = let
+        home = self.homeConfigurations."eric@hwc-laptop".config;
+        fixture = pkgs.writeText "radicale-client-config.json" (builtins.toJSON {
+          command = home.programs.todui.radicale.passwordCommand;
+          username = home.programs.todui.radicale.username;
+          sync = home.xdg.configFile."vdirsyncer/config".text;
+        });
+      in pkgs.runCommand "radicale-client-auth" {
+        nativeBuildInputs = [ pkgs.python3 pkgs.gawk ];
+      } ''
+        python3 - ${fixture} <<'PY'
+        import configparser, json, pathlib, shlex, subprocess, sys
+        cfg = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        sync = configparser.RawConfigParser()
+        sync.read_string(cfg["sync"])
+        clients = [("todui", cfg["username"], cfg["command"])]
+        for name in ("tasks", "calendar", "contacts"):
+            section = sync[f"storage {name}_radicale_remote"]
+            fetch = json.loads(section["password.fetch"])
+            assert fetch.pop(0) == "command"
+            clients.append((name, json.loads(section["username"]), fetch))
+        users = sorted({user for _, user, _ in clients})
+        secret = pathlib.Path("secret fixture'quoted")
+        expected = {user: f"fixture:{i}:with spaces" for i, user in enumerate(users)}
+        secret.write_text("unrelated:other\n" + "".join(
+            f"{user}:{password}\n" for user, password in expected.items()
+        ) + "unrelated-last:other-last\n")
+        for name, user, command in clients:
+            if isinstance(command, str):
+                original = shlex.split(command)[-1]
+                command = command.replace(shlex.quote(original), shlex.quote(str(secret)))
+                result = subprocess.run(command, shell=True, capture_output=True, text=True)
+            else:
+                command[-1] = str(secret)
+                result = subprocess.run(command, capture_output=True, text=True)
+            assert result.returncode == 0, f"{name}: credential command failed"
+            assert result.stdout == expected[user] + "\n", f"{name}: wrong user's password"
+            print(f"{name}: selected only its user's complete password")
+        PY
+        touch $out
+      '';
+
       workbench-navigation = let
         home = self.homeConfigurations."eric@hwc-laptop".config;
         navigation = import ./domains/home/apps/zellij/parts/tabs.nix {
