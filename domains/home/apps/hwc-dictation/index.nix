@@ -19,6 +19,11 @@ let
       enabled = true;
       engine_policy = cfg.enginePolicy;
       # AUTO-MANAGED: app bounds 32 takes / 256 MiB, acknowledged success 24h.
+      # HWC-EXCEPTION(Law 8): recovery has no independent file-deletion timer.
+      # Justification: only the app knows which takes are protected; admission
+      # refuses capacity overflow and prunes eligible takes on startup/reserve.
+      # Plan: permanent by design; archive retention belongs to a later feature.
+      # Revocable: yes
       recovery_dir = "${config.xdg.stateHome}/hwc-dictation/recovery";
     };
     hotkey.enabled = false;
