@@ -10,8 +10,8 @@ Waybar call the same client; the daemon owns recording and transcription.
 - `whisper-cpp` owns declared model downloads. No server changes belong here.
 
 ## Structure
-- `index.nix` — options, generated app configuration with short-clip CPU optimization, launcher and user service.
+- `index.nix` — options, generated app configuration with CPU fallback settings, launcher and user service.
 
 ## Changelog
-- 2026-09-08: native browser paste, focus guard, cancellation and overlay smoke passed; selected tested base.en CPU fallback on the laptop. Activation remains pending.
+- 2026-09-08: native browser paste, focus guard, cancellation and overlay smoke passed; selected tested base.en CPU fallback on the laptop. Reduced context stays disabled after a short-speech accuracy regression. Activation remains pending.
 - 2026-09-07: prepared bounded desktop dictation deployment; activation pending app verification.

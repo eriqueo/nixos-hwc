@@ -28,8 +28,8 @@ let
       model = cfg.model;
       language = "en";
       threads = 4;
-      # Short-clip CPU benchmark: base.en, 4.75s speech in 3.06s offline.
-      context_window_optimization = true;
+      # Reduced context mistranscribed the one-second speech fixture.
+      context_window_optimization = false;
       gpu_isolation = true;
       on_demand_loading = false;
       remote_endpoint = cfg.remoteEndpoint;
