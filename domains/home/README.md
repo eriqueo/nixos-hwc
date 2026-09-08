@@ -47,6 +47,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-07: Consume Workbench registry v2: Brief first/landing; filter explicit
+  default tabs, keep Server on demand, preserve aerc and mail as distinct targets.
 - 2026-09-07: Fix todui list-deletion authentication with a user-scoped secret
   command, verified through the laptop configuration by `radicale-client-auth`.
 - 2026-09-07: Waybar's existing app structure now includes a conditional dictation launcher and a shortcut tooltip derived from Hyprland's binding record.

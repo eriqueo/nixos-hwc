@@ -91,6 +91,8 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 - todui/khalt/workbench log a missing/unread `*_KEYMAP` rather than failing silent.
 
 ## Changelog
+- 2026-09-07: Consume Workbench registry v2: Brief first/landing; filter explicit
+  default tabs, keep Server on demand, preserve aerc and mail as distinct targets.
 - 2026-09-04: Add i for the Workbench inbox and N for nightly; reject duplicate meta shortcuts while retaining R for refinery and m for aerc.
 - 2026-09-04: Use hub:/tool: destinations, retain m for aerc, and add R for refinery; unresolved destinations fail evaluation.
 

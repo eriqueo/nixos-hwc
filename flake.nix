@@ -515,7 +515,18 @@
         grammar = home.hwc.home.keymap.grammar;
         jumps = lib.filter (entry: entry ? target) grammar.meta;
         destinationFor = key: (builtins.head (lib.filter (entry: entry.key == key) jumps)).target;
+        acceptsRegistry = registry: (builtins.tryEval (builtins.deepSeq
+          (import ./domains/home/apps/zellij/parts/tabs.nix { inherit lib; hubRegistry = registry; }) true)).success;
+        registry = inputs.workbench.hubRegistry;
       in
+      assert lib.assertMsg (!acceptsRegistry (registry // { schemaVersion = 999; }))
+        "workbench check: unsupported registry schema accepted";
+      assert lib.assertMsg (!acceptsRegistry (registry // { hubs = registry.hubs ++ [ (builtins.head registry.hubs) ]; }))
+        "workbench check: duplicate registry hub accepted";
+      assert lib.assertMsg (!acceptsRegistry (registry // { hubs = map (hub: hub // { defaultTab = false; }) registry.hubs; }))
+        "workbench check: hidden landing accepted";
+      assert lib.assertMsg (builtins.head names == "brief" && focused == [ "brief" ] && !(lib.elem "server" names))
+        "workbench check: Brief must land first and Server must remain on demand";
       assert lib.assertMsg (names == map (tab: tab.name) navigation.destinations)
         "workbench check: generated tab names/order differ from navigation";
       assert lib.assertMsg (hubCommands == map (hub: hub.slug) navigation.hubTabs)
