@@ -2,7 +2,7 @@
 
 ## Purpose
 
-n8n workflow automation platform running as a Podman container. Handles alert routing, webhook processing, business integrations, curated event intake, and general workflow automation. Exposed via Cloudflare Tunnel (`n8n.heartwoodcraft.me`) for external webhook access.
+n8n workflow automation platform running as a Podman container. Handles alert routing, webhook processing, business integrations, and general workflow automation. Event Scout now owns event discovery and curation. Exposed via Cloudflare Tunnel (`n8n.heartwoodcraft.me`) for external webhook access.
 
 ## Boundaries
 
