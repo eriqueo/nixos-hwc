@@ -495,6 +495,11 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-09-08: Restrict the triage snapshot to its cached thread IDs (maximum
+  512, validated as hex). Full-inbox JSON still caused calendar timeouts under
+  overlapping reads; selected-thread queries preserve membership/tag authority
+  while avoiding unrelated inbox work. Empty triage does not run notmuch.
+
 - 2026-09-08: Triage reads use one notmuch JSON snapshot (3.5 seconds, 2 MiB)
   for inbox membership and live bucket tags. This reduces subprocess competition
   with khal. Mark read clears unread and removes the thread from the digest;
@@ -670,7 +675,8 @@ scan and a four-second command deadline. It uses existing peer-authenticated
 PostgreSQL access; no new secret or caller-supplied SQL is exposed.
 `mail-triage.ts` adds `action=digest`: eight urgent/review items, explicit overflow,
 and the cached triage timestamp. One notmuch JSON snapshot supplies membership
-and tags within 3.5 seconds and 2 MiB; failure returns a coded error. An empty
+and tags for at most 512 cached thread IDs within 3.5 seconds and 2 MiB;
+invalid identities, overflow or command failure return a coded error. An empty
 inbox removes cached cards. Only the digest filters read threads.
 `calendar.ts` returns `start_date` for seven consecutive days so empty days render.
 Tests in `src/tests/` exercise registered tools and their failure boundaries.

@@ -22,7 +22,7 @@ domains/system/
 ├── mcp/                  # HWC Infrastructure MCP Server (25 tools, 5 resources)
 │   ├── index.nix         # NixOS module, systemd service, Caddy route
 │   ├── parts/caddy.nix   # Reverse-proxy route (port 6243 → 6200)
-│   └── src/              # TypeScript source; bounded mail inbox snapshot and shared tag actions
+│   └── src/              # TypeScript source; bounded selected-thread mail snapshot and shared tag actions
 └── (storage/ and users/ subdirs removed; live config uses flat users.nix
    and mounts.nix at the top level)
 ```
@@ -40,6 +40,11 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-09-08: Restrict the triage snapshot to its cached thread IDs (maximum
+  512, validated as hex). Full-inbox JSON still caused calendar timeouts under
+  overlapping reads; selected-thread queries preserve membership/tag authority
+  while avoiding unrelated inbox work. Empty triage does not run notmuch.
 
 - 2026-09-08: Mail triage uses one bounded inbox snapshot instead of four
   subprocesses competing with khal under the gateway CPU quota. Mark read uses

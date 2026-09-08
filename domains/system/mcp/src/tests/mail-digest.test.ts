@@ -22,6 +22,7 @@ describe("authoritative inbox membership", () => {
       const result = await mailTriageTools(path)[0].handler({action:"digest"});
       expect(result.status).toBe("ok");
       expect(run).toHaveBeenCalledTimes(1);
+      expect(run.mock.calls[0][1][3]).toBe("tag:inbox AND NOT tag:trash AND (thread:a)");
       expect(result.view!.data).toMatchObject({summary:expect.stringContaining("0 urgent · 1 to review")});
       expect(run.mock.calls[0][2]).toMatchObject({timeout:3500,maxBuffer:2*1024*1024});
     } finally { await rm(dir,{recursive:true,force:true}); }
@@ -52,12 +53,24 @@ describe("authoritative inbox membership", () => {
       async () => new Map([["a",new Set(["triage/urgent","triage/review","triage/noise"])]])))
       .toEqual({urgent:[],review:[],noise:[thread("a")]});
   });
+  it("rejects oversized or invalid cached identities before running notmuch", async () => {
+    run.mockReset();
+    for (const ids of [Array.from({length:513},(_,i)=>i.toString(16)), ["a OR tag:inbox"]]) {
+      await expect(reflectLiveBuckets({urgent:ids.map(thread),review:[],noise:[]})).rejects.toThrow("512 valid hexadecimal");
+    }
+    expect(run).not.toHaveBeenCalled();
+  });
+  it("empty triage requires no subprocess", async () => {
+    run.mockReset();
+    expect(await reflectLiveBuckets({urgent:[],review:[],noise:[]})).toEqual({urgent:[],review:[],noise:[]});
+    expect(run).not.toHaveBeenCalled();
+  });
   it("does not resurrect mail from a successful empty inbox", async () => {
     expect(await reflectLiveBuckets({urgent:[thread("a")], review:[], noise:[]}, async () => new Map()))
       .toEqual({urgent:[],review:[],noise:[]});
   });
   it("fails when live membership cannot be read", async () => {
-    await expect(reflectLiveBuckets({urgent:[],review:[],noise:[]}, async () => {throw Error("offline")}))
+    await expect(reflectLiveBuckets({urgent:[thread("a")],review:[],noise:[]}, async () => {throw Error("offline")}))
       .rejects.toThrow("offline");
   });
   it("wires digest reads, caps at eight, keeps urgent first and deduplicates", async () => {

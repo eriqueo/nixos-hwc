@@ -88,7 +88,7 @@ const NOTMUCH_CANDIDATES = ["notmuch", "/etc/profiles/per-user/eric/bin/notmuch"
 type Inbox = Map<string, Set<string>>;
 
 /** One scan, bounded at 3.5s/2MiB; never fan out per bucket under the gateway CPU quota. */
-function notmuchInbox(): Promise<Inbox> {
+function notmuchInbox(ids: readonly string[]): Promise<Inbox> {
   return new Promise((resolve, reject) => {
     const tryBin = (i: number): void => {
       if (i >= NOTMUCH_CANDIDATES.length) {
@@ -97,7 +97,8 @@ function notmuchInbox(): Promise<Inbox> {
       }
       execFile(
         NOTMUCH_CANDIDATES[i],
-        ["search", "--format=json", "--output=summary", "tag:inbox AND NOT tag:trash"],
+        ["search", "--format=json", "--output=summary",
+          `tag:inbox AND NOT tag:trash AND (${ids.map(id => `thread:${id}`).join(" OR ")})`],
         { timeout: 3500, maxBuffer: 2 * 1024 * 1024 },
         (err, stdout) => {
           if (err && (err as NodeJS.ErrnoException).code === "ENOENT") {
@@ -141,10 +142,19 @@ function notmuchInbox(): Promise<Inbox> {
  */
 export async function reflectLiveBuckets(
   cached: Record<Bucket, TriageThread[]>,
-  readInbox: () => Promise<Inbox> = notmuchInbox,
+  readInbox: (ids: readonly string[]) => Promise<Inbox> = notmuchInbox,
   unreadOnly = false,
 ): Promise<Record<Bucket, TriageThread[]>> {
-  const inbox = await readInbox();
+  // Only cached threads can appear on this surface. Scanning the entire inbox
+  // starves khal under the gateway CPU quota. Bound argv/query work at 512 IDs;
+  // overflow or invalid cache identity fails visibly, never falls back to all mail.
+  const ids = [...new Set(TRIAGE_BUCKETS.flatMap(bucket =>
+    cached[bucket as Bucket].map(thread => thread.thread_id)))];
+  if (ids.length > 512 || ids.some(id => typeof id !== "string" || !/^[0-9a-f]{1,64}$/.test(id))) {
+    throw Error("Mail triage requires at most 512 valid hexadecimal thread IDs");
+  }
+  if (ids.length === 0) return {urgent: [], review: [], noise: []};
+  const inbox = await readInbox(ids);
   const seen = new Set<string>();
   const out: Record<Bucket, TriageThread[]> = { urgent: [], review: [], noise: [] };
   for (const bucket of TRIAGE_BUCKETS) {
@@ -231,7 +241,7 @@ function clockFromIso(iso: string | undefined): string {
 
 export function mailTriageTools(
   briefingPath = process.env.HWC_BRIEFING_JSON || DEFAULT_BRIEFING_JSON,
-  readInbox: () => Promise<Inbox> = notmuchInbox,
+  readInbox: (ids: readonly string[]) => Promise<Inbox> = notmuchInbox,
 ): ToolDef[] {
 
   return [
