@@ -43,9 +43,6 @@ let
       echo "HWC_LEADS_HMAC_SECRET=$(cat ${cfg.secrets.hwcLeadsHmacFile})" >> ${secretsEnvFile}
     ''}
 
-    ${lib.optionalString (cfg.secrets.eventControlTokenFile != null) ''
-      echo "HWC_EVENT_CONTROL_TOKEN=$(cat ${cfg.secrets.eventControlTokenFile})" >> ${secretsEnvFile}
-    ''}
   '';
 
   # Every secret this unit feeds into the container, in one list. The env-file
@@ -58,7 +55,6 @@ let
     cfg.secrets.discordWebhookFrigateFile
     cfg.secrets.anthropicApiKeyFile
     cfg.secrets.hwcLeadsHmacFile
-    cfg.secrets.eventControlTokenFile
   ];
 
   # Check if any secrets are configured

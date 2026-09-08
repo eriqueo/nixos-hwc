@@ -2,7 +2,7 @@
 #
 # HWC control bot — one private Discord control surface (`/next`) over the
 # HWC apps' typed control APIs, plus curated event cards whose actions cross
-# into n8n. It owns no business state and no database: every action crosses
+# into Event Scout. It owns no business state and no database: every action crosses
 # the owning service's API, keyed by the Discord interaction id, and lands in
 # that service's ledger.
 #
@@ -56,9 +56,9 @@ let
   crmControlTokenFile = "/run/agenix/${toString crm.controlTokenSecretRef}";
   homeScout = config.hwc.server.ai.homeScout;
   homeControlTokenFile = "/run/agenix/${toString homeScout.controlTokenSecret}";
-  n8n = config.hwc.automation.n8n;
+  eventScout = config.hwc.server.native.ai.event-scout or { enable = false; };
   eventControlTokenFile =
-    config.hwc.secrets.api.${toString cfg.targets.events.controlTokenSecret} or "";
+    config.hwc.secrets.api.${eventScout.controlTokenSecret} or "";
   targets =
     lib.optionalAttrs cfg.targets.leadScout {
       lead = {
@@ -93,7 +93,7 @@ let
     }
     // lib.optionalAttrs cfg.targets.events.enable {
       events = {
-        url = "http://127.0.0.1:${toString n8n.port}";
+        url = "http://127.0.0.1:${toString eventScout.port}";
         tokenFile = eventControlTokenFile;
         channelId = cfg.targets.events.channelId;
         cardPort = cfg.targets.events.cardPort;
@@ -105,7 +105,7 @@ let
     ++ lib.optional cfg.targets.researchScout.enable "research-scout.service"
     ++ lib.optional cfg.targets.crm.enable "hwc-crm.service"
     ++ lib.optional cfg.targets.homeScout.enable "home-scout.service"
-    ++ lib.optional cfg.targets.events.enable "podman-n8n.service";
+    ++ lib.optional cfg.targets.events.enable "event-scout.service";
 
   # Deterministic systemd restart delays plus 0–5 s of jitter, so a Discord
   # outage does not restart every Gateway client in lock-step.
@@ -167,21 +167,16 @@ in
     };
 
     targets.events = {
-      enable = lib.mkEnableOption "the curated Discord event-card adapter backed by n8n";
+      enable = lib.mkEnableOption "the curated Discord event-card adapter backed by Event Scout";
       channelId = lib.mkOption {
         type = lib.types.strMatching "^[0-9]{17,20}$";
         default = "1545506587815313560";
         description = "Discord channel snowflake for curated event cards.";
       };
-      controlTokenSecret = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Agenix secret name for the n8n/event-card bearer token.";
-      };
       cardPort = lib.mkOption {
         type = lib.types.port;
         default = 8789;
-        description = "Loopback port for authenticated event-card delivery from n8n.";
+        description = "Loopback port for authenticated event-card delivery from Event Scout.";
       };
     };
 
@@ -336,15 +331,14 @@ in
       {
         assertion =
           !cfg.targets.events.enable
-          || (n8n.enable && cfg.targets.events.controlTokenSecret != null);
-        message = "hwc-control-bot targets Events, so n8n must be enabled and targets.events.controlTokenSecret must be set.";
+          || eventScout.enable;
+        message = "hwc-control-bot targets Events, so Event Scout must be enabled.";
       }
       {
         assertion =
           !cfg.targets.events.enable
-          || cfg.targets.events.controlTokenSecret == null
-          || builtins.hasAttr cfg.targets.events.controlTokenSecret config.hwc.secrets.api;
-        message = "hwc-control-bot: Events control token secret ${toString cfg.targets.events.controlTokenSecret} has no generated agenix mount.";
+          || builtins.hasAttr eventScout.controlTokenSecret config.hwc.secrets.api;
+        message = "hwc-control-bot: Event Scout control token has no generated agenix mount.";
       }
     ];
   };

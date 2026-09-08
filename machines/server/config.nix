@@ -27,6 +27,7 @@
     ../../domains/server/native/ai/hwc-control-bot/index.nix # HWC Discord control bot (/next)
     ../../domains/server/native/ai/home-scout/index.nix # Home Scout MCP + HTTP + ingest timers
     ../../domains/server/native/ai/research-scout/index.nix # Research Scout MCP + HTTP + arXiv ingest timer
+    ../../domains/server/native/ai/event-scout/index.nix # Event Scout discovery + curated Discord events
     ../../domains/server/native/ai/brain-mcp/index.nix # Brain MCP Server (Deno)
     ../../domains/server/native/ai/brainvec/index.nix # brainvec semantic-index ingest (vault embeddings)
     ../../domains/server/native/ai/hermes/index.nix # Hermes Agent (Nous Research)
@@ -157,12 +158,15 @@
     targets.events = {
       enable = true;
       channelId = "1545506587815313560";
-      controlTokenSecret = "hwc-control-events-token";
     };
     # One post at 07:30, only when the counts moved since the last one.
     summary.enable = true;
   };
   hwc.business.crm.controlTokenSecretRef = "hwc-control-crm-token";
+  hwc.server.native.ai.event-scout = {
+    enable = true;
+    reviewerId = config.hwc.server.ai.leadScout.discordApprovalBots.hwc.allowedUserId;
+  };
   hwc.server.ai.homeScout.controlTokenSecret = "hwc-control-home-scout-token";
   hwc.server.ai.leadScout.discordApprovalBots = {
     datax-jtpros = {

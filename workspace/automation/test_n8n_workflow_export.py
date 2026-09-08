@@ -387,60 +387,10 @@ class TestTrackedArtifacts(unittest.TestCase):
                   if p.get("parameterType") == "formBinaryData"]
         self.assertEqual(len(binary), 1)
 
-    def test_weekly_events_has_one_curated_discord_path_and_no_slack_path(self):
-        path = os.path.join(WORKFLOW_DIR, "11-weekly-events.json")
-        with open(path, encoding="utf-8") as handle:
-            doc = json.load(handle)
-        nodes = {node["name"]: node for node in doc["nodes"]}
-        self.assertIn("Curate Events", nodes)
-        self.assertIn("Ingest and Judge", nodes)
-        self.assertIn("Reserve Delivery", nodes)
-        post = nodes["Post Discord Event Card"]
-        self.assertEqual(post["parameters"]["url"],
-                         "http://127.0.0.1:8789/api/events/v1/cards")
-        headers = post["parameters"]["headerParameters"]["parameters"]
-        self.assertEqual(headers, [{"name": "Authorization",
-                                    "value": "=Bearer {{ $env.HWC_EVENT_CONTROL_TOKEN }}"}])
-        self.assertNotIn("slack", json.dumps(doc).lower())
-
-    def test_event_curation_is_deterministic_bounded_and_explains_withholding(self):
-        path = os.path.join(WORKFLOW_DIR, "11-weekly-events.json")
-        with open(path, encoding="utf-8") as handle:
-            doc = json.load(handle)
-        code = next(node["parameters"]["jsCode"] for node in doc["nodes"]
-                    if node["name"] == "Curate Events")
-        harness = r'''
-const fs=require('fs'),vm=require('vm'); const code=fs.readFileSync(0,'utf8');
-const ve=(title,time,loc,desc,url='https://example.com/e')=>`BEGIN:VEVENT\nSUMMARY:${title}\nDTSTART:${time}\nDTEND:20260912T120000\nLOCATION:${loc}\nDESCRIPTION:${desc}\nURL:${url}\nEND:VEVENT`;
-const adult=ve('Adults Only 21+ Party','20260912T210000','Downtown Brewery','explicit adults only');
-const many=Array.from({length:45},(_,i)=>ve(`Family Workshop ${i}`,`20260912T${String(10+Math.floor(i/6)).padStart(2,'0')}${String((i%6)*10).padStart(2,'0')}00`,`Bozeman Library Room ${i}`,'family kids workshop',`https://example.com/${i}`)).join('\n');
-const inputs=[adult+'\n'+many,many,'','',''].map(data=>({json:{data}}));
-const dates={friday:'2026-09-11',saturday:'2026-09-12',sunday:'2026-09-13'};
-const context={require,$input:{all:()=>inputs},$execution:{id:'fixture-run'},$:(name)=>({first:()=>({json:dates})}),URL,Date};
-const run=()=>vm.runInNewContext(`(()=>{${code}})()`,context).map(x=>x.json); const a=run(),b=run();
-console.log(JSON.stringify({total:a.length,selected:a.filter(x=>x.curation.decision==='selected').length,review:a.filter(x=>x.curation.decision==='needs_review').length,withheld:a.filter(x=>x.curation.decision==='withheld').map(x=>x.title),stable:a.map(x=>x.fingerprint).join()===b.map(x=>x.fingerprint).join(),capReason:a.some(x=>x.curation.reasons.includes('held by the 40-card per-run limit'))}));
-'''
-        result = subprocess.run(["node", "-e", harness], input=code, text=True,
-                                capture_output=True, check=True)
-        observed = json.loads(result.stdout)
-        self.assertEqual(observed["total"], 46)  # duplicate source copies collapse
-        self.assertEqual(observed["selected"], 40)
-        self.assertEqual(observed["review"], 5)
-        self.assertEqual(observed["withheld"], ["Adults Only 21+ Party"])
-        self.assertTrue(observed["stable"])
-        self.assertTrue(observed["capReason"])
-
-    def test_event_action_export_replaces_the_slack_socket_workflow(self):
-        path = os.path.join(WORKFLOW_DIR, "13-weekly-event-actions.json")
-        with open(path, encoding="utf-8") as handle:
-            doc = json.load(handle)
-        self.assertEqual(doc["id"], "dS9FFDOrYH7NPsMx")
-        self.assertEqual(doc["name"], "home:social:event-actions")
-        self.assertNotIn("slack", json.dumps(doc).lower())
-        webhook_paths = {node["parameters"].get("path") for node in doc["nodes"]
-                         if node["type"] == "n8n-nodes-base.webhook"}
-        self.assertEqual(webhook_paths,
-                         {"hwc-events-control", "hwc-events-control-health"})
+    def test_events_are_owned_by_event_scout_not_workflow_exports(self):
+        for name in ("11-weekly-events.json", "13-weekly-event-actions.json"):
+            self.assertFalse(os.path.exists(os.path.join(WORKFLOW_DIR, name)),
+                             "Event Scout owns event discovery and review")
 
 
 if __name__ == "__main__":
