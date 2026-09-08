@@ -109,8 +109,8 @@ Bump `version` + both hashes in `parts/package.nix`.
 
 - 2026-09-08: DX2 now reads `/run/agenix/pi-dx1-api-key`, matching the live
   endpoint's accepted credential, and uses the endpoint's advertised `llm`
-  model slug (`dx2/llm`). The old DX2 secret remains provisioned pending
-  separate removal after the live Pi probe passes.
+  model slug (`dx2/llm`). Removed the superseded dedicated DX2 secret after
+  the live Pi probe passed.
 - 2026-09-01: Added the **DX2** provider — `dx2.enable` (on by default),
   `dx2.baseUrl` `https://dx2.datax.to/v1`, key via `!cat
   /run/agenix/dx2-api-key` off
