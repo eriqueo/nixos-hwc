@@ -51,7 +51,18 @@ let
       app_paste_keys = { t3code = "ctrl+v"; chromium-browser = "ctrl+v"; kitty = "ctrl+shift+v"; };
       notification = { on_transcription = false; };
     };
-    osd = { enabled = true; frontend = "gtk4"; theme_file = toString paletteFile; };
+    osd = {
+      enabled = true;
+      frontend = "gtk4";
+      theme_file = toString paletteFile;
+      # Permanent desktop layout: fixed corner margins stay on the selected
+      # output. Centered fractional placement uses the first monitor's height,
+      # which placed the panel below the shorter external display.
+      position = "top-right";
+      margin_px = 64;
+      width_px = 480;
+      height_px = 80;
+    };
   };
   configFile = toml.generate "hwc-dictation.toml" settings;
   launcher = pkgs.writeShellScriptBin "hwc-dictation" ''

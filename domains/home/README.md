@@ -48,6 +48,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-09: make dictation recording visible with a larger, fixed top-right panel; remove dependence on mismatched monitor heights in the desktop layout.
 - 2026-09-08: activated owned dictation on the laptop; final package and native desktop checks passed. Removed the temporary clipboard dependency override and exercised live clipboard write and recording/cancellation.
 - 2026-09-07: Prepared the owned dictation app service, lifecycle Waybar status and shared Hyprland controls; removed the old shell toggle from the candidate configuration.
 - 2026-09-07: Consume Workbench registry v2: Brief first/landing; filter explicit
