@@ -64,7 +64,7 @@ EOF
 in
 {
   config = lib.mkIf cfg.enable {
-    # Directory creation handled via systemd.tmpfiles (_shared/directories.nix)
+    # Directory creation handled via systemd.tmpfiles (media/directories.nix)
 
     # Systemd service to generate config from secrets before container starts
     systemd.services.slskd-config-generator = {

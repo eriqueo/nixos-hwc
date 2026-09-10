@@ -102,8 +102,17 @@ in
       };
     };
 
-    # Ensure every save-location root exists
-    systemd.tmpfiles.rules = map (d: "d ${toString d} 0755 eric users -") outputRoots;
+    # Declares ONLY the root this service owns. The other entries in
+    # outputRoots are existing media library directories that belong to
+    # domains/media/directories.nix — `${media.root}/youtube` is shared with
+    # pinchflat, and until 2026-09-10 all three modules declared it: pinchflat
+    # as `1000 100`, this map as `eric users`. Same identity, two spellings,
+    # settled by whichever rule systemd applied last.
+    #
+    # ReadWritePaths above still covers every root, because writability is this
+    # service's concern; existence is the owner's. Adding a NEW outputRoot means
+    # adding it to directories.nix as well — it will not be created from here.
+    systemd.tmpfiles.rules = [ "d ${toString cfg.outputDirectory} 0755 eric users -" ];
 
     # Provide n8n integration script system-wide
     environment.systemPackages = [ n8nScript ];

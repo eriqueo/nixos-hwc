@@ -1,5 +1,25 @@
 # domains/media/directories.nix
-# Shared directory setup for media container services (declarative tmpfiles)
+#
+# THE SINGLE PRODUCER of /mnt directory creation for the media stack.
+#
+# Until 2026-09-10 there were two. domains/server/containers/_shared/directories.nix
+# was a near-identical copy imported directly by machines/server/config.nix, and
+# both were live: the emitted tmpfiles set carried 111 lines for 92 unique paths,
+# i.e. 17 paths declared twice. Deleting the copy was verified by building the
+# host config both ways and diffing the emitted rules — 111 lines fell to 94 with
+# the same 92 unique paths, zero missing and zero added, so the copy contributed
+# nothing but duplicates.
+#
+# Duplicates were not harmless. The two files had drifted: this one had gained
+# hot.cache, books/.audiobookshelf-metadata and podcasts, and the copy had not.
+# They also spelled the same owner two ways — `eric users` against `1000 100` —
+# which systemd resolves identically and a reader does not. Nothing broke, but
+# the next divergence would have been silent in exactly the same way.
+#
+# If you are adding a /mnt path, add it HERE. domains/system/mounts/index.nix
+# still owns the mount points themselves and the top-level library directories
+# (`media.directories`); that split is deliberate — mounts owns what the disk is,
+# this file owns what the services need inside it.
 { lib, config, ... }:
 let
   paths = config.hwc.paths;
@@ -64,6 +84,13 @@ in
         (mkDir "${mediaRoot}/books/audiobooks")
         (mkDir "${mediaRoot}/books/.audiobookshelf-metadata")
         (mkDir "${mediaRoot}/podcasts")
+        # Shared between pinchflat (downloads into it) and the youtube
+        # transcripts service (writes alongside). Both used to declare it
+        # themselves, with pinchflat saying `1000 100` and transcripts saying
+        # `eric users` — the same identity spelled two ways, resolved by
+        # whichever rule systemd applied last. A library directory that two
+        # services share belongs to neither of them.
+        (mkDir "${mediaRoot}/youtube")
       ])
 
       # Container config roots (/opt)

@@ -26,9 +26,12 @@ in
 
     # Create required directories
     {
+      # ${media.root}/youtube is NOT declared here: it is a shared library
+      # directory that the youtube transcripts service also writes to, and both
+      # modules used to declare it with different owner spellings. It now comes
+      # from domains/media/directories.nix, the single producer.
       systemd.tmpfiles.rules = [
         "d ${configPath} 0755 1000 100 -"
-        "d ${config.hwc.paths.media.root}/youtube 0755 1000 100 -"
       ];
     }
   ]);
