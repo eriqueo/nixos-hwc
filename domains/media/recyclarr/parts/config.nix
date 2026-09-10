@@ -79,6 +79,31 @@ let
         # HD-1080p prefers 1080p but falls back through 720p down to
         # DVD/SDTV so old or obscure shows (DVD-only releases) still
         # download, then upgrade automatically when 1080p appears.
+        #
+        # WEB-DL RANKS ABOVE BLURAY, AND ABOVE WEBRIP SEPARATELY.
+        #
+        # WEBDL-1080p and WEBRip-1080p used to share one `WEB-1080p` group,
+        # which made them EQUAL to Sonarr — so a WEBRip could never upgrade to
+        # a WEB-DL of the same show, no matter how much worse it was. That is
+        # the defect behind Parks and Recreation: 122 WEBRip files at 100
+        # MB/min sat there while 1.0 GB WEB-DLs of the same episodes were
+        # rejected as "equal or higher preference". Grouping qualities is for
+        # things you genuinely do not care to distinguish; these are not that.
+        #
+        # WEB-DL is first because it is the best quality-per-byte source for
+        # television: a 1080p WEB-DL of a sitcom runs ~50 MB/min against ~90
+        # for the Bluray of the same episode, off the same digital master.
+        #
+        # THE CUTOFF DELIBERATELY STAYS AT Bluray-1080p, one rank BELOW the
+        # top. Cutoff means "stop upgrading once reached", and a file at or
+        # above it is satisfied. Bluray therefore stays put instead of being
+        # chased down to WEB-DL — this library holds ~250 GB of Bluray-sourced
+        # episodes (Columbo, Band of Brothers, Jeeves and Wooster, South Park)
+        # that are large because Bluray is large, not because anything is
+        # wrong. Moving the cutoff up to WEBDL-1080p would put every one of
+        # them below cutoff and a Cutoff Unmet search would replace real
+        # picture quality with a smaller file. WEBRip and HDTV are below the
+        # cutoff and DO get upgraded, which is the intended effect.
         quality_profiles:
           - name: HD-1080p
             reset_unmatched_scores:
@@ -88,17 +113,13 @@ let
               until_quality: Bluray-1080p
               until_score: 10000
             qualities:
+              - name: WEBDL-1080p
               - name: Bluray-1080p
-              - name: WEB-1080p
-                qualities:
-                  - WEBDL-1080p
-                  - WEBRip-1080p
+              - name: WEBRip-1080p
               - name: HDTV-1080p
+              - name: WEBDL-720p
               - name: Bluray-720p
-              - name: WEB-720p
-                qualities:
-                  - WEBDL-720p
-                  - WEBRip-720p
+              - name: WEBRip-720p
               - name: HDTV-720p
               - name: SD-Fallback
                 qualities:
