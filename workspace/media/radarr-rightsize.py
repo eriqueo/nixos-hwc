@@ -291,6 +291,32 @@ def cmd_report(args, movies, profiles):
 
 
 def cmd_set_max_size(args, key):
+    """DISABLED 2026-09-09 — recyclarr owns quality definitions.
+
+    This wrote maxSize straight to the Radarr API on 2026-08-24. Recyclarr
+    reverted all twelve values on its next nightly run and kept doing so for
+    two weeks; measured 2026-09-09, every maxSize was None again. Recyclarr
+    reports the sync as successful while resetting them, so nothing surfaced.
+
+    The caps now live in the recyclarr config, generated from
+    domains/media/recyclarr/parts/config.nix, which is the single producer for
+    this endpoint. Editing them here would put two writers on one field and the
+    nightly sync would win.
+
+    --report and --apply are unaffected; only this subcommand is refused.
+    """
+    print(
+        "refused: quality definition sizes are owned by recyclarr.\n"
+        "  Edit the `quality_definition.qualities` block in\n"
+        "  domains/media/recyclarr/parts/config.nix, rebuild, then run\n"
+        "  `sudo systemctl start recyclarr-sync.service`.\n"
+        "  Writing them here is reverted by the next nightly sync.",
+        file=sys.stderr,
+    )
+    return 2
+
+
+def _cmd_set_max_size_unused(args, key):
     """Cap future grabs, one definition at a time, then read back.
 
     Written per item (PUT qualitydefinition/{id}, 202) rather than through the

@@ -22,9 +22,58 @@ let
         base_url: http://localhost:8989
         api_key: !secret sonarr_api_key
 
-        # Quality definitions from TRaSH Guides
+        # Quality definitions from TRaSH Guides, with explicit size caps.
+        #
+        # The guide's `series` data sets a MINIMUM per tier and leaves max and
+        # preferred unlimited — it gates quality with custom formats, not size.
+        # With no cap Sonarr took whatever the indexer offered: measured
+        # 2026-09-09, Parks and Recreation held 122 WEBRip-1080p files at a
+        # median 2.2 GB for a 21-minute episode (100 MB/min) while a 1.01 GB
+        # WEBDL-1080p of the same episode sat rejected in the release list.
+        #
+        # `max` is set near the p90 of what this library ALREADY holds per
+        # tier, so the cap removes outliers rather than the normal case, and
+        # `preferred` sits near the median so Sonarr picks the smaller of two
+        # acceptable releases. Both were derived from measured MB/min across
+        # 4,300 episode files, not from a general sense of a good bitrate.
+        #
+        # Every `max` below was checked against that tier's LIVE guide minimum
+        # on 2026-09-09 and clears it. A max at or under min does not cap a
+        # tier, it makes the tier ungrabbable — that is how four Radarr tiers
+        # were broken on 2026-08-24. Guide minimums at time of writing:
+        # HDTV/WEBDL/WEBRip-720p 10, Bluray-720p 17.1, HDTV/WEBDL/WEBRip-1080p
+        # 15, Bluray-1080p 50.4. Re-check them before changing any value here.
+        #
+        # Bluray-1080p Remux is deliberately left uncapped: it is not in the
+        # HD-1080p profile, so a cap there gates nothing and only risks the
+        # min/max inversion above.
         quality_definition:
           type: series
+          qualities:
+            - name: HDTV-720p
+              preferred: 28
+              max: 45
+            - name: WEBDL-720p
+              preferred: 30
+              max: 45
+            - name: WEBRip-720p
+              preferred: 30
+              max: 45
+            - name: Bluray-720p
+              preferred: 40
+              max: 55
+            - name: HDTV-1080p
+              preferred: 40
+              max: 70
+            - name: WEBDL-1080p
+              preferred: 50
+              max: 85
+            - name: WEBRip-1080p
+              preferred: 45
+              max: 70
+            - name: Bluray-1080p
+              preferred: 65
+              max: 95
 
         # Quality profiles
         # HD-1080p prefers 1080p but falls back through 720p down to
@@ -78,9 +127,55 @@ let
         base_url: http://localhost:7878
         api_key: !secret radarr_api_key
 
-        # Quality definitions from TRaSH Guides
+        # Quality definitions from TRaSH Guides, with explicit size caps.
+        #
+        # These caps were set once before, on 2026-08-24, by
+        # `workspace/media/radarr-rightsize.py --set-max-size` writing straight
+        # to the Radarr API — and recyclarr reverted every one of them on its
+        # next nightly run, because recyclarr owns this endpoint and the guide
+        # data says unlimited. Measured 2026-09-09: all twelve were back to
+        # None. The sync reports success while doing it, so nothing surfaced.
+        # That is why the caps live HERE now and not in that script; the script
+        # keeps its reporting and replacement modes, but `--set-max-size` writes
+        # to a field this file owns.
+        #
+        # Same derivation as the Sonarr block: `max` near the p90 of what the
+        # library already holds per tier, `preferred` near the median, measured
+        # over 323 movies. Checked against LIVE guide minimums on 2026-09-09 —
+        # WEBDL/WEBRip-1080p 12.5, HDTV-1080p 33.8, Bluray-1080p 50.8,
+        # Bluray-720p 25.7 — and every max clears its min.
+        #
+        # Remux-1080p (min 102, holding 215-267 MB/min) is left uncapped on
+        # purpose: it sits outside the HD-1080p profile, so it is not grabbable
+        # anyway, and a cap near its min is the inversion that broke four tiers
+        # in August.
         quality_definition:
           type: movie
+          qualities:
+            - name: HDTV-720p
+              preferred: 30
+              max: 45
+            - name: WEBDL-720p
+              preferred: 35
+              max: 55
+            - name: WEBRip-720p
+              preferred: 35
+              max: 55
+            - name: Bluray-720p
+              preferred: 45
+              max: 60
+            - name: HDTV-1080p
+              preferred: 50
+              max: 70
+            - name: WEBDL-1080p
+              preferred: 60
+              max: 90
+            - name: WEBRip-1080p
+              preferred: 55
+              max: 80
+            - name: Bluray-1080p
+              preferred: 80
+              max: 110
 
         # Quality profiles
         # Same fallback ladder as Sonarr: prefer 1080p, accept anything
