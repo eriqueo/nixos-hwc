@@ -22,7 +22,6 @@
     ../../domains/media/index.nix
     ../../domains/notifications/index.nix # Notification delivery (webhooks, CLI)
     ../../domains/gaming/index.nix # Retroarch emulation + WebDAV save sync
-    ../../domains/server/containers/_shared/directories.nix
     ../../domains/server/native/ai/lead-scout/index.nix # Lead Scout MCP + HTTP
     ../../domains/server/native/ai/hwc-control-bot/index.nix # HWC Discord control bot (/next)
     ../../domains/server/native/ai/home-scout/index.nix # Home Scout MCP + HTTP + ingest timers
