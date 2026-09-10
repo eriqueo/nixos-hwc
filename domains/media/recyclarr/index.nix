@@ -5,7 +5,10 @@
   #==========================================================================
   options.hwc.media.recyclarr = {
     enable = lib.mkEnableOption "Recyclarr *arr configuration sync";
-    image = lib.mkOption { type = lib.types.str; default = "ghcr.io/recyclarr/recyclarr:latest"; description = "Container image for Recyclarr"; };
+    # Pinned, not :latest — upstream stopped publishing a `latest` tag and the
+    # sync failed nightly from 2026-09-06 with "manifest unknown", silently
+    # freezing every custom format and quality-profile score in the *arr stack.
+    image = lib.mkOption { type = lib.types.str; default = "ghcr.io/recyclarr/recyclarr:8.7.2"; description = "Container image for Recyclarr"; };
     schedule = lib.mkOption { type = lib.types.str; default = "daily"; description = "How often to sync configurations"; };
     services = {
       sonarr = {

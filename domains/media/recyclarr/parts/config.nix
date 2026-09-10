@@ -185,7 +185,7 @@ in
       serviceConfig = {
         Type = "oneshot";
         ExecStartPre = "${generateConfigScript}";
-        ExecStart = "${pkgs.podman}/bin/podman run --rm --network=host -v ${cfgRoot}/config:/config ghcr.io/recyclarr/recyclarr:latest sync";
+        ExecStart = "${pkgs.podman}/bin/podman run --rm --network=host -v ${cfgRoot}/config:/config ${cfg.image} sync";
       };
     };
 
