@@ -37,6 +37,16 @@ in
         (mkDir "${downloadsRoot}/scripts")
       ])
 
+      # Service cache tier. Six services already wrote here — frigate, gpu,
+      # immich, jellyfin, qbittorrent, tensorrt — off a directory made by hand
+      # in 2025 that no module created, so a rebuilt machine would not have it.
+      # Only the parent is declared: each consumer makes its own subdirectory,
+      # and enumerating them here would be a second list to keep in sync with
+      # the modules that actually own them.
+      (lib.optionals (paths.hot.cache != null) [
+        (mkDir paths.hot.cache)
+      ])
+
       # Event spool + processing areas
       (lib.optionals (hotRoot != null) [
         (mkDir "${hotRoot}/events")

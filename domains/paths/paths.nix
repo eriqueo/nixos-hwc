@@ -130,10 +130,18 @@ in
         description = "Surveillance buffer (auto-derived from hot.root)";
       };
 
-      receipts = mkOption {
+      # Live service caches: frigate, gpu, immich, jellyfin, qbittorrent,
+      # tensorrt. Six services write here and the path was in no module, so a
+      # rebuilt machine would not have had it — the directory only existed
+      # because someone made it by hand in 2025. Declared 2026-09-10.
+      #
+      # Retention class: REPLACEABLE. Every consumer regenerates its own
+      # subdirectory, so this is deliberately NOT a borg source; losing it
+      # costs a rebuild of thumbnails and model caches, nothing more.
+      cache = mkOption {
         type = types.nullOr types.path;
         default = null; # Auto-derived in config section
-        description = "Receipts storage (auto-derived from hot.root)";
+        description = "Service cache tier on hot storage (auto-derived from hot.root)";
       };
     };
 
@@ -495,7 +503,7 @@ in
     # Hot storage sub-paths
     hot.downloads = mkIf (cfg.hot.root != null) (mkDefault "${cfg.hot.root}/downloads");
     hot.surveillance = mkIf (cfg.hot.root != null) (mkDefault "${cfg.hot.root}/surveillance");
-    hot.receipts = mkIf (cfg.hot.root != null) (mkDefault "${cfg.hot.root}/receipts");
+    hot.cache = mkIf (cfg.hot.root != null) (mkDefault "${cfg.hot.root}/cache");
 
     # Media sub-paths
     media.music = mkIf (cfg.media.root != null) (mkDefault "${cfg.media.root}/music");
