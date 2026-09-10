@@ -102,6 +102,16 @@ for line in lines:
         if line.split("=", 1)[1].strip() not in ("", '""'):
             line = 'url_base = ""'
             updated = True
+    # A relative value here resolves against SABnzbd's home (/config) and lands
+    # on the NVMe root disk instead of the hot pool. Force absolute.
+    elif line.startswith("download_dir = "):
+        if line.split("=", 1)[1].strip().strip('"') != "${cfg.downloadDir}":
+            line = 'download_dir = ${cfg.downloadDir}'
+            updated = True
+    elif line.startswith("complete_dir = "):
+        if line.split("=", 1)[1].strip().strip('"') != "${cfg.completeDir}":
+            line = 'complete_dir = ${cfg.completeDir}'
+            updated = True
     new_lines.append(line)
 
 if not found:

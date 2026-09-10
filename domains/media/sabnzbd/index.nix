@@ -12,6 +12,15 @@ in
     network.mode = lib.mkOption { type = lib.types.enum [ "media" "vpn" ]; default = "vpn"; description = "Network mode: 'media' for direct access, 'vpn' to route through gluetun"; };
     webPort = lib.mkOption { type = lib.types.port; default = 8081; description = "Web UI port"; };
     gpu.enable = lib.mkOption { type = lib.types.bool; default = false; description = "Enable GPU acceleration (not typically needed for SABnzbd)"; };
+    # Both of these ship RELATIVE in a stock sabnzbd.ini ("Downloads/incomplete",
+    # "Downloads/complete"), which SABnzbd resolves against its own home — i.e.
+    # /config, i.e. /opt/sabnzbd on the 468 GB NVMe root disk, not the 916 GB hot
+    # pool the /downloads mount points at. Categories override the completed path
+    # per-download, so this stayed invisible for everything categorized; the
+    # incomplete path has no category override and staged EVERY usenet download
+    # on the system disk. Absolute, and enforced on container start.
+    downloadDir = lib.mkOption { type = lib.types.str; default = "/downloads/incomplete"; description = "In-progress download directory (container path)"; };
+    completeDir = lib.mkOption { type = lib.types.str; default = "/downloads/complete"; description = "Completed download directory for uncategorized downloads (container path)"; };
     categories = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule {
         options = {
