@@ -131,9 +131,15 @@ in
 
       directories = lib.mkOption {
         type = t.listOf t.str;
+        # "downloads", "incomplete" and "blackhole" were removed 2026-09-10.
+        # All three were pre-hot/cold-split leftovers: downloads have lived on
+        # /mnt/hot since the tiers were separated, no download client watches a
+        # blackhole, and all three had been empty ever since. They survived
+        # because this list creates them unconditionally, so deleting them from
+        # disk lasted exactly until the next rebuild — the directory is not the
+        # thing that persists, this default is.
         default = [
           "movies" "tv" "music" "books" "photos"
-          "downloads" "incomplete" "blackhole"
         ];
         description = "Media subdirectories to create";
       };
@@ -189,9 +195,10 @@ in
         options = [ "defaults" "noatime" ];
       };
 
+      # transcript-text removed 2026-09-10: nothing ever wrote to it and it was
+      # always empty. transcripts.service writes /mnt/media/transcripts.
       systemd.tmpfiles.rules = [
         "d ${cfg.hot.path} 0755 root root -"
-        "d ${cfg.hot.path}/transcript-text 0755 eric users -"
       ];
     })
 
