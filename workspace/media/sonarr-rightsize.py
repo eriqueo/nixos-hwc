@@ -184,6 +184,61 @@ def profile_allows(profile, quality_name):
     return False
 
 
+def quality_rank(profile, quality_name):
+    """Position of quality_name in the profile, best = highest number.
+
+    Returns None when the quality is not in the profile at all.
+    """
+    rank = 0
+    found = None
+    for item in profile.get("items", []):
+        q = item.get("quality")
+        subs = item.get("items") or []
+        if q:
+            rank += 1
+            if q.get("name") == quality_name:
+                found = rank
+        elif subs:
+            rank += 1
+            for sub in subs:
+                sq = sub.get("quality")
+                if sq and sq.get("name") == quality_name:
+                    found = rank
+    return found
+
+
+def meets_cutoff(profile, quality_name):
+    """True if this quality already satisfies the profile's upgrade cutoff.
+
+    THIS IS THE ONE PRODUCER OF "good enough". The profile already declares it
+    — Sonarr's cutoff means "stop upgrading once reached" — so reading it here
+    keeps this tool from inventing a second, quieter definition that disagrees.
+
+    Concretely: the Sonarr HD-1080p profile ranks WEB-DL top with the cutoff one
+    rank below at Bluray-1080p, precisely so the ~250 GB of Bluray-sourced
+    episodes here are satisfied and never chased down to a smaller WEB-DL. A
+    hardcoded "skip Bluray" list here would drift from that the first time the
+    profile changed. WEBRip and HDTV sit below the cutoff and stay in scope.
+    """
+    if not profile:
+        return False
+    cutoff_id = profile.get("cutoff")
+    cutoff_name = None
+    for item in profile.get("items", []):
+        q = item.get("quality")
+        if q and q.get("id") == cutoff_id:
+            cutoff_name = q.get("name")
+        elif item.get("id") == cutoff_id:
+            cutoff_name = item.get("name")
+    if cutoff_name is None:
+        return False
+    have = quality_rank(profile, quality_name)
+    want = quality_rank(profile, cutoff_name)
+    if have is None or want is None:
+        return False
+    return have >= want
+
+
 def runtime_seconds(episode_file):
     """Seconds of video, from mediaInfo. None when it cannot be determined.
 
@@ -206,10 +261,12 @@ def runtime_seconds(episode_file):
     return secs if secs >= 120 else None
 
 
-def find_candidates(key, series_list, profiles, max_rate, min_size_gb, name_filter):
-    """Episode files over the rate cap, plus a count of what could not be rated."""
+def find_candidates(key, series_list, profiles, max_rate, min_size_gb, name_filter,
+                    include_satisfied=False):
+    """Episode files over the rate cap, plus counts of what was excluded."""
     out = []
     unrated = 0
+    satisfied = 0
     for s in series_list:
         if name_filter and name_filter.lower() not in s["title"].lower():
             continue
@@ -225,6 +282,10 @@ def find_candidates(key, series_list, profiles, max_rate, min_size_gb, name_filt
             rate = (size / MB) / (secs / 60)
             if rate <= max_rate:
                 continue
+            qname = ((f.get("quality") or {}).get("quality") or {}).get("name")
+            if not include_satisfied and meets_cutoff(profile, qname):
+                satisfied += 1
+                continue
             out.append({
                 "series": s,
                 "profile": profile,
@@ -234,7 +295,7 @@ def find_candidates(key, series_list, profiles, max_rate, min_size_gb, name_filt
                 "rate": rate,
             })
     out.sort(key=lambda c: -(c["size"] - c["seconds"] / 60 * max_rate * MB))
-    return out, unrated
+    return out, unrated, satisfied
 
 
 def episode_ids_for_file(key, cand):
@@ -321,8 +382,9 @@ def label(cand):
 
 
 def cmd_report(args, key, series_list, profiles):
-    cands, unrated = find_candidates(
-        key, series_list, profiles, args.max_rate, args.min_size, args.series
+    cands, unrated, satisfied = find_candidates(
+        key, series_list, profiles, args.max_rate, args.min_size, args.series,
+        args.include_satisfied,
     )
     if not cands:
         print(f"no file over {args.max_rate:.0f} MB/min; nothing to do")
@@ -346,14 +408,19 @@ def cmd_report(args, key, series_list, profiles):
     print(f"\nrecoverable at {args.max_rate:.0f} MB/min: {total_excess / GB:.0f} GB")
     print("This is the ARITHMETIC ceiling, not a promise — it assumes a suitable")
     print("smaller release exists for every file. Run --apply to see what resolves.")
+    if satisfied:
+        print(f"\n{satisfied} oversized files already MEET THE PROFILE CUTOFF and were left alone")
+        print("(Bluray and better — shrinking those trades picture quality for space).")
+        print("Pass --include-satisfied to rate them too.")
     if unrated:
         print(f"\n{unrated} files CANNOT VERIFY — no usable mediaInfo runtime, excluded from all counts.")
     return 0
 
 
 def cmd_apply(args, key, series_list, profiles):
-    cands, unrated = find_candidates(
-        key, series_list, profiles, args.max_rate, args.min_size, args.series
+    cands, unrated, satisfied = find_candidates(
+        key, series_list, profiles, args.max_rate, args.min_size, args.series,
+        args.include_satisfied,
     )
     if not cands:
         print("no candidates; nothing to do")
@@ -414,6 +481,8 @@ def cmd_apply(args, key, series_list, profiles):
         time.sleep(args.delay)
 
     print(f"\n{'grabbed' if args.yes else 'would grab'}: {acted}, skipped: {skipped}")
+    if satisfied:
+        print(f"{satisfied} oversized files meet the profile cutoff and were left alone.")
     if unrated:
         print(f"{unrated} files CANNOT VERIFY — no usable mediaInfo runtime, excluded.")
     if not args.yes:
@@ -439,6 +508,8 @@ def main():
     p.add_argument("--delay", type=float, default=2.0, help="seconds between indexer searches")
     p.add_argument("--shrink-ratio", type=float, default=DEFAULT_SHRINK_RATIO,
                    help="replacement must be at most this fraction of the current file")
+    p.add_argument("--include-satisfied", action="store_true",
+                   help="also rate files that already meet the profile cutoff (e.g. Bluray)")
     p.add_argument("--any-quality", action="store_true",
                    help="allow releases outside the series quality profile")
     p.add_argument("--config", default=CONFIG_XML)
