@@ -10,9 +10,6 @@
 ## Structure
 ```
 domains/server/
-├── containers/   # OCI services (mkContainer-based)
-│   ├── _shared/    # caddy / directories / network helpers (live)
-│   └── arka/       # Arka MCP Gateway (live, imported by machines/server/config.nix)
 ├── native/
 │   └── ai/
 │       ├── brain-mcp/     # Brain MCP server (Deno) — vault CRUD + semantic search
@@ -36,16 +33,17 @@ domains/server/
 ```
 
 ## Container Services
-The media/arr/torrent stack now lives entirely in `domains/media/` (containers + native splits live there). Server-domain containers retain only the Arka MCP Gateway plus the `_shared/` helpers that other domains import.
+The media/arr/torrent stack lives entirely in `domains/media/`. **This domain no longer contains any containers at all** — `containers/` is gone: Arka was removed in `1d66a10e` and the last `_shared/` file on 2026-09-10. Native services only.
 
 ## Native Services
 - Only `native/ai/jobber-mcp/` remains live, imported directly by `machines/server/config.nix`. The historical aggregator (`native/index.nix`) and all other native subdirs were dead parallel implementations and have been removed.
 
 ## Routing & Composition
-- Caddy routes live in `domains/networking/routes.nix`; container-specific defaults are in `containers/_shared/caddy.nix`.
+- Caddy routes live in `domains/networking/routes.nix`. (`containers/_shared/caddy.nix` was named here until 2026-09-10; it had been deleted in 2026-06-09.)
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-09-10: **`containers/` is gone entirely.** `_shared/directories.nix`, its last remaining file, was a near-identical copy of `domains/media/directories.nix` and both were live — this one imported straight into `machines/server/config.nix`, the other reached through `media/index.nix` — so the host emitted 111 tmpfiles lines for 92 unique paths, 17 declared twice. Deleted; `domains/media/directories.nix` is now the single producer and carries the rationale. Verified by building the host config both ways and diffing the emitted rules: 111 lines fell to 94 with the same 92 unique paths, zero missing and zero added. This also corrects three stale claims in the sections above, all of which described a tree that no longer existed: `## Structure` still listed `containers/_shared/` and `containers/arka/` (Arka was removed in `1d66a10e`), the notes still said server containers "retain only the Arka MCP Gateway plus the `_shared/` helpers", and `## Notes` still pointed at `containers/_shared/caddy.nix`, deleted on 2026-06-09. The 2026-06-09 entry below ends with "`directories.nix` remains the only live `_shared` file" — that was true when written and is left standing as the record; this entry supersedes it.
 
 - 2026-09-08: Event Scout replaces the n8n event producer/action workflows. New
   `hwc.server.native.ai.event-scout` retains the complete folder namespace;
