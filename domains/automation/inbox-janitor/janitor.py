@@ -285,6 +285,20 @@ def unique(dest_dir: Path, name: str, on_conflict: str) -> Optional[Path]:
     return dest_dir / f"{stem}_{i}{dot}{ext}"
 
 
+def _display(p: Path, cfg: dict) -> str:
+    """Log path: inbox-relative when inside, absolute when a rule DRAINS out.
+
+    A rule may name an absolute dest to move a file to its permanent PARA home
+    (pathlib makes `downloads / "/home/eric/500_media"` the absolute path). The
+    log line used a bare relative_to(inbox_root), which RAISES on exactly those
+    targets — so any drain rule crashed the run before the first file moved.
+    """
+    try:
+        return str(p.relative_to(Path(cfg["meta"]["inbox_root"])))
+    except ValueError:
+        return str(p)
+
+
 def iter_files(cfg: dict, all_mode: bool, locations: Optional[list] = None):
     """Default: loose files at downloads/ root (idempotent drain).
     --all: walk the whole downloads tree (reclassify / preview).
@@ -345,7 +359,13 @@ def republish(touched: set[Path], cfg: dict, log) -> None:
         return
     root = Path(cfg["meta"]["inbox_root"])
     for d in sorted(touched):
-        sub = str(d.relative_to(root))
+        try:
+            sub = str(d.relative_to(root))
+        except ValueError:
+            continue    # drained OUT of the inbox: not in this Syncthing folder,
+                        # so there is nothing here to rescan. Skipping is the whole
+                        # handling — raising here would abort the run after the
+                        # moves had already happened.
         req = urllib.request.Request(
             f"{url}/rest/db/scan?folder={folder}&sub={urllib.parse.quote(sub)}",
             method="POST", headers={"X-API-Key": key})
@@ -522,7 +542,7 @@ def run(cfg: dict, apply: bool, all_mode: bool, log, locations: Optional[list] =
         if target is None:
             log(f"[{dec.reason:14}] SKIP (conflict)  {m.name}")
             continue
-        log(f"[{dec.reason:14}] {m.name}  ->  {target.relative_to(Path(cfg['meta']['inbox_root']))}")
+        log(f"[{dec.reason:14}] {m.name}  ->  {_display(target, cfg)}")
         if apply:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(path), str(target))
