@@ -33,9 +33,12 @@ in
       networkMode = "media";
       gpuEnable = false;
       timeZone = config.time.timeZone or "UTC";
-      memory = "2g";
-      cpus = "1.5";
-      memorySwap = "3g";
+      # 2026-09-11: 2g was OOM-killed (cgroup) during a DataX acceptance
+      # baseline (npm ci + test run on a 2.3 GB worktree); the kill took the
+      # engine server with it and left the item "running". Host has 64 GB.
+      memory = "8g";
+      cpus = "3";
+      memorySwap = "10g";
       # The image runs as uid 1000 (`refinery`), which is eric on this host, so
       # the state dir and the vault binds keep their ownership.
       user = "1000:100";
