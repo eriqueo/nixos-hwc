@@ -42,14 +42,11 @@ let
 
   freecadGpuWrapper = pkgs.writeShellScriptBin "freecad-gpu" ''
     #!/usr/bin/env bash
-    export __NV_PRIME_RENDER_OFFLOAD=1
-    export __GLX_VENDOR_LIBRARY_NAME=nvidia
-    export __VK_LAYER_NV_optimus=NVIDIA_only
     export __GL_SHADER_DISK_CACHE=1
     export __GL_THREADED_OPTIMIZATIONS=1
     export QT_QPA_PLATFORM=xcb
     export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
-    exec ${freecadPkg}/bin/freecad "$@"
+    exec gpu-offload ${freecadPkg}/bin/freecad "$@"
   '';
 
   freecadOptimizedWrapper = pkgs.writeShellScriptBin "freecad-optimized" ''

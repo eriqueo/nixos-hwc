@@ -50,6 +50,23 @@ let
   # Detect OCI engine for CDI hinting (defaults to podman if unset per repo standard)
   usingPodman = (config.virtualisation.oci-containers.backend or "podman") == "podman";
 
+  # One producer for intentional NVIDIA PRIME offload. Hybrid sessions pin EGL
+  # to Mesa below, so an opt-in launch must remove that pin before restoring the
+  # complete NVIDIA selection vocabulary.
+  nvidiaOffload = pkgs.writeShellScriptBin "gpu-offload" ''
+    #!/usr/bin/env bash
+    if [[ $# -eq 0 ]]; then
+      echo "Usage: gpu-offload <application> [args...]" >&2
+      exit 64
+    fi
+
+    unset __EGL_VENDOR_LIBRARY_FILENAMES
+    export __NV_PRIME_RENDER_OFFLOAD=1
+    export __GLX_VENDOR_LIBRARY_NAME=nvidia
+    export __VK_LAYER_NV_optimus=NVIDIA_only
+    exec "$@"
+  '';
+
 in
 {
   #==========================================================================
@@ -278,6 +295,11 @@ in
         CUDA_CACHE_PATH = "${paths.cache}/cuda";
       } // (if cfg.nvidia.prime.enable then {
         LIBVA_DRIVER_NAME = "iHD";  # Intel iGPU does VA-API on hybrids
+        # libglvnd otherwise enumerates both vendors for ordinary Wayland EGL
+        # clients. That loads NVIDIA libraries and opens the dGPU even though
+        # Intel owns the display. Explicit offload goes through gpu-offload,
+        # which removes this pin before selecting NVIDIA.
+        __EGL_VENDOR_LIBRARY_FILENAMES = "${pkgs.mesa}/share/glvnd/egl_vendor.d/50_mesa.json";
         # VDPAU intentionally unset — VDPAU is X11/NVIDIA-era; Wayland
         # clients use VA-API. Leaving it unset prevents libvdpau-nvidia
         # from being loaded into Intel-context processes.
@@ -291,7 +313,7 @@ in
         config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver}
         libva-utils
         vdpauinfo
-      ];
+      ] ++ lib.optionals cfg.nvidia.prime.enable [ nvidiaOffload ];
 
       # NVIDIA container runtime (toolkit)
       hardware.nvidia-container-toolkit.enable = cfg.nvidia.containerRuntime;
@@ -434,26 +456,14 @@ in
           NEXT_NVIDIA_FILE="/tmp/gpu-next-nvidia"
           if [[ -f "$NEXT_NVIDIA_FILE" ]]; then
             rm "$NEXT_NVIDIA_FILE"
-            # Use nvidia-offload environment variables
-            if command -v nvidia-smi >/dev/null 2>&1; then
-              export __NV_PRIME_RENDER_OFFLOAD=1
-              export __GLX_VENDOR_LIBRARY_NAME=nvidia
-              export __VK_LAYER_NV_optimus=NVIDIA_only
-            fi
-            exec "$@"
+            exec ${nvidiaOffload}/bin/gpu-offload "$@"
           fi
 
           case "$CURRENT_MODE" in
             "performance")
               case "$1" in
                 blender|gimp|inkscape|kdenlive|obs|steam|wine|chromium|firefox|godot|krita)
-                  # Use nvidia-offload environment variables
-                  if command -v nvidia-smi >/dev/null 2>&1; then
-                    export __NV_PRIME_RENDER_OFFLOAD=1
-                    export __GLX_VENDOR_LIBRARY_NAME=nvidia
-                    export __VK_LAYER_NV_optimus=NVIDIA_only
-                  fi
-                  exec "$@"
+                  exec ${nvidiaOffload}/bin/gpu-offload "$@"
                   ;;
                 *)
                   exec "$@"
@@ -472,10 +482,7 @@ in
             echo "blender not found on PATH"
             exit 1
           fi
-          export __NV_PRIME_RENDER_OFFLOAD=1
-          export __GLX_VENDOR_LIBRARY_NAME=nvidia
-          export __VK_LAYER_NV_optimus=NVIDIA_only
-          exec blender "$@"
+          exec ${nvidiaOffload}/bin/gpu-offload blender "$@"
         '')
 
         (pkgs.writeShellScriptBin "gpu-status" ''
@@ -493,35 +500,40 @@ in
           INTEL_GPU="Intel Graphics"
           NVIDIA_GPU="NVIDIA RTX 2000 Ada"
 
+          NVIDIA_STATE="unavailable"
           ${lib.optionalString (cfg.type == "nvidia") ''
-            NVIDIA_POWER=$(nvidia-smi --query-gpu=power.draw --format=csv,noheader,nounits 2>/dev/null | head -1 || echo "0")
-            NVIDIA_TEMP=$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -1 || echo "0")
+            for device in /sys/bus/pci/devices/*; do
+              [[ "$(cat "$device/vendor" 2>/dev/null || true)" == "0x10de" ]] || continue
+              [[ "$(cat "$device/class" 2>/dev/null || true)" == 0x03* ]] || continue
+              NVIDIA_STATE=$(cat "$device/power/runtime_status" 2>/dev/null || echo "unknown")
+              break
+            done
           ''}
 
           case "$CURRENT_MODE" in
             "intel")
               ICON="iGPU"
               CLASS="intel"
-              TOOLTIP="Intel Mode: $INTEL_GPU"
+              TOOLTIP="Intel Mode: $INTEL_GPU\nNVIDIA runtime: $NVIDIA_STATE"
               ;;
             "nvidia")
               ICON="dGPU"
               CLASS="nvidia"
               ${lib.optionalString (cfg.type == "nvidia") ''
-                TOOLTIP="NVIDIA Mode: $NVIDIA_GPU\nPower: $NVIDIA_POWER W | Temp: $NVIDIA_TEMP°C"
+                TOOLTIP="NVIDIA Mode: $NVIDIA_GPU\nRuntime: $NVIDIA_STATE"
               ''}
               ;;
             "performance")
               ICON="GPU+"
               CLASS="performance"
               ${lib.optionalString (cfg.type == "nvidia") ''
-                TOOLTIP="Performance Mode: Auto-GPU Selection\nNVIDIA: $NVIDIA_POWER W | $NVIDIA_TEMP°C"
+                TOOLTIP="Performance Mode: Auto-GPU Selection\nNVIDIA runtime: $NVIDIA_STATE"
               ''}
               ;;
             *)
               ICON="iGPU"
               CLASS="intel"
-              TOOLTIP="Intel Mode (Default): $INTEL_GPU"
+              TOOLTIP="Intel Mode (Default): $INTEL_GPU\nNVIDIA runtime: $NVIDIA_STATE"
               ;;
           esac
 
