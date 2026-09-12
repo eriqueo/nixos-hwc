@@ -317,8 +317,8 @@ in
           Non-store directories appended to the service PATH. These carry the
           provider CLIs the harness drives: `claude` is an ad-hoc npm global on
           hwc-server, while `codex`, `pi` and `herdr` come from the per-user Nix
-          profile. `pi` matters as much as the others — the delegate skill runs
-          `pi --model mycloud/dx1` as a child process, not through Herdr.
+          profile. The delegate skill runs `pi --model dx2/llm` as a child
+          process, not through Herdr.
         '';
       };
     };

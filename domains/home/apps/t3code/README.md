@@ -102,10 +102,9 @@ There is no `parts/`. This module packages no source.
   `herdr` come from `/etc/profiles/per-user/eric/bin` — none of which reaches a
   systemd user service by itself. `serve.packages` supplies the Nix half and
   `serve.extraPath` the non-store half. `pi` earns its place alongside the
-  others: the `delegate` skill runs `pi --model mycloud/dx1` as a **child
-  process** and strips every `HERDR_*` variable
-  (`~/.claude/skills/delegate/scripts/delegate.py:102`), so cross-provider
-  delegation needs the binary on PATH, not a Herdr pane.
+  others: the `delegate` skill runs `pi --model dx2/llm` as a **child
+  process** and strips every `HERDR_*` variable. Cross-provider delegation
+  needs the binary on PATH, not a Herdr pane.
 
 - **`~/.t3/userdata` is CRITICAL and is in Borg.** It holds the event-sourced
   SQLite store plus the server signing key; losing the key invalidates every
@@ -156,6 +155,7 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
+- 2026-09-11: Updated the delegate route to the bounded `dx2/llm` Pi worker.
 - 2026-09-04: `hwc-xps` now overrides `desktop.electronPackage` with
   `electron_43` from the flake's locked unstable nixpkgs input. XPS remains on
   stable for its system and Home Manager package set; only this runtime crosses

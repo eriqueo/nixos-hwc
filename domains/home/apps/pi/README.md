@@ -1,8 +1,7 @@
 # hwc.home.apps.pi
 
 pi coding agent (`@earendil-works/pi-coding-agent`) pinned at **v0.80.7**,
-wired to DataX's **DX1** model as the `mycloud` provider and **DX2** as the
-`dx2` provider. Declarative
+wired to DataX's **DX2** model as a bounded worker lane. Declarative
 replacement for the imperative `setup-pi.sh` install on datax-box
 (`/home/projects/bin/pi` + hand-written `~/.pi/agent/*.json` + `.bashrc` PATH
 edits).
@@ -10,7 +9,7 @@ edits).
 ## Structure
 
 ```
-index.nix          # hwc.home.apps.pi — options + models.json/settings.json rendering
+index.nix          # options, DX2-only routing, and bounded subagent configuration
 parts/package.nix  # pinned buildNpmPackage of the pi monorepo (vendored from
                    # nixpkgs; hwc-server's stable channel has no pi-coding-agent)
 parts/guards.ts    # pi extension: tool_call guards, port of the Claude Code
@@ -22,58 +21,57 @@ parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
 
 ## Design decisions
 
-- **Split config (immutable models / seeded settings).**
+- **Split config (immutable models / reconciled settings).**
   `models.json` is a `home.file` store symlink — deterministic provider config,
   byte-identical across hosts, and pi never writes it. `settings.json` is
   **seeded then mutable** via `home.activation` (the tuxedo/freecad
   copy-if-absent pattern): pi rewrites it at runtime (`lastChangelogVersion`,
   trust decisions, UI prefs), so a store symlink would re-nag the changelog
-  every launch and drop trust state. Nix provides the initial
-  `defaultProvider`/`defaultModel`; pi owns it thereafter.
+  every launch and drop trust state. Nix replaces only the routing keys on
+  activation. Pi keeps unrelated runtime state.
 - **Secret never in the store.** `models.json` uses pi's shell-command
   indirection — `"apiKey": "!cat /run/agenix/pi-dx1-api-key"` — resolved at
   request time. The key lives in
   `domains/secrets/parts/home/pi-dx1-api-key.age` (default mount
-  root:secrets 0440; eric reads via the `secrets` group). DX2 consumes that
-  same mount because its endpoint accepts the DX1 credential.
-- **DX2 is a provider, not a second model.** A pi provider carries one
-  `baseUrl` and one `apiKey`, and DX2 is served from its own endpoint
-  (`dx2.datax.to`) while sharing DX1's credential. Its distinct base URL keeps
-  it out of `mycloud.models`. `dx2.enable` is ON, unlike `deepseek.enable`,
-  because the shared key is already provisioned.
+  root:secrets 0440; eric reads via the `secrets` group). DX2 uses that mount
+  because its endpoint accepts the existing DataX credential.
+- **Pi is the DX2 worker lane.** `models.json` declares only `dx2/llm`.
+  `settings.json` selects only that model and enforces the same scope for native
+  subagents. External Claude Code, Codex, and Cursor agent profiles are disabled.
+  Project settings or a separately invoked binary remain explicit escape hatches.
 - **DX2 reasoning levels match the endpoint.** The model advertises reasoning
   to pi and maps only `low`, `medium`, and `xhigh`, the values accepted by the
   DX2 API. Unsupported levels are hidden instead of producing retry loops.
-  Pi's mutable `defaultThinkingLevel` is currently `medium`; `Shift+Tab` or
+  Pi's mutable `defaultThinkingLevel` can select a supported level; `Shift+Tab` or
   `--thinking` can select another supported level for a session.
-- **Endpoint = the LiteLLM proxy, not the pod.** `dx1.baseUrl` is
-  `https://dx1.datax.to/v1`. This is the same client-side entry point the
-  DataX app uses; it survives DX1 moving between RunPod pods. Pointing at a
-  pod-proxy URL directly is what broke this module once already (see
-  changelog), so a `proxy.runpod.net` baseUrl now raises a warning.
+- **Endpoint = the stable proxy, not the pod.** `dx2.baseUrl` is
+  `https://dx2.datax.to/v1`. A `proxy.runpod.net` base URL raises a warning.
+- **Subagent fan-out is bounded.** The auto-managed subagent config permits two
+  concurrent children, four launches per run, eight launches per session, and
+  two active asynchronous runs. Work above a limit is rejected or queued by
+  the extension according to the limit's documented behavior.
 - **One skill tree, two harnesses.** `skillPaths` defaults to
   `~/.claude/skills`; pi implements the Agent Skills standard and reads that
   tree directly, so there is no second copy to drift. It lands in the `skills`
-  array of settings.json — the only Nix-owned key in an otherwise pi-owned
-  file, so it is merged **append-only at every activation** (jq + `cmp`,
+  array of settings.json. The skill list is merged **append-only at every activation** (jq + `cmp`,
   the same shape as claude-code's gate-hook heal) rather than seeded. Seeding
   alone would never reach a machine whose settings.json already exists.
 - **Guards are an extension, not instructions.** `parts/guards.ts` blocks
   grep/sed, confirms destructive git and `nixos-rebuild`, and refuses
   unbounded reads over 64 KB. `tool_call` fires before execution and
   `{ block: true }` means the call never runs — the model gets no vote. That
-  matters more here than under Claude Code: DX1 follows prose rules less
+  matters more here than under Claude Code: DX2 follows prose rules less
   reliably, so rules worth keeping belong in the extension, not in AGENTS.md.
   Extensions in `~/.pi/agent/extensions/` are auto-discovered, so this needs
   no settings entry.
 - **AGENTS.md is short on purpose.** `contextFile` → `parts/AGENTS.md` is
   deliberately shorter than `~/.claude/CLAUDE.md` and is *not* a copy of it.
   Always-loaded instruction volume degrades compliance across every rule, and
-  DX1 has less headroom for that than Claude. It carries only what cannot be
+  DX2 has less headroom for that than Claude. It carries only what cannot be
   enforced mechanically (guards.ts) or loaded on demand — skills, and the
   per-repo `CLAUDE.md` that pi already discovers from cwd and its ancestors.
-  Its content is DX1-shaped: halt condition, quote-the-output-before-claiming,
-  read narrowly, no JSON-literal tool args. Those four map to the observed DX1
+  Its content is small-model-shaped: halt condition, quote-the-output-before-claiming,
+  read narrowly, no JSON-literal tool args. Those four map to observed worker
   failure modes (runaway loops, phantom tool calls, compaction→fabrication,
   tool call rendered as a code block).
 - **Vendored package, not overridden.** hwc-server rides nixpkgs-stable
@@ -96,10 +94,8 @@ parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
   sees the finished answer first, then the correction turn. That is the one
   behavioural difference from a Claude Code Stop hook, and pi 0.80.7 offers no
   way to close it.
-- **Claude in pi is not covered by the Claude plan.** Anthropic gates Pro/Max
-  quota to its own clients. pi prints a warning at startup and bills a
-  third-party harness per token as extra usage. So `enabledModels` puts
-  `mycloud/dx1` first, and Claude Code stays the cheap way to run Claude.
+- **Frontier models run in their native harnesses.** Pi's enabled model ring has
+  only DX2. Claude Code and Codex retain their native subscription logins.
 
 ## Updating pi
 
@@ -112,6 +108,10 @@ Bump `version` + both hashes in `parts/package.nix`.
 
 ## Changelog
 
+- 2026-09-11: Made Pi the bounded DX2 worker lane. Removed DX1, DeepSeek, and
+  frontier models from Nix-owned routing. Added strict DX2 subagent scope,
+  disabled external frontier profiles, and capped concurrency and fan-out.
+  Activation now reconciles routing while preserving Pi-owned runtime state.
 - 2026-09-08: Declared DX2 as a reasoning model and mapped its supported
   `low`, `medium`, and `xhigh` thinking levels. Unsupported levels are hidden;
   Pi's existing `medium` default now reaches DX2 as `reasoning_effort`.
