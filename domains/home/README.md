@@ -48,6 +48,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-12: Hyprland now bridges the system-owned EGL vendor selection into Home Manager's `systemd.user.sessionVariables`, covering services started by the lingering user manager while preserving standalone-HM evaluation.
 - 2026-09-11: Blender and FreeCAD NVIDIA wrappers now consume the system-owned `gpu-offload` boundary, so intentional offload removes the hybrid session's Mesa-only EGL pin without duplicating vendor-selection variables in Home Manager.
 - 2026-09-09: make dictation recording visible with a larger, fixed top-right panel; remove dependence on mismatched monitor heights in the desktop layout.
 - 2026-09-08: activated owned dictation on the laptop; final package and native desktop checks passed. Removed the temporary clipboard dependency override and exercised live clipboard write and recording/cancellation.
