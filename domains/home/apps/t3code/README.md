@@ -19,7 +19,7 @@ design note below.
 
 ```
 index.nix   # hwc.home.apps.t3code — desktop launcher + Electron shim + desktop
-            #   entry; headless t3-serve unit; t3-update
+            #   entry; headless t3-serve unit; t3-update; DX2 handoff adapter
 README.md   # this file
 ```
 
@@ -106,6 +106,14 @@ There is no `parts/`. This module packages no source.
   process** and strips every `HERDR_*` variable. Cross-provider delegation
   needs the binary on PATH, not a Herdr pane.
 
+- **Context handoffs cross one narrow executable boundary.**
+  `t3-dx2-handoff` accepts a bounded prompt on stdin, stores it in a mode-0600
+  temporary file, and calls the shared `delegate.py` helper with Pi pinned to
+  `dx2/llm` and read-only access. It returns the helper's versioned JSON
+  envelope to T3. The T3 server owns idle policy, queuing, durable state and
+  starting the fresh frontier thread; this adapter owns only process launch.
+  The temporary prompt is deleted on every normal or error exit.
+
 - **`~/.t3/userdata` is CRITICAL and is in Borg.** It holds the event-sourced
   SQLite store plus the server signing key; losing the key invalidates every
   paired client and the store is regenerable from nothing. `~/.t3/caches` and
@@ -155,6 +163,8 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
+- 2026-09-12: Added `t3-dx2-handoff`, the read-only Pi/DX2 adapter used by
+  T3's bounded overnight context-handoff workflow.
 - 2026-09-11: Updated the delegate route to the bounded `dx2/llm` Pi worker.
 - 2026-09-04: `hwc-xps` now overrides `desktop.electronPackage` with
   `electron_43` from the flake's locked unstable nixpkgs input. XPS remains on

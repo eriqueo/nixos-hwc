@@ -30,7 +30,12 @@
 #   * For the headless shape: a deterministic PATH. A systemd user service
 #     inherits none of an interactive shell's PATH, and T3 resolves its provider
 #     binaries out of its own process environment.
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.hwc.home.apps.t3code;
 
@@ -39,7 +44,11 @@ let
   # and then break with a file-not-found the user cannot read.
   launcher = pkgs.writeShellApplication {
     name = "t3code";
-    runtimeInputs = [ cfg.desktop.electronPackage pkgs.coreutils pkgs.nodejs ];
+    runtimeInputs = [
+      cfg.desktop.electronPackage
+      pkgs.coreutils
+      pkgs.nodejs
+    ];
     text = ''
       REPO=${lib.escapeShellArg cfg.repo}
       MAIN="$REPO/apps/desktop/dist-electron/main.cjs"
@@ -80,7 +89,10 @@ let
   # bin.mjs but no client serves a blank page instead of failing.
   serveLauncher = pkgs.writeShellApplication {
     name = "t3-serve";
-    runtimeInputs = [ pkgs.nodejs pkgs.coreutils ];
+    runtimeInputs = [
+      pkgs.nodejs
+      pkgs.coreutils
+    ];
     text = ''
       REPO=${lib.escapeShellArg cfg.repo}
       BIN="$REPO/apps/server/dist/bin.mjs"
@@ -106,7 +118,13 @@ let
   # rebuilding leaves source, bundle and client assets on different revisions.
   updater = pkgs.writeShellApplication {
     name = "t3-update";
-    runtimeInputs = [ pkgs.nodejs pkgs.git pkgs.coreutils pkgs.curl pkgs.systemd ];
+    runtimeInputs = [
+      pkgs.nodejs
+      pkgs.git
+      pkgs.coreutils
+      pkgs.curl
+      pkgs.systemd
+    ];
     text = ''
       REPO=${lib.escapeShellArg cfg.repo}
       cd "$REPO"
@@ -117,9 +135,10 @@ let
       export ELECTRON_SKIP_BINARY_DOWNLOAD=1
       npx --yes pnpm@${cfg.pnpmVersion} install --frozen-lockfile
       ${
-        if cfg.serve.enable
-        then "npx --yes pnpm@${cfg.pnpmVersion} exec vp run --filter t3 build"
-        else "npx --yes pnpm@${cfg.pnpmVersion} build"
+        if cfg.serve.enable then
+          "npx --yes pnpm@${cfg.pnpmVersion} exec vp run --filter t3 build"
+        else
+          "npx --yes pnpm@${cfg.pnpmVersion} build"
       }
 
       echo "built $(git rev-parse --short HEAD)"
@@ -131,12 +150,43 @@ let
     '';
   };
 
+  # Stable process boundary between T3's event reactor and the shared delegate
+  # helper. The server sends one bounded prompt on stdin and receives the
+  # helper's versioned JSON envelope on stdout. Pi itself remains read-only and
+  # pinned to dx2/llm by delegate.py.
+  handoffWorker = pkgs.writeShellApplication {
+    name = "t3-dx2-handoff";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.python3
+    ];
+    text = ''
+      DELEGATE="$HOME/.claude-config/skills/delegate/scripts/delegate.py"
+      if [ ! -f "$DELEGATE" ]; then
+        echo '{"schemaVersion":1,"state":"failed","code":"worker_unavailable","detail":"The shared delegate helper is not installed."}' >&2
+        exit 2
+      fi
+
+      PROMPT_FILE="$(mktemp -t t3-dx2-handoff.XXXXXX)"
+      chmod 600 "$PROMPT_FILE"
+      trap 'rm -f "$PROMPT_FILE"' EXIT
+      dd of="$PROMPT_FILE" status=none
+
+      python3 "$DELEGATE" \
+        --provider pi \
+        --model dx2/llm \
+        --access read-only \
+        --cwd "$PWD" \
+        --prompt-file "$PROMPT_FILE" \
+        --timeout 600
+    '';
+  };
+
   # The service's PATH, spelled out. `claude` is an ad-hoc npm global on
   # hwc-server rather than a Nix package, and codex/pi/herdr live in the
   # per-user Nix profile — none of which a user unit inherits on its own.
   servePath = lib.concatStringsSep ":" (
-    [ (lib.makeBinPath cfg.serve.packages) ]
-    ++ cfg.serve.extraPath
+    [ (lib.makeBinPath ([ handoffWorker ] ++ cfg.serve.packages)) ] ++ cfg.serve.extraPath
   );
 in
 {
@@ -330,10 +380,15 @@ in
   config = lib.mkIf cfg.enable {
     # electronPackage is listed as well as referenced, so it is a GC root even
     # if the launcher script is never run.
-    home.packages =
-      [ updater ]
-      ++ lib.optionals cfg.desktop.enable [ launcher cfg.desktop.electronPackage ]
-      ++ lib.optional cfg.serve.enable serveLauncher;
+    home.packages = [
+      updater
+      handoffWorker
+    ]
+    ++ lib.optionals cfg.desktop.enable [
+      launcher
+      cfg.desktop.electronPackage
+    ]
+    ++ lib.optional cfg.serve.enable serveLauncher;
 
     systemd.user.services.t3code = lib.mkIf (cfg.desktop.enable && cfg.desktop.autoStart) {
       Unit = {
@@ -410,9 +465,10 @@ in
     # tree, which is outside this flake — a plain `source` would try to import
     # a path the pure evaluator cannot see, and fail at build time.
     xdg.dataFile."icons/hicolor/scalable/apps/t3code.svg" =
-      lib.mkIf (cfg.desktop.enable && cfg.desktop.desktopEntry.enable) {
-        source = config.lib.file.mkOutOfStoreSymlink "${cfg.repo}/assets/prod/logo.svg";
-      };
+      lib.mkIf (cfg.desktop.enable && cfg.desktop.desktopEntry.enable)
+        {
+          source = config.lib.file.mkOutOfStoreSymlink "${cfg.repo}/assets/prod/logo.svg";
+        };
 
     #========================================================================
     # VALIDATION
