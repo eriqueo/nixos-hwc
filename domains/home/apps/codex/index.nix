@@ -33,6 +33,7 @@ in
       type = lib.types.listOf lib.types.str;
       default = [
         "delegate"
+        "dx2-evidence"
         "herdr"
         "project-director"
       ];
