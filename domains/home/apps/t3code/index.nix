@@ -164,6 +164,13 @@ let
     ];
     text = ''
       DELEGATE="$HOME/.claude-config/skills/delegate/scripts/delegate.py"
+      # T3 owns the result ceiling. Only forward that option; callers cannot
+      # override the pinned provider, read-only authority, or tool policy.
+      # No arguments remains compatible with older T3 server bundles.
+      if [ "$#" -ne 0 ] && { [ "$#" -ne 2 ] || [ "$1" != "--max-result-characters" ]; }; then
+        echo '{"schemaVersion":1,"state":"failed","code":"invalid_result_limit","detail":"Expected only --max-result-characters and its limit."}' >&2
+        exit 2
+      fi
       if [ ! -f "$DELEGATE" ]; then
         echo '{"schemaVersion":1,"state":"failed","code":"worker_unavailable","detail":"The shared delegate helper is not installed."}' >&2
         exit 2
@@ -181,7 +188,7 @@ let
         --no-tools \
         --cwd "$PWD" \
         --prompt-file "$PROMPT_FILE" \
-        --timeout 600
+        --timeout 600 "$@"
     '';
   };
 

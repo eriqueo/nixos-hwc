@@ -17,6 +17,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
+- `apps/t3code/` — launchers and a restricted DX2 handoff adapter; T3 supplies the result limit.
 - `apps/hwc-dictation/` — owned desktop dictation package, settings and user service.
 
 `apps/todui` uses the shared Radicale password selector in `domains/lib/hm.nix`.
@@ -48,6 +49,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-13: Pass T3's result-character limit to the Pi stream collector without allowing provider or access overrides.
 - 2026-09-09: make dictation recording visible with a larger, fixed top-right panel; remove dependence on mismatched monitor heights in the desktop layout.
 - 2026-09-08: activated owned dictation on the laptop; final package and native desktop checks passed. Removed the temporary clipboard dependency override and exercised live clipboard write and recording/cancellation.
 - 2026-09-07: Prepared the owned dictation app service, lifecycle Waybar status and shared Hyprland controls; removed the old shell toggle from the candidate configuration.
