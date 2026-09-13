@@ -48,6 +48,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-13: Proton Mail's ordinary desktop entry now uses its integrated-GPU wrapper; its optional autostart service was not the live launch path.
 - 2026-09-13: SwayNC now uses GTK's OpenGL renderer after live follow-up showed its initially clean Vulkan process later reopened NVIDIA device descriptors when handling notifications.
 - 2026-09-12: Chromium and Proton Mail use the system GPU device boundary, T3 Code limits Vulkan discovery to Intel, and the dictation overlay uses its proven OpenGL renderer so routine desktop apps cannot keep NVIDIA awake; explicit `gpu-offload` use remains unchanged.
 - 2026-09-12: Chromium's Intel-safe launchers now preserve the system-owned Mesa EGL vendor selection instead of deleting it and reopening NVIDIA during vendor discovery.

@@ -30,6 +30,7 @@ in
     home.packages = (session.packages or []);
     home.sessionVariables = (session.env or {});
     systemd.user.services = (session.services or {});
+    xdg.desktopEntries = (session.desktopEntries or {});
     home.file = lib.mkMerge [
       (appearance.files homeDir)
       (behavior.files homeDir)
