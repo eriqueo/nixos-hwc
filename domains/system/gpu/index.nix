@@ -67,6 +67,43 @@ let
     exec "$@"
   '';
 
+  # Ordinary hybrid clients should not be able to wake NVIDIA merely by
+  # enumerating render devices. Keep the policy here, opposite gpu-offload,
+  # and discover DRM ownership dynamically because card numbers are not stable.
+  gpuIntegrated = pkgs.writeShellScriptBin "gpu-integrated" ''
+    #!/usr/bin/env bash
+    if [[ $# -eq 0 ]]; then
+      echo "Usage: gpu-integrated <application> [args...]" >&2
+      exit 64
+    fi
+
+    shopt -s nullglob
+    nvidia_devices=()
+
+    for device in /dev/nvidia* /dev/nvidia-caps/*; do
+      [[ -e "$device" && ! -d "$device" ]] || continue
+      nvidia_devices+=("$device")
+    done
+
+    for device in /dev/dri/card* /dev/dri/renderD*; do
+      [[ -e "$device" ]] || continue
+      vendor=$(cat "/sys/class/drm/$(basename "$device")/device/vendor" 2>/dev/null || true)
+      [[ "$vendor" == "0x10de" ]] || continue
+      nvidia_devices+=("$device")
+    done
+
+    if (( ''${#nvidia_devices[@]} == 0 )); then
+      exec "$@"
+    fi
+
+    bwrap_args=(--bind / / --dev-bind /dev /dev --die-with-parent)
+    for device in "''${nvidia_devices[@]}"; do
+      bwrap_args+=(--ro-bind /dev/null "$device")
+    done
+
+    exec ${pkgs.bubblewrap}/bin/bwrap "''${bwrap_args[@]}" "$@"
+  '';
+
 in
 {
   #==========================================================================
@@ -313,7 +350,7 @@ in
         config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver}
         libva-utils
         vdpauinfo
-      ] ++ lib.optionals cfg.nvidia.prime.enable [ nvidiaOffload ];
+      ] ++ lib.optionals cfg.nvidia.prime.enable [ gpuIntegrated nvidiaOffload ];
 
       # NVIDIA container runtime (toolkit)
       hardware.nvidia-container-toolkit.enable = cfg.nvidia.containerRuntime;

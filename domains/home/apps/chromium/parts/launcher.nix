@@ -83,6 +83,9 @@ let
       export LIBVA_DRIVER_NAME=iHD
     fi
 
+    if command -v gpu-integrated >/dev/null 2>&1; then
+      exec gpu-integrated chromium ${lib.escapeShellArgs baseFlags} ${profileArg} "$@"
+    fi
     exec chromium ${lib.escapeShellArgs baseFlags} ${profileArg} "$@"
   '';
 in

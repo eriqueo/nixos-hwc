@@ -34,9 +34,23 @@
 let
   cfg = config.hwc.home.apps.t3code;
 
-  # Resolve Electron from PATH at RUN time, never at build time. A store path
-  # written into this script would survive until the next garbage collection
-  # and then break with a file-not-found the user cannot read.
+  # Chromium's subprocess path covers renderers, utilities, zygotes and the GPU
+  # process, but not the Electron main process's explicitly spawned T3 backend.
+  # This keeps UI device enumeration away from NVIDIA without removing GPU
+  # access from provider commands launched by the backend.
+  electronSubprocess = pkgs.writeShellScript "t3code-electron-subprocess" ''
+    if command -v gpu-integrated >/dev/null 2>&1; then
+      exec gpu-integrated ${lib.getExe cfg.desktop.electronPackage} "$@"
+    fi
+    exec ${lib.getExe cfg.desktop.electronPackage} "$@"
+  '';
+  electronLauncher = pkgs.writeShellScript "t3code-electron" ''
+    exec ${lib.getExe cfg.desktop.electronPackage} \
+      --browser-subprocess-path=${electronSubprocess} "$@"
+  '';
+
+  # The configured Electron package is referenced by the launch scripts and is
+  # also installed below, so both the wrapper and its runtime are GC roots.
   launcher = pkgs.writeShellApplication {
     name = "t3code";
     runtimeInputs = [ cfg.desktop.electronPackage pkgs.coreutils pkgs.nodejs ];
@@ -53,12 +67,11 @@ let
         exit 1
       fi
 
-      # The shim directory the electron npm package reads. Rebuilt every start,
-      # so a garbage-collected or upgraded Electron heals itself instead of
-      # leaving a dangling symlink.
+      # The shim directory the electron npm package reads. Rebuilt every start
+      # so changing desktop.electronPackage replaces the target immediately.
       SHIM="''${XDG_DATA_HOME:-$HOME/.local/share}/t3code-electron"
       mkdir -p "$SHIM"
-      ln -sfn "$(command -v electron)" "$SHIM/electron"
+      ln -sfn ${electronLauncher} "$SHIM/electron"
       export ELECTRON_OVERRIDE_DIST_PATH="$SHIM"
 
       ${lib.optionalString (cfg.desktop.port != null) ''
