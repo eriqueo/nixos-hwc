@@ -44,6 +44,8 @@ let
   # pipeline, but we strip them explicitly here so a stray inherited
   # __NV_PRIME_RENDER_OFFLOAD=1 cannot cause libglvnd to attempt the
   # NVIDIA EGL vendor and trigger the cross-GPU crash described above.
+  # Preserve __EGL_VENDOR_LIBRARY_FILENAMES: the hybrid system owns its
+  # Mesa-only value, and deleting it makes libglvnd probe NVIDIA again.
   #
   # `profileArg` is appended verbatim to the exec line. Empty for the default
   # wrapper (uses chromium's Default profile under ~/.config/chromium). The
@@ -60,7 +62,6 @@ let
     unset __NV_PRIME_RENDER_OFFLOAD
     unset __GLX_VENDOR_LIBRARY_NAME
     unset __VK_LAYER_NV_optimus
-    unset __EGL_VENDOR_LIBRARY_FILENAMES
 
     # If an Intel iGPU is present AND the iHD VA-API driver is installed,
     # force chromium's libva to use it. Without this, a system-wide
