@@ -34,23 +34,9 @@
 let
   cfg = config.hwc.home.apps.t3code;
 
-  # Chromium's subprocess path covers renderers, utilities, zygotes and the GPU
-  # process, but not the Electron main process's explicitly spawned T3 backend.
-  # This keeps UI device enumeration away from NVIDIA without removing GPU
-  # access from provider commands launched by the backend.
-  electronSubprocess = pkgs.writeShellScript "t3code-electron-subprocess" ''
-    if command -v gpu-integrated >/dev/null 2>&1; then
-      exec gpu-integrated ${lib.getExe cfg.desktop.electronPackage} "$@"
-    fi
-    exec ${lib.getExe cfg.desktop.electronPackage} "$@"
-  '';
-  electronLauncher = pkgs.writeShellScript "t3code-electron" ''
-    exec ${lib.getExe cfg.desktop.electronPackage} \
-      --browser-subprocess-path=${electronSubprocess} "$@"
-  '';
-
-  # The configured Electron package is referenced by the launch scripts and is
-  # also installed below, so both the wrapper and its runtime are GC roots.
+  # Resolve Electron from PATH at RUN time, never at build time. A store path
+  # written into this script would survive until the next garbage collection
+  # and then break with a file-not-found the user cannot read.
   launcher = pkgs.writeShellApplication {
     name = "t3code";
     runtimeInputs = [ cfg.desktop.electronPackage pkgs.coreutils pkgs.nodejs ];
@@ -67,12 +53,25 @@ let
         exit 1
       fi
 
-      # The shim directory the electron npm package reads. Rebuilt every start
-      # so changing desktop.electronPackage replaces the target immediately.
+      # The shim directory the electron npm package reads. Rebuilt every start,
+      # so a garbage-collected or upgraded Electron heals itself instead of
+      # leaving a dangling symlink.
       SHIM="''${XDG_DATA_HOME:-$HOME/.local/share}/t3code-electron"
       mkdir -p "$SHIM"
-      ln -sfn ${electronLauncher} "$SHIM/electron"
+      ln -sfn "$(command -v electron)" "$SHIM/electron"
       export ELECTRON_OVERRIDE_DIST_PATH="$SHIM"
+
+      # Electron's Vulkan loader otherwise enumerates NVIDIA even though the
+      # Intel render node is explicitly selected. Limit Vulkan discovery only
+      # on Intel hybrid desktops; CUDA remains available to backend children.
+      for device in /dev/dri/renderD*; do
+        vendor=$(cat "/sys/class/drm/$(basename "$device")/device/vendor" 2>/dev/null || true)
+        if [ "$vendor" = "0x8086" ]; then
+          export VK_DRIVER_FILES=${pkgs.mesa}/share/vulkan/icd.d/intel_icd.x86_64.json
+          export VK_ICD_FILENAMES="$VK_DRIVER_FILES"
+          break
+        fi
+      done
 
       ${lib.optionalString (cfg.desktop.port != null) ''
         export T3CODE_PORT=${toString cfg.desktop.port}
