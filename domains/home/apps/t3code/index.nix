@@ -152,8 +152,10 @@ let
 
   # Stable process boundary between T3's event reactor and the shared delegate
   # helper. The server sends one bounded prompt on stdin and receives the
-  # helper's versioned JSON envelope on stdout. Pi itself remains read-only and
-  # pinned to dx2/llm by delegate.py.
+  # helper's versioned JSON envelope on stdout. Pi itself remains read-only,
+  # tool-free, and pinned to dx2/llm by delegate.py. Handoffs compress the
+  # supplied transcript; repo exploration belongs to the separate DX2 evidence
+  # lane and would inflate Pi's captured JSON event stream.
   handoffWorker = pkgs.writeShellApplication {
     name = "t3-dx2-handoff";
     runtimeInputs = [
@@ -176,6 +178,7 @@ let
         --provider pi \
         --model dx2/llm \
         --access read-only \
+        --no-tools \
         --cwd "$PWD" \
         --prompt-file "$PROMPT_FILE" \
         --timeout 600

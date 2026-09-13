@@ -109,10 +109,12 @@ There is no `parts/`. This module packages no source.
 - **Context handoffs cross one narrow executable boundary.**
   `t3-dx2-handoff` accepts a bounded prompt on stdin, stores it in a mode-0600
   temporary file, and calls the shared `delegate.py` helper with Pi pinned to
-  `dx2/llm` and read-only access. It returns the helper's versioned JSON
-  envelope to T3. The T3 server owns idle policy, queuing, durable state and
-  starting the fresh frontier thread; this adapter owns only process launch.
-  The temporary prompt is deleted on every normal or error exit.
+  `dx2/llm`, read-only access, and no tools. Handoffs compress only the supplied
+  transcript; repo scouting remains the separate DX2 evidence lane. It returns
+  the helper's versioned JSON envelope to T3. The T3 server owns idle policy,
+  queuing, durable state and starting the fresh frontier thread; this adapter
+  owns only process launch. The temporary prompt is deleted on every normal or
+  error exit.
 
 - **`~/.t3/userdata` is CRITICAL and is in Borg.** It holds the event-sourced
   SQLite store plus the server signing key; losing the key invalidates every
@@ -163,6 +165,9 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
+- 2026-09-13: Made the DX2 context-handoff adapter tool-free so Pi cannot inflate
+  its captured JSON event stream by exploring the workspace during transcript
+  compression.
 - 2026-09-12: Added `t3-dx2-handoff`, the read-only Pi/DX2 adapter used by
   T3's bounded overnight context-handoff workflow.
 - 2026-09-11: Updated the delegate route to the bounded `dx2/llm` Pi worker.
