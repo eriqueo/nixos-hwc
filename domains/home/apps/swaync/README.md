@@ -15,4 +15,5 @@ the appearance part.
 - `parts/appearance.nix` — settings attrset + CSS style derived from theme tokens
 
 ## Changelog
+- 2026-09-13: Pin the service to GTK's OpenGL renderer. A clean initial restart was insufficient: after later notification activity the Vulkan renderer reopened NVIDIA device descriptors and prevented runtime suspension.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).
