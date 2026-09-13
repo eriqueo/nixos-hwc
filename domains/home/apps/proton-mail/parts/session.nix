@@ -1,9 +1,21 @@
 # ProtonMail • Session part
 # Session-scoped things only: packages, user services, env.
-{ lib, pkgs, config, osConfig ? {}, ... }:
+{
+  lib,
+  pkgs,
+  config,
+  osConfig ? { },
+  ...
+}:
 
 let
   cfg = config.hwc.home.apps.proton-mail;
+  launcher = pkgs.writeShellScript "protonmail-integrated" ''
+    if command -v gpu-integrated >/dev/null 2>&1; then
+      exec gpu-integrated ${pkgs.protonmail-desktop}/bin/protonmail-desktop "$@"
+    fi
+    exec ${pkgs.protonmail-desktop}/bin/protonmail-desktop "$@"
+  '';
 in
 {
   # ProtonMail desktop package
@@ -21,7 +33,7 @@ in
         WantedBy = [ "graphical-session.target" ];
       };
       Service = {
-        ExecStart = "${pkgs.protonmail-desktop}/bin/protonmail-desktop --hidden";
+        ExecStart = "${launcher} --hidden";
         Restart = "on-failure";
         RestartSec = "5s";
       };

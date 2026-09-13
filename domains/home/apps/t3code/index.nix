@@ -30,16 +30,39 @@
 #   * For the headless shape: a deterministic PATH. A systemd user service
 #     inherits none of an interactive shell's PATH, and T3 resolves its provider
 #     binaries out of its own process environment.
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.hwc.home.apps.t3code;
 
-  # Resolve Electron from PATH at RUN time, never at build time. A store path
-  # written into this script would survive until the next garbage collection
-  # and then break with a file-not-found the user cannot read.
+  # Chromium's subprocess path covers renderers, utilities, zygotes and the GPU
+  # process, but not the Electron main process's explicitly spawned T3 backend.
+  # This keeps UI device enumeration away from NVIDIA without removing GPU
+  # access from provider commands launched by the backend.
+  electronSubprocess = pkgs.writeShellScript "t3code-electron-subprocess" ''
+    if command -v gpu-integrated >/dev/null 2>&1; then
+      exec gpu-integrated ${lib.getExe cfg.desktop.electronPackage} "$@"
+    fi
+    exec ${lib.getExe cfg.desktop.electronPackage} "$@"
+  '';
+  electronLauncher = pkgs.writeShellScript "t3code-electron" ''
+    exec ${lib.getExe cfg.desktop.electronPackage} \
+      --browser-subprocess-path=${electronSubprocess} "$@"
+  '';
+
+  # The configured Electron package is referenced by the launch scripts and is
+  # also installed below, so both the wrapper and its runtime are GC roots.
   launcher = pkgs.writeShellApplication {
     name = "t3code";
-    runtimeInputs = [ cfg.desktop.electronPackage pkgs.coreutils pkgs.nodejs ];
+    runtimeInputs = [
+      cfg.desktop.electronPackage
+      pkgs.coreutils
+      pkgs.nodejs
+    ];
     text = ''
       REPO=${lib.escapeShellArg cfg.repo}
       MAIN="$REPO/apps/desktop/dist-electron/main.cjs"
@@ -53,12 +76,11 @@ let
         exit 1
       fi
 
-      # The shim directory the electron npm package reads. Rebuilt every start,
-      # so a garbage-collected or upgraded Electron heals itself instead of
-      # leaving a dangling symlink.
+      # The shim directory the electron npm package reads. Rebuilt every start
+      # so changing desktop.electronPackage replaces the target immediately.
       SHIM="''${XDG_DATA_HOME:-$HOME/.local/share}/t3code-electron"
       mkdir -p "$SHIM"
-      ln -sfn "$(command -v electron)" "$SHIM/electron"
+      ln -sfn ${electronLauncher} "$SHIM/electron"
       export ELECTRON_OVERRIDE_DIST_PATH="$SHIM"
 
       ${lib.optionalString (cfg.desktop.port != null) ''
@@ -80,7 +102,10 @@ let
   # bin.mjs but no client serves a blank page instead of failing.
   serveLauncher = pkgs.writeShellApplication {
     name = "t3-serve";
-    runtimeInputs = [ pkgs.nodejs pkgs.coreutils ];
+    runtimeInputs = [
+      pkgs.nodejs
+      pkgs.coreutils
+    ];
     text = ''
       REPO=${lib.escapeShellArg cfg.repo}
       BIN="$REPO/apps/server/dist/bin.mjs"
@@ -106,7 +131,13 @@ let
   # rebuilding leaves source, bundle and client assets on different revisions.
   updater = pkgs.writeShellApplication {
     name = "t3-update";
-    runtimeInputs = [ pkgs.nodejs pkgs.git pkgs.coreutils pkgs.curl pkgs.systemd ];
+    runtimeInputs = [
+      pkgs.nodejs
+      pkgs.git
+      pkgs.coreutils
+      pkgs.curl
+      pkgs.systemd
+    ];
     text = ''
       REPO=${lib.escapeShellArg cfg.repo}
       cd "$REPO"
@@ -117,9 +148,10 @@ let
       export ELECTRON_SKIP_BINARY_DOWNLOAD=1
       npx --yes pnpm@${cfg.pnpmVersion} install --frozen-lockfile
       ${
-        if cfg.serve.enable
-        then "npx --yes pnpm@${cfg.pnpmVersion} exec vp run --filter t3 build"
-        else "npx --yes pnpm@${cfg.pnpmVersion} build"
+        if cfg.serve.enable then
+          "npx --yes pnpm@${cfg.pnpmVersion} exec vp run --filter t3 build"
+        else
+          "npx --yes pnpm@${cfg.pnpmVersion} build"
       }
 
       echo "built $(git rev-parse --short HEAD)"
@@ -135,8 +167,7 @@ let
   # hwc-server rather than a Nix package, and codex/pi/herdr live in the
   # per-user Nix profile — none of which a user unit inherits on its own.
   servePath = lib.concatStringsSep ":" (
-    [ (lib.makeBinPath cfg.serve.packages) ]
-    ++ cfg.serve.extraPath
+    [ (lib.makeBinPath cfg.serve.packages) ] ++ cfg.serve.extraPath
   );
 in
 {
@@ -330,10 +361,14 @@ in
   config = lib.mkIf cfg.enable {
     # electronPackage is listed as well as referenced, so it is a GC root even
     # if the launcher script is never run.
-    home.packages =
-      [ updater ]
-      ++ lib.optionals cfg.desktop.enable [ launcher cfg.desktop.electronPackage ]
-      ++ lib.optional cfg.serve.enable serveLauncher;
+    home.packages = [
+      updater
+    ]
+    ++ lib.optionals cfg.desktop.enable [
+      launcher
+      cfg.desktop.electronPackage
+    ]
+    ++ lib.optional cfg.serve.enable serveLauncher;
 
     systemd.user.services.t3code = lib.mkIf (cfg.desktop.enable && cfg.desktop.autoStart) {
       Unit = {
@@ -410,9 +445,10 @@ in
     # tree, which is outside this flake — a plain `source` would try to import
     # a path the pure evaluator cannot see, and fail at build time.
     xdg.dataFile."icons/hicolor/scalable/apps/t3code.svg" =
-      lib.mkIf (cfg.desktop.enable && cfg.desktop.desktopEntry.enable) {
-        source = config.lib.file.mkOutOfStoreSymlink "${cfg.repo}/assets/prod/logo.svg";
-      };
+      lib.mkIf (cfg.desktop.enable && cfg.desktop.desktopEntry.enable)
+        {
+          source = config.lib.file.mkOutOfStoreSymlink "${cfg.repo}/assets/prod/logo.svg";
+        };
 
     #========================================================================
     # VALIDATION
