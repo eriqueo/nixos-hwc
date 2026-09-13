@@ -56,43 +56,35 @@ let
   # a suspend/resume singleton race — is what stacked "Something went wrong
   # when opening your profile" dialogs.) $HOME is resolved at runtime (late
   # binding), so the same wrapper is correct on any host.
-  mkLauncher =
-    {
-      name,
-      profileArg ? "",
-    }:
-    pkgs.writeShellScriptBin name ''
-      set -u
+  mkLauncher = { name, profileArg ? "" }: pkgs.writeShellScriptBin name ''
+    set -u
 
-      unset __NV_PRIME_RENDER_OFFLOAD
-      unset __GLX_VENDOR_LIBRARY_NAME
-      unset __VK_LAYER_NV_optimus
+    unset __NV_PRIME_RENDER_OFFLOAD
+    unset __GLX_VENDOR_LIBRARY_NAME
+    unset __VK_LAYER_NV_optimus
 
-      # If an Intel iGPU is present AND the iHD VA-API driver is installed,
-      # force chromium's libva to use it. Without this, a system-wide
-      # LIBVA_DRIVER_NAME=nvidia (set on hybrid laptops where the dGPU is the
-      # nominal type) makes chromium's HW video decode fail because chromium
-      # renders on the Intel render node — causing CPU-bound fallback decode.
-      # This block is a NO-OP on machines without an Intel iGPU or without the
-      # iHD driver installed, so the same wrapper is safe on other hosts.
-      intel_present=0
-      for n in /dev/dri/renderD*; do
-        v=$(cat "/sys/class/drm/$(basename "$n")/device/vendor" 2>/dev/null || true)
-        if [ "$v" = "0x8086" ]; then
-          intel_present=1
-          break
-        fi
-      done
-      if [ "$intel_present" = "1" ] && \
-         [ -r /run/opengl-driver/lib/dri/iHD_drv_video.so ]; then
-        export LIBVA_DRIVER_NAME=iHD
+    # If an Intel iGPU is present AND the iHD VA-API driver is installed,
+    # force chromium's libva to use it. Without this, a system-wide
+    # LIBVA_DRIVER_NAME=nvidia (set on hybrid laptops where the dGPU is the
+    # nominal type) makes chromium's HW video decode fail because chromium
+    # renders on the Intel render node — causing CPU-bound fallback decode.
+    # This block is a NO-OP on machines without an Intel iGPU or without the
+    # iHD driver installed, so the same wrapper is safe on other hosts.
+    intel_present=0
+    for n in /dev/dri/renderD*; do
+      v=$(cat "/sys/class/drm/$(basename "$n")/device/vendor" 2>/dev/null || true)
+      if [ "$v" = "0x8086" ]; then
+        intel_present=1
+        break
       fi
+    done
+    if [ "$intel_present" = "1" ] && \
+       [ -r /run/opengl-driver/lib/dri/iHD_drv_video.so ]; then
+      export LIBVA_DRIVER_NAME=iHD
+    fi
 
-      if command -v gpu-integrated >/dev/null 2>&1; then
-        exec gpu-integrated chromium ${lib.escapeShellArgs baseFlags} ${profileArg} "$@"
-      fi
-      exec chromium ${lib.escapeShellArgs baseFlags} ${profileArg} "$@"
-    '';
+    exec chromium ${lib.escapeShellArgs baseFlags} ${profileArg} "$@"
+  '';
 in
 {
   packages = [

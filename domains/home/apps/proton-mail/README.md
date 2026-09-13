@@ -14,5 +14,4 @@ Installs the Proton Mail desktop client (`pkgs.protonmail-desktop`), writes a mi
 - `parts/appearance.nix` — intentionally empty (system theming; no files).
 
 ## Changelog
-- 2026-09-12: Start the autostart client through the system-owned `gpu-integrated` boundary when available, keeping Electron's device probing from holding the laptop dGPU open.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

@@ -43,11 +43,12 @@ There is no `parts/`. This module packages no source.
   nixpkgs carries 41.9.1, and the app reported `backend ready` and
   `main window created`.
 
-- **The shim is rebuilt at every start and its targets are GC-rooted.** The
-  configured `electronPackage` sits in `home.packages`, while the generated
-  launch scripts reference both it and the guarded Chromium subprocess path.
-  Rebuilding the shim on launch makes a package change take effect immediately;
-  the Home Manager generation keeps every referenced store path alive.
+- **The shim is rebuilt at every start, never baked in.** Writing
+  `/nix/store/…-electron-41.9.1/bin/electron` into the launcher would work until
+  the next `nix-collect-garbage` deleted it, and then fail with a
+  file-not-found the user cannot act on. The launcher resolves
+  `command -v electron` instead, and `electronPackage` sits in `home.packages`
+  so the store path is a GC root.
 
 - **The icon is an out-of-store symlink.** `assets/prod/logo.svg` lives in the
   fork's working tree, outside this flake. A plain `source` would ask the pure
@@ -155,7 +156,6 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
-- 2026-09-12: Route Electron's Chromium subprocesses through `gpu-integrated` while leaving the main process and its agent backend outside that mount namespace; the UI cannot wake NVIDIA by probing, but provider-launched CUDA work remains available.
 - 2026-09-04: `hwc-xps` now overrides `desktop.electronPackage` with
   `electron_43` from the flake's locked unstable nixpkgs input. XPS remains on
   stable for its system and Home Manager package set; only this runtime crosses

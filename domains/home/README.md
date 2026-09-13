@@ -48,7 +48,6 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
-- 2026-09-12: Chromium, Proton Mail, T3 Code's UI subprocesses, and the dictation overlay now consume narrow integrated-rendering boundaries so routine desktop apps cannot keep NVIDIA awake; explicit `gpu-offload` use remains unchanged.
 - 2026-09-12: Chromium's Intel-safe launchers now preserve the system-owned Mesa EGL vendor selection instead of deleting it and reopening NVIDIA during vendor discovery.
 - 2026-09-12: Hyprland now bridges the system-owned EGL vendor selection into Home Manager's `systemd.user.sessionVariables`, covering services started by the lingering user manager while preserving standalone-HM evaluation.
 - 2026-09-11: Blender and FreeCAD NVIDIA wrappers now consume the system-owned `gpu-offload` boundary, so intentional offload removes the hybrid session's Mesa-only EGL pin without duplicating vendor-selection variables in Home Manager.
