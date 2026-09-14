@@ -55,7 +55,7 @@ spinner.fg          = ${sel}
 *.selected.bg       = ${h (c.fg2 or "a7aaad")}
 *.selected.bold     = true
 
-# msglist_* — NO .fg on any of these so [user] tag colors come through
+# Message state carries the hierarchy; category tags stay out of the row chrome.
 msglist_unread.bold         = true
 msglist_read.dim            = true
 msglist_deleted.dim         = true
@@ -73,7 +73,7 @@ msglist_header.fg           = ${bg}
 msglist_header.bg           = ${sel}
 msglist_header.bold         = true
 
-# dirlist_* — NO .fg so [user] tag colors come through (same rule as msglist)
+# Directory state stays quiet except for unread/recent weight.
 dirlist_unread.bold = true
 dirlist_recent.bold = true
 
@@ -133,7 +133,13 @@ hide.fg           = ${dim}
 starred.fg        = ${h (c.errorBright or "d08080")}
 starred.bold      = true
 
-# Scoped views (sidebar)
+# Calm daily surface (sidebar)
+now.fg            = ${fg0}
+now.bold          = true
+backlog.fg        = ${dim}
+backlog.dim       = true
+
+# Hidden drill-downs retain their styles when opened directly.
 focus.fg          = ${fg0}
 focus.bold        = true
 today.fg          = ${fg}

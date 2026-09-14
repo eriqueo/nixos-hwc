@@ -68,7 +68,7 @@ let
     (replace-set on the triage/* tags — moves the workbench kanban card too)
 
     FILTER / SORT / VIEW
-    Space f f  filter        Space f s  search      Space f t  trash-sender
+    Space f f  filter        Space f s  search      Space f u  unsubscribe
     Space s d  sort by date  Space t t  toggle threads
     Space t s  switch styleset            Space M    add new tag
 
@@ -133,7 +133,8 @@ in
 
       # Navigation (static folders + derived tag folders)
       # Trailing " # <label>" is the aerc annotation shown in the which-key popover.
-      <Space>gi = :cf inbox_i<Enter> # inbox
+      <Space>gi = :cf now<Enter> # now
+      <Space>gI = :cf inbox_i<Enter> # all inbox
       <Space>gu = :cf unread_u<Enter> # unread
       <Space>ga = :cf Archive_a<Enter> # archive
       <Space>gs = :cf sent_s<Enter> # sent
@@ -158,9 +159,8 @@ ${triageGoBinds}
       # Triage bucket marking (replace-set, same semantics as workbench moves)
 ${triageBinds}
 
-      # Auto-trash sender management
-      <Space>ft = :pipe -b -m ${config.home.homeDirectory}/.local/bin/aerc-trash-sender<Enter>:modify-labels +trash -inbox -unread<Enter> # trash sender
-      <Space>; = :term ${config.home.homeDirectory}/.local/bin/aerc-show-trash-senders<Enter> # show trash senders
+      # Use the sender's List-Unsubscribe header when available.
+      <Space>fu = :unsubscribe<Enter> # unsubscribe
 
       # === ALL MARKING UNDER <Space>m LEADER ===
       <Space>mu = :modify-labels +unread<Enter> # mark unread
@@ -263,38 +263,6 @@ ${categoryBinds}
             ${pkgs.tmux}/bin/tmux set-buffer -- "$url"
         fi
         printf '\n\033[0;32m→ %s\033[0m\n' "$url"
-      '';
-      executable = true;
-    };
-
-    ".local/bin/aerc-trash-sender" = {
-      text = ''
-        #!/usr/bin/env bash
-        set -euo pipefail
-        sender=$(sed -n 's/^From:.*<\([^>]*\)>.*/\1/p;s/^From: *\([^<]*\)$/\1/p' | head -n1)
-        if [ -n "$sender" ]; then
-          mkdir -p ~/.config/notmuch
-          echo "$sender" >> ~/.config/notmuch/trash-senders
-          echo "Sender added to auto-trash list: $sender"
-        else
-          echo "Could not extract sender address" >&2
-          exit 1
-        fi
-      '';
-      executable = true;
-    };
-
-    ".local/bin/aerc-show-trash-senders" = {
-      text = ''
-        #!/usr/bin/env bash
-        echo "=== AUTO-TRASH SENDERS ==="
-        if [ -f ~/.config/notmuch/trash-senders ]; then
-          sort ~/.config/notmuch/trash-senders | column
-        else
-          echo "(none)"
-        fi
-        echo
-        read -rp "Press Enter to close..."
       '';
       executable = true;
     };

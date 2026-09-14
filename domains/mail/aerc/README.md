@@ -4,7 +4,7 @@ Declarative aerc configuration for a unified Proton Mail + Notmuch setup, manage
 
 ## Purpose
 
-Single-account email workflow: all addresses (eric@iheartwoodcraft.com, eriqueo@proton.me, office@, eriqueokeefe@gmail.com) consolidated through Proton Bridge. Uses notmuch for indexing and virtual folders, msmtp for sending, and mbsync for IMAP sync.
+Unified email workflow across Proton and Gmail identities. Uses notmuch for indexing and virtual folders, msmtp for sending, and mbsync for IMAP sync.
 
 ## Boundaries
 
@@ -17,14 +17,15 @@ Single-account email workflow: all addresses (eric@iheartwoodcraft.com, eriqueo@
 ```
 aerc/
   index.nix              # Module entry — enable toggle, packages, shell aliases, activation
+  package.nix            # Forked aerc package from the flake input
   parts/
-    tags.nix             # Single source of truth for tag definitions (colors, keys, queries)
     config.nix           # aerc.conf, accounts.conf, notmuch-queries, stylesets, templates
     binds.nix            # binds.conf (keybindings) + ov pager config
-    theme.nix            # hwc-theme styleset (Gruvbox-inspired, palette-driven)
-    session.nix          # Shell environment helpers (legacy, mostly moved to index.nix)
-    sieve.nix            # Server-side sieve filter rules
-    behavior.nix         # Reference behavior documentation (not imported)
+    appearance.nix       # hwc styleset (palette-driven)
+    tags.nix             # Mail taxonomy adapter for queries, styles, and bindings
+    tags-custom.json     # User-defined aerc-only tags
+    sieve.nix            # Sieve script deployment
+    sieve-filters.nix    # Server-side Sieve rules
 ```
 
 ## Architecture
@@ -59,15 +60,15 @@ The `<C-r>` keybind runs `sync-mail` which executes the full pipeline (mbsync + 
 
 ### Tag System (tags.nix)
 
-All tag metadata is defined once in `tags.nix` and consumed by both `config.nix` and `binds.nix`. Adding a new tag to this file automatically generates:
+Shared tag metadata originates in `domains/mail/taxonomy/data.nix`; `tags.nix` adapts it for aerc, and `tags-custom.json` holds aerc-only additions. The generated data supplies:
 
-- Notmuch query-map entry (virtual folder in aerc)
-- Column-tags `.StyleMap` case (colored tag pill in message list)
-- `.Style` switch case (tag-based row coloring for date/sender/to/subject)
-- `[user]` styleset section (appended to all 9 bundled themes)
+- Notmuch query-map entries for direct drill-down
+- `[user]` styles for virtual folder names
 - Exclusive single-key binding (if `key` is set)
 - `<Space>m*` additive label binding
 - `<Space>g*` go-to-folder binding
+
+Tags remain available to the shared triage and briefing integrations, but the daily message list deliberately does not render tag pills or color whole rows by category.
 
 #### Tag Types
 
@@ -106,11 +107,11 @@ All tag metadata is defined once in `tags.nix` and consumed by both `config.nix`
 
 ### Stylesets
 
-All 9 bundled aerc stylesets (blue, catppuccin, default, dracula, monochrome, nord, pink, solarized, solarized-dark) are copied at Nix eval time with a `[user]` section appended containing tag colors. This means tag coloring works regardless of which theme is active.
+All 9 bundled aerc stylesets (blue, catppuccin, default, dracula, monochrome, nord, pink, solarized, solarized-dark) are copied at Nix eval time with a `[user]` section appended for folder-name styles.
 
 Switch themes live with `<Space>ts` followed by the theme name (tab-completes).
 
-The custom `hwc-theme` styleset in `theme.nix` is palette-driven from `hwc.home.theme.colors` and includes domain-based sender coloring (iheartwoodcraft.com, gmail, proton addresses).
+The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.theme.colors`. Message state supplies row emphasis; categories do not recolor the row.
 
 ## Keybindings
 
@@ -163,7 +164,8 @@ The custom `hwc-theme` styleset in `theme.nix` is palette-driven from `hwc.home.
 
 | Key | Folder |
 |-----|--------|
-| `<Space>gi` | inbox |
+| `<Space>gi` | now |
+| `<Space>gI` | full inbox (hidden drill-down) |
 | `<Space>gu` | unread |
 | `<Space>ga` | Archive |
 | `<Space>gs` | sent |
@@ -206,6 +208,7 @@ The custom `hwc-theme` styleset in `theme.nix` is palette-driven from `hwc.home.
 |-----|--------|
 | `<Space>ff` | Filter messages |
 | `<Space>fs` | Search messages |
+| `<Space>fu` | Unsubscribe using the message's `List-Unsubscribe` header |
 | `<Space>sd` | Sort by date (newest first) |
 | `<Space>tt` | Toggle thread view |
 
@@ -250,26 +253,29 @@ The custom `hwc-theme` styleset in `theme.nix` is palette-driven from `hwc.home.
 ## Column Layout
 
 ```
-tags<12 | date<10 | from<16 | to<14 | flags>4 | subject<*
+state<3 | date<10 | from<22 | subject<*
 ```
 
 | Column | Template | Description |
 |--------|----------|-------------|
-| `tags` | `.StyleMap` | Colored tag pills (system tags excluded) |
+| `state` | `.IsUnread` / `.IsFlagged` | `●` unread and `★` flagged |
 | `date` | `.DateAutoFormat` | Relative dates (Today, Yesterday, Mon 10 Mar) |
 | `from` | `.From \| names` | Sender display name |
-| `to` | `.To \| names` | Recipient display name (shows which address received) |
-| `flags` | Symbolic | `●` unread, `↩` replied, `★` flagged, `⊞` attachment |
 | `subject` | `.Subject` | Subject with thread prefix and fold count |
 
-All columns are colored by tag category via `.Style` with a derived switch expression.
+Unread messages are bold, read messages are dim, and selection remains a strong reversed bar. Category tags stay out of the row chrome.
 
 ## Virtual Folders (Query Map)
 
-Static folders:
+The sidebar intentionally exposes only `now`, `family`, `backlog`, `drafts`, `sent_s`, `Archive_a`, and `trash_d`. `now` is the default; only its unread count appears in the sidebar, and the tab count is scoped to it.
+
+Primary folders:
 
 | Folder | Query |
 |--------|-------|
+| now | unread inbox mail from the last 7 days, excluding notifications, newsletters, trash, and `triage/noise` |
+| family | `tag:family AND NOT tag:trash` |
+| backlog | the same unread non-noise inbox set as `now`, older than the 7-day window |
 | inbox | `tag:inbox AND NOT tag:trash` |
 | unread | `tag:unread AND NOT tag:trash` |
 | sent | `tag:sent` |
@@ -279,6 +285,8 @@ Static folders:
 | spam | `tag:spam` |
 | important | `tag:important AND NOT tag:trash` |
 | hide_my_email | `tag:hide` |
+
+The remaining static, triage, and tag-derived queries stay in the query map for integrations, bindings, and direct `:cf <name>` drill-down without crowding the sidebar.
 
 Tag-derived folders (auto-generated from `tags.nix`):
 
@@ -328,11 +336,17 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 ## Adding a New Tag
 
 1. Add entry to `categoryTags` or `flagTags` in `parts/tags.nix`
-2. Rebuild — query-map, stylesets, bindings, and column coloring update automatically
+2. Rebuild — query-map, folder styles, and bindings update automatically
 3. If Proton label exists, the post-new hook auto-discovers it from `proton/Labels/<name>/`
 
 ## Changelog
 
+- 2026-09-14: Added the calm daily surface: `now` is recent unread non-noise,
+  `backlog` holds its older complement, and the sidebar exposes only seven
+  useful destinations. Only `now` shows a sidebar count, the tab count is also
+  scoped to `now`, and the message list is reduced to
+  state/date/from/subject, removed tag pills and category-wide row colors, and
+  replaced the inert trash-sender helper with built-in `:unsubscribe`.
 - 2026-06-26: folder nav `<C-j>/<C-k>` → `<A-j>/<A-k>` (next/prev-folder). Ctrl is now the workbench/zellij layer (Ctrl+j/k cycle tabs), so in-app side-column nav moved to Alt to avoid the collision.
 - 2026-06-26: which-key footer legend (`esc close · ⌫ back`) on the bottom border + Backspace walks up one chord level (forked aerc, app/whichkey.go + app/aerc.go); new themeable `whichkey_legend` style.
 - 2026-06-26: which-key popover redesign (forked aerc) — compact content-sized box (was edge-to-edge), `key → label` rows with nvim arrow, group keys read `domain +N` (e.g. `buffer +7`); styleset reworked to a raised slate card (bg3, lighter than terminal) with an inverted cream title chip and copper border, plus interior padding + a minimum box size. Code in `github:eriqueo/aerc` (app/whichkey.go, app/aerc.go); colors in `parts/appearance.nix`.

@@ -20,12 +20,15 @@ mail/
 ├── abook/index.nix            # Address book config
 ├── aerc/
 │   ├── index.nix              # aerc module (enable toggle, packages, activation)
+│   ├── package.nix            # Forked aerc package from the flake input
 │   └── parts/
 │       ├── config.nix         # aerc.conf, accounts.conf, queries, stylesets, templates
 │       ├── binds.nix          # Keybindings + ov pager config
-│       ├── tags.nix           # Single source of truth for tag definitions
-│       ├── theme.nix          # Palette-driven styleset (Gruvbox)
-│       └── sieve.nix          # Server-side sieve filters
+│       ├── appearance.nix     # Palette-driven styleset
+│       ├── tags.nix           # Taxonomy adapter for queries, styles, and bindings
+│       ├── tags-custom.json   # User-defined aerc-only tags
+│       ├── sieve.nix          # Sieve script deployment
+│       └── sieve-filters.nix  # Server-side Sieve rules
 ├── afew/
 │   ├── index.nix              # afew config generation (filters, MailMover)
 │   └── package.nix            # afew package derivation
@@ -76,6 +79,14 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-09-14: Replaced aerc's overlapping-folder dashboard with a calm daily
+  surface: `now` (recent unread non-noise), `family`, `backlog`, drafts, sent,
+  archive, and trash. Only `now` shows a sidebar count and the tab count is
+  scoped to it; the message list is a
+  compact state/date/from/subject view without category-wide row colors. Legacy
+  queries and triage tags remain available for integrations and direct
+  drill-down. Replaced the inert local trash-sender helper with aerc's built-in
+  `:unsubscribe` command.
 - 2026-09-07: Share the Radicale password selector with todui; retain per-user
   selection and colon-containing passwords across the three sync clients.
 - 2026-08-30: `accounts/index.nix` Gmail agenix handshake no longer falls back to
