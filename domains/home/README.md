@@ -49,6 +49,13 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-13: Proton Mail's plain command now owns the integrated-GPU boundary, covering Hyprland's actual login autostart instead of only the generated desktop entry and optional service.
+- 2026-09-13: Proton Mail's ordinary desktop entry now uses its integrated-GPU wrapper; its optional autostart service was not the live launch path.
+- 2026-09-13: SwayNC now uses GTK's OpenGL renderer after live follow-up showed its initially clean Vulkan process later reopened NVIDIA device descriptors when handling notifications.
+- 2026-09-12: Chromium and Proton Mail use the system GPU device boundary, T3 Code limits Vulkan discovery to Intel, and the dictation overlay uses its proven OpenGL renderer so routine desktop apps cannot keep NVIDIA awake; explicit `gpu-offload` use remains unchanged.
+- 2026-09-12: Chromium's Intel-safe launchers now preserve the system-owned Mesa EGL vendor selection instead of deleting it and reopening NVIDIA during vendor discovery.
+- 2026-09-12: Hyprland now bridges the system-owned EGL vendor selection into Home Manager's `systemd.user.sessionVariables`, covering services started by the lingering user manager while preserving standalone-HM evaluation.
+- 2026-09-11: Blender and FreeCAD NVIDIA wrappers now consume the system-owned `gpu-offload` boundary, so intentional offload removes the hybrid session's Mesa-only EGL pin without duplicating vendor-selection variables in Home Manager.
 - 2026-09-13: Pass T3's result-character limit to the Pi stream collector without allowing provider or access overrides.
 - 2026-09-09: make dictation recording visible with a larger, fixed top-right panel; remove dependence on mismatched monitor heights in the desktop layout.
 - 2026-09-08: activated owned dictation on the laptop; final package and native desktop checks passed. Removed the temporary clipboard dependency override and exercised live clipboard write and recording/cancellation.

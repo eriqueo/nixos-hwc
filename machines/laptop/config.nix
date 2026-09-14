@@ -292,6 +292,9 @@
     type = "nvidia";
     nvidia = {
       containerRuntime = true;
+      # This undocumented server-era override remained active with zero clients
+      # and runtime_usage=1. Omit it on the PRIME laptop; the server default stays.
+      legacyPerfLevelOverride = false;
       prime.enable = true;
       prime.nvidiaBusId = "PCI:1:0:0";
       prime.intelBusId  = "PCI:0:2:0";

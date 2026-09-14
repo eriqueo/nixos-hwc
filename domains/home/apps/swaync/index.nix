@@ -23,5 +23,10 @@ in
       settings = appearance.settings;
       style = appearance.style;
     };
+
+    # GTK's Vulkan renderer re-enumerates NVIDIA after notifications arrive,
+    # even when the initial process is clean. The OpenGL renderer stays on the
+    # session's Mesa EGL provider and avoids holding the dGPU open.
+    systemd.user.services.swaync.Service.Environment = [ "GSK_RENDERER=gl" ];
   };
 }

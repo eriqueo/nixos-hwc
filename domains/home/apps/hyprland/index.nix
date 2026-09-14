@@ -4,6 +4,11 @@ let
   cfg = config.hwc.home.apps.hyprland;
   hmLib = import ../../../lib/hm.nix { inherit lib; };
   isNixOSHost = hmLib.isNixOSHost osConfig;
+  osCfg = hmLib.osCfgOr osConfig;
+  eglVendorLibraryFilenames = lib.attrByPath
+    [ "environment" "sessionVariables" "__EGL_VENDOR_LIBRARY_FILENAMES" ]
+    null
+    osCfg;
 
   # behavior declares the bindings once and returns them two ways: `settings`
   # (what Hyprland loads) and `keybinds` (structured records). theme paints
@@ -83,6 +88,14 @@ in
     home.packages = basePkgs ++ (session.packages or []) ++ [ monitorListenerPkg ];
 
     home.sessionVariables = { XDG_CURRENT_DESKTOP = "Hyprland"; };
+
+    # environment.sessionVariables reaches login children, but a lingering
+    # systemd --user manager predates that PAM environment. Publish the same
+    # system-owned EGL selection through environment.d so daemon-reload updates
+    # the manager environment used by subsequently started desktop services.
+    systemd.user.sessionVariables = lib.optionalAttrs
+      (isNixOSHost && eglVendorLibraryFilenames != null)
+      { __EGL_VENDOR_LIBRARY_FILENAMES = eglVendorLibraryFilenames; };
 
     home.file.".local/state/hypr/.keep".text = "";
 

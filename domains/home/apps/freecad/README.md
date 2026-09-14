@@ -12,4 +12,5 @@ Installs FreeCAD (patched with an Arch-workbench window-displaymode guard) with 
 - `patches/arch-window-displaymode-guard.patch` — upstream FreeCAD source patch.
 
 ## Changelog
+- 2026-09-11: `freecad-gpu` delegates NVIDIA vendor selection to the system-owned `gpu-offload` command, preserving explicit PRIME offload under the hybrid session's Mesa-only EGL default.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

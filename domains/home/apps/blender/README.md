@@ -12,5 +12,6 @@ Installs Blender with GPU-rendering support matched to the host's `hwc.system.ha
 - `parts/package.nix` — optional pinned Blender 5.2.0 derivation from the official upstream tarball (autoPatchelf'd, driver libs via `/run/opengl-driver` in the wrapper).
 
 ## Changelog
+- 2026-09-11: `blender-gpu` delegates NVIDIA vendor selection to the system-owned `gpu-offload` command, which removes the hybrid session's Mesa-only EGL pin before launch.
 - 2026-07-30: added `package` option + `parts/package.nix` (official upstream binary), wired on hwc-laptop. `pkgs.blender.override { cudaSupport = true; }` is a variant Hydra never builds, so the default path recompiled Blender and its CUDA-context deps (~30 min) on every nixpkgs bump. The upstream tarball bundles those deps (embree/OIDN/OpenEXR/OSL/USD/TBB) and ships the Cycles CUDA + OptiX kernels. Verified: enumerates the RTX 2000 Ada on both CUDA and OPTIX backends. Side effect — this removed openimagedenoise from the closure entirely, so `overlays/openimagedenoise-cuda.nix` became dead code and was deleted.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

@@ -70,6 +70,18 @@ let
       ln -sfn "$(command -v electron)" "$SHIM/electron"
       export ELECTRON_OVERRIDE_DIST_PATH="$SHIM"
 
+      # Electron's Vulkan loader otherwise enumerates NVIDIA even though the
+      # Intel render node is explicitly selected. Limit Vulkan discovery only
+      # on Intel hybrid desktops; CUDA remains available to backend children.
+      for device in /dev/dri/renderD*; do
+        vendor=$(cat "/sys/class/drm/$(basename "$device")/device/vendor" 2>/dev/null || true)
+        if [ "$vendor" = "0x8086" ]; then
+          export VK_DRIVER_FILES=${pkgs.mesa}/share/vulkan/icd.d/intel_icd.x86_64.json
+          export VK_ICD_FILENAMES="$VK_DRIVER_FILES"
+          break
+        fi
+      done
+
       ${lib.optionalString (cfg.desktop.port != null) ''
         export T3CODE_PORT=${toString cfg.desktop.port}
       ''}

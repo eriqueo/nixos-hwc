@@ -13,6 +13,7 @@ Waybar call the same client; the daemon owns recording and transcription.
 - `index.nix` — options, generated app configuration with CPU fallback settings and a fixed top-right recording panel, launcher and user service.
 
 ## Changelog
+- 2026-09-12: Pin the GTK overlay to its proven OpenGL renderer; this prevents GTK's Vulkan discovery from opening NVIDIA while dictation and transcription remain CPU-isolated.
 - 2026-09-09: enlarge the recording panel to 480×80 and anchor it 64 pixels from the top-right. The previous fractional placement used the taller monitor's height and put the panel below the external display.
 - 2026-09-08: activated app `0b66198` through Nix `6fd8640d` on hwc-laptop. Final package: 1,168 tests passed, two ignored; restricted-PATH native desktop acceptance passed. Removed the temporary runtime override and verified live clipboard write and recording/cancellation. Desktop deployment is exercised; future phone/archive/summary work remains planned.
 - 2026-09-08: pinned the package runtime-dependency repair after live clipboard delivery failed without `cat`; desktop acceptance now uses a restricted daemon PATH.

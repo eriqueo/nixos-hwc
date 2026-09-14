@@ -166,6 +166,7 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
+- 2026-09-12: On Intel hybrid desktops, restrict Electron's Vulkan ICD discovery to Intel. A disposable T3 home on an alternate port reached backend readiness with hardware rendering and zero NVIDIA descriptors; CUDA remains available to provider children because it does not use the Vulkan ICD selector.
 - 2026-09-13: Forward T3's result-character ceiling to the streaming Pi helper;
   reject other adapter arguments to preserve the tool-free, read-only lane.
 - 2026-09-13: Made the DX2 context-handoff adapter tool-free so Pi cannot inflate
