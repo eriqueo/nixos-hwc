@@ -101,8 +101,7 @@
   # streaming bitrate cap. Keep proxy and LAN trust in Nix instead of relying on
   # mutable Dashboard state; Dashboard edits are intentionally reset on restart.
   networkXml = pkgs.writeText "jellyfin-network.xml" ''
-        <?xml version="1.0" encoding="utf-8"?>
-        <NetworkConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <NetworkConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
           <BaseUrl />
           <EnableHttps>false</EnableHttps>
           <RequireHttps>false</RequireHttps>
@@ -281,6 +280,7 @@ in {
 
         # Write declarative network and encoding policy. These files are runtime
         # state to Jellyfin, so replace them on every start to prevent UI drift.
+        ${pkgs.libxml2.bin}/bin/xmllint --noout ${networkXml} ${encodingXml}
         cp ${networkXml} "$CONFIG_DIR/network.xml"
         cp ${encodingXml} "$CONFIG_DIR/encoding.xml"
 
