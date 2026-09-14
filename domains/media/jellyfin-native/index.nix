@@ -313,6 +313,13 @@ in {
             gpu_acceleration_ready=false
           fi
           if [ "$gpu_acceleration_ready" != true ]; then
+            ${pkgs.xmlstarlet}/bin/xmlstarlet ed --inplace \
+              --update "/EncodingOptions/HardwareAccelerationType" --value none \
+              --update "/EncodingOptions/EnableEnhancedNvdecDecoder" --value false \
+              --update "/EncodingOptions/EnableHardwareEncoding" --value false \
+              --delete "/EncodingOptions/HardwareDecodingCodecs/string" \
+              "$CONFIG_DIR/encoding.xml"
+            ${pkgs.libxml2.bin}/bin/xmllint --noout "$CONFIG_DIR/encoding.xml"
             echo "WARNING: Jellyfin will start with software transcoding. Playback remains available, but video transcodes may use high CPU. Inspect this unit with: journalctl -u jellyfin" >&2
           fi
         ''}
