@@ -19,13 +19,23 @@ core/
 ├── coredump.nix     # systemd-coredump retention caps
 ├── nix-build-limits.nix # nix-daemon MemoryHigh/MemoryMax cgroup ceiling
 ├── index.nix        # Core aggregator
-└── packages.nix     # Base system packages
+├── packages.nix     # Base system packages
+└── paths.nix.bak    # Stray tracked backup — not imported; a Law 13 cleanup candidate
 ```
 
 ## Changelog
 - 2026-02-28: Added README for Charter Law 12 compliance
 - 2026-03-12: Inlined options.nix into index.nix for identity, polkit, session, shell; removed separate options.nix files
 - 2026-03-26: Added Authentik SSO/Identity Provider module
+- 2026-08-28: authentik — the `postgresql.postStart` `CREATE ROLE` + four GRANTs
+  became `ensureUsers` with `ensureDBOwnership`. None of the scripted statements
+  had ever run (`$PSQL` undefined, `|| true` swallowing the failure), and this was
+  the one place in the repo where that dead code was load-bearing: a rebuilt
+  cluster would have had the authentik database and no authentik role. See
+  `authentik/README.md` and the full audit in `domains/data/databases/README.md`
+  (`e82ca994`).
+- 2026-09-14: Structure block corrected — it omitted the stray tracked
+  `paths.nix.bak` sitting in this directory.
 - 2026-05-21: `login.nix` — strip NVIDIA PRIME env exports (`__NV_PRIME_RENDER_OFFLOAD`, `__GLX_VENDOR_LIBRARY_NAME`, `__VK_LAYER_NV_optimus`, `LIBVA_DRIVER_NAME=nvidia`) from greetd's `hyprStart`. Comment claimed "ignored if not applicable" — false: they actively route libglvnd/libva to NVIDIA on every child process, poisoning Hyprland's EGL state and crashing the compositor on WebGL DMA-BUF imports. NVIDIA offload is per-process via `gpu-launch` / `blender-offload` (companion to the system/gpu.nix fix the same day)
 - 2026-05-21: `login.nix` — additionally pin `__EGL_VENDOR_LIBRARY_FILENAMES=/run/opengl-driver/share/glvnd/egl_vendor.d/50_mesa.json` in `hyprStart`. Without this, libglvnd enumerated both Mesa (priority 50) and NVIDIA (priority 10) ICDs, loading `libEGL_nvidia.so` + `nvidia-egl-*.so` into every process — visibly broke browser WebGL even after the prior env-strip commit (page-level "WebGL supported but disabled or unavailable" error). gpu-launch / blender-offload unset this var per-process to restore enumeration when NVIDIA EGL is actually wanted
 - 2026-05-21: `login.nix` — reverted the `__EGL_VENDOR_LIBRARY_FILENAMES` pin from `hyprStart`. The "WebGL disabled in LibreWolf" symptom was actually a LibreWolf-specific FPP override (`privacy.fingerprintingProtection.overrides` including `WebGLRenderCapability` via `+AllTargets`), not an EGL ICD enumeration problem — confirmed by `nix-shell -p firefox` working on the same Mesa/NVIDIA setup. The earlier NVIDIA PRIME env strip in `hyprStart` (commit 5c30ef8d) stays — that fix was correct and unrelated

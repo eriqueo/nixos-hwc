@@ -126,6 +126,13 @@ into this module is pending.
 
 ## Changelog
 
+- **2026-05-29** — `parts/bootstrap/types.ts` dropped TypeScript's
+  parameter-property shorthand from `HermesDeployError`. Node 22's
+  `--experimental-strip-types` only strips type annotations and will not
+  synthesize the field assignments `constructor(public readonly code: …)` implies,
+  so those fields were undefined at runtime; they are now declared and assigned
+  explicitly, with the union exported as `HermesDeployErrorCode` (`3f4601be`).
+
 - **2026-06-09** — Caddy routes migrated to name-based vhosts under the shared
   `*.hwc.iheartwoodcraft.com` wildcard cert: app at `hermes.hwc.iheartwoodcraft.com`
   (was `:25443`) and the market-trials dashboard at
