@@ -123,6 +123,7 @@ in
 
   # Pointer cursor for GTK/Qt (XCursor); Hyprcursor is handled in Hyprland/session.
   home.pointerCursor = lib.mkIf graphical {
+    enable = true;
     name = xcurName;
     package = xcurPkg;
     size = cursSize;

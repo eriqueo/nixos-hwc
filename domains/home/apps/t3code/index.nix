@@ -417,6 +417,9 @@ in
         Description = "T3 Code (autostart)";
         PartOf = [ "graphical-session.target" ];
         After = [ "graphical-session.target" ];
+        # T3 carries the agent running `hms`; switching this unit in place
+        # severs that command. Apply unit changes on the next explicit restart.
+        X-SwitchMethod = "keep-old";
       };
       Service = {
         # THE BACKEND ESCAPES THIS UNIT'S CGROUP, so systemd's own KillMode
@@ -441,6 +444,10 @@ in
         ExecStartPre = "-${pkgs.procps}/bin/pkill -f ${lib.escapeShellArg "${cfg.repo}/apps/server/dist/bin.mjs"}";
         ExecStart = lib.getExe launcher;
         ExecStopPost = "-${pkgs.procps}/bin/pkill -f ${lib.escapeShellArg "${cfg.repo}/apps/server/dist/bin.mjs"}";
+        # Electron's single-instance handoff exits successfully when the app is
+        # already open. Keep the unit active so sd-switch does not start it on
+        # every `hms` and fire the backend cleanup hooks around that no-op.
+        RemainAfterExit = true;
         Restart = "on-failure";
         RestartSec = 5;
       };
@@ -509,8 +516,12 @@ in
       }
     ];
 
-    warnings =
-      lib.optional (!builtins.pathExists "${cfg.repo}/apps/desktop/package.json")
-        "hwc.home.apps.t3code: ${cfg.repo} does not look like the T3 Code fork. Clone eriqueo/t3code there, or set hwc.home.apps.t3code.repo.";
+    # cfg.repo is deliberately outside the flake, so pure evaluation cannot
+    # inspect it. Check the live filesystem during activation instead.
+    home.activation.t3codeRepoCheck = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      if [ ! -f ${lib.escapeShellArg "${cfg.repo}/apps/desktop/package.json"} ]; then
+        echo "hwc.home.apps.t3code: ${cfg.repo} does not look like the T3 Code fork. Clone eriqueo/t3code there, or set hwc.home.apps.t3code.repo." >&2
+      fi
+    '';
   };
 }

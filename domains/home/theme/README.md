@@ -17,7 +17,7 @@ theme/
 ├── palettes/        # deep-nord.nix, gruv.nix, hwc.nix (token sets incl.
 │                    #   ansi, sectionA-D powerline tokens, cursor block)
 ├── templates/
-│   └── gtk.nix      # palette -> GTK 2/3/4 settings, CSS bridge, pointerCursor
+│   └── gtk.nix      # palette -> GTK 2/3/4, CSS bridge, explicit pointerCursor enable
 ├── fonts/index.nix  # font packages + mono/ui font-name tokens
 └── nord-mountains.jpg
 ```
@@ -37,6 +37,9 @@ There is no separate "adapters" layer — that design was never built; the
 former README describing it was aspirational.
 
 ## Changelog
+- 2026-09-02: Explicitly enable `home.pointerCursor` on graphical hosts,
+  preserving the existing cursor output without Home Manager's deprecated
+  implicit-enable behavior.
 - 2026-06-11: Add `theme.graphical` option (default true). When false, the
   gtk template skips the GUI-only XCursor theme (~846 MB) and pointer-cursor
   wiring — headless machines (hwc-server) set it false in their machine home

@@ -21,6 +21,7 @@ design note below.
 index.nix   # hwc.home.apps.t3code — desktop launcher + Electron shim + desktop
             #   entry; headless t3-serve unit; t3-update; DX2 handoff adapter
             #   forwarding T3's result limit without allowing policy overrides
+            #   activation-time repo check
 README.md   # this file
 ```
 
@@ -63,6 +64,13 @@ There is no `parts/`. This module packages no source.
   event-sourced SQLite store. Starting the app itself keeps one backend, one
   database and one thread history, and still gives the always-running behaviour
   a service is wanted for.
+
+- **Home Manager switches keep the running harness.** T3 carries the agent
+  invoking `hms`, so restarting its unit during activation aborts the command
+  that is applying the generation. `RemainAfterExit` keeps a successful
+  Electron single-instance handoff active, and `X-SwitchMethod=keep-old`
+  defers future unit changes until an explicit restart. The existing backend
+  sweep still runs for an intentional service restart or stop.
 
 - **`port` is set, and Tailscale Serve is not.** `T3CODE_PORT` reaches the
   desktop backend and fixes its port — measured 2026-08-26 with `T3CODE_PORT=3891`,
@@ -202,6 +210,10 @@ here; on hwc-server the `serve` shape of this module supersedes it.
   The rebase is what makes Claude Fable 5.1 selectable: upstream moved model
   slugs out of `ClaudeProvider.ts` and into `model-manifest.json`, which
   carries `claude-fable-5-1`. The old checkout hardcoded `claude-fable-5`.
+- 2026-09-02: Moved local-fork validation from pure Nix evaluation to Home
+  Manager activation, where the out-of-store checkout is visible. Valid
+  checkouts no longer produce a false warning; missing checkouts still do.
+- 2026-09-02: `hms` no longer starts the inactive T3 service and kills the backend carrying its own activation. Successful single-instance handoff stays active; unit changes wait for an explicit restart.
 - 2026-08-26: Fixed an orphaned-backend leak the autostart service caused.
   Electron moves the backend it spawns into a sibling systemd scope
   (`…/app.slice/app-electron-<pid>.scope`), so `systemctl --user stop t3code`
