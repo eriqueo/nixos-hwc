@@ -2,6 +2,12 @@
 let
   tags = import ./tags.nix { inherit lib; };
 
+  # A human disposition is a completed decision, not just a folder move.
+  # Automatic arrival rules deliberately keep their existing unread semantics;
+  # these commands are used only by interactive aerc bindings.
+  archiveCmd = "+archive -inbox -unread";
+  trashCmd = "+trash -inbox -unread";
+
   # Exclusive category bindings under <Space>m leader (adds tag, removes all other categories)
   # Trailing " # <tag>" is the aerc binding annotation — shown in the which-key popover.
   categoryBinds = lib.concatStringsSep "\n" (map (t:
@@ -128,8 +134,8 @@ in
       u = :unread<Enter>
 
       # Static system tags (single-key for speed)
-      a = :modify-labels +archive -inbox<Enter>
-      d = :modify-labels +trash -inbox<Enter>
+      a = :modify-labels ${archiveCmd}<Enter>
+      d = :modify-labels ${trashCmd}<Enter>
 
       c = :compose<Enter>
       C = :reply -aq<Enter>
@@ -171,8 +177,8 @@ ${triageBinds}
 
       # === ALL MARKING UNDER <Space>m LEADER ===
       <Space>mu = :modify-labels +unread<Enter> # mark unread
-      <Space>ma = :modify-labels +archive -inbox<Enter> # archive
-      <Space>md = :modify-labels +trash -inbox<Enter> # trash
+      <Space>ma = :modify-labels ${archiveCmd}<Enter> # archive
+      <Space>md = :modify-labels ${trashCmd}<Enter> # trash
       <Space>mz = :modify-labels +spam -inbox<Enter> # spam
       <Space>ml = :modify-labels<space> # label…
 
@@ -204,8 +210,8 @@ ${categoryBinds}
       r = :reply<Enter>
       R = :reply -aq<Enter>
       f = :forward<Enter>
-      a = :modify-labels +archive -inbox<Enter>:close<Enter>
-      d = :modify-labels +trash -inbox<Enter>:close<Enter>
+      a = :modify-labels ${archiveCmd}<Enter>:close<Enter>
+      d = :modify-labels ${trashCmd}<Enter>:close<Enter>
       H = :toggle-headers<Enter>
       u = :open-link<Enter>
       / = :toggle-key-passthrough<Enter>/

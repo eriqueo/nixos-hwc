@@ -136,8 +136,8 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 
 | Key | Action |
 |-----|--------|
-| `a` | Archive (`+archive -inbox`) |
-| `d` | Trash (`+trash -inbox`) |
+| `a` | Finish and archive (`+archive -inbox -unread`) |
+| `d` | Finish and trash (`+trash -inbox -unread`) |
 | `X` | Move to folder (prompt) |
 | `Y` | Copy to folder (prompt) |
 
@@ -171,12 +171,12 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 | Key | Action |
 |-----|--------|
 | `<Space>mu` | +unread |
-| `<Space>ma` | +archive -inbox |
+| `<Space>ma` | +archive -inbox -unread |
 | `<Space>m!` | +action |
 | `<Space>m?` | +pending |
 | `<Space>mk` | +keep |
 | `<Space>mh` | Set category to hwcmt |
-| `<Space>md` | +trash -inbox |
+| `<Space>md` | +trash -inbox -unread |
 | `<Space>mz` | +spam -inbox |
 | `<Space>ml` | Free-form label (prompt) |
 | `<Space>mw` | Set category to work |
@@ -325,6 +325,9 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-09-14: Human archive/trash bindings now also clear `unread`. These keys
+  mean the message has been decided and removed from `now`; automatic arrival
+  rules retain their previous unread behavior.
 - 2026-09-14: Refined the calm sidebar to `now`, `family`, `datax`, and `hwc`.
   DataX-first precedence plus HWC fallback makes the three contexts an exact
   partition of `now`; added direct `<Space>gF/gD/gW/gB` navigation and kept
