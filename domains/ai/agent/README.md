@@ -17,20 +17,9 @@ Provides a safe, auditable interface for Open WebUI to execute system commands w
 
 ## Integration Steps
 
-### 1. Add agent import to domains/ai/default.nix
+### 1. Import (already wired)
 
-After PRs 1-2 are merged, add this line to the imports in `domains/ai/default.nix`:
-
-```nix
-imports = [
-  ./options.nix
-  ./ollama/default.nix
-  ./open-webui/default.nix
-  ./local-workflows/default.nix
-  ./mcp/default.nix
-  ./agent/default.nix  # ADD THIS LINE
-];
-```
+`domains/ai/index.nix` already imports `./agent`; no import edit is needed.
 
 ### 2. Enable agent on server
 
@@ -142,3 +131,23 @@ To register the agent as a tool in Open WebUI:
    - Headers: `Content-Type: application/json`
 
 Then users can invoke system commands through the chat interface.
+
+## Structure
+
+```
+agent/
+├── default.nix       # Import wrapper
+├── index.nix         # Options + systemd service (options declared inline, Law 10)
+└── hwc-ai-agent.py   # FastAPI whitelist agent, wrapped by writeScriptBin
+```
+
+## Changelog
+
+- 2026-06-02: Tailnet rename sweep — `hwc.ocelot-wahoo.ts.net` →
+  `hwc-server.ocelot-wahoo.ts.net`.
+- 2026-05-21: Deleted the orphaned `options.nix` stub left behind by the
+  inline-options move (`4f199955`).
+- 2026-03-06: Law 10 — options moved from `options.nix` into `index.nix`
+  (`0f8f427c`); `index.nix` added, `options.nix` removed.
+- 2026-01-18: Law 3 — hardcoded `/home/eric/.nixos` and `.nixos-mcp-drafts`
+  paths in the Python wrapper replaced with `config.hwc.paths.*` (`af11efbd`).
