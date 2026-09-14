@@ -16,6 +16,7 @@ apps/
 ├── chromium/       # Browser
 ├── freecad/        # CAD software
 ├── gpu-screen-recorder/  # Call/screen recording (gsr-toggle script + sys.nix capture wrapper)
+├── hwc-dictation/  # Owned desktop dictation app (whisper-cpp backend, guarded paste)
 ├── hyprland/       # Wayland compositor
 ├── kitty/          # Terminal emulator
 ├── librewolf/      # Privacy browser
@@ -30,6 +31,26 @@ apps/
 ```
 
 ## Changelog
+- 2026-09-13: **t3code — bounded DX2 handoff adapter.** Installed the adapter
+  (`5b50b3ac`), then two fixes: handoff compression stays tool-free (`8f61d652`)
+  and a caller-owned result limit is forwarded rather than silently re-derived
+  (`d13d444b`). See `t3code/README.md`.
+- 2026-09-11: **DX2 lands across the agent apps.** `pi` becomes the bounded worker
+  lane (`f0e44dbe`) and `codex` exposes the DX2 evidence skill (`e2cf6e62`),
+  following the 2026-09-08 `pi` groundwork: DX1's credential shared with the DX2
+  endpoint (`d815f19f`), the endpoint model slug corrected (`faa6d6d0`), and
+  reasoning levels mapped (`e93600ee`). The superseded DX2 key was removed from
+  secrets the same day (`e30605e8`). Per-app detail in `pi/README.md`,
+  `codex/README.md`.
+- 2026-09-09: **hwc-dictation — new owned desktop app** (`hwc-dictation/`, with
+  `whisper-cpp` as the backend). Shipped 2026-09-08 with guarded paste and a
+  recovery path (`e7a7c167`), then hardened over the same day: full audio context
+  retained after the short-speech regression (`b94ae732`), explicit overlay
+  shutdown with a bounded drain (`9cc045b4`), the complete clipboard runtime
+  dependency set actually deployed (`6fd8640d`), and recovery-cleanup ownership
+  documented (`f404ec45`). The recording panel then stopped disappearing on mixed
+  monitors — a `hyprland/parts/behavior.nix` + `waybar/parts/{appearance,behavior}.nix`
+  change (`032a64ed`).
 - 2026-09-07: Consume Workbench registry v2: Brief first/landing; filter explicit
   default tabs, keep Server on demand, preserve aerc and mail as distinct targets.
 - 2026-08-26: **doctl — new app; agenix-authenticated DigitalOcean CLI**. `doctl auth init` validates against `cloud.digitalocean.com/v1/oauth/token/info` and returned 401 for a token that same endpoint accepted over curl (doctl 1.160.1), so the `config.yaml` auth path is unusable. A `writeShellScriptBin "doctl"` wrapper reads `/run/agenix/digitalocean-access-token`, exports `DIGITALOCEAN_ACCESS_TOKEN`, and execs `${pkgs.doctl}/bin/doctl` — the token stays out of `config.yaml`, the shell environment, and shell history. The bare `pkgs.doctl` was removed from `core/development/` and from `apps/dxlog/`, which would otherwise collide on `bin/doctl`; `dxlog` now enables this module instead, which also repaired `dxlog live` (verified: the tail connects and holds open). Enabled on hwc-laptop. hwc-server has no `doctl` consumer, so the `core/development` removal is not a regression there.
