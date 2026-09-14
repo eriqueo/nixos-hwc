@@ -154,6 +154,13 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-08-29** — **The email subject is decision-first.** `run.sh` led the
+  subject with a raw alert count, which reported volume rather than whether
+  anything wanted Eric. It now derives `NEEDS_COUNT` from `sections.today.items`
+  (capped at 5) and renders `— N need you`, falling back to `— N to watch` from
+  `alerts` only when nothing needs a decision, and to a bare date when neither
+  applies. Same hierarchy as the dashboard entry below (`7f332a78`).
+
 - **2026-08-29** — **CEO information hierarchy.** Dashboard and email lead with
   a bounded `Needs you` list, keep deeper queue items behind an explicit Explore
   route, and suppress an alert only when a visible Today item already represents

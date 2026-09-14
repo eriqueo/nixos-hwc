@@ -12,9 +12,10 @@ Immich photo management with NVIDIA CUDA GPU acceleration for ML operations (Sma
 ## Structure
 
 ```
-domains/server/containers/immich/
-├── index.nix           # Container definition with GPU config
-├── options.nix         # hwc.server.containers.immich.* options
+domains/media/immich-container/
+├── index.nix           # hwc.media.immich.* options (declared inline, Law 10)
+├── parts/
+│   └── config.nix      # Container definitions, GPU config, Postgres role/database, storage
 └── sys.nix             # System-lane packages
 ```
 
@@ -79,6 +80,27 @@ journalctl -u immich-machine-learning | grep -i "onnx\|cuda"  # CUDA provider
 
 ## Changelog
 
+- 2026-08-28: **The database and its owning role are now declared; fifteen dead
+  grants are gone.** `parts/config.nix` held an eight-line `$PSQL` block for schema
+  `public` plus seven more for the pgvector `vectors` schema, and none ever ran —
+  `$PSQL` is undefined in the generated postgresql post-start script and `|| true`
+  swallowed the command-not-found. They were not restored: immich connects as its
+  own `immich` role, which owns the database, so the app never touched them; their
+  only purpose was letting `eric` read the database from a psql prompt, and `eric`
+  is a superuser. Deleting them surfaced a real gap — neither the database nor its
+  owning role was declared anywhere in the repo, so a rebuilt cluster would not
+  have reproduced either. Both are now declared, with the owner taken from
+  `cfg.database.name` and **not** `cfg.database.user`: those are different facts
+  this module's options don't distinguish (`machines/server/config.nix` sets
+  `database.user = "eric"`, the role the container CONNECTS as, while the live
+  database and its objects are owned by a separate `immich` role). Declaring from
+  `database.user` would have emitted `ALTER DATABASE immich OWNER TO eric` — a live
+  ownership change wearing a cleanup's clothes — and NixOS's own `ensureDBOwnership`
+  assertion caught it on the first eval (`e82ca994`, `53e84228`).
+- 2026-03-29: External-library mount repointed —
+  `${paths.media.root}/pictures:/mnt/media/pictures:ro` became
+  `${paths.photos}/external:/mnt/media/photos/external:ro`, mounting the laptop
+  photo library and dropping the unused pictures mount (`0a0f7414`).
 - 2026-03-27: Fixed Prometheus metrics port mappings — added host-side port publishing for apiPort (8091) and microservicesPort (8092) which were only set as container env vars but never exposed, causing false ServiceDown alerts
 - 2026-02-26: Created README per Law 12 (migrated from docs/infrastructure/)
 - 2025-11-21: Initial GPU optimization implementation

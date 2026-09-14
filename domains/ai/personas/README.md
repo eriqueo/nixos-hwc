@@ -28,7 +28,9 @@ cat README.md | hwc-llm coder -
 
 Drop two files into `library/`:
 
-- `mypersona.nix` — `{ model = "gpu"; temperature = 0.2; topP = 0.9; maxTokens = 256; description = "..."; }`
+- `mypersona.nix` — `import ./_defaults.nix // { ... }`, overriding only what
+  differs (`model`, `temperature`, `topP`, `maxTokens`, `description`, and the
+  `useMemory` / `useKnowledge` / `knowledgeTopK` gates read by persona-daemon)
 - `mypersona.md`  — system-prompt body (plain text; fed verbatim to the model)
 
 Rebuild and the persona becomes available. The list is derived from
@@ -38,11 +40,13 @@ Rebuild and the persona becomes available. The list is derived from
 
 ```
 library/
+  _defaults.nix          # Shared persona defaults (merged by every persona)
   classifier.{nix,md}    # GPU label classification
   extractor.{nix,md}     # GPU JSON extraction
   coder.{nix,md}         # GPU code-first
   assistant.{nix,md}     # GPU general
   thinker.{nix,md}       # CPU multi-step reasoning
+default.nix              # Import wrapper
 index.nix                # Inline options + library load + hwc-llm wrapper
 README.md
 ```
@@ -59,6 +63,14 @@ README.md
 
 ## Changelog
 
+- 2026-05-31: Gated the `personaManifestFile` set on the option being declared in
+  scope (`lib.hasAttrByPath … options`), not merely enabled — `lib.mkIf` alone
+  still registered the set on hosts without persona-daemon and broke
+  `nix flake check` (`40d9e2a3`).
+- 2026-05-29: Persona-daemon commits 2/4 and 3/4 — added `library/_defaults.nix`
+  and reworked every persona to `import ./_defaults.nix // { … }`; new
+  `useMemory` / `useKnowledge` / `knowledgeTopK` gates wired for SQLite
+  conversation memory and brain-vault RAG (`d5e5d002`, `007b5ab9`).
 - 2026-05-29: Initial module. 5 personas (classifier, extractor, coder,
   assistant, thinker). Stateless CLI wrapping `llama-gpu` (port 11500)
   and `llama-cpu` (port 11501).

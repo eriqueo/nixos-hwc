@@ -51,4 +51,10 @@ hwc.data.cloudbeaver = {
 
 ## Changelog
 
+- 2026-07-05: Law 5 burn-down — added an `HWC-EXCEPTION(Law 5)` annotation block
+  above the raw `virtualisation.oci-containers.containers.cloudbeaver` definition
+  (reason/justification/plan/revocable). This is an infra container attached to
+  the postgres network, not a media app, so `mkContainer`'s media/PUID model does
+  not apply; the exception is permanent by design but revocable. Comment only, no
+  behavior change (`434614ed`).
 - 2026-03-25: Created README per Law 12

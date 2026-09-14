@@ -51,6 +51,22 @@ domains/mail/calendar/
 
 ## Changelog
 
+- **2026-09-07**: `index.nix` — the todui wrapper now selects the configured
+  Radicale user instead of `cut`-ing across every htpasswd entry. The principal
+  consolidation below made htpasswd multi-user; vdirsyncer already selected its
+  user, but the wrapper sent an invalid Basic password and got 401. Sharing the
+  established selector in `hm.nix` (rendered as shell or JSON argv per caller)
+  restores authentication — a read-only live probe returns 207 (`14e17608`).
+- **2026-07-16**: **Consolidated under the `eric` principal; `cal` retired.** The
+  calendar collection moved server-side to `eric/migrated`, so ONE phone CalDAV
+  account carries calendar + reminders and one CardDAV account carries contacts.
+  `hwc.mail.calendar.radicale.username` and `hwc.business.crm.calendar.{user,
+  collection}` now default to `eric`. The old `cal`/`eric` split existed as a
+  cross-discovery guard and is superseded: `parts/vdirsyncer-pair-radicale.nix`
+  pins `collections = ["migrated"]`, and the only remaining leak is the tasks pair
+  discovering the VTODO-empty calendar collection, which is cosmetic. This also
+  fixed CRM appointments never reaching the phone — `eric` could not see
+  `cal/migrated` under `owner_only` rights (`7485823d`).
 - **2026-07-10**: Booking accuracy. Set khal `default_calendar = migrated`
   (the VEVENT calendar the hwc-crm availability endpoint reads) when Radicale is
   on, so quick-adds never prompt. Added a `busy` command (`home.packages`):

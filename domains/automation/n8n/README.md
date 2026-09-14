@@ -131,6 +131,10 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
+- 2026-09-14: Law-12 refresh — `parts/estimator-integration/README.md` gained a
+  Changelog recording the only change it has seen since 2026-03-20: the
+  2026-06-02 tailnet rename sweep (`hwc.ocelot-wahoo.ts.net` →
+  `hwc-server.ocelot-wahoo.ts.net`) applied to its `NEXT-SESSION.md`. Docs only.
 - 2026-09-08: Event discovery, curation and calendar review moved to Event Scout
   in the Scout monorepo (`apps/event-scout`). Removed the two event workflow
   exports, the unused event ledger migration and n8n's event bearer mount.

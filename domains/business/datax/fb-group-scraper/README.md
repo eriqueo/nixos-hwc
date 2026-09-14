@@ -11,13 +11,17 @@ npx playwright install chromium
 
 ## Auth
 
-First run requires a one-time interactive login to capture session cookies:
+First run requires a one-time interactive login:
 
 ```bash
 node index.mjs --login --headed
 ```
 
-This opens a browser. Log in to Facebook manually, press Enter in the terminal, and the session is saved to `./data/session.json`. Subsequent runs reuse this session headlessly.
+This opens a browser. Log in to Facebook manually — no Enter press is needed. The
+script polls for the `c_user` cookie and exits once it appears, which survives the
+passkey redirect that a DOM check could not. The browser profile is saved to
+`./data/browser-profile` (override with `--profile <path>`) and subsequent runs
+reuse it headlessly via `chromium.launchPersistentContext`.
 
 If the session expires (you'll see "Session expired"), re-run the login step.
 
@@ -117,11 +121,29 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 ## Structure
 
 ```
-├── index.mjs    CLI, browser lifecycle, scroll loop, comment expansion
-├── parse.mjs    FB GraphQL response parsers (ported from API Monitor)
-├── store.mjs    SQLite persistence layer
+├── index.mjs         CLI, browser lifecycle, scroll loop, comment expansion
+├── parse.mjs         FB GraphQL response parsers (ported from API Monitor)
+├── Containerfile     mcr.microsoft.com/playwright:v1.59.1-noble
+├── package.json      playwright pinned to 1.59.1 (must match the image)
+├── package-lock.json
 ├── data/
-│   ├── posts.db       ← created on first run
-│   └── session.json   ← created on login
-└── package.json
+│   ├── posts.db          ← created on first run
+│   └── browser-profile/  ← created on login (--profile overrides)
+└── README.md
 ```
+
+> These sources are unreferenced leftovers — no Nix module imports this tree.
+> See `domains/business/README.md`, 2026-08-26.
+
+## Changelog
+
+- 2026-05-21: Login reworked end to end. `chromium.launch` + a saved
+  `session.json` became `chromium.launchPersistentContext` over a profile
+  directory, with a new `--profile <path>` flag (default
+  `./data/browser-profile`). Login detection now polls for the `c_user` cookie
+  instead of checking for the absence of `#login_form` — the DOM check reported
+  success mid-passkey-redirect — so `--login --headed` auto-completes with no
+  Enter press. Playwright pinned to exactly `1.59.1` in `package.json` and
+  `package-lock.json` to match the bumped Containerfile base image
+  (`v1.49.0-noble` → `v1.59.1-noble`); a floating `^1.49.0` against a pinned
+  image is a version skew waiting to happen.

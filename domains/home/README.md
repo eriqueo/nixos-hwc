@@ -49,6 +49,12 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-14: Law-12 refresh under `apps/` — `apps/README.md` gained `hwc-dictation/`
+  in its Structure plus changelog entries for the dictation app, the DX2 work across
+  pi/codex/t3code, and the mixed-monitor panel fix. `nvim/` recorded the 2026-06-26
+  which-key restyle and added the `parts/appearance.nix` it had never listed;
+  `yazi/` recorded the `name=` → `url=` `[filetype]` key rename; `khalt/` recorded
+  its adoption of the unified keymap grammar. Docs only.
 - 2026-09-13: Pass T3's result-character limit to the Pi stream collector without allowing provider or access overrides.
 - 2026-09-09: make dictation recording visible with a larger, fixed top-right panel; remove dependence on mismatched monitor heights in the desktop layout.
 - 2026-09-08: activated owned dictation on the laptop; final package and native desktop checks passed. Removed the temporary clipboard dependency override and exercised live clipboard write and recording/cancellation.

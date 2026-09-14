@@ -13,12 +13,17 @@ Business data layer for Heartwood Craft. Manages the `hwc` PostgreSQL database s
 
 ```
 domains/business/databases/
-├── index.nix                    # Module: hwc.business.databases.* (database provisioning)
-├── schema.sql                   # Full business schema (690 lines, 15+ tables, views, triggers)
+├── index.nix                    # Module: hwc.business.databases.* (database + business_user role)
+├── schema.sql                   # Full business schema (tables, views, triggers)
+├── migrations/                  # Incremental SQL migrations (001-catalog-schema-split.sql, …)
+├── migrate_canonical.sql        # Canonical-naming migration
 ├── catalog.db                   # SQLite catalog (source for migration to Postgres)
 ├── migrate_catalog.py           # Migration script: SQLite -> Postgres catalog_items table
+├── seed_catalog.py              # Seed the catalog tables
+├── populate_assembly_logic.py   # Populate assembly/formula logic
 ├── export_calculator_json.py    # Export DB → calculator-bathroom.json for website calculator
 ├── export_estimator_data.py     # Export DB → tradeRates.json, templates.json, catalog_export.json
+├── CATALOG_NAMING_CONVENTION.md
 └── README.md
 ```
 
@@ -85,6 +90,23 @@ After enabling and rebuilding:
 
 ## Changelog
 
+- 2026-08-28: **`business_user` is now declared; the four `$PSQL` grants are gone.**
+  The postStart block held four `GRANT`/`ALTER DEFAULT PRIVILEGES` lines that never
+  ran — `$PSQL` is undefined in the generated postgresql post-start script and
+  `|| true` swallowed the command-not-found. They were deleted rather than repaired:
+  `cfg.user` is a superuser and owns this database, so every one of those grants
+  was a no-op. What WAS load-bearing is the `business_user` role — `schema.sql`
+  (772-774) and `migrations/001-catalog-schema-split.sql` grant to it by name and
+  nothing else in the repo mentions it, so it existed by hand and a rebuilt cluster
+  would have run those grants against a nonexistent role. It is now
+  `services.postgresql.ensureUsers = [{ name = "business_user"; }]`, with no
+  `ensureDBOwnership` (eric owns the database; business_user is a grantee). The
+  per-database backup registration was dropped too — `postgresql-db-backup` was
+  retired 2026-08-26, so registering into it read as a backup while being dead
+  config; `hwc` rides the borg pre-hook's nightly `pg_dumpall`. The role for
+  `cfg.user` is declared once cluster-wide in `domains/data/databases/index.nix`
+  (one producer per fact). Full 54-statement audit lives in that module's README
+  (`e82ca994`, `53e84228`).
 - 2026-05-01: Added export scripts, estimate_templates table, 70 catalog items with Craftsman/JT rates
 - 2026-04-12: Created index.nix module (hwc.business.databases.*), wired into business domain
 - 2026-03-24: Granted n8n postgres user access to hwc schema
