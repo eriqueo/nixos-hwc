@@ -20,12 +20,15 @@ mail/
 ├── abook/index.nix            # Address book config
 ├── aerc/
 │   ├── index.nix              # aerc module (enable toggle, packages, activation)
+│   ├── package.nix            # Forked aerc package from the flake input
 │   └── parts/
 │       ├── config.nix         # aerc.conf, accounts.conf, queries, stylesets, templates
 │       ├── binds.nix          # Keybindings + ov pager config
-│       ├── tags.nix           # Single source of truth for tag definitions
-│       ├── theme.nix          # Palette-driven styleset (Gruvbox)
-│       └── sieve.nix          # Server-side sieve filters
+│       ├── appearance.nix     # Palette-driven styleset
+│       ├── tags.nix           # Taxonomy adapter for queries, styles, and bindings
+│       ├── tags-custom.json   # User-defined aerc-only tags
+│       ├── sieve.nix          # Sieve script deployment
+│       └── sieve-filters.nix  # Server-side Sieve rules
 ├── afew/
 │   ├── index.nix              # afew config generation (filters, MailMover)
 │   └── package.nix            # afew package derivation
@@ -76,6 +79,44 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-09-14: Kept navigation layers distinct: Workbench/Zellij retains Ctrl
+  chords, while aerc previous/next-tab now uses Alt+Shift+K/J in the message,
+  viewer, compose, and terminal contexts. Selector prompts from the aerc fork
+  now render as bounded raised cards with a visible key legend; the
+  unsubscribe flow labels HTTPS as recommended and email as fallback.
+- 2026-09-14: Improved the calendar handoff for image-based campaign mail.
+  Written dates in subjects populate the review form without inventing a
+  midnight start; generic and tracked links no longer become locations; the
+  title drops a duplicated trailing date; and the reference section retains
+  only one labeled event-page candidate without resolving tracking redirects.
+  When missing facts are trapped inside a large remote flyer, the helper offers
+  an explicit opt-in to fetch that public HTTPS image once and run bounded local
+  Tesseract OCR before the editable review.
+- 2026-09-14: Repaired the managed-mail lifecycle. `now` is now the stable
+  `queue` + `inbox` cohort, so opening a message cannot make it disappear. New
+  mail once again gets the transient `new` tag required by every arrival rule;
+  folder-state tagging now runs before sender disposition; and finance tagging
+  no longer de-inboxes receipts. The legacy Inbox remains outside the managed
+  queue for bounded later cleanup.
+- 2026-09-14: Learned exact QuickBooks-marketing and Bozeman Daily Chronicle
+  e-edition sender addresses as future auto-trash noise without matching the
+  separate QuickBooks payment sender.
+- 2026-09-14: Interactive aerc archive/trash now mean a completed decision:
+  preserve-or-delete, remove from inbox, and clear unread. Automated arrival
+  rules remain unchanged.
+- 2026-09-14: Refined aerc's calm surface to four visible contexts: `now`,
+  `family`, `datax`, and `hwc`. The three context folders exactly partition
+  `now` with DataX-first precedence and HWC as the safe fallback. Backlog and
+  system destinations remain reachable by Space-leader navigation without
+  occupying the sidebar.
+- 2026-09-14: Replaced aerc's overlapping-folder dashboard with a calm daily
+  surface: `now` (recent unread non-noise), `family`, `backlog`, drafts, sent,
+  archive, and trash. Only `now` shows a sidebar count and the tab count is
+  scoped to it; the message list is a
+  compact state/date/from/subject view without category-wide row colors. Legacy
+  queries and triage tags remain available for integrations and direct
+  drill-down. Replaced the inert local trash-sender helper with aerc's built-in
+  `:unsubscribe` command.
 - 2026-09-07: Share the Radicale password selector with todui; retain per-user
   selection and colon-containing passwords across the three sync clients.
 - 2026-08-30: `accounts/index.nix` Gmail agenix handshake no longer falls back to

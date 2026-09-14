@@ -12,15 +12,36 @@ let
             pathBase = config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail";
         in if nmRoot != "" then nmRoot else "${pathBase}/Maildir";
 
+    # One managed queue, partitioned by context. Read/unread is presentation,
+    # never workflow state: opening a message cannot make it disappear. DataX
+    # wins over Family when signals overlap; HWC is the deliberate fallback so
+    # every message in `now` appears in exactly one context folder.
+    currentInbox = "tag:inbox AND tag:${tags.currentTag} AND NOT tag:trash";
+    # Legacy unread mail remains outside the daily surface until a bounded
+    # cohort is deliberately promoted into the managed queue.
+    legacyBacklog = "tag:inbox AND tag:unread AND NOT tag:${tags.currentTag} AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:trash AND NOT tag:triage/noise";
+    familySignal = "(tag:family OR tag:keep OR to:eriqueokeefe@gmail.com OR to:eriqueo@proton.me OR to:g_erique@proton.me)";
+
+    # Final receivers that are allowed to attest Authentication-Results. Aerc's
+    # RFC 8058 unsubscribe command rejects all other headers before acting; do
+    # not replace this exact list with the documented debugging wildcard (`*`).
+    trustedAuthResults = [ "^mail\\.protonmail\\.ch$" "^mx\\.google\\.com$" ];
+
   queries = ''
-    # ── Focus: the manageable daily views ──
+    # ── Calm daily surface: one inbox plus three exact context partitions ──
+    now            = ${currentInbox}
+    family         = ${currentInbox} AND NOT tag:datax AND ${familySignal}
+    datax          = ${currentInbox} AND tag:datax
+    hwc            = ${currentInbox} AND NOT tag:datax AND NOT ${familySignal}
+    backlog        = ${legacyBacklog}
+
+    # ── Legacy drill-downs (hidden from the sidebar, still directly addressable) ──
     focus          = tag:inbox AND tag:unread AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:trash
     today          = tag:inbox AND date:1d.. AND NOT tag:trash
     week           = tag:inbox AND date:1w.. AND NOT tag:trash
     people         = tag:inbox AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:sent AND NOT tag:trash
 
     # ── Relationships ──
-    family         = tag:family AND NOT tag:trash
     keep           = tag:keep
 
     # ── Family aggregates (colour-grouped) ──
@@ -60,9 +81,11 @@ ${tagQueries}
     query-map           = ${config.home.homeDirectory}/.config/aerc/notmuch-queries
     from                = Eric <eric@iheartwoodcraft.com>
     outgoing            = ${pkgs.msmtp}/bin/msmtp
-    default             = focus
+    trusted-authres     = ${lib.concatStringsSep "," trustedAuthResults}
+    folders             = now,family,datax,hwc
+    default             = now
     enable-folders-sort = true
-    folders-sort        = focus,today,week,people,${lib.concatMapStringsSep "," tags.triageTag tags.triageBuckets},action_!,pending_?,family,keep,business,money,growth,system,all,newsletters,notifications,inbox_i,unread_u,important,drafts,sent_s,Archive_a,trash_d,spam_z
+    folders-sort        = now,family,datax,hwc
   '';
 
   accountsFile = pkgs.writeText "aerc-accounts.conf" accountsConf;
@@ -102,20 +125,6 @@ ${tagQueries}
     ) tagDefs)
   );
 
-  # Derive the switch expression for column templates
-  tagSwitch = let
-    cases = map (t: ''(case `\b${t.tag}\b` "${tagStyle t}")'') tagDefs;
-  in ''(switch (.Labels | join " ") ${lib.concatStringsSep " " cases} (default "default"))'';
-
-  rowStyle = let
-      cases = map (t: ''(case `\b${t.tag}\b` "${tagStyle t}")'') tags.categoryTags;
-  in ''(switch (.Labels | join " ") ${lib.concatStringsSep " " cases} (default "default"))'';
-
-  # Derive the .StyleMap cases for column-tags
-  tagStyleMapCases = lib.concatStringsSep " " (
-    map (t: ''(case "${t.tag}" "${tagStyle t}")'') tagDefs
-  );
-
   # Derive [user] styleset section from tag group colors
   tagUserSection = ''
 
@@ -144,9 +153,9 @@ in
       enable-osc8 = true
 
       [ui]
-      index-columns = flags<6,tags<12,date<10,from<16,subject<*
+      index-columns = state<3,date<10,from<22,subject<*
       # Column header row above the msglist (forked aerc feature), styled via the
-      # msglist_header styleset object. Labels: tags date from flags subject.
+      # msglist_header styleset object. Labels: state date from subject.
       index-headers = true
       threading-enabled = true
       confirm-quit = false
@@ -160,24 +169,24 @@ in
       which-key-groups = g:go (folders), m:mark (tags), f:find, s:sort, t:toggle/triage, b:buffer, y:yank, d:delete, w:window, p:project, o:open, q:quit
       styleset-name = hwc
       dirlist-left = {{.Style .Folder .Folder}}
-      dirlist-tree = true
-      dirlist-collapse = 1
-      dirlist-exclude = ^\..*|^proton(/.*)?$|^gmail-business|^gmail-personal|^acc:|^hwc_email$
+      dirlist-right = {{if eq .Folder "now"}}{{if .Unread}}{{humanReadable .Unread}}{{end}}{{end}}
+      dirlist-tree = false
       mouse-enabled = true
       fuzzy-complete = true
-      tab-title-account = {{.Account}}{{if .Unread}} ({{.Unread}}){{end}}
+      tab-title-account = mail{{if .Unread "now"}} ({{.Unread "now"}}){{end}}
 
       # Live column templates
-      column-tags    = {{.StyleMap .Labels (exclude "inbox") (exclude "unread") (exclude "new") (exclude "sent") (exclude "draft") (exclude "trash") (exclude "spam") (exclude "archive") (exclude "flagged") (exclude "replied") (exclude "passed") (exclude "attachment") (exclude "signed") (exclude "encrypted") (exclude `^hwc`) (exclude `^proton`) (exclude `^gmail`) (exclude `^acc:`) (exclude `^personal_`) (exclude `_google$`) (exclude `_proton$`) (exclude "newsletter") (exclude "notifications") (exclude "notification") (exclude "aerc-notes") (exclude "action") (exclude "hide_my_email") (exclude "starred") (exclude "important") ${tagStyleMapCases} (default "default") | join " " }}
-      column-date    = {{.Style (.DateAutoFormat .Date.Local) ${rowStyle}}}
-      column-from    = {{.Style (index (.From | names) 0) ${rowStyle}}}
-      column-flags   = {{.Flags | join "" }}
-      column-subject = {{.ThreadPrefix}}{{if .ThreadFolded}}{{printf "{%d}" .ThreadCount}}{{end}}{{.Style .Subject ${rowStyle}}}
+      column-state   = {{if .IsUnread}}●{{else}} {{end}}{{if .IsFlagged}}★{{end}}
+      column-date    = {{.DateAutoFormat .Date.Local}}
+      column-from    = {{index (.From | names) 0}}
+      column-subject = {{.ThreadPrefix}}{{if .ThreadFolded}}{{printf "{%d}" .ThreadCount}}{{end}}{{.Subject}}
       column-separator = " | "
 
       [viewer]
 
-      pager = ${pkgs.less}/bin/less -R
+      # -~ keeps the unused area below a short message visually blank instead
+      # of filling the whole viewer with Vim-like tilde markers.
+      pager = ${pkgs.less}/bin/less -R -~
       alternatives = text/html,text/plain
       [compose]
       editor = ${pkgs.neovim}/bin/nvim

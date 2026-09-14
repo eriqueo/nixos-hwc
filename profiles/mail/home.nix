@@ -46,7 +46,6 @@
       userName = "Eric O'Keefe";
       primaryEmail = "eric@iheartwoodcraft.com";
       otherEmails = [ "eriqueo@proton.me" "heartwoodcraftmt@gmail.com" "eriqueokeefe@gmail.com" ];
-      newTags = [ "unread" "inbox" ];
       excludeFolders = [ "trash" "spam" "[Gmail]/All Mail" ];
 
       # Classification rules (trash/archive/newsletter/notification/finance

@@ -60,6 +60,10 @@ let
     # "tasks*/*" also matches tasks-radicale/ when that backend is on.
     pathGlob = if cfg.radicale.enable then "tasks*/*" else "tasks/*";
   };
+
+  emailToTask = pkgs.writeShellScriptBin "email-to-task" ''
+    exec ${pkgs.python3}/bin/python3 ${./parts/email-to-task.py} "$@"
+  '';
 in
 {
   #============================================================================
@@ -143,7 +147,7 @@ in
   # IMPLEMENTATION
   #============================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.todoman ];
+    home.packages = [ pkgs.todoman emailToTask ];
 
     # Contribute the tasks pair(s) to the shared (calendar) vdirsyncer config.
     hwc.mail.calendar.extraVdirsyncerPairs =

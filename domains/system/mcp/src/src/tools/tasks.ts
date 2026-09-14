@@ -8,7 +8,7 @@
  * run (15-min timer, or `R` in todui).
  */
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { hostname } from "node:os";
 import { catchError, mcpError } from "../errors.js";
 import { contract } from "../result.js";
@@ -190,6 +190,15 @@ export function tasksTools(): ToolDef[] {
           priority: { type: "number", description: "1 (highest) … 9; overrides inline (A)-(I)" },
           due: { type: "string", description: "YYYY-MM-DD, 'today' or 'tomorrow'; overrides inline due:" },
           description: { type: "string", description: "Longer notes body" },
+          idempotencyKey: {
+            type: "string",
+            description: "Stable source identifier. Reusing it in the same list updates the same task instead of creating a duplicate.",
+          },
+          requestVersion: {
+            type: "number",
+            enum: [1],
+            description: "Optional additive request schema version; current writers send 1 and legacy callers may omit it.",
+          },
         },
         required: ["summary"],
       },
@@ -216,7 +225,12 @@ export function tasksTools(): ToolDef[] {
           const due = (args.due ? parseDue(args.due as string) : null) || parsed.due;
           const priority = (args.priority as number) ?? parsed.priority;
 
-          const uid = `${randomUUID().replace(/-/g, "")}@${hostname()}`;
+          const idempotencyKey = (args.idempotencyKey as string | undefined)?.trim();
+          if (args.requestVersion !== undefined && args.requestVersion !== 1)
+            return mcpError({ type: "VALIDATION_ERROR", message: "requestVersion must be 1" });
+          const uid = idempotencyKey
+            ? `hwc-${createHash("sha256").update(`hwc_tasks_add:v1\0${listName}\0${idempotencyKey}`).digest("hex").slice(0, 32)}@${hostname()}`
+            : `${randomUUID().replace(/-/g, "")}@${hostname()}`;
           const ics = buildVtodo({
             uid,
             summary: parsed.summary,
@@ -230,7 +244,7 @@ export function tasksTools(): ToolDef[] {
           return {
             status: "ok",
             message: `Added '${parsed.summary}' to ${listName} (phone sees it now; laptop todui on next sync)`,
-            data: { uid, list: listName, summary: parsed.summary, categories, priority, due },
+            data: { uid, list: listName, summary: parsed.summary, categories, priority, due, idempotent: Boolean(idempotencyKey) },
           };
         } catch (err) {
           return catchError("NETWORK_ERROR", "Failed to add task", err);

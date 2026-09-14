@@ -55,7 +55,7 @@ spinner.fg          = ${sel}
 *.selected.bg       = ${h (c.fg2 or "a7aaad")}
 *.selected.bold     = true
 
-# msglist_* — NO .fg on any of these so [user] tag colors come through
+# Message state carries the hierarchy; category tags stay out of the row chrome.
 msglist_unread.bold         = true
 msglist_read.dim            = true
 msglist_deleted.dim         = true
@@ -73,7 +73,7 @@ msglist_header.fg           = ${bg}
 msglist_header.bg           = ${sel}
 msglist_header.bold         = true
 
-# dirlist_* — NO .fg so [user] tag colors come through (same rule as msglist)
+# Directory state stays quiet except for unread/recent weight.
 dirlist_unread.bold = true
 dirlist_recent.bold = true
 
@@ -109,9 +109,23 @@ whichkey_title.bold    = true
 whichkey_legend.bg     = ${h (c.bg3 or "32373c")}
 whichkey_legend.fg     = ${dim}
 
-selector_default.bg    = ${bg}
-selector_focused.bg    = ${h (c.bg3 or "32373c")}
-selector_focused.fg    = ${fg0}
+# Selector dialogs use the same raised-card hierarchy as which-key, with their
+# own style objects so dialog chrome can evolve without changing the key map.
+selector_default.bg    = ${h (c.bg3 or "32373c")}
+selector_default.fg    = ${fg0}
+selector_focused.bg    = ${fg0}
+selector_focused.fg    = ${h (c.bg0 or "1d2021")}
+selector_focused.bold  = true
+selector_chooser.bg    = ${h (c.bg3 or "32373c")}
+selector_chooser.fg    = ${sel}
+selector_chooser.bold  = true
+selector_border.bg     = ${h (c.bg3 or "32373c")}
+selector_border.fg     = ${sel}
+selector_title.bg      = ${fg0}
+selector_title.fg      = ${h (c.bg0 or "1d2021")}
+selector_title.bold    = true
+selector_hint.bg       = ${h (c.bg3 or "32373c")}
+selector_hint.fg       = ${dim}
 
 [viewer]
 url.fg        = ${h (c.link or "5e81ac")}
@@ -133,7 +147,20 @@ hide.fg           = ${dim}
 starred.fg        = ${h (c.errorBright or "d08080")}
 starred.bold      = true
 
-# Scoped views (sidebar)
+# Calm daily surface (sidebar): overview, then warm personal, cool DataX,
+# and the HWC copper accent. Backlog stays quiet when opened directly.
+now.fg            = ${fg0}
+now.bold          = true
+family.fg         = ${h (c.warningBright or "fcbb74")}
+family.bold       = true
+datax.fg          = ${h (c.info or "5e81ac")}
+datax.bold        = true
+hwc.fg            = ${sel}
+hwc.bold          = true
+
+# Hidden drill-downs retain their styles when opened directly.
+backlog.fg        = ${dim}
+backlog.dim       = true
 focus.fg          = ${fg0}
 focus.bold        = true
 today.fg          = ${fg}
@@ -141,7 +168,6 @@ week.fg           = ${fg}
 people.fg         = ${h (c.warningBright or "fcbb74")}
 action.fg         = ${h (c.error or "bf616a")}
 action.bold       = true
-family.fg         = ${h (c.warningBright or "fcbb74")}
 keep.fg           = ${h (c.success or "a3be8c")}
 
 # Family aggregate groups (each its family colour)

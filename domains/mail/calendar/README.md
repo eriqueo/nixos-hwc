@@ -43,7 +43,8 @@ domains/mail/calendar/
 │   ├── service.nix                     # 15-min sync timer
 │   ├── parser.nix                      # email-to-khal helper + aerc filter
 │   ├── ics-watcher.nix                 # auto-import dropped .ics
-│   └── email-to-khal.py
+│   ├── email-to-khal.py                # reviewed email → event proposal/import
+│   └── email_to_khal_test.py           # parser, flyer, and fetch-policy regressions
 ├── scripts/
 │   └── migrate-icloud-to-radicale.sh  # one-time data migration (do not commit-run)
 └── README.md
@@ -51,6 +52,24 @@ domains/mail/calendar/
 
 ## Changelog
 
+- **2026-09-14**: Image-based newsletter proposals now recover a written date
+  from the subject while leaving an unknown time blank for review. The helper
+  removes a duplicated trailing date from the title, never treats a generic or
+  campaign-tracked URL as the venue, and reduces the raw URL wall to one
+  labeled event-page candidate. Link selection remains offline and never
+  resolves campaign redirects. If facts remain missing inside a large remote
+  flyer, an explicit prompt can fetch one public HTTPS image (no redirects,
+  8-MiB cap, bounded network/OCR time, no retry) and run local Tesseract; its
+  proposed time, duration, and venue remain editable before import.
+- **2026-09-14**: Made the aerc `i` handoff outcome honest: cancellation no
+  longer falls through to a sync/success message, sync names the configured
+  calendar server rather than iCloud, and success tells the operator to archive
+  the unchanged source email with `a`. A failed sync reports that the event is
+  already local and must not be created again.
+  Compact school-message ranges such as `5:30p-6:30p 9/17/26` now produce the
+  start and 60-minute duration in the review form automatically.
+  HTML-only messages now put cleaned readable text in the reference section;
+  the previous branch leaked raw HTML markup into the editor.
 - **2026-07-10**: Booking accuracy. Set khal `default_calendar = migrated`
   (the VEVENT calendar the hwc-crm availability endpoint reads) when Radicale is
   on, so quick-adds never prompt. Added a `busy` command (`home.packages`):

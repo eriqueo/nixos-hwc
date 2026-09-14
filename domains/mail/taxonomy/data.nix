@@ -16,7 +16,7 @@
 #   archive      — auto-archived on arrival (kept in All Mail, out of inbox)
 #   newsletter   — +newsletter -inbox on arrival
 #   notification — +notification -inbox on arrival
-#   finance      — +finance -inbox on arrival
+#   finance      — +finance on arrival; classification only, stays in inbox
 #   noise        — LLM-ADVISORY ONLY: the triage prompt buckets these as noise.
 #                  NEVER fed to the auto-trash rules. Promoting a sender to
 #                  trash is a deliberate per-sender move between lists.
@@ -24,6 +24,13 @@
 # All rule-fed senders (trash/archive) are ALSO emitted into the prompt's
 # noise list — the safe merge direction (see lib.nix promptFragment).
 {
+  # REPLACEABLE migration cohort. `queue` separates mail managed by the calm
+  # workflow from the pre-existing Inbox backlog without making read/unread a
+  # workflow state. It can be rebuilt from the cutover dump plus post-cutover
+  # arrivals. Removal condition: after `tag:inbox AND NOT tag:queue` reaches
+  # zero, point `now` directly at `tag:inbox` and remove this marker.
+  workflow.currentTag = "queue";
+
   # Triage buckets — tag-backed kanban placement (`triage/<bucket>` notmuch
   # tags). Shared by run.sh Step 2b, hwc_mail set-triage, hwc_mail_triage.
   triage = {
@@ -89,6 +96,9 @@
     trash = [
       # lead-gen platforms
       "angi.com" "angieslist.com" "homeadvisor.com" "wix.com"
+      # user-confirmed recurring promos; exact senders preserve adjacent mail
+      "Intuit@mkt.intuit.com"
+      "nm_bozemandailychronicle@newsmemory.com"
       # marketing drip / cold social
       "linkedin.com" "nextdoor.com" "semrush.com" "jonloomer.com"
       "trainsemail.com" "thinkr.org" "constructionconsulting.co"
@@ -117,7 +127,8 @@
     # +notification -inbox on arrival.
     notification = [ "no-reply@" "noreply@" "notifications@" "notices@" "github.com" ];
 
-    # +finance -inbox on arrival.
+    # +finance on arrival. Finance is a classification, not a disposition:
+    # receipts and account notices still need a human outcome.
     finance = [
       "amazon.com" "paypal.com" "stripe.com" "squareup.com" "intuit.com"
       "quickbooks" "chase.com" "bankofamerica.com"

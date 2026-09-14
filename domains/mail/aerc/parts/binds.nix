@@ -2,6 +2,19 @@
 let
   tags = import ./tags.nix { inherit lib; };
 
+  # A human disposition is a completed decision, not just a folder move.
+  # Automatic arrival rules deliberately keep their existing unread semantics;
+  # these commands are used only by interactive aerc bindings.
+  archiveCmd = "+archive -inbox -unread";
+  trashCmd = "+trash -inbox -unread";
+
+  # Workbench/Zellij owns Ctrl navigation. Aerc tab switching stays on one
+  # Alt+Shift pair and is injected into each noinherit context from here.
+  tabBinds = ''
+      <A-J> = :next-tab<Enter> # next aerc tab
+      <A-K> = :prev-tab<Enter> # previous aerc tab
+  '';
+
   # Exclusive category bindings under <Space>m leader (adds tag, removes all other categories)
   # Trailing " # <tag>" is the aerc binding annotation — shown in the which-key popover.
   categoryBinds = lib.concatStringsSep "\n" (map (t:
@@ -50,8 +63,11 @@ let
     ════════ AERC LEADER MAP ════════   (Space = leader; Space ? shows this)
 
     NAVIGATE  -  Space g ...
-    Space g i  inbox     Space g u  unread    Space g a  archive
-    Space g s  sent      Space g d  trash     Space g z  spam
+    Space g i  now       Space g F  family    Space g D  datax
+    Space g W  hwc       Space g B  backlog   Space g I  full inbox
+    -- system destinations --
+    Space g a  archive   Space g s  sent      Space g d  trash
+    Space g z  spam      Space g u  all unread
     ${goHelp}
 
     MARK / TAG  -  Space m ...
@@ -68,14 +84,20 @@ let
     (replace-set on the triage/* tags — moves the workbench kanban card too)
 
     FILTER / SORT / VIEW
-    Space f f  filter        Space f s  search      Space f t  trash-sender
+    Space f f  filter        Space f s  search      Space f u  unsubscribe
     Space s d  sort by date  Space t t  toggle threads
     Space t s  switch styleset            Space M    add new tag
+
+    HAND OFF (open the message first; then archive with a)
+    t  task → todui/phone    i  event → khalt/phone    p  record → Paperless
 
     MESSAGES (no leader)
     j / k  move      J / K  mark + move    V  visual-mark
     r  read          u  unread             a  archive     d  trash
     c  compose       C  reply-all          Enter  open    /  search
+
+    AERC TABS
+    Alt+Shift+J  next tab        Alt+Shift+K  previous tab
 
     (press q to close)
   '';
@@ -88,8 +110,7 @@ in
       # =============================================
 
       # Global
-      <C-h> = :prev-tab<Enter>
-      <C-l> = :next-tab<Enter>
+${tabBinds}
       <C-q> = :prompt 'Quit aerc?' quit<Enter>
       <C-t> = :term<Enter>
       <A-j> = :next-folder<Enter>
@@ -125,15 +146,20 @@ in
       u = :unread<Enter>
 
       # Static system tags (single-key for speed)
-      a = :modify-labels +archive -inbox<Enter>
-      d = :modify-labels +trash -inbox<Enter>
+      a = :modify-labels ${archiveCmd}<Enter>
+      d = :modify-labels ${trashCmd}<Enter>
 
       c = :compose<Enter>
       C = :reply -aq<Enter>
 
       # Navigation (static folders + derived tag folders)
       # Trailing " # <label>" is the aerc annotation shown in the which-key popover.
-      <Space>gi = :cf inbox_i<Enter> # inbox
+      <Space>gi = :cf now<Enter> # now
+      <Space>gF = :cf family<Enter> # family
+      <Space>gD = :cf datax<Enter> # datax
+      <Space>gW = :cf hwc<Enter> # hwc
+      <Space>gB = :cf backlog<Enter> # backlog
+      <Space>gI = :cf inbox_i<Enter> # all inbox
       <Space>gu = :cf unread_u<Enter> # unread
       <Space>ga = :cf Archive_a<Enter> # archive
       <Space>gs = :cf sent_s<Enter> # sent
@@ -158,14 +184,13 @@ ${triageGoBinds}
       # Triage bucket marking (replace-set, same semantics as workbench moves)
 ${triageBinds}
 
-      # Auto-trash sender management
-      <Space>ft = :pipe -b -m ${config.home.homeDirectory}/.local/bin/aerc-trash-sender<Enter>:modify-labels +trash -inbox -unread<Enter> # trash sender
-      <Space>; = :term ${config.home.homeDirectory}/.local/bin/aerc-show-trash-senders<Enter> # show trash senders
+      # Use the sender's List-Unsubscribe header when available.
+      <Space>fu = :unsubscribe<Enter> # unsubscribe
 
       # === ALL MARKING UNDER <Space>m LEADER ===
       <Space>mu = :modify-labels +unread<Enter> # mark unread
-      <Space>ma = :modify-labels +archive -inbox<Enter> # archive
-      <Space>md = :modify-labels +trash -inbox<Enter> # trash
+      <Space>ma = :modify-labels ${archiveCmd}<Enter> # archive
+      <Space>md = :modify-labels ${trashCmd}<Enter> # trash
       <Space>mz = :modify-labels +spam -inbox<Enter> # spam
       <Space>ml = :modify-labels<space> # label…
 
@@ -191,14 +216,15 @@ ${categoryBinds}
 
       [view]
       $noinherit = true
+${tabBinds}
       q = :close<Enter>
       J = :next<Enter>
       K = :prev<Enter>
       r = :reply<Enter>
       R = :reply -aq<Enter>
       f = :forward<Enter>
-      a = :modify-labels +archive -inbox<Enter>:close<Enter>
-      d = :modify-labels +trash -inbox<Enter>:close<Enter>
+      a = :modify-labels ${archiveCmd}<Enter>:close<Enter>
+      d = :modify-labels ${trashCmd}<Enter>:close<Enter>
       H = :toggle-headers<Enter>
       u = :open-link<Enter>
       / = :toggle-key-passthrough<Enter>/
@@ -208,7 +234,9 @@ ${categoryBinds}
       l = :next-part<Enter>
       h = :prev-part<Enter>
       o = :open<Enter>
+      t = :pipe -m email-to-task<Enter>
       i = :pipe -m email-to-khal<Enter>
+      p = :pipe -m email-to-paperless<Enter>
 
       [view::passthrough]
       $noinherit = true
@@ -217,8 +245,7 @@ ${categoryBinds}
       [compose]
       $noinherit = true
       $ex = <C-x>
-      <C-h> = :prev-tab<Enter>
-      <C-l> = :next-tab<Enter>
+${tabBinds}
       <Tab> = :next-field<Enter>
       <S-Tab> = :prev-field<Enter>
       <C-s> = :send<Enter>
@@ -239,6 +266,7 @@ ${categoryBinds}
       [terminal]
       $noinherit = true
       $ex = <C-x>
+${tabBinds}
     '';
 
     ".config/aerc/leader-cheatsheet.txt".text = leaderHelp;
@@ -263,38 +291,6 @@ ${categoryBinds}
             ${pkgs.tmux}/bin/tmux set-buffer -- "$url"
         fi
         printf '\n\033[0;32m→ %s\033[0m\n' "$url"
-      '';
-      executable = true;
-    };
-
-    ".local/bin/aerc-trash-sender" = {
-      text = ''
-        #!/usr/bin/env bash
-        set -euo pipefail
-        sender=$(sed -n 's/^From:.*<\([^>]*\)>.*/\1/p;s/^From: *\([^<]*\)$/\1/p' | head -n1)
-        if [ -n "$sender" ]; then
-          mkdir -p ~/.config/notmuch
-          echo "$sender" >> ~/.config/notmuch/trash-senders
-          echo "Sender added to auto-trash list: $sender"
-        else
-          echo "Could not extract sender address" >&2
-          exit 1
-        fi
-      '';
-      executable = true;
-    };
-
-    ".local/bin/aerc-show-trash-senders" = {
-      text = ''
-        #!/usr/bin/env bash
-        echo "=== AUTO-TRASH SENDERS ==="
-        if [ -f ~/.config/notmuch/trash-senders ]; then
-          sort ~/.config/notmuch/trash-senders | column
-        else
-          echo "(none)"
-        fi
-        echo
-        read -rp "Press Enter to close..."
       '';
       executable = true;
     };

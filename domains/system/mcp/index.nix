@@ -58,6 +58,14 @@ let
   n8nMcpVersion = "2.40.5";
   n8nMcpInstallDir = "${appsRoot}/n8n-mcp";
 
+  # One reusable terminal adapter for the gateway's Streamable HTTP protocol.
+  # Calls are deliberately single-shot: mutation callers must supply their own
+  # idempotency key rather than letting the transport replay an ambiguous write.
+  mcpCall = pkgs.writeShellScriptBin "hwc-mcp-call" ''
+    exec ${pkgs.python3}/bin/python3 ${./clients/hwc-mcp-call.py} \
+      --endpoint http://127.0.0.1:${toString cfg.port}/mcp "$@"
+  '';
+
   # n8n-mcp npm install script — ensures the stdio backend package is available
   installN8nMcp = pkgs.writeShellScript "hwc-sys-mcp-install-n8n" ''
     set -euo pipefail
@@ -232,6 +240,8 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = mkIf cfg.enable {
+
+    environment.systemPackages = [ mcpCall ];
 
     #--------------------------------------------------------------------------
     # TMPFILES (runtime directory for env file)

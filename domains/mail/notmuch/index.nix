@@ -2,8 +2,10 @@
 let
   on = (config.hwc.mail.enable or true);
   cfg = config.hwc.mail.notmuch or {};
+  taxonomy = (import ../taxonomy/lib.nix { inherit lib; }).data;
+  defaultNewTags = [ "new" "unread" "inbox" taxonomy.workflow.currentTag ];
   paths = import ./parts/paths.nix { inherit lib config cfg; };
-  ident = import ./parts/identity.nix { inherit lib cfg; };
+  ident = import ./parts/identity.nix { inherit lib cfg defaultNewTags; };
   afewCfg = config.hwc.mail.afew or {};
   afewPkg = import ../afew/package.nix { inherit lib pkgs; cfg = afewCfg; };
 
@@ -37,7 +39,7 @@ in
     userName = lib.mkOption { type = lib.types.str; default = ""; };
     primaryEmail = lib.mkOption { type = lib.types.str; default = ""; };
     otherEmails = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; };
-    newTags = lib.mkOption { type = lib.types.listOf lib.types.str; default = [ "unread" "inbox" ]; };
+    newTags = lib.mkOption { type = lib.types.listOf lib.types.str; default = defaultNewTags; };
     excludeFolders = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; };
     postNewHook = lib.mkOption { type = lib.types.lines; default = ""; };
     savedSearches = lib.mkOption { type = lib.types.attrsOf lib.types.str; default = {}; };
