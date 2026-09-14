@@ -95,6 +95,10 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-09-14: Structure gained the four sub-modules it had never listed —
+  `brain-sweep/`, `mail-janitor/`, `refinery/`, `vault-sync/`. Law-12 changelog
+  refresh for `inbox-janitor/`, `refinery/` and `n8n/parts/estimator-integration/`.
+  Docs only.
 - 2026-09-11: refinery container cgroup raised to `memory = "8g"` / `cpus = "3"` /
   `memorySwap = "10g"` (was 2g/1.5/3g). A DataX acceptance baseline (`npm ci` +
   tests on a 2.3 GB worktree) exhausted the 2g cgroup; the OOM killer took the

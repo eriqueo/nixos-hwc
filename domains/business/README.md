@@ -30,6 +30,11 @@ business/
 ```
 
 ## Changelog
+- 2026-09-14: Structure gained `crm/`, `umami/` and the unreferenced `datax/`
+  leftovers tree. Law-12 changelog refresh for `crm/`, `databases/`, `firefly/`,
+  `paperless/`, `morning-briefing/` and `datax/fb-group-scraper/` (whose Structure
+  and Auth sections still described a deleted `store.mjs` and the `session.json`
+  login that `launchPersistentContext` replaced in May). Docs only.
 - 2026-09-05: crm — new `hwc.business.crm.controlTokenSecretRef` (agenix
   `hwc-control-crm-token`), exported as `HWC_CRM_CONTROL_TOKEN_FILE` and accepted
   ONLY by the app's `/api/control/v1/*` routes (note, snooze, disqualify) for the
