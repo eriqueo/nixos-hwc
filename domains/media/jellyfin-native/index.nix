@@ -285,17 +285,36 @@ in {
         cp ${encodingXml} "$CONFIG_DIR/encoding.xml"
 
         ${lib.optionalString cfg.gpu.enable ''
-          # Fail loudly instead of silently falling back to software transcoding
-          # when this FFmpeg build cannot expose the configured NVIDIA path.
-          ${jellyfinFfmpeg}/bin/ffmpeg -hide_banner -hwaccels 2>&1 \
-            | ${pkgs.gnugrep}/bin/grep -qx cuda
-          ${jellyfinFfmpeg}/bin/ffmpeg -hide_banner -decoders 2>&1 \
-            | ${pkgs.gnugrep}/bin/grep -q h264_cuvid
-          ${jellyfinFfmpeg}/bin/ffmpeg -hide_banner -encoders 2>&1 \
-            | ${pkgs.gnugrep}/bin/grep -q hevc_nvenc
-          ${jellyfinFfmpeg}/bin/ffmpeg -hide_banner -filters 2>&1 \
-            | ${pkgs.gnugrep}/bin/grep -q tonemap_cuda
-          test -r /dev/nvidia0 -a -w /dev/nvidia0
+          # GPU loss degrades performance, not availability. Report every
+          # missing prerequisite, then let Jellyfin use software transcoding.
+          gpu_acceleration_ready=true
+          if ! ${jellyfinFfmpeg}/bin/ffmpeg -hide_banner -hwaccels 2>&1 \
+            | ${pkgs.gnugrep}/bin/grep -qx cuda; then
+            echo "WARNING: Jellyfin FFmpeg does not expose CUDA hardware acceleration." >&2
+            gpu_acceleration_ready=false
+          fi
+          if ! ${jellyfinFfmpeg}/bin/ffmpeg -hide_banner -decoders 2>&1 \
+            | ${pkgs.gnugrep}/bin/grep -q h264_cuvid; then
+            echo "WARNING: Jellyfin FFmpeg does not expose the H.264 NVIDIA decoder." >&2
+            gpu_acceleration_ready=false
+          fi
+          if ! ${jellyfinFfmpeg}/bin/ffmpeg -hide_banner -encoders 2>&1 \
+            | ${pkgs.gnugrep}/bin/grep -q hevc_nvenc; then
+            echo "WARNING: Jellyfin FFmpeg does not expose the HEVC NVIDIA encoder." >&2
+            gpu_acceleration_ready=false
+          fi
+          if ! ${jellyfinFfmpeg}/bin/ffmpeg -hide_banner -filters 2>&1 \
+            | ${pkgs.gnugrep}/bin/grep -q tonemap_cuda; then
+            echo "WARNING: Jellyfin FFmpeg does not expose the CUDA tone-mapping filter." >&2
+            gpu_acceleration_ready=false
+          fi
+          if [ ! -r /dev/nvidia0 ] || [ ! -w /dev/nvidia0 ]; then
+            echo "WARNING: Jellyfin cannot read and write /dev/nvidia0." >&2
+            gpu_acceleration_ready=false
+          fi
+          if [ "$gpu_acceleration_ready" != true ]; then
+            echo "WARNING: Jellyfin will start with software transcoding. Playback remains available, but video transcodes may use high CPU. Inspect this unit with: journalctl -u jellyfin" >&2
+          fi
         ''}
       '';
 
