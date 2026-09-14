@@ -6,12 +6,11 @@
 }: let
   cfg = config.hwc.media.jellyfin;
 
-  # Custom ffmpeg with NVENC/CUDA support for GPU transcoding
-  ffmpeg-nvenc = pkgs.ffmpeg-full.override {
-    withUnfree = true;
-    withCuda = true;
-    withNvenc = true;
-  };
+  # Jellyfin's FFmpeg fork carries the CUDA filters that Jellyfin's capability
+  # gate requires for NVDEC. A generic CUDA-enabled ffmpeg can expose NVENC yet
+  # still fail that gate (notably without tonemap_cuda), producing the deceptive
+  # software-decode + hardware-encode path that saturated the CPU here.
+  jellyfinFfmpeg = pkgs.jellyfin-ffmpeg;
 
   # Transcode pacing — a COUPLED PAIR, enforced by an assertion in IMPLEMENTATION.
   #
@@ -238,7 +237,7 @@ in {
       dataDir = "/var/lib/hwc/jellyfin"; # Override default /var/lib/jellyfin
       cacheDir = "/var/cache/hwc/jellyfin"; # Override default /var/cache/jellyfin
       package = pkgs.jellyfin.override {
-        jellyfin-ffmpeg = ffmpeg-nvenc;
+        jellyfin-ffmpeg = jellyfinFfmpeg;
       };
     };
 
@@ -288,12 +287,14 @@ in {
         ${lib.optionalString cfg.gpu.enable ''
           # Fail loudly instead of silently falling back to software transcoding
           # when this FFmpeg build cannot expose the configured NVIDIA path.
-          ${ffmpeg-nvenc}/bin/ffmpeg -hide_banner -hwaccels 2>&1 \
+          ${jellyfinFfmpeg}/bin/ffmpeg -hide_banner -hwaccels 2>&1 \
             | ${pkgs.gnugrep}/bin/grep -qx cuda
-          ${ffmpeg-nvenc}/bin/ffmpeg -hide_banner -decoders 2>&1 \
+          ${jellyfinFfmpeg}/bin/ffmpeg -hide_banner -decoders 2>&1 \
             | ${pkgs.gnugrep}/bin/grep -q h264_cuvid
-          ${ffmpeg-nvenc}/bin/ffmpeg -hide_banner -encoders 2>&1 \
+          ${jellyfinFfmpeg}/bin/ffmpeg -hide_banner -encoders 2>&1 \
             | ${pkgs.gnugrep}/bin/grep -q hevc_nvenc
+          ${jellyfinFfmpeg}/bin/ffmpeg -hide_banner -filters 2>&1 \
+            | ${pkgs.gnugrep}/bin/grep -q tonemap_cuda
           test -r /dev/nvidia0 -a -w /dev/nvidia0
         ''}
       '';
