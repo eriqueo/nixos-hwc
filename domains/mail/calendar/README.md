@@ -51,6 +51,11 @@ domains/mail/calendar/
 
 ## Changelog
 
+- **2026-09-14**: Made the aerc `i` handoff outcome honest: cancellation no
+  longer falls through to a sync/success message, sync names the configured
+  calendar server rather than iCloud, and success tells the operator to archive
+  the unchanged source email with `a`. A failed sync reports that the event is
+  already local and must not be created again.
 - **2026-07-10**: Booking accuracy. Set khal `default_calendar = migrated`
   (the VEVENT calendar the hwc-crm availability endpoint reads) when Radicale is
   on, so quick-adds never prompt. Added a `busy` command (`home.packages`):

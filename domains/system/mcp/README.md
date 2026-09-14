@@ -355,7 +355,7 @@ within seconds; laptop todui on its next vdirsyncer run.
 | Tool | Description |
 |------|-------------|
 | `hwc_tasks_list` | List tasks. Filters: list, status (active/completed/all), category (`+proj`/`@ctx`), grep. |
-| `hwc_tasks_add` | Add task. Summary supports the todui inline dialect (`+proj @ctx (A) due:YYYY-MM-DD`) or explicit fields. |
+| `hwc_tasks_add` | Add task. Summary supports the todui inline dialect (`+proj @ctx (A) due:YYYY-MM-DD`) or explicit fields; optional `idempotencyKey` makes a repeated source update one CalDAV item. Additive writers send `requestVersion: 1`; legacy callers may omit it. |
 | `hwc_tasks_update` | By uid: edit fields / complete / reopen / delete. Property-surgical edits preserve RRULE and Apple metadata. |
 | `hwc_tasks_lists` | List the task lists (with active counts) or create a new one (MKCALENDAR). |
 
@@ -495,6 +495,10 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-09-14: Added the single-shot `hwc-mcp-call` terminal client and optional
+  `hwc_tasks_add.idempotencyKey`. The key plus target list derives a stable
+  CalDAV UID, so an aerc task handoff can recover from an ambiguous response
+  without duplicating the task. Calls are never retried by the transport.
 - 2026-09-08: Restrict the triage snapshot to its cached thread IDs (maximum
   512, validated as hex). Full-inbox JSON still caused calendar timeouts under
   overlapping reads; selected-thread queries preserve membership/tag authority
@@ -684,6 +688,8 @@ Tests in `src/tests/` exercise registered tools and their failure boundaries.
 ```
 domains/system/mcp/
 ├── index.nix
+├── clients/
+│   └── hwc-mcp-call.py            # single-shot Streamable HTTP CLI adapter
 ├── parts/
 │   ├── caddy.nix
 │   └── jt.nix

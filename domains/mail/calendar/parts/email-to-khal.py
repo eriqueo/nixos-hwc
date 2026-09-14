@@ -407,13 +407,14 @@ def handle_ics_attachment(ics_parts: list[bytes]):
     answer = tty_input("  Import? [Y/n] ", default="y").lower()
     if answer and answer != "y":
         print("  Cancelled.")
-        return
+        return False
 
     imported = 0
     for data in ics_parts:
         if import_ics_file(data):
             imported += 1
     print(f"\n  Imported {imported} event(s).")
+    return imported > 0
 
 
 def _ics_field(ics_text: str, field: str) -> str | None:
@@ -496,7 +497,7 @@ def handle_body_parse(msg):
         edited = editor_review(event, email_body=body)
         if not edited:
             print("  Cancelled (title was empty).")
-            return
+            return False
     else:
         # No tty (aerc :pipe without -p) — use auto-detected values directly
         if not dt:
@@ -555,22 +556,24 @@ def handle_body_parse(msg):
         print(f"    {dt.strftime('%Y-%m-%d %H:%M')} ({dur_str})")
         if edited.get("location"):
             print(f"    {edited['location']}")
+        return True
     else:
         print("\n  Failed to import event.")
         sys.exit(1)
 
 
 def sync_calendar():
-    """Push new events to iCloud via vdirsyncer."""
-    print("  Syncing to iCloud...")
+    """Push new events to the configured calendar server via vdirsyncer."""
+    print("  Syncing calendar...")
     result = subprocess.run(
         ["vdirsyncer", "sync"],
         capture_output=True, text=True,
     )
     if result.returncode == 0:
-        print("  Synced.")
+        print("  Synced. Press a to finish with this email.")
     else:
-        print(f"  Sync failed: {result.stderr.strip()}")
+        print(f"  Calendar item was created locally, but sync failed: {result.stderr.strip()}")
+        print("  Do not create it again; the next scheduled sync can finish it. Email is unchanged.")
 
 
 def main():
@@ -579,11 +582,12 @@ def main():
 
     ics_parts = extract_ics_parts(msg)
     if ics_parts:
-        handle_ics_attachment(ics_parts)
+        created = handle_ics_attachment(ics_parts)
     else:
-        handle_body_parse(msg)
+        created = handle_body_parse(msg)
 
-    sync_calendar()
+    if created:
+        sync_calendar()
 
 
 if __name__ == "__main__":

@@ -81,6 +81,9 @@ let
     Space s d  sort by date  Space t t  toggle threads
     Space t s  switch styleset            Space M    add new tag
 
+    HAND OFF (open the message first; then archive with a)
+    t  task → todui/phone    i  event → khalt/phone    p  record → Paperless
+
     MESSAGES (no leader)
     j / k  move      J / K  mark + move    V  visual-mark
     r  read          u  unread             a  archive     d  trash
@@ -221,7 +224,9 @@ ${categoryBinds}
       l = :next-part<Enter>
       h = :prev-part<Enter>
       o = :open<Enter>
+      t = :pipe -m email-to-task<Enter>
       i = :pipe -m email-to-khal<Enter>
+      p = :pipe -m email-to-paperless<Enter>
 
       [view::passthrough]
       $noinherit = true

@@ -540,6 +540,7 @@
     # Same sources as rsync, plus database dumps
     sources = [
       "/mnt/media/photos" # Immich photos (CRITICAL)
+      config.hwc.business.paperless.storage.mediaDir # Paperless originals/archive (CRITICAL)
       "/var/lib/hwc" # Service state directories
       "/var/lib/backups" # Database dumps
       # T3 Code state (CRITICAL). Holds the event-sourced SQLite store — every

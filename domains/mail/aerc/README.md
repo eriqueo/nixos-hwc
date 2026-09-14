@@ -62,8 +62,9 @@ The `<C-r>` keybind runs `sync-mail` which executes the full pipeline (mbsync + 
 
 `now` is the managed decision queue: `tag:queue AND tag:inbox`. Opening or
 reading a message never removes it. Only a disposition that removes `inbox`
-(archive, trash, or a successful future task/calendar/record handoff) finishes
-the item. `family`, `datax`, and `hwc` are complete context lenses over that
+(archive or trash) finishes the item. A task/calendar/Paperless handoff writes
+to the destination but deliberately leaves the source email in place; press
+`a` after confirming the handoff. `family`, `datax`, and `hwc` are context lenses over that
 same queue, not filing destinations. `backlog` is legacy unread mail that has
 not yet been promoted into a bounded managed cohort.
 
@@ -207,13 +208,6 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 | `<Space>sd` | Sort by date (newest first) |
 | `<Space>tt` | Toggle thread view |
 
-## Changelog
-
-- 2026-09-14: Made `now` a stable `queue` + `inbox` decision surface, independent
-  of unread state and message date. The original 41 messages form the cutover
-  cohort; new arrivals join automatically. Legacy unread mail remains isolated
-  in `backlog` until promoted in bounded batches.
-
 ### View
 
 | Key | Action |
@@ -228,6 +222,9 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 | `H` | Toggle headers |
 | `u` | Open link |
 | `O` | Open attachment |
+| `t` | Review and create a task in the shared todui/phone backend |
+| `i` | Review and create a calendar event for khalt/phone |
+| `p` | Queue a safe PDF record of the email for Paperless |
 | `S` | Save attachment |
 | `U` | URL scan (urlscan) |
 | `/` | Search in pager (passthrough) |
@@ -341,6 +338,16 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-09-14: Added the opened-message handoff grammar: `t` reviews and creates
+  an idempotent task, `i` reviews and creates a calendar event, and `p` queues a
+  deterministic text-only PDF for Paperless. Handoffs never archive the source;
+  `a` remains the explicit finish action. Configured exact Proton and Google
+  Authentication-Results authorities so RFC 8058 unsubscribe can validate real
+  DKIM-pass messages without trusting a wildcard.
+- 2026-09-14: Made `now` a stable `queue` + `inbox` decision surface, independent
+  of unread state and message date. The original 41 messages form the cutover
+  cohort; new arrivals join automatically. Legacy unread mail remains isolated
+  in `backlog` until promoted in bounded batches.
 - 2026-09-14: Human archive/trash bindings now also clear `unread`. These keys
   mean the message has been decided and removed from `now`; automatic arrival
   rules retain their previous unread behavior.

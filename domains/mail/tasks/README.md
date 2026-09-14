@@ -8,8 +8,8 @@ CLI for reading/writing tasks.
 
 ## Boundaries
 - Manages: the `tasks` vdirsyncer pair (VTODO), the local tasks vdir, todoman's
-  `config.py`, and the `~/.cache/todoman` / `~/.local/share/vdirsyncer/tasks`
-  directories.
+  `config.py`, the `email-to-task` review helper, and the `~/.cache/todoman` /
+  `~/.local/share/vdirsyncer/tasks` directories.
 - Does NOT manage: its own vdirsyncer config file or sync timer. It contributes
   a `[pair tasks]` fragment to `hwc.mail.calendar.extraVdirsyncerPairs`, so there
   is exactly one `~/.config/vdirsyncer/config` and one `vdirsyncer.service`/timer
@@ -25,7 +25,8 @@ tasks/
     ├── vdirsyncer-pair.nix          # [pair tasks] fragment (item_types = ["VTODO"])
     ├── vdirsyncer-pair-radicale.nix # [pair tasks_radicale] — self-hosted backend,
     │                                #   "from a"/"from b" discovery (list creation works)
-    └── todoman-config.nix           # ~/.config/todoman/config.py text
+    ├── todoman-config.nix           # ~/.config/todoman/config.py text
+    └── email-to-task.py             # aerc email → reviewed MCP task handoff
 ```
 
 ## Secret + account
@@ -89,6 +90,10 @@ agenix secret, selected by `domains/lib/hm.nix`. todoman's path glob widens to `
 stay CLI-visible. Deploy order + phone CalDAV setup: see the radicale README.
 
 ## Changelog
+- 2026-09-14: Added `email-to-task`, the reviewed aerc `t` handoff. It sends
+  summary/list/due/categories/priority plus source context through
+  `hwc_tasks_add`, using Message-ID (or a raw-message digest) as the stable
+  idempotency key. It never archives mail and never retries an ambiguous write.
 - 2026-06-11: Phase C plumbing — optional `radicale` sub-options + second
   vdirsyncer pair part (off by default; flip in machines/laptop/home.nix after
   the server deploy). todoman path glob parameterized (`tasks*/*` with radicale).

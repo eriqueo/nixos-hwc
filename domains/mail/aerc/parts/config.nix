@@ -22,6 +22,11 @@ let
     legacyBacklog = "tag:inbox AND tag:unread AND NOT tag:${tags.currentTag} AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:trash AND NOT tag:triage/noise";
     familySignal = "(tag:family OR tag:keep OR to:eriqueokeefe@gmail.com OR to:eriqueo@proton.me OR to:g_erique@proton.me)";
 
+    # Final receivers that are allowed to attest Authentication-Results. Aerc's
+    # RFC 8058 unsubscribe command rejects all other headers before acting; do
+    # not replace this exact list with the documented debugging wildcard (`*`).
+    trustedAuthResults = [ "^mail\\.protonmail\\.ch$" "^mx\\.google\\.com$" ];
+
   queries = ''
     # ── Calm daily surface: one inbox plus three exact context partitions ──
     now            = ${currentInbox}
@@ -76,6 +81,7 @@ ${tagQueries}
     query-map           = ${config.home.homeDirectory}/.config/aerc/notmuch-queries
     from                = Eric <eric@iheartwoodcraft.com>
     outgoing            = ${pkgs.msmtp}/bin/msmtp
+    trusted-authres     = ${lib.concatStringsSep "," trustedAuthResults}
     folders             = now,family,datax,hwc
     default             = now
     enable-folders-sort = true
