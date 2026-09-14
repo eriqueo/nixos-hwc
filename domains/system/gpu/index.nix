@@ -51,8 +51,9 @@ let
   usingPodman = (config.virtualisation.oci-containers.backend or "podman") == "podman";
 
   # One producer for intentional NVIDIA PRIME offload. Hybrid sessions pin EGL
-  # to Mesa below, so an opt-in launch must remove that pin before restoring the
-  # complete NVIDIA selection vocabulary.
+  # to Mesa below, and individual clients may pin Vulkan to Intel, so an opt-in
+  # launch must remove both restrictions before restoring the complete NVIDIA
+  # selection vocabulary.
   nvidiaOffload = pkgs.writeShellScriptBin "gpu-offload" ''
     #!/usr/bin/env bash
     if [[ $# -eq 0 ]]; then
@@ -61,6 +62,8 @@ let
     fi
 
     unset __EGL_VENDOR_LIBRARY_FILENAMES
+    unset VK_DRIVER_FILES
+    unset VK_ICD_FILENAMES
     export __NV_PRIME_RENDER_OFFLOAD=1
     export __GLX_VENDOR_LIBRARY_NAME=nvidia
     export __VK_LAYER_NV_optimus=NVIDIA_only
