@@ -160,6 +160,16 @@ in
         description = "NVIDIA driver package channel.";
       };
 
+      legacyPerfLevelOverride = lib.mkOption {
+        type = t.bool;
+        default = true;
+        description = ''
+          Apply the legacy, undocumented PerfLevelSrc=0x2222 registry override.
+          Disable this only in a bounded boot experiment; the default preserves
+          the existing pure-NVIDIA server performance policy.
+        '';
+      };
+
       enableMonitoring = lib.mkEnableOption "Log GPU utilization with nvidia-smi (unit: gpu-monitor)";
       containerRuntime = lib.mkEnableOption "Enable NVIDIA container runtime (nvidia-container-toolkit)";
 
@@ -305,8 +315,11 @@ in
           options nvidia NVreg_DeviceFileUID=0 NVreg_DeviceFileGID=26 NVreg_DeviceFileMode=0660
           options nvidia NVreg_ModifyDeviceFiles=1
 
-          # Persistence-leaning behavior
-          options nvidia NVreg_RegistryDwords="PerfLevelSrc=0x2222"
+          ${lib.optionalString cfg.nvidia.legacyPerfLevelOverride ''
+            # Legacy server performance behavior. Hybrid laptops may disable
+            # this in a boot specialization while testing runtime D3.
+            options nvidia NVreg_RegistryDwords="PerfLevelSrc=0x2222"
+          ''}
         '';
       };
 
