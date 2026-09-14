@@ -344,6 +344,8 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
   `a` remains the explicit finish action. Configured exact Proton and Google
   Authentication-Results authorities so RFC 8058 unsubscribe can validate real
   DKIM-pass messages without trusting a wildcard.
+- 2026-09-14: The embedded `less` viewer now uses `-~`, leaving the area below
+  short messages blank instead of painting every unused row with `~`.
 - 2026-09-14: Made `now` a stable `queue` + `inbox` decision surface, independent
   of unread state and message date. The original 41 messages form the cutover
   cohort; new arrivals join automatically. Legacy unread mail remains isolated

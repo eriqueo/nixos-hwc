@@ -56,6 +56,8 @@ domains/mail/calendar/
   calendar server rather than iCloud, and success tells the operator to archive
   the unchanged source email with `a`. A failed sync reports that the event is
   already local and must not be created again.
+  Compact school-message ranges such as `5:30p-6:30p 9/17/26` now produce the
+  start and 60-minute duration in the review form automatically.
 - **2026-07-10**: Booking accuracy. Set khal `default_calendar = migrated`
   (the VEVENT calendar the hwc-crm availability endpoint reads) when Radicale is
   on, so quick-adds never prompt. Added a `busy` command (`home.packages`):

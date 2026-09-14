@@ -124,6 +124,35 @@ def parse_structured_fields(body: str, msg=None) -> dict:
     if m:
         fields["time_raw"] = m.group(1).strip()
 
+    # School/community mail often compresses the useful facts into one bullet:
+    # "5:30p-6:30p 9/17/26". Normalize that into the same fields as explicit
+    # Date:/Time: lines and derive the duration from the range.
+    compact_range = re.search(
+        r"(?P<sh>\d{1,2})(?::(?P<sm>\d{2}))?\s*(?P<sa>[ap])(?:m)?\s*"
+        r"[-–—]\s*(?P<eh>\d{1,2})(?::(?P<em>\d{2}))?\s*(?P<ea>[ap])(?:m)?\s+"
+        r"(?P<date>\d{1,2}/\d{1,2}/(?:\d{2}|\d{4}))",
+        body,
+        re.IGNORECASE,
+    )
+    if compact_range:
+        fields.setdefault("date_raw", compact_range.group("date"))
+        fields.setdefault(
+            "time_raw",
+            f"{compact_range.group('sh')}:{compact_range.group('sm') or '00'} {compact_range.group('sa')}m",
+        )
+
+        def minutes(hour: str, minute: str | None, meridiem: str) -> int:
+            value = int(hour) % 12
+            if meridiem.lower() == "p":
+                value += 12
+            return value * 60 + int(minute or "0")
+
+        start = minutes(compact_range.group("sh"), compact_range.group("sm"), compact_range.group("sa"))
+        end = minutes(compact_range.group("eh"), compact_range.group("em"), compact_range.group("ea"))
+        duration = (end - start) % (24 * 60)
+        if 0 < duration <= 12 * 60:
+            fields["duration_min"] = duration
+
     # Link: try plaintext first, then fall back to HTML hrefs
     m = re.search(
         r"(?:^|\n)\s*(?:Link|URL|Join|Meeting\s*Link)[^:]*:\s*(https?://\S+)",

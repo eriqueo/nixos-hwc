@@ -184,7 +184,9 @@ in
 
       [viewer]
 
-      pager = ${pkgs.less}/bin/less -R
+      # -~ keeps the unused area below a short message visually blank instead
+      # of filling the whole viewer with Vim-like tilde markers.
+      pager = ${pkgs.less}/bin/less -R -~
       alternatives = text/html,text/plain
       [compose]
       editor = ${pkgs.neovim}/bin/nvim
