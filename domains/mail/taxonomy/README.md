@@ -46,6 +46,9 @@ Design: `docs/plans/unified-triage-architecture.md`.
 
 ## Changelog
 
+- 2026-09-14: Learned two user-confirmed noise senders at exact-address scope:
+  QuickBooks marketing and the Bozeman Daily Chronicle e-edition notice. The
+  separate QuickBooks payment sender remains untouched.
 - 2026-07-09: Created (Phase 1 of unified-triage). Data moved verbatim from
   `profiles/mail/home.nix` (trash/archive senders), `notmuch/index.nix`
   option defaults (newsletter/notification/finance/action),

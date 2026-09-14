@@ -79,6 +79,9 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-09-14: Learned exact QuickBooks-marketing and Bozeman Daily Chronicle
+  e-edition sender addresses as future auto-trash noise without matching the
+  separate QuickBooks payment sender.
 - 2026-09-14: Interactive aerc archive/trash now mean a completed decision:
   preserve-or-delete, remove from inbox, and clear unread. Automated arrival
   rules remain unchanged.

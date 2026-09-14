@@ -89,6 +89,9 @@
     trash = [
       # lead-gen platforms
       "angi.com" "angieslist.com" "homeadvisor.com" "wix.com"
+      # user-confirmed recurring promos; exact senders preserve adjacent mail
+      "Intuit@mkt.intuit.com"
+      "nm_bozemandailychronicle@newsmemory.com"
       # marketing drip / cold social
       "linkedin.com" "nextdoor.com" "semrush.com" "jonloomer.com"
       "trainsemail.com" "thinkr.org" "constructionconsulting.co"
