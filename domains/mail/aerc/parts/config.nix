@@ -12,10 +12,20 @@ let
             pathBase = config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail";
         in if nmRoot != "" then nmRoot else "${pathBase}/Maildir";
 
+    # One bounded daily inbox, partitioned by context. DataX wins over Family
+    # when signals overlap; HWC is the deliberate fallback so every message in
+    # `now` appears in exactly one context folder.
+    calmInbox = "tag:inbox AND tag:unread AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:trash AND NOT tag:triage/noise";
+    currentInbox = "${calmInbox} AND date:1w..";
+    familySignal = "(tag:family OR tag:keep OR to:eriqueokeefe@gmail.com OR to:eriqueo@proton.me OR to:g_erique@proton.me)";
+
   queries = ''
-    # ── Calm daily surface ──
-    now            = tag:inbox AND tag:unread AND date:1w.. AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:trash AND NOT tag:triage/noise
-    backlog        = tag:inbox AND tag:unread AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:trash AND NOT tag:triage/noise AND NOT date:1w..
+    # ── Calm daily surface: one inbox plus three exact context partitions ──
+    now            = ${currentInbox}
+    family         = ${currentInbox} AND NOT tag:datax AND ${familySignal}
+    datax          = ${currentInbox} AND tag:datax
+    hwc            = ${currentInbox} AND NOT tag:datax AND NOT ${familySignal}
+    backlog        = ${calmInbox} AND NOT date:1w..
 
     # ── Legacy drill-downs (hidden from the sidebar, still directly addressable) ──
     focus          = tag:inbox AND tag:unread AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:trash
@@ -24,7 +34,6 @@ let
     people         = tag:inbox AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:sent AND NOT tag:trash
 
     # ── Relationships ──
-    family         = tag:family AND NOT tag:trash
     keep           = tag:keep
 
     # ── Family aggregates (colour-grouped) ──
@@ -64,10 +73,10 @@ ${tagQueries}
     query-map           = ${config.home.homeDirectory}/.config/aerc/notmuch-queries
     from                = Eric <eric@iheartwoodcraft.com>
     outgoing            = ${pkgs.msmtp}/bin/msmtp
-    folders             = now,family,backlog,drafts,sent_s,Archive_a,trash_d
+    folders             = now,family,datax,hwc
     default             = now
     enable-folders-sort = true
-    folders-sort        = now,family,backlog,drafts,sent_s,Archive_a,trash_d
+    folders-sort        = now,family,datax,hwc
   '';
 
   accountsFile = pkgs.writeText "aerc-accounts.conf" accountsConf;

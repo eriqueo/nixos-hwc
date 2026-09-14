@@ -64,8 +64,7 @@ Shared tag metadata originates in `domains/mail/taxonomy/data.nix`; `tags.nix` a
 
 - Notmuch query-map entries for direct drill-down
 - `[user]` styles for virtual folder names
-- Exclusive single-key binding (if `key` is set)
-- `<Space>m*` additive label binding
+- `<Space>m*` exclusive category or additive flag binding
 - `<Space>g*` go-to-folder binding
 
 Tags remain available to the shared triage and briefing integrations, but the daily message list deliberately does not render tag pills or color whole rows by category.
@@ -74,8 +73,8 @@ Tags remain available to the shared triage and briefing integrations, but the da
 
 | Type | Behavior | Example |
 |------|----------|---------|
-| **Category** (`categoryTags`) | Mutually exclusive — pressing one removes all others + inbox | work, finance, tech, personal, family |
-| **Flag** (`flagTags`) | Additive — coexists with categories | starred, hwcmt |
+| **Category** (`categoryTags`) | Mutually exclusive — assigning one removes the other categories | work, finance, tech, personal, family |
+| **Flag** (`flagTags`) | Additive — coexists with categories | action, pending, keep |
 
 #### Tag Attributes
 
@@ -83,27 +82,14 @@ Tags remain available to the shared triage and briefing integrations, but the da
 |-----------|----------|-------------|
 | `tag` | yes | Notmuch tag name |
 | `color` | yes | Hex color for `[user]` styleset section |
-| `key` | no | Single-key exclusive binding in `[messages]` (category tags only) |
 | `spaceKey` | no | Key for `<Space>m*` and `<Space>g*` bindings (defaults to first char of tag) |
 | `display` | no | Display name in query-map and stylesets (defaults to tag) |
 | `query` | no | Custom notmuch query (defaults to `tag:<name> AND NOT tag:trash`) |
 | `extra` | no | Extra styleset lines (e.g., `"insurance.dim = true"`) |
 | `noGoTo` | no | Skip `<Space>g*` generation (avoids key conflicts) |
 
-#### Current Tags
-
-| Tag | Color | Key | Space | Folder |
-|-----|-------|-----|-------|--------|
-| starred | red `#FF5555` | `s` | `*` | starred |
-| hwcmt | orange `#FFB86C` (dim) | — | `h` | hwcmt |
-| work | orange `#FFB86C` | `w` | `w` | work |
-| coaching | yellow `#F1FA8C` | — | `c` | coaching |
-| finance | green `#50FA7B` | `f` | `f` | finance |
-| bank | cyan `#8BE9FD` | — | `b` | bank |
-| insurance | green `#50FA7B` (dim) | — | `i` | — |
-| tech | purple `#BD93F9` | — | `t` | tech |
-| personal | pink `#FF79C6` | `p` | `p` | personal |
-| family | sage `#98C379` | — | `y` | family |
+The current tag vocabulary, leader keys, and palette roles live in
+`domains/mail/taxonomy/data.nix`; this README does not duplicate that registry.
 
 ### Stylesets
 
@@ -120,12 +106,13 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 | Key | Action |
 |-----|--------|
 | `<C-h>` / `<C-l>` | Prev/next tab |
-| `<C-j>` / `<C-k>` | Next/prev folder |
+| `<A-j>` / `<A-k>` | Next/prev visible context |
 | `<C-p>` / `<C-n>` | Next/prev account |
 | `<C-r>` | Full mail sync (mbsync + notmuch new) |
 | `<C-q>` | Quit (with confirmation) |
 | `<C-t>` | Open terminal |
-| `?` | View binds.conf |
+| `;` | View binds.conf |
+| `<Space>?` | Open the focused leader cheat sheet |
 | `<Space>ts` | Switch styleset |
 
 ### Messages
@@ -145,18 +132,12 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 | `c` | Compose |
 | `C` | Reply all (quote) |
 
-### Tagging (Messages)
+### Disposition (Messages)
 
 | Key | Action |
 |-----|--------|
 | `a` | Archive (`+archive -inbox`) |
 | `d` | Trash (`+trash -inbox`) |
-| `s` | Star (`+starred`) |
-| `S` | Spam (`+spam -inbox`) |
-| `w` | Work (exclusive — removes other categories) |
-| `f` | Finance (exclusive) |
-| `t` | Tech (exclusive) |
-| `p` | Personal (exclusive) |
 | `X` | Move to folder (prompt) |
 | `Y` | Copy to folder (prompt) |
 
@@ -165,14 +146,17 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 | Key | Folder |
 |-----|--------|
 | `<Space>gi` | now |
+| `<Space>gF` | family |
+| `<Space>gD` | datax |
+| `<Space>gW` | hwc |
+| `<Space>gB` | backlog (hidden drill-down) |
 | `<Space>gI` | full inbox (hidden drill-down) |
 | `<Space>gu` | unread |
 | `<Space>ga` | Archive |
 | `<Space>gs` | sent |
 | `<Space>gd` | trash |
-| `<Space>gS` | spam |
-| `<Space>gH` | hide_my_email |
-| `<Space>g*` | starred |
+| `<Space>gz` | spam |
+| `<Space>g_` | hide_my_email |
 | `<Space>gh` | hwcmt |
 | `<Space>gw` | work |
 | `<Space>gc` | coaching |
@@ -188,19 +172,21 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 |-----|--------|
 | `<Space>mu` | +unread |
 | `<Space>ma` | +archive -inbox |
-| `<Space>m*` | +starred |
-| `<Space>mh` | +hwcmt |
+| `<Space>m!` | +action |
+| `<Space>m?` | +pending |
+| `<Space>mk` | +keep |
+| `<Space>mh` | Set category to hwcmt |
 | `<Space>md` | +trash -inbox |
-| `<Space>mS` | +spam -inbox |
+| `<Space>mz` | +spam -inbox |
 | `<Space>ml` | Free-form label (prompt) |
-| `<Space>mw` | +work -inbox |
-| `<Space>mc` | +coaching -inbox |
-| `<Space>mf` | +finance -inbox |
-| `<Space>mb` | +bank -inbox |
-| `<Space>mi` | +insurance -inbox |
-| `<Space>mt` | +tech -inbox |
-| `<Space>mp` | +personal -inbox |
-| `<Space>my` | +family -inbox |
+| `<Space>mw` | Set category to work |
+| `<Space>mc` | Set category to coaching |
+| `<Space>mf` | Set category to finance |
+| `<Space>mb` | Set category to bank |
+| `<Space>m$` | Set category to insurance |
+| `<Space>mt` | Set category to tech |
+| `<Space>mp` | Set category to personal |
+| `<Space>my` | Set category to family |
 
 ### Filter / Sort
 
@@ -223,7 +209,6 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 | `f` | Forward |
 | `a` | Archive + close |
 | `d` | Trash + close |
-| `s` | Star |
 | `H` | Toggle headers |
 | `u` | Open link |
 | `O` | Open attachment |
@@ -267,14 +252,23 @@ Unread messages are bold, read messages are dim, and selection remains a strong 
 
 ## Virtual Folders (Query Map)
 
-The sidebar intentionally exposes only `now`, `family`, `backlog`, `drafts`, `sent_s`, `Archive_a`, and `trash_d`. `now` is the default; only its unread count appears in the sidebar, and the tab count is scoped to it.
+The sidebar intentionally exposes only `now`, `family`, `datax`, and `hwc`.
+`now` is the complete recent unread non-noise inbox. The other three folders
+partition that same set exactly: DataX wins on `tag:datax`; family then matches
+protected family mail and the three personal recipient addresses; HWC receives
+everything left so no current message disappears. `now` is the default; only
+its unread count appears in the sidebar, and the tab count is scoped to it.
+Backlog, drafts, sent, archive, trash, and the legacy tag/triage queries remain
+available by direct keybinding without competing for attention in the sidebar.
 
 Primary folders:
 
 | Folder | Query |
 |--------|-------|
 | now | unread inbox mail from the last 7 days, excluding notifications, newsletters, trash, and `triage/noise` |
-| family | `tag:family AND NOT tag:trash` |
+| family | the `now` set matching `family`/`keep` or a personal recipient address, excluding DataX |
+| datax | the `now` set tagged `datax` |
+| hwc | every message left in `now` after DataX and family, including uncategorized mail |
 | backlog | the same unread non-noise inbox set as `now`, older than the 7-day window |
 | inbox | `tag:inbox AND NOT tag:trash` |
 | unread | `tag:unread AND NOT tag:trash` |
@@ -288,20 +282,8 @@ Primary folders:
 
 The remaining static, triage, and tag-derived queries stay in the query map for integrations, bindings, and direct `:cf <name>` drill-down without crowding the sidebar.
 
-Tag-derived folders (auto-generated from `tags.nix`):
-
-| Folder | Query |
-|--------|-------|
-| starred | `tag:starred AND NOT tag:trash` |
-| hwcmt | `tag:hwcmt AND NOT tag:trash` |
-| work | `tag:work AND NOT tag:trash` |
-| coaching | `tag:coaching AND NOT tag:trash` |
-| finance | `tag:finance AND NOT tag:trash` |
-| bank | `tag:bank AND NOT tag:trash` |
-| insurance | `tag:insurance AND NOT tag:trash` |
-| tech | `tag:tech AND NOT tag:trash` |
-| personal | `(tag:gmail-personal OR tag:personal) AND NOT tag:trash` |
-| family | `tag:family AND NOT tag:trash` |
+Tag-derived folders are generated from `domains/mail/taxonomy/data.nix` and
+remain directly addressable even though they are hidden from the sidebar.
 
 ## Filters
 
@@ -335,12 +317,19 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Adding a New Tag
 
-1. Add entry to `categoryTags` or `flagTags` in `parts/tags.nix`
-2. Rebuild — query-map, folder styles, and bindings update automatically
-3. If Proton label exists, the post-new hook auto-discovers it from `proton/Labels/<name>/`
+1. For a shared mail tag, edit `domains/mail/taxonomy/data.nix`; for an
+   aerc-only tag, use `<Space>M` to update `parts/tags-custom.json`.
+2. Rebuild — query-map, folder styles, and bindings update automatically.
+3. If a Proton label exists, the post-new hook discovers it from
+   `proton/Labels/<name>/`.
 
 ## Changelog
 
+- 2026-09-14: Refined the calm sidebar to `now`, `family`, `datax`, and `hwc`.
+  DataX-first precedence plus HWC fallback makes the three contexts an exact
+  partition of `now`; added direct `<Space>gF/gD/gW/gB` navigation and kept
+  backlog/system/tag views hidden but addressable. Corrected the documented
+  keymap and tag source to match the generated configuration.
 - 2026-09-14: Added the calm daily surface: `now` is recent unread non-noise,
   `backlog` holds its older complement, and the sidebar exposes only seven
   useful destinations. Only `now` shows a sidebar count, the tab count is also

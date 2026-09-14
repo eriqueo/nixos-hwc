@@ -50,8 +50,11 @@ let
     ════════ AERC LEADER MAP ════════   (Space = leader; Space ? shows this)
 
     NAVIGATE  -  Space g ...
-    Space g i  inbox     Space g u  unread    Space g a  archive
-    Space g s  sent      Space g d  trash     Space g z  spam
+    Space g i  now       Space g F  family    Space g D  datax
+    Space g W  hwc       Space g B  backlog   Space g I  full inbox
+    -- system destinations --
+    Space g a  archive   Space g s  sent      Space g d  trash
+    Space g z  spam      Space g u  all unread
     ${goHelp}
 
     MARK / TAG  -  Space m ...
@@ -134,6 +137,10 @@ in
       # Navigation (static folders + derived tag folders)
       # Trailing " # <label>" is the aerc annotation shown in the which-key popover.
       <Space>gi = :cf now<Enter> # now
+      <Space>gF = :cf family<Enter> # family
+      <Space>gD = :cf datax<Enter> # datax
+      <Space>gW = :cf hwc<Enter> # hwc
+      <Space>gB = :cf backlog<Enter> # backlog
       <Space>gI = :cf inbox_i<Enter> # all inbox
       <Space>gu = :cf unread_u<Enter> # unread
       <Space>ga = :cf Archive_a<Enter> # archive

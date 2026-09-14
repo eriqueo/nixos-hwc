@@ -133,13 +133,20 @@ hide.fg           = ${dim}
 starred.fg        = ${h (c.errorBright or "d08080")}
 starred.bold      = true
 
-# Calm daily surface (sidebar)
+# Calm daily surface (sidebar): overview, then warm personal, cool DataX,
+# and the HWC copper accent. Backlog stays quiet when opened directly.
 now.fg            = ${fg0}
 now.bold          = true
-backlog.fg        = ${dim}
-backlog.dim       = true
+family.fg         = ${h (c.warningBright or "fcbb74")}
+family.bold       = true
+datax.fg          = ${h (c.info or "5e81ac")}
+datax.bold        = true
+hwc.fg            = ${sel}
+hwc.bold          = true
 
 # Hidden drill-downs retain their styles when opened directly.
+backlog.fg        = ${dim}
+backlog.dim       = true
 focus.fg          = ${fg0}
 focus.bold        = true
 today.fg          = ${fg}
@@ -147,7 +154,6 @@ week.fg           = ${fg}
 people.fg         = ${h (c.warningBright or "fcbb74")}
 action.fg         = ${h (c.error or "bf616a")}
 action.bold       = true
-family.fg         = ${h (c.warningBright or "fcbb74")}
 keep.fg           = ${h (c.success or "a3be8c")}
 
 # Family aggregate groups (each its family colour)
