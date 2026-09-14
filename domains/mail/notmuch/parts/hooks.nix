@@ -60,9 +60,9 @@ let
   # never losing a self-sent message again.
   digestShield = ''
     # Shield: any self-addressed HWC mail stays in the inbox.
-    # Scoped by folder residency (NOT tag:new — new.tags has no 'new' tag, and
-    # afew strips it anyway). Idempotent: re-asserts inbox on the live Sent-copy
-    # of a self-sent message that hasn't already been archived.
+    # Scoped by folder residency rather than tag:new so repeated syncs can
+    # repair the live Sent-copy of a self-sent message. Idempotent: re-asserts
+    # inbox on a message that hasn't already been archived.
     ${nm} tag +inbox -archive -sent -- '(from:eric@iheartwoodcraft.com OR from:office@iheartwoodcraft.com OR from:admin@iheartwoodcraft.com) AND (to:eric@iheartwoodcraft.com OR to:office@iheartwoodcraft.com OR to:admin@iheartwoodcraft.com) AND path:proton/Sent/** AND NOT path:proton/Archive/**'
   '';
 
@@ -125,7 +125,10 @@ let
     fi
   '';
 
-  tail = rulesPatched + "\n" + accountTags + protonLabelTags + extra + "\n" + keepShield + "\n" + digestShield + "\n" + removeNew;
+  # Folder residency establishes the starting state; sender/subject rules then
+  # make the final arrival disposition. Reversing these lets +inbox from the
+  # folder pass undo -inbox from newsletter/archive/trash rules.
+  tail = accountTags + "\n" + rulesPatched + protonLabelTags + extra + "\n" + keepShield + "\n" + digestShield + "\n" + removeNew;
 in
 {
   text = head + "\n" + body + "\n" + tail;

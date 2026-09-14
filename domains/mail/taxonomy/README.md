@@ -27,7 +27,7 @@ Design: `docs/plans/unified-triage-architecture.md`.
 | Consumer | What it takes |
 |---|---|
 | `domains/mail/notmuch/index.nix` | `derived.*Senders` / `actionSubjects` as the `rules.*` option defaults |
-| `domains/mail/aerc/parts/tags.nix` | `data.categories/flags/groups` (adds theme colors) |
+| `domains/mail/aerc/parts/tags.nix` | `data.categories/flags/groups` (adds theme colors) and `workflow.currentTag` |
 | `domains/system/mcp/index.nix` | `jsonText` → store-path `mail-taxonomy.json` → `HWC_MAIL_TAXONOMY_FILE` → `mail.ts` |
 | `domains/business/morning-briefing/index.nix` | `promptFragment` → rendered into the triage prompt → `MAIL_PROMPT` |
 
@@ -46,6 +46,9 @@ Design: `docs/plans/unified-triage-architecture.md`.
 
 ## Changelog
 
+- 2026-09-14: Added the temporary `queue` workflow marker that separates the
+  managed decision queue from the legacy Inbox without abusing unread as state.
+  Finance became classification-only so receipts remain visible for a decision.
 - 2026-09-14: Learned two user-confirmed noise senders at exact-address scope:
   QuickBooks marketing and the Bozeman Daily Chronicle e-edition notice. The
   separate QuickBooks payment sender remains untouched.

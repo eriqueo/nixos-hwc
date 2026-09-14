@@ -12,11 +12,14 @@ let
             pathBase = config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail";
         in if nmRoot != "" then nmRoot else "${pathBase}/Maildir";
 
-    # One bounded daily inbox, partitioned by context. DataX wins over Family
-    # when signals overlap; HWC is the deliberate fallback so every message in
-    # `now` appears in exactly one context folder.
-    calmInbox = "tag:inbox AND tag:unread AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:trash AND NOT tag:triage/noise";
-    currentInbox = "${calmInbox} AND date:1w..";
+    # One managed queue, partitioned by context. Read/unread is presentation,
+    # never workflow state: opening a message cannot make it disappear. DataX
+    # wins over Family when signals overlap; HWC is the deliberate fallback so
+    # every message in `now` appears in exactly one context folder.
+    currentInbox = "tag:inbox AND tag:${tags.currentTag} AND NOT tag:trash";
+    # Legacy unread mail remains outside the daily surface until a bounded
+    # cohort is deliberately promoted into the managed queue.
+    legacyBacklog = "tag:inbox AND tag:unread AND NOT tag:${tags.currentTag} AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:trash AND NOT tag:triage/noise";
     familySignal = "(tag:family OR tag:keep OR to:eriqueokeefe@gmail.com OR to:eriqueo@proton.me OR to:g_erique@proton.me)";
 
   queries = ''
@@ -25,7 +28,7 @@ let
     family         = ${currentInbox} AND NOT tag:datax AND ${familySignal}
     datax          = ${currentInbox} AND tag:datax
     hwc            = ${currentInbox} AND NOT tag:datax AND NOT ${familySignal}
-    backlog        = ${calmInbox} AND NOT date:1w..
+    backlog        = ${legacyBacklog}
 
     # ── Legacy drill-downs (hidden from the sidebar, still directly addressable) ──
     focus          = tag:inbox AND tag:unread AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:trash

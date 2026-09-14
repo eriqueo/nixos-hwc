@@ -25,7 +25,7 @@ notmuch tag ${tag} ${ops} -- '${q}'
   rulesText = ''
 ${line "+newsletter"  "-inbox" (scopeNew newsletterQ)}
 ${line "+notification" "-inbox" (scopeNew notificationQ)}
-${line "+finance"     "-inbox" (scopeNew financeQ)}
+${line "+finance"     ""       (scopeNew financeQ)}
 ${line "+action"      ""       (scopeNew actionQ)}
 ${line "+archive"     "-inbox" (scopeNewSafe archiveQ)}
 ${line "+trash"       "-inbox -unread" (scopeNewSafe trashQ)}

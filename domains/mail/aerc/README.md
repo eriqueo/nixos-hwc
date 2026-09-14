@@ -58,6 +58,15 @@ Proton Mail <--IMAP--> Proton Bridge (localhost:1143/1025)
 
 The `<C-r>` keybind runs `sync-mail` which executes the full pipeline (mbsync + notmuch new). Never run bare `mbsync -a` from aerc — it skips notmuch indexing and tags will appear to revert.
 
+### Daily queue semantics
+
+`now` is the managed decision queue: `tag:queue AND tag:inbox`. Opening or
+reading a message never removes it. Only a disposition that removes `inbox`
+(archive, trash, or a successful future task/calendar/record handoff) finishes
+the item. `family`, `datax`, and `hwc` are complete context lenses over that
+same queue, not filing destinations. `backlog` is legacy unread mail that has
+not yet been promoted into a bounded managed cohort.
+
 ### Tag System (tags.nix)
 
 Shared tag metadata originates in `domains/mail/taxonomy/data.nix`; `tags.nix` adapts it for aerc, and `tags-custom.json` holds aerc-only additions. The generated data supplies:
@@ -197,6 +206,13 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 | `<Space>fu` | Unsubscribe using the message's `List-Unsubscribe` header |
 | `<Space>sd` | Sort by date (newest first) |
 | `<Space>tt` | Toggle thread view |
+
+## Changelog
+
+- 2026-09-14: Made `now` a stable `queue` + `inbox` decision surface, independent
+  of unread state and message date. The original 41 messages form the cutover
+  cohort; new arrivals join automatically. Legacy unread mail remains isolated
+  in `backlog` until promoted in bounded batches.
 
 ### View
 

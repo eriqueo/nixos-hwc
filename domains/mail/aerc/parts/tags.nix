@@ -15,6 +15,7 @@
 let
   c = colors;
   taxonomy = (import ../../taxonomy/lib.nix { inherit lib; }).data;
+  currentTag = taxonomy.workflow.currentTag;
 
   # Palette role → hex, with hwc fallbacks. The taxonomy assigns each group a
   # ROLE (accent/info/…); the theme decides what that role looks like.
@@ -104,5 +105,5 @@ let
 in {
   inherit categoryTags flagTags allTags tagStyle categoryNames exclusiveCmd clearFlagsCmd clearAllCmd;
   inherit group tagStyleLines;
-  inherit triageBuckets triageTag setTriageCmd;
+  inherit triageBuckets triageTag setTriageCmd currentTag;
 }
