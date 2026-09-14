@@ -37,6 +37,7 @@ crm/
 | `.emailTransport` | `file` | Flip to `smtp` (Proton Bridge) to go live. |
 | `.smtp.passwordSecretRef` | `proton-bridge-password` | agenix. |
 | `.jtGrantKeyRef` | `jobtread-grant-key` | Manual-lead JT create. |
+| `.controlTokenSecretRef` | `null` | agenix bearer token for `/api/control/v1/*` ONLY (note, snooze, disqualify). `null` → those routes 503. |
 | `.tick.enable` / `.tick.onCalendar` | true / hourly | Persistent timer. |
 | `.leadscoutIngest.enable` | true | lead_scout → funnel board ingest timer. |
 | `.leadscoutIngest.onCalendar` | `*:00/30` | Every 30 min, persistent. |
@@ -54,6 +55,14 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 `^/hooks/(contact|appointment|availability)`.
 
 ## Changelog
+- **2026-09-05** — **A control-bot token, scoped to three verbs.**
+  `controlTokenSecretRef` (new agenix secret `hwc-control-crm-token`) is exported
+  as `HWC_CRM_CONTROL_TOKEN_FILE` and accepted only by `/api/control/v1/*`:
+  note, snooze, disqualify. It authorizes no sends, no sequences, no JobTread
+  calls, and no stage forces — the narrow grant is the point, since the consumer
+  is a Discord bot. Default `null` leaves those routes answering 503 (fail
+  closed), and an assertion rejects a ref that is not a declared agenix secret.
+  Consumed by `hwc.server.ai.hwcControlBot.targets.crm` (`d7b055fb`).
 - **2026-08-11** — **A failed migration now stops the boot.** The
   `hwc-crm-migrate` ExecStartPre loop had no `set -e`, so its exit status was
   whichever `psql` ran last and a migration could fail on every single start

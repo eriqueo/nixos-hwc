@@ -14,7 +14,8 @@ Firefly III personal finance manager running as a Podman container, with optiona
 ```
 domains/business/firefly/
 ├── index.nix          # Option definitions + imports
-├── sys.nix            # PostgreSQL database grants
+├── sys.nix            # System lane — declares nothing today; holds the Postgres
+│                      #   grant/ownership reasoning (see 2026-08-28 changelog)
 ├── README.md          # This file
 └── parts/
     ├── config.nix     # Container definitions, storage, systemd deps, firewall, validation
@@ -102,6 +103,19 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
+- 2026-08-28: **`sys.nix` no longer grants anything — because it never did.** The
+  sixteen `$PSQL` GRANT / ALTER DEFAULT PRIVILEGES lines (the same eight-line block
+  once for `firefly` and once for `firefly_pico`) were deleted. `$PSQL` is undefined
+  in the generated postgresql post-start script and every line ended in `|| true`,
+  which swallowed the command-not-found, so none of them ever executed. They were
+  not restored because they were never load-bearing: both containers connect as
+  `database.user` (`eric`), a superuser who already owns all 81 firefly and 15
+  firefly_pico tables, and a grant to the object owner grants nothing. The role
+  itself is declared once cluster-wide in `domains/data/databases/index.nix`, not
+  here. `ensureDBOwnership` is deliberately NOT set for either database — both are
+  owned by `postgres` while their objects are owned by `eric`, and setting it would
+  rewrite live ownership to chase a tidier declaration. `sys.nix` is kept, empty of
+  declarations, so the reasoning sits next to the code it explains (`e82ca994`).
 - 2026-07-13: Automation build-out — `firefly-cron-token` secret + daily cron timer, `firefly-importer` container + `firefly-import` vhost (:8087), `firefly-digest` timer posting to hwc-notify (`finance-to-alerts` route), PAT-gated until `firefly-pat.age` is provisioned.
 
 - 2026-06-09: Access moved from dedicated tailnet ports (Firefly `:10443`, Pico `:11443`) to name-based vhosts `firefly.hwc.iheartwoodcraft.com` / `firefly-pico.hwc.iheartwoodcraft.com` under the shared `*.hwc.iheartwoodcraft.com` wildcard cert (no per-service listener / firewall hole). Both `appUrl`s updated to match — Firefly's `APP_URL` and Pico's app URL must equal the browser origin. See `domains/networking/README.md`.
