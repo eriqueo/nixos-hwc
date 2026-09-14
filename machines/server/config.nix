@@ -928,7 +928,6 @@
     # See wiki/nixos/iheartwoodcraft-com-backend-migration.md.
     extraIngress = {
       "mcp.heartwoodcraft.me" = "http://localhost:6200";
-      "leads.heartwoodcraft.me" = "http://localhost:8420";
       "brain.heartwoodcraft.me" = "http://localhost:9876";
 
       # datax-monitor dashboard — shared with external DataX collaborators
@@ -971,7 +970,6 @@
       # entries drop. brain./monitor. are Access-gated on the Cloudflare side.
       # See brain: tech/development/builds/heartwoodcraft_me_retirement.md
       "mcp.iheartwoodcraft.com" = "http://localhost:6200";
-      "leads.iheartwoodcraft.com" = "http://localhost:8420";
       "brain.iheartwoodcraft.com" = "http://localhost:9876";
       "monitor.iheartwoodcraft.com" = "http://localhost:4400";
 

@@ -206,11 +206,10 @@ in
         type = lib.types.bool;
         default = true;
         description = ''
-          Periodic lead_scout → CRM ingest: pulls hot/warm classified FB
-          posts from the datax Postgres (READ-ONLY) onto the funnel board.
-          Idempotent — already-ingested posts are skipped silently (D22);
-          hot leads get next_action_date = today. facebook_scrape is never
-          auto-emailed (D13).
+          Periodic lead_scout → CRM ingest over a read-only Postgres
+          connection. Legacy routes are post-keyed; routes with an identity
+          score create one entity case and append repeated posts as evidence
+          (D38). Scraped sources are never auto-emailed (D13).
         '';
       };
       onCalendar = lib.mkOption { type = lib.types.str; default = "*:00/30"; };
@@ -250,6 +249,19 @@ in
                 post classified under two profiles must yield two leads.
               '';
             };
+            identityScoreKey = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = ''
+                Optional scores object key used as exact entity identity.
+                Requires category; null preserves legacy per-post intake.
+              '';
+            };
+            category = lib.mkOption {
+              type = lib.types.nullOr (lib.types.enum [ "job" "network" "sub" ]);
+              default = null;
+              description = "CRM qualification assigned to an entity-level case.";
+            };
           };
         });
         default = [
@@ -269,11 +281,21 @@ in
             nextActionTiers = [ "hot_connect" ];
             emailPrefix = "net";
           }
+          {
+            profile = "hwc_subcontractor_v1";
+            pipeline = "network";
+            source = "network_scrape";
+            ingestTiers = [ "strong_candidate" ];
+            nextActionTiers = [ "strong_candidate" ];
+            emailPrefix = "sub";
+            identityScoreKey = "candidate_name";
+            category = "sub";
+          }
         ];
         description = ''
-          lead_scout → CRM route table (app D23): one route per classifier
-          profile feeding one pipeline. Rendered to HWC_CRM_INGEST_ROUTES as
-          JSON; one timer iterates all routes.
+          lead_scout → CRM route table (app D23/D38): one route per classifier
+          profile feeding one pipeline. The rendered JSON carries an explicit
+          version; one timer iterates all routes.
         '';
       };
       # Option name kept as dataxDsn for now: renaming a public option is a
@@ -355,6 +377,18 @@ in
       {
         assertion = cfg.controlTokenSecretRef == null || config.age.secrets ? ${cfg.controlTokenSecretRef};
         message = "hwc.business.crm.controlTokenSecretRef '${toString cfg.controlTokenSecretRef}' is not a declared agenix secret";
+      }
+      {
+        assertion = lib.all
+          (r: (r.identityScoreKey == null) == (r.category == null))
+          cfg.leadscoutIngest.routes;
+        message = "hwc-crm Lead Scout routes must set identityScoreKey and category together";
+      }
+      {
+        assertion =
+          let prefixes = map (r: r.emailPrefix) cfg.leadscoutIngest.routes;
+          in builtins.length prefixes == builtins.length (lib.unique prefixes);
+        message = "hwc-crm Lead Scout route emailPrefix values must be unique";
       }
     ];
 
@@ -438,14 +472,19 @@ in
         PYTHONPATH = "${cfg.projectDir}/src";
         HWC_CRM_PG_DSN = cfg.postgresDsn;
         HWC_CRM_DATAX_DSN = cfg.leadscoutIngest.dataxDsn;
-        HWC_CRM_INGEST_ROUTES = builtins.toJSON (map (r: {
-          profile = r.profile;
-          pipeline = r.pipeline;
-          source = r.source;
-          ingest_tiers = r.ingestTiers;
-          next_action_tiers = r.nextActionTiers;
-          email_prefix = r.emailPrefix;
-        }) cfg.leadscoutIngest.routes);
+        HWC_CRM_INGEST_ROUTES = builtins.toJSON {
+          version = 2;
+          routes = map (r: {
+            profile = r.profile;
+            pipeline = r.pipeline;
+            source = r.source;
+            ingest_tiers = r.ingestTiers;
+            next_action_tiers = r.nextActionTiers;
+            email_prefix = r.emailPrefix;
+            identity_score_key = r.identityScoreKey;
+            category = r.category;
+          }) cfg.leadscoutIngest.routes;
+        };
       };
       serviceConfig = {
         Type = "oneshot";

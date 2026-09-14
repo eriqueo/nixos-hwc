@@ -1,8 +1,9 @@
 # domains/server/native/ai/lead-scout/index.nix
 #
 # Lead Scout — native systemd service
-# Long-running HTTP + MCP server on port 8420, proxied externally via
-# Cloudflare Tunnel at leads.heartwoodcraft.me.
+# Long-running HTTP + MCP server on port 8420. Human access is tailnet-only at
+# lead-scout.hwc.iheartwoodcraft.com; the Access-protected `leads-origin`
+# tunnel hostname exists only for the OAuth MCP gateway.
 #
 # Scrape/classify scheduling is owned by the in-process cron scheduler
 # (src/shells/scheduler.ts) driven by the scrape_sources DB table.
