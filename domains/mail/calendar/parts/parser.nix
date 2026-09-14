@@ -6,7 +6,8 @@ let
   py = pkgs.python3.withPackages (ps: with ps; [ dateparser ]);
 
   emailToKhalScript = pkgs.writeShellScriptBin "email-to-khal" ''
-    exec ${py}/bin/python3 ${./email-to-khal.py} "$@"
+    exec ${py}/bin/python3 ${./email-to-khal.py} \
+      --tesseract ${pkgs.tesseract}/bin/tesseract "$@"
   '';
 in
 {

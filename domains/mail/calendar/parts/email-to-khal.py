@@ -10,6 +10,9 @@ Designed for aerc's :pipe command. Reads email from stdin,
 interacts with user via /dev/tty.
 """
 
+import argparse
+import ipaddress
+import socket
 import sys
 import re
 import tempfile
@@ -22,6 +25,11 @@ from email.parser import BytesParser
 from email.header import decode_header
 from html import unescape
 from urllib.parse import urlparse
+from urllib.request import HTTPRedirectHandler, Request, build_opener
+
+MAX_REMOTE_IMAGE_BYTES = 8 * 1024 * 1024
+REMOTE_IMAGE_TIMEOUT_SECONDS = 10
+OCR_TIMEOUT_SECONDS = 20
 
 TIMEZONE_ICAL = {
     "eastern": "US/Eastern", "et": "US/Eastern",
@@ -117,12 +125,8 @@ def is_campaign_tracking_url(value: str) -> bool:
     )
 
 
-def extract_event_link(msg) -> tuple[str, str] | None:
-    """Find a labeled event link or a link wrapped around the main flyer.
-
-    This is intentionally offline. Campaign redirects are retained as tracked
-    references for the user to open, but are never followed while parsing.
-    """
+def extract_html_link_records(msg) -> list[dict]:
+    """Return offline metadata for links and any images they wrap."""
     records = []
     for part in msg.walk():
         if part.get_content_type() != "text/html":
@@ -143,29 +147,139 @@ def extract_event_link(msg) -> tuple[str, str] | None:
             text = unescape(re.sub(r"<[^>]+>", " ", inner))
             text = re.sub(r"\s+", " ", text).strip()
             image_area = 0
+            image_src = ""
             for image in re.finditer(r"<img\b([^>]*)>", inner, re.IGNORECASE | re.DOTALL):
                 attrs = image.group(1)
                 width = re.search(r"\bwidth=[\"']?(\d+)", attrs, re.IGNORECASE)
                 height = re.search(r"\bheight=[\"']?(\d+)", attrs, re.IGNORECASE)
                 if width and height:
-                    image_area = max(image_area, int(width.group(1)) * int(height.group(1)))
+                    area = int(width.group(1)) * int(height.group(1))
+                    if area > image_area:
+                        image_area = area
+                        src = re.search(r"\bsrc=[\"']([^\"']+)[\"']", attrs, re.IGNORECASE)
+                        image_src = unescape(src.group(1)).strip() if src else ""
                 alt = re.search(r"\balt=[\"']([^\"']*)[\"']", attrs, re.IGNORECASE)
                 if not text and alt:
                     text = unescape(alt.group(1)).strip()
-            records.append((href, text, image_area))
+            records.append({
+                "href": href,
+                "text": text,
+                "image_area": image_area,
+                "image_src": image_src,
+            })
+    return records
+
+
+def extract_event_link(msg) -> tuple[str, str] | None:
+    """Find a labeled event link or a link wrapped around the main flyer.
+
+    This is intentionally offline. Campaign redirects are retained as tracked
+    references for the user to open, but are never followed while parsing.
+    """
+    records = extract_html_link_records(msg)
 
     label_pattern = re.compile(
         r"\b(register|registration|rsvp|event|details|learn more|calendar|join)\b",
         re.IGNORECASE,
     )
-    for href, text, _ in records:
-        if label_pattern.search(text):
-            return "Event page", href
-    for href, _, image_area in records:
-        if image_area >= 120_000:
-            label = "Event page (tracked flyer)" if is_campaign_tracking_url(href) else "Event page"
-            return label, href
+    for record in records:
+        if label_pattern.search(record["text"]):
+            return "Event page", record["href"]
+    for record in records:
+        if record["image_area"] >= 120_000:
+            label = (
+                "Event page (tracked flyer)"
+                if is_campaign_tracking_url(record["href"])
+                else "Event page"
+            )
+            return label, record["href"]
     return None
+
+
+def extract_remote_flyer(msg) -> str | None:
+    """Return the large flyer image URL without requesting it."""
+    candidates = [
+        record for record in extract_html_link_records(msg)
+        if record["image_area"] >= 120_000
+        and record["image_src"].lower().startswith("https://")
+        and not is_campaign_tracking_url(record["image_src"])
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda record: record["image_area"])["image_src"]
+
+
+class NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def public_https_image_url(value: str, resolver=socket.getaddrinfo) -> bool:
+    """Reject local, credentialed, non-HTTPS, and nonstandard-port targets."""
+    parsed = urlparse(value)
+    try:
+        port = parsed.port
+    except ValueError:
+        return False
+    if (
+        parsed.scheme.lower() != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or port not in (None, 443)
+    ):
+        return False
+    try:
+        addresses = resolver(parsed.hostname, 443, type=socket.SOCK_STREAM)
+    except OSError:
+        return False
+    if not addresses:
+        return False
+    return all(ipaddress.ip_address(item[4][0]).is_global for item in addresses)
+
+
+def fetch_remote_image(
+    value: str,
+    resolver=socket.getaddrinfo,
+    opener=None,
+) -> bytes:
+    """Fetch one public HTTPS image once, with redirects and large bodies denied."""
+    if not public_https_image_url(value, resolver=resolver):
+        raise ValueError("flyer URL is not a public HTTPS image")
+    opener = opener or build_opener(NoRedirect)
+    request = Request(value, headers={"Accept": "image/*"})
+    with opener.open(request, timeout=REMOTE_IMAGE_TIMEOUT_SECONDS) as response:
+        content_type = response.headers.get_content_type()
+        if not content_type.startswith("image/"):
+            raise ValueError(f"flyer returned {content_type}, not an image")
+        declared_size = response.headers.get("Content-Length")
+        if declared_size:
+            try:
+                size = int(declared_size)
+            except ValueError as error:
+                raise ValueError("flyer returned an invalid size") from error
+            if size > MAX_REMOTE_IMAGE_BYTES:
+                raise ValueError("flyer is larger than 8 MiB")
+        data = response.read(MAX_REMOTE_IMAGE_BYTES + 1)
+    if len(data) > MAX_REMOTE_IMAGE_BYTES:
+        raise ValueError("flyer is larger than 8 MiB")
+    return data
+
+
+def ocr_remote_image(value: str, tesseract: str) -> str:
+    """Download a consented flyer once and OCR it locally with a hard deadline."""
+    image = fetch_remote_image(value)
+    result = subprocess.run(
+        [tesseract, "stdin", "stdout"],
+        input=image,
+        capture_output=True,
+        timeout=OCR_TIMEOUT_SECONDS,
+        check=False,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.decode("utf-8", errors="ignore").strip()
+        raise RuntimeError(detail or "local OCR failed")
+    return result.stdout.decode("utf-8", errors="ignore")[:131_072].strip()
 
 
 def extract_ics_parts(msg) -> list[bytes]:
@@ -192,21 +306,19 @@ def parse_structured_fields(body: str, msg=None) -> dict:
     if m:
         fields["time_raw"] = m.group(1).strip()
 
-    # School/community mail often compresses the useful facts into one bullet:
-    # "5:30p-6:30p 9/17/26". Normalize that into the same fields as explicit
-    # Date:/Time: lines and derive the duration from the range.
-    compact_range = re.search(
+    # School/community mail and OCR text often contain a compact time range.
+    # Normalize it into the same fields as explicit Date:/Time: lines and
+    # derive the duration.
+    time_range = re.search(
         r"(?P<sh>\d{1,2})(?::(?P<sm>\d{2}))?\s*(?P<sa>[ap])(?:m)?\s*"
-        r"[-–—]\s*(?P<eh>\d{1,2})(?::(?P<em>\d{2}))?\s*(?P<ea>[ap])(?:m)?\s+"
-        r"(?P<date>\d{1,2}/\d{1,2}/(?:\d{2}|\d{4}))",
+        r"[-–—]\s*(?P<eh>\d{1,2})(?::(?P<em>\d{2}))?\s*(?P<ea>[ap])(?:m)?",
         body,
         re.IGNORECASE,
     )
-    if compact_range:
-        fields.setdefault("date_raw", compact_range.group("date"))
+    if time_range:
         fields.setdefault(
             "time_raw",
-            f"{compact_range.group('sh')}:{compact_range.group('sm') or '00'} {compact_range.group('sa')}m",
+            f"{time_range.group('sh')}:{time_range.group('sm') or '00'} {time_range.group('sa')}m",
         )
 
         def minutes(hour: str, minute: str | None, meridiem: str) -> int:
@@ -215,11 +327,15 @@ def parse_structured_fields(body: str, msg=None) -> dict:
                 value += 12
             return value * 60 + int(minute or "0")
 
-        start = minutes(compact_range.group("sh"), compact_range.group("sm"), compact_range.group("sa"))
-        end = minutes(compact_range.group("eh"), compact_range.group("em"), compact_range.group("ea"))
+        start = minutes(time_range.group("sh"), time_range.group("sm"), time_range.group("sa"))
+        end = minutes(time_range.group("eh"), time_range.group("em"), time_range.group("ea"))
         duration = (end - start) % (24 * 60)
         if 0 < duration <= 12 * 60:
             fields["duration_min"] = duration
+
+    numeric_date = re.search(r"\b\d{1,2}/\d{1,2}/(?:\d{2}|\d{4})\b", body)
+    if numeric_date:
+        fields.setdefault("date_raw", numeric_date.group(0))
 
     # Link: try plaintext first, then fall back to HTML hrefs
     m = re.search(
@@ -255,12 +371,22 @@ def parse_structured_fields(body: str, msg=None) -> dict:
     if m:
         fields["location"] = m.group(1).strip()
 
-    # Duration: "90-minute", "1 hour", "2h", "30 min"
-    m = re.search(r"(\d+)\s*[-\s]?\s*(minute|min|hour|hr|h)\b", body, re.IGNORECASE)
-    if m:
-        val = int(m.group(1))
-        unit = m.group(2).lower()
-        fields["duration_min"] = val * 60 if unit in ("hour", "hr", "h") else val
+    # Duration: "90-minute", "1 hour", "2h", "30 min". Preserve a time-
+    # range-derived duration, which is more authoritative, and do not allow a
+    # bare "h" across whitespace (OCR once turned "$25\nh..." into 25 hours).
+    m = re.search(
+        r"\b(?P<val>\d+)\s*[- ]?\s*(?P<unit>minutes?|mins?|hours?|hrs?)\b|"
+        r"\b(?P<hours>\d+)h\b",
+        body,
+        re.IGNORECASE,
+    )
+    if m and "duration_min" not in fields:
+        if m.group("hours"):
+            fields["duration_min"] = int(m.group("hours")) * 60
+        else:
+            value = int(m.group("val"))
+            unit = m.group("unit").lower()
+            fields["duration_min"] = value * 60 if unit.startswith(("hour", "hr")) else value
 
     return fields
 
@@ -384,6 +510,19 @@ def compact_reference_text(text: str, width: int = 96, limit: int = 1600) -> str
     if len(text) > limit:
         text = text[: limit - 1].rstrip() + "…"
     return "\n".join(textwrap.wrap(text, width=width, break_long_words=False))
+
+
+def extract_street_address(text: str) -> str:
+    """Extract one conventional street-address line from OCR text."""
+    suffix = (
+        r"Avenue|Ave|Street|St|Road|Rd|Boulevard|Blvd|Drive|Dr|"
+        r"Lane|Ln|Way"
+    )
+    match = re.search(
+        rf"(?im)^\s*(\d{{1,6}}\s+[^\n]{{1,70}}?\b(?:{suffix})\.?(?:,\s*[^\n]{{1,30}})?)\s*$",
+        text,
+    )
+    return match.group(1).strip() if match else ""
 
 
 # ── ICS generation ───────────────────────────────────────────────────
@@ -588,7 +727,7 @@ def decode_mime_header(raw: str | None) -> str:
     return " ".join(decoded)
 
 
-def handle_body_parse(msg):
+def handle_body_parse(msg, tesseract: str):
     """Parse email body, open editor for review, then import."""
     subject = decode_mime_header(msg["subject"])
     body = extract_body(msg)
@@ -599,13 +738,51 @@ def handle_body_parse(msg):
     fields = parse_structured_fields(combined_body, msg)
 
     searchable_text = f"{subject}\n{combined_body}"
+    date_only = parse_date_only(searchable_text)
+    if date_only:
+        fields.setdefault("date_raw", date_only.strftime("%Y-%m-%d"))
     dt, tz_name = parse_datetime(fields, searchable_text)
     # If plaintext had no dates, try HTML text too
     if not dt and html_text and combined_body != html_text:
         fields_html = parse_structured_fields(html_text, msg)
         fields.update({k: v for k, v in fields_html.items() if k not in fields})
-        dt, tz_name = parse_datetime(fields, f"{subject}\n{html_text}")
-    date_only = parse_date_only(searchable_text)
+        searchable_text = f"{subject}\n{html_text}"
+        date_only = parse_date_only(searchable_text)
+        if date_only:
+            fields.setdefault("date_raw", date_only.strftime("%Y-%m-%d"))
+        dt, tz_name = parse_datetime(fields, searchable_text)
+
+    ocr_text = ""
+    time_was_found = bool(dt) and has_explicit_time(
+        f"{fields.get('time_raw', '')}\n{searchable_text}"
+    )
+    flyer = extract_remote_flyer(msg)
+    if has_tty() and flyer and (not dt or not time_was_found):
+        answer = tty_input(
+            "  Event details may be inside a remote flyer. Run local OCR? [y/N] ",
+            default="n",
+        ).lower()
+        if answer == "y":
+            try:
+                ocr_text = ocr_remote_image(flyer, tesseract)
+                ocr_fields = parse_structured_fields(ocr_text)
+                ocr_location = extract_street_address(ocr_text)
+                if ocr_location:
+                    ocr_fields["location"] = ocr_location
+                fields.update({
+                    key: value for key, value in ocr_fields.items()
+                    if not fields.get(key)
+                })
+                searchable_text += f"\n{ocr_text}"
+                date_only = parse_date_only(searchable_text)
+                if date_only:
+                    fields.setdefault("date_raw", date_only.strftime("%Y-%m-%d"))
+                dt, tz_name = parse_datetime(fields, searchable_text)
+                time_was_found = bool(dt) and has_explicit_time(
+                    f"{fields.get('time_raw', '')}\n{ocr_text}"
+                )
+            except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as error:
+                print(f"  Could not read the remote flyer: {error}")
     duration_min = fields.get("duration_min", 60)
 
     # Build description from extracted details
@@ -619,12 +796,6 @@ def handle_body_parse(msg):
         desc_parts.append(f"{fields.get('link_label', 'Link')}: {fields['link']}")
 
     location = fields.get("location", "")
-
-    time_was_found = bool(dt) and (
-        has_explicit_time(fields.get("time_raw", ""))
-        or has_explicit_time(fields.get("date_raw", ""))
-        or (not fields.get("date_raw") and has_explicit_time(searchable_text))
-    )
 
     event = {
         "title": clean_event_title(subject),
@@ -649,6 +820,8 @@ def handle_body_parse(msg):
     # The review reference must always be readable text. `body` is empty for an
     # HTML-only message; using it here previously dumped raw markup into nvim.
     reference_body = compact_reference_text(combined_body)
+    if ocr_text:
+        reference_body += f"\n\n── Text read from flyer ──\n{compact_reference_text(ocr_text)}"
     if fields.get("link"):
         reference_body += (
             f"\n\n── Suggested link ──\n"
@@ -659,7 +832,7 @@ def handle_body_parse(msg):
         print("  Opening editor for review...\n")
         edited = editor_review(event, email_body=reference_body)
         if not edited:
-            print("  Cancelled (title was empty).")
+            print("  Cancelled. Email is unchanged.")
             return False
     else:
         # No tty (aerc :pipe without -p) — use auto-detected values directly
@@ -714,7 +887,7 @@ def handle_body_parse(msg):
 
     calendar = edited.get("calendar", "")
     if import_ics_file(ics_data, calendar):
-        print(f"\n  Event created:")
+        print("\n  Event created:")
         print(f"    {edited['title']}")
         print(f"    {dt.strftime('%Y-%m-%d %H:%M')} ({dur_str})")
         if edited.get("location"):
@@ -740,6 +913,10 @@ def sync_calendar():
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--tesseract", default="tesseract")
+    args = parser.parse_args()
+
     raw = sys.stdin.buffer.read()
     msg = BytesParser().parsebytes(raw)
 
@@ -747,7 +924,7 @@ def main():
     if ics_parts:
         created = handle_ics_attachment(ics_parts)
     else:
-        created = handle_body_parse(msg)
+        created = handle_body_parse(msg, args.tesseract)
 
     if created:
         sync_calendar()

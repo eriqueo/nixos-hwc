@@ -89,6 +89,9 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
   midnight start; generic and tracked links no longer become locations; the
   title drops a duplicated trailing date; and the reference section retains
   only one labeled event-page candidate without resolving tracking redirects.
+  When missing facts are trapped inside a large remote flyer, the helper offers
+  an explicit opt-in to fetch that public HTTPS image once and run bounded local
+  Tesseract OCR before the editable review.
 - 2026-09-14: Repaired the managed-mail lifecycle. `now` is now the stable
   `queue` + `inbox` cohort, so opening a message cannot make it disappear. New
   mail once again gets the transient `new` tag required by every arrival rule;
