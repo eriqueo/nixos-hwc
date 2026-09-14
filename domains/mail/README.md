@@ -79,6 +79,16 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-09-14: Kept navigation layers distinct: Workbench/Zellij retains Ctrl
+  chords, while aerc previous/next-tab now uses Alt+Shift+K/J in the message,
+  viewer, compose, and terminal contexts. Selector prompts from the aerc fork
+  now render as bounded raised cards with a visible key legend; the
+  unsubscribe flow labels HTTPS as recommended and email as fallback.
+- 2026-09-14: Improved the calendar handoff for image-based campaign mail.
+  Written dates in subjects populate the review form without inventing a
+  midnight start; generic and tracked links no longer become locations; the
+  title drops a duplicated trailing date; and the reference section retains
+  only one labeled event-page candidate without resolving tracking redirects.
 - 2026-09-14: Repaired the managed-mail lifecycle. `now` is now the stable
   `queue` + `inbox` cohort, so opening a message cannot make it disappear. New
   mail once again gets the transient `new` tag required by every arrival rule;

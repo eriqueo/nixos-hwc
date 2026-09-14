@@ -15,10 +15,13 @@ import re
 import tempfile
 import subprocess
 import os
+import textwrap
 import uuid
 from datetime import datetime, timedelta, timezone
 from email.parser import BytesParser
 from email.header import decode_header
+from html import unescape
+from urllib.parse import urlparse
 
 TIMEZONE_ICAL = {
     "eastern": "US/Eastern", "et": "US/Eastern",
@@ -100,6 +103,71 @@ def extract_html_links(msg) -> list[str]:
     return urls
 
 
+def is_campaign_tracking_url(value: str) -> bool:
+    """Identify campaign redirects without resolving them over the network."""
+    parsed = urlparse(value)
+    host = (parsed.hostname or "").lower()
+    path = parsed.path.lower()
+    return (
+        host in {"t.e2ma.net", "e2ma.net"}
+        or host.endswith(".list-manage.com")
+        or "mailchi.mp" in host
+        or "/click/" in path
+        or "/track/" in path
+    )
+
+
+def extract_event_link(msg) -> tuple[str, str] | None:
+    """Find a labeled event link or a link wrapped around the main flyer.
+
+    This is intentionally offline. Campaign redirects are retained as tracked
+    references for the user to open, but are never followed while parsing.
+    """
+    records = []
+    for part in msg.walk():
+        if part.get_content_type() != "text/html":
+            continue
+        payload = part.get_payload(decode=True)
+        if not payload:
+            continue
+        source = payload.decode("utf-8", errors="ignore")
+        for match in re.finditer(
+            r"<a\b[^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>",
+            source,
+            re.IGNORECASE | re.DOTALL,
+        ):
+            href = unescape(match.group(1)).strip()
+            if not href.lower().startswith(("http://", "https://")):
+                continue
+            inner = match.group(2)
+            text = unescape(re.sub(r"<[^>]+>", " ", inner))
+            text = re.sub(r"\s+", " ", text).strip()
+            image_area = 0
+            for image in re.finditer(r"<img\b([^>]*)>", inner, re.IGNORECASE | re.DOTALL):
+                attrs = image.group(1)
+                width = re.search(r"\bwidth=[\"']?(\d+)", attrs, re.IGNORECASE)
+                height = re.search(r"\bheight=[\"']?(\d+)", attrs, re.IGNORECASE)
+                if width and height:
+                    image_area = max(image_area, int(width.group(1)) * int(height.group(1)))
+                alt = re.search(r"\balt=[\"']([^\"']*)[\"']", attrs, re.IGNORECASE)
+                if not text and alt:
+                    text = unescape(alt.group(1)).strip()
+            records.append((href, text, image_area))
+
+    label_pattern = re.compile(
+        r"\b(register|registration|rsvp|event|details|learn more|calendar|join)\b",
+        re.IGNORECASE,
+    )
+    for href, text, _ in records:
+        if label_pattern.search(text):
+            return "Event page", href
+    for href, _, image_area in records:
+        if image_area >= 120_000:
+            label = "Event page (tracked flyer)" if is_campaign_tracking_url(href) else "Event page"
+            return label, href
+    return None
+
+
 def extract_ics_parts(msg) -> list[bytes]:
     results = []
     for part in msg.walk():
@@ -161,23 +229,21 @@ def parse_structured_fields(body: str, msg=None) -> dict:
     if m:
         fields["link"] = m.group(1).strip()
     elif msg:
-        # Extract URLs from HTML parts (catches "Click Here" hyperlinks)
         html_urls = extract_html_links(msg)
-        # Filter for meeting-like URLs, skip unsubscribe/tracking links
+        # Meeting links are safe to identify from their destination. For image-
+        # based newsletters, retain only the main flyer link as a candidate;
+        # never promote the first arbitrary campaign link.
         meeting_urls = [
             u for u in html_urls
             if re.search(r"zoom|meet|teams|webinar|gotomeeting|whereby", u, re.IGNORECASE)
         ]
         if meeting_urls:
             fields["link"] = meeting_urls[0]
-        elif html_urls:
-            # Skip common junk URLs
-            useful = [
-                u for u in html_urls
-                if not re.search(r"unsubscribe|manage.*subscription|tracking|click\.|list-manage", u, re.IGNORECASE)
-            ]
-            if useful:
-                fields["link"] = useful[0]
+            fields["link_label"] = "Meeting link"
+        else:
+            event_link = extract_event_link(msg)
+            if event_link:
+                fields["link_label"], fields["link"] = event_link
 
     m = re.search(r"(?:^|\n)\s*Password:\s*(\S+)", body, re.IGNORECASE)
     if m:
@@ -262,6 +328,62 @@ def parse_datetime(fields: dict, body: str):
                 return dt, tz
 
     return None, tz
+
+
+def parse_date_only(text: str):
+    """Parse a written or numeric date without inventing a start time."""
+    import dateparser
+
+    month = (
+        r"January|February|March|April|May|June|July|August|"
+        r"September|October|November|December"
+    )
+    patterns = [
+        rf"(?:(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\w*,?\s+)?"
+        rf"(?:{month})\s+\d{{1,2}}(?:st|nd|rd|th)?,\s*\d{{4}}",
+        r"\b\d{1,2}/\d{1,2}/(?:\d{2}|\d{4})\b",
+        r"\b\d{4}-\d{2}-\d{2}\b",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if not match:
+            continue
+        parsed = dateparser.parse(match.group(0), settings={
+            "PREFER_DATES_FROM": "future",
+            "RETURN_AS_TIMEZONE_AWARE": False,
+        })
+        if parsed:
+            return parsed
+    return None
+
+
+def has_explicit_time(text: str) -> bool:
+    return bool(re.search(
+        r"\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b\d{1,2}:\d{2}\b",
+        text,
+        re.IGNORECASE,
+    ))
+
+
+def clean_event_title(subject: str) -> str:
+    """Remove a trailing written date that is already shown in the form."""
+    month = (
+        r"January|February|March|April|May|June|July|August|"
+        r"September|October|November|December"
+    )
+    trailing_date = (
+        rf"\s*[-–—]\s*(?:(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\w*,?\s+)?"
+        rf"(?:{month})\s+\d{{1,2}}(?:st|nd|rd|th)?,\s*\d{{4}}\s*$"
+    )
+    return re.sub(trailing_date, "", subject, flags=re.IGNORECASE).strip()
+
+
+def compact_reference_text(text: str, width: int = 96, limit: int = 1600) -> str:
+    """Keep review context readable without dumping a newsletter footer wall."""
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) > limit:
+        text = text[: limit - 1].rstrip() + "…"
+    return "\n".join(textwrap.wrap(text, width=width, break_long_words=False))
 
 
 # ── ICS generation ───────────────────────────────────────────────────
@@ -476,12 +598,14 @@ def handle_body_parse(msg):
     combined_body = body if body.strip() else html_text
     fields = parse_structured_fields(combined_body, msg)
 
-    dt, tz_name = parse_datetime(fields, combined_body)
+    searchable_text = f"{subject}\n{combined_body}"
+    dt, tz_name = parse_datetime(fields, searchable_text)
     # If plaintext had no dates, try HTML text too
     if not dt and html_text and combined_body != html_text:
         fields_html = parse_structured_fields(html_text, msg)
         fields.update({k: v for k, v in fields_html.items() if k not in fields})
-        dt, tz_name = parse_datetime(fields, html_text)
+        dt, tz_name = parse_datetime(fields, f"{subject}\n{html_text}")
+    date_only = parse_date_only(searchable_text)
     duration_min = fields.get("duration_min", 60)
 
     # Build description from extracted details
@@ -492,16 +616,20 @@ def handle_body_parse(msg):
     if fields.get("password"):
         desc_parts.append(f"Password: {fields['password']}")
     if fields.get("link"):
-        desc_parts.append(f"Link: {fields['link']}")
+        desc_parts.append(f"{fields.get('link_label', 'Link')}: {fields['link']}")
 
     location = fields.get("location", "")
-    if not location and fields.get("link"):
-        location = fields["link"]
+
+    time_was_found = bool(dt) and (
+        has_explicit_time(fields.get("time_raw", ""))
+        or has_explicit_time(fields.get("date_raw", ""))
+        or (not fields.get("date_raw") and has_explicit_time(searchable_text))
+    )
 
     event = {
-        "title": subject,
-        "date": dt.strftime("%Y-%m-%d") if dt else "",
-        "time": dt.strftime("%H:%M") if dt else "",
+        "title": clean_event_title(subject),
+        "date": (dt or date_only).strftime("%Y-%m-%d") if (dt or date_only) else "",
+        "time": dt.strftime("%H:%M") if time_was_found else "",
         "duration": f"{duration_min}m",
         "timezone": tz_name or "local",
         "location": location,
@@ -509,8 +637,10 @@ def handle_body_parse(msg):
         "description": "\n".join(desc_parts),
     }
 
-    if not dt:
-        print("\n  Could not auto-detect date/time — fill in manually.\n")
+    if not event["date"]:
+        print("\n  Could not detect a date or time — fill them in manually.\n")
+    elif not event["time"]:
+        print(f"\n  Detected date: {event['date']}; fill in the event time.\n")
     else:
         print(f"\n  Detected: {event['date']} {event['time']} ({event['timezone']})")
         print(f"  Title:    {event['title']}")
@@ -518,12 +648,12 @@ def handle_body_parse(msg):
 
     # The review reference must always be readable text. `body` is empty for an
     # HTML-only message; using it here previously dumped raw markup into nvim.
-    reference_body = combined_body
-
-    # Include HTML URLs in the reference body so user can copy them
-    html_urls = extract_html_links(msg)
-    if html_urls:
-        reference_body += "\n\n── URLs found in email ──\n" + "\n".join(html_urls)
+    reference_body = compact_reference_text(combined_body)
+    if fields.get("link"):
+        reference_body += (
+            f"\n\n── Suggested link ──\n"
+            f"{fields.get('link_label', 'Link')}: {fields['link']}"
+        )
 
     if has_tty():
         print("  Opening editor for review...\n")
@@ -533,8 +663,8 @@ def handle_body_parse(msg):
             return False
     else:
         # No tty (aerc :pipe without -p) — use auto-detected values directly
-        if not dt:
-            print("  No date/time detected and no terminal for editor. Aborting.")
+        if not event["date"] or not event["time"]:
+            print("  Date or time is missing and no terminal is available for review. Aborting.")
             sys.exit(1)
         edited = {
             "title": event["title"],

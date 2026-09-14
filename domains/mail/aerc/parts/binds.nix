@@ -8,6 +8,13 @@ let
   archiveCmd = "+archive -inbox -unread";
   trashCmd = "+trash -inbox -unread";
 
+  # Workbench/Zellij owns Ctrl navigation. Aerc tab switching stays on one
+  # Alt+Shift pair and is injected into each noinherit context from here.
+  tabBinds = ''
+      <A-J> = :next-tab<Enter> # next aerc tab
+      <A-K> = :prev-tab<Enter> # previous aerc tab
+  '';
+
   # Exclusive category bindings under <Space>m leader (adds tag, removes all other categories)
   # Trailing " # <tag>" is the aerc binding annotation — shown in the which-key popover.
   categoryBinds = lib.concatStringsSep "\n" (map (t:
@@ -89,6 +96,9 @@ let
     r  read          u  unread             a  archive     d  trash
     c  compose       C  reply-all          Enter  open    /  search
 
+    AERC TABS
+    Alt+Shift+J  next tab        Alt+Shift+K  previous tab
+
     (press q to close)
   '';
 in
@@ -100,8 +110,7 @@ in
       # =============================================
 
       # Global
-      <C-h> = :prev-tab<Enter>
-      <C-l> = :next-tab<Enter>
+${tabBinds}
       <C-q> = :prompt 'Quit aerc?' quit<Enter>
       <C-t> = :term<Enter>
       <A-j> = :next-folder<Enter>
@@ -207,6 +216,7 @@ ${categoryBinds}
 
       [view]
       $noinherit = true
+${tabBinds}
       q = :close<Enter>
       J = :next<Enter>
       K = :prev<Enter>
@@ -235,8 +245,7 @@ ${categoryBinds}
       [compose]
       $noinherit = true
       $ex = <C-x>
-      <C-h> = :prev-tab<Enter>
-      <C-l> = :next-tab<Enter>
+${tabBinds}
       <Tab> = :next-field<Enter>
       <S-Tab> = :prev-field<Enter>
       <C-s> = :send<Enter>
@@ -257,8 +266,7 @@ ${categoryBinds}
       [terminal]
       $noinherit = true
       $ex = <C-x>
-      <C-h> = :prev-tab<Enter>
-      <C-l> = :next-tab<Enter>
+${tabBinds}
     '';
 
     ".config/aerc/leader-cheatsheet.txt".text = leaderHelp;

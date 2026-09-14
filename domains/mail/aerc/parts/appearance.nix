@@ -109,9 +109,23 @@ whichkey_title.bold    = true
 whichkey_legend.bg     = ${h (c.bg3 or "32373c")}
 whichkey_legend.fg     = ${dim}
 
-selector_default.bg    = ${bg}
-selector_focused.bg    = ${h (c.bg3 or "32373c")}
-selector_focused.fg    = ${fg0}
+# Selector dialogs use the same raised-card hierarchy as which-key, with their
+# own style objects so dialog chrome can evolve without changing the key map.
+selector_default.bg    = ${h (c.bg3 or "32373c")}
+selector_default.fg    = ${fg0}
+selector_focused.bg    = ${fg0}
+selector_focused.fg    = ${h (c.bg0 or "1d2021")}
+selector_focused.bold  = true
+selector_chooser.bg    = ${h (c.bg3 or "32373c")}
+selector_chooser.fg    = ${sel}
+selector_chooser.bold  = true
+selector_border.bg     = ${h (c.bg3 or "32373c")}
+selector_border.fg     = ${sel}
+selector_title.bg      = ${fg0}
+selector_title.fg      = ${h (c.bg0 or "1d2021")}
+selector_title.bold    = true
+selector_hint.bg       = ${h (c.bg3 or "32373c")}
+selector_hint.fg       = ${dim}
 
 [viewer]
 url.fg        = ${h (c.link or "5e81ac")}

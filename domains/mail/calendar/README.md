@@ -51,6 +51,13 @@ domains/mail/calendar/
 
 ## Changelog
 
+- **2026-09-14**: Image-based newsletter proposals now recover a written date
+  from the subject while leaving an unknown time blank for review. The helper
+  removes a duplicated trailing date from the title, never treats a generic or
+  campaign-tracked URL as the venue, and reduces the raw URL wall to one
+  labeled event-page candidate. Link selection remains offline: it does not
+  resolve campaign redirects or download remote flyer images while reviewing
+  mail.
 - **2026-09-14**: Made the aerc `i` handoff outcome honest: cancellation no
   longer falls through to a sync/success message, sync names the configured
   calendar server rather than iCloud, and success tells the operator to archive
