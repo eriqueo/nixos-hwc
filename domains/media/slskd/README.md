@@ -423,6 +423,40 @@ shares.directories = [
 
 ---
 
-**Last Updated**: 2025-11-06
+## Structure
+
+```
+slskd/
+├── index.nix          # Options (network.mode, vpnInstance, allowClearnet, listenPort) + VPN assertions
+├── sys.nix            # System-lane wiring
+├── parts/
+│   └── config.nix     # Container definition + runtime secret injection
+├── VERSION.md
+└── README.md          # This file
+```
+
+## Changelog
+
+- 2026-09-10: `parts/config.nix` comment repointed — tmpfiles directory creation
+  moved from `_shared/directories.nix` to `media/directories.nix` when
+  `/mnt/media/youtube` was given a single producer. Comment only (`ca49bf2b`).
+- 2026-08-20: **`network.mode` now defaults to `"vpn"`, and clearnet is a build
+  failure.** It defaulted to `"media"` from the day the module was written, so
+  slskd egressed on the house IP for six weeks — ~29.4 GB out, 15.5 GB in — while
+  every sibling downloader was tunnelled. Nothing objected because nothing was
+  watching: the ordering line that appeared to wire slskd to gluetun lived in a
+  module whose `enable` was never set. A default is not a guarantee, so the new
+  `allowClearnet` option (default `false`) makes an un-tunnelled slskd fail the
+  build rather than quietly leak, and `helpers.mkVpnAssertions` replaces the
+  hand-written check. New `vpnInstance` (default `gluetun-slskd`): slskd gets its
+  OWN tunnel rather than sharing qBittorrent's, because Proton forwards exactly
+  one port per WireGuard session and Soulseek without an inbound port loses
+  uploads *and* degrades search and browse — which is what soularr depends on.
+  New `listenPort` (default `50300`) covers the window before a forwarded port
+  exists (`0f102aa4`).
+
+---
+
+**Last Updated**: 2026-09-10
 **Architecture Version**: HWC 6.0
 **Module Version**: Container with runtime secret injection

@@ -76,6 +76,13 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-09-14: Law-12 refresh for `aerc/` and `calendar/`. `aerc/README.md`'s
+  Structure had drifted three files out of date (it listed `theme.nix`,
+  `session.nix` and `behavior.nix`, none of which exist, and omitted
+  `package.nix`, `appearance.nix`, `sieve-filters.nix` and `tags-custom.json`) and
+  gained entries for the canonical-taxonomy split, the triage keybinds and the
+  contacts pair; `calendar/README.md` gained the `eric`-principal consolidation and
+  the todui Radicale-user selection fix. Docs only.
 - 2026-09-07: Share the Radicale password selector with todui; retain per-user
   selection and colon-containing passwords across the three sync clients.
 - 2026-08-30: `accounts/index.nix` Gmail agenix handshake no longer falls back to
