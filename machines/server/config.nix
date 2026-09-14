@@ -8,8 +8,7 @@
   pkgs,
   inputs ? null,
   ...
-}:
-{
+}: {
   imports = [
     ./hardware.nix
 
@@ -174,7 +173,7 @@
       guildId = "1503422144829460592";
       channelId = "1503607114042576936";
       allowedUserId = "1501391621521150075";
-      profileIds = [ "datax_jtpros" ];
+      profileIds = ["datax_jtpros"];
     };
     hwc = {
       enable = true;
@@ -225,14 +224,14 @@
   };
 
   # ZFS support for backup drives
-  boot.supportedFilesystems = [ "zfs" ];
+  boot.supportedFilesystems = ["zfs"];
   boot.zfs.forceImportRoot = false;
   boot.zfs.forceImportAll = false;
 
   # Note: boot.initrd.systemd.fido2 doesn't exist in stable 24.05 (added in later versions)
 
   # ZFS configuration (scrub/trim hygiene comes from the server role)
-  boot.zfs.extraPools = [ "backup-pool" ]; # Auto-import backup pool on boot
+  boot.zfs.extraPools = ["backup-pool"]; # Auto-import backup pool on boot
 
   # Charter v10.1 path configuration (hostname-based defaults)
   # Server hostname detection provides all correct defaults:
@@ -371,23 +370,23 @@
     folders = {
       "000_inbox" = {
         path = "/home/eric/000_inbox";
-        devices = [ "hwc-laptop" ];
+        devices = ["hwc-laptop"];
       };
       "100_hwc" = {
         path = "/home/eric/100_hwc";
-        devices = [ "hwc-laptop" ];
+        devices = ["hwc-laptop"];
       };
       "200_personal" = {
         path = "/home/eric/200_personal";
-        devices = [ "hwc-laptop" ];
+        devices = ["hwc-laptop"];
       };
       "300_tech" = {
         path = "/home/eric/300_tech";
-        devices = [ "hwc-laptop" ];
+        devices = ["hwc-laptop"];
       };
       "700_datax" = {
         path = "/home/eric/700_datax";
-        devices = [ "hwc-laptop" ];
+        devices = ["hwc-laptop"];
       };
       # 600_apps: removed from Syncthing 2026-06-16. Each app inside is now its
       # own git repo (server hub for workbench/todui/khalt; GitHub for
@@ -401,7 +400,7 @@
         # feed the receive-only phone mirror, so the server is the sole sender
         # (sendonly) and the laptop is NOT a peer. sendonly guarantees a stale
         # phone can never push vault changes back and clobber the source.
-        devices = [ "hwc-phone" ];
+        devices = ["hwc-phone"];
         type = "sendonly";
         # Vault is a git repo: .git MUST be excluded or Syncthing replicates
         # git internals and a stale peer can clobber committed history.
@@ -416,12 +415,12 @@
       };
       "screenshots" = {
         path = "/home/eric/500_media/510_pictures/screenshots";
-        devices = [ "hwc-laptop" ];
+        devices = ["hwc-laptop"];
       };
       # Phone capture inbox (Phase 9: Mobius Sync). Phone device added after pairing.
       "inbox-mobile" = {
         path = "/mnt/vaults/inbox-mobile";
-        devices = [ "hwc-phone" ];
+        devices = ["hwc-phone"];
       };
     };
   };
@@ -727,7 +726,7 @@
     # Local llama-cpp rebuild with sm_61 added — required because the cached
     # CUDA binary at cache.nixos-cuda.org targets sm_75+ only and aborts on
     # the Quadro P1000 (compute 6.1) with "no kernel image is available".
-    cudaCapabilities = [ "6.1" ];
+    cudaCapabilities = ["6.1"];
     gpu.enable = true;
     cpu = {
       enable = true;
@@ -758,7 +757,7 @@
   # Model sits beside llama-gpu in the P1000's ~1.4 GB of free VRAM.
   hwc.server.ai.whisper = {
     enable = true;
-    cudaCapabilities = [ "6.1" ];
+    cudaCapabilities = ["6.1"];
   };
 
   # hwc-llm — persona CLI that wraps the llama-server endpoints with a
@@ -847,7 +846,7 @@
   # enables lingering so rootless podman containers run when not logged in.
   hwc.system.core.session = {
     linger.enable = true;
-    linger.users = [ "eric" ];
+    linger.users = ["eric"];
   };
   # X11 services disabled for headless server
   # services.xserver.enable = true;
@@ -1141,6 +1140,13 @@
       upstream = "localhost:8096";
     };
     gpu.enable = true;
+    network = {
+      # Android TV clients are on this LAN. Without this declaration Jellyfin
+      # classified them as remote and forced an unnecessary 8 Mbit transcode.
+      localSubnets = ["192.168.0.0/24"];
+      # Caddy reaches Jellyfin through the loopback upstream below.
+      knownProxies = ["127.0.0.1"];
+    };
     # Policy management revived 2026-07-16 via the agenix apiKeyFile the
     # 2026-06-11 removal note asked for (plaintext apiKey option is gone).
     apiKeyFile = config.age.secrets.jellyfin-api-key.path;
@@ -1270,7 +1276,7 @@
       ps.pgvector
       ps.vectorchord
     ];
-    sharedPreloadLibraries = [ "vchord" ];
+    sharedPreloadLibraries = ["vchord"];
 
     # RETIRED 2026-08-26. Law 15: exactly one mechanism per backup concern.
     #

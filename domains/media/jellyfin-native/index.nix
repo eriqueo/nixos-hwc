@@ -1,12 +1,16 @@
-{ lib, config, pkgs, ... }:
-let
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}: let
   cfg = config.hwc.media.jellyfin;
 
   # Custom ffmpeg with NVENC/CUDA support for GPU transcoding
   ffmpeg-nvenc = pkgs.ffmpeg-full.override {
     withUnfree = true;
-    withCuda   = true;
-    withNvenc  = true;
+    withCuda = true;
+    withNvenc = true;
   };
 
   # Transcode pacing — a COUPLED PAIR, enforced by an assertion in IMPLEMENTATION.
@@ -91,40 +95,136 @@ let
     </EncodingOptions>
   '';
 
+  renderXmlStrings = values:
+    lib.concatMapStringsSep "\n" (value: "      <string>${lib.escapeXML value}</string>") values;
+
+  # Jellyfin treats an unlisted RFC1918 client as remote and applies its remote
+  # streaming bitrate cap. Keep proxy and LAN trust in Nix instead of relying on
+  # mutable Dashboard state; Dashboard edits are intentionally reset on restart.
+  networkXml = pkgs.writeText "jellyfin-network.xml" ''
+        <?xml version="1.0" encoding="utf-8"?>
+        <NetworkConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+          <BaseUrl />
+          <EnableHttps>false</EnableHttps>
+          <RequireHttps>false</RequireHttps>
+          <CertificatePath />
+          <CertificatePassword />
+          <InternalHttpPort>8096</InternalHttpPort>
+          <InternalHttpsPort>8920</InternalHttpsPort>
+          <PublicHttpPort>8096</PublicHttpPort>
+          <PublicHttpsPort>8920</PublicHttpsPort>
+          <AutoDiscovery>true</AutoDiscovery>
+          <EnableUPnP>false</EnableUPnP>
+          <EnableIPv4>true</EnableIPv4>
+          <EnableIPv6>false</EnableIPv6>
+          <EnableRemoteAccess>true</EnableRemoteAccess>
+          <LocalNetworkSubnets>
+    ${renderXmlStrings cfg.network.localSubnets}
+          </LocalNetworkSubnets>
+          <LocalNetworkAddresses />
+          <KnownProxies>
+    ${renderXmlStrings cfg.network.knownProxies}
+          </KnownProxies>
+          <IgnoreVirtualInterfaces>true</IgnoreVirtualInterfaces>
+          <VirtualInterfaceNames>
+            <string>veth</string>
+          </VirtualInterfaceNames>
+          <EnablePublishedServerUriByRequest>false</EnablePublishedServerUriByRequest>
+          <PublishedServerUriBySubnet />
+          <RemoteIPFilter />
+          <IsRemoteIPFilterBlacklist>false</IsRemoteIPFilterBlacklist>
+        </NetworkConfiguration>
+  '';
   # NOTE: User initialization script removed (2026-02-08)
   # The init-users.nix script is incompatible with Jellyfin 10.9.11+ EF Core migrations.
   # Users should be created through the Jellyfin web UI wizard on first boot.
   # The old script wrote to the legacy SQLite Users table, but Jellyfin 10.9.11
   # expects users in EF Core format with migrations from LocalUsersv2.
-in
-{
+in {
   #==========================================================================
   # OPTIONS
   #==========================================================================
   options.hwc.media.jellyfin = {
     enable = lib.mkEnableOption "Jellyfin media server (native service)";
-    openFirewall = lib.mkOption { type = lib.types.bool; default = false; description = "Whether to open firewall ports automatically"; };
+    openFirewall = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Whether to open firewall ports automatically";
+    };
     reverseProxy = {
       enable = lib.mkEnableOption "Enable reverse proxy route for Jellyfin";
-      path = lib.mkOption { type = lib.types.str; default = "/media"; description = "Reverse proxy path"; };
-      upstream = lib.mkOption { type = lib.types.str; default = "localhost:8096"; description = "Upstream server for reverse proxy"; };
+      path = lib.mkOption {
+        type = lib.types.str;
+        default = "/media";
+        description = "Reverse proxy path";
+      };
+      upstream = lib.mkOption {
+        type = lib.types.str;
+        default = "localhost:8096";
+        description = "Upstream server for reverse proxy";
+      };
     };
     gpu = {
       enable = lib.mkEnableOption "GPU acceleration for video transcoding";
     };
+    network = {
+      localSubnets = lib.mkOption {
+        type = with lib.types; listOf str;
+        default = [];
+        description = "IP subnets Jellyfin should classify as local networks";
+      };
+      knownProxies = lib.mkOption {
+        type = with lib.types; listOf str;
+        default = [];
+        description = "Reverse proxy addresses whose forwarded client IPs Jellyfin should trust";
+      };
+    };
     users = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule {
-        options.maxActiveSessions = lib.mkOption { type = lib.types.int; default = 0; description = "Maximum active sessions (0 = unlimited)"; };
-        options.passwordless = lib.mkOption { type = lib.types.bool; default = false; description = "Remove the user's password so sign-in requires no credentials (Jellyfin forbids this for administrators)"; };
-        options.hidden = lib.mkOption { type = with lib.types; nullOr bool; default = null; description = "Show/hide the user tile on the login screen (null = leave as-is)"; };
-        options.admin = lib.mkOption { type = with lib.types; nullOr bool; default = null; description = "Grant/revoke administrator (null = leave as-is)"; };
-        options.ensure = lib.mkOption { type = lib.types.bool; default = false; description = "Create the user via API if it does not exist"; };
-        options.passwordFile = lib.mkOption { type = lib.types.str; default = ""; description = "Path to a file with the initial password used when the user is created via ensure"; };
+        options.maxActiveSessions = lib.mkOption {
+          type = lib.types.int;
+          default = 0;
+          description = "Maximum active sessions (0 = unlimited)";
+        };
+        options.remoteClientBitrateLimit = lib.mkOption {
+          type = lib.types.int;
+          default = 0;
+          description = "Remote streaming bitrate limit in bits per second (0 = unlimited)";
+        };
+        options.passwordless = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Remove the user's password so sign-in requires no credentials (Jellyfin forbids this for administrators)";
+        };
+        options.hidden = lib.mkOption {
+          type = with lib.types; nullOr bool;
+          default = null;
+          description = "Show/hide the user tile on the login screen (null = leave as-is)";
+        };
+        options.admin = lib.mkOption {
+          type = with lib.types; nullOr bool;
+          default = null;
+          description = "Grant/revoke administrator (null = leave as-is)";
+        };
+        options.ensure = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Create the user via API if it does not exist";
+        };
+        options.passwordFile = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          description = "Path to a file with the initial password used when the user is created via ensure";
+        };
       });
       default = {};
       description = "User policy overrides applied via API after startup";
     };
-    apiKeyFile = lib.mkOption { type = lib.types.str; default = ""; description = "Path to a file containing the Jellyfin API key (e.g. an agenix mount) for policy management"; };
+    apiKeyFile = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = "Path to a file containing the Jellyfin API key (e.g. an agenix mount) for policy management";
+    };
   };
 
   #==========================================================================
@@ -135,23 +235,25 @@ in
     services.jellyfin = {
       enable = true;
       openFirewall = cfg.openFirewall;
-      dataDir = "/var/lib/hwc/jellyfin";  # Override default /var/lib/jellyfin
-      cacheDir = "/var/cache/hwc/jellyfin";  # Override default /var/cache/jellyfin
+      dataDir = "/var/lib/hwc/jellyfin"; # Override default /var/lib/jellyfin
+      cacheDir = "/var/cache/hwc/jellyfin"; # Override default /var/cache/jellyfin
       package = pkgs.jellyfin.override {
         jellyfin-ffmpeg = ffmpeg-nvenc;
       };
     };
 
-
-
     # Manual firewall configuration (matching /etc/nixos pattern)
     networking.firewall = lib.mkIf (!cfg.openFirewall) {
-      allowedTCPPorts = [ 8096 7359 ];  # HTTP + TCP discovery
-      allowedUDPPorts = [ 7359 ];       # UDP discovery
+      allowedTCPPorts = [8096 7359]; # HTTP + TCP discovery
+      allowedUDPPorts = [7359]; # UDP discovery
     };
 
     # GPU acceleration and migration fix configuration
     systemd.services.jellyfin = {
+      # Changing either generated policy restarts Jellyfin, whose preStart then
+      # replaces mutable Dashboard state with these declarations.
+      restartTriggers = [encodingXml networkXml];
+
       # Fix migration issues before startup
       # Jellyfin 10.9.11+ has migration routines that fail on fresh installs
       # because they expect old database tables that don't exist.
@@ -178,8 +280,22 @@ in
           rm -f "$CONFIG_DIR/migrations.xml"
         fi
 
-        # Write declarative encoding config (nvenc encode + cuvid decode, no system native decoder)
+        # Write declarative network and encoding policy. These files are runtime
+        # state to Jellyfin, so replace them on every start to prevent UI drift.
+        cp ${networkXml} "$CONFIG_DIR/network.xml"
         cp ${encodingXml} "$CONFIG_DIR/encoding.xml"
+
+        ${lib.optionalString cfg.gpu.enable ''
+          # Fail loudly instead of silently falling back to software transcoding
+          # when this FFmpeg build cannot expose the configured NVIDIA path.
+          ${ffmpeg-nvenc}/bin/ffmpeg -hide_banner -hwaccels 2>&1 \
+            | ${pkgs.gnugrep}/bin/grep -qx cuda
+          ${ffmpeg-nvenc}/bin/ffmpeg -hide_banner -decoders 2>&1 \
+            | ${pkgs.gnugrep}/bin/grep -q h264_cuvid
+          ${ffmpeg-nvenc}/bin/ffmpeg -hide_banner -encoders 2>&1 \
+            | ${pkgs.gnugrep}/bin/grep -q hevc_nvenc
+          test -r /dev/nvidia0 -a -w /dev/nvidia0
+        ''}
       '';
 
       serviceConfig = {
@@ -208,7 +324,7 @@ in
         ];
 
         # Add user to GPU groups for hardware access
-        SupplementaryGroups = [ "video" "render" ];
+        SupplementaryGroups = ["video" "render"];
       };
 
       environment = lib.mkIf cfg.gpu.enable {
@@ -244,9 +360,9 @@ in
     # Apply user policies via API after Jellyfin starts
     systemd.services.jellyfin-apply-policies = lib.mkIf (cfg.users != {} && cfg.apiKeyFile != "") {
       description = "Apply Jellyfin user policies";
-      after = [ "jellyfin.service" ];
-      requires = [ "jellyfin.service" ];
-      wantedBy = [ "multi-user.target" ];
+      after = ["jellyfin.service"];
+      requires = ["jellyfin.service"];
+      wantedBy = ["multi-user.target"];
 
       serviceConfig = {
         Type = "oneshot";
@@ -288,11 +404,14 @@ in
 
             # Update policy fields
             UPDATED_POLICY=$(echo "$USER_JSON" | ${pkgs.jq}/bin/jq '.Policy
-              | .MaxActiveSessions = ${toString userCfg.maxActiveSessions}${
-                lib.optionalString (userCfg.hidden != null)
-                  "\n              | .IsHidden = ${lib.boolToString userCfg.hidden}"}${
-                lib.optionalString (userCfg.admin != null)
-                  "\n              | .IsAdministrator = ${lib.boolToString userCfg.admin}"}')
+              | .MaxActiveSessions = ${toString userCfg.maxActiveSessions}
+              | .RemoteClientBitrateLimit = ${toString userCfg.remoteClientBitrateLimit}${
+            lib.optionalString (userCfg.hidden != null)
+            "\n              | .IsHidden = ${lib.boolToString userCfg.hidden}"
+          }${
+            lib.optionalString (userCfg.admin != null)
+            "\n              | .IsAdministrator = ${lib.boolToString userCfg.admin}"
+          }')
 
             # Apply policy
             ${pkgs.curl}/bin/curl -sf -X POST "http://127.0.0.1:8096/Users/$USER_ID/Policy" \
@@ -311,7 +430,7 @@ in
                 -d '{"ResetPassword": true}'
               echo "Password removed for ${username}"
             fi
-            ''}
+          ''}
           fi
         '';
       in let
