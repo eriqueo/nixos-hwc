@@ -165,8 +165,8 @@ in
         default = true;
         description = ''
           Apply the legacy, undocumented PerfLevelSrc=0x2222 registry override.
-          Disable this only in a bounded boot experiment; the default preserves
-          the existing pure-NVIDIA server performance policy.
+          The default preserves the existing pure-NVIDIA server performance
+          policy; PRIME laptops may disable it for runtime-power management.
         '';
       };
 
@@ -316,8 +316,8 @@ in
           options nvidia NVreg_ModifyDeviceFiles=1
 
           ${lib.optionalString cfg.nvidia.legacyPerfLevelOverride ''
-            # Legacy server performance behavior. Hybrid laptops may disable
-            # this in a boot specialization while testing runtime D3.
+            # Legacy server performance behavior. PRIME laptops may disable it
+            # when the override prevents runtime D3.
             options nvidia NVreg_RegistryDwords="PerfLevelSrc=0x2222"
           ''}
         '';

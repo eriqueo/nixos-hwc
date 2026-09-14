@@ -41,16 +41,6 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.kernelParams = [ "button.lid_init_state=open" ];
-
-  # Temporary RTD3 isolation experiment. The normal generation retains the
-  # legacy PerfLevelSrc override; this boot entry changes only that one input.
-  # Remove after a clean battery boot proves whether runtime_usage reaches 0:
-  # promote the winning value to the laptop config, then delete this entry.
-  specialisation.nvidia-rtd3-no-perf-level.configuration = {
-    system.nixos.tags = [ "nvidia-rtd3-no-perf-level" ];
-    hwc.system.hardware.gpu.nvidia.legacyPerfLevelOverride = false;
-  };
-
   networking.hostName = "hwc-laptop";
   system.stateVersion = "24.05";
 
@@ -302,6 +292,9 @@
     type = "nvidia";
     nvidia = {
       containerRuntime = true;
+      # This undocumented server-era override remained active with zero clients
+      # and runtime_usage=1. Omit it on the PRIME laptop; the server default stays.
+      legacyPerfLevelOverride = false;
       prime.enable = true;
       prime.nvidiaBusId = "PCI:1:0:0";
       prime.intelBusId  = "PCI:0:2:0";

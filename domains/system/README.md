@@ -40,7 +40,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
-- 2026-09-14: `gpu/` — expose the inherited `PerfLevelSrc=0x2222` registry override so hwc-laptop can omit it in a bounded RTD3 boot specialization while the normal generation and pure-NVIDIA server retain existing behavior.
+- 2026-09-14: `gpu/` — expose the inherited `PerfLevelSrc=0x2222` registry override so the PRIME laptop can omit this server-era performance setting from its normal boot while pure-NVIDIA hosts retain existing behavior.
 - 2026-09-13: `gpu/` — `gpu-offload` now clears inherited Intel-only Vulkan ICD selectors as well as the Mesa EGL selector, so explicit NVIDIA Vulkan work launched by a restricted desktop client can still discover the dGPU.
 - 2026-09-12: `gpu/` — add `gpu-integrated`, the system-owned inverse of `gpu-offload`; it discovers NVIDIA DRM nodes by PCI vendor at launch and masks all NVIDIA character devices from ordinary hybrid clients without disabling iGPU acceleration.
 - 2026-09-11: `gpu/` — hybrid PRIME sessions pin ordinary EGL clients to Mesa, one `gpu-offload` command owns intentional NVIDIA selection, and Waybar status reads passive PCI runtime state instead of waking the dGPU through `nvidia-smi` every five seconds.
