@@ -41,7 +41,7 @@ crm/
 | `.leadscoutIngest.enable` | true | lead_scout → funnel board ingest timer. |
 | `.leadscoutIngest.onCalendar` | `*:00/30` | Every 30 min, persistent. |
 | `.leadscoutIngest.sinceDays` | 14 | Rescan window (skip pre-filter makes overlap free). |
-| `.leadscoutIngest.routes` | job + network | Route table: profile→pipeline+source+tiers+emailPrefix (JSON env). |
+| `.leadscoutIngest.routes` | job + network + subcontractor | Versioned route table. Subcontractors use `scores.candidate_name` identity and category `sub`; repeated posts append as evidence. |
 | `.leadscoutIngest.dataxDsn` | `postgresql:///lead_scout` | READ-ONLY by contract. Option name kept; the database was renamed 2026-08-26. |
 | `.calendar.enable` | false | Write appointment events to Radicale. |
 | `.calendar.caldavUrl` | loopback Radicale | CalDAV base URL. |
@@ -54,6 +54,11 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 `^/hooks/(contact|appointment|availability)`.
 
 ## Changelog
+- **2026-09-14** — Activated `hwc_subcontractor_v1` as a v2 entity route:
+  strong candidates enter the CRM Network pipeline as category `sub`, keyed by
+  exact normalized `scores.candidate_name`; repeated posts become append-only
+  evidence instead of duplicate cards. Legacy job/network routes retain their
+  post-keyed behavior.
 - **2026-08-11** — **A failed migration now stops the boot.** The
   `hwc-crm-migrate` ExecStartPre loop had no `set -e`, so its exit status was
   whichever `psql` ran last and a migration could fail on every single start
