@@ -22,6 +22,7 @@ apps/
 ├── mpv/            # Media player
 ├── obsidian/       # Note-taking
 ├── xournalpp/      # PDF annotator / handwritten notes
+├── vesktop/        # Discord client with Vencord built in
 ├── waybar/         # Status bar
 ├── tuxedo/         # todo.txt TUI (keyboard-driven task manager)
 ├── todui/          # VTODO task TUI (external flake input; HWC adapter only)
@@ -30,6 +31,8 @@ apps/
 ```
 
 ## Changelog
+- 2026-09-14: Added Vesktop through Home Manager's native `programs.vesktop`
+  module; enabled only on hwc-laptop.
 - 2026-09-07: Consume Workbench registry v2: Brief first/landing; filter explicit
   default tabs, keep Server on demand, preserve aerc and mail as distinct targets.
 - 2026-08-26: **doctl — new app; agenix-authenticated DigitalOcean CLI**. `doctl auth init` validates against `cloud.digitalocean.com/v1/oauth/token/info` and returned 401 for a token that same endpoint accepted over curl (doctl 1.160.1), so the `config.yaml` auth path is unusable. A `writeShellScriptBin "doctl"` wrapper reads `/run/agenix/digitalocean-access-token`, exports `DIGITALOCEAN_ACCESS_TOKEN`, and execs `${pkgs.doctl}/bin/doctl` — the token stays out of `config.yaml`, the shell environment, and shell history. The bare `pkgs.doctl` was removed from `core/development/` and from `apps/dxlog/`, which would otherwise collide on `bin/doctl`; `dxlog` now enables this module instead, which also repaired `dxlog live` (verified: the tail connects and holds open). Enabled on hwc-laptop. hwc-server has no `doctl` consumer, so the `core/development` removal is not a regression there.

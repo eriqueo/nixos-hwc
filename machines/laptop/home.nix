@@ -29,6 +29,7 @@ let dictationModel = "base.en"; in
     imv.enable = true;
     mpv.enable = true;
     qutebrowser.enable = true;
+    vesktop.enable = true;
     qbittorrent.enable = true;
     aider.enable = true;
     claude-code.enable = true;
