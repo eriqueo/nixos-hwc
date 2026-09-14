@@ -73,4 +73,9 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-03-31: Admin credential defaults follow the generated secrets namespace —
+  `hwc.secrets.api.couchdbAdminUsernameFile` / `…PasswordFile` became
+  `hwc.secrets.api."couchdb-admin-username"` / `"couchdb-admin-password"`, with
+  `or null` so the module still evaluates when the secret is not mounted. Option
+  descriptions updated to match (`17b9283b`).
 - 2026-03-25: Created README per Law 12
