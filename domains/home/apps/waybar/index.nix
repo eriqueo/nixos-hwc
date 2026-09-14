@@ -17,7 +17,7 @@ let
 
   scriptPathBin = lib.makeBinPath scriptPkgs;
 
-  behavior  = import ./parts/behavior.nix  { inherit config lib pkgs; };
+  behavior  = import ./parts/behavior.nix  { inherit config lib pkgs osConfig; };
   appearance= import ./parts/appearance.nix { inherit config lib pkgs; };
   packages  = import ./parts/packages.nix  { inherit lib pkgs; };
   scripts   = import ./parts/scripts.nix   { inherit pkgs lib; pathBin = scriptPathBin; };
@@ -29,6 +29,7 @@ in
   #==========================================================================
   options.hwc.home.apps.waybar = {
     enable = lib.mkEnableOption "Waybar status bar";
+    powerHub.enable = lib.mkEnableOption "laptop power controls and passive telemetry";
   };
 
   #==========================================================================
@@ -47,10 +48,9 @@ in
 
     xdg.configFile."waybar/style.css".text = appearance;
 
-    # Lid sleep state: no init service — the ignore-file simply doesn't exist
-    # after login, so lid close suspends by default. waybar-lid-toggle creates/
-    # deletes /run/user/$UID/hwc-lid-ignore to flip it — no D-Bus, no logind.
-    # acpid reads the file (machines/laptop/config.nix hwc-lid-close handler).
+    # Lid sleep state: no init service — the AC-only request file does not
+    # exist after login, so lid close suspends by default. The Waybar power hub
+    # writes an explicit request; acpid still checks physical AC at close time.
 
     # Restart waybar after Home Manager activation (rebuild switch).
     # HM reloads the daemon but doesn't restart changed services by default.
@@ -88,15 +88,18 @@ in
         assertion = !cfg.enable || config.hwc.home.apps.swaync.enable;
         message = "waybar requires swaync for notification center (custom/notification widget)";
       }
+      {
+        assertion = !cfg.powerHub.enable || !isNixOSHost || lib.attrByPath [ "hwc" "system" "apps" "waybar" "powerHub" "enable" ] false osConfig;
+        message = "waybar power hub home lane requires hwc.system.apps.waybar.powerHub.enable on NixOS";
+      }
     ];
 
     # Runtime dependencies enforced via scriptPkgs PATH:
     # - kitty, wofi, btop: Runtime availability ensured via scriptPkgs inclusion (line 15, 19)
     # - wlogout: Called by custom/power widget, must be installed system-wide or in home packages
     #
-    # GPU scripts dependency: waybar-gpu-status widget calls gpu-toggle (from infrastructure.hardware.gpu)
-    # This dependency is enforced at runtime - gpu-toggle must exist in PATH
-    # Infrastructure GPU module provides: gpu-toggle, gpu-status, gpu-launch, gpu-next
+    # GPU scripts dependency: the power hub calls gpu-set-policy/gpu-next from
+    # the system GPU capability; gpu-launch remains the application boundary.
     # Note: Cross-domain assertions (HM -> System) can't be enforced at build time
     #       Runtime failure will occur if infrastructure.hardware.gpu.powerManagement.smartToggle is not enabled
   };

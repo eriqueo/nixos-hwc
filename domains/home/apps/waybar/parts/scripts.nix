@@ -340,64 +340,6 @@ in
            "''$LOAD1" "''$CLASS" "''$LOAD1" "''$LOAD5" "''$LOAD15" "''$NCPUS"
   '';
 
-  "power-profile" = sh "waybar-power-profile" ''
-    # Try to get current power profile
-    if command -v powerprofilesctl >/dev/null 2>&1; then
-      PROFILE=$(powerprofilesctl get 2>/dev/null || echo "unknown")
-    else
-      PROFILE="unavailable"
-    fi
-
-    case "''$PROFILE" in
-      "performance")
-        ICON="󰓅"
-        CLASS="performance"
-        TOOLTIP="Power Profile: Performance"
-        ;;
-      "balanced")
-        ICON="󰾅"
-        CLASS="balanced"
-        TOOLTIP="Power Profile: Balanced"
-        ;;
-      "power-saver")
-        ICON="󰾆"
-        CLASS="powersave"
-        TOOLTIP="Power Profile: Power Saver"
-        ;;
-      *)
-        ICON="󱐋"
-        CLASS="unknown"
-        TOOLTIP="Power Profile: Unknown"
-        ;;
-    esac
-
-    printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "''$ICON" "''$CLASS" "''$TOOLTIP"
-  '';
-
-  "power-profile-toggle" = sh "waybar-power-profile-toggle" ''
-    if ! command -v powerprofilesctl >/dev/null 2>&1; then
-      notify-send "Power Profile" "powerprofilesctl not available" -i battery
-      exit 0
-    fi
-
-    CURRENT=$(powerprofilesctl get 2>/dev/null || echo "balanced")
-
-    case "''$CURRENT" in
-      "performance")
-        powerprofilesctl set balanced
-        notify-send "Power Profile" "Switched to Balanced" -i battery
-        ;;
-      "balanced")
-        powerprofilesctl set power-saver
-        notify-send "Power Profile" "Switched to Power Saver" -i battery-low
-        ;;
-      *)
-        powerprofilesctl set performance
-        notify-send "Power Profile" "Switched to Performance" -i battery-full-charged
-        ;;
-    esac
-  '';
-
   "disk-space" = sh "waybar-disk-space" ''
     # Monitor key partitions
     ROOT_USAGE=$(df -h / | awk 'NR==2 {print $5}' | tr -d '%')
@@ -477,25 +419,144 @@ in
     pkill -RTMIN+8 -x '\.waybar-wrapped|waybar' || true
   '';
 
-  "lid-status" = sh "waybar-lid-status" ''
-    STATE="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc-lid-ignore"
-    if [[ -f "$STATE" ]]; then
-      printf '{"text":"Lid","class":"sleep-disabled","tooltip":"Lid Close: Ignore\\nClick to enable sleep"}\n'
+  "lid-set" = sh "waybar-lid-set" ''
+    POLICY="''${1:-}"
+    RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc"
+    STATE="$RUNTIME_DIR/lid-ignore-request"
+
+    case "$POLICY" in
+      suspend)
+        rm -f "$STATE"
+        notify-send "Lid Sleep" "Closing the lid will suspend" -i system-suspend -t 3000
+        ;;
+      ignore)
+        AC_ONLINE=$(cat /sys/class/power_supply/AC/online 2>/dev/null || echo 0)
+        if [[ "$AC_ONLINE" != "1" ]]; then
+          rm -f "$STATE"
+          notify-send "Lid Sleep" "Ignore is available only while plugged in" -i battery-low -u critical -t 4000
+          exit 3
+        fi
+        mkdir -p "$RUNTIME_DIR"
+        touch "$STATE"
+        notify-send "Lid Sleep" "Ignoring lid close until AC is unplugged" -i computer -t 3000
+        ;;
+      *)
+        echo "usage: waybar-lid-set {suspend|ignore}" >&2
+        exit 2
+        ;;
+    esac
+  '';
+
+  "power-status" = sh "hwc-power-status" ''
+    OUTPUT_MODE="''${1:-json}"
+    case "$OUTPUT_MODE" in
+      json|--waybar) ;;
+      *) echo "usage: hwc-power-status [--waybar]" >&2; exit 64 ;;
+    esac
+
+    PROFILE=$(powerprofilesctl get 2>/dev/null || echo unknown)
+    AC_ONLINE=$(cat /sys/class/power_supply/AC/online 2>/dev/null || echo 0)
+    ENERGY_UWH=$(cat /sys/class/power_supply/BAT0/energy_now 2>/dev/null || echo 0)
+    CAPACITY=$(cat /sys/class/power_supply/BAT0/capacity 2>/dev/null || echo unknown)
+    CHARGE_STOP=$(cat /sys/class/power_supply/BAT0/charge_control_end_threshold 2>/dev/null || echo unknown)
+    PLATFORM=$(cat /sys/firmware/acpi/platform_profile 2>/dev/null || echo unknown)
+    EPP=$(cat /sys/devices/system/cpu/cpufreq/policy0/energy_performance_preference 2>/dev/null || echo unknown)
+    TURBO=$(cat /sys/devices/system/cpu/intel_pstate/no_turbo 2>/dev/null || echo unknown)
+    RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc"
+    GPU_POLICY=$(cat "$RUNTIME_DIR/gpu-launch-policy" 2>/dev/null || echo intel)
+
+    if [[ "$AC_ONLINE" == "1" ]]; then SOURCE="AC"; else SOURCE="battery"; fi
+    if [[ "$AC_ONLINE" == "1" && -f "$RUNTIME_DIR/lid-ignore-request" ]]; then
+      LID_POLICY="ignore"
     else
-      printf '{"text":"Lid","class":"sleep-enabled","tooltip":"Lid Close: Sleep\\nClick to disable"}\n'
+      LID_POLICY="suspend"
+    fi
+
+    NVIDIA_STATE="unavailable"
+    for device in /sys/bus/pci/devices/*; do
+      [[ "$(cat "$device/vendor" 2>/dev/null || true)" == "0x10de" ]] || continue
+      [[ "$(cat "$device/class" 2>/dev/null || true)" == 0x03* ]] || continue
+      NVIDIA_STATE=$(cat "$device/power/runtime_status" 2>/dev/null || echo unknown)
+      break
+    done
+
+    BRIGHTNESS="unknown"
+    if [[ -r /sys/class/backlight/intel_backlight/brightness && -r /sys/class/backlight/intel_backlight/max_brightness ]]; then
+      BRIGHTNESS_NOW=$(cat /sys/class/backlight/intel_backlight/brightness)
+      BRIGHTNESS_MAX=$(cat /sys/class/backlight/intel_backlight/max_brightness)
+      if [[ "$BRIGHTNESS_NOW" =~ ^[0-9]+$ && "$BRIGHTNESS_MAX" =~ ^[1-9][0-9]*$ ]]; then
+        BRIGHTNESS=$(awk -v current="$BRIGHTNESS_NOW" -v maximum="$BRIGHTNESS_MAX" 'BEGIN { printf "%.0f", current * 100 / maximum }')
+      fi
+    fi
+
+    # The battery controller updates power_now in steps. Use a short bounded
+    # median instead of presenting one volatile sample as a reliable estimate.
+    POWER_UW=0
+    if [[ "$SOURCE" == "battery" ]]; then
+      SAMPLES=()
+      for _ in 1 2 3 4 5; do
+        SAMPLE=$(cat /sys/class/power_supply/BAT0/power_now 2>/dev/null || echo 0)
+        [[ "$SAMPLE" =~ ^[0-9]+$ ]] && SAMPLES+=("$SAMPLE")
+        sleep 0.4
+      done
+      if [[ ''${#SAMPLES[@]} -gt 0 ]]; then
+        POWER_UW=$(printf '%s\n' "''${SAMPLES[@]}" | sort -n | awk '{ values[NR]=$1 } END { print values[int((NR+1)/2)] }')
+      fi
+    fi
+
+    POWER_W=$(awk -v uw="$POWER_UW" 'BEGIN { printf "%.1f", uw / 1000000 }')
+    if [[ "$SOURCE" == "battery" && "$POWER_UW" -gt 0 && "$ENERGY_UWH" =~ ^[0-9]+$ ]]; then
+      HOURS=$(awk -v e="$ENERGY_UWH" -v p="$POWER_UW" 'BEGIN { printf "%.1f", e / p }')
+    else
+      HOURS="unknown"
+    fi
+
+    case "$PROFILE" in
+      performance) ICON="Pwr+"; CLASS="performance" ;;
+      balanced) ICON="Pwr"; CLASS="balanced" ;;
+      power-saver) ICON="Pwr-"; CLASS="powersave" ;;
+      *) ICON="Pwr?"; CLASS="unknown" ;;
+    esac
+
+    STATUS=$(jq -cn \
+      --arg source "$SOURCE" --arg profile "$PROFILE" --arg capacity "$CAPACITY" \
+      --arg powerW "$POWER_W" --arg runtimeHours "$HOURS" --arg brightness "$BRIGHTNESS" \
+      --arg chargeStop "$CHARGE_STOP" --arg platform "$PLATFORM" --arg epp "$EPP" \
+      --arg turbo "$TURBO" --arg lidPolicy "$LID_POLICY" --arg gpuPolicy "$GPU_POLICY" \
+      --arg nvidiaState "$NVIDIA_STATE" \
+      '{schemaVersion:1,source:$source,profile:$profile,capacityPct:$capacity,powerW:$powerW,runtimeHours:$runtimeHours,brightnessPct:$brightness,chargeStopPct:$chargeStop,platformProfile:$platform,energyPreference:$epp,noTurbo:$turbo,lidPolicy:$lidPolicy,gpuLaunchPolicy:$gpuPolicy,nvidiaRuntimeState:$nvidiaState}')
+
+    if [[ "$OUTPUT_MODE" == "--waybar" ]]; then
+      TOOLTIP="power: $PROFILE ($SOURCE)\ndraw: $POWER_W W · $CAPACITY% · $HOURS h\nbrightness: $BRIGHTNESS% · charge ceiling: $CHARGE_STOP%\nplatform: $PLATFORM · epp: $EPP · no_turbo: $TURBO\nlid close: $LID_POLICY\nwrapped launches: $GPU_POLICY\nnvidia runtime: $NVIDIA_STATE"
+      jq -cn --arg text "$ICON" --arg class "$CLASS" --arg tooltip "$TOOLTIP" \
+        '{text:$text,class:$class,tooltip:$tooltip}'
+    else
+      jq . <<<"$STATUS"
     fi
   '';
 
-  "lid-toggle" = sh "waybar-lid-toggle" ''
-    # Toggle lid sleep via plain state file — no D-Bus, no logind, no touchpad disruption.
-    # acpid reads /run/user/1000/hwc-lid-ignore; present = ignore, absent = suspend.
-    STATE="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc-lid-ignore"
-    if [[ -f "$STATE" ]]; then
-      rm "$STATE"
-      notify-send "Lid Sleep" "Enabled - closing lid will suspend" -i system-suspend -t 3000
-    else
-      touch "$STATE"
-      notify-send "Lid Sleep" "Disabled - lid close now ignored" -i computer -t 3000
-    fi
+  "power-hub-menu" = sh "waybar-power-hub-menu" ''
+    CHOICE=$(printf '%s\n' \
+      'power · performance' 'power · balanced' 'power · power-saver' \
+      'brightness · 30%' 'brightness · 50%' 'brightness · 75%' 'brightness · 100%' \
+      'lid · suspend' 'lid · ignore while plugged in' \
+      'gpu launches · integrated' 'gpu launches · NVIDIA allowlist' 'gpu launches · NVIDIA next app' \
+      | wofi --dmenu --prompt 'power') || exit 0
+
+    case "$CHOICE" in
+      'power · performance') powerprofilesctl set performance ;;
+      'power · balanced') powerprofilesctl set balanced ;;
+      'power · power-saver') powerprofilesctl set power-saver ;;
+      'brightness · 30%') brightnessctl set 30% ;;
+      'brightness · 50%') brightnessctl set 50% ;;
+      'brightness · 75%') brightnessctl set 75% ;;
+      'brightness · 100%') brightnessctl set 100% ;;
+      'lid · suspend') waybar-lid-set suspend ;;
+      'lid · ignore while plugged in') waybar-lid-set ignore ;;
+      'gpu launches · integrated') gpu-set-policy intel ;;
+      'gpu launches · NVIDIA allowlist') gpu-set-policy performance ;;
+      'gpu launches · NVIDIA next app') gpu-next ;;
+      *) exit 0 ;;
+    esac
   '';
 }

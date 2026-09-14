@@ -84,9 +84,9 @@ window#waybar {
 
 /* === BASE MODULE STYLE === */
 #cpu, #memory, #temperature, #custom-network, #pulseaudio,
-#custom-battery, #custom-gpu, #custom-ollama, #custom-dt, #idle_inhibitor, #mpd, #tray,
+#custom-battery, #custom-power-hub, #custom-ollama, #custom-dt, #idle_inhibitor, #mpd, #tray,
 #custom-notification, #custom-power, #custom-disk-space, #backlight, #bluetooth,
-#custom-lid-sleep, #custom-proton-auth, #custom-recording, #custom-dictation, #hyprland-language {
+#custom-proton-auth, #custom-recording, #custom-dictation, #hyprland-language {
   padding: 8px 6px;
   min-height: 0;
   margin: 0px 0px;
@@ -102,7 +102,7 @@ window#waybar {
 /* In gruv, sectionA-C are exact 50% accent blends over surface0; sectionD is bg3. */
 
 /* Toggles */
-#custom-gpu, #custom-ollama, #custom-dt, #idle_inhibitor, #custom-lid-sleep, #custom-recording, #custom-dictation {
+#custom-power-hub, #custom-ollama, #custom-dt, #idle_inhibitor, #custom-recording, #custom-dictation {
   background-color: #${colors.sectionB};
 }
 
@@ -171,10 +171,10 @@ window#waybar {
 
 /* === HOVER — universal === */
 #cpu:hover, #memory:hover, #temperature:hover, #custom-network:hover, #pulseaudio:hover,
-#custom-battery:hover, #clock:hover, #custom-gpu:hover, #custom-ollama:hover, #custom-dt:hover,
+#custom-battery:hover, #clock:hover, #custom-power-hub:hover, #custom-ollama:hover, #custom-dt:hover,
 #idle_inhibitor:hover, #mpd:hover, #tray:hover, #custom-notification:hover,
 #custom-power:hover, #custom-disk-space:hover, #backlight:hover, #bluetooth:hover,
-#custom-weather:hover, #custom-khal:hover, #custom-lid-sleep:hover, #custom-proton-auth:hover,
+#custom-weather:hover, #custom-khal:hover, #custom-proton-auth:hover,
 #custom-workspace-link:hover, #custom-recording:hover, #custom-dictation:hover, #hyprland-language:hover {
   background-color: #${colors.bg3};
 }

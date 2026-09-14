@@ -4,8 +4,76 @@
 # Declares machine identity and composes profiles; states hardware reality.
 # Follows the refactored system domain architecture.
 
-{ config, lib, pkgs, modulesPath, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  modulesPath,
+  ...
+}:
 
+let
+  # One producer for the charger-transition policy. The selector accepts an
+  # alternate sysfs file so its input parsing can be tested without changing
+  # the real power source.
+  selectPowerProfile = pkgs.writeShellScript "hwc-select-power-profile" ''
+    set -eu
+    AC_ONLINE_PATH="''${1:-/sys/class/power_supply/AC/online}"
+
+    if [[ ! -r "$AC_ONLINE_PATH" ]]; then
+      echo "hwc-select-power-profile: unreadable AC state: $AC_ONLINE_PATH" >&2
+      exit 66
+    fi
+
+    case "$(cat "$AC_ONLINE_PATH")" in
+      0) printf '%s\n' power-saver ;;
+      1) printf '%s\n' balanced ;;
+      *)
+        echo "hwc-select-power-profile: invalid AC state in $AC_ONLINE_PATH" >&2
+        exit 65
+        ;;
+    esac
+  '';
+
+  # Returns a brightness target only when the current value exceeds the battery
+  # ceiling. Empty output means preserve the user's current (already lower)
+  # choice. The sysfs directory is injectable for focused tests.
+  selectBrightnessClamp = pkgs.writeShellScript "hwc-select-brightness-clamp" ''
+    set -eu
+    BACKLIGHT_PATH="''${1:-/sys/class/backlight/intel_backlight}"
+    CEILING_PERCENT="''${2:-60}"
+
+    if [[ ! -r "$BACKLIGHT_PATH/brightness" || ! -r "$BACKLIGHT_PATH/max_brightness" ]]; then
+      exit 0
+    fi
+
+    CURRENT=$(cat "$BACKLIGHT_PATH/brightness")
+    MAXIMUM=$(cat "$BACKLIGHT_PATH/max_brightness")
+    case "$CURRENT:$MAXIMUM:$CEILING_PERCENT" in
+      *[!0-9:]*|*::*|:*) exit 65 ;;
+    esac
+    if [[ "$MAXIMUM" -eq 0 || "$CEILING_PERCENT" -gt 100 ]]; then
+      exit 65
+    fi
+
+    if [[ $((CURRENT * 100)) -gt $((MAXIMUM * CEILING_PERCENT)) ]]; then
+      printf '%s%%\n' "$CEILING_PERCENT"
+    fi
+  '';
+
+  applyPowerSourcePolicy = pkgs.writeShellScript "hwc-apply-power-source-policy" ''
+    set -eu
+    PROFILE="$(${selectPowerProfile} "''${1:-/sys/class/power_supply/AC/online}")"
+    ${pkgs.tlp}/bin/tlp "$PROFILE"
+
+    if [[ "$PROFILE" == "power-saver" ]]; then
+      TARGET="$(${selectBrightnessClamp})"
+      if [[ -n "$TARGET" ]]; then
+        ${pkgs.brightnessctl}/bin/brightnessctl --device=intel_backlight set "$TARGET"
+      fi
+    fi
+  '';
+in
 {
   ##############################################################################
   ##  MACHINE: HWC-LAPTOP
@@ -68,17 +136,27 @@
   };
 
   # Lid-close suspend: handled here via acpid, NOT logind inhibitors.
-  # State file: /run/user/1000/hwc-lid-ignore
+  # State file: /run/user/1000/hwc/lid-ignore-request
   #   - absent   → lid close triggers suspend (default — nothing creates it)
-  #   - present  → lid close does nothing
-  # Toggle is managed by waybar-lid-toggle (writes/deletes the file — no D-Bus).
+  #   - present  → lid close does nothing, but ONLY while AC is online
+  # Waybar manages the request. The root handler derives effective policy from
+  # the authoritative AC signal at close time; a stale request can never keep
+  # the laptop awake on battery.
   services.acpid = {
     enable = true;
+    handlers."hwc-power-source" = {
+      event = "ac_adapter.*";
+      action = "${applyPowerSourcePolicy}";
+    };
     handlers."hwc-lid-close" = {
       event = "button/lid LID close";
       action = ''
-        STATE="/run/user/1000/hwc-lid-ignore"
-        if [[ ! -f "$STATE" ]]; then
+        STATE="/run/user/1000/hwc/lid-ignore-request"
+        AC_ONLINE=$(cat /sys/class/power_supply/AC/online 2>/dev/null || echo 0)
+        if [[ "$AC_ONLINE" != "1" ]]; then
+          ${pkgs.coreutils}/bin/rm -f "$STATE"
+          ${pkgs.systemd}/bin/systemctl suspend
+        elif [[ ! -f "$STATE" ]]; then
           ${pkgs.systemd}/bin/systemctl suspend
         fi
       '';
@@ -122,18 +200,49 @@
     # peak temps stay low enough that the fan mostly sits at level 0-1.
     # Firmware emergency handoff at 90°C keeps it well clear of Tjmax (~100°C).
     fanControl.levels = [
-      [ 0             0   60 ]   # Silent zone (was 55)
-      [ 1            55   68 ]   # Gentle ramp
-      [ 2            63   74 ]   # Gradual increase
-      [ 3            70   80 ]   # Medium cooling
-      [ 4            76   86 ]   # Higher cooling
-      [ 5            82   92 ]   # Maximum manual control
-      [ "level auto" 90 32767 ]  # Emergency firmware handoff
+      [
+        0
+        0
+        60
+      ] # Silent zone (was 55)
+      [
+        1
+        55
+        68
+      ] # Gentle ramp
+      [
+        2
+        63
+        74
+      ] # Gradual increase
+      [
+        3
+        70
+        80
+      ] # Medium cooling
+      [
+        4
+        76
+        86
+      ] # Higher cooling
+      [
+        5
+        82
+        92
+      ] # Maximum manual control
+      [
+        "level auto"
+        90
+        32767
+      ] # Emergency firmware handoff
     ];
     peripherals = {
       enable = true;
-      avahi = true;  # Network printer discovery
-      drivers = [ pkgs.brlaser pkgs.hplip ];  # HP and Brother drivers
+      avahi = true; # Network printer discovery
+      drivers = [
+        pkgs.brlaser
+        pkgs.hplip
+      ]; # HP and Brother drivers
     };
   };
 
@@ -146,10 +255,10 @@
   # Private key lives in agenix secret `vpn-wireguard-private-key`.
   hwc.networking.vpn.enable = true;
   hwc.networking.vpn.protonvpn = {
-    enable = false;                         # TEMP: re-enable after filling in WG values below
-    address = [ "10.2.0.2/32" ];          # FILL IN: [Interface] Address from .conf
-    peer.publicKey = "";                    # FILL IN: [Peer] PublicKey from .conf
-    peer.endpoint  = "";                    # FILL IN: [Peer] Endpoint from .conf, e.g. "198.51.100.42:51820"
+    enable = false; # TEMP: re-enable after filling in WG values below
+    address = [ "10.2.0.2/32" ]; # FILL IN: [Interface] Address from .conf
+    peer.publicKey = ""; # FILL IN: [Peer] PublicKey from .conf
+    peer.endpoint = ""; # FILL IN: [Peer] Endpoint from .conf, e.g. "198.51.100.42:51820"
   };
 
   # Proton Mail Bridge managed by Home Manager user service (NOT system service)
@@ -160,13 +269,24 @@
     enable = true;
     loginManager.enable = true;
     loginManager.autoLoginUser = "eric";
+    # Prepared but intentionally unarmed until a controlled logout/TTY test.
+    # The runtime resolver and one-shot fallback are evaluated in the login
+    # module; enabling this changes the compositor's DRM device set.
+    loginManager.preferredDrmDevice = {
+      enable = false;
+      pciAddress = "0000:00:02.0";
+      vendorId = "0x8086";
+    };
     sudo.enable = true;
     sudo.extraRules = [
       {
         users = [ "eric" ];
         commands = [
           # Performance mode: allow CPU governor changes
-          { command = "/run/current-system/sw/bin/tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"; options = [ "NOPASSWD" ]; }
+          {
+            command = "/run/current-system/sw/bin/tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor";
+            options = [ "NOPASSWD" ];
+          }
         ];
       }
     ];
@@ -182,7 +302,7 @@
     # Laptop should not wait-online; Hyprland can start immediately.
     waitOnline.mode = "off";
 
-    ssh.enable = true;            # Enable the SSH server.
+    ssh.enable = true; # Enable the SSH server.
     firewall.level = "strict";
     firewall.extraTcpPorts = [ 56037 ];
     firewall.extraUdpPorts = [ 56037 ];
@@ -203,11 +323,26 @@
       addresses = [ "tcp://${config.hwc.networking.hosts.ips.main}:22000" ];
     };
     folders = {
-      "000_inbox"    = { path = "/home/eric/000_inbox";    devices = [ "hwc-server" ]; };
-      "100_hwc"      = { path = "/home/eric/100_hwc";      devices = [ "hwc-server" ]; };
-      "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-server" ]; };
-      "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-server" ]; };
-      "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-server" ]; };
+      "000_inbox" = {
+        path = "/home/eric/000_inbox";
+        devices = [ "hwc-server" ];
+      };
+      "100_hwc" = {
+        path = "/home/eric/100_hwc";
+        devices = [ "hwc-server" ];
+      };
+      "200_personal" = {
+        path = "/home/eric/200_personal";
+        devices = [ "hwc-server" ];
+      };
+      "300_tech" = {
+        path = "/home/eric/300_tech";
+        devices = [ "hwc-server" ];
+      };
+      "700_datax" = {
+        path = "/home/eric/700_datax";
+        devices = [ "hwc-server" ];
+      };
       # 600_apps: removed from Syncthing 2026-06-16 (see server config). Each app
       # is its own git repo now; Syncthing over live .git was clobbering
       # lead_scout/sr_analyzer. git is the only sync. Same fix as brain below.
@@ -215,7 +350,10 @@
       # laptop<->server vault sync (clone of the bare hub; Obsidian-git or CLI
       # pull/push). Removed from Syncthing 2026-06-15 to eliminate the
       # git-on-a-multi-writer-tree clobber at the root.
-      "screenshots"  = { path = "/home/eric/500_media/510_pictures/screenshots"; devices = [ "hwc-server" ]; };
+      "screenshots" = {
+        path = "/home/eric/500_media/510_pictures/screenshots";
+        devices = [ "hwc-server" ];
+      };
     };
   };
 
@@ -257,9 +395,14 @@
     device = "/dev/disk/by-uuid/A802BE5102BE23EA";
     fsType = "ntfs3";
     options = [
-      "uid=1000" "gid=100" "dmask=0000" "fmask=0000"
-      "force" "iocharset=utf8"
-      "noauto" "nofail"
+      "uid=1000"
+      "gid=100"
+      "dmask=0000"
+      "fmask=0000"
+      "force"
+      "iocharset=utf8"
+      "noauto"
+      "nofail"
     ];
   };
 
@@ -277,10 +420,12 @@
 
   # USB auto-mount for external drives + NTFS fixperms for Seagate
   hwc.system.usb.autoMount.enable = true;
-  hwc.system.usb.ntfsFixperms = [{
-    mountPoint = "/mnt/seagate";
-    afterUnit = "mnt-seagate.mount";
-  }];
+  hwc.system.usb.ntfsFixperms = [
+    {
+      mountPoint = "/mnt/seagate";
+      afterUnit = "mnt-seagate.mount";
+    }
+  ];
 
   #============================================================================
   # === [domains/system/hardware] Orchestration ================================
@@ -297,7 +442,7 @@
       legacyPerfLevelOverride = false;
       prime.enable = true;
       prime.nvidiaBusId = "PCI:1:0:0";
-      prime.intelBusId  = "PCI:0:2:0";
+      prime.intelBusId = "PCI:0:2:0";
     };
     powerManagement.smartToggle = true;
   };
@@ -305,8 +450,8 @@
   # Override NVIDIA power management defaults for proper suspend/resume
   # Fixes GPU state corruption in applications (like Kitty) after resume
   hardware.nvidia.powerManagement = {
-    enable = true;           # Enable power management for suspend/resume
-    finegrained = true;      # Pilot fine-grained PM for smoother offload
+    enable = true; # Enable power management for suspend/resume
+    finegrained = true; # Pilot fine-grained PM for smoother offload
   };
 
   #============================================================================
@@ -318,10 +463,13 @@
   #============================================================================
   # System-lane dependencies for home apps (co-located sys.nix files)
   # These are enabled separately because system evaluates before Home Manager
-  hwc.system.apps.hyprland.enable = true;   # Startup script, helper scripts
-  hwc.system.apps.waybar.enable = true;     # System dependency validation
-  hwc.system.apps.chromium.enable = true;   # System integration (dconf, dbus)
-  hwc.system.apps.gpu-screen-recorder.enable = true;  # setcap gsr-kms-server (Wayland capture)
+  hwc.system.apps.hyprland.enable = true; # Startup script, helper scripts
+  hwc.system.apps.waybar = {
+    enable = true; # System dependency validation
+    powerHub.enable = true;
+  };
+  hwc.system.apps.chromium.enable = true; # System integration (dconf, dbus)
+  hwc.system.apps.gpu-screen-recorder.enable = true; # setcap gsr-kms-server (Wayland capture)
 
   #============================================================================
   # === [profiles/security.nix] Orchestration =================================
@@ -335,8 +483,8 @@
   # Storage paths (Charter v10.1 - hostname-based defaults with overrides)
   # Laptop defaults from paths.nix match most values, only override exceptions
   # Defaults: media.root=/home/eric/500_media, photos=.../510_pictures, backup=.../backup
-  hwc.paths.hot.root = "/home/eric/500_media/hot";     # Override: laptop uses hot for active work
-  hwc.paths.cold = "/home/eric/500_media/archive";     # Override: laptop archives locally
+  hwc.paths.hot.root = "/home/eric/500_media/hot"; # Override: laptop uses hot for active work
+  hwc.paths.cold = "/home/eric/500_media/archive"; # Override: laptop archives locally
 
   # AI model storage. ai.root is null on non-server hosts (paths.nix), but the
   # llama.cpp module asserts an absolute modelsDir derived from ai.models. Point
@@ -387,10 +535,13 @@
     cudaSupport = true;
     gpu = {
       enable = true;
-      threads = 8;                          # cap under the 22 logical cores; GPU does the work
-      extraArgs = [ "--alias" "lfm2-2.6b" ]; # stable model name for the wrapper/clients
+      threads = 8; # cap under the 22 logical cores; GPU does the work
+      extraArgs = [
+        "--alias"
+        "lfm2-2.6b"
+      ]; # stable model name for the wrapper/clients
     };
-    embed.enable = true;                     # RAG embeddings, same model/flags as the server
+    embed.enable = true; # RAG embeddings, same model/flags as the server
     # cpu.enable left false → 24B CPU service intentionally skipped.
   };
 
@@ -413,9 +564,18 @@
   # the registry so a re-registered server is a one-line change.
   networking.hosts = {
     "${config.hwc.networking.hosts.ips.main}" = [
-      "sonarr.local" "radarr.local" "prowlarr.local" "jellyfin.local"
-      "lidarr.local" "qbittorrent.local" "grafana.local" "dashboard.local"
-      "prometheus.local" "caddy.local" "server.local" "hwc.local"
+      "sonarr.local"
+      "radarr.local"
+      "prowlarr.local"
+      "jellyfin.local"
+      "lidarr.local"
+      "qbittorrent.local"
+      "grafana.local"
+      "dashboard.local"
+      "prometheus.local"
+      "caddy.local"
+      "server.local"
+      "hwc.local"
     ];
   };
 
@@ -425,18 +585,30 @@
   # Power management: TLP handles thermal + power (thermald conflicts with TLP)
   services.tlp = {
     enable = true;
+    # TLP remains the sole power-policy producer. Its native D-Bus daemon lets
+    # the active desktop session select performance/balanced/power-saver
+    # without passwordless sudo or a competing sysfs writer.
+    pd.enable = true;
     settings = {
+      # Charger transitions are owned by applyPowerSourcePolicy: SAV on
+      # battery, BAL on AC. Disable TLP's built-in PRF/BAL writer so the two
+      # policies cannot race. Manual Waybar choices persist until the next
+      # physical charger transition.
+      TLP_AUTO_SWITCH = 0;
+      TLP_DEFAULT_MODE = "BAL";
+
       # CPU performance settings
       CPU_SCALING_GOVERNOR_ON_AC = "powersave";
       CPU_SCALING_GOVERNOR_ON_BAT = "powersave";
 
-      # Battery charge thresholds (extends battery life)
-      START_CHARGE_THRESH_BAT0 = 75;  # Start charging at 75%
-      STOP_CHARGE_THRESH_BAT0 = 90;   # Stop charging at 90%
+      # Preserve battery health while retaining enough capacity for mobile work.
+      START_CHARGE_THRESH_BAT0 = 75; # Start charging at 75%
+      STOP_CHARGE_THRESH_BAT0 = 95; # Stop charging at 95%
 
       # Add CPU energy/performance preferences
-      CPU_ENERGY_PERF_POLICY_ON_AC = "balance_power";  # Changed from "performance" to reduce heat
-      CPU_ENERGY_PERF_POLICY_ON_BAT = "balance-power";
+      CPU_ENERGY_PERF_POLICY_ON_AC = "balance_power"; # Changed from "performance" to reduce heat
+      CPU_ENERGY_PERF_POLICY_ON_BAT = "power";
+      PLATFORM_PROFILE_ON_BAT = "low-power";
 
       # Boost control (disable turbo on AC too — Meteor Lake turbo bursts spike
       # temps past the fan trip points and slam the fan to max; capping heat at
@@ -457,6 +629,11 @@
     };
   };
 
+  # Apply the same charger policy on boot, when no ACPI transition is
+  # guaranteed to fire. This extends TLP's existing privileged service rather
+  # than creating a second privileged daemon.
+  systemd.services.tlp.postStart = "${applyPowerSourcePolicy}";
+
   #============================================================================
   # PERFORMANCE TUNING (32GB RAM, dual NVMe system)
   #============================================================================
@@ -465,17 +642,17 @@
   services.thermald.enable = false;
   boot.kernel.sysctl = {
     # Memory management for high-RAM system
-    "vm.swappiness" = 100;              # Rarely use swap (have 32GB RAM + zram)
-    "vm.vfs_cache_pressure" = 50;      # Keep file cache longer
-    "vm.dirty_ratio" = 6;             # Allow more dirty memory before blocking
-    "vm.dirty_background_ratio" = 3;  # Background writeback threshold
+    "vm.swappiness" = 100; # Rarely use swap (have 32GB RAM + zram)
+    "vm.vfs_cache_pressure" = 50; # Keep file cache longer
+    "vm.dirty_ratio" = 6; # Allow more dirty memory before blocking
+    "vm.dirty_background_ratio" = 3; # Background writeback threshold
 
     # Network performance tuning
-    "net.core.rmem_max" = 134217728;   # 128MB receive buffer
-    "net.core.wmem_max" = 134217728;   # 128MB send buffer
-    "net.ipv4.tcp_rmem" = "4096 87380 67108864";  # TCP receive buffer
-    "net.ipv4.tcp_wmem" = "4096 65536 67108864";  # TCP send buffer
-    "net.ipv4.tcp_congestion_control" = "bbr";    # Modern TCP congestion control
+    "net.core.rmem_max" = 134217728; # 128MB receive buffer
+    "net.core.wmem_max" = 134217728; # 128MB send buffer
+    "net.ipv4.tcp_rmem" = "4096 87380 67108864"; # TCP receive buffer
+    "net.ipv4.tcp_wmem" = "4096 65536 67108864"; # TCP send buffer
+    "net.ipv4.tcp_congestion_control" = "bbr"; # Modern TCP congestion control
 
     # File descriptor limits for development workloads
     "fs.file-max" = 2097152;
@@ -484,6 +661,10 @@
 
   # Device rules: kyber scheduler on NVMe
   services.udev.extraRules = lib.mkAfter ''
+    # Clear the AC-only lid-ignore request as soon as unplug is observed. The
+    # acpid close handler repeats the AC check because udev delivery is not a
+    # synchronization primitive and must not be the safety boundary.
+    SUBSYSTEM=="power_supply", KERNEL=="AC", ATTR{online}=="0", RUN+="${pkgs.coreutils}/bin/rm -f /run/user/1000/hwc/lid-ignore-request"
     ACTION=="add|change", KERNEL=="nvme*n*", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="kyber"
   '';
 
@@ -496,8 +677,8 @@
   hardware.graphics.extraPackages = with pkgs; [
     level-zero
     intel-compute-runtime
-    intel-media-driver   # iHD VA-API driver for Meteor Lake / Arc iGPU
-    libvdpau-va-gl       # VDPAU<->VAAPI bridge
+    intel-media-driver # iHD VA-API driver for Meteor Lake / Arc iGPU
+    libvdpau-va-gl # VDPAU<->VAAPI bridge
   ];
 
   # Performance mode wrappers (perf-mode/balanced-mode) — system hardware domain

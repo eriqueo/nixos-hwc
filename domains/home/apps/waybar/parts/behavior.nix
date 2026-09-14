@@ -17,6 +17,7 @@ let
     (lib.concatMap (g: g.binds) hyprlandBehavior.keybinds);
   dictateShortcut = if dictateBind == null then "" else
     "${lib.replaceStrings [ " " ] [ "+" ] dictateBind.mods}+${dictateBind.key}";
+  powerHubEnabled = config.hwc.home.apps.waybar.powerHub.enable;
 
   commonModules = {
     # GTK computes a 37 px minimum from the shared 16 px text and 8 px padding.
@@ -29,8 +30,9 @@ let
       "custom/sep-pre"
     ] ++ lib.optionals ollamaEnabled [ "custom/ollama" ]
       ++ lib.optionals dtEnabled [ "custom/dt" ]
+      ++ lib.optionals powerHubEnabled [ "custom/power-hub" ]
       ++ [
-      "custom/gpu" "idle_inhibitor" "custom/lid-sleep"
+      "idle_inhibitor"
     ] ++ lib.optionals gsrEnabled [ "custom/recording" ]
       ++ lib.optionals dictateEnabled [ "custom/dictation" ]
       ++ [
@@ -120,7 +122,13 @@ let
     };
   };
 
-  commonWidgetsBase = ollamaWidget // dtWidget // gsrWidget // dictateWidget // {
+  powerHubWidget = lib.optionalAttrs powerHubEnabled {
+    # Aggregates authoritative status while actions remain owned by TLP, the
+    # lid policy, brightnessctl, and the GPU-launch capability respectively.
+    "custom/power-hub" = { format = "{}"; exec = "hwc-power-status --waybar"; return-type = "json"; interval = 10; on-click = "waybar-power-hub-menu"; };
+  };
+
+  commonWidgetsBase = ollamaWidget // dtWidget // gsrWidget // dictateWidget // powerHubWidget // {
     "hyprland/submap" = { format = "mode: {}"; max-length = 12; tooltip = false; };
     "hyprland/window" = {
       format = "{title}";
@@ -150,7 +158,6 @@ let
       tooltip-format = "<tt><small>{calendar}</small></tt>";
     };
 
-    "custom/gpu" = { format = "{}"; exec = "gpu-status"; return-type = "json"; interval = 5; on-click = "gpu-toggle"; };
     idle_inhibitor = { format = "{icon}"; format-icons = { activated = "Awake"; deactivated = "Idle"; }; };
     pulseaudio = { format = "{icon} {volume}%"; format-muted = "󰝟 Muted"; format-icons = { default = ["󰕿" "󰖀" "󰖁"]; }; on-click = "pavucontrol"; };
     "custom/network" = { format = "{}"; exec = "waybar-network-status"; return-type = "json"; interval = 5; on-click = "waybar-network-settings"; };
@@ -162,13 +169,11 @@ let
       format = "{temperatureC}°C";
       format-critical = "{temperatureC}°C!";
     };
-    "custom/power-profile" = { format = "{}"; exec = "waybar-power-profile"; return-type = "json"; interval = 10; on-click = "waybar-power-profile-toggle"; };
     "custom/disk-space" = { format = "{}"; exec = "waybar-disk-space"; return-type = "json"; interval = 30; on-click = "baobab"; };
     "custom/battery" = { format = "{}"; exec = "waybar-battery-health"; return-type = "json"; interval = 5; on-click = "waybar-power-settings"; };
     "custom/proton-auth" = { format = "Auth"; tooltip = "Proton Authenticator (SUPER+A)"; on-click = "proton-authenticator-toggle"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
     "custom/power" = { format = "Pwr"; tooltip = "Shutdown"; on-click = "wlogout"; };
-    "custom/lid-sleep" = { format = "{}"; exec = "waybar-lid-status"; return-type = "json"; interval = 5; on-click = "waybar-lid-toggle"; };
     "custom/workspace-link" = { format = "{}"; exec = "waybar-workspace-link-status"; return-type = "json"; interval = "once"; signal = 8; on-click = "waybar-workspace-link-toggle"; };
 
     "custom/khal" = {

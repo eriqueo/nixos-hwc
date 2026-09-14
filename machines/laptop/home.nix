@@ -49,6 +49,7 @@ let dictationModel = "base.en"; in
       enable = true;
       model = "${config.hwc.home.apps.whisper-cpp.modelsDir}/ggml-${dictationModel}.bin";
     };
+    waybar.powerHub.enable = true;
     whisper-cpp = {
       enable = true;
       cuda = true;

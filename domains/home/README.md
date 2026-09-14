@@ -25,8 +25,9 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 ```
 domains/home/
 ├── apps/    # 50 app modules, auto-imported via readDir (index.nix per app,
-│            # optional sys.nix system half, parts/ for split config)
 ├── keymap/  # shared grammar; registry hub/tool navigation destinations
+│            # optional sys.nix system half, parts/ for split config); Waybar's
+│            # laptop-only power hub has paired home/system flags for HM parity
 ├── core/    # shell/ (CLI env, zsh, aliases — parts/), development/, xdg-dirs.nix
 └── theme/   # palettes/ (deep-nord, gruv, hwc), templates/gtk.nix, fonts/
 ```
@@ -76,6 +77,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 - 2026-09-02: `apps/waybar/` now maps its CSS and comments onto materialized HWC theme semantics, so palette changes restyle the bar while opaque powerline seams remain intact.
 - 2026-08-31: `apps/codex/` now exposes the shared `delegate` skill for Herdr-free Claude Code, Codex, and DX1 worker calls from T3 sessions.
 - 2026-08-31: `apps/codex/` now exposes the shared Herdr and Project Director skills through out-of-store symlinks, keeping Claude and Codex on one orchestration-skill source.
+- 2026-08-28: apps/waybar — introduced a laptop-gated power hub over native TLP profiles, brightnessctl, the existing wrapped-launch GPU policy, and the AC-safe lid request. Status is passive sysfs/DBus telemetry: the five-second widget no longer invokes `nvidia-smi`, which could itself keep the dGPU awake. GPU request state moved from global `/tmp` to the user's boot-scoped runtime directory.
 - 2026-08-12: `core/shell/` — the `server` ssh matchBlock and the `server`/`xps` aliases no longer carry hardcoded Tailscale IPs; both read `hmLib.fleet osConfig` (new helper in `domains/lib/hm.nix`), which resolves `hwc.networking.hosts.ips` on NixOS hosts and falls back to literals only for standalone HM. `parts/aliases.nix` takes a new `fleet` argument, mirroring the existing `nixosPath` registry-with-Law-1-fallback pattern already in that file. Rendered values change (`100.114.232.124` → `100.77.195.118`) because hwc-server re-registered on a new tailnet address that day — which is the point: the address now lives in one place instead of four.
 - 2026-07-11: Law 3 migration — shell + scraper `nixosPath` standalone-HM fallback now derives from `config.home.homeDirectory` (gpu-screen-recorder escape-hatch precedent) instead of a `/home/eric` literal; hyprland session.nix stale commented-out screenshots fallback removed; yazi keymap.nix dead `? "/mnt/media"` default param dropped (index.nix always passes `mediaRoot`). Rendered values unchanged.
 
