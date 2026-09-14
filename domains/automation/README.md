@@ -18,12 +18,30 @@ readme-freshness weekly Law-12 drift report.
 automation/
 ├── index.nix    # Domain aggregator
 ├── README.md    # This file
+├── brain-sweep/    # Nightly `brain sweep --report` drift detector over the vault
+│   ├── index.nix   # systemd service/timer (hwc.automation.brainSweep.*); CLI lives in ~/600_apps/brain
+│   └── README.md
 ├── inbox-janitor/  # Server-only timer draining ~/000_inbox/downloads (hwc.automation.inboxJanitor.*)
 │   ├── index.nix   # Options + systemd oneshot service/timer (every 30m); dryRun default on
 │   ├── janitor.py  # Engine: pure classify() core + I/O edges; reads ~/000_inbox/_inbox-routing.yaml
 │   └── README.md   # Single-writer rationale + rollout
+├── mail-janitor/   # Age-aware anti-buildup sweep for the Gmail accounts (hwc.automation.mailJanitor.*)
+│   ├── index.nix   # Options + systemd service/timer; dryRun defaults true
+│   ├── janitor.py  # PRESERVE / TXN / NOISE tiers; trash only, never hard-delete
+│   └── README.md
 ├── mqtt/        # MQTT broker for event-driven automation
 │   └── index.nix
+├── refinery/    # Substance-agnostic refinement engine + board on :8060 (hwc.automation.refinery.*)
+│   ├── index.nix       # Options + native-mode service (buildNpmPackage → esbuild bundle)
+│   ├── parts/          # Container mode (mkContainer over ghcr.io/eriqueo/refinery)
+│   ├── engine/         # TypeScript core: contracts, gates, executors, stores, shells
+│   ├── pipelines/      # Pipeline definitions (data)
+│   ├── gauntlets/      # Standalone-gauntlet dispatch contracts (YAML)
+│   ├── domains.yaml
+│   └── README.md       # Per-slice changelog
+├── vault-sync/  # Periodic commit + pull + push of the brain vault against the bare hub
+│   ├── index.nix       # systemd service/timer; push failure is FATAL + notifies
+│   └── README.md
 ├── nightly-builds/  # Overnight gauntlet-card runner (headless Claude Code)
 │   ├── index.nix    # Options + systemd service/timer (hwc.automation.nightlyBuilds.*);
 │   │                #   passes NB_DISCORD_WEBHOOK_FILE (agenix discord-webhook-nightly-builds).
@@ -77,6 +95,22 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-09-11: refinery container cgroup raised to `memory = "8g"` / `cpus = "3"` /
+  `memorySwap = "10g"` (was 2g/1.5/3g). A DataX acceptance baseline (`npm ci` +
+  tests on a 2.3 GB worktree) exhausted the 2g cgroup; the OOM killer took the
+  engine server and left the item stuck "running" on a stale lock. Host has 64 GB
+  (`f4fba13e`).
+- 2026-09-10: inbox-janitor — rules may now name an absolute destination so a file
+  leaves `downloads/` for its permanent PARA home. `run()` formats via `_display()`
+  instead of `target.relative_to(inbox_root)` (which raised `ValueError` and killed
+  the run before the first move), and `republish()` skips paths outside the
+  Syncthing folder. Without it the tree could only accumulate (`3ebcded1`).
+- 2026-09-08: Event discovery left n8n — the native Event Scout service replaced the
+  n8n event owner. Removed workflows `11-weekly-events.json` and
+  `13-weekly-event-actions.json`, migration `003-event-case-ledger.sql`, and the
+  event options/env from `n8n/index.nix` + `sys.nix`; nested n8n READMEs rewritten
+  to point at Scout (`d67ae1de`, `12719452`). This reverts the event curation +
+  Discord approval routing added one day earlier (`f12ab10c`).
 - 2026-09-07: n8n alert integrity — Frigate's Discord webhook is now injected as
   `DISCORD_WEBHOOK_FRIGATE_URL` from the existing agenix `discord-webhook-frigate`
   (new `hwc.automation.n8n.secrets.discordWebhookFrigateFile`), the tracked

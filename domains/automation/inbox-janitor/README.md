@@ -143,6 +143,17 @@ distinct live gdrive investigations share `datax__ops__gdrive__` — so inferrin
 from filenames would delete parallel work while sounding precise.
 
 ## Changelog
+- 2026-09-10: **Rules may drain outside the inbox.** A rule can name an absolute
+  `dest` so a file leaves `downloads/` for its permanent PARA home — `classify()`
+  already handled it (`pathlib` resolves `downloads / "/abs/path"` to the absolute
+  path), but two edge functions did not. `run()` logged
+  `target.relative_to(inbox_root)`, which raises `ValueError` for any target
+  outside the inbox and crashed the run before the first file moved; it now
+  formats via `_display()` (inbox-relative inside, absolute out). `republish()`
+  hit the same call inside the move loop *after* `shutil.move`, so it aborted a
+  half-finished drain; it now skips paths outside the Syncthing folder, which is
+  correct — there is nothing there for that folder to rescan. Measured before the
+  change: 763 of 828 non-agent files older than 30 days (`3ebcded1`).
 - 2026-08-22: **`downloads/agent/` reorganized to `agent/<project>/<file>` and two
   reports added.** The flat bucket + `<domain>__<class>__<nouns>` filename convention
   measured **23% conformance (68 of 290 files) with zero near-misses** — no file used

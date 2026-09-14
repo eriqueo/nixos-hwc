@@ -53,6 +53,11 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-09-11: **Container cgroup raised after an OOM kill.** `parts/container.nix`
+  goes `memory` 2g → **8g**, `cpus` 1.5 → **3**, `memorySwap` 3g → **10g**. A DataX
+  acceptance baseline (`npm ci` + test run on a 2.3 GB worktree) exhausted the 2g
+  cgroup on 2026-09-11; the OOM killer took the engine server with it and left the
+  item "running" behind a stale lock. The host has 64 GB (`f4fba13e`).
 - 2026-09-04: **Container mode.** The engine was extracted with history into
   `eriqueo/refinery` (CI: tests + image to GHCR). `mode = "container"` runs that
   image through `mkContainer` (`parts/container.nix`) with one env file
