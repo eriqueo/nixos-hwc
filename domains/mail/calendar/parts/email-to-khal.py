@@ -62,7 +62,7 @@ def extract_body(msg) -> str:
                 payload = part.get_payload(decode=True)
                 if payload:
                     parts.append(payload.decode("utf-8", errors="ignore"))
-    else:
+    elif msg.get_content_type() == "text/plain":
         payload = msg.get_payload(decode=True)
         if payload:
             parts.append(payload.decode("utf-8", errors="ignore"))
@@ -516,14 +516,18 @@ def handle_body_parse(msg):
         print(f"  Title:    {event['title']}")
         print(f"  Duration: {event['duration']}\n")
 
+    # The review reference must always be readable text. `body` is empty for an
+    # HTML-only message; using it here previously dumped raw markup into nvim.
+    reference_body = combined_body
+
     # Include HTML URLs in the reference body so user can copy them
     html_urls = extract_html_links(msg)
     if html_urls:
-        body += "\n\n── URLs found in email ──\n" + "\n".join(html_urls)
+        reference_body += "\n\n── URLs found in email ──\n" + "\n".join(html_urls)
 
     if has_tty():
         print("  Opening editor for review...\n")
-        edited = editor_review(event, email_body=body)
+        edited = editor_review(event, email_body=reference_body)
         if not edited:
             print("  Cancelled (title was empty).")
             return False

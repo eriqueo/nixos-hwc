@@ -58,6 +58,8 @@ domains/mail/calendar/
   already local and must not be created again.
   Compact school-message ranges such as `5:30p-6:30p 9/17/26` now produce the
   start and 60-minute duration in the review form automatically.
+  HTML-only messages now put cleaned readable text in the reference section;
+  the previous branch leaked raw HTML markup into the editor.
 - **2026-07-10**: Booking accuracy. Set khal `default_calendar = migrated`
   (the VEVENT calendar the hwc-crm availability endpoint reads) when Radicale is
   on, so quick-adds never prompt. Added a `busy` command (`home.packages`):

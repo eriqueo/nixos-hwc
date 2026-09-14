@@ -229,6 +229,10 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 | `U` | URL scan (urlscan) |
 | `/` | Search in pager (passthrough) |
 
+Review helpers open in an aerc terminal tab. `<C-h>` / `<C-l>` move between
+that tab and the original message without closing the editor; `<C-x>` opens the
+aerc command prompt inside a terminal.
+
 ### Compose
 
 | Key | Action |
@@ -346,6 +350,8 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
   DKIM-pass messages without trusting a wildcard.
 - 2026-09-14: The embedded `less` viewer now uses `-~`, leaving the area below
   short messages blank instead of painting every unused row with `~`.
+- 2026-09-14: Review-terminal `<C-h>/<C-l>` now switch aerc tabs directly, so
+  the original message remains one key away while editing a handoff.
 - 2026-09-14: Made `now` a stable `queue` + `inbox` decision surface, independent
   of unread state and message date. The original 41 messages form the cutover
   cohort; new arrivals join automatically. Legacy unread mail remains isolated

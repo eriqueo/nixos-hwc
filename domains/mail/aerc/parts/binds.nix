@@ -257,6 +257,8 @@ ${categoryBinds}
       [terminal]
       $noinherit = true
       $ex = <C-x>
+      <C-h> = :prev-tab<Enter>
+      <C-l> = :next-tab<Enter>
     '';
 
     ".config/aerc/leader-cheatsheet.txt".text = leaderHelp;
