@@ -200,7 +200,7 @@ archive the source message instead.
 | `<Space>ft` | Filter the current folder by tag; `Tab` completes tag names |
 | `<Space>fT` | Find a tag across all mail in the reusable `tag-search` query |
 | `<Space>fc` | Clear the current filter/search |
-| `<Space>fu` | Unsubscribe using the message's `List-Unsubscribe` header |
+| `<Space>fu` | Unsubscribe from the message header; email-only senders ask first, then open review without Neovim |
 | `<Space>sd` | Sort by date (newest first) |
 | `<Space>tt` | Toggle thread view |
 
@@ -351,6 +351,9 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-09-15: Made unsubscribe drafts an explicit two-step decision. Email-only
+  senders first explain that unsubscribe requires an email; continuing opens
+  aerc's review screen without Neovim, and `y` remains the separate send action.
 - 2026-09-15: Bounded the mark/classify popup by nesting categories and visible
   flags, removed automation-only `action`/`pending` from the human workflow,
   and made bulk clears preserve the protected `keep` tag. Added tag-aware

@@ -79,6 +79,9 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-09-15: Made aerc's email-only unsubscribe path explicit and review-first.
+  `<Space>fu` now asks before creating the draft, bypasses Neovim, and still
+  requires `y` on the review screen before anything is sent.
 - 2026-09-15: Made aerc's tag controls match the calm inbox model: the first
   mark popup is bounded, categories and visible flags are nested,
   automation-only action/pending tags stay out of the human workflow, tag

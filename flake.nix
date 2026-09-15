@@ -574,6 +574,7 @@
           "<Space>ft = :filter tag:"
           "<Space>fT = :query -f -n tag-search tag:"
           "<Space>fc = :clear -s<Enter>"
+          "<Space>fu = :unsubscribe -s<Enter>"
           "<Space>mcy = :modify-labels +family"
         ];
         missing = lib.filter (needle: !(lib.hasInfix needle binds)) required;

@@ -82,7 +82,7 @@ let
     Space f t  filter current folder by tag (Tab completes)
     Space f T  find tag across all mail (Tab completes)
     Space f c  clear filter  Space f f  filter      Space f s  search
-    Space f u  unsubscribe
+    Space f u  review unsubscribe
     Space s d  sort by date  Space t t  toggle threads
     Space t s  switch styleset            Space M    add new tag
 
@@ -185,8 +185,9 @@ ${triageGoBinds}
       # Triage bucket marking (replace-set, same semantics as workbench moves)
 ${triageBinds}
 
-      # Use the sender's List-Unsubscribe header when available.
-      <Space>fu = :unsubscribe<Enter> # unsubscribe
+      # Use the sender's List-Unsubscribe header and skip straight to review
+      # when the only available method is an email draft.
+      <Space>fu = :unsubscribe -s<Enter> # review unsubscribe
 
       # === BOUNDED MARKING UNDER <Space>m LEADER ===
       <Space>mu = :modify-labels +unread<Enter> # mark unread
