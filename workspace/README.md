@@ -21,7 +21,8 @@ workspace/
 ├── monitoring/      # health-check scripts (NOT nix-wired; overlaps domains/monitoring —
 │                    #   candidates for retirement as declarative coverage grows)
 ├── nixos-dev/       # Repo dev tools: charter-lint, grebuild, add-home-app,
-│                    #   graph/ (referenced by flake.nix hwc-graph), audits, lints
+│                    #   graph/ (referenced by flake.nix hwc-graph), audits, lints,
+│                    #   tests/ (executable regression suites for the tools here)
 ├── plans/           # Dated architecture proposals (CHARTER §6) + audit reports
 ├── projects/        # Standalone app code parked here — Phase-2 eviction candidates
 │                    #   (each wants its own repo; see 2026-07-05 audit)
@@ -51,6 +52,20 @@ referencing site):
 
 ## Changelog
 
+- 2026-09-15: `nixos-dev/add-home-app.sh` v3.0 — repaired against Charter v12.6.
+  Four live breakages: machine detection walked every flake output via
+  `nix flake show`; package search resolved against the moving `nixpkgs`
+  registry instead of this repo's locked revision; `--no-interactive` set a flag
+  nothing read, so every prompt still blocked; and generation emitted a Law-10
+  `options.nix` and wrote to the deleted `profiles/home.nix`. Now: targeted
+  `nix eval #nixosConfigurations --apply builtins.attrNames`, search and
+  validation against the flake.lock nixpkgs, a real non-interactive contract
+  (one exact top-level attribute or a loud failure with stable exit codes
+  3/4/5), and generation through `domains/lib/mkSimpleApp.nix` or a Law-6
+  native adapter plus per-app README, apps README index, and the enable in
+  `machines/<machine>/home.nix`. On `main` it diverts to a dedicated worktree.
+  New: `nixos-dev/tests/add-home-app` regression suite (62 assertions) driving
+  the real script against isolated git + Nix fixtures.
 - 2026-07-05: Audit cleanup (see `plans/2026-07-05-systems-process-audit.md`).
   Deleted reorg-debris duplicates: `hooks/` + `media/hooks/` (stale forks of
   `automation/hooks/`), `diagnostics/` + `setup/` (dups of `system/*`),
