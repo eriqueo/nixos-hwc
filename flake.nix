@@ -614,6 +614,7 @@
         "aerc-rendering: plain text is not the default MIME alternative";
       pkgs.runCommand "aerc-rendering" {} ''
         export TERM=xterm-256color
+        export LC_ALL=C.UTF-8
         ${filterRunner} < ${fixture} > rendered
         ${pkgs.python3}/bin/python3 -c 'import sys; sys.stdout.buffer.write(b"\x1b[31muntrusted\x1b[0m\n")' \
           | ${filterRunner} > sanitized
