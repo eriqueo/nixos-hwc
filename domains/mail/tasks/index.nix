@@ -96,7 +96,7 @@ in
 
     defaultList = lib.mkOption {
       type = lib.types.str;
-      default = "Reminders";
+      default = "Work";
       description = ''
         todoman default_list for `todo new` when -l is omitted. Must match a
         collection directory created by `vdirsyncer discover tasks`; correct it

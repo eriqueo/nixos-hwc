@@ -161,7 +161,10 @@ def main() -> int:
         description += "\n\nEmail excerpt:\n" + body[:4000]
 
     lists = task_lists()
-    default_list = next((name for name in ("work", "hwc") if name in lists), lists[0] if lists else "Reminders")
+    default_list = next(
+        (name for name in ("Work", "work", "hwc") if name in lists),
+        lists[0] if lists else "Work",
+    )
     available = ", ".join(lists) if lists else "unavailable (the write will validate your choice)"
     proposal = f"""# Review task — save and close to create it
 # Clear Summary to cancel. Nothing is archived automatically.

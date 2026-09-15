@@ -45,8 +45,9 @@ crm/
 | `.leadscoutIngest.dataxDsn` | `postgresql:///lead_scout` | READ-ONLY by contract. Option name kept; the database was renamed 2026-08-26. |
 | `.calendar.enable` | false | Write appointment events to Radicale. |
 | `.calendar.caldavUrl` | loopback Radicale | CalDAV base URL. |
-| `.calendar.user` | `cal` | Radicale user (pw from `radicale-htpasswd`). |
-| `.calendar.collection` | `cal/migrated` | Collection PATH (displayname `hwc`). |
+| `.calendar.user` | `eric` | Radicale user (pw from `radicale-htpasswd`). |
+| `.calendar.collection` | `eric/work` | Appointment write target. |
+| `.calendar.busyCollections` | Work + Family + Personal | Collections checked for conflicts; Groceries is task-only. |
 | `.calendar.organizerEmail` | — | ORGANIZER on the `.ics` invite. |
 
 Ingress: Caddy vhost `crm.hwc.iheartwoodcraft.com` (tailnet-private) for the
@@ -54,6 +55,9 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 `^/hooks/(contact|appointment|availability)`.
 
 ## Changelog
+- **2026-09-15** — Appointment events now write to the Work collection while
+  availability combines conflicts from Work, Family, and Personal. Groceries
+  remains a server-side reminders collection and is not queried for VEVENTs.
 - **2026-09-14** — Activated `hwc_subcontractor_v1` as a v2 entity route:
   strong candidates enter the CRM Network pipeline as category `sub`, keyed by
   exact normalized `scores.candidate_name`; repeated posts become append-only
