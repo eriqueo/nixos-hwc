@@ -26,7 +26,7 @@ import {
   type Task,
 } from "../executors/caldav.js";
 
-const DEFAULT_LIST = "Reminders";
+const DEFAULT_LIST = "Work";
 
 /* ── one-line dialect (mirrors todui's core/dialect.py) ───────────────── */
 
@@ -120,7 +120,7 @@ export function tasksTools(): ToolDef[] {
       inputSchema: {
         type: "object",
         properties: {
-          list: { type: "string", description: "Filter to one list (e.g. Reminders, Family)" },
+          list: { type: "string", description: "Filter to one list (e.g. Work, Family, Groceries)" },
           status: {
             type: "string",
             enum: ["active", "completed", "all"],

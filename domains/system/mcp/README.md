@@ -351,6 +351,8 @@ and Apple Reminders on the phone (native CalDAV account). Credential read
 from `/run/agenix/radicale-htpasswd`; override URL/path via
 `HWC_TASKS_CALDAV_URL` / `HWC_TASKS_HTPASSWD_PATH`. Phone sees changes
 within seconds; laptop todui on its next vdirsyncer run.
+Task creation defaults to Work; pass `list: "Groceries"` for the dedicated
+server-side grocery list.
 
 | Tool | Description |
 |------|-------------|
@@ -494,6 +496,9 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **nvidia-smi PATH fallback**: GPU tool tries PATH first, then `/run/current-system/sw/bin/nvidia-smi`
 
 ## Changelog
+
+- 2026-09-15: Default agent-created tasks to Work and document Groceries as a
+  directly addressable server-side list.
 
 - 2026-09-14: Added the single-shot `hwc-mcp-call` terminal client and optional
   `hwc_tasks_add.idempotencyKey`. The key plus target list derives a stable

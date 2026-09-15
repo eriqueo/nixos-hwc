@@ -16,6 +16,8 @@
 let
   cfg = config.hwc.business.crm;
   paths = config.hwc.paths;
+  calendarPrincipal = "eric";
+  calendarPath = name: "${calendarPrincipal}/${name}";
 
   # Same JT org registry hwc-leads uses — one source of truth for the
   # org id / custom field ids / default location.
@@ -55,6 +57,7 @@ let
       export HWC_CRM_CALDAV_USER="${cfg.calendar.user}"
       export HWC_CRM_CALDAV_PASSWORD_FILE="/run/hwc-crm/caldav-pw"
       export HWC_CRM_CALDAV_COLLECTION="${cfg.calendar.collection}"
+      export HWC_CRM_CALDAV_BUSY_COLLECTIONS="${lib.concatStringsSep "," cfg.calendar.busyCollections}"
       export HWC_CRM_ORGANIZER_EMAIL="${cfg.calendar.organizerEmail}"
     ''}
     ${lib.optionalString (cfg.calendar.enable && cfg.rolodex.enable) ''
@@ -350,8 +353,17 @@ in
       caldavUrl = lib.mkOption { type = lib.types.str; default = "http://127.0.0.1:5232"; };
       # Single-principal consolidation (2026-07-16): calendar + rolodex both
       # live under `eric`, the phone's one login. `cal` is retired.
-      user = lib.mkOption { type = lib.types.str; default = "eric"; };
-      collection = lib.mkOption { type = lib.types.str; default = "eric/migrated"; };
+      user = lib.mkOption { type = lib.types.str; default = calendarPrincipal; };
+      collection = lib.mkOption {
+        type = lib.types.str;
+        default = calendarPath "work";
+        description = "CalDAV collection path receiving new appointment events.";
+      };
+      busyCollections = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = map calendarPath [ "work" "family" "personal" ];
+        description = "CalDAV collection paths checked for appointment conflicts.";
+      };
       organizerEmail = lib.mkOption { type = lib.types.str; default = "eric@iheartwoodcraft.com"; };
     };
   };

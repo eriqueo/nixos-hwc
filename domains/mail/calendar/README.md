@@ -14,9 +14,9 @@ NAMESPACE: `hwc.home.apps`-adjacent but lives under mail — `hwc.mail.calendar.
   `["from a"]` (iCloud can't MKCALENDAR). Synced into `calendars/<account>/`.
 - **Radicale (`hwc.mail.calendar.radicale.enable`):** the self-hosted CalDAV
   server (`tasks.hwc.iheartwoodcraft.com`, same vhost + `radicale-htpasswd`
-  secret as the tasks backend). One VEVENT pair (`calendar_radicale`),
-  discovery `["from a","from b"]` (Radicale allows MKCALENDAR), synced into
-  `calendars-radicale/`. **When radicale is on, the iCloud account pairs are no
+  secret as the tasks backend). One VEVENT pair (`calendar_radicale`) pinned to
+  `work`, `family`, and `personal`, synced into `calendars-radicale/`.
+  **When radicale is on, the iCloud account pairs are no
   longer generated** (calendar lives on Radicale, plumbed exactly like tasks).
   This is the VEVENT twin of `domains/mail/tasks`'s VTODO Radicale pair.
 
@@ -51,6 +51,10 @@ domains/mail/calendar/
 ```
 
 ## Changelog
+
+- **2026-09-15**: Replaced the flattened `migrated`/`hwc` calendar target with
+  the human-readable Work, Family, and Personal collections. khal and `busy`
+  now default to Work; the VEVENT sync pair excludes task-only Groceries.
 
 - **2026-09-14**: Image-based newsletter proposals now recover a written date
   from the subject while leaving an unknown time blank for review. The helper

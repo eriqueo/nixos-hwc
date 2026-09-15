@@ -1,6 +1,7 @@
 { config, lib, pkgs, inputs, osConfig ? {}, ... }:
 let
   cfg = config.hwc.mail.calendar;
+  radicaleCalendarIds = [ "work" "family" "personal" ];
 
   # khalt supersedes plain khal: its package ships the fork's full `khal`/`ikhal`
   # CLI. Expose ONLY `khal`/`ikhal` here — NOT `bin/khalt`, which is owned by the
@@ -17,8 +18,8 @@ let
 
   dataDir = "~/.local/share/vdirsyncer";
 
-  # `busy` — one-liner to block time on the "hwc" calendar the booking form
-  # reads (Radicale cal/migrated; khal names it by displayname "hwc"), then
+  # `busy` — one-liner to block time on the Work calendar the booking form
+  # reads, then
   # push to Radicale immediately so availability updates now instead of on the
   # ~15-min vdirsyncer timer.
   busyScript = pkgs.writeShellScriptBin "busy" ''
@@ -28,7 +29,7 @@ let
       echo "        busy 2026-07-20 9:00 30m Call: Alden"
       exit 1
     fi
-    ${khalCli}/bin/khal new -a hwc "$@" || exit 1
+    ${khalCli}/bin/khal new -a Work "$@" || exit 1
     if ${pkgs.vdirsyncer}/bin/vdirsyncer sync calendar_radicale >/dev/null 2>&1; then
       echo "✓ blocked + synced — availability is updated"
     else
@@ -63,6 +64,7 @@ let
       url = cfg.radicale.url;
       username = cfg.radicale.username;
       secretPath = radicalePwPath;
+      collectionIds = radicaleCalendarIds;
     });
 
   vdirsyncer = import ./parts/vdirsyncer.nix {
@@ -142,11 +144,9 @@ in
           Radicale username for the calendar principal. Consolidated to the
           single `eric` principal (2026-07-16) so ONE iPhone CalDAV account
           carries calendar + reminders and one CardDAV account carries the
-          CRM rolodex. The former split (calendar under a separate `cal`
-          user to stop cross-discovery) is superseded: this pair pins
-          `collections = ["migrated"]`, so the only leak is the tasks pair
-          discovering the calendar collection — VTODO-filtered and empty, a
-          cosmetic extra list at worst. Requires a matching
+          CRM rolodex. The VEVENT pair pins Work, Family, and Personal; the
+          VTODO pair discovers those plus the task-only Groceries collection.
+          Requires a matching
           `eric:<password>` line in the radicale-htpasswd secret.
         '';
       };

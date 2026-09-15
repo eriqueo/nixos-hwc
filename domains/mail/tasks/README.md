@@ -90,6 +90,9 @@ agenix secret, selected by `domains/lib/hm.nix`. todoman's path glob widens to `
 stay CLI-visible. Deploy order + phone CalDAV setup: see the radicale README.
 
 ## Changelog
+- 2026-09-15: Default new tasks to the Radicale Work collection. The reviewed
+  email handoff prefers Work while retaining legacy `work`/`hwc` fallbacks
+  during the collection migration.
 - 2026-09-14: Added `email-to-task`, the reviewed aerc `t` handoff. It sends
   summary/list/due/categories/priority plus source context through
   `hwc_tasks_add`, using Message-ID (or a raw-message digest) as the stable
