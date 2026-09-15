@@ -35,6 +35,7 @@ in
         "delegate"
         "dx2-evidence"
         "herdr"
+        "project-closeout"
         "project-director"
       ];
       description = "Shared skills exposed to Codex from sharedSkillSource; the source files stay single-copy.";

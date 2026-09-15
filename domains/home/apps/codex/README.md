@@ -12,6 +12,7 @@ Installs the OpenAI Codex CLI (stock `pkgs.codex` by default, overridable via `p
 - `parts/package.nix` — optional pinned codex 0.146.0 derivation from the upstream static-musl release tarball.
 
 ## Changelog
+- 2026-09-15: Exposed `project-closeout` so Codex can verify project goals and request an explicit worktree disposition independently of handoff. HM-only → `hms`.
 - 2026-09-11: Exposed `dx2-evidence` as the explicit read-only Pi worker skill; `delegate` remains the Claude↔Codex cross-audit path. HM-only → `hms`.
 - 2026-08-31: Exposed the shared `delegate` skill to Codex alongside Herdr and Project Director, enabling bounded native Claude Code, Codex, and DX1 workers from T3 sessions that lack Herdr pane context. HM-only → `hms`.
 - 2026-08-31: Added `sharedSkillSource` plus the selected `herdr` and `project-director` skill symlinks under `~/.codex/skills`; Claude and Codex now consume one source rather than copied orchestration instructions. HM-only → `hms`.
