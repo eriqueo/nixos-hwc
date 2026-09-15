@@ -79,6 +79,14 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-09-15: Made aerc's tag controls match the calm inbox model: the first
+  mark popup is bounded, categories and visible flags are nested,
+  automation-only action/pending tags stay out of the human workflow, tag
+  filtering has completion and a reusable all-mail query, and bulk clears
+  preserve protected `keep`. Aerc tab navigation now uses Alt+h/l and accepts
+  both terminal encodings of the Alt+Shift+j/k compatibility chords. The fork
+  pin now routes IPC commands through aerc's UI loop so remote configuration
+  reloads cannot race a tab redraw and crash the client.
 - 2026-09-14: Kept navigation layers distinct: Workbench/Zellij retains Ctrl
   chords, while aerc previous/next-tab now uses Alt+Shift+K/J in the message,
   viewer, compose, and terminal contexts. Selector prompts from the aerc fork

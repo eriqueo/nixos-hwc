@@ -166,7 +166,7 @@ in
       which-key-delay = 350ms
       # Labels for group (prefix) keys in the popover, so <Space>g shows
       # "go: folders" not "+20". Mirrors domains/home/keymap/grammar.nix groups.
-      which-key-groups = g:go (folders), m:mark (tags), f:find, s:sort, t:toggle/triage, b:buffer, y:yank, d:delete, w:window, p:project, o:open, q:quit
+      which-key-groups = g:go (folders), m:mark/classify, c:categories, v:flags, f:find, s:sort, t:toggle/triage, b:buffer, y:yank, d:delete, w:window, p:project, o:open, q:quit
       styleset-name = hwc
       dirlist-left = {{.Style .Folder .Folder}}
       dirlist-right = {{if eq .Folder "now"}}{{if .Unread}}{{humanReadable .Unread}}{{end}}{{end}}

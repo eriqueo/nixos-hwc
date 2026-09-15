@@ -550,6 +550,44 @@
         && destinationFor "R" == "hub:refinery" && destinationFor "N" == "hub:nightly")
         "workbench check: mail/refinery/nightly shortcuts changed destination";
       pkgs.runCommand "workbench-navigation" {} ''touch "$out"'';
+
+      # ── Aerc's human workflow stays smaller than its mail taxonomy ─────
+      # The taxonomy intentionally retains automation and legacy tags, but the
+      # generated which-key surface must not flatten that whole vocabulary into
+      # one menu. Exercise the exact server Home Manager output consumed by the
+      # live aerc process, including noinherit tab contexts and tag commands.
+      aerc-bindings = let
+        home = self.homeConfigurations."eric@hwc-server".config;
+        binds = home.home.file.".config/aerc/binds.conf".text;
+        lines = lib.splitString "\n" binds;
+        directMarkLines = lib.filter
+          (line: builtins.match "[[:space:]]*<Space>m. =.*" line != null)
+          lines;
+        tags = import ./domains/mail/aerc/parts/tags.nix { inherit lib; };
+        required = [
+          "<A-h> = :prev-tab<Enter>"
+          "<A-l> = :next-tab<Enter>"
+          "<A-J> = :next-tab<Enter>"
+          "<A-K> = :prev-tab<Enter>"
+          "<A-S-j> = :next-tab<Enter>"
+          "<A-S-k> = :prev-tab<Enter>"
+          "<Space>ft = :filter tag:"
+          "<Space>fT = :query -f -n tag-search tag:"
+          "<Space>fc = :clear -s<Enter>"
+          "<Space>mcy = :modify-labels +family"
+        ];
+        missing = lib.filter (needle: !(lib.hasInfix needle binds)) required;
+      in
+      assert lib.assertMsg (missing == [])
+        "aerc-bindings: generated server binds are missing ${lib.concatStringsSep ", " missing}";
+      assert lib.assertMsg (lib.length directMarkLines <= 8)
+        "aerc-bindings: first mark popup has ${toString (lib.length directMarkLines)} direct entries (limit 8)";
+      assert lib.assertMsg (!(lib.hasInfix "<Space>m! =" binds) && !(lib.hasInfix "<Space>m? =" binds))
+        "aerc-bindings: action/pending leaked back into the human mark menu";
+      assert lib.assertMsg (!(lib.hasInfix "-keep" tags.clearFlagsCmd) && !(lib.hasInfix "-keep" tags.clearAllCmd))
+        "aerc-bindings: a bulk clear can remove the protected keep tag";
+      pkgs.runCommand "aerc-bindings" {} ''touch "$out"'';
+
       # ── Prometheus tier ladders are mutually exclusive ──────────────────
       # Parses the ACTUAL rule expressions (not a second copy of the numbers)
       # and proves no sample value can satisfy two tiers of one family. Before
