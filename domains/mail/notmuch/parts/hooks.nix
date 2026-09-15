@@ -1,4 +1,5 @@
-{ lib, pkgs, special, afewPkg, afewEnabled ? true, rulesText, extraHook, osConfig ? {}}:
+{ lib, pkgs, special, afewPkg, afewEnabled ? true, rulesText, extraHook
+, operatorRulesCommand ? "", osConfig ? {}}:
 let
   nm = "${pkgs.notmuch}/bin/notmuch";
 
@@ -75,6 +76,13 @@ let
   extra =
     if (builtins.isString extraHook && extraHook != "") then "\n" + extraHook else "";
 
+  operatorRules = lib.optionalString (operatorRulesCommand != "") ''
+    # Reviewed exact-sender rules override the declarative arrival baseline.
+    # This is intentionally fatal: tag:new remains as a retry marker if the
+    # versioned ledger cannot be read or a bounded notmuch operation fails.
+    ${operatorRulesCommand}
+  '';
+
   accountTags = ''
     # Proton: tag by destination address (all addresses share one IMAP connection)
     # HWC addresses: eric@iheartwoodcraft.com, office@, admin@, g_hwcmt@proton.me
@@ -128,7 +136,7 @@ let
   # Folder residency establishes the starting state; sender/subject rules then
   # make the final arrival disposition. Reversing these lets +inbox from the
   # folder pass undo -inbox from newsletter/archive/trash rules.
-  tail = accountTags + "\n" + rulesPatched + protonLabelTags + extra + "\n" + keepShield + "\n" + digestShield + "\n" + removeNew;
+  tail = accountTags + "\n" + rulesPatched + protonLabelTags + extra + "\n" + operatorRules + "\n" + keepShield + "\n" + digestShield + "\n" + removeNew;
 in
 {
   text = head + "\n" + body + "\n" + tail;

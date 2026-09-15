@@ -8,6 +8,19 @@ let
   ident = import ./parts/identity.nix { inherit lib cfg defaultNewTags; };
   afewCfg = config.hwc.mail.afew or {};
   afewPkg = import ../afew/package.nix { inherit lib pkgs; cfg = afewCfg; };
+  operatorRulesCfg = cfg.operatorRules or {};
+  operatorRulesEnabled = operatorRulesCfg.enable or true;
+  operatorRulesStateDir = operatorRulesCfg.stateDir or
+    "${config.home.homeDirectory}/.local/state/mail-rules";
+  operatorRulesPkg = pkgs.writeShellApplication {
+    name = "mail-rule";
+    text = ''
+      exec ${pkgs.python3}/bin/python3 ${./parts/operator-rules.py} \
+        --db ${lib.escapeShellArg "${operatorRulesStateDir}/rules.sqlite"} \
+        --notmuch ${pkgs.notmuch}/bin/notmuch \
+        "$@"
+    '';
+  };
 
   cfgPart = import ./parts/config.nix {
     inherit lib pkgs;
@@ -25,6 +38,8 @@ let
     afewEnabled = afewCfg.enable or false;
     rulesText = rules.text;
     extraHook = cfg.postNewHook or "";
+    operatorRulesCommand = lib.optionalString operatorRulesEnabled
+      "${operatorRulesPkg}/bin/mail-rule apply-new";
   };
 
   searches = import ./parts/searches.nix { inherit lib cfg; };
@@ -44,6 +59,18 @@ in
     postNewHook = lib.mkOption { type = lib.types.lines; default = ""; };
     savedSearches = lib.mkOption { type = lib.types.attrsOf lib.types.str; default = {}; };
     installDashboard = lib.mkOption { type = lib.types.bool; default = false; };
+    operatorRules = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable reviewed exact-sender rules in aerc and post-new.";
+      };
+      stateDir = lib.mkOption {
+        type = lib.types.str;
+        default = "${config.home.homeDirectory}/.local/state/mail-rules";
+        description = "Private persistent directory for the versioned rule ledger.";
+      };
+    };
     # Defaults come from the canonical taxonomy (domains/mail/taxonomy/) —
     # edit data.nix there, NOT these options; a direct override here silently
     # re-forks the vocabulary (see docs/plans/unified-triage-architecture.md).
@@ -61,7 +88,7 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf on (lib.mkMerge [
-    { home.packages = cfgPart.packages; }
+    { home.packages = cfgPart.packages ++ lib.optional operatorRulesEnabled operatorRulesPkg; }
     { programs.notmuch = cfgPart.programs.notmuch; }
 
     { home.file."${paths.maildirRoot}/.notmuch/hooks/post-new" = {
@@ -71,6 +98,12 @@ in
     }
 
     { xdg.configFile."notmuch/searches".text = searches.text; }
+
+    (lib.mkIf operatorRulesEnabled {
+      home.activation.mailOperatorRulesState = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        install -d -m0700 ${lib.escapeShellArg operatorRulesStateDir}
+      '';
+    })
 
     (lib.mkIf (cfg.installDashboard or false) {
       home.file.".local/bin/mail-dashboard" = {

@@ -43,6 +43,9 @@
 
     notmuch = {
       maildirRoot = "/home/eric/400_mail/Maildir";
+      # CRITICAL, indefinite: reviewed human decisions. /var/lib/hwc is in the
+      # server's daily Borg source set; the state is not generated from Nix.
+      operatorRules.stateDir = "/var/lib/hwc/mail-rules";
       userName = "Eric O'Keefe";
       primaryEmail = "eric@iheartwoodcraft.com";
       otherEmails = [ "eriqueo@proton.me" "heartwoodcraftmt@gmail.com" "eriqueokeefe@gmail.com" ];

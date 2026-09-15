@@ -69,9 +69,34 @@ mail/
         ├── identity.nix       # userName/email/newTags defaults
         ├── folders.nix        # folder→tag clause builder (uses common.rolesFor)
         ├── rules.nix          # newsletter/notification/finance/action/trash rules
+        ├── operator-rules.py  # reviewed exact-sender rule ledger + bounded applier
+        ├── test_operator_rules.py # ledger/parser/notmuch adapter regression tests
         ├── searches.nix       # saved searches for notmuch CLI
         └── dashboard.sh       # mail-dashboard script
 ```
+
+## Aerc workflow contract
+
+`now` is the only decision queue. Reading a message never completes it;
+archiving or trashing does. `family`, `datax`, and `hwc` are durable tag-backed
+history views, so archived mail remains findable there. `Space g A` opens all
+non-trash history. `Space f t` filters the current view by tag, `Space f T`
+opens an all-mail tag query, and `Space f c` clears the current search/filter.
+Sort with `Space s d` (newest), `Space s f` (sender), or `Space s s` (subject).
+
+`Space r a` reviews an exact-sender rule from the selected message. A reviewed
+rule may assign one durable domain tag and route future messages to `now`,
+archive, or recoverable trash. It never learns a whole domain or wildcard.
+Archive/trash rules cannot move mail protected by `keep`. `Space r m` lists and
+disables active rules. The versioned SQLite ledger is human-authored CRITICAL
+state, retained indefinitely at `/var/lib/hwc/mail-rules`; the server's daily
+Borg backup includes `/var/lib/hwc`.
+
+Future Workbench integration should consume the same selected-item context
+contract used by the existing hubs: a global action can hand the selected
+mail/task/document to an agent with a stable source and item ID. That action is
+deliberately not part of this mail slice; any write-back must remain an explicit
+review/apply step.
 
 ## Known Issues
 
@@ -79,6 +104,28 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-09-15: Separated inbox zero from durable organization. `now` remains the
+  stable queue of undecided mail while `family`, `datax`, and `hwc` now retain
+  archived history; all non-trash mail is one key away. Added default
+  newest-first ordering, sender/subject sorts, and documented tag filtering.
+  Added reviewed exact-sender rules from aerc with a private, versioned,
+  append-audited SQLite ledger, bounded grouped notmuch writes, `keep`
+  protection, backed-up server state, and interactive rule disabling.
+- 2026-09-15: Made aerc's sender-authored plain MIME part the calm default.
+  Plain mail now has a fixed reading measure, bounded whitespace, terminal
+  control sanitization, and compact clickable labels for long tracking URLs;
+  HTML remains available through MIME-part navigation.
+- 2026-09-15: Made aerc's email-only unsubscribe path explicit and review-first.
+  `<Space>fu` now asks before creating the draft, bypasses Neovim, and still
+  requires `y` on the review screen before anything is sent.
+- 2026-09-15: Made aerc's tag controls match the calm inbox model: the first
+  mark popup is bounded, categories and visible flags are nested,
+  automation-only action/pending tags stay out of the human workflow, tag
+  filtering has completion and a reusable all-mail query, and bulk clears
+  preserve protected `keep`. Aerc tab navigation now uses Alt+h/l and accepts
+  both terminal encodings of the Alt+Shift+j/k compatibility chords. The fork
+  pin now routes IPC commands through aerc's UI loop so remote configuration
+  reloads cannot race a tab redraw and crash the client.
 - 2026-09-14: Kept navigation layers distinct: Workbench/Zellij retains Ctrl
   chords, while aerc previous/next-tab now uses Alt+Shift+K/J in the message,
   viewer, compose, and terminal contexts. Selector prompts from the aerc fork
