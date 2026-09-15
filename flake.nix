@@ -589,6 +589,57 @@
         "aerc-bindings: a bulk clear can remove the protected keep tag";
       pkgs.runCommand "aerc-bindings" {} ''touch "$out"'';
 
+      # The calm reading view prefers the sender-authored plain part. HTML is
+      # still available with the MIME-part keys when layout carries meaning.
+      aerc-rendering = let
+        home = self.homeConfigurations."eric@hwc-server".config;
+        aercConf = home.home.file.".config/aerc/aerc.conf".text;
+        plainFilterLine = builtins.head (lib.filter
+          (line: lib.hasPrefix "text/plain = " line)
+          (lib.splitString "\n" aercConf));
+        plainFilter = lib.removePrefix "text/plain = " plainFilterLine;
+        filterRunner = pkgs.writeShellScript "test-aerc-plain-filter" plainFilter;
+        longUrl = "https://tracking.example/campaign/abcdefghijklmnopqrstuvwxyz0123456789/abcdefghijklmnopqrstuvwxyz0123456789?recipient=fixture";
+        fixture = pkgs.writeText "aerc-plain-message.txt" ''
+          Nicole sent you a new request.
+
+
+
+          The useful message stays visible, while this tracking machinery does not: <${longUrl}>
+
+          This paragraph is intentionally long enough to prove that the configured aerc wrap stage uses a calm reading measure instead of expanding prose across a very wide terminal window where it becomes hard to scan.
+        '';
+      in
+      assert lib.assertMsg (lib.hasInfix "alternatives = text/plain,text/html" aercConf)
+        "aerc-rendering: plain text is not the default MIME alternative";
+      pkgs.runCommand "aerc-rendering" {} ''
+        export TERM=xterm-256color
+        ${filterRunner} < ${fixture} > rendered
+        ${pkgs.python3}/bin/python3 -c 'import sys; sys.stdout.buffer.write(b"\x1b[31muntrusted\x1b[0m\n")' \
+          | ${filterRunner} > sanitized
+        ${pkgs.python3}/bin/python3 - rendered sanitized ${lib.escapeShellArg longUrl} <<'PY'
+        import pathlib
+        import re
+        import sys
+
+        rendered = pathlib.Path(sys.argv[1]).read_bytes()
+        sanitized = pathlib.Path(sys.argv[2]).read_bytes()
+        target = sys.argv[3].encode()
+        expected_link = b"\x1b]8;;" + target + b"\x1b\\"
+        assert expected_link in rendered, "long URL target was not preserved in OSC 8 link"
+        assert b"\x1b" not in sanitized, "untrusted terminal control reached the viewer"
+
+        visible = re.sub(rb"\x1b]8;;.*?\x1b\\(.*?)\x1b]8;;\x1b\\", rb"\1", rendered)
+        text = visible.decode()
+        assert target not in visible, "long tracking URL remains visible"
+        assert "↗ tracking.example" in text, "compact link label is missing"
+        assert "\n\n\n" not in text, "excess blank lines remain"
+        assert max(map(len, text.splitlines())) <= 100, "visible line exceeds reading measure"
+        assert text.count("Nicole sent you a new request.") == 1, "message content changed or duplicated"
+        PY
+        touch "$out"
+      '';
+
       # ── Prometheus tier ladders are mutually exclusive ──────────────────
       # Parses the ACTUAL rule expressions (not a second copy of the numbers)
       # and proves no sample value can satisfy two tiers of one family. Before

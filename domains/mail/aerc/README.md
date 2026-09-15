@@ -225,6 +225,13 @@ archive the source message instead.
 | `U` | URL scan (urlscan) |
 | `/` | Search in pager (passthrough) |
 
+The viewer opens the sender-authored plain part first. `h` / `l` move between
+MIME parts when an HTML layout is useful. Plain mail is wrapped to a 100-column
+reading measure, repeated blank lines collapse, and long tracking URLs render
+as clickable `↗ domain` labels. The full URL remains the link target and stays
+available through `u` or `U`; the renderer never follows it or loads remote
+content.
+
 Review helpers open in an aerc terminal tab. `<A-h>` / `<A-l>` move between
 that tab and the original message without closing the editor; `<C-x>` opens the
 aerc command prompt inside a terminal.
@@ -316,7 +323,7 @@ the first-level navigation popup.
 | MIME Type | Handler |
 |-----------|---------|
 | `text/html` | aerc bundled HTML filter |
-| `text/plain` | wrap + colorize |
+| `text/plain` | 100-column wrap + control sanitization + compact clickable tracking links |
 | `text/calendar` | aerc calendar filter |
 | `text/*` | cat passthrough |
 | `message/delivery-status` | colorize |
@@ -351,6 +358,11 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-09-15: Made sender-authored plain text the default reading view while
+  retaining `h`/`l` MIME switching. Plain mail now uses a stable 100-column
+  measure, collapses excess blank lines, strips untrusted terminal controls,
+  and hides long tracking URLs behind local, clickable `↗ domain` labels
+  without resolving or loading them.
 - 2026-09-15: Made unsubscribe drafts an explicit two-step decision. Email-only
   senders first explain that unsubscribe requires an email; continuing opens
   aerc's review screen without Neovim, and `y` remains the separate send action.

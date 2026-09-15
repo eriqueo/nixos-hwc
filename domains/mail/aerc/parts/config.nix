@@ -187,7 +187,9 @@ in
       # -~ keeps the unused area below a short message visually blank instead
       # of filling the whole viewer with Vim-like tilde markers.
       pager = ${pkgs.less}/bin/less -R -~
-      alternatives = text/html,text/plain
+      # Sender-authored plain text is the calm default. HTML remains available
+      # with h/l when its visual layout carries meaning.
+      alternatives = text/plain,text/html
       [compose]
       editor = ${pkgs.neovim}/bin/nvim
       lf-editor = true
@@ -200,7 +202,7 @@ in
       file-picker-cmd = ${pkgs.yazi}/bin/yazi --chooser-file %s
       [filters]
       text/html = ${aercPkg}/libexec/aerc/filters/html
-      text/plain = ${aercPkg}/libexec/aerc/filters/wrap -w $(${pkgs.ncurses}/bin/tput cols) | ${aercPkg}/libexec/aerc/filters/colorize
+      text/plain = ${aercPkg}/libexec/aerc/filters/wrap -w 100 | ${pkgs.python3}/bin/python3 ${./plain-text-filter.py}
       text/calendar = ${aercPkg}/libexec/aerc/filters/calendar
       text/* = cat -
       message/delivery-status = ${aercPkg}/libexec/aerc/filters/colorize
