@@ -601,9 +601,9 @@ in
       CPU_SCALING_GOVERNOR_ON_AC = "powersave";
       CPU_SCALING_GOVERNOR_ON_BAT = "powersave";
 
-      # Preserve battery health while retaining enough capacity for mobile work.
-      START_CHARGE_THRESH_BAT0 = 75; # Start charging at 75%
-      STOP_CHARGE_THRESH_BAT0 = 95; # Stop charging at 95%
+      # Keep the laptop ready for mobile work while avoiding a sustained 100% charge.
+      START_CHARGE_THRESH_BAT0 = 85; # Start charging below 85%
+      STOP_CHARGE_THRESH_BAT0 = 90; # Stop charging at 90%
 
       # Add CPU energy/performance preferences
       CPU_ENERGY_PERF_POLICY_ON_AC = "balance_power"; # Changed from "performance" to reduce heat
