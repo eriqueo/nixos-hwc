@@ -20,7 +20,7 @@ parts/
   to-aerc.nix          grammar -> binds.conf fragment (composes with tags.nix)
   to-khalt.nix         grammar -> [keybindings] block + KHALT_LEADER_TREE json
   to-todui.nix         grammar -> TODUI_KEYMAP json (env)
-  to-workbench.nix     grammar -> WORKBENCH_KEYMAP json (env)
+  to-workbench.nix     grammar -> versioned Workbench global-binding JSON
 ```
 
 ## The two layers
@@ -48,9 +48,9 @@ WIRED (staged):
    map; `clear-defaults=true` stops zellij eating aerc/yazi's Ctrl keys.
 3. **khalt** (`apps/khalt/index.nix`) — `to-khalt`'s `keybindingsBlock` appended
    to `configText` (gives khalt the shared list verbs a/e/d/Enter).
-4. **todui & workbench** — `to-todui`/`to-workbench` JSON staged as
-   `~/.config/{todui,workbench}/keymap.json` (the app-side readers consume these
-   once built; writing them now is harmless and the data is ready).
+4. **todui & workbench** — `to-todui` JSON remains staged; Workbench now reads
+   its versioned `~/.config/workbench/keymap.json` and merges explicit
+   `cmd.workbench` bindings with the active hub actions.
 
 DEFERRED (intentionally NOT auto-edited — they already implement the grammar by
 hand, so converting them to generator-sourced is a no-behavior-change refactor
@@ -72,8 +72,6 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 - **todui** — read `TODUI_KEYMAP` via its env→toml→default precedence
   (`src/todui/config.py`); render `BINDINGS` + leader menu from it instead of
   hard-coded Python. *Largest change.*
-- **workbench** — read `WORKBENCH_KEYMAP` → `Keymap.from_actions(globals_=…)`;
-  and DROP the `Space t/c/m` app-jumps (they become `Alt+Space`, owned by zellij).
 - **khalt** — teach `khalt_leader.build_keymap()` to read `KHALT_LEADER_TREE`
   (the json from `to-khalt`) so the menu GROUPS come from data, not Python. Until
   then khalt drives only leaf keys (a/e/d via `[keybindings]`) — a documented
@@ -91,6 +89,8 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 - todui/khalt/workbench log a missing/unread `*_KEYMAP` rather than failing silent.
 
 ## Changelog
+- 2026-09-15: Activate the Workbench keymap consumer with a versioned bindings
+  contract and add `Space o a` for the selected-item agent action.
 - 2026-09-10: Drop the `x` → DataX hub jump. Workbench removed the hub (SRs are
   worked on the SR2 web board), and an unresolved `hub:` destination fails
   evaluation by design — the build caught this, not a reader. `x` is now free.

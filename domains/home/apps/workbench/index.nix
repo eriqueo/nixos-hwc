@@ -28,6 +28,14 @@ let
   # it falls back to a bare "aerc". Same fact the zellij layout derives.
   aercCmd = (config.hwc.home.core.shell.aliases or {}).aerc or "aerc";
 
+  # The provider is machine policy, not an app concern. Use the same Codex
+  # package selected by hwc.home.apps.codex so the pane launcher cannot drift
+  # from the CLI on the user's PATH. The initial prompt is appended by Workbench.
+  codexPkg = if config.hwc.home.apps.codex.package != null
+    then config.hwc.home.apps.codex.package
+    else pkgs.codex;
+  agentCmd = "${lib.getExe codexPkg} -C ${config.home.homeDirectory}/.nixos";
+
   # Standing-tab map (navigate-to-tab, not spawn-duplicate): launch-target ->
   # tab name, the TOOL tabs only. Imported from the SAME source the zellij layout
   # emits its tab names from, so the host can never navigate to a tab name the
@@ -36,11 +44,8 @@ let
     inherit lib; hubRegistry = inputs.workbench.hubRegistry;
   };
 
-  # Unified keymap grammar → staged as ~/.config/workbench/keymap.json. The host
-  # has a real chord state machine but its grammar is still hard-coded; the
-  # app-side reader (feed Keymap.from_actions globals + DROP the Space t/c/m
-  # jumps, which become Alt+Space owned by zellij) is the staged prerequisite —
-  # see domains/home/keymap/README.md. Writing the file now is harmless.
+  # Unified keymap grammar → ~/.config/workbench/keymap.json. Workbench parses
+  # this versioned contract and merges its global bindings with hub actions.
   km   = (config.hwc.home.keymap or {}).grammar or {};
   kmWb = lib.optionalString (km ? meta)
     (import ../../keymap/parts/to-workbench.nix { inherit lib; grammar = km; }).json;
@@ -116,6 +121,7 @@ in
       # says — on the laptop that's the server over ssh, so DON'T bake a local
       # aerc onto PATH; the launcher invokes `ssh -t server aerc` instead.
       launchers.aerc = aercCmd;
+      launchers.agent = agentCmd;
       # `opens = "url:…"` (e.g. the DataX SR2 dashboard on Enter) opens in the GUI
       # browser. Use `chromium-hwc-workbench`, NOT the SUPER+B `chromium-hwc`: it
       # carries the same GPU/ANGLE/WebGL flags but a DEDICATED --user-data-dir, so
@@ -129,14 +135,14 @@ in
         zellij        # the multiplexer workbench drives
         yazi          # peer pane: files
         neovim        # peer pane: editor
+        codexPkg      # selected-item agent provider
         # mail (aerc) is NOT a local binary here — see launchers.aerc above.
         # Only bake a local aerc when no remote alias redirects it.
         # todui + khalt come from their own HM modules already on PATH.
       ] ++ lib.optional (aercCmd == "aerc") aerc;
     };
 
-    # Staged unified-keymap data (see let-block note). Harmless until the
-    # app-side reader lands; written only when the keymap module is imported.
+    # Versioned unified-keymap data, written only when the keymap module exists.
     xdg.configFile = lib.optionalAttrs (kmWb != "") {
       "workbench/keymap.json".text = kmWb;
     };

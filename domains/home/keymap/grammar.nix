@@ -113,6 +113,11 @@ rec {
     { keys = "b p"; desc = "Previous"; cmd = {
         nvim = "<cmd>bprevious<cr>";
       }; }
+
+    # --- o : open / create external -------------------------------------
+    { keys = "o a"; desc = "Ask agent about item"; cmd = {
+        workbench = "ask-agent";
+      }; }
   ];
 
   #--------------------------------------------------------------------------
