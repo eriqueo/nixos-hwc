@@ -662,6 +662,7 @@
           "<Space>ss = :sort subject -r date<Enter>"
         ];
         missingBinds = lib.filter (needle: !(lib.hasInfix needle binds)) requiredBinds;
+        source = ./domains/mail/notmuch/parts/operator-rules.py;
         tests = ./domains/mail/notmuch/parts/test_operator_rules.py;
         hookFixture = pkgs.writeText "mail-post-new-hook" hook;
       in
@@ -684,7 +685,7 @@
         && lib.hasInfix "all            = NOT tag:trash" queries)
         "mail-operator-rules: durable domain/all-mail history queries regressed";
       pkgs.runCommand "mail-operator-rules" {} ''
-        ${pkgs.python3}/bin/python3 ${tests}
+        MAIL_RULE_SOURCE=${source} ${pkgs.python3}/bin/python3 ${tests}
         ${pkgs.python3}/bin/python3 - ${hookFixture} <<'PY'
         import pathlib
         import sys

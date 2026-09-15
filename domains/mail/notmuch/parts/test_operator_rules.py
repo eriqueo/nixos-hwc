@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import os
 import sys
 import tempfile
 import unittest
@@ -13,7 +14,9 @@ from pathlib import Path
 from unittest import mock
 
 
-MODULE_PATH = Path(__file__).with_name("operator-rules.py")
+MODULE_PATH = Path(
+    os.environ.get("MAIL_RULE_SOURCE", Path(__file__).with_name("operator-rules.py"))
+)
 SPEC = importlib.util.spec_from_file_location("operator_rules", MODULE_PATH)
 assert SPEC is not None and SPEC.loader is not None
 operator_rules = importlib.util.module_from_spec(SPEC)
