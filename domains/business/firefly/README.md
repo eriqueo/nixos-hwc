@@ -32,8 +32,9 @@ hwc.business.firefly = {
   enable = true;
 
   images = {
-    core = "docker.io/fireflyiii/core:latest";
-    pico = "cioraneanu/firefly-pico:latest";
+    core = "docker.io/fireflyiii/core:version-6.6.6";
+    pico = "cioraneanu/firefly-pico:1.10.1";
+    importer = "docker.io/fireflyiii/data-importer:version-2.3.4";
   };
 
   settings = {
@@ -96,12 +97,13 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 - `podman-firefly.service` — main Firefly III container (generates env file with APP_KEY + STATIC_CRON_TOKEN in preStart)
 - `podman-firefly-pico.service` — Pico mobile companion (depends on firefly)
-- `podman-firefly-importer.service` — data importer (CSV/SimpleFIN; stateless, PAT pasted per session in its UI)
+- `podman-firefly-importer.service` — data importer (CSV/SimpleFIN; stateless, OAuth client authorized per browser session)
 - `firefly-cron.timer` — daily 03:10 hit on `/api/v1/cron/<token>` (recurring transactions, bill warnings, auto-budgets fire nowhere without this)
 - `firefly-digest.timer` — daily 07:15 finance digest (balances, bills due 7d, yesterday's transactions) → hwc-notify `topic=finance` → #hwc-alerts. Skips with a journal note until a PAT exists at `/run/agenix/firefly-pat` (drop `firefly-pat.age` in `domains/secrets/parts/services/` to arm it).
 
 ## Changelog
 
+- 2026-09-15: Pinned Firefly III core 6.6.6, the minimum compatible release line for data-importer 2.3.4; importing had been blocked because core 6.4.22 was below the importer's required 6.6.0. OAuth clients and tokens must be recreated after this upgrade.
 - 2026-07-13: Automation build-out — `firefly-cron-token` secret + daily cron timer, `firefly-importer` container + `firefly-import` vhost (:8087), `firefly-digest` timer posting to hwc-notify (`finance-to-alerts` route), PAT-gated until `firefly-pat.age` is provisioned.
 
 - 2026-06-09: Access moved from dedicated tailnet ports (Firefly `:10443`, Pico `:11443`) to name-based vhosts `firefly.hwc.iheartwoodcraft.com` / `firefly-pico.hwc.iheartwoodcraft.com` under the shared `*.hwc.iheartwoodcraft.com` wildcard cert (no per-service listener / firewall hole). Both `appUrl`s updated to match — Firefly's `APP_URL` and Pico's app URL must equal the browser origin. See `domains/networking/README.md`.
