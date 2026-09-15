@@ -74,17 +74,18 @@ Shared tag metadata originates in `domains/mail/taxonomy/data.nix`; `tags.nix` a
 
 - Notmuch query-map entries for direct drill-down
 - `[user]` styles for virtual folder names
-- `<Space>m*` exclusive category or additive flag binding
-- `<Space>g*` go-to-folder binding
+- nested `<Space>mc*` category and `<Space>mv*` user-flag bindings
 
 Tags remain available to the shared triage and briefing integrations, but the daily message list deliberately does not render tag pills or color whole rows by category.
+Automation-only `action` and `pending` tags remain queryable but do not appear
+in the human mark menu.
 
 #### Tag Types
 
 | Type | Behavior | Example |
 |------|----------|---------|
 | **Category** (`categoryTags`) | Mutually exclusive — assigning one removes the other categories | work, finance, tech, personal, family |
-| **Flag** (`flagTags`) | Additive — coexists with categories | action, pending, keep |
+| **Flag** (`flagTags`) | Additive — coexists with categories; may be automation-only | action, pending, keep |
 
 #### Tag Attributes
 
@@ -115,7 +116,8 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 
 | Key | Action |
 |-----|--------|
-| `<C-h>` / `<C-l>` | Prev/next tab |
+| `<A-h>` / `<A-l>` | Prev/next aerc tab |
+| `<A-S-j>` / `<A-S-k>` | Next/prev aerc tab compatibility aliases |
 | `<A-j>` / `<A-k>` | Next/prev visible context |
 | `<C-p>` / `<C-n>` | Next/prev account |
 | `<C-r>` | Full mail sync (mbsync + notmuch new) |
@@ -167,14 +169,10 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 | `<Space>gd` | trash |
 | `<Space>gz` | spam |
 | `<Space>g_` | hide_my_email |
-| `<Space>gh` | hwcmt |
-| `<Space>gw` | work |
-| `<Space>gc` | coaching |
-| `<Space>gf` | finance |
-| `<Space>gb` | bank |
-| `<Space>gt` | tech |
-| `<Space>gp` | personal |
-| `<Space>gy` | family |
+
+Tag-derived folders no longer occupy this first-level navigation menu. Use
+the tag filters below; the generated query-map still retains every legacy and
+automation tag.
 
 ### Space-Leader Labels (`<Space>m*`)
 
@@ -182,21 +180,16 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 |-----|--------|
 | `<Space>mu` | +unread |
 | `<Space>ma` | +archive -inbox -unread |
-| `<Space>m!` | +action |
-| `<Space>m?` | +pending |
-| `<Space>mk` | +keep |
-| `<Space>mh` | Set category to hwcmt |
 | `<Space>md` | +trash -inbox -unread |
 | `<Space>mz` | +spam -inbox |
 | `<Space>ml` | Free-form label (prompt) |
-| `<Space>mw` | Set category to work |
-| `<Space>mc` | Set category to coaching |
-| `<Space>mf` | Set category to finance |
-| `<Space>mb` | Set category to bank |
-| `<Space>m$` | Set category to insurance |
-| `<Space>mt` | Set category to tech |
-| `<Space>mp` | Set category to personal |
-| `<Space>my` | Set category to family |
+| `<Space>mx` | Clear removable categories/flags; preserve protected `keep` |
+| `<Space>mc…` | Classify with a category; pause after `c` to see choices |
+| `<Space>mv…` | Add a user-visible flag; pause after `v` to see choices |
+
+`action` and `pending` are automation-only compatibility tags. They are not
+offered as manual workflow states: create a task/calendar/document handoff and
+archive the source message instead.
 
 ### Filter / Sort
 
@@ -204,7 +197,10 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 |-----|--------|
 | `<Space>ff` | Filter messages |
 | `<Space>fs` | Search messages |
-| `<Space>fu` | Unsubscribe using the message's `List-Unsubscribe` header |
+| `<Space>ft` | Filter the current folder by tag; `Tab` completes tag names |
+| `<Space>fT` | Find a tag across all mail in the reusable `tag-search` query |
+| `<Space>fc` | Clear the current filter/search |
+| `<Space>fu` | Unsubscribe from the message header; email-only senders ask first, then open review without Neovim |
 | `<Space>sd` | Sort by date (newest first) |
 | `<Space>tt` | Toggle thread view |
 
@@ -229,9 +225,28 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 | `U` | URL scan (urlscan) |
 | `/` | Search in pager (passthrough) |
 
-Review helpers open in an aerc terminal tab. `<C-h>` / `<C-l>` move between
+The viewer opens the sender-authored plain part first. `h` / `l` move between
+MIME parts when an HTML layout is useful. Plain mail is wrapped to a 100-column
+reading measure, repeated blank lines collapse, and long tracking URLs render
+as clickable `↗ domain` labels. The full URL remains the link target and stays
+available through `u` or `U`; the renderer never follows it or loads remote
+content.
+
+Review helpers open in an aerc terminal tab. `<A-h>` / `<A-l>` move between
 that tab and the original message without closing the editor; `<C-x>` opens the
 aerc command prompt inside a terminal.
+
+### Searching by tag
+
+Use `<Space>ft` when you want to narrow the context already open. Aerc seeds
+`:filter tag:`; type a tag or press `Tab` to complete one, then press `Enter`.
+The active folder still bounds the results—for example, filtering `now` by
+`finance` shows only finance messages in the managed queue. `<Space>fc` removes
+that filter.
+
+Use `<Space>fT` when you want the complete history. It seeds a top-level
+notmuch query and reuses one `tag-search` folder, so repeated searches do not
+grow the sidebar. Press `<Space>gi` to return to `now`.
 
 ### Compose
 
@@ -300,14 +315,15 @@ Primary folders:
 The remaining static, triage, and tag-derived queries stay in the query map for integrations, bindings, and direct `:cf <name>` drill-down without crowding the sidebar.
 
 Tag-derived folders are generated from `domains/mail/taxonomy/data.nix` and
-remain directly addressable even though they are hidden from the sidebar.
+remain directly addressable even though they are hidden from the sidebar and
+the first-level navigation popup.
 
 ## Filters
 
 | MIME Type | Handler |
 |-----------|---------|
 | `text/html` | aerc bundled HTML filter |
-| `text/plain` | wrap + colorize |
+| `text/plain` | 100-column wrap + control sanitization + compact clickable tracking links |
 | `text/calendar` | aerc calendar filter |
 | `text/*` | cat passthrough |
 | `message/delivery-status` | colorize |
@@ -342,6 +358,22 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-09-15: Made sender-authored plain text the default reading view while
+  retaining `h`/`l` MIME switching. Plain mail now uses a stable 100-column
+  measure, collapses excess blank lines, strips untrusted terminal controls,
+  and hides long tracking URLs behind local, clickable `↗ domain` labels
+  without resolving or loading them.
+- 2026-09-15: Made unsubscribe drafts an explicit two-step decision. Email-only
+  senders first explain that unsubscribe requires an email; continuing opens
+  aerc's review screen without Neovim, and `y` remains the separate send action.
+- 2026-09-15: Bounded the mark/classify popup by nesting categories and visible
+  flags, removed automation-only `action`/`pending` from the human workflow,
+  and made bulk clears preserve the protected `keep` tag. Added tag-aware
+  current-folder filtering and reusable all-mail queries with completion.
+  Aerc tabs now use mnemonic `<A-h>/<A-l>` navigation and accept both terminal
+  encodings of the `<A-S-j>/<A-S-k>` compatibility chords. The fork pin also
+  serializes IPC commands on aerc's UI loop, preventing remote `:reload` from
+  racing a tab redraw and crashing the client.
 - 2026-09-14: Added the opened-message handoff grammar: `t` reviews and creates
   an idempotent task, `i` reviews and creates a calendar event, and `p` queues a
   deterministic text-only PDF for Paperless. Handoffs never archive the source;

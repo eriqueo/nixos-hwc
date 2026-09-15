@@ -550,6 +550,155 @@
         && destinationFor "R" == "hub:refinery" && destinationFor "N" == "hub:nightly")
         "workbench check: mail/refinery/nightly shortcuts changed destination";
       pkgs.runCommand "workbench-navigation" {} ''touch "$out"'';
+
+      # ── Aerc's human workflow stays smaller than its mail taxonomy ─────
+      # The taxonomy intentionally retains automation and legacy tags, but the
+      # generated which-key surface must not flatten that whole vocabulary into
+      # one menu. Exercise the exact server Home Manager output consumed by the
+      # live aerc process, including noinherit tab contexts and tag commands.
+      aerc-bindings = let
+        home = self.homeConfigurations."eric@hwc-server".config;
+        binds = home.home.file.".config/aerc/binds.conf".text;
+        lines = lib.splitString "\n" binds;
+        directMarkLines = lib.filter
+          (line: builtins.match "[[:space:]]*<Space>m. =.*" line != null)
+          lines;
+        tags = import ./domains/mail/aerc/parts/tags.nix { inherit lib; };
+        required = [
+          "<A-h> = :prev-tab<Enter>"
+          "<A-l> = :next-tab<Enter>"
+          "<A-J> = :next-tab<Enter>"
+          "<A-K> = :prev-tab<Enter>"
+          "<A-S-j> = :next-tab<Enter>"
+          "<A-S-k> = :prev-tab<Enter>"
+          "<Space>ft = :filter tag:"
+          "<Space>fT = :query -f -n tag-search tag:"
+          "<Space>fc = :clear -s<Enter>"
+          "<Space>fu = :unsubscribe -s<Enter>"
+          "<Space>mcy = :modify-labels +family"
+        ];
+        missing = lib.filter (needle: !(lib.hasInfix needle binds)) required;
+      in
+      assert lib.assertMsg (missing == [])
+        "aerc-bindings: generated server binds are missing ${lib.concatStringsSep ", " missing}";
+      assert lib.assertMsg (lib.length directMarkLines <= 8)
+        "aerc-bindings: first mark popup has ${toString (lib.length directMarkLines)} direct entries (limit 8)";
+      assert lib.assertMsg (!(lib.hasInfix "<Space>m! =" binds) && !(lib.hasInfix "<Space>m? =" binds))
+        "aerc-bindings: action/pending leaked back into the human mark menu";
+      assert lib.assertMsg (!(lib.hasInfix "-keep" tags.clearFlagsCmd) && !(lib.hasInfix "-keep" tags.clearAllCmd))
+        "aerc-bindings: a bulk clear can remove the protected keep tag";
+      pkgs.runCommand "aerc-bindings" {} ''touch "$out"'';
+
+      # The calm reading view prefers the sender-authored plain part. HTML is
+      # still available with the MIME-part keys when layout carries meaning.
+      aerc-rendering = let
+        home = self.homeConfigurations."eric@hwc-server".config;
+        aercConf = home.home.file.".config/aerc/aerc.conf".text;
+        plainFilterLine = builtins.head (lib.filter
+          (line: lib.hasPrefix "text/plain = " line)
+          (lib.splitString "\n" aercConf));
+        plainFilter = lib.removePrefix "text/plain = " plainFilterLine;
+        filterRunner = pkgs.writeShellScript "test-aerc-plain-filter" plainFilter;
+        longUrl = "https://tracking.example/campaign/abcdefghijklmnopqrstuvwxyz0123456789/abcdefghijklmnopqrstuvwxyz0123456789?recipient=fixture";
+        fixture = pkgs.writeText "aerc-plain-message.txt" ''
+          Nicole sent you a new request.
+
+
+
+          The useful message stays visible, while this tracking machinery does not: <${longUrl}>
+
+          This paragraph is intentionally long enough to prove that the configured aerc wrap stage uses a calm reading measure instead of expanding prose across a very wide terminal window where it becomes hard to scan.
+        '';
+      in
+      assert lib.assertMsg (lib.hasInfix "alternatives = text/plain,text/html" aercConf)
+        "aerc-rendering: plain text is not the default MIME alternative";
+      pkgs.runCommand "aerc-rendering" {} ''
+        export TERM=xterm-256color
+        export LC_ALL=C.UTF-8
+        ${filterRunner} < ${fixture} > rendered
+        ${pkgs.python3}/bin/python3 -c 'import sys; sys.stdout.buffer.write(b"\x1b[31muntrusted\x1b[0m\n")' \
+          | ${filterRunner} > sanitized
+        ${pkgs.python3}/bin/python3 - rendered sanitized ${lib.escapeShellArg longUrl} <<'PY'
+        import pathlib
+        import re
+        import sys
+
+        rendered = pathlib.Path(sys.argv[1]).read_bytes()
+        sanitized = pathlib.Path(sys.argv[2]).read_bytes()
+        target = sys.argv[3].encode()
+        expected_link = b"\x1b]8;;" + target + b"\x1b\\"
+        assert expected_link in rendered, "long URL target was not preserved in OSC 8 link"
+        assert b"\x1b" not in sanitized, "untrusted terminal control reached the viewer"
+
+        visible = re.sub(rb"\x1b]8;;.*?\x1b\\(.*?)\x1b]8;;\x1b\\", rb"\1", rendered)
+        text = visible.decode()
+        assert target not in visible, "long tracking URL remains visible"
+        assert "↗ tracking.example" in text, "compact link label is missing"
+        assert "\n\n\n" not in text, "excess blank lines remain"
+        assert max(map(len, text.splitlines())) <= 100, "visible line exceeds reading measure"
+        assert text.count("Nicole sent you a new request.") == 1, "message content changed or duplicated"
+        PY
+        touch "$out"
+      '';
+
+      # The daily decision queue and durable domain history are separate
+      # concepts. Operator-authored sender rules are reviewed in aerc, stored
+      # in a private versioned ledger, and applied before tag:new is cleared.
+      mail-operator-rules = let
+        home = self.homeConfigurations."eric@hwc-server".config;
+        binds = home.home.file.".config/aerc/binds.conf".text;
+        aercConf = home.home.file.".config/aerc/aerc.conf".text;
+        queries = home.home.file.".config/aerc/notmuch-queries".text;
+        hook = home.home.file."/home/eric/400_mail/Maildir/.notmuch/hooks/post-new".text;
+        operatorRules = home.hwc.mail.notmuch.operatorRules;
+        rulePackages = lib.filter (pkg: lib.getName pkg == "mail-rule") home.home.packages;
+        bindLines = lib.splitString "\n" binds;
+        bindCount = needle: lib.length (lib.filter (line: lib.hasInfix needle line) bindLines);
+        requiredBinds = [
+          "<Space>gA = :cf all<Enter>"
+          "<Space>ra = :pipe -m mail-rule review<Enter>"
+          "<Space>rm = :term mail-rule manage<Enter>"
+          "<Space>sf = :sort from -r date<Enter>"
+          "<Space>ss = :sort subject -r date<Enter>"
+        ];
+        missingBinds = lib.filter (needle: !(lib.hasInfix needle binds)) requiredBinds;
+        source = ./domains/mail/notmuch/parts/operator-rules.py;
+        tests = ./domains/mail/notmuch/parts/test_operator_rules.py;
+        hookFixture = pkgs.writeText "mail-post-new-hook" hook;
+      in
+      assert lib.assertMsg (operatorRules.enable && operatorRules.stateDir == "/var/lib/hwc/mail-rules")
+        "mail-operator-rules: server rule ledger is not enabled in backed-up state";
+      assert lib.assertMsg (lib.length rulePackages == 1)
+        "mail-operator-rules: mail-rule is not installed exactly once";
+      assert lib.assertMsg (missingBinds == [])
+        "mail-operator-rules: generated server binds are missing ${lib.concatStringsSep ", " missingBinds}";
+      assert lib.assertMsg (bindCount "<Space>ra = :pipe -m mail-rule review<Enter>" == 2
+        && bindCount "<Space>rm = :term mail-rule manage<Enter>" == 2)
+        "mail-operator-rules: sender-rule controls must work in message-list and viewer contexts";
+      assert lib.assertMsg (lib.hasInfix "sort = -r date" aercConf)
+        "mail-operator-rules: newest-first is not the default sort";
+      assert lib.assertMsg (lib.hasInfix "now            = tag:inbox AND tag:queue AND NOT tag:trash" queries)
+        "mail-operator-rules: now is no longer the stable decision queue";
+      assert lib.assertMsg (lib.hasInfix "family         = tag:family AND NOT tag:trash" queries
+        && lib.hasInfix "datax          = tag:datax AND NOT tag:trash" queries
+        && lib.hasInfix "hwc            = (tag:hwc OR tag:work OR tag:office OR tag:hwcmt) AND NOT tag:trash" queries
+        && lib.hasInfix "all            = NOT tag:trash" queries)
+        "mail-operator-rules: durable domain/all-mail history queries regressed";
+      pkgs.runCommand "mail-operator-rules" {} ''
+        MAIL_RULE_SOURCE=${source} ${pkgs.python3}/bin/python3 ${tests}
+        ${pkgs.python3}/bin/python3 - ${hookFixture} <<'PY'
+        import pathlib
+        import sys
+
+        hook = pathlib.Path(sys.argv[1]).read_text()
+        operator = hook.index("mail-rule apply-new")
+        shield = hook.index("# Shield: kept mail", operator)
+        remove_new = hook.index("# Remove transient new tag", shield)
+        assert operator < shield < remove_new, "operator rules run outside the safe post-new window"
+        PY
+        touch "$out"
+      '';
+
       # ── Prometheus tier ladders are mutually exclusive ──────────────────
       # Parses the ACTUAL rule expressions (not a second copy of the numbers)
       # and proves no sample value can satisfy two tiers of one family. Before

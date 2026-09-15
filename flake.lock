@@ -8,11 +8,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789419904,
-        "narHash": "sha256-gxvPkAmOzvZ6rNCon/CqjQOWj2L6ld4dCoXx7rM+i7Y=",
+        "lastModified": 1789498470,
+        "narHash": "sha256-7+/3mRcmLKi4I5M3T6ZyxPGnN33Q2f7/vYXQo13zRvA=",
         "owner": "eriqueo",
         "repo": "aerc",
-        "rev": "30272ac93b67984b9dea83456aa17864e8f07ac8",
+        "rev": "fe52be5c31f72c27bf3d1be079e8fcfd0f8872c5",
         "type": "github"
       },
       "original": {

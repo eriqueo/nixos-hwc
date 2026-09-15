@@ -75,19 +75,24 @@ let
         removes = lib.concatMapStringsSep "" (n: " -${n}") others;
     in "+${t.tag}${removes}";
 
-  # Clear flags only (action, pending + Proton junk) — preserves category
+  # Clear flags only (action, pending + Proton junk) — preserves category and
+  # every taxonomy-protected flag. `keep` is a durable janitor/auto-trash
+  # shield, so an interactive bulk clear must never remove it.
+  clearableFlagNames = map (t: t.tag)
+    (lib.filter (t: !(t.protected or false)) flagTags);
   clearFlagsCmd =
     let
       extras = [ "important" "flagged" "starred" ];
-      toClear = lib.unique ((map (t: t.tag) flagTags) ++ extras);
+      toClear = lib.unique (clearableFlagNames ++ extras);
       removes = lib.concatMapStringsSep " " (n: "-${n}") toClear;
     in removes;
 
-  # Nuclear clear: removes ALL custom categories + flags + Proton junk
+  # Bulk clear: removes categories, removable flags, and Proton junk while
+  # preserving protected flags.
   clearAllCmd =
     let
       extras = [ "important" "flagged" "starred" ];
-      allToClear = lib.unique (categoryNames ++ (map (t: t.tag) flagTags) ++ extras);
+      allToClear = lib.unique (categoryNames ++ clearableFlagNames ++ extras);
       removes = lib.concatMapStringsSep " " (n: "-${n}") allToClear;
     in removes;
 
