@@ -641,6 +641,63 @@
         touch "$out"
       '';
 
+      # The daily decision queue and durable domain history are separate
+      # concepts. Operator-authored sender rules are reviewed in aerc, stored
+      # in a private versioned ledger, and applied before tag:new is cleared.
+      mail-operator-rules = let
+        home = self.homeConfigurations."eric@hwc-server".config;
+        binds = home.home.file.".config/aerc/binds.conf".text;
+        aercConf = home.home.file.".config/aerc/aerc.conf".text;
+        queries = home.home.file.".config/aerc/notmuch-queries".text;
+        hook = home.home.file."/home/eric/400_mail/Maildir/.notmuch/hooks/post-new".text;
+        operatorRules = home.hwc.mail.notmuch.operatorRules;
+        rulePackages = lib.filter (pkg: lib.getName pkg == "mail-rule") home.home.packages;
+        bindLines = lib.splitString "\n" binds;
+        bindCount = needle: lib.length (lib.filter (line: lib.hasInfix needle line) bindLines);
+        requiredBinds = [
+          "<Space>gA = :cf all<Enter>"
+          "<Space>ra = :pipe -m mail-rule review<Enter>"
+          "<Space>rm = :term mail-rule manage<Enter>"
+          "<Space>sf = :sort from -r date<Enter>"
+          "<Space>ss = :sort subject -r date<Enter>"
+        ];
+        missingBinds = lib.filter (needle: !(lib.hasInfix needle binds)) requiredBinds;
+        tests = ./domains/mail/notmuch/parts/test_operator_rules.py;
+        hookFixture = pkgs.writeText "mail-post-new-hook" hook;
+      in
+      assert lib.assertMsg (operatorRules.enable && operatorRules.stateDir == "/var/lib/hwc/mail-rules")
+        "mail-operator-rules: server rule ledger is not enabled in backed-up state";
+      assert lib.assertMsg (lib.length rulePackages == 1)
+        "mail-operator-rules: mail-rule is not installed exactly once";
+      assert lib.assertMsg (missingBinds == [])
+        "mail-operator-rules: generated server binds are missing ${lib.concatStringsSep ", " missingBinds}";
+      assert lib.assertMsg (bindCount "<Space>ra = :pipe -m mail-rule review<Enter>" == 2
+        && bindCount "<Space>rm = :term mail-rule manage<Enter>" == 2)
+        "mail-operator-rules: sender-rule controls must work in message-list and viewer contexts";
+      assert lib.assertMsg (lib.hasInfix "sort = -r date" aercConf)
+        "mail-operator-rules: newest-first is not the default sort";
+      assert lib.assertMsg (lib.hasInfix "now            = tag:inbox AND tag:queue AND NOT tag:trash" queries)
+        "mail-operator-rules: now is no longer the stable decision queue";
+      assert lib.assertMsg (lib.hasInfix "family         = tag:family AND NOT tag:trash" queries
+        && lib.hasInfix "datax          = tag:datax AND NOT tag:trash" queries
+        && lib.hasInfix "hwc            = (tag:hwc OR tag:work OR tag:office OR tag:hwcmt) AND NOT tag:trash" queries
+        && lib.hasInfix "all            = NOT tag:trash" queries)
+        "mail-operator-rules: durable domain/all-mail history queries regressed";
+      pkgs.runCommand "mail-operator-rules" {} ''
+        ${pkgs.python3}/bin/python3 ${tests}
+        ${pkgs.python3}/bin/python3 - ${hookFixture} <<'PY'
+        import pathlib
+        import sys
+
+        hook = pathlib.Path(sys.argv[1]).read_text()
+        operator = hook.index("mail-rule apply-new")
+        shield = hook.index("# Shield: kept mail", operator)
+        remove_new = hook.index("# Remove transient new tag", shield)
+        assert operator < shield < remove_new, "operator rules run outside the safe post-new window"
+        PY
+        touch "$out"
+      '';
+
       # ── Prometheus tier ladders are mutually exclusive ──────────────────
       # Parses the ACTUAL rule expressions (not a second copy of the numbers)
       # and proves no sample value can satisfy two tiers of one family. Before

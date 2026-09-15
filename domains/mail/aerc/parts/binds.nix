@@ -63,8 +63,8 @@ let
     Space g i  now       Space g F  family    Space g D  datax
     Space g W  hwc       Space g B  backlog   Space g I  full inbox
     -- system destinations --
-    Space g a  archive   Space g s  sent      Space g d  trash
-    Space g z  spam      Space g u  all unread
+    Space g A  all mail  Space g a  archive   Space g s  sent
+    Space g d  trash     Space g z  spam      Space g u  all unread
 
     MARK / CLASSIFY  -  Space m ...
     Space m a  archive   Space m d  trash     Space m u  unread
@@ -83,7 +83,9 @@ let
     Space f T  find tag across all mail (Tab completes)
     Space f c  clear filter  Space f f  filter      Space f s  search
     Space f u  review unsubscribe
-    Space s d  sort by date  Space t t  toggle threads
+    Space s d  newest first  Space s f  sender  Space s s  subject
+    Space r a  make sender rule   Space r m  manage sender rules
+    Space t t  toggle threads
     Space t s  switch styleset            Space M    add new tag
 
     HAND OFF (open the message first; then archive with a)
@@ -159,6 +161,7 @@ ${tabBinds}
       <Space>gW = :cf hwc<Enter> # hwc
       <Space>gB = :cf backlog<Enter> # backlog
       <Space>gI = :cf inbox_i<Enter> # all inbox
+      <Space>gA = :cf all<Enter> # all mail
       <Space>gu = :cf unread_u<Enter> # unread
       <Space>ga = :cf Archive_a<Enter> # archive
       <Space>gs = :cf sent_s<Enter> # sent
@@ -180,7 +183,14 @@ ${triageGoBinds}
       <Space>fT = :query -f -n tag-search tag: # find tag across all mail
       <Space>fc = :clear -s<Enter> # clear filter/search
       <Space>sd = :sort -r date<Enter> # sort by date
+      <Space>sf = :sort from -r date<Enter> # sort by sender
+      <Space>ss = :sort subject -r date<Enter> # sort by subject
       <Space>tt = :toggle-threads<Enter> # toggle threads
+
+      # Reviewed exact-sender automation. A rule can assign a durable domain
+      # tag and choose whether future mail enters now, archives, or trashes.
+      <Space>ra = :pipe -m mail-rule review<Enter> # add sender rule
+      <Space>rm = :term mail-rule manage<Enter> # manage sender rules
 
       # Triage bucket marking (replace-set, same semantics as workbench moves)
 ${triageBinds}
@@ -227,6 +237,8 @@ ${tabBinds}
       t = :pipe -m email-to-task<Enter>
       i = :pipe -m email-to-khal<Enter>
       p = :pipe -m email-to-paperless<Enter>
+      <Space>ra = :pipe -m mail-rule review<Enter> # add sender rule
+      <Space>rm = :term mail-rule manage<Enter> # manage sender rules
 
       [view::passthrough]
       $noinherit = true

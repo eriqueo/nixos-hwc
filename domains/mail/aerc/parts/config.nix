@@ -12,27 +12,24 @@ let
             pathBase = config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail";
         in if nmRoot != "" then nmRoot else "${pathBase}/Maildir";
 
-    # One managed queue, partitioned by context. Read/unread is presentation,
-    # never workflow state: opening a message cannot make it disappear. DataX
-    # wins over Family when signals overlap; HWC is the deliberate fallback so
-    # every message in `now` appears in exactly one context folder.
+    # `now` is the managed decision queue. The domain folders below are durable
+    # tag-backed history: archiving completes a decision without making the
+    # message disappear from family/datax/hwc.
     currentInbox = "tag:inbox AND tag:${tags.currentTag} AND NOT tag:trash";
     # Legacy unread mail remains outside the daily surface until a bounded
     # cohort is deliberately promoted into the managed queue.
     legacyBacklog = "tag:inbox AND tag:unread AND NOT tag:${tags.currentTag} AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:trash AND NOT tag:triage/noise";
-    familySignal = "(tag:family OR tag:keep OR to:eriqueokeefe@gmail.com OR to:eriqueo@proton.me OR to:g_erique@proton.me)";
-
     # Final receivers that are allowed to attest Authentication-Results. Aerc's
     # RFC 8058 unsubscribe command rejects all other headers before acting; do
     # not replace this exact list with the documented debugging wildcard (`*`).
     trustedAuthResults = [ "^mail\\.protonmail\\.ch$" "^mx\\.google\\.com$" ];
 
   queries = ''
-    # ── Calm daily surface: one inbox plus three exact context partitions ──
+    # ── Calm daily surface: one queue plus durable domain history ──
     now            = ${currentInbox}
-    family         = ${currentInbox} AND NOT tag:datax AND ${familySignal}
-    datax          = ${currentInbox} AND tag:datax
-    hwc            = ${currentInbox} AND NOT tag:datax AND NOT ${familySignal}
+    family         = tag:family AND NOT tag:trash
+    datax          = tag:datax AND NOT tag:trash
+    hwc            = (tag:hwc OR tag:work OR tag:office OR tag:hwcmt) AND NOT tag:trash
     backlog        = ${legacyBacklog}
 
     # ── Legacy drill-downs (hidden from the sidebar, still directly addressable) ──
@@ -55,7 +52,7 @@ let
 ${triageQueries}
 
     # ── Bulk / review ──
-    all            = tag:inbox AND NOT tag:trash
+    all            = NOT tag:trash
     newsletters    = tag:inbox AND tag:newsletter AND NOT tag:trash
     notifications  = tag:inbox AND tag:notification AND NOT tag:trash
 
@@ -158,6 +155,7 @@ in
       # msglist_header styleset object. Labels: state date from subject.
       index-headers = true
       threading-enabled = true
+      sort = -r date
       confirm-quit = false
       # which-key leader popup (forked aerc feature). Pressing the Space leader
       # and pausing shows the possible next keys + annotations, narrowing as you
@@ -166,7 +164,7 @@ in
       which-key-delay = 350ms
       # Labels for group (prefix) keys in the popover, so <Space>g shows
       # "go: folders" not "+20". Mirrors domains/home/keymap/grammar.nix groups.
-      which-key-groups = g:go (folders), m:mark/classify, c:categories, v:flags, f:find, s:sort, t:toggle/triage, b:buffer, y:yank, d:delete, w:window, p:project, o:open, q:quit
+      which-key-groups = g:go (folders), m:mark/classify, c:categories, v:flags, f:find, r:rules, s:sort, t:toggle/triage, b:buffer, y:yank, d:delete, w:window, p:project, o:open, q:quit
       styleset-name = hwc
       dirlist-left = {{.Style .Folder .Folder}}
       dirlist-right = {{if eq .Folder "now"}}{{if .Unread}}{{humanReadable .Unread}}{{end}}{{end}}
