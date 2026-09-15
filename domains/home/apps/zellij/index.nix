@@ -31,7 +31,72 @@ let
   # domain (on the laptop: "ssh -t server aerc"; falls back to "aerc").
   mailCommand = (config.hwc.home.core.shell.aliases or {}).aerc or "aerc";
   tabs = import ./parts/tabs.nix { inherit lib; hubRegistry = inputs.workbench.hubRegistry; };
-  layout = import ./parts/layout.nix { inherit lib mailCommand tabs; };
+
+  # Reuse Workbench's one browser-command fact. The dedicated Chromium profile
+  # prevents the singleton/profile-lock collision fixed in the Workbench URL
+  # launcher; these tabs must not invent a second browser path.
+  browserCommand = (config.programs.workbench.launchers or {}).browser or "xdg-open";
+  browserParts = lib.splitString " " browserCommand;
+  browserExe = builtins.head browserParts;
+  browserArgv = lib.escapeShellArgs browserParts;
+  vhostDomain = lib.attrByPath
+    [ "hwc" "networking" "shared" "vhostDomain" ]
+    "hwc.iheartwoodcraft.com"
+    osConfig;
+
+  # A web application cannot render inside a terminal pane. Keep an honest,
+  # persistent launcher in the standing tab: the first Enter on Zellij's
+  # suspended pane opens the app, while o/r/Enter can open it again later.
+  webAppLauncher = pkgs.writeShellApplication {
+    name = "workbench-web-app";
+    text = ''
+      if [ "$#" -ne 2 ]; then
+        printf 'usage: workbench-web-app <name> <https-url>\n' >&2
+        exit 64
+      fi
+
+      app_name="$1"
+      app_url="$2"
+      status="ready"
+
+      open_app() {
+        case "$app_url" in
+          https://*) ;;
+          *) status="refused non-HTTPS URL"; return ;;
+        esac
+        if ! command -v ${lib.escapeShellArg browserExe} >/dev/null 2>&1; then
+          status="browser launcher unavailable: ${browserExe}"
+          return
+        fi
+        ${browserArgv} "$app_url" >/dev/null 2>&1 &
+        status="browser request sent"
+      }
+
+      draw() {
+        printf '\033[2J\033[H'
+        printf '\n  %s\n\n' "$app_name"
+        printf '  web application\n  %s\n\n' "$app_url"
+        printf '  %s\n\n' "$status"
+        printf '  enter / o / r   open again\n'
+        printf '  ctrl+j / ctrl+k switch Workbench tabs\n'
+      }
+
+      open_app
+      while true; do
+        draw
+        key=""
+        IFS= read -r -s -n 1 key || exit 0
+        case "$key" in
+          ""|o|r) open_app ;;
+        esac
+      done
+    '';
+  };
+
+  layout = import ./parts/layout.nix {
+    inherit lib mailCommand tabs vhostDomain;
+    webAppCommand = "${webAppLauncher}/bin/workbench-web-app";
+  };
 
   # INTER-APP meta layer (Ctrl+Space). Generated from the unified keymap grammar
   # when it is present (profiles/desktop imports domains/home/keymap). Guarded:
@@ -72,7 +137,7 @@ in
   # IMPLEMENTATION
   #============================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.zellij ];
+    home.packages = [ pkgs.zellij webAppLauncher ];
 
     # zellij reads $XDG_CONFIG_HOME/zellij/config.kdl + layouts/*.kdl.
     # We DO NOT use programs.zellij.settings (it hardcodes its own theme path);

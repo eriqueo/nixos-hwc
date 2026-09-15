@@ -3,22 +3,26 @@
 ## Purpose
 Configures zellij as workbench's pane host: installs the package, writes a
 palette-derived KDL theme and config directly (bypassing `programs.zellij`),
-ships the `workbench` layout of hub/tool tabs, and wires the Ctrl+Space
+ships the `workbench` layout of hub/tool/web-launcher tabs, and wires the Ctrl+Space
 meta-leader which-key plugin when the unified keymap grammar is present.
 
 ## Boundaries
 - ✅ `hwc.home.apps.zellij.enable`; `defaultLayout` (default "workbench"); config.kdl (theme, session_serialization off), workbench.kdl layout, zellij-which.wasm deployed to a stable `~/.config/zellij/plugins/` path (permission-grant persistence)
-- ✅ Mail pane command late-bound from `hwc.home.core.shell.aliases.aerc`; hub facts come from the Workbench registry; tool facts come from the structured tab table
+- ✅ Mail pane command late-bound from `hwc.home.core.shell.aliases.aerc`; hub facts come from the Workbench registry; terminal and web-tool facts come from the structured tab table
+- ✅ Paperless and Firefly standing tabs use a persistent terminal launcher that opens each HTTPS app through Workbench's existing dedicated Chromium profile
 - ❌ The workbench host app and peer TUIs are their own modules; the which-key plugin is built in its own 600_apps repo (`zellij-which` flake input)
 - ❌ Intra-app Space leaders belong to each app; zellij owns only the inter-app meta layer
 
 ## Structure
 - `index.nix` — options, packages, config.kdl/layout/plugin via xdg.configFile
 - `parts/appearance.nix` — palette → KDL themes block
-- `parts/layout.nix` — workbench pane-grid KDL (late-bound mail command)
-- `parts/tabs.nix` — versioned hub registry consumer + structured tool tab set (order = GoToTab indices)
+- `parts/layout.nix` — workbench pane-grid KDL (late-bound mail and web-app commands)
+- `parts/tabs.nix` — versioned hub registry consumer + structured terminal/web tool tab set (order = GoToTab indices)
 
 ## Changelog
+- 2026-09-15: Add suspended Paperless and Firefly launcher tabs; both reuse the
+  existing Workbench Chromium profile and derive HTTPS hosts from the shared
+  vhost domain while remaining outside the Python pane-launch target map.
 - 2026-09-07: Consume Workbench registry v2: Brief first/landing; filter explicit
   default tabs, keep Server on demand, preserve aerc and mail as distinct targets.
 - 2026-09-04: Consume Workbench hubRegistry schema v1; derive deployment order and landing, add mail/nightly hubs, and keep aerc distinct.

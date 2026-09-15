@@ -521,6 +521,8 @@
         focused = captures ''tab name="([^"]+)" focus=true'' layout;
         grammar = home.hwc.home.keymap.grammar;
         jumps = lib.filter (entry: entry ? target) grammar.meta;
+        webTabs = lib.filter (tab: tab.kind == "web") navigation.toolTabs;
+        vhostDomain = self.nixosConfigurations.hwc-laptop.config.hwc.networking.shared.vhostDomain;
         destinationFor = key: (builtins.head (lib.filter (entry: entry.key == key) jumps)).target;
         acceptsRegistry = registry: (builtins.tryEval (builtins.deepSeq
           (import ./domains/home/apps/zellij/parts/tabs.nix { inherit lib; hubRegistry = registry; }) true)).success;
@@ -543,6 +545,14 @@
       assert lib.assertMsg (home.programs.workbench.defaultHub == navigation.landingHub
         && home.programs.workbench.tabs == navigation.launcherTabs)
         "workbench check: launcher destinations differ from layout";
+      assert lib.assertMsg (map (tab: tab.name) webTabs == [ "paperless" "firefly" ]
+        && !(home.programs.workbench.tabs ? paperless)
+        && !(home.programs.workbench.tabs ? firefly))
+        "workbench check: web tabs entered the Python pane-launch target map";
+      assert lib.assertMsg (lib.all (tab:
+        lib.hasInfix ''args "${tab.name}" "https://${tab.host}.${vhostDomain}"; start_suspended true;'' layout
+      ) webTabs)
+        "workbench check: web tabs are not suspended HTTPS launchers on the shared vhost";
       assert lib.assertMsg (lib.all (entry: lib.hasInfix
         "${entry.key}|goto-tab|${toString navigation.tabFor.${entry.target}}|${entry.desc}" configKdl) jumps)
         "workbench check: generated grammar indices differ from navigation";
