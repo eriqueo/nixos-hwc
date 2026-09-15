@@ -16,6 +16,8 @@ NAMESPACE: `hwc.home.apps`-adjacent but lives under mail — `hwc.mail.calendar.
   server (`tasks.hwc.iheartwoodcraft.com`, same vhost + `radicale-htpasswd`
   secret as the tasks backend). One VEVENT pair (`calendar_radicale`) pinned to
   `work`, `family`, and `personal`, synced into `calendars-radicale/`.
+  The `work` collection keeps the stable khal display name `hwc`; collection
+  paths and user-facing display names are separate contracts.
   **When radicale is on, the iCloud account pairs are no
   longer generated** (calendar lives on Radicale, plumbed exactly like tasks).
   This is the VEVENT twin of `domains/mail/tasks`'s VTODO Radicale pair.
@@ -51,6 +53,12 @@ domains/mail/calendar/
 ```
 
 ## Changelog
+
+- **2026-09-15**: Restored `hwc` as the primary business calendar's stable
+  display name after the collection taxonomy rollout changed khal's generated
+  default to `Work`. The collection path remains `eric/work`; khal's default
+  and `busy` now derive from one `hwc` value. This keeps aerc's reviewed `i`
+  import and booking blocks on the same calendar.
 
 - **2026-09-15**: Replaced the flattened `migrated`/`hwc` calendar target with
   the human-readable Work, Family, and Personal collections. khal and `busy`
