@@ -17,6 +17,8 @@ shell's aerc alias, one-shot analysis via the selected Codex package, browser vi
 - `index.nix` — imports the flake's HM module; options + programs.workbench wiring, wb-reload, versioned keymap, one-shot Codex provider, registry landing hub + shared standing-tool destinations
 
 ## Changelog
+- 2026-09-16: Update Workbench's agent runner to negotiate supported Codex
+  feature flags and keep failures visible until dismissed.
 - 2026-09-16: Update Workbench to the terminal-native Kanban stage browser with a selected-item preview and narrow-terminal collapse.
 - 2026-09-16: Replace the interactive agent pane command with Workbench's bounded one-shot Codex provider; results now return to Workbench through the application-owned run ledger.
 - 2026-09-15: Bind the Workbench `agent` target to the configured Codex package,
