@@ -49,6 +49,7 @@
   dictateEnabled = config.hwc.home.apps.hwc-dictation.enable or false;
   dictateCommand = "hwc-dictation record toggle";
   dictateCancelCommand = "hwc-dictation record cancel";
+  workbenchClass = "hwc-workbench";
 
   # Directional and per-workspace families are mechanical — generate them, so a
   # missing arrow or workspace variant is impossible.
@@ -107,7 +108,7 @@
           # a zsh alias named wb-reload would be invisible here. wb-reload kills
           # the named session then re-creates it, so every SUPER+W picks up the
           # latest layout instead of reattaching a stale session.
-          {mods = mod;            key = "W";      act = "exec,kitty -e wb-reload";      desc = "Workbench (fresh zellij session)";}
+          {mods = mod;            key = "W";      act = "exec,kitty --class ${workbenchClass} -e wb-reload"; desc = "Workbench (fresh zellij session)";}
           {mods = mod;            key = "V";      act = "exec,cliphist list | wofi --dmenu | cliphist decode | wl-copy"; desc = "Clipboard history";}
           {mods = "${mod} SHIFT"; key = "I";      act = "exec,refinery-intake";         desc = "Refinery intake (capture an idea)";}
         ]
@@ -294,6 +295,11 @@ in {
       # Opacity
       "match:class ^(kitty)$, opacity 0.95"
       "match:class ^(yazi)$, opacity 0.90"
+
+      # A terminal BEL or activation request from background aerc must not move
+      # the user to Workbench's workspace. Keep the global focus-on-activate
+      # policy and contain only the named Workbench window.
+      "match:class ^(${workbenchClass})$, suppress_event activate, opacity 0.95, immediate on"
 
       # dt TUI — float, fixed size, centered (opened via SUPER+T)
       "match:class ^(dt-tui)$, float on, size 800 500, center 1"

@@ -4,19 +4,20 @@
 Thin translator wiring the standalone `workbench` flake's HM module
 (`programs.workbench`) into the HWC namespace: feeds it the system palette,
 MCP gateway URL, hub/tab data, and late-bound peer launchers (mail via the
-shell's aerc alias, agent via the selected Codex package, browser via
+shell's aerc alias, one-shot analysis via the selected Codex package, browser via
 `gpu-launch chromium-hwc-workbench`).
 
 ## Boundaries
-- ✅ `hwc.home.apps.workbench.enable`; `gatewayUrl`, `offline`, `hubsDir` options; `wb-reload` binary (kills + recreates the zellij `workbench` session); versioned `workbench/keymap.json`; Codex selected-item launcher
+- ✅ `hwc.home.apps.workbench.enable`; `gatewayUrl`, `offline`, `hubsDir` options; `wb-reload` binary (kills + recreates the zellij `workbench` session); versioned `workbench/keymap.json`; bounded Codex selected-item runner
 - ✅ Tool tabs imported from `../zellij/parts/tabs.nix` so host navigation can't drift from the layout
 - ❌ The app itself lives in the `workbench` flake input (600_apps); this module only supplies values
 - ❌ Pane grid/theme belong to `domains/home/apps/zellij/`; keymap grammar to `domains/home/keymap/`
 
 ## Structure
-- `index.nix` — imports the flake's HM module; options + programs.workbench wiring, wb-reload, versioned keymap, selected Codex provider, registry landing hub + shared standing-tool destinations
+- `index.nix` — imports the flake's HM module; options + programs.workbench wiring, wb-reload, versioned keymap, one-shot Codex provider, registry landing hub + shared standing-tool destinations
 
 ## Changelog
+- 2026-09-16: Replace the interactive agent pane command with Workbench's bounded one-shot Codex provider; results now return to Workbench through the application-owned run ledger.
 - 2026-09-15: Bind the Workbench `agent` target to the configured Codex package,
   stage the live versioned keymap contract, and include Codex in the wrapper runtime.
 - 2026-09-07: Consume Workbench registry v2: Brief first/landing; filter explicit

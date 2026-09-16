@@ -29,12 +29,11 @@ let
   aercCmd = (config.hwc.home.core.shell.aliases or {}).aerc or "aerc";
 
   # The provider is machine policy, not an app concern. Use the same Codex
-  # package selected by hwc.home.apps.codex so the pane launcher cannot drift
-  # from the CLI on the user's PATH. The initial prompt is appended by Workbench.
+  # package selected by hwc.home.apps.codex so the one-shot analyzer cannot
+  # drift from the CLI on the user's PATH.
   codexPkg = if config.hwc.home.apps.codex.package != null
     then config.hwc.home.apps.codex.package
     else pkgs.codex;
-  agentCmd = "${lib.getExe codexPkg} -C ${config.home.homeDirectory}/.nixos";
 
   # Standing-tab map (navigate-to-tab, not spawn-duplicate): launch-target ->
   # tab name, the TOOL tabs only. Imported from the SAME source the zellij layout
@@ -116,12 +115,12 @@ in
       hubsDir = cfg.hubsDir;
       defaultHub = navigation.landingHub;   # application-owned landing designation
       tabs = navigation.launcherTabs;    # plain jumps navigate to the tool's standing tab
+      agentCommand = lib.getExe codexPkg;
 
       # Peer launch overrides (late binding). Mail runs wherever the shell alias
       # says — on the laptop that's the server over ssh, so DON'T bake a local
       # aerc onto PATH; the launcher invokes `ssh -t server aerc` instead.
       launchers.aerc = aercCmd;
-      launchers.agent = agentCmd;
       # `opens = "url:…"` (e.g. the DataX SR2 dashboard on Enter) opens in the GUI
       # browser. Use `chromium-hwc-workbench`, NOT the SUPER+B `chromium-hwc`: it
       # carries the same GPU/ANGLE/WebGL flags but a DEDICATED --user-data-dir, so
