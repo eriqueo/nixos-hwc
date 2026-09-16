@@ -23,10 +23,20 @@ business/
 ├── leads/             # hwc.business.leads — unified lead pipeline
 ├── morning-briefing/  # hwc.business.morningBriefing — 6am Claude agent
 ├── paperless/         # hwc.business.paperless — Paperless-NGX documents
-└── website/           # hwc.business.website — Heartwood CMS + 11ty + webapps
+├── website/           # hwc.business.website — Heartwood CMS + 11ty + webapps
+└── workbench/         # hwc.business.workbench — HWC Workbench hub (area registry + static launcher)
 ```
 
 ## Changelog
+- 2026-09-16: New `workbench/` module (`hwc.business.workbench`) — the one
+  producer of the HWC Workbench area registry (CRM, Lead Scout, Home Scout,
+  Research Scout, Event Scout, Refinery; DataX Monitor asserted out). Each
+  area names its vhost route and the destination is resolved from
+  `hwc.networking.shared.routes`, so a missing required route or duplicate id
+  fails evaluation. The hub page and `/areas.json` are rendered at eval time
+  into a store path served by a static `root` vhost at
+  `workbench.hwc.iheartwoodcraft.com`; app switchers (scout `@scout/ui`,
+  hwc-crm) fetch that JSON instead of keeping their own area lists.
 - 2026-09-14: CRM Lead Scout intake gained a versioned entity route for
   `hwc_subcontractor_v1`: one category-`sub` relationship case per exact
   candidate identity, with repeated posts retained as append-only evidence.

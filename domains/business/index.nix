@@ -25,5 +25,6 @@
     ./leads/index.nix          # hwc-leads (Phase 0 scaffold, Phase 2 impl)
     ./crm/index.nix            # hwc-crm (front-of-funnel on hwc-leads)
     ./umami/index.nix          # Umami web analytics (stats.iheartwoodcraft.com)
+    ./workbench/index.nix      # HWC Workbench hub — area registry + launcher
   ];
 }

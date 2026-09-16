@@ -230,7 +230,13 @@ in
       # root (static), needsUrlBase=bool, stripPrefix=bool (deprecated),
       # headers=attrs, assetGlobs, assetStrategy, ws=bool, timeouts={try,fail}
       # mode="vhost": served as <name>.<vhostDomain> on :443 (no port field).
-      type = types.listOf (types.attrsOf types.anything);
+      #
+      # lazyAttrsOf, not attrsOf (2026-09-16): attrsOf forces EVERY attribute of
+      # an element as soon as one is read, so a route whose `root` is derived
+      # from the other routes (hwc.business.workbench resolves its area
+      # destinations from this list) recursed infinitely on its own `name`.
+      # lazyAttrsOf merges per attribute on access; values are unchanged.
+      type = types.listOf (types.lazyAttrsOf types.anything);
       default = [];
       description = "Aggregated reverse proxy routes for all services.";
     };

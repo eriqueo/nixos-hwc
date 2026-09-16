@@ -48,6 +48,10 @@
   # DataX Monitor — DX1 agent-execution diagnostic dashboard (monitor.hwc.iheartwoodcraft.com)
   hwc.business.dataxMonitor.enable = true;
 
+  # HWC Workbench hub — area registry + launcher (workbench.hwc.iheartwoodcraft.com).
+  # Areas resolve against the vhost routes the other modules above declare.
+  hwc.business.workbench.enable = true;
+
   # Paperless-NGX document management
   hwc.business.paperless.enable = lib.mkDefault true;
 
