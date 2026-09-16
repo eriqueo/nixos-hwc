@@ -34,7 +34,7 @@ sets) and below it (the packages), not in it.
 
 ## Inventory
 
-25 rows. `owning layer` is the layer that must change to fix the row, not the layer
+26 rows. `owning layer` is the layer that must change to fix the row, not the layer
 the text sits in.
 
 | location (file:line) | assumption | failure mode on aarch64 | owning layer |
@@ -585,6 +585,11 @@ read this as license to touch anything under `ContractorCTO/*`.
 **Adopt Option A, with Option C's asymmetric `checks` split inside it** — i.e.
 `forAllSystems` for the mechanism, asymmetric content for `checks`. Named
 combination: **A + C**.
+
+That splits into two follow-up cards, scoped in full below: **card 02** makes the
+flake's outputs per-system (`flake.nix` only), and **card 03** arch-gates the
+shared dev environment (`profiles/base/home.nix` + `machines/firestick/home.nix`
+only). Card 02 does not depend on card 03 and they may land in either order.
 
 From the matrix: Option B is disqualified on three columns at once — it is the only
 option that needs a new input and a `flake.lock` change (which this goal forbids),
