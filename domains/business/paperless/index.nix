@@ -10,7 +10,9 @@ in
 
     image = lib.mkOption {
       type = lib.types.str;
-      default = "ghcr.io/paperless-ngx/paperless-ngx:2.14";
+      # v3 renamed or requires several env vars (see parts/config.nix) and only
+      # migrates a database already at 2.20.15 — do not jump from older 2.x.
+      default = "ghcr.io/paperless-ngx/paperless-ngx:3.1.3";
       description = "Paperless-NGX container image";
     };
 
@@ -110,6 +112,14 @@ in
         default = "pdfa";
         description = "OCR output format (pdf, pdfa, pdfa-2)";
       };
+
+      # v3 default is "auto", which skips the archive copy for born-digital PDFs.
+      # "always" keeps the v2 behaviour, where every document got a PDF/A archive.
+      archiveFileGeneration = lib.mkOption {
+        type = lib.types.enum [ "auto" "always" "never" ];
+        default = "always";
+        description = "When paperless creates a PDF/A archive copy (PAPERLESS_ARCHIVE_FILE_GENERATION)";
+      };
     };
 
     consumer = {
@@ -123,6 +133,15 @@ in
         type = lib.types.bool;
         default = false;
         description = "Delete originals after successful import";
+      };
+
+      # v2 rejected a file whose hash matched an existing document. v3 imports
+      # it as a second document unless this is on, in which case the duplicate
+      # is deleted from the consume dir. On keeps one document per file.
+      deleteDuplicates = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Delete consume-dir files that duplicate an existing document instead of importing them";
       };
 
       # Subdirectory handling for bulk imports. With both on, a file dropped at
@@ -159,10 +178,10 @@ in
 
       gotenbergImage = lib.mkOption {
         type = lib.types.str;
-        # Pinned to the version paperless-ngx 2.14 ships in its own compose file.
+        # Pinned to the version paperless-ngx 3.1.3 ships in its own compose file.
         # Gotenberg's chromium/libreoffice routes have changed shape across 8.x
         # minors; track cfg.image when bumping, not the newest tag.
-        default = "docker.io/gotenberg/gotenberg:8.7.0";
+        default = "docker.io/gotenberg/gotenberg:8.34";
         description = "Gotenberg container image";
       };
     };
