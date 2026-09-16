@@ -36,6 +36,11 @@ let dictationModel = "base.en"; in
     # Zero-touch receive: pull server-side ~/.claude-config edits every 15 min.
     claude-code.shareConfig.autoPull.enable = true;
     claude-desktop.enable = true;
+    # This machine's own tailnet address, pinned so the phone's endpoint does not
+    # depend on whether tailscale0 had an address when the app started. See the
+    # option's description — the desktop app resolves exposure once at bootstrap
+    # and silently falls back to loopback when that one read comes up empty.
+    t3code.desktop.lanHost = "100.71.213.18";
     scraper.enable = true;
     markitdown.enable = true;
     dt.enable = true;

@@ -86,6 +86,10 @@ let
         export T3CODE_PORT=${toString cfg.desktop.port}
       ''}
 
+      ${lib.optionalString (cfg.desktop.lanHost != null) ''
+        export T3CODE_DESKTOP_LAN_HOST=${lib.escapeShellArg cfg.desktop.lanHost}
+      ''}
+
       cd "$REPO"
       exec node "$START" "$@"
     '';
@@ -273,6 +277,52 @@ in
           app scans upward from its default for a free port, which means the phone
           app must be re-paired whenever the number moves. Set a port to keep the
           pairing stable.
+        '';
+      };
+
+      lanHost = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        example = "100.71.213.18";
+        description = ''
+          Address the app ADVERTISES to the phone (`T3CODE_DESKTOP_LAN_HOST`).
+          A bare host or IP — no scheme, no port; the app interpolates it as
+          `http://<host>:<port>` (DesktopServerExposure.ts:123).
+
+          SETTING THIS IS ABOUT BOOT ORDER, NOT ABOUT THE ADDRESS. Exposure is
+          resolved exactly ONCE, during bootstrap (DesktopApp.ts:189 calls
+          configureFromSettings), from a single `os.networkInterfaces()` read
+          (DesktopNetworkInterfaces.ts:43). There is no watcher and no retry. If
+          that one read finds neither a LAN IPv4 nor a Tailscale IPv4, the
+          `unavailable` branch (DesktopServerExposure.ts:380) discards the
+          persisted `network-accessible` mode, binds 127.0.0.1 instead of
+          0.0.0.0, and the phone cannot reach the server until the app is
+          restarted by hand.
+
+          An override short-circuits that read (resolveLanAdvertisedHost returns
+          it unconditionally, DesktopServerExposure.ts:85), so the advertised
+          endpoint is never null, `unavailable` is never true, and the bind is
+          0.0.0.0 on every launch regardless of when wlan0 and tailscale0
+          acquire addresses.
+
+          Measured 2026-09-15: after a cold boot at 16:22 the desktop log read
+          "bootstrap fell back to local-only because no advertised network host
+          was available", the listener was 127.0.0.1:3773, and the phone got
+          connection-refused on 100.71.213.18:3773 — which had worked for the
+          two weeks prior. An earlier boot the same day logged "bootstrap
+          enabled network access http://192.168.0.136:3773" and worked.
+
+          The bind is 0.0.0.0 in network-accessible mode either way
+          (DESKTOP_LAN_BIND_HOST, DesktopServerExposure.ts:31), so this does not
+          widen exposure beyond what the mode already implies — port 3773 is
+          reachable on Wi-Fi as well as on the tailnet. The name says LAN; the
+          value may be a Tailscale address, and upstream tests that case
+          (DesktopServerExposure.test.ts:371).
+
+          Unlike `T3CODE_TAILSCALE_SERVE` below, this survives: it is read in
+          the ELECTRON process (DesktopConfig.ts:45), and the backend child's
+          env strip only removes it from the child — the same path T3CODE_PORT
+          already takes.
         '';
       };
 

@@ -19,9 +19,10 @@ design note below.
 
 ```
 index.nix   # hwc.home.apps.t3code — desktop launcher + Electron shim + desktop
-            #   entry; headless t3-serve unit; t3-update; DX2 handoff adapter
-            #   forwarding T3's result limit without allowing policy overrides
-            #   activation-time repo check
+            #   entry; pinned backend port and advertised host, so the phone's
+            #   endpoint survives a reboot; headless t3-serve unit; t3-update;
+            #   DX2 handoff adapter forwarding T3's result limit without
+            #   allowing policy overrides; activation-time repo check
 README.md   # this file
 ```
 
@@ -174,6 +175,18 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
+- 2026-09-15: Added `desktop.lanHost` (`T3CODE_DESKTOP_LAN_HOST`), and set it to
+  `100.71.213.18` on hwc-laptop. The desktop app resolves its network exposure
+  ONCE at bootstrap from a single `os.networkInterfaces()` read, with no watcher
+  and no retry; when that read finds neither a LAN nor a Tailscale IPv4 it
+  discards the persisted `network-accessible` mode and binds loopback. A cold
+  boot at 16:22 hit exactly that — `bootstrap fell back to local-only because no
+  advertised network host was available` — and the phone lost an endpoint that
+  had worked for two weeks. An explicit advertised host short-circuits the
+  interface read, so the bind is 0.0.0.0 on every launch regardless of boot
+  order. Cross-audited against upstream source by a second model; the cold-boot
+  race itself is inferred, because the app logs the fallback outcome but not the
+  interface snapshot that produced it.
 - 2026-09-12: On Intel hybrid desktops, restrict Electron's Vulkan ICD discovery to Intel. A disposable T3 home on an alternate port reached backend readiness with hardware rendering and zero NVIDIA descriptors; CUDA remains available to provider children because it does not use the Vulkan ICD selector.
 - 2026-09-13: Forward T3's result-character ceiling to the streaming Pi helper;
   reject other adapter arguments to preserve the tool-free, read-only lane.
