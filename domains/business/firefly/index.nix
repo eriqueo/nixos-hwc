@@ -2,7 +2,7 @@
 #
 # Firefly III Personal Finance Manager
 # Includes both Firefly III core and Firefly-Pico mobile companion
-{ lib, config, pkgs, ... }:
+{ lib, config, pkgs, inputs, ... }:
 
 let
   cfg = config.hwc.business.firefly;
@@ -101,6 +101,80 @@ in
         type = lib.types.port;
         default = 8087;
         description = "Internal HTTP port for the data importer container";
+      };
+    };
+
+    # Workbench Finance area: recurring-payment explorer backed by Firefly's
+    # REST API. The service is socket-activated behind Caddy and never exposes
+    # a TCP listener of its own.
+    explorer = {
+      enable = lib.mkEnableOption "Firefly recurring-payment explorer" // { default = true; };
+
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = inputs.pnc-statement-pipeline.packages.${pkgs.stdenv.hostPlatform.system}.default;
+        defaultText = "inputs.pnc-statement-pipeline.packages.<system>.default";
+        description = "Immutable Firefly Explorer application package.";
+      };
+
+      appUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "https://firefly-explorer.${config.hwc.networking.shared.vhostDomain}";
+        description = "Public same-origin URL used for CSRF validation.";
+      };
+
+      patFile = lib.mkOption {
+        type = lib.types.str;
+        default = "/run/agenix/firefly-explorer-pat";
+        description = "Dedicated Firefly personal access token path.";
+      };
+
+      socketPath = lib.mkOption {
+        type = lib.types.str;
+        default = "/run/firefly-explorer.sock";
+        description = "Root-owned Unix socket used only by Caddy.";
+      };
+
+      assetAccountId = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 12;
+        description = "Firefly asset-account id explored by this app.";
+      };
+
+      accountName = lib.mkOption {
+        type = lib.types.str;
+        default = "Dad - Checking";
+        description = "Account label shown in the explorer.";
+      };
+
+      historyStart = lib.mkOption {
+        type = lib.types.strMatching "[0-9]{4}-[0-9]{2}-[0-9]{2}";
+        default = "2019-08-19";
+        description = "Earliest Firefly date fetched for recurrence analysis.";
+      };
+
+      allowedLogin = lib.mkOption {
+        type = lib.types.str;
+        default = "eriqueo@github";
+        description = "Exact Tailscale WhoIs LoginName allowed to use the API.";
+      };
+
+      cacheSeconds = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 60;
+        description = "Bounded in-memory Firefly read cache lifetime.";
+      };
+
+      protectedTags = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ "dad-pnc-statements" ];
+        description = "Existing Firefly tags the explorer may never remove.";
+      };
+
+      coverageNote = lib.mkOption {
+        type = lib.types.str;
+        default = "Firefly includes imported activity from August 2019, with known bank-source gaps after 2023-12-18 and in early 2025 and early 2026.";
+        description = "Visible warning explaining the limits of imported history.";
       };
     };
 
@@ -257,6 +331,7 @@ in
     ./sys.nix
     ./parts/config.nix
     ./parts/automation.nix
+    ./parts/explorer.nix
   ];
 
   #==========================================================================

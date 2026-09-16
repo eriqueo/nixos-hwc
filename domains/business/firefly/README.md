@@ -2,11 +2,11 @@
 
 ## Purpose
 
-Firefly III personal finance manager running as a Podman container, with optional Firefly-Pico mobile companion app. Provides budgeting, transaction tracking, and financial reporting via web UI.
+Firefly III personal finance manager running as a Podman container, with optional Firefly-Pico mobile companion app and a Workbench Finance explorer. Provides budgeting, transaction tracking, full-history recurring-payment review, and guarded transaction metadata edits.
 
 ## Boundaries
 
-- **Manages**: Firefly III + Firefly-Pico containers, env file generation from agenix secrets, DB grants, firewall rules
+- **Manages**: Firefly III + Firefly-Pico containers, the Firefly Explorer Unix-socket service, env file generation from agenix secrets, DB grants, firewall rules
 - **Does NOT manage**: PostgreSQL (→ `domains/data/databases/`), reverse proxy TLS termination (→ `domains/networking/`), secret declarations (→ `domains/secrets/`)
 
 ## Structure
@@ -18,7 +18,8 @@ domains/business/firefly/
 ├── README.md          # This file
 └── parts/
     ├── config.nix     # Container definitions, storage, systemd deps, firewall, validation
-    └── automation.nix # firefly-cron + firefly-digest timers
+    ├── automation.nix # firefly-cron + firefly-digest timers
+    └── explorer.nix   # Root-only socket + hardened Workbench Finance service
 ```
 
 ## Namespace
@@ -48,6 +49,16 @@ hwc.business.firefly = {
     enable = true;                  # Enabled by default
     appUrl = "https://firefly-pico.hwc.iheartwoodcraft.com";
     fireflyUrl = "http://firefly:8080";  # Container-internal
+  };
+
+  explorer = {
+    enable = true;
+    appUrl = "https://firefly-explorer.hwc.iheartwoodcraft.com";
+    assetAccountId = 12;
+    accountName = "Dad - Checking";
+    historyStart = "2019-08-19";
+    allowedLogin = "eriqueo@github";
+    patFile = "/run/agenix/firefly-explorer-pat";
   };
 
   database = {
@@ -81,6 +92,7 @@ hwc.business.firefly = {
 
 - **PostgreSQL** (`hwc.data.databases.postgresql.enable`) — auto-registers `firefly` and `firefly_pico` databases
 - **agenix secret**: `firefly-app-key` (Laravel APP_KEY, written to env file at container start)
+- **agenix secret**: `firefly-explorer-pat` (dedicated personal access token; `root:secrets`, mode `0440`)
 - **media-network** — both containers join `media` Podman network by default
 
 ## Access
@@ -90,6 +102,7 @@ hwc.business.firefly = {
 | Firefly III | `https://firefly.hwc.iheartwoodcraft.com` | 8085 |
 | Firefly-Pico | `https://firefly-pico.hwc.iheartwoodcraft.com` | 8086 |
 | Data Importer | `https://firefly-import.hwc.iheartwoodcraft.com` | 8087 |
+| Workbench Finance | `https://firefly-explorer.hwc.iheartwoodcraft.com` | root-only Unix socket |
 
 Firewall rules auto-open internal ports on `tailscale0` interface.
 
@@ -100,9 +113,12 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 - `podman-firefly-importer.service` — data importer (CSV/SimpleFIN; stateless, OAuth client authorized per browser session)
 - `firefly-cron.timer` — daily 03:10 hit on `/api/v1/cron/<token>` (recurring transactions, bill warnings, auto-budgets fire nowhere without this)
 - `firefly-digest.timer` — daily 07:15 finance digest (balances, bills due 7d, yesterday's transactions) → hwc-notify `topic=finance` → #hwc-alerts. Skips with a journal note until a PAT exists at `/run/agenix/firefly-pat` (drop `firefly-pat.age` in `domains/secrets/parts/services/` to arm it).
+- `firefly-explorer.socket` — `/run/firefly-explorer.sock`, `root:root` mode `0600`; only root-run Caddy can connect.
+- `firefly-explorer.service` — immutable explorer package; validates its token, Firefly account, UI assets, and tailscaled socket before serving. Every API request is authorized with Tailscale WhoIs. Split groups remain read-only; writes are limited to existing category/expense-account ids and existing tags.
 
 ## Changelog
 
+- 2026-09-16: Added the Workbench Finance recurring-payment explorer from the revision-locked private `pnc-statement-pipeline` flake. The default report scans Firefly history from 2019-08-19; date controls filter visible occurrences without narrowing cadence/status analysis. Caddy reaches it only through a root-owned `0600` Unix socket, API reads require the configured Tailscale identity, and exact-fingerprint writes are limited to one journal's existing category, expense account, or tags. Added a dedicated encrypted PAT instead of sharing the digest token.
 - 2026-09-15: Pinned Firefly III core 6.6.6, the minimum compatible release line for data-importer 2.3.4; importing had been blocked because core 6.4.22 was below the importer's required 6.6.0. OAuth clients and tokens must be recreated after this upgrade.
 - 2026-07-13: Automation build-out — `firefly-cron-token` secret + daily cron timer, `firefly-importer` container + `firefly-import` vhost (:8087), `firefly-digest` timer posting to hwc-notify (`finance-to-alerts` route), PAT-gated until `firefly-pat.age` is provisioned.
 
