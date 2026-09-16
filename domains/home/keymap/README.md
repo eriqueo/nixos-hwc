@@ -89,6 +89,8 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 - todui/khalt/workbench log a missing/unread `*_KEYMAP` rather than failing silent.
 
 ## Changelog
+- 2026-09-15: Add `a` → `tool:herdr` (Agents). Keybinding conflicts between
+  herdr's own chords and the Ctrl meta layer are NOT yet mapped.
 - 2026-09-15: Activate the Workbench keymap consumer with a versioned bindings
   contract and add `Space o a` for the selected-item agent action.
 - 2026-09-10: Drop the `x` → DataX hub jump. Workbench removed the hub (SRs are

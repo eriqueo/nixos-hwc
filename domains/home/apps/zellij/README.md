@@ -19,6 +19,8 @@ meta-leader which-key plugin when the unified keymap grammar is present.
 - `parts/tabs.nix` — versioned hub registry consumer + structured tool tab set (order = GoToTab indices)
 
 ## Changelog
+- 2026-09-15: Add the `agents` tool tab (herdr, order 60), started suspended so
+  opening the workbench does not attach a herdr session.
 - 2026-09-07: Consume Workbench registry v2: Brief first/landing; filter explicit
   default tabs, keep Server on demand, preserve aerc and mail as distinct targets.
 - 2026-09-04: Consume Workbench hubRegistry schema v1; derive deployment order and landing, add mail/nightly hubs, and keep aerc distinct.

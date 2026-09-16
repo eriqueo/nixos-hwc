@@ -181,7 +181,7 @@ rec {
   # The meta layer (metaLeader -> zellij `meta` mode -> one key). `target` is the
   # logical hub-page/tool to focus (mapped to the layout's tab index in
   # to-zellij.nix). Namespaced HUB jumps + TOOL jumps
-  # (t/c/m/f/e) are all disjoint from each other AND from the nav/utility letters
+  # (t/c/m/f/e/a) are all disjoint from each other AND from the nav/utility letters
   # (n/p/]/[/w/z/s/d/Q) — no internal collision.
   #--------------------------------------------------------------------------
   meta = [
@@ -198,6 +198,7 @@ rec {
     { key = "m"; intent = "mail";     desc = "Mail (aerc)";    target = "tool:aerc"; }
     { key = "f"; intent = "files";    desc = "Files (yazi)";   target = "tool:yazi"; }
     { key = "e"; intent = "edit";     desc = "Edit (nvim)";    target = "tool:nvim"; }
+    { key = "a"; intent = "agents";   desc = "Agents (herdr)"; target = "tool:herdr"; }
     # tab navigation (n/p AND ]/[ — every tool tab is single-pane, so next/prev
     # *tab* is what you actually want; pane focus lives behind the pane-picker).
     # j/k CYCLE left/right and STAY in meta mode (press repeatedly to walk the

@@ -12,6 +12,9 @@ let
     yazi = { name = "files"; order = 30; suspended = false; };
     aerc = { name = "aerc"; order = 40; suspended = true; };
     nvim = { name = "edit"; order = 50; suspended = false; };
+    # Suspended: herdr starts a server and attaches a session; do not spawn one
+    # just because the workbench opened. <ENTER> in the pane attaches.
+    herdr = { name = "agents"; order = 60; suspended = true; };
   };
   toolTabs = lib.sort (a: b: a.order < b.order)
     (lib.mapAttrsToList (target: spec: spec // {
