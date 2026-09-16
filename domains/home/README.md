@@ -50,6 +50,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-16: Workbench now uses a bounded one-shot Codex result flow, and its exact Hyprland window class suppresses background activation so aerc cannot steal the active workspace.
 - 2026-09-13: Proton Mail's plain command now owns the integrated-GPU boundary, covering Hyprland's actual login autostart instead of only the generated desktop entry and optional service.
 - 2026-09-13: Proton Mail's ordinary desktop entry now uses its integrated-GPU wrapper; its optional autostart service was not the live launch path.
 - 2026-09-13: SwayNC now uses GTK's OpenGL renderer after live follow-up showed its initially clean Vulkan process later reopened NVIDIA device descriptors when handling notifications.
