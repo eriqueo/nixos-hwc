@@ -1,7 +1,7 @@
 # domains/business/workbench — HWC Workbench hub
 #
-# The product home for the six HWC operator areas (CRM, Lead Scout, Home Scout,
-# Research Scout, Event Scout, Refinery). This module is the ONE producer of the
+# The product home for the seven HWC operator areas (CRM, Finance, Lead Scout,
+# Home Scout, Research Scout, Event Scout, Refinery). This module is the ONE producer of the
 # area registry: ids, labels, order and descriptions are declared here; each
 # area's destination is RESOLVED from hwc.networking.shared.routes rather than
 # copied, so a route rename or removal fails evaluation instead of shipping a
@@ -196,6 +196,8 @@ in
       default = [
         { id = "crm"; label = "CRM"; route = "crm";
           description = "Funnel board, follow-ups, intake"; }
+        { id = "finance"; label = "Finance"; route = "firefly-explorer";
+          description = "Recurring payments and transaction review"; }
         { id = "lead-scout"; label = "Lead Scout"; route = "lead-scout";
           description = "Lead discovery and triage"; }
         { id = "home-scout"; label = "Home Scout"; route = "home-scout";

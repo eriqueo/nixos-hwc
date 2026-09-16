@@ -51,6 +51,7 @@ domains/secrets/
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-09-16: Added `firefly-explorer-pat` under `parts/services/firefly-explorer/pat.age`, a distinct Firefly personal access token used only by the Workbench Finance explorer. It uses the generated default `root:secrets` / `0440` mount and all-host/user recipient set; plaintext was streamed from Firefly directly into age encryption, then decrypted only for token-shape validation.
 - 2026-09-08: Removed the superseded `parts/infrastructure/dx2-api-key.age`.
   DX2 now shares `parts/home/pi-dx1-api-key.age`, and the live `dx2/llm` Pi
   probe passed before removal.

@@ -120,6 +120,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Firefly Explorer — full-history recurring-payment review UI and guarded
+    # edit API. Private first-party app, pinned by flake.lock like the other
+    # shared app inputs; the server module consumes its default package.
+    pnc-statement-pipeline = {
+      url = "github:eriqueo/pnc-statement-pipeline";
+      inputs.nixpkgs.follows = "nixpkgs-stable";
+    };
+
     # aerc — forked notmuch mail TUI (which-key leader popup + msglist column
     # headers, config-gated default-off). Same shared-remote model as
     # todui/khalt/workbench: private GitHub repo via a github: input. The flake

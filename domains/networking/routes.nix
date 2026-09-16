@@ -264,6 +264,16 @@ in
       upstream = "http://127.0.0.1:8087";
     }
 
+    # Workbench Finance — full-history recurring-payment explorer. There is no
+    # TCP listener: only root-run Caddy can open the root:root 0600 socket.
+    # mkProxyBlock overwrites X-Forwarded-For with {remote}; the app maps that
+    # address through tailscaled WhoIs before allowing any /api request.
+    {
+      name = "firefly-explorer";
+      mode = "vhost";
+      upstream = "unix//run/firefly-explorer.sock";
+    }
+
     # Paperless-NGX - name-based vhost. Django validates request Origin against
     # PAPERLESS_CSRF_TRUSTED_ORIGINS, so this route and the origin built in
     # domains/business/paperless/parts/config.nix must name the same host or

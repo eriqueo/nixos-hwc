@@ -564,6 +564,26 @@
         "type": "github"
       }
     },
+    "pnc-statement-pipeline": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs-stable"
+        ]
+      },
+      "locked": {
+        "lastModified": 1789602075,
+        "narHash": "sha256-c/PTViGnj2/RPU1rl1Es7nTbBzMd7ApN5q2CJmosHw0=",
+        "owner": "eriqueo",
+        "repo": "pnc-statement-pipeline",
+        "rev": "700e90c4b66826690df8fac4e7bedde2eec1380a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "eriqueo",
+        "repo": "pnc-statement-pipeline",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "aerc": "aerc",
@@ -580,6 +600,7 @@
         "nixpkgs-stable": "nixpkgs-stable",
         "nixvirt": "nixvirt",
         "pave-query-builder": "pave-query-builder",
+        "pnc-statement-pipeline": "pnc-statement-pipeline",
         "tetro": "tetro",
         "todui": "todui",
         "workbench": "workbench",
