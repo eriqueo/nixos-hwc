@@ -47,12 +47,16 @@ let
 
     PAPERLESS_OCR_LANGUAGE=${ocrLanguages}
     PAPERLESS_OCR_OUTPUT_TYPE=${cfg.ocr.outputType}
+    PAPERLESS_ARCHIVE_FILE_GENERATION=${cfg.ocr.archiveFileGeneration}
 
-    PAPERLESS_CONSUMER_POLLING=${toString cfg.consumer.polling}
+    PAPERLESS_CONSUMER_POLLING_INTERVAL=${toString cfg.consumer.polling}
     PAPERLESS_CONSUMER_DELETE_ORIGINALS=${if cfg.consumer.deleteOriginals then "true" else "false"}
+    PAPERLESS_CONSUMER_DELETE_DUPLICATES=${lib.boolToString cfg.consumer.deleteDuplicates}
     PAPERLESS_CONSUMER_RECURSIVE=${lib.boolToString cfg.consumer.recursive}
     PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS=${lib.boolToString cfg.consumer.subdirsAsTags}
 
+    # v3 no longer infers the engine from DBHOST; without this it opens SQLite.
+    PAPERLESS_DBENGINE=postgresql
     PAPERLESS_DBHOST=${cfg.database.host}
     PAPERLESS_DBPORT=${toString cfg.database.port}
     PAPERLESS_DBNAME=${cfg.database.name}

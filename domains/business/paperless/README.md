@@ -117,6 +117,14 @@ hwc.business.paperless = {
 
 ## Changelog
 
+- 2026-09-16: Upgraded to paperless-ngx 3.1.3 (Gotenberg 8.34, the version its
+  compose file pins). 2.14's Ghostscript 10.03.1 crashed making PDF/A copies of
+  some PDFs. The env file now sets `PAPERLESS_DBENGINE=postgresql`, which v3
+  requires, and renames `CONSUMER_POLLING` to `CONSUMER_POLLING_INTERVAL`. Two new
+  options keep v2 behaviour against changed v3 defaults: `ocr.archiveFileGeneration
+  = "always"` and `consumer.deleteDuplicates = true`. v3 migrates only from 2.20.15,
+  so the database was first migrated by a one-off 2.20.15 container.
+
 - 2026-09-16: Office-document ingest and folder tags. Paperless parses only PDFs
   and images and skips other files without an error, so `.doc`/`.docx`/`.odt`/`.rtf`/`.ppt`
   in the consume dir never became documents. `officeIngest` adds Tika (text and
