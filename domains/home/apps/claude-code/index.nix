@@ -51,6 +51,15 @@ in
           "hooks/principles-primer.sh"
           "hooks/principles-gate.sh"
           "hooks/principles-lint.sh"
+          # settings.json is shared too (2026-09-16). It carried the autoMode
+          # block, guard-wrapped hook commands and model prefs on the laptop
+          # while the server ran a three-week-old copy — the heal below only
+          # ADDS wiring, so nothing converged the rest. Claude Code writes
+          # through a symlink (measured with `claude plugin enable` against a
+          # symlinked CLAUDE_CONFIG_DIR: link intact, target updated), so the
+          # live file on every host is the repo file. settings.local.json
+          # stays host-local for per-machine permission allowlists.
+          "settings.json"
         ];
         description = "Entries under repoPath to symlink into ~/.claude/ (nested paths symlink single files).";
       };
@@ -316,7 +325,10 @@ in
           if [ -n "$_tmp" ] && ${pkgs.jq}/bin/jq --slurpfile wire ${wireFile} --slurpfile enable ${enableFile} -f ${healJq} "$_src" > "$_tmp" 2>/dev/null; then
             if ! ${pkgs.diffutils}/bin/cmp -s "$_tmp" "$_s" 2>/dev/null; then
               [ -f "$_s" ] && run ${pkgs.coreutils}/bin/cp "$_s" "$_s.pre-heal.bak"
-              run ${pkgs.coreutils}/bin/mv "$_tmp" "$_s"
+              # cp, not mv: settings.json is a symlink into the shared repo
+              # (shareConfig.items) and mv would replace the link with a
+              # host-local regular file — the drift this share exists to end.
+              run ${pkgs.coreutils}/bin/cp "$_tmp" "$_s"
               echo "claude-code: gate-hook wiring healed into $_s (backup: $_s.pre-heal.bak)"
             fi
           else
