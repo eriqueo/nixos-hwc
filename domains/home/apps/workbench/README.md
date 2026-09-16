@@ -4,18 +4,21 @@
 Thin translator wiring the standalone `workbench` flake's HM module
 (`programs.workbench`) into the HWC namespace: feeds it the system palette,
 MCP gateway URL, hub/tab data, and late-bound peer launchers (mail via the
-shell's aerc alias, browser via `gpu-launch chromium-hwc-workbench`).
+shell's aerc alias, agent via the selected Codex package, browser via
+`gpu-launch chromium-hwc-workbench`).
 
 ## Boundaries
-- ✅ `hwc.home.apps.workbench.enable`; `gatewayUrl`, `offline`, `hubsDir` options; `wb-reload` binary (kills + recreates the zellij `workbench` session); staged `workbench/keymap.json` when the keymap grammar is present
+- ✅ `hwc.home.apps.workbench.enable`; `gatewayUrl`, `offline`, `hubsDir` options; `wb-reload` binary (kills + recreates the zellij `workbench` session); versioned `workbench/keymap.json`; Codex selected-item launcher
 - ✅ Tool tabs imported from `../zellij/parts/tabs.nix` so host navigation can't drift from the layout
 - ❌ The app itself lives in the `workbench` flake input (600_apps); this module only supplies values
 - ❌ Pane grid/theme belong to `domains/home/apps/zellij/`; keymap grammar to `domains/home/keymap/`
 
 ## Structure
-- `index.nix` — imports the flake's HM module; options + programs.workbench wiring, wb-reload, keymap staging, registry landing hub + shared standing-tool destinations
+- `index.nix` — imports the flake's HM module; options + programs.workbench wiring, wb-reload, versioned keymap, selected Codex provider, registry landing hub + shared standing-tool destinations
 
 ## Changelog
+- 2026-09-15: Bind the Workbench `agent` target to the configured Codex package,
+  stage the live versioned keymap contract, and include Codex in the wrapper runtime.
 - 2026-09-07: Consume Workbench registry v2: Brief first/landing; filter explicit
   default tabs, keep Server on demand, preserve aerc and mail as distinct targets.
 - 2026-09-04: Default hub and standing tools derive from the shared registry consumer; packaged TOML owns hub facts.
