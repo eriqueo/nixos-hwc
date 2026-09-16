@@ -8,7 +8,8 @@
 #
 # HOW THE TOKENS REACH HERE:
 #   khal.nix is imported by domains/mail/calendar/index.nix with
-#   `import ./parts/khal.nix { inherit lib pkgs cfg; }`. The system theme lives
+#   `import ./parts/khal.nix { inherit lib pkgs cfg defaultCalendar; }`. The
+#   system theme lives
 #   at config.hwc.home.theme.colors. So index.nix must ALSO pass `colors`:
 #     khalConfig = import ./parts/khal.nix {
 #       inherit lib pkgs cfg;
@@ -21,7 +22,7 @@
 # positions 1-2, 24-bit hex in positions 4-5); only the hex literals become
 # token lookups.
 
-{ lib, pkgs, cfg, colors ? {} }:
+{ lib, pkgs, cfg, defaultCalendar, colors ? {} }:
 let
   dataDir = "~/.local/share/vdirsyncer";
 
@@ -84,7 +85,7 @@ in
 
     [default]
     ${if cfg.radicale.enable
-      then "default_calendar = Work"   # khal names calendars by displayname
+      then "default_calendar = ${defaultCalendar}"   # khal names calendars by displayname
       else "default_calendar = 06A30686-742B-4681-BBE9-BB15C7E9A54F"}
     highlight_event_days = true
 

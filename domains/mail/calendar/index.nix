@@ -2,6 +2,7 @@
 let
   cfg = config.hwc.mail.calendar;
   radicaleCalendarIds = [ "work" "family" "personal" ];
+  primaryCalendarDisplayName = "hwc";
 
   # khalt supersedes plain khal: its package ships the fork's full `khal`/`ikhal`
   # CLI. Expose ONLY `khal`/`ikhal` here — NOT `bin/khalt`, which is owned by the
@@ -18,8 +19,8 @@ let
 
   dataDir = "~/.local/share/vdirsyncer";
 
-  # `busy` — one-liner to block time on the Work calendar the booking form
-  # reads, then
+  # `busy` — one-liner to block time on the primary business calendar the
+  # booking form reads, then
   # push to Radicale immediately so availability updates now instead of on the
   # ~15-min vdirsyncer timer.
   busyScript = pkgs.writeShellScriptBin "busy" ''
@@ -29,7 +30,7 @@ let
       echo "        busy 2026-07-20 9:00 30m Call: Alden"
       exit 1
     fi
-    ${khalCli}/bin/khal new -a Work "$@" || exit 1
+    ${khalCli}/bin/khal new -a ${lib.escapeShellArg primaryCalendarDisplayName} "$@" || exit 1
     if ${pkgs.vdirsyncer}/bin/vdirsyncer sync calendar_radicale >/dev/null 2>&1; then
       echo "✓ blocked + synced — availability is updated"
     else
@@ -74,6 +75,7 @@ let
   # fields from the active system theme (fail-soft to gruvbox literals).
   khal = import ./parts/khal.nix {
     inherit lib pkgs cfg;
+    defaultCalendar = primaryCalendarDisplayName;
     colors = (config.hwc.home.theme or {}).colors or {};
   };
   service = import ./parts/service.nix { inherit lib pkgs; };
