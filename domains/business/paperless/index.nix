@@ -124,6 +124,47 @@ in
         default = false;
         description = "Delete originals after successful import";
       };
+
+      # Subdirectory handling for bulk imports. With both on, a file dropped at
+      # consume/230_admin/housing/lease.pdf is tagged `230_admin` and `housing`.
+      # subdirsAsTags does nothing without recursive — paperless never looks
+      # below the consume root — so the assertion in parts/config.nix ties them.
+      recursive = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Consume files in subdirectories of the consume dir";
+      };
+
+      subdirsAsTags = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Tag consumed files with the names of their subdirectories";
+      };
+    };
+
+    # Office-document ingest. Paperless parses PDFs and images on its own and
+    # SKIPS everything else, silently — a .docx dropped in the consume dir is
+    # not an error, it just never becomes a document. Tika extracts the text and
+    # metadata; Gotenberg renders the file to PDF for the archive copy. Both are
+    # sidecars on media-network reached by container DNS, so they publish no host
+    # port and claim nothing in domains/networking/routes.nix.
+    officeIngest = {
+      enable = lib.mkEnableOption "Tika + Gotenberg sidecars for Office document ingest" // { default = true; };
+
+      tikaImage = lib.mkOption {
+        type = lib.types.str;
+        default = "docker.io/apache/tika:3.3.1.0";
+        description = "Apache Tika server container image";
+      };
+
+      gotenbergImage = lib.mkOption {
+        type = lib.types.str;
+        # Pinned to the version paperless-ngx 2.14 ships in its own compose file.
+        # Gotenberg's chromium/libreoffice routes have changed shape across 8.x
+        # minors; track cfg.image when bumping, not the newest tag.
+        default = "docker.io/gotenberg/gotenberg:8.7.0";
+        description = "Gotenberg container image";
+      };
     };
 
     # Mail ingest: expose Proton Bridge IMAP (loopback-only) on the podman

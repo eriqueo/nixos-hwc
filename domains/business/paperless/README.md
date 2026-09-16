@@ -19,7 +19,7 @@ domains/business/paperless/
 ├── sys.nix                # System packages + email-to-paperless command
 ├── README.md              # This file
 ├── parts/
-    ├── config.nix         # Container definition, env generation, DB grants, cleanup timer
+    ├── config.nix         # Paperless + Tika/Gotenberg containers, env generation, cleanup timer
     ├── directories.nix    # tmpfiles rules for storage directories (SOLE producer)
     └── receipts.nix       # IMAP proxy (mail ingest) + phone-receipts → consume mover
 └── scripts/
@@ -65,6 +65,12 @@ hwc.business.paperless = {
 
   consumer.polling = 60;
   consumer.deleteOriginals = false;
+  consumer.recursive = true;        # scan consume/ subdirectories
+  consumer.subdirsAsTags = true;    # consume/a/b/x.pdf → tags a, b
+
+  officeIngest.enable = true;       # Tika + Gotenberg sidecars (.doc/.docx/.odt/.rtf/.ppt)
+  officeIngest.tikaImage = "docker.io/apache/tika:3.3.1.0";
+  officeIngest.gotenbergImage = "docker.io/gotenberg/gotenberg:8.7.0";
 
   admin.user = "eric";
   admin.email = "eric@hwc.local";
@@ -106,10 +112,22 @@ hwc.business.paperless = {
 
 - `paperless-env.service` — generates env file from agenix secrets (runs before container)
 - `podman-paperless.service` — main Paperless-NGX container
+- `podman-paperless-tika.service` / `podman-paperless-gotenberg.service` — Office-ingest sidecars (ordered before paperless, not required by it)
 - `paperless-cleanup.service` / `paperless-cleanup.timer` — daily staging/export cleanup
 
 ## Changelog
 
+- 2026-09-16: Office-document ingest and folder tags. Paperless parses only PDFs
+  and images and skips other files without an error, so `.doc`/`.docx`/`.odt`/`.rtf`/`.ppt`
+  in the consume dir never became documents. `officeIngest` adds Tika (text and
+  metadata) and Gotenberg (PDF render) as sidecars on media-network, reached by
+  container DNS with no host ports. Paperless is ordered after them but does not
+  `require` them: a failed sidecar stops Office imports, not the document store.
+  Gotenberg runs with JavaScript off and a `file:///tmp` allow-list because its
+  chromium route renders untrusted `.eml`. `consumer.recursive` and
+  `consumer.subdirsAsTags` let a bulk import carry its source folders as tags;
+  the receipts mover and `email-to-paperless` both write to the consume root, so
+  they gain no tags.
 - 2026-09-14: Added `email-to-paperless` for aerc's opened-message `p` key. It
   parses mail without running HTML, renders deterministic PDF bytes for checksum
   dedupe, writes in staging, and atomically renames into consume. The source mail

@@ -7,6 +7,15 @@ let
   envFile = "${envDir}/paperless.env";
 
   ocrLanguages = lib.concatStringsSep "+" cfg.ocr.languages;
+
+  # Sidecar container names. These are also the DNS names paperless dials, so
+  # the name and the endpoint below derive from one binding rather than two
+  # string literals that can drift apart.
+  tikaName = "paperless-tika";
+  gotenbergName = "paperless-gotenberg";
+  tikaPort = 9998;
+  gotenbergPort = 3000;
+
   # Paperless' own origin. This is NOT cosmetic: Django validates the Origin of
   # every unsafe request against PAPERLESS_CSRF_TRUSTED_ORIGINS below, so if
   # this drifts from the host Caddy actually serves paperless under, GETs keep
@@ -41,6 +50,8 @@ let
 
     PAPERLESS_CONSUMER_POLLING=${toString cfg.consumer.polling}
     PAPERLESS_CONSUMER_DELETE_ORIGINALS=${if cfg.consumer.deleteOriginals then "true" else "false"}
+    PAPERLESS_CONSUMER_RECURSIVE=${lib.boolToString cfg.consumer.recursive}
+    PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS=${lib.boolToString cfg.consumer.subdirsAsTags}
 
     PAPERLESS_DBHOST=${cfg.database.host}
     PAPERLESS_DBPORT=${toString cfg.database.port}
@@ -48,6 +59,10 @@ let
     PAPERLESS_DBUSER=${cfg.database.user}
 
     PAPERLESS_REDIS=redis://${cfg.redis.host}:${toString cfg.redis.port}
+    ${lib.optionalString cfg.officeIngest.enable ''
+    PAPERLESS_TIKA_ENABLED=1
+    PAPERLESS_TIKA_ENDPOINT=http://${tikaName}:${toString tikaPort}
+    PAPERLESS_TIKA_GOTENBERG_ENDPOINT=http://${gotenbergName}:${toString gotenbergPort}''}
     EOF
 
     chown root:secrets ${envFile}
@@ -103,6 +118,45 @@ in
       cpus = cfg.resources.cpus;
     })
 
+    # Office-ingest sidecars. They live here beside the paperless container
+    # rather than in a parts/tika.nix of their own: they have no independent
+    # lifecycle, no consumer other than paperless, and their endpoints are the
+    # same env file generated twenty lines up. A separate file would put the
+    # two halves of one binding in two places (Charter §0.13).
+    (lib.mkIf cfg.officeIngest.enable (lib.mkMerge [
+      (helpers.mkContainer {
+        name = tikaName;
+        image = cfg.officeIngest.tikaImage;
+        networkMode = cfg.network.mode;
+        gpuEnable = false;
+        timeZone = config.time.timeZone or "UTC";
+        ports = [];   # media-network DNS only; nothing to claim in routes.nix
+        memory = "2g";
+        cpus = "2.0";
+      })
+
+      (helpers.mkContainer {
+        name = gotenbergName;
+        image = cfg.officeIngest.gotenbergImage;
+        networkMode = cfg.network.mode;
+        gpuEnable = false;
+        timeZone = config.time.timeZone or "UTC";
+        ports = [];
+        memory = "2g";
+        cpus = "2.0";
+        # Gotenberg's chromium route renders .eml. Left at its defaults it will
+        # fetch remote content — tracking pixels and scripts out of untrusted
+        # mail — so JavaScript is off and the allow-list is restricted to the
+        # temp file Gotenberg was handed. Upstream paperless-ngx ships the same
+        # two flags for the same reason.
+        cmd = [
+          "gotenberg"
+          "--chromium-disable-javascript=true"
+          "--chromium-allow-list=file:///tmp/.*"
+        ];
+      })
+    ]))
+
     {
       # Storage dirs (incl. the bind-mount sources) are declared once, in
       # parts/directories.nix. A second producer for the same four paths used
@@ -126,8 +180,17 @@ in
 
       # Ensure container waits for env file
       systemd.services."podman-paperless" = {
+        # Ordering only for the sidecars, deliberately not `requires`. Paperless
+        # dials Tika/Gotenberg per consumed document, not at startup, so a
+        # sidecar that is slow or down must degrade to "Office files don't
+        # import" — not take the whole document store offline. Coupling the
+        # lifecycles is how this module got a 1600-restart crash loop before.
         after = [ "network-online.target" "postgresql.service" "paperless-env.service" ]
-          ++ lib.optional (cfg.network.mode == "media") "init-media-network.service";
+          ++ lib.optional (cfg.network.mode == "media") "init-media-network.service"
+          ++ lib.optionals cfg.officeIngest.enable [
+            "podman-${tikaName}.service"
+            "podman-${gotenbergName}.service"
+          ];
         requires = [ "paperless-env.service" ];
         wants = [ "network-online.target" ];
       };
@@ -207,6 +270,17 @@ in
         {
           assertion = cfg.ocr.languages != [];
           message = "paperless OCR languages list must not be empty";
+        }
+        {
+          # The sidecars are addressed by podman DNS name. In host mode there is
+          # no such DNS, and paperless would silently fall back to skipping every
+          # Office file — the exact failure officeIngest exists to remove.
+          assertion = !cfg.officeIngest.enable || cfg.network.mode == "media";
+          message = "paperless officeIngest requires network.mode = \"media\" (Tika/Gotenberg are resolved by container DNS)";
+        }
+        {
+          assertion = !cfg.consumer.subdirsAsTags || cfg.consumer.recursive;
+          message = "paperless consumer.subdirsAsTags requires consumer.recursive (subdirectories are never scanned otherwise)";
         }
       ];
     }
