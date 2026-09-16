@@ -51,21 +51,39 @@ let
   areasJson = pkgs.writeText "hwc-workbench-areas.json" (builtins.toJSON registry);
 
   esc = lib.escapeXML;
+  # Glyph = initials of the label ("Lead Scout" → LS, "Refinery" → RE), so a
+  # new area needs no icon asset and siblings stay distinguishable.
+  glyph = a:
+    let
+      words = lib.filter (w: w != "") (lib.splitString " " a.label);
+      initials =
+        if builtins.length words >= 2
+        then lib.concatMapStrings (w: builtins.substring 0 1 w) (lib.take 2 words)
+        else builtins.substring 0 2 a.label;
+    in esc (lib.toUpper initials);
   renderArea = a:
     if a.available then ''
       <li>
         <a class="area" href="${esc a.href}">
+          <span class="area-glyph" aria-hidden="true">${glyph a}</span>
           <span class="area-label">${esc a.label}</span>
           <span class="area-desc">${esc a.description}</span>
-          <span class="area-host">${esc a.route}.${esc vhostDomain}</span>
+          <span class="area-foot">
+            <span class="area-host">${esc a.route}.${esc vhostDomain}</span>
+            <span class="area-go" aria-hidden="true">open →</span>
+          </span>
         </a>
       </li>
     '' else ''
       <li>
         <span class="area area-unavailable" aria-disabled="true">
+          <span class="area-glyph" aria-hidden="true">${glyph a}</span>
           <span class="area-label">${esc a.label}</span>
           <span class="area-desc">${esc a.description}</span>
-          <span class="area-host">not deployed on this host</span>
+          <span class="area-foot">
+            <span class="area-host">not deployed on this host</span>
+            <span class="area-go">unavailable</span>
+          </span>
         </span>
       </li>
     '';
@@ -78,6 +96,9 @@ let
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#1d2021">
     <title>${esc cfg.productName}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
     <link rel="stylesheet" href="/palette.css">
     <link rel="stylesheet" href="/hub.css">
     </head>
@@ -86,8 +107,9 @@ let
       <header class="hub-head">
         <span class="hub-mark" aria-hidden="true">H</span>
         <div>
-          <h1>${esc cfg.productName}</h1>
-          <p class="hub-sub">switch between areas · each opens in place</p>
+          <p class="hub-eyebrow">heartwood craft · operator tools</p>
+          <h1>${esc cfg.productName}<em>.</em></h1>
+          <p class="hub-sub">Choose an area. Each one opens in place at its own address.</p>
         </div>
       </header>
       <nav aria-label="Workbench areas">

@@ -28,6 +28,7 @@ business/
 ```
 
 ## Changelog
+- 2026-09-16: `workbench/` hub redesigned after Eric found the first cut too small: larger identity block and headline, 200 px cards with initials glyphs (derived from the label, no icon asset), 26 px display labels, hover lift, ellipsized hostnames, one column under 640 px, Playfair/DM Sans/JetBrains Mono loaded like the scout apps. Still tokens-only CSS and zero runtime JavaScript.
 - 2026-09-16: New `workbench/` module (`hwc.business.workbench`) — the one
   producer of the HWC Workbench area registry (CRM, Lead Scout, Home Scout,
   Research Scout, Event Scout, Refinery; DataX Monitor asserted out). Each
