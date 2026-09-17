@@ -1,5 +1,11 @@
 # domains/home/apps/codex/index.nix
-{ config, lib, pkgs, inputs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  inputs,
+  ...
+}:
 let
   cfg = config.hwc.home.apps.codex;
   codexPkg = if cfg.package != null then cfg.package else (pkgs.codex or null);
@@ -14,7 +20,11 @@ let
   # once as AGENTS.md.pre-render.bak.
   agentsRender = pkgs.writeShellApplication {
     name = "codex-agents-render";
-    runtimeInputs = with pkgs; [ coreutils gawk diffutils ];
+    runtimeInputs = with pkgs; [
+      coreutils
+      gawk
+      diffutils
+    ];
     text = ''
       REPO=${lib.escapeShellArg repo}
       OUT="$HOME/.codex/AGENTS.md"
@@ -51,9 +61,12 @@ let
     name = "codex-hooks-trust";
     # nodejs: the npm codex is a `#!/usr/bin/env node` launcher, and activation
     # PATH carries no node (measured on hwc-server: it fell through to 0.92).
-    runtimeInputs = [ pkgs.python3 pkgs.nodejs ];
+    runtimeInputs = [
+      pkgs.python3
+      pkgs.nodejs
+    ];
     text = ''
-      exec python3 ${./hooks-trust.py} "$HOME/.npm-global/bin/codex" ${codexPkg}/bin/codex
+      exec python3 ${./hooks-trust.py} "$@" "$HOME/.npm-global/bin/codex" ${codexPkg}/bin/codex
     '';
   };
 in
@@ -72,7 +85,7 @@ in
 
     env = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
-      default = {};
+      default = { };
       description = "Additional environment variables for Codex CLI";
     };
 
@@ -128,59 +141,66 @@ in
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf cfg.enable (lib.mkMerge [
-    {
-      home.packages = [ codexPkg ];
+  config = lib.mkIf cfg.enable (
+    lib.mkMerge [
+      {
+        home.packages = [ codexPkg ];
 
-      home.sessionVariables = cfg.env;
+        home.sessionVariables = cfg.env;
 
-      # Create config directory
-      xdg.configFile."codex/.keep".text = "";
+        # Create config directory
+        xdg.configFile."codex/.keep".text = "";
 
-      # Claude already consumes the shared skill tree directly. Codex has its
-      # own skill root, so expose only the cross-harness orchestration skills as
-      # out-of-store symlinks instead of copying a second source tree.
-      home.file = lib.listToAttrs (
-        (map (skill:
-          lib.nameValuePair ".codex/skills/${skill}" {
-            source = config.lib.file.mkOutOfStoreSymlink "${cfg.sharedSkillSource}/${skill}";
+        # Claude already consumes the shared skill tree directly. Codex has its
+        # own skill root, so expose only the cross-harness orchestration skills as
+        # out-of-store symlinks instead of copying a second source tree.
+        home.file = lib.listToAttrs (
+          (map (
+            skill:
+            lib.nameValuePair ".codex/skills/${skill}" {
+              source = config.lib.file.mkOutOfStoreSymlink "${cfg.sharedSkillSource}/${skill}";
+            }
+          ) cfg.sharedSkills)
+          ++ (map (
+            skill:
+            lib.nameValuePair ".agents/skills/${skill}" {
+              source = config.lib.file.mkOutOfStoreSymlink "${cfg.sharedSkillSource}/${skill}";
+            }
+          ) cfg.workflowSkills)
+        );
+      }
+
+      (lib.mkIf cfg.shareHarness {
+        home.packages = [
+          agentsRender
+          hooksTrust
+        ];
+
+        # One hooks.json for every host. herdr's own entry is in it, so
+        # `herdr integration install codex` must not be run against the link.
+        home.file.".codex/hooks.json".source =
+          config.lib.file.mkOutOfStoreSymlink "${repo}/codex/hooks.json";
+
+        home.activation.codexSharedHarness = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+          run ${agentsRender}/bin/codex-agents-render \
+            || echo "codex: AGENTS.md render failed" >&2
+          run ${hooksTrust}/bin/codex-hooks-trust \
+            || echo "codex: shared hooks are not all trusted — run codex-hooks-trust" >&2
+        '';
+
+      })
+
+      #========================================================================
+      # VALIDATION
+      #========================================================================
+      {
+        assertions = [
+          {
+            assertion = codexPkg != null;
+            message = "codex package must be available";
           }
-        ) cfg.sharedSkills)
-        ++ (map (skill:
-          lib.nameValuePair ".agents/skills/${skill}" {
-            source = config.lib.file.mkOutOfStoreSymlink "${cfg.sharedSkillSource}/${skill}";
-          }
-        ) cfg.workflowSkills)
-      );
-    }
-
-    (lib.mkIf cfg.shareHarness {
-      home.packages = [ agentsRender hooksTrust ];
-
-      # One hooks.json for every host. herdr's own entry is in it, so
-      # `herdr integration install codex` must not be run against the link.
-      home.file.".codex/hooks.json".source =
-        config.lib.file.mkOutOfStoreSymlink "${repo}/codex/hooks.json";
-
-      home.activation.codexSharedHarness = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-        run ${agentsRender}/bin/codex-agents-render \
-          || echo "codex: AGENTS.md render failed" >&2
-        run ${hooksTrust}/bin/codex-hooks-trust \
-          || echo "codex: shared hooks are not all trusted — run codex-hooks-trust" >&2
-      '';
-
-    })
-
-    #========================================================================
-    # VALIDATION
-    #========================================================================
-    {
-      assertions = [
-        {
-          assertion = codexPkg != null;
-          message = "codex package must be available";
-        }
-      ];
-    }
-  ]);
+        ];
+      }
+    ]
+  );
 }

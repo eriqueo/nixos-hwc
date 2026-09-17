@@ -16,7 +16,7 @@ for file in system-policy claude-instructions codex-hooks codex-skill pi-instruc
   printf 'pinned\n' > "$STORE/$file"
 done
 
-for command in claude codex pi herdr agent-state-validate; do
+for command in claude codex pi herdr agent-state-validate codex-hooks-trust; do
   cat > "$BIN/$command" <<'EOF'
 #!/usr/bin/env bash
 exit 0

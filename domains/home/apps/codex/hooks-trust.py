@@ -10,7 +10,7 @@ the same server (config/value/write) only for hooks whose source is the user
 hooks.json. Project and plugin hooks are never touched.
 
 Lives beside index.nix, not inline, so it can run by hand against a scratch
-CODEX_HOME. Usage: hooks-trust.py <codex-binary>...  (first that answers wins)
+CODEX_HOME. Usage: hooks-trust.py [--check] <codex-binary>...  (first that answers wins)
 Exit: 0 every user hook trusted · 1 a hook is still untrusted or no binary answered
 """
 import json
@@ -59,7 +59,7 @@ def rpc_session(binary):
     return proc, send, recv
 
 
-def main(binaries):
+def main(binaries, check_only=False):
     home = os.environ.get("CODEX_HOME", os.path.expanduser("~/.codex"))
     link = os.path.join(home, "hooks.json")
     # hooks.json is a symlink into ~/.claude-config; accept either spelling of its source.
@@ -87,6 +87,13 @@ def main(binaries):
                 print(f"hooks-trust: {binary} lists no hooks from {link}", file=sys.stderr)
                 return 1
             untrusted = [h for h in hooks if h.get("trustStatus") in ("untrusted", "modified")]
+            if check_only:
+                still = [h["key"] for h in hooks
+                         if h.get("trustStatus") not in ("trusted", "managed")]
+                print(f"hooks-trust: {len(hooks)} user hooks, {len(still)} untrusted ({binary})")
+                for key in still:
+                    print(f"hooks-trust: still untrusted: {key}", file=sys.stderr)
+                return 0 if not still else 1
             next_id = 3
             for hook in untrusted:
                 send({"id": next_id, "method": "config/value/write", "params": {
@@ -117,4 +124,8 @@ def main(binaries):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    arguments = sys.argv[1:]
+    check = bool(arguments and arguments[0] == "--check")
+    if check:
+        arguments = arguments[1:]
+    sys.exit(main(arguments, check_only=check))

@@ -68,6 +68,7 @@ doctor_local() {
   fi
 
   if agent-state-validate >/dev/null; then ok 'mutable state ownership'; else fail 'mutable state ownership'; fi
+  if codex-hooks-trust --check >/dev/null; then ok 'Codex hooks trusted'; else fail 'Codex hooks untrusted or unverifiable'; fi
   if systemctl --user --quiet is-active agent-state-sync.timer; then ok 'agent-state-sync.timer active'; else fail 'agent-state-sync.timer inactive'; fi
   for command in claude codex pi herdr; do check_command "$command"; done
 

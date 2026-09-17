@@ -36,8 +36,8 @@ policy, updates the Nix pin, builds and switches both hosts, and finishes with
 the fleet doctor. `agent-harness sync` validates and synchronizes mutable state.
 
 The doctor verifies actual provider paths, system and Home Manager ownership
-manifests, state shape, commands, and the sync timer. A dirty authoring checkout
-is a warning; a runtime reference to it is a failure.
+manifests, state shape, Codex hook trust, commands, and the sync timer. A dirty
+authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
