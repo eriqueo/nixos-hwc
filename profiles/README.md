@@ -34,6 +34,9 @@ mail/        home.nix             # server — hwc.mail menu (Phase C)
 
 ## Changelog
 
+- 2026-09-17: `base/home.nix` narrows `claude-code.shareConfig.extraConfigDirs`
+  to `.claude_dx2_home`. DX1 is retired, so its Claude home no longer
+  receives shared links.
 - 2026-09-17: `base/home.nix` defaults
   `claude-code.shareConfig.extraConfigDirs` to the T3 DX1/DX2 Claude homes.
   The laptop and server both run those provider instances, so the value sits

@@ -32,9 +32,8 @@ let dictationModel = "base.en"; in
     vesktop.enable = true;
     qbittorrent.enable = true;
     aider.enable = true;
+    # shareConfig (and its two-way sync) defaults on with the package.
     claude-code.enable = true;
-    # Zero-touch receive: pull server-side ~/.claude-config edits every 15 min.
-    claude-code.shareConfig.autoPull.enable = true;
     claude-desktop.enable = true;
     # This machine's own tailnet address, pinned so the phone's endpoint does not
     # depend on whether tailscale0 had an address when the app started. See the

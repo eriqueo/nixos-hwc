@@ -10,6 +10,31 @@ let
         "${cfg.shareConfig.repoPath}/claimcheck/bin/claimcheck" "$@"
     '';
   };
+
+  # Every Claude config dir that receives the shared items and memory links.
+  configDirs = map (dir: "${config.home.homeDirectory}/${dir}")
+    ([ ".claude" ] ++ cfg.shareConfig.extraConfigDirs);
+
+  postMergeScript = pkgs.writeShellScript "claude-config-post-merge" ''
+    rc=0
+    ${lib.concatMapStringsSep "\n" (cmd: "${cmd} || rc=1") cfg.shareConfig.sync.postMerge}
+    exit $rc
+  '';
+
+  # Two-way sync + memory link layer. The logic is config-sync.sh, beside this
+  # file, so config-sync.test.sh exercises the same bytes the unit runs.
+  configSync = pkgs.writeShellApplication {
+    name = "claude-config-sync";
+    runtimeInputs = with pkgs; [ git coreutils util-linux gawk findutils diffutils openssh ];
+    text = ''
+      CC_HOST="$(uname -n)"
+      export CC_HOST
+      export CC_REPO=${lib.escapeShellArg cfg.shareConfig.repoPath}
+      export CC_CONFIG_DIRS=${lib.escapeShellArg (lib.concatStringsSep ":" configDirs)}
+      export CC_POST_MERGE=${postMergeScript}
+      exec bash ${./config-sync.sh} "$@"
+    '';
+  };
 in
 {
   #==========================================================================
@@ -63,29 +88,42 @@ in
         ];
         description = "Entries under repoPath to symlink into ~/.claude/ (nested paths symlink single files).";
       };
-      # Extra Claude config directories that get the same `items`. T3 Code runs
-      # its DataX provider instances with CLAUDE_CONFIG_DIR set to their own
-      # homePath (e.g. ~/.claude_dx1_home), and Claude Code reads skills,
-      # CLAUDE.md, hooks and settings ONLY from that directory. Found empty on
-      # hwc-server 2026-09-17: those instances reported zero user skills while
-      # the default instance reported all of them. Only the shared items are
-      # linked; credentials, sessions and .claude.json stay per-directory.
+      # Extra Claude config directories that get the same `items` and memory
+      # links. T3 Code runs its DX2 provider instance with CLAUDE_CONFIG_DIR set
+      # to its own homePath (~/.claude_dx2_home), and Claude Code reads skills,
+      # CLAUDE.md, hooks, settings and memories ONLY from that directory. Found
+      # empty on hwc-server 2026-09-17. Credentials, sessions and .claude.json
+      # stay per-directory.
       extraConfigDirs = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        example = [ ".claude_dx1_home" ".claude_dx2_home" ];
-        description = "Home-relative Claude config directories (CLAUDE_CONFIG_DIR targets) that receive the same shareConfig.items symlinks as ~/.claude.";
+        example = [ ".claude_dx2_home" ];
+        description = "Home-relative Claude config directories (CLAUDE_CONFIG_DIR targets) that receive the same shareConfig.items symlinks and memory links as ~/.claude.";
       };
-      autoPull = {
+      # Two-way sync replaces the 2026-07 pull-only timer. Pull-only kept
+      # hand edits safe but left every host-written fact stranded: on
+      # 2026-09-16 the laptop was 8 commits ahead with 12 dirty files and the
+      # server held MISTAKES.md entries and memories nobody else could see.
+      # The unit commits ONLY data paths (MISTAKES.md, projects/*/memory),
+      # merges without autostash so git refuses to touch a dirty hand edit,
+      # and pushes. Hand edits stay the author's to commit.
+      sync = {
         enable = lib.mkOption {
           type = lib.types.bool;
-          default = false;
-          description = "Run a systemd --user timer that fast-forward-pulls the config repo so other hosts' commits arrive zero-touch.";
+          # Every host that shares the repo also writes to it; a sharing host
+          # without sync is the stranded-facts state this replaced.
+          default = cfg.shareConfig.enable;
+          description = "Run a systemd --user timer that links per-project memories into the repo, commits memories and MISTAKES.md, merges the hub, and pushes.";
         };
         interval = lib.mkOption {
           type = lib.types.str;
-          default = "15min";
-          description = "systemd OnUnitActiveSec cadence for the auto-pull timer.";
+          default = "5min";
+          description = "systemd OnUnitActiveSec cadence for the sync timer.";
+        };
+        postMerge = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = "Commands run after a merge changed the tree (e.g. regenerate derived Codex files). A failure is logged, never fatal.";
         };
       };
       wireGateHooks = lib.mkOption {
@@ -174,30 +212,31 @@ in
       ) ([ ".claude" ] ++ cfg.shareConfig.extraConfigDirs));
     })
 
-    # Optional zero-touch receive: fast-forward-pull the config repo on a timer.
-    # Pull-only (never auto-commits/pushes) so a dirty working tree of in-progress
-    # skill edits is never clobbered — a non-ff state just makes the unit no-op.
-    (lib.mkIf (cfg.shareConfig.enable && cfg.shareConfig.autoPull.enable) {
-      systemd.user.services.claude-config-pull = {
-        Unit.Description = "Fast-forward-pull the shared claude-config repo";
+    # Memory links on every activation, so a host is linked before its first
+    # timer run. Non-fatal: a missing clone must not fail the generation.
+    (lib.mkIf cfg.shareConfig.enable {
+      home.packages = [ configSync ];
+      home.activation.claudeMemoryLinks = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        run ${configSync}/bin/claude-config-sync link \
+          || echo "claude-code: memory link layer failed — see claude-config-sync link" >&2
+      '';
+    })
+
+    # Two-way sync of the shared repo. A failure leaves the unit failed, which is
+    # the signal: `systemctl --user status claude-config-sync`.
+    (lib.mkIf (cfg.shareConfig.enable && cfg.shareConfig.sync.enable) {
+      systemd.user.services.claude-config-sync = {
+        Unit.Description = "Two-way sync of the shared claude-config repo (memories, mistakes ledger)";
         Service = {
           Type = "oneshot";
-          # Fetch, then fast-forward ONLY when strictly behind. A diverged/ahead
-          # or dirty tree is a clean no-op (exit 0) — matching the receive-only
-          # intent — instead of `pull --ff-only`'s loud exit-128 every interval.
-          ExecStart = pkgs.writeShellScript "claude-config-pull" ''
-            set -eu
-            ${pkgs.git}/bin/git -C ${cfg.shareConfig.repoPath} fetch --quiet
-            ${pkgs.git}/bin/git -C ${cfg.shareConfig.repoPath} merge --ff-only '@{u}' \
-              || echo "claude-config: non-ff (diverged/ahead/dirty) — skipping pull"
-          '';
+          ExecStart = "${configSync}/bin/claude-config-sync sync";
         };
       };
-      systemd.user.timers.claude-config-pull = {
-        Unit.Description = "Periodic pull of the shared claude-config repo";
+      systemd.user.timers.claude-config-sync = {
+        Unit.Description = "Periodic two-way sync of the shared claude-config repo";
         Timer = {
           OnBootSec = "2min";
-          OnUnitActiveSec = cfg.shareConfig.autoPull.interval;
+          OnUnitActiveSec = cfg.shareConfig.sync.interval;
           Persistent = true;
         };
         Install.WantedBy = [ "timers.target" ];
@@ -364,8 +403,8 @@ in
           message = "hwc.home.apps.claude-code.shareConfig.items must list at least one entry when shareConfig is enabled.";
         }
         {
-          assertion = cfg.shareConfig.autoPull.enable -> cfg.shareConfig.enable;
-          message = "hwc.home.apps.claude-code.shareConfig.autoPull requires shareConfig.enable = true.";
+          assertion = cfg.shareConfig.sync.enable -> cfg.shareConfig.enable;
+          message = "hwc.home.apps.claude-code.shareConfig.sync requires shareConfig.enable = true.";
         }
       ];
     }

@@ -33,10 +33,8 @@
   # Claude Code: server runs claude from an ad-hoc npm global, so do NOT enable
   # the Nix package/Obsidian-cert here. Opt into the shared, version-controlled
   # skill/agent/command/CLAUDE.md set only — symlinked from ~/.claude-config.
-  hwc.home.apps.claude-code.shareConfig = {
-    enable = true;
-    autoPull.enable = true;  # ff-pull ~/.claude-config from the bare repo (zero-touch receive)
-  };
+  # shareConfig.sync follows enable: two-way sync with the bare hub.
+  hwc.home.apps.claude-code.shareConfig.enable = true;
 
   # T3 Code, headless shape. Same fork and same module as the laptop, minus
   # Electron: `t3 serve` on loopback, fronted by the Caddy vhost

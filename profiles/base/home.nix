@@ -55,9 +55,9 @@
       pi.enable = lib.mkDefault true;
       aider.enable = lib.mkDefault true;
       gemini-cli.enable = lib.mkDefault true;
-      # T3's DX1/DX2 provider instances run Claude with these as
-      # CLAUDE_CONFIG_DIR. Inert unless the host enables shareConfig.
-      claude-code.shareConfig.extraConfigDirs = lib.mkDefault [ ".claude_dx1_home" ".claude_dx2_home" ];
+      # T3's DX2 provider instance runs Claude with this as CLAUDE_CONFIG_DIR.
+      # Inert unless the host enables shareConfig. DX1 is retired.
+      claude-code.shareConfig.extraConfigDirs = lib.mkDefault [ ".claude_dx2_home" ];
     };
   };
 
