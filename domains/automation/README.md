@@ -77,6 +77,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-09-16: refinery board renders the shared HWC Workbench shell. `engine/src/shells/shell.css.ts` and `palette.css.ts` are verbatim copies of `scout/packages/ui/src/styles/{shell,palette}.css` (String.raw modules because the board is one esbuild bundle and its tests run tsc output; hwc-ui lint L6 checks drift via `npm run lint:ui`). `layout()` emits the `wb-*` rail (Work views = Board/Overnight/Finished/gauntlet views, Tools = Reviews/Reference), the topbar, and a registry-driven area switcher; the board's short-name color vars now alias the palette. The registry is injected by Nix — `REFINERY_WORKBENCH_AREAS_FILE=${hwc.business.workbench.site}/areas.json` — and parsed once at startup (`shells/workbench.ts`); absent or malformed, the switcher still offers Refinery and the Workbench home. Routes and POST handlers unchanged.
 - 2026-09-07: n8n alert integrity — Frigate's Discord webhook is now injected as
   `DISCORD_WEBHOOK_FRIGATE_URL` from the existing agenix `discord-webhook-frigate`
   (new `hwc.automation.n8n.secrets.discordWebhookFrigateFile`), the tracked

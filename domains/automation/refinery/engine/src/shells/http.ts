@@ -24,8 +24,9 @@ import { ledgerAgentRuns, readDx1CasesFile, readDx1LedgerEntries, readFleetSnaps
 import { gauntletInvestigationProjects, readRunBundle, readRunFile } from "../sources/gauntlet-investigations.js";
 import { GAUNTLET_VIEWS, GauntletView, buildGauntletExport, gauntletViewByKey, gauntletViewForId } from "../sources/gauntlet-views.js";
 import { syncBrainIdeas, makeIdeaItem, ideaId, isBrainIdea, appendBrainIdea, removeBrainIdea, promoteBrainIdea } from "../sources/brain-ideas.js";
-import { renderBoard, renderDx1CasesPanel, renderDx1Fleet, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderGauntletBoard, renderGauntletDetail, renderProjectDetail, renderReport, renderReference, renderReviews, renderReviewDetail, HOPPER_STAGE_KEYS } from "./render.js";
+import { renderBoard, renderDx1CasesPanel, renderDx1Fleet, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderGauntletBoard, renderGauntletDetail, renderProjectDetail, renderReport, renderReference, renderReviews, renderReviewDetail, HOPPER_STAGE_KEYS, setWorkbenchRegistry } from "./render.js";
 import { FileReviewsStore, resolveReviewsDir } from "../stores/reviews-store.js";
+import { loadWorkbenchRegistry } from "./workbench.js";
 
 export interface HttpShellConfig {
   port: number;
@@ -51,6 +52,7 @@ export interface HttpShellConfig {
   nativeRepo?: string; // default target repo for native pipelines (REFINERY_NATIVE_REPO); payload.repo overrides
   nativeTimeoutMs?: number; // headless-claude timeout for a native run (REFINERY_NATIVE_TIMEOUT)
   archiveAfterDays?: number; // passed items older than this leave the board for /finished (REFINERY_ARCHIVE_DAYS; default 7)
+  workbenchAreasFile?: string; // Nix-rendered areas.json (REFINERY_WORKBENCH_AREAS_FILE); absent → switcher degrades to Refinery + home
 }
 
 export function configFromEnv(): HttpShellConfig {
@@ -77,6 +79,7 @@ export function configFromEnv(): HttpShellConfig {
     nativeRepo: process.env.REFINERY_NATIVE_REPO,
     nativeTimeoutMs: process.env.REFINERY_NATIVE_TIMEOUT ? Number(process.env.REFINERY_NATIVE_TIMEOUT) : undefined,
     archiveAfterDays: process.env.REFINERY_ARCHIVE_DAYS ? Number(process.env.REFINERY_ARCHIVE_DAYS) : undefined,
+    workbenchAreasFile: process.env.REFINERY_WORKBENCH_AREAS_FILE,
     clock: () => new Date().toISOString(),
   };
 }
@@ -107,6 +110,7 @@ export function createShell(cfg: HttpShellConfig) {
   const store = new MarkdownItemStore(cfg.itemsDir);
   const catalog = new PipelineCatalog({ dir: cfg.pipelinesDir, statePath: cfg.pipelineStatePath });
   const domains = loadDomains(cfg.domainsFile);
+  setWorkbenchRegistry(loadWorkbenchRegistry(cfg.workbenchAreasFile));
 
   // Morning PR reviews are written by the morning-review CLI. This HTTP shell
   // reads them and owns one human action: requeueing the exact source card.

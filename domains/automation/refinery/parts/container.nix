@@ -23,6 +23,11 @@ let
   vaultMount = "/mnt/refinery/vault";
   srMount = "/mnt/refinery/sr-gauntlet";
   dx1Mount = "/mnt/refinery/dx1-gauntlet";
+  # Workbench area registry: NixOS (hwc.business.workbench) is the one producer
+  # of the area list; the hub's rendered areas.json is bind-mounted read-only so
+  # the board's area switcher renders the same registry every other area uses.
+  workbench = config.hwc.business.workbench;
+  areasMount = "/mnt/refinery/workbench/areas.json";
 in
 {
   config = lib.mkIf (cfg.enable && cfg.mode == "container") (lib.mkMerge [
@@ -56,7 +61,8 @@ in
         ++ lib.optionals (cfg.dx1GauntletDir != null) [
           "${cfg.dx1GauntletDir}/investigations:${dx1Mount}/investigations:ro"
           "${cfg.dx1GauntletDir}/state:${dx1Mount}/state:ro"
-        ];
+        ]
+        ++ lib.optionals workbench.enable [ "${workbench.site}/areas.json:${areasMount}:ro" ];
       # Secrets and host-specific values (DataX secret, GitHub token, DX1 key,
       # REFINERY_REPOS, git identity, board URL) come from the agenix env file.
       environmentFiles = [ config.age.secrets."refinery-env".path ];
@@ -65,7 +71,8 @@ in
         REFINERY_NATIVE_DRAIN = "inline";
       } // lib.optionalAttrs (cfg.vaultDir != null) { REFINERY_VAULT_DIR = vaultMount; }
         // lib.optionalAttrs (cfg.srGauntletDir != null) { REFINERY_SR_GAUNTLET_DIR = srMount; }
-        // lib.optionalAttrs (cfg.dx1GauntletDir != null) { REFINERY_DX1_GAUNTLET_DIR = dx1Mount; };
+        // lib.optionalAttrs (cfg.dx1GauntletDir != null) { REFINERY_DX1_GAUNTLET_DIR = dx1Mount; }
+        // lib.optionalAttrs workbench.enable { REFINERY_WORKBENCH_AREAS_FILE = areasMount; };
     })
     {
       # The state dir is shared with native mode; keep it owned by eric so a

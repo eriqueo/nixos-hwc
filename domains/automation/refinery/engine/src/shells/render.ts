@@ -17,6 +17,9 @@ import { Dx1CasesFile, FleetMember, FleetRates, FleetSnapshot, FleetTemplate, ca
 import { ENHANCER_SCRIPT } from "./enhance.js";
 import { GAUNTLET_VIEWS, GauntletRunBundle, GauntletView, detailsExportMd, gauntletViewByKey, tabMd } from "../sources/gauntlet-views.js";
 import { mdToHtml } from "./markdown.js";
+import { PALETTE_CSS } from "./palette.css.js";
+import { SHELL_CSS } from "./shell.css.js";
+import { REFINERY_AREA_ID, WORKBENCH_HOME, type WorkbenchRegistry } from "./workbench.js";
 
 function esc(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
@@ -87,20 +90,18 @@ function ageLabel(ms: number): string {
   return h >= 1 ? `${h}h` : "new";
 }
 
-const STYLE = `<style>
-  /* HWC brand palette (domains/home/theme/palettes/hwc.nix) — gruvbox-anchored,
-     blue-shifted, copper-orange accent. bg0..3 depth, fg0..3, semantic status. */
+// The palette and the Workbench shell are vendored from scout/packages/ui
+// (palette.css.ts, shell.css.ts; hwc-ui lint L6 checks drift). The board's own
+// short-name vars are aliases onto the palette, so its content renders in the
+// same colors as every other Workbench area.
+const STYLE = `<style>${PALETTE_CSS}${SHELL_CSS}
   :root{
-    --bg:#1d2021;--panel:#282828;--elev:#2c3338;--line:#32373c;
-    --ink:#ebdbb2;--fg:#d5c4a1;--dim:#a7aaad;--muted:#50626f;
-    --acc:#d08770;--acc2:#5e81ac;--ok:#a3be8c;--warn:#cf995f;--err:#bf616a;
+    --bg:var(--color-base-900);--panel:var(--color-base-800);--elev:var(--color-base-700);--line:var(--color-base-600);
+    --ink:var(--color-cream-100);--fg:var(--color-cream-200);--dim:var(--color-cream-400);--muted:var(--color-base-500);
+    --acc:var(--color-copper);--acc2:var(--color-blue);--ok:var(--color-green);--warn:var(--color-gold);--err:var(--color-coral);
   }
-  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 ui-sans-serif,system-ui,sans-serif}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--font-body)}
   a{color:var(--fg);text-decoration:none}
-  header{padding:12px 18px;border-bottom:1px solid var(--line);display:flex;gap:16px;align-items:baseline}
-  header h1{margin:0;font-size:17px;color:var(--ink)}
-  nav a{color:var(--dim);margin-right:14px;font-size:13px}
-  nav a.active{color:var(--ink);border-bottom:2px solid var(--acc);padding-bottom:2px}
   button{background:var(--elev);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer}
   button:hover{border-color:var(--acc)}
   .btn{display:inline-flex;align-items:center;background:var(--elev);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px}.btn.primary{background:color-mix(in srgb,var(--acc) 18%,var(--elev));border-color:var(--acc)}.btn:hover{border-color:var(--acc);color:var(--ink)}
@@ -288,19 +289,82 @@ const STYLE = `<style>
   .exec-fold>summary::-webkit-details-marker{display:none}.exec-fold>summary::before{content:"▸ ";color:var(--acc);margin-right:5px}.exec-fold[open]>summary::before{content:"▾ "}
   .decision-note{border-left:3px solid var(--warn);padding:8px 11px;background:color-mix(in srgb,var(--warn) 7%,transparent);color:var(--fg);font-size:12px;margin:7px 0}
   .card-actions{margin-top:8px;display:flex;gap:8px;align-items:center}.card-actions>.btn{padding:4px 8px}.card-more{flex:1}.card-more>summary{cursor:pointer;list-style:none;color:var(--dim);font-size:11px;min-height:30px;display:flex;align-items:center}.card-more>summary::-webkit-details-marker{display:none}.card-more>summary::before{content:"＋ ";color:var(--acc)}
-  @media(max-width:760px){header{align-items:flex-start;flex-direction:column;gap:8px}nav{display:flex;overflow-x:auto;width:100%}nav a{min-height:44px;display:flex;align-items:center;white-space:nowrap}.exec-page{padding:12px}.exec-hero{grid-template-columns:1fr}.exec-stat{text-align:left}.wrap{padding:8px 0}.grid{grid-template-columns:1fr;padding:0}.ccrow button,.ccrow select,.btn{min-height:44px}}
+  @media(max-width:760px){.exec-page{padding:12px}.exec-hero{grid-template-columns:1fr}.exec-stat{text-align:left}.wrap{padding:8px 0}.grid{grid-template-columns:1fr;padding:0}.ccrow button,.ccrow select,.btn{min-height:44px}}
 </style>`;
 
+// Rail items are the board's routes; the order here is the rail order.
+// Work views = the boards; Tools = reference surfaces.
+const RAIL_WORK: { href: string; label: string; key: string; glyph: string }[] = [
+  { href: "/", label: "Board", key: "flow", glyph: "▦" },
+  { href: "/nightly", label: "Overnight", key: "nightly", glyph: "☾" },
+  { href: "/finished", label: "Finished", key: "finished", glyph: "✓" },
+  ...GAUNTLET_VIEWS.map((v) => ({ href: `/${v.key}`, label: v.label, key: v.key, glyph: "◇" })),
+];
+const RAIL_TOOLS: { href: string; label: string; key: string; glyph: string }[] = [
+  { href: "/reviews", label: "Reviews", key: "reviews", glyph: "☰" },
+  { href: "/reference", label: "Reference", key: "reference", glyph: "?" },
+];
+
+let workbench: WorkbenchRegistry | null = null;
+/** Bound once at startup by the HTTP shell (registry parsed at the edge). */
+export function setWorkbenchRegistry(registry: WorkbenchRegistry | null): void {
+  workbench = registry;
+}
+
+function railItem(item: { href: string; label: string; key: string; glyph: string }, active: string): string {
+  const current = active === item.key ? ' aria-current="page"' : "";
+  return `<a class="wb-rail-item" href="${item.href}" title="${esc(item.label)}"${current}><span class="wb-rail-icon" aria-hidden="true">${item.glyph}</span><span class="wb-rail-text">${esc(item.label)}</span></a>`;
+}
+
+// One <select> driven by the registry: the current area is the selected
+// (no-op) option, every other area navigates to its own origin, and the
+// Workbench home is always offered — even when the registry is unavailable.
+function areaSelect(): string {
+  const home = workbench?.home ?? WORKBENCH_HOME;
+  const listed = workbench?.areas.some((a) => a.id === REFINERY_AREA_ID) ?? false;
+  const options = [
+    listed ? "" : `<option value="" selected>Refinery</option>`,
+    ...(workbench?.areas ?? []).map((a) =>
+      a.id === REFINERY_AREA_ID
+        ? `<option value="" selected>${esc(a.label)}</option>`
+        : `<option value="${esc(a.href ?? "")}"${a.available && a.href ? "" : " disabled"}>${esc(a.label)}${a.available ? "" : " (not deployed)"}</option>`,
+    ),
+    `<option value="${esc(home)}">${workbench ? "Workbench home" : "Workbench home (registry unavailable)"}</option>`,
+  ].join("");
+  return `<label class="wb-rail-area"><span class="wb-rail-label">Workbench area</span><select class="wb-area-select" aria-label="Workbench area" data-registry="${workbench ? "ready" : "unavailable"}" onchange="if(this.value)window.location.assign(this.value)">${options}</select></label>`;
+}
+
+// Collapse toggle: the same per-origin preference key every Workbench area uses.
+const RAIL_SCRIPT = `<script>(function(){var s=document.querySelector('.wb-shell'),b=document.querySelector('.wb-rail-toggle'),k='hwc-workbench:rail-collapsed';if(!s||!b)return;function ap(c){s.dataset.rail=c?'collapsed':'expanded';b.setAttribute('aria-label',c?'Expand navigation':'Collapse navigation');b.title=b.getAttribute('aria-label');b.textContent=c?'\u203a':'\u2039'}var c=false;try{c=localStorage.getItem(k)==='true'}catch(e){}ap(c);b.addEventListener('click',function(){c=!c;try{localStorage.setItem(k,String(c))}catch(e){}ap(c)})})();</script>`;
+
 function layout(active: string, body: string): string {
-  const tab = (href: string, label: string, key: string) =>
-    `<a href="${href}" class="${active === key ? "active" : ""}">${label}</a>`;
+  const home = workbench?.home ?? WORKBENCH_HOME;
   return `<!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Refinery</title>${STYLE}</head><body>
-<header><h1>🛠 Refinery</h1><nav>
-  ${tab("/", "Board", "flow")}${tab("/nightly", "Overnight", "nightly")}${tab("/finished", "Finished", "finished")}${GAUNTLET_VIEWS.map((v) => tab(`/${v.key}`, v.label, v.key)).join("")}${tab("/reviews", "Reviews", "reviews")}${tab("/reference", "Reference", "reference")}
-</nav></header>
+<title>Refinery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+${STYLE}</head><body>
+<div class="wb-shell" data-rail="expanded" data-scroll="page">
+<aside class="wb-rail" aria-label="Refinery navigation">
+  <div class="wb-rail-head">
+    <a class="wb-rail-brand" href="${esc(home)}" aria-label="HWC Workbench home"><span class="wb-rail-mark" aria-hidden="true">H</span><span class="wb-rail-brand-copy"><strong>Workbench</strong><small>heartwood craft</small></span></a>
+    <button type="button" class="wb-rail-toggle" aria-label="Collapse navigation" title="Collapse navigation">‹</button>
+  </div>
+  ${areaSelect()}
+  <nav class="wb-rail-nav" aria-label="Refinery navigation">
+    <div class="wb-rail-group" role="group" aria-labelledby="wb-rail-group-work"><span class="wb-rail-label" id="wb-rail-group-work">Work views</span>${RAIL_WORK.map((i) => railItem(i, active)).join("")}</div>
+    <div class="wb-rail-group wb-rail-group-tools" role="group" aria-labelledby="wb-rail-group-tools"><span class="wb-rail-label" id="wb-rail-group-tools">Tools</span>${RAIL_TOOLS.map((i) => railItem(i, active)).join("")}</div>
+  </nav>
+</aside>
+<div class="wb-body">
+<header class="wb-topbar"><div class="wb-topbar-title"><span class="wb-eyebrow">heartwood craft / automation</span><h1 class="wb-title">Refinery</h1></div></header>
+<main class="wb-main">
 ${body}
+</main>
+</div>
+</div>
+${RAIL_SCRIPT}
 ${ENHANCER_SCRIPT}
 </body></html>`;
 }

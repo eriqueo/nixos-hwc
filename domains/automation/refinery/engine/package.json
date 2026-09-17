@@ -7,7 +7,8 @@
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",
     "test": "rm -rf dist && tsc -p tsconfig.json && node --test --enable-source-maps 'dist/test/**/*.test.js'",
-    "morning-review": "node dist/src/cli/morning-review.js"
+    "morning-review": "node dist/src/cli/morning-review.js",
+    "lint:ui": "bash $HOME/.claude/skills/hwc-ui/lint.sh . --src src"
   },
   "dependencies": {
     "yaml": "2.5.1",

@@ -905,7 +905,7 @@ test("renderReference renders the glossary + the live pipelines", () => {
   assert.ok(html.includes("App Refinement") && html.includes("Project Ideation"), "pipeline labels");
   assert.ok(html.includes("chestertons-fence") && html.includes("premortem"), "gates listed");
   assert.ok(html.includes(">native<") || html.includes("native"), "executor listed");
-  assert.ok(html.includes("class=\"active\">Reference"), "Reference nav active");
+  assert.ok(/aria-current="page"[^<]*<span class="wb-rail-icon"[^>]*>[^<]*<\/span><span class="wb-rail-text">Reference<\/span>/.test(html), "Reference nav active");
 });
 
 function prReviewFixture(over: Partial<PrReview> = {}): PrReview {
@@ -935,7 +935,7 @@ test("renderReviews is an executive decision surface, not an expanded evidence d
   assert.ok(html.includes("Review &amp; merge"), "merge-ready card has one clear primary action");
   assert.ok(html.includes('action="/review/requeue"'), "non-merge decision has a requeue action");
   assert.ok(html.includes("<details") && html.includes("Handled"), "terminal work is collapsed by default");
-  assert.ok(html.includes("class=\"active\">Reviews"), "Reviews nav active");
+  assert.ok(/aria-current="page"[^<]*<span class="wb-rail-icon"[^>]*>[^<]*<\/span><span class="wb-rail-text">Reviews<\/span>/.test(html), "Reviews nav active");
 
   const empty = renderReviews([]);
   assert.ok(empty.includes("no PR reviews yet"), "empty state");
