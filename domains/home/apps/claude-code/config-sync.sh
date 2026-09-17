@@ -101,9 +101,12 @@ captured() {
 migrate_dir() { # <real memory dir> <store memory dir>
   local d="$1" t="$2" rel backup ok
   mkdir -p "$t"
+  # A memory dir can be its own git repo (datax-main was, 2026-08-17..09-17).
+  # Its .git never enters the store: copied in, it would make git record the
+  # store as a gitlink and ship none of the files.
   while IFS= read -r -d '' rel; do
     capture "$d/$rel" "$t/$rel"
-  done < <(cd "$d" && find . -type f -print0)
+  done < <(cd "$d" && find . -path ./.git -prune -o -type f -print0)
   backup="$d.pre-sync-$(date +%Y%m%d%H%M%S)"
   mv "$d" "$backup" || { warn "could not move $d aside"; return; }
   if ! ln -s "$t" "$d"; then
@@ -114,7 +117,11 @@ migrate_dir() { # <real memory dir> <store memory dir>
   while IFS= read -r -d '' rel; do
     captured "$backup/$rel" "$t/$rel" || capture "$backup/$rel" "$t/$rel"
     captured "$backup/$rel" "$t/$rel" || ok=0
-  done < <(cd "$backup" && find . -type f -print0)
+  done < <(cd "$backup" && find . -path ./.git -prune -o -type f -print0)
+  if [ -e "$backup/.git" ]; then
+    ok=0
+    warn "$d was its own git repo; its history stays in $backup/.git (fold it in by hand)"
+  fi
   if [ "$ok" = 1 ]; then
     rm -rf -- "$backup"
   else
@@ -158,6 +165,11 @@ link_layer
 # ---- commit data paths ------------------------------------------------------
 
 DATA=(MISTAKES.md projects)
+nested=$(find projects -mindepth 2 -name .git 2>/dev/null | head -n 5)
+if [ -n "$nested" ]; then
+  warn "refusing to commit: nested git repo in the memory store (would become a gitlink): $nested"
+  exit 1
+fi
 {
   # log-mistake holds this lock while it rewrites the ledger.
   exec 8>"$CC_REPO/MISTAKES.md.lock"

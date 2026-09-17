@@ -105,6 +105,23 @@ check "failure names the blocking file"            "rg -q 'skill.md' '$W/A.err'"
 check "hand edit untouched"                        "rg -q 'local draft' '$W/A/repo/skill.md'"
 check "hand edit never auto-committed"             "! git -C '$W/A/repo' log -p --all | rg -q 'local draft'"
 
+echo "nested git repos"
+q "$W/A/repo" checkout -- skill.md
+NG="$W/A/claude/projects/-home-eric-nested/memory"
+mkdir -p "$NG"
+printf -- '- [n](n.md) — n\n' > "$NG/MEMORY.md"
+git -C "$NG" init -q; q "$NG" add -A; q "$NG" commit -m own-history
+run A sync; rc=$?
+NS="$W/A/repo/projects/-home-eric-nested/memory"
+check "memory from a nested repo reaches the store" "[ $rc = 0 ] && [ -f '$NS/MEMORY.md' ]"
+check "nested .git never copied into the store"     "[ ! -e '$NS/.git' ]"
+check "files committed, not a gitlink"               "git -C '$W/A/repo' ls-files -s projects/-home-eric-nested/memory | rg -q '^100644'"
+check "backup with history kept"                     "compgen -G '$NG.pre-sync-*/.git' >/dev/null"
+check "keeping it is reported"                       "rg -q 'its own git repo' '$W/A.err'"
+git -C "$NS" init -q
+run A sync; rc=$?
+check "store containing a .git refuses to commit"    "[ $rc = 1 ] && rg -q 'nested git repo' '$W/A.err'"
+
 echo
 echo "pass=$PASS fail=$FAIL"
 [ "$FAIL" = 0 ]
