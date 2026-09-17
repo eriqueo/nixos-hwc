@@ -55,8 +55,8 @@ in
     shareConfig = {
       enable = lib.mkOption {
         type = lib.types.bool;
-        default = cfg.enable;
-        description = "Symlink ~/.claude/{skills,agents,commands,CLAUDE.md,engineering-principles} from the shared claude-config git repo. Defaults to the package enable, but can be turned on standalone (e.g. hwc-server).";
+        default = false;
+        description = "Legacy live-repo sharing. The agent-harness module supersedes this option.";
       };
       repoPath = lib.mkOption {
         type = lib.types.str;

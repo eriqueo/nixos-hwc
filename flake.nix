@@ -29,6 +29,13 @@
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-25.11";
 
+    # Static agent policy and adapters. Mutable memories and the mistakes
+    # ledger live in ~/.agent-state and never enter this Nix input.
+    agent-harness = {
+      url = "git+ssh://hwc-server/home/eric/git/claude-config.git?ref=refs/heads/feat/agent-harness-v2";
+      flake = false;
+    };
+
     nixvirt = {
         url = "github:AshleyYakeley/NixVirt";
         inputs.nixpkgs.follows = "nixpkgs";

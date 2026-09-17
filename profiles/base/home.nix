@@ -48,6 +48,7 @@
 
     # CLI apps
     apps = {
+      agent-harness.enable = lib.mkDefault true;
       gpg.enable = lib.mkDefault true;
       yazi.enable = lib.mkDefault true;
       herdr.enable = lib.mkDefault true;
@@ -55,9 +56,6 @@
       pi.enable = lib.mkDefault true;
       aider.enable = lib.mkDefault true;
       gemini-cli.enable = lib.mkDefault true;
-      # T3's DX2 provider instance runs Claude with this as CLAUDE_CONFIG_DIR.
-      # Inert unless the host enables shareConfig. DX1 is retired.
-      claude-code.shareConfig.extraConfigDirs = lib.mkDefault [ ".claude_dx2_home" ];
     };
   };
 

@@ -108,6 +108,8 @@ Bump `version` + both hashes in `parts/package.nix`.
 
 ## Changelog
 
+- 2026-09-17: Build Pi's global context from the Nix-pinned harness and its shared standing instructions.
+
 - 2026-09-11: Made Pi the bounded DX2 worker lane. Removed DX1, DeepSeek, and
   frontier models from Nix-owned routing. Added strict DX2 subagent scope,
   disabled external frontier profiles, and capped concurrency and fan-out.

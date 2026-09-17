@@ -111,6 +111,8 @@ in
   hwc.system.hardware.enable = true;
   hwc.system.hardware.monitoring.enable = true;
 
+  hwc.system.apps.agent-harness.enable = lib.mkDefault true;
+
   # Backup — defaults off, machines enable per-need.
   # Value defaults (retention, sources, excludes, schedule, paths) live as
   # option defaults in domains/data/backup/index.nix; this role only flips

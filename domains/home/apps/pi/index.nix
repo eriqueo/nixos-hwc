@@ -16,7 +16,7 @@
 #     (lastChangelogVersion, trust decisions, UI prefs); a store symlink
 #     would make every launch re-nag the changelog and drop trust state.
 #     Nix reconciles routing keys; pi owns unrelated runtime state.
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, inputs, ... }:
 let
   cfg = config.hwc.home.apps.pi;
   piPkg = if cfg.package != null then cfg.package else pkgs.callPackage ./parts/package.nix { };
@@ -191,7 +191,10 @@ in
 
     contextFile = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
-      default = ./parts/AGENTS.md;
+      default = pkgs.writeText "pi-agent-harness.md" ''
+        ${builtins.readFile (inputs.agent-harness + "/pi/AGENTS.md")}
+        ${builtins.readFile (inputs.agent-harness + "/standing-instructions.md")}
+      '';
       description = ''
         Global instructions, installed as ~/.pi/agent/AGENTS.md. Set to null to
         install none.

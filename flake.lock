@@ -68,6 +68,23 @@
         "type": "github"
       }
     },
+    "agent-harness": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789672543,
+        "narHash": "sha256-yYrCoKyRpQVD/jvzUaTB7/Q1F+HJmIGq7vz0aUoZkpU=",
+        "ref": "refs/heads/feat/agent-harness-v2",
+        "rev": "5db302d8093409374c2c0b4b289f5c3ba7b5586d",
+        "revCount": 141,
+        "type": "git",
+        "url": "ssh://hwc-server/home/eric/git/claude-config.git"
+      },
+      "original": {
+        "ref": "refs/heads/feat/agent-harness-v2",
+        "type": "git",
+        "url": "ssh://hwc-server/home/eric/git/claude-config.git"
+      }
+    },
     "bloxels-cv": {
       "inputs": {
         "nixpkgs": [
@@ -589,6 +606,7 @@
         "aerc": "aerc",
         "agenix": "agenix",
         "agenix-stable": "agenix-stable",
+        "agent-harness": "agent-harness",
         "bloxels-cv": "bloxels-cv",
         "claude-cowork": "claude-cowork",
         "codex": "codex",

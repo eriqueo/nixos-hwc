@@ -48,11 +48,14 @@ let
       cfg.desktop.electronPackage
       pkgs.coreutils
       pkgs.nodejs
+      pkgs.systemd
     ];
     text = ''
       REPO=${lib.escapeShellArg cfg.repo}
       MAIN="$REPO/apps/desktop/dist-electron/main.cjs"
       START="$REPO/apps/desktop/scripts/start-electron.mjs"
+
+      agent-harness-doctor >/dev/null || echo "t3code: agent harness health check failed; run agent-harness doctor" >&2
 
       if [ ! -f "$MAIN" ]; then
         echo "t3code: $MAIN is missing — the fork is not built." >&2
@@ -108,11 +111,14 @@ let
     runtimeInputs = [
       pkgs.nodejs
       pkgs.coreutils
+      pkgs.systemd
     ];
     text = ''
       REPO=${lib.escapeShellArg cfg.repo}
       BIN="$REPO/apps/server/dist/bin.mjs"
       CLIENT="$REPO/apps/server/dist/client/index.html"
+
+      agent-harness-doctor >/dev/null || echo "t3-serve: agent harness health check failed; run agent-harness doctor" >&2
 
       for artifact in "$BIN" "$CLIENT"; do
         if [ ! -f "$artifact" ]; then

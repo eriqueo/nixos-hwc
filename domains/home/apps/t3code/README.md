@@ -175,6 +175,8 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
+- 2026-09-17: Desktop and server launchers run the shared harness doctor as a warning preflight.
+
 - 2026-09-15: Added `desktop.lanHost` (`T3CODE_DESKTOP_LAN_HOST`), and set it to
   `100.71.213.18` on hwc-laptop. The desktop app resolves its network exposure
   ONCE at bootstrap from a single `os.networkInterfaces()` read, with no watcher
