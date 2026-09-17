@@ -48,6 +48,8 @@ let
     PAPERLESS_OCR_LANGUAGE=${ocrLanguages}
     PAPERLESS_OCR_OUTPUT_TYPE=${cfg.ocr.outputType}
     PAPERLESS_ARCHIVE_FILE_GENERATION=${cfg.ocr.archiveFileGeneration}
+    ${lib.optionalString cfg.ocr.continueOnSoftRenderError ''
+    PAPERLESS_OCR_USER_ARGS={"continue_on_soft_render_error":true}''}
 
     PAPERLESS_CONSUMER_POLLING_INTERVAL=${toString cfg.consumer.polling}
     PAPERLESS_CONSUMER_DELETE_ORIGINALS=${if cfg.consumer.deleteOriginals then "true" else "false"}

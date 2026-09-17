@@ -113,6 +113,19 @@ in
         description = "OCR output format (pdf, pdfa, pdfa-2)";
       };
 
+      # Ghostscript refuses to write a PDF/A copy of a PDF that breaks the
+      # PDF/A rules — two Cancer Cell papers carry images with `Interpolate
+      # true`, which PDF/A forbids — and ocrmypdf then fails the whole import.
+      # This tells ocrmypdf to keep going after such a rejection, so the file
+      # becomes a document. Only the archive copy can differ from the source;
+      # the original file is stored either way. Upstream names this setting as
+      # the fix for "Ghostscript PDF/A rendering failed" (docs/troubleshooting.md).
+      continueOnSoftRenderError = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Import a PDF even when Ghostscript rejects its PDF/A archive copy";
+      };
+
       # v3 default is "auto", which skips the archive copy for born-digital PDFs.
       # "always" keeps the v2 behaviour, where every document got a PDF/A archive.
       archiveFileGeneration = lib.mkOption {
