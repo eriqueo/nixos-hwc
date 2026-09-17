@@ -117,6 +117,13 @@ hwc.business.paperless = {
 
 ## Changelog
 
+- 2026-09-16: `ocr.continueOnSoftRenderError` (on by default) sets
+  `PAPERLESS_OCR_USER_ARGS={"continue_on_soft_render_error":true}`. Ghostscript
+  10.05.1 refuses to write a PDF/A copy of a file that breaks PDF/A rules — two
+  Cancer Cell papers use images with `Interpolate true` — and ocrmypdf then failed
+  the whole import, so the document never existed. Only the archive copy can now
+  differ from the source; the original is stored either way.
+
 - 2026-09-16: Upgraded to paperless-ngx 3.1.3 (Gotenberg 8.34, the version its
   compose file pins). 2.14's Ghostscript 10.03.1 crashed making PDF/A copies of
   some PDFs. The env file now sets `PAPERLESS_DBENGINE=postgresql`, which v3
