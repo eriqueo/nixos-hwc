@@ -112,9 +112,11 @@
   networking.hostName = "hwc-server";
   networking.hostId = "8425e349";
 
-  # Verified refinery release built from eriqueo/refinery commit 3a74db3d.
+  # Verified refinery release built from eriqueo/refinery commit 39846f5
+  # (shared Workbench shell; built locally with deploy/build-image.sh because
+  # the repo's GitHub Actions was blocked by account billing on 2026-09-17).
   # Keep this immutable release until the next tested image replaces it.
-  hwc.automation.refinery.image = "localhost/refinery:3a74db3d-docker";
+  hwc.automation.refinery.image = "localhost/refinery:39846f5-docker";
   hwc.automation.refinery.imagePull = "never";
 
   # Lead Scout — Facebook group lead scraper/classifier, MCP + HTTP on port 8420
