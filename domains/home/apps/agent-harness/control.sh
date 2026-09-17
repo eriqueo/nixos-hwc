@@ -129,7 +129,7 @@ publish_preflight() {
   [ "$(git -C "$SOURCE" branch --show-current)" = main ] || { printf 'agent-harness: static policy must be on main\n' >&2; return 1; }
   [ "$(git -C "$NIXOS" branch --show-current)" = main ] || { printf 'agent-harness: nixos-hwc must be on main\n' >&2; return 1; }
 
-  "$SOURCE/bin/harness-policy-check"
+  (cd "$SOURCE" && bin/harness-policy-check)
   git -C "$SOURCE" fetch github refs/heads/main:refs/remotes/github/main
   git -C "$SOURCE" merge-base --is-ancestor github/main HEAD || { printf 'agent-harness: static policy is behind github/main\n' >&2; return 1; }
 

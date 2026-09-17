@@ -81,6 +81,7 @@ git -C "$NIXOS_REPO" config user.email test@example.invalid
 mkdir -p "$SOURCE_REPO/bin"
 cat > "$SOURCE_REPO/bin/harness-policy-check" <<'EOF'
 #!/usr/bin/env bash
+[ "$PWD" = "$(git rev-parse --show-toplevel)" ]
 exit 0
 EOF
 chmod +x "$SOURCE_REPO/bin/harness-policy-check"
