@@ -25,3 +25,4 @@ starting a T3 or Herdr session. Run `agent-harness sync` for immediate state syn
 
 - 2026-09-17: Added the shared control plane, separate mutable state sync,
   machine-wide Claude settings, provider health checks, and interactive CLI.
+- 2026-09-17: Quoted interactive command assignments for shellcheck compliance.

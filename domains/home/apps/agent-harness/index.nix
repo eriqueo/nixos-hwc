@@ -43,7 +43,7 @@ let
       if [ -z "$command" ] && [ -t 0 ]; then
         printf '1 status\n2 doctor\n3 sync\n4 static diff\n> '
         read -r choice
-        case "$choice" in 1) command=status;; 2) command=doctor;; 3) command=sync;; 4) command=diff;; *) exit 2;; esac
+        case "$choice" in 1) command="status";; 2) command="doctor";; 3) command="sync";; 4) command="diff";; *) exit 2;; esac
       fi
       case "$command" in
         status) systemctl --user status agent-state-sync.timer --no-pager; git -C ${lib.escapeShellArg cfg.stateDir} status --short --branch ;;
