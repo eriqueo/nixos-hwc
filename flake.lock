@@ -71,11 +71,11 @@
     "agent-harness": {
       "flake": false,
       "locked": {
-        "lastModified": 1789672543,
-        "narHash": "sha256-yYrCoKyRpQVD/jvzUaTB7/Q1F+HJmIGq7vz0aUoZkpU=",
+        "lastModified": 1789673108,
+        "narHash": "sha256-HvXNMj8yZ74eVBB7n7I+GJ6eZQR5hZAjhj6/unI/qE8=",
         "ref": "refs/heads/feat/agent-harness-v2",
-        "rev": "5db302d8093409374c2c0b4b289f5c3ba7b5586d",
-        "revCount": 141,
+        "rev": "f836d08bc05984b3f939edca74100ae9190c6d9f",
+        "revCount": 142,
         "type": "git",
         "url": "ssh://hwc-server/home/eric/git/claude-config.git"
       },
