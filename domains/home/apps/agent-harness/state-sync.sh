@@ -45,7 +45,10 @@ link_memories() {
         rmdir "$source" 2>/dev/null || true
       fi
       if [ -d "$target" ]; then
-        [ -L "$source" ] || ln -s "$target" "$source"
+        if [ -L "$source" ] && [ "$(readlink "$source")" != "$target" ]; then
+          unlink "$source"
+        fi
+        [ -e "$source" ] || ln -s "$target" "$source"
       fi
     done
 
@@ -55,6 +58,9 @@ link_memories() {
       [[ "$slug" == *-tmp-* ]] && continue
       mkdir -p "$config/projects/$slug"
       source="$config/projects/$slug/memory"
+      if [ -L "$source" ] && [ "$(readlink "$source")" != "$target" ]; then
+        unlink "$source"
+      fi
       [ -e "$source" ] || ln -s "$target" "$source"
     done
   done

@@ -22,6 +22,12 @@ test -L "$ROOT/config/projects/demo/memory"
 test "$(readlink "$ROOT/config/projects/demo/memory")" = "$ROOT/state/projects/demo/memory"
 test "$(cat "$ROOT/state/projects/demo/memory/local.md")" = local
 
+unlink "$ROOT/config/projects/demo/memory"
+ln -s "$ROOT/retired/projects/demo/memory" "$ROOT/config/projects/demo/memory"
+AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
+  bash "$(dirname "$0")/state-sync.sh" link
+test "$(readlink "$ROOT/config/projects/demo/memory")" = "$ROOT/state/projects/demo/memory"
+
 AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
   bash "$(dirname "$0")/state-sync.sh" sync
 git -C "$ROOT/state" status --porcelain | test ! -s /dev/stdin
