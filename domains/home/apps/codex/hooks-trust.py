@@ -72,6 +72,7 @@ def main(binaries):
             send({"id": 1, "method": "initialize",
                   "params": {"clientInfo": {"name": "hwc-hooks-trust", "version": "1"}}})
             if recv(1) is None:
+                print(f"hooks-trust: {binary} did not answer initialize", file=sys.stderr)
                 continue
             send({"method": "initialized"})
             send({"id": 2, "method": "hooks/list", "params": {"cwds": [os.path.expanduser("~")]}})

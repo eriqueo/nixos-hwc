@@ -48,7 +48,9 @@ let
   # the laptop's 0.146 matched the hash 0.154 computes).
   hooksTrust = pkgs.writeShellApplication {
     name = "codex-hooks-trust";
-    runtimeInputs = [ pkgs.python3 ];
+    # nodejs: the npm codex is a `#!/usr/bin/env node` launcher, and activation
+    # PATH carries no node (measured on hwc-server: it fell through to 0.92).
+    runtimeInputs = [ pkgs.python3 pkgs.nodejs ];
     text = ''
       exec python3 ${./hooks-trust.py} "$HOME/.npm-global/bin/codex" ${codexPkg}/bin/codex
     '';
