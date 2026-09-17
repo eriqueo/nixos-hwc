@@ -8,10 +8,11 @@ Installs the OpenAI Codex CLI (stock `pkgs.codex` by default, overridable via `p
 - ❌ Does not manage API keys/auth or any `config.toml` contents inside `~/.config/codex/`; the pinned package is NOT the default (server intentionally uses stock pkgs.codex).
 
 ## Structure
-- `index.nix` — options (`enable`, `package`, `env`, shared skill source/list), install, config dir, selected skill symlinks, assertion.
+- `index.nix` — options (`enable`, `package`, `env`, shared skill source/list, `workflowSkills`), install, config dir, selected skill symlinks under `~/.codex/skills` and workflow skill symlinks under `~/.agents/skills`, assertion.
 - `parts/package.nix` — optional pinned codex 0.146.0 derivation from the upstream static-musl release tarball.
 
 ## Changelog
+- 2026-09-17: Added `workflowSkills`, linking `stepwise-refinement`, `chestertons-fence`, `premortem` and `datax-sr-triage` into `~/.agents/skills`. claude-config's `codex-workflow-start.sh` and `principles-lint.sh` both name that path, but only hwc-laptop had it, built by hand. Codex threads served from hwc-server had none of the four. An existing hand-made entry on the laptop is moved aside with HM's `.backup` suffix. HM-only → `hms`.
 - 2026-09-15: Exposed `project-closeout` so Codex can verify project goals and request an explicit worktree disposition independently of handoff. HM-only → `hms`.
 - 2026-09-11: Exposed `dx2-evidence` as the explicit read-only Pi worker skill; `delegate` remains the Claude↔Codex cross-audit path. HM-only → `hms`.
 - 2026-08-31: Exposed the shared `delegate` skill to Codex alongside Herdr and Project Director, enabling bounded native Claude Code, Codex, and DX1 workers from T3 sessions that lack Herdr pane context. HM-only → `hms`.

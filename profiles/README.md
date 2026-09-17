@@ -34,6 +34,11 @@ mail/        home.nix             # server — hwc.mail menu (Phase C)
 
 ## Changelog
 
+- 2026-09-17: `base/home.nix` defaults
+  `claude-code.shareConfig.extraConfigDirs` to the T3 DX1/DX2 Claude homes.
+  The laptop and server both run those provider instances, so the value sits
+  here once instead of in two machine files. It is inert on hosts without
+  `shareConfig.enable`.
 - 2026-07-29: the HM 26.05 stateVersion-default pins (`gtk.gtk4.theme`,
   `wayland.windowManager.hyprland.configType`,
   `xdg.userDirs.setSessionVariables`) moved from `desktop/home.nix` to

@@ -40,6 +40,22 @@ in
       ];
       description = "Shared skills exposed to Codex from sharedSkillSource; the source files stay single-copy.";
     };
+
+    # The engineering workflow skills live at ~/.agents/skills, the documented
+    # Codex user-skill root. claude-config's codex-workflow-start.sh names that
+    # path and principles-lint.sh checks all four there. It was hand-built on
+    # hwc-laptop and absent on hwc-server (found 2026-09-17), so Codex threads
+    # served from the server had no workflow skills at all.
+    workflowSkills = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [
+        "stepwise-refinement"
+        "chestertons-fence"
+        "premortem"
+        "datax-sr-triage"
+      ];
+      description = "Shared skills exposed at ~/.agents/skills (Codex user-skill root) from sharedSkillSource; the set principles-lint.sh verifies.";
+    };
   };
 
   #==========================================================================
@@ -56,11 +72,18 @@ in
     # Claude already consumes the shared skill tree directly. Codex has its
     # own skill root, so expose only the cross-harness orchestration skills as
     # out-of-store symlinks instead of copying a second source tree.
-    home.file = lib.listToAttrs (map (skill:
-      lib.nameValuePair ".codex/skills/${skill}" {
-        source = config.lib.file.mkOutOfStoreSymlink "${cfg.sharedSkillSource}/${skill}";
-      }
-    ) cfg.sharedSkills);
+    home.file = lib.listToAttrs (
+      (map (skill:
+        lib.nameValuePair ".codex/skills/${skill}" {
+          source = config.lib.file.mkOutOfStoreSymlink "${cfg.sharedSkillSource}/${skill}";
+        }
+      ) cfg.sharedSkills)
+      ++ (map (skill:
+        lib.nameValuePair ".agents/skills/${skill}" {
+          source = config.lib.file.mkOutOfStoreSymlink "${cfg.sharedSkillSource}/${skill}";
+        }
+      ) cfg.workflowSkills)
+    );
 
     #========================================================================
     # VALIDATION

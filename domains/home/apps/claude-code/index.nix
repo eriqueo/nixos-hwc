@@ -63,6 +63,19 @@ in
         ];
         description = "Entries under repoPath to symlink into ~/.claude/ (nested paths symlink single files).";
       };
+      # Extra Claude config directories that get the same `items`. T3 Code runs
+      # its DataX provider instances with CLAUDE_CONFIG_DIR set to their own
+      # homePath (e.g. ~/.claude_dx1_home), and Claude Code reads skills,
+      # CLAUDE.md, hooks and settings ONLY from that directory. Found empty on
+      # hwc-server 2026-09-17: those instances reported zero user skills while
+      # the default instance reported all of them. Only the shared items are
+      # linked; credentials, sessions and .claude.json stay per-directory.
+      extraConfigDirs = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        example = [ ".claude_dx1_home" ".claude_dx2_home" ];
+        description = "Home-relative Claude config directories (CLAUDE_CONFIG_DIR targets) that receive the same shareConfig.items symlinks as ~/.claude.";
+      };
       autoPull = {
         enable = lib.mkOption {
           type = lib.types.bool;
@@ -153,10 +166,12 @@ in
       # Own the validator runtime here so a host cannot appear wired while its
       # Artifact hook blocks every report on an undeclared Python dependency.
       home.packages = [ claimcheckPackage ];
-      home.file = lib.listToAttrs (map (item:
-        lib.nameValuePair ".claude/${item}" {
-          source = config.lib.file.mkOutOfStoreSymlink "${cfg.shareConfig.repoPath}/${item}";
-        }) cfg.shareConfig.items);
+      home.file = lib.listToAttrs (lib.concatMap (dir:
+        map (item:
+          lib.nameValuePair "${dir}/${item}" {
+            source = config.lib.file.mkOutOfStoreSymlink "${cfg.shareConfig.repoPath}/${item}";
+          }) cfg.shareConfig.items
+      ) ([ ".claude" ] ++ cfg.shareConfig.extraConfigDirs));
     })
 
     # Optional zero-touch receive: fast-forward-pull the config repo on a timer.
