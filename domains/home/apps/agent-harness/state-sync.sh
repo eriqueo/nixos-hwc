@@ -72,7 +72,7 @@ sync_state() {
   cd "$STATE"
   exec 9>.git/.sync.lock
   flock 9
-  AGENT_STATE_DIR="$STATE" bash "$VALIDATOR"
+  AGENT_STATE_DIR="$STATE" "$VALIDATOR"
   git add -A -- MISTAKES.md projects
   git add -A -- .harness-schema.json
   [ ! -e .mistakes-dismissed.log ] || git add -A -- .mistakes-dismissed.log

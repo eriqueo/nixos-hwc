@@ -45,7 +45,7 @@ let
     text = ''
       export AGENT_STATE_DIR=${lib.escapeShellArg cfg.stateDir}
       export AGENT_CONFIG_DIRS=${lib.escapeShellArg (lib.concatStringsSep ":" configDirs)}
-      export AGENT_STATE_VALIDATOR=${./state-validate.sh}
+      export AGENT_STATE_VALIDATOR=${stateValidator}/bin/agent-state-validate
       exec ${pkgs.bash}/bin/bash ${./state-sync.sh} "$@"
     '';
   };
