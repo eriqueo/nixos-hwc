@@ -32,7 +32,7 @@ let
       export CC_REPO=${lib.escapeShellArg cfg.shareConfig.repoPath}
       export CC_CONFIG_DIRS=${lib.escapeShellArg (lib.concatStringsSep ":" configDirs)}
       export CC_POST_MERGE=${postMergeScript}
-      exec bash ${./config-sync.sh} "$@"
+      exec ${pkgs.bash}/bin/bash ${./config-sync.sh} "$@"
     '';
   };
 in
