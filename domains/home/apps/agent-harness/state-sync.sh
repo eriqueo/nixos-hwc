@@ -1,20 +1,44 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
 STATE=${AGENT_STATE_DIR:-$HOME/.agent-state}
 CONFIG_DIRS=${AGENT_CONFIG_DIRS:-$HOME/.claude:$HOME/.claude_dx2_home}
 HOST=${AGENT_HOST:-$(uname -n)}
 VALIDATOR=${AGENT_STATE_VALIDATOR:-$(realpath "$(dirname "$0")/state-validate.sh")}
+NOTIFY_URL=${AGENT_STATE_NOTIFY_URL-https://hwc-notify.hwc.iheartwoodcraft.com:29443/notify}
+ALERT_STATE="$STATE/.git/.sync-alert-state"
 
 log() { printf 'agent-state: %s\n' "$*"; }
 notify() {
-  command -v curl >/dev/null 2>&1 || return 0
-  command -v jq >/dev/null 2>&1 || return 0
+  [ -n "$NOTIFY_URL" ] || return 1
+  command -v curl >/dev/null 2>&1 || return 1
+  command -v jq >/dev/null 2>&1 || return 1
   jq -n --arg title "$1" --arg body "$2" \
     '{topic:"monitoring",title:$title,body:$body,priority:2,source:"agent-state-sync"}' \
     | curl -fsS --max-time 5 -H 'content-type: application/json' -d @- \
-        http://127.0.0.1:11600/notify >/dev/null 2>&1 || true
+        "$NOTIFY_URL" >/dev/null 2>&1
 }
+notify_failure() {
+  [ -d "$STATE/.git" ] || return 0
+  [ "$(cat "$ALERT_STATE" 2>/dev/null || true)" != failed ] || return 0
+  if notify "Agent state sync failed" \
+      "State sync failed on $HOST. Inspect journalctl --user -u agent-state-sync.service."; then
+    printf 'failed\n' > "$ALERT_STATE"
+  fi
+}
+notify_recovery() {
+  [ "$(cat "$ALERT_STATE" 2>/dev/null || true)" = failed ] || return 0
+  if notify "Agent state sync recovered" "State sync is healthy again on $HOST."; then
+    printf 'ok\n' > "$ALERT_STATE"
+  fi
+}
+on_error() {
+  local status=$?
+  trap - ERR
+  notify_failure || true
+  exit "$status"
+}
+trap on_error ERR
 
 link_memories() {
   [ -d "$STATE/.git" ] || { log "missing git clone at $STATE"; return 1; }
@@ -92,7 +116,7 @@ sync_state() {
             git checkout --ours -- "$path"
             git add -- "$path" "$copy"
             log "kept hub conflict as $copy"
-            notify "Agent memory conflict" "$path kept with $copy on $HOST"
+            notify "Agent memory conflict" "$path kept with $copy on $HOST" || true
             ;;
           MISTAKES.md)
             git checkout --ours -- "$path"
@@ -102,7 +126,6 @@ sync_state() {
           *)
             git merge --abort 2>/dev/null || true
             log "unsupported merge conflict: $path"
-            notify "Agent state sync failed" "Unsupported conflict at $path on $HOST"
             return 1
             ;;
         esac
@@ -110,10 +133,8 @@ sync_state() {
       git commit --no-edit
     fi
   fi
-  if ! git push; then
-    notify "Agent state sync failed" "Push failed on $HOST. Inspect agent-state-sync.service."
-    return 1
-  fi
+  git push
+  notify_recovery || true
 }
 
 case "${1:-sync}" in

@@ -44,7 +44,8 @@ is a warning; a runtime reference to it is a failure.
 - 2026-09-17: Added the ownership manifest, changed-memory schema gate, fleet
   doctor, managed static-policy commit hook, and a publication command with a
   location-independent preflight. The state service invokes its packaged
-  validator directly so its minimal systemd `PATH` is sufficient.
+  validator directly so its minimal systemd `PATH` is sufficient. Sync failure
+  and recovery alerts are emitted once per transition through `hwc-notify`.
 - 2026-09-17: Added the shared control plane, separate mutable state sync,
   machine-wide Claude settings, provider health checks, and interactive CLI.
 - 2026-09-17: Quoted interactive command assignments for shellcheck compliance.

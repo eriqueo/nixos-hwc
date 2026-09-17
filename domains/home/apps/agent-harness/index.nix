@@ -46,6 +46,7 @@ let
       export AGENT_STATE_DIR=${lib.escapeShellArg cfg.stateDir}
       export AGENT_CONFIG_DIRS=${lib.escapeShellArg (lib.concatStringsSep ":" configDirs)}
       export AGENT_STATE_VALIDATOR=${stateValidator}/bin/agent-state-validate
+      export AGENT_STATE_NOTIFY_URL=${lib.escapeShellArg cfg.notifyUrl}
       exec ${pkgs.bash}/bin/bash ${./state-sync.sh} "$@"
     '';
   };
@@ -112,6 +113,11 @@ in
         "hwc-server"
         "hwc-laptop"
       ];
+    };
+    notifyUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "https://hwc-notify.hwc.iheartwoodcraft.com:29443/notify";
+      description = "hwc-notify endpoint used for state-sync failure and recovery transitions";
     };
     claudeConfigDirs = lib.mkOption {
       type = lib.types.listOf lib.types.str;

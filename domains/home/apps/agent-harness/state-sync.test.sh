@@ -3,6 +3,15 @@ set -euo pipefail
 
 ROOT=$(mktemp -d)
 trap 'rm -rf "$ROOT"' EXIT
+mkdir -p "$ROOT/bin"
+cat > "$ROOT/bin/curl" <<EOF
+#!/usr/bin/env bash
+cat >/dev/null
+printf 'alert\n' >> "$ROOT/alerts"
+EOF
+chmod +x "$ROOT/bin/curl"
+export PATH="$ROOT/bin:$PATH"
+export AGENT_STATE_NOTIFY_URL=http://notify.invalid/notify
 git init --bare "$ROOT/hub.git" >/dev/null
 git clone "$ROOT/hub.git" "$ROOT/state" >/dev/null 2>&1
 git -C "$ROOT/state" config user.name test
@@ -53,5 +62,15 @@ if AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=tes
   echo 'state-sync.test: invalid memory unexpectedly synchronized' >&2
   exit 1
 fi
+test "$(wc -l < "$ROOT/alerts")" -eq 1
+if AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
+    bash "$(dirname "$0")/state-sync.sh" sync >/dev/null 2>&1; then
+  echo 'state-sync.test: repeated invalid memory unexpectedly synchronized' >&2
+  exit 1
+fi
+test "$(wc -l < "$ROOT/alerts")" -eq 1
 rm "$ROOT/state/projects/demo/memory/invalid.md"
+AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
+  bash "$(dirname "$0")/state-sync.sh" sync >/dev/null
+test "$(wc -l < "$ROOT/alerts")" -eq 2
 printf 'state-sync.test: PASS\n'
