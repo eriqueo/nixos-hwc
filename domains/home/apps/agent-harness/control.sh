@@ -180,7 +180,7 @@ publish() {
       ssh -t "$host" "cd ~/.nixos && git pull --ff-only && sudo nixos-rebuild switch --flake .#$host"
     fi
   done
-  exec "$0" doctor --fleet
+  exec "$BASH" "$0" doctor --fleet
 }
 
 usage() {
