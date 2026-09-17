@@ -113,9 +113,9 @@
   networking.hostId = "8425e349";
 
   # Verified refinery release built from eriqueo/refinery commit 39846f5
-  # (shared Workbench shell; built locally with deploy/build-image.sh because
-  # the repo's GitHub Actions was blocked by account billing on 2026-09-17).
-  # Keep this immutable release until the next tested image replaces it.
+  # (shared Workbench shell). Built locally with deploy/build-image.sh; the
+  # repo has no CI since 2026-09-17, so local build + this pin is the release
+  # path. Keep this immutable release until the next tested image replaces it.
   hwc.automation.refinery.image = "localhost/refinery:39846f5-docker";
   hwc.automation.refinery.imagePull = "never";
 
