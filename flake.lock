@@ -571,11 +571,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789602075,
-        "narHash": "sha256-c/PTViGnj2/RPU1rl1Es7nTbBzMd7ApN5q2CJmosHw0=",
+        "lastModified": 1789603199,
+        "narHash": "sha256-v/BuJ2n3sEQFthOBsH3X4hf4i7i6vSKRc/uvhpeWqjw=",
         "owner": "eriqueo",
         "repo": "pnc-statement-pipeline",
-        "rev": "700e90c4b66826690df8fac4e7bedde2eec1380a",
+        "rev": "90a8a5873a89cfc2a01d345dfeaefb70f2ec28af",
         "type": "github"
       },
       "original": {
