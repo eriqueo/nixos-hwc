@@ -73,16 +73,15 @@
       "locked": {
         "lastModified": 1789673108,
         "narHash": "sha256-HvXNMj8yZ74eVBB7n7I+GJ6eZQR5hZAjhj6/unI/qE8=",
-        "ref": "refs/heads/main",
+        "owner": "eriqueo",
+        "repo": "claude-config",
         "rev": "f836d08bc05984b3f939edca74100ae9190c6d9f",
-        "revCount": 142,
-        "type": "git",
-        "url": "ssh://hwc-server/home/eric/git/claude-config.git"
+        "type": "github"
       },
       "original": {
-        "ref": "refs/heads/main",
-        "type": "git",
-        "url": "ssh://hwc-server/home/eric/git/claude-config.git"
+        "owner": "eriqueo",
+        "repo": "claude-config",
+        "type": "github"
       }
     },
     "bloxels-cv": {

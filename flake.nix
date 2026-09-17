@@ -32,7 +32,7 @@
     # Static agent policy and adapters. Mutable memories and the mistakes
     # ledger live in ~/.agent-state and never enter this Nix input.
     agent-harness = {
-      url = "git+ssh://hwc-server/home/eric/git/claude-config.git?ref=refs/heads/main";
+      url = "github:eriqueo/claude-config";
       flake = false;
     };
 
