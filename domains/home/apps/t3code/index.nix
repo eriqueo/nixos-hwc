@@ -185,7 +185,7 @@ let
       pkgs.python3
     ];
     text = ''
-      DELEGATE="$HOME/.claude-config/skills/delegate/scripts/delegate.py"
+      DELEGATE="/etc/agent-harness/skills/delegate/scripts/delegate.py"
       # T3 owns the result ceiling. Only forward that option; callers cannot
       # override the pinned provider, read-only authority, or tool policy.
       # No arguments remains compatible with older T3 server bundles.

@@ -4,6 +4,7 @@ set -euo pipefail
 STATE=${AGENT_STATE_DIR:-$HOME/.agent-state}
 CONFIG_DIRS=${AGENT_CONFIG_DIRS:-$HOME/.claude:$HOME/.claude_dx2_home}
 HOST=${AGENT_HOST:-$(uname -n)}
+VALIDATOR=${AGENT_STATE_VALIDATOR:-$(realpath "$(dirname "$0")/state-validate.sh")}
 
 log() { printf 'agent-state: %s\n' "$*"; }
 notify() {
@@ -71,7 +72,9 @@ sync_state() {
   cd "$STATE"
   exec 9>.git/.sync.lock
   flock 9
+  AGENT_STATE_DIR="$STATE" bash "$VALIDATOR"
   git add -A -- MISTAKES.md projects
+  git add -A -- .harness-schema.json
   [ ! -e .mistakes-dismissed.log ] || git add -A -- .mistakes-dismissed.log
   if ! git diff --cached --quiet; then
     git commit -m "sync($HOST): agent state $(date -Iminutes)"

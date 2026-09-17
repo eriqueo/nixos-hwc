@@ -21,7 +21,7 @@ design note below.
 index.nix   # hwc.home.apps.t3code — desktop launcher + Electron shim + desktop
             #   entry; pinned backend port and advertised host, so the phone's
             #   endpoint survives a reboot; headless t3-serve unit; t3-update;
-            #   DX2 handoff adapter forwarding T3's result limit without
+            #   DX2 handoff adapter using the pinned delegate helper and forwarding T3's result limit without
             #   allowing policy overrides; activation-time repo check
 README.md   # this file
 ```
@@ -175,6 +175,7 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
+- 2026-09-17: Resolve the DX2 delegate helper from `/etc/agent-harness` so T3 cannot bypass pinned policy through the mutable authoring checkout.
 - 2026-09-17: Desktop and server launchers run the shared harness doctor as a warning preflight.
 
 - 2026-09-15: Added `desktop.lanHost` (`T3CODE_DESKTOP_LAN_HOST`), and set it to
