@@ -948,22 +948,23 @@
       # Umami analytics — script.js + /api/send must be visitor-reachable.
       "stats.iheartwoodcraft.com" = "http://localhost:3009";
 
-      # hwc-crm public contact intake — the website's JobTread web-form embed
-      # mirrors submissions here so they land on the funnel board. PATH-locked
-      # to /hooks/contact ONLY; the rest of hwc-crm (board UI, transitions)
-      # stays tailnet-private (unmatched paths fall through to the 404 default).
+      # hwc-crm public website intake — contact form mirror, calculator email
+      # gate (hwc-crm D42: the CRM absorbed hwc-leads), "request a call" and
+      # availability. PATH-locked to /hooks/*; the rest of hwc-crm (board UI,
+      # transitions) stays tailnet-private (unmatched paths fall through to
+      # the 404 default).
       "crm.iheartwoodcraft.com" = {
         service = "http://localhost:11660";
-        path = "^/hooks/(contact|appointment|availability)";
+        path = "^/hooks/(contact|calculator|appointment|availability)";
       };
 
-      # hwc-leads report viewer API — public so customers can open the report
+      # Calculator report viewer API — public so customers can open the report
       # link emailed to them off-tailnet. PATH-locked to the read-only, already
-      # sanitised GET /api/reports/<id> (no email/phone/full name/attribution);
-      # the leads capture POST + admin stay tailnet-private. Needs DNS CNAME
-      # reports → tunnel. hwc-leads listens on :11650.
+      # sanitised GET /api/reports/<id> (no email/phone/full name/attribution).
+      # Served by hwc-crm (:11660) since D42; it reads the same hwc.reports
+      # table hwc-leads wrote, so links already emailed keep working.
       "reports.iheartwoodcraft.com" = {
-        service = "http://localhost:11650";
+        service = "http://localhost:11660";
         path = "^/api/reports/";
       };
 

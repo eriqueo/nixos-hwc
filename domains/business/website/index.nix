@@ -57,16 +57,18 @@ in
     # of truth for "where do leads go" — change here, rebuild + redeploy.
     leadsWebhookUrl = lib.mkOption {
       type = lib.types.str;
-      default = "https://api.iheartwoodcraft.com/webhook/calculator-lead";
+      default = "https://crm.iheartwoodcraft.com/hooks/calculator";
       description = ''
         URL the calculator app POSTs lead submissions to. MUST be publicly
         reachable — site visitors' browsers call it directly. The previous
         hwc-server.ocelot-wahoo.ts.net default was tailnet-only and silently
-        lost every public lead (2026-07-07 plumbing audit). Now the
-        Cloudflare-tunnel n8n ingress: the thin-shell workflow
-        (work_calculator_lead) HMAC-signs + forwards to hwc-leads on
-        loopback :11650. A future direct-POST cutover would point this at
-        a public hwc-leads route.
+        lost every public lead (2026-07-07 plumbing audit). Cutover
+        2026-09-18 (hwc-crm D42) from the n8n thin shell → hwc-leads path to
+        hwc-crm's path-locked /hooks/calculator, which saves the lead and its
+        report, builds the JobTread graph, pings Discord and sends the
+        acknowledgement. It answers the CORS preflight and returns
+        {reportId, reportUrl}. The n8n route stays up until Cloudflare's
+        7-day cache of the old bundle has expired.
       '';
     };
     leadsAppointmentWebhookUrl = lib.mkOption {
