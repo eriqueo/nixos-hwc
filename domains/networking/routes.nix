@@ -397,13 +397,6 @@ in
       upstream = "http://127.0.0.1:11500";
     }
 
-    # llama.cpp CPU server — LFM2-24B-A2B Q4 in host RAM (loopback clients)
-    {
-      name = "llama-cpu";
-      mode = "vhost";
-      upstream = "http://127.0.0.1:11501";
-    }
-
     # T3 Code headless server — the agent harness, reachable from the phone
     # while the laptop is off. Backed by hwc.home.apps.t3code.serve (HM lane),
     # which binds 127.0.0.1:3773 and nothing wider.

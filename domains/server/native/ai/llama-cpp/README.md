@@ -38,7 +38,7 @@ README.md     # (this file)
 | Service     | External (Caddy)            | Internal           | Model                       |
 |-------------|-----------------------------|--------------------|-----------------------------|
 | llama-gpu   | `https://hwc.…ts.net:26443` | `127.0.0.1:11500`  | LFM2-2.6B Q4_K_M            |
-| llama-cpu   | `https://hwc.…ts.net:27443` | `127.0.0.1:11501`  | LFM2-24B-A2B Q4_K_M         |
+| llama-cpu   | _(disabled on hwc-server)_  | `127.0.0.1:11501`  | LFM2-24B-A2B Q4_K_M         |
 | llama-embed | _(none yet — loopback only)_ | `127.0.0.1:11502`  | nomic-embed-text-v1.5 Q5_K_M |
 
 All expose llama.cpp's OpenAI-compatible server API. Chat services serve
@@ -70,6 +70,11 @@ download via `ExecStartPre`; subsequent starts are no-ops.
 
 ## Changelog
 
+- 2026-09-18: Disable `llama-cpu` (LFM2-24B) on hwc-server and drop its
+  Caddy route (port 27443). It served zero chat requests in 75 days (only
+  `/health`); the idle model had been paged out and held 12 GiB of swap.
+  Hermes now uses deepseek. `llama-gpu` and `llama-embed` are unchanged —
+  embed backs brain semantic search.
 - 2026-06-28: Add `cudaSupport` option (nullOr bool, default `null`). `null`
   trusts the host's global `nixpkgs.config.cudaSupport` (unchanged for the
   server's stable-cuda pkgs). Set `true` on hosts without global cudaSupport

@@ -727,7 +727,7 @@
 
   # llama.cpp inference — three services share one binary
   # GPU:   LFM2-2.6B Q4 (~1.5 GB)  on  26443 -> 127.0.0.1:11500
-  # CPU:   LFM2-24B-A2B Q4 (~14 GB) on  27443 -> 127.0.0.1:11501
+  # CPU:   LFM2-24B-A2B Q4 (~14 GB) — DISABLED 2026-09-18 (see below)
   # Embed: nomic-embed-text-v1.5 Q5 (~270 MB)        127.0.0.1:11502
   hwc.server.ai.llamaCpp = {
     enable = true;
@@ -737,7 +737,10 @@
     cudaCapabilities = ["6.1"];
     gpu.enable = true;
     cpu = {
-      enable = true;
+      # Disabled 2026-09-18: zero chat requests in 75 days (only /health),
+      # and the idle ~14 GB model had been paged out, holding 12 GiB of the
+      # 15 GiB swap. Hermes moved to deepseek. Settings kept for re-enable.
+      enable = false;
       threads = 6; # one per physical core on i7-8700K; HT rarely helps memory-bound inference
       # Hermes Agent rejects models with n_ctx < 64K with a ValueError
       # ("below the minimum 64,000 required"). LFM2-24B-A2B's n_ctx_train
