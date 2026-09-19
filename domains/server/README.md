@@ -43,6 +43,7 @@ The media/arr/torrent stack lives entirely in `domains/media/`. **This domain no
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-09-18: `native/ai/research-scout/` — item scoring moved from DX1 (`dx1.datax.to`, retired; HTTP 404 since 2026-09-14, about 1,000 failed classifier batches) to DX2 (`https://dx2.datax.to/v1`, model `llm`). The same `pi-dx1-api-key` secret authenticates DX2.
 - 2026-09-14: Lead Scout's human dashboard is now tailnet-only at
   `lead-scout.hwc.iheartwoodcraft.com`. The obsolete public dashboard aliases
   were removed from the Cloudflare tunnel; the Access-protected

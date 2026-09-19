@@ -239,7 +239,7 @@ in
         # The classifier shells out to the `claude` CLI (scout precedent:
         # unit PATH carries only nodejs, so the binary must be declared).
         CLAUDE_BIN = "/etc/profiles/per-user/${cfg.user}/bin/claude";
-        # Item scoring runs on the self-hosted DX1 model via its OpenAI-
+        # Item scoring runs on DataX's hosted DX2 model via its OpenAI-
         # compatible endpoint — 60 abstracts a day is a volume job, and it was
         # burning the Claude subscription. The suggestions sink deliberately
         # stays on claude-cli (its digest_sinks setting), because deciding what
@@ -249,9 +249,13 @@ in
         # systemd's `environment` cannot read a file, and an EnvironmentFile
         # would mean a second plaintext copy. The service user is in `secrets`,
         # so it can read the 0440 root:secrets mount directly.
+        #
+        # dx1.datax.to was retired (HTTP 404 from 2026-09-14). The same key
+        # authenticates DX2; `llm` is its canonical model id. Same endpoint as
+        # hwc.home.apps.pi.dx2.baseUrl (HM option — not readable from here).
         OPENAI_API_KEY_FILE = "/run/agenix/pi-dx1-api-key";
-        OPENAI_BASE_URL = "https://dx1.datax.to/v1";
-        OPENAI_MODEL = "dx1";
+        OPENAI_BASE_URL = "https://dx2.datax.to/v1";
+        OPENAI_MODEL = "llm";
         # Hardened unit must never write frontend/dist — deploy prebuilds it.
         SKIP_FRONTEND_BUILD = "1";
       }
