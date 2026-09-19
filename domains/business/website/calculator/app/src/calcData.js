@@ -330,6 +330,9 @@ export function makeHelpers(data) {
         referrer: a.referrer || null,
         landing_page: a.landing_page || null,
         pages_viewed: parseInt(sessionStorage.getItem("hwc_pages_viewed") || "0", 10),
+        // per-tab id minted by the site's tracking.js; the CRM uses it to
+        // show the pages this lead looked at (Umami)
+        visit_id: sessionStorage.getItem("hwc_visit_id") || null,
       };
     } catch {
       return {};
