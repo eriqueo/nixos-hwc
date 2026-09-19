@@ -955,10 +955,11 @@
       # gate (hwc-crm D42: the CRM absorbed hwc-leads), "request a call" and
       # availability. PATH-locked to /hooks/*; the rest of hwc-crm (board UI,
       # transitions) stays tailnet-private (unmatched paths fall through to
-      # the 404 default).
+      # the 404 default). /hooks/jt is JobTread's webhook (hwc-crm D45): the
+      # URL carries a token, and the body only hints which job to re-read.
       "crm.iheartwoodcraft.com" = {
         service = "http://localhost:11660";
-        path = "^/hooks/(contact|calculator|appointment|availability)";
+        path = "^/hooks/(contact|calculator|appointment|availability|jt)";
       };
 
       # Calculator report viewer API — public so customers can open the report

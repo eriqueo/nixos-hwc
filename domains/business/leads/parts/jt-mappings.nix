@@ -81,4 +81,21 @@
       "Custom" = "Custom";
     };
   };
+
+  # The two-way job link (hwc-crm D45). Its presence turns the link on.
+  # The CRM writes only these: a snoozed lead → deferredPhase; a woken lead →
+  # the phase it had before (defaultPhase when unknown); a lost lead → Job
+  # Lost Reason (CRM loss reason → JobTread option) plus the job close date.
+  jobSync = {
+    deferredPhase = "Deferred";
+    defaultPhase = "1. Contacted";
+    lossReasons = {
+      price = "Too Expensive";
+      timing = "Timing";
+      ghosted = "Ghosted";
+      competitor = "Other Contractor";
+      project_cancelled = "Other";
+      other = "Other";
+    };
+  };
 }
