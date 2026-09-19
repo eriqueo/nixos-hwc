@@ -33,4 +33,31 @@
   # JT account `type` for customer accounts. Other valid values exist
   # in JT (vendor, subcontractor, …) but hwc-leads only creates customers.
   accountType = "customer";
+
+  # ── Read by hwc-crm only (hwc-leads ignores unknown keys) ─────────────
+  # Job custom fields. Phase is the ONE status field since 2026-09-18 (job
+  # Status and customer Status were deleted). Run PM Report is required: a
+  # job without a value rejects every later update.
+  jobCustomFields = {
+    phase = "22P4fguBu3Ub";
+    jobType = "22P4fgU4XmLY";
+    runPmReport = "22PdsGQDV5pV";
+    jobLostReason = "22PUGv3vsqBU";
+    siteVisit = "22PVyDzw2gXH";
+  };
+
+  # Customer (account) custom fields.
+  accountCustomFields = {
+    leadSource = "22PUGvBnXeYs";
+    projectType = "22Nnj9KMKEPC";
+  };
+
+  # Option texts hwc-crm writes on intake. Must match the live field
+  # options exactly (verified against the org 2026-09-18).
+  intakeValues = {
+    phase = "1. Contacted";
+    leadSource = "Website";
+    jobTypeByCalculator = { bathroom = "Bathroom"; deck = "Deck"; };
+    projectTypeByCalculator = { bathroom = "Bathroom Remodel"; deck = "Deck"; };
+  };
 }
