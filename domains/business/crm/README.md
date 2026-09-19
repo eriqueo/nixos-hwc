@@ -55,6 +55,13 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 `^/hooks/(contact|appointment|availability)`.
 
 ## Changelog
+- **2026-09-19** — When `hwc.business.umami.enable` is on, the service gets
+  `HWC_CRM_UMAMI_DSN` / `HWC_CRM_UMAMI_WEBSITE_ID` (hwc-crm D46): the CRM reads
+  Umami's database read-only to show a lead's website visit and the website
+  report. The umami module stays the one producer of the database name and the
+  website id. Also this cycle: the tunnel route admits `/hooks/calculator` and
+  `/hooks/jt`, and `jt-mappings.nix` (leads domain) carries the JobTread field
+  ids, form option lists and the `jobSync` block the CRM reads.
 - **2026-09-15** — Appointment events now write to the Work collection while
   availability combines conflicts from Work, Family, and Personal. Groceries
   remains a server-side reminders collection and is not queried for VEVENTs.

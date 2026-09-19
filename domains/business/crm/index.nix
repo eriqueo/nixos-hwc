@@ -39,6 +39,13 @@ let
     export HWC_CRM_EMAIL_TRANSPORT="${cfg.emailTransport}"
     export HWC_CRM_SPOOL_DIR="${cfg.statePath}/spool"
     export HWC_CRM_JT_MAPPINGS_FILE="${jtMappingsFile}"
+    ${lib.optionalString config.hwc.business.umami.enable ''
+      # hwc-crm D46: a lead's website visit + the website report, read-only
+      # from Umami's database (unix-socket peer auth). The umami module is the
+      # one producer of the database name and website id.
+      export HWC_CRM_UMAMI_DSN="postgresql:///${config.hwc.business.umami.databaseName}"
+      export HWC_CRM_UMAMI_WEBSITE_ID="${config.hwc.business.umami.websiteId}"
+    ''}
     ${lib.optionalString (cfg.jtGrantKeyRef != null) ''
       export HWC_CRM_JT_GRANT_FILE="${config.age.secrets.${cfg.jtGrantKeyRef}.path}"
     ''}
