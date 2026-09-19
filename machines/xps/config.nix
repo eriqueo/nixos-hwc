@@ -128,8 +128,12 @@
   # exportarr disabled — no *arr services on this machine
   hwc.monitoring.exportarr.enable = lib.mkForce false;
 
-  # n8n: the automation stack moved to the business role (server-only), so
-  # nothing to disable here anymore — xps no longer imports domains/automation.
+  # No automation on xps. n8n and mqtt live on the business role, which xps does
+  # not take. The server role still imports domains/automation and defaults these
+  # two on for the always-on machine; xps is not that machine, and a second
+  # refinery would poll the same DataX queue as hwc-server.
+  hwc.automation.nightlyBuilds.enable = false;
+  hwc.automation.refinery.enable = false;
 
   services.openssh.settings = {
     X11Forwarding = lib.mkForce true;
