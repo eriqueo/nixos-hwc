@@ -59,5 +59,26 @@
     leadSource = "Website";
     jobTypeByCalculator = { bathroom = "Bathroom"; deck = "Deck"; };
     projectTypeByCalculator = { bathroom = "Bathroom Remodel"; deck = "Deck"; };
+
+    # The contact + inline forms let the customer choose these. hwc-crm
+    # writes a choice only when it is listed here; JobTread rejects the
+    # whole create on an unknown option.
+    leadSourceOptions = [
+      "Website" "Google Local Service" "Google General" "Facebook"
+      "Short Term Rental" "Repeat" "Instagram" "Chamber" "Word of Mouth"
+      "Insurance" "Other"
+    ];
+    projectTypeOptions = [
+      "Bathroom Remodel" "Exterior" "Interior" "Custom" "Deck" "Fence" "Addition"
+    ];
+    # Customer "Project Type" → job "Job Type". Addition has no Job Type.
+    jobTypeByProjectType = {
+      "Bathroom Remodel" = "Bathroom";
+      "Deck" = "Deck";
+      "Interior" = "Interior General";
+      "Exterior" = "Exterior General";
+      "Fence" = "Exterior General";
+      "Custom" = "Custom";
+    };
   };
 }

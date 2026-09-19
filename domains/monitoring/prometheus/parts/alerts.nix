@@ -37,6 +37,16 @@
           };
         }
         {
+          alert = "CrmIntakeDown";
+          expr = ''probe_success{job="probe-crm-intake"} == 0'';
+          for = "5m";
+          labels = { severity = "P5"; category = "leads"; };
+          annotations = {
+            summary = "CRM lead intake down: {{ $labels.instance }}";
+            description = "CORS preflight through Cloudflare → tunnel → hwc-crm has failed for 5+ minutes. Calculator submissions are being LOST; contact-form submissions are falling back to the JobTread widget and will NOT appear on the CRM board. Check cloudflared-tunnel and hwc-crm services.";
+          };
+        }
+        {
           alert = "WebhookIngressDown";
           expr = ''probe_success{job="probe-webhook-ingress"} == 0'';
           for = "5m";

@@ -268,6 +268,13 @@ in
               "https://api.iheartwoodcraft.com/webhook/calculator-lead"
               "https://api.iheartwoodcraft.com/webhook/calculator-appointment"
             ])
+            # hwc-crm public intake (Cloudflare proxy → tunnel → hwc-crm) via CORS
+            # preflight: proves the whole ingress chain and touches no data, so
+            # it never creates a lead or counts as one.
+            (probeJob "probe-crm-intake" "http_options_2xx" "60s" [
+              "https://crm.iheartwoodcraft.com/hooks/contact"
+              "https://crm.iheartwoodcraft.com/hooks/calculator"
+            ])
             # hwc-leads liveness + HMAC enforcement (401 on unsigned POST)
             (probeJob "probe-leads-service" "http_post_401" "30s" [
               "http://127.0.0.1:11650/leads"
