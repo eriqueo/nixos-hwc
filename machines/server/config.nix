@@ -204,12 +204,15 @@
   hwc.server.ai.brainvec.enable = true; # semantic index behind vault-sync (feeds brain-mcp search_semantic)
 
   # Phone Capture Processor (Phase 10: Whisper STT + Tesseract OCR)
-  # Watches inbox-mobile/{audio,screenshots} and writes markdown to brain/inbox/
+  # Watches inbox-mobile/{audio,screenshots} and writes markdown to the vault's
+  # global capture inbox, `_inbox/`. It wrote to `inbox/` until 2026-09-19: the
+  # vault's reorganisation renamed the inbox and this path was never moved, so
+  # captures landed in a directory nothing reads.
   hwc.server.services.inboxProcessor = {
     enable = true;
     audioInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/audio";
     screenshotsInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/screenshots";
-    brainInboxPath = "${config.hwc.paths.brain."server-replica"}/inbox";
+    brainInboxPath = "${config.hwc.paths.brain."server-replica"}/_inbox";
     processedPath = "${config.hwc.paths.brain."inbox-mobile"}/processed";
     # DX2 adds a title, summary and action items above the verbatim
     # transcript; fail-open to the raw note when DX2 is unreachable.
