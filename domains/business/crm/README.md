@@ -55,6 +55,10 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 `^/hooks/(contact|appointment|availability)`.
 
 ## Changelog
+- **2026-09-19** — Lead Scout routes gain `minScores` (classifier score floors,
+  passed to the ingest as `min_scores`). The network route now ingests only
+  `hot_connect` with `network_value >= 3`: measured that day, 0 of 524
+  `warm_connect` leads were ever worked and every worked network lead scored 3.
 - **2026-09-19** — When `hwc.business.umami.enable` is on, the service gets
   `HWC_CRM_UMAMI_DSN` / `HWC_CRM_UMAMI_WEBSITE_ID` (hwc-crm D46): the CRM reads
   Umami's database read-only to show a lead's website visit and the website

@@ -272,6 +272,14 @@ in
               default = null;
               description = "CRM qualification assigned to an entity-level case.";
             };
+            minScores = lib.mkOption {
+              type = lib.types.attrsOf lib.types.number;
+              default = { };
+              description = ''
+                Classifier score floors. A candidate whose score is missing
+                or below any floor is not ingested.
+              '';
+            };
           };
         });
         default = [
@@ -287,9 +295,12 @@ in
             profile = "hwc_network_v1";
             pipeline = "network";
             source = "network_scrape";
-            ingestTiers = [ "hot_connect" "warm_connect" ];
+            # Measured 2026-09-19: 0 of 524 warm_connect leads were ever
+            # worked, and every worked network lead scored network_value 3.
+            ingestTiers = [ "hot_connect" ];
             nextActionTiers = [ "hot_connect" ];
             emailPrefix = "net";
+            minScores = { network_value = 3; };
           }
           {
             profile = "hwc_subcontractor_v1";
@@ -502,6 +513,7 @@ in
             email_prefix = r.emailPrefix;
             identity_score_key = r.identityScoreKey;
             category = r.category;
+            min_scores = r.minScores;
           }) cfg.leadscoutIngest.routes;
         };
       };
