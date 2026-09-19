@@ -25,6 +25,9 @@
 let
   cfg = config.hwc.automation.refinery;
   paths = config.hwc.paths;
+  # The business role is not on every host that runs the refinery (xps takes the
+  # server role alone), so the namespace may be absent: no workbench, no switcher.
+  workbench = config.hwc.business.workbench or { enable = false; };
 
   vaultDefault =
     if paths.brain.server-replica != null
@@ -226,11 +229,11 @@ in
           # dx1-gauntlet) drains it. Also under the StateDirectory.
           "REFINERY_DX1_RUNNOW_SPOOL=/var/lib/refinery/dx1-run-now"
           "REFINERY_TRIAGE_PROVIDER=${cfg.triageProvider}"
-        ] ++ lib.optionals config.hwc.business.workbench.enable [
+        ] ++ lib.optionals workbench.enable [
           # Workbench area switcher: the board renders the Nix-produced registry
           # (hwc.business.workbench, the one producer of the area list) from the
           # hub's own areas.json. Absent → the switcher offers Refinery + home.
-          "REFINERY_WORKBENCH_AREAS_FILE=${config.hwc.business.workbench.site}/areas.json"
+          "REFINERY_WORKBENCH_AREAS_FILE=${workbench.site}/areas.json"
         ] ++ [
           "REFINERY_DATAX_BASE_URL=${cfg.dataxBaseUrl}"
           # claude-cli triage shells out to headless `claude`, which reads the

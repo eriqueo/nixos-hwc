@@ -26,7 +26,9 @@ let
   # Workbench area registry: NixOS (hwc.business.workbench) is the one producer
   # of the area list; the hub's rendered areas.json is bind-mounted read-only so
   # the board's area switcher renders the same registry every other area uses.
-  workbench = config.hwc.business.workbench;
+  # The business role is not on every host that runs the refinery (xps takes the
+  # server role alone), so the namespace may be absent: no workbench, no mount.
+  workbench = config.hwc.business.workbench or { enable = false; };
   areasMount = "/mnt/refinery/workbench/areas.json";
 in
 {
