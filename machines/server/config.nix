@@ -30,9 +30,8 @@
     ../../domains/server/native/ai/brainvec/index.nix # brainvec semantic-index ingest (vault embeddings)
     ../../domains/server/native/ai/hermes/index.nix # Hermes Agent (Nous Research)
     ../../domains/server/native/ai/market-intelligence/index.nix # Market Intelligence (earnings signals + dashboard)
-    ../../domains/server/native/ai/llama-cpp/index.nix # llama.cpp inference (GPU + CPU + embed)
+    ../../domains/server/native/ai/llama-cpp/index.nix # llama.cpp inference (embed only on this host)
     ../../domains/server/native/ai/whisper/index.nix # whisper.cpp speech-to-text server (GPU)
-    ../../domains/server/native/ai/persona-daemon/index.nix # Persona-aware HTTP daemon + SQLite memory
     ../../domains/server/services/inbox-processor/index.nix # Phone capture processor (Whisper + Tesseract)
     ../../domains/server/services/bloxels-cv/index.nix # Bloxels grid photo classifier (path watcher)
     ../../domains/server/services/radicale/index.nix # Self-hosted CalDAV (tasks.hwc.*)
@@ -692,15 +691,6 @@
 
   # GPU acceleration for Immich handled by hwc.media.immich.gpu.enable in server profile
 
-  # AI DOMAIN CONFIGURATION (Server)
-  #============================================================================
-  # Profile auto-detection: server (GPU: nvidia, RAM: 32GB >= 16GB threshold)
-  # Result: Relaxed limits (4 cores, 8GB, 80°C warning, 90°C critical)
-  hwc.ai = {
-    # Explicit server profile selection
-    profiles.selected = "server";
-  };
-
   # MCP (Model Context Protocol) server infrastructure
   # Parent MCP disabled (mcp-proxy not in nixpkgs-stable), but heartwood is self-contained
   hwc.ai.mcp.enable = lib.mkForce false;
@@ -713,10 +703,6 @@
 
   # Navidrome music streaming (container)
   hwc.media.navidrome.enable = true;
-  hwc.ai.agent = {
-    enable = true;
-    port = 6020;
-  };
 
   # NanoClaw AI agent orchestrator
   # Connects to Slack via Socket Mode, spawns agents in containers
@@ -725,61 +711,29 @@
   # (nanoclaw-anthropic-key.age is reused by Hermes via re-named logical secret).
   # hwc.ai.nanoclaw = { enable = false; slack.enable = false; };
 
-  # llama.cpp inference — three services share one binary
-  # GPU:   LFM2-2.6B Q4 (~1.5 GB)  on  26443 -> 127.0.0.1:11500
-  # CPU:   LFM2-24B-A2B Q4 (~14 GB) — DISABLED 2026-09-18 (see below)
-  # Embed: nomic-embed-text-v1.5 Q5 (~270 MB)        127.0.0.1:11502
+  # llama.cpp inference — embeddings only on this host.
+  # Embed: nomic-embed-text-v1.5 Q5 (~270 MB) on 127.0.0.1:11502; it backs
+  # brainvec ingest and brain-mcp semantic search.
+  # The two chat services (gpu LFM2-2.6B, cpu LFM2-24B) were retired
+  # 2026-09-19 with the rest of the local chat stack: they had no consumer.
   hwc.server.ai.llamaCpp = {
     enable = true;
     # Local llama-cpp rebuild with sm_61 added — required because the cached
     # CUDA binary at cache.nixos-cuda.org targets sm_75+ only and aborts on
     # the Quadro P1000 (compute 6.1) with "no kernel image is available".
     cudaCapabilities = ["6.1"];
-    gpu.enable = true;
-    cpu = {
-      # Disabled 2026-09-18: zero chat requests in 75 days (only /health),
-      # and the idle ~14 GB model had been paged out, holding 12 GiB of the
-      # 15 GiB swap. Hermes moved to deepseek. Settings kept for re-enable.
-      enable = false;
-      threads = 6; # one per physical core on i7-8700K; HT rarely helps memory-bound inference
-      # Hermes Agent rejects models with n_ctx < 64K with a ValueError
-      # ("below the minimum 64,000 required"). LFM2-24B-A2B's n_ctx_train
-      # is 128K (per the GGUF metadata), and its hybrid attention keeps
-      # KV cache near-constant: at 8K context the KV buffer was 161 MB,
-      # so 64K only adds ~1.3 GB — well within the 38 GB free here.
-      contextSize = 65536;
-      # --jinja enables OpenAI-compatible tool/function calling (llama.cpp
-      # returns 500 "tools param requires --jinja flag" without it). --alias
-      # gives the endpoint a stable model name instead of the raw GGUF path,
-      # so Hermes' chat completions request can use model="lfm2-24b".
-      extraArgs = [
-        "--jinja"
-        "--alias"
-        "lfm2-24b"
-      ];
-    };
-    embed.enable = true; # powers RAG retrieval over /mnt/vaults/brain (persona-daemon, Phase 2.5)
+    embed.enable = true;
   };
 
   # whisper.cpp speech-to-text — resident whisper-server on 127.0.0.1:11503,
   # OpenAI-compatible /v1/audio/transcriptions, vhost `whisper` on the tailnet.
   # Same sm_61 rebuild as llama-cpp: the cached binary has no Pascal kernels
   # and every model above base.en died with "IM2COL failed" (2026-09-05).
-  # Model sits beside llama-gpu in the P1000's ~1.4 GB of free VRAM.
+  # Shares the 4 GB P1000 with llama-embed and Frigate.
   hwc.server.ai.whisper = {
     enable = true;
     cudaCapabilities = ["6.1"];
   };
-
-  # hwc-llm — persona CLI that wraps the llama-server endpoints with a
-  # curated system-prompt library. Stateless by default; --conversation
-  # routes through persona-daemon below. See domains/ai/personas/README.md.
-  hwc.ai.personas.enable = true;
-
-  # persona-daemon (Deno) — OpenAI-compatible HTTP on 127.0.0.1:11550 plus
-  # SQLite conversation memory. Commit 2 ships conversations only;
-  # RAG over /mnt/vaults/brain arrives in Commit 3. Caddy + MCP in Commit 4.
-  hwc.server.ai.personaDaemon.enable = true;
 
   # Hermes Agent — official nousresearch/hermes-agent Podman container.
   # Re-architected 2026-06-03 from a bespoke native multi-unit deployment to

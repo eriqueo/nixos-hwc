@@ -2,11 +2,11 @@
 
 ## Purpose
 
-AI infrastructure: MCP servers, persona CLIs over local llama.cpp, and agent orchestration. (Local llama.cpp inference services live in `domains/server/native/ai/`.)
+AI infrastructure: MCP servers. (Local inference — llama.cpp embeddings and whisper — lives in `domains/server/native/ai/`.)
 
 ## Boundaries
 
-- **Manages**: MCP servers, hardware profile detection, persona CLIs (`hwc-llm`)
+- **Manages**: MCP servers
 - **Does NOT manage**: GPU drivers (→ `domains/infrastructure/hardware/gpu`), container runtime (→ `domains/server/`), secrets for API keys (→ `domains/secrets/`)
 
 ## Structure
@@ -14,26 +14,14 @@ AI infrastructure: MCP servers, persona CLIs over local llama.cpp, and agent orc
 ```
 domains/ai/
 ├── index.nix           # Domain aggregator
-├── agent/              # HTTP tool agent
-├── mcp/                # Model Context Protocol servers
-├── personas/           # `hwc-llm` persona CLI wrapping llama.cpp endpoints
-└── profiles/           # Hardware profile detection and defaults
+└── mcp/                # Model Context Protocol servers
 ```
 
-Boundaries: this listing reflects what `ai/index.nix` actually imports. Any other directory you see in the tree (e.g. `anything-llm/`, `open-webui/`, `router/`) used to live here and has been removed as dead code.
-
-## CLI Tools
-
-- `hwc-llm` - Persona-aware CLI wrapping local llama.cpp (LFM2-2.6B GPU / LFM2-24B-A2B CPU); see `personas/`
-
-## Hardware Profiles
-
-Auto-detects and configures based on available hardware:
-- **NVIDIA GPU**: CUDA acceleration for local inference
-- **AMD GPU**: ROCm acceleration
-- **CPU-only**: Optimized CPU inference
+Boundaries: this listing reflects what `ai/index.nix` actually imports. Any other directory you see in the tree (e.g. `anything-llm/`, `open-webui/`, `router/`, `agent/`, `personas/`, `profiles/`) used to live here and has been removed as dead code.
 
 ## Changelog
+
+- 2026-09-19: **Retired the local chat stack**: removed `agent/` (hwc-ai-agent, the tool API built for Open WebUI; its audit log was last written Dec 2025), `personas/` (`hwc-llm`) and `profiles/` (hardware profile detection; nothing read `aiProfile`). Removed with them: `domains/server/native/ai/persona-daemon/`, the `llama-gpu` and `llama-cpu` services on hwc-server, their vhosts, probes and alerts. Evidence of non-use: persona-daemon's database held one conversation, from the day it was built (2026-05-30); 12 days of Caddy vhost logs showed no request to the chat hosts. Why it stalled: the models that fit a 4 GB P1000 or CPU RAM were too weak to trust, and Claude Code / Pi / T3 took over interactive work. What stays local: `llama-embed` (brain semantic search) and whisper. Hosted DX2 (`dx2.datax.to`) is the text model now. Machine configs for server, laptop and xps lost their `hwc.ai.profiles` / `hwc.ai.agent` settings. Recover from git history if needed.
 
 - 2026-07-05: Removed `tools/` and `cloud/` (audit 2.2). `cloud` was never enabled anywhere; `tools` (charter-search/ai-doc/ai-commit/ai-lint) was enabled on the laptop but had zero shell-history usage ever — dead by the "deployed + used" principle. Laptop enable block removed. Recover from git history if needed.
 

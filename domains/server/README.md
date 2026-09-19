@@ -19,9 +19,8 @@ domains/server/
 │       ├── home-scout/    # Home Scout MCP + HTTP, plus five timer-driven ingests
 │       ├── hwc-control-bot/ # HWC Discord control bot (/next over the apps' control APIs)
 │       ├── lead-scout/    # Lead Scout MCP + HTTP, plus profile-scoped Discord review bots
-│       ├── llama-cpp/     # llama.cpp inference (GPU + CPU)
+│       ├── llama-cpp/     # llama.cpp inference (embeddings only on hwc-server)
 │       ├── market-intelligence/  # Market-intelligence jobs
-│       ├── persona-daemon/       # Persona daemon
 │       ├── research-scout/       # Research Scout MCP + HTTP, plus the arXiv ingest timer
 │       └── whisper/       # whisper.cpp speech-to-text server (GPU, OpenAI-compatible)
 ├── services/
@@ -43,6 +42,7 @@ The media/arr/torrent stack lives entirely in `domains/media/`. **This domain no
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-09-19: Removed `native/ai/persona-daemon/` (Deno chat daemon with SQLite memory and its own vault index) as part of retiring the local chat stack; see `domains/ai/README.md` for the evidence and the full list. Its database held one conversation, from its build day. brainvec is now the only vault index. `native/ai/llama-cpp/` keeps running for embeddings only.
 - 2026-09-18: `native/ai/research-scout/` — item scoring moved from DX1 (`dx1.datax.to`, retired; HTTP 404 since 2026-09-14, about 1,000 failed classifier batches) to DX2 (`https://dx2.datax.to/v1`, model `llm`). The same `pi-dx1-api-key` secret authenticates DX2.
 - 2026-09-14: Lead Scout's human dashboard is now tailnet-only at
   `lead-scout.hwc.iheartwoodcraft.com`. The obsolete public dashboard aliases

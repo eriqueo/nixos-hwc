@@ -503,18 +503,6 @@ in
   # Machine-specific Home Manager overrides live in ./home.nix (HM lane),
   # wired by the flake glue for both nixos-rebuild and standalone hms.
 
-  #============================================================================
-  # AI DOMAIN CONFIGURATION (Laptop)
-  #============================================================================
-  # Profile auto-detection: laptop (GPU: nvidia, RAM: 32GB < 16GB threshold)
-  # Result: Conservative limits (2 cores, 4GB, 70°C warning, 80°C critical)
-  hwc.ai = {
-    # Profile selection (auto-detects laptop based on RAM/GPU)
-    profiles.selected = "auto";
-    # ai.tools removed 2026-07-05 (audit 2.2): was enabled here but zero
-    # shell-history usage ever — dead by the "deployed + used" principle.
-  };
-
   # Local llama.cpp inference (reuses the server module in-place). Laptop runs
   # ONLY the GPU chat model + embeddings — NOT the 24B CPU service (won't fit
   # the 8GB VRAM, and CPU inference is the fan-noise condition we're avoiding).

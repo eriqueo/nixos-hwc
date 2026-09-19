@@ -22,8 +22,8 @@
 # vault-sync also exists on the laptop (no embed backend there), and a
 # no-change ingest run costs zero embedding calls.
 #
-# NOTE: persona-daemon keeps its own separate vault RAG (SQLite, chunked) —
-# deliberate duplication; brainvec serves the brain/agent tool surface.
+# brainvec is the only vault index: persona-daemon, which kept a second
+# chunked copy, was retired 2026-09-19.
 #
 # NAMESPACE: hwc.server.ai.brainvec
 #

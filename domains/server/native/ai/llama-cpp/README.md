@@ -12,8 +12,8 @@ share one CUDA-built `pkgs.llama-cpp` binary, all instances of a single
   in host RAM with `-ngl 0`. Memory-bandwidth bound; ~6 tok/s on the
   i7-8700K because only ~2 B parameters are active per token.
 - **llama-embed** — embeddings (nomic-embed-text-v1.5 Q5, ~270 MB, 768-dim
-  vectors) on the GPU. Consumed by `persona-daemon` for RAG retrieval over
-  the brain vault.
+  vectors) on the GPU. Consumed by brainvec ingest and brain-mcp semantic
+  search. **The only one of the three enabled on hwc-server** since 2026-09-19.
 
 Charter v11.1 native-systemd pattern; mirrors
 `domains/server/native/ai/hermes/` and `…/lead-scout/`.
@@ -37,7 +37,7 @@ README.md     # (this file)
 
 | Service     | External (Caddy)            | Internal           | Model                       |
 |-------------|-----------------------------|--------------------|-----------------------------|
-| llama-gpu   | `https://hwc.…ts.net:26443` | `127.0.0.1:11500`  | LFM2-2.6B Q4_K_M            |
+| llama-gpu   | _(disabled on hwc-server)_  | `127.0.0.1:11500`  | LFM2-2.6B Q4_K_M            |
 | llama-cpu   | _(disabled on hwc-server)_  | `127.0.0.1:11501`  | LFM2-24B-A2B Q4_K_M         |
 | llama-embed | _(none yet — loopback only)_ | `127.0.0.1:11502`  | nomic-embed-text-v1.5 Q5_K_M |
 
@@ -70,6 +70,16 @@ download via `ExecStartPre`; subsequent starts are no-ops.
 
 ## Changelog
 
+- 2026-09-19: Disable `llama-gpu` on hwc-server and drop its Caddy vhost and
+  probe; `llama-embed` is now the only enabled instance. Its consumers
+  (persona-daemon, `hwc-llm`) were retired the same day for lack of use. Frees
+  about 1.8 GB of the 4 GB P1000. Both chat GGUFs were deleted from
+  `/opt/ai/models/llama-cpp/`; re-enabling an instance re-downloads its model
+  through `modelUrl`. **Correction to the 2026-09-18 entry below:** "75 days"
+  overstated the evidence. The llama journal only reached back to 2026-09-14.
+  The supported evidence is 4.5 days of journal with only `/health`, 12 days of
+  Caddy vhost logs with no request to either chat host, and a persona-daemon
+  database holding one conversation, from 2026-05-30.
 - 2026-09-18: Disable `llama-cpu` (LFM2-24B) on hwc-server and drop its
   Caddy route (port 27443). It served zero chat requests in 75 days (only
   `/health`); the idle model had been paged out and held 12 GiB of swap.

@@ -41,6 +41,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-09-19: `routes.nix` — removed the `llama-gpu` vhost; the persona-daemon vhost went with its module. No request reached either host in the Caddy vhost logs (2026-09-07 to 09-19). The 2026-09-18 entry's "75 days" overstated the window; see the llama-cpp README.
 - 2026-09-18: `routes.nix` — removed the `llama-cpu` vhost (`127.0.0.1:11501`). Its backend service is disabled on hwc-server because it served no chat requests in 75 days; see the llama-cpp README.
 - 2026-09-16: Added the `firefly-explorer` vhost for Workbench Finance. Its upstream is `/run/firefly-explorer.sock`, a root-owned `0600` Unix socket rather than a TCP port. The common proxy block overwrites `X-Forwarded-For` with Caddy's actual peer address, which the application verifies through tailscaled WhoIs before serving `/api`.
 - 2026-09-16: `reverseProxy` — `hwc.networking.shared.routes` element type is now `lazyAttrsOf anything` (was `attrsOf anything`). `attrsOf` forces every attribute of an element the moment any one is read, so `hwc.business.workbench`, whose static `root` derivation is generated from the other routes' names, recursed on its own `name`. `lazyAttrsOf` merges per attribute on access; rendered Caddy config and every existing route are unchanged by evaluation. The new `workbench` vhost (`workbench.<vhostDomain>`) is a static store-path root declared by that module, not in `routes.nix`.

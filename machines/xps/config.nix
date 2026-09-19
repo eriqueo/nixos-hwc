@@ -105,21 +105,11 @@
   # Enabled by profiles/session.nix — autoLoginUser = "eric"
   hwc.system.core.session.loginManager.enable = true;
 
-  # AI domain — laptop profile for conservative thermal limits
-  hwc.ai = {
-    profiles.selected = "laptop";
-  };
-
   hwc.ai.mcp = {
     enable = false;
     filesystem.nixos.enable = true;
     proxy.enable = true;
     reverseProxy.enable = true;
-  };
-
-  hwc.ai.agent = {
-    enable = false;
-    port = 6020;
   };
 
   # Self serving-domain (rootHost/tailscaleDomain) now derives from

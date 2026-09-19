@@ -390,13 +390,6 @@ in
       upstream = "http://127.0.0.1:8788";
     }
 
-    # llama.cpp GPU server — LFM2-2.6B Q4 on the Quadro P1000 (loopback clients)
-    {
-      name = "llama-gpu";
-      mode = "vhost";
-      upstream = "http://127.0.0.1:11500";
-    }
-
     # T3 Code headless server — the agent harness, reachable from the phone
     # while the laptop is off. Backed by hwc.home.apps.t3code.serve (HM lane),
     # which binds 127.0.0.1:3773 and nothing wider.

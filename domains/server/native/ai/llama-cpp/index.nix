@@ -328,8 +328,8 @@ in
       default = {};
       description = ''
         Embeddings service. Default: nomic-embed-text-v1.5 Q5 (~270 MB,
-        768-dim vectors) on the GPU. Powers RAG retrieval over the brain
-        vault (consumed by persona-daemon).
+        768-dim vectors) on the GPU. Powers semantic search over the brain
+        vault (consumed by brainvec ingest and brain-mcp).
 
         Note: llama.cpp's flag is `--embeddings` (with the 's'); the
         OpenAI-compat endpoint is `/v1/embeddings`. extraArgs already

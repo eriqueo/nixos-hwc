@@ -29,7 +29,6 @@ let
     { topic = "media";                channels = [ "discord-media" ]; }
     { topic = "monitoring";           channels = [ "discord-ops" ]; }
     { topic = "nightly-builds";       channels = [ "discord-nightly-builds" ]; }
-    { topic = "persona-daemon";       channels = [ "discord-ops" ]; }
     # Keep email as the complete long-form copy; Discord truncates embeds at
     # 4096 characters. The dedicated channel adds a scan-friendly scout view.
     { topic = "research-scout";       channels = [ "discord-research-scout" "smtp-office" ]; }

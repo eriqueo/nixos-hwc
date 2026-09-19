@@ -5,12 +5,10 @@
   # OPTIONS
   #==========================================================================
   imports = [
-    ./profiles          # Hardware profile detection and defaults
     ./mcp               # Model Context Protocol servers
-    ./agent             # HTTP tool agent
-    ./personas          # `hwc-llm` persona CLI for local llama.cpp services
     # tools/cloud/nanoclaw removed 2026-07-05 (never enabled — audit item 2.2);
-    # recover from git history if ever needed.
+    # agent/personas/profiles removed 2026-09-19 (local chat stack retired: no
+    # consumer). Recover from git history if ever needed.
   ];
 
   #==========================================================================
