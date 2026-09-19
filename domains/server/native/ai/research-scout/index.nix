@@ -250,12 +250,12 @@ in
         # would mean a second plaintext copy. The service user is in `secrets`,
         # so it can read the 0440 root:secrets mount directly.
         #
-        # dx1.datax.to was retired (HTTP 404 from 2026-09-14). The same key
-        # authenticates DX2; `llm` is its canonical model id. Same endpoint as
-        # hwc.home.apps.pi.dx2.baseUrl (HM option — not readable from here).
-        OPENAI_API_KEY_FILE = "/run/agenix/pi-dx1-api-key";
-        OPENAI_BASE_URL = "https://dx2.datax.to/v1";
-        OPENAI_MODEL = "llm";
+        # The endpoint facts come from hwc.server.ai.dx2 (../dx2/index.nix), the
+        # one system-lane producer. This unit once held its own copy of the DX1
+        # URL and kept calling it for five days after DX1 was retired.
+        OPENAI_API_KEY_FILE = config.hwc.server.ai.dx2.apiKeyFile;
+        OPENAI_BASE_URL = config.hwc.server.ai.dx2.baseUrl;
+        OPENAI_MODEL = config.hwc.server.ai.dx2.model;
         # Hardened unit must never write frontend/dist — deploy prebuilds it.
         SKIP_FRONTEND_BUILD = "1";
       }

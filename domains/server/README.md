@@ -14,6 +14,7 @@ domains/server/
 │   └── ai/
 │       ├── brain-mcp/     # Brain MCP server (Deno) — vault CRUD + semantic search
 │       ├── brainvec/      # brainvec semantic-index ingest (vault embeddings via llama-embed)
+│       ├── dx2/           # DX2 endpoint facts (URL, model id, key path) — options only, runs nothing
 │       ├── event-scout/   # Local events: curated queue, Discord cards, calendar actions
 │       ├── hermes/        # Hermes Agent (Nous Research)
 │       ├── home-scout/    # Home Scout MCP + HTTP, plus five timer-driven ingests
@@ -25,7 +26,7 @@ domains/server/
 │       └── whisper/       # whisper.cpp speech-to-text server (GPU, OpenAI-compatible)
 ├── services/
 │   ├── bloxels-cv/       # Bloxels grid photo classifier (path watcher on inbox-mobile)
-│   ├── inbox-processor/  # Phone capture processor (whisper-server + Tesseract)
+│   ├── inbox-processor/  # Phone capture processor (whisper-server + Tesseract; optional DX2 voice-note cleanup)
 │   └── radicale/         # Self-hosted CalDAV (tasks.hwc.*, two-way task sync)
 ├── media/        # Media profile toggle wiring
 └── n8n/          # Workflow/profile pieces for n8n
@@ -42,6 +43,7 @@ The media/arr/torrent stack lives entirely in `domains/media/`. **This domain no
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-09-19: **Voice captures now get a DX2 cleanup pass, and DX2's endpoint facts have one producer.** New `native/ai/dx2/` declares `hwc.server.ai.dx2.{baseUrl,model,apiKeyFile}` and runs nothing; `research-scout` reads them instead of its own literals (rendered unit environment is unchanged — checked by evaluation). `services/inbox-processor/` gained `cleanup.enable` (on for hwc-server): after whisper transcribes a capture, DX2 returns a title, a 1–3 sentence summary and action items, written above the verbatim transcript. It is fail-open: if DX2 is down, slow (60 s cap) or returns the wrong shape, the note is written with the raw transcript as before. Where to inspect: the note's `cleanup: dx2 | raw` frontmatter field, and `journalctl -u inbox-processor-audio` for the `WARNING: DX2 cleanup failed` line. What DX2 was NOT given, on measured grounds: lead-scout classification and mail triage — see the header of `native/ai/dx2/index.nix`.
 - 2026-09-19: Removed `native/ai/persona-daemon/` (Deno chat daemon with SQLite memory and its own vault index) as part of retiring the local chat stack; see `domains/ai/README.md` for the evidence and the full list. Its database held one conversation, from its build day. brainvec is now the only vault index. `native/ai/llama-cpp/` keeps running for embeddings only.
 - 2026-09-18: `native/ai/research-scout/` — item scoring moved from DX1 (`dx1.datax.to`, retired; HTTP 404 since 2026-09-14, about 1,000 failed classifier batches) to DX2 (`https://dx2.datax.to/v1`, model `llm`). The same `pi-dx1-api-key` secret authenticates DX2.
 - 2026-09-14: Lead Scout's human dashboard is now tailnet-only at

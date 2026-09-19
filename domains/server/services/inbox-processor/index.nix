@@ -50,6 +50,14 @@ in
         server keeps the model loaded and runs on the GPU.
       '';
     };
+
+    cleanup.enable = lib.mkEnableOption ''
+      a DX2 pass over each voice transcript: a title, a short summary and
+      action items go above the verbatim transcript. Fail-open — if DX2 is
+      down, slow or returns junk, the note is written with the raw transcript
+      exactly as before and `cleanup: raw` in its frontmatter. Endpoint facts
+      come from hwc.server.ai.dx2. The transcript text leaves the box
+    '';
   };
 
   # IMPLEMENTATION — delegated to sys.nix; this block holds assertions only.
@@ -76,6 +84,10 @@ in
       {
         assertion = config.hwc.server.ai.whisper.enable or false;
         message = "hwc.server.services.inboxProcessor needs hwc.server.ai.whisper.enable = true (audio captures are transcribed by the resident whisper-server).";
+      }
+      {
+        assertion = cfg.cleanup.enable -> (config.hwc.server.ai ? dx2);
+        message = "hwc.server.services.inboxProcessor.cleanup needs domains/server/native/ai/dx2/index.nix imported (it supplies the DX2 URL, model and key path).";
       }
     ];
   };

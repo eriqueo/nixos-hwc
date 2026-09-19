@@ -30,6 +30,7 @@
     ../../domains/server/native/ai/brainvec/index.nix # brainvec semantic-index ingest (vault embeddings)
     ../../domains/server/native/ai/hermes/index.nix # Hermes Agent (Nous Research)
     ../../domains/server/native/ai/market-intelligence/index.nix # Market Intelligence (earnings signals + dashboard)
+    ../../domains/server/native/ai/dx2/index.nix # DX2 endpoint facts (URL, model, key) for research-scout + inbox-processor
     ../../domains/server/native/ai/llama-cpp/index.nix # llama.cpp inference (embed only on this host)
     ../../domains/server/native/ai/whisper/index.nix # whisper.cpp speech-to-text server (GPU)
     ../../domains/server/services/inbox-processor/index.nix # Phone capture processor (Whisper + Tesseract)
@@ -210,6 +211,9 @@
     screenshotsInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/screenshots";
     brainInboxPath = "${config.hwc.paths.brain."server-replica"}/inbox";
     processedPath = "${config.hwc.paths.brain."inbox-mobile"}/processed";
+    # DX2 adds a title, summary and action items above the verbatim
+    # transcript; fail-open to the raw note when DX2 is unreachable.
+    cleanup.enable = true;
   };
 
   # Bloxels CV — classify phone photos of the printed 13x13 Bloxels grid.
