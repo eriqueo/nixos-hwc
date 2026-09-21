@@ -698,13 +698,15 @@
         "mail-operator-rules: sender-rule controls must work in message-list and viewer contexts";
       assert lib.assertMsg (lib.hasInfix "sort = -r date" aercConf)
         "mail-operator-rules: newest-first is not the default sort";
-      assert lib.assertMsg (lib.hasInfix "now            = tag:inbox AND tag:queue AND NOT tag:trash" queries)
+      assert lib.assertMsg (lib.hasInfix "now            = tag:inbox AND tag:queue AND NOT tag:trash AND NOT tag:attention/bulk AND NOT tag:attention/junk" queries)
         "mail-operator-rules: now is no longer the stable decision queue";
-      assert lib.assertMsg (lib.hasInfix "family         = tag:family AND NOT tag:trash" queries
-        && lib.hasInfix "datax          = tag:datax AND NOT tag:trash" queries
-        && lib.hasInfix "hwc            = (tag:hwc OR tag:work OR tag:office OR tag:hwcmt) AND NOT tag:trash" queries
+      assert lib.assertMsg (lib.hasInfix "family         = (tag:category/family OR tag:family) AND NOT tag:trash" queries
+        && lib.hasInfix "datax          = (tag:category/datax OR tag:datax) AND NOT tag:trash" queries
+        && lib.hasInfix "hwc            = (tag:category/hwc OR tag:hwc OR tag:work OR tag:office OR tag:hwcmt) AND NOT tag:trash" queries
+        && lib.hasInfix "later          = tag:later AND NOT tag:trash" queries
+        && lib.hasInfix "junk           = tag:trash AND tag:attention/junk" queries
         && lib.hasInfix "all            = NOT tag:trash" queries)
-        "mail-operator-rules: durable domain/all-mail history queries regressed";
+        "mail-operator-rules: attention/domain/all-mail queries regressed";
       pkgs.runCommand "mail-operator-rules" {} ''
         MAIL_RULE_SOURCE=${source} ${pkgs.python3}/bin/python3 ${tests}
         ${pkgs.python3}/bin/python3 - ${hookFixture} <<'PY'
