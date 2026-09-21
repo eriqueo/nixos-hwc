@@ -131,6 +131,10 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
+- 2026-09-21: `parts/estimator-integration/README.md` gained the `## Structure`
+  and `## Changelog` sections Law 12 requires, and recorded the 2026-06-02
+  tailnet rename. Doc-only; no workflow or module here changed.
+
 - 2026-09-08: Event discovery, curation and calendar review moved to Event Scout
   in the Scout monorepo (`apps/event-scout`). Removed the two event workflow
   exports, the unused event ledger migration and n8n's event bearer mount.
