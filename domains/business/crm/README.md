@@ -55,6 +55,11 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 `^/hooks/(contact|appointment|availability)`.
 
 ## Changelog
+- **2026-09-21** — `calendar.busyFeeds` (label → agenix secret holding a
+  calendar's secret iCal address). The CRM reads each feed read-only and never
+  offers a customer a time it covers; hwc-server sets three (ContractorCTO,
+  Proton work, Google family). The Python env gains `recurring-ical-events` to
+  expand repeating events. hwc-crm D51.
 - **2026-09-19** — Lead Scout routes gain `minScores` (classifier score floors,
   passed to the ingest as `min_scores`). The network route now ingests only
   `hot_connect` with `network_value >= 3`: measured that day, 0 of 524

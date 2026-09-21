@@ -26,7 +26,7 @@ let
 
   pythonEnv = pkgs.python3.withPackages (ps: with ps; [
     fastapi uvicorn psycopg jinja2 httpx pydantic email-validator
-    icalendar tzdata
+    icalendar recurring-ical-events tzdata
   ]);
 
   crmWrapper = pkgs.writeShellScript "hwc-crm-wrapper" ''
@@ -66,6 +66,8 @@ let
       export HWC_CRM_CALDAV_COLLECTION="${cfg.calendar.collection}"
       export HWC_CRM_CALDAV_BUSY_COLLECTIONS="${lib.concatStringsSep "," cfg.calendar.busyCollections}"
       export HWC_CRM_ORGANIZER_EMAIL="${cfg.calendar.organizerEmail}"
+      export HWC_CRM_BUSY_FEEDS="${lib.concatStringsSep "," (lib.mapAttrsToList
+        (label: ref: "${label}=${config.age.secrets.${ref}.path}") cfg.calendar.busyFeeds)}"
     ''}
     ${lib.optionalString (cfg.calendar.enable && cfg.rolodex.enable) ''
       export HWC_CRM_CARDDAV_USER="${cfg.rolodex.user}"
@@ -383,6 +385,18 @@ in
         description = "CalDAV collection paths checked for appointment conflicts.";
       };
       organizerEmail = lib.mkOption { type = lib.types.str; default = "eric@iheartwoodcraft.com"; };
+      busyFeeds = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { };
+        example = { "Google family" = "hwcmt-ical-link"; };
+        description = ''
+          Calendars kept outside Radicale that also make Eric busy: label →
+          agenix secret NAME holding the calendar's secret iCal address. The
+          CRM reads each feed (read-only) and never offers a customer a time
+          it covers. The label is what alerts and Intake health show; the
+          address itself never leaves the secret. No "=" or "," in a label.
+        '';
+      };
     };
   };
 
@@ -407,6 +421,11 @@ in
       {
         assertion = cfg.controlTokenSecretRef == null || config.age.secrets ? ${cfg.controlTokenSecretRef};
         message = "hwc.business.crm.controlTokenSecretRef '${toString cfg.controlTokenSecretRef}' is not a declared agenix secret";
+      }
+      {
+        assertion = lib.all (ref: config.age.secrets ? ${ref})
+          (lib.attrValues cfg.calendar.busyFeeds);
+        message = "hwc.business.crm.calendar.busyFeeds names an agenix secret that is not declared";
       }
       {
         assertion = lib.all

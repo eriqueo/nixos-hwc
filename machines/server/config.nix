@@ -168,6 +168,12 @@
     summary.enable = true;
   };
   hwc.business.crm.controlTokenSecretRef = "hwc-control-crm-token";
+  # Calendars outside Radicale that also make Eric busy for website bookings.
+  hwc.business.crm.calendar.busyFeeds = {
+    "ContractorCTO" = "cto-ical-link";
+    "Proton work" = "proton-ical-link";
+    "Google family" = "hwcmt-ical-link";
+  };
   hwc.server.native.ai.event-scout = {
     enable = true;
     reviewerId = config.hwc.server.ai.leadScout.discordApprovalBots.hwc.allowedUserId;
