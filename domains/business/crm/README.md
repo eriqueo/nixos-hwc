@@ -42,6 +42,7 @@ crm/
 | `.leadscoutIngest.onCalendar` | `*:00/30` | Every 30 min, persistent. |
 | `.leadscoutIngest.sinceDays` | 14 | Rescan window (skip pre-filter makes overlap free). |
 | `.leadscoutIngest.routes` | job + network + subcontractor | Versioned route table. Subcontractors use `scores.candidate_name` identity and category `sub`; repeated posts append as evidence. |
+| `.leadscoutIngest.routesJson` | derived | Internal route/window contract shared by the ingest timer and Lead Scout UI. |
 | `.leadscoutIngest.dataxDsn` | `postgresql:///lead_scout` | READ-ONLY by contract. Option name kept; the database was renamed 2026-08-26. |
 | `.calendar.enable` | false | Write appointment events to Radicale. |
 | `.calendar.caldavUrl` | loopback Radicale | CalDAV base URL. |
@@ -55,6 +56,9 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 `^/hooks/(contact|appointment|availability)`.
 
 ## Changelog
+- **2026-09-21** — The CRM ingest and Lead Scout action UI now consume one
+  derived v2 route/window contract, keeping route and score eligibility under
+  one Nix producer.
 - **2026-09-21** — `calendar.busyFeeds` (label → agenix secret holding a
   calendar's secret iCal address). The CRM reads each feed read-only and never
   offers a customer a time it covers; hwc-server sets three (ContractorCTO,

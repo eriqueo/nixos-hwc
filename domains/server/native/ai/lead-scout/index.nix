@@ -373,8 +373,12 @@ in
         after = [
           "network-online.target"
           "postgresql.service"
-        ];
-        wants = [ "network-online.target" ];
+        ]
+        ++ lib.optional config.hwc.business.crm.enable "hwc-crm.service";
+        wants = [
+          "network-online.target"
+        ]
+        ++ lib.optional config.hwc.business.crm.enable "hwc-crm.service";
         wantedBy = [ "multi-user.target" ];
 
         environment = {
@@ -401,6 +405,15 @@ in
             lib.mapAttrs (_: secretName: config.age.secrets.${secretName}.path) cfg.channelMap
           );
         }
+        //
+          lib.optionalAttrs (config.hwc.business.crm.enable && config.hwc.business.crm.leadscoutIngest.enable)
+            {
+              # CRM owns handoff eligibility and funnel state. Lead Scout receives
+              # the same route contract plus a read-only evidence endpoint; no CRM
+              # mutation credential crosses this boundary.
+              HWC_CRM_URL = "http://${config.hwc.business.crm.bindAddr}:${toString config.hwc.business.crm.port}";
+              HWC_CRM_INGEST_ROUTES = config.hwc.business.crm.leadscoutIngest.routesJson;
+            }
         // {
 
           # The classifier shells out to the `claude` CLI. Upstream lead_scout
@@ -473,7 +486,8 @@ in
         message = "Lead Scout bot(s) ${lib.concatStringsSep ", " (builtins.attrNames delegatedBots)} delegate their Gateway to hwc-control-bot, which is not enabled — their buttons would have no consumer.";
       }
       {
-        assertion = cfg.controlTokenSecret == null || builtins.hasAttr cfg.controlTokenSecret config.age.secrets;
+        assertion =
+          cfg.controlTokenSecret == null || builtins.hasAttr cfg.controlTokenSecret config.age.secrets;
         message = "Lead Scout controlTokenSecret ${toString cfg.controlTokenSecret} has no generated agenix mount.";
       }
     ]

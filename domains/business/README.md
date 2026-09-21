@@ -28,6 +28,8 @@ business/
 ```
 
 ## Changelog
+- 2026-09-21: CRM now exposes one derived Lead Scout ingest route/window
+  contract to both its timer and Lead Scout's read-only handoff UI.
 - 2026-09-21: Morning Briefing now consumes the resident local Laya mail
   classifier and the shared `act/look/bulk/junk` attention contract.
 - 2026-09-16: Added Finance as the seventh HWC Workbench area, backed by the Firefly recurring-payment explorer at `firefly-explorer.hwc.iheartwoodcraft.com`. The shared registry remains the single producer of area order and destinations; the Finance app consumes `/areas.json` for its matching area switcher.
