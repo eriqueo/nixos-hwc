@@ -284,24 +284,21 @@ Unread messages are bold, read messages are dim, and selection remains a strong 
 
 ## Virtual Folders (Query Map)
 
-The sidebar intentionally exposes only `now`, `family`, `datax`, and `hwc`.
-`now` is the complete recent unread non-noise inbox. The other three folders
-partition that same set exactly: DataX wins on `tag:datax`; family then matches
-protected family mail and the three personal recipient addresses; HWC receives
-everything left so no current message disappears. `now` is the default; only
-its unread count appears in the sidebar, and the tab count is scoped to it.
-Backlog, drafts, sent, archive, trash, and the legacy tag/triage queries remain
-available by direct keybinding without competing for attention in the sidebar.
+The sidebar exposes Now, the five subject categories, Later, and Junk. Now is
+the inbox decision queue (`act + look`) and is independent of read state.
+Category folders remain useful across archived history. Later holds legitimate
+bulk or human-deferred mail; Junk is recoverable Trash selected with stronger
+evidence.
 
 Primary folders:
 
 | Folder | Query |
 |--------|-------|
-| now | unread inbox mail from the last 7 days, excluding notifications, newsletters, trash, and `triage/noise` |
-| family | the `now` set matching `family`/`keep` or a personal recipient address, excluding DataX |
-| datax | the `now` set tagged `datax` |
-| hwc | every message left in `now` after DataX and family, including uncategorized mail |
-| backlog | the same unread non-noise inbox set as `now`, older than the 7-day window |
+| now | managed inbox mail excluding `bulk`, `junk`, and trash; reading does not remove it |
+| family/datax/hwc/personal/other | `category/<name>` history, with legacy category tags included where present |
+| later | `tag:later AND NOT tag:trash` |
+| junk | `tag:trash AND tag:attention/junk` |
+| backlog | legacy unread inbox mail not yet promoted into the managed queue |
 | inbox | `tag:inbox AND NOT tag:trash` |
 | unread | `tag:unread AND NOT tag:trash` |
 | sent | `tag:sent` |
@@ -312,7 +309,8 @@ Primary folders:
 | important | `tag:important AND NOT tag:trash` |
 | hide_my_email | `tag:hide` |
 
-The remaining static, triage, and tag-derived queries stay in the query map for integrations, bindings, and direct `:cf <name>` drill-down without crowding the sidebar.
+The remaining static and tag-derived queries stay in the query map for direct
+drill-down without crowding the sidebar.
 
 Tag-derived folders are generated from `domains/mail/taxonomy/data.nix` and
 remain directly addressable even though they are hidden from the sidebar and
@@ -357,6 +355,10 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
    `proton/Labels/<name>/`.
 
 ## Changelog
+
+- 2026-09-21: The sidebar now exposes Now, subject categories, Later, and Junk
+  from the local Laya contract. `<Space>t...` records durable human attention
+  and category corrections through the classifier ledger.
 
 - 2026-09-15: Made sender-authored plain text the default reading view while
   retaining `h`/`l` MIME switching. Plain mail now uses a stable 100-column

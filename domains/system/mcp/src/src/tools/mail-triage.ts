@@ -3,11 +3,11 @@
  *
  * READS (board/summary) come from the CACHED mail-triage produced daily by
  * domains/business/morning-briefing (run.sh injects a `.mail_triage` key into
- * output/briefing.json), re-bucketed by the LIVE notmuch triage/* tags so
+ * output/briefing.json), re-bucketed by the LIVE notmuch attention/* tags so
  * moves persist, and filtered to threads still in the inbox.
  *
  * WRITES are the generic workbench card_actions verbs ({action, id[,target]}):
- * triage-<bucket> / move (replace the triage/* tag set), archive, trash,
+ * triage-<bucket> / move (replace the attention/* tag set), archive, trash,
  * mark-read, flag-action — all plain notmuch tag ops on `thread:<id>`, the same store
  * aerc and the briefing read. Never runs Claude.
  *
@@ -26,42 +26,46 @@ import { TRIAGE_BUCKETS, triageTag, mailTagActions } from "./mail.js";
 const DEFAULT_BRIEFING_JSON =
   "/home/eric/.nixos/domains/business/morning-briefing/output/briefing.json";
 
-/** A single triaged thread as produced by the mail-triage prompt. */
+/** A single classified thread as produced by the local Laya runner. */
 interface TriageThread {
   thread_id: string;
   subject: string;
-  from_name: string;
-  from_address: string;
-  date_relative: string;
+  sender?: string;
+  from_name?: string;
+  from_address?: string;
+  date_relative?: string;
   tags: string[];
-  has_attachment: boolean;
-  summary: string;
-  suggested_action: string;
+  has_attachment?: boolean;
+  summary?: string;
+  suggested_action?: string;
   urgency_reason?: string;
 }
 
 interface MailTriage {
   generated_at: string;
-  query_window_hours: number;
-  total_unread: number;
+  query_window_hours?: number;
+  total_unread?: number;
   buckets: {
-    urgent: TriageThread[];
-    review: TriageThread[];
-    noise: TriageThread[];
+    act: TriageThread[];
+    look: TriageThread[];
+    bulk: TriageThread[];
+    junk: TriageThread[];
   };
   stats: {
-    urgent_count: number;
-    review_count: number;
-    noise_count: number;
+    act_count: number;
+    look_count: number;
+    bulk_count: number;
+    junk_count: number;
   };
 }
 
-type Bucket = "urgent" | "review" | "noise";
+type Bucket = "act" | "look" | "bulk" | "junk";
 
 const PRIORITY: Record<Bucket, "critical" | "normal" | "low"> = {
-  urgent: "critical",
-  review: "normal",
-  noise: "low",
+  act: "critical",
+  look: "normal",
+  bulk: "low",
+  junk: "low",
 };
 
 /** Read + JSON-parse the briefing file and pull .mail_triage. null on any failure. */
@@ -98,7 +102,7 @@ function notmuchInbox(ids: readonly string[]): Promise<Inbox> {
       execFile(
         NOTMUCH_CANDIDATES[i],
         ["search", "--format=json", "--output=summary",
-          `tag:inbox AND NOT tag:trash AND (${ids.map(id => `thread:${id}`).join(" OR ")})`],
+          `(tag:inbox OR tag:later OR tag:trash) AND (${ids.map(id => `thread:${id}`).join(" OR ")})`],
         { timeout: 3500, maxBuffer: 2 * 1024 * 1024 },
         (err, stdout) => {
           if (err && (err as NodeJS.ErrnoException).code === "ENOENT") {
@@ -130,11 +134,11 @@ function notmuchInbox(ids: readonly string[]): Promise<Inbox> {
 }
 
 /**
- * Re-bucket the cached triage by the LIVE notmuch `triage/<bucket>` tags so a
- * workbench "move between columns" (a triage/* retag) survives a refresh
+ * Re-bucket the cached triage by the LIVE notmuch `attention/<state>` tags so a
+ * workbench move survives a refresh
  * WITHOUT re-running the daily briefing. The briefing remains the content
  * source (subject/summary/sender); the tag is the source of truth for
- * PLACEMENT. A thread carrying no triage/* tag (never moved) keeps its cached
+ * PLACEMENT. A thread carrying no attention/* tag keeps its cached
  * bucket. Threads no longer in the inbox (archived/trashed since the cache
  * was written — including via this tool's own verbs) are dropped, so an
  * archive durably removes the card instead of resurrecting on refresh.
@@ -143,7 +147,7 @@ function notmuchInbox(ids: readonly string[]): Promise<Inbox> {
 export async function reflectLiveBuckets(
   cached: Record<Bucket, TriageThread[]>,
   readInbox: (ids: readonly string[]) => Promise<Inbox> = notmuchInbox,
-  unreadOnly = false,
+  _unreadOnly = false,
 ): Promise<Record<Bucket, TriageThread[]>> {
   // Only cached threads can appear on this surface. Scanning the entire inbox
   // starves khal under the gateway CPU quota. Bound argv/query work at 512 IDs;
@@ -153,14 +157,14 @@ export async function reflectLiveBuckets(
   if (ids.length > 512 || ids.some(id => typeof id !== "string" || !/^[0-9a-f]{1,64}$/.test(id))) {
     throw Error("Mail triage requires at most 512 valid hexadecimal thread IDs");
   }
-  if (ids.length === 0) return {urgent: [], review: [], noise: []};
+  if (ids.length === 0) return {act: [], look: [], bulk: [], junk: []};
   const inbox = await readInbox(ids);
   const seen = new Set<string>();
-  const out: Record<Bucket, TriageThread[]> = { urgent: [], review: [], noise: [] };
+  const out: Record<Bucket, TriageThread[]> = { act: [], look: [], bulk: [], junk: [] };
   for (const bucket of TRIAGE_BUCKETS) {
     for (const thread of cached[bucket as Bucket]) {
       const tags = inbox.get(thread.thread_id);
-      if (!tags || seen.has(thread.thread_id) || (unreadOnly && !tags.has("unread"))) continue;
+      if (!tags || seen.has(thread.thread_id)) continue;
       seen.add(thread.thread_id);
       // Keep the established last-bucket precedence if a thread has multiple tags.
       const live = [...TRIAGE_BUCKETS].reverse().find(b => tags.has(triageTag(b))) as Bucket | undefined;
@@ -172,7 +176,7 @@ export async function reflectLiveBuckets(
 
 /* ─── Write verbs (generic workbench card_actions path) ──────────────────── */
 
-/** Tag ops per verb. triage-<bucket> and move replace the triage/* set. */
+/** Tag ops per verb. triage-<bucket> and move replace the attention/* set. */
 function verbTagOps(verb: string, target?: string): string[] | null {
   const bucketOf = (b: string): string[] | null =>
     (TRIAGE_BUCKETS as readonly string[]).includes(b)
@@ -223,7 +227,7 @@ function toCard(thread: TriageThread, bucket: Bucket) {
     kind: "mail",
     label: thread.subject,
     priority: PRIORITY[bucket],
-    sender: thread.from_name,
+    sender: thread.sender ?? thread.from_name ?? thread.from_address ?? "?",
     summary: thread.summary,
     suggested_action: thread.suggested_action,
     urgency_reason: thread.urgency_reason,
@@ -249,12 +253,9 @@ export function mailTriageTools(
       name: "hwc_mail_triage",
       description:
         "Mail triage board (Triage Surface Contract). READS: action=board (default) returns a kanban of " +
-        "Urgent/Review/Noise columns from the cached morning-briefing triage, re-bucketed by the live " +
-        "notmuch triage/* tags and filtered to threads still in the inbox; action=summary returns a compact " +
-        "text overview; action=digest returns up to eight urgent/review threads with actions. WRITES (per-card verbs, require id): action=triage-urgent|triage-review|triage-noise " +
-        "or action=move with target=<bucket> replace the thread's triage/* tag set; action=archive|trash " +
-        "de-inbox the thread; action=mark-read removes unread and clears it from the digest; action=flag-action adds the +action flag. Writes hit the same notmuch tags " +
-        "aerc and the briefing read. Never runs Claude.",
+        "Act/Look/Bulk/Junk columns from the cached Laya classification, reflected from live " +
+        "notmuch attention/* tags; action=summary returns a compact overview; action=digest returns " +
+        "up to eight Act/Look threads. Writes hit the same notmuch tags aerc and the briefing read.",
       inputSchema: {
         type: "object",
         properties: {
@@ -351,24 +352,27 @@ export function mailTriageTools(
 
         if (!triage) return mcpError({ type: "UNAVAILABLE", message: "Mail digest is unavailable. Open aerc or run mail triage." });
         // Reflect any persisted moves: re-bucket cached threads by their live
-        // triage/* notmuch tag so a workbench column move survives a refresh.
+        // attention/* notmuch tag so a workbench column move survives a refresh.
         let reflected: Record<Bucket, TriageThread[]>;
         try { reflected = await reflectLiveBuckets({
-          urgent: bucketThreads(triage, "urgent"),
-          review: bucketThreads(triage, "review"),
-          noise: bucketThreads(triage, "noise"),
+          act: bucketThreads(triage, "act"),
+          look: bucketThreads(triage, "look"),
+          bulk: bucketThreads(triage, "bulk"),
+          junk: bucketThreads(triage, "junk"),
         }, readInbox, action === "digest"); } catch {
           return mcpError({ type: "COMMAND_FAILED", message: "Cannot verify inbox membership. Open aerc or refresh." });
         }
-        const urgent = reflected.urgent;
-        const review = reflected.review;
-        const noise = reflected.noise;
+        const act = reflected.act;
+        const look = reflected.look;
+        const bulk = reflected.bulk;
+        const junk = reflected.junk;
 
         // Counts derive from the REFLECTED arrays (post-move), not the stale
         // cached stats — a move shifts a thread between buckets at read time.
-        const urgentCount = urgent.length;
-        const reviewCount = review.length;
-        const noiseCount = noise.length;
+        const actCount = triage.stats?.act_count ?? act.length;
+        const lookCount = triage.stats?.look_count ?? look.length;
+        const bulkCount = triage.stats?.bulk_count ?? bulk.length;
+        const junkCount = triage.stats?.junk_count ?? junk.length;
         const totalUnread = triage?.total_unread ?? 0;
         const generatedAt = triage?.generated_at ?? null;
 
@@ -377,40 +381,41 @@ export function mailTriageTools(
           generated_at: generatedAt,
           total_unread: totalUnread,
           stats: {
-            urgent_count: urgentCount,
-            review_count: reviewCount,
-            noise_count: noiseCount,
+            act_count: actCount,
+            look_count: lookCount,
+            bulk_count: bulkCount,
+            junk_count: junkCount,
           },
         };
 
         if (action === "digest") {
-          // Eight visible items, urgent first; overflow is explicit and opens in aerc.
-          const items = [...urgent.map(t => toCard(t, "urgent")),
-                         ...review.map(t => toCard(t, "review"))];
+          // Eight visible Now items, actions first; reading does not remove them.
+          const items = [...act.map(t => toCard(t, "act")),
+                         ...look.map(t => toCard(t, "look"))];
           return { status: "ok", message: "Actionable mail", data: compact,
             view: contract("list", "Mail needing attention", {
               items: items.slice(0, 8), total: items.length,
               remaining: Math.max(0, items.length - 8),
-              summary: `${urgentCount} urgent · ${reviewCount} to review · triaged ${generatedAt ?? "unknown"}`,
+              summary: `${actCount} act · ${lookCount} look · classified ${generatedAt ?? "unknown"}`,
             }, { generated_at: generatedAt, source: "hwc_mail_triage" }) };
         }
 
         if (action === "summary") {
-          const highlights = urgent.slice(0, 5).map((t) => t.subject);
+          const highlights = act.slice(0, 5).map((t) => t.subject);
           const summaryText = triage
             ? `${totalUnread} unread (as of ${clockFromIso(generatedAt ?? undefined)})`
             : "no triage yet";
           return {
             status: "ok",
             message: triage
-              ? `Mail triage: ${urgentCount} urgent, ${reviewCount} review, ${noiseCount} noise`
+              ? `Mail: ${actCount} act, ${lookCount} look, ${bulkCount} later, ${junkCount} junk`
               : "No cached mail triage found",
             data: compact,
             view: contract(
               "text",
               "Mail",
               {
-                greeting: `${urgentCount} urgent · ${reviewCount} review · ${noiseCount} noise`,
+                greeting: `${actCount} act · ${lookCount} look · ${bulkCount} later · ${junkCount} junk`,
                 summary: summaryText,
                 highlights,
               },
@@ -421,15 +426,16 @@ export function mailTriageTools(
 
         // action === "board" (default)
         const columns = [
-          { id: "urgent", title: "Urgent", cards: urgent.map((t) => toCard(t, "urgent")) },
-          { id: "review", title: "Review", cards: review.map((t) => toCard(t, "review")) },
-          { id: "noise", title: "Noise", cards: noise.map((t) => toCard(t, "noise")) },
+          { id: "act", title: "Act", cards: act.map((t) => toCard(t, "act")) },
+          { id: "look", title: "Look", cards: look.map((t) => toCard(t, "look")) },
+          { id: "bulk", title: "Later", cards: bulk.map((t) => toCard(t, "bulk")) },
+          { id: "junk", title: "Junk", cards: junk.map((t) => toCard(t, "junk")) },
         ];
 
         return {
           status: "ok",
           message: triage
-            ? `Mail triage board: ${urgentCount} urgent, ${reviewCount} review, ${noiseCount} noise`
+            ? `Mail board: ${actCount} act, ${lookCount} look, ${bulkCount} later, ${junkCount} junk`
             : "No cached mail triage found — empty board",
           data: compact,
           view: contract(

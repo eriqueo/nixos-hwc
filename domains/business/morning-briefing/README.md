@@ -7,8 +7,8 @@ runs `defaultMode=acceptEdits` — which does NOT auto-approve Bash or MCP tool
 calls. So an agent asked to gather via MCP gets every call *permission-denied*
 (this produced briefings full of bogus `[CRITICAL] … permission denied` alerts).
 `run.sh` therefore gathers system/mail/calendar directly in bash (`systemctl`,
-`df`, `notmuch`, `khal`) as `eric`, who has full file/CLI access. Claude is used
-ONLY for the mail-triage *reasoning* in Step 2 (no tool calls). **JobTread
+`df`, `notmuch`, `khal`) as `eric`, who has full file/CLI access. A resident,
+CPU-only Laya service performs mail classification locally. **JobTread
 sections (jobs/leads/tasks/overdue/docs) are placeholders** pending a local data
 source — see "JobTread follow-up" below.
 
@@ -29,8 +29,6 @@ gather-research.mjs    # Step 1c: research-scout review lane over loopback REST
                        #   (:8422/api/<tool>) → sections.research (articles
                        #   awaiting review + the standing themes report)
 CLAUDE.md              # Agent prompt: data schema, alert rules, MCP sources
-prompts/
-  mail-triage.txt      # Mail triage prompt: bucket rules, known senders
 dashboard/
   index.html           # Static SPA dashboard (dark theme, pull-to-refresh)
   briefing.json        # Symlink → ../output/briefing.json
@@ -39,19 +37,18 @@ output/
   mail-triage.json     # Step 2 output before merge
 logs/
   run.log              # Rolling log (last 100 lines)
-  mail-triage-raw.log  # Full raw Claude output from the last FAILED triage parse
 ```
 
 ## Pipeline
 
 | Step | What | How |
 |------|------|-----|
-| 0 | Pre-flight | Check claude binary exists (still needed for Step 2 mail triage) |
+| 0 | Pre-flight | The classifier service validates its pinned model at startup. |
 | 1 | Local gather | bash assembles `briefing.json` directly: `systemctl` (services incl. failed unit NAMES, podman-* container count, borg backup unit), `df` (storage), `notmuch` (mail), `khal`→`jq` (calendar, 7-day window), `curl` open-meteo (weather). Alerts computed locally. **No Claude, no MCP.** |
 | 1b | Live gather | `node gather-live.mjs` → local MCP gateway (`:6200/mcp`, plain JSON-RPC, no permissions): `jt_jobs` (jobs + leads + weekly snapshot), `jt_documents list_overdue` (overdue invoices), `hwc_tasks_list` (CalDAV tasks). Best-effort: per-section failures become dashboard alerts, placeholders kept. |
 | 1c | Local-app gather | `node gather-refinery.mjs` (refinery `.md` item store) and `node gather-research.mjs` (research-scout REST on `:8422`). Both emit `{}` on any failure and are `|| echo '{}'`-guarded, so each degrades independently — one app being down never costs the other its section. `gather-research.mjs` reads the lessons snapshot with `generate:false`, so the briefing spends no LLM calls. |
-| 2 | Mail triage | `notmuch search` → `claude --print` classifies into urgent/review/noise (pure reasoning, no tool calls). JSON extracted with node (direct → fenced → brace-span); full raw saved to `logs/mail-triage-raw.log` on parse failure. |
-| 2b | Persist buckets | `notmuch tag` stamps each classified thread with `triage/<bucket>` (removes other `triage/*`) |
+| 2 | Mail classification | `notmuch` → resident Laya classifies attention (`act/look/bulk/junk`), subject category, and factual tags. Uncertainty stays in `act`. |
+| 2b | Persist decisions | The classifier writes `attention/*`, `category/*`, Later/Junk effects, append-only judgments, and permanent human locks. |
 | 3 | Merge | `jq` injects mail_triage into briefing.json |
 | 4 | Publish | Dashboard reads via symlink; no-op if symlink exists |
 | 5 | Email | Plain-text render (alerts, calendar, tasks, leads, overdue invoices, jobs, mail triage w/ summaries, website) via msmtp from office@. **Only sent on the pre-9am run** — midday/evening timer firings refresh the dashboard without re-emailing (`FORCE_EMAIL=1` overrides). |
@@ -74,22 +71,20 @@ to describe: it speaks StreamableHTTP JSON-RPC to the local gateway and fills
 - Every job/lead/invoice carries a `url` → `https://app.jobtread.com/jobs/<id>`
   so the dashboard can deep-link.
 
-### Tag-backed triage buckets (persisted moves)
+### Tag-backed attention states
 
-The triage bucket (urgent/review/noise) is a **notmuch tag** `triage/<bucket>`, not
-just a position in the cached JSON. This is what lets the workbench Mail-triage
-kanban "move between columns" PERSIST across a refresh:
+Attention (`act/look/bulk/junk`) is a **notmuch tag** `attention/<state>`, not
+just a position in cached JSON. `act` and `look` form Now. `bulk` moves to Later.
+`junk` moves to recoverable Trash.
 
-- **Step 2b** (this pipeline) writes the daily baseline: each classified thread is
-  tagged `triage/<bucket>` (other `triage/*` removed first).
-- The **workbench** moves a card by calling `hwc_mail action=tag tag_action=set-triage
-  triage=<bucket>` on the gateway, which replaces the `triage/*` tag set.
-- **`hwc_mail_triage`** re-buckets the cached threads by their *live* `triage/*` tag at
-  read time, so a move shows up on the next board refresh without re-running the briefing.
+- The resident classifier skips unchanged fingerprints and reconsiders a model
+  decision only when a thread gains context.
+- A human correction in aerc becomes an append-only event and locks the thread.
+- **`hwc_mail_triage`** reflects the cached threads through their live
+  `attention/*` tag, so the board and aerc show the same placement.
 
-The bucket→tag mapping is owned in **one place**: `TRIAGE_BUCKETS` / `triageTag()` in
-`domains/system/mcp/src/src/tools/mail.ts`. The bucket names here (`urgent review noise`
-in Step 2b) and in `mail-triage.ts` must stay in lockstep with it.
+The deployed attention vocabulary is baked from `domains/mail/taxonomy/`; the
+classifier's versioned contract is pinned through the System One flake input.
 
 ## Sections
 
@@ -105,7 +100,7 @@ in Step 2b) and in `mail-triage.ts` must stay in lockstep with it.
 | Recent Documents | JobTread | `jt_get_documents` | After Overdue |
 | System Health | HWC server | `hwc_monitoring_health_check` | After Recent Docs |
 | Backup | Borg via HWC | `hwc_storage_status` | After System |
-| Mail Triage | notmuch + Claude | Step 2 pipeline | After Backup |
+| Mail | notmuch + Laya | Step 2 pipeline | After Backup |
 | Comms | Quo/OpenPhone | Placeholder (future) | After Mail |
 | Refinery | Refinery item store | N/A (local file read) | After Mail triage |
 | Research | research-scout `:8422` | N/A (loopback REST) | After Refinery |
@@ -142,17 +137,24 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Troubleshooting
 
-**Claude CLI not found**: Step 0 pre-flight checks for the binary at `/etc/profiles/per-user/eric/bin/claude`. If missing, the service logs `FATAL` and writes an error briefing.json. Ensure `claude-code` is in the NixOS user packages.
+**Classifier unavailable**: mail stays in Now. Check `mail-classifier-model.service`
+and `/run/hwc-mail-classifier/laya.sock`; the briefing records the degraded state.
 
 **MCP server unreachable**: The agent adds an alert for any data source that fails. Check `hwc-sys-mcp` gateway status with `systemctl status hwc-sys-mcp`. Individual tool failures produce partial briefings (other sections still render).
 
-**jq parse failures**: Step 3 merge can fail if briefing.json or mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific jq error. The mail triage step includes a JSON extraction fallback (sed range) to handle markdown fences in Claude output.
+**jq parse failures**: Step 3 merge can fail if briefing.json or
+mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific error.
 
 **Stale briefing**: Dashboard shows "stale" in red if briefing is >2h old. Check timer status with `systemctl list-timers morning-briefing.timer`. Manual trigger: `sudo systemctl start morning-briefing.service`.
 
-**Mail triage empty**: If notmuch returns 0 threads, an empty triage is written (not an error). Check `notmuch count tag:inbox AND tag:unread` to verify mail state. Mail sync issues: check `systemctl status mbsync-eric.timer`.
+**Mail view empty**: Check `notmuch count tag:inbox AND tag:queue` and
+`systemctl status mbsync-eric.timer`.
 
 ## Changelog
+
+- **2026-09-21** — Replaced Claude prompt triage with the pinned local Laya
+  classifier. The briefing now reads the same `act/look/bulk/junk` snapshot as
+  aerc, while human corrections remain permanent in the classifier ledger.
 
 - **2026-08-29** — **CEO information hierarchy.** Dashboard and email lead with
   a bounded `Needs you` list, keep deeper queue items behind an explicit Explore

@@ -357,7 +357,7 @@ server-side grocery list.
 | Tool | Description |
 |------|-------------|
 | `hwc_tasks_list` | List tasks. Filters: list, status (active/completed/all), category (`+proj`/`@ctx`), grep. |
-| `hwc_tasks_add` | Add task. Summary supports the todui inline dialect (`+proj @ctx (A) due:YYYY-MM-DD`) or explicit fields; optional `idempotencyKey` makes a repeated source update one CalDAV item. Additive writers send `requestVersion: 1`; legacy callers may omit it. |
+| `hwc_tasks_add` | Add task. Summary supports the todui inline dialect (`+proj @ctx (A) due:YYYY-MM-DD`) or explicit fields; optional `idempotencyKey` makes a repeated source update one CalDAV item. A validated weekly `recurrence` adds timezone-aware DTSTART/DUE/RRULE fields for Apple Reminders. |
 | `hwc_tasks_update` | By uid: edit fields / complete / reopen / delete. Property-surgical edits preserve RRULE and Apple metadata. |
 | `hwc_tasks_lists` | List the task lists (with active counts) or create a new one (MKCALENDAR). |
 
@@ -497,6 +497,10 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-09-21: Mail surfaces now consume `act/look/bulk/junk` and preserve Now
+  items when read. `hwc_tasks_add` accepts a bounded weekly recurrence contract
+  for persistent phone reminders.
+
 - 2026-09-15: Default agent-created tasks to Work and document Groceries as a
   directly addressable server-side list.
 
@@ -518,8 +522,8 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - Parse complete multiline PostgreSQL analytics JSON; live verification exposed
   embedded newlines in the top-pages aggregate.
 
-- Workbench daily/business views: bounded urgent/review mail digest with verified
-  inbox membership, explicit seven-day khal range, and read-only Umami aggregates.
+- Workbench daily/business views: bounded Act/Look mail digest with verified
+  placement, explicit seven-day khal range, and read-only Umami aggregates.
   The configured Umami website ID/database are passed to the gateway by Nix.
 
 - **2026-08-29** — `hwc_today action=board` accepts an optional validated
@@ -682,11 +686,11 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 page aggregates from the configured Umami website, with a fourteen-day comparison
 scan and a four-second command deadline. It uses existing peer-authenticated
 PostgreSQL access; no new secret or caller-supplied SQL is exposed.
-`mail-triage.ts` adds `action=digest`: eight urgent/review items, explicit overflow,
-and the cached triage timestamp. One notmuch JSON snapshot supplies membership
+`mail-triage.ts` adds `action=digest`: eight Act/Look items, explicit overflow,
+and the cached classification timestamp. One notmuch JSON snapshot supplies placement
 and tags for at most 512 cached thread IDs within 3.5 seconds and 2 MiB;
-invalid identities, overflow or command failure return a coded error. An empty
-inbox removes cached cards. Only the digest filters read threads.
+invalid identities, overflow or command failure return a coded error. Reading
+does not remove a Now item.
 `calendar.ts` returns `start_date` for seven consecutive days so empty days render.
 Tests in `src/tests/` exercise registered tools and their failure boundaries.
 

@@ -618,6 +618,7 @@
         "nixvirt": "nixvirt",
         "pave-query-builder": "pave-query-builder",
         "pnc-statement-pipeline": "pnc-statement-pipeline",
+        "system-one": "system-one",
         "tetro": "tetro",
         "todui": "todui",
         "workbench": "workbench",
@@ -678,6 +679,22 @@
       "original": {
         "owner": "oxalica",
         "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "system-one": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790020374,
+        "narHash": "sha256-17vuaCGsuUgCKM//+qoMQGgwlp1qhinjtdv9G9l/rVI=",
+        "owner": "eriqueo",
+        "repo": "system-one",
+        "rev": "7b524a5923f3040943af8520e0e76b0ec7b883bb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "eriqueo",
+        "repo": "system-one",
         "type": "github"
       }
     },

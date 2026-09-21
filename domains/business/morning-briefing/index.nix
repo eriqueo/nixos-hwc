@@ -5,22 +5,10 @@ let
   paths = config.hwc.paths;
   agentDir = "${paths.nixos}/domains/business/morning-briefing";
 
-  # Mail-triage prompt: reasoning template (prompts/mail-triage.txt) + the
-  # known-senders section generated from the canonical taxonomy
-  # (domains/mail/taxonomy/ — same data.nix the notmuch rules and the MCP
-  # gateway derive from; docs/plans/unified-triage-architecture.md). Rendered
-  # to a store path at build and handed to run.sh via MAIL_PROMPT, so the 6am
-  # run always classifies with the vocabulary of the deployed commit.
-  taxonomy = import ../../mail/taxonomy/lib.nix { inherit lib; };
-  mailTriagePrompt = pkgs.writeText "mail-triage-prompt.txt"
-    (builtins.replaceStrings
-      [ "@KNOWN_SENDERS@" ]
-      [ taxonomy.promptFragment ]
-      (builtins.readFile ./prompts/mail-triage.txt));
 in
 {
   options.hwc.business.morningBriefing = {
-    enable = lib.mkEnableOption "Morning briefing agent (Claude Code CLI + MCP)";
+    enable = lib.mkEnableOption "deterministic morning briefing and local mail classification";
     onCalendar = lib.mkOption {
       type = with lib.types; either str (listOf str);
       default = "*-*-* 06:00:00";
@@ -34,11 +22,10 @@ in
 
   config = lib.mkIf cfg.enable {
     systemd.services.morning-briefing = {
-      description = "Morning Briefing — Claude Code CLI data gathering agent";
-      after = [ "network-online.target" ];
-      wants = [ "network-online.target" ];
+      description = "Morning Briefing — local data gathering and Laya mail classification";
+      after = [ "network-online.target" "mail-classifier-model.service" ];
+      wants = [ "network-online.target" "mail-classifier-model.service" ];
       environment.HOME = paths.user.home;
-      environment.MAIL_PROMPT = "${mailTriagePrompt}";
       # git: config-drift tile (HEAD/unpushed/dirty). coredumpctl comes from
       # systemd which is always on the base PATH via /run/current-system.
       # pass+gnupg: msmtp's passwordeval for the Step-5 email (proton bridge).
@@ -64,7 +51,7 @@ in
           "${agentDir}/output"
           "${agentDir}/logs"
           "${agentDir}/dashboard"
-          paths.user.claude
+          "/var/lib/hwc/mail-classifier"
           "/tmp"
         ];
       };
@@ -80,11 +67,9 @@ in
       };
     };
 
-    # ── On-demand mail retriage (unified-triage Phase 4) ─────────────────────
-    # triage-mail.sh `delta`: classify ONLY unread inbox threads with no
-    # triage/* tag and append them to the cached board — never re-buckets
-    # already-classified threads, so manual moves survive (unlike the 6am
-    # baseline, which deliberately re-stamps everything).
+    # ── Mail retriage ────────────────────────────────────────────────────────
+    # The case ledger skips unchanged threads and permanently preserves human
+    # corrections. The timer keeps new mail moving without re-deciding history.
     #
     # Trigger: the MCP gateway (hwc_mail_triage action=retriage) touches
     # ~/.cache/hwc/retriage.request — a file the gateway's sandbox can already
@@ -93,8 +78,9 @@ in
     systemd.services.mail-retriage = {
       description = "Mail retriage — classify unclassified unread threads on demand";
       environment.HOME = paths.user.home;
-      environment.MAIL_PROMPT = "${mailTriagePrompt}";
-      path = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.nodejs_22 pkgs.notmuch ];
+      after = [ "mail-classifier-model.service" ];
+      wants = [ "mail-classifier-model.service" ];
+      path = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.notmuch ];
       serviceConfig = {
         Type = "oneshot";
         User = lib.mkForce "eric";
@@ -112,9 +98,20 @@ in
         ReadWritePaths = [
           "${agentDir}/output"
           "${agentDir}/logs"
-          paths.user.claude
+          "/var/lib/hwc/mail-classifier"
           "/tmp"
         ];
+      };
+    };
+
+    systemd.timers.mail-retriage = {
+      description = "Classify newly indexed mail every 15 minutes";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnBootSec = "5m";
+        OnUnitActiveSec = "15m";
+        Persistent = true;
+        RandomizedDelaySec = "30s";
       };
     };
 

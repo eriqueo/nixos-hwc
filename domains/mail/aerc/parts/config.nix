@@ -1,4 +1,4 @@
-{ lib, pkgs, config, aercPkg, ... }:
+{ lib, pkgs, config, aercPkg, mailContract, ... }:
 let
     common    = import ../../accounts/helpers.nix { inherit lib; };
     accounts  = config.hwc.mail.accounts or {};
@@ -15,7 +15,7 @@ let
     # `now` is the managed decision queue. The domain folders below are durable
     # tag-backed history: archiving completes a decision without making the
     # message disappear from family/datax/hwc.
-    currentInbox = "tag:inbox AND tag:${tags.currentTag} AND NOT tag:trash";
+    currentInbox = "tag:inbox AND tag:${tags.currentTag} AND NOT tag:trash AND NOT tag:attention/bulk AND NOT tag:attention/junk";
     # Legacy unread mail remains outside the daily surface until a bounded
     # cohort is deliberately promoted into the managed queue.
     legacyBacklog = "tag:inbox AND tag:unread AND NOT tag:${tags.currentTag} AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:trash AND NOT tag:triage/noise";
@@ -27,9 +27,13 @@ let
   queries = ''
     # ── Calm daily surface: one queue plus durable domain history ──
     now            = ${currentInbox}
-    family         = tag:family AND NOT tag:trash
-    datax          = tag:datax AND NOT tag:trash
-    hwc            = (tag:hwc OR tag:work OR tag:office OR tag:hwcmt) AND NOT tag:trash
+    family         = (tag:category/family OR tag:family) AND NOT tag:trash
+    datax          = (tag:category/datax OR tag:datax) AND NOT tag:trash
+    hwc            = (tag:category/hwc OR tag:hwc OR tag:work OR tag:office OR tag:hwcmt) AND NOT tag:trash
+    personal       = tag:category/personal AND NOT tag:trash
+    other          = tag:category/other AND NOT tag:trash
+    later          = tag:later AND NOT tag:trash
+    junk           = tag:trash AND tag:attention/junk
     backlog        = ${legacyBacklog}
 
     # ── Legacy drill-downs (hidden from the sidebar, still directly addressable) ──
@@ -79,10 +83,10 @@ ${tagQueries}
     from                = Eric <eric@iheartwoodcraft.com>
     outgoing            = ${pkgs.msmtp}/bin/msmtp
     trusted-authres     = ${lib.concatStringsSep "," trustedAuthResults}
-    folders             = now,family,datax,hwc
+    folders             = now,hwc,datax,family,personal,other,later,junk
     default             = now
     enable-folders-sort = true
-    folders-sort        = now,family,datax,hwc
+    folders-sort        = now,hwc,datax,family,personal,other,later,junk
   '';
 
   accountsFile = pkgs.writeText "aerc-accounts.conf" accountsConf;

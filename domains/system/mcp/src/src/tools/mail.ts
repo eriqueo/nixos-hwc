@@ -38,7 +38,7 @@ interface MailTaxonomy {
 }
 
 const FALLBACK_TAXONOMY: MailTaxonomy = {
-  triage: { buckets: ["urgent", "review", "noise"], tagPrefix: "triage/" },
+  triage: { buckets: ["act", "look", "bulk", "junk"], tagPrefix: "attention/" },
   categories: [
     "office", "work", "hwcmt",
     "finance", "bank", "insurance",
@@ -78,12 +78,11 @@ const CATEGORY_TAGS = TAXONOMY.categories;
 const FLAG_TAGS = TAXONOMY.flags;
 const JUNK_TAGS = ["important", "flagged", "starred"];
 
-/* ─── Triage buckets (tag-backed) ──────────────────────────────────────────
- * The Mail-triage kanban's "move between columns" must PERSIST, so the bucket
- * is a notmuch tag `triage/<bucket>`. The bucket→tag mapping is shared by:
- *   - the morning-briefing pipeline (writes triage/<bucket> when it classifies)
- *   - replace-triage-bucket here (remove other triage/* + add the target)
- *   - hwc_mail_triage (re-buckets cached threads by their live triage/* tag)
+/* ─── Attention states (tag-backed) ────────────────────────────────────────
+ * Mail placement persists as `attention/<state>`. The mapping is shared by:
+ *   - the Laya classifier
+ *   - replace-triage-bucket here
+ *   - hwc_mail_triage (reflects live attention/* tags)
  * All of them derive from the taxonomy, so they cannot drift. */
 export const TRIAGE_BUCKETS: readonly string[] = TAXONOMY.triage.buckets;
 
@@ -98,11 +97,11 @@ export function mailTagActions(): Record<string, string[]> {
   };
 }
 export type TriageBucket = string;
-/** notmuch tag for a triage bucket, e.g. "urgent" → "triage/urgent". */
+/** notmuch tag for an attention state, e.g. "act" → "attention/act". */
 export function triageTag(bucket: string): string {
   return `${TAXONOMY.triage.tagPrefix}${bucket}`;
 }
-/** Tag ops that REPLACE the triage bucket: drop every triage/* then add target. */
+/** Tag ops that replace the attention state. */
 function replaceTriageOps(target: TriageBucket): string[] {
   const ops = TRIAGE_BUCKETS.filter((b) => b !== target).map((b) => `-${triageTag(b)}`);
   ops.push(`+${triageTag(target)}`);
@@ -502,8 +501,7 @@ export function mailTools(): ToolDef[] {
       description:
         "Mail management. Actions: search, read, send, reply, tag, sync, health, accounts, folders. " +
         "Mutations route through action=tag: tag_action=archive|trash|delete (delete==trash), " +
-        "or tag_action=set-triage with triage=urgent|review|noise to REPLACE the triage bucket " +
-        "(removes other triage/* tags, adds the target) — the persisted backing for the triage kanban's move.",
+        "or tag_action=set-triage with triage=act|look|bulk|junk to replace the attention state.",
       inputSchema: {
         type: "object",
         properties: {
@@ -553,7 +551,7 @@ export function mailTools(): ToolDef[] {
           triage: {
             type: "string",
             enum: [...TRIAGE_BUCKETS],
-            description: "[tag] With tag_action=set-triage: target triage bucket. Removes other triage/* tags and adds triage/<bucket>.",
+            description: "[tag] With tag_action=set-triage: target attention state.",
           },
           tags: {
             type: "array",
@@ -685,7 +683,7 @@ export function mailTools(): ToolDef[] {
               // Replace the triage bucket: needs an explicit target bucket.
               const target = args.triage as string | undefined;
               if (!target || !TRIAGE_BUCKETS.includes(target as TriageBucket)) {
-                return mcpError({ type: "VALIDATION_ERROR", message: `tag_action=set-triage requires triage one of: ${TRIAGE_BUCKETS.join(", ")}`, suggestion: "Pass triage=urgent|review|noise" });
+                return mcpError({ type: "VALIDATION_ERROR", message: `tag_action=set-triage requires triage one of: ${TRIAGE_BUCKETS.join(", ")}`, suggestion: "Pass triage=act|look|bulk|junk" });
               }
               ops = replaceTriageOps(target as TriageBucket);
               mode = `triage:${target}`;

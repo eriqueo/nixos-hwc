@@ -27,6 +27,34 @@ import {
 } from "../executors/caldav.js";
 
 const DEFAULT_LIST = "Work";
+const WEEKDAYS = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"] as const;
+
+type WeeklyRecurrence = {
+  frequency: "weekly";
+  weekday: typeof WEEKDAYS[number];
+  startDate: string;
+  time: string;
+  timezone: string;
+};
+
+export function weeklyRecurrence(value: unknown): {
+  start: { date: string; time: string; timezone: string };
+  rrule: string;
+} | null {
+  if (!value || typeof value !== "object") return null;
+  const item = value as Partial<WeeklyRecurrence>;
+  if (
+    item.frequency !== "weekly" ||
+    !WEEKDAYS.includes(item.weekday as typeof WEEKDAYS[number]) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(item.startDate || "") ||
+    !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(item.time || "") ||
+    !/^[A-Za-z_+-]+(?:\/[A-Za-z0-9_+-]+)+$/.test(item.timezone || "")
+  ) return null;
+  return {
+    start: { date: item.startDate!, time: item.time!, timezone: item.timezone! },
+    rrule: `FREQ=WEEKLY;BYDAY=${item.weekday}`,
+  };
+}
 
 /* ── one-line dialect (mirrors todui's core/dialect.py) ───────────────── */
 
@@ -190,6 +218,18 @@ export function tasksTools(): ToolDef[] {
           priority: { type: "number", description: "1 (highest) … 9; overrides inline (A)-(I)" },
           due: { type: "string", description: "YYYY-MM-DD, 'today' or 'tomorrow'; overrides inline due:" },
           description: { type: "string", description: "Longer notes body" },
+          recurrence: {
+            type: "object",
+            description: "Optional weekly phone reminder schedule.",
+            properties: {
+              frequency: { type: "string", enum: ["weekly"] },
+              weekday: { type: "string", enum: WEEKDAYS },
+              startDate: { type: "string", description: "First occurrence, YYYY-MM-DD" },
+              time: { type: "string", description: "Local 24-hour time, HH:MM" },
+              timezone: { type: "string", description: "IANA timezone, e.g. America/Denver" },
+            },
+            required: ["frequency", "weekday", "startDate", "time", "timezone"],
+          },
           idempotencyKey: {
             type: "string",
             description: "Stable source identifier. Reusing it in the same list updates the same task instead of creating a duplicate.",
@@ -224,6 +264,9 @@ export function tasksTools(): ToolDef[] {
           ];
           const due = (args.due ? parseDue(args.due as string) : null) || parsed.due;
           const priority = (args.priority as number) ?? parsed.priority;
+          const recurrence = args.recurrence === undefined ? null : weeklyRecurrence(args.recurrence);
+          if (args.recurrence !== undefined && !recurrence)
+            return mcpError({ type: "VALIDATION_ERROR", message: "recurrence must be a valid weekly schedule" });
 
           const idempotencyKey = (args.idempotencyKey as string | undefined)?.trim();
           if (args.requestVersion !== undefined && args.requestVersion !== 1)
@@ -238,13 +281,14 @@ export function tasksTools(): ToolDef[] {
             priority,
             due,
             description: (args.description as string) || "",
+            ...(recurrence ? { start: recurrence.start, rrule: recurrence.rrule } : {}),
           });
           await putItem(`${list.href}${uid}.ics`, ics);
 
           return {
             status: "ok",
             message: `Added '${parsed.summary}' to ${listName} (phone sees it now; laptop todui on next sync)`,
-            data: { uid, list: listName, summary: parsed.summary, categories, priority, due, idempotent: Boolean(idempotencyKey) },
+            data: { uid, list: listName, summary: parsed.summary, categories, priority, due, recurring: Boolean(recurrence), idempotent: Boolean(idempotencyKey) },
           };
         } catch (err) {
           return catchError("NETWORK_ERROR", "Failed to add task", err);

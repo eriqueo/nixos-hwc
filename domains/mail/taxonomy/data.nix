@@ -31,11 +31,11 @@
   # zero, point `now` directly at `tag:inbox` and remove this marker.
   workflow.currentTag = "queue";
 
-  # Triage buckets — tag-backed kanban placement (`triage/<bucket>` notmuch
-  # tags). Shared by run.sh Step 2b, hwc_mail set-triage, hwc_mail_triage.
+  # Attention states — tag-backed placement shared by Laya, aerc, the morning
+  # briefing, and the MCP mail board. Now = act + look; bulk = Later.
   triage = {
-    buckets = [ "urgent" "review" "noise" ];
-    tagPrefix = "triage/";
+    buckets = [ "act" "look" "bulk" "junk" ];
+    tagPrefix = "attention/";
   };
 
   # Semantic groups → theme palette ROLE (not hex — theme is presentation,

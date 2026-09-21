@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # domains/business/morning-briefing/run.sh
 #
-# Step 1: Claude Code CLI → MCP servers → output/briefing.json
-# Step 2: notmuch → Claude → output/mail-triage.json
+# Step 1: local sources → output/briefing.json
+# Step 2: notmuch → resident Laya → output/mail-triage.json
 # Step 3: jq merge → .mail_triage injected into briefing.json
 # Step 4: copy output/briefing.json → dashboard/briefing.json for Caddy
 
@@ -14,7 +14,6 @@ DASHBOARD_DIR="${AGENT_DIR}/dashboard"
 PROMPTS_DIR="${AGENT_DIR}/prompts"
 LOG_FILE="${AGENT_DIR}/logs/run.log"
 LOCK_FILE="/tmp/morning-briefing.lock"
-CLAUDE_BIN="/etc/profiles/per-user/eric/bin/claude"
 
 mkdir -p "${OUTPUT_DIR}" "${DASHBOARD_DIR}" "${AGENT_DIR}/logs"
 
@@ -35,36 +34,13 @@ trap 'rm -f "${LOCK_FILE}"' EXIT
 log "START"
 cd "${AGENT_DIR}"
 
-# ── Step 0: Pre-flight ───────────────────────────────────────────────────────
-if [ ! -x "${CLAUDE_BIN}" ]; then
-  log "FATAL: Claude binary not found at ${CLAUDE_BIN}"
-  cat > "${OUTPUT_DIR}/briefing.json.tmp" <<ERRJSON
-{
-  "generated_at": "$(date -Iseconds)",
-  "error": true,
-  "error_message": "Claude Code CLI not found at ${CLAUDE_BIN}",
-  "sections": {},
-  "alerts": [{"level": "critical", "section": "system", "message": "Claude Code CLI binary missing — cannot compile briefing"}]
-}
-ERRJSON
-  mv "${OUTPUT_DIR}/briefing.json.tmp" "${OUTPUT_DIR}/briefing.json"
-  cp "${OUTPUT_DIR}/briefing.json" "${DASHBOARD_DIR}/briefing.json"
-  exit 1
-fi
-log "OK: Pre-flight passed (claude binary exists)"
-
 # ── Step 1: Main briefing ─────────────────────────────────────────────────────
 log "STEP 1: Gathering deterministic data locally (no Claude / no MCP)..."
 STEP1_START=$(date +%s)
 
-# The 6am HEADLESS run cannot get tool-permission approvals inside Claude
-# (~/.claude runs defaultMode=acceptEdits, which does NOT cover Bash or MCP
-# calls), so the agent's MCP gather was auto-denied — the CRITICAL "permission
-# denied" alerts. Gather everything here in bash instead: full file/CLI access
-# as eric, the same pattern Step 2 (notmuch) already uses. Claude is used ONLY
-# for the mail-triage reasoning (Step 2), which needs no tools. JobTread
-# sections (jobs/leads/tasks/overdue/docs) are placeholders until a local data
-# source is wired — see README "JobTread follow-up".
+# Gather directly as eric so the headless service never depends on interactive
+# tool approvals. Laya handles mail through its bounded local socket. JobTread
+# sections use the loopback gateway below.
 
 SYSTEMCTL="/run/current-system/sw/bin/systemctl"; [ -x "${SYSTEMCTL}" ] || SYSTEMCTL="systemctl"
 KHAL_BIN="/etc/profiles/per-user/eric/bin/khal"
@@ -603,20 +579,11 @@ else
 fi
 
 # ── Steps 2/2b/3: Mail triage (classify → tag → merge) ──────────────────────
-# The classify/parse/tag/merge logic lives ONCE in triage-mail.sh, shared with
-# the on-demand mail-retriage.service (unified-triage Phase 4). `baseline`
-# mode reproduces the old Steps 2/2b/3 exactly: classify all unread inbox
-# threads in the window, replace mail-triage.json, stamp triage/<bucket>
-# tags, replace .mail_triage in briefing.json.
-#
-# MAIL_PROMPT is normally set by index.nix to the store-path prompt rendered
-# from prompts/mail-triage.txt + the taxonomy's known-senders section
-# (domains/mail/taxonomy/). The repo file is a TEMPLATE with a
-# @KNOWN_SENDERS@ placeholder — triage-mail.sh's fallback only fires on
-# direct shell invocation and triages without the known-senders lists.
+# One Laya runner owns classification, tags, human locks, and the case ledger.
+# The same idempotent path serves the briefing and the intraday timer.
 log "STEP 2: Mail triage (triage-mail.sh baseline)..."
 STEP2_START=$(date +%s)
-if MAIL_PROMPT="${MAIL_PROMPT:-}" CLAUDE_BIN="${CLAUDE_BIN}" "${AGENT_DIR}/triage-mail.sh" baseline; then
+if "${AGENT_DIR}/triage-mail.sh" baseline; then
   log "STEP 2: OK"
 else
   log "WARN: triage-mail.sh baseline reported failure (see [triage-baseline] log lines)"
@@ -768,19 +735,16 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
         sec("ACTIVE JOBS (" + ((.sections.jobs.active | length) | tostring) + ")")
         + ([.sections.jobs.active[] | "  #" + (.number // "?") + " " + .name + " — " + (.phase // "?") + " / " + (.status // "?")] | join("\n"))
       else "" end)
-    # mail_triage buckets live under .buckets.* — the old .mail_triage.urgent
-    # path never existed, which is why the email stopped carrying a mail
-    # summary (2026-07-08).
     + (if .mail_triage then
         sec("MAIL")
-        + "urgent: " + ((.mail_triage.buckets.urgent // []) | length | tostring)
-        + " · review: " + ((.mail_triage.buckets.review // []) | length | tostring)
-        + " · noise: " + ((.mail_triage.buckets.noise // []) | length | tostring)
+        + "act: " + ((.mail_triage.stats.act_count // 0) | tostring)
+        + " · look: " + ((.mail_triage.stats.look_count // 0) | tostring)
+        + " · later: " + ((.mail_triage.stats.bulk_count // 0) | tostring)
+        + " · junk: " + ((.mail_triage.stats.junk_count // 0) | tostring)
         + (if .sections.mail.summary then " · " + .sections.mail.summary else "" end)
         + (if .mail_triage.error then "\n  triage error: " + .mail_triage.error else "" end)
-        + (((.mail_triage.buckets.urgent // [])[:5]) | map("\n  ! " + (.from_name // .from_address // "?") + ": " + (.subject // "?")
-            + (if .summary then "\n      " + .summary else "" end)) | join(""))
-        + (((.mail_triage.buckets.review // [])[:5]) | map("\n  · " + (.from_name // .from_address // "?") + ": " + (.subject // "?")) | join(""))
+        + (((.mail_triage.buckets.act // [])[:5]) | map("\n  ! " + (.sender // "?") + ": " + (.subject // "?")) | join(""))
+        + (((.mail_triage.buckets.look // [])[:5]) | map("\n  · " + (.sender // "?") + ": " + (.subject // "?")) | join(""))
       else "" end)
     + (if (.sections.refinery.counts.total // 0) > 0 then
         sec("REFINERY")
@@ -914,17 +878,17 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
       else "" end)
 
     + (if .mail_triage then
-        card("Mail"; $dash; "triage";
-          item("urgent " + ((.mail_triage.buckets.urgent // []) | length | tostring)
-            + " &middot; review " + ((.mail_triage.buckets.review // []) | length | tostring)
-            + " &middot; noise " + ((.mail_triage.buckets.noise // []) | length | tostring)
+        card("Mail"; $dash; "now";
+          item("act " + ((.mail_triage.stats.act_count // 0) | tostring)
+            + " &middot; look " + ((.mail_triage.stats.look_count // 0) | tostring)
+            + " &middot; later " + ((.mail_triage.stats.bulk_count // 0) | tostring)
+            + " &middot; junk " + ((.mail_triage.stats.junk_count // 0) | tostring)
             + (if $s.mail.summary then " &middot; " + meta(($s.mail.summary|h)) else "" end))
           + (if .mail_triage.error then item(red("triage error: " + (.mail_triage.error|h))) else "" end)
-          + (((.mail_triage.buckets.urgent // [])[:5]) | map(
-              item(red("!") + " " + ((.from_name // .from_address // "?")|h) + ": " + ((.subject // "?")|h)
-                + (if .summary then "<br><span style=\"color:#a7aaad;font-size:13px;padding-left:14px\">" + (.summary|h) + "</span>" else "" end))) | join(""))
-          + (((.mail_triage.buckets.review // [])[:5]) | map(
-              item(meta("&middot;") + " " + ((.from_name // .from_address // "?")|h) + ": " + ((.subject // "?")|h))) | join("")))
+          + (((.mail_triage.buckets.act // [])[:5]) | map(
+              item(red("!") + " " + ((.sender // "?")|h) + ": " + ((.subject // "?")|h))) | join(""))
+          + (((.mail_triage.buckets.look // [])[:5]) | map(
+              item(meta("&middot;") + " " + ((.sender // "?")|h) + ": " + ((.subject // "?")|h))) | join("")))
       else "" end)
 
     + (if ($s.refinery.counts.total // 0) > 0 then

@@ -44,6 +44,9 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-09-21: MCP task creation gained bounded weekly recurrence, and mail
+  surfaces moved to the shared `act/look/bulk/junk` attention contract.
 - 2026-09-14: `gpu/` — expose the inherited `PerfLevelSrc=0x2222` registry override so the PRIME laptop can omit this server-era performance setting from its normal boot while pure-NVIDIA hosts retain existing behavior.
 - 2026-09-13: `gpu/` — `gpu-offload` now clears inherited Intel-only Vulkan ICD selectors as well as the Mesa EGL selector, so explicit NVIDIA Vulkan work launched by a restricted desktop client can still discover the dGPU.
 - 2026-09-12: `gpu/` — add `gpu-integrated`, the system-owned inverse of `gpu-offload`; it discovers NVIDIA DRM nodes by PCI vendor at launch and masks all NVIDIA character devices from ordinary hybrid clients without disabling iGPU acceleration.

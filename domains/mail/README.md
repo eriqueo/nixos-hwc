@@ -39,6 +39,9 @@ mail/
 │       ├── files.nix          # keychain.json + setup script
 │       ├── runtime.nix        # Env vars, PATH handling
 │       └── service.nix        # systemd user service unit
+├── classifier/
+│   ├── index.nix              # aerc-facing correction/review command
+│   └── sys.nix                # pinned Laya package + resident CPU service
 ├── calendar/
 │   ├── index.nix              # khal + vdirsyncer integration; extraVdirsyncerPairs option
 │   └── parts/
@@ -77,10 +80,10 @@ mail/
 
 ## Aerc workflow contract
 
-`now` is the only decision queue. Reading a message never completes it;
-archiving or trashing does. `family`, `datax`, and `hwc` are durable tag-backed
-history views, so archived mail remains findable there. `Space g A` opens all
-non-trash history. `Space f t` filters the current view by tag, `Space f T`
+`now` is `act + look`. Reading never completes it. `bulk` moves to Later and
+`junk` to recoverable Trash. Subject categories (`hwc`, `datax`, `family`,
+`personal`, `other`) are independent of attention and stay searchable across
+history. `Space g A` opens all non-trash history. `Space f t` filters the current view by tag, `Space f T`
 opens an all-mail tag query, and `Space f c` clears the current search/filter.
 Sort with `Space s d` (newest), `Space s f` (sender), or `Space s s` (subject).
 
@@ -104,6 +107,12 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-09-21: Added the local Laya mail classifier boundary. System One owns
+  typed model questions, conservative policy, human locks, and the append-only
+  case ledger; this domain pins its source/model revisions, runs one bounded
+  resident CPU worker, and exposes reviewed aerc correction commands. The
+  CRITICAL ledger is backed up under `/var/lib/hwc`; the model cache is
+  REPLACEABLE and bounded by tmpfiles cleanup.
 - 2026-09-15: Restored `hwc` as the stable display name and khal default for
   the primary `eric/work` calendar. Aerc's reviewed `i` import and `busy` now
   derive that name from one value, while CRM and CalDAV keep using the

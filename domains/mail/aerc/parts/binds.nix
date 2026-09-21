@@ -1,4 +1,4 @@
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, mailContract, ... }:
 let
   tags = import ./tags.nix { inherit lib; };
 
@@ -40,18 +40,14 @@ let
     "      <Space>mv${t.spaceKey} = :modify-labels +${t.tag}<Enter> # +${t.tag}"
   ) visibleFlagTags);
 
-  # ── Triage set-bucket bindings under <Space>t (t = toggle/triage group) ──
-  # Replace-set semantics identical to the gateway's hwc_mail set-triage, so a
-  # keypress here moves the same card on the workbench kanban. <Space>mt is
-  # taken (tech category), hence the t group. Keys: first letter of bucket.
-  triageBinds = lib.concatStringsSep "\n" (map (b:
-    "      <Space>t${builtins.substring 0 1 b} = :modify-labels ${tags.setTriageCmd b}<Enter> # triage: ${b}"
-  ) tags.triageBuckets);
-
-  # Go-to triage folders: uppercase first letter (<Space>gt is tech's folder)
-  triageGoBinds = lib.concatStringsSep "\n" (map (b:
-    "      <Space>g${lib.toUpper (builtins.substring 0 1 b)} = :cf ${tags.triageTag b}<Enter> # ${tags.triageTag b}"
-  ) tags.triageBuckets);
+  attentionKeys = { act = "a"; look = "l"; bulk = "b"; junk = "j"; };
+  categoryKeys = { hwc = "h"; datax = "d"; family = "f"; personal = "p"; other = "o"; };
+  attentionBinds = lib.concatStringsSep "\n" (map (state:
+    "      <Space>t${attentionKeys.${state}} = :pipe -m mail-classifier correct --attention ${state}<Enter> # lock: ${state}"
+  ) mailContract.attention);
+  classifierCategoryBinds = lib.concatStringsSep "\n" (map (category:
+    "      <Space>tc${categoryKeys.${category}} = :pipe -m mail-classifier correct --category ${category}<Enter> # lock category: ${category}"
+  ) mailContract.categories);
 
   # ── Leader cheat sheet (generated from the same tag data) ──
   catHelp  = lib.concatStringsSep "\n" (map (t: "    Space m c ${t.spaceKey}   ${t.tag}") tags.categoryTags);
@@ -61,7 +57,8 @@ let
 
     NAVIGATE  -  Space g ...
     Space g i  now       Space g F  family    Space g D  datax
-    Space g W  hwc       Space g B  backlog   Space g I  full inbox
+    Space g W  hwc       Space g P  personal  Space g O  other
+    Space g L  later     Space g J  junk      Space g I  full inbox
     -- system destinations --
     Space g A  all mail  Space g a  archive   Space g s  sent
     Space g d  trash     Space g z  spam      Space g u  all unread
@@ -74,9 +71,9 @@ let
     -- categories (exclusive; Space m c ...) --
     ${catHelp}
 
-    TRIAGE  -  Space t ... (mark)  /  Space g U|R|N (go to folder)
-    Space t u  → urgent   Space t r  → review   Space t n  → noise
-    (replace-set on the triage/* tags — moves the workbench kanban card too)
+    ATTENTION  -  human choices lock the thread permanently
+    Space t a  act       Space t l  look       Space t b  bulk
+    Space t j  junk      Space t c h|d|f|p|o  subject category
 
     FILTER / SORT / VIEW
     Space f t  filter current folder by tag (Tab completes)
@@ -159,6 +156,10 @@ ${tabBinds}
       <Space>gF = :cf family<Enter> # family
       <Space>gD = :cf datax<Enter> # datax
       <Space>gW = :cf hwc<Enter> # hwc
+      <Space>gP = :cf personal<Enter> # personal
+      <Space>gO = :cf other<Enter> # other
+      <Space>gL = :cf later<Enter> # later
+      <Space>gJ = :cf junk<Enter> # junk
       <Space>gB = :cf backlog<Enter> # backlog
       <Space>gI = :cf inbox_i<Enter> # all inbox
       <Space>gA = :cf all<Enter> # all mail
@@ -168,9 +169,6 @@ ${tabBinds}
       <Space>gd = :cf trash_d<Enter> # trash
       <Space>gz = :cf spam_z<Enter> # spam
       <Space>g_ = :cf hide_my_email<Enter> # hide-my-email
-
-      # Triage folders (tag-backed buckets, shared with workbench kanban)
-${triageGoBinds}
 
       # Flexible path
       X = :mv<space>
@@ -192,8 +190,9 @@ ${triageGoBinds}
       <Space>ra = :pipe -m mail-rule review<Enter> # add sender rule
       <Space>rm = :term mail-rule manage<Enter> # manage sender rules
 
-      # Triage bucket marking (replace-set, same semantics as workbench moves)
-${triageBinds}
+      # Human classifier corrections are durable learning events.
+${attentionBinds}
+${classifierCategoryBinds}
 
       # Use the sender's List-Unsubscribe header and skip straight to review
       # when the only available method is an email draft.
@@ -239,6 +238,8 @@ ${tabBinds}
       p = :pipe -m email-to-paperless<Enter>
       <Space>ra = :pipe -m mail-rule review<Enter> # add sender rule
       <Space>rm = :term mail-rule manage<Enter> # manage sender rules
+${attentionBinds}
+${classifierCategoryBinds}
 
       [view::passthrough]
       $noinherit = true

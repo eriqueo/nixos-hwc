@@ -1,6 +1,8 @@
 import importlib.util
 import io
+import os
 import pathlib
+import tempfile
 import unittest
 from email.message import EmailMessage, Message
 
@@ -44,6 +46,23 @@ class FakeOpener:
 
 
 class EmailToKhalTests(unittest.TestCase):
+    def test_review_draft_is_private_and_parseable(self):
+        event = {
+            "title": "Parent conference",
+            "date": "2026-09-24",
+            "time": "09:00",
+            "duration": "30m",
+            "timezone": "local",
+            "location": "School",
+            "calendar": "family",
+            "description": "Bring notes",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "proposal.event"
+            email_to_khal.write_review_draft(path, event, "Original text")
+            self.assertEqual(os.stat(path).st_mode & 0o777, 0o600)
+            self.assertEqual(email_to_khal._parse_template(path.read_text())["title"], event["title"])
+
     def test_chamber_image_mail_yields_partial_offline_proposal(self):
         subject = (
             "Business Before Hours - Tami Majszak Farmers Insurance - "

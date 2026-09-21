@@ -2,6 +2,8 @@
 { lib, pkgs, config, inputs, ... }:
 let
   cfg = config.hwc.mail.aerc;
+  mailContract = builtins.fromJSON
+    (builtins.readFile "${inputs.system-one}/scripts/mail_classifier_contract.json");
 
   # Forked aerc (github:eriqueo/aerc) consumed as a flake-input package, mirroring
   # domains/mail/calendar/index.nix's khalt consumption. Currently a zero-change
@@ -9,8 +11,8 @@ let
   # later, config-gated default-off.
   aercPkg = import ./package.nix { inherit pkgs inputs; };
 
-  cfgPart    = import ./parts/config.nix   { inherit lib pkgs config aercPkg; };
-  bindsPart  = import ./parts/binds.nix  { inherit lib pkgs config; };
+  cfgPart    = import ./parts/config.nix   { inherit lib pkgs config aercPkg mailContract; };
+  bindsPart  = import ./parts/binds.nix  { inherit lib pkgs config mailContract; };
   sievePart  = import ./parts/sieve.nix  { inherit lib pkgs config; };
 in
 {

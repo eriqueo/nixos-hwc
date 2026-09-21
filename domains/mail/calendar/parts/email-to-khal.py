@@ -24,6 +24,7 @@ from datetime import datetime, timedelta, timezone
 from email.parser import BytesParser
 from email.header import decode_header
 from html import unescape
+from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
@@ -399,6 +400,15 @@ def detect_timezone(text: str) -> str | None:
     return None
 
 
+def normalize_two_digit_year(text: str) -> str:
+    """Treat email-style numeric years as 20xx, independent of dateparser's pivot."""
+    return re.sub(
+        r"(\b\d{1,2}/\d{1,2}/)(\d{2})\b",
+        lambda match: f"{match.group(1)}20{match.group(2)}",
+        text,
+    )
+
+
 def parse_datetime(fields: dict, body: str):
     """
     Returns (datetime | None, iana_tz | None).
@@ -420,7 +430,7 @@ def parse_datetime(fields: dict, body: str):
 
     # Try structured fields
     if date_raw:
-        combined = f"{date_raw} {clean_time}".strip()
+        combined = normalize_two_digit_year(f"{date_raw} {clean_time}".strip())
         dt = dateparser.parse(combined, settings={
             "PREFER_DATES_FROM": "future",
             "RETURN_AS_TIMEZONE_AWARE": False,
@@ -474,7 +484,7 @@ def parse_date_only(text: str):
         match = re.search(pattern, text, re.IGNORECASE)
         if not match:
             continue
-        parsed = dateparser.parse(match.group(0), settings={
+        parsed = dateparser.parse(normalize_two_digit_year(match.group(0)), settings={
             "PREFER_DATES_FROM": "future",
             "RETURN_AS_TIMEZONE_AWARE": False,
         })
@@ -618,11 +628,31 @@ Calendar: {calendar}
 """
 
 
-def editor_review(event: dict, email_body: str = "") -> dict | None:
-    """Open $EDITOR with event details. Returns parsed dict or None if cancelled."""
+def render_review(event: dict, email_body: str = "") -> str:
+    """Render the human-review format shared by editor and classifier drafts."""
     # Comment out each line of the email body so it doesn't get parsed as fields
     commented_body = "\n".join(f"# {line}" for line in email_body.splitlines())
-    content = TEMPLATE.format(**event, email_body=commented_body)
+    return TEMPLATE.format(**event, email_body=commented_body)
+
+
+def write_review_draft(path: str | Path, event: dict, email_body: str = "") -> None:
+    """Atomically write a private review draft without importing an event."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    temporary = target.with_name(f".{target.name}.{os.getpid()}.tmp")
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(descriptor, "w") as stream:
+            stream.write(render_review(event, email_body))
+        os.replace(temporary, target)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def editor_review(event: dict, email_body: str = "") -> dict | None:
+    """Open $EDITOR with event details. Returns parsed dict or None if cancelled."""
+    content = render_review(event, email_body)
 
     fd, path = tempfile.mkstemp(suffix=".event", prefix="khal-")
     with os.fdopen(fd, "w") as f:
@@ -727,7 +757,7 @@ def decode_mime_header(raw: str | None) -> str:
     return " ".join(decoded)
 
 
-def handle_body_parse(msg, tesseract: str):
+def handle_body_parse(msg, tesseract: str, draft_path: str | None = None):
     """Parse email body, open editor for review, then import."""
     subject = decode_mime_header(msg["subject"])
     body = extract_body(msg)
@@ -828,6 +858,11 @@ def handle_body_parse(msg, tesseract: str):
             f"{fields.get('link_label', 'Link')}: {fields['link']}"
         )
 
+    if draft_path:
+        write_review_draft(draft_path, event, reference_body)
+        print(f"  Calendar draft written: {draft_path}")
+        return False
+
     if has_tty():
         print("  Opening editor for review...\n")
         edited = editor_review(event, email_body=reference_body)
@@ -915,13 +950,22 @@ def sync_calendar():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--tesseract", default="tesseract")
+    parser.add_argument(
+        "--draft",
+        help="write a reviewable khal-format draft; never import or sync",
+    )
     args = parser.parse_args()
 
     raw = sys.stdin.buffer.read()
     msg = BytesParser().parsebytes(raw)
 
     ics_parts = extract_ics_parts(msg)
-    if ics_parts:
+    if args.draft:
+        # Classifier automation does not inspect attachment contents. The body
+        # still yields a proposal, and the separate attachment tag tells Eric
+        # that supporting material exists.
+        created = handle_body_parse(msg, args.tesseract, args.draft)
+    elif ics_parts:
         created = handle_ics_attachment(ics_parts)
     else:
         created = handle_body_parse(msg, args.tesseract)

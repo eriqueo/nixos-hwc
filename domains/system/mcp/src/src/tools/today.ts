@@ -5,7 +5,7 @@
  * READS output/briefing.json (the merged artifact run.sh builds 3×/day) and
  * derives action_items from its sections — overdue invoices, overdue CalDAV
  * tasks, stale leads, the refinery action bucket, finished nightly builds,
- * system alerts, urgent mail. No new collection: the briefing pipeline stays
+ * system alerts, action mail. No new collection: the briefing pipeline stays
  * the single gatherer; this tool is triage + verbs.
  *
  * Every item carries a stable id (`<source>:<entity>`), a one-line `why`, an
@@ -236,12 +236,12 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
     });
   }
 
-  for (const m of b.mail_triage?.buckets?.urgent ?? []) {
+  for (const m of b.mail_triage?.buckets?.act ?? []) {
     items.push({
       id: `mail:${String(m.thread_id ?? slug(String(m.subject ?? "mail")))}`,
       source: "mail",
-      title: `Mail: ${String(m.subject ?? "urgent thread")}`,
-      why: String(m.summary ?? "triaged urgent").slice(0, 120),
+      title: `Mail: ${String(m.subject ?? "action thread")}`,
+      why: String(m.summary ?? "classified as needing action").slice(0, 120),
       severity: "amber",
       effort_min: EFFORT.mail,
       age_days: 0,
@@ -318,7 +318,7 @@ export function todayTools(): ToolDef[] {
       description:
         "The Today Queue — one ranked, actionable triage list derived from the morning " +
         "briefing's sections: overdue invoices, overdue tasks, stale leads, refinery items " +
-        "needing a decision, finished nightly builds, system alerts, urgent mail. " +
+        "needing a decision, finished nightly builds, system alerts, action mail. " +
         `action=board (default) returns the top ${TOP_N} with a spillover count; ` +
         "action=summary a one-line rollup; action=delta what changed since the last " +
         "run (new/reopened/worsened/resolved cases). Writes (need id): dismiss " +

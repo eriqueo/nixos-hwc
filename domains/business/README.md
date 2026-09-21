@@ -21,13 +21,15 @@ business/
 ├── estimator/         # hwc.business.estimator — React PWA on :13443
 ├── firefly/           # hwc.business.firefly — Firefly III finance
 ├── leads/             # hwc.business.leads — unified lead pipeline
-├── morning-briefing/  # hwc.business.morningBriefing — 6am Claude agent
+├── morning-briefing/  # hwc.business.morningBriefing — local gather + Laya mail snapshot
 ├── paperless/         # hwc.business.paperless — Paperless-NGX documents
 ├── website/           # hwc.business.website — Heartwood CMS + 11ty + webapps
 └── workbench/         # hwc.business.workbench — HWC Workbench hub (area registry + static launcher)
 ```
 
 ## Changelog
+- 2026-09-21: Morning Briefing now consumes the resident local Laya mail
+  classifier and the shared `act/look/bulk/junk` attention contract.
 - 2026-09-16: Added Finance as the seventh HWC Workbench area, backed by the Firefly recurring-payment explorer at `firefly-explorer.hwc.iheartwoodcraft.com`. The shared registry remains the single producer of area order and destinations; the Finance app consumes `/areas.json` for its matching area switcher.
 - 2026-09-16: `workbench/` hub redesigned after Eric found the first cut too small: larger identity block and headline, 200 px cards with initials glyphs (derived from the label, no icon asset), 26 px display labels, hover lift, ellipsized hostnames, one column under 640 px, Playfair/DM Sans/JetBrains Mono loaded like the scout apps. Still tokens-only CSS and zero runtime JavaScript.
 - 2026-09-16: New `workbench/` module (`hwc.business.workbench`) — the one

@@ -33,6 +33,8 @@ mail/        home.nix             # server — hwc.mail menu (Phase C)
 ```
 
 ## Changelog
+- 2026-09-21: The business system role enables the resident Laya mail
+  classifier used by retriage and the morning briefing.
 
 - 2026-09-17: `base/home.nix` narrows `claude-code.shareConfig.extraConfigDirs`
   to `.claude_dx2_home`. DX1 is retired, so its Claude home no longer

@@ -58,6 +58,7 @@
   # Morning briefing — 6am compiles + emails; midday/evening runs only refresh
   # the dashboard data (run.sh skips the Step-5 email after 9am)
   hwc.business.morningBriefing.enable = true;
+  hwc.mail.classifier.system.enable = true;
   hwc.business.morningBriefing.onCalendar = [
     "*-*-* 06:00:00"
     "*-*-* 12:00:00"

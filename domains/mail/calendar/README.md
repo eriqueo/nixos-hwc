@@ -54,6 +54,10 @@ domains/mail/calendar/
 
 ## Changelog
 
+- 2026-09-21: `email-to-khal --draft PATH` now writes a private, reviewable
+  khal-format proposal without importing or syncing. Classifier automation
+  deliberately ignores attachment contents.
+
 - **2026-09-15**: Restored `hwc` as the primary business calendar's stable
   display name after the collection taxonomy rollout changed khal's generated
   default to `Work`. The collection path remains `eric/work`; khal's default

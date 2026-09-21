@@ -36,6 +36,12 @@
       flake = false;
     };
 
+    # System One owns the typed Laya mail-classifier runtime.
+    system-one = {
+      url = "github:eriqueo/system-one";
+      flake = false;
+    };
+
     nixvirt = {
         url = "github:AshleyYakeley/NixVirt";
         inputs.nixpkgs.follows = "nixpkgs";

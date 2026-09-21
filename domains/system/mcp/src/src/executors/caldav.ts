@@ -214,7 +214,7 @@ function utcStamp(): string {
   return new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 }
 
-/** Build a fresh VTODO ics document. due = "YYYY-MM-DD" (all-day). */
+/** Build a fresh VTODO ics document. due = "YYYY-MM-DD" (all-day unless start is set). */
 export function buildVtodo(fields: {
   uid: string;
   summary: string;
@@ -222,6 +222,8 @@ export function buildVtodo(fields: {
   priority?: number;
   due?: string | null;
   description?: string;
+  start?: { date: string; time: string; timezone: string };
+  rrule?: string;
 }): string {
   const now = utcStamp();
   const lines = [
@@ -240,7 +242,14 @@ export function buildVtodo(fields: {
   if (fields.categories?.length)
     lines.push(`CATEGORIES:${fields.categories.map(icsEscape).join(",")}`);
   if (fields.priority) lines.push(`PRIORITY:${fields.priority}`);
-  if (fields.due) lines.push(`DUE;VALUE=DATE:${fields.due.replace(/-/g, "")}`);
+  if (fields.start) {
+    const stamp = `${fields.start.date.replace(/-/g, "")}T${fields.start.time.replace(":", "")}00`;
+    lines.push(`DTSTART;TZID=${fields.start.timezone}:${stamp}`);
+    if (fields.due) lines.push(`DUE;TZID=${fields.start.timezone}:${stamp}`);
+  } else if (fields.due) {
+    lines.push(`DUE;VALUE=DATE:${fields.due.replace(/-/g, "")}`);
+  }
+  if (fields.rrule) lines.push(`RRULE:${fields.rrule}`);
   if (fields.description)
     lines.push(`DESCRIPTION:${icsEscape(fields.description)}`);
   lines.push("END:VTODO", "END:VCALENDAR");
