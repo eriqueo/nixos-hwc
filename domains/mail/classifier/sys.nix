@@ -59,6 +59,12 @@ in
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
+      environment = {
+        HF_HOME = "/var/cache/hwc-mail-classifier/huggingface";
+        HF_HUB_CACHE = "/var/cache/hwc-mail-classifier/huggingface/hub";
+        HF_XET_CACHE = "/var/cache/hwc-mail-classifier/huggingface/xet";
+        XDG_CACHE_HOME = "/var/cache/hwc-mail-classifier";
+      };
       serviceConfig = {
         Type = "simple";
         User = lib.mkForce "eric";

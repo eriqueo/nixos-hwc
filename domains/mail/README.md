@@ -113,7 +113,7 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
   resident CPU worker with the explicit CPU-only PyTorch build, and exposes
   reviewed aerc correction commands. The
   CRITICAL ledger is backed up under `/var/lib/hwc`; the model cache is
-  REPLACEABLE and bounded by tmpfiles cleanup.
+  REPLACEABLE, isolated from the user's home, and bounded by tmpfiles cleanup.
 - 2026-09-15: Restored `hwc` as the stable display name and khal default for
   the primary `eric/work` calendar. Aerc's reviewed `i` import and `busy` now
   derive that name from one value, while CRM and CalDAV keep using the
