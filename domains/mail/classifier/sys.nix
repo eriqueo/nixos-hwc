@@ -1,7 +1,18 @@
 { config, inputs, lib, pkgs, ... }:
 let
   cfg = config.hwc.mail.classifier.system;
-  laya = pkgs.python3Packages.buildPythonPackage rec {
+  # The fleet package set has CUDA enabled for GPU workloads. Import the same
+  # pinned nixpkgs revision with CUDA disabled so every transitive Python
+  # dependency (including transformers' torch) stays CPU-only.
+  cpuPkgs = import inputs.nixpkgs {
+    inherit (pkgs) system;
+    config = {
+      allowUnfree = true;
+      cudaSupport = false;
+    };
+  };
+  cpuPython = cpuPkgs.python3Packages;
+  laya = cpuPython.buildPythonPackage rec {
     pname = "laya";
     version = "0.3.5";
     pyproject = true;
@@ -11,15 +22,15 @@ let
       rev = "573e5b62696ba441230cd6be71d593331b5d23af";
       hash = "sha256-cbUuLBMBC7WwqAf7m7Ihs6qkx7H7FdwhPVMWfgnfg8c=";
     };
-    build-system = [ pkgs.python3Packages.setuptools ];
+    build-system = [ cpuPython.setuptools ];
     # This service is deliberately CPU-only. The fleet enables CUDA globally,
     # so plain `torch` would pull a multi-gigabyte GPU closure it cannot use.
-    dependencies = with pkgs.python3Packages; [
+    dependencies = with cpuPython; [
       torchWithoutCuda transformers safetensors huggingface-hub numpy
     ];
     doCheck = false;
   };
-  python = pkgs.python3.withPackages (_: [ laya ]);
+  python = cpuPkgs.python3.withPackages (_: [ laya ]);
   runtime = pkgs.writeShellApplication {
     name = "mail-classifier-runtime";
     runtimeInputs = [ python pkgs.notmuch ];
