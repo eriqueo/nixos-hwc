@@ -202,6 +202,10 @@ archive the source message instead.
 | `<Space>fc` | Clear the current filter/search |
 | `<Space>fu` | Unsubscribe from the message header; email-only senders ask first, then open review without Neovim |
 | `<Space>sd` | Sort by date (newest first) |
+| `<Space>sf` | Sort by sender, then newest first |
+| `<Space>ss` | Sort by subject, then newest first |
+| `<Space>ra` | Make a reviewed exact-sender rule (`mail-rule review`) |
+| `<Space>rm` | Manage sender rules (`mail-rule manage`) |
 | `<Space>tt` | Toggle thread view |
 
 ### View
@@ -285,11 +289,11 @@ Unread messages are bold, read messages are dim, and selection remains a strong 
 ## Virtual Folders (Query Map)
 
 The sidebar intentionally exposes only `now`, `family`, `datax`, and `hwc`.
-`now` is the complete recent unread non-noise inbox. The other three folders
-partition that same set exactly: DataX wins on `tag:datax`; family then matches
-protected family mail and the three personal recipient addresses; HWC receives
-everything left so no current message disappears. `now` is the default; only
-its unread count appears in the sidebar, and the tab count is scoped to it.
+`now` is the managed decision queue — the complete recent unread non-noise
+inbox. The other three are **durable tag-backed history**, not partitions of
+`now`: they select on the domain tag itself, so archiving a message completes
+the decision without removing it from family/datax/hwc. `now` is the default;
+only its unread count appears in the sidebar, and the tab count is scoped to it.
 Backlog, drafts, sent, archive, trash, and the legacy tag/triage queries remain
 available by direct keybinding without competing for attention in the sidebar.
 
@@ -298,9 +302,10 @@ Primary folders:
 | Folder | Query |
 |--------|-------|
 | now | unread inbox mail from the last 7 days, excluding notifications, newsletters, trash, and `triage/noise` |
-| family | the `now` set matching `family`/`keep` or a personal recipient address, excluding DataX |
-| datax | the `now` set tagged `datax` |
-| hwc | every message left in `now` after DataX and family, including uncategorized mail |
+| family | `tag:family AND NOT tag:trash` |
+| datax | `tag:datax AND NOT tag:trash` |
+| hwc | `(tag:hwc OR tag:work OR tag:office OR tag:hwcmt) AND NOT tag:trash` |
+| all | `NOT tag:trash` (all mail, `<Space>gA`) |
 | backlog | the same unread non-noise inbox set as `now`, older than the 7-day window |
 | inbox | `tag:inbox AND NOT tag:trash` |
 | unread | `tag:unread AND NOT tag:trash` |
@@ -358,6 +363,16 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-09-15 (c): **Durable views + sender rules.** `family`/`datax`/`hwc`
+  stopped being exact partitions of the `now` inbox and became tag-backed
+  history (`tag:family`, `tag:datax`, `tag:hwc|work|office|hwcmt`, each minus
+  trash), so archiving completes a decision without the message vanishing from
+  its domain folder; `all` widened to `NOT tag:trash` and got `<Space>gA`. New
+  `r` group — `<Space>ra` pipes the message to `mail-rule review` to create a
+  reviewed exact-sender rule (durable domain tag + whether future mail enters
+  `now`, archives, or trashes), `<Space>rm` opens `mail-rule manage`; both are
+  bound in the message list and the view. Sort gained `<Space>sf` (sender) and
+  `<Space>ss` (subject), and `sort = -r date` is now the configured default.
 - 2026-09-15: Made sender-authored plain text the default reading view while
   retaining `h`/`l` MIME switching. Plain mail now uses a stable 100-column
   measure, collapses excess blank lines, strips untrusted terminal controls,

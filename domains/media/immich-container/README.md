@@ -79,6 +79,23 @@ journalctl -u immich-machine-learning | grep -i "onnx\|cuda"  # CUDA provider
 
 ## Changelog
 
+- 2026-08-28: **15 dead `$PSQL` grants deleted; the database and its owning role
+  declared instead** (e82ca994, 53e84228). The 8-line `public` block and 7 more
+  for the pgvector `vectors` schema never ran — `$PSQL` is undefined in the
+  generated postgresql post-start script and `|| true` swallowed the
+  command-not-found. They were not restored: Immich connects as the `immich`
+  role, which owns the database, and the grants only ever aimed to let `eric`
+  read it from a psql prompt — `eric` is a superuser, so that access was already
+  unconditional. The `immich` database and role existed on the live cluster by
+  hand and were declared nowhere, so a rebuilt cluster would not have reproduced
+  them; `parts/config.nix` now declares both. The owner is `cfg.database.name`,
+  **not** `cfg.database.user` — `database.user = "eric"` is the role the
+  container connects as, and declaring ownership from it would have emitted
+  `ALTER DATABASE immich OWNER TO eric`. Full audit in
+  `domains/data/databases/README.md`.
+- 2026-03-29: External library mount — the stale read-only `/mnt/media/pictures`
+  mount (an empty, deleted dir) was replaced with `/mnt/media/photos/external`
+  for the 34K laptop-only photos, in both the server and ML containers.
 - 2026-03-27: Fixed Prometheus metrics port mappings — added host-side port publishing for apiPort (8091) and microservicesPort (8092) which were only set as container env vars but never exposed, causing false ServiceDown alerts
 - 2026-02-26: Created README per Law 12 (migrated from docs/infrastructure/)
 - 2025-11-21: Initial GPU optimization implementation
