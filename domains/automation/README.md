@@ -93,6 +93,8 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-09-21 (b): `n8n/README.md` recorded the estimator-integration doc
+  refresh below. Doc-only.
 - 2026-09-21: `## Structure` corrected — it had never listed `refinery/`,
   `brain-sweep/`, `mail-janitor/` or `vault-sync/`, all of which have READMEs and
   changelog entries of their own here. Doc-only.

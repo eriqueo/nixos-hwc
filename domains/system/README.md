@@ -46,6 +46,9 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-09-21: Law 12 refresh — `core/authentik/README.md` recorded its
+  2026-08-28 postgres change, and `## Structure` above now lists `mcp/parts/jt.nix`
+  and `mcp/clients/`. Doc-only.
 - 2026-09-15: `mcp/` — agent-created tasks default to the Work collection, with
   Groceries documented as a directly addressable server-side list, following the
   Radicale work/life collection split.

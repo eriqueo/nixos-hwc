@@ -23,6 +23,10 @@ core/
 ```
 
 ## Changelog
+- 2026-09-21: `authentik/README.md` refreshed under Law 12 — its postgres
+  provisioning moved off the dead `$PSQL` `postStart` block to `ensureUsers` +
+  `ensureDBOwnership` on 2026-08-28 and the README never said so. Doc-only; no
+  module here changed.
 - 2026-08-28: `login/index.nix` adds an opt-in compositor DRM preference that resolves a real `cardN` node from stable PCI identity at login, verifies vendor/connector/character-device/uniqueness invariants, and leaves Aquamarine's normal enumeration untouched on resolution failure. A pinned compositor that exits nonzero during the bounded startup window retries exactly once without the preference. `hwc-laptop` records the Intel PCI/vendor identity but leaves the feature disabled until a controlled logout/TTY acceptance test; no running session is changed by this commit.
 - 2026-08-28: `login/index.nix` documentation now describes `gpu-launch`'s boot-scoped user-runtime policy. The Intel-only Aquamarine restriction remains deliberately unconfigured: the prior by-path value failed graphical login and the dynamically resolved real DRM node still requires the documented bare-TTY test before it may enter greetd.
 - 2026-02-28: Added README for Charter Law 12 compliance
