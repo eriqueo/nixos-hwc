@@ -110,7 +110,8 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 - 2026-09-21: Added the local Laya mail classifier boundary. System One owns
   typed model questions, conservative policy, human locks, and the append-only
   case ledger; this domain pins its source/model revisions, runs one bounded
-  resident CPU worker, and exposes reviewed aerc correction commands. The
+  resident CPU worker with the explicit CPU-only PyTorch build, and exposes
+  reviewed aerc correction commands. The
   CRITICAL ledger is backed up under `/var/lib/hwc`; the model cache is
   REPLACEABLE and bounded by tmpfiles cleanup.
 - 2026-09-15: Restored `hwc` as the stable display name and khal default for

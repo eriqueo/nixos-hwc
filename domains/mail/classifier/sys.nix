@@ -12,8 +12,10 @@ let
       hash = "sha256-cbUuLBMBC7WwqAf7m7Ihs6qkx7H7FdwhPVMWfgnfg8c=";
     };
     build-system = [ pkgs.python3Packages.setuptools ];
+    # This service is deliberately CPU-only. The fleet enables CUDA globally,
+    # so plain `torch` would pull a multi-gigabyte GPU closure it cannot use.
     dependencies = with pkgs.python3Packages; [
-      torch transformers safetensors huggingface-hub numpy
+      torchWithoutCuda transformers safetensors huggingface-hub numpy
     ];
     doCheck = false;
   };
