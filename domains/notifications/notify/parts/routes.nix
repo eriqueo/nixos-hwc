@@ -63,12 +63,14 @@ in
   {
     name = "calculator-source-to-leads";
     match = { source = "calculator"; };
-    channels = [ "discord-hwc-leads" ];
+    channels = [ "discord-hwc-leads" "smtp-office" ];
   }
+  # Email copy: a new lead, a CRM failure and a calendar reminder each reach
+  # Eric's inbox as well, so a muted Discord does not hide a customer.
   {
     name = "leads-topic-to-leads";
     match = { topic = "leads"; };
-    channels = [ "discord-hwc-leads" ];
+    channels = [ "discord-hwc-leads" "smtp-office" ];
   }
 
   # Canary deliberately exercises Discord and SMTP together. Its timer remains
