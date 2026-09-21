@@ -368,6 +368,10 @@ Hardening: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome=read-only`, `
 
 ## Changelog
 
+- **2026-09-19**: Dropped the `persona-daemon` → `discord-ops` route with the
+  rest of the local chat stack (persona-daemon, hwc-llm personas, hwc-ai-agent,
+  llama-gpu/llama-cpu and their vhost, probes and alerts). One line in
+  `parts/routes.nix`; llama-embed and whisper are unaffected.
 - **2026-09-07**: The executive brief stopped deleting the body. Since
   2026-08-29 a notification with an `executive` block rendered `meaning` in
   place of `body` on Discord and instead of it on SMTP, so every producer that
