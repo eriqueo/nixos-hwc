@@ -26,6 +26,8 @@ domains/system/
 ├── mcp/                  # HWC Infrastructure MCP Server (25 tools, 5 resources)
 │   ├── index.nix         # NixOS module, systemd service, Caddy route
 │   ├── parts/caddy.nix   # Reverse-proxy route (port 6243 → 6200)
+│   ├── parts/jt.nix      # jt-mcp stdio backend
+│   ├── clients/hwc-mcp-call.py  # Single-shot Streamable HTTP CLI adapter
 │   └── src/              # TypeScript source; bounded selected-thread mail snapshot and shared tag actions
 └── (storage/ and users/ subdirs removed; live config uses flat users.nix
    and mounts.nix at the top level)
@@ -44,6 +46,17 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-09-21: Law 12 refresh — `core/authentik/README.md` recorded its
+  2026-08-28 postgres change, and `## Structure` above now lists `mcp/parts/jt.nix`
+  and `mcp/clients/`. Doc-only.
+- 2026-09-15: `mcp/` — agent-created tasks default to the Work collection, with
+  Groceries documented as a directly addressable server-side list, following the
+  Radicale work/life collection split.
+- 2026-09-14: `mcp/` — added the single-shot `clients/hwc-mcp-call.py` terminal
+  client (Streamable HTTP) and an optional `hwc_tasks_add.idempotencyKey`. The
+  key plus target list derives a stable CalDAV UID, so an aerc task handoff can
+  recover from an ambiguous response without duplicating the task; the transport
+  never retries.
 - 2026-09-14: `gpu/` — expose the inherited `PerfLevelSrc=0x2222` registry override so the PRIME laptop can omit this server-era performance setting from its normal boot while pure-NVIDIA hosts retain existing behavior.
 - 2026-09-13: `gpu/` — `gpu-offload` now clears inherited Intel-only Vulkan ICD selectors as well as the Mesa EGL selector, so explicit NVIDIA Vulkan work launched by a restricted desktop client can still discover the dGPU.
 - 2026-09-12: `gpu/` — add `gpu-integrated`, the system-owned inverse of `gpu-offload`; it discovers NVIDIA DRM nodes by PCI vendor at launch and masks all NVIDIA character devices from ordinary hybrid clients without disabling iGPU acceleration.

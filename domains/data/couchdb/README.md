@@ -73,4 +73,8 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-03-31: Admin-secret defaults re-read through the string-keyed secrets
+  attrset — `config.hwc.secrets.api."couchdb-admin-username"` / `"…-password"`
+  with an `or null` fallback, replacing the camelCase `*File` attributes
+  (17b9283b). Option descriptions updated to match.
 - 2026-03-25: Created README per Law 12

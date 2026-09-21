@@ -17,6 +17,10 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
+- `apps/agent-harness/` — one static policy source + one mutable state store for
+  Claude Code, Codex, Pi, T3 and Herdr (`contract.nix`, `control.sh` doctor,
+  `state-sync.sh`/`state-validate.sh`, each with a `.test.sh`; `sys.nix` places
+  machine-wide Claude policy under `/etc`).
 - `apps/t3code/` — launchers and a restricted DX2 handoff adapter; T3 supplies the result limit.
 - `apps/hwc-dictation/` — owned desktop dictation package, settings and user service.
 
@@ -24,7 +28,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ```
 domains/home/
-├── apps/    # 50 app modules, auto-imported via readDir (index.nix per app,
+├── apps/    # 64 app modules, auto-imported via readDir (index.nix per app,
 ├── keymap/  # shared grammar; registry hub/tool navigation destinations
 │            # optional sys.nix system half, parts/ for split config); Waybar's
 │            # laptop-only power hub has paired home/system flags for HM parity
@@ -50,6 +54,23 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-17 (b): New `apps/agent-harness/` module consolidates the harness the
+  entry below introduced: Nix pins the static half (instructions, skills, hooks,
+  provider adapters) and the `~/.agent-state` clone holds only memories and
+  `MISTAKES.md`, with an ownership/revision contract (`contract.nix`), a
+  `control.sh` doctor that checks the local host, the fleet, and Codex hook
+  trust, and a packaged state validator the sync actually executes. Publication
+  is location-independent and state-sync transitions raise an alert. Same day's
+  fixes to the apps it fronts: `claude-code` refuses to commit a memory store
+  containing a `.git` (hwc-server's `datax-main` memory dir was its own repo and
+  shipped as a gitlink with none of its files) and runs `config-sync.sh` under a
+  pinned bash (a user unit has no bash on PATH — the first timer run exited
+  127); `codex` hook trust gets the node runtime the npm launcher needs
+  (activation PATH had none, so trust fell through to the 0.92 package, which
+  has no `hooks/list`); and T3's `~/.claude_dx1_home` / `~/.claude_dx2_home` plus
+  Codex's `~/.agents/skills` now receive the shared skills declaratively
+  (`shareConfig.extraConfigDirs`, `codex.workflowSkills`) instead of being empty
+  on the server.
 - 2026-09-17: apps/claude-code `shareConfig.autoPull` → two-way `shareConfig.sync` with a shared memory store; apps/codex gains `shareHarness` (shared hooks.json, rendered AGENTS.md, hook trust). hwc-laptop and hwc-server now run one harness from `~/.claude-config`.
 - 2026-09-16: Workbench now uses a bounded one-shot Codex result flow, and its exact Hyprland window class suppresses background activation so aerc cannot steal the active workspace.
 - 2026-09-13: Proton Mail's plain command now owns the integrated-GPU boundary, covering Hyprland's actual login autostart instead of only the generated desktop entry and optional service.

@@ -116,6 +116,14 @@ journalctl -u podman-qbittorrent -f
 
 ## Changelog
 
+- **2026-08-20**: Gluetun went multi-instance
+  (`hwc.networking.gluetun.instances.<name>.*` replaced the flat singleton).
+  The local `mode != "vpn" || gluetun.enable` assertion in `parts/config.nix`
+  was replaced by `helpers.mkVpnAssertions`, which validates that the specific
+  tunnel this container joins is declared and enabled; the other assertions
+  (hot path, etc.) are appended unchanged. qBittorrent keeps the forwarded port
+  on the existing `gluetun` instance — Proton forwards exactly one per
+  WireGuard session, which is why slskd needs a tunnel of its own.
 - **2026-08-01**: Split `privacy.enable` into per-protocol toggles
   (`anonymousMode`/`dht`/`pex`/`lsd`) and turned **DHT + PeX back on** by
   default. The blanket-off posture was redundant with the gluetun tunnel (the

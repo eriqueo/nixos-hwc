@@ -13,6 +13,10 @@ Installs Chromium with proprietary codecs/WideVine (`enableWideVine = true`) plu
 - `parts/launcher.nix` — `mkLauncher` building the two wrappers with GPU-safe flags and VA-API driver selection.
 
 ## Changelog
+- 2026-09-14: Comment-only follow-on to the power-hub merge (8c0f4de4,
+  c7c62d32) — the wrapper's GPU-selection note in `index.nix` no longer points at
+  `/tmp/gpu-mode`, which the user-runtime `gpu-launch` policy replaced. No
+  behavior change.
 - 2026-09-12: Run both launchers through the system-owned `gpu-integrated` boundary when available, preventing Chromium's GPU process from opening NVIDIA during Vulkan/GL device enumeration while retaining Intel acceleration.
 - 2026-09-12: Preserve the system-owned Mesa EGL vendor selection in both launchers while continuing to strip PRIME offload variables; deleting the EGL selection made Intel-rendered Chromium probe and hold the NVIDIA device.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

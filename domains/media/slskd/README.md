@@ -423,6 +423,35 @@ shares.directories = [
 
 ---
 
+## Changelog
+
+- **2026-09-10**: `/mnt/media/youtube` got a single producer
+  (`media/directories.nix`); the comment here pointing at
+  `_shared/directories.nix` was corrected to `media/directories.nix` in the same
+  commit (ca49bf2b). Comment only.
+- **2026-08-20**: **slskd moved inside the tunnel, and leaving it is now a build
+  failure.** `network.mode` had defaulted to `"media"` since the module was
+  written, so slskd egressed on the house IP for six weeks (~29.4 GB out,
+  15.5 GB in) while every sibling downloader was tunnelled — the ordering line
+  that appeared to wire it to gluetun lived in a module whose `enable` was never
+  set. The default is now `"vpn"`, with an assertion that fails the build on
+  `"media"` unless the new `allowClearnet` is set deliberately, plus
+  `helpers.mkVpnAssertions` checking the specific tunnel is declared and
+  enabled. New `vpnInstance` (default `gluetun-slskd`): slskd gets its **own**
+  tunnel because Proton forwards exactly one port per WireGuard session and
+  qBittorrent holds the one on the existing tunnel — and Soulseek without an
+  inbound port loses uploads and degrades search and browse, which soularr
+  depends on. The Soulseek listen port now follows the tunnel's NAT-PMP
+  forwarded port (`<gluetun stateRoot>/<instance>/forwarded-port`), read by the
+  config generator — the only writer of `slskd.yml` — falling back to the new
+  `listenPort` option (50300) off-VPN. On the VPN the host port publishes and
+  the P2P firewall opening are dropped: the tunnel publishes the web UI and the
+  inbound path is its forwarded port. slskd stays **disabled** on hwc-server
+  until its tunnel instance exists (needs a second Proton WireGuard key + agenix
+  secret).
+
+---
+
 **Last Updated**: 2025-11-06
 **Architecture Version**: HWC 6.0
 **Module Version**: Container with runtime secret injection

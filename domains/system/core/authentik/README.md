@@ -50,4 +50,16 @@ authentik/
 - Podman + media network (when `network.mode = "media"`)
 
 ## Changelog
+- 2026-08-28: **Postgres provisioning moved off `postStart`** (e82ca994).
+  `parts/config.nix` held 5 `$PSQL` lines; `$PSQL` is unassigned in the
+  generated post-start script, so each failed command-not-found under a
+  swallowing `|| true`. One of them was load-bearing — the `CREATE ROLE` — which
+  meant a rebuilt cluster would have had the authentik database and no authentik
+  role. It is now `ensureUsers` with `ensureDBOwnership`, reproducing live state
+  exactly (authentik already owns its database). Dropping `PASSWORD
+  'placeholder'` is not a regression: authentik reaches Postgres over the podman
+  bridge, which `pg_hba` matches as trust before any md5 rule. `postStart` was
+  structurally wrong for this anyway — `postgresql-setup.service` is ordered
+  `After=postgresql.service`, so it runs before `ensureDatabases`/`ensureUsers`
+  create anything. Full audit in `domains/data/databases/README.md`.
 - 2026-03-26: Initial scaffolding — server/worker containers, DB provisioning, Caddy reverse proxy, secret integration

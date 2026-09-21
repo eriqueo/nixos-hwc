@@ -35,7 +35,7 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `parts/container.nix` | **Container mode** (`hwc.automation.refinery.mode = "container"`, 2026-09-04): runs the `eriqueo/refinery` image (`ghcr.io/eriqueo/refinery`) via `mkContainer` on the same port and `/var/lib/refinery` state dir, with the vault and gauntlet mirrors as volumes and the agenix `refinery-env` file for secrets and host values. The engine's source of truth is now that repo; the `engine/` tree here is the native-mode fallback until it is deleted. Host switch runbook: `deploy/README.md` in the repo. |
 | `index.nix` | Module: options + the `:8060` service. Builds the **engine** package (buildNpmPackage → esbuild bundles **two** entry points: `serve.ts`→`server.js` for the board, and `cli/morning-review.ts`→`morning-review.js` wrapped as `bin/refinery-morning-review`). Pipelines baked to the store, mutable state in `/var/lib/refinery`. Hardened (ProtectHome=tmpfs + vault bound read-only for `/hopper`). Exposes a read-only `package` option so the **nightly-builds** morning-review pass runs the CLI without rebuilding the engine. |
 | `engine/src/cli/morning-review.ts` | The morning PR-review CLI shell. Late-binds config from env (`REFINERY_VAULT_DIR`, `REFINERY_DEFAULT_REPO`, `REFINERY_REVIEWS_DIR`, `REFINERY_LLM_PROVIDER`, optional `REFINERY_REVIEW_DATE`), wires real git/gh/fs/LLM adapters, runs the orchestrator, prints a JSON summary to stdout. Driven by `nightly-builds-review.service` (timer in the **nightly-builds** domain). |
-| `engine/src/shells/` | HTTP shell over the core: `http.ts` owns the routes and mutation handlers; `render.ts` gives every Refinery landing/detail surface the same executive hierarchy (situation → meaning → recommended action, with machine state/history folded) while preserving plain form-posts and CSS-only progressive disclosure; `serve.ts` is the service entry. |
+| `engine/src/shells/` | HTTP shell over the core: `http.ts` owns the routes and mutation handlers; `render.ts` gives every Refinery landing/detail surface the same executive hierarchy (situation → meaning → recommended action, with machine state/history folded) while preserving plain form-posts and CSS-only progressive disclosure; `serve.ts` is the service entry. The shared HWC Workbench chrome lives here too: `shell.css.ts` + `palette.css.ts` are verbatim String.raw copies of `scout/packages/ui/src/styles/{shell,palette}.css` (hwc-ui lint L6 checks drift), and `workbench.ts` parses the Nix-injected `areas.json` registry once at startup for the area switcher. |
 | `engine/` | Engine core: Item + GateModule + Pipeline contracts (Zod), step runner, in-memory ItemStore. TypeScript library, `node --test` unit tests. Substance-agnostic, no IO beyond injected ports. |
 | `engine/src/gates/` | Gate registry: Eric's engineering canon as `GateModule`s (stepwise-refinement, principles-create/fix, chestertons-fence, blast-radius, premortem, admission-gates). Each = `applies()` predicate over item traits + a prompt + a Zod verdict schema + `decide()`. LLM consulted via an injected `LlmPort` (stubbed in tests). `makeGateRegistry(llm)` / `gateList(llm)`. |
 | `engine/src/executors/` | Executors (`Executor`s): `gauntlet` — the thin port to a **standalone** gauntlet (trigger via `ProcessPort`, read its report+verdict back via `ResultReader`, map to `ExecutorResult`); the modular seam that keeps the engine from absorbing each gauntlet's code. `native` — the in-process executor (mode-parameterized worktree → headless-claude → verdict → report → push/pristine; git/claude/report injected) for a pipeline with no standalone runner. `spec` — the project-ideation terminal step (LLM → `SpecSchema` → markdown spec to scratch). |
@@ -53,6 +53,25 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-09-19: **Tolerate a host without the business role.** `index.nix` and
+  `parts/container.nix` now read `config.hwc.business.workbench` through a
+  fallback, so its absence simply means the area switcher is off. hwc-xps takes
+  the server role (refinery on, container mode) but not the business role, and
+  `nix flake check` failed there on the missing namespace. The switcher was
+  already optional — this is the read, not the behavior.
+- 2026-09-16: **The board renders the shared HWC Workbench shell.** `layout()`
+  emits the `wb-*` rail / topbar / area-switcher markup, with the palette and
+  shell CSS vendored verbatim from `scout/packages/ui` as String.raw modules
+  (`engine/src/shells/{shell,palette}.css.ts`; hwc-ui lint L6 checks drift). The
+  area registry is injected by Nix from `hwc.business.workbench`'s rendered
+  `areas.json` — a service env var in native mode, a read-only bind mount in
+  container mode — and parsed once at startup (`shells/workbench.ts`); absent, the
+  switcher still offers Refinery and the Workbench home. Routes and POST handlers
+  unchanged; engine tests 217/217 (+ `test/workbench-shell.test.ts`).
+- 2026-09-11: Container limits raised to **8 GB / 3 CPUs**. The 2 GB cgroup was
+  exhausted by a DataX acceptance baseline (`npm ci` + test run on a 2.3 GB
+  worktree); the OOM killer took the engine server and left the item running
+  behind a stale lock. Host has 64 GB.
 - 2026-09-04: **Container mode.** The engine was extracted with history into
   `eriqueo/refinery` (CI: tests + image to GHCR). `mode = "container"` runs that
   image through `mkContainer` (`parts/container.nix`) with one env file

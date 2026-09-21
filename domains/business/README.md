@@ -16,18 +16,34 @@ finance, business databases, website/CMS, and the daily morning briefing.
 ```
 business/
 ├── index.nix          # Domain aggregator
+├── crm/               # hwc.business.crm — hwc-crm funnel over the hwc.leads store
 ├── databases/         # hwc.business.databases — business PostgreSQL layer
+├── datax/             # DataX pieces (no aggregator): dashboard/, fb-classifier/,
+│                      #   fb-group-scraper/, fb-monitor-bak/
 ├── datax-monitor/     # hwc.business.dataxMonitor — DX1 diagnostic dashboard on :4400
 ├── estimator/         # hwc.business.estimator — React PWA on :13443
 ├── firefly/           # hwc.business.firefly — Firefly III finance
 ├── leads/             # hwc.business.leads — unified lead pipeline
 ├── morning-briefing/  # hwc.business.morningBriefing — 6am Claude agent
 ├── paperless/         # hwc.business.paperless — Paperless-NGX documents
+├── umami/             # hwc.business.umami — cookieless analytics for iheartwoodcraft.com
+│                      #   (one producer of the analytics DB name + website id)
 ├── website/           # hwc.business.website — Heartwood CMS + 11ty + webapps
 └── workbench/         # hwc.business.workbench — HWC Workbench hub (area registry + static launcher)
 ```
 
 ## Changelog
+- 2026-09-21: `## Structure` corrected — `crm/`, `umami/` and the `datax/`
+  sub-tree were live but unlisted. Doc-only.
+- 2026-09-19: Lead-visit tie-through, end to end. The calculator now sends the
+  per-tab `visit_id` minted by the site's `tracking.js`
+  (`website/calculator/app/src/calcData.js`), and hwc-crm gained read-only Umami
+  access settings (D46) so a lead's page views and website report render from
+  Umami's database — the `umami/` module stays the one producer of the database
+  name and website id. Separately, the CRM's network-scraper route gained a
+  `minScores` option (passed through as `min_scores`) and now ingests
+  `hot_connect` only at `network_value >= 3`: measured that day, 0 of 524
+  `warm_connect` leads had ever been worked.
 - 2026-09-16: Added Finance as the seventh HWC Workbench area, backed by the Firefly recurring-payment explorer at `firefly-explorer.hwc.iheartwoodcraft.com`. The shared registry remains the single producer of area order and destinations; the Finance app consumes `/areas.json` for its matching area switcher.
 - 2026-09-16: `workbench/` hub redesigned after Eric found the first cut too small: larger identity block and headline, 200 px cards with initials glyphs (derived from the label, no icon asset), 26 px display labels, hover lift, ellipsized hostnames, one column under 640 px, Playfair/DM Sans/JetBrains Mono loaded like the scout apps. Still tokens-only CSS and zero runtime JavaScript.
 - 2026-09-16: New `workbench/` module (`hwc.business.workbench`) — the one

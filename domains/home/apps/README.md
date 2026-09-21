@@ -10,7 +10,6 @@ User application configuration via Home Manager.
 ## Structure
 ```
 apps/
-├── aerc/           # Email client
 ├── aider/          # AI coding assistant
 ├── blender/        # 3D modeling
 ├── chromium/       # Browser
@@ -18,8 +17,10 @@ apps/
 ├── gpu-screen-recorder/  # Call/screen recording (gsr-toggle script + sys.nix capture wrapper)
 ├── hyprland/       # Wayland compositor
 ├── kitty/          # Terminal emulator
-├── librewolf/      # Privacy browser
+├── firefox/        # Browser (replaced the retired librewolf/ module)
 ├── mpv/            # Media player
+├── agent-harness/  # One policy source + state store for the agent apps below
+├── claude-code/, codex/, pi/, t3code/, herdr/  # Agent harness consumers
 ├── obsidian/       # Note-taking
 ├── xournalpp/      # PDF annotator / handwritten notes
 ├── vesktop/        # Discord client with Vencord built in
@@ -31,6 +32,35 @@ apps/
 ```
 
 ## Changelog
+- 2026-09-21: `## Structure` corrected — `aerc/` lives in `domains/mail/`, not
+  here, and `librewolf/` is retired (the browser is `firefox/`). Added
+  `agent-harness/` and named the agent apps it fronts. Doc-only.
+- 2026-09-17: **`agent-harness/` — new module.** Static policy (instructions,
+  skills, hooks, provider adapters) is pinned by Nix; mutable memories and
+  `MISTAKES.md` live in the `~/.agent-state` clone. Ships an ownership/revision
+  contract, a `control.sh` doctor (local, fleet, and Codex hook trust), a
+  packaged state validator, and location-independent publication. Same day:
+  `claude-code` gained the two-way `shareConfig.sync` (and learned to refuse a
+  memory store containing a `.git`, and to run `config-sync.sh` under a pinned
+  bash), `codex` gained `shareHarness` plus the node runtime its hook trust
+  needs, and the T3 DX Claude homes and `~/.agents/skills` now get the shared
+  skills declaratively.
+- 2026-09-16: `claude-code` shares `settings.json` across hosts via
+  claude-config; the gate hook heals with `cp` over the symlink instead of `mv`
+  replacing it. `vesktop` launches through `gpu-integrated` — its GPU process
+  held `/dev/nvidiactl` and the NVIDIA render node for a whole session, pinning
+  the RTX 2000 at ~15 W idle on battery, so the module now owns `bin/vesktop`,
+  the desktop entry and the login autostart file. `workbench` shipped the kanban
+  stage browser, structured agent results, and a compatible agent runner
+  (#90/#93/#94).
+- 2026-09-15: `zellij` gained the herdr **agents** tab in the workbench (order
+  60, meta jump `a`, started suspended so opening the workbench does not attach
+  a herdr session); `workbench` wired the selected-item agent; `codex` installs
+  the project-closeout skill; `t3code` pins the advertised host so the phone
+  endpoint survives a reboot — the desktop app resolves its network exposure
+  exactly once at bootstrap with no watcher or retry, and a cold boot that finds
+  no LAN/Tailscale IPv4 silently discards network-accessible mode and binds
+  127.0.0.1.
 - 2026-09-14: Added Vesktop through Home Manager's native `programs.vesktop`
   module; enabled only on hwc-laptop.
 - 2026-09-07: Consume Workbench registry v2: Brief first/landing; filter explicit

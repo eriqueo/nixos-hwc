@@ -104,6 +104,10 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-09-21: `aerc/README.md` refreshed under Law 12 — the 2026-09-15 durable
+  views + sender rules change (`family`/`datax`/`hwc` became tag-backed history,
+  new `r` rules group, sender/subject sort) was in the code but not in the docs.
+  Doc-only; no module here changed.
 - 2026-09-15: Restored `hwc` as the stable display name and khal default for
   the primary `eric/work` calendar. Aerc's reviewed `i` import and `busy` now
   derive that name from one value, while CRM and CalDAV keep using the

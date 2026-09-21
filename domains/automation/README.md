@@ -22,6 +22,22 @@ automation/
 │   ├── index.nix   # Options + systemd oneshot service/timer (every 30m); dryRun default on
 │   ├── janitor.py  # Engine: pure classify() core + I/O edges; reads ~/000_inbox/_inbox-routing.yaml
 │   └── README.md   # Single-writer rationale + rollout
+├── mail-janitor/   # Age-aware anti-buildup sweep for the Gmail accounts (hwc.automation.mailJanitor.*)
+│   ├── index.nix   # Options + timer; dryRun defaults TRUE
+│   ├── janitor.py  # PRESERVE / TXN / NOISE tiers; trash only, never hard-delete
+│   └── README.md
+├── brain-sweep/    # Nightly `brain sweep --report` drift detector (hwc.automation.brainSweep.*)
+│   ├── index.nix   # Schedules the CLI in ~/600_apps/brain; a detector, never a fixer
+│   └── README.md
+├── vault-sync/     # Periodic commit + pull + push of the brain vault against the bare hub
+│   ├── index.nix   # Tier-2 git-only transport; push failure is FATAL + OnFailure notifier
+│   └── README.md
+├── refinery/    # Refinement engine board + intake (hwc.automation.refinery.*)
+│   ├── index.nix       # Options + the :8060 engine HTTP shell; native/container modes
+│   ├── parts/container.nix  # Container mode via mkContainer (ghcr.io/eriqueo/refinery)
+│   ├── engine/         # TypeScript core: contracts, gates, executors, shells, stores
+│   ├── pipelines/, gauntlets/, domains.yaml  # Data: pipeline + gauntlet definitions
+│   └── README.md       # Slice log + structure table
 ├── mqtt/        # MQTT broker for event-driven automation
 │   └── index.nix
 ├── nightly-builds/  # Overnight gauntlet-card runner (headless Claude Code)
@@ -77,6 +93,16 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-09-21 (b): `n8n/README.md` recorded the estimator-integration doc
+  refresh below. Doc-only.
+- 2026-09-21: `## Structure` corrected — it had never listed `refinery/`,
+  `brain-sweep/`, `mail-janitor/` or `vault-sync/`, all of which have READMEs and
+  changelog entries of their own here. Doc-only.
+- 2026-09-19: refinery tolerates a host without the business role (7385e5be).
+  `index.nix` and `parts/container.nix` read `config.hwc.business.workbench`
+  through a fallback, so the area registry's absence just means the switcher is
+  off. hwc-xps takes the server role but not the business role, and
+  `nix flake check` was failing there on the missing namespace.
 - 2026-09-16: refinery board renders the shared HWC Workbench shell. `engine/src/shells/shell.css.ts` and `palette.css.ts` are verbatim copies of `scout/packages/ui/src/styles/{shell,palette}.css` (String.raw modules because the board is one esbuild bundle and its tests run tsc output; hwc-ui lint L6 checks drift via `npm run lint:ui`). `layout()` emits the `wb-*` rail (Work views = Board/Overnight/Finished/gauntlet views, Tools = Reviews/Reference), the topbar, and a registry-driven area switcher; the board's short-name color vars now alias the palette. The registry is injected by Nix — `REFINERY_WORKBENCH_AREAS_FILE=${hwc.business.workbench.site}/areas.json` — and parsed once at startup (`shells/workbench.ts`); absent or malformed, the switcher still offers Refinery and the Workbench home. Routes and POST handlers unchanged.
 - 2026-09-07: n8n alert integrity — Frigate's Discord webhook is now injected as
   `DISCORD_WEBHOOK_FRIGATE_URL` from the existing agenix `discord-webhook-frigate`
