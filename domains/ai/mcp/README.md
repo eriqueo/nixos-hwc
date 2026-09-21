@@ -19,8 +19,9 @@ mcp/
 - The old `workspace/projects/jt-mcp/` was removed during the 2026-03-26 workspace restructure
 
 ## Changelog
-- 2026-05-21: Deleted `heartwood/` (4f199955) — the JT MCP module lives in
-  `domains/business/mcp/`, and this copy was unimported by `ai/index.nix`. Part
+- 2026-05-21: Deleted `heartwood/` (4f199955) — the copy here was unimported by
+  `ai/index.nix`; the JT MCP module lives outside this domain (the commit said
+  `domains/business/mcp/`; today it is `domains/system/mcp/parts/jt.nix`). Part
   of the dead-tree + `options.nix` orphan sweep across the AI domain; the commit
   verified all four toplevel/activation drv hashes unchanged. `## Structure`
   updated to match.

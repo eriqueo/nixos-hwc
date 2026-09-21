@@ -17,9 +17,9 @@ First run requires a one-time interactive login to capture session cookies:
 node index.mjs --login --headed
 ```
 
-This opens a browser. Log in to Facebook manually, press Enter in the terminal, and the session is saved to `./data/session.json`. Subsequent runs reuse this session headlessly.
+This opens a browser. Log in to Facebook manually — no Enter press: the script polls for the `c_user` cookie and exits on its own once you are in, which survives a passkey redirect. State lives in the persistent Chromium profile at `./data/browser-profile` (`launchPersistentContext`), and subsequent runs reuse it headlessly.
 
-If the session expires (you'll see "Session expired"), re-run the login step.
+If the session expires (`Not logged in. Run with --login --headed first.`), re-run the login step.
 
 ## Usage
 
@@ -37,7 +37,7 @@ node index.mjs jobtread -n 50 -d comments
 node index.mjs jobtread -n 100 -q
 
 # Custom paths
-node index.mjs jobtread --db ./mydata/jt.db --session ./mydata/session.json
+node index.mjs jobtread -o /tmp/export.json --profile ./mydata/browser-profile
 ```
 
 ### Options
@@ -46,8 +46,8 @@ node index.mjs jobtread --db ./mydata/jt.db --session ./mydata/session.json
 |------|-------------|---------|
 | `-n, --posts` | Number of posts to collect | 50 |
 | `-d, --depth` | `posts` or `comments` | posts |
-| `--db` | SQLite database path | `./data/posts.db` |
-| `--session` | Session state file | `./data/session.json` |
+| `-o, --output` | Write JSON to file | stdout |
+| `--profile` | Browser profile directory | `./data/browser-profile` |
 | `--headed` | Show the browser window | off |
 | `--login` | Interactive login mode | — |
 | `-q, --quiet` | Minimal output | off |
@@ -117,11 +117,35 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 ## Structure
 
 ```
-├── index.mjs    CLI, browser lifecycle, scroll loop, comment expansion
-├── parse.mjs    FB GraphQL response parsers (ported from API Monitor)
-├── store.mjs    SQLite persistence layer
-├── data/
-│   ├── posts.db       ← created on first run
-│   └── session.json   ← created on login
-└── package.json
+├── index.mjs        CLI, browser lifecycle, scroll loop, comment expansion
+├── parse.mjs        FB GraphQL response parsers (ported from API Monitor)
+├── Containerfile    Playwright image (pinned to the same playwright version
+│                    as package.json — they must match)
+├── package.json / package-lock.json
+└── data/
+    └── browser-profile/   ← persistent Chromium profile, created by --login
 ```
+
+`store.mjs` and `data/posts.db` are listed in older copies of this section but
+have never existed in the repo; output is JSON on stdout or `-o <path>`.
+
+## Changelog
+- 2026-09-21: Added `## Changelog` for Charter Law 12 and corrected `## Structure`,
+  `## Auth` and the options table, which still documented the retired
+  `--session` / `session.json` / `--db` CLI. The `## Schema` section below still
+  describes a SQLite store this scraper does not have.
+- 2026-05-15: Lead scoring reworked for HWC (80d78d4a) — the classifier moved
+  off the DataX market-research schema to a residential-remodel one
+  (`hot_lead`/`warm_lead`/`monitor`/`competitor` over project signal, service
+  match, urgency, contractor request, budget signal, sentiment), and the prompt
+  became a `fbClassifier.promptFile` option instead of a hardcoded path. Here
+  that landed as the playwright 1.59.1 lockfile update; the classifier itself
+  lives in `../fb-classifier/`.
+- 2026-05-13: `index.mjs` picked up the jobber-mcp project-path move to
+  `300_tech/320_projects` and three preceding "jobber mcp" commits.
+- 2026-05-11: **Login rewritten around a persistent profile.** `--session
+  <file>` became `--profile <dir>` on `launchPersistentContext`; login
+  completion is detected by polling for the `c_user` cookie rather than watching
+  the DOM, so no Enter press is needed and a passkey redirect no longer breaks
+  it. Playwright pinned to 1.59.1 in `package.json` to match the Containerfile
+  image.

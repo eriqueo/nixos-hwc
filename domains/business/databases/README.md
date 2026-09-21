@@ -85,6 +85,18 @@ After enabling and rebuilding:
 
 ## Changelog
 
+- 2026-08-28: **Dead `postStart` grants deleted; `business_user` declared
+  instead** (e82ca994, 53e84228). This module's 4 `$PSQL` lines were part of the
+  54 dead statements in the generated postgresql post-start script — `$PSQL` is
+  never assigned in the pinned 15.x module, so each line failed
+  command-not-found and `|| true` swallowed it. They were deleted rather than
+  repaired: `eric` is superuser and owns the objects here, so every one of those
+  grants was a no-op. Deleting them exposed `business_user`, which lived on the
+  cluster by hand and was declared nowhere — `schema.sql:772-774` and
+  `migrations/001-catalog-schema-split.sql` grant to it by name, so a rebuilt
+  cluster would have run those grants against a nonexistent role. It is now
+  `services.postgresql.ensureUsers = [{ name = "business_user"; }]`, with no
+  `ensureDBOwnership` (it is a grantee; `eric` owns the database).
 - 2026-05-01: Added export scripts, estimate_templates table, 70 catalog items with Craftsman/JT rates
 - 2026-04-12: Created index.nix module (hwc.business.databases.*), wired into business domain
 - 2026-03-24: Granted n8n postgres user access to hwc schema
