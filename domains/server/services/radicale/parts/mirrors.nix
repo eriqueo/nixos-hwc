@@ -95,6 +95,9 @@ let
     printf '%s' "$pw" > "$RUNTIME_DIRECTORY/pw"
     printf '[general]\nstatus_path = "%s/status"\n' "$STATE_DIRECTORY" > "$conf"
     ${lib.concatStringsSep "\n" (lib.mapAttrsToList perMirror mirrors)}
+    # discover is required once per pair even with collections = null; with
+    # nothing to create it never prompts, so it is safe to run every time.
+    ${pkgs.vdirsyncer}/bin/vdirsyncer -c "$conf" discover
     ${pkgs.vdirsyncer}/bin/vdirsyncer -c "$conf" sync
     # Feed URLs are secrets: the config dies with the run.
     rm -f "$conf" "$RUNTIME_DIRECTORY/pw"
