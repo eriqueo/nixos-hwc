@@ -65,7 +65,7 @@ let
       url = cfg.radicale.url;
       username = cfg.radicale.username;
       secretPath = radicalePwPath;
-      collectionIds = radicaleCalendarIds;
+      collectionIds = radicaleCalendarIds ++ cfg.radicale.extraCollections;
     });
 
   vdirsyncer = import ./parts/vdirsyncer.nix {
@@ -157,6 +157,19 @@ in
         type = lib.types.str;
         default = "dark green";
         description = "khal display color for the Radicale calendar(s).";
+      };
+
+      extraCollections = lib.mkOption {
+        type = with lib.types; listOf str;
+        default = [];
+        example = [ "cto" "proton-work" "google-family" ];
+        description = ''
+          Further VEVENT collection ids under the Radicale principal to sync
+          into khal, beyond work/family/personal. Used for the read-only
+          mirrors the server creates (hwc.server.services.radicale.mirrors);
+          the pair pins ids, so each machine must name them. After adding one,
+          run `vdirsyncer discover calendar_radicale` once.
+        '';
       };
     };
 

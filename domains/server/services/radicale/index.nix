@@ -27,6 +27,10 @@ let
     [ "age" "secrets" "radicale-htpasswd" "path" ]
     "/run/agenix/radicale-htpasswd"
     config;
+
+  # Read-only mirrors of outside calendars (iCal feeds) into Radicale: the
+  # radicale-mirror timer. Options for it (mirrors.*) are declared below.
+  mirrorsConfig = import ./parts/mirrors.nix { inherit config lib pkgs cfg htpasswdPath; };
 in
 {
   #============================================================================
@@ -34,6 +38,46 @@ in
   #============================================================================
   options.hwc.server.services.radicale = {
     enable = lib.mkEnableOption "Radicale CalDAV server (self-hosted tasks/calendars)";
+
+    mirrors = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.submodule {
+        options = {
+          secret = lib.mkOption {
+            type = lib.types.str;
+            description = "agenix secret name holding the calendar's secret iCal address (one URL).";
+          };
+          displayName = lib.mkOption {
+            type = lib.types.str;
+            description = "Calendar name shown on the phone and in khal.";
+          };
+          color = lib.mkOption {
+            type = lib.types.str;
+            default = "#8E8E93";
+            description = "Calendar colour (#RRGGBB), set once when the collection is created.";
+          };
+        };
+      });
+      default = {};
+      example = lib.literalExpression ''{ cto = { secret = "cto-ical-link"; displayName = "ContractorCTO"; }; }'';
+      description = ''
+        Outside calendars mirrored read-only into Radicale every mirrorInterval
+        (parts/mirrors.nix), keyed by the collection id created under
+        /<mirrorUser>/. Add the same ids to
+        hwc.mail.calendar.radicale.extraCollections on each khal machine.
+      '';
+    };
+
+    mirrorUser = lib.mkOption {
+      type = lib.types.str;
+      default = "eric";
+      description = "Radicale principal the mirrors are created under (needs a line in the htpasswd secret).";
+    };
+
+    mirrorInterval = lib.mkOption {
+      type = lib.types.str;
+      default = "15min";
+      description = "How often the mirrors are refreshed (systemd OnUnitActiveSec).";
+    };
 
     port = lib.mkOption {
       type = lib.types.port;
@@ -48,7 +92,7 @@ in
   #============================================================================
   # IMPLEMENTATION
   #============================================================================
-  config = lib.mkIf cfg.enable {
+  config = lib.mkMerge [ mirrorsConfig (lib.mkIf cfg.enable {
     services.radicale = {
       enable = true;
       settings = {
@@ -74,5 +118,5 @@ in
         upstream = "http://127.0.0.1:${toString cfg.port}";
       }
     ];
-  };
+  }) ];
 }

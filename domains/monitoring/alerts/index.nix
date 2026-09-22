@@ -101,6 +101,12 @@ let
     "home-scout-schools"
     "home-scout-overlays"
     "recyclarr-sync"
+
+    # Added 2026-09-21: the outside-calendar mirror into Radicale
+    # (domains/server/services/radicale/parts/mirrors.nix, declared with an
+    # ExecStart whenever hwc.server.services.radicale.mirrors is non-empty,
+    # which machines/server/config.nix sets). A dead feed URL must be heard.
+    "radicale-mirror"
   ];
 
   # Get final list of services to monitor

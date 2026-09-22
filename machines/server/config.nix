@@ -240,6 +240,15 @@
   hwc.server.services.radicale = {
     enable = true;
     reverseProxy.enable = true;
+    # Outside calendars mirrored read-only into Radicale every 15 min, so the
+    # phone's one CalDAV account and khal show them. Same three secrets the
+    # CRM's busyFeeds read above; the ids are pinned on each khal machine in
+    # hwc.mail.calendar.radicale.extraCollections.
+    mirrors = {
+      cto           = { secret = "cto-ical-link";    displayName = "ContractorCTO"; color = "#FF9F0A"; };
+      proton-work   = { secret = "proton-ical-link"; displayName = "Proton work";   color = "#BF5AF2"; };
+      google-family = { secret = "hwcmt-ical-link";  displayName = "Google family"; color = "#30D158"; };
+    };
   };
 
   # ZFS support for backup drives

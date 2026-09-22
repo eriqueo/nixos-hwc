@@ -54,6 +54,13 @@ domains/mail/calendar/
 
 ## Changelog
 
+- 2026-09-21: `hwc.mail.calendar.radicale.extraCollections` — further VEVENT
+  collection ids pinned into the `calendar_radicale` pair, for the read-only
+  mirrors the server keeps in Radicale (`hwc.server.services.radicale.mirrors`:
+  `cto`, `proton-work`, `google-family`). Both machines list them; khal picks
+  the new dirs up through its `calendars-radicale/*` discovery. Edits to a
+  mirrored event are reverted by the next server mirror run.
+
 - 2026-09-21: `email-to-khal --draft PATH` now writes a private, reviewable
   khal-format proposal without importing or syncing. Classifier automation
   deliberately ignores attachment contents.

@@ -18,6 +18,9 @@
   # generates them once radicale is on). This gives hwc-server the
   # calendars-radicale/ vdir the MCP's hwc_calendar tool reads.
   hwc.mail.calendar.radicale.enable = true;
+  # The read-only mirrors this machine keeps in Radicale (config.nix
+  # hwc.server.services.radicale.mirrors), so hwc_calendar sees them too.
+  hwc.mail.calendar.radicale.extraCollections = [ "cto" "proton-work" "google-family" ];
 
   # khalt (forked khal/ikhal) — supersedes plain khal. Headless server enables
   # it only to materialise the khalt package + ~/.config/khalt/config that the

@@ -55,6 +55,19 @@ password (`cut -d: -f2-`).
    phone; add a task on the phone in that list → sync → visible in todui.
 
 ## Changelog
+- 2026-09-21: **Read-only mirrors of outside calendars** (`parts/mirrors.nix`,
+  `hwc.server.services.radicale.mirrors`). A system timer (`radicale-mirror`,
+  every 15 min, DynamicUser + `secrets` group) copies each secret iCal address
+  (agenix) into its own collection under `/eric/` with vdirsyncer's `http`
+  storage; `partial_sync = "revert"` undoes edits made on the Radicale side, so
+  the mirror stays one-way. Live: `cto`, `proton-work`, `google-family` (the
+  same three secrets the CRM's `busyFeeds` read). The phone's existing CalDAV
+  account discovers them by itself; khal machines pin the ids in
+  `hwc.mail.calendar.radicale.extraCollections` and run
+  `vdirsyncer discover calendar_radicale` once. Failure → `hwc-service-failure-notifier`
+  (added to the alerts blessed list). The vdirsyncer config, holding the URLs
+  and the password, is written to RuntimeDirectory (tmpfs, 0700) and removed
+  after each run.
 - 2026-06-15: Now also hosts the **calendar** (VEVENT) backend, not just tasks.
   No server-side change required (Radicale is generic CalDAV) — the laptop adds
   a `calendar_radicale` vdirsyncer pair (`hwc.mail.calendar.radicale.enable`)
