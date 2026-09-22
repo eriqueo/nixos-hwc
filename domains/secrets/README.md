@@ -51,6 +51,7 @@ domains/secrets/
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-09-21: Added `heartbeat-ping-url` (`parts/services/heartbeat/ping-url.age`): the healthchecks.io ping URL for `hwc.monitoring.heartbeat` on hwc-server. Anyone holding it can keep the check green, so it is a credential. Standard `root:secrets` / `0440` mount. It was encrypted straight to the 4 `everyone` keys with `age -R`, with no rekey and no plaintext file on disk, and checked by decrypting it to 56 bytes on hwc-server.
 - 2026-09-18: Added `althub-api-key` for the paid altHUB Usenet indexer. The generated layer supplies the standard `root:secrets` / `0440` mount and all-host/user recipient set. The key passed Prowlarr's live indexer test, and the enabled indexer synced to Sonarr, Radarr, Lidarr, and Readarr.
 - 2026-09-16: Added `firefly-explorer-pat` under `parts/services/firefly-explorer/pat.age`, a distinct Firefly personal access token used only by the Workbench Finance explorer. It uses the generated default `root:secrets` / `0440` mount and all-host/user recipient set; plaintext was streamed from Firefly directly into age encryption, then decrypted only for token-shape validation.
 - 2026-09-08: Removed the superseded `parts/infrastructure/dx2-api-key.age`.

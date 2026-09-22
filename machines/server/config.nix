@@ -530,6 +530,13 @@
   hwc.automation.mailJanitor.dryRun = false; # active after dry-run verified 2026-06-24
   # Unified lead pipeline comes from the business role.
 
+  # Off-host dead-man's switch: healthchecks.io check "hwc-server" (5 min
+  # period, 10 min grace). It alerts when these pings stop.
+  hwc.monitoring.heartbeat = {
+    enable = true;
+    pingUrlFile = config.age.secrets.heartbeat-ping-url.path;
+  };
+
   # Alert sources — what to monitor (thresholds, triggers)
   hwc.monitoring.alerts = {
     enable = true;
