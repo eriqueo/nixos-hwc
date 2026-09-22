@@ -101,10 +101,18 @@ def main() -> int:
     parser.add_argument("tool")
     parser.add_argument("arguments", nargs="?", default="{}", help="JSON object")
     parser.add_argument("--endpoint", default="http://127.0.0.1:6200/mcp")
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=10.0,
+        help="tool-call response deadline in seconds (default: 10)",
+    )
     parser.add_argument("--write", action="store_true", help="emit write-safe failure guidance")
     args = parser.parse_args()
 
     try:
+        if not 0 < args.timeout <= 600:
+            raise CallError("timeout must be greater than 0 and at most 600 seconds")
         arguments = json.loads(args.arguments)
         if not isinstance(arguments, dict):
             raise CallError("arguments must decode to a JSON object")
@@ -142,6 +150,7 @@ def main() -> int:
                     "params": {"name": args.tool, "arguments": arguments},
                 },
                 session_id=session_id,
+                timeout=args.timeout,
             )
             value = unwrap_tool_result(envelope)
         finally:

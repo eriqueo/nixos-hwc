@@ -499,6 +499,8 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 - 2026-09-22: Mail health now reads the versioned core/Trash status projection,
   and mail sync starts `mbsync.service` instead of bypassing its unit result.
+  `hwc-mcp-call --timeout <seconds>` gives bounded long-running tools such as a
+  waited mail sync enough time without weakening the 10-second default.
 - 2026-09-22: Mail surfaces consume `DO/DID/LOOK/JUNK` from the pinned v2
   contract. State/outcome writes route through the classifier ledger; completed
   threads disappear instead of returning from cached JSON.
