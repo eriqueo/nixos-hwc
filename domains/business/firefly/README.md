@@ -118,6 +118,7 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
+- 2026-09-21: Pinned Explorer `0605857`: serve current HTML without conditional caching, since Nix-normalized mtimes can otherwise return stale 304 responses and reference removed JavaScript builds. Static asset caching, Tailscale API checks, and finance data are unchanged.
 - 2026-09-16: Pinned Firefly Explorer fix `90a8a587`: tailscaled LocalAPI requires `Host: local-tailscaled.sock` even over its Unix socket. The original package used `localhost`, so the deployed authorization boundary failed closed with 403 for every API request. A Unix-socket regression test now watches the exact Host requirement.
 - 2026-09-16: Added the Workbench Finance recurring-payment explorer from the revision-locked private `pnc-statement-pipeline` flake. The default report scans Firefly history from 2019-08-19; date controls filter visible occurrences without narrowing cadence/status analysis. Caddy reaches it only through a root-owned `0600` Unix socket, API reads require the configured Tailscale identity, and exact-fingerprint writes are limited to one journal's existing category, expense account, or tags. Added a dedicated encrypted PAT instead of sharing the digest token.
 - 2026-09-15: Pinned Firefly III core 6.6.6, the minimum compatible release line for data-importer 2.3.4; importing had been blocked because core 6.4.22 was below the importer's required 6.6.0. OAuth clients and tokens must be recreated after this upgrade.
