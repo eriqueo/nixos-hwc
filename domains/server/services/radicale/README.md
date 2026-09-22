@@ -63,11 +63,16 @@ password (`cut -d: -f2-`).
   the mirror stays one-way. Live: `cto`, `proton-work`, `google-family` (the
   same three secrets the CRM's `busyFeeds` read). The phone's existing CalDAV
   account discovers them by itself; khal machines pin the ids in
-  `hwc.mail.calendar.radicale.extraCollections` and run
-  `vdirsyncer discover calendar_radicale` once. Failure → `hwc-service-failure-notifier`
-  (added to the alerts blessed list). The vdirsyncer config, holding the URLs
+  `hwc.mail.calendar.radicale.extraCollections` and run once
+  `yes | vdirsyncer discover calendar_radicale && vdirsyncer sync calendar_radicale && vdirsyncer metasync calendar_radicale`
+  (done on hwc-server 2026-09-21; the laptop after its next `hms`). Failure →
+  `hwc-service-failure-notifier` (added to the alerts blessed list); vdirsyncer
+  output is passed through a redactor that replaces every feed URL, because
+  the notifier forwards journal lines. The vdirsyncer config, holding the URLs
   and the password, is written to RuntimeDirectory (tmpfs, 0700) and removed
-  after each run.
+  after each run. Feed quirks seen: the Microsoft (ContractorCTO) feed carries
+  few UIDs, so vdirsyncer keys most items by content hash; DTSTAMP changes on
+  every fetch and is ignored by the hash, so an unchanged feed uploads nothing.
 - 2026-06-15: Now also hosts the **calendar** (VEVENT) backend, not just tasks.
   No server-side change required (Radicale is generic CalDAV) — the laptop adds
   a `calendar_radicale` vdirsyncer pair (`hwc.mail.calendar.radicale.enable`)

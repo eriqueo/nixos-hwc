@@ -50,6 +50,7 @@ let
   perMirror = id: m: ''
     # ---- ${id}: ${m.displayName}
     url=$(tr -d '[:space:]' < ${secretPath m.secret})
+    urls+=("$url")
     case "$url" in
       https://*|http://*) ;;
       *) echo "radicale-mirror: secret ${m.secret} does not hold a feed URL" >&2; exit 1 ;;
@@ -94,11 +95,25 @@ let
     [ -n "$pw" ] || { echo "radicale-mirror: no ${cfg.mirrorUser} line in the htpasswd secret" >&2; exit 1; }
     printf '%s' "$pw" > "$RUNTIME_DIRECTORY/pw"
     printf '[general]\nstatus_path = "%s/status"\n' "$STATE_DIRECTORY" > "$conf"
+    urls=()
     ${lib.concatStringsSep "\n" (lib.mapAttrsToList perMirror mirrors)}
+    # vdirsyncer names a storage by its URL in some error messages, and the
+    # failure notifier forwards the last journal lines to Discord. Every
+    # feed URL is replaced before a line reaches the journal.
+    redact() {
+      ${pkgs.python3}/bin/python3 -c '
+    import sys
+    urls = [u for u in sys.argv[1:] if u]
+    for line in sys.stdin:
+        for u in urls:
+            line = line.replace(u, "<feed url>")
+        sys.stdout.write(line); sys.stdout.flush()
+    ' "''${urls[@]}"
+    }
     # discover is required once per pair even with collections = null; with
     # nothing to create it never prompts, so it is safe to run every time.
-    ${pkgs.vdirsyncer}/bin/vdirsyncer -c "$conf" discover
-    ${pkgs.vdirsyncer}/bin/vdirsyncer -c "$conf" sync
+    ${pkgs.vdirsyncer}/bin/vdirsyncer -c "$conf" discover 2>&1 | redact
+    ${pkgs.vdirsyncer}/bin/vdirsyncer -c "$conf" sync 2>&1 | redact
     # Feed URLs are secrets: the config dies with the run.
     rm -f "$conf" "$RUNTIME_DIRECTORY/pw"
   '';

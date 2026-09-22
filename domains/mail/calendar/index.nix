@@ -168,7 +168,10 @@ in
           into khal, beyond work/family/personal. Used for the read-only
           mirrors the server creates (hwc.server.services.radicale.mirrors);
           the pair pins ids, so each machine must name them. After adding one,
-          run `vdirsyncer discover calendar_radicale` once.
+          run once: `yes | vdirsyncer discover calendar_radicale`, then
+          `vdirsyncer sync calendar_radicale`, then
+          `vdirsyncer metasync calendar_radicale` (the timer runs sync only,
+          and the calendar's name and colour travel by metasync).
         '';
       };
     };
