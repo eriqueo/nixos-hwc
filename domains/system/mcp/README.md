@@ -319,19 +319,12 @@ The service runs `dist/index.js`. Editing `src/*.ts` without running `npx tsc` m
 | `hwc_network_tunnel_status` | Tailscale peers and/or Gluetun VPN status. tunnel=tailscale/vpn/all. |
 | `hwc_network_caddy_routes` | Live route config from Caddy admin API. Falls back to routes.nix. |
 
-### Mail (9)
+### Mail (2)
 
 | Tool | Description |
 |------|-------------|
-| `hwc_mail_health` | Health timer state, Bridge status, per-lane sync status, notmuch stats. |
-| `hwc_mail_search` | Search or count mail. Saved search names or raw notmuch queries. count_only flag. |
-| `hwc_mail_read` | Read message/thread by notmuch ID. Headers + body text. |
-| `hwc_mail_tag` | Generic mail tags and outcomes. Workflow state writes use `hwc_mail_triage`. |
-| `hwc_mail_send` | Send via msmtp. Proton accounts, cc/bcc, in-reply-to. |
-| `hwc_mail_reply` | Reply to thread with auto-populated recipients, subject, threading headers. |
-| `hwc_mail_sync` | Trigger the authoritative core sync unit. |
-| `hwc_mail_accounts` | Configured accounts, identities, search names, tag taxonomy. |
-| `hwc_mail_folders` | Maildir folders with notmuch message counts. |
+| `hwc_mail` | Consolidated search, read, send, reply, tag, core sync, health, accounts, and folders actions. |
+| `hwc_mail_triage` | Read and change workflow state through the classifier case ledger. |
 
 ### Calendar (5)
 
