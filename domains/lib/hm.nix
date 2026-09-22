@@ -41,6 +41,10 @@ rec {
       xps  = "100.126.80.42";
     } osConfig;
 
+    lanIps = lib.attrByPath [ "hwc" "networking" "hosts" "lanIps" ] {
+      main = "192.168.0.97";
+    } osConfig;
+
     fqdn = lib.attrByPath [ "hwc" "networking" "hosts" "fqdn" ] {
       main = "hwc-server.ocelot-wahoo.ts.net";
       xps  = "hwc-xps.ocelot-wahoo.ts.net";

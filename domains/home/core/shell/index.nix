@@ -93,6 +93,8 @@ in
         });
         default = {
           server = { hostname = fleet.ips.main; user = "eric"; forwardAgent = true; };
+          # Home-LAN fallback for when Tailscale can't connect (internet down).
+          server-lan = { hostname = fleet.lanIps.main; user = "eric"; forwardAgent = true; };
           # Elliott's lil-box (DataX), reachable only via Cloudflare Access.
           # Agent forwarding OFF: never forward your ssh-agent into a third party's box.
           lil-box = {

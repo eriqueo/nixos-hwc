@@ -36,12 +36,13 @@
   }];
 
   # Static IP for LAN reliability (works even if router DHCP fails)
-  # This ensures Jellyfin is always reachable at 192.168.0.97 on local network
+  # The address comes from the fleet registry (hwc.networking.hosts.lanIps),
+  # which the laptop's `server-lan` fallback also reads.
   networking.useDHCP = lib.mkDefault false;
   networking.interfaces.eno1 = {
     useDHCP = false;
     ipv4.addresses = [{
-      address = "192.168.0.97";
+      address = config.hwc.networking.hosts.lanIps.main;
       prefixLength = 24;
     }];
   };

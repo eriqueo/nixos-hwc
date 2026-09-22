@@ -18,6 +18,7 @@
   "checkup" = "$HWC_NIXOS_DIR/scripts/system-checkup.sh"; "speedtest" = "speedtest-cli";
   "myip" = "curl -s ifconfig.me"; "reload" = "source ~/.zshrc";
   "server" = "ssh eric@${fleet.ips.main}"; "xps" = "ssh eric@${fleet.ips.xps}";
+  "server-lan" = "ssh eric@${fleet.lanIps.main}";
   "vpnon" = "sudo systemctl start wg-quick-protonvpn"; "vpnoff" = "sudo systemctl stop wg-quick-protonvpn";
   "vpnstatus" = "sudo wg show protonvpn 2>/dev/null || echo 'VPN disconnected'";
   "website" = "ssh -i ~/.ssh/hostinger_deploy -p 65002 u930853409@194.195.84.13";

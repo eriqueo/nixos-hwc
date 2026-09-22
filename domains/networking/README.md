@@ -41,6 +41,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-09-21: `hosts/` — new `hwc.networking.hosts.lanIps` (alias → home-LAN IP; `main = 192.168.0.97`), plus an assertion that its aliases exist in `servers`. It is the fallback path when the internet is down. hwc-server now reads its own static `eno1` address from it (`machines/server/hardware.nix`), so the server and its clients cannot disagree. Consumers: the `server-lan` ssh matchBlock and alias (via `hmLib.fleet`). Also, `machines/laptop/config.nix` pins every hwc-server vhost name (`<name>.hwc.iheartwoodcraft.com`) to the tailnet IP in `/etc/hosts`. The names are read from hwc-server's route table through `inputs.self`. Public DNS gives the same answer, so nothing changes online; offline, service URLs keep resolving.
 - 2026-09-19: `routes.nix` — removed the `llama-gpu` vhost; the persona-daemon vhost went with its module. No request reached either host in the Caddy vhost logs (2026-09-07 to 09-19). The 2026-09-18 entry's "75 days" overstated the window; see the llama-cpp README.
 - 2026-09-18: `routes.nix` — removed the `llama-cpu` vhost (`127.0.0.1:11501`). Its backend service is disabled on hwc-server because it served no chat requests in 75 days; see the llama-cpp README.
 - 2026-09-16: Added the `firefly-explorer` vhost for Workbench Finance. Its upstream is `/run/firefly-explorer.sock`, a root-owned `0600` Unix socket rather than a TCP port. The common proxy block overwrites `X-Forwarded-For` with Caddy's actual peer address, which the application verifies through tailscaled WhoIs before serving `/api`.

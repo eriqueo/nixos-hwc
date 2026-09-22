@@ -81,6 +81,24 @@ in
       '';
     };
 
+    lanIps = mkOption {
+      type = types.attrsOf types.str;
+      default = {
+        main = "192.168.0.97";
+      };
+      description = ''
+        Server alias -> home-LAN IP, for servers that have one. The fallback
+        path when the internet is down: Tailscale may not reach its control
+        plane or DERP relays then, but the server firewall trusts eno1, so the
+        LAN address always answers from inside the house.
+
+        hwc-server reads its own static address from here
+        (machines/server/hardware.nix), so the machine and every client that
+        falls back to it cannot disagree. Keep the router's DHCP reservation
+        for the server's MAC on the same address.
+      '';
+    };
+
     primary = mkOption {
       type = types.str;
       default = "main";
@@ -144,6 +162,10 @@ in
           ips:     ${lib.concatStringsSep ", " (lib.attrNames cfg.ips)}
         Adding a server means adding both its hostname and its Tailscale IP.
       '';
+    }
+    {
+      assertion = lib.all (a: builtins.hasAttr a cfg.servers) (lib.attrNames cfg.lanIps);
+      message = "hwc.networking.hosts.lanIps has aliases not in .servers: ${lib.concatStringsSep ", " (lib.subtractLists (lib.attrNames cfg.servers) (lib.attrNames cfg.lanIps))}";
     }
   ];
 }

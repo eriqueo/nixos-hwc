@@ -25,6 +25,7 @@
     ./exportarr/index.nix
     ./homepage/index.nix
     ./alerts/index.nix            # Alert sources, thresholds, severity mapping
+    ./heartbeat/index.nix         # Outbound ping to an external dead-man's switch
   ];
   #==========================================================================
   # IMPLEMENTATION & VALIDATION

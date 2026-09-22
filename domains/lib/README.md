@@ -48,6 +48,7 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+- 2026-09-21: `hm.nix` `fleet` also returns `lanIps` (from `hwc.networking.hosts.lanIps`, literal fallback for standalone HM), for the `server-lan` fallback.
 - 2026-09-07: `hm.nix` owns the runtime Radicale password selector for todui and
   the tasks, calendar, and contacts sync clients; callers render shell or JSON argv.
 - 2026-08-20: `mkInfraContainer.nix` split into `containerDefOf` (the podman definition) + `mkInfraContainer` (single, unchanged behavior for its callers) + `mkInfraContainers` (a config-derived SET). The plural entry point exists for a module-system reason, not a taste one: a module's `config` may be an `mkIf`/`mkMerge` only when its contents do not depend on `config`, because `pushDownProperties` forces them before `config` is fixed — so `mkMerge (map mkInfraContainer <config-derived list>)` is infinite recursion. The plural form returns a plain attrset with literal top-level names, so only the values are config-derived. `mkContainer.nix` gained `vpnContainer` (which tunnel `"vpn"` mode joins) and `mkVpnAssertions`, the one producer of the "this container's tunnel exists and is enabled" check that was previously hand-copied into eight modules.
