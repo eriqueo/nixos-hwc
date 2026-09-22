@@ -41,6 +41,7 @@ let
       openssh
       curl
       jq
+      gawk
     ]);
     text = ''
       export AGENT_STATE_DIR=${lib.escapeShellArg cfg.stateDir}
