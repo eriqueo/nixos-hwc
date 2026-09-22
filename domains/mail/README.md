@@ -41,7 +41,7 @@ mail/
 │       └── service.nix        # systemd user service unit
 ├── classifier/
 │   ├── index.nix              # aerc-facing correction/review command
-│   └── sys.nix                # pinned Laya package + resident CPU service
+│   └── sys.nix                # pinned Laya + local Nomic hybrid service
 ├── calendar/
 │   ├── index.nix              # khal + vdirsyncer integration; extraVdirsyncerPairs option
 │   └── parts/
@@ -106,6 +106,11 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-09-22: Promoted the private Nomic embedding classifier for Domain after
+  it passed the frozen sender-disjoint gate (6/7). Embedding State remains
+  shadow-only after missing its gate (5/7); Laya and learned exact-sender
+  preferences still control State. The service now waits for and requires the
+  loopback-only `llama-embed` dependency.
 - 2026-09-22: Isolated Proton Trash from the ten-minute core sync. `sync-mail`
   now owns one nonblocking lock and a versioned, atomically replaced status
   projection; core runs every ten minutes, and Trash is a daily pull-only mirror

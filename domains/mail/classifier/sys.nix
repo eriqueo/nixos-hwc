@@ -43,21 +43,24 @@ let
       --socket /run/hwc-mail-classifier/laya.sock \
       --cache /var/cache/hwc-mail-classifier/huggingface \
       --model convaiinnovations/laya \
-      --revision 00c37c405e3c3ad73ee070227614c89cda06b99e
+      --revision 00c37c405e3c3ad73ee070227614c89cda06b99e \
+      --embed-url http://127.0.0.1:11502/v1 \
+      --embed-model nomic-embed-text-v1.5
   '';
 in
 {
   # OPTIONS
-  options.hwc.mail.classifier.system.enable = lib.mkEnableOption "resident CPU Laya mail-classifier";
+  options.hwc.mail.classifier.system.enable = lib.mkEnableOption "resident private hybrid mail-classifier";
 
   # IMPLEMENTATION
   config = lib.mkIf cfg.enable {
     environment.systemPackages = [ runtime ];
 
     systemd.services.mail-classifier-model = {
-      description = "Laya local mail-classifier model";
-      after = [ "network-online.target" ];
+      description = "Private hybrid mail-classifier model";
+      after = [ "network-online.target" "llama-embed.service" ];
       wants = [ "network-online.target" ];
+      requires = [ "llama-embed.service" ];
       wantedBy = [ "multi-user.target" ];
       environment = {
         HF_HOME = "/var/cache/hwc-mail-classifier/huggingface";
