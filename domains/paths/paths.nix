@@ -273,6 +273,12 @@ in
         description = "Mail storage - laptop only";
       };
 
+      mailSyncStatus = mkOption {
+        type = types.path;
+        default = "${userHome}/.local/state/mail-sync/status.json";
+        description = "Bounded mail synchronization status projection";
+      };
+
       media = mkOption {
         type = types.nullOr types.path;
         default = if isLaptop then laptopMedia else null;
@@ -564,6 +570,7 @@ in
     HWC_PERSONAL_DIR = cfg.user.personal;
     HWC_TECH_DIR = cfg.user.tech;
     HWC_MAIL_DIR = cfg.user.mail;
+    HWC_MAIL_SYNC_STATUS = cfg.user.mailSyncStatus;
     HWC_MEDIA_DIR = cfg.user.media;
     HWC_VAULTS_DIR = cfg.user.vaults;
 

@@ -6,7 +6,10 @@ CONFIG_DIRS=${AGENT_CONFIG_DIRS:-$HOME/.claude:$HOME/.claude_dx2_home}
 HOST=${AGENT_HOST:-$(uname -n)}
 VALIDATOR=${AGENT_STATE_VALIDATOR:-$(realpath "$(dirname "$0")/state-validate.sh")}
 NOTIFY_URL=${AGENT_STATE_NOTIFY_URL-https://hwc-notify.hwc.iheartwoodcraft.com:29443/notify}
-ALERT_STATE="$STATE/.git/.sync-alert-state"
+CASE_FILE="$STATE/.git/.sync-case.json"
+CURRENT_FINGERPRINT=""
+CASE_TRANSITION=0
+PREVIOUS_CASE_STATE=""
 
 log() { printf 'agent-state: %s\n' "$*"; }
 notify() {
@@ -18,24 +21,86 @@ notify() {
     | curl -fsS --max-time 5 -H 'content-type: application/json' -d @- \
         "$NOTIFY_URL" >/dev/null 2>&1
 }
-notify_failure() {
-  [ -d "$STATE/.git" ] || return 0
-  [ "$(cat "$ALERT_STATE" 2>/dev/null || true)" != failed ] || return 0
-  if notify "Agent state sync failed" \
-      "State sync failed on $HOST. Inspect journalctl --user -u agent-state-sync.service."; then
-    printf 'failed\n' > "$ALERT_STATE"
-  fi
+case_field() {
+  [ -r "$CASE_FILE" ] || return 0
+  jq -r "$1 // empty" "$CASE_FILE" 2>/dev/null || true
 }
-notify_recovery() {
-  [ "$(cat "$ALERT_STATE" 2>/dev/null || true)" = failed ] || return 0
-  if notify "Agent state sync recovered" "State sync is healthy again on $HOST."; then
-    printf 'ok\n' > "$ALERT_STATE"
+
+record_case() {
+  local state=$1 outcome=$2 fingerprint=$3 previous_state previous_fingerprint tmp
+  previous_state=$(case_field '.state')
+  previous_fingerprint=$(case_field '.caseId')
+  PREVIOUS_CASE_STATE=$previous_state
+  CASE_TRANSITION=0
+  if [ "$previous_state" != "$state" ] || [ "$previous_fingerprint" != "$fingerprint" ]; then
+    CASE_TRANSITION=1
+    log "case transition state=$previous_state->$state outcome=$outcome case=$fingerprint"
   fi
+  if [ "$previous_state" = "$state" ] && [ "$previous_fingerprint" = "$fingerprint" ] \
+      && [ "$(case_field '.lastOutcome')" = "$outcome" ]; then
+    return 0
+  fi
+  tmp=$(mktemp "$STATE/.git/.sync-case.json.XXXXXX")
+  jq -n \
+    --arg caseId "$fingerprint" \
+    --arg state "$state" \
+    --arg outcome "$outcome" \
+    --arg host "$HOST" \
+    --arg at "$(date -Iseconds)" \
+    '{schemaVersion:1,caseId:$caseId,state:$state,lastOutcome:$outcome,host:$host,updatedAt:$at}' \
+    > "$tmp"
+  chmod 600 "$tmp"
+  mv -f "$tmp" "$CASE_FILE"
 }
+
+notify_failure_transition() {
+  [ "$CASE_TRANSITION" -eq 1 ] || return 0
+  notify "Agent state sync blocked" \
+    "State sync is blocked on $HOST ($1). Inspect journalctl --user -u agent-state-sync.service." || true
+}
+
+notify_recovery_transition() {
+  [ "$CASE_TRANSITION" -eq 1 ] || return 0
+  [ "$PREVIOUS_CASE_STATE" = blocked ] || return 0
+  notify "Agent state sync recovered" "State sync is healthy again on $HOST." || true
+}
+
+state_fingerprint() {
+  local path
+  {
+    printf 'validator\0'
+    sha256sum "$VALIDATOR"
+    printf 'head\0'
+    git rev-parse HEAD
+    printf 'schema\0'
+    sha256sum .harness-schema.json
+    printf 'status\0'
+    git status --porcelain=v1 -z --untracked-files=all -- \
+      MISTAKES.md .mistakes-dismissed.log .harness-schema.json projects
+    {
+      git diff --name-only -z HEAD -- MISTAKES.md .mistakes-dismissed.log .harness-schema.json projects
+      git diff --cached --name-only -z -- MISTAKES.md .mistakes-dismissed.log .harness-schema.json projects
+      git ls-files --others --exclude-standard -z -- MISTAKES.md .mistakes-dismissed.log .harness-schema.json projects
+    } | sort -zu | while IFS= read -r -d '' path; do
+      printf 'path=%s\0' "$path"
+      if [ -f "$path" ]; then
+        sha256sum "$path"
+      elif [ -L "$path" ]; then
+        printf 'symlink=%s\n' "$(readlink "$path")"
+      else
+        printf 'deleted\n'
+      fi
+    done
+  } | sha256sum | awk '{print $1}'
+}
+
 on_error() {
   local status=$?
   trap - ERR
-  notify_failure || true
+  if [ -n "$CURRENT_FINGERPRINT" ] && [ -d "$STATE/.git" ]; then
+    record_case blocked sync-failed "$CURRENT_FINGERPRINT" || true
+    notify_failure_transition sync-failed
+  fi
   exit "$status"
 }
 trap on_error ERR
@@ -96,7 +161,31 @@ sync_state() {
   cd "$STATE"
   exec 9>.git/.sync.lock
   flock 9
-  AGENT_STATE_DIR="$STATE" "$VALIDATOR"
+  CURRENT_FINGERPRINT=$(state_fingerprint)
+  if [ "$(case_field '.state')" = blocked ] \
+      && [ "$(case_field '.lastOutcome')" = validation-failed ] \
+      && [ "$(case_field '.caseId')" = "$CURRENT_FINGERPRINT" ]; then
+    log "unchanged blocked case $CURRENT_FINGERPRINT; validation and network skipped"
+    trap - ERR
+    return 75
+  fi
+
+  validation_ok=0
+  if AGENT_STATE_DIR="$STATE" "$VALIDATOR"; then validation_ok=1; fi
+  after_validation=$(state_fingerprint)
+  if [ "$after_validation" != "$CURRENT_FINGERPRINT" ]; then
+    log 'state changed during validation; retrying once with the new case'
+    CURRENT_FINGERPRINT=$after_validation
+    validation_ok=0
+    if AGENT_STATE_DIR="$STATE" "$VALIDATOR"; then validation_ok=1; fi
+  fi
+  if [ "$validation_ok" -ne 1 ]; then
+    record_case blocked validation-failed "$CURRENT_FINGERPRINT"
+    notify_failure_transition validation-failed
+    trap - ERR
+    return 1
+  fi
+
   git add -A -- MISTAKES.md projects
   git add -A -- .harness-schema.json
   [ ! -e .mistakes-dismissed.log ] || git add -A -- .mistakes-dismissed.log
@@ -134,7 +223,10 @@ sync_state() {
     fi
   fi
   git push
-  notify_recovery || true
+  CURRENT_FINGERPRINT=$(state_fingerprint)
+  record_case resolved synced "$CURRENT_FINGERPRINT"
+  notify_recovery_transition
+  rm -f .git/.sync-alert-state
 }
 
 case "${1:-sync}" in

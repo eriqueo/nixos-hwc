@@ -10,6 +10,38 @@ fail() {
   failures=$((failures + 1))
 }
 
+validate_memory_file() {
+  local file=$1 display=$2 frontmatter
+  frontmatter=$(awk 'NR == 1 && $0 != "---" { exit } NR > 1 && $0 == "---" { exit } NR > 1 { print }' "$file")
+  if ! printf '%s\n' "$frontmatter" | rg -q '^authority: (observation|reference|decision)$'; then
+    fail "$display must declare top-level authority: observation|reference|decision"
+  fi
+  if ! printf '%s\n' "$frontmatter" | rg -q '^source: .+'; then
+    fail "$display must declare a non-empty top-level source"
+  fi
+  if printf '%s\n' "$frontmatter" | rg -q '^standing:'; then
+    fail "$display declares standing policy; move the rule to static or project policy"
+  fi
+}
+
+if [ "${1:-}" = memory-stdin ]; then
+  tmp=$(mktemp)
+  trap 'rm -f "$tmp"' EXIT
+  cat > "$tmp"
+  validate_memory_file "$tmp" "${2:-memory input}"
+  if [ "$failures" -ne 0 ]; then
+    printf 'agent-state-validate: %d failure(s)\n' "$failures" >&2
+    exit 1
+  fi
+  printf 'agent-state-validate: PASS\n'
+  exit 0
+fi
+
+[ "$#" -eq 0 ] || {
+  printf 'usage: agent-state-validate [memory-stdin [display-name]]\n' >&2
+  exit 2
+}
+
 [ -d "$STATE/.git" ] || { printf 'agent-state-validate: missing git clone at %s\n' "$STATE" >&2; exit 1; }
 [ -r "$SCHEMA" ] || { printf 'agent-state-validate: missing %s\n' "$SCHEMA" >&2; exit 1; }
 
@@ -48,16 +80,7 @@ while IFS= read -r path; do
   [ "${path##*/}" != MEMORY.md ] || continue
   file="$STATE/$path"
   [ -f "$file" ] || continue
-  frontmatter=$(awk 'NR == 1 && $0 != "---" { exit } NR > 1 && $0 == "---" { exit } NR > 1 { print }' "$file")
-  if ! printf '%s\n' "$frontmatter" | rg -q '^authority: (observation|reference|decision)$'; then
-    fail "$path must declare top-level authority: observation|reference|decision"
-  fi
-  if ! printf '%s\n' "$frontmatter" | rg -q '^source: .+'; then
-    fail "$path must declare a non-empty top-level source"
-  fi
-  if printf '%s\n' "$frontmatter" | rg -q '^standing:'; then
-    fail "$path declares standing policy; move the rule to static or project policy"
-  fi
+  validate_memory_file "$file" "$path"
 done <<< "$changed"
 
 if [ "$failures" -ne 0 ]; then

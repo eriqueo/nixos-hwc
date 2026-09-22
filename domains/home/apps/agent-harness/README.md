@@ -10,9 +10,9 @@ source and one mutable state store.
 - `contract.nix` defines the ownership and revision contract shared by both lanes.
 - `control.sh` implements local and fleet health checks plus policy publication.
 - `control.test.sh` seeds split revisions and mutable runtime references against the doctor.
-- `state-sync.sh` synchronizes only memories and the mistakes ledger.
-- `state-validate.sh` validates state ownership and changed memories.
-- `state-sync.test.sh` verifies import, links, commit, pull, and push against a throwaway hub.
+- `state-sync.sh` synchronizes only memories and the mistakes ledger, with one bounded validation case under `.git`.
+- `state-validate.sh` owns the memory contract for both full-store scans and projected writes on stdin.
+- `state-sync.test.sh` verifies import, links, validation blocking, recovery, commit, pull, and push against a throwaway hub.
 
 ## State ownership
 
@@ -41,6 +41,10 @@ authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
+- 2026-09-22: Unified store and pre-write memory validation behind
+  `agent-state-validate memory-stdin`. Repeated invalid state now exits 75 from
+  one fixed-size case projection without rerunning validation or touching the
+  network; content changes retry, and only block/recovery transitions notify.
 - 2026-09-17: Added the ownership manifest, changed-memory schema gate, fleet
   doctor, managed static-policy commit hook, and a publication command with a
   location-independent preflight and a Bash-owned final doctor handoff. The state service invokes its packaged

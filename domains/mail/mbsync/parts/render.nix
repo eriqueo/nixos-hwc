@@ -31,6 +31,7 @@ let
     let
       mapping = a.mailboxMapping or {};
       wildcards = a.sync.wildcards or [];
+      effectiveWildcards = wildcards ++ lib.optionals (a.type == "proton-bridge") [ "!Trash" ];
       createPolicy = if common.isGmail a then "Create Near" else "Create Both";
 
       # Create one channel per mailbox mapping
@@ -55,7 +56,7 @@ let
       mappedChannels = lib.mapAttrsToList makeChannel mapping;
 
       # Wildcard channels (e.g., Folders/*) - use pattern-based channel
-      wildcardChannel = if wildcards != [] then
+      wildcardChannel = if effectiveWildcards != [] then
         let
           # Handle negation patterns (starting with !) differently - don't quote the whole thing
           quotePattern = p:
@@ -65,7 +66,7 @@ let
               rest = lib.removePrefix "!" p;
             in "!${confQuote rest}"
             else confQuote p;
-          wildcardPatterns = lib.concatStringsSep " " (map quotePattern wildcards);
+          wildcardPatterns = lib.concatStringsSep " " (map quotePattern effectiveWildcards);
           # Remove Near auto-deletes local folders when server folders are removed
           removePolicy = "Remove Near";
         in ''
@@ -80,7 +81,19 @@ let
         ''
       else "";
 
-      allChannels = mappedChannels ++ (if wildcardChannel != "" then [wildcardChannel] else []);
+      trashChannel = if a.type == "proton-bridge" then ''
+        Channel ${a.name}-trash
+        Far :${a.name}-remote:"Trash"
+        Near :${a.name}-local:"Trash"
+        ${createPolicy}
+        Remove Near
+        Expunge Both
+        SyncState *
+      '' else "";
+
+      allChannels = mappedChannels
+        ++ (if wildcardChannel != "" then [ wildcardChannel ] else [])
+        ++ (if trashChannel != "" then [ trashChannel ] else []);
     in
       if allChannels == [] then
         # Fallback to simple INBOX channel if no mapping
@@ -135,8 +148,18 @@ let
     '';
 
   mbsyncrc = lib.concatStringsSep "\n\n" (map mbsyncBlock syncVals);
+  channelNamesFor = a:
+    let
+      mapped = map
+        (remoteName: "${a.name}-${lib.replaceStrings ["[" "]" "/" " "] ["" "" "-" "-"] remoteName}")
+        (builtins.attrNames (a.mailboxMapping or {}));
+      wildcard = lib.optionals ((a.sync.wildcards or []) != [] || a.type == "proton-bridge") [ "${a.name}-wildcards" ];
+      named = mapped ++ wildcard;
+    in if named == [] then [ a.name ] else named;
+  coreChannels = lib.concatMap channelNamesFor syncVals;
+  trashChannels = map (a: "${a.name}-trash") (lib.filter (a: a.type == "proton-bridge") syncVals);
 in
 {
-  inherit mbsyncrc haveProton;
+  inherit mbsyncrc haveProton coreChannels trashChannels;
   packages = [ pkgs.isync pkgs.pass pkgs.gnupg ];
 }

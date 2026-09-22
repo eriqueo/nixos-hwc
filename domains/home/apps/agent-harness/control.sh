@@ -20,6 +20,12 @@ ok() { printf 'ok   %s\n' "$*"; }
 warn() { printf 'WARN %s\n' "$*"; }
 fail() { printf 'FAIL %s\n' "$*"; failures=$((failures + 1)); }
 
+show_state_case() {
+  local case_file="$STATE/.git/.sync-case.json"
+  [ -r "$case_file" ] || return 0
+  jq -r '"agent-state case: \(.state) (\(.lastOutcome), \(.caseId))"' "$case_file" 2>/dev/null || true
+}
+
 expected_revision() { jq -r '.staticPolicy.revision' "$EXPECTED"; }
 
 check_command() {
@@ -67,7 +73,12 @@ doctor_local() {
     check_no_authoring_reference 'T3 DX2 handoff' "$(command -v t3-dx2-handoff)"
   fi
 
-  if agent-state-validate >/dev/null; then ok 'mutable state ownership'; else fail 'mutable state ownership'; fi
+  if agent-state-validate >/dev/null; then
+    ok 'mutable state ownership'
+  else
+    fail 'mutable state ownership'
+    show_state_case
+  fi
   if codex-hooks-trust --check >/dev/null; then ok 'Codex hooks trusted'; else fail 'Codex hooks untrusted or unverifiable'; fi
   if systemctl --user --quiet is-active agent-state-sync.timer; then ok 'agent-state-sync.timer active'; else fail 'agent-state-sync.timer inactive'; fi
   for command in claude codex pi herdr; do check_command "$command"; done
@@ -200,7 +211,11 @@ if [ -z "$command" ] && [ -t 0 ]; then
 fi
 
 case "$command" in
-  status) systemctl --user status agent-state-sync.timer --no-pager; git -C "$STATE" status --short --branch ;;
+  status)
+    systemctl --user show agent-state-sync.timer -p ActiveState -p SubState -p LastTriggerUSec --no-pager
+    show_state_case
+    git -C "$STATE" status --short --branch
+    ;;
   doctor) if [ "${2:-}" = --fleet ]; then doctor_fleet; else doctor_local; fi ;;
   revision) expected_revision ;;
   sync) exec agent-state-sync sync ;;

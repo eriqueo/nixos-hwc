@@ -52,11 +52,11 @@ Proton Mail <--IMAP--> Proton Bridge (localhost:1143/1025)
 ### Sync Lifecycle (`<C-r>` or systemd timer)
 
 1. **Pre-sync**: afew MailMover physically moves files based on tags (archive/trash/spam)
-2. **Sync**: `mbsync -a` syncs IMAP state bidirectionally
+2. **Sync**: `mbsync.service` runs the ten-minute core lane; Proton Trash is isolated in its daily lane
 3. **Post-sync**: `notmuch new` indexes new messages, triggers post-new hook
 4. **Hook**: Applies folder-state tags, auto-classification rules, Proton label tags
 
-The `<C-r>` keybind runs `sync-mail` which executes the full pipeline (mbsync + notmuch new). Never run bare `mbsync -a` from aerc — it skips notmuch indexing and tags will appear to revert.
+The `<C-r>` keybind waits for `mbsync.service`, which runs the locked core pipeline (mbsync + notmuch new). Run `sync-mail trash` only for an explicit Trash investigation. Never run bare `mbsync -a` from aerc — it skips lane status and notmuch indexing.
 
 ### Daily workflow semantics
 
@@ -359,6 +359,8 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-09-22: Routed `<C-r>` through `mbsync.service`, so aerc uses the same
+  locked core lane and authoritative unit result as timers and the MCP.
 - 2026-09-22: Replaced overlapping folder/category/flag semantics with one
   workflow axis (`DO/DID/LOOK/JUNK`), one independent Domain, and factual Tags.
   Added ledger-backed state/Domain teaching, thread-wide marked archive/trash,

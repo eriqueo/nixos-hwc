@@ -323,13 +323,13 @@ The service runs `dist/index.js`. Editing `src/*.ts` without running `npx tsc` m
 
 | Tool | Description |
 |------|-------------|
-| `hwc_mail_health` | Health timer state, Bridge status, sync freshness, notmuch stats. |
+| `hwc_mail_health` | Health timer state, Bridge status, per-lane sync status, notmuch stats. |
 | `hwc_mail_search` | Search or count mail. Saved search names or raw notmuch queries. count_only flag. |
 | `hwc_mail_read` | Read message/thread by notmuch ID. Headers + body text. |
 | `hwc_mail_tag` | Generic mail tags and outcomes. Workflow state writes use `hwc_mail_triage`. |
 | `hwc_mail_send` | Send via msmtp. Proton accounts, cc/bcc, in-reply-to. |
 | `hwc_mail_reply` | Reply to thread with auto-populated recipients, subject, threading headers. |
-| `hwc_mail_sync` | Trigger full sync cycle. |
+| `hwc_mail_sync` | Trigger the authoritative core sync unit. |
 | `hwc_mail_accounts` | Configured accounts, identities, search names, tag taxonomy. |
 | `hwc_mail_folders` | Maildir folders with notmuch message counts. |
 
@@ -497,6 +497,8 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-09-22: Mail health now reads the versioned core/Trash status projection,
+  and mail sync starts `mbsync.service` instead of bypassing its unit result.
 - 2026-09-22: Mail surfaces consume `DO/DID/LOOK/JUNK` from the pinned v2
   contract. State/outcome writes route through the classifier ledger; completed
   threads disappear instead of returning from cached JSON.

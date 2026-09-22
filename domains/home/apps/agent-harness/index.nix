@@ -161,6 +161,7 @@ in
       Service = {
         Type = "oneshot";
         ExecStart = "${stateSync}/bin/agent-state-sync sync";
+        SuccessExitStatus = [ 75 ];
       };
     };
     systemd.user.timers.agent-state-sync = {

@@ -293,6 +293,10 @@ in
         HWC_UMAMI_DATABASE = config.hwc.business.umami.databaseName;
 
         HWC_MAIL_CLASSIFIER_CONTRACT_FILE = mailClassifierContract;
+        HWC_MAIL_SYNC_STATUS = paths.user.mailSyncStatus;
+        HWC_SYSTEMCTL_BIN = "${pkgs.systemd}/bin/systemctl";
+        XDG_RUNTIME_DIR = "/run/user/${toString config.hwc.system.core.identity.puid}";
+        DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/${toString config.hwc.system.core.identity.puid}/bus";
 
         # Retriage trigger file (hwc_mail_triage action=retriage touches it;
         # the mail-retriage path unit in business/morning-briefing watches it).

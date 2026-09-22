@@ -39,6 +39,9 @@ let
     BRIDGE_SMTP_PORT="${toString cfg.bridge.smtpPort}"
     ALERT_COOLDOWN_MIN="${toString cfg.alertCooldownMin}"
     AUTO_REMEDIATE="${if cfg.autoRemediate then "true" else "false"}"
+    SYNC_STATUS=${lib.escapeShellArg (config.hwc.paths.user.mailSyncStatus or "${config.home.homeDirectory}/.local/state/mail-sync/status.json")}
+    TRASH_SYNC_MAX_AGE_MIN="${toString cfg.trashSyncMaxAgeMin}"
+    TRASH_TIMER_ENABLED="${if (config.hwc.mail.mbsync.trashTimerEnable or false) then "true" else "false"}"
 
     mkdir -p "$STATE_DIR"
 
@@ -227,34 +230,46 @@ let
 
     # ─── Check 4: mbsync last successful sync ──────────────────
     check_mbsync() {
-      # Timer enabled?
       if ! ${pkgs.systemd}/bin/systemctl --user is-enabled mbsync.timer >/dev/null 2>&1; then
         warn "mbsync.timer is not enabled"
       fi
-
-      # Check the marker file touched by sync-mail after each successful run.
-      # This is more reliable than .mbsyncstate which only updates when
-      # there are actual state changes (new/deleted messages).
-      local marker="''${XDG_CACHE_HOME:-$HOME/.cache}/mbsync-last-success"
-      if [[ -f "$marker" ]]; then
-        local marker_mtime age_min
-        marker_mtime=$(${pkgs.coreutils}/bin/stat -c %Y "$marker" 2>/dev/null || echo 0)
-        age_min=$(( ($(now_epoch) - marker_mtime) / 60 ))
-        if (( age_min > SYNC_MAX_AGE_MIN )); then
-          fail "Last successful mbsync was ''${age_min}m ago (threshold: ''${SYNC_MAX_AGE_MIN}m)"
-        fi
-      else
-        warn "No mbsync success marker found — mbsync may have never completed"
+      if [[ "$TRASH_TIMER_ENABLED" == true ]] \
+          && ! ${pkgs.systemd}/bin/systemctl --user is-enabled mbsync-trash.timer >/dev/null 2>&1; then
+        warn "mbsync-trash.timer is not enabled"
       fi
 
-      # Check how many times mbsync actually failed (exited non-zero) in the last 30 min.
-      # Count systemd "Failed with result" lines — exactly one per failed invocation.
-      local recent_failures
-      recent_failures=$(${pkgs.systemd}/bin/journalctl --user -u mbsync.service \
-        --since "30 min ago" --no-pager 2>/dev/null \
-        | ${pkgs.gnugrep}/bin/grep -c "Failed with result" 2>/dev/null) || recent_failures=0
-      if (( recent_failures > 5 )); then
-        fail "mbsync has failed ''${recent_failures} times in the last 30 minutes"
+      if ! ${pkgs.jq}/bin/jq -e '.schemaVersion == 1 and (.lanes | type == "object")' \
+          "$SYNC_STATUS" >/dev/null 2>&1; then
+        fail "Mail sync status is missing or invalid: $SYNC_STATUS"
+        return
+      fi
+
+      check_lane() {
+        local lane=$1 max_age=$2 state outcome code success_epoch age_min
+        state=$(${pkgs.jq}/bin/jq -r --arg lane "$lane" '.lanes[$lane].state // "missing"' "$SYNC_STATUS")
+        outcome=$(${pkgs.jq}/bin/jq -r --arg lane "$lane" '.lanes[$lane].lastOutcome // "unknown"' "$SYNC_STATUS")
+        code=$(${pkgs.jq}/bin/jq -r --arg lane "$lane" '.lanes[$lane].exitCode // -1' "$SYNC_STATUS")
+        success_epoch=$(${pkgs.jq}/bin/jq -r --arg lane "$lane" '.lanes[$lane].lastSuccessEpoch // 0' "$SYNC_STATUS")
+        if [[ "$state" != healthy ]]; then
+          fail "Mail sync lane $lane is $state ($outcome, exit $code)"
+          return
+        fi
+        age_min=$(( ($(now_epoch) - success_epoch) / 60 ))
+        if (( success_epoch == 0 || age_min > max_age )); then
+          fail "Mail sync lane $lane last succeeded ''${age_min}m ago (threshold: ''${max_age}m)"
+        fi
+      }
+
+      check_lane core "$SYNC_MAX_AGE_MIN"
+      if [[ "$TRASH_TIMER_ENABLED" == true ]]; then
+        check_lane trash "$TRASH_SYNC_MAX_AGE_MIN"
+      fi
+
+      local core_result
+      core_result=$(${pkgs.systemd}/bin/systemctl --user show mbsync.service \
+        --property Result --value 2>/dev/null || echo unknown)
+      if [[ "$core_result" != success ]]; then
+        fail "mbsync.service result is $core_result"
       fi
     }
 
@@ -370,6 +385,12 @@ in
       type = lib.types.int;
       default = 45;
       description = "Alert if last successful sync was more than N minutes ago";
+    };
+
+    trashSyncMaxAgeMin = lib.mkOption {
+      type = lib.types.int;
+      default = 1800;
+      description = "Alert if isolated Trash has not completed successfully within 30 hours";
     };
 
     freshnessHours = lib.mkOption {

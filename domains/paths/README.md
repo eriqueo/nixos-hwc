@@ -36,6 +36,7 @@ domains/paths/
 | `hwc.paths.media.photos` | `~/500_media/510_pictures` | `/mnt/media/photos` |
 | `hwc.paths.hot.root` | N/A | `/mnt/hot` |
 | `hwc.paths.downloads` | `~/000_inbox/downloads` | `/opt/downloads` |
+| `hwc.paths.user.mailSyncStatus` | `~/.local/state/mail-sync/status.json` | same |
 
 ## Usage
 
@@ -58,6 +59,8 @@ in {
 4. Allow per-machine overrides
 
 ## Changelog
+- 2026-09-22: Added `user.mailSyncStatus`, the single path producer for the
+  bounded mail-sync status consumed by Home Manager health checks and the MCP.
 - 2026-09-10: `hot.receipts` **deleted**, `hot.cache` **added**. Both were the same defect in opposite directions, found by comparing this contract against what is actually on `/mnt/hot`. `hot.receipts` was declared and auto-derived to `${hot.root}/receipts` and consumed by **nothing** — the only other `receipts` hits in the tree are `home/core/xdg-dirs.nix` (financial folders) and `mail-janitor` (a mail class), neither related — and the directory has never existed on disk. A declared path with no consumer is worse than no path: it reads as a supported location, so anything written there would sit outside every mount and every borg source while looking official. `hot.cache` is the inverse — six live services (frigate, gpu, immich, jellyfin, qbittorrent, tensorrt) write to `/mnt/hot/cache`, which no module created; it existed only because someone made it by hand, and a rebuilt machine would not have had it. Its tmpfiles rule declares the parent ONLY, because each consumer creates its own subdirectory and listing them here would be a second copy to drift from the modules that own them. Retention class REPLACEABLE, deliberately not a borg source — every subdirectory regenerates.
 
 - 2026-07-11: Added `hwc.paths.removableMedia` (universal default `/mnt`) — mount root for the usb-automount domain (`<removableMedia>/<label>`), part of the Law 3 hardcoded-paths migration.

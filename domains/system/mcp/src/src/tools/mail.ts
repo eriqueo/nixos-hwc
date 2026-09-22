@@ -4,7 +4,7 @@
 
 import { execFile, spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { readFile, stat, readdir } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { ToolDef, ToolResult } from "../types.js";
@@ -18,9 +18,9 @@ import { mcpError, catchError } from "../errors.js";
 
 const HOME = homedir();
 const MAIL_HEALTH_STATE = join(HOME, ".local/state/mail-health");
-const MBSYNC_SUCCESS_MARKER = join(HOME, ".cache/mbsync-last-success");
+const MAIL_SYNC_STATUS = process.env.HWC_MAIL_SYNC_STATUS || join(HOME, ".local/state/mail-sync/status.json");
 const MAILDIR = join(HOME, "400_mail/Maildir");
-const SYNC_MAIL = join(HOME, ".local/bin/sync-mail");
+const SYSTEMCTL = process.env.HWC_SYSTEMCTL_BIN || "systemctl";
 
 /* ─── Classifier contract (same versioned producer as Laya and aerc) ─────── */
 interface MailContract {
@@ -424,11 +424,16 @@ export async function executeMailHealth(): Promise<ToolResult> {
     }
 
     try {
-      const ms = await stat(MBSYNC_SUCCESS_MARKER);
-      const ageMin = Math.round((Date.now() - ms.mtime.getTime()) / 60000);
-      result.sync = { lastSuccess: ms.mtime.toISOString(), ageMinutes: ageMin, healthy: ageMin < 30 };
-    } catch {
-      result.sync = { error: "No sync marker — mbsync may not have run" };
+      const projection = JSON.parse(await readFile(MAIL_SYNC_STATUS, "utf8")) as {
+        schemaVersion?: number;
+        lanes?: Record<string, Record<string, unknown>>;
+      };
+      if (projection.schemaVersion !== 1 || !projection.lanes) {
+        throw new Error("unsupported status schema");
+      }
+      result.sync = { statusFile: MAIL_SYNC_STATUS, lanes: projection.lanes };
+    } catch (err) {
+      result.sync = { error: `Mail sync status unavailable: ${String(err)}` };
     }
 
     try {
@@ -445,7 +450,8 @@ export async function executeMailHealth(): Promise<ToolResult> {
     }
 
     const bridgeOk = (result.bridge as Record<string, unknown>)?.active === true;
-    const syncOk = (result.sync as Record<string, unknown>)?.healthy === true;
+    const syncLanes = (result.sync as { lanes?: Record<string, Record<string, unknown>> })?.lanes;
+    const syncOk = syncLanes?.core?.state === "healthy";
     const hasFailure = !!firstFailureRaw;
 
     let status: "ok" | "partial" | "error";
@@ -881,7 +887,7 @@ export function mailTools(): ToolDef[] {
 
             if (wait) {
               const result = await new Promise<{ exitCode: number; stdout: string; stderr: string }>((resolve) => {
-                execFile(SYNC_MAIL, [], { timeout: 120000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+                execFile(SYSTEMCTL, ["--user", "start", "--wait", "mbsync.service"], { timeout: 120000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
                   const code = error && "code" in error ? (error.code as number) : 0;
                   resolve({
                     exitCode: typeof code === "number" ? code : 1,
@@ -893,19 +899,19 @@ export function mailTools(): ToolDef[] {
 
               if (result.exitCode !== 0) {
                 return {
-                  status: "partial",
-                  message: `Sync completed with exit code ${result.exitCode} (partial failures are normal — Bridge rejects some messages)`,
+                  status: "error",
+                  message: `Core sync unit failed with exit code ${result.exitCode}`,
                   data: { exitCode: result.exitCode, output: result.stdout.slice(-1000), errors: result.stderr.slice(-500) },
                 };
               }
-              return { status: "ok", message: "Sync complete", data: { output: result.stdout.slice(-500) } };
+              return { status: "ok", message: "Core sync unit completed", data: { output: result.stdout.slice(-500) } };
             } else {
-              const proc = spawn(SYNC_MAIL, [], { detached: true, stdio: "ignore" });
+              const proc = spawn(SYSTEMCTL, ["--user", "start", "mbsync.service"], { detached: true, stdio: "ignore" });
               proc.unref();
-              return { status: "ok", message: `Sync started (PID ${proc.pid})` };
+              return { status: "ok", message: "Core sync unit queued" };
             }
           } catch (err) {
-            return catchError("INTERNAL_ERROR", "Sync failed", err, "Is sync-mail script at ~/.local/bin/sync-mail? Is Proton Bridge running?");
+            return catchError("INTERNAL_ERROR", "Sync failed", err, "Inspect mbsync.service and the mail sync status projection");
           }
         }
 

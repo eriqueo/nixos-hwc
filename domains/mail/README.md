@@ -57,7 +57,7 @@ mail/
 │   ├── index.nix              # mbsync module
 │   └── parts/
 │       ├── render.nix         # .mbsyncrc generation from account attrset
-│       └── service.nix        # sync-mail script + systemd service + timer
+│       └── service.nix        # locked core/Trash sync lanes, services, timers, bounded status
 ├── msmtp/
 │   ├── index.nix              # SMTP send module
 │   └── parts/render.nix       # msmtp config generation
@@ -105,6 +105,12 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-09-22: Isolated Proton Trash from the ten-minute core sync. `sync-mail`
+  now owns one nonblocking lock and a versioned, atomically replaced status
+  projection; core runs every ten minutes, Trash has a separate daily timer,
+  and the false-success cache marker was removed. `notmuch new` still runs after
+  partial IMAP failures to preserve the label-copy safety invariant.
 
 - 2026-09-22: Mail workflow v2 makes State, Domain, Tags, and completion
   disjoint. All human state/outcome changes pass through the classifier ledger;

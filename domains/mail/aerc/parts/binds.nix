@@ -106,7 +106,7 @@ ${tabBinds}
       <A-k> = :prev-folder<Enter>
       <C-p> = :next-account<Enter>
       <C-n> = :prev-account<Enter>
-      <C-r> = :exec ${config.home.homeDirectory}/.local/bin/sync-mail<Enter>
+      <C-r> = :exec ${pkgs.systemd}/bin/systemctl --user start --wait mbsync.service<Enter>
 
       # Show your actual binds.conf instead of built-in defaults
       <semicolon> = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/binds.conf"'<Enter>
