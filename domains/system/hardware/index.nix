@@ -15,6 +15,24 @@
 let
   cfg = config.hwc.system.hardware;
   t = lib.types;
+  senselTouchpadMode = pkgs.writeShellScript "hwc-sensel-touchpad-mode" ''
+    # The P1 Gen 7 can enumerate its Sensel pad in mouse mode. Mouse events
+    # bypass libinput's touchpad palm rejection and disable-while-typing.
+    exec ${pkgs.python3}/bin/python3 - "$1" <<'PY'
+    import fcntl
+    import os
+    import sys
+
+    with os.fdopen(os.open(sys.argv[1], os.O_RDWR | os.O_NONBLOCK), "rb+", closefd=True) as device:
+        mode = bytearray([4, 0])
+        fcntl.ioctl(device, 0xC0024807, mode, True)  # HIDIOCGFEATURE(2)
+        if mode == bytearray([4, 0]):
+            fcntl.ioctl(device, 0xC0024806, bytearray([4, 3]), True)  # HIDIOCSFEATURE(2)
+            fcntl.ioctl(device, 0xC0024807, mode, True)
+        if mode != bytearray([4, 3]):
+            raise SystemExit(f"Sensel touchpad mode is {mode.hex()}, expected 0403")
+    PY
+  '';
 in
 {
   #==========================================================================
@@ -118,6 +136,8 @@ in
     #    failures are swallowed and the device ends up bound either way.
     services.udev.extraRules = lib.mkBefore ''
       KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Lid Switch", ENV{LIBINPUT_IGNORE_DEVICE}="1"
+      # Reapply after boot and after each lid/resume rebind (a HID reset clears mode).
+      SUBSYSTEM=="hidraw", KERNELS=="i2c-SNSL002D:00", ACTION=="add", RUN+="${senselTouchpadMode} /dev/%k"
       # Rival 3 Wireless: the keyboard HID interface (event7) also has pointer
       # capabilities and emits its own BTN_MIDDLE. Without this, libinput exposes
       # BOTH event6 (mouse) and event7 (keyboard) as pointer devices, causing two

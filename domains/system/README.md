@@ -44,6 +44,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-09-22: `hardware/` — set the P1 Gen 7 Sensel pad to touchpad mode on each HID enumeration so palm rejection works after boot, resume, and lid rebind.
 
 - 2026-09-21: MCP task creation gained bounded weekly recurrence, and mail
   surfaces moved to the shared `act/look/bulk/junk` attention contract.
