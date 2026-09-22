@@ -62,7 +62,7 @@ The `<C-r>` keybind runs `sync-mail` which executes the full pipeline (mbsync + 
 
 `now` is the managed decision queue: `tag:queue AND tag:inbox`. Opening or
 reading a message never removes it. Only a disposition that removes `inbox`
-(archive or trash) finishes the item. A task/calendar/Paperless handoff writes
+(archive or trash) from the whole selected thread finishes the item. A task/calendar/Paperless handoff writes
 to the destination but deliberately leaves the source email in place; press
 `a` after confirming the handoff. `family`, `datax`, and `hwc` are context lenses over that
 same queue, not filing destinations. `backlog` is legacy unread mail that has
@@ -148,8 +148,8 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 
 | Key | Action |
 |-----|--------|
-| `a` | Finish and archive (`+archive -inbox -unread`) |
-| `d` | Finish and trash (`+trash -inbox -unread`) |
+| `a` | Finish and archive the selected thread (`+archive -inbox -unread`) |
+| `d` | Finish and trash the selected thread (`+trash -inbox -unread`) |
 | `X` | Move to folder (prompt) |
 | `Y` | Copy to folder (prompt) |
 
@@ -179,8 +179,8 @@ automation tag.
 | Key | Action |
 |-----|--------|
 | `<Space>mu` | +unread |
-| `<Space>ma` | +archive -inbox -unread |
-| `<Space>md` | +trash -inbox -unread |
+| `<Space>ma` | Finish/archive marked messages |
+| `<Space>md` | Finish/trash marked messages |
 | `<Space>mz` | +spam -inbox |
 | `<Space>ml` | Free-form label (prompt) |
 | `<Space>mx` | Clear removable categories/flags; preserve protected `keep` |
@@ -356,6 +356,10 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-09-21: Made single-key `a` and `d` dispositions operate on every message
+  in the selected thread. This keeps a completed Now row from returning when an
+  unfolded thread still has another inbox member; `<Space>ma/md` remain the
+  marked-message batch controls.
 - 2026-09-21: The sidebar now exposes Now, subject categories, Later, and Junk
   from the local Laya contract. `<Space>t...` records durable human attention
   and category corrections through the classifier ledger.

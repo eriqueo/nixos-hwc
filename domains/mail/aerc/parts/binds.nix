@@ -8,6 +8,11 @@ let
   archiveCmd = "+archive -inbox -unread";
   trashCmd = "+trash -inbox -unread";
 
+  # Now displays one row per thread, so a single-key disposition must finish
+  # every message in that selected thread even when the row is unfolded.
+  # Clear prior marks first; Space+m retains the explicit marked-message path.
+  selectedThreadCmd = ":unmark -a<Enter>:mark -T<Enter>";
+
   # Workbench/Zellij owns Ctrl navigation. Inside aerc, Alt+j/k moves through
   # the vertical folder list and Alt+h/l moves through the horizontal tab bar.
   # Keep both encodings of Alt+Shift+j/k as compatibility aliases: terminal
@@ -144,8 +149,8 @@ ${tabBinds}
       u = :unread<Enter>
 
       # Static system tags (single-key for speed)
-      a = :modify-labels ${archiveCmd}<Enter>
-      d = :modify-labels ${trashCmd}<Enter>
+      a = ${selectedThreadCmd}:modify-labels ${archiveCmd}<Enter>
+      d = ${selectedThreadCmd}:modify-labels ${trashCmd}<Enter>
 
       c = :compose<Enter>
       C = :reply -aq<Enter>
@@ -222,8 +227,8 @@ ${tabBinds}
       r = :reply<Enter>
       R = :reply -aq<Enter>
       f = :forward<Enter>
-      a = :modify-labels ${archiveCmd}<Enter>:close<Enter>
-      d = :modify-labels ${trashCmd}<Enter>:close<Enter>
+      a = ${selectedThreadCmd}:modify-labels ${archiveCmd}<Enter>:close<Enter>
+      d = ${selectedThreadCmd}:modify-labels ${trashCmd}<Enter>:close<Enter>
       H = :toggle-headers<Enter>
       u = :open-link<Enter>
       / = :toggle-key-passthrough<Enter>/

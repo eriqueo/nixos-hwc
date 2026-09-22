@@ -80,8 +80,9 @@ mail/
 
 ## Aerc workflow contract
 
-`now` is `act + look`. Reading never completes it. `bulk` moves to Later and
-`junk` to recoverable Trash. Subject categories (`hwc`, `datax`, `family`,
+`now` is `act + look`. Reading never completes it. Single-key archive/trash
+finishes the whole selected thread; marked-message batches remain under
+`Space m`. `bulk` moves to Later and `junk` to recoverable Trash. Subject categories (`hwc`, `datax`, `family`,
 `personal`, `other`) are independent of attention and stay searchable across
 history. `Space g A` opens all non-trash history. `Space f t` filters the current view by tag, `Space f T`
 opens an all-mail tag query, and `Space f c` clears the current search/filter.
@@ -107,6 +108,9 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-09-21: Fixed Now dispositions for unfolded threads. Aerc's `a` and `d`
+  now select the whole current thread before changing placement tags, while
+  `<Space>ma/md` retain marked-message batch behavior.
 - 2026-09-21: Added the local Laya mail classifier boundary. System One owns
   typed model questions, conservative policy, human locks, and the append-only
   case ledger; this domain pins its source/model revisions, runs one bounded
