@@ -141,13 +141,19 @@ in
         fi
       }
 
+      run_core() {
+        # MailMover changes core folders before their two-way sync. Never run it
+        # for the pull-only Trash lane: Bridge rejects uploads into Trash.
+        ${afewPkg}/bin/afew -m -a || true
+        run_lane core "''${CORE_CHANNELS[@]}"
+      }
+
       ensure_status
-      ${afewPkg}/bin/afew -m -a || true
       case "$mode" in
-        core) run_lane core "''${CORE_CHANNELS[@]}" ;;
+        core) run_core ;;
         trash) run_lane trash "''${TRASH_CHANNELS[@]}" ;;
         all)
-          run_lane core "''${CORE_CHANNELS[@]}"
+          run_core
           run_lane trash "''${TRASH_CHANNELS[@]}"
           ;;
       esac

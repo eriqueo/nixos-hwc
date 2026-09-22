@@ -13,6 +13,10 @@
   # 2026-07-09. Leaving webhook.url unset makes send_webhook a no-op.
   hwc.mail.health.notify.url = "http://127.0.0.1:11600";
 
+  # Proton Bridge rejects APPEND into Trash, so this daily lane is a bounded
+  # pull-only mirror. Core sync remains independent on its ten-minute timer.
+  hwc.mail.mbsync.trashTimerEnable = true;
+
   # Calendar → Radicale (self-hosted CalDAV, same backend as tasks). Retires
   # the iCloud account pairs the mail role declares (vdirsyncer no longer
   # generates them once radicale is on). This gives hwc-server the

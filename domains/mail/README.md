@@ -108,9 +108,10 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 - 2026-09-22: Isolated Proton Trash from the ten-minute core sync. `sync-mail`
   now owns one nonblocking lock and a versioned, atomically replaced status
-  projection; core runs every ten minutes, Trash has a separate daily timer,
-  and the false-success cache marker was removed. `notmuch new` still runs after
-  partial IMAP failures to preserve the label-copy safety invariant.
+  projection; core runs every ten minutes, and Trash is a daily pull-only mirror
+  because Bridge refuses IMAP APPEND into Trash. Trash-only runs never invoke
+  MailMover. The false-success cache marker was removed. `notmuch new` still runs
+  after partial IMAP failures to preserve the label-copy safety invariant.
 
 - 2026-09-22: Mail workflow v2 makes State, Domain, Tags, and completion
   disjoint. All human state/outcome changes pass through the classifier ledger;
