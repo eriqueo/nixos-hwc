@@ -675,8 +675,8 @@
         rulePackages = lib.filter (pkg: lib.getName pkg == "mail-rule") home.home.packages;
         bindLines = lib.splitString "\n" binds;
         bindCount = needle: lib.length (lib.filter (line: lib.hasInfix needle line) bindLines);
-        threadArchive = ":unmark -a<Enter>:mark -T<Enter>:modify-labels +archive -inbox -unread<Enter>";
-        threadTrash = ":unmark -a<Enter>:mark -T<Enter>:modify-labels +trash -inbox -unread<Enter>";
+        archiveDisposition = "      a = :modify-labels +archive -inbox -unread<Enter>";
+        trashDisposition = "      d = :modify-labels +trash -inbox -unread<Enter>";
         requiredBinds = [
           "<Space>gA = :cf all<Enter>"
           "<Space>ra = :pipe -m mail-rule review<Enter>"
@@ -698,8 +698,13 @@
       assert lib.assertMsg (bindCount "<Space>ra = :pipe -m mail-rule review<Enter>" == 2
         && bindCount "<Space>rm = :term mail-rule manage<Enter>" == 2)
         "mail-operator-rules: sender-rule controls must work in message-list and viewer contexts";
-      assert lib.assertMsg (bindCount threadArchive == 2 && bindCount threadTrash == 2)
-        "mail-operator-rules: archive/trash must finish the selected thread in list and viewer contexts";
+      assert lib.assertMsg (bindCount archiveDisposition == 2 && bindCount trashDisposition == 2
+        && !(lib.hasInfix ":unmark -a<Enter>:mark -T<Enter>:modify-labels" binds))
+        "mail-operator-rules: archive/trash must preserve marked-message bulk selections";
+      assert lib.assertMsg (bindCount "<Space>tt = :fold -t<Enter>" == 1
+        && bindCount "<Space>tT = :fold -a<Enter>" == 1
+        && !(lib.hasInfix ":toggle-threads<Enter>" binds))
+        "mail-operator-rules: thread fold controls changed unexpectedly";
       assert lib.assertMsg (bindCount "<Space>ma = :modify-labels +archive -inbox -unread<Enter>" == 1
         && bindCount "<Space>md = :modify-labels +trash -inbox -unread<Enter>" == 1)
         "mail-operator-rules: marked-message archive/trash controls changed unexpectedly";
