@@ -43,18 +43,10 @@
 
     notmuch = {
       maildirRoot = "/home/eric/400_mail/Maildir";
-      # CRITICAL, indefinite: reviewed human decisions. /var/lib/hwc is in the
-      # server's daily Borg source set; the state is not generated from Nix.
-      operatorRules.stateDir = "/var/lib/hwc/mail-rules";
       userName = "Eric O'Keefe";
       primaryEmail = "eric@iheartwoodcraft.com";
       otherEmails = [ "eriqueo@proton.me" "heartwoodcraftmt@gmail.com" "eriqueokeefe@gmail.com" ];
       excludeFolders = [ "trash" "spam" "[Gmail]/All Mail" ];
-
-      # Classification rules (trash/archive/newsletter/notification/finance
-      # senders) come from the canonical taxonomy at domains/mail/taxonomy/
-      # — edit data.nix there, not here. The lists here were moved verbatim
-      # on 2026-07-09 (drift-kill; docs/plans/unified-triage-architecture.md).
 
       savedSearches = {
         inbox = "tag:inbox and not tag:archived";

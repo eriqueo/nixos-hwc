@@ -153,9 +153,10 @@
   /* Mail triage */
   .thread{border:1px solid var(--border);border-radius:4px;margin-bottom:6px;overflow:hidden;transition:border-color .15s}
   .thread:hover{border-color:var(--border2)}
-  .thread.urgent{border-left:3px solid var(--urgent)}
-  .thread.review{border-left:3px solid var(--review)}
-  .thread.noise{border-left:3px solid var(--noise)}
+  .thread.do{border-left:3px solid var(--urgent)}
+  .thread.did{border-left:3px solid var(--review)}
+  .thread.look{border-left:3px solid var(--review)}
+  .thread.junk{border-left:3px solid var(--noise)}
   .thread.done{opacity:.35}
 
   .thread-main{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;cursor:pointer;user-select:none}
@@ -284,10 +285,6 @@
 </div>
 <script>
 // ── Config ────────────────────────────────────────────────────────────────────
-const WEBHOOK_BASE='https://hwc-server.ocelot-wahoo.ts.net/webhook';
-const WEBHOOK_ACTION=WEBHOOK_BASE+'/mail-action';
-const WEBHOOK_QUERY=WEBHOOK_BASE+'/mail-query';
-
 // ── DOM helper ────────────────────────────────────────────────────────────────
 const $=(tag,attrs,...ch)=>{
   const el=document.createElement(tag);
@@ -334,58 +331,9 @@ function fmtShortDate(iso){
   return`${d.getMonth()+1}/${d.getDate()}`;
 }
 
-// ── Live mail query ───────────────────────────────────────────────────────────
-async function fetchLiveThreads(){
-  try{
-    const r=await fetch(WEBHOOK_QUERY,{signal:AbortSignal.timeout(5000)});
-    if(!r.ok)return null;
-    return await r.json();
-  }catch{return null}
-}
-
-function mergeMailData(cached,live){
-  if(!live||!Array.isArray(live))return cached;
-  const liveSet=new Set(live.map(t=>t.thread));
-  const result={urgent:[],review:[],noise:[]};
-  const seen=new Set();
-  for(const[bucket,threads]of Object.entries(cached.buckets||{})){
-    for(const t of(threads||[])){
-      if(liveSet.has(t.thread_id)){result[bucket].push(t);seen.add(t.thread_id)}
-    }
-  }
-  for(const lt of live){
-    if(!seen.has(lt.thread)){
-      result.review.push({
-        thread_id:lt.thread,subject:lt.subject||'(no subject)',
-        from_name:lt.authors||'',from_address:'',
-        date_relative:lt.date_relative||'',tags:lt.tags||[],
-        has_attachment:(lt.tags||[]).includes('attachment'),
-        summary:'',suggested_action:'read_only'
-      });
-    }
-  }
-  return{...cached,buckets:result,
-    stats:{urgent_count:result.urgent.length,review_count:result.review.length,noise_count:result.noise.length},
-    _live:true};
-}
-
-// ── Mail action webhook ───────────────────────────────────────────────────────
-async function doAction(threadId,action){
-  const r=await fetch(WEBHOOK_ACTION,{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({threadId,action})
-  });
-  if(!r.ok)throw new Error(`HTTP ${r.status}`);
-  const data=await r.json();
-  if(!data.ok)throw new Error('notmuch reported failure');
-  return data;
-}
-
 // ── Thread card ───────────────────────────────────────────────────────────────
 function makeThread(t,bucket){
   const wrap=$('div',{class:`thread ${bucket}`});
-  let expanded=false,actDone=false;
-  const chevron=$('span',{class:'thread-chevron'},'▾');
   const body=$('div',{class:'thread-body'});
   const top=$('div',{class:'thread-top'});
   top.appendChild($('span',{class:'thread-from'},t.from_name||t.from_address));
@@ -400,45 +348,7 @@ function makeThread(t,bucket){
     });
     body.appendChild(tg);
   }
-  const main=$('div',{class:'thread-main'});
-  main.appendChild(body);main.appendChild(chevron);wrap.appendChild(main);
-
-  const actions=$('div',{class:'thread-actions',style:'display:none'});
-  function setDone(label,tags){
-    actions.innerHTML='';
-    const tagStr=tags&&tags.length?tags.filter(t=>!['inbox','unread'].includes(t)).join(', '):'';
-    actions.appendChild($('span',{class:'act done-state'},`\u2713 ${label}${tagStr?' \u00b7 '+tagStr:''}`));
-    wrap.classList.add('done');actDone=true;
-  }
-  function setErr(){
-    actions.querySelectorAll('.act').forEach(b=>{b.disabled=false});
-    const e=$('span',{class:'act err-state'},'\u2717 failed');
-    actions.insertBefore(e,actions.firstChild);
-    setTimeout(()=>e.remove(),3000);
-  }
-  function makeBtn(label,action,cls=''){
-    return $('button',{class:`act ${cls}`,onclick:async()=>{
-      if(actDone)return;
-      actions.querySelectorAll('.act').forEach(x=>x.disabled=true);
-      try{const data=await doAction(t.thread_id,action);setDone(label,data.tags)}catch{setErr()}
-    }},label);
-  }
-  const suggested=t.suggested_action||'none';
-  const primaryLabels={reply:'Reply',archive:'Archive',trash:'Trash',
-    flag_action:'Flag: action',flag_pending:'Flag: pending',read_only:'Mark read',none:'Mark read'};
-  const primaryAction=suggested==='reply'?'read_only':suggested==='none'?'read_only':suggested;
-  actions.appendChild(makeBtn(primaryLabels[suggested]||'Mark read',primaryAction,'primary'));
-  if(suggested!=='archive')actions.appendChild(makeBtn('Archive','archive'));
-  if(suggested!=='trash')actions.appendChild(makeBtn('Trash','trash','danger'));
-  if(!['flag_action','flag_pending'].includes(suggested)){
-    actions.appendChild(makeBtn('\u2691 Action','flag_action'));
-    actions.appendChild(makeBtn('\u23f8 Pending','flag_pending'));
-  }
-  wrap.appendChild(actions);
-  main.addEventListener('click',()=>{
-    expanded=!expanded;wrap.classList.toggle('open',expanded);
-    actions.style.display=expanded?'flex':'none';
-  });
+  wrap.appendChild($('div',{class:'thread-main'},body));
   return wrap;
 }
 
@@ -489,8 +399,7 @@ function makeCalendar(cal){
 // ── Mail tile with tabs ──────────────────────────────────────────────────────
 function makeMailTile(triage,liveThreads,mailHealth){
   const sec=$('div',{class:'section'});
-  let merged=triage||{buckets:{},stats:{}};
-  if(liveThreads&&triage&&!triage.error){merged=mergeMailData(triage,liveThreads)}
+  const merged=triage||{buckets:{},stats:{}};
 
   sec.appendChild($('div',{class:'sec-hdr'},
     $('span',null,'Mail'),
@@ -505,39 +414,21 @@ function makeMailTile(triage,liveThreads,mailHealth){
   }
 
   const b=merged.buckets||{};
-  const urgent=b.urgent||[],review=b.review||[],noise=b.noise||[];
-  const reviewAll=[...urgent,...review];
-  const all=[...reviewAll,...noise];
-
-  // Tabs
+  const states=[['do','DO'],['did','DID'],['look','LOOK'],['junk','JUNK']];
   const tabs=$('div',{class:'mail-tabs',role:'tablist'});
-  const tabReview=$('button',{class:'mail-tab active',role:'tab','aria-selected':'true'},`Review (${reviewAll.length})`);
-  const tabNoise=$('button',{class:'mail-tab',role:'tab','aria-selected':'false'},`Noise (${noise.length})`);
-  const tabAll=$('button',{class:'mail-tab',role:'tab','aria-selected':'false'},`All (${all.length})`);
-  tabs.appendChild(tabReview);tabs.appendChild(tabNoise);tabs.appendChild(tabAll);
+  const allTabs=states.map(([state,label],i)=>$('button',{class:`mail-tab${i===0?' active':''}`,role:'tab','aria-selected':i===0?'true':'false'},`${label} (${(b[state]||[]).length})`));
+  allTabs.forEach(tab=>tabs.appendChild(tab));
   sec.appendChild(tabs);
 
-  // Panels
-  const panelReview=$('div',{role:'tabpanel'});
-  const panelNoise=$('div',{role:'tabpanel',style:'display:none'});
-  const panelAll=$('div',{role:'tabpanel',style:'display:none'});
-
-  if(!reviewAll.length)panelReview.appendChild($('div',{class:'empty'},'Inbox zero'));
-  else reviewAll.forEach(t=>panelReview.appendChild(makeThread(t,urgent.includes(t)?'urgent':'review')));
-
-  if(!noise.length)panelNoise.appendChild($('div',{class:'empty'},'No noise'));
-  else noise.forEach(t=>panelNoise.appendChild(makeThread(t,'noise')));
-
-  if(!all.length)panelAll.appendChild($('div',{class:'empty'},'Inbox zero'));
-  else all.forEach(t=>{
-    const bkt=urgent.includes(t)?'urgent':review.includes(t)?'review':'noise';
-    panelAll.appendChild(makeThread(t,bkt));
+  const allPanels=states.map(([state,label],i)=>{
+    const panel=$('div',{role:'tabpanel',style:i===0?'':'display:none'});
+    const threads=b[state]||[];
+    if(!threads.length)panel.appendChild($('div',{class:'empty'},state==='do'?'Inbox zero':`No ${label.toLowerCase()} mail`));
+    else threads.forEach(thread=>panel.appendChild(makeThread(thread,state)));
+    sec.appendChild(panel);
+    return panel;
   });
 
-  sec.appendChild(panelReview);sec.appendChild(panelNoise);sec.appendChild(panelAll);
-
-  // Tab switching
-  const allTabs=[tabReview,tabNoise,tabAll],allPanels=[panelReview,panelNoise,panelAll];
   function switchTab(i){
     allTabs.forEach((t,j)=>{t.classList.toggle('active',j===i);t.setAttribute('aria-selected',j===i?'true':'false')});
     allPanels.forEach((p,j)=>{p.style.display=j===i?'':'none'});
@@ -550,11 +441,6 @@ function makeMailTile(triage,liveThreads,mailHealth){
       switchTab(next);allTabs[next].focus();e.preventDefault();
     }
   });
-
-  // Default to All tab if review is empty but others exist
-  if(!reviewAll.length&&all.length)switchTab(2);
-
-  if(merged._live)sec.appendChild($('div',{class:'mail-live'},'\u25cf live'));
 
   appendMailHealth(sec,mailHealth);
   return sec;
@@ -1097,11 +983,8 @@ function renderFooter(data){
 const app=document.getElementById('app');
 async function load(){
   try{
-    const[data,liveThreads]=await Promise.all([
-      fetch(`./briefing.json?t=${Date.now()}`).then(r=>{if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json()}),
-      fetchLiveThreads()
-    ]);
-    render(data,liveThreads);
+    const data=await fetch(`./briefing.json?t=${Date.now()}`).then(r=>{if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json()});
+    render(data,null);
   }catch(e){render({error:true,error_message:`Could not load briefing: ${e.message}`})}
 }
 

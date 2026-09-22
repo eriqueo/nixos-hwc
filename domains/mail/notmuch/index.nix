@@ -1,27 +1,14 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
+{ config, inputs, lib, pkgs, osConfig ? {}, ...}:
 let
   on = (config.hwc.mail.enable or true);
   cfg = config.hwc.mail.notmuch or {};
-  taxonomy = (import ../taxonomy/lib.nix { inherit lib; }).data;
-  defaultNewTags = [ "new" "unread" "inbox" taxonomy.workflow.currentTag ];
+  mailContract = builtins.fromJSON
+    (builtins.readFile "${inputs.system-one}/scripts/mail_classifier_contract.json");
+  defaultNewTags = [ "new" "unread" "inbox" ];
   paths = import ./parts/paths.nix { inherit lib config cfg; };
   ident = import ./parts/identity.nix { inherit lib cfg defaultNewTags; };
   afewCfg = config.hwc.mail.afew or {};
   afewPkg = import ../afew/package.nix { inherit lib pkgs; cfg = afewCfg; };
-  operatorRulesCfg = cfg.operatorRules or {};
-  operatorRulesEnabled = operatorRulesCfg.enable or true;
-  operatorRulesStateDir = operatorRulesCfg.stateDir or
-    "${config.home.homeDirectory}/.local/state/mail-rules";
-  operatorRulesPkg = pkgs.writeShellApplication {
-    name = "mail-rule";
-    text = ''
-      exec ${pkgs.python3}/bin/python3 ${./parts/operator-rules.py} \
-        --db ${lib.escapeShellArg "${operatorRulesStateDir}/rules.sqlite"} \
-        --notmuch ${pkgs.notmuch}/bin/notmuch \
-        "$@"
-    '';
-  };
-
   cfgPart = import ./parts/config.nix {
     inherit lib pkgs;
     maildirRoot = paths.maildirRoot;
@@ -31,15 +18,10 @@ let
   };
 
   special = import ./parts/folders.nix { inherit lib config; };
-  rules   = import ./parts/rules.nix { inherit lib cfg; };
-
   hookTxt = import ./parts/hooks.nix {
-    inherit lib pkgs special afewPkg;
+    inherit lib pkgs special afewPkg mailContract;
     afewEnabled = afewCfg.enable or false;
-    rulesText = rules.text;
     extraHook = cfg.postNewHook or "";
-    operatorRulesCommand = lib.optionalString operatorRulesEnabled
-      "${operatorRulesPkg}/bin/mail-rule apply-new";
   };
 
   searches = import ./parts/searches.nix { inherit lib cfg; };
@@ -59,28 +41,15 @@ in
     postNewHook = lib.mkOption { type = lib.types.lines; default = ""; };
     savedSearches = lib.mkOption { type = lib.types.attrsOf lib.types.str; default = {}; };
     installDashboard = lib.mkOption { type = lib.types.bool; default = false; };
-    operatorRules = {
-      enable = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Enable reviewed exact-sender rules in aerc and post-new.";
-      };
-      stateDir = lib.mkOption {
-        type = lib.types.str;
-        default = "${config.home.homeDirectory}/.local/state/mail-rules";
-        description = "Private persistent directory for the versioned rule ledger.";
-      };
-    };
     # Defaults come from the canonical taxonomy (domains/mail/taxonomy/) —
     # edit data.nix there, NOT these options; a direct override here silently
     # re-forks the vocabulary (see docs/plans/unified-triage-architecture.md).
     rules = let tax = (import ../taxonomy/lib.nix { inherit lib; }).derived; in {
-      newsletterSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = tax.newsletterSenders; };
-      notificationSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = tax.notificationSenders; };
-      financeSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = tax.financeSenders; };
-      actionSubjects = lib.mkOption { type = lib.types.listOf lib.types.str; default = tax.actionSubjects; };
-      trashSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = tax.trashSenders; description = "Senders whose mail is auto-trashed on arrival (+trash -inbox -unread, scoped to tag:new). Default: taxonomy senders.trash."; };
-      archiveSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = tax.archiveSenders; description = "Senders whose mail is auto-archived on arrival (+archive -inbox, kept but out of inbox; scoped to tag:new). Default: taxonomy senders.archive."; };
+      trashSenders = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = tax.trashSenders;
+        description = "Legacy deny list consumed only by the separate Gmail janitor; never by local workflow classification.";
+      };
     };
   };
 
@@ -88,7 +57,7 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf on (lib.mkMerge [
-    { home.packages = cfgPart.packages ++ lib.optional operatorRulesEnabled operatorRulesPkg; }
+    { home.packages = cfgPart.packages; }
     { programs.notmuch = cfgPart.programs.notmuch; }
 
     { home.file."${paths.maildirRoot}/.notmuch/hooks/post-new" = {
@@ -98,12 +67,6 @@ in
     }
 
     { xdg.configFile."notmuch/searches".text = searches.text; }
-
-    (lib.mkIf operatorRulesEnabled {
-      home.activation.mailOperatorRulesState = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        install -d -m0700 ${lib.escapeShellArg operatorRulesStateDir}
-      '';
-    })
 
     (lib.mkIf (cfg.installDashboard or false) {
       home.file.".local/bin/mail-dashboard" = {

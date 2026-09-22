@@ -737,13 +737,13 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
       else "" end)
     + (if .mail_triage then
         sec("MAIL")
-        + "act: " + ((.mail_triage.stats.act_count // 0) | tostring)
+        + "do: " + ((.mail_triage.stats.do_count // 0) | tostring)
+        + " · did: " + ((.mail_triage.stats.did_count // 0) | tostring)
         + " · look: " + ((.mail_triage.stats.look_count // 0) | tostring)
-        + " · later: " + ((.mail_triage.stats.bulk_count // 0) | tostring)
         + " · junk: " + ((.mail_triage.stats.junk_count // 0) | tostring)
         + (if .sections.mail.summary then " · " + .sections.mail.summary else "" end)
         + (if .mail_triage.error then "\n  triage error: " + .mail_triage.error else "" end)
-        + (((.mail_triage.buckets.act // [])[:5]) | map("\n  ! " + (.sender // "?") + ": " + (.subject // "?")) | join(""))
+        + (((.mail_triage.buckets.do // [])[:5]) | map("\n  ! " + (.sender // "?") + ": " + (.subject // "?")) | join(""))
         + (((.mail_triage.buckets.look // [])[:5]) | map("\n  · " + (.sender // "?") + ": " + (.subject // "?")) | join(""))
       else "" end)
     + (if (.sections.refinery.counts.total // 0) > 0 then
@@ -878,14 +878,14 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
       else "" end)
 
     + (if .mail_triage then
-        card("Mail"; $dash; "now";
-          item("act " + ((.mail_triage.stats.act_count // 0) | tostring)
+        card("Mail"; $dash; "workflow";
+          item("do " + ((.mail_triage.stats.do_count // 0) | tostring)
+            + " &middot; did " + ((.mail_triage.stats.did_count // 0) | tostring)
             + " &middot; look " + ((.mail_triage.stats.look_count // 0) | tostring)
-            + " &middot; later " + ((.mail_triage.stats.bulk_count // 0) | tostring)
             + " &middot; junk " + ((.mail_triage.stats.junk_count // 0) | tostring)
             + (if $s.mail.summary then " &middot; " + meta(($s.mail.summary|h)) else "" end))
           + (if .mail_triage.error then item(red("triage error: " + (.mail_triage.error|h))) else "" end)
-          + (((.mail_triage.buckets.act // [])[:5]) | map(
+          + (((.mail_triage.buckets.do // [])[:5]) | map(
               item(red("!") + " " + ((.sender // "?")|h) + ": " + ((.subject // "?")|h))) | join(""))
           + (((.mail_triage.buckets.look // [])[:5]) | map(
               item(meta("&middot;") + " " + ((.sender // "?")|h) + ": " + ((.subject // "?")|h))) | join("")))

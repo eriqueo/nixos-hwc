@@ -1,43 +1,18 @@
 # domains/mail/taxonomy/data.nix
 #
-# Canonical mail taxonomy — THE single source of truth for tag vocabulary,
-# triage buckets, sender dispositions, and action subjects.
+# Reviewed sender dispositions, legacy/manual tag vocabulary, and action subjects.
+# Workflow State, Domain, and model traits live in System One's pinned contract.
 #
 # PURE DATA: no options, no config, no pkgs. Imported at BUILD TIME from both
 # lanes, so drift between consumers is structurally impossible:
 #   HM lane     — notmuch rule defaults (notmuch/index.nix), aerc tags/colors
 #                 (aerc/parts/tags.nix)
-#   system lane — MCP gateway (mail-taxonomy.json via system/mcp/index.nix),
-#                 morning-briefing triage prompt (business/morning-briefing)
 # See docs/plans/unified-triage-architecture.md and ./README.md.
 #
 # DISPOSITION SEMANTICS (behavior-preserving — premortem risk 2):
-#   trash        — auto-trashed on arrival by notmuch rules (never reaches inbox)
-#   archive      — auto-archived on arrival (kept in All Mail, out of inbox)
-#   newsletter   — +newsletter -inbox on arrival
-#   notification — +notification -inbox on arrival
-#   finance      — +finance on arrival; classification only, stays in inbox
-#   noise        — LLM-ADVISORY ONLY: the triage prompt buckets these as noise.
-#                  NEVER fed to the auto-trash rules. Promoting a sender to
-#                  trash is a deliberate per-sender move between lists.
-#   review       — LLM-ADVISORY ONLY: the triage prompt buckets these as review.
-# All rule-fed senders (trash/archive) are ALSO emitted into the prompt's
-# noise list — the safe merge direction (see lib.nix promptFragment).
+#   trash — legacy deny list for the separate Gmail janitor only. Local mail is
+#           classified solely by Laya plus human ledger corrections.
 {
-  # REPLACEABLE migration cohort. `queue` separates mail managed by the calm
-  # workflow from the pre-existing Inbox backlog without making read/unread a
-  # workflow state. It can be rebuilt from the cutover dump plus post-cutover
-  # arrivals. Removal condition: after `tag:inbox AND NOT tag:queue` reaches
-  # zero, point `now` directly at `tag:inbox` and remove this marker.
-  workflow.currentTag = "queue";
-
-  # Attention states — tag-backed placement shared by Laya, aerc, the morning
-  # briefing, and the MCP mail board. Now = act + look; bulk = Later.
-  triage = {
-    buckets = [ "act" "look" "bulk" "junk" ];
-    tagPrefix = "attention/";
-  };
-
   # Semantic groups → theme palette ROLE (not hex — theme is presentation,
   # not taxonomy; aerc maps role→hex from the active palette).
   groups = {
@@ -106,73 +81,5 @@
       "ccsend.com"
     ];
 
-    # Low-value-but-keepable — auto-archived (out of inbox, kept in All Mail).
-    archive = [
-      # retail / suppliers (receipts tracked in QB/JobTread; keep findable)
-      "amazon.com" "sherwin.com" "harborfreight.com" "homedepot.com"
-      "bruntworkwear.com" "fergusonhome.com" "bestbuy.com" "soundcore.com"
-      "jossandmain.com" "plumdragonherbs.com" "hibid.com"
-      # coaching / industry
-      "builttobuildacademy.com" "narihq.org" "agingcare.com"
-      "thecontractorfight.com"
-      # bulk / SaaS marketing
-      "mailchimpapp.com" "zapier.com" "supadata.ai" "beehiiv.com"
-      "sage.com" "perplexity.ai" "vimeo.com"
-    ];
-
-    # +newsletter -inbox on arrival (address patterns; rules.nix also matches
-    # any list:"*" header).
-    newsletter = [ "newsletter@" "news@" "updates@" "digest@" "list@" "mailer@" ];
-
-    # +notification -inbox on arrival.
-    notification = [ "no-reply@" "noreply@" "notifications@" "notices@" "github.com" ];
-
-    # +finance on arrival. Finance is a classification, not a disposition:
-    # receipts and account notices still need a human outcome.
-    finance = [
-      "amazon.com" "paypal.com" "stripe.com" "squareup.com" "intuit.com"
-      "quickbooks" "chase.com" "bankofamerica.com"
-    ];
-
-    # LLM-advisory noise — reaches the inbox, but the triage prompt always
-    # buckets it as noise (suggested_action: trash). Entries are strings or
-    # { match, note }.
-    noise = [
-      "alignable.com"
-      "profitabletradie.com"
-      "theprofessionalbuilder.com"
-      "bf10x.hubspotemail.net"
-      "stantaylor.com"
-      "mg.homedepot.com"
-      "your.cvs.com"
-      "emailinfo.bestbuy.com"
-      "mail.instagram.com"
-      "bniconnectglobal.com"
-      { match = "quora.com"; note = "digest emails"; }
-      { match = "zillow.com"; note = "marketing"; }
-      { match = "thumbtack.com"; note = "notifications"; }
-      { match = "yelp.com"; note = "business promotions"; }
-      { match = "Any sender matching \"*estimat*\", \"*takeoff*\", \"*bid*\" @gmail.com"; note = "cold outreach pattern"; }
-    ];
-
-    # LLM-advisory review — legitimate platforms/newsletters worth a glance.
-    review = [
-      { match = "ollama"; note = "tech newsletter"; }
-      { match = "Bozeman Area Chamber of Commerce"; note = "local business events"; }
-      { match = "Google Local Services Ads (lsa.google.com, google.com notifications)"; note = "lead platform Eric actively uses"; }
-      { match = "GitHub"; note = "unless CI failure from eriqueo/* repo → urgent"; }
-      { match = "iCloud"; note = "system/security notifications"; }
-      { match = "MxToolbox"; note = "deliverability summary"; }
-      { match = "Quo/OpenPhone (quo.com, openphone.com)"; note = "business phone notifications"; }
-      { match = "Stripe (stripe.com)"; note = "payment processing"; }
-      { match = "QuickBooks (intuit.com)"; note = "accounting"; }
-      { match = "JobTread (jobtread.com)"; note = "project management"; }
-    ];
   };
-
-  # Subjects that get +action on arrival (kept in inbox).
-  actionSubjects = [
-    "invoice" "quote" "proposal" "estimate" "RFP" "action required"
-    "approve" "signature" "past due"
-  ];
 }

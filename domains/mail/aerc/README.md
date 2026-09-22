@@ -58,35 +58,38 @@ Proton Mail <--IMAP--> Proton Bridge (localhost:1143/1025)
 
 The `<C-r>` keybind runs `sync-mail` which executes the full pipeline (mbsync + notmuch new). Never run bare `mbsync -a` from aerc — it skips notmuch indexing and tags will appear to revert.
 
-### Daily queue semantics
+### Daily workflow semantics
 
-`now` is the managed decision queue: `tag:queue AND tag:inbox`. Opening or
-reading a message never removes it. Only a disposition that removes `inbox`
-(archive or trash) finishes the item. A folded row expands to its whole thread;
-when `J`/`K` marks exist, the disposition applies to that marked set. A task/calendar/Paperless handoff writes
-to the destination but deliberately leaves the source email in place; press
-`a` after confirming the handoff. `family`, `datax`, and `hwc` are context lenses over that
-same queue, not filing destinations. `backlog` is legacy unread mail that has
-not yet been promoted into a bounded managed cohort.
+The sidebar is one workflow axis: `DO`, `DID`, `LOOK`, and `JUNK`. `DO` is the
+inbox-zero queue. `DID` means Eric acted and is waiting; a new reply reopens it
+to `DO`. `LOOK` needs no response. `JUNK` is recoverable Trash. Archive removes
+the active state and records completion. Opening or reading mail never changes
+state. Domain (`HWC`, `DataX`, `Family`, `Personal`, `Other`) is a column/filter,
+never a folder or placement rule. Factual Tags never move mail.
+
+A folded row expands to its complete thread. When `J`/`K` marks exist, `a` or
+`d` applies thread-wide to the marked set through the classifier ledger.
 
 ### Tag System (tags.nix)
 
-Shared tag metadata originates in `domains/mail/taxonomy/data.nix`; `tags.nix` adapts it for aerc, and `tags-custom.json` holds aerc-only additions. The generated data supplies:
+Shared factual-tag metadata originates in `domains/mail/taxonomy/data.nix`;
+the versioned classifier contract supplies State and Domain. `tags.nix` adapts
+optional tags for aerc, and `tags-custom.json` holds aerc-only additions.
 
 - Notmuch query-map entries for direct drill-down
 - `[user]` styles for virtual folder names
-- nested `<Space>mc*` category and `<Space>mv*` user-flag bindings
+- nested `<Space>mv*` optional factual-tag bindings
 
-Tags remain available to the shared triage and briefing integrations, but the daily message list deliberately does not render tag pills or color whole rows by category.
-Automation-only `action` and `pending` tags remain queryable but do not appear
-in the human mark menu.
+The message list renders Domain, State, and factual Tags as separate columns.
+Legacy `action` and `pending` tags do not participate in workflow.
 
 #### Tag Types
 
 | Type | Behavior | Example |
 |------|----------|---------|
-| **Category** (`categoryTags`) | Mutually exclusive — assigning one removes the other categories | work, finance, tech, personal, family |
-| **Flag** (`flagTags`) | Additive — coexists with categories; may be automation-only | action, pending, keep |
+| **Domain** | Exactly one; independent of State | hwc, datax, family, personal, other |
+| **State** | Exactly one while active | do, did, look, junk |
+| **Tag** | Additive fact; never controls placement | attachment, finance, receipt |
 
 #### Tag Attributes
 
@@ -158,16 +161,16 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 
 | Key | Folder |
 |-----|--------|
-| `<Space>gi` | now |
-| `<Space>gF` | family |
-| `<Space>gD` | datax |
-| `<Space>gW` | hwc |
+| `<Space>gi` | DO |
+| `<Space>gd` | DID |
+| `<Space>gl` | LOOK |
+| `<Space>gj` | JUNK |
 | `<Space>gB` | backlog (hidden drill-down) |
 | `<Space>gI` | full inbox (hidden drill-down) |
 | `<Space>gu` | unread |
 | `<Space>ga` | Archive |
 | `<Space>gs` | sent |
-| `<Space>gd` | trash |
+| `<Space>gT` | trash |
 | `<Space>gz` | spam |
 | `<Space>g_` | hide_my_email |
 
@@ -185,8 +188,9 @@ automation tag.
 | `<Space>mz` | +spam -inbox |
 | `<Space>ml` | Free-form label (prompt) |
 | `<Space>mx` | Clear removable categories/flags; preserve protected `keep` |
-| `<Space>mc…` | Classify with a category; pause after `c` to see choices |
 | `<Space>mv…` | Add a user-visible flag; pause after `v` to see choices |
+| `<Space>ta/td/tl/tj` | Teach DO/DID/LOOK/JUNK |
+| `<Space>tc h/d/f/p/o` | Teach HWC/DataX/Family/Personal/Other Domain |
 
 `action` and `pending` are automation-only compatibility tags. They are not
 offered as manual workflow states: create a task/calendar/document handoff and
@@ -271,35 +275,32 @@ grow the sidebar. Press `<Space>gi` to return to `now`.
 
 ## Column Layout
 
-```
-state<3 | date<10 | from<22 | subject<*
-```
+`From | Subject | Date | Domain | State | Tags`
 
 | Column | Template | Description |
 |--------|----------|-------------|
-| `state` | `.IsUnread` / `.IsFlagged` | `●` unread and `★` flagged |
-| `date` | `.DateAutoFormat` | Relative dates (Today, Yesterday, Mon 10 Mar) |
 | `from` | `.From \| names` | Sender display name |
 | `subject` | `.Subject` | Subject with thread prefix and fold count |
+| `date` | `.DateAutoFormat` | Relative date |
+| `domain` | `domain/*` | HWC/DataX/Family/Personal/Other |
+| `state` | `state/*` | DO/DID/LOOK/JUNK |
+| `tags` | `trait/*` plus optional facts | Factual traits only |
 
-Unread messages are bold, read messages are dim, and selection remains a strong reversed bar. Category tags stay out of the row chrome.
+Unread messages are bold, read messages are dim, and selection remains a strong reversed bar.
 
 ## Virtual Folders (Query Map)
 
-The sidebar exposes Now, the five subject categories, Later, and Junk. Now is
-the inbox decision queue (`act + look`) and is independent of read state.
-Category folders remain useful across archived history. Later holds legitimate
-bulk or human-deferred mail; Junk is recoverable Trash selected with stronger
-evidence.
+The sidebar exposes only the four active workflow states. Domain drill-down is
+available with `<Space>fd h/d/f/p/o`; clear it with `<Space>fc`.
 
 Primary folders:
 
 | Folder | Query |
 |--------|-------|
-| now | managed inbox mail excluding `bulk`, `junk`, and trash; reading does not remove it |
-| family/datax/hwc/personal/other | `category/<name>` history, with legacy category tags included where present |
-| later | `tag:later AND NOT tag:trash` |
-| junk | `tag:trash AND tag:attention/junk` |
+| do | `tag:state/do` — Eric must act |
+| did | `tag:state/did` — waiting after Eric acted |
+| look | `tag:state/look` — read or monitor |
+| junk | `tag:state/junk` — recoverable Trash |
 | backlog | legacy unread inbox mail not yet promoted into the managed queue |
 | inbox | `tag:inbox AND NOT tag:trash` |
 | unread | `tag:unread AND NOT tag:trash` |
@@ -357,6 +358,11 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
    `proton/Labels/<name>/`.
 
 ## Changelog
+
+- 2026-09-22: Replaced overlapping folder/category/flag semantics with one
+  workflow axis (`DO/DID/LOOK/JUNK`), one independent Domain, and factual Tags.
+  Added ledger-backed state/Domain teaching, thread-wide marked archive/trash,
+  explicit fold-one/fold-all keys, and the six-column message list.
 
 - 2026-09-21: Replaced the thread-view toggle with selected/all fold controls:
   `<Space>tt` toggles the selected fold and `<Space>tT` folds the current view.

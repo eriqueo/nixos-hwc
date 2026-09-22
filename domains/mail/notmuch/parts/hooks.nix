@@ -1,10 +1,13 @@
-{ lib, pkgs, special, afewPkg, afewEnabled ? true, rulesText, extraHook
-, operatorRulesCommand ? "", osConfig ? {}}:
+{ lib, pkgs, special, afewPkg, mailContract, afewEnabled ? true, extraHook
+, osConfig ? {}}:
 let
   nm = "${pkgs.notmuch}/bin/notmuch";
-
-  # Rewrite any ‘notmuch ’ occurrences coming from rulesText into the absolute path.
-  rulesPatched = builtins.replaceStrings [ "notmuch " ] [ "${nm} " ] rulesText;
+  stateTag = state: "${mailContract.stateTagPrefix}${state}";
+  activeStateQuery = lib.concatStringsSep " OR "
+    (map (state: "tag:${stateTag state}") mailContract.states);
+  nonDoStateQuery = lib.concatStringsSep " OR "
+    (map (state: "tag:${stateTag state}")
+      (lib.filter (state: state != mailContract.fallbackState) mailContract.states));
 
   mk = clause: tag: minus:
     if clause == "" then "" else ''
@@ -64,7 +67,7 @@ let
     # Scoped by folder residency rather than tag:new so repeated syncs can
     # repair the live Sent-copy of a self-sent message. Idempotent: re-asserts
     # inbox on a message that hasn't already been archived.
-    ${nm} tag +inbox -archive -sent -- '(from:eric@iheartwoodcraft.com OR from:office@iheartwoodcraft.com OR from:admin@iheartwoodcraft.com) AND (to:eric@iheartwoodcraft.com OR to:office@iheartwoodcraft.com OR to:admin@iheartwoodcraft.com) AND path:proton/Sent/** AND NOT path:proton/Archive/**'
+    ${nm} tag +inbox +${stateTag mailContract.fallbackState} -archive -sent -- '(from:eric@iheartwoodcraft.com OR from:office@iheartwoodcraft.com OR from:admin@iheartwoodcraft.com) AND (to:eric@iheartwoodcraft.com OR to:office@iheartwoodcraft.com OR to:admin@iheartwoodcraft.com) AND path:proton/Sent/** AND NOT path:proton/Archive/** AND NOT tag:${mailContract.completedTag} AND NOT (${nonDoStateQuery}) AND NOT tag:trash'
   '';
 
   # Strip the transient "new" tag after all processing is done
@@ -75,13 +78,6 @@ let
 
   extra =
     if (builtins.isString extraHook && extraHook != "") then "\n" + extraHook else "";
-
-  operatorRules = lib.optionalString (operatorRulesCommand != "") ''
-    # Reviewed exact-sender rules override the declarative arrival baseline.
-    # This is intentionally fatal: tag:new remains as a retry marker if the
-    # versioned ledger cannot be read or a bounded notmuch operation fails.
-    ${operatorRulesCommand}
-  '';
 
   accountTags = ''
     # Proton: tag by destination address (all addresses share one IMAP connection)
@@ -96,7 +92,10 @@ let
     ${nm} tag +personal -- 'tag:new AND tag:proton-personal'
 
     # Folder state tags — scoped to tag:new so manual tag changes are preserved
-    ${nm} tag +inbox -- 'tag:new AND path:proton/inbox/**'
+    # New Inbox mail starts in DO until Laya assigns another model state.
+    # Existing DID/LOOK/JUNK/completed threads retain their human state here;
+    # the classifier alone reopens DID/completed when its fingerprint changes.
+    ${nm} tag +inbox +${stateTag mailContract.fallbackState} -- 'tag:new AND path:proton/inbox/** AND NOT (${activeStateQuery}) AND NOT tag:${mailContract.completedTag}'
     ${nm} tag +sent -inbox -unread -- 'tag:new AND path:proton/Sent/**'
     ${nm} tag +draft -inbox -unread -- 'tag:new AND path:proton/Drafts/**'
     ${nm} tag +trash -inbox -unread -- 'tag:new AND path:proton/Trash/**'
@@ -133,10 +132,9 @@ let
     fi
   '';
 
-  # Folder residency establishes the starting state; sender/subject rules then
-  # make the final arrival disposition. Reversing these lets +inbox from the
-  # folder pass undo -inbox from newsletter/archive/trash rules.
-  tail = accountTags + "\n" + rulesPatched + protonLabelTags + extra + "\n" + operatorRules + "\n" + keepShield + "\n" + digestShield + "\n" + removeNew;
+  # Folder residency only establishes safe transport state; Laya owns content
+  # classification after tag:new is removed.
+  tail = accountTags + "\n" + protonLabelTags + extra + "\n" + keepShield + "\n" + digestShield + "\n" + removeNew;
 in
 {
   text = head + "\n" + body + "\n" + tail;

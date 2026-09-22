@@ -9,49 +9,22 @@ let
     let base = nmCfg.maildirRoot or "";
     in if base != "" then base else "${config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail"}/Maildir";
 
-  rules = nmCfg.rules or {};
-
-  joinFrom = lst:
-    if lst == [] then ""
-    else lib.concatStringsSep " OR " (map (s: "from:${s}") lst);
-
-  newsletterClause   = joinFrom (rules.newsletterSenders or []);
-  notificationClause = joinFrom (rules.notificationSenders or []);
-  financeClause      = joinFrom (rules.financeSenders or []);
-  actionClause       = joinFrom (rules.actionSubjects or []);
-
-  # Afew 3.0+ uses numbered filter sections: [Filter.1], [Filter.2], etc.
-  filterList = lib.filter (f: f.clause != "") [
-    { num = 1; clause = newsletterClause; tag = "newsletter"; msg = "Tag newsletters"; }
-    { num = 2; clause = notificationClause; tag = "notification"; msg = "Tag notifications"; }
-    { num = 3; clause = financeClause; tag = "finance"; msg = "Tag finance emails"; }
-    { num = 4; clause = actionClause; tag = "action"; msg = "Tag actionable emails"; }
-  ];
-
-  makeFilter = f: ''
-[Filter.${toString f.num}]
-query = ${f.clause}
-tags = +${f.tag}
-message = ${f.msg}
-'';
-
-  filters = lib.concatStringsSep "\n" (map makeFilter filterList);
-
   # Folder-state filters: tag messages that arrive already in Archive/Trash/Spam
   # (e.g. synced from Proton where they were already there)
-  folderStateFilters =
-    let base = lib.length filterList + 1; in ''
-[Filter.${toString base}]
+  # Content classification deliberately does not happen here; Laya is the sole
+  # automatic producer of State, Domain, and factual traits.
+  folderStateFilters = ''
+[Filter.1]
 query = folder:proton/Archive AND NOT tag:archive
 tags = +archive
 message = Tag messages already in Proton Archive
 
-[Filter.${toString (base + 1)}]
+[Filter.2]
 query = folder:proton/Trash AND NOT tag:trash
 tags = +trash
 message = Tag messages already in Proton Trash
 
-[Filter.${toString (base + 2)}]
+[Filter.3]
 query = folder:proton/Spam AND NOT tag:spam
 tags = +spam
 message = Tag messages already in Proton Spam
@@ -76,7 +49,6 @@ proton/Spam = 'tag:inbox':proton/inbox
 # notmuch config discovery is done via NOTMUCH_CONFIG; no database path needed here
 maildir = ${mailRoot}
 
-${filters}
 ${folderStateFilters}
 ${mailMoverSection}
 ''; # trailing newline expected by afew

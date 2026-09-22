@@ -309,12 +309,13 @@ export function morningBriefTool(): ToolDef {
       if (Object.keys(mailTriage).length) {
         const stats = asObj(mailTriage["stats"]);
         const total = num(mailTriage["total_unread"]);
-        const u = num(stats["urgent_count"]); const r = num(stats["review_count"]); const n = num(stats["noise_count"]);
-        if (total != null || u != null) {
-          mailLines.push(`- Triage: ${total ?? "?"} unread — ${u ?? 0} urgent, ${r ?? 0} review, ${n ?? 0} noise`);
+        const todo = num(stats["do_count"]); const did = num(stats["did_count"]);
+        const look = num(stats["look_count"]); const junk = num(stats["junk_count"]);
+        if (total != null || todo != null) {
+          mailLines.push(`- Workflow: ${total ?? "?"} unread — ${todo ?? 0} do, ${did ?? 0} did, ${look ?? 0} look, ${junk ?? 0} junk`);
         }
-        const urgent = bullets(asArr(asObj(mailTriage["buckets"])["urgent"]), 5);
-        for (const item of urgent) mailLines.push(`  - 🔴 ${item}`);
+        const doMail = bullets(asArr(asObj(mailTriage["buckets"])["do"]), 5);
+        for (const item of doMail) mailLines.push(`  - 🔴 ${item}`);
       }
       section("Mail", mailLines);
 

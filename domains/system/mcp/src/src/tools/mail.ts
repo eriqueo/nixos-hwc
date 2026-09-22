@@ -22,90 +22,76 @@ const MBSYNC_SUCCESS_MARKER = join(HOME, ".cache/mbsync-last-success");
 const MAILDIR = join(HOME, "400_mail/Maildir");
 const SYNC_MAIL = join(HOME, ".local/bin/sync-mail");
 
-/* ─── Taxonomy (canonical, baked from nixos-hwc domains/mail/taxonomy/) ────
- * The tag vocabulary is loaded at startup from HWC_MAIL_TAXONOMY_FILE — a
- * store-path JSON the gateway's NixOS module bakes from the same data.nix
- * that generates the notmuch rules, aerc tags, and the triage prompt (see
- * docs/plans/unified-triage-architecture.md). The literals below are a
- * boot-robustness fallback ONLY (env unset / file unreadable), never the
- * source of truth — a warning is logged whenever the fallback is used. */
-interface MailTaxonomy {
-  triage: { buckets: string[]; tagPrefix: string };
-  categories: string[];
-  flags: string[];
-  /** Flags bulk clear operations must never remove (e.g. `keep`). */
-  protectedFlags?: string[];
+/* ─── Classifier contract (same versioned producer as Laya and aerc) ─────── */
+interface MailContract {
+  schemaVersion: number;
+  states: string[];
+  domains: string[];
+  factTags: string[];
+  stateTagPrefix: string;
+  domainTagPrefix: string;
+  traitTagPrefix: string;
+  completedTag: string;
 }
 
-const FALLBACK_TAXONOMY: MailTaxonomy = {
-  triage: { buckets: ["act", "look", "bulk", "junk"], tagPrefix: "attention/" },
-  categories: [
-    "office", "work", "hwcmt",
-    "finance", "bank", "insurance",
-    "personal", "family", "eriqueokeefe",
-    "admin", "coaching",
-    "tech", "aerc", "website",
-  ],
-  flags: ["action", "pending"],
-  protectedFlags: [],
+const FALLBACK_CONTRACT: MailContract = {
+  schemaVersion: 2,
+  states: ["do", "did", "look", "junk"],
+  domains: ["hwc", "datax", "family", "personal", "other"],
+  factTags: ["attachment", "calendar", "deadline", "finance", "security", "receipt", "recurring", "newsletter", "unsubscribe"],
+  stateTagPrefix: "state/",
+  domainTagPrefix: "domain/",
+  traitTagPrefix: "trait/",
+  completedTag: "workflow/done",
 };
 
-function loadTaxonomy(): MailTaxonomy {
-  const file = process.env.HWC_MAIL_TAXONOMY_FILE;
+function loadContract(): MailContract {
+  const file = process.env.HWC_MAIL_CLASSIFIER_CONTRACT_FILE;
   if (!file) {
-    log.warn("mail: HWC_MAIL_TAXONOMY_FILE unset — using compiled-in fallback taxonomy");
-    return FALLBACK_TAXONOMY;
+    log.warn("mail: HWC_MAIL_CLASSIFIER_CONTRACT_FILE unset — using compiled-in v2 contract");
+    return FALLBACK_CONTRACT;
   }
   try {
     const parsed = JSON.parse(readFileSync(file, "utf8"));
     if (
-      !Array.isArray(parsed?.triage?.buckets) || parsed.triage.buckets.length === 0 ||
-      typeof parsed?.triage?.tagPrefix !== "string" ||
-      !Array.isArray(parsed?.categories) || !Array.isArray(parsed?.flags)
+      parsed?.schemaVersion !== 2 || !Array.isArray(parsed?.states) ||
+      !Array.isArray(parsed?.domains) || !Array.isArray(parsed?.factTags) ||
+      typeof parsed?.stateTagPrefix !== "string" ||
+      typeof parsed?.domainTagPrefix !== "string" ||
+      typeof parsed?.traitTagPrefix !== "string" ||
+      typeof parsed?.completedTag !== "string"
     ) {
-      throw new Error("missing/invalid triage.buckets, triage.tagPrefix, categories, or flags");
+      throw new Error("missing or invalid mail-classifier-v2 fields");
     }
-    log.info(`mail: taxonomy loaded from ${file}`);
-    return parsed as MailTaxonomy;
+    log.info(`mail: classifier contract loaded from ${file}`);
+    return parsed as MailContract;
   } catch (err) {
-    log.warn(`mail: failed to load taxonomy from ${file} (${String(err)}) — using compiled-in fallback`);
-    return FALLBACK_TAXONOMY;
+    log.warn(`mail: failed to load classifier contract from ${file} (${String(err)}) — using compiled-in v2 contract`);
+    return FALLBACK_CONTRACT;
   }
 }
 
-const TAXONOMY = loadTaxonomy();
-const CATEGORY_TAGS = TAXONOMY.categories;
-const FLAG_TAGS = TAXONOMY.flags;
+const MAIL_CONTRACT = loadContract();
+export const MAIL_STATES: readonly string[] = MAIL_CONTRACT.states;
+const DOMAIN_TAGS = MAIL_CONTRACT.domains;
+const TRAIT_TAGS = MAIL_CONTRACT.factTags;
 const JUNK_TAGS = ["important", "flagged", "starred"];
-
-/* ─── Attention states (tag-backed) ────────────────────────────────────────
- * Mail placement persists as `attention/<state>`. The mapping is shared by:
- *   - the Laya classifier
- *   - replace-triage-bucket here
- *   - hwc_mail_triage (reflects live attention/* tags)
- * All of them derive from the taxonomy, so they cannot drift. */
-export const TRIAGE_BUCKETS: readonly string[] = TAXONOMY.triage.buckets;
 
 /** Shared named tag effects for the mail and triage transports. */
 export function mailTagActions(): Record<string, string[]> {
-  const trash = ["+trash", "-inbox", "-unread"];
+  const clearStates = MAIL_STATES.map((state) => `-${mailStateTag(state)}`);
+  const complete = [...clearStates, `+${MAIL_CONTRACT.completedTag}`];
+  const trash = ["+trash", "-inbox", "-unread", ...complete];
   return {
-    archive: ["+archive", "-inbox"], trash, delete: trash,
-    untrash: ["-trash", "+inbox"], spam: ["+spam", "-inbox", "-unread"],
+    archive: ["+archive", "-inbox", ...complete], trash, delete: trash,
+    untrash: ["-trash", "+inbox", `-${MAIL_CONTRACT.completedTag}`, `+${mailStateTag("do")}`], spam: ["+spam", "-inbox", "-unread", ...complete],
     unspam: ["-spam", "+inbox"], read: ["-unread"], unread: ["+unread"],
-    "clear-categories": clearAllCustomOps(),
+    "clear-metadata": clearAllCustomOps(),
   };
 }
-export type TriageBucket = string;
-/** notmuch tag for an attention state, e.g. "act" → "attention/act". */
-export function triageTag(bucket: string): string {
-  return `${TAXONOMY.triage.tagPrefix}${bucket}`;
-}
-/** Tag ops that replace the attention state. */
-function replaceTriageOps(target: TriageBucket): string[] {
-  const ops = TRIAGE_BUCKETS.filter((b) => b !== target).map((b) => `-${triageTag(b)}`);
-  ops.push(`+${triageTag(target)}`);
-  return ops;
+export type MailState = string;
+export function mailStateTag(state: string): string {
+  return `${MAIL_CONTRACT.stateTagPrefix}${state}`;
 }
 
 const SAVED_SEARCHES: Record<string, string> = {
@@ -117,13 +103,12 @@ const SAVED_SEARCHES: Record<string, string> = {
   trash: "tag:trash",
   spam: "tag:spam",
   important: "tag:important AND NOT tag:trash",
-  // Per-tag searches generated from the taxonomy (flags + categories), so a
-  // vocabulary change lands here without touching this file.
+  // State and Domain are independent filter axes, never sidebar folders.
   ...Object.fromEntries(
-    [...FLAG_TAGS, ...CATEGORY_TAGS].map((t) => [t, `(tag:${t} AND NOT tag:trash) AND tag:inbox`]),
+    MAIL_STATES.map((state) => [`state:${state}`, `tag:${mailStateTag(state)}`]),
   ),
   ...Object.fromEntries(
-    CATEGORY_TAGS.map((t) => [`label:${t}`, `tag:${t} AND NOT tag:trash`]),
+    DOMAIN_TAGS.map((domain) => [`domain:${domain}`, `tag:${MAIL_CONTRACT.domainTagPrefix}${domain}`]),
   ),
   "label:hide": "tag:hide",
   unified: "tag:inbox",
@@ -275,22 +260,12 @@ function resolveQuery(query: string): string {
   return SAVED_SEARCHES[query] ?? query;
 }
 
-function exclusiveCategoryOps(category: string): string[] {
-  const ops = [`+${category}`];
-  for (const c of CATEGORY_TAGS) {
-    if (c !== category) ops.push(`-${c}`);
-  }
-  return ops;
-}
-
 function clearAllCustomOps(): string[] {
-  // Protected flags (e.g. `keep`, the family/friends preservation tag) are
-  // never stripped by bulk clears — the keep-shield and the mail-janitor's
-  // exclusions depend on them surviving.
-  const protectedFlags = TAXONOMY.protectedFlags ?? [];
-  return [...CATEGORY_TAGS, ...FLAG_TAGS, ...JUNK_TAGS]
-    .filter((t) => !protectedFlags.includes(t))
-    .map((t) => `-${t}`);
+  return [
+    ...DOMAIN_TAGS.map((domain) => `${MAIL_CONTRACT.domainTagPrefix}${domain}`),
+    ...TRAIT_TAGS.map((trait) => `${MAIL_CONTRACT.traitTagPrefix}${trait}`),
+    ...JUNK_TAGS,
+  ].map((tag) => `-${tag}`);
 }
 
 function flattenShow(data: unknown): unknown[] {
@@ -500,8 +475,7 @@ export function mailTools(): ToolDef[] {
       name: "hwc_mail",
       description:
         "Mail management. Actions: search, read, send, reply, tag, sync, health, accounts, folders. " +
-        "Mutations route through action=tag: tag_action=archive|trash|delete (delete==trash), " +
-        "or tag_action=set-triage with triage=act|look|bulk|junk to replace the attention state.",
+        "Workflow state changes belong to hwc_mail_triage so they are recorded as human decisions.",
       inputSchema: {
         type: "object",
         properties: {
@@ -544,27 +518,14 @@ export function mailTools(): ToolDef[] {
             type: "string",
             enum: [
               "archive", "trash", "delete", "untrash", "spam", "unspam",
-              "read", "unread", "clear-categories", "set-triage",
+              "read", "unread", "clear-metadata",
             ],
-            description: "[tag] Named action (maps to correct tag combination). delete==trash. set-triage requires `triage`.",
-          },
-          triage: {
-            type: "string",
-            enum: [...TRIAGE_BUCKETS],
-            description: "[tag] With tag_action=set-triage: target attention state.",
+            description: "[tag] Named action (maps to correct tag combination). delete==trash.",
           },
           tags: {
             type: "array",
             items: { type: "string" },
             description: "[tag] Raw tag ops: '+tag' to add, '-tag' to remove",
-          },
-          category: {
-            type: "string",
-            description: `[tag] Exclusive category: ${CATEGORY_TAGS.join(", ")}`,
-          },
-          flag: {
-            type: "string",
-            description: "[tag] Additive flag: '+action', '-action', '+pending', '-pending'",
           },
           // [sync] params
           wait: {
@@ -673,44 +634,17 @@ export function mailTools(): ToolDef[] {
             const query = resolveQuery(rawQuery);
             const actionName = args.tag_action as string | undefined;
             const rawTags = args.tags as string[] | undefined;
-            const category = args.category as string | undefined;
-            const flag = args.flag as string | undefined;
 
             let ops: string[];
             let mode: string;
 
-            if (actionName === "set-triage") {
-              // Replace the triage bucket: needs an explicit target bucket.
-              const target = args.triage as string | undefined;
-              if (!target || !TRIAGE_BUCKETS.includes(target as TriageBucket)) {
-                return mcpError({ type: "VALIDATION_ERROR", message: `tag_action=set-triage requires triage one of: ${TRIAGE_BUCKETS.join(", ")}`, suggestion: "Pass triage=act|look|bulk|junk" });
-              }
-              ops = replaceTriageOps(target as TriageBucket);
-              mode = `triage:${target}`;
-            } else if (actionName) {
+            if (actionName) {
               const actionMap = mailTagActions();
               ops = actionMap[actionName];
               if (!ops) {
                 return mcpError({ type: "VALIDATION_ERROR", message: `Unknown action '${actionName}'. Valid: ${Object.keys(actionMap).join(", ")}`, suggestion: "Use one of the supported actions" });
               }
               mode = `action:${actionName}`;
-            } else if (category) {
-              if (!CATEGORY_TAGS.includes(category)) {
-                return mcpError({ type: "VALIDATION_ERROR", message: `Unknown category '${category}'. Valid: ${CATEGORY_TAGS.join(", ")}`, suggestion: "Use one of the defined category tags" });
-              }
-              ops = exclusiveCategoryOps(category);
-              mode = `category:${category}`;
-            } else if (flag) {
-              const flagMatch = flag.match(/^([+-])([a-zA-Z]+)$/);
-              if (!flagMatch) {
-                return mcpError({ type: "VALIDATION_ERROR", message: `Invalid flag format: '${flag}'. Use '+action' or '-pending'.`, suggestion: "Flag format is +name or -name where name is: " + FLAG_TAGS.join(", ") });
-              }
-              const [, op, name] = flagMatch;
-              if (!FLAG_TAGS.includes(name)) {
-                return mcpError({ type: "VALIDATION_ERROR", message: `Unknown flag '${name}'. Valid: ${FLAG_TAGS.join(", ")}`, suggestion: "Use one of the defined flag tags" });
-              }
-              ops = [`${op}${name}`];
-              mode = `flag:${op}${name}`;
             } else if (rawTags && rawTags.length > 0) {
               for (const t of rawTags) {
                 if (!/^[+-][a-zA-Z0-9_:/.@-]+$/.test(t)) {
@@ -720,7 +654,7 @@ export function mailTools(): ToolDef[] {
               ops = rawTags;
               mode = "raw";
             } else {
-              return mcpError({ type: "VALIDATION_ERROR", message: "Specify tag_action, tags, category, or flag.", suggestion: "Provide one of: tag_action (named preset), tags (raw ops), category (exclusive), or flag (additive)" });
+              return mcpError({ type: "VALIDATION_ERROR", message: "Specify tag_action or tags.", suggestion: "Use hwc_mail_triage for recorded workflow-state changes" });
             }
 
             const nm = await notmuchBin();
@@ -983,8 +917,9 @@ export function mailTools(): ToolDef[] {
             data: {
               accounts: ACCOUNTS,
               savedSearches: Object.keys(SAVED_SEARCHES),
-              categoryTags: CATEGORY_TAGS,
-              flagTags: FLAG_TAGS,
+              states: MAIL_STATES,
+              domains: DOMAIN_TAGS,
+              traits: TRAIT_TAGS,
             },
           };
         }

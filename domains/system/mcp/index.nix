@@ -33,13 +33,8 @@ let
   crmSrcDir = "${paths.user.home}/600_apps/hwc-crm";
   crmMcpPython = pkgs.python3.withPackages (ps: with ps; [ mcp httpx ]);
 
-  # Mail taxonomy — build-time import of the canonical registry
-  # (domains/mail/taxonomy/, see docs/plans/unified-triage-architecture.md).
-  # Baked to a store-path JSON that mail.ts loads at startup, so the gateway's
-  # tag vocabulary comes from the same commit as the notmuch rules and the
-  # triage prompt — no runtime handoff between the HM and system lanes.
-  mailTaxonomyJson = pkgs.writeText "mail-taxonomy.json"
-    (import ../../mail/taxonomy/lib.nix { inherit lib; }).jsonText;
+  # One versioned workflow/Domain/trait vocabulary for Laya, aerc, and MCP.
+  mailClassifierContract = "${inputs.system-one}/scripts/mail_classifier_contract.json";
 
   # JT config (options from parts/jt.nix)
   jtCfg = config.hwc.system.mcp.jt;
@@ -297,9 +292,7 @@ in
         HWC_UMAMI_WEBSITE_ID = config.hwc.business.umami.websiteId;
         HWC_UMAMI_DATABASE = config.hwc.business.umami.databaseName;
 
-        # Canonical mail taxonomy (categories/flags/triage buckets) for
-        # hwc_mail — store path, rebuilt with the config (see let-binding).
-        HWC_MAIL_TAXONOMY_FILE = "${mailTaxonomyJson}";
+        HWC_MAIL_CLASSIFIER_CONTRACT_FILE = mailClassifierContract;
 
         # Retriage trigger file (hwc_mail_triage action=retriage touches it;
         # the mail-retriage path unit in business/morning-briefing watches it).
@@ -360,6 +353,8 @@ in
             # Mail tools need write access: notmuch tag (Xapian DB), sync-mail (mbsync marker + lock)
             "${mailRoot}/Maildir"
             "${paths.user.home}/.cache"
+            # Mail workflow writes must record human decisions in the case ledger.
+            "/var/lib/hwc/mail-classifier"
             # GPG needs write for lock files and random_seed during pass decrypt
             "${paths.user.home}/.gnupg"
             # msmtp logs here

@@ -12,28 +12,36 @@ let
             pathBase = config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail";
         in if nmRoot != "" then nmRoot else "${pathBase}/Maildir";
 
-    # `now` is the managed decision queue. The domain folders below are durable
-    # tag-backed history: archiving completes a decision without making the
-    # message disappear from family/datax/hwc.
-    currentInbox = "tag:inbox AND tag:${tags.currentTag} AND NOT tag:trash AND NOT tag:attention/bulk AND NOT tag:attention/junk";
-    # Legacy unread mail remains outside the daily surface until a bounded
-    # cohort is deliberately promoted into the managed queue.
-    legacyBacklog = "tag:inbox AND tag:unread AND NOT tag:${tags.currentTag} AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:trash AND NOT tag:triage/noise";
+    stateTag = state: "${mailContract.stateTagPrefix}${state}";
+    stateQueries = lib.concatStringsSep "\n" (map (state:
+      "    ${state} = tag:${stateTag state}"
+    ) mailContract.states);
+    activeStateQuery = lib.concatStringsSep " OR "
+      (map (state: "tag:${stateTag state}") mailContract.states);
+    legacyBacklog = "tag:inbox AND NOT (${activeStateQuery}) AND NOT tag:${mailContract.completedTag} AND NOT tag:trash";
+    domainDisplay = {
+      hwc = "HWC"; datax = "DataX"; family = "Family";
+      personal = "Personal"; other = "Other";
+    };
+    stateDisplay = { "do" = "DO"; did = "DID"; look = "LOOK"; junk = "JUNK"; };
+    templateCases = prefix: items: display:
+      lib.concatStringsSep " " (map (item:
+        ''(case `^${prefix}${item}$` "${display.${item} or item}")''
+      ) items);
+    domainCases = templateCases mailContract.domainTagPrefix mailContract.domains domainDisplay + '' (exclude `.*`)'';
+    stateCases = templateCases mailContract.stateTagPrefix mailContract.states stateDisplay + '' (exclude `.*`)'';
+    manualFactTags = map (tag: tag.tag)
+      (lib.filter (tag: !(lib.elem tag.tag [ "action" "pending" ])) tags.flagTags);
+    traitCases = templateCases mailContract.traitTagPrefix mailContract.factTags {}
+      + " " + templateCases "" manualFactTags {} + '' (exclude `.*`)'';
     # Final receivers that are allowed to attest Authentication-Results. Aerc's
     # RFC 8058 unsubscribe command rejects all other headers before acting; do
     # not replace this exact list with the documented debugging wildcard (`*`).
     trustedAuthResults = [ "^mail\\.protonmail\\.ch$" "^mx\\.google\\.com$" ];
 
   queries = ''
-    # ── Calm daily surface: one queue plus durable domain history ──
-    now            = ${currentInbox}
-    family         = (tag:category/family OR tag:family) AND NOT tag:trash
-    datax          = (tag:category/datax OR tag:datax) AND NOT tag:trash
-    hwc            = (tag:category/hwc OR tag:hwc OR tag:work OR tag:office OR tag:hwcmt) AND NOT tag:trash
-    personal       = tag:category/personal AND NOT tag:trash
-    other          = tag:category/other AND NOT tag:trash
-    later          = tag:later AND NOT tag:trash
-    junk           = tag:trash AND tag:attention/junk
+    # ── Workflow state is the sidebar; Domain and Tags are columns/filters ──
+${stateQueries}
     backlog        = ${legacyBacklog}
 
     # ── Legacy drill-downs (hidden from the sidebar, still directly addressable) ──
@@ -50,10 +58,6 @@ let
     money          = tag:inbox AND (tag:finance OR tag:bank OR tag:insurance) AND NOT tag:trash
     growth         = tag:inbox AND (tag:admin OR tag:coaching) AND NOT tag:trash
     system         = tag:inbox AND (tag:tech OR tag:website) AND NOT tag:trash
-
-    # ── Triage buckets (tag-backed; shared with the workbench kanban and the
-    # morning briefing — placement IS the live triage/* tag) ──
-${triageQueries}
 
     # ── Bulk / review ──
     all            = NOT tag:trash
@@ -83,10 +87,10 @@ ${tagQueries}
     from                = Eric <eric@iheartwoodcraft.com>
     outgoing            = ${pkgs.msmtp}/bin/msmtp
     trusted-authres     = ${lib.concatStringsSep "," trustedAuthResults}
-    folders             = now,hwc,datax,family,personal,other,later,junk
-    default             = now
+    folders             = do,did,look,junk
+    default             = do
     enable-folders-sort = true
-    folders-sort        = now,hwc,datax,family,personal,other,later,junk
+    folders-sort        = do,did,look,junk
   '';
 
   accountsFile = pkgs.writeText "aerc-accounts.conf" accountsConf;
@@ -100,15 +104,6 @@ ${tagQueries}
   # Category tag names for inbox-scoped queries
   categoryNames = builtins.listToAttrs (map (t: { name = t.tag; value = true; }) tags.categoryTags);
   isCategoryTag = t: categoryNames ? ${t.tag};
-
-  # Triage bucket folders — names contain "/" so dirlist-tree nests them under
-  # one "triage" node. Inbox-scoped to mirror the workbench board's window.
-  triageQueries = lib.concatStringsSep "\n" (map (b:
-    let name = tags.triageTag b;
-        n = 18 - builtins.stringLength name;
-        pad = if n > 0 then lib.fixedWidthString n " " "" else "";
-    in "    ${name}${pad} = tag:${tags.triageTag b} AND tag:inbox AND NOT tag:trash"
-  ) tags.triageBuckets);
 
   # Derive notmuch query-map entries from tagDefs
   # Category tags are inbox-scoped (only show active items); flag tags show all
@@ -154,9 +149,9 @@ in
       enable-osc8 = true
 
       [ui]
-      index-columns = state<3,date<10,from<22,subject<*
+      index-columns = from<20,subject<*,date<10,domain<9,state<5,tags<24
       # Column header row above the msglist (forked aerc feature), styled via the
-      # msglist_header styleset object. Labels: state date from subject.
+      # msglist_header styleset object. Labels: from subject date domain state tags.
       index-headers = true
       threading-enabled = true
       sort = -r date
@@ -168,20 +163,22 @@ in
       which-key-delay = 350ms
       # Labels for group (prefix) keys in the popover, so <Space>g shows
       # "go: folders" not "+20". Mirrors domains/home/keymap/grammar.nix groups.
-      which-key-groups = g:go (folders), m:mark/classify, c:categories, v:flags, f:find, r:rules, s:sort, t:toggle/triage, b:buffer, y:yank, d:delete, w:window, p:project, o:open, q:quit
+      which-key-groups = g:go (states), m:mark/tags, v:tags, f:find/filter, r:rules, s:sort, t:state/domain/fold, b:buffer, y:yank, d:delete, w:window, p:project, o:open, q:quit
       styleset-name = hwc
       dirlist-left = {{.Style .Folder .Folder}}
-      dirlist-right = {{if eq .Folder "now"}}{{if .Unread}}{{humanReadable .Unread}}{{end}}{{end}}
+      dirlist-right = {{if .Exists}}{{humanReadable .Exists}}{{end}}
       dirlist-tree = false
       mouse-enabled = true
       fuzzy-complete = true
-      tab-title-account = mail{{if .Unread "now"}} ({{.Unread "now"}}){{end}}
+      tab-title-account = mail{{if .Exists "do"}} ({{.Exists "do"}} DO){{end}}
 
       # Live column templates
-      column-state   = {{if .IsUnread}}●{{else}} {{end}}{{if .IsFlagged}}★{{end}}
-      column-date    = {{.DateAutoFormat .Date.Local}}
       column-from    = {{index (.From | names) 0}}
       column-subject = {{.ThreadPrefix}}{{if .ThreadFolded}}{{printf "{%d}" .ThreadCount}}{{end}}{{.Subject}}
+      column-date    = {{.DateAutoFormat .Date.Local}}
+      column-domain  = {{map .Labels ${domainCases} | join ","}}
+      column-state   = {{map .Labels ${stateCases} | join ","}}
+      column-tags    = {{map .Labels ${traitCases} | join ","}}
       column-separator = " | "
 
       [viewer]

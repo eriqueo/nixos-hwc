@@ -22,8 +22,8 @@ let
   notifyCfg = config.hwc.notifications.notify;
   paths     = config.hwc.paths;
   agentDir  = "${paths.nixos}/domains/automation/mail-janitor";
-  # One source of truth: the same trashSenders that drive the local notmuch rules
-  # also tell the janitor which marketing/lead-gen senders are junk.
+  # This legacy deny list is scoped to the Gmail janitor. It does not drive the
+  # local notmuch workflow; Laya owns local classification.
   mailRules = config.home-manager.users.eric.hwc.mail.notmuch.rules or {};
   denyDomains = mailRules.trashSenders or [];
 in

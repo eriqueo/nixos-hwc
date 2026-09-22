@@ -3,24 +3,23 @@
  *
  * READS (board/summary) come from the CACHED mail-triage produced daily by
  * domains/business/morning-briefing (run.sh injects a `.mail_triage` key into
- * output/briefing.json), re-bucketed by the LIVE notmuch attention/* tags so
- * moves persist, and filtered to threads still in the inbox.
+ * output/briefing.json), re-bucketed by LIVE notmuch state/* tags so human
+ * decisions persist. Completed threads have no active state and disappear.
  *
  * WRITES are the generic workbench card_actions verbs ({action, id[,target]}):
- * triage-<bucket> / move (replace the attention/* tag set), archive, trash,
- * mark-read, flag-action — all plain notmuch tag ops on `thread:<id>`, the same store
- * aerc and the briefing read. Never runs Claude.
+ * state-<state> / move, archive, and trash route through the classifier ledger,
+ * the same authoritative human-decision path as aerc. Never runs an LLM.
  *
  * Path is late-bound from env HWC_BRIEFING_JSON, defaulting to the real
  * pipeline output path. Missing/unparseable file or failed live search → coded read failure; writes fail loud (a workbench write must never fake success).
  */
 
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
 import { mcpError } from "../errors.js";
-import { TRIAGE_BUCKETS, triageTag, mailTagActions } from "./mail.js";
+import { MAIL_STATES, mailStateTag, mailTagActions } from "./mail.js";
 
 /** Default briefing output path (run.sh writes here, then injects .mail_triage). */
 const DEFAULT_BRIEFING_JSON =
@@ -46,25 +45,25 @@ interface MailTriage {
   query_window_hours?: number;
   total_unread?: number;
   buckets: {
-    act: TriageThread[];
+    do: TriageThread[];
+    did: TriageThread[];
     look: TriageThread[];
-    bulk: TriageThread[];
     junk: TriageThread[];
   };
   stats: {
-    act_count: number;
+    do_count: number;
+    did_count: number;
     look_count: number;
-    bulk_count: number;
     junk_count: number;
   };
 }
 
-type Bucket = "act" | "look" | "bulk" | "junk";
+type Bucket = "do" | "did" | "look" | "junk";
 
 const PRIORITY: Record<Bucket, "critical" | "normal" | "low"> = {
-  act: "critical",
+  do: "critical",
+  did: "normal",
   look: "normal",
-  bulk: "low",
   junk: "low",
 };
 
@@ -102,7 +101,7 @@ function notmuchInbox(ids: readonly string[]): Promise<Inbox> {
       execFile(
         NOTMUCH_CANDIDATES[i],
         ["search", "--format=json", "--output=summary",
-          `(tag:inbox OR tag:later OR tag:trash) AND (${ids.map(id => `thread:${id}`).join(" OR ")})`],
+          `(${MAIL_STATES.map(state => `tag:${mailStateTag(state)}`).join(" OR ")}) AND (${ids.map(id => `thread:${id}`).join(" OR ")})`],
         { timeout: 3500, maxBuffer: 2 * 1024 * 1024 },
         (err, stdout) => {
           if (err && (err as NodeJS.ErrnoException).code === "ENOENT") {
@@ -134,15 +133,11 @@ function notmuchInbox(ids: readonly string[]): Promise<Inbox> {
 }
 
 /**
- * Re-bucket the cached triage by the LIVE notmuch `attention/<state>` tags so a
- * workbench move survives a refresh
+ * Re-bucket the cached snapshot by LIVE `state/<state>` tags.
  * WITHOUT re-running the daily briefing. The briefing remains the content
  * source (subject/summary/sender); the tag is the source of truth for
- * PLACEMENT. A thread carrying no attention/* tag keeps its cached
- * bucket. Threads no longer in the inbox (archived/trashed since the cache
- * was written — including via this tool's own verbs) are dropped, so an
- * archive durably removes the card instead of resurrecting on refresh.
- * notmuch unavailable → coded failure; a successful empty inbox empties the board.
+ * PLACEMENT. A thread carrying no active state is completed and is dropped,
+ * so archive never resurrects from stale JSON.
  */
 export async function reflectLiveBuckets(
   cached: Record<Bucket, TriageThread[]>,
@@ -152,23 +147,25 @@ export async function reflectLiveBuckets(
   // Only cached threads can appear on this surface. Scanning the entire inbox
   // starves khal under the gateway CPU quota. Bound argv/query work at 512 IDs;
   // overflow or invalid cache identity fails visibly, never falls back to all mail.
-  const ids = [...new Set(TRIAGE_BUCKETS.flatMap(bucket =>
+  const ids = [...new Set(MAIL_STATES.flatMap(bucket =>
     cached[bucket as Bucket].map(thread => thread.thread_id)))];
   if (ids.length > 512 || ids.some(id => typeof id !== "string" || !/^[0-9a-f]{1,64}$/.test(id))) {
     throw Error("Mail triage requires at most 512 valid hexadecimal thread IDs");
   }
-  if (ids.length === 0) return {act: [], look: [], bulk: [], junk: []};
+  if (ids.length === 0) return {do: [], did: [], look: [], junk: []};
   const inbox = await readInbox(ids);
   const seen = new Set<string>();
-  const out: Record<Bucket, TriageThread[]> = { act: [], look: [], bulk: [], junk: [] };
-  for (const bucket of TRIAGE_BUCKETS) {
+  const out: Record<Bucket, TriageThread[]> = { do: [], did: [], look: [], junk: [] };
+  for (const bucket of MAIL_STATES) {
     for (const thread of cached[bucket as Bucket]) {
       const tags = inbox.get(thread.thread_id);
       if (!tags || seen.has(thread.thread_id)) continue;
       seen.add(thread.thread_id);
-      // Keep the established last-bucket precedence if a thread has multiple tags.
-      const live = [...TRIAGE_BUCKETS].reverse().find(b => tags.has(triageTag(b))) as Bucket | undefined;
-      out[live ?? (bucket as Bucket)].push(thread);
+      // During new-reply ingestion an old DID plus the new message's DO can
+      // briefly coexist. Contract order is conservative: DO wins until Laya
+      // normalizes the whole thread.
+      const live = MAIL_STATES.find(state => tags.has(mailStateTag(state))) as Bucket | undefined;
+      if (live) out[live].push(thread);
     }
   }
   return out;
@@ -176,24 +173,7 @@ export async function reflectLiveBuckets(
 
 /* ─── Write verbs (generic workbench card_actions path) ──────────────────── */
 
-/** Tag ops per verb. triage-<bucket> and move replace the attention/* set. */
-function verbTagOps(verb: string, target?: string): string[] | null {
-  const bucketOf = (b: string): string[] | null =>
-    (TRIAGE_BUCKETS as readonly string[]).includes(b)
-      ? [
-          ...TRIAGE_BUCKETS.filter((o) => o !== b).map((o) => `-${triageTag(o)}`),
-          `+${triageTag(b)}`,
-        ]
-      : null;
-  if (verb === "move") return target ? bucketOf(target) : null;
-  if (verb.startsWith("triage-")) return bucketOf(verb.slice("triage-".length));
-  if (verb === "archive" || verb === "trash") return mailTagActions()[verb];
-  if (verb === "mark-read") return mailTagActions().read;
-  if (verb === "flag-action") return ["+action"];
-  return null;
-}
-
-const WRITE_VERBS = ["move", "archive", "trash", "mark-read", "flag-action", "retriage"] as const;
+const WRITE_VERBS = ["move", "archive", "trash", "mark-read", "retriage"] as const;
 
 /** Apply tag ops to thread:<id>. Resolves an error string or null on success. */
 function notmuchTagThread(id: string, ops: string[]): Promise<string | null> {
@@ -218,6 +198,42 @@ function notmuchTagThread(id: string, ops: string[]): Promise<string | null> {
     };
     tryBin(0);
   });
+}
+
+function notmuchMbox(id: string): Promise<{bin: string; mbox: string}> {
+  return new Promise((resolve, reject) => {
+    const tryBin = (i: number): void => {
+      if (i >= NOTMUCH_CANDIDATES.length) return reject(new Error("notmuch binary not found"));
+      const bin = NOTMUCH_CANDIDATES[i];
+      execFile(bin, ["show", "--format=mbox", "--entire-thread=true", `thread:${id}`],
+        { timeout: 10_000, maxBuffer: 20 * 1024 * 1024 }, (err, stdout, stderr) => {
+          if (err && (err as NodeJS.ErrnoException).code === "ENOENT") return tryBin(i + 1);
+          if (err) return reject(new Error((stderr || String(err)).slice(0, 300)));
+          resolve({bin, mbox: stdout});
+        });
+    };
+    tryBin(0);
+  });
+}
+
+/** Run the same durable human-decision command used by aerc. */
+async function classifierMutation(id: string, kind: "state" | "outcome", value: string): Promise<string | null> {
+  try {
+    const {bin, mbox} = await notmuchMbox(id);
+    const args = kind === "state"
+      ? ["correct", "--db", "/var/lib/hwc/mail-classifier/ledger.sqlite", "--notmuch", bin, "--state", value]
+      : ["transition", "--db", "/var/lib/hwc/mail-classifier/ledger.sqlite", "--notmuch", bin, "--outcome", value];
+    return await new Promise((resolve) => {
+      const child = spawn("/run/current-system/sw/bin/mail-classifier-runtime", args, {stdio: ["pipe", "ignore", "pipe"]});
+      let stderr = "";
+      child.stderr.on("data", chunk => { stderr += String(chunk); });
+      child.on("error", error => resolve(String(error).slice(0, 300)));
+      child.on("close", code => resolve(code === 0 ? null : (stderr || `classifier exited ${code}`).slice(0, 300)));
+      child.stdin.end(mbox);
+    });
+  } catch (error) {
+    return String(error).slice(0, 300);
+  }
 }
 
 /** Map a thread to a kanban card. */
@@ -252,10 +268,9 @@ export function mailTriageTools(
     {
       name: "hwc_mail_triage",
       description:
-        "Mail triage board (Triage Surface Contract). READS: action=board (default) returns a kanban of " +
-        "Act/Look/Bulk/Junk columns from the cached Laya classification, reflected from live " +
-        "notmuch attention/* tags; action=summary returns a compact overview; action=digest returns " +
-        "up to eight Act/Look threads. Writes hit the same notmuch tags aerc and the briefing read.",
+        "Mail workflow board. READS: action=board (default) returns DO/DID/LOOK/JUNK from cached Laya content " +
+        "reflected through live state/* tags; action=summary is compact; action=digest returns up to eight DO items. " +
+        "Writes use the same durable human-decision ledger as aerc.",
       inputSchema: {
         type: "object",
         properties: {
@@ -263,12 +278,12 @@ export function mailTriageTools(
             type: "string",
             enum: [
               "board", "summary", "digest",
-              ...TRIAGE_BUCKETS.map((b) => `triage-${b}`),
+              ...MAIL_STATES.map((state) => `state-${state}`),
               ...WRITE_VERBS,
             ],
             default: "board",
             description:
-              "board/summary/digest = reads; triage-<bucket>, move (+target), archive, trash, mark-read, flag-action = per-thread writes (require id)",
+              "board/summary/digest = reads; state-<state>, move (+target), archive, trash, mark-read = per-thread writes (require id)",
           },
           id: {
             type: "string",
@@ -276,8 +291,8 @@ export function mailTriageTools(
           },
           target: {
             type: "string",
-            enum: [...TRIAGE_BUCKETS],
-            description: "[move] destination bucket (the kanban column id)",
+            enum: [...MAIL_STATES],
+            description: "[move] destination workflow state",
           },
         },
       },
@@ -324,15 +339,23 @@ export function mailTriageTools(
               suggestion: "Pass the kanban card id as `id`",
             });
           }
-          const ops = verbTagOps(action, args.target as string | undefined);
-          if (ops === null) {
+          const requestedState = action === "move"
+            ? args.target as string | undefined
+            : action.startsWith("state-") ? action.slice("state-".length) : undefined;
+          if ((action === "move" || action.startsWith("state-")) &&
+              (!requestedState || !MAIL_STATES.includes(requestedState))) {
             return mcpError({
               type: "VALIDATION_ERROR",
               message: `unknown verb or missing/invalid target for '${action}'`,
-              suggestion: `Verbs: ${TRIAGE_BUCKETS.map((b) => `triage-${b}`).join(", ")}, move (target=${TRIAGE_BUCKETS.join("|")}), archive, trash, mark-read, flag-action`,
+              suggestion: `Verbs: ${MAIL_STATES.map((state) => `state-${state}`).join(", ")}, move (target=${MAIL_STATES.join("|")}), archive, trash, mark-read`,
             });
           }
-          const err = await notmuchTagThread(id, ops);
+          let err: string | null;
+          if (requestedState) err = await classifierMutation(id, "state", requestedState);
+          else if (action === "archive") err = await classifierMutation(id, "outcome", "done");
+          else if (action === "trash") err = await classifierMutation(id, "outcome", "trash");
+          else if (action === "mark-read") err = await notmuchTagThread(id, mailTagActions().read);
+          else err = "unknown workflow action";
           if (err !== null) {
             return mcpError({
               type: "COMMAND_FAILED",
@@ -342,8 +365,8 @@ export function mailTriageTools(
           }
           return {
             status: "ok",
-            message: `${action} → thread:${id} (${ops.join(" ")})`,
-            data: { action, id, ops },
+            message: `${action} → thread:${id}`,
+            data: { action, id, state: requestedState ?? null },
           };
         }
 
@@ -351,28 +374,27 @@ export function mailTriageTools(
         const triage = await loadTriage(briefingPath);
 
         if (!triage) return mcpError({ type: "UNAVAILABLE", message: "Mail digest is unavailable. Open aerc or run mail triage." });
-        // Reflect any persisted moves: re-bucket cached threads by their live
-        // attention/* notmuch tag so a workbench column move survives a refresh.
+        // Reflect persisted decisions from their live active-state tag.
         let reflected: Record<Bucket, TriageThread[]>;
         try { reflected = await reflectLiveBuckets({
-          act: bucketThreads(triage, "act"),
+          do: bucketThreads(triage, "do"),
+          did: bucketThreads(triage, "did"),
           look: bucketThreads(triage, "look"),
-          bulk: bucketThreads(triage, "bulk"),
           junk: bucketThreads(triage, "junk"),
         }, readInbox, action === "digest"); } catch {
           return mcpError({ type: "COMMAND_FAILED", message: "Cannot verify inbox membership. Open aerc or refresh." });
         }
-        const act = reflected.act;
+        const doMail = reflected.do;
+        const did = reflected.did;
         const look = reflected.look;
-        const bulk = reflected.bulk;
         const junk = reflected.junk;
 
         // Counts derive from the REFLECTED arrays (post-move), not the stale
         // cached stats — a move shifts a thread between buckets at read time.
-        const actCount = triage.stats?.act_count ?? act.length;
-        const lookCount = triage.stats?.look_count ?? look.length;
-        const bulkCount = triage.stats?.bulk_count ?? bulk.length;
-        const junkCount = triage.stats?.junk_count ?? junk.length;
+        const doCount = doMail.length;
+        const didCount = did.length;
+        const lookCount = look.length;
+        const junkCount = junk.length;
         const totalUnread = triage?.total_unread ?? 0;
         const generatedAt = triage?.generated_at ?? null;
 
@@ -381,41 +403,39 @@ export function mailTriageTools(
           generated_at: generatedAt,
           total_unread: totalUnread,
           stats: {
-            act_count: actCount,
+            do_count: doCount,
+            did_count: didCount,
             look_count: lookCount,
-            bulk_count: bulkCount,
             junk_count: junkCount,
           },
         };
 
         if (action === "digest") {
-          // Eight visible Now items, actions first; reading does not remove them.
-          const items = [...act.map(t => toCard(t, "act")),
-                         ...look.map(t => toCard(t, "look"))];
-          return { status: "ok", message: "Actionable mail", data: compact,
-            view: contract("list", "Mail needing attention", {
+          const items = doMail.map(t => toCard(t, "do"));
+          return { status: "ok", message: "Mail to do", data: compact,
+            view: contract("list", "Mail to do", {
               items: items.slice(0, 8), total: items.length,
               remaining: Math.max(0, items.length - 8),
-              summary: `${actCount} act · ${lookCount} look · classified ${generatedAt ?? "unknown"}`,
+              summary: `${doCount} do · ${didCount} waiting · classified ${generatedAt ?? "unknown"}`,
             }, { generated_at: generatedAt, source: "hwc_mail_triage" }) };
         }
 
         if (action === "summary") {
-          const highlights = act.slice(0, 5).map((t) => t.subject);
+          const highlights = doMail.slice(0, 5).map((t) => t.subject);
           const summaryText = triage
             ? `${totalUnread} unread (as of ${clockFromIso(generatedAt ?? undefined)})`
             : "no triage yet";
           return {
             status: "ok",
             message: triage
-              ? `Mail: ${actCount} act, ${lookCount} look, ${bulkCount} later, ${junkCount} junk`
+              ? `Mail: ${doCount} do, ${didCount} did, ${lookCount} look, ${junkCount} junk`
               : "No cached mail triage found",
             data: compact,
             view: contract(
               "text",
               "Mail",
               {
-                greeting: `${actCount} act · ${lookCount} look · ${bulkCount} later · ${junkCount} junk`,
+                greeting: `${doCount} do · ${didCount} did · ${lookCount} look · ${junkCount} junk`,
                 summary: summaryText,
                 highlights,
               },
@@ -426,16 +446,16 @@ export function mailTriageTools(
 
         // action === "board" (default)
         const columns = [
-          { id: "act", title: "Act", cards: act.map((t) => toCard(t, "act")) },
+          { id: "do", title: "DO", cards: doMail.map((t) => toCard(t, "do")) },
+          { id: "did", title: "DID", cards: did.map((t) => toCard(t, "did")) },
           { id: "look", title: "Look", cards: look.map((t) => toCard(t, "look")) },
-          { id: "bulk", title: "Later", cards: bulk.map((t) => toCard(t, "bulk")) },
           { id: "junk", title: "Junk", cards: junk.map((t) => toCard(t, "junk")) },
         ];
 
         return {
           status: "ok",
           message: triage
-            ? `Mail board: ${actCount} act, ${lookCount} look, ${bulkCount} later, ${junkCount} junk`
+            ? `Mail board: ${doCount} do, ${didCount} did, ${lookCount} look, ${junkCount} junk`
             : "No cached mail triage found — empty board",
           data: compact,
           view: contract(

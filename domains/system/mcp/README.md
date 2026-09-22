@@ -326,7 +326,7 @@ The service runs `dist/index.js`. Editing `src/*.ts` without running `npx tsc` m
 | `hwc_mail_health` | Health timer state, Bridge status, sync freshness, notmuch stats. |
 | `hwc_mail_search` | Search or count mail. Saved search names or raw notmuch queries. count_only flag. |
 | `hwc_mail_read` | Read message/thread by notmuch ID. Headers + body text. |
-| `hwc_mail_tag` | Tag or act on messages. action (archive/trash/etc), category, flag, or raw tag ops. |
+| `hwc_mail_tag` | Generic mail tags and outcomes. Workflow state writes use `hwc_mail_triage`. |
 | `hwc_mail_send` | Send via msmtp. Proton accounts, cc/bcc, in-reply-to. |
 | `hwc_mail_reply` | Reply to thread with auto-populated recipients, subject, threading headers. |
 | `hwc_mail_sync` | Trigger full sync cycle. |
@@ -497,7 +497,10 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
-- 2026-09-21: Mail surfaces now consume `act/look/bulk/junk` and preserve Now
+- 2026-09-22: Mail surfaces consume `DO/DID/LOOK/JUNK` from the pinned v2
+  contract. State/outcome writes route through the classifier ledger; completed
+  threads disappear instead of returning from cached JSON.
+- 2026-09-21: Mail surfaces consumed `act/look/bulk/junk` and preserved Now
   items when read. `hwc_tasks_add` accepts a bounded weekly recurrence contract
   for persistent phone reminders.
 
@@ -686,11 +689,11 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 page aggregates from the configured Umami website, with a fourteen-day comparison
 scan and a four-second command deadline. It uses existing peer-authenticated
 PostgreSQL access; no new secret or caller-supplied SQL is exposed.
-`mail-triage.ts` adds `action=digest`: eight Act/Look items, explicit overflow,
+`mail-triage.ts` adds `action=digest`: eight DO items, explicit overflow,
 and the cached classification timestamp. One notmuch JSON snapshot supplies placement
 and tags for at most 512 cached thread IDs within 3.5 seconds and 2 MiB;
 invalid identities, overflow or command failure return a coded error. Reading
-does not remove a Now item.
+does not remove a DO item.
 `calendar.ts` returns `start_date` for seven consecutive days so empty days render.
 Tests in `src/tests/` exercise registered tools and their failure boundaries.
 

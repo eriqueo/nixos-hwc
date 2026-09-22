@@ -1,10 +1,9 @@
 # aerc tag definitions — PRESENTATION layer over the canonical taxonomy.
 # Imported by config.nix (queries, stylesets, column templates) and binds.nix (keybindings).
 #
-# Tag VOCABULARY (categories, flags, groups, displays, spaceKeys) comes from
-# domains/mail/taxonomy/data.nix — the single source of truth shared with the
-# notmuch rules, the MCP gateway, and the triage prompt. Edit the taxonomy,
-# not this file. This file owns only what is aerc-specific: mapping each
+# Optional legacy/manual tag vocabulary comes from domains/mail/taxonomy/data.nix.
+# Workflow State, Domain, and classifier traits come from the separate pinned
+# System One contract. This file owns only what is aerc-specific: mapping each
 # group's palette ROLE to a hex color from the active theme, and the exclusive
 # <Space>m marking / styleset command generation.
 #
@@ -15,7 +14,6 @@
 let
   c = colors;
   taxonomy = (import ../../taxonomy/lib.nix { inherit lib; }).data;
-  currentTag = taxonomy.workflow.currentTag;
 
   # Palette role → hex, with hwc fallbacks. The taxonomy assigns each group a
   # ROLE (accent/info/…); the theme decides what that role looks like.
@@ -42,11 +40,10 @@ let
   customCategories = map (t: t // { color = group.${t.group} or group.system; }) (customData.categories or []);
   customFlags = map (t: t // { color = group.${t.group} or group.urgent; }) (customData.flags or []);
 
-  # Category tags are mutually exclusive — assigning one removes the others.
+  # Legacy category tags remain searchable but are not workflow State or Domain.
   categoryTags = (map (colorize group.system) taxonomy.categories) ++ customCategories;
 
-  # Flag tags coexist with categories (not exclusive) and are NOT inbox-scoped,
-  # so their virtual folders show the full tagged set across all folders.
+  # Optional fact/protection tags coexist with Domain and workflow State.
   flagTags = (map (colorize group.urgent) taxonomy.flags) ++ customFlags;
 
   allTags = flagTags ++ categoryTags;
@@ -96,19 +93,7 @@ let
       removes = lib.concatMapStringsSep " " (n: "-${n}") allToClear;
     in removes;
 
-  # ── Triage buckets (tag-backed, from the taxonomy) ──
-  # Same replace-set semantics as the gateway's hwc_mail set-triage: add the
-  # target triage/<bucket> tag, drop every other triage/* tag. This is what
-  # lets an aerc keypress move a card on the workbench kanban and vice versa.
-  triageBuckets = taxonomy.triage.buckets;
-  triageTag = b: "${taxonomy.triage.tagPrefix}${b}";
-  setTriageCmd = b:
-    "+${taxonomy.triage.tagPrefix}${b}"
-    + lib.concatMapStrings (o: " -${taxonomy.triage.tagPrefix}${o}")
-        (lib.filter (o: o != b) taxonomy.triage.buckets);
-
 in {
   inherit categoryTags flagTags allTags tagStyle categoryNames exclusiveCmd clearFlagsCmd clearAllCmd;
   inherit group tagStyleLines;
-  inherit triageBuckets triageTag setTriageCmd currentTag;
 }

@@ -596,7 +596,9 @@
           "<Space>fT = :query -f -n tag-search tag:"
           "<Space>fc = :clear -s<Enter>"
           "<Space>fu = :unsubscribe -s<Enter>"
-          "<Space>mcy = :modify-labels +family"
+          "<Space>ta = :pipe -m mail-classifier correct --state do<Enter>"
+          "<Space>td = :pipe -m mail-classifier correct --state did<Enter>"
+          "<Space>tcd = :pipe -m mail-classifier correct --domain datax<Enter>"
         ];
         missing = lib.filter (needle: !(lib.hasInfix needle binds)) required;
       in
@@ -662,74 +664,66 @@
         touch "$out"
       '';
 
-      # The daily decision queue and durable domain history are separate
-      # concepts. Operator-authored sender rules are reviewed in aerc, stored
-      # in a private versioned ledger, and applied before tag:new is cleared.
-      mail-operator-rules = let
+      # Workflow state drives the sidebar; Domain and factual tags are columns
+      # and filters. Laya is the sole automatic content classifier.
+      mail-workflow-v2 = let
         home = self.homeConfigurations."eric@hwc-server".config;
         binds = home.home.file.".config/aerc/binds.conf".text;
         aercConf = home.home.file.".config/aerc/aerc.conf".text;
         queries = home.home.file.".config/aerc/notmuch-queries".text;
         hook = home.home.file."/home/eric/400_mail/Maildir/.notmuch/hooks/post-new".text;
-        operatorRules = home.hwc.mail.notmuch.operatorRules;
-        rulePackages = lib.filter (pkg: lib.getName pkg == "mail-rule") home.home.packages;
         bindLines = lib.splitString "\n" binds;
         bindCount = needle: lib.length (lib.filter (line: lib.hasInfix needle line) bindLines);
-        archiveDisposition = "      a = :modify-labels +archive -inbox -unread<Enter>";
-        trashDisposition = "      d = :modify-labels +trash -inbox -unread<Enter>";
+        archiveDisposition = "      a = :pipe -m mail-classifier transition --outcome done<Enter>";
+        trashDisposition = "      d = :pipe -m mail-classifier transition --outcome trash<Enter>";
         requiredBinds = [
           "<Space>gA = :cf all<Enter>"
-          "<Space>ra = :pipe -m mail-rule review<Enter>"
-          "<Space>rm = :term mail-rule manage<Enter>"
           "<Space>sf = :sort from -r date<Enter>"
           "<Space>ss = :sort subject -r date<Enter>"
         ];
         missingBinds = lib.filter (needle: !(lib.hasInfix needle binds)) requiredBinds;
-        source = ./domains/mail/notmuch/parts/operator-rules.py;
-        tests = ./domains/mail/notmuch/parts/test_operator_rules.py;
         hookFixture = pkgs.writeText "mail-post-new-hook" hook;
       in
-      assert lib.assertMsg (operatorRules.enable && operatorRules.stateDir == "/var/lib/hwc/mail-rules")
-        "mail-operator-rules: server rule ledger is not enabled in backed-up state";
-      assert lib.assertMsg (lib.length rulePackages == 1)
-        "mail-operator-rules: mail-rule is not installed exactly once";
       assert lib.assertMsg (missingBinds == [])
-        "mail-operator-rules: generated server binds are missing ${lib.concatStringsSep ", " missingBinds}";
-      assert lib.assertMsg (bindCount "<Space>ra = :pipe -m mail-rule review<Enter>" == 2
-        && bindCount "<Space>rm = :term mail-rule manage<Enter>" == 2)
-        "mail-operator-rules: sender-rule controls must work in message-list and viewer contexts";
+        "mail-workflow-v2: generated server binds are missing ${lib.concatStringsSep ", " missingBinds}";
       assert lib.assertMsg (bindCount archiveDisposition == 2 && bindCount trashDisposition == 2
         && !(lib.hasInfix ":unmark -a<Enter>:mark -T<Enter>:modify-labels" binds))
-        "mail-operator-rules: archive/trash must preserve marked-message bulk selections";
+        "mail-workflow-v2: archive/trash must preserve marked-message bulk selections";
       assert lib.assertMsg (bindCount "<Space>tt = :fold -t<Enter>" == 1
         && bindCount "<Space>tT = :fold -a<Enter>" == 1
         && !(lib.hasInfix ":toggle-threads<Enter>" binds))
-        "mail-operator-rules: thread fold controls changed unexpectedly";
-      assert lib.assertMsg (bindCount "<Space>ma = :modify-labels +archive -inbox -unread<Enter>" == 1
-        && bindCount "<Space>md = :modify-labels +trash -inbox -unread<Enter>" == 1)
-        "mail-operator-rules: marked-message archive/trash controls changed unexpectedly";
+        "mail-workflow-v2: thread fold controls changed unexpectedly";
+      assert lib.assertMsg (bindCount "<Space>ma = :pipe -m mail-classifier transition --outcome done<Enter>" == 1
+        && bindCount "<Space>md = :pipe -m mail-classifier transition --outcome trash<Enter>" == 1)
+        "mail-workflow-v2: marked-message archive/trash controls changed unexpectedly";
       assert lib.assertMsg (lib.hasInfix "sort = -r date" aercConf)
-        "mail-operator-rules: newest-first is not the default sort";
-      assert lib.assertMsg (lib.hasInfix "now            = tag:inbox AND tag:queue AND NOT tag:trash AND NOT tag:attention/bulk AND NOT tag:attention/junk" queries)
-        "mail-operator-rules: now is no longer the stable decision queue";
-      assert lib.assertMsg (lib.hasInfix "family         = (tag:category/family OR tag:family) AND NOT tag:trash" queries
-        && lib.hasInfix "datax          = (tag:category/datax OR tag:datax) AND NOT tag:trash" queries
-        && lib.hasInfix "hwc            = (tag:category/hwc OR tag:hwc OR tag:work OR tag:office OR tag:hwcmt) AND NOT tag:trash" queries
-        && lib.hasInfix "later          = tag:later AND NOT tag:trash" queries
-        && lib.hasInfix "junk           = tag:trash AND tag:attention/junk" queries
+        "mail-workflow-v2: newest-first is not the default sort";
+      assert lib.assertMsg (lib.hasInfix "do = tag:state/do" queries
+        && lib.hasInfix "did = tag:state/did" queries
+        && lib.hasInfix "look = tag:state/look" queries
+        && lib.hasInfix "junk = tag:state/junk" queries)
+        "mail-workflow-v2: workflow state views regressed";
+      assert lib.assertMsg (!(lib.hasInfix "category/" queries)
+        && !(lib.hasInfix "attention/" queries)
+        && !(lib.hasInfix "tag:queue" queries)
         && lib.hasInfix "all            = NOT tag:trash" queries)
-        "mail-operator-rules: attention/domain/all-mail queries regressed";
-      pkgs.runCommand "mail-operator-rules" {} ''
-        MAIL_RULE_SOURCE=${source} ${pkgs.python3}/bin/python3 ${tests}
+        "mail-workflow-v2: legacy workflow/category folders returned";
+      assert lib.assertMsg (lib.hasInfix "index-columns = from<20,subject<*,date<10,domain<9,state<5,tags<24" aercConf
+        && lib.hasInfix "column-domain" aercConf
+        && lib.hasInfix "column-state" aercConf
+        && lib.hasInfix "column-tags" aercConf)
+        "mail-workflow-v2: workflow columns regressed";
+      pkgs.runCommand "mail-workflow-v2" {} ''
         ${pkgs.python3}/bin/python3 - ${hookFixture} <<'PY'
         import pathlib
         import sys
 
         hook = pathlib.Path(sys.argv[1]).read_text()
-        operator = hook.index("mail-rule apply-new")
-        shield = hook.index("# Shield: kept mail", operator)
-        remove_new = hook.index("# Remove transient new tag", shield)
-        assert operator < shield < remove_new, "operator rules run outside the safe post-new window"
+        folder_state = hook.index("+inbox +state/do")
+        remove_new = hook.index("# Remove transient new tag", folder_state)
+        assert folder_state < remove_new, "new mail loses its safe DO state"
+        assert "mail-rule" not in hook, "retired sender-rule writer returned"
+        assert "tag:new AND NOT tag:keep" not in hook, "legacy sender placement returned"
         PY
         touch "$out"
       '';

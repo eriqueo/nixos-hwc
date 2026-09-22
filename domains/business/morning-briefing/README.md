@@ -47,8 +47,8 @@ logs/
 | 1 | Local gather | bash assembles `briefing.json` directly: `systemctl` (services incl. failed unit NAMES, podman-* container count, borg backup unit), `df` (storage), `notmuch` (mail), `khal`→`jq` (calendar, 7-day window), `curl` open-meteo (weather). Alerts computed locally. **No Claude, no MCP.** |
 | 1b | Live gather | `node gather-live.mjs` → local MCP gateway (`:6200/mcp`, plain JSON-RPC, no permissions): `jt_jobs` (jobs + leads + weekly snapshot), `jt_documents list_overdue` (overdue invoices), `hwc_tasks_list` (CalDAV tasks). Best-effort: per-section failures become dashboard alerts, placeholders kept. |
 | 1c | Local-app gather | `node gather-refinery.mjs` (refinery `.md` item store) and `node gather-research.mjs` (research-scout REST on `:8422`). Both emit `{}` on any failure and are `|| echo '{}'`-guarded, so each degrades independently — one app being down never costs the other its section. `gather-research.mjs` reads the lessons snapshot with `generate:false`, so the briefing spends no LLM calls. |
-| 2 | Mail classification | `notmuch` → resident Laya classifies attention (`act/look/bulk/junk`), subject category, and factual tags. Uncertainty stays in `act`. |
-| 2b | Persist decisions | The classifier writes `attention/*`, `category/*`, Later/Junk effects, append-only judgments, and permanent human locks. |
+| 2 | Mail classification | `notmuch` → resident Laya classifies State (`do/look/junk`), Domain, and factual traits. Uncertainty stays retryable `do`. |
+| 2b | Persist decisions | The classifier writes `state/*`, `domain/*`, `trait/*`, append-only judgments, outcomes, and axis-specific human locks. |
 | 3 | Merge | `jq` injects mail_triage into briefing.json |
 | 4 | Publish | Dashboard reads via symlink; no-op if symlink exists |
 | 5 | Email | Plain-text render (alerts, calendar, tasks, leads, overdue invoices, jobs, mail triage w/ summaries, website) via msmtp from office@. **Only sent on the pre-9am run** — midday/evening timer firings refresh the dashboard without re-emailing (`FORCE_EMAIL=1` overrides). |
@@ -71,20 +71,22 @@ to describe: it speaks StreamableHTTP JSON-RPC to the local gateway and fills
 - Every job/lead/invoice carries a `url` → `https://app.jobtread.com/jobs/<id>`
   so the dashboard can deep-link.
 
-### Tag-backed attention states
+### Tag-backed workflow states
 
-Attention (`act/look/bulk/junk`) is a **notmuch tag** `attention/<state>`, not
-just a position in cached JSON. `act` and `look` form Now. `bulk` moves to Later.
-`junk` moves to recoverable Trash.
+Workflow State (`do/did/look/junk`) is a notmuch tag `state/<state>`, not a
+cached dashboard position. `DO` is the inbox-zero queue, `DID` waits after a
+human action, `LOOK` is read/monitor, and `JUNK` is recoverable Trash. Archive
+records `workflow/done` and removes the active state.
 
 - The resident classifier skips unchanged fingerprints and reconsiders a model
   decision only when a thread gains context.
-- A human correction in aerc becomes an append-only event and locks the thread.
+- A human correction in aerc becomes an append-only event and locks only the
+  changed State or Domain axis.
 - **`hwc_mail_triage`** reflects the cached threads through their live
-  `attention/*` tag, so the board and aerc show the same placement.
+  `state/*` tag, so the board and aerc show the same placement.
 
-The deployed attention vocabulary is baked from `domains/mail/taxonomy/`; the
-classifier's versioned contract is pinned through the System One flake input.
+The classifier's versioned contract is pinned through the System One flake input
+and consumed by aerc, notmuch, the briefing, and MCP.
 
 ## Sections
 
@@ -137,7 +139,7 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Troubleshooting
 
-**Classifier unavailable**: mail stays in Now. Check `mail-classifier-model.service`
+**Classifier unavailable**: unclassified mail stays in DO. Check `mail-classifier-model.service`
 and `/run/hwc-mail-classifier/laya.sock`; the briefing records the degraded state.
 
 **MCP server unreachable**: The agent adds an alert for any data source that fails. Check `hwc-sys-mcp` gateway status with `systemctl status hwc-sys-mcp`. Individual tool failures produce partial briefings (other sections still render).
@@ -147,10 +149,13 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 
 **Stale briefing**: Dashboard shows "stale" in red if briefing is >2h old. Check timer status with `systemctl list-timers morning-briefing.timer`. Manual trigger: `sudo systemctl start morning-briefing.service`.
 
-**Mail view empty**: Check `notmuch count tag:inbox AND tag:queue` and
+**Mail view empty**: Check `notmuch count --output=threads tag:state/do` and
 `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+
+- **2026-09-22** — Mail views now use the v2 DO/DID/LOOK/JUNK snapshot. The
+  dashboard is read-only; aerc and MCP mutations both record ledger events.
 
 - **2026-09-21** — Replaced Claude prompt triage with the pinned local Laya
   classifier. The briefing now reads the same `act/look/bulk/junk` snapshot as

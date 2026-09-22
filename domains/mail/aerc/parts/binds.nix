@@ -5,8 +5,8 @@ let
   # A human disposition is a completed decision, not just a folder move.
   # Automatic arrival rules deliberately keep their existing unread semantics;
   # these commands are used only by interactive aerc bindings.
-  archiveCmd = "+archive -inbox -unread";
-  trashCmd = "+trash -inbox -unread";
+  archiveCmd = "mail-classifier transition --outcome done";
+  trashCmd = "mail-classifier transition --outcome trash";
 
   # Workbench/Zellij owns Ctrl navigation. Inside aerc, Alt+j/k moves through
   # the vertical folder list and Alt+h/l moves through the horizontal tab bar.
@@ -22,17 +22,10 @@ let
       <A-S-k> = :prev-tab<Enter> # previous aerc tab
   '';
 
-  # Keep the first mark popup bounded. Category bindings live one level deeper
-  # under <Space>mc; action/pending remain automation tags but are deliberately
-  # absent from the human workflow. Protected/custom flags live under mv.
+  # Keep the mark popup bounded. Workflow and domain choices live under
+  # <Space>t; protected/custom flags remain optional facts under <Space>mv.
   hiddenWorkflowFlags = [ "action" "pending" ];
   visibleFlagTags = lib.filter (t: !(lib.elem t.tag hiddenWorkflowFlags)) tags.flagTags;
-
-  # Exclusive category bindings (adds tag, removes all other categories).
-  # Trailing " # <tag>" is the aerc binding annotation shown in which-key.
-  categoryBinds = lib.concatStringsSep "\n" (map (t:
-    "      <Space>mc${t.spaceKey} = :modify-labels ${tags.exclusiveCmd t}<Enter> # ${t.tag}"
-  ) tags.categoryTags);
 
   # Additive user-facing flags coexist with categories. The canonical taxonomy
   # still owns hidden automation flags and their query-map entries.
@@ -40,48 +33,46 @@ let
     "      <Space>mv${t.spaceKey} = :modify-labels +${t.tag}<Enter> # +${t.tag}"
   ) visibleFlagTags);
 
-  attentionKeys = { act = "a"; look = "l"; bulk = "b"; junk = "j"; };
-  categoryKeys = { hwc = "h"; datax = "d"; family = "f"; personal = "p"; other = "o"; };
-  attentionBinds = lib.concatStringsSep "\n" (map (state:
-    "      <Space>t${attentionKeys.${state}} = :pipe -m mail-classifier correct --attention ${state}<Enter> # lock: ${state}"
-  ) mailContract.attention);
-  classifierCategoryBinds = lib.concatStringsSep "\n" (map (category:
-    "      <Space>tc${categoryKeys.${category}} = :pipe -m mail-classifier correct --category ${category}<Enter> # lock category: ${category}"
-  ) mailContract.categories);
+  stateKeys = { "do" = "a"; did = "d"; look = "l"; junk = "j"; };
+  domainKeys = { hwc = "h"; datax = "d"; family = "f"; personal = "p"; other = "o"; };
+  stateBinds = lib.concatStringsSep "\n" (map (state:
+    "      <Space>t${stateKeys.${state}} = :pipe -m mail-classifier correct --state ${state}<Enter> # state: ${lib.toUpper state}"
+  ) mailContract.states);
+  domainBinds = lib.concatStringsSep "\n" (map (domain:
+    "      <Space>tc${domainKeys.${domain}} = :pipe -m mail-classifier correct --domain ${domain}<Enter> # domain: ${domain}"
+  ) mailContract.domains);
+  domainFilterBinds = lib.concatStringsSep "\n" (map (domain:
+    "      <Space>fd${domainKeys.${domain}} = :filter tag:${mailContract.domainTagPrefix}${domain}<Enter> # filter domain: ${domain}"
+  ) mailContract.domains);
 
   # ── Leader cheat sheet (generated from the same tag data) ──
-  catHelp  = lib.concatStringsSep "\n" (map (t: "    Space m c ${t.spaceKey}   ${t.tag}") tags.categoryTags);
   flagHelp = lib.concatStringsSep "\n" (map (t: "    Space m v ${t.spaceKey}   +${t.tag}") visibleFlagTags);
   leaderHelp = ''
     ════════ AERC LEADER MAP ════════   (Space = leader; Space ? shows this)
 
     NAVIGATE  -  Space g ...
-    Space g i  now       Space g F  family    Space g D  datax
-    Space g W  hwc       Space g P  personal  Space g O  other
-    Space g L  later     Space g J  junk      Space g I  full inbox
+    Space g i  DO        Space g d  DID       Space g l  LOOK
+    Space g j  JUNK      Space g I  raw inbox
     -- system destinations --
     Space g A  all mail  Space g a  archive   Space g s  sent
-    Space g d  trash     Space g z  spam      Space g u  all unread
+    Space g T  trash     Space g z  spam      Space g u  all unread
 
     MARK / CLASSIFY  -  Space m ...
     Space m a  archive   Space m d  trash     Space m u  unread
     Space m z  spam      Space m l  label...  Space m x  clear removable tags
     -- optional flags (additive; action/pending are automation-only) --
     ${flagHelp}
-    -- categories (exclusive; Space m c ...) --
-    ${catHelp}
-
-    ATTENTION  -  human choices lock the thread permanently
-    Space t a  act       Space t l  look       Space t b  bulk
-    Space t j  junk      Space t c h|d|f|p|o  subject category
+    WORKFLOW STATE  -  human choices stick; a new reply reopens DID as DO
+    Space t a  DO        Space t d  DID        Space t l  LOOK
+    Space t j  JUNK      Space t c h|d|f|p|o  set Domain
 
     FILTER / SORT / VIEW
     Space f t  filter current folder by tag (Tab completes)
     Space f T  find tag across all mail (Tab completes)
+    Space f d h|d|f|p|o  filter current view by Domain
     Space f c  clear filter  Space f f  filter      Space f s  search
     Space f u  review unsubscribe
     Space s d  newest first  Space s f  sender  Space s s  subject
-    Space r a  make sender rule   Space r m  manage sender rules
     Space t t  toggle selected fold  Space t T  fold all threads
     Space t s  switch styleset            Space M    add new tag
 
@@ -146,29 +137,25 @@ ${tabBinds}
       # Static system tags (single-key for speed)
       # Native marked-or-selected semantics preserve J/K bulk selections.
       # A selected folded row expands to its complete thread.
-      a = :modify-labels ${archiveCmd}<Enter>
-      d = :modify-labels ${trashCmd}<Enter>
+      a = :pipe -m ${archiveCmd}<Enter>
+      d = :pipe -m ${trashCmd}<Enter>
 
       c = :compose<Enter>
       C = :reply -aq<Enter>
 
       # Navigation (static folders + derived tag folders)
       # Trailing " # <label>" is the aerc annotation shown in the which-key popover.
-      <Space>gi = :cf now<Enter> # now
-      <Space>gF = :cf family<Enter> # family
-      <Space>gD = :cf datax<Enter> # datax
-      <Space>gW = :cf hwc<Enter> # hwc
-      <Space>gP = :cf personal<Enter> # personal
-      <Space>gO = :cf other<Enter> # other
-      <Space>gL = :cf later<Enter> # later
-      <Space>gJ = :cf junk<Enter> # junk
+      <Space>gi = :cf do<Enter> # DO
+      <Space>gd = :cf did<Enter> # DID
+      <Space>gl = :cf look<Enter> # LOOK
+      <Space>gj = :cf junk<Enter> # JUNK
       <Space>gB = :cf backlog<Enter> # backlog
       <Space>gI = :cf inbox_i<Enter> # all inbox
       <Space>gA = :cf all<Enter> # all mail
       <Space>gu = :cf unread_u<Enter> # unread
       <Space>ga = :cf Archive_a<Enter> # archive
       <Space>gs = :cf sent_s<Enter> # sent
-      <Space>gd = :cf trash_d<Enter> # trash
+      <Space>gT = :cf trash_d<Enter> # trash
       <Space>gz = :cf spam_z<Enter> # spam
       <Space>g_ = :cf hide_my_email<Enter> # hide-my-email
 
@@ -182,20 +169,16 @@ ${tabBinds}
       <Space>ft = :filter tag: # filter current folder by tag
       <Space>fT = :query -f -n tag-search tag: # find tag across all mail
       <Space>fc = :clear -s<Enter> # clear filter/search
+${domainFilterBinds}
       <Space>sd = :sort -r date<Enter> # sort by date
       <Space>sf = :sort from -r date<Enter> # sort by sender
       <Space>ss = :sort subject -r date<Enter> # sort by subject
       <Space>tt = :fold -t<Enter> # toggle selected fold
       <Space>tT = :fold -a<Enter> # fold all threads
 
-      # Reviewed exact-sender automation. A rule can assign a durable domain
-      # tag and choose whether future mail enters now, archives, or trashes.
-      <Space>ra = :pipe -m mail-rule review<Enter> # add sender rule
-      <Space>rm = :term mail-rule manage<Enter> # manage sender rules
-
       # Human classifier corrections are durable learning events.
-${attentionBinds}
-${classifierCategoryBinds}
+${stateBinds}
+${domainBinds}
 
       # Use the sender's List-Unsubscribe header and skip straight to review
       # when the only available method is an email draft.
@@ -203,15 +186,14 @@ ${classifierCategoryBinds}
 
       # === BOUNDED MARKING UNDER <Space>m LEADER ===
       <Space>mu = :modify-labels +unread<Enter> # mark unread
-      <Space>ma = :modify-labels ${archiveCmd}<Enter> # archive
-      <Space>md = :modify-labels ${trashCmd}<Enter> # trash
+      <Space>ma = :pipe -m ${archiveCmd}<Enter> # archive
+      <Space>md = :pipe -m ${trashCmd}<Enter> # trash
       <Space>mz = :modify-labels +spam -inbox<Enter> # spam
       <Space>ml = :modify-labels<space> # label…
       <Space>mx = :modify-labels ${tags.clearAllCmd}<Enter> # clear removable tags (keep protected)
 
-      # Optional flags and categories are nested so the first popup stays calm.
+      # Optional flags stay nested so the first popup stays calm.
 ${flagBinds}
-${categoryBinds}
 
       # Add a new tag definition (edits tags-custom.json, runs hms)
       <Space>M = :term ${config.home.homeDirectory}/.local/bin/aerc-new-tag<Enter> # new tag…
@@ -225,8 +207,8 @@ ${tabBinds}
       r = :reply<Enter>
       R = :reply -aq<Enter>
       f = :forward<Enter>
-      a = :modify-labels ${archiveCmd}<Enter>:close<Enter>
-      d = :modify-labels ${trashCmd}<Enter>:close<Enter>
+      a = :pipe -m ${archiveCmd}<Enter>:close<Enter>
+      d = :pipe -m ${trashCmd}<Enter>:close<Enter>
       H = :toggle-headers<Enter>
       u = :open-link<Enter>
       / = :toggle-key-passthrough<Enter>/
@@ -239,10 +221,8 @@ ${tabBinds}
       t = :pipe -m email-to-task<Enter>
       i = :pipe -m email-to-khal<Enter>
       p = :pipe -m email-to-paperless<Enter>
-      <Space>ra = :pipe -m mail-rule review<Enter> # add sender rule
-      <Space>rm = :term mail-rule manage<Enter> # manage sender rules
-${attentionBinds}
-${classifierCategoryBinds}
+${stateBinds}
+${domainBinds}
 
       [view::passthrough]
       $noinherit = true

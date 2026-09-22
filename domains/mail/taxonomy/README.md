@@ -2,9 +2,9 @@
 
 ## Purpose
 
-The canonical Nix mail taxonomy for tag vocabulary, attention-state transport,
-sender dispositions, and action subjects. System One separately publishes the
-versioned model contract pinned by the flake.
+The canonical Nix registry for reviewed sender dispositions, optional factual
+tags, and action subjects. System One publishes the pinned workflow-v2 contract
+for State, Domain, and classifier traits.
 
 Design: `docs/plans/unified-triage-architecture.md`.
 
@@ -24,17 +24,17 @@ Design: `docs/plans/unified-triage-architecture.md`.
 
 | Consumer | What it takes |
 |---|---|
-| `domains/mail/notmuch/index.nix` | `derived.*Senders` / `actionSubjects` as the `rules.*` option defaults |
-| `domains/mail/aerc/parts/tags.nix` | `data.categories/flags/groups` (adds theme colors) and `workflow.currentTag` |
-| `domains/system/mcp/index.nix` | `jsonText` → store-path `mail-taxonomy.json` → `HWC_MAIL_TAXONOMY_FILE` → `mail.ts` |
+| `domains/mail/notmuch/index.nix` | exposes the legacy janitor deny list without applying local placement rules |
+| `domains/mail/aerc/parts/tags.nix` | optional/manual tag presentation |
+| `domains/system/mcp/index.nix` | pins the System One classifier contract directly |
 | `domains/business/morning-briefing` | consumes the classifier's JSON snapshot; no prompt vocabulary |
 
 ## Editing rules
 
-- **Add/teach a sender**: one entry in `data.nix` `senders.<disposition>`.
-  Dispositions `trash|archive|newsletter|notification|finance` drive the
-  existing on-arrival notmuch rules. Classifier learning remains exact-sender,
-  review-first, and separate from those declarative rules.
+- **Teach the classifier**: use the aerc State or Domain correction keys. The
+  v2 case ledger learns exact senders without a separate declarative writer.
+- `data.nix` `senders.trash` is legacy input only for the separate Gmail
+  janitor. It does not classify or place local mail.
 - **Never** override `hwc.mail.notmuch.rules.*` directly in a profile or
   machine file — that silently re-forks the vocabulary.
 - Changes deploy with the normal lanes: `hms` for rules/aerc, server
@@ -45,6 +45,10 @@ Design: `docs/plans/unified-triage-architecture.md`.
 
 - 2026-09-21: Replaced the `urgent/review/noise` placement vocabulary with
   `act/look/bulk/junk` under `attention/`, matching the Laya classifier.
+
+- 2026-09-22: Removed workflow state from this registry. The versioned System
+  One contract now solely defines `state/*`, `domain/*`, and `trait/*`; this
+  registry retains reviewed deterministic sender rules and optional facts.
 
 - 2026-09-14: Added the temporary `queue` workflow marker that separates the
   managed decision queue from the legacy Inbox without abusing unread as state.

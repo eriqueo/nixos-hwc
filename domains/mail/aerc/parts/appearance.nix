@@ -55,7 +55,8 @@ spinner.fg          = ${sel}
 *.selected.bg       = ${h (c.fg2 or "a7aaad")}
 *.selected.bold     = true
 
-# Message state carries the hierarchy; category tags stay out of the row chrome.
+# Message read/selection state carries the row hierarchy; workflow State and
+# Domain are explicit columns rather than whole-row colors.
 msglist_unread.bold         = true
 msglist_read.dim            = true
 msglist_deleted.dim         = true
@@ -147,16 +148,15 @@ hide.fg           = ${dim}
 starred.fg        = ${h (c.errorBright or "d08080")}
 starred.bold      = true
 
-# Calm daily surface (sidebar): overview, then warm personal, cool DataX,
-# and the HWC copper accent. Backlog stays quiet when opened directly.
-now.fg            = ${fg0}
-now.bold          = true
-family.fg         = ${h (c.warningBright or "fcbb74")}
-family.bold       = true
-datax.fg          = ${h (c.info or "5e81ac")}
-datax.bold        = true
-hwc.fg            = ${sel}
-hwc.bold          = true
+# Workflow state is the only primary sidebar axis.
+do.fg             = ${h (c.error or "bf616a")}
+do.bold           = true
+did.fg            = ${h (c.warning or "cf995f")}
+did.bold          = true
+look.fg           = ${h (c.info or "5e81ac")}
+look.bold         = true
+junk.fg           = ${dim}
+junk.dim          = true
 
 # Hidden drill-downs retain their styles when opened directly.
 backlog.fg        = ${dim}

@@ -71,31 +71,27 @@ mail/
         ├── paths.nix          # maildirRoot resolution
         ├── identity.nix       # userName/email/newTags defaults
         ├── folders.nix        # folder→tag clause builder (uses common.rolesFor)
-        ├── rules.nix          # newsletter/notification/finance/action/trash rules
-        ├── operator-rules.py  # reviewed exact-sender rule ledger + bounded applier
-        ├── test_operator_rules.py # ledger/parser/notmuch adapter regression tests
         ├── searches.nix       # saved searches for notmuch CLI
         └── dashboard.sh       # mail-dashboard script
 ```
 
 ## Aerc workflow contract
 
-`now` is `act + look`. Reading never completes it. Single-key archive/trash
-uses aerc's marked-or-selected rule: `J`/`K` selections move as one batch, and
-a selected folded row expands to its whole thread. `bulk` moves to Later and
-`junk` to recoverable Trash. Subject categories (`hwc`, `datax`, `family`,
-`personal`, `other`) are independent of attention and stay searchable across
-history. `Space g A` opens all non-trash history. `Space f t` filters the current view by tag, `Space f T`
-opens an all-mail tag query, and `Space f c` clears the current search/filter.
+`DO` is the inbox-zero queue; `DID` waits after Eric acted; `LOOK` needs no
+response; `JUNK` is recoverable Trash. Reading never changes workflow state.
+Archive records completion and removes every active state. Single-key
+archive/trash uses aerc's marked-or-selected rule: `J`/`K` selections move as
+one thread-wide batch, and a selected folded row expands to its whole thread.
+Domain (`hwc`, `datax`, `family`, `personal`, `other`) is independent of State,
+appears as a column, and is filtered rather than exposed as folders. Facts are
+additive Tags and never control placement. `Space g A` opens all non-trash
+history. `Space f t` filters by tag, `Space f d …` filters by Domain, and
+`Space f c` clears the current filter.
 Sort with `Space s d` (newest), `Space s f` (sender), or `Space s s` (subject).
 
-`Space r a` reviews an exact-sender rule from the selected message. A reviewed
-rule may assign one durable domain tag and route future messages to `now`,
-archive, or recoverable trash. It never learns a whole domain or wildcard.
-Archive/trash rules cannot move mail protected by `keep`. `Space r m` lists and
-disables active rules. The versioned SQLite ledger is human-authored CRITICAL
-state, retained indefinitely at `/var/lib/hwc/mail-rules`; the server's daily
-Borg backup includes `/var/lib/hwc`.
+State and Domain corrections teach the classifier's exact-sender preference in
+the same operation. `DID` and completion are never generalized. No separate
+sender-rule writer runs in the arrival hook.
 
 Future Workbench integration should consume the same selected-item context
 contract used by the existing hubs: a global action can hand the selected
@@ -109,6 +105,10 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-09-22: Mail workflow v2 makes State, Domain, Tags, and completion
+  disjoint. All human state/outcome changes pass through the classifier ledger;
+  Laya can assign only DO/LOOK/JUNK and reopens DID/completed on a new reply.
 - 2026-09-21: Made `<Space>tt` toggle the selected thread fold and
   `<Space>tT` fold the current view. Restored native marked-or-selected
   archive/trash behavior so `J`/`K` selections move as a batch.

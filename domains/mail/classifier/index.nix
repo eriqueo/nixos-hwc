@@ -11,7 +11,7 @@ let
         exit 69
       fi
       case "''${1:-}" in
-        correct|review)
+        correct|transition|review)
           verb="$1"
           shift
           exec "$runtime" "$verb" \

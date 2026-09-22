@@ -23,12 +23,12 @@ mkdir -p "${OUTPUT_DIR}" "${DRAFT_DIR}"
 chmod 700 "${DRAFT_DIR}"
 
 if [ ! -x "${CLASSIFIER_BIN}" ] || [ ! -S "${SOCKET}" ]; then
-  log "WARN: Laya classifier unavailable; inbox remains in Now"
+  log "WARN: Laya classifier unavailable; unclassified mail remains DO"
   jq -n --arg now "$(date -Iseconds)" '{
-    schemaVersion: 1, generated_at: $now, provider: "laya",
-    error: "classifier unavailable; mail remains in Now",
-    buckets: {act: [], look: [], bulk: [], junk: []},
-    stats: {act_count: 0, look_count: 0, bulk_count: 0, junk_count: 0}
+    schemaVersion: 2, generated_at: $now, provider: "laya",
+    error: "classifier unavailable; unclassified mail remains DO",
+    buckets: {do: [], did: [], look: [], junk: []},
+    stats: {do_count: 0, did_count: 0, look_count: 0, junk_count: 0}
   }' > "${MAIL_TRIAGE_JSON}.tmp" && mv "${MAIL_TRIAGE_JSON}.tmp" "${MAIL_TRIAGE_JSON}"
 else
   if "${CLASSIFIER_BIN}" run \
@@ -40,7 +40,7 @@ else
       --email-to-khal "${EMAIL_TO_KHAL}"; then
     log "classified with resident Laya model"
   else
-    log "ERROR: classifier run failed; inbox remains in Now"
+    log "ERROR: classifier run failed; unclassified mail remains DO"
     exit 1
   fi
 fi
