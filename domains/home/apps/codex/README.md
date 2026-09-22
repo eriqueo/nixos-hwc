@@ -14,6 +14,10 @@ Installs the OpenAI Codex CLI (stock `pkgs.codex` by default, overridable via `p
 
 ## Changelog
 
+- 2026-09-22: Activation also records trust through an existing T3 `~/.codex_p`
+  profile. Codex keys trust by the hooks path even when `hooks.json` and
+  `config.toml` are symlinks to `~/.codex`, so trusting only the canonical path
+  left the same three hooks disabled inside T3.
 - 2026-09-17: Consume the Nix-pinned harness, include static standing instructions in AGENTS.md, and stop depending on state-repo merges for rendering.
 - 2026-09-17: `shareHarness` (default follows `agent-harness.enable`) links `~/.codex/hooks.json` from the Nix-pinned harness, renders `~/.codex/AGENTS.md` with `codex-agents-render`, and records hook trust with `codex-hooks-trust`. Both run at activation. AGENTS.md is rendered, not committed: it is the Codex preamble, CLAUDE.md, standing instructions, and the PRIMER-DIGEST block, so it cannot drift from its sources and two hosts cannot conflict on it. A hand-written AGENTS.md found in place is kept once as `AGENTS.md.pre-render.bak`. Trust exists because Codex runs no hook until its hash is recorded in the host's config.toml, and that state is per host. `hooks-trust.py` asks the Codex app-server (`hooks/list`) and writes trust through it (`config/value/write`) for user hooks.json entries only; `codex-hooks-trust --check` is the read-only doctor path. Measured: the hash does not depend on Codex version. Do not run `herdr integration install codex` against the link; herdr's v8 entry is already in the shared file. HM-only → `hms`.
 - 2026-09-17: Added `workflowSkills`, linking `stepwise-refinement`, `chestertons-fence`, `premortem` and `datax-sr-triage` into `~/.agents/skills`. claude-config's `codex-workflow-start.sh` and `principles-lint.sh` both name that path, but only hwc-laptop had it, built by hand. Codex threads served from hwc-server had none of the four. An existing hand-made entry on the laptop is moved aside with HM's `.backup` suffix. HM-only → `hms`.

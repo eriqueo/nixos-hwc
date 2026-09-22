@@ -186,6 +186,10 @@ in
             || echo "codex: AGENTS.md render failed" >&2
           run ${hooksTrust}/bin/codex-hooks-trust \
             || echo "codex: shared hooks are not all trusted — run codex-hooks-trust" >&2
+          if [ -e "$HOME/.codex_p/hooks.json" ]; then
+            run env CODEX_HOME="$HOME/.codex_p" ${hooksTrust}/bin/codex-hooks-trust \
+              || echo "codex: T3 profile hooks are not all trusted — run CODEX_HOME=$HOME/.codex_p codex-hooks-trust" >&2
+          fi
         '';
 
       })
