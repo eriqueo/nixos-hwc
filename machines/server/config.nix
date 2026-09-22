@@ -128,9 +128,10 @@
   hwc.server.ai.homeScout.workspaceRoot = "/home/eric/600_apps/scout";
   hwc.server.ai.leadScout.projectDir = "/home/eric/600_apps/scout/apps/lead-scout";
   hwc.server.ai.leadScout.workspaceRoot = "/home/eric/600_apps/scout";
-  # Research Scout — research/paper intelligence, MCP + HTTP on port 8422.
-  # projectDir/workspaceRoot defaults already point at the scout monorepo.
-  hwc.server.ai.researchScout.enable = true;
+  # Research Scout is paused because its scheduled research workload exceeds
+  # its current use. Keep the module imported and its data/config intact so
+  # resuming it is one explicit switch plus a rebuild.
+  hwc.server.ai.researchScout.enable = false;
   # HWC classifier profiles post to #lead-scout;
   # DataX profiles stay on the default datax-discord-webhook (#jt-pros).
   hwc.server.ai.leadScout.channelMap = {
@@ -147,7 +148,9 @@
     enable = true;
     # Research reviews: the one lane with a human review queue today.
     targets.researchScout = {
-      enable = true;
+      # Must move with researchScout.enable: the adapter asserts its target is
+      # live and would otherwise keep a dead dependency in /next.
+      enable = false;
       profile = "llm_engineering_v1";
     };
     # CRM next actions: note, snooze, disqualify only (no sends, no JT).
