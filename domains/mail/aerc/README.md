@@ -62,7 +62,8 @@ The `<C-r>` keybind runs `sync-mail` which executes the full pipeline (mbsync + 
 
 `now` is the managed decision queue: `tag:queue AND tag:inbox`. Opening or
 reading a message never removes it. Only a disposition that removes `inbox`
-(archive or trash) from the whole selected thread finishes the item. A task/calendar/Paperless handoff writes
+(archive or trash) finishes the item. A folded row expands to its whole thread;
+when `J`/`K` marks exist, the disposition applies to that marked set. A task/calendar/Paperless handoff writes
 to the destination but deliberately leaves the source email in place; press
 `a` after confirming the handoff. `family`, `datax`, and `hwc` are context lenses over that
 same queue, not filing destinations. `backlog` is legacy unread mail that has
@@ -148,8 +149,8 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 
 | Key | Action |
 |-----|--------|
-| `a` | Finish and archive the selected thread (`+archive -inbox -unread`) |
-| `d` | Finish and trash the selected thread (`+trash -inbox -unread`) |
+| `a` | Finish/archive marked messages, otherwise the selected folded thread |
+| `d` | Finish/trash marked messages, otherwise the selected folded thread |
 | `X` | Move to folder (prompt) |
 | `Y` | Copy to folder (prompt) |
 
@@ -202,7 +203,8 @@ archive the source message instead.
 | `<Space>fc` | Clear the current filter/search |
 | `<Space>fu` | Unsubscribe from the message header; email-only senders ask first, then open review without Neovim |
 | `<Space>sd` | Sort by date (newest first) |
-| `<Space>tt` | Toggle thread view |
+| `<Space>tt` | Toggle the selected thread fold |
+| `<Space>tT` | Fold every thread in the current view |
 
 ### View
 
@@ -356,10 +358,14 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
-- 2026-09-21: Made single-key `a` and `d` dispositions operate on every message
-  in the selected thread. This keeps a completed Now row from returning when an
-  unfolded thread still has another inbox member; `<Space>ma/md` remain the
-  marked-message batch controls.
+- 2026-09-21: Replaced the thread-view toggle with selected/all fold controls:
+  `<Space>tt` toggles the selected fold and `<Space>tT` folds the current view.
+  Restored native marked-or-selected behavior for `a` and `d`, so `J`/`K`
+  selections archive or trash as one batch while folded rows still expand to
+  complete threads.
+- 2026-09-21: Initially made single-key `a` and `d` dispositions force the
+  selected thread. Superseded above after that approach erased `J`/`K` marks;
+  explicit folds now provide whole-thread behavior without breaking batches.
 - 2026-09-21: The sidebar now exposes Now, subject categories, Later, and Junk
   from the local Laya contract. `<Space>t...` records durable human attention
   and category corrections through the classifier ledger.

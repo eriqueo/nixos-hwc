@@ -8,11 +8,6 @@ let
   archiveCmd = "+archive -inbox -unread";
   trashCmd = "+trash -inbox -unread";
 
-  # Now displays one row per thread, so a single-key disposition must finish
-  # every message in that selected thread even when the row is unfolded.
-  # Clear prior marks first; Space+m retains the explicit marked-message path.
-  selectedThreadCmd = ":unmark -a<Enter>:mark -T<Enter>";
-
   # Workbench/Zellij owns Ctrl navigation. Inside aerc, Alt+j/k moves through
   # the vertical folder list and Alt+h/l moves through the horizontal tab bar.
   # Keep both encodings of Alt+Shift+j/k as compatibility aliases: terminal
@@ -87,7 +82,7 @@ let
     Space f u  review unsubscribe
     Space s d  newest first  Space s f  sender  Space s s  subject
     Space r a  make sender rule   Space r m  manage sender rules
-    Space t t  toggle threads
+    Space t t  toggle selected fold  Space t T  fold all threads
     Space t s  switch styleset            Space M    add new tag
 
     HAND OFF (open the message first; then archive with a)
@@ -149,8 +144,10 @@ ${tabBinds}
       u = :unread<Enter>
 
       # Static system tags (single-key for speed)
-      a = ${selectedThreadCmd}:modify-labels ${archiveCmd}<Enter>
-      d = ${selectedThreadCmd}:modify-labels ${trashCmd}<Enter>
+      # Native marked-or-selected semantics preserve J/K bulk selections.
+      # A selected folded row expands to its complete thread.
+      a = :modify-labels ${archiveCmd}<Enter>
+      d = :modify-labels ${trashCmd}<Enter>
 
       c = :compose<Enter>
       C = :reply -aq<Enter>
@@ -188,7 +185,8 @@ ${tabBinds}
       <Space>sd = :sort -r date<Enter> # sort by date
       <Space>sf = :sort from -r date<Enter> # sort by sender
       <Space>ss = :sort subject -r date<Enter> # sort by subject
-      <Space>tt = :toggle-threads<Enter> # toggle threads
+      <Space>tt = :fold -t<Enter> # toggle selected fold
+      <Space>tT = :fold -a<Enter> # fold all threads
 
       # Reviewed exact-sender automation. A rule can assign a durable domain
       # tag and choose whether future mail enters now, archives, or trashes.
@@ -227,8 +225,8 @@ ${tabBinds}
       r = :reply<Enter>
       R = :reply -aq<Enter>
       f = :forward<Enter>
-      a = ${selectedThreadCmd}:modify-labels ${archiveCmd}<Enter>:close<Enter>
-      d = ${selectedThreadCmd}:modify-labels ${trashCmd}<Enter>:close<Enter>
+      a = :modify-labels ${archiveCmd}<Enter>:close<Enter>
+      d = :modify-labels ${trashCmd}<Enter>:close<Enter>
       H = :toggle-headers<Enter>
       u = :open-link<Enter>
       / = :toggle-key-passthrough<Enter>/
