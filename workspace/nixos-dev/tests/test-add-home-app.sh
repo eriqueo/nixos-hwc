@@ -46,8 +46,8 @@ if [[ -z "$WORKDIR" ]]; then
   WORKDIR="$(mktemp -d)"
   trap 'rm -rf "$WORKDIR"' EXIT
 else
-  # .nixos-worktrees too: the main-refusal case creates one there, and a
-  # survivor makes the next run refuse ("worktree path already exists").
+  # .nixos-worktrees too: v3.0 created one there, and CASE 6 asserts that a
+  # run no longer does — a survivor from an old run would fail that check.
   rm -rf "${WORKDIR:?}/nixpkgs" "${WORKDIR:?}/home-manager" \
          "${WORKDIR:?}/repo" "${WORKDIR:?}/repo-main" \
          "${WORKDIR:?}/repo-direct" "${WORKDIR:?}/repo-inline" \
@@ -336,19 +336,19 @@ assert_eq "unknown machine exit code is 5" "5" "$RC5"
 assert_contains "unknown machine lists what exists" "$OUT" "hwc-fixturehost"
 
 echo
-echo "CASE 6 — refuses to mutate main; diverts to a dedicated feature worktree"
-BEFORE_MAIN="$(manifest "$WORKDIR/repo-main")"
+echo "CASE 6 — on main, generates in place; no worktree, no branch"
 OUT="$(cd "$WORKDIR/repo-main" && timeout 300 "$SUT" --no-interactive --no-commit \
         --no-build-test --machine hwc-fixturehost fixtureapp </dev/null 2>&1)"; RC6=$?
-AFTER_MAIN="$(manifest "$WORKDIR/repo-main")"
 assert_eq "main run exits 0" "0" "$RC6"
-assert_contains "main run says it is refusing to write to main" "$OUT" "Refusing to write to 'main'"
-assert_eq "main checkout is byte-identical afterwards" "$BEFORE_MAIN" "$AFTER_MAIN"
-assert_eq "main checkout stays git-clean" "" "$(git -C "$WORKDIR/repo-main" status --porcelain)"
-WT="$WORKDIR/.nixos-worktrees/fixtureapp"
-assert_file "worktree holds the generated module" "$WT/domains/home/apps/fixtureapp/index.nix"
-WTB="$(git -C "$WT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '<none>')"
-assert_eq "worktree is on a dedicated branch" "add-app/fixtureapp" "$WTB"
+assert_file "main checkout holds the generated module" \
+  "$WORKDIR/repo-main/domains/home/apps/fixtureapp/index.nix"
+assert_eq "main checkout stays on main" "main" \
+  "$(git -C "$WORKDIR/repo-main" rev-parse --abbrev-ref HEAD 2>/dev/null)"
+assert_no_file "no worktree directory is created" "$WORKDIR/.nixos-worktrees"
+assert_eq "no add-app branch is created" "" \
+  "$(git -C "$WORKDIR/repo-main" branch --list 'add-app/*')"
+assert_contains "uncommitted run refuses to activate" "$OUT" \
+  "Not activating: the module is not committed"
 
 echo
 echo "CASE 7 — generates a current-shape mkSimpleApp module on a feature branch"
@@ -436,6 +436,18 @@ assert_contains "commit carries the new module" "$COMMITTED" \
   "domains/home/apps/fixtureapp/index.nix"
 assert_contains "commit carries the machine enable" "$COMMITTED" \
   "machines/fixturehost/home.nix"
+assert_contains "another machine's generation is never activated here" "$OUT" \
+  "Not activating: hwc-fixturehost is not this host"
+
+echo
+echo "CASE 10 — --no-switch commits without activating"
+git -C "$REPO" reset -q --hard HEAD~1
+git -C "$REPO" clean -qfd 2>/dev/null || true
+run_sut --no-interactive --no-build-test --no-switch --machine hwc-fixturehost fixtureapp; RC10=$RC
+assert_eq "--no-switch run exits 0" "0" "$RC10"
+assert_contains "--no-switch says activation was skipped" "$OUT" "Skipping activation (--no-switch)"
+assert_contains "--no-switch still commits" \
+  "$(git -C "$REPO" show --name-only --pretty=format: HEAD)" "domains/home/apps/fixtureapp/index.nix"
 
 echo
 echo "-----------------------------------------------------------------"

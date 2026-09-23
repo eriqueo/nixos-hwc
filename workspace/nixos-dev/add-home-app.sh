@@ -21,6 +21,11 @@
 #     `profiles/home.nix` (deleted in the roles refactor). Now the module goes
 #     through domains/lib/mkSimpleApp.nix or a Law-6 native adapter, and the app
 #     is enabled in machines/<machine>/home.nix.
+#
+# v3.1 (2026-09-23): no more worktree diversion. v3.0 moved every run on `main`
+# into ~/.nixos-worktrees/<app> on an add-app/<app> branch, which nothing ever
+# merged or activated — eden sat there, committed and uninstalled. Eric's call:
+# write in the checkout you are standing in, commit, and activate (`hms`).
 
 set -eo pipefail
 
@@ -37,7 +42,7 @@ readonly CYAN='\033[0;36m'
 readonly NC='\033[0m' # No Color
 
 # Script version
-readonly VERSION="3.0.0"
+readonly VERSION="3.1.0"
 
 # Stable exit codes — the non-interactive contract is scriptable only if these
 # do not move. Referenced by tests/test-add-home-app.sh.
@@ -46,6 +51,7 @@ readonly E_USAGE=2       # bad invocation
 readonly E_NOMATCH=3     # --no-interactive: no exact top-level attribute
 readonly E_AMBIGUOUS=4   # --no-interactive: more than one exact match
 readonly E_MACHINE=5     # target machine not in the flake
+readonly E_ACTIVATE=6    # committed, but the HM build or activation failed
 readonly E_CONFLICT=7    # module directory already exists
 
 #==============================================================================
@@ -116,6 +122,7 @@ DRY_RUN=false
 SKIP_COMMIT=false
 SKIP_INTERACTIVE=false
 SKIP_BUILD_TEST=false
+SKIP_SWITCH=false
 TEMPLATE_TYPE="auto"       # auto, simple, native
 MACHINE_OVERRIDE=""
 
@@ -172,6 +179,7 @@ ${CYAN}OPTIONS:${NC}
     --no-commit            Skip automatic git commit
     --no-interactive       Resolve one exact top-level attribute, never prompt
     --no-build-test        Skip build testing (faster, less safe)
+    --no-switch            Commit but do not activate (skip the hms step)
     --machine NAME         Target flake machine (default: this host)
     --template TYPE        Force template: auto, simple, native
     --debug                Enable debug output
@@ -189,7 +197,8 @@ ${CYAN}TEMPLATES:${NC}
 
 ${CYAN}EXIT CODES:${NC}
     0 ok   ${E_FAIL} failure   ${E_USAGE} usage   ${E_NOMATCH} no exact match
-    ${E_AMBIGUOUS} ambiguous match   ${E_MACHINE} unknown machine   ${E_CONFLICT} module exists
+    ${E_AMBIGUOUS} ambiguous match   ${E_MACHINE} unknown machine   ${E_ACTIVATE} activation failed
+    ${E_CONFLICT} module exists
 
 ${CYAN}EXAMPLES:${NC}
     ${GREEN}# Interactive search-and-select${NC}
@@ -206,7 +215,8 @@ ${CYAN}WORKFLOW:${NC}
     4. Generate domains/home/apps/<name>/{index.nix,README.md}
     5. Update domains/home/apps/README.md
     6. Enable in machines/<machine>/home.nix
-    7. Optional: validate, commit
+    7. Validate, commit in the current checkout (no worktree)
+    8. Activate Home Manager on this host (what 'hms' does)
 
 ${CYAN}MORE INFO:${NC}
     See: CLAUDE.md and CHARTER.md in repository root
@@ -749,55 +759,6 @@ check_for_duplicates() {
 }
 
 #==============================================================================
-# WORKTREE DISCIPLINE
-#==============================================================================
-# `main` is not a working surface in this repo. If the caller is standing on it,
-# generation moves to a dedicated feature worktree rather than refusing outright
-# — the point is that main stays untouched, not that the user gets turned away.
-
-current_branch() {
-    git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo ""
-}
-
-ensure_feature_worktree() { # <app-name>  — may reassign REPO_ROOT
-    local app_name="$1"
-    local branch
-    branch="$(current_branch)"
-
-    if [[ -z "$branch" ]]; then
-        warn "Not a git checkout; skipping worktree discipline"
-        return 0
-    fi
-
-    if [[ "$branch" != "main" && "$branch" != "master" ]]; then
-        info "On feature branch '$branch' — generating here"
-        return 0
-    fi
-
-    local wt_branch="add-app/$app_name"
-    local wt_root wt_path
-    wt_root="$(dirname "$REPO_ROOT")/.nixos-worktrees"
-    wt_path="$wt_root/$app_name"
-
-    warn "Refusing to write to '$branch'."
-    log "Creating a dedicated feature worktree: $wt_path (branch $wt_branch)"
-
-    mkdir -p "$wt_root"
-    if [[ -d "$wt_path" ]]; then
-        error "Worktree path already exists: $wt_path"
-        return "$E_FAIL"
-    fi
-    if ! git -C "$REPO_ROOT" worktree add -b "$wt_branch" "$wt_path" HEAD >&2; then
-        error "Failed to create worktree at $wt_path"
-        return "$E_FAIL"
-    fi
-
-    REPO_ROOT="$wt_path"
-    success "Generating in $REPO_ROOT (branch $wt_branch); '$branch' untouched"
-    return 0
-}
-
-#==============================================================================
 # MODULE GENERATION
 #==============================================================================
 # Two producers, both Charter-current. No options.nix is emitted by either —
@@ -1092,11 +1053,6 @@ commit_changes() { # <app-name> <attr> <version> <description> <machine>
     local app_name="$1" package_attr="$2" package_version="$3"
     local package_description="$4" machine="$5"
 
-    if [[ "$SKIP_COMMIT" == "true" ]]; then
-        info "Skipping commit (--no-commit)"
-        return 0
-    fi
-
     local dir; dir="$(machine_dir_for "$machine")"
 
     # Only the paths this run produced. Never `git add -A`: an unrelated dirty
@@ -1135,6 +1091,56 @@ Generated with add-home-app.sh v${VERSION}"
     fi
     error "Failed to commit changes"
     return 1
+}
+
+#==============================================================================
+# ACTIVATION
+#==============================================================================
+# The same thing the `hms` zsh function does: build this host's standalone HM
+# activation package and run it. Without this the app sat committed but never
+# installed, and "I added it and can't find it" was the normal outcome.
+#
+# Gated, never guessed: the flake reads git-tracked files only, so an
+# uncommitted module is invisible to it; a failed evaluation will not build;
+# and another machine's generation must not be activated on this one.
+
+activate_home() { # <machine> <evaluated> <committed>
+    local machine="$1" evaluated="$2" committed="$3"
+
+    if [[ "$SKIP_SWITCH" == "true" ]]; then
+        info "Skipping activation (--no-switch). Apply later with: hms"
+        return 0
+    fi
+    if [[ "$committed" != "true" ]]; then
+        warn "Not activating: the module is not committed, so the flake cannot see it."
+        warn "Commit it, then run: hms"
+        return 0
+    fi
+    if [[ "$evaluated" != "true" ]]; then
+        warn "Not activating: the configuration failed to evaluate. Fix it, then run: hms"
+        return 0
+    fi
+    if [[ "$machine" != "$(current_hostname)" ]]; then
+        info "Not activating: $machine is not this host. Run 'hms' on $machine."
+        return 0
+    fi
+
+    log "Activating Home Manager for $machine (hms)..."
+    local activator
+    if ! activator=$("${NIX[@]}" build --no-link --print-out-paths \
+            "$REPO_ROOT#homeConfigurations.\"eric@$machine\".activationPackage"); then
+        error "Home Manager build failed; the commit stands, nothing was activated"
+        return 1
+    fi
+    if ! "$activator/activate" >&2; then
+        error "Home Manager activation failed"
+        return 1
+    fi
+    if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] && command -v hyprctl >/dev/null 2>&1; then
+        hyprctl reload >/dev/null || true
+    fi
+    success "Activated — the app is installed"
+    return 0
 }
 
 #==============================================================================
@@ -1265,9 +1271,6 @@ main() {
         fi
     fi
 
-    ensure_feature_worktree "$app_name" || { rc=$?; exit "$rc"; }
-    cd "$REPO_ROOT" || die "$E_FAIL" "Failed to enter $REPO_ROOT"
-
     local app_dir="$REPO_ROOT/domains/home/apps/$app_name"
     if ! integrate_app "$app_name" "$package_attr" "$package_description" \
             "$app_type" "$target_machine"; then
@@ -1275,20 +1278,30 @@ main() {
         exit "$E_FAIL"
     fi
 
+    local evaluated=true
     if [[ "$SKIP_BUILD_TEST" != "true" ]]; then
-        test_configuration_quick "$target_machine" || \
+        if ! test_configuration_quick "$target_machine"; then
+            evaluated=false
             warn "Evaluation failed — files are on disk for inspection, not reverted"
+        fi
     fi
 
-    commit_changes "$app_name" "$package_attr" "$package_version" \
-        "$package_description" "$target_machine" || \
-        warn "Failed to commit, but files are in working state"
+    local committed=false
+    if [[ "$SKIP_COMMIT" != "true" ]]; then
+        if commit_changes "$app_name" "$package_attr" "$package_version" \
+                "$package_description" "$target_machine"; then
+            committed=true
+        else
+            warn "Failed to commit, but files are in working state"
+        fi
+    else
+        info "Skipping commit (--no-commit)"
+    fi
 
     show_configuration_hints "$app_name" "$package_attr" "$app_dir" "$app_type"
 
     success "'$app_name' added"
-    info "Next: review the module, then apply with"
-    info "  hms                      # HM-only change (this is one)"
+    activate_home "$target_machine" "$evaluated" "$committed" || exit "$E_ACTIVATE"
     echo >&2
 }
 
@@ -1303,6 +1316,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             --no-commit)      SKIP_COMMIT=true; shift ;;
             --no-interactive) SKIP_INTERACTIVE=true; shift ;;
             --no-build-test)  SKIP_BUILD_TEST=true; shift ;;
+            --no-switch)      SKIP_SWITCH=true; shift ;;
             --machine)
                 [[ -n "${2:-}" ]] || die "$E_USAGE" "--machine needs a value"
                 MACHINE_OVERRIDE="$2"; shift 2 ;;
