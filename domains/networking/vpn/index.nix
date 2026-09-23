@@ -16,6 +16,20 @@ let
   cfg = config.hwc.networking.vpn;
   proton = cfg.protonvpn;
   privateKeyFile = config.hwc.secrets.api.${proton.privateKeySecret} or null;
+
+  # Tailscale bypass rules. wg-quick installs `not fwmark 0xca6c lookup 51820`
+  # just below Tailscale's lowest rule (5210), i.e. ahead of Tailscale's
+  # `lookup 52` (5270). Without these, tailnet traffic and tailscaled's own
+  # fwmarked underlay packets go into the Proton tunnel and the tailnet is
+  # unreachable while the VPN is up. Priorities 5200/5201 sit below both.
+  ip = "${pkgs.iproute2}/bin/ip";
+  tailnetRules = [
+    "-4 rule %s priority 5200 to 100.64.0.0/10 lookup 52"
+    "-6 rule %s priority 5200 to fd7a:115c:a1e0::/48 lookup 52"
+    "-4 rule %s priority 5201 fwmark 0x80000/0xff0000 lookup main"
+    "-6 rule %s priority 5201 fwmark 0x80000/0xff0000 lookup main"
+  ];
+  ruleCmds = verb: map (r: "${ip} ${lib.replaceStrings [ "%s" ] [ verb ] r}") tailnetRules;
 in
 {
   #==========================================================================
@@ -31,6 +45,17 @@ in
         type = lib.types.bool;
         default = true;
         description = "Auto-connect at boot (wg-quick-protonvpn.service wantedBy multi-user.target)";
+      };
+
+      bypassTailscale = lib.mkOption {
+        type = lib.types.bool;
+        default = config.services.tailscale.enable;
+        defaultText = lib.literalExpression "config.services.tailscale.enable";
+        description = ''
+          Keep tailnet traffic (100.64.0.0/10, fd7a:115c:a1e0::/48) and
+          tailscaled's own packets off the tunnel, so the tailnet stays
+          reachable while the VPN is up. All other traffic still uses Proton.
+        '';
       };
 
       privateKeySecret = lib.mkOption {
@@ -95,6 +120,8 @@ in
       address = proton.address;
       dns = proton.dns;
       privateKeyFile = privateKeyFile;
+      postUp = lib.optionals proton.bypassTailscale (ruleCmds "add");
+      postDown = lib.optionals proton.bypassTailscale (map (c: "${c} || true") (ruleCmds "del"));
       peers = [{
         publicKey = proton.peer.publicKey;
         allowedIPs = proton.peer.allowedIPs;
