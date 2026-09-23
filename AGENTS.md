@@ -29,6 +29,11 @@ triggered by the file's path rather than your read of the task.
 - Native services need `User = lib.mkForce "eric"`; container PGID is 100.
 - Ports: check `domains/networking/routes.nix` before claiming one.
 - Paths come from `config.hwc.paths.*` (`domains/paths/paths.nix`).
+- Laya/classifier adaptation: follow
+  `/home/eric/900_vaults/brain/_library/ai-ml/laya_reliability_playbook.md`.
+  Keep memory separate from unseen accuracy, tune only on development data,
+  freeze identity-disjoint holdout before scoring, compare a cheap baseline,
+  promote each decision axis separately, and use shadow mode plus a safe fallback.
 
 ## Before adding a file
 Adding a file to a directory that already has files? Read **every** file in
