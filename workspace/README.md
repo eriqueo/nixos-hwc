@@ -52,6 +52,13 @@ referencing site):
 
 ## Changelog
 
+- 2026-09-23: `add-home-app.sh` v3.1 — no worktree diversion. Runs on `main`
+  used to land in `~/.nixos-worktrees/<app>` on an `add-app/<app>` branch that
+  nothing merged or activated (eden sat there uninstalled). The script now
+  writes and commits in the current checkout, then activates Home Manager the
+  way `hms` does — only when the module is committed, evaluates, and targets
+  this host. `--no-switch` opts out; exit 6 = activation failed. Suite: 74
+  assertions.
 - 2026-09-22: Completed the `add-home-app.sh` v3.0 repair after the recovered
   nightly branch exposed three uncovered seams. Interactive `s` now re-enters
   search under `set -e`; machine enablement preserves both grouped and direct
