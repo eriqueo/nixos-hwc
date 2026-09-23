@@ -34,6 +34,8 @@ networking/
 │   ├── options.nix
 │   ├── sys.nix
 │   └── parts/
+├── vpn/                # Host ProtonVPN via wg-quick (hwc.networking.vpn.protonvpn; laptop, on demand)
+│   └── index.nix
     ├── index.nix
     ├── options.nix
     ├── sys.nix
@@ -41,6 +43,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-09-22: `vpn/` — new `protonvpn.privateKeySecret` option (default `vpn-wireguard-private-key`, so existing behaviour is unchanged). hwc-laptop now enables the tunnel with its own key, `vpn-wireguard-private-key-laptop`, against Proton US-UT#100, with `autostart = false`: the `vpnon`/`vpnoff`/`vpnstatus` aliases start and stop `wg-quick-protonvpn`. The default key belongs to hwc-server's gluetun tunnel, and Proton allows one active session per key, so sharing it would knock the download stack offline. Both addresses from the Proton config are set (10.2.0.2/32 and 2a07:b944::2:2/128), so IPv6 also leaves through the tunnel rather than being blackholed by the `::/0` route.
 - 2026-09-21: `hosts/` — new `hwc.networking.hosts.lanIps` (alias → home-LAN IP; `main = 192.168.0.97`), plus an assertion that its aliases exist in `servers`. It is the fallback path when the internet is down. hwc-server now reads its own static `eno1` address from it (`machines/server/hardware.nix`), so the server and its clients cannot disagree. Consumers: the `server-lan` ssh matchBlock and alias (via `hmLib.fleet`). Also, `machines/laptop/config.nix` pins every hwc-server vhost name (`<name>.hwc.iheartwoodcraft.com`) to the tailnet IP in `/etc/hosts`. The names are read from hwc-server's route table through `inputs.self`. Public DNS gives the same answer, so nothing changes online; offline, service URLs keep resolving.
 - 2026-09-19: `routes.nix` — removed the `llama-gpu` vhost; the persona-daemon vhost went with its module. No request reached either host in the Caddy vhost logs (2026-09-07 to 09-19). The 2026-09-18 entry's "75 days" overstated the window; see the llama-cpp README.
 - 2026-09-18: `routes.nix` — removed the `llama-cpu` vhost (`127.0.0.1:11501`). Its backend service is disabled on hwc-server because it served no chat requests in 75 days; see the llama-cpp README.

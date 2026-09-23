@@ -4,7 +4,9 @@
 # Replaces the old protonvpn-cli flow (removed upstream in nixpkgs).
 #
 # Namespace: hwc.networking.vpn.*
-# Private key: agenix secret `vpn-wireguard-private-key`
+# Private key: the agenix secret named by protonvpn.privateKeySecret. Each
+# host needs its OWN Proton key: Proton allows one active session per key, so a
+# key shared with another tunnel (e.g. hwc-server's gluetun) knocks one off.
 # Peer info (server pubkey, endpoint, client address) comes from the Proton
 # WireGuard config you download at account.protonvpn.com/downloads.
 
@@ -13,7 +15,7 @@
 let
   cfg = config.hwc.networking.vpn;
   proton = cfg.protonvpn;
-  privateKeyFile = config.hwc.secrets.api."vpn-wireguard-private-key" or null;
+  privateKeyFile = config.hwc.secrets.api.${proton.privateKeySecret} or null;
 in
 {
   #==========================================================================
@@ -29,6 +31,16 @@ in
         type = lib.types.bool;
         default = true;
         description = "Auto-connect at boot (wg-quick-protonvpn.service wantedBy multi-user.target)";
+      };
+
+      privateKeySecret = lib.mkOption {
+        type = lib.types.str;
+        default = "vpn-wireguard-private-key";
+        description = ''
+          Name of the agenix secret holding this host's WireGuard private key
+          (the attribute under hwc.secrets.api, not a path). Give each host its
+          own key: Proton allows one active session per key.
+        '';
       };
 
       address = lib.mkOption {
@@ -100,7 +112,7 @@ in
     assertions = [
       {
         assertion = privateKeyFile != null;
-        message = "hwc.networking.vpn.protonvpn enabled but agenix secret 'vpn-wireguard-private-key' is not available.";
+        message = "hwc.networking.vpn.protonvpn enabled but agenix secret '${proton.privateKeySecret}' (protonvpn.privateKeySecret) is not available.";
       }
       {
         assertion = proton.peer.publicKey != "";

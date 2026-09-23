@@ -251,15 +251,22 @@ in
   # TODO: Enable Borg on laptop when backup drive is mounted
   hwc.data.backup.enable = false;
 
-  # Declarative ProtonVPN via WireGuard.
-  # Peer values come from a config downloaded at account.protonvpn.com/downloads.
-  # Private key lives in agenix secret `vpn-wireguard-private-key`.
+  # Declarative ProtonVPN via WireGuard, on demand only: `vpnon` / `vpnoff` /
+  # `vpnstatus` (shell aliases) start/stop wg-quick-protonvpn.
+  # Server US-UT#100, from wg-US-UT-100.conf (account.protonvpn.com/downloads).
+  # The laptop has its OWN Proton key (`vpn-wireguard-private-key-laptop`);
+  # `vpn-wireguard-private-key` belongs to hwc-server's gluetun tunnel, and
+  # Proton allows one active session per key.
+  # Both addresses from the .conf: IPv6 goes through the tunnel too, rather
+  # than being blackholed by the ::/0 route.
   hwc.networking.vpn.enable = true;
   hwc.networking.vpn.protonvpn = {
-    enable = false; # TEMP: re-enable after filling in WG values below
-    address = [ "10.2.0.2/32" ]; # FILL IN: [Interface] Address from .conf
-    peer.publicKey = ""; # FILL IN: [Peer] PublicKey from .conf
-    peer.endpoint = ""; # FILL IN: [Peer] Endpoint from .conf, e.g. "198.51.100.42:51820"
+    enable = true;
+    autostart = false;
+    privateKeySecret = "vpn-wireguard-private-key-laptop";
+    address = [ "10.2.0.2/32" "2a07:b944::2:2/128" ];
+    peer.publicKey = "p98ypqr13MegNQyjIu4i4tFLVvQXWCM9uul0KqokxwA=";
+    peer.endpoint = "198.44.139.83:51820";
   };
 
   # Proton Mail Bridge managed by Home Manager user service (NOT system service)
