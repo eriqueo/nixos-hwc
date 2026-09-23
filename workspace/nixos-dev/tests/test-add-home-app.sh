@@ -50,6 +50,7 @@ else
   # survivor makes the next run refuse ("worktree path already exists").
   rm -rf "${WORKDIR:?}/nixpkgs" "${WORKDIR:?}/home-manager" \
          "${WORKDIR:?}/repo" "${WORKDIR:?}/repo-main" \
+         "${WORKDIR:?}/repo-direct" "${WORKDIR:?}/repo-inline" \
          "${WORKDIR:?}/.nixos-worktrees"
   mkdir -p "$WORKDIR"
 fi
@@ -136,8 +137,8 @@ EOF
 EOF
 }
 
-build_fixture_repo() { # dest branch
-  local dest="$1" branch="$2"
+build_fixture_repo() { # dest branch [machine-home-shape]
+  local dest="$1" branch="$2" machine_home_shape="${3:-grouped}"
   mkdir -p "$dest/domains/lib" "$dest/domains/home/apps/existingapp" "$dest/machines/fixturehost"
 
   cat > "$dest/flake.nix" <<EOF
@@ -219,6 +220,21 @@ EOF
 }
 EOF
 
+  if [[ "$machine_home_shape" == "direct" ]]; then
+    cat > "$dest/machines/fixturehost/home.nix" <<'EOF'
+# machines/fixturehost/home.nix
+{ ... }:
+{
+  hwc.home.apps.existingapp.enable = true;
+}
+EOF
+  elif [[ "$machine_home_shape" == "inline" ]]; then
+    cat > "$dest/machines/fixturehost/home.nix" <<'EOF'
+# Valid Nix, but deliberately has neither supported insertion seam.
+{ ... }: { hwc.home.apps.existingapp.enable = true; }
+EOF
+  fi
+
   git -C "$dest" init -q -b main
   git -C "$dest" config user.email "fixture@example.com"
   git -C "$dest" config user.name "Fixture"
@@ -249,6 +265,8 @@ build_fixture_nixpkgs
 build_fixture_home_manager
 build_fixture_repo "$WORKDIR/repo" "feat/fixture"
 build_fixture_repo "$WORKDIR/repo-main" "main"
+build_fixture_repo "$WORKDIR/repo-direct" "feat/direct" direct
+build_fixture_repo "$WORKDIR/repo-inline" "feat/inline" inline
 
 REPO="$WORKDIR/repo"
 PROMPTS=("Enter package name" "Select [" "Proceed with adding" "Continue anyway" "Apply configuration now" "Run full build test")
@@ -275,6 +293,14 @@ for p in "${PROMPTS[@]}"; do assert_not_contains "dry run emits no prompt: $p" "
 assert_contains "dry run names the target machine" "$OUT" "hwc-fixturehost"
 assert_contains "dry run identifies native HM support absence" "$OUT" "simple"
 assert_not_contains "dry run does not touch unrelated flake outputs" "$OUT" "must not be evaluated"
+
+echo
+echo "CASE 1b — interactive search-again preserves the picker workflow"
+OUT="$(cd "$REPO" && printf 's\nfixtureapp\n1\n' | timeout 300 "$SUT" \
+        --dry-run --machine hwc-fixturehost fixtureapp 2>&1)"; RC1B=$?
+assert_eq "search-again exits 0" "0" "$RC1B"
+assert_contains "search-again reaches a new search" "$OUT" "Enter new search term"
+assert_contains "search-again completes the dry run" "$OUT" "DRY RUN"
 
 echo
 echo "CASE 2 — --dry-run --no-interactive identifies native Home Manager support"
@@ -356,6 +382,28 @@ if command -v nix-instantiate >/dev/null 2>&1; then
 fi
 
 echo
+echo "CASE 8b — enables apps in the direct-assignment machine-file precedent"
+PRIMARY_REPO="$REPO"
+REPO="$WORKDIR/repo-direct"
+run_sut --no-interactive --no-commit --no-build-test --machine hwc-fixturehost fixtureapp; RC8B=$RC
+assert_eq "direct-assignment generation exits 0" "0" "$RC8B"
+DIRECT_MACHINE="$(cat "$REPO/machines/fixturehost/home.nix" 2>/dev/null)"
+assert_contains "direct-assignment machine enables the app" "$DIRECT_MACHINE" \
+  "hwc.home.apps.fixtureapp.enable = true;"
+
+echo
+echo "CASE 8c — a failed integration rolls every scoped file back"
+REPO="$WORKDIR/repo-inline"
+BEFORE_INLINE="$(manifest "$REPO")"
+run_sut --no-interactive --no-commit --no-build-test --machine hwc-fixturehost fixtureapp; RC8C=$RC
+AFTER_INLINE="$(manifest "$REPO")"
+assert_eq "unsupported machine shape fails" "1" "$RC8C"
+assert_eq "failed integration is byte-identical after rollback" "$BEFORE_INLINE" "$AFTER_INLINE"
+assert_no_file "failed integration leaves no app directory" \
+  "$REPO/domains/home/apps/fixtureapp"
+REPO="$PRIMARY_REPO"
+
+echo
 echo "CASE 8 — generates a Law-6 native adapter for a programs.<name> app"
 run_sut --no-interactive --no-commit --no-build-test --machine hwc-fixturehost hmnative; RC8=$RC
 assert_eq "native generation exits 0" "0" "$RC8"
@@ -381,7 +429,7 @@ git -C "$REPO" clean -qfd 2>/dev/null || true
 printf '\n# unrelated dirty edit\n' >> "$REPO/domains/home/apps/existingapp/README.md"
 run_sut --no-interactive --no-build-test --machine hwc-fixturehost fixtureapp; RC9=$RC
 assert_eq "committing run exits 0" "0" "$RC9"
-COMMITTED="$(git -C "$REPO" show --name-only --pretty=format: HEAD | sed '/^$/d' | sort | tr '\n' ' ')"
+COMMITTED="$(git -C "$REPO" show --name-only --pretty=format: HEAD | awk 'NF' | sort | tr '\n' ' ')"
 assert_not_contains "unrelated dirty file stayed out of the commit" "$COMMITTED" \
   "domains/home/apps/existingapp/README.md"
 assert_contains "commit carries the new module" "$COMMITTED" \

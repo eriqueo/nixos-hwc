@@ -52,6 +52,13 @@ referencing site):
 
 ## Changelog
 
+- 2026-09-22: Completed the `add-home-app.sh` v3.0 repair after the recovered
+  nightly branch exposed three uncovered seams. Interactive `s` now re-enters
+  search under `set -e`; machine enablement preserves both grouped and direct
+  assignment shapes already used in `machines/*/home.nix`; and a failed
+  integration restores every scoped file. The executable regression suite now
+  carries 70 assertions, including both machine shapes and byte-identical
+  rollback.
 - 2026-09-15: `nixos-dev/add-home-app.sh` v3.0 — repaired against Charter v12.6.
   Four live breakages: machine detection walked every flake output via
   `nix flake show`; package search resolved against the moving `nixpkgs`
@@ -64,7 +71,7 @@ referencing site):
   3/4/5), and generation through `domains/lib/mkSimpleApp.nix` or a Law-6
   native adapter plus per-app README, apps README index, and the enable in
   `machines/<machine>/home.nix`. On `main` it diverts to a dedicated worktree.
-  New: `nixos-dev/tests/add-home-app` regression suite (62 assertions) driving
+  New: `nixos-dev/tests/test-add-home-app.sh` regression suite driving
   the real script against isolated git + Nix fixtures.
 - 2026-07-05: Audit cleanup (see `plans/2026-07-05-systems-process-audit.md`).
   Deleted reorg-debris duplicates: `hooks/` + `media/hooks/` (stale forks of

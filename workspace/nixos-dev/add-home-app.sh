@@ -366,7 +366,7 @@ detect_machine() {
         return "$E_MACHINE"
     fi
 
-    if grep -Fxq "$candidate" <<< "$names"; then
+    if rg -Fxq -- "$candidate" <<< "$names"; then
         printf '%s\n' "$candidate"
         return 0
     fi
@@ -382,7 +382,7 @@ detect_machine() {
     echo -n "Enter target machine name: " >&2
     local chosen
     read -r chosen
-    if ! grep -Fxq "$chosen" <<< "$names"; then
+    if ! rg -Fxq -- "$chosen" <<< "$names"; then
         error "'$chosen' is not in this flake either"
         return "$E_MACHINE"
     fi
@@ -959,7 +959,9 @@ update_apps_readme() { # <app-name> <description>
 }
 
 # The roles refactor deleted profiles/home.nix. Per-machine enables live in
-# machines/<machine>/home.nix, inside the `hwc.home.apps = { ... }` block.
+# machines/<machine>/home.nix. Current files use either a grouped
+# `hwc.home.apps = { ... }` block or direct `hwc.home.apps.<name>.enable`
+# assignments; preserve whichever shape the target machine already uses.
 enable_in_machine() { # <app-name> <machine-config-name>
     local app_name="$1" machine="$2"
     local dir; dir="$(machine_dir_for "$machine")"
@@ -979,16 +981,24 @@ enable_in_machine() { # <app-name> <machine-config-name>
     cp "$target" "$backup"
 
     local tmp="$TEMP_DIR/machine_home.nix"
-    awk -v app="$app_name" '
+    if ! awk -v app="$app_name" '
         { print }
         !done && /^[[:space:]]*hwc\.home\.apps[[:space:]]*=[[:space:]]*\{[[:space:]]*$/ {
             printf "    %s.enable = true;\n", app; done = 1
         }
         END { if (!done) exit 3 }
-    ' "$target" > "$tmp" || {
-        error "machines/$dir/home.nix has no 'hwc.home.apps = {' block to extend"
-        return 1
-    }
+    ' "$target" > "$tmp"; then
+        if ! awk -v app="$app_name" '
+            !done && /^}[[:space:]]*$/ {
+                printf "  hwc.home.apps.%s.enable = true;\n", app; done = 1
+            }
+            { print }
+            END { if (!done) exit 3 }
+        ' "$target" > "$tmp"; then
+            error "machines/$dir/home.nix has no supported app-enable insertion seam"
+            return 1
+        fi
+    fi
 
     cp "$tmp" "$target"
 
@@ -1015,6 +1025,14 @@ enable_in_machine() { # <app-name> <machine-config-name>
 integrate_app() { # <app-name> <attr> <description> <app-type> <machine>
     local app_name="$1" package_attr="$2" description="$3" app_type="$4" machine="$5"
     local app_dir="$REPO_ROOT/domains/home/apps/$app_name"
+    local apps_readme="$REPO_ROOT/domains/home/apps/README.md"
+    local machine_dir; machine_dir="$(machine_dir_for "$machine")"
+    local machine_home="$REPO_ROOT/machines/$machine_dir/home.nix"
+    local apps_readme_backup="$TEMP_DIR/apps_readme.integration.bak"
+    local machine_home_backup="$TEMP_DIR/machine_home.integration.bak"
+
+    [[ -f "$apps_readme" ]] && cp "$apps_readme" "$apps_readme_backup"
+    [[ -f "$machine_home" ]] && cp "$machine_home" "$machine_home_backup"
 
     mkdir -p "$app_dir" || { error "Failed to create $app_dir"; return 1; }
 
@@ -1026,8 +1044,14 @@ integrate_app() { # <app-name> <attr> <description> <app-type> <machine>
 
     success "Created domains/home/apps/$app_name/{index.nix,README.md}"
 
-    update_apps_readme "$app_name" "$description"
-    enable_in_machine "$app_name" "$machine" || return 1
+    if ! update_apps_readme "$app_name" "$description" \
+       || ! enable_in_machine "$app_name" "$machine"; then
+        rm -rf "$app_dir"
+        [[ -f "$apps_readme_backup" ]] && cp "$apps_readme_backup" "$apps_readme"
+        [[ -f "$machine_home_backup" ]] && cp "$machine_home_backup" "$machine_home"
+        error "Integration failed; rolled back generated and edited files"
+        return 1
+    fi
     return 0
 }
 
@@ -1175,8 +1199,11 @@ main() {
             search_file=$(search_packages "$package_query") || exit "$E_FAIL"
             results_file=$(format_search_results "$search_file") || exit "$E_FAIL"
 
-            select_package "$results_file" "$selection_file"
-            select_result=$?
+            if select_package "$results_file" "$selection_file"; then
+                select_result=0
+            else
+                select_result=$?
+            fi
 
             if [[ $select_result -eq 2 ]]; then
                 echo -n "Enter new search term: " >&2
@@ -1244,8 +1271,7 @@ main() {
     local app_dir="$REPO_ROOT/domains/home/apps/$app_name"
     if ! integrate_app "$app_name" "$package_attr" "$package_description" \
             "$app_type" "$target_machine"; then
-        error "Integration failed; removing $app_dir"
-        rm -rf "$app_dir"
+        error "Integration failed; no scoped changes were kept"
         exit "$E_FAIL"
     fi
 
