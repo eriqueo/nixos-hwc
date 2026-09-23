@@ -30,6 +30,29 @@ let
     "-6 rule %s priority 5201 fwmark 0x80000/0xff0000 lookup main"
   ];
   ruleCmds = verb: map (r: "${ip} ${lib.replaceStrings [ "%s" ] [ verb ] r}") tailnetRules;
+
+  # Proton NAT-PMP: a mapping lives 60 s, so renew every 45 s. Proton ignores
+  # the requested ports and returns one public port for both protocols; the
+  # client listens on that same port. The port is written to portFile.
+  pf = proton.portForwarding;
+  portFile = "/run/protonvpn-natpmp/port";
+  natpmpLoop = pkgs.writeShellScript "protonvpn-natpmp" ''
+    set -u
+    natpmpc=${pkgs.libnatpmp}/bin/natpmpc
+    last=""
+    while true; do
+      out=$($natpmpc -a 1 0 udp 60 -g ${pf.gateway} && $natpmpc -a 1 0 tcp 60 -g ${pf.gateway}) \
+        || { echo "NAT-PMP request to ${pf.gateway} failed"; exit 1; }
+      port=$(printf '%s\n' "$out" | ${pkgs.gawk}/bin/awk '/Mapped public port/ { print $4; exit }')
+      [ -n "$port" ] || { echo "no port in natpmpc output"; exit 1; }
+      if [ "$port" != "$last" ]; then
+        echo "$port" > ${portFile}
+        echo "forwarded port: $port"
+        last=$port
+      fi
+      sleep 45
+    done
+  '';
 in
 {
   #==========================================================================
@@ -56,6 +79,22 @@ in
           tailscaled's own packets off the tunnel, so the tailnet stays
           reachable while the VPN is up. All other traffic still uses Proton.
         '';
+      };
+
+      portForwarding = {
+        enable = lib.mkEnableOption ''
+          Proton NAT-PMP port forwarding. Needs a key generated with
+          "NAT-PMP (Port Forwarding)" on and a P2P server. While the tunnel is
+          up, protonvpn-natpmp.service renews the mapping and writes the
+          forwarded port to ${portFile}; set the torrent client's listening
+          port to it
+        '';
+
+        gateway = lib.mkOption {
+          type = lib.types.str;
+          default = "10.2.0.1";
+          description = "Proton's NAT-PMP gateway inside the tunnel";
+        };
       };
 
       privateKeySecret = lib.mkOption {
@@ -130,8 +169,32 @@ in
       }];
     };
 
+    # Starts and stops with the tunnel (bindsTo + wantedBy the wg-quick unit).
+    systemd.services.protonvpn-natpmp = lib.mkIf pf.enable {
+      description = "Proton NAT-PMP port forwarding";
+      bindsTo = [ "wg-quick-protonvpn.service" ];
+      after = [ "wg-quick-protonvpn.service" ];
+      wantedBy = [ "wg-quick-protonvpn.service" ];
+      serviceConfig = {
+        ExecStart = natpmpLoop;
+        Restart = "on-failure";
+        RestartSec = 10;
+        RuntimeDirectory = "protonvpn-natpmp";
+        RuntimeDirectoryMode = "0755";
+      };
+    };
+
+    # The forwarded port is random and can change per session, so a fixed
+    # port can't be declared. Opening the unprivileged range on the tunnel
+    # interface only is equivalent: Proton forwards just the mapped port, so
+    # nothing else from the internet reaches this interface.
+    networking.firewall.interfaces.protonvpn = lib.mkIf pf.enable {
+      allowedTCPPortRanges = [{ from = 1024; to = 65535; }];
+      allowedUDPPortRanges = [{ from = 1024; to = 65535; }];
+    };
+
     # CLI tools for managing the tunnel
-    environment.systemPackages = with pkgs; [ wireguard-tools ];
+    environment.systemPackages = with pkgs; [ wireguard-tools ] ++ lib.optional pf.enable libnatpmp;
 
     #========================================================================
     # VALIDATION

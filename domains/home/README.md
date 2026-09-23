@@ -50,6 +50,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-23: `core/shell/` — new `vpnport` alias: prints the Proton forwarded port from `/run/protonvpn-natpmp/port` (see `hwc.networking.vpn.protonvpn.portForwarding`).
 - 2026-09-21: `core/shell/` — new `server-lan` ssh matchBlock and shell alias to hwc-server's home-LAN address (`hmLib.fleet.lanIps.main`). Use it when Tailscale can't connect because the internet is down.
 - 2026-09-17: apps/claude-code `shareConfig.autoPull` → two-way `shareConfig.sync` with a shared memory store; apps/codex gains `shareHarness` (shared hooks.json, rendered AGENTS.md, hook trust). hwc-laptop and hwc-server now run one harness from `~/.claude-config`.
 - 2026-09-16: Workbench now uses a bounded one-shot Codex result flow, and its exact Hyprland window class suppresses background activation so aerc cannot steal the active workspace.

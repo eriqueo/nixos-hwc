@@ -253,7 +253,9 @@ in
 
   # Declarative ProtonVPN via WireGuard, on demand only: `vpnon` / `vpnoff` /
   # `vpnstatus` (shell aliases) start/stop wg-quick-protonvpn.
-  # Server US-UT#100, from wg-US-UT-100.conf (account.protonvpn.com/downloads).
+  # Server US-UT#108 (P2P), from hwc-laptop-pmp-US-UT-108.conf
+  # (account.protonvpn.com/downloads), generated with NAT-PMP on for port
+  # forwarding; `vpnport` prints the forwarded port for qBittorrent.
   # The laptop has its OWN Proton key (`vpn-wireguard-private-key-laptop`);
   # `vpn-wireguard-private-key` belongs to hwc-server's gluetun tunnel, and
   # Proton allows one active session per key.
@@ -267,6 +269,7 @@ in
     address = [ "10.2.0.2/32" "2a07:b944::2:2/128" ];
     peer.publicKey = "p98ypqr13MegNQyjIu4i4tFLVvQXWCM9uul0KqokxwA=";
     peer.endpoint = "198.44.139.83:51820";
+    portForwarding.enable = true;
   };
 
   # Proton Mail Bridge managed by Home Manager user service (NOT system service)
