@@ -500,7 +500,7 @@
           configurationRules = server.services.prometheus.rules;
         });
       in pkgs.runCommand "frigate-contract" {
-        nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.onnx p.pillow ])) pkgs.prometheus ];
+        nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.onnx p.pillow ])) pkgs.prometheus.cli ];
       } ''
         python3 ${./domains/media/frigate/parts/test_config.py} ${fixture} ${./domains/media/frigate/parts/labelmap.py}
         touch $out
