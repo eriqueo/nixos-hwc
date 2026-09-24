@@ -28,12 +28,12 @@ let
       lib.concatStringsSep " " (map (item:
         ''(case `^${prefix}${item}$` "${display.${item} or item}")''
       ) items);
-    domainCases = templateCases mailContract.domainTagPrefix mailContract.domains domainDisplay + '' (exclude `.*`)'';
-    stateCases = templateCases mailContract.stateTagPrefix mailContract.states stateDisplay + '' (exclude `.*`)'';
+    domainCases = templateCases mailContract.domainTagPrefix mailContract.domains domainDisplay + " (exclude `.*`)";
+    stateCases = templateCases mailContract.stateTagPrefix mailContract.states stateDisplay + " (exclude `.*`)";
     manualFactTags = map (tag: tag.tag)
       (lib.filter (tag: !(lib.elem tag.tag [ "action" "pending" ])) tags.flagTags);
     traitCases = templateCases mailContract.traitTagPrefix mailContract.factTags {}
-      + " " + templateCases "" manualFactTags {} + '' (exclude `.*`)'';
+      + " " + templateCases "" manualFactTags {} + " (exclude `.*`)";
     # Final receivers that are allowed to attest Authentication-Results. Aerc's
     # RFC 8058 unsubscribe command rejects all other headers before acting; do
     # not replace this exact list with the documented debugging wildcard (`*`).

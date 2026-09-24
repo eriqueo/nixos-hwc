@@ -713,6 +713,8 @@
         && lib.hasInfix "column-state" aercConf
         && lib.hasInfix "column-tags" aercConf)
         "mail-workflow-v2: workflow columns regressed";
+      assert lib.assertMsg (!(lib.hasInfix ")(exclude" aercConf))
+        "mail-workflow-v2: generated aerc template operands must be whitespace-separated";
       pkgs.runCommand "mail-workflow-v2" {} ''
         ${pkgs.python3}/bin/python3 - ${hookFixture} <<'PY'
         import pathlib

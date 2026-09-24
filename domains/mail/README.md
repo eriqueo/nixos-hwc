@@ -106,6 +106,8 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-09-23: Kept aerc's Domain, State, and Tags columns loadable by preserving
+  whitespace between generated `case` and `exclude` template operands.
 - 2026-09-22: Promoted the private Nomic embedding classifier for Domain after
   it passed the frozen sender-disjoint gate (6/7). Embedding State remains
   shadow-only after missing its gate (5/7); Laya and learned exact-sender
