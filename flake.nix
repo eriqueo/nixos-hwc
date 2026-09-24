@@ -780,6 +780,23 @@
         touch "$out"
       '';
 
+      # The gateway must run the TypeScript build produced by Nix. Pointing
+      # systemd back at ignored checkout dist/ output recreates the stale-code
+      # failure this boundary removes. Referencing the entry point also builds
+      # the package, whose checkPhase runs the MCP test suite.
+      mcp-immutable-build = let
+        command = self.nixosConfigurations.hwc-server.config.systemd.services.hwc-sys-mcp.serviceConfig.ExecStart;
+        main = lib.last (lib.splitString " " command);
+      in
+      assert lib.assertMsg (lib.hasPrefix "/nix/store/" main)
+        "mcp-immutable-build: gateway entry point is not in the Nix store";
+      assert lib.assertMsg (!(lib.hasInfix "/home/eric/.nixos/" main))
+        "mcp-immutable-build: gateway returned to mutable checkout dist output";
+      pkgs.runCommand "mcp-immutable-build" {} ''
+        test -f ${main}
+        touch "$out"
+      '';
+
       # ── Prometheus tier ladders are mutually exclusive ──────────────────
       # Parses the ACTUAL rule expressions (not a second copy of the numbers)
       # and proves no sample value can satisfy two tiers of one family. Before

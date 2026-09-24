@@ -56,6 +56,7 @@ interface MailTriage {
     look_count: number;
     junk_count: number;
   };
+  routing_rules?: unknown[];
 }
 
 type Bucket = "do" | "did" | "look" | "junk";
@@ -397,6 +398,9 @@ export function mailTriageTools(
         const junkCount = junk.length;
         const totalUnread = triage?.total_unread ?? 0;
         const generatedAt = triage?.generated_at ?? null;
+        const routingRuleCount = Array.isArray(triage?.routing_rules)
+          ? triage.routing_rules.length
+          : 0;
 
         // Compact legacy data form — stable regardless of action.
         const compact = {
@@ -408,6 +412,7 @@ export function mailTriageTools(
             look_count: lookCount,
             junk_count: junkCount,
           },
+          routing_rule_count: routingRuleCount,
         };
 
         if (action === "digest") {
@@ -416,7 +421,7 @@ export function mailTriageTools(
             view: contract("list", "Mail to do", {
               items: items.slice(0, 8), total: items.length,
               remaining: Math.max(0, items.length - 8),
-              summary: `${doCount} do · ${didCount} waiting · classified ${generatedAt ?? "unknown"}`,
+              summary: `${doCount} do · ${didCount} waiting · ${routingRuleCount} routing rule${routingRuleCount === 1 ? "" : "s"} · classified ${generatedAt ?? "unknown"}`,
             }, { generated_at: generatedAt, source: "hwc_mail_triage" }) };
         }
 

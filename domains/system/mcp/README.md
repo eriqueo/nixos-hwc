@@ -212,14 +212,17 @@ Check root podman socket access:
 
 `nix eval` operates on the git store, not the working tree. Uncommitted changes are invisible. Commit first, or use filesystem-based tools (`list_domains`, `search_options`, `get_port_map`) which read the working tree.
 
-### Service running old code after editing TypeScript
+### Deploying TypeScript changes
 
-The systemd service runs `dist/index.js` (compiled JS), not the TypeScript source. After editing `.ts` files:
+The systemd service runs a `buildNpmPackage` result from the Nix store. Commit
+the TypeScript change, then build and switch the system generation:
 
 ```bash
-cd domains/system/mcp/src && npx tsc   # compile TS → JS
-sudo systemctl restart hwc-sys-mcp      # restart with new JS
+sudo nixos-rebuild switch --flake .#hwc-server
 ```
+
+The Nix build runs `npm run build` and the test suite. A plain service restart
+does not deploy unbuilt working-tree TypeScript.
 
 ## What NOT To Do (Lessons from Production Crashes)
 
@@ -262,9 +265,12 @@ The sessionless design eliminates all of these. If you need session awareness in
 
 The Caddy reverse proxy on :18080 has `flush_interval -1` for the MCP routes. Without it, Caddy buffers streaming responses. Claude.ai sees `content-length: 0` with empty bodies and can't connect. The `transport http { read_timeout 0; write_timeout 0 }` settings are also required for long-running tool calls.
 
-### DO NOT forget to compile TypeScript before restarting
+### DO NOT bypass the Nix-built gateway
 
-The service runs `dist/index.js`. Editing `src/*.ts` without running `npx tsc` means the restart loads the old compiled code. The startup log version vs health endpoint version mismatch is a telltale sign.
+The service entry point is the immutable package in the current system
+generation. Do not repoint it at ignored `src/dist/` output or treat a service
+restart as deployment; that was the stale-code failure this package boundary
+removed.
 
 ## Tools (44 hwc-sys)
 
@@ -467,9 +473,8 @@ systemctl status hwc-sys-mcp
 # View logs
 journalctl -u hwc-sys-mcp -f
 
-# Restart after code changes
-cd domains/system/mcp/src && npx tsc    # compile TS → JS first!
-sudo systemctl restart hwc-sys-mcp
+# Deploy code changes (builds, tests, and restarts the new store path)
+sudo nixos-rebuild switch --flake .#hwc-server
 ```
 
 PATH includes: nix, git, systemd, podman, tailscale, curl, jq, borgbackup, coreutils, gawk, gnugrep, procps, util-linux, bash, pass, gnupg.
@@ -490,6 +495,10 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-09-24: The gateway is now built and tested by Nix and systemd runs its
+  immutable store entry point, eliminating drift between TypeScript and ignored
+  `dist/` output. Workbench mail surfaces report the active routing-rule count,
+  and the Morning Briefing detail lists each active sender-plus-subject rule.
 - 2026-09-22: Mail health now reads the versioned core/Trash status projection,
   and mail sync starts `mbsync.service` instead of bypassing its unit result.
   `hwc-mcp-call --timeout <seconds>` gives bounded long-running tools such as a

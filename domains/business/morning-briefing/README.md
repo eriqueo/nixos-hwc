@@ -31,7 +31,7 @@ gather-research.mjs    # Step 1c: research-scout review lane over loopback REST
 CLAUDE.md              # Agent prompt: data schema, alert rules, MCP sources
 dashboard/
   index.html           # Static SPA dashboard (dark theme, pull-to-refresh)
-  briefing.json        # Symlink → ../output/briefing.json
+  briefing.json        # Atomically published served copy of output/briefing.json
 output/
   briefing.json        # Final merged output (main + mail triage)
   mail-triage.json     # Step 2 output before merge
@@ -94,7 +94,8 @@ and consumed by aerc, notmuch, the briefing, and MCP.
 The mutable outputs are under `output/`: `briefing.json` is the combined source
 for the dashboard and Workbench, while `mail-triage.json` is the classifier's
 mail-only snapshot before merge. `dashboard/briefing.json` is only the served
-link/copy of `output/briefing.json`; it is not another source of truth.
+copy of `output/briefing.json`; it is not another source of truth. Both the full
+morning run and each intraday mail retriage publish that copy atomically.
 
 ## Sections
 
@@ -161,6 +162,11 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+
+- **2026-09-24** — Persistent sender-plus-subject routing rules now appear in
+  the dashboard, Workbench briefing, and plain/HTML email. Mail retriage also
+  republishes the served dashboard JSON atomically, so intraday changes cannot
+  remain hidden behind the previous scheduled copy.
 
 - **2026-09-22** — Mail views now use the v2 DO/DID/LOOK/JUNK snapshot. The
   dashboard is read-only; aerc and MCP mutations both record ledger events.

@@ -24,7 +24,7 @@ domains/system/
 ├── gpu/
 │   └── index.nix         # Graphics stack, PRIME offload, and boot-scoped wrapped-launch policy
 ├── mcp/                  # HWC Infrastructure MCP Server (25 tools, 5 resources)
-│   ├── index.nix         # NixOS module, systemd service, Caddy route
+│   ├── index.nix         # Nix-built TypeScript package, systemd service, Caddy route
 │   ├── parts/caddy.nix   # Reverse-proxy route (port 6243 → 6200)
 │   └── src/              # TypeScript source; bounded selected-thread mail snapshot and shared tag actions
 └── (storage/ and users/ subdirs removed; live config uses flat users.nix
@@ -44,6 +44,9 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-09-24: `mcp/` is compiled and tested by `buildNpmPackage`; systemd now
+  runs the immutable store result instead of ignored checkout `dist/` files.
+  Workbench mail views expose active routing rules.
 - 2026-09-22: `hardware/` — set the P1 Gen 7 Sensel pad to touchpad mode on each HID enumeration so palm rejection works after boot, resume, and lid rebind.
 
 - 2026-09-21: MCP task creation gained bounded weekly recurrence, and mail

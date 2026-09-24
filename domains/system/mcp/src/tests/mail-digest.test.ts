@@ -6,9 +6,44 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mailTriageTools, reflectLiveBuckets } from "../src/tools/mail-triage.js";
+import { morningBriefTool } from "../src/tools/morning-brief.js";
 
 const thread = (id: string) => ({
   thread_id: id, subject: `Thread ${id}`, sender: "Sender", tags: [],
+});
+
+describe("morning briefing mail routing rules", () => {
+  it("shows active rules in the Workbench briefing detail", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "morning-brief-"));
+    try {
+      const path = join(dir, "briefing.json");
+      await writeFile(path, JSON.stringify({
+        generated_at: new Date().toISOString(),
+        sections: {mail: {healthy: true}},
+        alerts: [],
+        mail_triage: {
+          stats: {do_count: 1, did_count: 0, look_count: 0, junk_count: 0},
+          buckets: {do: [], did: [], look: [], junk: []},
+          routing_rules: [{
+            sender: "office@example.com",
+            subject_contains: "[P1 CRITICAL]",
+            state: "do",
+            domain: "hwc",
+          }],
+        },
+      }));
+
+      const result = await morningBriefTool(path).handler({});
+      expect(result.status).toBe("ok");
+      expect(result.view?.data).toMatchObject({
+        body: expect.stringContaining("Routing rules: **1 active**"),
+      });
+      expect((result.view?.data as {body:string}).body)
+        .toContain("office@example.com + “[P1 CRITICAL]” → DO · HWC");
+    } finally {
+      await rm(dir, {recursive: true, force: true});
+    }
+  });
 });
 const empty = () => ({ do: [], did: [], look: [], junk: [] });
 
@@ -108,7 +143,7 @@ describe("authoritative mail placement", () => {
     const dir = await mkdtemp(join(tmpdir(),"mail-digest-"));
     try {
       const path = join(dir,"brief.json");
-      await writeFile(path, JSON.stringify({mail_triage:{generated_at:"2026-09-07T12:00:00Z",buckets:{
+      await writeFile(path, JSON.stringify({mail_triage:{generated_at:"2026-09-07T12:00:00Z",routing_rules:[{},{}],buckets:{
         ...empty(),do:[thread("a"),...Array.from({length:10},(_,i)=>thread(String(i)))],look:[thread("e")],junk:[thread("f")]
       }}}));
       const tool = mailTriageTools(path, async () => new Map(
@@ -120,6 +155,8 @@ describe("authoritative mail placement", () => {
       expect(data.items).toHaveLength(8);
       expect(data.items[0].id).toBe("a");
       expect(data.remaining).toBe(3);
+      expect(data.summary).toContain("2 routing rules");
+      expect(result.data).toMatchObject({routing_rule_count:2});
       expect(data.items.some((i:any)=>i.id==="f")).toBe(false);
     } finally { await rm(dir,{recursive:true,force:true}); }
   });

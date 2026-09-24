@@ -98,6 +98,7 @@ in
         ReadWritePaths = [
           "${agentDir}/output"
           "${agentDir}/logs"
+          "${agentDir}/dashboard"
           "/var/lib/hwc/mail-classifier"
           "/tmp"
         ];

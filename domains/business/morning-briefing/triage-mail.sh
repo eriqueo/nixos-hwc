@@ -7,6 +7,7 @@ set -uo pipefail
 MODE="${1:-baseline}"
 AGENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_DIR="${AGENT_DIR}/output"
+DASHBOARD_DIR="${AGENT_DIR}/dashboard"
 LOG_FILE="${AGENT_DIR}/logs/run.log"
 MAIL_TRIAGE_JSON="${OUTPUT_DIR}/mail-triage.json"
 BRIEFING_JSON="${OUTPUT_DIR}/briefing.json"
@@ -19,8 +20,32 @@ DRAFT_DIR="${OUTPUT_DIR}/calendar-drafts"
 
 log() { echo "$(date -Iseconds) [triage-${MODE}] $*" >> "${LOG_FILE}"; }
 
-mkdir -p "${OUTPUT_DIR}" "${DRAFT_DIR}"
+publish_dashboard() {
+  if [ ! -f "${BRIEFING_JSON}" ]; then
+    log "WARN: no combined briefing to publish"
+    return 1
+  fi
+
+  # dashboard/briefing.json is a served derivative, never a second producer.
+  # Copy to a sibling and rename so Caddy sees either the old complete document
+  # or the new complete document, never a partial JSON write.
+  cp --remove-destination "${BRIEFING_JSON}" "${DASHBOARD_DIR}/briefing.json.tmp" \
+    && jq empty "${DASHBOARD_DIR}/briefing.json.tmp" \
+    && mv "${DASHBOARD_DIR}/briefing.json.tmp" "${DASHBOARD_DIR}/briefing.json"
+}
+
+mkdir -p "${OUTPUT_DIR}" "${DRAFT_DIR}" "${DASHBOARD_DIR}" "$(dirname "${LOG_FILE}")"
 chmod 700 "${DRAFT_DIR}"
+
+if [ "${MODE}" = "publish" ]; then
+  publish_dashboard
+  exit $?
+fi
+
+if [ "${MODE}" != "baseline" ] && [ "${MODE}" != "delta" ]; then
+  log "ERROR: unknown mode '${MODE}'"
+  exit 2
+fi
 
 if [ ! -x "${CLASSIFIER_BIN}" ] || [ ! -S "${SOCKET}" ]; then
   log "WARN: Laya classifier unavailable; unclassified mail remains DO"
@@ -52,5 +77,10 @@ if [ -f "${BRIEFING_JSON}" ]; then
     && jq empty "${BRIEFING_JSON}.tmp" \
     && mv "${BRIEFING_JSON}.tmp" "${BRIEFING_JSON}"
 fi
+
+publish_dashboard || {
+  log "ERROR: dashboard publish failed"
+  exit 1
+}
 
 exit 0

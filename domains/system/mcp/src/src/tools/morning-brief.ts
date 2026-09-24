@@ -65,7 +65,7 @@ function bullets(items: unknown[], max = 50): string[] {
   return items.slice(0, max).map(itemLine).filter(Boolean);
 }
 
-export function morningBriefTool(): ToolDef {
+export function morningBriefTool(briefingPath = BRIEFING_PATH): ToolDef {
   return {
     name: "hwc_morning_brief",
     description:
@@ -78,12 +78,12 @@ export function morningBriefTool(): ToolDef {
     handler: async (): Promise<ToolResult> => {
       let raw: string;
       try {
-        raw = await readFile(BRIEFING_PATH, "utf8");
+        raw = await readFile(briefingPath, "utf8");
       } catch {
         return {
           status: "error",
           message: "Morning briefing unavailable — briefing.json not found",
-          error: `Could not read ${BRIEFING_PATH}`,
+          error: `Could not read ${briefingPath}`,
           error_type: "NOT_FOUND",
           suggestion: "Check the morning-briefing.service timer ran; it writes briefing.json at 6am MT.",
           view: contract("text", "Morning Briefing", {
@@ -316,6 +316,18 @@ export function morningBriefTool(): ToolDef {
         }
         const doMail = bullets(asArr(asObj(mailTriage["buckets"])["do"]), 5);
         for (const item of doMail) mailLines.push(`  - 🔴 ${item}`);
+        const routingRules = asArr(mailTriage["routing_rules"]);
+        if (routingRules.length) {
+          mailLines.push(`- Routing rules: **${routingRules.length} active**`);
+          for (const rawRule of routingRules.slice(0, 20)) {
+            const rule = asObj(rawRule);
+            const sender = pick(rule, "sender") || "unknown sender";
+            const subject = pick(rule, "subject_contains") || "any subject";
+            const state = pick(rule, "state").toUpperCase() || "DO";
+            const domain = pick(rule, "domain").toUpperCase() || "OTHER";
+            mailLines.push(`  - ${sender} + “${subject}” → ${state} · ${domain}`);
+          }
+        }
       }
       section("Mail", mailLines);
 

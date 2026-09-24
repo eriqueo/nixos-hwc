@@ -28,6 +28,32 @@ let
 
   srcDir = "${paths.nixos}/domains/system/mcp/src";
 
+  # Build the gateway from its TypeScript source during the Nix build. The
+  # service previously ran ignored dist/ files from the mutable checkout, so a
+  # successful system switch could restart old JavaScript after source changed.
+  mcpNodejs = pkgs.nodejs_22;
+  mcpPackage = pkgs.buildNpmPackage {
+    pname = "hwc-infra-mcp";
+    version = "0.3.0";
+    src = lib.cleanSourceWith {
+      src = ./src;
+      filter = path: type:
+        let base = baseNameOf path;
+        in base != "node_modules" && base != "dist" && base != ".gitignore";
+    };
+    nodejs = mcpNodejs;
+    npmDepsHash = "sha256-J0nRXqTrTfqXQRmvAmalj8QwnL1knh8ZE0iOzj0s4Lw=";
+    npmBuildScript = "build";
+    dontNpmPrune = false;
+    doCheck = true;
+    checkPhase = ''
+      runHook preCheck
+      npm test
+      runHook postCheck
+    '';
+  };
+  mcpMain = "${mcpPackage}/lib/node_modules/@hwc/infra-mcp/dist/index.js";
+
   # hwc-crm stdio backend: a thin python MCP client over the hwc-crm HTTP API.
   # Needs the official MCP SDK (FastMCP) + httpx; run from the live checkout.
   crmSrcDir = "${paths.user.home}/600_apps/hwc-crm";
@@ -339,7 +365,7 @@ in
         {
           Type = "simple";
           ExecStartPre = "+${installN8nMcp}";  # + = run as root (npm install needs write to /opt)
-          ExecStart = "${pkgs.nodejs_22}/bin/node ${srcDir}/dist/index.js";
+          ExecStart = "${mcpNodejs}/bin/node ${mcpMain}";
           EnvironmentFile = "/run/hwc-sys-mcp/env";
           WorkingDirectory = srcDir;
           Restart = "on-failure";

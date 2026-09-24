@@ -4,7 +4,7 @@
 # Step 1: local sources → output/briefing.json
 # Step 2: notmuch → resident Laya → output/mail-triage.json
 # Step 3: jq merge → .mail_triage injected into briefing.json
-# Step 4: copy output/briefing.json → dashboard/briefing.json for Caddy
+# Step 4: atomically publish output/briefing.json for Caddy
 
 set -euo pipefail
 
@@ -614,12 +614,10 @@ fi
 
 # ── Step 4: Publish to dashboard/ ────────────────────────────────────────────
 if [ -f "${OUTPUT_DIR}/briefing.json" ]; then
-  # Use symlink if not already linked; otherwise cp with --remove-destination
-  if [ -L "${DASHBOARD_DIR}/briefing.json" ]; then
-    log "OK: Dashboard symlink already points to output"
-  else
-    cp --remove-destination "${OUTPUT_DIR}/briefing.json" "${DASHBOARD_DIR}/briefing.json"
+  if "${AGENT_DIR}/triage-mail.sh" publish; then
     log "OK: Published to dashboard/"
+  else
+    log "ERROR: Dashboard publish failed"
   fi
 fi
 # Today-queue agent reports: serve output/reports/ through the dashboard vhost
