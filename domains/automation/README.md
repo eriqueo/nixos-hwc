@@ -78,6 +78,8 @@ workspace/automation/
 
 ## Changelog
 
+- 2026-09-24: Publish and re-export the Frigate workflow with local timestamps, checked clip readiness, request deadlines and message IDs in execution history; exercise all send branches through a local capture sink.
+
 - 2026-09-24: Frigate bridge forwards only completed events, bounds requests, checks HTTP errors and logs outcomes by event ID without retries.
 
 - 2026-09-22: Clarified that mail-janitor's legacy deny list is janitor-only;

@@ -48,11 +48,14 @@ fidelity to live: none carries an `_hwc` block, and several still hold volatile
 fields (`updatedAt`, `versionId`) the tool drops. They are scanned (clean) but
 not canonical.
 
-`02-frigate-surveillance-intelligence.json` is the freshest — re-synced from
-live on 2026-07-15 with its webhook redacted, then hand-edited on 2026-09-07 to
-replace that placeholder with `={{ $env.DISCORD_WEBHOOK_FRIGATE_URL }}` — but it
-is still a hand edit, not a regeneration, so it is the first candidate for a
-real re-export.
+`02-frigate-surveillance-intelligence.json` was regenerated from the published
+live workflow on 2026-09-24. It uses the configured timezone explicitly, checks
+the HLS manifest before offering clip links, gives a clear pending/unavailable
+message, and bounds HTTP requests without retrying Discord POSTs. Successful
+delivery responses (including message IDs) and failures stay in n8n execution
+history. A temporary workflow using local HTTP sinks exercised snapshot upload,
+snapshot fallback, ready/pending clips, animal routing, cooldown and update
+filtering without sending external messages. The temporary workflow was deleted.
 
 Regenerate opportunistically, one live export at a time. Do **not** run the tool
 over a tracked file to make it look canonical: canonicalizing a stale artifact
