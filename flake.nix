@@ -484,6 +484,31 @@
         touch $out
       '';
     in {
+      mqtt-webhook-contract = let
+        module = import ./domains/automation/mqtt/index.nix {
+          inherit pkgs lib;
+          config.hwc = {
+            paths.state = "/tmp";
+            automation.mqtt = {
+              enable = true;
+              port = 18884;
+              dataDir = "/tmp/mqtt";
+              webhookBridge = {
+                enable = true;
+                topic = "fixture/events";
+                eventTypes = [ "end" ];
+                webhookUrl = "http://127.0.0.1:18386/capture";
+              };
+            };
+          };
+        };
+        bridge = module.config.content.systemd.services.mqtt-webhook-bridge.content.serviceConfig.ExecStart;
+      in pkgs.runCommand "mqtt-webhook-contract" {
+        nativeBuildInputs = [ pkgs.python3 pkgs.mosquitto ];
+      } ''
+        python3 ${./domains/automation/mqtt/test_bridge.py} ${bridge}
+        touch $out
+      '';
       frigate-contract = let
         server = self.nixosConfigurations.hwc-server.config;
         frigate = server.hwc.media.frigate;

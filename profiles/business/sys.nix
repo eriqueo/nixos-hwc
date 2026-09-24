@@ -119,6 +119,7 @@
     webhookBridge = {
       enable = true;
       topic = "frigate/events";
+      eventTypes = [ "end" ]; # Intermediate updates cannot notify; avoid n8n executions.
       webhookUrl = "http://127.0.0.1:5678/webhook/frigate-events";
     };
   };

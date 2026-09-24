@@ -13,7 +13,8 @@ Mosquitto MQTT broker providing a lightweight message bus for service integratio
 
 ```
 domains/automation/mqtt/
-├── index.nix     # Options, Mosquitto config, webhook bridge service
+├── index.nix     # Options, Mosquitto config, bounded webhook forwarding and event filtering
+├── test_bridge.py # Real broker + local HTTP sink contract test
 └── README.md     # This file
 ```
 
@@ -50,5 +51,7 @@ hwc.automation.mqtt = {
 - `mqtt-webhook-bridge.service` — forwards MQTT events to n8n webhook (optional)
 
 ## Changelog
+
+- 2026-09-24: Filter intermediate camera updates before n8n, bound HTTP calls to 15 seconds, check failure status and log event IDs. POSTs remain non-retriable; accepted means n8n received the event, not that Discord delivered it.
 
 - 2026-03-25: Created README per Law 12

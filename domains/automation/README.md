@@ -22,7 +22,7 @@ automation/
 │   ├── index.nix   # Options + systemd oneshot service/timer (every 30m); dryRun default on
 │   ├── janitor.py  # Engine: pure classify() core + I/O edges; reads ~/000_inbox/_inbox-routing.yaml
 │   └── README.md   # Single-writer rationale + rollout
-├── mqtt/        # MQTT broker for event-driven automation
+├── mqtt/        # MQTT broker, event filtering and bounded webhook forwarding
 │   └── index.nix
 ├── nightly-builds/  # Overnight gauntlet-card runner (headless Claude Code)
 │   ├── index.nix    # Options + systemd service/timer (hwc.automation.nightlyBuilds.*);
@@ -77,6 +77,8 @@ workspace/automation/
 ```
 
 ## Changelog
+
+- 2026-09-24: Frigate bridge forwards only completed events, bounds requests, checks HTTP errors and logs outcomes by event ID without retries.
 
 - 2026-09-22: Clarified that mail-janitor's legacy deny list is janitor-only;
   local mail workflow classification belongs solely to Laya.

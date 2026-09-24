@@ -38,13 +38,27 @@ let
         topic=$(echo "$line" | cut -d' ' -f1)
         payload=$(echo "$line" | cut -d' ' -f2-)
 
-        # Only forward if we have a payload
+        # One request in flight; pipe backpressure bounds memory. QoS 0 remains
+        # best effort. External POSTs are non-retriable: an ambiguous timeout
+        # must not trigger a duplicate notification.
         if [ -n "$payload" ] && [ "$payload" != "$topic" ]; then
-          echo "[$(date -Iseconds)] Forwarding event from $topic"
-          ${pkgs.curl}/bin/curl -s -X POST \
+          ${lib.optionalString (cfg.webhookBridge.eventTypes != []) ''
+            if ! ${pkgs.jq}/bin/jq -e --argjson types '${builtins.toJSON cfg.webhookBridge.eventTypes}' \
+              '.type as $type | $types | index($type) != null' <<< "$payload" >/dev/null; then
+              continue
+            fi
+          ''}
+          event_id=$(${pkgs.jq}/bin/jq -c '.after.id // .id // "unknown"' <<< "$payload" 2>/dev/null || echo '"invalid-json"')
+          if status=$(${pkgs.curl}/bin/curl --silent --show-error --fail \
+            --connect-timeout 3 --max-time 15 -o /dev/null -w '%{http_code}' -X POST \
             -H "Content-Type: application/json" \
             -d "$payload" \
-            "$WEBHOOK_URL" || echo "  Warning: webhook call failed"
+            "$WEBHOOK_URL"); then
+            echo "event=$event_id outcome=accepted http=$status (delivery tracked by n8n)"
+          else
+            result=$?
+            echo "event=$event_id outcome=failed http=$status curl_exit=$result retry=false" >&2
+          fi
         fi
       done
   '';
@@ -78,6 +92,11 @@ in
         type = lib.types.str;
         default = "http://127.0.0.1:5678/webhook/frigate-events";
         description = "Webhook URL to forward messages to";
+      };
+      eventTypes = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [];
+        description = "Forward only these JSON event types; empty forwards every payload";
       };
     };
   };
@@ -121,6 +140,7 @@ in
         ExecStart = "${mqttWebhookBridge}";
         Restart = "always";
         RestartSec = 5;
+        TimeoutStopSec = 20;
         User = "nobody";
         Group = "nogroup";
       };
