@@ -7,31 +7,21 @@ sibling modules (e.g. `domains/mail/tasks`) inject pairs into via
 
 NAMESPACE: `hwc.home.apps`-adjacent but lives under mail — `hwc.mail.calendar.*`.
 
-## Backends
+## Backend
 
-- **iCloud (legacy, default off-path):** one CalDAV pair per
-  `hwc.mail.calendar.accounts.<name>` against `caldav.icloud.com`, discovery
-  `["from a"]` (iCloud can't MKCALENDAR). Synced into `calendars/<account>/`.
-- **Radicale (`hwc.mail.calendar.radicale.enable`):** the self-hosted CalDAV
-  server (`tasks.hwc.iheartwoodcraft.com`, same vhost + `radicale-htpasswd`
-  secret as the tasks backend). One VEVENT pair (`calendar_radicale`) pinned to
-  `work`, `family`, and `personal`, synced into `calendars-radicale/`.
-  The `work` collection keeps the stable khal display name `hwc`; collection
-  paths and user-facing display names are separate contracts.
-  **When radicale is on, the iCloud account pairs are no
-  longer generated** (calendar lives on Radicale, plumbed exactly like tasks).
-  This is the VEVENT twin of `domains/mail/tasks`'s VTODO Radicale pair.
+Radicale is the only backend: the self-hosted CalDAV server
+(`tasks.hwc.iheartwoodcraft.com`, same vhost + `radicale-htpasswd` secret as
+the tasks backend). One VEVENT pair (`calendar_radicale`) pinned to `work`,
+`family`, and `personal` (plus `radicale.extraCollections`), synced into
+`calendars-radicale/`. The `work` collection's displayname is
+`hwc.mail.calendar.primaryCalendar` (`hwc`); khal's default, `busy`, and
+todoman's default list all resolve by it. Collection paths and user-facing
+display names are separate contracts. This is the VEVENT twin of
+`domains/mail/tasks`'s VTODO Radicale pair.
 
 khalt's `khal` is THE calendar binary (plain `pkgs.khal` is retired); the
 config at `~/.config/khal/config` and khalt's own `~/.config/khalt/config`
 (see `domains/home/apps/khalt`) both point at the same calendar dirs.
-
-## Migration (iCloud → Radicale, one-time, laptop)
-
-`scripts/migrate-icloud-to-radicale.sh` copies existing iCloud VEVENT `.ics`
-files into a local Radicale collection, then prints the `vdirsyncer discover` /
-`sync` steps. Run AFTER `hms` with `radicale.enable = true`. It deletes nothing
-and is idempotent. See the header comment in the script for the exact runbook.
 
 ## Structure
 
@@ -39,7 +29,7 @@ and is idempotent. See the header comment in the script for the exact runbook.
 domains/mail/calendar/
 ├── index.nix                          # hwc.mail.calendar.* options + impl
 ├── parts/
-│   ├── vdirsyncer.nix                 # single config (iCloud pairs OR radicale)
+│   ├── vdirsyncer.nix                 # single config (radicale + sibling pairs)
 │   ├── vdirsyncer-pair-radicale.nix   # [pair calendar_radicale] (VEVENT)
 │   ├── khal.nix                        # ~/.config/khal/config (palette-driven)
 │   ├── service.nix                     # 15-min sync timer
@@ -47,12 +37,19 @@ domains/mail/calendar/
 │   ├── ics-watcher.nix                 # auto-import dropped .ics
 │   ├── email-to-khal.py                # reviewed email → event proposal/import
 │   └── email_to_khal_test.py           # parser, flyer, and fetch-policy regressions
-├── scripts/
-│   └── migrate-icloud-to-radicale.sh  # one-time data migration (do not commit-run)
 └── README.md
 ```
 
 ## Changelog
+
+- 2026-09-24: Radicale is the only backend. Deleted the iCloud `accounts`
+  option, its per-account pairs and khal calendars, the hardcoded iCloud
+  `default_calendar` UUID, the `calendars/` mkdir, the apple-app-pw handshake,
+  and the finished `scripts/migrate-icloud-to-radicale.sh`. Dropped
+  `radicale.enable` (always on with the module). Added `primaryCalendar`
+  (default `hwc`) so khal, `busy`, and todoman's default list share one name
+  for eric/work. The iCloud path was off on both machines but still the
+  default, the same trap that left the server syncing dead iCloud tasks.
 
 - 2026-09-21: `hwc.mail.calendar.radicale.extraCollections` — further VEVENT
   collection ids pinned into the `calendar_radicale` pair, for the read-only

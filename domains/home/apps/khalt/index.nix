@@ -36,37 +36,25 @@ let
   dataDir = "~/.local/share/vdirsyncer";
 
   # --- calendars: same data + rendering as domains/mail/calendar's khal.nix ---
-  mkCalendar = name: acc: ''
-    [[${name}]]
-    path = ${dataDir}/calendars/${name}/*
-    color = ${acc.color}
-    type = discover
-  '';
   mkLocalCalendar = name: local: ''
     [[${name}]]
     path = ${local.path}
     color = ${local.color}
     type = discover
   '';
-  # Radicale-synced calendars (VEVENT), discovered under calendars-radicale/.
-  # When hwc.mail.calendar.radicale is on, the iCloud accounts no longer sync,
-  # so this is the live calendar source (same data the MCP's khal reads).
-  radicaleEnabled = (calCfg.radicale or {}).enable or false;
-  radicaleCalendar = lib.optionalString radicaleEnabled ''
+  # Radicale-synced calendars (VEVENT), discovered under calendars-radicale/ —
+  # the only CalDAV calendar source (same data the MCP's khal reads). Present
+  # only when hwc.mail.calendar syncs them.
+  calendarEnabled = calCfg.enable or false;
+  radicaleCalendar = lib.optionalString calendarEnabled ''
     [[radicale]]
     path = ${dataDir}/calendars-radicale/*
     color = ${(calCfg.radicale or {}).color or "dark green"}
     type = discover
   '';
 
-  # When Radicale is the backend, iCloud account pairs are not synced, so their
-  # stale calendars/<account>/ dirs are not surfaced (mirrors khal.nix).
-  accountCalendars = lib.optionals (!radicaleEnabled)
-    (lib.mapAttrsToList mkCalendar (calCfg.accounts or {}));
-
   calendars = lib.concatStringsSep "\n" (
-    accountCalendars
-    ++ (lib.mapAttrsToList mkLocalCalendar (calCfg.localCalendars or {}))
+    (lib.mapAttrsToList mkLocalCalendar (calCfg.localCalendars or {}))
     ++ lib.optional (radicaleCalendar != "") radicaleCalendar
   );
 

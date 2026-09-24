@@ -26,7 +26,9 @@ import {
   type Task,
 } from "../executors/caldav.js";
 
-const DEFAULT_LIST = "Work";
+// Displayname of eric/work, shared with the calendar. Keep in step with
+// hwc.mail.calendar.primaryCalendar (HM lane, which this system service cannot read).
+const DEFAULT_LIST = "hwc";
 const WEEKDAYS = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"] as const;
 
 type WeeklyRecurrence = {

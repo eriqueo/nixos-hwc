@@ -2,7 +2,7 @@
 let
   cfg = config.hwc.mail.calendar;
   radicaleCalendarIds = [ "work" "family" "personal" ];
-  primaryCalendarDisplayName = "hwc";
+  primaryCalendarDisplayName = cfg.primaryCalendar;
 
   # khalt supersedes plain khal: its package ships the fork's full `khal`/`ikhal`
   # CLI. Expose ONLY `khal`/`ikhal` here — NOT `bin/khalt`, which is owned by the
@@ -38,38 +38,30 @@ let
     fi
   '';
 
-  # Handshake: safe access to agenix secrets
-  isNixOSHost = osConfig ? hwc;
-  osCfg = if isNixOSHost then osConfig else {};
-
+  # Handshake: safe access to the Radicale credential (htpasswd
+  # "user:password"), mirroring domains/mail/tasks/index.nix.
   # Use osConfig.age.secrets path when HM evaluates as a NixOS module
   # (sudo nixos-rebuild). Fall back to the canonical agenix runtime path
   # so standalone HM (`hms`) doesn't rewrite the config with /dev/null
   # — the secret file exists at this path regardless of HM eval mode.
-  hasApplePw = (osCfg ? age) && (osCfg.age.secrets ? apple-app-pw);
-  applePwPath = if hasApplePw
-    then osCfg.age.secrets.apple-app-pw.path
-    else "/run/agenix/apple-app-pw";
-
-  # Same handshake for the Radicale credential (htpasswd "user:password"),
-  # mirroring domains/mail/tasks/index.nix.
+  isNixOSHost = osConfig ? hwc;
+  osCfg = if isNixOSHost then osConfig else {};
   hasRadicalePw = (osCfg ? age) && (osCfg.age.secrets ? radicale-htpasswd);
   radicalePwPath = if hasRadicalePw
     then osCfg.age.secrets.radicale-htpasswd.path
     else "/run/agenix/radicale-htpasswd";
 
-  radicalePair = lib.optionalString cfg.radicale.enable
-    (import ./parts/vdirsyncer-pair-radicale.nix {
-      inherit lib;
-      inherit dataDir;
-      url = cfg.radicale.url;
-      username = cfg.radicale.username;
-      secretPath = radicalePwPath;
-      collectionIds = radicaleCalendarIds ++ cfg.radicale.extraCollections;
-    });
+  radicalePair = import ./parts/vdirsyncer-pair-radicale.nix {
+    inherit lib;
+    inherit dataDir;
+    url = cfg.radicale.url;
+    username = cfg.radicale.username;
+    secretPath = radicalePwPath;
+    collectionIds = radicaleCalendarIds ++ cfg.radicale.extraCollections;
+  };
 
   vdirsyncer = import ./parts/vdirsyncer.nix {
-    inherit lib pkgs cfg applePwPath radicalePair;
+    inherit lib cfg radicalePair;
   };
   # khal.nix is now palette-aware: it derives its urwid [palette] hi-color
   # fields from the active system theme (fail-soft to gruvbox literals).
@@ -103,36 +95,23 @@ in
       '';
     };
 
-    accounts = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.submodule {
-        options = {
-          email = lib.mkOption {
-            type = lib.types.str;
-            description = "Apple ID email address";
-          };
-          color = lib.mkOption {
-            type = lib.types.str;
-            default = "light magenta";
-            description = "khal display color for this calendar";
-          };
-        };
-      });
-      default = {};
-      description = "Apple Calendar accounts to sync via CalDAV";
+    primaryCalendar = lib.mkOption {
+      type = lib.types.str;
+      default = "hwc";
+      description = ''
+        Displayname of the Radicale Work collection (eric/work), the primary
+        business calendar and task list. khal's default_calendar, `busy`, and
+        todoman's default list resolve collections by displayname, so this
+        must match the name Radicale serves for eric/work.
+      '';
     };
 
+    # Calendar (VEVENT) sync runs against the self-hosted Radicale server
+    # (tasks.hwc.iheartwoodcraft.com — same vhost/secret as the tasks backend);
+    # khal/ikhal discover the synced calendars under
+    # ~/.local/share/vdirsyncer/calendars-radicale/. The iCloud accounts path
+    # was deleted 2026-09-24 (retired 2026-06-15, but still the default).
     radicale = {
-      enable = lib.mkEnableOption ''
-        calendar (VEVENT) sync against the self-hosted Radicale server
-        (tasks.hwc.iheartwoodcraft.com — same vhost/secret as the tasks
-        backend). When on, the iCloud `accounts` no longer generate
-        vdirsyncer pairs (calendar lives on Radicale, plumbed exactly like
-        tasks); khal/ikhal discover the synced calendars under
-        ~/.local/share/vdirsyncer/calendars-radicale/. Requires the
-        radicale-htpasswd secret and the server's
-        hwc.server.services.radicale to be deployed
-      '';
-
       url = lib.mkOption {
         type = lib.types.str;
         default = "https://tasks.hwc.iheartwoodcraft.com/";
@@ -215,12 +194,7 @@ in
 
       # Ensure storage directories exist
       home.activation.calendarDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        mkdir -p ~/.local/share/vdirsyncer/{status,tokens,calendars}
-        ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: _:
-          "mkdir -p ~/.local/share/vdirsyncer/calendars/${name}"
-        ) cfg.accounts)}
-        ${lib.optionalString cfg.radicale.enable
-          "run mkdir -p ~/.local/share/vdirsyncer/calendars-radicale"}
+        run mkdir -p ~/.local/share/vdirsyncer/{status,tokens,calendars-radicale}
       '';
     }
 
@@ -235,9 +209,10 @@ in
     {
       assertions = [
         {
-          assertion = cfg.accounts != {} || cfg.radicale.enable;
-          message = "hwc.mail.calendar requires at least one iCloud account "
-            + "or hwc.mail.calendar.radicale.enable = true.";
+          assertion = cfg.primaryCalendar != "";
+          message = "hwc.mail.calendar.primaryCalendar must name the displayname "
+            + "of the Radicale eric/work collection (khal default_calendar, "
+            + "`busy` and todoman's default list resolve by it).";
         }
       ];
     }

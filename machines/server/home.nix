@@ -17,11 +17,6 @@
   # pull-only mirror. Core sync remains independent on its ten-minute timer.
   hwc.mail.mbsync.trashTimerEnable = true;
 
-  # Calendar → Radicale (self-hosted CalDAV, same backend as tasks). Retires
-  # the iCloud account pairs the mail role declares (vdirsyncer no longer
-  # generates them once radicale is on). This gives hwc-server the
-  # calendars-radicale/ vdir the MCP's hwc_calendar tool reads.
-  hwc.mail.calendar.radicale.enable = true;
   # The read-only mirrors this machine keeps in Radicale (config.nix
   # hwc.server.services.radicale.mirrors), so hwc_calendar sees them too.
   hwc.mail.calendar.radicale.extraCollections = [ "cto" "proton-work" "google-family" ];

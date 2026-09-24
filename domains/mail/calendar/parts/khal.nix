@@ -31,13 +31,6 @@ let
   c = colors;
   hex = name: fallback: "'#${c.${name} or fallback}'";
 
-  mkCalendar = name: acc: ''
-    [[${name}]]
-    path = ${dataDir}/calendars/${name}/*
-    color = ${acc.color}
-    type = discover
-  '';
-
   mkLocalCalendar = name: local: ''
     [[${name}]]
     path = ${local.path}
@@ -45,25 +38,18 @@ let
     type = discover
   '';
 
-  # Radicale-synced calendars (VEVENT) discovered under calendars-radicale/.
-  # When the Radicale backend is on, the iCloud accounts no longer generate
-  # vdirsyncer pairs, so this is the live calendar source.
-  radicaleCalendar = lib.optionalString cfg.radicale.enable ''
+  # Radicale-synced calendars (VEVENT) discovered under calendars-radicale/ —
+  # the only CalDAV calendar source.
+  radicaleCalendar = ''
     [[radicale]]
     path = ${dataDir}/calendars-radicale/*
     color = ${cfg.radicale.color}
     type = discover
   '';
 
-  # When Radicale is the backend, iCloud account pairs are not synced, so their
-  # stale calendars/<account>/ dirs are not surfaced (mirrors vdirsyncer.nix).
-  accountCalendars = lib.optionals (!cfg.radicale.enable)
-    (lib.mapAttrsToList mkCalendar cfg.accounts);
-
   calendars = lib.concatStringsSep "\n" (
-    accountCalendars
-    ++ (lib.mapAttrsToList mkLocalCalendar (cfg.localCalendars or {}))
-    ++ lib.optional (radicaleCalendar != "") radicaleCalendar
+    (lib.mapAttrsToList mkLocalCalendar (cfg.localCalendars or {}))
+    ++ [ radicaleCalendar ]
   );
 
   # --- palette role -> (named fallback, hi-color token) -----------------------
@@ -84,9 +70,8 @@ in
     longdatetimeformat = %Y-%m-%d %H:%M %A
 
     [default]
-    ${if cfg.radicale.enable
-      then "default_calendar = ${defaultCalendar}"   # khal names calendars by displayname
-      else "default_calendar = 06A30686-742B-4681-BBE9-BB15C7E9A54F"}
+    # khal names calendars by displayname
+    default_calendar = ${defaultCalendar}
     highlight_event_days = true
 
     [view]

@@ -67,16 +67,11 @@ let dictationModel = "base.en"; in
   };
 
   # Calendar: self-hosted Radicale (CalDAV) via khalt's khal + vdirsyncer,
-  # plumbed exactly like tasks below. iCloud retired 2026-06-15 — calendar
-  # data was migrated to Radicale (one-time import, see
-  # domains/mail/calendar/README.md "Migration"); the old iCloud vdir at
-  # ~/.local/share/vdirsyncer/calendars/icloud/ stays on disk as the import
-  # source until verified, then can be archived. With radicale.enable on, the
-  # iCloud account pairs are no longer generated.
+  # plumbed exactly like tasks below. iCloud retired 2026-06-15 and its code
+  # path was deleted 2026-09-24; Radicale is the only backend.
   hwc.mail.calendar = {
     enable = true;
     icsWatch.enable = false;
-    radicale.enable = true;
     # Read-only mirrors the server keeps in Radicale
     # (machines/server/config.nix hwc.server.services.radicale.mirrors).
     radicale.extraCollections = [ "cto" "proton-work" "google-family" ];
@@ -89,22 +84,9 @@ let dictationModel = "base.en"; in
   # Tasks: VTODO sync via todoman/todui, riding the calendar vdirsyncer
   # config + timer above. The laptop wires mail per-machine (no mail role),
   # so tasks is enabled here rather than in profiles/mail/home.nix.
-  hwc.mail.tasks = {
-    enable = true;
-    # iCloud pair DEAD as of 2026-06-11: Apple's Reminders "upgrade" was
-    # triggered phone-side and permanently removed CalDAV access to iCloud
-    # reminders (collections now serve only "The creator of this list has
-    # upgraded these reminders." placeholders; old pinned collections were
-    # deleted server-side). Irreversible — do not re-enable. Local task data
-    # was migrated to Radicale; old vdir archived at
-    # ~/.local/share/vdirsyncer/archive-icloud-tasks-2026-06-11/ (named to
-    # stay outside todoman's tasks*/* glob).
-    icloud.enable = false;
-    # Primary backend: self-hosted Radicale (tasks.hwc.iheartwoodcraft.com)
-    # with two-way list creation (todui `N`). Server deployed + secret
-    # provisioned 2026-06-11; runbook in domains/server/services/radicale/README.md.
-    radicale.enable = true;
-  };
+  # Backend: self-hosted Radicale (tasks.hwc.iheartwoodcraft.com) with two-way
+  # list creation (todui `N`); runbook in domains/server/services/radicale/README.md.
+  hwc.mail.tasks.enable = true;
 
   hwc.mail.mbsync.enable = false;
 

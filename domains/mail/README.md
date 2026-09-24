@@ -46,12 +46,12 @@ mail/
 │   ├── index.nix              # khal + vdirsyncer integration; extraVdirsyncerPairs option
 │   └── parts/
 │       ├── khal.nix           # Calendar config
-│       ├── vdirsyncer.nix     # iCloud CalDAV config (+ appends sibling pairs)
+│       ├── vdirsyncer.nix     # Radicale CalDAV config (+ appends sibling pairs)
 │       └── service.nix        # vdirsyncer sync timer (shared by calendar + tasks)
 ├── tasks/
-│   ├── index.nix              # VTODO/Reminders sync + todoman (shares calendar config/timer)
+│   ├── index.nix              # VTODO sync against Radicale + todoman (shares calendar config/timer)
 │   └── parts/
-│       ├── vdirsyncer-pair.nix # [pair tasks] fragment (item_types = ["VTODO"])
+│       ├── vdirsyncer-pair-radicale.nix # [pair tasks_radicale] fragment
 │       └── todoman-config.nix  # ~/.config/todoman/config.py
 ├── mbsync/
 │   ├── index.nix              # mbsync module
@@ -112,6 +112,10 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-09-24: Calendar and tasks sync only against Radicale. Deleted the iCloud
+  code paths (calendar `accounts`, tasks `icloud.enable`/`account`/`collections`,
+  both `radicale.enable` switches, the apple-app-pw handshake); the mail role no
+  longer declares an iCloud account. See `calendar/` and `tasks/` changelogs.
 - 2026-09-24: Added guided sender-plus-subject routing rules under `Space r`.
   Rules share the classifier ledger, preserve thread-level safety overrides,
   and publish their reason into Workbench and morning-briefing views.

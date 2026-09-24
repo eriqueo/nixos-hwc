@@ -539,44 +539,66 @@
         touch $out
       '';
       # Credential checks use fake secrets; no server or real secret is accessed.
+      # Runs on every host that syncs calendar + tasks and pins the rendered
+      # wiring: Radicale is the only CalDAV backend, and todoman reads the vdir
+      # the tasks pair writes. The server kept a dead iCloud tasks pair (and a
+      # todoman path over it) until 2026-09-24 because only the laptop was checked.
       radicale-client-auth = let
-        home = self.homeConfigurations."eric@hwc-laptop".config;
-        fixture = pkgs.writeText "radicale-client-config.json" (builtins.toJSON {
-          command = home.programs.todui.radicale.passwordCommand;
-          username = home.programs.todui.radicale.username;
-          sync = home.xdg.configFile."vdirsyncer/config".text;
-        });
+        hosts = [ "eric@hwc-laptop" "eric@hwc-server" ];
+        fixture = pkgs.writeText "radicale-client-config.json" (builtins.toJSON (map (host:
+          let home = self.homeConfigurations.${host}.config;
+          in {
+            inherit host;
+            todui = lib.optionalAttrs home.programs.todui.enable {
+              command = home.programs.todui.radicale.passwordCommand;
+              username = home.programs.todui.radicale.username;
+            };
+            sync = home.xdg.configFile."vdirsyncer/config".text;
+            todoman = home.xdg.configFile."todoman/config.py".text;
+          }) hosts));
       in pkgs.runCommand "radicale-client-auth" {
         nativeBuildInputs = [ pkgs.python3 pkgs.gawk ];
       } ''
         python3 - ${fixture} <<'PY'
-        import configparser, json, pathlib, shlex, subprocess, sys
-        cfg = json.loads(pathlib.Path(sys.argv[1]).read_text())
-        sync = configparser.RawConfigParser()
-        sync.read_string(cfg["sync"])
-        clients = [("todui", cfg["username"], cfg["command"])]
-        for name in ("tasks", "calendar", "contacts"):
-            section = sync[f"storage {name}_radicale_remote"]
-            fetch = json.loads(section["password.fetch"])
-            assert fetch.pop(0) == "command"
-            clients.append((name, json.loads(section["username"]), fetch))
-        users = sorted({user for _, user, _ in clients})
-        secret = pathlib.Path("secret fixture'quoted")
-        expected = {user: f"fixture:{i}:with spaces" for i, user in enumerate(users)}
-        secret.write_text("unrelated:other\n" + "".join(
-            f"{user}:{password}\n" for user, password in expected.items()
-        ) + "unrelated-last:other-last\n")
-        for name, user, command in clients:
-            if isinstance(command, str):
-                original = shlex.split(command)[-1]
-                command = command.replace(shlex.quote(original), shlex.quote(str(secret)))
-                result = subprocess.run(command, shell=True, capture_output=True, text=True)
-            else:
-                command[-1] = str(secret)
-                result = subprocess.run(command, capture_output=True, text=True)
-            assert result.returncode == 0, f"{name}: credential command failed"
-            assert result.stdout == expected[user] + "\n", f"{name}: wrong user's password"
-            print(f"{name}: selected only its user's complete password")
+        import configparser, json, pathlib, re, shlex, subprocess, sys
+        for cfg in json.loads(pathlib.Path(sys.argv[1]).read_text()):
+            host = cfg["host"]
+            assert "caldav.icloud.com" not in cfg["sync"], f"{host}: vdirsyncer still syncs iCloud"
+            sync = configparser.RawConfigParser()
+            sync.read_string(cfg["sync"])
+            pairs = sorted(s.split(" ", 1)[1] for s in sync.sections() if s.startswith("pair "))
+            assert pairs == ["calendar_radicale", "contacts_radicale", "tasks_radicale"], \
+                f"{host}: expected only the three Radicale pairs, got {pairs}"
+            tasks_dir = json.loads(sync["storage tasks_radicale_local"]["path"])
+            todo_path = re.search(r'^\s*path = "(.*)"$', cfg["todoman"], re.M).group(1)
+            assert todo_path == tasks_dir.rstrip("/") + "/*", \
+                f"{host}: todoman reads {todo_path}, tasks pair writes {tasks_dir}"
+            print(f"{host}: Radicale-only; todoman reads the tasks pair's vdir")
+            clients = []
+            if cfg["todui"]:
+                clients.append(("todui", cfg["todui"]["username"], cfg["todui"]["command"]))
+            for name in ("tasks", "calendar", "contacts"):
+                section = sync[f"storage {name}_radicale_remote"]
+                fetch = json.loads(section["password.fetch"])
+                assert fetch.pop(0) == "command"
+                clients.append((name, json.loads(section["username"]), fetch))
+            users = sorted({user for _, user, _ in clients})
+            secret = pathlib.Path("secret fixture'quoted")
+            expected = {user: f"fixture:{i}:with spaces" for i, user in enumerate(users)}
+            secret.write_text("unrelated:other\n" + "".join(
+                f"{user}:{password}\n" for user, password in expected.items()
+            ) + "unrelated-last:other-last\n")
+            for name, user, command in clients:
+                if isinstance(command, str):
+                    original = shlex.split(command)[-1]
+                    command = command.replace(shlex.quote(original), shlex.quote(str(secret)))
+                    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+                else:
+                    command[-1] = str(secret)
+                    result = subprocess.run(command, capture_output=True, text=True)
+                assert result.returncode == 0, f"{host} {name}: credential command failed"
+                assert result.stdout == expected[user] + "\n", f"{host} {name}: wrong user's password"
+                print(f"{host} {name}: selected only its user's complete password")
         PY
         touch $out
       '';

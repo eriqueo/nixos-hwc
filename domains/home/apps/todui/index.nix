@@ -18,10 +18,10 @@ let
   cfg = config.hwc.home.apps.todui;
   hmLib = import ../../../lib/hm.nix { inherit lib; };
 
-  # Follow the enabled tasks backend (same HM eval as hwc.mail.tasks). iCloud
-  # CalDAV died 2026-06-11; Radicale is the backend. Falls back to the generic
-  # tasks vdir when radicale is off so the app still opens.
-  radicaleOn = lib.attrByPath [ "hwc" "mail" "tasks" "radicale" "enable" ] false config;
+  # Follow the tasks module (same HM eval as hwc.mail.tasks), whose only
+  # backend is Radicale. Sync wiring is off when the tasks module is off, so
+  # the app still opens over an empty vdir.
+  tasksOn = lib.attrByPath [ "hwc" "mail" "tasks" "enable" ] false config;
   vdirRoot = "${config.home.homeDirectory}/.local/share/vdirsyncer";
 
   radicaleUrl = lib.attrByPath [ "hwc" "mail" "tasks" "radicale" "url" ]
@@ -62,17 +62,15 @@ in
     programs.todui = {
       enable = true;
 
-      tasksGlob =
-        if radicaleOn then "${vdirRoot}/tasks-radicale/*"
-        else "${vdirRoot}/tasks/*";
-      syncPairs = lib.optional radicaleOn "tasks_radicale";
-      newListRoot = lib.optionalString radicaleOn "${vdirRoot}/tasks-radicale";
-      newListPair = lib.optionalString radicaleOn "tasks_radicale";
+      tasksGlob = "${vdirRoot}/tasks-radicale/*";
+      syncPairs = lib.optional tasksOn "tasks_radicale";
+      newListRoot = lib.optionalString tasksOn "${vdirRoot}/tasks-radicale";
+      newListPair = lib.optionalString tasksOn "tasks_radicale";
 
-      radicale.url = lib.optionalString radicaleOn radicaleUrl;
-      radicale.username = lib.optionalString radicaleOn radicaleUser;
+      radicale.url = lib.optionalString tasksOn radicaleUrl;
+      radicale.username = lib.optionalString tasksOn radicaleUser;
       radicale.passwordCommand =
-        lib.optionalString radicaleOn (lib.escapeShellArgs (hmLib.radicalePasswordArgs {
+        lib.optionalString tasksOn (lib.escapeShellArgs (hmLib.radicalePasswordArgs {
           username = radicaleUser;
           secretPath = radicalePwPath;
           awk = "${pkgs.gawk}/bin/awk";

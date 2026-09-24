@@ -337,8 +337,8 @@ removed.
 | Tool | Description |
 |------|-------------|
 | `hwc_calendar_list` | Events for today, this week, or custom date range. range=today/week/custom. |
-| `hwc_calendar_sync` | Trigger immediate vdirsyncer sync to/from iCloud. |
-| `hwc_calendar_create` | Create event (timed, all-day, or multi-day). Syncs to iCloud. |
+| `hwc_calendar_sync` | Trigger immediate vdirsyncer sync to/from Radicale. |
+| `hwc_calendar_create` | Create event (timed, all-day, or multi-day). Syncs to Radicale. |
 | `hwc_calendar_delete` | Delete event by search (two-step: dry-run then confirm). |
 | `hwc_calendar_edit` | Modify event fields (delete + recreate pattern). |
 
@@ -453,7 +453,7 @@ domains/system/mcp/
         storage.ts                 # 2 storage tools
         network.ts                 # 3 network tools
         mail.ts                    # 11 mail tools
-        calendar.ts                # 7 calendar tools (khal/vdirsyncer → iCloud)
+        calendar.ts                # 7 calendar tools (khal/vdirsyncer → Radicale)
         media.ts                   # 2 media tools
         build.ts                   # 1 git status tool
       transforms/
@@ -495,6 +495,12 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-09-24: Radicale single source. `hwc_calendar` delete/edit scan only
+  `calendars-radicale/`; the legacy iCloud `calendars/` root is dropped, since
+  its stale copies could match dead events. `hwc_tasks_add` defaults to the
+  `hwc` list (the displayname of eric/work, shared with
+  `hwc.mail.calendar.primaryCalendar`); the old `Work` default matched no list
+  and failed NOT_FOUND.
 - 2026-09-24: The gateway is now built and tested by Nix and systemd runs its
   immutable store entry point, eliminating drift between TypeScript and ignored
   `dist/` output. Workbench mail surfaces report the active routing-rule count,

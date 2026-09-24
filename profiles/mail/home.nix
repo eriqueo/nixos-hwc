@@ -17,17 +17,14 @@
     bridge.enable = true;
     aerc.enable = true;
 
+    # Calendar + tasks sync against the self-hosted Radicale server only.
     calendar = {
       enable = true;
       icsWatch.enable = true;
-      accounts.icloud = {
-        email = "eric@iheartwoodcraft.com";
-        color = "dark green";
-      };
     };
 
-    # VTODO/Reminders sync (todoman). Shares calendar's vdirsyncer config + timer
-    # and reuses the icloud account above.
+    # VTODO sync (todoman) against Radicale. Shares calendar's vdirsyncer
+    # config + timer.
     tasks.enable = true;
 
     # CardDAV rolodex (khard + aerc completion) against the CRM-owned

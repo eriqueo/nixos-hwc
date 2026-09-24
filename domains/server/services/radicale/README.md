@@ -2,28 +2,32 @@
 
 ## Purpose
 Self-hosted CalDAV server giving full two-way sync **including collection
-creation**, for both VTODO (tasks) and VEVENT (calendars). iCloud pins the
-laptop's tasks pair to fixed collection IDs (lists can only be created in Apple
-Reminders); Radicale permits MKCALENDAR, so lists created in `todui` (`N`) and
-calendars created in khalt are created server-side by vdirsyncer discovery, and
-the iPhone reads/writes them through native CalDAV accounts. The same service,
-vhost, and `radicale-htpasswd` secret serve both component types — the VTODO
-pair (`domains/mail/tasks`) and the VEVENT pair (`domains/mail/calendar`,
-`hwc.mail.calendar.radicale.*`) just differ by `item_types`.
+creation**, for both VTODO (tasks) and VEVENT (calendars). It is the single
+source of truth for both: the iCloud CalDAV paths were deleted from the client
+modules on 2026-09-24. Radicale permits MKCALENDAR, so lists created in `todui`
+(`N`) and calendars created in khalt are created server-side by vdirsyncer
+discovery, and the iPhone reads/writes them through native CalDAV accounts. The
+same service, vhost, and `radicale-htpasswd` secret serve both component types
+— the VTODO pair (`domains/mail/tasks`) and the VEVENT pair
+(`domains/mail/calendar`, `hwc.mail.calendar.radicale.*`) just differ by
+`item_types`.
 
 ## Boundaries
 - Manages: the Radicale service (localhost:5232), its htpasswd auth wiring,
-  and the `tasks` Caddy vhost (tasks.hwc.iheartwoodcraft.com).
-- Does NOT manage: the laptop's vdirsyncer pair (`domains/mail/tasks`,
-  `hwc.mail.tasks.radicale.*`), the todui TUI (`domains/home/apps/todui`), or
+  the read-only calendar mirrors, and the `tasks` Caddy vhost
+  (tasks.hwc.iheartwoodcraft.com).
+- Does NOT manage: the machines' vdirsyncer pairs (`domains/mail/tasks`,
+  `domains/mail/calendar`), the todui TUI (`domains/home/apps/todui`), or
   the phone's CalDAV account (manual, see runbook).
 - Storage: upstream default `/var/lib/radicale/collections` (StateDirectory).
 
 ## Structure
 ```
 radicale/
-└── index.nix    # Module: options hwc.server.services.radicale.*,
-                 #   services.radicale settings, secrets group, Caddy route
+├── index.nix         # Module: options hwc.server.services.radicale.*,
+│                     #   services.radicale settings, secrets group, Caddy route
+└── parts/
+    └── mirrors.nix   # radicale-mirror timer: outside iCal feeds → read-only collections
 ```
 
 ## Secret
@@ -42,19 +46,27 @@ password (`cut -d: -f2-`).
    `sudo nixos-rebuild switch --flake .#hwc-server`. Check:
    `systemctl status radicale` and
    `curl -u eric:<password> https://tasks.hwc.iheartwoodcraft.com/eric/` (401 without auth = auth on).
-3. **Enable the laptop pair**: in `machines/laptop/home.nix` set
-   `hwc.mail.tasks.radicale.enable = true`, run `hms`, then
-   `vdirsyncer discover tasks_radicale` (answer y) and
-   `vdirsyncer sync tasks_radicale`.
+3. **Enable a machine's pairs**: set `hwc.mail.calendar.enable` and
+   `hwc.mail.tasks.enable` (the mail role sets both), run `hms`, then
+   `yes | vdirsyncer discover`, `vdirsyncer sync`, and `vdirsyncer metasync`.
 4. **Phone**: Settings → Apps → Reminders (or Calendar) → Accounts → Add
    Account → Other → Add CalDAV Account: server
    `tasks.hwc.iheartwoodcraft.com`, user `eric`, the password from step 1.
-   (Phone reaches it over Tailscale.)
+   (Phone reaches it over Tailscale.) Make this account the default for new
+   events and reminders, and turn off iCloud Calendars and Reminders, so the
+   phone does not show a second copy.
 5. **Verify**: `todui` → `N` → new list → it appears on the server
    (`ls /var/lib/radicale/collections/collection-root/eric/`) and on the
    phone; add a task on the phone in that list → sync → visible in todui.
 
 ## Changelog
+- 2026-09-24: Radicale is the only calendar + tasks backend on every machine
+  (client-side iCloud paths deleted; see `domains/mail/calendar` and
+  `domains/mail/tasks`). The retired `cal/migrated` collection (a 07-16 copy
+  superseded by `eric/work|family|personal`) was moved out of the collection
+  root to `/var/lib/radicale/archive/cal-migrated-2026-09-24`; delete after
+  2026-10-24 if nothing needed it. Runbook step 3 and the phone step updated;
+  Structure now lists `parts/mirrors.nix`.
 - 2026-09-21: **Read-only mirrors of outside calendars** (`parts/mirrors.nix`,
   `hwc.server.services.radicale.mirrors`). A system timer (`radicale-mirror`,
   every 15 min, DynamicUser + `secrets` group) copies each secret iCal address

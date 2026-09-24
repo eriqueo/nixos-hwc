@@ -19,11 +19,10 @@ khal binary.
 ## Calendars
 
 `[calendars]` is rendered from `hwc.mail.calendar`:
-- iCloud `accounts` → `calendars/<account>/*` (suppressed when radicale is on).
 - `localCalendars` → their `.ics` dirs.
-- `hwc.mail.calendar.radicale.enable` → a `[[radicale]]` discover calendar at
-  `~/.local/share/vdirsyncer/calendars-radicale/*` (the live source once iCloud
-  is retired — the same dir the MCP's `hwc_calendar` reads via `-c` this config).
+- `hwc.mail.calendar.enable` → a `[[radicale]]` discover calendar at
+  `~/.local/share/vdirsyncer/calendars-radicale/*` (the only CalDAV source —
+  the same dir the MCP's `hwc_calendar` reads via `-c` this config).
 
 ## Structure
 
@@ -35,6 +34,9 @@ domains/home/apps/khalt/
 
 ## Changelog
 
+- **2026-09-24**: The `[[radicale]]` calendar now follows
+  `hwc.mail.calendar.enable`; the iCloud `accounts` calendars are gone with the
+  calendar module's iCloud path. Rendered config is unchanged on both machines.
 - **2026-06-15**: `[calendars]` now renders the Radicale-synced calendar
   (`calendars-radicale/`) when `hwc.mail.calendar.radicale.enable` is set, and
   drops the stale iCloud account calendars in that case (mirrors

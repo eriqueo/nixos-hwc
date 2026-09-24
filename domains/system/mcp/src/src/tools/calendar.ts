@@ -173,11 +173,10 @@ export async function khalList(start: string, end: string): Promise<CalendarEven
 /* ════════════════════════════════════════════════════════════════ */
 
 const HOME = homedir();
-// Both the legacy iCloud calendars dir and the Radicale-synced calendars dir
-// (calendars-radicale/, written by the calendar_radicale vdirsyncer pair).
-// delete/edit scan whichever exist.
+// The Radicale-synced calendars dir (calendars-radicale/, written by the
+// calendar_radicale vdirsyncer pair). The legacy iCloud calendars/ root was
+// dropped 2026-09-24: its stale copies made delete/edit match dead events.
 const VDIRSYNCER_CALENDAR_ROOTS = [
-  join(HOME, ".local/share/vdirsyncer/calendars"),
   join(HOME, ".local/share/vdirsyncer/calendars-radicale"),
 ];
 
@@ -200,10 +199,8 @@ function icsField(content: string, field: string): string | null {
   return match ? match[1].trim() : null;
 }
 
-// Recursively collect every *.ics path under a root (≤3 levels deep). iCloud
-// stores at calendars/<account>/<collection>/*.ics (2 levels) while Radicale
-// stores at calendars-radicale/<collection>/*.ics (1 level), so a recursive
-// walk handles both layouts uniformly.
+// Recursively collect every *.ics path under a root (≤3 levels deep). Radicale
+// stores at calendars-radicale/<collection>/*.ics (1 level).
 async function collectIcsPaths(dir: string, depth = 0): Promise<string[]> {
   if (depth > 3) return [];
   const out: string[] = [];

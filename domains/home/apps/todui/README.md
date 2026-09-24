@@ -40,10 +40,14 @@ todui/
 - Password selection uses `domains/lib/hm.nix`'s `radicalePasswordArgs`, shared
   with vdirsyncer. Only the configured user's entry is read from the multi-user
   secret. The wrapper includes an absolute gawk path and shell-escaped arguments.
-- Paths/sync: derived from `hwc.mail.tasks.radicale.enable` and the vdir root.
+- Paths/sync: the glob is always `tasks-radicale/*`; sync pairs, list creation,
+  and credentials follow `hwc.mail.tasks.enable`.
 - khal + vdirsyncer are put on todui's PATH via `extraRuntimePackages`.
 
 ## Changelog
+- 2026-09-24: Follows `hwc.mail.tasks.enable` (the tasks module's
+  `radicale.enable` was removed with its iCloud path). The glob no longer falls
+  back to the dead iCloud `tasks/*` vdir. Laptop render unchanged.
 - 2026-09-07: Fix list-deletion HTTP 401 caused by reading every user's password;
   use the shared selector and add `radicale-client-auth` to the flake checks.
 - 2026-07-05: radicalePwPath rewritten from if/has-attr chain to `lib.attrByPath`

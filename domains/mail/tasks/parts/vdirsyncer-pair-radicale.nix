@@ -4,8 +4,8 @@
 # (domains/server/services/radicale on hwc-server, fronted by Caddy at
 # tasks.hwc.iheartwoodcraft.com).
 #
-# Unlike the iCloud pair, collections use "from a"/"from b" discovery: Radicale
-# allows collection creation (MKCALENDAR), so lists created locally (todui `N`)
+# Collections use "from a"/"from b" discovery: Radicale allows collection
+# creation (MKCALENDAR), so lists created locally (todui `N`)
 # are created server-side on the next `vdirsyncer discover tasks_radicale` +
 # sync, and lists created on the server/phone appear locally. The password is
 # the second field of the agenix htpasswd secret shared with the server.
