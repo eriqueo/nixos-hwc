@@ -147,6 +147,9 @@ in
       wants = [ "mosquitto.service" ];
       requires = [ "frigate-config.service" ] ++ lib.optionals cfg.gpu.enable [ "nvidia-container-toolkit-cdi-generator.service" ];
       restartTriggers = [ cfg._configTemplate ./parts/labelmap.py ];
+      # Report startup only after the API health check passes. Bound a failed
+      # initialization instead of inheriting the container module's infinity.
+      serviceConfig.TimeoutStartSec = lib.mkForce 120;
     };
 
     # Frigate container
@@ -172,6 +175,7 @@ in
         "--health-interval=30s"
         "--health-timeout=5s"
         "--health-retries=3"
+        "--sdnotify=healthy"
       ]
       ++ lib.optionals cfg.gpu.enable [
         "--device=nvidia.com/gpu=${toString cfg.gpu.device}"

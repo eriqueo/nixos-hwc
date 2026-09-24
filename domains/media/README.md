@@ -69,6 +69,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-09-24: Frigate reports systemd readiness only after its API health check passes, with a 120-second startup deadline.
+
 - 2026-09-24: Pass root-only camera secrets through systemd credentials to the unprivileged config generator; keep source secret permissions unchanged.
 
 - 2026-09-24: Correct Frigate motion masks and labels; derive camera expectations, use native metrics, share Reolink recording stream, remove unused buffer and inert retention options. Retain 3-day motion/14-day event footage.

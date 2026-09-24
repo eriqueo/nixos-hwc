@@ -27,6 +27,8 @@ assert "frigate-config.service" in fixture["requires"]
 assert fixture["configTemplate"] in fixture["restartTriggers"]
 assert fixture["port"] == 5000
 assert not fixture["ports"]
+assert "--sdnotify=healthy" in fixture["extraOptions"]
+assert fixture["startupTimeout"] == 120
 assert not any(v.endswith(":/tmp/frigate") for v in fixture["volumes"])
 assert not fixture["exporterPresent"]
 native = [s for s in fixture["scrapes"] if s["job_name"] == "frigate"]

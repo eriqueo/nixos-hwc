@@ -41,6 +41,8 @@ Owns Frigate and its generated configuration. Prometheus owns alert evaluation; 
 
 ## Current operating contract
 
+Systemd waits for the API health check before reporting Frigate started. Startup has a 120-second deadline; the container process existing is not proof that the NVR is ready.
+
 Three cameras are enabled: carport and porch at 3 detect FPS, Reolink at 2. Side yard remains disabled until its connection is repaired. Zero object-detection FPS can mean no motion; zero camera FPS on an enabled camera means a capture fault.
 
 Motion masks preserve the carport sidewalk approach and porch foreground. Their pixel checks are automated; day/night walk-through coverage must also be checked after camera positioning or tuning changes. Camera clocks are separate from server recording timestamps.

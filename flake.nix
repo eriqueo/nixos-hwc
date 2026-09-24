@@ -519,7 +519,8 @@
           configScript = server.systemd.services.frigate-config.script;
           credentials = server.systemd.services.frigate-config.serviceConfig.LoadCredential;
           inherit (server.systemd.services.podman-frigate) requires restartTriggers;
-          inherit (server.virtualisation.oci-containers.containers.frigate) ports volumes;
+          inherit (server.virtualisation.oci-containers.containers.frigate) ports volumes extraOptions;
+          startupTimeout = server.systemd.services.podman-frigate.serviceConfig.TimeoutStartSec;
           exporterPresent = server.virtualisation.oci-containers.containers ? frigate-exporter;
           scrapes = server.hwc.monitoring.prometheus.scrapeConfigs;
           rules = import ./domains/monitoring/prometheus/parts/alerts.nix { inherit lib; };
