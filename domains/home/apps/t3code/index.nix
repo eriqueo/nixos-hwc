@@ -214,9 +214,9 @@ let
     '';
   };
 
-  # The service's PATH, spelled out. `claude` is an ad-hoc npm global on
-  # hwc-server rather than a Nix package, and codex/pi/herdr live in the
-  # per-user Nix profile — none of which a user unit inherits on its own.
+  # The service's PATH, spelled out. `claude` and `codex` are npm globals on
+  # hwc-server rather than Nix packages, and pi/herdr live in the per-user Nix
+  # profile — none of which a user unit inherits on its own.
   servePath = lib.concatStringsSep ":" (
     [ (lib.makeBinPath ([ handoffWorker ] ++ cfg.serve.packages)) ] ++ cfg.serve.extraPath
   );
@@ -443,8 +443,10 @@ in
         ];
         description = ''
           Non-store directories appended to the service PATH. These carry the
-          provider CLIs the harness drives: `claude` is an ad-hoc npm global on
-          hwc-server, while `codex`, `pi` and `herdr` come from the per-user Nix
+          provider CLIs the harness drives: `claude` and `codex` are npm globals
+          on hwc-server, found first and kept current by
+          `hwc.home.apps.agent-harness.cliUpdates`; the per-user profile's
+          older Nix copies are shadowed. `pi` and `herdr` come from that
           profile. The delegate skill runs `pi --model dx2/llm` as a child
           process, not through Herdr.
         '';

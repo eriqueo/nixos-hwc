@@ -92,6 +92,83 @@ let
     '';
   };
   doctor = pkgs.writeShellScriptBin "agent-harness-doctor" ''exec ${cli}/bin/agent-harness doctor "$@"'';
+
+  # Nothing else updates the npm-global provider CLIs on a host that drives
+  # them headless (T3 serve, nightly builds). Measured 2026-09-24 on hwc-server:
+  # ~/.claude.json had autoUpdates=false, claude sat at 2.1.274 and codex at
+  # 0.154.0. T3's model manifest gates Opus 5.5 on claude >= 2.1.280, so the
+  # model never appeared. hwc-laptop, where both are used interactively, was
+  # current.
+  cliUpdater = pkgs.writeShellApplication {
+    name = "agent-cli-update";
+    # bash supplies `sh`: npm runs lifecycle scripts through the `sh` on PATH,
+    # and a user unit's PATH is systemd's bin alone. Measured 2026-09-24:
+    # without it, claude-code's postinstall failed with `spawn sh ENOENT`.
+    runtimeInputs = with pkgs; [
+      nodejs
+      bash
+      jq
+      curl
+      coreutils
+    ];
+    text = ''
+      export NPM_CONFIG_PREFIX=${lib.escapeShellArg cfg.cliUpdates.npmPrefix}
+      NOTIFY_URL=${lib.escapeShellArg cfg.notifyUrl}
+      HOST=$(uname -n)
+      # One line: the failing packages of the last run, empty after a clean run.
+      # Alerts fire on a change to it, so a lasting failure alerts once.
+      CASE_FILE="''${XDG_STATE_HOME:-$HOME/.local/state}/agent-cli-update/failed"
+      mkdir -p "$(dirname "$CASE_FILE")"
+
+      # npm ls exits 1 for a package that is not installed; that means "none".
+      installed() {
+        local json
+        json=$(npm ls -g --depth=0 --json "$1" 2>/dev/null || true)
+        [ -n "$json" ] || json='{}'
+        jq -r --arg p "$1" '.dependencies[$p].version // "none"' <<< "$json"
+      }
+
+      notify() {
+        jq -n --arg title "$1" --arg body "$2" \
+          '{topic:"monitoring",title:$title,body:$body,priority:2,source:"agent-cli-update"}' \
+          | curl -fsS --max-time 5 -H 'content-type: application/json' -d @- "$NOTIFY_URL" >/dev/null 2>&1
+      }
+
+      failed=()
+      for pkg in ${lib.escapeShellArgs cfg.cliUpdates.packages}; do
+        before=$(installed "$pkg")
+        # npm's stderr stays in the journal; that is where a failure is read.
+        if npm install -g --no-fund --no-audit "$pkg@latest" >/dev/null; then
+          after=$(installed "$pkg")
+          # The previous version is the rollback target: npm install -g "$pkg@<it>".
+          if [ "$before" = "$after" ]; then
+            echo "$pkg $after (current)"
+          else
+            echo "$pkg $before -> $after"
+          fi
+        else
+          echo "$pkg: npm install failed, still $before" >&2
+          failed+=("$pkg")
+        fi
+      done
+
+      current="''${failed[*]}"
+      previous=$(cat "$CASE_FILE" 2>/dev/null || true)
+      if [ "$current" != "$previous" ]; then
+        if [ -n "$current" ]; then
+          title="Agent CLI update failed"
+          body="$HOST could not update $current. T3 hides models that need a newer CLI. Check: journalctl --user -u agent-cli-update"
+        else
+          title="Agent CLI update recovered"
+          body="$HOST updated $previous again. No action needed."
+        fi
+        # Record the case only once its alert is out, so a missed alert retries.
+        if notify "$title" "$body"; then printf '%s' "$current" > "$CASE_FILE"; fi
+      fi
+
+      [ -z "$current" ]
+    '';
+  };
 in
 {
   options.hwc.home.apps.agent-harness = {
@@ -128,6 +205,38 @@ in
       type = lib.types.str;
       default = "1min";
     };
+    cliUpdates = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Update the npm-global provider CLIs on a timer, for headless hosts.
+          Off by default: hwc-laptop's claude is the native install, which
+          updates itself, and its npm codex was current when this was added.
+        '';
+      };
+      packages = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [
+          "@anthropic-ai/claude-code"
+          "@openai/codex"
+        ];
+        description = "npm packages installed globally at @latest on each run.";
+      };
+      npmPrefix = lib.mkOption {
+        type = lib.types.str;
+        default = "${home}/.npm-global";
+        description = "npm global prefix; the T3 serve PATH reads its bin/ first.";
+      };
+      onCalendar = lib.mkOption {
+        type = lib.types.str;
+        default = "*-*-* 04:30:00";
+        description = ''
+          When to update. Clear of nightly-builds (01:30 launch) and its
+          07:30 review, so no headless run sees the binary swapped under it.
+        '';
+      };
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -137,7 +246,8 @@ in
       stateSync
       stateValidator
       (pkgs.writeShellScriptBin "log-mistake" ''exec ${pkgs.python3}/bin/python3 ${harness}/bin/log-mistake "$@"'')
-    ];
+    ]
+    ++ lib.optional cfg.cliUpdates.enable cliUpdater;
 
     home.file = lib.mkMerge (
       map (dir: {
@@ -172,6 +282,29 @@ in
         OnBootSec = "1min";
         OnUnitActiveSec = cfg.syncInterval;
         Unit = "agent-state-sync.service";
+      };
+    };
+
+    systemd.user.services.agent-cli-update = lib.mkIf cfg.cliUpdates.enable {
+      Unit = {
+        Description = "Update npm-global agent CLIs (${lib.concatStringsSep ", " cfg.cliUpdates.packages})";
+        After = [ "network-online.target" ];
+        Wants = [ "network-online.target" ];
+      };
+      Service = {
+        Type = "oneshot";
+        ExecStart = lib.getExe cliUpdater;
+        TimeoutStartSec = "10min";
+      };
+    };
+    systemd.user.timers.agent-cli-update = lib.mkIf cfg.cliUpdates.enable {
+      Unit.Description = "Daily npm-global agent CLI update";
+      Install.WantedBy = [ "timers.target" ];
+      Timer = {
+        OnCalendar = cfg.cliUpdates.onCalendar;
+        # A run missed while the host was down happens at the next boot.
+        Persistent = true;
+        Unit = "agent-cli-update.service";
       };
     };
   };

@@ -5,7 +5,7 @@ source and one mutable state store.
 
 ## Structure
 
-- `index.nix` installs the pinned policy, state links, health CLI, and user timer.
+- `index.nix` installs the pinned policy, state links, health CLI, the state-sync timer, and the opt-in `agent-cli-update` timer.
 - `sys.nix` installs machine-wide Claude policy under `/etc`.
 - `contract.nix` defines the ownership and revision contract shared by both lanes.
 - `control.sh` implements local and fleet health checks plus policy publication.
@@ -35,12 +35,23 @@ the local desired revision. `agent-harness publish` checks and pushes static
 policy, updates the Nix pin, builds and switches both hosts, and finishes with
 the fleet doctor. `agent-harness sync` validates and synchronizes mutable state.
 
+On a host with `cliUpdates.enable`, `agent-cli-update` runs daily. Run it by
+hand with `systemctl --user start agent-cli-update`. Read the version changes
+with `journalctl --user -u agent-cli-update`. To roll back a bad release, run
+`npm install -g <package>@<previous version>` with the version from that log.
+
 The doctor verifies actual provider paths, system and Home Manager ownership
 manifests, state shape, Codex hook trust, commands, and the sync timer. A dirty
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
+- 2026-09-24: Added opt-in `cliUpdates`: a daily user timer (04:30) that
+  installs the npm-global `claude` and `codex` at `@latest` and logs each
+  version change. It alerts through `hwc-notify` once on failure and once on
+  recovery. It is on for hwc-server only, where nothing else updated them. On
+  2026-09-24 claude 2.1.274 hid Opus 5.5 in T3, which needs 2.1.280.
+  `bash` is on the unit's PATH because npm runs lifecycle scripts through `sh`.
 - 2026-09-22: Unified store and pre-write memory validation behind
   `agent-state-validate memory-stdin`. Repeated invalid state now exits 75 from
   one fixed-size case projection without rerunning validation or touching the
