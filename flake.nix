@@ -313,6 +313,12 @@
         nixosPkgs = pkgs-stable-cuda;  # CUDA overlay (Immich ML / llama.cpp)
         hmPkgs    = pkgs-stable;       # standalone HM lane stays plain stable
       };
+      work = {
+        channel   = "stable";
+        roles     = [ "base" "server" ];
+        nixosPkgs = pkgs-stable;
+        hmPkgs    = pkgs-stable;
+      };
       laptop = {
         channel   = "unstable";
         roles     = [ "base" "desktop" ];
