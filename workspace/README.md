@@ -18,8 +18,8 @@ workspace/
 ├── home/            # domains/home — scraper (nix-wired), mail, photo-dedup
 ├── media/           # domains/media — youtube-services (nix-wired), beets helpers,
 │                    #   manifests/ (generated reorg/dedupe scripts, see its README)
-├── monitoring/      # health-check scripts (NOT nix-wired; overlaps domains/monitoring —
-│                    #   candidates for retirement as declarative coverage grows)
+├── monitoring/      # operator health scripts (not Nix-wired); frigate-health.sh
+│                    #   emits read-only camera/storage evidence for issue #100
 ├── nixos-dev/       # Repo dev tools: charter-lint, grebuild, add-home-app,
 │                    #   graph/ (referenced by flake.nix hwc-graph), audits, lints,
 │                    #   tests/ (executable regression suites for the tools here)
@@ -50,8 +50,32 @@ referencing site):
 
 ---
 
+## Frigate field evidence
+
+For the first post-change Frigate storage window, run on hwc-server after
+2026-09-25 13:23 America/Denver:
+
+```bash
+bash workspace/monitoring/frigate-health.sh --since 2026-09-24T13:23:00-06:00 --hours 24
+```
+
+Run earlier to inspect a partial window (`window.complete` stays false).
+The default without `--since` is the previous 24 hours, not a post-change claim.
+The tool requires Python 3 and noninteractive sudo access to the Frigate
+container. Exit zero means collection and current enabled-camera health passed;
+it does not certify a full window or field coverage. Compare `present_samples`
+and `online_samples` with `expected_samples` before comparing storage.
+Missing samples and outages prevent a like-for-like comparison. Retention can
+delete older footage, so collect the first-day result before three days pass.
+Counts use retained database segments and event metadata; they do not prove
+that a person walking every approach gets detected or notified.
+
 ## Changelog
 
+- 2026-09-24: Repaired `monitoring/frigate-health.sh`: use the live API on port
+  5000, omit raw logs and process arguments, return nonzero on collection/health
+  failure, and emit JSON containing bounded recording/event totals and camera
+  availability samples. No cron job, service restart, notification, or data write.
 - 2026-09-22: Completed the `add-home-app.sh` v3.0 repair after the recovered
   nightly branch exposed three uncovered seams. Interactive `s` now re-enters
   search under `set -e`; machine enablement preserves both grouped and direct
