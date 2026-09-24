@@ -60,6 +60,7 @@ monitoring/
 
 ## Changelog
 
+- 2026-09-24: The Frigate blackbox probe is present only on hosts that import the Frigate module. This keeps the configured port as its source of truth and lets the media-free hwc-xps configuration evaluate.
 - 2026-09-24: Keep camera outage alerts active beyond 24 hours, require stable recovery, distinguish missing camera metrics from failed/stale scrapes, and fix the Frigate health-probe port. Remove the nonfunctional event-spike rule.
 - 2026-09-21: `heartbeat/` enabled on hwc-server, reading `heartbeat-ping-url`. The healthchecks.io check "hwc-server" expects a ping every 5 minutes with a 10-minute grace.
 - 2026-09-21: New `heartbeat/` module (`hwc.monitoring.heartbeat`). A timer pings an external healthchecks.io check every 5 minutes; the outside service alerts when the pings stop. This is the off-host watcher the `alerts/` header and the 2026-09-07 entry name as missing: it still fires when the server is off, the internet is down, or hwc-notify is dead. The ping URL is an agenix secret. Off by default; hwc-server enables it once the secret exists.

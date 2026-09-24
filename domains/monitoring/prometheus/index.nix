@@ -11,11 +11,12 @@
 #   - Grafana (metrics datasource)
 #   - Alertmanager (alert source)
 
-{ config, lib, pkgs, ... }:
+{ config, lib, options, pkgs, ... }:
 
 let
   cfg = config.hwc.monitoring.prometheus;
   paths = config.hwc.paths;
+  hasFrigatePort = lib.hasAttrByPath [ "hwc" "media" "frigate" "port" ] options;
 in
 {
   #==========================================================================
@@ -232,8 +233,9 @@ in
               { name = "Pinchflat";      url = "http://127.0.0.1:8945/"; }
               { name = "LazyLibrarian";  url = "http://127.0.0.1:5299/"; }
               { name = "Calibre";        url = "http://127.0.0.1:8083/"; }
-              { name = "Frigate NVR";    url = "http://127.0.0.1:${toString config.hwc.media.frigate.port}/api/stats"; }
               { name = "Gluetun VPN";    url = "http://127.0.0.1:8000/v1/publicip/ip"; }
+            ] ++ lib.optionals hasFrigatePort [
+              { name = "Frigate NVR"; url = "http://127.0.0.1:${toString config.hwc.media.frigate.port}/api/stats"; }
             ];
             # TCP datastores / daemons (up = connect succeeds).
             tcpServices = [
