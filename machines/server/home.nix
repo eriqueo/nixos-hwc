@@ -58,6 +58,12 @@
     serve.host = "0.0.0.0";
   };
 
+  # Nothing else updates the npm-global claude and codex here: T3 serve and
+  # nightly-builds drive them headless, and ~/.claude.json has autoUpdates=false.
+  # Without this, T3 hides every model whose manifest minVersion is newer than
+  # the installed CLI.
+  hwc.home.apps.agent-harness.cliUpdates.enable = true;
+
   # Headless: no font deployment (overrides nothing today — the desktop
   # role is what turns fonts on — but states the intent explicitly).
   hwc.home.theme.fonts.enable = false;

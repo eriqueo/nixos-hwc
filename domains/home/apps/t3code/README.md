@@ -108,8 +108,9 @@ There is no `parts/`. This module packages no source.
 
 - **`serve` gets an explicit PATH, because a user unit inherits none.** T3
   resolves provider binaries out of its own process environment. On hwc-server
-  `claude` is an ad-hoc npm global (`~/.npm-global/bin`) while `codex`, `pi` and
-  `herdr` come from `/etc/profiles/per-user/eric/bin` — none of which reaches a
+  `claude` and `codex` are npm globals (`~/.npm-global/bin`, kept current by
+  `agent-harness.cliUpdates`) while `pi` and `herdr` come from
+  `/etc/profiles/per-user/eric/bin` — none of which reaches a
   systemd user service by itself. `serve.packages` supplies the Nix half and
   `serve.extraPath` the non-store half. `pi` earns its place alongside the
   others: the `delegate` skill runs `pi --model dx2/llm` as a **child
@@ -175,6 +176,7 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
+- 2026-09-24: Corrected the serve PATH doc: `codex` resolves to the npm global, not the per-user profile. Its freshness is owned by `agent-harness.cliUpdates`.
 - 2026-09-17: Resolve the DX2 delegate helper from `/etc/agent-harness` so T3 cannot bypass pinned policy through the mutable authoring checkout.
 - 2026-09-17: Desktop and server launchers run the shared harness doctor as a warning preflight.
 
