@@ -21,6 +21,8 @@ spec.loader.exec_module(labelmap)
 # the old create-only-if-absent bug.
 assert sys.argv[2] in fixture["configScript"]
 assert "if [ ! -f" not in fixture["configScript"]
+assert "cat /run/agenix" not in fixture["configScript"]
+assert len(fixture["credentials"]) == 5
 assert "frigate-config.service" in fixture["requires"]
 assert fixture["configTemplate"] in fixture["restartTriggers"]
 assert fixture["port"] == 5000

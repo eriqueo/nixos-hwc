@@ -87,7 +87,12 @@ in
         RemainAfterExit = true;
         User = lib.mkForce "eric";
         Group = "users";
-        SupplementaryGroups = [ "secrets" ];
+        # PID 1 reads root-only agenix mounts; the service receives private,
+        # read-only copies without broadening permissions on the source files.
+        LoadCredential = map (name: "${name}:${config.age.secrets.${name}.path}") [
+          "frigate-rtsp-username" "frigate-rtsp-password" "frigate-camera-ips"
+          "frigate-reolink-username" "frigate-reolink-password"
+        ];
         UMask = "0077";
       };
 
@@ -98,18 +103,18 @@ in
           ${cfg.storage.configPath}/labelmap/coco-80.txt
 
         # Read secrets - Cobra cameras
-        RTSP_USER=$(cat /run/agenix/frigate-rtsp-username)
-        RTSP_PASS=$(cat /run/agenix/frigate-rtsp-password)
+        RTSP_USER=$(cat "$CREDENTIALS_DIRECTORY/frigate-rtsp-username")
+        RTSP_PASS=$(cat "$CREDENTIALS_DIRECTORY/frigate-rtsp-password")
         RTSP_PASS_ENCODED=$(echo "$RTSP_PASS" | ${pkgs.python3}/bin/python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read().strip()))")
 
-        CAMERA_IPS=$(cat /run/agenix/frigate-camera-ips)
+        CAMERA_IPS=$(cat "$CREDENTIALS_DIRECTORY/frigate-camera-ips")
         CAM1_IP=$(echo "$CAMERA_IPS" | ${pkgs.jq}/bin/jq -r '.cobra_cam_1')
         CAM2_IP=$(echo "$CAMERA_IPS" | ${pkgs.jq}/bin/jq -r '.cobra_cam_2')
         CAM3_IP=$(echo "$CAMERA_IPS" | ${pkgs.jq}/bin/jq -r '.cobra_cam_3')
 
         # Read secrets - Reolink camera
-        REOLINK_USER=$(cat /run/agenix/frigate-reolink-username)
-        REOLINK_PASS=$(cat /run/agenix/frigate-reolink-password)
+        REOLINK_USER=$(cat "$CREDENTIALS_DIRECTORY/frigate-reolink-username")
+        REOLINK_PASS=$(cat "$CREDENTIALS_DIRECTORY/frigate-reolink-password")
         REOLINK_PASS_ENCODED=$(echo "$REOLINK_PASS" | ${pkgs.python3}/bin/python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read().strip()))")
         REOLINK_IP=$(echo "$CAMERA_IPS" | ${pkgs.jq}/bin/jq -r '.reolink')
 

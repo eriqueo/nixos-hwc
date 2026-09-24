@@ -492,6 +492,7 @@
           inherit (frigate) port;
           configTemplate = frigate._configTemplate;
           configScript = server.systemd.services.frigate-config.script;
+          credentials = server.systemd.services.frigate-config.serviceConfig.LoadCredential;
           inherit (server.systemd.services.podman-frigate) requires restartTriggers;
           inherit (server.virtualisation.oci-containers.containers.frigate) ports volumes;
           exporterPresent = server.virtualisation.oci-containers.containers ? frigate-exporter;
