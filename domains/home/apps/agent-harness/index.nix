@@ -101,8 +101,12 @@ let
   # current.
   cliUpdater = pkgs.writeShellApplication {
     name = "agent-cli-update";
+    # bash supplies `sh`: npm runs lifecycle scripts through the `sh` on PATH,
+    # and a user unit's PATH is systemd's bin alone. Measured 2026-09-24:
+    # without it, claude-code's postinstall failed with `spawn sh ENOENT`.
     runtimeInputs = with pkgs; [
       nodejs
+      bash
       jq
       curl
       coreutils

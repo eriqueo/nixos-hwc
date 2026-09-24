@@ -51,6 +51,7 @@ authoring checkout is a warning; a runtime reference to it is a failure.
   version change. It alerts through `hwc-notify` once on failure and once on
   recovery. It is on for hwc-server only, where nothing else updated them. On
   2026-09-24 claude 2.1.274 hid Opus 5.5 in T3, which needs 2.1.280.
+  `bash` is on the unit's PATH because npm runs lifecycle scripts through `sh`.
 - 2026-09-22: Unified store and pre-write memory validation behind
   `agent-state-validate memory-stdin`. Repeated invalid state now exits 75 from
   one fixed-size case projection without rerunning validation or touching the
