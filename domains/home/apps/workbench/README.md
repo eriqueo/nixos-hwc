@@ -17,6 +17,8 @@ shell's aerc alias, one-shot analysis via the selected Codex package, browser vi
 - `index.nix` — imports the flake's HM module; options + programs.workbench wiring, wb-reload, versioned keymap, one-shot Codex provider, registry landing hub + shared standing-tool destinations
 
 ## Changelog
+- 2026-09-24: Keep empty Kanban stages keyboard-reachable so mail can move
+  through Act, Look, Later, and Junk even when only one stage has messages.
 - 2026-09-23: Update Workbench's Kanban stage browser to show its navigation
   keys, distinguish navigation from message moves, and focus the first message
   only after its widget mounts.
