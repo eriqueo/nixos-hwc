@@ -69,6 +69,7 @@ workspace/media/
 
 ## Changelog
 
+- 2026-09-24: Align Frigate operating instructions with deployed camera rates, clocks, mask geometry and current validation limits.
 - 2026-09-24: Frigate reports systemd readiness only after its API health check passes, with a 120-second startup deadline.
 
 - 2026-09-24: Pass root-only camera secrets through systemd credentials to the unprivileged config generator; keep source secret permissions unchanged.

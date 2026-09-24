@@ -53,6 +53,10 @@ Metrics come directly from `/api/metrics`; there is no exporter container. Expec
 
 The recording cache is a bounded 1 GiB RAM mount at `/tmp/cache`. The unused SSD mount at `/tmp/frigate` is removed; its old empty directory may remain on disk. No footage is deleted by this change. The deployed version remains 0.16.2.
 
+Camera-side settings are separate from Nix. On September 24, both active Cobra substreams were set to 1280×720 at 5 FPS with a 10-frame GOP; their main streams remain 4K at 15 FPS. Reolink's substream is 640×360 with its supported 7 FPS setting (RTSP advertises 22/3); its main stream remains 4K at 25 FPS. Frigate still detects at 3/3/2 FPS and scales the Reolink input to 480×270.
+
+Cobra native date/time settings use GMT-7 with one-hour DST from the second Sunday in March to the first Sunday in November, both at 02:00. NTP remains enabled. Image overlays show local time, but the firmware's ONVIF UTC response differs by one hour. Day/night coverage, clock synchronization and a full-day storage comparison remain tracked in [issue #100](https://github.com/eriqueo/nixos-hwc/issues/100). Original camera settings are saved at `~/000_inbox/downloads/agent/tech/nixos-hwc/camera-settings-before.json`.
+
 ## Overview
 
 Frigate is a complete local NVR with AI-powered object detection. This implementation uses:
@@ -70,7 +74,7 @@ Frigate is a complete local NVR with AI-powered object detection. This implement
 | Feature | Status | Details |
 |---------|--------|---------|
 | GPU Object Detection | ✅ | ONNX + CUDA, ~24ms inference |
-| Hardware Video Decode | ✅ | CUDA hwaccel (not NVDEC - better IR handling) |
+| Hardware Video Decode | ✅ | NVIDIA decoding through FFmpeg's CUDA hwaccel interface |
 | Motion-Based Recording | ✅ | Savings depend on measured motion; no fixed percentage |
 | Substream Detection | ✅ | 720p detect, 4K record (fixes green tint) |
 | go2rtc Restreaming | ✅ | WebRTC live view, stream stability |
@@ -122,9 +126,8 @@ systemctl status podman-frigate.service
 # View logs
 journalctl -u podman-frigate.service -f
 
-# Restart after config changes
+# Commit and build through the repository workflow, then activate
 sudo nixos-rebuild switch --flake .#hwc-server
-sudo systemctl restart podman-frigate.service
 ```
 
 ---
@@ -145,7 +148,7 @@ Fallback:     CPU if CUDA unavailable
 | Component | Value |
 |-----------|-------|
 | GPU | NVIDIA (CUDA-capable) |
-| Hwaccel | CUDA (not NVDEC - better color handling) |
+| Hwaccel | FFmpeg CUDA interface; no forced output pixel format |
 | Detector | ONNX with CUDA execution provider |
 | Model Input | 320x320 BGR, float32 |
 
@@ -177,16 +180,16 @@ model:
 ffmpeg:
   hwaccel_args:
     - -hwaccel
-    - cuda            # CUDA hwaccel (not nvdec)
+    - cuda            # NVIDIA hardware decoding
     - -hwaccel_device
     - '0'
   # NOTE: No hwaccel_output_format - prevents green tint during IR transitions
 ```
 
-**Why CUDA instead of NVDEC?**
-- NVDEC with forced `yuv420p` output causes green tint during IR mode switches
-- CUDA hwaccel lets FFmpeg auto-select pixel format
-- Better handling of day/night transitions
+CUDA and NVDEC are not competing hardware decoders here. The current FFmpeg
+configuration uses NVIDIA decoding without forcing an output pixel format.
+That configuration was retained from the earlier IR color troubleshooting;
+day/night behavior must be exercised after camera or decoder changes.
 
 ### Validation Commands
 
@@ -202,26 +205,20 @@ curl -s http://localhost:5000/api/stats | jq '.cameras | to_entries[] | {name: .
 
 ## Storage & Retention
 
-### Current Storage Status
+### Storage Status
 
-| Mount | Total | Used | Free | Purpose |
-|-------|-------|------|------|---------|
-| /mnt/media | 7.3 TB | 4.2 TB (61%) | 2.7 TB | Recordings & clips |
-| /mnt/hot | 916 GB | 174 GB (20%) | 696 GB | Buffer/cache |
-| Frigate Total | - | ~43 GB | - | All surveillance data |
+Use `/api/stats` for current mount usage and `du` for retained surveillance data.
+Storage savings require a full observation window with comparable scene activity;
+they cannot be inferred from a camera being offline.
 
 ### Directory Structure
 
 ```
 /mnt/media/surveillance/frigate/
-└── media/                      # Recordings and snapshots (~43GB)
-    ├── cobra_cam_1/
-    ├── cobra_cam_2/
-    ├── cobra_cam_3/
-    └── reolink/
-
-/mnt/hot/surveillance/frigate/
-└── buffer/                     # Temporary processing buffer
+└── media/
+    ├── recordings/             # Date/hour/camera segment tree
+    ├── clips/                  # Snapshots, previews and related media
+    └── exports/                # User exports, when present
 
 /opt/surveillance/frigate/
 └── config/
@@ -322,12 +319,11 @@ objects:
 
 ### Per-Camera Zones and Noise Reduction
 
-All cameras with zones use `required_zones` — Frigate won't create events unless
-the object enters the named zone. This eliminates street traffic, passing pedestrians,
-and neighbor activity from generating events.
+The configured `required_zones` limit review alerts and detections to the named
+areas. They do not prevent all object tracking or motion recording outside a zone.
 
 **cobra_cam_1 (Carport)** — road at top of frame, driveway/yard below
-- Motion mask: timestamp, bright light, road (top 40%)
+- Motion mask: road and timestamp above y=150, about 20.8% of the frame
 - Zone: `carport` — everything below the road line
 - required_zones on person/dog/cat
 
@@ -336,7 +332,7 @@ and neighbor activity from generating events.
 - TODO: Add zones when camera is back online (similar to cobra_cam_1)
 
 **cobra_cam_3 (Front porch)** — looking through porch railing at fenced yard
-- Motion mask: timestamp, street beyond fence, neighbor areas, porch deck foreground
+- Motion mask: timestamp, street beyond fence and neighbor areas; porch foreground remains visible
 - Zone: `front_yard` — yard inside the fence
 - required_zones on person/dog/cat
 
@@ -357,14 +353,14 @@ Each camera uses **two separate streams** to optimize for both detection and rec
 ```
 Camera Hardware
     │
-    ├─► Main Stream (4K @ 15fps) ─► go2rtc ─► Frigate Record
+    ├─► Main Stream (4K, Cobra 15fps / Reolink 25fps) ─► go2rtc ─► Frigate Record
     │   - High quality for recordings
     │   - H.264 (Cobra) / HEVC (Reolink)
     │   - All active cameras record via 4K passthrough
     │
     └─► Sub Stream ─► go2rtc ─► Frigate Detect
-        - Cobra: 720p @ 3fps, Reolink: 480×270 @ 2fps
-        - Prevents green tint from resolution mismatch
+        - Cobra source: 720p @ 5fps; Frigate detects at 3fps
+        - Reolink source: 640×360, 7fps setting; detection: 480×270 @ 2fps
 ```
 
 ### go2rtc Restreaming
@@ -386,15 +382,10 @@ go2rtc:
 
 ### Why This Architecture?
 
-**Problem Solved**: Green tint during IR mode transitions
-
-**Root Cause**: When detect resolution doesn't match input stream, FFmpeg/NVDEC color space conversion fails during IR mode switches.
-
-**Solution**:
-1. Use camera's native substream for detection (720p)
-2. Set `detect.width/height` to exactly match substream
-3. Use CUDA hwaccel without forcing output format
-4. Pass video through go2rtc with `#video=copy`
+The main stream preserves recording detail while the smaller substream limits
+detection work. Keep the existing decoder pixel-format behavior during tuning.
+The earlier IR color failure is historical evidence, not proof that all scaling
+causes color errors; Reolink intentionally uses a smaller detection resolution.
 
 ---
 
@@ -414,13 +405,13 @@ go2rtc:
 
 **Full System Recovery** (from NixOS rebuild):
 ```bash
-# 1. Rebuild NixOS (creates all config, directories, services)
-sudo nixos-rebuild switch --flake .#hwc-server
-
-# 2. Restore the ONNX model from backup before starting Frigate
+# 1. Restore the ONNX model and its parent directory before activation
 # Model location: /opt/surveillance/frigate/config/models/yolov9-s-320.onnx
 
-# 3. Frigate will start with empty recordings (config is generated from Nix)
+# 2. Restore the matching database/media if recovering footage
+
+# 3. Activate the committed, tested NixOS configuration
+sudo nixos-rebuild switch --flake .#hwc-server
 ```
 
 **Recording Recovery** (if backed up):
@@ -477,19 +468,8 @@ curl -s http://localhost:5000/api/stats | jq '{
 }'
 ```
 
-**Expected Output**:
-```json
-{
-  "version": "0.16.2-4d58206",
-  "detector_ms": 24,
-  "cameras": [
-    {"cobra_cam_1": {"fps": 3.0, "detect": 4.0}},
-    {"cobra_cam_2": {"fps": 3.0, "detect": 4.0}},
-    {"cobra_cam_3": {"fps": 3.0, "detect": 8.0}},
-    {"reolink": {"fps": 3.0, "detect": 9.0}}
-  ]
-}
-```
+Expected camera FPS: approximately 3 for carport/porch, 2 for Reolink and 0 for
+the disabled side yard. Detection FPS varies with activity and object count.
 
 ### Health Indicators
 
@@ -515,10 +495,10 @@ curl -s http://localhost:5000/api/stats | jq '{
 
 **Symptom**: Green tint, especially during IR mode transitions (day/night)
 
-**Cause**: Resolution mismatch between input stream and detect dimensions, or forced pixel format
+**Possible cause**: Decoder/pixel-format behavior during an IR transition. Inspect a current frame and decoder logs before changing settings.
 
 **Solution** (already implemented):
-1. Use substreams for detection (match detect resolution exactly)
+1. Use substreams for detection
 2. Use CUDA hwaccel without `hwaccel_output_format`
 3. Use `#video=copy` in go2rtc streams
 
@@ -597,11 +577,8 @@ a known problem when the nvidia driver doesn't match the running kernel.
 # 1. Edit Nix config
 vim domains/media/frigate/parts/config.nix
 
-# 2. Rebuild
+# 2. Commit, run checks, build and activate through the repository workflow
 sudo nixos-rebuild switch --flake .#hwc-server
-
-# 3. Restart Frigate
-sudo systemctl restart podman-frigate.service
 ```
 
 ### Useful Debug Commands
@@ -610,8 +587,7 @@ sudo systemctl restart podman-frigate.service
 # Check all go2rtc streams
 curl -s http://localhost:1984/api/streams | jq 'to_entries[] | {name: .key, producers: .value.producers | length}'
 
-# View generated config
-cat /opt/surveillance/frigate/config/config.yaml
+# Generated config contains credentials; do not paste it or raw stream logs.
 
 # Check storage usage
 du -sh /mnt/media/surveillance/frigate/*
@@ -685,7 +661,7 @@ hwc.media.frigate = {
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    frigate-config.service                        │
-│  - Reads secrets from /run/agenix/                              │
+│  - Reads private systemd credential copies                      │
 │  - Substitutes ${VARIABLES} with envsubst                       │
 │  - Writes to /opt/surveillance/frigate/config/config.yaml       │
 └─────────────────────────────────────────────────────────────────┘
@@ -717,6 +693,7 @@ hwc.media.frigate = {
 
 ## Changelog
 
+- 2026-09-24: Document measured camera substream settings, native clock changes, readiness deadline and field-validation issue; remove stale storage/performance examples and obsolete mask descriptions.
 - 2026-09-24: Correct masks, regenerate labels from model metadata, use native metrics and expected-camera rules, share Reolink main stream, enforce config dependency/restarts and remove unused buffer/inert retention knobs. Footage retention unchanged.
 - 2026-08-20: **`frigate-cleanup` could delete the container's own bind-mount source, and its retention sweeps were never running at all.** `parts/cleanup.nix` derived `basePath = removeSuffix "/media" mediaPath` — the **parent** of the real tree — so `find ${basePath}/recordings ...` and the clips sweep have been hitting paths that do not exist, nightly, for months. The journal shows it plainly: `Frigate cleanup complete - Recordings: , Clips: `, both `du` outputs empty. The only line that ever acted was `find ${basePath} -type d -empty -delete`, and find's start points are themselves matches, so it could remove `${mediaPath}` — the `${cfg.storage.mediaPath}:/media/frigate` mount source (`index.nix:290`) — leaving the next container start dead with `statfs ...: no such file or directory`. Third instance of this exact shape in the repo (paperless `/mnt/hot/documents`, slskd via `media-cleanup`); `domains/data/storage/parts/cleanup.nix:17` already carries the fix and the explanation. The prune is now scoped to `${mediaPath}/{recordings,clips}` with `-mindepth 1`, and that is all this service does today. The two mp4 retention sweeps were **commented out rather than repointed**, deliberately: fixing only the path converts a months-long no-op into a first-ever deletion pass over ~506 GB / 60k files, at thresholds (`recordingRetentionDays = 7`, `clipRetentionDays = 10`) *tighter* than Frigate's own retention (`parts/config.nix`: recordings `retain.days = 3`, but `alerts.retain`/`detections.retain` are 14d and pin the recording segments those events reference). A backstop that outranks the thing it backs up is not a backstop — switched on as-is it would delete segments Frigate still believes it owns and break event playback. Removal condition is recorded inline: choose thresholds >= Frigate's native retention first, then uncomment.
 - 2026-07-10: **Frigate exporter actually works now + enabled.** The `frigate.exporter` module referenced `ghcr.io/blakeblackshear/frigate-prometheus-exporter` — an image that never existed (403), so it was dead on arrival and left disabled. Repointed to the maintained `docker.io/rhysbailey/prometheus-frigate-exporter` (bairhys/prometheus-frigate-exporter, serves `/metrics` on container port **9100**, host-mapped 9192), fixed `frigateUrl` to `http://host.containers.internal:5000` (the exporter runs on the podman bridge; Frigate is `--network=host`, so `localhost` couldn't reach it), and flipped `exporter.enable = true`. Feeds the new Grafana **Cameras** dashboard (`/d/cameras`): per-camera FPS/detection, onnx inference speed, GPU util, CPU-by-camera, stream bandwidth, surveillance storage.
