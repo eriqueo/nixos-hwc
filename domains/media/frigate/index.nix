@@ -13,12 +13,12 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.media.frigate;
+  labelPython = pkgs.python3.withPackages (p: [ p.onnx ]);
 in
 {
   imports = [
     ./parts/config.nix
     ./parts/cleanup.nix
-    ./exporter/index.nix
   ];
 
   #==========================================================================
@@ -39,7 +39,7 @@ in
     port = lib.mkOption {
       type = lib.types.port;
       default = 5000;
-      description = "Web UI port (exposed directly via --network=host, proxied by Caddy on 5443)";
+      description = "Frigate internal HTTP port (host networking; fixed at 5000)";
     };
 
     gpu = {
@@ -50,7 +50,6 @@ in
     storage = {
       configPath = lib.mkOption { type = lib.types.str; default = "/var/lib/frigate/config"; description = "Configuration directory path"; };
       mediaPath = lib.mkOption { type = lib.types.str; default = "${config.hwc.paths.media.root}/surveillance/frigate/media"; description = "Media storage path (recordings)"; };
-      bufferPath = lib.mkOption { type = lib.types.str; default = "${config.hwc.paths.hot.surveillance}/frigate/buffer"; description = "Buffer storage path (hot storage)"; };
     };
 
     resources = {
@@ -68,22 +67,12 @@ in
         description = "systemd OnCalendar schedule for cleanup";
       };
 
-      recordingRetentionDays = lib.mkOption {
-        type = lib.types.int;
-        default = 7;
-        description = "Delete recordings older than N days";
-      };
-
-      clipRetentionDays = lib.mkOption {
-        type = lib.types.int;
-        default = 10;
-        description = "Delete clips/events older than N days";
-      };
     };
 
     firewall.tailscaleOnly = lib.mkOption { type = lib.types.bool; default = true; description = "Restrict access to Tailscale interface only"; };
 
     _configTemplate = lib.mkOption { type = lib.types.package; internal = true; description = "Generated YAML config template"; };
+    _settings = lib.mkOption { type = lib.types.attrs; internal = true; readOnly = true; description = "Structured config shared by YAML generation and camera expectations"; };
   };
 
   config = lib.mkIf cfg.enable {
@@ -96,105 +85,17 @@ in
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
+        User = lib.mkForce "eric";
+        Group = "users";
+        SupplementaryGroups = [ "secrets" ];
+        UMask = "0077";
       };
 
       script = ''
-        # Create COCO-80 labelmap if it doesn't exist
-        if [ ! -f ${cfg.storage.configPath}/labelmap/coco-80.txt ]; then
-          cat > ${cfg.storage.configPath}/labelmap/coco-80.txt << 'LABELMAP_EOF'
-person
-bicycle
-car
-motorcycle
-airplane
-bus
-train
-truck
-boat
-traffic light
-fire hydrant
-street sign
-stop sign
-parking meter
-bench
-bird
-cat
-dog
-horse
-sheep
-cow
-elephant
-bear
-zebra
-giraffe
-hat
-backpack
-umbrella
-shoe
-eye glasses
-handbag
-tie
-suitcase
-frisbee
-skis
-snowboard
-sports ball
-kite
-baseball bat
-baseball glove
-skateboard
-surfboard
-tennis racket
-bottle
-plate
-wine glass
-cup
-fork
-knife
-spoon
-bowl
-banana
-apple
-sandwich
-orange
-broccoli
-carrot
-hot dog
-pizza
-donut
-cake
-chair
-couch
-potted plant
-bed
-mirror
-dining table
-window
-desk
-toilet
-door
-tv
-laptop
-mouse
-remote
-keyboard
-cell phone
-microwave
-oven
-toaster
-sink
-refrigerator
-blender
-book
-clock
-vase
-scissors
-teddy bear
-hair drier
-toothbrush
-LABELMAP_EOF
-          chown eric:users ${cfg.storage.configPath}/labelmap/coco-80.txt
-        fi
+        # REPLACEABLE: derived on every run from the model, including upgrades.
+        ${labelPython}/bin/python3 ${./parts/labelmap.py} \
+          ${cfg.storage.configPath}/models/${builtins.baseNameOf cfg._settings.model.path} \
+          ${cfg.storage.configPath}/labelmap/coco-80.txt
 
         # Read secrets - Cobra cameras
         RTSP_USER=$(cat /run/agenix/frigate-rtsp-username)
@@ -214,9 +115,13 @@ LABELMAP_EOF
 
         # Substitute secrets into nix-generated config template
         export RTSP_USER RTSP_PASS_ENCODED CAM1_IP CAM2_IP CAM3_IP REOLINK_USER REOLINK_PASS_ENCODED REOLINK_IP
-        ${pkgs.envsubst}/bin/envsubst < ${cfg._configTemplate} > ${cfg.storage.configPath}/config.yaml
-
-        chown eric:users ${cfg.storage.configPath}/config.yaml
+        # Idempotent derived configuration. Replace atomically; never expose a
+        # partially written credential-bearing file to a restarting container.
+        temporary=$(mktemp ${cfg.storage.configPath}/.config.XXXXXX)
+        trap 'rm -f "$temporary"' EXIT
+        ${pkgs.envsubst}/bin/envsubst < ${cfg._configTemplate} > "$temporary"
+        chmod 0600 "$temporary"
+        mv -f "$temporary" ${cfg.storage.configPath}/config.yaml
       '';
 
       path = with pkgs; [ coreutils jq python3 envsubst ];
@@ -228,15 +133,15 @@ LABELMAP_EOF
       "d ${cfg.storage.configPath}/models 0755 eric users -"
       "d ${cfg.storage.configPath}/labelmap 0755 eric users -"
       "d ${cfg.storage.mediaPath} 0755 eric users -"
-      "d ${cfg.storage.bufferPath} 0755 eric users -"
     ];
 
     # Ensure Frigate starts after mosquitto (for MQTT events) and CDI spec generation
     systemd.services.podman-frigate = {
-      after = [ "mosquitto.service" ]
+      after = [ "mosquitto.service" "frigate-config.service" ]
         ++ lib.optional cfg.gpu.enable "nvidia-container-toolkit-cdi-generator.service";
       wants = [ "mosquitto.service" ];
-      requires = lib.optionals cfg.gpu.enable [ "nvidia-container-toolkit-cdi-generator.service" ];
+      requires = [ "frigate-config.service" ] ++ lib.optionals cfg.gpu.enable [ "nvidia-container-toolkit-cdi-generator.service" ];
+      restartTriggers = [ cfg._configTemplate ./parts/labelmap.py ];
     };
 
     # Frigate container
@@ -248,14 +153,7 @@ LABELMAP_EOF
       image = cfg.image;
       autoStart = true;
 
-      ports = [
-        "${toString cfg.port}:5000"
-        "8554:8554"
-        "8555:8555/tcp"
-        "8555:8555/udp"
-        # NOTE: 9191:9090 removed — ignored with --network=host and caused
-        # false ServiceDown alerts. Use frigate-exporter module for metrics.
-      ];
+      # Host networking exposes the application's listeners directly.
 
       extraOptions = [
         "--network=host"
@@ -288,7 +186,6 @@ LABELMAP_EOF
         "${cfg.storage.configPath}/models:/config/models:ro"
         "${cfg.storage.configPath}/labelmap:/labelmap:ro"
         "${cfg.storage.mediaPath}:/media/frigate"
-        "${cfg.storage.bufferPath}:/tmp/frigate"
         "/etc/localtime:/etc/localtime:ro"
       ];
     };
@@ -302,8 +199,25 @@ LABELMAP_EOF
       };
     };
 
-    # Prometheus integration: handled by frigate-exporter module (exporter/index.nix)
-    # The frigate container itself does not expose Prometheus metrics natively.
+    # Frigate owns its metrics. The former sidecar duplicated /api/metrics.
+    hwc.monitoring.prometheus.scrapeConfigs = [{
+      job_name = "frigate";
+      metrics_path = "/api/metrics";
+      static_configs = [{ targets = [ "127.0.0.1:${toString cfg.port}" ]; }];
+      scrape_interval = "30s";
+      # Process command lines are unnecessary high-cardinality labels.
+      metric_relabel_configs = [{ action = "labeldrop"; regex = "cmdline"; }];
+    }];
+    services.prometheus.rules = [ (builtins.toJSON {
+      groups = [{
+        name = "frigate_configuration";
+        rules = lib.mapAttrsToList (name: camera: {
+          record = "frigate_camera_expected_fps";
+          expr = "vector(${toString (if camera.enabled then camera.detect.fps else 0)})";
+          labels.camera_name = name;
+        }) cfg._settings.cameras;
+      }];
+    }) ];
 
     assertions = [
       {
@@ -315,12 +229,8 @@ LABELMAP_EOF
         message = "hwc.media.frigate.storage.mediaPath must be set";
       }
       {
-        assertion = cfg.storage.bufferPath != "";
-        message = "hwc.media.frigate.storage.bufferPath must be set";
-      }
-      {
-        assertion = builtins.match "^/mnt/.*" cfg.storage.bufferPath != null;
-        message = "hwc.media.frigate.storage.bufferPath must be under /mnt";
+        assertion = cfg.port == 5000;
+        message = "Frigate uses host networking and listens on 5000; port mappings cannot change it";
       }
       {
         assertion = builtins.match "^/mnt/.*" cfg.storage.mediaPath != null;

@@ -143,7 +143,7 @@ let
       # - Detect: substream (1280x720) via go2rtc - matches detect resolution exactly
       # - Record: main stream (4K) via go2rtc
       # cobra_cam_1: Carport — road at top, driveway/yard below
-      # Events only (no continuous motion recording; saves ~8 GB/day)
+      # Motion retention, with road-only motion excluded above the sidewalk.
       cobra_cam_1 = {
         enabled = true;
         audio.enabled = false;
@@ -155,9 +155,9 @@ let
         };
         detect = { width = 1280; height = 720; fps = 3; };
         motion.mask = [
-          "0,0,1280,50"       # Timestamp strip
-          "350,0,750,200"     # Bright light area (top center)
-          "0,0,1280,300"      # Road and beyond (top ~40%)
+          # September 24 image: sidewalk/approach lies below y=150.
+          # The former two-point masks drew lines; y=300 would hide arrivals.
+          "0,0,1280,0,1280,150,0,150"
         ];
         zones.carport = {
           coordinates = "0,300,1280,300,1280,720,0,720";
@@ -180,9 +180,9 @@ let
         };
         detect = { width = 1280; height = 720; fps = 5; };
         motion.mask = [
-          "0,0,1280,50"       # Timestamp strip
-          "0,0,1280,280"      # Street and warehouse area (top third)
-          "1150,600,1280,720" # Green bin corner (bottom right)
+          "0,0,1280,0,1280,50,0,50" # Timestamp strip
+          "0,0,1280,0,1280,280,0,280" # Street (camera remains disabled)
+          "1150,600,1280,600,1280,720,1150,720" # Green bin corner
         ];
       };
 
@@ -198,15 +198,14 @@ let
         };
         detect = { width = 1280; height = 720; fps = 3; };
         motion.mask = [
-          "0,0,1280,50"       # Timestamp strip
+          "0,0,1280,0,1280,30,0,30" # Timestamp only; preserve distant arrivals
           # Street and sidewalk beyond the fence (polygon covering top area)
           "0,0,0,320,400,280,900,280,1280,320,1280,0"
           # Left side neighbor area
           "0,0,0,450,180,380,180,0"
           # Right side street/cars
           "1100,0,1100,400,1280,400,1280,0"
-          # Porch deck/railing foreground (bottom strip)
-          "0,620,1280,620,1280,720,0,720"
+          # Keep the porch foreground visible to motion at the door.
         ];
         # Focus detection on yard area inside fence
         zones.front_yard = {
@@ -224,12 +223,12 @@ let
         ffmpeg = ffmpegDefaults // {
           inputs = [
             { path = "rtsp://127.0.0.1:8554/reolink_sub"; roles = [ "detect" ]; }
-            { path = "rtsp://127.0.0.1:8554/reolink_record"; roles = [ "record" ]; }
+            { path = "rtsp://127.0.0.1:8554/reolink"; roles = [ "record" ]; }
           ];
         };
         detect = { width = 480; height = 270; fps = 2; };
         motion.mask = [
-          "0,0,480,23"        # Timestamp strip (scaled from 640x360)
+          "0,0,480,0,480,16,0,16" # Timestamp strip
           "0,0,0,150,75,135,75,0"  # Neighbor's area (left side with blue car)
           "435,0,435,90,480,90,480,0"  # Far right edge
         ];
@@ -266,10 +265,8 @@ let
       # Reolink - main (4K HEVC), sub (640x360 H264) for detection
       # Record uses main stream directly (no transcode) — transcode was unstable
       # with kernel/driver mismatch and poisoned go2rtc, killing all camera streams.
-      # TODO: Re-enable 1080p transcode after reboot: "ffmpeg:reolink#video=h264#hardware#width=1920#height=1080"
       reolink = [ "${reolinkUrl "h264Preview_01_main"}#video=copy" ];
       reolink_sub = [ "${reolinkUrl "h264Preview_01_sub"}#video=copy" ];
-      reolink_record = [ "${reolinkUrl "h264Preview_01_main"}#video=copy" ];
     };
 
     ui.timezone = "America/Denver";
@@ -296,5 +293,6 @@ in
   config = lib.mkIf cfg.enable {
     # Export the generated config template for the runtime service to use
     hwc.media.frigate._configTemplate = configTemplate;
+    hwc.media.frigate._settings = frigateConfig;
   };
 }

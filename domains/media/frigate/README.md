@@ -2,9 +2,9 @@
 
 **Version**: 0.16.2-tensorrt
 **Domain**: `hwc.media.frigate`
-**Architecture**: Config-First Pattern (Charter v11.1)
+**Architecture**: Nix-generated configuration (Charter v12.6)
 **Status**: ✅ Production
-**Last Updated**: 2026-04-07
+**Last Updated**: 2026-09-24
 
 ---
 
@@ -22,6 +22,34 @@
 10. [Configuration Reference](#configuration-reference)
 
 ---
+
+## Purpose
+
+Local camera recording, object detection, restreaming and camera metrics.
+
+## Boundaries
+
+Owns Frigate and its generated configuration. Prometheus owns alert evaluation; n8n owns event notifications. Frigate alone deletes footage under its native retention policy.
+
+## Structure
+
+- `index.nix`: options, container, atomic config generation, native metrics and expected-camera recording rules.
+- `parts/config.nix`: camera settings, masks, zones and recording retention.
+- `parts/labelmap.py`: rebuild labels from the installed ONNX model on every config generation.
+- `parts/test_config.py`: emitted-config, model and Prometheus contract tests (`nix build .#checks.x86_64-linux.frigate-contract`).
+- `parts/cleanup.nix`: prune empty directories; never delete footage.
+
+## Current operating contract
+
+Three cameras are enabled: carport and porch at 3 detect FPS, Reolink at 2. Side yard remains disabled until its connection is repaired. Zero object-detection FPS can mean no motion; zero camera FPS on an enabled camera means a capture fault.
+
+Motion masks preserve the carport sidewalk approach and porch foreground. Their pixel checks are automated; day/night walk-through coverage must also be checked after camera positioning or tuning changes. Camera clocks are separate from server recording timestamps.
+
+The ONNX model at `configPath/models/yolov9-s-320.onnx` is an existing external prerequisite. Configuration generation fails if the model or class metadata is invalid. The label file is derived, atomically replaced, and must not be edited. Historical animal labels are not rewritten.
+
+Metrics come directly from `/api/metrics`; there is no exporter container. Expected FPS comes from the same camera settings as the YAML. Offline alerts persist during long outages; five minutes of recovery is required before resolution. Missing camera metrics and unavailable/stale telemetry have separate alerts. The obsolete detection-spike rule queried a metric that never existed and was removed.
+
+The recording cache is a bounded 1 GiB RAM mount at `/tmp/cache`. The unused SSD mount at `/tmp/frigate` is removed; its old empty directory may remain on disk. No footage is deleted by this change. The deployed version remains 0.16.2.
 
 ## Overview
 
@@ -41,12 +69,12 @@ Frigate is a complete local NVR with AI-powered object detection. This implement
 |---------|--------|---------|
 | GPU Object Detection | ✅ | ONNX + CUDA, ~24ms inference |
 | Hardware Video Decode | ✅ | CUDA hwaccel (not NVDEC - better IR handling) |
-| Motion-Based Recording | ✅ | 60-70% storage savings vs continuous |
+| Motion-Based Recording | ✅ | Savings depend on measured motion; no fixed percentage |
 | Substream Detection | ✅ | 720p detect, 4K record (fixes green tint) |
 | go2rtc Restreaming | ✅ | WebRTC live view, stream stability |
 | Detection Zones | ✅ | Per-camera zones with required_zones enforcement |
 | Tiered Retention | ✅ | 3d motion, 14d alerts/detections, 30d person snapshots |
-| Automated Cleanup | ✅ | Frigate native + systemd backup timer |
+| Automated Cleanup | ✅ | Frigate native; timer prunes empty directories |
 
 ---
 
@@ -75,10 +103,10 @@ curl -s http://localhost:5000/api/stats | jq '{
 #   "version": "0.16.2-4d58206",
 #   "detector_ms": 24,
 #   "cameras": [
-#     {"name": "cobra_cam_1", "fps": 5.0},
-#     {"name": "cobra_cam_2", "fps": 5.0},
-#     {"name": "cobra_cam_3", "fps": 5.0},
-#     {"name": "reolink", "fps": 5.0}
+#     {"name": "cobra_cam_1", "fps": 3.0},
+#     {"name": "cobra_cam_2", "fps": 0.0},
+#     {"name": "cobra_cam_3", "fps": 3.0},
+#     {"name": "reolink", "fps": 2.0}
 #   ]
 # }
 ```
@@ -247,13 +275,11 @@ snapshots:
 - Deletes recordings older than retention period
 - Manages database and clips
 
-**2. Systemd Backup Timer** (Secondary)
+**2. Empty-directory Timer**
 - Module: `hwc.media.frigate.cleanup` (parts/cleanup.nix)
 - Schedule: Daily with 1-hour random delay
 - Actions:
-  - Delete recordings >7 days old (configurable: `cleanup.recordingRetentionDays`)
-  - Delete clips >10 days old (configurable: `cleanup.clipRetentionDays`)
-  - Remove empty directories
+  - Remove empty directories only. Native retention owns all file deletion.
 
 ```bash
 # Check cleanup timer status
@@ -353,9 +379,7 @@ go2rtc:
     cobra_cam_1_sub: [rtsp://...@192.168.0.201:554/ch01/1#video=copy]  # 720p sub
     reolink:         [rtsp://...@192.168.0.204:554/main#video=copy]    # 4K HEVC
     reolink_sub:     [rtsp://...@192.168.0.204:554/sub#video=copy]     # 640x360
-    reolink_record:  [rtsp://...@192.168.0.204:554/main#video=copy]    # 4K passthrough
-    # reolink_record was previously a 1080p ffmpeg transcode but this destabilized
-    # go2rtc (i/o timeouts, corrupt segments). Passthrough until driver is aligned.
+    # Recording and live view share reolink; no second upstream connection.
 ```
 
 ### Why This Architecture?
@@ -379,10 +403,10 @@ go2rtc:
 | Data | Location | Backed Up? | Method |
 |------|----------|------------|--------|
 | Configuration | Nix files in repo | ✅ Yes | Git |
-| AI Model | `/opt/.../models/` | ✅ Yes | Downloadable |
+| AI Model | `configPath/models/` | Verify backup | External prerequisite; not automatically downloaded |
 | Secrets | agenix encrypted | ✅ Yes | Git (encrypted) |
 | Recordings | `/mnt/media/.../media/` | ⚠️ Optional | Manual/Borg |
-| Database | `/mnt/media/.../frigate.db` | ⚠️ Optional | With recordings |
+| Database | `configPath/frigate.db` | Verify backup | Restore with matching recordings |
 
 ### Recovery Procedure
 
@@ -391,7 +415,7 @@ go2rtc:
 # 1. Rebuild NixOS (creates all config, directories, services)
 sudo nixos-rebuild switch --flake .#hwc-server
 
-# 2. AI model is downloaded automatically or copy from backup
+# 2. Restore the ONNX model from backup before starting Frigate
 # Model location: /opt/surveillance/frigate/config/models/yolov9-s-320.onnx
 
 # 3. Frigate will start with empty recordings (config is generated from Nix)
@@ -402,7 +426,7 @@ sudo nixos-rebuild switch --flake .#hwc-server
 # Restore recordings from backup to:
 /mnt/media/surveillance/frigate/media/
 
-# Frigate will index existing recordings on startup
+# Restore the matching database backup too; files alone do not restore its index
 ```
 
 ### Backup Recommendations
@@ -416,8 +440,8 @@ sudo nixos-rebuild switch --flake .#hwc-server
 - Consider Borg backup for `/mnt/media/surveillance/frigate/` if needed
 
 **Not Critical**:
-- Recordings are ephemeral by design (7-day retention)
-- Can be regenerated by cameras
+- Recordings expire under 3-day motion/14-day event retention.
+- Deleted historical footage cannot be regenerated; export evidence before expiry.
 
 ---
 
@@ -457,10 +481,10 @@ curl -s http://localhost:5000/api/stats | jq '{
   "version": "0.16.2-4d58206",
   "detector_ms": 24,
   "cameras": [
-    {"cobra_cam_1": {"fps": 5.0, "detect": 4.0}},
-    {"cobra_cam_2": {"fps": 5.0, "detect": 4.0}},
-    {"cobra_cam_3": {"fps": 5.0, "detect": 8.0}},
-    {"reolink": {"fps": 5.0, "detect": 9.0}}
+    {"cobra_cam_1": {"fps": 3.0, "detect": 4.0}},
+    {"cobra_cam_2": {"fps": 3.0, "detect": 4.0}},
+    {"cobra_cam_3": {"fps": 3.0, "detect": 8.0}},
+    {"reolink": {"fps": 3.0, "detect": 9.0}}
   ]
 }
 ```
@@ -470,8 +494,8 @@ curl -s http://localhost:5000/api/stats | jq '{
 | Metric | Healthy | Warning | Critical |
 |--------|---------|---------|----------|
 | Inference speed | <30ms | 30-50ms | >50ms |
-| Camera FPS | ~5.0 | <4.0 | 0 |
-| Detection FPS | >0 | Intermittent | 0 |
+| Camera FPS | Near configured 3/2 FPS | Below half configured rate | 0 on enabled camera |
+| Detection FPS | Activity-dependent | Inspect missed objects | Not a capture-health signal |
 | Storage free | >20% | 10-20% | <10% |
 
 ### Web UI Access
@@ -604,7 +628,7 @@ journalctl -u podman-frigate.service -f
 hwc.media.frigate = {
   enable = true;
   image = "ghcr.io/blakeblackshear/frigate:0.16.2-tensorrt";
-  port = 5001;
+  port = 5000;
 
   gpu = {
     enable = true;
@@ -614,7 +638,6 @@ hwc.media.frigate = {
   storage = {
     configPath = "/opt/surveillance/frigate/config";
     mediaPath = "/mnt/media/surveillance/frigate/media";
-    bufferPath = "/mnt/hot/surveillance/frigate/buffer";
   };
 
   resources = {
@@ -633,7 +656,7 @@ hwc.media.frigate = {
 |------|---------|
 | `domains/media/frigate/index.nix` | Main module, container config |
 | `domains/media/frigate/parts/config.nix` | Frigate YAML config (Nix-native) |
-| `domains/media/frigate/exporter/index.nix` | Prometheus exporter (if enabled) |
+| `parts/labelmap.py` | Atomic model-derived label generation |
 | `/opt/surveillance/frigate/config/config.yaml` | Generated runtime config |
 | `/opt/surveillance/frigate/config/models/` | AI model files |
 | `domains/media/frigate/parts/cleanup.nix` | Retention cleanup timer + service |
@@ -691,6 +714,8 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+
+- 2026-09-24: Correct masks, regenerate labels from model metadata, use native metrics and expected-camera rules, share Reolink main stream, enforce config dependency/restarts and remove unused buffer/inert retention knobs. Footage retention unchanged.
 - 2026-08-20: **`frigate-cleanup` could delete the container's own bind-mount source, and its retention sweeps were never running at all.** `parts/cleanup.nix` derived `basePath = removeSuffix "/media" mediaPath` — the **parent** of the real tree — so `find ${basePath}/recordings ...` and the clips sweep have been hitting paths that do not exist, nightly, for months. The journal shows it plainly: `Frigate cleanup complete - Recordings: , Clips: `, both `du` outputs empty. The only line that ever acted was `find ${basePath} -type d -empty -delete`, and find's start points are themselves matches, so it could remove `${mediaPath}` — the `${cfg.storage.mediaPath}:/media/frigate` mount source (`index.nix:290`) — leaving the next container start dead with `statfs ...: no such file or directory`. Third instance of this exact shape in the repo (paperless `/mnt/hot/documents`, slskd via `media-cleanup`); `domains/data/storage/parts/cleanup.nix:17` already carries the fix and the explanation. The prune is now scoped to `${mediaPath}/{recordings,clips}` with `-mindepth 1`, and that is all this service does today. The two mp4 retention sweeps were **commented out rather than repointed**, deliberately: fixing only the path converts a months-long no-op into a first-ever deletion pass over ~506 GB / 60k files, at thresholds (`recordingRetentionDays = 7`, `clipRetentionDays = 10`) *tighter* than Frigate's own retention (`parts/config.nix`: recordings `retain.days = 3`, but `alerts.retain`/`detections.retain` are 14d and pin the recording segments those events reference). A backstop that outranks the thing it backs up is not a backstop — switched on as-is it would delete segments Frigate still believes it owns and break event playback. Removal condition is recorded inline: choose thresholds >= Frigate's native retention first, then uncomment.
 - 2026-07-10: **Frigate exporter actually works now + enabled.** The `frigate.exporter` module referenced `ghcr.io/blakeblackshear/frigate-prometheus-exporter` — an image that never existed (403), so it was dead on arrival and left disabled. Repointed to the maintained `docker.io/rhysbailey/prometheus-frigate-exporter` (bairhys/prometheus-frigate-exporter, serves `/metrics` on container port **9100**, host-mapped 9192), fixed `frigateUrl` to `http://host.containers.internal:5000` (the exporter runs on the podman bridge; Frigate is `--network=host`, so `localhost` couldn't reach it), and flipped `exporter.enable = true`. Feeds the new Grafana **Cameras** dashboard (`/d/cameras`): per-camera FPS/detection, onnx inference speed, GPU util, CPU-by-camera, stream bandwidth, surveillance storage.
 - 2026-04-12: Extract cleanup timer/service into parts/cleanup.nix with configurable retention options
@@ -719,6 +744,6 @@ hwc.media.frigate = {
 
 ---
 
-**Last Updated**: 2026-04-07
+**Last Updated**: 2026-09-24
 **Maintainer**: Eric
 **Status**: Production ✅

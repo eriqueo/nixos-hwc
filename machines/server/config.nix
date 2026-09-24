@@ -798,8 +798,8 @@
   hwc.media.frigate = {
     enable = true;
 
-    # Internal port 5001 (exposed as 5443 via Caddy)
-    port = 5001;
+    # Host-networked HTTP listener, proxied by the Frigate Caddy vhost.
+    port = 5000;
 
     # GPU acceleration for ONNX object detection (TensorRT + CUDA)
     gpu = {
@@ -811,15 +811,13 @@
     storage = {
       configPath = "/opt/surveillance/frigate/config";
       mediaPath = "/mnt/media/surveillance/frigate/media";
-      bufferPath = "/mnt/hot/surveillance/frigate/buffer";
     };
 
     # Firewall settings
     firewall.tailscaleOnly = true;
 
-    exporter.enable = true; # frigate-prometheus-exporter → Grafana "Cameras" dashboard
-
-    # Automated surveillance cleanup (backup enforcement for Frigate retention)
+    # Native metrics → Prometheus; native retention owns footage deletion.
+    # This timer only prunes empty directories.
     cleanup.enable = true;
   };
 

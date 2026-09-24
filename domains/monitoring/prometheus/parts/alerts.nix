@@ -184,7 +184,7 @@
         # Services - Service down
         {
           alert = "ServiceDown";
-          expr = "up == 0";
+          expr = ''up{job!="frigate"} == 0'';
           for = "5m";
           labels = {
             severity = "P5";
@@ -196,23 +196,42 @@
           };
         }
 
-        # Frigate - Camera offline
-        # The avg_over_time guard silences cameras that are deliberately
-        # disabled (cobra_cam_2 exports 0 fps permanently and kept this alert
-        # firing forever): only a camera that was alive over the last day can
-        # go "offline". Label is camera_name, NOT camera — the bare {{
-        # $labels.camera }} rendered an empty name in Discord.
+        # Configured expectations, not recent success, determine which cameras
+        # should be online. Long outages must never become false recoveries.
+        {
+          alert = "FrigateMetricsUnavailable";
+          expr = ''up{job="frigate"} == 0 or absent(up{job="frigate"}) or (time() - frigate_service_last_updated_timestamp > 120)'';
+          for = "5m";
+          keep_firing_for = "5m";
+          labels = { severity = "P4"; category = "frigate"; };
+          annotations = {
+            summary = "Frigate monitoring is unavailable";
+            description = "Camera health cannot be checked. Inspect podman-frigate.service and the frigate Prometheus target.";
+          };
+        }
         {
           alert = "FrigateCameraOffline";
-          expr = "frigate_camera_fps < 1 and avg_over_time(frigate_camera_fps[1d]) > 0.5";
+          expr = "(frigate_camera_fps < 1) and on(camera_name) (frigate_camera_expected_fps > 0)";
           for = "5m";
+          keep_firing_for = "5m";
           labels = {
             severity = "P4";
             category = "frigate";
           };
           annotations = {
             summary = "Frigate camera {{ $labels.camera_name }} is offline";
-            description = "Camera {{ $labels.camera_name }} FPS is {{ $value | humanize }} (was alive over the last day) — check the camera/stream, then podman logs frigate";
+            description = "Camera {{ $labels.camera_name }} is not receiving video. Check its power and cable, then inspect Frigate at https://frigate.hwc.iheartwoodcraft.com.";
+          };
+        }
+        {
+          alert = "FrigateCameraMetricsMissing";
+          expr = ''(frigate_camera_expected_fps > 0 unless on(camera_name) frigate_camera_fps) and on() (up{job="frigate"} == 1)'';
+          for = "5m";
+          keep_firing_for = "5m";
+          labels = { severity = "P4"; category = "frigate"; };
+          annotations = {
+            summary = "Frigate camera {{ $labels.camera_name }} has no metrics";
+            description = "Frigate responds but this configured camera is missing. Inspect its configuration and logs at https://frigate.hwc.iheartwoodcraft.com.";
           };
         }
 
@@ -299,16 +318,11 @@
           };
         }
 
-        # Frigate - Low camera FPS
-        # Threshold is RELATIVE to the camera's own 1-day baseline, not a
-        # fixed 10: detect fps is deliberately 2-5 per camera (frigate
-        # parts/config.nix), so `< 10` fired permanently on every camera and
-        # re-spammed Discord each repeat_interval — same disease as the
-        # ModerateDiskUsage 75%→82% fix below. The >= 1 guard leaves
-        # dead/disabled cameras to FrigateCameraOffline.
+        # Compare with the configured rate; a degraded daily average is not
+        # a healthy baseline. Zero frames belong to the offline alert above.
         {
           alert = "FrigateLowFPS";
-          expr = "frigate_camera_fps < 0.5 * avg_over_time(frigate_camera_fps[1d]) and frigate_camera_fps >= 1";
+          expr = "(frigate_camera_fps < on(camera_name) (0.5 * frigate_camera_expected_fps)) and (frigate_camera_fps >= 1)";
           for = "10m";
           labels = {
             severity = "P3";
@@ -316,7 +330,7 @@
           };
           annotations = {
             summary = "Frigate camera {{ $labels.camera_name }} has degraded FPS";
-            description = "Camera {{ $labels.camera_name }} FPS is {{ $value | humanize }}, below half its 1-day baseline — stream is struggling, check camera/network";
+            description = "Camera {{ $labels.camera_name }} FPS is {{ $value | humanize }}, below half its configured rate. Inspect the stream and network in Frigate.";
           };
         }
 
@@ -392,21 +406,6 @@
           annotations = {
             summary = "Moderate disk usage on {{ $labels.instance }}:{{ $labels.mountpoint }}";
             description = "Disk usage is {{ $value | humanize }}% (threshold: 82%)";
-          };
-        }
-
-        # Frigate - Detection event spike
-        {
-          alert = "FrigateDetectionSpike";
-          expr = "increase(frigate_events_total[1h]) > 50";
-          for = "15m";
-          labels = {
-            severity = "P3";
-            category = "frigate";
-          };
-          annotations = {
-            summary = "Frigate detection spike for {{ $labels.camera }}";
-            description = "{{ $value | humanize }} events in last hour (threshold: > 50)";
           };
         }
 

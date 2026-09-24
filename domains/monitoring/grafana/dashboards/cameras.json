@@ -15,15 +15,15 @@
       "id": 1, "type": "stat", "title": "Frigate",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
-      "targets": [ { "refId": "A", "expr": "count(frigate_camera_fps)", "instant": true } ],
+      "targets": [ { "refId": "A", "expr": "min(up{job=\"frigate\"}) or vector(0)", "instant": true } ],
       "fieldConfig": { "defaults": { "decimals": 0, "unit": "none", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }, "mappings": [ { "type": "range", "options": { "from": 0, "to": 0, "result": { "text": "DOWN", "color": "red" } } }, { "type": "range", "options": { "from": 1, "to": 9999, "result": { "text": "UP", "color": "green" } } } ] }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none", "textMode": "value", "justifyMode": "center" }
     },
     {
-      "id": 2, "type": "stat", "title": "Cameras online",
+      "id": 2, "type": "stat", "title": "Enabled cameras: online / expected",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 4, "w": 5, "x": 4, "y": 0 },
-      "targets": [ { "refId": "A", "expr": "count(frigate_camera_fps > 0)", "instant": true }, { "refId": "B", "expr": "count(frigate_camera_fps)", "instant": true } ],
+      "targets": [ { "refId": "A", "expr": "count((frigate_camera_fps >= 1) and on(camera_name) (frigate_camera_expected_fps > 0)) or vector(0)", "legendFormat": "Online", "instant": true }, { "refId": "B", "expr": "count(frigate_camera_expected_fps > 0)", "legendFormat": "Expected", "instant": true } ],
       "fieldConfig": { "defaults": { "decimals": 0, "color": { "mode": "fixed", "fixedColor": "text" } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "none", "graphMode": "none", "textMode": "value", "justifyMode": "center" }
     },

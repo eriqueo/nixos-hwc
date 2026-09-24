@@ -3,9 +3,7 @@
 # Automated surveillance recording cleanup
 # Gated behind hwc.media.frigate.cleanup.enable
 #
-# Currently prunes only the empty date hierarchy under mediaPath. The mp4
-# retention sweeps this file was written for are commented out and inert —
-# see the note in the script for why turning them on is a policy decision.
+# Prunes only empty directories. Frigate owns file retention and database rows.
 
 { lib, config, pkgs, ... }:
 let
@@ -30,27 +28,16 @@ in
     };
 
     systemd.services.frigate-cleanup = {
-      description = "Cleanup old Frigate surveillance recordings";
+      description = "Prune empty Frigate recording directories";
       serviceConfig = {
         Type = "oneshot";
-        User = "root";
+        User = lib.mkForce "eric";
+        Group = "users";
       };
       path = [ pkgs.findutils pkgs.coreutils ];
       script = ''
-        # The two mp4 retention sweeps are DISABLED, not merely broken. They ran
-        # nightly for months against the wrong (non-existent) basePath, so they
-        # have never deleted anything. Simply repointing them at mediaPath turns
-        # a no-op into a first-ever deletion pass over ~506G / 60k files, with
-        # thresholds (${toString cleanupCfg.recordingRetentionDays}d recordings /
-        # ${toString cleanupCfg.clipRetentionDays}d clips) TIGHTER than Frigate's
-        # own retention (parts/config.nix: recordings 3d, alerts/detections 14d —
-        # and those 14d events pin the recording segments they reference). That
-        # is not the "backup enforcement" this service claims to be: as written it
-        # outranks Frigate and would break event playback.
-        # Removal condition: set thresholds >= Frigate's native retention, then
-        # uncomment against ${mediaPath} and delete this note.
-        # find ${mediaPath}/recordings -type f -name "*.mp4" -mtime +${toString cleanupCfg.recordingRetentionDays} -delete 2>/dev/null || true
-        # find ${mediaPath}/clips -type f -name "*.mp4" -mtime +${toString cleanupCfg.clipRetentionDays} -delete 2>/dev/null || true
+        # AUTO-MANAGED footage: Frigate alone deletes files according to the
+        # native retention in parts/config.nix. Never delete files behind its DB.
 
         # Prune the empty date hierarchy Frigate's own cleanup leaves behind.
         # Scoped to recordings/ and clips/ with -mindepth 1 so it can never

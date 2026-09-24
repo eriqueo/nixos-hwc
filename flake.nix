@@ -484,6 +484,27 @@
         touch $out
       '';
     in {
+      frigate-contract = let
+        server = self.nixosConfigurations.hwc-server.config;
+        frigate = server.hwc.media.frigate;
+        fixture = pkgs.writeText "frigate-contract.json" (builtins.toJSON {
+          settings = frigate._settings;
+          inherit (frigate) port;
+          configTemplate = frigate._configTemplate;
+          configScript = server.systemd.services.frigate-config.script;
+          inherit (server.systemd.services.podman-frigate) requires restartTriggers;
+          inherit (server.virtualisation.oci-containers.containers.frigate) ports volumes;
+          exporterPresent = server.virtualisation.oci-containers.containers ? frigate-exporter;
+          scrapes = server.hwc.monitoring.prometheus.scrapeConfigs;
+          rules = import ./domains/monitoring/prometheus/parts/alerts.nix { inherit lib; };
+          configurationRules = server.services.prometheus.rules;
+        });
+      in pkgs.runCommand "frigate-contract" {
+        nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.onnx p.pillow ])) pkgs.prometheus ];
+      } ''
+        python3 ${./domains/media/frigate/parts/test_config.py} ${fixture} ${./domains/media/frigate/parts/labelmap.py}
+        touch $out
+      '';
       # Credential checks use fake secrets; no server or real secret is accessed.
       radicale-client-auth = let
         home = self.homeConfigurations."eric@hwc-laptop".config;
