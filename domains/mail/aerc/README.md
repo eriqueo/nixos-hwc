@@ -191,10 +191,17 @@ automation tag.
 | `<Space>mv…` | Add a user-visible flag; pause after `v` to see choices |
 | `<Space>ta/td/tl/tj` | Teach DO/DID/LOOK/JUNK |
 | `<Space>tc h/d/f/p/o` | Teach HWC/DataX/Family/Personal/Other Domain |
+| `<Space>ra` | Create an exact-sender plus subject-text routing rule from the selected message |
+| `<Space>rm` | Review and disable active routing rules |
 
 `action` and `pending` are automation-only compatibility tags. They are not
 offered as manual workflow states: create a task/calendar/document handoff and
 archive the source message instead.
+
+The rule review suggests a stable bracketed prefix such as `[P1 CRITICAL]` when
+the subject has one. `DO` is the safe default. `JUNK` requires typing a second
+confirmation because it moves future matches to recoverable Trash. Rules never
+match every message from a sender without subject text.
 
 ### Filter / Sort
 

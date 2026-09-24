@@ -49,7 +49,7 @@ logs/
 | 1c | Local-app gather | `node gather-refinery.mjs` (refinery `.md` item store) and `node gather-research.mjs` (research-scout REST on `:8422`). Both emit `{}` on any failure and are `|| echo '{}'`-guarded, so each degrades independently — one app being down never costs the other its section. `gather-research.mjs` reads the lessons snapshot with `generate:false`, so the briefing spends no LLM calls. |
 | 2 | Mail classification | `notmuch` → resident Laya classifies State (`do/look/junk`), Domain, and factual traits. Uncertainty stays retryable `do`. |
 | 2b | Persist decisions | The classifier writes `state/*`, `domain/*`, `trait/*`, append-only judgments, outcomes, and axis-specific human locks. |
-| 3 | Merge | `jq` injects mail_triage into briefing.json |
+| 3 | Merge | `jq` injects mail_triage into briefing.json, including active routing rules and per-thread routing explanations. |
 | 4 | Publish | Dashboard reads via symlink; no-op if symlink exists |
 | 5 | Email | Plain-text render (alerts, calendar, tasks, leads, overdue invoices, jobs, mail triage w/ summaries, website) via msmtp from office@. **Only sent on the pre-9am run** — midday/evening timer firings refresh the dashboard without re-emailing (`FORCE_EMAIL=1` overrides). |
 
@@ -82,11 +82,19 @@ records `workflow/done` and removes the active state.
   decision only when a thread gains context.
 - A human correction in aerc becomes an append-only event and locks only the
   changed State or Domain axis.
+- A sender-plus-subject routing rule is also an append-only event. Routed
+  threads explain the matching rule in the dashboard, Workbench digest, and
+  morning email; the dashboard and email also list active rules.
 - **`hwc_mail_triage`** reflects the cached threads through their live
   `state/*` tag, so the board and aerc show the same placement.
 
 The classifier's versioned contract is pinned through the System One flake input
 and consumed by aerc, notmuch, the briefing, and MCP.
+
+The mutable outputs are under `output/`: `briefing.json` is the combined source
+for the dashboard and Workbench, while `mail-triage.json` is the classifier's
+mail-only snapshot before merge. `dashboard/briefing.json` is only the served
+link/copy of `output/briefing.json`; it is not another source of truth.
 
 ## Sections
 

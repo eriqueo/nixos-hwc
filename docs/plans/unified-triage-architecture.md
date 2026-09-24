@@ -39,18 +39,30 @@ thread cases, append-only judgments, append-only human events, independent
 state/Domain locks, outcomes, and exact-sender learning. Its v1 database is
 backed up before the schema-2 migration. The pinned model cache is REPLACEABLE.
 
+Explicit routing rules use that same append-only event ledger; there is no
+second aerc or arrival-hook rule store. A rule matches an exact sender plus a
+required, case-insensitive subject substring and chooses `DO`, `LOOK`, or
+`JUNK` plus one Domain. The most specific matching subject wins. A rule beats
+model output and broad exact-sender learning, while a thread-specific human lock
+and the new-reply `DO` safety rule remain stronger. Active rules are capped at
+200. `JUNK` creation requires a separate confirmation.
+
 ## Human controls
 
 - aerc columns are `From | Subject | Date | Domain | State | Tags`.
 - `<Space>ta`, `<Space>td`, `<Space>tl`, and `<Space>tj` teach
   `DO`, `DID`, `LOOK`, and `JUNK` through the ledger.
 - `<Space>tc h|d|f|p|o` teaches Domain without changing state.
+- `<Space>ra` reviews a sender-plus-subject routing rule from the selected
+  message; `<Space>rm` reviews and disables active rules.
 - `a` completes; `d` directly trashes without sender teaching.
 - `J`/`K` marks plus `a`/`d` operate on the complete marked set, thread-wide.
 - `<Space>tt` folds the selected thread; `<Space>tT` folds all threads.
 - The sidebar contains workflow states only. Domain drill-down uses filters.
 
-The morning briefing is a read-only view of the same v2 snapshot. MCP reflects
+The morning briefing is a read-only view of the same v2 snapshot. Routed items
+carry a plain-language rule explanation, and the dashboard and email list active
+rules. The Workbench mail digest consumes the same item summary. MCP reflects
 live `state/*` tags and routes state/outcome writes through the same ledger as
 aerc. Calendar mail creates private khal-format drafts for review and never
 imports an event automatically.

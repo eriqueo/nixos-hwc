@@ -66,6 +66,9 @@ let
     Space t a  DO        Space t d  DID        Space t l  LOOK
     Space t j  JUNK      Space t c h|d|f|p|o  set Domain
 
+    ROUTING RULES  -  exact sender plus subject text; saved in the mail ledger
+    Space r a  create from selected mail   Space r m  review / disable rules
+
     FILTER / SORT / VIEW
     Space f t  filter current folder by tag (Tab completes)
     Space f T  find tag across all mail (Tab completes)
@@ -180,6 +183,11 @@ ${domainFilterBinds}
 ${stateBinds}
 ${domainBinds}
 
+      # Persistent sender + subject routing rules. The create command receives
+      # the selected full message and opens its guided review in an aerc tab.
+      <Space>ra = :pipe -m mail-classifier route-review<Enter> # create routing rule…
+      <Space>rm = :term mail-classifier route-manage<Enter> # review / disable routing rules…
+
       # Use the sender's List-Unsubscribe header and skip straight to review
       # when the only available method is an email draft.
       <Space>fu = :unsubscribe -s<Enter> # review unsubscribe
@@ -223,6 +231,8 @@ ${tabBinds}
       p = :pipe -m email-to-paperless<Enter>
 ${stateBinds}
 ${domainBinds}
+      <Space>ra = :pipe -m mail-classifier route-review<Enter> # create routing rule…
+      <Space>rm = :term mail-classifier route-manage<Enter> # review / disable routing rules…
 
       [view::passthrough]
       $noinherit = true

@@ -336,11 +336,11 @@ function makeThread(t,bucket){
   const wrap=$('div',{class:`thread ${bucket}`});
   const body=$('div',{class:'thread-body'});
   const top=$('div',{class:'thread-top'});
-  top.appendChild($('span',{class:'thread-from'},t.from_name||t.from_address));
+  top.appendChild($('span',{class:'thread-from'},t.sender||t.from_name||t.from_address||'?'));
   top.appendChild($('span',{class:'thread-subject'},t.subject));
   top.appendChild($('span',{class:'thread-date'},t.date_relative||''));
   body.appendChild(top);
-  body.appendChild($('div',{class:'thread-summary'},t.summary));
+  if(t.summary)body.appendChild($('div',{class:'thread-summary'},t.summary));
   if(t.tags&&t.tags.length){
     const tg=$('div',{class:'thread-tags'});
     t.tags.filter(x=>!['inbox','unread','flagged'].includes(x)).forEach(x=>{
@@ -414,6 +414,14 @@ function makeMailTile(triage,liveThreads,mailHealth){
   }
 
   const b=merged.buckets||{};
+  const rules=merged.routing_rules||[];
+  if(rules.length){
+    const ruleBox=$('div',{class:'mail-detail',style:'margin-bottom:12px'});
+    ruleBox.appendChild($('div',null,`${rules.length} active routing rule${rules.length===1?'':'s'}`));
+    rules.forEach(rule=>ruleBox.appendChild($('div',null,
+      `${rule.sender} + “${rule.subject_contains}” → ${String(rule.state).toUpperCase()} · ${String(rule.domain).toUpperCase()}`)));
+    sec.appendChild(ruleBox);
+  }
   const states=[['do','DO'],['did','DID'],['look','LOOK'],['junk','JUNK']];
   const tabs=$('div',{class:'mail-tabs',role:'tablist'});
   const allTabs=states.map(([state,label],i)=>$('button',{class:`mail-tab${i===0?' active':''}`,role:'tab','aria-selected':i===0?'true':'false'},`${label} (${(b[state]||[]).length})`));

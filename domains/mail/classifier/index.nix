@@ -11,12 +11,18 @@ let
         exit 69
       fi
       case "''${1:-}" in
-        correct|transition|review)
+        correct|transition|review|route-review)
           verb="$1"
           shift
           exec "$runtime" "$verb" \
             --db /var/lib/hwc/mail-classifier/ledger.sqlite \
             --notmuch ${pkgs.notmuch}/bin/notmuch "$@"
+          ;;
+        route-manage|route-list|route-set|route-disable)
+          verb="$1"
+          shift
+          exec "$runtime" "$verb" \
+            --db /var/lib/hwc/mail-classifier/ledger.sqlite "$@"
           ;;
         *) exec "$runtime" "$@" ;;
       esac

@@ -28,6 +28,9 @@ business/
 ```
 
 ## Changelog
+- 2026-09-24: Morning Briefing now shows persistent mail-routing rules and the
+  rule that placed each matching thread in the dashboard, Workbench digest, and
+  plain/HTML email.
 - 2026-09-21: CRM now exposes one derived Lead Scout ingest route/window
   contract to both its timer and Lead Scout's read-only handoff UI.
 - 2026-09-21: Morning Briefing now consumes the resident local Laya mail

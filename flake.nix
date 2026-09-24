@@ -647,6 +647,8 @@
           "<Space>ta = :pipe -m mail-classifier correct --state do<Enter>"
           "<Space>td = :pipe -m mail-classifier correct --state did<Enter>"
           "<Space>tcd = :pipe -m mail-classifier correct --domain datax<Enter>"
+          "<Space>ra = :pipe -m mail-classifier route-review<Enter>"
+          "<Space>rm = :term mail-classifier route-manage<Enter>"
         ];
         missing = lib.filter (needle: !(lib.hasInfix needle binds)) required;
       in

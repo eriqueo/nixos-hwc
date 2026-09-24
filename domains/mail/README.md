@@ -93,6 +93,12 @@ State and Domain corrections teach the classifier's exact-sender preference in
 the same operation. `DID` and completion are never generalized. No separate
 sender-rule writer runs in the arrival hook.
 
+Persistent routing rules are narrower than sender learning: each one requires
+an exact sender plus subject text, then chooses State and Domain. Create one from
+the selected message with `Space r a`; review or disable rules with `Space r m`.
+Rules live as append-only events in the classifier ledger, and Junk rules ask
+for an extra confirmation before they can send future matches to Trash.
+
 Future Workbench integration should consume the same selected-item context
 contract used by the existing hubs: a global action can hand the selected
 mail/task/document to an agent with a stable source and item ID. That action is
@@ -106,6 +112,9 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-09-24: Added guided sender-plus-subject routing rules under `Space r`.
+  Rules share the classifier ledger, preserve thread-level safety overrides,
+  and publish their reason into Workbench and morning-briefing views.
 - 2026-09-23: Kept aerc's Domain, State, and Tags columns loadable by preserving
   whitespace between generated `case` and `exclude` template operands.
 - 2026-09-22: Promoted the private Nomic embedding classifier for Domain after

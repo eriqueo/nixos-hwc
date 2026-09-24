@@ -743,8 +743,12 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
         + " · junk: " + ((.mail_triage.stats.junk_count // 0) | tostring)
         + (if .sections.mail.summary then " · " + .sections.mail.summary else "" end)
         + (if .mail_triage.error then "\n  triage error: " + .mail_triage.error else "" end)
-        + (((.mail_triage.buckets.do // [])[:5]) | map("\n  ! " + (.sender // "?") + ": " + (.subject // "?")) | join(""))
-        + (((.mail_triage.buckets.look // [])[:5]) | map("\n  · " + (.sender // "?") + ": " + (.subject // "?")) | join(""))
+        + (if ((.mail_triage.routing_rules // []) | length) > 0 then
+            "\n  routing rules: " + (((.mail_triage.routing_rules | length)) | tostring) + " active"
+            + ((.mail_triage.routing_rules // []) | map("\n    " + .sender + " + ‘" + .subject_contains + "’ → " + (.state | ascii_upcase) + " · " + (.domain | ascii_upcase)) | join(""))
+          else "" end)
+        + (((.mail_triage.buckets.do // [])[:5]) | map("\n  ! " + (.sender // "?") + ": " + (.subject // "?") + (if .summary then "\n      " + .summary else "" end)) | join(""))
+        + (((.mail_triage.buckets.look // [])[:5]) | map("\n  · " + (.sender // "?") + ": " + (.subject // "?") + (if .summary then "\n      " + .summary else "" end)) | join(""))
       else "" end)
     + (if (.sections.refinery.counts.total // 0) > 0 then
         sec("REFINERY")
@@ -885,10 +889,17 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
             + " &middot; junk " + ((.mail_triage.stats.junk_count // 0) | tostring)
             + (if $s.mail.summary then " &middot; " + meta(($s.mail.summary|h)) else "" end))
           + (if .mail_triage.error then item(red("triage error: " + (.mail_triage.error|h))) else "" end)
+          + (if ((.mail_triage.routing_rules // []) | length) > 0 then
+              item(meta((((.mail_triage.routing_rules | length)) | tostring) + " active routing rule(s)"))
+              + ((.mail_triage.routing_rules // []) | map(
+                  item(meta((.sender|h) + " + &lsquo;" + (.subject_contains|h) + "&rsquo; &rarr; " + ((.state | ascii_upcase)|h) + " &middot; " + ((.domain | ascii_upcase)|h)))) | join(""))
+            else "" end)
           + (((.mail_triage.buckets.do // [])[:5]) | map(
-              item(red("!") + " " + ((.sender // "?")|h) + ": " + ((.subject // "?")|h))) | join(""))
+              item(red("!") + " " + ((.sender // "?")|h) + ": " + ((.subject // "?")|h)
+                + (if .summary then "<br>" + meta((.summary|h)) else "" end))) | join(""))
           + (((.mail_triage.buckets.look // [])[:5]) | map(
-              item(meta("&middot;") + " " + ((.sender // "?")|h) + ": " + ((.subject // "?")|h))) | join("")))
+              item(meta("&middot;") + " " + ((.sender // "?")|h) + ": " + ((.subject // "?")|h)
+                + (if .summary then "<br>" + meta((.summary|h)) else "" end))) | join("")))
       else "" end)
 
     + (if ($s.refinery.counts.total // 0) > 0 then
