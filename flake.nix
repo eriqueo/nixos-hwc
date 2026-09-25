@@ -29,7 +29,7 @@
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-26.05";
     # TS-2026-011 needs Tailscale >= 1.102.3; stable 26.05 has 1.98.10.
-    # Remove this temporary pin when nixpkgs-stable provides >= 1.102.3.
+    # Remove this temporary pin when both Nixpkgs inputs provide >= 1.102.3.
     nixpkgs-tailscale.url = "github:NixOS/nixpkgs/4975466d324710c576dc11ad614684e6bd8cad8e";
 
     # Static agent policy and adapters. Mutable memories and the mistakes
@@ -287,6 +287,7 @@
 
     # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)
     pkgs = mkPkgs system nixpkgs [];
+    pkgs-laptop = mkPkgs system nixpkgs [ tailscaleOverlay ];
 
     # Stable package set with the temporary Tailscale security update.
     pkgs-stable = mkPkgs system nixpkgs-stable [ tailscaleOverlay ];
@@ -323,8 +324,8 @@
       laptop = {
         channel   = "unstable";
         roles     = [ "base" "desktop" ];
-        nixosPkgs = pkgs;
-        hmPkgs    = pkgs;
+        nixosPkgs = pkgs-laptop;
+        hmPkgs    = pkgs-laptop;
         hmBackupExt  = "hm-bak";
         extraModules = [ inputs.nixvirt.nixosModules.default ];
       };
