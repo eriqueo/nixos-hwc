@@ -28,6 +28,7 @@ business/
 ```
 
 ## Changelog
+- 2026-09-25: `workbench` — removed the `routeOwner` option (ownership is now `hwc.networking.shared.routeOwners`); area resolution reads `shared.effectiveRoutes`, which includes stubs for vhosts another host owns.
 - 2026-09-25: `workbench/` gains `routeOwner` and `remoteRoutes` (areas served by another fleet host count as deployed) so the hub vhost can be owned by hwc-work while hwc-server keeps the module enabled for its local `areas.json` and proxies the name (service split wave 1).
 - 2026-09-24: Estimator's manual build service uses supported Node 22 on
   NixOS 26.05 and includes the Node version in both rebuild and npm-install

@@ -96,7 +96,6 @@
   # own refinery areas.json but proxies the vhost to this host.
   hwc.business.workbench = {
     enable = true;
-    routeOwner = "work";
     # Areas whose apps are still on hwc-server (wave 2/3). Remove each name
     # from this list in the commit that moves its app here.
     remoteRoutes = [ "crm" "firefly-explorer" "lead-scout" "home-scout" "research-scout" "event-scout" ];

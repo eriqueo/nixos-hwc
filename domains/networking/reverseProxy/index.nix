@@ -11,7 +11,27 @@ let
   routeOwner      = config.hwc.networking.reverseProxy.routeOwner;
   routes          = lib.filter
     (r: routeOwner == null || (r.owner or "main") == routeOwner)
-    config.hwc.networking.shared.routes;
+    config.hwc.networking.shared.effectiveRoutes;
+
+  # Route ownership has one producer: shared.routeOwners (routes.nix), the
+  # same on every host. It stamps `owner` onto the matching local route, and
+  # for a vhost whose owner is another host and which has no local route (its
+  # module is off here) it adds a name-only stub, so this host still proxies
+  # the name and the laptop still pins it.
+  hostAliases = config.hwc.networking.hosts.servers;
+  ownerMap = config.hwc.networking.shared.routeOwners;
+  declaredRoutes = config.hwc.networking.shared.routes;
+  localRouteNames = map (r: r.name) declaredRoutes;
+  ownedRoutes = map
+    (r: if ownerMap ? ${r.name} then r // { owner = ownerMap.${r.name}.owner; } else r)
+    declaredRoutes;
+  remoteStubs = lib.mapAttrsToList
+    (name: o: { inherit name; mode = "vhost"; owner = o.owner; })
+    (lib.filterAttrs
+      (name: o: o.mode == "vhost"
+        && !(lib.elem name localRouteNames)
+        && hostAliases.${o.owner} != config.networking.hostName)
+      ownerMap);
   vhostDomain     = config.hwc.networking.shared.vhostDomain;
   subpathRoutes   = lib.filter (r: r.mode == "subpath") routes;
 
@@ -310,6 +330,39 @@ in
       default = [];
       description = "Aggregated reverse proxy routes for all services.";
     };
+    routeOwners = mkOption {
+      # A bare alias means a vhost; port routes say so, because a missing
+      # port route gets no stub (there is no name to proxy).
+      type = types.attrsOf (types.coercedTo
+        (types.enum (lib.attrNames config.hwc.networking.hosts.servers))
+        (owner: { inherit owner; })
+        (types.submodule {
+          options = {
+            owner = mkOption { type = types.enum (lib.attrNames config.hwc.networking.hosts.servers); };
+            mode = mkOption { type = types.enum [ "vhost" "port" ]; default = "vhost"; };
+          };
+        }));
+      default = { };
+      example = { calculator = "work"; brain-mcp = { owner = "work"; mode = "port"; }; };
+      description = ''
+        Route name → host alias (hwc.networking.hosts.servers) that runs its
+        backend. Routes not listed belong to "main". Declared once (routes.nix)
+        and evaluated identically on every host: a routeOwner host renders only
+        its own routes, legacy hosts proxy other owners' vhosts to them over the
+        tailnet, and the laptop pins each vhost name to its owner. Moving an
+        app's route is one entry here.
+      '';
+    };
+    effectiveRoutes = mkOption {
+      type = types.listOf (types.lazyAttrsOf types.anything);
+      readOnly = true;
+      description = ''
+        `routes` with `owner` applied from `routeOwners`, plus a name-only vhost
+        stub for each remotely owned vhost that has no local route. Every
+        consumer of route ownership (Caddy rendering, laptop pins, workbench
+        area resolution) reads this, not `routes`.
+      '';
+    };
     vhostDomain = mkOption {
       type = types.str;
       default = "hwc.iheartwoodcraft.com";
@@ -323,7 +376,10 @@ in
     };
   };
 
-  config = mkIf config.hwc.networking.reverseProxy.enable {
+  config = lib.mkMerge [
+  { hwc.networking.shared.effectiveRoutes = ownedRoutes ++ remoteStubs; }
+
+  (mkIf config.hwc.networking.reverseProxy.enable {
     services.caddy = {
       enable = true;
       # Caddy with the deSEC DNS provider compiled in, for ACME DNS-01 issuance
@@ -364,5 +420,6 @@ in
     networking.firewall.allowedTCPPorts =
       [ 80 443 ]
       ++ (lib.map (r: r.port) (lib.filter (r: r.mode == "port" || r.mode == "static") routes));
-  };
+  })
+  ];
 }

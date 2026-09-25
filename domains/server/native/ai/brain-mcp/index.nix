@@ -137,13 +137,11 @@ in
     # Deviation: tailscale serve --https=8443 not viable (port 8443 owned by slskd/Caddy).
     # Creates https://hwc-server.ocelot-wahoo.ts.net:13443 via Caddy with Tailscale cert.
     #==========================================================================
-    # Owned by hwc-work since the service split (wave 1); the route only
-    # exists where the service is enabled, so the owner tag is what lets a
-    # routeOwner = "work" Caddy serve it.
+    # Owned by hwc-work since the service split (wave 1); ownership is the
+    # routeOwners entry in domains/networking/routes.nix.
     hwc.networking.shared.routes = [{
       name = "brain-mcp";
       mode = "port";
-      owner = "work";
       port = cfg.reverseProxyPort;
       upstream = "http://127.0.0.1:${toString cfg.port}";
     }];
