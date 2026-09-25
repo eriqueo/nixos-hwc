@@ -715,6 +715,14 @@
   };
   systemd.tmpfiles.rules = [ "z /mnt/backup 0751 root root -" ];
 
+  # hwc-work's eric key. It clones and syncs the brain vault and claude-config
+  # hubs on this host and pulls the app checkouts the service split moved
+  # there (vault-sync, t3-update, nightly-builds all use SSH remotes). mkAfter
+  # keeps the fleet keys from hwc.system.users; same shape as the laptop.
+  users.users.eric.openssh.authorizedKeys.keys = lib.mkAfter [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIcfkt1xgKBQbL9kuc1x2h/F3HjK+pDU5j/I9Q74e8xE eric@hwc-work"
+  ];
+
   # Machine-specific GPU settings for Quadro P1000 (legacy driver required)
   hwc.system.hardware.gpu = {
     enable = lib.mkForce true;
