@@ -24,6 +24,7 @@ let dictationModel = "base.en"; in
 
   # Apps enabled on this machine specifically
   hwc.home.apps = {
+    eden.enable = true;
     calcurse.enable = true;
     calcure.enable = true;
     imv.enable = true;
