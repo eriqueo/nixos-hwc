@@ -59,6 +59,7 @@ monitoring/
 
 ## Changelog
 
+- 2026-09-25: `alerts/` — each timer/service name in the service-failure list is gated on its owning module's enable option (`lib.attrByPath`, no `systemd.services` read, so no recursion). Units that moved to hwc-work no longer leave ExecStart-less OnFailure stubs on hwc-server; this also turns `alert-onfailure-units` green again (red since wave 1: brainvec-ingest, nightly-builds). `prometheus/` — probes for apps that moved (hwc-leads, CMS, Umami, the hwc-sys gateway) use their vhost or owner-derived URL instead of loopback.
 - 2026-09-24: Grafana 13 image rendering uses JWTs and requires a non-default shared token. Grafana and its localhost renderer now read one age-mounted `AUTH_TOKEN` environment file; Grafana resolves the token at runtime, outside the Nix store. A consistent pre-upgrade SQLite backup on the backup pool supports rollback after the unified-storage migration.
 - 2026-09-24: Grafana's 26.05 module requires an explicit signing key.
   The existing key is now supplied through an age-mounted file provider so

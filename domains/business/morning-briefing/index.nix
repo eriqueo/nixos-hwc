@@ -9,6 +9,23 @@ in
 {
   options.hwc.business.morningBriefing = {
     enable = lib.mkEnableOption "deterministic morning briefing and local mail classification";
+    hostHealthFrom = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "main";
+      description = ''
+        hwc.networking.hosts alias whose host health (systemctl, disks,
+        journal, VPN, backups) the briefing reports; null = the host it runs
+        on. The probes run there over ssh as eric (BRIEFING_HOST in run.sh).
+        TEMPORARY for the service split: removal = wave 3 makes those
+        sections Prometheus-backed.
+      '';
+    };
+    prometheusUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "http://127.0.0.1:9090";
+      description = "Prometheus the briefing queries for down targets and the disk forecast.";
+    };
     onCalendar = lib.mkOption {
       type = with lib.types; either str (listOf str);
       default = "*-*-* 06:00:00";
@@ -25,13 +42,19 @@ in
       description = "Morning Briefing — local data gathering and Laya mail classification";
       after = [ "network-online.target" "mail-classifier-model.service" ];
       wants = [ "network-online.target" "mail-classifier-model.service" ];
-      environment.HOME = paths.user.home;
+      environment = {
+        HOME = paths.user.home;
+        PROM_URL = cfg.prometheusUrl;
+      } // lib.optionalAttrs (cfg.hostHealthFrom != null) {
+        BRIEFING_HOST = config.hwc.networking.hosts.servers.${cfg.hostHealthFrom};
+      };
       # git: config-drift tile (HEAD/unpushed/dirty). coredumpctl comes from
       # systemd which is always on the base PATH via /run/current-system.
       # pass+gnupg: msmtp's passwordeval for the Step-5 email (proton bridge).
       # curl: website tile (umami stats via loopback API). postgresql client
       # comes from /run/current-system/sw/bin (absolute path in run.sh).
-      path = [ pkgs.bash pkgs.coreutils pkgs.findutils pkgs.gawk pkgs.gnugrep pkgs.jq pkgs.nodejs_22 pkgs.notmuch pkgs.git pkgs.msmtp pkgs.pass pkgs.gnupg pkgs.curl ];
+      # openssh: host_exec (hostHealthFrom).
+      path = [ pkgs.bash pkgs.coreutils pkgs.findutils pkgs.gawk pkgs.gnugrep pkgs.jq pkgs.nodejs_22 pkgs.notmuch pkgs.git pkgs.msmtp pkgs.pass pkgs.gnupg pkgs.curl pkgs.openssh ];
       serviceConfig = {
         Type = "oneshot";
         User = lib.mkForce "eric";

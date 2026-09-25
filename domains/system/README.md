@@ -45,6 +45,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-09-25: `mcp/` — `serverAlias` default is now `work`: the hwc-sys gateway runs on hwc-work (service split wave 2), so every host's `hwc.system.mcp.url` (and the generated `.mcp.json`) points there.
 - 2026-09-24: GPU driver selection accepts `legacy_580`; hwc-server's
   Quadro P1000 needs NVIDIA 580 because current stable 595 dropped Pascal.
 - 2026-09-24: Adopted the 26.05 `settings` APIs for coredump and resolved;

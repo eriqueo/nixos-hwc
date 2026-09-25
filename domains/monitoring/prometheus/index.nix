@@ -16,6 +16,13 @@
 let
   cfg = config.hwc.monitoring.prometheus;
   paths = config.hwc.paths;
+  # Apps that may live on another host are probed by their vhost name or
+  # owner-derived URL, never loopback (service split: they run on hwc-work).
+  vhost = name: "https://${name}.${config.hwc.networking.shared.vhostDomain}";
+  mcpCfg = config.hwc.system.mcp;
+  gatewayHealthUrl = config.hwc.networking.hosts.url {
+    server = mcpCfg.serverAlias; port = mcpCfg.tailnetPort; path = "/health";
+  };
   hasFrigatePort = lib.hasAttrByPath [ "hwc" "media" "frigate" "port" ] options;
 in
 {
@@ -210,7 +217,7 @@ in
               { name = "Firefly III";    url = "http://127.0.0.1:8085/"; }
               { name = "Firefly-Pico";   url = "http://127.0.0.1:8086/"; }
               { name = "CloudBeaver";    url = "http://127.0.0.1:8978/"; }
-              { name = "Heartwood MCP";  url = "http://127.0.0.1:6200/health"; }
+              { name = "Heartwood MCP";  url = gatewayHealthUrl; }
               { name = "CouchDB";        url = "http://127.0.0.1:5984/"; }
               # Local AI — llama.cpp embeddings (brainvec + brain-mcp via :11502).
               # /health is 200 only when the model is loaded, 503 while loading.
@@ -275,18 +282,18 @@ in
             ])
             # hwc-leads liveness + HMAC enforcement (401 on unsigned POST)
             (probeJob "probe-leads-service" "http_post_401" "30s" [
-              "http://127.0.0.1:11650/leads"
+              "${vhost "hwc-leads"}/leads"
             ])
             # n8n engine + CMS API (auth-walled: 200 or 401 = alive)
             (probeJob "probe-n8n" "http_health_check" "30s" [
               "http://127.0.0.1:5678/healthz"
             ])
             (probeJob "probe-cms" "http_2xx_or_401" "60s" [
-              "http://127.0.0.1:8095/api/health"
+              "${vhost "heartwood-cms"}/api/health"
             ])
             # Umami analytics — local heartbeat + public collect ingress
             (probeJob "probe-umami" "http_health_check" "60s" [
-              "http://127.0.0.1:3009/api/heartbeat"
+              "${vhost "umami"}/api/heartbeat"
               "https://stats.iheartwoodcraft.com/api/heartbeat"
             ])
           ]

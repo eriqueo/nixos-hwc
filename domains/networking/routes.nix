@@ -40,6 +40,20 @@ in
     t3-work = "work";
     brain-mcp = { owner = "work"; mode = "port"; };  # wave 1
     monitor = "work";    # wave 2: DataX monitor
+    # wave 2 fused window: business apps, scouts, Radicale, gateway, briefing
+    crm = "work";
+    hwc-leads = "work";
+    estimator = "work";
+    event-scout = "work";
+    tasks = "work";            # Radicale
+    lead-scout = "work";
+    home-scout = "work";
+    research-scout = "work";   # disabled app; its data moved
+    umami = "work";
+    briefing = "work";
+    heartwood-cms = "work";
+    infra-mcp = { owner = "work"; mode = "port"; };       # hwc-sys gateway
+    lead-scout-api = { owner = "work"; mode = "port"; };
   };
 
   hwc.networking.shared.routes = [

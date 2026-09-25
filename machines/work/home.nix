@@ -4,9 +4,17 @@
 
   # Mail role (service split wave 2): this host runs the Proton Bridge session
   # that used to live on hwc-server. hwc-notify is still on hwc-server, so
-  # mail-health posts to its tailnet vhost. The server's trash mirror and
-  # extra Radicale collections join here with the mail readers in step 4.
+  # mail-health posts to its tailnet port route.
   hwc.mail.health.notify.url = "https://hwc-notify.hwc.iheartwoodcraft.com:29443";
+
+  # The read-only mirrors this machine keeps in Radicale (config.nix
+  # hwc.server.services.radicale.mirrors), so hwc_calendar sees them too.
+  hwc.mail.calendar.radicale.extraCollections = [ "cto" "proton-work" "google-family" ];
+
+  # khalt (forked khal/ikhal) — supersedes plain khal. Enabled only to
+  # materialise the khalt package + ~/.config/khalt/config that the hwc-sys
+  # gateway (on this host since wave 2) points HWC_KHAL_BIN / HWC_KHALT_CONFIG at.
+  hwc.home.apps.khalt.enable = true;
 
   # `brain <cmd>` — vault janitor/fixer CLI. Needs ~/600_apps/brain and the
   # vault clone, both present here since service split wave 1.

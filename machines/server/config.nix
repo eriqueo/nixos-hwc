@@ -21,11 +21,6 @@
     ../../domains/media/index.nix
     ../../domains/notifications/index.nix # Notification delivery (webhooks, CLI)
     ../../domains/gaming/index.nix # Retroarch emulation + WebDAV save sync
-    ../../domains/server/native/ai/lead-scout/index.nix # Lead Scout MCP + HTTP
-    ../../domains/server/native/ai/hwc-control-bot/index.nix # HWC Discord control bot (/next)
-    ../../domains/server/native/ai/home-scout/index.nix # Home Scout MCP + HTTP + ingest timers
-    ../../domains/server/native/ai/research-scout/index.nix # Research Scout MCP + HTTP + arXiv ingest timer
-    ../../domains/server/native/ai/event-scout/index.nix # Event Scout discovery + curated Discord events
     ../../domains/server/native/ai/brain-mcp/index.nix # Brain MCP Server (Deno)
     ../../domains/server/native/ai/brainvec/index.nix # brainvec semantic-index ingest (vault embeddings)
     ../../domains/server/native/ai/hermes/index.nix # Hermes Agent (Nous Research)
@@ -35,7 +30,6 @@
     ../../domains/server/native/ai/whisper/index.nix # whisper.cpp speech-to-text server (GPU)
     ../../domains/server/services/inbox-processor/index.nix # Phone capture processor (Whisper + Tesseract)
     ../../domains/server/services/bloxels-cv/index.nix # Bloxels grid photo classifier (path watcher)
-    ../../domains/server/services/radicale/index.nix # Self-hosted CalDAV (tasks.hwc.*)
     ../../domains/server/deploy/index.nix # `deploy` — one-step deploy CLI for 600_apps
   ];
 
@@ -125,92 +119,6 @@
   hwc.automation.refinery.enable = false;
   hwc.automation.nightlyBuilds.enable = false;
 
-  # Lead Scout — Facebook group lead scraper/classifier, MCP + HTTP on port 8420
-  hwc.server.ai.leadScout.enable = true;
-  hwc.server.ai.homeScout.enable = true;
-  # Both scouts run from the scout monorepo (eriqueo/scout) as of 2026-07-19;
-  # the old standalone clones are retained temporarily as rollback.
-  hwc.server.ai.homeScout.projectDir = "/home/eric/600_apps/scout/apps/home-scout";
-  hwc.server.ai.homeScout.workspaceRoot = "/home/eric/600_apps/scout";
-  hwc.server.ai.leadScout.projectDir = "/home/eric/600_apps/scout/apps/lead-scout";
-  hwc.server.ai.leadScout.workspaceRoot = "/home/eric/600_apps/scout";
-  # Research Scout is paused because its scheduled research workload exceeds
-  # its current use. Keep the module imported and its data/config intact so
-  # resuming it is one explicit switch plus a rebuild.
-  hwc.server.ai.researchScout.enable = false;
-  # HWC classifier profiles post to #lead-scout;
-  # DataX profiles stay on the default datax-discord-webhook (#jt-pros).
-  hwc.server.ai.leadScout.channelMap = {
-    hwc_bozeman_v1 = "discord-webhook-lead-scout";
-    hwc_network_v1 = "discord-webhook-lead-scout";
-  };
-  # Each review program owns a private bot identity. DataX keeps its own
-  # Gateway unit; the HWC bot's Gateway is consumed by hwc-control-bot (one
-  # `/next` surface over Lead Scout, CRM, Research, Home). HWC approvals
-  # remain review-only in the app and cannot publish a reply.
-  hwc.server.ai.leadScout.controlTokenSecret = "hwc-control-lead-scout-token";
-  hwc.server.ai.researchScout.controlTokenSecret = "hwc-control-research-scout-token";
-  hwc.server.ai.hwcControlBot = {
-    enable = true;
-    # Research reviews: the one lane with a human review queue today.
-    targets.researchScout = {
-      # Must move with researchScout.enable: the adapter asserts its target is
-      # live and would otherwise keep a dead dependency in /next.
-      enable = false;
-      profile = "llm_engineering_v1";
-    };
-    # CRM next actions: note, snooze, disqualify only (no sends, no JT).
-    targets.crm.enable = true;
-    # Home listing reviews: interested / pass / wrong tier on Eric's BUYING
-    # lens. The remodel lens is a business signal, not a preference to record.
-    targets.homeScout = {
-      enable = true;
-      profile = "home_buy_bozeman";
-    };
-    # Curated Bozeman event cards and Add / Ignore actions live in #events.
-    # n8n owns the ledger and calendar effect; this bot owns Discord transport.
-    targets.events = {
-      enable = true;
-      channelId = "1545506587815313560";
-    };
-    # One post at 07:30, only when the counts moved since the last one.
-    summary.enable = true;
-  };
-  hwc.business.crm.controlTokenSecretRef = "hwc-control-crm-token";
-  # Calendars outside Radicale that also make Eric busy for website bookings.
-  hwc.business.crm.calendar.busyFeeds = {
-    "ContractorCTO" = "cto-ical-link";
-    "Proton work" = "proton-ical-link";
-    "Google family" = "hwcmt-ical-link";
-  };
-  hwc.server.native.ai.event-scout = {
-    enable = true;
-    reviewerId = config.hwc.server.ai.leadScout.discordApprovalBots.hwc.allowedUserId;
-  };
-  hwc.server.ai.homeScout.controlTokenSecret = "hwc-control-home-scout-token";
-  hwc.server.ai.leadScout.discordApprovalBots = {
-    datax-jtpros = {
-      enable = true;
-      botTokenSecret = "hermes-discord-bot-token";
-      guildId = "1503422144829460592";
-      channelId = "1503607114042576936";
-      allowedUserId = "1501391621521150075";
-      profileIds = ["datax_jtpros"];
-    };
-    hwc = {
-      enable = true;
-      botTokenSecret = "hwc-lead-scout-bot-token";
-      guildId = "1503422144829460592";
-      channelId = "1545506724750958602";
-      allowedUserId = "1501391621521150075";
-      profileIds = [
-        "hwc_bozeman_v1"
-        "hwc_network_v1"
-      ];
-      gateway = "hwc-control-bot";
-    };
-  };
-
   # `deploy` — interactive one-step deploy CLI; auto-discovers ~/600_apps/*/deploy.sh
   hwc.server.deploy.enable = true;
 
@@ -242,23 +150,6 @@
     enable = true;
     package = inputs.bloxels-cv.packages.${pkgs.system}.default;
     watchPath = "${config.hwc.paths.brain."inbox-mobile"}/bloxels";
-  };
-
-  # Radicale — self-hosted CalDAV for two-way task sync with list creation
-  # (todui N key). Behind Caddy at tasks.hwc.iheartwoodcraft.com. Requires the
-  # radicale-htpasswd agenix secret (domains/secrets/parts/services/).
-  hwc.server.services.radicale = {
-    enable = true;
-    reverseProxy.enable = true;
-    # Outside calendars mirrored read-only into Radicale every 15 min, so the
-    # phone's one CalDAV account and khal show them. Same three secrets the
-    # CRM's busyFeeds read above; the ids are pinned on each khal machine in
-    # hwc.mail.calendar.radicale.extraCollections.
-    mirrors = {
-      cto           = { secret = "cto-ical-link";    displayName = "ContractorCTO"; color = "#FF9F0A"; };
-      proton-work   = { secret = "proton-ical-link"; displayName = "Proton work";   color = "#BF5AF2"; };
-      google-family = { secret = "hwcmt-ical-link";  displayName = "Google family"; color = "#30D158"; };
-    };
   };
 
   # ZFS support for backup drives
@@ -531,6 +422,22 @@
   # TEMPORARY: removal = the business role leaves this host (wave 5).
   hwc.business.dataxMonitor.enable = false;
 
+  # Service split wave 2 fused window: the business apps, the hwc-sys gateway
+  # and the morning briefing run on hwc-work (machines/work/config.nix). Their
+  # databases and state stay here untouched for the rollback window (dropped
+  # in wave 5). The scouts, control bot and Radicale left this file with their
+  # settings; these are the business-role members.
+  # TEMPORARY: removal = the business role leaves this host (wave 5).
+  hwc.business.crm.enable = false;
+  hwc.business.leads.enable = false;
+  hwc.business.databases.enable = false;
+  hwc.business.umami.enable = false;
+  hwc.business.estimator.enable = false;
+  hwc.business.website.enable = false;
+  hwc.business.website.webapps.enable = false;
+  hwc.business.morningBriefing.enable = false;
+  hwc.mail.classifier.system.enable = false;
+
   # Workbench hub — module stays on (refinery's areas.json contract, and the
   # business role enables it) but the vhost is served by hwc-work
   # (routeOwners in domains/networking/routes.nix); this Caddy proxies
@@ -773,9 +680,8 @@
   # MCP (Model Context Protocol) server infrastructure
   # Parent MCP disabled (mcp-proxy not in nixpkgs-stable), but heartwood is self-contained
   hwc.ai.mcp.enable = lib.mkForce false;
-  hwc.system.mcp.enable = true;
-  hwc.system.mcp.jt.enable = true;
-  hwc.system.mcp.host = "0.0.0.0"; # Arka containers need access via 10.89.1.1
+  # The hwc-sys gateway (+ JT tools) runs on hwc-work since service split
+  # wave 2; hwc.system.mcp.serverAlias points every host's URL there.
 
   # Server-only additions to the generated ~/.nixos/.mcp.json (agent-harness):
   # the services these reach exist only here.

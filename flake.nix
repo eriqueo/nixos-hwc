@@ -317,7 +317,7 @@
       };
       work = {
         channel   = "stable";
-        roles     = [ "base" "server" "mail" ];
+        roles     = [ "base" "server" "mail" "business" ];
         nixosPkgs = pkgs-stable;
         hmPkgs    = pkgs-stable;
       };
@@ -815,7 +815,11 @@
       # failure this boundary removes. Referencing the entry point also builds
       # the package, whose checkPhase runs the MCP test suite.
       mcp-immutable-build = let
-        command = self.nixosConfigurations.hwc-server.config.systemd.services.hwc-sys-mcp.serviceConfig.ExecStart;
+        # The gateway's host follows hwc.system.mcp.serverAlias (hwc-work since
+        # service split wave 2), so the check reads that host's unit.
+        fleet = self.nixosConfigurations.hwc-server.config.hwc;
+        gatewayHost = fleet.networking.hosts.servers.${fleet.system.mcp.serverAlias};
+        command = self.nixosConfigurations.${gatewayHost}.config.systemd.services.hwc-sys-mcp.serviceConfig.ExecStart;
         main = lib.last (lib.splitString " " command);
       in
       assert lib.assertMsg (lib.hasPrefix "/nix/store/" main)
@@ -942,13 +946,15 @@
       # (read off the rendered unit files of the evaluated hwc-server config),
       # not against the srgPath list, so this cannot pass on a package that is
       # named but never reaches the unit.
+      # The gauntlet runs on hwc-work since service split wave 1; the check
+      # follows it (it failed "no subject" while still pointed at hwc-server).
       sr-gauntlet-flock = let
-        server = self.nixosConfigurations."hwc-server".config;
+        server = self.nixosConfigurations."hwc-work".config;
         units = [ "sr-gauntlet.service" "sr-gauntlet-runnow.service" ];
         unitFile = n: pkgs.writeText "check-${n}" server.systemd.units.${n}.text;
       in
       assert lib.assertMsg server.hwc.automation.srGauntlet.enable
-        "sr-gauntlet-flock: srGauntlet is disabled on hwc-server — this check has no subject and would pass empty";
+        "sr-gauntlet-flock: srGauntlet is disabled on hwc-work — this check has no subject and would pass empty";
       pkgs.runCommand "sr-gauntlet-flock" {} ''
         fail=0
         ${lib.concatMapStringsSep "\n" (n: ''

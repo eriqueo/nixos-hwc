@@ -18,18 +18,8 @@
   # hwc.mail.bridge.relay (config.nix) forwards to hwc-work over the tailnet.
   hwc.mail.bridge.enable = false;
 
-  # Proton Bridge rejects APPEND into Trash, so this daily lane is a bounded
-  # pull-only mirror. Core sync remains independent on its ten-minute timer.
-  hwc.mail.mbsync.trashTimerEnable = true;
-
-  # The read-only mirrors this machine keeps in Radicale (config.nix
-  # hwc.server.services.radicale.mirrors), so hwc_calendar sees them too.
-  hwc.mail.calendar.radicale.extraCollections = [ "cto" "proton-work" "google-family" ];
-
-  # khalt (forked khal/ikhal) — supersedes plain khal. Headless server enables
-  # it only to materialise the khalt package + ~/.config/khalt/config that the
-  # MCP gateway points HWC_KHAL_BIN / HWC_KHALT_CONFIG at. No TUI use here.
-  hwc.home.apps.khalt.enable = true;
+  # khalt + the Radicale mirror collections left with the hwc-sys gateway
+  # (their one consumer) for hwc-work in service split wave 2.
 
   # `brain <cmd>` — the vault janitor/fixer CLI. The nightly sweep already runs the same
   # checkout through hwc.automation.brainSweep (system lane, one subcommand). This puts the

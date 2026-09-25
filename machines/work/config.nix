@@ -1,6 +1,10 @@
 # hwc-work — staged MS-02 work server. Production service ownership remains
 # on hwc-server until a service is migrated with its state and callers.
-{ config, pkgs, ... }: {
+{ config, pkgs, ... }:
+let
+  # hwc-notify stays on hwc-server; its tailnet port route (measured 200).
+  notifyUrl = "https://hwc-notify.hwc.iheartwoodcraft.com:29443";
+in {
   imports = [
     ./hardware.nix
     # Notification routes need the networking domain's shared vocabulary,
@@ -12,10 +16,16 @@
     ../../domains/server/native/ai/brain-mcp/index.nix
     ../../domains/server/native/ai/brainvec/index.nix
     ../../domains/server/native/ai/llama-cpp/index.nix
-    # Service split wave 2: the business capability domain. Each app is
-    # enabled here in the commit that moves it; the business ROLE stays on
-    # hwc-server until wave 5.
-    ../../domains/business/index.nix
+    # Service split wave 2 (fused window): scouts, control bot, Radicale and
+    # the DX2 facts research-scout reads — machine-imported, as on hwc-server
+    # before. The business apps come from the business role (flake.nix).
+    ../../domains/server/native/ai/lead-scout/index.nix
+    ../../domains/server/native/ai/hwc-control-bot/index.nix
+    ../../domains/server/native/ai/home-scout/index.nix
+    ../../domains/server/native/ai/research-scout/index.nix
+    ../../domains/server/native/ai/event-scout/index.nix
+    ../../domains/server/native/ai/dx2/index.nix
+    ../../domains/server/services/radicale/index.nix
   ];
 
   networking.hostName = "hwc-work";
@@ -75,14 +85,14 @@
   };
   hwc.automation.nightlyBuilds = {
     enable = true;
-    notifyUrl = "https://hwc-notify.hwc.iheartwoodcraft.com:29443/notify";
+    notifyUrl = "${notifyUrl}/notify";
   };
   hwc.automation.srGauntlet.enable = true;
   hwc.automation.dx1Gauntlet.enable = true;
   hwc.automation.vaultSync.enable = true;
   hwc.automation.brainSweep = {
     enable = true;
-    notifyUrl = "https://hwc-notify.hwc.iheartwoodcraft.com:29443";
+    inherit notifyUrl;
   };
   # readme-freshness stays on hwc-server: it asserts a local hwc-notify, which
   # moves with the notifications stack in a later wave.
@@ -95,9 +105,143 @@
     embed.enable = true;
     embed.gpuLayers = 0;
   };
-  # DataX monitor (wave 2, step 3b) — dashboard + 4h Firestore ingest; its
-  # datax_monitor database was restored here from hwc-server's final dump.
-  hwc.business.dataxMonitor.enable = true;
+  #==========================================================================
+  # Service split wave 2 — business apps (business role since the fused
+  # window; DataX monitor moved first in step 3b). Databases were restored
+  # here from hwc-server's final pg_dumps. hwc-notify stays on hwc-server, so
+  # every notifier posts to its tailnet port route.
+  #==========================================================================
+  # Role members that move in later waves stay off here until then.
+  # TEMPORARY: each line goes in the commit that moves that app (waves 3/4).
+  hwc.automation.n8n.enable = false;        # wave 4
+  # Mosquitto stays with Frigate on hwc-server (roadmap end state), so the
+  # role's mqtt membership is not for this host; revisit when the role moves (wave 5).
+  hwc.automation.mqtt.enable = false;
+  hwc.business.paperless.enable = false;    # wave 3
+  hwc.business.firefly.enable = false;      # wave 3
+
+  # The briefing keeps reporting the media/storage host's health (its
+  # systemctl/disk/journal/VPN/backup sections run on hwc-server over ssh)
+  # and reads the fleet Prometheus there. TEMPORARY: removal = wave 3.
+  hwc.business.morningBriefing.hostHealthFrom = "main";
+  hwc.business.morningBriefing.prometheusUrl =
+    "http://${config.hwc.networking.hosts.ips.main}:9090";
+
+  hwc.business.crm.notifyUrl = notifyUrl;
+  hwc.business.leads.notifyServiceUrl = notifyUrl;
+
+  # The hwc-sys gateway (+ JT tools). Binds all interfaces for tailnet
+  # callers (laptop workbench, hwc-server Prometheus); tailscale0 is trusted.
+  hwc.system.mcp.enable = true;
+  hwc.system.mcp.jt.enable = true;
+  hwc.system.mcp.host = "0.0.0.0";
+
+  # Lead Scout — Facebook group lead scraper/classifier, MCP + HTTP on port 8420
+  hwc.server.ai.leadScout.enable = true;
+  hwc.server.ai.homeScout.enable = true;
+  # Both scouts run from the scout monorepo (eriqueo/scout) as of 2026-07-19;
+  # the old standalone clones are retained temporarily as rollback.
+  hwc.server.ai.homeScout.projectDir = "/home/eric/600_apps/scout/apps/home-scout";
+  hwc.server.ai.homeScout.workspaceRoot = "/home/eric/600_apps/scout";
+  hwc.server.ai.leadScout.projectDir = "/home/eric/600_apps/scout/apps/lead-scout";
+  hwc.server.ai.leadScout.workspaceRoot = "/home/eric/600_apps/scout";
+  # Research Scout is paused because its scheduled research workload exceeds
+  # its current use. Keep the module imported and its data/config intact so
+  # resuming it is one explicit switch plus a rebuild.
+  hwc.server.ai.researchScout.enable = false;
+  # HWC classifier profiles post to #lead-scout;
+  # DataX profiles stay on the default datax-discord-webhook (#jt-pros).
+  hwc.server.ai.leadScout.channelMap = {
+    hwc_bozeman_v1 = "discord-webhook-lead-scout";
+    hwc_network_v1 = "discord-webhook-lead-scout";
+  };
+  # Each review program owns a private bot identity. DataX keeps its own
+  # Gateway unit; the HWC bot's Gateway is consumed by hwc-control-bot (one
+  # `/next` surface over Lead Scout, CRM, Research, Home). HWC approvals
+  # remain review-only in the app and cannot publish a reply.
+  hwc.server.ai.leadScout.controlTokenSecret = "hwc-control-lead-scout-token";
+  hwc.server.ai.researchScout.controlTokenSecret = "hwc-control-research-scout-token";
+  hwc.server.ai.hwcControlBot = {
+    enable = true;
+    # Research reviews: the one lane with a human review queue today.
+    targets.researchScout = {
+      # Must move with researchScout.enable: the adapter asserts its target is
+      # live and would otherwise keep a dead dependency in /next.
+      enable = false;
+      profile = "llm_engineering_v1";
+    };
+    # CRM next actions: note, snooze, disqualify only (no sends, no JT).
+    targets.crm.enable = true;
+    # Home listing reviews: interested / pass / wrong tier on Eric's BUYING
+    # lens. The remodel lens is a business signal, not a preference to record.
+    targets.homeScout = {
+      enable = true;
+      profile = "home_buy_bozeman";
+    };
+    # Curated Bozeman event cards and Add / Ignore actions live in #events.
+    # n8n owns the ledger and calendar effect; this bot owns Discord transport.
+    targets.events = {
+      enable = true;
+      channelId = "1545506587815313560";
+    };
+    # One post at 07:30, only when the counts moved since the last one.
+    summary.enable = true;
+  };
+  hwc.business.crm.controlTokenSecretRef = "hwc-control-crm-token";
+  # Calendars outside Radicale that also make Eric busy for website bookings.
+  hwc.business.crm.calendar.busyFeeds = {
+    "ContractorCTO" = "cto-ical-link";
+    "Proton work" = "proton-ical-link";
+    "Google family" = "hwcmt-ical-link";
+  };
+  hwc.server.native.ai.event-scout = {
+    enable = true;
+    reviewerId = config.hwc.server.ai.leadScout.discordApprovalBots.hwc.allowedUserId;
+  };
+  hwc.server.ai.homeScout.controlTokenSecret = "hwc-control-home-scout-token";
+  hwc.server.ai.homeScout.notifyUrl = notifyUrl;
+  hwc.server.ai.researchScout.notifyUrl = notifyUrl;
+  hwc.server.ai.leadScout.discordApprovalBots = {
+    datax-jtpros = {
+      enable = true;
+      botTokenSecret = "hermes-discord-bot-token";
+      guildId = "1503422144829460592";
+      channelId = "1503607114042576936";
+      allowedUserId = "1501391621521150075";
+      profileIds = ["datax_jtpros"];
+    };
+    hwc = {
+      enable = true;
+      botTokenSecret = "hwc-lead-scout-bot-token";
+      guildId = "1503422144829460592";
+      channelId = "1545506724750958602";
+      allowedUserId = "1501391621521150075";
+      profileIds = [
+        "hwc_bozeman_v1"
+        "hwc_network_v1"
+      ];
+      gateway = "hwc-control-bot";
+    };
+  };
+
+
+  # Radicale — self-hosted CalDAV for two-way task sync with list creation
+  # (todui N key). Behind Caddy at tasks.hwc.iheartwoodcraft.com. Requires the
+  # radicale-htpasswd agenix secret (domains/secrets/parts/services/).
+  hwc.server.services.radicale = {
+    enable = true;
+    reverseProxy.enable = true;
+    # Outside calendars mirrored read-only into Radicale every 15 min, so the
+    # phone's one CalDAV account and khal show them. Same three secrets the
+    # CRM's busyFeeds read above; the ids are pinned on each khal machine in
+    # hwc.mail.calendar.radicale.extraCollections.
+    mirrors = {
+      cto           = { secret = "cto-ical-link";    displayName = "ContractorCTO"; color = "#FF9F0A"; };
+      proton-work   = { secret = "proton-ical-link"; displayName = "Proton work";   color = "#BF5AF2"; };
+      google-family = { secret = "hwcmt-ical-link";  displayName = "Google family"; color = "#30D158"; };
+    };
+  };
+
 
   # Workbench hub served from here; hwc-server keeps the module on for its
   # own refinery areas.json but proxies the vhost to this host.
@@ -105,22 +249,17 @@
     enable = true;
     # Areas whose apps are still on hwc-server (wave 2/3). Remove each name
     # from this list in the commit that moves its app here.
-    remoteRoutes = [ "crm" "firefly-explorer" "lead-scout" "home-scout" "research-scout" "event-scout" ];
+    remoteRoutes = [ "firefly-explorer" ];
   };
 
   #==========================================================================
   # CLOUDFLARE TUNNEL (public ingress) — service split wave 2, step 1
   #==========================================================================
   # The one tunnel moved here from hwc-server with the same credential; every
-  # hostname, path lock and Access policy is unchanged. Apps still on
-  # hwc-server are reached over the tailnet: directly where they bind on all
-  # interfaces (n8n, the hwc-sys gateway, datax-monitor), otherwise through
-  # the server's Caddy vhost by IP with the vhost's Host/SNI (crm, lead-scout,
-  # umami bind 127.0.0.1). Caddy passes CF-Connecting-IP through, which is the
-  # header hwc-crm rate-limits on.
-  # TEMPORARY (each server target): flips to http://localhost:<port> in the
-  # commit that moves that app to this host; removal condition = the app's
-  # unit is disabled on hwc-server.
+  # hostname, path lock and Access policy is unchanged. Since the wave 2
+  # fused window every origin is local except n8n, which stays on hwc-server
+  # until wave 4 and is reached over the tailnet (it binds all interfaces).
+  # TEMPORARY (n8n targets): flip to localhost when n8n moves (wave 4).
   #
   # History carried from hwc-server: Phase 4.6 (2026-07-07) found the planned
   # *.api.iheartwoodcraft.com subzone impossible on the free plan (subdomain
@@ -134,13 +273,6 @@
   hwc.networking.cloudflared =
     let
       server = config.hwc.networking.hosts.ips.main;
-      viaServerCaddy = vhost: path: {
-        service = "https://${server}";
-        originRequest = {
-          httpHostHeader = "${vhost}.hwc.iheartwoodcraft.com";
-          originServerName = "${vhost}.hwc.iheartwoodcraft.com";
-        };
-      } // (if path == null then { } else { inherit path; });
     in {
       enable = true;
       tunnelId = "1536327b-2641-4706-8ad9-48c94d0b11f9";
@@ -148,9 +280,9 @@
       # n8n.heartwoodcraft.me → n8n (hwc-server until wave 4).
       n8nHost = server;
       extraIngress = {
-        "mcp.heartwoodcraft.me" = "http://${server}:6200";
-        "mcp.iheartwoodcraft.com" = "http://${server}:6200";
-        "hwc-origin.heartwoodcraft.me" = "http://${server}:6200";
+        "mcp.heartwoodcraft.me" = "http://localhost:6200";
+        "mcp.iheartwoodcraft.com" = "http://localhost:6200";
+        "hwc-origin.heartwoodcraft.me" = "http://localhost:6200";
 
         # brain-mcp is local (wave 1).
         "brain.heartwoodcraft.me" = "http://localhost:9876";
@@ -170,18 +302,23 @@
         };
 
         # Umami — script.js + /api/send must be visitor-reachable.
-        "stats.iheartwoodcraft.com" = viaServerCaddy "umami" null;
+        "stats.iheartwoodcraft.com" = "http://localhost:3009";
 
         # hwc-crm public intake, PATH-locked to /hooks/*; the board stays
         # tailnet-private. /hooks/jt is JobTread's webhook (hwc-crm D45).
-        "crm.iheartwoodcraft.com" =
-          viaServerCaddy "crm" "^/hooks/(contact|calculator|appointment|availability|jt)";
+        "crm.iheartwoodcraft.com" = {
+          service = "http://localhost:11660";
+          path = "^/hooks/(contact|calculator|appointment|availability|jt)";
+        };
 
         # Calculator report viewer — read-only sanitised GET /api/reports/<id>.
-        "reports.iheartwoodcraft.com" = viaServerCaddy "crm" "^/api/reports/";
+        "reports.iheartwoodcraft.com" = {
+          service = "http://localhost:11660";
+          path = "^/api/reports/";
+        };
 
         # hwc-mcp-gateway origin for lead-scout (Access service token).
-        "leads-origin.heartwoodcraft.me" = viaServerCaddy "lead-scout" null;
+        "leads-origin.heartwoodcraft.me" = "http://localhost:8420";
       };
     };
 
@@ -195,17 +332,15 @@
   hwc.system.networking.waitOnline.mode = "all";
   hwc.system.networking.waitOnline.timeoutSeconds = 30;
 
-  # Data plane for the apps that will migrate here. PostgreSQL 15 matches the
-  # server cluster so per-database dumps restore without a version step. No
-  # container network binding yet: the 10.89.0.1 gateway only exists once a
-  # container is attached, and the module's wait would otherwise stall boot
-  # for two minutes on a host with zero containers. Enable it with the first
-  # container that needs the database.
+  # PostgreSQL 15 matches the server cluster so per-database dumps restore
+  # without a version step. The container network binding (10.89.0.1) is on
+  # since Umami (a container) moved here in wave 2; refinery keeps the media
+  # network's bridge up, so the module's wait for the gateway IP resolves.
   hwc.data.databases.postgresql = {
     enable = true;
     version = "15";
     package = pkgs.postgresql_15;
-    containerNetwork.enable = false;
+    containerNetwork.enable = true;
   };
 
   # Backups push to the server's DAS over the tailnet rather than to a local
@@ -224,6 +359,12 @@
       "/var/lib/backups"  # Database dumps from preBackupScript
       "/var/lib/refinery"    # Refinery board items, specs, reviews, spools
       "/var/lib/sr-gauntlet" # Gauntlet checkouts, datax.env, headless Claude config
+      # Service split wave 2 (fused window). hwc-server's borg never covered
+      # these three; the databases ride the pg_dumpall above.
+      "/var/lib/radicale"    # CalDAV/CardDAV collections (CRITICAL)
+      "/var/lib/estimator"   # built estimator bundle (REPLACEABLE, small)
+      "/opt/business"        # CMS app, website repo working tree, jt-mcp
+      "/home/eric/600_apps/sr_analyzer/data" # SR board SQLite (CRITICAL)
       # T3 Code state (CRITICAL): event-sourced SQLite store + this host's own
       # signing key and pairing credentials. Copied live; see the same note on
       # hwc-server. caches/ and worktrees/ are replaceable and not listed.

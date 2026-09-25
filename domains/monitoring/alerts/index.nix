@@ -20,6 +20,13 @@ let
   # Get notification scripts from the notifications domain
   notifInternal = config.hwc.notifications._internal;
 
+  # A unit is monitored only on the host whose module enables it. Gating on
+  # the owning module's enable OPTION (not on config.systemd.services, which
+  # recurses — see the NOTE below) keeps a unit that moved to another host
+  # (service split) from leaving an ExecStart-less OnFailure stub here, which
+  # is what turned the alert-onfailure-units check red after wave 1.
+  on = path: lib.attrByPath path false config;
+
   # List of critical services to auto-detect (when services list is empty)
   # NOTE: We don't check if services exist at build time to avoid infinite recursion
   # systemd will gracefully handle OnFailure= for non-existent services
@@ -79,13 +86,15 @@ let
     # ExecStart — which is precisely how the seven dead entries above came to
     # report LoadState=bad-setting. A name on this list is not a no-op; it
     # CREATES a stub unit. Add a name here only after checking the unit exists.
-    "brainvec-ingest"
-    "hwc-crm-tick"
+  ] ++ lib.optional (on [ "hwc" "server" "ai" "brainvec" "enable" ]) "brainvec-ingest"
+    ++ lib.optional (on [ "hwc" "business" "crm" "enable" ]) "hwc-crm-tick"
+    ++ [
     "storage-monitor"
     "inbox-janitor"
-    "morning-briefing"
-    "nightly-builds"
-    "llama-embed"
+  ] ++ lib.optional (on [ "hwc" "business" "morningBriefing" "enable" ]) "morning-briefing"
+    ++ lib.optional (on [ "hwc" "automation" "nightlyBuilds" "enable" ]) "nightly-builds"
+    ++ lib.optional (on [ "hwc" "server" "ai" "llamaCpp" "embed" "enable" ]) "llama-embed"
+    ++ [
 
     # Added 2026-09-07 — three more timer-driven units that were running with
     # no notifier. All three are declared with an ExecStart in a module that is
@@ -98,16 +107,20 @@ let
     # evaluated hwc-server config and fails if any monitored name resolves to a
     # unit without an ExecStart. It reads the FINAL config from outside this
     # module, so it does not hit the recursion that blocks deriving this list.
+  ] ++ lib.optionals (on [ "hwc" "server" "ai" "homeScout" "enable" ]) [
     "home-scout-schools"
     "home-scout-overlays"
+  ] ++ [
     "recyclarr-sync"
 
     # Added 2026-09-21: the outside-calendar mirror into Radicale
     # (domains/server/services/radicale/parts/mirrors.nix, declared with an
     # ExecStart whenever hwc.server.services.radicale.mirrors is non-empty,
     # which machines/server/config.nix sets). A dead feed URL must be heard.
-    "radicale-mirror"
-  ];
+  ] ++ lib.optional
+    (on [ "hwc" "server" "services" "radicale" "enable" ]
+      && (lib.attrByPath [ "hwc" "server" "services" "radicale" "mirrors" ] { } config) != { })
+    "radicale-mirror";
 
   # Get final list of services to monitor
   monitoredServices =

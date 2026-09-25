@@ -43,6 +43,7 @@ The media/arr/torrent stack lives entirely in `domains/media/`. **This domain no
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-09-25: Service split wave 2 — lead/home/event/research scouts, hwc-control-bot and Radicale (+ mirrors) are machine-imported and configured on hwc-work; hwc-server no longer imports them.
 - 2026-09-25: `native/ai/brain-mcp` — its port route no longer carries `owner`; ownership is the `brain-mcp` entry in `hwc.networking.shared.routeOwners`.
 - 2026-09-25: Service split wave 1 — `native/ai/brain-mcp` tags its port route `owner = "work"`; `native/ai/llama-cpp` only asserts an NVIDIA GPU when a service offloads layers, so hwc-work runs `embed` on CPU (`gpuLayers = 0`). brain-mcp, brainvec and llama-embed are enabled on hwc-work; hwc-server keeps llama-embed for the mail classifier until wave 2.
 - 2026-09-21: Lead Scout receives the CRM-owned ingest contract and loopback

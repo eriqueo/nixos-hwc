@@ -61,10 +61,11 @@ let dictationModel = "base.en"; in
       models = [ dictationModel "medium.en" "large-v3" ];
     };
 
-    # The MCP gateway runs on hwc-server (localhost:6200 there), not the laptop.
-    # Reach it over the tailnet; without this workbench points at a dead local
-    # 127.0.0.1:6200 and silently falls back to fixtures. (enable: desktop role.)
-    workbench.gatewayUrl = "http://hwc-server:6200";
+    # The MCP gateway runs on hwc-work (localhost:6200 there) since service
+    # split wave 2 (hwc.system.mcp.serverAlias), not the laptop. Reach it over
+    # the tailnet; without this workbench points at a dead local 127.0.0.1:6200
+    # and silently falls back to fixtures. (enable: desktop role.)
+    workbench.gatewayUrl = "http://hwc-work:6200";
   };
 
   # Calendar: self-hosted Radicale (CalDAV) via khalt's khal + vdirsyncer,

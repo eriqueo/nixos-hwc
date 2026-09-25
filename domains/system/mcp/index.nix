@@ -153,7 +153,7 @@ in
 
     serverAlias = lib.mkOption {
       type = lib.types.str;
-      default = "main";
+      default = "work";  # service split wave 2
       description = ''
         hwc.networking.hosts alias of the one host that runs the gateway. Every
         host derives `url` from it, so change this default (not a machine

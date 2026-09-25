@@ -43,31 +43,46 @@ STEP1_START=$(date +%s)
 # sections use the loopback gateway below.
 
 SYSTEMCTL="/run/current-system/sw/bin/systemctl"; [ -x "${SYSTEMCTL}" ] || SYSTEMCTL="systemctl"
+
+# Host-health probes (systemctl, df, journal, failure log, VPN status) describe
+# the media/storage host. Since service split wave 2 the briefing runs on
+# hwc-work, so BRIEFING_HOST (hwc.business.morningBriefing.hostHealthFrom) runs
+# them there over ssh; unset = this host. `-n` keeps ssh off stdin — one call
+# sits inside a `while read` loop. printf %q keeps each argument one word
+# through the remote shell.
+# TEMPORARY: removal = wave 3 makes these sections Prometheus-backed.
+host_exec() {
+  if [ -n "${BRIEFING_HOST:-}" ]; then
+    ssh -n -o BatchMode=yes -o ConnectTimeout=10 "${BRIEFING_HOST}" "$(printf '%q ' "$@")"
+  else
+    "$@"
+  fi
+}
 KHAL_BIN="/etc/profiles/per-user/eric/bin/khal"
 
 # -- system: service counts + overall state (systemctl is read-only/always-safe) --
-SERVICES_ACTIVE=$("${SYSTEMCTL}" list-units --type=service --state=running --no-legend 2>/dev/null | wc -l | tr -d ' ' || echo 0)
-SERVICES_FAILED=$("${SYSTEMCTL}" list-units --type=service --state=failed --no-legend 2>/dev/null | wc -l | tr -d ' ' || echo 0)
+SERVICES_ACTIVE=$(host_exec "${SYSTEMCTL}" list-units --type=service --state=running --no-legend 2>/dev/null | wc -l | tr -d ' ' || echo 0)
+SERVICES_FAILED=$(host_exec "${SYSTEMCTL}" list-units --type=service --state=failed --no-legend 2>/dev/null | wc -l | tr -d ' ' || echo 0)
 # Failed unit NAMES, not just a count — "1 failed service(s)" with no name is
 # an alert you can't act on (2026-07-08 usability pass).
-FAILED_UNITS_JSON=$("${SYSTEMCTL}" list-units --type=service --state=failed --no-legend --plain 2>/dev/null \
+FAILED_UNITS_JSON=$(host_exec "${SYSTEMCTL}" list-units --type=service --state=failed --no-legend --plain 2>/dev/null \
   | awk '{print $1}' | jq -R -s 'split("\n") | map(select(length>0))' 2>/dev/null || echo '[]')
 echo "${FAILED_UNITS_JSON}" | jq empty 2>/dev/null || FAILED_UNITS_JSON='[]'
 # Containers = running podman-*.service units (works as eric; podman ps would
 # need the root socket). The dashboard used to render literal "undefined" here.
-CONTAINERS_RUNNING=$("${SYSTEMCTL}" list-units --type=service --state=running --no-legend --plain 'podman-*' 2>/dev/null | wc -l | tr -d ' ' || echo 0)
+CONTAINERS_RUNNING=$(host_exec "${SYSTEMCTL}" list-units --type=service --state=running --no-legend --plain 'podman-*' 2>/dev/null | wc -l | tr -d ' ' || echo 0)
 [ -n "${CONTAINERS_RUNNING}" ] || CONTAINERS_RUNNING=0
 # NB: `is-system-running` EXITS NON-ZERO when not "running" (e.g. "degraded"),
 # so a `|| echo` fallback would fire ON TOP of the real output and concatenate
 # ("degraded\nunknown"). Capture the output, swallow the exit with `|| true`,
 # then default only if it came back empty.
-SYS_STATE=$("${SYSTEMCTL}" is-system-running 2>/dev/null) || true
+SYS_STATE=$(host_exec "${SYSTEMCTL}" is-system-running 2>/dev/null) || true
 [ -n "${SYS_STATE}" ] || SYS_STATE="unknown"
 [ -n "${SERVICES_ACTIVE}" ] || SERVICES_ACTIVE=0
 [ -n "${SERVICES_FAILED}" ] || SERVICES_FAILED=0
 
 # -- storage: df for the key mounts → [{mount, percent}] --
-STORAGE_JSON=$(df -h --output=target,pcent / /mnt/hot /mnt/media 2>/dev/null \
+STORAGE_JSON=$(host_exec df -h --output=target,pcent / /mnt/hot /mnt/media 2>/dev/null \
   | tail -n +2 \
   | jq -R -s 'split("\n") | map(select(length>0)) | map(
       (split(" ") | map(select(length>0))) as $p
@@ -266,10 +281,10 @@ fi
 #    reads). archive_count/total_size need repo access — left null here. --
 BACKUP_JSON='{}'
 BK_UNIT="borgbackup-job-hwc-backup"
-BK_RESULT=$("${SYSTEMCTL}" show "${BK_UNIT}.service" -p Result --value 2>/dev/null || echo "")
-BK_EXITCODE=$("${SYSTEMCTL}" show "${BK_UNIT}.service" -p ExecMainStatus --value 2>/dev/null || echo "")
-BK_LAST_RAW=$("${SYSTEMCTL}" show "${BK_UNIT}.service" -p ExecMainExitTimestamp --value 2>/dev/null || echo "")
-BK_NEXT_RAW=$("${SYSTEMCTL}" show "${BK_UNIT}.timer" -p NextElapseUSecRealtime --value 2>/dev/null || echo "")
+BK_RESULT=$(host_exec "${SYSTEMCTL}" show "${BK_UNIT}.service" -p Result --value 2>/dev/null || echo "")
+BK_EXITCODE=$(host_exec "${SYSTEMCTL}" show "${BK_UNIT}.service" -p ExecMainStatus --value 2>/dev/null || echo "")
+BK_LAST_RAW=$(host_exec "${SYSTEMCTL}" show "${BK_UNIT}.service" -p ExecMainExitTimestamp --value 2>/dev/null || echo "")
+BK_NEXT_RAW=$(host_exec "${SYSTEMCTL}" show "${BK_UNIT}.timer" -p NextElapseUSecRealtime --value 2>/dev/null || echo "")
 BK_LAST=""; [ -n "${BK_LAST_RAW}" ] && BK_LAST=$(date -Iseconds -d "${BK_LAST_RAW}" 2>/dev/null || echo "")
 BK_NEXT=""; [ -n "${BK_NEXT_RAW}" ] && BK_NEXT=$(date -Iseconds -d "${BK_NEXT_RAW}" 2>/dev/null || echo "")
 if [ -n "${BK_RESULT}" ]; then
@@ -295,9 +310,9 @@ fi
 
 # -- backup: postgres dump unit, same pattern as borg (02:35 nightly) --
 PG_UNIT="postgresql-db-backup"
-PG_RESULT=$("${SYSTEMCTL}" show "${PG_UNIT}.service" -p Result --value 2>/dev/null || echo "")
-PG_EXITCODE=$("${SYSTEMCTL}" show "${PG_UNIT}.service" -p ExecMainStatus --value 2>/dev/null || echo "")
-PG_LAST_RAW=$("${SYSTEMCTL}" show "${PG_UNIT}.service" -p ExecMainExitTimestamp --value 2>/dev/null || echo "")
+PG_RESULT=$(host_exec "${SYSTEMCTL}" show "${PG_UNIT}.service" -p Result --value 2>/dev/null || echo "")
+PG_EXITCODE=$(host_exec "${SYSTEMCTL}" show "${PG_UNIT}.service" -p ExecMainStatus --value 2>/dev/null || echo "")
+PG_LAST_RAW=$(host_exec "${SYSTEMCTL}" show "${PG_UNIT}.service" -p ExecMainExitTimestamp --value 2>/dev/null || echo "")
 PG_LAST=""; [ -n "${PG_LAST_RAW}" ] && PG_LAST=$(date -Iseconds -d "${PG_LAST_RAW}" 2>/dev/null || echo "")
 if [ -n "${PG_RESULT}" ]; then
   PG_STATUS="error"
@@ -321,7 +336,7 @@ OPS_SINCE=$(date -d 'yesterday 17:00' '+%Y-%m-%d %H:%M:%S' 2>/dev/null || date '
 
 # Service-failure EVENTS from the notify wrapper's log (crash→restart visible).
 # Log lines look like: [2026-07-07 21:12:41] Service failure: postgresql
-SVC_FAIL_JSON=$({ grep -h '^\[20' /var/log/hwc/notifications/service-failures.log 2>/dev/null || true; } \
+SVC_FAIL_JSON=$({ host_exec grep -h '^\[20' /var/log/hwc/notifications/service-failures.log 2>/dev/null || true; } \
   | awk -v since="${OPS_SINCE}" -F'[][]' '$2 >= since && index($0, "Service failure: ") { split($0, a, "Service failure: "); print $2 "|" a[2] }' \
   | jq -R -s 'split("\n") | map(select(length>0)) | map(split("|") | {time: .[0], service: .[1]})' 2>/dev/null || echo '[]')
 echo "${SVC_FAIL_JSON}" | jq empty 2>/dev/null || SVC_FAIL_JSON='[]'
@@ -333,7 +348,7 @@ echo "${SVC_FAIL_JSON}" | jq empty 2>/dev/null || SVC_FAIL_JSON='[]'
 SVC_FAIL_ANNOTATED=$(echo "${SVC_FAIL_JSON}" | jq -r '.[] | [.time, .service] | @tsv' 2>/dev/null \
   | while IFS=$'\t' read -r t s; do
       [ -n "${s}" ] || continue
-      state=$("${SYSTEMCTL}" is-active "${s}" 2>/dev/null) || true
+      state=$(host_exec "${SYSTEMCTL}" is-active "${s}" 2>/dev/null) || true
       jq -cn --arg time "${t}" --arg service "${s}" --arg state "${state:-unknown}" \
         '{time:$time, service:$service, active_now:($state=="active")}'
     done | jq -s '.' 2>/dev/null || echo '')
@@ -345,7 +360,7 @@ fi
 # ~37 services, each with a human `service` label) — replaced the Uptime Kuma
 # journal scrape when Kuma was decommissioned (2026-07-09). Two views merged
 # per service: down RIGHT NOW (probe_success == 0) and >1% downtime over 24h.
-PROM_URL="http://127.0.0.1:9090"
+PROM_URL="${PROM_URL:-http://127.0.0.1:9090}"
 SVC_DOWN_NOW=$("${CURL_BIN}" -sG -m 10 "${PROM_URL}/api/v1/query" \
   --data-urlencode 'query=probe_success{job=~"probe-services-.*"} == 0' 2>/dev/null \
   | jq '[.data.result[]? | {service: (.metric.service // .metric.instance // "?")}]' 2>/dev/null || echo '[]')
@@ -371,7 +386,7 @@ echo "${SERVICES_DOWN_JSON}" | jq empty 2>/dev/null || SERVICES_DOWN_JSON='[]'
 # OPS_ERR_FLOOR: drop units with a trivial one-off count (single activation
 # blips like init.scope ×3, run-*.scope ×4) — a crash-loop clears this easily.
 OPS_ERR_FLOOR=5
-ERR_TOP_JSON=$({ "${JOURNALCTL}" -p err --since "${OPS_SINCE}" --no-pager -q -o json 2>/dev/null || true; } \
+ERR_TOP_JSON=$({ host_exec "${JOURNALCTL}" -p err --since "${OPS_SINCE}" --no-pager -q -o json 2>/dev/null || true; } \
   | jq -s --argjson floor "${OPS_ERR_FLOOR}" 'map(._SYSTEMD_UNIT // .SYSLOG_IDENTIFIER // "kernel") | map(select(startswith("podman-") | not)) | group_by(.) | map({unit: .[0], errors: length}) | map(select(.errors >= $floor)) | sort_by(-.errors) | .[:5]' 2>/dev/null || echo '[]')
 echo "${ERR_TOP_JSON}" | jq empty 2>/dev/null || ERR_TOP_JSON='[]'
 
@@ -394,7 +409,7 @@ echo "${DISK_FORECAST_JSON}" | jq empty 2>/dev/null || DISK_FORECAST_JSON='[]'
 # where that silence gets a voice. A 33-hour outage in Aug 2026 went unactioned
 # behind 43 identical alerts — the fix is one alert there and the standing state
 # here, not more alerts.
-VPN_JSON=$({ cat /var/lib/hwc/gluetun/*/status.json 2>/dev/null || true; } \
+VPN_JSON=$({ host_exec sh -c 'cat /var/lib/hwc/gluetun/*/status.json' 2>/dev/null || true; } \
   | jq -s 'map({instance, state, reason, forwarded_port, restart_count,
                 degraded_since, last_check})' 2>/dev/null || echo '[]')
 echo "${VPN_JSON}" | jq empty 2>/dev/null || VPN_JSON='[]'

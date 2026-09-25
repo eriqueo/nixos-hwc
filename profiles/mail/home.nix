@@ -15,6 +15,9 @@
   hwc.mail = {
     enable = true;
     bridge.enable = lib.mkDefault true;
+    # Proton Bridge rejects APPEND into Trash, so this daily lane is a bounded
+    # pull-only mirror. Core sync remains independent on its ten-minute timer.
+    mbsync.trashTimerEnable = lib.mkDefault true;
     aerc.enable = true;
 
     # Calendar + tasks sync against the self-hosted Radicale server only.

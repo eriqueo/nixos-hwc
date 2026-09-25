@@ -25,6 +25,18 @@ let
   ownedRoutes = map
     (r: if ownerMap ? ${r.name} then r // { owner = ownerMap.${r.name}.owner; } else r)
     declaredRoutes;
+  # A port route belongs to one host's tailnet name (rootHost); another
+  # owner's port route has nothing to serve here, so it is not rendered.
+  isRemoteOwned = r: r ? owner && hostAliases.${r.owner} != config.networking.hostName;
+  localPortRoutes = lib.filter (r: r.mode == "port" && !(isRemoteOwned r)) routes;
+
+  # The root site's /mcp handler follows the gateway to its host.
+  mcpAlias = config.hwc.system.mcp.serverAlias or "main";
+  mcpUpstream =
+    if hostAliases.${mcpAlias} == config.networking.hostName
+    then "127.0.0.1:${toString (config.hwc.system.mcp.port or 6200)}"
+    else "${config.hwc.networking.hosts.ips.${mcpAlias}}:${toString (config.hwc.system.mcp.port or 6200)}";
+
   remoteStubs = lib.mapAttrsToList
     (name: o: { inherit name; mode = "vhost"; owner = o.owner; })
     (lib.filterAttrs
@@ -270,7 +282,7 @@ let
           path /mcp /mcp/* /health /.well-known/*
         }
         handle @mcp_routes {
-          reverse_proxy 127.0.0.1:6200 {
+          reverse_proxy ${mcpUpstream} {
             flush_interval -1
             transport http {
               read_timeout 0
@@ -395,7 +407,7 @@ in
         # Root tailnet listener exists only where subpath routes or MCP need it.
         ${rootBlock}
 
-        ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "port") routes))}
+        ${concatStringsSep "\n" (map renderRoute localPortRoutes)}
 
         ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "static") routes))}
 
@@ -419,7 +431,7 @@ in
 
     networking.firewall.allowedTCPPorts =
       [ 80 443 ]
-      ++ (lib.map (r: r.port) (lib.filter (r: r.mode == "port" || r.mode == "static") routes));
+      ++ (lib.map (r: r.port) (localPortRoutes ++ lib.filter (r: r.mode == "static") routes));
   })
   ];
 }

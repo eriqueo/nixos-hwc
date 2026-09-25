@@ -20,20 +20,20 @@
   #==========================================================================
 
   # Unified lead pipeline (Phase 2, in progress 2026-05-31).
-  hwc.business.leads.enable = true;
+  hwc.business.leads.enable = lib.mkDefault true;
 
   # hwc-crm — front-of-funnel (stages/sequences/board) on hwc-leads (2026-07-10).
-  hwc.business.crm.enable = true;
+  hwc.business.crm.enable = lib.mkDefault true;
   # Go-live: real sequence email via Proton Bridge loopback (same path as
   # hwc-leads). Sends are still gated by hwc.crm_settings.sequences_enabled.
   hwc.business.crm.emailTransport = "smtp";
 
-  hwc.business.website.enable = true;
+  hwc.business.website.enable = lib.mkDefault true;
 
   # hwc-publish: deploy static apps instantly, no rebuild needed.
   # Reserved range: 14000–14099 (on tailscale0)
   # Usage: hwc-publish <name> <dist/> [--port N]
-  hwc.business.website.webapps.enable = true;
+  hwc.business.website.webapps.enable = lib.mkDefault true;
 
   # Firefly III personal finance
   hwc.business.firefly.enable = lib.mkDefault true;
@@ -57,8 +57,8 @@
 
   # Morning briefing — 6am compiles + emails; midday/evening runs only refresh
   # the dashboard data (run.sh skips the Step-5 email after 9am)
-  hwc.business.morningBriefing.enable = true;
-  hwc.mail.classifier.system.enable = true;
+  hwc.business.morningBriefing.enable = lib.mkDefault true;
+  hwc.mail.classifier.system.enable = lib.mkDefault true;
   hwc.business.morningBriefing.onCalendar = [
     "*-*-* 06:00:00"
     "*-*-* 12:00:00"
@@ -76,7 +76,7 @@
   # Access: https://<host>.ocelot-wahoo.ts.net:13443
   # Build:  sudo systemctl start estimator-build  (or: estimator-build alias)
   hwc.business.estimator = {
-    enable     = true;
+    enable     = lib.mkDefault true;
     port       = 13443;
     webhookUrl = config.hwc.networking.hosts.url { server = "main"; path = "/webhook/estimate-push"; };
     apiKeyFile = config.age.secrets.estimator-api-key.path;
@@ -115,7 +115,7 @@
 
   # MQTT broker for event-driven automation (Frigate -> n8n)
   hwc.automation.mqtt = {
-    enable = true;
+    enable = lib.mkDefault true;
     webhookBridge = {
       enable = true;
       topic = "frigate/events";
