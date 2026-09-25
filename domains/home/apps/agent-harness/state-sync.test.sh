@@ -102,4 +102,18 @@ AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
   bash "$(dirname "$0")/state-sync.sh" sync >/dev/null
 test "$(wc -l < "$ROOT/alerts")" -eq 3
 test "$(wc -l < "$ROOT/validations")" -eq 3
+
+# Claude Code's memory writer moves authority/source under metadata:; that form
+# declares them. Other nesting does not, and nested standing policy is rejected.
+memory() { printf -- '---\nname: m\n%s\n---\n\nbody\n' "$1"; }
+memory $'metadata:\n  node_type: memory\n  authority: decision\n  source: "Eric"' \
+  | bash "$VALIDATOR" memory-stdin nested.md >/dev/null
+for bad in $'meta:\n  authority: decision\n  source: x' \
+           $'metadata:\n  deep:\n    authority: decision\n    source: x' \
+           $'metadata:\n  authority: decision\n  source: x\n  standing: always'; do
+  if memory "$bad" | bash "$VALIDATOR" memory-stdin bad.md >/dev/null 2>&1; then
+    echo "state-sync.test: accepted invalid frontmatter: $bad" >&2
+    exit 1
+  fi
+done
 printf 'state-sync.test: PASS\n'

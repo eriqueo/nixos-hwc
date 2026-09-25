@@ -12,12 +12,22 @@ fail() {
 
 validate_memory_file() {
   local file=$1 display=$2 frontmatter
-  frontmatter=$(awk 'NR == 1 && $0 != "---" { exit } NR > 1 && $0 == "---" { exit } NR > 1 { print }' "$file")
+  # Top-level keys, plus the direct children of `metadata:`. Claude Code's memory
+  # writer rewrites a newly written memory with every non-standard key moved
+  # under metadata:. Measured 2026-09-25: two memories written with top-level
+  # authority/source came back nested, failed this check, and blocked the
+  # store sync. The writer's form counts as a declaration.
+  frontmatter=$(awk '
+    NR == 1 && $0 != "---" { exit }
+    NR > 1 && $0 == "---" { exit }
+    NR > 1 && /^[^ ]/ { in_meta = /^metadata:[ ]*$/; print; next }
+    NR > 1 && in_meta && /^  [^ ]/ { print substr($0, 3) }
+  ' "$file")
   if ! printf '%s\n' "$frontmatter" | rg -q '^authority: (observation|reference|decision)$'; then
-    fail "$display must declare top-level authority: observation|reference|decision"
+    fail "$display must declare authority: observation|reference|decision (top level or under metadata:)"
   fi
   if ! printf '%s\n' "$frontmatter" | rg -q '^source: .+'; then
-    fail "$display must declare a non-empty top-level source"
+    fail "$display must declare a non-empty source (top level or under metadata:)"
   fi
   if printf '%s\n' "$frontmatter" | rg -q '^standing:'; then
     fail "$display declares standing policy; move the rule to static or project policy"

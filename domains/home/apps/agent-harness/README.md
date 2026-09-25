@@ -21,7 +21,8 @@ at `~/.agent-state` holds mutable memories and `MISTAKES.md`. Project repositori
 still own their local `AGENTS.md` or `CLAUDE.md` files.
 
 New or changed memories declare `authority: observation|reference|decision` and
-a non-empty `source:`. Standing policy belongs in the static harness or a
+a non-empty `source:`, at the top level or directly under `metadata:` (where
+Claude Code's memory writer moves them). Standing policy belongs in the static harness or a
 project repository and is rejected from changed memory files.
 
 The private `eriqueo/claude-config` GitHub repository publishes static revisions
@@ -46,6 +47,10 @@ authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
+- 2026-09-25: `state-validate.sh` accepts `authority`/`source`/`standing` as
+  direct children of `metadata:`. Claude Code rewrites each newly written memory
+  that way, so every new memory failed the store check and blocked sync (twice
+  on 2026-09-25). `state-sync.test.sh` pins the accepted and rejected forms.
 - 2026-09-25: `sys.nix` generates `~/.nixos/.mcp.json` (`projectMcp`), replacing
   the hand-kept `.mcp.laptop.json`/`.mcp.server.json` copies and their setup
   script. The server copy spawned a stale checkout build of the MCP gateway
