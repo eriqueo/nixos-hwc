@@ -298,6 +298,38 @@
   # allowUnfree set in flake.nix
 
   # --- Networking Configuration (Server: DO wait for network) ---
+  # NetworkManager owns association, the static LAN address and the default
+  # route on Wi-Fi. The PSK is read from a root-only file at activation, so it
+  # never enters the Nix store. Keep the address tied to the fleet registry.
+  networking.useDHCP = lib.mkDefault false;
+  networking.nameservers = [ "192.168.0.1" "1.1.1.1" "8.8.8.8" ];
+  networking.firewall.trustedInterfaces = [ "wlp3s0" ];
+  networking.networkmanager.ensureProfiles = {
+    environmentFiles = [ "/etc/NetworkManager/hwc-server-wifi.env" ];
+    profiles.hwc-server-wifi = {
+      connection = {
+        id = "hwc-server-wifi";
+        type = "wifi";
+        interface-name = "wlp3s0";
+        autoconnect = "true";
+      };
+      wifi = {
+        mode = "infrastructure";
+        ssid = "Pupcastle";
+      };
+      wifi-security = {
+        key-mgmt = "wpa-psk";
+        psk = "$PUPCASTLE_PSK";
+      };
+      ipv4 = {
+        method = "manual";
+        address1 = "${config.hwc.networking.hosts.lanIps.main}/24";
+        gateway = "192.168.0.1";
+      };
+      ipv6.method = "disabled";
+    };
+  };
+
   hwc.system.networking = {
     enable = true;
     networkManager.enable = true;

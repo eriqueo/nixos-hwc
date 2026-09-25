@@ -35,20 +35,6 @@
     size = 16384; # 16GB in MB
   }];
 
-  # Static IP for LAN reliability (works even if router DHCP fails)
-  # The address comes from the fleet registry (hwc.networking.hosts.lanIps),
-  # which the laptop's `server-lan` fallback also reads.
-  networking.useDHCP = lib.mkDefault false;
-  networking.interfaces.eno1 = {
-    useDHCP = false;
-    ipv4.addresses = [{
-      address = config.hwc.networking.hosts.lanIps.main;
-      prefixLength = 24;
-    }];
-  };
-  networking.defaultGateway = "192.168.0.1";
-  networking.nameservers = [ "192.168.0.1" "1.1.1.1" "8.8.8.8" ];
-
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
 }
