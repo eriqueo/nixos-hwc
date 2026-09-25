@@ -75,9 +75,9 @@
   hwc.automation.refinery = {
     enable = true;
     mode = "container";
-    # eriqueo/refinery 0e24e55: DataX system map, built and checked locally
+    # eriqueo/refinery dc1c39f: sourced DataX handoffs, built and checked locally
     # with deploy/build-image.sh from that commit; no registry pull.
-    image = "localhost/refinery:0e24e55-docker";
+    image = "localhost/refinery:dc1c39f-docker";
     imagePull = "never";
   };
   hwc.automation.nightlyBuilds = {
