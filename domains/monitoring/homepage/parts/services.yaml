@@ -198,12 +198,6 @@
         description: Password manager
         server: localhost
         container: vaultwarden
-    - CloudBeaver:
-        icon: mdi-database
-        href: https://cloudbeaver.hwc.iheartwoodcraft.com
-        description: DB management
-        server: localhost
-        container: cloudbeaver
     - Firefly III:
         icon: firefly-iii
         href: https://firefly.hwc.iheartwoodcraft.com

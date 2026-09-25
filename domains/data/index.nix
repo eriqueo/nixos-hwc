@@ -15,6 +15,5 @@
     ./storage/index.nix
     ./syncthing/index.nix  # hwc.data.syncthing — bidirectional file sync
     ./couchdb/index.nix
-    ./cloudbeaver/index.nix  # hwc.data.cloudbeaver — web database manager
   ];
 }

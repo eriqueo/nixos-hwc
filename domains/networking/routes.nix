@@ -327,13 +327,6 @@ in
       headers = { "X-Forwarded-Prefix" = "/webhook"; };
     }
 
-    # CloudBeaver - name-based vhost (subpath-hostile)
-    {
-      name = "cloudbeaver";
-      mode = "vhost";
-      upstream = "http://127.0.0.1:8978";
-    }
-
     # Bathroom Calculator - static React app for iheartwoodcraft.com embedding
     # CORS enabled for cross-origin embedding on WordPress
     {

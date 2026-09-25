@@ -1206,9 +1206,6 @@
   # Redis (used by Paperless-NGX for async task queue)
   hwc.data.databases.redis.enable = lib.mkDefault true;
 
-  # CloudBeaver - web-based database manager (access via port 12443)
-  hwc.data.cloudbeaver.enable = lib.mkDefault true;
-
   # Storage automation
   hwc.data.storage = {
     enable = lib.mkDefault true;

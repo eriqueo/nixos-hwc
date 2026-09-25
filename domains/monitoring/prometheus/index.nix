@@ -216,7 +216,6 @@ in
               { name = "Paperless-NGX";  url = "http://127.0.0.1:8102/api/"; }
               { name = "Firefly III";    url = "http://127.0.0.1:8085/"; }
               { name = "Firefly-Pico";   url = "http://127.0.0.1:8086/"; }
-              { name = "CloudBeaver";    url = "http://127.0.0.1:8978/"; }
               { name = "Heartwood MCP";  url = gatewayHealthUrl; }
               { name = "CouchDB";        url = "http://127.0.0.1:5984/"; }
               # Local AI — llama.cpp embeddings (brainvec + brain-mcp via :11502).
