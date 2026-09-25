@@ -10,17 +10,29 @@
 #     10.89.0.1 listener — see domains/data/databases).
 #
 #   paperless-receipts-mover — watches the phone-synced Syncthing folder
-#     (receipts.mobileDir) and moves photo/PDF drops into the consume dir,
-#     where paperless OCRs them. PathExistsGlob keeps firing while matching
-#     files remain, so the mover must always empty the folder (it does —
-#     everything matching moves out; non-matching files are left alone and
-#     not matched by the globs, so no retrigger loop).
-{ lib, config, pkgs, ... }:
+#     (receipts.mobileDir) and moves photo/PDF drops into Paperless's consume
+#     dir, where paperless OCRs them. It runs on the host that holds the phone
+#     folder: a local `mv` when Paperless runs here, otherwise an rsync over
+#     SSH (as eric) into the consume dir of the host named by serverAlias,
+#     read from that host's evaluated config (service split wave 3: phone
+#     ingest stays on hwc-server, Paperless runs on hwc-work). rsync writes a
+#     temp file and renames it, so the consumer never sees a partial file.
+#     PathExistsGlob keeps firing while matching files remain, so the mover
+#     must always empty the folder (it does — everything matching moves out;
+#     non-matching files are left alone and not matched by the globs).
+{ lib, config, pkgs, inputs, ... }:
 
 let
   cfg = config.hwc.business.paperless;
   paths = config.hwc.paths;
-  consumeDir = cfg.storage.consumeDir;
+  paperlessHost = config.hwc.networking.hosts.servers.${cfg.serverAlias};
+  local = cfg.enable && paperlessHost == config.networking.hostName;
+  consumeDir =
+    if local then cfg.storage.consumeDir
+    else inputs.self.nixosConfigurations.${paperlessHost}.config.hwc.business.paperless.storage.consumeDir;
+  deliver = f: name:
+    if local then ''mv -n "${f}" "${consumeDir}/${name}"''
+    else ''${pkgs.rsync}/bin/rsync -a --remove-source-files -e "${pkgs.openssh}/bin/ssh -o BatchMode=yes" "${f}" "${paperlessHost}:${consumeDir}/${name}"'';
 
   receiptExts = [ "pdf" "jpg" "jpeg" "png" "heic" "webp" ];
   globsFor = dir: lib.concatMap (e: [ "${dir}/*.${e}" "${dir}/*.${lib.toUpper e}" ]) receiptExts;
@@ -41,19 +53,20 @@ let
           remaining=$((remaining+1))
           continue
         fi
-        mv -n "$f" "${consumeDir}/receipt_$(date +%Y%m%d-%H%M%S)_$(basename "$f")"
+        name="receipt_$(date +%Y%m%d-%H%M%S)_$(basename "$f")"
+        ${deliver "$f" "$name"}
         moved=$((moved+1))
       done
       [ "$remaining" -eq 0 ] && break
       sleep 5
     done
-    echo "paperless-receipts-mover: moved $moved file(s) to consume."
+    echo "paperless-receipts-mover: moved $moved file(s) to ${if local then "" else "${paperlessHost}:"}${consumeDir}."
   '';
 in
 {
-  config = lib.mkIf cfg.enable (lib.mkMerge [
+  config = lib.mkMerge [
 
-    (lib.mkIf cfg.mailIngest.enable {
+    (lib.mkIf (cfg.enable && cfg.mailIngest.enable) {
       systemd.services.paperless-imap-proxy = {
         description = "Proton Bridge IMAP proxy for paperless mail ingest";
         after = [ "network-online.target" "init-media-network.service" "protonmail-bridge.service" ];
@@ -101,6 +114,10 @@ in
           ExecStart = moverScript;
         };
       };
+      assertions = [{
+        assertion = consumeDir != null;
+        message = "paperless receipts: the Paperless host (${paperlessHost}) has no storage.consumeDir";
+      }];
 
       # Belt-and-braces sweep for files the path unit skipped (fresh-file
       # guard) — PathExistsGlob only re-fires on trigger events.
@@ -112,5 +129,5 @@ in
         };
       };
     })
-  ]);
+  ];
 }

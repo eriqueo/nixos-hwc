@@ -128,7 +128,22 @@
   # Mosquitto stays with Frigate on hwc-server (roadmap end state), so the
   # role's mqtt membership is not for this host; revisit when the role moves (wave 5).
   hwc.automation.mqtt.enable = false;
-  hwc.business.paperless.enable = false;    # wave 3
+  # Paperless (wave 3): state on this host's SSD under /var/lib/hwc (in borg),
+  # not the server's DAS paths the module defaults to. Phone receipts still
+  # land on hwc-server and are forwarded here (receipts watcher there).
+  hwc.business.paperless = {
+    enable = true;
+    storage = let root = "${config.hwc.paths.state}/paperless"; in {
+      dataDir = "${root}/data";
+      mediaDir = "${root}/media";
+      consumeDir = "${root}/consume";
+      exportDir = "${root}/export";
+      stagingDir = "${root}/staging";
+    };
+  };
+  # Redis — Paperless's task queue (its only consumer), on 127.0.0.1 +
+  # the podman gateway like PostgreSQL.
+  hwc.data.databases.redis.enable = true;
   hwc.business.firefly.enable = false;      # wave 3
 
   # The briefing keeps reporting the media/storage host's health: its

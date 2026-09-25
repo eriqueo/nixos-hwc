@@ -28,6 +28,7 @@ business/
 ```
 
 ## Changelog
+- 2026-09-25: Service split wave 3 (3.3): `paperless` runs on hwc-work with its state on the SSD under `hwc.paths.state/paperless` (machine-set storage paths; the module defaults are the server's DAS). New `serverAlias` (default `work`). The receipts watcher is independent of `enable`: it runs on the host holding the phone folder (hwc-server) and forwards each drop by rsync-over-SSH into the consume dir of the Paperless host, read from that host's evaluated config; `receipts.enable` now defaults off.
 - 2026-09-25: Service split wave 3 (notifications): crm and leads default their notify URL to `hwc.notifications.notify.url`; firefly-digest posts there instead of loopback.
 - 2026-09-25: `morning-briefing/run.sh` — the calendar gather captures khal's output before parsing: under pipefail a failing khal made jq print `{events:[]}` and the `|| echo` fallback add a second document, which `jq empty` accepted and `--argjson` rejected, so the whole briefing assembly failed and the dashboard kept stale data.
 - 2026-09-25: Service split wave 2 fused window — hwc-work takes the business role (n8n/paperless/firefly off there until waves 3/4; mqtt stays with Frigate); every role member hwc-server no longer runs is `mkDefault` and switched off in its machine config. `morning-briefing`: new `hostHealthFrom` (host alias whose systemctl/disk/journal/VPN/backup health run.sh reports, via `host_exec` over ssh; TEMPORARY until wave 3) and `prometheusUrl` (was hard-coded loopback).

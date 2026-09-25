@@ -219,8 +219,19 @@ in
 
     # Phone receipts: watch the Syncthing mobile-inbox receipts folder and
     # move drops into the consume dir for OCR ingestion.
+    serverAlias = lib.mkOption {
+      type = lib.types.str;
+      default = "work";  # service split wave 3
+      description = ''
+        hwc.networking.hosts alias of the host that runs Paperless. A receipts
+        watcher on another host forwards into that host's consume dir, read
+        from its evaluated config (one producer of the path).
+      '';
+    };
     receipts = {
-      enable = lib.mkEnableOption "mobile receipts folder → paperless consume" // { default = true; };
+      # Independent of `enable`: it runs on the host that holds the phone
+      # folder, which need not be the host that runs Paperless.
+      enable = lib.mkEnableOption "the phone receipts folder watcher (enable on the host that holds receipts.mobileDir)";
 
       mobileDir = lib.mkOption {
         type = lib.types.str;

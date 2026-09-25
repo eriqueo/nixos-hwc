@@ -60,6 +60,7 @@ in
     # wave 3: the central monitoring stack
     grafana = "work";
     homepage = "work";
+    paperless = "work";        # wave 3
   };
 
   hwc.networking.shared.routes = [

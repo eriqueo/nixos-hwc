@@ -405,6 +405,10 @@
   hwc.business.website.enable = false;
   hwc.business.website.webapps.enable = false;
   hwc.business.morningBriefing.enable = false;
+  hwc.business.paperless.enable = false;  # wave 3: runs on hwc-work
+  # The phone's receipts folder is Syncthing ingest on this host; its watcher
+  # forwards drops into Paperless's consume dir on hwc-work.
+  hwc.business.paperless.receipts.enable = true;
   hwc.mail.classifier.system.enable = false;
 
   # Workbench hub — module stays on (refinery's areas.json contract, and the
@@ -1141,8 +1145,7 @@
     backup.perDatabase.enable = false;
   };
 
-  # Redis (used by Paperless-NGX for async task queue)
-  hwc.data.databases.redis.enable = lib.mkDefault true;
+  # Redis moved with Paperless (its only consumer) to hwc-work in wave 3.
 
   # Storage automation
   hwc.data.storage = {
