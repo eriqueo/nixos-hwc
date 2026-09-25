@@ -5,6 +5,32 @@ existing headless CLI/Home Manager setup, SSH, Tailscale, Podman and server tool
 It leaves CouchDB, Nightly Builds, Refinery, business services, public routes and
 storage mounts on `hwc-server`. No production data is copied by activating it.
 
+## Before erasing the preinstalled Windows
+
+This walkthrough replaces Windows on the internal SSD. You do not need to
+activate Windows or sign into it to install NixOS. Step 4 below creates a new
+partition table, erasing Windows, its EFI boot partition and its recovery
+partitions. If you want to keep Windows or dual boot, stop before that step;
+the disk layout and `machines/work/hardware.nix` need a different plan.
+
+If you might want to restore Windows later, do this while it still boots:
+
+1. Back up any files you want to keep. For the factory recovery option, make a
+   [Windows Recovery Drive](https://support.microsoft.com/en-us/windows/experience/backup-recovery/recovery-drive)
+   on a **separate blank USB stick** using Start > Recovery Drive, with
+   **Back up system files to the recovery drive** selected. The recovery
+   drive does not include personal files; creating it erases that USB stick.
+2. Record the Windows edition under Settings > System > About and its
+   [activation status](https://support.microsoft.com/en-us/windows/activation/activate-windows)
+   under Settings > System > Activation. Keep any product-key information that
+   came with the PC. A later reinstall must use the matching edition, and
+   activation depends on the license supplied with this unit.
+3. If Device Encryption or BitLocker is enabled, save its
+   [recovery key](https://support.microsoft.com/en-us/windows/security/encryption/find-your-bitlocker-recovery-key)
+   somewhere other than the MS-02 before changing firmware settings. Disabling
+   Secure Boot or changing boot settings can prompt for that key if you boot
+   Windows again.
+
 ## At the desk: install a reachable base system
 
 Use an external monitor and keyboard on the MS-02. The laptop and MS-02 each
@@ -20,7 +46,8 @@ needed to log in. Do not use `nixos-install --flake` at this stage.
    [NixOS 25.11 minimal x86_64 ISO](https://channels.nixos.org/nixos-25.11/latest-nixos-minimal-x86_64-linux.iso)
    to a USB stick.
    Boot the MS-02 from that stick in UEFI mode. If the installer will not boot,
-   check whether Secure Boot is enabled; the standard installer is unsigned.
+   check whether Secure Boot is enabled; the
+   [standard installer is unsigned](https://wiki.nixos.org/wiki/NixOS_Installation_Guide/en#UEFI_boot).
    At the installer prompt, become root with `sudo -i` and confirm UEFI:
 
    ```sh
@@ -45,7 +72,7 @@ needed to log in. Do not use `nixos-install --flake` at this stage.
    offline.
 
 3. Identify the **internal 1 TB SSD by model and serial**. The next commands
-   erase the selected disk, including any preinstalled Windows installation.
+   erase the selected disk, including Windows and any recovery partitions.
    Set `TARGET_DISK` to its whole-disk `/dev/disk/by-id/nvme-...` path, not a
    partition or the installer USB. Stop if its size and model do not match:
 
@@ -59,7 +86,8 @@ needed to log in. Do not use `nixos-install --flake` at this stage.
 4. Create the disk layout expected by the checked-in
    `machines/work/hardware.nix`: a 1 GiB FAT32 EFI system partition labeled
    `HWCBOOT` and an ext4 root partition labeled `HWCWORK`. Keep those labels
-   exact:
+   exact. The first `parted ... mklabel gpt` command removes the Windows
+   partition table; run it only after the Windows preflight above:
 
    ```sh
    parted --script "$TARGET_DISK" mklabel gpt
