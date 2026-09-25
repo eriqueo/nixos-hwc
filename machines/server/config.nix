@@ -772,6 +772,29 @@
   hwc.system.mcp.jt.enable = true;
   hwc.system.mcp.host = "0.0.0.0"; # Arka containers need access via 10.89.1.1
 
+  # Server-only additions to the generated ~/.nixos/.mcp.json (agent-harness):
+  # the services these reach exist only here.
+  hwc.system.apps.agent-harness.projectMcp.extraServers = {
+    filesystem = {
+      command = "npx";
+      args = [
+        "-y"
+        "@modelcontextprotocol/server-filesystem"
+        config.hwc.paths.nixos
+        "/etc/nixos"
+        "${config.hwc.paths.user.home}/.config"
+      ];
+    };
+    postgres = {
+      command = "npx";
+      args = [ "-y" "@modelcontextprotocol/server-postgres" "postgresql://localhost:5432/postgres" ];
+    };
+    puppeteer = {
+      command = "npx";
+      args = [ "-y" "@modelcontextprotocol/server-puppeteer" ];
+    };
+  };
+
   # Note: Backup is configured above (hwc.data.backup block at line ~304)
   # NixOS config excluded - it's in git. Databases handled by preBackupScript.
 

@@ -151,6 +151,38 @@ in
       description = "Bind address";
     };
 
+    serverAlias = lib.mkOption {
+      type = lib.types.str;
+      default = "main";
+      description = ''
+        hwc.networking.hosts alias of the one host that runs the gateway. Every
+        host derives `url` from it, so change this default (not a machine
+        override) when the gateway moves.
+      '';
+    };
+
+    tailnetPort = lib.mkOption {
+      type = lib.types.port;
+      default = 6243;
+      description = "Tailnet-only TLS port Caddy serves the gateway on (parts/caddy.nix).";
+    };
+
+    url = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = config.hwc.networking.hosts.url {
+        server = cfg.serverAlias;
+        port = cfg.tailnetPort;
+        path = "/mcp";
+      };
+      defaultText = lib.literalExpression ''hwc.networking.hosts.url { server = serverAlias; port = tailnetPort; path = "/mcp"; }'';
+      description = ''
+        Derived: the gateway's tailnet /mcp endpoint, identical on every host.
+        Agent sessions reach the Nix-built service here instead of spawning
+        their own copy (agent-harness projectMcp).
+      '';
+    };
+
     transport = lib.mkOption {
       type = lib.types.enum [ "stdio" "sse" "both" ];
       default = "both";
@@ -478,6 +510,12 @@ in
       {
         assertion = cfg.port != 0;
         message = "hwc.system.mcp.port must be configured";
+      }
+      {
+        # Clients on every host derive `url` from serverAlias. Enabling the
+        # gateway anywhere else would leave them pointed at a host without it.
+        assertion = config.hwc.networking.hosts.servers.${cfg.serverAlias} or null == config.networking.hostName;
+        message = "hwc.system.mcp is enabled on ${config.networking.hostName}, but hwc.system.mcp.serverAlias (\"${cfg.serverAlias}\") names ${config.hwc.networking.hosts.servers.${cfg.serverAlias} or "no registered host"}. Change the serverAlias default when the gateway moves.";
       }
     ];
   };

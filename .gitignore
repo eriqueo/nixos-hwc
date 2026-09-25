@@ -41,9 +41,8 @@ __pycache__/
 .aider*
 
 # Claude Code - Machine-specific and generated configs
+# .mcp.json is a store symlink written by hwc.system.apps.agent-harness.projectMcp.
 .mcp.json
-.mcp.laptop.json
-.mcp.server.json
 .claude/settings.local.json
 .claude/.claude/settings.local.json
 .claude/auto-push-cron.sh

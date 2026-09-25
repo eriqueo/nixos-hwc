@@ -1,7 +1,8 @@
 # domains/system/mcp/parts/caddy.nix
 #
 # Caddy TLS route for tailnet access to the unified MCP gateway.
-# Port 6243 — tailnet-only TLS route.
+# hwc.system.mcp.tailnetPort (6243) — tailnet-only TLS route; agent sessions on
+# every host connect here through hwc.system.mcp.url.
 #
 # Note: Public Funnel access goes through :18080 → :6200.
 # All tools (hwc-sys, JT, n8n) are served from the single /mcp endpoint.
@@ -21,7 +22,7 @@ in
       {
         name = "infra-mcp";
         mode = "port";
-        port = 6243;
+        port = cfg.tailnetPort;
         upstream = "http://127.0.0.1:${toString cfg.port}";
       }
     ];

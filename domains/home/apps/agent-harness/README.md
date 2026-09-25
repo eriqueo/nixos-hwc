@@ -6,7 +6,7 @@ source and one mutable state store.
 ## Structure
 
 - `index.nix` installs the pinned policy, state links, health CLI, the state-sync timer, and the opt-in `agent-cli-update` timer.
-- `sys.nix` installs machine-wide Claude policy under `/etc`.
+- `sys.nix` installs machine-wide Claude policy under `/etc`, and generates the nixos repo's `.mcp.json` (`projectMcp`): a tmpfiles store symlink with the shared servers, `hwc-sys` over HTTP at `hwc.system.mcp.url`, and per-host `extraServers`.
 - `contract.nix` defines the ownership and revision contract shared by both lanes.
 - `control.sh` implements local and fleet health checks plus policy publication.
 - `control.test.sh` seeds split revisions and mutable runtime references against the doctor.
@@ -46,6 +46,12 @@ authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
+- 2026-09-25: `sys.nix` generates `~/.nixos/.mcp.json` (`projectMcp`), replacing
+  the hand-kept `.mcp.laptop.json`/`.mcp.server.json` copies and their setup
+  script. The server copy spawned a stale checkout build of the MCP gateway
+  (dist/ from 2026-09-21) and held inline keys; the laptop copy had no gateway.
+  Every host now reaches the Nix-built gateway service over HTTP, and the
+  GitHub server reads its token from `gh auth token` at launch.
 - 2026-09-24: Added opt-in `cliUpdates`: a daily user timer (04:30) that
   installs the npm-global `claude` and `codex` at `@latest` and logs each
   version change. It alerts through `hwc-notify` once on failure and once on

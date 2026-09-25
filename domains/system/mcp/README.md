@@ -1,6 +1,6 @@
 # domains/system/mcp — HWC MCP Gateway
 
-Unified MCP gateway (v0.3.2) aggregating 121 tools from three sources. Connects to Claude Code (stdio), Claude.ai (Streamable HTTP via Tailscale Funnel), and any MCP-compatible client. JT and n8n backends use lazy loading — 46 tools visible by default, backends activate on demand.
+Unified MCP gateway (v0.3.2) aggregating 121 tools from three sources. One Nix-built service on hwc-server serves Claude Code/T3 sessions on every host (Streamable HTTP over the tailnet route), Claude.ai, and any MCP-compatible client. JT and n8n backends use lazy loading — 46 tools visible by default, backends activate on demand.
 
 | Source | Tools | Transport | Loading |
 |--------|-------|-----------|---------|
@@ -11,23 +11,22 @@ Unified MCP gateway (v0.3.2) aggregating 121 tools from three sources. Connects 
 
 ## Connection Guide
 
-### Claude Code (stdio)
+### Claude Code and T3 sessions (HTTP over the tailnet)
 
-Configured in `.mcp.json`:
+The repo's `.mcp.json` is generated on every host by
+`hwc.system.apps.agent-harness.projectMcp` and points `hwc-sys` at
+`hwc.system.mcp.url` — `https://hwc-server.ocelot-wahoo.ts.net:6243/mcp`, the
+tailnet-only Caddy route (`parts/caddy.nix`) to this service:
 
 ```json
-"hwc-sys": {
-  "command": "node",
-  "args": ["/home/eric/.nixos/domains/system/mcp/src/dist/index.js"],
-  "env": {
-    "HWC_MCP_TRANSPORT": "stdio",
-    "HWC_NIXOS_CONFIG_PATH": "/home/eric/.nixos",
-    "HWC_HOSTNAME": "hwc-server"
-  }
-}
+"hwc-sys": { "type": "http", "url": "https://hwc-server.ocelot-wahoo.ts.net:6243/mcp" }
 ```
 
-In stdio mode, Claude Code spawns the gateway directly. All 129 tools appear as a single server. The gateway spawns jt-mcp and n8n-mcp as stdio child processes internally.
+Sessions therefore run the deployed code with the service's environment and
+sandbox, including the JT, n8n and CRM backends. No session spawns its own
+gateway. `serverAlias` names the host that runs the gateway; change its default
+when the gateway moves, and an assertion stops a build that enables it anywhere
+else.
 
 ### Claude.ai (Streamable HTTP over Tailscale Funnel)
 
@@ -55,8 +54,9 @@ curl -s -X POST https://hwc-server.ocelot-wahoo.ts.net/mcp \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","method":"initialize","id":1,"params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
 
-# List tools (no session ID needed — sessionless mode)
+# List tools (send the mcp-session-id header returned by initialize)
 curl -s -X POST https://hwc-server.ocelot-wahoo.ts.net/mcp \
+  -H "mcp-session-id: <id from initialize>" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":2,"params":{}}' | jq '.result.tools | length'
@@ -71,27 +71,17 @@ curl -s -X POST https://hwc-server.ocelot-wahoo.ts.net/mcp \
 
 ## Transport Architecture
 
-### v0.3.0 — Sessionless (current)
+### Sessions (current)
 
-One long-lived `Server` + `StreamableHTTPServerTransport` pair, created at startup. All requests are handled by the same transport. No session IDs, no session map, no reaper.
+Each `initialize` POST creates a `StreamableHTTPServerTransport` with a random
+session ID; later requests carry it in `mcp-session-id`. An unknown ID gets
+HTTP 404, which tells the client to re-initialize — that is how clients recover
+after the service restarts on a deploy.
 
-```
-                                ┌─────────────────────────────┐
-  POST /mcp ──────────────────▶ │  Shared Transport            │
-                                │  (sessionIdGenerator: undef) │
-  POST /mcp ──────────────────▶ │                              │──▶ Server ──▶ BackendManager
-                                │  enableJsonResponse: true    │
-  POST /mcp ──────────────────▶ │                              │
-                                └─────────────────────────────┘
-```
+### stdio
 
-Key config:
-- `sessionIdGenerator: undefined` — disables SDK session tracking entirely
-- `enableJsonResponse: true` — returns `application/json` when client accepts it
-
-### stdio (Claude Code)
-
-Standard JSON-RPC over stdin/stdout. One `Server` instance for the lifetime of the process. Logs go to stderr.
+`HWC_MCP_TRANSPORT=stdio` still works for ad-hoc runs of the built package.
+Nothing in the fleet launches it that way; sessions use HTTP.
 
 ### BackendManager
 
@@ -252,14 +242,16 @@ The codebase has an Accept header fix that adds missing media types for SDK comp
 
 The SDK is pinned to exact `1.12.1` (not `^1.12.1`). Minor SDK updates have broken transport behavior before. Upgrade deliberately with testing.
 
-### DO NOT add session maps, reapers, or ping intervals
+### DO NOT add ping intervals or reentrant session cleanup
 
 The v0.1.0 architecture had session maps with TTL reapers and SSE ping keepalive intervals. This accumulated state caused:
 - Session map growth → stack overflow on cleanup iteration
 - Reentrant recursion in `cleanupSession()` → crash
 - Ping interval leaks when sessions weren't cleaned up properly
 
-The sessionless design eliminates all of these. If you need session awareness in the future, consider a bounded LRU map with hard limits, not unbounded growth.
+The current per-session map is bounded by time, not count: a once-a-minute
+reaper closes sessions idle for 30 minutes (`SESSION_TTL_MS`), and a reaped
+client gets 404 and re-initializes. Keep cleanup a single non-reentrant pass.
 
 ### DO NOT remove the Caddy `flush_interval -1`
 
@@ -495,6 +487,14 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-09-25: Agent sessions use the service. `index.nix` adds `serverAlias`,
+  `tailnetPort` and the derived `url`; the agent-harness generates `.mcp.json`
+  with `hwc-sys` pointed at it over HTTP. Before, Claude Code on hwc-server
+  spawned the ignored checkout `src/dist/` (built 2026-09-21), so deploys never
+  reached sessions and they ran without the service's environment; hwc-laptop
+  had no gateway. The separate `hwc-jt` and `hwc-n8n` entries are gone — the
+  gateway serves those tools. Transport docs now describe the per-session map.
+
 - 2026-09-25: `hwc_calendar` delete/edit read the VEVENT's own properties. They
   searched the whole file, so 172 of 196 events reported the VTIMEZONE block's
   DTSTART (151 of them dated 1883 or 1970), and edit recreated them on that date. Times are now
@@ -717,14 +717,16 @@ does not remove a DO item.
 Its delete/edit search parses each stored file's VEVENT (VTIMEZONE and VALARM
 lines excluded) with the ICS unfold/unescape helpers from `executors/caldav.ts`.
 Tests in `src/tests/` exercise registered tools and their failure boundaries.
+`index.nix` derives `url` (the gateway's tailnet `/mcp` endpoint) from
+`serverAlias` and `tailnetPort` on every host; agent sessions connect there.
 
 ```
 domains/system/mcp/
-├── index.nix
+├── index.nix                      # service, package, serverAlias/tailnetPort/url
 ├── clients/
 │   └── hwc-mcp-call.py            # single-shot Streamable HTTP CLI adapter
 ├── parts/
-│   ├── caddy.nix
+│   ├── caddy.nix                  # tailnet route on tailnetPort
 │   └── jt.nix
 ├── README.md
 └── src/
