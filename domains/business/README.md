@@ -28,6 +28,7 @@ business/
 ```
 
 ## Changelog
+- 2026-09-25: `firefly/parts/explorer.nix` waits (bounded, 180 s) for Firefly to answer before starting: the explorer exits on a failed startup check, and `podman-firefly` is active before PHP listens, so the first start on hwc-work lost that race (the same race would recur at every boot).
 - 2026-09-25: Service split wave 3 (3.4): Firefly III + Pico + importer + explorer and their cron/digest timers run on hwc-work (their state is the two databases; `/opt/firefly` holds only the generated `.env`). `workbench`: removed the `remoteRoutes` scaffolding option — the owner map's stubs already make every remote vhost name known.
 - 2026-09-25: `paperless/parts/directories.nix` no longer pre-creates `originals/`, `archive/`, `thumbnails/` directly under the media dir: Paperless stores them under `media/documents/`, so those were always empty (230 originals lived in `documents/originals`, 0 in the top-level one).
 - 2026-09-25: Service split wave 3 (3.3): `paperless` runs on hwc-work with its state on the SSD under `hwc.paths.state/paperless` (machine-set storage paths; the module defaults are the server's DAS). New `serverAlias` (default `work`). The receipts watcher is independent of `enable`: it runs on the host holding the phone folder (hwc-server) and forwards each drop by rsync-over-SSH into the consume dir of the Paperless host, read from that host's evaluated config; `receipts.enable` now defaults off.

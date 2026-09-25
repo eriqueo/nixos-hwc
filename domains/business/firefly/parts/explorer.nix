@@ -5,7 +5,7 @@
 # X-Forwarded-For address through tailscaled WhoIs before serving any API data.
 # Persistent data remains in Firefly. The explorer keeps only a bounded,
 # replaceable in-memory cache (default 60 seconds), so there is no cleanup job.
-{ lib, config, ... }:
+{ lib, config, pkgs, ... }:
 
 let
   cfg = config.hwc.business.firefly;
@@ -56,6 +56,18 @@ in
         User = lib.mkForce "eric";
         Group = "users";
         SupplementaryGroups = [ "secrets" ];
+        # The app checks Firefly at startup and exits if it is not answering;
+        # podman-firefly is "active" before PHP listens, so a boot (or a
+        # socket hit right after a switch) lost that race (hwc-work,
+        # 2026-09-25). Wait for it, bounded, then start or fail loudly.
+        ExecStartPre = pkgs.writeShellScript "firefly-explorer-wait" ''
+          for i in $(${pkgs.coreutils}/bin/seq 1 36); do
+            ${pkgs.curl}/bin/curl -fs -o /dev/null -m 5 ${fireflyBase}/ && exit 0
+            ${pkgs.coreutils}/bin/sleep 5
+          done
+          echo "firefly-explorer: Firefly at ${fireflyBase} did not answer within 180s" >&2
+          exit 1
+        '';
         ExecStart = "${explorer.package}/bin/firefly-explorer --fd 3";
         Restart = "no";
         UMask = "0077";
