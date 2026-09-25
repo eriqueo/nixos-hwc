@@ -4,8 +4,16 @@ let
 
   tailscaleDomain = config.hwc.networking.shared.tailscaleDomain;
   rootHost        = config.hwc.networking.shared.rootHost;
-  routes          = config.hwc.networking.shared.routes;
+  # During the service split, legacy Caddy hosts keep their existing route
+  # table. A host with routeOwner set serves only explicitly assigned routes;
+  # remove the legacy null mode once every route has an owner and xps has an
+  # explicit serving role.
+  routeOwner      = config.hwc.networking.reverseProxy.routeOwner;
+  routes          = lib.filter
+    (r: routeOwner == null || (r.owner or "main") == routeOwner)
+    config.hwc.networking.shared.routes;
   vhostDomain     = config.hwc.networking.shared.vhostDomain;
+  subpathRoutes   = lib.filter (r: r.mode == "subpath") routes;
 
   # This host's own tailnet FQDN, derived from its hostname + the one shared
   # tailnet suffix (see domains/networking/hosts.nix). A server's serving domain
@@ -199,10 +207,57 @@ let
     }
   '';
 
+  # A work-only vhost host has no legacy tailnet-root routes. Do not publish a
+  # root site with an inert /mcp handler and no backend on that host.
+  rootBlock = lib.optionalString
+    (subpathRoutes != [ ] || (config.hwc.ai.mcp.proxy.enable or false)) ''
+      ${rootHost} {
+        tls {
+          get_certificate tailscale
+          protocols tls1.2 tls1.3
+          alpn h2 http/1.1
+        }
+        encode zstd gzip
+
+        # Access log (route-level analytics derive from the host+uri fields).
+        # Size-capped rolling — caddy logs once filled the disk here.
+        log {
+          output file /var/log/caddy/access-root.log {
+            roll_size 50MiB
+            roll_keep 5
+            roll_keep_for 30d
+          }
+          format json
+        }
+
+        # MCP routes — proxy to hwc-sys Express server (priority over subpath routes)
+        @mcp_routes {
+          path /mcp /mcp/* /health /.well-known/*
+        }
+        handle @mcp_routes {
+          reverse_proxy 127.0.0.1:6200 {
+            flush_interval -1
+            transport http {
+              read_timeout 0
+              write_timeout 0
+            }
+          }
+        }
+
+        # All subpath routes (sonarr, radarr, navidrome, etc.)
+        ${concatStringsSep "\n" (map renderRoute subpathRoutes)}
+      }
+    '';
+
 in
 {
   options.hwc.networking.reverseProxy = {
     enable = mkEnableOption "Reverse proxy service (Caddy)";
+    routeOwner = mkOption {
+      type = types.nullOr (types.enum (lib.attrNames config.hwc.networking.hosts.servers));
+      default = null;
+      description = "When set, serve only routes assigned to this host alias; null retains legacy route behavior during the split.";
+    };
     domain = mkOption {
       type = types.str;
       default = selfDomain;
@@ -266,44 +321,8 @@ in
         hash = "sha256-oEKfWN5U1LI25vNvr/QZE2C8PQyIgBAGH/1YhUDoGr0=";
       };
       extraConfig = ''
-        # Primary HTTPS listener — serves subpath routes + MCP over tailnet.
-        # Caddy owns :443 with a Tailscale-provisioned LE cert.
-        ${rootHost} {
-          tls {
-            get_certificate tailscale
-            protocols tls1.2 tls1.3
-            alpn h2 http/1.1
-          }
-          encode zstd gzip
-
-          # Access log (route-level analytics derive from the host+uri fields).
-          # Size-capped rolling — caddy logs once filled the disk here.
-          log {
-            output file /var/log/caddy/access-root.log {
-              roll_size 50MiB
-              roll_keep 5
-              roll_keep_for 30d
-            }
-            format json
-          }
-
-          # MCP routes — proxy to hwc-sys Express server (priority over subpath routes)
-          @mcp_routes {
-            path /mcp /mcp/* /health /.well-known/*
-          }
-          handle @mcp_routes {
-            reverse_proxy 127.0.0.1:6200 {
-              flush_interval -1
-              transport http {
-                read_timeout 0
-                write_timeout 0
-              }
-            }
-          }
-
-          # All subpath routes (sonarr, radarr, navidrome, etc.)
-          ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "subpath") routes))}
-        }
+        # Root tailnet listener exists only where subpath routes or MCP need it.
+        ${rootBlock}
 
         ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "port") routes))}
 

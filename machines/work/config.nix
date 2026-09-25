@@ -18,8 +18,13 @@
   hwc.automation.refinery.enable = false;
   hwc.mail.protonmailBridgeCert.enable = false;
 
-  # No storage tiers, production routes or scheduled business services are
-  # enabled until the drives and ownership for each service are established.
+  # First work-owned route: the static calculator. Other app routes stay on
+  # hwc-server until each app, its data, and its callers have migrated.
+  hwc.networking.reverseProxy.enable = true;
+  hwc.networking.reverseProxy.routeOwner = "work";
+
+  # Storage tiers and scheduled business services remain disabled until the
+  # drives and ownership for each service are established.
   hwc.system.networking.waitOnline.mode = "all";
   hwc.system.networking.waitOnline.timeoutSeconds = 30;
 }

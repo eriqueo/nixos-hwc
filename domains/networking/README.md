@@ -22,9 +22,9 @@ Provides network infrastructure that other domains depend on:
 networking/
 ├── index.nix           # Domain aggregator
 ├── README.md           # This file
-├── hosts/              # Host registry: tailnetSuffix + servers + derived fqdn/url helper
+├── hosts/              # Host registry: tailnetSuffix + server/work aliases + derived fqdn/url helper
 │   └── index.nix
-├── reverseProxy/       # Caddy NixOS service, DNS plugin + route rendering
+├── reverseProxy/       # Caddy NixOS service, DNS plugin + owner-filtered route rendering
 │   └── index.nix
 ├── routes.nix          # Centralized service route definitions
 ├── podman-network.nix  # media-network systemd service
@@ -39,6 +39,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-09-25: Register hwc-work's tailnet address and introduce an opt-in Caddy route-owner filter. The calculator is the first work-owned route; networking tolerates hosts without the AI domain. Legacy server/xps rendering stays unchanged while the server's static copy covers cached DNS and the laptop's pinned hosts entry.
 - 2026-09-24: `reverseProxy/` — refresh the deSEC-enabled Caddy fixed-output source hash for the 26.05 nixpkgs input. Caddy remains 2.11.4, but the vendored source hash changed; the new value came from the exact server Caddy build's reported content hash.
 - 2026-09-23: `vpn/` — new `protonvpn.portForwarding` (`enable`, `gateway` default `10.2.0.1`). `protonvpn-natpmp.service` is bound to `wg-quick-protonvpn`: it renews Proton's NAT-PMP mapping every 45 s with `natpmpc` (mappings last 60 s) and writes the forwarded port to `/run/protonvpn-natpmp/port`. The firewall opens 1024–65535 on the `protonvpn` interface only, because the port is random per session; Proton forwards just the mapped port, so nothing else from the internet reaches that interface. hwc-laptop enables it against US-UT#108 (P2P) with a NAT-PMP key.
 - 2026-09-22: `vpn/` — new `protonvpn.bypassTailscale` (default `services.tailscale.enable`). With the tunnel up, the tailnet was unreachable: wg-quick puts `not fwmark 0xca6c lookup 51820` at priority 5209, ahead of Tailscale's `lookup 52` at 5270, so `ip route get 100.77.195.118` gave `dev protonvpn`. The option's PostUp adds rules at 5200/5201. They send tailnet destinations (100.64.0.0/10, fd7a:115c:a1e0::/48) to table 52, and tailscaled's fwmarked underlay packets to `main`. PostDown removes them. Everything else still leaves through Proton. The fix was tested by hand on hwc-laptop before it was committed: qBittorrent's vhost answered while egress stayed on the Proton IP.

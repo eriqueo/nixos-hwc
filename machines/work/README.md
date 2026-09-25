@@ -1,6 +1,6 @@
-# hwc-work: install the MS-02 and make the first flake switch
+# hwc-work: MS-02 fleet host and work-server rollout
 
-`#hwc-work` is the staged work-server output in the fleet flake. It provides the
+`#hwc-work` is the active work-server output in the fleet flake. It provides the
 existing headless CLI/Home Manager setup, SSH, Tailscale, Podman and server tools.
 It leaves CouchDB, Nightly Builds, Refinery, business services, public routes and
 storage mounts on `hwc-server`. No production data is copied by activating it.

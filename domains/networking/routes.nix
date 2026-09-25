@@ -1,6 +1,8 @@
 { lib, config, ... }:
 let
-  mcpCfg = config.hwc.ai.mcp;
+  # Work imports networking without the optional AI domain. Only add the MCP
+  # route on hosts that declare and enable that capability.
+  mcpCfg = config.hwc.ai.mcp or { reverseProxy.enable = false; };
   nixosDir = config.hwc.paths.nixos;
 in
 {
@@ -307,6 +309,7 @@ in
     {
       name = "calculator";
       mode = "vhost";
+      owner = "work";
       root = "${nixosDir}/domains/business/website/calculator/app/dist";
     }
     # Heartwood CMS — name-based vhost (content management dashboard)

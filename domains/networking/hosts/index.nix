@@ -45,7 +45,7 @@ in
       default = {
         main = "hwc-server";   # primary server
         xps  = "hwc-xps";      # peer server
-        # work = "hwc-work";   # future work server — uncomment when built
+        work = "hwc-work";   # work/development application server
       };
       description = ''
         Server registry: logical alias -> tailnet hostname. The canonical set of
@@ -58,6 +58,7 @@ in
       type = types.attrsOf types.str;
       default = {
         main = "100.77.195.118";
+        work = "100.77.38.32";
         xps  = "100.126.80.42";
       };
       description = ''
