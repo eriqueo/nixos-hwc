@@ -571,18 +571,17 @@ in
   # failure mode noted in domains/networking/hosts/index.nix). Address comes from
   # the registry so a re-registered server is a one-line change.
   #
-  # The service vhosts (<name>.hwc.iheartwoodcraft.com) are pinned here too.
-  # Public DNS answers them with this same tailnet IP, so nothing changes while
-  # the internet is up. When it is down, public DNS is unreachable and without
-  # these lines every service URL stops resolving, even if Tailscale still has
-  # a direct LAN path to the server. The names are read from hwc-server's own
-  # route table, so a new route needs no edit here; only the laptop rebuild.
+  # Service vhosts are pinned to their route owner's tailnet IP. Public DNS
+  # gives the same answers while online; offline, these entries preserve URLs
+  # when DNS is unavailable but Tailscale still has a direct LAN path. Read
+  # the names and owners from the server's route table so moving an app needs
+  # one route-owner change, followed by the laptop rebuild.
   networking.hosts = let
     server = inputs.self.nixosConfigurations.hwc-server.config.hwc.networking.shared;
-    vhostNames = map (r: "${r.name}.${server.vhostDomain}")
-      (builtins.filter (r: r.mode == "vhost") server.routes);
+    vhostNamesFor = owner: map (r: "${r.name}.${server.vhostDomain}")
+      (builtins.filter (r: r.mode == "vhost" && (r.owner or "main") == owner) server.routes);
   in {
-    "${config.hwc.networking.hosts.ips.main}" = vhostNames ++ [
+    "${config.hwc.networking.hosts.ips.main}" = vhostNamesFor "main" ++ [
       "sonarr.local"
       "radarr.local"
       "prowlarr.local"
@@ -596,6 +595,7 @@ in
       "server.local"
       "hwc.local"
     ];
+    "${config.hwc.networking.hosts.ips.work}" = vhostNamesFor "work";
   };
 
   #============================================================================
