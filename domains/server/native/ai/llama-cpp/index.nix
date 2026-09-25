@@ -378,10 +378,12 @@ in
         '';
       }
       {
-        assertion = (cfg.gpu.enable || cfg.embed.enable) ->
+        # Only a service that actually offloads layers needs the NVIDIA stack.
+        # embed with gpuLayers = 0 is a plain CPU server (hwc-work, Intel iGPU).
+        assertion = (cfg.gpu.enable || (cfg.embed.enable && cfg.embed.gpuLayers > 0)) ->
           (config.hwc.system.hardware.gpu.type or "none") == "nvidia";
         message = ''
-          hwc.server.ai.llamaCpp gpu/embed services require
+          hwc.server.ai.llamaCpp gpu/embed services with gpuLayers > 0 require
           hwc.system.hardware.gpu.type = "nvidia".
         '';
       }

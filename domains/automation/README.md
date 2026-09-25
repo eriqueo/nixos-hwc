@@ -78,6 +78,7 @@ workspace/automation/
 
 ## Changelog
 
+- 2026-09-25: Service split wave 1 — `nightly-builds` gains `notifyUrl` (was a `127.0.0.1:11600` literal) so hwc-work can post to hwc-notify's tailnet vhost. Refinery, nightly builds, sr/dx1 gauntlets and brain-sweep now run on hwc-work; hwc-server disables them in the cutover commit. readme-freshness stays on hwc-server (asserts a local hwc-notify). vault-sync runs on both hosts.
 - 2026-09-24: Publish and re-export the Frigate workflow with local timestamps, checked clip readiness, request deadlines and message IDs in execution history; exercise all send branches through a local capture sink.
 
 - 2026-09-24: Frigate bridge forwards only completed events, bounds requests, checks HTTP errors and logs outcomes by event ID without retries.

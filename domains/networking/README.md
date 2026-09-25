@@ -39,6 +39,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-09-25: Service split wave 1 — `refinery` is work-owned; new `t3-work` vhost for hwc-work's own T3 Code environment (hwc-server keeps `t3`). Laptop pins and the server proxy derive from the owner tags as before.
 - 2026-09-25: Register hwc-work's tailnet address and introduce opt-in Caddy route ownership. The calculator is the first work-owned route; legacy hosts proxy it to work over the tailnet with its TLS name for cached DNS and pinned clients. Networking also tolerates hosts without the AI domain.
 - 2026-09-24: `reverseProxy/` — refresh the deSEC-enabled Caddy fixed-output source hash for the 26.05 nixpkgs input. Caddy remains 2.11.4, but the vendored source hash changed; the new value came from the exact server Caddy build's reported content hash.
 - 2026-09-23: `vpn/` — new `protonvpn.portForwarding` (`enable`, `gateway` default `10.2.0.1`). `protonvpn-natpmp.service` is bound to `wg-quick-protonvpn`: it renews Proton's NAT-PMP mapping every 45 s with `natpmpc` (mappings last 60 s) and writes the forwarded port to `/run/protonvpn-natpmp/port`. The firewall opens 1024–65535 on the `protonvpn` interface only, because the port is random per session; Proton forwards just the mapped port, so nothing else from the internet reaches that interface. hwc-laptop enables it against US-UT#108 (P2P) with a NAT-PMP key.

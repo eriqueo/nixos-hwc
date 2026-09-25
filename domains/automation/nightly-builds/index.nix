@@ -58,6 +58,10 @@ let
     # still go through hwc-notify. Same secret the discord-nightly-builds
     # notify channel uses; readable by the eric-run service (owner).
     NB_DISCORD_WEBHOOK_FILE = config.age.secrets."discord-webhook-nightly-builds".path;
+    # hwc-notify endpoint for run/review/rebuild notices. An option, not a
+    # loopback literal: hwc-work runs this module while hwc-notify stays on
+    # hwc-server, so the URL is a per-host fact.
+    NB_NOTIFY_URL = cfg.notifyUrl;
   };
   nbPath = [
     pkgs.bash pkgs.coreutils pkgs.git pkgs.openssh
@@ -308,6 +312,12 @@ in
   # OPTIONS
   options.hwc.automation.nightlyBuilds = {
     enable = lib.mkEnableOption "Nightly gauntlet-card runner (headless Claude Code)";
+
+    notifyUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "http://127.0.0.1:11600/notify";
+      description = "hwc-notify POST endpoint for run, review and rebuild notices (same shape as brainSweep/readmeFreshness.notifyUrl).";
+    };
 
     onCalendar = lib.mkOption {
       type = lib.types.str;

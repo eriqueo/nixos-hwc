@@ -335,6 +335,7 @@ in
     {
       name = "refinery";
       mode = "vhost";
+      owner = "work"; # service split wave 1: board + gauntlets run on hwc-work
       upstream = "http://127.0.0.1:8060";
     }
 
@@ -409,6 +410,14 @@ in
     {
       name = "t3";
       mode = "vhost";
+      upstream = "http://127.0.0.1:3773";
+    }
+    # T3 Code on hwc-work — a second, separate T3 environment (its own
+    # ~/.t3 store and phone pairing), not a move of `t3`. Same port, other host.
+    {
+      name = "t3-work";
+      mode = "vhost";
+      owner = "work";
       upstream = "http://127.0.0.1:3773";
     }
 
