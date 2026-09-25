@@ -9,7 +9,7 @@ source and one mutable state store.
 - `sys.nix` installs machine-wide Claude policy under `/etc`, and generates Claude Code's MCP config as tmpfiles store symlinks: `~/.mcp.json` (`userMcp`, read by every project under the home directory: shared servers, `hwc-sys` over HTTP at `hwc.system.mcp.url`, `brain` at `userMcp.brainUrl`) and the nixos repo's `.mcp.json` (`projectMcp`: `git` plus per-host `extraServers`). The host running brain-mcp asserts `brainUrl` names its route.
 - `contract.nix` defines the ownership and revision contract shared by both lanes.
 - `control.sh` implements local and fleet health checks plus policy publication.
-- `control.test.sh` seeds split revisions and mutable runtime references against the doctor.
+- `control.test.sh` checks split revisions, mutable runtime references, and invalid fleet names.
 - `state-sync.sh` synchronizes only memories and the mistakes ledger, with one bounded validation case under `.git`.
 - `state-validate.sh` owns the memory contract for both full-store scans and projected writes on stdin.
 - `state-sync.test.sh` verifies import, links, validation blocking, recovery, commit, pull, and push against a throwaway hub.
@@ -31,9 +31,9 @@ for both root evaluators. The server bare repository remains an authoring mirror
 ## Operations
 
 Run `agent-harness` for the interactive menu. Session launchers run the local
-doctor automatically. `agent-harness doctor --fleet` compares both hosts with
+doctor automatically. `agent-harness doctor --fleet` compares every configured host with
 the local desired revision. `agent-harness publish` checks and pushes static
-policy, updates the Nix pin, builds and switches both hosts, and finishes with
+policy, updates the Nix pin, builds and switches the configured fleet, and finishes with
 the fleet doctor. `agent-harness sync` validates and synchronizes mutable state.
 
 On a host with `cliUpdates.enable`, `agent-cli-update` runs daily. Run it by
@@ -47,6 +47,8 @@ authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
+- 2026-09-25: Fleet health and publication include hwc-work. Publication builds
+  and switches the configured host list instead of a separate two-host list.
 - 2026-09-25: `.mcp.laptop.json`/`.mcp.server.json` were tracked (committed in
   2025, gitignored later), so the tmpfiles `r` rules that deleted them left
   every checkout dirty. They are now removed from the repo and the rules are

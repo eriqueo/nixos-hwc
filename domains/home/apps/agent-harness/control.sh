@@ -6,7 +6,8 @@ SYSTEM_MANIFEST=${AGENT_HARNESS_SYSTEM_MANIFEST:-/etc/agent-harness-manifest.jso
 STATE=${AGENT_STATE_DIR:-$HOME/.agent-state}
 SOURCE=${AGENT_HARNESS_SOURCE:-$HOME/.claude-config}
 NIXOS=${AGENT_HARNESS_NIXOS:-$HOME/.nixos}
-FLEET=${AGENT_HARNESS_FLEET_HOSTS:-hwc-server:hwc-laptop}
+FLEET=${AGENT_HARNESS_FLEET_HOSTS:?fleet hosts are not configured}
+FLEET_HOSTS=()
 STORE_PREFIX=${AGENT_HARNESS_STORE_PREFIX:-/nix/store}
 SYSTEM_POLICY=${AGENT_HARNESS_SYSTEM_POLICY:-/etc/agent-harness/CLAUDE.md}
 CLAUDE_INSTRUCTIONS=${AGENT_HARNESS_CLAUDE_INSTRUCTIONS:-$HOME/.claude/CLAUDE.md}
@@ -24,6 +25,15 @@ show_state_case() {
   local case_file="$STATE/.git/.sync-case.json"
   [ -r "$case_file" ] || return 0
   jq -r '"agent-state case: \(.state) (\(.lastOutcome), \(.caseId))"' "$case_file" 2>/dev/null || true
+}
+
+validate_fleet() {
+  local host
+  IFS=: read -r -a FLEET_HOSTS <<< "$FLEET"
+  [ "${#FLEET_HOSTS[@]}" -gt 0 ] || { printf 'agent-harness: fleet is empty\n' >&2; return 1; }
+  for host in "${FLEET_HOSTS[@]}"; do
+    [[ "$host" =~ ^hwc-[a-z0-9-]+$ ]] || { printf 'agent-harness: invalid fleet host %s\n' "$host" >&2; return 1; }
+  done
 }
 
 expected_revision() { jq -r '.staticPolicy.revision' "$EXPECTED"; }
@@ -101,9 +111,9 @@ doctor_local() {
 
 doctor_fleet() {
   local desired host output remote_revision fleet_failures=0
+  validate_fleet
   desired=$(expected_revision)
-  IFS=: read -r -a hosts <<< "$FLEET"
-  for host in "${hosts[@]}"; do
+  for host in "${FLEET_HOSTS[@]}"; do
     if [ "$host" = "$(hostname)" ]; then
       if ! doctor_local; then fleet_failures=$((fleet_failures + 1)); fi
       continue
@@ -136,6 +146,7 @@ require_clean_tracked() {
 }
 
 publish_preflight() {
+  validate_fleet
   require_clean_tracked "$SOURCE" 'static policy'
   require_clean_tracked "$NIXOS" 'nixos-hwc'
   [ "$(git -C "$SOURCE" branch --show-current)" = main ] || { printf 'agent-harness: static policy must be on main\n' >&2; return 1; }
@@ -181,11 +192,13 @@ publish() {
     git -C "$NIXOS" commit -m "chore: publish agent harness $static_revision"
   fi
 
-  nix build --no-link "$NIXOS#nixosConfigurations.hwc-server.config.system.build.toplevel"
-  nix build --no-link "$NIXOS#nixosConfigurations.hwc-laptop.config.system.build.toplevel"
+  local host
+  for host in "${FLEET_HOSTS[@]}"; do
+    nix build --no-link "$NIXOS#nixosConfigurations.$host.config.system.build.toplevel"
+  done
   git -C "$NIXOS" push origin main
 
-  for host in hwc-server hwc-laptop; do
+  for host in "${FLEET_HOSTS[@]}"; do
     if [ "$host" = "$(hostname)" ]; then
       sudo nixos-rebuild switch --flake "$NIXOS#$host"
     else

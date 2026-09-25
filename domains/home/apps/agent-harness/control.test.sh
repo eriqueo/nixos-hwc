@@ -46,6 +46,7 @@ run_doctor() {
   AGENT_HARNESS_PI_INSTRUCTIONS="$STORE/pi-instructions" \
   AGENT_HARNESS_CLAUDE_SETTINGS="$STORE/claude-settings" \
   AGENT_HARNESS_SOURCE="$ROOT/source" \
+  AGENT_HARNESS_FLEET_HOSTS=hwc-server:hwc-laptop:hwc-work \
   bash "$(dirname "$0")/control.sh" doctor
 }
 
@@ -104,10 +105,19 @@ run_publish_check() {
   AGENT_HARNESS_EXPECTED_MANIFEST="$ROOT/expected.json" \
   AGENT_HARNESS_SOURCE="$SOURCE_REPO" \
   AGENT_HARNESS_NIXOS="$NIXOS_REPO" \
+  AGENT_HARNESS_FLEET_HOSTS=hwc-server:hwc-laptop:hwc-work \
   bash "$(dirname "$0")/control.sh" publish --check
 }
 
 run_publish_check >/dev/null
+if AGENT_HARNESS_FLEET_HOSTS='hwc-server:bad host' \
+  AGENT_HARNESS_EXPECTED_MANIFEST="$ROOT/expected.json" \
+  AGENT_HARNESS_SOURCE="$SOURCE_REPO" \
+  AGENT_HARNESS_NIXOS="$NIXOS_REPO" \
+  bash "$(dirname "$0")/control.sh" publish --check >/dev/null 2>&1; then
+  echo 'control.test: invalid fleet unexpectedly passed publication preflight' >&2
+  exit 1
+fi
 printf 'dirty\n' >> "$SOURCE_REPO/policy"
 if run_publish_check >/dev/null 2>&1; then
   echo 'control.test: dirty static source unexpectedly passed publication preflight' >&2

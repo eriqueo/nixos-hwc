@@ -190,6 +190,7 @@ in
       default = [
         "hwc-server"
         "hwc-laptop"
+        "hwc-work"
       ];
     };
     notifyUrl = lib.mkOption {
