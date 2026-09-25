@@ -40,10 +40,14 @@
     # Development Environment
     core.development.enable = lib.mkDefault true;
 
-    # Declared git hooks — every host pins ~/.nixos to its tracked .githooks/
+    # Declared git hooks — every host runs ~/.nixos's tracked .githooks/; the
+    # checkout guard is pinned so checking out an older commit cannot drop it.
     core.repoHooks = {
       enable = lib.mkDefault true;
-      repos = [ { path = "${config.home.homeDirectory}/.nixos"; } ];
+      repos = [ {
+        path = "${config.home.homeDirectory}/.nixos";
+        pinned.post-checkout = ../../.githooks/post-checkout;
+      } ];
     };
 
     # CLI apps

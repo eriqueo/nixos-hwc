@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # Keep the primary checkout on a branch. On 2026-09-25 an agent deployed
-# unmerged work by checking out bare commits here, four times in one hour: the
-# checkout sat detached and the running system held commits main did not, so
-# the next deploy from main would have reverted them. Deploy an unmerged branch
-# from its worktree instead — nothing in this checkout has to move:
-#   sudo nixos-rebuild switch --flake ~/.nixos-worktrees/<name>#hwc-<host>
+# unmerged work by checking out bare commits here, five times in one afternoon:
+# the checkout sat detached, the running system held commits main did not, and
+# a checked-out commit that lacked main's newest commits would have reverted
+# them on the next switch. Services read files from this checkout at runtime
+# (paths.nixos), so it must hold exactly what runs. Deploy by rebasing the
+# branch onto origin/main, fast-forwarding main, and switching from here.
+# Pinned into the Nix store by hwc.home.core.repoHooks, so a checkout of a
+# commit that predates this file cannot remove it before it runs.
 # A post-checkout hook cannot stop a checkout; its exit status becomes the
 # command's. So it re-attaches the branch it came from and fails loudly.
 # Bypass for deliberate inspection: HWC_ALLOW_DETACHED=1 git checkout <rev>
@@ -23,8 +26,9 @@ done
 previous=$(git rev-parse --symbolic-full-name '@{-1}' 2>/dev/null)
 echo >&2
 echo "post-checkout: the primary checkout must stay on a branch." >&2
-echo "Deploy unmerged work from its worktree instead:" >&2
-echo "  sudo nixos-rebuild switch --flake ~/.nixos-worktrees/<name>#hwc-<host>" >&2
+echo "Services read this checkout at runtime, so deploy from main here:" >&2
+echo "  git -C <worktree> rebase origin/main && git merge --ff-only <branch>" >&2
+echo "  sudo nixos-rebuild switch --flake .#hwc-<host>" >&2
 case "$previous" in
   refs/heads/*)
     if git checkout -q "${previous#refs/heads/}"; then

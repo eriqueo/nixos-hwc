@@ -17,12 +17,18 @@ core/
 │   ├── index.nix      #   git, ssh (options + wiring)
 │   └── parts/         #   aliases, ssh, zsh-init, prompt, fzf
 ├── development/       # hwc.home.core.development — language toolchains
-├── repo-hooks/        # hwc.home.core.repoHooks — pins core.hooksPath to a
-│                      #   repo-tracked hooks dir (.githooks) at activation
+├── repo-hooks/        # hwc.home.core.repoHooks — core.hooksPath -> a store dir:
+│                      #   dispatchers to the tree's .githooks + pinned hooks
 └── xdg-dirs.nix       # XDG user directory layout (000_inbox, 100_hwc, …)
 ```
 
 ## Changelog
+- 2026-09-25: `repo-hooks/` — `core.hooksPath` now points at a generated store
+  dir instead of the tree-relative `.githooks`. `dispatched` hooks forward to the
+  checked-out tree's copy; `pinned` hooks are store copies. A tree-relative path
+  let a checkout of a commit that predated `.githooks/post-checkout` delete the
+  guard before it ran, so ~/.nixos was detached again within a minute of the
+  guard landing. `profiles/base/home.nix` pins `post-checkout`.
 - 2026-09-25: `core/shell/` — removed `hwc.home.core.shell.mcp` and its
   `~/.mcp.json`. It duplicated the MCP server list, its `github` entry had no
   token, and its brain URL still named hwc-server after brain-mcp moved to

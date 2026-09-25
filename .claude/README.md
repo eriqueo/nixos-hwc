@@ -37,9 +37,10 @@ need no per-host approval.
 
 ## Git hooks
 
-`.githooks/` is the hooks directory on every host (`core.hooksPath`, pinned
-by `hwc.home.core.repoHooks`): `pre-commit` runs the charter checks,
-`post-commit` pushes, `post-checkout` keeps the primary checkout on a branch.
+`hwc.home.core.repoHooks` points `core.hooksPath` at a generated store dir on
+every host. It forwards `pre-commit` (charter checks) and `post-commit` (push)
+to `.githooks/` in the checked-out tree, and pins `post-checkout` (keeps the
+primary checkout on a branch) so a checkout cannot remove it.
 
 ## Files
 

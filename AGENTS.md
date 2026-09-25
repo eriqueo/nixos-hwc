@@ -13,7 +13,8 @@ triggered by the file's path rather than your read of the task.
 
 ## Build & gate
 - Commit BEFORE building. The tracked `.githooks/pre-commit` runs the nine
-  charter-law checks (`core.hooksPath` is pinned there by activation);
+  charter-law checks (`core.hooksPath` points at a store dir that
+  `hwc.home.core.repoHooks` generates at activation and that forwards to it);
   reproduce one with `nix build --no-link .#checks.x86_64-linux.charter-law<N>`.
   `nix flake check` runs them all — `--no-build` does NOT.
 - Two activation lanes; run `hostname` first and state which lane applies:
@@ -23,11 +24,13 @@ triggered by the file's path rather than your read of the task.
   Don't alternate lanes casually — each keeps its own HM generation and
   will trip "existing file in the way" on files the other placed.
 - A build without a switch changes nothing; never report "live" from a build.
-- Deploy unmerged work from its worktree:
-  `sudo nixos-rebuild switch --flake ~/.nixos-worktrees/<name>#hwc-<host>`.
-  Never check out a commit in this checkout to deploy it; the tracked
-  `.githooks/post-checkout` returns it to its branch and fails the checkout.
-  Merge to `main` right after a verified switch, so `main` holds what runs.
+- Deploy from `main` in this checkout: rebase the worktree branch onto
+  `origin/main`, `git merge --ff-only <branch>` here, then switch. Services
+  read files from this checkout at runtime (`paths.nixos`), so it must hold
+  exactly what runs, and `--ff-only` is what stops a deploy from dropping
+  commits that are already live. If a switch fails verification, fix forward or
+  `git revert` on `main`. Never check out a bare commit here: the pinned
+  `post-checkout` guard returns to the branch and fails the checkout.
 
 ## Rules no lint catches yet
 - Secrets: `group = "secrets"; mode = "0440"`.
