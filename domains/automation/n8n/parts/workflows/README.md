@@ -603,18 +603,6 @@ Event discovery, curation, Discord review and calendar actions now belong to
 `scout/apps/event-scout`. The former 11/13 exports are removed; restore from git
 history only for rollback, with Event Scout publishing disabled first.
 
-### 12-voice-log.json (work_voice_log)
-**Purpose:** Daily voice-log intake (accepts a transcript, validates it).
-
-**Trigger:** Webhook `POST /webhook/daily-log`
-
-Both lines are read off the tracked file (`name`, webhook `path`); the file was
-previously undocumented here. Everything else is left blank rather than guessed —
-fill it in from a real export, not from reading this stale JSON.
-
----
-
-
 ## Import Instructions
 
 1. Access n8n: `https://hwc-server.ocelot-wahoo.ts.net:2443`

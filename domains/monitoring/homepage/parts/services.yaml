@@ -74,10 +74,6 @@
         icon: mdi-finance
         href: https://market-dashboard.hwc.iheartwoodcraft.com
         description: Paper-trading dashboard
-    - Market Intelligence:
-        icon: mdi-chart-box
-        href: https://market-intelligence.hwc.iheartwoodcraft.com
-        description: Earnings signals
 
 - Home:
     - Frigate:

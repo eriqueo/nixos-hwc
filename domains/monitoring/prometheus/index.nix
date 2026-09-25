@@ -271,7 +271,6 @@ in
             # Public webhook ingress (Cloudflare proxy → tunnel → n8n) via CORS preflight
             (probeJob "probe-webhook-ingress" "http_options_2xx" "60s" [
               "https://api.iheartwoodcraft.com/webhook/calculator-lead"
-              "https://api.iheartwoodcraft.com/webhook/calculator-appointment"
             ])
             # hwc-crm public intake (Cloudflare proxy → tunnel → hwc-crm) via CORS
             # preflight: proves the whole ingress chain and touches no data, so

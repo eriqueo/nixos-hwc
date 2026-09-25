@@ -35,7 +35,6 @@ let
     { topic = "research-suggestions"; channels = [ "discord-research-scout" "smtp-office" ]; }
     { topic = "service";              channels = [ "discord-ops" ]; }
     { topic = "system";               channels = [ "discord-ops" ]; }
-    { topic = "voice-log";            channels = [ "discord-ops" ]; }
     { topic = "website";              channels = [ "discord-website" ]; }
   ];
 

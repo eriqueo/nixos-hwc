@@ -78,6 +78,7 @@ workspace/automation/
 
 ## Changelog
 
+- 2026-09-25: n8n — deleted three dormant, superseded workflows after exporting them to hwc-server `/var/lib/backups/service-split-wave2/n8n-retired/`: `work_report_data` (last run 2026-05-14; crm serves `/api/reports`), `work_calculator_appointment` (last run 2026-07-10; crm `/hooks/appointment`), `hwc:ops:voice-log` (last success 2026-03-31). Removed the repo export `parts/workflows/12-voice-log.json` and its README section.
 - 2026-09-25: Service split wave 1 — `nightly-builds` gains `notifyUrl` (was a `127.0.0.1:11600` literal) so hwc-work can post to hwc-notify's tailnet vhost. Refinery, nightly builds, sr/dx1 gauntlets and brain-sweep now run on hwc-work; hwc-server disables them in the cutover commit. readme-freshness stays on hwc-server (asserts a local hwc-notify). vault-sync runs on both hosts.
 - 2026-09-24: Publish and re-export the Frigate workflow with local timestamps, checked clip readiness, request deadlines and message IDs in execution history; exercise all send branches through a local capture sink.
 

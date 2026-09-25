@@ -24,7 +24,6 @@
     ../../domains/server/native/ai/brain-mcp/index.nix # Brain MCP Server (Deno)
     ../../domains/server/native/ai/brainvec/index.nix # brainvec semantic-index ingest (vault embeddings)
     ../../domains/server/native/ai/hermes/index.nix # Hermes Agent (Nous Research)
-    ../../domains/server/native/ai/market-intelligence/index.nix # Market Intelligence (earnings signals + dashboard)
     ../../domains/server/native/ai/dx2/index.nix # DX2 endpoint facts (URL, model, key) for research-scout + inbox-processor
     ../../domains/server/native/ai/llama-cpp/index.nix # llama.cpp inference (embed only on this host)
     ../../domains/server/native/ai/whisper/index.nix # whisper.cpp speech-to-text server (GPU)
@@ -756,14 +755,6 @@
     gateway.discord.allowedUsers = "1501391621521150075"; # Eric's Discord snowflake
     model.provider = "deepseek"; # native Hermes provider; base URL built in
     model.modelName = "deepseek-v4-pro";
-  };
-
-  # Market Intelligence — construction-sector earnings research. Static dashboard
-  # on :25445 + daily/weekly timers. Reuses the hermes DeepSeek key; FRED/FMP keys
-  # are agenix secrets (market-intelligence-{fred,fmp}-key). App code lives in
-  # /var/lib/hwc/market-intelligence (managed outside nix, like hermes-agent/scripts).
-  hwc.server.ai.marketIntelligence = {
-    enable = true;
   };
 
   # CouchDB for Obsidian LiveSync comes from the server role.

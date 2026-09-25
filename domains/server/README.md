@@ -21,7 +21,6 @@ domains/server/
 │       ├── hwc-control-bot/ # HWC Discord control bot (/next over the apps' control APIs)
 │       ├── lead-scout/    # Lead Scout MCP + HTTP, plus profile-scoped Discord review bots
 │       ├── llama-cpp/     # llama.cpp inference (embeddings only on hwc-server)
-│       ├── market-intelligence/  # Market-intelligence jobs
 │       ├── research-scout/       # Research Scout MCP + HTTP, plus the arXiv ingest timer
 │       └── whisper/       # whisper.cpp speech-to-text server (GPU, OpenAI-compatible)
 ├── services/
@@ -43,6 +42,7 @@ The media/arr/torrent stack lives entirely in `domains/media/`. **This domain no
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-09-25: Retired `native/ai/market-intelligence` (Eric's decision during the service-split audit): module, its daily/weekly timers and static dashboard vhost removed; its out-of-git app code and SQLite were archived to hwc-server `/var/lib/backups/service-split-wave2/market-intelligence.tar.zst` before the state dir was deleted. Hermes' separate market-dashboard (paper trading) is unaffected.
 - 2026-09-25: Service split wave 2 — lead/home/event/research scouts, hwc-control-bot and Radicale (+ mirrors) are machine-imported and configured on hwc-work; hwc-server no longer imports them.
 - 2026-09-25: `native/ai/brain-mcp` — its port route no longer carries `owner`; ownership is the `brain-mcp` entry in `hwc.networking.shared.routeOwners`.
 - 2026-09-25: Service split wave 1 — `native/ai/brain-mcp` tags its port route `owner = "work"`; `native/ai/llama-cpp` only asserts an NVIDIA GPU when a service offloads layers, so hwc-work runs `embed` on CPU (`gpuLayers = 0`). brain-mcp, brainvec and llama-embed are enabled on hwc-work; hwc-server keeps llama-embed for the mail classifier until wave 2.
