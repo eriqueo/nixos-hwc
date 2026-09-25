@@ -1324,5 +1324,59 @@
   # Home Manager (CLI only, no GUI) — ./home.nix is wired by the flake glue
   # for both nixos-rebuild and standalone hms.
 
+  # Temporary 26.05 rollout guard. Remove this service and timer after the new
+  # generation survives reboot and fresh SSH, PostgreSQL, Grafana rendering,
+  # Jellyfin, and the production container checks have passed.
+  # HWC-EXCEPTION(Law 4): restoring the system profile, Grafana DB and boot
+  # entry requires root; this service exists only for the upgrade window.
+  # Justification: a failed remote switch must recover without SSH access.
+  # Plan: remove after the post-reboot checks above pass.
+  # Revocable: yes
+  systemd.services.hwc-2605-rollback = {
+    description = "Restore pre-upgrade NixOS generation if 26.05 is unconfirmed";
+    unitConfig.ConditionPathExists = "!/var/lib/hwc-2605/confirmed";
+    serviceConfig = {
+      Type = "oneshot";
+      User = lib.mkForce "root";
+      Group = "root";
+    };
+    path = [ pkgs.coreutils pkgs.systemd pkgs.util-linux ];
+    script = ''
+      set -eu
+      old=/nix/store/1pqs2m4s6g6yc01w13v588wjl12g5bha-nixos-system-hwc-server-25.11.20260630.b6018f8
+      logger -t hwc-2605-rollback 'Unconfirmed upgrade; restoring prior system generation'
+      if [ "$(readlink -f /run/current-system)" != "$old" ]; then
+        systemctl stop grafana.service
+        snapshot=/mnt/backup/hwc-upgrade/grafana-pre-2605-2026-09-24.db
+        if ! test -r "$snapshot"; then
+          snapshot=/var/lib/backups/grafana-pre-2605-2026-09-24.db
+        fi
+        if test -r "$snapshot"; then
+          db=/var/lib/hwc/grafana/data/grafana.db
+          for suffix in -wal -shm; do
+            if test -e "$db$suffix"; then
+              mv "$db$suffix" "/var/lib/backups/grafana-26.05-failed.db$suffix"
+            fi
+          done
+          cp "$db" /var/lib/backups/grafana-26.05-failed.db
+          install -o eric -g users -m 0640 "$snapshot" "$db"
+        else
+          logger -p user.err -t hwc-2605-rollback 'Grafana snapshot unavailable; restoring OS only'
+        fi
+      fi
+      "$old/sw/bin/nix-env" --profile /nix/var/nix/profiles/system --set "$old"
+      "$old/bin/switch-to-configuration" boot
+      systemctl reboot
+    '';
+  };
+
+  systemd.timers.hwc-2605-rollback = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnActiveSec = "30min";
+      AccuracySec = "1s";
+    };
+  };
+
   system.stateVersion = "24.05";
 }
