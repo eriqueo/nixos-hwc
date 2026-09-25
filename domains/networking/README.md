@@ -22,27 +22,24 @@ Provides network infrastructure that other domains depend on:
 networking/
 ├── index.nix           # Domain aggregator
 ├── README.md           # This file
-├── hosts.nix           # Host registry: tailnetSuffix + servers + derived fqdn/url helper
-├── reverseProxy.nix    # Caddy NixOS service + route rendering
-├── routes-lib.nix      # Route accumulator option + mkRoute helper
+├── hosts/              # Host registry: tailnetSuffix + servers + derived fqdn/url helper
+│   └── index.nix
+├── reverseProxy/       # Caddy NixOS service, DNS plugin + route rendering
+│   └── index.nix
 ├── routes.nix          # Centralized service route definitions
 ├── podman-network.nix  # media-network systemd service
 ├── cloudflared/        # Cloudflare Tunnel (public webhook ingress)
 │   └── index.nix
 ├── gluetun/            # VPN container (WireGuard via ProtonVPN)
 │   ├── index.nix
-│   ├── options.nix
 │   ├── sys.nix
-│   └── parts/
+│   └── parts/           # Config, packages, scripts, helpers
 ├── vpn/                # Host ProtonVPN via wg-quick (hwc.networking.vpn.protonvpn; laptop, on demand)
 │   └── index.nix
-    ├── index.nix
-    ├── options.nix
-    ├── sys.nix
-    └── README.md
 ```
 
 ## Changelog
+- 2026-09-24: `reverseProxy/` — refresh the deSEC-enabled Caddy fixed-output source hash for the 26.05 nixpkgs input. Caddy remains 2.11.4, but the vendored source hash changed; the new value came from the exact server Caddy build's reported content hash.
 - 2026-09-23: `vpn/` — new `protonvpn.portForwarding` (`enable`, `gateway` default `10.2.0.1`). `protonvpn-natpmp.service` is bound to `wg-quick-protonvpn`: it renews Proton's NAT-PMP mapping every 45 s with `natpmpc` (mappings last 60 s) and writes the forwarded port to `/run/protonvpn-natpmp/port`. The firewall opens 1024–65535 on the `protonvpn` interface only, because the port is random per session; Proton forwards just the mapped port, so nothing else from the internet reaches that interface. hwc-laptop enables it against US-UT#108 (P2P) with a NAT-PMP key.
 - 2026-09-22: `vpn/` — new `protonvpn.bypassTailscale` (default `services.tailscale.enable`). With the tunnel up, the tailnet was unreachable: wg-quick puts `not fwmark 0xca6c lookup 51820` at priority 5209, ahead of Tailscale's `lookup 52` at 5270, so `ip route get 100.77.195.118` gave `dev protonvpn`. The option's PostUp adds rules at 5200/5201. They send tailnet destinations (100.64.0.0/10, fd7a:115c:a1e0::/48) to table 52, and tailscaled's fwmarked underlay packets to `main`. PostDown removes them. Everything else still leaves through Proton. The fix was tested by hand on hwc-laptop before it was committed: qBittorrent's vhost answered while egress stayed on the Proton IP.
 - 2026-09-22: `vpn/` — new `protonvpn.privateKeySecret` option (default `vpn-wireguard-private-key`, so existing behaviour is unchanged). hwc-laptop now enables the tunnel with its own key, `vpn-wireguard-private-key-laptop`, against Proton US-UT#100, with `autostart = false`: the `vpnon`/`vpnoff`/`vpnstatus` aliases start and stop `wg-quick-protonvpn`. The default key belongs to hwc-server's gluetun tunnel, and Proton allows one active session per key, so sharing it would knock the download stack offline. Both addresses from the Proton config are set (10.2.0.2/32 and 2a07:b944::2:2/128), so IPv6 also leaves through the tunnel rather than being blackholed by the `::/0` route.
