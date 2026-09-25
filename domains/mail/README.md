@@ -112,6 +112,11 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-09-25: `calendar/parts/service.nix` — vdirsyncer runs a guarded first-run
+  `discover` (only while `status/` is missing or empty) before `sync`. A new host
+  (hwc-work, service split wave 2) otherwise fails every run with "Please run
+  `vdirsyncer discover`"; later runs never re-discover, so a collection deleted on
+  one side is not re-created.
 - 2026-09-25: Service split wave 2 — the Proton Bridge session moved from
   hwc-server to hwc-work. `bridge/index.nix` now honours `hwc.mail.bridge.enable`
   (it used to key only on "a proton-bridge account exists"; unit presence already

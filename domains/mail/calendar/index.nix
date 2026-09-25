@@ -70,7 +70,7 @@ let
     defaultCalendar = primaryCalendarDisplayName;
     colors = (config.hwc.home.theme or {}).colors or {};
   };
-  service = import ./parts/service.nix { inherit lib pkgs; };
+  service = import ./parts/service.nix { inherit lib pkgs dataDir; };
   parser = import ./parts/parser.nix { inherit lib pkgs cfg; };
   icsWatcher = import ./parts/ics-watcher.nix { inherit lib pkgs; };
 
