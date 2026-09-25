@@ -21,7 +21,20 @@
   # The server role supplies Podman, CLI tools and server path defaults.
   # CouchDB and the Proton bridge stay on hwc-server until their own waves.
   hwc.data.couchdb.enable = false;
+  # The cert exporter requires a system bridge unit no host runs, and nothing
+  # reads its pem; the mail role's user-unit bridge serves plaintext loopback.
   hwc.mail.protonmailBridgeCert.enable = false;
+
+  # Service split wave 2: the Proton Bridge session (mail role, HM user unit)
+  # runs here. Expose its loopback-only SMTP/IMAP on the tailnet address for
+  # hwc-server's consumers (crm, hwc-notify, paperless receipts, its mbsync),
+  # which reach it through that host's own 127.0.0.1 relay.
+  # TEMPORARY: removal = no Proton Bridge consumer left on hwc-server.
+  hwc.mail.bridge.relay = {
+    enable = true;
+    listenAddress = config.hwc.networking.hosts.ips.work;
+    targetAddress = "127.0.0.1";
+  };
 
   # Syncthing — the work folders, peered with hwc-server only (the server is
   # the hub; the laptop reaches these through it). 700_datax carries the

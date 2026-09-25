@@ -13,6 +13,11 @@
   # 2026-07-09. Leaving webhook.url unset makes send_webhook a no-op.
   hwc.mail.health.notify.url = "http://127.0.0.1:11600";
 
+  # Service split wave 2: the Proton Bridge session runs on hwc-work. This
+  # host's mail consumers still dial 127.0.0.1:1025/1143, which
+  # hwc.mail.bridge.relay (config.nix) forwards to hwc-work over the tailnet.
+  hwc.mail.bridge.enable = false;
+
   # Proton Bridge rejects APPEND into Trash, so this daily lane is a bounded
   # pull-only mirror. Core sync remains independent on its ten-minute timer.
   hwc.mail.mbsync.trashTimerEnable = true;

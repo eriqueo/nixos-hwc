@@ -34,7 +34,7 @@ mail/
 │   └── package.nix            # afew package derivation
 ├── bridge/
 │   ├── index.nix              # Proton Bridge HM user service
-│   ├── sys.nix                # Proton Bridge NixOS system service (+ cert export)
+│   ├── sys.nix                # Proton Bridge NixOS system service (+ cert export) + `relay` (socat SMTP/IMAP between hosts)
 │   └── parts/
 │       ├── files.nix          # keychain.json + setup script
 │       ├── runtime.nix        # Env vars, PATH handling
@@ -112,6 +112,16 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-09-25: Service split wave 2 — the Proton Bridge session moved from
+  hwc-server to hwc-work. `bridge/index.nix` now honours `hwc.mail.bridge.enable`
+  (it used to key only on "a proton-bridge account exists"; unit presence already
+  equalled `enable` on every host, so nothing else changed) and the mail role sets
+  it with `mkDefault`. New `hwc.mail.bridge.relay` (`bridge/sys.nix`): one socat per
+  port, `listenAddress → targetAddress`; work exposes its bridge on its tailnet IP,
+  hwc-server relays its own `127.0.0.1:1025/1143` there so its consumers are
+  unchanged. `health/`: the bridge-unit check and vault check run only where the
+  bridge is local, and the port checks now require the IMAP `* OK` / SMTP `220`
+  greeting (a relay port accepts a bare connect even when the bridge is down).
 - 2026-09-24: Calendar and tasks sync only against Radicale. Deleted the iCloud
   code paths (calendar `accounts`, tasks `icloud.enable`/`account`/`collections`,
   both `radicale.enable` switches, the apple-app-pw handshake); the mail role no

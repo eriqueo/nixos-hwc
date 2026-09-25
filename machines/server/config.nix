@@ -879,12 +879,7 @@
     X11Forwarding = lib.mkForce false; # Headless server doesn't need X11 forwarding
   };
 
-  # Session/sudo/permitCertUid come from the server role. This machine only
-  # enables lingering so rootless podman containers run when not logged in.
-  hwc.system.core.session = {
-    linger.enable = true;
-    linger.users = ["eric"];
-  };
+  # Session/sudo/lingering/permitCertUid come from the server role.
   # X11 services disabled for headless server
   # services.xserver.enable = true;
 
@@ -943,6 +938,18 @@
   # tailnet (n8n, gateway, datax-monitor directly; crm, lead-scout, umami via
   # their Caddy vhosts here). Phase 4.6 history (api.iheartwoodcraft.com path
   # routing, .me retirement twins, hwc-mcp-gateway origins) moved with it.
+
+  # Proton Bridge — the session runs on hwc-work since wave 2 (home.nix turns
+  # this host's bridge off). Consumers here (crm/leads SMTP, hwc-notify email,
+  # msmtp for briefing/umami report/gateway, paperless receipts IMAP via its
+  # 10.89.0.1 socat, this host's mbsync) keep dialing 127.0.0.1:1025/1143;
+  # this relay forwards those to work's tailnet listener.
+  # TEMPORARY: removal = no Proton Bridge consumer left on this host.
+  hwc.mail.bridge.relay = {
+    enable = true;
+    listenAddress = "127.0.0.1";
+    targetAddress = config.hwc.networking.hosts.ips.work;
+  };
 
   # n8n webhook URL still points at the .me hostname because that's where
   # callers expect to reach it. Flip to n8n.api.iheartwoodcraft.com after

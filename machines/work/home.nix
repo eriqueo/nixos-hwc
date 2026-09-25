@@ -2,6 +2,12 @@
 { ... }: {
   hwc.home.theme.graphical = false;
 
+  # Mail role (service split wave 2): this host runs the Proton Bridge session
+  # that used to live on hwc-server. hwc-notify is still on hwc-server, so
+  # mail-health posts to its tailnet vhost. The server's trash mirror and
+  # extra Radicale collections join here with the mail readers in step 4.
+  hwc.mail.health.notify.url = "https://hwc-notify.hwc.iheartwoodcraft.com:29443";
+
   # `brain <cmd>` — vault janitor/fixer CLI. Needs ~/600_apps/brain and the
   # vault clone, both present here since service split wave 1.
   hwc.home.apps.brain.enable = true;

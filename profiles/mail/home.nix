@@ -14,7 +14,7 @@
 
   hwc.mail = {
     enable = true;
-    bridge.enable = true;
+    bridge.enable = lib.mkDefault true;
     aerc.enable = true;
 
     # Calendar + tasks sync against the self-hosted Radicale server only.

@@ -37,6 +37,7 @@ let
     FRESHNESS_HOURS="${toString cfg.freshnessHours}"
     BRIDGE_IMAP_PORT="${toString cfg.bridge.imapPort}"
     BRIDGE_SMTP_PORT="${toString cfg.bridge.smtpPort}"
+    BRIDGE_LOCAL="${if (config.hwc.mail.bridge.enable or false) then "true" else "false"}"
     ALERT_COOLDOWN_MIN="${toString cfg.alertCooldownMin}"
     AUTO_REMEDIATE="${if cfg.autoRemediate then "true" else "false"}"
     SYNC_STATUS=${lib.escapeShellArg (config.hwc.paths.user.mailSyncStatus or "${config.home.homeDirectory}/.local/state/mail-sync/status.json")}
@@ -191,8 +192,11 @@ let
 
     # ─── Check 3: Proton Bridge ─────────────────────────────────
     check_bridge() {
-      # Service running?
-      if ! ${pkgs.systemd}/bin/systemctl --user is-active protonmail-bridge.service >/dev/null 2>&1; then
+      # Service running? Only where the bridge runs locally; a host whose
+      # hwc.mail.bridge is off reaches another host's bridge through
+      # hwc.mail.bridge.relay, and the greeting checks below cover that path.
+      if [[ "$BRIDGE_LOCAL" == "true" ]] \
+         && ! ${pkgs.systemd}/bin/systemctl --user is-active protonmail-bridge.service >/dev/null 2>&1; then
         if [[ "$AUTO_REMEDIATE" == "true" ]]; then
           ${pkgs.systemd}/bin/systemctl --user restart protonmail-bridge.service 2>/dev/null || true
           sleep 5
@@ -209,21 +213,27 @@ let
         fi
       fi
 
-      # IMAP port accepting connections?
-      if ! timeout 5 ${pkgs.bash}/bin/bash -c \
-          "echo QUIT | ${pkgs.netcat}/bin/nc -w 3 127.0.0.1 $BRIDGE_IMAP_PORT" >/dev/null 2>&1; then
-        fail "Bridge IMAP port $BRIDGE_IMAP_PORT not accepting connections"
+      # Greetings, not bare connects: a relay port accepts a TCP connection
+      # even when the bridge behind it is down, so only the protocol banner
+      # (IMAP "* OK", SMTP "220") proves the bridge answered.
+      local imap_greet smtp_greet
+      imap_greet=$(timeout 5 ${pkgs.bash}/bin/bash -c \
+          "echo QUIT | ${pkgs.netcat}/bin/nc -w 3 127.0.0.1 $BRIDGE_IMAP_PORT" 2>/dev/null || true)
+      if [[ "$imap_greet" != "* OK"* ]]; then
+        fail "Bridge IMAP port $BRIDGE_IMAP_PORT did not greet"
       fi
 
       # SMTP port (warning only — less critical than IMAP)
-      if ! timeout 5 ${pkgs.bash}/bin/bash -c \
-          "echo QUIT | ${pkgs.netcat}/bin/nc -w 3 127.0.0.1 $BRIDGE_SMTP_PORT" >/dev/null 2>&1; then
-        warn "Bridge SMTP port $BRIDGE_SMTP_PORT not accepting connections"
+      smtp_greet=$(timeout 5 ${pkgs.bash}/bin/bash -c \
+          "echo QUIT | ${pkgs.netcat}/bin/nc -w 3 127.0.0.1 $BRIDGE_SMTP_PORT" 2>/dev/null || true)
+      if [[ "$smtp_greet" != "220"* ]]; then
+        warn "Bridge SMTP port $BRIDGE_SMTP_PORT did not greet"
       fi
 
       # Degraded vault detection (insecure mode = keychain broken)
       local vault_dir="$HOME/.config/protonmail/bridge-v3"
-      if [[ -f "$vault_dir/insecure/vault.enc" ]] && [[ ! -f "$vault_dir/vault.enc" ]]; then
+      if [[ "$BRIDGE_LOCAL" == "true" ]] \
+         && [[ -f "$vault_dir/insecure/vault.enc" ]] && [[ ! -f "$vault_dir/vault.enc" ]]; then
         warn "Bridge running with insecure vault — keychain may be broken"
       fi
     }

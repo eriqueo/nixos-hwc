@@ -3,9 +3,12 @@ let
   mail = config.hwc.mail or {};
   vals = lib.attrValues (mail.accounts or {});
   needs = lib.any (a: a.type == "proton-bridge") vals;
-  enabled = (mail.enable or false) && needs;
-
   br = mail.bridge or {};
+  # bridge.enable is honoured so one host can keep the mail role while the
+  # Proton session runs elsewhere (hwc-server relays to hwc-work since the
+  # service split).
+  enabled = (mail.enable or false) && (br.enable or false) && needs;
+
   runtime = import ./parts/runtime.nix { inherit lib pkgs br; };
   files = import ./parts/files.nix { inherit lib br; };
   service = import ./parts/service.nix { inherit lib pkgs br runtime; };

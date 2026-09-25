@@ -317,7 +317,7 @@
       };
       work = {
         channel   = "stable";
-        roles     = [ "base" "server" ];
+        roles     = [ "base" "server" "mail" ];
         nixosPkgs = pkgs-stable;
         hmPkgs    = pkgs-stable;
       };

@@ -57,9 +57,13 @@
   # artifact for this host and a droplet). Native mode remains selectable.
   hwc.automation.refinery.mode = lib.mkDefault "container";
 
-  # Passwordless service management for eric (waybar/agent tooling)
+  # Passwordless service management for eric (waybar/agent tooling).
+  # Lingering keeps eric's user units (rootless podman, the Proton Bridge,
+  # T3 serve) running on a serving host with nobody logged in.
   hwc.system.core.session = {
     enable = true;
+    linger.enable = lib.mkDefault true;
+    linger.users = [ "eric" ];
     sudo.enable = true;
     sudo.wheelNeedsPassword = lib.mkDefault false;
     sudo.extraRules = [

@@ -1,6 +1,7 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.mail.bridge.system;
+  relay = config.hwc.mail.bridge.relay;
   bridgePkg = pkgs.protonmail-bridge;
 
   # Get username from system configuration
@@ -14,10 +15,67 @@ in
     enable = lib.mkEnableOption "Proton Mail Bridge system service";
   };
 
+  # Plain TCP relay for the bridge's SMTP/IMAP ports between hosts. The
+  # bridge (one Proton session) runs on one host and binds 127.0.0.1 only;
+  # the host that runs it exposes the ports on its tailnet address
+  # (listenAddress = tailnet IP, targetAddress = 127.0.0.1) and a host whose
+  # consumers still expect a loopback bridge relays 127.0.0.1 to it
+  # (listenAddress = 127.0.0.1, targetAddress = the bridge host). Traffic is
+  # the bridge's plaintext loopback protocol, carried inside WireGuard.
+  options.hwc.mail.bridge.relay = {
+    enable = lib.mkEnableOption "TCP relay of the Proton Bridge SMTP/IMAP ports";
+    listenAddress = lib.mkOption {
+      type = lib.types.str;
+      example = "127.0.0.1";
+      description = "Address the relay binds on this host.";
+    };
+    targetAddress = lib.mkOption {
+      type = lib.types.str;
+      example = "100.77.38.32";
+      description = "Address the bridge answers on (127.0.0.1 on the bridge host).";
+    };
+    ports = lib.mkOption {
+      type = lib.types.listOf lib.types.port;
+      default = [ 1025 1143 ];
+      description = "Bridge ports to relay (SMTP, IMAP).";
+    };
+  };
+
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf cfg.enable {
+  config = lib.mkMerge [
+  (lib.mkIf relay.enable {
+    # One socat per port. Restarts forever: at boot the tailnet address may
+    # not exist yet, and on the consuming host 127.0.0.1:<port> is only free
+    # once a local bridge is gone.
+    systemd.services = lib.listToAttrs (map (port: {
+      name = "proton-bridge-relay-${toString port}";
+      value = {
+        description = "Proton Bridge relay ${relay.listenAddress}:${toString port} -> ${relay.targetAddress}:${toString port}";
+        after = [ "network-online.target" "tailscaled.service" ];
+        wants = [ "network-online.target" ];
+        wantedBy = [ "multi-user.target" ];
+        startLimitIntervalSec = 0;
+        serviceConfig = {
+          ExecStart = "${pkgs.socat}/bin/socat TCP-LISTEN:${toString port},bind=${relay.listenAddress},fork,reuseaddr TCP:${relay.targetAddress}:${toString port}";
+          Restart = "always";
+          RestartSec = 5;
+          DynamicUser = true;
+          NoNewPrivileges = true;
+        };
+      };
+    }) relay.ports);
+
+    assertions = [
+      {
+        assertion = relay.listenAddress != relay.targetAddress;
+        message = "hwc.mail.bridge.relay: listenAddress and targetAddress must differ (a relay to itself loops).";
+      }
+    ];
+  })
+
+  (lib.mkIf cfg.enable {
     users.groups.protonbridge = {};
     users.users.protonbridge = {
       isSystemUser = true;
@@ -104,6 +162,7 @@ in
       };
     };
     assertions = [];
-  };
+  })
+  ];
 
 }
