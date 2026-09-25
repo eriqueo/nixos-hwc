@@ -28,9 +28,8 @@ in
       (lib.optional (cfg.storage.dataDir != null) "d ${cfg.storage.dataDir} 0750 eric users -")
 
       (lib.optional (cfg.storage.mediaDir != null) "d ${cfg.storage.mediaDir} 0750 eric users -")
-      (lib.optional (cfg.storage.mediaDir != null) "d ${cfg.storage.mediaDir}/originals 0750 eric users -")
-      (lib.optional (cfg.storage.mediaDir != null) "d ${cfg.storage.mediaDir}/archive 0750 eric users -")
-      (lib.optional (cfg.storage.mediaDir != null) "d ${cfg.storage.mediaDir}/thumbnails 0750 eric users -")
+      # Paperless creates media/documents/{originals,archive,thumbnails}
+      # itself; top-level siblings were pre-created here and never used.
 
       (lib.optional (cfg.storage.consumeDir != null) "d ${cfg.storage.consumeDir} 0750 eric users -")
       (lib.optional (cfg.storage.exportDir != null) "d ${cfg.storage.exportDir} 0750 eric users -")
