@@ -1327,8 +1327,8 @@
   # Temporary 26.05 rollout guard. Remove this service and timer after the new
   # generation survives reboot and fresh SSH, PostgreSQL, Grafana rendering,
   # Jellyfin, and the production container checks have passed.
-  # HWC-EXCEPTION(Law 4): restoring the system profile, Grafana DB and boot
-  # entry requires root; this service exists only for the upgrade window.
+  # HWC-EXCEPTION(Law 4): restoring the system profile, Grafana DB, Syncthing
+  # config and boot entry requires root; this exists only for the upgrade window.
   # Justification: a failed remote switch must recover without SSH access.
   # Plan: remove after the post-reboot checks above pass.
   # Revocable: yes
@@ -1363,6 +1363,22 @@
         else
           logger -p user.err -t hwc-2605-rollback 'Grafana snapshot unavailable; restoring OS only'
         fi
+      fi
+      # Syncthing 26.05 upgrades config.xml from v51 to v52. The 25.11 binary
+      # cannot read v52, even if the OS profile is already back on 25.11.
+      systemctl stop syncthing.service || true
+      syncthing_snapshot=/mnt/backup/hwc-upgrade/syncthing-pre-2605-2026-09-25.xml
+      if ! test -r "$syncthing_snapshot"; then
+        syncthing_snapshot=/var/lib/backups/syncthing-pre-2605-2026-09-25.xml
+      fi
+      if test -r "$syncthing_snapshot"; then
+        syncthing_config=/home/eric/.config/syncthing/config.xml
+        if test -e "$syncthing_config"; then
+          cp "$syncthing_config" /var/lib/backups/syncthing-26.05-failed.xml
+        fi
+        install -o eric -g syncthing -m 0600 "$syncthing_snapshot" "$syncthing_config"
+      else
+        logger -p user.err -t hwc-2605-rollback 'Syncthing snapshot unavailable; restoring OS only'
       fi
       "$old/sw/bin/nix-env" --profile /nix/var/nix/profiles/system --set "$old"
       "$old/bin/switch-to-configuration" boot
