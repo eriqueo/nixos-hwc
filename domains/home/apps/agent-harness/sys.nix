@@ -149,14 +149,7 @@ in
 
     systemd.tmpfiles.rules =
       lib.optional cfg.userMcp.enable "L+ ${config.hwc.paths.user.home}/.mcp.json - - - - ${userMcpJson}"
-      ++ lib.optionals cfg.projectMcp.enable [
-        "L+ ${cfg.projectMcp.repo}/.mcp.json - - - - ${projectMcpJson}"
-        # Temporary: the hand-kept per-host copies the generated file replaces
-        # (2026-09-25). Remove these two lines once no fleet host has them:
-        #   ssh <host> 'ls ~/.nixos/.mcp.laptop.json ~/.nixos/.mcp.server.json'
-        "r ${cfg.projectMcp.repo}/.mcp.laptop.json"
-        "r ${cfg.projectMcp.repo}/.mcp.server.json"
-      ];
+      ++ lib.optional cfg.projectMcp.enable "L+ ${cfg.projectMcp.repo}/.mcp.json - - - - ${projectMcpJson}";
 
     assertions = [
       {

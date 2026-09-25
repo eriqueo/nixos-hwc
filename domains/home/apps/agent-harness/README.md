@@ -47,6 +47,10 @@ authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
+- 2026-09-25: `.mcp.laptop.json`/`.mcp.server.json` were tracked (committed in
+  2025, gitignored later), so the tmpfiles `r` rules that deleted them left
+  every checkout dirty. They are now removed from the repo and the rules are
+  gone. Their tracked contents were placeholders, never live keys.
 - 2026-09-25: `state-validate.sh` accepts `authority`/`source`/`standing` as
   direct children of `metadata:`. Claude Code rewrites each newly written memory
   that way, so every new memory failed the store check and blocked sync (twice
