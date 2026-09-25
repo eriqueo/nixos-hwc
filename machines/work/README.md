@@ -115,15 +115,17 @@ it for the first build:
 
 ```sh
 age_package=$(nix --extra-experimental-features 'nix-command flakes' build nixpkgs#age --no-link --print-out-paths)
-sudo install -d -m 0700 /run/agenix
-sudo "$age_package/bin/age" -d -i /etc/age/keys.txt /home/eric/.nixos/domains/secrets/parts/services/github-flake-token.age | sudo tee /run/agenix/github-flake-token >/dev/null
-sudo chmod 0400 /run/agenix/github-flake-token
-sudo test -s /run/agenix/github-flake-token
+sudo install -d -m 0700 /run/hwc-work-bootstrap
+sudo "$age_package/bin/age" -d -i /etc/age/keys.txt /home/eric/.nixos/domains/secrets/parts/services/github-flake-token.age | sudo tee /run/hwc-work-bootstrap/github-flake-token >/dev/null
+sudo chmod 0400 /run/hwc-work-bootstrap/github-flake-token
+sudo test -s /run/hwc-work-bootstrap/github-flake-token
 ```
 
 Pass a temporary `NIX_CONFIG` include to the first rebuild commands below.
 The first declarative switch installs the base profile's permanent include,
-and agenix then owns the `/run/agenix` secret. Do not paste the token into a
+and agenix then owns the `/run/agenix` secret. Keep the temporary file outside
+`/run/agenix`: activation needs to create that path as a symlink. Remove the
+temporary token after successful activation. Do not paste the token into a
 shell command, Git, or the Nix store.
 
 ## Build, switch and check
@@ -134,8 +136,8 @@ Then, on `hwc-work`:
 
 ```sh
 cd /home/eric/.nixos
-sudo env NIX_CONFIG='!include /run/agenix/github-flake-token' nixos-rebuild build --flake .#hwc-work
-sudo env NIX_CONFIG='!include /run/agenix/github-flake-token' nixos-rebuild switch --flake .#hwc-work
+sudo env NIX_CONFIG='!include /run/hwc-work-bootstrap/github-flake-token' nixos-rebuild build --flake .#hwc-work
+sudo env NIX_CONFIG='!include /run/hwc-work-bootstrap/github-flake-token' nixos-rebuild switch --flake .#hwc-work
 hostname
 systemctl --failed
 sudo test -s /run/agenix/user-initial-password

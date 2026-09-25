@@ -20,13 +20,14 @@ let
   # ── machine host keys (age public keys matching /etc/age/keys.txt on each host) ──
   laptop = readKey ./machines/laptop/AGE_PUBLIC_KEY.txt;
   server = readKey ./machines/server/AGE_PUBLIC_KEY.txt;
+  work   = readKey ./machines/work/AGE_PUBLIC_KEY.txt;
   xps    = readKey ./machines/xps/AGE_PUBLIC_KEY.txt;
 
   # ── user keys ──
   eric = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPpGuiR4JKb0EyK8z+QmWo7qayRC01IHqUYspUbxgVgB eriqueo@homeserver";
 
   # ── recipient groups ──
-  allHosts = [ server xps laptop ];
+  allHosts = [ server xps laptop work ];
   allUsers = [ eric ];
   everyone = allHosts ++ allUsers;
 

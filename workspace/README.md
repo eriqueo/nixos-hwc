@@ -26,7 +26,7 @@ workspace/
 ├── plans/           # Dated architecture proposals (CHARTER §6) + audit reports
 ├── projects/        # Standalone app code parked here — Phase-2 eviction candidates
 │                    #   (each wants its own repo; see 2026-07-05 audit)
-├── system/          # secret-manager.sh (the `secret` alias), secrets-parity,
+├── system/          # secret-manager.sh (`secret`; recipients from secrets.nix), secrets-parity,
 │                    #   couchdb/zfs utilities, diagnostics/, setup/
 ├── tools/           # readme-freshness.sh (Law-12 drift detector), web-speed.sh
 └── utilities/       # lints/ (charter lints incl. permission-lint.sh — CHARTER §3.1),
@@ -72,12 +72,11 @@ that a person walking every approach gets detected or notified.
 
 ## Changelog
 
-<<<<<<< HEAD
+- 2026-09-24: `secret-manager.sh` reads recipient rules from `secrets.nix`, so host enrollment also applies to interactive secret creation and edits. It fails before encryption if rules cannot be read or disagree.
 - 2026-09-24: Repaired `monitoring/frigate-health.sh`: use the live API on port
   5000, omit raw logs and process arguments, return nonzero on collection/health
   failure, and emit JSON containing bounded recording/event totals and camera
   availability samples. No cron job, service restart, notification, or data write.
-=======
 - 2026-09-23: `add-home-app.sh` v3.1 — no worktree diversion. Runs on `main`
   used to land in `~/.nixos-worktrees/<app>` on an `add-app/<app>` branch that
   nothing merged or activated (eden sat there uninstalled). The script now
@@ -85,7 +84,6 @@ that a person walking every approach gets detected or notified.
   way `hms` does — only when the module is committed, evaluates, and targets
   this host. `--no-switch` opts out; exit 6 = activation failed. Suite: 74
   assertions.
->>>>>>> d7705b1f (fix(workspace): add-app writes in place and activates HM)
 - 2026-09-22: Completed the `add-home-app.sh` v3.0 repair after the recovered
   nightly branch exposed three uncovered seams. Interactive `s` now re-enters
   search under `set -e`; machine enablement preserves both grouped and direct

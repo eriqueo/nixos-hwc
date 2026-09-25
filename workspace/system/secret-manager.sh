@@ -37,21 +37,23 @@ log_error() { echo -e "${RED}❌${NC} $*" >&2; }
 log_header() { echo -e "\n${BOLD}${BLUE}$*${NC}"; }
 log_step() { echo -e "\n${BOLD}$*${NC}"; }
 
-# Build the agenix recipient set ("everyone"): every host's age pubkey + eric's
-# user key, mirroring `everyone` in secrets.nix. TUI-created secrets are encrypted
-# to all of them so every host can decrypt — consistent with the generated layer
-# (a single-host `age -r` blob could not be decrypted off the host that made it).
+# Read the shared recipient set from the authoritative agenix rules. Reject
+# differing sets: this tool's encrypt-to-everyone operation cannot represent
+# per-secret recipient restrictions without explicitly choosing a rule.
 get_recipients() {
-  cat "${NIXOS_DIR}/machines/server/AGE_PUBLIC_KEY.txt" \
-      "${NIXOS_DIR}/machines/laptop/AGE_PUBLIC_KEY.txt" \
-      "${NIXOS_DIR}/machines/xps/AGE_PUBLIC_KEY.txt"
-  # eric's user key — parsed from secrets.nix so there is one source of truth
-  grep -oE 'ssh-ed25519 [A-Za-z0-9+/]+ eriqueo@homeserver' "${NIXOS_DIR}/secrets.nix" | head -1
+  nix eval --json --file "${NIXOS_DIR}/secrets.nix" --apply '
+    rules: let
+      sets = map (rule: rule.publicKeys) (builtins.attrValues rules);
+      recipients = builtins.head sets;
+    in assert builtins.all (keys: keys == recipients) sets; recipients
+  ' | jq -er '.[]'
 }
 
 # Encrypt stdin to all recipients, writing to the file named by $1.
 encrypt_to_everyone() {
-  age -R <(get_recipients) -o "$1"
+  local recipients
+  recipients=$(get_recipients) || return 1
+  age -R <(printf '%s\n' "$recipients") -o "$1"
 }
 
 validate_secret_name() {

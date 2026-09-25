@@ -32,6 +32,10 @@ domains/secrets/
     └── index.nix
 ```
 
+Host recipients are defined in the root `secrets.nix`, including the work host's
+public identity in `machines/work/AGE_PUBLIC_KEY.txt`. The `secret` tool reads
+these same rules instead of maintaining another host list.
+
 ## How It Fits Together
 1. **Generator** (`lib.nix`): a pure, `builtins`-only function that `readDir`-walks `parts/**` for `*.age` (excluding `caddy/`) and emits BOTH the recipient rules (for `secrets.nix`) and the `age.secrets` mounts (for `declarations/generated.nix`). The directory tree of `.age` files is the single source of truth. Secret name = the path under the category dir with subdir segments prefixed, joined by `-`, base name truncated at the first `.`, and `_`→`-` (e.g. `jellyfin/admin-password.age` → `jellyfin-admin-password`).
 2. **Declarations** (`declarations/generated.nix`): mounts every secret with `mode=0440 owner=root group=secrets` by default, overridden per-name only for the handful that differ (the `mountOverrides` map). `caddy.nix` + `parts/caddy.nix` stay hand-written because the caddy certs are selected by hostname at runtime.
@@ -51,6 +55,7 @@ domains/secrets/
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-09-24: Enrolled `hwc-work` as a fleet age recipient and rekeyed encrypted payloads while preserving existing recipients and plaintext. The secret-management tool now derives its recipient set from `secrets.nix` and refuses inconsistent sets.
 - 2026-09-24: Removed `apple-app-pw` (`parts/home/`), the Apple app-specific password for iCloud CalDAV. Its only readers, the iCloud calendar and tasks pairs in `domains/mail/`, were deleted in the same change. It unmounts from `/run/agenix` at each host's next system rebuild. Revoke the password at appleid.apple.com; the ciphertext stays in git history.
 - 2026-09-23: Replaced the plaintext of `vpn-wireguard-private-key-laptop` with a new Proton key generated with NAT-PMP (port forwarding) on, for US-UT#108 (P2P). Streamed from the downloaded .conf straight into `age -R` to the 4 `everyone` keys, never printed; a decrypt with the laptop host key gives 44 bytes and public key `QV1A2hy1…`. The old UT#100 key (`eSoefR6r…`) is no longer used.
 - 2026-09-22: Added `vpn-wireguard-private-key-laptop` (`parts/infrastructure/`): hwc-laptop's own ProtonVPN WireGuard key (US-UT#100), consumed by `hwc.networking.vpn.protonvpn.privateKeySecret`. It is separate from `vpn-wireguard-private-key` because Proton allows one active session per key and that one serves hwc-server's gluetun. Standard `root:secrets` / `0440` mount. Encrypted straight to the 4 `everyone` keys with `age -R`, with no rekey; the plaintext was shredded, and a decrypt on hwc-laptop derived the expected public key.
