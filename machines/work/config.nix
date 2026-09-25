@@ -1,6 +1,6 @@
 # hwc-work — staged MS-02 work server. Production service ownership remains
 # on hwc-server until a service is migrated with its state and callers.
-{ pkgs, ... }: {
+{ config, pkgs, ... }: {
   imports = [
     ./hardware.nix
     # Notification routes need the networking domain's shared vocabulary,
@@ -23,6 +23,24 @@
   hwc.data.couchdb.enable = false;
   hwc.mail.protonmailBridgeCert.enable = false;
 
+  # Syncthing — the work folders, peered with hwc-server only (the server is
+  # the hub; the laptop reaches these through it). 700_datax carries the
+  # gauntlet trees the moved timers write into; 000_inbox carries the agent
+  # handoffs. Personal and media folders stay off this host.
+  hwc.data.syncthing = {
+    enable = true;
+    devices."hwc-server" = {
+      id = "5UCUDT4-CUUGX7U-F2XVLET-SE3QGCA-JRYGXK3-45MQOBP-SYMQZM7-O653IAA";
+      addresses = [ "tcp://${config.hwc.networking.hosts.ips.main}:22000" ];
+    };
+    folders = {
+      "000_inbox" = { path = "/home/eric/000_inbox"; devices = [ "hwc-server" ]; };
+      "100_hwc"   = { path = "/home/eric/100_hwc";   devices = [ "hwc-server" ]; };
+      "300_tech"  = { path = "/home/eric/300_tech";  devices = [ "hwc-server" ]; };
+      "700_datax" = { path = "/home/eric/700_datax"; devices = [ "hwc-server" ]; };
+    };
+  };
+
   #==========================================================================
   # Service split wave 1 (2026-09-25): development apps + brain stack.
   # Refinery, nightly builds and both gauntlets moved here with their state
@@ -34,8 +52,8 @@
   hwc.automation.refinery = {
     enable = true;
     mode = "container";
-    # Same verified release hwc-server ran (eriqueo/refinery 39846f5), loaded
-    # from `podman save` on the server; no registry pull.
+    # Same verified release hwc-server ran (eriqueo/refinery 39846f5), built
+    # on this host with deploy/build-image.sh from that commit; no registry pull.
     image = "localhost/refinery:39846f5-docker";
     imagePull = "never";
   };
