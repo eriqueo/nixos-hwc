@@ -44,7 +44,9 @@ in
       volumes = [ "${dataDir}:/data:rw" ];
       environment = {
         DOMAIN = "https://vaultwarden.${config.hwc.networking.shared.vhostDomain}";
-        SIGNUPS_ALLOWED = "true";
+        # One account exists (audit 2026-09-25); open signup let anyone who
+        # reaches the vhost create one. Invite from the admin panel instead.
+        SIGNUPS_ALLOWED = "false";
         INVITATIONS_ALLOWED = "true";
         SHOW_PASSWORD_HINT = "false";
         ROCKET_PORT = "80";

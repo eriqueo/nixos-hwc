@@ -141,10 +141,13 @@
       stagingDir = "${root}/staging";
     };
   };
+  # Vaultwarden (wave 3) — https://vaultwarden.hwc.iheartwoodcraft.com; its
+  # SQLite state lives under /var/lib/hwc (in borg).
+  hwc.secrets.vaultwarden.enable = true;
+
   # Redis — Paperless's task queue (its only consumer), on 127.0.0.1 +
   # the podman gateway like PostgreSQL.
   hwc.data.databases.redis.enable = true;
-  hwc.business.firefly.enable = false;      # wave 3
 
   # The briefing keeps reporting the media/storage host's health: its
   # systemctl/disk/journal/VPN/backup sections run on hwc-server over ssh.
@@ -263,14 +266,8 @@
   };
 
 
-  # Workbench hub served from here; hwc-server keeps the module on for its
-  # own refinery areas.json but proxies the vhost to this host.
-  hwc.business.workbench = {
-    enable = true;
-    # Areas whose apps are still on hwc-server (wave 2/3). Remove each name
-    # from this list in the commit that moves its app here.
-    remoteRoutes = [ "firefly-explorer" ];
-  };
+  # Workbench hub served from here (business role); hwc-server keeps the
+  # module on for its own areas.json but proxies the vhost to this host.
 
   #==========================================================================
   # CLOUDFLARE TUNNEL (public ingress) — service split wave 2, step 1

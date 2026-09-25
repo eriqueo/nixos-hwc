@@ -39,6 +39,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-09-25: `routeOwners` += `firefly`, `firefly-pico`, `firefly-import`, `firefly-explorer`, `vaultwarden` (wave 3).
 - 2026-09-25: `routeOwners.paperless = "work"` (wave 3).
 - 2026-09-25: Service split wave 3 (monitoring fleet): `hosts/` gains derived `self` (this host's alias) and `selfIp`. `routeOwners` += `grafana`, `homepage` (central stack) and `sr_analyzer` (the container moved in wave 2; the route had stayed and 502'd).
 - 2026-09-25: Service split wave 3 (notifications): `routeOwners.hwc-notify = { owner = "work"; mode = "port"; }`; gluetun's transition alerts default to `hwc.notifications.notify.url` (null where the notifications domain is absent).

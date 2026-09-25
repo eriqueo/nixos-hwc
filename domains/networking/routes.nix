@@ -61,6 +61,11 @@ in
     grafana = "work";
     homepage = "work";
     paperless = "work";        # wave 3
+    firefly = "work";
+    firefly-pico = "work";
+    firefly-import = "work";
+    firefly-explorer = "work";
+    vaultwarden = "work";
   };
 
   hwc.networking.shared.routes = [

@@ -406,6 +406,7 @@
   hwc.business.website.webapps.enable = false;
   hwc.business.morningBriefing.enable = false;
   hwc.business.paperless.enable = false;  # wave 3: runs on hwc-work
+  hwc.business.firefly.enable = false;    # wave 3: runs on hwc-work
   # The phone's receipts folder is Syncthing ingest on this host; its watcher
   # forwards drops into Paperless's consume dir on hwc-work.
   hwc.business.paperless.receipts.enable = true;
@@ -1049,8 +1050,7 @@
     };
   };
 
-  # Vaultwarden password manager — https://hwc-server.ocelot-wahoo.ts.net:15443
-  hwc.secrets.vaultwarden.enable = lib.mkDefault true;
+  # Vaultwarden runs on hwc-work since service split wave 3.
 
   # Authentik SSO/Identity Provider — https://hwc-server.ocelot-wahoo.ts.net:15543
   hwc.system.core.authentik.enable = lib.mkDefault true;

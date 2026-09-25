@@ -24,12 +24,10 @@ let
   vhostDomain = config.hwc.networking.shared.vhostDomain;
   # effectiveRoutes: includes stubs for vhosts another host owns (routeOwners).
   routes = config.hwc.networking.shared.effectiveRoutes;
-  # Routes this host serves, plus routes declared as served by another host
-  # of the fleet (cfg.remoteRoutes). Both resolve to the same
-  # https://<route>.<vhostDomain>/ URL because DNS, not this host, picks the
-  # server for a name.
-  vhostNames = map (r: r.name) (lib.filter (r: (r.mode or "") == "vhost") routes)
-    ++ cfg.remoteRoutes;
+  # Every vhost name known here — local routes plus the owner-map stubs for
+  # names another host serves. Each resolves to https://<route>.<vhostDomain>/
+  # because DNS, not this host, picks the server for a name.
+  vhostNames = map (r: r.name) (lib.filter (r: (r.mode or "") == "vhost") routes);
 
   homeUrl = "https://${cfg.routeName}.${vhostDomain}/";
 
@@ -192,17 +190,6 @@ in
       description = "Vhost name of the hub: <routeName>.<vhostDomain>.";
     };
 
-    remoteRoutes = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      example = [ "crm" "event-scout" ];
-      description = ''
-        Vhost route names served by another host in the fleet, treated as
-        deployed for the area list and the `required` assertion. Service
-        split scaffolding: each name leaves this list when its app moves to
-        the host serving the hub (the assertion then re-checks it locally).
-      '';
-    };
 
 
     areas = lib.mkOption {
