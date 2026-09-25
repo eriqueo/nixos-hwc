@@ -36,6 +36,11 @@ let
         header_up X-Forwarded-Host {host}
         ${renderHeaders}
         ${lib.optionalString ws "flush_interval -1"}
+        ${lib.optionalString (r ? tlsServerName) ''
+          transport http {
+            tls_server_name ${r.tlsServerName}
+          }
+        ''}
       }
     '';
 
@@ -137,10 +142,20 @@ let
 
   renderVhostRoute = r:
     let
+      # An owner is the one host with the local backend. Legacy Caddy hosts
+      # proxy to it during DNS propagation and while clients retain a pinned
+      # server address; the tailnet IP avoids a DNS loop through this Caddy.
+      ownerHost = if r ? owner then config.hwc.networking.hosts.servers.${r.owner} else null;
+      remoteOwner = ownerHost != null && config.networking.hostName != ownerHost;
+      remoteRoute = r // {
+        upstream = "https://${config.hwc.networking.hosts.ips.${r.owner}}";
+        tlsServerName = "${r.name}.${vhostDomain}";
+      };
       # A vhost route is either a reverse proxy (has `upstream`) or a static
       # file server (has `root`), served under its own host matcher on :443.
       body =
-        if r ? root then ''
+        if remoteOwner then mkProxyBlock remoteRoute
+        else if r ? root then ''
           # Static file server (CORS-enabled for cross-origin embedding).
           # Only hashed build assets are cached immutably; the SPA/PWA shell and
           # generated data files revalidate so updates are picked up.
