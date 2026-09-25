@@ -5,204 +5,50 @@ existing headless CLI/Home Manager setup, SSH, Tailscale, Podman and server tool
 It leaves CouchDB, Nightly Builds, Refinery, business services, public routes and
 storage mounts on `hwc-server`. No production data is copied by activating it.
 
-## Before erasing the preinstalled Windows
+## Installed system: preserve Windows and Wi-Fi
 
-This walkthrough replaces Windows on the internal SSD. You do not need to
-activate Windows or sign into it to install NixOS. Step 4 below creates a new
-partition table, erasing Windows, its EFI boot partition and its recovery
-partitions. If you want to keep Windows or dual boot, stop before that step;
-the disk layout and `machines/work/hardware.nix` need a different plan.
+The MS-02 already boots NixOS 25.11 alongside Windows on its internal SSD.
+Do not repartition or format this disk. Linux uses these existing partitions:
 
-If you might want to restore Windows **on this MS-02** later, do this while it
-still boots. The preinstalled Windows license stays with this device; finding
-its product key does not make it a license for the laptop
-([Microsoft's preinstalled Windows terms](https://www.microsoft.com/content/dam/microsoft/usetm/documents/windows/11/oem-%28pre-installed%29/UseTerms_OEM_Windows_11_English.pdf)):
+| Partition | Label | Use |
+| --- | --- | --- |
+| nvme0n1p1 | SYSTEM | Windows EFI; leave unchanged |
+| nvme0n1p2 | — | Windows reserved; leave unchanged |
+| nvme0n1p3 | Windows | Windows installation; leave unchanged |
+| nvme0n1p4 | Recovery | Windows recovery; leave unchanged |
+| nvme0n1p5 | HWCBOOT | Linux EFI, mounted at /boot |
+| nvme0n1p6 | HWCWORK | Linux ext4 root, mounted at / |
 
-1. Back up any files you want to keep. For the factory recovery option, make a
-   [Windows Recovery Drive](https://support.microsoft.com/en-us/windows/experience/backup-recovery/recovery-drive)
-   on a **separate blank USB stick** using Start > Recovery Drive, with
-   **Back up system files to the recovery drive** selected. The recovery
-   drive does not include personal files; creating it erases that USB stick.
-2. Record the Windows edition under Settings > System > About and its
-   [activation status](https://support.microsoft.com/en-us/windows/activation/activate-windows)
-   under Settings > System > Activation. Keep any product-key information that
-   came with the PC for a possible reinstall on this MS-02. A later reinstall
-   must use the matching edition. Windows Setup may read an embedded key from
-   this PC's firmware without asking you to type it
-   ([Microsoft's install guidance](https://support.microsoft.com/en-us/windows/deployment/install-upgrade/install-or-upgrade-windows-using-a-product-key)).
-3. If Device Encryption or BitLocker is enabled, save its
-   [recovery key](https://support.microsoft.com/en-us/windows/security/encryption/find-your-bitlocker-recovery-key)
-   somewhere other than the MS-02 before changing firmware settings. Disabling
-   Secure Boot or changing boot settings can prompt for that key if you boot
-   Windows again.
+The generated hardware configuration is `/etc/nixos/hardware-configuration.nix`.
+The fleet hardware file keeps the verified labels and the generated initrd,
+Intel microcode and NPU settings. Windows retains its separate EFI partition;
+use the firmware boot menu to select it. Windows boot has not been exercised
+as part of the Linux cutover.
 
-## At the desk: install a reachable base system
+NetworkManager has a persistent `Pupcastle` Wi-Fi profile on `wlo5`. Keep that
+profile through activation. Ethernet is optional. The observed Wi-Fi address was
+`192.168.0.231`; check DHCP if it changes. Keep the old server on its existing
+network and leave its production services and DAS in place.
 
-Use an external monitor and keyboard on the MS-02. The laptop and MS-02 each
-connect to the same Wi-Fi; the laptop's connection does not automatically share
-internet with the MS-02. The stock minimal installer may need to download
-packages, and the fleet flake has private inputs. Have the Wi-Fi password or
-phone USB tethering available. Keep `hwc-server` running throughout this stage.
-This first install uses only the small configuration below. It does not import
-the fleet flake or agenix, so neither an age key nor a decrypted secret is
-needed to log in. Do not use `nixos-install --flake` at this stage.
+Before activation, check the actual mounts, connectivity and administrator access:
 
-1. On the laptop, write the
-   [NixOS 25.11 minimal x86_64 ISO](https://channels.nixos.org/nixos-25.11/latest-nixos-minimal-x86_64-linux.iso)
-   to a USB stick.
-   Boot the MS-02 from that stick in UEFI mode. If the installer will not boot,
-   check whether Secure Boot is enabled; the
-   [standard installer is unsigned](https://wiki.nixos.org/wiki/NixOS_Installation_Guide/en#UEFI_boot).
-   At the installer prompt, become root with `sudo -i` and confirm UEFI:
+```sh
+hostname
+lsblk -f
+findmnt /
+findmnt /boot
+nmcli device status
+sudo -v
+```
 
-   ```sh
-   test -d /sys/firmware/efi/efivars && echo UEFI
-   ```
-
-2. Connect the **installer** to Wi-Fi. On the minimal ISO, `wpa_supplicant`
-   manages Wi-Fi. `wpa_passphrase` asks for the password without putting it in
-   shell history; its temporary config stays on the live USB system. Replace
-   the SSID, then check that downloads and DNS work:
-
-   ```sh
-   ip -br link
-   umask 077
-   wpa_passphrase 'YOUR_WIFI_SSID' > /etc/wpa_supplicant.conf
-   systemctl restart wpa_supplicant
-   ping -c 2 cache.nixos.org
-   ```
-
-   If Wi-Fi is not detected or the ping fails, use phone USB tethering and
-   repeat the ping. Do not count on a stock ISO completing this setup fully
-   offline.
-
-3. Identify the **internal 1 TB SSD by model and serial**. The next commands
-   erase the selected disk, including Windows and any recovery partitions.
-   Set `TARGET_DISK` to its whole-disk `/dev/disk/by-id/nvme-...` path, not a
-   partition or the installer USB. Stop if its size and model do not match:
-
-   ```sh
-   lsblk -o NAME,PATH,SIZE,MODEL,SERIAL,TYPE
-   export TARGET_DISK=/dev/disk/by-id/nvme-REPLACE_WITH_THE_INTERNAL_1TB_SSD
-   readlink -f "$TARGET_DISK"
-   lsblk "$TARGET_DISK"
-   ```
-
-4. Create the disk layout expected by the checked-in
-   `machines/work/hardware.nix`: a 1 GiB FAT32 EFI system partition labeled
-   `HWCBOOT` and an ext4 root partition labeled `HWCWORK`. Keep those labels
-   exact. The first `parted ... mklabel gpt` command removes the Windows
-   partition table; run it only after the Windows preflight above:
-
-   ```sh
-   parted --script "$TARGET_DISK" mklabel gpt
-   parted --script "$TARGET_DISK" mkpart ESP fat32 1MiB 1025MiB
-   parted --script "$TARGET_DISK" set 1 esp on
-   parted --script "$TARGET_DISK" mkpart root ext4 1025MiB 100%
-   partprobe "$TARGET_DISK"
-   udevadm settle
-   mkfs.fat -F 32 -n HWCBOOT "${TARGET_DISK}-part1"
-   mkfs.ext4 -L HWCWORK "${TARGET_DISK}-part2"
-   mount /dev/disk/by-label/HWCWORK /mnt
-   mkdir -p /mnt/boot
-   mount /dev/disk/by-label/HWCBOOT /mnt/boot
-   findmnt /mnt
-   findmnt /mnt/boot
-   ```
-
-5. Generate the hardware file, then replace only
-   `/mnt/etc/nixos/configuration.nix` with the small bootstrap configuration
-   below. Keep the generated `hardware-configuration.nix`. NetworkManager
-   will handle Wi-Fi at the desk and wired DHCP after the move. Password SSH
-   is temporary; the fleet flake later installs key-only SSH.
-
-   ```sh
-   nixos-generate-config --root /mnt
-   nano /mnt/etc/nixos/configuration.nix
-   ```
-
-   ```nix
-   { pkgs, ... }: {
-     imports = [ ./hardware-configuration.nix ];
-
-     boot.loader.systemd-boot.enable = true;
-     boot.loader.efi.canTouchEfiVariables = true;
-     hardware.enableRedistributableFirmware = true;
-
-     networking.hostName = "hwc-work";
-     networking.networkmanager.enable = true;
-     networking.useDHCP = true;
-
-     services.openssh.enable = true;
-     services.openssh.settings = {
-       PasswordAuthentication = true;
-       PermitRootLogin = "no";
-     };
-     users.users.eric = {
-       isNormalUser = true;
-       extraGroups = [ "wheel" "networkmanager" ];
-     };
-
-     nix.settings.experimental-features = [ "nix-command" "flakes" ];
-     environment.systemPackages = with pkgs; [ git ];
-     system.stateVersion = "25.11";
-   }
-   ```
-
-6. Install, set both passwords, remove the USB, and reboot from the SSD.
-   `nixos-install` prompts for the root console password; the second command
-   sets the `eric` password for the temporary SSH login. Make sure both
-   commands succeed before rebooting:
-
-   ```sh
-   nixos-install --root /mnt
-   nixos-enter --root /mnt -c 'passwd eric'
-   reboot
-   ```
-
-7. Log in as `eric` on the installed system and run `sudo -v` with the password
-   you just set. This proves local login and sudo work before any age key
-   exists. The live installer's Wi-Fi connection was temporary, so join Wi-Fi
-   **again** using the installed
-   NetworkManager. Find the Wi-Fi IP and check SSH:
-
-   ```sh
-   sudo -v
-   sudo nmtui
-   nmcli device status
-   ip -br address
-   systemctl is-active sshd
-   ```
-
-   On the laptop, replace `WIFI_IP` with the MS-02's Wi-Fi address, then
-   test a login and install the laptop's public SSH key:
-
-   ```sh
-   ssh eric@WIFI_IP
-   exit
-   ssh-copy-id eric@WIFI_IP
-   ssh -o PasswordAuthentication=no eric@WIFI_IP hostname
-   ```
-
-   The last command must print `hwc-work`. Leave the monitor connected until
-   this works. Keep the initial root password for console recovery.
-
-## Move to the router and verify Ethernet
-
-1. Shut down the MS-02 with `sudo poweroff`. Move it to the router and plug a
-   normal Ethernet cable into its **2.5 GbE RJ45 port**. Power it on. The
-   bootstrap configuration enables NetworkManager and DHCP on Ethernet.
-2. On the laptop, find `hwc-work` in the router's DHCP client list and SSH to
-   its **wired** IP: `ssh eric@WIRED_IP`. The Wi-Fi IP from the desk may not
-   be the wired IP. On the MS-02, run `nmcli device status`, `ip -br address`,
-   and `systemctl is-active sshd` to confirm the wired link and SSH.
-3. If no wired DHCP lease or SSH appears, reconnect the monitor and keyboard
-   and inspect those three commands locally. The installed NixOS boot entry
-   and USB installer are recovery paths. Keep `hwc-server` in service.
+From the old server, require a key-only SSH login to the current Wi-Fi address.
+The fleet's authorized keys must include the key used for that login. Keep console
+access available through the first switch and reboot. Retain the bootstrap NixOS
+generation as the rollback target.
 
 ## Before the first flake switch
 
-The base system is now reachable over wired Ethernet without age. The fleet
+The base system is reachable over Wi-Fi without age. The fleet
 flake is a second stage because its private inputs and agenix secrets need the
 new host's age identity. It replaces temporary password SSH with the
 repository's authorized public keys. Confirm that the laptop's public key is
@@ -219,9 +65,9 @@ installed by `ssh-copy-id` in the bootstrap system may differ.
 
    If the installed release is not 25.11, review `system.stateVersion` in
    `machines/work/config.nix` before the first switch. If the disk labels,
-   filesystems or mounts differ from the contract above, replace
-   `machines/work/hardware.nix` with the new host's generated
-   `/etc/nixos/hardware-configuration.nix`, review it, and commit that change
+   filesystems or mounts differ from the verified layout above, review
+   `machines/work/hardware.nix` against the new host's generated
+   `/etc/nixos/hardware-configuration.nix`, and commit any required change
    before building. Do not copy another host's `hardware.nix`.
 2. On the new host, generate its own age identity:
 
@@ -299,10 +145,10 @@ sudo podman info >/dev/null
 ```
 
 Keep this SSH session open. From a second laptop terminal, confirm key-only
-login to the wired address before rebooting:
+login to the current Wi-Fi address before rebooting:
 
 ```sh
-ssh -o PasswordAuthentication=no eric@WIRED_IP hostname
+ssh -o PasswordAuthentication=no eric@WIFI_IP hostname
 ```
 
 It must print `hwc-work`. Then reboot and repeat the key-only SSH check from
