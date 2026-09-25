@@ -12,6 +12,9 @@ connect to the same Wi-Fi; the laptop's connection does not automatically share
 internet with the MS-02. The stock minimal installer may need to download
 packages, and the fleet flake has private inputs. Have the Wi-Fi password or
 phone USB tethering available. Keep `hwc-server` running throughout this stage.
+This first install uses only the small configuration below. It does not import
+the fleet flake or agenix, so neither an age key nor a decrypted secret is
+needed to log in. Do not use `nixos-install --flake` at this stage.
 
 1. On the laptop, write the
    [NixOS 25.11 minimal x86_64 ISO](https://channels.nixos.org/nixos-25.11/latest-nixos-minimal-x86_64-linux.iso)
@@ -115,7 +118,8 @@ phone USB tethering available. Keep `hwc-server` running throughout this stage.
 
 6. Install, set both passwords, remove the USB, and reboot from the SSD.
    `nixos-install` prompts for the root console password; the second command
-   sets the `eric` password for the temporary SSH login:
+   sets the `eric` password for the temporary SSH login. Make sure both
+   commands succeed before rebooting:
 
    ```sh
    nixos-install --root /mnt
@@ -123,11 +127,14 @@ phone USB tethering available. Keep `hwc-server` running throughout this stage.
    reboot
    ```
 
-7. Log in as `eric` on the installed system. The live installer's Wi-Fi
-   connection was temporary, so join Wi-Fi **again** using the installed
+7. Log in as `eric` on the installed system and run `sudo -v` with the password
+   you just set. This proves local login and sudo work before any age key
+   exists. The live installer's Wi-Fi connection was temporary, so join Wi-Fi
+   **again** using the installed
    NetworkManager. Find the Wi-Fi IP and check SSH:
 
    ```sh
+   sudo -v
    sudo nmtui
    nmcli device status
    ip -br address
@@ -162,11 +169,12 @@ phone USB tethering available. Keep `hwc-server` running throughout this stage.
 
 ## Before the first flake switch
 
-The base system is now reachable over wired Ethernet. The fleet flake is a
-second stage because its private inputs and agenix secrets need the new host's
-age identity. It replaces temporary password SSH with the repository's
-authorized public keys. Confirm that the laptop's public key is among the keys
-in `domains/system/users/index.nix` before switching.
+The base system is now reachable over wired Ethernet without age. The fleet
+flake is a second stage because its private inputs and agenix secrets need the
+new host's age identity. It replaces temporary password SSH with the
+repository's authorized public keys. Confirm that the laptop's public key is
+among the keys in `domains/system/users/index.nix` before switching; the key
+installed by `ssh-copy-id` in the bootstrap system may differ.
 
 1. As `eric`, clone the public repo at the path used by Home Manager's repo hook
    and `hwc.paths.nixos`:
@@ -198,6 +206,25 @@ in `domains/system/users/index.nix` before switching.
    `secrets.nix`, then run `sudo agenix -r -i /etc/age/keys.txt` from the
    repo. Commit and push the changed recipient rules and encrypted files.
    Pull that commit on `hwc-work`. Keep the private `/etc/age/keys.txt` off Git.
+
+3. Before any `nixos-rebuild switch`, prove the new key can decrypt **both**
+   login secrets from the pulled commit. The flake uses
+   `user-initial-password.age` for `eric` and `emergency-password.age` for
+   root; a declared secret is not proof it can be decrypted. Run this on
+   `hwc-work` and require the final line to print:
+
+   ```sh
+   age_package=$(nix --extra-experimental-features 'nix-command flakes' build nixpkgs#age --no-link --print-out-paths)
+   sudo test -s /etc/age/keys.txt &&
+     sudo "$age_package/bin/age" -d -i /etc/age/keys.txt /home/eric/.nixos/domains/secrets/parts/system/user-initial-password.age >/dev/null &&
+     sudo "$age_package/bin/age" -d -i /etc/age/keys.txt /home/eric/.nixos/domains/secrets/parts/system/emergency-password.age >/dev/null &&
+     echo 'Both login secrets decrypt'
+   ```
+
+   If it does not print, stay on the working bootstrap system. Check that
+   `work` was added to `allHosts`, all `.age` files were rekeyed, and the new
+   commit was pulled. Keep the monitor and keyboard available through the
+   first flake switch and reboot.
 
 ## Private flake inputs on first activation
 
@@ -232,12 +259,22 @@ sudo env NIX_CONFIG='!include /run/agenix/github-flake-token' nixos-rebuild buil
 sudo env NIX_CONFIG='!include /run/agenix/github-flake-token' nixos-rebuild switch --flake .#hwc-work
 hostname
 systemctl --failed
+sudo test -s /run/agenix/user-initial-password
+sudo test -s /run/agenix/emergency-password
 sudo test -s /run/agenix/github-flake-token
 sudo podman info >/dev/null
 ```
 
-Reboot, repeat the hostname, failed-unit and SSH checks from another device,
-then run `sudo tailscale up --hostname hwc-work` to register a separate node.
+Keep this SSH session open. From a second laptop terminal, confirm key-only
+login to the wired address before rebooting:
+
+```sh
+ssh -o PasswordAuthentication=no eric@WIRED_IP hostname
+```
+
+It must print `hwc-work`. Then reboot and repeat the key-only SSH check from
+the laptop. On the new host, repeat the hostname, failed-unit and secret-file
+checks. Then run `sudo tailscale up --hostname hwc-work` to register a separate node.
 Keep `hwc-server`
 running as the only owner of its existing data, jobs and public endpoints.
 The new host's Tailscale IP can enter `hwc.networking.hosts.ips` once known;
