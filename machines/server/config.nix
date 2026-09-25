@@ -117,6 +117,13 @@
   # path. Keep this immutable release until the next tested image replaces it.
   hwc.automation.refinery.image = "localhost/refinery:39846f5-docker";
   hwc.automation.refinery.imagePull = "never";
+  # Service split wave 1 (2026-09-25): the board, nightly builds and both
+  # gauntlets run on hwc-work with their state. The role defaults above are
+  # overridden here; /var/lib/refinery and /var/lib/sr-gauntlet stay on disk
+  # for the rollback window and are removed in wave 5. The refinery vhost is
+  # work-owned in routes.nix, so this Caddy proxies it to hwc-work.
+  hwc.automation.refinery.enable = false;
+  hwc.automation.nightlyBuilds.enable = false;
 
   # Lead Scout — Facebook group lead scraper/classifier, MCP + HTTP on port 8420
   hwc.server.ai.leadScout.enable = true;
@@ -207,9 +214,10 @@
   # `deploy` — interactive one-step deploy CLI; auto-discovers ~/600_apps/*/deploy.sh
   hwc.server.deploy.enable = true;
 
-  # Brain MCP Server — vault filesystem tools (read/write/search/lint) on port 9876
-  hwc.server.ai.brainMcp.enable = true;
-  hwc.server.ai.brainvec.enable = true; # semantic index behind vault-sync (feeds brain-mcp search_semantic)
+  # Brain MCP Server + brainvec — moved to hwc-work (service split wave 1,
+  # 2026-09-25). The tunnel names below now target hwc-work's tailnet address.
+  hwc.server.ai.brainMcp.enable = false;
+  hwc.server.ai.brainvec.enable = false;
 
   # Phone Capture Processor (Phase 10: Whisper STT + Tesseract OCR)
   # Watches inbox-mobile/{audio,screenshots} and writes markdown to the vault's
@@ -483,11 +491,9 @@
   # hwc-notify, which is a hwc-server one-off enabled just above.
   hwc.automation.readmeFreshness.enable = true;
 
-  # SR Gauntlet — daily (06:30, 7d/wk) read-only investigation of open DataX
-  # SRs → per-SR REPORT.md + Discord delivery. Lives here (not the server
-  # profile) because the pipeline checkout (~/700_datax/sr_gauntlet) and its
-  # credential sources only exist on hwc-server.
-  hwc.automation.srGauntlet.enable = true;
+  # SR Gauntlet — moved to hwc-work with its checkout and credential dirs
+  # (service split wave 1, 2026-09-25). Kept off here so one host investigates.
+  hwc.automation.srGauntlet.enable = false;
 
   # DX1 Gauntlet — case-ledger investigations, sr-gauntlet's sibling.
   # Enabled 2026-08-17 after the flip conditions were met and verified:
@@ -499,7 +505,8 @@
   #   3. run.sh allowlists CLAUDE_CONFIG_DIR/CLAUDE_CODE_OAUTH_TOKEN through
   #      its env -i scrub (the unit-supplied agenix token would otherwise be
   #      stripped and headless auth would fail).
-  hwc.automation.dx1Gauntlet.enable = true;
+  # Moved to hwc-work with sr-gauntlet (service split wave 1, 2026-09-25).
+  hwc.automation.dx1Gauntlet.enable = false;
 
   # Brain vault git sync — Tier-2 transport. Every 15 min: commit local vault
   # changes, pull the hub (laptop's commits), push server changes up. Replaces
@@ -511,7 +518,13 @@
   # CLI at ~/600_apps/brain). Detector, not fixer: writes a dated drift report to
   # _inbox/janitor/ under the shared .git/.sync.lock flock; pings hwc-notify only
   # on alert-level drift or failure. vault-sync carries the report to the hub.
-  hwc.automation.brainSweep.enable = true;
+  # Runs on hwc-work with the rest of the brain stack (service split wave 1).
+  hwc.automation.brainSweep.enable = false;
+
+  # Workbench hub — module stays on (refinery's areas.json contract, and the
+  # business role enables it) but the vhost is served by hwc-work; this Caddy
+  # proxies workbench.<vhostDomain> there and the laptop pins follow.
+  hwc.business.workbench.routeOwner = "work";
 
   # Inbox janitor — every 30 min, drain loose files at the root of
   # ~/000_inbox/downloads per ~/000_inbox/_inbox-routing.yaml (datax stays,
@@ -942,7 +955,10 @@
     # See wiki/nixos/iheartwoodcraft-com-backend-migration.md.
     extraIngress = {
       "mcp.heartwoodcraft.me" = "http://localhost:6200";
-      "brain.heartwoodcraft.me" = "http://localhost:9876";
+      # brain-mcp runs on hwc-work (service split wave 1); it binds 0.0.0.0
+      # with :9876 open on the tailnet interface, so the tunnel process here
+      # reaches it directly. The tunnel itself moves in wave 2.
+      "brain.heartwoodcraft.me" = "http://${config.hwc.networking.hosts.ips.work}:9876";
 
       # datax-monitor dashboard — shared with external DataX collaborators
       # off-tailnet. Public DNS CNAME + Cloudflare Access policy ("datax",
@@ -986,14 +1002,14 @@
       # entries drop. brain./monitor. are Access-gated on the Cloudflare side.
       # See brain: tech/development/builds/heartwoodcraft_me_retirement.md
       "mcp.iheartwoodcraft.com" = "http://localhost:6200";
-      "brain.iheartwoodcraft.com" = "http://localhost:9876";
+      "brain.iheartwoodcraft.com" = "http://${config.hwc.networking.hosts.ips.work}:9876";
       "monitor.iheartwoodcraft.com" = "http://localhost:4400";
 
       # hwc-mcp-gateway origins — internal hostnames the OAuth gateway Worker
       # proxies to (machine-to-machine via an Access service token). Distinct
       # from the bare brain./leads./mcp. names above, which stay owned by the
       # live MCP Portal during the parallel cutover. See ~/600_apps/hwc-mcp-gateway/ORIGINS.md.
-      "brain-origin.heartwoodcraft.me" = "http://localhost:9876";
+      "brain-origin.heartwoodcraft.me" = "http://${config.hwc.networking.hosts.ips.work}:9876";
       "leads-origin.heartwoodcraft.me" = "http://localhost:8420";
       "hwc-origin.heartwoodcraft.me" = "http://localhost:6200";
     };
