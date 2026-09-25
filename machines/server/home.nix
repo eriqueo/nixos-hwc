@@ -8,10 +8,9 @@
 
 {
   # Mail-health alerts route via hwc-notify only (priority-1 fanout: Discord ×2
-  # + email). The old n8n webhook → Slack hop was redundant middleware — the
-  # n8n workflow just forwarded to this same :11600/notify — so it was retired
-  # 2026-07-09. Leaving webhook.url unset makes send_webhook a no-op.
-  hwc.mail.health.notify.url = "http://127.0.0.1:11600";
+  # + email), at the default hwc.mail.health.notify.url (the dispatcher's one
+  # derived address). The old n8n webhook → Slack hop was retired 2026-07-09;
+  # leaving webhook.url unset makes send_webhook a no-op.
 
   # Service split wave 2: the Proton Bridge session runs on hwc-work. This
   # host's mail consumers still dial 127.0.0.1:1025/1143, which

@@ -39,7 +39,8 @@
 #     the old reliance on the interactive ~/.claude/.credentials.json OAuth token,
 #     whose ~8h rotation caused 5 straight 401 failures once the server went a
 #     day without an interactive Claude session (2026-07-21/22).
-#   - hwc-notify on 127.0.0.1:11600 (run summaries; best-effort)
+#   - Discord directly for run summaries (the gauntlet bypasses hwc-notify;
+#     see ~/700_datax/sr_gauntlet/README.md)
 
 { config, lib, pkgs, ... }:
 

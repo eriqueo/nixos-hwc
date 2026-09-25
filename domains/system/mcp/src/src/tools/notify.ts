@@ -2,16 +2,16 @@
  * hwc_notify — MCP wrapper over the local hwc-notify HTTP service.
  *
  * Single consolidated tool with an `action` field (mirrors
- * n8n-consolidation.ts). Talks to http://127.0.0.1:11600 — the loopback
- * service binds there per the NixOS module's bindAddr/port options.
- * Both MCP and the hwc-notify service run on hwc-server, so this is an
- * in-host call.
+ * n8n-consolidation.ts). Talks to HWC_NOTIFY_URL, which the NixOS module
+ * sets from hwc.notifications.notify.url — the dispatcher's one derived
+ * address, valid from any host (service split: gateway and dispatcher may
+ * live on different hosts).
  */
 
 import type { ToolDef, ToolResult } from "../types.js";
 import { mcpError } from "../errors.js";
 
-const NOTIFY_BASE = "http://127.0.0.1:11600";
+const NOTIFY_BASE = (process.env.HWC_NOTIFY_URL ?? "").replace(/\/+$/, "");
 
 const ACTIONS = ["send", "recent", "status", "health"] as const;
 type Action = (typeof ACTIONS)[number];
@@ -112,7 +112,7 @@ export function notifyTools(): ToolDef[] {
         "Notification dispatcher. Single tool, action-dispatched. Use send to fire " +
         "an alert/lead/info notification (routed through parts/routes.nix to Discord + " +
         "SMTP), recent to query the audit log, status for circuit-breaker state, health " +
-        "for liveness. All calls go to http://127.0.0.1:11600 on hwc-server.",
+        "for liveness. All calls go to the dispatcher at HWC_NOTIFY_URL (hwc.notifications.notify.url).",
       inputSchema: HWC_NOTIFY_SCHEMA,
       handler: async (args): Promise<ToolResult> => {
         const action = String(args.action ?? "") as Action;

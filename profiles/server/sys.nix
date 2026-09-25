@@ -14,7 +14,46 @@
     ../../domains/data/index.nix
     ../../domains/notifications/index.nix
     ../../domains/automation/index.nix
+    # Failure alerting (alerts/), exporters and heartbeat live in the
+    # monitoring domain; the central Prometheus/Grafana stack is the
+    # monitoring ROLE. Every serving host alerts on its own units.
+    ../../domains/monitoring/index.nix
   ];
+
+  # Notifications: every serving host sends through hwc-alert to the one
+  # dispatcher at hwc.notifications.notify.url (the dispatcher itself is
+  # enabled on its host's machine config).
+  hwc.notifications = {
+    enable = lib.mkDefault true;
+    send.cli.enable = lib.mkDefault true;
+  };
+
+  # SMART disk monitoring on every serving host (was a single machine's
+  # one-off, so the other serving hosts had none). Short test daily 02:00,
+  # long test Saturdays 03:00.
+  services.smartd = {
+    enable = lib.mkDefault true;
+    autodetect = lib.mkDefault true;
+    notifications.wall.enable = lib.mkDefault true;
+    defaults.monitored = lib.mkDefault "-a -o on -s (S/../.././02|L/../../6/03)";
+  };
+
+  # Service-failure, SMART and backup alerts for this host's own units. The
+  # unit list is gated on each owning module's enable, so it follows the
+  # apps (domains/monitoring/alerts). Disk space is owned by Prometheus.
+  hwc.monitoring.alerts = {
+    enable = lib.mkDefault true;
+    sources.serviceFailures = {
+      enable = lib.mkDefault true;
+      autoDetect = lib.mkDefault true;
+    };
+    sources.smartd.enable = lib.mkDefault config.services.smartd.enable;
+    sources.backup = {
+      enable = lib.mkDefault true;
+      onSuccess = lib.mkDefault false;
+      onFailure = lib.mkDefault true;
+    };
+  };
 
   # Server identity (Charter v10.3 multi-server support) — flips path
   # defaults in domains/paths to server layout.

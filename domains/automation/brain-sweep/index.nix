@@ -97,7 +97,7 @@ in {
 
     notifyUrl = lib.mkOption {
       type = lib.types.str;
-      default = "http://127.0.0.1:11600";
+      default = config.hwc.notifications.notify.url;
       description = "hwc-notify base URL; the sweep POSTs to <url>/notify on alert/failure. Empty disables.";
     };
 

@@ -54,9 +54,10 @@ mkdir -p "$RUNS_DIR"
 LOG_FILE="$RUNS_DIR/_launcher.log"
 log() { echo "$(date -Iseconds) $*" | tee -a "$LOG_FILE"; }
 
-# hwc-notify HTTP endpoint (loopback). Run results POST here as topic
+# hwc-notify endpoint (the module exports NB_NOTIFY_URL from
+# hwc.automation.nightlyBuilds.notifyUrl). Run results POST here as topic
 # "nightly-builds"; routes.nix fans that to the #nightly-builds Discord channel.
-NOTIFY_URL="${NB_NOTIFY_URL:-http://127.0.0.1:11600/notify}"
+NOTIFY_URL="${NB_NOTIFY_URL:?NB_NOTIFY_URL unset — run via the nightly-builds unit}"
 
 # notify <priority> <title> <body> — best-effort run-result post. Never fails
 # the run (the branch + REPORT are the durable output; a notify is a courtesy).

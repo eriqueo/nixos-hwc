@@ -3,9 +3,8 @@
   hwc.home.theme.graphical = false;
 
   # Mail role (service split wave 2): this host runs the Proton Bridge session
-  # that used to live on hwc-server. hwc-notify is still on hwc-server, so
-  # mail-health posts to its tailnet port route.
-  hwc.mail.health.notify.url = "https://hwc-notify.hwc.iheartwoodcraft.com:29443";
+  # that used to live on hwc-server. mail-health posts to the dispatcher via
+  # the default (hwc.notifications.notify.url).
 
   # The read-only mirrors this machine keeps in Radicale (config.nix
   # hwc.server.services.radicale.mirrors), so hwc_calendar sees them too.

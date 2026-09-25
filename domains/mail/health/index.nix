@@ -381,13 +381,13 @@ in
     notify = {
       url = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
-        default = null;
+        default = lib.attrByPath [ "hwc" "notifications" "notify" "url" ] null osConfig;
+        defaultText = lib.literalExpression "osConfig.hwc.notifications.notify.url (null without it)";
         description = ''
           hwc-notify base URL. Criticals POST here with priority 1
-          (Discord fanout + email). Loopback on hwc-server; the Caddy
-          tailnet port (:29443) from other machines. null = disabled.
+          (Discord fanout + email). Defaults to the system's single producer,
+          hwc.notifications.notify.url. null = disabled.
         '';
-        example = "http://127.0.0.1:11600";
       };
     };
 

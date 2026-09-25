@@ -133,7 +133,7 @@ in
     # would change if hwc-notify ever moves off-host.
     notifyServiceUrl = lib.mkOption {
       type = lib.types.str;
-      default = "http://127.0.0.1:11600";
+      default = config.hwc.notifications.notify.url;
       description = ''
         Base URL of the hwc-notify service. The Phase 2 NotifyAdapter
         POSTs to <notifyServiceUrl>/notify with a server-built

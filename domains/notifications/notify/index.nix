@@ -341,6 +341,31 @@ in
       '';
     };
 
+    serverAlias = lib.mkOption {
+      type = lib.types.str;
+      default = "work";  # service split wave 3
+      description = ''
+        hwc.networking.hosts alias of the one host that runs the dispatcher.
+        Every sender on every host derives `url` from it, so change this
+        default (not a machine override) when the dispatcher moves.
+      '';
+    };
+
+    url = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = config.hwc.networking.hosts.url {
+        server = cfg.serverAlias;
+        port = cfg.reverseProxyPort;
+      };
+      defaultText = lib.literalExpression ''hwc.networking.hosts.url { server = serverAlias; port = reverseProxyPort; }'';
+      description = ''
+        Derived: the dispatcher's base URL (no path), identical on every host —
+        the one producer of "where hwc-notify is". Senders POST to
+        <url>/notify; Alertmanager to <url>/webhook/alertmanager.
+      '';
+    };
+
     statePath = lib.mkOption {
       type = lib.types.path;
       default = "${paths.state}/notify";

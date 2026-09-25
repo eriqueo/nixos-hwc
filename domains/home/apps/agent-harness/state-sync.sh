@@ -5,7 +5,7 @@ STATE=${AGENT_STATE_DIR:-$HOME/.agent-state}
 CONFIG_DIRS=${AGENT_CONFIG_DIRS:-$HOME/.claude:$HOME/.claude_dx2_home}
 HOST=${AGENT_HOST:-$(uname -n)}
 VALIDATOR=${AGENT_STATE_VALIDATOR:-$(realpath "$(dirname "$0")/state-validate.sh")}
-NOTIFY_URL=${AGENT_STATE_NOTIFY_URL-https://hwc-notify.hwc.iheartwoodcraft.com:29443/notify}
+NOTIFY_URL=${AGENT_STATE_NOTIFY_URL-}  # set by the agent-harness module; empty = no notify
 CASE_FILE="$STATE/.git/.sync-case.json"
 CURRENT_FINGERPRINT=""
 CASE_TRANSITION=0

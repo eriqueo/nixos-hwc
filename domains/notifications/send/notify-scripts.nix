@@ -14,7 +14,7 @@
 { pkgs, lib, config }:
 
 let
-  # hwc-alert package (front-end onto :11600/notify).
+  # hwc-alert package (front-end onto <notify.url>/notify).
   cliTool = import ./cli.nix { inherit pkgs lib config; };
   alert = "${cliTool}/bin/hwc-alert";
   logDir = "/var/log/hwc/notifications";

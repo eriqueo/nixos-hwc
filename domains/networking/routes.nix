@@ -54,6 +54,8 @@ in
     heartwood-cms = "work";
     infra-mcp = { owner = "work"; mode = "port"; };       # hwc-sys gateway
     lead-scout-api = { owner = "work"; mode = "port"; };
+    # wave 3: the hwc-notify dispatcher (senders use hwc.notifications.notify.url)
+    hwc-notify = { owner = "work"; mode = "port"; };
   };
 
   hwc.networking.shared.routes = [

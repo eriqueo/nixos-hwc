@@ -4,7 +4,7 @@
 #
 # One command = one intent: "send an alert". It parses friendly args
 # (title/message/severity/endpoint/fields) and POSTs the native
-# NotificationInput shape to the loopback dispatcher at :11600/notify.
+# NotificationInput shape to the dispatcher at hwc.notifications.notify.url.
 # The dispatcher owns routing, fan-out, audit, and circuit-breaking —
 # this shell never talks to Slack/gotify/n8n. It is the sibling of the
 # machine front-end (the HTTP port itself).
@@ -18,7 +18,7 @@
 let
   cliCfg = config.hwc.notifications.send.cli;
   notifyCfg = config.hwc.notifications.notify;
-  base = "http://${notifyCfg.bindAddr}:${toString notifyCfg.port}";
+  base = notifyCfg.url;
   logDir = "/var/log/hwc/notifications";
 
 in
@@ -28,7 +28,7 @@ pkgs.writeShellApplication {
   text = ''
     set -euo pipefail
 
-    # hwc-alert - Send alerts to the hwc-notify dispatcher (:11600/notify)
+    # hwc-alert - Send alerts to the hwc-notify dispatcher (<notify.url>/notify)
     #
     # Usage:
     #   hwc-alert <title> <message> [options]
@@ -59,7 +59,7 @@ pkgs.writeShellApplication {
 
     show_help() {
       cat << 'EOF'
-hwc-alert - Send alerts to the hwc-notify dispatcher (:11600/notify)
+hwc-alert - Send alerts to the hwc-notify dispatcher ($BASE/notify)
 
 Usage:
   hwc-alert <title> <message> [options]

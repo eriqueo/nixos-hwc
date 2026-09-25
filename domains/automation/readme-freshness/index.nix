@@ -47,7 +47,7 @@ in
 
     notifyUrl = lib.mkOption {
       type = lib.types.str;
-      default = "http://127.0.0.1:${toString notifyCfg.port}/notify";
+      default = "${notifyCfg.url}/notify";
       description = "hwc-notify endpoint the report POSTs to (topic nightly-builds)";
     };
 
@@ -82,12 +82,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions = [
-      {
-        assertion = config.hwc.notifications.notify.enable;
-        message = "hwc.automation.readmeFreshness needs hwc.notifications.notify.enable (it POSTs the report there).";
-      }
-    ];
+    assertions = [];
 
     systemd.services.readme-freshness = {
       description = "README freshness — Law-12 drift report + autonomous fix";

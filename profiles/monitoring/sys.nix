@@ -60,7 +60,7 @@
     webhookReceivers = [
       {
         name = "hwc-notify";
-        url = "http://localhost:11600/webhook/alertmanager";
+        url = "${config.hwc.notifications.notify.url}/webhook/alertmanager";
         sendResolved = true;
       }
     ];

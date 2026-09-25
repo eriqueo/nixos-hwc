@@ -39,6 +39,7 @@ notifications/
 | `hwc.notifications.notify.transitionMode` | Transition decision engine: `shadow` (default, records only) or `off` |
 
 ## Changelog
+- 2026-09-25: Service split wave 3 (notifications): `notify.serverAlias` (default `work`) + read-only `notify.url` (`hosts.url { server = serverAlias; port = reverseProxyPort; }`) — the ONE producer of the dispatcher's address. `hwc-alert` posts there (it derived loopback from `bindAddr`, so it only worked on the dispatcher's host); every sender module defaults to it. The dispatcher runs on hwc-work; hwc-server and every serving host send over the tailnet port route.
 - 2026-09-25: `notify/parts/routes.nix` — dropped the `voice-log` topic; its only producer, the dormant n8n `hwc:ops:voice-log` workflow (last success 2026-03-31), was deleted.
 - 2026-09-21: `notify/parts/routes.nix` — the two leads rules also deliver to `smtp-office`. Eric expected an email for a new website lead and had only the Discord ping; the same topic carries the CRM's failure alerts and its new calendar reminders. Leads stay isolated from other topics as before.
 - 2026-09-19: `notify/parts/routes.nix` — removed the `persona-daemon` topic route; its only emitter (the persona-daemon alerts) was deleted with the module.

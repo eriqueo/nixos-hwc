@@ -39,6 +39,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-09-25: Service split wave 3 (notifications): `routeOwners.hwc-notify = { owner = "work"; mode = "port"; }`; gluetun's transition alerts default to `hwc.notifications.notify.url` (null where the notifications domain is absent).
 - 2026-09-25: `routes.nix` — removed the `cloudbeaver` vhost (app retired).
 - 2026-09-25: The wildcard vhost site answers 404 ("no route for <host>") for names without a route instead of Caddy's empty 200, which made a retired app look alive and could keep a probe on a vanished vhost green.
 - 2026-09-25: Service split wave 2 fused window — `routeOwners` += crm, hwc-leads, estimator, event-scout, tasks, lead-scout, home-scout, research-scout, umami, briefing, heartwood-cms and the port routes infra-mcp / lead-scout-api. reverseProxy no longer renders a port route another host owns (it has nothing to serve there), and the root site's `/mcp` handler follows `hwc.system.mcp.serverAlias`. The tunnel on hwc-work now targets localhost for everything except n8n.

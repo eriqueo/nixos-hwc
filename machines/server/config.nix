@@ -360,31 +360,7 @@
 
   # MQTT broker (Frigate -> n8n bridge) comes from the business role.
 
-  # Notifications delivery infrastructure
-  hwc.notifications = {
-    enable = true;
-    send.cli.enable = true; # CLI tool for manual alerts
 
-    # hwc-notify — hexagonal TS dispatcher (Phase 1 complete 2026-05-31).
-    # Primary alert / lead notification path. Replaces the n8n
-    # home:admin:alert-manager workflow. See README.md in
-    # domains/notifications/notify and the architecture note in
-    # wiki/nixos/hwc-notify-architecture.md.
-    notify.enable = true;
-    # Disabled 2026-08-29. The canary's design used its own success message as
-    # the human-visible heartbeat: a daily Discord post + email saying nothing
-    # was wrong. Eric read that as pure noise, and it was — the script already
-    # checks the dispatch result itself, so nobody needs to read the message.
-    # Meanwhile the failure path was silent (hwc-notify-canary was never added
-    # to monitoringServices, so no OnFailure notifier fired). Loud when fine,
-    # quiet when broken: backwards, so it is off until it is rebuilt that way.
-    canary.enable = false;
-  };
-
-  # README freshness — weekly Law-12 drift report (Mon 09:00) → #nightly-builds
-  # Discord channel. Lives here (not the server profile) because it POSTs to
-  # hwc-notify, which is a hwc-server one-off enabled just above.
-  hwc.automation.readmeFreshness.enable = true;
 
   # SR Gauntlet — moved to hwc-work with its checkout and credential dirs
   # (service split wave 1, 2026-09-25). Kept off here so one host investigates.
@@ -452,13 +428,6 @@
   hwc.automation.inboxJanitor.enable = true;
   hwc.automation.inboxJanitor.dryRun = false;
 
-  # mail-janitor — weekly age-aware Gmail anti-buildup sweep. Trashes NOISE
-  # (promo/streaming/social/bot) at any age + TRANSACTIONAL (receipts/orders)
-  # older than 1yr; PRESERVE (people/history/finance) and the Family-Friends
-  # label are never touched. Ships dryRun=true — watch the Discord report +
-  # journal, then set hwc.automation.mailJanitor.dryRun = false to let it act.
-  hwc.automation.mailJanitor.enable = true;
-  hwc.automation.mailJanitor.dryRun = false; # active after dry-run verified 2026-06-24
   # Unified lead pipeline comes from the business role.
 
   # Off-host dead-man's switch: healthchecks.io check "hwc-server" (5 min
@@ -469,29 +438,6 @@
   };
 
   # Alert sources — what to monitor (thresholds, triggers)
-  hwc.monitoring.alerts = {
-    enable = true;
-
-    # Disk-space monitoring is owned by Prometheus alerts
-    # (domains/monitoring/prometheus/parts/alerts.nix). The legacy script-based
-    # diskSpace source was retired 2026-06-04.
-
-    # Service failure notifications (auto-detect critical services)
-    sources.serviceFailures = {
-      enable = true;
-      autoDetect = true;
-    };
-
-    # SMART disk monitoring
-    sources.smartd.enable = true;
-
-    # Backup notifications
-    sources.backup = {
-      enable = true;
-      onSuccess = false; # Don't spam on success
-      onFailure = true; # Always alert on failure
-    };
-  };
 
   # Rsync backup DISABLED - using Borg exclusively
   # See hwc.data.borg below for primary backup
@@ -834,13 +780,7 @@
     ACTION=="add|change", KERNEL=="sd*", ENV{ID_BUS}=="ata", ATTR{queue/rotational}=="1", ATTR{queue/scheduler}="bfq"
   '';
 
-  # SMART disk monitoring
-  services.smartd = {
-    enable = true;
-    autodetect = true;
-    notifications.wall.enable = true;
-    defaults.monitored = "-a -o on -s (S/../.././02|L/../../6/03)";
-  };
+  # SMART disk monitoring comes from the server role.
 
   # Enhanced logging for server.
   # SystemMaxUse and MaxRetentionSec are both ceilings and journald evicts on

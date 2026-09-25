@@ -63,7 +63,7 @@ in
 
     notifyUrl = lib.mkOption {
       type = lib.types.str;
-      default = "http://127.0.0.1:${toString notifyCfg.port}/notify";
+      default = "${notifyCfg.url}/notify";
       description = "hwc-notify endpoint the run summary POSTs to.";
     };
 
@@ -78,10 +78,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions = [{
-      assertion = notifyCfg.enable;
-      message = "hwc.automation.mailJanitor expects hwc.notifications.notify.enable (it POSTs the run summary).";
-    }];
+    assertions = [];
 
     systemd.services.mail-janitor = {
       description = "mail-janitor — age-aware Gmail anti-buildup sweep";

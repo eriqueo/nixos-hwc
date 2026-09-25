@@ -16,7 +16,7 @@
 set -uo pipefail
 
 REPO_DIR="${RF_REPO_DIR:-$HOME/.nixos}"
-NOTIFY_URL="${RF_NOTIFY_URL:-http://127.0.0.1:11600/notify}"
+NOTIFY_URL="${RF_NOTIFY_URL:?RF_NOTIFY_URL unset — run via the readme-freshness unit}"
 AUTO_FIX="${RF_AUTO_FIX:-0}"
 BRANCH_PREFIX="${RF_BRANCH_PREFIX:-readme/auto-refresh}"
 CLAUDE_BIN="${RF_CLAUDE_BIN:-/etc/profiles/per-user/eric/bin/claude}"

@@ -4,8 +4,9 @@
 #
 # NAMESPACE: hwc.notifications.*
 #
-# All delivery flows through hwc-notify (domains/notifications/notify), the
-# loopback dispatcher on :11600. Two front-ends onto that core:
+# All delivery flows through hwc-notify (domains/notifications/notify), the one
+# dispatcher, reached from every host at hwc.notifications.notify.url (its
+# tailnet port route; the daemon itself listens on loopback). Two front-ends:
 #   - the HTTP port itself (machines / n8n POST NotificationInput JSON)
 #   - hwc-alert (this domain's `send/cli.nix`) for humans + scripts
 # The event-shaped notifiers (smartd / systemd OnFailure / backup) are thin
@@ -25,7 +26,7 @@ let
   # Event-shaped notifiers (smartd / OnFailure / backup) — adapters over hwc-alert.
   notifyScripts = import ./send/notify-scripts.nix { inherit pkgs lib config; };
 
-  # hwc-alert CLI — front-end onto :11600/notify.
+  # hwc-alert CLI — front-end onto <notify.url>/notify.
   cliTool = import ./send/cli.nix { inherit pkgs lib config; };
 
 in

@@ -123,7 +123,7 @@ let
   # wrapper only adds the single morning digest — mirrors run.sh's notify().
   reviewRun = pkgs.writeShellScript "nightly-builds-review-run" ''
     set -uo pipefail
-    NOTIFY_URL="''${NB_NOTIFY_URL:-http://127.0.0.1:11600/notify}"
+    NOTIFY_URL="''${NB_NOTIFY_URL:-${cfg.notifyUrl}}"
     OUT="$(mktemp)"; trap 'rm -f "$OUT"' EXIT
     # No date window needed: the CLI skips any step that already has a review
     # record (idempotent) and complete projects graduate off the gauntlet into
@@ -241,7 +241,7 @@ A branch may have pushed without a PR — run \`gh pr list\` and open any missin
   rebuildDrain = pkgs.writeShellScript "nightly-builds-rebuild-drain" ''
     set -uo pipefail
     SPOOL="${rebuildSpoolDir}"
-    NOTIFY_URL="''${NB_NOTIFY_URL:-http://127.0.0.1:11600/notify}"
+    NOTIFY_URL="''${NB_NOTIFY_URL:-${cfg.notifyUrl}}"
     FLAKE="${toString cfg.repoDir}"
     # Fixed allowlist — the ONLY hosts that may be rebuilt. Anything else is
     # dropped without eval.
@@ -315,7 +315,7 @@ in
 
     notifyUrl = lib.mkOption {
       type = lib.types.str;
-      default = "http://127.0.0.1:11600/notify";
+      default = "${config.hwc.notifications.notify.url}/notify";
       description = "hwc-notify POST endpoint for run, review and rebuild notices (same shape as brainSweep/readmeFreshness.notifyUrl).";
     };
 

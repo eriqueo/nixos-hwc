@@ -3,6 +3,7 @@
   lib,
   pkgs,
   inputs,
+  osConfig ? { },
   ...
 }:
 let
@@ -195,7 +196,11 @@ in
     };
     notifyUrl = lib.mkOption {
       type = lib.types.str;
-      default = "https://hwc-notify.hwc.iheartwoodcraft.com:29443/notify";
+      # Derived from the system's hwc.notifications.notify.url (the one
+      # producer); the literal is only the standalone-HM fallback.
+      default = "${
+        lib.attrByPath [ "hwc" "notifications" "notify" "url" ] "https://hwc-work.ocelot-wahoo.ts.net:29443" osConfig
+      }/notify";
       description = "hwc-notify endpoint used for state-sync failure and recovery transitions";
     };
     claudeConfigDirs = lib.mkOption {

@@ -112,6 +112,7 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-09-25: Service split wave 3 (notifications): `health/` — `notify.url` defaults to the system's `hwc.notifications.notify.url` (osConfig), so neither machine sets it.
 - 2026-09-25: `calendar/parts/service.nix` — the discover-on-change step also runs `vdirsyncer metasync` (and its version is part of the stamp, so it runs once everywhere). `sync` never moves collection metadata; hwc-work had no displaynames, so khal rejected `default_calendar = hwc` and the morning briefing's calendar gather broke.
 - 2026-09-25: `calendar/parts/service.nix` — vdirsyncer's pre-sync discover now runs whenever its config differs from the last discovered one (sha256 stamp beside `status/`), not only on an empty status dir: moving the Radicale mirror collections to hwc-work changed the pair config and every sync failed with "Detected change in config file, please run discover".
 - 2026-09-25: `calendar/parts/service.nix` — vdirsyncer runs a guarded first-run

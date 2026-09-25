@@ -17,7 +17,7 @@
 let
   cfg = config.hwc.business.firefly;
   fireflyBase = "http://127.0.0.1:${toString cfg.reverseProxy.coreInternalPort}";
-  notifyUrl = "http://127.0.0.1:11600/notify";
+  notifyUrl = "${config.hwc.notifications.notify.url}/notify";
   cronTokenFile = config.age.secrets.firefly-cron-token.path;
 
   curl = "${pkgs.curl}/bin/curl";

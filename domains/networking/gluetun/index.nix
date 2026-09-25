@@ -171,7 +171,7 @@ let
 
         notifyUrl = mkOption {
           type = types.nullOr types.str;
-          default = "http://127.0.0.1:11600";
+          default = lib.attrByPath [ "hwc" "notifications" "notify" "url" ] null config;
           description = ''
             hwc-notify base URL for transition alerts (topic=monitoring →
             #hwc-alerts). null disables alerting; auto-restart is unaffected.

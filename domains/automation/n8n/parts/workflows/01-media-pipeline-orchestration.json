@@ -494,7 +494,7 @@
         "options": {},
         "sendBody": true,
         "specifyBody": "json",
-        "url": "http://127.0.0.1:11600/notify"
+        "url": "https://hwc-work.ocelot-wahoo.ts.net:29443/notify"
       },
       "position": [
         1904,
@@ -513,7 +513,7 @@
         "options": {},
         "sendBody": true,
         "specifyBody": "json",
-        "url": "http://127.0.0.1:11600/notify"
+        "url": "https://hwc-work.ocelot-wahoo.ts.net:29443/notify"
       },
       "position": [
         224,
@@ -532,7 +532,7 @@
         "options": {},
         "sendBody": true,
         "specifyBody": "json",
-        "url": "http://127.0.0.1:11600/notify"
+        "url": "https://hwc-work.ocelot-wahoo.ts.net:29443/notify"
       },
       "position": [
         1904,

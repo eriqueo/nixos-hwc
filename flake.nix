@@ -918,20 +918,23 @@
       # copy of the monitored list. A name that resolves to no ExecStart is a
       # stub unit: it reads as coverage and delivers nothing (seven such dead
       # entries were found by hand on 2026-08-26).
+      # Every serving host alerts on its own units (service split): check each.
       alert-onfailure-units = let
-        server = self.nixosConfigurations."hwc-server".config;
         onFailureOf = svc:
           let v = (svc.unitConfig or {}).OnFailure or null;
           in if v == null then ""
              else if builtins.isList v then lib.concatStringsSep " " v
              else toString v;
-        monitored = lib.filter
-          (n: lib.hasInfix "hwc-service-failure-notifier@" (onFailureOf server.systemd.services.${n}))
-          (builtins.attrNames server.systemd.services);
-        unitText = n:
-          let t = (server.systemd.units."${n}.service" or {}).text or null;
-          in if t == null then "" else t;
-        dead = lib.filter (n: !(lib.hasInfix "ExecStart=" (unitText n))) monitored;
+        deadOn = host: let
+          c = self.nixosConfigurations.${host}.config;
+          monitored = lib.filter
+            (n: lib.hasInfix "hwc-service-failure-notifier@" (onFailureOf c.systemd.services.${n}))
+            (builtins.attrNames c.systemd.services);
+          unitText = n:
+            let t = (c.systemd.units."${n}.service" or {}).text or null;
+            in if t == null then "" else t;
+        in map (n: "${host}:${n}") (lib.filter (n: !(lib.hasInfix "ExecStart=" (unitText n))) monitored);
+        dead = lib.concatMap deadOn [ "hwc-server" "hwc-work" ];
       in
       assert lib.assertMsg (dead == [])
         ("monitored units with no ExecStart (OnFailure= on these is a silent no-op): "

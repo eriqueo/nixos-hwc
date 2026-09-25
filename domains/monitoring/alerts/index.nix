@@ -26,6 +26,10 @@ let
   # (service split) from leaving an ExecStart-less OnFailure stub here, which
   # is what turned the alert-onfailure-units check red after wave 1.
   on = path: lib.attrByPath path false config;
+  # Containers are gated on being declared (reading the oci-containers
+  # attrset, not systemd.services, keeps this recursion-free).
+  containers = config.virtualisation.oci-containers.containers;
+  podman = name: lib.optional (containers ? ${name}) "podman-${name}";
 
   # List of critical services to auto-detect (when services list is empty)
   # NOTE: We don't check if services exist at build time to avoid infinite recursion
@@ -61,21 +65,26 @@ let
   # deliberately not filled here; the disabled canary
   # (domains/notifications/canary.nix, off since 2026-08-29) is untouched by
   # this change and is not that watcher either.
-  autoDetectedServices = [
+  autoDetectedServices =
     # Web / infra
-    "caddy"
-    "postgresql"
-    "jellyfin"
-    "podman-n8n"
-
-    # Media stack
-    "podman-navidrome"
-    "podman-gluetun"
-    "podman-mousehole"
-    "podman-qbittorrent"
-    "podman-sonarr"
-    "podman-radarr"
-    "podman-prowlarr"
+    lib.optional (on [ "services" "caddy" "enable" ]) "caddy"
+    ++ lib.optional (on [ "services" "postgresql" "enable" ]) "postgresql"
+    ++ lib.optional (on [ "services" "jellyfin" "enable" ]) "jellyfin"
+    # Containers: media stack (hwc-server), apps (hwc-work) — wherever declared
+    ++ lib.concatMap podman [
+      "n8n" "navidrome" "gluetun" "mousehole" "qbittorrent" "sonarr" "radarr" "prowlarr"
+      "refinery" "umami"
+    ]
+    # Business apps + ingress (service split: these run on hwc-work). The
+    # dispatcher itself is never listed — it cannot report its own death
+    # (see NOT A DEADMAN above).
+    ++ lib.optional (on [ "hwc" "business" "crm" "enable" ]) "hwc-crm"
+    ++ lib.optional (on [ "hwc" "system" "mcp" "enable" ]) "hwc-sys-mcp"
+    ++ lib.optional (on [ "hwc" "server" "services" "radicale" "enable" ]) "radicale"
+    ++ lib.optional (on [ "hwc" "server" "ai" "leadScout" "enable" ]) "lead-scout"
+    ++ lib.optional (on [ "hwc" "networking" "cloudflared" "enable" ])
+         "cloudflared-tunnel-${config.hwc.networking.cloudflared.tunnelId}"
+    ++ [
 
     # Timer-driven jobs (added 2026-08-26 — all were uncovered)
     #
@@ -88,10 +97,9 @@ let
     # CREATES a stub unit. Add a name here only after checking the unit exists.
   ] ++ lib.optional (on [ "hwc" "server" "ai" "brainvec" "enable" ]) "brainvec-ingest"
     ++ lib.optional (on [ "hwc" "business" "crm" "enable" ]) "hwc-crm-tick"
-    ++ [
-    "storage-monitor"
-    "inbox-janitor"
-  ] ++ lib.optional (on [ "hwc" "business" "morningBriefing" "enable" ]) "morning-briefing"
+    ++ lib.optional (on [ "hwc" "data" "storage" "enable" ] && on [ "hwc" "data" "storage" "monitoring" "enable" ]) "storage-monitor"
+    ++ lib.optional (on [ "hwc" "automation" "inboxJanitor" "enable" ]) "inbox-janitor"
+    ++ lib.optional (on [ "hwc" "business" "morningBriefing" "enable" ]) "morning-briefing"
     ++ lib.optional (on [ "hwc" "automation" "nightlyBuilds" "enable" ]) "nightly-builds"
     ++ lib.optional (on [ "hwc" "server" "ai" "llamaCpp" "embed" "enable" ]) "llama-embed"
     ++ [
@@ -110,8 +118,8 @@ let
   ] ++ lib.optionals (on [ "hwc" "server" "ai" "homeScout" "enable" ]) [
     "home-scout-schools"
     "home-scout-overlays"
-  ] ++ [
-    "recyclarr-sync"
+  ] ++ lib.optional (on [ "hwc" "media" "recyclarr" "enable" ]) "recyclarr-sync"
+    ++ [
 
     # Added 2026-09-21: the outside-calendar mirror into Radicale
     # (domains/server/services/radicale/parts/mirrors.nix, declared with an

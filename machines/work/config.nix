@@ -1,10 +1,7 @@
 # hwc-work — staged MS-02 work server. Production service ownership remains
 # on hwc-server until a service is migrated with its state and callers.
 { config, pkgs, ... }:
-let
-  # hwc-notify stays on hwc-server; its tailnet port route (measured 200).
-  notifyUrl = "https://hwc-notify.hwc.iheartwoodcraft.com:29443";
-in {
+{
   imports = [
     ./hardware.nix
     # Notification routes need the networking domain's shared vocabulary,
@@ -85,17 +82,31 @@ in {
   };
   hwc.automation.nightlyBuilds = {
     enable = true;
-    notifyUrl = "${notifyUrl}/notify";
   };
   hwc.automation.srGauntlet.enable = true;
   hwc.automation.dx1Gauntlet.enable = true;
   hwc.automation.vaultSync.enable = true;
   hwc.automation.brainSweep = {
     enable = true;
-    inherit notifyUrl;
   };
-  # readme-freshness stays on hwc-server: it asserts a local hwc-notify, which
-  # moves with the notifications stack in a later wave.
+  # hwc-notify — the one dispatcher (service split wave 3; was hwc-server).
+  # Every sender on every host reaches it at hwc.notifications.notify.url.
+  # The canary stays off (2026-08-29): it was loud when fine and quiet when
+  # broken; rebuild it the other way round before re-enabling.
+  hwc.notifications.notify.enable = true;
+  hwc.notifications.canary.enable = false;
+
+  # README freshness — weekly Law-12 drift report (Mon 09:00) → #nightly-builds.
+  # Moved from hwc-server in wave 3 (it only stayed there because it asserted
+  # a local dispatcher); it scans this host's ~/.nixos.
+  hwc.automation.readmeFreshness.enable = true;
+
+  # mail-janitor — weekly age-aware Gmail anti-buildup sweep (Sun 04:00).
+  # Trashes NOISE at any age + TRANSACTIONAL older than 1yr; PRESERVE and the
+  # Family-Friends label are never touched. Live since the 2026-06-24 dry run.
+  # Moved from hwc-server in wave 3 with its triage-clock state.
+  hwc.automation.mailJanitor.enable = true;
+  hwc.automation.mailJanitor.dryRun = false;
   hwc.server.ai.brainMcp.enable = true;
   hwc.server.ai.brainvec.enable = true;
   # nomic-embed-text on CPU: the only inference this host runs. gpuLayers = 0
@@ -126,9 +137,6 @@ in {
   hwc.business.morningBriefing.hostHealthFrom = "main";
   hwc.business.morningBriefing.prometheusUrl =
     "http://${config.hwc.networking.hosts.ips.main}:9090";
-
-  hwc.business.crm.notifyUrl = notifyUrl;
-  hwc.business.leads.notifyServiceUrl = notifyUrl;
 
   # The hwc-sys gateway (+ JT tools). Binds all interfaces for tailnet
   # callers (laptop workbench, hwc-server Prometheus); tailscale0 is trusted.
@@ -199,8 +207,6 @@ in {
     reviewerId = config.hwc.server.ai.leadScout.discordApprovalBots.hwc.allowedUserId;
   };
   hwc.server.ai.homeScout.controlTokenSecret = "hwc-control-home-scout-token";
-  hwc.server.ai.homeScout.notifyUrl = notifyUrl;
-  hwc.server.ai.researchScout.notifyUrl = notifyUrl;
   hwc.server.ai.leadScout.discordApprovalBots = {
     datax-jtpros = {
       enable = true;

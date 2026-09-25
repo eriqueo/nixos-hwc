@@ -164,7 +164,7 @@ in
 
     notifyUrl = lib.mkOption {
       type = lib.types.str;
-      default = "http://127.0.0.1:11600"; # hwc-notify loopback
+      default = config.hwc.notifications.notify.url;
       description = ''
         hwc-notify base URL. Web-form contact leads POST a topic="leads"
         notification here so they land in #hwc-leads (Discord) — the same

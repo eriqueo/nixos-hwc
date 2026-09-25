@@ -59,6 +59,7 @@ monitoring/
 
 ## Changelog
 
+- 2026-09-25: Service split wave 3 (notifications): `alerts/` is enabled on every serving host by the server role (hwc-work had no failure alerting); every unit on its list is gated on its owning module/NixOS enable or on the container being declared, and hwc-work's critical units (crm, gateway, tunnel, radicale, lead-scout, refinery, umami) were added. The `alert-onfailure-units` check covers hwc-server and hwc-work. Alertmanager's receiver is `<notify.url>/webhook/alertmanager`. SMART monitoring comes from the server role.
 - 2026-09-25: CloudBeaver removed from the blackbox service probes and the Homepage tiles (app retired).
 - 2026-09-25: Homepage loses the Market Intelligence tile (module retired). `probe-webhook-ingress` drops `/webhook/calculator-appointment`: that n8n workflow was deleted as dormant (last run 2026-07-10; the live calculator bundle posts to crm `/hooks/appointment`).
 - 2026-09-25: `alerts/` — each timer/service name in the service-failure list is gated on its owning module's enable option (`lib.attrByPath`, no `systemd.services` read, so no recursion). Units that moved to hwc-work no longer leave ExecStart-less OnFailure stubs on hwc-server; this also turns `alert-onfailure-units` green again (red since wave 1: brainvec-ingest, nightly-builds). `prometheus/` — probes for apps that moved (hwc-leads, CMS, Umami, the hwc-sys gateway) use their vhost or owner-derived URL instead of loopback.

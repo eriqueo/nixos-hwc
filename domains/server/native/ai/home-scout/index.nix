@@ -10,8 +10,8 @@
 #      <projectDir>/ingest
 #   3. Postgres database `home_scout` on the shared instance
 #
-# Notifications go to the hwc-notify loopback dispatcher (:11600/notify) —
-# no webhook secrets needed.
+# Notifications go to the hwc-notify dispatcher (notifyUrl, default
+# hwc.notifications.notify.url) — no webhook secrets needed.
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.server.ai.homeScout;
@@ -158,7 +158,7 @@ in
 
     notifyUrl = lib.mkOption {
       type = lib.types.str;
-      default = "http://127.0.0.1:11600";
+      default = config.hwc.notifications.notify.url;
       description = "hwc-notify dispatcher base URL (POSTs to /notify)";
     };
 
