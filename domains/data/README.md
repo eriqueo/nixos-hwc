@@ -26,6 +26,7 @@ data/
 ```
 
 ## Changelog
+- 2026-09-25: `databases/` — the primary user's role now declares `ensureClauses.superuser = true`. The module already assumed `eric` was a superuser (hand-made on hwc-server); hwc-work's cluster had created it without, which would have broken cross-database reads (crm → lead_scout/umami, gateway → umami) after the service split.
 - 2026-09-25: Borg remote repositories are implemented, not "future". `hwc.data.borg.repo.remote.{enable,path,sshKeySecret}` swap the SSH URL in for the local path across the job, the `borg-hwc`/`borg-list`/`borg-restore` wrappers, `break-lock`, and `borg check`; the URL is kept out of `ReadWritePaths`. `BORG_RSH` carries the agenix key when one is named. First consumer: hwc-work pushing `/var/lib/hwc` and its `pg_dumpall` to the server's `/mnt/backup/borg-hwc-work` through a restricted `services.borgbackup.repos` user. Server behaviour unchanged (local path, same drv inputs apart from the new BORG_RSH env on borg-check).
 - 2026-07-05: Law 5 burn-down — added `HWC-EXCEPTION(Law 5)` annotation blocks (reason/justification/plan/revocable) to this domain's raw `oci-containers` module(s); infra-shaped containers are sanctioned exceptions to the mkContainer rule. Comments only, no behavior change.
 - 2026-06-09: Law 3 finish — databases per-DB backup outputDir default derives from `hwc.paths.user.home`. Drv hash unchanged.

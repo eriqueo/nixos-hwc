@@ -201,7 +201,16 @@ in
         #
         # No `ensureDBOwnership`: `eric` is a superuser and already owns what it
         # needs. Setting it would rewrite live database ownership.
-        ensureUsers = [{ name = config.hwc.system.users.user.name or "eric"; }];
+        #
+        # The superuser bit is declared, not assumed (2026-09-25): hwc-server's
+        # `eric` was made superuser by hand, and hwc-work's cluster created it
+        # without, so crm (reads lead_scout/umami) and the hwc-sys gateway
+        # (reads umami) would have hit permission errors there after the
+        # service split. ensureClauses is idempotent on hwc-server.
+        ensureUsers = [{
+          name = config.hwc.system.users.user.name or "eric";
+          ensureClauses.superuser = true;
+        }];
 
         settings = lib.mkMerge [
           {
