@@ -166,6 +166,10 @@ in
   xdg.configFile."gtk-3.0/gtk.css".text = gtk3Css;
   xdg.configFile."gtk-4.0/gtk.css".text = gtk4Css;
 
+  # Headless hosts have no dconf D-Bus service. Keep file-based GTK settings,
+  # but do not run desktop database writes during their HM activation.
+  dconf.enable = lib.mkDefault graphical;
+
   # libadwaita dark mode: AdwStyleManager reads this dconf key
   dconf.settings."org/gnome/desktop/interface".color-scheme = "prefer-dark";
 }

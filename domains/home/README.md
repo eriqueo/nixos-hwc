@@ -29,7 +29,7 @@ domains/home/
 │            # optional sys.nix system half, parts/ for split config); Waybar's
 │            # laptop-only power hub has paired home/system flags for HM parity
 ├── core/    # shell/ (CLI env, zsh, aliases — parts/), development/, xdg-dirs.nix
-└── theme/   # palettes/ (deep-nord, gruv, hwc), templates/gtk.nix, fonts/
+└── theme/   # palettes/, GTK templates (headless skips dconf writes), fonts/
 ```
 
 One-package apps use `domains/lib/mkSimpleApp.nix`; cross-lane helpers
@@ -50,6 +50,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-24: `theme/templates/gtk.nix` defaults dconf activation to `theme.graphical`; headless Home Manager activation no longer requires the desktop dconf D-Bus service.
 - 2026-09-24: apps/agent-harness gains opt-in `cliUpdates`, a daily timer that keeps the npm-global `claude` and `codex` at `@latest`. hwc-server enables it (machines/server/home.nix). apps/t3code serve-PATH doc now says `codex` is an npm global there.
 - 2026-09-23: `core/shell/` — new `vpnport` alias: prints the Proton forwarded port from `/run/protonvpn-natpmp/port` (see `hwc.networking.vpn.protonvpn.portForwarding`).
 - 2026-09-21: `core/shell/` — new `server-lan` ssh matchBlock and shell alias to hwc-server's home-LAN address (`hmLib.fleet.lanIps.main`). Use it when Tailscale can't connect because the internet is down.

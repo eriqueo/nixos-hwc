@@ -17,7 +17,7 @@ theme/
 ├── palettes/        # deep-nord.nix, gruv.nix, hwc.nix (token sets incl.
 │                    #   ansi, sectionA-D powerline tokens, cursor block)
 ├── templates/
-│   └── gtk.nix      # palette -> GTK 2/3/4, CSS bridge, explicit pointerCursor enable
+│   └── gtk.nix      # GTK/CSS bridge; cursor and dconf activation follow graphical
 ├── fonts/index.nix  # font packages + mono/ui font-name tokens
 └── nord-mountains.jpg
 ```
@@ -37,6 +37,7 @@ There is no separate "adapters" layer — that design was never built; the
 former README describing it was aspirational.
 
 ## Changelog
+- 2026-09-24: Default dconf activation to `theme.graphical`, preserving file-based GTK settings while avoiding desktop D-Bus writes on headless hosts. Fixes first activation of `hwc-work` without a dconf service.
 - 2026-09-02: Explicitly enable `home.pointerCursor` on graphical hosts,
   preserving the existing cursor output without Home Manager's deprecated
   implicit-enable behavior.
