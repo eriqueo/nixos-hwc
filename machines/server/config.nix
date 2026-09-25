@@ -703,7 +703,7 @@
     enable = lib.mkForce true;
     type = "nvidia";
     nvidia = {
-      driver = "stable"; # Domain chooses the matching package
+      driver = "legacy_580"; # Last branch supporting Quadro P1000 (Pascal)
       containerRuntime = true;
       enableMonitoring = true;
     };

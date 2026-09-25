@@ -45,6 +45,8 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-09-24: GPU driver selection accepts `legacy_580`; hwc-server's
+  Quadro P1000 needs NVIDIA 580 because current stable 595 dropped Pascal.
 - 2026-09-24: Adopted the 26.05 `settings` APIs for coredump and resolved;
   the old 25.11 fields were removed. Storage and DNS values are unchanged.
 - 2026-09-24: `mcp/` is compiled and tested by `buildNpmPackage`; systemd now

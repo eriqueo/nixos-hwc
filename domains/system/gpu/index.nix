@@ -17,7 +17,7 @@
 #
 # USAGE:
 #   hwc.system.hardware.gpu.type = "nvidia";  # or "intel" | "amd" | "none"
-#   hwc.system.hardware.gpu.nvidia.driver = "stable";  # "stable" | "beta" | "production"
+#   hwc.system.hardware.gpu.nvidia.driver = "stable";  # or "legacy_580" for Pascal GPUs
 #   hwc.system.hardware.gpu.nvidia.containerRuntime = true;   # enables nvidia-container-toolkit
 #   hwc.system.hardware.gpu.nvidia.enableMonitoring = true;   # nvidia-smi logging service
 #
@@ -155,7 +155,7 @@ in
       };
 
       driver = lib.mkOption {
-        type = t.enum [ "stable" "beta" "production" ];
+        type = t.enum [ "stable" "beta" "production" "legacy_580" ];
         default = "stable";
         description = "NVIDIA driver package channel.";
       };
