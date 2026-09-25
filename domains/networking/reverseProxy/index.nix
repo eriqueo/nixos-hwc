@@ -251,6 +251,14 @@ let
         format json
       }
       ${concatStringsSep "\n" (map renderVhostRoute vhostRoutes)}
+
+      # A name with no route is a 404, not Caddy's empty 200: the empty 200
+      # made a retired app (market-intelligence) look alive and would let a
+      # blackbox probe on a vanished vhost stay green. Matcher-less handle =
+      # fallback after every host-matched handle above.
+      handle {
+        respond "no route for {host}" 404
+      }
     }
   '';
 

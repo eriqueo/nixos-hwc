@@ -39,6 +39,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-09-25: The wildcard vhost site answers 404 ("no route for <host>") for names without a route instead of Caddy's empty 200, which made a retired app look alive and could keep a probe on a vanished vhost green.
 - 2026-09-25: Service split wave 2 fused window — `routeOwners` += crm, hwc-leads, estimator, event-scout, tasks, lead-scout, home-scout, research-scout, umami, briefing, heartwood-cms and the port routes infra-mcp / lead-scout-api. reverseProxy no longer renders a port route another host owns (it has nothing to serve there), and the root site's `/mcp` handler follows `hwc.system.mcp.serverAlias`. The tunnel on hwc-work now targets localhost for everything except n8n.
 - 2026-09-25: `routeOwners.monitor = "work"` — DataX monitor vhost served by hwc-work; the tunnel's monitor.* names target localhost there.
 - 2026-09-25: Route ownership has one producer — `shared.routeOwners` in `routes.nix` (name → host alias; `{ owner; mode = "port"; }` for port routes). reverseProxy derives read-only `shared.effectiveRoutes` (owner stamped on local routes, plus a name-only vhost stub for each remotely owned vhost with no local route, so the server keeps proxying a moved app's name and the laptop keeps pinning it after its module is turned off here). The per-route `owner` fields (calculator, refinery, t3-work), brain-mcp's module-route owner and `business.workbench.routeOwner` were converted to map entries. Pure refactor: rendered Caddyfiles on hwc-server and hwc-work and the laptop's pins are byte-identical.
