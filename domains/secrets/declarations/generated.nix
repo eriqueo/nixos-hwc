@@ -44,6 +44,8 @@ let
     frigate-rtsp-username = { mode = "0400"; group = "root"; };
     frigate-camera-ips    = { mode = "0400"; group = "root"; };
     borg-passphrase       = { mode = "0400"; group = "root"; };
+    # OpenSSH refuses a private key that any group can read.
+    borg-work-ssh-key     = { mode = "0400"; group = "root"; };
     rclone-proton-config  = { mode = "0600"; group = "root"; };
   };
 

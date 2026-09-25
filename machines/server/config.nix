@@ -698,6 +698,23 @@
     notifications.onFailure = true;
   };
 
+  # hwc-work backs up to this host's DAS. The NixOS repos module creates the
+  # `borg` user and pins its key to `borg serve --restrict-to-repository`, so
+  # the work host can only touch its own repository. The private half is the
+  # agenix secret `borg-work-ssh-key` mounted on hwc-work; the client job is
+  # `hwc.data.borg.repo.remote` in machines/work/config.nix. Traversal bit on
+  # /mnt/backup lets the borg user reach its subdirectory without exposing the
+  # server's own repository, which stays root-only.
+  # Retention class: AUTO-MANAGED — bounded by the client's prune policy
+  # (7 daily / 4 weekly / 6 monthly) and compacted by the same job.
+  services.borgbackup.repos.hwc-work = {
+    path = "/mnt/backup/borg-hwc-work";
+    authorizedKeys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEnjV1K+7pHtjsFJKKm07ty4fTayNLQ+lOPoUhTkEP50 root@hwc-work borg-to-server"
+    ];
+  };
+  systemd.tmpfiles.rules = [ "z /mnt/backup 0751 root root -" ];
+
   # Machine-specific GPU settings for Quadro P1000 (legacy driver required)
   hwc.system.hardware.gpu = {
     enable = lib.mkForce true;

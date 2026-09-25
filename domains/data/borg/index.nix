@@ -20,6 +20,15 @@ let
   # Job name for systemd service
   jobName = "hwc-backup";
 
+  # One producer for "where the repository is": local path or SSH URL.
+  repoUrl = if cfg.repo.remote.enable then cfg.repo.remote.path else cfg.repo.path;
+
+  # SSH command for the job and the interactive wrappers. The key flag is
+  # present only when a remote key secret is named.
+  borgRsh = "ssh -o StrictHostKeyChecking=accept-new"
+    + lib.optionalString (cfg.repo.remote.enable && cfg.repo.remote.sshKeySecret != null)
+        " -i /run/agenix/${cfg.repo.remote.sshKeySecret}";
+
   # Build OnCalendar string
   onCalendar =
     if cfg.schedule.frequency == "daily" then
@@ -45,15 +54,31 @@ in
         description = "Path to local Borg repository";
       };
 
-      # Future: remote repository support
+      # Remote repository over SSH. When enabled, `remote.path` replaces
+      # `repo.path` everywhere (job, wrappers, check, break-lock) and is kept
+      # out of ReadWritePaths, which only accepts filesystem paths. The
+      # serving host declares the matching `services.borgbackup.repos.<name>`
+      # with the client's public key, so `borg serve` is restricted to that
+      # one repository.
       remote = {
         enable = lib.mkEnableOption "Remote repository (SSH)";
 
         path = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
-          example = "user@backup-server:/path/to/repo";
-          description = "SSH path to remote Borg repository";
+          example = "ssh://borg@100.77.195.118/mnt/backup/borg-hwc-work";
+          description = "SSH URL of the remote Borg repository";
+        };
+
+        sshKeySecret = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          example = "borg-work-ssh-key";
+          description = ''
+            Name of the agenix secret holding the private SSH key the root-run
+            backup job presents to the remote host. Mount it 0400 root, since
+            OpenSSH refuses a key any group can read.
+          '';
         };
       };
     };
@@ -220,23 +245,26 @@ in
       # borg-hwc: wrapper with passphrase pre-loaded
       (pkgs.writeShellScriptBin "borg-hwc" ''
         export BORG_PASSCOMMAND="cat /run/agenix/${cfg.encryption.passphraseSecret}"
-        export BORG_REPO="${cfg.repo.path}"
+        export BORG_RSH="${borgRsh}"
+        export BORG_REPO="${repoUrl}"
         exec ${pkgs.borgbackup}/bin/borg "$@"
       '')
 
       # borg-list: show recent backups
       (pkgs.writeShellScriptBin "borg-list" ''
         export BORG_PASSCOMMAND="cat /run/agenix/${cfg.encryption.passphraseSecret}"
+        export BORG_RSH="${borgRsh}"
         echo "=== Borg Archives ==="
-        ${pkgs.borgbackup}/bin/borg list "${cfg.repo.path}"
+        ${pkgs.borgbackup}/bin/borg list "${repoUrl}"
         echo ""
         echo "=== Repository Info ==="
-        ${pkgs.borgbackup}/bin/borg info "${cfg.repo.path}"
+        ${pkgs.borgbackup}/bin/borg info "${repoUrl}"
       '')
 
       # borg-restore: restore files from archive
       (pkgs.writeShellScriptBin "borg-restore" ''
         export BORG_PASSCOMMAND="cat /run/agenix/${cfg.encryption.passphraseSecret}"
+        export BORG_RSH="${borgRsh}"
         if [ $# -lt 2 ]; then
           echo "Usage: borg-restore <archive-name> <target-dir> [path]"
           echo ""
@@ -245,12 +273,12 @@ in
           echo "  borg-restore hwc-server-hwc-backup-2026-03-02 /tmp/restore var/lib/hwc/n8n"
           echo ""
           echo "Available archives:"
-          ${pkgs.borgbackup}/bin/borg list --short "${cfg.repo.path}"
+          ${pkgs.borgbackup}/bin/borg list --short "${repoUrl}"
           exit 1
         fi
         ARCHIVE="$1"; TARGET="$2"; SUBPATH="''${3:-.}"
         mkdir -p "$TARGET" && cd "$TARGET"
-        ${pkgs.borgbackup}/bin/borg extract "${cfg.repo.path}::$ARCHIVE" "$SUBPATH"
+        ${pkgs.borgbackup}/bin/borg extract "${repoUrl}::$ARCHIVE" "$SUBPATH"
         echo "Restored to $TARGET"
       '')
 
@@ -268,8 +296,8 @@ in
       paths = cfg.sources;
       exclude = cfg.excludePatterns;
 
-      # Repository
-      repo = cfg.repo.path;
+      # Repository (local path or SSH URL)
+      repo = repoUrl;
 
       # Encryption
       encryption = {
@@ -304,16 +332,15 @@ in
       # Reduce compact I/O — only rewrite segments with >25% freed space (default 10%)
       extraCompactArgs = [ "--threshold" "25" ];
 
-      # Environment for hooks
+      # Environment for hooks and the remote transport
       environment = {
-        BORG_RSH = "ssh -o StrictHostKeyChecking=accept-new";
+        BORG_RSH = borgRsh;
       };
 
-      # Read-write paths for pre/post hooks
+      # Read-write paths for pre/post hooks. A remote repo is not a path.
       readWritePaths = [
         "/var/lib/backups"
-        cfg.repo.path
-      ];
+      ] ++ lib.optional (!cfg.repo.remote.enable) cfg.repo.path;
     };
 
     # Custom timer with random delay support
@@ -340,7 +367,7 @@ in
       after = [ "borg-check.service" ];
       # Break stale locks before starting (from previous crashes/kills)
       preStart = ''
-        ${pkgs.borgbackup}/bin/borg break-lock ${cfg.repo.path} 2>/dev/null || true
+        ${pkgs.borgbackup}/bin/borg break-lock ${repoUrl} 2>/dev/null || true
       '';
       # Prevent stuck borg processes from blocking future backups
       serviceConfig = {
@@ -361,9 +388,10 @@ in
       restartIfChanged = false;
       # Use environment attr so NixOS quotes it properly for systemd
       environment.BORG_PASSCOMMAND = "cat /run/agenix/${cfg.encryption.passphraseSecret}";
+      environment.BORG_RSH = borgRsh;
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${pkgs.borgbackup}/bin/borg check ${cfg.repo.path}";
+        ExecStart = "${pkgs.borgbackup}/bin/borg check ${repoUrl}";
       };
     };
 
@@ -393,6 +421,15 @@ in
       {
         assertion = cfg.encryption.mode != "none" || cfg.repo.remote.enable == false;
         message = "Remote Borg repositories must use encryption";
+      }
+      {
+        assertion = !cfg.repo.remote.enable || cfg.repo.remote.path != null;
+        message = "hwc.data.borg.repo.remote.enable needs hwc.data.borg.repo.remote.path";
+      }
+      {
+        assertion = cfg.repo.remote.sshKeySecret == null
+          || builtins.hasAttr cfg.repo.remote.sshKeySecret config.age.secrets;
+        message = "hwc.data.borg.repo.remote.sshKeySecret names an agenix secret that is not declared";
       }
     ];
 
