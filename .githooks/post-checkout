@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Keep the primary checkout on a branch. On 2026-09-25 an agent deployed
+# unmerged work by checking out bare commits here, four times in one hour: the
+# checkout sat detached and the running system held commits main did not, so
+# the next deploy from main would have reverted them. Deploy an unmerged branch
+# from its worktree instead — nothing in this checkout has to move:
+#   sudo nixos-rebuild switch --flake ~/.nixos-worktrees/<name>#hwc-<host>
+# A post-checkout hook cannot stop a checkout; its exit status becomes the
+# command's. So it re-attaches the branch it came from and fails loudly.
+# Bypass for deliberate inspection: HWC_ALLOW_DETACHED=1 git checkout <rev>
+[ "${3:-0}" = 1 ] || exit 0                        # file checkout, not a HEAD move
+[ -z "${HWC_ALLOW_DETACHED:-}" ] || exit 0
+git symbolic-ref -q HEAD >/dev/null && exit 0      # on a branch: nothing to guard
+
+git_dir=$(git rev-parse --absolute-git-dir)
+common_dir=$(cd "$(git rev-parse --git-common-dir)" && pwd -P)
+[ "$(cd "$git_dir" && pwd -P)" = "$common_dir" ] || exit 0   # linked worktree
+[ -z "$(git rev-parse --show-superproject-working-tree)" ] || exit 0
+for state in rebase-merge rebase-apply sequencer BISECT_START; do
+  [ -e "$git_dir/$state" ] && exit 0               # rebase, am, cherry-pick, bisect
+done
+
+previous=$(git rev-parse --symbolic-full-name '@{-1}' 2>/dev/null)
+echo >&2
+echo "post-checkout: the primary checkout must stay on a branch." >&2
+echo "Deploy unmerged work from its worktree instead:" >&2
+echo "  sudo nixos-rebuild switch --flake ~/.nixos-worktrees/<name>#hwc-<host>" >&2
+case "$previous" in
+  refs/heads/*)
+    if git checkout -q "${previous#refs/heads/}"; then
+      echo "post-checkout: returned to ${previous#refs/heads/}; this checkout did not happen." >&2
+    else
+      echo "post-checkout: could not return to ${previous#refs/heads/}; HEAD is detached. Run: git checkout ${previous#refs/heads/}" >&2
+    fi
+    ;;
+  *)
+    echo "post-checkout: no branch to return to; HEAD is detached. Run: git checkout main" >&2
+    ;;
+esac
+exit 1

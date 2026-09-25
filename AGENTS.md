@@ -23,6 +23,11 @@ triggered by the file's path rather than your read of the task.
   Don't alternate lanes casually — each keeps its own HM generation and
   will trip "existing file in the way" on files the other placed.
 - A build without a switch changes nothing; never report "live" from a build.
+- Deploy unmerged work from its worktree:
+  `sudo nixos-rebuild switch --flake ~/.nixos-worktrees/<name>#hwc-<host>`.
+  Never check out a commit in this checkout to deploy it; the tracked
+  `.githooks/post-checkout` returns it to its branch and fails the checkout.
+  Merge to `main` right after a verified switch, so `main` holds what runs.
 
 ## Rules no lint catches yet
 - Secrets: `group = "secrets"; mode = "0440"`.
