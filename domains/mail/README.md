@@ -112,6 +112,7 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-09-25: `calendar/parts/service.nix` — vdirsyncer's pre-sync discover now runs whenever its config differs from the last discovered one (sha256 stamp beside `status/`), not only on an empty status dir: moving the Radicale mirror collections to hwc-work changed the pair config and every sync failed with "Detected change in config file, please run discover".
 - 2026-09-25: `calendar/parts/service.nix` — vdirsyncer runs a guarded first-run
   `discover` (only while `status/` is missing or empty) before `sync`. A new host
   (hwc-work, service split wave 2) otherwise fails every run with "Please run

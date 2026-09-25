@@ -1,14 +1,21 @@
 { lib, pkgs, dataDir }:
 let
-  # First run on a host: vdirsyncer refuses to sync until `discover` has
-  # recorded each pair's collections under status/. Run it once, answering
-  # yes to creating the missing local collections; later runs skip it so a
-  # collection deleted on one side is never silently re-created.
-  firstDiscover = pkgs.writeShellScript "vdirsyncer-first-discover" ''
-    status="${dataDir}/status"
-    status="''${status/#\~/$HOME}"
-    if [ ! -d "$status" ] || [ -z "$(ls -A "$status")" ]; then
+  # vdirsyncer refuses to sync until `discover` has recorded each pair's
+  # collections — on a new host, and again after any change to its config
+  # (e.g. a Radicale collection added to a pair). Discover whenever the
+  # config differs from the one last discovered (hash kept beside status/),
+  # answering yes to creating missing collections; unchanged config never
+  # re-discovers, so a collection deleted on one side stays deleted.
+  firstDiscover = pkgs.writeShellScript "vdirsyncer-discover-on-change" ''
+    set -eu
+    data="${dataDir}"
+    data="''${data/#\~/$HOME}"
+    conf="''${XDG_CONFIG_HOME:-$HOME/.config}/vdirsyncer/config"
+    stamp="$data/discovered-config.sha256"
+    want=$(sha256sum "$conf" | cut -d' ' -f1)
+    if [ ! -f "$stamp" ] || [ "$(cat "$stamp")" != "$want" ]; then
       yes | ${pkgs.vdirsyncer}/bin/vdirsyncer discover
+      mkdir -p "$data" && printf '%s\n' "$want" > "$stamp"
     fi
   '';
 in

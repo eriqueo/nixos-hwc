@@ -302,6 +302,12 @@ in
     systemd.tmpfiles.rules = [
       "d /run/hwc-sys-mcp 0750 eric users -"
       "d /opt/business/website-site/.trash 0750 eric users -"
+      # The sandbox refuses to start while any Read*Paths entry is missing:
+      # the n8n-mcp install dir (ExecStartPre fills it) and khal's data dir
+      # existed on hwc-server only by history; a fresh host (hwc-work, service
+      # split wave 2) failed at NAMESPACE until both were created.
+      "d ${n8nMcpInstallDir} 0755 eric users -"
+      "d ${paths.user.home}/.local/share/khal 0755 eric users -"
     ];
 
     #--------------------------------------------------------------------------
