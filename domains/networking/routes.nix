@@ -376,6 +376,17 @@ in
       upstream = "http://127.0.0.1:4400";
     }
 
+    # Umami analytics dashboard + collect API (container publishes loopback
+    # :3009). Public visitors reach it as stats.iheartwoodcraft.com through
+    # the tunnel, which runs on hwc-work and so reaches this loopback app via
+    # this vhost until umami itself moves (service split wave 2). Tailnet
+    # exposure adds nothing: the dashboard (with login) is already public.
+    {
+      name = "umami";
+      mode = "vhost";
+      upstream = "http://127.0.0.1:3009";
+    }
+
     # lead_scout API — MCP + REST backend — HELD on port mode.
     # Same :8420 backend as lead-scout; the laptop's Claude MCP config may pin
     # this URL, so migrate it together with the other MCP endpoints.

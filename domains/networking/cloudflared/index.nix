@@ -58,15 +58,28 @@ in
       description = "Local n8n port to proxy to";
     };
 
+    n8nHost = lib.mkOption {
+      type = lib.types.str;
+      default = "localhost";
+      description = ''
+        Host that serves n8n for the primary `domain`. `localhost` when the
+        tunnel and n8n share a host; a tailnet address when they do not
+        (service split: the tunnel runs on hwc-work, n8n on hwc-server
+        until wave 4).
+      '';
+    };
+
     extraIngress = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.either lib.types.str (lib.types.attrsOf lib.types.str));
+      type = lib.types.attrsOf (lib.types.either lib.types.str lib.types.attrs);
       default = {};
       description = ''
         Additional hostname → service ingress rules. A plain string routes
-        the whole hostname; an attrset ({ service; path; }) routes only
-        request paths matching the regex — unmatched paths fall through to
-        the tunnel default (404). Path form passes through to the nixpkgs
-        services.cloudflared ingress submodule.
+        the whole hostname; an attrset ({ service; path; originRequest; })
+        routes only request paths matching the regex — unmatched paths fall
+        through to the tunnel default (404) — and may set per-rule origin
+        options such as httpHostHeader/originServerName for an HTTPS origin
+        reached by IP. The attrset passes through to the nixpkgs
+        services.cloudflared ingress submodule, which validates it.
       '';
       example = {
         "status.heartwoodcraft.me" = "http://localhost:3000";
@@ -92,7 +105,7 @@ in
           default = "http_status:404";
 
           ingress = {
-            ${cfg.domain} = "http://localhost:${toString cfg.n8nPort}";
+            ${cfg.domain} = "http://${cfg.n8nHost}:${toString cfg.n8nPort}";
           } // cfg.extraIngress;
         };
       };

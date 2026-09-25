@@ -39,6 +39,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-09-25: Service split wave 2 — `cloudflared/` gains `n8nHost` (default `localhost`) and `extraIngress` attrsets may carry `originRequest`, so the tunnel can run on hwc-work while its origins are still on hwc-server (tailnet IP, or the server's Caddy vhost by IP with its Host/SNI). `routes.nix` gains an `umami` vhost (→ `127.0.0.1:3009`) so the loopback-only Umami is reachable from the tunnel host.
 - 2026-09-25: Service split wave 1 — `refinery` is work-owned; new `t3-work` vhost for hwc-work's own T3 Code environment (hwc-server keeps `t3`). Laptop pins and the server proxy derive from the owner tags as before.
 - 2026-09-25: Register hwc-work's tailnet address and introduce opt-in Caddy route ownership. The calculator is the first work-owned route; legacy hosts proxy it to work over the tailnet with its TLS name for cached DNS and pinned clients. Networking also tolerates hosts without the AI domain.
 - 2026-09-24: `reverseProxy/` — refresh the deSEC-enabled Caddy fixed-output source hash for the 26.05 nixpkgs input. Caddy remains 2.11.4, but the vendored source hash changed; the new value came from the exact server Caddy build's reported content hash.

@@ -89,6 +89,73 @@
     remoteRoutes = [ "crm" "firefly-explorer" "lead-scout" "home-scout" "research-scout" "event-scout" ];
   };
 
+  #==========================================================================
+  # CLOUDFLARE TUNNEL (public ingress) — service split wave 2, step 1
+  #==========================================================================
+  # The one tunnel moved here from hwc-server with the same credential; every
+  # hostname, path lock and Access policy is unchanged. Apps still on
+  # hwc-server are reached over the tailnet: directly where they bind on all
+  # interfaces (n8n, the hwc-sys gateway, datax-monitor), otherwise through
+  # the server's Caddy vhost by IP with the vhost's Host/SNI (crm, lead-scout,
+  # umami bind 127.0.0.1). Caddy passes CF-Connecting-IP through, which is the
+  # header hwc-crm rate-limits on.
+  # TEMPORARY (each server target): flips to http://localhost:<port> in the
+  # commit that moves that app to this host; removal condition = the app's
+  # unit is disabled on hwc-server.
+  hwc.networking.cloudflared =
+    let
+      server = config.hwc.networking.hosts.ips.main;
+      viaServerCaddy = vhost: path: {
+        service = "https://${server}";
+        originRequest = {
+          httpHostHeader = "${vhost}.hwc.iheartwoodcraft.com";
+          originServerName = "${vhost}.hwc.iheartwoodcraft.com";
+        };
+      } // (if path == null then { } else { inherit path; });
+    in {
+      enable = true;
+      tunnelId = "1536327b-2641-4706-8ad9-48c94d0b11f9";
+      credentialsFile = config.age.secrets.cloudflared-tunnel-credentials.path;
+      # n8n.heartwoodcraft.me → n8n (hwc-server until wave 4).
+      n8nHost = server;
+      extraIngress = {
+        "mcp.heartwoodcraft.me" = "http://${server}:6200";
+        "mcp.iheartwoodcraft.com" = "http://${server}:6200";
+        "hwc-origin.heartwoodcraft.me" = "http://${server}:6200";
+
+        # brain-mcp is local (wave 1).
+        "brain.heartwoodcraft.me" = "http://localhost:9876";
+        "brain.iheartwoodcraft.com" = "http://localhost:9876";
+        "brain-origin.heartwoodcraft.me" = "http://localhost:9876";
+
+        # datax-monitor — Cloudflare Access ("datax" allow-list) gates it; the
+        # app has no auth of its own.
+        "monitor.heartwoodcraft.me" = "http://${server}:4400";
+        "monitor.iheartwoodcraft.com" = "http://${server}:4400";
+
+        # Production-domain webhook ingress (calculator lead/appointment):
+        # only /webhook/* reaches n8n; other paths hit the 404 default.
+        "api.iheartwoodcraft.com" = {
+          service = "http://${server}:5678";
+          path = "^/webhook/";
+        };
+
+        # Umami — script.js + /api/send must be visitor-reachable.
+        "stats.iheartwoodcraft.com" = viaServerCaddy "umami" null;
+
+        # hwc-crm public intake, PATH-locked to /hooks/*; the board stays
+        # tailnet-private. /hooks/jt is JobTread's webhook (hwc-crm D45).
+        "crm.iheartwoodcraft.com" =
+          viaServerCaddy "crm" "^/hooks/(contact|calculator|appointment|availability|jt)";
+
+        # Calculator report viewer — read-only sanitised GET /api/reports/<id>.
+        "reports.iheartwoodcraft.com" = viaServerCaddy "crm" "^/api/reports/";
+
+        # hwc-mcp-gateway origin for lead-scout (Access service token).
+        "leads-origin.heartwoodcraft.me" = viaServerCaddy "lead-scout" null;
+      };
+    };
+
   # First work-owned route: the static calculator. Other app routes stay on
   # hwc-server until each app, its data, and its callers have migrated.
   hwc.networking.reverseProxy.enable = true;
