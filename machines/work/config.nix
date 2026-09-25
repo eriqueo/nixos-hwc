@@ -12,7 +12,10 @@
     ../../domains/server/native/ai/brain-mcp/index.nix
     ../../domains/server/native/ai/brainvec/index.nix
     ../../domains/server/native/ai/llama-cpp/index.nix
-    ../../domains/business/workbench/index.nix
+    # Service split wave 2: the business capability domain. Each app is
+    # enabled here in the commit that moves it; the business ROLE stays on
+    # hwc-server until wave 5.
+    ../../domains/business/index.nix
   ];
 
   networking.hostName = "hwc-work";
@@ -92,6 +95,10 @@
     embed.enable = true;
     embed.gpuLayers = 0;
   };
+  # DataX monitor (wave 2, step 3b) — dashboard + 4h Firestore ingest; its
+  # datax_monitor database was restored here from hwc-server's final dump.
+  hwc.business.dataxMonitor.enable = true;
+
   # Workbench hub served from here; hwc-server keeps the module on for its
   # own refinery areas.json but proxies the vhost to this host.
   hwc.business.workbench = {
@@ -152,8 +159,8 @@
 
         # datax-monitor — Cloudflare Access ("datax" allow-list) gates it; the
         # app has no auth of its own.
-        "monitor.heartwoodcraft.me" = "http://${server}:4400";
-        "monitor.iheartwoodcraft.com" = "http://${server}:4400";
+        "monitor.heartwoodcraft.me" = "http://localhost:4400";
+        "monitor.iheartwoodcraft.com" = "http://localhost:4400";
 
         # Production-domain webhook ingress (calculator lead/appointment):
         # only /webhook/* reaches n8n; other paths hit the 404 default.

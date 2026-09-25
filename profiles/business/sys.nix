@@ -46,7 +46,7 @@
   # research-scout already do. `hwc.business.datax` no longer exists.
 
   # DataX Monitor — DX1 agent-execution diagnostic dashboard (monitor.hwc.iheartwoodcraft.com)
-  hwc.business.dataxMonitor.enable = true;
+  hwc.business.dataxMonitor.enable = lib.mkDefault true;
 
   # HWC Workbench hub — area registry + launcher (workbench.hwc.iheartwoodcraft.com).
   # Areas resolve against the vhost routes the other modules above declare.

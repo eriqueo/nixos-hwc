@@ -39,6 +39,7 @@ in
     workbench = "work";  # wave 1: hub; hwc-server keeps the module on for its areas.json
     t3-work = "work";
     brain-mcp = { owner = "work"; mode = "port"; };  # wave 1
+    monitor = "work";    # wave 2: DataX monitor
   };
 
   hwc.networking.shared.routes = [

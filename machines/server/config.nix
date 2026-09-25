@@ -526,6 +526,11 @@
   # Runs on hwc-work with the rest of the brain stack (service split wave 1).
   hwc.automation.brainSweep.enable = false;
 
+  # DataX monitor runs on hwc-work (service split wave 2). The database stays
+  # here untouched for the rollback window (dropped in wave 5).
+  # TEMPORARY: removal = the business role leaves this host (wave 5).
+  hwc.business.dataxMonitor.enable = false;
+
   # Workbench hub — module stays on (refinery's areas.json contract, and the
   # business role enables it) but the vhost is served by hwc-work
   # (routeOwners in domains/networking/routes.nix); this Caddy proxies
