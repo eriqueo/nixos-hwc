@@ -13,7 +13,10 @@ partition table, erasing Windows, its EFI boot partition and its recovery
 partitions. If you want to keep Windows or dual boot, stop before that step;
 the disk layout and `machines/work/hardware.nix` need a different plan.
 
-If you might want to restore Windows later, do this while it still boots:
+If you might want to restore Windows **on this MS-02** later, do this while it
+still boots. The preinstalled Windows license stays with this device; finding
+its product key does not make it a license for the laptop
+([Microsoft's preinstalled Windows terms](https://www.microsoft.com/content/dam/microsoft/usetm/documents/windows/11/oem-%28pre-installed%29/UseTerms_OEM_Windows_11_English.pdf)):
 
 1. Back up any files you want to keep. For the factory recovery option, make a
    [Windows Recovery Drive](https://support.microsoft.com/en-us/windows/experience/backup-recovery/recovery-drive)
@@ -23,8 +26,10 @@ If you might want to restore Windows later, do this while it still boots:
 2. Record the Windows edition under Settings > System > About and its
    [activation status](https://support.microsoft.com/en-us/windows/activation/activate-windows)
    under Settings > System > Activation. Keep any product-key information that
-   came with the PC. A later reinstall must use the matching edition, and
-   activation depends on the license supplied with this unit.
+   came with the PC for a possible reinstall on this MS-02. A later reinstall
+   must use the matching edition. Windows Setup may read an embedded key from
+   this PC's firmware without asking you to type it
+   ([Microsoft's install guidance](https://support.microsoft.com/en-us/windows/deployment/install-upgrade/install-or-upgrade-windows-using-a-product-key)).
 3. If Device Encryption or BitLocker is enabled, save its
    [recovery key](https://support.microsoft.com/en-us/windows/security/encryption/find-your-bitlocker-recovery-key)
    somewhere other than the MS-02 before changing firmware settings. Disabling
