@@ -217,7 +217,8 @@ in
       # Process command lines are unnecessary high-cardinality labels.
       metric_relabel_configs = [{ action = "labeldrop"; regex = "cmdline"; }];
     }];
-    services.prometheus.rules = [ (builtins.toJSON {
+    # Exported: the central Prometheus (another host) loads it.
+    hwc.monitoring.prometheus.rules = [ (builtins.toJSON {
       groups = [{
         name = "frigate_configuration";
         rules = lib.mapAttrsToList (name: camera: {
@@ -254,8 +255,8 @@ in
         message = "hwc.media.frigate requires Podman as OCI container backend";
       }
       {
-        assertion = config.hwc.monitoring.prometheus.enable;
-        message = "Frigate metrics require Prometheus (hwc.monitoring.prometheus.enable = true)";
+        assertion = config.hwc.monitoring.prometheus.agent.enable;
+        message = "Frigate exports its metrics through this host's agent (hwc.monitoring.prometheus.agent.enable = true)";
       }
     ];
   };

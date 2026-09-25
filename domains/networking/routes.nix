@@ -56,6 +56,10 @@ in
     lead-scout-api = { owner = "work"; mode = "port"; };
     # wave 3: the hwc-notify dispatcher (senders use hwc.notifications.notify.url)
     hwc-notify = { owner = "work"; mode = "port"; };
+    sr_analyzer = "work";      # wave 2 miss: the container moved, the route stayed
+    # wave 3: the central monitoring stack
+    grafana = "work";
+    homepage = "work";
   };
 
   hwc.networking.shared.routes = [

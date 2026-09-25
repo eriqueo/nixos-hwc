@@ -9,7 +9,7 @@
   imports = [
     ./hardware.nix
 
-    # Roles (base, desktop, server, monitoring) are supplied by the
+    # Roles (base, desktop, server) are supplied by the
     # flake.nix machines table — membership lives there, not here.
     # Machine-specific HM overrides live in ./home.nix (HM lane), wired by
     # the flake glue.
@@ -125,8 +125,12 @@
 
   # CouchDB for Obsidian LiveSync comes from the server role.
 
-  # exportarr disabled — no *arr services on this machine
-  hwc.monitoring.exportarr.enable = lib.mkForce false;
+  # Not scraped: hwc-xps is not reachable from the fleet (no authorized ssh
+  # key, 2026-09-25), so it cannot be deployed with a tailnet-bound agent;
+  # enabling it would page "target down". Re-enable when it is reachable.
+  # (Its own central stack was dropped with the monitoring role: its
+  # Alertmanager posted to a dead localhost:11600.)
+  hwc.monitoring.prometheus.agent.enable = false;
 
   # No automation on xps. n8n and mqtt live on the business role, which xps does
   # not take. The server role still imports domains/automation and defaults these

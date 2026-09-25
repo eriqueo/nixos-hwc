@@ -1,14 +1,13 @@
 - search:
     provider: google
     target: _blank
+# Local resources are the host Homepage runs on (hwc-work). Other hosts'
+# disks come from the central Prometheus — see the Fleet tiles.
 - resources:
     cpu: true
     memory: true
     disk: /
-    label: System
-- resources:
-    disk: /mnt/backup
-    label: Backup Pool
+    label: hwc-work
 - datetime:
     text_size: xl
     format:

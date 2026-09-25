@@ -113,6 +113,21 @@ in
       description = "Derived: server alias -> full tailnet FQDN (`<hostname>.<tailnetSuffix>`).";
     };
 
+    self = mkOption {
+      type = types.nullOr types.str;
+      readOnly = true;
+      description = ''
+        Derived: this host's alias in `servers` (matched on networking.hostName),
+        or null for a host that is not a registered server (laptop, kids…).
+      '';
+    };
+
+    selfIp = mkOption {
+      type = types.nullOr types.str;
+      readOnly = true;
+      description = "Derived: this host's tailnet address (`ips.<self>`), or null.";
+    };
+
     url = mkOption {
       type = types.functionTo types.str;
       readOnly = true;
@@ -136,6 +151,9 @@ in
   #============================================================================
   config.hwc.networking.hosts = {
     fqdn = lib.mapAttrs (_alias: host: mkFqdn host) cfg.servers;
+
+    self = lib.findFirst (a: cfg.servers.${a} == config.networking.hostName) null (lib.attrNames cfg.servers);
+    selfIp = if cfg.self == null then null else cfg.ips.${cfg.self} or null;
 
     url = { server ? cfg.primary, scheme ? "https", port ? null, path ? "" }:
       let

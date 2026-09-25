@@ -73,6 +73,8 @@ in
 
         environment = {
           PORT = toString exporterPort;
+          # Host network: bind the tailnet address, not every interface.
+          INTERFACE = config.hwc.monitoring.prometheus.agent.listenAddress;
           ENABLE_ADDITIONAL_METRICS = "true";
           ENABLE_UNKNOWN_QUEUE_ITEMS = "true";
         };
@@ -117,8 +119,8 @@ in
     #==========================================================================
     assertions = [
       {
-        assertion = !cfg.enable || config.hwc.monitoring.prometheus.enable;
-        message = "Exportarr requires Prometheus to be enabled (hwc.monitoring.prometheus.enable = true)";
+        assertion = !cfg.enable || config.hwc.monitoring.prometheus.agent.enable;
+        message = "Exportarr exports to the central Prometheus through this host's agent (hwc.monitoring.prometheus.agent.enable = true)";
       }
       {
         assertion = !cfg.enable || (builtins.length cfg.apps > 0);

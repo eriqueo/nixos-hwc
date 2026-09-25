@@ -28,6 +28,13 @@
     send.cli.enable = lib.mkDefault true;
   };
 
+  # Metrics agent (node + blackbox exporters on the tailnet) and container
+  # exporters on every serving host; the central Prometheus (monitoring role)
+  # collects them.
+  hwc.monitoring.prometheus.agent.enable = lib.mkDefault true;
+  hwc.monitoring.cadvisor.enable = lib.mkDefault config.hwc.monitoring.prometheus.agent.enable;
+  hwc.monitoring.podman-exporter.enable = lib.mkDefault config.hwc.monitoring.prometheus.agent.enable;
+
   # SMART disk monitoring on every serving host (was a single machine's
   # one-off, so the other serving hosts had none). Short test daily 02:00,
   # long test Saturdays 03:00.

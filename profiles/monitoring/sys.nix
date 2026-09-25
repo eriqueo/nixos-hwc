@@ -1,7 +1,8 @@
 # profiles/monitoring/sys.nix — monitoring role, NixOS lane
 #
-# Pure observability: prometheus, blackbox, cadvisor, grafana, homepage,
-# alertmanager + receivers. (The n8n/automation stack lives in the
+# The central observability stack: prometheus (fleet collector), grafana,
+# homepage, alertmanager + receivers. Per-host exporters are not here — the
+# server role runs them on every serving host. (The n8n/automation stack lives in the
 # business role. Uptime Kuma decommissioned 2026-07-09 — the declarative
 # blackbox probes + Grafana service-health dashboard replaced it.)
 #
@@ -21,21 +22,13 @@
   # MONITORING SERVICES
   #==========================================================================
 
-  # Prometheus - Metrics collection with 90-day retention
+  # The central Prometheus (90-day retention). It collects every serving
+  # host's exports — node/blackbox agent, cAdvisor, podman-exporter, exportarr,
+  # Frigate — which the server role and the machines enable where they run.
   hwc.monitoring.prometheus = {
     enable = lib.mkDefault true;
     retention = "90d";
-    blackbox.enable = lib.mkDefault true;
   };
-
-  # cAdvisor - host/system cgroup metrics
-  hwc.monitoring.cadvisor.enable = lib.mkDefault true;
-
-  # podman-exporter - named per-container CPU/mem/net (what cAdvisor can't do)
-  hwc.monitoring.podman-exporter.enable = lib.mkDefault true;
-
-  # Exportarr - Arr apps metrics (Sonarr/Radarr/Lidarr/Prowlarr)
-  hwc.monitoring.exportarr.enable = lib.mkDefault true;
 
   # Grafana - Dashboards and visualization
   hwc.monitoring.grafana = {

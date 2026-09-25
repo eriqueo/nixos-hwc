@@ -311,13 +311,13 @@
     machines = {
       server = {
         channel   = "stable";
-        roles     = [ "base" "server" "business" "monitoring" "mail" ];
+        roles     = [ "base" "server" "business" "mail" ];
         nixosPkgs = pkgs-stable-cuda;  # CUDA overlay (Immich ML / llama.cpp)
         hmPkgs    = pkgs-stable;       # standalone HM lane stays plain stable
       };
       work = {
         channel   = "stable";
-        roles     = [ "base" "server" "mail" "business" ];
+        roles     = [ "base" "server" "mail" "business" "monitoring" ];
         nixosPkgs = pkgs-stable;
         hmPkgs    = pkgs-stable;
       };
@@ -331,7 +331,7 @@
       };
       xps = {
         channel   = "stable";
-        roles     = [ "base" "desktop" "server" "monitoring" ];
+        roles     = [ "base" "desktop" "server" ];
         nixosPkgs = pkgs-stable;
         hmPkgs    = pkgs-stable;
       };
@@ -532,7 +532,8 @@
           exporterPresent = server.virtualisation.oci-containers.containers ? frigate-exporter;
           scrapes = server.hwc.monitoring.prometheus.scrapeConfigs;
           rules = import ./domains/monitoring/prometheus/parts/alerts.nix { inherit lib; };
-          configurationRules = server.services.prometheus.rules;
+          # Exported for the central Prometheus (another host since wave 3).
+          configurationRules = server.hwc.monitoring.prometheus.rules;
         });
       in pkgs.runCommand "frigate-contract" {
         nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.onnx p.pillow ])) pkgs.prometheus.cli ];
@@ -901,11 +902,18 @@
       # Checked against the FILES THE SERVER WILL LOAD (read off the evaluated
       # config) rather than a second rendering of parts/alerts.nix, so this
       # cannot pass on a copy while the deployed file is broken.
+      # Parses the rules of whichever registered server runs the central
+      # Prometheus (hwc-work since service split wave 3).
       alert-rules-parse = let
-        ruleFiles = self.nixosConfigurations."hwc-server".config.services.prometheus.ruleFiles;
+        servers = lib.attrValues self.nixosConfigurations."hwc-server".config.hwc.networking.hosts.servers;
+        central = lib.findFirst
+          (h: self.nixosConfigurations ? ${h} && self.nixosConfigurations.${h}.config.hwc.monitoring.prometheus.enable)
+          null servers;
+        prom = self.nixosConfigurations.${central}.config.services.prometheus;
+        ruleFiles = prom.ruleFiles ++ map (r: pkgs.writeText "exported-rules.yml" r) prom.rules;
       in
-      assert lib.assertMsg (ruleFiles != [])
-        "alert-rules-parse: hwc-server declares no prometheus ruleFiles — this check has no subject and would pass empty";
+      assert lib.assertMsg (central != null && ruleFiles != [])
+        "alert-rules-parse: no registered server runs the central Prometheus — this check has no subject and would pass empty";
       pkgs.runCommand "alert-rules-parse" {
         nativeBuildInputs = [ pkgs.prometheus.cli ];
       } ''

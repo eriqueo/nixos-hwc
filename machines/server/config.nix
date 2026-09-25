@@ -240,6 +240,9 @@
       "--hostname=hwc-server"
     ];
     # firewall.level = "server" comes from the server role
+    # Audited 2026-09-25 (service split wave 3): dropped ports with no
+    # listener (5030 slskd web, 8888 receipt API, 8501 Streamlit, 5909 Calibre
+    # VNC) and the monitoring ports that moved to hwc-work (3000/9090/9093).
     firewall.extraTcpPorts = [
       22000 # Syncthing sync
       # Media services
@@ -255,18 +258,9 @@
       8096 # Jellyfin
       2283 # Immich
       8081 # SABnzbd
-      5030 # SLSKD
       # Business services
-      8888 # Receipt API
-      8501 # Streamlit apps
       5432 # PostgreSQL (internal)
       6379 # Redis (internal)
-      # Monitoring services
-      3000 # Grafana
-      9090 # Prometheus
-      9093 # Alertmanager
-      # Calibre VNC
-      5909 # Calibre desktop VNC
       # YouTube
       8943 # Pinchflat (YouTube subscriptions)
       # Game streaming (Sunshine)
@@ -781,6 +775,10 @@
   '';
 
   # SMART disk monitoring comes from the server role.
+
+  # *arr metrics (Sonarr/Radarr/Lidarr/Prowlarr) — the apps run here; the
+  # central Prometheus on hwc-work scrapes them over the tailnet.
+  hwc.monitoring.exportarr.enable = true;
 
   # Enhanced logging for server.
   # SystemMaxUse and MaxRetentionSec are both ceilings and journald evicts on

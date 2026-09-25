@@ -131,12 +131,11 @@
   hwc.business.paperless.enable = false;    # wave 3
   hwc.business.firefly.enable = false;      # wave 3
 
-  # The briefing keeps reporting the media/storage host's health (its
-  # systemctl/disk/journal/VPN/backup sections run on hwc-server over ssh)
-  # and reads the fleet Prometheus there. TEMPORARY: removal = wave 3.
+  # The briefing keeps reporting the media/storage host's health: its
+  # systemctl/disk/journal/VPN/backup sections run on hwc-server over ssh.
+  # (Its Prometheus is the local central one since wave 3.)
+  # TEMPORARY: removal = those sections read the central Prometheus instead.
   hwc.business.morningBriefing.hostHealthFrom = "main";
-  hwc.business.morningBriefing.prometheusUrl =
-    "http://${config.hwc.networking.hosts.ips.main}:9090";
 
   # The hwc-sys gateway (+ JT tools). Binds all interfaces for tailnet
   # callers (laptop workbench, hwc-server Prometheus); tailscale0 is trusted.

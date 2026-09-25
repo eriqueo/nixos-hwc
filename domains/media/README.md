@@ -69,6 +69,7 @@ workspace/media/
 
 ## Changelog
 
+- 2026-09-25: Service split wave 3 (monitoring fleet): `frigate/` exports its camera recording rules through `hwc.monitoring.prometheus.rules` (the central Prometheus is on another host) and asserts the metrics agent instead of a local Prometheus.
 - 2026-09-24: Align Frigate operating instructions with deployed camera rates, clocks, mask geometry and current validation limits.
 - 2026-09-24: Frigate reports systemd readiness only after its API health check passes, with a 120-second startup deadline.
 

@@ -43,7 +43,8 @@ in
       image = cfg.image;
       autoStart = true;
 
-      ports = [ "127.0.0.1:${toString cfg.port}:9882" ];
+      # Tailnet address only: the central Prometheus scrapes it remotely.
+      ports = [ "${config.hwc.monitoring.prometheus.agent.listenAddress}:${toString cfg.port}:9882" ];
 
       environment = {
         CONTAINER_HOST = "unix:///run/podman/podman.sock";
@@ -76,8 +77,8 @@ in
 
     assertions = [
       {
-        assertion = !cfg.enable || config.hwc.monitoring.prometheus.enable;
-        message = "podman-exporter requires Prometheus (hwc.monitoring.prometheus.enable = true)";
+        assertion = !cfg.enable || config.hwc.monitoring.prometheus.agent.enable;
+        message = "podman-exporter exports to the central Prometheus through this host's agent (hwc.monitoring.prometheus.agent.enable = true)";
       }
     ];
   };

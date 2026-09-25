@@ -1,3 +1,44 @@
+- Fleet:
+    # Disk use per host from the central Prometheus (node exporter via each
+    # host's agent). Homepage runs on hwc-work, so this is how it sees the
+    # server's DAS; the container reaches Prometheus on the host.
+    - hwc-server:
+        icon: mdi-server
+        description: Media + storage host
+        widget:
+          type: prometheusmetric
+          url: http://host.containers.internal:9090
+          refreshInterval: 60000
+          metrics:
+            - label: Root
+              query: 100 - 100 * node_filesystem_avail_bytes{host="hwc-server",mountpoint="/"} / node_filesystem_size_bytes{host="hwc-server",mountpoint="/"}
+              format:
+                type: percent
+            - label: Hot
+              query: 100 - 100 * node_filesystem_avail_bytes{host="hwc-server",mountpoint="/mnt/hot"} / node_filesystem_size_bytes{host="hwc-server",mountpoint="/mnt/hot"}
+              format:
+                type: percent
+            - label: Media
+              query: 100 - 100 * node_filesystem_avail_bytes{host="hwc-server",mountpoint="/mnt/media"} / node_filesystem_size_bytes{host="hwc-server",mountpoint="/mnt/media"}
+              format:
+                type: percent
+            - label: Backup
+              query: 100 - 100 * node_filesystem_avail_bytes{host="hwc-server",mountpoint="/mnt/backup"} / node_filesystem_size_bytes{host="hwc-server",mountpoint="/mnt/backup"}
+              format:
+                type: percent
+    - hwc-work:
+        icon: mdi-server-network
+        description: Work + development host
+        widget:
+          type: prometheusmetric
+          url: http://host.containers.internal:9090
+          refreshInterval: 60000
+          metrics:
+            - label: Root
+              query: 100 - 100 * node_filesystem_avail_bytes{host="hwc-work",mountpoint="/"} / node_filesystem_size_bytes{host="hwc-work",mountpoint="/"}
+              format:
+                type: percent
+
 - HWC:
     - CRM:
         icon: mdi-account-group
@@ -19,6 +60,18 @@
         icon: mdi-radar
         href: https://lead-scout.hwc.iheartwoodcraft.com
         description: Lead intelligence
+    - Home Scout:
+        icon: mdi-home-search
+        href: https://home-scout.hwc.iheartwoodcraft.com
+        description: Listings on the buying lens
+    - Event Scout:
+        icon: mdi-calendar-star
+        href: https://event-scout.hwc.iheartwoodcraft.com
+        description: Curated Bozeman events
+    - Workbench:
+        icon: mdi-view-dashboard
+        href: https://workbench.hwc.iheartwoodcraft.com
+        description: Area launcher
     - Morning Briefing:
         icon: mdi-sunny
         href: https://briefing.hwc.iheartwoodcraft.com
@@ -27,11 +80,10 @@
         icon: n8n
         href: https://hwc-server.ocelot-wahoo.ts.net:2443
         description: Workflow automation
-        server: localhost
-        container: n8n
+        siteMonitor: https://hwc-server.ocelot-wahoo.ts.net:2443
     - MCP Gateway:
         icon: mdi-transit-connection-variant
-        href: http://hwc-server.ocelot-wahoo.ts.net:6200/health
+        href: https://hwc-work.ocelot-wahoo.ts.net:6243/health
         description: Unified system / JT / n8n / CRM MCP
         widget:
           type: customapi
@@ -48,8 +100,7 @@
         icon: paperless-ngx
         href: https://paperless.hwc.iheartwoodcraft.com
         description: Document management
-        server: localhost
-        container: paperless
+        siteMonitor: https://paperless.hwc.iheartwoodcraft.com
 
 - DataX:
     - SR Analyzer:
@@ -80,14 +131,12 @@
         icon: frigate
         href: https://frigate.hwc.iheartwoodcraft.com
         description: NVR / cameras
-        server: localhost
-        container: frigate
+        siteMonitor: https://frigate.hwc.iheartwoodcraft.com
     - Immich:
         icon: immich
         href: https://immich.hwc.iheartwoodcraft.com
         description: Photos
-        server: localhost
-        container: immich-server
+        siteMonitor: https://immich.hwc.iheartwoodcraft.com
     - Cameras:
         icon: grafana
         href: https://grafana.hwc.iheartwoodcraft.com/d/cameras
@@ -102,50 +151,42 @@
         icon: jellyseerr
         href: https://jellyseerr.hwc.iheartwoodcraft.com
         description: Media requests
-        server: localhost
-        container: jellyseerr
+        siteMonitor: https://jellyseerr.hwc.iheartwoodcraft.com
     - Sonarr:
         icon: sonarr
-        href: https://hwc-server.ocelot-wahoo.ts.net/sonarr
+        href: https://sonarr.hwc.iheartwoodcraft.com
         description: TV shows
-        server: localhost
-        container: sonarr
+        siteMonitor: https://sonarr.hwc.iheartwoodcraft.com
     - Radarr:
         icon: radarr
-        href: https://hwc-server.ocelot-wahoo.ts.net/radarr
+        href: https://radarr.hwc.iheartwoodcraft.com
         description: Movies
-        server: localhost
-        container: radarr
+        siteMonitor: https://radarr.hwc.iheartwoodcraft.com
     - Lidarr:
         icon: lidarr
-        href: https://hwc-server.ocelot-wahoo.ts.net/lidarr
+        href: https://lidarr.hwc.iheartwoodcraft.com
         description: Music
-        server: localhost
-        container: lidarr
+        siteMonitor: https://lidarr.hwc.iheartwoodcraft.com
     - Readarr:
         icon: readarr
-        href: https://hwc-server.ocelot-wahoo.ts.net/readarr
+        href: https://readarr.hwc.iheartwoodcraft.com
         description: Books
-        server: localhost
-        container: readarr
+        siteMonitor: https://readarr.hwc.iheartwoodcraft.com
     - Prowlarr:
         icon: prowlarr
-        href: https://hwc-server.ocelot-wahoo.ts.net/prowlarr
+        href: https://prowlarr.hwc.iheartwoodcraft.com
         description: Indexers
-        server: localhost
-        container: prowlarr
+        siteMonitor: https://prowlarr.hwc.iheartwoodcraft.com
     - Navidrome:
         icon: navidrome
         href: https://navidrome.hwc.iheartwoodcraft.com
         description: Music streaming
-        server: localhost
-        container: navidrome
+        siteMonitor: https://navidrome.hwc.iheartwoodcraft.com
     - Audiobookshelf:
         icon: audiobookshelf
         href: https://audiobookshelf.hwc.iheartwoodcraft.com
         description: Audiobooks
-        server: localhost
-        container: audiobookshelf
+        siteMonitor: https://audiobookshelf.hwc.iheartwoodcraft.com
     - Calibre:
         icon: calibre
         href: https://calibre.hwc.iheartwoodcraft.com
@@ -154,8 +195,7 @@
         icon: mdi-youtube
         href: https://pinchflat.hwc.iheartwoodcraft.com
         description: YouTube archiver
-        server: localhost
-        container: pinchflat
+        siteMonitor: https://pinchflat.hwc.iheartwoodcraft.com
     - slskd:
         icon: mdi-download-network
         href: https://slskd.hwc.iheartwoodcraft.com
@@ -184,26 +224,33 @@
         description: Per-container CPU / RAM / net (Grafana)
     - Prometheus:
         icon: prometheus
-        href: http://localhost:9090
-        description: Metrics collection
+        href: http://hwc-work.ocelot-wahoo.ts.net:9090
+        description: Metrics collection (fleet)
+        siteMonitor: http://hwc-work.ocelot-wahoo.ts.net:9090/-/healthy
     - Authentik:
         icon: authentik
         href: https://hwc-server.ocelot-wahoo.ts.net:15543
         description: SSO / Identity
-        server: localhost
-        container: authentik-server
+        siteMonitor: https://hwc-server.ocelot-wahoo.ts.net:15543
     - Vaultwarden:
         icon: vaultwarden
         href: https://vaultwarden.hwc.iheartwoodcraft.com
         description: Password manager
-        server: localhost
-        container: vaultwarden
+        siteMonitor: https://vaultwarden.hwc.iheartwoodcraft.com
     - Firefly III:
         icon: firefly-iii
         href: https://firefly.hwc.iheartwoodcraft.com
         description: Finance
-        server: localhost
-        container: firefly
+        siteMonitor: https://firefly.hwc.iheartwoodcraft.com
+    - Firefly Pico:
+        icon: firefly-iii
+        href: https://firefly-pico.hwc.iheartwoodcraft.com
+        description: Mobile-friendly Firefly front end
+        siteMonitor: https://firefly-pico.hwc.iheartwoodcraft.com
+    - Firefly Importer:
+        icon: firefly-iii
+        href: https://firefly-import.hwc.iheartwoodcraft.com
+        description: Bank statement import
     - Caddy:
         icon: caddy
         description: Reverse proxy
