@@ -102,6 +102,16 @@
   # TEMPORARY (each server target): flips to http://localhost:<port> in the
   # commit that moves that app to this host; removal condition = the app's
   # unit is disabled on hwc-server.
+  #
+  # History carried from hwc-server: Phase 4.6 (2026-07-07) found the planned
+  # *.api.iheartwoodcraft.com subzone impossible on the free plan (subdomain
+  # zones are Enterprise-only; proxied two-level names lack Universal SSL), so
+  # production ingress rides the one-level api.iheartwoodcraft.com with PATH
+  # routing (wiki/nixos/iheartwoodcraft-com-backend-migration.md). The .com
+  # twins of .me names (2026-07-19) run in parallel until callers flip, then
+  # the .me entries drop (brain: tech/development/builds/heartwoodcraft_me_retirement.md).
+  # *-origin names are what the hwc-mcp-gateway OAuth Worker proxies to with an
+  # Access service token (~/600_apps/hwc-mcp-gateway/ORIGINS.md).
   hwc.networking.cloudflared =
     let
       server = config.hwc.networking.hosts.ips.main;

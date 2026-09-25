@@ -936,89 +936,13 @@
   '';
 
   #============================================================================
-  # CLOUDFLARE TUNNEL (public webhook ingress)
+  # CLOUDFLARE TUNNEL — runs on hwc-work since service split wave 2
   #============================================================================
-  # Exposes webhooks.heartwoodcraft.me → n8n for external services (Quo, etc.).
-  # Parallel *.api.iheartwoodcraft.com hostnames are configured below for the
-  # Phase 4.6 backend-ingress migration; they activate when DNS is provisioned.
-  # Setup: cloudflared tunnel login → cloudflared tunnel create hwc-server
-  #        then encrypt credentials JSON with agenix and set tunnelId below
-  hwc.networking.cloudflared = {
-    enable = true; # Enable after: tunnel created + credentials encrypted + DNS CNAME set
-    tunnelId = "1536327b-2641-4706-8ad9-48c94d0b11f9";
-    credentialsFile = config.age.secrets.cloudflared-tunnel-credentials.path;
-    # n8n.heartwoodcraft.me handled by `domain` option default → localhost:n8nPort.
-    #
-    # Phase 4.6 outcome (2026-07-07): the planned *.api.iheartwoodcraft.com
-    # subzone is impossible on the free plan (Cloudflare subdomain zones are
-    # Enterprise-only) and proxied two-level names aren't covered by
-    # Universal SSL. Production-domain ingress instead rides the ONE-level
-    # hostname api.iheartwoodcraft.com (proxied CNAME → tunnel, created
-    # 2026-07-07) with PATH routing: only /webhook/* reaches n8n; all other
-    # paths fall through to the tunnel's 404 default, so the n8n UI is not
-    # publicly exposed. mcp/leads/brain can join later as path routes.
-    # See wiki/nixos/iheartwoodcraft-com-backend-migration.md.
-    extraIngress = {
-      "mcp.heartwoodcraft.me" = "http://localhost:6200";
-      # brain-mcp runs on hwc-work (service split wave 1); it binds 0.0.0.0
-      # with :9876 open on the tailnet interface, so the tunnel process here
-      # reaches it directly. The tunnel itself moves in wave 2.
-      "brain.heartwoodcraft.me" = "http://${config.hwc.networking.hosts.ips.work}:9876";
-
-      # datax-monitor dashboard — shared with external DataX collaborators
-      # off-tailnet. Public DNS CNAME + Cloudflare Access policy ("datax",
-      # email allow-list) gate it; the tunnel only proxies; the app has no
-      # auth of its own. Local target is hwc.business.dataxMonitor on :4400.
-      "monitor.heartwoodcraft.me" = "http://localhost:4400";
-
-      # Production-domain webhook ingress (calculator lead/appointment).
-      "api.iheartwoodcraft.com" = {
-        service = "http://localhost:5678";
-        path = "^/webhook/";
-      };
-
-      # Umami analytics — script.js + /api/send must be visitor-reachable.
-      "stats.iheartwoodcraft.com" = "http://localhost:3009";
-
-      # hwc-crm public website intake — contact form mirror, calculator email
-      # gate (hwc-crm D42: the CRM absorbed hwc-leads), "request a call" and
-      # availability. PATH-locked to /hooks/*; the rest of hwc-crm (board UI,
-      # transitions) stays tailnet-private (unmatched paths fall through to
-      # the 404 default). /hooks/jt is JobTread's webhook (hwc-crm D45): the
-      # URL carries a token, and the body only hints which job to re-read.
-      "crm.iheartwoodcraft.com" = {
-        service = "http://localhost:11660";
-        path = "^/hooks/(contact|calculator|appointment|availability|jt)";
-      };
-
-      # Calculator report viewer API — public so customers can open the report
-      # link emailed to them off-tailnet. PATH-locked to the read-only, already
-      # sanitised GET /api/reports/<id> (no email/phone/full name/attribution).
-      # Served by hwc-crm (:11660) since D42; it reads the same hwc.reports
-      # table hwc-leads wrote, so links already emailed keep working.
-      "reports.iheartwoodcraft.com" = {
-        service = "http://localhost:11660";
-        path = "^/api/reports/";
-      };
-
-      # heartwoodcraft.me retirement (Phase 1, 2026-07-19): .com twins of the
-      # remaining .me hostnames, same upstreams — parallel until callers flip
-      # (claude.ai connectors, DataX monitor collaborators), then the .me
-      # entries drop. brain./monitor. are Access-gated on the Cloudflare side.
-      # See brain: tech/development/builds/heartwoodcraft_me_retirement.md
-      "mcp.iheartwoodcraft.com" = "http://localhost:6200";
-      "brain.iheartwoodcraft.com" = "http://${config.hwc.networking.hosts.ips.work}:9876";
-      "monitor.iheartwoodcraft.com" = "http://localhost:4400";
-
-      # hwc-mcp-gateway origins — internal hostnames the OAuth gateway Worker
-      # proxies to (machine-to-machine via an Access service token). Distinct
-      # from the bare brain./leads./mcp. names above, which stay owned by the
-      # live MCP Portal during the parallel cutover. See ~/600_apps/hwc-mcp-gateway/ORIGINS.md.
-      "brain-origin.heartwoodcraft.me" = "http://${config.hwc.networking.hosts.ips.work}:9876";
-      "leads-origin.heartwoodcraft.me" = "http://localhost:8420";
-      "hwc-origin.heartwoodcraft.me" = "http://localhost:6200";
-    };
-  };
+  # The tunnel process and its full ingress table live in
+  # machines/work/config.nix; it reaches the apps still on this host over the
+  # tailnet (n8n, gateway, datax-monitor directly; crm, lead-scout, umami via
+  # their Caddy vhosts here). Phase 4.6 history (api.iheartwoodcraft.com path
+  # routing, .me retirement twins, hwc-mcp-gateway origins) moved with it.
 
   # n8n webhook URL still points at the .me hostname because that's where
   # callers expect to reach it. Flip to n8n.api.iheartwoodcraft.com after
