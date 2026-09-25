@@ -105,7 +105,7 @@ let dictationModel = "base.en"; in
   # org.freedesktop.secrets and upgrades off basic on its own.
   hwc.home.apps.gpg.secretService.enable = true;
 
-  # Shell: MCP configured for laptop context
+  # Shell (MCP client config is generated system-wide by agent-harness userMcp)
   hwc.home.core.shell = {
     enable = true;
     # Mail lives on the server (laptop mbsync is disabled); run aerc there.
@@ -117,18 +117,5 @@ let dictationModel = "base.en"; in
     # checkouts are not relocated, so its base cdd/cdj (parts/aliases.nix) stay as-is.
     aliases.cdd = "cd ~/700_datax/datax/main";
     aliases.cdj = "cd ~/700_datax/jt-mcp/main";
-    mcp = {
-      enable = true;
-      includeConfigDir = false;   # don't expose ~/.config to Claude
-      includeServerTools = false; # no server MCP tools on laptop
-      brain.enable = true;        # vault CRUD + semantic search over the tailnet (brain-mcp :23443)
-      n8n = {
-        enable = true;
-        # accessToken is set via agenix secret injection or overridden locally.
-        # To set temporarily: add  accessToken = "your-token-here";  below.
-        # Long-term: wire this through an activation script reading the agenix secret file.
-        accessToken = ""; # REPLACE with your token or wire via agenix
-      };
-    };
   };
 }

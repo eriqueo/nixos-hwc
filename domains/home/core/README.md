@@ -14,7 +14,7 @@ environment and user directory layout.
 core/
 ├── index.nix          # Aggregator
 ├── shell/             # hwc.home.core.shell — zsh, aliases, fzf, starship,
-│   ├── index.nix      #   git, ssh, MCP config (options + wiring)
+│   ├── index.nix      #   git, ssh (options + wiring)
 │   └── parts/         #   aliases, ssh, zsh-init, prompt, fzf
 ├── development/       # hwc.home.core.development — language toolchains
 ├── repo-hooks/        # hwc.home.core.repoHooks — pins core.hooksPath to a
@@ -23,6 +23,11 @@ core/
 ```
 
 ## Changelog
+- 2026-09-25: `core/shell/` — removed `hwc.home.core.shell.mcp` and its
+  `~/.mcp.json`. It duplicated the MCP server list, its `github` entry had no
+  token, and its brain URL still named hwc-server after brain-mcp moved to
+  hwc-work. `hwc.system.apps.agent-harness.userMcp` now generates the file on
+  every host, in the system lane.
 - 2026-09-23: `core/shell/` — `vpnport` alias (prints the Proton forwarded port).
 - 2026-09-21: `core/shell/` — `server-lan` ssh matchBlock and alias (hwc-server over the home LAN, for internet outages).
 - 2026-08-30: `core/shell/` — starship zsh init moved from HM's `enableZshIntegration` into `parts/zsh-init.nix` (`_hwc_starship_init`). `starship init zsh` bakes the first `starship` on PATH, which is `~/.nix-profile/bin/starship` after any `hms`; the next `nixos-rebuild switch` removes that profile entry and every open shell printed `no such file or directory: ~/.nix-profile/bin/starship` three times per prompt. Init now forces the lookup to `/etc/profiles/per-user/$USER/bin/starship`, which both activation lanes leave in place. `_hwc_reinit_prompt` reuses the same helper.

@@ -108,40 +108,8 @@ in
       };
     };
 
-    mcp = {
-      enable = lib.mkOption { type = lib.types.bool; default = false; description = "Enable MCP configuration file generation for Claude Desktop"; };
-      includeConfigDir = lib.mkOption { type = lib.types.bool; default = false; description = "Include user config directory in filesystem MCP server (laptop only)"; };
-      includeServerTools = lib.mkOption { type = lib.types.bool; default = false; description = "Include server-specific MCP tools (postgres, prometheus, puppeteer)"; };
-      brain = {
-        enable = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = "Include the brain MCP server (vault CRUD + semantic search) as a native HTTP entry — tailnet-gated, no token (brain-mcp dropped Bearer auth 2026-05-22)";
-        };
-        url = lib.mkOption {
-          type = lib.types.str;
-          default = "https://hwc-server.ocelot-wahoo.ts.net:23443/mcp";
-          description = "brain-mcp streamable-HTTP endpoint (Caddy tailnet route)";
-        };
-      };
-      n8n = {
-        enable = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = "Include n8n MCP server via supergateway bridge";
-        };
-        url = lib.mkOption {
-          type = lib.types.str;
-          default = "https://hwc-server.ocelot-wahoo.ts.net:2443/mcp-server/http";
-          description = "n8n MCP server HTTP endpoint URL";
-        };
-        accessToken = lib.mkOption {
-          type = lib.types.str;
-          default = "";
-          description = "n8n MCP Bearer access token (use agenix secret; do not hardcode in git)";
-        };
-      };
-    };
+    # MCP client config (~/.mcp.json) moved to the system lane on 2026-09-25:
+    # hwc.system.apps.agent-harness.userMcp (domains/home/apps/agent-harness/sys.nix).
   };
 
   #============================================================================
@@ -258,90 +226,5 @@ in
 
     # tmux is owned by domains/home/apps/tmux (hwc.home.apps.tmux) —
     # the duplicate hwc.home.shell.tmux surface was removed 2026-06-11.
-
-    # MCP (Model Context Protocol) configuration for Claude Desktop
-    home.file.".mcp.json" = lib.mkIf cfg.mcp.enable {
-      text = builtins.toJSON {
-        mcpServers = {
-          filesystem = {
-            command = "npx";
-            args = [
-              "-y"
-              "@modelcontextprotocol/server-filesystem"
-              "${config.home.homeDirectory}/.nixos"
-              "/etc/nixos"
-            ] ++ lib.optionals cfg.mcp.includeConfigDir [
-              "${config.xdg.configHome}"
-            ];
-          };
-          # git/time/fetch are Python reference servers published on PyPI, not npm.
-          # They run via uvx (uv); the old npx @modelcontextprotocol/server-* paths 404.
-          git = {
-            command = "uvx";
-            args = [ "mcp-server-git" ];
-            cwd = "${config.home.homeDirectory}/.nixos";
-          };
-          github = {
-            command = "npx";
-            args = [ "-y" "@modelcontextprotocol/server-github" ];
-            env = {};
-          };
-          sequential-thinking = {
-            command = "npx";
-            args = [ "-y" "@modelcontextprotocol/server-sequential-thinking" ];
-          };
-          time = {
-            command = "uvx";
-            args = [ "mcp-server-time" ];
-          };
-          fetch = {
-            command = "uvx";
-            args = [ "mcp-server-fetch" ];
-          };
-          memory = {
-            command = "npx";
-            args = [ "-y" "@modelcontextprotocol/server-memory" ];
-          };
-        } // lib.optionalAttrs cfg.mcp.brain.enable {
-          # Native streamable-HTTP entry (Claude Code supports type=http).
-          # No auth header: brain-mcp is tailnet-gated (Bearer removed 2026-05-22).
-          brain = {
-            type = "http";
-            url = cfg.mcp.brain.url;
-          };
-        } // lib.optionalAttrs (cfg.mcp.n8n.enable && cfg.mcp.n8n.accessToken != "") {
-          n8n-mcp = {
-            command = "npx";
-            args = [
-              "-y"
-              "supergateway"
-              "--streamableHttp"
-              cfg.mcp.n8n.url
-              "--header"
-              "authorization:Bearer ${cfg.mcp.n8n.accessToken}"
-            ];
-          };
-        } // lib.optionalAttrs cfg.mcp.includeServerTools {
-          postgres = {
-            command = "npx";
-            args = [ "-y" "@modelcontextprotocol/server-postgres" ];
-            env = {
-              POSTGRES_CONNECTION_STRING = "postgresql://localhost:5432/postgres";
-            };
-          };
-          prometheus = {
-            command = "npx";
-            args = [ "-y" "@modelcontextprotocol/server-prometheus" ];
-            env = {
-              PROMETHEUS_URL = "http://localhost:9090";
-            };
-          };
-          puppeteer = {
-            command = "npx";
-            args = [ "-y" "@modelcontextprotocol/server-puppeteer" ];
-          };
-        };
-      };
-    };
   };
 }

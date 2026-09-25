@@ -6,7 +6,7 @@ source and one mutable state store.
 ## Structure
 
 - `index.nix` installs the pinned policy, state links, health CLI, the state-sync timer, and the opt-in `agent-cli-update` timer.
-- `sys.nix` installs machine-wide Claude policy under `/etc`, and generates the nixos repo's `.mcp.json` (`projectMcp`): a tmpfiles store symlink with the shared servers, `hwc-sys` over HTTP at `hwc.system.mcp.url`, and per-host `extraServers`.
+- `sys.nix` installs machine-wide Claude policy under `/etc`, and generates Claude Code's MCP config as tmpfiles store symlinks: `~/.mcp.json` (`userMcp`, read by every project under the home directory: shared servers, `hwc-sys` over HTTP at `hwc.system.mcp.url`, `brain` at `userMcp.brainUrl`) and the nixos repo's `.mcp.json` (`projectMcp`: `git` plus per-host `extraServers`). The host running brain-mcp asserts `brainUrl` names its route.
 - `contract.nix` defines the ownership and revision contract shared by both lanes.
 - `control.sh` implements local and fleet health checks plus policy publication.
 - `control.test.sh` seeds split revisions and mutable runtime references against the doctor.
@@ -51,6 +51,12 @@ authoring checkout is a warning; a runtime reference to it is a failure.
   direct children of `metadata:`. Claude Code rewrites each newly written memory
   that way, so every new memory failed the store check and blocked sync (twice
   on 2026-09-25). `state-sync.test.sh` pins the accepted and rejected forms.
+- 2026-09-25: `sys.nix` also generates `~/.mcp.json` (`userMcp`), replacing
+  the HM shell module's copy on hwc-laptop and a hand-kept file on hwc-server.
+  Both named brain on hwc-server, where it no longer runs since service-split
+  wave 1; `brainUrl` now derives from the hosts registry (hwc-work), and hwc-work
+  asserts it matches brain-mcp's route. The shared servers moved from the repo
+  file to this one.
 - 2026-09-25: `sys.nix` generates `~/.nixos/.mcp.json` (`projectMcp`), replacing
   the hand-kept `.mcp.laptop.json`/`.mcp.server.json` copies and their setup
   script. The server copy spawned a stale checkout build of the MCP gateway
