@@ -421,6 +421,7 @@
   hwc.business.morningBriefing.enable = false;
   hwc.business.paperless.enable = false;  # wave 3: runs on hwc-work
   hwc.business.firefly.enable = false;    # wave 3: runs on hwc-work
+  hwc.automation.n8n.enable = false;      # wave 4: runs on hwc-work (routeOwners.n8n)
   # The phone's receipts folder is Syncthing ingest on this host; its watcher
   # forwards drops into Paperless's consume dir on hwc-work.
   hwc.business.paperless.receipts.enable = true;
