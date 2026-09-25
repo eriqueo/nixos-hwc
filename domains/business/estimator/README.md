@@ -162,6 +162,9 @@ and is NOT a refactor gate.
 
 ## Changelog
 
+- 2026-09-24: The manual build service moves from unsupported Node 20 to
+  Node 22. Both skip checks include the Node version so the next build
+  reinstalls dependencies and rebakes the app under the new runtime.
 - 2026-06-12: Golden-master parity oracle — `test/golden/*.json` snapshots for all 8 templates captured from the live engine, strict runner `test/golden-master.test.js` (exit 1 on diff, `--update` / `--perturb` modes), `test:golden` npm script. Safety net for estimator refactor steps 02–04.
 - 2026-06-09: Access moved from the bespoke `services.caddy.extraConfig` PWA block on tailnet port `:13443` to a `vhost` route `estimator.hwc.iheartwoodcraft.com` under the shared `*.hwc.iheartwoodcraft.com` wildcard cert. PWA cache behaviour preserved by the vhost renderer's assets-only-immutable policy. See `domains/networking/README.md`.
 - 2026-05-01: Bottom-up pricing engine — Job #306 rates, Craftsman production rates, 8 new scope items, deck assembler, templates, MCP tools, DB export pipeline

@@ -58,8 +58,9 @@
     }
     # CHARTER v9.0: Hard enforcement that server MUST use stable nixpkgs
     {
-      # pkgs.lib.trivial.release returns e.g. "25.11" for nixos-25.11 stable
-      assertion = lib.hasPrefix "25" (pkgs.lib.trivial.release or "");
+      # Compare with the flake's stable source so a future release update does
+      # not leave this assertion pinned to the previous release.
+      assertion = (pkgs.lib.trivial.release or "") == inputs.nixpkgs-stable.lib.trivial.release;
       message = ''
         ============================================================
         SERVER NIXPKGS PROVENANCE VIOLATION
@@ -68,12 +69,10 @@
 
         Current nixpkgs: ${toString pkgs.path}
         Current release: ${pkgs.lib.trivial.release or "unknown"}
-        Expected: nixpkgs-stable (25.11 branch)
+        Expected: nixpkgs-stable (${inputs.nixpkgs-stable.lib.trivial.release} branch)
 
         Fix in flake.nix:
-          hwc-server = nixpkgs-stable.lib.nixosSystem {
-            pkgs = pkgs-stable;  # NOT pkgs
-          };
+          machines.server.nixosPkgs = pkgs-stable-cuda;
         ============================================================
       '';
     }
@@ -699,20 +698,20 @@
     notifications.onFailure = true;
   };
 
-  # Machine-specific GPU override for Quadro P1000 (legacy driver required)
+  # Machine-specific GPU settings for Quadro P1000 (legacy driver required)
   hwc.system.hardware.gpu = {
     enable = lib.mkForce true;
     type = "nvidia";
     nvidia = {
-      driver = "stable"; # Use stable as base, override package below
+      driver = "stable"; # Domain chooses the matching package
       containerRuntime = true;
       enableMonitoring = true;
     };
   };
 
-  # P1000 (Pascal) with driver 580 - last full-support branch before legacy transition
+  # P1000 (Pascal) requires the proprietary driver. The GPU domain selects
+  # hardware.nvidia.package from the stable driver value above.
   hardware.nvidia = {
-    package = config.boot.kernelPackages.nvidiaPackages.stable; # 580.95.05
     open = lib.mkForce false; # Pascal doesn't support open-source modules
     modesetting.enable = true;
     powerManagement.enable = true;

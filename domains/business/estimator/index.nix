@@ -34,7 +34,7 @@ let
   # ── Build script ───────────────────────────────────────────────────────────
   buildScript = pkgs.writeShellApplication {
     name = "estimator-build";
-    runtimeInputs = with pkgs; [ nodejs_20 rsync coreutils findutils bash ];
+    runtimeInputs = with pkgs; [ nodejs_22 rsync coreutils findutils bash ];
     text = ''
       source_dir="${appSource}"
       webhook_url="${cfg.webhookUrl}"
@@ -46,8 +46,8 @@ let
       current_link="$servedir/dist"
 
       # ── 1. Compute input hash ─────────────────────────────────────────
-      # Store path encodes source content; webhook URL is the only other input
-      input_hash="$(echo "${appSource}|$webhook_url" | sha256sum | cut -d' ' -f1)"
+      # Rebuild after a Node runtime change as well as source or URL changes.
+      input_hash="$(printf '%s|%s|%s' "${appSource}" "$webhook_url" "$(node --version)" | sha256sum | cut -d' ' -f1)"
 
       # ── 2. Early exit if unchanged ────────────────────────────────────
       if [ -f "$hashfile" ] && [ -L "$current_link" ] \
@@ -70,7 +70,7 @@ let
       } > "$workdir/.env.production"
 
       # ── 5. Install deps (only if lockfile changed) ────────────────────
-      lock_hash="$(sha256sum "$workdir/package-lock.json" | cut -d' ' -f1)"
+      lock_hash="$( { sha256sum "$workdir/package-lock.json"; node --version; } | sha256sum | cut -d' ' -f1)"
       stored_lock="/var/lib/estimator-build/.lock-hash"
       if [ ! -f "$stored_lock" ] || [ "$(cat "$stored_lock")" != "$lock_hash" ]; then
         echo "estimator-build: lockfile changed, running npm ci"

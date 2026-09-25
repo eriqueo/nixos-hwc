@@ -95,7 +95,11 @@ in
           allow_sign_up = false;
         };
 
-        security = lib.mkIf (cfg.adminPasswordFile != null) {
+        security = {
+          # 26.05 removed the upstream default. Preserve the old key through
+          # the age mount so existing encrypted datasource settings still open.
+          secret_key = "$__file{${config.hwc.secrets.api."grafana-secret-key"}}";
+        } // lib.optionalAttrs (cfg.adminPasswordFile != null) {
           admin_password = "$__file{${cfg.adminPasswordFile}}";
         };
       };

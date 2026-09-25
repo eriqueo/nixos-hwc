@@ -1,7 +1,7 @@
 # overlays/cloudflared.nix
-# Backport cloudflared from nixpkgs-unstable to stable 25.11.
-# nixos-25.11 ships cloudflared 2025.11.1; unstable tracks upstream
-# (2026.5.0 at time of writing). Cloudflared is a Go static binary so
+# Backport cloudflared from nixpkgs-unstable to stable 26.05.
+# At the 26.05 migration, stable has 2026.5.2 and locked unstable has
+# 2026.7.3. Cloudflared is a Go static binary so
 # crossing the stable/unstable boundary is low-risk.
 
 { nixpkgs-unstable }:

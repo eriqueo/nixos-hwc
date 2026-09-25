@@ -7,7 +7,7 @@
 # genuine one-offs only.
 #
 # DEPENDENCIES (Upstream):
-#   - nixpkgs (nixos-unstable), nixpkgs-stable (25.11)
+#   - nixpkgs (nixos-unstable), nixpkgs-stable (26.05)
 #   - home-manager / home-manager-stable (follow their nixpkgs)
 #   - agenix / agenix-stable (follow their nixpkgs)
 #
@@ -27,7 +27,10 @@
 
   inputs = {
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-26.05";
+    # TS-2026-011 needs Tailscale >= 1.102.3; stable 26.05 has 1.98.10.
+    # Remove this temporary pin when nixpkgs-stable provides >= 1.102.3.
+    nixpkgs-tailscale.url = "github:NixOS/nixpkgs/4975466d324710c576dc11ad614684e6bd8cad8e";
 
     # Static agent policy and adapters. Mutable memories and the mistakes
     # ledger live in ~/.agent-state and never enter this Nix input.
@@ -53,7 +56,7 @@
     };
 
     home-manager-stable = {
-      url = "github:nix-community/home-manager/release-25.11";
+      url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
@@ -216,7 +219,7 @@
     };
 
     # Add the overlay here - this is the safest approach
-    mkPkgs = system: nixpkgsInput:
+    mkPkgs = system: nixpkgsInput: extraOverlays:
       import nixpkgsInput {
         inherit system;
         config = {
@@ -231,14 +234,13 @@
         overlays = [
           silenceDeprecatedAliases
           pandasStubsOverlay   # TEMP: skip pandas-stubs tests (upstream pytest-9.1.1 breakage)
-          rcloneOverlay   # iCloud-capable rclone 1.74.1 (HM lane on stable machines)
           # Expose the cowork-capable Claude Desktop package (package-only flake,
           # no overlay of its own) under pkgs for the home app module.
           (final: prev: {
             claude-cowork-linux =
               inputs.claude-cowork.packages.${prev.stdenv.hostPlatform.system}.default;
           })
-        ];
+        ] ++ extraOverlays;
       };
 
     # Server-specific overlay for CUDA support
@@ -252,14 +254,13 @@
     claudeCodeOverlay = import ./overlays/claude-code.nix { nixpkgs-unstable = nixpkgs; };
 
     # Cloudflared overlay - backport from unstable to stable
-    # Stable 25.11 lags upstream cloudflared releases; the daemon needs to track
+    # Stable 26.05 lags upstream cloudflared releases; the daemon needs to track
     # current Cloudflare edge protocol to keep the tunnel healthy.
     cloudflaredOverlay = import ./overlays/cloudflared.nix { nixpkgs-unstable = nixpkgs; };
 
-    # Rclone overlay - backport from unstable to stable
-    # Stable 25.11's rclone 1.72.1 can't authenticate to iCloud Drive
-    # (SRP auth fix landed in 1.74.0); unstable tracks 1.74.1. See overlay file.
-    rcloneOverlay = import ./overlays/rclone.nix { nixpkgs-unstable = nixpkgs; };
+    tailscaleOverlay = final: prev: {
+      tailscale = inputs.nixpkgs-tailscale.legacyPackages.${prev.stdenv.hostPlatform.system}.tailscale;
+    };
 
     # pandas-stubs overlay — TEMPORARY (tracked). Skips pandas-stubs' failing test
     # phase on the 2026-07-25 nixpkgs (upstream pytest-9.1.1 deprecation-as-error
@@ -272,7 +273,7 @@
     mkPkgsWithOverlays = system: nixpkgsInput: extraOverlays:
       import nixpkgsInput {
         inherit system;
-        overlays = [ silenceDeprecatedAliases pandasStubsOverlay claudeCodeOverlay cloudflaredOverlay rcloneOverlay ] ++ extraOverlays;
+        overlays = [ silenceDeprecatedAliases pandasStubsOverlay claudeCodeOverlay cloudflaredOverlay ] ++ extraOverlays;
         config = {
           allowUnfree = true;
           nvidia.acceptLicense = true;
@@ -285,16 +286,16 @@
       };
 
     # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)
-    pkgs = mkPkgs system nixpkgs;
+    pkgs = mkPkgs system nixpkgs [];
 
-    # pkgs-stable (25.11 - claude-code now available natively)
-    pkgs-stable = mkPkgs system nixpkgs-stable;
+    # Stable package set with the temporary Tailscale security update.
+    pkgs-stable = mkPkgs system nixpkgs-stable [ tailscaleOverlay ];
 
     # pkgs-stable with CUDA overlay for server (Immich ML GPU acceleration)
-    pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ serverOverlay ];
+    pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ serverOverlay tailscaleOverlay ];
 
     # Firestick is the one aarch64 machine
-    pkgs-firestick = mkPkgs "aarch64-linux" nixpkgs;
+    pkgs-firestick = mkPkgs "aarch64-linux" nixpkgs [];
 
     lib = nixpkgs.lib;
 

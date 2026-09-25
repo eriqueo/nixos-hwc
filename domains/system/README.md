@@ -11,6 +11,7 @@
 ```
 domains/system/
 ├── core/
+│   ├── coredump.nix     # Bounded systemd-coredump storage (26.05+ settings API)
 │   ├── filesystem.nix    # Filesystem tmpfiles; options at hwc.system.core.filesystem (alias: hwc.filesystem)
 │   ├── packages.nix      # Base/server/security package bundles (hwc.system.core.packages.*)
 │   ├── paths.nix         # Path source of truth (hwc.paths.*)
@@ -44,6 +45,8 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-09-24: Adopted the 26.05 `settings` APIs for coredump and resolved;
+  the old 25.11 fields were removed. Storage and DNS values are unchanged.
 - 2026-09-24: `mcp/` is compiled and tested by `buildNpmPackage`; systemd now
   runs the immutable store result instead of ignored checkout `dist/` files.
   Workbench mail views expose active routing rules.

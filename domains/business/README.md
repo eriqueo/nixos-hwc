@@ -28,6 +28,9 @@ business/
 ```
 
 ## Changelog
+- 2026-09-24: Estimator's manual build service uses supported Node 22 on
+  NixOS 26.05 and includes the Node version in both rebuild and npm-install
+  cache keys, so the first build under Node 22 refreshes dependencies.
 - 2026-09-24: Morning Briefing now shows persistent mail-routing rules and the
   rule that placed each matching thread in the dashboard, Workbench digest, and
   plain/HTML email. Intraday retriage atomically republishes the dashboard copy.

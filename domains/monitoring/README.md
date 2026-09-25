@@ -60,6 +60,9 @@ monitoring/
 
 ## Changelog
 
+- 2026-09-24: Grafana's 26.05 module requires an explicit signing key.
+  The existing key is now supplied through an age-mounted file provider so
+  stored datasource credentials remain decryptable.
 - 2026-09-24: The Frigate blackbox probe is present only on hosts that import the Frigate module. This keeps the configured port as its source of truth and lets the media-free hwc-xps configuration evaluate.
 - 2026-09-24: Keep camera outage alerts active beyond 24 hours, require stable recovery, distinguish missing camera metrics from failed/stale scrapes, and fix the Frigate health-probe port. Remove the nonfunctional event-spike rule.
 - 2026-09-21: `heartbeat/` enabled on hwc-server, reading `heartbeat-ping-url`. The healthchecks.io check "hwc-server" expects a ping every 5 minutes with a 10-minute grace.

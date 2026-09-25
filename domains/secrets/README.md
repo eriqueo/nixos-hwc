@@ -22,7 +22,7 @@ domains/secrets/
 │   ├── home/            # Email, OAuth, scraper credentials
 │   ├── infrastructure/  # Database, VPN, camera credentials
 │   ├── networking/      # Tailscale OAuth client secret (node self-registration)
-│   ├── services/        # Service API keys and passwords
+│   ├── services/        # Service API keys, passwords, and Grafana signing key
 │   │   └── discord-webhook/ # Per-domain Discord webhook payloads
 │   └── system/          # User passwords, SSH keys, backups
 ├── secrets-api.nix      # Stable path facade → `hwc.secrets.api.*`
@@ -55,6 +55,10 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-09-24: Added `grafana-secret-key` with the exact prior Grafana value,
+  encrypted to the fleet recipient set. Its generated `root:secrets` / `0440`
+  mount feeds Grafana's 26.05 file provider; plaintext equality was checked
+  in memory before staging.
 - 2026-09-24: Enrolled `hwc-work` as a fleet age recipient and rekeyed encrypted payloads while preserving existing recipients and plaintext. The secret-management tool now derives its recipient set from `secrets.nix` and refuses inconsistent sets.
 - 2026-09-24: Removed `apple-app-pw` (`parts/home/`), the Apple app-specific password for iCloud CalDAV. Its only readers, the iCloud calendar and tasks pairs in `domains/mail/`, were deleted in the same change. It unmounts from `/run/agenix` at each host's next system rebuild. Revoke the password at appleid.apple.com; the ciphertext stays in git history.
 - 2026-09-23: Replaced the plaintext of `vpn-wireguard-private-key-laptop` with a new Proton key generated with NAT-PMP (port forwarding) on, for US-UT#108 (P2P). Streamed from the downloaded .conf straight into `age -R` to the 4 `everyone` keys, never printed; a decrypt with the laptop host key gives 44 bytes and public key `QV1A2hy1…`. The old UT#100 key (`eSoefR6r…`) is no longer used.
