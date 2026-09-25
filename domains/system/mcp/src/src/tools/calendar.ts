@@ -7,6 +7,7 @@ import { readdir, readFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { catchError, mcpError } from "../errors.js";
+import { icsUnescape, unfoldIcs } from "../executors/caldav.js";
 import { contract } from "../result.js";
 import type { ResultEnvelope, ToolDef, ToolResult } from "../types.js";
 import { log } from "../log.js";
@@ -183,20 +184,99 @@ const VDIRSYNCER_CALENDAR_ROOTS = [
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
 
+interface IcsTime {
+  date: string; // YYYY-MM-DD
+  time: string | null; // HH:MM; null for all-day
+}
+
 interface IcsEvent {
   path: string;
   uid: string;
   summary: string;
-  dtstart: string | null;
-  dtend: string | null;
+  dtstart: string | null; // raw VEVENT value, in its own TZID
+  start: IcsTime | null; // DTSTART in the local zone
+  end: IcsTime | null;
   location: string | null;
   description: string | null;
+  recurring: boolean;
 }
 
-function icsField(content: string, field: string): string | null {
-  const regex = new RegExp(`^${field}[^:]*:(.+)$`, "mi");
-  const match = content.match(regex);
-  return match ? match[1].trim() : null;
+type IcsProps = Map<string, { params: string; value: string }>;
+
+// NAME;PARAM=a;PARAM="quoted: colon":value
+const ICS_LINE_RE = /^([A-Za-z0-9-]+)((?:;(?:"[^"]*"|[^";:])*)*):(.*)$/;
+
+/**
+ * Properties of each VEVENT in a calendar object, taken only from the VEVENT's
+ * own lines. A whole-file search reads the wrong ones: Apple and Radicale put a
+ * VTIMEZONE first whose STANDARD/DAYLIGHT blocks carry their own DTSTART, and a
+ * nested VALARM carries its own DESCRIPTION.
+ */
+function parseVevents(raw: string): IcsProps[] {
+  const events: IcsProps[] = [];
+  const stack: string[] = [];
+  for (const line of unfoldIcs(raw).split(/\r?\n/)) {
+    const m = line.match(ICS_LINE_RE);
+    if (!m) continue;
+    const name = m[1].toUpperCase();
+    if (name === "BEGIN") {
+      stack.push(m[3].trim().toUpperCase());
+      if (stack[stack.length - 1] === "VEVENT") events.push(new Map());
+    } else if (name === "END") {
+      stack.pop();
+    } else if (stack[stack.length - 1] === "VEVENT") {
+      const props = events[events.length - 1];
+      if (!props.has(name)) props.set(name, { params: m[2], value: m[3].trim() });
+    }
+  }
+  return events;
+}
+
+// `khal new` reads bare times in the local zone; the khalt config sets none.
+function localZone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+/** Wall-clock time of `instant` in `zone`, as UTC epoch ms. Throws on an unknown zone. */
+function wallClock(instant: number, zone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: zone, hourCycle: "h23",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  }).formatToParts(new Date(instant));
+  const part = (type: string) => Number(parts.find((p) => p.type === type)!.value);
+  return Date.UTC(part("year"), part("month") - 1, part("day"), part("hour"), part("minute"), part("second"));
+}
+
+/**
+ * A DTSTART/DTEND value as date and time in `zone`. UTC ("Z") and TZID times
+ * are converted; floating times are already local. Null when the value is
+ * malformed or its TZID is not an IANA zone.
+ */
+function icsTime(prop: { params: string; value: string } | undefined, zone: string): IcsTime | null {
+  const m = prop?.value.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/);
+  if (!prop || !m) return null;
+  const [, y, mo, d, h, mi, s, utc] = m;
+  if (h === undefined) return { date: `${y}-${mo}-${d}`, time: null };
+  let wall = Date.UTC(+y, +mo - 1, +d, +h, +mi, +s);
+  const tzid = prop.params.match(/;TZID=(?:"([^"]*)"|([^;]*))/i);
+  const source = utc ? "UTC" : tzid ? (tzid[1] ?? tzid[2]) : null;
+  if (source) {
+    try {
+      // Wall time in `source` → instant (the second pass settles DST edges) → wall time in `zone`.
+      const guess = wall - (wallClock(wall, source) - wall);
+      const instant = wall - (wallClock(guess, source) - guess);
+      wall = wallClock(instant, zone);
+    } catch {
+      return null;
+    }
+  }
+  const iso = new Date(wall).toISOString();
+  return { date: iso.slice(0, 10), time: iso.slice(11, 16) };
+}
+
+function timeLabel(t: IcsTime | null): string | null {
+  return t ? (t.time ? `${t.date} ${t.time}` : t.date) : null;
 }
 
 // Recursively collect every *.ics path under a root (≤3 levels deep). Radicale
@@ -221,7 +301,7 @@ async function collectIcsPaths(dir: string, depth = 0): Promise<string[]> {
   return out;
 }
 
-async function searchIcsFiles(query: string, dateFilter?: string): Promise<IcsEvent[]> {
+async function searchIcsFiles(query: string, dateFilter: string | undefined, zone: string): Promise<IcsEvent[]> {
   const results: IcsEvent[] = [];
   const lowerQuery = query.toLowerCase();
 
@@ -235,27 +315,33 @@ async function searchIcsFiles(query: string, dateFilter?: string): Promise<IcsEv
 
   for (const icsPath of icsPaths) {
     try {
-      const content = await readFile(icsPath, "utf-8");
-      const summary = icsField(content, "SUMMARY");
-      const dtstart = icsField(content, "DTSTART");
-      const uid = icsField(content, "UID");
+      const vevents = parseVevents(await readFile(icsPath, "utf-8"));
+      // The series master; any other VEVENT overrides one occurrence (RECURRENCE-ID).
+      const event = vevents.find((e) => !e.has("RECURRENCE-ID")) ?? vevents[0];
+      if (!event) continue;
+      const text = (name: string) => {
+        const value = event.get(name)?.value;
+        return value ? icsUnescape(value) : null;
+      };
+      const summary = text("SUMMARY");
+      const uid = event.get("UID")?.value;
 
       if (!summary || !uid) continue;
       if (!summary.toLowerCase().includes(lowerQuery)) continue;
 
-      if (dateFilter && dtstart) {
-        const eventDate = dtstart.substring(0, 10).replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3");
-        if (!eventDate.startsWith(dateFilter)) continue;
-      }
+      const start = icsTime(event.get("DTSTART"), zone);
+      if (dateFilter && start?.date !== dateFilter) continue;
 
       results.push({
         path: icsPath,
         uid,
         summary,
-        dtstart,
-        dtend: icsField(content, "DTEND"),
-        location: icsField(content, "LOCATION"),
-        description: icsField(content, "DESCRIPTION"),
+        dtstart: event.get("DTSTART")?.value ?? null,
+        start,
+        end: icsTime(event.get("DTEND"), zone),
+        location: text("LOCATION"),
+        description: text("DESCRIPTION"),
+        recurring: vevents.length > 1 || ["RRULE", "RDATE", "RECURRENCE-ID"].some((p) => event.has(p)),
       });
     } catch { /* file not readable */ }
   }
@@ -282,7 +368,7 @@ export function calendarTools(): ToolDef[] {
   return [
     {
       name: "hwc_calendar",
-      description: "Calendar management. Actions: list, create, edit, delete, sync.",
+      description: "Calendar management. Actions: list, create, edit, delete, sync. Edit refuses recurring events; delete removes every occurrence of one.",
       inputSchema: {
         type: "object",
         properties: {
@@ -311,7 +397,7 @@ export function calendarTools(): ToolDef[] {
           description: { type: "string", description: "[create/edit] Event description" },
           // [delete/edit] params
           query: { type: "string", description: "[delete/edit] Search text to find the event" },
-          filter_date: { type: "string", description: "[delete/edit] YYYY-MM-DD to narrow search" },
+          filter_date: { type: "string", description: "[delete/edit] YYYY-MM-DD start date to narrow search (first occurrence for recurring events)" },
           confirm: { type: "boolean", description: "[delete/edit] If true, apply; if false (default), preview" },
           // [edit] params
           newSummary: { type: "string", description: "[edit] New event title" },
@@ -475,22 +561,23 @@ export function calendarTools(): ToolDef[] {
               return mcpError({ type: "VALIDATION_ERROR", message: `Invalid date format: ${date}. Use YYYY-MM-DD.` });
             }
 
-            const matches = await searchIcsFiles(query, date);
+            const matches = await searchIcsFiles(query, date, localZone());
 
             if (matches.length === 0) {
               return { status: "ok", message: `No events found matching "${query}"${date ? ` on ${date}` : ""}`, data: { matches: [], matchCount: 0 } };
             }
 
             if (!confirm) {
+              const series = matches.length === 1 && matches[0].recurring ? " It is recurring, so confirm deletes every occurrence." : "";
               return {
                 status: "ok",
-                message: `Found ${matches.length} event(s) matching "${query}". Set confirm=true to delete.`,
-                data: { matches: matches.map((m) => ({ summary: m.summary, dtstart: m.dtstart, location: m.location, uid: m.uid })), matchCount: matches.length, action: "dry-run" },
+                message: `Found ${matches.length} event(s) matching "${query}". Set confirm=true to delete.${series}`,
+                data: { matches: matches.map((m) => ({ summary: m.summary, start: timeLabel(m.start), dtstart: m.dtstart, recurring: m.recurring, location: m.location, uid: m.uid })), matchCount: matches.length, action: "dry-run" },
               };
             }
 
             if (matches.length > 1) {
-              return mcpError({ type: "VALIDATION_ERROR", message: `Multiple events (${matches.length}) match "${query}". Narrow the search or specify a date.`, suggestion: "Add a date filter or use a more specific query to match exactly one event", context: { matches: matches.map((m) => ({ summary: m.summary, dtstart: m.dtstart })) } });
+              return mcpError({ type: "VALIDATION_ERROR", message: `Multiple events (${matches.length}) match "${query}". Narrow the search or specify a date.`, suggestion: "Add a date filter or use a more specific query to match exactly one event", context: { matches: matches.map((m) => ({ summary: m.summary, start: timeLabel(m.start) })) } });
             }
 
             const event = matches[0];
@@ -500,8 +587,8 @@ export function calendarTools(): ToolDef[] {
 
             return {
               status: "ok",
-              message: `Deleted event: "${event.summary}"`,
-              data: { deleted: { summary: event.summary, dtstart: event.dtstart, uid: event.uid }, syncTriggered: true },
+              message: `Deleted ${event.recurring ? "recurring event (every occurrence)" : "event"}: "${event.summary}"`,
+              data: { deleted: { summary: event.summary, start: timeLabel(event.start), dtstart: event.dtstart, recurring: event.recurring, uid: event.uid }, syncTriggered: true },
             };
           } catch (err) {
             return catchError("INTERNAL_ERROR", "Failed to delete calendar event", err, "Check that vdirsyncer calendar storage is accessible");
@@ -529,27 +616,30 @@ export function calendarTools(): ToolDef[] {
             if (newStartTime && !TIME_RE.test(newStartTime)) return mcpError({ type: "VALIDATION_ERROR", message: `Invalid newStartTime format: ${newStartTime}. Use HH:MM.` });
             if (newEndTime && !TIME_RE.test(newEndTime)) return mcpError({ type: "VALIDATION_ERROR", message: `Invalid newEndTime format: ${newEndTime}. Use HH:MM.` });
 
-            const matches = await searchIcsFiles(query, date);
+            const matches = await searchIcsFiles(query, date, localZone());
 
             if (matches.length === 0) {
               return { status: "ok", message: `No events found matching "${query}"${date ? ` on ${date}` : ""}`, data: { matches: [], matchCount: 0 } };
             }
 
             if (matches.length > 1) {
-              return mcpError({ type: "VALIDATION_ERROR", message: `Multiple events (${matches.length}) match "${query}". Narrow the search.`, suggestion: "Add a date filter or use a more specific query", context: { matches: matches.map((m) => ({ summary: m.summary, dtstart: m.dtstart })) } });
+              return mcpError({ type: "VALIDATION_ERROR", message: `Multiple events (${matches.length}) match "${query}". Narrow the search.`, suggestion: "Add a date filter or use a more specific query", context: { matches: matches.map((m) => ({ summary: m.summary, start: timeLabel(m.start) })) } });
             }
 
             const event = matches[0];
 
-            const existingDate = event.dtstart
-              ? event.dtstart.substring(0, 8).replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")
-              : null;
-            const existingStartTime = event.dtstart?.includes("T")
-              ? event.dtstart.substring(9, 11) + ":" + event.dtstart.substring(11, 13)
-              : null;
-            const existingEndTime = event.dtend?.includes("T")
-              ? event.dtend.substring(9, 11) + ":" + event.dtend.substring(11, 13)
-              : null;
+            // Edit deletes the file and runs `khal new`, which writes one plain
+            // event: a series would lose every other occurrence and its overrides.
+            if (event.recurring) {
+              return mcpError({ type: "VALIDATION_ERROR", message: `"${event.summary}" is a recurring event. Edit would replace the whole series with one event, so nothing was changed.`, suggestion: "Change recurring events in the phone's calendar app", context: { start: timeLabel(event.start), uid: event.uid } });
+            }
+            if (!event.start) {
+              return mcpError({ type: "VALIDATION_ERROR", message: `Could not read the start of "${event.summary}" (DTSTART ${event.dtstart ?? "missing"}), so nothing was changed.`, suggestion: "Change this event in the phone's calendar app" });
+            }
+
+            const existingDate = event.start.date;
+            const existingStartTime = event.start.time;
+            const existingEndTime = event.end?.time ?? null;
 
             const finalSummary = newSummary ?? event.summary;
             const finalDate = newDate ?? existingDate;
@@ -557,10 +647,6 @@ export function calendarTools(): ToolDef[] {
             const finalEndTime = newEndTime ?? existingEndTime;
             const finalLocation = newLocation ?? event.location;
             const finalDescription = newDescription ?? event.description;
-
-            if (!finalDate) {
-              return mcpError({ type: "VALIDATION_ERROR", message: "Could not determine event date. Provide newDate." });
-            }
 
             const changes = {
               summary: { from: event.summary, to: finalSummary },
@@ -575,7 +661,7 @@ export function calendarTools(): ToolDef[] {
               return {
                 status: "ok",
                 message: `Preview changes for "${event.summary}". Set confirm=true to apply.`,
-                data: { original: { summary: event.summary, dtstart: event.dtstart, location: event.location }, changes, action: "dry-run" },
+                data: { original: { summary: event.summary, start: timeLabel(event.start), dtstart: event.dtstart, location: event.location }, changes, action: "dry-run" },
               };
             }
 

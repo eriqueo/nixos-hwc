@@ -150,7 +150,7 @@ export function unfoldIcs(raw: string): string {
   return raw.replace(/\r?\n[ \t]/g, "");
 }
 
-function icsUnescape(s: string): string {
+export function icsUnescape(s: string): string {
   return s
     .replace(/\\n/gi, "\n")
     .replace(/\\,/g, ",")

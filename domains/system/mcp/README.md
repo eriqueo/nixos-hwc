@@ -339,8 +339,8 @@ removed.
 | `hwc_calendar_list` | Events for today, this week, or custom date range. range=today/week/custom. |
 | `hwc_calendar_sync` | Trigger immediate vdirsyncer sync to/from Radicale. |
 | `hwc_calendar_create` | Create event (timed, all-day, or multi-day). Syncs to Radicale. |
-| `hwc_calendar_delete` | Delete event by search (two-step: dry-run then confirm). |
-| `hwc_calendar_edit` | Modify event fields (delete + recreate pattern). |
+| `hwc_calendar_delete` | Delete event by search (two-step: dry-run then confirm). A recurring event is deleted with every occurrence. |
+| `hwc_calendar_edit` | Modify event fields (delete + recreate pattern). Refuses recurring events. |
 
 ### Tasks (4)
 
@@ -495,6 +495,13 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-09-25: `hwc_calendar` delete/edit read the VEVENT's own properties. They
+  searched the whole file, so 172 of 196 events reported the VTIMEZONE block's
+  DTSTART (151 of them dated 1883 or 1970), and edit recreated them on that date. Times are now
+  converted from their TZID or UTC into the local zone that `khal new` uses, text
+  is unfolded and unescaped, and edit refuses recurring events rather than
+  replacing the series with one event. `tests/calendar-week.test.ts` is now
+  `tests/calendar.test.ts`.
 - 2026-09-24: Radicale single source. `hwc_calendar` delete/edit scan only
   `calendars-radicale/`; the legacy iCloud `calendars/` root is dropped, since
   its stale copies could match dead events. `hwc_tasks_add` defaults to the
@@ -707,6 +714,8 @@ and tags for at most 512 cached thread IDs within 3.5 seconds and 2 MiB;
 invalid identities, overflow or command failure return a coded error. Reading
 does not remove a DO item.
 `calendar.ts` returns `start_date` for seven consecutive days so empty days render.
+Its delete/edit search parses each stored file's VEVENT (VTIMEZONE and VALARM
+lines excluded) with the ICS unfold/unescape helpers from `executors/caldav.ts`.
 Tests in `src/tests/` exercise registered tools and their failure boundaries.
 
 ```
