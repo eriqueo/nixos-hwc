@@ -400,19 +400,24 @@
     ];
   };
 
-  # Syncthing — bidirectional home folder sync with hwc-laptop
+  # Syncthing — bidirectional home folder sync with hwc-laptop and, since the
+  # service split, hwc-work (inbox/hwc/tech/datax only; this host stays the hub).
   hwc.data.syncthing = {
     enable = true;
     devices."hwc-laptop".id = "H3EVGHN-DTDTMWS-INSC2RH-PBRABJX-M3FW7AM-3P2NY3M-X5XLYCK-JD2YRQG";
     devices."hwc-phone".id = "ROLZBPO-HN33OQP-E4DV5PD-34ZVSIP-I5USNNW-NHHOPKC-APNQNSH-BX7OMQN";
+    devices."hwc-work" = {
+      id = "D235HNY-GMD6CNM-MEDAB6A-IAGCUZL-YHZMCDI-FNMUNDZ-SIJK6UU-FQ6BGQS";
+      addresses = [ "tcp://${config.hwc.networking.hosts.ips.work}:22000" ];
+    };
     folders = {
       "000_inbox" = {
         path = "/home/eric/000_inbox";
-        devices = ["hwc-laptop"];
+        devices = ["hwc-laptop" "hwc-work"];
       };
       "100_hwc" = {
         path = "/home/eric/100_hwc";
-        devices = ["hwc-laptop"];
+        devices = ["hwc-laptop" "hwc-work"];
       };
       "200_personal" = {
         path = "/home/eric/200_personal";
@@ -420,11 +425,11 @@
       };
       "300_tech" = {
         path = "/home/eric/300_tech";
-        devices = ["hwc-laptop"];
+        devices = ["hwc-laptop" "hwc-work"];
       };
       "700_datax" = {
         path = "/home/eric/700_datax";
-        devices = ["hwc-laptop"];
+        devices = ["hwc-laptop" "hwc-work"];
       };
       # 600_apps: removed from Syncthing 2026-06-16. Each app inside is now its
       # own git repo (server hub for workbench/todui/khalt; GitHub for
