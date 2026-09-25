@@ -116,9 +116,14 @@ jq -n --argjson u "${INBOX_UNREAD}" '{inbox_unread: $u}' > "${STATE_FILE}" 2>/de
 #    output; the length>=5 filter drops them. --
 CAL_JSON='{"events": []}'
 if [ -x "${KHAL_BIN}" ]; then
-  CAL_JSON=$("${KHAL_BIN}" list \
+  # khal's output is captured first: under pipefail a failing khal used to let
+  # jq print {events:[]} AND fire the `|| echo` fallback, leaving two JSON
+  # documents that `jq empty` accepts and --argjson rejects, so the whole
+  # briefing assembly failed (hwc-work, 2026-09-25).
+  KHAL_OUT=$("${KHAL_BIN}" list \
     --format='{start-date}T{start-time}|{end-date}T{end-time}|{title}|{location}|{all-day}' \
-    today 7d 2>/dev/null \
+    today 7d 2>/dev/null) || KHAL_OUT=""
+  CAL_JSON=$(printf '%s' "${KHAL_OUT}" \
     | jq -R -s 'split("\n") | map(select(length>0)) | map(split("|")) | map(select(length>=5)) | map({
         summary: .[2],
         start: .[0],
@@ -127,7 +132,7 @@ if [ -x "${KHAL_BIN}" ]; then
         location: (if .[3] == "" then null else .[3] end),
         allDay: (.[4] | ascii_downcase == "true")
       }) | { events: . }' 2>/dev/null || echo '{"events": []}')
-  echo "${CAL_JSON}" | jq empty 2>/dev/null || CAL_JSON='{"events": []}'
+  echo "${CAL_JSON}" | jq -e 'type == "object"' >/dev/null 2>&1 || CAL_JSON='{"events": []}'
 fi
 EV_COUNT=$(echo "${CAL_JSON}" | jq '.events | length' 2>/dev/null || echo 0)
 

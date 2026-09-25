@@ -5,16 +5,22 @@ let
   # (e.g. a Radicale collection added to a pair). Discover whenever the
   # config differs from the one last discovered (hash kept beside status/),
   # answering yes to creating missing collections; unchanged config never
-  # re-discovers, so a collection deleted on one side stays deleted.
+  # re-discovers, so a collection deleted on one side stays deleted. `sync`
+  # never moves collection metadata, so the same step runs `metasync`: khal
+  # names calendars by displayname (default_calendar = "hwc"), and a host
+  # that never ran it exits "hwc is not valid for 'default_calendar'".
   firstDiscover = pkgs.writeShellScript "vdirsyncer-discover-on-change" ''
     set -eu
     data="${dataDir}"
     data="''${data/#\~/$HOME}"
     conf="''${XDG_CONFIG_HOME:-$HOME/.config}/vdirsyncer/config"
     stamp="$data/discovered-config.sha256"
-    want=$(sha256sum "$conf" | cut -d' ' -f1)
+    # The step's version is part of the stamp, so a change to what this step
+    # does (v2: + metasync) runs it once on every host.
+    want=$({ cat "$conf"; echo "discover-step v2"; } | sha256sum | cut -d' ' -f1)
     if [ ! -f "$stamp" ] || [ "$(cat "$stamp")" != "$want" ]; then
       yes | ${pkgs.vdirsyncer}/bin/vdirsyncer discover
+      ${pkgs.vdirsyncer}/bin/vdirsyncer metasync
       mkdir -p "$data" && printf '%s\n' "$want" > "$stamp"
     fi
   '';

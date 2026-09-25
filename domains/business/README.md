@@ -28,6 +28,7 @@ business/
 ```
 
 ## Changelog
+- 2026-09-25: `morning-briefing/run.sh` — the calendar gather captures khal's output before parsing: under pipefail a failing khal made jq print `{events:[]}` and the `|| echo` fallback add a second document, which `jq empty` accepted and `--argjson` rejected, so the whole briefing assembly failed and the dashboard kept stale data.
 - 2026-09-25: Service split wave 2 fused window — hwc-work takes the business role (n8n/paperless/firefly off there until waves 3/4; mqtt stays with Frigate); every role member hwc-server no longer runs is `mkDefault` and switched off in its machine config. `morning-briefing`: new `hostHealthFrom` (host alias whose systemctl/disk/journal/VPN/backup health run.sh reports, via `host_exec` over ssh; TEMPORARY until wave 3) and `prometheusUrl` (was hard-coded loopback).
 - 2026-09-25: `datax-monitor` moved to hwc-work (service split wave 2, step 3b): work imports the business domain and enables it; the business role sets it with `mkDefault` so hwc-server can turn it off; `datax_monitor` restored on work from the server's final pg_dump.
 - 2026-09-25: `workbench` — removed the `routeOwner` option (ownership is now `hwc.networking.shared.routeOwners`); area resolution reads `shared.effectiveRoutes`, which includes stubs for vhosts another host owns.
