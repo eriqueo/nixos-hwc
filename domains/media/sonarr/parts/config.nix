@@ -14,6 +14,7 @@ let
     name = "sonarr";
     inherit configPath;
     source = "sonarr";
+    webhookUrl = "${config.hwc.automation.n8n.publicUrl}/webhook/media-pipeline";
   };
 in
 {

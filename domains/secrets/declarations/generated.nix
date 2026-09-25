@@ -37,7 +37,6 @@ let
     jellyfin-api-key           = { owner = "eric"; };
     jellyfin-admin-password    = { owner = "eric"; };
     jellyfin-eric-password     = { owner = "eric"; };
-    n8n-owner-password-hash    = { owner = "eric"; };
     n8n-api-key                = { owner = "eric"; };
 
     # Restrictive root-only secrets (camera/backup config).

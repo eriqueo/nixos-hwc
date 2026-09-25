@@ -342,9 +342,10 @@ in
             "https://iheartwoodcraft.com/llms.txt"
             "https://iheartwoodcraft.com/js/calculator.bundle.js"
           ]; }
-        # Public webhook ingress (Cloudflare proxy → tunnel → n8n) via CORS preflight
+        # Public webhook ingress (Cloudflare proxy → tunnel → n8n) via CORS
+        # preflight on a live webhook (estimate-push; calculator-lead was retired 2026-09-25)
         { job = "probe-webhook-ingress"; module = "http_options_2xx";
-          targets = [ { url = "https://api.iheartwoodcraft.com/webhook/calculator-lead"; } ]; }
+          targets = [ { url = "https://api.iheartwoodcraft.com/webhook/estimate-push"; } ]; }
         # hwc-crm public intake via CORS preflight (touches no data)
         { job = "probe-crm-intake"; module = "http_options_2xx"; targets = map (url: { inherit url; }) [
             "https://crm.iheartwoodcraft.com/hooks/contact"

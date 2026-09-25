@@ -280,7 +280,6 @@
           cudaSupport = true;  # Binary cache should provide pre-built CUDA packages
           permittedInsecurePackages = [
             "qtwebengine-5.15.19"
-            "n8n-1.91.3"
           ];
         };
       };

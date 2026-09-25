@@ -32,11 +32,17 @@ in
       description = "n8n web interface port";
     };
 
-    webhookUrl = lib.mkOption {
+    publicUrl = lib.mkOption {
       type = lib.types.str;
-      default = "https://${config.hwc.networking.shared.rootHost}";
-      defaultText = "https://\${config.hwc.networking.shared.rootHost}";
-      description = "Base URL for webhook callbacks";
+      readOnly = true;
+      description = ''
+        Editor + webhook base URL, `https://<owner fqdn>:<n8n route port>`,
+        derived on every host from hwc.networking.shared.routeOwners.n8n and
+        the `n8n` port route (routes.nix). Every caller that pins n8n's
+        tailnet address (the *arr media-pipeline webhook, the container's own
+        N8N_EDITOR_BASE_URL/WEBHOOK_URL) reads this, so moving n8n is the
+        routeOwners entry alone.
+      '';
     };
 
     dataDir = lib.mkOption {
@@ -56,22 +62,6 @@ in
         type = lib.types.nullOr lib.types.path;
         default = null;
         description = "Path to encryption key file for credentials (via agenix)";
-      };
-    };
-
-    database = {
-      type = lib.mkOption {
-        type = lib.types.enum [ "sqlite" "postgres" ];
-        default = "sqlite";
-        description = "Database type for n8n";
-      };
-
-      sqlite = {
-        file = lib.mkOption {
-          type = lib.types.path;
-          default = "${paths.state}/n8n/database.sqlite";
-          description = "SQLite database file path";
-        };
       };
     };
 
@@ -138,32 +128,6 @@ in
       };
 
     };
-
-    owner = {
-      email = lib.mkOption {
-        type = lib.types.str;
-        default = "eric@iheartwoodcraft.com";
-        description = "Owner account email address";
-      };
-
-      firstName = lib.mkOption {
-        type = lib.types.str;
-        default = "Eric";
-        description = "Owner account first name";
-      };
-
-      lastName = lib.mkOption {
-        type = lib.types.str;
-        default = "Okeefe";
-        description = "Owner account last name";
-      };
-
-      passwordHashFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        default = null;
-        description = "Path to file containing bcrypt password hash for owner account (via agenix)";
-      };
-    };
   };
 
   #==========================================================================
@@ -176,7 +140,16 @@ in
   #==========================================================================
   # IMPLEMENTATION (non-container config)
   #==========================================================================
-  config = lib.mkIf cfg.enable {
+  config = lib.mkMerge [
+  {
+    hwc.automation.n8n.publicUrl =
+      let
+        owner = config.hwc.networking.shared.routeOwners.n8n.owner or "main";
+        route = lib.findFirst (r: r.name == "n8n") { port = 2443; }
+          config.hwc.networking.shared.effectiveRoutes;
+      in config.hwc.networking.hosts.url { server = owner; port = route.port; };
+  }
+  (lib.mkIf cfg.enable {
     # Firewall - localhost + Tailscale
     networking.firewall.interfaces."lo".allowedTCPPorts = [ cfg.port ];
     networking.firewall.interfaces."tailscale0".allowedTCPPorts =
@@ -185,7 +158,11 @@ in
     #========================================================================
     # VALIDATION
     #========================================================================
-    assertions = [
+    assertions =
+      let
+        hosts = config.hwc.networking.hosts;
+        owner = config.hwc.networking.shared.routeOwners.n8n.owner or "main";
+      in [
       {
         assertion = cfg.port != 0;
         message = "n8n port must be configured (hwc.automation.n8n.port)";
@@ -194,6 +171,14 @@ in
         assertion = cfg.dataDir != "";
         message = "n8n data directory must be configured (hwc.automation.n8n.dataDir)";
       }
+      # One writer: the host that runs n8n must be the one the route table
+      # sends callers to, or webhooks land on a host with no n8n.
+      {
+        assertion = hosts.self != null && owner == hosts.self;
+        message = "hwc.automation.n8n is enabled on ${config.networking.hostName} but "
+          + "hwc.networking.shared.routeOwners.n8n names '${owner}' (routes.nix).";
+      }
     ];
-  };
+  })
+  ];
 }

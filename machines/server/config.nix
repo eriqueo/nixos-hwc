@@ -23,7 +23,6 @@
     ../../domains/gaming/index.nix # Retroarch emulation + WebDAV save sync
     ../../domains/server/native/ai/brain-mcp/index.nix # Brain MCP Server (Deno)
     ../../domains/server/native/ai/brainvec/index.nix # brainvec semantic-index ingest (vault embeddings)
-    ../../domains/server/native/ai/hermes/index.nix # Hermes Agent (Nous Research)
     ../../domains/server/native/ai/dx2/index.nix # DX2 endpoint facts (URL, model, key) for research-scout + inbox-processor
     ../../domains/server/native/ai/llama-cpp/index.nix # llama.cpp inference (embed only on this host)
     ../../domains/server/native/ai/whisper/index.nix # whisper.cpp speech-to-text server (GPU)
@@ -352,8 +351,23 @@
     };
   };
 
-  # MQTT broker (Frigate -> n8n bridge) comes from the business role.
-
+  # Mosquitto is Frigate's event bus and lives with the cameras. The bridge
+  # forwards `end` events to n8n on whichever host owns it (service split
+  # wave 4: hwc-work) — plain HTTP inside the tailnet, no cert dependency.
+  hwc.automation.mqtt = {
+    enable = true;
+    webhookBridge = {
+      enable = true;
+      topic = "frigate/events";
+      eventTypes = [ "end" ]; # Intermediate updates cannot notify; avoid n8n executions.
+      webhookUrl = config.hwc.networking.hosts.url {
+        server = config.hwc.networking.shared.routeOwners.n8n.owner;
+        scheme = "http";
+        port = config.hwc.automation.n8n.port;
+        path = "/webhook/frigate-events";
+      };
+    };
+  };
 
 
   # SR Gauntlet — moved to hwc-work with its checkout and credential dirs
@@ -658,7 +672,7 @@
 
   # NanoClaw AI agent orchestrator
   # Connects to Slack via Socket Mode, spawns agents in containers
-  # NanoClaw — disabled 2026-05-29; superseded by hwc.server.ai.hermes (below).
+  # NanoClaw — disabled 2026-05-29; its successor Hermes was retired 2026-09-25.
   # Module moved to domains/ai/.nanoclaw-disabled/; secret declarations remain
   # (nanoclaw-anthropic-key.age is reused by Hermes via re-named logical secret).
   # hwc.ai.nanoclaw = { enable = false; slack.enable = false; };
@@ -685,21 +699,6 @@
   hwc.server.ai.whisper = {
     enable = true;
     cudaCapabilities = ["6.1"];
-  };
-
-  # Hermes Agent — official nousresearch/hermes-agent Podman container.
-  # Re-architected 2026-06-03 from a bespoke native multi-unit deployment to
-  # the supported container: gateway + dashboard supervised together by s6 in
-  # one writable /opt/data, so the in-app controls (chat tab, restart) work as
-  # designed. Model is DeepSeek V4 via OPENAI_BASE_URL/HERMES_MODEL; the API
-  # key + Discord token are injected from agenix at container start.
-  hwc.server.ai.hermes = {
-    enable = true;
-    gateway.enable = true;
-    gateway.discord.enable = true;
-    gateway.discord.allowedUsers = "1501391621521150075"; # Eric's Discord snowflake
-    model.provider = "deepseek"; # native Hermes provider; base URL built in
-    model.modelName = "deepseek-v4-pro";
   };
 
   # CouchDB for Obsidian LiveSync comes from the server role.
@@ -818,12 +817,6 @@
     listenAddress = "127.0.0.1";
     targetAddress = config.hwc.networking.hosts.ips.work;
   };
-
-  # n8n webhook URL still points at the .me hostname because that's where
-  # callers expect to reach it. Flip to n8n.api.iheartwoodcraft.com after
-  # DNS is provisioned and any external integrations (Quo, Slack, etc.)
-  # are updated.
-  hwc.automation.n8n.webhookUrl = "https://n8n.heartwoodcraft.me";
 
   #============================================================================
   # REVERSE PROXY

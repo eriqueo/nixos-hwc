@@ -16,7 +16,7 @@ share one CUDA-built `pkgs.llama-cpp` binary, all instances of a single
   search. **The only one of the three enabled on hwc-server** since 2026-09-19.
 
 Charter v11.1 native-systemd pattern; mirrors
-`domains/server/native/ai/hermes/` and `…/lead-scout/`.
+`domains/server/native/ai/lead-scout/`.
 
 ## Structure
 

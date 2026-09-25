@@ -14,6 +14,7 @@ let
     name = "lidarr";
     inherit configPath;
     source = "lidarr";
+    webhookUrl = "${config.hwc.automation.n8n.publicUrl}/webhook/media-pipeline";
   };
 in
 {

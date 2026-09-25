@@ -122,12 +122,6 @@
   # here from hwc-server's final pg_dumps. hwc-notify stays on hwc-server, so
   # every notifier posts to its tailnet port route.
   #==========================================================================
-  # Role members that move in later waves stay off here until then.
-  # TEMPORARY: each line goes in the commit that moves that app (waves 3/4).
-  hwc.automation.n8n.enable = false;        # wave 4
-  # Mosquitto stays with Frigate on hwc-server (roadmap end state), so the
-  # role's mqtt membership is not for this host; revisit when the role moves (wave 5).
-  hwc.automation.mqtt.enable = false;
   # Paperless (wave 3): state on this host's SSD under /var/lib/hwc (in borg),
   # not the server's DAS paths the module defaults to. Phone receipts still
   # land on hwc-server and are forwarded here (receipts watcher there).
@@ -273,10 +267,8 @@
   # CLOUDFLARE TUNNEL (public ingress) — service split wave 2, step 1
   #==========================================================================
   # The one tunnel moved here from hwc-server with the same credential; every
-  # hostname, path lock and Access policy is unchanged. Since the wave 2
-  # fused window every origin is local except n8n, which stays on hwc-server
-  # until wave 4 and is reached over the tailnet (it binds all interfaces).
-  # TEMPORARY (n8n targets): flip to localhost when n8n moves (wave 4).
+  # hostname, path lock and Access policy is unchanged. Every origin is local
+  # since wave 4 (n8n was the last remote one).
   #
   # History carried from hwc-server: Phase 4.6 (2026-07-07) found the planned
   # *.api.iheartwoodcraft.com subzone impossible on the free plan (subdomain
@@ -288,14 +280,11 @@
   # *-origin names are what the hwc-mcp-gateway OAuth Worker proxies to with an
   # Access service token (~/600_apps/hwc-mcp-gateway/ORIGINS.md).
   hwc.networking.cloudflared =
-    let
-      server = config.hwc.networking.hosts.ips.main;
-    in {
+    {
       enable = true;
       tunnelId = "1536327b-2641-4706-8ad9-48c94d0b11f9";
       credentialsFile = config.age.secrets.cloudflared-tunnel-credentials.path;
-      # n8n.heartwoodcraft.me → n8n (hwc-server until wave 4).
-      n8nHost = server;
+      # n8n.heartwoodcraft.me → local n8n (module default n8nHost = localhost).
       extraIngress = {
         "mcp.heartwoodcraft.me" = "http://localhost:6200";
         "mcp.iheartwoodcraft.com" = "http://localhost:6200";
@@ -311,10 +300,10 @@
         "monitor.heartwoodcraft.me" = "http://localhost:4400";
         "monitor.iheartwoodcraft.com" = "http://localhost:4400";
 
-        # Production-domain webhook ingress (calculator lead/appointment):
+        # Production-domain webhook ingress (Twilio SMS, JobTread pulls):
         # only /webhook/* reaches n8n; other paths hit the 404 default.
         "api.iheartwoodcraft.com" = {
-          service = "http://${server}:5678";
+          service = "http://localhost:${toString config.hwc.automation.n8n.port}";
           path = "^/webhook/";
         };
 

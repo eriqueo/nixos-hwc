@@ -50,6 +50,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-25: Deleted `apps/n8n/` (HM n8n CLI app; enabled on no host, its only effect was keeping `n8n-1.91.3` in `permittedInsecurePackages`).
 - 2026-09-25: Service split wave 3 (notifications): `apps/agent-harness` — `notifyUrl` derives from `osConfig.hwc.notifications.notify.url` (standalone-HM fallback literal only); `state-sync.sh` has no hidden fallback host.
 - 2026-09-24: `theme/templates/gtk.nix` defaults dconf activation to `theme.graphical`; headless Home Manager activation no longer requires the desktop dconf D-Bus service.
 - 2026-09-24: apps/agent-harness gains opt-in `cliUpdates`, a daily timer that keeps the npm-global `claude` and `codex` at `@latest`. hwc-server enables it (machines/server/home.nix). apps/t3code serve-PATH doc now says `codex` is an npm global there.

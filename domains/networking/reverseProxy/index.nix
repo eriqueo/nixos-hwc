@@ -30,6 +30,18 @@ let
   isRemoteOwned = r: r ? owner && hostAliases.${r.owner} != config.networking.hostName;
   localPortRoutes = lib.filter (r: r.mode == "port" && !(isRemoteOwned r)) routes;
 
+  # A subpath route lives under THIS host's tailnet root (rootHost/path), so a
+  # client pinned to it (the estimator's webhook URL, a laptop mail tool) keeps
+  # naming this host after the backend moves. A remotely owned subpath is
+  # therefore rendered here as a proxy to the same path on the owner's root
+  # host — the subpath twin of the vhost stubs below: IP upstream + SNI/Host of
+  # the owner, so the request never loops through this Caddy's own DNS name.
+  remoteSubpath = r: r // {
+    upstream = "https://${config.hwc.networking.hosts.ips.${r.owner}}";
+    tlsServerName = config.hwc.networking.hosts.fqdn.${r.owner};
+    headers = (r.headers or {}) // { Host = config.hwc.networking.hosts.fqdn.${r.owner}; };
+  };
+
   # The root site's /mcp handler follows the gateway to its host.
   mcpAlias = config.hwc.system.mcp.serverAlias or "main";
   mcpUpstream =
@@ -149,7 +161,10 @@ let
         }
       '';
     in
-      if r.mode == "subpath" then
+      if r.mode == "subpath" && isRemoteOwned r then
+        # The owner serves the app; this host forwards the same path there.
+        renderRoute (removeAttrs (remoteSubpath r) [ "owner" ])
+      else if r.mode == "subpath" then
         # If the app has a URL base, we must preserve the path; otherwise we may strip.
         (if needsUrlBase then subpathPreserve else subpathStrip)
       else if r.mode == "port" then ''
@@ -351,15 +366,16 @@ in
       description = "Aggregated reverse proxy routes for all services.";
     };
     routeOwners = mkOption {
-      # A bare alias means a vhost; port routes say so, because a missing
-      # port route gets no stub (there is no name to proxy).
+      # A bare alias means a vhost; port and subpath routes say so, because a
+      # missing port route gets no stub (there is no name to proxy) and a
+      # remotely owned subpath is forwarded to the owner's root host instead.
       type = types.attrsOf (types.coercedTo
         (types.enum (lib.attrNames config.hwc.networking.hosts.servers))
         (owner: { inherit owner; })
         (types.submodule {
           options = {
             owner = mkOption { type = types.enum (lib.attrNames config.hwc.networking.hosts.servers); };
-            mode = mkOption { type = types.enum [ "vhost" "port" ]; default = "vhost"; };
+            mode = mkOption { type = types.enum [ "vhost" "port" "subpath" ]; default = "vhost"; };
           };
         }));
       default = { };

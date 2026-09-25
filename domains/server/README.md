@@ -16,7 +16,6 @@ domains/server/
 │       ├── brainvec/      # brainvec semantic-index ingest (vault embeddings via llama-embed)
 │       ├── dx2/           # DX2 endpoint facts (URL, model id, key path) — options only, runs nothing
 │       ├── event-scout/   # Local events: curated queue, Discord cards, calendar actions
-│       ├── hermes/        # Hermes Agent (Nous Research)
 │       ├── home-scout/    # Home Scout MCP + HTTP, plus five timer-driven ingests
 │       ├── hwc-control-bot/ # HWC Discord control bot (/next over the apps' control APIs)
 │       ├── lead-scout/    # Lead Scout MCP + HTTP, plus profile-scoped Discord review bots
@@ -42,6 +41,7 @@ The media/arr/torrent stack lives entirely in `domains/media/`. **This domain no
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-09-25: Retired `native/ai/hermes` (Eric's decision, service split wave 4 audit: every cron delivery failing, no Discord use in 30 days, trial window over). Module, both vhosts, the DeepSeek key and Homepage tiles removed; `/var/lib/hwc/hermes-agent`, `market-dashboard` and the old native `hermes` tree archived to hwc-server `/var/lib/backups/service-split-wave4/` before deletion. `hermes-discord-bot-token` stays: lead-scout's approvals bot uses it.
 - 2026-09-25: Service split wave 3 (notifications): home-scout and research-scout default `notifyUrl` to `hwc.notifications.notify.url`.
 - 2026-09-25: Retired `native/ai/market-intelligence` (Eric's decision during the service-split audit): module, its daily/weekly timers and static dashboard vhost removed; its out-of-git app code and SQLite were archived to hwc-server `/var/lib/backups/service-split-wave2/market-intelligence.tar.zst` before the state dir was deleted. Hermes' separate market-dashboard (paper trading) is unaffected.
 - 2026-09-25: Service split wave 2 — lead/home/event/research scouts, hwc-control-bot and Radicale (+ mirrors) are machine-imported and configured on hwc-work; hwc-server no longer imports them.

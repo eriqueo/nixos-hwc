@@ -72,9 +72,10 @@ INITEOF
       echo "${name} config enforced: AuthenticationMethod=External, AuthenticationRequired=DisabledForLocalAddresses, UrlBase=${urlBase}"
     '';
 
-  # Enforce n8n media-pipeline webhook in arr database
-  # Usage: mkArrWebhookScript { name = "radarr"; configPath = "/path/to/config"; source = "radarr"; }
-  mkArrWebhookScript = { name, configPath, source, webhookUrl ? "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline" }:
+  # Enforce n8n media-pipeline webhook in arr database. The caller derives
+  # webhookUrl from n8n's route owner (this lib has no `config`).
+  # Usage: mkArrWebhookScript { name = "radarr"; configPath = "/path/to/config"; source = "radarr"; webhookUrl = ...; }
+  mkArrWebhookScript = { name, configPath, source, webhookUrl }:
     let
       sqlite = "${pkgs.sqlite}/bin/sqlite3";
       fullUrl = "${webhookUrl}?source=${source}";

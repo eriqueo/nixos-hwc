@@ -48,6 +48,7 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+- 2026-09-25: `arr-config.nix` `mkArrWebhookScript` requires `webhookUrl` (no hwc-server literal default); callers derive it from `hwc.automation.n8n.publicUrl`.
 - 2026-09-21: `hm.nix` `fleet` also returns `lanIps` (from `hwc.networking.hosts.lanIps`, literal fallback for standalone HM), for the `server-lan` fallback.
 - 2026-09-07: `hm.nix` owns the runtime Radicale password selector for todui and
   the tasks, calendar, and contacts sync clients; callers render shell or JSON argv.

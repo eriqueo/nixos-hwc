@@ -9,6 +9,12 @@ let
   cfg = config.hwc.automation.n8n;
   paths = config.hwc.paths;
 
+  # This host's tailnet identity (n8n validates Origin against N8N_HOST) and
+  # the editor/webhook base URL from the read-only `publicUrl` (index.nix);
+  # the assertion there guarantees the owner IS this host.
+  hosts = config.hwc.networking.hosts;
+  publicUrl = "${cfg.publicUrl}/";
+
   # Path to generated secrets env file
   secretsEnvFile = "/run/n8n/secrets.env";
 
@@ -81,36 +87,37 @@ in
     (helpers.mkContainer {
       name = "n8n";
       image = cfg.image;
-      networkMode = "host";  # Needs host for Tailscale funnel integration
+      # Host network: the SSH credential targets host.containers.internal (the
+      # podman host itself) and the Postgres/SMTP credentials use localhost.
+      networkMode = "host";
       gpuEnable = false;
       timeZone = cfg.timezone;
       ports = [];  # Host network mode, port is exposed directly
       volumes = [
         "${cfg.dataDir}:/home/node/.n8n"
-        "/data:/data"  # Scraper output access
       ];
       environment = {
         N8N_PORT = toString cfg.port;
         N8N_PROTOCOL = "https";
-        N8N_HOST = "hwc-server.ocelot-wahoo.ts.net";
+        N8N_HOST = hosts.fqdn.${hosts.self};
         GENERIC_TIMEZONE = cfg.timezone;
         N8N_PERSONALIZATION_ENABLED = "false";
         N8N_VERSION_NOTIFICATIONS_ENABLED = "false";
         N8N_DIAGNOSTICS_ENABLED = "false";
         N8N_HIRING_BANNER_ENABLED = "false";
-        N8N_EDITOR_BASE_URL = "https://hwc-server.ocelot-wahoo.ts.net:10000/";
-        WEBHOOK_URL = "https://hwc-server.ocelot-wahoo.ts.net:10000/";
+        N8N_EDITOR_BASE_URL = publicUrl;
+        WEBHOOK_URL = publicUrl;
         N8N_PROXY_HOPS = "1";
         N8N_ENDPOINT_WEBHOOK = "webhook";
         N8N_ENDPOINT_REST = "rest";
+        # SQLite in the state volume; `config` beside it holds the credential
+        # encryption key — the two move together or every credential is lost.
         DB_TYPE = "sqlite";
         DB_SQLITE_DATABASE = "/home/node/.n8n/database.sqlite";
-        # Allow file access to /data for scraper CSV imports (semicolon-separated)
-        N8N_RESTRICT_FILE_ACCESS_TO = "/home/node/.n8n-files;/data";
+        N8N_RESTRICT_FILE_ACCESS_TO = "/home/node/.n8n-files";
         # Allow access to environment variables in code nodes (required for $env.JOBTREAD_GRANT_KEY etc.)
         N8N_BLOCK_ENV_ACCESS_IN_NODE = "false";
-        # Allow `require("crypto")` in Code nodes — needed by the
-        # work_calculator_lead thin shell to HMAC-sign POST /leads.
+        # Allow `require("crypto")` in Code nodes (HMAC signing).
         NODE_FUNCTION_ALLOW_BUILTIN = "crypto";
       } // cfg.extraEnv;
       environmentFiles =

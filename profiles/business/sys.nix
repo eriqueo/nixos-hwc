@@ -78,12 +78,18 @@
   hwc.business.estimator = {
     enable     = lib.mkDefault true;
     port       = 13443;
-    webhookUrl = config.hwc.networking.hosts.url { server = "main"; path = "/webhook/estimate-push"; };
+    # Posted by the browser to n8n's host (the /webhook subpath follows
+    # routeOwners.webhook; other hosts forward it there).
+    webhookUrl = config.hwc.networking.hosts.url {
+      server = config.hwc.networking.shared.routeOwners.webhook.owner;
+      path = "/webhook/estimate-push";
+    };
     apiKeyFile = config.age.secrets.estimator-api-key.path;
   };
 
   #==========================================================================
-  # AUTOMATION STACK (n8n + MQTT)
+  # AUTOMATION STACK (n8n). Mosquitto + the Frigate webhook bridge are NOT
+  # role members: they belong to the camera host (machines/server/config.nix).
   #==========================================================================
 
   # n8n - Workflow automation for business + alert routing
@@ -91,7 +97,6 @@
     enable = lib.mkDefault true;
     port = 5678;
     dataDir = "/var/lib/hwc/n8n";
-    owner.passwordHashFile = config.age.secrets.n8n-owner-password-hash.path;
     # Workflow secrets (loaded from agenix)
     secrets = {
       estimatorApiKeyFile = config.age.secrets.estimator-api-key.path;
@@ -104,23 +109,10 @@
     };
     # Non-secret workflow configuration
     extraEnv = {
-      # work_lead_response: Twilio sender number
+      # hwc:ops:leads:sms-handler: Twilio sender number
       TWILIO_PHONE_NUMBER = "+14064378700";
-      # work_estimate_router: PostgREST endpoint (has fallback)
-      POSTGRES_REST_URL = "http://localhost:3000";
-      # work_content_calendar: Google Drive folder for calendar content
+      # hwc:dev:content:calendar: Google Drive folder for calendar content
       DRIVE_CALENDAR_FOLDER_ID = "1xkrYYSbZzX16Gjo7VbGazgLMkS12u06I";
-    };
-  };
-
-  # MQTT broker for event-driven automation (Frigate -> n8n)
-  hwc.automation.mqtt = {
-    enable = lib.mkDefault true;
-    webhookBridge = {
-      enable = true;
-      topic = "frigate/events";
-      eventTypes = [ "end" ]; # Intermediate updates cannot notify; avoid n8n executions.
-      webhookUrl = "http://127.0.0.1:5678/webhook/frigate-events";
     };
   };
 }

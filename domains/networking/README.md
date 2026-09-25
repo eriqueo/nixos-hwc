@@ -39,6 +39,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-09-25: Service split wave 4: `routeOwners` gains `mode = "subpath"`; a remotely owned subpath route is rendered on the other hosts as a forward to the same path on the owner's tailnet root host (IP upstream + owner SNI/Host, the vhost-stub shape). `n8n` (port) and `webhook` (subpath) are owned by `work`; the n8n route's Origin header derives from the owner's FQDN.
 - 2026-09-25: `routeOwners` += `firefly`, `firefly-pico`, `firefly-import`, `firefly-explorer`, `vaultwarden` (wave 3).
 - 2026-09-25: `routeOwners.paperless = "work"` (wave 3).
 - 2026-09-25: Service split wave 3 (monitoring fleet): `hosts/` gains derived `self` (this host's alias) and `selfIp`. `routeOwners` += `grafana`, `homepage` (central stack) and `sr_analyzer` (the container moved in wave 2; the route had stayed and 502'd).

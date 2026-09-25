@@ -66,6 +66,10 @@ in
     firefly-import = "work";
     firefly-explorer = "work";
     vaultwarden = "work";
+    # wave 4: n8n (editor port route + the /webhook subpath on the tailnet
+    # root, which hwc-server keeps forwarding for pinned callers)
+    n8n = { owner = "work"; mode = "port"; };
+    webhook = { owner = "work"; mode = "subpath"; };
   };
 
   hwc.networking.shared.routes = [
@@ -264,25 +268,25 @@ in
       upstream = "http://127.0.0.1:8945";
     }
 
-    # YouTube Transcripts API - FastAPI transcript extraction service
-    # (n8n calls this via loopback :8100, not the public URL)
+    # YouTube Transcripts API - FastAPI transcript extraction service. Stays
+    # on hwc-server (Eric, 2026-09-25): it writes into the media library.
     {
       name = "transcripts";
       mode = "vhost";
       upstream = "http://127.0.0.1:8100";
     }
 
-    # n8n - Workflow automation platform — HELD on port mode.
-    # Host-sensitive: N8N_EDITOR_BASE_URL/WEBHOOK_URL + the public Cloudflare
-    # tunnel + webhook URLs referenced across notifications/arr/mail modules.
-    # Migrating needs a coordinated cutover of all of those — separate change.
+    # n8n - Workflow automation platform — HELD on port mode: the editor and
+    # webhook base URLs, the *arr/estimator webhook callers and the Cloudflare
+    # tunnel all pin <owner>.ts.net:2443. The n8n module derives its own
+    # N8N_HOST/EDITOR/WEBHOOK URLs from this route and routeOwners.n8n.
     {
       name = "n8n";
       mode = "port";
       port = 2443;
       upstream = "http://127.0.0.1:5678";
       # Strip port from Origin header - n8n validates origin against hostname only
-      headers = { Origin = "https://hwc-server.ocelot-wahoo.ts.net"; };
+      headers = { Origin = "https://${config.hwc.networking.hosts.fqdn.${config.hwc.networking.shared.routeOwners.n8n.owner}}"; };
     }
 
     # Firefly III - name-based vhost (APP_URL updated in firefly module).
@@ -328,8 +332,10 @@ in
       upstream = "http://127.0.0.1:8102";
     }
 
-    # Generic webhook endpoint - forwards to n8n for external integrations (Slack, etc.)
-    # Preserves full path so n8n receives /webhook/* for routing
+    # Generic webhook endpoint - forwards to n8n for tailnet callers that pin
+    # <host>.ts.net/webhook/* (estimator, laptop mail tool). Preserves the full
+    # path so n8n receives /webhook/* for routing. Owned by n8n's host
+    # (routeOwners.webhook); other hosts forward it there.
     {
       name = "webhook";
       mode = "subpath";

@@ -78,9 +78,9 @@
         description: Daily ops dashboard
     - n8n:
         icon: n8n
-        href: https://hwc-server.ocelot-wahoo.ts.net:2443
+        href: https://hwc-work.ocelot-wahoo.ts.net:2443
         description: Workflow automation
-        siteMonitor: https://hwc-server.ocelot-wahoo.ts.net:2443
+        siteMonitor: https://hwc-work.ocelot-wahoo.ts.net:2443
     - MCP Gateway:
         icon: mdi-transit-connection-variant
         href: https://hwc-work.ocelot-wahoo.ts.net:6243/health
@@ -115,16 +115,6 @@
         icon: mdi-factory
         href: https://refinery.hwc.iheartwoodcraft.com
         description: Refinement engine board
-
-- Projects:
-    - Hermes:
-        icon: mdi-chart-line
-        href: https://hermes.hwc.iheartwoodcraft.com
-        description: Market trials agent
-    - Market Trials:
-        icon: mdi-finance
-        href: https://market-dashboard.hwc.iheartwoodcraft.com
-        description: Paper-trading dashboard
 
 - Home:
     - Frigate:

@@ -14,6 +14,7 @@ let
     name = "radarr";
     inherit configPath;
     source = "radarr";
+    webhookUrl = "${config.hwc.automation.n8n.publicUrl}/webhook/media-pipeline";
   };
 in
 {

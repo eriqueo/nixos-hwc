@@ -68,6 +68,7 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-09-25: Service split wave 4: sonarr/radarr/lidarr pass the media-pipeline webhook URL from `hwc.automation.n8n.publicUrl` (n8n on hwc-work); `lib/arr-config.nix` no longer defaults it to a host literal.
 
 - 2026-09-25: Service split wave 3 (monitoring fleet): `frigate/` exports its camera recording rules through `hwc.monitoring.prometheus.rules` (the central Prometheus is on another host) and asserts the metrics agent instead of a local Prometheus.
 - 2026-09-24: Align Frigate operating instructions with deployed camera rates, clocks, mask geometry and current validation limits.

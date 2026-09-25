@@ -90,7 +90,6 @@
       pave-query-builder.enable = lib.mkDefault true;
 
       # Development & Automation
-      n8n.enable = lib.mkDefault false;
       # codex release-binary pin moved to domains/home/apps/codex/parts/
       # package.nix; machine one-offs apply it (headless machines use stock).
 

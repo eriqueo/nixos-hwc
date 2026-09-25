@@ -59,13 +59,6 @@ hwc.automation.n8n = {
     hwcLeadsHmacFile = config.age.secrets.hwc-leads-hmac-secret.path;
   };
 
-  owner = {
-    email = "eric@iheartwoodcraft.com";
-    firstName = "Eric";
-    lastName = "Okeefe";
-    passwordHashFile = config.age.secrets.n8n-owner-password-hash.path;
-  };
-
 };
 ```
 

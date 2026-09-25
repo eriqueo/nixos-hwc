@@ -46,7 +46,6 @@
     slack.enable = false;
     slack-cli.enable = false;
     google-cloud-sdk.enable = false;
-    n8n.enable = false;
     neomutt.enable = false;
     proton-mail.enable = false;
     proton-authenticator.enable = false;
