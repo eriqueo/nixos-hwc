@@ -69,9 +69,11 @@ fi
 
 SOURCE_REPO="$ROOT/publish-source"
 SOURCE_REMOTE="$ROOT/publish-source.git"
+SOURCE_MIRROR="$ROOT/publish-mirror.git"
 NIXOS_REPO="$ROOT/publish-nixos"
 NIXOS_REMOTE="$ROOT/publish-nixos.git"
 git init -q --bare "$SOURCE_REMOTE"
+git init -q --bare "$SOURCE_MIRROR"
 git init -q --bare "$NIXOS_REMOTE"
 git init -q -b main "$SOURCE_REPO"
 git init -q -b main "$NIXOS_REPO"
@@ -91,6 +93,7 @@ git -C "$SOURCE_REPO" add .
 git -C "$SOURCE_REPO" commit -q -m static
 STATIC_REVISION=$(git -C "$SOURCE_REPO" rev-parse HEAD)
 git -C "$SOURCE_REPO" remote add github "$SOURCE_REMOTE"
+git -C "$SOURCE_REPO" remote add origin "$SOURCE_MIRROR"
 git -C "$SOURCE_REPO" push -q -u github main
 
 cat > "$NIXOS_REPO/flake.lock" <<EOF
@@ -110,6 +113,40 @@ run_publish_check() {
 }
 
 run_publish_check >/dev/null
+
+cat > "$BIN/nix" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$HARNESS_TEST_ROOT/nix.log"
+EOF
+cat > "$BIN/ssh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$HARNESS_TEST_ROOT/ssh.log"
+case "$*" in *'agent-harness revision'*) printf 'rev1\nok\n' ;; esac
+EOF
+cat > "$BIN/hostname" <<'EOF'
+#!/usr/bin/env bash
+printf 'harness-test-host\n'
+EOF
+chmod +x "$BIN/nix" "$BIN/ssh" "$BIN/hostname"
+HARNESS_TEST_ROOT="$ROOT" PATH="$BIN:$PATH" \
+  AGENT_HARNESS_EXPECTED_MANIFEST="$ROOT/expected.json" \
+  AGENT_HARNESS_SOURCE="$SOURCE_REPO" \
+  AGENT_HARNESS_NIXOS="$NIXOS_REPO" \
+  AGENT_HARNESS_FLEET_HOSTS=hwc-server:hwc-laptop:hwc-work \
+  bash "$(dirname "$0")/control.sh" publish >/dev/null
+[ "$(git -C "$SOURCE_MIRROR" rev-parse refs/heads/main)" = "$STATIC_REVISION" ] || {
+  echo 'control.test: static mirror did not receive the published revision' >&2
+  exit 1
+}
+for host in hwc-server hwc-laptop hwc-work; do
+  rg -q "nixosConfigurations\\.$host\\.config\\.system\\.build\\.toplevel" "$ROOT/nix.log" || {
+    echo "control.test: $host was not built" >&2; exit 1;
+  }
+  rg -q "$host .*git -C ~/.claude-config pull --ff-only" "$ROOT/ssh.log" || {
+    echo "control.test: $host did not refresh its static authoring source" >&2; exit 1;
+  }
+done
+
 if AGENT_HARNESS_FLEET_HOSTS='hwc-server:bad host' \
   AGENT_HARNESS_EXPECTED_MANIFEST="$ROOT/expected.json" \
   AGENT_HARNESS_SOURCE="$SOURCE_REPO" \

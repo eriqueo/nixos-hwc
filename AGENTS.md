@@ -1,7 +1,7 @@
 # nixos-hwc
 
-NixOS flake managing the HWC fleet — hwc-laptop (Hyprland desktop) and
-hwc-server (headless: Podman, Caddy, monitoring, media). Charter v12.6:
+NixOS flake managing HWC machines. The agent harness runs on hwc-laptop,
+hwc-server, and hwc-work. Charter v12.6:
 domains = capabilities, profiles = roles, machines = instances. Each
 domain's `README.md` carries its structure and changelog.
 

@@ -180,6 +180,9 @@ publish() {
   [ "${1:-}" != --check ] || return 0
 
   git -C "$SOURCE" push github HEAD:main
+  # Remote authoring checkouts track the server mirror, while Nix pins GitHub.
+  # Publish both before switching, so the checkout and active policy agree.
+  git -C "$SOURCE" push origin HEAD:main
   static_revision=$(git -C "$SOURCE" rev-parse HEAD)
 
   if [ "$locked" != "$static_revision" ]; then
@@ -202,7 +205,7 @@ publish() {
     if [ "$host" = "$(hostname)" ]; then
       sudo nixos-rebuild switch --flake "$NIXOS#$host"
     else
-      ssh -t "$host" "cd ~/.nixos && git pull --ff-only && sudo nixos-rebuild switch --flake .#$host"
+      ssh -t "$host" "git -C ~/.claude-config pull --ff-only && cd ~/.nixos && git pull --ff-only && sudo nixos-rebuild switch --flake .#$host"
     fi
   done
   exec "$BASH" "$0" doctor --fleet
