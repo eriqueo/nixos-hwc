@@ -30,9 +30,8 @@ monitoring/
 │                         #   `alert-rules-parse` runs promtool over the rule
 │                         #   files hwc-server actually loads, which is the only
 │                         #   thing that proves they are valid PromQL
-├── grafana/            # Dashboards + visualization
+├── grafana/            # Dashboards, visualization + renderer token wiring
 │   ├── index.nix
-│   ├── options.nix
 │   └── dashboards/     # Pre-configured JSON dashboards
 ├── alertmanager/       # Alert routing to webhooks
 │   ├── index.nix
@@ -60,6 +59,7 @@ monitoring/
 
 ## Changelog
 
+- 2026-09-24: Grafana 13 image rendering uses JWTs and requires a non-default shared token. Grafana and its localhost renderer now read one age-mounted `AUTH_TOKEN` environment file; Grafana resolves the token at runtime, outside the Nix store. A consistent pre-upgrade SQLite backup on the backup pool supports rollback after the unified-storage migration.
 - 2026-09-24: Grafana's 26.05 module requires an explicit signing key.
   The existing key is now supplied through an age-mounted file provider so
   stored datasource credentials remain decryptable.

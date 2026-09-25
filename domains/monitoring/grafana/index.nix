@@ -13,6 +13,7 @@
 let
   cfg = config.hwc.monitoring.grafana;
   paths = config.hwc.paths;
+  rendererEnv = config.hwc.secrets.api."grafana-renderer-token-env";
 in
 {
   #==========================================================================
@@ -102,10 +103,17 @@ in
         } // lib.optionalAttrs (cfg.adminPasswordFile != null) {
           admin_password = "$__file{${cfg.adminPasswordFile}}";
         };
+
+        # Grafana 13 requires a non-default token for JWT image rendering.
+        # PID 1 reads the age EnvironmentFile for both services; Grafana
+        # expands this provider at runtime, keeping the token out of the store.
+        rendering = lib.optionalAttrs cfg.imageRenderer.enable {
+          renderer_token = "$__env{AUTH_TOKEN}";
+        };
       };
     };
 
-    # Image renderer — a headless-Chromium sidecar plugin that turns panels and
+    # Image renderer — a headless-Chromium sidecar service that turns panels and
     # dashboards into PNGs (enables the render API + /render/... URLs used for
     # alert screenshots and programmatic dashboard capture). provisionGrafana
     # wires server_url (renderer) + callback_url (http://127.0.0.1:3000) into
@@ -117,6 +125,10 @@ in
       # 127.0.0.1:8081. 8181 is clear. provisionGrafana derives Grafana's
       # rendering server_url from this addr, so both sides stay in sync.
       settings.server.addr = "localhost:8181";
+    };
+
+    systemd.services.grafana-image-renderer = lib.mkIf cfg.imageRenderer.enable {
+      serviceConfig.EnvironmentFile = rendererEnv;
     };
 
     # Prometheus datasource provisioning
@@ -171,6 +183,8 @@ in
         WorkingDirectory = lib.mkForce cfg.dataDir;
         # Disable user namespace isolation so eric can access directories
         PrivateUsers = lib.mkForce false;
+      } // lib.optionalAttrs cfg.imageRenderer.enable {
+        EnvironmentFile = rendererEnv;
       };
     };
 

@@ -55,6 +55,7 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-09-24: Added `grafana-renderer-token-env` for Grafana 13's JWT image rendering. It contains one generated `AUTH_TOKEN` assignment, encrypted to the standard five recipients and mounted root:secrets 0440 for the Grafana and renderer units to read through systemd. Removed a plaintext password from the stale Navidrome setup note; its encrypted secret remains unchanged.
 - 2026-09-24: Added `grafana-secret-key` with the exact prior Grafana value,
   encrypted to the fleet recipient set. Its generated `root:secrets` / `0440`
   mount feeds Grafana's 26.05 file provider; plaintext equality was checked
