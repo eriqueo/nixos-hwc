@@ -26,6 +26,22 @@ in
   # preference. And converting one still means clearing the app's in-app URL
   # base in the SAME commit — never a rebuild apart — or it redirects to a path
   # that no longer routes. See the domain README for what that cost each app.
+
+  # Route ownership — the ONE producer (service split). Name → host alias of
+  # hwc.networking.hosts.servers that runs the backend; unlisted routes belong
+  # to "main" (hwc-server). The server proxies these vhosts to their owner, the
+  # laptop pins each name to its owner, and a routeOwner host's Caddy renders
+  # only its own. Moving an app's route = one entry here, plus the laptop
+  # rebuild. `mode = "port"` marks a port route (no stub when it is absent).
+  hwc.networking.shared.routeOwners = {
+    calculator = "work";
+    refinery = "work";   # wave 1: board + gauntlets
+    workbench = "work";  # wave 1: hub; hwc-server keeps the module on for its areas.json
+    t3-work = "work";
+    brain-mcp = { owner = "work"; mode = "port"; };  # wave 1
+    monitor = "work";    # wave 2: DataX monitor
+  };
+
   hwc.networking.shared.routes = [
     # Jellyfin - name-based vhost (jellyfin.hwc.iheartwoodcraft.com)
     {
@@ -309,7 +325,6 @@ in
     {
       name = "calculator";
       mode = "vhost";
-      owner = "work";
       root = "${nixosDir}/domains/business/website/calculator/app/dist";
     }
     # Heartwood CMS — name-based vhost (content management dashboard)
@@ -335,7 +350,6 @@ in
     {
       name = "refinery";
       mode = "vhost";
-      owner = "work"; # service split wave 1: board + gauntlets run on hwc-work
       upstream = "http://127.0.0.1:8060";
     }
 
@@ -428,7 +442,6 @@ in
     {
       name = "t3-work";
       mode = "vhost";
-      owner = "work";
       upstream = "http://127.0.0.1:3773";
     }
 

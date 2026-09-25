@@ -579,7 +579,7 @@ in
   networking.hosts = let
     server = inputs.self.nixosConfigurations.hwc-server.config.hwc.networking.shared;
     vhostNamesFor = owner: map (r: "${r.name}.${server.vhostDomain}")
-      (builtins.filter (r: r.mode == "vhost" && (r.owner or "main") == owner) server.routes);
+      (builtins.filter (r: r.mode == "vhost" && (r.owner or "main") == owner) server.effectiveRoutes);
   in {
     "${config.hwc.networking.hosts.ips.main}" = vhostNamesFor "main" ++ [
       "sonarr.local"

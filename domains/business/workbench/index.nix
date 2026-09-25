@@ -22,7 +22,8 @@
 let
   cfg = config.hwc.business.workbench;
   vhostDomain = config.hwc.networking.shared.vhostDomain;
-  routes = config.hwc.networking.shared.routes;
+  # effectiveRoutes: includes stubs for vhosts another host owns (routeOwners).
+  routes = config.hwc.networking.shared.effectiveRoutes;
   # Routes this host serves, plus routes declared as served by another host
   # of the fleet (cfg.remoteRoutes). Both resolve to the same
   # https://<route>.<vhostDomain>/ URL because DNS, not this host, picks the
@@ -203,18 +204,6 @@ in
       '';
     };
 
-    routeOwner = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      example = "work";
-      description = ''
-        Host alias (hwc.networking.hosts.servers) that serves the hub. Null
-        means the legacy owner ("main"). The module can stay enabled on a
-        non-owner host so its refinery still has a local areas.json; that
-        host's Caddy then proxies the vhost to the owner (reverseProxy
-        remoteOwner) and the laptop pins derive from this same value.
-      '';
-    };
 
     areas = lib.mkOption {
       type = lib.types.listOf areaType;
@@ -265,7 +254,7 @@ in
       name = cfg.routeName;
       mode = "vhost";
       root = "${hubSite}";
-    } // lib.optionalAttrs (cfg.routeOwner != null) { owner = cfg.routeOwner; })];
+    })];
 
     # VALIDATION
     assertions = [
