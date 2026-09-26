@@ -18,6 +18,8 @@ Provides network infrastructure that other domains depend on:
 
 ## Structure
 
+`routes.nix` owns service hostnames, including stable `whisper` and `sync` vhosts and retained migration forwards.
+
 ```
 networking/
 ├── index.nix           # Domain aggregator
@@ -39,6 +41,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-09-26: Whisper route ownership moves to work with CPU inference; the server preserves its vhost proxy. Add `sync.hwc.iheartwoodcraft.com` for host-independent phone LiveSync while retaining the old `/sync` path until client migration.
 - 2026-09-25: Preserve server n8n :2443 during wave 4 through an explicit `forwardFrom` route declaration. Rendering and firewall use the same route set; the forward derives the target IP, port, Host and SNI from the owner. Removal requires verified old-port consumers in wave 5.
 - 2026-09-25: Service split wave 4: `routeOwners` gains `mode = "subpath"`; a remotely owned subpath route is rendered on the other hosts as a forward to the same path on the owner's tailnet root host (IP upstream + owner SNI/Host, the vhost-stub shape). `n8n` (port) and `webhook` (subpath) are owned by `work`; the n8n route's Origin header derives from the owner's FQDN.
 - 2026-09-25: `routeOwners` += `firefly`, `firefly-pico`, `firefly-import`, `firefly-explorer`, `vaultwarden` (wave 3).

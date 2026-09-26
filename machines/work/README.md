@@ -1,13 +1,17 @@
-# hwc-work: MS-02 fleet host and work-server rollout
+# hwc-work — work and development host
 
-`#hwc-work` is the active work-server output in the fleet flake. It provides the
-existing headless CLI/Home Manager setup, SSH, Tailscale, Podman and server tools.
-It leaves CouchDB, Nightly Builds, Refinery, business services, public routes and
-storage mounts on `hwc-server`. No production data is copied by activating it.
+`#hwc-work` runs business/development applications, the brain stack, CPU Whisper,
+phone audio/screenshot processing, mail, monitoring and the public tunnel. Live
+state resides on its SSD and Borg pushes recovery copies to the home server's
+backup pool. Home retains media/storage, Bloxels and phone sync ingress. T3 runs
+on both hosts with separate histories and the same pinned harness.
+
+The bootstrap steps below are historical setup instructions. The fleet flake is
+already active; routine changes use the normal commit, local build and switch path.
 
 ## Installed system: preserve Windows and Wi-Fi
 
-The MS-02 already boots NixOS 25.11 alongside Windows on its internal SSD.
+The MS-02 runs NixOS26.05 and retains Windows partitions on its internal SSD.
 Do not repartition or format this disk. Linux uses these existing partitions:
 
 | Partition | Label | Use |

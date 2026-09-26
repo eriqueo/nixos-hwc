@@ -121,10 +121,10 @@
     CPUQuota = "400%";
     MemoryMax = "2G";
   };
-  # TEMPORARY staging fence: enable only after home workers are stopped and
-  # inbox-mobile has converged. Home remains the writer during this stage.
+  # Sole audio/screenshot writer. Syncthing carries captures and processed
+  # originals through home; the brain vault continues to use git sync.
   hwc.server.services.inboxProcessor = {
-    enable = false;
+    enable = true;
     audioInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/audio";
     screenshotsInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/screenshots";
     brainInboxPath = "${config.hwc.paths.brain."server-replica"}/_inbox";

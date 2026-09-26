@@ -1,15 +1,18 @@
 # whisper
 
-Resident whisper.cpp speech-to-text server on hwc-server. One systemd unit
-(`whisper-server.service`) keeps a ggml model loaded on the Quadro P1000 and
-answers OpenAI-compatible `POST /v1/audio/transcriptions` on
-`127.0.0.1:11503`. Caddy publishes it as `whisper.<vhostDomain>` on the
-tailnet (`domains/networking/routes.nix`).
+Resident whisper.cpp speech-to-text service on hwc-work. It serves the pinned
+small.en model on CPU with four threads, CPUQuota400%, and MemoryMax2G.
+OpenAI-compatible `POST /v1/audio/transcriptions` remains available at
+`https://whisper.hwc.iheartwoodcraft.com`. The home server retains forwarding.
 
-Consumers:
-- `domains/server/services/inbox-processor/` — phone audio captures.
-- iOS Shortcut on the phone (see below).
-- Anything speaking the OpenAI Whisper API (Open WebUI STT, curl).
+Consumers found by repository search and live configuration:
+- Work inbox-processor for phone audio captures.
+- Laptop hwc-dictation (`prefer_remote`, 30-second remote timeout, local fallback).
+- The documented phone Shortcut and other Whisper API clients.
+
+Same-model synthetic tests on work (2026-09-26):12/30/60-second recordings
+completed in2.6/5.5/9.3seconds. A short request queued behind60seconds of audio
+took11.7seconds. Peak RSS720MiB. This measures capacity, not microphone accuracy.
 
 ## Structure
 
@@ -54,10 +57,11 @@ Bind the Shortcut to the Action Button. The phone must be on the tailnet.
 - whisper-server serialises inference behind one mutex. Single-user box;
   a long capture from the inbox delays a phone request until it finishes.
 - No auth on the endpoint. The tailnet-only firewall is the boundary.
-- VRAM: llama-gpu holds ~1.8 GB of the 4 GB card. Quantised models
-  (`*-q5_0`) exist in the enum so a larger model can sit in the remainder.
+- Work uses CPU; the home GPU allocation is released after cutover. Very long
+  recordings can still delay dictation beyond its30-second timeout.
 
 ## Changelog
+- 2026-09-26: Move same-model inference to work CPU after capacity tests; preserve the API hostname and include the live laptop dictation caller in the inventory.
 
 - 2026-09-05: created. Root cause of the GPU failure that shaped this
   module: the cached `whisper-cpp` binary is built for `CUDA : ARCHS =

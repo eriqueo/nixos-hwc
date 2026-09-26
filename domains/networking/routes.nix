@@ -38,6 +38,7 @@ in
     refinery = "work";   # wave 1: board + gauntlets
     workbench = "work";  # wave 1: hub; hwc-server keeps the module on for its areas.json
     t3-work = "work";
+    whisper = "work";   # wave 5: CPU transcription and phone audio processing
     brain-mcp = { owner = "work"; mode = "port"; };  # wave 1
     monitor = "work";    # wave 2: DataX monitor
     # wave 2 fused window: business apps, scouts, Radicale, gateway, briefing
@@ -234,6 +235,8 @@ in
     }
 
     # CouchDB (Obsidian LiveSync) - strip /sync prefix
+    # TEMPORARY: keep this host-specific URL until phone LiveSync has moved
+    # to the stable sync vhost below and completed a verified sync.
     {
       name = "couchdb";
       mode = "subpath";
@@ -245,6 +248,14 @@ in
         Upgrade       = "{http.request.header.upgrade}";
         Connection    = "{http.request.header.connection}";
       };
+    }
+
+    # Host-independent LiveSync URL for the hwc-home rename. Same CouchDB
+    # authentication and tailnet boundary; the existing /sync route stays.
+    {
+      name = "sync";
+      mode = "vhost";
+      upstream = "http://127.0.0.1:5984";
     }
 
     # Tdarr - name-based vhost (WebSocket intensive, subpath issues)

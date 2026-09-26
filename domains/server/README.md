@@ -1,11 +1,11 @@
 # Server Domain
 
 ## Purpose
-- Server-lane workloads: containers plus native services for media, AI, automation, networking, and supporting jobs.
+- Native AI, scout, capture-processing and calendar services. Machines select their owners; the domain name does not require running on the home server.
 
 ## Boundaries
-- Namespaces follow folder paths (`hwc.server.containers.*`, `hwc.server.native.*`); container defaults come from `_shared` helpers.
-- Uses mkContainer (see `domains/server/containers/_shared/`) for OCI hygiene and Charter compliance (PUID/PGID 1000/100).
+- Owns native AI/scout services, phone capture processing, Bloxels and Radicale.
+- Media containers live in `domains/media/`; general automation lives in `domains/automation/`.
 
 ## Structure
 ```
@@ -19,28 +19,29 @@ domains/server/
 │       ├── home-scout/    # Home Scout MCP + HTTP, plus five timer-driven ingests
 │       ├── hwc-control-bot/ # HWC Discord control bot (/next over the apps' control APIs)
 │       ├── lead-scout/    # Lead Scout MCP + HTTP, plus profile-scoped Discord review bots
-│       ├── llama-cpp/     # llama.cpp inference (embeddings only on hwc-server)
+│       ├── llama-cpp/     # llama.cpp inference (embeddings on hwc-work)
 │       ├── research-scout/       # Research Scout MCP + HTTP, plus the arXiv ingest timer
-│       └── whisper/       # whisper.cpp speech-to-text server (GPU, OpenAI-compatible)
+│       └── whisper/       # whisper.cpp speech-to-text server (CPU on work, OpenAI-compatible)
 ├── services/
 │   ├── bloxels-cv/       # Bloxels grid photo classifier (path watcher on inbox-mobile)
 │   ├── inbox-processor/  # Phone capture processor (whisper-server + Tesseract; optional DX2 voice-note cleanup)
 │   └── radicale/         # Self-hosted CalDAV (tasks.hwc.*, two-way task sync)
-├── media/        # Media profile toggle wiring
-└── n8n/          # Workflow/profile pieces for n8n
+└── deploy/       # Deployment helpers
 ```
 
 ## Container Services
 The media/arr/torrent stack lives entirely in `domains/media/`. **This domain no longer contains any containers at all** — `containers/` is gone: Arka was removed in `1d66a10e` and the last `_shared/` file on 2026-09-10. Native services only.
 
 ## Native Services
-- Only `native/ai/jobber-mcp/` remains live, imported directly by `machines/server/config.nix`. The historical aggregator (`native/index.nix`) and all other native subdirs were dead parallel implementations and have been removed.
+Machine configs import the AI/scout modules they need. Work owns the brain stack,
+scouts, Whisper and audio/screenshot processing. Home retains Bloxels and the
+phone Syncthing hub. T3 is a Home Manager application retained on all three hosts.
 
 ## Routing & Composition
-- Caddy routes live in `domains/networking/routes.nix`. (`containers/_shared/caddy.nix` was named here until 2026-09-10; it had been deleted in 2026-06-09.)
-- `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
+Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+- 2026-09-26: Whisper and inbox audio/screenshot processing move to work after CPU benchmarks; Bloxels stays home. Correct stale domain ownership and deleted-directory descriptions.
 - 2026-09-25: Retired `native/ai/hermes` (Eric's decision, service split wave 4 audit: every cron delivery failing, no Discord use in 30 days, trial window over). Module, both vhosts, the DeepSeek key and Homepage tiles removed; `/var/lib/hwc/hermes-agent`, `market-dashboard` and the old native `hermes` tree archived to hwc-server `/var/lib/backups/service-split-wave4/` before deletion. `hermes-discord-bot-token` stays: lead-scout's approvals bot uses it.
 - 2026-09-25: Service split wave 3 (notifications): home-scout and research-scout default `notifyUrl` to `hwc.notifications.notify.url`.
 - 2026-09-25: Retired `native/ai/market-intelligence` (Eric's decision during the service-split audit): module, its daily/weekly timers and static dashboard vhost removed; its out-of-git app code and SQLite were archived to hwc-server `/var/lib/backups/service-split-wave2/market-intelligence.tar.zst` before the state dir was deleted. Hermes' separate market-dashboard (paper trading) is unaffected.

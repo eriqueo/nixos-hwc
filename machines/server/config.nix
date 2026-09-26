@@ -122,7 +122,7 @@
   # vault's reorganisation renamed the inbox and this path was never moved, so
   # captures landed in a directory nothing reads.
   hwc.server.services.inboxProcessor = {
-    enable = true;
+    enable = false; # Work owns audio/screenshots; home keeps the phone sync hub.
     audioInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/audio";
     screenshotsInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/screenshots";
     brainInboxPath = "${config.hwc.paths.brain."server-replica"}/_inbox";
@@ -642,7 +642,7 @@
   # and every model above base.en died with "IM2COL failed" (2026-09-05).
   # Shares the 4 GB P1000 with Frigate and media workloads.
   hwc.server.ai.whisper = {
-    enable = true;
+    enable = false; # Work CPU inference; old vhost forwards through routeOwners.
     cudaCapabilities = ["6.1"];
   };
 
