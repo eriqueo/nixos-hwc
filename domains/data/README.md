@@ -12,6 +12,8 @@ storage (mount management), Syncthing (file sync), and CouchDB (Obsidian LiveSyn
 
 ## Structure
 
+Machine references follow machines/home; the home job pins its historical Borg archive/prune identity.
+
 ```
 data/
 ├── index.nix       # Domain aggregator
@@ -25,6 +27,7 @@ data/
 ```
 
 ## Changelog
+- 2026-09-26: Machine references follow machines/home; the home job pins its historical Borg archive/prune identity.
 - 2026-09-26: Centralize version-matched PostgreSQL dumps with atomic publication and failure propagation. Restore helpers preserve failure status; jobs respect repository locks. Local dump retention excludes nested migration archives.
 - 2026-09-25: Retired `cloudbeaver/` (service-split audit: 0 requests in the 9 days of vhost logs; Eric: no longer used). Workspace archived to hwc-server `/var/lib/backups/service-split-wave3/cloudbeaver.tar.zst` before deletion.
 - 2026-09-25: `databases/` — the primary user's role now declares `ensureClauses.superuser = true`. The module already assumed `eric` was a superuser (hand-made on hwc-server); hwc-work's cluster had created it without, which would have broken cross-database reads (crm → lead_scout/umami, gateway → umami) after the service split.

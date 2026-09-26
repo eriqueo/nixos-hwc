@@ -5,6 +5,8 @@ source and one mutable state store.
 
 ## Structure
 
+The fleet control list names hwc-home, hwc-work and hwc-laptop.
+
 - `index.nix` installs the pinned policy, state links, health CLI, the state-sync timer, and the opt-in `agent-cli-update` timer.
 - `sys.nix` installs machine-wide Claude policy under `/etc`, and generates Claude Code's MCP config as tmpfiles store symlinks: `~/.mcp.json` (`userMcp`, read by every project under the home directory: shared servers, `hwc-sys` over HTTP at `hwc.system.mcp.url`, `brain` at `userMcp.brainUrl`) and the nixos repo's `.mcp.json` (`projectMcp`: `git` plus per-host `extraServers`). The host running brain-mcp asserts `brainUrl` names its route.
 - `contract.nix` defines the ownership and revision contract shared by both lanes.
@@ -46,6 +48,7 @@ manifests, state shape, Codex hook trust, commands, and the sync timer. A dirty
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+- 2026-09-26: Rename the home fleet target to hwc-home; keep the shared harness pin and per-host session stores.
 
 - 2026-09-25: Fleet health and publication include hwc-work. Publication builds
   and switches the configured host list instead of a separate two-host list.

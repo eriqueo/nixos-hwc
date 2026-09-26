@@ -14,6 +14,8 @@ readme-freshness weekly Law-12 drift report.
 
 ## Structure
 
+The nightly rebuild allowlist uses hwc-home; machine-directory references follow the renamed instance.
+
 ```
 automation/
 ├── index.nix    # Domain aggregator
@@ -77,6 +79,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-09-26: The nightly rebuild allowlist uses hwc-home; machine-directory references follow the renamed instance.
 - 2026-09-26: Both nightly runners tolerate an absent `/mnt` while keeping existing mounts read-only. The service-split retirement check pins the evaluated production units.
 - 2026-09-25: Regenerate the Frigate and Jellyfin workflow review exports from live n8n after the wave-4 cross-host URL changes; the existing canonicalizer and secret scanner verify both artifacts.
 - 2026-09-25: Service split wave 4: n8n runs on hwc-work. `n8n/` derives `N8N_HOST` and the editor/webhook base from the new read-only `hwc.automation.n8n.publicUrl` (routeOwners.n8n + the `n8n` port route) and asserts the enabling host IS the route owner; the never-read `webhookUrl`, `database.*`, `owner.*` options, the `/data` scraper mount and `POSTGRES_REST_URL` are gone. `mqtt/` is no longer a business-role member: Mosquitto + the bridge are enabled by the camera host, and the bridge posts to n8n's owner over the tailnet. Live audit: 16 workflows deleted after export (14 inactive, `work_calculator_lead`, `home:admin:script-executor`); `frigate-detect`/`jellyfin-alert` now call Frigate and Jellyfin through their tailnet vhosts. Repo exports 04/06/07/09/10 removed.

@@ -3,7 +3,7 @@
 # THE SINGLE PRODUCER of /mnt directory creation for the media stack.
 #
 # Until 2026-09-10 there were two. domains/server/containers/_shared/directories.nix
-# was a near-identical copy imported directly by machines/server/config.nix, and
+# was a near-identical copy imported directly by machines/home/config.nix, and
 # both were live: the emitted tmpfiles set carried 111 lines for 92 unique paths,
 # i.e. 17 paths declared twice. Deleting the copy was verified by building the
 # host config both ways and diffing the emitted rules — 111 lines fell to 94 with

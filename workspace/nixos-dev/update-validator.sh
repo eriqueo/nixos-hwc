@@ -54,7 +54,7 @@ info() {
 #============================================================================
 echo "Proving server uses nixpkgs-stable (via nix eval)..."
 
-NIXPKGS_VERSION=$(nix eval --raw '.#nixosConfigurations.hwc-server.pkgs.lib.trivial.release' 2>/dev/null || echo "unknown")
+NIXPKGS_VERSION=$(nix eval --raw '.#nixosConfigurations.hwc-home.pkgs.lib.trivial.release' 2>/dev/null || echo "unknown")
 
 if [[ "$NIXPKGS_VERSION" == "24.05"* ]] || [[ "$NIXPKGS_VERSION" == "24.11"* ]]; then
     success "Server uses nixpkgs-stable ($NIXPKGS_VERSION)"
@@ -68,7 +68,7 @@ fi
 #============================================================================
 echo "Proving PostgreSQL version pin (via nix eval)..."
 
-PG_VERSION=$(nix eval --raw '.#nixosConfigurations.hwc-server.config.services.postgresql.package.version' 2>/dev/null || echo "disabled")
+PG_VERSION=$(nix eval --raw '.#nixosConfigurations.hwc-home.config.services.postgresql.package.version' 2>/dev/null || echo "disabled")
 
 if [[ "$PG_VERSION" == "disabled" ]]; then
     info "PostgreSQL not enabled (skipping version check)"
@@ -239,8 +239,8 @@ echo -e "${GREEN}Validation checks: PASSED${NC}"
 echo ""
 echo "Safe to proceed with gradual update:"
 echo "  1. nix flake lock --update-input nixpkgs-stable"
-echo "  2. nixos-rebuild build --flake .#hwc-server"
-echo "  3. nixos-rebuild test --flake .#hwc-server"
+echo "  2. nixos-rebuild build --flake .#hwc-home"
+echo "  3. nixos-rebuild test --flake .#hwc-home"
 echo "  4. Verify services: systemctl status postgresql tailscaled"
-echo "  5. nixos-rebuild switch --flake .#hwc-server"
+echo "  5. nixos-rebuild switch --flake .#hwc-home"
 echo ""

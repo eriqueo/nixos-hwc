@@ -48,18 +48,18 @@
   # handoffs. Personal and media folders stay off this host.
   hwc.data.syncthing = {
     enable = true;
-    devices."hwc-server" = {
+    devices."hwc-home" = {
       id = "5UCUDT4-CUUGX7U-F2XVLET-SE3QGCA-JRYGXK3-45MQOBP-SYMQZM7-O653IAA";
       addresses = [ "tcp://${config.hwc.networking.hosts.ips.main}:22000" ];
     };
     folders = {
-      "000_inbox" = { path = "/home/eric/000_inbox"; devices = [ "hwc-server" ]; };
-      "100_hwc"   = { path = "/home/eric/100_hwc";   devices = [ "hwc-server" ]; };
-      "300_tech"  = { path = "/home/eric/300_tech";  devices = [ "hwc-server" ]; };
-      "700_datax" = { path = "/home/eric/700_datax"; devices = [ "hwc-server" ]; };
+      "000_inbox" = { path = "/home/eric/000_inbox"; devices = [ "hwc-home" ]; };
+      "100_hwc"   = { path = "/home/eric/100_hwc";   devices = [ "hwc-home" ]; };
+      "300_tech"  = { path = "/home/eric/300_tech";  devices = [ "hwc-home" ]; };
+      "700_datax" = { path = "/home/eric/700_datax"; devices = [ "hwc-home" ]; };
       "inbox-mobile" = {
         path = config.hwc.paths.brain."inbox-mobile";
-        devices = [ "hwc-server" ];
+        devices = [ "hwc-home" ];
       };
     };
   };

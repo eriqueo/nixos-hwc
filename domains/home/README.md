@@ -17,6 +17,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
+
+The shared agent-harness fleet list uses hwc-home, hwc-work and hwc-laptop without changing session stores.
 - `apps/t3code/` — launchers and a restricted DX2 handoff adapter; T3 supplies the result limit.
 - `apps/hwc-dictation/` — owned desktop dictation package, settings and user service.
 - `apps/bitwarden/` — desktop client for the self-hosted Vaultwarden account.
@@ -52,6 +54,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 - 2026-09-26: Credential app launchers now open on the active workspace; added the Bitwarden desktop client and Waybar buttons, removed unused Proton Pass settings output.
+- 2026-09-26: The shared agent-harness fleet list uses hwc-home, hwc-work and hwc-laptop without changing session stores.
 - 2026-09-25: Deleted `apps/n8n/` (HM n8n CLI app; enabled on no host, its only effect was keeping `n8n-1.91.3` in `permittedInsecurePackages`).
 - 2026-09-25: Service split wave 3 (notifications): `apps/agent-harness` — `notifyUrl` derives from `osConfig.hwc.notifications.notify.url` (standalone-HM fallback literal only); `state-sync.sh` has no hidden fallback host.
 - 2026-09-24: `theme/templates/gtk.nix` defaults dconf activation to `theme.graphical`; headless Home Manager activation no longer requires the desktop dconf D-Bus service.

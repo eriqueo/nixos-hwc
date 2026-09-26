@@ -75,7 +75,7 @@ class ConfigExtractor:
             except:
                 pass
     
-    def evaluate_config_safely(self, host: str = "hwc-server") -> Optional[Dict]:
+    def evaluate_config_safely(self, host: str = "hwc-home") -> Optional[Dict]:
         """Use nix eval to safely extract configuration without building"""
         
         # Try different evaluation approaches

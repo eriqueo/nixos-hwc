@@ -16,7 +16,7 @@
 #   - agenix secret holding the check's ping URL (pingUrlFile)
 #
 # USED BY:
-#   - machines/server/config.nix
+#   - machines/home/config.nix
 
 { config, lib, pkgs, ... }:
 

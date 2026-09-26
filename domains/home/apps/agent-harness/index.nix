@@ -189,7 +189,7 @@ in
     fleetHosts = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [
-        "hwc-server"
+        "hwc-home"
         "hwc-laptop"
         "hwc-work"
       ];

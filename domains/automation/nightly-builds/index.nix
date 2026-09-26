@@ -236,7 +236,7 @@ A branch may have pushed without a PR — run \`gh pr list\` and open any missin
   # ignored and the spool file deleted. No part of the spooled file's *content*
   # is ever evaluated — only its basename, and only after allowlist match.
   rebuildSpoolDir = "/var/lib/refinery/rebuild-request";
-  rebuildAllowedHosts = [ "hwc-server" "hwc-laptop" ];
+  rebuildAllowedHosts = [ "hwc-home" "hwc-laptop" ];
 
   rebuildDrain = pkgs.writeShellScript "nightly-builds-rebuild-drain" ''
     set -uo pipefail

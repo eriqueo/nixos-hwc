@@ -43,7 +43,7 @@ in
     servers = mkOption {
       type = types.attrsOf types.str;
       default = {
-        main = "hwc-server";   # primary server
+        main = "hwc-home";   # primary server
         xps  = "hwc-xps";      # peer server
         work = "hwc-work";   # work/development application server
       };
@@ -73,7 +73,7 @@ in
 
         These values are NOT stable identifiers. A node that re-registers (a
         `tailscale logout`, a reinstall, OAuth re-registration) can come back as
-        a new device with a new address: on 2026-08-12 hwc-server moved
+        a new device with a new address: on 2026-08-12 hwc-home moved
         100.114.232.124 -> 100.77.195.118 exactly that way, and because the old
         value had been copied into four live files, one re-registration broke
         ssh, the `server` alias, syncthing, and every `*.local` name at once.
@@ -93,8 +93,8 @@ in
         plane or DERP relays then, but the server firewall trusts eno1, so the
         LAN address always answers from inside the house.
 
-        hwc-server reads its own static address from here
-        (machines/server/hardware.nix), so the machine and every client that
+        hwc-home reads its own static address from here
+        (machines/home/hardware.nix), so the machine and every client that
         falls back to it cannot disagree. Keep the router's DHCP reservation
         for the server's MAC on the same address.
       '';
@@ -136,9 +136,9 @@ in
         subpath live at the call site (they are per-service, not per-host):
 
           config.hwc.networking.hosts.url { server = "main"; port = 6443; path = "/sab"; }
-            => "https://hwc-server.ocelot-wahoo.ts.net:6443/sab"
+            => "https://hwc-home.ocelot-wahoo.ts.net:6443/sab"
           config.hwc.networking.hosts.url { path = "/webhook/estimate-push"; }
-            => "https://hwc-server.ocelot-wahoo.ts.net/webhook/estimate-push"
+            => "https://hwc-home.ocelot-wahoo.ts.net/webhook/estimate-push"
 
         Args (all optional): server (default = primary), scheme (default
         "https"), port (default null = omit), path (default "").

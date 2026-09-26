@@ -12,6 +12,8 @@ photo management, and video surveillance services.
 
 ## Structure
 
+Machine references follow machines/home; media state and service ownership are unchanged.
+
 ```
 media/
 ├── index.nix                # Domain aggregator
@@ -68,6 +70,7 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-09-26: Machine references follow machines/home; media state and service ownership are unchanged.
 - 2026-09-25: Service split wave 4: sonarr/radarr/lidarr pass the media-pipeline webhook URL from `hwc.automation.n8n.publicUrl` (n8n on hwc-work); `lib/arr-config.nix` no longer defaults it to a host literal.
 
 - 2026-09-25: Service split wave 3 (monitoring fleet): `frigate/` exports its camera recording rules through `hwc.monitoring.prometheus.rules` (the central Prometheus is on another host) and asserts the metrics agent instead of a local Prometheus.

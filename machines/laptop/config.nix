@@ -336,7 +336,7 @@ in
   # Syncthing — bidirectional home folder sync with hwc-server
   hwc.data.syncthing = {
     enable = true;
-    devices."hwc-server" = {
+    devices."hwc-home" = {
       id = "5UCUDT4-CUUGX7U-F2XVLET-SE3QGCA-JRYGXK3-45MQOBP-SYMQZM7-O653IAA";
       # Tailnet IP from the host registry, not retyped — see
       # domains/networking/hosts/index.nix for why these values move.
@@ -345,23 +345,23 @@ in
     folders = {
       "000_inbox" = {
         path = "/home/eric/000_inbox";
-        devices = [ "hwc-server" ];
+        devices = [ "hwc-home" ];
       };
       "100_hwc" = {
         path = "/home/eric/100_hwc";
-        devices = [ "hwc-server" ];
+        devices = [ "hwc-home" ];
       };
       "200_personal" = {
         path = "/home/eric/200_personal";
-        devices = [ "hwc-server" ];
+        devices = [ "hwc-home" ];
       };
       "300_tech" = {
         path = "/home/eric/300_tech";
-        devices = [ "hwc-server" ];
+        devices = [ "hwc-home" ];
       };
       "700_datax" = {
         path = "/home/eric/700_datax";
-        devices = [ "hwc-server" ];
+        devices = [ "hwc-home" ];
       };
       # 600_apps: removed from Syncthing 2026-06-16 (see server config). Each app
       # is its own git repo now; Syncthing over live .git was clobbering
@@ -372,7 +372,7 @@ in
       # git-on-a-multi-writer-tree clobber at the root.
       "screenshots" = {
         path = "/home/eric/500_media/510_pictures/screenshots";
-        devices = [ "hwc-server" ];
+        devices = [ "hwc-home" ];
       };
     };
   };
@@ -577,7 +577,7 @@ in
   # the names and owners from the server's route table so moving an app needs
   # one route-owner change, followed by the laptop rebuild.
   networking.hosts = let
-    server = inputs.self.nixosConfigurations.hwc-server.config.hwc.networking.shared;
+    server = inputs.self.nixosConfigurations.hwc-home.config.hwc.networking.shared;
     vhostNamesFor = owner: map (r: "${r.name}.${server.vhostDomain}")
       (builtins.filter (r: r.mode == "vhost" && (r.owner or "main") == owner) server.effectiveRoutes);
   in {

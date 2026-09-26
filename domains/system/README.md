@@ -8,6 +8,8 @@
 - No Home Manager logic lives here; cross-lane assertions are guarded so the system lane stands alone.
 
 ## Structure
+
+MCP config and rebuild tools recognize hwc-home; config host choices also include work and the actual kids output.
 ```
 domains/system/
 ├── core/
@@ -45,6 +47,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-09-26: MCP config and rebuild tools recognize hwc-home; config host choices also include work and the actual kids output.
 - 2026-09-25: Service split wave 3 (notifications): `mcp/` — the gateway's `hwc_notify` tool reads `HWC_NOTIFY_URL` (set from `hwc.notifications.notify.url`); it hard-coded loopback and had been failing since the gateway moved to hwc-work in wave 2.
 - 2026-09-25: `mcp/` — tmpfiles creates the n8n-mcp install dir and `~/.local/share/khal`; the gateway's sandbox failed at NAMESPACE on hwc-work (first start on a fresh host) because both existed on hwc-server only by history.
 - 2026-09-25: `mcp/` — `serverAlias` default is now `work`: the hwc-sys gateway runs on hwc-work (service split wave 2), so every host's `hwc.system.mcp.url` (and the generated `.mcp.json`) points there.

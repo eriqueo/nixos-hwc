@@ -67,7 +67,7 @@
 
   # Umami web analytics — cookieless analytics for iheartwoodcraft.com
   # (public collect endpoint rides the cloudflared tunnel at
-  # stats.iheartwoodcraft.com; see machines/server/config.nix extraIngress)
+  # stats.iheartwoodcraft.com; see machines/home/config.nix extraIngress)
   hwc.business.umami.enable = lib.mkDefault true;
 
   # Heartwood Estimate Assembler — React PWA
@@ -89,7 +89,7 @@
 
   #==========================================================================
   # AUTOMATION STACK (n8n). Mosquitto + the Frigate webhook bridge are NOT
-  # role members: they belong to the camera host (machines/server/config.nix).
+  # role members: they belong to the camera host (machines/home/config.nix).
   #==========================================================================
 
   # n8n - Workflow automation for business + alert routing

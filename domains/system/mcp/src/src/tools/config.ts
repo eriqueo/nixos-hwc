@@ -8,7 +8,7 @@ import type { ToolDef, ToolResult } from "../types.js";
 import { nixEval, flakeMetadata } from "../executors/nix.js";
 import { mcpError, catchError } from "../errors.js";
 
-const HOSTS = ["hwc-server", "hwc-laptop", "hwc-xps", "hwc-gaming", "hwc-firestick"] as const;
+const HOSTS = ["hwc-home", "hwc-work", "hwc-laptop", "hwc-xps", "hwc-kids", "hwc-firestick"] as const;
 
 export function configTools(nixosConfigPath: string, declarativeTtl: number): ToolDef[] {
   return [
@@ -49,7 +49,7 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
           host: {
             type: "string",
             enum: HOSTS,
-            description: "[get_option/host_profile] Which host config to evaluate (default: hwc-server)",
+            description: "[get_option/host_profile] Which host config to evaluate (default: hwc-home)",
           },
           // [port_map] params
           filter: {
@@ -74,7 +74,7 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
             if (!optionPath) {
               return mcpError({ type: "VALIDATION_ERROR", message: "option_path is required for action=get_option" });
             }
-            const host = (args.host as string) || "hwc-server";
+            const host = (args.host as string) || "hwc-home";
             const value = await nixEval(nixosConfigPath, host, optionPath, declarativeTtl);
             return { status: "ok", message: `${host}: ${optionPath}`, data: { host, path: optionPath, value } };
           } catch (err) {

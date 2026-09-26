@@ -8,7 +8,7 @@
 #   - hwc.data.databases.postgresql (engine + 10.89.0.1 container binding)
 #   - agenix secret: umami-env (APP_SECRET + DATABASE_URL)
 #   - public ingress: cloudflared extraIngress "stats.iheartwoodcraft.com"
-#     → http://localhost:<port> (machines/server/config.nix) — the tracking
+#     → http://localhost:<port> (machines/home/config.nix) — the tracking
 #     script and /api/send collect endpoint must be reachable by site
 #     visitors' browsers, so this rides the Cloudflare tunnel like the
 #     calculator webhooks.

@@ -75,7 +75,7 @@ let dictationModel = "base.en"; in
     enable = true;
     icsWatch.enable = false;
     # Read-only mirrors the server keeps in Radicale
-    # (machines/server/config.nix hwc.server.services.radicale.mirrors).
+    # (machines/home/config.nix hwc.server.services.radicale.mirrors).
     radicale.extraCollections = [ "cto" "proton-work" "google-family" ];
   };
 

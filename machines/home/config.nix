@@ -1,4 +1,4 @@
-# nixos-hwc/machines/server/config.nix
+# nixos-hwc/machines/home/config.nix
 #
 # MACHINE: HWC-SERVER
 # Declares machine identity and composes profiles; states hardware reality.
@@ -57,14 +57,14 @@
         ============================================================
         SERVER NIXPKGS PROVENANCE VIOLATION
         ============================================================
-        hwc-server MUST use nixpkgs-stable, not nixpkgs-unstable!
+        hwc-home MUST use nixpkgs-stable, not nixpkgs-unstable!
 
         Current nixpkgs: ${toString pkgs.path}
         Current release: ${pkgs.lib.trivial.release or "unknown"}
         Expected: nixpkgs-stable (${inputs.nixpkgs-stable.lib.trivial.release} branch)
 
         Fix in flake.nix:
-          machines.server.nixosPkgs = pkgs-stable-cuda;
+          machines.home.nixosPkgs = pkgs-stable-cuda;
         ============================================================
       '';
     }
@@ -100,7 +100,7 @@
   ];
 
   # System identity
-  networking.hostName = "hwc-server";
+  networking.hostName = "hwc-home";
   networking.hostId = "8425e349";
 
   # Migrated application state remains for recovery until archive restore
@@ -209,11 +209,13 @@
     # client's auth_keys scope is bound to a tag set, and kb/1215 states you
     # must pass one of those tags to --advertise-tags. Dropping it breaks
     # registration outright.
+    # Apply identity to healthy existing nodes, without logout/re-registration.
+    tailscale.extraSetFlags = [ "--hostname=${config.networking.hostName}" ];
     tailscale.extraUpFlags = [
       "--reset"
       "--advertise-tags=tag:server"
       "--accept-routes"
-      "--hostname=hwc-server"
+      "--hostname=${config.networking.hostName}"
     ];
     # firewall.level = "server" comes from the server role
     # Audited 2026-09-25 (service split wave 3): dropped ports with no
@@ -403,6 +405,13 @@
   # Rsync backup DISABLED - using Borg exclusively
   # See hwc.data.borg below for primary backup
   hwc.data.backup.enable = false;
+
+  # Permanent historical data identity: retain archive visibility and pruning
+  # across the host rename. These names are not network destinations.
+  services.borgbackup.jobs.hwc-backup = {
+    archiveBaseName = "hwc-server-hwc-backup";
+    prune.prefix = config.services.borgbackup.jobs.hwc-backup.archiveBaseName;
+  };
 
   # Borg Backup - Primary deduplicating backup (daily)
   hwc.data.borg = {
@@ -641,7 +650,7 @@
   };
 
   # Frigate NVR (Config-First Pattern with GPU Acceleration)
-  # Access: https://hwc-server.ocelot-wahoo.ts.net:5443 (via Caddy)
+  # Access: https://hwc-home.ocelot-wahoo.ts.net:5443 (via Caddy)
   # Charter v7.0 Section 19 compliant - TensorRT CUDA support
   hwc.media.frigate = {
     enable = true;

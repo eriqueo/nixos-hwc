@@ -3,7 +3,7 @@
 # Development environment — languages, editors, container tools
 #
 # NAMESPACE: hwc.home.core.development.*
-# USED BY: profiles/session.nix, machines/server/config.nix
+# USED BY: profiles/session.nix, machines/home/config.nix
 # USAGE: hwc.home.core.development.enable = true;
 
 { config, lib, pkgs, osConfig ? {}, ... }:

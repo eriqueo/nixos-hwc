@@ -125,14 +125,14 @@ apply_nixos_config() {
     log "Applying new NixOS media stack configuration..."
     
     # Test configuration first
-    if \! nixos-rebuild test --flake .#hwc-server; then
+    if \! nixos-rebuild test --flake .#hwc-home; then
         error "NixOS configuration test failed\!"
         error "Check configuration syntax and try again"
         return 1
     fi
     
     log "Configuration test passed, applying..."
-    nixos-rebuild switch --flake .#hwc-server
+    nixos-rebuild switch --flake .#hwc-home
 }
 
 # Function: Start services in proper order
@@ -189,7 +189,7 @@ health_checks() {
     
     for service in "${\!services[@]}"; do
         local port="${services[$service]}"
-        local url="https://hwc-server.ocelot-wahoo.ts.net/${service}/"
+        local url="https://hwc-home.ocelot-wahoo.ts.net/${service}/"
         
         log "Checking $service at $url..."
         
@@ -205,7 +205,7 @@ health_checks() {
     if [[ ${#failed_services[@]} -eq 0 ]]; then
         log "🎉 All services passed health checks\!"
         log "Media stack migration completed successfully"
-        log "Access your services at: https://hwc-server.ocelot-wahoo.ts.net/SERVICE/"
+        log "Access your services at: https://hwc-home.ocelot-wahoo.ts.net/SERVICE/"
     else
         warn "❌ Failed services: ${failed_services[*]}"
         warn "Troubleshooting steps:"

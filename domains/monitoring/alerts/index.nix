@@ -9,7 +9,7 @@
 #
 # USED BY:
 #   - profiles/monitoring.nix (enables alert sources)
-#   - machines/server/config.nix (configures thresholds)
+#   - machines/home/config.nix (configures thresholds)
 
 { config, lib, pkgs, ... }:
 
@@ -90,7 +90,7 @@ let
     #
     # postgresql-db-backup is deliberately NOT here. It was on this list for
     # about ten minutes while writing this change, until an eval showed the
-    # mistake: the same commit retires that job (machines/server/config.nix),
+    # mistake: the same commit retires that job (machines/home/config.nix),
     # so naming it here would generate a unit carrying only `OnFailure=` and no
     # ExecStart — which is precisely how the seven dead entries above came to
     # report LoadState=bad-setting. A name on this list is not a no-op; it
@@ -124,7 +124,7 @@ let
     # Added 2026-09-21: the outside-calendar mirror into Radicale
     # (domains/server/services/radicale/parts/mirrors.nix, declared with an
     # ExecStart whenever hwc.server.services.radicale.mirrors is non-empty,
-    # which machines/server/config.nix sets). A dead feed URL must be heard.
+    # which machines/home/config.nix sets). A dead feed URL must be heard.
   ] ++ lib.optional
     (on [ "hwc" "server" "services" "radicale" "enable" ]
       && (lib.attrByPath [ "hwc" "server" "services" "radicale" "mirrors" ] { } config) != { })
@@ -232,7 +232,7 @@ in
       notifications = {
         mail = {
           enable = lib.mkForce true;
-          sender = "smartd@hwc-server";
+          sender = "smartd@${config.networking.hostName}";
           recipient = "root";  # Required but unused - our script ignores it
           mailer = "${notifInternal.smartdNotify}/bin/hwc-smartd-notify";
         };

@@ -395,7 +395,7 @@ export function nightlyReviewTools(): ToolDef[] {
           },
           host: {
             type: "string",
-            description: "[rebuild] Target host (default hwc-server)",
+            description: "[rebuild] Target host (default hwc-home)",
           },
         },
       },
@@ -578,7 +578,7 @@ export function nightlyReviewTools(): ToolDef[] {
         /* ── rebuild ────────────────────────────────────────────── */
         if (action === "rebuild") {
           try {
-            const host = (args.host as string) || "hwc-server";
+            const host = (args.host as string) || "hwc-home";
             await mkdir(REBUILD_DIR, { recursive: true });
             await writeFile(join(REBUILD_DIR, host), `${host}\n`, "utf-8");
             return {

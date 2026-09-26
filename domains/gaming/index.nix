@@ -5,7 +5,7 @@
 # NAMESPACE: hwc.gaming.{retroarch,webdav}.*
 #
 # USED BY:
-#   - machines/server/config.nix
+#   - machines/home/config.nix
 
 { lib, config, ... }:
 

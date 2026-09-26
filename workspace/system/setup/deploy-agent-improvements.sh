@@ -106,7 +106,7 @@ add_modules_to_config() {
 test_configuration() {
     log "Testing NixOS configuration..."
     
-    if sudo nixos-rebuild test --flake .#hwc-server; then
+    if sudo nixos-rebuild test --flake .#hwc-home; then
         log "✓ Configuration test successful"
         return 0
     else
@@ -130,7 +130,7 @@ deploy_configuration() {
         fi
     else
         log "grebuild not available, using direct nixos-rebuild"
-        if sudo nixos-rebuild switch --flake .#hwc-server; then
+        if sudo nixos-rebuild switch --flake .#hwc-home; then
             log "✓ Configuration deployed successfully"
             return 0
         else
@@ -275,7 +275,7 @@ case "${1:-}" in
         if [[ -n "${2:-}" && -d "$2" ]]; then
             log "Rolling back from backup: $2"
             cp -r "$2"/* /etc/nixos/
-            sudo nixos-rebuild switch --flake .#hwc-server
+            sudo nixos-rebuild switch --flake .#hwc-home
             log "Rollback completed"
         else
             log "ERROR: Please provide backup directory path"

@@ -48,7 +48,7 @@ check_service() {
 }
 
 # Check key services based on machine
-if [ "$HOSTNAME" = "hwc-server" ]; then
+if [ "$HOSTNAME" = "hwc-home" ]; then
   check_service "caddy"
   check_service "jellyfin"
   check_service "immich-server"

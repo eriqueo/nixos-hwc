@@ -106,7 +106,7 @@ in
       #
       # The owner is `cfg.database.name`, NOT `cfg.database.user`. Those are two
       # different facts and this module's options do not distinguish them:
-      # machines/server/config.nix:1133 sets `database.user = "eric"` (the role the
+      # machines/home/config.nix:1133 sets `database.user = "eric"` (the role the
       # container CONNECTS as, via trust auth), while the live `immich` database
       # and every object in it are owned by a separate `immich` role. Declaring
       # ownership from `database.user` would emit

@@ -46,7 +46,7 @@ rec {
     } osConfig;
 
     fqdn = lib.attrByPath [ "hwc" "networking" "hosts" "fqdn" ] {
-      main = "hwc-server.ocelot-wahoo.ts.net";
+      main = "hwc-home.ocelot-wahoo.ts.net";
       xps  = "hwc-xps.ocelot-wahoo.ts.net";
     } osConfig;
   };
