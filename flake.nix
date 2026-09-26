@@ -1050,6 +1050,60 @@
         # [-] character class keeps this lint from matching its own definition
         "rg 'github:eriqueo/nixos[-]hwc' flake.nix"
       ];
+      # Exercise rendered Borg hooks and helpers, including their failure paths.
+      borg-recovery = let
+        hosts = map (name: self.nixosConfigurations.${name}.config) [ "hwc-server" "hwc-work" ];
+        hookFiles = map (c: pkgs.writeText "borg-pre-hook" c.services.borgbackup.jobs.hwc-backup.preHook) hosts;
+        restore = lib.findFirst (p: (p.name or "") == "borg-restore") null
+          self.nixosConfigurations.hwc-work.config.environment.systemPackages;
+      in
+      assert lib.all (c: !(lib.hasInfix "break-lock"
+        (c.systemd.services.borgbackup-job-hwc-backup.preStart or ""))) hosts;
+      assert lib.all (c: lib.hasInfix "${c.services.postgresql.package}/bin/pg_dumpall"
+        c.services.borgbackup.jobs.hwc-backup.preHook) hosts;
+      pkgs.runCommand "borg-recovery" { nativeBuildInputs = [ pkgs.python3 pkgs.bash pkgs.coreutils ]; } ''
+        python3 - ${lib.concatStringsSep " " (map toString hookFiles)} ${restore}/bin/borg-restore <<'PY'
+        import gzip, os, pathlib, subprocess, sys, tempfile, time
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            producer = root / "su"
+            producer.write_text("#!${pkgs.bash}/bin/bash\nif [ -e " + str(root / "fail") + " ]; then exit 23; fi\nprintf 'valid SQL snapshot\\n'\n")
+            producer.chmod(0o700)
+            for i, hook in enumerate(sys.argv[1:-1]):
+                dest = root / str(i)
+                dest.mkdir()
+                nested = dest / "service-split" / "recovery.json"
+                nested.parent.mkdir()
+                nested.write_text("keep")
+                os.utime(nested, (1, 1))
+                old = dest / "postgresql-old.sql.gz"
+                old.write_text("expired")
+                os.utime(old, (1, 1))
+                script = pathlib.Path(hook).read_text().replace("/var/lib/backups", str(dest))
+                script = script.replace("/run/wrappers/bin/su", str(producer))
+                # Host-specific CouchDB/arr producers are outside this PG test.
+                script = script.replace("systemctl is-active --quiet couchdb", "false")
+                script = script.replace('SRC="/opt/', 'SRC="' + str(root) + '/absent/')
+                subprocess.run(["bash", "-c", script], check=True)
+                output = next(dest.glob("postgresql-2*.sql.gz"))
+                before = output.read_bytes()
+                assert gzip.decompress(before) == b"valid SQL snapshot\n"
+                assert not old.exists() and nested.read_text() == "keep"
+                (root / "fail").touch()
+                assert subprocess.run(["bash", "-c", script]).returncode != 0
+                assert output.read_bytes() == before
+                assert not list(dest.glob(".postgresql-*"))
+                (root / "fail").unlink()
+            fake = root / "borg"
+            fake.write_text("#!${pkgs.bash}/bin/bash\nexit 42\n")
+            fake.chmod(0o700)
+            script = pathlib.Path(sys.argv[-1]).read_text().replace("${pkgs.borgbackup}/bin/borg", str(fake))
+            result = subprocess.run(["bash", "-c", script, "restore", "absent", str(root / "restore")])
+            assert result.returncode == 42, result.returncode
+        PY
+        touch "$out"
+      '';
+
       # Service-split retirement contract, evaluated through production units.
       service-split-retirement = let
         server = self.nixosConfigurations.hwc-server.config;

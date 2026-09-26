@@ -13,10 +13,8 @@ Borg deduplicating encrypted backup service. Provides block-level deduplication,
 
 ```
 domains/data/borg/
-├── index.nix          # Options, Borg job config, integrity checks, CLI tools
-├── README.md          # This file
-└── parts/
-    └── scripts.nix    # Additional helper scripts
+├── index.nix          # Options, atomic PostgreSQL snapshots, Borg jobs, CLI tools
+└── README.md          # This file
 ```
 
 ## Namespace
@@ -79,6 +77,7 @@ hwc.data.borg = {
 - `borg-check.service` / `borg-check.timer` — weekly repository integrity check
 
 ## Changelog
+- 2026-09-26: Share configured-version PostgreSQL dumps across hosts; fail closed and publish atomically. Preserve restore errors, wait for locks, and keep nested recovery archives outside daily dump cleanup.
 
 - 2026-04-04: Update failure notification ref from `hwc.alerts.enable` to `hwc.monitoring.alerts.enable` (domain redistribution)
 - 2026-04-03: Fix backup timeout — increase to 12h (compact on 240GB repo), raise compact threshold to 25%, exclude regenerable Prometheus/Jellyfin data

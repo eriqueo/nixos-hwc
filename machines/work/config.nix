@@ -386,21 +386,6 @@
       weekly = 4;
       monthly = 6;
     };
-    preBackupScript = ''
-      DUMP_DIR="/var/lib/backups"
-      mkdir -p "$DUMP_DIR"
-      DATE=$(date +%Y-%m-%d)
-
-      echo "Dumping PostgreSQL databases..."
-      if systemctl is-active --quiet postgresql; then
-        # --rsyncable keeps borg dedup effective across daily compressed dumps
-        /run/wrappers/bin/su - postgres -s /bin/sh -c "/run/current-system/sw/bin/pg_dumpall 2>/dev/null" | /run/current-system/sw/bin/gzip --rsyncable > "$DUMP_DIR/postgresql-$DATE.sql.gz" || echo "PostgreSQL dump failed"
-      fi
-
-      # Keep 14 days locally; borg holds the long-term retention.
-      find "$DUMP_DIR" -name "*.sql.gz" -mtime +14 -delete 2>/dev/null || true
-      echo "Database dumps complete"
-    '';
     monitoring.enable = true;
     notifications.onFailure = true;
   };

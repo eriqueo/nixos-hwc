@@ -29,6 +29,28 @@ let
     + lib.optionalString (cfg.repo.remote.enable && cfg.repo.remote.sshKeySecret != null)
         " -i /run/agenix/${cfg.repo.remote.sshKeySecret}";
 
+  # CRITICAL: logical PostgreSQL snapshots. One producer for every Borg host;
+  # use the running cluster's package, never the unrelated CLI package in PATH.
+  # Publish atomically and abort the backup if the producer fails. Retain 14
+  # days locally; Borg owns long-term retention. Nested migration archives are
+  # deliberately outside this cleanup boundary.
+  postgresBackup = lib.optionalString config.services.postgresql.enable ''
+    (
+      set -euo pipefail
+      umask 077
+      dumpDir=/var/lib/backups
+      mkdir -p "$dumpDir" || exit 1
+      dumpFile="$dumpDir/postgresql-$(date +%Y-%m-%d).sql.gz"
+      dumpTemp=$(mktemp "$dumpDir/.postgresql-XXXXXX") || exit 1
+      trap 'rm -f "$dumpTemp"' EXIT
+      /run/wrappers/bin/su - postgres -s /bin/sh -c '${config.services.postgresql.package}/bin/pg_dumpall' \
+        | ${pkgs.gzip}/bin/gzip --rsyncable > "$dumpTemp" || exit 1
+      ${pkgs.gzip}/bin/gzip -t "$dumpTemp" || exit 1
+      mv "$dumpTemp" "$dumpFile" || exit 1
+      find "$dumpDir" -maxdepth 1 -name 'postgresql-*.sql.gz' -mtime +14 -delete
+    ) || exit "$?"
+  '';
+
   # Build OnCalendar string
   onCalendar =
     if cfg.schedule.frequency == "daily" then
@@ -277,9 +299,8 @@ in
           exit 1
         fi
         ARCHIVE="$1"; TARGET="$2"; SUBPATH="''${3:-.}"
-        mkdir -p "$TARGET" && cd "$TARGET"
-        ${pkgs.borgbackup}/bin/borg extract "${repoUrl}::$ARCHIVE" "$SUBPATH"
-        echo "Restored to $TARGET"
+        mkdir -p "$TARGET" && cd "$TARGET" || exit 1
+        exec ${pkgs.borgbackup}/bin/borg extract "${repoUrl}::$ARCHIVE" "$SUBPATH"
       '')
 
       # borg-backup-now: trigger manual backup
@@ -315,7 +336,7 @@ in
       startAt = []; # We use our own timer for more control
 
       # Pre-backup hook (database dumps, etc.)
-      preHook = lib.mkIf (cfg.preBackupScript != null) cfg.preBackupScript;
+      preHook = postgresBackup + lib.optionalString (cfg.preBackupScript != null) cfg.preBackupScript;
 
       # Post-backup hook
       postHook = lib.mkIf (cfg.postBackupScript != null) cfg.postBackupScript;
@@ -365,10 +386,8 @@ in
       # Don't run backup while borg-check is running
       conflicts = [ "borg-check.service" ];
       after = [ "borg-check.service" ];
-      # Break stale locks before starting (from previous crashes/kills)
-      preStart = ''
-        ${pkgs.borgbackup}/bin/borg break-lock ${repoUrl} 2>/dev/null || true
-      '';
+      # Respect readers and other writers. A stale lock is an operator recovery
+      # action after checking its holder, never an automatic startup step.
       # Prevent stuck borg processes from blocking future backups
       serviceConfig = {
         Type = "oneshot";              # Backup runs to completion, not a long-lived daemon

@@ -484,11 +484,6 @@
       JQ=/run/current-system/sw/bin/jq
       CURL=/run/current-system/sw/bin/curl
 
-      echo "Dumping PostgreSQL databases..."
-      if systemctl is-active --quiet postgresql; then
-        # --rsyncable keeps borg dedup effective across daily compressed dumps
-        /run/wrappers/bin/su - postgres -s /bin/sh -c "/run/current-system/sw/bin/pg_dumpall 2>/dev/null" | /run/current-system/sw/bin/gzip --rsyncable > "$DUMP_DIR/postgresql-$DATE.sql.gz" || echo "PostgreSQL dump failed"
-      fi
 
       echo "Dumping CouchDB databases..."
       if systemctl is-active --quiet couchdb; then
@@ -537,10 +532,10 @@
 
       # Cleanup old dumps (keep 14 days - Borg handles long-term retention)
       # *.sql matches legacy uncompressed dumps until they age out
-      find "$DUMP_DIR" -name "*.sql" -mtime +14 -delete 2>/dev/null || true
-      find "$DUMP_DIR" -name "*.sql.gz" -mtime +14 -delete 2>/dev/null || true
-      find "$DUMP_DIR" -name "*.json" -mtime +14 -delete 2>/dev/null || true
-      find "$DUMP_DIR" -name "*.db" -mtime +14 -delete 2>/dev/null || true
+      find "$DUMP_DIR" -maxdepth 1 -name "*.sql" -mtime +14 -delete 2>/dev/null || true
+      find "$DUMP_DIR" -maxdepth 1 -name "*.sql.gz" -mtime +14 -delete 2>/dev/null || true
+      find "$DUMP_DIR" -maxdepth 1 -name "*.json" -mtime +14 -delete 2>/dev/null || true
+      find "$DUMP_DIR" -maxdepth 1 -name "*.db" -mtime +14 -delete 2>/dev/null || true
       echo "Database dumps complete"
     '';
 
