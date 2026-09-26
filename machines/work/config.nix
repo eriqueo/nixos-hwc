@@ -12,7 +12,6 @@
     ../../domains/server/native/ai/brain-mcp/index.nix
     ../../domains/server/native/ai/brainvec/index.nix
     ../../domains/server/native/ai/llama-cpp/index.nix
-    ../../domains/server/native/ai/whisper/index.nix
     ../../domains/server/services/inbox-processor/index.nix
     # Service split wave 2 (fused window): scouts, control bot, Radicale and
     # the DX2 facts research-scout reads — machine-imported, as on hwc-server
@@ -110,21 +109,12 @@
   hwc.automation.mailJanitor.dryRun = false;
   hwc.server.ai.brainMcp.enable = true;
   hwc.server.ai.brainvec.enable = true;
-  # Same small.en weights/API as home. Four-thread CPU inference measured
-  # 9.3s for 60s audio and 720 MiB peak RSS on this host (2026-09-26).
-  hwc.server.ai.whisper = {
-    enable = true;
-    gpu = false;
-    threads = 4;
-  };
-  systemd.services.whisper-server.serviceConfig = {
-    CPUQuota = "400%";
-    MemoryMax = "2G";
-  };
   # Sole audio/screenshot writer. Syncthing carries captures and processed
   # originals through home; the brain vault continues to use git sync.
   hwc.server.services.inboxProcessor = {
     enable = true;
+    # Keep GPU inference on home; the stable vhost also serves laptop dictation.
+    whisperUrl = "https://whisper.${config.hwc.networking.shared.vhostDomain}";
     audioInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/audio";
     screenshotsInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/screenshots";
     brainInboxPath = "${config.hwc.paths.brain."server-replica"}/_inbox";

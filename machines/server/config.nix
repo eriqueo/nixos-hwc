@@ -27,7 +27,6 @@
     ../../domains/server/native/ai/dx2/index.nix # DX2 endpoint facts (URL, model, key) for research-scout + inbox-processor
     ../../domains/server/native/ai/llama-cpp/index.nix # Options shared with Whisper; embeddings disabled
     ../../domains/server/native/ai/whisper/index.nix # whisper.cpp speech-to-text server (GPU)
-    ../../domains/server/services/inbox-processor/index.nix # Phone capture processor (Whisper + Tesseract)
     ../../domains/server/services/bloxels-cv/index.nix # Bloxels grid photo classifier (path watcher)
     ../../domains/server/deploy/index.nix # `deploy` — one-step deploy CLI for 600_apps
   ];
@@ -116,21 +115,8 @@
   hwc.server.ai.brainMcp.enable = false;
   hwc.server.ai.brainvec.enable = false;
 
-  # Phone Capture Processor (Phase 10: Whisper STT + Tesseract OCR)
-  # Watches inbox-mobile/{audio,screenshots} and writes markdown to the vault's
-  # global capture inbox, `_inbox/`. It wrote to `inbox/` until 2026-09-19: the
-  # vault's reorganisation renamed the inbox and this path was never moved, so
-  # captures landed in a directory nothing reads.
-  hwc.server.services.inboxProcessor = {
-    enable = false; # Work owns audio/screenshots; home keeps the phone sync hub.
-    audioInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/audio";
-    screenshotsInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/screenshots";
-    brainInboxPath = "${config.hwc.paths.brain."server-replica"}/_inbox";
-    processedPath = "${config.hwc.paths.brain."inbox-mobile"}/processed";
-    # DX2 adds a title, summary and action items above the verbatim
-    # transcript; fail-open to the raw note when DX2 is unreachable.
-    cleanup.enable = true;
-  };
+  # Audio/screenshots are processed on work beside mail; home keeps GPU
+  # transcription and the shared phone inbox transport.
 
   # Bloxels CV — classify phone photos of the printed 13x13 Bloxels grid.
   # Watches inbox-mobile/bloxels; writes results/<photo>/{grid.json,debug.png}
@@ -642,7 +628,7 @@
   # and every model above base.en died with "IM2COL failed" (2026-09-05).
   # Shares the 4 GB P1000 with Frigate and media workloads.
   hwc.server.ai.whisper = {
-    enable = false; # Work CPU inference; old vhost forwards through routeOwners.
+    enable = true; # Home GPU is about twice as fast as work CPU (2026-09-26).
     cudaCapabilities = ["6.1"];
   };
 

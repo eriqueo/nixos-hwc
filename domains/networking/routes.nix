@@ -38,7 +38,6 @@ in
     refinery = "work";   # wave 1: board + gauntlets
     workbench = "work";  # wave 1: hub; hwc-server keeps the module on for its areas.json
     t3-work = "work";
-    whisper = "work";   # wave 5: CPU transcription and phone audio processing
     brain-mcp = { owner = "work"; mode = "port"; };  # wave 1
     monitor = "work";    # wave 2: DataX monitor
     # wave 2 fused window: business apps, scouts, Radicale, gateway, briefing

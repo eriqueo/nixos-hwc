@@ -1,18 +1,19 @@
 # whisper
 
-Resident whisper.cpp speech-to-text service on hwc-work. It serves the pinned
-small.en model on CPU with four threads, CPUQuota400%, and MemoryMax2G.
-OpenAI-compatible `POST /v1/audio/transcriptions` remains available at
-`https://whisper.hwc.iheartwoodcraft.com`. The home server retains forwarding.
+Resident whisper.cpp speech-to-text service on the home server. It serves the
+pinned small.en model on the Quadro P1000 GPU. The API stays at
+`https://whisper.hwc.iheartwoodcraft.com/v1/audio/transcriptions`.
 
 Consumers found by repository search and live configuration:
-- Work inbox-processor for phone audio captures.
+- Work inbox-processor for phone audio captures, through the HTTPS vhost.
 - Laptop hwc-dictation (`prefer_remote`, 30-second remote timeout, local fallback).
 - The documented phone Shortcut and other Whisper API clients.
 
-Same-model synthetic tests on work (2026-09-26):12/30/60-second recordings
-completed in2.6/5.5/9.3seconds. A short request queued behind60seconds of audio
-took11.7seconds. Peak RSS720MiB. This measures capacity, not microphone accuracy.
+Same-model synthetic tests (2026-09-26): 12/30/60-second recordings took
+1.3/2.5/4.6 seconds on home GPU, versus 2.6/5.4/9.5 seconds on work CPU.
+Eric chose home inference for latency and work inbox processing beside mail.
+The staged work Whisper service is removed. These tests measure processing
+capacity, not microphone accuracy.
 
 ## Structure
 
@@ -57,11 +58,10 @@ Bind the Shortcut to the Action Button. The phone must be on the tailnet.
 - whisper-server serialises inference behind one mutex. Single-user box;
   a long capture from the inbox delays a phone request until it finishes.
 - No auth on the endpoint. The tailnet-only firewall is the boundary.
-- Work uses CPU; the home GPU allocation is released after cutover. Very long
-  recordings can still delay dictation beyond its30-second timeout.
+- Very long recordings can still delay dictation beyond its 30-second timeout.
 
 ## Changelog
-- 2026-09-26: Move same-model inference to work CPU after capacity tests; preserve the API hostname and include the live laptop dictation caller in the inventory.
+- 2026-09-26: Keep inference on home GPU after comparative benchmarks; work inbox processing uses the unchanged HTTPS endpoint. Remove staged work CPU inference.
 
 - 2026-09-05: created. Root cause of the GPU failure that shaped this
   module: the cached `whisper-cpp` binary is built for `CUDA : ARCHS =

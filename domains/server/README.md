@@ -21,7 +21,7 @@ domains/server/
 │       ├── lead-scout/    # Lead Scout MCP + HTTP, plus profile-scoped Discord review bots
 │       ├── llama-cpp/     # llama.cpp inference (embeddings on hwc-work)
 │       ├── research-scout/       # Research Scout MCP + HTTP, plus the arXiv ingest timer
-│       └── whisper/       # whisper.cpp speech-to-text server (CPU on work, OpenAI-compatible)
+│       └── whisper/       # whisper.cpp speech-to-text server (GPU on home, OpenAI-compatible)
 ├── services/
 │   ├── bloxels-cv/       # Bloxels grid photo classifier (path watcher on inbox-mobile)
 │   ├── inbox-processor/  # Phone capture processor (whisper-server + Tesseract; optional DX2 voice-note cleanup)
@@ -34,14 +34,14 @@ The media/arr/torrent stack lives entirely in `domains/media/`. **This domain no
 
 ## Native Services
 Machine configs import the AI/scout modules they need. Work owns the brain stack,
-scouts, Whisper and audio/screenshot processing. Home retains Bloxels and the
+scouts and audio/screenshot processing beside mail. Home retains GPU Whisper, Bloxels and the
 phone Syncthing hub. T3 is a Home Manager application retained on all three hosts.
 
 ## Routing & Composition
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
-- 2026-09-26: Whisper and inbox audio/screenshot processing move to work after CPU benchmarks; Bloxels stays home. Correct stale domain ownership and deleted-directory descriptions.
+- 2026-09-26: Move inbox audio/screenshot processing to work beside mail; retain faster GPU Whisper and Bloxels on home. Remote HTTPS inference no longer requires a local Whisper unit. Remove staged work inference and the old home processor configuration. Correct stale domain ownership and deleted-directory descriptions.
 - 2026-09-25: Retired `native/ai/hermes` (Eric's decision, service split wave 4 audit: every cron delivery failing, no Discord use in 30 days, trial window over). Module, both vhosts, the DeepSeek key and Homepage tiles removed; `/var/lib/hwc/hermes-agent`, `market-dashboard` and the old native `hermes` tree archived to hwc-server `/var/lib/backups/service-split-wave4/` before deletion. `hermes-discord-bot-token` stays: lead-scout's approvals bot uses it.
 - 2026-09-25: Service split wave 3 (notifications): home-scout and research-scout default `notifyUrl` to `hwc.notifications.notify.url`.
 - 2026-09-25: Retired `native/ai/market-intelligence` (Eric's decision during the service-split audit): module, its daily/weekly timers and static dashboard vhost removed; its out-of-git app code and SQLite were archived to hwc-server `/var/lib/backups/service-split-wave2/market-intelligence.tar.zst` before the state dir was deleted. Hermes' separate market-dashboard (paper trading) is unaffected.

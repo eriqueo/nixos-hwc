@@ -282,8 +282,10 @@ in
       inbox-processor-audio = {
         description = "Process audio files from phone inbox via whisper-server";
         # Ordering only: readiness is proven per request by curl -f + jq.
-        after = [ "whisper-server.service" ];
-        wants = [ "whisper-server.service" ];
+        after = [ "network-online.target" ]
+          ++ lib.optional (config.hwc.server.ai.whisper.enable or false) "whisper-server.service";
+        wants = [ "network-online.target" ]
+          ++ lib.optional (config.hwc.server.ai.whisper.enable or false) "whisper-server.service";
         serviceConfig = {
           Type = "oneshot";
           User = lib.mkForce "eric";
