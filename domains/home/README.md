@@ -53,6 +53,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-26: Waybar now uses Proton Pass's native tray icon and the packaged color artwork for Authenticator and Bitwarden.
 - 2026-09-26: Credential app launchers now open on the active workspace; added the Bitwarden desktop client and Waybar buttons, removed unused Proton Pass settings output.
 - 2026-09-26: The shared agent-harness fleet list uses hwc-home, hwc-work and hwc-laptop without changing session stores.
 - 2026-09-25: Deleted `apps/n8n/` (HM n8n CLI app; enabled on no host, its only effect was keeping `n8n-1.91.3` in `permittedInsecurePackages`).
