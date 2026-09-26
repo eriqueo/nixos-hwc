@@ -337,7 +337,7 @@
       # Phone capture inbox (Phase 9: Mobius Sync). Phone device added after pairing.
       "inbox-mobile" = {
         path = "/mnt/vaults/inbox-mobile";
-        devices = ["hwc-phone"];
+        devices = ["hwc-phone" "hwc-work"];
       };
     };
   };

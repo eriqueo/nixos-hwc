@@ -12,6 +12,8 @@
     ../../domains/server/native/ai/brain-mcp/index.nix
     ../../domains/server/native/ai/brainvec/index.nix
     ../../domains/server/native/ai/llama-cpp/index.nix
+    ../../domains/server/native/ai/whisper/index.nix
+    ../../domains/server/services/inbox-processor/index.nix
     # Service split wave 2 (fused window): scouts, control bot, Radicale and
     # the DX2 facts research-scout reads — machine-imported, as on hwc-server
     # before. The business apps come from the business role (flake.nix).
@@ -34,6 +36,10 @@
   # reads its pem; the mail role's user-unit bridge serves plaintext loopback.
   hwc.mail.protonmailBridgeCert.enable = false;
 
+  # CRITICAL: phone capture inputs/processed originals, backed up by this
+  # host's /var/lib/hwc Borg source. Syncthing versions expire after 30 days.
+  hwc.paths.brain."inbox-mobile" = "${config.hwc.paths.state}/inbox-mobile";
+
   # The Proton Bridge and its consumers are local. Cross-host SMTP/IMAP
   # relays retired with the server mail role; the bridge stays loopback-only.
 
@@ -52,6 +58,10 @@
       "100_hwc"   = { path = "/home/eric/100_hwc";   devices = [ "hwc-server" ]; };
       "300_tech"  = { path = "/home/eric/300_tech";  devices = [ "hwc-server" ]; };
       "700_datax" = { path = "/home/eric/700_datax"; devices = [ "hwc-server" ]; };
+      "inbox-mobile" = {
+        path = config.hwc.paths.brain."inbox-mobile";
+        devices = [ "hwc-server" ];
+      };
     };
   };
 
@@ -100,6 +110,30 @@
   hwc.automation.mailJanitor.dryRun = false;
   hwc.server.ai.brainMcp.enable = true;
   hwc.server.ai.brainvec.enable = true;
+  # Same small.en weights/API as home. Four-thread CPU inference measured
+  # 9.3s for 60s audio and 720 MiB peak RSS on this host (2026-09-26).
+  hwc.server.ai.whisper = {
+    enable = true;
+    gpu = false;
+    threads = 4;
+  };
+  systemd.services.whisper-server.serviceConfig = {
+    CPUQuota = "400%";
+    MemoryMax = "2G";
+  };
+  # TEMPORARY staging fence: enable only after home workers are stopped and
+  # inbox-mobile has converged. Home remains the writer during this stage.
+  hwc.server.services.inboxProcessor = {
+    enable = false;
+    audioInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/audio";
+    screenshotsInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/screenshots";
+    brainInboxPath = "${config.hwc.paths.brain."server-replica"}/_inbox";
+    processedPath = "${config.hwc.paths.brain."inbox-mobile"}/processed";
+    cleanup.enable = true;
+  };
+  systemd.tmpfiles.rules = [
+    "d ${config.hwc.paths.brain."inbox-mobile"} 0755 eric users -"
+  ];
   # nomic-embed-text on CPU: the only inference this host runs. gpuLayers = 0
   # is what exempts it from the NVIDIA assertion; this host has an Intel iGPU.
   hwc.server.ai.llamaCpp = {
