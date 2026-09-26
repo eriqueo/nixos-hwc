@@ -1105,6 +1105,28 @@
         touch "$out"
       '';
 
+      home-rename = let
+        renamed = self.nixosConfigurations ? hwc-home;
+        home = self.nixosConfigurations.${if renamed then "hwc-home" else "hwc-server"}.config;
+        job = home.services.borgbackup.jobs.hwc-backup;
+      in
+      assert lib.assertMsg (renamed && !(self.nixosConfigurations ? hwc-server))
+        "home rename: only hwc-home may name the home machine/output";
+      assert home.networking.hostName == "hwc-home";
+      assert home.hwc.networking.hosts.servers.main == home.networking.hostName;
+      assert lib.elem "--hostname=${home.networking.hostName}" home.services.tailscale.extraSetFlags;
+      assert job.repo == "/mnt/backup/borg-hwc-server";
+      assert job.archiveBaseName == "hwc-server-hwc-backup";
+      assert job.prune.prefix == job.archiveBaseName;
+      assert builtins.hashFile "sha256" ./machines/home/AGE_PUBLIC_KEY.txt
+        == "a98fc2db8fd8507418f110474d5a83f62e24fa4b1af10b7c92fc8066ea8a64d7";
+      assert lib.all (name: let c = self.nixosConfigurations.${name}.config; in
+        c.hwc.networking.hosts.fqdn.main == "hwc-home.${c.hwc.networking.hosts.tailnetSuffix}"
+        && lib.elem "hwc-home" c.home-manager.users.eric.hwc.home.apps.agent-harness.fleetHosts
+        && !(lib.elem "hwc-server" c.home-manager.users.eric.hwc.home.apps.agent-harness.fleetHosts)
+      ) [ "hwc-home" "hwc-work" "hwc-laptop" ];
+      pkgs.runCommand "home-rename" {} ''touch "$out"'';
+
       phone-ingest-ownership = let
         home = self.nixosConfigurations.hwc-server.config;
         work = self.nixosConfigurations.hwc-work.config;
