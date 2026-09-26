@@ -1063,7 +1063,7 @@
         c.services.borgbackup.jobs.hwc-backup.preHook) hosts;
       pkgs.runCommand "borg-recovery" { nativeBuildInputs = [ pkgs.python3 pkgs.bash pkgs.coreutils ]; } ''
         python3 - ${lib.concatStringsSep " " (map toString hookFiles)} ${restore}/bin/borg-restore <<'PY'
-        import gzip, os, pathlib, subprocess, sys, tempfile, time
+        import gzip, os, pathlib, re, subprocess, sys, tempfile
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
             producer = root / "su"
@@ -1097,7 +1097,8 @@
             fake = root / "borg"
             fake.write_text("#!${pkgs.bash}/bin/bash\nexit 42\n")
             fake.chmod(0o700)
-            script = pathlib.Path(sys.argv[-1]).read_text().replace("${pkgs.borgbackup}/bin/borg", str(fake))
+            script, replacements = re.subn(r"/nix/store/[^\s]+/bin/borg\b", str(fake), pathlib.Path(sys.argv[-1]).read_text())
+            assert replacements >= 1
             result = subprocess.run(["bash", "-c", script, "restore", "absent", str(root / "restore")])
             assert result.returncode == 42, result.returncode
         PY
