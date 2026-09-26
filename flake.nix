@@ -1105,6 +1105,30 @@
         touch "$out"
       '';
 
+      phone-ingest-ownership = let
+        home = self.nixosConfigurations.hwc-server.config;
+        work = self.nixosConfigurations.hwc-work.config;
+        laptop = self.nixosConfigurations.hwc-laptop.config;
+        vhost = "whisper.${work.hwc.networking.shared.vhostDomain}";
+        ingestUnits = [ "inbox-processor-audio" "inbox-processor-screenshots" ];
+      in
+      assert lib.assertMsg (!home.hwc.server.ai.whisper.enable
+        && work.hwc.server.ai.whisper.enable && !work.hwc.server.ai.whisper.gpu
+        && home.hwc.server.services.bloxelsCv.enable
+        && lib.all (name: !(builtins.hasAttr name home.systemd.paths)
+          && builtins.hasAttr name work.systemd.paths) ingestUnits)
+        "phone ingestion: home must keep only Bloxels; work owns audio/screenshots and CPU Whisper";
+      assert work.systemd.services.whisper-server.serviceConfig.CPUQuota == "400%";
+      assert work.systemd.services.whisper-server.serviceConfig.MemoryMax == "2G";
+      assert lib.elem "hwc-work" home.hwc.data.syncthing.folders.inbox-mobile.devices;
+      assert work.hwc.data.syncthing.folders.inbox-mobile.path == work.hwc.paths.brain.inbox-mobile;
+      assert work.hwc.server.services.inboxProcessor.audioInboxPath == "${work.hwc.paths.brain.inbox-mobile}/audio";
+      assert work.hwc.server.services.inboxProcessor.whisperUrl == "http://127.0.0.1:${toString work.hwc.server.ai.whisper.port}";
+      assert work.hwc.networking.shared.routeOwners.whisper.owner == "work";
+      assert lib.hasInfix "tls_server_name ${vhost}" home.services.caddy.extraConfig;
+      assert lib.hasInfix "${work.hwc.networking.hosts.ips.work} ${vhost}" laptop.networking.extraHosts;
+      pkgs.runCommand "phone-ingest-ownership" {} ''touch "$out"'';
+
       # Service-split retirement contract, evaluated through production units.
       service-split-retirement = let
         server = self.nixosConfigurations.hwc-server.config;
