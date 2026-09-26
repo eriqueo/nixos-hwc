@@ -3,7 +3,7 @@
 # Radicale — self-hosted CalDAV server (tasks + calendars).
 #
 # NAMESPACE: hwc.server.services.radicale.*   (Charter Law 2: namespace = folder)
-# USAGE:     hwc.server.services.radicale.enable = true;   (machines/server/config.nix)
+# USAGE:     hwc.server.services.radicale.enable = true;   (machines/home/config.nix)
 #
 # Purpose: full two-way task sync with collection creation. iCloud pins the
 # tasks pair to fixed collection IDs (lists can only be created on the phone);

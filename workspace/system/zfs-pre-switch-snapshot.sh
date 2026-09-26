@@ -107,7 +107,7 @@ echo ""
 
 if [[ $FAILED_COUNT -eq 0 ]]; then
     echo -e "${GREEN}All snapshots created successfully!${NC}"
-    echo "Safe to proceed with: nixos-rebuild switch --flake .#hwc-server"
+    echo "Safe to proceed with: nixos-rebuild switch --flake .#hwc-home"
     exit 0
 else
     echo -e "${RED}Some snapshots failed! Review errors before proceeding.${NC}"

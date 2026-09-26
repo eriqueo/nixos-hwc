@@ -347,7 +347,7 @@ in
     # This block was written to KEEP the registration, reasoning that dropping
     # it would silently retire a running backup. That reasoning was correct when
     # written and went stale within the hour: postgresql-db-backup was retired
-    # wholesale later the same day (machines/server/config.nix,
+    # wholesale later the same day (machines/home/config.nix,
     # `backup.perDatabase.enable = false`) because it wrote to
     # /home/eric/backups/postgres, a path in no borg source. A registration into
     # a disabled option is dead config that reads as a backup, so it is removed

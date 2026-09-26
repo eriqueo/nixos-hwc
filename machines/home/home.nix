@@ -1,4 +1,4 @@
-# machines/server/home.nix
+# machines/home/home.nix
 #
 # MACHINE: HWC-SERVER — Home Manager one-offs (HM lane)
 # CLI defaults come from the base role's home half. Mail runs on work.

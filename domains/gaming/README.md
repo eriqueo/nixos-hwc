@@ -11,6 +11,8 @@ Gaming services including retro emulation (RetroArch) and WebDAV-based save sync
 
 ## Structure
 
+Machine reference follows machines/home; gaming settings are unchanged.
+
 ```
 domains/gaming/
 ├── index.nix           # Domain aggregator
@@ -39,6 +41,7 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+- 2026-09-26: Machine reference follows machines/home; gaming settings are unchanged.
 
 - 2026-07-11: webdav — `User = lib.mkForce "eric"` per the native-services Architecture Law (was bare; no-op today, verified by before/after eval).
 - 2026-03-24 (`d9f3f46a`): Law 3 — retroarch `romsDir`/`systemDir` defaults now derive from `config.hwc.paths.media.retroarch.{roms,system}` instead of hardcoded `/mnt/media/retroarch/{roms,system}` (this domain's slice of the repo-wide hwc.paths refactor).

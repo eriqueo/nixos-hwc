@@ -5,7 +5,7 @@
 # NAMESPACE: hwc.data.syncthing.*
 #
 # USED BY:
-#   - machines/server/config.nix (sync with laptop)
+#   - machines/home/config.nix (sync with laptop)
 #   - machines/laptop/config.nix (sync with server)
 
 { lib, config, pkgs, ... }:

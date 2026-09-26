@@ -13,6 +13,8 @@ Other domains register their scrape configs via `hwc.monitoring.prometheus.scrap
 
 ## Structure
 
+Homepage fleet labels/selectors use hwc-home; SMART sender derives from the local hostname.
+
 Camera monitoring consumes Frigate native metrics and config-derived expected FPS. The Cameras dashboard distinguishes enabled cameras from disabled ones.
 
 ```
@@ -58,6 +60,7 @@ monitoring/
 ```
 
 ## Changelog
+- 2026-09-26: Homepage fleet labels/selectors use hwc-home; SMART sender derives from the local hostname.
 - 2026-09-26: Remove the Authentik Homepage tile with its retirement. Module-gated probes automatically drop the retired Authentik and server embedding targets.
 - 2026-09-25: Service split wave 4: the public webhook-ingress probe targets `/webhook/estimate-push` (calculator-lead retired); Homepage's n8n tile follows n8n to hwc-work; the Hermes/Market Trials tiles are gone with the module.
 

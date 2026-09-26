@@ -2,7 +2,7 @@
     # Disk use per host from the central Prometheus (node exporter via each
     # host's agent). Homepage runs on hwc-work, so this is how it sees the
     # server's DAS; the container reaches Prometheus on the host.
-    - hwc-server:
+    - hwc-home:
         icon: mdi-server
         description: Media + storage host
         widget:
@@ -11,19 +11,19 @@
           refreshInterval: 60000
           metrics:
             - label: Root
-              query: 100 - 100 * node_filesystem_avail_bytes{host="hwc-server",mountpoint="/"} / node_filesystem_size_bytes{host="hwc-server",mountpoint="/"}
+              query: 100 - 100 * node_filesystem_avail_bytes{host="hwc-home",mountpoint="/"} / node_filesystem_size_bytes{host="hwc-home",mountpoint="/"}
               format:
                 type: percent
             - label: Hot
-              query: 100 - 100 * node_filesystem_avail_bytes{host="hwc-server",mountpoint="/mnt/hot"} / node_filesystem_size_bytes{host="hwc-server",mountpoint="/mnt/hot"}
+              query: 100 - 100 * node_filesystem_avail_bytes{host="hwc-home",mountpoint="/mnt/hot"} / node_filesystem_size_bytes{host="hwc-home",mountpoint="/mnt/hot"}
               format:
                 type: percent
             - label: Media
-              query: 100 - 100 * node_filesystem_avail_bytes{host="hwc-server",mountpoint="/mnt/media"} / node_filesystem_size_bytes{host="hwc-server",mountpoint="/mnt/media"}
+              query: 100 - 100 * node_filesystem_avail_bytes{host="hwc-home",mountpoint="/mnt/media"} / node_filesystem_size_bytes{host="hwc-home",mountpoint="/mnt/media"}
               format:
                 type: percent
             - label: Backup
-              query: 100 - 100 * node_filesystem_avail_bytes{host="hwc-server",mountpoint="/mnt/backup"} / node_filesystem_size_bytes{host="hwc-server",mountpoint="/mnt/backup"}
+              query: 100 - 100 * node_filesystem_avail_bytes{host="hwc-home",mountpoint="/mnt/backup"} / node_filesystem_size_bytes{host="hwc-home",mountpoint="/mnt/backup"}
               format:
                 type: percent
     - hwc-work:

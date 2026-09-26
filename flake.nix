@@ -308,7 +308,7 @@
     # package sets defined above — the overlay story stays explicit here
     # rather than being derived from `channel`.
     machines = {
-      server = {
+      home = {
         channel   = "stable";
         roles     = [ "base" "server" ];
         nixosPkgs = pkgs-stable-cuda;  # CUDA overlay (Immich ML / llama.cpp)
@@ -517,7 +517,7 @@
         touch $out
       '';
       frigate-contract = let
-        server = self.nixosConfigurations.hwc-server.config;
+        server = self.nixosConfigurations.hwc-home.config;
         frigate = server.hwc.media.frigate;
         fixture = pkgs.writeText "frigate-contract.json" (builtins.toJSON {
           settings = frigate._settings;
@@ -546,7 +546,7 @@
       # the tasks pair writes. The server kept a dead iCloud tasks pair (and a
       # todoman path over it) until 2026-09-24 because only the laptop was checked.
       radicale-client-auth = let
-        hosts = [ "eric@hwc-laptop" "eric@hwc-server" ];
+        hosts = [ "eric@hwc-laptop" "eric@hwc-home" ];
         fixture = pkgs.writeText "radicale-client-config.json" (builtins.toJSON (map (host:
           let home = self.homeConfigurations.${host}.config;
           in {
@@ -656,7 +656,7 @@
       # one menu. Exercise the exact server Home Manager output consumed by the
       # live aerc process, including noinherit tab contexts and tag commands.
       aerc-bindings = let
-        home = self.homeConfigurations."eric@hwc-server".config;
+        home = self.homeConfigurations."eric@hwc-home".config;
         binds = home.home.file.".config/aerc/binds.conf".text;
         lines = lib.splitString "\n" binds;
         directMarkLines = lib.filter
@@ -695,7 +695,7 @@
       # The calm reading view prefers the sender-authored plain part. HTML is
       # still available with the MIME-part keys when layout carries meaning.
       aerc-rendering = let
-        home = self.homeConfigurations."eric@hwc-server".config;
+        home = self.homeConfigurations."eric@hwc-home".config;
         aercConf = home.home.file.".config/aerc/aerc.conf".text;
         plainFilterLine = builtins.head (lib.filter
           (line: lib.hasPrefix "text/plain = " line)
@@ -747,7 +747,7 @@
       # Workflow state drives the sidebar; Domain and factual tags are columns
       # and filters. Laya is the sole automatic content classifier.
       mail-workflow-v2 = let
-        home = self.homeConfigurations."eric@hwc-server".config;
+        home = self.homeConfigurations."eric@hwc-home".config;
         binds = home.home.file.".config/aerc/binds.conf".text;
         aercConf = home.home.file.".config/aerc/aerc.conf".text;
         queries = home.home.file.".config/aerc/notmuch-queries".text;
@@ -817,7 +817,7 @@
       mcp-immutable-build = let
         # The gateway's host follows hwc.system.mcp.serverAlias (hwc-work since
         # service split wave 2), so the check reads that host's unit.
-        fleet = self.nixosConfigurations.hwc-server.config.hwc;
+        fleet = self.nixosConfigurations.hwc-home.config.hwc;
         gatewayHost = fleet.networking.hosts.servers.${fleet.system.mcp.serverAlias};
         command = self.nixosConfigurations.${gatewayHost}.config.systemd.services.hwc-sys-mcp.serviceConfig.ExecStart;
         main = lib.last (lib.splitString " " command);
@@ -904,7 +904,7 @@
       # Parses the rules of whichever registered server runs the central
       # Prometheus (hwc-work since service split wave 3).
       alert-rules-parse = let
-        servers = lib.attrValues self.nixosConfigurations."hwc-server".config.hwc.networking.hosts.servers;
+        servers = lib.attrValues self.nixosConfigurations."hwc-home".config.hwc.networking.hosts.servers;
         central = lib.findFirst
           (h: self.nixosConfigurations ? ${h} && self.nixosConfigurations.${h}.config.hwc.monitoring.prometheus.enable)
           null servers;
@@ -921,7 +921,7 @@
       '';
 
       # ── Every OnFailure= notifier points at a unit that exists ──────────
-      # Derived from the EVALUATED hwc-server config, so it needs no second
+      # Derived from the EVALUATED hwc-home config, so it needs no second
       # copy of the monitored list. A name that resolves to no ExecStart is a
       # stub unit: it reads as coverage and delivers nothing (seven such dead
       # entries were found by hand on 2026-08-26).
@@ -941,7 +941,7 @@
             let t = (c.systemd.units."${n}.service" or {}).text or null;
             in if t == null then "" else t;
         in map (n: "${host}:${n}") (lib.filter (n: !(lib.hasInfix "ExecStart=" (unitText n))) monitored);
-        dead = lib.concatMap deadOn [ "hwc-server" "hwc-work" ];
+        dead = lib.concatMap deadOn [ "hwc-home" "hwc-work" ];
       in
       assert lib.assertMsg (dead == [])
         ("monitored units with no ExecStart (OnFailure= on these is a silent no-op): "
@@ -953,11 +953,11 @@
       # which NixOS' default service PATH does not provide: without
       # pkgs.util-linux on srgPath both units exit 1 at the lock line, before
       # any investigation. Resolved against the PATH systemd will really set
-      # (read off the rendered unit files of the evaluated hwc-server config),
+      # (read off the rendered unit files of the evaluated hwc-home config),
       # not against the srgPath list, so this cannot pass on a package that is
       # named but never reaches the unit.
       # The gauntlet runs on hwc-work since service split wave 1; the check
-      # follows it (it failed "no subject" while still pointed at hwc-server).
+      # follows it (it failed "no subject" while still pointed at hwc-home).
       sr-gauntlet-flock = let
         server = self.nixosConfigurations."hwc-work".config;
         units = [ "sr-gauntlet.service" "sr-gauntlet-runnow.service" ];
@@ -1052,7 +1052,7 @@
       ];
       # Exercise rendered Borg hooks and helpers, including their failure paths.
       borg-recovery = let
-        hosts = map (name: self.nixosConfigurations.${name}.config) [ "hwc-server" "hwc-work" ];
+        hosts = map (name: self.nixosConfigurations.${name}.config) [ "hwc-home" "hwc-work" ];
         hookFiles = map (c: pkgs.writeText "borg-pre-hook" c.services.borgbackup.jobs.hwc-backup.preHook) hosts;
         restore = lib.findFirst (p: (p.name or "") == "borg-restore") null
           self.nixosConfigurations.hwc-work.config.environment.systemPackages;
@@ -1128,7 +1128,7 @@
       pkgs.runCommand "home-rename" {} ''touch "$out"'';
 
       phone-ingest-ownership = let
-        home = self.nixosConfigurations.hwc-server.config;
+        home = self.nixosConfigurations.hwc-home.config;
         work = self.nixosConfigurations.hwc-work.config;
         vhost = "whisper.${work.hwc.networking.shared.vhostDomain}";
         ingestUnits = [ "inbox-processor-audio" "inbox-processor-screenshots" ];
@@ -1154,7 +1154,7 @@
 
       # Service-split retirement contract, evaluated through production units.
       service-split-retirement = let
-        server = self.nixosConfigurations.hwc-server.config;
+        server = self.nixosConfigurations.hwc-home.config;
         work = self.nixosConfigurations.hwc-work.config;
         peer = self.nixosConfigurations.hwc-xps.config;
         absent = units: names: lib.all (name: !(builtins.hasAttr name units)) names;
@@ -1190,7 +1190,7 @@
       # only work owns the application. Remove the legacy-port assertion only
       # with wave 5 evidence that old clients have moved.
       n8n-route-compatibility = let
-        server = self.nixosConfigurations."hwc-server".config;
+        server = self.nixosConfigurations."hwc-home".config;
         work = self.nixosConfigurations."hwc-work".config;
         route = lib.findFirst (r: r.name == "n8n") null
           work.hwc.networking.shared.effectiveRoutes;
@@ -1230,7 +1230,7 @@
       '';
       charter-law16 = mkCharterLint "law16-layer-purity" [
         "rg 'mkDerivation|fetchurl|writeShellScript' profiles/ --glob '!README.md'"
-        "rg -i '\\b(laptop|xps|kids|firestick|hwc-server)\\b' profiles/ --glob '!README.md'"
+        "rg -i '\\b(laptop|xps|kids|firestick|hwc-home)\\b' profiles/ --glob '!README.md'"
         "rg 'import.*profiles/' profiles/"
         "rg 'mkOption|mkEnableOption' profiles/"
       ];

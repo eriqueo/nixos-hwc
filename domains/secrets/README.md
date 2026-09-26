@@ -8,6 +8,8 @@
 - No secret values live in Nix; tracked `.age` files contain only encrypted payloads, and plaintext staging files are removed after encryption.
 
 ## Structure
+
+Host recipients read the unchanged public key from machines/home; no rekeying or encrypted-payload changes.
 ```
 domains/secrets/
 ├── index.nix            # Aggregator (imports declarations, API, emergency, hardening)
@@ -55,6 +57,7 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-09-26: Host recipients read the unchanged public key from machines/home; no rekeying or encrypted-payload changes.
 - 2026-09-25: Removed `services/hermes-deepseek-key.age` (Hermes retired) and `services/n8n-owner-password-hash.age` (fed an option the n8n module never read).
 - 2026-09-25: `vaultwarden/` runs on hwc-work (service split wave 3) and sets `SIGNUPS_ALLOWED=false` (one account; open signup let anyone reaching the vhost register — invite via the admin panel).
 - 2026-09-25: Removed `services/market-intelligence-{alphavantage,fmp,fred}-key.age` with the retired market-intelligence module (their only consumer; `fmp` had none even then).
