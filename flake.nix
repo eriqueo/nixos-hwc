@@ -310,7 +310,7 @@
     machines = {
       server = {
         channel   = "stable";
-        roles     = [ "base" "server" "business" "mail" ];
+        roles     = [ "base" "server" ];
         nixosPkgs = pkgs-stable-cuda;  # CUDA overlay (Immich ML / llama.cpp)
         hmPkgs    = pkgs-stable;       # standalone HM lane stays plain stable
       };
@@ -1050,6 +1050,40 @@
         # [-] character class keeps this lint from matching its own definition
         "rg 'github:eriqueo/nixos[-]hwc' flake.nix"
       ];
+      # Service-split retirement contract, evaluated through production units.
+      service-split-retirement = let
+        server = self.nixosConfigurations.hwc-server.config;
+        work = self.nixosConfigurations.hwc-work.config;
+        peer = self.nixosConfigurations.hwc-xps.config;
+        absent = units: names: lib.all (name: !(builtins.hasAttr name units)) names;
+      in
+      assert lib.assertMsg (absent server.systemd.services [
+        "podman-authentik-server" "podman-authentik-worker" "authentik-env"
+        "llama-embed" "podman-n8n" "nightly-builds"
+        "proton-bridge-relay-1025" "proton-bridge-relay-1143"
+      ]) "service split: a retired server unit returned";
+      assert lib.assertMsg (absent server.home-manager.users.eric.systemd.user.services
+        [ "mbsync" "mbsync-trash" "mail-health" "vdirsyncer" "protonmail-bridge" ])
+        "service split: retired server mail service returned";
+      assert lib.assertMsg (server.services.postgresql.enable
+        && server.hwc.media.immich.enable && server.hwc.data.couchdb.enable
+        && server.hwc.business.paperless.receipts.enable
+        && builtins.hasAttr "podman-immich-redis" server.systemd.services
+        && builtins.hasAttr "paperless-receipts-mover" server.systemd.paths)
+        "service split: media storage or receipt ingress lost";
+      assert lib.assertMsg (work.hwc.automation.n8n.enable
+        && work.hwc.automation.refinery.enable && work.hwc.automation.nightlyBuilds.enable
+        && work.home-manager.users.eric.hwc.mail.bridge.enable
+        && !work.hwc.mail.bridge.relay.enable
+        && !peer.hwc.data.couchdb.enable && !peer.hwc.automation.refinery.enable
+        && !peer.hwc.automation.nightlyBuilds.enable)
+        "service split: application ownership regressed";
+      assert lib.assertMsg (lib.all (name:
+        work.systemd.services.${name}.serviceConfig.ReadOnlyPaths == [ "-/mnt" ])
+        [ "nightly-builds" "nightly-builds-runnow" ])
+        "service split: nightly sandbox must tolerate absent media mounts";
+      pkgs.runCommand "service-split-retirement" {} ''touch "$out"'';
+
       # Wave 4 compatibility contract: the old entry point survives while
       # only work owns the application. Remove the legacy-port assertion only
       # with wave 5 evidence that old clients have moved.

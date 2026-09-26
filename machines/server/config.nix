@@ -12,7 +12,7 @@
   imports = [
     ./hardware.nix
 
-    # Roles (base, server, business, monitoring, mail) are supplied by the
+    # Roles (base, server) are supplied by the
     # flake.nix machines table — membership lives there, not here.
 
     ../../domains/ai/index.nix
@@ -21,6 +21,7 @@
     ../../domains/media/index.nix
     ../../domains/notifications/index.nix # Notification delivery (webhooks, CLI)
     ../../domains/gaming/index.nix # Retroarch emulation + WebDAV save sync
+    ../../domains/business/index.nix # Phone receipt forwarding; apps stay disabled
     ../../domains/server/native/ai/brain-mcp/index.nix # Brain MCP Server (Deno)
     ../../domains/server/native/ai/brainvec/index.nix # brainvec semantic-index ingest (vault embeddings)
     ../../domains/server/native/ai/dx2/index.nix # DX2 endpoint facts (URL, model, key) for research-scout + inbox-processor
@@ -103,19 +104,9 @@
   networking.hostName = "hwc-server";
   networking.hostId = "8425e349";
 
-  # Verified refinery release built from eriqueo/refinery commit 39846f5
-  # (shared Workbench shell). Built locally with deploy/build-image.sh; the
-  # repo has no CI since 2026-09-17, so local build + this pin is the release
-  # path. Keep this immutable release until the next tested image replaces it.
-  hwc.automation.refinery.image = "localhost/refinery:39846f5-docker";
-  hwc.automation.refinery.imagePull = "never";
-  # Service split wave 1 (2026-09-25): the board, nightly builds and both
-  # gauntlets run on hwc-work with their state. The role defaults above are
-  # overridden here; /var/lib/refinery and /var/lib/sr-gauntlet stay on disk
-  # for the rollback window and are removed in wave 5. The refinery vhost is
-  # work-owned in routes.nix, so this Caddy proxies it to hwc-work.
-  hwc.automation.refinery.enable = false;
-  hwc.automation.nightlyBuilds.enable = false;
+  # Migrated application state remains for recovery until archive restore
+  # checks pass. Application ownership is explicit on hwc-work; the server
+  # role now supplies infrastructure only.
 
   # `deploy` — interactive one-step deploy CLI; auto-discovers ~/600_apps/*/deploy.sh
   hwc.server.deploy.enable = true;
@@ -400,37 +391,9 @@
   # Runs on hwc-work with the rest of the brain stack (service split wave 1).
   hwc.automation.brainSweep.enable = false;
 
-  # DataX monitor runs on hwc-work (service split wave 2). The database stays
-  # here untouched for the rollback window (dropped in wave 5).
-  # TEMPORARY: removal = the business role leaves this host (wave 5).
-  hwc.business.dataxMonitor.enable = false;
-
-  # Service split wave 2 fused window: the business apps, the hwc-sys gateway
-  # and the morning briefing run on hwc-work (machines/work/config.nix). Their
-  # databases and state stay here untouched for the rollback window (dropped
-  # in wave 5). The scouts, control bot and Radicale left this file with their
-  # settings; these are the business-role members.
-  # TEMPORARY: removal = the business role leaves this host (wave 5).
-  hwc.business.crm.enable = false;
-  hwc.business.leads.enable = false;
-  hwc.business.databases.enable = false;
-  hwc.business.umami.enable = false;
-  hwc.business.estimator.enable = false;
-  hwc.business.website.enable = false;
-  hwc.business.website.webapps.enable = false;
-  hwc.business.morningBriefing.enable = false;
-  hwc.business.paperless.enable = false;  # wave 3: runs on hwc-work
-  hwc.business.firefly.enable = false;    # wave 3: runs on hwc-work
-  hwc.automation.n8n.enable = false;      # wave 4: runs on hwc-work (routeOwners.n8n)
   # The phone's receipts folder is Syncthing ingest on this host; its watcher
   # forwards drops into Paperless's consume dir on hwc-work.
   hwc.business.paperless.receipts.enable = true;
-  hwc.mail.classifier.system.enable = false;
-
-  # Workbench hub — module stays on (refinery's areas.json contract, and the
-  # business role enables it) but the vhost is served by hwc-work
-  # (routeOwners in domains/networking/routes.nix); this Caddy proxies
-  # workbench.<vhostDomain> there and the laptop pins follow.
 
   # Inbox janitor — every 30 min, drain loose files at the root of
   # ~/000_inbox/downloads per ~/000_inbox/_inbox-routing.yaml (datax stays,
@@ -678,19 +641,7 @@
   # (nanoclaw-anthropic-key.age is reused by Hermes via re-named logical secret).
   # hwc.ai.nanoclaw = { enable = false; slack.enable = false; };
 
-  # llama.cpp inference — embeddings only on this host.
-  # Embed: nomic-embed-text-v1.5 Q5 (~270 MB) on 127.0.0.1:11502; it backs
-  # brainvec ingest and brain-mcp semantic search.
-  # The two chat services (gpu LFM2-2.6B, cpu LFM2-24B) were retired
-  # 2026-09-19 with the rest of the local chat stack: they had no consumer.
-  hwc.server.ai.llamaCpp = {
-    enable = true;
-    # Local llama-cpp rebuild with sm_61 added — required because the cached
-    # CUDA binary at cache.nixos-cuda.org targets sm_75+ only and aborts on
-    # the Quadro P1000 (compute 6.1) with "no kernel image is available".
-    cudaCapabilities = ["6.1"];
-    embed.enable = true;
-  };
+  # Embeddings run on work with brainvec, brain MCP and the mail classifier.
 
   # whisper.cpp speech-to-text — resident whisper-server on 127.0.0.1:11503,
   # OpenAI-compatible /v1/audio/transcriptions, vhost `whisper` on the tailnet.
@@ -702,7 +653,13 @@
     cudaCapabilities = ["6.1"];
   };
 
-  # CouchDB for Obsidian LiveSync comes from the server role.
+  # Phone LiveSync is storage owned by this machine, not every serving host.
+  hwc.data.couchdb = {
+    enable = true;
+    settings = { port = 5984; bindAddress = "127.0.0.1"; };
+    monitoring.enableHealthCheck = true;
+    reverseProxy = { enable = true; path = "/sync"; };
+  };
 
   # Frigate NVR (Config-First Pattern with GPU Acceleration)
   # Access: https://hwc-server.ocelot-wahoo.ts.net:5443 (via Caddy)
@@ -807,17 +764,7 @@
   # their Caddy vhosts here). Phase 4.6 history (api.iheartwoodcraft.com path
   # routing, .me retirement twins, hwc-mcp-gateway origins) moved with it.
 
-  # Proton Bridge — the session runs on hwc-work since wave 2 (home.nix turns
-  # this host's bridge off). Consumers here (crm/leads SMTP, hwc-notify email,
-  # msmtp for briefing/umami report/gateway, paperless receipts IMAP via its
-  # 10.89.0.1 socat, this host's mbsync) keep dialing 127.0.0.1:1025/1143;
-  # this relay forwards those to work's tailnet listener.
-  # TEMPORARY: removal = no Proton Bridge consumer left on this host.
-  hwc.mail.bridge.relay = {
-    enable = true;
-    listenAddress = "127.0.0.1";
-    targetAddress = config.hwc.networking.hosts.ips.work;
-  };
+  # Mail and its consumers run on work; phone receipts use SSH forwarding.
 
   #============================================================================
   # REVERSE PROXY
@@ -1046,8 +993,8 @@
 
   # Vaultwarden runs on hwc-work since service split wave 3.
 
-  # Authentik SSO/Identity Provider — https://hwc-server.ocelot-wahoo.ts.net:15543
-  hwc.system.core.authentik.enable = lib.mkDefault true;
+  # Authentik retired: zero configured SSO providers. Its database and files
+  # remain for recovery. Immich owns Redis :6380 and must keep running.
 
   # Business subdomains (firefly, databases, datax, paperless, morning
   # briefing, webapps, estimator, leads, website) come from the business role.

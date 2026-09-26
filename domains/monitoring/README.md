@@ -46,7 +46,7 @@ monitoring/
 │   ├── index.nix
 │   └── parts/
 │       ├── settings.yaml
-│       ├── services.yaml
+│       ├── services.yaml  # Active fleet services; retired Authentik removed
 │       ├── widgets.yaml
 │       ├── docker.yaml
 │       └── bookmarks.yaml
@@ -58,6 +58,7 @@ monitoring/
 ```
 
 ## Changelog
+- 2026-09-26: Remove the Authentik Homepage tile with its retirement. Module-gated probes automatically drop the retired Authentik and server embedding targets.
 - 2026-09-25: Service split wave 4: the public webhook-ingress probe targets `/webhook/estimate-push` (calculator-lead retired); Homepage's n8n tile follows n8n to hwc-work; the Hermes/Market Trials tiles are gone with the module.
 
 - 2026-09-25: Service split wave 3 (monitoring fleet): `prometheus/` split into an **agent** (every serving host, server role: node + blackbox exporters bound to the host's tailnet IP, plus the host's EXPORTS — `scrapeConfigs`, new `probes`, new `rules`) and the **central** Prometheus (monitoring role, now on hwc-work) which unions every registered server's exports from its evaluated config, rewrites localhost targets to the tailnet IP, labels series `host`/`instance`, and routes probes through the owning host's blackbox agent. Service probes are declared where the service runs (gated on its module/container), so moving an app moves its probe. cAdvisor, podman-exporter and exportarr bind the tailnet address and assert the agent, not a local Prometheus. Grafana, Alertmanager, Homepage run on hwc-work; Homepage's container-socket statuses became `siteMonitor`s, stale links fixed (gateway, Prometheus, *arr subpaths), a Fleet group shows each host's disks from Prometheus, tiles added for Pico, importer, workbench, home/event scout. Checks `alert-rules-parse` and `frigate-contract` follow the central host / exported rules.

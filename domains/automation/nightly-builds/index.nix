@@ -437,7 +437,9 @@ in
         # was prompt-only. Bind /mnt read-only so a misbehaving agent physically
         # cannot move/delete media. Worktrees (/tmp/nightly), the vault
         # (runs/REPORT), the repo, and /var/lib/refinery stay writable.
-        ReadOnlyPaths = [ "/mnt" ];
+        # Work has no /mnt. Ignore absence while preserving read-only access
+        # on hosts with media mounts; otherwise systemd fails before ExecStart.
+        ReadOnlyPaths = [ "-/mnt" ];
       };
     };
 
@@ -478,7 +480,7 @@ in
         NoNewPrivileges = true;
         # Same OS-enforced Gate 7 as the nightly runner: run-now executes the
         # same cards, so /mnt is read-only here too.
-        ReadOnlyPaths = [ "/mnt" ];
+        ReadOnlyPaths = [ "-/mnt" ];
       };
     };
 

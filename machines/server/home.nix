@@ -12,10 +12,7 @@
   # derived address). The old n8n webhook → Slack hop was retired 2026-07-09;
   # leaving webhook.url unset makes send_webhook a no-op.
 
-  # Service split wave 2: the Proton Bridge session runs on hwc-work. This
-  # host's mail consumers still dial 127.0.0.1:1025/1143, which
-  # hwc.mail.bridge.relay (config.nix) forwards to hwc-work over the tailnet.
-  hwc.mail.bridge.enable = false;
+  # The mail role and its timers moved to work; retained mail state is recovery data.
 
   # khalt + the Radicale mirror collections left with the hwc-sys gateway
   # (their one consumer) for hwc-work in service split wave 2.

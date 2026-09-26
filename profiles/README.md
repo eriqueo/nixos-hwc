@@ -24,15 +24,16 @@ nothing else. Machines compose roles via the `machines` registry in
 ```
 base/        sys.nix  home.nix    # every machine — system core, secrets, CLI env
 desktop/     sys.nix  home.nix    # laptop, xps — screen + human (GUI apps, mail client menu)
-server/      sys.nix              # server, xps — infra serving (Phase C)
-business/    sys.nix              # server — Heartwood operations (Phase C)
-monitoring/  sys.nix              # server, xps — observability
+server/      sys.nix              # server, work, xps — serving infrastructure
+business/    sys.nix              # work — Heartwood operations
+monitoring/  sys.nix              # work — central observability
 gaming/      sys.nix              # kids — retro gaming station
 appliance/   sys.nix              # firestick — lean travel TV stack
-mail/        home.nix             # server — hwc.mail menu (Phase C)
+mail/        home.nix             # work — hwc.mail menu
 ```
 
 ## Changelog
+- 2026-09-26: Server loses business/mail membership. CouchDB, Refinery and Nightly Builds are enabled by their owner machines, not by the generic server role.
 - 2026-09-21: The business system role enables the resident Laya mail
   classifier used by retriage and the morning briefing.
 

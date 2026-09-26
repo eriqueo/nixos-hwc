@@ -1,6 +1,6 @@
 # profiles/server/sys.nix — server role, NixOS lane
 #
-# Infra-serving bundle shared by all serving machines (containers, CouchDB,
+# Infra-serving bundle shared by all serving machines (containers,
 # ZFS hygiene, passwordless service management, server
 # firewall posture). Anything one machine diverges on is overridden in its
 # machine file (role values use mkDefault where override is expected).
@@ -78,30 +78,8 @@
     };
   };
 
-  # CouchDB for Obsidian LiveSync
-  hwc.data.couchdb = {
-    enable = lib.mkDefault true;
-    settings = {
-      port = lib.mkDefault 5984;
-      bindAddress = lib.mkDefault "127.0.0.1";  # Localhost only for security
-    };
-    monitoring.enableHealthCheck = lib.mkDefault true;
-    reverseProxy = {
-      enable = lib.mkDefault true;  # Expose via Caddy for remote access
-      path = lib.mkDefault "/sync"; # Match Obsidian's expected path
-    };
-  };
-
-  # Nightly Builds — unattended overnight gauntlet-card runner. Lives on the
-  # server role because the always-on machine is the one that runs overnight.
-  hwc.automation.nightlyBuilds.enable = lib.mkDefault true;
-
-  # Refinery — read-only Kanban board for the gauntlet hopper (port 8060,
-  # behind Caddy as refinery.hwc.iheartwoodcraft.com).
-  hwc.automation.refinery.enable = lib.mkDefault true;
-  # 2026-09-04: the Refinery runs as the eriqueo/refinery container image (one
-  # artifact for this host and a droplet). Native mode remains selectable.
-  hwc.automation.refinery.mode = lib.mkDefault "container";
+  # Stateful applications are enabled by their owning machine. Serving
+  # infrastructure alone must not start CouchDB, Refinery or Nightly Builds.
 
   # Passwordless service management for eric (waybar/agent tooling).
   # Lingering keeps eric's user units (rootless podman, the Proton Bridge,

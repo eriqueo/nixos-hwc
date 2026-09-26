@@ -27,7 +27,7 @@ is gated and off by default.
 domains/automation/nightly-builds/
 ├── index.nix         # Options + units: nightly-builds(.timer), -runnow(.path),
 │                     #   -review(.timer), and the opt-in privileged -rebuild(.path).
-│                     #   tmpfiles for the run-now / reviews / rebuild spools.
+│                     #   tmpfiles for spools; optional read-only /mnt sandbox.
 ├── run.sh            # Nightly launcher, packaged with its prompts/sender into an immutable store closure
 │                     #   (per-card timeout = the card's declared minute budget +50%)
 ├── send-report.sh    # Rich per-card Discord report (REPORT.md attached)
@@ -62,6 +62,8 @@ Claude config directory. For a non-CLI provider, set
 switching providers does not require changing runner code.
 
 ## Changelog
+
+- **2026-09-26** — Use `ReadOnlyPaths = [ "-/mnt" ]` for both runners. Work has no `/mnt`; requiring it caused systemd to exit with `226/NAMESPACE` before the launcher could run. Existing media mounts remain read-only.
 
 - **2026-09-07** — A morning with no decision now sends nothing. The P5 card
   "No nightly-build decision needs you" is gone; the run logs

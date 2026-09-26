@@ -217,11 +217,6 @@
         href: http://hwc-work.ocelot-wahoo.ts.net:9090
         description: Metrics collection (fleet)
         siteMonitor: http://hwc-work.ocelot-wahoo.ts.net:9090/-/healthy
-    - Authentik:
-        icon: authentik
-        href: https://hwc-server.ocelot-wahoo.ts.net:15543
-        description: SSO / Identity
-        siteMonitor: https://hwc-server.ocelot-wahoo.ts.net:15543
     - Vaultwarden:
         icon: vaultwarden
         href: https://vaultwarden.hwc.iheartwoodcraft.com
