@@ -1,5 +1,4 @@
-# hwc-work — staged MS-02 work server. Production service ownership remains
-# on hwc-server until a service is migrated with its state and callers.
+# hwc-work — MS-02 work and development application server.
 { config, pkgs, ... }:
 {
   imports = [
@@ -29,7 +28,7 @@
   system.stateVersion = "25.11";
 
   # The server role supplies Podman, CLI tools and server path defaults.
-  # CouchDB and the Proton bridge stay on hwc-server until their own waves.
+  # CouchDB stays with phone storage on the home server.
   hwc.data.couchdb.enable = false;
   # The cert exporter requires a system bridge unit no host runs, and nothing
   # reads its pem; the mail role's user-unit bridge serves plaintext loopback.
@@ -61,8 +60,8 @@
   # Refinery, nightly builds and both gauntlets moved here with their state
   # (/var/lib/refinery, /var/lib/sr-gauntlet, ~/700_datax/*_gauntlet). The
   # brain stack (brain-mcp, brainvec, llama-embed on CPU, brain-sweep) runs
-  # here against this host's clone of the vault hub. hwc-notify still lives
-  # on hwc-server, so every notifier posts to its tailnet vhost.
+  # here against this host's clone of the vault hub. hwc-notify runs here;
+  # senders use its shared derived address.
   #==========================================================================
   hwc.automation.refinery = {
     enable = true;
@@ -111,8 +110,7 @@
   #==========================================================================
   # Service split wave 2 — business apps (business role since the fused
   # window; DataX monitor moved first in step 3b). Databases were restored
-  # here from hwc-server's final pg_dumps. hwc-notify stays on hwc-server, so
-  # every notifier posts to its tailnet port route.
+  # here from hwc-server's final pg_dumps. Notifications run locally too.
   #==========================================================================
   # Paperless (wave 3): state on this host's SSD under /var/lib/hwc (in borg),
   # not the server's DAS paths the module defaults to. Phone receipts still

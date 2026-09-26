@@ -1,17 +1,12 @@
 # machines/server/home.nix
 #
 # MACHINE: HWC-SERVER — Home Manager one-offs (HM lane)
-# CLI defaults come from the base role's home half; the mail menu comes
-# from the mail role. Only genuine headless one-offs live here.
+# CLI defaults come from the base role's home half. Mail runs on work.
+# Only genuine headless one-offs live here.
 
 { lib, ... }:
 
 {
-  # Mail-health alerts route via hwc-notify only (priority-1 fanout: Discord ×2
-  # + email), at the default hwc.mail.health.notify.url (the dispatcher's one
-  # derived address). The old n8n webhook → Slack hop was retired 2026-07-09;
-  # leaving webhook.url unset makes send_webhook a no-op.
-
   # The mail role and its timers moved to work; retained mail state is recovery data.
 
   # khalt + the Radicale mirror collections left with the hwc-sys gateway

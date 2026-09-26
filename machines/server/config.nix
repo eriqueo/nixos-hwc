@@ -25,7 +25,7 @@
     ../../domains/server/native/ai/brain-mcp/index.nix # Brain MCP Server (Deno)
     ../../domains/server/native/ai/brainvec/index.nix # brainvec semantic-index ingest (vault embeddings)
     ../../domains/server/native/ai/dx2/index.nix # DX2 endpoint facts (URL, model, key) for research-scout + inbox-processor
-    ../../domains/server/native/ai/llama-cpp/index.nix # llama.cpp inference (embed only on this host)
+    ../../domains/server/native/ai/llama-cpp/index.nix # Options shared with Whisper; embeddings disabled
     ../../domains/server/native/ai/whisper/index.nix # whisper.cpp speech-to-text server (GPU)
     ../../domains/server/services/inbox-processor/index.nix # Phone capture processor (Whisper + Tesseract)
     ../../domains/server/services/bloxels-cv/index.nix # Bloxels grid photo classifier (path watcher)
@@ -405,8 +405,6 @@
   hwc.automation.inboxJanitor.enable = true;
   hwc.automation.inboxJanitor.dryRun = false;
 
-  # Unified lead pipeline comes from the business role.
-
   # Off-host dead-man's switch: healthchecks.io check "hwc-server" (5 min
   # period, 10 min grace). It alerts when these pings stop.
   hwc.monitoring.heartbeat = {
@@ -647,7 +645,7 @@
   # OpenAI-compatible /v1/audio/transcriptions, vhost `whisper` on the tailnet.
   # Same sm_61 rebuild as llama-cpp: the cached binary has no Pascal kernels
   # and every model above base.en died with "IM2COL failed" (2026-09-05).
-  # Shares the 4 GB P1000 with llama-embed and Frigate.
+  # Shares the 4 GB P1000 with Frigate and media workloads.
   hwc.server.ai.whisper = {
     enable = true;
     cudaCapabilities = ["6.1"];
@@ -760,8 +758,7 @@
   #============================================================================
   # The tunnel process and its full ingress table live in
   # machines/work/config.nix; it reaches the apps still on this host over the
-  # tailnet (n8n, gateway, datax-monitor directly; crm, lead-scout, umami via
-  # their Caddy vhosts here). Phase 4.6 history (api.iheartwoodcraft.com path
+  # tailnet. Migrated app origins are local to work. Phase 4.6 history (api.iheartwoodcraft.com path
   # routing, .me retirement twins, hwc-mcp-gateway origins) moved with it.
 
   # Mail and its consumers run on work; phone receipts use SSH forwarding.
@@ -996,8 +993,8 @@
   # Authentik retired: zero configured SSO providers. Its database and files
   # remain for recovery. Immich owns Redis :6380 and must keep running.
 
-  # Business subdomains (firefly, databases, datax, paperless, morning
-  # briefing, webapps, estimator, leads, website) come from the business role.
+  # Business applications and their role run on work. The business domain
+  # import here supplies only the phone receipt-forwarding capability.
 
   # Immich photo management (container-based)
   hwc.media.immich = {
