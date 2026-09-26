@@ -1059,7 +1059,7 @@
       in
       assert lib.all (c: !(lib.hasInfix "break-lock"
         (c.systemd.services.borgbackup-job-hwc-backup.preStart or ""))) hosts;
-      assert lib.all (c: lib.hasInfix "${c.services.postgresql.package}/bin/pg_dumpall"
+      assert lib.all (c: lib.hasInfix (builtins.unsafeDiscardStringContext "${c.services.postgresql.package}/bin/pg_dumpall")
         c.services.borgbackup.jobs.hwc-backup.preHook) hosts;
       pkgs.runCommand "borg-recovery" { nativeBuildInputs = [ pkgs.python3 pkgs.bash pkgs.coreutils ]; } ''
         python3 - ${lib.concatStringsSep " " (map toString hookFiles)} ${restore}/bin/borg-restore <<'PY'
