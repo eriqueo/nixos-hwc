@@ -12,9 +12,11 @@ CPU-only Laya service performs mail classification locally. **JobTread
 sections (jobs/leads/tasks/overdue/docs) are placeholders** pending a local data
 source — see "JobTread follow-up" below.
 
-Dashboard: `https://hwc-server.ocelot-wahoo.ts.net:16443`
+Dashboard: `https://briefing.hwc.iheartwoodcraft.com`
 
 ## Structure
+
+`prompts/today/` requires host attribution rather than assuming the retired server name. Remote evidence gaps stay explicit; the dispatch tool grant is unchanged.
 
 ```
 index.nix              # NixOS module: systemd service + timer

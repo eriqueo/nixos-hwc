@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Morning Briefing diagnosis templates establish the execution host and distinguish it from the alert's host.
+
 Machine references follow machines/home for retained phone/media ingress; business applications remain on work.
 ```
 business/
@@ -30,6 +32,7 @@ business/
 ```
 
 ## Changelog
+- 2026-09-26: Remove the retired hostname from Today diagnosis prompts; require host attribution before using local evidence.
 - 2026-09-26: Machine references follow machines/home for retained phone/media ingress; business applications remain on work.
 - 2026-09-25: `firefly/parts/explorer.nix` waits (bounded, 180 s) for Firefly to answer before starting: the explorer exits on a failed startup check, and `podman-firefly` is active before PHP listens, so the first start on hwc-work lost that race (the same race would recur at every boot).
 - 2026-09-25: Service split wave 3 (3.4): Firefly III + Pico + importer + explorer and their cron/digest timers run on hwc-work (their state is the two databases; `/opt/firefly` holds only the generated `.env`). `workbench`: removed the `remoteRoutes` scaffolding option — the owner map's stubs already make every remote vhost name known.
