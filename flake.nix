@@ -1156,9 +1156,15 @@
       service-split-retirement = let
         server = self.nixosConfigurations.hwc-home.config;
         work = self.nixosConfigurations.hwc-work.config;
+        laptopHome = self.nixosConfigurations.hwc-laptop.config.home-manager.users.eric;
+        mailCommand = "ssh -t ${work.hwc.networking.hosts.fqdn.work} aerc";
         peer = self.nixosConfigurations.hwc-xps.config;
         absent = units: names: lib.all (name: !(builtins.hasAttr name units)) names;
       in
+      assert lib.assertMsg (laptopHome.hwc.home.core.shell.aliases.aerc == mailCommand
+        && lib.elem "SUPER,E,exec,kitty -e ${mailCommand}"
+          laptopHome.wayland.windowManager.hyprland.settings.bind)
+        "service split: laptop shell and desktop mail must reach the work mail owner";
       assert lib.assertMsg (absent server.systemd.services [
         "podman-authentik-server" "podman-authentik-worker" "authentik-env"
         "llama-embed" "podman-n8n" "nightly-builds"

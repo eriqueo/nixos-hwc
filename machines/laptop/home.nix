@@ -5,8 +5,11 @@
 # this file adjusts only what is unique to this machine.
 # Shared between NixOS module (nixos-rebuild) and standalone (home-manager switch).
 
-{ config, lib, pkgs, ... }:
-let dictationModel = "base.en"; in
+{ config, lib, pkgs, osConfig ? {}, ... }:
+let
+  dictationModel = "base.en";
+  mailHost = lib.attrByPath [ "hwc" "networking" "hosts" "fqdn" "work" ] "hwc-work" osConfig;
+in
 
 {
   # Codex pinned to the upstream release binary (faster-moving than the
@@ -109,9 +112,9 @@ let dictationModel = "base.en"; in
   # Shell (MCP client config is generated system-wide by agent-harness userMcp)
   hwc.home.core.shell = {
     enable = true;
-    # Mail lives on the server (laptop mbsync is disabled); run aerc there.
+    # Work owns mail; shell, Zellij, Workbench and Hyprland consume this command.
     # `command aerc` still reaches the local binary if ever needed.
-    aliases.aerc = "ssh -t server aerc";
+    aliases.aerc = "ssh -t ${mailHost} aerc";
     # datax/jt-mcp relocated to a worktree-container layout (2026-06-26): the repo
     # root is now a container holding main/ (read-only upstream mirror) + eok/* work
     # worktrees. Point the jump aliases at main/. Laptop-only override — the server's
