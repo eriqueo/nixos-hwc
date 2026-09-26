@@ -1050,6 +1050,33 @@
         # [-] character class keeps this lint from matching its own definition
         "rg 'github:eriqueo/nixos[-]hwc' flake.nix"
       ];
+      # Wave 4 compatibility contract: the old entry point survives while
+      # only work owns the application. Remove the legacy-port assertion only
+      # with wave 5 evidence that old clients have moved.
+      n8n-route-compatibility = let
+        server = self.nixosConfigurations."hwc-server".config;
+        work = self.nixosConfigurations."hwc-work".config;
+        route = lib.findFirst (r: r.name == "n8n") null
+          work.hwc.networking.shared.effectiveRoutes;
+        port = toString route.port;
+        ownerIp = work.hwc.networking.hosts.ips.work;
+        ownerName = work.hwc.networking.hosts.fqdn.work;
+        oldListener = "${server.hwc.networking.shared.rootHost}:${port}";
+        serverCaddy = server.services.caddy.extraConfig;
+      in
+      assert lib.assertMsg (!server.hwc.automation.n8n.enable && work.hwc.automation.n8n.enable)
+        "n8n compatibility: work must be the only declared writer";
+      assert lib.assertMsg (lib.hasInfix oldListener serverCaddy
+        && lib.hasInfix "reverse_proxy https://${ownerIp}:${port}" serverCaddy
+        && lib.hasInfix "tls_server_name ${ownerName}" serverCaddy
+        && lib.hasInfix "header_up Host ${ownerName}" serverCaddy
+        && lib.elem route.port server.networking.firewall.allowedTCPPorts)
+        "n8n compatibility: former-owner listener, upstream, TLS identity or firewall missing";
+      assert lib.assertMsg (lib.hasInfix "${ownerName}:${port}" work.services.caddy.extraConfig
+        && lib.hasInfix "reverse_proxy http://127.0.0.1:${toString work.hwc.automation.n8n.port}" work.services.caddy.extraConfig)
+        "n8n compatibility: work does not serve the local application";
+      pkgs.runCommand "n8n-route-compatibility" {} ''touch "$out"'';
+
       # Tracked n8n workflow JSON is a REDACTED DERIVED EXPORT of live n8n
       # (domains/automation/n8n/parts/workflows/README.md). This runs the same
       # scanner the export tool refuses to write past, so a raw webhook, bearer

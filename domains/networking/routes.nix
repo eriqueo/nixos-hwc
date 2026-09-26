@@ -284,6 +284,9 @@ in
       name = "n8n";
       mode = "port";
       port = 2443;
+      # TEMPORARY: preserve existing editor/webhook clients during the split.
+      # Remove in wave 5 only after old-port callers and bookmarks are verified.
+      forwardFrom = [ "main" ];
       upstream = "http://127.0.0.1:5678";
       # Strip port from Origin header - n8n validates origin against hostname only
       headers = { Origin = "https://${config.hwc.networking.hosts.fqdn.${config.hwc.networking.shared.routeOwners.n8n.owner}}"; };

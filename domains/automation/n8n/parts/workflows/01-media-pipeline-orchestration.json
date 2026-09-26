@@ -362,7 +362,7 @@
         },
         "options": {},
         "sendHeaders": true,
-        "url": "http://127.0.0.1:8096/Library/VirtualFolders"
+        "url": "https://jellyfin.hwc.iheartwoodcraft.com/Library/VirtualFolders"
       },
       "position": [
         -16,
@@ -384,7 +384,7 @@
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "options": {},
-        "url": "http://127.0.0.1:8096/Library/VirtualFolders"
+        "url": "https://jellyfin.hwc.iheartwoodcraft.com/Library/VirtualFolders"
       },
       "position": [
         -16,
@@ -410,7 +410,7 @@
         "options": {},
         "sendBody": true,
         "specifyBody": "json",
-        "url": "http://127.0.0.1:8096/Library/Refresh"
+        "url": "https://jellyfin.hwc.iheartwoodcraft.com/Library/Refresh"
       },
       "position": [
         464,
@@ -436,7 +436,7 @@
         "options": {},
         "sendBody": true,
         "specifyBody": "json",
-        "url": "http://127.0.0.1:8096/Library/Refresh"
+        "url": "https://jellyfin.hwc.iheartwoodcraft.com/Library/Refresh"
       },
       "position": [
         464,
@@ -567,7 +567,7 @@
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "options": {},
-        "url": "=http://127.0.0.1:8096/Items?SearchTerm={{ encodeURIComponent($json.searchTitle) }}&IncludeItemTypes={{ $json.itemType }}&Recursive=true"
+        "url": "=https://jellyfin.hwc.iheartwoodcraft.com/Items?SearchTerm={{ encodeURIComponent($json.searchTitle) }}&IncludeItemTypes={{ $json.itemType }}&Recursive=true"
       },
       "position": [
         1184,

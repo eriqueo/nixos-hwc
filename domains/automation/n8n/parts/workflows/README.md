@@ -39,6 +39,12 @@ Secrets belong in the container env, referenced from the workflow as
 
 ### Regeneration status
 
+Both `01-media-pipeline-orchestration.json` and
+`02-frigate-surveillance-intelligence.json` were regenerated from live n8n on
+2026-09-25 for wave 4. They use the Jellyfin and Frigate vhosts instead of
+server loopback addresses. The canonicalizer secret scan and its 32 tests
+passed. The paragraphs below record the earlier behavioral changes.
+
 `01-media-pipeline-orchestration.json` is a canonical export of live workflow
 `home:media:jellyfin-alert` (`n14heZ9wzJ8Uyemo`). It carries the `_hwc` marker and
 was regenerated after the 2026-09-07 production exercise.

@@ -129,7 +129,7 @@
           },
           "timeout": 5000
         },
-        "url": "=http://127.0.0.1:5000/vod/event/{{ $json.eventId }}/master.m3u8"
+        "url": "=https://frigate.hwc.iheartwoodcraft.com/vod/event/{{ $json.eventId }}/master.m3u8"
       },
       "position": [
         -1160,
@@ -152,7 +152,7 @@
           },
           "timeout": 5000
         },
-        "url": "=http://127.0.0.1:5000/api/events/{{ $json.eventId }}/snapshot.jpg"
+        "url": "=https://frigate.hwc.iheartwoodcraft.com/api/events/{{ $json.eventId }}/snapshot.jpg"
       },
       "position": [
         -624,

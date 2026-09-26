@@ -25,10 +25,12 @@ let
   ownedRoutes = map
     (r: if ownerMap ? ${r.name} then r // { owner = ownerMap.${r.name}.owner; } else r)
     declaredRoutes;
-  # A port route belongs to one host's tailnet name (rootHost); another
-  # owner's port route has nothing to serve here, so it is not rendered.
+  # Port routes are local unless a migration explicitly retains a former
+  # owner's listener. The same set drives rendering and firewall openings.
   isRemoteOwned = r: r ? owner && hostAliases.${r.owner} != config.networking.hostName;
-  localPortRoutes = lib.filter (r: r.mode == "port" && !(isRemoteOwned r)) routes;
+  portRoutes = lib.filter (r: r.mode == "port" && (!(isRemoteOwned r)
+    || lib.elem config.networking.hostName
+      (map (alias: hostAliases.${alias}) (r.forwardFrom or [])))) routes;
 
   # A subpath route lives under THIS host's tailnet root (rootHost/path), so a
   # client pinned to it (the estimator's webhook URL, a laptop mail tool) keeps
@@ -36,8 +38,9 @@ let
   # therefore rendered here as a proxy to the same path on the owner's root
   # host — the subpath twin of the vhost stubs below: IP upstream + SNI/Host of
   # the owner, so the request never loops through this Caddy's own DNS name.
-  remoteSubpath = r: r // {
-    upstream = "https://${config.hwc.networking.hosts.ips.${r.owner}}";
+  remoteRoute = r: r // {
+    upstream = "https://${config.hwc.networking.hosts.ips.${r.owner}}"
+      + lib.optionalString (r.mode == "port") ":${toString r.port}";
     tlsServerName = config.hwc.networking.hosts.fqdn.${r.owner};
     headers = (r.headers or {}) // { Host = config.hwc.networking.hosts.fqdn.${r.owner}; };
   };
@@ -161,9 +164,9 @@ let
         }
       '';
     in
-      if r.mode == "subpath" && isRemoteOwned r then
+      if lib.elem r.mode [ "subpath" "port" ] && isRemoteOwned r then
         # The owner serves the app; this host forwards the same path there.
-        renderRoute (removeAttrs (remoteSubpath r) [ "owner" ])
+        renderRoute (removeAttrs (remoteRoute r) [ "owner" ])
       else if r.mode == "subpath" then
         # If the app has a URL base, we must preserve the path; otherwise we may strip.
         (if needsUrlBase then subpathPreserve else subpathStrip)
@@ -431,7 +434,7 @@ in
         # Root tailnet listener exists only where subpath routes or MCP need it.
         ${rootBlock}
 
-        ${concatStringsSep "\n" (map renderRoute localPortRoutes)}
+        ${concatStringsSep "\n" (map renderRoute portRoutes)}
 
         ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "static") routes))}
 
@@ -455,7 +458,7 @@ in
 
     networking.firewall.allowedTCPPorts =
       [ 80 443 ]
-      ++ (lib.map (r: r.port) (localPortRoutes ++ lib.filter (r: r.mode == "static") routes));
+      ++ (lib.map (r: r.port) (portRoutes ++ lib.filter (r: r.mode == "static") routes));
   })
   ];
 }
