@@ -408,7 +408,7 @@ function makeMailTile(triage,liveThreads,mailHealth){
 
   if(merged.error){
     sec.appendChild($('div',{class:'empty'},`Triage unavailable: ${merged.error}`));
-    sec.appendChild($('div',{class:'empty-hint'},'diagnose on hwc-server: domains/business/morning-briefing/logs/run.log (+ mail-triage-raw.log)'));
+    sec.appendChild($('div',{class:'empty-hint'},'diagnose on the Morning Briefing host: domains/business/morning-briefing/logs/run.log (+ mail-triage-raw.log)'));
     appendMailHealth(sec,mailHealth);
     return sec;
   }

@@ -62,7 +62,7 @@ for card in "${DISPATCH_DIR}"/*.md; do
     # way, and a failed unit surfaces in tomorrow's briefing (services_failed).
     if claude_auth_failed "${output}"; then
       log "FATAL: claude auth failure (credential expired or invalid) — ${name} left in queue"
-      log "FATAL: re-authenticate on hwc-server: run \`claude\`, then /login; verify with \`claude -p PONG\`"
+      log "FATAL: re-authenticate on the host running this dispatcher: run \`claude\`, then /login; verify with \`claude -p PONG\`"
       exit 1
     fi
     printf '%s\n\n---\n*dispatched %s · card: %s*\n' "${output}" "$(date -Iseconds)" "${name}" > "${report_path}"
