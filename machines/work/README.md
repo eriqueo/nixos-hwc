@@ -27,7 +27,9 @@ as part of the Linux cutover.
 
 NetworkManager has a persistent `Pupcastle` Wi-Fi profile on `wlo5`. Keep that
 profile through activation. Ethernet is optional. The observed Wi-Fi address was
-`192.168.0.231`; check DHCP if it changes. Keep the old server on its existing
+`192.168.0.231`; check DHCP if it changes. `hardware.nix` pins the Intel
+BE20x card to Wi-Fi 6E (`iwlwifi disable_11be=1`): on Wi-Fi 7 multi-link at
+320 MHz its firmware crashed repeatedly under sustained load (2026-09-25). Keep the old server on its existing
 network and leave its production services and DAS in place.
 
 Before activation, check the actual mounts, connectivity and administrator access:
