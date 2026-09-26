@@ -11,12 +11,6 @@ in
   #==========================================================================
   options.hwc.home.apps.proton-authenticator = {
     enable = lib.mkEnableOption "Proton Authenticator";
-
-    autoStart = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Auto-start Proton Authenticator on login";
-    };
   };
 
   #==========================================================================

@@ -10,6 +10,9 @@ let
   gsrEnabled = gsrCfg.enable or false;
 
   dictateEnabled = config.hwc.home.apps.hwc-dictation.enable or false;
+  authEnabled = config.hwc.home.apps.proton-authenticator.enable or false;
+  passEnabled = config.hwc.home.apps.proton-pass.enable or false;
+  bitwardenEnabled = config.hwc.home.apps.bitwarden.enable or false;
   # Consume the same structured record as Hyprland and its keybind legend.
   hyprlandBehavior = import ../../hyprland/parts/behavior.nix { inherit config lib pkgs; };
   dictateCommand = hyprlandBehavior.dictateCommand;
@@ -41,8 +44,10 @@ let
       "custom/sep-2"
       "temperature" "custom/disk-space" "custom/battery"
       "custom/sep-3"
-      "custom/proton-auth" "tray" "custom/notification" "custom/power"
-    ];
+    ] ++ lib.optionals authEnabled [ "custom/proton-auth" ]
+      ++ lib.optionals passEnabled [ "custom/proton-pass" ]
+      ++ lib.optionals bitwardenEnabled [ "custom/bitwarden" ]
+      ++ [ "tray" "custom/notification" "custom/power" ];
   };
 
   workspaceInternal = {
@@ -171,7 +176,9 @@ let
     };
     "custom/disk-space" = { format = "{}"; exec = "waybar-disk-space"; return-type = "json"; interval = 30; on-click = "baobab"; };
     "custom/battery" = { format = "{}"; exec = "waybar-battery-health"; return-type = "json"; interval = 5; on-click = "waybar-power-settings"; };
-    "custom/proton-auth" = { format = "Auth"; tooltip = "Proton Authenticator (SUPER+A)"; on-click = "proton-authenticator-toggle"; };
+    "custom/proton-auth" = { format = "󰦝"; tooltip = "Proton Authenticator (SUPER+A)"; on-click = "proton-authenticator-toggle"; };
+    "custom/proton-pass" = { format = "Pass"; tooltip = "Proton Pass"; on-click = "hyprland-app-toggle proton-pass ${pkgs.proton-pass}/bin/proton-pass"; };
+    "custom/bitwarden" = { format = "BW"; tooltip = "Bitwarden (Vaultwarden account)"; on-click = "${pkgs.hyprland}/bin/hyprctl dispatch exec ${pkgs.bitwarden-desktop}/bin/bitwarden"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
     "custom/power" = { format = "Pwr"; tooltip = "Shutdown"; on-click = "wlogout"; };
     "custom/workspace-link" = { format = "{}"; exec = "waybar-workspace-link-status"; return-type = "json"; interval = "once"; signal = 8; on-click = "waybar-workspace-link-toggle"; };

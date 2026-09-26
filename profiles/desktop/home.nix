@@ -47,9 +47,8 @@
 
       # Proton Suite
       proton-authenticator.enable = lib.mkDefault true;
-      proton-authenticator.autoStart = lib.mkDefault true;
       proton-pass.enable = lib.mkDefault true;
-      proton-pass.autoStart = lib.mkDefault true;
+      bitwarden.enable = lib.mkDefault true;
 
       # Productivity & Office
       obsidian.enable = lib.mkDefault true;

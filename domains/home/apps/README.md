@@ -13,6 +13,7 @@ apps/
 ├── aerc/           # Email client
 ├── aider/          # AI coding assistant
 ├── blender/        # 3D modeling
+├── bitwarden/      # Desktop client for the self-hosted vault
 ├── chromium/       # Browser
 ├── freecad/        # CAD software
 ├── gpu-screen-recorder/  # Call/screen recording (gsr-toggle script + sys.nix capture wrapper)
@@ -32,6 +33,7 @@ apps/
 ```
 
 ## Changelog
+- 2026-09-26: Added the Bitwarden desktop client as an independent app module; Proton app buttons share Hyprland's window toggle.
 - 2026-09-14: Added Vesktop through Home Manager's native `programs.vesktop`
   module; enabled only on hwc-laptop.
 - 2026-09-07: Consume Workbench registry v2: Brief first/landing; filter explicit

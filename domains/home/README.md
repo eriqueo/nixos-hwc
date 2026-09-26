@@ -19,12 +19,13 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 ## Structure
 - `apps/t3code/` — launchers and a restricted DX2 handoff adapter; T3 supplies the result limit.
 - `apps/hwc-dictation/` — owned desktop dictation package, settings and user service.
+- `apps/bitwarden/` — desktop client for the self-hosted Vaultwarden account.
 
 `apps/todui` uses the shared Radicale password selector in `domains/lib/hm.nix`.
 
 ```
 domains/home/
-├── apps/    # 50 app modules, auto-imported via readDir (index.nix per app,
+├── apps/    # app modules, auto-imported via readDir (index.nix per app,
 ├── keymap/  # shared grammar; registry hub/tool navigation destinations
 │            # optional sys.nix system half, parts/ for split config); Waybar's
 │            # laptop-only power hub has paired home/system flags for HM parity
@@ -50,6 +51,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-26: Credential app launchers now open on the active workspace; added the Bitwarden desktop client and Waybar buttons, removed unused Proton Pass settings output.
 - 2026-09-25: Deleted `apps/n8n/` (HM n8n CLI app; enabled on no host, its only effect was keeping `n8n-1.91.3` in `permittedInsecurePackages`).
 - 2026-09-25: Service split wave 3 (notifications): `apps/agent-harness` — `notifyUrl` derives from `osConfig.hwc.notifications.notify.url` (standalone-HM fallback literal only); `state-sync.sh` has no hidden fallback host.
 - 2026-09-24: `theme/templates/gtk.nix` defaults dconf activation to `theme.graphical`; headless Home Manager activation no longer requires the desktop dconf D-Bus service.

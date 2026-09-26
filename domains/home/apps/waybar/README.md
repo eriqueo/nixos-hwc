@@ -14,12 +14,14 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 - `index.nix` — options, packages, programs.waybar, systemd service, assertions
 - `sys.nix` — system-lane option + hardware/network assertions
 - `parts/behavior.nix` — module layout and per-widget settings, including daemon-driven dictation status and a tooltip shortcut derived from Hyprland's binding record
+- `parts/behavior.nix` includes app-gated Authenticator, Proton Pass and Bitwarden buttons; the Proton buttons use the Hyprland toggle.
 - `parts/appearance.nix` — HWC-branded CSS mapped onto shared theme tokens
 - The laptop power hub uses paired home/system flags; dictation remains driven by the daemon.
 - `parts/packages.nix` — waybar + module dependency packages
 - `parts/scripts.nix` — writeShellScriptBin helpers including `waybar-launch` and the structured `hwc-power-status` telemetry producer
 
 ## Changelog
+- 2026-09-26: Replaced Authenticator text with an icon and added Proton Pass and Bitwarden buttons. Credential app buttons only appear when their app is enabled.
 - 2026-09-07: Replaced the static microphone with versioned daemon status; shortcut text comes from the Hyprland binding, right-click cancels, and middle-click acknowledges the result.
 - 2026-09-07: added a clickable dictation microphone on both bar layouts when whisper dictation is enabled; hover shows the configured shortcut and click starts/stops the existing recorder.
 - 2026-09-02: Both output configs now request the 37 px height already imposed

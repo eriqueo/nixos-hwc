@@ -309,11 +309,8 @@ in {
       # the card translucent, and a legend you read through is one you misread.
       "match:class ^(hypr-keybinds)$, float on, center 1, size 1100 900, opacity 1.0"
 
-      # Proton Authenticator - tile on workspace 8, suppress fullscreen
-      "match:class ^(Proton-authenticator)$, tile on, workspace 8 silent, size 400 600, suppress_event fullscreen"
-
-      # Proton Pass - tile on workspace 8
-      "match:class ^(Proton Pass)$, tile on, workspace 8 silent"
+      # Password manager launchers place new windows on the current workspace.
+      "match:class ^(Proton-authenticator)$, tile on, size 400 600, suppress_event fullscreen"
 
       # DOSBox ECE (eXoWin3x) — inhibit idle during play
       "match:class ^(dosbox)$, idle_inhibit always"

@@ -9,6 +9,7 @@ Configures the Hyprland Wayland window manager as the desktop session: full `way
 
 ## Structure
 - `index.nix` — HM options + implementation: packages, hyprland settings merge, submaps, monitor-listener service, NixOS session-variable bridge, cross-lane and dependency assertions. Threads `behavior.keybinds` → `theme`, `theme.card` → `session`.
+- `index.nix` also provides `hyprland-app-toggle`, the shared window show/hide and graphical launch command for credential apps.
 - `sys.nix` — system-lane options; exposes helper scripts via `environment.systemPackages`.
 - `parts/behavior.nix` — the keybind records (SUPER-based, conditional todui/dt/gsr/dictation binds), mouse binds, the `resize` submap, and window rules. Returns settings, keybinds, submaps, and the dictation toggle/cancel commands shared with Waybar. `settings` is what Hyprland loads; `keybinds` supplies the legend.
 - `parts/hardware.nix` — monitor layout (eDP-1 + DP-1), workspace→monitor mapping, input/touchpad/per-device settings.
@@ -22,6 +23,7 @@ Every binding is declared **once** in `parts/behavior.nix`, as a record carrying
 It is deliberately *not* read from `hyprctl binds -j`: that API emits malformed JSON in Hyprland 0.56.0 (keys and values misaligned — `"keycode": RETURN`, `"allow_input_capture": ,`), and carries no descriptions, so the best it could ever print is `exec hyprland-monitor-toggle`.
 
 ## Changelog
+- 2026-09-26: Credential app launchers now use one Hyprland-owned toggle and show new windows on the current workspace. Removed the stale Proton Pass class rule and Authenticator workspace pin.
 - 2026-09-16: Launch Workbench with the exact `hwc-workbench` window class and suppress activation requests for that class, preventing background aerc bells from switching workspaces while preserving the desktop-wide focus policy.
 - 2026-09-12: Publish the system-owned EGL vendor selection through Home Manager's `environment.d` output so daemon-reload updates the lingering systemd user manager; subsequently started desktop services inherit the Mesa-only default without per-service copies.
 - 2026-09-07: Routed dictation to the owned daemon client and added SUPER+SHIFT+ESCAPE cancellation.

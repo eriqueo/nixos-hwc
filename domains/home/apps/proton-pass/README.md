@@ -1,17 +1,16 @@
 # proton-pass
 
 ## Purpose
-Installs the Proton Pass password manager desktop client and writes `~/.config/protonpass/config.json` with tray/notification/auto-lock (15 min) behavior and a browser-integration flag.
+Installs the Proton Pass desktop client. Waybar uses Hyprland's shared app toggle to show it on the current workspace.
 
 ## Boundaries
-- ✅ Manages: `hwc.home.apps.proton-pass.enable` → package + config.json; `browserIntegration` option (default true) fed into that config; an `autoStart` option exists but is currently inert (session part returns no services — startup is handled via Hyprland exec-once conventions).
+- ✅ Manages: `hwc.home.apps.proton-pass.enable` → desktop package.
 - ❌ Does not manage: the app's own runtime config at `~/.config/Proton Pass/` (app needs write access; theme set manually in-app), vault data/credentials, browser extensions, or window rules (in `domains/home/apps/hyprland`).
 
 ## Structure
-- `index.nix` — options (`enable`, `autoStart`, `browserIntegration`); merges part outputs.
-- `parts/session.nix` — package only; services intentionally empty.
-- `parts/behavior.nix` — writes `.config/protonpass/config.json`.
-- `parts/appearance.nix` — intentionally empty (documents why HM can't own the app's real config).
+- `index.nix` — enable option and package wiring.
+- `parts/session.nix` — desktop package.
 
 ## Changelog
+- 2026-09-26: Removed the unused `~/.config/protonpass/config.json` producer and inert options. Proton Pass keeps its real writable config; the Waybar button uses the Hyprland toggle.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

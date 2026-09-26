@@ -86,7 +86,8 @@ window#waybar {
 #cpu, #memory, #temperature, #custom-network, #pulseaudio,
 #custom-battery, #custom-power-hub, #custom-ollama, #custom-dt, #idle_inhibitor, #mpd, #tray,
 #custom-notification, #custom-power, #custom-disk-space, #backlight, #bluetooth,
-#custom-proton-auth, #custom-recording, #custom-dictation, #hyprland-language {
+#custom-proton-auth, #custom-proton-pass, #custom-bitwarden,
+#custom-recording, #custom-dictation, #hyprland-language {
   padding: 8px 6px;
   min-height: 0;
   margin: 0px 0px;
@@ -135,7 +136,8 @@ window#waybar {
 }
 
 /* Actions */
-#custom-proton-auth, #tray, #custom-notification, #custom-power {
+#custom-proton-auth, #custom-proton-pass, #custom-bitwarden,
+#tray, #custom-notification, #custom-power {
   background-color: #${colors.sectionD};
 }
 
@@ -175,6 +177,7 @@ window#waybar {
 #idle_inhibitor:hover, #mpd:hover, #tray:hover, #custom-notification:hover,
 #custom-power:hover, #custom-disk-space:hover, #backlight:hover, #bluetooth:hover,
 #custom-weather:hover, #custom-khal:hover, #custom-proton-auth:hover,
+#custom-proton-pass:hover, #custom-bitwarden:hover,
 #custom-workspace-link:hover, #custom-recording:hover, #custom-dictation:hover, #hyprland-language:hover {
   background-color: #${colors.bg3};
 }
