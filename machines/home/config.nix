@@ -103,11 +103,6 @@
   networking.hostName = "hwc-home";
   networking.hostId = "8425e349";
 
-  # Temporary: Tailscale's control plane still publishes the old machine name
-  # despite the local hostname update; its OAuth client cannot edit devices.
-  # Remove when Self.DNSName is hwc-home and its HTTPS certificate is available.
-  hwc.networking.shared.rootHost = "hwc-server.${config.hwc.networking.hosts.tailnetSuffix}";
-
   # Migrated application state remains for recovery until archive restore
   # checks pass. Application ownership is explicit on hwc-work; the server
   # role now supplies infrastructure only.
