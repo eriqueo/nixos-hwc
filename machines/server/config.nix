@@ -424,10 +424,10 @@
 
     repo.path = "/mnt/backup/borg-hwc-server";
 
-    # Same sources as rsync, plus database dumps
+    # Home/media state and database dumps. Paperless originals now live on
+    # work; its old server copy was restore-tested before wave-5 cleanup.
     sources = [
       "/mnt/media/photos" # Immich photos (CRITICAL)
-      config.hwc.business.paperless.storage.mediaDir # Paperless originals/archive (CRITICAL)
       "/var/lib/hwc" # Service state directories
       "/var/lib/backups" # Database dumps
       # T3 Code state (CRITICAL). Holds the event-sourced SQLite store — every
@@ -1034,7 +1034,7 @@
     outputDirectory = "/mnt/media/transcripts";
   };
 
-  # PostgreSQL (always enabled — used by many services)
+  # PostgreSQL remains for Immich and retained transcript databases.
   # Version pinned to 15 in domains/data/databases/index.nix (data format lock)
   hwc.data.databases.postgresql = {
     enable = lib.mkDefault true;
