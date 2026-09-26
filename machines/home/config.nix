@@ -758,6 +758,8 @@
   #============================================================================
   hwc.networking.reverseProxy = {
     enable = lib.mkDefault true;
+    # Moved app vhosts resolve directly to work; only explicit forwards remain.
+    routeOwner = "main";
     # domain defaults to this host's own tailnet FQDN (networking.hostName +
     # hwc.networking.hosts.tailnetSuffix) — no override needed.
   };

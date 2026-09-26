@@ -29,9 +29,9 @@ in
 
   # Route ownership — the ONE producer (service split). Name → host alias of
   # hwc.networking.hosts.servers that runs the backend; unlisted routes belong
-  # to "main" (hwc-server). The server proxies these vhosts to their owner, the
-  # laptop pins each name to its owner, and a routeOwner host's Caddy renders
-  # only its own. Moving an app's route = one entry here, plus the laptop
+  # to "main" (hwc-home). The laptop pins each name to its owner, and a
+  # routeOwner host's Caddy renders its own routes plus explicit forwardFrom
+  # entries. Moving an app's route = one entry here, plus the laptop
   # rebuild. `mode = "port"` marks a port route (no stub when it is absent).
   hwc.networking.shared.routeOwners = {
     calculator = "work";
@@ -294,8 +294,9 @@ in
       name = "n8n";
       mode = "port";
       port = 2443;
-      # TEMPORARY: preserve existing editor/webhook clients during the split.
-      # Remove in wave 5 only after old-port callers and bookmarks are verified.
+      # TEMPORARY: retained editor/webhook entrypoint; port access was unlogged.
+      # Remove after seven days of access-n8n.log show no non-probe home clients
+      # and configured callers still resolve to the work owner (roadmap C1).
       forwardFrom = [ "main" ];
       upstream = "http://127.0.0.1:5678";
       # Strip port from Origin header - n8n validates origin against hostname only
@@ -352,6 +353,9 @@ in
     {
       name = "webhook";
       mode = "subpath";
+      # TEMPORARY: retained tailnet automation URL. Remove after root access
+      # logs and caller inventory show no home /webhook users for seven days.
+      forwardFrom = [ "main" ];
       path = "/webhook";
       upstream = "http://127.0.0.1:5678";
       needsUrlBase = true;  # Preserve /webhook prefix - n8n expects it for routing

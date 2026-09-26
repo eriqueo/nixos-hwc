@@ -4,13 +4,12 @@ let
 
   tailscaleDomain = config.hwc.networking.shared.tailscaleDomain;
   rootHost        = config.hwc.networking.shared.rootHost;
-  # During the service split, legacy Caddy hosts keep their existing route
-  # table. A host with routeOwner set serves only explicitly assigned routes;
-  # remove the legacy null mode once every route has an owner and xps has an
-  # explicit serving role.
+  # Serving hosts render their own routes plus explicit compatibility entries.
+  # XPS retains null mode until its serving role can be deployed and checked.
   routeOwner      = config.hwc.networking.reverseProxy.routeOwner;
   routes          = lib.filter
-    (r: routeOwner == null || (r.owner or "main") == routeOwner)
+    (r: routeOwner == null || (r.owner or "main") == routeOwner
+      || lib.elem routeOwner (r.forwardFrom or []))
     config.hwc.networking.shared.effectiveRoutes;
 
   # Route ownership has one producer: shared.routeOwners (routes.nix), the
@@ -179,6 +178,24 @@ let
             alpn h2 http/1.1
           }
           encode zstd gzip
+          ${lib.optionalString ((r.forwardFrom or []) != []) ''
+          # Bound evidence for retiring a former-owner port without guessing
+          # about clients. No query strings or request headers are retained.
+          log {
+            output file /var/log/caddy/access-${r.name}.log {
+              roll_size 50MiB
+              roll_keep 5
+              roll_keep_for 7d
+            }
+            format filter {
+              wrap json
+              fields {
+                request>headers delete
+                request>uri delete
+              }
+            }
+          }
+          ''}
           ${proxyBlock}
         }
       ''
@@ -329,7 +346,7 @@ in
     routeOwner = mkOption {
       type = types.nullOr (types.enum (lib.attrNames config.hwc.networking.hosts.servers));
       default = null;
-      description = "When set, serve only routes assigned to this host alias; null retains legacy route behavior during the split.";
+      description = "Serve routes owned by this alias plus explicit forwardFrom entries; null retains legacy behavior for hosts not yet reconciled.";
     };
     domain = mkOption {
       type = types.str;

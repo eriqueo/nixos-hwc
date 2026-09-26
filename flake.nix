@@ -1205,7 +1205,15 @@
         ownerName = work.hwc.networking.hosts.fqdn.work;
         oldListener = "${server.hwc.networking.shared.rootHost}:${port}";
         serverCaddy = server.services.caddy.extraConfig;
+        workVhosts = lib.attrNames (lib.filterAttrs (_: o: o.owner == "work" && o.mode == "vhost")
+          work.hwc.networking.shared.routeOwners);
       in
+      assert lib.assertMsg (lib.all (name:
+        !(lib.hasInfix "@${name} host ${name}." serverCaddy)) workVhosts)
+        "route cleanup: a work vhost fallback returned on home";
+      assert lib.assertMsg (lib.hasInfix "handle @webhook" serverCaddy
+        && lib.hasInfix "reverse_proxy ${ownerIp}:${toString work.hwc.system.mcp.port}" serverCaddy)
+        "route cleanup: shared webhook or MCP entrypoint missing";
       assert lib.assertMsg (!server.hwc.automation.n8n.enable && work.hwc.automation.n8n.enable)
         "n8n compatibility: work must be the only declared writer";
       assert lib.assertMsg (lib.hasInfix oldListener serverCaddy
