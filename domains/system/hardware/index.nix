@@ -50,6 +50,18 @@ in
     mouse.enable = lib.mkEnableOption "Enable mouse-specific tools (Solaar for Logitech, etc.)";
     powerScripts.enable = lib.mkEnableOption "perf-mode/balanced-mode CPU governor toggle scripts";
 
+    # Declared intel_pstate HWP energy/performance preference. powerScripts
+    # above is an imperative governor toggle for a person at a desk; this is
+    # the resident policy for a host whose workload is short bursts (the
+    # MS-02's 285HX turbos one core to 5.5 GHz and 80°C for a mail poll).
+    # Hosts that run TLP must leave this null: TLP owns EPP there.
+    cpuPower.energyPerformancePreference = lib.mkOption {
+      type = t.nullOr (t.enum [ "default" "performance" "balance_performance" "balance_power" "power" ]);
+      default = null;
+      example = "balance_power";
+      description = "EPP written to every cpufreq policy at boot (null = leave the driver default).";
+    };
+
     fanControl = {
       enable = lib.mkEnableOption "Enable ThinkPad fan control via thinkfan";
 
@@ -426,7 +438,44 @@ in
       extraUdpPorts = lib.optionals cfg.peripherals.avahi [ 5353 ]; # mDNS
     };
 
-    assertions = [];
+    #==========================================================================
+    # CPU POWER POLICY (EPP)
+    #==========================================================================
+    # RemainAfterExit + ExecStop: removing the option (or the unit) restores
+    # the driver default on the next switch, so a revert never leaves an
+    # undeclared policy behind until reboot.
+    systemd.services.hwc-cpu-power = lib.mkIf (cfg.cpuPower.energyPerformancePreference != null) {
+      description = "Apply declared CPU energy/performance preference";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "systemd-modules-load.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = pkgs.writeShellScript "hwc-cpu-power-apply" ''
+          set -eu
+          n=0
+          for f in /sys/devices/system/cpu/cpufreq/policy*/energy_performance_preference; do
+            [ -w "$f" ] || continue
+            echo ${cfg.cpuPower.energyPerformancePreference} > "$f"
+            n=$((n + 1))
+          done
+          [ "$n" -gt 0 ] || { echo "no writable energy_performance_preference (intel_pstate HWP not active?)" >&2; exit 1; }
+          echo "EPP=${cfg.cpuPower.energyPerformancePreference} on $n policies"
+        '';
+        ExecStop = pkgs.writeShellScript "hwc-cpu-power-restore" ''
+          for f in /sys/devices/system/cpu/cpufreq/policy*/energy_performance_preference; do
+            [ -w "$f" ] && echo default > "$f" || true
+          done
+        '';
+      };
+    };
+
+    assertions = [
+      {
+        assertion = cfg.cpuPower.energyPerformancePreference == null || !(config.services.tlp.enable or false);
+        message = "hwc.system.hardware.cpuPower.energyPerformancePreference and services.tlp both write EPP; keep one producer.";
+      }
+    ];
   };
 
 }
