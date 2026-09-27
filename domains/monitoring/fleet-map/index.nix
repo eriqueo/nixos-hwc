@@ -26,7 +26,7 @@ in {
       wantedBy = [ "multi-user.target" ];
       after = [ "network-online.target" "tailscaled.service" ];
       wants = [ "network-online.target" ];
-      path = [ pkgs.python3 pkgs.git pkgs.nix pkgs.openssh pkgs.sudo pkgs.systemd pkgs.iproute2 pkgs.coreutils pkgs.podman pkgs.postgresql ];
+      path = [ "/run/wrappers" "/run/current-system/sw" pkgs.python3 pkgs.git pkgs.nix pkgs.openssh pkgs.sudo pkgs.systemd pkgs.iproute2 pkgs.coreutils pkgs.podman pkgs.postgresql ];
       environment = {
         HOME = config.hwc.paths.user.home;
         XDG_RUNTIME_DIR = "/run/user/1000";

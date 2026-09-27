@@ -1156,6 +1156,27 @@
       pkgs.runCommand "phone-ingest-ownership" {} ''touch "$out"'';
 
       # Service-split retirement contract, evaluated through production units.
+      fleet-map-routing = let
+        work = self.nixosConfigurations.hwc-work.config;
+        home = self.nixosConfigurations.hwc-home.config;
+        unit = work.systemd.services.fleet-map-publish;
+      in
+      assert lib.assertMsg (work.hwc.monitoring.fleet-map.enable
+        && work.hwc.networking.shared.routeOwners.map.owner == "work"
+        && lib.hasInfix "@map host map." work.services.caddy.extraConfig
+        && !(lib.hasInfix "@map host map." home.services.caddy.extraConfig))
+        "fleet-map must be published only by its work owner";
+      assert lib.assertMsg (lib.hasInfix "--capture" unit.script
+        && lib.hasInfix "/run/wrappers/bin" unit.environment.PATH
+        && lib.hasInfix "/run/current-system/sw/bin" unit.environment.PATH
+        && unit.serviceConfig.TimeoutStartSec == "10min")
+        "fleet-map publisher needs the real host commands and a bounded lifetime";
+      pkgs.runCommand "fleet-map-routing" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        cd ${inputs.fleet-map}
+        PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v
+        touch "$out"
+      '';
+
       service-split-retirement = let
         server = self.nixosConfigurations.hwc-home.config;
         work = self.nixosConfigurations.hwc-work.config;
