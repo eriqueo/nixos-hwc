@@ -8,6 +8,52 @@ let
   '';
 in
 {
+  "bitwarden-open" = sh "waybar-bitwarden-open" ''
+    window() {
+      hyprctl clients -j | jq -r '[.[] | select(.class == "bitwarden") | .address] | first // empty'
+    }
+
+    address=$(window)
+    if [[ -n "$address" ]]; then
+      workspace=$(hyprctl activeworkspace -j | jq -r '.id')
+      hyprctl dispatch movetoworkspace "$workspace,address:$address"
+      hyprctl dispatch focuswindow "address:$address"
+      exit 0
+    fi
+
+    launch() {
+      hyprctl dispatch exec ${pkgs.bitwarden-desktop}/bin/bitwarden
+      for _ in {1..10}; do
+        sleep 1
+        [[ -n "$(window)" ]] && return 0
+      done
+      return 1
+    }
+
+    if launch; then exit 0; fi
+
+    # Electron can keep its main process and tray icon after losing the window.
+    # A second launch then returns success without restoring a renderer.
+    main_pid=$(pgrep -u "$(id -u)" -f '^[^ ]*/electron /nix/store/[^ ]*/opt/Bitwarden/resources/app\.asar( |$)' || true)
+    if [[ -n "$main_pid" ]]; then
+      kill -TERM "$main_pid"
+      for _ in {1..5}; do
+        sleep 1
+        kill -0 "$main_pid" 2>/dev/null || break
+      done
+      if kill -0 "$main_pid" 2>/dev/null; then
+        echo "Bitwarden did not exit after TERM" >&2
+        notify-send "Bitwarden" "Could not reopen the app. Check its process." -u critical
+        exit 1
+      fi
+      if launch; then exit 0; fi
+    fi
+
+    echo "Bitwarden did not create a window" >&2
+    notify-send "Bitwarden" "Could not open the app. Check the Waybar journal." -u critical
+    exit 1
+  '';
+
   "launch" = sh "waybar-launch" ''
     CONFIG_SRC="''${XDG_CONFIG_HOME:-$HOME/.config}/waybar/config"
     STYLE_SRC="''${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"

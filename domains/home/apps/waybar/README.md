@@ -15,12 +15,14 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 - `sys.nix` — system-lane option + hardware/network assertions
 - `parts/behavior.nix` — module layout and per-widget settings, including daemon-driven dictation status and a tooltip shortcut derived from Hyprland's binding record
 - `parts/behavior.nix` includes app-gated Authenticator and Bitwarden buttons; Proton Pass uses its native color tray icon.
+- `parts/scripts.nix` includes the Bitwarden opener, which focuses its window and recovers a headless Electron process after a bounded launch attempt.
 - `parts/appearance.nix` — HWC-branded CSS mapped onto shared theme tokens
 - The laptop power hub uses paired home/system flags; dictation remains driven by the daemon.
 - `parts/packages.nix` — waybar + module dependency packages
 - `parts/scripts.nix` — writeShellScriptBin helpers including `waybar-launch` and the structured `hwc-power-status` telemetry producer
 
 ## Changelog
+- 2026-09-27: Recover a headless Bitwarden process when its Waybar button cannot open a window; focus an existing window directly.
 - 2026-09-26: Removed the duplicate Proton Pass text button. Authenticator and Bitwarden buttons now show their packages' color icons.
 - 2026-09-26: Replaced Authenticator text with an icon and added Proton Pass and Bitwarden buttons. Credential app buttons only appear when their app is enabled.
 - 2026-09-07: Replaced the static microphone with versioned daemon status; shortcut text comes from the Hyprland binding, right-click cancels, and middle-click acknowledges the result.

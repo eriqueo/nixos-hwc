@@ -177,7 +177,7 @@ let
     # A space keeps Waybar's static custom module clickable; CSS paints the
     # packaged full-color icon over it.
     "custom/proton-auth" = { format = " "; tooltip = "Proton Authenticator (SUPER+A)"; on-click = "proton-authenticator-toggle"; };
-    "custom/bitwarden" = { format = " "; tooltip = "Bitwarden (Vaultwarden account)"; on-click = "${pkgs.hyprland}/bin/hyprctl dispatch exec ${pkgs.bitwarden-desktop}/bin/bitwarden"; };
+    "custom/bitwarden" = { format = " "; tooltip = "Bitwarden (Vaultwarden account)"; on-click = "waybar-bitwarden-open"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
     "custom/power" = { format = "Pwr"; tooltip = "Shutdown"; on-click = "wlogout"; };
     "custom/workspace-link" = { format = "{}"; exec = "waybar-workspace-link-status"; return-type = "json"; interval = "once"; signal = 8; on-click = "waybar-workspace-link-toggle"; };
