@@ -30,7 +30,7 @@ domains/secrets/
 ├── secrets-api.nix      # Stable path facade → `hwc.secrets.api.*`
 ├── emergency.nix        # Recovery account/password wiring
 ├── hardening.nix        # Firewall/SSH/fail2ban/audit toggles under `hwc.secrets.hardening.*`
-└── vaultwarden/         # Self-hosted Bitwarden password manager (hwc.secrets.vaultwarden.*)
+└── vaultwarden/         # Self-hosted Bitwarden password manager; pinned image (hwc.secrets.vaultwarden.*)
     └── index.nix
 ```
 
@@ -57,6 +57,7 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-09-26: Vaultwarden's pinned image moved to 1.37.3 so Bitwarden 2026.7+ can use the password prelogin route.
 - 2026-09-26: Host recipients read the unchanged public key from machines/home; no rekeying or encrypted-payload changes.
 - 2026-09-25: Removed `services/hermes-deepseek-key.age` (Hermes retired) and `services/n8n-owner-password-hash.age` (fed an option the n8n module never read).
 - 2026-09-25: `vaultwarden/` runs on hwc-work (service split wave 3) and sets `SIGNUPS_ALLOWED=false` (one account; open signup let anyone reaching the vhost register — invite via the admin panel).
