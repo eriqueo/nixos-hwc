@@ -235,8 +235,8 @@ in
     }
 
     # CouchDB (Obsidian LiveSync) - strip /sync prefix
-    # TEMPORARY: keep this host-specific URL until phone LiveSync has moved
-    # to the stable sync vhost below and completed a verified sync.
+    # Permanent by design: retain the host-local LiveSync entrypoint alongside
+    # the stable sync vhost. Both reach the same CouchDB instance.
     {
       name = "couchdb";
       mode = "subpath";

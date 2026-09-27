@@ -486,6 +486,7 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **nvidia-smi PATH fallback**: GPU tool tries PATH first, then `/run/current-system/sw/bin/nvidia-smi`
 
 ## Changelog
+- **2026-09-27**: Package n8n-mcp from `parts/n8n-mcp/package-lock.json` during the Nix build. The gateway no longer installs npm dependencies as root at startup. `mcp-immutable-build` starts the backend offline and reads its bundled HTTP Request node documentation. Update the manifest with `npm install --package-lock-only --ignore-scripts --no-audit --no-fund`, refresh `npmDepsHash`, then commit, build and switch. The prior system generation and old install remain available for recovery during adoption.
 
 - 2026-09-25: Agent sessions use the service. `index.nix` adds `serverAlias`,
   `tailnetPort` and the derived `url`; the agent-harness generates `.mcp.json`
@@ -703,6 +704,10 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **2026-04-02**: Root podman fix, parameter validation, `.mcp.json` registration, Phase 1-3 foundation.
 
 ## Structure
+
+`parts/n8n-mcp/` holds the backend's dependency manifest, generated lockfile and
+offline stdio smoke test. `index.nix` builds that closure separately from the
+gateway and supplies `HWC_N8N_ENTRY_POINT` from the Nix store.
 
 `src/src/tools/site-analytics.ts` reads only seven-day visits/page views and five
 page aggregates from the configured Umami website, with a fourteen-day comparison

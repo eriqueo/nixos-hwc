@@ -9,6 +9,9 @@
 
 ## Structure
 
+`core/index.nix` supplies the overridable journal ceiling. `mcp/parts/n8n-mcp/`
+locks the backend dependency closure; the gateway consumes its Nix store entry point.
+
 MCP config and rebuild tools recognize hwc-home; config host choices also include work and the actual kids output.
 ```
 domains/system/
@@ -47,6 +50,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-09-27: Replace root startup npm installation with a locked Nix-built n8n backend; test its real stdio entry point offline. Set a 1G default journal ceiling while preserving host overrides.
 - 2026-09-26: `hardware/` — new `cpuPower.energyPerformancePreference` (default null) writes an intel_pstate EPP to every cpufreq policy from a `RemainAfterExit` oneshot whose `ExecStop` restores `default`, so a revert is clean at the next switch; asserts against TLP as a second EPP producer. hwc-work sets `balance_power`: its 285HX hit 80-90°C and 93-218 package-throttle events per core per day on one-thread pollers.
 - 2026-09-26: MCP config and rebuild tools recognize hwc-home; config host choices also include work and the actual kids output.
 - 2026-09-25: Service split wave 3 (notifications): `mcp/` — the gateway's `hwc_notify` tool reads `HWC_NOTIFY_URL` (set from `hwc.notifications.notify.url`); it hard-coded loopback and had been failing since the gateway moved to hwc-work in wave 2.

@@ -179,17 +179,15 @@ in
 
     projectDir = lib.mkOption {
       type = lib.types.path;
-      default = "${config.hwc.paths.user.home}/600_apps/lead_scout";
-      description = "Path to the lead_scout project directory";
+      default = "${cfg.workspaceRoot}/apps/lead-scout";
+      description = "Path to the lead-scout app in the Scout monorepo";
     };
 
     workspaceRoot = lib.mkOption {
       type = lib.types.path;
-      default = cfg.projectDir;
+      default = "${config.hwc.paths.user.home}/600_apps/scout";
       description = ''
-        Root whose node_modules carries hoisted tooling (tsx). Equal to
-        projectDir for a standalone checkout; the monorepo root when
-        projectDir is an app inside the scout workspace.
+        Scout monorepo root whose node_modules carries hoisted tooling (tsx).
       '';
     };
 

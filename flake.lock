@@ -104,6 +104,22 @@
         "type": "github"
       }
     },
+    "brainvec": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787792992,
+        "narHash": "sha256-UQ23elcwC6pzqeNBEUjbTS+fhzBM3xIEKaBX4WSQ2pg=",
+        "owner": "eriqueo",
+        "repo": "brainvec",
+        "rev": "af7976e4bd757631b571037c2d9dc0484c2426c7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "eriqueo",
+        "repo": "brainvec",
+        "type": "github"
+      }
+    },
     "claude-cowork": {
       "inputs": {
         "nixpkgs": [
@@ -639,6 +655,7 @@
         "agenix-stable": "agenix-stable",
         "agent-harness": "agent-harness",
         "bloxels-cv": "bloxels-cv",
+        "brainvec": "brainvec",
         "claude-cowork": "claude-cowork",
         "codex": "codex",
         "fleet-map": "fleet-map",

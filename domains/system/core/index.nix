@@ -60,6 +60,12 @@
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkMerge [
+    {
+      # AUTO-MANAGED: journald rotates oldest archived journals at this cap.
+      # A host or audit policy can replace it (home retains its 8G window).
+      services.journald.extraConfig = lib.mkDefault "SystemMaxUse=1G";
+    }
+
     (lib.mkIf config.hwc.system.core.nixld.guiLibs.enable {
       programs.nix-ld.libraries = with pkgs; [
         gtk3 pango cairo gdk-pixbuf atk

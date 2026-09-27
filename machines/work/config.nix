@@ -173,9 +173,9 @@
   hwc.data.databases.redis.enable = true;
 
   # The briefing keeps reporting the media/storage host's health: its
-  # systemctl/disk/journal/VPN/backup sections run on hwc-server over ssh.
+  # systemctl/disk/journal/VPN/backup sections run on hwc-home over ssh.
   # (Its Prometheus is the local central one since wave 3.)
-  # TEMPORARY: removal = those sections read the central Prometheus instead.
+  # Permanent by design: these reads supply detail absent from Prometheus.
   hwc.business.morningBriefing.hostHealthFrom = "main";
 
   # The hwc-sys gateway (+ JT tools). Binds all interfaces for tailnet
@@ -187,12 +187,6 @@
   # Lead Scout — Facebook group lead scraper/classifier, MCP + HTTP on port 8420
   hwc.server.ai.leadScout.enable = true;
   hwc.server.ai.homeScout.enable = true;
-  # Both scouts run from the scout monorepo (eriqueo/scout) as of 2026-07-19;
-  # the old standalone clones are retained temporarily as rollback.
-  hwc.server.ai.homeScout.projectDir = "/home/eric/600_apps/scout/apps/home-scout";
-  hwc.server.ai.homeScout.workspaceRoot = "/home/eric/600_apps/scout";
-  hwc.server.ai.leadScout.projectDir = "/home/eric/600_apps/scout/apps/lead-scout";
-  hwc.server.ai.leadScout.workspaceRoot = "/home/eric/600_apps/scout";
   # Research Scout is paused because its scheduled research workload exceeds
   # its current use. Keep the module imported and its data/config intact so
   # resuming it is one explicit switch plus a rebuild.

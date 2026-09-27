@@ -68,7 +68,6 @@ let
   # Law 3: derive from hwc.paths. apps/business/mail roots are nullable
   # (machine-scoped options), so fall back to their canonical defaults to
   # keep evaluation safe on machines where they are null.
-  appsRoot = if paths.apps.root != null then paths.apps.root else "/opt";
   businessRoot = if paths.business.root != null then paths.business.root else "/opt/business";
   mailRoot = if paths.user.mail != null then paths.user.mail else "${paths.user.home}/400_mail";
   cmsAppPath = "${businessRoot}/heartwood-cms";
@@ -76,8 +75,26 @@ let
   # n8n config
   n8nCfg = lib.attrByPath ["hwc" "automation" "n8n"] {} config;
   n8nPort = n8nCfg.port or 5678;
-  n8nMcpVersion = "2.40.5";
-  n8nMcpInstallDir = "${appsRoot}/n8n-mcp";
+  # Permanent by design: the manifest pins the backend version; npm's lock
+  # and Nix hash pin its full dependency closure. Startup never installs code.
+  n8nMcpPackage = pkgs.buildNpmPackage {
+    pname = "hwc-n8n-mcp";
+    version = (builtins.fromJSON (builtins.readFile ./parts/n8n-mcp/package.json)).version;
+    src = ./parts/n8n-mcp;
+    nodejs = mcpNodejs;
+    npmDepsHash = lib.fakeHash;
+    dontNpmBuild = true;
+    # Compile optional better-sqlite3 against this exact Node runtime.
+    npm_config_build_from_source = "true";
+    nativeBuildInputs = [ pkgs.python3 ];
+    installPhase = ''
+      runHook preInstall
+      mkdir -p "$out/lib/node_modules"
+      cp -r node_modules/. "$out/lib/node_modules/"
+      runHook postInstall
+    '';
+  };
+  n8nMcpMain = "${n8nMcpPackage}/lib/node_modules/n8n-mcp/dist/mcp/index.js";
 
   # One reusable terminal adapter for the gateway's Streamable HTTP protocol.
   # Calls are deliberately single-shot: mutation callers must supply their own
@@ -85,25 +102,6 @@ let
   mcpCall = pkgs.writeShellScriptBin "hwc-mcp-call" ''
     exec ${pkgs.python3}/bin/python3 ${./clients/hwc-mcp-call.py} \
       --endpoint http://127.0.0.1:${toString cfg.port}/mcp "$@"
-  '';
-
-  # n8n-mcp npm install script — ensures the stdio backend package is available
-  installN8nMcp = pkgs.writeShellScript "hwc-sys-mcp-install-n8n" ''
-    set -euo pipefail
-    ${pkgs.coreutils}/bin/mkdir -p "${n8nMcpInstallDir}"
-
-    INSTALLED=""
-    if [ -f "${n8nMcpInstallDir}/node_modules/n8n-mcp/package.json" ]; then
-      INSTALLED=$(${pkgs.nodejs_22}/bin/node -e "console.log(require('${n8nMcpInstallDir}/node_modules/n8n-mcp/package.json').version)" 2>/dev/null || echo "")
-    fi
-
-    if [ "$INSTALLED" != "${n8nMcpVersion}" ]; then
-      echo "Installing n8n-mcp@${n8nMcpVersion} (current: $INSTALLED)"
-      cd "${n8nMcpInstallDir}"
-      ${pkgs.nodejs_22}/bin/npm install --no-save "n8n-mcp@${n8nMcpVersion}" 2>&1
-    else
-      echo "n8n-mcp@${n8nMcpVersion} already installed"
-    fi
   '';
 
   # Environment file generator — injects agenix secrets at runtime
@@ -303,10 +301,8 @@ in
       "d /run/hwc-sys-mcp 0750 eric users -"
       "d /opt/business/website-site/.trash 0750 eric users -"
       # The sandbox refuses to start while any Read*Paths entry is missing:
-      # the n8n-mcp install dir (ExecStartPre fills it) and khal's data dir
-      # existed on hwc-server only by history; a fresh host (hwc-work, service
-      # split wave 2) failed at NAMESPACE until both were created.
-      "d ${n8nMcpInstallDir} 0755 eric users -"
+      # khal's data dir existed on hwc-server only by history; a fresh host
+      # failed at NAMESPACE until it was created.
       "d ${paths.user.home}/.local/share/khal 0755 eric users -"
     ];
 
@@ -386,7 +382,7 @@ in
         JT_API_URL = jtCfg.jt.apiUrl;
 
         # stdio backend: n8n-mcp
-        HWC_N8N_ENTRY_POINT = "${n8nMcpInstallDir}/node_modules/n8n-mcp/dist/mcp/index.js";
+        HWC_N8N_ENTRY_POINT = n8nMcpMain;
         N8N_API_URL = "http://localhost:${toString n8nPort}";
 
         # stdio backend: hwc-crm (front-of-funnel CRM tools over loopback :11660)
@@ -406,7 +402,6 @@ in
       serviceConfig = mkMerge [
         {
           Type = "simple";
-          ExecStartPre = "+${installN8nMcp}";  # + = run as root (npm install needs write to /opt)
           ExecStart = "${mcpNodejs}/bin/node ${mcpMain}";
           EnvironmentFile = "/run/hwc-sys-mcp/env";
           WorkingDirectory = srcDir;
@@ -465,8 +460,6 @@ in
             "/run/agenix"
             # jt-mcp source (stdio backend reads dist/)
             jtCfg.srcDir
-            # n8n-mcp npm package
-            n8nMcpInstallDir
             # hwc-crm source (python stdio backend reads src/)
             crmSrcDir
           ];

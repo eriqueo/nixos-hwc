@@ -29,6 +29,9 @@
     # Fleet map UI and read-only capture tools have their own app lifecycle.
     fleet-map = { url = "github:eriqueo/fleet-map"; flake = false; };
 
+    # Ingest code deploys with the system generation, never from a timer pull.
+    brainvec = { url = "github:eriqueo/brainvec"; flake = false; };
+
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-26.05";
     # TS-2026-011 needs Tailscale >= 1.102.3; stable 26.05 has 1.98.10.
@@ -822,17 +825,106 @@
         # service split wave 2), so the check reads that host's unit.
         fleet = self.nixosConfigurations.hwc-home.config.hwc;
         gatewayHost = fleet.networking.hosts.servers.${fleet.system.mcp.serverAlias};
-        command = self.nixosConfigurations.${gatewayHost}.config.systemd.services.hwc-sys-mcp.serviceConfig.ExecStart;
+        service = self.nixosConfigurations.${gatewayHost}.config.systemd.services.hwc-sys-mcp;
+        command = service.serviceConfig.ExecStart;
         main = lib.last (lib.splitString " " command);
+        n8n = service.environment.HWC_N8N_ENTRY_POINT;
       in
       assert lib.assertMsg (lib.hasPrefix "/nix/store/" main)
         "mcp-immutable-build: gateway entry point is not in the Nix store";
       assert lib.assertMsg (!(lib.hasInfix "/home/eric/.nixos/" main))
         "mcp-immutable-build: gateway returned to mutable checkout dist output";
-      pkgs.runCommand "mcp-immutable-build" {} ''
+      assert lib.assertMsg (lib.hasPrefix "/nix/store/" n8n && !(service.serviceConfig ? ExecStartPre))
+        "mcp-immutable-build: n8n backend must be immutable with no startup installer";
+      pkgs.runCommand "mcp-immutable-build" { nativeBuildInputs = [ pkgs.coreutils ]; } ''
         test -f ${main}
+        timeout 45 ${service.environment.HWC_NODE_PATH} \
+          ${./domains/system/mcp/parts/n8n-mcp/smoke.mjs} \
+          ${n8n} ${service.environment.HWC_NODE_PATH}
         touch "$out"
       '';
+
+      brainvec-deployment = let
+        service = self.nixosConfigurations.hwc-work.config.systemd.services.brainvec-ingest;
+        env = lib.filterAttrs (name: _: lib.hasPrefix "BRAINVEC_" name) service.environment;
+        source = inputs.brainvec;
+      in pkgs.runCommand "brainvec-deployment" { nativeBuildInputs = [ pkgs.nodejs_22 ]; } ''
+        # Test the actual rendered wrapper and environment, not a second launcher.
+        ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: value: "export ${name}=${lib.escapeShellArg value}") env)}
+        export BRAINVEC_VAULT="$TMPDIR/vault" BRAINVEC_CACHE="$TMPDIR/cache"
+        mkdir -p "$BRAINVEC_VAULT" "$BRAINVEC_CACHE"
+        printf '# Woodworking\nCabinet joinery and wood.\n' > "$BRAINVEC_VAULT/wood.md"
+        printf '# Cooking\nSoup recipes.\n' > "$BRAINVEC_VAULT/food.md"
+        cat > "$TMPDIR/embed-fixture.mjs" <<'JS'
+        globalThis.fetch = async (_url, options) => ({
+          ok: true,
+          json: async () => ({ data: JSON.parse(options.body).input.map((text, index) => ({
+            index, embedding: text.toLowerCase().includes('wood') ? [1, 0] : [0, 1],
+          })) }),
+        });
+        JS
+        export NODE_OPTIONS="--import=$TMPDIR/embed-fixture.mjs"
+        ${service.serviceConfig.ExecStart}
+        node ${source}/query.mjs --json --k 1 woodworking > result.json
+        node -e 'const r=require("./result.json"); if(r.hits[0].path!=="wood.md") process.exit(1)'
+        cp "$BRAINVEC_CACHE/index.jsonl" expected.jsonl
+        # Rebuild from source after discarding the derived fixture index.
+        rm "$BRAINVEC_CACHE/index.jsonl" "$BRAINVEC_CACHE/meta.json"
+        ${service.serviceConfig.ExecStart}
+        cmp expected.jsonl "$BRAINVEC_CACHE/index.jsonl"
+        # No changed notes: no embedder, GitHub, git, SSH or writable checkout.
+        unset NODE_OPTIONS
+        export BRAINVEC_EMBED_BASE_URL=http://127.0.0.1:1
+        ${service.serviceConfig.ExecStart}
+        cmp expected.jsonl "$BRAINVEC_CACHE/index.jsonl"
+        node ${source}/query.mjs --json --related wood.md > related.json
+        node -e 'const r=require("./related.json"); if(r.hits[0].path!=="food.md") process.exit(1)'
+        # Pin source provenance and prove the production wrapper consumes it.
+        ${pkgs.ripgrep}/bin/rg -F '${source}/ingest.mjs' ${service.serviceConfig.ExecStart}
+        if ${pkgs.ripgrep}/bin/rg 'git |ssh |600_apps' ${service.serviceConfig.ExecStart}; then
+          echo 'brainvec-deployment: mutable checkout or timer-side updater remains' >&2
+          exit 1
+        fi
+        touch "$out"
+      '';
+
+      scout-layout = let
+        work = self.nixosConfigurations.hwc-work;
+        cfg = work.config;
+        root = "${cfg.hwc.paths.user.home}/600_apps/scout";
+        check = name: option:
+          let
+            app = "${root}/apps/${name}";
+            service = cfg.systemd.services.${name}.serviceConfig;
+            defaults = work.options.hwc.server.ai.${option};
+          in lib.assertMsg (
+            toString defaults.workspaceRoot.default == root
+            && toString defaults.projectDir.default == app
+            && toString service.WorkingDirectory == app
+            && lib.hasInfix "${root}/node_modules/tsx/dist/cli.mjs ${app}/src/cli.ts serve" service.ExecStart
+          ) "scout-layout: ${name} defaults or rendered service left the monorepo";
+      in
+      assert check "lead-scout" "leadScout";
+      assert check "home-scout" "homeScout";
+      assert lib.all (name:
+        toString cfg.systemd.services.${name}.serviceConfig.WorkingDirectory == "${root}/apps/home-scout/ingest"
+        && cfg.systemd.services.${name}.environment.PYTHONPATH == "${root}/apps/home-scout/ingest"
+      ) [ "home-scout-harvest" "home-scout-cadastral" "home-scout-redfin" "home-scout-schools" "home-scout-overlays" ];
+      pkgs.runCommand "scout-layout" {} ''touch "$out"'';
+
+      journal-retention = let
+        work = self.nixosConfigurations.hwc-work;
+        home = self.nixosConfigurations.hwc-home.config;
+        # A host override must still win over the capability's default.
+        override = (work.extendModules {
+          modules = [ { services.journald.extraConfig = "SystemMaxUse=2G"; } ];
+        }).config.services.journald.extraConfig;
+      in
+      assert lib.assertMsg (lib.hasInfix "SystemMaxUse=1G" work.config.services.journald.extraConfig)
+        "journal-retention: work has no explicit default ceiling";
+      assert lib.hasInfix "SystemMaxUse=8G" home.services.journald.extraConfig;
+      assert override == "SystemMaxUse=2G";
+      pkgs.runCommand "journal-retention" {} ''touch "$out"'';
 
       # ── Prometheus tier ladders are mutually exclusive ──────────────────
       # Parses the ACTUAL rule expressions (not a second copy of the numbers)

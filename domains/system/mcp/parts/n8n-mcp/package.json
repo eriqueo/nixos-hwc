@@ -1,0 +1,9 @@
+{
+  "name": "hwc-n8n-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Locked runtime closure for the HWC gateway's n8n stdio backend",
+  "dependencies": {
+    "n8n-mcp": "2.40.5"
+  }
+}

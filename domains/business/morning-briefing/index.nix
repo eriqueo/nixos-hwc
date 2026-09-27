@@ -17,8 +17,8 @@ in
         hwc.networking.hosts alias whose host health (systemctl, disks,
         journal, VPN, backups) the briefing reports; null = the host it runs
         on. The probes run there over ssh as eric (BRIEFING_HOST in run.sh).
-        TEMPORARY for the service split: removal = wave 3 makes those
-        sections Prometheus-backed.
+        Permanent by design: these reads retain journal, VPN and backup
+        detail that the central Prometheus probes do not provide.
       '';
     };
     prometheusUrl = lib.mkOption {

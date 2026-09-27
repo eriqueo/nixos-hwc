@@ -5,11 +5,9 @@
 # search_semantic / related_notes tools.
 #
 # The pipeline code lives in its OWN repo (github.com/eriqueo/brainvec,
-# cloned to ~/600_apps/brainvec — same code-lives-in-repo, nix-only-schedules
-# pattern as sr_analyzer/sr-gauntlet). This module only provides the schedule
-# + environment. If the checkout is missing the service logs the clone
-# command and exits 0 — a rebuild without the code degrades gracefully
-# (2026-07-10 sr-gauntlet lesson: nix changes must never outrun their code).
+# pinned as a flake input). Nix owns source deployment, schedule and environment.
+# Update with `nix flake update brainvec`, commit, build and switch. The timer
+# runs that immutable source without updating a checkout or needing GitHub.
 #
 # Embeddings come from the local llama-embed service (nomic-embed-text-v1.5,
 # 768-dim, 127.0.0.1:11502) — fully self-hosted, no external API. nomic's
@@ -28,34 +26,22 @@
 # NAMESPACE: hwc.server.ai.brainvec
 #
 # DEPENDENCIES:
-#   - ~/600_apps/brainvec checkout (clone by hand once; ingest ff-pulls it)
+#   - brainvec flake input (source revision in flake.lock)
 #   - hwc.server.ai.llamaCpp embed sub-service (127.0.0.1:11502)
 #   - the vault clone at the brain-mcp vaultPath
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, inputs, ... }:
 let
   cfg = config.hwc.server.ai.brainvec;
   paths = config.hwc.paths;
 
   ingestScript = pkgs.writeShellApplication {
     name = "brainvec-ingest";
-    runtimeInputs = [ pkgs.nodejs_22 pkgs.git pkgs.openssh ];
+    runtimeInputs = [ pkgs.nodejs_22 ];
     text = ''
       set -uo pipefail
-      REPO=${lib.escapeShellArg (toString cfg.repoDir)}
-      if [ ! -f "$REPO/ingest.mjs" ]; then
-        echo "brainvec checkout missing — run: git clone git@github.com:eriqueo/brainvec.git $REPO"
-        exit 0
-      fi
-      # Keep the checkout current (sr-gauntlet precedent). Home Manager's
-      # immutable .ssh/config is store-owned, which OpenSSH rejects as an
-      # explicit user config; bypass it while retaining the default keys and
-      # known_hosts. A transient pull failure must not block indexing the
-      # available checkout, but it must be visible rather than silently stale.
-      if ! GIT_SSH_COMMAND="ssh -F /dev/null" git -C "$REPO" pull --ff-only; then
-        echo "WARNING: brainvec checkout update failed; indexing existing $(git -C "$REPO" rev-parse --short HEAD)" >&2
-      fi
-      exec node "$REPO/ingest.mjs" "$@"
+      echo "brainvec source=${inputs.brainvec.rev}"
+      exec node ${inputs.brainvec}/ingest.mjs "$@"
     '';
   };
 in
@@ -72,12 +58,6 @@ in
       description = "User to run the ingest as (must own the vault clone + cache)";
     };
 
-    repoDir = lib.mkOption {
-      type = lib.types.str;
-      default = "${paths.user.home}/600_apps/brainvec";
-      description = "brainvec checkout (own git repo; cloned by hand once)";
-    };
-
     vaultDir = lib.mkOption {
       type = lib.types.path;
       default = if paths.brain.vault != null then paths.brain.vault
@@ -85,6 +65,8 @@ in
       description = "Brain vault clone to index";
     };
 
+    # REPLACEABLE: one current index + metadata, rebuilt from the vault.
+    # Each successful ingest drops vanished notes and atomically replaces it.
     cacheDir = lib.mkOption {
       type = lib.types.str;
       default = "${paths.user.home}/.cache/brainvec";

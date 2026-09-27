@@ -18,11 +18,12 @@ core/
 │   └── index.nix    # session policy, guarded compositor DRM preference
 ├── coredump.nix     # systemd-coredump retention caps
 ├── nix-build-limits.nix # nix-daemon MemoryHigh/MemoryMax cgroup ceiling
-├── index.nix        # Core aggregator
+├── index.nix        # Core aggregator and overridable journal ceiling
 └── packages.nix     # Base system packages
 ```
 
 ## Changelog
+- 2026-09-27: Declare `SystemMaxUse=1G` as a default independent of audit enablement; home keeps its explicit 8G policy.
 - 2026-09-24: `coredump.nix` uses `settings.Coredump` on 26.05 while retaining
   the 500M use and 2G free-space limits.
 - 2026-08-28: `login/index.nix` adds an opt-in compositor DRM preference that resolves a real `cardN` node from stable PCI identity at login, verifies vendor/connector/character-device/uniqueness invariants, and leaves Aquamarine's normal enumeration untouched on resolution failure. A pinned compositor that exits nonzero during the bounded startup window retries exactly once without the preference. `hwc-laptop` records the Intel PCI/vendor identity but leaves the feature disabled until a controlled logout/TTY acceptance test; no running session is changed by this commit.
