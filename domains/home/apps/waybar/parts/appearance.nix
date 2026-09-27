@@ -86,7 +86,7 @@ window#waybar {
 #cpu, #memory, #temperature, #custom-network, #pulseaudio,
 #custom-battery, #custom-power-hub, #custom-ollama, #custom-dt, #idle_inhibitor, #mpd, #tray,
 #custom-notification, #custom-power, #custom-disk-space, #backlight, #bluetooth,
-#custom-proton-auth, #custom-bitwarden,
+#custom-proton-auth,
 #custom-recording, #custom-dictation, #hyprland-language {
   padding: 8px 6px;
   min-height: 0;
@@ -136,23 +136,18 @@ window#waybar {
 }
 
 /* Actions */
-#custom-proton-auth, #custom-bitwarden,
+#custom-proton-auth,
 #tray, #custom-notification, #custom-power {
   background-color: #${colors.sectionD};
 }
 
-/* Use each package's color icon. Proton Pass already supplies its own tray icon. */
-#custom-proton-auth, #custom-bitwarden {
+/* Match the 20 px tray marks: the packaged icon has transparent edge padding. */
+#custom-proton-auth {
   min-width: 20px;
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 20px 20px;
-}
-#custom-proton-auth {
+  background-size: 25px 25px;
   background-image: url("file://${pkgs.proton-authenticator}/share/icons/hicolor/32x32/apps/proton-authenticator.png");
-}
-#custom-bitwarden {
-  background-image: url("file://${pkgs.bitwarden-desktop}/share/icons/hicolor/32x32/apps/bitwarden.png");
 }
 
 /* === POWERLINE SEPARATORS === */
@@ -191,7 +186,6 @@ window#waybar {
 #idle_inhibitor:hover, #mpd:hover, #tray:hover, #custom-notification:hover,
 #custom-power:hover, #custom-disk-space:hover, #backlight:hover, #bluetooth:hover,
 #custom-weather:hover, #custom-khal:hover, #custom-proton-auth:hover,
-#custom-bitwarden:hover,
 #custom-workspace-link:hover, #custom-recording:hover, #custom-dictation:hover, #hyprland-language:hover {
   background-color: #${colors.bg3};
 }

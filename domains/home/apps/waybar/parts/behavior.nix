@@ -11,7 +11,6 @@ let
 
   dictateEnabled = config.hwc.home.apps.hwc-dictation.enable or false;
   authEnabled = config.hwc.home.apps.proton-authenticator.enable or false;
-  bitwardenEnabled = config.hwc.home.apps.bitwarden.enable or false;
   # Consume the same structured record as Hyprland and its keybind legend.
   hyprlandBehavior = import ../../hyprland/parts/behavior.nix { inherit config lib pkgs; };
   dictateCommand = hyprlandBehavior.dictateCommand;
@@ -44,7 +43,6 @@ let
       "temperature" "custom/disk-space" "custom/battery"
       "custom/sep-3"
     ] ++ lib.optionals authEnabled [ "custom/proton-auth" ]
-      ++ lib.optionals bitwardenEnabled [ "custom/bitwarden" ]
       ++ [ "tray" "custom/notification" "custom/power" ];
   };
 
@@ -177,7 +175,6 @@ let
     # A space keeps Waybar's static custom module clickable; CSS paints the
     # packaged full-color icon over it.
     "custom/proton-auth" = { format = " "; tooltip = "Proton Authenticator (SUPER+A)"; on-click = "proton-authenticator-toggle"; };
-    "custom/bitwarden" = { format = " "; tooltip = "Bitwarden (Vaultwarden account)"; on-click = "waybar-bitwarden-open"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
     "custom/power" = { format = "Pwr"; tooltip = "Shutdown"; on-click = "wlogout"; };
     "custom/workspace-link" = { format = "{}"; exec = "waybar-workspace-link-status"; return-type = "json"; interval = "once"; signal = 8; on-click = "waybar-workspace-link-toggle"; };
