@@ -82,7 +82,7 @@ let
     version = (builtins.fromJSON (builtins.readFile ./parts/n8n-mcp/package.json)).version;
     src = ./parts/n8n-mcp;
     nodejs = mcpNodejs;
-    npmDepsHash = lib.fakeHash;
+    npmDepsHash = "sha256-sc936CuA7oIwg/O1dmC999qkbv5Qf11oH3YG/4DsXpU=";
     dontNpmBuild = true;
     # Compile optional better-sqlite3 against this exact Node runtime.
     npm_config_build_from_source = "true";
