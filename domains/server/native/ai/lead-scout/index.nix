@@ -33,6 +33,73 @@ let
 
   chromiumBin = "${pkgs.chromium}/bin/chromium";
 
+  # Model bridge (options.modelBridge). The token never appears in the unit
+  # file: the wrapper reads the agenix mount at start and passes it as an
+  # argument to the bridge process, which runs as cfg.user like the server.
+  bridge = cfg.modelBridge;
+  bridgeScript = "${cfg.projectDir}/bridge/lead-scout-model-bridge.mjs";
+  bridgeTokenFile = "/run/agenix/${toString bridge.tokenSecret}";
+  bridgeStart = pkgs.writeShellScript "lead-scout-model-bridge-start" ''
+    set -eu
+    exec ${node} ${bridgeScript} \
+      --backend ${bridge.backend} --host ${bridge.host} --port ${toString bridge.port} \
+      --model ${lib.escapeShellArg bridge.model} \
+      --max-in-flight ${toString bridge.maxInFlight} --max-queue ${toString bridge.maxQueue} \
+      ${lib.optionalString (bridge.tokenSecret != null) ''--token "$(cat ${bridgeTokenFile})"''}
+  '';
+  modelBridgeService = lib.optionalAttrs bridge.enable {
+    lead-scout-model-bridge = {
+      description = "Lead Scout model bridge (claude/codex/pi -> OpenAI-compatible)";
+      after = [
+        "network-online.target"
+        "tailscaled.service"
+      ];
+      wants = [ "network-online.target" ];
+      wantedBy = [ "multi-user.target" ];
+      # The bridge resolves the backend binary on PATH only; the per-user
+      # profile is where `claude` lives on this host (same binary the server
+      # unit pins via CLAUDE_BIN).
+      path = [
+        pkgs.nodejs
+        "/etc/profiles/per-user/${cfg.user}"
+      ];
+      environment = {
+        NODE_ENV = "production";
+        # Same reason as the server unit: ProtectHome makes ~/.config read-only.
+        XDG_CONFIG_HOME = "${cfg.projectDir}/data/xdg-config";
+      };
+      serviceConfig = {
+        Type = "simple";
+        ExecStart = bridgeStart;
+        WorkingDirectory = cfg.projectDir;
+        User = cfg.user;
+        SupplementaryGroups = [ "secrets" ];
+        # A non-loopback bind fails until the address exists (tailnet up);
+        # on-failure restarts cover boot ordering.
+        Restart = "on-failure";
+        RestartSec = "5s";
+        TimeoutStopSec = "30s";
+
+        NoNewPrivileges = true;
+        PrivateTmp = true;
+        ProtectSystem = "strict";
+        ProtectHome = "read-only";
+        ProtectKernelTunables = true;
+        ProtectKernelModules = true;
+        ProtectControlGroups = true;
+        SystemCallArchitectures = "native";
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
+        RestrictSUIDSGID = true;
+        LockPersonality = true;
+        ReadWritePaths = [
+          "${cfg.projectDir}/data"
+          "/tmp"
+        ];
+      };
+    };
+  };
+
   enabledApprovalBots = lib.filterAttrs (_: bot: bot.enable) cfg.discordApprovalBots;
   # Only bots whose Gateway this module owns get an approval unit here. A bot
   # delegated to the HWC control bot (gateway = "hwc-control-bot") still gets
@@ -288,6 +355,59 @@ in
         }
       );
     };
+
+    modelBridge = {
+      enable = lib.mkEnableOption ''
+        the Lead Scout model bridge: a host-side OpenAI-compatible endpoint
+        (scout apps/lead-scout/bridge/lead-scout-model-bridge.mjs) that forwards
+        chat completions to the Claude CLI, Codex or Pi under this user's login,
+        so a containerised Lead Scout instance can classify with no API key
+      '';
+      host = lib.mkOption {
+        type = lib.types.str;
+        default = "127.0.0.1";
+        description = ''
+          Bind address. Anything but loopback requires tokenSecret (the bridge
+          refuses to start otherwise). Rootless podman containers cannot reach
+          host loopback or host.containers.internal (pasta); bind the tailnet
+          address for them.
+        '';
+      };
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 8431;
+        description = "Bridge port; Lead Scout's base_url is http://<host>:<port>/v1.";
+      };
+      backend = lib.mkOption {
+        type = lib.types.enum [ "claude" "codex" "pi" ];
+        default = "claude";
+        description = "Which CLI harness the bridge forwards to.";
+      };
+      model = lib.mkOption {
+        type = lib.types.str;
+        default = claudeModel;
+        description = "Model name passed to the backend CLI (--model).";
+      };
+      maxInFlight = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 2;
+        description = "Concurrent backend calls; further requests queue.";
+      };
+      maxQueue = lib.mkOption {
+        type = lib.types.ints.unsigned;
+        default = 8;
+        description = "Queued requests beyond which the bridge answers 503.";
+      };
+      tokenSecret = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = ''
+          agenix secret NAME holding the bearer token the bridge requires on
+          every request. Lead Scout's config.yaml llm.api_key carries the same
+          value. Required when host is not loopback.
+        '';
+      };
+    };
   };
 
   #============================================================================
@@ -479,10 +599,27 @@ in
         };
       };
     }
-    // approvalBotServices;
+    // approvalBotServices
+    // modelBridgeService;
 
     # VALIDATION
     assertions = [
+      {
+        assertion =
+          !cfg.modelBridge.enable
+          || cfg.modelBridge.tokenSecret == null
+          || builtins.hasAttr cfg.modelBridge.tokenSecret config.age.secrets;
+        message = "Lead Scout modelBridge.tokenSecret ${toString cfg.modelBridge.tokenSecret} has no generated agenix mount.";
+      }
+      {
+        assertion =
+          !cfg.modelBridge.enable
+          || cfg.modelBridge.tokenSecret != null
+          || lib.hasPrefix "127." cfg.modelBridge.host
+          || cfg.modelBridge.host == "localhost"
+          || cfg.modelBridge.host == "::1";
+        message = "Lead Scout modelBridge binds ${cfg.modelBridge.host} without a tokenSecret; the bridge refuses non-loopback binds without a token.";
+      }
       {
         assertion = builtins.length approvalProfileIds == builtins.length (lib.unique approvalProfileIds);
         message = "Lead Scout Discord approval profileIds must be owned by exactly one bot.";

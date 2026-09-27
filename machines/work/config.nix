@@ -202,6 +202,17 @@
   # `/next` surface over Lead Scout, CRM, Research, Home). HWC approvals
   # remain review-only in the app and cannot publish a reply.
   hwc.server.ai.leadScout.controlTokenSecret = "hwc-control-lead-scout-token";
+  # Host model bridge: exposes Eric's Claude CLI login as an OpenAI-compatible
+  # endpoint so the containerised DataX instance (podman, no CLI inside) scores
+  # with claude-cli through the bridge instead of an API key. Bound on the
+  # tailnet address because rootless podman's host.containers.internal
+  # (pasta, 169.254.1.2) cannot reach host sockets; measured 2026-09-27.
+  # Token-protected (bearer = lead-scout-bridge-token).
+  hwc.server.ai.leadScout.modelBridge = {
+    enable = true;
+    host = "100.77.38.32";
+    tokenSecret = "lead-scout-bridge-token";
+  };
   hwc.server.ai.researchScout.controlTokenSecret = "hwc-control-research-scout-token";
   hwc.server.ai.hwcControlBot = {
     enable = true;
