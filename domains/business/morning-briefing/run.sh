@@ -50,7 +50,8 @@ SYSTEMCTL="/run/current-system/sw/bin/systemctl"; [ -x "${SYSTEMCTL}" ] || SYSTE
 # them there over ssh; unset = this host. `-n` keeps ssh off stdin — one call
 # sits inside a `while read` loop. printf %q keeps each argument one word
 # through the remote shell.
-# TEMPORARY: removal = wave 3 makes these sections Prometheus-backed.
+# Permanent by design: journal, VPN and backup details remain source-owned.
+# A central green probe cannot replace them; five sampled SSH reads total 0.73 s.
 host_exec() {
   if [ -n "${BRIEFING_HOST:-}" ]; then
     ssh -n -o BatchMode=yes -o ConnectTimeout=10 "${BRIEFING_HOST}" "$(printf '%q ' "$@")"

@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Morning Briefing retains direct home health reads for journal, VPN and backup detail; central probes are a separate signal.
+
 Morning Briefing operator hints refer to the producing service host, not a retired hostname.
 
 Morning Briefing diagnosis templates establish the execution host and distinguish it from the alert's host.
@@ -34,6 +36,7 @@ business/
 ```
 
 ## Changelog
+- 2026-09-26: Close the obsolete wave-3 SSH-removal marker after field/cost review; source-owned detail remains intentional.
 - 2026-09-26: Remove retired-host assumptions from dispatch authentication and dashboard diagnostic hints.
 - 2026-09-26: Remove the retired hostname from Today diagnosis prompts; require host attribution before using local evidence.
 - 2026-09-26: Machine references follow machines/home for retained phone/media ingress; business applications remain on work.
