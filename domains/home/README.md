@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+`core/development` provides opt-in daily rootless image retention: only untagged, unreferenced build cache older than 12 hours, with a 10-minute execution bound.
+
 Hyprland, Zellij and Workbench derive their mail command from the shell alias; the laptop targets the work host registry entry.
 
 The shared agent-harness fleet list uses hwc-home, hwc-work and hwc-laptop without changing session stores.
@@ -55,6 +57,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-26: Bound work's rootless build-image growth with a user timer; preserve container references, named images, volumes and recent rollback images.
 - 2026-09-26: Repoint laptop mail to work and remove Hyprland's duplicate home-mail command. The service-split check covers the evaluated alias and desktop binding.
 - 2026-09-26: Proton Pass's native color tray icon now opens its window on Linux; Waybar uses packaged color artwork for Authenticator and Bitwarden.
 - 2026-09-26: Credential app launchers now open on the active workspace; added the Bitwarden desktop client and Waybar buttons, removed unused Proton Pass settings output.

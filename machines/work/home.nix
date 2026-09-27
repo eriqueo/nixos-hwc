@@ -1,6 +1,7 @@
 # Headless Home Manager lane. Base supplies the CLI and development tools.
 { ... }: {
   hwc.home.theme.graphical = false;
+  hwc.home.core.development.rootlessImagePrune.enable = true;
 
   # Mail role (service split wave 2): this host runs the Proton Bridge session
   # that used to live on hwc-server. mail-health posts to the dispatcher via

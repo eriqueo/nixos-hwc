@@ -40,6 +40,7 @@ in
     };
 
     containers = lib.mkOption { type = t.bool; default = true; description = "Enable container development tools"; };
+    rootlessImagePrune.enable = lib.mkEnableOption "daily expiry of untagged rootless build images older than 12 hours";
     directoryStructure = lib.mkOption { type = t.bool; default = true; description = "Create development directory structure"; };
   };
 
@@ -47,6 +48,26 @@ in
   # IMPLEMENTATION
   #============================================================================
   config = lib.mkIf cfg.enable {
+
+    # REPLACEABLE build cache. Podman preserves named images and images used
+    # by any container (including stopped containers); never prune volumes.
+    systemd.user.services.podman-image-prune = lib.mkIf cfg.rootlessImagePrune.enable {
+      Unit = {
+        Description = "Expire superseded rootless build images after a 12-hour grace period";
+        ConditionPathIsDirectory = "%h/.local/share/containers/storage";
+      };
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${pkgs.podman}/bin/podman image prune --force --filter until=12h";
+        TimeoutStartSec = "10min";
+        Nice = 10;
+      };
+    };
+    systemd.user.timers.podman-image-prune = lib.mkIf cfg.rootlessImagePrune.enable {
+      Unit.Description = "Daily rootless build-cache retention";
+      Timer = { OnCalendar = "daily"; RandomizedDelaySec = "15min"; Persistent = true; };
+      Install.WantedBy = [ "timers.target" ];
+    };
 
     home.packages = with pkgs; [
       git-lfs

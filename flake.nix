@@ -1158,9 +1158,18 @@
         work = self.nixosConfigurations.hwc-work.config;
         laptopHome = self.nixosConfigurations.hwc-laptop.config.home-manager.users.eric;
         mailCommand = "ssh -t ${work.hwc.networking.hosts.fqdn.work} aerc";
+        workHome = work.home-manager.users.eric;
+        prune = workHome.systemd.user.services.podman-image-prune or {};
         peer = self.nixosConfigurations.hwc-xps.config;
         absent = units: names: lib.all (name: !(builtins.hasAttr name units)) names;
       in
+      assert lib.assertMsg (
+        lib.any (cmd: lib.hasSuffix "/bin/podman image prune --force --filter until=12h" cmd)
+          (prune.Service.ExecStart or [])
+        && (prune.Service.TimeoutStartSec or "") == "10min"
+        && workHome.systemd.user.timers.podman-image-prune.Timer.Persistent
+        && !(server.home-manager.users.eric.systemd.user.services ? podman-image-prune)
+      ) "service split: rootless build-cache retention must be bounded and preserve referenced/named images";
       assert lib.assertMsg (laptopHome.hwc.home.core.shell.aliases.aerc == mailCommand
         && lib.elem "SUPER,E,exec,kitty -e ${mailCommand}"
           laptopHome.wayland.windowManager.hyprland.settings.bind)
