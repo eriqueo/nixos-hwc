@@ -109,6 +109,10 @@ let
         CLAUDE_MODEL = claudeModel;
         PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromiumBin;
         PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+        # Chromium creates its crash database under $XDG_CONFIG_HOME/chromium at
+        # startup and aborts (SIGTRAP) when that mkdir fails; ProtectHome makes
+        # ~/.config read-only, so the config home lives inside the writable data dir.
+        XDG_CONFIG_HOME = "${cfg.projectDir}/data/xdg-config";
         DISCORD_BOT_TOKEN_FILE = approvalBotTokenFile bot;
         DISCORD_APPROVAL_GUILD_ID = bot.guildId;
         DISCORD_APPROVAL_CHANNEL_ID = bot.channelId;
@@ -390,6 +394,12 @@ in
           # NixOS can't load. Point it at the Nix-built chromium.
           PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromiumBin;
           PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+          # Chromium creates its crash database under $XDG_CONFIG_HOME/chromium at
+          # startup and aborts (SIGTRAP) when that mkdir fails; ProtectHome makes
+          # ~/.config read-only, so the config home lives inside the writable data
+          # dir. Measured 2026-09-26: every scheduled scrape since 2026-09-25 died
+          # this way (agent/lead-scout/personal-service-chromium-sigtrap.md).
+          XDG_CONFIG_HOME = "${cfg.projectDir}/data/xdg-config";
           DISCORD_WEBHOOK_FILE = config.age.secrets.${cfg.discordWebhookSecret}.path;
         }
         // discordApprovalEnvironment

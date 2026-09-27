@@ -43,6 +43,7 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+- 2026-09-26: `native/ai/lead-scout`: both units (serve and the approvals sidecar) set `XDG_CONFIG_HOME` to `<projectDir>/data/xdg-config`. Chromium 153 creates its crash database under `$XDG_CONFIG_HOME/chromium` at startup and aborts with SIGTRAP when that directory cannot be created; with `ProtectHome = "read-only"` every scheduled scrape had failed at launch since 2026-09-25 13:20 (46 core dumps). Triage: `~/000_inbox/downloads/agent/lead-scout/personal-service-chromium-sigtrap.md`.
 - 2026-09-26: Machine references follow machines/home; retained home services and work processing ownership are unchanged.
 - 2026-09-26: Move inbox audio/screenshot processing to work beside mail; retain faster GPU Whisper and Bloxels on home. Remote HTTPS inference no longer requires a local Whisper unit. Remove staged work inference and the old home processor configuration. Correct stale domain ownership and deleted-directory descriptions.
 - 2026-09-25: Retired `native/ai/hermes` (Eric's decision, service split wave 4 audit: every cron delivery failing, no Discord use in 30 days, trial window over). Module, both vhosts, the DeepSeek key and Homepage tiles removed; `/var/lib/hwc/hermes-agent`, `market-dashboard` and the old native `hermes` tree archived to hwc-server `/var/lib/backups/service-split-wave4/` before deletion. `hermes-discord-bot-token` stays: lead-scout's approvals bot uses it.
