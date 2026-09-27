@@ -6,6 +6,10 @@
   # Mail role (service split wave 2): this host runs the Proton Bridge session
   # that used to live on hwc-server. mail-health posts to the dispatcher via
   # the default (hwc.notifications.notify.url).
+  # Weekly bridge bounce, Sunday 04:20: after borg (03:00) and mail-janitor
+  # (04:00), before the 05:00 home-scout jobs. Weekly, not daily: cadvisor's
+  # 7-day RSS trace showed churn between 150 and 830 MB, no daily climb.
+  hwc.mail.bridge.restart.onCalendar = "Sun *-*-* 04:20:00";
 
   # The read-only mirrors this machine keeps in Radicale (config.nix
   # hwc.server.services.radicale.mirrors), so hwc_calendar sees them too.

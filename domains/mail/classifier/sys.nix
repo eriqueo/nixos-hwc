@@ -79,6 +79,11 @@ in
         CacheDirectory = "hwc-mail-classifier";
         CacheDirectoryMode = "0700";
         ExecStart = modelServer;
+        # Batch inference on a 24-core host: classification runs are short
+        # single-thread bursts that hit 80°C+ package temps at default priority.
+        # Same de-prioritisation as llama-embed; nothing here is latency-bound.
+        Nice = 10;
+        CPUWeight = 20;
         Restart = "on-failure";
         RestartSec = "10s";
         TimeoutStartSec = "5m";

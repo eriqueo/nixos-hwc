@@ -146,6 +146,9 @@ in
         User = lib.mkForce cfg.user;
         Group = "users";
         ExecStart = "${ingestScript}/bin/brainvec-ingest";
+        # Background batch work; yields to interactive load like llama-embed does.
+        Nice = 10;
+        CPUWeight = 20;
         # Ingest is read-only over the vault; writes only its own cache.
         NoNewPrivileges = true;
         PrivateTmp = true;

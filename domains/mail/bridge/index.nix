@@ -31,6 +31,17 @@ in
     };
     ensureConfigDir = lib.mkOption { type = lib.types.bool; default = true; };
     restartSec = lib.mkOption { type = lib.types.int; default = 30; };
+    restart.onCalendar = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "Sun *-*-* 04:20:00";
+      description = ''
+        systemd OnCalendar for a scheduled `try-restart` of the bridge (null =
+        never). A restart costs one missed mbsync tick and a mail-health
+        "activating" window, so pick a quiet slot; a weekly cadence is enough
+        for the bridge's slow memory growth.
+      '';
+    };
     keychain = {
       helper = lib.mkOption {
         type = lib.types.str;
