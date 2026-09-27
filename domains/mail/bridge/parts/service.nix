@@ -29,4 +29,24 @@ EOF
     };
     Install = { WantedBy = [ "default.target" ]; };
   };
+
+  # Scheduled restart (hwc.mail.bridge.restart.onCalendar). try-restart only
+  # bounces a running bridge; a stopped or failed one is mail-health's job.
+  systemd.user.services.protonmail-bridge-restart = lib.mkIf (br.restart.onCalendar or null != null) {
+    Unit.Description = "Scheduled Proton Mail Bridge restart";
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.systemd}/bin/systemctl --user try-restart protonmail-bridge.service";
+    };
+  };
+  systemd.user.timers.protonmail-bridge-restart = lib.mkIf (br.restart.onCalendar or null != null) {
+    Unit.Description = "Scheduled Proton Mail Bridge restart";
+    Timer = {
+      OnCalendar = br.restart.onCalendar;
+      # Not Persistent: a missed slot must not restart the bridge at login.
+      Persistent = false;
+      RandomizedDelaySec = "2min";
+    };
+    Install.WantedBy = [ "timers.target" ];
+  };
 }

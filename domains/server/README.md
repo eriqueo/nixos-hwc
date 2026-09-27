@@ -43,6 +43,7 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+- 2026-09-26: `native/ai/brainvec` — ingest runs at `Nice=10`/`CPUWeight=20`, matching llama-embed; part of the hwc-work thermal smoothing (batch work yields to interactive load).
 - 2026-09-26: Machine references follow machines/home; retained home services and work processing ownership are unchanged.
 - 2026-09-26: Move inbox audio/screenshot processing to work beside mail; retain faster GPU Whisper and Bloxels on home. Remote HTTPS inference no longer requires a local Whisper unit. Remove staged work inference and the old home processor configuration. Correct stale domain ownership and deleted-directory descriptions.
 - 2026-09-25: Retired `native/ai/hermes` (Eric's decision, service split wave 4 audit: every cron delivery failing, no Discord use in 30 days, trial window over). Module, both vhosts, the DeepSeek key and Homepage tiles removed; `/var/lib/hwc/hermes-agent`, `market-dashboard` and the old native `hermes` tree archived to hwc-server `/var/lib/backups/service-split-wave4/` before deletion. `hermes-discord-bot-token` stays: lead-scout's approvals bot uses it.
