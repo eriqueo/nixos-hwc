@@ -337,11 +337,11 @@
     "fleet-map": {
       "flake": false,
       "locked": {
-        "lastModified": 1790479211,
-        "narHash": "sha256-Q9YMvWoqulxGWqRcIFYIQujetfZlKDDrybZMpU+sA0k=",
+        "lastModified": 1790479509,
+        "narHash": "sha256-SEvPF6mLV5+ZTrOqW1eu7zSC9/NAtorhgftzfltZ5Ng=",
         "owner": "eriqueo",
         "repo": "fleet-map",
-        "rev": "c8847942cc0b7335d18a72281e006ece7cae75b7",
+        "rev": "deb0cae4b45b9cfe9894a2466b839106acfa4afb",
         "type": "github"
       },
       "original": {
