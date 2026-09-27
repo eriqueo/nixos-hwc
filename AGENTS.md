@@ -1,7 +1,7 @@
 # nixos-hwc
 
 NixOS flake managing HWC machines. The agent harness runs on hwc-laptop,
-hwc-server, and hwc-work. Charter v12.6:
+hwc-home, and hwc-work. Charter v12.6:
 domains = capabilities, profiles = roles, machines = instances. Each
 domain's `README.md` carries its structure and changelog.
 
