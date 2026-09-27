@@ -34,6 +34,7 @@ in
   # entries. Moving an app's route = one entry here, plus the laptop
   # rebuild. `mode = "port"` marks a port route (no stub when it is absent).
   hwc.networking.shared.routeOwners = {
+    map = "work";        # private fleet topology, hosted by monitoring
     calculator = "work";
     refinery = "work";   # wave 1: board + gauntlets
     workbench = "work";  # wave 1: hub; hwc-server keeps the module on for its areas.json

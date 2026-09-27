@@ -26,6 +26,9 @@
   description = "HWC NixOS Configuration - Modular Architecture";
 
   inputs = {
+    # Fleet map UI and read-only capture tools have their own app lifecycle.
+    fleet-map = { url = "github:eriqueo/fleet-map"; flake = false; };
+
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-26.05";
     # TS-2026-011 needs Tailscale >= 1.102.3; stable 26.05 has 1.98.10.

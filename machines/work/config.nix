@@ -31,6 +31,7 @@
   # The server role supplies Podman, CLI tools and server path defaults.
   # CouchDB stays with phone storage on the home server.
   hwc.data.couchdb.enable = false;
+  hwc.monitoring.fleet-map.enable = true;
   # The cert exporter requires a system bridge unit no host runs, and nothing
   # reads its pem; the mail role's user-unit bridge serves plaintext loopback.
   hwc.mail.protonmailBridgeCert.enable = false;

@@ -18,6 +18,8 @@ Provides network infrastructure that other domains depend on:
 
 ## Structure
 
+`routeOwners.map` assigns the fleet map to work; the existing wildcard HTTPS renderer serves its generated static site.
+
 Home and work render owned routes. Home retains explicit n8n port/webhook forwards and the shared MCP entrypoint; moved app vhost fallbacks are removed. Retained n8n port logs are bounded to five 50 MiB files/seven days and omit request headers and URIs.
 
 The host registry now names hwc-home; stable application vhosts and IPs remain unchanged.
@@ -45,6 +47,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-09-27: Assign map.hwc.iheartwoodcraft.com to work; monitoring self-registers its static vhost.
 - 2026-09-26: Remove 25 home-to-work vhost fallbacks after authoritative DNS, laptop pins and access-log review. Honor `forwardFrom` in owner filtering; retain n8n/webhook explicitly and add bounded port access evidence. Existing n8n compatibility check also tests vhost absence and shared entrypoints.
 - 2026-09-26: The host registry now names hwc-home; stable application vhosts and IPs remain unchanged.
 - 2026-09-26: Whisper keeps its home GPU route while the work inbox processor consumes its stable HTTPS URL. Add `sync.hwc.iheartwoodcraft.com` for host-independent phone LiveSync while retaining the old `/sync` path until client migration.

@@ -334,6 +334,22 @@
         "type": "github"
       }
     },
+    "fleet-map": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790479211,
+        "narHash": "sha256-Q9YMvWoqulxGWqRcIFYIQujetfZlKDDrybZMpU+sA0k=",
+        "owner": "eriqueo",
+        "repo": "fleet-map",
+        "rev": "c8847942cc0b7335d18a72281e006ece7cae75b7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "eriqueo",
+        "repo": "fleet-map",
+        "type": "github"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -625,6 +641,7 @@
         "bloxels-cv": "bloxels-cv",
         "claude-cowork": "claude-cowork",
         "codex": "codex",
+        "fleet-map": "fleet-map",
         "home-manager": "home-manager_3",
         "home-manager-stable": "home-manager-stable",
         "hwc-dictation": "hwc-dictation",

@@ -23,6 +23,7 @@
     ./cadvisor/index.nix
     ./podman-exporter/index.nix
     ./exportarr/index.nix
+    ./fleet-map/index.nix
     ./homepage/index.nix
     ./alerts/index.nix            # Alert sources, thresholds, severity mapping
     ./heartbeat/index.nix         # Outbound ping to an external dead-man's switch
