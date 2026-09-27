@@ -65,6 +65,13 @@
     };
   };
 
+  # CPU policy (2026-09-26): balance_power EPP, turbo left on. The 285HX in
+  # this MS-02 idles at 42°C and hit 80-90°C for one-thread pollers under
+  # the balance_performance default, with 93-218 package-throttle events per
+  # core per day and audible fan hunting. Nothing latency-bound runs here;
+  # GPU Whisper stays on home.
+  hwc.system.hardware.cpuPower.energyPerformancePreference = "balance_power";
+
   #==========================================================================
   # Service split wave 1 (2026-09-25): development apps + brain stack.
   # Refinery, nightly builds and both gauntlets moved here with their state
@@ -87,6 +94,13 @@
   hwc.automation.srGauntlet.enable = true;
   hwc.automation.dx1Gauntlet.enable = true;
   hwc.automation.vaultSync.enable = true;
+  # Timer stagger (2026-09-26). The module defaults put five pollers on the
+  # same quarter-hour minute and three morning jobs on 07:30; every shared
+  # start was a 60-80°C package spike and a fan ramp on this small chassis.
+  # brain-vault-sync keeps :00 and brainvec keeps :05 (it orders after the
+  # sync); the rest take distinct minutes. Pure instance data, so it lives here.
+  hwc.automation.srGauntlet.onCalendar = "*:7/15";
+  hwc.automation.dx1Gauntlet.onCalendar = "*-*-* 07:45:00";
   hwc.automation.brainSweep = {
     enable = true;
   };
@@ -218,10 +232,17 @@
       enable = true;
       channelId = "1545506587815313560";
     };
-    # One post at 07:30, only when the counts moved since the last one.
+    # One morning post, only when the counts moved since the last one.
+    # 07:50: off the 07:30 minute that nightly-builds-review keeps.
     summary.enable = true;
+    summary.onCalendar = "*-*-* 07:50:00";
   };
   hwc.business.crm.controlTokenSecretRef = "hwc-control-crm-token";
+  # Timer stagger (see the automation block above): off :00 (logrotate,
+  # brain-vault-sync) and off each other.
+  hwc.business.crm.tick.onCalendar = "*:41";
+  hwc.business.crm.leadscoutIngest.onCalendar = "*:13/30";
+  hwc.business.crm.rolodex.sync.onCalendar = "*:11/15";
   # Calendars outside Radicale that also make Eric busy for website bookings.
   hwc.business.crm.calendar.busyFeeds = {
     "ContractorCTO" = "cto-ical-link";
