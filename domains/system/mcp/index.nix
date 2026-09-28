@@ -415,11 +415,6 @@ in
           PrivateTmp = true;
           ProtectSystem = "strict";
           ProtectHome = "read-only";
-          # Keep repository/build inputs read-only inside the one website mount.
-          ReadOnlyPaths = map (entry: "-${paths.business.websiteSite}/${entry}") [
-            ".git" "node_modules" "dist" "package.json" "package-lock.json"
-            ".eleventy.js" ".eleventyignore" ".gitignore"
-          ];
           ReadWritePaths = [
             "/tmp"
             "/run/hwc-sys-mcp"
@@ -456,7 +451,11 @@ in
             "${paths.nixos}/domains/business/morning-briefing/output"
           ];
           SupplementaryGroups = [ "podman" ];
-          ReadOnlyPaths = [
+          # Keep repository/build inputs read-only inside the one website mount.
+          ReadOnlyPaths = (map (entry: "-${paths.business.websiteSite}/${entry}") [
+            ".git" "node_modules" "dist" "package.json" "package-lock.json"
+            ".eleventy.js" ".eleventyignore" ".gitignore"
+          ]) ++ [
             paths.nixos
             "/nix/store"
             "/run/systemd"
