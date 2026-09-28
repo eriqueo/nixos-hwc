@@ -24,6 +24,7 @@ Every binding is declared **once** in `parts/behavior.nix`, as a record carrying
 It is deliberately *not* read from `hyprctl binds -j`: that API emits malformed JSON in Hyprland 0.56.0 (keys and values misaligned — `"keycode": RETURN`, `"allow_input_capture": ,`), and carries no descriptions, so the best it could ever print is `exec hyprland-monitor-toggle`.
 
 ## Changelog
+- 2026-09-28: Removed the JobTread `--app` Chromium window from autostart. It ran unseen on workspace 4 for the whole session and shared the Default profile with SUPER+B Chromium; after 10 days of uptime it lost its `/tmp` singleton and a second browser opened over the same profile.
 - 2026-09-26: Derive SUPER+E from the configured mail command, removing its stale home-server destination.
 - 2026-09-26: Credential app launchers now use one Hyprland-owned toggle and show new windows on the current workspace. Removed the stale Proton Pass class rule and Authenticator workspace pin.
 - 2026-09-16: Launch Workbench with the exact `hwc-workbench` window class and suppress activation requests for that class, preventing background aerc bells from switching workspaces while preserving the desktop-wide focus policy.

@@ -53,10 +53,6 @@
       workspace = 2;
     }
     {
-      cmd = "gpu-launch chromium-hwc --app=https://app.jobtread.com";
-      workspace = 4;
-    }
-    {
       cmd = "proton-mail";
       workspace = 8;
     }
