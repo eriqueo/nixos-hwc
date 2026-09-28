@@ -50,6 +50,7 @@
   dictateCommand = "hwc-dictation record toggle";
   dictateCancelCommand = "hwc-dictation record cancel";
   workbenchClass = "hwc-workbench";
+  workbenchCommand = "kitty --class ${workbenchClass} -e wb-reload";
   # Same command as the Zellij and Workbench mail panes; local where no alias exists.
   mailCommand = (config.hwc.home.core.shell.aliases or {}).aerc or "aerc";
 
@@ -110,7 +111,7 @@
           # a zsh alias named wb-reload would be invisible here. wb-reload kills
           # the named session then re-creates it, so every SUPER+W picks up the
           # latest layout instead of reattaching a stale session.
-          {mods = mod;            key = "W";      act = "exec,kitty --class ${workbenchClass} -e wb-reload"; desc = "Workbench (fresh zellij session)";}
+          {mods = mod;            key = "W";      act = "exec,${workbenchCommand}"; desc = "Workbench (fresh zellij session)";}
           {mods = mod;            key = "V";      act = "exec,cliphist list | wofi --dmenu | cliphist decode | wl-copy"; desc = "Clipboard history";}
           {mods = "${mod} SHIFT"; key = "I";      act = "exec,refinery-intake";         desc = "Refinery intake (capture an idea)";}
         ]
@@ -266,8 +267,9 @@
     };
   };
 in {
-  # Waybar uses the same commands as these compositor bindings.
-  inherit keybinds dictateCommand dictateCancelCommand;
+  # Waybar uses the same commands as these compositor bindings; session.nix
+  # autostarts Workbench with the SUPER+W command.
+  inherit keybinds dictateCommand dictateCancelCommand workbenchCommand;
 
   submaps = lib.listToAttrs (map mkSubmap submapGroups);
 

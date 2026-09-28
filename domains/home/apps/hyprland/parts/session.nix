@@ -4,6 +4,7 @@
   lib,
   pkgs,
   card ? "",
+  workbenchCommand ? null,
   osConfig ? {},
   ...
 }: let
@@ -36,9 +37,12 @@
   # Workspace pinning uses Hyprland's native `[workspace N silent]` exec rule,
   # which is race-free (unlike a startup script that dispatches workspaces).
   #============================================================================
+  # xfconfd is not listed: Thunar starts it through D-Bus activation
+  # (org.xfce.Xfconf.service) when it first reads a setting.
+  workbenchEnabled = (config.hwc.home.apps.workbench.enable or false) && workbenchCommand != null;
+
   autostart = [
     # Background / one-shot services
-    {cmd = "xfconfd";}
     {cmd = "hyprctl setcursor ${hyprcursorName} ${cursorSize}";}
     {cmd = "swaybg -i ${../../../theme/nord-mountains.jpg} -m fill";}
     {cmd = "wl-paste --watch cliphist store";}
@@ -52,11 +56,12 @@
       cmd = "kitty";
       workspace = 2;
     }
-    {
-      cmd = "proton-mail";
-      workspace = 8;
-    }
-  ];
+  ]
+  # Workbench carries mail (aerc) along with the other daily tools.
+  ++ lib.optional workbenchEnabled {
+    cmd = workbenchCommand;
+    workspace = 3;
+  };
 
   mkExec = a:
     if a ? workspace

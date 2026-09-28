@@ -16,7 +16,7 @@ let
   # viewer package. One declaration, so the legend can't drift from the keys.
   behavior   = import ./parts/behavior.nix   { inherit config lib pkgs; };
   theme      = import ./parts/theme.nix      { inherit config lib pkgs; keybinds = behavior.keybinds; };
-  session    = import ./parts/session.nix    { inherit config lib pkgs; card = theme.card; osConfig = osConfig; };
+  session    = import ./parts/session.nix    { inherit config lib pkgs; card = theme.card; workbenchCommand = behavior.workbenchCommand; osConfig = osConfig; };
 
   hw = if builtins.pathExists ./parts/hardware.nix
        then import ./parts/hardware.nix { inherit lib pkgs; }
