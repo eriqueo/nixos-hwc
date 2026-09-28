@@ -324,6 +324,16 @@ in
     };
 
     business = {
+      websiteSite = mkOption {
+        type = types.path;
+        default = "${serverBusinessRoot}/website-site";
+        description = "Canonical website source on the business host";
+      };
+      websitePublished = mkOption {
+        type = types.path;
+        default = "${serverBusinessRoot}/website-published";
+        description = "Bounded website releases and atomic current link";
+      };
       root = mkOption {
         type = types.nullOr types.path;
         default = if isServer then serverBusinessRoot else null;

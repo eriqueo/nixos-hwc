@@ -3,7 +3,7 @@
  */
 
 import { readdir, readFile, writeFile, rename, mkdir, stat } from "node:fs/promises";
-import { join, basename, extname } from "node:path";
+import { join, basename, extname, isAbsolute } from "node:path";
 import matter from "gray-matter";
 import type { ToolDef, ToolResult } from "../types.js";
 import { mcpError, catchError } from "../errors.js";
@@ -17,8 +17,8 @@ function isValidSlug(slug: string): boolean {
   return /^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(slug) && !slug.includes("..");
 }
 
-export function websiteTools(nixosConfigPath: string): ToolDef[] {
-  const siteRoot = join(nixosConfigPath, "domains/business/website/site_files/src");
+export function websiteTools(websiteSiteDir: string): ToolDef[] {
+  const siteRoot = join(websiteSiteDir, "src");
 
   function contentDir(type: ContentType): string {
     return type === "pages" ? join(siteRoot, "pages") : join(siteRoot, "blog");
@@ -78,7 +78,13 @@ export function websiteTools(nixosConfigPath: string): ToolDef[] {
         required: ["action"],
       },
       handler: async (args): Promise<ToolResult> => {
+        if (!isAbsolute(websiteSiteDir)) {
+          return mcpError({type: "UNAVAILABLE", message: "Website directory is not configured"});
+        }
         const action = args.action as string;
+        if (args.slug !== undefined && (typeof args.slug !== "string" || !isValidSlug(args.slug))) {
+          return mcpError({type: "VALIDATION_ERROR", message: "Invalid content slug"});
+        }
 
         // ── list ─────────────────────────────────────────────────
         if (action === "list") {
