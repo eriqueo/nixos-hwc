@@ -415,6 +415,11 @@ in
           PrivateTmp = true;
           ProtectSystem = "strict";
           ProtectHome = "read-only";
+          # Keep repository/build inputs read-only inside the one website mount.
+          ReadOnlyPaths = map (entry: "-${paths.business.websiteSite}/${entry}") [
+            ".git" "node_modules" "dist" "package.json" "package-lock.json"
+            ".eleventy.js" ".eleventyignore" ".gitignore"
+          ];
           ReadWritePaths = [
             "/tmp"
             "/run/hwc-sys-mcp"
@@ -431,8 +436,9 @@ in
             "${paths.user.home}/.local/share/vdirsyncer"
             "${paths.user.home}/.local/share/khal"
             # Website content editing via hwc_website_* tools
-            "${paths.business.websiteSite}/src"
-            "${paths.business.websiteSite}/.trash"
+            # One mount is required for atomic rename from src/ to .trash/.
+            # Separate ReadWritePaths bind mounts make rename fail with EXDEV.
+            (toString paths.business.websiteSite)
             # CMS app editing via hwc_cms_* tools (scope: cms)
             cmsAppPath
             # Calculator app editing via hwc_cms_* tools (scope: calculator)

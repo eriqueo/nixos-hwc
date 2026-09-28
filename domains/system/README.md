@@ -52,6 +52,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-09-28: Keep website content and trash on one writable mount for atomic soft deletion; repository metadata and build inputs stay read-only.
 - 2026-09-28: MCP website content/trash paths consume hwc.paths.business.websiteSite through an explicit environment binding.
 - 2026-09-27: Replace root startup npm installation with a locked Nix-built n8n backend; test its real stdio entry point offline. Set a 1G default journal ceiling while preserving host overrides.
 - 2026-09-26: `hardware/` — new `cpuPower.energyPerformancePreference` (default null) writes an intel_pstate EPP to every cpufreq policy from a `RemainAfterExit` oneshot whose `ExecStop` restores `default`, so a revert is clean at the next switch; asserts against TLP as a second EPP producer. hwc-work sets `balance_power`: its 285HX hit 80-90°C and 93-218 package-throttle events per core per day on one-thread pollers.
