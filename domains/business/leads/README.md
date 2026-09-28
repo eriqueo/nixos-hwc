@@ -141,6 +141,11 @@ Hardening: same set as hwc-notify (`NoNewPrivileges`, `ProtectSystem=strict`, `P
 
 ## Changelog
 
+- **2026-09-25** — `notifyServiceUrl` now defaults to
+  `config.hwc.notifications.notify.url` instead of the hardcoded
+  `http://127.0.0.1:11600` (2fdea699 — hwc-notify given one address, dispatcher
+  moved to hwc-work). The option comment had already anticipated this: it exists
+  precisely so the Phase 2 NotifyAdapter keeps working if hwc-notify moves off-host.
 - **2026-09-19** — `parts/jt-mappings.nix` gained `jobSync` (hwc-crm D45): the Deferred phase, the default phase and the CRM-loss-reason → `Job Lost Reason` map. Its presence turns on hwc-crm's two-way job link. The tunnel route for `crm.iheartwoodcraft.com` (`machines/server/config.nix`) now also admits `/hooks/jt`, JobTread's webhook into the CRM.
 - **2026-09-19** — `parts/jt-mappings.nix` `intakeValues` gained `leadSourceOptions`, `projectTypeOptions` and `jobTypeByProjectType` (hwc-crm only). The website contact and inline forms now post to hwc-crm, which writes the customer's chosen Lead Source and Project Type to JobTread only when the choice is a listed live option.
 - **2026-09-18** — `parts/jt-mappings.nix` gained `jobCustomFields`, `accountCustomFields` and `intakeValues`, read by hwc-crm only (this service ignores unknown keys). JobTread's job `Phase` field is now the one status field; job `Status` and customer `Status` were deleted in JobTread. hwc-crm sets Phase, Job Type and Run PM Report on every job it creates, and Lead Source / Project Type on every customer it creates.
