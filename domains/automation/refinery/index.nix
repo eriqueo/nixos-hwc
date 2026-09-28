@@ -20,7 +20,7 @@
 #   - Caddy route on port 8060 (domains/networking/routes.nix)
 #   - a headless `claude` binary for triage (claude-cli provider) — cfg.claudeBin
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, inputs, ... }:
 
 let
   cfg = config.hwc.automation.refinery;
@@ -40,8 +40,9 @@ let
   board = pkgs.buildNpmPackage {
     pname = "refinery-engine-board";
     version = "0.1.0";
-    src = ./engine;
-    npmDepsHash = "sha256-FM9UojLOeKWb8Rer2oBYF6Qk3v3cgFewEVzDdsxBFrA=";
+    # The native review timer must write the same format as the container board.
+    src = inputs.refinery + "/engine";
+    npmDepsHash = "sha256-G58tIlEz0zYmT/1JnA0mrqGXZ38IUszU5suZsTOUmxk=";
     nativeBuildInputs = [ pkgs.esbuild pkgs.makeWrapper ];
     dontNpmBuild = true; # we don't need tsc output, just the bundle
     # Two entry points, both esbuild-bundled the same way (CJS, deps inlined):

@@ -14,6 +14,10 @@ readme-freshness weekly Law-12 drift report.
 
 ## Structure
 
+Refinery native bundles (including the nightly review writer) use the pinned
+`refinery` flake input, matching the container release selected on work.
+Review storage upgrades require both writers to move together.
+
 The nightly rebuild allowlist uses hwc-home; machine-directory references follow the renamed instance.
 
 ```
@@ -79,6 +83,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-09-28: Pin the native Refinery review writer to the repaired upstream source so the timer and container share collision-safe, atomic v2 review storage.
 - 2026-09-26: The nightly rebuild allowlist uses hwc-home; machine-directory references follow the renamed instance.
 - 2026-09-26: Both nightly runners tolerate an absent `/mnt` while keeping existing mounts read-only. The service-split retirement check pins the evaluated production units.
 - 2026-09-25: Regenerate the Frigate and Jellyfin workflow review exports from live n8n after the wave-4 cross-host URL changes; the existing canonicalizer and secret scanner verify both artifacts.

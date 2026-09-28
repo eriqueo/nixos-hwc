@@ -648,6 +648,22 @@
         "type": "github"
       }
     },
+    "refinery": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790611414,
+        "narHash": "sha256-2T47gxGkBSSO1B2slm3OwnpNPQs+SjQPWpgnfqsv9Ic=",
+        "owner": "eriqueo",
+        "repo": "refinery",
+        "rev": "f5d2a41b707b84f9fc73ee3395566f94f450d281",
+        "type": "github"
+      },
+      "original": {
+        "owner": "eriqueo",
+        "repo": "refinery",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "aerc": "aerc",
@@ -669,6 +685,7 @@
         "nixvirt": "nixvirt",
         "pave-query-builder": "pave-query-builder",
         "pnc-statement-pipeline": "pnc-statement-pipeline",
+        "refinery": "refinery",
         "system-one": "system-one",
         "tetro": "tetro",
         "todui": "todui",
