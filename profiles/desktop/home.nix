@@ -108,7 +108,7 @@
   # Mail & Communication
   hwc.mail = {
     enable = lib.mkDefault true;
-    bridge.enable = true;
+    bridge.enable = lib.mkDefault true;
     aerc.enable = lib.mkDefault true;
 
     notmuch = {

@@ -33,6 +33,7 @@ mail/        home.nix             # work — hwc.mail menu
 ```
 
 ## Changelog
+- 2026-09-28: Desktop role's `hwc.mail.bridge.enable` is now `mkDefault true`, so a machine can opt out; hwc-laptop does.
 - 2026-09-26: Machine references follow the home instance rename; role names remain capabilities.
 - 2026-09-26: Server loses business/mail membership. CouchDB, Refinery and Nightly Builds are enabled by their owner machines, not by the generic server role.
 - 2026-09-21: The business system role enables the resident Laya mail

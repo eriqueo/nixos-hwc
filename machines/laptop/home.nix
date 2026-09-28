@@ -95,6 +95,11 @@ in
 
   hwc.mail.mbsync.enable = false;
 
+  # No local Proton Bridge: mail is read and sent through aerc on hwc-work
+  # (the `aerc` alias, SUPER+E and the Workbench mail pane all ssh there), and
+  # with mbsync off nothing here fetched through it.
+  hwc.mail.bridge.enable = false;
+
   hwc.mail.health = {
     enable = false;
   };
