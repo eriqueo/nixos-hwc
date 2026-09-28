@@ -60,6 +60,9 @@ password (`cut -d: -f2-`).
    phone; add a task on the phone in that list → sync → visible in todui.
 
 ## Changelog
+- 2026-09-26: Doc-only — the `USAGE` header names `machines/home/config.nix` instead
+  of `machines/server/config.nix`, following the rename of the home machine and its
+  fleet consumers; identities preserved (4ac9941d).
 - 2026-09-24: Radicale is the only calendar + tasks backend on every machine
   (client-side iCloud paths deleted; see `domains/mail/calendar` and
   `domains/mail/tasks`). The retired `cal/migrated` collection (a 07-16 copy

@@ -421,6 +421,31 @@ shares.directories = [
 - **Secrets Management**: `domains/secrets/README.md` (if exists)
 - **HWC Charter**: `charter.md`
 
+## Changelog
+
+- **2026-09-10**: Comment-only — `parts/config.nix` now points at
+  `media/directories.nix` as the tmpfiles owner instead of the retired
+  `_shared/directories.nix`, part of making `/mnt/media/youtube` have a single
+  producer (ca49bf2b).
+- **2026-08-20**: **slskd moved onto its own VPN tunnel, and clearnet became a build
+  failure.** `network.mode` had defaulted to `"media"` since the module was written,
+  so slskd egressed on the house IP for six weeks (~29.4 GB out, 15.5 GB in) while
+  every sibling downloader was tunnelled — the ordering line that appeared to wire it
+  to gluetun lived in a module whose `enable` was never set. The default is now
+  `"vpn"`, and a new `allowClearnet` option (default `false`) makes `"media"` fail the
+  build unless set deliberately: a default is not a guarantee, the assertion is. New
+  `vpnInstance` (default `gluetun-slskd`) gives slskd its **own** tunnel rather than
+  sharing qBittorrent's — Proton forwards exactly one port per WireGuard session, and
+  Soulseek without an inbound port loses uploads and degrades search and browse, which
+  is exactly what soularr depends on. The Soulseek listen port now follows the tunnel's
+  NAT-PMP forwarded port: `parts/config.nix` reads
+  `<gluetun.stateRoot>/<vpnInstance>/forwarded-port` and falls back to the new
+  `listenPort` option (50300) off-VPN or before the first sync; the config generator is
+  the only writer of `slskd.yml`, so the port cannot drift between two producers. On
+  the VPN, `sys.nix` stops publishing host ports — the tunnel publishes the web UI and
+  the Soulseek port arrives through the forward. Assertions come from the shared
+  `helpers.mkVpnAssertions` in `domains/lib/mkContainer.nix` (0f102aa4).
+
 ---
 
 **Last Updated**: 2025-11-06

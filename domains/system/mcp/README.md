@@ -486,6 +486,9 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **nvidia-smi PATH fallback**: GPU tool tries PATH first, then `/run/current-system/sw/bin/nvidia-smi`
 
 ## Changelog
+- **2026-09-27 (b)**: Locked the n8n backend's `npmDepsHash` to
+  `sha256-sc936CuA7oIwg/O1dmC999qkbv5Qf11oH3YG/4DsXpU=`; it had landed as
+  `lib.fakeHash` (59b79d0d). The refresh procedure in the entry below is unchanged.
 - **2026-09-27**: Package n8n-mcp from `parts/n8n-mcp/package-lock.json` during the Nix build. The gateway no longer installs npm dependencies as root at startup. `mcp-immutable-build` starts the backend offline and reads its bundled HTTP Request node documentation. Update the manifest with `npm install --package-lock-only --ignore-scripts --no-audit --no-fund`, refresh `npmDepsHash`, then commit, build and switch. The prior system generation and old install remain available for recovery during adoption.
 
 - 2026-09-25: Agent sessions use the service. `index.nix` adds `serverAlias`,
