@@ -56,6 +56,11 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 `^/hooks/(contact|appointment|availability)`.
 
 ## Changelog
+- **2026-09-25** — `notifyUrl` now defaults to `config.hwc.notifications.notify.url`
+  instead of the hardcoded `http://127.0.0.1:11600` loopback (2fdea699 — hwc-notify
+  given one address, dispatcher moved to hwc-work). Web-form contact leads still POST
+  `topic="leads"` and still land in #hwc-leads; they just follow the dispatcher rather
+  than assuming it is local.
 - **2026-09-21** — The CRM ingest and Lead Scout action UI now consume one
   derived v2 route/window contract, keeping route and score eligibility under
   one Nix producer.

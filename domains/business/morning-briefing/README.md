@@ -165,6 +165,16 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 
 ## Changelog
 
+- **2026-09-27** — The `host` option's SSH-backed health reads are now documented as
+  **permanent by design**, not a service-split stopgap. Both the option description
+  and `run.sh`'s `host_exec` comment dropped their "TEMPORARY: wave 3 makes these
+  sections Prometheus-backed" note: the journal, VPN and backup detail these reads
+  return is source-owned and a central green probe cannot replace it; five sampled
+  SSH reads total 0.73 s (498015ee, a0af0e72).
+- **2026-09-26** — Operator hints follow the service host instead of naming
+  `hwc-server`. The dashboard's mail-triage failure hint now says "diagnose on the
+  Morning Briefing host", and `run-dispatch.sh`'s Claude auth-failure line says
+  "re-authenticate on the host running this dispatcher" (42722b02). Text only.
 - **2026-09-24** — Persistent sender-plus-subject routing rules now appear in
   the dashboard, Workbench briefing, and plain/HTML email. Mail retriage also
   republishes the served dashboard JSON atomically, so intraday changes cannot

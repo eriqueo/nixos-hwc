@@ -85,6 +85,14 @@ After enabling and rebuilding:
 
 ## Changelog
 
+- 2026-08-28: **`business_user` is now declared here** (`services.postgresql.ensureUsers`),
+  with no `ensureDBOwnership` — `eric` owns this database and its objects, and
+  `business_user` is a grantee. This module owns the role because `schema.sql:772-774`
+  and `migrations/001-catalog-schema-split.sql` grant to it by name and nothing else in
+  the repo mentions it; the role existed on the live cluster by hand, so a rebuilt
+  cluster would have run those grants against a role that does not exist (53e84228,
+  follow-on to e82ca994 which deleted 54 dead `$PSQL` statements across the postgres
+  modules — `$PSQL` is never set in `postStart`, so none of them ever ran).
 - 2026-05-01: Added export scripts, estimate_templates table, 70 catalog items with Craftsman/JT rates
 - 2026-04-12: Created index.nix module (hwc.business.databases.*), wired into business domain
 - 2026-03-24: Granted n8n postgres user access to hwc schema

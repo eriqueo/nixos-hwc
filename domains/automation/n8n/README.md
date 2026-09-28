@@ -124,6 +124,16 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
+- 2026-09-28: `parts/estimator-integration/README.md` gained the `## Structure` and
+  `## Changelog` sections Law 12 requires; its one recorded change is the 2026-06-02
+  `hwc-server.ocelot-wahoo.ts.net` tailnet rename sweep. Docs only.
+
+- 2026-09-25: Wave 4 routing verified. `01-media-pipeline-orchestration.json` and
+  `02-frigate-surveillance-intelligence.json` regenerated from live n8n — they now
+  address the Jellyfin and Frigate vhosts instead of server loopback addresses. The
+  canonicalizer secret scan and its 32 tests passed. `parts/workflows/README.md`
+  records the regeneration status (91a8be6b).
+
 - 2026-09-08: Event discovery, curation and calendar review moved to Event Scout
   in the Scout monorepo (`apps/event-scout`). Removed the two event workflow
   exports, the unused event ledger migration and n8n's event bearer mount.

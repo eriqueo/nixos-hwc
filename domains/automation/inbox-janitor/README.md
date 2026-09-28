@@ -143,6 +143,17 @@ distinct live gdrive investigations share `datax__ops__gdrive__` — so inferrin
 from filenames would delete parallel work while sounding precise.
 
 ## Changelog
+- 2026-09-10: **Rules may now drain a file OUT of the inbox.** `classify()` already
+  handled an absolute `dest` (pathlib resolves `downloads / "/abs/path"` to the
+  absolute path), but two edge functions did not: `run()` logged
+  `target.relative_to(inbox_root)`, which raises `ValueError` for any target outside
+  the inbox — crashing the run before the first file moved — and `republish()` hit
+  the same call inside the move loop *after* `shutil.move`, so it could abort a drain
+  that had already half-happened. `run()` now formats through `_display()`
+  (inbox-relative inside, absolute out) and `republish()` skips paths outside the
+  Syncthing folder, since there is nothing there for that folder to rescan. Until
+  this, the tree could only accumulate: 763 of 828 non-agent files were older than
+  30 days and `code/` held nothing newer than 30 days.
 - 2026-08-22: **`downloads/agent/` reorganized to `agent/<project>/<file>` and two
   reports added.** The flat bucket + `<domain>__<class>__<nouns>` filename convention
   measured **23% conformance (68 of 290 files) with zero near-misses** — no file used

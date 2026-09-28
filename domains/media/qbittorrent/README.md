@@ -116,6 +116,11 @@ journalctl -u podman-qbittorrent -f
 
 ## Changelog
 
+- **2026-08-20**: gluetun went multi-instance, so the hand-written
+  `cfg.network.mode != "vpn" || gluetun.enable` assertion was replaced with the
+  shared `helpers.mkVpnAssertions` from `domains/lib/mkContainer.nix`, passed this
+  module's `network.mode` and the `gluetun.instances` set. The hot-path assertion
+  (`hwc.paths.hot != null`) is unchanged and now appended after it (0f102aa4).
 - **2026-08-01**: Split `privacy.enable` into per-protocol toggles
   (`anonymousMode`/`dht`/`pex`/`lsd`) and turned **DHT + PeX back on** by
   default. The blanket-off posture was redundant with the gluetun tunnel (the

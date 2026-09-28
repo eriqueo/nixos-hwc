@@ -42,6 +42,19 @@ domains/mail/calendar/
 
 ## Changelog
 
+- 2026-09-25: **`vdirsyncer.service` gained a discover-on-change `ExecStartPre`.**
+  vdirsyncer refuses to sync until `discover` has recorded each pair's collections —
+  on a new host, and again after any config change — and hwc-work failed every run
+  after joining the mail role and again after the Radicale mirror collections moved
+  into its pair config. `parts/service.nix` now runs `yes | vdirsyncer discover`
+  followed by `vdirsyncer metasync` whenever the config's sha256 differs from the
+  one stamped beside `status/`. Three properties are deliberate: unchanged config
+  never re-discovers, so a collection deleted on one side stays deleted; `metasync`
+  is in the same step because `sync` never moves collection metadata, and a host
+  that skipped it has no displaynames and khal exits `hwc is not valid for
+  'default_calendar'`; and the stamp hashes a step version (`discover-step v2`) so a
+  change to what the step does re-runs it once on every host. `service.nix` now takes
+  `dataDir` (cb8796e6 → 095d5f8e → 80f66c80, each found on a fresh hwc-work).
 - 2026-09-24: Radicale is the only backend. Deleted the iCloud `accounts`
   option, its per-account pairs and khal calendars, the hardcoded iCloud
   `default_calendar` UUID, the `calendars/` mkdir, the apple-app-pw handshake,

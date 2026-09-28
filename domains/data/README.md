@@ -27,6 +27,7 @@ data/
 ```
 
 ## Changelog
+- 2026-09-28: Law 12 changelog refresh across `couchdb/`, `databases/` and `syncthing/` — each now records the real commits landed since its README was last touched. Docs only.
 - 2026-09-26: Machine references follow machines/home; the home job pins its historical Borg archive/prune identity.
 - 2026-09-26: Centralize version-matched PostgreSQL dumps with atomic publication and failure propagation. Restore helpers preserve failure status; jobs respect repository locks. Local dump retention excludes nested migration archives.
 - 2026-09-25: Retired `cloudbeaver/` (service-split audit: 0 requests in the 9 days of vhost logs; Eric: no longer used). Workspace archived to hwc-server `/var/lib/backups/service-split-wave3/cloudbeaver.tar.zst` before deletion.

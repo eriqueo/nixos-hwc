@@ -117,11 +117,28 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 ## Structure
 
 ```
-├── index.mjs    CLI, browser lifecycle, scroll loop, comment expansion
-├── parse.mjs    FB GraphQL response parsers (ported from API Monitor)
-├── store.mjs    SQLite persistence layer
-├── data/
-│   ├── posts.db       ← created on first run
-│   └── session.json   ← created on login
-└── package.json
+├── index.mjs        CLI, browser lifecycle, scroll loop, comment expansion
+├── parse.mjs        FB GraphQL response parsers (ported from API Monitor)
+├── Containerfile    Playwright image (version-pinned to package.json)
+├── package.json     + package-lock.json
+└── data/            ← created at runtime, not tracked
+    ├── posts.db       ← created on first run
+    └── session.json   ← created on login
 ```
+
+## Changelog
+
+- 2026-05-21: `shell.nix` removed (5da97868). The Playwright login shell it
+  provided is no longer carried in this directory.
+- 2026-05-13: `index.mjs` path fixes carried along with the jobber-mcp project-path
+  move to `300_tech/320_projects` (b6f1fc59).
+- 2026-05-11: **Login/session rework.** `index.mjs` switched to
+  `launchPersistentContext` with a `--profile` flag (14bb2b86), dropping ~53 lines
+  of manual session juggling. Login detection went through three corrections in
+  the same day: wait for the logged-in UI rather than just the password form
+  disappearing (c000f1b2), poll for login state so passkey redirects survive
+  (a215218e), and finally detect via the `c_user` cookie instead of the DOM
+  (be21c3c0) — the DOM checks kept breaking on FB markup changes. Playwright
+  pinned to 1.59.1 in both `package.json` and the `Containerfile` so the host and
+  image versions match (96bcad2c). `shell.nix` was added for Playwright on the
+  NixOS laptop and pointed at the system chromium (8b1715d8, c1723479).

@@ -117,6 +117,21 @@ hwc.business.paperless = {
 
 ## Changelog
 
+- 2026-09-25 (b): Stopped pre-creating `media/{originals,archive,thumbnails}`.
+  Paperless keeps those under `media/documents/`; the top-level siblings tmpfiles
+  created were always empty — 230 originals in `documents/originals`, 0 in the
+  top-level one (e37f25a4).
+- 2026-09-25: **Service split wave 3, slice 3.3 — Paperless and Redis moved to
+  hwc-work**, state on its SSD under `hwc.paths.state/paperless`. Tika, Gotenberg
+  and mail ingest went with them. The phone's receipts folder stays Syncthing ingest
+  on hwc-server, so `paperless-receipts-mover` no longer assumes Paperless is local:
+  it does a plain `mv` when Paperless runs on the same host and otherwise rsyncs
+  over SSH (as eric, `--remove-source-files`) into the consume dir it reads from the
+  `serverAlias` host's evaluated config. rsync writes a temp file and renames, so
+  the consumer never sees a partial. `parts/receipts.nix` dropped its outer
+  `mkIf cfg.enable` so the mover can run on a host where Paperless is off, and
+  gained an assertion that the Paperless host actually has a `storage.consumeDir`
+  (4f78f8a3).
 - 2026-09-16: `ocr.continueOnSoftRenderError` (on by default) sets
   `PAPERLESS_OCR_USER_ARGS={"continue_on_soft_render_error":true}`. Ghostscript
   10.05.1 refuses to write a PDF/A copy of a file that breaks PDF/A rules — two

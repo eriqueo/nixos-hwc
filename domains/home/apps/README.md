@@ -33,6 +33,8 @@ apps/
 ```
 
 ## Changelog
+- 2026-09-27: `waybar` — Bitwarden's native tray icon is now its only bar button (the custom CSS button was removed), Authenticator's icon was enlarged to match the 20 px tray marks, and `parts/scripts.nix` gained `waybar-bitwarden-open`, which focuses an existing window and recovers a headless Electron process rather than launching a second one that never renders.
+- 2026-09-26: `proton-pass` — the tray handler patch now matches on `tray.on('double-click', …)` alone instead of the platform-guard block around it, so a package update that reflows that guard no longer breaks `--replace-fail`.
 - 2026-09-26: Added the Bitwarden desktop client as an independent app module; Proton app buttons share Hyprland's window toggle.
 - 2026-09-14: Added Vesktop through Home Manager's native `programs.vesktop`
   module; enabled only on hwc-laptop.

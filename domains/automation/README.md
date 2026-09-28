@@ -79,6 +79,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-09-28: Law 12 changelog refresh across `brain-sweep/`, `inbox-janitor/`, `mail-janitor/`, `n8n/`, `nightly-builds/`, `refinery/` and `sr-gauntlet/` — each now records the real commits landed since its README was last touched. Docs only; no module changed.
 - 2026-09-26: The nightly rebuild allowlist uses hwc-home; machine-directory references follow the renamed instance.
 - 2026-09-26: Both nightly runners tolerate an absent `/mnt` while keeping existing mounts read-only. The service-split retirement check pins the evaluated production units.
 - 2026-09-25: Regenerate the Frigate and Jellyfin workflow review exports from live n8n after the wave-4 cross-host URL changes; the existing canonicalizer and secret scanner verify both artifacts.

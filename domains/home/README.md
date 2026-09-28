@@ -59,6 +59,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-27: Bitwarden uses its native tray icon as its only Waybar button, and Authenticator's visible mark was enlarged to match the tray marks.
+- 2026-09-27: A Waybar Bitwarden click now focuses an existing window, and recovers a headless Electron process (TERM, then relaunch) when no window appears.
 - 2026-09-26: Pin the scoped harness hostname correction; preserve T3 launch commands and active sessions.
 - 2026-09-26: Bound work's rootless build-image growth with a user timer; preserve container references, named images, volumes and recent rollback images.
 - 2026-09-26: Repoint laptop mail to work and remove Hyprland's duplicate home-mail command. The service-split check covers the evaluated alias and desktop binding.

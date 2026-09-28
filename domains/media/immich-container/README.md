@@ -79,6 +79,29 @@ journalctl -u immich-machine-learning | grep -i "onnx\|cuda"  # CUDA provider
 
 ## Changelog
 
+- 2026-09-26: Comment-only — the config's reference to the machine file follows the
+  home-machine rename (`machines/server/config.nix` → `machines/home/config.nix`);
+  identities preserved (4ac9941d).
+- 2026-08-28: **The fifteen dead `$PSQL` grant lines are gone, and the immich database
+  and its owning role are now declared.** `$PSQL` is undefined in the generated
+  postgresql post-start script and `|| true` swallowed the command-not-found, so none
+  of the eight `public`-schema grants or the seven `vectors`-schema grants ever ran.
+  They are not restored: Immich connects as its own `immich` role, which owns the
+  database, so the app never touched them; their only purpose was letting `eric` read
+  the database from a psql prompt, and `eric` is a superuser. Neither the database nor
+  its owner was declared anywhere in the repo — both existed on the live cluster by
+  hand, and a rebuilt cluster would not have reproduced them. The owner is
+  `cfg.database.name`, **not** `cfg.database.user`: the machine sets
+  `database.user = "eric"` (the role the container *connects* as, via trust auth) while
+  the live database and its objects are owned by a separate `immich` role. Declaring
+  ownership from `database.user` would emit `ALTER DATABASE immich OWNER TO eric` — a
+  live ownership change wearing a cleanup's clothes, which NixOS's own
+  `ensureDBOwnership` assertion caught on first eval. Full audit in
+  `domains/data/databases/README.md` (e82ca994, 53e84228).
+- 2026-03-29: Replaced the stale read-only `${paths.media.root}/pictures` mount (the
+  directory had been deleted and was empty) with `${paths.photos}/external` in both
+  the server and ML containers, for the new external library holding 34K laptop-only
+  photos (0a0f7414).
 - 2026-03-27: Fixed Prometheus metrics port mappings — added host-side port publishing for apiPort (8091) and microservicesPort (8092) which were only set as container env vars but never exposed, causing false ServiceDown alerts
 - 2026-02-26: Created README per Law 12 (migrated from docs/infrastructure/)
 - 2025-11-21: Initial GPU optimization implementation
