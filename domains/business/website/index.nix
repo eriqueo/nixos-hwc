@@ -159,7 +159,7 @@ in
       };
 
       # Ensure ImageMagick and npx are available for build + image processing
-      path = [ pkgs.imagemagick pkgs.nodejs_22 ];
+      path = [ pkgs.imagemagick pkgs.nodejs_22 pkgs.util-linux ];
     };
 
 
@@ -171,6 +171,7 @@ in
     # this fail-safe removes abandoned staging even when nobody publishes.
     systemd.services.website-release-prune = {
       description = "Prune unused website releases";
+      path = [ pkgs.util-linux ];
       # Each service owns its generated PATH; share only application settings.
       environment = builtins.removeAttrs config.systemd.services.heartwood-cms.environment [ "PATH" ];
       serviceConfig = {
@@ -318,6 +319,10 @@ in
         redir /what-is-the-most-popular-home-renovation/ / 301
         redir /top-remodeling-tips-for-bozeman-homeowners-from-bathrooms-to-basements / 301
         redir /top-remodeling-tips-for-bozeman-homeowners-from-bathrooms-to-basements/ / 301
+        # Permanent public aliases: old cached pages use brand/ for these icons.
+        rewrite /img/brand/Construction-Contractor-Logo.jpg /img/icons/Construction-Contractor-Logo.jpg
+        rewrite /img/brand/iccu-small.jpg /img/icons/iccu-small.jpg
+        rewrite /img/brand/jobtread-badge.webp /img/icons/jobtread-badge.webp
         @report path_regexp report ^/report/([A-Za-z0-9-]{4,64})/?$
         rewrite @report /report/?id={re.report.1}
         file_server

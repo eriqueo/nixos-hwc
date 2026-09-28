@@ -41,6 +41,7 @@ business/
 ```
 
 ## Changelog
+- 2026-09-28: Preserve legacy footer image URLs and supply kernel flock for crash-safe website publication.
 - 2026-09-28: Bound website release cleanup with a daily fail-safe timer; share app settings while each unit owns its generated PATH.
 - 2026-09-28: Website source, CMS, calculator builds and atomic public releases run on hwc-work; a loopback Caddy origin serves the existing Cloudflare tunnel.
 - 2026-09-27: Correct the stale promise to replace detailed SSH health reads with Prometheus; behavior is unchanged.
