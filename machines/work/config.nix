@@ -43,21 +43,27 @@
   # The Proton Bridge and its consumers are local. Cross-host SMTP/IMAP
   # relays retired with the server mail role; the bridge stays loopback-only.
 
-  # Syncthing — the work folders, peered with hwc-server only (the server is
-  # the hub; the laptop reaches these through it). 700_datax carries the
-  # gauntlet trees the moved timers write into; 000_inbox carries the agent
-  # handoffs. Personal and media folders stay off this host.
+  # Syncthing — the work folders. hwc-home is the hub for inbox, hwc and tech;
+  # the laptop reaches those through it. 700_datax is the exception: this host
+  # is the DataX dev host, so it peers with the laptop directly and hwc-home
+  # carries no DataX work (2026-09-28). The laptop dials in (it has no fixed
+  # address). Personal and media folders stay off this host.
   hwc.data.syncthing = {
     enable = true;
     devices."hwc-home" = {
       id = "5UCUDT4-CUUGX7U-F2XVLET-SE3QGCA-JRYGXK3-45MQOBP-SYMQZM7-O653IAA";
       addresses = [ "tcp://${config.hwc.networking.hosts.ips.main}:22000" ];
     };
+    devices."hwc-laptop".id = "H3EVGHN-DTDTMWS-INSC2RH-PBRABJX-M3FW7AM-3P2NY3M-X5XLYCK-JD2YRQG";
     folders = {
       "000_inbox" = { path = "/home/eric/000_inbox"; devices = [ "hwc-home" ]; };
       "100_hwc"   = { path = "/home/eric/100_hwc";   devices = [ "hwc-home" ]; };
       "300_tech"  = { path = "/home/eric/300_tech";  devices = [ "hwc-home" ]; };
-      "700_datax" = { path = "/home/eric/700_datax"; devices = [ "hwc-home" ]; };
+      "700_datax" = {
+        path = "/home/eric/700_datax";
+        devices = [ "hwc-laptop" ];
+        ignores = import ../../domains/data/syncthing/parts/datax-ignores.nix;
+      };
       "inbox-mobile" = {
         path = config.hwc.paths.brain."inbox-mobile";
         devices = [ "hwc-home" ];

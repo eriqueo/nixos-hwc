@@ -263,7 +263,9 @@
   };
 
   # Syncthing — bidirectional home folder sync with hwc-laptop and, since the
-  # service split, hwc-work (inbox/hwc/tech/datax only; this host stays the hub).
+  # service split, hwc-work (inbox/hwc/tech only; this host stays their hub).
+  # 700_datax left this host 2026-09-28: the laptop and hwc-work peer it
+  # directly, and DataX development happens on hwc-work.
   hwc.data.syncthing = {
     enable = true;
     devices."hwc-laptop".id = "H3EVGHN-DTDTMWS-INSC2RH-PBRABJX-M3FW7AM-3P2NY3M-X5XLYCK-JD2YRQG";
@@ -287,10 +289,6 @@
       };
       "300_tech" = {
         path = "/home/eric/300_tech";
-        devices = ["hwc-laptop" "hwc-work"];
-      };
-      "700_datax" = {
-        path = "/home/eric/700_datax";
         devices = ["hwc-laptop" "hwc-work"];
       };
       # 600_apps: removed from Syncthing 2026-06-16. Each app inside is now its

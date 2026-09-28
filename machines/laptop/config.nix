@@ -334,7 +334,8 @@ in
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIcfkt1xgKBQbL9kuc1x2h/F3HjK+pDU5j/I9Q74e8xE eric@hwc-work"
   ];
 
-  # Syncthing — bidirectional home folder sync with hwc-server
+  # Syncthing — bidirectional home folder sync with hwc-home, except 700_datax,
+  # which peers with hwc-work directly
   hwc.data.syncthing = {
     enable = true;
     devices."hwc-home" = {
@@ -342,6 +343,10 @@ in
       # Tailnet IP from the host registry, not retyped — see
       # domains/networking/hosts/index.nix for why these values move.
       addresses = [ "tcp://${config.hwc.networking.hosts.ips.main}:22000" ];
+    };
+    devices."hwc-work" = {
+      id = "D235HNY-GMD6CNM-MEDAB6A-IAGCUZL-YHZMCDI-FNMUNDZ-SIJK6UU-FQ6BGQS";
+      addresses = [ "tcp://${config.hwc.networking.hosts.ips.work}:22000" ];
     };
     folders = {
       "000_inbox" = {
@@ -360,9 +365,12 @@ in
         path = "/home/eric/300_tech";
         devices = [ "hwc-home" ];
       };
+      # 700_datax peers with hwc-work, the DataX dev host, not the hub
+      # (2026-09-28). hwc-home carries no DataX work.
       "700_datax" = {
         path = "/home/eric/700_datax";
-        devices = [ "hwc-home" ];
+        devices = [ "hwc-work" ];
+        ignores = import ../../domains/data/syncthing/parts/datax-ignores.nix;
       };
       # 600_apps: removed from Syncthing 2026-06-16 (see server config). Each app
       # is its own git repo now; Syncthing over live .git was clobbering
