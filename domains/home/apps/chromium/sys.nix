@@ -54,6 +54,19 @@ in
         builtins.toJSON {
           RestoreOnStartup = 1;  # 1 = restore last session
         };
+
+      #========================================================================
+      # SINGLETON PROTECTION — /tmp aging
+      #========================================================================
+      # Chromium's profile singleton lives in /tmp/org.chromium.Chromium.XXXXXX
+      # (SingletonSocket + SingletonCookie) for the life of the browser. The
+      # stock `q /tmp ... 10d` rule deletes the cookie symlink once a browser
+      # (e.g. the JobTread --app window started at login) has run 10+ days;
+      # the next launch then can't reach the live instance, takes the profile
+      # lock itself, and two browsers fight over the Default profile's SQLite
+      # files — stacked "Something went wrong when opening your profile"
+      # dialogs. Exclude only the singleton files; leaked scoped_dirs still age.
+      systemd.tmpfiles.rules = [ "x /tmp/org.chromium.Chromium.*/Singleton*" ];
     })
     {}
   ];
