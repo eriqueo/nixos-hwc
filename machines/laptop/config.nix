@@ -324,13 +324,14 @@ in
     tailscale.extraSetFlags = [ "--accept-dns" "--operator=eric" ];
   };
 
-  # Machine-specific control path: let Eric's hwc-server login key reach the
-  # laptop for remote checks and deployments. Append at the native NixOS
-  # option so the three fleet-wide keys produced by hwc.system.users remain
-  # authorized; assigning hwc.system.users.user.ssh.keys here would replace
-  # that option's default list.
+  # Machine-specific control path: let Eric's hwc-home and hwc-work login keys
+  # reach the laptop for remote checks and deployments. Append at the native
+  # NixOS option so the three fleet-wide keys produced by hwc.system.users
+  # remain authorized; assigning hwc.system.users.user.ssh.keys here would
+  # replace that option's default list.
   users.users.eric.openssh.authorizedKeys.keys = lib.mkAfter [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPpGuiR4JKb0EyK8z+QmWo7qayRC01IHqUYspUbxgVgB eriqueo@homeserver"
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIcfkt1xgKBQbL9kuc1x2h/F3HjK+pDU5j/I9Q74e8xE eric@hwc-work"
   ];
 
   # Syncthing — bidirectional home folder sync with hwc-server
