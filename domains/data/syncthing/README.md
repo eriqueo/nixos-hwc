@@ -56,6 +56,11 @@ hwc.data.syncthing = {
 
 ## Changelog
 
+- 2026-09-26: Doc-only — the `USED BY` header now names `machines/home/config.nix`
+  instead of `machines/server/config.nix`, following the rename of the home machine
+  and its fleet consumers (4ac9941d). Device identities were preserved; no folder or
+  option changed.
+
 - 2026-07-11: `dataDir` now `config.hwc.paths.user.home` instead of hardcoded `/home/eric` (Law 3 migration, value unchanged).
 
 - 2026-04-12: Created module, extracted from machines/server/config.nix and machines/laptop/config.nix

@@ -73,4 +73,8 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-03-31: Secret lookups moved from the camelCase `hwc.secrets.api.couchdbAdmin{Username,Password}File`
+  attrs to the kebab-case `hwc.secrets.api."couchdb-admin-{username,password}"` names,
+  with `or null` so an unprovisioned secret evaluates instead of failing. Option
+  descriptions updated to match (17b9283b).
 - 2026-03-25: Created README per Law 12
