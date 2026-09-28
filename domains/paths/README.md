@@ -11,6 +11,8 @@ Central path definitions providing machine-aware filesystem abstraction. Enables
 
 ## Structure
 
+business.websiteSite and business.websitePublished own the source and release locations for CMS, MCP and public serving.
+
 ```
 domains/paths/
 └── paths.nix           # Single-file module (Charter Law 10: Primitive Module Exception)
@@ -59,6 +61,7 @@ in {
 4. Allow per-machine overrides
 
 ## Changelog
+- 2026-09-28: business.websiteSite and business.websitePublished own the source and release locations for CMS, MCP and public serving.
 - 2026-09-22: Added `user.mailSyncStatus`, the single path producer for the
   bounded mail-sync status consumed by Home Manager health checks and the MCP.
 - 2026-09-10: `hot.receipts` **deleted**, `hot.cache` **added**. Both were the same defect in opposite directions, found by comparing this contract against what is actually on `/mnt/hot`. `hot.receipts` was declared and auto-derived to `${hot.root}/receipts` and consumed by **nothing** — the only other `receipts` hits in the tree are `home/core/xdg-dirs.nix` (financial folders) and `mail-janitor` (a mail class), neither related — and the directory has never existed on disk. A declared path with no consumer is worse than no path: it reads as a supported location, so anything written there would sit outside every mount and every borg source while looking official. `hot.cache` is the inverse — six live services (frigate, gpu, immich, jellyfin, qbittorrent, tensorrt) write to `/mnt/hot/cache`, which no module created; it existed only because someone made it by hand, and a rebuilt machine would not have had it. Its tmpfiles rule declares the parent ONLY, because each consumer creates its own subdirectory and listing them here would be a second copy to drift from the modules that own them. Retention class REPLACEABLE, deliberately not a borg source — every subdirectory regenerates.

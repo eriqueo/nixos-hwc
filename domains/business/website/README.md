@@ -1,27 +1,21 @@
-# Heartwood CMS
+# Heartwood website on hwc-work
 
 ## Purpose
-Content management dashboard for the customer-facing site at iheartwoodcraft.com. Node.js REST API that reads/writes markdown files and JSON in the site_files 11ty repo, processes images via ImageMagick, builds the site, and deploys to Hostinger via SFTP. Vanilla JS frontend served as static files.
+Edit, build and publish iheartwoodcraft.com on hwc-work. Cloudflare provides public DNS, TLS and the tunnel; Caddy serves only local published output. The CMS stays private.
 
 ## Boundaries
-- Manages: systemd service for the CMS API server (port 8095)
-- Does NOT manage: the site_files repo itself -> git
-- Does NOT manage: agenix secret declarations -> domains/secrets
-- Does NOT manage: reverse proxy -> needs separate Caddy/Tailscale config
+- Website source: `/opt/business/website-site`, repository `eriqueo/hwc-website`.
+- CMS app: `/opt/business/heartwood-cms`, repository `eriqueo/heartwood-cms`.
+- Calculator source: `calculator/app` in this Nix repository, on hwc-work.
+- CRM receives existing contact/calculator/appointment requests; this migration does not change those endpoints.
 
 ## Structure
-```
-domains/business/website/
-├── index.nix       # NixOS module with systemd service
-├── site_files/     # 11ty site source (pages, blog, images, templates)
-└── README.md       # This file
-```
+`index.nix` declares CMS configuration, its local static origin and the public tunnel entries. `hwc.paths.business.websiteSite` and `websitePublished` own locations. CMS and MCP receive the same explicit source path. `site_files` remains a compatibility symlink for old operator instructions, permanent by design; active CMS/MCP/calculator builds no longer require it.
 
-Application files live at `/opt/business/heartwood-cms/` (not in the NixOS repo).
+Publishing builds the calculator then the 11ty site. Preview builds do not change the public release. Successful publication switches `website-published/current` atomically. Generated releases are REPLACEABLE and bounded by the publisher; source is CRITICAL and covered by hwc-work's `/opt/business` backup. The previous release supports rollback. Existing Apache redirects and report URL rewrites are now served by Caddy. Hostinger is not a publishing destination.
+
+The CMS deploy action performs local publication. The API remains at loopback port 8095 behind its existing private route. Caddy's public origin binds only 127.0.0.1:8096; no public inbound firewall port is added. The tunnel serves `iheartwoodcraft.com` and `www.iheartwoodcraft.com` from this origin.
 
 ## Changelog
-- 2026-09-18: Calculator email gate cut over to hwc-crm (hwc-crm DECISIONS D42 — the CRM absorbed hwc-leads). `leadsWebhookUrl` default changed from the n8n thin shell `https://api.iheartwoodcraft.com/webhook/calculator-lead` to `https://crm.iheartwoodcraft.com/hooks/calculator`. In `machines/server/config.nix` the `crm.iheartwoodcraft.com` tunnel path gained `calculator`, and `reports.iheartwoodcraft.com` moved from hwc-leads `:11650` to hwc-crm `:11660` (same `hwc.reports` table). The n8n route and hwc-leads stay up until Cloudflare's 7-day cache of the old bundle has expired.
-- 2026-07-10: Calculator "Schedule a call" rebuilt. `leadsAppointmentWebhookUrl` default changed from the broken n8n `https://api.iheartwoodcraft.com/webhook/calculator-appointment` (which wrote an invalid status to the legacy `hwc.calculator_leads`) to the hwc-crm ingress `https://crm.iheartwoodcraft.com/hooks/appointment`. The "Request a call" fetch is now `no-cors`/`text/plain` fire-and-forget. The block-time select (morning/afternoon/evening) was replaced with Calendly-style availability: on date pick the form fetches free 30-min slots from hwc-crm `GET /hooks/availability` (Mon–Fri 9–4 MT, minus real calendar conflicts) into a real time dropdown, submitting an exact HH:MM. Calculator bundle rebuilt from `domains/business/website/calculator/app` (vite; `site_files` is a symlink to `/opt/business/website-site`) with `VITE_LEADS_WEBHOOK_URL` + `VITE_LEADS_WEBHOOK_APPT_URL`. **Cache-bust gotcha:** the bundle has a STABLE filename (`calculator.bundle.js`) that Cloudflare caches 7 days — bump the `?v=YYYYMMDDx` query in `src/pages/calculator.md` + `deck-calculator.md` on every calculator change (the `cloudflare-api-key` secret is DNS/read-scoped and CANNOT purge).
-- 2026-07-07: leadsWebhookUrl/leadsAppointmentWebhookUrl defaults switched from the tailnet-only hwc-server.ocelot-wahoo.ts.net (unreachable for public visitors — every calculator lead was silently lost) to the public Cloudflare-tunnel ingress n8n.heartwoodcraft.me. Note: the CMS deploy action does NOT run the vite calculator build despite the env-injection comment — the bundle is built manually and committed to the site repo.
-- 2026-04-01: Rename heartwood-site to site_files, update paths in index.nix
-- 2026-03-30: Initial creation — systemd service for Heartwood CMS Dashboard
+- 2026-09-28: Move public origin and publishing to hwc-work; retain page redirects/report links; derive tool and calculator paths from the canonical source.
+- 2026-09-18: Calculator lead intake moved to hwc-crm.

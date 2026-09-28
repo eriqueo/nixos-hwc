@@ -44,7 +44,7 @@ export function allTools(config: ServerConfig): ToolDef[] {
     ...mediaTools(),
     ...calendarTools(),
     ...tasksTools(),
-    ...websiteTools(config.nixosConfigPath),
+    ...websiteTools(config.websiteSiteDir),
     ...siteAnalyticsTools(config.umamiWebsiteId, config.umamiDatabase, psqlRaw),
     ...cmsTools([
       { name: "cms", path: config.cmsAppPath, description: "Heartwood CMS app (Express backend + vanilla JS frontend)" },

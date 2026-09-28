@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Website source, CMS, calculator builds and atomic public releases run on hwc-work; a loopback Caddy origin serves the existing Cloudflare tunnel.
+
 The morning-briefing host-health option documents permanent source-owned SSH
 reads for journal, VPN and backup detail, alongside central Prometheus probes.
 
@@ -39,6 +41,7 @@ business/
 ```
 
 ## Changelog
+- 2026-09-28: Website source, CMS, calculator builds and atomic public releases run on hwc-work; a loopback Caddy origin serves the existing Cloudflare tunnel.
 - 2026-09-27: Correct the stale promise to replace detailed SSH health reads with Prometheus; behavior is unchanged.
 - 2026-09-26: Close the obsolete wave-3 SSH-removal marker after field/cost review; source-owned detail remains intentional.
 - 2026-09-26: Remove retired-host assumptions from dispatch authentication and dashboard diagnostic hints.

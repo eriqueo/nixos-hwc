@@ -299,7 +299,7 @@ in
     #--------------------------------------------------------------------------
     systemd.tmpfiles.rules = [
       "d /run/hwc-sys-mcp 0750 eric users -"
-      "d /opt/business/website-site/.trash 0750 eric users -"
+      "d ${paths.business.websiteSite}/.trash 0750 eric users -"
       # The sandbox refuses to start while any Read*Paths entry is missing:
       # khal's data dir existed on hwc-server only by history; a fresh host
       # failed at NAMESPACE until it was created.
@@ -348,6 +348,7 @@ in
 
         # CMS app path for hwc_cms_* tools
         HWC_CMS_APP_PATH = cmsAppPath;
+        HWC_WEBSITE_SITE_DIR = toString paths.business.websiteSite;
         # Application-owned Umami identity; read-only aggregate tool uses peer auth.
         HWC_UMAMI_WEBSITE_ID = config.hwc.business.umami.websiteId;
         HWC_UMAMI_DATABASE = config.hwc.business.umami.databaseName;
@@ -430,8 +431,8 @@ in
             "${paths.user.home}/.local/share/vdirsyncer"
             "${paths.user.home}/.local/share/khal"
             # Website content editing via hwc_website_* tools
-            "/opt/business/website-site/src"
-            "/opt/business/website-site/.trash"
+            "${paths.business.websiteSite}/src"
+            "${paths.business.websiteSite}/.trash"
             # CMS app editing via hwc_cms_* tools (scope: cms)
             cmsAppPath
             # Calculator app editing via hwc_cms_* tools (scope: calculator)
