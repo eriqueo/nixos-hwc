@@ -368,7 +368,7 @@ in
     {
       name = "calculator";
       mode = "vhost";
-      root = "${nixosDir}/domains/business/website/calculator/app/dist";
+      root = "${config.hwc.paths.business.websitePublished}/current/js";
     }
     # Heartwood CMS — name-based vhost (content management dashboard)
     {

@@ -18,6 +18,8 @@ Provides network infrastructure that other domains depend on:
 
 ## Structure
 
+The calculator vhost serves the website publisher's active calculator output on work.
+
 The host-local `/sync` route and stable `sync` vhost are permanent entrypoints
 to the same CouchDB. The separate n8n compatibility observation window remains.
 
@@ -50,6 +52,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-09-28: Point the private calculator vhost at the atomic website release, eliminating the obsolete app/dist root.
 - 2026-09-27: Mark the retained host-local LiveSync route permanent by design; no route behavior changed.
 - 2026-09-27: Assign map.hwc.iheartwoodcraft.com to work; monitoring self-registers its static vhost.
 - 2026-09-26: Remove 25 home-to-work vhost fallbacks after authoritative DNS, laptop pins and access-log review. Honor `forwardFrom` in owner filtering; retain n8n/webhook explicitly and add bounded port access evidence. Existing n8n compatibility check also tests vhost absence and shared entrypoints.
