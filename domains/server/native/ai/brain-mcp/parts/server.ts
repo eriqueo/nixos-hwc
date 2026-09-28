@@ -24,9 +24,11 @@ const KEY_FILE = Deno.env.get("BRAIN_MCP_KEY_FILE") ?? "/run/agenix/brain-mcp-ap
 // local llama-embed backend for query-time embedding. Both optional — the
 // tools degrade to actionable messages when either is absent.
 const BRAINVEC_INDEX = Deno.env.get("BRAINVEC_INDEX") ?? "/home/eric/.cache/brainvec/index.jsonl";
-const EMBED_BASE_URL = Deno.env.get("BRAINVEC_EMBED_BASE_URL") ?? "http://127.0.0.1:11502/v1";
-const EMBED_MODEL = Deno.env.get("BRAINVEC_EMBED_MODEL") ?? "nomic-embed-text-v1.5";
-const EMBED_PREFIX_QUERY = Deno.env.get("BRAINVEC_EMBED_PREFIX_QUERY") ?? "search_query: ";
+// Both consumers import the same immutable contract and adapter, pinned by Nix.
+const vectorSource = Deno.env.get("BRAINVEC_SOURCE");
+if (!vectorSource) throw new Error("BRAINVEC_SOURCE is required");
+const { EMBED_ID, EMBED_BASE_URL, embedBatch } = await import(`file://${vectorSource}/embed.mjs`);
+const { EMBED_INPUT_MAX, validateIndex, cosine } = await import(`file://${vectorSource}/lib.mjs`);
 
 let API_KEY: string;
 try {
@@ -225,9 +227,7 @@ async function withCheckpoint<T>(
 }
 
 // ── Semantic index (brainvec) ────────────────────────────────────────────────
-// Lazy, mtime-cached load of the brainvec JSONL index. cosine/topK are a
-// deliberate ~15-line port of brainvec/lib.mjs (separate repo, node — a Deno
-// import would couple deployments; duplication accepted and noted there).
+// Lazy, mtime-cached load; validate the whole generation before publishing it.
 interface VecEntry {
   path: string;
   title: string | null;
@@ -249,22 +249,11 @@ async function loadVecIndex(): Promise<VecEntry[] | null> {
   const entries: VecEntry[] = [];
   for (const line of (await Deno.readTextFile(BRAINVEC_INDEX)).split("\n")) {
     if (!line.trim()) continue;
-    try {
-      entries.push(JSON.parse(line));
-    } catch { /* skip corrupt line */ }
+    entries.push(JSON.parse(line));
   }
+  validateIndex(entries, EMBED_ID);
   vecCache = { mtime, entries };
   return entries;
-}
-
-function cosine(a: number[], b: number[]): number {
-  let dot = 0, na = 0, nb = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    na += a[i] * a[i];
-    nb += b[i] * b[i];
-  }
-  return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1);
 }
 
 function vecTopK(queryVec: number[], entries: VecEntry[], k: number) {
@@ -275,16 +264,10 @@ function vecTopK(queryVec: number[], entries: VecEntry[], k: number) {
 }
 
 async function embedQuery(text: string): Promise<number[]> {
-  const res = await fetch(`${EMBED_BASE_URL}/embeddings`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ model: EMBED_MODEL, input: [EMBED_PREFIX_QUERY + text.slice(0, 2000)] }),
+  const [vector] = await embedBatch([text.slice(0, EMBED_INPUT_MAX)], "query", {
     signal: AbortSignal.timeout(20_000),
   });
-  const data = await res.json().catch(() => null);
-  const vec = data?.data?.[0]?.embedding;
-  if (!res.ok || !vec) throw new Error(`embed backend ${res.status}`);
-  return vec;
+  return vector;
 }
 
 function formatHits(hits: Array<{ path: string; title: string | null; type: string | null; score: number }>): string {
@@ -529,11 +512,6 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
       const entries = await loadVecIndex();
       if (!entries || !entries.length) {
         return { content: [{ type: "text", text: `Semantic index not found/empty at ${BRAINVEC_INDEX} — run brainvec-ingest on the server (systemctl start brainvec-ingest), or use search_notes (keyword) instead.` }] };
-      }
-      // Model-drift guard: mixed-model cosine is garbage; be loud about it.
-      const foreign = entries.filter((e) => !e.embedId?.startsWith(EMBED_MODEL)).length;
-      if (foreign > entries.length / 2) {
-        return { content: [{ type: "text", text: `Semantic index was built with a different embedding model (${entries[0]?.embedId}) than this server queries with (${EMBED_MODEL}) — re-run ingest with --force. Use search_notes meanwhile.` }] };
       }
       let queryVec: number[];
       try {

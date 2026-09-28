@@ -83,9 +83,9 @@
   hwc.automation.refinery = {
     enable = true;
     mode = "container";
-    # eriqueo/refinery 0c47c43: DataX decision inbox, built and checked locally
+    # eriqueo/refinery f5d2a41: atomic review storage and collision-safe keys, tested locally
     # with deploy/build-image.sh from that commit; no registry pull.
-    image = "localhost/refinery:0c47c43-docker";
+    image = "localhost/refinery:f5d2a41-docker";
     imagePull = "never";
   };
   hwc.automation.nightlyBuilds = {

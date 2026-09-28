@@ -107,11 +107,11 @@
     "brainvec": {
       "flake": false,
       "locked": {
-        "lastModified": 1787792992,
-        "narHash": "sha256-UQ23elcwC6pzqeNBEUjbTS+fhzBM3xIEKaBX4WSQ2pg=",
+        "lastModified": 1790611703,
+        "narHash": "sha256-ZvIgb70uUW4Hro4+kir3rlsrPI2csFBhDugmYYvB+i4=",
         "owner": "eriqueo",
         "repo": "brainvec",
-        "rev": "af7976e4bd757631b571037c2d9dc0484c2426c7",
+        "rev": "3c6a20b46c45bc4cbe61c507248c1be87fd9efad",
         "type": "github"
       },
       "original": {
@@ -951,11 +951,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790230666,
-        "narHash": "sha256-ikhVJe9dbDg18ZKcXddYpLCsFMCuP+G9KPfHhB7HJyA=",
+        "lastModified": 1790611574,
+        "narHash": "sha256-OBQAOkO2tXHmuLLLEN6W9JZ76asaco/Te3JkXVInmNk=",
         "owner": "eriqueo",
         "repo": "workbench",
-        "rev": "0aa27147d248cac7ad12e62474014b0145f33e07",
+        "rev": "c6fcda9357f0a5c4ef97549b9bc2574f3ed0a057",
         "type": "github"
       },
       "original": {

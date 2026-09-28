@@ -5,12 +5,15 @@
 # inbox, delete/move/replace/frontmatter/commit) plus semantic retrieval
 # (search_semantic, related_notes — brainvec index + llama-embed on :11502).
 # Binds to 127.0.0.1:9876 (Tailscale tunnel added in Phase 12).
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, inputs, ... }:
 let
   cfg = config.hwc.server.ai.brainMcp;
   paths = config.hwc.paths;
   deno = "${pkgs.deno}/bin/deno";
   server = "${paths.nixos}/domains/server/native/ai/brain-mcp/parts/server.ts";
+  # Ingest owns the transform vocabulary; the reader consumes the same values.
+  vectorEnvironment = lib.filterAttrs (name: _: lib.hasPrefix "BRAINVEC_EMBED_" name)
+    config.systemd.services.brainvec-ingest.environment;
 in
 {
   #==========================================================================
@@ -60,18 +63,25 @@ in
 
     embedBaseUrl = lib.mkOption {
       type = lib.types.str;
-      default = "http://127.0.0.1:11502/v1";
+      default = config.hwc.server.ai.brainvec.embedBaseUrl;
       description = "OpenAI-compatible embeddings endpoint for query-time embedding (llama-embed)";
     };
 
     embedModel = lib.mkOption {
       type = lib.types.str;
-      default = "nomic-embed-text-v1.5";
-      description = "Embedding model label — must match the index's embedId prefix";
+      default = config.hwc.server.ai.brainvec.embedModel;
+      description = "Embedding model label — must match the ingest transform";
     };
   };
 
   config = lib.mkIf cfg.enable {
+
+    assertions = [{
+      assertion = config.hwc.server.ai.brainvec.enable
+        && cfg.embedModel == config.hwc.server.ai.brainvec.embedModel
+        && cfg.embedBaseUrl == config.hwc.server.ai.brainvec.embedBaseUrl;
+      message = "brain-mcp requires brainvec ingest with the same embedding model and endpoint";
+    }];
 
     #==========================================================================
     # SYSTEM PACKAGES
@@ -87,14 +97,12 @@ in
       wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
 
-      environment = {
+      environment = vectorEnvironment // {
         BRAIN_VAULT_ROOT = cfg.vaultPath;
         BRAIN_MCP_PORT = toString cfg.port;
         BRAIN_MCP_KEY_FILE = cfg.apiKeyFile;
         BRAINVEC_INDEX = cfg.brainvecIndex;
-        BRAINVEC_EMBED_BASE_URL = cfg.embedBaseUrl;
-        BRAINVEC_EMBED_MODEL = cfg.embedModel;
-        BRAINVEC_EMBED_PREFIX_QUERY = "search_query: ";
+        BRAINVEC_SOURCE = toString inputs.brainvec;
         DENO_DIR = "/var/cache/brain-mcp/deno";
         HOME = "/home/${cfg.user}";
         PATH = lib.mkForce "/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";

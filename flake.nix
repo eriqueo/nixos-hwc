@@ -848,7 +848,12 @@
         service = self.nixosConfigurations.hwc-work.config.systemd.services.brainvec-ingest;
         env = lib.filterAttrs (name: _: lib.hasPrefix "BRAINVEC_" name) service.environment;
         source = inputs.brainvec;
-      in pkgs.runCommand "brainvec-deployment" { nativeBuildInputs = [ pkgs.nodejs_22 ]; } ''
+        reader = self.nixosConfigurations.hwc-work.config.systemd.services.brain-mcp.environment;
+      in assert reader.BRAINVEC_SOURCE == toString source;
+      assert lib.all (name: reader.${name} == env.${name})
+        (builtins.filter (lib.hasPrefix "BRAINVEC_EMBED_") (builtins.attrNames env));
+      pkgs.runCommand "brainvec-deployment" { nativeBuildInputs = [ pkgs.nodejs_22 pkgs.deno ]; } ''
+        node --test ${source}/contract.test.mjs
         # Test the actual rendered wrapper and environment, not a second launcher.
         ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: value: "export ${name}=${lib.escapeShellArg value}") env)}
         export BRAINVEC_VAULT="$TMPDIR/vault" BRAINVEC_CACHE="$TMPDIR/cache"
@@ -879,6 +884,11 @@
         cmp expected.jsonl "$BRAINVEC_CACHE/index.jsonl"
         node ${source}/query.mjs --json --related wood.md > related.json
         node -e 'const r=require("./related.json"); if(r.hits[0].path!=="food.md") process.exit(1)'
+        # Deno consumes the same Node-compatible adapter and identity.
+        export DENO_DIR="$TMPDIR/deno"
+        node --input-type=module -e 'import {EMBED_ID} from "${source}/embed.mjs"; console.log(EMBED_ID)' > node-id
+        deno eval 'import {EMBED_ID} from "${source}/embed.mjs"; console.log(EMBED_ID)' > deno-id
+        cmp node-id deno-id
         # Pin source provenance and prove the production wrapper consumes it.
         ${pkgs.ripgrep}/bin/rg -F '${source}/ingest.mjs' ${service.serviceConfig.ExecStart}
         if ${pkgs.ripgrep}/bin/rg 'git |ssh |600_apps' ${service.serviceConfig.ExecStart}; then

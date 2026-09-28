@@ -10,8 +10,10 @@
 ## Structure
 
 `native/ai/brainvec` runs the flake-locked source; update with `nix flake update
-brainvec`, commit, build and switch. Ingest logs the source revision. The existing
-index format, embed identity and cache location are unchanged. The cache is
+brainvec`, commit, build and switch. Ingest logs the source revision. The Node ingest and Deno MCP reader share that pinned transform contract.
+The v2 identity hashes both exact prefixes, model, dimensions and input cap.
+Stage and verify a rebuilt index before replacing the active index; retain
+the old source/index pair for rollback. The cache is
 REPLACEABLE; ingest rebuilds it from the vault. `brainvec-deployment` exercises
 rebuild, query and offline incremental ingest through the rendered launcher.
 Lead/Home Scout defaults select their apps under the Scout workspace; work no
@@ -51,6 +53,7 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+- 2026-09-28: Brain MCP imports Brainvec validation and embedding adapter from the pinned source and consumes the ingest transform environment. Invalid or mismatched indices fail visibly. The deployment check runs malformed-response regressions and compares the reader identity.
 - 2026-09-27: `native/ai/lead-scout`: new `modelBridge` option set and unit `lead-scout-model-bridge` (scout `apps/lead-scout/bridge/lead-scout-model-bridge.mjs`): runs under eric with `/etc/profiles/per-user/eric/bin` on PATH so the Claude CLI login is reachable, serves an OpenAI-compatible endpoint on `host:port` (hwc-work: tailnet `100.77.38.32:8431`) with a bearer token from agenix `lead-scout-bridge-token`. Purpose: the containerised DataX instance scores through Eric's Claude CLI with no API key. Rootless podman's `host.containers.internal` (pasta) cannot reach host sockets, hence the tailnet bind. Secret `parts/services/lead-scout-bridge-token.age` added (recipients = everyone).
 - 2026-09-27: Nix owns Brainvec deployment; remove timer-side git updates and the unused checkout option. Promote Lead/Home Scout monorepo paths to module defaults.
 - 2026-09-26: `native/ai/brainvec` — ingest runs at `Nice=10`/`CPUWeight=20`, matching llama-embed; part of the hwc-work thermal smoothing (batch work yields to interactive load).
