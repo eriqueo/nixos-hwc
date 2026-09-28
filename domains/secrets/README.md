@@ -57,6 +57,7 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-09-28: Added `sr-gauntlet-firestore` (`parts/services/sr-gauntlet/firestore.age`): the DataX Firestore service-account key as three env lines (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`). It moves the key out of the retired `~/600_apps/sr_analyzer/.env`. Standard `root:secrets / 0440`, encrypted to `everyone`. sr-gauntlet (`SRG_ENV_FILE`) and dx1-gauntlet (`DXG_ENV_FILE`) read it.
 - 2026-09-26: Vaultwarden's pinned image moved to 1.37.3 so Bitwarden 2026.7+ can use the password prelogin route.
 - 2026-09-26: Host recipients read the unchanged public key from machines/home; no rekeying or encrypted-payload changes.
 - 2026-09-25: Removed `services/hermes-deepseek-key.age` (Hermes retired) and `services/n8n-owner-password-hash.age` (fed an option the n8n module never read).

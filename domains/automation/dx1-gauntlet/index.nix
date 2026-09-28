@@ -24,7 +24,7 @@
 #   - /var/lib/sr-gauntlet/{datax,jt-mcp} — the SAME service-owned clones
 #     sr-gauntlet uses (read-only worktree sources; DXG_PIN_REMOTE prefers
 #     the upstream remote)
-#   - ~/600_apps/sr_analyzer/.env (Firestore fetch) + /var/lib/sr-gauntlet/
+#   - sr-gauntlet-firestore agenix secret (Firestore fetch) + /var/lib/sr-gauntlet/
 #     datax.env (Firestore admin + OpenSearch) — same cred files as sr-gauntlet
 #   - sr-gauntlet-claude-oauth agenix secret — the SAME long-lived Claude
 #     subscription token (one credential, two consumers; see sr-gauntlet's
@@ -52,8 +52,9 @@ let
   dxgEnv = {
     HOME = paths.user.home;
     DXG_MAX_CASES = toString cfg.maxCases;
-    # Firestore fetch creds (same file sr_gauntlet's fetch uses).
-    DXG_ENV_FILE = "${paths.user.home}/600_apps/sr_analyzer/.env";
+    # Firestore fetch creds (FIREBASE_* — the same agenix secret sr-gauntlet's
+    # fetch uses; one credential, two consumers).
+    DXG_ENV_FILE = config.age.secrets.sr-gauntlet-firestore.path;
     # Firestore-admin + OpenSearch creds for the context aggregator — the
     # trimmed service copy, not a dev tree .env.local.
     DXG_DATAX_ENV = "/var/lib/sr-gauntlet/datax.env";

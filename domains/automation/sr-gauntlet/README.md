@@ -23,10 +23,9 @@ sr-gauntlet/
 ```
 
 Enabled in `machines/work/config.nix` (host one-off: the pipeline checkout
-and its credential sources — `~/600_apps/sr_analyzer/.env` and
-`/var/lib/sr-gauntlet/datax.env` — only exist on hwc-work). The sr_analyzer
-service is retired, but its checkout's `.env` is still the Firestore key for
-this pipeline and dx1-gauntlet; keep it until the key moves.
+and `/var/lib/sr-gauntlet/datax.env` only exist on hwc-work). The Firestore
+fetch key is the `sr-gauntlet-firestore` agenix secret, passed as
+`SRG_ENV_FILE`; dx1-gauntlet reads the same secret.
 
 **Gateway board source.** The hwc-sys `datax_*` tools read the pipeline's
 `state/sr-cache.json` and `state/ledger.json` (see
@@ -59,6 +58,11 @@ units re-read it each run, so no restart is needed.
 
 ## Changelog
 
+- **2026-09-28**: `SRG_ENV_FILE` now points at the new `sr-gauntlet-firestore`
+  agenix secret (`config.age.secrets.sr-gauntlet-firestore.path`) instead of
+  the retired `~/600_apps/sr_analyzer/.env`. The secret holds the same three
+  `FIREBASE_*` lines, so the pipeline code is unchanged apart from
+  `live-board.mjs`, which now reads `SRG_ENV_FILE` too.
 - **2026-09-28**: The retired sr_analyzer's role as the gateway's board source
   moved here: `fetch-srs.mjs` (sr_gauntlet `5d5453b`, `c50cbf7`) stamps SR2's
   phase and needs-reply flag on each cached SR, records `syncedAt`, and writes

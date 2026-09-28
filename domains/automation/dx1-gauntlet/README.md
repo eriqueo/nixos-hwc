@@ -36,6 +36,11 @@ worktree source, two consumers.
 
 ## Changelog
 
+- 2026-09-28: `DXG_ENV_FILE` now points at the `sr-gauntlet-firestore` agenix
+  secret instead of the retired `~/600_apps/sr_analyzer/.env`. Same
+  `FIREBASE_*` key names, so `fetch-cases.mjs`, `write-results.mjs` and
+  `check-creds.mjs` need no change.
+
 - 2026-08-16: Module created (DX1 automation-gauntlet Phase 2b). Mirrors
   sr-gauntlet's unit anatomy: oneshot + timer (daily, `Persistent = true`),
   EnvironmentFile agenix Claude token, DXG_* env late-binding creds/repos/caps

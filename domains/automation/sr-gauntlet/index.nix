@@ -15,8 +15,8 @@
 # The pipeline itself (run.sh, fetch-srs.mjs, aggregate-context.mjs,
 # opensearch-query.mjs, send-report.sh) lives in its own repo at
 # ~/700_datax/sr_gauntlet — this module only provides the schedule.
-# Credentials are late-bound at runtime from ~/600_apps/sr_analyzer/.env
-# (Firestore fetch) and /var/lib/sr-gauntlet/datax.env (Firestore admin +
+# Credentials are late-bound at runtime from the sr-gauntlet-firestore agenix
+# secret (Firestore fetch) and /var/lib/sr-gauntlet/datax.env (Firestore admin +
 # OpenSearch — a trimmed copy, not the dev tree); nothing secret passes
 # through the Nix store.
 #
@@ -60,18 +60,22 @@ let
   # producer for the path: consumed by srgEnv.CLAUDE_CONFIG_DIR + the tmpfiles rule.
   claudeConfigDir = "/var/lib/sr-gauntlet/claude-config";
 
+  # Firestore service-account env file (agenix; see SRG_ENV_FILE below).
+  firestoreEnvFile = config.age.secrets.sr-gauntlet-firestore.path;
+
   # Env + tool path shared by the daily run and the run-now drain (same needs).
   srgEnv = {
     HOME = paths.user.home;
     SRG_MAX_SRS = toString cfg.maxSrs;
     SRG_REFINERY_BASE_URL = cfg.refineryBaseUrl;
     SRG_DATAX_BASE_URL = cfg.dataxBaseUrl;
-    # Late-bind Firestore creds from sr_analyzer's single .env (declare once,
-    # derive everywhere). Without this the script falls back to a stale default
-    # path and fetch FATALs with ENOENT. The sr_analyzer service is retired
-    # (2026-09-28); its checkout stays only as this key's home until the key
-    # moves into agenix — deleting the checkout breaks both gauntlets.
-    SRG_ENV_FILE = "${paths.user.home}/600_apps/sr_analyzer/.env";
+    # Firestore fetch creds (FIREBASE_PROJECT_ID / _CLIENT_EMAIL / _PRIVATE_KEY),
+    # read at runtime by fetch-srs.mjs and live-board.mjs. The file is the
+    # sr-gauntlet-firestore agenix secret (0440 root:secrets; eric is in
+    # `secrets`). It replaces ~/600_apps/sr_analyzer/.env, which was the key's
+    # home until the sr_analyzer app retired (2026-09-28). dx1-gauntlet reads
+    # the same secret.
+    SRG_ENV_FILE = firestoreEnvFile;
     # Service-owned source clones (origin = official ContractorCTO, pinned to main),
     # NOT Eric's ~/700_datax dev worktrees. run.sh fetches origin/main from these
     # and builds throwaway /tmp worktrees — nothing edits them. Decouples the
