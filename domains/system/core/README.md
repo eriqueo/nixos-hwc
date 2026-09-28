@@ -23,6 +23,7 @@ core/
 ```
 
 ## Changelog
+- 2026-09-28: Law 12 changelog refresh — `authentik/README.md` now records the 2026-08-28 replacement of its dead `$PSQL` role/grant block with declared `ensureUsers` + `ensureDBOwnership`. Docs only.
 - 2026-09-27: Declare `SystemMaxUse=1G` as a default independent of audit enablement; home keeps its explicit 8G policy.
 - 2026-09-24: `coredump.nix` uses `settings.Coredump` on 26.05 while retaining
   the 500M use and 2G free-space limits.

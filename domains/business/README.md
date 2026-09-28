@@ -39,6 +39,7 @@ business/
 ```
 
 ## Changelog
+- 2026-09-28: Law 12 changelog refresh across `crm/`, `databases/`, `datax/fb-group-scraper/`, `firefly/`, `leads/`, `morning-briefing/`, `paperless/` and `website/`. `fb-group-scraper`'s `## Structure` block was also corrected — it listed a `store.mjs` that is not in the directory — and that README gained its first `## Changelog`. Docs only; no module changed.
 - 2026-09-27: Correct the stale promise to replace detailed SSH health reads with Prometheus; behavior is unchanged.
 - 2026-09-26: Close the obsolete wave-3 SSH-removal marker after field/cost review; source-owned detail remains intentional.
 - 2026-09-26: Remove retired-host assumptions from dispatch authentication and dashboard diagnostic hints.

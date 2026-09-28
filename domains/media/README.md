@@ -70,6 +70,7 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-09-28: Law 12 changelog refresh across `frigate/`, `immich-container/`, `mousehole/`, `qbittorrent/` and `slskd/`. `slskd/README.md` gained the `## Changelog` section it had never had, recording the 2026-08-20 move onto its own VPN tunnel. Docs only; no module changed.
 - 2026-09-26: Machine references follow machines/home; media state and service ownership are unchanged.
 - 2026-09-25: Service split wave 4: sonarr/radarr/lidarr pass the media-pipeline webhook URL from `hwc.automation.n8n.publicUrl` (n8n on hwc-work); `lib/arr-config.nix` no longer defaults it to a host literal.
 
