@@ -53,6 +53,12 @@ units re-read it each run, so no restart is needed.
 
 ## Changelog
 
+- **2026-09-25**: Doc-only correction to `index.nix`'s dependency header. The
+  gauntlet does not POST run summaries to hwc-notify on `127.0.0.1:11600` — it posts
+  to Discord directly (see `~/700_datax/sr_gauntlet/README.md`). Caught while giving
+  hwc-notify one address and moving the dispatcher to hwc-work (2fdea699); no unit
+  or option changed.
+
 - **2026-09-07**: Added `pkgs.util-linux` to `srgPath`. `run.sh` serializes the
   poll timer against the run-now drain with `flock`, which is absent from the
   default service PATH, so both units exited 1 at the lock line before doing any

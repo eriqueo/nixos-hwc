@@ -63,6 +63,11 @@ switching providers does not require changing runner code.
 
 ## Changelog
 
+- **2026-09-26 (b)** — `rebuildAllowedHosts` is now `[ "hwc-home" "hwc-laptop" ]`.
+  Mechanical: the home machine was renamed from `hwc-server` to `hwc-home` and its
+  fleet consumers were swept with it (4ac9941d). The privileged rebuild path is
+  otherwise unchanged — still allowlist-matched on basename only.
+
 - **2026-09-26** — Use `ReadOnlyPaths = [ "-/mnt" ]` for both runners. Work has no `/mnt`; requiring it caused systemd to exit with `226/NAMESPACE` before the launcher could run. Existing media mounts remain read-only.
 
 - **2026-09-07** — A morning with no decision now sends nothing. The P5 card
