@@ -167,6 +167,25 @@ in
     systemd.tmpfiles.rules = [
       "d ${cfg.publishDir} 0755 eric users -"
     ];
+    # AUTO-MANAGED generated releases: publisher keeps current + previous;
+    # this fail-safe removes abandoned staging even when nobody publishes.
+    systemd.services.website-release-prune = {
+      description = "Prune unused website releases";
+      inherit (config.systemd.services.heartwood-cms) environment;
+      serviceConfig = {
+        Type = "oneshot";
+        User = lib.mkForce cfg.user;
+        Group = "users";
+        ExecStart = "${pkgs.nodejs_22}/bin/node ${cfg.srcDir}/lib/deployer.js --prune";
+        NoNewPrivileges = true;
+        ProtectSystem = "strict";
+        ReadWritePaths = [ cfg.publishDir ];
+      };
+    };
+    systemd.timers.website-release-prune = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = { OnCalendar = "daily"; Persistent = true; RandomizedDelaySec = "30m"; };
+    };
     services.caddy.virtualHosts."http://127.0.0.1:${toString cfg.originPort}".extraConfig = ''
       bind 127.0.0.1
       root * ${cfg.publishDir}/current
