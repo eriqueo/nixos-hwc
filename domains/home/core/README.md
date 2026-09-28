@@ -23,6 +23,13 @@ core/
 ```
 
 ## Changelog
+- 2026-09-26: `development/` gained `rootlessImagePrune.enable` — a user timer running
+  `podman image prune --force --filter until=12h` daily (randomized 15 min, persistent,
+  gated on `~/.local/share/containers/storage` existing). Bounds rootless build-image
+  growth on hwc-work without touching service state: podman preserves named images and
+  anything a container references, including stopped ones, and volumes are never pruned.
+  The module's `USED BY` header also follows the home-machine rename
+  (`machines/server/config.nix` → `machines/home/config.nix`) (33cc2f69, 4ac9941d).
 - 2026-09-25: `repo-hooks/` — `core.hooksPath` now points at a generated store
   dir instead of the tree-relative `.githooks`. `dispatched` hooks forward to the
   checked-out tree's copy; `pinned` hooks are store copies. A tree-relative path
