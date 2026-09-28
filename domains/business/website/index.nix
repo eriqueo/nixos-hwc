@@ -188,7 +188,8 @@ in
       wantedBy = [ "timers.target" ];
       timerConfig = { OnCalendar = "daily"; Persistent = true; RandomizedDelaySec = "30m"; };
     };
-    services.caddy.virtualHosts."http://127.0.0.1:${toString cfg.originPort}".extraConfig = ''
+    services.caddy.virtualHosts."http://:${toString cfg.originPort}".extraConfig = ''
+      # Tunnel preserves the public Host header; accept both names on loopback.
       bind 127.0.0.1
       root * ${cfg.publishDir}/current
       encode zstd gzip
