@@ -93,15 +93,18 @@ in
   # list creation (todui `N`); runbook in domains/server/services/radicale/README.md.
   hwc.mail.tasks.enable = true;
 
-  hwc.mail.mbsync.enable = false;
-
-  # No local Proton Bridge: mail is read and sent through aerc on hwc-work
-  # (the `aerc` alias, SUPER+E and the Workbench mail pane all ssh there), and
-  # with mbsync off nothing here fetched through it.
-  hwc.mail.bridge.enable = false;
-
-  hwc.mail.health = {
+  # No local mail stack: mail is read and sent through aerc on hwc-work (the
+  # `aerc` alias, SUPER+E and the Workbench mail pane all ssh there). The
+  # laptop's own maildir stopped syncing 2026-04-01 and nothing read it.
+  # hwc.mail.enable gates msmtp, notmuch, abook and the classifier; calendar,
+  # contacts and tasks above are separately enabled and stay on.
+  hwc.mail = {
     enable = false;
+    aerc.enable = false;
+    afew.enable = false;
+    mbsync.enable = false;
+    bridge.enable = false;
+    health.enable = false;
   };
 
   # eXoDOS (flatpak auto-install + launcher) — domains/home/apps/exodos
