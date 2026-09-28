@@ -41,7 +41,7 @@ business/
 ```
 
 ## Changelog
-- 2026-09-28: Bound website release cleanup with a daily fail-safe timer.
+- 2026-09-28: Bound website release cleanup with a daily fail-safe timer; share app settings while each unit owns its generated PATH.
 - 2026-09-28: Website source, CMS, calculator builds and atomic public releases run on hwc-work; a loopback Caddy origin serves the existing Cloudflare tunnel.
 - 2026-09-27: Correct the stale promise to replace detailed SSH health reads with Prometheus; behavior is unchanged.
 - 2026-09-26: Close the obsolete wave-3 SSH-removal marker after field/cost review; source-owned detail remains intentional.

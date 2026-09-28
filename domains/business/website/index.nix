@@ -171,7 +171,8 @@ in
     # this fail-safe removes abandoned staging even when nobody publishes.
     systemd.services.website-release-prune = {
       description = "Prune unused website releases";
-      inherit (config.systemd.services.heartwood-cms) environment;
+      # Each service owns its generated PATH; share only application settings.
+      environment = builtins.removeAttrs config.systemd.services.heartwood-cms.environment [ "PATH" ];
       serviceConfig = {
         Type = "oneshot";
         User = lib.mkForce cfg.user;
