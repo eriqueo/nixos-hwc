@@ -62,6 +62,7 @@ monitoring/
 ```
 
 ## Changelog
+- 2026-09-28: Remove the SR Analyzer Homepage tile with the service's retirement.
 - 2026-09-27: Publish a private fleet topology map from the pinned fleet-map app, with a bounded atomic publisher, host command path, wiring check and explicit snapshot dates.
 - 2026-09-26: Homepage fleet labels/selectors use hwc-home; SMART sender derives from the local hostname.
 - 2026-09-26: Remove the Authentik Homepage tile with its retirement. Module-gated probes automatically drop the retired Authentik and server embedding targets.

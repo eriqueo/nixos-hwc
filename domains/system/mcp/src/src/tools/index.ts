@@ -53,7 +53,7 @@ export function allTools(config: ServerConfig): ToolDef[] {
     ...estimatorTools(config.nixosConfigPath),
     ...notifyTools(),
     ...leadsTools(),
-    ...dataxTools(config.dataxAnalyzerUrl, config.dataxLedgerPath),
+    ...dataxTools(config.dataxGauntletStateDir),
     ...mailTriageTools(),
     ...nightlyReviewTools(),
     ...refineryTools(),

@@ -52,6 +52,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-09-28: Remove the `sr_analyzer` vhost and its `routeOwners` entry. The service is retired; the hwc-sys `datax_*` tools read the SR gauntlet's cache instead.
 - 2026-09-28: Point the private calculator vhost at the atomic website release, eliminating the obsolete app/dist root.
 - 2026-09-27: Mark the retained host-local LiveSync route permanent by design; no route behavior changed.
 - 2026-09-27: Assign map.hwc.iheartwoodcraft.com to work; monitoring self-registers its static vhost.

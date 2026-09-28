@@ -411,7 +411,6 @@
       "/var/lib/radicale"    # CalDAV/CardDAV collections (CRITICAL)
       "/var/lib/estimator"   # built estimator bundle (REPLACEABLE, small)
       "/opt/business"        # CMS app, website repo working tree, jt-mcp
-      "/home/eric/600_apps/sr_analyzer/data" # SR board SQLite (CRITICAL)
       # T3 Code state (CRITICAL): event-sourced SQLite store + this host's own
       # signing key and pairing credentials. Copied live; see the same note on
       # hwc-server. caches/ and worktrees/ are replaceable and not listed.

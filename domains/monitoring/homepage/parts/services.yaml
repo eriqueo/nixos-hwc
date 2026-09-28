@@ -103,10 +103,6 @@
         siteMonitor: https://paperless.hwc.iheartwoodcraft.com
 
 - DataX:
-    - SR Analyzer:
-        icon: mdi-clipboard-list
-        href: https://sr_analyzer.hwc.iheartwoodcraft.com
-        description: DataX SR triage
     - DataX Monitor:
         icon: mdi-monitor-dashboard
         href: https://monitor.hwc.iheartwoodcraft.com

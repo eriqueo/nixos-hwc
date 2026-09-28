@@ -68,7 +68,9 @@ let
     SRG_DATAX_BASE_URL = cfg.dataxBaseUrl;
     # Late-bind Firestore creds from sr_analyzer's single .env (declare once,
     # derive everywhere). Without this the script falls back to a stale default
-    # path and fetch FATALs with ENOENT.
+    # path and fetch FATALs with ENOENT. The sr_analyzer service is retired
+    # (2026-09-28); its checkout stays only as this key's home until the key
+    # moves into agenix — deleting the checkout breaks both gauntlets.
     SRG_ENV_FILE = "${paths.user.home}/600_apps/sr_analyzer/.env";
     # Service-owned source clones (origin = official ContractorCTO, pinned to main),
     # NOT Eric's ~/700_datax dev worktrees. run.sh fetches origin/main from these

@@ -57,7 +57,6 @@ in
     lead-scout-api = { owner = "work"; mode = "port"; };
     # wave 3: the hwc-notify dispatcher (senders use hwc.notifications.notify.url)
     hwc-notify = { owner = "work"; mode = "port"; };
-    sr_analyzer = "work";      # wave 2 miss: the container moved, the route stayed
     # wave 3: the central monitoring stack
     grafana = "work";
     homepage = "work";
@@ -452,14 +451,6 @@ in
       mode = "port";
       port = 22443;
       upstream = "http://127.0.0.1:8420";
-    }
-
-    # sr_analyzer — name-based vhost (local Kanban for DataX SR triage).
-    # Standalone Podman container at ~/600_apps/sr_analyzer (NOT a NixOS module).
-    {
-      name = "sr_analyzer";
-      mode = "vhost";
-      upstream = "http://127.0.0.1:8788";
     }
 
     # T3 Code headless server — the agent harness, reachable from the phone

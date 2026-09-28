@@ -486,6 +486,8 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **nvidia-smi PATH fallback**: GPU tool tries PATH first, then `/run/current-system/sw/bin/nvidia-smi`
 
 ## Changelog
+- **2026-09-28**: The `datax_*` tools read the SR gauntlet's state dir instead of the retired sr_analyzer service. `executors/sr-gauntlet-state.ts` (renamed from `sr-gauntlet-ledger.ts`) reads `sr-cache.json`, where the gauntlet stamps each SR with SR2's `effectivePhase` and `effectiveNeedsReply` and records `syncedAt` after each whole-collection Firestore read, plus `ledger.json`. `datax_support_requests` is now read-only. The `move`, `delete` and `retriage` actions are gone, because they wrote to sr_analyzer's private copy and never to DataX; SR2 owns ticket state. `datax_api_health` reports the age of the gauntlet's last sync. `HWC_DATAX_ANALYZER_URL` and `HWC_DATAX_LEDGER_PATH` are replaced by `HWC_DATAX_GAUNTLET_STATE_DIR`, derived from `hwc.automation.srGauntlet.gauntletDir`. `tests/datax.test.ts` pins the file contract.
+
 - **2026-09-27**: Package n8n-mcp from `parts/n8n-mcp/package-lock.json` during the Nix build. The gateway no longer installs npm dependencies as root at startup. `mcp-immutable-build` starts the backend offline and reads its bundled HTTP Request node documentation. Update the manifest with `npm install --package-lock-only --ignore-scripts --no-audit --no-fund`, refresh `npmDepsHash`, then commit, build and switch. The prior system generation and old install remain available for recovery during adoption.
 
 - 2026-09-25: Agent sessions use the service. `index.nix` adds `serverAlias`,
@@ -756,8 +758,7 @@ domains/system/mcp/
         │   ├── prometheus.ts
         │   ├── tailscale.ts
         │   ├── caldav.ts
-        │   ├── sr-analyzer.ts        # DataX SR board port (datax_* tools)
-        │   └── sr-gauntlet-ledger.ts # SR investigation overlay (datax_* tools)
+        │   └── sr-gauntlet-state.ts  # SR cache + investigation ledger (datax_* tools)
         ├── tools/
         │   ├── index.ts
         │   ├── registry.ts

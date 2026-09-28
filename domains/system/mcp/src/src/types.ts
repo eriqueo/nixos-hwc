@@ -111,10 +111,8 @@ export interface ServerConfig {
   umamiDatabase: string;
   cmsAppPath: string;
   websiteSiteDir: string;
-  /** Base URL of the sr_analyzer SR-board service the datax_* tools consume. */
-  dataxAnalyzerUrl: string;
-  /** Path to the SR gauntlet's investigation ledger (verdict overlay source). */
-  dataxLedgerPath: string;
+  /** SR gauntlet state dir: sr-cache.json (board) + ledger.json (overlay). */
+  dataxGauntletStateDir: string;
 }
 
 /** MCP Resource definition */

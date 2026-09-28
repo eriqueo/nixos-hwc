@@ -22,9 +22,15 @@ sr-gauntlet/
                  # board's "▶ re-investigate now" button.
 ```
 
-Enabled in `machines/server/config.nix` (host one-off: the pipeline checkout
-and its credential sources — sr_analyzer/.env, datax/.env.local — only exist
-on hwc-server).
+Enabled in `machines/work/config.nix` (host one-off: the pipeline checkout
+and its credential sources — `~/600_apps/sr_analyzer/.env` and
+`/var/lib/sr-gauntlet/datax.env` — only exist on hwc-work). The sr_analyzer
+service is retired, but its checkout's `.env` is still the Firestore key for
+this pipeline and dx1-gauntlet; keep it until the key moves.
+
+**Gateway board source.** The hwc-sys `datax_*` tools read the pipeline's
+`state/sr-cache.json` and `state/ledger.json` (see
+`domains/system/mcp/README.md`).
 
 **Auto-investigation (poll).** The timer fires every 15 min; `run.sh` Phase A
 fetches waiting SRs from Firestore and the thread-hash ledger dedups, so most
@@ -53,6 +59,10 @@ units re-read it each run, so no restart is needed.
 
 ## Changelog
 
+- **2026-09-28**: The retired sr_analyzer's role as the gateway's board source
+  moved here: `fetch-srs.mjs` (sr_gauntlet `5d5453b`, `c50cbf7`) stamps SR2's
+  phase and needs-reply flag on each cached SR, records `syncedAt`, and writes
+  the cache atomically. No change to this module's units.
 - **2026-09-07**: Added `pkgs.util-linux` to `srgPath`. `run.sh` serializes the
   poll timer against the run-now drain with `flock`, which is absent from the
   default service PATH, so both units exited 1 at the lock line before doing any
