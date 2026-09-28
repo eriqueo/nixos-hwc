@@ -50,6 +50,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-09-28: Law 12 changelog refresh — `core/authentik/README.md` now records the 2026-08-28 replacement of its dead `$PSQL` role/grant block with declared `ensureUsers` + `ensureDBOwnership`, and `core/README.md` carries the same note. Docs only.
 - 2026-09-27 (b): `mcp/` — the n8n backend's `npmDepsHash` is locked to a real value
   (`sha256-sc936Cu…`) instead of `lib.fakeHash`, completing the previous entry's
   Nix-built backend (59b79d0d).
