@@ -20,6 +20,7 @@ aerc/
   package.nix            # Forked aerc package from the flake input
   parts/
     config.nix           # aerc.conf, accounts.conf, notmuch-queries, stylesets, templates
+    plain-text-filter.py # Control sanitization and compact links for plain/HTML output
     binds.nix            # binds.conf (keybindings) + ov pager config
     appearance.nix       # hwc styleset (palette-driven)
     tags.nix             # Mail taxonomy adapter for queries, styles, and bindings
@@ -229,13 +230,13 @@ match every message from a sender without subject text.
 | `a` | Archive + close |
 | `d` | Trash + close |
 | `H` | Toggle headers |
-| `u` | Open link |
+| `u` | Choose a link from the current part to copy; Tab completes, Enter copies |
 | `O` | Open attachment |
 | `t` | Review and create a task in the shared todui/phone backend |
-| `i` | Review and create a calendar event for khalt/phone |
+| `i` | Import a calendar event for khalt/phone; does not RSVP |
 | `p` | Queue a safe PDF record of the email for Paperless |
 | `S` | Save attachment |
-| `U` | Pick a URL from the full message and send it to `hwc-open` |
+| `U` | Pick a URL from the full message, with duplicate targets removed; q returns |
 | `/` | Search in pager (passthrough) |
 
 The viewer opens the sender-authored plain part first. `h` / `l` move between
@@ -244,6 +245,14 @@ reading measure, repeated blank lines collapse, and long tracking URLs render
 as clickable `↗ domain` labels. The full URL remains the link target and stays
 available through `u` or `U`; the renderer never follows it or loads remote
 content.
+
+HTML buttons retain numbered references: match `[1]Open` or `[2]Yes` to the
+same number in the References section. Ctrl-click a reference URL or compact
+domain label in Kitty to open its complete target in the laptop browser, even
+when aerc runs over SSH inside Zellij. `u` copies a selected link for pasting
+into the browser. `U` scans every MIME part and keeps the sender's surrounding
+text, so shared-document and invitation links remain identifiable. On the
+headless host, selecting a URL in `U` copies it; it does not launch a browser.
 
 Review helpers open in an aerc terminal tab. `<A-h>` / `<A-l>` move between
 that tab and the original message without closing the editor; `<C-x>` opens the
@@ -332,7 +341,7 @@ the first-level navigation popup.
 
 | MIME Type | Handler |
 |-----------|---------|
-| `text/html` | aerc bundled HTML filter |
+| `text/html` | Network-isolated bundled HTML filter with numbered links, then control sanitization and compact URL references |
 | `text/plain` | 100-column wrap + control sanitization + compact clickable tracking links |
 | `text/calendar` | aerc calendar filter |
 | `text/*` | cat passthrough |
@@ -368,6 +377,10 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-09-29: Exposed HTML button targets as numbered, locally clickable link
+  references. Replaced the incomplete `u` open command with native link-copy
+  completion, deduplicated the full-message `U` picker, and labeled calendar
+  import as separate from RSVP in the viewer and cheat sheet.
 - 2026-09-29: Hid the classifier's unsubscribe-available trait from the Tags
   column; it remains available to mail logic. Clarified that `i` imports a
   calendar event without responding to the organizer.

@@ -204,7 +204,10 @@ in
         else ''notmuch address --format=text --output=recipients "%s"''}
       file-picker-cmd = ${pkgs.yazi}/bin/yazi --chooser-file %s
       [filters]
-      text/html = ${aercPkg}/libexec/aerc/filters/html
+      # Keep button labels connected to their targets in a terminal. The bundled
+      # renderer still isolates networking; our final pass sanitizes controls and
+      # turns long reference URLs into compact OSC8 links for local Ctrl-click.
+      text/html = ${aercPkg}/libexec/aerc/filters/html -o display_link_number=true | ${pkgs.python3}/bin/python3 ${./plain-text-filter.py}
       text/plain = ${aercPkg}/libexec/aerc/filters/wrap -w 100 | ${pkgs.python3}/bin/python3 ${./plain-text-filter.py}
       text/calendar = ${aercPkg}/libexec/aerc/filters/calendar
       text/* = cat -

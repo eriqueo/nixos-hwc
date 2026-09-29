@@ -80,7 +80,12 @@ let
     Space t s  switch styleset            Space M    add new tag
 
     HAND OFF (open the message first; then archive with a)
-    t  task → todui/phone    i  event → khalt/phone    p  record → Paperless
+    t  task → todui/phone    i  import event (no RSVP)    p  record → Paperless
+
+    OPENED MESSAGE LINKS
+    Ctrl-click a URL/reference  open in laptop browser
+    u  choose link to copy (Tab completes; Enter copies)
+    U  full-message URL picker (Enter selects; q returns)
 
     MESSAGES (no leader)
     j / k  move      J / K  mark + move    V  visual-mark
@@ -218,16 +223,16 @@ ${tabBinds}
       a = :pipe -m ${archiveCmd}<Enter>:close<Enter>
       d = :pipe -m ${trashCmd}<Enter>:close<Enter>
       H = :toggle-headers<Enter>
-      u = :open-link<Enter>
+      u = :copy-link<space><Tab>
       / = :toggle-key-passthrough<Enter>/
       O = :open<Enter>
       S = :save<space>
-      U = :pipe -m ${pkgs.urlscan}/bin/urlscan -f '${config.home.homeDirectory}/.local/bin/hwc-open {}'<Enter>
+      U = :pipe -m ${pkgs.urlscan}/bin/urlscan --dedupe -f '${config.home.homeDirectory}/.local/bin/hwc-open {}'<Enter>
       l = :next-part<Enter>
       h = :prev-part<Enter>
       o = :open<Enter>
       t = :pipe -m email-to-task<Enter>
-      i = :pipe -m email-to-khal<Enter>
+      i = :pipe -m email-to-khal<Enter> # import event (no RSVP)
       p = :pipe -m email-to-paperless<Enter>
 ${stateBinds}
 ${domainBinds}
