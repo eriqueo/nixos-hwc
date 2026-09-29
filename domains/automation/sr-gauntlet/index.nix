@@ -14,7 +14,7 @@
 #
 # The pipeline itself (run.sh, fetch-srs.mjs, aggregate-context.mjs,
 # opensearch-query.mjs, send-report.sh) lives in its own repo at
-# ~/700_datax/sr_gauntlet — this module only provides the schedule.
+# ~/700_datax/gauntlets/sr_gauntlet — this module only provides the schedule.
 # Credentials are late-bound at runtime from the sr-gauntlet-firestore agenix
 # secret (Firestore fetch) and /var/lib/sr-gauntlet/datax.env (Firestore admin +
 # OpenSearch — a trimmed copy, not the dev tree); nothing secret passes
@@ -23,7 +23,7 @@
 # NAMESPACE: hwc.automation.srGauntlet.*
 #
 # DEPENDENCIES:
-#   - ~/700_datax/sr_gauntlet checkout (the pipeline)
+#   - ~/700_datax/gauntlets/sr_gauntlet checkout (the pipeline)
 #   - /var/lib/sr-gauntlet/{datax,jt-mcp} — service-owned clones of the official
 #     upstream repos ContractorCTO/datax and ContractorCTO/dx-mcp (worktree
 #     sources, origin/main; the org renamed from elstruck on 2026-08-25 and
@@ -40,7 +40,7 @@
 #     whose ~8h rotation caused 5 straight 401 failures once the server went a
 #     day without an interactive Claude session (2026-07-21/22).
 #   - Discord directly for run summaries (the gauntlet bypasses hwc-notify;
-#     see ~/700_datax/sr_gauntlet/README.md)
+#     see ~/700_datax/gauntlets/sr_gauntlet/README.md)
 
 { config, lib, pkgs, ... }:
 
@@ -174,7 +174,7 @@ in
 
     gauntletDir = lib.mkOption {
       type = lib.types.path;
-      default = "${paths.user.home}/700_datax/sr_gauntlet";
+      default = "${paths.user.home}/700_datax/gauntlets/sr_gauntlet";
       description = "sr_gauntlet pipeline checkout (run.sh lives here)";
     };
 

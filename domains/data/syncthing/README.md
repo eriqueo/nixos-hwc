@@ -58,6 +58,8 @@ hwc.data.syncthing = {
 
 ## Changelog
 
+- 2026-09-29: `datax-ignores.nix` follows the 700_datax layout: `dx-mcp` (was `jt-mcp`),
+  `gauntlets/` (was `sr_gauntlet` and `dx1_gauntlet`) and `tools/` (a git repo) stay per-host.
 - 2026-09-28: `700_datax` left hwc-home. hwc-laptop and hwc-work peer it directly, both
   with `parts/datax-ignores.nix` so repo checkouts and gauntlet trees never sync.
 - 2026-07-11: `dataDir` now `config.hwc.paths.user.home` instead of hardcoded `/home/eric` (Law 3 migration, value unchanged).

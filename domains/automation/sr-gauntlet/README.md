@@ -1,7 +1,7 @@
 # SR Gauntlet (schedule module)
 
 Daily unattended investigation of DataX support requests. The pipeline itself
-lives in its own repo at `~/700_datax/sr_gauntlet` (fetch → per-SR customer
+lives in its own repo at `~/700_datax/gauntlets/sr_gauntlet` (fetch → per-SR customer
 context pack → headless read-only Claude investigation → REPORT.md → Discord);
 this module contributes only the systemd service + timer that launch it.
 
@@ -58,6 +58,8 @@ units re-read it each run, so no restart is needed.
 
 ## Changelog
 
+- **2026-09-29**: `gauntletDir` defaults to `~/700_datax/gauntlets/sr_gauntlet`;
+  both gauntlet repos moved under `gauntlets/` in the 700_datax layout cleanup.
 - **2026-09-28**: `SRG_ENV_FILE` now points at the new `sr-gauntlet-firestore`
   agenix secret (`config.age.secrets.sr-gauntlet-firestore.path`) instead of
   the retired `~/600_apps/sr_analyzer/.env`. The secret holds the same three

@@ -11,7 +11,8 @@
 # ledger are the only outputs; the human applies fixes).
 #
 # The pipeline itself (run.sh, fetch-cases.mjs, aggregate-case-context.mjs,
-# write-results.mjs) lives in its own repo at ~/700_datax/dx1_gauntlet — this
+# write-results.mjs) lives in its own repo (eriqueo/dx1_gauntlet) at
+# ~/700_datax/gauntlets/dx1_gauntlet — this
 # module only provides the schedule + the board's run-now drain. Credentials
 # are late-bound at runtime from the same files sr-gauntlet uses; nothing
 # secret passes through the Nix store.
@@ -19,8 +20,8 @@
 # NAMESPACE: hwc.automation.dx1Gauntlet.*
 #
 # DEPENDENCIES (why machines/server sets enable = false until provisioned):
-#   - ~/700_datax/dx1_gauntlet checkout (the pipeline; laptop-authored repo,
-#     no remote yet — clone/rsync to the server before enabling)
+#   - ~/700_datax/gauntlets/dx1_gauntlet checkout (the pipeline; clone of
+#     eriqueo/dx1_gauntlet, which gained its remote on 2026-09-29)
 #   - /var/lib/sr-gauntlet/{datax,jt-mcp} — the SAME service-owned clones
 #     sr-gauntlet uses (read-only worktree sources; DXG_PIN_REMOTE prefers
 #     the upstream remote)
@@ -123,7 +124,7 @@ in
 
     gauntletDir = lib.mkOption {
       type = lib.types.path;
-      default = "${paths.user.home}/700_datax/dx1_gauntlet";
+      default = "${paths.user.home}/700_datax/gauntlets/dx1_gauntlet";
       description = "dx1_gauntlet pipeline checkout (run.sh lives here)";
     };
   };

@@ -129,13 +129,13 @@ in
 
     srGauntletDir = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
-      default = "${paths.user.home}/700_datax/sr_gauntlet";
+      default = "${paths.user.home}/700_datax/gauntlets/sr_gauntlet";
       description = "sr_gauntlet dir — read-only mirror of its investigations/";
     };
 
     dx1GauntletDir = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
-      default = "${paths.user.home}/700_datax/dx1_gauntlet";
+      default = "${paths.user.home}/700_datax/gauntlets/dx1_gauntlet";
       description = "dx1_gauntlet dir — read-only mirror of its investigations/ + state/ (verdict ledger)";
     };
 

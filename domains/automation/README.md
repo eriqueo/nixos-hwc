@@ -48,11 +48,11 @@ automation/
 │                      #   Claude runs the `readme-refresh` skill in a worktree, the
 │                      #   launcher hard-verifies READMEs-only, pushes + opens a PR
 ├── sr-gauntlet/   # Daily DataX SR investigation schedule (hwc.automation.srGauntlet.*)
-│   ├── index.nix  # systemd service/timer (06:30 daily) wrapping ~/700_datax/sr_gauntlet/run.sh
+│   ├── index.nix  # systemd service/timer (06:30 daily) wrapping ~/700_datax/gauntlets/sr_gauntlet/run.sh
 │   └── README.md  # Containment model + pointer to the pipeline repo
 ├── dx1-gauntlet/  # DX1 case-ledger investigation schedule (hwc.automation.dx1Gauntlet.*)
 │   ├── index.nix  # systemd service/timer (daily, strangler-fig) wrapping
-│   │              #   ~/700_datax/dx1_gauntlet/run.sh + the /dx1 run-now drain
+│   │              #   ~/700_datax/gauntlets/dx1_gauntlet/run.sh + the /dx1 run-now drain
 │   └── README.md  # Containment model + provisioning gate (enable=false until checkout exists)
 └── n8n/         # n8n workflow automation
     ├── index.nix     # Options (incl. secrets.*) + firewall rules

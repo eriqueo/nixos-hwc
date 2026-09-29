@@ -7,10 +7,10 @@
 # spawning the trigger) is a later, human-reviewed step.
 id: sr_gauntlet
 trigger:
-  command: /home/eric/700_datax/sr_gauntlet/run.sh
+  command: /home/eric/700_datax/gauntlets/sr_gauntlet/run.sh
   args: ["--id", "{id}"]
   timeoutMs: 1800000 # 30 min — matches SRG_AGENT_TIMEOUT headroom
-resultsDir: /home/eric/700_datax/sr_gauntlet/investigations/{date}-{id}
+resultsDir: /home/eric/700_datax/gauntlets/sr_gauntlet/investigations/{date}-{id}
 reportFile: REPORT.md
 verdictPattern: "SR-VERDICT: (investigated|inconclusive)"
 successVerdicts: ["investigated"]

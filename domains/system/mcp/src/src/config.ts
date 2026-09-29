@@ -27,6 +27,6 @@ export function loadConfig(): ServerConfig {
     cmsAppPath: process.env.HWC_CMS_APP_PATH || "/opt/business/heartwood-cms",
     dataxGauntletStateDir:
       process.env.HWC_DATAX_GAUNTLET_STATE_DIR ||
-      "/home/eric/700_datax/sr_gauntlet/state",
+      "/home/eric/700_datax/gauntlets/sr_gauntlet/state",
   };
 }

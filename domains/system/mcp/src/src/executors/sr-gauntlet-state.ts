@@ -1,7 +1,7 @@
 /**
  * sr_gauntlet state adapter — read-only view of the SR gauntlet's state dir.
  *
- * The SR gauntlet (~/700_datax/sr_gauntlet) polls DataX Firestore every 15
+ * The SR gauntlet (~/700_datax/gauntlets/sr_gauntlet) polls DataX Firestore every 15
  * minutes and keeps two files the datax_* tools read:
  *
  *   sr-cache.json  every SR, refreshed incrementally, with SR2's derivations

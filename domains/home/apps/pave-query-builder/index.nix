@@ -26,7 +26,7 @@ let
   # validation. Set unconditionally (not pathExists-guarded — that returns false
   # under pure flake eval); the app's schema loader degrades gracefully if the
   # file is absent, so baking the HWC path is safe even on a checkout-less host.
-  schemaPath = "${config.home.homeDirectory}/700_datax/jt-mcp/schema_pretty.json";
+  schemaPath = "${config.home.homeDirectory}/700_datax/dx-mcp/main/schema_pretty.json";
 
   # The raw app package (the HM module installs wrapped binaries for PATH use;
   # the systemd service needs an explicit store path + its own env, so reference

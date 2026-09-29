@@ -11,4 +11,5 @@ Thin translator around the external `pave-query-builder` flake input (trap-safe 
 - `index.nix` — imports upstream HM module; options; pave-web start/open launcher scripts, user service, desktop entries.
 
 ## Changelog
+- 2026-09-29: `schemaPath` reads `~/700_datax/dx-mcp/main/schema_pretty.json`; the old `jt-mcp/` root file no longer existed after the worktree layout move.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

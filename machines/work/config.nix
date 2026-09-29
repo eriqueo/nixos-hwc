@@ -81,7 +81,7 @@
   #==========================================================================
   # Service split wave 1 (2026-09-25): development apps + brain stack.
   # Refinery, nightly builds and both gauntlets moved here with their state
-  # (/var/lib/refinery, /var/lib/sr-gauntlet, ~/700_datax/*_gauntlet). The
+  # (/var/lib/refinery, /var/lib/sr-gauntlet, ~/700_datax/gauntlets/*). The
   # brain stack (brain-mcp, brainvec, llama-embed on CPU, brain-sweep) runs
   # here against this host's clone of the vault hub. hwc-notify runs here;
   # senders use its shared derived address.

@@ -2,7 +2,7 @@
 
 Unattended investigation of open DX1 health-ledger cases (`dx1Cases`) —
 sr-gauntlet's sibling. The pipeline itself lives in its own repo at
-`~/700_datax/dx1_gauntlet` (fetch open cases → per-case transcript/OpenSearch
+`~/700_datax/gauntlets/dx1_gauntlet` (fetch open cases → per-case transcript/OpenSearch
 context pack → headless read-only Claude investigation → REPORT.md +
 `dx1Investigations` Firestore doc → Discord); this module contributes only the
 systemd service + timer that launch it, plus the drain behind the refinery
@@ -36,6 +36,9 @@ worktree source, two consumers.
 
 ## Changelog
 
+- 2026-09-29: `gauntletDir` defaults to `~/700_datax/gauntlets/dx1_gauntlet`. The
+  pipeline gained a remote (`eriqueo/dx1_gauntlet`); hwc-work's checkout tracks
+  the `hwc-work/running` branch, which is the code the service ran before the move.
 - 2026-09-28: `DXG_ENV_FILE` now points at the `sr-gauntlet-firestore` agenix
   secret instead of the retired `~/600_apps/sr_analyzer/.env`. Same
   `FIREBASE_*` key names, so `fetch-cases.mjs`, `write-results.mjs` and

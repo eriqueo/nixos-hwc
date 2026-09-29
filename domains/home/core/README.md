@@ -23,6 +23,7 @@ core/
 ```
 
 ## Changelog
+- 2026-09-29: `cdj` goes to `~/700_datax/dx-mcp`; the local jt-mcp container was renamed to match upstream `ContractorCTO/dx-mcp`.
 - 2026-09-25: `repo-hooks/` — `core.hooksPath` now points at a generated store
   dir instead of the tree-relative `.githooks`. `dispatched` hooks forward to the
   checked-out tree's copy; `pinned` hooks are store copies. A tree-relative path

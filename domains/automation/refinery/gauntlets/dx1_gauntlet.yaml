@@ -27,10 +27,10 @@
 #   decodes "+" back to ":" before invoking run.sh.
 id: dx1_gauntlet
 trigger:
-  command: /home/eric/700_datax/dx1_gauntlet/run.sh
+  command: /home/eric/700_datax/gauntlets/dx1_gauntlet/run.sh
   args: ["--id", "{id}"]
   timeoutMs: 1800000 # 30 min per case — matches sr_gauntlet's agent budget
-resultsDir: /home/eric/700_datax/dx1_gauntlet/investigations/{id}
+resultsDir: /home/eric/700_datax/gauntlets/dx1_gauntlet/investigations/{id}
 reportFile: REPORT.md
 verdictPattern: "DX1-VERDICT: (diagnosed|inconclusive|not-reproducible)"
 successVerdicts: ["diagnosed", "inconclusive", "not-reproducible"]

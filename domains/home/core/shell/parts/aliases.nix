@@ -24,7 +24,7 @@
   "vpnport" = "cat /run/protonvpn-natpmp/port 2>/dev/null || echo 'no forwarded port (VPN down?)'";
   "website" = "ssh -i ~/.ssh/hostinger_deploy -p 65002 u930853409@194.195.84.13";
   "cdn" = "cd ~/.nixos";
-  "cdd" = "cd ~/700_datax/datax"; "cdj" = "cd ~/700_datax/jt-mcp";
+  "cdd" = "cd ~/700_datax/datax"; "cdj" = "cd ~/700_datax/dx-mcp";
   "downloads" = "cd ~/000_inbox/downloads"; "hwc" = "cd ~/100_hwc"; "inbox" = "cd ~/000_inbox";
   "screenshots" = "cd ~/500_media/510_pictures/screenshots";
   "cameras" = "echo 'Frigate: http://100.115.126.41:5000'";

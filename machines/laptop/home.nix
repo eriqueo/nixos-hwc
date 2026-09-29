@@ -128,6 +128,6 @@ in
     # worktrees. Point the jump aliases at main/. Laptop-only override — the server's
     # checkouts are not relocated, so its base cdd/cdj (parts/aliases.nix) stay as-is.
     aliases.cdd = "cd ~/700_datax/datax/main";
-    aliases.cdj = "cd ~/700_datax/jt-mcp/main";
+    aliases.cdj = "cd ~/700_datax/dx-mcp/main";
   };
 }
