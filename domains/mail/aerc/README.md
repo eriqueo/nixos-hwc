@@ -248,6 +248,8 @@ content.
 Review helpers open in an aerc terminal tab. `<A-h>` / `<A-l>` move between
 that tab and the original message without closing the editor; `<C-x>` opens the
 aerc command prompt inside a terminal.
+The `i` calendar handoff imports an event after review; it does not RSVP to
+the organizer. Respond to an invitation through its Yes/No/Maybe links.
 
 ### Searching by tag
 
@@ -366,6 +368,9 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-09-29: Hid the classifier's unsubscribe-available trait from the Tags
+  column; it remains available to mail logic. Clarified that `i` imports a
+  calendar event without responding to the organizer.
 - 2026-09-29: Corrected the `U` URL picker to use urlscan's safe runner
   (`-f`) instead of compact mode (`-c`), which treated `hwc-open` as the
   message filename and left the picker empty.
