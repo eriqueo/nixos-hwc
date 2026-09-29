@@ -213,9 +213,11 @@ Before promoting live residency, also test that a slow model response cannot
 overwrite a later phone action; re-read/CAS the case before its effects.
 
 The remaining gates are tracked in [nixos-hwc #104](https://github.com/eriqueo/nixos-hwc/issues/104).
-The guarded probe is installed; live preflight exposed Python capability bytes
-versus strings and stopped before any write. Both forms now have coverage and
-the 58-test suite is added to the packaged-Python Nix check. After that check
+The guarded probe is installed; live preflight exposed cached pre-login
+capabilities and stopped before any write. A trace with the deployed Python
+proved authenticated CAPABILITY includes UIDPLUS; the probe now queries it
+explicitly and decodes byte/text responses. The 59-test suite runs in the
+packaged-Python Nix check. After that check
 and activation, Eric creates the six labels and archives a disposable email
 with subject `Proton label sync test`; then run the real probe. No agent review
 follow-up is scheduled for the one-day filter check or the October 6 review.
