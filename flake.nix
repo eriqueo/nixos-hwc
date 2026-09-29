@@ -486,7 +486,9 @@
       mailHost = assert lib.assertMsg (lib.length (builtins.attrNames mailMachines) == 1)
         "mail checks: expected one mail-role owner";
         "hwc-${builtins.head (builtins.attrNames mailMachines)}";
-      mailHome = self.homeConfigurations."eric@${mailHost}".config;
+      # Runtime mail controls depend on osConfig; inspect the deployed integrated
+      # HM configuration rather than the standalone evaluation without that port.
+      mailHome = self.nixosConfigurations.${mailHost}.config.home-manager.users.eric;
       mkCharterLint = name: cmds: pkgs.runCommand "charter-${name}" {
         nativeBuildInputs = [ pkgs.ripgrep pkgs.fd ];
       } ''
@@ -974,8 +976,96 @@
 
       # Workflow state drives the sidebar; Domain and factual tags are columns
       # and filters. Laya is the sole automatic content classifier.
+      mail-classifier-tests = pkgs.runCommand "mail-classifier-tests" {} ''
+        # Exercise the packaged Python boundary, not only the host's Python.
+        ${pkgs.python3}/bin/python3 ${inputs.system-one}/scripts/mail_classifier_test.py
+        touch "$out"
+      '';
+
+      mail-residency-shadow = let
+        home = mailHome;
+        fixture = pkgs.writeText "mail-residency-shadow.json" (builtins.toJSON {
+          script = home.home.file.".local/bin/sync-mail".text;
+          command = home.hwc.mail.classifier.residency.command;
+          statusFile = home.hwc.mail.mbsync.statusFile;
+          maildirRoot = home.hwc.mail.notmuch.maildirRoot;
+        });
+      in
+      assert lib.assertMsg home.hwc.mail.classifier.residency.enable
+        "mail-residency-shadow: mail host must observe in shadow";
+      pkgs.runCommand "mail-residency-shadow" {} ''
+        ${pkgs.python3}/bin/python3 - ${fixture} <<'PY'
+        import json
+        import os
+        import pathlib
+        import re
+        import subprocess
+        import sys
+        import tempfile
+
+        fixture = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        original = fixture['script']
+        assert original.count(fixture['command']) == 1
+
+        def exercise(source, stage="", mode='core'):
+            with tempfile.TemporaryDirectory() as directory:
+                root = pathlib.Path(directory)
+                log = root / 'calls'
+                status = root / 'status.json'
+                stub = root / 'command'
+                stub.write_text('#!${pkgs.python3}/bin/python3\n'
+                    'import os, pathlib, sys\n'
+                    'name = pathlib.Path(sys.argv[0]).name\n'
+                    'with open(os.environ["CALL_LOG"], "a") as f: f.write(name + "\\n")\n'
+                    'raise SystemExit(23 if name == os.environ["FAIL_STAGE"] else 0)\n')
+                stub.chmod(0o755)
+                for name in ['afew', 'mbsync', 'notmuch', 'mail-classifier']:
+                    (root / name).symlink_to(stub)
+                script = source.replace(fixture['statusFile'], str(status))
+                script = script.replace(fixture['maildirRoot'], str(root / 'Maildir'))
+                script = re.sub(r'/nix/store/[^\s"\x27]+/bin/(afew|mbsync|notmuch|mail-classifier)\b',
+                    lambda m: str(root / m[1]), script)
+                wrapper = root / 'sync-mail'
+                wrapper.write_text(script)
+                wrapper.chmod(0o755)
+                result = subprocess.run(['${pkgs.bash}/bin/bash', str(wrapper), mode],
+                    env={**os.environ, 'CALL_LOG': str(log), 'FAIL_STAGE': stage, 'SYNC_MAIL_LOCKED': '1'},
+                    capture_output=True, text=True)
+                calls = log.read_text().splitlines()
+                lanes = json.loads(status.read_text())['lanes']
+                assert 'notmuch' in calls, 'indexing must survive transport/mover failure'
+                if mode == 'trash':
+                    assert calls == ['mbsync', 'notmuch'], calls
+                    assert 'residency' not in lanes
+                elif stage in ['afew', 'mbsync', 'notmuch']:
+                    assert 'mail-classifier' not in calls, calls
+                    assert lanes['core']['state'] == 'degraded'
+                    assert lanes['residency']['lastOutcome'] == 'prerequisite-failed'
+                else:
+                    assert calls == ['afew', 'mbsync', 'notmuch', 'mail-classifier'], calls
+                    assert lanes['core']['state'] == 'healthy'
+                    assert lanes['residency']['state'] == ('degraded' if stage else 'healthy')
+                assert result.returncode == (23 if stage else 0), result.stderr
+
+        for stage in ["", 'afew', 'mbsync', 'notmuch', 'mail-classifier']:
+            exercise(original, stage)
+        exercise(original, mode='trash')
+        try:
+            exercise(original.replace(fixture['command'], 'true'))
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('removed observer wiring passed its check')
+        PY
+        touch "$out"
+      '';
+
       mail-workflow-v2 = let
         home = mailHome;
+        identity = home.programs.notmuch.extraConfig.user;
+        ownAddresses = [ identity.primary_email ] ++ lib.splitString ";" identity.other_email;
+        controls = lib.findFirst (package: lib.getName package == "mail-classifier")
+          (throw "mail-workflow-v2: classifier controls missing") home.home.packages;
         binds = home.home.file.".config/aerc/binds.conf".text;
         aercConf = home.home.file.".config/aerc/aerc.conf".text;
         queries = home.home.file.".config/aerc/notmuch-queries".text;
@@ -992,6 +1082,9 @@
         missingBinds = lib.filter (needle: !(lib.hasInfix needle binds)) requiredBinds;
         hookFixture = pkgs.writeText "mail-post-new-hook" hook;
       in
+      assert lib.assertMsg (lib.all (address: lib.elem address ownAddresses)
+        [ "eric@iheartwoodcraft.com" "office@iheartwoodcraft.com" "admin@iheartwoodcraft.com" "eric@contractorcto.com" ])
+        "mail-workflow-v2: declared identities miss Eric's aliases; self-learning guard would be incomplete";
       assert lib.assertMsg (missingBinds == [])
         "mail-workflow-v2: generated server binds are missing ${lib.concatStringsSep ", " missingBinds}";
       assert lib.assertMsg (bindCount archiveDisposition == 2 && bindCount trashDisposition == 2
@@ -1024,16 +1117,90 @@
       assert lib.assertMsg (!(lib.hasInfix ")(exclude" aercConf))
         "mail-workflow-v2: generated aerc template operands must be whitespace-separated";
       pkgs.runCommand "mail-workflow-v2" {} ''
-        ${pkgs.python3}/bin/python3 - ${hookFixture} <<'PY'
+        ${pkgs.python3}/bin/python3 - ${hookFixture} ${controls}/bin/mail-classifier <<'PY'
         import pathlib
+        import shlex
+        import subprocess
         import sys
+        import tempfile
 
         hook = pathlib.Path(sys.argv[1]).read_text()
+        managed_prefix = ${builtins.toJSON mailHome.hwc.mail.classifier.contract.protonSync.managedLabelPrefix}
+        managed_mailbox = ${builtins.toJSON mailHome.hwc.mail.classifier.contract.protonSync.labelMailboxPrefix}
+        mbsyncrc = ${builtins.toJSON mailHome.home.file.".mbsyncrc".text}
+        assert '!"' + managed_mailbox + managed_prefix + '*"' in mbsyncrc
         folder_state = hook.index("+inbox +state/do")
         remove_new = hook.index("# Remove transient new tag", folder_state)
         assert folder_state < remove_new, "new mail loses its safe DO state"
         assert "mail-rule" not in hook, "retired sender-rule writer returned"
         assert "tag:new AND NOT tag:keep" not in hook, "legacy sender placement returned"
+
+        # Exercise the actual generated dispatcher with only its runtime binding
+        # substituted. Removing reopen from that dispatcher must lose db/notmuch.
+        control = pathlib.Path(sys.argv[2]).read_text()
+        runtime_path = "/run/current-system/sw/bin/mail-classifier-runtime"
+        assert control.count(runtime_path) == 1
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            # Exercise the actual legacy label loop. Its directory and notmuch
+            # executable are the only substituted dependencies.
+            labels = root / "Labels"
+            labels.mkdir()
+            for name in ['finance', managed_prefix + 'look', '_work']:
+                (labels / name).mkdir()
+            tags = root / 'tags'
+            tagger = root / 'notmuch'
+            tagger.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\" >> " + str(tags) + "\n")
+            tagger.chmod(0o755)
+            start = hook.index('# Dynamic Proton label → notmuch tag mapping')
+            end = hook.index('# Shield: kept mail', start)
+            fragment = hook[start:end]
+            import re
+            fragment = re.sub(r'_LABELS_DIR=.*', '_LABELS_DIR="' + str(labels) + '"', fragment)
+            fragment = re.sub(r'/nix/store/[^\s"\x27]+/bin/notmuch\b', str(tagger), fragment)
+            def check_labels(text):
+                tags.write_text("")
+                subprocess.run(['${pkgs.bash}/bin/bash', '-c', text], check=True)
+                applied = tags.read_text().splitlines()
+                assert '+finance' in applied
+                assert '+' + managed_prefix + 'look' not in applied
+                assert '+_work' not in applied
+            check_labels(fragment)
+            try:
+                check_labels(fragment.replace('|' + managed_prefix + '*', ""))
+            except AssertionError:
+                pass
+            else:
+                raise AssertionError('removed managed-label skip passed its check')
+            runtime = root / "runtime"
+            runtime.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\"\n")
+            runtime.chmod(0o755)
+            def dispatch(text, verb="reopen"):
+                wrapper = root / "wrapper"
+                lock_path = ${builtins.toJSON "${builtins.dirOf mailHome.hwc.mail.mbsync.statusFile}/sync.lock"}
+                wrapper.write_text(text.replace(runtime_path, str(runtime)).replace(lock_path, str(root / 'sync.lock')))
+                wrapper.chmod(0o755)
+                return subprocess.check_output([str(wrapper), verb], text=True).splitlines()
+            def check(arguments):
+                assert arguments[0] == "reopen"
+                assert arguments[1:3] == ["--db", "/var/lib/hwc/mail-classifier/ledger.sqlite"]
+                assert arguments[3] == "--notmuch"
+            check(dispatch(control))
+            observation = dispatch(control, "observe-residency")
+            assert observation[:3] == ['observe-residency', '--db', '/var/lib/hwc/mail-classifier/ledger.sqlite']
+            assert observation[observation.index('--bridge-host') + 1] == '127.0.0.1'
+            assert observation[observation.index('--bridge-port') + 1] == '1143'
+            password_command = observation[observation.index('--password-command') + 1]
+            assert shlex.split(password_command)[:2] == ['sh', '-c']
+            probe = dispatch(control, 'label-probe')
+            assert probe[:3] == ['label-probe', '--db', '/var/lib/hwc/mail-classifier/ledger.sqlite']
+            assert '--notmuch' not in probe
+            try:
+                check(dispatch(control.replace("|reopen", "")))
+            except AssertionError:
+                pass
+            else:
+                raise AssertionError("dispatcher check accepted removed reopen wiring")
         PY
         touch "$out"
       '';

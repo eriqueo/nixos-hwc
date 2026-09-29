@@ -3,6 +3,7 @@ let
   cfg        = config.hwc.mail;
   accs       = cfg.accounts or {};
   common     = import ../../accounts/helpers.nix { inherit lib; };
+  syncContract = config.hwc.mail.classifier.contract.protonSync;
   # Use notmuch maildirRoot or fallback to default
   maildirRoot =
     let nmRoot = cfg.notmuch.maildirRoot or "";
@@ -31,7 +32,10 @@ let
     let
       mapping = a.mailboxMapping or {};
       wildcards = a.sync.wildcards or [];
-      effectiveWildcards = wildcards ++ lib.optionals (a.type == "proton-bridge") [ "!Trash" ];
+      effectiveWildcards = wildcards ++ lib.optionals (a.type == "proton-bridge") [
+        "!Trash"
+        "!${syncContract.labelMailboxPrefix}${syncContract.managedLabelPrefix}*"
+      ];
       createPolicy = if common.isGmail a then "Create Near" else "Create Both";
 
       # Create one channel per mailbox mapping
@@ -113,12 +117,7 @@ let
         '']
       else allChannels;
 
-  getOr = a: n: def:
-    if common.hasField a n then
-      let v = common.getField a n; in
-      if v == null then def else
-      if builtins.isString v then (if v == "" then def else v) else v
-    else def;
+  getOr = common.getOr;
 
   mbsyncBlock = a:
     let

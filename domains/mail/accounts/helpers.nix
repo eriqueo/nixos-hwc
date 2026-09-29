@@ -3,6 +3,12 @@ let
   hasField = a: n: builtins.hasAttr n a;
   getField = a: n: if hasField a n then builtins.getAttr n a else null;
   hasText  = s: builtins.isString s && s != "";
+  getOr = a: n: def:
+    if hasField a n then
+      let v = getField a n; in
+      if v == null then def else
+      if builtins.isString v then (if v == "" then def else v) else v
+    else def;
 
   loginOf = a:
     let try = n: if hasField a n && hasText (getField a n) then getField a n else null;
@@ -72,7 +78,7 @@ let
 in
 {
   inherit
-    hasField getField hasText loginOf isGmail
+    hasField getField hasText getOr loginOf isGmail
     imapHost imapPort tlsType smtpHost smtpPort startTLS
     passCmd
     md rolesFor imapDefaultsFor smtpDefaultsFor;

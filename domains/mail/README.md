@@ -40,7 +40,7 @@ mail/
 │       ├── runtime.nix        # Env vars, PATH handling
 │       └── service.nix        # systemd user service unit
 ├── classifier/
-│   ├── index.nix              # aerc-facing correction/review command
+│   ├── index.nix              # controls, shared contract, residency shadow, guarded label probe
 │   └── sys.nix                # pinned Laya + local Nomic hybrid service
 ├── calendar/
 │   ├── index.nix              # khal + vdirsyncer integration; extraVdirsyncerPairs option
@@ -57,14 +57,14 @@ mail/
 │   ├── index.nix              # mbsync module
 │   └── parts/
 │       ├── render.nix         # .mbsyncrc generation from account attrset
-│       └── service.nix        # locked core/Trash sync lanes, services, timers, bounded status
+│       └── service.nix        # locked core/Trash/residency lanes, failure gates, bounded status
 ├── msmtp/
 │   ├── index.nix              # SMTP send module
 │   └── parts/render.nix       # msmtp config generation
 ├── health/
 │   └── index.nix              # Health monitoring (GPG→pass→Bridge→mbsync→freshness)
 └── notmuch/
-    ├── index.nix              # notmuch module + options
+    ├── index.nix              # notmuch module + canonical sender identities
     └── parts/
         ├── config.nix         # notmuch config (database, user, flags)
         ├── hooks.nix          # post-new hook generator
@@ -112,6 +112,15 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-09-29: Prepare S2's single-message label probe with a shared sync lock and CRITICAL keyed receipts. Unknown writes never retry. The System One contract owns the six labels and reserved prefix; mbsync excludes that namespace and the legacy hook skips it. Fake-server tests require Archive/All Mail preservation and reject duplicate COPY. Eric must create six labels for the real probe; bulk projection and label teaching wait for that proof.
+  The probe requires a disposable test subject. Its packaged-Python preflight
+  caught a cached pre-login capability list before any write. The probe queries
+  authenticated CAPABILITY explicitly, decodes byte/text responses, and the
+  classifier suite runs inside the Nix check as well.
+- 2026-09-29: S1 shadow observes live Bridge folder membership after successful MailMover, core sync and indexing. It records bounded, content-keyed observations/proposals without mail or learning effects. MailMover failures remain visible while indexing continues. A shared status-path binding uses the system paths domain. Initial live pilot: 1,578 recent threads, zero baseline proposals, seven seconds. Labels and live actions remain behind later gates.
+  Account helpers now own null/empty override fallback for mbsync, msmtp and the
+  observer; transport rendering is checked against the live files.
+- 2026-09-29: Prepared sync safety prerequisites: System One excludes own identities from sender learning, ignores historical self preferences without deleting audit data, and exposes non-teaching reopen. Notmuch owns the complete alias list instead of duplicated role declarations. Two-way sync's revised plan and remaining acceptance gates live in `docs/plans/unified-triage-architecture.md`; folder observation and label projection are still pending.
 - 2026-09-29: Prepared two generated Proton Sieve filters: taxonomy junk plus interim recipient/sender labels and Seen/Archive actions mapped to existing targets. No stars or dead folders. New junk entries are Proton-only; Gmail retains 15 entries after protected removals. `mail-trash-guard` checks malformed/protected matches and production wiring. These replace the repo's unused April bundle; Proton activation awaits Eric's review and paste.
   Mail checks now derive their host from the flake's mail role; calendar checks
   inspect enabled clients instead of the retired hwc-home mail configuration.

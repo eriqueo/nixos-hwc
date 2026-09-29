@@ -10,6 +10,7 @@
   configDigest,
   bridgeVersion,
   trashTimerEnable,
+  residencyCommand,
   ...
 }:
 let
@@ -128,6 +129,7 @@ in
 
       declare -A lane_rc=()
       declare -a selected=()
+      afew_rc=0
       run_lane() {
         local lane=$1
         shift
@@ -144,7 +146,7 @@ in
       run_core() {
         # MailMover changes core folders before their two-way sync. Never run it
         # for the pull-only Trash lane: Bridge rejects uploads into Trash.
-        ${afewPkg}/bin/afew -m -a || true
+        ${afewPkg}/bin/afew -m -a || afew_rc=$?
         run_lane core "''${CORE_CHANNELS[@]}"
       }
 
@@ -168,10 +170,30 @@ in
         elif [[ "$rc" -ne 0 ]]; then
           record_lane "$lane" degraded sync-failed "$rc"
           [[ "$final_rc" -ne 0 ]] || final_rc=$rc
+        elif [[ "$lane" == core && "$afew_rc" -ne 0 ]]; then
+          record_lane "$lane" degraded mover-failed "$afew_rc"
+          [[ "$final_rc" -ne 0 ]] || final_rc=$afew_rc
         else
           record_lane "$lane" healthy success 0
         fi
       done
+
+      ${lib.optionalString (residencyCommand != "") ''
+      if [[ "$mode" != trash ]]; then
+        if [[ "$final_rc" -eq 0 ]]; then
+          residency_rc=0
+          ${residencyCommand} || residency_rc=$?
+          if [[ "$residency_rc" -eq 0 ]]; then
+            record_lane residency healthy shadow-success 0
+          else
+            record_lane residency degraded observation-failed "$residency_rc"
+            final_rc=$residency_rc
+          fi
+        else
+          record_lane residency degraded prerequisite-failed "$final_rc"
+        fi
+      fi
+      ''}
 
       ${pkgs.coreutils}/bin/rm -f "''${XDG_CACHE_HOME:-$HOME/.cache}/mbsync-last-success"
       exit "$final_rc"

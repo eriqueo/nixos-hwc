@@ -1,7 +1,7 @@
 # profiles/mail/home.nix — mail role, Home Manager lane
 #
 # Full mail menu: bridge, aerc, notmuch, calendar sync, mail health.
-# Identity data lives here because only the mail role consumes it.
+# Sender identities come from domains/mail/notmuch; roles select services.
 #
 # USED BY: see the machines table in flake.nix
 
@@ -44,8 +44,6 @@
     notmuch = {
       maildirRoot = "/home/eric/400_mail/Maildir";
       userName = "Eric O'Keefe";
-      primaryEmail = "eric@iheartwoodcraft.com";
-      otherEmails = [ "eriqueo@proton.me" "heartwoodcraftmt@gmail.com" "eriqueokeefe@gmail.com" ];
       excludeFolders = [ "trash" "spam" "[Gmail]/All Mail" ];
 
       savedSearches = {

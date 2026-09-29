@@ -2,8 +2,7 @@
 let
   on = (config.hwc.mail.enable or true);
   cfg = config.hwc.mail.notmuch or {};
-  mailContract = builtins.fromJSON
-    (builtins.readFile "${inputs.system-one}/scripts/mail_classifier_contract.json");
+  mailContract = config.hwc.mail.classifier.contract;
   defaultNewTags = [ "new" "unread" "inbox" ];
   paths = import ./parts/paths.nix { inherit lib config cfg; };
   ident = import ./parts/identity.nix { inherit lib cfg defaultNewTags; };
@@ -34,8 +33,16 @@ in
   options.hwc.mail.notmuch = {
     maildirRoot = lib.mkOption { type = lib.types.str; default = ""; };
     userName = lib.mkOption { type = lib.types.str; default = ""; };
-    primaryEmail = lib.mkOption { type = lib.types.str; default = ""; };
-    otherEmails = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; };
+    primaryEmail = lib.mkOption { type = lib.types.str; default = "eric@iheartwoodcraft.com"; };
+    # One identity producer for notmuch and the classifier's self-learning guard.
+    otherEmails = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [
+        "eriqueo@proton.me" "heartwoodcraftmt@gmail.com" "eriqueokeefe@gmail.com"
+        "office@iheartwoodcraft.com" "admin@iheartwoodcraft.com"
+        "eric@contractorcto.com" "g_hwcmt@proton.me" "g_erique@proton.me"
+      ];
+    };
     newTags = lib.mkOption { type = lib.types.listOf lib.types.str; default = defaultNewTags; };
     excludeFolders = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; };
     postNewHook = lib.mkOption { type = lib.types.lines; default = ""; };

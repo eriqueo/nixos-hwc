@@ -17,13 +17,22 @@ let
     haveProton = render.haveProton;
     inherit maildirRoot;
     inherit (render) coreChannels trashChannels;
-    statusFile = config.hwc.paths.user.mailSyncStatus or "${config.home.homeDirectory}/.local/state/mail-sync/status.json";
+    statusFile = config.hwc.mail.mbsync.statusFile;
     configDigest = builtins.hashString "sha256" render.mbsyncrc;
     bridgeVersion = lib.getVersion (brCfg.package or pkgs.protonmail-bridge);
     trashTimerEnable = config.hwc.mail.mbsync.trashTimerEnable;
+    residencyCommand = lib.optionalString config.hwc.mail.classifier.residency.enable
+      config.hwc.mail.classifier.residency.command;
   };
 in
 {
+  options.hwc.mail.mbsync.statusFile = lib.mkOption {
+    type = lib.types.str;
+    readOnly = true;
+    default = toString (osConfig.hwc.paths.user.mailSyncStatus or
+      "${config.home.homeDirectory}/.local/state/mail-sync/status.json");
+    description = "Mail status path bound from the system paths domain, shared by sync and observation";
+  };
   options.hwc.mail.mbsync.trashTimerEnable = lib.mkOption {
     type = lib.types.bool;
     default = false;

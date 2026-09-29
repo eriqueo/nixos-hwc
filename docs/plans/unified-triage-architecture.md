@@ -78,3 +78,148 @@ the thread fingerprint and reopens a prior `DID` or completed outcome to `DO`.
 Run v2 long enough to measure unsafe Junk attempts, fallback rate, correction
 rate, and sender-learning precision before considering attachment reading,
 automatic deletion, auto-unsubscribe, or a Jev comparison.
+
+## Proton two-way sync — refined plan, 2026-09-29
+
+S0 is deployed at `20ea1240`, and Eric confirmed the two generated filters were
+pasted. Their one-day delivery check remains open. Safety prerequisites and S1
+shadow are live. S2's guarded single-message probe is prepared, awaiting six
+labels, a disposable test email and the live transport proof. Bulk projection
+and S3–S4 are not implemented.
+The corrected handoff contract is triage from both aerc and the Proton phone/web
+app, using the same classifier ledger. This adds transport observation and
+projection; it does not retune Laya or promote its shadow State model.
+
+### Shape and authority
+
+System One remains the sole owner of workflow State, Domain, human events and
+sender learning. Add residency observation to its existing mail command and
+ledger. The Nix mail-sync wrapper supplies transport readiness and invokes it
+only after afew, mbsync and notmuch indexing succeed. Keep one sync lock.
+
+Use read-only Bridge residency for the whole thread, including every physical copy.
+The local Trash lane runs daily, so Maildir is an unsafe source for a ten-minute
+observer. Read folder Message-ID headers with EXAMINE and BODY.PEEK, cap each
+folder scan, and reject a scan if UIDs change before it ends. Credentials come
+from the declared Proton account at command entry and never enter the ledger.
+Body-free notmuch metadata supplies thread identity and message fingerprints.
+Retain recent snapshot message IDs when a thread leaves the local index; remote
+References/In-Reply-To linking an unseen reply suppress proposals until indexed.
+Proton label/Sent copies do not count as Inbox/Archive/Trash residency. A thread
+with any Inbox copy remains in Inbox; mixed Archive/Trash is ambiguous and does
+nothing. Store the previous residency and content-derived message fingerprint.
+Only a previously observed Inbox thread leaving it with unchanged fingerprint
+can propose completion or Trash. Initial Archive/Trash and changed fingerprints
+never infer a human action. A known Archive/Trash thread returning to Inbox can
+propose a non-teaching reopen. Existing matching local outcomes are no-ops.
+
+The observer starts in shadow for seven days: it records observations and
+proposals, not human actions or model judgments, and never tags or moves mail.
+It scans a 30-day window with a ceiling of 2,000 threads and 100 transitions per
+run. Overflow halts the batch without advancing snapshots. Older threads are
+no-ops. The additive snapshot tables carry sync schema version 1 while leaving
+the classifier's schema-2 reader compatible. Snapshots are rebuildable from
+current residency with an initial no-action baseline; events remain CRITICAL.
+
+Own identities come from one notmuch identity producer. Include Eric's mail
+aliases there and remove the repeated role declarations. The classifier binds
+that set at command entry, excludes self from learning and chooses the newest
+non-self message for automatic label corrections. Existing own-address
+preferences remain in the audit store but cannot influence predictions. A
+separate `reopen` command changes a thread to DO without teaching a sender.
+
+### Ordered slices and acceptance
+
+1. Safety prerequisites: guard self-learning, ignore self preferences, add
+   non-teaching reopen and a bounded SQLite busy result. Test the actual command
+   paths, preserve Domain and audit history, and see the tests fail when the
+   guard integration is removed. Run System One's required build and tests.
+2. S1 shadow: add versioned observations/proposals to the existing ledger and
+   wire the observer after successful mail sync. Test fake read-only IMAP with
+   multi-folder threads, automatic Archive, reopen, failed afew/sync/indexing,
+   out-of-window messages, repeat runs and caps. Removing the observer call must
+   fail the shell wiring check. Before deployment, back up the ledger and rehearse
+   restore with integrity and row-count checks. The live completion signal is a
+   healthy residency status lane and visible thread proposals without mail or
+   sender-preference changes. After seven days, compare proposals with actual
+   phone actions before allowing live transitions.
+3. S2 projection: Eric creates `@look`, `@did`, `@hwc`, `@datax`, `@family`,
+   `@personal` when the adapter is ready. Define their mapping once in the
+   classifier contract. Exclude `Labels/@*` from mbsync and legacy label tagging.
+   An IMAP adapter can COPY or expunge only these label mailboxes. First prove on
+   one test message that a label copy does not duplicate All Mail and a label
+   expunge preserves Archive. Count duplicates periodically. Track acknowledged
+   writes in the ledger; advance projection state only after IMAP OK. Missing
+   labels or out-of-window threads cause no writes. Report terminal status in a
+   `labels` lane. No real-folder expunge is allowed.
+4. S3 label correction: compare remote labels and acknowledged projection at
+   thread level. Pending means a label write acknowledged this run but not yet
+   observed remotely; these are excluded from human interpretation. Labels on
+   Sent or old messages participate in the thread's remote view. Bound human
+   corrections to 20 per run, halt on overflow and record actions through the
+   existing correction owner. Take and rehearse a separate pre-teaching backup.
+   Require no oscillation across three runs and no self-sender learning.
+5. S4 consolidation needs Eric's explicit go. Map old labels to the new domains,
+   propose coaching/tech/ads/website/aerc as routing candidates, and move finance,
+   bank and insurance to the finance trait. Retire interim `02-routing`, legacy
+   aerc views and `label:*` searches together. Eric deletes old Proton labels.
+
+Rejected shapes: stateless Archive→done closes Sieve-delivered leads;
+`correct --state do` for reopen teaches instead of merely reopening; IMAP custom
+keywords do not persist; both mbsync and the direct adapter writing managed label
+folders create two writers. Keep the current model thresholds frozen. New model
+promotion requires fresh chronological, sender-disjoint corrections and the
+cheap baseline comparison from the Laya reliability playbook.
+
+Current evidence: 35 classifier tests pass on System One `2b8157a`; the ledger
+has 31 human corrections, only four since the prior evaluation, and two own
+sender preference rows. Backup `ledger.pre-proton-residency-v1.sqlite` under
+`/var/lib/hwc/mail-classifier` restores with integrity_check=ok and matching
+counts for all six tables. Premortem permits prerequisites and S1 shadow only.
+
+Safety prerequisites are implemented in System One `c92d037`: 40 classifier
+tests, the full npm build and test suite pass on its final merged commit.
+Removing correspondent selection or the self-teaching guard fails its targeted
+test. The Nix dispatcher check exercises the generated reopen wrapper and fails
+with its reopen branch removed; dropping office from the identity defaults
+fails the production Nix identity guard. Nix `9f244a81` is deployed: all checks
+passed, the model service is active, nine own addresses are loaded and the two
+historical self-preference rows remain stored but cannot affect predictions.
+
+S1 is implemented in System One `3f18381`: 50 classifier tests and the full npm
+build/test suite pass on that merged commit. Removing fingerprint gating or
+the transition cap fails its targeted test. A read-only Bridge pilot on a
+disposable ledger copy observed 1,578 recent threads in 7.11 seconds and
+proposed zero baseline actions. Nix tests exercise the rendered sync script
+with mover/sync/index/observer failures and reject removed observer wiring.
+Late IMAP responses and missing UID validity fail closed. Final Nix checks and
+live scheduled consumption remain pending.
+
+S1 is deployed and consumed at Nix `6552346b`: all flake checks pass, including
+failure injection and removed observer wiring. Transport renders match the live
+files byte for byte. The first real core cycle observed 1,578 threads and zero
+proposals; core and residency status are healthy. Human events remain 117 and
+sender preferences remain 23. Ledger schema remains 2. Shadow began at
+2026-09-29 16:14 MDT; its seven-day review is due October 6.
+
+S2 first isolates the new label namespace from mbsync and legacy tagging, then
+ships a guarded single-message probe. Eric must create six empty labels before
+the real probe, then send themselves an email with the contract's test subject
+and archive it. The probe refuses any other subject. Bulk projection implementation depends on whether Bridge COPY
+preserves All Mail counts and label UID EXPUNGE preserves Archive. Reserve a
+content-derived probe key before the first effect; a timeout is non-retriable
+and requires inspection. No broad projector is activated from mocked evidence.
+Before promoting live residency, also test that a slow model response cannot
+overwrite a later phone action; re-read/CAS the case before its effects.
+
+The remaining gates are tracked in [nixos-hwc #104](https://github.com/eriqueo/nixos-hwc/issues/104).
+The guarded probe is installed; live preflight exposed cached pre-login
+capabilities and stopped before any write. A trace with the deployed Python
+proved authenticated CAPABILITY includes UIDPLUS; the probe now queries it
+explicitly and decodes byte/text responses. The 59-test suite runs in the
+packaged-Python Nix check. After that check
+and activation, Eric creates the six labels and archives a disposable email
+with subject `Proton label sync test`; then run the real probe. No agent review
+follow-up is scheduled for the one-day filter check or the October 6 review.
+The ten-minute shadow observer runs automatically. The original laptop handoff
+could not be updated while that host was offline; this living plan is current.

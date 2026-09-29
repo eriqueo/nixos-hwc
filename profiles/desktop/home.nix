@@ -114,8 +114,6 @@
     notmuch = {
       maildirRoot = lib.mkDefault "/home/eric/400_mail/Maildir";
       userName = "Eric O'Keefe";
-      primaryEmail = "eric@iheartwoodcraft.com";
-      otherEmails = [ "eriqueo@proton.me" "heartwoodcraftmt@gmail.com" "eriqueokeefe@gmail.com" ];
       newTags = [ "unread" "inbox" ];
       excludeFolders = [ "trash" "spam" "[Gmail]/All Mail" ];
       savedSearches = {
