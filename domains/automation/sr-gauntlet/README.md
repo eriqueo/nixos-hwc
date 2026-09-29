@@ -20,6 +20,7 @@ sr-gauntlet/
                  # timer (default every 15 min) for auto-investigation, PLUS
                  # the run-now drain (service + path unit) behind the refinery
                  # board's "▶ re-investigate now" button.
+                 # Managed Claude settings and shared 365-day raw retention.
 ```
 
 Enabled in `machines/work/config.nix` (host one-off: the pipeline checkout
@@ -58,6 +59,8 @@ units re-read it each run, so no restart is needed.
 
 ## Changelog
 
+- **2026-09-29**: Manage `cleanupPeriodDays` in the isolated Claude settings
+  and pass the same 365-day retention value to both pipeline units.
 - **2026-09-29**: `gauntletDir` defaults to `~/700_datax/gauntlets/sr_gauntlet`;
   both gauntlet repos moved under `gauntlets/` in the 700_datax layout cleanup.
 - **2026-09-28**: `SRG_ENV_FILE` now points at the new `sr-gauntlet-firestore`
