@@ -7,6 +7,9 @@ let
   # these commands are used only by interactive aerc bindings.
   archiveCmd = "mail-classifier transition --outcome done";
   trashCmd = "mail-classifier transition --outcome trash";
+  # Native copy-link scans raw HTML and can retain &amp; in a target. Parse
+  # the complete MIME message with urlscan for both viewer shortcuts instead.
+  urlPicker = ":pipe -m ${pkgs.urlscan}/bin/urlscan --dedupe -f '${config.home.homeDirectory}/.local/bin/hwc-open {}'<Enter>";
 
   # Workbench/Zellij owns Ctrl navigation. Inside aerc, Alt+j/k moves through
   # the vertical folder list and Alt+h/l moves through the horizontal tab bar.
@@ -84,8 +87,7 @@ let
 
     OPENED MESSAGE LINKS
     Ctrl-click a URL/reference  open in laptop browser
-    u  choose link to copy (Tab completes; Enter copies)
-    U  full-message URL picker (Enter selects; q returns)
+    u / U  full-message URL picker (Enter copies; q returns)
 
     MESSAGES (no leader)
     j / k  move      J / K  mark + move    V  visual-mark
@@ -223,11 +225,11 @@ ${tabBinds}
       a = :pipe -m ${archiveCmd}<Enter>:close<Enter>
       d = :pipe -m ${trashCmd}<Enter>:close<Enter>
       H = :toggle-headers<Enter>
-      u = :copy-link<space><Tab>
+      u = ${urlPicker}
       / = :toggle-key-passthrough<Enter>/
       O = :open<Enter>
       S = :save<space>
-      U = :pipe -m ${pkgs.urlscan}/bin/urlscan --dedupe -f '${config.home.homeDirectory}/.local/bin/hwc-open {}'<Enter>
+      U = ${urlPicker}
       l = :next-part<Enter>
       h = :prev-part<Enter>
       o = :open<Enter>

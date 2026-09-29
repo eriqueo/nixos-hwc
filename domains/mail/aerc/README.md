@@ -230,7 +230,7 @@ match every message from a sender without subject text.
 | `a` | Archive + close |
 | `d` | Trash + close |
 | `H` | Toggle headers |
-| `u` | Choose a link from the current part to copy; Tab completes, Enter copies |
+| `u` | Full-message URL picker; Enter copies the selected URL, q returns |
 | `O` | Open attachment |
 | `t` | Review and create a task in the shared todui/phone backend |
 | `i` | Import a calendar event for khalt/phone; does not RSVP |
@@ -249,8 +249,7 @@ content.
 HTML mail ends with a numbered Links section containing the sender's labels,
 such as `Open`, `Yes`, `No`, and `Maybe`. Ctrl-click the domain beside a label
 in Kitty to open its complete target in the laptop browser, even
-when aerc runs over SSH inside Zellij. `u` copies a selected link for pasting
-into the browser. `U` scans every MIME part and keeps the sender's surrounding
+when aerc runs over SSH inside Zellij. `u` and `U` scan every MIME part and keep the sender's surrounding
 text, so shared-document and invitation links remain identifiable. On the
 headless host, selecting a URL in `U` copies it; it does not launch a browser.
 
@@ -388,8 +387,9 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
   Prepared for review; the eight old Proton filters remain the live source
   until Eric pastes the replacement. Mixed taxonomy changes need a system switch.
 - 2026-09-29: Exposed HTML button targets as labeled, locally clickable links
-  without changing their encoded parameters. Replaced the incomplete `u` open command with native link-copy
-  completion, deduplicated the full-message `U` picker, and labeled calendar
+  without changing their encoded parameters. Routed both `u` and `U` through
+  the MIME-aware URL picker because native HTML link copying retains entities.
+  Deduplicated the picker and labeled calendar
   import as separate from RSVP in the viewer and cheat sheet.
 - 2026-09-29: Hid the classifier's unsubscribe-available trait from the Tags
   column; it remains available to mail logic. Clarified that `i` imports a
