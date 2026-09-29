@@ -5,12 +5,7 @@ let
   vals = lib.attrValues accs;
   common = import ../../accounts/helpers.nix { inherit lib; };
 
-  getOr = a: n: def:
-    if common.hasField a n then
-      let v = common.getField a n; in
-      if v == null then def else
-      if builtins.isString v then (if v == "" then def else v) else v
-    else def;
+  getOr = common.getOr;
 
   msmtpBlock = a:
     let
