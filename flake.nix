@@ -486,7 +486,9 @@
       mailHost = assert lib.assertMsg (lib.length (builtins.attrNames mailMachines) == 1)
         "mail checks: expected one mail-role owner";
         "hwc-${builtins.head (builtins.attrNames mailMachines)}";
-      mailHome = self.homeConfigurations."eric@${mailHost}".config;
+      # Runtime mail controls depend on osConfig; inspect the deployed integrated
+      # HM configuration rather than the standalone evaluation without that port.
+      mailHome = self.nixosConfigurations.${mailHost}.config.home-manager.users.eric;
       mkCharterLint = name: cmds: pkgs.runCommand "charter-${name}" {
         nativeBuildInputs = [ pkgs.ripgrep pkgs.fd ];
       } ''
