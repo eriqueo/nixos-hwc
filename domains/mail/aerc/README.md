@@ -246,9 +246,9 @@ as clickable `↗ domain` labels. The full URL remains the link target and stays
 available through `u` or `U`; the renderer never follows it or loads remote
 content.
 
-HTML buttons retain numbered references: match `[1]Open` or `[2]Yes` to the
-same number in the References section. Ctrl-click a reference URL or compact
-domain label in Kitty to open its complete target in the laptop browser, even
+HTML mail ends with a numbered Links section containing the sender's labels,
+such as `Open`, `Yes`, `No`, and `Maybe`. Ctrl-click the domain beside a label
+in Kitty to open its complete target in the laptop browser, even
 when aerc runs over SSH inside Zellij. `u` copies a selected link for pasting
 into the browser. `U` scans every MIME part and keeps the sender's surrounding
 text, so shared-document and invitation links remain identifiable. On the
@@ -341,7 +341,7 @@ the first-level navigation popup.
 
 | MIME Type | Handler |
 |-----------|---------|
-| `text/html` | Network-isolated bundled HTML filter with numbered links, then control sanitization and compact URL references |
+| `text/html` | Network-isolated bundled HTML layout + control sanitization + labeled web links from the original HTML |
 | `text/plain` | 100-column wrap + control sanitization + compact clickable tracking links |
 | `text/calendar` | aerc calendar filter |
 | `text/*` | cat passthrough |
@@ -377,8 +377,8 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
-- 2026-09-29: Exposed HTML button targets as numbered, locally clickable link
-  references. Replaced the incomplete `u` open command with native link-copy
+- 2026-09-29: Exposed HTML button targets as labeled, locally clickable links
+  without changing their encoded parameters. Replaced the incomplete `u` open command with native link-copy
   completion, deduplicated the full-message `U` picker, and labeled calendar
   import as separate from RSVP in the viewer and cheat sheet.
 - 2026-09-29: Hid the classifier's unsubscribe-available trait from the Tags

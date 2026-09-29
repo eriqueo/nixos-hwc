@@ -204,10 +204,9 @@ in
         else ''notmuch address --format=text --output=recipients "%s"''}
       file-picker-cmd = ${pkgs.yazi}/bin/yazi --chooser-file %s
       [filters]
-      # Keep button labels connected to their targets in a terminal. The bundled
-      # renderer still isolates networking; our final pass sanitizes controls and
-      # turns long reference URLs into compact OSC8 links for local Ctrl-click.
-      text/html = ${aercPkg}/libexec/aerc/filters/html -o display_link_number=true -o decode_url=false | ${pkgs.python3}/bin/python3 ${./plain-text-filter.py}
+      # Preserve readable, network-isolated HTML and expose labeled action links
+      # from the original source, including Google's table-based RSVP buttons.
+      text/html = ${pkgs.python3}/bin/python3 ${./plain-text-filter.py} --html-renderer ${aercPkg}/libexec/aerc/filters/html
       text/plain = ${aercPkg}/libexec/aerc/filters/wrap -w 100 | ${pkgs.python3}/bin/python3 ${./plain-text-filter.py}
       text/calendar = ${aercPkg}/libexec/aerc/filters/calendar
       text/* = cat -
