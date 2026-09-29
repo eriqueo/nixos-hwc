@@ -40,7 +40,7 @@ mail/
 │       ├── runtime.nix        # Env vars, PATH handling
 │       └── service.nix        # systemd user service unit
 ├── classifier/
-│   ├── index.nix              # correction/review + non-teaching reopen command
+│   ├── index.nix              # correction/review/reopen + read-only residency shadow
 │   └── sys.nix                # pinned Laya + local Nomic hybrid service
 ├── calendar/
 │   ├── index.nix              # khal + vdirsyncer integration; extraVdirsyncerPairs option
@@ -57,7 +57,7 @@ mail/
 │   ├── index.nix              # mbsync module
 │   └── parts/
 │       ├── render.nix         # .mbsyncrc generation from account attrset
-│       └── service.nix        # locked core/Trash sync lanes, services, timers, bounded status
+│       └── service.nix        # locked core/Trash/residency lanes, failure gates, bounded status
 ├── msmtp/
 │   ├── index.nix              # SMTP send module
 │   └── parts/render.nix       # msmtp config generation
@@ -112,6 +112,7 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-09-29: S1 shadow observes live Bridge folder membership after successful MailMover, core sync and indexing. It records bounded, content-keyed observations/proposals without mail or learning effects. MailMover failures remain visible while indexing continues. A shared status-path binding uses the system paths domain. Initial live pilot: 1,578 recent threads, zero baseline proposals, seven seconds. Labels and live actions remain behind later gates.
 - 2026-09-29: Prepared sync safety prerequisites: System One excludes own identities from sender learning, ignores historical self preferences without deleting audit data, and exposes non-teaching reopen. Notmuch owns the complete alias list instead of duplicated role declarations. Two-way sync's revised plan and remaining acceptance gates live in `docs/plans/unified-triage-architecture.md`; folder observation and label projection are still pending.
 - 2026-09-29: Prepared two generated Proton Sieve filters: taxonomy junk plus interim recipient/sender labels and Seen/Archive actions mapped to existing targets. No stars or dead folders. New junk entries are Proton-only; Gmail retains 15 entries after protected removals. `mail-trash-guard` checks malformed/protected matches and production wiring. These replace the repo's unused April bundle; Proton activation awaits Eric's review and paste.
   Mail checks now derive their host from the flake's mail role; calendar checks

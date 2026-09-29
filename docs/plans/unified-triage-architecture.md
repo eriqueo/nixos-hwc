@@ -82,7 +82,8 @@ automatic deletion, auto-unsubscribe, or a Jev comparison.
 ## Proton two-way sync — refined plan, 2026-09-29
 
 S0 is deployed at `20ea1240`, and Eric confirmed the two generated filters were
-pasted. Their one-day delivery check remains open. S1–S4 are not implemented.
+pasted. Their one-day delivery check remains open. Safety prerequisites are live;
+S1 shadow is implemented and awaiting Nix activation. S2–S4 are not implemented.
 The corrected handoff contract is triage from both aerc and the Proton phone/web
 app, using the same classifier ledger. This adds transport observation and
 projection; it does not retune Laya or promote its shadow State model.
@@ -94,7 +95,14 @@ sender learning. Add residency observation to its existing mail command and
 ledger. The Nix mail-sync wrapper supplies transport readiness and invokes it
 only after afew, mbsync and notmuch indexing succeed. Keep one sync lock.
 
-Use actual file residency for the whole thread, including every physical copy.
+Use read-only Bridge residency for the whole thread, including every physical copy.
+The local Trash lane runs daily, so Maildir is an unsafe source for a ten-minute
+observer. Read folder Message-ID headers with EXAMINE and BODY.PEEK, cap each
+folder scan, and reject a scan if UIDs change before it ends. Credentials come
+from the declared Proton account at command entry and never enter the ledger.
+Body-free notmuch metadata supplies thread identity and message fingerprints.
+Retain recent snapshot message IDs when a thread leaves the local index; remote
+References/In-Reply-To linking an unseen reply suppress proposals until indexed.
 Proton label/Sent copies do not count as Inbox/Archive/Trash residency. A thread
 with any Inbox copy remains in Inbox; mixed Archive/Trash is ambiguous and does
 nothing. Store the previous residency and content-derived message fingerprint.
@@ -125,7 +133,7 @@ separate `reopen` command changes a thread to DO without teaching a sender.
    paths, preserve Domain and audit history, and see the tests fail when the
    guard integration is removed. Run System One's required build and tests.
 2. S1 shadow: add versioned observations/proposals to the existing ledger and
-   wire the observer after successful mail sync. Test a fixture Maildir with
+   wire the observer after successful mail sync. Test fake read-only IMAP with
    multi-folder threads, automatic Archive, reopen, failed afew/sync/indexing,
    out-of-window messages, repeat runs and caps. Removing the observer call must
    fail the shell wiring check. Before deployment, back up the ledger and rehearse
@@ -172,4 +180,15 @@ tests, the full npm build and test suite pass on its final merged commit.
 Removing correspondent selection or the self-teaching guard fails its targeted
 test. The Nix dispatcher check exercises the generated reopen wrapper and fails
 with its reopen branch removed; dropping office from the identity defaults
-fails the production Nix identity guard. Nix runtime activation is pending.
+fails the production Nix identity guard. Nix `9f244a81` is deployed: all checks
+passed, the model service is active, nine own addresses are loaded and the two
+historical self-preference rows remain stored but cannot affect predictions.
+
+S1 is implemented in System One `3f18381`: 50 classifier tests and the full npm
+build/test suite pass on that merged commit. Removing fingerprint gating or
+the transition cap fails its targeted test. A read-only Bridge pilot on a
+disposable ledger copy observed 1,578 recent threads in 7.11 seconds and
+proposed zero baseline actions. Nix tests exercise the rendered sync script
+with mover/sync/index/observer failures and reject removed observer wiring.
+Late IMAP responses and missing UID validity fail closed. Final Nix checks and
+live scheduled consumption remain pending.

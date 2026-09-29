@@ -1,9 +1,12 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 let
   cfg = config.hwc.mail.classifier;
+  account = config.hwc.mail.accounts.proton;
+  common = import ../accounts/helpers.nix { inherit lib; };
+  syncStatus = config.hwc.mail.mbsync.statusFile;
   command = pkgs.writeShellApplication {
     name = "mail-classifier";
-    runtimeInputs = [ pkgs.notmuch ];
+    runtimeInputs = [ pkgs.notmuch pkgs.pass ];
     text = ''
       runtime=/run/current-system/sw/bin/mail-classifier-runtime
       if [ ! -x "$runtime" ]; then
@@ -11,6 +14,19 @@ let
         exit 69
       fi
       case "''${1:-}" in
+        ${lib.optionalString cfg.residency.enable ''
+        observe-residency)
+          shift
+          exec "$runtime" observe-residency \
+            --db /var/lib/hwc/mail-classifier/ledger.sqlite \
+            --notmuch ${pkgs.notmuch}/bin/notmuch \
+            --output ${lib.escapeShellArg "${builtins.dirOf syncStatus}/residency-shadow.json"} \
+            --bridge-host ${lib.escapeShellArg (account.imapHost or (common.imapHost account))} \
+            --bridge-port ${toString (account.imapPort or (common.imapPort account))} \
+            --bridge-login ${lib.escapeShellArg (common.loginOf account)} \
+            --password-command ${lib.escapeShellArg (common.passCmd account)} "$@"
+          ;;
+        ''}
         correct|transition|reopen|review|route-review)
           verb="$1"
           shift
@@ -33,6 +49,18 @@ in
   # OPTIONS
   options.hwc.mail.classifier.enable = lib.mkEnableOption "local Laya mail-classifier controls" // {
     default = true;
+  };
+  options.hwc.mail.classifier.residency = {
+    enable = lib.mkEnableOption "read-only Proton residency shadow after successful core sync" // {
+      default = lib.attrByPath [ "hwc" "mail" "classifier" "system" "enable" ] false osConfig
+        && config.hwc.mail.bridge.enable && cfg.enable;
+    };
+    command = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = "${command}/bin/mail-classifier observe-residency";
+      description = "Derived command for the sync owner; has no mail-write mode";
+    };
   };
 
   # IMPLEMENTATION

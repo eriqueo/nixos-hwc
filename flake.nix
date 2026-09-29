@@ -974,6 +974,84 @@
 
       # Workflow state drives the sidebar; Domain and factual tags are columns
       # and filters. Laya is the sole automatic content classifier.
+      mail-residency-shadow = let
+        home = mailHome;
+        fixture = pkgs.writeText "mail-residency-shadow.json" (builtins.toJSON {
+          script = home.home.file.".local/bin/sync-mail".text;
+          command = home.hwc.mail.classifier.residency.command;
+          statusFile = home.hwc.mail.mbsync.statusFile;
+          maildirRoot = home.hwc.mail.notmuch.maildirRoot;
+        });
+      in
+      assert lib.assertMsg home.hwc.mail.classifier.residency.enable
+        "mail-residency-shadow: mail host must observe in shadow";
+      pkgs.runCommand "mail-residency-shadow" {} ''
+        ${pkgs.python3}/bin/python3 - ${fixture} <<'PY'
+        import json
+        import os
+        import pathlib
+        import re
+        import subprocess
+        import sys
+        import tempfile
+
+        fixture = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        original = fixture['script']
+        assert original.count(fixture['command']) == 1
+
+        def exercise(source, stage="", mode='core'):
+            with tempfile.TemporaryDirectory() as directory:
+                root = pathlib.Path(directory)
+                log = root / 'calls'
+                status = root / 'status.json'
+                stub = root / 'command'
+                stub.write_text('#!${pkgs.python3}/bin/python3\n'
+                    'import os, pathlib, sys\n'
+                    'name = pathlib.Path(sys.argv[0]).name\n'
+                    'with open(os.environ["CALL_LOG"], "a") as f: f.write(name + "\\n")\n'
+                    'raise SystemExit(23 if name == os.environ["FAIL_STAGE"] else 0)\n')
+                stub.chmod(0o755)
+                for name in ['afew', 'mbsync', 'notmuch', 'mail-classifier']:
+                    (root / name).symlink_to(stub)
+                script = source.replace(fixture['statusFile'], str(status))
+                script = script.replace(fixture['maildirRoot'], str(root / 'Maildir'))
+                script = re.sub(r'/nix/store/[^\s"\x27]+/bin/(afew|mbsync|notmuch|mail-classifier)\b',
+                    lambda m: str(root / m[1]), script)
+                wrapper = root / 'sync-mail'
+                wrapper.write_text(script)
+                wrapper.chmod(0o755)
+                result = subprocess.run(['${pkgs.bash}/bin/bash', str(wrapper), mode],
+                    env={**os.environ, 'CALL_LOG': str(log), 'FAIL_STAGE': stage, 'SYNC_MAIL_LOCKED': '1'},
+                    capture_output=True, text=True)
+                calls = log.read_text().splitlines()
+                lanes = json.loads(status.read_text())['lanes']
+                assert 'notmuch' in calls, 'indexing must survive transport/mover failure'
+                if mode == 'trash':
+                    assert calls == ['mbsync', 'notmuch'], calls
+                    assert 'residency' not in lanes
+                elif stage in ['afew', 'mbsync', 'notmuch']:
+                    assert 'mail-classifier' not in calls, calls
+                    assert lanes['core']['state'] == 'degraded'
+                    assert lanes['residency']['lastOutcome'] == 'prerequisite-failed'
+                else:
+                    assert calls == ['afew', 'mbsync', 'notmuch', 'mail-classifier'], calls
+                    assert lanes['core']['state'] == 'healthy'
+                    assert lanes['residency']['state'] == ('degraded' if stage else 'healthy')
+                assert result.returncode == (23 if stage else 0), result.stderr
+
+        for stage in ["", 'afew', 'mbsync', 'notmuch', 'mail-classifier']:
+            exercise(original, stage)
+        exercise(original, mode='trash')
+        try:
+            exercise(original.replace(fixture['command'], 'true'))
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('removed observer wiring passed its check')
+        PY
+        touch "$out"
+      '';
+
       mail-workflow-v2 = let
         home = mailHome;
         identity = home.programs.notmuch.extraConfig.user;
@@ -1033,6 +1111,7 @@
       pkgs.runCommand "mail-workflow-v2" {} ''
         ${pkgs.python3}/bin/python3 - ${hookFixture} ${controls}/bin/mail-classifier <<'PY'
         import pathlib
+        import shlex
         import subprocess
         import sys
         import tempfile
@@ -1054,16 +1133,22 @@
             runtime = root / "runtime"
             runtime.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\"\n")
             runtime.chmod(0o755)
-            def dispatch(text):
+            def dispatch(text, verb="reopen"):
                 wrapper = root / "wrapper"
                 wrapper.write_text(text.replace(runtime_path, str(runtime)))
                 wrapper.chmod(0o755)
-                return subprocess.check_output([str(wrapper), "reopen"], text=True).splitlines()
+                return subprocess.check_output([str(wrapper), verb], text=True).splitlines()
             def check(arguments):
                 assert arguments[0] == "reopen"
                 assert arguments[1:3] == ["--db", "/var/lib/hwc/mail-classifier/ledger.sqlite"]
                 assert arguments[3] == "--notmuch"
             check(dispatch(control))
+            observation = dispatch(control, "observe-residency")
+            assert observation[:3] == ['observe-residency', '--db', '/var/lib/hwc/mail-classifier/ledger.sqlite']
+            assert observation[observation.index('--bridge-host') + 1] == '127.0.0.1'
+            assert observation[observation.index('--bridge-port') + 1] == '1143'
+            password_command = observation[observation.index('--password-command') + 1]
+            assert shlex.split(password_command)[:2] == ['sh', '-c']
             try:
                 check(dispatch(control.replace("|reopen", "")))
             except AssertionError:
