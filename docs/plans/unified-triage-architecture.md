@@ -84,7 +84,8 @@ automatic deletion, auto-unsubscribe, or a Jev comparison.
 S0 is deployed at `20ea1240`, and Eric confirmed the two generated filters were
 pasted. Their one-day delivery check remains open. Safety prerequisites and S1
 shadow are live. S2's guarded single-message probe is prepared, awaiting six
-labels and the live transport proof. Bulk projection and S3–S4 are not implemented.
+labels, a disposable test email and the live transport proof. Bulk projection
+and S3–S4 are not implemented.
 The corrected handoff contract is triage from both aerc and the Proton phone/web
 app, using the same classifier ledger. This adds transport observation and
 projection; it does not retune Laya or promote its shadow State model.
@@ -203,7 +204,8 @@ sender preferences remain 23. Ledger schema remains 2. Shadow began at
 
 S2 first isolates the new label namespace from mbsync and legacy tagging, then
 ships a guarded single-message probe. Eric must create six empty labels before
-the real probe. Bulk projection implementation depends on whether Bridge COPY
+the real probe, then send themselves an email with the contract's test subject
+and archive it. The probe refuses any other subject. Bulk projection implementation depends on whether Bridge COPY
 preserves All Mail counts and label UID EXPUNGE preserves Archive. Reserve a
 content-derived probe key before the first effect; a timeout is non-retriable
 and requires inspection. No broad projector is activated from mocked evidence.
