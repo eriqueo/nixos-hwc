@@ -37,8 +37,8 @@ worktree source, two consumers.
 ## Changelog
 
 - 2026-09-29: `gauntletDir` defaults to `~/700_datax/gauntlets/dx1_gauntlet`. The
-  pipeline gained a remote (`eriqueo/dx1_gauntlet`); hwc-work's checkout tracks
-  the `hwc-work/running` branch, which is the code the service ran before the move.
+  pipeline gained a remote (`eriqueo/dx1_gauntlet`), and hwc-work's checkout
+  runs its `main`, which adopts the ledger's case-admission decision.
 - 2026-09-28: `DXG_ENV_FILE` now points at the `sr-gauntlet-firestore` agenix
   secret instead of the retired `~/600_apps/sr_analyzer/.env`. Same
   `FIREBASE_*` key names, so `fetch-cases.mjs`, `write-results.mjs` and
