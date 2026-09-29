@@ -389,7 +389,8 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 - 2026-09-29: Exposed HTML button targets as labeled, locally clickable links
   without changing their encoded parameters. Routed both `u` and `U` through
   the MIME-aware URL picker because native HTML link copying retains entities.
-  Deduplicated the picker and labeled calendar
+  Sent clipboard output to the controlling terminal because urlscan suppresses
+  opener stdout. Deduplicated the picker and labeled calendar
   import as separate from RSVP in the viewer and cheat sheet.
 - 2026-09-29: Hid the classifier's unsubscribe-available trait from the Tags
   column; it remains available to mail logic. Clarified that `i` imports a

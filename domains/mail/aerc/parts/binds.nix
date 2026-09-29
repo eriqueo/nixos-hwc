@@ -286,6 +286,9 @@ ${tabBinds}
         if [ -n "$WAYLAND_DISPLAY" ] || [ -n "$DISPLAY" ]; then
             exec ${pkgs.xdg-utils}/bin/xdg-open "$url"
         fi
+        # urlscan redirects its opener's stdout/stderr to /dev/null. Clipboard
+        # escapes must reach the controlling terminal, not inherited stdout.
+        exec > /dev/tty
         # OSC52: base64-encode the URL and write clipboard escape to the terminal
         printf '\033]52;c;%s\a' \
           "$(printf '%s' "$url" | ${pkgs.coreutils}/bin/base64 | ${pkgs.coreutils}/bin/tr -d '\n')"
