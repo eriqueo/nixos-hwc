@@ -230,13 +230,13 @@ match every message from a sender without subject text.
 | `a` | Archive + close |
 | `d` | Trash + close |
 | `H` | Toggle headers |
-| `u` | Full-message URL picker; Enter copies the selected URL, q returns |
+| `u` | Full-message URL picker; Enter copies the selected URL |
 | `O` | Open attachment |
 | `t` | Review and create a task in the shared todui/phone backend |
 | `i` | Import a calendar event for khalt/phone; does not RSVP |
 | `p` | Queue a safe PDF record of the email for Paperless |
 | `S` | Save attachment |
-| `U` | Pick a URL from the full message, with duplicate targets removed; q returns |
+| `U` | Same full-message URL picker, with duplicate targets removed |
 | `/` | Search in pager (passthrough) |
 
 The viewer opens the sender-authored plain part first. `h` / `l` move between
@@ -252,6 +252,7 @@ in Kitty to open its complete target in the laptop browser, even
 when aerc runs over SSH inside Zellij. `u` and `U` scan every MIME part and keep the sender's surrounding
 text, so shared-document and invitation links remain identifiable. On the
 headless host, selecting a URL in `U` copies it; it does not launch a browser.
+Press `q` to exit the picker, then any key to close its finished terminal tab.
 
 Review helpers open in an aerc terminal tab. `<A-h>` / `<A-l>` move between
 that tab and the original message without closing the editor; `<C-x>` opens the

@@ -87,7 +87,7 @@ let
 
     OPENED MESSAGE LINKS
     Ctrl-click a URL/reference  open in laptop browser
-    u / U  full-message URL picker (Enter copies; q returns)
+    u / U  URL picker (Enter copies; q exits; any key closes finished tab)
 
     MESSAGES (no leader)
     j / k  move      J / K  mark + move    V  visual-mark
