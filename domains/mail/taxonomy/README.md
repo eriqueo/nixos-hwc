@@ -24,7 +24,8 @@ Design: `docs/plans/unified-triage-architecture.md`.
 
 | Consumer | What it takes |
 |---|---|
-| `domains/mail/notmuch/index.nix` | exposes the legacy janitor deny list without applying local placement rules |
+| `domains/mail/notmuch/index.nix` | exposes the Gmail janitor deny list (`derived.trashSenders`) without applying local placement rules |
+| `domains/mail/aerc/parts/sieve-filters.nix` | `derived.protonTrash` → the generated Proton Sieve script |
 | `domains/mail/aerc/parts/tags.nix` | optional/manual tag presentation |
 | `domains/system/mcp/index.nix` | pins the System One classifier contract directly |
 | `domains/business/morning-briefing` | consumes the classifier's JSON snapshot; no prompt vocabulary |
@@ -33,16 +34,38 @@ Design: `docs/plans/unified-triage-architecture.md`.
 
 - **Teach the classifier**: use the aerc State or Domain correction keys. The
   v2 case ledger learns exact senders without a separate declarative writer.
-- `data.nix` `senders.trash` is legacy input only for the separate Gmail
-  janitor. It does not classify or place local mail.
+- `data.nix` `senders.trash` is the one hard-junk list for the two
+  deterministic trash producers: the Gmail janitor and the Proton Sieve script.
+  Each entry's `scope` (`both` default, `gmail`, `proton`; `{ list = …; }` is
+  Proton-only) picks its producers. Evaluation rejects ambiguous entry shapes,
+  unknown scopes and protected sender/list identifiers for either producer.
+  Neither producer classifies local mail; Laya does.
 - **Never** override `hwc.mail.notmuch.rules.*` directly in a profile or
   machine file — that silently re-forks the vocabulary.
-- Changes deploy with the normal lanes: `hms` for rules/aerc, server
-  `nixos-rebuild` (+ gateway `npm run build`, service restart) for the
-  gateway JSON and the briefing prompt.
+- Changes to the Gmail projection require a system switch because the janitor
+  reads it into `MJ_DENY`. Pure aerc changes use the Home Manager lane.
+
+## Structure
+
+- `data.nix`: reviewed, scoped sender/list entries and protected senders.
+- `lib.nix`: validates entries and derives each producer's match lists.
+- `flake.nix` `mail-trash-guard`: seeded guard failures and production wiring.
 
 ## Changelog
 
+- 2026-09-29: `senders.trash` now also feeds the generated Proton Sieve script.
+  Merged the reviewed 2026-04-05 audit list and Eric's retired live Proton
+  trash rules; added per-entry `scope`, Proton list-id entries, and the
+  `senders.protected` guard (`lib.nix` throws on a violation; `data` is
+  injectable so the guard can be exercised). Eric's keepers are protected for
+  both producers and removed from the list: `semrush.com`, `contractorcto.com`,
+  `limitloginattempts.com`, `mail.instagram.com`, `contractorcto@gmail.com`
+  (a protected address also blocks any domain entry covering it).
+  `linkedin.com` is Gmail-only. New audit/live-filter entries are Proton-only;
+  Gmail retains its original list except the two protected removals (15 entries).
+  Removed four keeper domains; their reviewed narrow newsletter lists remain.
+  `mail-trash-guard` rejects malformed entries, scopes and protected list IDs,
+  and checks the rendered janitor environment and Home Manager Sieve files.
 - 2026-09-21: Replaced the `urgent/review/noise` placement vocabulary with
   `act/look/bulk/junk` under `attention/`, matching the Laya classifier.
 

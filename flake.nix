@@ -480,6 +480,13 @@
     # are burned down (see workspace/plans/2026-07-05-phase-plan-handoff.md).
     #========================================================================
     checks.${system} = let
+      # Resolve mail checks from the capability owner. The service split moved
+      # mail off hwc-home; a literal host left the checks with no subject.
+      mailMachines = lib.filterAttrs (_: machine: lib.elem "mail" machine.roles) machines;
+      mailHost = assert lib.assertMsg (lib.length (builtins.attrNames mailMachines) == 1)
+        "mail checks: expected one mail-role owner";
+        "hwc-${builtins.head (builtins.attrNames mailMachines)}";
+      mailHome = self.homeConfigurations."eric@${mailHost}".config;
       mkCharterLint = name: cmds: pkgs.runCommand "charter-${name}" {
         nativeBuildInputs = [ pkgs.ripgrep pkgs.fd ];
       } ''
@@ -553,7 +560,9 @@
       # the tasks pair writes. The server kept a dead iCloud tasks pair (and a
       # todoman path over it) until 2026-09-24 because only the laptop was checked.
       radicale-client-auth = let
-        hosts = [ "eric@hwc-laptop" "eric@hwc-home" ];
+        hosts = builtins.attrNames (lib.filterAttrs (_: home:
+          lib.attrByPath [ "hwc" "mail" "calendar" "enable" ] false home.config
+        ) self.homeConfigurations);
         fixture = pkgs.writeText "radicale-client-config.json" (builtins.toJSON (map (host:
           let home = self.homeConfigurations.${host}.config;
           in {
@@ -565,7 +574,8 @@
             sync = home.xdg.configFile."vdirsyncer/config".text;
             todoman = home.xdg.configFile."todoman/config.py".text;
           }) hosts));
-      in pkgs.runCommand "radicale-client-auth" {
+      in assert lib.assertMsg (hosts != []) "radicale-client-auth: no enabled calendar client";
+      pkgs.runCommand "radicale-client-auth" {
         nativeBuildInputs = [ pkgs.python3 pkgs.gawk ];
       } ''
         python3 - ${fixture} <<'PY'
@@ -657,13 +667,224 @@
         "workbench check: mail/refinery/nightly shortcuts changed destination";
       pkgs.runCommand "workbench-navigation" {} ''touch "$out"'';
 
+      # Seed failures through the same taxonomy helper used by Sieve and the
+      # Gmail janitor. Force the views: tryEval alone only checks the outer set.
+      mail-trash-guard = let
+        data = import ./domains/mail/taxonomy/data.nix;
+        taxonomy = import ./domains/mail/taxonomy/lib.nix { inherit lib data; };
+        accepts = trash: protection: (builtins.tryEval (builtins.deepSeq
+          (import ./domains/mail/taxonomy/lib.nix {
+            inherit lib;
+            data = data // { senders = data.senders // {
+              inherit trash;
+              protected = protection;
+            }; };
+          }).derived true)).success;
+        badEntries = [
+          "comms.contractorcto.com" "x@iheartwoodcraft.com" "proton.me"
+          "news.proton.me" "alerts@limitloginattempts.com" "mail.instagram.com"
+          "Contractorcto@gmail.com" "gmail.com" "com" "@junk.example"
+          { sender = "semrush.com"; scope = "gmail"; }
+          { list = "@business-noreply@mail.instagram.com"; }
+          { list = "list@support@sub.limitloginattempts.com"; }
+          { list = "@ContractorCTO@GMAIL.COM"; }
+          { sender = "junk.example"; scope = "protno"; }
+          { list = "@noise@junk.example"; scope = "both"; }
+          { list = "@noise@junk.example"; scope = "gmail"; }
+          { sender = "junk.example"; list = "@noise@junk.example"; }
+          { scope = "proton"; }
+          { sender = "junk.example"; typo = true; }
+          { sender = "@noise@junk.example"; }
+          { sender = ""; } { sender = 42; } { list = ""; }
+          { sender = "junk.example\nother.example"; } 42
+        ];
+        upperProtection = lib.mapAttrs (_: map lib.toUpper) data.senders.protected;
+        clean = [ "other@gmail.com" { sender = "noise.example"; scope = "proton"; }
+          { list = "@help@profitabletradie.com"; } "no-reply@news.proton.me" ];
+        home = mailHome;
+        system = self.nixosConfigurations.${mailHost}.config;
+        filters = import ./domains/mail/aerc/parts/sieve-filters.nix { inherit lib; };
+      in
+      assert lib.assertMsg (lib.all (entry: !accepts [ entry ] data.senders.protected) badEntries)
+        "mail-trash-guard: unsafe or malformed trash entry accepted";
+      assert lib.assertMsg (!accepts [ "comms.contractorcto.com" ] upperProtection
+        && !accepts [ { list = "@business-noreply@mail.instagram.com"; } ] upperProtection)
+        "mail-trash-guard: protection is case-sensitive";
+      assert lib.assertMsg (accepts clean data.senders.protected)
+        "mail-trash-guard: narrow reviewed entries rejected";
+      assert lib.assertMsg (lib.length taxonomy.derived.trashSenders == 15
+        && builtins.fromJSON system.systemd.services.mail-janitor.environment.MJ_DENY == taxonomy.derived.trashSenders)
+        "mail-trash-guard: Gmail janitor projection changed beyond reviewed removals";
+      assert lib.assertMsg (lib.all (name: home.home.file.".config/aerc/sieve/${name}".text == filters.${name})
+        (builtins.attrNames filters)
+        && !(home.home.file ? ".config/aerc/sieve/filters/bundle.sieve"))
+        "mail-trash-guard: Home Manager does not deploy the two generated filters";
+      pkgs.runCommand "mail-trash-guard" {} ''touch "$out"'';
+
+      # Parse and replay the actual Home Manager files, not a parallel renderer.
+      mail-proton-sieve = let
+        home = mailHome;
+        filters = lib.genAttrs [ "01-junk.sieve" "02-routing.sieve" ]
+          (name: home.home.file.".config/aerc/sieve/${name}".text);
+        fixture = pkgs.writeText "proton-sieve.json" (builtins.toJSON filters);
+      in pkgs.runCommand "mail-proton-sieve" {
+        nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.sievelib ])) ];
+      } ''
+        python3 - ${fixture} <<'PY'
+        import fnmatch
+        import json
+        import pathlib
+        import sys
+        from email.utils import getaddresses
+
+        from sievelib import commands
+        from sievelib.parser import Parser
+
+        # sievelib omits RFC 5235's spamtest and numeric comparator. Register only
+        # their grammar; fixtures below supply a score/threshold, never call Proton.
+        commands.comparator['extra_arg']['values'].append('"i;ascii-numeric"')
+
+
+        class SpamtestCommand(commands.TestCommand):
+            extension = 'spamtest'
+            args_definition = [commands.comparator, commands.match_type,
+                               {'name': 'value', 'type': ['string'], 'required': True}]
+
+
+        commands.add_commands(SpamtestCommand)
+
+
+        def strings(value):
+            return [json.loads(v).lower() for v in (value if isinstance(value, list) else [value])]
+
+
+        def matches(test, headers, spam):
+            args = test.arguments
+            if test.name == 'not':
+                return not matches(args['test'], headers, spam)
+            if test.name in ('allof', 'anyof'):
+                values = [matches(t, headers, spam) for t in args['tests']]
+                return all(values) if test.name == 'allof' else any(values)
+            if test.name == 'environment':
+                return True  # Proton provides the configured spam threshold.
+            if test.name == 'spamtest':
+                return spam
+            if test.name not in ('header', 'address'):
+                raise AssertionError(f'Unhandled test: {test.name}')
+            fields = strings(args['header-list' if test.name == 'address' else 'header-names'])
+            values = [headers[field].lower() for field in fields if field in headers]
+            if test.name == 'address':
+                values = [addr for _, addr in getaddresses(values)]
+                if args.get('address-part') == ':domain':
+                    values = [addr.rsplit('@', 1)[-1] for addr in values]
+            keys = strings(args['key-list'])
+            mode = args.get('match-type', ':is')
+            compare = {':is': lambda v, k: v == k,
+                       ':contains': lambda v, k: k in v,
+                       ':matches': lambda v, k: fnmatch.fnmatchcase(v, k)}[mode]
+            return any(compare(value, key) for value in values for key in keys)
+
+
+        def actions(tree, headers, spam=False):
+            result = set()
+            for node in tree:
+                if node.name == 'require':
+                    continue
+                assert node.name == 'if'
+                if not matches(node.arguments['test'], headers, spam):
+                    continue
+                for action in node.children:
+                    if action.name == 'stop':
+                        return result, True
+                    assert action.name in ('fileinto', 'addflag'), action.name
+                    result.update((action.name, value) for value in strings(next(iter(action.arguments.values()))))
+            return result, False
+
+
+        filters = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        parsed = {}
+        allowed = {'trash', 'archive', 'hide_my_email', 'work', 'personal', 'admin',
+                   'office', 'datax', 'cto', 'coaching', 'family', 'tech', 'ads',
+                   'finance', 'bank', 'insurance', 'aerc', 'website'}
+        for name, text in filters.items():
+            parser = Parser()
+            assert parser.parse(text), getattr(parser, 'error', name)
+            parsed[name] = parser.result
+            for node in parser.result:
+                for action in node.children:
+                    if action.name == 'fileinto':
+                        assert set(strings(action.arguments['mailbox'])) <= allowed
+                    if action.name == 'addflag':
+                        assert '\\flagged' not in strings(next(iter(action.arguments.values())))
+            print(f'{name}: syntax and targets pass')
+        parser = Parser()
+        assert not parser.parse('require ["fileinto"]; if true { fileinto "Trash" }')
+
+
+        def deliver(**headers):
+            result = set()
+            spam = headers.pop('spam', False)
+            for name in sorted(parsed):
+                part, stopped = actions(parsed[name], headers, spam)
+                result |= part
+                if stopped:
+                    break
+            return result
+
+
+        def expect(expected, **headers):
+            actual = deliver(**headers)
+            wanted = {('addflag', '\\seen') if value == 'Seen' else ('fileinto', value.lower())
+                      for value in expected}
+            assert actual == wanted, (headers, actual, wanted)
+
+
+        expect(['work'], to='eric@iheartwoodcraft.com')
+        expect(['personal'], to='eriqueo@proton.me')
+        expect(['CTO', 'datax'], to='eric@contractorcto.com')
+        expect(['coaching'], **{'from': 'hi@xotara.us'})
+        expect(['coaching'], **{'from': 'tony.fraserjones@profitabletradie.com'})
+        expect(['coaching'], **{'x-pm-list-identifier': '@certification@narihq.org'})
+        expect(['family'], **{'from': 'hello@classdojo.com'})
+        expect([], **{'from': 'hello@classdojo.com', 'spam': True})
+        expect(['tech'], **{'from': 'position-tracking@semrush.com'})
+        expect(['tech'], **{'x-pm-list-identifier': '@billing@limitloginattempts.com'})
+        expect(['tech', 'Seen'], **{'from': 'notifications@github.com'})
+        expect(['ads'], **{'x-pm-list-identifier': '@business-noreply@mail.instagram.com'})
+        expect(['finance'], **{'from': 'alerts@notify.wellsfargo.com'})
+        expect(['finance', 'bank'], **{'from': 'onlinebanking@ealerts.bankofamerica.com'})
+        expect(['finance', 'insurance'], **{'from': 'statefarmservice@statefarmservice.com'})
+        expect(['finance'], **{'x-pm-list-identifier': '@nicole.dray@farther.com'})
+        expect(['work'], **{'from': 'office@kenyonnoble.com'})
+        expect(['Seen'], **{'from': 'no-reply@accounts.google.com'})
+        expect(['Archive', 'Seen'], **{'x-pm-list-identifier': '@vimeo@vimeo.com'})
+        expect(['Archive', 'aerc', 'tech', 'Seen'], **{'from': 'builds@sr.ht'})
+        expect(['Archive', 'website', 'tech', 'Seen'], **{'from': 'dmarc@example.net'})
+        expect(['Archive', 'datax', 'Seen'], **{'from': 'support@comms.datax.to',
+               'to': 'hello@contractorcto.com', 'subject': 'New demo request → Example'})
+        expect(['datax'], **{'from': 'support@comms.datax.to', 'to': 'hello@contractorcto.com',
+               'subject': 'Customer needs a reply'})
+        expect(['hide_my_email'], to='camelcity.derail128@passmail.com')
+        expect(['Trash', 'Seen'], **{'from': 'noise@sub.angi.com', 'to': 'eric@iheartwoodcraft.com'})
+        expect(['Trash', 'Seen'], **{'x-pm-list-identifier': '@team@emails.hostinger.com'})
+        expect(['Trash', 'Seen'], **{'x-pm-list-identifier': '@help@profitabletradie.com'})
+        expect([], **{'from': 'tom@thecontractorfight.com', 'spam': True})
+        expect(['coaching'], **{'from': 'tom@thecontractorfight.com'})
+        expect([], **{'from': 'sales@klingspor.com'})
+        expect([], **{'from': 'person@otherangi.com'})
+        expect([], **{'from': 'other@gmail.com'})
+        print('32 delivery fixtures pass; seeded broken syntax rejected')
+        PY
+        touch "$out"
+      '';
+
       # ── Aerc's human workflow stays smaller than its mail taxonomy ─────
       # The taxonomy intentionally retains automation and legacy tags, but the
       # generated which-key surface must not flatten that whole vocabulary into
       # one menu. Exercise the exact server Home Manager output consumed by the
       # live aerc process, including noinherit tab contexts and tag commands.
       aerc-bindings = let
-        home = self.homeConfigurations."eric@hwc-home".config;
+        home = mailHome;
         binds = home.home.file.".config/aerc/binds.conf".text;
         lines = lib.splitString "\n" binds;
         directMarkLines = lib.filter
@@ -702,7 +923,7 @@
       # The calm reading view prefers the sender-authored plain part. HTML is
       # still available with the MIME-part keys when layout carries meaning.
       aerc-rendering = let
-        home = self.homeConfigurations."eric@hwc-home".config;
+        home = mailHome;
         aercConf = home.home.file.".config/aerc/aerc.conf".text;
         plainFilterLine = builtins.head (lib.filter
           (line: lib.hasPrefix "text/plain = " line)
@@ -754,7 +975,7 @@
       # Workflow state drives the sidebar; Domain and factual tags are columns
       # and filters. Laya is the sole automatic content classifier.
       mail-workflow-v2 = let
-        home = self.homeConfigurations."eric@hwc-home".config;
+        home = mailHome;
         binds = home.home.file.".config/aerc/binds.conf".text;
         aercConf = home.home.file.".config/aerc/aerc.conf".text;
         queries = home.home.file.".config/aerc/notmuch-queries".text;
