@@ -211,3 +211,13 @@ content-derived probe key before the first effect; a timeout is non-retriable
 and requires inspection. No broad projector is activated from mocked evidence.
 Before promoting live residency, also test that a slow model response cannot
 overwrite a later phone action; re-read/CAS the case before its effects.
+
+The remaining gates are tracked in [nixos-hwc #104](https://github.com/eriqueo/nixos-hwc/issues/104).
+The guarded probe is installed; live preflight exposed Python capability bytes
+versus strings and stopped before any write. Both forms now have coverage and
+the 58-test suite is added to the packaged-Python Nix check. After that check
+and activation, Eric creates the six labels and archives a disposable email
+with subject `Proton label sync test`; then run the real probe. No agent review
+follow-up is scheduled for the one-day filter check or the October 6 review.
+The ten-minute shadow observer runs automatically. The original laptop handoff
+could not be updated while that host was offline; this living plan is current.

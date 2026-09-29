@@ -976,6 +976,12 @@
 
       # Workflow state drives the sidebar; Domain and factual tags are columns
       # and filters. Laya is the sole automatic content classifier.
+      mail-classifier-tests = pkgs.runCommand "mail-classifier-tests" {} ''
+        # Exercise the packaged Python boundary, not only the host's Python.
+        ${pkgs.python3}/bin/python3 ${inputs.system-one}/scripts/mail_classifier_test.py
+        touch "$out"
+      '';
+
       mail-residency-shadow = let
         home = mailHome;
         fixture = pkgs.writeText "mail-residency-shadow.json" (builtins.toJSON {
