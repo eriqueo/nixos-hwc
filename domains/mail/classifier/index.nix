@@ -21,8 +21,8 @@ let
             --db /var/lib/hwc/mail-classifier/ledger.sqlite \
             --notmuch ${pkgs.notmuch}/bin/notmuch \
             --output ${lib.escapeShellArg "${builtins.dirOf syncStatus}/residency-shadow.json"} \
-            --bridge-host ${lib.escapeShellArg (account.imapHost or (common.imapHost account))} \
-            --bridge-port ${toString (account.imapPort or (common.imapPort account))} \
+            --bridge-host ${lib.escapeShellArg (common.getOr account "imapHost" (common.imapHost account))} \
+            --bridge-port ${toString (common.getOr account "imapPort" (common.imapPort account))} \
             --bridge-login ${lib.escapeShellArg (common.loginOf account)} \
             --password-command ${lib.escapeShellArg (common.passCmd account)} "$@"
           ;;

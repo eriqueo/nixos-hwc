@@ -113,12 +113,7 @@ let
         '']
       else allChannels;
 
-  getOr = a: n: def:
-    if common.hasField a n then
-      let v = common.getField a n; in
-      if v == null then def else
-      if builtins.isString v then (if v == "" then def else v) else v
-    else def;
+  getOr = common.getOr;
 
   mbsyncBlock = a:
     let
