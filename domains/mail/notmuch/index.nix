@@ -34,8 +34,16 @@ in
   options.hwc.mail.notmuch = {
     maildirRoot = lib.mkOption { type = lib.types.str; default = ""; };
     userName = lib.mkOption { type = lib.types.str; default = ""; };
-    primaryEmail = lib.mkOption { type = lib.types.str; default = ""; };
-    otherEmails = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; };
+    primaryEmail = lib.mkOption { type = lib.types.str; default = "eric@iheartwoodcraft.com"; };
+    # One identity producer for notmuch and the classifier's self-learning guard.
+    otherEmails = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [
+        "eriqueo@proton.me" "heartwoodcraftmt@gmail.com" "eriqueokeefe@gmail.com"
+        "office@iheartwoodcraft.com" "admin@iheartwoodcraft.com"
+        "eric@contractorcto.com" "g_hwcmt@proton.me" "g_erique@proton.me"
+      ];
+    };
     newTags = lib.mkOption { type = lib.types.listOf lib.types.str; default = defaultNewTags; };
     excludeFolders = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; };
     postNewHook = lib.mkOption { type = lib.types.lines; default = ""; };

@@ -976,6 +976,10 @@
       # and filters. Laya is the sole automatic content classifier.
       mail-workflow-v2 = let
         home = mailHome;
+        identity = home.programs.notmuch.extraConfig.user;
+        ownAddresses = [ identity.primary_email ] ++ lib.splitString ";" identity.other_email;
+        controls = lib.findFirst (package: lib.getName package == "mail-classifier")
+          (throw "mail-workflow-v2: classifier controls missing") home.home.packages;
         binds = home.home.file.".config/aerc/binds.conf".text;
         aercConf = home.home.file.".config/aerc/aerc.conf".text;
         queries = home.home.file.".config/aerc/notmuch-queries".text;
@@ -992,6 +996,9 @@
         missingBinds = lib.filter (needle: !(lib.hasInfix needle binds)) requiredBinds;
         hookFixture = pkgs.writeText "mail-post-new-hook" hook;
       in
+      assert lib.assertMsg (lib.all (address: lib.elem address ownAddresses)
+        [ "eric@iheartwoodcraft.com" "office@iheartwoodcraft.com" "admin@iheartwoodcraft.com" "eric@contractorcto.com" ])
+        "mail-workflow-v2: declared identities miss Eric's aliases; self-learning guard would be incomplete";
       assert lib.assertMsg (missingBinds == [])
         "mail-workflow-v2: generated server binds are missing ${lib.concatStringsSep ", " missingBinds}";
       assert lib.assertMsg (bindCount archiveDisposition == 2 && bindCount trashDisposition == 2
@@ -1024,9 +1031,11 @@
       assert lib.assertMsg (!(lib.hasInfix ")(exclude" aercConf))
         "mail-workflow-v2: generated aerc template operands must be whitespace-separated";
       pkgs.runCommand "mail-workflow-v2" {} ''
-        ${pkgs.python3}/bin/python3 - ${hookFixture} <<'PY'
+        ${pkgs.python3}/bin/python3 - ${hookFixture} ${controls}/bin/mail-classifier <<'PY'
         import pathlib
+        import subprocess
         import sys
+        import tempfile
 
         hook = pathlib.Path(sys.argv[1]).read_text()
         folder_state = hook.index("+inbox +state/do")
@@ -1034,6 +1043,33 @@
         assert folder_state < remove_new, "new mail loses its safe DO state"
         assert "mail-rule" not in hook, "retired sender-rule writer returned"
         assert "tag:new AND NOT tag:keep" not in hook, "legacy sender placement returned"
+
+        # Exercise the actual generated dispatcher with only its runtime binding
+        # substituted. Removing reopen from that dispatcher must lose db/notmuch.
+        control = pathlib.Path(sys.argv[2]).read_text()
+        runtime_path = "/run/current-system/sw/bin/mail-classifier-runtime"
+        assert control.count(runtime_path) == 1
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            runtime = root / "runtime"
+            runtime.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\"\n")
+            runtime.chmod(0o755)
+            def dispatch(text):
+                wrapper = root / "wrapper"
+                wrapper.write_text(text.replace(runtime_path, str(runtime)))
+                wrapper.chmod(0o755)
+                return subprocess.check_output([str(wrapper), "reopen"], text=True).splitlines()
+            def check(arguments):
+                assert arguments[0] == "reopen"
+                assert arguments[1:3] == ["--db", "/var/lib/hwc/mail-classifier/ledger.sqlite"]
+                assert arguments[3] == "--notmuch"
+            check(dispatch(control))
+            try:
+                check(dispatch(control.replace("|reopen", "")))
+            except AssertionError:
+                pass
+            else:
+                raise AssertionError("dispatcher check accepted removed reopen wiring")
         PY
         touch "$out"
       '';

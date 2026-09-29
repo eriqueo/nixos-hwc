@@ -40,7 +40,7 @@ mail/
 │       ├── runtime.nix        # Env vars, PATH handling
 │       └── service.nix        # systemd user service unit
 ├── classifier/
-│   ├── index.nix              # aerc-facing correction/review command
+│   ├── index.nix              # correction/review + non-teaching reopen command
 │   └── sys.nix                # pinned Laya + local Nomic hybrid service
 ├── calendar/
 │   ├── index.nix              # khal + vdirsyncer integration; extraVdirsyncerPairs option
@@ -64,7 +64,7 @@ mail/
 ├── health/
 │   └── index.nix              # Health monitoring (GPG→pass→Bridge→mbsync→freshness)
 └── notmuch/
-    ├── index.nix              # notmuch module + options
+    ├── index.nix              # notmuch module + canonical sender identities
     └── parts/
         ├── config.nix         # notmuch config (database, user, flags)
         ├── hooks.nix          # post-new hook generator
@@ -112,6 +112,7 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-09-29: Prepared sync safety prerequisites: System One excludes own identities from sender learning, ignores historical self preferences without deleting audit data, and exposes non-teaching reopen. Notmuch owns the complete alias list instead of duplicated role declarations. Two-way sync's revised plan and remaining acceptance gates live in `docs/plans/unified-triage-architecture.md`; folder observation and label projection are still pending.
 - 2026-09-29: Prepared two generated Proton Sieve filters: taxonomy junk plus interim recipient/sender labels and Seen/Archive actions mapped to existing targets. No stars or dead folders. New junk entries are Proton-only; Gmail retains 15 entries after protected removals. `mail-trash-guard` checks malformed/protected matches and production wiring. These replace the repo's unused April bundle; Proton activation awaits Eric's review and paste.
   Mail checks now derive their host from the flake's mail role; calendar checks
   inspect enabled clients instead of the retired hwc-home mail configuration.
