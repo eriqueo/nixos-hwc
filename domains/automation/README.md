@@ -48,7 +48,8 @@ automation/
 │                      #   Claude runs the `readme-refresh` skill in a worktree, the
 │                      #   launcher hard-verifies READMEs-only, pushes + opens a PR
 ├── sr-gauntlet/   # Daily DataX SR investigation schedule (hwc.automation.srGauntlet.*)
-│   ├── index.nix  # systemd service/timer (06:30 daily) wrapping ~/700_datax/gauntlets/sr_gauntlet/run.sh
+│   ├── index.nix  # 15-minute poll + run-now; managed Claude cleanup settings
+│   │              # wrapping ~/700_datax/gauntlets/sr_gauntlet/run.sh
 │   └── README.md  # Containment model + pointer to the pipeline repo
 ├── dx1-gauntlet/  # DX1 case-ledger investigation schedule (hwc.automation.dx1Gauntlet.*)
 │   ├── index.nix  # systemd service/timer (daily, strangler-fig) wrapping
@@ -83,6 +84,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-09-29: SR gauntlet: manage isolated Claude transcript cleanup at 365 days and pass the same raw-retention value to both launch units.
 - 2026-09-28: Pin the native Refinery review writer to the repaired upstream source so the timer and container share collision-safe, atomic v2 review storage.
 - 2026-09-26: The nightly rebuild allowlist uses hwc-home; machine-directory references follow the renamed instance.
 - 2026-09-26: Both nightly runners tolerate an absent `/mnt` while keeping existing mounts read-only. The service-split retirement check pins the evaluated production units.

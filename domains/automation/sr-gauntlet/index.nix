@@ -59,6 +59,11 @@ let
   # so CLAUDE_CODE_OAUTH_TOKEN is the sole credential (see srgEnv below). Single
   # producer for the path: consumed by srgEnv.CLAUDE_CONFIG_DIR + the tmpfiles rule.
   claudeConfigDir = "/var/lib/sr-gauntlet/claude-config";
+  # One runtime retention value feeds Claude cleanup and the pipeline sweeps.
+  rawRetentionDays = 365;
+  claudeSettings = pkgs.writeText "sr-gauntlet-claude-settings.json" (builtins.toJSON {
+    cleanupPeriodDays = rawRetentionDays;
+  });
 
   # Firestore service-account env file (agenix; see SRG_ENV_FILE below).
   firestoreEnvFile = config.age.secrets.sr-gauntlet-firestore.path;
@@ -97,6 +102,7 @@ let
     # permanently removes the interactive↔headless contention on the shared
     # credentials file that caused the original 401 lapse.
     CLAUDE_CONFIG_DIR = claudeConfigDir;
+    SRG_RAW_RETENTION_DAYS = toString rawRetentionDays;
   };
   # Long-lived Claude Code subscription token (agenix), sourced as an
   # EnvironmentFile so it NEVER enters the Nix store (unlike `environment=`).
@@ -199,6 +205,7 @@ in
       # Isolated Claude config dir (rationale at the claudeConfigDir binding).
       # 0700 eric: only the gauntlet reads/writes it.
       "d ${claudeConfigDir} 0700 eric users - -"
+      "C+ ${claudeConfigDir}/settings.json 0600 eric users - ${claudeSettings}"
     ];
 
     systemd.services.sr-gauntlet = {

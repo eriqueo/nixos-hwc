@@ -412,6 +412,8 @@
       "/var/lib/backups"  # Database dumps from preBackupScript
       "/var/lib/refinery"    # Refinery board items, specs, reviews, spools
       "/var/lib/sr-gauntlet" # Gauntlet checkouts, datax.env, headless Claude config
+      "${config.hwc.automation.srGauntlet.gauntletDir}/state" # CRITICAL case and delivery history
+      "${config.hwc.paths.user.home}/000_inbox/downloads/agent/datax/sr2-investigations/.project-director" # CRITICAL orchestration ledger
       # Service split wave 2 (fused window). hwc-server's borg never covered
       # these three; the databases ride the pg_dumpall above.
       "/var/lib/radicale"    # CalDAV/CardDAV collections (CRITICAL)
