@@ -1119,6 +1119,10 @@
         import tempfile
 
         hook = pathlib.Path(sys.argv[1]).read_text()
+        managed_prefix = ${builtins.toJSON mailHome.hwc.mail.classifier.contract.protonSync.managedLabelPrefix}
+        managed_mailbox = ${builtins.toJSON mailHome.hwc.mail.classifier.contract.protonSync.labelMailboxPrefix}
+        mbsyncrc = ${builtins.toJSON mailHome.home.file.".mbsyncrc".text}
+        assert '!"' + managed_mailbox + managed_prefix + '*"' in mbsyncrc
         folder_state = hook.index("+inbox +state/do")
         remove_new = hook.index("# Remove transient new tag", folder_state)
         assert folder_state < remove_new, "new mail loses its safe DO state"
@@ -1132,12 +1136,43 @@
         assert control.count(runtime_path) == 1
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
+            # Exercise the actual legacy label loop. Its directory and notmuch
+            # executable are the only substituted dependencies.
+            labels = root / "Labels"
+            labels.mkdir()
+            for name in ['finance', managed_prefix + 'look', '_work']:
+                (labels / name).mkdir()
+            tags = root / 'tags'
+            tagger = root / 'notmuch'
+            tagger.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\" >> " + str(tags) + "\n")
+            tagger.chmod(0o755)
+            start = hook.index('# Dynamic Proton label → notmuch tag mapping')
+            end = hook.index('# Shield: kept mail', start)
+            fragment = hook[start:end]
+            import re
+            fragment = re.sub(r'_LABELS_DIR=.*', '_LABELS_DIR="' + str(labels) + '"', fragment)
+            fragment = re.sub(r'/nix/store/[^\s"\x27]+/bin/notmuch\b', str(tagger), fragment)
+            def check_labels(text):
+                tags.write_text("")
+                subprocess.run(['${pkgs.bash}/bin/bash', '-c', text], check=True)
+                applied = tags.read_text().splitlines()
+                assert '+finance' in applied
+                assert '+' + managed_prefix + 'look' not in applied
+                assert '+_work' not in applied
+            check_labels(fragment)
+            try:
+                check_labels(fragment.replace('|' + managed_prefix + '*', ""))
+            except AssertionError:
+                pass
+            else:
+                raise AssertionError('removed managed-label skip passed its check')
             runtime = root / "runtime"
             runtime.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\"\n")
             runtime.chmod(0o755)
             def dispatch(text, verb="reopen"):
                 wrapper = root / "wrapper"
-                wrapper.write_text(text.replace(runtime_path, str(runtime)))
+                lock_path = ${builtins.toJSON "${builtins.dirOf mailHome.hwc.mail.mbsync.statusFile}/sync.lock"}
+                wrapper.write_text(text.replace(runtime_path, str(runtime)).replace(lock_path, str(root / 'sync.lock')))
                 wrapper.chmod(0o755)
                 return subprocess.check_output([str(wrapper), verb], text=True).splitlines()
             def check(arguments):
@@ -1151,6 +1186,9 @@
             assert observation[observation.index('--bridge-port') + 1] == '1143'
             password_command = observation[observation.index('--password-command') + 1]
             assert shlex.split(password_command)[:2] == ['sh', '-c']
+            probe = dispatch(control, 'label-probe')
+            assert probe[:3] == ['label-probe', '--db', '/var/lib/hwc/mail-classifier/ledger.sqlite']
+            assert '--notmuch' not in probe
             try:
                 check(dispatch(control.replace("|reopen", "")))
             except AssertionError:

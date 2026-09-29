@@ -82,8 +82,9 @@ automatic deletion, auto-unsubscribe, or a Jev comparison.
 ## Proton two-way sync — refined plan, 2026-09-29
 
 S0 is deployed at `20ea1240`, and Eric confirmed the two generated filters were
-pasted. Their one-day delivery check remains open. Safety prerequisites are live;
-S1 shadow is implemented and awaiting Nix activation. S2–S4 are not implemented.
+pasted. Their one-day delivery check remains open. Safety prerequisites and S1
+shadow are live. S2's guarded single-message probe is prepared, awaiting six
+labels and the live transport proof. Bulk projection and S3–S4 are not implemented.
 The corrected handoff contract is triage from both aerc and the Proton phone/web
 app, using the same classifier ledger. This adds transport observation and
 projection; it does not retune Laya or promote its shadow State model.
@@ -192,3 +193,19 @@ proposed zero baseline actions. Nix tests exercise the rendered sync script
 with mover/sync/index/observer failures and reject removed observer wiring.
 Late IMAP responses and missing UID validity fail closed. Final Nix checks and
 live scheduled consumption remain pending.
+
+S1 is deployed and consumed at Nix `6552346b`: all flake checks pass, including
+failure injection and removed observer wiring. Transport renders match the live
+files byte for byte. The first real core cycle observed 1,578 threads and zero
+proposals; core and residency status are healthy. Human events remain 117 and
+sender preferences remain 23. Ledger schema remains 2. Shadow began at
+2026-09-29 16:14 MDT; its seven-day review is due October 6.
+
+S2 first isolates the new label namespace from mbsync and legacy tagging, then
+ships a guarded single-message probe. Eric must create six empty labels before
+the real probe. Bulk projection implementation depends on whether Bridge COPY
+preserves All Mail counts and label UID EXPUNGE preserves Archive. Reserve a
+content-derived probe key before the first effect; a timeout is non-retriable
+and requires inspection. No broad projector is activated from mocked evidence.
+Before promoting live residency, also test that a slow model response cannot
+overwrite a later phone action; re-read/CAS the case before its effects.

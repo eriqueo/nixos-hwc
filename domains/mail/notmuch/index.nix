@@ -2,8 +2,7 @@
 let
   on = (config.hwc.mail.enable or true);
   cfg = config.hwc.mail.notmuch or {};
-  mailContract = builtins.fromJSON
-    (builtins.readFile "${inputs.system-one}/scripts/mail_classifier_contract.json");
+  mailContract = config.hwc.mail.classifier.contract;
   defaultNewTags = [ "new" "unread" "inbox" ];
   paths = import ./parts/paths.nix { inherit lib config cfg; };
   ident = import ./parts/identity.nix { inherit lib cfg defaultNewTags; };

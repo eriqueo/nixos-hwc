@@ -120,7 +120,7 @@ let
         [ -d "$_ldir" ] || continue
         _lname=$(basename "$_ldir")
         # Skip Bridge's underscore-prefixed internal mirror folders
-        case "$_lname" in _*) continue ;; esac
+        case "$_lname" in _*|${mailContract.protonSync.managedLabelPrefix}*) continue ;; esac
         # Idempotent: no tag:new scope so Proton-web label changes on existing
         # messages are picked up without waiting for a new message arrival.
         ${nm} tag "+$_lname" -- "path:proton/Labels/$_lname/** AND NOT tag:$_lname"

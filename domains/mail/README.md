@@ -40,7 +40,7 @@ mail/
 │       ├── runtime.nix        # Env vars, PATH handling
 │       └── service.nix        # systemd user service unit
 ├── classifier/
-│   ├── index.nix              # correction/review/reopen + read-only residency shadow
+│   ├── index.nix              # controls, shared contract, residency shadow, guarded label probe
 │   └── sys.nix                # pinned Laya + local Nomic hybrid service
 ├── calendar/
 │   ├── index.nix              # khal + vdirsyncer integration; extraVdirsyncerPairs option
@@ -112,6 +112,7 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-09-29: Prepare S2's single-message label probe with a shared sync lock and CRITICAL keyed receipts. Unknown writes never retry. The System One contract owns the six labels and reserved prefix; mbsync excludes that namespace and the legacy hook skips it. Fake-server tests require Archive/All Mail preservation and reject duplicate COPY. Eric must create six labels for the real probe; bulk projection and label teaching wait for that proof.
 - 2026-09-29: S1 shadow observes live Bridge folder membership after successful MailMover, core sync and indexing. It records bounded, content-keyed observations/proposals without mail or learning effects. MailMover failures remain visible while indexing continues. A shared status-path binding uses the system paths domain. Initial live pilot: 1,578 recent threads, zero baseline proposals, seven seconds. Labels and live actions remain behind later gates.
   Account helpers now own null/empty override fallback for mbsync, msmtp and the
   observer; transport rendering is checked against the live files.
