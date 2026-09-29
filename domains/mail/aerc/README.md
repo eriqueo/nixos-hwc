@@ -235,7 +235,7 @@ match every message from a sender without subject text.
 | `i` | Review and create a calendar event for khalt/phone |
 | `p` | Queue a safe PDF record of the email for Paperless |
 | `S` | Save attachment |
-| `U` | URL scan (urlscan) |
+| `U` | Pick a URL from the full message and send it to `hwc-open` |
 | `/` | Search in pager (passthrough) |
 
 The viewer opens the sender-authored plain part first. `h` / `l` move between
@@ -366,6 +366,9 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-09-29: Corrected the `U` URL picker to use urlscan's safe runner
+  (`-f`) instead of compact mode (`-c`), which treated `hwc-open` as the
+  message filename and left the picker empty.
 - 2026-09-22: Routed `<C-r>` through `mbsync.service`, so aerc uses the same
   locked core lane and authoritative unit result as timers and the MCP.
 - 2026-09-22: Made the isolated Proton Trash lane pull-only and kept MailMover

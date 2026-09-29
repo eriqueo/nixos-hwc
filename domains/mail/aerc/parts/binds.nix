@@ -222,7 +222,7 @@ ${tabBinds}
       / = :toggle-key-passthrough<Enter>/
       O = :open<Enter>
       S = :save<space>
-      U = :pipe -m ${pkgs.urlscan}/bin/urlscan -c ${config.home.homeDirectory}/.local/bin/hwc-open<Enter>
+      U = :pipe -m ${pkgs.urlscan}/bin/urlscan -f '${config.home.homeDirectory}/.local/bin/hwc-open {}'<Enter>
       l = :next-part<Enter>
       h = :prev-part<Enter>
       o = :open<Enter>
