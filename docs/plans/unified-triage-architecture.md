@@ -83,8 +83,9 @@ automatic deletion, auto-unsubscribe, or a Jev comparison.
 
 S0 is deployed at `20ea1240`, and Eric confirmed the two generated filters were
 pasted. Their one-day delivery check remains open. Safety prerequisites and S1
-shadow are live. S2's guarded single-message probe is prepared, awaiting six
-labels, a disposable test email and the live transport proof. Bulk projection
+shadow are live. Eric created all six S2 labels. The disposable test email was
+sent, received and archived with All Mail and Sent preserved. The guarded probe
+awaits deployment of its mailbox-quoting fix and the live transport proof. Bulk projection
 and S3–S4 are not implemented.
 The corrected handoff contract is triage from both aerc and the Proton phone/web
 app, using the same classifier ledger. This adds transport observation and
@@ -171,11 +172,12 @@ folders create two writers. Keep the current model thresholds frozen. New model
 promotion requires fresh chronological, sender-disjoint corrections and the
 cheap baseline comparison from the Laya reliability playbook.
 
-Current evidence: 35 classifier tests pass on System One `2b8157a`; the ledger
+Initial planning evidence: 35 classifier tests passed on System One `2b8157a`; the ledger
 has 31 human corrections, only four since the prior evaluation, and two own
 sender preference rows. Backup `ledger.pre-proton-residency-v1.sqlite` under
 `/var/lib/hwc/mail-classifier` restores with integrity_check=ok and matching
-counts for all six tables. Premortem permits prerequisites and S1 shadow only.
+counts for all six tables. The updated premortem also permits S2 namespace
+isolation and one guarded disposable-message probe.
 
 Safety prerequisites are implemented in System One `c92d037`: 40 classifier
 tests, the full npm build and test suite pass on its final merged commit.
@@ -193,7 +195,7 @@ disposable ledger copy observed 1,578 recent threads in 7.11 seconds and
 proposed zero baseline actions. Nix tests exercise the rendered sync script
 with mover/sync/index/observer failures and reject removed observer wiring.
 Late IMAP responses and missing UID validity fail closed. Final Nix checks and
-live scheduled consumption remain pending.
+live scheduled consumption passed in the deployment below.
 
 S1 is deployed and consumed at Nix `6552346b`: all flake checks pass, including
 failure injection and removed observer wiring. Transport renders match the live
@@ -203,9 +205,11 @@ sender preferences remain 23. Ledger schema remains 2. Shadow began at
 2026-09-29 16:14 MDT; its seven-day review is due October 6.
 
 S2 first isolates the new label namespace from mbsync and legacy tagging, then
-ships a guarded single-message probe. Eric must create six empty labels before
-the real probe, then send themselves an email with the contract's test subject
-and archive it. The probe refuses any other subject. Bulk projection implementation depends on whether Bridge COPY
+ships a guarded single-message probe. Eric created the six labels. The agent
+sent the authorized disposable email with the contract's test subject, confirmed
+delivery and archived only that message. SMTP and archive receipts use the same
+content-derived key under `downloads/agent/proton-mail/`; neither effect retries
+an unknown result. The probe refuses any other subject. Bulk projection implementation depends on whether Bridge COPY
 preserves All Mail counts and label UID EXPUNGE preserves Archive. Reserve a
 content-derived probe key before the first effect; a timeout is non-retriable
 and requires inspection. No broad projector is activated from mocked evidence.
@@ -216,10 +220,13 @@ The remaining gates are tracked in [nixos-hwc #104](https://github.com/eriqueo/n
 The guarded probe is installed; live preflight exposed cached pre-login
 capabilities and stopped before any write. A trace with the deployed Python
 proved authenticated CAPABILITY includes UIDPLUS; the probe now queries it
-explicitly and decodes byte/text responses. The 59-test suite runs in the
-packaged-Python Nix check. After that check
-and activation, Eric creates the six labels and archives a disposable email
-with subject `Proton label sync test`; then run the real probe. No agent review
+explicitly and decodes byte/text responses. The classifier suite runs in the
+packaged-Python Nix check. The next live preflight found an unquoted `All Mail`
+argument in the deployed client. No probe receipt or label write occurred.
+System One `2ce31e2` quotes mailbox names through the existing transport helper
+after checking the write allowlist. A strict mailbox fixture failed before the
+repair; all 60 classifier tests, npm build and the full npm test suite now pass.
+Deployment and the real probe remain pending. No agent review
 follow-up is scheduled for the one-day filter check or the October 6 review.
 The ten-minute shadow observer runs automatically. The original laptop handoff
 could not be updated while that host was offline; this living plan is current.
