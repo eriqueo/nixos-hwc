@@ -15,16 +15,21 @@ let
       fi
       case "''${1:-}" in
         ${lib.optionalString cfg.residency.enable ''
-        observe-residency|label-probe)
+        observe-residency|label-probe|project-labels)
           verb="$1"
           shift
           guard=()
           transport_args=(--notmuch ${pkgs.notmuch}/bin/notmuch)
           output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/residency-shadow.json"}
           if [ "$verb" = label-probe ]; then
-            guard=(${pkgs.util-linux}/bin/flock -n -E 75 ${lib.escapeShellArg "${builtins.dirOf syncStatus}/sync.lock"})
             transport_args=()
             output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/label-probe.json"}
+          fi
+          if [ "$verb" = project-labels ]; then
+            output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/labels.json"}
+          fi
+          if [ "$verb" != observe-residency ] && [ "''${SYNC_MAIL_LOCKED:-0}" != 1 ]; then
+            guard=(${pkgs.util-linux}/bin/flock -n -E 75 ${lib.escapeShellArg "${builtins.dirOf syncStatus}/sync.lock"})
           fi
           exec "''${guard[@]}" "$runtime" "$verb" \
             --db /var/lib/hwc/mail-classifier/ledger.sqlite \
@@ -76,9 +81,24 @@ in
       description = "Derived command for the sync owner; has no mail-write mode";
     };
   };
+  options.hwc.mail.classifier.projection = {
+    enable = lib.mkEnableOption "bounded one-way Proton label projection after healthy core sync" // {
+      default = cfg.residency.enable;
+    };
+    command = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = "${command}/bin/mail-classifier project-labels --apply";
+      description = "Shared writer for managed labels; never teaches or changes real folders";
+    };
+  };
 
   # IMPLEMENTATION
   config = lib.mkIf (config.hwc.mail.enable && cfg.enable) {
     home.packages = [ command ];
+    assertions = [{
+      assertion = !cfg.projection.enable || (cfg.residency.enable && cfg.contract.protonSync ? projection);
+      message = "Proton label projection requires healthy residency prerequisites";
+    }];
   };
 }

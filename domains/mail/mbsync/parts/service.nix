@@ -11,6 +11,7 @@
   bridgeVersion,
   trashTimerEnable,
   residencyCommand,
+  projectionCommand,
   ...
 }:
 let
@@ -196,6 +197,22 @@ in
       ''}
 
       ${pkgs.coreutils}/bin/rm -f "''${XDG_CACHE_HOME:-$HOME/.cache}/mbsync-last-success"
+      ${lib.optionalString (projectionCommand != "") ''
+      if [[ "$mode" != trash ]]; then
+        if [[ "$final_rc" -eq 0 ]]; then
+          labels_rc=0
+          ${projectionCommand} || labels_rc=$?
+          if [[ "$labels_rc" -eq 0 ]]; then
+            record_lane labels healthy projection-success 0
+          else
+            record_lane labels degraded projection-failed "$labels_rc"
+            final_rc=$labels_rc
+          fi
+        else
+          record_lane labels degraded prerequisite-failed "$final_rc"
+        fi
+      fi
+      ''}
       exit "$final_rc"
     '';
   };

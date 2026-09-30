@@ -101,6 +101,11 @@ let
     ${nm} tag +trash -inbox -unread -- 'tag:new AND path:proton/Trash/**'
     ${nm} tag +spam -inbox -unread -- 'tag:new AND path:proton/Spam/**'
     ${nm} tag +archive -inbox -- 'tag:new AND path:proton/Archive/**'
+
+    # Physical Inbox residency wins over stale completion/Archive transport
+    # tags after a remote reopen. This does not alter State, Domain or the
+    # ledger; S1 remains shadow. MailMover must not reverse the fetched move.
+    ${nm} tag +inbox -archive -trash -spam -sent -draft -- 'path:proton/inbox/**'
   '';
 
   # Proton Labels → notmuch tags (dynamic discovery)

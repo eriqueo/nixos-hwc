@@ -40,7 +40,7 @@ mail/
 │       ├── runtime.nix        # Env vars, PATH handling
 │       └── service.nix        # systemd user service unit
 ├── classifier/
-│   ├── index.nix              # controls, shared contract, residency shadow, guarded label probe
+│   ├── index.nix              # controls, contract, residency shadow, guarded probe and label projection
 │   └── sys.nix                # pinned Laya + local Nomic hybrid service
 ├── calendar/
 │   ├── index.nix              # khal + vdirsyncer integration; extraVdirsyncerPairs option
@@ -111,6 +111,13 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-09-30: Connect System One's bounded one-way `@` label projector after healthy
+  core transport/index/shadow checks under the existing sync lock. Its `labels`
+  lane and private report expose pending writes, conflicts and deferred work.
+  The CRITICAL ledger retains additive schema-1 write receipts; projection heads
+  expire outside the 30-day window. Phone learning remains disabled.
+  Indexing reasserts physical Proton Inbox residency without changing ledger
+  State/Domain, so stale completion tags cannot undo a remote reopen.
 
 - 2026-09-30: Excluded the full Proton label namespace from mbsync after legacy
   label deletion. Preserved local copies; rendered-config checks reject legacy

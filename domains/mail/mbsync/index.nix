@@ -23,6 +23,8 @@ let
     trashTimerEnable = config.hwc.mail.mbsync.trashTimerEnable;
     residencyCommand = lib.optionalString config.hwc.mail.classifier.residency.enable
       config.hwc.mail.classifier.residency.command;
+    projectionCommand = lib.optionalString config.hwc.mail.classifier.projection.enable
+      config.hwc.mail.classifier.projection.command;
   };
 in
 {
