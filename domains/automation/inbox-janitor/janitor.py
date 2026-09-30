@@ -460,26 +460,23 @@ _TOMBSTONE = re.compile(
     r"applied and deleted|~~", re.I)
 
 
-def report_dangling_agent_citations(cfg: dict, log) -> list:
-    """Report references to downloads/agent/<path> whose target does not exist.
+# The --citations export reads further than the dangling report: app repos and
+# the shared agent config cite agent/ output too, and a cleanup decision made
+# without them keeps nothing those places depend on. The dangling report keeps
+# its original four roots so its daily output does not change underneath it.
+_EXPORT_ROOTS = _CITE_ROOTS + ["600_apps", ".claude-config"]
 
-    This is the check the 2026-08-16 premortem was missing. That premortem
-    refused a scheduled delete tier because "agent/ already loses referenced
-    artifacts on its own" — true, and the reason it stayed true is that nothing
-    ever looked. Seven references were dangling when this was first run
-    (2026-08-22), including a git bundle held as a pre-migration backup and the
-    only copy of ready-to-send customer reply drafts.
+# Folder-or-file form: no extension required, so `downloads/agent/<x>/` counts.
+_CITE_ANY = r"downloads/agent/[A-Za-z0-9_./+()-]+"
 
-    Report-only, and deliberately NOT a delete trigger: the premortem's argument
-    against automated deletion here still stands. This makes the loss visible in
-    a day instead of never, which is the whole fix.
-    """
+
+def _scan_citations(pat: str, roots: list, log, skip_tombstones: bool) -> dict:
+    """rg each root for `pat`; return {line-hit: {citing files}}. The one scanner
+    both the dangling report and the --citations export read (one producer)."""
     import subprocess
     home = Path.home()
-    inbox = Path(cfg["meta"]["inbox_root"])
-    pat = r"downloads/agent/[A-Za-z0-9_./+()-]+\.[A-Za-z0-9]+"
-    refs: dict[str, set] = {}
-    for rel in _CITE_ROOTS:
+    hits: dict[str, set] = {}
+    for rel in roots:
         root = home / rel
         if not root.exists():
             continue
@@ -498,10 +495,85 @@ def report_dangling_agent_citations(cfg: dict, log) -> list:
             # dangling pointer. Without this the check re-reports the same known
             # losses forever, and this config's own note is right that a check
             # which cries wolf is a check that gets ignored.
-            if _TOMBSTONE.search(content):
+            if skip_tombstones and _TOMBSTONE.search(content):
                 continue
             for hit in re.findall(pat, content):
-                refs.setdefault(hit.split("downloads/agent/", 1)[1], set()).add(src)
+                hits.setdefault(hit, set()).add(src)
+    return hits
+
+
+def cited_rel(hit: str) -> str:
+    """Normalise one `downloads/agent/...` match to an agent-relative path. Pure.
+
+    Strips the prefix, trailing slashes, and sentence punctuation the character
+    class swallows (`see downloads/agent/foo/.` or `(downloads/agent/foo/)`).
+    """
+    rel = hit.split("downloads/agent/", 1)[1]
+    # A ")" is trailing punctuation only when it has no "(" to close.
+    while rel and (rel[-1] in "./" or
+                   (rel[-1] == ")" and rel.count(")") > rel.count("("))):
+        rel = rel[:-1]
+    return rel
+
+
+def export_agent_citations(cfg: dict, log) -> dict:
+    """Map each EXISTING path under downloads/agent (file or folder) to the
+    files citing it, scanning _EXPORT_ROOTS. Read-only.
+
+    Tombstoned lines are NOT skipped here: a line that says a sibling was
+    deleted still points at the folder, and for a keep/move decision the
+    conservative error is keeping too much.
+    """
+    agent = Path(cfg["meta"]["inbox_root"]) / "downloads/agent"
+    out: dict[str, set] = {}
+    for hit, srcs in _scan_citations(_CITE_ANY, _EXPORT_ROOTS, log, False).items():
+        rel = cited_rel(hit)
+        if rel and (agent / rel).exists():
+            out.setdefault(rel, set()).update(srcs)
+    return {k: sorted(v) for k, v in sorted(out.items())}
+
+
+def self_check() -> None:
+    """Pure checks for the citation normaliser; run with --self-check."""
+    cases = {
+        "downloads/agent/datax/foo/": "datax/foo",
+        "downloads/agent/datax/foo": "datax/foo",
+        "downloads/agent/tech/x/report.md": "tech/x/report.md",
+        "downloads/agent/tech/x/report.md.": "tech/x/report.md",
+        "downloads/agent/scout/.": "scout",
+        "downloads/agent/scout)": "scout",
+        "downloads/agent/a/b(1).md": "a/b(1).md",
+    }
+    bad = [(h, cited_rel(h), want) for h, want in cases.items() if cited_rel(h) != want]
+    found = re.findall(_CITE_ANY, "see ~/000_inbox/downloads/agent/datax/foo/ and "
+                                  "`downloads/agent/tech/y.md`")
+    if found != ["downloads/agent/datax/foo/", "downloads/agent/tech/y.md"]:
+        bad.append(("findall", found, "two hits"))
+    for b in bad:
+        print(f"FAIL {b[0]!r}: got {b[1]!r}, want {b[2]!r}")
+    print(f"self-check: {len(cases) + 1 - len(bad)}/{len(cases) + 1} passed")
+    sys.exit(1 if bad else 0)
+
+
+def report_dangling_agent_citations(cfg: dict, log) -> list:
+    """Report references to downloads/agent/<path> whose target does not exist.
+
+    This is the check the 2026-08-16 premortem was missing. That premortem
+    refused a scheduled delete tier because "agent/ already loses referenced
+    artifacts on its own" — true, and the reason it stayed true is that nothing
+    ever looked. Seven references were dangling when this was first run
+    (2026-08-22), including a git bundle held as a pre-migration backup and the
+    only copy of ready-to-send customer reply drafts.
+
+    Report-only, and deliberately NOT a delete trigger: the premortem's argument
+    against automated deletion here still stands. This makes the loss visible in
+    a day instead of never, which is the whole fix.
+    """
+    inbox = Path(cfg["meta"]["inbox_root"])
+    pat = r"downloads/agent/[A-Za-z0-9_./+()-]+\.[A-Za-z0-9]+"
+    refs: dict[str, set] = {}
+    for hit, srcs in _scan_citations(pat, _CITE_ROOTS, log, True).items():
+        refs.setdefault(hit.split("downloads/agent/", 1)[1], set()).update(srcs)
 
     dangling = []
     for target in sorted(refs):
@@ -568,9 +640,21 @@ def main() -> None:
     ap.add_argument("--from", dest="locations", action="append", metavar="LOC",
                     help="walk only this location (rel to downloads/ or absolute); repeatable")
     ap.add_argument("--force", action="store_true", help="bypass owner-host guard")
+    ap.add_argument("--citations", action="store_true",
+                    help="print JSON {agent path: [citing files]} for existing cited "
+                         "files AND folders under downloads/agent; read-only")
+    ap.add_argument("--self-check", action="store_true",
+                    help="run the citation-matcher self-check and exit")
     args = ap.parse_args()
 
+    if args.self_check:
+        self_check()
     cfg = yaml.safe_load(Path(args.config).read_text())
+    if args.citations:
+        import json
+        warn = lambda s: print(s, file=sys.stderr)
+        print(json.dumps(export_agent_citations(cfg, warn), indent=1))
+        return
     owner = cfg["meta"]["owner_host"]
     if args.apply and not args.force and socket.gethostname() != owner:
         sys.exit(f"inbox-janitor: refusing to --apply on '{socket.gethostname()}' "
