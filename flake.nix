@@ -1022,9 +1022,12 @@
             return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
         png = b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 2, 2, 8, 2, 0, 0, 0))
         png += chunk(b'IDAT', zlib.compress(b'\0\xff\0\0\0\0\xff' * 2)) + chunk(b'IEND', b"")
-        def message(data=png):
+        def message(data=png, narrow=False):
             msg = EmailMessage()
-            msg.set_content('<p>Before picture</p><img src="cid:picture" alt="Fixture">'
+            picture = '<img src="cid:picture" alt="Fixture">'
+            if narrow:
+                picture = '<table width="8"><tr><td>' + picture + '</td></tr></table>'
+            msg.set_content('<p>Before picture</p>' + picture +
                 '<p>After picture</p><img src="https://tracking.invalid/pixel" alt="Remote">'
                 '<img src="cid:missing" alt="Missing">'
                 '<p>\x1b[31muntrusted\x1b[0m</p>'
@@ -1042,10 +1045,19 @@
         assert 'Remote: remote image blocked' in output
         assert 'Missing: attached image missing' in output
         assert 'https://example.invalid/?a=1&b=2' in output, 'HTML action URL changed'
+        assert '[Fixture]' in run(message(narrow=True)), 'narrow table layout lost the image'
         assert 'image could not be displayed' in run(message(b'not a PNG'))
         plain = EmailMessage()
         plain.set_content('Plain message\n\x1b[31muntrusted\x1b[0m')
         assert '\x1b' not in run(plain.as_bytes())
+        many = EmailMessage()
+        many.set_content('<img src="cid:missing">' * 40, subtype='html')
+        bounded = run(many.as_bytes())
+        assert bounded.count('attached image missing') == 32
+        assert 'Image limit reached' in bounded
+        oversized = subprocess.run(shlex.split(command), input=b'x' * (32 * 1024 * 1024 + 1),
+                                   capture_output=True, timeout=30)
+        assert oversized.returncode != 0 and b'Use the normal view' in oversized.stderr
         print('aerc image binding: MIME ordering, real image output, links, blocked remote images, missing/corrupt images, and control sanitization pass')
         PY
         touch "$out"
