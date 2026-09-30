@@ -1006,8 +1006,9 @@
             assert line.startswith('I = :pipe -m '), 'image view must receive the complete MIME message'
             return line.removeprefix('I = :pipe -m ').split('<Enter>', 1)[0]
         command = image_command(wiring['binds'])
-        for broken in [re.sub(r'^I = .*$', "", wiring['binds'], flags=re.M),
+        for broken in [re.sub(r'^\s*I = .*$', "", wiring['binds'], flags=re.M),
                        wiring['binds'].replace('I = :pipe -m ', 'I = :pipe -p ')]:
+            assert broken != wiring['binds'], 'seeded wiring mutation did not match'
             try:
                 image_command(broken)
             except (StopIteration, AssertionError):

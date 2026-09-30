@@ -11,7 +11,6 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
-import hashlib
 import resource
 import shutil
 from email import policy
@@ -151,7 +150,9 @@ class HTMLImages(HTMLParser):
 
     def __init__(self, source: str) -> None:
         super().__init__(convert_charrefs=False)
-        self.prefix = "AERCIMAGE" + hashlib.sha256(source.encode()).hexdigest()[:16]
+        # One-cell markers survive narrow table layouts. Reserve only characters
+        # absent from sender text, so replacement cannot alter original content.
+        self.markers = (chr(code) for code in range(0xE000, 0xF900) if chr(code) not in source)
         self.fragments: list[str] = []
         self.images: dict[str, tuple[str, str]] = {}
 
@@ -163,7 +164,9 @@ class HTMLImages(HTMLParser):
         if len(self.images) >= MAX_IMAGES:
             self.fragments.append("<p>[Image limit reached]</p>")
             return
-        marker = self.prefix + str(len(self.images)) + "END"
+        marker = next(self.markers, None)
+        if marker is None:
+            raise ValueError("Image placeholders unavailable. Use the normal view.")
         self.images[marker] = (attrs_map.get("src") or "", attrs_map.get("alt") or "Image")
         self.fragments.append(f"<p>{marker}</p>")
 
