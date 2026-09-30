@@ -2,14 +2,15 @@
   "yazi/yazi.toml" = {
     text = ''
       [mgr]
-      sort_by = "btime"
-      sort_reverse = true
+      ratio = [ 2, 4, 3 ]
+      sort_by = "natural"
+      sort_reverse = false
       sort_dir_first = true
       mouse_events = [ "click", "scroll" ]
       show_hidden = false
       show_symlink = true
       show_symlink_icon = true
-      linemode = "btime"
+      linemode = "none"
       scrolloff = 5
 
       [preview]
