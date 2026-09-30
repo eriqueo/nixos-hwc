@@ -85,7 +85,7 @@ S0 is deployed at `20ea1240`, and Eric confirmed the two generated filters were
 pasted. Their one-day delivery check remains open. Safety prerequisites and S1
 shadow are live. Eric created all six S2 labels. The disposable test email was
 sent, received and archived with All Mail and Sent preserved. The guarded probe
-awaits deployment of its COPY source guard and the live transport proof. Bulk projection
+passed live after the COPY source repair. Bulk projection
 and S3–S4 are not implemented.
 The corrected handoff contract is triage from both aerc and the Proton phone/web
 app, using the same classifier ledger. This adds transport observation and
@@ -238,8 +238,18 @@ System One `e7e3335` separates read, label-write and Archive COPY source selecti
 It rechecks the exact source UID before COPY and rejects real-folder deletion
 commands and wrong COPY destinations before I/O. All 63 classifier tests and
 the full npm build/test suite pass. Removing command guards or COPY source
-wiring fails its test. Deploy this revision and test a fresh disposable email;
-the real transport proof remains pending. No agent review
+wiring fails its test. Nix `2fbc0a9a77b3f230391eb0e7a63aba94da8b4dbf` passed the
+full flake check after merging the published branch history, then switched on
+hwc-work. The fresh disposable probe verified adding and removing @personal:
+receipt `label-probe-359d328f8848ffa3056773daee203fbc`, label UID 1 removed,
+Archive UID 2913 and the single All Mail UID 20153 preserved. Read-only
+inspection also confirmed neither original had a Deleted flag. Cases remain
+586, judgments 950, human events 117 and sender preferences 23. The model
+service is active; mail-sync status remains healthy. The prior failed receipt
+is retained, with no automatic retry. Evidence covers one label round trip.
+S2's bounded projector is next; S1 stays
+shadow until the seven-day review, and S3 teaching retains its separate gates.
+No agent review
 follow-up is scheduled for the one-day filter check or the October 6 review.
 The ten-minute shadow observer runs automatically. The original laptop handoff
 could not be updated while that host was offline; this living plan is current.
