@@ -10,7 +10,7 @@ let
   # Native copy-link scans raw HTML and can retain &amp; in a target. Parse
   # the complete MIME message with urlscan for both viewer shortcuts instead.
   urlPicker = ":pipe -m ${pkgs.urlscan}/bin/urlscan --dedupe -f '${config.home.homeDirectory}/.local/bin/hwc-open {}'<Enter>";
-  imageView = ":pipe -m ${pkgs.bash}/bin/bash -o pipefail -c '${pkgs.python3}/bin/python3 ${./plain-text-filter.py} --message-images ${aercPkg}/libexec/aerc/filters/html ${pkgs.chafa}/bin/chafa | ${pkgs.less}/bin/less -R -~'<Enter>";
+  imageView = ":pipe -s -m ${pkgs.bash}/bin/bash -o pipefail -c '${pkgs.python3}/bin/python3 ${./plain-text-filter.py} --message-images ${aercPkg}/libexec/aerc/filters/html ${pkgs.chafa}/bin/chafa | ${pkgs.less}/bin/less -R -~'<Enter>";
 
   # Workbench/Zellij owns Ctrl navigation. Inside aerc, Alt+j/k moves through
   # the vertical folder list and Alt+h/l moves through the horizontal tab bar.
