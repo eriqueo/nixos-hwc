@@ -1289,20 +1289,31 @@
 
       lead-scout-member-recovery = let
         work = self.nixosConfigurations.hwc-work;
-        candidate = (work.extendModules { modules = [{
-          hwc.server.ai.leadScout.memberInstance = {
-            enable = true;
-            projectName = "b1-check";
-          };
+        candidate = work.config;
+        disabled = (work.extendModules { modules = [{
+          hwc.server.ai.leadScout.memberInstance.enable = lib.mkForce false;
         }]; }).config;
+        member = candidate.hwc.server.ai.leadScout.memberInstance;
         unit = candidate.systemd.user.services.lead-scout-member-instance;
         s = unit.serviceConfig;
         u = unit.unitConfig;
         commandPath = command: builtins.head (lib.splitString " " command);
         budget = command: lib.toInt (lib.last (lib.splitString " " command));
       in
-      assert lib.assertMsg (!work.config.hwc.server.ai.leadScout.memberInstance.enable)
-        "member recovery: source must remain disabled on work";
+      assert lib.assertMsg (member.enable && member.projectName == "lead-scout-datax")
+        "member recovery: actual work activation/project wiring missing";
+      assert lib.assertMsg (!(disabled.systemd.user.services ? lead-scout-member-instance)
+        && !(disabled.systemd.user.units ? "lead-scout-member-instance.service")
+        && disabled.hwc.server.ai.leadScout.memberInstance.vhost.enable
+        && disabled.hwc.server.ai.leadScout.modelBridge.enable)
+        "member recovery: disabled compatibility must omit supervision and retain vhost/bridge";
+      assert lib.assertMsg (unit.wantedBy == [ "default.target" ]
+        && u.ConditionUser == candidate.hwc.server.ai.leadScout.user
+        && candidate.users.users.eric.linger
+        && unit.environment.COMPOSE_PROJECT_NAME == member.projectName
+        && s.WorkingDirectory == member.directory
+        && lib.hasSuffix " ${member.projectName}_app_1 ${member.projectName}_db_1" s.ExecStart)
+        "member recovery: user activation/adoption wiring missing";
       assert lib.assertMsg (s.Type == "exec" && !(s.RemainAfterExit or false)
         && lib.hasInfix " wait --condition=stopped --exit-first-match " s.ExecStart)
         "member recovery: foreground waiter missing";
@@ -1326,6 +1337,14 @@
         && lib.hasSuffix " --user %I" candidate.systemd.user.services."hwc-service-failure-notifier@".serviceConfig.ExecStart)
         "member recovery: user terminal notifier missing";
       pkgs.runCommand "lead-scout-member-recovery" {} ''
+        units=${candidate.environment.etc."systemd/user".source}
+        test -L "$units/default.target.wants/lead-scout-member-instance.service"
+        ${pkgs.ripgrep}/bin/rg -F 'ConditionUser=${candidate.hwc.server.ai.leadScout.user}' "$units/lead-scout-member-instance.service"
+        ${pkgs.ripgrep}/bin/rg -F 'OnFailure=${u.OnFailure}' "$units/lead-scout-member-instance.service"
+        ${pkgs.ripgrep}/bin/rg -F 'ExecStart=${s.ExecStart}' "$units/lead-scout-member-instance.service"
+        ${pkgs.ripgrep}/bin/rg -F 'ExecStartPre=${s.ExecStartPre}' "$units/lead-scout-member-instance.service"
+        ${pkgs.ripgrep}/bin/rg -F 'ExecStopPost=${s.ExecStopPost}' "$units/lead-scout-member-instance.service"
+        test ! -e ${disabled.environment.etc."systemd/user".source}/lead-scout-member-instance.service
         ${pkgs.ripgrep}/bin/rg -F 'timeout --signal=KILL "$1"' ${commandPath s.ExecStartPre}
         ${pkgs.ripgrep}/bin/rg -F 'timeout --signal=KILL "$1"' ${commandPath s.ExecStopPost}
         steps=$(${pkgs.gawk}/bin/awk 'NF {last=$NF} END {print last}' ${commandPath s.ExecStartPre})

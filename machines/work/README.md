@@ -9,6 +9,16 @@ on both hosts with separate histories and the same pinned harness.
 The bootstrap steps below are historical setup instructions. The fleet flake is
 already active; routine changes use the normal commit, local build and switch path.
 
+## Member recovery source
+
+The work configuration enables the existing member supervisor for the measured
+`lead-scout-datax` compose project. The vhost and model bridge keep their existing
+owners. This source setting is not evidence of live activation. Root must reserve
+an idle window, compare affected units, and verify adoption preserves app/DB IDs,
+PIDs and start times. StopPost drains app before DB even when removing the unit;
+rollback therefore includes explicit recovery of the same containers. The host
+rollout plan in the Lead Scout handback records the concrete checks and boundaries.
+
 ## Installed system: preserve Windows and Wi-Fi
 
 The MS-02 runs NixOS26.05 and retains Windows partitions on its internal SSD.
