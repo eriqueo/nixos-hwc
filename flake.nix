@@ -1003,11 +1003,11 @@
         def image_command(binds):
             view = binds.split('[view]\n', 1)[1].split('[view::', 1)[0]
             line = next(line.strip() for line in view.splitlines() if line.strip().startswith('I = '))
-            assert line.startswith('I = :pipe -m '), 'image view must receive the complete MIME message'
-            return line.removeprefix('I = :pipe -m ').split('<Enter>', 1)[0]
+            assert line.startswith('I = :pipe -s -m '), 'image view must receive full MIME and close on pager exit'
+            return line.removeprefix('I = :pipe -s -m ').split('<Enter>', 1)[0]
         command = image_command(wiring['binds'])
         for broken in [re.sub(r'^\s*I = .*$', "", wiring['binds'], flags=re.M),
-                       wiring['binds'].replace('I = :pipe -m ', 'I = :pipe -p ')]:
+                       wiring['binds'].replace('I = :pipe -s -m ', 'I = :pipe -s -p ')]:
             assert broken != wiring['binds'], 'seeded wiring mutation did not match'
             try:
                 image_command(broken)
