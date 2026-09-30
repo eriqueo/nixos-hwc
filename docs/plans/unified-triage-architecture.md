@@ -85,7 +85,7 @@ S0 is deployed at `20ea1240`, and Eric confirmed the two generated filters were
 pasted. Their one-day delivery check remains open. Safety prerequisites and S1
 shadow are live. Eric created all six S2 labels. The disposable test email was
 sent, received and archived with All Mail and Sent preserved. The guarded probe
-awaits deployment of its mailbox-quoting fix and the live transport proof. Bulk projection
+awaits deployment of its COPY source guard and the live transport proof. Bulk projection
 and S3–S4 are not implemented.
 The corrected handoff contract is triage from both aerc and the Proton phone/web
 app, using the same classifier ledger. This adds transport observation and
@@ -147,7 +147,9 @@ separate `reopen` command changes a thread to DO without teaching a sender.
 3. S2 projection: Eric creates `@look`, `@did`, `@hwc`, `@datax`, `@family`,
    `@personal` when the adapter is ready. Define their mapping once in the
    classifier contract. Exclude `Labels/@*` from mbsync and legacy label tagging.
-   An IMAP adapter can COPY or expunge only these label mailboxes. First prove on
+   COPY destinations and UID EXPUNGE are restricted to these label mailboxes.
+   Bridge requires writable Archive selection for COPY; reject real-folder
+   STORE/EXPUNGE and MOVE at the command boundary. First prove on
    one test message that a label copy does not duplicate All Mail and a label
    expunge preserves Archive. Count duplicates periodically. Track acknowledged
    writes in the ledger; advance projection state only after IMAP OK. Missing
@@ -226,7 +228,18 @@ argument in the deployed client. No probe receipt or label write occurred.
 System One `2ce31e2` quotes mailbox names through the existing transport helper
 after checking the write allowlist. A strict mailbox fixture failed before the
 repair; all 60 classifier tests, npm build and the full npm test suite now pass.
-Deployment and the real probe remain pending. No agent review
+The quoting fix is deployed at Nix `f77d211f`. Its real COPY returned NO; Bridge
+v3.24.2 logged "the mailbox is read-only". [Proton's COPY handler](https://github.com/ProtonMail/gluon/blob/master/internal/session/handle_copy.go)
+rejects read-only sources. Read-only review found Archive UID 2912 and All Mail
+UID 20152 intact, no @personal association, and unchanged cases, judgments,
+human events and preferences. Keep failed receipt
+`label-probe-2e068cae763842ad78461c04fc556db3`; it never retries.
+System One `e7e3335` separates read, label-write and Archive COPY source selection.
+It rechecks the exact source UID before COPY and rejects real-folder deletion
+commands and wrong COPY destinations before I/O. All 63 classifier tests and
+the full npm build/test suite pass. Removing command guards or COPY source
+wiring fails its test. Deploy this revision and test a fresh disposable email;
+the real transport proof remains pending. No agent review
 follow-up is scheduled for the one-day filter check or the October 6 review.
 The ten-minute shadow observer runs automatically. The original laptop handoff
 could not be updated while that host was offline; this living plan is current.
