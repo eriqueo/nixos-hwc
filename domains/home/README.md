@@ -28,6 +28,8 @@ Hyprland, Zellij and Workbench derive their mail command from the shell alias; t
 
 Hyprland's `apps/hyprland/parts/behavior.nix` sizes Bluetooth and file pickers from the current monitor and limits floating windows to 80% of its logical dimensions.
 
+Hyprland's session starts enabled Bitwarden and Proton Pass clients, which supply their native Waybar tray icons.
+
 The shared agent-harness fleet list uses hwc-home, hwc-work and hwc-laptop without changing session stores.
 - `apps/t3code/` — launchers and a restricted DX2 handoff adapter; T3 supplies the result limit.
 - `apps/hwc-dictation/` — owned desktop dictation package, settings and user service.
@@ -63,6 +65,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-30: Start enabled Bitwarden and Proton Pass clients at desktop login so their native tray icons return after reboot.
 - 2026-09-30: Limit floating windows using runtime monitor dimensions; give Bluetooth and file pickers screen-relative starting sizes while preserving small dialogs and tiled applications.
 - 2026-09-30: Point `website` at the existing `id_ed25519` key instead of the absent `hostinger_deploy` key; Hostinger must authorize its public key before key login works.
 - 2026-09-30: Replace the `server` shell shortcut with `home`; add work, Foxtrot, DataX MCP, lil-box and home-LAN shortcuts using SSH host entries; preserve legacy SSH hostnames.

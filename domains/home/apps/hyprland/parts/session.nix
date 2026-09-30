@@ -61,6 +61,14 @@
   ++ lib.optional workbenchEnabled {
     cmd = workbenchCommand;
     workspace = 3;
+  }
+  # Native tray icons only exist while their applications are running.
+  # Hyprland owns these launches so restarting Waybar cannot stop the apps.
+  ++ lib.optional (config.hwc.home.apps.bitwarden.enable or false) {
+    cmd = "bitwarden --autostart";
+  }
+  ++ lib.optional (config.hwc.home.apps.proton-pass.enable or false) {
+    cmd = "proton-pass";
   };
 
   mkExec = a:
