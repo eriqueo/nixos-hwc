@@ -236,6 +236,22 @@ in
       }/notify";
       description = "hwc-notify endpoint used for state-sync failure and recovery transitions";
     };
+    tracker = {
+      enable = lib.mkEnableOption ''
+        the project tracker hub (claude-config tracker/server.py): every agent
+        project's roadmap, plan and Eric's decision cards, on one tailnet page.
+        Run it on ONE host; project data syncs through the deliverables folder'';
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 8765;
+        description = "Listening port (tailnet-only: the host firewall trusts tailscale0).";
+      };
+      root = lib.mkOption {
+        type = lib.types.str;
+        default = "${home}/000_inbox/downloads/agent";
+        description = "Deliverables root scanned for <project>/tracker.json (depth 1-2).";
+      };
+    };
     claudeConfigDirs = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ".claude_dx2_home" ];
@@ -345,6 +361,25 @@ in
         OnUnitActiveSec = cfg.syncInterval;
         Unit = "agent-state-sync.service";
       };
+    };
+
+    # Tracker data is not state of this unit: tracker.json (agents) and
+    # decisions.json / next-prompt.md (this server) live in each project's
+    # synced deliverables folder, so no StateDirectory or retention timer.
+    systemd.user.services.hwc-tracker = lib.mkIf cfg.tracker.enable {
+      Unit = {
+        Description = "HWC project tracker hub (roadmaps, plans, decision cards)";
+        After = [ "network-online.target" ];
+        # The server and page are pinned harness files; a new revision restarts it.
+        X-Restart-Triggers = [ "${harness}/tracker/server.py" "${harness}/tracker/index.html" ];
+      };
+      Service = {
+        ExecStart = "${pkgs.python3}/bin/python3 ${harness}/tracker/server.py ${toString cfg.tracker.port}";
+        Environment = [ "TRACKER_ROOT=${cfg.tracker.root}" ];
+        Restart = "on-failure";
+        RestartSec = 5;
+      };
+      Install.WantedBy = [ "default.target" ];
     };
 
     systemd.user.services.agent-cli-update = lib.mkIf cfg.cliUpdates.enable {

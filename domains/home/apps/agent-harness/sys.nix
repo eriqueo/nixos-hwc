@@ -120,6 +120,20 @@ in
 {
   options.hwc.system.apps.agent-harness = {
     enable = lib.mkEnableOption "machine-wide agent harness policy";
+    pipelineEnvironment = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { HWC_PIPELINE = "1"; };
+      readOnly = true;
+      description = ''
+        Environment every unit that launches a headless agent merges into its
+        own, so the shared workspace-guard only reports on it and never denies.
+        The one producer of the marker. Service domains read it (Law 11 forbids
+        this module reading theirs); `rg pipelineEnvironment domains` lists every
+        consumer. Current consumers, all on hwc-work: sr-gauntlet, nightly-builds,
+        readme-freshness, refinery, morning-briefing (today-dispatch), lead-scout,
+        home-scout, research-scout.
+      '';
+    };
     userMcp = {
       enable = lib.mkOption {
         type = lib.types.bool;

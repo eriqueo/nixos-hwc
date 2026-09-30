@@ -69,11 +69,10 @@ let
   firestoreEnvFile = config.age.secrets.sr-gauntlet-firestore.path;
 
   # Env + tool path shared by the daily run and the run-now drain (same needs).
-  srgEnv = {
+  # Marks the headless agents these units launch as a pipeline, so the shared
+  # workspace-guard only reports on them (producer: agent-harness sys.nix).
+  srgEnv = (config.hwc.system.apps.agent-harness.pipelineEnvironment or { }) // {
     HOME = paths.user.home;
-    # Marks the headless agents this unit launches as a pipeline: the shared
-    # workspace-guard only reports for them, never denies (agent-workspace S2).
-    HWC_PIPELINE = "1";
     SRG_MAX_SRS = toString cfg.maxSrs;
     SRG_REFINERY_BASE_URL = cfg.refineryBaseUrl;
     SRG_DATAX_BASE_URL = cfg.dataxBaseUrl;

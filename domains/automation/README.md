@@ -84,6 +84,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-09-30: sr-gauntlet, nightly-builds (runner, run-now, review), readme-freshness and refinery take the pipeline marker from `hwc.system.apps.agent-harness.pipelineEnvironment` instead of a local literal; one producer for every unit that launches a headless agent.
 - 2026-09-29: SR gauntlet: manage isolated Claude transcript cleanup at 365 days and pass the same raw-retention value to both launch units.
 - 2026-09-28: Pin the native Refinery review writer to the repaired upstream source so the timer and container share collision-safe, atomic v2 review storage.
 - 2026-09-26: The nightly rebuild allowlist uses hwc-home; machine-directory references follow the renamed instance.

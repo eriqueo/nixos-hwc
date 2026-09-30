@@ -156,7 +156,11 @@ in
     # as mail-retriage above.
     systemd.services.today-dispatch = {
       description = "Today queue — run queued read-only diagnosis cards";
-      environment.HOME = paths.user.home;
+      # HWC_PIPELINE marker: the workspace-guard only reports on the headless
+      # agent run-dispatch.sh launches (producer: agent-harness sys.nix).
+      environment = (config.hwc.system.apps.agent-harness.pipelineEnvironment or { }) // {
+        HOME = paths.user.home;
+      };
       path = [ pkgs.bash pkgs.coreutils pkgs.gnugrep pkgs.jq pkgs.git pkgs.ripgrep ];
       serviceConfig = {
         Type = "oneshot";

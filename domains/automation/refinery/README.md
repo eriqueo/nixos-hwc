@@ -57,6 +57,7 @@ container image together before migrating review storage.
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- 2026-09-30: `refinery-board` and `refinery-native-runnow` merge `hwc.system.apps.agent-harness.pipelineEnvironment` (`HWC_PIPELINE=1`), so the workspace guard only reports on the headless agents they launch. Inert on hwc-work, which runs container mode.
 - 2026-09-29: `srGauntletDir`, `dx1GauntletDir` and both gauntlet contracts point at `~/700_datax/gauntlets/{sr,dx1}_gauntlet` after the 700_datax layout cleanup.
 - 2026-09-28: Native builds consume the pinned Refinery source rather than the stale vendored engine, keeping the morning review timer on the same storage contract as the board.
 - 2026-09-04: **Container mode.** The engine was extracted with history into

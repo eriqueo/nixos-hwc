@@ -165,6 +165,13 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 
 ## Changelog
 
+- **2026-09-30** — New AGENTS section: `run.sh` calls `ws ledger --json` (the
+  agent-workspace ledger) and prints its rendered `line` (active projects per
+  host, unpushed work, hosts that have not checked in today, downloads/agent size
+  and weekly growth, watchdog status). Two alerts come from it: downloads/agent
+  grew more than 100 MB in a week, and the watchdog passed its arm date with no
+  accepted replay. `today-dispatch` carries the pipeline marker.
+
 - **2026-09-24** — Persistent sender-plus-subject routing rules now appear in
   the dashboard, Workbench briefing, and plain/HTML email. Mail retriage also
   republishes the served dashboard JSON atomically, so intraday changes cannot

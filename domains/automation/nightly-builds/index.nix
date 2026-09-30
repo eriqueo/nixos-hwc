@@ -48,11 +48,11 @@ let
 
   # Env + tool path shared by the nightly run and the run-now drain (same script,
   # same needs: git push, headless claude, jq/rg/awk/curl).
-  nbEnv = {
+  # Marks the headless agents these units launch as a pipeline, so the shared
+  # workspace-guard only reports on them (producer: agent-harness sys.nix).
+  pipelineEnv = config.hwc.system.apps.agent-harness.pipelineEnvironment or { };
+  nbEnv = pipelineEnv // {
     HOME = paths.user.home;
-    # Marks the headless agents this unit launches as a pipeline: the shared
-    # workspace-guard only reports for them, never denies (agent-workspace S2).
-    HWC_PIPELINE = "1";
     NB_VAULT_DIR = toString cfg.vaultDir;
     NB_REPO_DIR = toString cfg.repoDir;
     NB_MAX_CARDS = toString cfg.maxCards;
@@ -96,7 +96,7 @@ let
 
   # Env for the review pass: late-bound vault + repo + reviews dir + provider.
   # HOME is set so headless `claude` (claude-cli) and `gh` find their creds.
-  reviewEnv = {
+  reviewEnv = pipelineEnv // {
     HOME = paths.user.home;
     REFINERY_VAULT_DIR = toString cfg.vaultDir;
     REFINERY_DEFAULT_REPO = toString cfg.repoDir;

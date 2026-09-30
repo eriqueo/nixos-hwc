@@ -41,6 +41,7 @@ business/
 ```
 
 ## Changelog
+- 2026-09-30: morning-briefing adds an AGENTS section and alerts from `ws ledger --json`; `today-dispatch` carries the pipeline marker.
 - 2026-09-28: Accept public Host headers at the loopback website origin; require body/header checks for cutover acceptance.
 - 2026-09-28: Preserve legacy footer image URLs and supply kernel flock for crash-safe website publication.
 - 2026-09-28: Bound website release cleanup with a daily fail-safe timer; share app settings while each unit owns its generated PATH.

@@ -152,6 +152,8 @@ export function morningBriefTool(briefingPath = BRIEFING_PATH): ToolDef {
       const refinery = asObj(sections["refinery"]);
       const refCounts = asObj(refinery["counts"]);
       const refBuckets = asObj(refinery["buckets"]);
+      // Rendered by `ws ledger --json` (the one producer); printed as-is here.
+      const agentsLine = asStr(asObj(sections["agents"])["line"]);
 
       const events = asArr(calendar["events"]);
       const dueToday = asArr(tasks["due_today"]);
@@ -191,6 +193,7 @@ export function morningBriefTool(briefingPath = BRIEFING_PATH): ToolDef {
       }
       const refActionN = num(refCounts["action"]) ?? 0;
       if (refActionN > 0) highlights.push(`⚗ refinery: ${refActionN} item${refActionN !== 1 ? "s" : ""} need attention`);
+      if (agentsLine) highlights.push(`🤖 ${agentsLine}`);
 
       // ── body (full markdown for the detail modal) ───────────────────────
       const md: string[] = [];
@@ -350,6 +353,7 @@ export function morningBriefTool(briefingPath = BRIEFING_PATH): ToolDef {
         }
       }
       section("Refinery", refLines);
+      section("Agents", agentsLine ? [agentsLine] : []);
 
       // Recent documents
       section("Recent Documents", bullets(asArr(recentDocs["items"])).map((d) => `- ${d}`));

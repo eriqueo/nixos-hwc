@@ -497,6 +497,22 @@ if [ "${REFINERY_FAILED:-0}" -gt 0 ] 2>/dev/null; then
   echo "${ALERTS_JSON}" | jq empty 2>/dev/null || ALERTS_JSON='[]'
 fi
 
+# -- agents: the agent-workspace ledger (~/800_agents). `ws ledger --json` is the
+#    one producer of these facts AND of the rendered line, so this brief and the
+#    MCP morning-brief tool print the same text. {} on any failure, like refinery.
+#    Alerts: downloads/agent grew >100 MB in a week; the watchdog's arm date
+#    passed with no accepted replay (it stays note-taking; design v4.2 fix 1). --
+WS_BIN="${WS_BIN:-/etc/profiles/per-user/eric/bin/ws}"
+AGENTS_JSON=$("${WS_BIN}" ledger --json 2>>"${LOG_FILE}" || echo '{}')
+echo "${AGENTS_JSON}" | jq -e 'type == "object"' >/dev/null 2>&1 || AGENTS_JSON='{}'
+AGENTS_ALERTS=$(echo "${AGENTS_JSON}" | jq -c '
+  [ (if .downloads.red then {level:"warning",section:"agents",
+      message:"downloads/agent grew \(.downloads.growthBytes / 1048576 | floor) MB this week (limit 100 MB)"} else empty end),
+    (if .guard.armOverdue then {level:"warning",section:"agents",
+      message:"The watchdog passed its arm date (\(.guard.armDate)) with no accepted replay, so it is still only taking notes"} else empty end) ]' 2>/dev/null || echo '[]')
+ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq --argjson a "${AGENTS_ALERTS}" '. + $a' 2>/dev/null || echo "${ALERTS_JSON}")
+echo "${ALERTS_JSON}" | jq empty 2>/dev/null || ALERTS_JSON='[]'
+
 # -- research: research-scout's review lane. How many articles wait for Eric to
 #    read, the top few, and the standing themes report over the takeaways he has
 #    already written. Loopback REST to the unified server (:8422/api/<tool>) —
@@ -527,6 +543,7 @@ if jq -n \
   --argjson weather "${WX_JSON}" \
   --argjson backup "${BACKUP_JSON}" \
   --argjson refinery "${REFINERY_JSON}" \
+  --argjson agents "${AGENTS_JSON}" \
   --argjson research "${RESEARCH_JSON}" '
   {
     generated_at: $now,
@@ -551,6 +568,7 @@ if jq -n \
                 + (if $mail_delta != null then " (\(if $mail_delta >= 0 then "+" else "" end)\($mail_delta) since last run)" else "" end)) },
       ops: $ops,
       refinery: $refinery,
+      agents: $agents,
       research: $research,
       website: $website,
       weather: $weather,
@@ -780,6 +798,7 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
         + (((.sections.refinery.buckets.active // [])[:5]) | map("\n  · " + (.title // .id)
             + " [" + (.pipeline // "?") + (if .step then " · " + .step else "" end) + "]") | join(""))
       else "" end)
+    + (if (.sections.agents.line // "") != "" then sec("AGENTS") + .sections.agents.line else "" end)
     + (if ((.sections.research.counts.awaiting // 0) > 0
            or ((.sections.research.lessons.themes // []) | length) > 0
            or (.sections.research.health.staleIngest // false)) then

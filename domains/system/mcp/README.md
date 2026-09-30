@@ -486,6 +486,7 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **nvidia-smi PATH fallback**: GPU tool tries PATH first, then `/run/current-system/sw/bin/nvidia-smi`
 
 ## Changelog
+- **2026-09-30**: `morning-brief.ts` prints `sections.agents.line`, the Agents line rendered by `ws ledger --json`, as a highlight and an Agents section. It renders nothing itself, so the text brief and this tool cannot disagree.
 - **2026-09-29**: The fallback gauntlet state dir in `config.ts` is `~/700_datax/gauntlets/sr_gauntlet/state`, following the gauntlet's move.
 - **2026-09-28**: The `datax_*` tools read the SR gauntlet's state dir instead of the retired sr_analyzer service. `executors/sr-gauntlet-state.ts` (renamed from `sr-gauntlet-ledger.ts`) reads `sr-cache.json`, where the gauntlet stamps each SR with SR2's `effectivePhase` and `effectiveNeedsReply` and records `syncedAt` after each whole-collection Firestore read, plus `ledger.json`. `datax_support_requests` is now read-only. The `move`, `delete` and `retriage` actions are gone, because they wrote to sr_analyzer's private copy and never to DataX; SR2 owns ticket state. `datax_api_health` reports the age of the gauntlet's last sync. `HWC_DATAX_ANALYZER_URL` and `HWC_DATAX_LEDGER_PATH` are replaced by `HWC_DATAX_GAUNTLET_STATE_DIR`, derived from `hwc.automation.srGauntlet.gauntletDir`. `tests/datax.test.ts` pins the file contract.
 

@@ -64,6 +64,7 @@ switching providers does not require changing runner code.
 
 ## Changelog
 
+- **2026-09-30** — The runner, run-now and review units merge `hwc.system.apps.agent-harness.pipelineEnvironment` (`HWC_PIPELINE=1`) instead of a local literal.
 - **2026-09-30** — Set `HWC_PIPELINE=1` in the runner environment, so the shared workspace guard reports on its headless agents and never denies.
 
 - **2026-09-26** — Use `ReadOnlyPaths = [ "-/mnt" ]` for both runners. Work has no `/mnt`; requiring it caused systemd to exit with `226/NAMESPACE` before the launcher could run. Existing media mounts remain read-only.

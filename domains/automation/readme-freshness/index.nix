@@ -88,7 +88,9 @@ in
       description = "README freshness — Law-12 drift report + autonomous fix";
       after = [ "network-online.target" "hwc-notify.service" ];
       wants = [ "network-online.target" ];
-      environment = {
+      # HWC_PIPELINE marker: the workspace-guard only reports on this unit's
+      # headless agent (producer: agent-harness sys.nix).
+      environment = (config.hwc.system.apps.agent-harness.pipelineEnvironment or { }) // {
         HOME             = paths.user.home;
         RF_REPO_DIR      = toString cfg.repoDir;
         RF_NOTIFY_URL    = cfg.notifyUrl;

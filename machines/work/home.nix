@@ -43,4 +43,7 @@
   # T3 serve and nightly-builds drive the npm-global claude/codex headless;
   # nothing else updates them here.
   hwc.home.apps.agent-harness.cliUpdates.enable = true;
+
+  # The project tracker hub runs here only: http://hwc-work:8765/ on the tailnet.
+  hwc.home.apps.agent-harness.tracker.enable = true;
 }

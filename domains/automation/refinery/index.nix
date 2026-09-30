@@ -25,6 +25,7 @@
 let
   cfg = config.hwc.automation.refinery;
   paths = config.hwc.paths;
+  pipelineEnv = config.hwc.system.apps.agent-harness.pipelineEnvironment or { };
   # The business role is not on every host that runs the refinery (xps takes the
   # server role alone), so the namespace may be absent: no workbench, no switcher.
   workbench = config.hwc.business.workbench or { enable = false; };
@@ -191,6 +192,9 @@ in
       description = "Refinery interactive engine board + intake";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ];
+      # HWC_PIPELINE marker: the workspace-guard only reports on the headless
+      # agents this unit launches (producer: agent-harness sys.nix).
+      environment = pipelineEnv;
       serviceConfig = {
         User = lib.mkForce "eric";
         Group = "users";
@@ -303,7 +307,7 @@ in
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
       path = [ pkgs.git pkgs.openssh ];
-      environment = {
+      environment = pipelineEnv // {
         REFINERY_ITEMS_DIR = "/var/lib/refinery/items";
         REFINERY_PIPELINES_DIR = "${pipelinesDir}";
         REFINERY_PIPELINE_STATE = "/var/lib/refinery/profiles.json";

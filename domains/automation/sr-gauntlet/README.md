@@ -60,6 +60,9 @@ units re-read it each run, so no restart is needed.
 
 ## Changelog
 
+- **2026-09-30**: Both units take the marker from
+  `hwc.system.apps.agent-harness.pipelineEnvironment` instead of a local literal.
+
 - **2026-09-30**: Set `HWC_PIPELINE=1` in both units' environment, so the
   shared workspace guard reports on their headless agents and never denies.
 
