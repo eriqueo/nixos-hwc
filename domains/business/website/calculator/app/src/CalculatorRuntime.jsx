@@ -65,7 +65,7 @@ function ImageCard({ option, selected, onClick }) {
         borderRadius: 12,
         cursor: "pointer",
         textAlign: "left",
-        border: selected ? `2px solid ${T.copper}` : `1.5px solid ${T.border}`,
+        border: selected ? `2px solid ${T.borderSelected}` : `1.5px solid ${T.border}`,
         background: selected ? T.copperLight : T.white,
         transition: "all 0.15s ease",
         fontFamily: "inherit",
@@ -127,7 +127,7 @@ function CompactCard({ option, selected, onClick }) {
   return (
     <button onClick={onClick} aria-pressed={selected} style={{
       padding: "16px 20px", borderRadius: 10, cursor: "pointer", textAlign: "left",
-      border: selected ? `2px solid ${T.copper}` : `1.5px solid ${T.border}`,
+      border: selected ? `2px solid ${T.borderSelected}` : `1.5px solid ${T.border}`,
       background: selected ? T.copperLight : T.white, transition: "all 0.15s ease",
       fontFamily: "inherit", display: "flex", alignItems: "center", gap: 14, width: "100%", boxShadow: T.cardShadow,
     }}
@@ -150,11 +150,11 @@ function CheckboxItem({ option, checked, onClick }) {
   return (
     <button onClick={onClick} aria-pressed={checked} style={{
       padding: "12px 14px", borderRadius: 8, cursor: "pointer", textAlign: "left",
-      border: checked ? `2px solid ${T.copper}` : `1.5px solid ${T.border}`,
+      border: checked ? `2px solid ${T.borderSelected}` : `1.5px solid ${T.border}`,
       background: checked ? T.copperLight : T.white, transition: "all 0.15s ease",
       fontFamily: "inherit", display: "flex", alignItems: "center", gap: 10, width: "100%",
     }}>
-      <div style={{ width: 20, height: 20, borderRadius: 4, flexShrink: 0, border: checked ? `2px solid ${T.copper}` : `2px solid #d1d5db`, background: checked ? T.copper : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: T.white, fontSize: 12, fontWeight: 700, transition: "all 0.15s" }}>
+      <div aria-hidden="true" style={{ width: 20, height: 20, borderRadius: 4, flexShrink: 0, border: checked ? `2px solid ${T.borderSelected}` : `2px solid ${T.borderHover}`, background: checked ? T.copper : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: T.charcoal, fontSize: 12, fontWeight: 700, transition: "all 0.15s" }}>
         {checked && "✓"}
       </div>
       <span style={{ fontSize: 16, fontWeight: 500, color: T.text }}>{option.label}</span>
