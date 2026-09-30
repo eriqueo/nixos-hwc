@@ -86,7 +86,7 @@ pasted. Their one-day delivery check remains open. Safety prerequisites and S1
 shadow are live. Eric created all six S2 labels. The disposable test email was
 sent, received and archived with All Mail and Sent preserved. The guarded probe
 passed live after the COPY source repair. The bounded S2 projector is now
-deployed and consumed on hwc-work at Nix `1e30d58b` / System One `251050a`.
+deployed and consumed on hwc-work, repaired at Nix `7b1f7e70` / System One `1096e14`.
 S3–S4 are not implemented.
 The corrected handoff contract is triage from both aerc and the Proton phone/web
 app, using the same classifier ledger. This adds transport observation and
@@ -329,3 +329,33 @@ unverified. Phone-label teaching remains off, unseen classifier accuracy remains
 unmeasured and S1 review remains due October 6. Evidence:
 `/home/eric/000_inbox/downloads/agent/proton-mail/verification/projection-live.json`
 and `verification/reopen-repaired.json` in that same project directory.
+
+### September 30 — label timeout and misleading outage alert
+
+The initial writer reserved an intent before its second read-only preflight.
+A normal deadline could then leave a requires-review receipt despite no remote
+mutation. That stopped label backfill. Core transport remained healthy, but
+mail-health treated the aggregate service exit as a critical mail outage.
+
+System One `1096e14` finishes read-only preparation before reservation and defers
+expired preparations without a receipt. Timeouts after effects still require
+readback. Explicit `review-label-write` checks the unchanged remote preimage and
+case before settling a pending receipt as not applied; it preserves its original
+error and audit history. Fresh intents use the reviewed key as their predecessor.
+The live review made zero remote mutations. The ledger was backed up first.
+
+All 91 classifier tests, full System One build/tests and Nix checks pass.
+Removing the preflight repair reproduces the failure. Nix `7b1f7e70` separates
+label warnings from transport failures; core/Trash failures and stale transport
+remain critical. The deployed decision function was exercised without sending
+notifications. Two actual core cycles verified 9 and 8 label updates, with no
+conflicts or unresolved writes. There are 52 verified applied receipts; all
+preserve real-folder UIDs and stars. Human correction/outcome counts remain
+31/86; sender preferences/corrections remain 23/21. All status lanes are healthy,
+and the ten-minute timer is active. The second cycle deferred 429 associations.
+
+Alert `72bbd8ce-ffa0-40ee-a1f8-0c2b88a146b9` had one successful SMTP delivery.
+Read-only Bridge headers show its Sent and received Inbox copies with the same
+Message-ID. They are preserved. Evidence:
+`/home/eric/000_inbox/downloads/agent/proton-mail/verification/deadline-repair-live.json`.
+S1 remains shadow until its October 6 review; phone-label teaching remains off.
