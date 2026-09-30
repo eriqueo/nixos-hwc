@@ -211,7 +211,7 @@ in
       text/calendar = ${aercPkg}/libexec/aerc/filters/calendar
       text/* = cat -
       message/delivery-status = ${aercPkg}/libexec/aerc/filters/colorize
-      image/* = ${pkgs.bash}/bin/bash -lc 'if [ -n "$KITTY_WINDOW_ID" ]; then ${pkgs.kitty}/bin/kitty +kitten icat --stdin yes; else ${pkgs.chafa}/bin/chafa -f sixel -s $(${pkgs.ncurses}/bin/tput cols)x0 -; fi'
+      # No image filter: Vaxis selects native graphics or portable half blocks.
       application/pdf = ${pkgs.poppler-utils}/bin/pdftotext -layout - -
       application/json = ${pkgs.jq}/bin/jq -C . 2>/dev/null || cat -
       subject,~^\[PATCH = ${aercPkg}/libexec/aerc/filters/hldiff

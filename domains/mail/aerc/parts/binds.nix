@@ -1,4 +1,4 @@
-{ lib, pkgs, config, mailContract, ... }:
+{ lib, pkgs, config, mailContract, aercPkg, ... }:
 let
   tags = import ./tags.nix { inherit lib; };
 
@@ -10,6 +10,7 @@ let
   # Native copy-link scans raw HTML and can retain &amp; in a target. Parse
   # the complete MIME message with urlscan for both viewer shortcuts instead.
   urlPicker = ":pipe -m ${pkgs.urlscan}/bin/urlscan --dedupe -f '${config.home.homeDirectory}/.local/bin/hwc-open {}'<Enter>";
+  imageView = ":pipe -m ${pkgs.bash}/bin/bash -o pipefail -c '${pkgs.python3}/bin/python3 ${./plain-text-filter.py} --message-images ${aercPkg}/libexec/aerc/filters/html ${pkgs.chafa}/bin/chafa | ${pkgs.less}/bin/less -R -~'<Enter>";
 
   # Workbench/Zellij owns Ctrl navigation. Inside aerc, Alt+j/k moves through
   # the vertical folder list and Alt+h/l moves through the horizontal tab bar.
@@ -87,6 +88,7 @@ let
 
     OPENED MESSAGE LINKS
     Ctrl-click a URL/reference  open in laptop browser
+    I  view embedded pictures   q  return to normal view
     u / U  URL picker (Enter copies; q exits; any key closes finished tab)
 
     MESSAGES (no leader)
@@ -225,6 +227,7 @@ ${tabBinds}
       a = :pipe -m ${archiveCmd}<Enter>:close<Enter>
       d = :pipe -m ${trashCmd}<Enter>:close<Enter>
       H = :toggle-headers<Enter>
+      I = ${imageView} # view embedded pictures
       u = ${urlPicker}
       / = :toggle-key-passthrough<Enter>/
       O = :open<Enter>

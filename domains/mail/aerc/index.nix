@@ -12,7 +12,7 @@ let
   aercPkg = import ./package.nix { inherit pkgs inputs; };
 
   cfgPart    = import ./parts/config.nix   { inherit lib pkgs config aercPkg mailContract; };
-  bindsPart  = import ./parts/binds.nix  { inherit lib pkgs config mailContract; };
+  bindsPart  = import ./parts/binds.nix  { inherit lib pkgs config mailContract aercPkg; };
   sievePart  = import ./parts/sieve.nix  { inherit lib pkgs config; };
 in
 {

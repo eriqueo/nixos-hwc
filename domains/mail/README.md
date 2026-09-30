@@ -24,6 +24,7 @@ mail/
 │   └── parts/
 │       ├── config.nix         # aerc.conf, accounts.conf, queries, stylesets, templates
 │       ├── binds.nix          # Keybindings + ov pager config
+│       ├── plain-text-filter.py # Safe text, labeled links, optional embedded pictures
 │       ├── appearance.nix     # Palette-driven styleset
 │       ├── tags.nix           # Taxonomy adapter for queries, styles, and bindings
 │       ├── tags-custom.json   # User-defined aerc-only tags
@@ -111,6 +112,9 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-09-30: Added aerc's `I` embedded-picture view using local attachments and
+  portable colored blocks; kept the normal reader and blocked remote images.
+  Image attachment viewing now uses Vaxis's graphics detection and fallback.
 - 2026-09-30: Connect System One's bounded one-way `@` label projector after healthy
   core transport/index/shadow checks under the existing sync lock. Its `labels`
   lane and private report expose pending writes, conflicts and deferred work.

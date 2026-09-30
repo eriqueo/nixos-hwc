@@ -945,6 +945,10 @@
       aerc-rendering = let
         home = mailHome;
         aercConf = home.home.file.".config/aerc/aerc.conf".text;
+        imageWiring = pkgs.writeText "aerc-image-wiring.json" (builtins.toJSON {
+          binds = home.home.file.".config/aerc/binds.conf".text;
+          conf = aercConf;
+        });
         plainFilterLine = builtins.head (lib.filter
           (line: lib.hasPrefix "text/plain = " line)
           (lib.splitString "\n" aercConf));
@@ -988,6 +992,60 @@
         assert "\n\n\n" not in text, "excess blank lines remain"
         assert max(map(len, text.splitlines())) <= 100, "visible line exceeds reading measure"
         assert text.count("Nicole sent you a new request.") == 1, "message content changed or duplicated"
+        PY
+        ${pkgs.python3}/bin/python3 - ${imageWiring} <<'PY'
+        import json, re, shlex, struct, subprocess, sys, zlib
+        from email.message import EmailMessage
+        from email import policy
+        from pathlib import Path
+
+        wiring = json.loads(Path(sys.argv[1]).read_text())
+        def image_command(binds):
+            view = binds.split('[view]\n', 1)[1].split('[view::', 1)[0]
+            line = next(line.strip() for line in view.splitlines() if line.strip().startswith('I = '))
+            assert line.startswith('I = :pipe -m '), 'image view must receive the complete MIME message'
+            return line.removeprefix('I = :pipe -m ').split('<Enter>', 1)[0]
+        command = image_command(wiring['binds'])
+        for broken in [re.sub(r'^I = .*$', "", wiring['binds'], flags=re.M),
+                       wiring['binds'].replace('I = :pipe -m ', 'I = :pipe -p ')]:
+            try:
+                image_command(broken)
+            except (StopIteration, AssertionError):
+                pass
+            else:
+                raise AssertionError('image wiring check accepted a removed or part-only binding')
+        assert not re.search(r'^image/\*\s*=', wiring['conf'].split('[filters]', 1)[1].split('[openers]', 1)[0], re.M)
+        # Run the generated binding, replacing only its interactive pager.
+        command = command.replace('${pkgs.less}/bin/less -R -~', '${pkgs.coreutils}/bin/cat')
+        def chunk(kind, data):
+            return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+        png = b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 2, 2, 8, 2, 0, 0, 0))
+        png += chunk(b'IDAT', zlib.compress(b'\0\xff\0\0\0\0\xff' * 2)) + chunk(b'IEND', b"")
+        def message(data=png):
+            msg = EmailMessage()
+            msg.set_content('<p>Before picture</p><img src="cid:picture" alt="Fixture">'
+                '<p>After picture</p><img src="https://tracking.invalid/pixel" alt="Remote">'
+                '<img src="cid:missing" alt="Missing">'
+                '<p>\x1b[31muntrusted\x1b[0m</p>'
+                '<a href="https://example.invalid/?a=1&amp;b=2">Action</a>', subtype='html')
+            msg.add_related(data, maintype='image', subtype='png', cid='<picture>')
+            return msg.as_bytes(policy=policy.SMTP)
+        def run(raw):
+            result = subprocess.run(shlex.split(command), input=raw, capture_output=True, timeout=30)
+            assert result.returncode == 0, result.stderr
+            return result.stdout.decode()
+        output = run(message())
+        assert output.index('Before picture') < output.index('[Fixture]') < output.index('After picture')
+        assert '\x1b[' in output, 'real chafa must produce colored image cells'
+        assert '\x1b[31m' not in output, 'sender terminal controls escaped sanitization'
+        assert 'Remote: remote image blocked' in output
+        assert 'Missing: attached image missing' in output
+        assert 'https://example.invalid/?a=1&b=2' in output, 'HTML action URL changed'
+        assert 'image could not be displayed' in run(message(b'not a PNG'))
+        plain = EmailMessage()
+        plain.set_content('Plain message\n\x1b[31muntrusted\x1b[0m')
+        assert '\x1b' not in run(plain.as_bytes())
+        print('aerc image binding: MIME ordering, real image output, links, blocked remote images, missing/corrupt images, and control sanitization pass')
         PY
         touch "$out"
       '';

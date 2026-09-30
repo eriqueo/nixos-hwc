@@ -20,7 +20,7 @@ aerc/
   package.nix            # Forked aerc package from the flake input
   parts/
     config.nix           # aerc.conf, accounts.conf, notmuch-queries, stylesets, templates
-    plain-text-filter.py # Control sanitization and compact links for plain/HTML output
+    plain-text-filter.py # Safe plain/HTML text, links, and optional embedded-image view
     binds.nix            # binds.conf (keybindings) + ov pager config
     appearance.nix       # hwc styleset (palette-driven)
     tags.nix             # Mail taxonomy adapter for queries, styles, and bindings
@@ -346,12 +346,18 @@ the first-level navigation popup.
 | `text/calendar` | aerc calendar filter |
 | `text/*` | cat passthrough |
 | `message/delivery-status` | colorize |
-| `image/*` | kitty icat (if Kitty) or chafa sixel |
+| `image/*` | Native Vaxis image viewer; detects graphics support and falls back to half blocks |
 | `application/pdf` | pdftotext |
 | `application/json` | jq colored |
 | `subject,~^\[PATCH` | hldiff (patch highlighting) |
 
 Multipart converter: pandoc markdown-to-HTML for rich email composition (`H` in compose review).
+
+Press `I` in an opened message to show embedded CID pictures at their position
+in the text. This view uses colored half blocks through SSH and multiplexers;
+`q` returns to the normal viewer. Remote images stay blocked. Press `l`/`h`
+to select an image attachment for aerc's native viewer. The optional view limits
+messages to 32 MiB and images to 32, at most 100 columns by 24 rows each.
 
 ## Sending
 
@@ -376,6 +382,11 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
    `proton/Labels/<name>/`.
 
 ## Changelog
+
+- 2026-09-30: Added `I` for a local embedded-image view that preserves readable
+  text and original links. Remote pictures stay blocked; corrupt or missing
+  attachments show a message. Removed the forced Kitty/sixel attachment filter
+  so Vaxis can detect graphics support and provide its portable fallback.
 
 - 2026-09-30: Removed legacy label assignments after Eric deleted all old
   Proton labels. `02-routing` keeps reviewed Seen/Archive and hide-my-email
