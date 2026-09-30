@@ -15,13 +15,13 @@ let
       fi
       case "''${1:-}" in
         ${lib.optionalString cfg.residency.enable ''
-        observe-residency|label-probe|project-labels)
+        observe-residency|label-probe|project-labels|review-label-write)
           verb="$1"
           shift
           guard=()
           transport_args=(--notmuch ${pkgs.notmuch}/bin/notmuch)
           output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/residency-shadow.json"}
-          if [ "$verb" = label-probe ]; then
+          if [ "$verb" = label-probe ] || [ "$verb" = review-label-write ]; then
             transport_args=()
             output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/label-probe.json"}
           fi

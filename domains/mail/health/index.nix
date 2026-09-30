@@ -43,6 +43,7 @@ let
     SYNC_STATUS=${lib.escapeShellArg (config.hwc.paths.user.mailSyncStatus or "${config.home.homeDirectory}/.local/state/mail-sync/status.json")}
     TRASH_SYNC_MAX_AGE_MIN="${toString cfg.trashSyncMaxAgeMin}"
     TRASH_TIMER_ENABLED="${if (config.hwc.mail.mbsync.trashTimerEnable or false) then "true" else "false"}"
+    LABEL_PROJECTION_ENABLED="${if (config.hwc.mail.classifier.projection.enable or false) then "true" else "false"}"
 
     mkdir -p "$STATE_DIR"
 
@@ -255,18 +256,18 @@ let
       fi
 
       check_lane() {
-        local lane=$1 max_age=$2 state outcome code success_epoch age_min
+        local lane=$1 max_age=$2 severity=''${3:-fail} state outcome code success_epoch age_min
         state=$(${pkgs.jq}/bin/jq -r --arg lane "$lane" '.lanes[$lane].state // "missing"' "$SYNC_STATUS")
         outcome=$(${pkgs.jq}/bin/jq -r --arg lane "$lane" '.lanes[$lane].lastOutcome // "unknown"' "$SYNC_STATUS")
         code=$(${pkgs.jq}/bin/jq -r --arg lane "$lane" '.lanes[$lane].exitCode // -1' "$SYNC_STATUS")
         success_epoch=$(${pkgs.jq}/bin/jq -r --arg lane "$lane" '.lanes[$lane].lastSuccessEpoch // 0' "$SYNC_STATUS")
         if [[ "$state" != healthy ]]; then
-          fail "Mail sync lane $lane is $state ($outcome, exit $code)"
+          "$severity" "Mail sync lane $lane is $state ($outcome, exit $code). Inspect $SYNC_STATUS."
           return
         fi
         age_min=$(( ($(now_epoch) - success_epoch) / 60 ))
         if (( success_epoch == 0 || age_min > max_age )); then
-          fail "Mail sync lane $lane last succeeded ''${age_min}m ago (threshold: ''${max_age}m)"
+          "$severity" "Mail sync lane $lane last succeeded ''${age_min}m ago (threshold: ''${max_age}m)"
         fi
       }
 
@@ -275,11 +276,24 @@ let
         check_lane trash "$TRASH_SYNC_MAX_AGE_MIN"
       fi
 
-      local core_result
+      local core_result main_status label_state=disabled label_code=-1
+      if [[ "$LABEL_PROJECTION_ENABLED" == true ]]; then
+        check_lane labels "$SYNC_MAX_AGE_MIN" warn
+        label_state=$(${pkgs.jq}/bin/jq -r '.lanes.labels.state // "missing"' "$SYNC_STATUS")
+        label_code=$(${pkgs.jq}/bin/jq -r '.lanes.labels.exitCode // -1' "$SYNC_STATUS")
+      fi
       core_result=$(${pkgs.systemd}/bin/systemctl --user show mbsync.service \
         --property Result --value 2>/dev/null || echo unknown)
       if [[ "$core_result" != success ]]; then
-        fail "mbsync.service result is $core_result"
+        main_status=$(${pkgs.systemd}/bin/systemctl --user show mbsync.service \
+          --property ExecMainStatus --value 2>/dev/null || echo unknown)
+        # The sync owner publishes transport and labels separately. A known
+        # label failure must not page "Mail DOWN" after successful transport.
+        # Core/Trash failures and staleness above remain critical.
+        if [[ "$core_result" != exit-code || "$label_state" != degraded \
+              || "$label_code" == 0 || "$label_code" == -1 || "$main_status" != "$label_code" ]]; then
+          fail "mbsync.service result is $core_result (exit $main_status)"
+        fi
       fi
     }
 

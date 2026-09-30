@@ -41,7 +41,7 @@ mail/
 │       ├── runtime.nix        # Env vars, PATH handling
 │       └── service.nix        # systemd user service unit
 ├── classifier/
-│   ├── index.nix              # controls, contract, residency shadow, guarded probe and live label projection
+│   ├── index.nix              # controls, contract, observer, label projection and explicit pending-write review
 │   └── sys.nix                # pinned Laya + local Nomic hybrid service
 ├── calendar/
 │   ├── index.nix              # khal + vdirsyncer integration; extraVdirsyncerPairs option
@@ -112,6 +112,12 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-09-30: Complete label preflight before reserving writes, so a read-only
+  deadline defers without blocking later cycles. Add shared locked read-only
+  review for an unchanged pending preimage, preserving its error and an explicit
+  not-applied outcome. Mail health reports label failure separately from healthy
+  transport and keeps real core/Trash outages and unknown process failures critical.
 - 2026-09-30: Added aerc's `I` embedded-picture view using local attachments and
   portable colored blocks; kept the normal reader and blocked remote images.
   Image attachment viewing now uses Vaxis's graphics detection and fallback.

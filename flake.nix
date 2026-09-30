@@ -1076,6 +1076,54 @@
         touch "$out"
       '';
 
+      mail-health-lanes = pkgs.runCommand "mail-health-lanes" {} ''
+        ${pkgs.python3}/bin/python3 - ${mailHome.home.file.".local/bin/mail-health-check".source} <<'PY'
+        import copy, json, os, pathlib, re, shlex, subprocess, sys, tempfile
+        source = pathlib.Path(sys.argv[1]).read_text()
+        start = source.index('check_mbsync() {')
+        fragment = source[start:source.index('# ─── Check 5:', start)]
+        healthy = {'state': 'healthy', 'lastOutcome': 'success', 'exitCode': 0, 'lastSuccessEpoch': 9900}
+        base = {'schemaVersion': 1, 'lanes': {k: copy.deepcopy(healthy) for k in ['core', 'trash', 'labels']}}
+        def run(text, status, result='success', exit_code=0, projection=True):
+            with tempfile.TemporaryDirectory() as d:
+                root = pathlib.Path(d); state = root/'status.json'; state.write_text(json.dumps(status))
+                ctl = root/'systemctl'
+                ctl.write_text('#!${pkgs.python3}/bin/python3\nimport os,sys\n'
+                    'if "show" in sys.argv: print(os.environ["RESULT"] if "Result" in sys.argv else os.environ["EXIT_CODE"])\n')
+                ctl.chmod(0o700)
+                script = re.sub(r'/nix/store/[^\s]+/bin/systemctl', str(ctl), text)
+                header = 'set -eu\nSYNC_STATUS='+shlex.quote(str(state))+'\nSYNC_MAX_AGE_MIN=45\nTRASH_SYNC_MAX_AGE_MIN=1800\nTRASH_TIMER_ENABLED=true\n'
+                header += 'LABEL_PROJECTION_ENABLED='+str(projection).lower()+'\nnow_epoch() { echo 10000; }\nfail() { echo "F:$*"; }\nwarn() { echo "W:$*"; }\n'
+                r = subprocess.run(['${pkgs.bash}/bin/bash','-c',header+script+'\ncheck_mbsync\n'],capture_output=True,text=True,
+                    env={**os.environ,'RESULT':result,'EXIT_CODE':str(exit_code)})
+                assert r.returncode == 0, r.stderr
+                return r.stdout.splitlines()
+        def label_failure(text):
+            s = copy.deepcopy(base); s['lanes']['labels'].update(state='degraded',lastOutcome='projection-failed',exitCode=69)
+            lines = run(text,s,'exit-code',69)
+            assert not any(x.startswith('F:') for x in lines), lines
+            assert any(x.startswith('W:Mail sync lane labels is degraded') for x in lines), lines
+        label_failure(fragment)
+        assert run(fragment,base) == []
+        s = copy.deepcopy(base); s['lanes']['core'].update(state='degraded',exitCode=1)
+        assert any(x.startswith('F:Mail sync lane core') for x in run(fragment,s,'exit-code',1))
+        s = copy.deepcopy(base); s['lanes']['core']['lastSuccessEpoch']=1
+        assert any(x.startswith('F:Mail sync lane core last succeeded') for x in run(fragment,s))
+        assert any(x.startswith('F:Mail sync status is missing') for x in run(fragment,{}))
+        assert any(x.startswith('F:mbsync.service') for x in run(fragment,base,'exit-code',23))
+        s = copy.deepcopy(base); s['lanes']['labels']['lastSuccessEpoch']=1
+        assert any(x.startswith('W:Mail sync lane labels last succeeded') for x in run(fragment,s))
+        del s['lanes']['labels']; assert run(fragment,s,projection=False)==[]
+        broken,count=re.subn(r'if \[\[ "\$core_result" != exit-code.*?\]\]; then','if true; then',fragment,flags=re.S)
+        assert count==1
+        try: label_failure(broken)
+        except AssertionError: pass
+        else: raise AssertionError('removed health distinction passed wiring test')
+        print('generated mail health: label warning, healthy transport, real failures, stale lanes and removed wiring pass')
+        PY
+        touch "$out"
+      '';
+
       mail-residency-shadow = let
         home = mailHome;
         fixture = pkgs.writeText "mail-residency-shadow.json" (builtins.toJSON {
@@ -1382,6 +1430,16 @@
             assert projected[:3] == ['project-labels', '--db', '/var/lib/hwc/mail-classifier/ledger.sqlite']
             assert '--notmuch' in projected
             assert projected[projected.index('--output') + 1].endswith('/labels.json')
+            reviewed = dispatch(control, 'review-label-write')
+            assert reviewed[:3] == ['review-label-write', '--db', '/var/lib/hwc/mail-classifier/ledger.sqlite']
+            assert '--bridge-host' in reviewed and '--notmuch' not in reviewed
+            try:
+                broken_review = dispatch(control.replace('|review-label-write', ""), 'review-label-write')
+                assert '--bridge-host' in broken_review and '--notmuch' not in broken_review
+            except AssertionError:
+                pass
+            else:
+                raise AssertionError('dispatcher accepted removed review wiring')
             try:
                 check(dispatch(control.replace("|reopen", "")))
             except AssertionError:
