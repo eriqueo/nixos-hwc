@@ -21,6 +21,37 @@
 let
   cfg = config.hwc.home.apps.zellij;
 
+  # Temporary release fallback: the pinned channels still ship 0.44.3, which
+  # cannot forward Kitty graphics. Removed automatically once nixpkgs >= 0.45.1.
+  graphicsPackage = if lib.versionAtLeast pkgs.zellij.version "0.45.1" then pkgs.zellij
+    else pkgs.stdenvNoCC.mkDerivation {
+      pname = "zellij";
+      version = "0.45.1";
+      src = pkgs.fetchurl {
+        url = "https://github.com/zellij-org/zellij/releases/download/v0.45.1/zellij-x86_64-unknown-linux-musl.tar.gz";
+        hash = "sha256:40bcc2e03f5d5ae8e054e39f676081fe12ab70871506996ba595834c3718eefc";
+      };
+      sourceRoot = ".";
+      dontConfigure = true;
+      dontBuild = true;
+      installPhase = ''
+        runHook preInstall
+        install -Dm755 zellij "$out/bin/zellij"
+        runHook postInstall
+      '';
+      doInstallCheck = true;
+      installCheckPhase = ''
+        "$out/bin/zellij" --version | ${pkgs.ripgrep}/bin/rg '^zellij 0\.45\.1$'
+      '';
+      meta = {
+        description = "Terminal workspace with Kitty graphics support";
+        homepage = "https://zellij.dev";
+        license = lib.licenses.mit;
+        platforms = [ "x86_64-linux" ];
+        mainProgram = "zellij";
+      };
+    };
+
   # The active system palette, flat token -> hex (no leading '#').
   colors = (config.hwc.home.theme or {}).colors or {};
 
@@ -61,6 +92,12 @@ in
   options.hwc.home.apps.zellij = {
     enable = lib.mkEnableOption "zellij — terminal multiplexer (workbench's pane host)";
 
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = graphicsPackage;
+      description = "Pane host package shared by Zellij and Workbench.";
+    };
+
     defaultLayout = lib.mkOption {
       type = lib.types.str;
       default = "workbench";
@@ -72,7 +109,7 @@ in
   # IMPLEMENTATION
   #============================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.zellij ];
+    home.packages = [ cfg.package ];
 
     # zellij reads $XDG_CONFIG_HOME/zellij/config.kdl + layouts/*.kdl.
     # We DO NOT use programs.zellij.settings (it hardcodes its own theme path);

@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+`apps/zellij` owns the graphics-capable pane host package consumed by Workbench's wrapper and restart helper.
+
 `apps/yazi/` owns the persistent favorites column, its bounded atomic data
 store, Alt navigation, and package-bound storage tests.
 
@@ -77,6 +79,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-30: Prepare Zellij 0.45.1 and Workbench's shared runtime without restarting running sessions.
 - 2026-09-30: Add Yazi's persistent favorites sidebar, Alt focus/navigation, editable bookmarks, natural sorting, and Zoxide history.
 - 2026-09-30: Remove home model links, consume rooted Whisper store files, declare Go runtime/cache placement and monthly retention, and stop XDG activation from recreating `~/Projects`.
 - 2026-09-30: Give credential utilities readable floating windows without narrowing the browser; restore Bitwarden portal file selection through an app-scoped relay that keeps vault processes protected and drains on exit.

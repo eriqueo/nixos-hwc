@@ -661,13 +661,20 @@
       assert lib.assertMsg (home.programs.workbench.defaultHub == navigation.landingHub
         && home.programs.workbench.tabs == navigation.launcherTabs)
         "workbench check: launcher destinations differ from layout";
+      assert lib.assertMsg (lib.versionAtLeast home.hwc.home.apps.zellij.package.version "0.45.1"
+        && lib.elem home.hwc.home.apps.zellij.package home.programs.workbench.extraRuntimePackages
+        && lib.elem home.hwc.home.apps.zellij.package home.home.packages)
+        "workbench check: shell and wrapper must share the graphics-capable pane host";
       assert lib.assertMsg (lib.all (entry: lib.hasInfix
         "${entry.key}|goto-tab|${toString navigation.tabFor.${entry.target}}|${entry.desc}" configKdl) jumps)
         "workbench check: generated grammar indices differ from navigation";
       assert lib.assertMsg (destinationFor "m" == "tool:aerc" && destinationFor "i" == "hub:mail"
         && destinationFor "R" == "hub:refinery" && destinationFor "N" == "hub:nightly")
         "workbench check: mail/refinery/nightly shortcuts changed destination";
-      pkgs.runCommand "workbench-navigation" {} ''touch "$out"'';
+      pkgs.runCommand "workbench-navigation" {} ''
+        ${lib.getExe home.hwc.home.apps.zellij.package} --version
+        touch "$out"
+      '';
 
       # Seed failures through the same taxonomy helper used by Sieve and the
       # Gmail janitor. Force the views: tryEval alone only checks the outer set.

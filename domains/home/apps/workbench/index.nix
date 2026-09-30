@@ -15,6 +15,7 @@
 
 let
   cfg = config.hwc.home.apps.workbench;
+  zellijPkg = config.hwc.home.apps.zellij.package;
 
   # Active system palette -> flat token map, string values only, handed to the
   # app as JSON via the generic module's `palette` option (which sets
@@ -56,12 +57,17 @@ let
   # source of truth that resolves both from the keybind and from interactive
   # shells. Kills the named session first (picks up layout edits) then re-creates
   # it fresh — i.e. SUPER+W now reloads workbench every time, by design. Bare
-  # `zellij` (PATH, not a pinned store path) so the reload uses the SAME zellij
-  # that owns the session. Run from a fresh terminal; never from inside the
+  # The selected package is shared with the wrapper and shell. Run from a
+  # fresh terminal; never from inside the
   # workbench session it would kill.
   wbReload = pkgs.writeShellScriptBin "wb-reload" ''
-    zellij delete-session workbench --force 2>/dev/null || true
-    exec zellij attach -c workbench
+    # Temporary migration: old servers use a version-specific socket directory.
+    # Removed automatically once nixpkgs supplies the graphics-capable release.
+    ${lib.optionalString (lib.versionOlder pkgs.zellij.version "0.45.1") ''
+      ${lib.getExe pkgs.zellij} delete-session workbench --force 2>/dev/null || true
+    ''}
+    ${lib.getExe zellijPkg} delete-session workbench --force 2>/dev/null || true
+    exec ${lib.getExe zellijPkg} attach -c workbench
   '';
 in
 {
@@ -131,7 +137,7 @@ in
       # session PATH (same as the Hyprland keybind in apps/hyprland/parts/behavior.nix).
       launchers.browser = "gpu-launch chromium-hwc-workbench";
       extraRuntimePackages = with pkgs; [
-        zellij        # the multiplexer workbench drives
+        zellijPkg     # same pane host as the shell and restart helper
         yazi          # peer pane: files
         neovim        # peer pane: editor
         codexPkg      # selected-item agent provider

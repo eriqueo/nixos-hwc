@@ -13,12 +13,13 @@ meta-leader which-key plugin when the unified keymap grammar is present.
 - ❌ Intra-app Space leaders belong to each app; zellij owns only the inter-app meta layer
 
 ## Structure
-- `index.nix` — options, packages, config.kdl/layout/plugin via xdg.configFile
+- `index.nix` — selected graphics-capable package shared with Workbench; options, config.kdl/layout/plugin via xdg.configFile
 - `parts/appearance.nix` — palette → KDL themes block
 - `parts/layout.nix` — workbench pane-grid KDL (late-bound mail command)
 - `parts/tabs.nix` — versioned hub registry consumer + structured tool tab set (order = GoToTab indices)
 
 ## Changelog
+- 2026-09-30: Select Zellij 0.45.1 for Kitty pixels while the pinned channels ship 0.44.3; use nixpkgs once it reaches 0.45.1.
 - 2026-09-15: Add the `agents` tool tab (herdr, order 60), started suspended so
   opening the workbench does not attach a herdr session.
 - 2026-09-07: Consume Workbench registry v2: Brief first/landing; filter explicit
