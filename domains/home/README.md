@@ -18,7 +18,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
-`core/shell/` owns SSH hosts and shell shortcuts: `home`, `work`, `foxtrot`, `datax` (the MCP droplet), `lil-box`, `xps`, and `home-lan`; `website` retains its existing Hostinger login. `ssh server` remains available for existing Git remotes.
+`core/shell/` owns SSH hosts and shell shortcuts: `home`, `work`, `foxtrot`, `datax` (the MCP droplet), `lil-box`, `xps`, and `home-lan`; `website` uses the laptop's existing Ed25519 key for its Hostinger login. `ssh server` remains available for existing Git remotes.
 
 The harness input carries a text-only home-host correction atop the existing pin; unrelated harness changes are excluded.
 
@@ -61,6 +61,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-30: Point `website` at the existing `id_ed25519` key instead of the absent `hostinger_deploy` key; Hostinger must authorize its public key before key login works.
 - 2026-09-30: Replace the `server` shell shortcut with `home`; add work, Foxtrot, DataX MCP, lil-box and home-LAN shortcuts using SSH host entries; preserve legacy SSH hostnames.
 - 2026-09-26: Pin the scoped harness hostname correction; preserve T3 launch commands and active sessions.
 - 2026-09-26: Bound work's rootless build-image growth with a user timer; preserve container references, named images, volumes and recent rollback images.

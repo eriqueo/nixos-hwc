@@ -23,7 +23,7 @@
   "vpnon" = "sudo systemctl start wg-quick-protonvpn"; "vpnoff" = "sudo systemctl stop wg-quick-protonvpn";
   "vpnstatus" = "sudo wg show protonvpn 2>/dev/null || echo 'VPN disconnected'";
   "vpnport" = "cat /run/protonvpn-natpmp/port 2>/dev/null || echo 'no forwarded port (VPN down?)'";
-  "website" = "ssh -i ~/.ssh/hostinger_deploy -p 65002 u930853409@194.195.84.13";
+  "website" = "ssh -i ~/.ssh/id_ed25519 -p 65002 u930853409@194.195.84.13";
   "cdn" = "cd ~/.nixos";
   "cdd" = "cd ~/700_datax/datax"; "cdj" = "cd ~/700_datax/dx-mcp";
   "downloads" = "cd ~/000_inbox/downloads"; "hwc" = "cd ~/100_hwc"; "inbox" = "cd ~/000_inbox";
