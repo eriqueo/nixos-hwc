@@ -1017,7 +1017,9 @@
                 raise AssertionError('image wiring check accepted a removed or part-only binding')
         assert not re.search(r'^image/\*\s*=', wiring['conf'].split('[filters]', 1)[1].split('[openers]', 1)[0], re.M)
         # Run the generated binding, replacing only its interactive pager.
-        command = command.replace('${pkgs.less}/bin/less -R -~', '${pkgs.coreutils}/bin/cat')
+        pager_pattern = r'/nix/store/[^\s]+/bin/less -R -~'
+        assert len(re.findall(pager_pattern, command)) == 1
+        command = re.sub(pager_pattern, '${pkgs.coreutils}/bin/cat', command)
         def chunk(kind, data):
             return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
         png = b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 2, 2, 8, 2, 0, 0, 0))
@@ -1039,6 +1041,7 @@
             assert result.returncode == 0, result.stderr
             return result.stdout.decode()
         output = run(message())
+        assert all(label in output for label in ['Before picture', '[Fixture]', 'After picture']), repr(output)
         assert output.index('Before picture') < output.index('[Fixture]') < output.index('After picture')
         assert '\x1b[' in output, 'real chafa must produce colored image cells'
         assert '\x1b[31m' not in output, 'sender terminal controls escaped sanitization'
