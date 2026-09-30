@@ -45,7 +45,7 @@ let
   botTokenFile = "/run/agenix/${discord.botTokenSecret}";
 
   node = "/run/current-system/sw/bin/node";
-  tsx = "${cfg.workspaceRoot}/node_modules/tsx/dist/cli.mjs";
+  tsNode = import ../../../../lib/mkTsNode.nix { } cfg.workspaceRoot;
   cli = "${cfg.projectDir}/src/cli.ts";
 
   # ── Target registry ──
@@ -224,12 +224,12 @@ in
         Type = "simple";
         ExecStartPre = [
           "${pkgs.coreutils}/bin/test -f ${cli}"
-          "${pkgs.coreutils}/bin/test -f ${tsx}"
+          "${pkgs.coreutils}/bin/test -f ${tsNode.loader}"
           "${pkgs.coreutils}/bin/test -s ${botTokenFile}"
         ]
         ++ map (file: "${pkgs.coreutils}/bin/test -s ${file}") targetTokenFiles
         ++ [ restartJitter ];
-        ExecStart = "${node} ${tsx} ${cli} serve";
+        ExecStart = tsNode.run node cli "serve";
         WorkingDirectory = cfg.projectDir;
         User = "eric";
         Group = "users";
@@ -267,7 +267,7 @@ in
       path = [ pkgs.nodejs ];
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${node} ${tsx} ${cli} summary";
+        ExecStart = tsNode.run node cli "summary";
         WorkingDirectory = cfg.projectDir;
         User = "eric";
         Group = "users";

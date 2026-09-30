@@ -24,6 +24,7 @@ lib/
 ├── hm.nix                 # HM handshakes, fleet data, runtime Radicale password argv
 ├── mkContainer.nix        # Application containers (media apps, *arr services)
 ├── mkInfraContainer.nix   # Infrastructure containers (gluetun, pihole)
+├── mkTsNode.nix           # Direct-node tsx loader launcher for Scout native units
 └── arr-config.nix         # *arr-specific config.xml enforcement
 ```
 
@@ -50,6 +51,7 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+- 2026-09-29: Add `mkTsNode.nix`: `{ loader, run }` for units that run Scout TypeScript with `node --import` on the hoisted tsx loader, so the unit's main PID is the app. Consumers: lead/home/research/event scout and hwc-control-bot.
 - 2026-09-26: Standalone HM fleet fallback and dependency-update commands use hwc-home.
 - 2026-09-25: `arr-config.nix` `mkArrWebhookScript` requires `webhookUrl` (no hwc-server literal default); callers derive it from `hwc.automation.n8n.publicUrl`.
 - 2026-09-21: `hm.nix` `fleet` also returns `lanIps` (from `hwc.networking.hosts.lanIps`, literal fallback for standalone HM), for the `server-lan` fallback.

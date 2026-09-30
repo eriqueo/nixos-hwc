@@ -6,7 +6,7 @@ let
   dbName = "event_scout";
   appDir = "${cfg.workspaceRoot}/apps/event-scout";
   cli = "${appDir}/src/cli.ts";
-  tsx = "${cfg.workspaceRoot}/node_modules/tsx/dist/cli.mjs";
+  tsNode = import ../../../../lib/mkTsNode.nix { } cfg.workspaceRoot;
   tokenFile = config.hwc.secrets.api.${cfg.controlTokenSecret};
   inbox = "${config.hwc.paths.user.home}/000_inbox/downloads";
   origin = "https://event-scout.${config.hwc.networking.shared.vhostDomain}";
@@ -29,7 +29,7 @@ let
     WorkingDirectory = appDir;
     ExecStartPre = [
       "${pkgs.coreutils}/bin/test -f ${cli}"
-      "${pkgs.coreutils}/bin/test -f ${tsx}"
+      "${pkgs.coreutils}/bin/test -f ${tsNode.loader}"
       "${pkgs.coreutils}/bin/test -s ${tokenFile}"
       "${pkgs.coreutils}/bin/test -f ${appDir}/frontend/dist/index.html"
     ];
@@ -40,7 +40,7 @@ let
     ProtectHome = "read-only";
     ReadWritePaths = [ inbox ];
   };
-  command = action: "${pkgs.nodejs}/bin/node ${tsx} ${cli} ${action}";
+  command = action: tsNode.run "${pkgs.nodejs}/bin/node" cli action;
 in {
   # Unlike the older Scout modules, this namespace retains native/ai (Law 2).
   options.hwc.server.native.ai.event-scout = {

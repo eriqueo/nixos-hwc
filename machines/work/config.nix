@@ -219,6 +219,10 @@
     host = "100.77.38.32";
     tokenSecret = "lead-scout-bridge-token";
   };
+  # Member instance vhost only. Boot supervision (memberInstance.enable) stays
+  # off: it is boot-only, not restart monitoring, and needs its measured
+  # projectName first.
+  hwc.server.ai.leadScout.memberInstance.vhost.enable = true;
   hwc.server.ai.researchScout.controlTokenSecret = "hwc-control-research-scout-token";
   hwc.server.ai.hwcControlBot = {
     enable = true;

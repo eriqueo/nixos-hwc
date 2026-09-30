@@ -1300,8 +1300,12 @@
             toString defaults.workspaceRoot.default == root
             && toString defaults.projectDir.default == app
             && toString service.WorkingDirectory == app
-            && lib.hasInfix "${root}/node_modules/tsx/dist/cli.mjs ${app}/src/cli.ts serve" service.ExecStart
-          ) "scout-layout: ${name} defaults or rendered service left the monorepo";
+            # Direct node, not the tsx CLI wrapper (a second process that
+            # relays its own SIGTERM): the unit's main process is node itself,
+            # loading the monorepo's hoisted tsx loader and this app's CLI.
+            && lib.hasSuffix "/bin/node" (builtins.head (lib.splitString " " service.ExecStart))
+            && lib.hasInfix " --import ${root}/node_modules/tsx/dist/loader.mjs ${app}/src/cli.ts serve" service.ExecStart
+          ) "scout-layout: ${name} defaults, rendered service or direct-node launcher left the monorepo";
       in
       assert check "lead-scout" "leadScout";
       assert check "home-scout" "homeScout";

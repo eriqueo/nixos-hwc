@@ -27,9 +27,61 @@ let
   dbName = "lead_scout";
 
   node = "/run/current-system/sw/bin/node";
-  tsx = "${cfg.workspaceRoot}/node_modules/tsx/dist/cli.mjs";
+  # Direct node + tsx loader: the main PID is the app (domains/lib/mkTsNode.nix).
+  tsNode = import ../../../../lib/mkTsNode.nix { } cfg.workspaceRoot;
   cli = "${cfg.projectDir}/src/cli.ts";
   claudeModel = "opus";
+
+  # Member instance (options.memberInstance). One composition root for its
+  # compose invocation, preflight, health proof and trusted-peer check.
+  member = cfg.memberInstance;
+  memberCompose = "${pkgs.podman-compose}/bin/podman-compose "
+    + lib.concatMapStringsSep " " (file: "-f ${file}") member.composeFiles;
+  # Inputs must exist and podman must be rootless before anything starts.
+  # Existence only; file contents (secrets) are never read here.
+  memberPreflight = pkgs.writeShellScript "lead-scout-member-preflight" ''
+    set -euo pipefail
+    for file in ${lib.escapeShellArgs (member.composeFiles ++ [ ".env" "config.yaml" ])}; do
+      [ -f "${member.directory}/$file" ] || { echo "[lead-scout-member] missing $file" >&2; exit 1; }
+    done
+    [ "$(${pkgs.podman}/bin/podman info --format '{{.Host.Security.Rootless}}')" = true ] \
+      || { echo "[lead-scout-member] podman is not rootless for this user" >&2; exit 1; }
+  '';
+  # Bounded: 30 attempts, 5 s each, 2.000-2.999 s jittered gaps (~4.5 min
+  # worst case, inside TimeoutStartSec). A miss fails the unit; no retry.
+  memberHealth = pkgs.writeShellScript "lead-scout-member-health" ''
+    for attempt in $(${pkgs.coreutils}/bin/seq 1 30); do
+      ${pkgs.curl}/bin/curl -fsS -o /dev/null --max-time 5 \
+        http://127.0.0.1:${toString member.port}/api/health && exit 0
+      ${pkgs.coreutils}/bin/sleep "$(printf '2.%03d' $((RANDOM % 1000)))"
+    done
+    echo "[lead-scout-member] /api/health not reached after 30 attempts" >&2
+    exit 1
+  '';
+  # Rootless publishing makes every client's socket peer the app's own
+  # address (measured 10.89.2.4), so trust is sound only as that one exact
+  # address. Empty trusted_proxies (trust off) passes. Anything else must equal
+  # the live app address, or the unit fails and says why. Reads that one key.
+  memberTrustCheck = pkgs.writeShellScript "lead-scout-member-trust-check" ''
+    set -euo pipefail
+    configured=$(${pkgs.yq-go}/bin/yq '.server.trusted_proxies // [] | .[]' config.yaml)
+    if [ -z "$configured" ]; then
+      echo "[lead-scout-member] trusted_proxies empty: forwarded client addresses ignored"
+      exit 0
+    fi
+    ids=$(${pkgs.podman}/bin/podman ps -q \
+      --filter "label=io.podman.compose.project=$COMPOSE_PROJECT_NAME" \
+      --filter label=com.docker.compose.service=app)
+    if [ -z "$ids" ] || [ "$(echo "$ids" | ${pkgs.coreutils}/bin/wc -l)" -ne 1 ]; then
+      echo "[lead-scout-member] expected exactly one running app container" >&2
+      exit 1
+    fi
+    live=$(${pkgs.podman}/bin/podman inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' "$ids" | ${pkgs.findutils}/bin/xargs)
+    if [ "$configured" != "$live" ]; then
+      echo "[lead-scout-member] trusted_proxies ($configured) is not the app address ($live); refusing" >&2
+      exit 1
+    fi
+  '';
 
   chromiumBin = "${pkgs.chromium}/bin/chromium";
 
@@ -193,12 +245,12 @@ let
         Type = "simple";
         ExecStartPre = [
           "${pkgs.coreutils}/bin/test -f ${cli}"
-          "${pkgs.coreutils}/bin/test -f ${tsx}"
+          "${pkgs.coreutils}/bin/test -f ${tsNode.loader}"
           "${pkgs.coreutils}/bin/test -r ${approvalBotTokenFile bot}"
           "${pkgs.coreutils}/bin/test -s ${approvalBotTokenFile bot}"
           discordRestartJitter
         ];
-        ExecStart = "${node} ${tsx} ${cli} discord:approvals";
+        ExecStart = tsNode.run node cli "discord:approvals";
         WorkingDirectory = cfg.projectDir;
         User = lib.mkForce "eric";
         Group = "users";
@@ -408,6 +460,50 @@ in
         '';
       };
     };
+
+    memberInstance = {
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 8430;
+        description = ''
+          Loopback publish of the rootless member instance. The one producer
+          for its vhost upstream and its health proof.
+        '';
+      };
+      vhost.enable = lib.mkEnableOption ''
+        the lead-scout-datax vhost to the member instance, with a per-route
+        bare-IP X-Forwarded-For (routeOwners assigns the name to work)
+      '';
+      enable = lib.mkEnableOption ''
+        BOOT-TIME start of the rootless podman-compose member instance. This is
+        a oneshot: it validates inputs, brings the existing project up once per
+        user-manager start, proves health and the trusted-peer invariant, then
+        exits. It does NOT watch or restart containers that stop later, so it
+        does NOT meet an ongoing-restart contract; recovery is unproven and
+        separate
+      '';
+      directory = lib.mkOption {
+        type = lib.types.path;
+        default = "${config.hwc.paths.state}/lead-scout-datax";
+        description = "Runtime compose directory (compose files, .env, config.yaml; secrets stay there, never in Nix).";
+      };
+      composeFiles = lib.mkOption {
+        type = lib.types.nonEmptyListOf lib.types.str;
+        default = [ "docker-compose.yml" "compose.override.yml" ];
+        description = ''
+          Compose files, in order, relative to `directory` — the same set the
+          deployment uses. Default discovery would drop the override.
+        '';
+      };
+      projectName = lib.mkOption {
+        type = lib.types.str;
+        description = ''
+          Compose project name of the containers already running, read from
+          their io.podman.compose.project label. A different name would make
+          `up --no-recreate` start a second copy that collides on ports.
+        '';
+      };
+    };
   };
 
   #============================================================================
@@ -566,7 +662,7 @@ in
 
         serviceConfig = {
           Type = "simple";
-          ExecStart = "${node} ${tsx} ${cli} serve --port ${toString cfg.port}";
+          ExecStart = tsNode.run node cli "serve --port ${toString cfg.port}";
           WorkingDirectory = cfg.projectDir;
           User = cfg.user;
           Restart = "on-failure";
@@ -601,6 +697,49 @@ in
     }
     // approvalBotServices
     // modelBridgeService;
+
+    # Member instance vhost. Per-route override only: mkProxyBlock's default
+    # {remote} renders `ip:port`, which Express cannot use as a client address;
+    # {remote_host} is the bare IP and replaces any client-supplied value
+    # (measured with real Caddy + Express, 2026-09-29). The global default is
+    # unchanged because firefly-explorer consumes it.
+    hwc.networking.shared.routes = lib.mkIf member.vhost.enable [{
+      name = "lead-scout-datax";
+      mode = "vhost";
+      upstream = "http://127.0.0.1:${toString member.port}";
+      headers = {
+        "X-Forwarded-For" = "{remote_host}";
+        "X-Real-IP" = "{remote_host}";
+      };
+    }];
+
+    # Member instance: rootless, so a user unit in eric's manager (linger is on
+    # via the server role). Boot contract only — see memberInstance.enable.
+    # --no-recreate leaves running containers untouched and --no-build never
+    # builds from the runtime directory, so a start against the live instance
+    # is a no-op. Every failure is visible as a failed unit; nothing retries it.
+    systemd.user.services.lead-scout-member-instance = lib.mkIf member.enable {
+      description = "Lead Scout member instance (rootless compose, boot start only; no restart monitoring)";
+      wantedBy = [ "default.target" ];
+      unitConfig.ConditionUser = cfg.user;
+      path = [ pkgs.podman pkgs.podman-compose ];
+      environment.COMPOSE_PROJECT_NAME = member.projectName;
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        WorkingDirectory = member.directory;
+        ExecStartPre = memberPreflight;
+        ExecStart = "${memberCompose} up -d --no-build --no-recreate";
+        ExecStartPost = [ memberHealth memberTrustCheck ];
+        # App first so its 10 s drain runs while the database is still up.
+        ExecStop = [
+          "${memberCompose} stop -t 15 app"
+          "${memberCompose} stop db"
+        ];
+        TimeoutStartSec = "5min";
+        TimeoutStopSec = "60s";
+      };
+    };
 
     # VALIDATION
     assertions = [

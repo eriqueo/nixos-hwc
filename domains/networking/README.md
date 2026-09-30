@@ -52,6 +52,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-09-29: `routeOwners."lead-scout-datax" = "work"`. The vhost itself is registered by `hwc.server.ai.leadScout.memberInstance.vhost` (upstream from its `port`), with a per-route `X-Forwarded-For`/`X-Real-IP` `{remote_host}` override: the default `{remote}` renders `ip:port`, which Express cannot use as a client address. Global `mkProxyBlock` headers unchanged; firefly-explorer still consumes the default.
 - 2026-09-28: Remove the `sr_analyzer` vhost and its `routeOwners` entry. The service is retired; the hwc-sys `datax_*` tools read the SR gauntlet's cache instead.
 - 2026-09-28: Point the private calculator vhost at the atomic website release, eliminating the obsolete app/dist root.
 - 2026-09-27: Mark the retained host-local LiveSync route permanent by design; no route behavior changed.

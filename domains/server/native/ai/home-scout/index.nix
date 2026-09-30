@@ -16,7 +16,7 @@
 let
   cfg = config.hwc.server.ai.homeScout;
   node = "/run/current-system/sw/bin/node";
-  tsx  = "${cfg.workspaceRoot}/node_modules/tsx/dist/cli.mjs";
+  tsNode = import ../../../../lib/mkTsNode.nix { } cfg.workspaceRoot;
   cli  = "${cfg.projectDir}/src/cli.ts";
 
   # homeharvest is not in nixpkgs; pure-python wheel with nixpkgs-available deps.
@@ -369,7 +369,7 @@ in
 
       serviceConfig = {
         Type             = "simple";
-        ExecStart        = "${node} ${tsx} ${cli} serve --port ${toString cfg.port}";
+        ExecStart        = tsNode.run node cli "serve --port ${toString cfg.port}";
         WorkingDirectory = cfg.projectDir;
         User             = cfg.user;
         Restart          = "on-failure";
