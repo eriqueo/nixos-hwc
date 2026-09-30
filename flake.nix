@@ -1701,6 +1701,80 @@
         touch "$out"
       '';
 
+      user-runtime-paths = let
+        laptopSystem = self.nixosConfigurations.hwc-laptop;
+        laptop = laptopSystem.config.home-manager.users.eric;
+        paths = laptopSystem.config.hwc.paths;
+        standalone = self.homeConfigurations."eric@hwc-laptop".config;
+        stable = self.nixosConfigurations.hwc-home.config.home-manager.users.eric;
+        stableStandalone = self.homeConfigurations."eric@hwc-home".config;
+        overridden = (laptopSystem.extendModules {
+          modules = [{
+            hwc.paths.user.apps = "/tmp/hwc-test-apps";
+            hwc.paths.user.go.workspace = "/tmp/hwc-test-go";
+            hwc.paths.user.go.moduleCache = "/tmp/hwc-test-modules";
+          }];
+        }).config.home-manager.users.eric;
+        homes = [ laptop standalone stable stableStandalone ];
+        modelPaths = laptop.hwc.home.apps.whisper-cpp.modelPaths;
+        cleanup = laptop.systemd.user.services.go-cache-clean.Service;
+        noHomeModels = home: !(lib.any (lib.hasPrefix "models/") (lib.attrNames home.home.file));
+        projectMapping = home:
+          home.xdg.userDirs.extraConfig.PROJECTS == home.home.sessionVariables.PROJECTS
+          && !(lib.hasInfix "${home.home.homeDirectory}/Projects"
+            home.home.activation.createXdgUserDirectories.data);
+      in
+      assert lib.assertMsg (lib.all projectMapping homes)
+        "user-runtime-paths: XDG Projects must use the app root in both HM API lanes";
+      assert lib.assertMsg (laptop.home.sessionVariables.PROJECTS == toString paths.user.apps
+        && laptop.home.sessionVariables.GOPATH == toString paths.user.go.workspace
+        && laptop.home.sessionVariables.GOMODCACHE == toString paths.user.go.moduleCache
+        && laptop.home.sessionVariables.GOCACHE == toString paths.user.go.buildCache
+        && laptop.home.sessionVariables.GOBIN == toString paths.user.go.bin)
+        "user-runtime-paths: integrated environment must consume hwc.paths";
+      assert lib.assertMsg (overridden.home.sessionVariables.PROJECTS == "/tmp/hwc-test-apps"
+        && overridden.home.sessionVariables.GOPATH == "/tmp/hwc-test-go"
+        && overridden.home.sessionVariables.GOMODCACHE == "/tmp/hwc-test-modules")
+        "user-runtime-paths: changing the central paths must change their consumers";
+      assert lib.assertMsg (lib.all (home:
+        home.home.sessionVariables.GOPATH != "${home.home.homeDirectory}/go"
+        && home.home.sessionVariables.GOMODCACHE != "${home.home.homeDirectory}/go/pkg/mod") homes)
+        "user-runtime-paths: Go must not recreate ~/go";
+      assert lib.assertMsg (noHomeModels laptop && noHomeModels standalone
+        && laptop.hwc.home.apps.hwc-dictation.model == toString modelPaths."base.en"
+        && standalone.hwc.home.apps.hwc-dictation.model == toString standalone.hwc.home.apps.whisper-cpp.modelPaths."base.en"
+        && lib.all (model: lib.elem (toString model) (map toString laptop.home.extraDependencies))
+          (lib.attrValues modelPaths))
+        "user-runtime-paths: dictation must use store files and every model must retain a GC root";
+      assert lib.assertMsg (laptop.systemd.user.timers.go-cache-clean.Timer.OnCalendar == "monthly"
+        && lib.elem "GOMODCACHE=${paths.user.go.moduleCache}" cleanup.Environment)
+        "user-runtime-paths: cache retention must use the declared cache";
+      pkgs.runCommand "user-runtime-paths" { } ''
+        # The actual Go defaults file reaches callers without a fresh shell.
+        export GOENV=${pkgs.writeText "go-env-test" laptop.xdg.configFile."go/env".text}
+        test "$(${pkgs.go}/bin/go env GOPATH)" = '${paths.user.go.workspace}'
+        test "$(${pkgs.go}/bin/go env GOMODCACHE)" = '${paths.user.go.moduleCache}'
+
+        # Exercise the actual cleaner against isolated derived data. Source
+        # and installed binaries must survive; the build cache must regenerate.
+        runtime_test="$TMPDIR/go-runtime"
+        mkdir -p "$runtime_test/workspace/src" "$runtime_test/bin" "$runtime_test/modules/example"
+        echo keep > "$runtime_test/workspace/src/keep"
+        echo keep > "$runtime_test/bin/keep"
+        echo replaceable > "$runtime_test/modules/example/data"
+        export GOPATH="$runtime_test/workspace" GOMODCACHE="$runtime_test/modules"
+        export GOCACHE="$runtime_test/build" GOBIN="$runtime_test/bin" GOTOOLCHAIN=local
+        echo 'package main; func main() {}' > "$runtime_test/main.go"
+        ${pkgs.go}/bin/go build -o "$runtime_test/app" "$runtime_test/main.go"
+        ${lib.head cleanup.ExecStart}
+        test ! -e "$GOMODCACHE/example/data"
+        test -f "$GOPATH/src/keep"
+        test -f "$GOBIN/keep"
+        ${pkgs.go}/bin/go build -o "$runtime_test/app" "$runtime_test/main.go"
+        "$runtime_test/app"
+        touch "$out"
+      '';
+
       charter-law1 = mkCharterLint "law1-osconfig-safety" [
         "rg 'osConfig\\.' domains/home --type nix | rg -v 'osConfig\\.[a-zA-Z0-9_.]+ or |attrByPath|osConfig \\?|lib\\.mkIf isNixOS|#'"
       ];

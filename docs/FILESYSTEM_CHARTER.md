@@ -105,6 +105,21 @@ Each domain (`100_hwc/`, `200_personal/`, `300_tech/`) follows this pattern (und
 
 ## XDG Integration
 
+### Application and runtime storage
+
+Independent application source checkouts live in `~/600_apps/<app>` and own
+their build and release lifecycle. `~/Projects` and `~/projects` are not
+alternate checkout roots. XDG PROJECTS points at `hwc.paths.user.apps`.
+
+Nix-managed binaries and declared model weights live in `/nix/store`.
+User-installed executables use `hwc.paths.user.go.bin` (`~/.local/bin`).
+Writable Go state uses the declared `hwc.paths.user.go` locations: the
+workspace under `~/.local/share/go`, dependencies under `~/.cache/go/mod`,
+and build cache under `~/.cache/go-build`. The development module declares
+monthly whole-cache cleanup; it preserves source and installed binaries.
+The `user-runtime-paths` flake check enforces these consumers, checks central
+path overrides and exercises cache cleanup and regeneration.
+
 System automatically maps XDG directories (update paths to match Dewey/underscore scheme):
 - `XDG_DOWNLOAD_DIR` → `~/000_inbox/downloads/`
 - `XDG_DOCUMENTS_DIR` → `~/100_hwc/110_documents/`

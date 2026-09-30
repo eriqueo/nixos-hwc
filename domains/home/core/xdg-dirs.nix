@@ -11,7 +11,7 @@
 #   x50_reference  — Static knowledge, docs, manuals
 #   x90_archive    — Dead storage
 #
-{ config, lib, osConfig ? {}, ... }:
+{ config, lib, options, osConfig ? {}, ... }:
 let
   home   = config.home.homeDirectory;
   inbox  = "${home}/000_inbox";
@@ -19,6 +19,7 @@ let
   pers   = "${home}/200_personal";
   tech   = "${home}/300_tech";
   media  = "${home}/500_media";
+  apps = lib.attrByPath [ "hwc" "paths" "user" "apps" ] "${home}/600_apps" osConfig;
 in {
   config = {
     xdg.userDirs = {
@@ -40,6 +41,14 @@ in {
       pictures = "${media}/510_pictures";
       music    = "${media}/520_music";
       videos   = "${media}/530_videos";
+
+      # Independent app repositories use the declared apps root. Older HM
+      # has no native projects option; extraConfig works in both API lanes.
+      extraConfig.PROJECTS = apps;
+    } // lib.optionalAttrs (options.xdg.userDirs ? projects) {
+      # Disable the new upstream ~/Projects default rather than recreating it
+      # on every activation. extraConfig supplies the canonical destination.
+      projects = null;
     };
 
     # Ensure all domain folders exist on activation

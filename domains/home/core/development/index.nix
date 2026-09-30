@@ -11,6 +11,19 @@
 let
   cfg = config.hwc.home.core.development;
   t = lib.types;
+  # Law 1 standalone fallback; NixOS placement is owned by hwc.paths.
+  goPaths = lib.attrByPath [ "hwc" "paths" "user" "go" ] {
+    workspace = "${config.xdg.dataHome}/go";
+    moduleCache = "${config.xdg.cacheHome}/go/mod";
+    buildCache = "${config.xdg.cacheHome}/go-build";
+    bin = "${config.home.homeDirectory}/.local/bin";
+  } osConfig;
+  goEnvironment = {
+    GOPATH = goPaths.workspace;
+    GOMODCACHE = goPaths.moduleCache;
+    GOCACHE = goPaths.buildCache;
+    GOBIN = goPaths.bin;
+  };
 in
 {
   #============================================================================
@@ -48,6 +61,34 @@ in
   # IMPLEMENTATION
   #============================================================================
   config = lib.mkIf cfg.enable {
+
+    # Go also reads this file in existing shells and GUI-launched builds that
+    # have not sourced the new session variables. Nix owns these defaults.
+    xdg.configFile."go/env".text = lib.generators.toKeyValue {} goEnvironment;
+
+    # REPLACEABLE: caches contain downloaded/compiled dependencies, never
+    # user source or installed binaries. go clean removes whole caches rather
+    # than expiring individual files inside an otherwise present module.
+    systemd.user.services.go-cache-clean = {
+      Unit.Description = "Clear replaceable Go dependency and build caches";
+      Service = {
+        Type = "oneshot";
+        Environment = lib.mapAttrsToList (name: value: "${name}=${value}")
+          (goEnvironment // { GOTOOLCHAIN = "local"; });
+        # Skip an active compiler; the next monthly run can try again.
+        ExecCondition = pkgs.writeShellScript "go-cache-idle" ''
+          ! ${pkgs.procps}/bin/pgrep -u "$(${pkgs.coreutils}/bin/id -u)" -x 'go|compile|link'
+        '';
+        ExecStart = "${pkgs.go}/bin/go clean -modcache -cache";
+        TimeoutStartSec = "5min";
+        Nice = 19;
+      };
+    };
+    systemd.user.timers.go-cache-clean = {
+      Unit.Description = "Monthly retention for replaceable Go caches";
+      Timer = { OnCalendar = "monthly"; RandomizedDelaySec = "15min"; Persistent = true; };
+      Install.WantedBy = [ "timers.target" ];
+    };
 
     # REPLACEABLE build cache. Podman preserves named images and images used
     # by any container (including stopped containers); never prune volumes.
@@ -117,11 +158,10 @@ in
     home.sessionVariables = {
       EDITOR = lib.mkForce (if cfg.editors.neovim then "nvim" else "micro");
       VISUAL = lib.mkForce (if cfg.editors.neovim then "nvim" else "micro");
-      PROJECTS = "$HOME/.nixos/workspace";
+      PROJECTS = config.xdg.userDirs.extraConfig.PROJECTS;
       SCRIPTS = "$HOME/.nixos/workspace";
       WORKSPACE = "$HOME/.nixos/workspace";
-
-    } // lib.optionalAttrs cfg.languages.python {
+    } // goEnvironment // lib.optionalAttrs cfg.languages.python {
       PYTHONDONTWRITEBYTECODE = "1";
       PYTHONUNBUFFERED = "1";
       PIP_USER = "1";
@@ -132,7 +172,7 @@ in
 
     home.sessionPath = [
       "$HOME/bin"
-      "$HOME/.local/bin"
+      goPaths.bin
     ] ++ lib.optionals cfg.languages.javascript [
       "$HOME/.npm-global/bin"
     ];

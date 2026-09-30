@@ -21,6 +21,13 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 `apps/yazi/` owns the persistent favorites column, its bounded atomic data
 store, Alt navigation, and package-bound storage tests.
 
+`core/xdg-dirs.nix` maps projects to `hwc.paths.user.apps`, suppressing the
+upstream `~/Projects` default. `core/development` applies central Go paths and
+monthly cache cleanup, with a managed Go defaults file for existing shells.
+`apps/whisper-cpp` exposes store-backed `modelPaths` and
+roots every selected weight; dictation reads those files without `~/models` links.
+The `user-runtime-paths` flake check covers both HM lanes, path overrides and cache rebuilding.
+
 `core/shell/` owns SSH hosts and shell shortcuts: `home`, `work`, `foxtrot`, `datax` (the MCP droplet), `lil-box`, `xps`, and `home-lan`; `website` uses the laptop's existing Ed25519 key for its Hostinger login. `ssh server` remains available for existing Git remotes.
 
 The harness input carries a text-only home-host correction atop the existing pin; unrelated harness changes are excluded.
@@ -71,6 +78,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 - 2026-09-30: Add Yazi's persistent favorites sidebar, Alt focus/navigation, editable bookmarks, natural sorting, and Zoxide history.
+- 2026-09-30: Remove home model links, consume rooted Whisper store files, declare Go runtime/cache placement and monthly retention, and stop XDG activation from recreating `~/Projects`.
 - 2026-09-30: Give credential utilities readable floating windows without narrowing the browser; restore Bitwarden portal file selection through an app-scoped relay that keeps vault processes protected and drains on exit.
 - 2026-09-30: Start enabled Bitwarden and Proton Pass clients at desktop login so their native tray icons return after reboot.
 - 2026-09-30: Limit floating windows using runtime monitor dimensions; give Bluetooth and file pickers screen-relative starting sizes while preserving small dialogs and tiled applications.

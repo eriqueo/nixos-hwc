@@ -243,6 +243,35 @@ in
     # -------------------------------------------------------------------------
 
     user = {
+      apps = mkOption {
+        type = types.path;
+        default = "${userHome}/600_apps";
+        description = "Independent application source checkouts (each owns its build lifecycle)";
+      };
+
+      go = {
+        workspace = mkOption {
+          type = types.path;
+          default = "${userHome}/.local/share/go";
+          description = "User Go workspace; downloaded dependencies live in moduleCache instead";
+        };
+        moduleCache = mkOption {
+          type = types.path;
+          default = "${userHome}/.cache/go/mod";
+          description = "REPLACEABLE Go module cache, cleared monthly by the development module";
+        };
+        buildCache = mkOption {
+          type = types.path;
+          default = "${userHome}/.cache/go-build";
+          description = "REPLACEABLE Go build cache, trimmed by Go and cleared monthly";
+        };
+        bin = mkOption {
+          type = types.path;
+          default = "${userHome}/.local/bin";
+          description = "User-installed executables; Nix-managed packages remain in the store";
+        };
+      };
+
       inbox = mkOption {
         type = types.nullOr types.path;
         default = if isLaptop then laptopInbox else null;

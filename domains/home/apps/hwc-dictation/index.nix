@@ -72,7 +72,7 @@ in {
   options.hwc.home.apps.hwc-dictation = {
     enable = lib.mkEnableOption "HWC desktop dictation";
     package = lib.mkOption { type = lib.types.package; default = app.default; description = "Tested CPU or GPU dictation package."; };
-    model = lib.mkOption { type = lib.types.str; default = "${config.hwc.home.apps.whisper-cpp.modelsDir}/ggml-medium.en.bin"; description = "Existing local GGML model."; };
+    model = lib.mkOption { type = lib.types.str; default = toString config.hwc.home.apps.whisper-cpp.modelPaths."medium.en"; description = "Declared local GGML model store file."; };
     enginePolicy = lib.mkOption { type = lib.types.enum [ "local" "remote" "prefer_remote" ]; default = "prefer_remote"; description = "Default engine policy for a new take."; };
     remoteEndpoint = lib.mkOption { type = lib.types.str; default = "https://whisper.hwc.iheartwoodcraft.com"; description = "Base URL of the transcription server."; };
   };
