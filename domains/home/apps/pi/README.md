@@ -13,7 +13,8 @@ index.nix          # options, DX2-only routing, and bounded subagent configurati
 parts/package.nix  # pinned buildNpmPackage of the pi monorepo (vendored from
                    # nixpkgs; hwc-server's stable channel has no pi-coding-agent)
 parts/guards.ts    # pi extension: tool_call guards, port of the Claude Code
-                   # enforce-tools + write-guard PreToolUse hooks
+                   # enforce-tools + write-guard PreToolUse hooks, and an exec
+                   # of the shared /etc/agent-harness workspace-guard.sh
 parts/stop-guards.ts # pi extension: agent_end guards, port of ste100-guard and
                    # the self-caught channel of mistake-guard
 parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
@@ -107,6 +108,8 @@ nix run nixpkgs#prefetch-npm-deps -- ./package-lock.json  # → npmDepsHash
 Bump `version` + both hashes in `parts/package.nix`.
 
 ## Changelog
+
+- 2026-09-30: `guards.ts` runs the shared `workspace-guard.sh` (agent workspace S2) on bash, write and edit calls, with `HWC_HOOK_RUNTIME=pi`. It is not ported, so Claude, Codex and Pi apply one rule set. An armed deny blocks only with a UI; no-UI runs are allowed and logged.
 
 - 2026-09-17: Build Pi's global context from the Nix-pinned harness and its shared standing instructions.
 

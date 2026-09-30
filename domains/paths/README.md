@@ -39,6 +39,7 @@ domains/paths/
 | `hwc.paths.hot.root` | N/A | `/mnt/hot` |
 | `hwc.paths.downloads` | `~/000_inbox/downloads` | `/opt/downloads` |
 | `hwc.paths.user.mailSyncStatus` | `~/.local/state/mail-sync/status.json` | same |
+| `hwc.paths.user.agents` | `~/800_agents` | same (local, never synced) |
 
 ## Usage
 
@@ -61,6 +62,7 @@ in {
 4. Allow per-machine overrides
 
 ## Changelog
+- 2026-09-30: Added `user.agents` (`~/800_agents`), the agent workspace root on every host.
 - 2026-09-28: business.websiteSite and business.websitePublished own the source and release locations for CMS, MCP and public serving.
 - 2026-09-22: Added `user.mailSyncStatus`, the single path producer for the
   bounded mail-sync status consumed by Home Manager health checks and the MCP.

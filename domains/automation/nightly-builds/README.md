@@ -28,6 +28,7 @@ domains/automation/nightly-builds/
 ├── index.nix         # Options + units: nightly-builds(.timer), -runnow(.path),
 │                     #   -review(.timer), and the opt-in privileged -rebuild(.path).
 │                     #   tmpfiles for spools; optional read-only /mnt sandbox.
+│                     #   HWC_PIPELINE=1: the workspace guard only reports here.
 ├── run.sh            # Nightly launcher, packaged with its prompts/sender into an immutable store closure
 │                     #   (per-card timeout = the card's declared minute budget +50%)
 ├── send-report.sh    # Rich per-card Discord report (REPORT.md attached)
@@ -62,6 +63,8 @@ Claude config directory. For a non-CLI provider, set
 switching providers does not require changing runner code.
 
 ## Changelog
+
+- **2026-09-30** — Set `HWC_PIPELINE=1` in the runner environment, so the shared workspace guard reports on its headless agents and never denies.
 
 - **2026-09-26** — Use `ReadOnlyPaths = [ "-/mnt" ]` for both runners. Work has no `/mnt`; requiring it caused systemd to exit with `226/NAMESPACE` before the launcher could run. Existing media mounts remain read-only.
 

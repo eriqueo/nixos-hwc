@@ -50,6 +50,9 @@ let
   # same needs: git push, headless claude, jq/rg/awk/curl).
   nbEnv = {
     HOME = paths.user.home;
+    # Marks the headless agents this unit launches as a pipeline: the shared
+    # workspace-guard only reports for them, never denies (agent-workspace S2).
+    HWC_PIPELINE = "1";
     NB_VAULT_DIR = toString cfg.vaultDir;
     NB_REPO_DIR = toString cfg.repoDir;
     NB_MAX_CARDS = toString cfg.maxCards;

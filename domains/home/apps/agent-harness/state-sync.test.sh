@@ -103,6 +103,26 @@ AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
 test "$(wc -l < "$ROOT/alerts")" -eq 3
 test "$(wc -l < "$ROOT/validations")" -eq 3
 
+# The agent-workspace ledger and guard files are part of the contract: they
+# validate, and a sync commits and pushes them to the hub.
+mkdir -p "$ROOT/state/ledger" "$ROOT/state/guard"
+printf '{"host":"test","projects":{},"schemaVersion":1}\n' > "$ROOT/state/ledger/test.json"
+printf '{"armDate":"2026-10-14","replayAccepted":null}\n' > "$ROOT/state/guard/arm.json"
+AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
+  bash "$(dirname "$0")/state-sync.sh" sync >/dev/null
+test -z "$(git -C "$ROOT/state" status --porcelain)"
+git -C "$ROOT/hub.git" cat-file -e main:ledger/test.json
+git -C "$ROOT/hub.git" cat-file -e main:guard/arm.json
+# Anything else stays outside the contract.
+printf 'x\n' > "$ROOT/state/stray.txt"
+git -C "$ROOT/state" add stray.txt
+if AGENT_STATE_DIR="$ROOT/state" bash "$VALIDATOR" >/dev/null 2>&1; then
+  echo 'state-sync.test: a path outside the contract validated' >&2
+  exit 1
+fi
+git -C "$ROOT/state" rm -q --cached stray.txt
+rm "$ROOT/state/stray.txt"
+
 # Claude Code's memory writer moves authority/source under metadata:; that form
 # declares them. Other nesting does not, and nested standing policy is rejected.
 memory() { printf -- '---\nname: m\n%s\n---\n\nbody\n' "$1"; }

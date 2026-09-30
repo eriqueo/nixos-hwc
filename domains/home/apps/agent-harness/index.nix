@@ -94,6 +94,26 @@ let
   };
   doctor = pkgs.writeShellScriptBin "agent-harness-doctor" ''exec ${cli}/bin/agent-harness doctor "$@"'';
 
+  # The agent-workspace allocator. Its code is static policy (claude-config
+  # bin/ws); the dependencies are declared here so it also runs from the
+  # state-sync unit, whose PATH is systemd's alone.
+  ws = pkgs.writeShellApplication {
+    name = "ws";
+    runtimeInputs = with pkgs; [
+      git
+      jq
+      ripgrep
+      coreutils
+      findutils
+      gawk
+      util-linux
+    ];
+    text = ''
+      export WS_ROOT=${lib.escapeShellArg cfg.workspaceRoot}
+      exec ${pkgs.bash}/bin/bash ${harness}/bin/ws "$@"
+    '';
+  };
+
   # Nothing else updates the npm-global provider CLIs on a host that drives
   # them headless (T3 serve, nightly builds). Measured 2026-09-24 on hwc-server:
   # ~/.claude.json had autoUpdates=false, claude sat at 2.1.274 and codex at
@@ -176,7 +196,20 @@ in
     enable = lib.mkEnableOption "shared agent harness control plane";
     stateDir = lib.mkOption {
       type = lib.types.str;
+      # TEMPORARY: a compatibility link to "${cfg.workspaceRoot}/state" since
+      # the agent-workspace S2 move. Point this at the real path and drop the
+      # link in S8, once `rg '\.agent-state'` finds nothing in either repo.
       default = "${home}/.agent-state";
+    };
+    workspaceRoot = lib.mkOption {
+      type = lib.types.str;
+      default = osConfig.hwc.paths.user.agents or "${home}/800_agents";
+      defaultText = lib.literalExpression ''osConfig.hwc.paths.user.agents or "''${home}/800_agents"'';
+      description = ''
+        Agent workspace root: projects/, closed/, state/ (the agent-state
+        clone), log/ and LEDGER.md. Local to each host and never a Syncthing
+        folder; the system module asserts that.
+      '';
     };
     editableSource = lib.mkOption {
       type = lib.types.str;
@@ -249,6 +282,7 @@ in
     home.packages = [
       cli
       doctor
+      ws
       stateSync
       stateValidator
       (pkgs.writeShellScriptBin "log-mistake" ''exec ${pkgs.python3}/bin/python3 ${harness}/bin/log-mistake "$@"'')
@@ -266,6 +300,24 @@ in
       }) ([ ".claude" ] ++ cfg.claudeConfigDirs)
     );
 
+    # One-time move of the agent-state clone into the workspace root, leaving
+    # stateDir as a link to it. Idempotent: it acts only while stateDir is a
+    # real directory and the destination is free. The sync lock is held so a
+    # timer run cannot straddle the rename.
+    home.activation.agentWorkspace = lib.hm.dag.entryBefore [ "agentHarnessMemoryLinks" ] ''
+      root=${lib.escapeShellArg cfg.workspaceRoot}
+      old=${lib.escapeShellArg cfg.stateDir}
+      run mkdir -p "$root/projects" "$root/closed" "$root/log"
+      if [ -d "$old/.git" ] && [ ! -L "$old" ] && [ ! -e "$root/state" ]; then
+        (
+          exec 9>>"$old/.git/.sync.lock"
+          ${pkgs.util-linux}/bin/flock -w 120 9
+          run mv "$old" "$root/state"
+          run ln -s "$root/state" "$old"
+        ) || echo "agent-harness: could not move $old to $root/state" >&2
+      fi
+    '';
+
     home.activation.agentHarnessMemoryLinks = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       run ${stateSync}/bin/agent-state-sync link || echo "agent-harness: state clone missing; run agent-harness doctor" >&2
       if [ -d ${lib.escapeShellArg cfg.editableSource}/.git ]; then
@@ -278,6 +330,10 @@ in
       Service = {
         Type = "oneshot";
         ExecStart = "${stateSync}/bin/agent-state-sync sync";
+        # Re-render ~/800_agents/LEDGER.md from the ledgers just pulled, so each
+        # host shows the others' projects within one sync interval. A render
+        # failure never fails the sync.
+        ExecStartPost = "-${ws}/bin/ws ledger --write";
         SuccessExitStatus = [ 75 ];
       };
     };

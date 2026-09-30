@@ -181,9 +181,53 @@ const REVERT_REASON = (p: string) =>
   `  3. Commit the fix BEFORE seeding any mutation against it, then revert ` +
   `freely.`;
 
+// ===========================================================================
+// THE WORKSPACE GUARD — exec of the shared workspace-guard.sh
+// ===========================================================================
+//
+// Unlike the two guards above, this one is NOT ported: Claude, Codex and Pi
+// run the same script, so the three runtimes cannot drift. It keeps agent
+// files inside ~/800_agents and deliverables inside agent/<project>/ (design:
+// ~/000_inbox/downloads/agent/tech/agent-workspace/design.md). While it is
+// report-only it logs and prints nothing. Once armed, a deny blocks when there
+// is a UI; a no-UI run (-p / --mode json) is allowed, and the script has
+// already logged it.
+const WORKSPACE_GUARD = "/etc/agent-harness/hooks/workspace-guard.sh";
+
+function workspaceGuard(toolName: string, input: any, cwd: string): string | null {
+  let payload: any;
+  if (toolName === "bash") {
+    payload = { tool_name: "Bash", tool_input: { command: input?.command ?? "" } };
+  } else if (toolName === "write") {
+    payload = { tool_name: "Write", tool_input: { file_path: input?.path ?? input?.file_path ?? "", content: input?.content ?? "" } };
+  } else if (toolName === "edit") {
+    payload = { tool_name: "Edit", tool_input: { file_path: input?.path ?? input?.file_path ?? "" } };
+  } else {
+    return null;
+  }
+  if (!existsSync(WORKSPACE_GUARD)) return null;
+  try {
+    const out = execFileSync("bash", [WORKSPACE_GUARD], {
+      input: JSON.stringify({ ...payload, cwd, session_id: `pi-${process.pid}` }),
+      env: { ...process.env, HWC_HOOK_RUNTIME: "pi" },
+      encoding: "utf-8",
+      timeout: 10_000,
+    }).trim();
+    if (!out) return null;
+    const specific = JSON.parse(out)?.hookSpecificOutput ?? {};
+    return specific.permissionDecision === "deny" ? specific.permissionDecisionReason ?? "Workspace guard denied this call." : null;
+  } catch {
+    // The guard never fails loudly; neither does its caller.
+    return null;
+  }
+}
+
 export default function (pi: ExtensionAPI) {
   pi.on("tool_call", async (event: any, ctx: any) => {
     const cwd: string = ctx?.cwd ?? process.cwd();
+
+    const workspaceDenial = workspaceGuard(event.toolName, event.input, cwd);
+    if (workspaceDenial && ctx?.hasUI) return { block: true, reason: workspaceDenial };
 
     if (event.toolName === "bash") {
       const command: string = event.input?.command ?? "";

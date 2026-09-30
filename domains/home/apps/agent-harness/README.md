@@ -7,20 +7,28 @@ source and one mutable state store.
 
 The fleet control list names hwc-home, hwc-work and hwc-laptop.
 
-- `index.nix` installs the pinned policy, state links, health CLI, the state-sync timer, and the opt-in `agent-cli-update` timer.
-- `sys.nix` installs machine-wide Claude policy under `/etc`, and generates Claude Code's MCP config as tmpfiles store symlinks: `~/.mcp.json` (`userMcp`, read by every project under the home directory: shared servers, `hwc-sys` over HTTP at `hwc.system.mcp.url`, `brain` at `userMcp.brainUrl`) and the nixos repo's `.mcp.json` (`projectMcp`: `git` plus per-host `extraServers`). The host running brain-mcp asserts `brainUrl` names its route.
+- `index.nix` installs the pinned policy, state links, health CLI, the `ws` workspace allocator, the state-sync timer (which re-renders `LEDGER.md` after each run), and the opt-in `agent-cli-update` timer. Its `agentWorkspace` activation creates `workspaceRoot` (`~/800_agents`) and moves the state clone into `state/` once, leaving `stateDir` as a link.
+- `sys.nix` installs machine-wide Claude policy under `/etc`, and generates Claude Code's MCP config as tmpfiles store symlinks: `~/.mcp.json` (`userMcp`, read by every project under the home directory: shared servers, `hwc-sys` over HTTP at `hwc.system.mcp.url`, `brain` at `userMcp.brainUrl`) and the nixos repo's `.mcp.json` (`projectMcp`: `git` plus per-host `extraServers`). The host running brain-mcp asserts `brainUrl` names its route. Every host asserts that no Syncthing folder overlaps `hwc.paths.user.agents`.
 - `contract.nix` defines the ownership and revision contract shared by both lanes.
 - `control.sh` implements local and fleet health checks plus policy publication.
 - `control.test.sh` checks split revisions, mutable runtime references, fleet names, and publication to all hosts and source remotes.
-- `state-sync.sh` synchronizes only memories and the mistakes ledger, with one bounded validation case under `.git`.
+- `state-sync.sh` synchronizes only memories, the mistakes ledger, and the agent-workspace `ledger/` and `guard/` files, with one bounded validation case under `.git`.
 - `state-validate.sh` owns the memory contract for both full-store scans and projected writes on stdin.
 - `state-sync.test.sh` verifies import, links, validation blocking, recovery, commit, pull, and push against a throwaway hub.
 
 ## State ownership
 
 Nix pins static instructions, skills, hooks, and provider adapters. The Git clone
-at `~/.agent-state` holds mutable memories and `MISTAKES.md`. Project repositories
-still own their local `AGENTS.md` or `CLAUDE.md` files.
+at `~/800_agents/state` (still reachable as `~/.agent-state` until S8) holds
+mutable memories, `MISTAKES.md`, each host's workspace ledger
+(`ledger/<host>.json`, written only by that host) and the workspace guard's
+`guard/arm.json` and `guard/budgets.json`. Project repositories still own their
+local `AGENTS.md` or `CLAUDE.md` files.
+
+The agent workspace (`~/800_agents`: `projects/`, `closed/`, `log/`,
+`LEDGER.md`) is local to each host. Its allocator, guard and worktree hooks are
+static policy in claude-config (`bin/ws`, `hooks/workspace-*.sh`); the design
+is `~/000_inbox/downloads/agent/tech/agent-workspace/design.md`.
 
 New or changed memories declare `authority: observation|reference|decision` and
 a non-empty `source:`, at the top level or directly under `metadata:` (where
@@ -48,6 +56,8 @@ manifests, state shape, Codex hook trust, commands, and the sync timer. A dirty
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+- 2026-09-30: Agent workspace S2. Add `workspaceRoot` (from `hwc.paths.user.agents`), the one-time move of the state clone to `~/800_agents/state` behind a `~/.agent-state` link, the `ws` package, a `LEDGER.md` render after each sync, and `ledger/*.json` and `guard/*.json` in the state contract (`contract.nix`, validator, fingerprint, staging; `state-sync.test.sh` covers them). `sys.nix` asserts no Syncthing folder overlaps the root.
+
 - 2026-09-26: Rename the home fleet target to hwc-home; keep the shared harness pin and per-host session stores.
 
 - 2026-09-25: Fleet health and publication include hwc-work. Publication builds

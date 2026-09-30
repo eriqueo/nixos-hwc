@@ -18,6 +18,10 @@
       "MISTAKES.md"
       ".mistakes-dismissed.log"
       "projects/*/memory"
+      # Agent workspace: each host writes only ledger/<host>.json; guard/ holds
+      # arm.json and budgets.json, which only Eric edits.
+      "ledger/*.json"
+      "guard/*.json"
     ];
   };
 

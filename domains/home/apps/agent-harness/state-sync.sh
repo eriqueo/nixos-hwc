@@ -65,6 +65,10 @@ notify_recovery_transition() {
   notify "Agent state sync recovered" "State sync is healthy again on $HOST." || true
 }
 
+# The tracked roots of the mutable-state contract (contract.nix allowedRoots).
+# ledger/ and guard/ belong to the agent workspace (~/800_agents).
+STATE_ROOTS=(MISTAKES.md .mistakes-dismissed.log .harness-schema.json projects ledger guard)
+
 state_fingerprint() {
   local path
   {
@@ -75,12 +79,11 @@ state_fingerprint() {
     printf 'schema\0'
     sha256sum .harness-schema.json
     printf 'status\0'
-    git status --porcelain=v1 -z --untracked-files=all -- \
-      MISTAKES.md .mistakes-dismissed.log .harness-schema.json projects
+    git status --porcelain=v1 -z --untracked-files=all -- "${STATE_ROOTS[@]}"
     {
-      git diff --name-only -z HEAD -- MISTAKES.md .mistakes-dismissed.log .harness-schema.json projects
-      git diff --cached --name-only -z -- MISTAKES.md .mistakes-dismissed.log .harness-schema.json projects
-      git ls-files --others --exclude-standard -z -- MISTAKES.md .mistakes-dismissed.log .harness-schema.json projects
+      git diff --name-only -z HEAD -- "${STATE_ROOTS[@]}"
+      git diff --cached --name-only -z -- "${STATE_ROOTS[@]}"
+      git ls-files --others --exclude-standard -z -- "${STATE_ROOTS[@]}"
     } | sort -zu | while IFS= read -r -d '' path; do
       printf 'path=%s\0' "$path"
       if [ -f "$path" ]; then
@@ -188,6 +191,8 @@ sync_state() {
 
   git add -A -- MISTAKES.md projects
   git add -A -- .harness-schema.json
+  [ ! -e ledger ] || git add -A -- ledger
+  [ ! -e guard ] || git add -A -- guard
   [ ! -e .mistakes-dismissed.log ] || git add -A -- .mistakes-dismissed.log
   if ! git diff --cached --quiet; then
     git commit -m "sync($HOST): agent state $(date -Iminutes)"

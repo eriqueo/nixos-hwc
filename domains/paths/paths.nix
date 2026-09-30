@@ -308,6 +308,12 @@ in
         default = "${userHome}/.claude";
         description = "Claude Code settings directory";
       };
+
+      agents = mkOption {
+        type = types.path;
+        default = "${userHome}/800_agents";
+        description = "Agent workspace root (projects, closed, state, LEDGER.md) - every host; local, never a Syncthing folder";
+      };
     };
 
     # -------------------------------------------------------------------------

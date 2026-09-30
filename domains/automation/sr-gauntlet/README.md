@@ -21,6 +21,7 @@ sr-gauntlet/
                  # the run-now drain (service + path unit) behind the refinery
                  # board's "▶ re-investigate now" button.
                  # Managed Claude settings and shared 365-day raw retention.
+                 # HWC_PIPELINE=1: the workspace guard only reports here.
 ```
 
 Enabled in `machines/work/config.nix` (host one-off: the pipeline checkout
@@ -58,6 +59,9 @@ Rotate by re-running `claude setup-token` and re-encrypting the secret; oneshot
 units re-read it each run, so no restart is needed.
 
 ## Changelog
+
+- **2026-09-30**: Set `HWC_PIPELINE=1` in both units' environment, so the
+  shared workspace guard reports on their headless agents and never denies.
 
 - **2026-09-29**: Manage `cleanupPeriodDays` in the isolated Claude settings
   and pass the same 365-day retention value to both pipeline units.

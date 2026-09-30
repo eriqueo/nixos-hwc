@@ -99,6 +99,23 @@ let
     lib.attrNames hosts.servers
   );
   brainMcp = config.hwc.server.ai.brainMcp or { enable = false; };
+
+  # Syncthing folders that are the agent workspace root, sit inside it, or
+  # contain it. Scratch, worktrees and private captures must never leave the
+  # host; state/ travels by git only.
+  agentsRoot = config.hwc.paths.user.agents;
+  home = config.hwc.paths.user.home;
+  expandHome = p: if lib.hasPrefix "~/" p then home + lib.removePrefix "~" p else p;
+  overlaps =
+    p:
+    let
+      path = lib.removeSuffix "/" (expandHome p);
+    in
+    path != ""
+    && (path == agentsRoot || lib.hasPrefix "${agentsRoot}/" path || lib.hasPrefix "${path}/" agentsRoot);
+  syncedAgentFolders = lib.filter overlaps (
+    lib.mapAttrsToList (_: f: f.path or "") (config.services.syncthing.settings.folders or { })
+  );
 in
 {
   options.hwc.system.apps.agent-harness = {
@@ -166,6 +183,10 @@ in
             }
           );
         message = "hwc.system.apps.agent-harness.userMcp.brainUrl (${cfg.userMcp.brainUrl}) does not name brain-mcp's route on ${config.networking.hostName}. Update its default when brain-mcp moves or changes port.";
+      }
+      {
+        assertion = syncedAgentFolders == [ ];
+        message = "Syncthing folder(s) ${lib.concatStringsSep ", " syncedAgentFolders} overlap the agent workspace root ${agentsRoot}. It is local to each host; only state/ syncs, by git. Remove the folder or move it outside ${agentsRoot}.";
       }
     ];
   };

@@ -66,6 +66,7 @@ while IFS= read -r path; do
   [ -n "$path" ] || continue
   case "$path" in
     .gitattributes|.gitignore|.harness-schema.json|.mistakes-dismissed.log|MISTAKES.md|projects/*/memory/*) ;;
+    ledger/*.json|guard/*.json) ;;
     *) fail "tracked path is outside the mutable-state contract: $path" ;;
   esac
 done < <(git -C "$STATE" ls-files)
