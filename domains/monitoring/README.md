@@ -13,6 +13,9 @@ Other domains register their scrape configs via `hwc.monitoring.prometheus.scrap
 
 ## Structure
 
+`alerts/index.nix` owns both system and user failure templates. The user template
+calls the existing notification producer with `--user`; delivery stays in notifications.
+
 `fleet-map/` owns the read-only snapshot publisher; app code is a separate locked input. Its site contains only generated HTML. The production route check pins work ownership, the bounded unit and its host command path. Refresh: `sudo systemctl start fleet-map-publish`.
 
 Homepage fleet labels/selectors use hwc-home; SMART sender derives from the local hostname.
@@ -62,6 +65,7 @@ monitoring/
 ```
 
 ## Changelog
+- 2026-09-30: Add the user-manager failure template for bounded member recovery. It calls the shared producer's terminal-only user branch. System templates and consumers keep their existing semantics. Notification failure remains a failed user unit with local journal evidence.
 - 2026-09-28: Remove the SR Analyzer Homepage tile with the service's retirement.
 - 2026-09-27: Publish a private fleet topology map from the pinned fleet-map app, with a bounded atomic publisher, host command path, wiring check and explicit snapshot dates.
 - 2026-09-26: Homepage fleet labels/selectors use hwc-home; SMART sender derives from the local hostname.

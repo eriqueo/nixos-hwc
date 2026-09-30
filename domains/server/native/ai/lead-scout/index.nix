@@ -36,9 +36,9 @@ let
   # compose invocation, preflight, health proof and trusted-peer check.
   member = cfg.memberInstance;
   memberCompose = "${pkgs.podman-compose}/bin/podman-compose "
-    + lib.concatMapStringsSep " " (file: "-f ${file}") member.composeFiles;
+    + lib.concatMapStringsSep " " (file: "-f ${lib.escapeShellArg file}") member.composeFiles;
   # Inputs must exist and podman must be rootless before anything starts.
-  # Existence only; file contents (secrets) are never read here.
+  # Resolve only the recovery fields; never print the full compose config.
   memberPreflight = pkgs.writeShellScript "lead-scout-member-preflight" ''
     set -euo pipefail
     for file in ${lib.escapeShellArgs (member.composeFiles ++ [ ".env" "config.yaml" ])}; do
@@ -46,6 +46,32 @@ let
     done
     [ "$(${pkgs.podman}/bin/podman info --format '{{.Host.Security.Rootless}}')" = true ] \
       || { echo "[lead-scout-member] podman is not rootless for this user" >&2; exit 1; }
+    # Compose owns these facts. Never print its resolved config (it can contain
+    # secrets); project only the recovery fields through yq.
+    for service in app db; do
+      policy=$(${memberCompose} config | SERVICE="$service" ${pkgs.yq-go}/bin/yq '.services[strenv(SERVICE)].restart // "no"' -)
+      [ "$policy" = no ] || { echo "[lead-scout-member] $service restart policy must be no" >&2; exit 1; }
+      name="''${COMPOSE_PROJECT_NAME}_''${service}_1"
+      if ${pkgs.podman}/bin/podman container exists "$name"; then
+        policy=$(${pkgs.podman}/bin/podman inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$name")
+        [ "$policy" = no ] || { echo "[lead-scout-member] live $service has another restart authority" >&2; exit 1; }
+      fi
+    done
+    configured=$(${pkgs.yq-go}/bin/yq '.server.trusted_proxies // [] | .[]' config.yaml)
+    if [ -n "$configured" ]; then
+      declared=$(${memberCompose} config | ${pkgs.yq-go}/bin/yq '.services.app.networks[] | .ipv4_address // ""' -)
+      subnet=$(${memberCompose} config | ${pkgs.yq-go}/bin/yq '.networks[].ipam.config[].subnet // ""' -)
+      [ -n "$subnet" ] && [ "$configured" = "$declared" ] \
+        || { echo "[lead-scout-member] exact trust requires the compose static app address and subnet" >&2; exit 1; }
+    fi
+  '';
+  # StopPost alone owns the drain, including failed starts. No down/recreate.
+  memberStopSteps = pkgs.writeShellScript "lead-scout-member-stop-steps" ''
+    set -uo pipefail
+    status=0
+    ${memberCompose} stop -t 15 app || status=$?
+    ${memberCompose} stop -t 30 db || status=$?
+    exit "$status"
   '';
   # Bounded: 30 attempts, 5 s each, 2.000-2.999 s jittered gaps (~4.5 min
   # worst case, inside TimeoutStartSec). A miss fails the unit; no retry.
@@ -82,6 +108,26 @@ let
       exit 1
     fi
   '';
+
+  memberPrepareSteps = pkgs.writeShellScript "lead-scout-member-prepare-steps" ''
+    set -euo pipefail
+    ${restartJitter}
+    ${memberPreflight}
+    ${memberCompose} up -d --no-build --no-recreate
+    ${memberHealth}
+    ${memberTrustCheck}
+  '';
+  # One elapsed deadline around the entire sequence, not a fresh timeout per
+  # systemd command. The unit passes the budget; scaled tests run this same
+  # helper. KILL cancels the helper group without another grace period.
+  boundedMemberPhase = name: steps: pkgs.writeShellScript name ''
+    set -euo pipefail
+    [ "$#" -eq 1 ] && [[ "$1" =~ ^[1-9][0-9]*$ ]] \
+      || { echo "Expected one positive phase budget in seconds" >&2; exit 2; }
+    exec ${pkgs.coreutils}/bin/timeout --signal=KILL "$1" ${steps}
+  '';
+  memberPrepare = boundedMemberPhase "lead-scout-member-prepare" memberPrepareSteps;
+  memberStop = boundedMemberPhase "lead-scout-member-stop" memberStopSteps;
 
   chromiumBin = "${pkgs.chromium}/bin/chromium";
 
@@ -197,9 +243,9 @@ let
   };
 
   # systemd restart delays are deterministic. Add 0–5 seconds at the
-  # composition root so concurrent Discord recovery does not create a thundering
-  # herd; the unit's start-limit below remains the hard retry ceiling.
-  discordRestartJitter = pkgs.writeShellScript "lead-scout-discord-approval-restart-jitter" ''
+  # composition root for both Discord and member recovery. Member jitter is
+  # inside its aggregate preparation deadline, not another systemd phase.
+  restartJitter = pkgs.writeShellScript "lead-scout-restart-jitter" ''
     exec ${pkgs.coreutils}/bin/sleep "$((RANDOM % 6))"
   '';
 
@@ -248,7 +294,7 @@ let
           "${pkgs.coreutils}/bin/test -f ${tsNode.loader}"
           "${pkgs.coreutils}/bin/test -r ${approvalBotTokenFile bot}"
           "${pkgs.coreutils}/bin/test -s ${approvalBotTokenFile bot}"
-          discordRestartJitter
+          restartJitter
         ];
         ExecStart = tsNode.run node cli "discord:approvals";
         WorkingDirectory = cfg.projectDir;
@@ -475,12 +521,10 @@ in
         bare-IP X-Forwarded-For (routeOwners assigns the name to work)
       '';
       enable = lib.mkEnableOption ''
-        BOOT-TIME start of the rootless podman-compose member instance. This is
-        a oneshot: it validates inputs, brings the existing project up once per
-        user-manager start, proves health and the trusted-peer invariant, then
-        exits. It does NOT watch or restart containers that stop later, so it
-        does NOT meet an ongoing-restart contract; recovery is unproven and
-        separate
+        rootless member supervision: detached adoption, health and exact trust
+        on each start, then wait for either container to exit. Consecutive
+        failed starts terminate at the start limit; stable operation may begin
+        a new incident. Disabled until separately accepted for live activation
       '';
       directory = lib.mkOption {
         type = lib.types.path;
@@ -714,35 +758,70 @@ in
     }];
 
     # Member instance: rootless, so a user unit in eric's manager (linger is on
-    # via the server role). Boot contract only — see memberInstance.enable.
+    # via the server role). Activation remains separate — see memberInstance.enable.
     # --no-recreate leaves running containers untouched and --no-build never
     # builds from the runtime directory, so a start against the live instance
-    # is a no-op. Every failure is visible as a failed unit; nothing retries it.
+    # preserves container identity. Every retry repeats preparation.
     systemd.user.services.lead-scout-member-instance = lib.mkIf member.enable {
-      description = "Lead Scout member instance (rootless compose, boot start only; no restart monitoring)";
+      description = "Lead Scout member instance (rootless compose recovery)";
       wantedBy = [ "default.target" ];
-      unitConfig.ConditionUser = cfg.user;
+      # No extra network-wait job outside the incident budget. Preparation
+      # owns readiness and fails within its elapsed deadline if unavailable.
+      unitConfig = {
+        ConditionUser = cfg.user;
+        StartLimitIntervalSec = 5400;
+        StartLimitBurst = 5;
+        OnFailure = "hwc-service-failure-notifier@lead-scout-member-instance.service";
+      };
       path = [ pkgs.podman pkgs.podman-compose ];
       environment.COMPOSE_PROJECT_NAME = member.projectName;
       serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
+        Type = "exec";
         WorkingDirectory = member.directory;
-        ExecStartPre = memberPreflight;
-        ExecStart = "${memberCompose} up -d --no-build --no-recreate";
-        ExecStartPost = [ memberHealth memberTrustCheck ];
+        ExecStartPre = "${memberPrepare} 300";
+        # Only the waiter ignores exit status (podman returns1 on TERM).
+        # Restart=always still retries every main exit. Never use a service-wide
+        # SuccessExitStatus override: that also accepts preparation failures.
+        ExecStart = "-${pkgs.podman}/bin/podman wait --condition=stopped --exit-first-match ${member.projectName}_app_1 ${member.projectName}_db_1";
         # App first so its 10 s drain runs while the database is still up.
-        ExecStop = [
-          "${memberCompose} stop -t 15 app"
-          "${memberCompose} stop db"
-        ];
-        TimeoutStartSec = "5min";
-        TimeoutStopSec = "60s";
+        ExecStopPost = "${memberStop} 90";
+        TimeoutStartSec = 300;
+        TimeoutStopSec = 90;
+        TimeoutStartFailureMode = "kill";
+        TimeoutStopFailureMode = "kill";
+        KillSignal = "SIGTERM";
+        # Group TERM would signal conmon and stop DB before app. Mixed sends
+        # TERM only to the waiter, retaining group KILL for timeout containment.
+        KillMode = "mixed";
+        Restart = "always";
+        RestartSec = 15;
+        RestartSteps = 4;
+        RestartMaxDelaySec = 240;
       };
     };
 
     # VALIDATION
     assertions = [
+      {
+        assertion = !member.enable || (config.hwc.monitoring.alerts.enable
+          && config.hwc.monitoring.alerts.sources.serviceFailures.enable);
+        message = "Member recovery requires the existing user failure notifier.";
+      }
+      {
+        assertion = !member.enable || (let
+          unit = config.systemd.user.services.lead-scout-member-instance;
+          s = unit.serviceConfig;
+          u = unit.unitConfig;
+          seconds = command: lib.toInt (lib.last (lib.splitString " " command));
+        # Preparation + main activation + waiter termination + cleanup + delay.
+        # The manager fields are NOT aggregate lifecycle deadlines. Defaults:
+        # 5*(300+300+90+90+240)=5100 <5400. Stable operation starts a new incident.
+        in builtins.isString s.ExecStartPre && !(s ? ExecStartPost) && !(s ? ExecStop)
+          && u.StartLimitIntervalSec > u.StartLimitBurst * (
+            seconds s.ExecStartPre + s.TimeoutStartSec + s.TimeoutStopSec
+            + seconds s.ExecStopPost + s.RestartMaxDelaySec));
+        message = "Member start window must contain every failed-start startup/cleanup/backoff budget.";
+      }
       {
         assertion =
           !cfg.modelBridge.enable

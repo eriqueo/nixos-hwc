@@ -1287,6 +1287,54 @@
         touch "$out"
       '';
 
+      lead-scout-member-recovery = let
+        work = self.nixosConfigurations.hwc-work;
+        candidate = (work.extendModules { modules = [{
+          hwc.server.ai.leadScout.memberInstance = {
+            enable = true;
+            projectName = "b1-check";
+          };
+        }]; }).config;
+        unit = candidate.systemd.user.services.lead-scout-member-instance;
+        s = unit.serviceConfig;
+        u = unit.unitConfig;
+        commandPath = command: builtins.head (lib.splitString " " command);
+        budget = command: lib.toInt (lib.last (lib.splitString " " command));
+      in
+      assert lib.assertMsg (!work.config.hwc.server.ai.leadScout.memberInstance.enable)
+        "member recovery: source must remain disabled on work";
+      assert lib.assertMsg (s.Type == "exec" && !(s.RemainAfterExit or false)
+        && lib.hasInfix " wait --condition=stopped --exit-first-match " s.ExecStart)
+        "member recovery: foreground waiter missing";
+      assert lib.assertMsg (builtins.isString s.ExecStartPre && !(s ? ExecStartPost)
+        && !(s ? ExecStop)) "member recovery: duplicate preparation/cleanup phases";
+      assert lib.assertMsg (s.Restart == "always" && s.RestartSteps == 4
+        && s.RestartSec == 15 && s.RestartMaxDelaySec == 240
+        && u.StartLimitBurst == 5
+        && u.StartLimitIntervalSec > u.StartLimitBurst * (
+          budget s.ExecStartPre + s.TimeoutStartSec + s.TimeoutStopSec
+          + budget s.ExecStopPost + s.RestartMaxDelaySec))
+        "member recovery: start window does not contain failed-start budgets";
+      assert lib.assertMsg (builtins.isString s.ExecStartPre && !(s ? ExecStartPost)
+        && !(s ? ExecStop) && s.TimeoutStopSec == 90
+        && s.KillSignal == "SIGTERM" && s.KillMode == "mixed"
+        && s.TimeoutStartFailureMode == "kill" && s.TimeoutStopFailureMode == "kill"
+        && !(s ? SuccessExitStatus) && lib.hasPrefix "-" s.ExecStart
+        && budget s.ExecStartPre == 300 && budget s.ExecStopPost == 90)
+        "member recovery: aggregate preparation/sole cleanup boundary missing";
+      assert lib.assertMsg (u.OnFailure == "hwc-service-failure-notifier@lead-scout-member-instance.service"
+        && lib.hasSuffix " --user %I" candidate.systemd.user.services."hwc-service-failure-notifier@".serviceConfig.ExecStart)
+        "member recovery: user terminal notifier missing";
+      pkgs.runCommand "lead-scout-member-recovery" {} ''
+        ${pkgs.ripgrep}/bin/rg -F 'timeout --signal=KILL "$1"' ${commandPath s.ExecStartPre}
+        ${pkgs.ripgrep}/bin/rg -F 'timeout --signal=KILL "$1"' ${commandPath s.ExecStopPost}
+        steps=$(${pkgs.gawk}/bin/awk 'NF {last=$NF} END {print last}' ${commandPath s.ExecStartPre})
+        jitter=$(${pkgs.ripgrep}/bin/rg --no-config --no-line-number '^/nix/store/.*-lead-scout-restart-jitter$' "$steps")
+        ${pkgs.ripgrep}/bin/rg -F 'sleep "$((RANDOM % 6))"' "$jitter"
+        ${pkgs.ripgrep}/bin/rg -F 'start-limit-hit' ${candidate.hwc.notifications._internal.serviceFailureNotify}/bin/hwc-service-failure-notify
+        touch "$out"
+      '';
+
       scout-layout = let
         work = self.nixosConfigurations.hwc-work;
         cfg = work.config;

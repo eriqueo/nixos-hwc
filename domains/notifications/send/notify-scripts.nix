@@ -53,6 +53,40 @@ let
     runtimeInputs = [ pkgs.coreutils pkgs.systemd pkgs.util-linux ];
     text = ''
       set -euo pipefail
+      # User recovery units have no access to the root log file. Journal is
+      # their local failure signal. System callers retain the branch below.
+      if [ "''${1:-}" = --user ]; then
+        SERVICE_NAME="''${2:?missing user unit}"
+        SERVICE_NAME="''${SERVICE_NAME%.service}.service"
+        if ! PROPERTIES=$(systemctl --user show "$SERVICE_NAME" -p LoadState -p ActiveState -p Result); then
+          echo "Cannot read user unit $SERVICE_NAME; no notification sent" >&2
+          exit 1
+        fi
+        load="" state="" result=""
+        while IFS='=' read -r key value; do
+          case "$key" in
+            LoadState) load="$value" ;;
+            ActiveState) state="$value" ;;
+            Result) result="$value" ;;
+          esac
+        done <<< "$PROPERTIES"
+        if [ "$load" != loaded ] || [ -z "$state" ] || [ -z "$result" ]; then
+          echo "User unit $SERVICE_NAME has no readable terminal state; no notification sent" >&2
+          exit 1
+        fi
+        if [ "$state" != failed ] || [ "$result" != start-limit-hit ]; then
+          echo "User unit $SERVICE_NAME state=$state result=$result; no terminal-limit notification"
+          exit 0
+        fi
+        LOGS=$(journalctl --user-unit "$SERVICE_NAME" -n 12 --no-pager 2>&1 | tail -12 || echo "Could not get logs")
+        if ! ${alert} "Service Failed: $SERVICE_NAME" \
+          "User service $SERVICE_NAME exhausted startup recovery. Inspect: journalctl --user-unit $SERVICE_NAME -n 50. Fix the cause, then systemctl --user reset-failed $SERVICE_NAME and systemctl --user start $SERVICE_NAME. Recent logs:"$'\n'"$LOGS" \
+          -s critical -e services -f "service=$SERVICE_NAME" -f "scope=user"; then
+          echo "hwc-alert failed for user unit $SERVICE_NAME; logged locally only" >&2
+          exit 1
+        fi
+        exit 0
+      fi
       LOG_FILE="${logDir}/service-failures.log"
       mkdir -p "${logDir}"
       log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"; }
