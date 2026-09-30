@@ -15,6 +15,7 @@ finance, business databases, website/CMS, and the daily morning briefing.
 ## Structure
 
 Website source, CMS, calculator builds and atomic public releases run on hwc-work; a loopback Caddy origin serves the existing Cloudflare tunnel.
+Calculator presentation tokens and layout live in `website/calculator/app/src`; pricing and CMS-managed calculator data remain separate from presentation.
 
 The morning-briefing host-health option documents permanent source-owned SSH
 reads for journal, VPN and backup detail, alongside central Prometheus probes.
@@ -42,6 +43,7 @@ business/
 
 ## Changelog
 - 2026-09-30: morning-briefing adds an AGENTS section and alerts from `ws ledger --json`; `today-dispatch` carries the pipeline marker.
+- 2026-09-30: Repair calculator mobile overflow, light-surface text contrast, accessible field names and autocomplete; retain pricing and CRM submission contracts.
 - 2026-09-28: Accept public Host headers at the loopback website origin; require body/header checks for cutover acceptance.
 - 2026-09-28: Preserve legacy footer image URLs and supply kernel flock for crash-safe website publication.
 - 2026-09-28: Bound website release cleanup with a daily fail-safe timer; share app settings while each unit owns its generated PATH.

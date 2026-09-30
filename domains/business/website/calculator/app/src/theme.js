@@ -20,8 +20,9 @@ export const T = {
   // Text
   heading: "#23282d",
   text: "#2d2d2d",
-  textMuted: "#6b7280",
-  textLight: "#9ca3af",
+  textMuted: "#4b5563",
+  textLight: "#4b5563",
+  textAccent: "#5b4a36",   // brand wood ramp; readable on cream and white
   textOnDark: "#e8e4df",
   textOnDarkMuted: "#9ca3af",
 
