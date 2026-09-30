@@ -127,13 +127,22 @@ cat > "$BIN/hostname" <<'EOF'
 #!/usr/bin/env bash
 printf 'harness-test-host\n'
 EOF
-chmod +x "$BIN/nix" "$BIN/ssh" "$BIN/hostname"
+# The installed CLI after the switch; publish must hand the final doctor to it.
+cat > "$BIN/agent-harness" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$HARNESS_TEST_ROOT/installed-cli.log"
+EOF
+chmod +x "$BIN/nix" "$BIN/ssh" "$BIN/hostname" "$BIN/agent-harness"
 HARNESS_TEST_ROOT="$ROOT" PATH="$BIN:$PATH" \
   AGENT_HARNESS_EXPECTED_MANIFEST="$ROOT/expected.json" \
   AGENT_HARNESS_SOURCE="$SOURCE_REPO" \
   AGENT_HARNESS_NIXOS="$NIXOS_REPO" \
   AGENT_HARNESS_FLEET_HOSTS=hwc-server:hwc-laptop:hwc-work \
   bash "$(dirname "$0")/control.sh" publish >/dev/null
+[ "$(cat "$ROOT/installed-cli.log" 2>/dev/null)" = 'doctor --fleet' ] || {
+  echo 'control.test: publish did not run the fleet doctor from the installed CLI' >&2
+  exit 1
+}
 [ "$(git -C "$SOURCE_MIRROR" rev-parse refs/heads/main)" = "$STATIC_REVISION" ] || {
   echo 'control.test: static mirror did not receive the published revision' >&2
   exit 1

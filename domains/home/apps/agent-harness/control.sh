@@ -217,7 +217,10 @@ publish() {
       ssh -t "$host" "git -C ~/.claude-config pull --ff-only && cd ~/.nixos && git pull --ff-only && sudo nixos-rebuild switch --flake .#$host"
     fi
   done
-  exec "$BASH" "$0" doctor --fleet
+  # The CLI now on PATH, not "$0": this process is the pre-switch store copy,
+  # whose expected manifest still names the old revision, so re-running it
+  # reported every freshly switched host as a mismatch (2026-09-30).
+  exec agent-harness doctor --fleet
 }
 
 usage() {
