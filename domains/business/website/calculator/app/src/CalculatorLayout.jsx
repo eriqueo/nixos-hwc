@@ -26,7 +26,7 @@ export default function CalculatorLayout({
         fontFamily: fonts.sans,
         color: T.text,
         padding: isMobile ? "2rem 0" : "3rem 0",
-        margin: isMobile ? "0 -1rem" : "0",
+        margin: 0,
       }}
     >
       <link href={fontsUrl} rel="stylesheet" />

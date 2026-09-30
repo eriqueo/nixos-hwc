@@ -24,7 +24,7 @@ const inputStyle = {
 
 const btnPrimary = {
   width: "100%", padding: "16px 0", borderRadius: 10, cursor: "pointer",
-  border: "none", background: T.copper, color: T.white,
+  border: "none", background: T.copper, color: T.charcoal,
   fontSize: 17, fontWeight: 600, fontFamily: "inherit", transition: "opacity 0.15s",
 };
 
@@ -58,6 +58,7 @@ function ImageCard({ option, selected, onClick }) {
   return (
     <button
       onClick={onClick}
+      aria-pressed={selected}
       style={{
         flex: "1 1 calc(50% - 6px)",
         minWidth: 160,
@@ -124,7 +125,7 @@ function ImageCard({ option, selected, onClick }) {
 // ─── Compact Card ──────────────────────────────────────────────────────────
 function CompactCard({ option, selected, onClick }) {
   return (
-    <button onClick={onClick} style={{
+    <button onClick={onClick} aria-pressed={selected} style={{
       padding: "16px 20px", borderRadius: 10, cursor: "pointer", textAlign: "left",
       border: selected ? `2px solid ${T.copper}` : `1.5px solid ${T.border}`,
       background: selected ? T.copperLight : T.white, transition: "all 0.15s ease",
@@ -133,7 +134,7 @@ function CompactCard({ option, selected, onClick }) {
       onMouseEnter={(e) => { if (!selected) { e.currentTarget.style.borderColor = T.copperMid; e.currentTarget.style.boxShadow = T.cardShadowHover; } }}
       onMouseLeave={(e) => { if (!selected) { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.boxShadow = T.cardShadow; } }}
     >
-      <div style={{ width: 38, height: 38, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 13, fontWeight: 700, color: T.copper, background: T.copperLight, border: `1px solid ${T.copperBorder}` }}>
+      <div style={{ width: 38, height: 38, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 13, fontWeight: 700, color: T.textAccent, background: T.copperLight, border: `1px solid ${T.copperBorder}` }}>
         {option.icon}
       </div>
       <div>
@@ -147,7 +148,7 @@ function CompactCard({ option, selected, onClick }) {
 // ─── CheckboxItem ──────────────────────────────────────────────────────────
 function CheckboxItem({ option, checked, onClick }) {
   return (
-    <button onClick={onClick} style={{
+    <button onClick={onClick} aria-pressed={checked} style={{
       padding: "12px 14px", borderRadius: 8, cursor: "pointer", textAlign: "left",
       border: checked ? `2px solid ${T.copper}` : `1.5px solid ${T.border}`,
       background: checked ? T.copperLight : T.white, transition: "all 0.15s ease",
@@ -166,8 +167,8 @@ function WhyToggle({ text }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ marginBottom: 16 }}>
-      <button onClick={() => setOpen(!open)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 14, fontWeight: 600, color: T.copper, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: `1.5px solid ${T.copper}`, fontSize: 11, fontWeight: 700, color: T.copper, lineHeight: 1 }}>?</span>
+      <button onClick={() => setOpen(!open)} aria-expanded={open} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 14, fontWeight: 600, color: T.textAccent, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: `1.5px solid ${T.copper}`, fontSize: 11, fontWeight: 700, color: T.textAccent, lineHeight: 1 }}>?</span>
         {open ? "Got it" : "Why do we ask this?"}
       </button>
       {open && (
@@ -387,9 +388,9 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <input type="text" placeholder="Your name" value={contact.name} onChange={(e) => setContact((c) => ({ ...c, name: e.target.value }))} style={inputStyle} onFocus={(e) => (e.target.style.borderColor = T.copper)} onBlur={(e) => (e.target.style.borderColor = T.border)} />
-              <input type="email" placeholder="Email address" value={contact.email} onChange={(e) => setContact((c) => ({ ...c, email: e.target.value }))} style={inputStyle} onFocus={(e) => (e.target.style.borderColor = T.copper)} onBlur={(e) => (e.target.style.borderColor = T.border)} onKeyDown={(e) => e.key === "Enter" && unlockGate()} />
-              <button onClick={unlockGate} disabled={!hasGateInfo} style={{ ...btnPrimary, background: hasGateInfo ? T.charcoal : "#d1d5db", cursor: hasGateInfo ? "pointer" : "not-allowed" }}>
+              <input type="text" aria-label="Your name" autoComplete="name" placeholder="Your name" value={contact.name} onChange={(e) => setContact((c) => ({ ...c, name: e.target.value }))} style={inputStyle} onFocus={(e) => (e.target.style.borderColor = T.copper)} onBlur={(e) => (e.target.style.borderColor = T.border)} />
+              <input type="email" aria-label="Email address" autoComplete="email" placeholder="Email address" value={contact.email} onChange={(e) => setContact((c) => ({ ...c, email: e.target.value }))} style={inputStyle} onFocus={(e) => (e.target.style.borderColor = T.copper)} onBlur={(e) => (e.target.style.borderColor = T.border)} onKeyDown={(e) => e.key === "Enter" && unlockGate()} />
+              <button onClick={unlockGate} disabled={!hasGateInfo} style={{ ...btnPrimary, color: T.white, background: hasGateInfo ? T.charcoal : "#d1d5db", cursor: hasGateInfo ? "pointer" : "not-allowed" }}>
                 Show my estimate
               </button>
               <div style={{ fontSize: 11, color: T.textLight, textAlign: "center", marginTop: 2 }}>We'll send your project summary to this email. No spam.</div>
@@ -411,7 +412,7 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
 
             <div style={{ background: T.surfaceBg, border: `1px solid ${T.border}`, borderRadius: 12, padding: "20px 24px", marginBottom: 24 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${T.border}` }}>
-                <div style={{ fontFamily: fonts.serif, fontSize: 14, fontWeight: 600, color: T.copper }}>Heartwood Craft</div>
+                <div style={{ fontFamily: fonts.serif, fontSize: 14, fontWeight: 600, color: T.textAccent }}>Heartwood Craft</div>
                 <div style={{ fontSize: 11, color: T.textLight }}>{new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div>
               </div>
               {summaryFields.map(({ label, id }) => (
@@ -428,7 +429,7 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
               )}
               <div style={{ textAlign: "center", padding: "16px 0 0" }}>
                 <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 4 }}>Estimated range</div>
-                <div style={{ fontFamily: fonts.serif, fontSize: 28, fontWeight: 700, color: T.copper }}>{fmt(lo)} – {fmt(hi)}</div>
+                <div style={{ fontFamily: fonts.serif, fontSize: 28, fontWeight: 700, color: T.textAccent }}>{fmt(lo)} – {fmt(hi)}</div>
               </div>
             </div>
 
@@ -440,14 +441,14 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
               <div style={{ fontSize: 17, fontWeight: 700, color: T.heading, marginBottom: 4 }}>Schedule a call with Eric</div>
               <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 18, lineHeight: 1.6 }}>Add your phone number and we'll send a calendar invite for your preferred time.</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <input type="text" placeholder="Your name" value={contact.name} onChange={(e) => setContact((c) => ({ ...c, name: e.target.value }))} style={inputStyle} onFocus={(e) => (e.target.style.borderColor = T.copper)} onBlur={(e) => (e.target.style.borderColor = T.border)} />
-                <input type="email" placeholder="Email address" value={contact.email} onChange={(e) => setContact((c) => ({ ...c, email: e.target.value }))} style={inputStyle} onFocus={(e) => (e.target.style.borderColor = T.copper)} onBlur={(e) => (e.target.style.borderColor = T.border)} />
-                <input type="tel" placeholder="Phone number" value={contact.phone} onChange={(e) => setContact((c) => ({ ...c, phone: e.target.value }))} style={inputStyle} onFocus={(e) => (e.target.style.borderColor = T.copper)} onBlur={(e) => (e.target.style.borderColor = T.border)} />
+                <input type="text" aria-label="Your name" autoComplete="name" placeholder="Your name" value={contact.name} onChange={(e) => setContact((c) => ({ ...c, name: e.target.value }))} style={inputStyle} onFocus={(e) => (e.target.style.borderColor = T.copper)} onBlur={(e) => (e.target.style.borderColor = T.border)} />
+                <input type="email" aria-label="Email address" autoComplete="email" placeholder="Email address" value={contact.email} onChange={(e) => setContact((c) => ({ ...c, email: e.target.value }))} style={inputStyle} onFocus={(e) => (e.target.style.borderColor = T.copper)} onBlur={(e) => (e.target.style.borderColor = T.border)} />
+                <input type="tel" aria-label="Phone number" autoComplete="tel" placeholder="Phone number" value={contact.phone} onChange={(e) => setContact((c) => ({ ...c, phone: e.target.value }))} style={inputStyle} onFocus={(e) => (e.target.style.borderColor = T.copper)} onBlur={(e) => (e.target.style.borderColor = T.border)} />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>Pick a time (Mountain Time · Mon–Fri)</div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <input type="date" value={contact.preferred_date || ""} onChange={(e) => loadSlots(e.target.value)} min={new Date().toISOString().split("T")[0]} style={{ ...inputStyle, flex: 1 }} />
-                    <select value={contact.preferred_time || ""} onChange={(e) => setContact((c) => ({ ...c, preferred_time: e.target.value }))} disabled={!slots || slots.length === 0} style={{ ...inputStyle, flex: 1, cursor: slots && slots.length ? "pointer" : "not-allowed" }}>
+                    <input type="date" aria-label="Preferred call date" value={contact.preferred_date || ""} onChange={(e) => loadSlots(e.target.value)} min={new Date().toISOString().split("T")[0]} style={{ ...inputStyle, minWidth: 0, flex: 1 }} />
+                    <select aria-label="Preferred call time" value={contact.preferred_time || ""} onChange={(e) => setContact((c) => ({ ...c, preferred_time: e.target.value }))} disabled={!slots || slots.length === 0} style={{ ...inputStyle, minWidth: 0, flex: 1, cursor: slots && slots.length ? "pointer" : "not-allowed" }}>
                       <option value="">
                         {slotsLoading ? "Loading times…"
                           : slots === null ? "Pick a date first"
@@ -458,7 +459,7 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
                     </select>
                   </div>
                 </div>
-                <button onClick={submitLead} disabled={!hasPhone || submitting} style={{ ...btnPrimary, background: hasPhone && !submitting ? T.charcoal : "#d1d5db", cursor: hasPhone && !submitting ? "pointer" : "not-allowed" }}>
+                <button onClick={submitLead} disabled={!hasPhone || submitting} style={{ ...btnPrimary, color: T.white, background: hasPhone && !submitting ? T.charcoal : "#d1d5db", cursor: hasPhone && !submitting ? "pointer" : "not-allowed" }}>
                   {submitting ? "Sending..." : "Request a call"}
                 </button>
               </div>
@@ -479,11 +480,11 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
               }
             </p>
             <div style={{ margin: "24px auto 0", padding: "16px 20px", borderRadius: 12, background: T.copperLight, display: "inline-block", textAlign: "left" }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: T.copper, marginBottom: 8 }}>What happens next</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: T.textAccent, marginBottom: 8 }}>What happens next</div>
               <div style={{ fontSize: 13, color: T.text, lineHeight: 1.8 }}>1. Eric confirms your call time<br />2. Site visit — scope, conditions, measurements<br />3. Detailed estimate, walked through together</div>
             </div>
             {reportUrl && (
-              <a href={reportUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", borderRadius: 10, marginTop: 20, background: T.copper, color: T.white, fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
+              <a href={reportUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", borderRadius: 10, marginTop: 20, background: T.copper, color: T.charcoal, fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
                 View your project summary →
               </a>
             )}
