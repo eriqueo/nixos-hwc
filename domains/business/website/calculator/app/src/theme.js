@@ -2,6 +2,8 @@
 // Matches the site's warm cream/copper palette instead of dark Gruvbox.
 // Used by CalculatorRuntime + EstimateSidebar.
 
+const readableAccent = "#5b4a36"; // brand wood ramp on light surfaces
+
 export const T = {
   // Brand
   copper: "#cf995f",
@@ -22,14 +24,14 @@ export const T = {
   text: "#2d2d2d",
   textMuted: "#4b5563",
   textLight: "#4b5563",
-  textAccent: "#5b4a36",   // brand wood ramp; readable on cream and white
+  textAccent: readableAccent,
   textOnDark: "#e8e4df",
   textOnDarkMuted: "#9ca3af",
 
   // Borders
   border: "#e5e7eb",
   borderHover: "#d1d5db",
-  borderSelected: "#cf995f",
+  borderSelected: readableAccent,
 
   // Interactive
   white: "#ffffff",
