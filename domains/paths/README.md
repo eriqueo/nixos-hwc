@@ -11,6 +11,10 @@ Central path definitions providing machine-aware filesystem abstraction. Enables
 
 ## Structure
 
+`user.apps` owns independent source checkouts (`~/600_apps`). `user.go` owns
+the Go workspace, module/build caches and user-installed binary destination.
+The development module applies these paths and clears replaceable caches monthly.
+
 business.websiteSite and business.websitePublished own the source and release locations for CMS, MCP and public serving.
 
 ```
@@ -61,6 +65,7 @@ in {
 4. Allow per-machine overrides
 
 ## Changelog
+- 2026-09-30: Declare `user.apps` and `user.go.{workspace,moduleCache,buildCache,bin}`; applications no longer choose a visible Go workspace at `~/go`.
 - 2026-09-28: business.websiteSite and business.websitePublished own the source and release locations for CMS, MCP and public serving.
 - 2026-09-22: Added `user.mailSyncStatus`, the single path producer for the
   bounded mail-sync status consumed by Home Manager health checks and the MCP.

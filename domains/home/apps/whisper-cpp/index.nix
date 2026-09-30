@@ -1,9 +1,8 @@
 # domains/home/apps/whisper-cpp/index.nix
 #
 # whisper.cpp (CUDA build on machines with NVIDIA) plus declarative model
-# management. Each requested model is fetched once via fetchurl (hash-pinned)
-# and symlinked into modelsDir so `whisper-cli -m <modelsDir>/ggml-<name>.bin`
-# resolves without imperative downloads.
+# management. Each requested model is fetched once via fetchurl (hash-pinned).
+# Consumers use modelPaths directly; no model directory is created in $HOME.
 #
 { config, lib, pkgs, ... }:
 let
@@ -32,10 +31,7 @@ let
     then pkgs.whisper-cpp.override { cudaSupport = true; }
     else pkgs.whisper-cpp;
 
-  modelFiles = lib.listToAttrs (map (m: {
-    name = "${cfg.modelsDir}/ggml-${m}.bin";
-    value = { source = fetchModel m; };
-  }) cfg.models);
+  modelPaths = lib.genAttrs cfg.models fetchModel;
 
 
 in
@@ -56,13 +52,13 @@ in
       type = lib.types.listOf (lib.types.enum (lib.attrNames knownModels));
       default = [ "medium.en" ];
       example = [ "large-v3" "medium.en" ];
-      description = "GGML model names to install. Symlinked into modelsDir as ggml-<name>.bin.";
+      description = "GGML model names to retain in the Nix store and expose through modelPaths.";
     };
 
-    modelsDir = lib.mkOption {
-      type = lib.types.str;
-      default = "${config.home.homeDirectory}/models/whisper";
-      description = "Directory where model symlinks live. Absolute path.";
+    modelPaths = lib.mkOption {
+      type = lib.types.attrsOf lib.types.package;
+      readOnly = true;
+      description = "Hash-pinned model store files, keyed by configured model name.";
     };
 
 
@@ -73,11 +69,10 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     home.packages = [ whisperPkg ];
-
-    # home.file paths must be relative to $HOME — strip the prefix.
-    home.file = lib.mapAttrs' (path: spec:
-      lib.nameValuePair (lib.removePrefix "${config.home.homeDirectory}/" path) spec
-    ) modelFiles;
+    hwc.home.apps.whisper-cpp.modelPaths = modelPaths;
+    # REPLACEABLE: Nix fetches and GC manage the weights. Retain even models
+    # not selected by dictation; they must survive store GC for CLI use.
+    home.extraDependencies = lib.attrValues modelPaths;
 
   };
 }

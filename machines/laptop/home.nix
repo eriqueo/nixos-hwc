@@ -55,7 +55,7 @@ in
     gpu-screen-recorder.enable = true;  # gsr-toggle / SHIFT+PRINT call recording
     hwc-dictation = {
       enable = true;
-      model = "${config.hwc.home.apps.whisper-cpp.modelsDir}/ggml-${dictationModel}.bin";
+      model = toString config.hwc.home.apps.whisper-cpp.modelPaths.${dictationModel};
     };
     waybar.powerHub.enable = true;
     whisper-cpp = {
