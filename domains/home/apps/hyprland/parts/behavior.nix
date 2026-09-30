@@ -318,8 +318,9 @@ in {
       # the card translucent, and a legend you read through is one you misread.
       "match:class ^(hypr-keybinds)$, float on, center 1, size 1100 900, opacity 1.0"
 
-      # Password manager launchers place new windows on the current workspace.
-      "match:class ^(Proton-authenticator)$, tile on, size 400 600, suppress_event fullscreen"
+      # Credential utilities need room for their sidebar and item details.
+      # Floating keeps opening one from splitting the browser into narrow tiles.
+      "match:class ^(bitwarden|proton-pass|[Pp]roton-authenticator)$, float on, size (monitor_w*0.7) (monitor_h*0.8), center 1, suppress_event fullscreen"
 
       # DOSBox ECE (eXoWin3x) — inhibit idle during play
       "match:class ^(dosbox)$, idle_inhibit always"

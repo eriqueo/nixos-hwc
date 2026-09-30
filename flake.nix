@@ -1621,6 +1621,20 @@
         touch $out
       '';
 
+      bitwarden-portal = let
+        client = lib.findFirst (p: (p.meta.mainProgram or "") == "bitwarden")
+          (throw "bitwarden-portal: laptop no longer installs Bitwarden")
+          self.homeConfigurations."eric@hwc-laptop".config.home.packages;
+      in pkgs.runCommand "bitwarden-portal" {
+        nativeBuildInputs = [ pkgs.python3 pkgs.ripgrep ];
+      } ''
+        # The actual HM package must invoke the tested relay launcher.
+        rg --text --fixed-strings '${client.portalLauncher}' '${client}/bin/bitwarden'
+        BITWARDEN_PORTAL_TEST_LAUNCHER='${client.portalLauncher}' \
+          python3 ${./domains/home/apps/bitwarden/test_portal_launcher.py}
+        touch "$out"
+      '';
+
       charter-law1 = mkCharterLint "law1-osconfig-safety" [
         "rg 'osConfig\\.' domains/home --type nix | rg -v 'osConfig\\.[a-zA-Z0-9_.]+ or |attrByPath|osConfig \\?|lib\\.mkIf isNixOS|#'"
       ];

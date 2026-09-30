@@ -30,6 +30,8 @@ Hyprland's `apps/hyprland/parts/behavior.nix` sizes Bluetooth and file pickers f
 
 Hyprland's session starts enabled Bitwarden and Proton Pass clients, which supply their native Waybar tray icons.
 
+Credential utility windows float at monitor-relative dimensions. Bitwarden's package relays its session-bus connection to allow file selection while retaining process isolation.
+
 The shared agent-harness fleet list uses hwc-home, hwc-work and hwc-laptop without changing session stores.
 - `apps/t3code/` — launchers and a restricted DX2 handoff adapter; T3 supplies the result limit.
 - `apps/hwc-dictation/` — owned desktop dictation package, settings and user service.
@@ -65,6 +67,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-30: Give credential utilities readable floating windows without narrowing the browser; restore Bitwarden portal file selection through an app-scoped relay that keeps vault processes protected and drains on exit.
 - 2026-09-30: Start enabled Bitwarden and Proton Pass clients at desktop login so their native tray icons return after reboot.
 - 2026-09-30: Limit floating windows using runtime monitor dimensions; give Bluetooth and file pickers screen-relative starting sizes while preserving small dialogs and tiled applications.
 - 2026-09-30: Point `website` at the existing `id_ed25519` key instead of the absent `hostinger_deploy` key; Hostinger must authorize its public key before key login works.
