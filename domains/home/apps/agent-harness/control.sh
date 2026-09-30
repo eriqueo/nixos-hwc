@@ -195,9 +195,18 @@ publish() {
     git -C "$NIXOS" commit -m "chore: publish agent harness $static_revision"
   fi
 
+  # Build each host in its own store: evaluate here, realise there. A remote
+  # host already holds its heavy closure, so nothing is fetched twice. Measured
+  # 2026-09-30: building hwc-home on hwc-work refetched its CUDA archives from
+  # NVIDIA, and a dropped download failed the whole publication twice.
   local host
   for host in "${FLEET_HOSTS[@]}"; do
-    nix build --no-link "$NIXOS#nixosConfigurations.$host.config.system.build.toplevel"
+    if [ "$host" = "$(hostname)" ]; then
+      nix build --no-link "$NIXOS#nixosConfigurations.$host.config.system.build.toplevel"
+    else
+      nix build --no-link --eval-store auto --store "ssh-ng://$host" \
+        "$NIXOS#nixosConfigurations.$host.config.system.build.toplevel"
+    fi
   done
   git -C "$NIXOS" push origin main
 

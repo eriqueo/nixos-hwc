@@ -142,6 +142,10 @@ for host in hwc-server hwc-laptop hwc-work; do
   rg -q "nixosConfigurations\\.$host\\.config\\.system\\.build\\.toplevel" "$ROOT/nix.log" || {
     echo "control.test: $host was not built" >&2; exit 1;
   }
+  # A remote host builds in its own store.
+  rg -q -- "--store ssh-ng://$host .*nixosConfigurations\\.$host\\." "$ROOT/nix.log" || {
+    echo "control.test: $host was not built in its own store" >&2; exit 1;
+  }
   rg -q "$host .*git -C ~/.claude-config pull --ff-only" "$ROOT/ssh.log" || {
     echo "control.test: $host did not refresh its static authoring source" >&2; exit 1;
   }
