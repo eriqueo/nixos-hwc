@@ -76,6 +76,11 @@
   # Pixels per resize step in the `resize` submap (see the submap group below).
   resizeStep = "40";
 
+  # Use the window's current monitor in logical pixels, including its scale.
+  # Dynamic max_size constrains initial sizing and later client requests.
+  floatingMaxSize = "(monitor_w*0.8) (monitor_h*0.8)";
+  filePickerSize = "(monitor_w*0.5) (monitor_h*0.6)";
+
   wsSlots = [1 2 3 4 5 6 7 8];
   sendToWs = map (n: {
     mods = "${mod} CTRL"; key = toString n;
@@ -282,19 +287,19 @@ in {
       "match:class ^(Chromium-browser)$, match:title ^.*JobTread.*$, tile on"
       "match:class ^(chromium-.*|Chromium-.*)$, tile on"
 
-      # File pickers - float and center
-      "match:title ^(Open).*, float on, center 1, size 1000 700"
-      "match:title ^(Save).*, float on, center 1, size 1000 700"
-      "match:title ^(Choose).*, float on, center 1, size 1000 700"
-      "match:title ^(Select).*, float on, center 1, size 1000 700"
-      "match:title ^(Upload).*, float on, center 1, size 1000 700"
+      # File pickers - size relative to the monitor where they open.
+      "match:title ^(Open).*, float on, center 1, size ${filePickerSize}"
+      "match:title ^(Save).*, float on, center 1, size ${filePickerSize}"
+      "match:title ^(Choose).*, float on, center 1, size ${filePickerSize}"
+      "match:title ^(Select).*, float on, center 1, size ${filePickerSize}"
+      "match:title ^(Upload).*, float on, center 1, size ${filePickerSize}"
       "match:class ^(file_dialog)$, float on, center 1"
       "match:class ^(xdg-desktop-portal-gtk)$, float on, center 1"
       "match:class ^(org.gtk.FileChooserDialog)$, float on, center 1"
 
       # Floating utilities
       "match:class ^(pavucontrol)$, float on, size 800 600"
-      "match:class ^(blueman-manager)$, float on"
+      "match:class ^(blueman-manager)$, float on, size (monitor_w*0.4) (monitor_h*0.5), center 1"
 
       # Opacity
       "match:class ^(kitty)$, opacity 0.95"
@@ -330,6 +335,10 @@ in {
 
       # Gaming
       "match:class ^(steam_app_).*, fullscreen on, immediate on"
+
+      # Keep this after app-specific sizes. Clamp oversized floating dialogs
+      # while retaining small dialogs, and leave room for Waybar and borders.
+      "match:float 1, max_size ${floatingMaxSize}, center 1"
     ];
   };
 }
