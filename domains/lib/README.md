@@ -16,7 +16,7 @@ any domain (media, networking, data, etc.) can use them without depending on the
 
 ## Structure
 
-Standalone HM fleet fallback and dependency-update commands use hwc-home.
+Standalone HM fleet fallback covers hwc-home, hwc-work and hwc-xps; dependency-update commands use hwc-home.
 
 ```
 lib/
@@ -51,6 +51,7 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+- 2026-09-30: Add hwc-work's tailnet IP and FQDN to `hm.nix`'s standalone Home Manager fleet fallback for the work SSH shortcut.
 - 2026-09-29: Add `mkTsNode.nix`: `{ loader, run }` for units that run Scout TypeScript with `node --import` on the hoisted tsx loader, so the unit's main PID is the app. Consumers: lead/home/research/event scout and hwc-control-bot.
 - 2026-09-26: Standalone HM fleet fallback and dependency-update commands use hwc-home.
 - 2026-09-25: `arr-config.nix` `mkArrWebhookScript` requires `webhookUrl` (no hwc-server literal default); callers derive it from `hwc.automation.n8n.publicUrl`.

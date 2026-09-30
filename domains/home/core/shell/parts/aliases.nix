@@ -1,8 +1,8 @@
 # domains/home/core/shell/parts/aliases.nix
 # Default shell aliases. ws = workspace root env var reference;
 # nixosPath = resolved hwc.paths.nixos (Law 3 with Law-1 fallback);
-# fleet = tailnet addresses from hwc.networking.hosts (same pattern, via hmLib).
-{ ws, nixosPath, fleet }:
+# SSH targets and accounts live in the shell module's SSH host configuration.
+{ ws, nixosPath }:
 {
   "ll" = "eza -l"; "la" = "eza -lh"; "lt" = "eza --tree --level=2";
   "cd" = "z"; "cdi" = "zi"; "cz" = "z"; "czz" = "zi";
@@ -17,8 +17,9 @@
   "nixsearch" = "nix search nixpkgs"; "nixclean" = "nix-collect-garbage -d";
   "checkup" = "$HWC_NIXOS_DIR/scripts/system-checkup.sh"; "speedtest" = "speedtest-cli";
   "myip" = "curl -s ifconfig.me"; "reload" = "source ~/.zshrc";
-  "server" = "ssh eric@${fleet.ips.main}"; "xps" = "ssh eric@${fleet.ips.xps}";
-  "server-lan" = "ssh eric@${fleet.lanIps.main}";
+  "home" = "ssh home"; "work" = "ssh work"; "xps" = "ssh xps";
+  "home-lan" = "ssh home-lan"; "server-lan" = "ssh server-lan";
+  "foxtrot" = "ssh foxtrot"; "datax" = "ssh datax"; "lil-box" = "ssh lil-box";
   "vpnon" = "sudo systemctl start wg-quick-protonvpn"; "vpnoff" = "sudo systemctl stop wg-quick-protonvpn";
   "vpnstatus" = "sudo wg show protonvpn 2>/dev/null || echo 'VPN disconnected'";
   "vpnport" = "cat /run/protonvpn-natpmp/port 2>/dev/null || echo 'no forwarded port (VPN down?)'";

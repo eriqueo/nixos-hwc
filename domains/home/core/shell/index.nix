@@ -92,9 +92,16 @@ in
           };
         });
         default = {
-          server = { hostname = fleet.ips.main; user = "eric"; forwardAgent = true; };
+          # Keep `ssh server` for existing Git remotes and scripts.
+          # Permanent by design: the interactive shell shortcut is `home`.
+          "home server" = { hostname = fleet.ips.main; user = "eric"; forwardAgent = true; };
+          work = { hostname = fleet.ips.work; user = "eric"; forwardAgent = true; };
+          xps = { hostname = fleet.ips.xps; user = "eric"; forwardAgent = true; };
           # Home-LAN fallback for when Tailscale can't connect (internet down).
-          server-lan = { hostname = fleet.lanIps.main; user = "eric"; forwardAgent = true; };
+          "home-lan server-lan" = { hostname = fleet.lanIps.main; user = "eric"; forwardAgent = true; };
+          # Third-party servers use their existing accounts without agent forwarding.
+          foxtrot = { hostname = "138.197.125.210"; user = "dominic"; forwardAgent = false; };
+          datax = { hostname = "159.223.207.95"; user = "root"; forwardAgent = false; };
           # Elliott's lil-box (DataX), reachable only via Cloudflare Access.
           # Agent forwarding OFF: never forward your ssh-agent into a third party's box.
           lil-box = {
@@ -193,7 +200,7 @@ in
         size = 5000;
         save = 5000;
       };
-      shellAliases = (import ./parts/aliases.nix { inherit ws nixosPath fleet; }) // cfg.aliases;
+      shellAliases = (import ./parts/aliases.nix { inherit ws nixosPath; }) // cfg.aliases;
       initContent = import ./parts/zsh-init.nix { inherit config; };
     };
 

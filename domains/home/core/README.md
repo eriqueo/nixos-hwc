@@ -10,6 +10,8 @@ environment and user directory layout.
 - Does NOT manage: app-specific config → `apps/`, theming → `theme/`.
 
 ## Structure
+Shell shortcuts consume the SSH hosts in `shell/index.nix`; addresses and accounts stay in those host entries. `home` replaces the `server` shell command while `ssh server` remains valid.
+
 ```
 core/
 ├── index.nix          # Aggregator
@@ -23,6 +25,7 @@ core/
 ```
 
 ## Changelog
+- 2026-09-30: Add `home`, `work`, `foxtrot`, `datax`, `lil-box` and `home-lan` SSH shortcuts; retain `xps`, `website`, and legacy SSH hostnames.
 - 2026-09-29: `cdj` goes to `~/700_datax/dx-mcp`; the local jt-mcp container was renamed to match upstream `ContractorCTO/dx-mcp`.
 - 2026-09-25: `repo-hooks/` — `core.hooksPath` now points at a generated store
   dir instead of the tree-relative `.githooks`. `dispatched` hooks forward to the

@@ -38,6 +38,7 @@ rec {
   fleet = osConfig: {
     ips = lib.attrByPath [ "hwc" "networking" "hosts" "ips" ] {
       main = "100.77.195.118";
+      work = "100.77.38.32";
       xps  = "100.126.80.42";
     } osConfig;
 
@@ -47,6 +48,7 @@ rec {
 
     fqdn = lib.attrByPath [ "hwc" "networking" "hosts" "fqdn" ] {
       main = "hwc-home.ocelot-wahoo.ts.net";
+      work = "hwc-work.ocelot-wahoo.ts.net";
       xps  = "hwc-xps.ocelot-wahoo.ts.net";
     } osConfig;
   };
