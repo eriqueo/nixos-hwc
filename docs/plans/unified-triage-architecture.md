@@ -86,7 +86,7 @@ pasted. Their one-day delivery check remains open. Safety prerequisites and S1
 shadow are live. Eric created all six S2 labels. The disposable test email was
 sent, received and archived with All Mail and Sent preserved. The guarded probe
 passed live after the COPY source repair. The bounded S2 projector is now
-code-complete and tested; deployment and live consumption remain pending.
+deployed and consumed on hwc-work at Nix `1e30d58b` / System One `251050a`.
 S3–S4 are not implemented.
 The corrected handoff contract is triage from both aerc and the Proton phone/web
 app, using the same classifier ledger. This adds transport observation and
@@ -312,5 +312,20 @@ The notmuch hook also gives physical Proton Inbox residency priority over stale
 transport tags. This prevents afew from reversing a fetched phone reopen on its
 next run, while retaining the workflow decision and shadow observer. Nix checks
 exercise the generated caller and three real notmuch/afew cycles; removing the
-hook repair must reproduce the reversal. Nix checks, activation and the bounded
-live label exercise are pending at this source checkpoint.
+hook repair must reproduce the reversal. All Nix checks and system activation
+passed at `1e30d58b`. The first bounded live write added `@family` to two physical
+copies and preserved their Inbox and All Mail UIDs and stars. The subsequent
+real core caller verified 10 more label associations, with zero conflicts or
+pending receipts and 467 eligible associations deferred at the cycle deadline.
+All 11 receipts preserved real-folder UIDs and stars. Human correction/outcome
+counts remain 31/86 and sender preferences remain 23. Core, residency and labels
+lanes are healthy; the ten-minute timer is active. Older eligible mail continues
+in bounded cycles. DO/Other deliberately have no projected label; stale or
+unclassified threads wait for classification.
+
+The installed afew, notmuch and mbsync replay also preserves a reference-server
+reopen across three full sync cycles. Live Proton phone reopen remains
+unverified. Phone-label teaching remains off, unseen classifier accuracy remains
+unmeasured and S1 review remains due October 6. Evidence:
+`/home/eric/000_inbox/downloads/agent/proton-mail/verification/projection-live.json`
+and `verification/reopen-repaired.json` in that same project directory.
