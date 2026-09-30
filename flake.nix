@@ -1136,6 +1136,7 @@
         "mail-workflow-v2: generated aerc template operands must be whitespace-separated";
       pkgs.runCommand "mail-workflow-v2" {} ''
         ${pkgs.python3}/bin/python3 - ${hookFixture} ${controls}/bin/mail-classifier <<'PY'
+        import fnmatch
         import pathlib
         import shlex
         import subprocess
@@ -1146,7 +1147,33 @@
         managed_prefix = ${builtins.toJSON mailHome.hwc.mail.classifier.contract.protonSync.managedLabelPrefix}
         managed_mailbox = ${builtins.toJSON mailHome.hwc.mail.classifier.contract.protonSync.labelMailboxPrefix}
         mbsyncrc = ${builtins.toJSON mailHome.home.file.".mbsyncrc".text}
-        assert '!"' + managed_mailbox + managed_prefix + '*"' in mbsyncrc
+        label_exclusion = '!"' + managed_mailbox + '*"'
+        assert label_exclusion in mbsyncrc
+
+
+        def check_label_isolation(text):
+            patterns = shlex.split(next(line for line in text.splitlines()
+                                        if line.startswith('Patterns ')))[1:]
+            def selected(name):
+                result = False
+                for pattern in patterns:
+                    excluded = pattern.startswith('!')
+                    if fnmatch.fnmatchcase(name, pattern[1:] if excluded else pattern):
+                        result = not excluded
+                return result
+            for name in ['work', 'finance', managed_prefix + 'hwc']:
+                assert not selected(managed_mailbox + name), name
+            for name in ['INBOX', 'Archive', 'Folders/hide_my_email']:
+                assert selected(name), name
+
+
+        check_label_isolation(mbsyncrc)
+        try:
+            check_label_isolation(mbsyncrc.replace(label_exclusion, ""))
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('removed label exclusion passed its wiring check')
         folder_state = hook.index("+inbox +state/do")
         remove_new = hook.index("# Remove transient new tag", folder_state)
         assert folder_state < remove_new, "new mail loses its safe DO state"

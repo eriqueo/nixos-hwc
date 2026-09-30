@@ -34,7 +34,9 @@ let
       wildcards = a.sync.wildcards or [];
       effectiveWildcards = wildcards ++ lib.optionals (a.type == "proton-bridge") [
         "!Trash"
-        "!${syncContract.labelMailboxPrefix}${syncContract.managedLabelPrefix}*"
+        # Eric deleted every legacy label on 2026-09-30. Never revisit or
+        # recreate them from retained local copies. System One owns @ labels.
+        "!${syncContract.labelMailboxPrefix}*"
       ];
       createPolicy = if common.isGmail a then "Create Near" else "Create Both";
 

@@ -56,7 +56,7 @@ mail/
 ├── mbsync/
 │   ├── index.nix              # mbsync module
 │   └── parts/
-│       ├── render.nix         # .mbsyncrc generation from account attrset
+│       ├── render.nix         # .mbsyncrc from accounts; excludes all Proton label mailboxes
 │       └── service.nix        # locked core/Trash/residency lanes, failure gates, bounded status
 ├── msmtp/
 │   ├── index.nix              # SMTP send module
@@ -111,6 +111,10 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-09-30: Excluded the full Proton label namespace from mbsync after legacy
+  label deletion. Preserved local copies; rendered-config checks reject legacy
+  and @ labels, preserve core folders and fail with the exclusion removed.
 
 - 2026-09-30: Removed deleted Proton label targets from `02-routing`; retained
   reviewed Seen/Archive and hide-my-email actions. Parsed delivery checks reject
