@@ -805,13 +805,22 @@
 
         filters = json.loads(pathlib.Path(sys.argv[1]).read_text())
         parsed = {}
-        allowed = {'trash', 'archive', 'hide_my_email', 'work', 'personal', 'admin',
-                   'office', 'datax', 'cto', 'coaching', 'family', 'tech', 'ads',
-                   'finance', 'bank', 'insurance', 'aerc', 'website'}
+        # Sieve retains folder/read effects; System One alone assigns @ labels.
+        allowed = {'trash', 'archive', 'hide_my_email'}
+
+
+        def check_targets(tree):
+            for node in tree:
+                if node.name == 'fileinto':
+                    assert set(strings(node.arguments['mailbox'])) <= allowed
+                check_targets(node.children)
+
+
         for name, text in filters.items():
             parser = Parser()
             assert parser.parse(text), getattr(parser, 'error', name)
             parsed[name] = parser.result
+            check_targets(parser.result)
             for node in parser.result:
                 for action in node.children:
                     if action.name == 'fileinto':
@@ -821,6 +830,15 @@
             print(f'{name}: syntax and targets pass')
         parser = Parser()
         assert not parser.parse('require ["fileinto"]; if true { fileinto "Trash" }')
+        for target in ['work', '@hwc']:
+            parser = Parser()
+            assert parser.parse('require ["fileinto"]; if true { fileinto "' + target + '"; }')
+            try:
+                check_targets(parser.result)
+            except AssertionError:
+                pass
+            else:
+                raise AssertionError('label target guard accepted ' + target)
 
 
         def deliver(**headers):
@@ -841,41 +859,41 @@
             assert actual == wanted, (headers, actual, wanted)
 
 
-        expect(['work'], to='eric@iheartwoodcraft.com')
-        expect(['personal'], to='eriqueo@proton.me')
-        expect(['CTO', 'datax'], to='eric@contractorcto.com')
-        expect(['coaching'], **{'from': 'hi@xotara.us'})
-        expect(['coaching'], **{'from': 'tony.fraserjones@profitabletradie.com'})
-        expect(['coaching'], **{'x-pm-list-identifier': '@certification@narihq.org'})
-        expect(['family'], **{'from': 'hello@classdojo.com'})
+        expect([], to='eric@iheartwoodcraft.com')
+        expect([], to='eriqueo@proton.me')
+        expect([], to='eric@contractorcto.com')
+        expect([], **{'from': 'hi@xotara.us'})
+        expect([], **{'from': 'tony.fraserjones@profitabletradie.com'})
+        expect([], **{'x-pm-list-identifier': '@certification@narihq.org'})
+        expect([], **{'from': 'hello@classdojo.com'})
         expect([], **{'from': 'hello@classdojo.com', 'spam': True})
-        expect(['tech'], **{'from': 'position-tracking@semrush.com'})
-        expect(['tech'], **{'x-pm-list-identifier': '@billing@limitloginattempts.com'})
-        expect(['tech', 'Seen'], **{'from': 'notifications@github.com'})
-        expect(['ads'], **{'x-pm-list-identifier': '@business-noreply@mail.instagram.com'})
-        expect(['finance'], **{'from': 'alerts@notify.wellsfargo.com'})
-        expect(['finance', 'bank'], **{'from': 'onlinebanking@ealerts.bankofamerica.com'})
-        expect(['finance', 'insurance'], **{'from': 'statefarmservice@statefarmservice.com'})
-        expect(['finance'], **{'x-pm-list-identifier': '@nicole.dray@farther.com'})
-        expect(['work'], **{'from': 'office@kenyonnoble.com'})
+        expect([], **{'from': 'position-tracking@semrush.com'})
+        expect([], **{'x-pm-list-identifier': '@billing@limitloginattempts.com'})
+        expect(['Seen'], **{'from': 'notifications@github.com'})
+        expect([], **{'x-pm-list-identifier': '@business-noreply@mail.instagram.com'})
+        expect([], **{'from': 'alerts@notify.wellsfargo.com'})
+        expect([], **{'from': 'onlinebanking@ealerts.bankofamerica.com'})
+        expect([], **{'from': 'statefarmservice@statefarmservice.com'})
+        expect([], **{'x-pm-list-identifier': '@nicole.dray@farther.com'})
+        expect([], **{'from': 'office@kenyonnoble.com'})
         expect(['Seen'], **{'from': 'no-reply@accounts.google.com'})
         expect(['Archive', 'Seen'], **{'x-pm-list-identifier': '@vimeo@vimeo.com'})
-        expect(['Archive', 'aerc', 'tech', 'Seen'], **{'from': 'builds@sr.ht'})
-        expect(['Archive', 'website', 'tech', 'Seen'], **{'from': 'dmarc@example.net'})
-        expect(['Archive', 'datax', 'Seen'], **{'from': 'support@comms.datax.to',
+        expect(['Archive', 'Seen'], **{'from': 'builds@sr.ht'})
+        expect(['Archive', 'Seen'], **{'from': 'dmarc@example.net'})
+        expect(['Archive', 'Seen'], **{'from': 'support@comms.datax.to',
                'to': 'hello@contractorcto.com', 'subject': 'New demo request → Example'})
-        expect(['datax'], **{'from': 'support@comms.datax.to', 'to': 'hello@contractorcto.com',
+        expect([], **{'from': 'support@comms.datax.to', 'to': 'hello@contractorcto.com',
                'subject': 'Customer needs a reply'})
         expect(['hide_my_email'], to='camelcity.derail128@passmail.com')
         expect(['Trash', 'Seen'], **{'from': 'noise@sub.angi.com', 'to': 'eric@iheartwoodcraft.com'})
         expect(['Trash', 'Seen'], **{'x-pm-list-identifier': '@team@emails.hostinger.com'})
         expect(['Trash', 'Seen'], **{'x-pm-list-identifier': '@help@profitabletradie.com'})
         expect([], **{'from': 'tom@thecontractorfight.com', 'spam': True})
-        expect(['coaching'], **{'from': 'tom@thecontractorfight.com'})
+        expect([], **{'from': 'tom@thecontractorfight.com'})
         expect([], **{'from': 'sales@klingspor.com'})
         expect([], **{'from': 'person@otherangi.com'})
         expect([], **{'from': 'other@gmail.com'})
-        print('32 delivery fixtures pass; seeded broken syntax rejected')
+        print('32 delivery fixtures pass; seeded broken syntax and label targets rejected')
         PY
         touch "$out"
       '';

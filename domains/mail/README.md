@@ -28,7 +28,7 @@ mail/
 │       ├── tags.nix           # Taxonomy adapter for queries, styles, and bindings
 │       ├── tags-custom.json   # User-defined aerc-only tags
 │       ├── sieve.nix          # Deploys ~/.config/aerc/sieve/{01-junk,02-routing}.sieve
-│       └── sieve-filters.nix  # Taxonomy junk + interim live-rule routing, checked by mail-trash-guard
+│       └── sieve-filters.nix  # Taxonomy junk + label-free Seen/Archive routing; parsed delivery checks
 ├── afew/
 │   ├── index.nix              # afew config generation (filters, MailMover)
 │   └── package.nix            # afew package derivation
@@ -111,6 +111,10 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-09-30: Removed deleted Proton label targets from `02-routing`; retained
+  reviewed Seen/Archive and hide-my-email actions. Parsed delivery checks reject
+  legacy and reserved @ label writes so System One remains their sole producer.
 
 - 2026-09-29: Prepare S2's single-message label probe with a shared sync lock and CRITICAL keyed receipts. Unknown writes never retry. The System One contract owns the six labels and reserved prefix; mbsync excludes that namespace and the legacy hook skips it. Fake-server tests require Archive/All Mail preservation and reject duplicate COPY. Eric must create six labels for the real probe; bulk projection and label teaching wait for that proof.
   The probe requires a disposable test subject. Its packaged-Python preflight

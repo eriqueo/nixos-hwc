@@ -26,7 +26,7 @@ aerc/
     tags.nix             # Mail taxonomy adapter for queries, styles, and bindings
     tags-custom.json     # User-defined aerc-only tags
     sieve.nix            # Deploys ~/.config/aerc/sieve/{01-junk,02-routing}.sieve
-    sieve-filters.nix    # Taxonomy junk + interim live-rule routing, checked by mail-trash-guard
+    sieve-filters.nix    # Taxonomy junk + label-free Seen/Archive routing; parsed delivery checks
 ```
 
 ## Architecture
@@ -376,6 +376,11 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
    `proton/Labels/<name>/`.
 
 ## Changelog
+
+- 2026-09-30: Removed legacy label assignments after Eric deleted all old
+  Proton labels. `02-routing` keeps reviewed Seen/Archive and hide-my-email
+  delivery actions; System One owns @ labels. The parsed target guard rejects
+  deleted labels and competing @ label writes, including seeded violations.
 
 - 2026-09-29: `sieve-filters.nix` now generates two Proton Sieve filters from
   `taxonomy/lib.nix` `derived.protonTrash`: `01-junk` (junk → Trash) and

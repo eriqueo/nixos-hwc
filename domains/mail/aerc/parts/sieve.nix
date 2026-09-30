@@ -13,6 +13,9 @@ in {
         commit and use nixos-rebuild switch for mixed changes. Paste each file
         into Proton > Settings > Filters after reviewing the active-mail audit.
         Disable the eight old filters for one day before deleting them.
+        02-routing preserves Seen/Archive and hide-my-email delivery only.
+        It assigns no labels. System One owns the six reserved @ labels;
+        automatic label projection is still pending.
       '';
     };
 }
