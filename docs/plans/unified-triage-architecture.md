@@ -264,6 +264,14 @@ Archive, spam guard and hide-my-email predicate. It assigns no @ labels: their
 projection remains System One's responsibility. This does not promote S1, S3
 teaching or complete S4 routing/view consolidation.
 
+mbsync's core wildcard also excludes the entire contract `Labels/` namespace.
+Its previous @-only exclusion still selected deleted legacy labels and produced
+missing-mailbox warnings for retained nonempty local copies. Those local copies
+remain intact; no mail or historical tags are deleted by this repair. The rendered
+pattern check rejects old and @ label selection, keeps Inbox/Archive/custom-folder
+selection and fails when the production exclusion is removed. A concurrent Gmail
+timeout was also observed; it is separate from the label warnings.
+
 The generated replacement needs Eric's manual paste into `02 - Routing`.
 The installed `01 - Junk` is unchanged. Before this repair, a read-only audit
 scanned 4,568 Trash copies and found no new protected Message-IDs compared with
