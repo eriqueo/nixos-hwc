@@ -13,8 +13,8 @@
       # NAVIGATION - g prefix (like neovim's g commands)
       # ══════════════════════════════════════════════════════════════════
       # Core vim motions
-      { on = [ "g", "g" ], run = "arrow top", desc = "Go to top" },
-      { on = [ "G" ], run = "arrow bot", desc = "Go to bottom" },
+      { on = [ "g", "g" ], run = "plugin bookmarks 'route arrow top'", desc = "Go to top" },
+      { on = [ "G" ], run = "plugin bookmarks 'route arrow bot'", desc = "Go to bottom" },
 
       # Quick directory jumps: g + letter (no space needed - faster)
       { on = [ "g", "h" ], run = "cd ~", desc = "Go: home" },
@@ -44,7 +44,7 @@
       # ══════════════════════════════════════════════════════════════════
 
       # <Space>g - Alternative go commands (via plugin for extensibility)
-      { on = [ "<Space>", "g", "g" ], run = "plugin bookmarks", desc = "Go: show all bookmarks" },
+      { on = [ "<Space>", "g", "g" ], run = "plugin bookmarks focus", desc = "Go: favorites" },
       { on = [ "<Space>", "g", "m" ], run = "cd ${mediaRoot}", desc = "Go: media mount" },
 
       # <Space>f - Find/Search
@@ -52,6 +52,8 @@
       { on = [ "<Space>", "/" ], run = "search --via=rg", desc = "Find: content (ripgrep)" },
       { on = [ "<Space>", "n" ], run = 'search --via=fd --args="--type f"', desc = "Find: files by name" },
       { on = [ "<Space>", "<Space>" ], run = "plugin zoxide", desc = "Zoxide jump" },
+      { on = [ "<Space>", "b", "a" ], run = "plugin bookmarks add", desc = "Favorite: add current folder" },
+      { on = [ "<Space>", "b", "b" ], run = "plugin bookmarks focus", desc = "Favorite: focus list" },
 
       # Filter
       { on = [ "f" ], run = "filter --smart", desc = "Filter" },
@@ -89,83 +91,98 @@
       { on = [ "<Space>", "y", "d" ], run = "copy dirname", desc = "Copy: directory" },
 
       # <Space>c - Chmod
-      { on = [ "<Space>", "c" ], run = "plugin chmod", desc = "Change permissions" },
+      { on = [ "<Space>", "c" ], run = "plugin bookmarks 'route plugin chmod'", desc = "Change permissions" },
 
       # <Space>a - Select all
-      { on = [ "<Space>", "a" ], run = "toggle_all --state=on", desc = "Select all" },
+      { on = [ "<Space>", "a" ], run = "plugin bookmarks 'route toggle_all --state=on'", desc = "Select all" },
 
       # ══════════════════════════════════════════════════════════════════
       # CORE VIM MOTIONS
       # ══════════════════════════════════════════════════════════════════
-      { on = [ "k" ], run = "arrow -1", desc = "Move up" },
-      { on = [ "j" ], run = "arrow 1", desc = "Move down" },
-      { on = [ "h" ], run = "leave", desc = "Go back/parent" },
-      { on = [ "l" ], run = "enter", desc = "Enter/Open" },
-      { on = [ "-" ], run = "leave", desc = "Parent directory" },
-      { on = [ "<C-u>" ], run = "arrow -50%", desc = "Half page up" },
-      { on = [ "<C-d>" ], run = "arrow 50%", desc = "Half page down" },
-      { on = [ "<C-b>" ], run = "arrow -100%", desc = "Page up" },
-      { on = [ "<C-f>" ], run = "arrow 100%", desc = "Page down" },
-      { on = [ "<Enter>" ], run = "open", desc = "Open" },
-      { on = [ "q" ], run = "quit", desc = "Quit" },
-      { on = [ "<Esc>" ], run = "escape", desc = "Cancel/Clear" },
+      { on = [ "k" ], run = "plugin bookmarks 'route arrow -1'", desc = "Move up" },
+      { on = [ "j" ], run = "plugin bookmarks 'route arrow 1'", desc = "Move down" },
+      { on = [ "<Up>" ], run = "plugin bookmarks 'route arrow -1'", desc = "Move up" },
+      { on = [ "<Down>" ], run = "plugin bookmarks 'route arrow 1'", desc = "Move down" },
+      { on = [ "h" ], run = "plugin bookmarks 'route leave'", desc = "Go back/parent" },
+      { on = [ "l" ], run = "plugin bookmarks 'route enter'", desc = "Enter/Open" },
+      { on = [ "<Left>" ], run = "plugin bookmarks 'route leave'", desc = "Go back/parent" },
+      { on = [ "<Right>" ], run = "plugin bookmarks 'route enter'", desc = "Enter/Open" },
+      { on = [ "-" ], run = "plugin bookmarks 'route leave'", desc = "Parent directory" },
+      { on = [ "<C-u>" ], run = "plugin bookmarks 'route arrow -50%'", desc = "Half page up" },
+      { on = [ "<C-d>" ], run = "plugin bookmarks 'route arrow 50%'", desc = "Half page down" },
+      { on = [ "<C-b>" ], run = "plugin bookmarks 'route arrow -100%'", desc = "Page up" },
+      { on = [ "<C-f>" ], run = "plugin bookmarks 'route arrow 100%'", desc = "Page down" },
+      { on = [ "<Enter>" ], run = "plugin bookmarks 'route open'", desc = "Open" },
+      { on = [ "<S-Enter>" ], run = "plugin bookmarks 'route open --interactive'", desc = "Open with" },
+      { on = [ "q" ], run = "plugin bookmarks 'route quit'", desc = "Quit" },
+      { on = [ "<Esc>" ], run = "plugin bookmarks 'route escape'", desc = "Cancel/Clear" },
 
       # ══════════════════════════════════════════════════════════════════
       # SELECTION (vim visual mode style)
       # ══════════════════════════════════════════════════════════════════
-      { on = [ "v" ], run = "toggle", desc = "Toggle select" },
-      { on = [ "V" ], run = "toggle_all", desc = "Toggle all" },
-      { on = [ "J" ], run = [ "toggle", "arrow 1" ], desc = "Select & down" },
-      { on = [ "K" ], run = [ "arrow -1", "toggle" ], desc = "Up & select" },
-      { on = [ "U" ], run = "escape --select", desc = "Clear selection" },
+      { on = [ "v" ], run = "plugin bookmarks 'route toggle'", desc = "Toggle select" },
+      { on = [ "V" ], run = "plugin bookmarks 'route toggle_all'", desc = "Toggle all" },
+      { on = [ "J" ], run = "plugin bookmarks 'route select-down'", desc = "Select & down" },
+      { on = [ "K" ], run = "plugin bookmarks 'route select-up'", desc = "Up & select" },
+      { on = [ "U" ], run = "plugin bookmarks 'route escape --select'", desc = "Clear selection" },
 
       # ══════════════════════════════════════════════════════════════════
       # FILE OPERATIONS (vim-inspired)
       # ══════════════════════════════════════════════════════════════════
       # Yank/Copy
-      { on = [ "y", "y" ], run = "yank", desc = "Yank (copy)" },
-      { on = [ "y" ], run = "yank", desc = "Yank (copy)" },
+      { on = [ "y", "y" ], run = "plugin bookmarks 'route yank'", desc = "Yank (copy)" },
+      { on = [ "y" ], run = "plugin bookmarks 'route yank'", desc = "Yank (copy)" },
 
       # Delete
-      { on = [ "d", "d" ], run = "remove", desc = "Delete (to trash)" },
-      { on = [ "d", "D" ], run = "remove --permanently", desc = "Delete permanently" },
+      { on = [ "d" ], run = "plugin bookmarks 'route remove'", desc = "Delete (to trash) / remove favorite" },
+      { on = [ "d", "d" ], run = "plugin bookmarks 'route remove'", desc = "Delete (to trash) / remove favorite" },
+      { on = [ "d", "D" ], run = "plugin bookmarks 'route remove --permanently'", desc = "Delete permanently" },
+      { on = [ "D" ], run = "plugin bookmarks 'route remove --permanently'", desc = "Delete permanently" },
 
       # Cut (like vim's d but for moving)
-      { on = [ "x" ], run = "yank --cut", desc = "Cut" },
+      { on = [ "x" ], run = "plugin bookmarks 'route yank --cut'", desc = "Cut" },
 
       # Paste
-      { on = [ "p" ], run = "paste", desc = "Paste here" },
-      { on = [ "P" ], run = [ "enter", "paste", "leave" ], desc = "Paste into hovered dir" },
+      { on = [ "p" ], run = "plugin bookmarks 'route paste'", desc = "Paste here" },
+      { on = [ "P" ], run = "plugin bookmarks 'route paste-into'", desc = "Paste into hovered dir" },
 
       # Create/Rename
-      { on = [ "o" ], run = "create", desc = "Create file/dir" },
-      { on = [ "O" ], run = "create --dir", desc = "Create directory" },
-      { on = [ "r" ], run = "rename --cursor=before_ext", desc = "Rename" },
-      { on = [ "R" ], run = "rename", desc = "Rename (full)" },
+      { on = [ "o" ], run = "plugin bookmarks 'route create'", desc = "Create file/dir" },
+      { on = [ "a" ], run = "plugin bookmarks 'route create'", desc = "Create file/dir / add favorite" },
+      { on = [ "O" ], run = "plugin bookmarks 'route create --dir'", desc = "Create directory" },
+      { on = [ "r" ], run = "plugin bookmarks 'route rename --cursor=before_ext'", desc = "Rename" },
+      { on = [ "R" ], run = "plugin bookmarks 'route rename'", desc = "Rename (full)" },
 
       # Links
-      { on = [ "s" ], run = "link", desc = "Symlink" },
-      { on = [ "S" ], run = "link --relative", desc = "Relative symlink" },
+      { on = [ "s" ], run = "plugin bookmarks 'route link'", desc = "Symlink" },
+      { on = [ "S" ], run = "plugin bookmarks 'route link --relative'", desc = "Relative symlink" },
+      { on = [ "_" ], run = "plugin bookmarks 'route link --relative'", desc = "Relative symlink" },
+      { on = [ "<C-->" ], run = "plugin bookmarks 'route hardlink'", desc = "Hardlink" },
 
       # ══════════════════════════════════════════════════════════════════
       # QUICK ACCESS
       # ══════════════════════════════════════════════════════════════════
       { on = [ "z" ], run = "plugin zoxide", desc = "Zoxide jump" },
       { on = [ "Z" ], run = "plugin fzf", desc = "FZF jump" },
-      { on = [ "," ], run = "plugin bookmarks", desc = "Bookmarks" },
+      { on = [ "," ], run = "plugin bookmarks focus", desc = "Favorites" },
+      { on = [ "<A-h>" ], run = "plugin bookmarks focus", desc = "Focus favorites" },
+      { on = [ "<A-l>" ], run = "plugin bookmarks close", desc = "Focus files" },
+      { on = [ "<A-j>" ], run = "plugin bookmarks next", desc = "Next favorite" },
+      { on = [ "<A-k>" ], run = "plugin bookmarks previous", desc = "Previous favorite" },
       { on = [ "." ], run = "hidden toggle", desc = "Toggle hidden" },
       { on = [ "i" ], run = "inspect", desc = "Inspect" },
       { on = [ "?" ], run = "help", desc = "Help" },
-      { on = [ "!" ], run = "shell --block --confirm", desc = "Shell command" },
-      { on = [ ":" ], run = "shell --block --confirm", desc = "Shell (vim-style)" },
-      { on = [ "$" ], run = "shell --interactive", desc = "Open shell here" },
-      { on = [ "<C-s>" ], run = "shell --interactive", desc = "Open shell here" },
+      { on = [ "!" ], run = "plugin bookmarks 'route shell --block --confirm'", desc = "Shell command" },
+      { on = [ ":" ], run = "plugin bookmarks 'route shell --block --confirm'", desc = "Shell (vim-style)" },
+      { on = [ ";" ], run = "plugin bookmarks 'route shell --interactive'", desc = "Shell command" },
+      { on = [ "$" ], run = "plugin bookmarks 'route shell --interactive'", desc = "Open shell here" },
+      { on = [ "<C-s>" ], run = "plugin bookmarks 'route shell --interactive'", desc = "Open shell here" },
 
       # ══════════════════════════════════════════════════════════════════
       # PREVIEW
       # ══════════════════════════════════════════════════════════════════
-      { on = [ "<A-j>" ], run = "seek 5", desc = "Preview: down" },
-      { on = [ "<A-k>" ], run = "seek -5", desc = "Preview: up" },
+      { on = [ "<A-J>" ], run = "seek 5", desc = "Preview: down" },
+      { on = [ "<A-K>" ], run = "seek -5", desc = "Preview: up" },
     ]
 
     [tasks]
@@ -179,12 +196,12 @@
 
     [input]
     prepend_keymap = [
-      { on = [ "<C-a>" ], run = "move 0", desc = "Start of line" },
-      { on = [ "<C-e>" ], run = "move 999", desc = "End of line" },
+      { on = [ "<C-a>" ], run = "move bol", desc = "Start of line" },
+      { on = [ "<C-e>" ], run = "move eol", desc = "End of line" },
       { on = [ "<C-f>" ], run = "move 1", desc = "Forward char" },
       { on = [ "<C-b>" ], run = "move -1", desc = "Backward char" },
-      { on = [ "<C-w>" ], run = "backward_kill_word", desc = "Delete word back" },
-      { on = [ "<C-u>" ], run = "kill_line", desc = "Clear line" },
+      { on = [ "<C-w>" ], run = "kill backward", desc = "Delete word back" },
+      { on = [ "<C-u>" ], run = [ "move bol", "kill eol" ], desc = "Clear line" },
       { on = [ "<Enter>" ], run = "close --submit", desc = "Submit" },
       { on = [ "<Esc>" ], run = "close", desc = "Cancel" },
     ]

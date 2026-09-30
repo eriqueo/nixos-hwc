@@ -18,6 +18,9 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+`apps/yazi/` owns the persistent favorites column, its bounded atomic data
+store, Alt navigation, and package-bound storage tests.
+
 `core/shell/` owns SSH hosts and shell shortcuts: `home`, `work`, `foxtrot`, `datax` (the MCP droplet), `lil-box`, `xps`, and `home-lan`; `website` uses the laptop's existing Ed25519 key for its Hostinger login. `ssh server` remains available for existing Git remotes.
 
 The harness input carries a text-only home-host correction atop the existing pin; unrelated harness changes are excluded.
@@ -67,6 +70,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-09-30: Add Yazi's persistent favorites sidebar, Alt focus/navigation, editable bookmarks, natural sorting, and Zoxide history.
 - 2026-09-30: Give credential utilities readable floating windows without narrowing the browser; restore Bitwarden portal file selection through an app-scoped relay that keeps vault processes protected and drains on exit.
 - 2026-09-30: Start enabled Bitwarden and Proton Pass clients at desktop login so their native tray icons return after reboot.
 - 2026-09-30: Limit floating windows using runtime monitor dimensions; give Bluetooth and file pickers screen-relative starting sizes while preserving small dialogs and tiled applications.
