@@ -85,8 +85,9 @@ S0 is deployed at `20ea1240`, and Eric confirmed the two generated filters were
 pasted. Their one-day delivery check remains open. Safety prerequisites and S1
 shadow are live. Eric created all six S2 labels. The disposable test email was
 sent, received and archived with All Mail and Sent preserved. The guarded probe
-passed live after the COPY source repair. Bulk projection
-and S3–S4 are not implemented.
+passed live after the COPY source repair. The bounded S2 projector is now
+code-complete and tested; deployment and live consumption remain pending.
+S3–S4 are not implemented.
 The corrected handoff contract is triage from both aerc and the Proton phone/web
 app, using the same classifier ledger. This adds transport observation and
 projection; it does not retune Laya or promote its shadow State model.
@@ -272,7 +273,7 @@ pattern check rejects old and @ label selection, keeps Inbox/Archive/custom-fold
 selection and fails when the production exclusion is removed. A concurrent Gmail
 timeout was also observed; it is separate from the label warnings.
 
-The generated replacement needs Eric's manual paste into `02 - Routing`.
+Eric confirmed the repaired replacement is active in `02 - Routing`.
 The installed `01 - Junk` is unchanged. Before this repair, a read-only audit
 scanned 4,568 Trash copies and found no new protected Message-IDs compared with
 the September 29 20:54 UTC baseline. Both fresh Trash deliveries matched reviewed
@@ -287,3 +288,29 @@ outcomes remain 31/86 and sender preferences 23; scheduled classification has
 advanced cases/judgments to 601/965. S1 remains shadow, with its October 6 review
 still required. The latest observed snapshot contained 1,592 threads and zero
 proposals; core, Trash and residency status lanes were healthy.
+
+### September 30 — automatic label projection
+
+System One `251050a` adds the bounded `project-labels` command. Each core sync
+invokes it after transport, indexing and observation succeed under the same
+lock. Its defaults limit a cycle to 100 label operations and 20 unresolved
+receipts. It reserves content-derived write keys before IMAP effects and
+acknowledges them only after checking remote labels, real-folder UIDs and stars.
+After a crash it reads the postcondition before considering further writes;
+unknown effects pause for review. Phone edits that differ from the acknowledged
+labels are preserved as conflicts. The command never changes cases, judgments,
+human corrections or sender preferences. S1 remains shadow and S3 teaching is off.
+
+All 87 classifier tests and the full System One build/test suite pass on that
+commit. Tests cover multi-copy mail, fresh replies, phone conflicts, a real
+process crash, bounded work and guards against real-folder deletion. Removing
+the CLI wiring or COPY guard makes the relevant test fail. A live read-only
+preview against a temporary ledger copy found 482 possible label operations
+and no label conflicts; it made no remote changes.
+
+The notmuch hook also gives physical Proton Inbox residency priority over stale
+transport tags. This prevents afew from reversing a fetched phone reopen on its
+next run, while retaining the workflow decision and shadow observer. Nix checks
+exercise the generated caller and three real notmuch/afew cycles; removing the
+hook repair must reproduce the reversal. Nix checks, activation and the bounded
+live label exercise are pending at this source checkpoint.

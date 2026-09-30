@@ -1005,6 +1005,7 @@
         fixture = pkgs.writeText "mail-residency-shadow.json" (builtins.toJSON {
           script = home.home.file.".local/bin/sync-mail".text;
           command = home.hwc.mail.classifier.residency.command;
+          projection = home.hwc.mail.classifier.projection.command;
           statusFile = home.hwc.mail.mbsync.statusFile;
           maildirRoot = home.hwc.mail.notmuch.maildirRoot;
         });
@@ -1024,6 +1025,7 @@
         fixture = json.loads(pathlib.Path(sys.argv[1]).read_text())
         original = fixture['script']
         assert original.count(fixture['command']) == 1
+        assert original.count(fixture['projection']) == 1
 
         def exercise(source, stage="", mode='core'):
             with tempfile.TemporaryDirectory() as directory:
@@ -1034,6 +1036,7 @@
                 stub.write_text('#!${pkgs.python3}/bin/python3\n'
                     'import os, pathlib, sys\n'
                     'name = pathlib.Path(sys.argv[0]).name\n'
+                    'if name == "mail-classifier": name = sys.argv[1]\n'
                     'with open(os.environ["CALL_LOG"], "a") as f: f.write(name + "\\n")\n'
                     'raise SystemExit(23 if name == os.environ["FAIL_STAGE"] else 0)\n')
                 stub.chmod(0o755)
@@ -1055,17 +1058,22 @@
                 if mode == 'trash':
                     assert calls == ['mbsync', 'notmuch'], calls
                     assert 'residency' not in lanes
+                    assert 'labels' not in lanes
                 elif stage in ['afew', 'mbsync', 'notmuch']:
-                    assert 'mail-classifier' not in calls, calls
+                    assert 'observe-residency' not in calls and 'project-labels' not in calls, calls
                     assert lanes['core']['state'] == 'degraded'
                     assert lanes['residency']['lastOutcome'] == 'prerequisite-failed'
+                    assert lanes['labels']['lastOutcome'] == 'prerequisite-failed'
                 else:
-                    assert calls == ['afew', 'mbsync', 'notmuch', 'mail-classifier'], calls
+                    expected = ['afew', 'mbsync', 'notmuch', 'observe-residency']
+                    if stage != 'observe-residency': expected.append('project-labels')
+                    assert calls == expected, calls
                     assert lanes['core']['state'] == 'healthy'
-                    assert lanes['residency']['state'] == ('degraded' if stage else 'healthy')
+                    assert lanes['residency']['state'] == ('degraded' if stage == 'observe-residency' else 'healthy')
+                    assert lanes['labels']['state'] == ('degraded' if stage else 'healthy')
                 assert result.returncode == (23 if stage else 0), result.stderr
 
-        for stage in ["", 'afew', 'mbsync', 'notmuch', 'mail-classifier']:
+        for stage in ["", 'afew', 'mbsync', 'notmuch', 'observe-residency', 'project-labels']:
             exercise(original, stage)
         exercise(original, mode='trash')
         try:
@@ -1074,6 +1082,12 @@
             pass
         else:
             raise AssertionError('removed observer wiring passed its check')
+        try:
+            exercise(original.replace(fixture['projection'], 'true'))
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('removed projector wiring passed its check')
         PY
         touch "$out"
       '';
@@ -1099,6 +1113,8 @@
         ];
         missingBinds = lib.filter (needle: !(lib.hasInfix needle binds)) requiredBinds;
         hookFixture = pkgs.writeText "mail-post-new-hook" hook;
+        afewTest = import ./domains/mail/afew/package.nix { inherit lib pkgs; cfg = home.hwc.mail.afew; };
+        afewFixture = pkgs.writeText "mail-afew-config" home.xdg.configFile."afew/config".text;
       in
       assert lib.assertMsg (lib.all (address: lib.elem address ownAddresses)
         [ "eric@iheartwoodcraft.com" "office@iheartwoodcraft.com" "admin@iheartwoodcraft.com" "eric@contractorcto.com" ])
@@ -1135,8 +1151,10 @@
       assert lib.assertMsg (!(lib.hasInfix ")(exclude" aercConf))
         "mail-workflow-v2: generated aerc template operands must be whitespace-separated";
       pkgs.runCommand "mail-workflow-v2" {} ''
-        ${pkgs.python3}/bin/python3 - ${hookFixture} ${controls}/bin/mail-classifier <<'PY'
+        ${pkgs.python3}/bin/python3 - ${hookFixture} ${controls}/bin/mail-classifier ${afewFixture} <<'PY'
         import fnmatch
+        import json
+        import os
         import pathlib
         import shlex
         import subprocess
@@ -1179,6 +1197,50 @@
         assert folder_state < remove_new, "new mail loses its safe DO state"
         assert "mail-rule" not in hook, "retired sender-rule writer returned"
         assert "tag:new AND NOT tag:keep" not in hook, "legacy sender placement returned"
+
+        def check_remote_reopen(source):
+            with tempfile.TemporaryDirectory() as directory:
+                root = pathlib.Path(directory)
+                mail = root / 'Maildir'
+                for folder in ['inbox', 'Archive', 'Trash', 'Spam']:
+                    for part in ['cur', 'new', 'tmp']:
+                        (mail / 'proton' / folder / part).mkdir(parents=True)
+                config = root / 'notmuch.conf'
+                config.write_text('[database]\npath=' + str(mail) + '\n[user]\nname=Fixture\nprimary_email=fixture@example.invalid\n[new]\ntags=new;unread;\n[maildir]\nsynchronize_flags=true\n')
+                env = {**os.environ, 'NOTMUCH_CONFIG': str(config),
+                       'XDG_CONFIG_HOME': str(root / 'config'), 'PATH': '${pkgs.notmuch}/bin:' + os.environ.get('PATH', "")}
+                afew = root / 'config' / 'afew' / 'config'
+                afew.parent.mkdir(parents=True)
+                afew.write_text(pathlib.Path(sys.argv[3]).read_text().replace('${home.hwc.mail.notmuch.maildirRoot}', str(mail)))
+                hp = mail / '.notmuch' / 'hooks' / 'post-new'
+                hp.parent.mkdir(parents=True)
+                hp.write_text(source.replace('export NOTMUCH_CONFIG="$HOME/.notmuch-config"', 'export NOTMUCH_CONFIG=' + shlex.quote(str(config))))
+                hp.chmod(0o700)
+                def nm(*args):
+                    return subprocess.check_output(['${pkgs.notmuch}/bin/notmuch', *args], env=env, text=True)
+                archived = mail / 'proton' / 'Archive' / 'cur' / 'fixture:2,S'
+                raw = 'Message-ID: <reopen@example.invalid>\nFrom: sender@example.invalid\nTo: fixture@example.invalid\nSubject: Fixture\nDate: Wed, 30 Sep 2026 12:00:00 +0000\n\nSynthetic content\n'
+                archived.write_text(raw); nm('new')
+                nm('tag', '+workflow/done', '+mail-classified-v2', '+archive', '-inbox', '--', 'id:reopen@example.invalid')
+                # The fetched remote move creates another filename for the same
+                # known ID. It is not fresh message content or a human correction.
+                for path in (mail / 'proton' / 'Archive' / 'cur').iterdir(): path.unlink()
+                (mail / 'proton' / 'inbox' / 'cur' / 'reopened:2,S').write_text(raw)
+                for _ in range(3):
+                    nm('new')
+                    subprocess.run(['${afewTest}/bin/afew', '-m', '-a'], env=env, check=True, capture_output=True)
+                    tags = json.loads(nm('search', '--format=json', '--output=tags', 'id:reopen@example.invalid'))
+                    assert 'inbox' in tags and 'archive' not in tags, tags
+                    assert 'workflow/done' in tags, 'transport repair must not promote S1'
+                    assert len(list((mail / 'proton' / 'inbox' / 'cur').iterdir())) == 1
+        check_remote_reopen(hook)
+        reopen_line = next(line for line in hook.splitlines() if 'tag +inbox -archive -trash -spam -sent -draft' in line)
+        try:
+            check_remote_reopen(hook.replace(reopen_line, ""))
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('removed remote-reopen wiring passed its real-tool replay')
 
         # Exercise the actual generated dispatcher with only its runtime binding
         # substituted. Removing reopen from that dispatcher must lose db/notmuch.
@@ -1240,6 +1302,10 @@
             probe = dispatch(control, 'label-probe')
             assert probe[:3] == ['label-probe', '--db', '/var/lib/hwc/mail-classifier/ledger.sqlite']
             assert '--notmuch' not in probe
+            projected = dispatch(control, 'project-labels')
+            assert projected[:3] == ['project-labels', '--db', '/var/lib/hwc/mail-classifier/ledger.sqlite']
+            assert '--notmuch' in projected
+            assert projected[projected.index('--output') + 1].endswith('/labels.json')
             try:
                 check(dispatch(control.replace("|reopen", "")))
             except AssertionError:
