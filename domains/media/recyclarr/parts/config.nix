@@ -205,6 +205,9 @@ let
           - name: HD-1080p
             reset_unmatched_scores:
               enabled: true
+              # Radarr owns this local rejection format; preserve its negative score.
+              except:
+                - Reject executable release titles
             upgrade:
               allowed: true
               until_quality: Bluray-1080p

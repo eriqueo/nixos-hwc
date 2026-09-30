@@ -40,7 +40,7 @@ media/
 ├── pinchflat/               # YouTube subscription manager
 ├── beets-container/         # Music organizer (container)
 ├── beets-native/            # Music organizer (native)
-├── recyclarr/               # *arr quality profile sync
+├── recyclarr/               # *arr quality profile sync; preserves Radarr executable rejection
 ├── slskd/                   # Soulseek client
 ├── soularr/                 # Soulseek-Lidarr integration
 ├── calibre/                 # Ebook management
@@ -70,6 +70,7 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-09-30: Preserve Radarr's local executable-title rejection score during Recyclarr sync. Sonarr and Radarr runtime settings prefer Usenet with a 24-hour torrent delay and fail executable/dangerous downloads for automatic replacement.
 - 2026-09-26: Machine references follow machines/home; media state and service ownership are unchanged.
 - 2026-09-25: Service split wave 4: sonarr/radarr/lidarr pass the media-pipeline webhook URL from `hwc.automation.n8n.publicUrl` (n8n on hwc-work); `lib/arr-config.nix` no longer defaults it to a host literal.
 
