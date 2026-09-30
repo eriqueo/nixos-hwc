@@ -67,7 +67,8 @@ only enabled on `hwc-server`, **and** `janitor.py` refuses `--apply` unless
 ```
 inbox-janitor/
 ├── index.nix    # Options + systemd oneshot service/timer (hwc.automation.inboxJanitor.*)
-├── janitor.py   # The engine: pure classify() core + I/O edges; dry-run by default
+├── janitor.py   # The engine: pure classify() core + I/O edges; dry-run by default;
+│                #   --citations exports the agent/ citation map, --self-check tests it
 └── README.md    # This file
 ```
 
@@ -86,7 +87,21 @@ inbox-janitor --config ~/000_inbox/_inbox-routing.yaml --all
 
 # apply (server only; --all also reclassifies already-foldered files)
 inbox-janitor --config ~/000_inbox/_inbox-routing.yaml --apply
+
+# read-only: JSON {agent-relative path: [citing files]} for every EXISTING file
+# or folder under downloads/agent that something cites (keep/move decisions)
+inbox-janitor --config ~/000_inbox/_inbox-routing.yaml --citations
+
+# self-check of the citation matcher (pure; exits non-zero on failure)
+inbox-janitor --self-check
 ```
+
+`--citations` scans the dangling report's roots plus `~/600_apps` and
+`~/.claude-config`, matches folder references (`downloads/agent/<x>/`, with or
+without the slash) as well as files, and does not skip tombstoned lines — for a
+keep decision the safe error is keeping too much. The dangling report keeps its
+original four roots and extension-only pattern, so its daily output is unchanged.
+Both read through one scanner, `_scan_citations()`.
 
 ## Enabling
 
@@ -143,6 +158,14 @@ distinct live gdrive investigations share `datax__ops__gdrive__` — so inferrin
 from filenames would delete parallel work while sounding precise.
 
 ## Changelog
+- 2026-09-30: Added `--citations` (read-only JSON export of which existing
+  files and folders under `downloads/agent/` are cited, and by whom) and
+  `--self-check`. The citation map already existed inside
+  `report_dangling_agent_citations()` but only its dangling half was visible,
+  its pattern required a file extension (so folder citations never matched), and
+  it scanned four roots. The legacy-folder cleanup needs the other half, from the
+  same producer. The rg loop moved into `_scan_citations()`, shared by both; the
+  dangling report's output was verified byte-identical before and after.
 - 2026-08-22: **`downloads/agent/` reorganized to `agent/<project>/<file>` and two
   reports added.** The flat bucket + `<domain>__<class>__<nouns>` filename convention
   measured **23% conformance (68 of 290 files) with zero near-misses** — no file used
