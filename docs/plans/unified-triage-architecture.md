@@ -253,3 +253,29 @@ No agent review
 follow-up is scheduled for the one-day filter check or the October 6 review.
 The ten-minute shadow observer runs automatically. The original laptop handoff
 could not be updated while that host was offline; this living plan is current.
+
+### September 30 — legacy labels deleted early
+
+Eric confirmed he removed every old Proton label. Current read-only Bridge LIST
+contains only the six @ labels and the existing hide-my-email custom folder.
+The interim `02-routing` filter still targeted 15 deleted labels. Its replacement
+removes label-only rules and label actions while preserving each reviewed Seen,
+Archive, spam guard and hide-my-email predicate. It assigns no @ labels: their
+projection remains System One's responsibility. This does not promote S1, S3
+teaching or complete S4 routing/view consolidation.
+
+The generated replacement needs Eric's manual paste into `02 - Routing`.
+The installed `01 - Junk` is unchanged. Before this repair, a read-only audit
+scanned 4,568 Trash copies and found no new protected Message-IDs compared with
+the September 29 20:54 UTC baseline. Both fresh Trash deliveries matched reviewed
+junk entries. There were 25 fresh Inbox and three fresh Archive deliveries, but
+recipient-label acceptance was blocked by the missing labels. This was about
+18 hours of observation, not full one-day acceptance. Receipt:
+`/home/eric/000_inbox/downloads/agent/proton-mail/s0-day-one-audit.json`.
+
+The deployed System One source matches the pinned `e7e3335` source byte for byte,
+and its 63 classifier tests pass in this continuation. Human corrections and
+outcomes remain 31/86 and sender preferences 23; scheduled classification has
+advanced cases/judgments to 601/965. S1 remains shadow, with its October 6 review
+still required. The latest observed snapshot contained 1,592 threads and zero
+proposals; core, Trash and residency status lanes were healthy.
