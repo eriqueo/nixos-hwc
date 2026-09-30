@@ -14,10 +14,10 @@ shell's aerc alias, one-shot analysis via the selected Codex package, browser vi
 - ❌ Pane grid/theme belong to `domains/home/apps/zellij/`; keymap grammar to `domains/home/keymap/`
 
 ## Structure
-- `index.nix` — imports the flake's HM module; options + programs.workbench wiring, wb-reload with version-specific session cleanup, shared Zellij package, versioned keymap, one-shot Codex provider, registry landing hub + shared standing-tool destinations
+- `index.nix` — imports the flake's HM module; options + programs.workbench wiring, wb-reload, shared Zellij package, versioned keymap, one-shot Codex provider, registry landing hub + shared standing-tool destinations
 
 ## Changelog
-- 2026-09-30: Share the graphics-capable Zellij package with the shell and restart helper; clear legacy sessions only when the user invokes reload.
+- 2026-09-30: Share the graphics-capable Zellij package with the shell and restart helper; restart sessions only when the user invokes reload.
 - 2026-09-24: Keep empty Kanban stages keyboard-reachable so mail can move
   through Act, Look, Later, and Junk even when only one stage has messages.
 - 2026-09-23: Update Workbench's Kanban stage browser to show its navigation

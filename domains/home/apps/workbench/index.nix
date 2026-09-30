@@ -61,11 +61,6 @@ let
   # fresh terminal; never from inside the
   # workbench session it would kill.
   wbReload = pkgs.writeShellScriptBin "wb-reload" ''
-    # Temporary migration: old servers use a version-specific socket directory.
-    # Removed automatically once nixpkgs supplies the graphics-capable release.
-    ${lib.optionalString (lib.versionOlder pkgs.zellij.version "0.45.1") ''
-      ${lib.getExe pkgs.zellij} delete-session workbench --force 2>/dev/null || true
-    ''}
     ${lib.getExe zellijPkg} delete-session workbench --force 2>/dev/null || true
     exec ${lib.getExe zellijPkg} attach -c workbench
   '';
