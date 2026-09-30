@@ -280,6 +280,17 @@ in
       ))
     ];
 
+    # The same producer/sender in the user manager. No root log directory or
+    # second delivery channel; failures remain visible in this unit's journal.
+    systemd.user.services."hwc-service-failure-notifier@" = lib.mkIf cfg.sources.serviceFailures.enable {
+      description = "HWC user service terminal failure notifier for %I";
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${notifInternal.serviceFailureNotify}/bin/hwc-service-failure-notify --user %I";
+        TimeoutStartSec = 30;
+      };
+    };
+
     #==========================================================================
     # VALIDATION
     #==========================================================================
