@@ -228,6 +228,7 @@ def render_message_images(raw: bytes, html_renderer: str, image_renderer: str, c
                 preview = subprocess.run(
                     [image_renderer, "--format=symbols", "--symbols=half",
                      "--colors=full", "--animate=off", "--probe=off",
+                     "--threads=1",
                      "--polite=on", "--size=" + str(columns) + "x24", "-"],
                     input=part.get_payload(decode=True), capture_output=True,
                     timeout=10, check=True,

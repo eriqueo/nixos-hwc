@@ -1048,7 +1048,9 @@
         assert 'Remote: remote image blocked' in output
         assert 'Missing: attached image missing' in output
         assert 'https://example.invalid/?a=1&b=2' in output, 'HTML action URL changed'
-        assert '[Fixture]' in run(message(narrow=True)), 'narrow table layout lost the image'
+        for _ in range(5):
+            narrow_output = run(message(narrow=True))
+            assert '[Fixture]' in narrow_output, 'narrow layout or bounded decoding lost the image'
         assert 'image could not be displayed' in run(message(b'not a PNG'))
         plain = EmailMessage()
         plain.set_content('Plain message\n\x1b[31muntrusted\x1b[0m')
