@@ -21,7 +21,7 @@ aerc/
   parts/
     config.nix           # aerc.conf, accounts.conf, notmuch-queries, stylesets, templates
     plain-text-filter.py # Safe plain/HTML text, links, and optional embedded-image view
-    binds.nix            # binds.conf (keybindings) + ov pager config
+    binds.nix            # Shared find menu, named viewing actions, binds.conf + ov pager config
     appearance.nix       # hwc styleset (palette-driven)
     tags.nix             # Mail taxonomy adapter for queries, styles, and bindings
     tags-custom.json     # User-defined aerc-only tags
@@ -208,8 +208,10 @@ match every message from a sender without subject text.
 
 | Key | Action |
 |-----|--------|
-| `<Space>ff` | Filter messages |
-| `<Space>fs` | Search messages |
+| `/` | Filter the current folder by words (message list) |
+| `<Space>ff` | Filter the current folder by words |
+| `<Space>fs` | Jump to matching words in the current folder |
+| `<Space>fa` | Search words across all indexed mail, including archives; reuse `mail-search` |
 | `<Space>ft` | Filter the current folder by tag; `Tab` completes tag names |
 | `<Space>fT` | Find a tag across all mail in the reusable `tag-search` query |
 | `<Space>fc` | Clear the current filter/search |
@@ -230,6 +232,10 @@ match every message from a sender without subject text.
 | `a` | Archive + close |
 | `d` | Trash + close |
 | `H` | Toggle headers |
+| `<Space>oi` / `I` | Local image preview; remote pictures stay blocked |
+| `<Space>on` / `l` | Next MIME part or attachment in the normal viewer |
+| `<Space>op` / `h` | Previous MIME part or attachment in the normal viewer |
+| `<Space>oc` / `i` | Import a calendar event after review; does not RSVP |
 | `u` | Full-message URL picker; Enter copies the selected URL |
 | `O` | Open attachment |
 | `t` | Review and create a task in the shared todui/phone backend |
@@ -238,6 +244,11 @@ match every message from a sender without subject text.
 | `S` | Save attachment |
 | `U` | Same full-message URL picker, with duplicate targets removed |
 | `/` | Search in pager (passthrough) |
+
+The find menu (`Space f`) also works in an opened message: it closes the
+message view and searches its account. `/` in the opened message still finds
+text within that message. In the image preview, press `q` first to return to
+the normal viewer; MIME-part navigation is unavailable in the preview tab.
 
 The viewer opens the sender-authored plain part first. `h` / `l` move between
 MIME parts when an HTML layout is useful. Plain mail is wrapped to a 100-column
@@ -259,6 +270,14 @@ that tab and the original message without closing the editor; `<C-x>` opens the
 aerc command prompt inside a terminal.
 The `i` calendar handoff imports an event after review; it does not RSVP to
 the organizer. Respond to an invitation through its Yes/No/Maybe links.
+
+### Searching by words
+
+Press `/` or `Space f f` in the message list, type words, and press `Enter`
+to narrow the current folder. No tag or Domain is required. `Space f c`
+removes the filter. Use `Space f a` for indexed mail across folders and
+archives; it reuses one search folder. For example, type `invoice` or
+`from:kyle subject:budget`. `Space g i` returns to DO.
 
 ### Searching by tag
 
@@ -382,6 +401,11 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
    `proton/Labels/<name>/`.
 
 ## Changelog
+
+- 2026-10-01: Added `/` word filtering and `Space f a` all-mail search. Shared
+  the find menu with the opened viewer and exposed local image preview,
+  MIME-part navigation, and calendar import under the labeled `Space o` menu.
+  Clarified that remote images and preview tabs cannot supply image MIME parts.
 
 - 2026-09-30: Added `I` for a local embedded-image view that preserves readable
   text and original links. Remote pictures stay blocked; corrupt or missing

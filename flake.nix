@@ -919,6 +919,14 @@
           lines;
         tags = import ./domains/mail/aerc/parts/tags.nix { inherit lib; };
         required = [
+          "/ = :filter<space>"
+          "<Space>fa = :query -f -n mail-search<space>"
+          "<Space>fa = :close<Enter>:query -f -n mail-search<space>"
+          "<Space>ff = :close<Enter>:filter<space>"
+          "<Space>oi = :pipe -s -m"
+          "<Space>on = :next-part<Enter>"
+          "<Space>op = :prev-part<Enter>"
+          "<Space>oc = :pipe -m email-to-khal<Enter>"
           "<A-h> = :prev-tab<Enter>"
           "<A-l> = :next-tab<Enter>"
           "<A-J> = :next-tab<Enter>"

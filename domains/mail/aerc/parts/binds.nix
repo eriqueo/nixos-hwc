@@ -12,6 +12,17 @@ let
   urlPicker = ":pipe -m ${pkgs.urlscan}/bin/urlscan --dedupe -f '${config.home.homeDirectory}/.local/bin/hwc-open {}'<Enter>";
   imageView = ":pipe -s -m ${pkgs.bash}/bin/bash -o pipefail -c '${pkgs.python3}/bin/python3 ${./plain-text-filter.py} --message-images ${aercPkg}/libexec/aerc/filters/html ${pkgs.chafa}/bin/chafa | ${pkgs.less}/bin/less -R -~'<Enter>";
 
+  # The viewer disables inherited bindings. Return to its account before
+  # issuing account-only commands, using the same find menu in both contexts.
+  findBinds = prefix: ''
+      <Space>ff = ${prefix}:filter<space> # filter folder by words…
+      <Space>fs = ${prefix}:search<space> # jump to matching words in folder…
+      <Space>fa = ${prefix}:query -f -n mail-search<space> # search all mail by words…
+      <Space>ft = ${prefix}:filter tag: # filter current folder by tag
+      <Space>fT = ${prefix}:query -f -n tag-search tag: # find tag across all mail
+      <Space>fc = ${prefix}:clear -s<Enter> # clear filter/search
+  '';
+
   # Workbench/Zellij owns Ctrl navigation. Inside aerc, Alt+j/k moves through
   # the vertical folder list and Alt+h/l moves through the horizontal tab bar.
   # Keep both encodings of Alt+Shift+j/k as compatibility aliases: terminal
@@ -74,10 +85,12 @@ let
     Space r a  create from selected mail   Space r m  review / disable rules
 
     FILTER / SORT / VIEW
+    /          filter current folder by words (message list)
+    Space f a  search all mail by words; includes archived mail
     Space f t  filter current folder by tag (Tab completes)
     Space f T  find tag across all mail (Tab completes)
     Space f d h|d|f|p|o  filter current view by Domain
-    Space f c  clear filter  Space f f  filter      Space f s  search
+    Space f c  clear filter  Space f f  filter by words  Space f s  jump to match
     Space f u  review unsubscribe
     Space s d  newest first  Space s f  sender  Space s s  subject
     Space t t  toggle selected fold  Space t T  fold all threads
@@ -86,15 +99,21 @@ let
     HAND OFF (open the message first; then archive with a)
     t  task → todui/phone    i  import event (no RSVP)    p  record → Paperless
 
+    OPENED MESSAGE  -  Space o ...
+    Space o i  local image preview (I)   Space o c  import calendar event (i)
+    Space o n / p  next / previous MIME part (l / h)
+    The preview uses blocks for attached pictures; remote pictures stay blocked.
+    Press q to leave the preview before changing MIME parts.
+
     OPENED MESSAGE LINKS
     Ctrl-click a URL/reference  open in laptop browser
-    I  view embedded pictures   q  return to normal view
+    I  local image preview      q  return to normal view
     u / U  URL picker (Enter copies; q exits; any key closes finished tab)
 
     MESSAGES (no leader)
     j / k  move      J / K  mark + move    V  visual-mark
     r  read          u  unread             a  archive     d  trash
-    c  compose       C  reply-all          Enter  open    /  search
+    c  compose       C  reply-all          Enter  open    /  filter by words
 
     AERC TABS
     Alt+H / Alt+L  previous / next tab
@@ -176,11 +195,8 @@ ${tabBinds}
       Y = :cp<space>
 
       # Filter and Sort
-      <Space>ff = :filter<space> # filter current folder
-      <Space>fs = :search<space> # search current folder
-      <Space>ft = :filter tag: # filter current folder by tag
-      <Space>fT = :query -f -n tag-search tag: # find tag across all mail
-      <Space>fc = :clear -s<Enter> # clear filter/search
+      / = :filter<space> # filter folder by words…
+${findBinds ""}
 ${domainFilterBinds}
       <Space>sd = :sort -r date<Enter> # sort by date
       <Space>sf = :sort from -r date<Enter> # sort by sender
@@ -227,7 +243,12 @@ ${tabBinds}
       a = :pipe -m ${archiveCmd}<Enter>:close<Enter>
       d = :pipe -m ${trashCmd}<Enter>:close<Enter>
       H = :toggle-headers<Enter>
-      I = ${imageView} # view embedded pictures
+      I = ${imageView} # local image preview (remote images blocked)
+      <Space>oi = ${imageView} # local image preview (remote images blocked)
+      <Space>on = :next-part<Enter> # next MIME part / attachment
+      <Space>op = :prev-part<Enter> # previous MIME part / attachment
+      <Space>oc = :pipe -m email-to-khal<Enter> # import calendar event (no RSVP)
+${findBinds ":close<Enter>"}
       u = ${urlPicker}
       / = :toggle-key-passthrough<Enter>/
       O = :open<Enter>
