@@ -991,6 +991,9 @@
                        if line and not line.startswith('#'))
         assert all(':' not in name for name in queries), queries
         binds = pathlib.Path(sys.argv[2]).read_text()
+        # Match the macro parser's backslash decoding before parsing commands.
+        def command_text(value):
+            return value.replace(chr(92) * 2, chr(92))
         # Check the generated production config, including viewer noinherit.
         sections = {}
         section = 'global'
@@ -1013,7 +1016,7 @@
         for key in ['<Space>ms', '<Space>md', '<Space>mt', '<Space>mr', '<Space>ml', '<Space>mv', '<Space>fd']:
             for section in ['[messages]', '[view]']:
                 line = sections[section][key]
-                options = shlex.split(line.split(':choose ', 1)[1].split('<Enter>', 1)[0])
+                options = shlex.split(command_text(line.split(':choose ', 1)[1].split('<Enter>', 1)[0]))
                 assert len(options) % 4 == 0
                 choices = [options[i+1] for i in range(0, len(options), 4)]
                 assert len(choices) == len(set(choices)) and 0 < len(choices) <= 12, choices
@@ -1041,7 +1044,7 @@
             assert nm('count', queries['history/family']) == '1'
             assert nm('count', queries['domain/family']) == '0'
             clear = next(line for line in binds.splitlines() if '<Space>mt =' in line)
-            options = shlex.split(clear.split('= :choose ', 1)[1].split('<Enter>', 1)[0])
+            options = shlex.split(command_text(clear.split('= :choose ', 1)[1].split('<Enter>', 1)[0]))
             command = next(options[i+3] for i in range(0, len(options), 4) if options[i+1] == 'x')
             assert command.startswith('modify-labels '), command
             operations = shlex.split(command)[1:]
@@ -1089,6 +1092,7 @@
             command = shlex.join(['aerc', '-I', '-C', str(conf), '-B', sys.argv[2], '-A', str(accounts)])
             os.environ['SHELL'] = '${pkgs.bash}/bin/bash'
             os.environ['TERM'] = 'xterm-256color'
+            os.environ['TZ'] = 'UTC'
             try:
                 tm('new-session', '-d', '-s', 'fixture', '-x', '150', '-y', '40', command)
                 for _ in range(20):
@@ -1101,9 +1105,9 @@
                 keys(':select 0')
                 special('Enter')
                 output = keys(' tt')
-                assert '{2}Alpha' in output and '12:03' not in output, output
+                assert '{2}Alpha' in output and '18:03' not in output, output
                 output = keys(' tt')
-                assert '{2}Alpha' not in output and '12:03' in output, output
+                assert '{2}Alpha' not in output and '18:03' in output, output
                 assert ':filter' in keys(' ff')
                 special('Escape')
                 assert ':query -f -n mail-search' in keys(' fa')
@@ -1116,12 +1120,17 @@
                 output = keys(' ms')
                 assert all(word in output for word in ['DO', 'DID', 'LOOK', 'JUNK']), output
                 special('Escape')
-                assert 'Add optional fact' in keys(' mt')
-                output = keys('a')
+                output = keys(' mt')
+                assert 'Clear optional facts' in output, output
+                keys('a')
+                output = special('Enter')
                 assert '+ads' in output and '+keep' in output, output
                 keys('g')
+                special('Enter')
                 assert 'ads' in nm('search', '--output=tags', 'id:remap-0@example.com').splitlines()
-                keys(' mtx')
+                keys(' mt')
+                keys('x')
+                special('Enter')
                 current = nm('search', '--output=tags', 'id:remap-0@example.com').splitlines()
                 assert 'ads' not in current and 'state/do' in current, current
                 assert ':filter' in keys(' ff')

@@ -28,7 +28,8 @@ in {
   leaderHelp = ''
     AERC — Space is the leader. Space ? opens this sheet.
     Press Space, then a group letter. Pause to see the available actions.
-    Esc cancels a menu. Context: account = list (returns there from viewer),
+    In a choice menu, type its key and press Enter. Esc cancels.
+    Context: account = list (returns there from viewer),
     message = list or viewer, view = opened message, global = list/view/terminal.
     Close tab is available in the viewer and terminal tabs.
 

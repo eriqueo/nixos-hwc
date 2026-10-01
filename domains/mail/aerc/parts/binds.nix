@@ -58,7 +58,10 @@ let
     reload = "reload"; quit = ''prompt "Quit aerc?" quit'';
     help = ''term ${pkgs.less}/bin/less -R "${config.home.homeDirectory}/.config/aerc/leader-cheatsheet.txt"'';
   } // builtins.mapAttrs (_: choices: choose choices) menus;
-  commands = builtins.mapAttrs (_: cmd: ":${cmd}<Enter>") native // {
+  # binds.conf decodes backslash escapes before go-opt lexes the command.
+  # Preserve the quote escapes required by nested choose/prompt commands.
+  bindingCommand = cmd: lib.replaceStrings [ "\\" ] [ "\\\\" ] cmd;
+  commands = builtins.mapAttrs (_: cmd: ":${bindingCommand cmd}<Enter>") native // {
     filter = ":filter<space>"; search = ":search<space>";
     all-search = ":query -f -n mail-search<space>";
     tag-filter = ":filter tag:"; tag-search = ":query -f -n tag-search tag:";
