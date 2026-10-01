@@ -89,7 +89,9 @@ function ImageCard({ option, selected, onClick }) {
       {option.image && !imgError ? (
         <div style={mediaContainerStyle}>
           <img
-            src={option.image}
+            src={option.imageSmall || option.image}
+            srcSet={option.imageSrcSet}
+            sizes={option.imageSizes}
             alt={option.label}
             onError={() => setImgError(true)}
             style={imgStyle}

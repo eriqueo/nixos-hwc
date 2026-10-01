@@ -21,6 +21,11 @@ export function buildSteps(data) {
     options: (step.options || []).map((opt) => ({
       ...opt,
       ...(opt.image ? { image: resolveImage(base, opt.image) } : {}),
+      ...(opt.imageSmall && step.imageVariant ? {
+        imageSmall: resolveImage(base, opt.imageSmall),
+        imageSrcSet: `${resolveImage(base, opt.imageSmall)} ${step.imageVariant.width}w, ${resolveImage(base, opt.image)} ${opt.imageWidth}w`,
+        imageSizes: step.imageVariant.sizes,
+      } : {}),
     })),
   }));
 }
