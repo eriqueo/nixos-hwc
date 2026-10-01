@@ -71,8 +71,13 @@ imports an event automatically.
 
 Processing is bounded and repeats every 15 minutes. Provider failure leaves the
 case visible and retryable. A human correction locks only the axis changed.
-Exact-sender learning can reuse human `DO`, `LOOK`, or `JUNK` and Domain
-corrections; `DID` is never generalized to future mail. A new message changes
+Exact-sender learning uses each thread's latest eligible human vote per axis.
+At least three threads must support the winner, at least 80 percent must agree,
+and latest feedback must agree. A new dissent suspends that axis. Corrections
+still fix the selected thread in one step. Repeat clicks do not inflate support.
+Legacy counters remain audit history, not authority; the event reader abstains
+above 10,000 events per sender. `DID`, completion and stars are not generalized.
+A new message changes
 the thread fingerprint and reopens a prior `DID` or completed outcome to `DO`.
 
 Run v2 long enough to measure unsafe Junk attempts, fallback rate, correction
@@ -359,3 +364,19 @@ Read-only Bridge headers show its Sent and received Inbox copies with the same
 Message-ID. They are preserved. Evidence:
 `/home/eric/000_inbox/downloads/agent/proton-mail/verification/deadline-repair-live.json`.
 S1 remains shadow until its October 6 review; phone-label teaching remains off.
+
+### October 1 — repeated correction agreement
+
+Eric approved the repeated-agreement rule in chat as the replacement for C3's
+separate teaching step. System One `642d3c7` keeps aerc and MCP command shapes,
+applies the thread correction immediately, and derives State/Domain preferences
+independently from append-only lessons. Predecessor-linked correction events
+retain changed feedback that returns to its earlier value. Exact retries add no
+vote. Old preference rows and classifier schema 2 remain intact. The private
+pre-policy backup restored with integrity `ok` and matching historical counts.
+
+All 95 classifier tests and the full npm build/test suite pass on the final
+System One commit. Disabling production preference consumption fails the runner
+wiring test. The Nix input is updated for deployment; live consumption remains
+the next acceptance step. The model and frozen 24-thread accuracy review are
+unchanged. Phone learning is still off.
