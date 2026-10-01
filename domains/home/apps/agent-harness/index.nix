@@ -317,6 +317,12 @@ in
         export ${lib.concatStringsSep " " (lib.mapAttrsToList (k: v: "${k}=${lib.escapeShellArg v}") t3Env)}
         exec ${pkgs.python3}/bin/python3 ${harness}/tracker/t3.py "$@"
       '')
+      # Stamps a project's live handoff (agent/<project>/handoff.md) with the
+      # writer and each checkout's HEAD, which the hub checks against the ledgers.
+      (pkgs.writeShellScriptBin "tracker-handoff" ''
+        export TRACKER_ROOT=${lib.escapeShellArg cfg.tracker.root} WS_ROOT=${lib.escapeShellArg cfg.workspaceRoot} TRACKER_WS_BIN=${ws}/bin/ws
+        exec ${pkgs.python3}/bin/python3 ${harness}/tracker/handoff_doc.py "$@"
+      '')
     ]
     ++ lib.optional cfg.cliUpdates.enable cliUpdater;
 
@@ -395,12 +401,13 @@ in
         Description = "HWC project tracker hub (roadmaps, plans, decision cards)";
         After = [ "network-online.target" ];
         # The server and page are pinned harness files; a new revision restarts it.
-        X-Restart-Triggers = [ "${harness}/tracker/server.py" "${harness}/tracker/index.html" "${harness}/tracker/t3.py" ];
+        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "server.py" "index.html" "t3.py" "handoff_doc.py" ];
       };
       Service = {
         ExecStart = "${pkgs.python3}/bin/python3 ${harness}/tracker/server.py ${toString cfg.tracker.port}";
         # T3 env: "Done deciding" posts the next prompt into the linked thread.
-        Environment = [ "TRACKER_ROOT=${cfg.tracker.root}" ]
+        # TRACKER_LEDGERS: every host's ws ledger, for the handoff coverage check.
+        Environment = [ "TRACKER_ROOT=${cfg.tracker.root}" "TRACKER_LEDGERS=${cfg.stateDir}/ledger" ]
           ++ lib.mapAttrsToList (k: v: "${k}=${v}") t3Env;
         Restart = "on-failure";
         RestartSec = 5;
