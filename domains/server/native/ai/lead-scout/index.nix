@@ -42,7 +42,7 @@ let
     set -euo pipefail
     export PATH=${lib.makeBinPath [ pkgs.pass pkgs.gnupg pkgs.coreutils ]}:$PATH
     exec ${pkgs.python3}/bin/python3 - <<'PY'
-    import os, pathlib, ssl, smtplib, subprocess
+    import os, pathlib, ssl, smtplib, subprocess, time, random
     root = pathlib.Path(os.environ['XDG_RUNTIME_DIR']) / 'lead-scout-invitation-mail'
     root.mkdir(mode=0o700, exist_ok=True)
     root.chmod(0o700)
@@ -50,9 +50,19 @@ let
     # Scout then requires STARTTLS and validates against this pinned certificate.
     try:
         password = subprocess.check_output(['pass', 'show', ${builtins.toJSON invitationMail.passwordEntry}], timeout=20, stderr=subprocess.DEVNULL).splitlines()[0]
-        with smtplib.SMTP('127.0.0.1', 1025, timeout=10) as smtp:
-            smtp.starttls(context=ssl._create_unverified_context())
-            certificate = ssl.DER_cert_to_PEM_cert(smtp.sock.getpeercert(binary_form=True)).encode()
+        # Type=simple does not imply SMTP readiness. Total deadline 30s,
+        # jittered probes; no mail is submitted by preparation.
+        deadline = time.monotonic() + 30
+        while True:
+            try:
+                with smtplib.SMTP('127.0.0.1', 1025, timeout=min(3, max(0.1, deadline-time.monotonic()))) as smtp:
+                    smtp.starttls(context=ssl._create_unverified_context())
+                    certificate = ssl.DER_cert_to_PEM_cert(smtp.sock.getpeercert(binary_form=True)).encode()
+                break
+            except (OSError, smtplib.SMTPException):
+                if time.monotonic() >= deadline:
+                    raise
+                time.sleep(min(random.uniform(0.5, 1), max(0, deadline-time.monotonic())))
         for name, content in [('password', password), ('certificate.pem', certificate), ('sender', ${builtins.toJSON invitationMail.from}.encode())]:
             temporary = root / (name + '.tmp')
             fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
@@ -808,8 +818,6 @@ in
     systemd.user.services.lead-scout-member-instance = lib.mkIf member.enable {
       description = "Lead Scout member instance (rootless compose recovery)";
       wantedBy = [ "default.target" ];
-      wants = lib.optional invitationMail.enable "lead-scout-invitation-mail.socket";
-      after = lib.optional invitationMail.enable "lead-scout-invitation-mail.socket";
       # No extra network-wait job outside the incident budget. Preparation
       # owns readiness and fails within its elapsed deadline if unavailable.
       unitConfig = {
@@ -854,17 +862,24 @@ in
         Type = "oneshot";
         RemainAfterExit = true;
         ExecStart = invitationMailPrepare;
-        TimeoutStartSec = 45;
+        TimeoutStartSec = 60;
         TimeoutStopSec = 10;
         UMask = "0077";
       };
     };
     systemd.user.sockets.lead-scout-invitation-mail = lib.mkIf invitationMail.enable {
       description = "Private Scout invitation SMTP socket";
-      wantedBy = [ "sockets.target" ];
+      wantedBy = [ "default.target" ];
       requires = [ "lead-scout-invitation-mail-prepare.service" ];
-      after = [ "lead-scout-invitation-mail-prepare.service" ];
-      unitConfig.ConditionUser = cfg.user;
+      after = [ "default.target" "lead-scout-invitation-mail-prepare.service" ];
+      before = [ "shutdown.target" ];
+      conflicts = [ "shutdown.target" ];
+      unitConfig = {
+        ConditionUser = cfg.user;
+        # Proton starts after default.target. Do not order this optional
+        # socket before sockets.target/basic.target and create a boot cycle.
+        DefaultDependencies = false;
+      };
       socketConfig = {
         ListenStream = "%t/lead-scout-invitation-mail/smtp.sock";
         SocketMode = "0600";
