@@ -151,7 +151,7 @@ in
       run_core() {
         # Fetch folder membership before interpreting local intent. Do not pull
         # flags here: the normal two-way pass reconciles phone AND local stars.
-        run_lane core --pull-new --pull-gone --create-near --remove-none --expunge-near "''${CORE_CHANNELS[@]}"
+        run_lane core --pull-new --pull-gone --create-near --remove-near --expunge-near "''${CORE_CHANNELS[@]}"
         if [[ ''${#TRASH_CHANNELS[@]} -gt 0 ]]; then
           run_lane trash "''${TRASH_CHANNELS[@]}"
         fi

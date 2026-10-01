@@ -1231,6 +1231,7 @@
         import os
         import pathlib
         import re
+        import shlex
         import subprocess
         import sys
         import tempfile
@@ -1239,6 +1240,22 @@
         original = fixture['script']
         assert original.count(fixture['command']) == 1
         assert original.count(fixture['projection']) == 1
+
+        def validate_prefetch(source):
+            options = re.search(r'run_lane core (--pull-new.*?) "', source)[1]
+            result = subprocess.run(['${pkgs.isync}/bin/mbsync', '-c', '/dev/null',
+                                     *shlex.split(options)], capture_output=True, text=True, timeout=10)
+            # Empty config is intentional: exercise the real option parser
+            # without reading credentials, opening mail, or contacting a server.
+            assert result.returncode == 1 and result.stderr.startswith('No channels defined.'), result.stderr
+
+        validate_prefetch(original)
+        try:
+            validate_prefetch(original.replace('--remove-near', '--remove-none'))
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('invalid prefetch option escaped the real mbsync parser')
 
         def exercise(source, stage="", mode='core'):
             with tempfile.TemporaryDirectory() as directory:
@@ -1295,7 +1312,7 @@
         for stage in ["", 'prefetch', 'afew', 'mbsync', 'notmuch', 'observe-residency', 'transport-apply', 'transport-ack', 'project-labels']:
             exercise(original, stage)
         exercise(original, mode='trash')
-        for missing in ['--pull-new --pull-gone --create-near --remove-none --expunge-near', '--phase apply', '--phase ack']:
+        for missing in ['--pull-new --pull-gone --create-near --remove-near --expunge-near', '--phase apply', '--phase ack']:
             try:
                 exercise(original.replace(missing, '--missing-wiring'))
             except AssertionError:

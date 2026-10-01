@@ -115,6 +115,10 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-10-01: Use mbsync's supported near-only mailbox removal option during
+  prefetch. Check generated arguments with its real parser and seed an invalid
+  option; a stub-only pipeline check missed the unsupported None spelling.
+
 - 2026-10-01: `calendar/` watches `hwc.paths.user.calendarDrop` as well as Downloads; event-scout's calendar hand-off left the synced inbox.
 - 2026-10-01: Added aerc word filtering with `/` and all-mail search with
   `Space f a`, including from the opened viewer. Named image preview,
