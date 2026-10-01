@@ -84,7 +84,7 @@ describe("authoritative mail placement", () => {
     run.mockReset();
     spawnRun.mockReset();
     run.mockImplementation((_bin,_args,_options,callback)=>callback(null,"From sender@example.com\nMessage-ID: <a@example.com>\n\nbody\n",""));
-    const stdin = {end: vi.fn()};
+    const stdin = {end: vi.fn(), on: vi.fn()};
     spawnRun.mockImplementation(() => {
       const child = {
         stdin,
@@ -212,5 +212,70 @@ describe("generated mail search registry", () => {
       vi.resetModules();
       await rm(dir, {recursive: true, force: true});
     }
+  });
+});
+
+
+describe("mail actions record local placement intent", () => {
+  it.each([
+    ["archive", "transition", "--outcome", "done"],
+    ["trash", "transition", "--outcome", "trash"],
+    ["delete", "transition", "--outcome", "trash"],
+    ["untrash", "reopen", null, null],
+    ["unspam", "reopen", null, null],
+    ["spam", "correct", "--state", "junk"],
+  ])("routes %s through the shared command", async (action, command, axis, value) => {
+    run.mockReset(); spawnRun.mockReset();
+    run.mockImplementation((_bin, _args, _options, callback) => callback(null,
+      "From sender@example.com\nMessage-ID: <fixture@example.com>\n\nbody\n", ""));
+    const stdin = {end: vi.fn(), on: vi.fn()};
+    spawnRun.mockImplementation(() => {
+      const child = {stdin, stderr: {on: vi.fn()}, on: vi.fn((event: string, callback: (code: number) => void) => {
+        if (event === "close") queueMicrotask(() => callback(0));
+        return child;
+      })};
+      return child;
+    });
+    expect((await mailTools()[0].handler({action: "tag", query: "thread:a", tag_action: action})).status).toBe("ok");
+    expect(run.mock.calls.at(-1)![1]).toEqual(["show", "--format=mbox", "--entire-thread=true", "--", "thread:a"]);
+    expect(run.mock.calls.some((call) => call[1][0] === "tag")).toBe(false);
+    expect(spawnRun.mock.calls[0][1][0]).toBe(command);
+    if (axis) expect(spawnRun.mock.calls[0][1]).toEqual(expect.arrayContaining([axis, value]));
+    expect(stdin.end).toHaveBeenCalledWith(expect.stringContaining("Message-ID"));
+  });
+
+  it.each(["+trash", "-trash", "+inbox", "-inbox", "+archive", "+spam"])(
+    "rejects raw placement %s before mutation", async (tag) => {
+      run.mockReset(); spawnRun.mockReset();
+      run.mockImplementation((_bin, _args, _options, callback) => callback(null, "", ""));
+      expect((await mailTools()[0].handler({action: "tag", query: "thread:a", tags: [tag]})).status).toBe("error");
+      expect(run).not.toHaveBeenCalled(); expect(spawnRun).not.toHaveBeenCalled();
+    });
+
+  it("reports selection failure without attempting a disposition", async () => {
+    run.mockReset(); spawnRun.mockReset();
+    run.mockImplementation((_bin, _args, _options, callback) => callback({code: 1}, "", "selection failed"));
+    expect((await mailTools()[0].handler({action: "tag", query: "thread:a", tag_action: "archive"})).status).toBe("error");
+    expect(spawnRun).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("disposition command failure", () => {
+  it("returns an error without retrying the command", async () => {
+    run.mockReset(); spawnRun.mockReset();
+    run.mockImplementation((_bin, _args, _options, callback) => callback(null,
+      "From sender@example.com\nMessage-ID: <fixture@example.com>\n\nbody\n", ""));
+    spawnRun.mockImplementation(() => {
+      const child = {stdin: {end: vi.fn(), on: vi.fn()}, stderr: {on: vi.fn()},
+        on: vi.fn((event: string, callback: (code: number) => void) => {
+          if (event === "close") queueMicrotask(() => callback(7)); return child;
+        })};
+      return child;
+    });
+    expect((await mailTools()[0].handler({action: "tag", query: "thread:a", tag_action: "trash"})).status).toBe("error");
+    expect(spawnRun).toHaveBeenCalledTimes(1);
+    expect(spawnRun.mock.calls[0][2]).toMatchObject({timeout: 30_000});
+    expect(run.mock.calls.some((call) => call[1][0] === "tag")).toBe(false);
   });
 });
