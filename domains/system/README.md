@@ -56,6 +56,10 @@ domains/system/
 
 ## Changelog
 
+- 2026-10-01: C12 routes MCP archive, Trash and restore through the shared
+  durable disposition command. Raw folder-tag writes are rejected; factual
+  metadata remains writable. Mail triage reuses the same bounded adapter.
+
 - 2026-10-01: C9 updates MCP mail examples to State, Domain and facts; reads
   the shared versioned current/history search registry. General metadata clear
   preserves stars, State, Domain and historical mail tags.

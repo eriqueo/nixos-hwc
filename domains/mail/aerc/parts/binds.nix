@@ -162,7 +162,7 @@ ${tabBinds}
       K = :mark -t<Enter>:prev<Enter>
       V = :mark -v<Enter>
       r = :read<Enter>
-      D = :delete<Enter>
+      D = :pipe -m ${trashCmd}<Enter> # Trash (record outcome)
       u = :unread<Enter>
 
       # Static system tags (single-key for speed)
@@ -190,6 +190,8 @@ ${tabBinds}
       <Space>gz = :cf spam_z<Enter> # spam
       <Space>g_ = :cf hide_my_email<Enter> # hide-my-email
 
+      # Explicit physical move/copy: these do not teach. Prefer the shared
+      # workflow actions for completion, Trash and restore.
       # Flexible path
       X = :mv<space>
       Y = :cp<space>

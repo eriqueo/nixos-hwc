@@ -121,6 +121,9 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
   MIME-part navigation, and calendar import in the `Space o` menu.
 - 2026-10-01: Fetch remote core/Trash membership before moving mail; require durable shared-command transport intents, preserve local stars during prefetch, and verify remote membership before acknowledging moves. Failed prefetch blocks uploads; phone-label support stays disabled.
 
+- 2026-10-01: C12 makes aerc uppercase delete use the shared Trash outcome
+  command so it records deliberate local intent instead of bypassing the ledger.
+
 - 2026-10-01: C9 makes notmuch's versioned generated search registry the source
   for aerc and MCP. Current State/Domain/fact views replace old active category
   aggregates; retained searches use `history:*`. General metadata clear keeps

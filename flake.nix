@@ -938,6 +938,7 @@
           "<Space>fT = :query -f -n tag-search tag:"
           "<Space>fc = :clear -s<Enter>"
           "<Space>fu = :unsubscribe -s<Enter>"
+          "D = :pipe -m mail-classifier transition --outcome trash<Enter>"
           "<Space>ta = :pipe -m mail-classifier correct --state do<Enter>"
           "<Space>td = :pipe -m mail-classifier correct --state did<Enter>"
           "<Space>tcd = :pipe -m mail-classifier correct --domain datax<Enter>"

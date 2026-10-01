@@ -487,6 +487,12 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-10-01: C12 makes both mail write entry paths use one durable disposition
+  adapter. Named archive/Trash/restore use transition/reopen; spam records JUNK.
+  Raw inbox/archive/trash/spam writes return a validation error. Selected mail
+  reads have a 20 MiB limit and 10-second deadline; disposition commands have a
+  30-second deadline and are never automatically retried. Failures return errors.
+
 - 2026-10-01: C9 reads the shared generated mail search registry (schema 1,
   128 KiB ceiling). Use `state:do`, `domain:hwc`, `fact:finance`, or
   `history:business` in `hwc_mail action=search`. Bad or absent registry files
