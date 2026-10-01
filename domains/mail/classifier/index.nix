@@ -15,7 +15,7 @@ let
       fi
       case "''${1:-}" in
         ${lib.optionalString cfg.residency.enable ''
-        observe-residency|label-probe|project-labels|review-label-write|transport)
+        observe-residency|observe-phone-labels|label-probe|project-labels|review-label-write|transport)
           verb="$1"
           shift
           guard=()
@@ -25,6 +25,9 @@ let
           if [ "$verb" = label-probe ] || [ "$verb" = review-label-write ]; then
             transport_args=()
             output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/label-probe.json"}
+          fi
+          if [ "$verb" = observe-phone-labels ]; then
+            output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/phone-label-shadow.json"}
           fi
           if [ "$verb" = project-labels ]; then
             output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/labels.json"}
