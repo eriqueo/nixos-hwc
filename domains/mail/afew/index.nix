@@ -3,6 +3,7 @@ let
   cfg   = config.hwc.mail.afew or {};
   nmCfg = config.hwc.mail.notmuch or {};
   transport = config.hwc.mail.classifier.contract.mailboxTransport;
+  folders = transport.localMailboxes;
   intent = target: "tag:${transport.intentTagPrefix}${target}";
 
   afewPkg = import ./package.nix { inherit lib pkgs; cfg = cfg; };
@@ -17,17 +18,17 @@ let
   # automatic producer of State, Domain, and factual traits.
   folderStateFilters = ''
 [Filter.1]
-query = folder:proton/Archive AND NOT tag:archive
+query = folder:${folders.archive} AND NOT tag:archive
 tags = +archive
 message = Tag messages already in Proton Archive
 
 [Filter.2]
-query = folder:proton/Trash AND NOT tag:trash
+query = folder:${folders.trash} AND NOT tag:trash
 tags = +trash
 message = Tag messages already in Proton Trash
 
 [Filter.3]
-query = folder:proton/Spam AND NOT tag:spam
+query = folder:${folders.spam} AND NOT tag:spam
 tags = +spam
 message = Tag messages already in Proton Spam
 '';
@@ -36,14 +37,14 @@ message = Tag messages already in Proton Spam
   # fetched residency and must never resurrect a phone Trash/Archive action.
   mailMoverSection = ''
 [MailMover]
-folders = proton/inbox proton/Archive proton/Trash proton/Spam
+folders = ${lib.concatStringsSep " " (map (name: folders.${name}) [ "inbox" "archive" "trash" "spam" ])}
 rename = True
 max_age = 30
 
-proton/inbox = '${intent "archive"}':proton/Archive '${intent "trash"}':proton/Trash
-proton/Archive = '${intent "inbox"}':proton/inbox '${intent "trash"}':proton/Trash
-proton/Trash = '${intent "inbox"}':proton/inbox '${intent "archive"}':proton/Archive
-proton/Spam = '${intent "inbox"}':proton/inbox '${intent "archive"}':proton/Archive '${intent "trash"}':proton/Trash
+${folders.inbox} = '${intent "archive"}':${folders.archive} '${intent "trash"}':${folders.trash}
+${folders.archive} = '${intent "inbox"}':${folders.inbox} '${intent "trash"}':${folders.trash}
+${folders.trash} = '${intent "inbox"}':${folders.inbox} '${intent "archive"}':${folders.archive}
+${folders.spam} = '${intent "inbox"}':${folders.inbox} '${intent "archive"}':${folders.archive} '${intent "trash"}':${folders.trash}
 '';
 
   conf = ''
