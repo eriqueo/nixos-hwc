@@ -242,7 +242,10 @@ describe("mail actions record local placement intent", () => {
     expect((await mailTools()[0].handler({action: "tag", query: "thread:a", tag_action: action})).status).toBe("ok");
     expect(run.mock.calls.at(-1)![1]).toEqual(["show", "--format=mbox", "--entire-thread=true", "--", "thread:a"]);
     expect(run.mock.calls.some((call) => call[1][0] === "tag")).toBe(false);
-    expect(spawnRun.mock.calls[0][1][0]).toBe(command);
+    expect(spawnRun.mock.calls[0][0]).toBe("/run/current-system/sw/bin/flock");
+    expect(spawnRun.mock.calls[0][1].slice(0, 4)).toEqual([
+      "-n", "-E", "75", expect.stringMatching(/\/mail-sync\/sync\.lock$/)]);
+    expect(spawnRun.mock.calls[0][1][5]).toBe(command);
     if (axis) expect(spawnRun.mock.calls[0][1]).toEqual(expect.arrayContaining([axis, value]));
     expect(stdin.end).toHaveBeenCalledWith(expect.stringContaining("Message-ID"));
   });
@@ -265,14 +268,14 @@ describe("mail actions record local placement intent", () => {
 
 
 describe("disposition command failure", () => {
-  it("returns an error without retrying the command", async () => {
+  it.each([7, 75])("returns an error without retrying failed or busy command %s", async (exitCode) => {
     run.mockReset(); spawnRun.mockReset();
     run.mockImplementation((_bin, _args, _options, callback) => callback(null,
       "From sender@example.com\nMessage-ID: <fixture@example.com>\n\nbody\n", ""));
     spawnRun.mockImplementation(() => {
       const child = {stdin: {end: vi.fn(), on: vi.fn()}, stderr: {on: vi.fn()},
         on: vi.fn((event: string, callback: (code: number) => void) => {
-          if (event === "close") queueMicrotask(() => callback(7)); return child;
+          if (event === "close") queueMicrotask(() => callback(exitCode)); return child;
         })};
       return child;
     });
