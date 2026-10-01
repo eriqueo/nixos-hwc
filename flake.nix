@@ -1101,8 +1101,9 @@
                 keys(':select 0')
                 special('Enter')
                 output = keys(' tt')
-                assert 'Re: Alpha' not in output and 'Alpha' in output, output
-                assert 'Re: Alpha' in keys(' tt')
+                assert '{2}Alpha' in output and '12:03' not in output, output
+                output = keys(' tt')
+                assert '{2}Alpha' not in output and '12:03' in output, output
                 assert ':filter' in keys(' ff')
                 special('Escape')
                 assert ':query -f -n mail-search' in keys(' fa')
