@@ -30,6 +30,7 @@
   lib,
   pkgs,
   osConfig ? {},
+  captureCommand ? null,
   ...
 }: let
   mod = "SUPER";
@@ -178,7 +179,9 @@
         [
           {mods = "${mod} SHIFT"; key = "M"; act = "exec,hyprland-monitor-toggle"; desc = "Swap external monitor to the other side";}
           {mods = mod;            key = "G"; act = "exec,gpu-toggle";              desc = "Toggle GPU mode (integrated / discrete)";}
-          {mods = ""; key = "PRINT"; act = "exec,hyprshot -m region -o $HWC_SCREENSHOTS_DIR/"; desc = "Screenshot a region";}
+          {mods = ""; key = "PRINT"; act = "exec," + (if captureCommand == null then "hyprshot -m region -o $HWC_SCREENSHOTS_DIR/" else captureCommand); desc = "Screenshot a region";}
+        ] ++ lib.optional (captureCommand != null)
+          {mods = "CTRL"; key = "PRINT"; act = "exec,${captureCommand} --private"; desc = "Private screenshot (keep OCR local)";} ++ [
         ]
         ++ lib.optionals gsrEnabled [
           {mods = "SHIFT"; key = "PRINT"; act = "exec,gsr-toggle"; desc = "Start / stop screen recording";}

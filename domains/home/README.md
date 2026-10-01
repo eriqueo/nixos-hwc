@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+Hyprland capture uses the pinned screenshot-renamer package. Print publishes a hash-bound eligibility marker. Ctrl+Print marks private captures before any OCR or model request.
+
 `apps/zellij` owns the graphics-capable pane host package consumed by Workbench's wrapper and restart helper.
 
 `apps/yazi/` owns the persistent favorites column, its bounded atomic data
@@ -80,6 +82,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-10-01: Hyprland capture uses the pinned screenshot-renamer package. Print publishes a hash-bound eligibility marker. Ctrl+Print marks private captures before any OCR or model request.
 - 2026-10-01: Make roadmap continuation explicit when the tracker needs no new cards.
 - 2026-10-01: Pin the tracker decision policy. Cards cover substantive unresolved choices; routine work proceeds and brief clarifications use chat.
 - 2026-09-30: Prepare Zellij 0.45.1 and Workbench's shared runtime without restarting running sessions.

@@ -1,5 +1,5 @@
 # domains/home/apps/hyprland/index.nix
-{ config, lib, pkgs, osConfig ? {}, ... }:
+{ config, lib, pkgs, inputs, osConfig ? {}, ... }:
 let
   cfg = config.hwc.home.apps.hyprland;
   hmLib = import ../../../lib/hm.nix { inherit lib; };
@@ -10,11 +10,18 @@ let
     null
     osCfg;
 
+  captureRoot = lib.attrByPath [ "hwc" "paths" "screenshots" ] null osCfg;
+  capturePkg = pkgs.writeShellApplication {
+    name = "hwc-screenshot";
+    text = ''exec ${lib.getExe inputs.screenshot-renamer.packages.${pkgs.system}.default} capture --root ${lib.escapeShellArg (if captureRoot == null then "" else toString captureRoot)} --hyprshot ${lib.getExe pkgs.hyprshot} "$@"'';
+  };
+  captureCommand = if captureRoot == null then null else "${capturePkg}/bin/hwc-screenshot";
+
   # behavior declares the bindings once and returns them two ways: `settings`
   # (what Hyprland loads) and `keybinds` (structured records). theme paints
   # those records into the SUPER+? legend `card`; session wraps the card in the
   # viewer package. One declaration, so the legend can't drift from the keys.
-  behavior   = import ./parts/behavior.nix   { inherit config lib pkgs; };
+  behavior   = import ./parts/behavior.nix   { inherit config lib pkgs captureCommand; };
   theme      = import ./parts/theme.nix      { inherit config lib pkgs; keybinds = behavior.keybinds; };
   session    = import ./parts/session.nix    { inherit config lib pkgs; card = theme.card; workbenchCommand = behavior.workbenchCommand; osConfig = osConfig; };
 
@@ -110,7 +117,7 @@ in
     #==========================================================================
     # IMPLEMENTATION
     #==========================================================================
-    home.packages = basePkgs ++ (session.packages or []) ++ [ monitorListenerPkg appToggle ];
+    home.packages = basePkgs ++ lib.optional (captureRoot != null) capturePkg ++ (session.packages or []) ++ [ monitorListenerPkg appToggle ];
 
     home.sessionVariables = { XDG_CURRENT_DESKTOP = "Hyprland"; };
 

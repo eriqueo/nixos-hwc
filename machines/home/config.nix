@@ -391,6 +391,9 @@
   # Syncthing tree, so a single host owns the routing pass (same rationale as
   # vaultSync's single-writer hub). Ships dryRun=true — watch the journal, then
   # set hwc.automation.inboxJanitor.dryRun = false.
+  hwc.automation.screenshotRenamer.enable = true;
+  hwc.automation.screenshotRenamer.mode = "shadow";
+
   hwc.automation.inboxJanitor.enable = true;
   hwc.automation.inboxJanitor.dryRun = false;
 
