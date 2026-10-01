@@ -71,7 +71,16 @@ in {
     # CRITICAL: consistent online SQLite snapshot and unresolved source copies.
     # The app caps recovery at 512 MiB and pauses effects when full; Borg retains
     # archived snapshots under its existing bounded prune policy.
-    hwc.data.borg.sources = lib.mkAfter [ "${state}/backups" "${state}/recovery" ];
+    # The parent state directory already enters Borg. Keep live WAL files and
+    # temporary credentials out; only consistent backups and recovery survive.
+    hwc.data.borg.excludePatterns = lib.mkAfter [
+      "${state}/ledger.sqlite*" "${state}/worker.lock" "${state}/work-*"
+    ];
+    systemd.tmpfiles.rules = [
+      "d ${state} 0700 eric users -"
+      "d ${state}/backups 0700 eric users -"
+      "d ${state}/recovery 0700 eric users -"
+    ];
     systemd.services.screenshot-renamer = {
       description = "Propose screenshot names with isolated Pi and DX2";
       after = [ "network-online.target" "syncthing.service" ];

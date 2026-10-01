@@ -86,6 +86,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-10-01: Screenshot backup uses the existing parent Borg source, excludes live SQLite and temporary credentials, and creates empty recovery directories declaratively.
 - 2026-10-01: Screenshot naming runs beside the inbox janitor on its single owner. `screenshot-renamer/index.nix` schedules a pinned app, a separate progress checker and daily receipt backup. Shadow mode mounts screenshots read-only. Apply also requires human holdout evidence (95% quality, 50% coverage) and recovery proof.
 - 2026-09-30: sr-gauntlet, nightly-builds (runner, run-now, review), readme-freshness and refinery take the pipeline marker from `hwc.system.apps.agent-harness.pipelineEnvironment` instead of a local literal; one producer for every unit that launches a headless agent.
 - 2026-09-29: SR gauntlet: manage isolated Claude transcript cleanup at 365 days and pass the same raw-retention value to both launch units.
