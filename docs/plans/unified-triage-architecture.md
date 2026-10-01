@@ -377,6 +377,26 @@ pre-policy backup restored with integrity `ok` and matching historical counts.
 
 All 95 classifier tests and the full npm build/test suite pass on the final
 System One commit. Disabling production preference consumption fails the runner
-wiring test. The Nix input is updated for deployment; live consumption remains
-the next acceptance step. The model and frozen 24-thread accuracy review are
-unchanged. Phone learning is still off.
+wiring test. Nix `631a040b` passed full flake checks and switched on hwc-work.
+The installed classifier and contract match the tested source byte for byte;
+all 95 tests passed again against that installed source. The real review command
+consumed the new policy, and the model service is active. Fourteen MCP caller
+tests pass. All 23 historical preference rows and 21 old correction rows remain
+unchanged. No sender currently has enough independent lessons for an active
+broad override. The model is unchanged. Phone learning is still off.
+
+The fresh 24-thread review now has Eric's labels. Frozen content State scored
+6/24 versus always-DO 7/24: one DO became LOOK and two wanted LOOK messages became
+JUNK. Active embedding Domain scored 12/24 versus the prior-majority baseline
+7/24 and Laya-only Domain 4/24. This small sender-separated diagnostic does not
+support expanded State authority. No retuning or promotion occurred. Full
+confusion matrices, frozen revisions and input-binding checks are in
+`downloads/agent/proton-mail/verification/classifier-review-scored.json`; private
+inputs, predictions and answers now live under the backed-up service evaluation
+folder. New tuning requires a new frozen sender-separated holdout.
+
+Both disposable phone archive actions produced completion proposals. After
+explicit test-case preparation, both phone reopens produced reopen proposals
+and survived three full core sync cycles, with one Inbox and one All Mail copy
+each and no Archive/Trash/star copies. These are shadow observations, not live
+completion application. Star/Trash tests and the October 6 review remain open.
