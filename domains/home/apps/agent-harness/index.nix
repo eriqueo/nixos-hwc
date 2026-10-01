@@ -326,17 +326,7 @@ in
     '';
 
     home.activation.agentHarnessMemoryLinks = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      if run ${stateSync}/bin/agent-state-sync link; then
-        # TEMPORARY (agent-workspace S8): remove the S2 compatibility link now
-        # that every memory link points at stateDir. Delete this block once all
-        # three hosts have switched; the S8 check is that rg finds no old address.
-        legacy=${lib.escapeShellArg "${home}/.agent-state"}
-        if [ -L "$legacy" ] && [ "$(readlink -f "$legacy")" = "$(readlink -f ${lib.escapeShellArg cfg.stateDir})" ]; then
-          run rm "$legacy"
-        fi
-      else
-        echo "agent-harness: state clone missing; run agent-harness doctor" >&2
-      fi
+      run ${stateSync}/bin/agent-state-sync link || echo "agent-harness: state clone missing; run agent-harness doctor" >&2
       if [ -d ${lib.escapeShellArg cfg.editableSource}/.git ]; then
         run ${pkgs.git}/bin/git -C ${lib.escapeShellArg cfg.editableSource} config core.hooksPath ${policyHook}/bin
       fi

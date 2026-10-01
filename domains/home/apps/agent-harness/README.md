@@ -59,7 +59,7 @@ manifests, state shape, Codex hook trust, commands, and the sync timer. A dirty
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
-- 2026-10-01: Agent workspace S8. `stateDir` defaults to `~/800_agents/state`, and the scripts, `contract.nix` and docs use it. Activation retargets every memory link there and then removes the S2 compatibility link (a temporary block, deleted once all three hosts switch). The S2 move code is gone. A new hourly `ws-audit` user timer writes the ledger, renders `LEDGER.md`, expires `closed/` and logs findings.
+- 2026-10-01: Agent workspace S8. `stateDir` defaults to `~/800_agents/state`, and the scripts, `contract.nix` and docs use it. Activation retargeted every memory link there and removed the S2 compatibility link on all three hosts; that one-time block is deleted again. The S2 move code is gone. A new hourly `ws-audit` user timer writes the ledger, renders `LEDGER.md`, expires `closed/` and logs findings.
 - 2026-10-01: Continue down the roadmap when no new decision cards are needed. Wait for a decision only when remaining work depends on it.
 - 2026-10-01: Add `tracker-wait`. The hub's "Done deciding — wake the agent" button stamps a handoff, and a waiting agent starts the next phase from it.
 - 2026-10-01: Reserve tracker cards for substantive unresolved choices. The skill and generated prompt retain chat authorization, routine progress and explicit rejected decisions.
