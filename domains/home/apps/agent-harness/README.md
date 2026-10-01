@@ -16,6 +16,7 @@ The fleet control list names hwc-home, hwc-work and hwc-laptop.
 - `state-validate.sh` owns the memory contract for both full-store scans and projected writes on stdin.
 - `state-sync.test.sh` verifies import, links, validation blocking, recovery, commit, pull, and push against a throwaway hub.
 - The pinned `tracker/` serves review cards with cause and fix choices, yes/no certainty and optional notes. Its browser test exercises the existing decision store on disposable project data.
+- The pinned `project-tracker` skill and generated phase prompt reserve cards for substantive choices. Agents continue authorized routine work and ask brief clarifications in chat.
 
 ## State ownership
 
@@ -57,6 +58,7 @@ manifests, state shape, Codex hook trust, commands, and the sync timer. A dirty
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+- 2026-10-01: Reserve tracker cards for substantive unresolved choices. The skill and generated prompt retain chat authorization, routine progress and explicit rejected decisions.
 - 2026-10-01: Pin the tracker review form. It shows one ticket at a time, keeps drafts during ticket navigation and restores saved answers through the existing comment API. Plain decision cards and earlier comments remain supported.
 - 2026-09-30: `tracker.enable` runs the project tracker hub (claude-config `tracker/server.py`) as the user service `hwc-tracker` on port 8765, enabled on hwc-work only. It restarts when the harness revision changes. `sys.nix` adds the read-only `pipelineEnvironment` (`HWC_PIPELINE=1`), the one producer of the marker that every headless-agent unit merges; `rg pipelineEnvironment domains` lists them.
 - 2026-09-30: `agent-harness publish` ends with the fleet doctor from the newly installed CLI. Re-running its own pre-switch copy compared every freshly switched host with the old revision and reported false FAILs.
