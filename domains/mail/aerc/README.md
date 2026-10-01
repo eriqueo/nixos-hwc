@@ -152,6 +152,8 @@ preserves stars, history, State, Domain and `keep`.
 indexed mail, including archives. These also work from a viewer by returning to
 its account. `Space s a` sorts subjects alphabetically A–Z.
 `Space s s` sorts by subject and then newest date.
+Client-side threading retains folds and respects sort criteria; Notmuch's native
+thread fetch always uses newest-first and ignores subject/sender sorting.
 
 Bare `i` and `I` are retired. Use `Space o c` for calendar import (no RSVP)
 and `Space w i` for the local image preview. The preview uses blocks; remote

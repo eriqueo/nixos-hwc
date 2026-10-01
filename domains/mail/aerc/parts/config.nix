@@ -121,6 +121,10 @@ in
       # msglist_header styleset object. Labels: from subject date domain state tags.
       index-headers = true
       threading-enabled = true
+      # Notmuch's server-thread path ignores SortCriteria. Client threading
+      # preserves reference-based folds while respecting every sort binding.
+      # Permanent by design: use the backend's sorted UID order for threads.
+      force-client-threads = true
       sort = -r date
       confirm-quit = false
       # which-key leader popup (forked aerc feature). Pressing the Space leader
