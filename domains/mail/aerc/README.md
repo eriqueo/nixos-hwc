@@ -275,13 +275,13 @@ the organizer. Respond to an invitation through its Yes/No/Maybe links.
 
 Use `<Space>ft` when you want to narrow the context already open. Aerc seeds
 `:filter tag:`; type a tag or press `Tab` to complete one, then press `Enter`.
-The active folder still bounds the results—for example, filtering `now` by
-`trait/finance` filters factual finance in the current view. `<Space>fc` removes
+The active folder still bounds the results. For example, filtering `DO` by
+`trait/finance` shows factual finance in the current queue. `<Space>fc` removes
 that filter.
 
 Use `<Space>fT` when you want the complete history. It seeds a top-level
 notmuch query and reuses one `tag-search` folder, so repeated searches do not
-grow the sidebar. Press `<Space>gi` to return to `now`.
+grow the sidebar. Press `<Space>gi` to return to `DO`.
 
 ### Compose
 
