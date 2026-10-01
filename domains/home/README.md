@@ -46,6 +46,7 @@ Credential utility windows float at monitor-relative dimensions. Bitwarden's pac
 
 The shared agent-harness fleet list uses hwc-home, hwc-work and hwc-laptop without changing session stores.
 Its project tracker records substantive decisions while agents continue down the roadmap within existing authorization when no new cards are needed.
+Versioned human review inputs separate demonstrated cause from repair or feature work, with full requests and dated evidence linked from each ticket.
 - `apps/t3code/` — launchers and a restricted DX2 handoff adapter; T3 supplies the result limit.
 - `apps/hwc-dictation/` — owned desktop dictation package, settings and user service.
 - `apps/bitwarden/` — desktop client for the self-hosted Vaultwarden account.
@@ -80,6 +81,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-10-01: Allow requested feature work to have an owner without implying a fault; link blind review inputs to their full request and dated evidence.
 - 2026-10-01: Make roadmap continuation explicit when the tracker needs no new cards.
 - 2026-10-01: Pin the tracker decision policy. Cards cover substantive unresolved choices; routine work proceeds and brief clarifications use chat.
 - 2026-09-30: Prepare Zellij 0.45.1 and Workbench's shared runtime without restarting running sessions.
