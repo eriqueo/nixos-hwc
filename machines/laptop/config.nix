@@ -352,6 +352,9 @@ in
       "000_inbox" = {
         path = "/home/eric/000_inbox";
         devices = [ "hwc-home" ];
+        # 14 days on all three inbox peers (2026-10-01): 30 held 6.6 GB of
+        # moved media and exports that already had live copies.
+        versioning.maxAge = "1209600";
       };
       "100_hwc" = {
         path = "/home/eric/100_hwc";
