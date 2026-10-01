@@ -44,6 +44,7 @@ domains/paths/
 | `hwc.paths.downloads` | `~/000_inbox/downloads` | `/opt/downloads` |
 | `hwc.paths.user.mailSyncStatus` | `~/.local/state/mail-sync/status.json` | same |
 | `hwc.paths.user.agents` | `~/800_agents` | same (local, never synced) |
+| `hwc.paths.user.calendarDrop` | `~/.local/state/calendar-drop` | same (local, never synced) |
 
 ## Usage
 
@@ -66,6 +67,7 @@ in {
 4. Allow per-machine overrides
 
 ## Changelog
+- 2026-10-01: Added `user.calendarDrop` (`~/.local/state/calendar-drop`), the private folder programs hand `.ics` files to for the calendar watcher.
 - 2026-09-30: Added `user.agents` (`~/800_agents`), the agent workspace root on every host.
 - 2026-09-30: Declare `user.apps` and `user.go.{workspace,moduleCache,buildCache,bin}`; applications no longer choose a visible Go workspace at `~/go`.
 - 2026-09-28: business.websiteSite and business.websitePublished own the source and release locations for CMS, MCP and public serving.

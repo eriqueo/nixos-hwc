@@ -308,6 +308,12 @@ in
         description = "Bounded mail synchronization status projection";
       };
 
+      calendarDrop = mkOption {
+        type = types.path;
+        default = "${userHome}/.local/state/calendar-drop";
+        description = "Private, unsynced folder whose .ics files the calendar watcher imports; programs (event-scout) hand events here. Imported files move to imported/";
+      };
+
       media = mkOption {
         type = types.nullOr types.path;
         default = if isLaptop then laptopMedia else null;

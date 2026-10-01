@@ -72,7 +72,11 @@ let
   };
   service = import ./parts/service.nix { inherit lib pkgs dataDir; };
   parser = import ./parts/parser.nix { inherit lib pkgs cfg; };
-  icsWatcher = import ./parts/ics-watcher.nix { inherit lib pkgs; };
+  icsWatcher = import ./parts/ics-watcher.nix {
+    inherit lib pkgs;
+    khal = khalCli;
+    dropDir = lib.attrByPath [ "hwc" "paths" "user" "calendarDrop" ] "${config.home.homeDirectory}/.local/state/calendar-drop" osConfig;
+  };
 
 in
 {
@@ -81,7 +85,7 @@ in
     enable = lib.mkEnableOption "calendar sync via khal + vdirsyncer";
 
     icsWatch = {
-      enable = lib.mkEnableOption "auto-import .ics files dropped in ~/000_inbox/downloads into khal";
+      enable = lib.mkEnableOption "auto-import .ics files from ~/000_inbox/downloads and hwc.paths.user.calendarDrop into khal";
     };
 
     extraVdirsyncerPairs = lib.mkOption {

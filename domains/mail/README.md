@@ -113,6 +113,7 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-10-01: `calendar/` watches `hwc.paths.user.calendarDrop` as well as Downloads; event-scout's calendar hand-off left the synced inbox.
 - 2026-10-01: Added aerc word filtering with `/` and all-mail search with
   `Space f a`, including from the opened viewer. Named image preview,
   MIME-part navigation, and calendar import in the `Space o` menu.

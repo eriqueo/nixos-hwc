@@ -8,7 +8,10 @@ let
   cli = "${appDir}/src/cli.ts";
   tsNode = import ../../../../lib/mkTsNode.nix { } cfg.workspaceRoot;
   tokenFile = config.hwc.secrets.api.${cfg.controlTokenSecret};
-  inbox = "${config.hwc.paths.user.home}/000_inbox/downloads";
+  # The calendar watcher imports from this private drop and moves each file
+  # to imported/, which is how status() reads "added". It left the synced
+  # Downloads folder 2026-10-01 (agent-workspace S7).
+  inbox = config.hwc.paths.user.calendarDrop;
   origin = "https://event-scout.${config.hwc.networking.shared.vhostDomain}";
   environment = {
     NODE_ENV = "production";
@@ -18,7 +21,7 @@ let
     EVENT_SCOUT_ORIGIN = origin;
     EVENT_SCOUT_PORT = toString cfg.port;
     EVENT_SCOUT_CALENDAR_INBOX = inbox;
-    EVENT_SCOUT_CALENDAR_IMPORTED = "${inbox}/events";
+    EVENT_SCOUT_CALENDAR_IMPORTED = "${inbox}/imported";
     EVENT_SCOUT_CARD_URL = "http://127.0.0.1:${toString config.hwc.server.ai.hwcControlBot.targets.events.cardPort}";
     # Floating iCal timestamps are held for review, never inferred from host TZ.
     TZ = "America/Denver";
@@ -51,6 +54,14 @@ in {
     reviewerId = lib.mkOption { type = lib.types.strMatching "^[0-9]{17,20}$"; description = "Authorized reviewer, derived from the existing HWC Discord identity."; };
   };
   config = lib.mkIf cfg.enable {
+    # ReadWritePaths needs the drop to exist before the unit starts.
+    # Retention: indefinite, never expired. imported/ is how status() knows an
+    # event was added, so deleting a file makes the next sweep re-deliver it.
+    # It grows by one small .ics per accepted event.
+    systemd.tmpfiles.rules = [
+      "d ${inbox} 0750 eric users - -"
+      "d ${inbox}/imported 0750 eric users - -"
+    ];
     services.postgresql = {
       ensureDatabases = [ dbName ];
       ensureUsers = [{ name = dbName; ensureDBOwnership = true; }];

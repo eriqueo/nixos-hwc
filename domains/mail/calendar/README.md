@@ -34,7 +34,7 @@ domains/mail/calendar/
 │   ├── khal.nix                        # ~/.config/khal/config (palette-driven)
 │   ├── service.nix                     # 15-min sync timer
 │   ├── parser.nix                      # email-to-khal helper + aerc filter
-│   ├── ics-watcher.nix                 # auto-import dropped .ics
+│   ├── ics-watcher.nix                 # auto-import .ics from Downloads and the calendar drop
 │   ├── email-to-khal.py                # reviewed email → event proposal/import
 │   └── email_to_khal_test.py           # parser, flyer, and fetch-policy regressions
 └── README.md
@@ -42,6 +42,7 @@ domains/mail/calendar/
 
 ## Changelog
 
+- 2026-10-01: The `.ics` watcher also imports from `hwc.paths.user.calendarDrop` (private, unsynced) and moves those files to its `imported/`; event-scout hands events there instead of the synced Downloads folder. It now imports with the khalt fork's `khal`, as this module already documented, and its log names Radicale rather than iCloud.
 - 2026-09-24: Radicale is the only backend. Deleted the iCloud `accounts`
   option, its per-account pairs and khal calendars, the hardcoded iCloud
   `default_calendar` UUID, the `calendars/` mkdir, the apple-app-pw handshake,
