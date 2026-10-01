@@ -9,6 +9,8 @@ Self-contained email domain: client UI, accounts, sync, indexing, sending, and b
 
 ## Structure
 
+Mailbox movement runs through classifier transport intents, marker-only afew rules, and ordered mbsync prefetch/reconciliation/readback.
+
 Radicale clients in `calendar`, `tasks`, and `contacts` render credential argv
 from `domains/lib/hm.nix`, also consumed by todui's list-deletion launcher.
 ```
@@ -112,6 +114,8 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-10-01: Fetch remote core/Trash membership before moving mail; require durable shared-command transport intents, preserve local stars during prefetch, and verify remote membership before acknowledging moves.
 
 - 2026-09-30: Complete label preflight before reserving writes, so a read-only
   deadline defers without blocking later cycles. Add shared locked read-only

@@ -12,6 +12,7 @@
   trashTimerEnable,
   residencyCommand,
   projectionCommand,
+  transportCommand,
   ...
 }:
 let
@@ -144,26 +145,53 @@ in
         fi
       }
 
+      prefetch_index_rc=0
+      transport_rc=0
+      residency_rc=0
       run_core() {
-        # MailMover changes core folders before their two-way sync. Never run it
-        # for the pull-only Trash lane: Bridge rejects uploads into Trash.
+        # Fetch folder membership before interpreting local intent. Do not pull
+        # flags here: the normal two-way pass reconciles phone AND local stars.
+        run_lane core --pull-new --pull-gone --create-near --remove-none --expunge-near "''${CORE_CHANNELS[@]}"
+        if [[ ''${#TRASH_CHANNELS[@]} -gt 0 ]]; then
+          run_lane trash "''${TRASH_CHANNELS[@]}"
+        fi
+        "$NM" new || prefetch_index_rc=$?
+        if [[ ''${lane_rc[core]} -ne 0 || ''${lane_rc[trash]:-0} -ne 0 || "$prefetch_index_rc" -ne 0 ]]; then
+          return
+        fi
+        ${lib.optionalString (residencyCommand != "") ''
+        ${residencyCommand} || residency_rc=$?
+        ''}
+        ${lib.optionalString (transportCommand != "") ''
+        ${transportCommand} --phase apply || transport_rc=$?
+        ''}
+        if [[ "$transport_rc" -ne 0 ]]; then
+          return
+        fi
+        # Only durable intent markers can drive this mover. Plain folder tags
+        # are observations and cannot authorize an upload.
         ${afewPkg}/bin/afew -m -a || afew_rc=$?
+        if [[ "$afew_rc" -ne 0 ]]; then
+          return
+        fi
         run_lane core "''${CORE_CHANNELS[@]}"
+        ${lib.optionalString (transportCommand != "") ''
+        if [[ ''${lane_rc[core]} -eq 0 ]]; then
+          ${transportCommand} --phase ack || transport_rc=$?
+        fi
+        ''}
       }
 
       ensure_status
       case "$mode" in
-        core) run_core ;;
+        core|all) run_core ;;
         trash) run_lane trash "''${TRASH_CHANNELS[@]}" ;;
-        all)
-          run_core
-          run_lane trash "''${TRASH_CHANNELS[@]}"
-          ;;
       esac
 
       index_rc=0
       "$NM" new || index_rc=$?
       final_rc=$index_rc
+      [[ "$prefetch_index_rc" -eq 0 ]] || final_rc=$prefetch_index_rc
       for lane in "''${selected[@]}"; do
         rc=''${lane_rc[$lane]}
         if [[ "$index_rc" -ne 0 ]]; then
@@ -171,6 +199,11 @@ in
         elif [[ "$rc" -ne 0 ]]; then
           record_lane "$lane" degraded sync-failed "$rc"
           [[ "$final_rc" -ne 0 ]] || final_rc=$rc
+        elif [[ "$lane" == core && ( "$prefetch_index_rc" -ne 0 || "$transport_rc" -ne 0 ) ]]; then
+          reconciliation_rc=$transport_rc
+          [[ "$prefetch_index_rc" -eq 0 ]] || reconciliation_rc=$prefetch_index_rc
+          record_lane "$lane" degraded reconciliation-failed "$reconciliation_rc"
+          [[ "$final_rc" -ne 0 ]] || final_rc=$transport_rc
         elif [[ "$lane" == core && "$afew_rc" -ne 0 ]]; then
           record_lane "$lane" degraded mover-failed "$afew_rc"
           [[ "$final_rc" -ne 0 ]] || final_rc=$afew_rc
@@ -182,8 +215,6 @@ in
       ${lib.optionalString (residencyCommand != "") ''
       if [[ "$mode" != trash ]]; then
         if [[ "$final_rc" -eq 0 ]]; then
-          residency_rc=0
-          ${residencyCommand} || residency_rc=$?
           if [[ "$residency_rc" -eq 0 ]]; then
             record_lane residency healthy shadow-success 0
           else

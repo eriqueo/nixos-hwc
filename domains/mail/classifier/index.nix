@@ -15,12 +15,13 @@ let
       fi
       case "''${1:-}" in
         ${lib.optionalString cfg.residency.enable ''
-        observe-residency|label-probe|project-labels|review-label-write)
+        observe-residency|label-probe|project-labels|review-label-write|transport)
           verb="$1"
           shift
           guard=()
           transport_args=(--notmuch ${pkgs.notmuch}/bin/notmuch)
           output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/residency-shadow.json"}
+          output_args=()
           if [ "$verb" = label-probe ] || [ "$verb" = review-label-write ]; then
             transport_args=()
             output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/label-probe.json"}
@@ -28,12 +29,15 @@ let
           if [ "$verb" = project-labels ]; then
             output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/labels.json"}
           fi
+          if [ "$verb" != transport ]; then
+            output_args=(--output "$output")
+          fi
           if [ "$verb" != observe-residency ] && [ "''${SYNC_MAIL_LOCKED:-0}" != 1 ]; then
             guard=(${pkgs.util-linux}/bin/flock -n -E 75 ${lib.escapeShellArg "${builtins.dirOf syncStatus}/sync.lock"})
           fi
           exec "''${guard[@]}" "$runtime" "$verb" \
             --db /var/lib/hwc/mail-classifier/ledger.sqlite \
-            --output "$output" \
+            "''${output_args[@]}" \
             --bridge-host ${lib.escapeShellArg (common.getOr account "imapHost" (common.imapHost account))} \
             --bridge-port ${toString (common.getOr account "imapPort" (common.imapPort account))} \
             --bridge-login ${lib.escapeShellArg (common.loginOf account)} \
@@ -43,7 +47,11 @@ let
         correct|transition|reopen|review|route-review)
           verb="$1"
           shift
-          exec "$runtime" "$verb" \
+          guard=()
+          if [ "$verb" != review ] && [ "''${SYNC_MAIL_LOCKED:-0}" != 1 ]; then
+            guard=(${pkgs.util-linux}/bin/flock -n -E 75 ${lib.escapeShellArg "${builtins.dirOf syncStatus}/sync.lock"})
+          fi
+          exec "''${guard[@]}" "$runtime" "$verb" \
             --db /var/lib/hwc/mail-classifier/ledger.sqlite \
             --notmuch ${pkgs.notmuch}/bin/notmuch "$@"
           ;;

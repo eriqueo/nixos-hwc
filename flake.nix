@@ -1168,6 +1168,8 @@
                     'import os, pathlib, sys\n'
                     'name = pathlib.Path(sys.argv[0]).name\n'
                     'if name == "mail-classifier": name = sys.argv[1]\n'
+                    'if name == "transport": name += "-" + sys.argv[sys.argv.index("--phase") + 1]\n'
+                    'if name == "mbsync" and "--pull-new" in sys.argv: name = "prefetch"\n'
                     'with open(os.environ["CALL_LOG"], "a") as f: f.write(name + "\\n")\n'
                     'raise SystemExit(23 if name == os.environ["FAIL_STAGE"] else 0)\n')
                 stub.chmod(0o755)
@@ -1190,23 +1192,34 @@
                     assert calls == ['mbsync', 'notmuch'], calls
                     assert 'residency' not in lanes
                     assert 'labels' not in lanes
-                elif stage in ['afew', 'mbsync', 'notmuch']:
-                    assert 'observe-residency' not in calls and 'project-labels' not in calls, calls
-                    assert lanes['core']['state'] == 'degraded'
-                    assert lanes['residency']['lastOutcome'] == 'prerequisite-failed'
-                    assert lanes['labels']['lastOutcome'] == 'prerequisite-failed'
                 else:
-                    expected = ['afew', 'mbsync', 'notmuch', 'observe-residency']
-                    if stage != 'observe-residency': expected.append('project-labels')
+                    expected = ['prefetch', 'mbsync', 'notmuch']
+                    fetched = stage not in ['prefetch', 'mbsync', 'notmuch']
+                    if fetched:
+                        expected += ['observe-residency', 'transport-apply']
+                        if stage != 'transport-apply':
+                            expected.append('afew')
+                            if stage != 'afew':
+                                expected += ['mbsync', 'transport-ack']
+                    expected.append('notmuch')
+                    healthy = fetched and stage not in ['transport-apply', 'afew', 'transport-ack']
+                    if healthy and stage != 'observe-residency': expected.append('project-labels')
                     assert calls == expected, calls
-                    assert lanes['core']['state'] == 'healthy'
-                    assert lanes['residency']['state'] == ('degraded' if stage == 'observe-residency' else 'healthy')
-                    assert lanes['labels']['state'] == ('degraded' if stage else 'healthy')
+                    assert lanes['core']['state'] == ('healthy' if healthy else 'degraded')
+                    assert lanes['residency']['state'] == ('healthy' if healthy and stage != 'observe-residency' else 'degraded')
+                    assert lanes['labels']['state'] == ('healthy' if healthy and not stage else 'degraded')
                 assert result.returncode == (23 if stage else 0), result.stderr
 
-        for stage in ["", 'afew', 'mbsync', 'notmuch', 'observe-residency', 'project-labels']:
+        for stage in ["", 'prefetch', 'afew', 'mbsync', 'notmuch', 'observe-residency', 'transport-apply', 'transport-ack', 'project-labels']:
             exercise(original, stage)
         exercise(original, mode='trash')
+        for missing in ['--pull-new --pull-gone --create-near --remove-none --expunge-near', '--phase apply', '--phase ack']:
+            try:
+                exercise(original.replace(missing, '--missing-wiring'))
+            except AssertionError:
+                pass
+            else:
+                raise AssertionError('removed reconciliation wiring passed: ' + missing)
         try:
             exercise(original.replace(fixture['command'], 'true'))
         except AssertionError:
@@ -1372,6 +1385,43 @@
             pass
         else:
             raise AssertionError('removed remote-reopen wiring passed its real-tool replay')
+
+        def check_phone_trash(source):
+            with tempfile.TemporaryDirectory() as directory:
+                root = pathlib.Path(directory); mail = root / 'Maildir'
+                for folder in ['inbox', 'Archive', 'Trash', 'Spam']:
+                    for part in ['cur', 'new', 'tmp']: (mail / 'proton' / folder / part).mkdir(parents=True)
+                config = root / 'notmuch.conf'
+                config.write_text('[database]\npath=' + str(mail) + '\n[user]\nname=Fixture\nprimary_email=fixture@example.invalid\n[new]\ntags=new;unread;inbox;\n[maildir]\nsynchronize_flags=true\n')
+                env = {**os.environ, 'NOTMUCH_CONFIG': str(config), 'XDG_CONFIG_HOME': str(root / 'config'), 'PATH':'${pkgs.notmuch}/bin:' + os.environ.get("PATH", "")}
+                afew = root / 'config' / 'afew' / 'config'; afew.parent.mkdir(parents=True)
+                afew.write_text(source.replace('${home.hwc.mail.notmuch.maildirRoot}', str(mail)))
+                hp = mail / '.notmuch' / 'hooks' / 'post-new'; hp.parent.mkdir(parents=True)
+                hp.write_text(hook.replace('export NOTMUCH_CONFIG="$HOME/.notmuch-config"', 'export NOTMUCH_CONFIG=' + shlex.quote(str(config)))); hp.chmod(0o700)
+                def nm(*args): return subprocess.check_output(['${pkgs.notmuch}/bin/notmuch', *args], env=env, text=True)
+                def move(): subprocess.run(['${afewTest}/bin/afew', '-m', '-a'],env=env,check=True,capture_output=True)
+                raw = 'Message-ID: <trash@example.invalid>\nFrom: sender@example.invalid\nTo: fixture@example.invalid\nSubject: Fixture\nDate: Thu, 01 Oct 2026 12:00:00 +0000\n\nSynthetic content\n'
+                inbox = mail / 'proton/inbox/cur/old:2,S'; trash = mail / 'proton/Trash/cur/fetched:2,S'
+                inbox.write_text(raw); nm('new'); trash.write_text(raw); nm('new')
+                # A partial physical copy and stale Inbox tag are NOT local restore intent.
+                move(); assert trash.exists(), 'stale Inbox undid fetched Trash'
+                assert inbox.exists(), 'partial copy was deleted'
+                inbox.unlink(); nm('new')
+                for _ in range(3):
+                    move(); nm('new')
+                    assert trash.exists() and not list((mail/'proton/inbox/cur').iterdir())
+                # Only the durable command projection marker authorizes restoration.
+                nm('tag','+transport/inbox','+inbox','-trash','--','id:trash@example.invalid')
+                move(); nm('new')
+                assert not trash.exists() and len(list((mail/'proton/inbox/cur').iterdir())) == 1
+        afew_source = pathlib.Path(sys.argv[3]).read_text()
+        check_phone_trash(afew_source)
+        try:
+            check_phone_trash(afew_source.replace('tag:transport/inbox','tag:inbox'))
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('generic Inbox tags still authorize Trash restoration')
 
         # Exercise the actual generated dispatcher with only its runtime binding
         # substituted. Removing reopen from that dispatcher must lose db/notmuch.

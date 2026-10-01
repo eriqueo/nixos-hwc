@@ -2,6 +2,8 @@
 let
   cfg   = config.hwc.mail.afew or {};
   nmCfg = config.hwc.mail.notmuch or {};
+  transport = config.hwc.mail.classifier.contract.mailboxTransport;
+  intent = target: "tag:${transport.intentTagPrefix}${target}";
 
   afewPkg = import ./package.nix { inherit lib pkgs; cfg = cfg; };
 
@@ -30,18 +32,18 @@ tags = +spam
 message = Tag messages already in Proton Spam
 '';
 
-  # MailMover: physically moves Maildir files before mbsync, so mbsync
-  # pushes the moves to Proton. Uses exact folder names from ls ~/400_mail/Maildir/proton/
+  # Only durable shared-command intents authorize a move. Folder tags describe
+  # fetched residency and must never resurrect a phone Trash/Archive action.
   mailMoverSection = ''
 [MailMover]
 folders = proton/inbox proton/Archive proton/Trash proton/Spam
 rename = True
 max_age = 30
 
-proton/inbox = 'tag:archive':proton/Archive 'tag:trash':proton/Trash 'tag:spam':proton/Spam 'NOT tag:inbox':proton/Archive
-proton/Archive = 'tag:trash':proton/Trash
-proton/Trash = 'tag:inbox':proton/inbox
-proton/Spam = 'tag:inbox':proton/inbox
+proton/inbox = '${intent "archive"}':proton/Archive '${intent "trash"}':proton/Trash
+proton/Archive = '${intent "inbox"}':proton/inbox '${intent "trash"}':proton/Trash
+proton/Trash = '${intent "inbox"}':proton/inbox '${intent "archive"}':proton/Archive
+proton/Spam = '${intent "inbox"}':proton/inbox '${intent "archive"}':proton/Archive '${intent "trash"}':proton/Trash
 '';
 
   conf = ''
