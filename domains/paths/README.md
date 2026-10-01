@@ -11,6 +11,8 @@ Central path definitions providing machine-aware filesystem abstraction. Enables
 
 ## Structure
 
+`user.inbox` is available on every host. Laptop capture and the inbox owner derive their screenshot directory from this shared root.
+
 `user.apps` owns independent source checkouts (`~/600_apps`). `user.go` owns
 the Go workspace, module/build caches and user-installed binary destination.
 The development module applies these paths and clears replaceable caches monthly.
@@ -67,6 +69,7 @@ in {
 4. Allow per-machine overrides
 
 ## Changelog
+- 2026-10-01: `user.inbox` is available on every host. Laptop capture and the inbox owner derive their screenshot directory from this shared root.
 - 2026-10-01: Added `user.calendarDrop` (`~/.local/state/calendar-drop`), the private folder programs hand `.ics` files to for the calendar watcher.
 - 2026-09-30: Added `user.agents` (`~/800_agents`), the agent workspace root on every host.
 - 2026-09-30: Declare `user.apps` and `user.go.{workspace,moduleCache,buildCache,bin}`; applications no longer choose a visible Go workspace at `~/go`.

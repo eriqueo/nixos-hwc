@@ -32,6 +32,10 @@
     # Ingest code deploys with the system generation, never from a timer pull.
     brainvec = { url = "github:eriqueo/brainvec"; flake = false; };
     refinery = { url = "github:eriqueo/refinery"; flake = false; };
+    screenshot-renamer = {
+      url = "github:eriqueo/screenshot-renamer";
+      inputs.nixpkgs.follows = "nixpkgs-stable";
+    };
 
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-26.05";
@@ -507,6 +511,47 @@
         touch $out
       '';
     in {
+      screenshot-renamer = let
+        c = self.nixosConfigurations.hwc-home.config;
+        worker = c.systemd.services.screenshot-renamer.serviceConfig;
+        laptop = self.nixosConfigurations.hwc-laptop.config.home-manager.users.eric;
+        binds = laptop.wayland.windowManager.hyprland.settings.bind;
+        pi = pkgs.callPackage ./domains/home/apps/pi/parts/package.nix {};
+        python = pkgs.python3.withPackages (ps: [ ps.pillow ]);
+      in
+      assert lib.assertMsg (c.hwc.automation.screenshotRenamer.enable
+        && c.hwc.automation.screenshotRenamer.mode == "shadow"
+        && lib.elem "${c.hwc.paths.user.inbox}/screenshots" worker.BindReadOnlyPaths
+        && lib.hasInfix " shadow" worker.ExecStart
+        && c.systemd.timers.screenshot-renamer-check.wantedBy == [ "timers.target" ]
+        && lib.any (b: lib.hasInfix "hwc-screenshot" b && lib.hasInfix "--private" b) binds)
+        "screenshot wiring must remain active, read-only, monitored and capture privacy bound";
+      pkgs.runCommand "screenshot-renamer-contract" {
+        nativeBuildInputs = [ python pi pkgs.tesseract ];
+      } ''
+        export PYTHONDONTWRITEBYTECODE=1
+        export HOME="$TMPDIR/home"
+        mkdir -p "$HOME"
+        cd ${inputs.screenshot-renamer}
+        python3 -m unittest -v screenshot_renamer_checks test_worker
+        python3 - <<'PY'
+        from pathlib import Path
+        import dataclasses, tempfile, socket
+        from PIL import Image, ImageDraw, ImageFont
+        import screenshot_renamer as r
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d)
+            font = ImageFont.truetype("${pkgs.dejavu_fonts}/share/fonts/truetype/DejaVuSans.ttf", 32)
+            image = Image.new("RGB", (900, 220), "white")
+            ImageDraw.Draw(image).text((20, 35), "Quarterly sales report\nRevenue growth planning", font=font, fill="black")
+            image.save(p / "shot.png")
+            cfg = r.Config(p, p / "state", owner=socket.gethostname())
+            text = r.ocr(cfg, p / "shot.png", p)
+            assert "Quarterly sales report" in text, text
+        PY
+        touch "$out"
+      '';
+
       mqtt-webhook-contract = let
         module = import ./domains/automation/mqtt/index.nix {
           inherit pkgs lib;

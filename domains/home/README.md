@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+Hyprland capture uses the pinned screenshot-renamer package. Print publishes a hash-bound eligibility marker. Ctrl+Print marks private captures before any OCR or model request.
+
 `apps/zellij` owns the graphics-capable pane host package consumed by Workbench's wrapper and restart helper.
 
 `apps/yazi/` owns the persistent favorites column, its bounded atomic data
@@ -82,6 +84,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 - 2026-10-01: Allow requested feature work to have an owner without implying a fault; link blind review inputs to their full request and dated evidence.
+- 2026-10-01: Hyprland capture uses the pinned screenshot-renamer package. Print publishes a hash-bound eligibility marker. Ctrl+Print marks private captures before any OCR or model request.
 - 2026-10-01: Make roadmap continuation explicit when the tracker needs no new cards.
 - 2026-10-01: Generate aerc's approved leader bindings and help from shared keymap
   grammar; add alphabetical subject sort and consolidate named mail actions.

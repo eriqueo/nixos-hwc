@@ -14,6 +14,8 @@ readme-freshness weekly Law-12 drift report.
 
 ## Structure
 
+Screenshot naming runs beside the inbox janitor on its single owner. `screenshot-renamer/index.nix` schedules a pinned app, a separate progress checker and daily receipt backup. Shadow mode mounts screenshots read-only. Apply also requires human holdout evidence (95% quality, 50% coverage) and recovery proof.
+
 Refinery native bundles (including the nightly review writer) use the pinned
 `refinery` flake input, matching the container release selected on work.
 Review storage upgrades require both writers to move together.
@@ -84,6 +86,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-10-01: Screenshot naming runs beside the inbox janitor on its single owner. `screenshot-renamer/index.nix` schedules a pinned app, a separate progress checker and daily receipt backup. Shadow mode mounts screenshots read-only. Apply also requires human holdout evidence (95% quality, 50% coverage) and recovery proof.
 - 2026-09-30: sr-gauntlet, nightly-builds (runner, run-now, review), readme-freshness and refinery take the pipeline marker from `hwc.system.apps.agent-harness.pipelineEnvironment` instead of a local literal; one producer for every unit that launches a headless agent.
 - 2026-09-29: SR gauntlet: manage isolated Claude transcript cleanup at 365 days and pass the same raw-retention value to both launch units.
 - 2026-09-28: Pin the native Refinery review writer to the repaired upstream source so the timer and container share collision-safe, atomic v2 review storage.

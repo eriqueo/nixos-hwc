@@ -228,7 +228,7 @@ in
 
     screenshots = mkOption {
       type = types.nullOr types.path;
-      default = if isLaptop then "${laptopInbox}/screenshots" else null;
+      default = if isLaptop then "${cfg.user.inbox}/screenshots" else null;
       description = "Screenshot save location - laptop only (under 000_inbox so it rides the existing Syncthing share to hwc-server)";
     };
 
@@ -274,8 +274,8 @@ in
 
       inbox = mkOption {
         type = types.nullOr types.path;
-        default = if isLaptop then laptopInbox else null;
-        description = "Global inbox - laptop only";
+        default = "${userHome}/000_inbox";
+        description = "Global inbox, shared by capture clients and its single processing owner";
       };
 
       work = mkOption {

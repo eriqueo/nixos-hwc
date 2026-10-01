@@ -11,6 +11,7 @@
     ./brain-sweep/index.nix
     ./dx1-gauntlet/index.nix
     ./inbox-janitor/index.nix
+    ./screenshot-renamer/index.nix
     ./mail-janitor/index.nix
     ./mqtt/index.nix
     ./n8n/index.nix
