@@ -14,12 +14,12 @@
  * pipeline output path. Missing/unparseable file or failed live search → coded read failure; writes fail loud (a workbench write must never fake success).
  */
 
-import { execFile, spawn } from "node:child_process";
+import { execFile } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
 import { mcpError } from "../errors.js";
-import { MAIL_STATES, mailStateTag, mailTagActions } from "./mail.js";
+import { MAIL_STATES, mailStateTag, mailTagActions, classifierMutation } from "./mail.js";
 
 /** Default briefing output path (run.sh writes here, then injects .mail_triage). */
 const DEFAULT_BRIEFING_JSON =
@@ -201,42 +201,6 @@ function notmuchTagThread(id: string, ops: string[]): Promise<string | null> {
   });
 }
 
-function notmuchMbox(id: string): Promise<{bin: string; mbox: string}> {
-  return new Promise((resolve, reject) => {
-    const tryBin = (i: number): void => {
-      if (i >= NOTMUCH_CANDIDATES.length) return reject(new Error("notmuch binary not found"));
-      const bin = NOTMUCH_CANDIDATES[i];
-      execFile(bin, ["show", "--format=mbox", "--entire-thread=true", `thread:${id}`],
-        { timeout: 10_000, maxBuffer: 20 * 1024 * 1024 }, (err, stdout, stderr) => {
-          if (err && (err as NodeJS.ErrnoException).code === "ENOENT") return tryBin(i + 1);
-          if (err) return reject(new Error((stderr || String(err)).slice(0, 300)));
-          resolve({bin, mbox: stdout});
-        });
-    };
-    tryBin(0);
-  });
-}
-
-/** Run the same durable human-decision command used by aerc. */
-async function classifierMutation(id: string, kind: "state" | "outcome", value: string): Promise<string | null> {
-  try {
-    const {bin, mbox} = await notmuchMbox(id);
-    const args = kind === "state"
-      ? ["correct", "--db", "/var/lib/hwc/mail-classifier/ledger.sqlite", "--notmuch", bin, "--state", value]
-      : ["transition", "--db", "/var/lib/hwc/mail-classifier/ledger.sqlite", "--notmuch", bin, "--outcome", value];
-    return await new Promise((resolve) => {
-      const child = spawn("/run/current-system/sw/bin/mail-classifier-runtime", args, {stdio: ["pipe", "ignore", "pipe"]});
-      let stderr = "";
-      child.stderr.on("data", chunk => { stderr += String(chunk); });
-      child.on("error", error => resolve(String(error).slice(0, 300)));
-      child.on("close", code => resolve(code === 0 ? null : (stderr || `classifier exited ${code}`).slice(0, 300)));
-      child.stdin.end(mbox);
-    });
-  } catch (error) {
-    return String(error).slice(0, 300);
-  }
-}
-
 /** Map a thread to a kanban card. */
 function toCard(thread: TriageThread, bucket: Bucket) {
   return {
@@ -352,9 +316,9 @@ export function mailTriageTools(
             });
           }
           let err: string | null;
-          if (requestedState) err = await classifierMutation(id, "state", requestedState);
-          else if (action === "archive") err = await classifierMutation(id, "outcome", "done");
-          else if (action === "trash") err = await classifierMutation(id, "outcome", "trash");
+          if (requestedState) err = await classifierMutation(`thread:${id}`, {kind: "state", value: requestedState});
+          else if (action === "archive") err = await classifierMutation(`thread:${id}`, {kind: "outcome", value: "done"});
+          else if (action === "trash") err = await classifierMutation(`thread:${id}`, {kind: "outcome", value: "trash"});
           else if (action === "mark-read") err = await notmuchTagThread(id, mailTagActions().read);
           else err = "unknown workflow action";
           if (err !== null) {

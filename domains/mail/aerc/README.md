@@ -68,6 +68,10 @@ the active state and records completion. Opening or reading mail never changes
 state. Domain (`HWC`, `DataX`, `Family`, `Personal`, `Other`) is a column/filter,
 never a folder or placement rule. Factual Tags never move mail.
 
+`D` uses the same recorded Trash action as `d`. `X` and `Y` are explicit
+physical move/copy commands and do not teach. Use shared State and disposition
+commands for normal workflow decisions.
+
 A folded row expands to its complete thread. When `J`/`K` marks exist, `a` or
 `d` applies thread-wide to the marked set through the classifier ledger.
 
@@ -158,7 +162,7 @@ The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.t
 | `V` | Visual mark mode |
 | `r` | Mark read |
 | `u` | Mark unread |
-| `D` | Delete |
+| `D` | Trash through the shared disposition command |
 | `c` | Compose |
 | `C` | Reply all (quote) |
 
@@ -395,6 +399,10 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
    `proton/Labels/<name>/`.
 
 ## Changelog
+
+- 2026-10-01: C12 routes uppercase `D` through the same durable Trash
+  command as lowercase `d`. Explicit arbitrary-folder `X`/`Y` remain available
+  without teaching; normal workflow uses the shared disposition commands.
 
 - 2026-10-01: C9 uses the shared notmuch search registry for State, Domain and
   facts. Old account/category aggregates remain under `history:*`. Custom

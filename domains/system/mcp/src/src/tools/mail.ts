@@ -267,6 +267,39 @@ function msmtpSend(
   });
 }
 
+/** Shared durable human disposition path; never retried after a write. */
+type ClassifierMutation =
+  | { kind: "state"; value: string }
+  | { kind: "outcome"; value: "done" | "trash" }
+  | { kind: "reopen" };
+export async function classifierMutation(
+  query: string, mutation: ClassifierMutation,
+): Promise<string | null> {
+  try {
+    const bin = await notmuchBin();
+    const selected = await notmuchExec(bin,
+      ["show", "--format=mbox", "--entire-thread=true", "--", query],
+      { timeout: 10_000, maxBuffer: 20 * 1024 * 1024 });
+    if (selected.exitCode !== 0) return (selected.stderr || "notmuch selection failed").slice(0, 300);
+    const base = ["--db", "/var/lib/hwc/mail-classifier/ledger.sqlite", "--notmuch", bin];
+    const args = mutation.kind === "state" ? ["correct", ...base, "--state", mutation.value]
+      : mutation.kind === "outcome" ? ["transition", ...base, "--outcome", mutation.value]
+      : ["reopen", ...base];
+    return await new Promise((resolve) => {
+      const child = spawn("/run/current-system/sw/bin/mail-classifier-runtime", args,
+        {stdio: ["pipe", "ignore", "pipe"], timeout: 30_000});
+      let stderr = "";
+      child.stderr.on("data", chunk => { stderr = (stderr + String(chunk)).slice(0, 300); });
+      child.stdin.on("error", error => resolve(String(error).slice(0, 300)));
+      child.on("error", error => resolve(String(error).slice(0, 300)));
+      child.on("close", code => resolve(code === 0 ? null : (stderr || `classifier exited ${code}`).slice(0, 300)));
+      child.stdin.end(selected.stdout);
+    });
+  } catch (error) {
+    return String(error).slice(0, 300);
+  }
+}
+
 /* ════════════════════════════════════════════════════════════════ */
 /*  Helpers                                                        */
 /* ════════════════════════════════════════════════════════════════ */
@@ -674,6 +707,26 @@ export function mailTools(): ToolDef[] {
             const query = resolveQuery(rawQuery);
             const actionName = args.tag_action as string | undefined;
             const rawTags = args.tags as string[] | undefined;
+
+            // Placement belongs to the shared command so sync can distinguish
+            // deliberate local intent from stale folder tags.
+            const dispositions: Record<string, ClassifierMutation> = {
+              archive: {kind: "outcome", value: "done"},
+              trash: {kind: "outcome", value: "trash"},
+              delete: {kind: "outcome", value: "trash"},
+              untrash: {kind: "reopen"},
+              spam: {kind: "state", value: "junk"}, unspam: {kind: "reopen"},
+            };
+            if (actionName && Object.hasOwn(dispositions, actionName)) {
+              const error = await classifierMutation(query, dispositions[actionName]);
+              if (error !== null) return mcpError({type: "COMMAND_FAILED", message: "Mail disposition failed", error});
+              return {status: "ok", message: `Recorded ${actionName} for: ${rawQuery}`};
+            }
+            if (rawTags?.some(tag => /^[+-](?:inbox|archive|trash|spam)$/.test(tag))) {
+              return mcpError({type: "VALIDATION_ERROR",
+                message: "Folder changes require a recorded mail action",
+                suggestion: "Use tag_action archive, trash, untrash, spam or unspam; use hwc_mail_triage for State corrections"});
+            }
 
             let ops: string[];
             let mode: string;
