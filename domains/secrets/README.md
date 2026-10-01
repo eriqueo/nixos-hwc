@@ -25,6 +25,7 @@ domains/secrets/
 │   ├── infrastructure/  # Database, VPN, camera credentials
 │   ├── networking/      # Tailscale OAuth client secret (node self-registration)
 │   ├── services/        # Service API keys, passwords, and Grafana signing key
+│   │   ├── datax-app-env.age # Complete app development environment
 │   │   └── discord-webhook/ # Per-domain Discord webhook payloads
 │   └── system/          # User passwords, SSH keys, backups
 ├── secrets-api.nix      # Stable path facade → `hwc.secrets.api.*`
@@ -57,6 +58,7 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-09-30: Added `datax-app-env` from Eric's selected complete Quo environment. It includes the same four personal developer settings as the former inbox file, so no duplicate `datax-dev-env` is needed. The existing `dx-mcp-env` holds the MCP server environment and cannot replace the app environment. The generator supplies the current all-host/user recipients and `root:secrets / 0440` mount. The encrypted payload is CRITICAL source data preserved in Git; agenix recreates the plaintext mount. DataX workspace instructions name this shared source and preserve existing project overrides.
 - 2026-09-30: Added `dx-mcp-env` (`parts/services/dx-mcp-env.age`), the dx-mcp server's env file (13 variables), out of the synced inbox's `_secrets/env`. A local dx-mcp checkout reads it with `node --env-file=/run/agenix/dx-mcp-env`. Added `protonvpn-laptop-us-ut-81` (`parts/networking/`), an unused spare Proton WireGuard config for the laptop with its own key; the one in use (US-UT#108) was already declared. Both use the standard `root:secrets / 0440` and are encrypted to `everyone`.
 - 2026-09-28: Added `sr-gauntlet-firestore` (`parts/services/sr-gauntlet/firestore.age`): the DataX Firestore service-account key as three env lines (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`). It moves the key out of the retired `~/600_apps/sr_analyzer/.env`. Standard `root:secrets / 0440`, encrypted to `everyone`. sr-gauntlet (`SRG_ENV_FILE`) and dx1-gauntlet (`DXG_ENV_FILE`) read it.
 - 2026-09-26: Vaultwarden's pinned image moved to 1.37.3 so Bitwarden 2026.7+ can use the password prelogin route.
