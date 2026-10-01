@@ -58,7 +58,7 @@ let
     hide_my_email = searchRegistry.searches."label:hide";
     finance = searchRegistry.searches."fact:finance";
   };
-  queries = searchRegistry.text + lib.concatStringsSep "\n"
+  queries = searchRegistry.aercText + lib.concatStringsSep "\n"
     (lib.mapAttrsToList (name: query: "${name}=${query}") queryAliases) + "\n";
 
   accountsConf = ''

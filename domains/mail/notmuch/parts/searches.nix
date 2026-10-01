@@ -63,4 +63,9 @@ let
   searches = current // customFacts // history // (cfg.savedSearches or {});
   text = "# mail-searches-v1\n" + lib.concatStringsSep "\n"
     (lib.mapAttrsToList (name: query: "${name}=${query}") searches) + "\n";
-in { inherit searches text; }
+  # Aerc's INI parser treats ':' as a key/value delimiter. Keep the shared
+  # address vocabulary and substitute '/' only in its transport rendering.
+  aercText = "# mail-searches-v1\n" + lib.concatStringsSep "\n"
+    (lib.mapAttrsToList (name: query:
+      "${lib.replaceStrings [ ":" ] [ "/" ] name}=${query}") searches) + "\n";
+in { inherit searches text aercText; }

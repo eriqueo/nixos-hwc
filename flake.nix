@@ -961,7 +961,7 @@
         aercQueries = home.home.file.".config/aerc/notmuch-queries".text;
         deployed = home.xdg.configFile."notmuch/searches".text;
       in deployed == registry.text
-        && builtins.all (name: lib.hasInfix "${name}=${registry.searches.${name}}" aercQueries)
+        && builtins.all (name: lib.hasInfix "${lib.replaceStrings [ ":" ] [ "/" ] name}=${registry.searches.${name}}" aercQueries)
           (builtins.attrNames registry.searches)
         && registry.searches."fact:finance" == "tag:${contract.traitTagPrefix}finance"
         && registry.searches."domain:family" == "tag:${contract.domainTagPrefix}family"
@@ -978,6 +978,7 @@
         import os, pathlib, subprocess, sys, tempfile
         queries = dict(line.split('=', 1) for line in pathlib.Path(sys.argv[1]).read_text().splitlines()
                        if line and not line.startswith('#'))
+        assert all(':' not in name for name in queries), queries
         binds = pathlib.Path(sys.argv[2]).read_text()
         with tempfile.TemporaryDirectory() as root:
             root = pathlib.Path(root)
@@ -997,11 +998,11 @@
             nm('new')
             nm('tag', '+inbox', '+work', '+family', '+finance', '--', 'id:old@example.com')
             nm('tag', '+inbox', '+state/do', '+domain/hwc', '+trait/finance', '+ads', '+keep', '--', 'id:current@example.com')
-            assert nm('count', queries['domain:hwc']) == '1'
+            assert nm('count', queries['domain/hwc']) == '1'
             assert nm('count', queries['finance']) == '1'
-            assert nm('count', queries['history:business']) == '1'
-            assert nm('count', queries['history:family']) == '1'
-            assert nm('count', queries['domain:family']) == '0'
+            assert nm('count', queries['history/business']) == '1'
+            assert nm('count', queries['history/family']) == '1'
+            assert nm('count', queries['domain/family']) == '0'
             clear = next(line for line in binds.splitlines() if '<Space>mx =' in line)
             operations = clear.split(':modify-labels ', 1)[1].split('<Enter>', 1)[0].split()
             before = nm('search', '--output=files', 'id:current@example.com').splitlines()
