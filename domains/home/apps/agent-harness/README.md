@@ -15,7 +15,7 @@ The fleet control list names hwc-home, hwc-work and hwc-laptop.
 - `state-sync.sh` synchronizes only memories, the mistakes ledger, and the agent-workspace `ledger/` and `guard/` files, with one bounded validation case under `.git`.
 - `state-validate.sh` owns the memory contract for both full-store scans and projected writes on stdin.
 - `state-sync.test.sh` verifies import, links, validation blocking, recovery, commit, pull, and push against a throwaway hub.
-- The pinned `tracker/` serves review cards with cause and fix choices, yes/no certainty and optional notes. Its browser test exercises the existing decision store on disposable project data.
+- The pinned `tracker/` serves legacy cause/work inputs and per-problem explanation/action confirmations with Yes, No, Not sure and correction boxes. Its browser test exercises saving, reload, completeness and navigation on disposable project data.
 - `tracker-handoff stamp <project>` (pinned `tracker/handoff_doc.py`) records the writer and each project checkout's HEAD in the project's live `handoff.md`; the hub (`TRACKER_LEDGERS`) compares them with every host's ws ledger and puts the handoff at the top of the next prompt.
 - `tracker-link <project> --nonce N` (pinned `tracker/t3.py`) binds the calling T3 thread to a project, so "Done deciding" posts the next prompt into it. `tracker-wait <project>` (pinned `tracker/wait.py`) is the fallback outside T3: it blocks until the click, then prints the next prompt.
 - The pinned `project-tracker` skill and generated phase prompt reserve cards for substantive choices. With no new cards, agents proceed to the next ready roadmap step in the same session. Brief clarifications use chat.
@@ -60,6 +60,7 @@ manifests, state shape, Codex hook trust, commands, and the sync timer. A dirty
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+- 2026-10-01: Add protocol-4 training confirmation forms. Frozen explanations and actions use separate choices; whole-ticket completeness has its own question. Legacy inputs remain supported.
 - 2026-10-01: Add `tracker-handoff` and give `hwc-tracker` the ledger path: the agent's live `handoff.md` heads the next prompt, with its coverage checked against each checkout's HEAD in the ws ledgers. The hub restarts when `handoff_doc.py` changes.
 - 2026-10-01: Add `tracker-link` (pinned `tracker/t3.py`). An agent in T3 Code binds its own thread to a project; the hub's "Done deciding" button then posts the next prompt into that thread as a new turn through T3's `/api/orchestration/dispatch`, authorized by a 5-minute session the T3 CLI issues. `hwc-tracker` gets the node and T3 CLI paths. `tracker-wait` stays as the fallback outside T3.
 - 2026-10-01: Agent workspace S8. `stateDir` defaults to `~/800_agents/state`, and the scripts, `contract.nix` and docs use it. Activation retargeted every memory link there and removed the S2 compatibility link on all three hosts; that one-time block is deleted again. The S2 move code is gone. A new hourly `ws-audit` user timer writes the ledger, renders `LEDGER.md`, expires `closed/` and logs findings.
