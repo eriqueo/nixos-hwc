@@ -12,6 +12,7 @@
 The MCP mail reader consumes the generated current/history search registry from
 `domains/mail/notmuch/parts/searches.nix`; it does not own a separate category list.
 Shared mail dispositions acquire the mail owner lock before changing the ledger or tags.
+The gateway sandbox grants write access to that lock's directory from the shared mail status path.
 
 MCP website content/trash paths consume hwc.paths.business.websiteSite through an explicit environment binding.
 
@@ -56,6 +57,9 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-10-01: Permit shared mail lock writes inside the gateway sandbox and
+  check the generated service mount against its mail status path.
 
 - 2026-10-01: Serialize MCP mail corrections with aerc and sync under the shared
   mail lock. Busy writes stop with code 75 and do not retry automatically.

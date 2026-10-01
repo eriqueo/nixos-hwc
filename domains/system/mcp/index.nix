@@ -419,6 +419,8 @@ in
             "/run/hwc-sys-mcp"
             # Mail tools need write access: notmuch tag (Xapian DB), sync-mail (mbsync marker + lock)
             "${mailRoot}/Maildir"
+            # Shared workflow writes reserve the same lock used by aerc and sync.
+            (builtins.dirOf paths.user.mailSyncStatus)
             "${paths.user.home}/.cache"
             # Mail workflow writes must record human decisions in the case ledger.
             "/var/lib/hwc/mail-classifier"

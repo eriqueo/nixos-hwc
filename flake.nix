@@ -1734,6 +1734,8 @@
         main = lib.last (lib.splitString " " command);
         n8n = service.environment.HWC_N8N_ENTRY_POINT;
       in
+      assert lib.assertMsg (builtins.elem (builtins.dirOf service.environment.HWC_MAIL_SYNC_STATUS) service.serviceConfig.ReadWritePaths)
+        "mcp-immutable-build: shared mail owner lock must be writable inside the gateway sandbox";
       assert lib.assertMsg (lib.hasPrefix "/nix/store/" main)
         "mcp-immutable-build: gateway entry point is not in the Nix store";
       assert lib.assertMsg (!(lib.hasInfix "/home/eric/.nixos/" main))
