@@ -227,6 +227,10 @@
     enable = true;
     projectName = "lead-scout-datax";
     vhost.enable = true;
+    invitationMail = {
+      enable = true;
+      from = "eric@iheartwoodcraft.com";
+    };
   };
   hwc.server.ai.researchScout.controlTokenSecret = "hwc-control-research-scout-token";
   hwc.server.ai.hwcControlBot = {

@@ -35,6 +35,34 @@ let
   # Member instance (options.memberInstance). One composition root for its
   # compose invocation, preflight, health proof and trusted-peer check.
   member = cfg.memberInstance;
+  invitationMail = member.invitationMail;
+  # REPLACEABLE runtime files, rebuilt from the existing same-user pass store
+  # and local Proton Bridge certificate. Stable directory inode for bind mount.
+  invitationMailPrepare = pkgs.writeShellScript "lead-scout-invitation-mail-prepare" ''
+    set -euo pipefail
+    export PATH=${lib.makeBinPath [ pkgs.pass pkgs.gnupg pkgs.coreutils ]}:$PATH
+    exec ${pkgs.python3}/bin/python3 - <<'PY'
+    import os, pathlib, ssl, smtplib, subprocess
+    root = pathlib.Path(os.environ['XDG_RUNTIME_DIR']) / 'lead-scout-invitation-mail'
+    root.mkdir(mode=0o700, exist_ok=True)
+    root.chmod(0o700)
+    # Bootstrap trust only over fixed same-host loopback to the user's Bridge.
+    # Scout then requires STARTTLS and validates against this pinned certificate.
+    try:
+        password = subprocess.check_output(['pass', 'show', ${builtins.toJSON invitationMail.passwordEntry}], timeout=20, stderr=subprocess.DEVNULL).splitlines()[0]
+        with smtplib.SMTP('127.0.0.1', 1025, timeout=10) as smtp:
+            smtp.starttls(context=ssl._create_unverified_context())
+            certificate = ssl.DER_cert_to_PEM_cert(smtp.sock.getpeercert(binary_form=True)).encode()
+        for name, content in [('password', password), ('certificate.pem', certificate), ('sender', ${builtins.toJSON invitationMail.from}.encode())]:
+            temporary = root / (name + '.tmp')
+            fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, 'wb') as output:
+                output.write(content)
+            os.replace(temporary, root / name)
+    except Exception:
+        raise SystemExit('[invitation-email] preparation failed; check Proton Bridge and pass access')
+    PY
+  '';
   memberCompose = "${pkgs.podman-compose}/bin/podman-compose "
     + lib.concatMapStringsSep " " (file: "-f ${lib.escapeShellArg file}") member.composeFiles;
   # Inputs must exist and podman must be rootless before anything starts.
@@ -508,6 +536,19 @@ in
     };
 
     memberInstance = {
+      invitationMail = {
+        enable = lib.mkEnableOption "private invitation SMTP relay for the member instance";
+        from = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          description = "Sender address and SMTP login for the existing Proton Bridge account.";
+        };
+        passwordEntry = lib.mkOption {
+          type = lib.types.str;
+          default = "email/proton/bridge";
+          description = "Existing pass entry; only its first line is copied into private runtime storage.";
+        };
+      };
       port = lib.mkOption {
         type = lib.types.port;
         default = 8430;
@@ -767,6 +808,8 @@ in
     systemd.user.services.lead-scout-member-instance = lib.mkIf member.enable {
       description = "Lead Scout member instance (rootless compose recovery)";
       wantedBy = [ "default.target" ];
+      wants = lib.optional invitationMail.enable "lead-scout-invitation-mail.socket";
+      after = lib.optional invitationMail.enable "lead-scout-invitation-mail.socket";
       # No extra network-wait job outside the incident budget. Preparation
       # owns readiness and fails within its elapsed deadline if unavailable.
       unitConfig = {
@@ -802,8 +845,52 @@ in
       };
     };
 
+    systemd.user.services.lead-scout-invitation-mail-prepare = lib.mkIf invitationMail.enable {
+      description = "Prepare private Scout invitation mail credentials";
+      after = [ "protonmail-bridge.service" ];
+      requires = [ "protonmail-bridge.service" ];
+      unitConfig.ConditionUser = cfg.user;
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = invitationMailPrepare;
+        TimeoutStartSec = 45;
+        TimeoutStopSec = 10;
+        UMask = "0077";
+      };
+    };
+    systemd.user.sockets.lead-scout-invitation-mail = lib.mkIf invitationMail.enable {
+      description = "Private Scout invitation SMTP socket";
+      wantedBy = [ "sockets.target" ];
+      requires = [ "lead-scout-invitation-mail-prepare.service" ];
+      after = [ "lead-scout-invitation-mail-prepare.service" ];
+      unitConfig.ConditionUser = cfg.user;
+      socketConfig = {
+        ListenStream = "%t/lead-scout-invitation-mail/smtp.sock";
+        SocketMode = "0600";
+        DirectoryMode = "0700";
+        RemoveOnStop = true;
+      };
+    };
+    systemd.user.services.lead-scout-invitation-mail = lib.mkIf invitationMail.enable {
+      description = "Private Scout invitation SMTP relay";
+      requires = [ "lead-scout-invitation-mail.socket" ];
+      after = [ "lead-scout-invitation-mail.socket" ];
+      unitConfig.ConditionUser = cfg.user;
+      serviceConfig = {
+        ExecStart = "${pkgs.systemd}/lib/systemd/systemd-socket-proxyd --connections-max=2 --exit-idle-time=30s 127.0.0.1:1025";
+        TimeoutStopSec = 20;
+        NoNewPrivileges = true;
+        PrivateTmp = true;
+      };
+    };
+
     # VALIDATION
     assertions = [
+      {
+        assertion = !invitationMail.enable || (member.enable && builtins.match "[A-Za-z0-9._+-]+@[A-Za-z0-9.-]+" invitationMail.from != null);
+        message = "Scout invitation mail requires the member instance and a sender address.";
+      }
       {
         assertion = !member.enable || (config.hwc.monitoring.alerts.enable
           && config.hwc.monitoring.alerts.sources.serviceFailures.enable);
