@@ -5,6 +5,7 @@ vi.mock("node:child_process", () => ({execFile: run, spawn: spawnRun}));
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { mailTools, mailTagActions } from "../src/tools/mail.js";
 import { mailTriageTools, reflectLiveBuckets } from "../src/tools/mail-triage.js";
 import { morningBriefTool } from "../src/tools/morning-brief.js";
 
@@ -159,5 +160,57 @@ describe("authoritative mail placement", () => {
       expect(result.data).toMatchObject({routing_rule_count:2});
       expect(data.items.some((i:any)=>i.id==="f")).toBe(false);
     } finally { await rm(dir,{recursive:true,force:true}); }
+  });
+});
+
+
+describe("current mail views and metadata preservation", () => {
+  it.each([
+    ["state:do", "tag:state/do"],
+    ["domain:family", "tag:domain/family"],
+    ["fact:finance", "tag:trait/finance"],
+  ])("resolves %s through the actual mail search handler", async (name, query) => {
+    run.mockReset();
+    run.mockImplementation((_bin, _args, _options, callback) => callback(null, "0", ""));
+    const result = await mailTools()[0].handler({action: "search", query: name, count_only: true});
+    expect(result.status).toBe("ok");
+    expect(run.mock.calls.at(-1)![1]).toEqual(["count", query]);
+  });
+
+  it("clears optional facts without touching stars, Domain, State or history", async () => {
+    const operations = mailTagActions()["clear-metadata"];
+    expect(operations).toContain("-trait/finance");
+    for (const protectedOperation of [
+      "-flagged", "-starred", "-keep", "-state/do", "-domain/hwc", "-work", "-finance",
+    ]) expect(operations).not.toContain(protectedOperation);
+    run.mockReset();
+    run.mockImplementation((_bin, _args, _options, callback) => callback(null, "", ""));
+    const result = await mailTools()[0].handler({action: "tag", query: "id:fixture@example.com", tag_action: "clear-metadata"});
+    expect(result.status).toBe("ok");
+    expect(run.mock.calls[0][1]).toEqual(["tag", ...operations, "--", "id:fixture@example.com"]);
+  });
+});
+
+
+describe("generated mail search registry", () => {
+  it("uses the deployed registry for historical search and additive custom facts", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "mail-searches-"));
+    const file = join(dir, "searches");
+    try {
+      await writeFile(file, "# mail-searches-v1\nhistory:business=tag:work\ncustom-fact:ads=tag:ads AND NOT tag:trash\n");
+      vi.stubEnv("HWC_MAIL_SEARCHES_FILE", file);
+      vi.resetModules();
+      const module = await import("../src/tools/mail.js");
+      run.mockReset();
+      run.mockImplementation((_bin, _args, _options, callback) => callback(null, "0", ""));
+      expect((await module.mailTools()[0].handler({action: "search", query: "history:business", count_only: true})).status).toBe("ok");
+      expect(run.mock.calls.at(-1)![1]).toEqual(["count", "tag:work"]);
+      expect(module.mailTagActions()["clear-metadata"]).toContain("-ads");
+      expect(module.mailTagActions()["clear-metadata"]).not.toContain("-work");
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+      await rm(dir, {recursive: true, force: true});
+    }
   });
 });

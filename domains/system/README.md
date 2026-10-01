@@ -9,6 +9,9 @@
 
 ## Structure
 
+The MCP mail reader consumes the generated current/history search registry from
+`domains/mail/notmuch/parts/searches.nix`; it does not own a separate category list.
+
 MCP website content/trash paths consume hwc.paths.business.websiteSite through an explicit environment binding.
 
 `core/index.nix` supplies the overridable journal ceiling. `mcp/parts/n8n-mcp/`
@@ -52,6 +55,10 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-10-01: C9 updates MCP mail examples to State, Domain and facts; reads
+  the shared versioned current/history search registry. General metadata clear
+  preserves stars, State, Domain and historical mail tags.
 - 2026-09-28: Keep website content and trash on one writable mount for atomic soft deletion; repository metadata and build inputs join the existing read-only path list.
 - 2026-09-28: MCP website content/trash paths consume hwc.paths.business.websiteSite through an explicit environment binding.
 - 2026-09-27: Replace root startup npm installation with a locked Nix-built n8n backend; test its real stdio entry point offline. Set a 1G default journal ceiling while preserving host overrides.

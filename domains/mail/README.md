@@ -28,7 +28,7 @@ mail/
 │       ├── binds.nix          # Keybindings + ov pager config
 │       ├── plain-text-filter.py # Safe text, labeled links, optional embedded pictures
 │       ├── appearance.nix     # Palette-driven styleset
-│       ├── tags.nix           # Taxonomy adapter for queries, styles, and bindings
+│       ├── tags.nix           # Historical styles, additive facts and safe metadata clear
 │       ├── tags-custom.json   # User-defined aerc-only tags
 │       ├── sieve.nix          # Deploys ~/.config/aerc/sieve/{01-junk,02-routing}.sieve
 │       └── sieve-filters.nix  # Taxonomy junk + label-free Seen/Archive routing; parsed delivery checks
@@ -74,7 +74,7 @@ mail/
         ├── paths.nix          # maildirRoot resolution
         ├── identity.nix       # userName/email/newTags defaults
         ├── folders.nix        # folder→tag clause builder (uses common.rolesFor)
-        ├── searches.nix       # saved searches for notmuch CLI
+        ├── searches.nix       # One current/history registry for notmuch, aerc and MCP
         └── dashboard.sh       # mail-dashboard script
 ```
 
@@ -116,6 +116,12 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 ## Changelog
 
 - 2026-10-01: Fetch remote core/Trash membership before moving mail; require durable shared-command transport intents, preserve local stars during prefetch, and verify remote membership before acknowledging moves.
+
+- 2026-10-01: C9 makes notmuch's versioned generated search registry the source
+  for aerc and MCP. Current State/Domain/fact views replace old active category
+  aggregates; retained searches use `history:*`. General metadata clear keeps
+  stars, State, Domain, historical tags and keep. Existing custom category
+  definitions are additive facts. No mail folders or historical tags are removed.
 
 - 2026-09-30: Complete label preflight before reserving writes, so a read-only
   deadline defers without blocking later cycles. Add shared locked read-only
