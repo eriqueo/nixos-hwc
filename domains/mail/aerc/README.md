@@ -19,11 +19,11 @@ aerc/
   index.nix              # Module entry — enable toggle, packages, shell aliases, activation
   package.nix            # Forked aerc package from the flake input
   parts/
-    config.nix           # aerc.conf, accounts.conf, notmuch-queries, stylesets, templates
+    config.nix           # Client config + shared current/history search registry
     plain-text-filter.py # Safe plain/HTML text, links, and optional embedded-image view
     binds.nix            # binds.conf (keybindings) + ov pager config
     appearance.nix       # hwc styleset (palette-driven)
-    tags.nix             # Mail taxonomy adapter for queries, styles, and bindings
+    tags.nix             # Historical styles + additive custom facts and safe clearing
     tags-custom.json     # User-defined aerc-only tags
     sieve.nix            # Deploys ~/.config/aerc/sieve/{01-junk,02-routing}.sieve
     sieve-filters.nix    # Taxonomy junk + label-free Seen/Archive routing; parsed delivery checks
@@ -70,6 +70,17 @@ never a folder or placement rule. Factual Tags never move mail.
 
 A folded row expands to its complete thread. When `J`/`K` marks exist, `a` or
 `d` applies thread-wide to the marked set through the classifier ledger.
+
+### Current and historical searches
+
+Use `:cf domain:hwc` or `:cf domain:datax` for a Domain view, and
+`:cf fact:finance` for factual finance. `:cf finance` is the same finance view.
+Use `:cf history:business`, `:cf history:money`, `:cf history:growth`, or
+`:cf history:system` for old category aggregates. Unmapped coaching and tech
+remain available as `history:label:coaching` and `history:label:tech`.
+Old account searches also start with `history:`. These names describe retained
+history; no tag or physical folder is removed. Restart aerc after deployment to
+load the new map and bindings. MCP loads the same registry when its service starts.
 
 ### Tag System (tags.nix)
 
@@ -186,9 +197,9 @@ automation tag.
 | `<Space>mu` | +unread |
 | `<Space>ma` | Finish/archive marked messages |
 | `<Space>md` | Finish/trash marked messages |
-| `<Space>mz` | +spam -inbox |
+| `<Space>mz` | Record JUNK through the shared correction command |
 | `<Space>ml` | Free-form label (prompt) |
-| `<Space>mx` | Clear removable categories/flags; preserve protected `keep` |
+| `<Space>mx` | Clear optional facts; preserve stars, history, State, Domain and `keep` |
 | `<Space>mv…` | Add a user-visible flag; pause after `v` to see choices |
 | `<Space>ta/td/tl/tj` | Teach DO/DID/LOOK/JUNK |
 | `<Space>tc h/d/f/p/o` | Teach HWC/DataX/Family/Personal/Other Domain |
@@ -265,7 +276,7 @@ the organizer. Respond to an invitation through its Yes/No/Maybe links.
 Use `<Space>ft` when you want to narrow the context already open. Aerc seeds
 `:filter tag:`; type a tag or press `Tab` to complete one, then press `Enter`.
 The active folder still bounds the results—for example, filtering `now` by
-`finance` shows only finance messages in the managed queue. `<Space>fc` removes
+`trait/finance` filters factual finance in the current view. `<Space>fc` removes
 that filter.
 
 Use `<Space>fT` when you want the complete history. It seeds a top-level
@@ -376,12 +387,19 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 ## Adding a New Tag
 
 1. For a shared mail tag, edit `domains/mail/taxonomy/data.nix`; for an
-   aerc-only tag, use `<Space>M` to update `parts/tags-custom.json`.
+   aerc-only fact, use `<Space>M` to save `parts/tags-custom.json`, then ask the agent to commit and deploy it. Apply it immediately with `:modify-labels +<tag>`.
 2. Rebuild — query-map, folder styles, and bindings update automatically.
 3. If a Proton label exists, the post-new hook discovers it from
    `proton/Labels/<name>/`.
 
 ## Changelog
+
+- 2026-10-01: C9 uses the shared notmuch search registry for State, Domain and
+  facts. Old account/category aggregates remain under `history:*`. Custom
+  categories are additive facts; removed exclusive category assignment code.
+  General clearing preserves stars, history, State, Domain and keep. JUNK
+  marking uses the shared correction command. The new-fact helper saves without
+  activating an uncommitted Home Manager generation.
 
 - 2026-09-30: Added `I` for a local embedded-image view that preserves readable
   text and original links. Remote pictures stay blocked; corrupt or missing

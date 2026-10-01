@@ -5,14 +5,14 @@ touch -d '1970-01-01' "${XDG_CACHE_HOME:-$HOME/.cache}/notmuch/.last-dashboard" 
 echo "Email Dashboard  Last checked: ${last:-never}"
 echo
 printf "INBOX: %s\n" "$(notmuch count 'tag:inbox and tag:unread')"
-printf "Action: %s\n" "$(notmuch count 'tag:action and tag:unread')"
-printf "Finance: %s\n" "$(notmuch count 'tag:finance and tag:unread')"
-printf "Newsletters: %s\n" "$(notmuch count 'tag:newsletter and tag:unread')"
-printf "Notifications: %s\n" "$(notmuch count 'tag:notification and tag:unread')"
+printf "DO: %s\n" "$(notmuch count '@DO_QUERY@ and tag:unread')"
+printf "Finance: %s\n" "$(notmuch count '@FINANCE_QUERY@ and tag:unread')"
+printf "Newsletters: %s\n" "$(notmuch count '@NEWSLETTER_QUERY@ and tag:unread')"
+printf "Security: %s\n" "$(notmuch count '@SECURITY_QUERY@ and tag:unread')"
 echo
-stale="$(notmuch count 'tag:action and date:..7d')"
+stale="$(notmuch count '@DO_QUERY@ and date:..7d')"
 if [ "${stale}" -gt 0 ]; then
-  echo "Stale action items (>7d): ${stale}"
+  echo "Stale DO items (>7d): ${stale}"
 fi
 mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/notmuch"
 date +%s > "${XDG_CACHE_HOME:-$HOME/.cache}/notmuch/.last-dashboard"

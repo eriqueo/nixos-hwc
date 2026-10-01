@@ -4,7 +4,7 @@ let
     accounts  = config.hwc.mail.accounts or {};
     accVals   = lib.attrValues accounts;
     colors    = (config.hwc.home.theme or {}).colors or {};
-    tags      = import ./tags.nix { inherit lib; inherit colors; };
+    tags      = import ./tags.nix { inherit lib mailContract; inherit colors; };
     appearance = import ./appearance.nix { inherit lib colors tags; };
 
     maildirBase =
@@ -12,12 +12,12 @@ let
             pathBase = config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail";
         in if nmRoot != "" then nmRoot else "${pathBase}/Maildir";
 
-    stateTag = state: "${mailContract.stateTagPrefix}${state}";
-    stateQueries = lib.concatStringsSep "\n" (map (state:
-      "    ${state} = tag:${stateTag state}"
-    ) mailContract.states);
+    searchRegistry = import ../../notmuch/parts/searches.nix {
+      inherit lib mailContract;
+      cfg = config.hwc.mail.notmuch or {};
+    };
     activeStateQuery = lib.concatStringsSep " OR "
-      (map (state: "tag:${stateTag state}") mailContract.states);
+      (map (state: searchRegistry.searches.${"state:${state}"}) mailContract.states);
     legacyBacklog = "tag:inbox AND NOT (${activeStateQuery}) AND NOT tag:${mailContract.completedTag} AND NOT tag:trash";
     domainDisplay = {
       hwc = "HWC"; datax = "DataX"; family = "Family";
@@ -43,43 +43,23 @@ let
     # not replace this exact list with the documented debugging wildcard (`*`).
     trustedAuthResults = [ "^mail\\.protonmail\\.ch$" "^mx\\.google\\.com$" ];
 
-  queries = ''
-    # ── Workflow state is the sidebar; Domain and Tags are columns/filters ──
-${stateQueries}
-    backlog        = ${legacyBacklog}
-
-    # ── Legacy drill-downs (hidden from the sidebar, still directly addressable) ──
-    focus          = tag:inbox AND tag:unread AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:trash
-    today          = tag:inbox AND date:1d.. AND NOT tag:trash
-    week           = tag:inbox AND date:1w.. AND NOT tag:trash
-    people         = tag:inbox AND NOT tag:notification AND NOT tag:newsletter AND NOT tag:sent AND NOT tag:trash
-
-    # ── Relationships ──
-    keep           = tag:keep
-
-    # ── Family aggregates (colour-grouped) ──
-    business       = tag:inbox AND (tag:work OR tag:office OR tag:hwcmt) AND NOT tag:trash
-    money          = tag:inbox AND (tag:finance OR tag:bank OR tag:insurance) AND NOT tag:trash
-    growth         = tag:inbox AND (tag:admin OR tag:coaching) AND NOT tag:trash
-    system         = tag:inbox AND (tag:tech OR tag:website) AND NOT tag:trash
-
-    # ── Bulk / review ──
-    all            = NOT tag:trash
-    newsletters    = tag:inbox AND tag:newsletter AND NOT tag:trash
-    notifications  = tag:inbox AND tag:notification AND NOT tag:trash
-
-    # ── System + per-tag drill-down ──
-    inbox_i        = tag:inbox AND NOT tag:trash
-    unread_u       = tag:unread AND NOT tag:trash
-    sent_s         = tag:sent
-    drafts         = tag:draft
-    Archive_a      = tag:archive AND NOT tag:trash
-    trash_d        = tag:trash
-    spam_z         = tag:spam
-    important      = tag:important AND NOT tag:trash
-    hide_my_email  = tag:hide
-${tagQueries}
-  '';
+  # Transport aliases retain the compact State sidebar and navigation keys.
+  # Historical account/category searches remain explicit history:* entries.
+  queryAliases = builtins.listToAttrs (map (state: {
+    name = state; value = searchRegistry.searches.${"state:${state}"};
+  }) mailContract.states) // {
+    backlog = legacyBacklog;
+    inbox_i = searchRegistry.searches.inbox;
+    unread_u = searchRegistry.searches.unread;
+    sent_s = searchRegistry.searches.sent;
+    Archive_a = searchRegistry.searches.archive;
+    trash_d = searchRegistry.searches.trash;
+    spam_z = searchRegistry.searches.spam;
+    hide_my_email = searchRegistry.searches."label:hide";
+    finance = searchRegistry.searches."fact:finance";
+  };
+  queries = searchRegistry.text + lib.concatStringsSep "\n"
+    (lib.mapAttrsToList (name: query: "${name}=${query}") queryAliases) + "\n";
 
   accountsConf = ''
     [unified]
@@ -104,26 +84,6 @@ ${tagQueries}
 
   # Derive the style name for a tag (uses display if set, else tag)
   tagStyle = tags.tagStyle;
-
-  # Category tag names for inbox-scoped queries
-  categoryNames = builtins.listToAttrs (map (t: { name = t.tag; value = true; }) tags.categoryTags);
-  isCategoryTag = t: categoryNames ? ${t.tag};
-
-  # Derive notmuch query-map entries from tagDefs
-  # Category tags are inbox-scoped (only show active items); flag tags show all
-  tagQueries = lib.concatStringsSep "\n" (
-    lib.filter (s: s != "") (map (t:
-      let name = tagStyle t;
-          baseQuery = t.query or "tag:${t.tag} AND NOT tag:trash";
-          # Category tags and workflow flags are inbox-scoped (active items only)
-          inboxScoped = isCategoryTag t || t.tag == "action" || t.tag == "pending";
-          query = if inboxScoped then "(${baseQuery}) AND tag:inbox"
-                  else baseQuery;
-          n = 18 - builtins.stringLength name;
-          pad = if n > 0 then lib.fixedWidthString n " " "" else "";
-      in "    ${name}${pad} = ${query}"
-    ) tagDefs)
-  );
 
   # Derive [user] styleset section from tag group colors
   tagUserSection = ''

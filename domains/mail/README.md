@@ -26,7 +26,7 @@ mail/
 │       ├── binds.nix          # Keybindings + ov pager config
 │       ├── plain-text-filter.py # Safe text, labeled links, optional embedded pictures
 │       ├── appearance.nix     # Palette-driven styleset
-│       ├── tags.nix           # Taxonomy adapter for queries, styles, and bindings
+│       ├── tags.nix           # Historical styles, additive facts and safe metadata clear
 │       ├── tags-custom.json   # User-defined aerc-only tags
 │       ├── sieve.nix          # Deploys ~/.config/aerc/sieve/{01-junk,02-routing}.sieve
 │       └── sieve-filters.nix  # Taxonomy junk + label-free Seen/Archive routing; parsed delivery checks
@@ -72,7 +72,7 @@ mail/
         ├── paths.nix          # maildirRoot resolution
         ├── identity.nix       # userName/email/newTags defaults
         ├── folders.nix        # folder→tag clause builder (uses common.rolesFor)
-        ├── searches.nix       # saved searches for notmuch CLI
+        ├── searches.nix       # One current/history registry for notmuch, aerc and MCP
         └── dashboard.sh       # mail-dashboard script
 ```
 
@@ -112,6 +112,12 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-10-01: C9 makes notmuch's versioned generated search registry the source
+  for aerc and MCP. Current State/Domain/fact views replace old active category
+  aggregates; retained searches use `history:*`. General metadata clear keeps
+  stars, State, Domain, historical tags and keep. Existing custom category
+  definitions are additive facts. No mail folders or historical tags are removed.
 
 - 2026-09-30: Complete label preflight before reserving writes, so a read-only
   deadline defers without blocking later cycles. Add shared locked read-only
