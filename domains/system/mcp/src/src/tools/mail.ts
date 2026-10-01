@@ -3,7 +3,7 @@
  */
 
 import { execFile, spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -75,7 +75,6 @@ const MAIL_CONTRACT = loadContract();
 export const MAIL_STATES: readonly string[] = MAIL_CONTRACT.states;
 const DOMAIN_TAGS = MAIL_CONTRACT.domains;
 const TRAIT_TAGS = MAIL_CONTRACT.factTags;
-const JUNK_TAGS = ["important", "flagged", "starred"];
 
 /** Shared named tag effects for the mail and triage transports. */
 export function mailTagActions(): Record<string, string[]> {
@@ -110,14 +109,38 @@ const SAVED_SEARCHES: Record<string, string> = {
   ...Object.fromEntries(
     DOMAIN_TAGS.map((domain) => [`domain:${domain}`, `tag:${MAIL_CONTRACT.domainTagPrefix}${domain}`]),
   ),
+  ...Object.fromEntries(
+    TRAIT_TAGS.map((trait) => [`fact:${trait}`, `tag:${MAIL_CONTRACT.traitTagPrefix}${trait}`]),
+  ),
   "label:hide": "tag:hide",
-  unified: "tag:inbox",
-  "inbox:hwc": "tag:inbox AND tag:hwc",
-  "inbox:proton-hwc": "tag:inbox AND tag:proton-hwc",
-  "inbox:proton-personal": "tag:inbox AND tag:proton-personal",
-  "all:work": "tag:inbox AND tag:hwc",
-  "all:personal": "tag:inbox AND tag:proton-personal",
+
 };
+
+// Nix produces this registry for all three readers. A stale or malformed file
+// never overrides current contract axes; fall back to those and report the gap.
+function loadSearchRegistry(file: string): Record<string, string> {
+  try {
+    if (statSync(file).size > 128 * 1024) throw new Error("search registry exceeds 128 KiB");
+    const lines = readFileSync(file, "utf8").split(/\r?\n/);
+    if (lines[0] !== "# mail-searches-v1") throw new Error("unsupported search registry version");
+    const searches: Record<string, string> = {};
+    for (const line of lines) {
+      if (!line.trim() || line.startsWith("#")) continue;
+      const separator = line.indexOf("=");
+      if (separator <= 0 || separator === line.length - 1) throw new Error("invalid search entry");
+      const name = line.slice(0, separator);
+      if (Object.hasOwn(searches, name)) throw new Error("duplicate search name");
+      searches[name] = line.slice(separator + 1);
+    }
+    return searches;
+  } catch (err) {
+    log.warn("mail: generated search registry unavailable; using contract axes", { error: String(err) });
+    return {};
+  }
+}
+Object.assign(SAVED_SEARCHES, loadSearchRegistry(
+  process.env.HWC_MAIL_SEARCHES_FILE || join(HOME, ".config/notmuch/searches"),
+));
 
 const ACCOUNTS = [
   {
@@ -261,10 +284,21 @@ function resolveQuery(query: string): string {
 }
 
 function clearAllCustomOps(): string[] {
+  const historicalOrProtected = new Set([
+    "keep", "important", "flagged", "starred", "inbox", "archive", "trash", "spam",
+    "unread", "sent", "draft", "action", "pending",
+    ...Object.entries(SAVED_SEARCHES).filter(([name]) => name.startsWith("history:"))
+      .flatMap(([, query]) => [...query.matchAll(/tag:([a-zA-Z0-9_/-]+)/g)].map((match) => match[1])),
+  ]);
+  const customFacts = Object.entries(SAVED_SEARCHES)
+    .filter(([name]) => name.startsWith("custom-fact:"))
+    .flatMap(([, query]) => {
+      const match = /^tag:([a-zA-Z0-9_-]+) AND NOT tag:trash$/.exec(query);
+      return match && !historicalOrProtected.has(match[1]) ? [match[1]] : [];
+    });
   return [
-    ...DOMAIN_TAGS.map((domain) => `${MAIL_CONTRACT.domainTagPrefix}${domain}`),
+    ...customFacts,
     ...TRAIT_TAGS.map((trait) => `${MAIL_CONTRACT.traitTagPrefix}${trait}`),
-    ...JUNK_TAGS,
   ].map((tag) => `-${tag}`);
 }
 
@@ -493,7 +527,7 @@ export function mailTools(): ToolDef[] {
           // [search] params
           query: {
             type: "string",
-            description: "[search/tag] Notmuch query or saved search name (inbox, unread, action, label:finance, etc.)",
+            description: "[search/tag] Notmuch query or saved search name (inbox, state:do, domain:hwc, fact:finance, history:business)",
           },
           limit: { type: "number", description: "[search] Max results (default 20)" },
           offset: { type: "number", description: "[search] Skip first N results" },
@@ -581,7 +615,7 @@ export function mailTools(): ToolDef[] {
               { timeout: 10000 },
             );
             if (res.exitCode !== 0) {
-              return mcpError({ type: "COMMAND_FAILED", message: "notmuch search failed", error: res.stderr.slice(0, 500), suggestion: "Check query syntax. Use saved search names (inbox, action, label:finance) or raw notmuch queries.", context: { query, exitCode: res.exitCode } });
+              return mcpError({ type: "COMMAND_FAILED", message: "notmuch search failed", error: res.stderr.slice(0, 500), suggestion: "Check query syntax. Use saved search names (state:do, domain:hwc, fact:finance, history:business) or raw notmuch queries.", context: { query, exitCode: res.exitCode } });
             }
 
             const threads = JSON.parse(res.stdout || "[]") as Array<Record<string, unknown>>;

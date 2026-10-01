@@ -486,6 +486,12 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **nvidia-smi PATH fallback**: GPU tool tries PATH first, then `/run/current-system/sw/bin/nvidia-smi`
 
 ## Changelog
+
+- 2026-10-01: C9 reads the shared generated mail search registry (schema 1,
+  128 KiB ceiling). Use `state:do`, `domain:hwc`, `fact:finance`, or
+  `history:business` in `hwc_mail action=search`. Bad or absent registry files
+  log a warning and retain contract-derived searches. `clear-metadata` removes
+  optional facts while preserving stars, State, Domain, history and keep.
 - **2026-09-30**: `morning-brief.ts` prints `sections.agents.line`, the Agents line rendered by `ws ledger --json`, as a highlight and an Agents section. It renders nothing itself, so the text brief and this tool cannot disagree.
 - **2026-09-29**: The fallback gauntlet state dir in `config.ts` is `~/700_datax/gauntlets/sr_gauntlet/state`, following the gauntlet's move.
 - **2026-09-28**: The `datax_*` tools read the SR gauntlet's state dir instead of the retired sr_analyzer service. `executors/sr-gauntlet-state.ts` (renamed from `sr-gauntlet-ledger.ts`) reads `sr-cache.json`, where the gauntlet stamps each SR with SR2's `effectivePhase` and `effectiveNeedsReply` and records `syncedAt` after each whole-collection Firestore read, plus `ledger.json`. `datax_support_requests` is now read-only. The `move`, `delete` and `retriage` actions are gone, because they wrote to sr_analyzer's private copy and never to DataX; SR2 owns ticket state. `datax_api_health` reports the age of the gauntlet's last sync. `HWC_DATAX_ANALYZER_URL` and `HWC_DATAX_LEDGER_PATH` are replaced by `HWC_DATAX_GAUNTLET_STATE_DIR`, derived from `hwc.automation.srGauntlet.gauntletDir`. `tests/datax.test.ts` pins the file contract.
@@ -717,6 +723,10 @@ gateway and supplies `HWC_N8N_ENTRY_POINT` from the Nix store.
 page aggregates from the configured Umami website, with a fourteen-day comparison
 scan and a four-second command deadline. It uses existing peer-authenticated
 PostgreSQL access; no new secret or caller-supplied SQL is exposed.
+`mail.ts` loads `~/.config/notmuch/searches`, produced by the mail domain,
+for the same current/history searches used by aerc. The registry is replaceable
+configuration rebuilt by Home Manager; MCP restarts consume changes. Custom
+facts use `custom-fact:<name>`. Historical queries start with `history:`.
 `mail-triage.ts` adds `action=digest`: eight DO items, explicit overflow,
 and the cached classification timestamp. One notmuch JSON snapshot supplies placement
 and tags for at most 512 cached thread IDs within 3.5 seconds and 2 MiB;

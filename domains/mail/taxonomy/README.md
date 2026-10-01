@@ -47,11 +47,15 @@ Design: `docs/plans/unified-triage-architecture.md`.
 
 ## Structure
 
-- `data.nix`: reviewed, scoped sender/list entries and protected senders.
+- `data.nix`: reviewed sender/list entries, protected senders and historical tag styles.
 - `lib.nix`: validates entries and derives each producer's match lists.
 - `flake.nix` `mail-trash-guard`: seeded guard failures and production wiring.
 
 ## Changelog
+
+- 2026-10-01: Category metadata now describes retained history. Active views
+  use the System One State/Domain/fact contract. Aerc no longer assigns these
+  categories exclusively; custom entries are additive facts.
 
 - 2026-09-29: `senders.trash` now also feeds the generated Proton Sieve script.
   Merged the reviewed 2026-04-05 audit list and Eric's retired live Proton

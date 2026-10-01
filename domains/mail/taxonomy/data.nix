@@ -25,8 +25,8 @@
     waiting  = "warning";       # amber — needs follow-up
   };
 
-  # Category tags — mutually exclusive (assigning one removes the others).
-  # display = "tag_key" sidebar cue; spaceKey = aerc <Space>m leader key.
+  # Historical category metadata retained for searches and folder styles.
+  # These tags no longer generate assignment shortcuts or exclusive removal.
   categories = [
     # ── Business ──
     { tag = "office";       group = "business"; display = "office_o";       spaceKey = "o"; }

@@ -4,13 +4,13 @@
 # Optional legacy/manual tag vocabulary comes from domains/mail/taxonomy/data.nix.
 # Workflow State, Domain, and classifier traits come from the separate pinned
 # System One contract. This file owns only what is aerc-specific: mapping each
-# group's palette ROLE to a hex color from the active theme, and the exclusive
-# <Space>m marking / styleset command generation.
+# group's palette ROLE to a hex color from the active theme, and the additive
+# <Space>mv marking / styleset command generation.
 #
 # CUSTOM TAGS: User-defined tags live in tags-custom.json (same directory) —
 # deliberately OUTSIDE the taxonomy. Add tags there via the aerc-new-tag
-# script (<Space>M in aerc), then run `hms`.
-{ lib, colors ? {} }:
+# script (<Space>M in aerc), then commit and deploy the change.
+{ lib, colors ? {}, mailContract }:
 let
   c = colors;
   taxonomy = (import ../../taxonomy/lib.nix { inherit lib; }).data;
@@ -41,18 +41,15 @@ let
   customFlags = map (t: t // { color = group.${t.group} or group.urgent; }) (customData.flags or []);
 
   # Legacy category tags remain searchable but are not workflow State or Domain.
-  categoryTags = (map (colorize group.system) taxonomy.categories) ++ customCategories;
+  categoryTags = map (colorize group.system) taxonomy.categories;
 
   # Optional fact/protection tags coexist with Domain and workflow State.
-  flagTags = (map (colorize group.urgent) taxonomy.flags) ++ customFlags;
+  flagTags = (map (colorize group.urgent) taxonomy.flags) ++ customCategories ++ customFlags;
 
   allTags = flagTags ++ categoryTags;
 
   # Style name for a tag (uses display if set, else tag)
   tagStyle = t: t.display or t.tag;
-
-  # All category tag names (for building exclusive remove lists)
-  categoryNames = map (t: t.tag) categoryTags;
 
   # Generate [user] styleset lines from tag definitions
   tagStyleLines = lib.concatStringsSep "\n" (map (t:
@@ -66,34 +63,21 @@ let
     in base + dimLine + boldLine + extraLine
   ) allTags);
 
-  # Exclusive label command: +tag -all-other-categories (does NOT remove inbox — archiving is separate)
-  exclusiveCmd = t:
-    let others = lib.filter (n: n != t.tag) categoryNames;
-        removes = lib.concatMapStringsSep "" (n: " -${n}") others;
-    in "+${t.tag}${removes}";
-
-  # Clear flags only (action, pending + Proton junk) — preserves category and
-  # every taxonomy-protected flag. `keep` is a durable janitor/auto-trash
-  # shield, so an interactive bulk clear must never remove it.
-  clearableFlagNames = map (t: t.tag)
-    (lib.filter (t: !(t.protected or false)) flagTags);
-  clearFlagsCmd =
-    let
-      extras = [ "important" "flagged" "starred" ];
-      toClear = lib.unique (clearableFlagNames ++ extras);
-      removes = lib.concatMapStringsSep " " (n: "-${n}") toClear;
-    in removes;
-
-  # Bulk clear: removes categories, removable flags, and Proton junk while
-  # preserving protected flags.
-  clearAllCmd =
-    let
-      extras = [ "important" "flagged" "starred" ];
-      allToClear = lib.unique (categoryNames ++ clearableFlagNames ++ extras);
-      removes = lib.concatMapStringsSep " " (n: "-${n}") allToClear;
-    in removes;
+  # General metadata clear owns optional facts only. Historical categories,
+  # automation markers, keep, State, Domain and mail flags remain intact.
+  protectedNames = [ "important" "flagged" "starred" "inbox" "archive" "trash" "spam" "unread" "sent" "draft" ]
+    ++ map (tag: tag.tag) (taxonomy.categories ++ taxonomy.flags)
+    ++ map (state: "${mailContract.stateTagPrefix}${state}") mailContract.states
+    ++ map (domain: "${mailContract.domainTagPrefix}${domain}") mailContract.domains
+    ++ [ mailContract.completedTag mailContract.classifiedTag ];
+  clearableFacts = map (tag: "${mailContract.traitTagPrefix}${tag}") mailContract.factTags
+    ++ map (tag: tag.tag) (lib.filter (tag:
+      !(tag.protected or false) && !(lib.elem tag.tag protectedNames))
+      (customCategories ++ customFlags));
+  clearAllCmd = lib.concatMapStringsSep " " (tag: "-${tag}") (lib.unique clearableFacts);
+  clearFlagsCmd = clearAllCmd;
 
 in {
-  inherit categoryTags flagTags allTags tagStyle categoryNames exclusiveCmd clearFlagsCmd clearAllCmd;
+  inherit categoryTags flagTags allTags tagStyle clearFlagsCmd clearAllCmd;
   inherit group tagStyleLines;
 }

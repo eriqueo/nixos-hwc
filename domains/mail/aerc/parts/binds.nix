@@ -1,6 +1,6 @@
 { lib, pkgs, config, mailContract, aercPkg, ... }:
 let
-  tags = import ./tags.nix { inherit lib; };
+  tags = import ./tags.nix { inherit lib mailContract; };
 
   # A human disposition is a completed decision, not just a folder move.
   # Automatic arrival rules deliberately keep their existing unread semantics;
@@ -42,8 +42,8 @@ let
   hiddenWorkflowFlags = [ "action" "pending" ];
   visibleFlagTags = lib.filter (t: !(lib.elem t.tag hiddenWorkflowFlags)) tags.flagTags;
 
-  # Additive user-facing flags coexist with categories. The canonical taxonomy
-  # still owns hidden automation flags and their query-map entries.
+  # Custom facts and keep are additive. Historical category tags only provide
+  # retained search/style metadata; assigning a fact never removes another.
   flagBinds = lib.concatStringsSep "\n" (map (t:
     "      <Space>mv${t.spaceKey} = :modify-labels +${t.tag}<Enter> # +${t.tag}"
   ) visibleFlagTags);
@@ -74,8 +74,8 @@ let
 
     MARK / CLASSIFY  -  Space m ...
     Space m a  archive   Space m d  trash     Space m u  unread
-    Space m z  spam      Space m l  label...  Space m x  clear removable tags
-    -- optional flags (additive; action/pending are automation-only) --
+    Space m z  JUNK      Space m l  label...  Space m x  clear optional facts
+    -- optional facts (additive; action/pending are historical) --
     ${flagHelp}
     WORKFLOW STATE  -  human choices stick; a new reply reopens DID as DO
     Space t a  DO        Space t d  DID        Space t l  LOOK
@@ -221,14 +221,14 @@ ${domainBinds}
       <Space>mu = :modify-labels +unread<Enter> # mark unread
       <Space>ma = :pipe -m ${archiveCmd}<Enter> # archive
       <Space>md = :pipe -m ${trashCmd}<Enter> # trash
-      <Space>mz = :modify-labels +spam -inbox<Enter> # spam
+      <Space>mz = :pipe -m mail-classifier correct --state junk<Enter> # JUNK (record lesson)
       <Space>ml = :modify-labels<space> # label…
-      <Space>mx = :modify-labels ${tags.clearAllCmd}<Enter> # clear removable tags (keep protected)
+      <Space>mx = :modify-labels ${tags.clearAllCmd}<Enter> # clear optional facts (preserve stars/history)
 
       # Optional flags stay nested so the first popup stays calm.
 ${flagBinds}
 
-      # Add a new tag definition (edits tags-custom.json, runs hms)
+      # Add a new tag definition (edits tags-custom.json, saves a fact definition)
       <Space>M = :term ${config.home.homeDirectory}/.local/bin/aerc-new-tag<Enter> # new tag…
 
       [view]
@@ -337,20 +337,15 @@ ${tabBinds}
         echo
 
         # Type
-        echo "Type: (c)ategory or (f)lag?"
-        read -rp "> " type_choice
-        case "$type_choice" in
-          c|C) tag_type="categories" ;;
-          f|F) tag_type="flags" ;;
-          *) echo "Invalid. Use c or f."; exit 1 ;;
-        esac
+        echo "New tags are additive facts. They do not create a Domain or State."
+        tag_type="flags"
 
         # Tag name
         read -rp "Tag name (lowercase, no spaces): " tag_name
         [[ -z "$tag_name" ]] && echo "Empty tag name." && exit 1
 
         # Keybind
-        read -rp "Keybind key (single char for <Space>m<key>): " space_key
+        read -rp "Keybind key (single char for <Space>mv<key>): " space_key
         [[ -z "$space_key" ]] && echo "Empty key." && exit 1
         case "$space_key" in
           '#'|'`'|'"'|'\') echo "Key '$space_key' breaks aerc INI config. Pick another."; exit 1 ;;
@@ -359,7 +354,7 @@ ${tabBinds}
         # Group
         echo "Group: ''${TAG_GROUPS[*]}"
         read -rp "Group: " group_name
-        if ! printf '%s\n' "''${TAG_GROUPS[@]}" | grep -qx "$group_name"; then
+        if ! printf '%s\n' "''${TAG_GROUPS[@]}" | ${pkgs.ripgrep}/bin/rg -Fxq -- "$group_name"; then
           echo "Unknown group: $group_name"
           exit 1
         fi
@@ -386,19 +381,15 @@ ${tabBinds}
           && mv "''${TAGS_FILE}.tmp" "$TAGS_FILE"
 
         echo
-        echo "Added $tag_name to $tag_type (group: $group_name, key: <Space>m$space_key)"
+        echo "Added $tag_name to $tag_type (group: $group_name, key: <Space>mv$space_key)"
         echo
 
-        # Stage the file so nix flake can see it
-        (cd "$HOME/.nixos" && git add "$TAGS_FILE")
-
-        # Rebuild Home Manager
-        echo "Running hms to apply..."
-        pkg=$(nix build --no-link --print-out-paths "$HOME/.nixos#homeConfigurations.\"eric@$(hostname)\".activationPackage")
-        "$pkg/activate"
-
-        echo
-        echo "Done! Restart aerc to pick up the new tag."
+        # Saving a custom fact is separate from deployment. An agent commits
+        # this change and uses the correct lane; never activate an uncommitted
+        # Home Manager generation from the shared main checkout.
+        echo "Saved the fact definition. Ask the agent to commit and deploy it."
+        echo "Use :modify-labels +$tag_name now to apply the fact to this message."
+        echo "The new shortcut appears after deployment and an aerc restart."
         read -rp "Press Enter to close..."
       '';
       executable = true;

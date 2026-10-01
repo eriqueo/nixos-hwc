@@ -23,8 +23,12 @@ let
     extraHook = cfg.postNewHook or "";
   };
 
-  searches = import ./parts/searches.nix { inherit lib cfg; };
-  dashboardText = builtins.readFile ./parts/dashboard.sh;
+  searches = import ./parts/searches.nix { inherit lib cfg mailContract; };
+  dashboardText = lib.replaceStrings
+    [ "@DO_QUERY@" "@FINANCE_QUERY@" "@NEWSLETTER_QUERY@" "@SECURITY_QUERY@" ]
+    (map (name: searches.searches.${name})
+      [ "state:do" "fact:finance" "fact:newsletter" "fact:security" ])
+    (builtins.readFile ./parts/dashboard.sh);
 in
 {
   #==========================================================================
