@@ -117,6 +117,9 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-10-01: Pin the shared IMAP mailbox-name encoding repair. The disabled
+  phone observer now uses the label adapter's string encoder for All Mail.
+
 - 2026-10-01: Include scheduled classification in the shared mail ownership
   contract so new intents cannot race transport acknowledgment.
 
