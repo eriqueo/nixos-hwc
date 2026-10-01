@@ -422,6 +422,9 @@
       "/var/lib/refinery"    # Refinery board items, specs, reviews, spools
       "/var/lib/sr-gauntlet" # Gauntlet checkouts, datax.env, headless Claude config
       "${config.hwc.automation.srGauntlet.gauntletDir}/state" # CRITICAL case and delivery history
+      # CRITICAL DX1 case ledger, cases and fleet history. Missed when the
+      # gauntlets moved here; added 2026-10-01.
+      "${config.hwc.automation.dx1Gauntlet.gauntletDir}/state"
       # CRITICAL orchestration ledger. Lives in the host-bound gauntlets tree,
       # which 700_datax's Syncthing ignores; it left the synced inbox 2026-10-01.
       "${config.hwc.paths.user.home}/700_datax/gauntlets/sr2-investigations/.project-director"
