@@ -1124,7 +1124,7 @@
                 assert 'Clear optional facts' in output, output
                 keys('a')
                 output = special('Enter')
-                assert '+ads' in output and '+keep' in output, output
+                assert '+ads' in output and '+receipts' in output, output
                 keys('g')
                 special('Enter')
                 assert 'ads' in nm('search', '--output=tags', 'id:remap-0@example.com').splitlines()
