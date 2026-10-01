@@ -1,4 +1,4 @@
-{ lib, pkgs, config, mailContract, aercPkg, ... }:
+{ lib, pkgs, config, mailContract, aercPkg, grammar, ... }:
 let
   tags = import ./tags.nix { inherit lib mailContract; };
 
@@ -12,22 +12,63 @@ let
   urlPicker = ":pipe -m ${pkgs.urlscan}/bin/urlscan --dedupe -f '${config.home.homeDirectory}/.local/bin/hwc-open {}'<Enter>";
   imageView = ":pipe -s -m ${pkgs.bash}/bin/bash -o pipefail -c '${pkgs.python3}/bin/python3 ${./plain-text-filter.py} --message-images ${aercPkg}/libexec/aerc/filters/html ${pkgs.chafa}/bin/chafa | ${pkgs.less}/bin/less -R -~'<Enter>";
 
-  # The viewer disables inherited bindings. Return to its account before
-  # issuing account-only commands, using the same find menu in both contexts.
-  findBinds = prefix: ''
-      <Space>ff = ${prefix}:filter<space> # filter folder by words…
-      <Space>fs = ${prefix}:search<space> # jump to matching words in folder…
-      <Space>fa = ${prefix}:query -f -n mail-search<space> # search all mail by words…
-      <Space>ft = ${prefix}:filter tag: # filter current folder by tag
-      <Space>fT = ${prefix}:query -f -n tag-search tag: # find tag across all mail
-      <Space>fc = ${prefix}:clear -s<Enter> # clear filter/search
-  '';
-
-  # Workbench/Zellij owns Ctrl navigation. Inside aerc, Alt+j/k moves through
-  # the vertical folder list and Alt+h/l moves through the horizontal tab bar.
-  # Keep both encodings of Alt+Shift+j/k as compatibility aliases: terminal
-  # stacks can report the same physical chord as Alt+uppercase or as an
-  # explicit Alt+Shift+lowercase key.
+  # Commands are realized here; keys and descriptions live in shared grammar.
+  # Native choose dialogs avoid ambiguous nested which-key group names.
+  quote = builtins.toJSON;
+  choose = options: "choose " + lib.concatStringsSep " " (map (option:
+    "-o ${quote option.key} ${quote option.desc} ${quote option.command}"
+  ) options);
+  hiddenWorkflowFlags = [ "action" "pending" ];
+  visibleFlagTags = lib.filter (t: !(lib.elem t.tag hiddenWorkflowFlags)) tags.flagTags;
+  stateKeys = grammar.aerc.stateKeys;
+  domainKeys = grammar.aerc.domainKeys;
+  menus = builtins.mapAttrs (_: choices: map (c: c // { command = native.${c.action}; }) choices)
+    grammar.aerc.menus // {
+    state = map (state: { key = stateKeys.${state}; desc = lib.toUpper state;
+      command = "pipe -m mail-classifier correct --state ${state}"; }) mailContract.states;
+    domain = map (domain: { key = domainKeys.${domain}; desc = domain;
+      command = "pipe -m mail-classifier correct --domain ${domain}"; }) mailContract.domains;
+    domain-filter = map (domain: { key = domainKeys.${domain}; desc = domain;
+      command = "filter tag:${mailContract.domainTagPrefix}${domain}"; }) mailContract.domains;
+    add-fact = map (t: { key = t.spaceKey; desc = "+${t.tag}";
+      command = "modify-labels +${t.tag}"; }) visibleFlagTags;
+  };
+  native = {
+    go-do = "cf do"; go-did = "cf did"; go-look = "cf look"; go-junk = "cf junk";
+    go-backlog = "cf backlog"; go-inbox = "cf inbox_i"; go-all = "cf all";
+    go-unread = "cf unread_u"; go-archive = "cf Archive_a"; go-sent = "cf sent_s";
+    go-trash = "cf trash_d"; go-spam = "cf spam_z"; go-hide = "cf hide_my_email";
+    clear = "clear -s";
+    sort-date = "sort -r date"; sort-from = "sort from -r date";
+    sort-subject = "sort subject -r date"; sort-alpha = "sort subject";
+    tab-next = "next-tab"; tab-prev = "prev-tab"; tab-close = "close";
+    headers = "toggle-headers"; fold = "fold -t"; fold-all = "fold -a";
+    part-next = "next-part"; part-prev = "prev-part";
+    task = "pipe -m email-to-task"; calendar = "pipe -m email-to-khal";
+    paperless = "pipe -m email-to-paperless";
+    compose = "compose"; forward = "forward"; reply = "reply"; reply-all = "reply -aq";
+    archive = "pipe -m ${archiveCmd}"; trash = "pipe -m ${trashCmd}";
+    unsubscribe = "unsubscribe -s"; read = "read"; unread = "unread";
+    rule-create = "pipe -m mail-classifier route-review";
+    rule-manage = "term mail-classifier route-manage";
+    labels = ''prompt "Labels (+/-):" modify-labels'';
+    clear-facts = "modify-labels ${tags.clearAllCmd}";
+    new-tag = "term ${config.home.homeDirectory}/.local/bin/aerc-new-tag";
+    sync = "exec ${pkgs.systemd}/bin/systemctl --user start --wait mbsync.service";
+    reload = "reload"; quit = ''prompt "Quit aerc?" quit'';
+    help = ''term ${pkgs.less}/bin/less -R "${config.home.homeDirectory}/.config/aerc/leader-cheatsheet.txt"'';
+  } // builtins.mapAttrs (_: choices: choose choices) menus;
+  commands = builtins.mapAttrs (_: cmd: ":${cmd}<Enter>") native // {
+    filter = ":filter<space>"; search = ":search<space>";
+    all-search = ":query -f -n mail-search<space>";
+    tag-filter = ":filter tag:"; tag-search = ":query -f -n tag-search tag:";
+    styleset = ":reload -s<space>"; move = ":mv<space>"; copy = ":cp<space>";
+    images = imageView; links = urlPicker;
+  };
+  keymap = import ../../../home/keymap/parts/to-aerc.nix {
+    inherit lib grammar commands menus;
+  };
+  # Workbench owns Ctrl navigation; Alt navigates aerc folders and tabs.
   tabBinds = ''
       <A-h> = :prev-tab<Enter> # previous aerc tab
       <A-l> = :next-tab<Enter> # next aerc tab
@@ -37,90 +78,6 @@ let
       <A-S-k> = :prev-tab<Enter> # previous aerc tab
   '';
 
-  # Keep the mark popup bounded. Workflow and domain choices live under
-  # <Space>t; protected/custom flags remain optional facts under <Space>mv.
-  hiddenWorkflowFlags = [ "action" "pending" ];
-  visibleFlagTags = lib.filter (t: !(lib.elem t.tag hiddenWorkflowFlags)) tags.flagTags;
-
-  # Custom facts and keep are additive. Historical category tags only provide
-  # retained search/style metadata; assigning a fact never removes another.
-  flagBinds = lib.concatStringsSep "\n" (map (t:
-    "      <Space>mv${t.spaceKey} = :modify-labels +${t.tag}<Enter> # +${t.tag}"
-  ) visibleFlagTags);
-
-  stateKeys = { "do" = "a"; did = "d"; look = "l"; junk = "j"; };
-  domainKeys = { hwc = "h"; datax = "d"; family = "f"; personal = "p"; other = "o"; };
-  stateBinds = lib.concatStringsSep "\n" (map (state:
-    "      <Space>t${stateKeys.${state}} = :pipe -m mail-classifier correct --state ${state}<Enter> # state: ${lib.toUpper state}"
-  ) mailContract.states);
-  domainBinds = lib.concatStringsSep "\n" (map (domain:
-    "      <Space>tc${domainKeys.${domain}} = :pipe -m mail-classifier correct --domain ${domain}<Enter> # domain: ${domain}"
-  ) mailContract.domains);
-  domainFilterBinds = lib.concatStringsSep "\n" (map (domain:
-    "      <Space>fd${domainKeys.${domain}} = :filter tag:${mailContract.domainTagPrefix}${domain}<Enter> # filter domain: ${domain}"
-  ) mailContract.domains);
-
-  # ── Leader cheat sheet (generated from the same tag data) ──
-  flagHelp = lib.concatStringsSep "\n" (map (t: "    Space m v ${t.spaceKey}   +${t.tag}") visibleFlagTags);
-  leaderHelp = ''
-    ════════ AERC LEADER MAP ════════   (Space = leader; Space ? shows this)
-
-    NAVIGATE  -  Space g ...
-    Space g i  DO        Space g d  DID       Space g l  LOOK
-    Space g j  JUNK      Space g I  raw inbox
-    -- system destinations --
-    Space g A  all mail  Space g a  archive   Space g s  sent
-    Space g T  trash     Space g z  spam      Space g u  all unread
-
-    MARK / CLASSIFY  -  Space m ...
-    Space m a  archive   Space m d  trash     Space m u  unread
-    Space m z  JUNK      Space m l  label...  Space m x  clear optional facts
-    -- optional facts (additive; action/pending are historical) --
-    ${flagHelp}
-    WORKFLOW STATE  -  human choices stick; a new reply reopens DID as DO
-    Space t a  DO        Space t d  DID        Space t l  LOOK
-    Space t j  JUNK      Space t c h|d|f|p|o  set Domain
-
-    ROUTING RULES  -  exact sender plus subject text; saved in the mail ledger
-    Space r a  create from selected mail   Space r m  review / disable rules
-
-    FILTER / SORT / VIEW
-    /          filter current folder by words (message list)
-    Space f a  search all mail by words; includes archived mail
-    Space f t  filter current folder by tag (Tab completes)
-    Space f T  find tag across all mail (Tab completes)
-    Space f d h|d|f|p|o  filter current view by Domain
-    Space f c  clear filter  Space f f  filter by words  Space f s  jump to match
-    Space f u  review unsubscribe
-    Space s d  newest first  Space s f  sender  Space s s  subject
-    Space t t  toggle selected fold  Space t T  fold all threads
-    Space t s  switch styleset            Space M    add new tag
-
-    HAND OFF (open the message first; then archive with a)
-    t  task → todui/phone    i  import event (no RSVP)    p  record → Paperless
-
-    OPENED MESSAGE  -  Space o ...
-    Space o i  local image preview (I)   Space o c  import calendar event (i)
-    Space o n / p  next / previous MIME part (l / h)
-    The preview uses blocks for attached pictures; remote pictures stay blocked.
-    Press q to leave the preview before changing MIME parts.
-
-    OPENED MESSAGE LINKS
-    Ctrl-click a URL/reference  open in laptop browser
-    I  local image preview      q  return to normal view
-    u / U  URL picker (Enter copies; q exits; any key closes finished tab)
-
-    MESSAGES (no leader)
-    j / k  move      J / K  mark + move    V  visual-mark
-    r  read          u  unread             a  archive     d  trash
-    c  compose       C  reply-all          Enter  open    /  filter by words
-
-    AERC TABS
-    Alt+H / Alt+L  previous / next tab
-    Alt+Shift+J / K remain compatibility aliases
-
-    (press q to close)
-  '';
 in
 {
   files = profileBase: {
@@ -141,13 +98,6 @@ ${tabBinds}
 
       # Show your actual binds.conf instead of built-in defaults
       <semicolon> = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/binds.conf"'<Enter>
-
-      # Leader cheat sheet (Space ?) — static which-key reference
-      <Space>? = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/leader-cheatsheet.txt"'<Enter> # cheat sheet
-
-      # Switch styleset on the fly
-      <Space>ts = :reload -s<space> # reload styleset
-
 
       [messages]
       j = :next<Enter>
@@ -174,64 +124,10 @@ ${tabBinds}
       c = :compose<Enter>
       C = :reply -aq<Enter>
 
-      # Navigation (static folders + derived tag folders)
-      # Trailing " # <label>" is the aerc annotation shown in the which-key popover.
-      <Space>gi = :cf do<Enter> # DO
-      <Space>gd = :cf did<Enter> # DID
-      <Space>gl = :cf look<Enter> # LOOK
-      <Space>gj = :cf junk<Enter> # JUNK
-      <Space>gB = :cf backlog<Enter> # backlog
-      <Space>gI = :cf inbox_i<Enter> # all inbox
-      <Space>gA = :cf all<Enter> # all mail
-      <Space>gu = :cf unread_u<Enter> # unread
-      <Space>ga = :cf Archive_a<Enter> # archive
-      <Space>gs = :cf sent_s<Enter> # sent
-      <Space>gT = :cf trash_d<Enter> # trash
-      <Space>gz = :cf spam_z<Enter> # spam
-      <Space>g_ = :cf hide_my_email<Enter> # hide-my-email
-
-      # Explicit physical move/copy: these do not teach. Prefer the shared
-      # workflow actions for completion, Trash and restore.
-      # Flexible path
       X = :mv<space>
       Y = :cp<space>
-
-      # Filter and Sort
       / = :filter<space> # filter folder by words…
-${findBinds ""}
-${domainFilterBinds}
-      <Space>sd = :sort -r date<Enter> # sort by date
-      <Space>sf = :sort from -r date<Enter> # sort by sender
-      <Space>ss = :sort subject -r date<Enter> # sort by subject
-      <Space>tt = :fold -t<Enter> # toggle selected fold
-      <Space>tT = :fold -a<Enter> # fold all threads
-
-      # Human classifier corrections are durable learning events.
-${stateBinds}
-${domainBinds}
-
-      # Persistent sender + subject routing rules. The create command receives
-      # the selected full message and opens its guided review in an aerc tab.
-      <Space>ra = :pipe -m mail-classifier route-review<Enter> # create routing rule…
-      <Space>rm = :term mail-classifier route-manage<Enter> # review / disable routing rules…
-
-      # Use the sender's List-Unsubscribe header and skip straight to review
-      # when the only available method is an email draft.
-      <Space>fu = :unsubscribe -s<Enter> # review unsubscribe
-
-      # === BOUNDED MARKING UNDER <Space>m LEADER ===
-      <Space>mu = :modify-labels +unread<Enter> # mark unread
-      <Space>ma = :pipe -m ${archiveCmd}<Enter> # archive
-      <Space>md = :pipe -m ${trashCmd}<Enter> # trash
-      <Space>mz = :pipe -m mail-classifier correct --state junk<Enter> # JUNK (record lesson)
-      <Space>ml = :modify-labels<space> # label…
-      <Space>mx = :modify-labels ${tags.clearAllCmd}<Enter> # clear optional facts (preserve stars/history)
-
-      # Optional flags stay nested so the first popup stays calm.
-${flagBinds}
-
-      # Add a new tag definition (edits tags-custom.json, saves a fact definition)
-      <Space>M = :term ${config.home.homeDirectory}/.local/bin/aerc-new-tag<Enter> # new tag…
+${keymap.bindsFor "messages"}
 
       [view]
       $noinherit = true
@@ -245,12 +141,6 @@ ${tabBinds}
       a = :pipe -m ${archiveCmd}<Enter>:close<Enter>
       d = :pipe -m ${trashCmd}<Enter>:close<Enter>
       H = :toggle-headers<Enter>
-      I = ${imageView} # local image preview (remote images blocked)
-      <Space>oi = ${imageView} # local image preview (remote images blocked)
-      <Space>on = :next-part<Enter> # next MIME part / attachment
-      <Space>op = :prev-part<Enter> # previous MIME part / attachment
-      <Space>oc = :pipe -m email-to-khal<Enter> # import calendar event (no RSVP)
-${findBinds ":close<Enter>"}
       u = ${urlPicker}
       / = :toggle-key-passthrough<Enter>/
       O = :open<Enter>
@@ -260,12 +150,8 @@ ${findBinds ":close<Enter>"}
       h = :prev-part<Enter>
       o = :open<Enter>
       t = :pipe -m email-to-task<Enter>
-      i = :pipe -m email-to-khal<Enter> # import event (no RSVP)
       p = :pipe -m email-to-paperless<Enter>
-${stateBinds}
-${domainBinds}
-      <Space>ra = :pipe -m mail-classifier route-review<Enter> # create routing rule…
-      <Space>rm = :term mail-classifier route-manage<Enter> # review / disable routing rules…
+${keymap.bindsFor "view"}
 
       [view::passthrough]
       $noinherit = true
@@ -296,9 +182,10 @@ ${tabBinds}
       $noinherit = true
       $ex = <C-x>
 ${tabBinds}
+${keymap.bindsFor "terminal"}
     '';
 
-    ".config/aerc/leader-cheatsheet.txt".text = leaderHelp;
+    ".config/aerc/leader-cheatsheet.txt".text = keymap.leaderHelp;
 
     ".local/bin/hwc-open" = {
       text = ''
@@ -347,7 +234,7 @@ ${tabBinds}
         [[ -z "$tag_name" ]] && echo "Empty tag name." && exit 1
 
         # Keybind
-        read -rp "Keybind key (single char for <Space>mv<key>): " space_key
+        read -rp "Keybind key (single char for Space m t a <key>): " space_key
         [[ -z "$space_key" ]] && echo "Empty key." && exit 1
         case "$space_key" in
           '#'|'`'|'"'|'\') echo "Key '$space_key' breaks aerc INI config. Pick another."; exit 1 ;;
@@ -383,7 +270,7 @@ ${tabBinds}
           && mv "''${TAGS_FILE}.tmp" "$TAGS_FILE"
 
         echo
-        echo "Added $tag_name to $tag_type (group: $group_name, key: <Space>mv$space_key)"
+        echo "Added $tag_name to $tag_type (group: $group_name, key: Space m t a $space_key)"
         echo
 
         # Saving a custom fact is separate from deployment. An agent commits
@@ -391,7 +278,7 @@ ${tabBinds}
         # Home Manager generation from the shared main checkout.
         echo "Saved the fact definition. Ask the agent to commit and deploy it."
         echo "Use :modify-labels +$tag_name now to apply the fact to this message."
-        echo "The new shortcut appears after deployment and an aerc restart."
+        echo "The new shortcut appears after deployment and aerc :reload."
         read -rp "Press Enter to close..."
       '';
       executable = true;

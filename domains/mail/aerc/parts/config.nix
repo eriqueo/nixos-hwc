@@ -1,5 +1,8 @@
-{ lib, pkgs, config, aercPkg, mailContract, ... }:
+{ lib, pkgs, config, aercPkg, mailContract, grammar, ... }:
 let
+    keymap = import ../../../home/keymap/parts/to-aerc.nix {
+      inherit lib grammar; commands = {}; menus = {};
+    };
     common    = import ../../accounts/helpers.nix { inherit lib; };
     accounts  = config.hwc.mail.accounts or {};
     accVals   = lib.attrValues accounts;
@@ -127,7 +130,7 @@ in
       which-key-delay = 350ms
       # Labels for group (prefix) keys in the popover, so <Space>g shows
       # "go: folders" not "+20". Mirrors domains/home/keymap/grammar.nix groups.
-      which-key-groups = g:go (states), m:mark/tags, v:tags, f:find/filter, r:rules, s:sort, t:state/domain/fold, b:buffer, y:yank, d:delete, w:window, p:project, o:open/view, q:quit
+      which-key-groups = ${keymap.whichKeyGroups}
       styleset-name = hwc
       dirlist-left = {{.Style .Folder .Folder}}
       dirlist-right = {{if .Exists}}{{humanReadable .Exists}}{{end}}

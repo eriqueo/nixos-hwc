@@ -83,6 +83,8 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 ## Changelog
 - 2026-10-01: Allow requested feature work to have an owner without implying a fault; link blind review inputs to their full request and dated evidence.
 - 2026-10-01: Make roadmap continuation explicit when the tracker needs no new cards.
+- 2026-10-01: Generate aerc's approved leader bindings and help from shared keymap
+  grammar; add alphabetical subject sort and consolidate named mail actions.
 - 2026-10-01: Pin the tracker decision policy. Cards cover substantive unresolved choices; routine work proceeds and brief clarifications use chat.
 - 2026-09-30: Prepare Zellij 0.45.1 and Workbench's shared runtime without restarting running sessions.
 - 2026-09-30: Add Yazi's persistent favorites sidebar, Alt focus/navigation, editable bookmarks, natural sorting, and Zoxide history.

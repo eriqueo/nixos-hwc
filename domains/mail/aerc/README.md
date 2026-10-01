@@ -14,6 +14,9 @@ Unified email workflow across Proton and Gmail identities. Uses notmuch for inde
 
 ## Structure
 
+Shared action metadata: `domains/home/keymap/grammar.nix`; pure context adapter:
+`domains/home/keymap/parts/to-aerc.nix`; command realizations: `parts/binds.nix`.
+
 ```
 aerc/
   index.nix              # Module entry — enable toggle, packages, shell aliases, activation
@@ -96,7 +99,7 @@ optional tags for aerc, and `tags-custom.json` holds aerc-only additions.
 
 - Notmuch query-map entries for direct drill-down
 - `[user]` styles for virtual folder names
-- nested `<Space>mv*` optional factual-tag bindings
+- nested `Space m t a …` optional factual-tag bindings
 
 The message list renders Domain, State, and factual Tags as separate columns.
 Legacy `action` and `pending` tags do not participate in workflow.
@@ -128,144 +131,37 @@ The current tag vocabulary, leader keys, and palette roles live in
 
 All 9 bundled aerc stylesets (blue, catppuccin, default, dracula, monochrome, nord, pink, solarized, solarized-dark) are copied at Nix eval time with a `[user]` section appended for folder-name styles.
 
-Switch themes live with `<Space>ts` followed by the theme name (tab-completes).
+Switch themes live with `<Space>ws` followed by the theme name (tab-completes).
 
 The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.theme.colors`. Message state supplies row emphasis; categories do not recolor the row.
 
 ## Keybindings
 
-### Global
+The approved Space map is defined in `domains/home/keymap/grammar.nix`.
+The aerc adapter supplies native commands and generates bindings for the message
+list, viewer and terminal contexts. `Space ?` opens the generated reference.
+The universal worksheet in the brain has the exported action table.
 
-| Key | Action |
-|-----|--------|
-| `<A-h>` / `<A-l>` | Prev/next aerc tab |
-| `<A-S-j>` / `<A-S-k>` | Next/prev aerc tab compatibility aliases |
-| `<A-j>` / `<A-k>` | Next/prev visible context |
-| `<C-p>` / `<C-n>` | Next/prev account |
-| `<C-r>` | Full mail sync (mbsync + notmuch new) |
-| `<C-q>` | Quit (with confirmation) |
-| `<C-t>` | Open terminal |
-| `;` | View binds.conf |
-| `<Space>?` | Open the focused leader cheat sheet |
-| `<Space>ts` | Switch styleset |
+Groups: `g` Go, `f` Find, `s` Sort, `b` Tabs, `t` Toggle, `w` View,
+`o` Handoff, `m` Mail, `y` Copy, `d` Delete, `q` App.
+State, Domain, replies, read status, tags and routing rules use named choice
+dialogs under Mail. `Esc` cancels. Facts stay additive; clearing optional facts
+preserves stars, history, State, Domain and `keep`.
 
-### Messages
+`Space f f` filters words in the current folder. `Space f a` searches all
+indexed mail, including archives. These also work from a viewer by returning to
+its account. `Space s a` sorts subjects alphabetically A–Z.
+`Space s s` sorts by subject and then newest date.
 
-| Key | Action |
-|-----|--------|
-| `j` / `k` | Next / prev message |
-| `g` / `G` | First / last message |
-| `<C-d>` / `<C-u>` | Page down / up (50%) |
-| `<Enter>` | Open message |
-| `q` | Quit |
-| `J` / `K` | Toggle mark + move |
-| `V` | Visual mark mode |
-| `r` | Mark read |
-| `u` | Mark unread |
-| `D` | Trash through the shared disposition command |
-| `c` | Compose |
-| `C` | Reply all (quote) |
+Bare `i` and `I` are retired. Use `Space o c` for calendar import (no RSVP)
+and `Space w i` for the local image preview. The preview uses blocks; remote
+images stay blocked. Leave it with `q`, then use `Space w n/p` to select MIME
+parts in the normal viewer. A native image part can show sharp local images.
 
-### Disposition (Messages)
-
-| Key | Action |
-|-----|--------|
-| `a` | Finish/archive marked messages, otherwise the selected folded thread |
-| `d` | Finish/trash marked messages, otherwise the selected folded thread |
-| `X` | Move to folder (prompt) |
-| `Y` | Copy to folder (prompt) |
-
-### Space-Leader Navigation (`<Space>g*`)
-
-| Key | Folder |
-|-----|--------|
-| `<Space>gi` | DO |
-| `<Space>gd` | DID |
-| `<Space>gl` | LOOK |
-| `<Space>gj` | JUNK |
-| `<Space>gB` | backlog (hidden drill-down) |
-| `<Space>gI` | full inbox (hidden drill-down) |
-| `<Space>gu` | unread |
-| `<Space>ga` | Archive |
-| `<Space>gs` | sent |
-| `<Space>gT` | trash |
-| `<Space>gz` | spam |
-| `<Space>g_` | hide_my_email |
-
-Tag-derived folders no longer occupy this first-level navigation menu. Use
-the tag filters below; the generated query-map still retains every legacy and
-automation tag.
-
-### Space-Leader Labels (`<Space>m*`)
-
-| Key | Action |
-|-----|--------|
-| `<Space>mu` | +unread |
-| `<Space>ma` | Finish/archive marked messages |
-| `<Space>md` | Finish/trash marked messages |
-| `<Space>mz` | Record JUNK through the shared correction command |
-| `<Space>ml` | Free-form label (prompt) |
-| `<Space>mx` | Clear optional facts; preserve stars, history, State, Domain and `keep` |
-| `<Space>mv…` | Add a user-visible flag; pause after `v` to see choices |
-| `<Space>ta/td/tl/tj` | Teach DO/DID/LOOK/JUNK |
-| `<Space>tc h/d/f/p/o` | Teach HWC/DataX/Family/Personal/Other Domain |
-| `<Space>ra` | Create an exact-sender plus subject-text routing rule from the selected message |
-| `<Space>rm` | Review and disable active routing rules |
-
-`action` and `pending` are automation-only compatibility tags. They are not
-offered as manual workflow states: create a task/calendar/document handoff and
-archive the source message instead.
-
-The rule review suggests a stable bracketed prefix such as `[P1 CRITICAL]` when
-the subject has one. `DO` is the safe default. `JUNK` requires typing a second
-confirmation because it moves future matches to recoverable Trash. Rules never
-match every message from a sender without subject text.
-
-### Filter / Sort
-
-| Key | Action |
-|-----|--------|
-| `/` | Filter the current folder by words (message list) |
-| `<Space>ff` | Filter the current folder by words |
-| `<Space>fs` | Jump to matching words in the current folder |
-| `<Space>fa` | Search words across all indexed mail, including archives; reuse `mail-search` |
-| `<Space>ft` | Filter the current folder by tag; `Tab` completes tag names |
-| `<Space>fT` | Find a tag across all mail in the reusable `tag-search` query |
-| `<Space>fc` | Clear the current filter/search |
-| `<Space>fu` | Unsubscribe from the message header; email-only senders ask first, then open review without Neovim |
-| `<Space>sd` | Sort by date (newest first) |
-| `<Space>tt` | Toggle the selected thread fold |
-| `<Space>tT` | Fold every thread in the current view |
-
-### View
-
-| Key | Action |
-|-----|--------|
-| `q` | Close view |
-| `J` / `K` | Next / prev message |
-| `r` | Reply |
-| `R` | Reply all |
-| `f` | Forward |
-| `a` | Archive + close |
-| `d` | Trash + close |
-| `H` | Toggle headers |
-| `<Space>oi` / `I` | Local image preview; remote pictures stay blocked |
-| `<Space>on` / `l` | Next MIME part or attachment in the normal viewer |
-| `<Space>op` / `h` | Previous MIME part or attachment in the normal viewer |
-| `<Space>oc` / `i` | Import a calendar event after review; does not RSVP |
-| `u` | Full-message URL picker; Enter copies the selected URL |
-| `O` | Open attachment |
-| `t` | Review and create a task in the shared todui/phone backend |
-| `i` | Import a calendar event for khalt/phone; does not RSVP |
-| `p` | Queue a safe PDF record of the email for Paperless |
-| `S` | Save attachment |
-| `U` | Same full-message URL picker, with duplicate targets removed |
-| `/` | Search in pager (passthrough) |
-
-The find menu (`Space f`) also works in an opened message: it closes the
-message view and searches its account. `/` in the opened message still finds
-text within that message. In the image preview, press `q` first to return to
-the normal viewer; MIME-part navigation is unavailable in the preview tab.
+Native fast keys remain: `j/k` move, `J/K` mark and move, `V` visual mark,
+`Enter` opens, `a/d` archive/trash, `c` compose. `r` marks read in the list
+and replies in the viewer. `Alt+j/k` changes folders; `Alt+h/l` changes tabs.
+Archive/trash retain classifier receipts and marked-or-selected semantics.
 
 The viewer opens the sender-authored plain part first. `h` / `l` move between
 MIME parts when an HTML layout is useful. Plain mail is wrapped to a 100-column
@@ -418,6 +314,8 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
    `proton/Labels/<name>/`.
 
 ## Changelog
+- 2026-10-01: Apply the approved unified leader map, add alphabetical subject sort,
+  retire bare i/I, and generate bindings, group labels and help from shared grammar.
 
 - 2026-10-01: Added `/` word filtering and `Space f a` all-mail search. Shared
   the find menu with the opened viewer and exposed local image preview,

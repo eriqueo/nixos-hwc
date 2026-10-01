@@ -924,9 +924,9 @@
           "<Space>fa = :query -f -n mail-search<space>"
           "<Space>fa = :close<Enter>:query -f -n mail-search<space>"
           "<Space>ff = :close<Enter>:filter<space>"
-          "<Space>oi = :pipe -s -m"
-          "<Space>on = :next-part<Enter>"
-          "<Space>op = :prev-part<Enter>"
+          "<Space>wi = :pipe -s -m"
+          "<Space>wn = :next-part<Enter>"
+          "<Space>wp = :prev-part<Enter>"
           "<Space>oc = :pipe -m email-to-khal<Enter>"
           "<A-h> = :prev-tab<Enter>"
           "<A-l> = :next-tab<Enter>"
@@ -937,20 +937,20 @@
           "<Space>ft = :filter tag:"
           "<Space>fT = :query -f -n tag-search tag:"
           "<Space>fc = :clear -s<Enter>"
-          "<Space>fu = :unsubscribe -s<Enter>"
+          "<Space>mu = :unsubscribe -s<Enter>"
           "D = :pipe -m mail-classifier transition --outcome trash<Enter>"
-          "<Space>ta = :pipe -m mail-classifier correct --state do<Enter>"
-          "<Space>td = :pipe -m mail-classifier correct --state did<Enter>"
-          "<Space>tcd = :pipe -m mail-classifier correct --domain datax<Enter>"
-          "<Space>ra = :pipe -m mail-classifier route-review<Enter>"
-          "<Space>rm = :term mail-classifier route-manage<Enter>"
+          "pipe -m mail-classifier correct --state do"
+          "pipe -m mail-classifier correct --state did"
+          "pipe -m mail-classifier correct --domain datax"
+          "pipe -m mail-classifier route-review"
+          "term mail-classifier route-manage"
         ];
         missing = lib.filter (needle: !(lib.hasInfix needle binds)) required;
       in
       assert lib.assertMsg (missing == [])
         "aerc-bindings: generated server binds are missing ${lib.concatStringsSep ", " missing}";
-      assert lib.assertMsg (lib.length directMarkLines <= 8)
-        "aerc-bindings: first mark popup has ${toString (lib.length directMarkLines)} direct entries (limit 8)";
+      assert lib.assertMsg (lib.length directMarkLines <= 22)
+        "aerc-bindings: first mark popup has ${toString (lib.length directMarkLines)} entries across list/view (limit 22)";
       assert lib.assertMsg (!(lib.hasInfix "<Space>m! =" binds) && !(lib.hasInfix "<Space>m? =" binds))
         "aerc-bindings: action/pending leaked back into the human mark menu";
       assert lib.assertMsg (!(lib.hasInfix "-keep" tags.clearFlagsCmd) && !(lib.hasInfix "-keep" tags.clearAllCmd))
@@ -959,8 +959,8 @@
         ([ "flagged" "starred" "keep" "work" "finance" "family" "action" "pending" ]
           ++ map (domain: "${contract.domainTagPrefix}${domain}") contract.domains))
         "aerc-bindings: metadata clear strips stars, historical tags or Domain";
-      assert lib.assertMsg (lib.hasInfix ":modify-labels ${tags.clearAllCmd}<Enter>" binds
-        && lib.hasInfix "<Space>mvg = :modify-labels +ads<Enter>" binds
+      assert lib.assertMsg (lib.hasInfix "modify-labels ${tags.clearAllCmd}" binds
+        && lib.hasInfix "modify-labels +ads" binds
         && !(lib.hasInfix "+work -" binds))
         "aerc-bindings: optional facts or safe-clear production wiring changed";
       assert lib.assertMsg (let
@@ -984,11 +984,37 @@
         bindsFile = home.home.file.".config/aerc/binds.conf".source;
       } ''
         python3 - "$queries" "$bindsFile" <<'PY'
-        import os, pathlib, subprocess, sys, tempfile
+        import os, pathlib, shlex, subprocess, sys, tempfile
         queries = dict(line.split('=', 1) for line in pathlib.Path(sys.argv[1]).read_text().splitlines()
                        if line and not line.startswith('#'))
         assert all(':' not in name for name in queries), queries
         binds = pathlib.Path(sys.argv[2]).read_text()
+        # Check the generated production config, including viewer noinherit.
+        sections = {}
+        section = 'global'
+        for line in binds.splitlines():
+            line = line.strip()
+            if line.startswith('['):
+                section = line
+            elif '=' in line and not line.startswith(('#', '$')):
+                key = line.split('=', 1)[0].strip()
+                current = sections.setdefault(section, {})
+                assert key not in current, (section, key)
+                current[key] = line
+        for section, rows in sections.items():
+            keys = [k for k in rows if k.startswith('<Space>')]
+            for key in keys:
+                assert not any(other != key and other.startswith(key) for other in keys), (section, key)
+            assert 'i' not in rows and 'I' not in rows, (section, 'retired shortcuts')
+        assert '<Space>bc' not in sections['[messages]']
+        assert '<Space>wi' in sections['[view]'] and '<Space>wi' not in sections['[messages]']
+        for key in ['<Space>ms', '<Space>md', '<Space>mt', '<Space>mr', '<Space>ml', '<Space>mv', '<Space>fd']:
+            for section in ['[messages]', '[view]']:
+                line = sections[section][key]
+                options = shlex.split(line.split(':choose ', 1)[1].split('<Enter>', 1)[0])
+                assert len(options) % 4 == 0
+                choices = [options[i+1] for i in range(0, len(options), 4)]
+                assert len(choices) == len(set(choices)) and 0 < len(choices) <= 12, choices
         with tempfile.TemporaryDirectory() as root:
             root = pathlib.Path(root)
             mail = root / 'mail'
@@ -1012,8 +1038,11 @@
             assert nm('count', queries['history/business']) == '1'
             assert nm('count', queries['history/family']) == '1'
             assert nm('count', queries['domain/family']) == '0'
-            clear = next(line for line in binds.splitlines() if '<Space>mx =' in line)
-            operations = clear.split(':modify-labels ', 1)[1].split('<Enter>', 1)[0].split()
+            clear = next(line for line in binds.splitlines() if '<Space>mt =' in line)
+            options = shlex.split(clear.split('= :choose ', 1)[1].split('<Enter>', 1)[0])
+            command = next(options[i+3] for i in range(0, len(options), 4) if options[i+1] == 'x')
+            assert command.startswith('modify-labels '), command
+            operations = shlex.split(command)[1:]
             before = nm('search', '--output=files', 'id:current@example.com').splitlines()
             nm('tag', *operations, '--', 'id:current@example.com')
             tags = set(nm('search', '--output=tags', 'id:current@example.com').splitlines())
@@ -1091,12 +1120,12 @@
         wiring = json.loads(Path(sys.argv[1]).read_text())
         def image_command(binds):
             view = binds.split('[view]\n', 1)[1].split('[view::', 1)[0]
-            line = next(line.strip() for line in view.splitlines() if line.strip().startswith('I = '))
-            assert line.startswith('I = :pipe -s -m '), 'image view must receive full MIME and close on pager exit'
-            return line.removeprefix('I = :pipe -s -m ').split('<Enter>', 1)[0]
+            line = next(line.strip() for line in view.splitlines() if line.strip().startswith('<Space>wi = '))
+            assert line.startswith('<Space>wi = :pipe -s -m '), 'image view must receive full MIME and close on pager exit'
+            return line.removeprefix('<Space>wi = :pipe -s -m ').split('<Enter>', 1)[0]
         command = image_command(wiring['binds'])
-        for broken in [re.sub(r'^\s*I = .*$', "", wiring['binds'], flags=re.M),
-                       wiring['binds'].replace('I = :pipe -s -m ', 'I = :pipe -s -p ')]:
+        for broken in [re.sub(r'^\s*<Space>wi = .*$', "", wiring['binds'], flags=re.M),
+                       wiring['binds'].replace('<Space>wi = :pipe -s -m ', '<Space>wi = :pipe -s -p ')]:
             assert broken != wiring['binds'], 'seeded wiring mutation did not match'
             try:
                 image_command(broken)
@@ -1353,6 +1382,7 @@
         requiredBinds = [
           "<Space>gA = :cf all<Enter>"
           "<Space>sf = :sort from -r date<Enter>"
+          "<Space>sa = :sort subject<Enter>"
           "<Space>ss = :sort subject -r date<Enter>"
         ];
         missingBinds = lib.filter (needle: !(lib.hasInfix needle binds)) requiredBinds;
@@ -1369,11 +1399,11 @@
         && !(lib.hasInfix ":unmark -a<Enter>:mark -T<Enter>:modify-labels" binds))
         "mail-workflow-v2: archive/trash must preserve marked-message bulk selections";
       assert lib.assertMsg (bindCount "<Space>tt = :fold -t<Enter>" == 1
-        && bindCount "<Space>tT = :fold -a<Enter>" == 1
+        && bindCount "<Space>ta = :fold -a<Enter>" == 1
         && !(lib.hasInfix ":toggle-threads<Enter>" binds))
         "mail-workflow-v2: thread fold controls changed unexpectedly";
-      assert lib.assertMsg (bindCount "<Space>ma = :pipe -m mail-classifier transition --outcome done<Enter>" == 1
-        && bindCount "<Space>md = :pipe -m mail-classifier transition --outcome trash<Enter>" == 1)
+      assert lib.assertMsg (bindCount "<Space>ma = :pipe -m mail-classifier transition --outcome done<Enter>" == 2
+        && bindCount "<Space>dd = :pipe -m mail-classifier transition --outcome trash<Enter>" == 2)
         "mail-workflow-v2: marked-message archive/trash controls changed unexpectedly";
       assert lib.assertMsg (lib.hasInfix "sort = -r date" aercConf)
         "mail-workflow-v2: newest-first is not the default sort";

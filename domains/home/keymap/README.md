@@ -17,7 +17,7 @@ parts/
   to-zellij.nix        registry hub + tool destinations -> zellij keybinds KDL (inter-app Ctrl+Space layer)
   to-yazi.nix          grammar -> keymap.toml [mgr] fragment
   to-nvim.nix          grammar -> lua (Space layer + which-key groups)
-  to-aerc.nix          grammar -> binds.conf fragment (composes with tags.nix)
+  to-aerc.nix          aerc action table -> context bindings, groups and reference
   to-khalt.nix         grammar -> [keybindings] block + KHALT_LEADER_TREE json
   to-todui.nix         grammar -> TODUI_KEYMAP json (env)
   to-workbench.nix     grammar -> versioned Workbench global-binding JSON
@@ -59,9 +59,10 @@ that needs runtime QA, not a blind stage-and-hms):
      `[mgr] prepend_keymap` array (replacing the hand-written g/f/s/b block).
    - **nvim** — source `to-nvim`'s `lua` after `mapleader`; add the `which-key`
      plugin (today absent) so the popup renders (incl. baked-in keymaps).
-   - **aerc** — splice `to-aerc`'s `bindsFragment` under `[messages]` (composes
-     with the tag-generated `<Space>g`/`<Space>m`; once aerc cmds are seeded in
-     grammar.nix). aerc already matches the grammar by hand today.
+Aerc now consumes `grammar.aerc` through the mail module, including on hosts
+without the desktop keymap option. `to-aerc` generates context bindings, group
+labels, installed help and the Markdown table exported to the universal worksheet.
+Dynamic State/Domain/fact choices still come from the mail contract and tag data.
 
 ## App-side prerequisites (separate repos under ~/600_apps, staged not done)
 
@@ -89,6 +90,8 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 - todui/khalt/workbench log a missing/unread `*_KEYMAP` rather than failing silent.
 
 ## Changelog
+- 2026-10-01: Wire aerc to one action table and context adapter. Generate the
+  leader reference and group labels; add subject A–Z and named Mail submenus.
 - 2026-09-15: Add `a` → `tool:herdr` (Agents). Keybinding conflicts between
   herdr's own chords and the Ctrl meta layer are NOT yet mapped.
 - 2026-09-15: Activate the Workbench keymap consumer with a versioned bindings

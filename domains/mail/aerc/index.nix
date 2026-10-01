@@ -10,9 +10,10 @@ let
   # canary (overrideAttrs on nixpkgs aerc @ 0.21.0); which-key/header patches land
   # later, config-gated default-off.
   aercPkg = import ./package.nix { inherit pkgs inputs; };
+  grammar = import ../../home/keymap/grammar.nix { inherit lib; };
 
-  cfgPart    = import ./parts/config.nix   { inherit lib pkgs config aercPkg mailContract; };
-  bindsPart  = import ./parts/binds.nix  { inherit lib pkgs config mailContract aercPkg; };
+  cfgPart    = import ./parts/config.nix   { inherit lib pkgs config aercPkg mailContract grammar; };
+  bindsPart  = import ./parts/binds.nix  { inherit lib pkgs config mailContract aercPkg grammar; };
   sievePart  = import ./parts/sieve.nix  { inherit lib pkgs config; };
 in
 {

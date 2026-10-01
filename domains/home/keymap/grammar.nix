@@ -150,7 +150,94 @@ rec {
       { keys = "R"; desc = "LSP references"; cmd = "<cmd>Telescope lsp_references<cr>"; }
       { keys = "s"; desc = "Save session"; cmd = "<cmd>mksession!<cr>"; }
     ];
-    aerc = "tags";
+    aerc = "mail";
+  };
+
+  # Aerc actions and descriptions have one producer. The mail adapter supplies
+  # native commands and dynamic State/Domain/fact options from their contracts.
+  aerc = let
+    row = keys: action: desc: scope: { inherit keys action desc scope; };
+  in {
+    stateKeys = { "do" = "a"; did = "d"; look = "l"; junk = "j"; };
+    domainKeys = { hwc = "h"; datax = "d"; family = "f"; personal = "p"; other = "o"; };
+    bindings = [
+      (row "g i" "go-do" "DO" "account")
+      (row "g d" "go-did" "DID" "account")
+      (row "g l" "go-look" "LOOK" "account")
+      (row "g j" "go-junk" "JUNK" "account")
+      (row "g B" "go-backlog" "Backlog" "account")
+      (row "g I" "go-inbox" "Raw inbox" "account")
+      (row "g A" "go-all" "All mail" "account")
+      (row "g u" "go-unread" "Unread" "account")
+      (row "g a" "go-archive" "Archive" "account")
+      (row "g s" "go-sent" "Sent" "account")
+      (row "g T" "go-trash" "Trash" "account")
+      (row "g z" "go-spam" "Spam" "account")
+      (row "g _" "go-hide" "Hide-my-email" "account")
+      (row "f f" "filter" "Filter folder by words…" "account")
+      (row "f a" "all-search" "Search all mail by words…" "account")
+      (row "f s" "search" "Jump to matching words…" "account")
+      (row "f t" "tag-filter" "Filter folder by tag…" "account")
+      (row "f T" "tag-search" "Search all mail by tag…" "account")
+      (row "f d" "domain-filter" "Filter by Domain…" "account")
+      (row "f c" "clear" "Clear filter/search" "account")
+      (row "s d" "sort-date" "Newest first" "account")
+      (row "s f" "sort-from" "Sender, then newest" "account")
+      (row "s s" "sort-subject" "Subject, then newest" "account")
+      (row "s a" "sort-alpha" "Alphabetical subject A–Z" "account")
+      (row "b n" "tab-next" "Next tab" "global")
+      (row "b p" "tab-prev" "Previous tab" "global")
+      (row "b c" "tab-close" "Close tab" "closable")
+      (row "t h" "headers" "Toggle headers" "view")
+      (row "t t" "fold" "Toggle selected fold" "account")
+      (row "t a" "fold-all" "Fold all threads" "account")
+      (row "w i" "images" "Local image preview (remote images blocked)" "view")
+      (row "w n" "part-next" "Next MIME part / attachment" "view")
+      (row "w p" "part-prev" "Previous MIME part / attachment" "view")
+      (row "w s" "styleset" "Switch styleset…" "global")
+      (row "o t" "task" "Task handoff" "message")
+      (row "o c" "calendar" "Import calendar event (no RSVP)" "message")
+      (row "o p" "paperless" "Paperless handoff" "message")
+      (row "o l" "links" "URL picker" "message")
+      (row "m c" "compose" "Compose" "account")
+      (row "m r" "replies" "Reply…" "message")
+      (row "m f" "forward" "Forward" "message")
+      (row "m a" "archive" "Archive (record outcome)" "message")
+      (row "m s" "state" "Set State…" "message")
+      (row "m d" "domain" "Set Domain…" "message")
+      (row "m t" "tags" "Optional tags…" "message")
+      (row "m l" "rules" "Routing rules…" "message")
+      (row "m u" "unsubscribe" "Review unsubscribe" "message")
+      (row "m v" "read-status" "Read/unread…" "message")
+      (row "m x" "move" "Move to folder… (no learning)" "message")
+      (row "y l" "links" "Copy URL via picker" "message")
+      (row "y m" "copy" "Copy to folder…" "message")
+      (row "d d" "trash" "Trash (record outcome)" "message")
+      (row "q s" "sync" "Sync mail" "global")
+      (row "q r" "reload" "Reload configuration" "global")
+      (row "q q" "quit" "Confirm quit" "global")
+      (row "?" "help" "Binding sheet" "global")
+    ];
+    menus = {
+      replies = [
+        { key = "r"; action = "reply"; desc = "Reply"; }
+        { key = "a"; action = "reply-all"; desc = "Reply all"; }
+      ];
+      rules = [
+        { key = "a"; action = "rule-create"; desc = "Create from selected mail"; }
+        { key = "m"; action = "rule-manage"; desc = "Review / disable rules"; }
+      ];
+      tags = [
+        { key = "a"; action = "add-fact"; desc = "Add optional fact…"; }
+        { key = "l"; action = "labels"; desc = "Add/remove labels…"; }
+        { key = "x"; action = "clear-facts"; desc = "Clear optional facts (preserve stars/history)"; }
+        { key = "n"; action = "new-tag"; desc = "Define a new optional tag"; }
+      ];
+      read-status = [
+        { key = "r"; action = "read"; desc = "Read"; }
+        { key = "u"; action = "unread"; desc = "Unread"; }
+      ];
+    };
   };
 
   #--------------------------------------------------------------------------
