@@ -30,7 +30,8 @@ domains/automation/nightly-builds/
 │                     #   tmpfiles for spools; optional read-only /mnt sandbox.
 │                     #   HWC_PIPELINE=1: the workspace guard only reports here.
 ├── run.sh            # Nightly launcher, packaged with its prompts/sender into an immutable store closure
-│                     #   (per-card timeout = the card's declared minute budget +50%)
+│                     #   (per-card timeout = the card's declared minute budget +50%;
+│                     #   removes work copies 7+ days old once clean and on origin)
 ├── send-report.sh    # Rich per-card Discord report (REPORT.md attached)
 ├── gen-index.sh      # Assemble a shared index README from per-card index.d/*.md
 │                     #   fragments (run-wrapper rule 8 — avoids batch merge conflicts)
@@ -64,6 +65,7 @@ switching providers does not require changing runner code.
 
 ## Changelog
 
+- **2026-10-01** — `run.sh` removes a card's `/tmp/nightly` work copy once its run date is 7 days old (`NB_WT_KEEP_DAYS`), it has no uncommitted or untracked files, and its HEAD is on a branch origin still has after a pruning fetch. Anything else is kept and logged. Nothing removed old copies before, so the 10-day `/tmp` sweep deleted their files under git and left broken registrations. Tested against a planted fixture covering all six keep/remove cases.
 - **2026-09-30** — The runner, run-now and review units merge `hwc.system.apps.agent-harness.pipelineEnvironment` (`HWC_PIPELINE=1`) instead of a local literal.
 - **2026-09-30** — Set `HWC_PIPELINE=1` in the runner environment, so the shared workspace guard reports on its headless agents and never denies.
 

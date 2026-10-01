@@ -169,6 +169,51 @@ pr_field() { # pr_field <state> <branch> <worktree> <context-phrase> -> the `pr:
   esac
 }
 
+# ── Old work copies ──────────────────────────────────────────────────────────
+# Each card's worktree stays under WT_ROOT for morning inspection, and nothing
+# removed old ones: tmpfiles' 10-day /tmp sweep then deleted their files under
+# git and left broken registrations (hwc-home kept three from 2026-09-15/16).
+# A copy whose run date is WT_KEEP_DAYS or more old is removed only when it is
+# clean (nothing uncommitted or untracked) and its HEAD is on a branch origin
+# still has after a pruning fetch. Anything else is kept and logged.
+WT_ROOT="${NB_WT_ROOT:-/tmp/nightly}"
+WT_KEEP_DAYS="${NB_WT_KEEP_DAYS:-7}"
+prune_old_worktrees() {
+  local wt name day age common repo fetched=" "
+  [ -d "$WT_ROOT" ] || return 0
+  for wt in "$WT_ROOT"/*/; do
+    wt="${wt%/}"
+    [ -d "$wt" ] || continue
+    name=$(basename "$wt"); day="${name:0:10}"
+    if ! day=$(date -d "$day" +%s 2>/dev/null); then
+      log "KEEP: $wt (no run date in its name)"; continue
+    fi
+    age=$(( ($(date +%s) - day) / 86400 ))
+    [ "$age" -ge "$WT_KEEP_DAYS" ] || continue
+    if ! common=$(git -C "$wt" rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
+      log "KEEP: $wt (not a working git copy)"; continue
+    fi
+    repo=$(dirname "$common")
+    # One pruning fetch per repo, so a branch deleted on origin no longer counts.
+    case "$fetched" in *" $repo "*) ;; *)
+      git -C "$repo" fetch --prune -q origin 2>>"$LOG_FILE" \
+        || { log "KEEP: $wt (fetch failed for $repo)"; continue; }
+      fetched="$fetched$repo "
+    esac
+    if [ -n "$(git -C "$wt" status --porcelain 2>&1)" ]; then
+      log "KEEP: $wt (uncommitted or untracked files)"; continue
+    fi
+    if [ -z "$(git -C "$wt" branch -r --contains HEAD 2>/dev/null)" ]; then
+      log "KEEP: $wt (HEAD is on no origin branch)"; continue
+    fi
+    if [ "$DRY_RUN" -eq 1 ]; then log "DRY: would remove old work copy $wt"; continue; fi
+    git -C "$repo" worktree remove "$wt" 2>>"$LOG_FILE" \
+      && log "removed old work copy $wt ($age days, clean, on origin)" \
+      || log "KEEP: $wt (git refused to remove it)"
+  done
+}
+prune_old_worktrees
+
 # ── Phase A: card-smith ──────────────────────────────────────────────────────
 # Skipped entirely on a targeted run — "Run now" executes an existing card, it
 # does not author new ones.
@@ -231,14 +276,14 @@ if [ -z "$QUEUED" ]; then
   exit 0
 fi
 
-mkdir -p /tmp/nightly
+mkdir -p "$WT_ROOT"
 
 for CARD in $QUEUED; do
   SLUG="$(basename "$CARD" .md)"
   GOAL="$(basename "$(dirname "$CARD")")"
   RUN_NAME="$DATE-$GOAL-$SLUG"
   RUN_DIR="$RUNS_DIR/$RUN_NAME"
-  WT="/tmp/nightly/$RUN_NAME"
+  WT="$WT_ROOT/$RUN_NAME"
 
   # Branch: prefer the card's declared "PR to branch `x`"; fall back to nightly/.
   # `head -1`: -m1 stops after the first matching LINE, but a single line may hold
@@ -448,7 +493,8 @@ Report: runs/$RUN_NAME/REPORT.md"
 $(pr_field "$PUSH_STATE" "$BRANCH" "$WT" 'partial work is reviewable, gate 8')
 Logs: runs/$RUN_NAME/agent-output.log"
   fi
-  # Worktree is left in place for morning inspection; next run recreates it.
+  # Worktree is left in place for morning inspection; prune_old_worktrees
+  # removes it once it is WT_KEEP_DAYS old, clean and on origin.
 done
 
 tail -500 "$LOG_FILE" > "$LOG_FILE.tmp" && mv "$LOG_FILE.tmp" "$LOG_FILE"
