@@ -917,7 +917,8 @@
         directMarkLines = lib.filter
           (line: builtins.match "[[:space:]]*<Space>m. =.*" line != null)
           lines;
-        tags = import ./domains/mail/aerc/parts/tags.nix { inherit lib; };
+        contract = home.hwc.mail.classifier.contract;
+        tags = import ./domains/mail/aerc/parts/tags.nix { inherit lib; mailContract = contract; };
         required = [
           "/ = :filter<space>"
           "<Space>fa = :query -f -n mail-search<space>"
@@ -953,7 +954,79 @@
         "aerc-bindings: action/pending leaked back into the human mark menu";
       assert lib.assertMsg (!(lib.hasInfix "-keep" tags.clearFlagsCmd) && !(lib.hasInfix "-keep" tags.clearAllCmd))
         "aerc-bindings: a bulk clear can remove the protected keep tag";
-      pkgs.runCommand "aerc-bindings" {} ''touch "$out"'';
+      assert lib.assertMsg (builtins.all (tag: !(lib.elem "-${tag}" (lib.splitString " " tags.clearAllCmd)))
+        ([ "flagged" "starred" "keep" "work" "finance" "family" "action" "pending" ]
+          ++ map (domain: "${contract.domainTagPrefix}${domain}") contract.domains))
+        "aerc-bindings: metadata clear strips stars, historical tags or Domain";
+      assert lib.assertMsg (lib.hasInfix ":modify-labels ${tags.clearAllCmd}<Enter>" binds
+        && lib.hasInfix "<Space>mvg = :modify-labels +ads<Enter>" binds
+        && !(lib.hasInfix "+work -" binds))
+        "aerc-bindings: optional facts or safe-clear production wiring changed";
+      assert lib.assertMsg (let
+        registry = import ./domains/mail/notmuch/parts/searches.nix {
+          inherit lib; cfg = home.hwc.mail.notmuch; mailContract = contract;
+        };
+        aercQueries = home.home.file.".config/aerc/notmuch-queries".text;
+        deployed = home.xdg.configFile."notmuch/searches".text;
+      in deployed == registry.text
+        && builtins.all (name: lib.hasInfix "${lib.replaceStrings [ ":" ] [ "/" ] name}=${registry.searches.${name}}" aercQueries)
+          (builtins.attrNames registry.searches)
+        && registry.searches."fact:finance" == "tag:${contract.traitTagPrefix}finance"
+        && registry.searches."domain:family" == "tag:${contract.domainTagPrefix}family"
+        && registry.searches."history:family" == "tag:family"
+        && !(registry.searches ? business) && !(registry.searches ? money)
+        && !(registry.searches ? "label:finance"))
+        "aerc-bindings: current axes and historical search registry drifted";
+      pkgs.runCommand "aerc-bindings" {
+        nativeBuildInputs = [ pkgs.python3 pkgs.notmuch ];
+        queries = home.home.file.".config/aerc/notmuch-queries".source;
+        bindsFile = home.home.file.".config/aerc/binds.conf".source;
+      } ''
+        python3 - "$queries" "$bindsFile" <<'PY'
+        import os, pathlib, subprocess, sys, tempfile
+        queries = dict(line.split('=', 1) for line in pathlib.Path(sys.argv[1]).read_text().splitlines()
+                       if line and not line.startswith('#'))
+        assert all(':' not in name for name in queries), queries
+        binds = pathlib.Path(sys.argv[2]).read_text()
+        with tempfile.TemporaryDirectory() as root:
+            root = pathlib.Path(root)
+            mail = root / 'mail'
+            for folder in ['inbox', 'archive']:
+                for part in ['cur', 'new', 'tmp']:
+                    (mail / folder / part).mkdir(parents=True)
+            config = root / 'notmuch-config'
+            config.write_text(f'[database]\npath={mail}\n[user]\nname=Test\nprimary_email=test@example.com\n[new]\ntags=\n[maildir]\nsynchronize_flags=true\n')
+            os.environ['NOTMUCH_CONFIG'] = str(config)
+            def nm(*args):
+                return subprocess.check_output(['notmuch', *args], text=True).strip()
+            for mid in ['old', 'current']:
+                (mail / 'inbox' / 'cur' / f'{mid}:2,F').write_text(
+                    f'From: sender@example.com\nTo: test@example.com\nMessage-ID: <{mid}@example.com>\nSubject: {mid}\nDate: Thu, 1 Oct 2026 12:00:00 -0600\n\nfixture\n')
+            (mail / 'archive' / 'cur' / 'copy:2,F').write_text((mail / 'inbox' / 'cur' / 'current:2,F').read_text())
+            nm('new')
+            nm('tag', '+inbox', '+work', '+family', '+finance', '--', 'id:old@example.com')
+            nm('tag', '+inbox', '+state/do', '+domain/hwc', '+trait/finance', '+ads', '+keep', '--', 'id:current@example.com')
+            assert nm('count', queries['domain/hwc']) == '1'
+            assert nm('count', queries['finance']) == '1'
+            assert nm('count', queries['history/business']) == '1'
+            assert nm('count', queries['history/family']) == '1'
+            assert nm('count', queries['domain/family']) == '0'
+            clear = next(line for line in binds.splitlines() if '<Space>mx =' in line)
+            operations = clear.split(':modify-labels ', 1)[1].split('<Enter>', 1)[0].split()
+            before = nm('search', '--output=files', 'id:current@example.com').splitlines()
+            nm('tag', *operations, '--', 'id:current@example.com')
+            tags = set(nm('search', '--output=tags', 'id:current@example.com').splitlines())
+            assert {'flagged', 'keep', 'state/do', 'domain/hwc', 'inbox'} <= tags, tags
+            assert 'trait/finance' not in tags and 'ads' not in tags, tags
+            after = nm('search', '--output=files', 'id:current@example.com').splitlines()
+            assert len(before) == len(after) == 2 and set(before) == set(after)
+            assert all(path.endswith(':2,F') for path in after), after
+            old_tags = set(nm('search', '--output=tags', 'id:old@example.com').splitlines())
+            assert {'work', 'family', 'finance', 'flagged'} <= old_tags, old_tags
+        print('generated views, legacy search, real metadata clear, stars and physical copies pass')
+        PY
+        touch "$out"
+      '';
 
       # The calm reading view prefers the sender-authored plain part. HTML is
       # still available with the MIME-part keys when layout carries meaning.

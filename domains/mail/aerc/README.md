@@ -73,12 +73,14 @@ A folded row expands to its complete thread. When `J`/`K` marks exist, `a` or
 
 ### Current and historical searches
 
-Use `:cf domain:hwc` or `:cf domain:datax` for a Domain view, and
-`:cf fact:finance` for factual finance. `:cf finance` is the same finance view.
-Use `:cf history:business`, `:cf history:money`, `:cf history:growth`, or
-`:cf history:system` for old category aggregates. Unmapped coaching and tech
-remain available as `history:label:coaching` and `history:label:tech`.
-Old account searches also start with `history:`. These names describe retained
+Use `:cf domain/hwc` or `:cf domain/datax` for a Domain view, and
+`:cf fact/finance` for factual finance. `:cf finance` is the same finance view.
+Use `:cf history/business`, `:cf history/money`, `:cf history/growth`, or
+`:cf history/system` for old category aggregates. Unmapped coaching and tech
+remain available as `history/label/coaching` and `history/label/tech`.
+Old aerc account searches also start with `history/`. MCP and the notmuch
+registry use the same addresses with colons, such as `history:business`.
+Aerc uses slashes because its configuration parser treats colons as separators. These names describe retained
 history; no tag or physical folder is removed. Restart aerc after deployment to
 load the new map and bindings. MCP loads the same registry when its service starts.
 
