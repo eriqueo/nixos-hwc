@@ -12,6 +12,12 @@
 `native/ai/lead-scout` owns the disabled member recovery unit. It adopts the
 runtime compose project, waits for either container to exit and stops app before
 db. Runtime compose owns static addresses; Nix only validates exact trust.
+Its optional invitation mail units expose a same-user Unix socket to fixed
+loopback Proton Bridge SMTP. Runtime sender, password and pinned certificate
+files are rebuilt from the configured address, existing pass entry and Bridge.
+Only that private runtime directory is mounted read-only into the member app.
+The relay caps connections at two. Scout reserves each invite before sending,
+never retries, and keeps Copy available when the result is uncertain.
 
 `native/ai/brainvec` runs the flake-locked source; update with `nix flake update
 brainvec`, commit, build and switch. Ingest logs the source revision. The Node ingest and Deno MCP reader share that pinned transform contract.
@@ -57,6 +63,7 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+- 2026-10-01: Added optional private invitation SMTP socket, bounded loopback relay and runtime preparation for the member Scout app. Enabled on work with eric@iheartwoodcraft.com.
 - 2026-10-01: event-scout hands calendar files to `hwc.paths.user.calendarDrop` (created by tmpfiles; `imported/` kept indefinitely as its record of added events) instead of the synced `~/000_inbox/downloads`.
 - 2026-09-30: lead-scout, home-scout and research-scout merge `hwc.system.apps.agent-harness.pipelineEnvironment` (`HWC_PIPELINE=1`) into the unit that launches the headless classifier, so the workspace guard only reports on it.
 - 2026-09-30: Member recovery uses one elapsed 300s preparation helper for shared 0–5s restart jitter, preflight, detached adoption, health and exact trust. Jitter consumes that deadline. Direct `podman wait` observes exits. One elapsed 90s StopPost owns app15/db30 drain; there is no StartPost or duplicate Stop. The 90-minute window counts five attempts, each with preparation300 + manager activation300 + waiter termination90 + cleanup90 + max delay240: **5100 < 5400**. Systemd timeouts apply per phase. This bounds consecutive failed startups, not lifetime crashes after stable operation.
