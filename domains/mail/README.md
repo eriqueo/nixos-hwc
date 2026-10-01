@@ -10,6 +10,7 @@ Self-contained email domain: client UI, accounts, sync, indexing, sending, and b
 ## Structure
 
 Mailbox movement runs through classifier transport intents, marker-only afew rules, and ordered mbsync prefetch/reconciliation/readback. The contract owns the physical sync folders; local history remains in lessons but does not block remote move receipts.
+The mail role retains these hooks in both integrated and standalone Home Manager builds.
 
 Radicale clients in `calendar`, `tasks`, and `contacts` render credential argv
 from `domains/lib/hm.nix`, also consumed by todui's list-deletion launcher.
@@ -114,6 +115,9 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-10-01: Keep reconciliation and projection in standalone mail-role
+  rebuilds; check both activation lanes so client updates cannot drop them.
 - 2026-10-01: Generate aerc's approved leader bindings and help from shared keymap
   grammar; add alphabetical subject sort and consolidate named mail actions.
 

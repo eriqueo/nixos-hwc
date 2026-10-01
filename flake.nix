@@ -1327,6 +1327,7 @@
 
       mail-residency-shadow = let
         home = mailHome;
+        standalone = self.homeConfigurations."eric@${mailHost}".config;
         fixture = pkgs.writeText "mail-residency-shadow.json" (builtins.toJSON {
           script = home.home.file.".local/bin/sync-mail".text;
           command = home.hwc.mail.classifier.residency.command;
@@ -1335,6 +1336,11 @@
           maildirRoot = home.hwc.mail.notmuch.maildirRoot;
         });
       in
+      assert lib.assertMsg (standalone.hwc.mail.classifier.residency.enable
+        && standalone.hwc.mail.classifier.projection.enable
+        && lib.hasInfix standalone.hwc.mail.classifier.residency.command standalone.home.file.".local/bin/sync-mail".text
+        && lib.hasInfix standalone.hwc.mail.classifier.projection.command standalone.home.file.".local/bin/sync-mail".text)
+        "mail-residency-shadow: standalone client activation must retain mail reconciliation and projection";
       assert lib.assertMsg home.hwc.mail.classifier.residency.enable
         "mail-residency-shadow: mail host must observe in shadow";
       pkgs.runCommand "mail-residency-shadow" {} ''
