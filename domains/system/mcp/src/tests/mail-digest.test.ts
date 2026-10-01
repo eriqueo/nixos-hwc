@@ -98,8 +98,11 @@ describe("authoritative mail placement", () => {
     });
     const result = await mailTriageTools("unused")[0].handler({action:"state-did",id:"a"});
     expect(result.status).toBe("ok");
-    expect(spawnRun).toHaveBeenCalledWith("/run/current-system/sw/bin/mail-classifier-runtime",
-      expect.arrayContaining(["correct","--state","did"]), expect.any(Object));
+    expect(spawnRun).toHaveBeenCalledWith("/run/current-system/sw/bin/flock",
+      ["-n", "-E", "75", expect.stringMatching(/\/mail-sync\/sync\.lock$/),
+        "/run/current-system/sw/bin/mail-classifier-runtime", "correct", "--db",
+        "/var/lib/hwc/mail-classifier/ledger.sqlite", "--notmuch", expect.any(String),
+        "--state", "did"], expect.any(Object));
     expect(stdin.end).toHaveBeenCalledWith(expect.stringContaining("Message-ID"));
   });
 

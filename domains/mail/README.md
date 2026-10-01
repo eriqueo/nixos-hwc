@@ -43,7 +43,7 @@ mail/
 │       ├── runtime.nix        # Env vars, PATH handling
 │       └── service.nix        # systemd user service unit
 ├── classifier/
-│   ├── index.nix              # controls, contract, observer, label projection and explicit pending-write review
+│   ├── index.nix              # locked controls, transport intents, shadow observers, projection and pending-write review
 │   └── sys.nix                # pinned Laya + local Nomic hybrid service
 ├── calendar/
 │   ├── index.nix              # khal + vdirsyncer integration; extraVdirsyncerPairs option
@@ -114,6 +114,10 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-10-01: Pin the tested shared runtime with durable folder intents, disabled
+  phone correction recovery and safe content-only DO fallback. Human lessons and
+  routing remain authoritative. MCP corrections share the sync lock with aerc.
 
 - 2026-10-01: Fetch remote core/Trash membership before moving mail; require durable shared-command transport intents, preserve local stars during prefetch, and verify remote membership before acknowledging moves. Failed prefetch blocks uploads; phone-label support stays disabled.
 

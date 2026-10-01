@@ -6,7 +6,7 @@ import { execFile, spawn } from "node:child_process";
 import { readFileSync, statSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { ToolDef, ToolResult } from "../types.js";
 import { getServiceStatus } from "../executors/systemd.js";
 import { log } from "../log.js";
@@ -286,7 +286,9 @@ export async function classifierMutation(
       : mutation.kind === "outcome" ? ["transition", ...base, "--outcome", mutation.value]
       : ["reopen", ...base];
     return await new Promise((resolve) => {
-      const child = spawn("/run/current-system/sw/bin/mail-classifier-runtime", args,
+      const child = spawn("/run/current-system/sw/bin/flock",
+        ["-n", "-E", "75", join(dirname(MAIL_SYNC_STATUS), "sync.lock"),
+          "/run/current-system/sw/bin/mail-classifier-runtime", ...args],
         {stdio: ["pipe", "ignore", "pipe"], timeout: 30_000});
       let stderr = "";
       child.stderr.on("data", chunk => { stderr = (stderr + String(chunk)).slice(0, 300); });
