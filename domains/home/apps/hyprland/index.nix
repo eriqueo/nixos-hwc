@@ -1,5 +1,5 @@
 # domains/home/apps/hyprland/index.nix
-{ config, lib, pkgs, inputs, osConfig ? {}, ... }:
+{ config, lib, pkgs, inputs, osConfig ? {}, screenshotRoot ? null, ... }:
 let
   cfg = config.hwc.home.apps.hyprland;
   hmLib = import ../../../lib/hm.nix { inherit lib; };
@@ -10,7 +10,8 @@ let
     null
     osCfg;
 
-  captureRoot = lib.attrByPath [ "hwc" "paths" "screenshots" ] null osCfg;
+  captureRoot = if screenshotRoot != null then screenshotRoot
+    else lib.attrByPath [ "hwc" "paths" "screenshots" ] null osCfg;
   capturePkg = pkgs.writeShellApplication {
     name = "hwc-screenshot";
     text = ''exec ${lib.getExe inputs.screenshot-renamer.packages.${pkgs.system}.default} capture --root ${lib.escapeShellArg (if captureRoot == null then "" else toString captureRoot)} --hyprshot ${lib.getExe pkgs.hyprshot} "$@"'';

@@ -41,7 +41,6 @@ let
   laptopMediaRoot = "/home/eric/500_media";
   laptopPhotos = "${laptopMediaRoot}/510_pictures";
   laptopBackup = "/mnt/backup";
-  laptopInbox = "/home/eric/000_inbox";
   laptopWork = "/home/eric/100_hwc";
   laptopPersonal = "/home/eric/200_personal";
   laptopTech = "/home/eric/300_tech";

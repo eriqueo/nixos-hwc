@@ -82,6 +82,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-10-01: Standalone Home Manager receives the system screenshot path explicitly, preserving policy-marked capture across both activation lanes.
 - 2026-10-01: Hyprland capture uses the pinned screenshot-renamer package. Print publishes a hash-bound eligibility marker. Ctrl+Print marks private captures before any OCR or model request.
 - 2026-10-01: Make roadmap continuation explicit when the tracker needs no new cards.
 - 2026-10-01: Pin the tracker decision policy. Cards cover substantive unresolved choices; routine work proceeds and brief clarifications use chat.
