@@ -56,7 +56,9 @@ if [ ! -x "${CLASSIFIER_BIN}" ] || [ ! -S "${SOCKET}" ]; then
     stats: {do_count: 0, did_count: 0, look_count: 0, junk_count: 0}
   }' > "${MAIL_TRIAGE_JSON}.tmp" && mv "${MAIL_TRIAGE_JSON}.tmp" "${MAIL_TRIAGE_JSON}"
 else
-  if "${CLASSIFIER_BIN}" run \
+  # The system units bind this path from hwc.paths. Busy means defer to the
+  # next scheduled run; never race a remote-folder readback or replay a write.
+  if /run/current-system/sw/bin/flock -n -E 75 "${MAIL_SYNC_LOCK_FILE:?mail owner lock binding required}" "${CLASSIFIER_BIN}" run \
       --socket "${SOCKET}" \
       --db "${LEDGER}" \
       --notmuch "${NOTMUCH_BIN}" \
@@ -65,6 +67,11 @@ else
       --email-to-khal "${EMAIL_TO_KHAL}"; then
     log "classified with resident Laya model"
   else
+    classifier_rc=$?
+    if [ "$classifier_rc" -eq 75 ]; then
+      log "mail owner busy; classification deferred to the next scheduled run"
+      exit 75
+    fi
     log "ERROR: classifier run failed; unclassified mail remains DO"
     exit 1
   fi

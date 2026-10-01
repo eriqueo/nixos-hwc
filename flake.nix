@@ -1328,14 +1328,23 @@
       mail-residency-shadow = let
         home = mailHome;
         standalone = self.homeConfigurations."eric@${mailHost}".config;
+        system = self.nixosConfigurations.${mailHost}.config;
+        ownerDir = builtins.dirOf system.hwc.paths.user.mailSyncStatus;
+        producers = with system.systemd.services; [ morning-briefing mail-retriage ];
         fixture = pkgs.writeText "mail-residency-shadow.json" (builtins.toJSON {
           script = home.home.file.".local/bin/sync-mail".text;
           command = home.hwc.mail.classifier.residency.command;
           projection = home.hwc.mail.classifier.projection.command;
           statusFile = home.hwc.mail.mbsync.statusFile;
           maildirRoot = home.hwc.mail.notmuch.maildirRoot;
+          triage = builtins.readFile ./domains/business/morning-briefing/triage-mail.sh;
         });
       in
+      assert lib.assertMsg (lib.all (service:
+        service.environment.MAIL_SYNC_LOCK_FILE == "${ownerDir}/sync.lock"
+        && builtins.elem ownerDir service.serviceConfig.ReadWritePaths) producers
+        && system.systemd.services.mail-retriage.serviceConfig.SuccessExitStatus == 75)
+        "mail-residency-shadow: scheduled classification must share the writable mail owner lock and defer busy runs";
       assert lib.assertMsg (standalone.hwc.mail.classifier.residency.enable
         && standalone.hwc.mail.classifier.projection.enable
         && lib.hasInfix (builtins.unsafeDiscardStringContext standalone.hwc.mail.classifier.residency.command) standalone.home.file.".local/bin/sync-mail".text
@@ -1356,6 +1365,38 @@
 
         fixture = json.loads(pathlib.Path(sys.argv[1]).read_text())
         original = fixture['script']
+        # Exercise the actual scheduled producer against a held kernel lock.
+        # Removing its lock integration must reach the fake effect and fail.
+        import fcntl
+        import socket
+        def classifier_busy(source):
+            with tempfile.TemporaryDirectory() as tmp:
+                root = pathlib.Path(tmp)
+                script = root / 'triage-mail.sh'
+                script.write_text(source.replace('/run/current-system/sw/bin/flock', '${pkgs.util-linux}/bin/flock'))
+                effect = root / 'effect'
+                classifier = root / 'classifier'
+                classifier.write_text('#!/bin/sh\ntouch "$CALLS"\nexit 0\n')
+                classifier.chmod(0o755)
+                model = socket.socket(socket.AF_UNIX)
+                model.bind(str(root / 'model.sock'))
+                with open(root / 'sync.lock', 'w') as lock:
+                    fcntl.flock(lock, fcntl.LOCK_EX)
+                    env = {**os.environ, 'CLASSIFIER_BIN': str(classifier),
+                        'MAIL_CLASSIFIER_SOCKET': str(root / 'model.sock'),
+                        'MAIL_SYNC_LOCK_FILE': str(root / 'sync.lock'), 'CALLS': str(effect)}
+                    result = subprocess.run(['${pkgs.bash}/bin/bash', str(script), 'delta'], env=env, capture_output=True, timeout=10)
+                    assert result.returncode == 75 and not effect.exists(), result.stderr
+                model.close()
+        classifier_busy(fixture['triage'])
+        stripped = fixture['triage'].replace('/run/current-system/sw/bin/flock -n -E 75 "$' + '{MAIL_SYNC_LOCK_FILE:?mail owner lock binding required}" ', "")
+        assert stripped != fixture['triage']
+        try:
+            classifier_busy(stripped)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('removed scheduled classifier lock escaped its effect test')
         assert original.count(fixture['command']) == 1
         assert original.count(fixture['projection']) == 1
 

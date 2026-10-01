@@ -44,6 +44,7 @@ in
       wants = [ "network-online.target" "mail-classifier-model.service" ];
       environment = {
         HOME = paths.user.home;
+        MAIL_SYNC_LOCK_FILE = "${builtins.dirOf paths.user.mailSyncStatus}/sync.lock";
         PROM_URL = cfg.prometheusUrl;
       } // lib.optionalAttrs (cfg.hostHealthFrom != null) {
         BRIEFING_HOST = config.hwc.networking.hosts.servers.${cfg.hostHealthFrom};
@@ -75,6 +76,7 @@ in
           "${agentDir}/logs"
           "${agentDir}/dashboard"
           "/var/lib/hwc/mail-classifier"
+          (builtins.dirOf paths.user.mailSyncStatus)
           "/tmp"
         ];
       };
@@ -101,6 +103,7 @@ in
     systemd.services.mail-retriage = {
       description = "Mail retriage — classify unclassified unread threads on demand";
       environment.HOME = paths.user.home;
+      environment.MAIL_SYNC_LOCK_FILE = "${builtins.dirOf paths.user.mailSyncStatus}/sync.lock";
       after = [ "mail-classifier-model.service" ];
       wants = [ "mail-classifier-model.service" ];
       path = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.notmuch ];
@@ -111,6 +114,7 @@ in
         WorkingDirectory = agentDir;
         ExecStart = "${agentDir}/triage-mail.sh delta";
         TimeoutSec = 300;
+        SuccessExitStatus = 75;
         StandardOutput = "journal";
         StandardError = "journal";
         NoNewPrivileges = true;
@@ -123,6 +127,7 @@ in
           "${agentDir}/logs"
           "${agentDir}/dashboard"
           "/var/lib/hwc/mail-classifier"
+          (builtins.dirOf paths.user.mailSyncStatus)
           "/tmp"
         ];
       };

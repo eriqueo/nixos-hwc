@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Scheduled mail classification reserves the shared mail owner lock before changing tags or transport intents.
+
 Website source, CMS, calculator builds and atomic public releases run on hwc-work; a loopback Caddy origin serves the existing Cloudflare tunnel.
 Calculator presentation tokens, selected states and layout live in `website/calculator/app/src`; pricing and CMS-managed calculator data remain separate from presentation.
 
@@ -42,6 +44,8 @@ business/
 ```
 
 ## Changelog
+- 2026-10-01: Serialize scheduled classification with sync, aerc and MCP;
+  defer busy runs with code 75 and preserve the last published snapshot.
 - 2026-09-30: morning-briefing adds an AGENTS section and alerts from `ws ledger --json`; `today-dispatch` carries the pipeline marker.
 - 2026-09-30: Repair calculator mobile overflow, text and selected-state contrast, accessible field names and autocomplete; retain pricing and CRM submission contracts.
 - 2026-09-28: Accept public Host headers at the loopback website origin; require body/header checks for cutover acceptance.
