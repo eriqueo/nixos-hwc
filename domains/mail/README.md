@@ -43,7 +43,7 @@ mail/
 │       ├── runtime.nix        # Env vars, PATH handling
 │       └── service.nix        # systemd user service unit
 ├── classifier/
-│   ├── index.nix              # controls, contract, observer, label projection and explicit pending-write review
+│   ├── index.nix              # locked controls, transport intents, shadow observers, projection and pending-write review
 │   └── sys.nix                # pinned Laya + local Nomic hybrid service
 ├── calendar/
 │   ├── index.nix              # khal + vdirsyncer integration; extraVdirsyncerPairs option
@@ -119,6 +119,10 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 - 2026-10-01: Added aerc word filtering with `/` and all-mail search with
   `Space f a`, including from the opened viewer. Named image preview,
   MIME-part navigation, and calendar import in the `Space o` menu.
+- 2026-10-01: Pin the tested shared runtime with durable folder intents, disabled
+  phone correction recovery and safe content-only DO fallback. Human lessons and
+  routing remain authoritative. MCP corrections share the sync lock with aerc.
+
 - 2026-10-01: Fetch remote core/Trash membership before moving mail; require durable shared-command transport intents, preserve local stars during prefetch, and verify remote membership before acknowledging moves. Failed prefetch blocks uploads; phone-label support stays disabled.
 
 - 2026-10-01: C12 makes aerc uppercase delete use the shared Trash outcome

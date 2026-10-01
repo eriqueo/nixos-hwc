@@ -487,6 +487,9 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-10-01: Shared mail corrections acquire the same nonblocking sync lock as
+  aerc and transport. Busy commands return failure without an automatic retry.
+
 - 2026-10-01: C12 makes both mail write entry paths use one durable disposition
   adapter. Named archive/Trash/restore use transition/reopen; spam records JUNK.
   Raw inbox/archive/trash/spam writes return a validation error. Selected mail
