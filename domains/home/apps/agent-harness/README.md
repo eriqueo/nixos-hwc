@@ -17,7 +17,7 @@ The fleet control list names hwc-home, hwc-work and hwc-laptop.
 - `state-sync.test.sh` verifies import, links, validation blocking, recovery, commit, pull, and push against a throwaway hub.
 - The pinned `tracker/` serves review cards with cause and fix choices, yes/no certainty and optional notes. Its browser test exercises the existing decision store on disposable project data.
 - `tracker-wait <project>` (pinned `tracker/wait.py`) blocks until Eric presses "Done deciding" on the hub, then prints the next prompt. Agents run it in the background at the end of a run.
-- The pinned `project-tracker` skill and generated phase prompt reserve cards for substantive choices. Agents continue authorized routine work and ask brief clarifications in chat.
+- The pinned `project-tracker` skill and generated phase prompt reserve cards for substantive choices. With no new cards, agents proceed to the next ready roadmap step in the same session. Brief clarifications use chat.
 
 ## State ownership
 
@@ -59,6 +59,7 @@ manifests, state shape, Codex hook trust, commands, and the sync timer. A dirty
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+- 2026-10-01: Continue down the roadmap when no new decision cards are needed. Wait for a decision only when remaining work depends on it.
 - 2026-10-01: Add `tracker-wait`. The hub's "Done deciding — wake the agent" button stamps a handoff, and a waiting agent starts the next phase from it.
 - 2026-10-01: Reserve tracker cards for substantive unresolved choices. The skill and generated prompt retain chat authorization, routine progress and explicit rejected decisions.
 - 2026-10-01: Pin the tracker review form. It shows one ticket at a time, keeps drafts during ticket navigation and restores saved answers through the existing comment API. Plain decision cards and earlier comments remain supported.
