@@ -56,7 +56,9 @@
     };
     devices."hwc-laptop".id = "H3EVGHN-DTDTMWS-INSC2RH-PBRABJX-M3FW7AM-3P2NY3M-X5XLYCK-JD2YRQG";
     folders = {
-      "000_inbox" = { path = "/home/eric/000_inbox"; devices = [ "hwc-home" ]; };
+      # 14 days on all three inbox peers (2026-10-01): 30 held 6.6 GB of
+      # moved media and exports that already had live copies.
+      "000_inbox" = { path = "/home/eric/000_inbox"; devices = [ "hwc-home" ]; versioning.maxAge = "1209600"; };
       "100_hwc"   = { path = "/home/eric/100_hwc";   devices = [ "hwc-home" ]; };
       "300_tech"  = { path = "/home/eric/300_tech";  devices = [ "hwc-home" ]; };
       "700_datax" = {
@@ -420,7 +422,9 @@
       "/var/lib/refinery"    # Refinery board items, specs, reviews, spools
       "/var/lib/sr-gauntlet" # Gauntlet checkouts, datax.env, headless Claude config
       "${config.hwc.automation.srGauntlet.gauntletDir}/state" # CRITICAL case and delivery history
-      "${config.hwc.paths.user.home}/000_inbox/downloads/agent/datax/sr2-investigations/.project-director" # CRITICAL orchestration ledger
+      # CRITICAL orchestration ledger. Lives in the host-bound gauntlets tree,
+      # which 700_datax's Syncthing ignores; it left the synced inbox 2026-10-01.
+      "${config.hwc.paths.user.home}/700_datax/gauntlets/sr2-investigations/.project-director"
       # Service split wave 2 (fused window). hwc-server's borg never covered
       # these three; the databases ride the pg_dumpall above.
       "/var/lib/radicale"    # CalDAV/CardDAV collections (CRITICAL)
