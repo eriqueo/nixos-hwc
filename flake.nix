@@ -40,7 +40,7 @@
     nixpkgs-tailscale.url = "github:NixOS/nixpkgs/4975466d324710c576dc11ad614684e6bd8cad8e";
 
     # Static agent policy and adapters. Mutable memories and the mistakes
-    # ledger live in ~/.agent-state and never enter this Nix input.
+    # ledger live in ~/800_agents/state and never enter this Nix input.
     agent-harness = {
       url = "github:eriqueo/claude-config";
       flake = false;

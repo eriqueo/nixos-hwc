@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-STATE=${AGENT_STATE_DIR:-$HOME/.agent-state}
+STATE=${AGENT_STATE_DIR:-$HOME/800_agents/state}
 SCHEMA="$STATE/.harness-schema.json"
 failures=0
 

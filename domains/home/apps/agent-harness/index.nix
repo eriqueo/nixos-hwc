@@ -196,10 +196,9 @@ in
     enable = lib.mkEnableOption "shared agent harness control plane";
     stateDir = lib.mkOption {
       type = lib.types.str;
-      # TEMPORARY: a compatibility link to "${cfg.workspaceRoot}/state" since
-      # the agent-workspace S2 move. Point this at the real path and drop the
-      # link in S8, once `rg '\.agent-state'` finds nothing in either repo.
-      default = "${home}/.agent-state";
+      default = "${cfg.workspaceRoot}/state";
+      defaultText = lib.literalExpression ''"''${workspaceRoot}/state"'';
+      description = "The agent-state git clone: memories, MISTAKES.md, ledger/ and guard/.";
     };
     workspaceRoot = lib.mkOption {
       type = lib.types.str;
@@ -319,26 +318,25 @@ in
       }) ([ ".claude" ] ++ cfg.claudeConfigDirs)
     );
 
-    # One-time move of the agent-state clone into the workspace root, leaving
-    # stateDir as a link to it. Idempotent: it acts only while stateDir is a
-    # real directory and the destination is free. The sync lock is held so a
-    # timer run cannot straddle the rename.
+    # The S2 one-time move of the state clone into the workspace root ran on all
+    # three hosts and was deleted in S8 (2026-10-01).
     home.activation.agentWorkspace = lib.hm.dag.entryBefore [ "agentHarnessMemoryLinks" ] ''
       root=${lib.escapeShellArg cfg.workspaceRoot}
-      old=${lib.escapeShellArg cfg.stateDir}
       run mkdir -p "$root/projects" "$root/closed" "$root/log"
-      if [ -d "$old/.git" ] && [ ! -L "$old" ] && [ ! -e "$root/state" ]; then
-        (
-          exec 9>>"$old/.git/.sync.lock"
-          ${pkgs.util-linux}/bin/flock -w 120 9
-          run mv "$old" "$root/state"
-          run ln -s "$root/state" "$old"
-        ) || echo "agent-harness: could not move $old to $root/state" >&2
-      fi
     '';
 
     home.activation.agentHarnessMemoryLinks = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      run ${stateSync}/bin/agent-state-sync link || echo "agent-harness: state clone missing; run agent-harness doctor" >&2
+      if run ${stateSync}/bin/agent-state-sync link; then
+        # TEMPORARY (agent-workspace S8): remove the S2 compatibility link now
+        # that every memory link points at stateDir. Delete this block once all
+        # three hosts have switched; the S8 check is that rg finds no old address.
+        legacy=${lib.escapeShellArg "${home}/.agent-state"}
+        if [ -L "$legacy" ] && [ "$(readlink -f "$legacy")" = "$(readlink -f ${lib.escapeShellArg cfg.stateDir})" ]; then
+          run rm "$legacy"
+        fi
+      else
+        echo "agent-harness: state clone missing; run agent-harness doctor" >&2
+      fi
       if [ -d ${lib.escapeShellArg cfg.editableSource}/.git ]; then
         run ${pkgs.git}/bin/git -C ${lib.escapeShellArg cfg.editableSource} config core.hooksPath ${policyHook}/bin
       fi
@@ -363,6 +361,26 @@ in
         OnBootSec = "1min";
         OnUnitActiveSec = cfg.syncInterval;
         Unit = "agent-state-sync.service";
+      };
+    };
+
+    # Hourly per-host audit (agent-workspace S8): writes this host's ledger,
+    # renders LEDGER.md, expires closed/ folders past 30 days and logs findings
+    # to the journal. About 3-4 s per run, measured on all three hosts.
+    systemd.user.services.ws-audit = {
+      Unit.Description = "Agent workspace audit (ledger, closed/ expiry, findings)";
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${ws}/bin/ws audit";
+      };
+    };
+    systemd.user.timers.ws-audit = {
+      Unit.Description = "Hourly agent workspace audit";
+      Install.WantedBy = [ "timers.target" ];
+      Timer = {
+        OnCalendar = "hourly";
+        RandomizedDelaySec = "5min";
+        Persistent = true;
       };
     };
 

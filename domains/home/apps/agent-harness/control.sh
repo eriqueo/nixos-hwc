@@ -3,7 +3,7 @@ set -euo pipefail
 
 EXPECTED=${AGENT_HARNESS_EXPECTED_MANIFEST:?expected manifest is not configured}
 SYSTEM_MANIFEST=${AGENT_HARNESS_SYSTEM_MANIFEST:-/etc/agent-harness-manifest.json}
-STATE=${AGENT_STATE_DIR:-$HOME/.agent-state}
+STATE=${AGENT_STATE_DIR:-$HOME/800_agents/state}
 SOURCE=${AGENT_HARNESS_SOURCE:-$HOME/.claude-config}
 NIXOS=${AGENT_HARNESS_NIXOS:-$HOME/.nixos}
 FLEET=${AGENT_HARNESS_FLEET_HOSTS:?fleet hosts are not configured}

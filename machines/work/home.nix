@@ -27,7 +27,7 @@
   # T3 Code, headless shape — this host's OWN environment, not a move of
   # hwc-server's. Each machine keeps its own ~/.t3 store, signing key and
   # phone pairing; the harness config (~/.claude, ~/.claude-config,
-  # ~/.agent-state) is what carries over, via agent-harness. Reached as
+  # ~/800_agents/state) is what carries over, via agent-harness. Reached as
   # t3-work.hwc.iheartwoodcraft.com (domains/networking/routes.nix).
   hwc.home.apps.t3code = {
     enable = true;
