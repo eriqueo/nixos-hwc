@@ -94,6 +94,13 @@ let
   };
   doctor = pkgs.writeShellScriptBin "agent-harness-doctor" ''exec ${cli}/bin/agent-harness doctor "$@"'';
 
+  # How tracker/t3.py reaches T3 Code: its CLI issues short bearer sessions
+  # from T3's own state dir, so no token is stored.
+  t3Env = {
+    T3CODE_NODE = "${pkgs.nodejs}/bin/node";
+    T3CODE_BIN = "${lib.attrByPath [ "hwc" "home" "apps" "t3code" "repo" ] "${home}/600_apps/t3code" config}/apps/server/dist/bin.mjs";
+  };
+
   # The agent-workspace allocator. Its code is static policy (claude-config
   # bin/ws); the dependencies are declared here so it also runs from the
   # state-sync unit, whose PATH is systemd's alone.
@@ -302,8 +309,14 @@ in
       stateValidator
       (pkgs.writeShellScriptBin "log-mistake" ''exec ${pkgs.python3}/bin/python3 ${harness}/bin/log-mistake "$@"'')
       # Blocks until Eric presses "Done deciding" on the tracker hub, then prints
-      # the next prompt; agents end a run with it in the background.
+      # the next prompt; the fallback for agents outside T3 Code.
       (pkgs.writeShellScriptBin "tracker-wait" ''exec ${pkgs.python3}/bin/python3 ${harness}/tracker/wait.py "$@"'')
+      # Binds the calling T3 thread to a tracker project, so "Done deciding"
+      # posts the next prompt into that thread.
+      (pkgs.writeShellScriptBin "tracker-link" ''
+        export ${lib.concatStringsSep " " (lib.mapAttrsToList (k: v: "${k}=${lib.escapeShellArg v}") t3Env)}
+        exec ${pkgs.python3}/bin/python3 ${harness}/tracker/t3.py "$@"
+      '')
     ]
     ++ lib.optional cfg.cliUpdates.enable cliUpdater;
 
@@ -382,11 +395,13 @@ in
         Description = "HWC project tracker hub (roadmaps, plans, decision cards)";
         After = [ "network-online.target" ];
         # The server and page are pinned harness files; a new revision restarts it.
-        X-Restart-Triggers = [ "${harness}/tracker/server.py" "${harness}/tracker/index.html" ];
+        X-Restart-Triggers = [ "${harness}/tracker/server.py" "${harness}/tracker/index.html" "${harness}/tracker/t3.py" ];
       };
       Service = {
         ExecStart = "${pkgs.python3}/bin/python3 ${harness}/tracker/server.py ${toString cfg.tracker.port}";
-        Environment = [ "TRACKER_ROOT=${cfg.tracker.root}" ];
+        # T3 env: "Done deciding" posts the next prompt into the linked thread.
+        Environment = [ "TRACKER_ROOT=${cfg.tracker.root}" ]
+          ++ lib.mapAttrsToList (k: v: "${k}=${v}") t3Env;
         Restart = "on-failure";
         RestartSec = 5;
       };
