@@ -20,6 +20,7 @@ including DONT KNOW; older four-State snapshots remain readable.
 
 Website source, CMS, calculator builds and atomic public releases run on hwc-work; a loopback Caddy origin serves the existing Cloudflare tunnel.
 Calculator presentation tokens, selected states and layout live in `website/calculator/app/src`; pricing and CMS-managed calculator data remain separate from presentation.
+Calculator measurement uses the website-owned browser contract, one run per reset, and CRM save receipts before showing success.
 
 The morning-briefing host-health option documents permanent source-owned SSH
 reads for journal, VPN and backup detail, alongside central Prometheus probes.
@@ -52,6 +53,7 @@ business/
 - Use the canonical State display names in routing summaries and empty mail views.
 - 2026-10-01: Show DONT KNOW from classifier metadata in briefing counts/tabs;
   bind the canonical contract for unavailable-model snapshots.
+- 2026-10-01: Add isolated calculator measurement and confirmed-save UI; preserve pricing and deployment workflow.
 - 2026-10-01: Serialize scheduled classification with sync, aerc and MCP;
   defer busy runs with code 75 and preserve the last published snapshot.
 - 2026-09-30: morning-briefing adds an AGENTS section and alerts from `ws ledger --json`; `today-dispatch` carries the pipeline marker.

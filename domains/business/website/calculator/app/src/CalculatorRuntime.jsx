@@ -9,7 +9,7 @@
 // (image-cards / cards / multi), gate→appointment funnel, dataLayer
 // analytics fired on the same hooks the GA tagging already expects.
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { T, fonts } from "./theme";
 import { buildSteps, makeCalculator, makeHelpers } from "./calcData";
 import CalculatorLayout from "./CalculatorLayout";
@@ -189,7 +189,13 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
   // Derived once at module-load equivalent — the data prop is stable across renders.
   const STEPS = buildSteps(data);
   const calculateRange = makeCalculator(data);
-  const { getLabel, getAttribution, fireEvent, fmt } = makeHelpers(data);
+  const { getLabel, getAttribution, fireEvent: pushEvent, fmt } = makeHelpers(data);
+  const measurement = window.hwcMeasurement;
+  const [runId, setRunId] = useState(() => measurement?.uuid());
+  const attempts = useRef({});
+  const questionShown = useRef(null);
+  const started = useRef(false);
+  const fireEvent = (name, params) => pushEvent(name, {...params, run_id: runId});
   const calculatorId = data.calculator;
   // Late-binding endpoints — prefer NixOS-injected env (via hwc.business.
   // website.leadsWebhookUrl) over the JSON fallback. The fallback only
@@ -210,6 +216,7 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
   const [reportUrl, setReportUrl] = useState(null);
   const [reportId, setReportId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [saveError, setSaveError] = useState("");
   // Availability-aware booking: real free slots from hwc-crm for the picked date.
   const [slots, setSlots] = useState(null);          // null=none loaded, []=no slots
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -234,6 +241,16 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
   };
 
   const cur = STEPS[step];
+  useEffect(() => {
+    const key = `${runId}:${phase}:${step}`;
+    if (phase === "quiz" && cur && questionShown.current !== key) {
+      questionShown.current = key;
+      fireEvent("calculator_question_viewed", {step_id: cur.id, step_number: step + 1});
+    } else if (phase === "results" && questionShown.current !== key) {
+      questionShown.current = key;
+      fireEvent("calculator_results_viewed");
+    }
+  }, [phase, step, runId]);
   const [lo, hi] = calculateRange(state);
   const hasGateInfo = contact.name.trim() && contact.email.trim();
   const hasPhone = contact.phone.trim();
@@ -261,17 +278,19 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
   });
   const goBack = () => { if (step > 0) fade(() => setStep((s) => s - 1)); };
   const pick = (id, v) => {
-    if (step === 0 && Object.keys(state).length === 0) {
+    if (!started.current) {
+      started.current = true;
       fireEvent("calculator_started", { calculator_type: calculatorId });
     }
     setState((p) => ({ ...p, [id]: v }));
     setTimeout(goNext, 200);
   };
   const toggle = (v) => setState((p) => { const f = p.features || []; return { ...p, features: f.includes(v) ? f.filter((x) => x !== v) : [...f, v] }; });
-  const reset = () => fade(() => { setStep(0); setState({}); setContact({ name: "", email: "", phone: "", notes: "", preferred_date: "", preferred_time: "" }); setPhase("quiz"); setReportUrl(null); setReportId(null); });
+  const reset = () => fade(() => { setRunId(measurement?.uuid()); started.current = false; attempts.current = {}; setSaveError(""); setStep(0); setState({}); setContact({ name: "", email: "", phone: "", notes: "", preferred_date: "", preferred_time: "" }); setPhase("quiz"); setReportUrl(null); setReportId(null); });
 
   const unlockGate = async () => {
-    if (!hasGateInfo) return;
+    if (!hasGateInfo || submitting) return;
+    setSubmitting(true); setSaveError("");
     fireEvent("gate_email_submitted", {
       estimate_low: lo,
       estimate_high: hi,
@@ -290,19 +309,32 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
       ...getAttribution()
     };
     try {
-      const res = await fetch(webhookUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      const respData = await res.json();
+      attempts.current.gate = measurement?.prepare({...payload, run_id: runId}, attempts.current.gate);
+      fireEvent("inquiry_attempted", {form_id: `calculator:${calculatorId}`, submission_id: attempts.current.gate?.id});
+      let respData;
+      if (measurement) respData = await measurement.send(webhookUrl, attempts.current.gate);
+      else {
+        const res = await fetch(webhookUrl, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)});
+        if (!res.ok) throw new Error("save failed");
+        respData = await res.json();
+      }
+      if (!respData.reportId || !respData.reportUrl) throw new Error("missing report");
       setReportUrl(respData.reportUrl || null);
       setReportId(respData.reportId || null);
-    } catch {
-      setReportUrl(null);
+      fireEvent("inquiry_saved", {form_id: `calculator:${calculatorId}`, submission_id: attempts.current.gate?.id, new_case: respData.new_case});
+      fade(() => setPhase("results"));
+    } catch (error) {
+      fireEvent(error.uncertain ? "inquiry_uncertain" : "inquiry_failed", {form_id: `calculator:${calculatorId}`, submission_id: attempts.current.gate?.id, code: error.code || String(error.status || "network")});
+      setSaveError("We could not confirm the save. Your details are still here. Try again, or call 406-551-5061.");
+    } finally {
+      setSubmitting(false);
     }
-    fade(() => setPhase("results"));
   };
 
   const submitLead = async () => {
-    if (!hasPhone) return;
+    if (!hasPhone || submitting) return;
     setSubmitting(true);
+    setSaveError("");
     fireEvent("calculator_appointment_request", {
       calculator_type: calculatorId,
       estimate_low: lo,
@@ -319,18 +351,24 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
       source_page: window.location.pathname,
       ...getAttribution()
     };
-    // Cross-origin fire-and-forget: no-cors + text/plain is a "simple" request
-    // (no CORS preflight), so it reaches crm.iheartwoodcraft.com/hooks/appointment
-    // even though we can't read the opaque response.
-    try { await fetch(webhookApptUrl, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) }); } catch {}
-    setSubmitting(false);
-    fade(() => setPhase("submitted"));
+    try {
+      attempts.current.call = measurement?.prepare({...payload, run_id: runId}, attempts.current.call);
+      fireEvent("inquiry_attempted", {form_id: "appointment", submission_id: attempts.current.call?.id});
+      if (!measurement) throw new Error("Save confirmation unavailable");
+      const saved = await measurement.send(webhookApptUrl, attempts.current.call);
+      fireEvent("inquiry_saved", {form_id: "appointment", submission_id: attempts.current.call.id, new_case: saved.new_case});
+      fade(() => setPhase("submitted"));
+    } catch (error) {
+      fireEvent(error.uncertain ? "inquiry_uncertain" : "inquiry_failed", {form_id: "appointment", submission_id: attempts.current.call?.id, code: error.code || String(error.status || "network")});
+      setSaveError("We could not confirm the call request. Try again, or call 406-551-5061.");
+    } finally { setSubmitting(false); }
   };
 
   const progress = Math.min((step / STEPS.length) * 100, 100);
 
   return (
     <CalculatorLayout sidebar={<SidebarComponent data={data} state={state} step={step} phase={phase} />} lo={lo} hi={hi} step={step} totalSteps={STEPS.length} fmt={fmt} phase={phase} title={data.title}>
+      {saveError && <p role="alert" style={{color: T.text, background: T.white, padding: 16, border: `2px solid ${T.borderSelected}`, borderRadius: 8}}>{saveError}</p>}
       {/* Progress bar */}
       {phase === "quiz" && (
         <div style={{ height: 3, background: T.border, borderRadius: 2, margin: "0 0 2rem", overflow: "hidden" }}>
@@ -392,8 +430,8 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <input type="text" aria-label="Your name" autoComplete="name" placeholder="Your name" value={contact.name} onChange={(e) => setContact((c) => ({ ...c, name: e.target.value }))} style={inputStyle} onFocus={(e) => (e.target.style.borderColor = T.copper)} onBlur={(e) => (e.target.style.borderColor = T.border)} />
               <input type="email" aria-label="Email address" autoComplete="email" placeholder="Email address" value={contact.email} onChange={(e) => setContact((c) => ({ ...c, email: e.target.value }))} style={inputStyle} onFocus={(e) => (e.target.style.borderColor = T.copper)} onBlur={(e) => (e.target.style.borderColor = T.border)} onKeyDown={(e) => e.key === "Enter" && unlockGate()} />
-              <button onClick={unlockGate} disabled={!hasGateInfo} style={{ ...btnPrimary, color: T.white, background: hasGateInfo ? T.charcoal : "#d1d5db", cursor: hasGateInfo ? "pointer" : "not-allowed" }}>
-                Show my estimate
+              <button onClick={unlockGate} disabled={!hasGateInfo || submitting} style={{ ...btnPrimary, color: T.white, background: hasGateInfo ? T.charcoal : "#d1d5db", cursor: hasGateInfo ? "pointer" : "not-allowed" }}>
+                {submitting ? "Saving…" : "Show my estimate"}
               </button>
               <div style={{ fontSize: 11, color: T.textLight, textAlign: "center", marginTop: 2 }}>We'll send your project summary to this email. No spam.</div>
             </div>
@@ -436,7 +474,7 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
             </div>
 
             <div style={{ fontSize: 12, color: T.textLight, textAlign: "center", marginBottom: 16 }}>
-              Project summary sent to <strong>{contact.email}</strong>
+              Project summary saved for <strong>{contact.email}</strong>
             </div>
 
             <div style={{ background: T.copperLight, border: `1px solid ${T.copperMid}`, borderRadius: 12, padding: 24 }}>
@@ -477,7 +515,7 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
             <h3 style={{ fontFamily: fonts.serif, fontSize: 24, fontWeight: 700, color: T.heading, margin: "0 0 8px" }}>Call request sent, {contact.name.split(" ")[0]}</h3>
             <p style={{ fontSize: 14, color: T.textMuted, maxWidth: 400, margin: "0 auto", lineHeight: 1.6 }}>
               {contact.preferred_date
-                ? <>A calendar invite is on its way to <strong>{contact.email}</strong>. Eric will call <strong>{contact.phone}</strong> — check your inbox to confirm the time.</>
+                ? <>Your call request is saved. Eric will confirm the time at <strong>{contact.email}</strong> or <strong>{contact.phone}</strong>.</>
                 : <>Request received. Eric will reach out at <strong>{contact.phone}</strong> to find a time that works.</>
               }
             </p>

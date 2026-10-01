@@ -19,6 +19,7 @@ Publishing builds the calculator then the 11ty site. Preview builds do not chang
 The CMS deploy action performs local publication. The API remains at loopback port 8095 behind its existing private route. Caddy's public origin binds only 127.0.0.1:8096; no public inbound firewall port is added. The tunnel serves `iheartwoodcraft.com` and `www.iheartwoodcraft.com` from this origin.
 
 ## Changelog
+- 2026-10-01: Calculator runs include question views and receipt checks; uncertain saves retain inputs for retry. Browser vocabulary comes from website data. Preview only.
 - 2026-10-01: Render responsive calculator photo cards from canonical presentation data; preserve estimates and lead fields.
 - 2026-09-28: Move public origin and publishing to hwc-work; retain page redirects/report links; derive tool and calculator paths from the canonical source.
 - 2026-09-18: Calculator lead intake moved to hwc-crm.

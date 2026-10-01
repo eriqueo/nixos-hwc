@@ -46,7 +46,7 @@ export const bathroomSidebarContent = {
       },
       {
         heading: "Aging in place?",
-        text: "Walk-in showers with grab bars and bench seating add safety without sacrificing style. We're pursuing UDCP certification for universal design."
+        text: "Walk-in showers with grab bars and bench seating add safety without sacrificing style. Eric holds NARI's Universal Design Certified Professional (UDCP) credential."
       }
     ]
   },
@@ -156,7 +156,7 @@ export const deckSidebarContent = {
       },
       {
         heading: "Foundation requirements",
-        text: "Ground-level decks can use deck blocks. Higher decks need concrete footings below the 36-inch frost line — that's significant excavation."
+        text: "Ground-level decks can use deck blocks. Higher decks need concrete footings below the 48-inch frost line — that's significant excavation."
       },
       {
         heading: "Permits",
