@@ -520,7 +520,7 @@
         pi = pkgs.callPackage ./domains/home/apps/pi/parts/package.nix {};
         python = pkgs.python3.withPackages (ps: [ ps.pillow ]);
       in
-      assert lib.assertMsg (lib.length (lib.filter (host: host.config.hwc.automation.screenshotRenamer.enable)
+      assert lib.assertMsg (lib.length (lib.filter (host: lib.attrByPath [ "hwc" "automation" "screenshotRenamer" "enable" ] false host.config)
           (lib.attrValues self.nixosConfigurations)) == 1
         && c.hwc.automation.screenshotRenamer.enable
         && c.hwc.automation.screenshotRenamer.mode == "shadow"
