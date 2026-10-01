@@ -1,3 +1,4 @@
+import 'virtual:hwc-measurement'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import CalculatorRuntime from './CalculatorRuntime'
