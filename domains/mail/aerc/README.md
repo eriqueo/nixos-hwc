@@ -310,7 +310,7 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 ## Adding a New Tag
 
 1. For a shared mail tag, edit `domains/mail/taxonomy/data.nix`; for an
-   aerc-only fact, use `<Space>M` to save `parts/tags-custom.json`, then ask the agent to commit and deploy it. Apply it immediately with `:modify-labels +<tag>`.
+   aerc-only fact, use `Space m t n` to save `parts/tags-custom.json`, then ask the agent to commit and deploy it. Apply it immediately with `:modify-labels +<tag>`.
 2. Rebuild — query-map, folder styles, and bindings update automatically.
 3. If a Proton label exists, the post-new hook discovers it from
    `proton/Labels/<name>/`.

@@ -1060,8 +1060,12 @@
             for idx, subject in enumerate(['Zebra needle', 'Alpha', 'Middle']):
                 (mail / 'inbox' / 'cur' / f'remap-{idx}:2,').write_text(
                     f'From: sender@example.com\nTo: test@example.com\nMessage-ID: <remap-{idx}@example.com>\nSubject: {subject}\nDate: Thu, 1 Oct 2026 12:0{idx}:00 -0600\n\nfixture body\n')
+            (mail / 'inbox' / 'cur' / 'remap-reply:2,').write_text(
+                'From: sender@example.com\nTo: test@example.com\nMessage-ID: <remap-reply@example.com>\nIn-Reply-To: <remap-1@example.com>\nReferences: <remap-1@example.com>\nSubject: Re: Alpha\nDate: Thu, 1 Oct 2026 12:03:00 -0600\n\nfixture reply\n')
             nm('new')
-            nm('tag', '+remap-fixture', '+state/do', '--', 'id:remap-*')
+            for mid in ['remap-0', 'remap-1', 'remap-2', 'remap-reply']:
+                nm('tag', '+remap-fixture', '+state/do', '--', f'id:{mid}@example.com')
+            assert nm('count', 'tag:remap-fixture') == '4'
             querymap = root / 'querymap'
             querymap.write_text('do=tag:remap-fixture\n')
             accounts = root / 'accounts.conf'
@@ -1094,6 +1098,11 @@
                 assert 'Zebra needle' in screen(), screen()
                 output = keys(' sa')
                 assert output.index('Alpha') < output.index('Middle') < output.index('Zebra needle'), output
+                keys(':select 0')
+                special('Enter')
+                output = keys(' tt')
+                assert 'Re: Alpha' not in output and 'Alpha' in output, output
+                assert 'Re: Alpha' in keys(' tt')
                 assert ':filter' in keys(' ff')
                 special('Escape')
                 assert ':query -f -n mail-search' in keys(' fa')
