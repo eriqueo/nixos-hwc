@@ -430,6 +430,7 @@
         pkgs = m.hmPkgs;
         extraSpecialArgs = {
           inherit inputs;
+          screenshotRoot = self.nixosConfigurations."hwc-${name}".config.hwc.paths.screenshots;
           nixosApiVersion = ch.apiVersion;
         };
         modules =
@@ -519,12 +520,16 @@
         pi = pkgs.callPackage ./domains/home/apps/pi/parts/package.nix {};
         python = pkgs.python3.withPackages (ps: [ ps.pillow ]);
       in
-      assert lib.assertMsg (c.hwc.automation.screenshotRenamer.enable
+      assert lib.assertMsg (lib.length (lib.filter (host: host.config.hwc.automation.screenshotRenamer.enable)
+          (lib.attrValues self.nixosConfigurations)) == 1
+        && c.hwc.automation.screenshotRenamer.enable
         && c.hwc.automation.screenshotRenamer.mode == "shadow"
         && lib.elem "${c.hwc.paths.user.inbox}/screenshots" worker.BindReadOnlyPaths
         && lib.hasInfix " shadow" worker.ExecStart
         && c.systemd.timers.screenshot-renamer-check.wantedBy == [ "timers.target" ]
-        && lib.any (b: lib.hasInfix "hwc-screenshot" b && lib.hasInfix "--private" b) binds)
+        && lib.any (b: lib.hasInfix "hwc-screenshot" b && lib.hasInfix "--private" b) binds
+        && lib.any (b: lib.hasInfix "hwc-screenshot" b && lib.hasInfix "--private" b)
+          self.homeConfigurations."eric@hwc-laptop".config.wayland.windowManager.hyprland.settings.bind)
         "screenshot wiring must remain active, read-only, monitored and capture privacy bound";
       pkgs.runCommand "screenshot-renamer-contract" {
         nativeBuildInputs = [ python pi pkgs.tesseract ];

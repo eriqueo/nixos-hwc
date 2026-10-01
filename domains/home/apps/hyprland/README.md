@@ -29,6 +29,7 @@ Every binding is declared **once** in `parts/behavior.nix`, as a record carrying
 It is deliberately *not* read from `hyprctl binds -j`: that API emits malformed JSON in Hyprland 0.56.0 (keys and values misaligned — `"keycode": RETURN`, `"allow_input_capture": ,`), and carries no descriptions, so the best it could ever print is `exec hyprland-monitor-toggle`.
 
 ## Changelog
+- 2026-10-01: Standalone Home Manager receives the system screenshot path explicitly, preserving policy-marked capture across both activation lanes.
 - 2026-10-01: Print uses `hwc-screenshot` with a hash-bound policy marker. Ctrl+Print makes a private capture; the worker excludes it before OCR. Both bindings and their legend come from `parts/behavior.nix`.
 - 2026-09-30: Float Bitwarden, Proton Pass and Authenticator at monitor-relative dimensions. Their tiled windows previously split the browser and password-manager content into cramped half-screen columns. Headless Hyprland reproduced the browser narrowing to 933 pixels; nine cases across 1920×1080, 2560×1600 and 1280×800 at scale 1.25 fit the monitor and retained the browser's full tile.
 - 2026-09-30: Start enabled credential clients in the Hyprland session. Their native tray icons disappeared after reboot because installing the apps did not launch them; Authenticator's static Waybar button remained. Live registration changed from an empty tray to verified Bitwarden and Proton Pass items after one launch per app.
