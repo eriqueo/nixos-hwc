@@ -1327,6 +1327,7 @@
         binds = home.home.file.".config/aerc/binds.conf".text;
         aercConf = home.home.file.".config/aerc/aerc.conf".text;
         queries = home.home.file.".config/aerc/notmuch-queries".text;
+        queryHas = name: query: lib.elem "${name}=${query}" (lib.splitString "\n" queries);
         hook = home.home.file."/home/eric/400_mail/Maildir/.notmuch/hooks/post-new".text;
         bindLines = lib.splitString "\n" binds;
         bindCount = needle: lib.length (lib.filter (line: lib.hasInfix needle line) bindLines);
@@ -1359,15 +1360,15 @@
         "mail-workflow-v2: marked-message archive/trash controls changed unexpectedly";
       assert lib.assertMsg (lib.hasInfix "sort = -r date" aercConf)
         "mail-workflow-v2: newest-first is not the default sort";
-      assert lib.assertMsg (lib.hasInfix "do = tag:state/do" queries
-        && lib.hasInfix "did = tag:state/did" queries
-        && lib.hasInfix "look = tag:state/look" queries
-        && lib.hasInfix "junk = tag:state/junk" queries)
+      assert lib.assertMsg (queryHas "do" "tag:state/do"
+        && queryHas "did" "tag:state/did"
+        && queryHas "look" "tag:state/look"
+        && queryHas "junk" "tag:state/junk")
         "mail-workflow-v2: workflow state views regressed";
       assert lib.assertMsg (!(lib.hasInfix "category/" queries)
         && !(lib.hasInfix "attention/" queries)
         && !(lib.hasInfix "tag:queue" queries)
-        && lib.hasInfix "all            = NOT tag:trash" queries)
+        && queryHas "all" "NOT tag:trash")
         "mail-workflow-v2: legacy workflow/category folders returned";
       assert lib.assertMsg (lib.hasInfix "index-columns = from<20,subject<*,date<10,domain<9,state<5,tags<24" aercConf
         && lib.hasInfix "column-domain" aercConf
