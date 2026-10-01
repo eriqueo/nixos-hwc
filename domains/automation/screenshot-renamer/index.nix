@@ -75,8 +75,11 @@ in {
     # archived snapshots under its existing bounded prune policy.
     # The parent state directory already enters Borg. Keep live WAL files and
     # temporary credentials out; only consistent backups and recovery survive.
+    # CRITICAL inputs: Syncthing is replication, so preserve independent archives.
+    hwc.data.borg.sources = lib.mkAfter [ root ];
     hwc.data.borg.excludePatterns = lib.mkAfter [
       "${state}/ledger.sqlite*" "${state}/worker.lock" "${state}/work-*"
+      "${state}/backups/*.new*" "${root}/.capture-*"
     ];
     systemd.tmpfiles.rules = [
       "d ${state} 0700 eric users -"

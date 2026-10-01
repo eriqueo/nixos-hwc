@@ -527,6 +527,7 @@
         && c.hwc.automation.screenshotRenamer.mode == "shadow"
         && lib.elem "${c.hwc.paths.user.inbox}/screenshots" worker.BindReadOnlyPaths
         && lib.hasInfix " shadow" worker.ExecStart
+        && lib.elem "${c.hwc.paths.user.inbox}/screenshots" c.services.borgbackup.jobs.hwc-backup.paths
         && lib.elem "${c.hwc.paths.state}/screenshot-renamer/work-*" c.services.borgbackup.jobs.hwc-backup.exclude
         && lib.elem "${c.hwc.paths.state}/screenshot-renamer/ledger.sqlite*" c.services.borgbackup.jobs.hwc-backup.exclude
         && c.systemd.timers.screenshot-renamer-check.wantedBy == [ "timers.target" ]
