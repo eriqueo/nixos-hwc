@@ -181,8 +181,7 @@
           {mods = mod;            key = "G"; act = "exec,gpu-toggle";              desc = "Toggle GPU mode (integrated / discrete)";}
           {mods = ""; key = "PRINT"; act = "exec," + (if captureCommand == null then "hyprshot -m region -o $HWC_SCREENSHOTS_DIR/" else captureCommand); desc = "Screenshot a region";}
         ] ++ lib.optional (captureCommand != null)
-          {mods = "CTRL"; key = "PRINT"; act = "exec,${captureCommand} --private"; desc = "Private screenshot (keep OCR local)";} ++ [
-        ]
+          {mods = "CTRL"; key = "PRINT"; act = "exec,${captureCommand} --private"; desc = "Private screenshot (skip OCR and naming)";}
         ++ lib.optionals gsrEnabled [
           {mods = "SHIFT"; key = "PRINT"; act = "exec,gsr-toggle"; desc = "Start / stop screen recording";}
         ]
