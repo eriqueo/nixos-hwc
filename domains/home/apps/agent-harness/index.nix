@@ -302,6 +302,9 @@ in
       stateSync
       stateValidator
       (pkgs.writeShellScriptBin "log-mistake" ''exec ${pkgs.python3}/bin/python3 ${harness}/bin/log-mistake "$@"'')
+      # Blocks until Eric presses "Done deciding" on the tracker hub, then prints
+      # the next prompt; agents end a run with it in the background.
+      (pkgs.writeShellScriptBin "tracker-wait" ''exec ${pkgs.python3}/bin/python3 ${harness}/tracker/wait.py "$@"'')
     ]
     ++ lib.optional cfg.cliUpdates.enable cliUpdater;
 
