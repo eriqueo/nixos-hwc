@@ -27,7 +27,7 @@ mail/
 │   ├── package.nix            # Forked aerc package from the flake input
 │   └── parts/
 │       ├── config.nix         # aerc.conf, accounts.conf, queries, stylesets, templates
-│       ├── binds.nix          # Shared find menu, named viewing actions + ov pager config
+│       ├── binds.nix          # Quiet workflow actions, shared find/view menus + ov pager config
 │       ├── plain-text-filter.py # Safe text, labeled links, optional embedded pictures
 │       ├── appearance.nix     # Palette-driven styleset
 │       ├── tags.nix           # Historical styles, additive facts and safe metadata clear
@@ -116,6 +116,9 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-10-01: Archive, Trash and State/Domain corrections use aerc's native
+  background pipe instead of opening results tabs; failed commands remain in
+  the status line, and interactive review helpers keep their terminal UI.
 
 - 2026-10-01: Pin the shared IMAP mailbox-name encoding repair. The disabled
   phone observer now uses the label adapter's string encoder for All Mail.

@@ -24,7 +24,7 @@ aerc/
   parts/
     config.nix           # Client config + shared current/history search registry
     plain-text-filter.py # Safe plain/HTML text, links, and optional embedded-image view
-    binds.nix            # Shared find menu, named viewing actions, binds.conf + ov pager config
+    binds.nix            # Quiet workflow actions, find/view menus, binds.conf + ov pager config
     appearance.nix       # hwc styleset (palette-driven)
     tags.nix             # Historical styles + additive custom facts and safe clearing
     tags-custom.json     # User-defined aerc-only tags
@@ -77,6 +77,10 @@ commands for normal workflow decisions.
 
 A folded row expands to its complete thread. When `J`/`K` marks exist, `a` or
 `d` applies thread-wide to the marked set through the classifier ledger.
+
+Archive, Trash and State/Domain corrections run without opening a results tab.
+Aerc reports completion or failure in its status line. Interactive rule review,
+calendar/task review, URL pickers and image previews keep their terminal UI.
 
 ### Current and historical searches
 
@@ -316,6 +320,8 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
    `proton/Labels/<name>/`.
 
 ## Changelog
+- 2026-10-01: Run completed workflow actions with native background pipes in
+  both list and viewer contexts; retain visible failures and interactive reviews.
 - 2026-10-01: Apply the approved unified leader map, add alphabetical subject sort,
   retire bare i/I, and generate bindings, group labels and help from shared grammar.
 

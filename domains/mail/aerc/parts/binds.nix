@@ -7,6 +7,11 @@ let
   # these commands are used only by interactive aerc bindings.
   archiveCmd = "mail-classifier transition --outcome done";
   trashCmd = "mail-classifier transition --outcome trash";
+  # Completed decisions need no terminal UI. Native background pipe preserves
+  # full-message and marked selection semantics and reports failures in status.
+  workflowPipe = command: "pipe -b -m ${command}";
+  archivePipe = workflowPipe archiveCmd;
+  trashPipe = workflowPipe trashCmd;
   # Native copy-link scans raw HTML and can retain &amp; in a target. Parse
   # the complete MIME message with urlscan for both viewer shortcuts instead.
   urlPicker = ":pipe -m ${pkgs.urlscan}/bin/urlscan --dedupe -f '${config.home.homeDirectory}/.local/bin/hwc-open {}'<Enter>";
@@ -25,9 +30,9 @@ let
   menus = builtins.mapAttrs (_: choices: map (c: c // { command = native.${c.action}; }) choices)
     grammar.aerc.menus // {
     state = map (state: { key = stateKeys.${state}; desc = lib.toUpper state;
-      command = "pipe -m mail-classifier correct --state ${state}"; }) mailContract.states;
+      command = workflowPipe "mail-classifier correct --state ${state}"; }) mailContract.states;
     domain = map (domain: { key = domainKeys.${domain}; desc = domain;
-      command = "pipe -m mail-classifier correct --domain ${domain}"; }) mailContract.domains;
+      command = workflowPipe "mail-classifier correct --domain ${domain}"; }) mailContract.domains;
     domain-filter = map (domain: { key = domainKeys.${domain}; desc = domain;
       command = "filter tag:${mailContract.domainTagPrefix}${domain}"; }) mailContract.domains;
     add-fact = map (t: { key = t.spaceKey; desc = "+${t.tag}";
@@ -47,7 +52,7 @@ let
     task = "pipe -m email-to-task"; calendar = "pipe -m email-to-khal";
     paperless = "pipe -m email-to-paperless";
     compose = "compose"; forward = "forward"; reply = "reply"; reply-all = "reply -aq";
-    archive = "pipe -m ${archiveCmd}"; trash = "pipe -m ${trashCmd}";
+    archive = archivePipe; trash = trashPipe;
     unsubscribe = "unsubscribe -s"; read = "read"; unread = "unread";
     rule-create = "pipe -m mail-classifier route-review";
     rule-manage = "term mail-classifier route-manage";
@@ -115,14 +120,14 @@ ${tabBinds}
       K = :mark -t<Enter>:prev<Enter>
       V = :mark -v<Enter>
       r = :read<Enter>
-      D = :pipe -m ${trashCmd}<Enter> # Trash (record outcome)
+      D = :${trashPipe}<Enter> # Trash (record outcome)
       u = :unread<Enter>
 
       # Static system tags (single-key for speed)
       # Native marked-or-selected semantics preserve J/K bulk selections.
       # A selected folded row expands to its complete thread.
-      a = :pipe -m ${archiveCmd}<Enter>
-      d = :pipe -m ${trashCmd}<Enter>
+      a = :${archivePipe}<Enter>
+      d = :${trashPipe}<Enter>
 
       c = :compose<Enter>
       C = :reply -aq<Enter>
@@ -141,8 +146,8 @@ ${tabBinds}
       r = :reply<Enter>
       R = :reply -aq<Enter>
       f = :forward<Enter>
-      a = :pipe -m ${archiveCmd}<Enter>:close<Enter>
-      d = :pipe -m ${trashCmd}<Enter>:close<Enter>
+      a = :${archivePipe}<Enter>:close<Enter>
+      d = :${trashPipe}<Enter>:close<Enter>
       H = :toggle-headers<Enter>
       u = ${urlPicker}
       / = :toggle-key-passthrough<Enter>/
