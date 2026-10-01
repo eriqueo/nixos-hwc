@@ -63,6 +63,8 @@ in {
         message = "Screenshot processing must run beside the single-owner inbox janitor"; }
       { assertion = config.hwc.data.borg.enable;
         message = "Screenshot receipts and recovery copies require Borg backup"; }
+      { assertion = lib.elem (toString paths.state) config.hwc.data.borg.sources;
+        message = "Screenshot consistent snapshots require the parent state Borg source"; }
       { assertion = paths.state == "/var/lib/hwc";
         message = "Screenshot StateDirectory must match hwc.paths.state"; }
     ];
