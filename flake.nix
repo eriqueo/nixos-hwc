@@ -992,10 +992,10 @@
           "<Space>fT = :query -f -n tag-search tag:"
           "<Space>fc = :clear -s<Enter>"
           "<Space>mu = :unsubscribe -s<Enter>"
-          "D = :pipe -m mail-classifier transition --outcome trash<Enter>"
-          "pipe -m mail-classifier correct --state do"
-          "pipe -m mail-classifier correct --state did"
-          "pipe -m mail-classifier correct --domain datax"
+          "D = :pipe -b -m mail-classifier transition --outcome trash<Enter>"
+          "pipe -b -m mail-classifier correct --state do"
+          "pipe -b -m mail-classifier correct --state did"
+          "pipe -b -m mail-classifier correct --domain datax"
           "pipe -m mail-classifier route-review"
           "term mail-classifier route-manage"
         ];
@@ -1040,7 +1040,7 @@
         configFile = home.home.file.".config/aerc/aerc.conf".source;
       } ''
         python3 - "$queries" "$bindsFile" "$configFile" <<'PY'
-        import os, pathlib, shlex, subprocess, sys, tempfile, time
+        import json, os, pathlib, shlex, subprocess, sys, tempfile, time
         queries = dict(line.split('=', 1) for line in pathlib.Path(sys.argv[1]).read_text().splitlines()
                        if line and not line.startswith('#'))
         assert all(':' not in name for name in queries), queries
@@ -1147,6 +1147,42 @@
             os.environ['SHELL'] = '${pkgs.bash}/bin/bash'
             os.environ['TERM'] = 'xterm-256color'
             os.environ['TZ'] = 'UTC'
+            # Exercise production bindings without touching the live ledger.
+            # A noisy successful child exposes foreground terminal regressions.
+            fixture_bin = root / 'bin'
+            fixture_bin.mkdir()
+            call_file = root / 'quiet-call.json'
+            failure_file = root / 'quiet-failure'
+            classifier = fixture_bin / 'mail-classifier'
+            classifier.write_text(
+                '#!${pkgs.python3}/bin/python3\n'
+                'import json, pathlib, sys\n'
+                f'call = pathlib.Path({str(call_file)!r})\n'
+                'message = sys.stdin.read()\n'
+                'call.write_text(json.dumps({"args": sys.argv[1:], "message": message}))\n'
+                'print("QUIET_ACTION_RESULT")\n'
+                f'sys.exit(42 if pathlib.Path({str(failure_file)!r}).exists() else 0)\n')
+            classifier.chmod(0o755)
+            os.environ['PATH'] = str(fixture_bin) + os.pathsep + os.environ['PATH']
+            def quiet_action(chord, expected, option=None):
+                call_file.unlink(missing_ok=True)
+                keys(chord)
+                if option is not None:
+                    keys(option)
+                    special('Enter')
+                for _ in range(30):
+                    if call_file.exists():
+                        break
+                    time.sleep(0.1)
+                assert call_file.exists(), screen()
+                call = json.loads(call_file.read_text())
+                assert call['args'] == expected, call
+                assert 'Message-ID: <remap-0@example.com>' in call['message'], call
+                time.sleep(0.1)
+                output = screen()
+                assert 'QUIET_ACTION_RESULT' not in output and 'mail-classifier <' not in output, output
+                assert 'Zebra needle' in output, output
+                return output
             try:
                 tm('new-session', '-d', '-s', 'fixture', '-x', '150', '-y', '40', command)
                 for _ in range(20):
@@ -1188,9 +1224,22 @@
                 current = nm('search', '--output=tags', 'id:remap-0@example.com').splitlines()
                 assert 'ads' not in current and 'state/do' in current, current
                 assert ':filter' in keys(' ff')
+                special('Escape')
+                for chord, outcome in [('a', 'done'), ('d', 'trash'), ('D', 'trash'),
+                                       (' ma', 'done'), (' dd', 'trash')]:
+                    quiet_action(chord, ['transition', '--outcome', outcome])
+                quiet_action(' ms', ['correct', '--state', 'look'], 'l')
+                quiet_action(' md', ['correct', '--domain', 'personal'], 'p')
+                for chord, outcome in [('a', 'done'), ('d', 'trash')]:
+                    assert 'fixture body' in special('Enter')
+                    output = quiet_action(chord, ['transition', '--outcome', outcome])
+                    assert 'fixture body' not in output, output
+                failure_file.touch()
+                output = quiet_action('a', ['transition', '--outcome', 'done'])
+                assert 'exit status 42' in output, output
             finally:
                 subprocess.run(['tmux', '-S', socket, 'kill-server'], capture_output=True)
-        print('generated views, legacy search, real metadata clear, stars and physical copies pass')
+        print('generated views, real metadata clear, quiet action tabs and visible failures pass')
         PY
         touch "$out"
       '';
@@ -1561,8 +1610,8 @@
         hook = home.home.file."/home/eric/400_mail/Maildir/.notmuch/hooks/post-new".text;
         bindLines = lib.splitString "\n" binds;
         bindCount = needle: lib.length (lib.filter (line: lib.hasInfix needle line) bindLines);
-        archiveDisposition = "      a = :pipe -m mail-classifier transition --outcome done<Enter>";
-        trashDisposition = "      d = :pipe -m mail-classifier transition --outcome trash<Enter>";
+        archiveDisposition = "      a = :pipe -b -m mail-classifier transition --outcome done<Enter>";
+        trashDisposition = "      d = :pipe -b -m mail-classifier transition --outcome trash<Enter>";
         requiredBinds = [
           "<Space>gA = :cf all<Enter>"
           "<Space>sf = :sort from -r date<Enter>"
@@ -1586,8 +1635,8 @@
         && bindCount "<Space>ta = :fold -a<Enter>" == 1
         && !(lib.hasInfix ":toggle-threads<Enter>" binds))
         "mail-workflow-v2: thread fold controls changed unexpectedly";
-      assert lib.assertMsg (bindCount "<Space>ma = :pipe -m mail-classifier transition --outcome done<Enter>" == 2
-        && bindCount "<Space>dd = :pipe -m mail-classifier transition --outcome trash<Enter>" == 2)
+      assert lib.assertMsg (bindCount "<Space>ma = :pipe -b -m mail-classifier transition --outcome done<Enter>" == 2
+        && bindCount "<Space>dd = :pipe -b -m mail-classifier transition --outcome trash<Enter>" == 2)
         "mail-workflow-v2: marked-message archive/trash controls changed unexpectedly";
       assert lib.assertMsg (lib.hasInfix "sort = -r date" aercConf)
         "mail-workflow-v2: newest-first is not the default sort";
