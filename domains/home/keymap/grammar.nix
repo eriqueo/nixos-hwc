@@ -21,8 +21,8 @@
 #   leader / metaLeader : the two prefixes (Nix-swappable in one edit).
 #   groups              : letter -> mnemonic name (the contract; meaning is fixed).
 #   shared              : Space-layer bindings present in >1 app.
-#   major.<app>         : that app's `Space m` (major-mode) table; aerc = "tags"
-#                         meaning "delegated to domains/mail/aerc/parts/tags.nix".
+#   major.<app>         : that app's `Space m` (major-mode) table.
+#   aerc                : mail action metadata; native realization in mail/aerc.
 #   listVerbs           : bare CRUD verbs shared by todui + khalt.
 #   columns             : the two-column nav convention (primary vs side column).
 #   meta                : the Alt+Space jump map (key -> pane target).

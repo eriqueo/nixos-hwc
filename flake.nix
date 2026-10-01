@@ -979,12 +979,14 @@
         && !(registry.searches ? "label:finance"))
         "aerc-bindings: current axes and historical search registry drifted";
       pkgs.runCommand "aerc-bindings" {
-        nativeBuildInputs = [ pkgs.python3 pkgs.notmuch ];
+        nativeBuildInputs = [ pkgs.python3 pkgs.notmuch pkgs.tmux pkgs.bash
+          (lib.findFirst (p: (p.pname or "") == "aerc") null home.home.packages) ];
         queries = home.home.file.".config/aerc/notmuch-queries".source;
         bindsFile = home.home.file.".config/aerc/binds.conf".source;
+        configFile = home.home.file.".config/aerc/aerc.conf".source;
       } ''
-        python3 - "$queries" "$bindsFile" <<'PY'
-        import os, pathlib, shlex, subprocess, sys, tempfile
+        python3 - "$queries" "$bindsFile" "$configFile" <<'PY'
+        import os, pathlib, shlex, subprocess, sys, tempfile, time
         queries = dict(line.split('=', 1) for line in pathlib.Path(sys.argv[1]).read_text().splitlines()
                        if line and not line.startswith('#'))
         assert all(':' not in name for name in queries), queries
@@ -1053,6 +1055,68 @@
             assert all(path.endswith(':2,F') for path in after), after
             old_tags = set(nm('search', '--output=tags', 'id:old@example.com').splitlines())
             assert {'work', 'family', 'finance', 'flagged'} <= old_tags, old_tags
+            # Exercise the real key decoder and native dialogs on isolated mail.
+            # This catches Notmuch's native thread fetch ignoring sort criteria.
+            for idx, subject in enumerate(['Zebra needle', 'Alpha', 'Middle']):
+                (mail / 'inbox' / 'cur' / f'remap-{idx}:2,').write_text(
+                    f'From: sender@example.com\nTo: test@example.com\nMessage-ID: <remap-{idx}@example.com>\nSubject: {subject}\nDate: Thu, 1 Oct 2026 12:0{idx}:00 -0600\n\nfixture body\n')
+            nm('new')
+            nm('tag', '+remap-fixture', '+state/do', '--', 'id:remap-*')
+            querymap = root / 'querymap'
+            querymap.write_text('do=tag:remap-fixture\n')
+            accounts = root / 'accounts.conf'
+            accounts.write_text(f'[fixture]\nsource=notmuch://{mail}\nfrom=Test <test@example.com>\nquery-map={querymap}\nfolders=do\ndefault=do\n')
+            conf = root / 'aerc.conf'
+            # Built-in style only; keyboard and threading settings are unchanged.
+            conf.write_text(pathlib.Path(sys.argv[3]).read_text().replace('styleset-name = hwc', 'styleset-name = default'))
+            socket = str(root / 'tmux.sock')
+            def tm(*args):
+                return subprocess.check_output(['tmux', '-S', socket, '-f', '/dev/null', *args], text=True)
+            def screen():
+                return tm('capture-pane', '-p', '-t', 'fixture')
+            def keys(value):
+                tm('send-keys', '-t', 'fixture', '-l', value)
+                time.sleep(0.7)
+                return screen()
+            def special(value):
+                tm('send-keys', '-t', 'fixture', value)
+                time.sleep(0.7)
+                return screen()
+            command = shlex.join(['aerc', '-I', '-C', str(conf), '-B', sys.argv[2], '-A', str(accounts)])
+            os.environ['SHELL'] = '${pkgs.bash}/bin/bash'
+            os.environ['TERM'] = 'xterm-256color'
+            try:
+                tm('new-session', '-d', '-s', 'fixture', '-x', '150', '-y', '40', command)
+                for _ in range(20):
+                    time.sleep(0.3)
+                    if 'Zebra needle' in screen():
+                        break
+                assert 'Zebra needle' in screen(), screen()
+                output = keys(' sa')
+                assert output.index('Alpha') < output.index('Middle') < output.index('Zebra needle'), output
+                assert ':filter' in keys(' ff')
+                special('Escape')
+                assert ':query -f -n mail-search' in keys(' fa')
+                keys('needle')
+                output = special('Enter')
+                assert 'Zebra needle' in output and 'Alpha' not in output, output
+                assert 'fixture body' in special('Enter')
+                assert 'local image preview' in keys(' w').lower()
+                special('Escape')
+                output = keys(' ms')
+                assert all(word in output for word in ['DO', 'DID', 'LOOK', 'JUNK']), output
+                special('Escape')
+                assert 'Add optional fact' in keys(' mt')
+                output = keys('a')
+                assert '+ads' in output and '+keep' in output, output
+                keys('g')
+                assert 'ads' in nm('search', '--output=tags', 'id:remap-0@example.com').splitlines()
+                keys(' mtx')
+                current = nm('search', '--output=tags', 'id:remap-0@example.com').splitlines()
+                assert 'ads' not in current and 'state/do' in current, current
+                assert ':filter' in keys(' ff')
+            finally:
+                subprocess.run(['tmux', '-S', socket, 'kill-server'], capture_output=True)
         print('generated views, legacy search, real metadata clear, stars and physical copies pass')
         PY
         touch "$out"
