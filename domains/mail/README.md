@@ -9,6 +9,8 @@ Self-contained email domain: client UI, accounts, sync, indexing, sending, and b
 
 ## Structure
 
+Mailbox movement runs through classifier transport intents, marker-only afew rules, and ordered mbsync prefetch/reconciliation/readback.
+
 Radicale clients in `calendar`, `tasks`, and `contacts` render credential argv
 from `domains/lib/hm.nix`, also consumed by todui's list-deletion launcher.
 ```
@@ -117,6 +119,7 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 - 2026-10-01: Added aerc word filtering with `/` and all-mail search with
   `Space f a`, including from the opened viewer. Named image preview,
   MIME-part navigation, and calendar import in the `Space o` menu.
+- 2026-10-01: Fetch remote core/Trash membership before moving mail; require durable shared-command transport intents, preserve local stars during prefetch, and verify remote membership before acknowledging moves.
 
 - 2026-09-30: Complete label preflight before reserving writes, so a read-only
   deadline defers without blocking later cycles. Add shared locked read-only
