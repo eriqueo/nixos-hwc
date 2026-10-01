@@ -182,7 +182,7 @@ new host can SSH to `hwc-server`, run these as `eric` to set up its existing
 state store:
 
 ```sh
-git clone eric@hwc-server:/home/eric/git/agent-state.git ~/.agent-state
+git clone eric@hwc-server:/home/eric/git/agent-state.git ~/800_agents/state
 agent-state-sync link
 ```
 

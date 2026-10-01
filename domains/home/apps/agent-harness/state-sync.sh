@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-STATE=${AGENT_STATE_DIR:-$HOME/.agent-state}
+STATE=${AGENT_STATE_DIR:-$HOME/800_agents/state}
 CONFIG_DIRS=${AGENT_CONFIG_DIRS:-$HOME/.claude:$HOME/.claude_dx2_home}
 HOST=${AGENT_HOST:-$(uname -n)}
 VALIDATOR=${AGENT_STATE_VALIDATOR:-$(realpath "$(dirname "$0")/state-validate.sh")}

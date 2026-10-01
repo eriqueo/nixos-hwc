@@ -12,7 +12,7 @@
 
   mutableState = {
     owner = "agent-state";
-    runtimeRoot = "~/.agent-state";
+    runtimeRoot = "~/800_agents/state";
     syncCommand = "agent-harness sync";
     allowedRoots = [
       "MISTAKES.md"
