@@ -24,7 +24,8 @@ Design: `docs/plans/unified-triage-architecture.md`.
 
 | Consumer | What it takes |
 |---|---|
-| `domains/mail/notmuch/index.nix` | exposes the legacy janitor deny list without applying local placement rules |
+| `domains/mail/notmuch/index.nix` | exposes the Gmail janitor deny list (`derived.trashSenders`) without applying local placement rules |
+| `domains/mail/aerc/parts/sieve-filters.nix` | `derived.protonTrash` → the generated Proton Sieve script |
 | `domains/mail/aerc/parts/tags.nix` | optional/manual tag presentation |
 | `domains/system/mcp/index.nix` | pins the System One classifier contract directly |
 | `domains/business/morning-briefing` | consumes the classifier's JSON snapshot; no prompt vocabulary |
@@ -33,8 +34,11 @@ Design: `docs/plans/unified-triage-architecture.md`.
 
 - **Teach the classifier**: use the aerc State or Domain correction keys. The
   v2 case ledger learns exact senders without a separate declarative writer.
-- `data.nix` `senders.trash` is legacy input only for the separate Gmail
-  janitor. It does not classify or place local mail.
+- `data.nix` `senders.trash` is the one hard-junk list for the two
+  deterministic trash producers: the Gmail janitor and the Proton Sieve script.
+  Each entry's `scope` (`both` default, `gmail`, `proton`; `{ list = …; }` is
+  Proton-only) picks its producers. Evaluation throws if a Proton entry matches
+  `senders.protected`. Neither producer classifies local mail; Laya does.
 - **Never** override `hwc.mail.notmuch.rules.*` directly in a profile or
   machine file — that silently re-forks the vocabulary.
 - Changes deploy with the normal lanes: `hms` for rules/aerc, server
@@ -43,6 +47,16 @@ Design: `docs/plans/unified-triage-architecture.md`.
 
 ## Changelog
 
+- 2026-09-29: `senders.trash` now also feeds the generated Proton Sieve script.
+  Merged the reviewed 2026-04-05 audit list and Eric's retired live Proton
+  trash rules; added per-entry `scope`, Proton list-id entries, and the
+  `senders.protected` guard (`lib.nix` throws on a violation; `data` is
+  injectable so the guard can be exercised). Eric's keepers are protected for
+  both producers and removed from the list: `semrush.com`, `contractorcto.com`,
+  `limitloginattempts.com`, `mail.instagram.com`, `contractorcto@gmail.com`
+  (a protected address also blocks any domain entry covering it).
+  `linkedin.com` is Gmail-only. The Gmail janitor's domain deny list grows with
+  the audit's junk domains.
 - 2026-09-21: Replaced the `urgent/review/noise` placement vocabulary with
   `act/look/bulk/junk` under `attention/`, matching the Laya classifier.
 

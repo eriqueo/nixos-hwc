@@ -27,8 +27,8 @@ mail/
 │       ├── appearance.nix     # Palette-driven styleset
 │       ├── tags.nix           # Taxonomy adapter for queries, styles, and bindings
 │       ├── tags-custom.json   # User-defined aerc-only tags
-│       ├── sieve.nix          # Sieve script deployment
-│       └── sieve-filters.nix  # Server-side Sieve rules
+│       ├── sieve.nix          # Deploys ~/.config/aerc/sieve/{01-junk,02-routing}.sieve
+│       └── sieve-filters.nix  # Generates the two Proton Sieve filters from taxonomy
 ├── afew/
 │   ├── index.nix              # afew config generation (filters, MailMover)
 │   └── package.nix            # afew package derivation
@@ -112,6 +112,7 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-09-29: Proton filtering is two generated Sieve filters (`aerc/parts/sieve-filters.nix` → `~/.config/aerc/sieve/`): `01-junk` sends hard junk to Trash from `taxonomy` `senders.trash`; `02-routing` files the hide-my-email alias and adds interim recipient labels. It replaces 133 hand-made Proton filters and the never-pasted April bundle, whose `10-split-by-recipient` default filed everything into folders that do not exist.
 - 2026-09-26: `bridge/` — new `hwc.mail.bridge.restart.onCalendar` (default null) adds a user timer that `try-restart`s the bridge on a schedule; hwc-work sets Sunday 04:20. `classifier/sys.nix` — `mail-classifier-model` runs at `Nice=10`/`CPUWeight=20` like llama-embed: its bursts were the hottest single spikes (82°C) on hwc-work.
 - 2026-09-25: Service split wave 3 (notifications): `health/` — `notify.url` defaults to the system's `hwc.notifications.notify.url` (osConfig), so neither machine sets it.
 - 2026-09-25: `calendar/parts/service.nix` — the discover-on-change step also runs `vdirsyncer metasync` (and its version is part of the stamp, so it runs once everywhere). `sync` never moves collection metadata; hwc-work had no displaynames, so khal rejected `default_calendar = hwc` and the morning briefing's calendar gather broke.

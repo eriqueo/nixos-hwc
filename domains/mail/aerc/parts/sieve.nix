@@ -1,47 +1,16 @@
-{ lib, pkgs, config, osConfig ? {}, ...}:
+{ lib, ... }:
 let
-  userFilters = (config.hwc.mail.aerc.sieve.filters or {});
-  autoFilters = import ./sieve-filters.nix;
-
-  defaultFilters = {
-    "10-split-by-recipient.sieve" = ''
-      require ["fileinto", "envelope"];
-      if anyof(
-        address :all :matches ["To","Cc","Bcc"] ["*@iheartwoodcraft.com"],
-        envelope :all :matches "to" ["*@iheartwoodcraft.com"]
-      ) {
-        fileinto "hwc/inbox";
-        stop;
-      }
-      elsif anyof(
-        address :all :is ["To","Cc","Bcc"] ["eriqueo@proton.me"],
-        envelope :all :is "to" ["eriqueo@proton.me"]
-      ) {
-        fileinto "proton/inbox";
-        stop;
-      }
-    '';
-  };
-
-  filters = defaultFilters // autoFilters // userFilters;
-
-  namesSorted = lib.sort (a: b: a < b) (builtins.attrNames filters);
-  bundle = lib.concatStringsSep "\n\n"
-    (map (n: "# ---- ${n}\n\n${filters.${n}}") namesSorted);
-
+  filters = import ./sieve-filters.nix { inherit lib; };
   sieveDir = ".config/aerc/sieve";
 in {
-  files = profileBase:
-    (lib.mapAttrs'
-      (name: text: { name = "${sieveDir}/filters/${name}"; value.text = text; })
-      filters)
+  files = _profileBase:
+    lib.mapAttrs' (name: text: lib.nameValuePair "${sieveDir}/${name}" { inherit text; }) filters
     // {
-      "${sieveDir}/filters/bundle.sieve".text = bundle;
       "${sieveDir}/README".text = ''
-        Managed by Home Manager.
-        - Add Sieve via hwc.mail.aerc.sieve.filters.<name> = "..." in Nix.
-        - Combined bundle: ${config.home.homeDirectory}/${sieveDir}/filters/bundle.sieve
-        - Paste bundle into Proton > Filters > Add sieve filter (Sieve editor).
+        Managed by Home Manager (domains/mail/aerc/parts/sieve-filters.nix).
+        Each *.sieve file is one Proton filter, in name order ("01 - Junk",
+        "02 - Routing"). Change the taxonomy, run hms, then paste the changed
+        file over its filter in Proton > Settings > Filters.
       '';
     };
 }

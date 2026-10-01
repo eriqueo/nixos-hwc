@@ -24,8 +24,8 @@ aerc/
     appearance.nix       # hwc styleset (palette-driven)
     tags.nix             # Mail taxonomy adapter for queries, styles, and bindings
     tags-custom.json     # User-defined aerc-only tags
-    sieve.nix            # Sieve script deployment
-    sieve-filters.nix    # Server-side Sieve rules
+    sieve.nix            # Deploys ~/.config/aerc/sieve/{01-junk,02-routing}.sieve
+    sieve-filters.nix    # Generates the two Proton Sieve filters from taxonomy
 ```
 
 ## Architecture
@@ -368,6 +368,12 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-09-29: `sieve-filters.nix` now generates two Proton Sieve filters from
+  `taxonomy/lib.nix` `derived.protonTrash`: `01-junk` (junk → Trash) and
+  `02-routing` (hide-my-email folder, recipient labels); `sieve.nix` deploys
+  them under `sieve/`, one file per Proton filter.
+  Removed the per-file April filters, `bundle.sieve`, and the
+  `10-split-by-recipient` default that targeted nonexistent folders.
 - 2026-09-29: Hid the classifier's unsubscribe-available trait from the Tags
   column; it remains available to mail logic. Clarified that `i` imports a
   calendar event without responding to the organizer.
