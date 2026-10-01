@@ -45,6 +45,7 @@ Hyprland's session starts enabled Bitwarden and Proton Pass clients, which suppl
 Credential utility windows float at monitor-relative dimensions. Bitwarden's package relays its session-bus connection to allow file selection while retaining process isolation.
 
 The shared agent-harness fleet list uses hwc-home, hwc-work and hwc-laptop without changing session stores.
+Its project tracker records substantive decisions while agents continue routine work within existing authorization.
 - `apps/t3code/` — launchers and a restricted DX2 handoff adapter; T3 supplies the result limit.
 - `apps/hwc-dictation/` — owned desktop dictation package, settings and user service.
 - `apps/bitwarden/` — desktop client for the self-hosted Vaultwarden account.
@@ -79,6 +80,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-10-01: Pin the tracker decision policy. Cards cover substantive unresolved choices; routine work proceeds and brief clarifications use chat.
 - 2026-09-30: Prepare Zellij 0.45.1 and Workbench's shared runtime without restarting running sessions.
 - 2026-09-30: Add Yazi's persistent favorites sidebar, Alt focus/navigation, editable bookmarks, natural sorting, and Zoxide history.
 - 2026-09-30: Remove home model links, consume rooted Whisper store files, declare Go runtime/cache placement and monthly retention, and stop XDG activation from recreating `~/Projects`.
