@@ -382,6 +382,14 @@
       builtins.filter builtins.pathExists
         (map (r: ./profiles + "/${r}/${lane}") roles);
 
+    # Both Home Manager lanes receive the same system-owned capture path.
+    homeSpecialArgs = name: ch: {
+      inherit inputs;
+      nixosApiVersion = ch.apiVersion;
+      screenshotRoot = lib.attrByPath [ "hwc" "paths" "screenshots" ] null
+        self.nixosConfigurations."hwc-${name}".config;
+    };
+
     # NixOS lane: framework modules + role sys halves + machine one-offs +
     # HM-as-module wiring (home halves + machine home.nix as users.eric).
     mkNixos = name: m:
@@ -413,10 +421,7 @@
               users.eric.imports =
                 roleHalves "home.nix" m.roles
                 ++ [ (./machines + "/${name}/home.nix") ];
-              extraSpecialArgs = {
-                inherit inputs;
-                nixosApiVersion = ch.apiVersion;
-              };
+              extraSpecialArgs = homeSpecialArgs name ch;
             };
           }
         ];
@@ -428,11 +433,7 @@
       let ch = channels.${m.channel}; in
       ch.hm.lib.homeManagerConfiguration {
         pkgs = m.hmPkgs;
-        extraSpecialArgs = {
-          inherit inputs;
-          screenshotRoot = self.nixosConfigurations."hwc-${name}".config.hwc.paths.screenshots;
-          nixosApiVersion = ch.apiVersion;
-        };
+        extraSpecialArgs = homeSpecialArgs name ch;
         modules =
           roleHalves "home.nix" m.roles
           ++ [
