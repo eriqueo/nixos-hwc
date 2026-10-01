@@ -325,6 +325,7 @@ export function makeHelpers(data) {
   }
 
   function getAttribution() {
+    if (window.hwcMeasurement) { const ctx = window.hwcMeasurement.context(); return {...ctx.attribution, ...ctx}; }
     try {
       const a = JSON.parse(sessionStorage.getItem("hwc_attribution") || "{}");
       return {
@@ -345,6 +346,7 @@ export function makeHelpers(data) {
   }
 
   function fireEvent(name, params) {
+    if (window.hwcMeasurement) { window.hwcMeasurement.emit(name, {calculator_type: calculator, ...params}); return; }
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push(Object.assign({
       event: name,
