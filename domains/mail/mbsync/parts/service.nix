@@ -199,11 +199,12 @@ in
         elif [[ "$rc" -ne 0 ]]; then
           record_lane "$lane" degraded sync-failed "$rc"
           [[ "$final_rc" -ne 0 ]] || final_rc=$rc
-        elif [[ "$lane" == core && ( "$prefetch_index_rc" -ne 0 || "$transport_rc" -ne 0 ) ]]; then
+        elif [[ "$lane" == core && ( "$prefetch_index_rc" -ne 0 || "$transport_rc" -ne 0 || ''${lane_rc[trash]:-0} -ne 0 ) ]]; then
           reconciliation_rc=$transport_rc
           [[ "$prefetch_index_rc" -eq 0 ]] || reconciliation_rc=$prefetch_index_rc
+          [[ ''${lane_rc[trash]:-0} -eq 0 ]] || reconciliation_rc=''${lane_rc[trash]}
           record_lane "$lane" degraded reconciliation-failed "$reconciliation_rc"
-          [[ "$final_rc" -ne 0 ]] || final_rc=$transport_rc
+          [[ "$final_rc" -ne 0 ]] || final_rc=$reconciliation_rc
         elif [[ "$lane" == core && "$afew_rc" -ne 0 ]]; then
           record_lane "$lane" degraded mover-failed "$afew_rc"
           [[ "$final_rc" -ne 0 ]] || final_rc=$afew_rc

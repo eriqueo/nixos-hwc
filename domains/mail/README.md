@@ -115,7 +115,7 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
-- 2026-10-01: Fetch remote core/Trash membership before moving mail; require durable shared-command transport intents, preserve local stars during prefetch, and verify remote membership before acknowledging moves.
+- 2026-10-01: Fetch remote core/Trash membership before moving mail; require durable shared-command transport intents, preserve local stars during prefetch, and verify remote membership before acknowledging moves. Failed prefetch blocks uploads; phone-label support stays disabled.
 
 - 2026-10-01: C9 makes notmuch's versioned generated search registry the source
   for aerc and MCP. Current State/Domain/fact views replace old active category
