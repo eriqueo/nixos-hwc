@@ -1338,8 +1338,8 @@
       in
       assert lib.assertMsg (standalone.hwc.mail.classifier.residency.enable
         && standalone.hwc.mail.classifier.projection.enable
-        && lib.hasInfix standalone.hwc.mail.classifier.residency.command standalone.home.file.".local/bin/sync-mail".text
-        && lib.hasInfix standalone.hwc.mail.classifier.projection.command standalone.home.file.".local/bin/sync-mail".text)
+        && lib.hasInfix (builtins.unsafeDiscardStringContext standalone.hwc.mail.classifier.residency.command) standalone.home.file.".local/bin/sync-mail".text
+        && lib.hasInfix (builtins.unsafeDiscardStringContext standalone.hwc.mail.classifier.projection.command) standalone.home.file.".local/bin/sync-mail".text)
         "mail-residency-shadow: standalone client activation must retain mail reconciliation and projection";
       assert lib.assertMsg home.hwc.mail.classifier.residency.enable
         "mail-residency-shadow: mail host must observe in shadow";
