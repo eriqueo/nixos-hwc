@@ -531,6 +531,7 @@
         && lib.elem "${c.hwc.paths.state}/screenshot-renamer/work-*" c.services.borgbackup.jobs.hwc-backup.exclude
         && lib.elem "${c.hwc.paths.state}/screenshot-renamer/ledger.sqlite*" c.services.borgbackup.jobs.hwc-backup.exclude
         && c.systemd.timers.screenshot-renamer-check.wantedBy == [ "timers.target" ]
+        && c.systemd.services.screenshot-renamer-check.serviceConfig.BindReadOnlyPaths == []
         && lib.any (b: lib.hasInfix "hwc-screenshot" b && lib.hasInfix "--private" b) binds
         && lib.any (b: lib.hasInfix "hwc-screenshot" b && lib.hasInfix "--private" b)
           self.homeConfigurations."eric@hwc-laptop".config.wayland.windowManager.hyprland.settings.bind)

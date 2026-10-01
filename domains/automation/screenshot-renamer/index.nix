@@ -101,7 +101,7 @@ in {
     # This checker does not depend on the worker succeeding or being scheduled.
     systemd.services.screenshot-renamer-check = {
       description = "Check screenshot progress and report changed failures";
-      serviceConfig = base // { ExecStart = command "check"; TimeoutStartSec = "30s"; };
+      serviceConfig = base // { BindReadOnlyPaths = []; ExecStart = command "check"; TimeoutStartSec = "30s"; };
     };
     systemd.timers.screenshot-renamer-check = timer "*:0/5";
     systemd.services.screenshot-renamer-cleanup = {

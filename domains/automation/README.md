@@ -86,6 +86,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-10-01: The screenshot progress watcher needs only local receipts and the dispatcher; missing inputs cannot prevent stalled-worker alerts.
 - 2026-10-01: Archive screenshot inputs and privacy markers with Borg; exclude incomplete capture and backup files. Syncthing remains replication, not the independent recovery copy.
 - 2026-10-01: Screenshot backup uses the existing parent Borg source, excludes live SQLite and temporary credentials, and creates empty recovery directories declaratively.
 - 2026-10-01: Screenshot naming runs beside the inbox janitor on its single owner. `screenshot-renamer/index.nix` schedules a pinned app, a separate progress checker and daily receipt backup. Shadow mode mounts screenshots read-only. Apply also requires human holdout evidence (95% quality, 50% coverage) and recovery proof.
