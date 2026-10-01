@@ -758,11 +758,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790886995,
-        "narHash": "sha256-xI/wdkLwp3zcBfUa9eNKG0dThmSfbhVF/vlzr4ZLWoU=",
+        "lastModified": 1790887650,
+        "narHash": "sha256-jnJ2+tW/3ysNi/qKS7V/tpCovZgqzrb2tKNPXMTN9XM=",
         "owner": "eriqueo",
         "repo": "screenshot-renamer",
-        "rev": "cb9f852b2291771593c028b88b051f1c142866a4",
+        "rev": "0618a66d3ae6d4fcb90c97141cf0399cb9b70f55",
         "type": "github"
       },
       "original": {
