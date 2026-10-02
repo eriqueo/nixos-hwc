@@ -47,6 +47,8 @@ business/
 
 ## Changelog
 
+- Bind State display metadata inside each plain and HTML routing renderer; both renderers accept current and legacy reports.
+
 - Use the canonical State display names in routing summaries and empty mail views.
 - 2026-10-01: Show DONT KNOW from classifier metadata in briefing counts/tabs;
   bind the canonical contract for unavailable-model snapshots.
