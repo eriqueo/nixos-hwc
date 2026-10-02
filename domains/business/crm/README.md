@@ -62,6 +62,8 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 (`machines/work/config.nix`).
 
 ## Changelog
+- **2026-10-02** — hwc-work sets `meta.appSecretRef = "crm-meta-app-secret"`;
+  signed Messenger deliveries are now recorded instead of answering 503.
 - **2026-10-02** — hwc-work sets the Messenger Page token
   (`crm-meta-page-token`) and `meta.pageId`, so `hwc-crm-messenger-import` is
   installed. `meta.appSecretRef` is still unset: deliveries answer 503.
