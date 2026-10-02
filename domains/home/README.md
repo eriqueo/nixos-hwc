@@ -18,6 +18,9 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+The shared keymap supplies DONT KNOW and Bulk mail navigation and the DONT KNOW
+correction key; mail owns the underlying commands and display contract.
+
 Hyprland capture uses the pinned screenshot-renamer package. Print publishes a hash-bound eligibility marker. Ctrl+Print marks private captures before any OCR or model request.
 
 `apps/zellij` owns the graphics-capable pane host package consumed by Workbench's wrapper and restart helper.
@@ -83,6 +86,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-10-01: Add shared aerc DONT KNOW/Bulk navigation and State correction key.
 - 2026-10-01: Allow requested feature work to have an owner without implying a fault; link blind review inputs to their full request and dated evidence.
 - 2026-10-01: Standalone Home Manager receives the system screenshot path explicitly, preserving policy-marked capture across both activation lanes.
 - 2026-10-01: Hyprland capture uses the pinned screenshot-renamer package. Print publishes a hash-bound eligibility marker. Ctrl+Print marks private captures before any OCR or model request.

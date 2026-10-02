@@ -6,7 +6,7 @@
 #    style does not define any."
 # So msglist_* styles must NOT set .fg, or they'll block [user] tag colors.
 # Use only bold/dim for message state differentiation.
-{ lib, colors, tags }:
+{ lib, colors, tags, mailContract }:
 
 let
   c = colors;
@@ -151,6 +151,14 @@ starred.bold      = true
 # Workflow state is the only primary sidebar axis.
 do.fg             = ${h (c.error or "bf616a")}
 do.bold           = true
+${mailContract.stateDisplayNames.${mailContract.fallbackState}}.fg = ${fg}
+${mailContract.stateDisplayNames.${mailContract.fallbackState}}.bold = true
+${mailContract.stateDisplayNames.${mailContract.actionState}}.fg = ${h (c.error or "bf616a")}
+${mailContract.stateDisplayNames.${mailContract.actionState}}.bold = true
+${mailContract.stateDisplayNames.did}.fg = ${h (c.warning or "cf995f")}
+${mailContract.stateDisplayNames.look}.fg = ${h (c.info or "5e81ac")}
+${mailContract.stateDisplayNames.junk}.fg = ${dim}
+Bulk.fg           = ${dim}
 did.fg            = ${h (c.warning or "cf995f")}
 did.bold          = true
 look.fg           = ${h (c.info or "5e81ac")}

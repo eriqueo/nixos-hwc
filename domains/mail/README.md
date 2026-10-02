@@ -12,6 +12,8 @@ Self-contained email domain: client UI, accounts, sync, indexing, sending, and b
 Mailbox movement runs through classifier transport intents, marker-only afew rules, and ordered mbsync prefetch/reconciliation/readback. The contract owns the physical sync folders; local history remains in lessons but does not block remote move receipts.
 The mail role retains these hooks in both integrated and standalone Home Manager builds.
 Scheduled classification uses the same owner lock before reserving mailbox moves.
+The pinned classifier contract supplies DONT KNOW, display names and the Bulk
+query. Aerc, notmuch, MCP and the briefing consume that vocabulary.
 
 Radicale clients in `calendar`, `tasks`, and `contacts` render credential argv
 from `domains/lib/hm.nix`, also consumed by todui's list-deletion launcher.
@@ -82,20 +84,25 @@ mail/
 
 ## Aerc workflow contract
 
-`DO` is the inbox-zero queue; `DID` waits after Eric acted; `LOOK` needs no
+`DONT KNOW` holds uncertain mail; `DO` is confirmed action; `DID` waits after Eric acted; `LOOK` needs no
 response; `JUNK` is recoverable Trash. Reading never changes workflow state.
 Archive records completion and removes every active state. Single-key
 archive/trash uses aerc's marked-or-selected rule: `J`/`K` selections move as
 one thread-wide batch, and a selected folded row expands to its whole thread.
 Domain (`hwc`, `datax`, `family`, `personal`, `other`) is independent of State,
 appears as a column, and is filtered rather than exposed as folders. Facts are
-additive Tags and never control placement. `Space g A` opens all non-trash
+additive Tags and never control placement. Bulk groups unknown newsletter or
+recurring mail with an unsubscribe mechanism, excluding security, finance,
+deadline and calendar facts. Bulk stays in Inbox and neither archives nor
+trashes. The default DONT KNOW view excludes that adjacent Bulk pile; the full
+State search and raw Inbox retain both. `Space g A` opens all non-trash
 history. `Space f t` filters by tag, `Space f d …` filters by Domain, and
 `Space f c` clears the current filter.
 Sort with `Space s d` (newest), `Space s f` (sender), or `Space s s` (subject).
 
-State and Domain corrections teach the classifier's exact-sender preference in
-the same operation. `DID` and completion are never generalized. No separate
+State and Domain corrections record a thread lesson in the same operation.
+Sender preferences need repeated agreement across distinct threads. DONT KNOW,
+`DID` and completion are never positive sender votes. No separate
 sender-rule writer runs in the arrival hook.
 
 Persistent routing rules are narrower than sender learning: each one requires
@@ -116,6 +123,8 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-10-01: Separate uncertain DONT KNOW from confirmed DO; add a reversible
+  Bulk view, canonical display names, arrival safeguards and locked migration controls.
 - 2026-10-01: Archive, Trash and State/Domain corrections use aerc's native
   background pipe instead of opening results tabs; failed commands remain in
   the status line, and interactive review helpers keep their terminal UI.

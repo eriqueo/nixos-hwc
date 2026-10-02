@@ -158,10 +158,12 @@ rec {
   aerc = let
     row = keys: action: desc: scope: { inherit keys action desc scope; };
   in {
-    stateKeys = { "do" = "a"; did = "d"; look = "l"; junk = "j"; };
+    stateKeys = { "do" = "a"; "dont-know" = "k"; did = "d"; look = "l"; junk = "j"; };
     domainKeys = { hwc = "h"; datax = "d"; family = "f"; personal = "p"; other = "o"; };
     bindings = [
       (row "g i" "go-do" "DO" "account")
+      (row "g k" "go-dont-know" "DONT KNOW" "account")
+      (row "g b" "go-bulk" "Bulk" "account")
       (row "g d" "go-did" "DID" "account")
       (row "g l" "go-look" "LOOK" "account")
       (row "g j" "go-junk" "JUNK" "account")

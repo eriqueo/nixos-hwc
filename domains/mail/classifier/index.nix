@@ -47,7 +47,7 @@ let
             --password-command ${lib.escapeShellArg (common.passCmd account)} "''${transport_args[@]}" "$@"
           ;;
         ''}
-        correct|transition|reopen|review|route-review)
+        correct|transition|reopen|review|route-review|migrate-uncertainty)
           verb="$1"
           shift
           guard=()

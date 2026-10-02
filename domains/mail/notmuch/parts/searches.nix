@@ -23,6 +23,7 @@ let
     important = "tag:important AND NOT tag:trash";
     starred = "tag:flagged AND NOT tag:trash";
     "label:hide" = "tag:hide";
+    "view:bulk" = mailContract.viewQueries.bulk;
   } // axis "state" mailContract.stateTagPrefix mailContract.states
     // axis "domain" mailContract.domainTagPrefix mailContract.domains
     // axis "fact" mailContract.traitTagPrefix mailContract.factTags;

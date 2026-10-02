@@ -1004,6 +1004,9 @@
           "D = :pipe -b -m mail-classifier transition --outcome trash<Enter>"
           "pipe -b -m mail-classifier correct --state do"
           "pipe -b -m mail-classifier correct --state did"
+          "pipe -b -m mail-classifier correct --state dont-know"
+          "<Space>gk = :cf DONT KNOW<Enter>"
+          "<Space>gb = :cf Bulk<Enter>"
           "pipe -b -m mail-classifier correct --domain datax"
           "pipe -m mail-classifier route-review"
           "term mail-classifier route-manage"
@@ -1036,6 +1039,8 @@
         && builtins.all (name: lib.hasInfix "${lib.replaceStrings [ ":" ] [ "/" ] name}=${registry.searches.${name}}" aercQueries)
           (builtins.attrNames registry.searches)
         && registry.searches."fact:finance" == "tag:${contract.traitTagPrefix}finance"
+        && registry.searches."state:dont-know" == "tag:${contract.stateTagPrefix}dont-know"
+        && registry.searches."view:bulk" == contract.viewQueries.bulk
         && registry.searches."domain:family" == "tag:${contract.domainTagPrefix}family"
         && registry.searches."history:family" == "tag:family"
         && !(registry.searches ? business) && !(registry.searches ? money)
@@ -1047,8 +1052,9 @@
         queries = home.home.file.".config/aerc/notmuch-queries".source;
         bindsFile = home.home.file.".config/aerc/binds.conf".source;
         configFile = home.home.file.".config/aerc/aerc.conf".source;
+        stylesFile = home.home.file.".config/aerc/stylesets/hwc".source;
       } ''
-        python3 - "$queries" "$bindsFile" "$configFile" <<'PY'
+        python3 - "$queries" "$bindsFile" "$configFile" "$stylesFile" <<'PY'
         import json, os, pathlib, shlex, subprocess, sys, tempfile, time
         queries = dict(line.split('=', 1) for line in pathlib.Path(sys.argv[1]).read_text().splitlines()
                        if line and not line.startswith('#'))
@@ -1137,8 +1143,11 @@
             accounts = root / 'accounts.conf'
             accounts.write_text(f'[fixture]\nsource=notmuch://{mail}\nfrom=Test <test@example.com>\nquery-map={querymap}\nfolders=do\ndefault=do\n')
             conf = root / 'aerc.conf'
-            # Built-in style only; keyboard and threading settings are unchanged.
-            conf.write_text(pathlib.Path(sys.argv[3]).read_text().replace('styleset-name = hwc', 'styleset-name = default'))
+            # Parse the actual production styles, including the spaced State
+            # alias, in the isolated client rather than hiding style failures.
+            style_dir = root / 'stylesets'; style_dir.mkdir()
+            (style_dir / 'hwc').write_text(pathlib.Path(sys.argv[4]).read_text())
+            conf.write_text(pathlib.Path(sys.argv[3]).read_text().replace('styleset-name = hwc', 'styleset-name = hwc\nstylesets-dirs = ' + str(style_dir)))
             socket = str(root / 'tmux.sock')
             def tm(*args):
                 return subprocess.check_output(['tmux', '-S', socket, '-f', '/dev/null', *args], text=True)
@@ -1217,7 +1226,7 @@
                 assert 'local image preview' in keys(' w').lower()
                 special('Escape')
                 output = keys(' ms')
-                assert all(word in output for word in ['DO', 'DID', 'LOOK', 'JUNK']), output
+                assert all(word in output for word in ['DO', 'DONT KNOW', 'DID', 'LOOK', 'JUNK']), output
                 special('Escape')
                 output = keys(' mt')
                 assert 'Clear optional facts' in output, output
@@ -1238,6 +1247,7 @@
                                        (' ma', 'done'), (' dd', 'trash')]:
                     quiet_action(chord, ['transition', '--outcome', outcome])
                 quiet_action(' ms', ['correct', '--state', 'look'], 'l')
+                quiet_action(' ms', ['correct', '--state', 'dont-know'], 'k')
                 quiet_action(' md', ['correct', '--domain', 'personal'], 'p')
                 for chord, outcome in [('a', 'done'), ('d', 'trash')]:
                     assert 'fixture body' in special('Enter')
@@ -1246,6 +1256,42 @@
                 failure_file.touch()
                 output = quiet_action('a', ['transition', '--outcome', 'done'])
                 assert 'exit status 42' in output, output
+            finally:
+                subprocess.run(['tmux', '-S', socket, 'kill-server'], capture_output=True)
+
+            # Actual spaced alias/default parsing and Bulk partition. These
+            # synthetic messages never use the real ledger or remote mail.
+            samples = {
+                'unknown-direct': ('Need sorting', ['state/dont-know']),
+                'unknown-bulk': ('Newsletter seed', ['state/dont-know', 'trait/newsletter']),
+                'unknown-security': ('Security seed', ['state/dont-know', 'trait/newsletter', 'trait/security']),
+                'confirmed-promo': ('Confirmed action seed', ['state/do', 'trait/newsletter']),
+            }
+            for mid, (subject, tags) in samples.items():
+                (mail / 'inbox' / 'cur' / f'{mid}:2,').write_text(
+                    f'From: sender@example.com\nTo: test@example.com\nMessage-ID: <{mid}@example.com>\nSubject: {subject}\nDate: Thu, 1 Oct 2026 13:00:00 -0600\n\nfixture body\n')
+            nm('new')
+            for mid, (subject, tags) in samples.items():
+                nm('tag', '+inbox', *('+' + tag for tag in tags), '--', f'id:{mid}@example.com')
+            querymap.write_text(pathlib.Path(sys.argv[1]).read_text())
+            assert nm('count', queries['DONT KNOW']) == '2'
+            assert nm('count', queries['Bulk']) == '1'
+            assert nm('count', queries['state/dont-know']) == '3'
+            accounts.write_text(f'[fixture]\nsource=notmuch://{mail}\nfrom=Test <test@example.com>\nquery-map={querymap}\nfolders=DO,DONT KNOW,DID,LOOK,JUNK,Bulk\ndefault=DONT KNOW\n')
+            try:
+                tm('new-session', '-d', '-s', 'fixture', '-x', '150', '-y', '40', command)
+                for _ in range(20):
+                    time.sleep(0.3)
+                    if 'Need sorting' in screen(): break
+                output = screen()
+                assert 'Need sorting' in output and 'DONT KNOW' in output and 'Security seed' in output, output
+                assert 'Newsletter seed' not in output and 'Confirmed action seed' not in output, output
+                output = keys(' gb')
+                assert 'Newsletter seed' in output and 'Need sorting' not in output and 'Security seed' not in output, output
+                output = keys(' gk')
+                assert 'Need sorting' in output and 'Newsletter seed' not in output, output
+                output = keys(' gi')
+                assert 'Confirmed action seed' in output and 'Need sorting' not in output, output
             finally:
                 subprocess.run(['tmux', '-S', socket, 'kill-server'], capture_output=True)
         print('generated views, real metadata clear, quiet action tabs and visible failures pass')
@@ -1650,6 +1696,7 @@
       assert lib.assertMsg (lib.hasInfix "sort = -r date" aercConf)
         "mail-workflow-v2: newest-first is not the default sort";
       assert lib.assertMsg (queryHas "do" "tag:state/do"
+        && queryHas "dont-know" "tag:state/dont-know"
         && queryHas "did" "tag:state/did"
         && queryHas "look" "tag:state/look"
         && queryHas "junk" "tag:state/junk")
@@ -1659,7 +1706,7 @@
         && !(lib.hasInfix "tag:queue" queries)
         && queryHas "all" "NOT tag:trash")
         "mail-workflow-v2: legacy workflow/category folders returned";
-      assert lib.assertMsg (lib.hasInfix "index-columns = from<20,subject<*,date<10,domain<9,state<5,tags<24" aercConf
+      assert lib.assertMsg (lib.hasInfix "index-columns = from<20,subject<*,date<10,domain<9,state<9,tags<24" aercConf
         && lib.hasInfix "column-domain" aercConf
         && lib.hasInfix "column-state" aercConf
         && lib.hasInfix "column-tags" aercConf)
@@ -1708,11 +1755,43 @@
             pass
         else:
             raise AssertionError('removed label exclusion passed its wiring check')
-        folder_state = hook.index("+inbox +state/do")
+        folder_state = hook.index("+inbox +state/dont-know")
         remove_new = hook.index("# Remove transient new tag", folder_state)
-        assert folder_state < remove_new, "new mail loses its safe DO state"
+        assert folder_state < remove_new, "new mail loses its DONT KNOW State"
         assert "mail-rule" not in hook, "retired sender-rule writer returned"
         assert "tag:new AND NOT tag:keep" not in hook, "legacy sender placement returned"
+
+        def check_arrival_states(source):
+            with tempfile.TemporaryDirectory() as directory:
+                root = pathlib.Path(directory); mail = root / 'Maildir'
+                for folder in ['inbox', 'Sent']:
+                    for part in ['cur', 'new', 'tmp']: (mail / 'proton' / folder / part).mkdir(parents=True)
+                config = root / 'notmuch.conf'
+                config.write_text('[database]\npath=' + str(mail) + '\n[user]\nname=Fixture\nprimary_email=fixture@example.invalid\n[new]\ntags=new;unread;\n[maildir]\nsynchronize_flags=true\n')
+                env = {**os.environ, 'NOTMUCH_CONFIG': str(config), 'XDG_CONFIG_HOME': str(root / 'config')}
+                hp = mail / '.notmuch' / 'hooks' / 'post-new'; hp.parent.mkdir(parents=True)
+                hp.write_text(source.replace('export NOTMUCH_CONFIG="$HOME/.notmuch-config"', 'export NOTMUCH_CONFIG=' + shlex.quote(str(config))))
+                hp.chmod(0o700)
+                def nm(*args): return subprocess.check_output(['${pkgs.notmuch}/bin/notmuch', *args], env=env, text=True)
+                def tags(mid): return set(json.loads(nm('search', '--format=json', '--output=tags', 'id:' + mid + '@example.invalid')))
+                for mid, folder, sender in [('arrival', 'inbox', 'sender@example.invalid'), ('selfsent', 'Sent', 'office@iheartwoodcraft.com')]:
+                    (mail / 'proton' / folder / 'cur' / (mid + ':2,F')).write_text(
+                        'Message-ID: <' + mid + '@example.invalid>\nFrom: ' + sender + '\nTo: eric@iheartwoodcraft.com\nSubject: Synthetic\nDate: Thu, 01 Oct 2026 12:00:00 +0000\n\nFixture\n')
+                nm('new')
+                for mid in ['arrival', 'selfsent']:
+                    assert {'inbox', 'state/dont-know', 'flagged'} <= tags(mid), tags(mid)
+                    assert 'state/do' not in tags(mid), tags(mid)
+                nm('tag', '+state/do', '-state/dont-know', '--', 'id:selfsent@example.invalid')
+                nm('new')
+                assert {'inbox', 'state/do', 'flagged'} <= tags('selfsent'), tags('selfsent')
+                assert 'state/dont-know' not in tags('selfsent'), tags('selfsent')
+        check_arrival_states(hook)
+        try:
+            check_arrival_states(hook.replace('+state/dont-know', '+state/do'))
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('removed unknown arrival wiring passed its real-tool replay')
 
         def check_remote_reopen(source):
             with tempfile.TemporaryDirectory() as directory:

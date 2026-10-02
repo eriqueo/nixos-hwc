@@ -15,6 +15,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 ## Structure
 
 Scheduled mail classification reserves the shared mail owner lock before changing tags or transport intents.
+Briefing mail counts and tabs consume the classifier's State display metadata,
+including DONT KNOW; older four-State snapshots remain readable.
 
 Website source, CMS, calculator builds and atomic public releases run on hwc-work; a loopback Caddy origin serves the existing Cloudflare tunnel.
 Calculator presentation tokens, selected states and layout live in `website/calculator/app/src`; pricing and CMS-managed calculator data remain separate from presentation.
@@ -44,6 +46,8 @@ business/
 ```
 
 ## Changelog
+- 2026-10-01: Show DONT KNOW from classifier metadata in briefing counts/tabs;
+  bind the canonical contract for unavailable-model snapshots.
 - 2026-10-01: Serialize scheduled classification with sync, aerc and MCP;
   defer busy runs with code 75 and preserve the last published snapshot.
 - 2026-09-30: morning-briefing adds an AGENTS section and alerts from `ws ledger --json`; `today-dispatch` carries the pipeline marker.

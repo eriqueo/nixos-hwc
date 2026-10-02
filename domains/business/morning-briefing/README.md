@@ -16,6 +16,9 @@ Dashboard: `https://briefing.hwc.iheartwoodcraft.com`
 
 ## Structure
 
+Mail snapshots provide State order and display names from the canonical
+contract. Counts, dashboard tabs and email renderers consume those fields.
+
 `prompts/today/` requires host attribution rather than assuming the retired server name. Remote evidence gaps stay explicit; the dispatch tool grant is unchanged.
 
 ```
@@ -49,7 +52,7 @@ logs/
 | 1 | Local gather | bash assembles `briefing.json` directly: `systemctl` (services incl. failed unit NAMES, podman-* container count, borg backup unit), `df` (storage), `notmuch` (mail), `khal`→`jq` (calendar, 7-day window), `curl` open-meteo (weather). Alerts computed locally. **No Claude, no MCP.** |
 | 1b | Live gather | `node gather-live.mjs` → local MCP gateway (`:6200/mcp`, plain JSON-RPC, no permissions): `jt_jobs` (jobs + leads + weekly snapshot), `jt_documents list_overdue` (overdue invoices), `hwc_tasks_list` (CalDAV tasks). Best-effort: per-section failures become dashboard alerts, placeholders kept. |
 | 1c | Local-app gather | `node gather-refinery.mjs` (refinery `.md` item store) and `node gather-research.mjs` (research-scout REST on `:8422`). Both emit `{}` on any failure and are `|| echo '{}'`-guarded, so each degrades independently — one app being down never costs the other its section. `gather-research.mjs` reads the lessons snapshot with `generate:false`, so the briefing spends no LLM calls. |
-| 2 | Mail classification | `notmuch` → resident Laya classifies State (`do/look/junk`), Domain, and factual traits. Uncertainty stays retryable `do`. |
+| 2 | Mail classification | `notmuch` → resident Laya estimates State (`do/look/junk`), Domain, and factual traits. Unsupported automatic State stays retryable `dont-know`, displayed DONT KNOW. Human corrections and rules remain authoritative. |
 | 2b | Persist decisions | The classifier writes `state/*`, `domain/*`, `trait/*`, append-only judgments, outcomes, and axis-specific human locks. |
 | 3 | Merge | `jq` injects mail_triage into briefing.json, including active routing rules and per-thread routing explanations. |
 | 4 | Publish | Dashboard reads via symlink; no-op if symlink exists |
@@ -75,8 +78,8 @@ to describe: it speaks StreamableHTTP JSON-RPC to the local gateway and fills
 
 ### Tag-backed workflow states
 
-Workflow State (`do/did/look/junk`) is a notmuch tag `state/<state>`, not a
-cached dashboard position. `DO` is the inbox-zero queue, `DID` waits after a
+Workflow State (`do/dont-know/did/look/junk`) is a notmuch tag `state/<state>`, not a
+cached dashboard position. `DO` is confirmed action; `DONT KNOW` needs sorting. `DID` waits after a
 human action, `LOOK` is read/monitor, and `JUNK` is recoverable Trash. Archive
 records `workflow/done` and removes the active state.
 
@@ -164,6 +167,8 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+- 2026-10-01: Render canonical DONT KNOW counts and tabs, preserve old snapshots,
+  and bind the source contract for unavailable-model fallback reports.
 
 - **2026-09-30** — New AGENTS section: `run.sh` calls `ws ledger --json` (the
   agent-workspace ledger) and prints its rendered `line` (active projects per

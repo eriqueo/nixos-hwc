@@ -5,9 +5,9 @@ let
   stateTag = state: "${mailContract.stateTagPrefix}${state}";
   activeStateQuery = lib.concatStringsSep " OR "
     (map (state: "tag:${stateTag state}") mailContract.states);
-  nonDoStateQuery = lib.concatStringsSep " OR "
+  nonInboxStateQuery = lib.concatStringsSep " OR "
     (map (state: "tag:${stateTag state}")
-      (lib.filter (state: state != mailContract.fallbackState) mailContract.states));
+      (lib.filter (state: !(lib.elem state [ mailContract.actionState mailContract.fallbackState ])) mailContract.states));
 
   mk = clause: tag: minus:
     if clause == "" then "" else ''
@@ -67,7 +67,8 @@ let
     # Scoped by folder residency rather than tag:new so repeated syncs can
     # repair the live Sent-copy of a self-sent message. Idempotent: re-asserts
     # inbox on a message that hasn't already been archived.
-    ${nm} tag +inbox +${stateTag mailContract.fallbackState} -archive -sent -- '(from:eric@iheartwoodcraft.com OR from:office@iheartwoodcraft.com OR from:admin@iheartwoodcraft.com) AND (to:eric@iheartwoodcraft.com OR to:office@iheartwoodcraft.com OR to:admin@iheartwoodcraft.com) AND path:proton/Sent/** AND NOT path:proton/Archive/** AND NOT tag:${mailContract.completedTag} AND NOT (${nonDoStateQuery}) AND NOT tag:trash'
+    ${nm} tag +inbox -archive -sent -- '(from:eric@iheartwoodcraft.com OR from:office@iheartwoodcraft.com OR from:admin@iheartwoodcraft.com) AND (to:eric@iheartwoodcraft.com OR to:office@iheartwoodcraft.com OR to:admin@iheartwoodcraft.com) AND path:proton/Sent/** AND NOT path:proton/Archive/** AND NOT tag:${mailContract.completedTag} AND NOT (${nonInboxStateQuery}) AND NOT tag:trash'
+    ${nm} tag +${stateTag mailContract.fallbackState} -- 'tag:inbox AND NOT (${activeStateQuery}) AND NOT tag:${mailContract.completedTag} AND NOT tag:trash'
   '';
 
   # Strip the transient "new" tag after all processing is done
@@ -92,7 +93,7 @@ let
     ${nm} tag +personal -- 'tag:new AND tag:proton-personal'
 
     # Folder state tags — scoped to tag:new so manual tag changes are preserved
-    # New Inbox mail starts in DO until Laya assigns another model state.
+    # New Inbox mail starts in DONT KNOW until a supported decision sorts it.
     # Existing DID/LOOK/JUNK/completed threads retain their human state here;
     # the classifier alone reopens DID/completed when its fingerprint changes.
     ${nm} tag +inbox +${stateTag mailContract.fallbackState} -- 'tag:new AND path:proton/inbox/** AND NOT (${activeStateQuery}) AND NOT tag:${mailContract.completedTag}'

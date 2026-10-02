@@ -25,9 +25,9 @@ let
 
   searches = import ./parts/searches.nix { inherit lib cfg mailContract; };
   dashboardText = lib.replaceStrings
-    [ "@DO_QUERY@" "@FINANCE_QUERY@" "@NEWSLETTER_QUERY@" "@SECURITY_QUERY@" ]
+    [ "@DO_QUERY@" "@DONT_KNOW_QUERY@" "@BULK_QUERY@" "@FINANCE_QUERY@" "@NEWSLETTER_QUERY@" "@SECURITY_QUERY@" ]
     (map (name: searches.searches.${name})
-      [ "state:do" "fact:finance" "fact:newsletter" "fact:security" ])
+      [ "state:do" "state:dont-know" "view:bulk" "fact:finance" "fact:newsletter" "fact:security" ])
     (builtins.readFile ./parts/dashboard.sh);
 in
 {

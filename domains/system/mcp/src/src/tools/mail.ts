@@ -32,47 +32,59 @@ interface MailContract {
   domainTagPrefix: string;
   traitTagPrefix: string;
   completedTag: string;
+  actionState: string;
+  fallbackState: string;
+  stateDisplayNames: Record<string, string>;
+  viewQueries: Record<string, string>;
 }
-
-const FALLBACK_CONTRACT: MailContract = {
-  schemaVersion: 2,
-  states: ["do", "did", "look", "junk"],
-  domains: ["hwc", "datax", "family", "personal", "other"],
-  factTags: ["attachment", "calendar", "deadline", "finance", "security", "receipt", "recurring", "newsletter", "unsubscribe"],
-  stateTagPrefix: "state/",
-  domainTagPrefix: "domain/",
-  traitTagPrefix: "trait/",
-  completedTag: "workflow/done",
-};
 
 function loadContract(): MailContract {
   const file = process.env.HWC_MAIL_CLASSIFIER_CONTRACT_FILE;
   if (!file) {
-    log.warn("mail: HWC_MAIL_CLASSIFIER_CONTRACT_FILE unset — using compiled-in v2 contract");
-    return FALLBACK_CONTRACT;
+    throw new Error("mail: HWC_MAIL_CLASSIFIER_CONTRACT_FILE is required; bind the System One contract");
   }
   try {
     const parsed = JSON.parse(readFileSync(file, "utf8"));
+    const strings = (value: unknown): value is string[] => Array.isArray(value)
+      && value.length > 0 && value.every(item => typeof item === "string" && item.length > 0)
+      && new Set(value).size === value.length;
     if (
-      parsed?.schemaVersion !== 2 || !Array.isArray(parsed?.states) ||
-      !Array.isArray(parsed?.domains) || !Array.isArray(parsed?.factTags) ||
+      ![2, 3].includes(parsed?.schemaVersion) || !strings(parsed?.states) ||
+      !strings(parsed?.domains) || !strings(parsed?.factTags) ||
       typeof parsed?.stateTagPrefix !== "string" ||
       typeof parsed?.domainTagPrefix !== "string" ||
       typeof parsed?.traitTagPrefix !== "string" ||
       typeof parsed?.completedTag !== "string"
     ) {
-      throw new Error("missing or invalid mail-classifier-v2 fields");
+      throw new Error("missing or invalid mail-classifier contract fields");
+    }
+    if (parsed.schemaVersion === 2) {
+      // Expand compatibility: v2's fallback was its action State. Display
+      // names were implicit uppercase; old contracts have no Bulk view.
+      parsed.actionState = parsed.fallbackState;
+      parsed.stateDisplayNames = Object.fromEntries(parsed.states.map((state: string) => [state, state.toUpperCase()]));
+      parsed.viewQueries = {};
+    }
+    if (!parsed.states.includes(parsed.actionState) || !parsed.states.includes(parsed.fallbackState)
+        || !parsed.stateDisplayNames || typeof parsed.stateDisplayNames !== "object"
+        || !parsed.states.every((state: string) => typeof parsed.stateDisplayNames[state] === "string"
+          && parsed.stateDisplayNames[state].length > 0)
+        || !parsed.viewQueries || typeof parsed.viewQueries !== "object"
+        || !Object.values(parsed.viewQueries).every(query => typeof query === "string" && query.length > 0)
+        || (parsed.schemaVersion === 3 && typeof parsed.viewQueries.bulk !== "string")) {
+      throw new Error("missing or invalid mail State/view contract fields");
     }
     log.info(`mail: classifier contract loaded from ${file}`);
     return parsed as MailContract;
   } catch (err) {
-    log.warn(`mail: failed to load classifier contract from ${file} (${String(err)}) — using compiled-in v2 contract`);
-    return FALLBACK_CONTRACT;
+    throw new Error(`mail: failed to load classifier contract from ${file}: ${String(err)}`);
   }
 }
 
 const MAIL_CONTRACT = loadContract();
 export const MAIL_STATES: readonly string[] = MAIL_CONTRACT.states;
+export const MAIL_ACTION_STATE = MAIL_CONTRACT.actionState;
+export const MAIL_STATE_DISPLAY_NAMES = MAIL_CONTRACT.stateDisplayNames;
 const DOMAIN_TAGS = MAIL_CONTRACT.domains;
 const TRAIT_TAGS = MAIL_CONTRACT.factTags;
 
@@ -83,7 +95,7 @@ export function mailTagActions(): Record<string, string[]> {
   const trash = ["+trash", "-inbox", "-unread", ...complete];
   return {
     archive: ["+archive", "-inbox", ...complete], trash, delete: trash,
-    untrash: ["-trash", "+inbox", `-${MAIL_CONTRACT.completedTag}`, `+${mailStateTag("do")}`], spam: ["+spam", "-inbox", "-unread", ...complete],
+    untrash: ["-trash", "+inbox", `-${MAIL_CONTRACT.completedTag}`, `+${mailStateTag(MAIL_CONTRACT.fallbackState)}`], spam: ["+spam", "-inbox", "-unread", ...complete],
     unspam: ["-spam", "+inbox"], read: ["-unread"], unread: ["+unread"],
     "clear-metadata": clearAllCustomOps(),
   };
@@ -113,6 +125,8 @@ const SAVED_SEARCHES: Record<string, string> = {
     TRAIT_TAGS.map((trait) => [`fact:${trait}`, `tag:${MAIL_CONTRACT.traitTagPrefix}${trait}`]),
   ),
   "label:hide": "tag:hide",
+  ...Object.fromEntries(Object.entries(MAIL_CONTRACT.viewQueries)
+    .map(([name, query]) => [`view:${name}`, query])),
 
 };
 
@@ -138,9 +152,10 @@ function loadSearchRegistry(file: string): Record<string, string> {
     return {};
   }
 }
-Object.assign(SAVED_SEARCHES, loadSearchRegistry(
-  process.env.HWC_MAIL_SEARCHES_FILE || join(HOME, ".config/notmuch/searches"),
-));
+Object.assign(SAVED_SEARCHES, {
+  ...loadSearchRegistry(process.env.HWC_MAIL_SEARCHES_FILE || join(HOME, ".config/notmuch/searches")),
+  ...SAVED_SEARCHES,
+});
 
 const ACCOUNTS = [
   {

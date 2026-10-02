@@ -19,7 +19,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
 import { mcpError } from "../errors.js";
-import { MAIL_STATES, mailStateTag, mailTagActions, classifierMutation } from "./mail.js";
+import { MAIL_STATES, MAIL_ACTION_STATE, MAIL_STATE_DISPLAY_NAMES, mailStateTag, mailTagActions, classifierMutation } from "./mail.js";
 
 /** Default briefing output path (run.sh writes here, then injects .mail_triage). */
 const DEFAULT_BRIEFING_JSON =
@@ -44,29 +44,15 @@ interface MailTriage {
   generated_at: string;
   query_window_hours?: number;
   total_unread?: number;
-  buckets: {
-    do: TriageThread[];
-    did: TriageThread[];
-    look: TriageThread[];
-    junk: TriageThread[];
-  };
-  stats: {
-    do_count: number;
-    did_count: number;
-    look_count: number;
-    junk_count: number;
-  };
+  buckets: Record<string, TriageThread[]>;
+  stats: Record<string, number>;
   routing_rules?: unknown[];
 }
 
-type Bucket = "do" | "did" | "look" | "junk";
+type Bucket = string;
 
-const PRIORITY: Record<Bucket, "critical" | "normal" | "low"> = {
-  do: "critical",
-  did: "normal",
-  look: "normal",
-  junk: "low",
-};
+const emptyBuckets = (): Record<Bucket, TriageThread[]> =>
+  Object.fromEntries(MAIL_STATES.map(state => [state, []]));
 
 /** Read + JSON-parse the briefing file and pull .mail_triage. null on any failure. */
 async function loadTriage(path: string): Promise<MailTriage | null> {
@@ -149,21 +135,23 @@ export async function reflectLiveBuckets(
   // starves khal under the gateway CPU quota. Bound argv/query work at 512 IDs;
   // overflow or invalid cache identity fails visibly, never falls back to all mail.
   const ids = [...new Set(MAIL_STATES.flatMap(bucket =>
-    cached[bucket as Bucket].map(thread => thread.thread_id)))];
+    (cached[bucket] ?? []).map(thread => thread.thread_id)))];
   if (ids.length > 512 || ids.some(id => typeof id !== "string" || !/^[0-9a-f]{1,64}$/.test(id))) {
     throw Error("Mail triage requires at most 512 valid hexadecimal thread IDs");
   }
-  if (ids.length === 0) return {do: [], did: [], look: [], junk: []};
+  if (ids.length === 0) return emptyBuckets();
   const inbox = await readInbox(ids);
   const seen = new Set<string>();
-  const out: Record<Bucket, TriageThread[]> = { do: [], did: [], look: [], junk: [] };
+  const out = emptyBuckets();
   for (const bucket of MAIL_STATES) {
-    for (const thread of cached[bucket as Bucket]) {
+    for (const thread of cached[bucket] ?? []) {
       const tags = inbox.get(thread.thread_id);
       if (!tags || seen.has(thread.thread_id)) continue;
       seen.add(thread.thread_id);
       // During new-reply ingestion an old DID plus the new message's DO can
-      // briefly coexist. Contract order is conservative: DO wins until Laya
+      // briefly coexist. Contract order is conservative: confirmed DO wins
+      // before DONT KNOW, which wins over a stale completed workflow State.
+      // This precedence remains defined by the contract until the classifier
       // normalizes the whole thread.
       const live = MAIL_STATES.find(state => tags.has(mailStateTag(state))) as Bucket | undefined;
       if (live) out[live].push(thread);
@@ -207,7 +195,7 @@ function toCard(thread: TriageThread, bucket: Bucket) {
     id: thread.thread_id,
     kind: "mail",
     label: thread.subject,
-    priority: PRIORITY[bucket],
+    priority: bucket === MAIL_ACTION_STATE ? "critical" : bucket === "junk" ? "low" : "normal",
     sender: thread.sender ?? thread.from_name ?? thread.from_address ?? "?",
     summary: thread.summary,
     suggested_action: thread.suggested_action,
@@ -233,7 +221,7 @@ export function mailTriageTools(
     {
       name: "hwc_mail_triage",
       description:
-        "Mail workflow board. READS: action=board (default) returns DO/DID/LOOK/JUNK from cached Laya content " +
+        `Mail workflow board. READS: action=board (default) returns ${MAIL_STATES.map(state => MAIL_STATE_DISPLAY_NAMES[state]).join("/")} from cached Laya content ` +
         "reflected through live state/* tags; action=summary is compact; action=digest returns up to eight DO items. " +
         "Writes use the same durable human-decision ledger as aerc.",
       inputSchema: {
@@ -341,25 +329,17 @@ export function mailTriageTools(
         if (!triage) return mcpError({ type: "UNAVAILABLE", message: "Mail digest is unavailable. Open aerc or run mail triage." });
         // Reflect persisted decisions from their live active-state tag.
         let reflected: Record<Bucket, TriageThread[]>;
-        try { reflected = await reflectLiveBuckets({
-          do: bucketThreads(triage, "do"),
-          did: bucketThreads(triage, "did"),
-          look: bucketThreads(triage, "look"),
-          junk: bucketThreads(triage, "junk"),
-        }, readInbox, action === "digest"); } catch {
+        try { reflected = await reflectLiveBuckets(Object.fromEntries(MAIL_STATES.map(state =>
+          [state, bucketThreads(triage, state)])), readInbox, action === "digest"); } catch {
           return mcpError({ type: "COMMAND_FAILED", message: "Cannot verify inbox membership. Open aerc or refresh." });
         }
-        const doMail = reflected.do;
-        const did = reflected.did;
-        const look = reflected.look;
-        const junk = reflected.junk;
+        const doMail = reflected[MAIL_ACTION_STATE];
 
         // Counts derive from the REFLECTED arrays (post-move), not the stale
         // cached stats — a move shifts a thread between buckets at read time.
         const doCount = doMail.length;
-        const didCount = did.length;
-        const lookCount = look.length;
-        const junkCount = junk.length;
+        const stateCounts = Object.fromEntries(MAIL_STATES.map(state => [`${state}_count`, reflected[state].length]));
+        const countsText = MAIL_STATES.map(state => `${reflected[state].length} ${MAIL_STATE_DISPLAY_NAMES[state]}`).join(" · ");
         const totalUnread = triage?.total_unread ?? 0;
         const generatedAt = triage?.generated_at ?? null;
         const routingRuleCount = Array.isArray(triage?.routing_rules)
@@ -370,12 +350,7 @@ export function mailTriageTools(
         const compact = {
           generated_at: generatedAt,
           total_unread: totalUnread,
-          stats: {
-            do_count: doCount,
-            did_count: didCount,
-            look_count: lookCount,
-            junk_count: junkCount,
-          },
+          stats: stateCounts,
           routing_rule_count: routingRuleCount,
         };
 
@@ -385,7 +360,7 @@ export function mailTriageTools(
             view: contract("list", "Mail to do", {
               items: items.slice(0, 8), total: items.length,
               remaining: Math.max(0, items.length - 8),
-              summary: `${doCount} do · ${didCount} waiting · ${routingRuleCount} routing rule${routingRuleCount === 1 ? "" : "s"} · classified ${generatedAt ?? "unknown"}`,
+              summary: `${countsText} · ${routingRuleCount} routing rule${routingRuleCount === 1 ? "" : "s"} · classified ${generatedAt ?? "unknown"}`,
             }, { generated_at: generatedAt, source: "hwc_mail_triage" }) };
         }
 
@@ -397,14 +372,14 @@ export function mailTriageTools(
           return {
             status: "ok",
             message: triage
-              ? `Mail: ${doCount} do, ${didCount} did, ${lookCount} look, ${junkCount} junk`
+              ? `Mail: ${countsText}`
               : "No cached mail triage found",
             data: compact,
             view: contract(
               "text",
               "Mail",
               {
-                greeting: `${doCount} do · ${didCount} did · ${lookCount} look · ${junkCount} junk`,
+                greeting: countsText,
                 summary: summaryText,
                 highlights,
               },
@@ -414,17 +389,13 @@ export function mailTriageTools(
         }
 
         // action === "board" (default)
-        const columns = [
-          { id: "do", title: "DO", cards: doMail.map((t) => toCard(t, "do")) },
-          { id: "did", title: "DID", cards: did.map((t) => toCard(t, "did")) },
-          { id: "look", title: "Look", cards: look.map((t) => toCard(t, "look")) },
-          { id: "junk", title: "Junk", cards: junk.map((t) => toCard(t, "junk")) },
-        ];
+        const columns = MAIL_STATES.map(state => ({id: state, title: MAIL_STATE_DISPLAY_NAMES[state],
+          cards: reflected[state].map(thread => toCard(thread, state))}));
 
         return {
           status: "ok",
           message: triage
-            ? `Mail board: ${doCount} do, ${didCount} did, ${lookCount} look, ${junkCount} junk`
+            ? `Mail board: ${countsText}`
             : "No cached mail triage found — empty board",
           data: compact,
           view: contract(

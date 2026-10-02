@@ -13,6 +13,7 @@
 import { readFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
+import { MAIL_STATES, MAIL_STATE_DISPLAY_NAMES } from "./mail.js";
 
 const BRIEFING_PATH =
   "/home/eric/.nixos/domains/business/morning-briefing/output/briefing.json";
@@ -312,10 +313,9 @@ export function morningBriefTool(briefingPath = BRIEFING_PATH): ToolDef {
       if (Object.keys(mailTriage).length) {
         const stats = asObj(mailTriage["stats"]);
         const total = num(mailTriage["total_unread"]);
-        const todo = num(stats["do_count"]); const did = num(stats["did_count"]);
-        const look = num(stats["look_count"]); const junk = num(stats["junk_count"]);
-        if (total != null || todo != null) {
-          mailLines.push(`- Workflow: ${total ?? "?"} unread — ${todo ?? 0} do, ${did ?? 0} did, ${look ?? 0} look, ${junk ?? 0} junk`);
+        if (total != null || MAIL_STATES.some(state => num(stats[`${state}_count`]) != null)) {
+          const counts = MAIL_STATES.map(state => `${num(stats[`${state}_count`]) ?? 0} ${MAIL_STATE_DISPLAY_NAMES[state]}`).join(", ");
+          mailLines.push(`- Workflow: ${total ?? "?"} unread — ${counts}`);
         }
         const doMail = bullets(asArr(asObj(mailTriage["buckets"])["do"]), 5);
         for (const item of doMail) mailLines.push(`  - 🔴 ${item}`);
@@ -326,7 +326,8 @@ export function morningBriefTool(briefingPath = BRIEFING_PATH): ToolDef {
             const rule = asObj(rawRule);
             const sender = pick(rule, "sender") || "unknown sender";
             const subject = pick(rule, "subject_contains") || "any subject";
-            const state = pick(rule, "state").toUpperCase() || "DO";
+            const stateValue = pick(rule, "state");
+            const state = MAIL_STATE_DISPLAY_NAMES[stateValue] || stateValue.toUpperCase();
             const domain = pick(rule, "domain").toUpperCase() || "OTHER";
             mailLines.push(`  - ${sender} + “${subject}” → ${state} · ${domain}`);
           }

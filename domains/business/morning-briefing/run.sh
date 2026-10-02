@@ -774,10 +774,9 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
       else "" end)
     + (if .mail_triage then
         sec("MAIL")
-        + "do: " + ((.mail_triage.stats.do_count // 0) | tostring)
-        + " · did: " + ((.mail_triage.stats.did_count // 0) | tostring)
-        + " · look: " + ((.mail_triage.stats.look_count // 0) | tostring)
-        + " · junk: " + ((.mail_triage.stats.junk_count // 0) | tostring)
+        + (.mail_triage as $triage | ($triage.states // ["do", "did", "look", "junk"])
+          | map(. as $state | ($triage.state_display_names[$state] // ($state | ascii_upcase))
+            + ": " + (($triage.stats[$state + "_count"] // 0) | tostring)) | join(" · "))
         + (if .sections.mail.summary then " · " + .sections.mail.summary else "" end)
         + (if .mail_triage.error then "\n  triage error: " + .mail_triage.error else "" end)
         + (if ((.mail_triage.routing_rules // []) | length) > 0 then
@@ -921,10 +920,9 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
 
     + (if .mail_triage then
         card("Mail"; $dash; "workflow";
-          item("do " + ((.mail_triage.stats.do_count // 0) | tostring)
-            + " &middot; did " + ((.mail_triage.stats.did_count // 0) | tostring)
-            + " &middot; look " + ((.mail_triage.stats.look_count // 0) | tostring)
-            + " &middot; junk " + ((.mail_triage.stats.junk_count // 0) | tostring)
+          item((.mail_triage as $triage | ($triage.states // ["do", "did", "look", "junk"])
+            | map(. as $state | (($triage.state_display_names[$state] // ($state | ascii_upcase)) | h)
+              + " " + (($triage.stats[$state + "_count"] // 0) | tostring)) | join(" &middot; "))
             + (if $s.mail.summary then " &middot; " + meta(($s.mail.summary|h)) else "" end))
           + (if .mail_triage.error then item(red("triage error: " + (.mail_triage.error|h))) else "" end)
           + (if ((.mail_triage.routing_rules // []) | length) > 0 then
