@@ -1,50 +1,29 @@
-# brain-mcp authentication
+# Brain MCP access
 
-## Public path (recommended)
+## Public clients
 
-- URL: `https://brain.heartwoodcraft.me/mcp`
-- Reachable from: anywhere
-- Auth: **Cloudflare Access Managed OAuth** (Advanced settings → Managed OAuth toggle ON on the self-hosted Access application)
-- Standards: RFC 8414 (OAuth 2.0 Authorization Server Metadata), RFC 9728 (OAuth 2.0 Protected Resource Metadata), Dynamic Client Registration, PKCE S256
+Use `https://brain-mcp.iheartwoodcraft.com/mcp`. The OAuth gateway advertises
+`https://auth-mcp.iheartwoodcraft.com` as its authorization server. Leave the
+client ID and secret blank in a connector that supports dynamic registration.
+Cloudflare Access protects the human login at `/authorize`. The gateway issues
+30-day access tokens and non-expiring refresh tokens, and sends its separate
+Service Auth credential to `brain-origin.iheartwoodcraft.com/mcp`.
 
-### How claude.ai connects
+The replacement origin rejects anonymous requests and the legacy gateway
+credential (verified 2026-10-02). Its new credential is encrypted in
+`domains/secrets/parts/services/hwc-gateway-com.age`. The Worker configuration
+and Access resource inventory live in `~/600_apps/hwc-mcp-gateway/`.
 
-1. claude.ai connector configured with **URL only** — no client ID or secret needed.
-2. claude.ai hits `/mcp`, receives `401` with `WWW-Authenticate: Bearer realm="OAuth", resource_metadata=https://brain.heartwoodcraft.me/.well-known/cloudflare-access-protected-resource/mcp`.
-3. claude.ai fetches `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource` to discover the authorization server (`polished-bush-c7f5.cloudflareaccess.com`).
-4. claude.ai dynamically registers itself as an OAuth client via Cloudflare's DCR endpoint.
-5. Cloudflare prompts the user to log in (browser).
-6. claude.ai receives an OAuth access token (Bearer JWT).
-7. All subsequent requests include the Bearer; Cloudflare validates → strips it → forwards to brain-mcp.
+## Private clients
 
-The brain-mcp process never sees the OAuth Bearer — Cloudflare strips it. App-level auth code was removed 2026-05-22.
+On hwc-work, use `http://127.0.0.1:9876/mcp`. Tailnet clients use the generated
+Brain MCP endpoint from Nix; the Caddy HTTPS route is port 23443. The process
+has no app-level Bearer check. Private access trusts the tailnet boundary.
 
-## Headers-based path (automation / scripts)
+## Retirement state
 
-For machine-to-machine access that can't do an interactive OAuth flow, use a Cloudflare Access **Service Token** policy on the same application:
-
-```bash
-curl -H "CF-Access-Client-Id: <id>.access" \
-     -H "CF-Access-Client-Secret: <secret>" \
-     https://brain.heartwoodcraft.me/mcp
-```
-
-Service tokens are created in: Cloudflare Zero Trust → Access → Service Credentials.
-
-## Internal path (Tailscale / localhost)
-
-- URL: `http://server:9876/mcp` (Tailscale alias `server`) or `http://127.0.0.1:9876/mcp` on the server itself. The alias resolves via `hwc.networking.hosts.ips.main` — don't copy the literal address into docs, it changes when the node re-registers (it moved once already, 2026-08-12).
-- Reachable from: only the server's localhost and Tailscale tailnet devices.
-- Auth: **none** at the app level. Trust boundary is the Tailscale identity layer (only paired devices can connect).
-- Use case: laptop Claude Code, Charter-internal tooling, debugging.
-
-## What does NOT work
-
-- Passing `CF-Access-Client-Id` / `CF-Access-Client-Secret` as headers in claude.ai's MCP connector form. The "Advanced settings" fields on that form are OAuth client_id/client_secret, NOT HTTP headers. With Managed OAuth enabled, leave those fields blank — claude.ai uses Dynamic Client Registration.
-
-## Same pattern on the other MCPs
-
-Apply Managed OAuth to each Self-hosted Access app for parity:
-- `leads.heartwoodcraft.me` (lead-scout) — done 2026-05-22
-- `mcp.heartwoodcraft.me` (hwc_mcp) — done 2026-05-22
-- Future MCPs: enable Managed OAuth on creation
+The old `.me` gateway remains during client reconnection. Historical bare
+`brain.*` aliases are separate routes; they were found to allow anonymous tool
+discovery and must be protected or removed after their consumers are reconciled.
+Do not treat an MCP portal policy as protection of an upstream hostname.
+Use the replacement gateway when adding a public client.

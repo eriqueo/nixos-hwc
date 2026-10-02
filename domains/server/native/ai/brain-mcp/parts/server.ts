@@ -9,7 +9,7 @@
  * checkpointed): delete_note, move_note, replace_in_notes, update_frontmatter,
  * commit_vault.
  * Protocol: JSON-RPC 2.0 over HTTP POST (MCP spec 2024-11-05).
- * Auth: Bearer token read from BRAIN_MCP_KEY_FILE at startup.
+ * Public auth: OAuth gateway and Cloudflare Access Service Auth at the origin.
  */
 
 import { join, resolve, relative, dirname } from "jsr:@std/path@1";
@@ -185,7 +185,7 @@ async function ensureGitRepo(): Promise<void> {
   if (await exists(join(VAULT_ROOT, ".git"))) return;
   await git(["init", "-b", "main"]);
   await git(["config", "user.name", "brain-mcp"]);
-  await git(["config", "user.email", "brain-mcp@heartwoodcraft.me"]);
+  await git(["config", "user.email", "brain-mcp@iheartwoodcraft.com"]);
 }
 
 // Commit any pending vault state under a prefixed message. No-op if tree is clean.
@@ -870,18 +870,10 @@ Deno.serve({ port: PORT, hostname: HOST }, async (req: Request): Promise<Respons
     return Response.json({ status: "ok", service: "brain-mcp", vault: VAULT_ROOT, port: PORT });
   }
 
-  // Auth: Cloudflare Access Managed OAuth at the network boundary.
-  //   - Public URL: https://brain.heartwoodcraft.me/mcp
-  //   - Managed OAuth toggle ON in the Cloudflare Access self-hosted app makes
-  //     Access an RFC 8414 / RFC 9728-compliant OAuth 2.1 authorization server
-  //     with Dynamic Client Registration (DCR) + PKCE.
-  //   - claude.ai discovers it via the WWW-Authenticate / .well-known endpoints,
-  //     registers dynamically, then sends a Bearer access token Cloudflare validates.
-  //   - Cloudflare strips the Bearer (Access JWT) before forwarding here, so this
-  //     process sees an authenticated request with no Authorization header to check.
-  //   - Internal Tailscale path (http://server:9876/mcp) bypasses Cloudflare and is
-  //     intentionally open; protected only by the Tailscale identity layer.
-  //   - App-level Bearer check removed 2026-05-22 — Access is the sole gate.
+  // Public clients use brain-mcp.iheartwoodcraft.com/mcp through the OAuth
+  // gateway. Its brain-origin hostname requires Cloudflare Service Auth.
+  // This process has no app-level Bearer check. The private tailnet path is
+  // intentionally trusted; every public route to it requires a network gate.
 
   if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
     if (req.method !== "POST") {

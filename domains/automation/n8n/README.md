@@ -2,7 +2,7 @@
 
 ## Purpose
 
-n8n workflow automation platform running as a Podman container. Handles alert routing, webhook processing, business integrations, and general workflow automation. Event Scout now owns event discovery and curation. Exposed via Cloudflare Tunnel (`n8n.heartwoodcraft.me`) for external webhook access.
+n8n workflow automation platform running as a Podman container. Handles alert routing, webhook processing, business integrations, and general workflow automation. Event Scout now owns event discovery and curation. Public receivers use Cloudflare Tunnel at `api.iheartwoodcraft.com/webhook/...`; the editor uses the tailnet. The old `.me` hostname remains until external senders are checked.
 
 ## Boundaries
 
@@ -80,7 +80,7 @@ n8n's MCP tooling now runs as a **stdio backend of the unified gateway** (`hwc-s
 ### Claude.ai Connection URL
 
 ```
-https://mcp.heartwoodcraft.me/n8n/mcp
+https://hwc-mcp.iheartwoodcraft.com/mcp
 ```
 
 ### Testing
@@ -90,7 +90,7 @@ https://mcp.heartwoodcraft.me/n8n/mcp
 curl -s https://mcp.heartwoodcraft.me/health | jq .
 
 # n8n MCP initialize
-curl -s -X POST https://mcp.heartwoodcraft.me/n8n/mcp \
+curl -s -X POST https://hwc-mcp.iheartwoodcraft.com/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
@@ -103,7 +103,7 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 ## Dependencies
 
 - **agenix secrets**: encryption key, owner password hash, various API keys, n8n-api-key (for MCP bridge)
-- **Cloudflare Tunnel** (`domains/networking/cloudflared`) — public ingress for `n8n.heartwoodcraft.me` and `mcp.heartwoodcraft.me`
+- **Cloudflare Tunnel** (`domains/networking/cloudflared`) — public path-restricted webhook ingress on `api.iheartwoodcraft.com`
 - **hwc-sys-mcp** — Express server proxies `/n8n/*` to the MCP bridge
 
 ## Access
@@ -111,9 +111,9 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 | Endpoint | URL |
 |----------|-----|
 | n8n UI (internal) | `http://127.0.0.1:5678` |
-| n8n UI (tailnet) | `https://hwc-server.ocelot-wahoo.ts.net:2443` (Caddy port route) |
-| n8n webhook (public) | `https://n8n.heartwoodcraft.me/webhook/...` |
-| n8n MCP (Claude.ai) | `https://mcp.heartwoodcraft.me/n8n/mcp` |
+| n8n UI (tailnet) | `https://hwc-work.ocelot-wahoo.ts.net:2443` (Caddy port route) |
+| n8n webhook (public) | `https://api.iheartwoodcraft.com/webhook/...` |
+| n8n MCP (Claude.ai) | `https://hwc-mcp.iheartwoodcraft.com/mcp` |
 | n8n MCP (internal) | `http://127.0.0.1:6201/mcp` |
 
 ## Systemd Units
@@ -123,6 +123,8 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 - `hwc-n8n-mcp-env.service` — generates bridge env file from agenix secrets
 
 ## Changelog
+
+- 2026-10-02: Document `.com` public webhook receivers and the current work tailnet editor. `publicUrl` is derived from the tailnet route; there is no separate `webhookUrl` option. Retain `.me` until actual external sender settings are verified.
 
 - 2026-09-08: Event discovery, curation and calendar review moved to Event Scout
   in the Scout monorepo (`apps/event-scout`). Removed the two event workflow

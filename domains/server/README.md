@@ -9,6 +9,9 @@
 
 ## Structure
 
+Brain MCP public clients use the `.com` OAuth gateway and Service Auth origin;
+`native/ai/brain-mcp/AUTH.md` records the private path and remaining alias cleanup.
+
 `native/ai/lead-scout` owns the disabled member recovery unit. It adopts the
 runtime compose project, waits for either container to exit and stops app before
 db. Runtime compose owns static addresses; Nix only validates exact trust.
@@ -63,6 +66,7 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+- 2026-10-02: Move Brain MCP’s new-repository Git identity to `brain-mcp@iheartwoodcraft.com` and document the deployed OAuth gateway and verified origin restriction. Legacy public aliases still require consumer reconciliation.
 - 2026-10-01: Added optional private invitation SMTP socket, bounded loopback relay and runtime preparation for the member Scout app. Enabled on work with eric@iheartwoodcraft.com.
 - 2026-10-01: event-scout hands calendar files to `hwc.paths.user.calendarDrop` (created by tmpfiles; `imported/` kept indefinitely as its record of added events) instead of the synced `~/000_inbox/downloads`.
 - 2026-09-30: lead-scout, home-scout and research-scout merge `hwc.system.apps.agent-harness.pipelineEnvironment` (`HWC_PIPELINE=1`) into the unit that launches the headless classifier, so the workspace guard only reports on it.

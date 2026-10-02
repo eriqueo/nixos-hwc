@@ -86,6 +86,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-10-02: Refresh n8n access documentation for the `.com` receiver, work tailnet editor and pending sender cutover.
 
 - 2026-10-02: Replace the screenshot naming schedule with folder arrivals, a boot catch-up run and retries only while work remains.
 
