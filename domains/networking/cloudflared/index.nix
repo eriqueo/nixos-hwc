@@ -13,11 +13,8 @@
 #   2. cloudflared tunnel create hwc-server → ~/.cloudflared/<TUNNEL_ID>.json
 #   3. Encrypt credentials JSON with agenix
 #   4. Create DNS CNAMEs in Cloudflare for each ingress hostname:
-#        {service}.heartwoodcraft.me → <TUNNEL_ID>.cfargotunnel.com   (active)
-#        {service}.api.iheartwoodcraft.com → <TUNNEL_ID>.cfargotunnel.com
-#        (Phase 4.6 in progress; needs api.iheartwoodcraft.com
-#         delegated from Hostinger to Cloudflare first — NS record at
-#         the apex zone pointing `api` to the Cloudflare nameservers.)
+#        {service}.iheartwoodcraft.com → <TUNNEL_ID>.cfargotunnel.com
+#      Create Access restrictions before publishing protected origins.
 #   5. Set tunnelId below and rebuild
 # See wiki/nixos/iheartwoodcraft-com-backend-migration.md for the
 # operator runbook covering the api.iheartwoodcraft.com migration.
@@ -46,9 +43,13 @@ in
     };
 
     domain = lib.mkOption {
-      type = lib.types.str;
-      default = "n8n.heartwoodcraft.me";
-      description = "Primary public hostname (default: n8n ingress)";
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        Optional whole-host n8n ingress. Leave null for path-restricted webhook
+        ingress through extraIngress. Legacy hostnames must be explicit at the
+        machine rather than silently surviving as a module default.
+      '';
     };
 
     n8nPort = lib.mkOption {
@@ -82,7 +83,7 @@ in
         services.cloudflared ingress submodule, which validates it.
       '';
       example = {
-        "status.heartwoodcraft.me" = "http://localhost:3000";
+        "status.iheartwoodcraft.com" = "http://localhost:3000";
         "api.iheartwoodcraft.com" = { service = "http://localhost:5678"; path = "^/webhook/"; };
       };
     };
@@ -104,7 +105,7 @@ in
           credentialsFile = cfg.credentialsFile;
           default = "http_status:404";
 
-          ingress = {
+          ingress = lib.optionalAttrs (cfg.domain != null) {
             ${cfg.domain} = "http://${cfg.n8nHost}:${toString cfg.n8nPort}";
           } // cfg.extraIngress;
         };

@@ -344,16 +344,20 @@
       enable = true;
       tunnelId = "1536327b-2641-4706-8ad9-48c94d0b11f9";
       credentialsFile = config.age.secrets.cloudflared-tunnel-credentials.path;
-      # n8n.heartwoodcraft.me → local n8n (module default n8nHost = localhost).
+      # Temporary: keep the old n8n route until external senders are verified
+      # on api.iheartwoodcraft.com/webhook/...; then remove this explicit route.
+      domain = "n8n.heartwoodcraft.me";
       extraIngress = {
         "mcp.heartwoodcraft.me" = "http://localhost:6200";
         "mcp.iheartwoodcraft.com" = "http://localhost:6200";
         "hwc-origin.heartwoodcraft.me" = "http://localhost:6200";
+        "hwc-origin.iheartwoodcraft.com" = "http://localhost:6200";
 
         # brain-mcp is local (wave 1).
         "brain.heartwoodcraft.me" = "http://localhost:9876";
         "brain.iheartwoodcraft.com" = "http://localhost:9876";
         "brain-origin.heartwoodcraft.me" = "http://localhost:9876";
+        "brain-origin.iheartwoodcraft.com" = "http://localhost:9876";
 
         # datax-monitor — Cloudflare Access ("datax" allow-list) gates it; the
         # app has no auth of its own.
@@ -385,6 +389,7 @@
 
         # hwc-mcp-gateway origin for lead-scout (Access service token).
         "leads-origin.heartwoodcraft.me" = "http://localhost:8420";
+        "leads-origin.iheartwoodcraft.com" = "http://localhost:8420";
       };
     };
 
