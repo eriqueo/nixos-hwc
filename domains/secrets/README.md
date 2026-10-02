@@ -63,6 +63,7 @@ these same rules instead of maintaining another host list.
 
 ## Changelog
 
+- 2026-10-02: Added `crm-meta-verify-token` (generated, never displayed) and `crm-meta-page-token` (the Heartwood Craft Page access token Eric supplied, first staged under the name `crm-meta-app-secret`; it is an `EAA…` access token, not the app secret) in `parts/services/`. hwc-crm D55 reads them for the Messenger webhook handshake and the history import. Both encrypted to the existing five recipients and verified by decryption on work; the standard `root:secrets / 0440` mount. The Meta app secret itself is still to be added as `crm-meta-app-secret`.
 - 2026-10-02: Remove the retired Hostinger SFTP payload. Source/app reference searches and evaluated work service configuration found no consumer; the website publishes locally on work. Removing its generated declaration retires the mount across the fleet.
 
 - 2026-10-02: Remove `hwc-gateway-clientid.age` and `hwc-gateway-secret.age` after both MCP clients moved. Retain the isolated `.com` credential; no remaining source consumers reference the old mounts.
