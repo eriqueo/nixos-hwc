@@ -132,7 +132,8 @@ let
   skillRoots = map (dir: "${dir}/skills") ([ ".claude" ] ++ cfg.claudeConfigDirs) ++ [ ".agents/skills" ];
 
   # How tracker/t3.py reaches T3 Code: its CLI issues short bearer sessions
-  # from T3's own state dir, so no token is stored.
+  # from T3's own state dir, so no token is stored. Used on each host by
+  # tracker-link and tracker-relay, never by the hub.
   t3Env = {
     T3CODE_NODE = "${pkgs.nodejs}/bin/node";
     T3CODE_BIN = "${lib.attrByPath [ "hwc" "home" "apps" "t3code" "repo" ] "${home}/600_apps/t3code" config}/apps/server/dist/bin.mjs";
@@ -293,6 +294,11 @@ in
         type = lib.types.str;
         default = "${home}/000_inbox/downloads/agent";
         description = "Deliverables root scanned for <project>/tracker.json (depth 1-2).";
+      };
+      url = lib.mkOption {
+        type = lib.types.str;
+        default = "http://hwc-work:8765";
+        description = "The hub as every host's tracker-relay reaches it (tailnet).";
       };
     };
     claudeConfigDirs = lib.mkOption {
@@ -505,16 +511,35 @@ in
         Description = "HWC project tracker hub (roadmaps, plans, decision cards)";
         After = [ "network-online.target" ];
         # The server and page are pinned harness files; a new revision restarts it.
-        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "server.py" "index.html" "t3.py" "handoff_doc.py" ];
+        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "server.py" "index.html" "handoff_doc.py" ];
       };
       Service = {
         ExecStart = "${pkgs.python3}/bin/python3 ${harness}/tracker/server.py ${toString cfg.tracker.port}";
-        # T3 env: "Done deciding" posts the next prompt into the linked thread.
+        # No T3 environment: the hub only queues pings; each host's
+        # tracker-relay posts them into its own T3.
         # TRACKER_LEDGERS: every host's ws ledger, for the handoff coverage check.
-        Environment = [ "TRACKER_ROOT=${cfg.tracker.root}" "TRACKER_LEDGERS=${cfg.stateDir}/ledger" ]
-          ++ lib.mapAttrsToList (k: v: "${k}=${v}") t3Env;
+        Environment = [ "TRACKER_ROOT=${cfg.tracker.root}" "TRACKER_LEDGERS=${cfg.stateDir}/ledger" ];
         Restart = "on-failure";
         RestartSec = 5;
+      };
+      Install.WantedBy = [ "default.target" ];
+    };
+
+    # Every host: posts the hub's pings for this host's T3 threads into the
+    # local T3 and reports back (tracker/relay.py). Polls every 5 s; while the
+    # host sleeps, the page shows the ping as "not answering" and it is
+    # delivered on wake. A T3 that is not running is reported as a failure.
+    systemd.user.services.tracker-relay = {
+      Unit = {
+        Description = "Deliver tracker pings into this host's T3 threads";
+        After = [ "network-online.target" ];
+        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "relay.py" "t3.py" ];
+      };
+      Service = {
+        ExecStart = "${pkgs.python3}/bin/python3 ${harness}/tracker/relay.py";
+        Environment = [ "TRACKER_URL=${cfg.tracker.url}" ] ++ lib.mapAttrsToList (k: v: "${k}=${v}") t3Env;
+        Restart = "always";
+        RestartSec = 10;
       };
       Install.WantedBy = [ "default.target" ];
     };

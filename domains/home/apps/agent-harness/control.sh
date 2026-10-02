@@ -143,6 +143,7 @@ doctor_local() {
   fi
   if codex-hooks-trust --check >/dev/null; then ok 'Codex hooks trusted'; else fail 'Codex hooks untrusted or unverifiable'; fi
   if systemctl --user --quiet is-active agent-state-sync.timer; then ok 'agent-state-sync.timer active'; else fail 'agent-state-sync.timer inactive'; fi
+  if systemctl --user --quiet is-active tracker-relay.service; then ok 'tracker-relay active'; else fail 'tracker-relay inactive: tracker pings to this host wait'; fi
   for command in claude codex pi herdr; do check_command "$command"; done
 
   if [ -d "$SOURCE/.git" ]; then
