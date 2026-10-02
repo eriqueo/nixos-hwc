@@ -48,12 +48,13 @@ if [ "${MODE}" != "baseline" ] && [ "${MODE}" != "delta" ]; then
 fi
 
 if [ ! -x "${CLASSIFIER_BIN}" ] || [ ! -S "${SOCKET}" ]; then
-  log "WARN: Laya classifier unavailable; unclassified mail remains DO"
-  jq -n --arg now "$(date -Iseconds)" '{
+  log "WARN: Laya classifier unavailable; unclassified mail remains DONT KNOW"
+  jq -n --arg now "$(date -Iseconds)" --slurpfile contract "${HWC_MAIL_CLASSIFIER_CONTRACT_FILE:?mail vocabulary binding required}" '{
     schemaVersion: 2, generated_at: $now, provider: "laya",
-    error: "classifier unavailable; unclassified mail remains DO",
-    buckets: {do: [], did: [], look: [], junk: []},
-    stats: {do_count: 0, did_count: 0, look_count: 0, junk_count: 0}
+    error: "classifier unavailable; unclassified mail remains DONT KNOW",
+    states: $contract[0].states, state_display_names: $contract[0].stateDisplayNames,
+    buckets: ($contract[0].states | map({key: ., value: []}) | from_entries),
+    stats: ($contract[0].states | map({key: (. + "_count"), value: 0}) | from_entries)
   }' > "${MAIL_TRIAGE_JSON}.tmp" && mv "${MAIL_TRIAGE_JSON}.tmp" "${MAIL_TRIAGE_JSON}"
 else
   # The system units bind this path from hwc.paths. Busy means defer to the
@@ -72,7 +73,7 @@ else
       log "mail owner busy; classification deferred to the next scheduled run"
       exit 75
     fi
-    log "ERROR: classifier run failed; unclassified mail remains DO"
+    log "ERROR: classifier run failed; unclassified mail remains DONT KNOW"
     exit 1
   fi
 fi

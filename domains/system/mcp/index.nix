@@ -48,6 +48,7 @@ let
     doCheck = true;
     checkPhase = ''
       runHook preCheck
+      export HWC_MAIL_CLASSIFIER_CONTRACT_FILE=${mailClassifierContract}
       npm test
       runHook postCheck
     '';

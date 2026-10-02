@@ -1,9 +1,10 @@
 # domains/business/morning-briefing/index.nix
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, inputs, ... }:
 let
   cfg = config.hwc.business.morningBriefing;
   paths = config.hwc.paths;
   agentDir = "${paths.nixos}/domains/business/morning-briefing";
+  mailContractFile = "${inputs.system-one}/scripts/mail_classifier_contract.json";
 
 in
 {
@@ -45,6 +46,7 @@ in
       environment = {
         HOME = paths.user.home;
         MAIL_SYNC_LOCK_FILE = "${builtins.dirOf paths.user.mailSyncStatus}/sync.lock";
+        HWC_MAIL_CLASSIFIER_CONTRACT_FILE = mailContractFile;
         PROM_URL = cfg.prometheusUrl;
       } // lib.optionalAttrs (cfg.hostHealthFrom != null) {
         BRIEFING_HOST = config.hwc.networking.hosts.servers.${cfg.hostHealthFrom};
@@ -104,6 +106,7 @@ in
       description = "Mail retriage — classify unclassified unread threads on demand";
       environment.HOME = paths.user.home;
       environment.MAIL_SYNC_LOCK_FILE = "${builtins.dirOf paths.user.mailSyncStatus}/sync.lock";
+      environment.HWC_MAIL_CLASSIFIER_CONTRACT_FILE = mailContractFile;
       after = [ "mail-classifier-model.service" ];
       wants = [ "mail-classifier-model.service" ];
       path = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.notmuch ];

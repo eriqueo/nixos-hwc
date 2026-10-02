@@ -29,7 +29,7 @@ let
   domainKeys = grammar.aerc.domainKeys;
   menus = builtins.mapAttrs (_: choices: map (c: c // { command = native.${c.action}; }) choices)
     grammar.aerc.menus // {
-    state = map (state: { key = stateKeys.${state}; desc = lib.toUpper state;
+    state = map (state: { key = stateKeys.${state}; desc = mailContract.stateDisplayNames.${state};
       command = workflowPipe "mail-classifier correct --state ${state}"; }) mailContract.states;
     domain = map (domain: { key = domainKeys.${domain}; desc = domain;
       command = workflowPipe "mail-classifier correct --domain ${domain}"; }) mailContract.domains;
@@ -39,7 +39,11 @@ let
       command = "modify-labels +${t.tag}"; }) visibleFlagTags;
   };
   native = {
-    go-do = "cf do"; go-did = "cf did"; go-look = "cf look"; go-junk = "cf junk";
+    go-do = "cf ${mailContract.stateDisplayNames.${mailContract.actionState}}";
+    go-dont-know = "cf ${mailContract.stateDisplayNames.${mailContract.fallbackState}}";
+    go-did = "cf ${mailContract.stateDisplayNames.did}";
+    go-look = "cf ${mailContract.stateDisplayNames.look}";
+    go-junk = "cf ${mailContract.stateDisplayNames.junk}"; go-bulk = "cf Bulk";
     go-backlog = "cf backlog"; go-inbox = "cf inbox_i"; go-all = "cf all";
     go-unread = "cf unread_u"; go-archive = "cf Archive_a"; go-sent = "cf sent_s";
     go-trash = "cf trash_d"; go-spam = "cf spam_z"; go-hide = "cf hide_my_email";

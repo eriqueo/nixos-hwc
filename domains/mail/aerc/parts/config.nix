@@ -8,7 +8,7 @@ let
     accVals   = lib.attrValues accounts;
     colors    = (config.hwc.home.theme or {}).colors or {};
     tags      = import ./tags.nix { inherit lib mailContract; inherit colors; };
-    appearance = import ./appearance.nix { inherit lib colors tags; };
+    appearance = import ./appearance.nix { inherit lib colors tags mailContract; };
 
     maildirBase =
         let nmRoot = config.hwc.mail.notmuch.maildirRoot or "";
@@ -26,7 +26,10 @@ let
       hwc = "HWC"; datax = "DataX"; family = "Family";
       personal = "Personal"; other = "Other";
     };
-    stateDisplay = { "do" = "DO"; did = "DID"; look = "LOOK"; junk = "JUNK"; };
+    stateDisplay = mailContract.stateDisplayNames;
+    stateWidth = toString (lib.foldl' lib.max 5 (map builtins.stringLength (builtins.attrValues stateDisplay)));
+    stateFolders = map (state: stateDisplay.${state}) mailContract.states;
+    sidebarFolders = lib.concatStringsSep "," (stateFolders ++ [ "Bulk" ]);
     templateCases = prefix: items: display:
       lib.concatStringsSep " " (map (item:
         ''(case `^${prefix}${item}$` "${display.${item} or item}")''
@@ -50,7 +53,12 @@ let
   # Historical account/category searches remain explicit history:* entries.
   queryAliases = builtins.listToAttrs (map (state: {
     name = state; value = searchRegistry.searches.${"state:${state}"};
+  }) mailContract.states) // builtins.listToAttrs (map (state: {
+    name = stateDisplay.${state};
+    value = searchRegistry.searches.${"state:${state}"}
+      + lib.optionalString (state == mailContract.fallbackState) " AND NOT (${mailContract.viewQueries.bulk})";
   }) mailContract.states) // {
+    Bulk = searchRegistry.searches."view:bulk";
     backlog = legacyBacklog;
     inbox_i = searchRegistry.searches.inbox;
     unread_u = searchRegistry.searches.unread;
@@ -74,10 +82,10 @@ let
     from                = Eric <eric@iheartwoodcraft.com>
     outgoing            = ${pkgs.msmtp}/bin/msmtp
     trusted-authres     = ${lib.concatStringsSep "," trustedAuthResults}
-    folders             = do,did,look,junk
-    default             = do
+    folders             = ${sidebarFolders}
+    default             = ${stateDisplay.${mailContract.fallbackState}}
     enable-folders-sort = true
-    folders-sort        = do,did,look,junk
+    folders-sort        = ${sidebarFolders}
   '';
 
   accountsFile = pkgs.writeText "aerc-accounts.conf" accountsConf;
@@ -116,7 +124,7 @@ in
       enable-osc8 = true
 
       [ui]
-      index-columns = from<20,subject<*,date<10,domain<9,state<5,tags<24
+      index-columns = from<20,subject<*,date<10,domain<9,state<${stateWidth},tags<24
       # Column header row above the msglist (forked aerc feature), styled via the
       # msglist_header styleset object. Labels: from subject date domain state tags.
       index-headers = true
@@ -141,7 +149,7 @@ in
       dirlist-tree = false
       mouse-enabled = true
       fuzzy-complete = true
-      tab-title-account = mail{{if .Exists "do"}} ({{.Exists "do"}} DO){{end}}
+      tab-title-account = mail{{if .Exists "${stateDisplay.${mailContract.actionState}}"}} ({{.Exists "${stateDisplay.${mailContract.actionState}}"}} ${stateDisplay.${mailContract.actionState}}){{end}}
 
       # Live column templates
       column-from    = {{index (.From | names) 0}}

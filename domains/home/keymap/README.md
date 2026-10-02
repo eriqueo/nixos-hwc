@@ -8,6 +8,9 @@ Plain-language design + rationale: `docs/UNIFIED-KEYMAP-SPEC.md`.
 
 ## Structure
 
+Aerc's `Space g k` opens DONT KNOW and `Space g b` opens Bulk. The State choice
+key `k` corrects a thread to DONT KNOW; mail-contract data supplies its display.
+
 ```
 index.nix              Options hwc.home.keymap.{enable,leader,metaLeader,grammar};
                        materializes grammar.nix as the read-only token set.
@@ -90,6 +93,8 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 - todui/khalt/workbench log a missing/unread `*_KEYMAP` rather than failing silent.
 
 ## Changelog
+- 2026-10-01: Add DONT KNOW and Bulk mail destinations; retain existing DO keys
+  and assign `k` to the new one-step State correction.
 - 2026-10-01: Wire aerc to one action table and context adapter. Generate the
   leader reference and group labels; add subject A–Z and named Mail submenus.
 - 2026-09-15: Add `a` → `tool:herdr` (Agents). Keybinding conflicts between

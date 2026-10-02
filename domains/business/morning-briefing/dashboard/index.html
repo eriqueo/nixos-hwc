@@ -419,10 +419,13 @@ function makeMailTile(triage,liveThreads,mailHealth){
     const ruleBox=$('div',{class:'mail-detail',style:'margin-bottom:12px'});
     ruleBox.appendChild($('div',null,`${rules.length} active routing rule${rules.length===1?'':'s'}`));
     rules.forEach(rule=>ruleBox.appendChild($('div',null,
-      `${rule.sender} + “${rule.subject_contains}” → ${String(rule.state).toUpperCase()} · ${String(rule.domain).toUpperCase()}`)));
+      `${rule.sender} + “${rule.subject_contains}” → ${merged.state_display_names?.[rule.state]||String(rule.state).toUpperCase()} · ${String(rule.domain).toUpperCase()}`)));
     sec.appendChild(ruleBox);
   }
-  const states=[['do','DO'],['did','DID'],['look','LOOK'],['junk','JUNK']];
+  // New snapshots carry the producer's vocabulary. Old four-State snapshots
+  // remain readable during the contract expansion.
+  const states=(merged.states||['do','did','look','junk']).map(state=>
+    [state,merged.state_display_names?.[state]||state.toUpperCase()]);
   const tabs=$('div',{class:'mail-tabs',role:'tablist'});
   const allTabs=states.map(([state,label],i)=>$('button',{class:`mail-tab${i===0?' active':''}`,role:'tab','aria-selected':i===0?'true':'false'},`${label} (${(b[state]||[]).length})`));
   allTabs.forEach(tab=>tabs.appendChild(tab));

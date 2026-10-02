@@ -5,7 +5,7 @@ vi.mock("node:child_process", () => ({execFile: run, spawn: spawnRun}));
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mailTools, mailTagActions } from "../src/tools/mail.js";
+import { mailTools, mailTagActions, MAIL_STATES } from "../src/tools/mail.js";
 import { mailTriageTools, reflectLiveBuckets } from "../src/tools/mail-triage.js";
 import { morningBriefTool } from "../src/tools/morning-brief.js";
 
@@ -46,7 +46,7 @@ describe("morning briefing mail routing rules", () => {
     }
   });
 });
-const empty = () => ({ do: [], did: [], look: [], junk: [] });
+const empty = () => Object.fromEntries(MAIL_STATES.map(state => [state, []]));
 
 describe("authoritative mail placement", () => {
   it("one production scan supplies membership and live workflow states", async () => {
@@ -60,8 +60,8 @@ describe("authoritative mail placement", () => {
       const result = await mailTriageTools(path)[0].handler({action:"digest"});
       expect(result.status).toBe("ok");
       expect(run).toHaveBeenCalledTimes(1);
-      expect(run.mock.calls[0][1][3]).toBe("(tag:state/do OR tag:state/did OR tag:state/look OR tag:state/junk) AND (thread:a)");
-      expect(result.view!.data).toMatchObject({summary:expect.stringContaining("0 do")});
+      expect(run.mock.calls[0][1][3]).toBe("(tag:state/do OR tag:state/dont-know OR tag:state/did OR tag:state/look OR tag:state/junk) AND (thread:a)");
+      expect(result.view!.data).toMatchObject({summary:expect.stringContaining("0 DO")});
       expect(run.mock.calls[0][2]).toMatchObject({timeout:3500,maxBuffer:2*1024*1024});
     } finally { await rm(dir,{recursive:true,force:true}); }
   });
@@ -170,6 +170,7 @@ describe("authoritative mail placement", () => {
 describe("current mail views and metadata preservation", () => {
   it.each([
     ["state:do", "tag:state/do"],
+    ["state:dont-know", "tag:state/dont-know"],
     ["domain:family", "tag:domain/family"],
     ["fact:finance", "tag:trait/finance"],
   ])("resolves %s through the actual mail search handler", async (name, query) => {
@@ -184,13 +185,77 @@ describe("current mail views and metadata preservation", () => {
     const operations = mailTagActions()["clear-metadata"];
     expect(operations).toContain("-trait/finance");
     for (const protectedOperation of [
-      "-flagged", "-starred", "-keep", "-state/do", "-domain/hwc", "-work", "-finance",
+      "-flagged", "-starred", "-keep", "-state/do", "-state/dont-know", "-domain/hwc", "-work", "-finance",
     ]) expect(operations).not.toContain(protectedOperation);
     run.mockReset();
     run.mockImplementation((_bin, _args, _options, callback) => callback(null, "", ""));
     const result = await mailTools()[0].handler({action: "tag", query: "id:fixture@example.com", tag_action: "clear-metadata"});
     expect(result.status).toBe("ok");
     expect(run.mock.calls[0][1]).toEqual(["tag", ...operations, "--", "id:fixture@example.com"]);
+  });
+});
+
+describe("DONT KNOW consumer contract", () => {
+  it("rebuckets an old four-State cache into DONT KNOW without losing its thread", async () => {
+    const legacy = {do: [thread("a")], did: [], look: [], junk: []};
+    expect(await reflectLiveBuckets(legacy, async () => new Map([["a", new Set(["state/dont-know", "state/did"])]])))
+      .toEqual({...empty(), "dont-know": [thread("a")]});
+    expect(await reflectLiveBuckets(legacy, async () => new Map([["a", new Set(["state/do", "state/dont-know"])]])))
+      .toEqual({...empty(), do: [thread("a")]});
+  });
+
+  it("shows DONT KNOW on the board and count while keeping it out of the action digest", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "mail-unknown-"));
+    try {
+      const path = join(dir, "brief.json");
+      await writeFile(path, JSON.stringify({mail_triage: {buckets: {do: [thread("a")], did: [], look: [], junk: []}}}));
+      const tool = mailTriageTools(path, async () => new Map([["a", new Set(["state/dont-know"])]]))[0];
+      const board = await tool.handler({action: "board"});
+      expect(board.status).toBe("ok");
+      expect(board.data).toMatchObject({stats: {"dont-know_count": 1, do_count: 0}});
+      expect(board.view!.data).toMatchObject({columns: expect.arrayContaining([
+        {id: "dont-know", title: "DONT KNOW", cards: [expect.objectContaining({id: "a", priority: "normal"})]},
+      ])});
+      const digest = await tool.handler({action: "digest"});
+      expect(digest.view!.data).toMatchObject({items: [], summary: expect.stringContaining("1 DONT KNOW")});
+      await writeFile(path, JSON.stringify({mail_triage: {stats: {"dont-know_count": 1}, buckets: {"dont-know": [thread("a")]}}}));
+      expect((await morningBriefTool(path).handler({})).view!.data)
+        .toMatchObject({body: expect.stringContaining("1 DONT KNOW")});
+    } finally {await rm(dir, {recursive: true, force: true});}
+  });
+
+  it("resolves Bulk from the producer even with a stale overriding search registry", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "mail-bulk-"));
+    try {
+      const file = join(dir, "searches");
+      await writeFile(file, "# mail-searches-v1\nview:bulk=tag:inbox\nstate:dont-know=tag:state/do\n");
+      const contract = JSON.parse(await import("node:fs/promises").then(fs => fs.readFile(process.env.HWC_MAIL_CLASSIFIER_CONTRACT_FILE!, "utf8")));
+      vi.stubEnv("HWC_MAIL_SEARCHES_FILE", file);
+      vi.resetModules();
+      const module = await import("../src/tools/mail.js");
+      run.mockReset();
+      run.mockImplementation((_bin, _args, _options, callback) => callback(null, "0", ""));
+      expect((await module.mailTools()[0].handler({action: "search", query: "view:bulk", count_only: true})).status).toBe("ok");
+      expect(run.mock.calls.at(-1)![1]).toEqual(["count", contract.viewQueries.bulk]);
+    } finally {vi.unstubAllEnvs(); vi.resetModules(); await rm(dir, {recursive: true, force: true});}
+  });
+
+  it("fails startup without a canonical contract and accepts the old version during expansion", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "mail-contract-"));
+    try {
+      const contract = JSON.parse(await import("node:fs/promises").then(fs => fs.readFile(process.env.HWC_MAIL_CLASSIFIER_CONTRACT_FILE!, "utf8")));
+      vi.stubEnv("HWC_MAIL_CLASSIFIER_CONTRACT_FILE", "");
+      vi.resetModules();
+      await expect(import("../src/tools/mail.js")).rejects.toThrow("is required");
+      const file = join(dir, "v2.json");
+      await writeFile(file, JSON.stringify({...contract, schemaVersion: 2, states: contract.states.filter((state: string) => state !== contract.fallbackState), fallbackState: contract.actionState}));
+      vi.stubEnv("HWC_MAIL_CLASSIFIER_CONTRACT_FILE", file);
+      vi.resetModules();
+      expect((await import("../src/tools/mail.js")).MAIL_STATES).not.toContain("dont-know");
+      await writeFile(file, JSON.stringify({...contract, stateDisplayNames: {}}));
+      vi.resetModules();
+      await expect(import("../src/tools/mail.js")).rejects.toThrow("invalid mail State/view");
+    } finally {vi.unstubAllEnvs(); vi.resetModules(); await rm(dir, {recursive: true, force: true});}
   });
 });
 

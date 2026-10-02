@@ -487,6 +487,9 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-10-01: Require the canonical mail contract, accept versions 2/3 during
+  expansion, show DONT KNOW in board/counts, and keep it outside the DO digest.
+
 - 2026-10-01: Shared mail corrections acquire the same nonblocking sync lock as
   aerc and transport. Busy commands return failure without an automatic retry.
 
@@ -723,6 +726,16 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **2026-04-02**: Root podman fix, parameter validation, `.mcp.json` registration, Phase 1-3 foundation.
 
 ## Structure
+
+`mail.ts` requires `HWC_MAIL_CLASSIFIER_CONTRACT_FILE` at startup and fails on a
+missing or malformed contract. Nix binds the pinned System One JSON for both
+service and package tests; no compiled-in vocabulary competes with it. For local
+tests, bind the checked-out producer explicitly:
+`HWC_MAIL_CLASSIFIER_CONTRACT_FILE=~/600_apps/system-one/scripts/mail_classifier_contract.json npm test`.
+The reader accepts version 2 during expansion and version 3 with State display
+names and view queries. Missing DONT KNOW buckets in old snapshots default to
+empty. Confirmed DO wins mixed live tags. Bulk is `view:bulk`; the board's
+DONT KNOW count covers its full State, including Bulk.
 
 `parts/n8n-mcp/` holds the backend's dependency manifest, generated lockfile and
 offline stdio smoke test. `index.nix` builds that closure separately from the

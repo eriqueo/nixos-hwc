@@ -9,6 +9,9 @@
 
 ## Structure
 
+MCP mail tools require the pinned System One contract at startup. They accept
+versions 2 and 3 during expansion and show DONT KNOW separately from confirmed DO.
+
 The MCP mail reader consumes the generated current/history search registry from
 `domains/mail/notmuch/parts/searches.nix`; it does not own a separate category list.
 Shared mail dispositions acquire the mail owner lock before changing the ledger or tags.
@@ -57,6 +60,8 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-10-01: Consume the canonical mail contract without a compiled vocabulary;
+  add DONT KNOW buckets/counts and preserve old briefing-cache compatibility.
 
 - 2026-10-01: Permit shared mail lock writes inside the gateway sandbox and
   check the generated service mount against its mail status path.

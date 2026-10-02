@@ -16,6 +16,7 @@ Unified email workflow across Proton and Gmail identities. Uses notmuch for inde
 
 Shared action metadata: `domains/home/keymap/grammar.nix`; pure context adapter:
 `domains/home/keymap/parts/to-aerc.nix`; command realizations: `parts/binds.nix`.
+The classifier contract supplies State labels and the read-only Bulk query.
 
 ```
 aerc/
@@ -64,12 +65,20 @@ The `<C-r>` keybind waits for `mbsync.service`, which runs the locked core pipel
 
 ### Daily workflow semantics
 
-The sidebar is one workflow axis: `DO`, `DID`, `LOOK`, and `JUNK`. `DO` is the
-inbox-zero queue. `DID` means Eric acted and is waiting; a new reply reopens it
-to `DO`. `LOOK` needs no response. `JUNK` is recoverable Trash. Archive removes
+The sidebar has `DO`, `DONT KNOW`, `DID`, `LOOK`, `JUNK`, and a separate Bulk view.
+`DO` is confirmed action. `DONT KNOW` holds uncertain mail and is the default.
+`DID` means Eric acted and is waiting; new context reopens it for classification.
+`LOOK` needs no response. `JUNK` is recoverable Trash. Archive removes
 the active state and records completion. Opening or reading mail never changes
 state. Domain (`HWC`, `DataX`, `Family`, `Personal`, `Other`) is a column/filter,
 never a folder or placement rule. Factual Tags never move mail.
+
+Bulk groups unknown newsletters and recurring mail with unsubscribe headers.
+Security, finance, deadline and calendar facts stay outside Bulk. Both groups
+remain in Inbox. DONT KNOW excludes the adjacent Bulk pile; `:cf state/dont-know`
+shows the complete State, and `Space g I` shows raw Inbox. Use `Space g k` for
+DONT KNOW, `Space g b` for Bulk, and `Space g i` for DO. `Space m s k Enter`
+sets DONT KNOW in one operation without a positive sender-learning vote.
 
 `D` uses the same recorded Trash action as `d`. `X` and `Y` are explicit
 physical move/copy commands and do not teach. Use shared State and disposition
@@ -113,7 +122,7 @@ Legacy `action` and `pending` tags do not participate in workflow.
 | Type | Behavior | Example |
 |------|----------|---------|
 | **Domain** | Exactly one; independent of State | hwc, datax, family, personal, other |
-| **State** | Exactly one while active | do, did, look, junk |
+| **State** | Exactly one while active | do, dont-know, did, look, junk |
 | **Tag** | Additive fact; never controls placement | attachment, finance, receipt |
 
 #### Tag Attributes
@@ -239,7 +248,7 @@ grow the sidebar. Press `<Space>gi` to return to `DO`.
 | `subject` | `.Subject` | Subject with thread prefix and fold count |
 | `date` | `.DateAutoFormat` | Relative date |
 | `domain` | `domain/*` | HWC/DataX/Family/Personal/Other |
-| `state` | `state/*` | DO/DID/LOOK/JUNK |
+| `state` | `state/*` | DO/DONT KNOW/DID/LOOK/JUNK |
 | `tags` | `trait/*` plus optional facts | Factual traits only |
 
 Unread messages are bold, read messages are dim, and selection remains a strong reversed bar.
@@ -254,6 +263,8 @@ Primary folders:
 | Folder | Query |
 |--------|-------|
 | do | `tag:state/do` — Eric must act |
+| DONT KNOW | Unknown State excluding the adjacent Bulk view; default |
+| Bulk | Unknown bulk facts, excluding security/finance/deadline/calendar; read-only |
 | did | `tag:state/did` — waiting after Eric acted |
 | look | `tag:state/look` — read or monitor |
 | junk | `tag:state/junk` — recoverable Trash |
@@ -320,6 +331,8 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
    `proton/Labels/<name>/`.
 
 ## Changelog
+- 2026-10-01: Add canonical DONT KNOW display/default, one-step correction,
+  navigation and widened State column; separate reversible Bulk view.
 - 2026-10-01: Run completed workflow actions with native background pipes in
   both list and viewer contexts; retain visible failures and interactive reviews.
 - 2026-10-01: Apply the approved unified leader map, add alphabetical subject sort,

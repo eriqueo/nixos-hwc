@@ -6,6 +6,8 @@ echo "Email Dashboard  Last checked: ${last:-never}"
 echo
 printf "INBOX: %s\n" "$(notmuch count 'tag:inbox and tag:unread')"
 printf "DO: %s\n" "$(notmuch count '@DO_QUERY@ and tag:unread')"
+printf "DONT KNOW: %s\n" "$(notmuch count '@DONT_KNOW_QUERY@ and tag:unread')"
+printf "Bulk: %s\n" "$(notmuch count '@BULK_QUERY@ and tag:unread')"
 printf "Finance: %s\n" "$(notmuch count '@FINANCE_QUERY@ and tag:unread')"
 printf "Newsletters: %s\n" "$(notmuch count '@NEWSLETTER_QUERY@ and tag:unread')"
 printf "Security: %s\n" "$(notmuch count '@SECURITY_QUERY@ and tag:unread')"
