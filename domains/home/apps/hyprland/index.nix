@@ -14,7 +14,7 @@ let
     else lib.attrByPath [ "hwc" "paths" "screenshots" ] null osCfg;
   capturePkg = pkgs.writeShellApplication {
     name = "hwc-screenshot";
-    text = ''exec ${lib.getExe inputs.screenshot-renamer.packages.${pkgs.system}.default} capture --root ${lib.escapeShellArg (if captureRoot == null then "" else toString captureRoot)} --hyprshot ${lib.getExe pkgs.hyprshot} "$@"'';
+    text = ''exec ${lib.getExe inputs.screenshot-renamer.packages.${pkgs.system}.default} capture --root ${lib.escapeShellArg (if captureRoot == null then "" else toString captureRoot)} --hyprshot ${lib.getExe pkgs.hyprshot} --wl-copy ${pkgs.wl-clipboard}/bin/wl-copy --notify-send ${pkgs.libnotify}/bin/notify-send "$@"'';
   };
   captureCommand = if captureRoot == null then null else "${capturePkg}/bin/hwc-screenshot";
 

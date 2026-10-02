@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+The screenshot wrapper pins its capture, clipboard and notification tools; it waits for background image output before publication.
+
 The shared keymap supplies DONT KNOW and Bulk mail navigation and the DONT KNOW
 correction key; mail owns the underlying commands and display contract.
 
@@ -86,6 +88,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-02: Fix screenshot clipboard copying: wait for complete Hyprshot raw output, then copy the saved PNG through a pinned wl-copy and retain the save notification.
 - 2026-10-01: Add shared aerc DONT KNOW/Bulk navigation and State correction key.
 - 2026-10-01: Allow requested feature work to have an owner without implying a fault; link blind review inputs to their full request and dated evidence.
 - 2026-10-01: Standalone Home Manager receives the system screenshot path explicitly, preserving policy-marked capture across both activation lanes.

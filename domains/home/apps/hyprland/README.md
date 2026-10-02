@@ -9,6 +9,8 @@ Configures the Hyprland Wayland window manager as the desktop session: full `way
 
 ## Structure
 
+The screenshot wrapper pins its capture, clipboard and notification tools; it waits for background image output before publication.
+
 Print uses `hwc-screenshot` with a hash-bound policy marker. Ctrl+Print makes a private capture; the worker excludes it before OCR. Both bindings and their legend come from `parts/behavior.nix`.
 - The mail binding derives from `hwc.home.core.shell.aliases.aerc`, shared with Zellij and Workbench, with local `aerc` as its fallback.
 - `index.nix` — HM options + implementation: packages, hyprland settings merge, submaps, monitor-listener service, NixOS session-variable bridge, cross-lane and dependency assertions. Threads `behavior.keybinds` → `theme`, `theme.card` → `session`.
@@ -29,6 +31,8 @@ Every binding is declared **once** in `parts/behavior.nix`, as a record carrying
 It is deliberately *not* read from `hyprctl binds -j`: that API emits malformed JSON in Hyprland 0.56.0 (keys and values misaligned — `"keycode": RETURN`, `"allow_input_capture": ,`), and carries no descriptions, so the best it could ever print is `exec hyprland-monitor-toggle`.
 
 ## Changelog
+
+- 2026-10-02: Fix screenshot clipboard copying: wait for complete Hyprshot raw output, then copy the saved PNG through a pinned wl-copy and retain the save notification.
 - 2026-10-01: Standalone Home Manager receives the system screenshot path explicitly, preserving policy-marked capture across both activation lanes.
 - 2026-10-01: Print uses `hwc-screenshot` with a hash-bound policy marker. Ctrl+Print makes a private capture; the worker excludes it before OCR. Both bindings and their legend come from `parts/behavior.nix`.
 - 2026-09-30: Float Bitwarden, Proton Pass and Authenticator at monitor-relative dimensions. Their tiled windows previously split the browser and password-manager content into cramped half-screen columns. Headless Hyprland reproduced the browser narrowing to 933 pixels; nine cases across 1920×1080, 2560×1600 and 1280×800 at scale 1.25 fit the monitor and retained the browser's full tile.
