@@ -1213,9 +1213,9 @@
                 keys(':select 0')
                 special('Enter')
                 output = keys(' tt')
-                assert '{2}Alpha' in output and '18:03' not in output, output
+                assert '{2}Alpha' in output and '└─>' not in output, output
                 output = keys(' tt')
-                assert '{2}Alpha' not in output and '18:03' in output, output
+                assert '{2}Alpha' not in output and '└─>' in output, output
                 assert ':filter' in keys(' ff')
                 special('Escape')
                 assert ':query -f -n mail-search' in keys(' fa')

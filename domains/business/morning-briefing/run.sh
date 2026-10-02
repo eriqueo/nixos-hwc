@@ -781,7 +781,7 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
         + (if .mail_triage.error then "\n  triage error: " + .mail_triage.error else "" end)
         + (if ((.mail_triage.routing_rules // []) | length) > 0 then
             "\n  routing rules: " + (((.mail_triage.routing_rules | length)) | tostring) + " active"
-            + ((.mail_triage.routing_rules // []) | map("\n    " + .sender + " + ‘" + .subject_contains + "’ → " + (.state | ascii_upcase) + " · " + (.domain | ascii_upcase)) | join(""))
+            + ((.mail_triage.routing_rules // []) | map("\n    " + .sender + " + ‘" + .subject_contains + "’ → " + ($triage.state_display_names[.state] // (.state | ascii_upcase)) + " · " + (.domain | ascii_upcase)) | join(""))
           else "" end)
         + (((.mail_triage.buckets.do // [])[:5]) | map("\n  ! " + (.sender // "?") + ": " + (.subject // "?") + (if .summary then "\n      " + .summary else "" end)) | join(""))
         + (((.mail_triage.buckets.look // [])[:5]) | map("\n  · " + (.sender // "?") + ": " + (.subject // "?") + (if .summary then "\n      " + .summary else "" end)) | join(""))
@@ -928,7 +928,7 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
           + (if ((.mail_triage.routing_rules // []) | length) > 0 then
               item(meta((((.mail_triage.routing_rules | length)) | tostring) + " active routing rule(s)"))
               + ((.mail_triage.routing_rules // []) | map(
-                  item(meta((.sender|h) + " + &lsquo;" + (.subject_contains|h) + "&rsquo; &rarr; " + ((.state | ascii_upcase)|h) + " &middot; " + ((.domain | ascii_upcase)|h)))) | join(""))
+                  item(meta((.sender|h) + " + &lsquo;" + (.subject_contains|h) + "&rsquo; &rarr; " + (($triage.state_display_names[.state] // (.state | ascii_upcase))|h) + " &middot; " + ((.domain | ascii_upcase)|h)))) | join(""))
             else "" end)
           + (((.mail_triage.buckets.do // [])[:5]) | map(
               item(red("!") + " " + ((.sender // "?")|h) + ": " + ((.subject // "?")|h)

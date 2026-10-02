@@ -434,7 +434,7 @@ function makeMailTile(triage,liveThreads,mailHealth){
   const allPanels=states.map(([state,label],i)=>{
     const panel=$('div',{role:'tabpanel',style:i===0?'':'display:none'});
     const threads=b[state]||[];
-    if(!threads.length)panel.appendChild($('div',{class:'empty'},state==='do'?'Inbox zero':`No ${label.toLowerCase()} mail`));
+    if(!threads.length)panel.appendChild($('div',{class:'empty'},state==='do'?'Inbox zero':`No ${label} mail`));
     else threads.forEach(thread=>panel.appendChild(makeThread(thread,state)));
     sec.appendChild(panel);
     return panel;

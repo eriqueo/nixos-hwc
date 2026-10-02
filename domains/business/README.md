@@ -46,6 +46,8 @@ business/
 ```
 
 ## Changelog
+
+- Use the canonical State display names in routing summaries and empty mail views.
 - 2026-10-01: Show DONT KNOW from classifier metadata in briefing counts/tabs;
   bind the canonical contract for unavailable-model snapshots.
 - 2026-10-01: Serialize scheduled classification with sync, aerc and MCP;

@@ -1,17 +1,18 @@
 # Local mail workflow architecture
 
-Status: workflow v2 implemented 2026-09-22. Laya is the first classifier; Jev
-remains a future comparison.
+Status: workflow contract v3 implemented and under deployment checks on October 1.
+Laya remains in State shadow. The dated sections below preserve earlier evidence.
 
 ## Observable contract
 
 Each managed thread has exactly one active workflow state and one Domain:
 
-- State: `do | did | look | junk`.
+- State: `do | dont-know | did | look | junk`.
 - Domain: `hwc | datax | family | personal | other`.
-- `DO` means Eric must act and is the inbox-zero queue.
+- `DO` means confirmed action. `DONT KNOW` means uncertainty for Eric to sort.
+  Both stay in Inbox.
 - `DID` means Eric acted and is waiting. Only a human may choose it; a new reply
-  reopens the thread to `DO`.
+  reopens the thread to `DONT KNOW`.
 - `LOOK` means read or monitor without a response.
 - `JUNK` means unwanted mail in recoverable Trash.
 - Archive completes a thread. Completed mail has `workflow/done` and no active
@@ -31,8 +32,8 @@ briefing, and MCP.
 
 Laya runs as a resident CPU service on a private Unix socket. It may propose
 only `DO`, `LOOK`, or `JUNK`, plus one Domain and factual traits. Uncertain,
-invalid, or failed inference remains retryable `DO`; it never becomes a
-completed judgment. The model never assigns `DID` or completion.
+invalid, or failed inference uses visible `DONT KNOW`. Provider failure stays
+retryable. Content-only State is shadow: a model guess cannot archive or trash mail. The model never assigns `DID` or completion.
 
 The CRITICAL ledger under `/var/lib/hwc/mail-classifier` stores content-derived
 thread cases, append-only judgments, append-only human events, independent
@@ -44,21 +45,23 @@ second aerc or arrival-hook rule store. A rule matches an exact sender plus a
 required, case-insensitive subject substring and chooses `DO`, `LOOK`, or
 `JUNK` plus one Domain. The most specific matching subject wins. A rule beats
 model output and broad exact-sender learning, while a thread-specific human lock
-and the new-reply `DO` safety rule remain stronger. Active rules are capped at
+and the new-reply Inbox safety rule remain stronger. Active rules are capped at
 200. `JUNK` creation requires a separate confirmation.
 
 ## Human controls
 
 - aerc columns are `From | Subject | Date | Domain | State | Tags`.
-- `<Space>ta`, `<Space>td`, `<Space>tl`, and `<Space>tj` teach
-  `DO`, `DID`, `LOOK`, and `JUNK` through the ledger.
-- `<Space>tc h|d|f|p|o` teaches Domain without changing state.
-- `<Space>ra` reviews a sender-plus-subject routing rule from the selected
-  message; `<Space>rm` reviews and disables active rules.
+- `<Space>ms a|k|d|l|j` corrects State to DO, DONT KNOW, DID, LOOK or JUNK.
+- `<Space>md h|d|f|p|o` corrects Domain without changing State.
+- Routing review uses the shared command owner; the installed bindings define its keys.
 - `a` completes; `d` directly trashes without sender teaching.
 - `J`/`K` marks plus `a`/`d` operate on the complete marked set, thread-wide.
 - `<Space>tt` folds the selected thread; `<Space>tT` folds all threads.
-- The sidebar contains workflow states only. Domain drill-down uses filters.
+- The sidebar starts at DONT KNOW and includes the five States plus Bulk.
+- Bulk is a read-only subset of uncertain newsletters or recurring unsubscribe mail.
+  Security, finance, deadline and calendar facts exclude it. No folder move occurs.
+- `<Space>gi` opens DO; `<Space>gk` opens DONT KNOW; `<Space>gb` opens Bulk.
+  Domain drill-down uses filters.
 
 The morning briefing is a read-only view of the same v2 snapshot. Routed items
 carry a plain-language rule explanation, and the dashboard and email list active
@@ -76,13 +79,35 @@ At least three threads must support the winner, at least 80 percent must agree,
 and latest feedback must agree. A new dissent suspends that axis. Corrections
 still fix the selected thread in one step. Repeat clicks do not inflate support.
 Legacy counters remain audit history, not authority; the event reader abstains
-above 10,000 events per sender. `DID`, completion and stars are not generalized.
+above 10,000 events per sender. DONT KNOW withdraws its thread's prior State vote.
+`DID`, completion and stars are not generalized.
 A new message changes
-the thread fingerprint and reopens a prior `DID` or completed outcome to `DO`.
+the thread fingerprint and reopens a prior `DID` or completed outcome to DONT KNOW.
 
 Run v2 long enough to measure unsafe Junk attempts, fallback rate, correction
 rate, and sender-learning precision before considering attachment reading,
 automatic deletion, auto-unsubscribe, or a Jev comparison.
+
+## Uncertainty migration and compatibility
+
+The contract owns eight projected labels, including @do and @dont-know. Other has
+no Domain label. A changed label vocabulary rebases the phone observer without
+inferring a human edit. Phone correction application remains disabled.
+
+The classifier ledger and cached report format stay schema 2. Reports expose
+optional State vocabulary/display metadata; consumers treat absent old buckets as
+empty. MCP validates either contract version 2 or 3 from the configured producer.
+The model protocol and model labels remain unchanged.
+
+`migrate-uncertainty` previews by default. Under the shared mail lock, it requires
+an unlocked, unfinished DO case, matching automatic judgment and current thread
+fingerprint. Explicit routing and human State provenance stay unchanged. Missing
+history stays unchanged. `--apply` changes only the State tag and ledger State;
+Domain, folders, stars and unread flags stay intact. A 1,000-case ceiling refuses
+overflow before effects. Durable reservations precede idempotent tags, with
+completion receipts for crash recovery. `--apply --rollback` restores matching,
+still-unlocked migrated cases and preserves later human corrections. Ledger and
+audit data are CRITICAL. Restore the backup in isolation before live migration.
 
 ## Proton two-way sync — refined plan, 2026-09-29
 
