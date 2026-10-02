@@ -14,7 +14,7 @@ readme-freshness weekly Law-12 drift report.
 
 ## Structure
 
-Screenshot naming runs beside the inbox janitor on its single owner. `screenshot-renamer/index.nix` schedules a pinned app, a separate progress checker and daily receipt backup. Shadow mode mounts screenshots read-only. Apply requires recovery proof. Eric selected live operator review instead of the scored holdout gate; the 95% quality and 50% coverage targets remain unverified.
+Screenshot naming runs beside the inbox janitor on its single owner. `screenshot-renamer/index.nix` starts a pinned app when screenshot or privacy receipt folders change, with work-driven retries, a separate progress checker and daily receipt backup. Shadow mode mounts screenshots read-only. Apply requires recovery proof. Eric selected live operator review instead of the scored holdout gate; the 95% quality and 50% coverage targets remain unverified.
 
 Refinery native bundles (including the nightly review writer) use the pinned
 `refinery` flake input, matching the container release selected on work.
@@ -87,11 +87,13 @@ workspace/automation/
 
 ## Changelog
 
+- 2026-10-02: Replace the screenshot naming schedule with folder arrivals, a boot catch-up run and retries only while work remains.
+
 - 2026-10-01: Enable automatic screenshot renaming on hwc-home with explicit live operator review; retain recovery, privacy, undo and overwrite guards.
 - 2026-10-01: The screenshot progress watcher needs only local receipts and the dispatcher; missing inputs cannot prevent stalled-worker alerts.
 - 2026-10-01: Archive screenshot inputs and privacy markers with Borg; exclude incomplete capture and backup files. Syncthing remains replication, not the independent recovery copy.
 - 2026-10-01: Screenshot backup uses the existing parent Borg source, excludes live SQLite and temporary credentials, and creates empty recovery directories declaratively.
-- 2026-10-01: Screenshot naming runs beside the inbox janitor on its single owner. `screenshot-renamer/index.nix` schedules a pinned app, a separate progress checker and daily receipt backup. Shadow mode mounts screenshots read-only. Apply requires recovery proof. Eric selected live operator review instead of the scored holdout gate; the 95% quality and 50% coverage targets remain unverified.
+- 2026-10-01: Screenshot naming runs beside the inbox janitor on its single owner. `screenshot-renamer/index.nix` starts a pinned app when screenshot or privacy receipt folders change, with work-driven retries, a separate progress checker and daily receipt backup. Shadow mode mounts screenshots read-only. Apply requires recovery proof. Eric selected live operator review instead of the scored holdout gate; the 95% quality and 50% coverage targets remain unverified.
 - 2026-09-30: sr-gauntlet, nightly-builds (runner, run-now, review), readme-freshness and refinery take the pipeline marker from `hwc.system.apps.agent-harness.pipelineEnvironment` instead of a local literal; one producer for every unit that launches a headless agent.
 - 2026-09-29: SR gauntlet: manage isolated Claude transcript cleanup at 365 days and pass the same raw-retention value to both launch units.
 - 2026-09-28: Pin the native Refinery review writer to the repaired upstream source so the timer and container share collision-safe, atomic v2 review storage.

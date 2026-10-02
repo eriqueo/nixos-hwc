@@ -46,7 +46,7 @@ let
   };
 in {
   options.hwc.automation.screenshotRenamer = {
-    enable = lib.mkEnableOption "Single-owner screenshot proposal timer";
+    enable = lib.mkEnableOption "Single-owner screenshot folder trigger";
     ownerHost = lib.mkOption {
       type = lib.types.str;
       default = config.networking.hostName;
@@ -93,17 +93,31 @@ in {
       "d ${state}/recovery 0700 eric users -"
     ];
     systemd.services.screenshot-renamer = {
-      description = "Propose screenshot names with isolated Pi and DX2";
+      description = "Rename arriving screenshots with isolated Pi and DX2";
+      wantedBy = [ "multi-user.target" ];
+      unitConfig.StartLimitIntervalSec = 0;
       after = [ "network-online.target" "syncthing.service" ];
       wants = [ "network-online.target" ];
       serviceConfig = base // {
         BindReadOnlyPaths = lib.optionals (cfg.mode == "shadow") [ root ] ++ [ config.age.secrets.pi-dx1-api-key.path ];
         BindPaths = lib.optionals (cfg.mode == "apply") [ root ];
         ExecStartPre = command "init";
-        ExecStart = command cfg.mode;
+        ExecStart = command "dispatch";
+        # 75 means settling/retry/burst work remains. Errors (1) stay failed;
+        # empty queues (0) stop. This is work-driven, never an idle poll.
+        Restart = "no";
+        RestartForceExitStatus = [ 75 ];
+        RestartSec = "30s";
       };
     };
-    systemd.timers.screenshot-renamer = timer "*:0/15";
+    systemd.paths.screenshot-renamer = {
+      description = "Watch for screenshot and privacy receipt arrivals";
+      wantedBy = [ "multi-user.target" ];
+      pathConfig = {
+        PathChanged = [ root "${root}/.screenshot-policy" ];
+        Unit = "screenshot-renamer.service";
+      };
+    };
     # This checker does not depend on the worker succeeding or being scheduled.
     systemd.services.screenshot-renamer-check = {
       description = "Check screenshot progress and report changed failures";
