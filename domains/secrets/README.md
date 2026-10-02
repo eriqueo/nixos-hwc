@@ -11,7 +11,7 @@
 
 `parts/services/hwc-gateway-com.age` holds the replacement gateway's isolated
 Access origin credentials as Wrangler secrets JSON. The generator mounts it
-as `root:secrets / 0440`; the legacy gateway credentials remain separate.
+as `root:secrets / 0440`. The retired `.me` gateway payloads and mounts are removed.
 
 Host recipients read the unchanged public key from machines/home; no rekeying or encrypted-payload changes.
 ```
@@ -62,6 +62,8 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+
+- 2026-10-02: Remove `hwc-gateway-clientid.age` and `hwc-gateway-secret.age` after both MCP clients moved. Retain the isolated `.com` credential; no remaining source consumers reference the old mounts.
 - 2026-10-02: Replaced `datax-app-env` with Eric's latest downloaded app environment, including Microsoft OAuth credentials. Retained the four personal developer settings omitted by the download. Verified encryption for the existing recipient set and byte-for-byte decryption on work; the generated mount remains `root:secrets / 0440`.
 - 2026-10-02: Add `hwc-gateway-com`, encrypted directly for the existing five recipients and verified by decryption on work. Its non-expiring token serves only the new `.com` origins. CRITICAL source data remains backed up in Git; agenix rebuilds the mount. Extend the existing Cloudflare account token with Worker, KV, Access and observability permissions for this migration; its value is unchanged.
 - 2026-09-30: Added `datax-app-env` from Eric's selected complete Quo environment. It includes the same four personal developer settings as the former inbox file, so no duplicate `datax-dev-env` is needed. The existing `dx-mcp-env` holds the MCP server environment and cannot replace the app environment. The generator supplies the current all-host/user recipients and `root:secrets / 0440` mount. The encrypted payload is CRITICAL source data preserved in Git; agenix recreates the plaintext mount. DataX workspace instructions name this shared source and preserve existing project overrides.

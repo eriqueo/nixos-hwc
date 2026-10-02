@@ -938,8 +938,8 @@ systemd.services."podman-<name>".after = [ "init-media-network.service" ];
 | Domain | Type | Used for |
 |--------|------|----------|
 | `hwc-server.ocelot-wahoo.ts.net` | Tailscale HTTPS | All services (port + subpath mode) |
-| `webhooks.heartwoodcraft.me` | Cloudflare tunnel | External webhook ingress → n8n |
-| `heartwoodcraft.me` | Hostinger hosting | Public business site |
+| `api.iheartwoodcraft.com/webhook/...` | Cloudflare tunnel | Path-restricted external webhook ingress → n8n |
+| `iheartwoodcraft.com` | Cloudflare + hwc-work | Public business site, published locally from `/opt/business` |
 
 ### TLS Configuration
 
@@ -1087,7 +1087,9 @@ networking.firewall.allowedTCPPorts =
 
 Source: `domains/networking/cloudflared/index.nix`
 
-Exposes `webhooks.heartwoodcraft.me` → n8n for external webhook ingress (Quo, etc.).
+The live ingress in `machines/work/config.nix` exposes only `/webhook/` on
+`api.iheartwoodcraft.com` to n8n. The old `n8n.heartwoodcraft.me` hostname stays
+until Quo dashboard sender verification passes.
 
 ```nix
 hwc.networking.cloudflared = {

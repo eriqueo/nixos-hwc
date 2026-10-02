@@ -335,8 +335,8 @@
   # zones are Enterprise-only; proxied two-level names lack Universal SSL), so
   # production ingress rides the one-level api.iheartwoodcraft.com with PATH
   # routing (wiki/nixos/iheartwoodcraft-com-backend-migration.md). The .com
-  # twins of .me names (2026-07-19) run in parallel until callers flip, then
-  # the .me entries drop (brain: tech/development/builds/heartwoodcraft_me_retirement.md).
+  # MCP callers now use .com; the retired .me MCP routes are removed.
+  # Remaining retirement checks: brain tech/development/builds/heartwoodcraft_me_retirement.md.
   # *-origin names are what the hwc-mcp-gateway OAuth Worker proxies to with an
   # Access service token (~/600_apps/hwc-mcp-gateway/ORIGINS.md).
   hwc.networking.cloudflared =
@@ -348,11 +348,6 @@
       # on api.iheartwoodcraft.com/webhook/...; then remove this explicit route.
       domain = "n8n.heartwoodcraft.me";
       extraIngress = {
-        # Temporary protected recovery rehearsal: remove after all three old
-        # origins initialize successfully and the .com origins still pass.
-        "hwc-origin.heartwoodcraft.me" = "http://localhost:6200";
-        "brain-origin.heartwoodcraft.me" = "http://localhost:9876";
-        "leads-origin.heartwoodcraft.me" = "http://localhost:8420";
         "hwc-origin.iheartwoodcraft.com" = "http://localhost:6200";
 
         # brain-mcp is local (wave 1).

@@ -58,6 +58,8 @@ networking/
 
 ## Changelog
 
+- 2026-10-02: Complete protected-origin withdrawal after live recovery passed for Brain, Leads and HWC. Claude and ChatGPT now use `.com`; retain only the old n8n hostname pending Quo dashboard verification.
+
 - 2026-10-02: Temporarily restore only the three Access-protected `.me` origins for the retirement recovery rehearsal. Remove them when initialization and `.com` parity pass; bare aliases remain closed.
 - 2026-10-02: Withdraw `.me` MCP origins and Monitor plus both domains’ bare MCP aliases after Eric confirmed Claude/ChatGPT on `.com` and the new Monitor dashboard loaded. Keep the explicit old n8n route pending sender checks.
 - 2026-10-02: Correct the networking module’s ingress comment to the existing path-restricted `.com` webhook hostname.
