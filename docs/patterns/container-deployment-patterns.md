@@ -1088,8 +1088,8 @@ networking.firewall.allowedTCPPorts =
 Source: `domains/networking/cloudflared/index.nix`
 
 The live ingress in `machines/work/config.nix` exposes only `/webhook/` on
-`api.iheartwoodcraft.com` to n8n. The old `n8n.heartwoodcraft.me` hostname stays
-until Quo dashboard sender verification passes.
+`api.iheartwoodcraft.com` to n8n. The old `.me` n8n route is retired; the
+editor remains on the tailnet.
 
 ```nix
 hwc.networking.cloudflared = {

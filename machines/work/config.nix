@@ -334,7 +334,7 @@
   # *.api.iheartwoodcraft.com subzone impossible on the free plan (subdomain
   # zones are Enterprise-only; proxied two-level names lack Universal SSL), so
   # production ingress rides the one-level api.iheartwoodcraft.com with PATH
-  # routing (wiki/nixos/iheartwoodcraft-com-backend-migration.md). The .com
+  # routing (wiki/nixos/iheartwoodcraft-com-backend-migration.md).
   # MCP callers now use .com; the retired .me MCP routes are removed.
   # Remaining retirement checks: brain tech/development/builds/heartwoodcraft_me_retirement.md.
   # *-origin names are what the hwc-mcp-gateway OAuth Worker proxies to with an
@@ -344,9 +344,8 @@
       enable = true;
       tunnelId = "1536327b-2641-4706-8ad9-48c94d0b11f9";
       credentialsFile = config.age.secrets.cloudflared-tunnel-credentials.path;
-      # Temporary: keep the old n8n route until external senders are verified
-      # on api.iheartwoodcraft.com/webhook/...; then remove this explicit route.
-      domain = "n8n.heartwoodcraft.me";
+      # Public n8n ingress is restricted to the .com webhook paths below.
+      domain = null;
       extraIngress = {
         "hwc-origin.iheartwoodcraft.com" = "http://localhost:6200";
 

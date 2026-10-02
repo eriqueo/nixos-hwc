@@ -18,8 +18,9 @@ Provides network infrastructure that other domains depend on:
 
 ## Structure
 
-`cloudflared.domain` is optional; work explicitly retains the old n8n hostname
-until its senders move. Work exposes only protected `.com` MCP origins and Monitor;
+`cloudflared.domain` is optional and null on work. Public n8n ingress uses only
+`api.iheartwoodcraft.com/webhook/...`; the editor stays on the tailnet.
+Work exposes only protected `.com` MCP origins and Monitor;
 the legacy MCP origins and unauthenticated bare aliases have been removed.
 Publish origin DNS only after its Access policy is in place.
 
@@ -57,6 +58,8 @@ networking/
 ```
 
 ## Changelog
+
+- 2026-10-02: Remove the last `.me` tunnel route after Eric confirmed Quo’s dashboard webhook uses `.com`. Keep the existing webhook path restriction and tailnet editor.
 
 - 2026-10-02: Complete protected-origin withdrawal after live recovery passed for Brain, Leads and HWC. Claude and ChatGPT now use `.com`; retain only the old n8n hostname pending Quo dashboard verification.
 
