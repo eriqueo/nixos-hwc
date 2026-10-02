@@ -18,6 +18,10 @@ Provides network infrastructure that other domains depend on:
 
 ## Structure
 
+`cloudflared.domain` is optional; work explicitly retains the old n8n hostname
+until its senders move. Work declares both domains' MCP origin ingress during
+cutover. Publish the new origin DNS only after its Access policy is in place.
+
 The calculator vhost serves the website publisher's active calculator output on work.
 
 The host-local `/sync` route and stable `sync` vhost are permanent entrypoints
@@ -52,6 +56,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-10-02: Add `.com` Brain, HWC and Leads origin ingress on work. Make the primary n8n hostname optional and retain `.me` explicitly until sender migration passes; preserve the path-restricted `.com` webhook route.
 - 2026-09-29: `routeOwners."lead-scout-datax" = "work"`. The vhost itself is registered by `hwc.server.ai.leadScout.memberInstance.vhost` (upstream from its `port`), with a per-route `X-Forwarded-For`/`X-Real-IP` `{remote_host}` override: the default `{remote}` renders `ip:port`, which Express cannot use as a client address. Global `mkProxyBlock` headers unchanged; firefly-explorer still consumes the default.
 - 2026-09-28: Remove the `sr_analyzer` vhost and its `routeOwners` entry. The service is retired; the hwc-sys `datax_*` tools read the SR gauntlet's cache instead.
 - 2026-09-28: Point the private calculator vhost at the atomic website release, eliminating the obsolete app/dist root.
