@@ -71,11 +71,11 @@
     "agent-harness": {
       "flake": false,
       "locked": {
-        "lastModified": 1790963431,
-        "narHash": "sha256-BlfruUagpxyWG11NjiISlYPn5172pNz4WsNrnvO9QOc=",
+        "lastModified": 1790970235,
+        "narHash": "sha256-L3Dc3nglqGmbDxDUxbgEkeppkglApIHu/5SONrdaYms=",
         "owner": "eriqueo",
         "repo": "claude-config",
-        "rev": "80e9c10f07b75ce2447d050b80d13cd520f6141c",
+        "rev": "e49c0ce7fa43ec26269fb0b0959c0ce44a85e678",
         "type": "github"
       },
       "original": {
