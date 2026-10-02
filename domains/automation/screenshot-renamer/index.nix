@@ -15,6 +15,7 @@ let
     tesseract = lib.getExe pkgs.tesseract;
     key_file = config.age.secrets.pi-dx1-api-key.path;
     allow_apply = cfg.mode == "apply";
+    operator_review = cfg.operatorReview;
     coverage = 0.5;
     notify_url = config.hwc.notifications.notify.url;
   });
@@ -51,10 +52,15 @@ in {
       default = config.networking.hostName;
       description = "Runtime hostname guard for the only enabled processing owner";
     };
+    operatorReview = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Eric reviews live names instead of requiring a scored holdout and audit quotas";
+    };
     mode = lib.mkOption {
       type = lib.types.enum [ "shadow" "apply" ];
       default = "shadow";
-      description = "Apply still requires human holdout evidence and filesystem recovery proof";
+      description = "Apply requires recovery proof and either holdout evidence or explicit operator review";
     };
   };
   config = lib.mkIf cfg.enable {

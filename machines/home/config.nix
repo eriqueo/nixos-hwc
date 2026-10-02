@@ -392,7 +392,8 @@
   # vaultSync's single-writer hub). Ships dryRun=true — watch the journal, then
   # set hwc.automation.inboxJanitor.dryRun = false.
   hwc.automation.screenshotRenamer.enable = true;
-  hwc.automation.screenshotRenamer.mode = "shadow";
+  hwc.automation.screenshotRenamer.mode = "apply";
+  hwc.automation.screenshotRenamer.operatorReview = true;
 
   hwc.automation.inboxJanitor.enable = true;
   hwc.automation.inboxJanitor.dryRun = false;

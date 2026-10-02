@@ -530,9 +530,11 @@
       assert lib.assertMsg (lib.length (lib.filter (host: lib.attrByPath [ "hwc" "automation" "screenshotRenamer" "enable" ] false host.config)
           (lib.attrValues self.nixosConfigurations)) == 1
         && c.hwc.automation.screenshotRenamer.enable
-        && c.hwc.automation.screenshotRenamer.mode == "shadow"
-        && lib.elem "${c.hwc.paths.user.inbox}/screenshots" worker.BindReadOnlyPaths
-        && lib.hasInfix " shadow" worker.ExecStart
+        && c.hwc.automation.screenshotRenamer.mode == "apply"
+        && c.hwc.automation.screenshotRenamer.operatorReview
+        && lib.elem "${c.hwc.paths.user.inbox}/screenshots" worker.BindPaths
+        && !(lib.elem "${c.hwc.paths.user.inbox}/screenshots" worker.BindReadOnlyPaths)
+        && lib.hasInfix " apply" worker.ExecStart
         && lib.elem "${c.hwc.paths.user.inbox}/screenshots" c.services.borgbackup.jobs.hwc-backup.paths
         && lib.elem "${c.hwc.paths.state}/screenshot-renamer/work-*" c.services.borgbackup.jobs.hwc-backup.exclude
         && lib.elem "${c.hwc.paths.state}/screenshot-renamer/ledger.sqlite*" c.services.borgbackup.jobs.hwc-backup.exclude
@@ -541,7 +543,7 @@
         && lib.any (b: lib.hasInfix "hwc-screenshot" b && lib.hasInfix "--private" b) binds
         && lib.any (b: lib.hasInfix "hwc-screenshot" b && lib.hasInfix "--private" b)
           self.homeConfigurations."eric@hwc-laptop".config.wayland.windowManager.hyprland.settings.bind)
-        "screenshot wiring must remain active, read-only, monitored and capture privacy bound";
+        "screenshot wiring must apply with explicit operator review, monitoring and capture privacy";
       pkgs.runCommand "screenshot-renamer-contract" {
         nativeBuildInputs = [ python pi pkgs.tesseract ];
       } ''
