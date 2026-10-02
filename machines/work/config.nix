@@ -265,6 +265,8 @@
   # Facebook Page Messenger (hwc-crm D55). Add appSecretRef before
   # subscribing the Page; deliveries answer 503 until then.
   hwc.business.crm.meta.verifyTokenSecretRef = "crm-meta-verify-token";
+  hwc.business.crm.meta.pageTokenSecretRef = "crm-meta-page-token";
+  hwc.business.crm.meta.pageId = "102022081185728"; # Heartwood Craft
   # Timer stagger (see the automation block above): off :00 (logrotate,
   # brain-vault-sync) and off each other.
   hwc.business.crm.tick.onCalendar = "*:41";

@@ -60,6 +60,7 @@ let
     export PYTHONPATH="${cfg.projectDir}/src"
     export HWC_CRM_PG_DSN="${cfg.postgresDsn}"
     export HWC_CRM_META_PAGE_TOKEN_FILE="${config.age.secrets.${cfg.meta.pageTokenSecretRef}.path}"
+    ${lib.optionalString (cfg.meta.pageId != null) ''export HWC_CRM_META_PAGE_ID="${cfg.meta.pageId}"''}
     exec ${pythonEnv}/bin/python3 -m hwc_crm.integrations.messenger_import "$@"
   '';
 
@@ -284,6 +285,15 @@ in
         description = ''
           Page access token for the history import. Non-null installs the
           `hwc-crm-messenger-import` command; the service never uses it.
+        '';
+      };
+      pageId = lib.mkOption {
+        type = lib.types.nullOr (lib.types.strMatching "[0-9]+");
+        default = null;
+        example = "102022081185728";
+        description = ''
+          The Facebook Page the import reads. Configured rather than looked
+          up: a Messenger Page token may be refused on /me.
         '';
       };
     };
@@ -576,7 +586,12 @@ in
       }
       {
         assertion = lib.all (ref: ref == null || config.age.secrets ? ${ref}) (
-          lib.attrValues cfg.meta
+          with cfg.meta;
+          [
+            verifyTokenSecretRef
+            appSecretRef
+            pageTokenSecretRef
+          ]
         );
         message = "hwc.business.crm.meta names an agenix secret that is not declared";
       }

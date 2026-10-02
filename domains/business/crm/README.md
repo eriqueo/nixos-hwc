@@ -54,6 +54,7 @@ crm/
 | `.meta.verifyTokenSecretRef` | null | Messenger webhook verify token; null hides `GET /hooks/messenger`. |
 | `.meta.appSecretRef` | null | Meta app secret; signs `POST /hooks/messenger`; null answers 503. |
 | `.meta.pageTokenSecretRef` | null | Page token; installs `hwc-crm-messenger-import`. |
+| `.meta.pageId` | null | Page the import reads; configured because a Page token may be refused on `/me`. |
 
 Ingress: Caddy vhost `crm.hwc.iheartwoodcraft.com` (tailnet-private) for the
 board UI + admin API; public Cloudflare Tunnel exposes ONLY
@@ -61,6 +62,9 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 (`machines/work/config.nix`).
 
 ## Changelog
+- **2026-10-02** — hwc-work sets the Messenger Page token
+  (`crm-meta-page-token`) and `meta.pageId`, so `hwc-crm-messenger-import` is
+  installed. `meta.appSecretRef` is still unset: deliveries answer 503.
 - **2026-10-02** — Facebook Page Messenger (hwc-crm D55): `meta.*SecretRef`
   options wire the verify token, app secret and Page token as `*_FILE` env
   paths (restart triggers included); a Page token installs
