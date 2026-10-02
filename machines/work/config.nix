@@ -348,20 +348,13 @@
       # on api.iheartwoodcraft.com/webhook/...; then remove this explicit route.
       domain = "n8n.heartwoodcraft.me";
       extraIngress = {
-        "mcp.heartwoodcraft.me" = "http://localhost:6200";
-        "mcp.iheartwoodcraft.com" = "http://localhost:6200";
-        "hwc-origin.heartwoodcraft.me" = "http://localhost:6200";
         "hwc-origin.iheartwoodcraft.com" = "http://localhost:6200";
 
         # brain-mcp is local (wave 1).
-        "brain.heartwoodcraft.me" = "http://localhost:9876";
-        "brain.iheartwoodcraft.com" = "http://localhost:9876";
-        "brain-origin.heartwoodcraft.me" = "http://localhost:9876";
         "brain-origin.iheartwoodcraft.com" = "http://localhost:9876";
 
         # datax-monitor — Cloudflare Access ("datax" allow-list) gates it; the
         # app has no auth of its own.
-        "monitor.heartwoodcraft.me" = "http://localhost:4400";
         "monitor.iheartwoodcraft.com" = "http://localhost:4400";
 
         # Production-domain webhook ingress (Twilio SMS, JobTread pulls):
@@ -388,7 +381,6 @@
         };
 
         # hwc-mcp-gateway origin for lead-scout (Access service token).
-        "leads-origin.heartwoodcraft.me" = "http://localhost:8420";
         "leads-origin.iheartwoodcraft.com" = "http://localhost:8420";
       };
     };

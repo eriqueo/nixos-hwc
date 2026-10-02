@@ -19,8 +19,9 @@ Provides network infrastructure that other domains depend on:
 ## Structure
 
 `cloudflared.domain` is optional; work explicitly retains the old n8n hostname
-until its senders move. Work declares both domains' MCP origin ingress during
-cutover. Publish the new origin DNS only after its Access policy is in place.
+until its senders move. Work exposes only protected `.com` MCP origins and Monitor;
+the legacy MCP origins and unauthenticated bare aliases have been removed.
+Publish origin DNS only after its Access policy is in place.
 
 The calculator vhost serves the website publisher's active calculator output on work.
 
@@ -56,6 +57,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-10-02: Withdraw `.me` MCP origins and Monitor plus both domains’ bare MCP aliases after Eric confirmed Claude/ChatGPT on `.com` and the new Monitor dashboard loaded. Keep the explicit old n8n route pending sender checks.
 - 2026-10-02: Correct the networking module’s ingress comment to the existing path-restricted `.com` webhook hostname.
 - 2026-10-02: Add `.com` Brain, HWC and Leads origin ingress on work. Make the primary n8n hostname optional and retain `.me` explicitly until sender migration passes; preserve the path-restricted `.com` webhook route.
 - 2026-09-29: `routeOwners."lead-scout-datax" = "work"`. The vhost itself is registered by `hwc.server.ai.leadScout.memberInstance.vhost` (upstream from its `port`), with a per-route `X-Forwarded-For`/`X-Real-IP` `{remote_host}` override: the default `{remote}` renders `ip:port`, which Express cannot use as a client address. Global `mkProxyBlock` headers unchanged; firefly-explorer still consumes the default.
