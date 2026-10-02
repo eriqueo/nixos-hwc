@@ -12,12 +12,11 @@ edits).
 index.nix          # options, DX2-only routing, and bounded subagent configuration
 parts/package.nix  # pinned buildNpmPackage of the pi monorepo (vendored from
                    # nixpkgs; hwc-server's stable channel has no pi-coding-agent)
-parts/guards.ts    # pi extension: tool_call guards, port of the Claude Code
-                   # enforce-tools + write-guard PreToolUse hooks, and an exec
-                   # of the shared /etc/agent-harness workspace-guard.sh
-parts/stop-guards.ts # pi extension: agent_end guards, port of ste100-guard and
-                   # the self-caught channel of mistake-guard
+parts/guards.ts    # pi extension: the Pi-only rule, refusing unbounded reads
+                   # of large files
 parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
+                   # (hwc-hook-bridge.ts is claude-config pi/hook-bridge.ts,
+                   # substituted in index.nix; it runs the shared hooks)
 ```
 
 ## Design decisions
@@ -60,19 +59,22 @@ parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
   array of settings.json. The skill list is merged **append-only at every activation** (jq + `cmp`,
   the same shape as claude-code's gate-hook heal) rather than seeded. Seeding
   alone would never reach a machine whose settings.json already exists.
-- **Guards are an extension, not instructions.** `parts/guards.ts` blocks
-  grep/sed, confirms destructive git and `nixos-rebuild`, and refuses
-  unbounded reads over 64 KB. `tool_call` fires before execution and
-  `{ block: true }` means the call never runs — the model gets no vote. That
-  matters more here than under Claude Code: DX2 follows prose rules less
-  reliably, so rules worth keeping belong in the extension, not in AGENTS.md.
-  Extensions in `~/.pi/agent/extensions/` are auto-discovered, so this needs
-  no settings entry.
+- **Guards are hooks, not instructions, and they are Claude's hooks.**
+  `hwc-hook-bridge.ts` sends each Pi event to claude-config's
+  `codex/hook-bridge.py --runtime pi`, which runs the hooks `settings.json`
+  registers for the same Claude tool name. `tool_call` fires before execution
+  and `{ block: true }` means the call never runs; an `ask` confirms with a UI
+  and blocks headless. A Stop block arrives on `agent_settled` (not
+  `agent_end`, after which Pi may still retry or compact) and becomes a
+  follow-up turn, at most two. The Stop guards read a Claude-format projection
+  of the current branch. `parts/guards.ts` keeps the one Pi-only rule, the
+  64 KB read limit. DX2 follows prose rules less reliably, so rules worth
+  keeping belong in hooks, not in AGENTS.md.
 - **AGENTS.md is short on purpose.** `contextFile` → `parts/AGENTS.md` is
   deliberately shorter than `~/.claude/CLAUDE.md` and is *not* a copy of it.
   Always-loaded instruction volume degrades compliance across every rule, and
   DX2 has less headroom for that than Claude. It carries only what cannot be
-  enforced mechanically (guards.ts) or loaded on demand — skills, and the
+  enforced mechanically (the shared hooks, guards.ts) or loaded on demand — skills, and the
   per-repo `CLAUDE.md` that pi already discovers from cwd and its ancestors.
   Its content is small-model-shaped: halt condition, quote-the-output-before-claiming,
   read narrowly, no JSON-literal tool args. Those four map to observed worker
@@ -88,16 +90,10 @@ parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
   array. Two writers on one list is how a declarative file and an imperative
   command fight, and pi's own updater (`pi update --all`) is the reason to let
   pi win. What Nix keeps is the part pi cannot re-derive: the model ring, the
-  skill tree path, and the two guard extensions.
-- **Two guard extensions, two switches.** `guards.enable` installs
-  `parts/guards.ts`, which runs on `tool_call` and BLOCKS — the model gets no
-  vote. `stopGuards.enable` installs `parts/stop-guards.ts`, which runs on
-  `agent_end`. `agent_end` carries no result type in pi 0.80.7, so an extension
-  cannot reject a turn there; it queues a correcting follow-up turn instead,
-  with `pi.sendMessage(..., {triggerTurn:true, deliverAs:"followUp"})`. The user
-  sees the finished answer first, then the correction turn. That is the one
-  behavioural difference from a Claude Code Stop hook, and pi 0.80.7 offers no
-  way to close it.
+  skill tree path, the hook bridge and the read guard.
+- **A Stop block is a follow-up, not a rejection.** Pi 0.80.7 cannot reject a
+  finished turn, so the user sees the answer first, then the correction turn.
+  That is the one behavioural difference from a Claude Code Stop hook.
 - **Frontier models run in their native harnesses.** Pi's enabled model ring has
   only DX2. Claude Code and Codex retain their native subscription logins.
 
@@ -111,6 +107,8 @@ nix run nixpkgs#prefetch-npm-deps -- ./package-lock.json  # → npmDepsHash
 Bump `version` + both hashes in `parts/package.nix`.
 
 ## Changelog
+
+- 2026-10-01: Removed the hand ports now that the shared hooks run: `parts/stop-guards.ts` and `stopGuards.enable` are gone, and `parts/guards.ts` keeps only the 64 KB read limit (grep/sed, destructive-git and rebuild confirmation, write-guard and the workspace-guard exec now come from the shared hooks). Policy change: Pi's Stop check is now the shared ste100 answer-length rule (block over 900 words), not the old 30-word sentence port; a headless Pi run now also blocks on enforce-tools' advisory asks (secrets and Caddy route edits).
 
 - 2026-10-01: `hookBridge.enable` installs claude-config's `pi/hook-bridge.ts` as `hwc-hook-bridge.ts`, with the pinned python and `codex/hook-bridge.py` substituted. Pi now runs every shared Claude hook (the bridge reads settings.json) instead of four hand ports; a bridge failure blocks bash/write/edit. Measured 0.24 s per PreToolUse call. Live: `pi -p` was denied `grep` by the shared enforce-tools.
 

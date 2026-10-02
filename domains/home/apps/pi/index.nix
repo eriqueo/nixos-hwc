@@ -213,7 +213,7 @@ in
         instruction volume degrades compliance across every rule, not just the
         newest one, and DX2 has less headroom for that than Claude does. So
         this file carries only what cannot be enforced mechanically
-        (parts/guards.ts) or loaded on demand (skills, per-repo CLAUDE.md,
+        (the shared hooks via hookBridge, parts/guards.ts) or loaded on demand (skills, per-repo CLAUDE.md,
         which pi discovers from cwd and its ancestors).
       '';
     };
@@ -235,34 +235,9 @@ in
       default = true;
       description = ''
         Install parts/guards.ts as a pi extension (~/.pi/agent/extensions/,
-        auto-discovered — no settings entry). Blocks grep/sed, confirms
-        destructive git and nixos-rebuild, and refuses unbounded reads of
-        large files. Port of the Claude Code enforce-tools PreToolUse hook:
-        rules the model cannot decline, which is the half of the contract that
-        survives being run against a smaller model.
-
-        Also carries the port of the write-guard PreToolUse hook: a write to an
-        existing file, a delete, and a `git checkout`/`git restore` over
-        uncommitted changes are all blocked until the session has looked at the
-        target.
-      '';
-    };
-
-    stopGuards.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = ''
-        Install parts/stop-guards.ts as a pi extension. Port of two Claude Code
-        Stop hooks: the ASD-STE100 sentence-length ceiling, and the self-caught
-        channel of the mistake ledger.
-
-        A SEPARATE FILE FROM guards.ts, and separate on purpose. guards.ts runs
-        on `tool_call` and BLOCKS — the model gets no vote. This one runs on
-        `agent_end`, which carries no result type in pi 0.80.7 and therefore
-        cannot reject a turn; it queues a correcting follow-up turn instead,
-        with pi.sendMessage(..., triggerTurn). Blocking and nagging are
-        different contracts with different failure modes, so each gets its own
-        switch. One file could not carry two switches.
+        auto-discovered — no settings entry). It refuses unbounded reads of
+        large files, the one Pi-only rule: a property of the smaller model, with
+        no Claude hook. Every shared rule comes through hookBridge.
       '';
     };
   };
@@ -300,10 +275,6 @@ in
 
     home.file.".pi/agent/extensions/hwc-hook-bridge.ts" = lib.mkIf cfg.hookBridge.enable {
       source = hookBridge;
-    };
-
-    home.file.".pi/agent/extensions/hwc-stop-guards.ts" = lib.mkIf cfg.stopGuards.enable {
-      source = ./parts/stop-guards.ts;
     };
 
     # settings.json: pi rewrites it at runtime → seed once, writable, then pi
