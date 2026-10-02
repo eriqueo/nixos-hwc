@@ -57,6 +57,8 @@ networking/
 ```
 
 ## Changelog
+
+- 2026-10-02: Temporarily restore only the three Access-protected `.me` origins for the retirement recovery rehearsal. Remove them when initialization and `.com` parity pass; bare aliases remain closed.
 - 2026-10-02: Withdraw `.me` MCP origins and Monitor plus both domains’ bare MCP aliases after Eric confirmed Claude/ChatGPT on `.com` and the new Monitor dashboard loaded. Keep the explicit old n8n route pending sender checks.
 - 2026-10-02: Correct the networking module’s ingress comment to the existing path-restricted `.com` webhook hostname.
 - 2026-10-02: Add `.com` Brain, HWC and Leads origin ingress on work. Make the primary n8n hostname optional and retain `.me` explicitly until sender migration passes; preserve the path-restricted `.com` webhook route.

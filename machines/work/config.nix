@@ -348,6 +348,11 @@
       # on api.iheartwoodcraft.com/webhook/...; then remove this explicit route.
       domain = "n8n.heartwoodcraft.me";
       extraIngress = {
+        # Temporary protected recovery rehearsal: remove after all three old
+        # origins initialize successfully and the .com origins still pass.
+        "hwc-origin.heartwoodcraft.me" = "http://localhost:6200";
+        "brain-origin.heartwoodcraft.me" = "http://localhost:9876";
+        "leads-origin.heartwoodcraft.me" = "http://localhost:8420";
         "hwc-origin.iheartwoodcraft.com" = "http://localhost:6200";
 
         # brain-mcp is local (wave 1).
