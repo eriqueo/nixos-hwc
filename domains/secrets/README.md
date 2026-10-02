@@ -11,7 +11,7 @@
 
 `parts/services/hwc-gateway-com.age` holds the replacement gateway's isolated
 Access origin credentials as Wrangler secrets JSON. The generator mounts it
-as `root:secrets / 0440`. The retired `.me` gateway payloads and mounts are removed.
+as `root:secrets / 0440`. The retired `.me` gateway and Hostinger SFTP payloads and mounts are removed.
 
 Host recipients read the unchanged public key from machines/home; no rekeying or encrypted-payload changes.
 ```
@@ -62,6 +62,8 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+
+- 2026-10-02: Remove the retired Hostinger SFTP payload. Source/app reference searches and evaluated work service configuration found no consumer; the website publishes locally on work. Removing its generated declaration retires the mount across the fleet.
 
 - 2026-10-02: Remove `hwc-gateway-clientid.age` and `hwc-gateway-secret.age` after both MCP clients moved. Retain the isolated `.com` credential; no remaining source consumers reference the old mounts.
 - 2026-10-02: Replaced `datax-app-env` with Eric's latest downloaded app environment, including Microsoft OAuth credentials. Retained the four personal developer settings omitted by the download. Verified encryption for the existing recipient set and byte-for-byte decryption on work; the generated mount remains `root:secrets / 0440`.
