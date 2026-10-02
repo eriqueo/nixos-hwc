@@ -14,6 +14,8 @@ CLAUDE_INSTRUCTIONS=${AGENT_HARNESS_CLAUDE_INSTRUCTIONS:-$HOME/.claude/CLAUDE.md
 CODEX_HOOKS=${AGENT_HARNESS_CODEX_HOOKS:-$HOME/.codex/hooks.json}
 PI_INSTRUCTIONS=${AGENT_HARNESS_PI_INSTRUCTIONS:-$HOME/.pi/agent/AGENTS.md}
 PI_SETTINGS=${AGENT_HARNESS_PI_SETTINGS:-$HOME/.pi/agent/settings.json}
+PI_HOOK_BRIDGE=${AGENT_HARNESS_PI_HOOK_BRIDGE:-$HOME/.pi/agent/extensions/hwc-hook-bridge.ts}
+PI_BRIDGE_FAILURES=${AGENT_HARNESS_PI_BRIDGE_FAILURES:-$HOME/.local/state/agent-harness/pi-bridge-failures.log}
 CLAUDE_SETTINGS=${AGENT_HARNESS_CLAUDE_SETTINGS:-/etc/claude-code/managed-settings.json}
 # The one skill set (a store path) and the roots every runtime reads it from.
 SKILL_SET=${AGENT_HARNESS_SKILL_SET:-}
@@ -99,6 +101,15 @@ check_skills() {
   else
     fail "Pi settings missing at $PI_SETTINGS"
   fi
+  # Pi reaches the shared hooks only through this extension; a failure to run
+  # them is logged by it, and blocks Pi's bash/write/edit calls meanwhile.
+  check_store_path 'Pi hook bridge' "$PI_HOOK_BRIDGE"
+  local since recent=0
+  since=$(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S)
+  if [ -r "$PI_BRIDGE_FAILURES" ]; then
+    recent=$(awk -F'\t' -v s="$since" '$1 >= s' "$PI_BRIDGE_FAILURES" | wc -l)
+  fi
+  if [ "$recent" -eq 0 ]; then ok 'Pi hook bridge: no failures in the last hour'; else fail "Pi hook bridge failed $recent time(s) in the last hour: $PI_BRIDGE_FAILURES"; fi
   printf 'skill fingerprint: %s (%s skills)\n' "$(skill_fingerprint)" \
     "$(find "$SKILL_SET" -mindepth 1 -maxdepth 1 -type d | wc -l)"
 }

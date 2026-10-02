@@ -12,7 +12,7 @@ cat > "$ROOT/expected.json" <<'EOF'
 EOF
 cp "$ROOT/expected.json" "$ROOT/system.json"
 
-for file in system-policy claude-instructions codex-hooks pi-instructions claude-settings; do
+for file in system-policy claude-instructions codex-hooks pi-instructions claude-settings pi-hook-bridge; do
   printf 'pinned\n' > "$STORE/$file"
 done
 
@@ -53,6 +53,8 @@ run_doctor() {
   AGENT_HARNESS_CODEX_HOOKS="$STORE/codex-hooks" \
   AGENT_HARNESS_PI_INSTRUCTIONS="$STORE/pi-instructions" \
   AGENT_HARNESS_PI_SETTINGS="$HOME_T/.pi/agent/settings.json" \
+  AGENT_HARNESS_PI_HOOK_BRIDGE="$STORE/pi-hook-bridge" \
+  AGENT_HARNESS_PI_BRIDGE_FAILURES="$ROOT/pi-bridge-failures.log" \
   AGENT_HARNESS_CLAUDE_SETTINGS="$STORE/claude-settings" \
   AGENT_HARNESS_SKILL_SET="$SKILLS" \
   AGENT_HARNESS_SKILL_ROOTS="$HOME_T/.claude/skills:$HOME_T/.agents/skills" \
@@ -85,6 +87,16 @@ if run_doctor >/dev/null 2>&1; then
 fi
 printf '{"skills":["%s/.claude/skills"]}\n' "$HOME_T" > "$HOME_T/.pi/agent/settings.json"
 run_doctor >/dev/null
+
+# A Pi bridge failure in the last hour fails the doctor; an older one does not.
+printf '2000-01-01T00:00:00.000Z\tPreToolUse\told\n' > "$ROOT/pi-bridge-failures.log"
+run_doctor >/dev/null
+printf '%s\tPreToolUse\tspawn ENOENT\n' "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" >> "$ROOT/pi-bridge-failures.log"
+if run_doctor >/dev/null 2>&1; then
+  echo 'control.test: recent Pi bridge failure unexpectedly passed' >&2
+  exit 1
+fi
+rm "$ROOT/pi-bridge-failures.log"
 
 # drift records a case only after its alert; with no notify URL it stays
 # unrecorded, so the alert retries on the next run.

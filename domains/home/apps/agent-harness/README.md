@@ -67,6 +67,7 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+- 2026-10-01: The doctor checks Pi's hook bridge extension (`~/.pi/agent/extensions/hwc-hook-bridge.ts`, a store path) and fails on any bridge failure logged in the last hour (`~/.local/state/agent-harness/pi-bridge-failures.log`), so the hourly drift timer alerts on it.
 - 2026-10-01: One skill set for every runtime on every host. `agentSkills` joins the harness skills with 13 adopted `cloudflare/skills` (new flake input); Claude, Codex (`~/.agents/skills`) and Pi read it. It replaces the Codex allowlists and the hand copies that had gone stale on hwc-laptop, and the `npx skills` installs on hwc-laptop and hwc-home. Only top-level dirs with `SKILL.md` count, so Claude Code's committed `skills/synced/` claude.ai copies no longer load as duplicates. Activation moves the old dirs to a backup. New `agent-harness drift` and hourly timer. `codex debug prompt-input` (0.159.3) listed all 49 skills plus 4 built-ins.
 - 2026-10-01: Add protocol-4 training confirmation forms. Frozen explanations and actions use separate choices; whole-ticket completeness has its own question. Legacy inputs remain supported.
 - 2026-10-01: Add `tracker-handoff` and give `hwc-tracker` the ledger path: the agent's live `handoff.md` heads the next prompt, with its coverage checked against each checkout's HEAD in the ws ledgers. The hub restarts when `handoff_doc.py` changes.
