@@ -22,7 +22,8 @@ hard guard on first-contact sends.
 crm/
 ├── README.md      # This file.
 └── index.nix      # hwc.business.crm.* options + service + tick timer
-                   #   + lead_scout ingest timer + route.
+                   #   + lead_scout ingest timer + route
+                   #   + Messenger secrets and hwc-crm-messenger-import.
 ```
 
 ## NixOS options
@@ -50,12 +51,22 @@ crm/
 | `.calendar.collection` | `eric/work` | Appointment write target. |
 | `.calendar.busyCollections` | Work + Family + Personal | Collections checked for conflicts; Groceries is task-only. |
 | `.calendar.organizerEmail` | — | ORGANIZER on the `.ics` invite. |
+| `.meta.verifyTokenSecretRef` | null | Messenger webhook verify token; null hides `GET /hooks/messenger`. |
+| `.meta.appSecretRef` | null | Meta app secret; signs `POST /hooks/messenger`; null answers 503. |
+| `.meta.pageTokenSecretRef` | null | Page token; installs `hwc-crm-messenger-import`. |
 
 Ingress: Caddy vhost `crm.hwc.iheartwoodcraft.com` (tailnet-private) for the
 board UI + admin API; public Cloudflare Tunnel exposes ONLY
-`^/hooks/(contact|appointment|availability)`.
+`^/hooks/(contact|calculator|appointment|availability|jt|messenger)$`
+(`machines/work/config.nix`).
 
 ## Changelog
+- **2026-10-02** — Facebook Page Messenger (hwc-crm D55): `meta.*SecretRef`
+  options wire the verify token, app secret and Page token as `*_FILE` env
+  paths (restart triggers included); a Page token installs
+  `hwc-crm-messenger-import`. hwc-work sets the verify token
+  (`crm-meta-verify-token`), and its tunnel route admits `/hooks/messenger`
+  with the path pattern now anchored to exact routes.
 - **2026-09-21** — The CRM ingest and Lead Scout action UI now consume one
   derived v2 route/window contract, keeping route and score eligibility under
   one Nix producer.

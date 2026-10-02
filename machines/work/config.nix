@@ -262,6 +262,9 @@
     summary.onCalendar = "*-*-* 07:50:00";
   };
   hwc.business.crm.controlTokenSecretRef = "hwc-control-crm-token";
+  # Facebook Page Messenger (hwc-crm D55). Add appSecretRef before
+  # subscribing the Page; deliveries answer 503 until then.
+  hwc.business.crm.meta.verifyTokenSecretRef = "crm-meta-verify-token";
   # Timer stagger (see the automation block above): off :00 (logrotate,
   # brain-vault-sync) and off each other.
   hwc.business.crm.tick.onCalendar = "*:41";
@@ -366,11 +369,12 @@
         # Umami — script.js + /api/send must be visitor-reachable.
         "stats.iheartwoodcraft.com" = "http://localhost:3009";
 
-        # hwc-crm public intake, PATH-locked to /hooks/*; the board stays
-        # tailnet-private. /hooks/jt is JobTread's webhook (hwc-crm D45).
+        # hwc-crm public intake, PATH-locked to exact /hooks/* routes; the
+        # board stays tailnet-private. /hooks/jt is JobTread's webhook (hwc-crm
+        # D45); /hooks/messenger is Meta's Messenger webhook (D55).
         "crm.iheartwoodcraft.com" = {
           service = "http://localhost:11660";
-          path = "^/hooks/(contact|calculator|appointment|availability|jt)";
+          path = "^/hooks/(contact|calculator|appointment|availability|jt|messenger)$";
         };
 
         # Calculator report viewer — read-only sanitised GET /api/reports/<id>.

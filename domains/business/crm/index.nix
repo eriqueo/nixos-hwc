@@ -44,6 +44,25 @@ let
     ]
   );
 
+  # Messenger (hwc-crm D55): one producer of the env names for both the
+  # service and the import command.
+  metaSecrets = lib.filterAttrs (_: ref: ref != null) {
+    HWC_CRM_META_VERIFY_TOKEN_FILE = cfg.meta.verifyTokenSecretRef;
+    HWC_CRM_META_APP_SECRET_FILE = cfg.meta.appSecretRef;
+  };
+  metaExports = lib.concatStrings (
+    lib.mapAttrsToList (
+      var: ref: "export ${var}=\"${config.age.secrets.${ref}.path}\"\n"
+    ) metaSecrets
+  );
+
+  messengerImport = pkgs.writeShellScriptBin "hwc-crm-messenger-import" ''
+    export PYTHONPATH="${cfg.projectDir}/src"
+    export HWC_CRM_PG_DSN="${cfg.postgresDsn}"
+    export HWC_CRM_META_PAGE_TOKEN_FILE="${config.age.secrets.${cfg.meta.pageTokenSecretRef}.path}"
+    exec ${pythonEnv}/bin/python3 -m hwc_crm.integrations.messenger_import "$@"
+  '';
+
   crmWrapper = pkgs.writeShellScript "hwc-crm-wrapper" ''
     export PYTHONPATH="${cfg.projectDir}/src"
     export HWC_CRM_BIND_ADDR="${cfg.bindAddr}"
@@ -67,6 +86,7 @@ let
     ${lib.optionalString (cfg.controlTokenSecretRef != null) ''
       export HWC_CRM_CONTROL_TOKEN_FILE="${config.age.secrets.${cfg.controlTokenSecretRef}.path}"
     ''}
+    ${metaExports}
     ${lib.optionalString (cfg.emailTransport == "smtp") ''
       export HWC_CRM_SMTP_HOST="${cfg.smtp.host}"
       export HWC_CRM_SMTP_PORT="${toString cfg.smtp.port}"
@@ -233,6 +253,39 @@ in
         disqualify). It authorizes nothing else — not sends, sequences, JT,
         or the board API. null leaves those routes answering 503 (fail closed).
       '';
+    };
+
+    # Facebook Page Messenger (hwc-crm D55). Each ref is an agenix secret
+    # NAME; null leaves that part off and the app fails closed.
+    meta = {
+      verifyTokenSecretRef = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        example = "crm-meta-verify-token";
+        description = ''
+          Verify token Meta's "Configure webhooks" form sends back on
+          GET /hooks/messenger. null hides the route (404).
+        '';
+      };
+      appSecretRef = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        example = "crm-meta-app-secret";
+        description = ''
+          The Meta app secret, used to check X-Hub-Signature-256 on every
+          POST /hooks/messenger. null makes deliveries answer 503, so
+          subscribe the Page only after this is set.
+        '';
+      };
+      pageTokenSecretRef = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        example = "crm-meta-page-token";
+        description = ''
+          Page access token for the history import. Non-null installs the
+          `hwc-crm-messenger-import` command; the service never uses it.
+        '';
+      };
     };
 
     statePath = lib.mkOption {
@@ -522,6 +575,12 @@ in
         message = "hwc.business.crm.controlTokenSecretRef '${toString cfg.controlTokenSecretRef}' is not a declared agenix secret";
       }
       {
+        assertion = lib.all (ref: ref == null || config.age.secrets ? ${ref}) (
+          lib.attrValues cfg.meta
+        );
+        message = "hwc.business.crm.meta names an agenix secret that is not declared";
+      }
+      {
         assertion = lib.all (ref: config.age.secrets ? ${ref}) (lib.attrValues cfg.calendar.busyFeeds);
         message = "hwc.business.crm.calendar.busyFeeds names an agenix secret that is not declared";
       }
@@ -555,7 +614,8 @@ in
         lib.optional (cfg.jtGrantKeyRef != null) config.age.secrets.${cfg.jtGrantKeyRef}.file
         ++ lib.optional (
           cfg.emailTransport == "smtp"
-        ) config.age.secrets.${cfg.smtp.passwordSecretRef}.file;
+        ) config.age.secrets.${cfg.smtp.passwordSecretRef}.file
+        ++ map (ref: config.age.secrets.${ref}.file) (lib.attrValues metaSecrets);
 
       serviceConfig = {
         Type = "exec";
@@ -670,6 +730,8 @@ in
         RandomizedDelaySec = "60s";
       };
     };
+
+    environment.systemPackages = lib.optional (cfg.meta.pageTokenSecretRef != null) messengerImport;
 
     # Tailnet-private vhost: crm.hwc.iheartwoodcraft.com
     hwc.networking.shared.routes = [
