@@ -21,6 +21,7 @@ including DONT KNOW; older four-State snapshots remain readable.
 Website source, CMS, calculator builds and atomic public releases run on hwc-work; a loopback Caddy origin serves the existing Cloudflare tunnel.
 Calculator presentation tokens, selected states and layout live in `website/calculator/app/src`; pricing and CMS-managed calculator data remain separate from presentation.
 Calculator measurement uses the website-owned browser contract, one run per reset, and CRM save receipts before showing success.
+The CMS activates calculator changes after the receipt-capable CRM backend is running; previous generated website output remains available for recovery.
 
 The morning-briefing host-health option documents permanent source-owned SSH
 reads for journal, VPN and backup detail, alongside central Prometheus probes.
@@ -47,6 +48,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-10-02: Prepare the approved measurement release with backend-first activation and retained website recovery output.
 
 - Bind State display metadata inside each plain and HTML routing renderer; both renderers accept current and legacy reports.
 
