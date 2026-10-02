@@ -12,9 +12,18 @@ cat > "$ROOT/expected.json" <<'EOF'
 EOF
 cp "$ROOT/expected.json" "$ROOT/system.json"
 
-for file in system-policy claude-instructions codex-hooks codex-skill pi-instructions claude-settings; do
+for file in system-policy claude-instructions codex-hooks pi-instructions claude-settings; do
   printf 'pinned\n' > "$STORE/$file"
 done
+
+# One skill set, linked from two roots; Codex's root holds only .system.
+SKILLS="$STORE/agent-skills"
+HOME_T="$ROOT/home"
+mkdir -p "$SKILLS/premortem" "$HOME_T/.claude" "$HOME_T/.agents" "$HOME_T/.codex/skills/.system" "$HOME_T/.pi/agent"
+printf -- '---\nname: premortem\n---\n' > "$SKILLS/premortem/SKILL.md"
+ln -s "$SKILLS" "$HOME_T/.claude/skills"
+ln -s "$SKILLS" "$HOME_T/.agents/skills"
+printf '{"skills":["%s/.claude/skills"]}\n' "$HOME_T" > "$HOME_T/.pi/agent/settings.json"
 
 for command in claude codex pi herdr agent-state-validate codex-hooks-trust; do
   cat > "$BIN/$command" <<'EOF'
@@ -42,15 +51,53 @@ run_doctor() {
   AGENT_HARNESS_SYSTEM_POLICY="$STORE/system-policy" \
   AGENT_HARNESS_CLAUDE_INSTRUCTIONS="$STORE/claude-instructions" \
   AGENT_HARNESS_CODEX_HOOKS="$STORE/codex-hooks" \
-  AGENT_HARNESS_CODEX_SKILL="$STORE/codex-skill" \
   AGENT_HARNESS_PI_INSTRUCTIONS="$STORE/pi-instructions" \
+  AGENT_HARNESS_PI_SETTINGS="$HOME_T/.pi/agent/settings.json" \
   AGENT_HARNESS_CLAUDE_SETTINGS="$STORE/claude-settings" \
+  AGENT_HARNESS_SKILL_SET="$SKILLS" \
+  AGENT_HARNESS_SKILL_ROOTS="$HOME_T/.claude/skills:$HOME_T/.agents/skills" \
+  AGENT_HARNESS_CODEX_SKILLS="$HOME_T/.codex/skills" \
   AGENT_HARNESS_SOURCE="$ROOT/source" \
   AGENT_HARNESS_FLEET_HOSTS=hwc-server:hwc-laptop:hwc-work \
-  bash "$(dirname "$0")/control.sh" doctor
+  bash "$(dirname "$0")/control.sh" "${1:-doctor}"
 }
 
 run_doctor >/dev/null
+
+# Drift: a hand-installed Codex skill, a root that is not the set, and a Pi
+# path outside it must each fail the doctor.
+mkdir "$HOME_T/.codex/skills/hand-copy"
+if run_doctor >/dev/null 2>&1; then
+  echo 'control.test: hand-installed Codex skill unexpectedly passed' >&2
+  exit 1
+fi
+rmdir "$HOME_T/.codex/skills/hand-copy"
+rm "$HOME_T/.agents/skills"; mkdir "$HOME_T/.agents/skills"
+if run_doctor >/dev/null 2>&1; then
+  echo 'control.test: skill root outside the set unexpectedly passed' >&2
+  exit 1
+fi
+rmdir "$HOME_T/.agents/skills"; ln -s "$SKILLS" "$HOME_T/.agents/skills"
+printf '{"skills":["%s/.claude/skills","/tmp"]}\n' "$HOME_T" > "$HOME_T/.pi/agent/settings.json"
+if run_doctor >/dev/null 2>&1; then
+  echo 'control.test: extra Pi skill path unexpectedly passed' >&2
+  exit 1
+fi
+printf '{"skills":["%s/.claude/skills"]}\n' "$HOME_T" > "$HOME_T/.pi/agent/settings.json"
+run_doctor >/dev/null
+
+# drift records a case only after its alert; with no notify URL it stays
+# unrecorded, so the alert retries on the next run.
+mkdir "$HOME_T/.codex/skills/hand-copy"
+if XDG_STATE_HOME="$ROOT/xdg" run_doctor drift >/dev/null 2>&1; then
+  echo 'control.test: drift unexpectedly passed with a hand install' >&2
+  exit 1
+fi
+[ ! -e "$ROOT/xdg/agent-harness/drift" ] || {
+  echo 'control.test: drift recorded a case whose alert was not sent' >&2
+  exit 1
+}
+rmdir "$HOME_T/.codex/skills/hand-copy"
 
 cat > "$ROOT/system.json" <<'EOF'
 {"schemaVersion":1,"staticPolicy":{"revision":"rev2"}}

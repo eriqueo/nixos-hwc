@@ -140,6 +140,22 @@
         "type": "github"
       }
     },
+    "cloudflare-skills": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790864655,
+        "narHash": "sha256-U0pebg1Uu/L5gYy6aZXte5FZT0R3OPHxU34J+HOTBFk=",
+        "owner": "cloudflare",
+        "repo": "skills",
+        "rev": "41e0d19858946d18af9ee2c2feebbe2e11d829ff",
+        "type": "github"
+      },
+      "original": {
+        "owner": "cloudflare",
+        "repo": "skills",
+        "type": "github"
+      }
+    },
     "codex": {
       "inputs": {
         "nixpkgs": [
@@ -673,6 +689,7 @@
         "bloxels-cv": "bloxels-cv",
         "brainvec": "brainvec",
         "claude-cowork": "claude-cowork",
+        "cloudflare-skills": "cloudflare-skills",
         "codex": "codex",
         "fleet-map": "fleet-map",
         "home-manager": "home-manager_3",

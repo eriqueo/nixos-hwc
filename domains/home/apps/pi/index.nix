@@ -178,9 +178,11 @@ in
       default = [ "~/.claude/skills" ];
       description = ''
         Directories pi loads Agent Skills from, written to the `skills` array
-        in settings.json. pi implements the Agent Skills standard, so the
-        Claude Code skill tree is consumed as-is — one tree, two harnesses, no
-        second copy to drift.
+        in settings.json. ~/.claude/skills is the agent-harness module's one
+        skill set, the same store path Claude and Codex (~/.agents/skills)
+        read. Stays on the Claude root because the merge below is
+        append-only: switching roots would leave both listed and load every
+        skill twice.
 
         settings.json is pi-owned at runtime, so these are merged in
         append-only at every activation rather than seeded once (seeding alone

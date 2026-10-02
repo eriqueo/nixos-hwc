@@ -1,18 +1,19 @@
 # codex
 
 ## Purpose
-Installs the OpenAI Codex CLI (stock `pkgs.codex` by default, overridable via `package`), optional extra session env vars, creates the `~/.config/codex/` directory, and exposes selected cross-harness skills from the shared `~/.claude-config/skills` source through `~/.codex/skills` symlinks. Enable via `hwc.home.apps.codex.enable`.
+Installs the OpenAI Codex CLI (stock `pkgs.codex` by default, overridable via `package`), optional extra session env vars, creates the `~/.config/codex/` directory, links the shared hooks and renders `AGENTS.md`. Skills are not set here: Codex reads `~/.agents/skills`, which agent-harness links to the one skill set every runtime loads. Enable via `hwc.home.apps.codex.enable`.
 
 ## Boundaries
-- ✅ Package selection with null-check assertion, `env` → `home.sessionVariables`, `codex/.keep` config-dir placeholder, and selected out-of-store skill symlinks from one shared source. `parts/package.nix` is an opt-in pin of the upstream 0.146.0 static-musl release binary for machines that set `package = pkgs.callPackage ./parts/package.nix { }`.
+- ✅ Package selection with null-check assertion, `env` → `home.sessionVariables`, `codex/.keep` config-dir placeholder, shared hooks and `AGENTS.md`. `parts/package.nix` is an opt-in pin of the upstream 0.146.0 static-musl release binary for machines that set `package = pkgs.callPackage ./parts/package.nix { }`.
 - ❌ Does not manage API keys/auth or any `config.toml` contents inside `~/.config/codex/`; the pinned package is NOT the default (server intentionally uses stock pkgs.codex).
 
 ## Structure
-- `index.nix` — options (`enable`, `package`, `env`, shared skill source/list, `workflowSkills`), install, config dir, selected skill symlinks under `~/.codex/skills` and workflow skill symlinks under `~/.agents/skills`, assertion.
+- `index.nix` — options (`enable`, `package`, `env`, `sharedConfigRepo`, `shareHarness`), install, config dir, hooks link, `AGENTS.md` render and hook trust activation, assertion.
 - `hooks-trust.py` — records Codex trust for the shared `~/.codex/hooks.json` entries through the app-server API; beside `index.nix` so it runs by hand against a scratch `CODEX_HOME`.
 - `parts/package.nix` — optional pinned codex 0.146.0 derivation from the upstream static-musl release tarball.
 
 ## Changelog
+- 2026-10-01: Removed `sharedSkillSource`, `sharedSkills` and `workflowSkills`. The two allowlists gave Codex 9 of the shared skills, and hand copies filled the gap and went stale (13 dirs on hwc-laptop dated Aug 28–Sep 13). Codex now reads the whole agent-harness skill set at `~/.agents/skills`; `~/.codex/skills` keeps only Codex's `.system`. HM-only.
 
 - 2026-09-22: Activation also records trust through an existing T3 `~/.codex_p`
   profile. Codex keys trust by the hooks path even when `hooks.json` and

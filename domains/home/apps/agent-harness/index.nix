@@ -81,8 +81,12 @@ let
       nix
       systemd
       gawk
+      curl
     ]);
     text = ''
+      export AGENT_HARNESS_SKILL_SET=${agentSkills}
+      export AGENT_HARNESS_SKILL_ROOTS=${lib.escapeShellArg (lib.concatMapStringsSep ":" (r: "${home}/${r}") skillRoots)}
+      export AGENT_HARNESS_NOTIFY_URL=${lib.escapeShellArg cfg.notifyUrl}
       export AGENT_HARNESS_EXPECTED_MANIFEST=${expectedManifest}
       export AGENT_HARNESS_SYSTEM_MANIFEST=/etc/agent-harness-manifest.json
       export AGENT_HARNESS_SOURCE=${lib.escapeShellArg cfg.editableSource}
@@ -93,6 +97,39 @@ let
     '';
   };
   doctor = pkgs.writeShellScriptBin "agent-harness-doctor" ''exec ${cli}/bin/agent-harness doctor "$@"'';
+
+  # The one skill set every runtime loads: Claude (~/.claude/skills and each
+  # claudeConfigDirs root), Codex (~/.agents/skills) and Pi (skillPaths). Before
+  # this, Codex got two hand allowlists plus hand copies that went stale, and
+  # third-party skills sat in one runtime on two hosts.
+  #
+  # Only top-level directories with a SKILL.md are skills. skills/synced/ is
+  # Claude Code's claude.ai sync, committed by mistake; Codex and Pi recursed into
+  # it and loaded a second, older copy of 25 skills.
+  #
+  # Copied, not linked per entry: one real tree reads the same to every runtime's
+  # discovery. A name taken by both sources fails the build.
+  agentSkills = pkgs.runCommand "agent-skills" { } ''
+    mkdir "$out"
+    for dir in ${harness}/skills/*/; do
+      name=$(basename "$dir")
+      [ -f "$dir/SKILL.md" ] || continue
+      cp -R --no-preserve=mode "$dir" "$out/$name"
+    done
+    for name in ${lib.escapeShellArgs cfg.adoptedSkills}; do
+      src=${inputs.cloudflare-skills}/skills/$name
+      if [ ! -f "$src/SKILL.md" ]; then
+        echo "agent-skills: adopted skill '$name' has no SKILL.md in cloudflare/skills" >&2
+        exit 1
+      fi
+      if [ -e "$out/$name" ]; then
+        echo "agent-skills: adopted skill '$name' collides with a harness skill; drop it from adoptedSkills" >&2
+        exit 1
+      fi
+      cp -R --no-preserve=mode "$src" "$out/$name"
+    done
+  '';
+  skillRoots = map (dir: "${dir}/skills") ([ ".claude" ] ++ cfg.claudeConfigDirs) ++ [ ".agents/skills" ];
 
   # How tracker/t3.py reaches T3 Code: its CLI issues short bearer sessions
   # from T3's own state dir, so no token is stored.
@@ -262,6 +299,30 @@ in
       type = lib.types.listOf lib.types.str;
       default = [ ".claude_dx2_home" ];
     };
+    adoptedSkills = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      # The set installed by hand with `npx skills` on hwc-laptop and hwc-home
+      # before 2026-10-01. web-perf is left out: the harness has its own.
+      default = [
+        "agents-sdk"
+        "cloudflare"
+        "cloudflare-email-service"
+        "cloudflare-one"
+        "cloudflare-one-migrations"
+        "durable-objects"
+        "nextjs-on-cloudflare"
+        "sandbox-migrate-to-next"
+        "sandbox-next"
+        "sandbox-stable"
+        "turnstile-spin"
+        "workers-best-practices"
+        "wrangler"
+      ];
+      description = ''
+        Skills from the cloudflare-skills flake input added to the shared skill
+        set. A new upstream skill joins only when named here.
+      '';
+    };
     syncInterval = lib.mkOption {
       type = lib.types.str;
       default = "1min";
@@ -327,8 +388,8 @@ in
     ++ lib.optional cfg.cliUpdates.enable cliUpdater;
 
     home.file = lib.mkMerge (
-      map (dir: {
-        "${dir}/skills".source = harness + "/skills";
+      [ (lib.genAttrs skillRoots (_: { source = agentSkills; })) ]
+      ++ map (dir: {
         "${dir}/agents".source = harness + "/agents";
         "${dir}/commands".source = harness + "/commands";
         "${dir}/CLAUDE.md".source = harness + "/CLAUDE.md";
@@ -339,6 +400,29 @@ in
 
     # The S2 one-time move of the state clone into the workspace root ran on all
     # three hosts and was deleted in S8 (2026-10-01).
+    # Home Manager will not replace a directory it does not own with the
+    # skill-set link, and Codex keeps loading whatever sits in ~/.codex/skills.
+    # So hand-made skill dirs move to a timestamped backup first; nothing is
+    # deleted. Dot entries stay: ~/.codex/skills/.system is Codex's own,
+    # rewritten at its startup. A second run finds nothing to move.
+    home.activation.agentSkillsMigrate = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+      _skBak="${home}/.local/state/agent-harness/pre-skillset-$(date +%Y%m%dT%H%M%S)"
+      _skMove() {
+        run mkdir -p "$_skBak/$2"
+        run mv "$1" "$_skBak/$2/"
+        echo "agent-harness: moved $1 to $_skBak/$2/"
+      }
+      if [ -d "${home}/.agents/skills" ] && [ ! -L "${home}/.agents/skills" ]; then
+        _skMove "${home}/.agents/skills" agents
+      fi
+      if [ -d "${home}/.codex/skills" ] && [ ! -L "${home}/.codex/skills" ]; then
+        for _sk in "${home}/.codex/skills"/*; do
+          [ -e "$_sk" ] || [ -L "$_sk" ] || continue
+          _skMove "$_sk" codex-skills
+        done
+      fi
+    '';
+
     home.activation.agentWorkspace = lib.hm.dag.entryBefore [ "agentHarnessMemoryLinks" ] ''
       root=${lib.escapeShellArg cfg.workspaceRoot}
       run mkdir -p "$root/projects" "$root/closed" "$root/log"
@@ -385,6 +469,26 @@ in
     };
     systemd.user.timers.ws-audit = {
       Unit.Description = "Hourly agent workspace audit";
+      Install.WantedBy = [ "timers.target" ];
+      Timer = {
+        OnCalendar = "hourly";
+        RandomizedDelaySec = "5min";
+        Persistent = true;
+      };
+    };
+
+    # Hourly skill and harness drift check; alerts once per change of the
+    # doctor's FAIL lines. Exits non-zero while drift lasts, so it shows in
+    # `systemctl --user --failed` too.
+    systemd.user.services.agent-harness-drift = {
+      Unit.Description = "Agent harness drift check (skill roots, hand installs, hooks)";
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${cli}/bin/agent-harness drift";
+      };
+    };
+    systemd.user.timers.agent-harness-drift = {
+      Unit.Description = "Hourly agent harness drift check";
       Install.WantedBy = [ "timers.target" ];
       Timer = {
         OnCalendar = "hourly";

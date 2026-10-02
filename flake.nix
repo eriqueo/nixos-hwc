@@ -49,6 +49,12 @@
       url = "github:eriqueo/claude-config";
       flake = false;
     };
+    # Third-party Agent Skills adopted into the one shared skill set
+    # (hwc.home.apps.agent-harness.adoptedSkills). A bump is a skill diff to read.
+    cloudflare-skills = {
+      url = "github:cloudflare/skills";
+      flake = false;
+    };
 
     # System One owns the typed Laya mail-classifier runtime.
     system-one = {

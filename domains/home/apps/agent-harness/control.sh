@@ -12,9 +12,14 @@ STORE_PREFIX=${AGENT_HARNESS_STORE_PREFIX:-/nix/store}
 SYSTEM_POLICY=${AGENT_HARNESS_SYSTEM_POLICY:-/etc/agent-harness/CLAUDE.md}
 CLAUDE_INSTRUCTIONS=${AGENT_HARNESS_CLAUDE_INSTRUCTIONS:-$HOME/.claude/CLAUDE.md}
 CODEX_HOOKS=${AGENT_HARNESS_CODEX_HOOKS:-$HOME/.codex/hooks.json}
-CODEX_SKILL=${AGENT_HARNESS_CODEX_SKILL:-$HOME/.agents/skills/stepwise-refinement}
 PI_INSTRUCTIONS=${AGENT_HARNESS_PI_INSTRUCTIONS:-$HOME/.pi/agent/AGENTS.md}
+PI_SETTINGS=${AGENT_HARNESS_PI_SETTINGS:-$HOME/.pi/agent/settings.json}
 CLAUDE_SETTINGS=${AGENT_HARNESS_CLAUDE_SETTINGS:-/etc/claude-code/managed-settings.json}
+# The one skill set (a store path) and the roots every runtime reads it from.
+SKILL_SET=${AGENT_HARNESS_SKILL_SET:-}
+SKILL_ROOTS=${AGENT_HARNESS_SKILL_ROOTS:-}
+CODEX_SKILLS=${AGENT_HARNESS_CODEX_SKILLS:-$HOME/.codex/skills}
+NOTIFY_URL=${AGENT_HARNESS_NOTIFY_URL:-}
 
 failures=0
 ok() { printf 'ok   %s\n' "$*"; }
@@ -62,8 +67,45 @@ check_no_authoring_reference() {
   fi
 }
 
+# Content fingerprint of the skill set. Hosts on different nixpkgs build the
+# same content at different store paths, so the fleet compares this instead.
+skill_fingerprint() {
+  (cd "$SKILL_SET" && find -L . -type f -print0 | sort -z | xargs -0 sha256sum) \
+    | sha256sum | cut -c1-16
+}
+
+check_skills() {
+  local root resolved entry path roots extra=()
+  if [ -z "$SKILL_SET" ] || [ -z "$SKILL_ROOTS" ]; then fail 'skill set or roots not configured'; return; fi
+  IFS=: read -r -a roots <<< "$SKILL_ROOTS"
+  for root in "${roots[@]}"; do
+    resolved=$(readlink -f "$root" 2>/dev/null || true)
+    if [ "$resolved" = "$SKILL_SET" ]; then ok "skill root $root"; else fail "skill root $root -> ${resolved:-missing}, not the shared set $SKILL_SET"; fi
+  done
+  # Codex keeps this root writable for its own .system; anything else here is
+  # a hand install that only Codex would see.
+  if [ -d "$CODEX_SKILLS" ]; then
+    for entry in "$CODEX_SKILLS"/*; do
+      [ -e "$entry" ] || [ -L "$entry" ] || continue
+      extra+=("$(basename "$entry")")
+    done
+  fi
+  if [ "${#extra[@]}" -eq 0 ]; then ok "$CODEX_SKILLS holds only Codex built-ins"; else fail "$CODEX_SKILLS has hand-installed skills: ${extra[*]} (add them to the shared set instead)"; fi
+  if [ -r "$PI_SETTINGS" ]; then
+    while IFS= read -r path; do
+      resolved=$(readlink -f "${path/#\~/$HOME}" 2>/dev/null || true)
+      if [ "$resolved" = "$SKILL_SET" ]; then ok "Pi skill path $path"; else fail "Pi skill path $path is not the shared set"; fi
+    done < <(jq -r '.skills[]? // empty' "$PI_SETTINGS")
+  else
+    fail "Pi settings missing at $PI_SETTINGS"
+  fi
+  printf 'skill fingerprint: %s (%s skills)\n' "$(skill_fingerprint)" \
+    "$(find "$SKILL_SET" -mindepth 1 -maxdepth 1 -type d | wc -l)"
+}
+
 doctor_local() {
   failures=0
+  check_skills
   if [ -r "$SYSTEM_MANIFEST" ] && cmp -s "$EXPECTED" "$SYSTEM_MANIFEST"; then
     ok 'system and user ownership manifests match'
   elif [ -r "$SYSTEM_MANIFEST" ]; then
@@ -75,7 +117,6 @@ doctor_local() {
   check_store_path 'system policy' "$SYSTEM_POLICY"
   check_store_path 'Claude instructions' "$CLAUDE_INSTRUCTIONS"
   check_store_path 'Codex hooks' "$CODEX_HOOKS"
-  check_store_path 'Codex workflow skill' "$CODEX_SKILL"
   check_store_path 'Pi instructions' "$PI_INSTRUCTIONS"
   check_no_authoring_reference 'Codex hooks' "$CODEX_HOOKS"
   check_no_authoring_reference 'Claude managed settings' "$CLAUDE_SETTINGS"
@@ -110,7 +151,7 @@ doctor_local() {
 }
 
 doctor_fleet() {
-  local desired host output remote_revision fleet_failures=0
+  local desired host output remote_revision remote_skills fleet_failures=0
   validate_fleet
   desired=$(expected_revision)
   for host in "${FLEET_HOSTS[@]}"; do
@@ -131,6 +172,13 @@ doctor_fleet() {
       fleet_failures=$((fleet_failures + 1))
     else
       ok "fleet host $host revision $remote_revision"
+    fi
+    remote_skills=$(printf '%s\n' "$output" | awk '/^skill fingerprint: / { print $3; exit }')
+    if [ "$remote_skills" != "$(skill_fingerprint)" ]; then
+      fail "fleet host $host skill set ${remote_skills:-unreported} != this host's $(skill_fingerprint)"
+      fleet_failures=$((fleet_failures + 1))
+    else
+      ok "fleet host $host skill set matches"
     fi
   done
   [ "$fleet_failures" -eq 0 ]
@@ -223,8 +271,35 @@ publish() {
   exec agent-harness doctor --fleet
 }
 
+# The hourly timer: the doctor's FAIL lines are the case, and an alert goes out
+# only when the case changes, so lasting drift alerts once (the
+# agent-cli-update pattern). The case is recorded only after its alert is sent.
+drift() {
+  local out current previous case_file title body
+  case_file="${XDG_STATE_HOME:-$HOME/.local/state}/agent-harness/drift"
+  mkdir -p "$(dirname "$case_file")"
+  out=$(doctor_local 2>&1) || true
+  printf '%s\n' "$out"
+  current=$(printf '%s\n' "$out" | awk '/^FAIL / { sub(/^FAIL /, ""); print }')
+  previous=$(cat "$case_file" 2>/dev/null || true)
+  [ "$current" = "$previous" ] && { [ -z "$current" ]; return; }
+  if [ -n "$current" ]; then
+    title="Agent harness drift on $(hostname)"
+    body="$current"$'\n'"Check: agent-harness doctor"
+  else
+    title="Agent harness drift cleared on $(hostname)"
+    body="agent-harness doctor is clean again. No action needed."
+  fi
+  if [ -n "$NOTIFY_URL" ] && jq -n --arg t "$title" --arg b "$body" \
+      '{topic:"monitoring",title:$t,body:$b,priority:2,source:"agent-harness-drift"}' \
+      | curl -fsS --max-time 5 -H 'content-type: application/json' -d @- "$NOTIFY_URL" >/dev/null 2>&1; then
+    printf '%s' "$current" > "$case_file"
+  fi
+  [ -z "$current" ]
+}
+
 usage() {
-  printf 'usage: agent-harness [status|doctor [--fleet]|revision|sync|validate-state|diff|publish [--check]]\n' >&2
+  printf 'usage: agent-harness [status|doctor [--fleet]|drift|revision|sync|validate-state|diff|publish [--check]]\n' >&2
   exit 2
 }
 
@@ -245,6 +320,7 @@ case "$command" in
     git -C "$STATE" status --short --branch
     ;;
   doctor) if [ "${2:-}" = --fleet ]; then doctor_fleet; else doctor_local; fi ;;
+  drift) drift ;;
   revision) expected_revision ;;
   sync) exec agent-state-sync sync ;;
   validate-state) exec agent-state-validate ;;

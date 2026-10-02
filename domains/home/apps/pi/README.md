@@ -51,9 +51,12 @@ parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
   concurrent children, four launches per run, eight launches per session, and
   two active asynchronous runs. Work above a limit is rejected or queued by
   the extension according to the limit's documented behavior.
-- **One skill tree, two harnesses.** `skillPaths` defaults to
-  `~/.claude/skills`; pi implements the Agent Skills standard and reads that
-  tree directly, so there is no second copy to drift. It lands in the `skills`
+- **One skill set, three runtimes.** `skillPaths` defaults to
+  `~/.claude/skills`, which agent-harness links to `agentSkills`, the same set
+  Claude and Codex (`~/.agents/skills`) read, so there is no second copy to
+  drift. It stays on the Claude root: the merge below is append-only, so a
+  second root would load every skill twice; the agent-harness doctor fails on
+  any Pi skill path that is not the set. It lands in the `skills`
   array of settings.json. The skill list is merged **append-only at every activation** (jq + `cmp`,
   the same shape as claude-code's gate-hook heal) rather than seeded. Seeding
   alone would never reach a machine whose settings.json already exists.
@@ -108,6 +111,8 @@ nix run nixpkgs#prefetch-npm-deps -- ./package-lock.json  # → npmDepsHash
 Bump `version` + both hashes in `parts/package.nix`.
 
 ## Changelog
+
+- 2026-10-01: `~/.claude/skills` is now the agent-harness one skill set (harness + adopted cloudflare skills, without the `skills/synced/` claude.ai copies Pi used to load twice). `skillPaths` is unchanged; its description says why.
 
 - 2026-09-30: `guards.ts` runs the shared `workspace-guard.sh` (agent workspace S2) on bash, write and edit calls, with `HWC_HOOK_RUNTIME=pi`. It is not ported, so Claude, Codex and Pi apply one rule set. An armed deny blocks only with a UI; no-UI runs are allowed and logged.
 

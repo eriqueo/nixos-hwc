@@ -92,42 +92,12 @@ in
     sharedConfigRepo = lib.mkOption {
       type = lib.types.str;
       default = toString inputs.agent-harness;
-      description = "Nix-pinned agent harness source for Codex skills, hooks, and AGENTS.md inputs.";
+      description = "Nix-pinned agent harness source for Codex hooks and AGENTS.md inputs.";
     };
 
-    sharedSkillSource = lib.mkOption {
-      type = lib.types.str;
-      default = "${repo}/skills";
-      description = "Shared Agent Skills source tree used for selected Codex skill symlinks.";
-    };
-
-    sharedSkills = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [
-        "delegate"
-        "dx2-evidence"
-        "herdr"
-        "project-closeout"
-        "project-director"
-      ];
-      description = "Shared skills exposed to Codex from sharedSkillSource; the source files stay single-copy.";
-    };
-
-    # The engineering workflow skills live at ~/.agents/skills, the documented
-    # Codex user-skill root. claude-config's codex-workflow-start.sh names that
-    # path and principles-lint.sh checks all four there. It was hand-built on
-    # hwc-laptop and absent on hwc-server (found 2026-09-17), so Codex threads
-    # served from the server had no workflow skills at all.
-    workflowSkills = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [
-        "stepwise-refinement"
-        "chestertons-fence"
-        "premortem"
-        "datax-sr-triage"
-      ];
-      description = "Shared skills exposed at ~/.agents/skills (Codex user-skill root) from sharedSkillSource; the set principles-lint.sh verifies.";
-    };
+    # Skills are not set here. Codex reads ~/.agents/skills, which the
+    # agent-harness module links to the one skill set every runtime loads. The
+    # per-skill allowlists that used to live here were the cause of the drift.
 
     # Hooks and instructions follow the claude-config share: a host that does
     # not carry the repo gets neither, instead of dangling links.
@@ -150,24 +120,6 @@ in
 
         # Create config directory
         xdg.configFile."codex/.keep".text = "";
-
-        # Claude already consumes the shared skill tree directly. Codex has its
-        # own skill root, so expose only the cross-harness orchestration skills as
-        # out-of-store symlinks instead of copying a second source tree.
-        home.file = lib.listToAttrs (
-          (map (
-            skill:
-            lib.nameValuePair ".codex/skills/${skill}" {
-              source = config.lib.file.mkOutOfStoreSymlink "${cfg.sharedSkillSource}/${skill}";
-            }
-          ) cfg.sharedSkills)
-          ++ (map (
-            skill:
-            lib.nameValuePair ".agents/skills/${skill}" {
-              source = config.lib.file.mkOutOfStoreSymlink "${cfg.sharedSkillSource}/${skill}";
-            }
-          ) cfg.workflowSkills)
-        );
       }
 
       (lib.mkIf cfg.shareHarness {

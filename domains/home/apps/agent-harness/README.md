@@ -8,10 +8,11 @@ source and one mutable state store.
 The fleet control list names hwc-home, hwc-work and hwc-laptop.
 
 - `index.nix` installs the pinned policy, state links, health CLI, the `ws` workspace allocator, the state-sync timer (which re-renders `LEDGER.md` after each run), the hourly `ws-audit` timer, and the opt-in `agent-cli-update` timer. Its `agentWorkspace` activation creates `workspaceRoot` (`~/800_agents`); `stateDir` is `~/800_agents/state`.
+- `index.nix` also builds `agentSkills`, the one skill set: every top-level harness skill with a `SKILL.md` plus the `adoptedSkills` from the `cloudflare-skills` flake input (a name collision fails the build). `~/.claude/skills`, each `claudeConfigDirs` root and `~/.agents/skills` (Codex) link to it, and Pi reads `~/.claude/skills`. The `agentSkillsMigrate` activation moves hand-made skill dirs to `~/.local/state/agent-harness/pre-skillset-<ts>/` before Home Manager links, leaving Codex's `~/.codex/skills/.system` alone. The hourly `agent-harness-drift` timer runs the doctor and alerts once per change.
 - `sys.nix` installs machine-wide Claude policy under `/etc`, and generates Claude Code's MCP config as tmpfiles store symlinks: `~/.mcp.json` (`userMcp`, read by every project under the home directory: shared servers, `hwc-sys` over HTTP at `hwc.system.mcp.url`, `brain` at `userMcp.brainUrl`) and the nixos repo's `.mcp.json` (`projectMcp`: `git` plus per-host `extraServers`). The host running brain-mcp asserts `brainUrl` names its route. Every host asserts that no Syncthing folder overlaps `hwc.paths.user.agents`. It also owns `pipelineEnvironment`, the automation marker that headless-agent units merge.
 - `contract.nix` defines the ownership and revision contract shared by both lanes.
 - `control.sh` implements local and fleet health checks plus policy publication.
-- `control.test.sh` checks split revisions, mutable runtime references, fleet names, and publication to all hosts and source remotes.
+- `control.test.sh` checks split revisions, mutable runtime references, skill drift (hand install, foreign root, extra Pi path, drift alert retry), fleet names, and publication to all hosts and source remotes.
 - `state-sync.sh` synchronizes only memories, the mistakes ledger, and the agent-workspace `ledger/` and `guard/` files, with one bounded validation case under `.git`.
 - `state-validate.sh` owns the memory contract for both full-store scans and projected writes on stdin.
 - `state-sync.test.sh` verifies import, links, validation blocking, recovery, commit, pull, and push against a throwaway hub.
@@ -56,10 +57,17 @@ with `journalctl --user -u agent-cli-update`. To roll back a bad release, run
 `npm install -g <package>@<previous version>` with the version from that log.
 
 The doctor verifies actual provider paths, system and Home Manager ownership
-manifests, state shape, Codex hook trust, commands, and the sync timer. A dirty
+manifests, state shape, Codex hook trust, commands, and the sync timer. It
+checks that every skill root resolves to the shared set, that `~/.codex/skills`
+holds nothing but `.system`, and that Pi's skill paths are the set; it prints a
+content fingerprint, which `--fleet` compares across hosts (store paths differ
+between nixpkgs versions). To add a skill, put it in claude-config `skills/` or
+name it in `adoptedSkills`; `npx skills add` and Codex's skill-installer cannot
+write the read-only roots, and an install into `~/.codex/skills` is drift. A dirty
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+- 2026-10-01: One skill set for every runtime on every host. `agentSkills` joins the harness skills with 13 adopted `cloudflare/skills` (new flake input); Claude, Codex (`~/.agents/skills`) and Pi read it. It replaces the Codex allowlists and the hand copies that had gone stale on hwc-laptop, and the `npx skills` installs on hwc-laptop and hwc-home. Only top-level dirs with `SKILL.md` count, so Claude Code's committed `skills/synced/` claude.ai copies no longer load as duplicates. Activation moves the old dirs to a backup. New `agent-harness drift` and hourly timer. `codex debug prompt-input` (0.159.3) listed all 49 skills plus 4 built-ins.
 - 2026-10-01: Add protocol-4 training confirmation forms. Frozen explanations and actions use separate choices; whole-ticket completeness has its own question. Legacy inputs remain supported.
 - 2026-10-01: Add `tracker-handoff` and give `hwc-tracker` the ledger path: the agent's live `handoff.md` heads the next prompt, with its coverage checked against each checkout's HEAD in the ws ledgers. The hub restarts when `handoff_doc.py` changes.
 - 2026-10-01: Add `tracker-link` (pinned `tracker/t3.py`). An agent in T3 Code binds its own thread to a project; the hub's "Done deciding" button then posts the next prompt into that thread as a new turn through T3's `/api/orchestration/dispatch`, authorized by a 5-minute session the T3 CLI issues. `hwc-tracker` gets the node and T3 CLI paths. `tracker-wait` stays as the fallback outside T3.
