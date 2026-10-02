@@ -50,6 +50,14 @@ let
     };
   };
 
+  # The shared hooks for Pi: claude-config's adapter, with the pinned python
+  # and bridge substituted so a headless unit's bare PATH cannot break it.
+  hookBridge = pkgs.runCommand "pi-hook-bridge.ts" { } ''
+    substitute ${inputs.agent-harness}/pi/hook-bridge.ts "$out" \
+      --replace-fail @python@ ${pkgs.python3}/bin/python3 \
+      --replace-fail @bridge@ ${inputs.agent-harness}/codex/hook-bridge.py
+  '';
+
   settingsSeed = pkgs.writeText "pi-settings.json" (builtins.toJSON (managedSettings // {
     skills = cfg.skillPaths;
   }));
@@ -210,6 +218,18 @@ in
       '';
     };
 
+    hookBridge.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Install claude-config's pi/hook-bridge.ts as a pi extension: Pi runs
+        the shared Claude hooks (settings.json, minus the Claude-only ones)
+        through codex/hook-bridge.py, the adapter Codex uses. A bridge failure
+        blocks bash, write and edit calls and is logged to
+        ~/.local/state/agent-harness/pi-bridge-failures.log.
+      '';
+    };
+
     guards.enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -276,6 +296,10 @@ in
     # no settings.json entry at all.
     home.file.".pi/agent/extensions/hwc-guards.ts" = lib.mkIf cfg.guards.enable {
       source = ./parts/guards.ts;
+    };
+
+    home.file.".pi/agent/extensions/hwc-hook-bridge.ts" = lib.mkIf cfg.hookBridge.enable {
+      source = hookBridge;
     };
 
     home.file.".pi/agent/extensions/hwc-stop-guards.ts" = lib.mkIf cfg.stopGuards.enable {

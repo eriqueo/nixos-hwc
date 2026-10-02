@@ -112,6 +112,8 @@ Bump `version` + both hashes in `parts/package.nix`.
 
 ## Changelog
 
+- 2026-10-01: `hookBridge.enable` installs claude-config's `pi/hook-bridge.ts` as `hwc-hook-bridge.ts`, with the pinned python and `codex/hook-bridge.py` substituted. Pi now runs every shared Claude hook (the bridge reads settings.json) instead of four hand ports; a bridge failure blocks bash/write/edit. Measured 0.24 s per PreToolUse call. Live: `pi -p` was denied `grep` by the shared enforce-tools.
+
 - 2026-10-01: `~/.claude/skills` is now the agent-harness one skill set (harness + adopted cloudflare skills, without the `skills/synced/` claude.ai copies Pi used to load twice). `skillPaths` is unchanged; its description says why.
 
 - 2026-09-30: `guards.ts` runs the shared `workspace-guard.sh` (agent workspace S2) on bash, write and edit calls, with `HWC_HOOK_RUNTIME=pi`. It is not ported, so Claude, Codex and Pi apply one rule set. An armed deny blocks only with a UI; no-UI runs are allowed and logged.
