@@ -41,7 +41,7 @@ folders = ${lib.concatStringsSep " " (map (name: folders.${name}) [ "inbox" "arc
 rename = True
 # Intent markers come from bounded, durable commands, including old threads.
 # A date filter would silently skip their moves and leave receipts pending.
-max_age = 0
+# Omit max_age: afew reads a configured 0 as a truthy string (today only).
 
 ${folders.inbox} = '${intent "archive"}':${folders.archive} '${intent "trash"}':${folders.trash}
 ${folders.archive} = '${intent "inbox"}':${folders.inbox} '${intent "trash"}':${folders.trash}

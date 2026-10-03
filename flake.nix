@@ -1875,7 +1875,7 @@
         afew_source = pathlib.Path(sys.argv[3]).read_text()
         check_phone_trash(afew_source)
         try:
-            check_phone_trash(afew_source.replace('max_age = 0', 'max_age = 30'))
+            check_phone_trash(afew_source.replace('rename = True', 'rename = True\nmax_age = 30'))
         except AssertionError:
             pass
         else:
