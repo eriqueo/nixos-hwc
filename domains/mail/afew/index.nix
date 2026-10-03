@@ -39,7 +39,9 @@ message = Tag messages already in Proton Spam
 [MailMover]
 folders = ${lib.concatStringsSep " " (map (name: folders.${name}) [ "inbox" "archive" "trash" "spam" ])}
 rename = True
-max_age = 30
+# Intent markers come from bounded, durable commands, including old threads.
+# A date filter would silently skip their moves and leave receipts pending.
+max_age = 0
 
 ${folders.inbox} = '${intent "archive"}':${folders.archive} '${intent "trash"}':${folders.trash}
 ${folders.archive} = '${intent "inbox"}':${folders.inbox} '${intent "trash"}':${folders.trash}

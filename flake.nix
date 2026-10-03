@@ -1856,7 +1856,9 @@
                 hp.write_text(hook.replace('export NOTMUCH_CONFIG="$HOME/.notmuch-config"', 'export NOTMUCH_CONFIG=' + shlex.quote(str(config)))); hp.chmod(0o700)
                 def nm(*args): return subprocess.check_output(['${pkgs.notmuch}/bin/notmuch', *args], env=env, text=True)
                 def move(): subprocess.run(['${afewTest}/bin/afew', '-m', '-a'],env=env,check=True,capture_output=True)
-                raw = 'Message-ID: <trash@example.invalid>\nFrom: sender@example.invalid\nTo: fixture@example.invalid\nSubject: Fixture\nDate: Thu, 01 Oct 2026 12:00:00 +0000\n\nSynthetic content\n'
+                # Durable human commands also apply to old mail. A fixed old
+                # date catches an accidental MailMover age filter.
+                raw = 'Message-ID: <trash@example.invalid>\nFrom: sender@example.invalid\nTo: fixture@example.invalid\nSubject: Fixture\nDate: Sat, 01 Jan 2000 12:00:00 +0000\n\nSynthetic content\n'
                 inbox = mail / 'proton/inbox/cur/old:2,S'; trash = mail / 'proton/Trash/cur/fetched:2,S'
                 inbox.write_text(raw); nm('new'); trash.write_text(raw); nm('new')
                 # A partial physical copy and stale Inbox tag are NOT local restore intent.
@@ -1872,6 +1874,12 @@
                 assert not trash.exists() and len(list((mail/'proton/inbox/cur').iterdir())) == 1
         afew_source = pathlib.Path(sys.argv[3]).read_text()
         check_phone_trash(afew_source)
+        try:
+            check_phone_trash(afew_source.replace('max_age = 0', 'max_age = 30'))
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('age filter silently skipped a durable restore command')
         try:
             check_phone_trash(afew_source.replace('tag:transport/inbox','tag:inbox'))
         except AssertionError:
