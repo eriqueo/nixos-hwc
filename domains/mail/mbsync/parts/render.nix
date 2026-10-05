@@ -88,8 +88,8 @@ let
       else "";
 
       # Bridge refuses IMAP APPEND into Trash. Treat the server mailbox as the
-      # source of truth: core deletions let Proton create the remote Trash copy,
-      # and this isolated lane only mirrors that result locally.
+      # source of truth: the shared transport owner uses a reserved COPY of the
+      # existing message to Trash; this lane only mirrors that result locally.
       trashChannel = if a.type == "proton-bridge" then ''
         Channel ${a.name}-trash
         Far :${a.name}-remote:"Trash"

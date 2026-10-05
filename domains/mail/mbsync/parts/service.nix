@@ -163,11 +163,29 @@ in
         ${residencyCommand} || residency_rc=$?
         ''}
         ${lib.optionalString (transportCommand != "") ''
+        # Flush pending local stars while source copies still exist. COPY must
+        # preserve the reconciled flags, not discard an unsent local flag edit.
+        run_lane core --pull-flags --push-flags "''${CORE_CHANNELS[@]}"
+        if [[ ''${lane_rc[core]} -ne 0 ]]; then
+          return
+        fi
         ${transportCommand} --phase apply || transport_rc=$?
         ''}
         if [[ "$transport_rc" -ne 0 ]]; then
           return
         fi
+        ${lib.optionalString (transportCommand != "") ''
+        # Transport can associate existing messages with remote Trash. Fetch
+        # that result before a stale local Inbox can reach the mover or push.
+        run_lane core --pull-new --pull-gone --create-near --remove-near --expunge-near "''${CORE_CHANNELS[@]}"
+        if [[ ''${#TRASH_CHANNELS[@]} -gt 0 ]]; then
+          run_lane trash "''${TRASH_CHANNELS[@]}"
+        fi
+        "$NM" new || prefetch_index_rc=$?
+        if [[ ''${lane_rc[core]} -ne 0 || ''${lane_rc[trash]:-0} -ne 0 || "$prefetch_index_rc" -ne 0 ]]; then
+          return
+        fi
+        ''}
         # Only durable intent markers can drive this mover. Plain folder tags
         # are observations and cannot authorize an upload.
         ${afewPkg}/bin/afew -m -a || afew_rc=$?

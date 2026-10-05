@@ -1590,7 +1590,10 @@
                     'name = pathlib.Path(sys.argv[0]).name\n'
                     'if name == "mail-classifier": name = sys.argv[1]\n'
                     'if name == "transport": name += "-" + sys.argv[sys.argv.index("--phase") + 1]\n'
-                    'if name == "mbsync" and "--pull-new" in sys.argv: name = "prefetch"\n'
+                    'if name == "mbsync" and "--pull-new" in sys.argv:\n'
+                    '    history = pathlib.Path(os.environ["CALL_LOG"])\n'
+                    '    name = "post-write-pull" if history.exists() and "transport-apply" in history.read_text().splitlines() else "prefetch"\n'
+                    'if name == "mbsync" and "--push-flags" in sys.argv: name = "reconcile-flags"\n'
                     'with open(os.environ["CALL_LOG"], "a") as f: f.write(name + "\\n")\n'
                     'raise SystemExit(23 if name == os.environ["FAIL_STAGE"] else 0)\n')
                 stub.chmod(0o755)
@@ -1617,13 +1620,15 @@
                     expected = ['prefetch', 'mbsync', 'notmuch']
                     fetched = stage not in ['prefetch', 'mbsync', 'notmuch']
                     if fetched:
-                        expected += ['observe-residency', 'transport-apply']
-                        if stage != 'transport-apply':
-                            expected.append('afew')
-                            if stage != 'afew':
+                        expected += ['observe-residency', 'reconcile-flags']
+                        if stage != 'reconcile-flags': expected.append('transport-apply')
+                        if stage not in ['transport-apply', 'reconcile-flags']:
+                            expected += ['post-write-pull', 'mbsync', 'notmuch']
+                            if stage != 'post-write-pull': expected.append('afew')
+                            if stage not in ['afew', 'post-write-pull']:
                                 expected += ['mbsync', 'transport-ack']
                     expected.append('notmuch')
-                    healthy = fetched and stage not in ['transport-apply', 'afew', 'transport-ack']
+                    healthy = fetched and stage not in ['reconcile-flags', 'transport-apply', 'post-write-pull', 'afew', 'transport-ack']
                     if healthy and stage != 'observe-residency': expected.append('project-labels')
                     assert calls == expected, calls
                     assert lanes['core']['state'] == ('healthy' if healthy else 'degraded')
@@ -1631,9 +1636,27 @@
                     assert lanes['labels']['state'] == ('healthy' if healthy and not stage else 'degraded')
                 assert result.returncode == (23 if stage else 0), result.stderr
 
-        for stage in ["", 'prefetch', 'afew', 'mbsync', 'notmuch', 'observe-residency', 'transport-apply', 'transport-ack', 'project-labels']:
+        for stage in ["", 'prefetch', 'reconcile-flags', 'post-write-pull', 'afew', 'mbsync', 'notmuch', 'observe-residency', 'transport-apply', 'transport-ack', 'project-labels']:
             exercise(original, stage)
         exercise(original, mode='trash')
+        flags = next(line for line in original.splitlines() if 'run_lane core --pull-flags --push-flags' in line)
+        try:
+            exercise(original.replace(flags, 'true'))
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('removed flag reconciliation escaped the owner wiring test')
+        # Remove just the second pull: success and failure ordering assertions
+        # must both detect the missing production integration.
+        pull = 'run_lane core --pull-new --pull-gone --create-near --remove-near --expunge-near '
+        start = original.index(pull, original.index(pull) + len(pull))
+        end = original.index('# Only durable intent markers', start)
+        try:
+            exercise(original[:start] + original[end:])
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('removed post-write pull escaped the owner wiring test')
         for missing in ['--pull-new --pull-gone --create-near --remove-near --expunge-near', '--phase apply', '--phase ack']:
             try:
                 exercise(original.replace(missing, '--missing-wiring'))
