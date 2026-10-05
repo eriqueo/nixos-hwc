@@ -124,6 +124,9 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
+- 2026-10-05: Law 12 sweep — `parts/estimator-integration/README.md` gained the
+  `## Structure` and `## Changelog` sections it lacked, recording the 2026-06-02
+  tailnet-rename sweep through its `NEXT-SESSION.md`. No code change here.
 - 2026-10-02: Document `.com` public webhook receivers and the current work tailnet editor. `publicUrl` is derived from the tailnet route; there is no separate `webhookUrl` option. Retain `.me` until actual external sender settings are verified.
 
 - 2026-09-08: Event discovery, curation and calendar review moved to Event Scout

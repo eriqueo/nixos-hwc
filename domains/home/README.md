@@ -89,6 +89,9 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-05: Law 12 sweep — changelog catch-up in `apps/` (42 commits since
+  2026-09-26), `apps/nvim/` and `apps/proton-pass/`, plus Structure fixes in `apps/`
+  and `apps/nvim/`. No code change in this domain.
 - 2026-10-02: Fix screenshot clipboard copying: wait for complete Hyprshot raw output, then copy the saved PNG through a pinned wl-copy and retain the save notification.
 - 2026-10-01: Add shared aerc DONT KNOW/Bulk navigation and State correction key.
 - 2026-10-01: Allow requested feature work to have an owner without implying a fault; link blind review inputs to their full request and dated evidence.

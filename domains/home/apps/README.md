@@ -36,6 +36,10 @@ apps/
 ```
 
 ## Changelog
+- 2026-10-05: Law 12 sweep — `nvim/README.md` added `parts/appearance.nix` and
+  `parts/.luarc.json` to its Structure block and recorded the which-key restyle
+  (`eff098eb`); `proton-pass/README.md` recorded the stable tray-handler match
+  (`b3c8e5dc`).
 - 2026-10-05: Structure block corrected — `aerc/` and `librewolf/` are gone (replaced
   by `neomutt/` and `firefox/`); `agent-harness/`, `pi/` and `workbench/` added; the
   "30+ apps" count is now the actual 65 directories. Changelog catch-up for the 42

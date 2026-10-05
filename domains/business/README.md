@@ -54,7 +54,9 @@ business/
 
 - 2026-10-05: Structure block lists `crm/`, `datax/` and `umami/`, which it had been
   missing (`crm` and `umami` are imported by `index.nix`; `datax/` holds unmoduled
-  scraper/classifier/dashboard assets).
+  scraper/classifier/dashboard assets). Same Law 12 sweep: changelog catch-up and
+  Structure fixes in `databases/`, `datax/fb-group-scraper/` (which had no Changelog),
+  `firefly/`, `leads/`, `morning-briefing/` and `paperless/`.
 - 2026-10-02: `crm` takes Facebook Page Messenger in through `/hooks/messenger`
   (hwc-crm D55): new `meta.{verifyTokenSecretRef,appSecretRef,pageTokenSecretRef,pageId}`,
   each non-null ref exporting its `*_FILE` path with restart triggers; a Page token

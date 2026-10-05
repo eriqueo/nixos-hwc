@@ -25,14 +25,13 @@ locks the backend dependency closure; the gateway consumes its Nix store entry p
 MCP config and rebuild tools recognize hwc-home; config host choices also include work and the actual kids output.
 ```
 domains/system/
-├── core/
-│   ├── coredump.nix     # Bounded systemd-coredump storage (26.05+ settings API)
-│   ├── filesystem.nix    # Filesystem tmpfiles; options at hwc.system.core.filesystem (alias: hwc.filesystem)
-│   ├── packages.nix      # Base/server/security package bundles (hwc.system.core.packages.*)
-│   ├── paths.nix         # Path source of truth (hwc.paths.*)
-│   ├── polkit.nix (moved to services/polkit)
-│   ├── thermal.nix
-│   └── validation.nix    # Domain-wide assertions
+├── core/                 # see core/README.md for its own Structure block
+│   ├── authentik/        # SSO/Identity Provider (hwc.system.core.authentik.*)
+│   ├── login/            # greetd + tuigreet, hyprStart session wrapper
+│   ├── coredump.nix      # Bounded systemd-coredump storage (26.05+ settings API)
+│   ├── nix-build-limits.nix  # nix-daemon MemoryHigh/MemoryMax cgroup ceiling
+│   ├── index.nix         # Core aggregator and overridable journal ceiling
+│   └── packages.nix      # Base/server/security package bundles (hwc.system.core.packages.*)
 ├── networking/
 │   └── index.nix         # SSH, declarative Tailscale up/set flags, NFS, Samba, firewall, wait-online
 ├── hardware/
@@ -43,9 +42,18 @@ domains/system/
 │   ├── index.nix         # Nix-built TypeScript package, systemd service, Caddy route
 │   ├── parts/caddy.nix   # Reverse-proxy route (port 6243 → 6200)
 │   └── src/              # TypeScript source; bounded selected-thread mail snapshot and shared tag actions
-└── (storage/ and users/ subdirs removed; live config uses flat users.nix
-   and mounts.nix at the top level)
+├── mounts/
+│   └── index.nix         # hwc.system.mounts.* — hot/media/backup tiers, mounts, external drives
+├── usb-automount/
+│   └── index.nix         # USB auto-mount (NTFS/exFAT/FAT32), skips /etc/fstab drives
+├── users/
+│   └── index.nix         # hwc.system.users.*, hwc.system.core.identity.* — accounts + SSH
+└── index.nix             # Domain aggregator
 ```
+
+`storage/` is gone; its concerns live in `mounts/`. `core/` no longer holds
+`filesystem.nix`, `paths.nix`, `polkit.nix`, `thermal.nix` or `validation.nix` — the
+**Subdomain Notes** below still describe some of those files.
 
 ## Subdomain Notes
 - **filesystem.nix** – Creates tmpfiles scaffolding from `hwc.paths.*` plus extra dirs (`hwc.filesystem.structure.dirs` alias).
@@ -60,6 +68,14 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-10-05: Law 12 sweep — Structure block rebuilt against the tree: `core/` lists
+  what it actually holds (`authentik/`, `login/`, `coredump.nix`,
+  `nix-build-limits.nix`, `index.nix`, `packages.nix`) instead of the removed
+  `filesystem.nix`, `paths.nix`, `polkit.nix`, `thermal.nix` and `validation.nix`; the
+  undocumented `mounts/`, `usb-automount/` and `users/` subdirs are listed, and the
+  note claiming `users.nix`/`mounts.nix` are flat top-level files is gone.
+  `core/authentik/README.md` caught up on the 2026-08-28 role declaration. No code
+  change in this domain.
 - 2026-10-01: Consume the canonical mail contract without a compiled vocabulary;
   add DONT KNOW buckets/counts and preserve old briefing-cache compatibility.
 

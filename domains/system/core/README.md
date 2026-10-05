@@ -23,6 +23,10 @@ core/
 ```
 
 ## Changelog
+- 2026-10-05: Law 12 sweep — `authentik/README.md` recorded `e82ca994` (2026-08-28):
+  the `authentik` role and its database ownership are declared via
+  `ensureUsers`/`ensureDBOwnership`, replacing a `CREATE ROLE` plus four GRANTs in
+  `postgresql.postStart` that never ran. No code change under `core/`.
 - 2026-09-27: Declare `SystemMaxUse=1G` as a default independent of audit enablement; home keeps its explicit 8G policy.
 - 2026-09-24: `coredump.nix` uses `settings.Coredump` on 26.05 while retaining
   the 500M use and 2G free-space limits.

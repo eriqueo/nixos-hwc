@@ -66,6 +66,9 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+- 2026-10-05: Law 12 sweep — `services/radicale/README.md` recorded the comment-only
+  `machines/server` → `machines/home` rename in its `USAGE:` header (`4ac9941d`). No
+  code change in this domain.
 - 2026-10-02: Move Brain MCP’s new-repository Git identity to `brain-mcp@iheartwoodcraft.com` and document the deployed OAuth gateway and verified origin restriction. Legacy public aliases still require consumer reconciliation.
 - 2026-10-01: Added optional private invitation SMTP socket, bounded loopback relay and runtime preparation for the member Scout app. Enabled on work with eric@iheartwoodcraft.com.
 - 2026-10-01: event-scout hands calendar files to `hwc.paths.user.calendarDrop` (created by tmpfiles; `imported/` kept indefinitely as its record of added events) instead of the synced `~/000_inbox/downloads`.

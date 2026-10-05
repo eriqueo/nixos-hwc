@@ -26,12 +26,22 @@ The nightly rebuild allowlist uses hwc-home; machine-directory references follow
 automation/
 ├── index.nix    # Domain aggregator
 ├── README.md    # This file
+├── brain-sweep/    # Nightly brain-vault janitor sweep (hwc.automation.brainSweep.*)
+│   ├── index.nix   # Sweep service + nightly timer
+│   └── README.md
 ├── inbox-janitor/  # Server-only timer draining ~/000_inbox/downloads (hwc.automation.inboxJanitor.*)
 │   ├── index.nix   # Options + systemd oneshot service/timer (every 30m); dryRun default on
 │   ├── janitor.py  # Engine: pure classify() core + I/O edges; reads ~/000_inbox/_inbox-routing.yaml
 │   └── README.md   # Single-writer rationale + rollout
+├── mail-janitor/   # Weekly age-aware Gmail anti-buildup sweep (hwc.automation.mailJanitor.*)
+│   ├── index.nix   # Options + timer/service
+│   ├── janitor.py  # Classifier + per-account IMAP sweep + hwc-notify summary
+│   └── README.md
 ├── mqtt/        # MQTT broker, event filtering and bounded webhook forwarding
 │   └── index.nix
+├── refinery/    # Refinery engine native bundles (pinned `refinery` flake input)
+├── screenshot-renamer/  # Screenshot naming beside the inbox janitor; private-capture admission
+├── vault-sync/  # Brain-vault git sync timers
 ├── nightly-builds/  # Overnight gauntlet-card runner (headless Claude Code)
 │   ├── index.nix    # Options + systemd service/timer; optional read-only /mnt sandbox
 │   │                #   passes NB_DISCORD_WEBHOOK_FILE (agenix discord-webhook-nightly-builds).
@@ -86,6 +96,11 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-10-05: Law 12 sweep — Structure block gains `brain-sweep/`, `mail-janitor/`,
+  `refinery/`, `screenshot-renamer/` and `vault-sync/`, which it had never listed.
+  Changelog catch-up in `brain-sweep/`, `mail-janitor/` and
+  `n8n/parts/estimator-integration/` (which had no Changelog section at all). No code
+  change in this domain.
 - 2026-10-02: Refresh n8n access documentation for the `.com` receiver, work tailnet editor and pending sender cutover.
 
 - 2026-10-02: Replace the screenshot naming schedule with folder arrivals, a boot catch-up run and retries only while work remains.
