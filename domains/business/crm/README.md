@@ -24,7 +24,7 @@ crm/
 └── index.nix      # hwc.business.crm.* options + service + tick timer
                    #   + lead_scout ingest timer + route
                    #   + bounded on-demand Pi/DX2 worker settings
-                   #   + Messenger secrets and hwc-crm-messenger-import.
+                   #   + shared Messenger Page credentials for import and manual replies.
 ```
 
 ## NixOS options
@@ -54,8 +54,8 @@ crm/
 | `.calendar.organizerEmail` | — | ORGANIZER on the `.ics` invite. |
 | `.meta.verifyTokenSecretRef` | null | Messenger webhook verify token; null hides `GET /hooks/messenger`. |
 | `.meta.appSecretRef` | null | Meta app secret; signs `POST /hooks/messenger`; null answers 503. |
-| `.meta.pageTokenSecretRef` | null | Page token; installs `hwc-crm-messenger-import`. |
-| `.meta.pageId` | null | Page the import reads; configured because a Page token may be refused on `/me`. |
+| `.meta.pageTokenSecretRef` | null | Page token; enables manual replies and installs `hwc-crm-messenger-import`. |
+| `.meta.pageId` | null | Page used by import and replies; configured because a Page token may be refused on `/me`. |
 
 Ingress: Caddy vhost `crm.hwc.iheartwoodcraft.com` (tailnet-private) for the
 board UI + admin API; public Cloudflare Tunnel exposes ONLY
@@ -63,6 +63,7 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 (`machines/work/config.nix`).
 
 ## Changelog
+- **2026-10-05** — Share the existing Page token and Page ID with the CRM service for manual Messenger replies (app D65). Import keeps its narrow Page credential; Page-token rotation now restarts the service. CRITICAL send receipts share the existing CRM database backup.
 - **2026-10-05** — Declare the on-demand inquiry assistant in the existing CRM service. One worker, queue/day caps, tool-free Pi/DX2, explicit reviewed sends, and bounded shutdown. Its CRITICAL judgments and reviews share the CRM database backup. Enabled on hwc-work.
 - **2026-10-02** — hwc-work sets `meta.appSecretRef = "crm-meta-app-secret"`;
   signed Messenger deliveries are now recorded instead of answering 503.
