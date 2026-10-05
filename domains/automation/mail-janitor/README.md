@@ -37,6 +37,10 @@ mail-janitor/
   keeping); refine the pattern lists in `janitor.py` as new junk surfaces.
 
 ## Changelog
+- 2026-09-25: `notifyUrl` derives from `hwc.notifications.notify.url` rather than
+  building a loopback URL from the dispatcher's port, and the assertion requiring
+  `notifications.notify.enable` on this host is dropped — the janitor follows the
+  dispatcher to hwc-work and only needs a URL (service split wave 3.1, `2fdea699`).
 - 2026-09-22: Scoped `trashSenders` explicitly to this Gmail janitor. It no
   longer feeds local notmuch placement; Laya owns the local workflow.
 - 2026-07-11: `User = lib.mkForce "eric"` per the native-services Architecture Law (was bare; no-op today, verified by before/after eval).

@@ -10,18 +10,20 @@ User application configuration via Home Manager.
 ## Structure
 ```
 apps/
-├── aerc/           # Email client
+├── agent-harness/  # Claude/Codex/Pi harness, skills, tracker CLIs, fleet doctor
 ├── aider/          # AI coding assistant
 ├── blender/        # 3D modeling
 ├── bitwarden/      # Desktop client for the self-hosted vault
 ├── chromium/       # Browser
+├── firefox/        # Browser (replaced the retired librewolf/)
 ├── freecad/        # CAD software
 ├── gpu-screen-recorder/  # Call/screen recording (gsr-toggle script + sys.nix capture wrapper)
 ├── hyprland/       # Wayland compositor
 ├── kitty/          # Terminal emulator
-├── librewolf/      # Privacy browser
 ├── mpv/            # Media player
+├── neomutt/        # Mail reader
 ├── obsidian/       # Note-taking
+├── pi/             # Pi agent (shared hooks via hwc-hook-bridge.ts)
 ├── xournalpp/      # PDF annotator / handwritten notes
 ├── vesktop/        # Discord client with Vencord built in
 ├── waybar/         # Status bar
@@ -29,10 +31,55 @@ apps/
 ├── todui/          # VTODO task TUI (external flake input; HWC adapter only)
 ├── pave-query-builder/  # Pave/JobTread API query TUI+CLI (external flake input; HWC adapter only)
 ├── eden/            # Switch 1 emulator derived from Yuzu and Sudachi
-└── ... (30+ apps)
+├── workbench/       # HWC Workbench launcher (Zellij session host)
+└── ... (65 app directories in total)
 ```
 
 ## Changelog
+- 2026-10-05: Law 12 sweep — `nvim/README.md` added `parts/appearance.nix` and
+  `parts/.luarc.json` to its Structure block and recorded the which-key restyle
+  (`eff098eb`); `proton-pass/README.md` recorded the stable tray-handler match
+  (`b3c8e5dc`).
+- 2026-10-05: Structure block corrected — `aerc/` and `librewolf/` are gone (replaced
+  by `neomutt/` and `firefox/`); `agent-harness/`, `pi/` and `workbench/` added; the
+  "30+ apps" count is now the actual 65 directories. Changelog catch-up for the 42
+  commits since 2026-09-26, grouped (per-app detail lives in each app's own README):
+  - **agent-harness** (2026-09-30 → 10-01): agent workspace S2/phase 2 — root at
+    `~/800_agents`, S8 state at `~/800_agents/state`, ledger in the state contract,
+    hourly `ws audit`, pipeline marker, tracker service, brief line and secrets
+    (`2ef4b231`, `42a9a167`, `f3681b0b`, `777a5e7c`). Tracker CLIs installed one per
+    commit: `tracker-wait` (`1339cb3b`), `tracker-link` (`bf51ca5e`),
+    `tracker-handoff` (`242a8bb3`), `tracker-relay` (`dd030550`, which also stops the
+    hub calling T3). One skill set for Claude, Codex and Pi on every host
+    (`f055efc2`); `publish` builds each remote host in its own store (`a641fd8c`) and
+    runs the final fleet doctor from the installed CLI (`4406dd9e`); doctor now checks
+    the Pi hook bridge and its failures (`f8e2a5b5`).
+  - **pi** (2026-10-01): the shared hooks run through `hwc-hook-bridge.ts`
+    (`2ae40076`), and the hand-written hook ports are deleted — `guards.ts` keeps the
+    read limit (`5982828b`).
+  - **screenshot / capture privacy** (2026-10-01 → 10-02): proposals scheduled beside
+    the inbox janitor with private-capture admission (`1128d5c7`), enforced audit
+    gates pinned (`c607d462`), the wiring preserved under standalone Home Manager with
+    single-ownership tested (`c9e03549`), and clipboard copying restored with complete
+    PNG capture and pinned tools (`a7bab6fd`).
+  - **hyprland / waybar / credentials** (2026-09-26 → 09-30): native Bitwarden tray
+    with the Authenticator icon aligned (`21d3abb0`), headless Bitwarden launch
+    recovered (`4e9516fa`), packaged credential icons and the native Pass tray
+    preferred (`8395bafd`), proton-pass opens from Linux tray activation (`80f9eeac`)
+    via a stable handler match (`b3c8e5dc`), enabled credential clients started for
+    native tray icons (`e656fdb8`), protected Bitwarden file selection and readable
+    credential windows restored (`c99e340e`), floating windows sized from their
+    current monitor (`4a96e88e`); Workbench autostarts while Proton Mail and xfconfd
+    drop out (`c8e65fe8`) and the JobTread app window stops autostarting (`c9a552d5`).
+  - **workbench** (2026-09-30): verified cross-version session cleanup (`8d89d0b8`)
+    and a shared graphics-capable Zellij package (`1d01464f`).
+  - **others**: `yazi` persistent favorites sidebar + Alt navigation (`2063a239`);
+    `chromium` keeps profile singleton files out of `/tmp` aging (`47a6dd67`); laptop
+    mail consumers fixed after the service split (`64d1a395`); the home-machine rename
+    swept through fleet consumers while preserving identities (`4ac9941d`); the
+    700_datax layout move (gauntlets under `gauntlets/`, jt-mcp → dx-mcp) reached paths
+    referenced here (`1ce31fe8`); user runtime storage declared so stray home
+    directories stop appearing (`b778095f`).
 - 2026-09-26: Added the Bitwarden desktop client as an independent app module; Proton app buttons share Hyprland's window toggle.
 - 2026-09-14: Added Vesktop through Home Manager's native `programs.vesktop`
   module; enabled only on hwc-laptop.

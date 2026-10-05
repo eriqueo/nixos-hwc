@@ -15,10 +15,15 @@ Business data layer for Heartwood Craft. Manages the `hwc` PostgreSQL database s
 domains/business/databases/
 ├── index.nix                    # Module: hwc.business.databases.* (database provisioning)
 ├── schema.sql                   # Full business schema (690 lines, 15+ tables, views, triggers)
+├── migrate_canonical.sql        # Canonical-schema migration SQL
+├── migrations/                  # Numbered follow-on migrations (001-catalog-schema-split.sql …)
 ├── catalog.db                   # SQLite catalog (source for migration to Postgres)
 ├── migrate_catalog.py           # Migration script: SQLite -> Postgres catalog_items table
+├── seed_catalog.py              # Seed the catalog tables
+├── populate_assembly_logic.py   # Populate assembly logic rows
 ├── export_calculator_json.py    # Export DB → calculator-bathroom.json for website calculator
 ├── export_estimator_data.py     # Export DB → tradeRates.json, templates.json, catalog_export.json
+├── CATALOG_NAMING_CONVENTION.md # Catalog item naming rules
 └── README.md
 ```
 
@@ -85,6 +90,14 @@ After enabling and rebuilding:
 
 ## Changelog
 
+- 2026-08-28: `business_user` is now declared here — `services.postgresql.ensureUsers`,
+  no `ensureDBOwnership` (`eric` owns the database; `business_user` is a grantee).
+  `schema.sql` and `migrations/001-catalog-schema-split.sql` grant to that role by
+  name and nothing else in the repo mentions it, so it existed only by hand on the
+  live cluster and a rebuilt cluster would have granted to a nonexistent role
+  (`53e84228`). The same pass (`e82ca994`) deleted the four dead `$PSQL` GRANT lines
+  that had been standing in for the declaration — `$PSQL` is unset in `postStart`,
+  so none of them ever ran.
 - 2026-05-01: Added export scripts, estimate_templates table, 70 catalog items with Craftsman/JT rates
 - 2026-04-12: Created index.nix module (hwc.business.databases.*), wired into business domain
 - 2026-03-24: Granted n8n postgres user access to hwc schema

@@ -167,6 +167,13 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+- 2026-10-01: Bind `$triage` inside each routing-rule renderer in `run.sh`
+  (`.mail_triage as $triage` before the `map`). Both the plain-text and HTML
+  branches referenced `$triage.state_display_names` from outside the scope that
+  defined it, so the routing-rule lines could not resolve a State display name
+  (`2599fbba` introduced the lookup, `c321c9cc` scoped it). Same pass: the
+  dashboard's empty-panel text uses the canonical label as given rather than
+  lowercasing it (`No DONT KNOW mail`, not `no dont know mail`).
 - 2026-10-01: Render canonical DONT KNOW counts and tabs, preserve old snapshots,
   and bind the source contract for unavailable-model fallback reports.
 

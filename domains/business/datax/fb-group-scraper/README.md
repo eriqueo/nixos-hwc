@@ -117,11 +117,35 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 ## Structure
 
 ```
-├── index.mjs    CLI, browser lifecycle, scroll loop, comment expansion
-├── parse.mjs    FB GraphQL response parsers (ported from API Monitor)
-├── store.mjs    SQLite persistence layer
-├── data/
-│   ├── posts.db       ← created on first run
-│   └── session.json   ← created on login
-└── package.json
+fb-group-scraper/
+├── index.mjs          CLI, browser lifecycle, scroll loop, comment expansion
+├── parse.mjs          FB GraphQL response parsers (ported from API Monitor)
+├── Containerfile      Playwright image (pinned to the package.json version)
+├── package.json
+├── package-lock.json
+├── README.md
+└── data/              ← created at runtime
+    ├── posts.db           on first run
+    └── browser-profile/   on --login
 ```
+
+## Changelog
+
+- 2026-10-05: Added `## Changelog` for Charter Law 12 and corrected `## Structure`
+  (no `store.mjs` — persistence lives in `index.mjs`; `Containerfile` and
+  `package-lock.json` were missing; `data/` now holds `browser-profile/`, not
+  `session.json`). The code changes it had fallen behind, newest first:
+  - `5da97868` (2026-05-21) removed the laptop-only `shell.nix` added in `8b1715d8`
+    and repointed by `c1723479`.
+  - `80d78d4a` (2026-05-21) bumped only `package-lock.json` here; the HWC lead-scoring
+    prompt and classifier it carries live in `fb-classifier/`.
+  - `b6f1fc59`, `5cf2ab77`, `2d15e31f`, `aa12b637` (2026-05-18/19) reworked `index.mjs`
+    under the "jobber mcp" commits (+120/−17 in `aa12b637` alone).
+  - `14bb2b86` (2026-05-14) switched to `chromium.launchPersistentContext` with a
+    `--profile` directory, replacing the saved `session.json` state file.
+  - `c03a3c62`, `c000f1b2`, `a215218e`, `be21c3c0` (2026-05-13/14) made `--login`
+    self-detecting: it polls for the `c_user` cookie instead of waiting on DOM state
+    or an Enter press, so passkey redirects survive. The **Auth** section above still
+    describes the older press-Enter/`session.json` flow.
+  - `96bcad2c` (2026-05-13) pinned Playwright 1.59.1 in both `package.json` and the
+    `Containerfile` so the image and the dependency match.

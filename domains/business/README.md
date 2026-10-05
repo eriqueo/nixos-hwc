@@ -36,19 +36,33 @@ Machine references follow machines/home for retained phone/media ingress; busine
 ```
 business/
 ├── index.nix          # Domain aggregator
+├── crm/               # hwc.business.crm — hwc-crm front-of-funnel on hwc-leads
 ├── databases/         # hwc.business.databases — business PostgreSQL layer
+├── datax/             # Unmoduled DataX assets (fb-group-scraper, fb-classifier, dashboard)
 ├── datax-monitor/     # hwc.business.dataxMonitor — DX1 diagnostic dashboard on :4400
 ├── estimator/         # hwc.business.estimator — React PWA on :13443
 ├── firefly/           # hwc.business.firefly — Firefly III finance
 ├── leads/             # hwc.business.leads — unified lead pipeline
 ├── morning-briefing/  # hwc.business.morningBriefing — local gather + Laya mail snapshot
 ├── paperless/         # hwc.business.paperless — Paperless-NGX documents
+├── umami/             # hwc.business.umami — Umami web analytics (stats.iheartwoodcraft.com)
 ├── website/           # hwc.business.website — Heartwood CMS + 11ty + webapps
 └── workbench/         # hwc.business.workbench — HWC Workbench hub (area registry + static launcher)
 ```
 
 ## Changelog
 
+- 2026-10-05: Structure block lists `crm/`, `datax/` and `umami/`, which it had been
+  missing (`crm` and `umami` are imported by `index.nix`; `datax/` holds unmoduled
+  scraper/classifier/dashboard assets). Same Law 12 sweep: changelog catch-up and
+  Structure fixes in `databases/`, `datax/fb-group-scraper/` (which had no Changelog),
+  `firefly/`, `leads/`, `morning-briefing/` and `paperless/`.
+- 2026-10-02: `crm` takes Facebook Page Messenger in through `/hooks/messenger`
+  (hwc-crm D55): new `meta.{verifyTokenSecretRef,appSecretRef,pageTokenSecretRef,pageId}`,
+  each non-null ref exporting its `*_FILE` path with restart triggers; a Page token
+  installs `hwc-crm-messenger-import`. hwc-work now sets the verify token, the Page
+  token + `pageId`, and the app secret, so signed deliveries are recorded instead of
+  answering 503.
 - 2026-10-02: Prepare the approved measurement release with backend-first activation and retained website recovery output.
 
 - Bind State display metadata inside each plain and HTML routing renderer; both renderers accept current and legacy reports.

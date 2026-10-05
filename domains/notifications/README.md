@@ -42,6 +42,10 @@ notifications/
 | `hwc.notifications.notify.transitionMode` | Transition decision engine: `shadow` (default, records only) or `off` |
 
 ## Changelog
+- 2026-10-05: Law 12 sweep — `notify/README.md` caught up on `serverAlias`/`url`
+  (`2fdea699`), the `smtp-office` copy on the two leads rules (`b82c1cf7`), and the
+  retired `voice-log` (`3833ee4f`) and `persona-daemon` (`16f1f9ce`) topic routes. No
+  code change in this domain.
 - 2026-09-30: Add terminal-only user-scope service failure handling in the existing producer. Intermediate retries and deliberate stops send nothing. Unreadable unit state or failed delivery exits nonzero and logs locally. The system branch retains its30-second recovery warning/critical behavior. No new sender or channel.
 - 2026-09-25: Service split wave 3 (notifications): `notify.serverAlias` (default `work`) + read-only `notify.url` (`hosts.url { server = serverAlias; port = reverseProxyPort; }`) — the ONE producer of the dispatcher's address. `hwc-alert` posts there (it derived loopback from `bindAddr`, so it only worked on the dispatcher's host); every sender module defaults to it. The dispatcher runs on hwc-work; hwc-server and every serving host send over the tailnet port route.
 - 2026-09-25: `notify/parts/routes.nix` — dropped the `voice-log` topic; its only producer, the dormant n8n `hwc:ops:voice-log` workflow (last success 2026-03-31), was deleted.

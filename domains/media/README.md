@@ -19,10 +19,8 @@ media/
 ├── index.nix                # Domain aggregator
 ├── README.md                # This file
 │
-├── jellyfin-container/      # Jellyfin media server (container)
 ├── jellyfin-native/         # Jellyfin media server (native NixOS)
 ├── navidrome-container/     # Navidrome music server (container)
-├── navidrome-native/        # Navidrome music server (native NixOS)
 ├── audiobookshelf/          # Audiobook/podcast server
 ├── jellyseerr/              # Media request management
 │
@@ -39,7 +37,6 @@ media/
 ├── mousehole/               # MAM IP updater
 ├── pinchflat/               # YouTube subscription manager
 ├── beets-container/         # Music organizer (container)
-├── beets-native/            # Music organizer (native)
 ├── recyclarr/               # *arr quality profile sync; preserves Radarr executable rejection
 ├── slskd/                   # Soulseek client
 ├── soularr/                 # Soulseek-Lidarr integration
@@ -47,11 +44,11 @@ media/
 ├── books/                   # LazyLibrarian
 │
 ├── immich-container/        # Photo management (container)
-├── immich-native/           # Photo management (native NixOS)
 ├── frigate/                 # NVR, model-derived labels and native camera metrics
 ├── youtube/                 # YouTube services
 │
 ├── orchestration/           # Media pipeline orchestration
+├── scripts/                 # Shared media helper scripts
 └── media-native/            # Native media service aggregator
 ```
 
@@ -70,6 +67,11 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-10-05: Law 12 sweep — Structure block drops `jellyfin-container/`,
+  `navidrome-native/`, `beets-native/` and `immich-native/` (none exist) and adds
+  `scripts/`. Changelog catch-up in `frigate/`, `immich-container/`, `mousehole/`,
+  `qbittorrent/` and `slskd/` (which had no Changelog section). No code change in this
+  domain.
 - 2026-09-30: Preserve Radarr's local executable-title rejection score during Recyclarr sync. Sonarr and Radarr runtime settings prefer Usenet with a 24-hour torrent delay and fail executable/dangerous downloads for automatic replacement.
 - 2026-09-26: Machine references follow machines/home; media state and service ownership are unchanged.
 - 2026-09-25: Service split wave 4: sonarr/radarr/lidarr pass the media-pipeline webhook URL from `hwc.automation.n8n.publicUrl` (n8n on hwc-work); `lib/arr-config.nix` no longer defaults it to a host literal.

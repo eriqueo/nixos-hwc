@@ -125,6 +125,9 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-10-03: `afew/index.nix` omits `max_age` entirely rather than setting `max_age = 0`.
+  afew reads a configured `0` as a truthy string and filters to today only, so the
+  explicit zero reinstated the date filter the previous commit removed (`3350168e`).
 - 2026-10-03: Remove afew's 30-day mover limit. It skipped older messages in explicit Inbox commands, leaving remote receipts pending and mail health critical while delivery continued. The real-tool Trash restore test now uses old mail and rejects a restored age filter.
 
 - Keep the real aerc thread-fold check independent of the current date by checking the reply row marker.
