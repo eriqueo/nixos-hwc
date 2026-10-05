@@ -71,6 +71,14 @@ let
     export HWC_CRM_PG_DSN="${cfg.postgresDsn}"
     export HWC_CRM_NOTIFY_URL="${cfg.notifyUrl}"
     export HWC_CRM_LOG_LEVEL="${cfg.logLevel}"
+    export HWC_CRM_ASSISTANT_ENABLED="${if cfg.assistant.enable then "1" else "0"}"
+    ${lib.optionalString cfg.assistant.enable ''
+      export HWC_CRM_ASSISTANT_PI="${cfg.assistant.piExecutable}"
+      export HWC_CRM_ASSISTANT_MODEL="${cfg.assistant.model}"
+      export HWC_CRM_ASSISTANT_CAPACITY="${toString cfg.assistant.capacity}"
+      export HWC_CRM_ASSISTANT_DAILY_CAP="${toString cfg.assistant.dailyCap}"
+      export HWC_CRM_ASSISTANT_TIMEOUT="${toString cfg.assistant.timeoutSeconds}"
+    ''}
     export HWC_CRM_EMAIL_TRANSPORT="${cfg.emailTransport}"
     export HWC_CRM_SPOOL_DIR="${cfg.statePath}/spool"
     export HWC_CRM_JT_MAPPINGS_FILE="${jtMappingsFile}"
@@ -191,6 +199,37 @@ in
         notification here so they land in #hwc-leads (Discord) — the same
         signal hwc-leads fires for calculator/appointment captures.
       '';
+    };
+
+    # CRITICAL: assistant snapshots, judgments, human reviews and email
+    # receipts remain in the CRM PostgreSQL database and its nightly backup.
+    # One worker in the existing service; at capacity requests answer 429.
+    assistant = {
+      enable = lib.mkEnableOption "on-demand reviewed Pi/DX2 inquiry assistance";
+      piExecutable = lib.mkOption {
+        type = lib.types.str;
+        default = "${pkgs.callPackage ../../home/apps/pi/parts/package.nix { }}/bin/pi";
+        description = "Pinned tool-free Pi executable; consumes the existing user's model configuration.";
+      };
+      model = lib.mkOption {
+        type = lib.types.str;
+        default = "dx2/llm";
+      };
+      capacity = lib.mkOption {
+        type = lib.types.ints.between 1 100;
+        default = 20;
+        description = "Queued/running requests; excess requests answer 429.";
+      };
+      dailyCap = lib.mkOption {
+        type = lib.types.ints.between 1 100;
+        default = 20;
+        description = "Request and manual retry reservations per Mountain calendar day.";
+      };
+      timeoutSeconds = lib.mkOption {
+        type = lib.types.ints.between 5 120;
+        default = 45;
+        description = "Process-group deadline; jobs fail visibly without automatic retry.";
+      };
     };
 
     logLevel = lib.mkOption {
@@ -644,6 +683,7 @@ in
         ExecStart = "${crmWrapper}";
         Restart = "always";
         RestartSec = "5s";
+        TimeoutStopSec = 180; # intake drain plus bounded assistant process cancellation
         StateDirectory = "hwc/crm";
         StateDirectoryMode = "0750";
         ReadWritePaths = [ cfg.statePath ];
