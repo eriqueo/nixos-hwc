@@ -423,6 +423,35 @@ shares.directories = [
 
 ---
 
+## Changelog
+
+- **2026-10-05**: Added this `## Changelog` section for Charter Law 12 — the README
+  had none, and the sections above still describe the pre-2026-08-20 clearnet
+  configuration (static port 50300, host-published 5031/50300, firewall openings).
+  Treat the two entries below as authoritative where they disagree.
+- **2026-09-10**: Comment-only — `parts/config.nix` points at `media/directories.nix`
+  rather than the retired `_shared/directories.nix` as the owner of tmpfiles directory
+  creation (`ca49bf2b`, which moved `/mnt/media/youtube` to a single producer).
+- **2026-08-20**: **slskd moved into its own VPN tunnel, and clearnet became a build
+  failure.** `network.mode` had defaulted to `"media"` since the module was written, so
+  slskd egressed on the house IP for six weeks (~29.4 GB out, 15.5 GB in) while every
+  sibling downloader was tunnelled; the ordering line that appeared to wire it to
+  gluetun lived in a module whose `enable` was never set. Changes: `network.mode`
+  defaults to `"vpn"`, and `"media"` now fails to build unless the new
+  `allowClearnet` is explicitly true. New `vpnInstance` (default `gluetun-slskd`) —
+  its own tunnel, not qBittorrent's, because Proton forwards exactly one port per
+  WireGuard session and Soulseek without an inbound port loses uploads *and* degrades
+  the search/browse that soularr depends on. New `listenPort` (default 50300) is only
+  the off-VPN fallback: `parts/config.nix` reads the tunnel's NAT-PMP
+  `forwarded-port` file and is the sole writer of `slskd.yml`, so the rotating port
+  cannot drift between two producers. On the VPN, `sys.nix` publishes no ports and
+  opens no firewall ports (the inbound path is the tunnel's own interface), and
+  `podman-slskd` takes `bindsTo`/`partOf` on the tunnel unit — a container whose netns
+  is gone must go with it, at the cost of a restart whenever the tunnel restarts
+  (`0f102aa4`).
+
+---
+
 **Last Updated**: 2025-11-06
 **Architecture Version**: HWC 6.0
 **Module Version**: Container with runtime secret injection

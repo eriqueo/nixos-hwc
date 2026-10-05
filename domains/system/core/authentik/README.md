@@ -50,4 +50,16 @@ authentik/
 - Podman + media network (when `network.mode = "media"`)
 
 ## Changelog
+- 2026-08-28: The `authentik` role and its database ownership are declared —
+  `services.postgresql.ensureUsers` with `ensureDBOwnership = true` — replacing a
+  `CREATE ROLE` plus four GRANT / ALTER DEFAULT PRIVILEGES statements in
+  `postgresql.postStart`. `$PSQL` is undefined in the generated post-start script and
+  every line ended in `|| true`, so none of it ever ran: the live role exists only
+  because someone created it by hand. Of the ten modules that wrote `postStart`, this
+  was the only one whose dead code was load-bearing — a rebuilt cluster would have had
+  the `authentik` database and no `authentik` role. An owner's privileges are implicit,
+  so the GRANTs have no work left; dropping `PASSWORD 'placeholder'` is not a
+  regression because authentik reaches Postgres over the podman bridge and pg_hba
+  matches `host all all 10.89.0.0/16 trust` first. Full audit in
+  `domains/data/databases/README.md` (2026-08-28) (`e82ca994`).
 - 2026-03-26: Initial scaffolding — server/worker containers, DB provisioning, Caddy reverse proxy, secret integration
