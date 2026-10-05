@@ -73,4 +73,9 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-03-31: The admin secret fallbacks read `config.hwc.secrets.api."couchdb-admin-username"`
+  / `."couchdb-admin-password"` (quoted kebab-case attribute names, with `or null`)
+  instead of the camelCase `couchdbAdminUsernameFile` / `couchdbAdminPasswordFile`,
+  following the secrets-API rename. The `secrets.admin*` option descriptions were
+  updated to match (`17b9283b`, commit message "update").
 - 2026-03-25: Created README per Law 12

@@ -27,6 +27,14 @@ data/
 ```
 
 ## Changelog
+- 2026-09-29: `syncthing/parts/datax-ignores.nix` follows the 700_datax layout move —
+  `dx-mcp` replaces `jt-mcp`, `gauntlets/` replaces `sr_gauntlet` + `dx1_gauntlet`, and
+  `tools/` (the `eriqueo/datax-tools` repo) is ignored; git carries all of them
+  (`8a938abe`, `1ce31fe8`).
+- 2026-09-28: `700_datax` left hwc-home. hwc-laptop and hwc-work peer it directly, and
+  the new `syncthing/parts/` holds the shared ignore list both must declare — Syncthing
+  never syncs `.stignore`, so a checkout would leak through whichever host lacked it
+  (`21233cb9`).
 - 2026-09-26: Machine references follow machines/home; the home job pins its historical Borg archive/prune identity.
 - 2026-09-26: Centralize version-matched PostgreSQL dumps with atomic publication and failure propagation. Restore helpers preserve failure status; jobs respect repository locks. Local dump retention excludes nested migration archives.
 - 2026-09-25: Retired `cloudbeaver/` (service-split audit: 0 requests in the 9 days of vhost logs; Eric: no longer used). Workspace archived to hwc-server `/var/lib/backups/service-split-wave3/cloudbeaver.tar.zst` before deletion.
