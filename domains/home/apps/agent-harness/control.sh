@@ -72,7 +72,7 @@ check_no_authoring_reference() {
 # Content fingerprint of the skill set. Hosts on different nixpkgs build the
 # same content at different store paths, so the fleet compares this instead.
 skill_fingerprint() {
-  (cd "$SKILL_SET" && find -L . -type f -print0 | sort -z | xargs -0 sha256sum) \
+  (cd "$SKILL_SET" && find -L . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) \
     | sha256sum | cut -c1-16
 }
 

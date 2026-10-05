@@ -66,6 +66,17 @@ run_doctor() {
 
 run_doctor >/dev/null
 
+# Skill identity is independent of the caller's collation locale. Seed names
+# whose order differs under C and English collation.
+printf 'one\n' > "$SKILLS/a-file"
+printf 'two\n' > "$SKILLS/a_file"
+fingerprint_c=$(LC_ALL=C run_doctor | awk '/^skill fingerprint:/ {print $3}')
+fingerprint_en=$(LC_ALL=en_US.UTF-8 run_doctor | awk '/^skill fingerprint:/ {print $3}')
+[ "$fingerprint_c" = "$fingerprint_en" ] || {
+  echo 'control.test: skill fingerprint depends on locale' >&2
+  exit 1
+}
+
 # Drift: a hand-installed Codex skill, a root that is not the set, and a Pi
 # path outside it must each fail the doctor.
 mkdir "$HOME_T/.codex/skills/hand-copy"
