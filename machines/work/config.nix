@@ -261,6 +261,7 @@
     summary.enable = true;
     summary.onCalendar = "*-*-* 07:50:00";
   };
+  hwc.business.crm.assistant.enable = true; # reviewed inquiry assistance; existing Pi/DX2 account
   hwc.business.crm.controlTokenSecretRef = "hwc-control-crm-token";
   # Facebook Page Messenger (hwc-crm D55). The app secret checks every
   # delivery's signature; without it deliveries answer 503.

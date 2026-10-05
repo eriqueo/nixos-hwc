@@ -23,6 +23,7 @@ crm/
 ├── README.md      # This file.
 └── index.nix      # hwc.business.crm.* options + service + tick timer
                    #   + lead_scout ingest timer + route
+                   #   + bounded on-demand Pi/DX2 worker settings
                    #   + Messenger secrets and hwc-crm-messenger-import.
 ```
 
@@ -62,6 +63,7 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 (`machines/work/config.nix`).
 
 ## Changelog
+- **2026-10-05** — Declare the on-demand inquiry assistant in the existing CRM service. One worker, queue/day caps, tool-free Pi/DX2, explicit reviewed sends, and bounded shutdown. Its CRITICAL judgments and reviews share the CRM database backup. Enabled on hwc-work.
 - **2026-10-02** — hwc-work sets `meta.appSecretRef = "crm-meta-app-secret"`;
   signed Messenger deliveries are now recorded instead of answering 503.
 - **2026-10-02** — hwc-work sets the Messenger Page token

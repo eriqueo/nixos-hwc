@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+CRM declares its on-demand Pi/DX2 inquiry worker, queue/day limits, and reviewed email controls in `crm/index.nix`.
+
 Scheduled mail classification reserves the shared mail owner lock before changing tags or transport intents.
 Briefing mail counts and tabs consume the classifier's State display metadata,
 including DONT KNOW; older four-State snapshots remain readable.
@@ -48,6 +50,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-10-05: Declare bounded CRM inquiry assistance and its CRITICAL database retention; enable it on hwc-work.
 
 - 2026-10-02: Prepare the approved measurement release with backend-first activation and retained website recovery output.
 
