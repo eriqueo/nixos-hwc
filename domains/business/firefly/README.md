@@ -118,6 +118,15 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
+- 2026-09-25: `parts/explorer.nix` gained a bounded `ExecStartPre` that waits up to
+  180 s for Firefly to answer, then fails loudly. The explorer exits when its startup
+  check cannot reach Firefly, and `podman-firefly` reports active before PHP listens,
+  so the first start on hwc-work lost that race — and would have at every boot
+  (`a98d11eb`).
+- 2026-09-25: `parts/automation.nix` builds `notifyUrl` from
+  `config.hwc.notifications.notify.url` instead of the hard-coded
+  `http://127.0.0.1:11600` — firefly-digest posts to the dispatcher's one address
+  after it moved to hwc-work (service split wave 3.1, `2fdea699`).
 - 2026-09-21: Pinned Explorer `0605857`: serve current HTML without conditional caching, since Nix-normalized mtimes can otherwise return stale 304 responses and reference removed JavaScript builds. Static asset caching, Tailscale API checks, and finance data are unchanged.
 - 2026-09-16: Pinned Firefly Explorer fix `90a8a587`: tailscaled LocalAPI requires `Host: local-tailscaled.sock` even over its Unix socket. The original package used `localhost`, so the deployed authorization boundary failed closed with 403 for every API request. A Unix-socket regression test now watches the exact Host requirement.
 - 2026-09-16: Added the Workbench Finance recurring-payment explorer from the revision-locked private `pnc-statement-pipeline` flake. The default report scans Firefly history from 2019-08-19; date controls filter visible occurrences without narrowing cadence/status analysis. Caddy reaches it only through a root-owned `0600` Unix socket, API reads require the configured Tailscale identity, and exact-fingerprint writes are limited to one journal's existing category, expense account, or tags. Added a dedicated encrypted PAT instead of sharing the digest token.
