@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+CRM supplies shared Messenger Page credentials to its service and import command for manual replies; send receipts share its existing database backup.
+
 CRM declares its on-demand Pi/DX2 inquiry worker, queue/day limits, and reviewed email controls in `crm/index.nix`.
 
 Scheduled mail classification reserves the shared mail owner lock before changing tags or transport intents.
@@ -50,6 +52,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-10-05: Wire the existing Messenger Page credential into manual CRM replies and service restart triggers.
 
 - 2026-10-05: Declare bounded CRM inquiry assistance and its CRITICAL database retention; enable it on hwc-work.
 

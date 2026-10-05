@@ -46,21 +46,28 @@ let
 
   # Messenger (hwc-crm D55): one producer of the env names for both the
   # service and the import command.
+  # CRITICAL: Messenger history and send receipts share the backed-up CRM DB.
+  # One Page credential owner; import receives only its read/send Page token.
+  metaPageSecrets = lib.filterAttrs (_: ref: ref != null) {
+    HWC_CRM_META_PAGE_TOKEN_FILE = cfg.meta.pageTokenSecretRef;
+  };
   metaSecrets = lib.filterAttrs (_: ref: ref != null) {
     HWC_CRM_META_VERIFY_TOKEN_FILE = cfg.meta.verifyTokenSecretRef;
     HWC_CRM_META_APP_SECRET_FILE = cfg.meta.appSecretRef;
-  };
-  metaExports = lib.concatStrings (
+  } // metaPageSecrets;
+  exportMetaSecrets = refs: lib.concatStrings (
     lib.mapAttrsToList (
       var: ref: "export ${var}=\"${config.age.secrets.${ref}.path}\"\n"
-    ) metaSecrets
+    ) refs
   );
+  metaPageIdExport = lib.optionalString (cfg.meta.pageId != null)
+    ''export HWC_CRM_META_PAGE_ID="${cfg.meta.pageId}"'';
 
   messengerImport = pkgs.writeShellScriptBin "hwc-crm-messenger-import" ''
     export PYTHONPATH="${cfg.projectDir}/src"
     export HWC_CRM_PG_DSN="${cfg.postgresDsn}"
-    export HWC_CRM_META_PAGE_TOKEN_FILE="${config.age.secrets.${cfg.meta.pageTokenSecretRef}.path}"
-    ${lib.optionalString (cfg.meta.pageId != null) ''export HWC_CRM_META_PAGE_ID="${cfg.meta.pageId}"''}
+    ${exportMetaSecrets metaPageSecrets}
+    ${metaPageIdExport}
     exec ${pythonEnv}/bin/python3 -m hwc_crm.integrations.messenger_import "$@"
   '';
 
@@ -95,7 +102,8 @@ let
     ${lib.optionalString (cfg.controlTokenSecretRef != null) ''
       export HWC_CRM_CONTROL_TOKEN_FILE="${config.age.secrets.${cfg.controlTokenSecretRef}.path}"
     ''}
-    ${metaExports}
+    ${exportMetaSecrets metaSecrets}
+    ${metaPageIdExport}
     ${lib.optionalString (cfg.emailTransport == "smtp") ''
       export HWC_CRM_SMTP_HOST="${cfg.smtp.host}"
       export HWC_CRM_SMTP_PORT="${toString cfg.smtp.port}"
@@ -322,8 +330,9 @@ in
         default = null;
         example = "crm-meta-page-token";
         description = ''
-          Page access token for the history import. Non-null installs the
-          `hwc-crm-messenger-import` command; the service never uses it.
+          Page access token for history import and manual Messenger replies.
+          Non-null installs `hwc-crm-messenger-import` and supplies the service
+          credential; replies also require pageId and a recent inbound message.
         '';
       };
       pageId = lib.mkOption {
@@ -331,7 +340,8 @@ in
         default = null;
         example = "102022081185728";
         description = ''
-          The Facebook Page the import reads. Configured rather than looked
+          The Facebook Page the import reads and manual replies use.
+          Configured rather than looked
           up: a Messenger Page token may be refused on /me.
         '';
       };
