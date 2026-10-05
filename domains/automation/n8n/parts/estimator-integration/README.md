@@ -83,3 +83,18 @@ All webhook endpoints require `x-api-key` header matching `ESTIMATOR_API_KEY` en
 - Workflows: `/home/eric/.nixos/domains/automation/n8n/parts/workflows/`
 - Estimator App: `/home/eric/.nixos/workspace/projects/react/heartwood-assembler/`
 - Server Config: `/home/eric/.nixos/machines/server/config.nix`
+
+## Structure
+```
+estimator-integration/
+├── README.md         # This document (architecture, endpoints, env vars)
+├── CHANGELOG.md      # Integration-specific change history
+└── NEXT-SESSION.md   # Credential setup + curl smoke tests
+```
+
+## Changelog
+- 2026-10-05: Added `## Structure` + `## Changelog` for Charter Law 12; this part
+  directory had neither. The only code change since the README's last commit is
+  `56c1f6c8` (2026-06-02), a mechanical tailnet-name sweep in `NEXT-SESSION.md`:
+  `hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net` across the n8n UI
+  URL and the three webhook curl examples. No workflow or app behavior changed.

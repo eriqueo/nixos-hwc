@@ -49,6 +49,9 @@ hwc.automation.brainSweep.enable = true;         # nightly at 03:30 by default
 
 ## Changelog
 
+- 2026-09-25: `notifyUrl` now defaults to `config.hwc.notifications.notify.url` instead of
+  the hard-coded `http://127.0.0.1:11600` — the dispatcher moved to hwc-work in service
+  split wave 3 (slice 3.1, `2fdea699`), so loopback was no longer where it lives.
 - 2026-07-23: Created. Operationalizes the long-designed-but-never-deployed janitor
   ([[janitor]] in the vault). Replaces the mythical `brain-janitor-nightly` scheduled prompt with
   a real deterministic sweep. Enabled on hwc-server (`machines/server/config.nix`).
