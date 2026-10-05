@@ -113,7 +113,8 @@ let
             maxTokens = cfg.dx2.maxTokens;
             reasoning = true;
             thinkingLevelMap = {
-              off = null;
+              # DX2 accepts "none"; null makes Pi clamp --thinking off to low.
+              off = "none";
               minimal = null;
               low = "low";
               medium = "medium";

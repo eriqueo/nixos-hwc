@@ -9,7 +9,7 @@ edits).
 ## Structure
 
 ```
-index.nix          # options, DX2-only routing, and bounded subagent configuration
+index.nix          # options, DX2-only routing, explicit thinking-off, and bounded subagents
 parts/package.nix  # pinned buildNpmPackage of the pi monorepo (vendored from
                    # nixpkgs; hwc-server's stable channel has no pi-coding-agent)
 parts/guards.ts    # pi extension: the Pi-only rule, refusing unbounded reads
@@ -39,9 +39,9 @@ parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
   `settings.json` selects only that model and enforces the same scope for native
   subagents. External Claude Code, Codex, and Cursor agent profiles are disabled.
   Project settings or a separately invoked binary remain explicit escape hatches.
-- **DX2 reasoning levels match the endpoint.** The model advertises reasoning
-  to pi and maps only `low`, `medium`, and `xhigh`, the values accepted by the
-  DX2 API. Unsupported levels are hidden instead of producing retry loops.
+- **DX2 reasoning levels match the endpoint.** The model maps `off` to
+  `reasoning_effort: none`. A null mapping makes Pi silently select `low`.
+  Enabled reasoning retains `low`, `medium`, and `xhigh`. Unsupported levels stay hidden.
   Pi's mutable `defaultThinkingLevel` can select a supported level; `Shift+Tab` or
   `--thinking` can select another supported level for a session.
 - **Endpoint = the stable proxy, not the pod.** `dx2.baseUrl` is
@@ -107,6 +107,8 @@ nix run nixpkgs#prefetch-npm-deps -- ./package-lock.json  # → npmDepsHash
 Bump `version` + both hashes in `parts/package.nix`.
 
 ## Changelog
+
+- 2026-10-05: Map thinking-off to DX2's accepted `none` value. The previous null mapping silently selected low reasoning and caused real CRM drafts to exceed their deadline. Keep enabled reasoning mappings unchanged.
 
 - 2026-10-01: Removed the hand ports now that the shared hooks run: `parts/stop-guards.ts` and `stopGuards.enable` are gone, and `parts/guards.ts` keeps only the 64 KB read limit (grep/sed, destructive-git and rebuild confirmation, write-guard and the workspace-guard exec now come from the shared hooks). Policy change: Pi's Stop check is now the shared ste100 answer-length rule (block over 900 words), not the old 30-word sentence port; a headless Pi run now also blocks on enforce-tools' advisory asks (secrets and Caddy route edits).
 
