@@ -97,5 +97,22 @@
       project_cancelled = "Other";
       other = "Other";
     };
+    # hwc-crm D62: Job Funnel stages that mirror the job's Phase. A Phase
+    # change in JobTread moves the card; moving a card into one of these
+    # stages writes its Phase. Texts must match the live Phase options.
+    stagePhases = {
+      visited = "2. Visited";
+      budgeting = "3. Budgeting";
+      budget_sent = "4. Budget Sent";
+    };
+    # A job whose Phase changes to one of these moves the lead to Won.
+    wonPhases = [
+      "5. Budget Approved"
+      "6. Work Start"
+      "7. First Milestone Complete"
+      "8. Second Milestone Complete"
+      "9. Final Milestone Complete"
+      "10. Job Complete"
+    ];
   };
 }
