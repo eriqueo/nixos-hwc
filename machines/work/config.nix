@@ -424,6 +424,9 @@
       sshKeySecret = "borg-work-ssh-key";
     };
     sources = [
+      # CRITICAL tracker records. Syncthing's 14-day versions are transport,
+      # not independent recovery. The hub is this host's sole decision writer.
+      "${config.hwc.paths.user.inbox}/downloads/agent"
       "/var/lib/hwc"      # Service state directories
       "/var/lib/backups"  # Database dumps from preBackupScript
       "/var/lib/refinery"    # Refinery board items, specs, reviews, spools
