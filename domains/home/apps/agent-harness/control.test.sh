@@ -68,7 +68,7 @@ run_doctor >/dev/null
 
 # Skill identity is independent of the caller's collation locale. Seed names
 # whose order differs under C and English collation.
-printf 'one\n' > "$SKILLS/a-file"
+printf 'one\n' > "$SKILLS/Z-file"
 printf 'two\n' > "$SKILLS/a_file"
 fingerprint_c=$(LC_ALL=C run_doctor | awk '/^skill fingerprint:/ {print $3}')
 fingerprint_en=$(LC_ALL=en_US.UTF-8 run_doctor | awk '/^skill fingerprint:/ {print $3}')
