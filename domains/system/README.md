@@ -60,6 +60,11 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-10-06: Mail mutation responses distinguish lock refusal from started-command
+  failure with a private start pipe. Version-1 no-effect context permits bounded
+  Workbench waiting; selection, runtime and transport failures never permit replay.
+  Both mail write entry paths use the same coded result and preserve the shared lock.
 - 2026-10-01: Consume the canonical mail contract without a compiled vocabulary;
   add DONT KNOW buckets/counts and preserve old briefing-cache compatibility.
 

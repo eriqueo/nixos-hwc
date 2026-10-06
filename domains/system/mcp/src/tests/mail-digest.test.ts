@@ -9,6 +9,17 @@ import { mailTools, mailTagActions, MAIL_STATES } from "../src/tools/mail.js";
 import { mailTriageTools, reflectLiveBuckets } from "../src/tools/mail-triage.js";
 import { morningBriefTool } from "../src/tools/morning-brief.js";
 
+function classifierChild(exitCode = 0, started = true) {
+  const child = {stdin: {end: vi.fn(), on: vi.fn()}, stderr: {on: vi.fn()},
+    stdio: [null, null, null, {on: vi.fn((event: string, callback: (chunk: Buffer) => void) => {
+      if (event === "data" && started) callback(Buffer.from("started\n"));
+    })}],
+    on: vi.fn((event: string, callback: (code: number) => void) => {
+      if (event === "close") queueMicrotask(() => callback(exitCode)); return child;
+    })};
+  return child;
+}
+
 const thread = (id: string) => ({
   thread_id: id, subject: `Thread ${id}`, sender: "Sender", tags: [],
 });
@@ -85,21 +96,12 @@ describe("authoritative mail placement", () => {
     spawnRun.mockReset();
     run.mockImplementation((_bin,_args,_options,callback)=>callback(null,"From sender@example.com\nMessage-ID: <a@example.com>\n\nbody\n",""));
     const stdin = {end: vi.fn(), on: vi.fn()};
-    spawnRun.mockImplementation(() => {
-      const child = {
-        stdin,
-        stderr: {on: vi.fn()},
-        on: vi.fn((event:string, callback:(code:number)=>void) => {
-          if (event === "close") queueMicrotask(() => callback(0));
-          return child;
-        }),
-      };
-      return child;
-    });
+    spawnRun.mockImplementation(() => ({...classifierChild(), stdin}));
     const result = await mailTriageTools("unused")[0].handler({action:"state-did",id:"a"});
     expect(result.status).toBe("ok");
     expect(spawnRun).toHaveBeenCalledWith("/run/current-system/sw/bin/flock",
       ["-n", "-E", "75", expect.stringMatching(/\/mail-sync\/sync\.lock$/),
+        "/run/current-system/sw/bin/sh", "-c", expect.stringContaining("exec"), "mail-classifier",
         "/run/current-system/sw/bin/mail-classifier-runtime", "correct", "--db",
         "/var/lib/hwc/mail-classifier/ledger.sqlite", "--notmuch", expect.any(String),
         "--state", "did"], expect.any(Object));
@@ -297,20 +299,14 @@ describe("mail actions record local placement intent", () => {
     run.mockImplementation((_bin, _args, _options, callback) => callback(null,
       "From sender@example.com\nMessage-ID: <fixture@example.com>\n\nbody\n", ""));
     const stdin = {end: vi.fn(), on: vi.fn()};
-    spawnRun.mockImplementation(() => {
-      const child = {stdin, stderr: {on: vi.fn()}, on: vi.fn((event: string, callback: (code: number) => void) => {
-        if (event === "close") queueMicrotask(() => callback(0));
-        return child;
-      })};
-      return child;
-    });
+    spawnRun.mockImplementation(() => ({...classifierChild(), stdin}));
     expect((await mailTools()[0].handler({action: "tag", query: "thread:a", tag_action: action})).status).toBe("ok");
     expect(run.mock.calls.at(-1)![1]).toEqual(["show", "--format=mbox", "--entire-thread=true", "--", "thread:a"]);
     expect(run.mock.calls.some((call) => call[1][0] === "tag")).toBe(false);
     expect(spawnRun.mock.calls[0][0]).toBe("/run/current-system/sw/bin/flock");
     expect(spawnRun.mock.calls[0][1].slice(0, 4)).toEqual([
       "-n", "-E", "75", expect.stringMatching(/\/mail-sync\/sync\.lock$/)]);
-    expect(spawnRun.mock.calls[0][1][5]).toBe(command);
+    expect(spawnRun.mock.calls[0][1][9]).toBe(command);
     if (axis) expect(spawnRun.mock.calls[0][1]).toEqual(expect.arrayContaining([axis, value]));
     expect(stdin.end).toHaveBeenCalledWith(expect.stringContaining("Message-ID"));
   });
@@ -337,16 +333,48 @@ describe("disposition command failure", () => {
     run.mockReset(); spawnRun.mockReset();
     run.mockImplementation((_bin, _args, _options, callback) => callback(null,
       "From sender@example.com\nMessage-ID: <fixture@example.com>\n\nbody\n", ""));
-    spawnRun.mockImplementation(() => {
-      const child = {stdin: {end: vi.fn(), on: vi.fn()}, stderr: {on: vi.fn()},
-        on: vi.fn((event: string, callback: (code: number) => void) => {
-          if (event === "close") queueMicrotask(() => callback(exitCode)); return child;
-        })};
-      return child;
-    });
-    expect((await mailTools()[0].handler({action: "tag", query: "thread:a", tag_action: "trash"})).status).toBe("error");
+    spawnRun.mockImplementation(() => classifierChild(exitCode));
+    const result = await mailTools()[0].handler({action:"tag",query:"thread:a",tag_action:"trash"});
+    expect(result.context).toMatchObject({mutation_status:"unknown",retry_safe:false});
+    expect(result.status).toBe("error");
     expect(spawnRun).toHaveBeenCalledTimes(1);
     expect(spawnRun.mock.calls[0][2]).toMatchObject({timeout: 30_000});
     expect(run.mock.calls.some((call) => call[1][0] === "tag")).toBe(false);
   });
+});
+
+
+describe("mail mutation contention", () => {
+  it("reports a proven pre-command lock refusal as safely waiting, not a tag failure", async () => {
+    run.mockReset(); spawnRun.mockReset();
+    run.mockImplementation((_bin,_args,_options,callback)=>callback(null,"From fixture@example.invalid\nMessage-ID: <busy@example.invalid>\n\nfixture\n", ""));
+    spawnRun.mockImplementation(() => classifierChild(75, false));
+    const result=await mailTriageTools("unused")[0].handler({action:"trash",id:"a"});
+    expect(result.status).toBe("error");
+    expect(result.message).toContain("sync");
+    expect(result.context).toMatchObject({schemaVersion:1,mutation_status:"not_started",retry_safe:true});
+  });
+});
+
+
+it("the actual flock/start-pipe protocol separates lock refusal from runtime exit 75", async () => {
+  const actual = await vi.importActual<typeof import("node:child_process")>("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "mail-lock-protocol-"));
+  const lock = join(dir, "lock");
+  const shell = '/run/current-system/sw/bin/sh';
+  const execute = (args: string[]) => new Promise<{code:number|null,start:string}>(resolve => {
+    const child = actual.spawn('/run/current-system/sw/bin/flock',args,{stdio:['pipe','ignore','pipe','pipe']});
+    let start = '';
+    (child.stdio[3] as NodeJS.ReadableStream).on('data',chunk=>{start+=String(chunk)});
+    child.on('close',code=>resolve({code,start}));
+    child.stdin!.end();
+  });
+  try {
+    const holder = actual.spawn('/run/current-system/sw/bin/flock',[lock,shell,'-c','printf ready; sleep 1'],{stdio:['ignore','pipe','ignore']});
+    await new Promise<void>(resolve=>holder.stdout!.once('data',()=>resolve()));
+    const prefix = ['-n','-E','75',lock,shell,'-c','printf "started\n" >&3; exec "$@"','classifier'];
+    expect(await execute([...prefix,shell,'-c','exit 75'])).toEqual({code:75,start:''});
+    await new Promise<void>(resolve=>holder.once('close',()=>resolve()));
+    expect(await execute([...prefix,shell,'-c','exit 75'])).toEqual({code:75,start:'started\n'});
+  } finally { await rm(dir,{recursive:true,force:true}); }
 });

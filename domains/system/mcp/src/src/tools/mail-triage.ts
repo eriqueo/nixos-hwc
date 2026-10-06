@@ -19,7 +19,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
 import { mcpError } from "../errors.js";
-import { MAIL_STATES, MAIL_ACTION_STATE, MAIL_STATE_DISPLAY_NAMES, mailStateTag, mailTagActions, classifierMutation } from "./mail.js";
+import { MAIL_STATES, MAIL_ACTION_STATE, MAIL_STATE_DISPLAY_NAMES, mailStateTag, mailTagActions, classifierMutation, classifierMutationError } from "./mail.js";
 
 /** Default briefing output path (run.sh writes here, then injects .mail_triage). */
 const DEFAULT_BRIEFING_JSON =
@@ -303,19 +303,15 @@ export function mailTriageTools(
               suggestion: `Verbs: ${MAIL_STATES.map((state) => `state-${state}`).join(", ")}, move (target=${MAIL_STATES.join("|")}), archive, trash, mark-read`,
             });
           }
-          let err: string | null;
-          if (requestedState) err = await classifierMutation(`thread:${id}`, {kind: "state", value: requestedState});
-          else if (action === "archive") err = await classifierMutation(`thread:${id}`, {kind: "outcome", value: "done"});
-          else if (action === "trash") err = await classifierMutation(`thread:${id}`, {kind: "outcome", value: "trash"});
-          else if (action === "mark-read") err = await notmuchTagThread(id, mailTagActions().read);
-          else err = "unknown workflow action";
-          if (err !== null) {
-            return mcpError({
-              type: "COMMAND_FAILED",
-              message: `notmuch tag failed for thread:${id}`,
-              error: err,
-            });
-          }
+          if (requestedState || action === "archive" || action === "trash") {
+            const failure = await classifierMutation(`thread:${id}`, requestedState
+              ? {kind: "state", value: requestedState}
+              : {kind: "outcome", value: action === "archive" ? "done" : "trash"});
+            if (failure) return classifierMutationError(failure, `thread:${id}`);
+          } else if (action === "mark-read") {
+            const err = await notmuchTagThread(id, mailTagActions().read);
+            if (err) return mcpError({type: "COMMAND_FAILED", message: "Mark-read failed", error: err});
+          } else return mcpError({type: "VALIDATION_ERROR", message: "Unknown workflow action"});
           return {
             status: "ok",
             message: `${action} → thread:${id}`,

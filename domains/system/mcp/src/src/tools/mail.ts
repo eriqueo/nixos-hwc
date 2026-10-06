@@ -287,15 +287,24 @@ type ClassifierMutation =
   | { kind: "state"; value: string }
   | { kind: "outcome"; value: "done" | "trash" }
   | { kind: "reopen" };
+interface ClassifierFailure { message: string; retrySafe: boolean }
+
+/** Version 1: retry is permitted only when the classifier never started. */
+export function classifierMutationError(failure: ClassifierFailure, query: string): ToolResult {
+  return mcpError({type: failure.retrySafe ? "UNAVAILABLE" : "COMMAND_FAILED",
+    message: failure.message, context: {schemaVersion: 1, query,
+      mutation_status: failure.retrySafe ? "not_started" : "unknown",
+      retry_safe: failure.retrySafe}});
+}
 export async function classifierMutation(
   query: string, mutation: ClassifierMutation,
-): Promise<string | null> {
+): Promise<ClassifierFailure | null> {
   try {
     const bin = await notmuchBin();
     const selected = await notmuchExec(bin,
       ["show", "--format=mbox", "--entire-thread=true", "--", query],
       { timeout: 10_000, maxBuffer: 20 * 1024 * 1024 });
-    if (selected.exitCode !== 0) return (selected.stderr || "notmuch selection failed").slice(0, 300);
+    if (selected.exitCode !== 0) return {message: (selected.stderr || "notmuch selection failed").slice(0, 300), retrySafe: false};
     const base = ["--db", "/var/lib/hwc/mail-classifier/ledger.sqlite", "--notmuch", bin];
     const args = mutation.kind === "state" ? ["correct", ...base, "--state", mutation.value]
       : mutation.kind === "outcome" ? ["transition", ...base, "--outcome", mutation.value]
@@ -303,17 +312,29 @@ export async function classifierMutation(
     return await new Promise((resolve) => {
       const child = spawn("/run/current-system/sw/bin/flock",
         ["-n", "-E", "75", join(dirname(MAIL_SYNC_STATUS), "sync.lock"),
+          "/run/current-system/sw/bin/sh", "-c", 'printf "started\\n" >&3; exec "$@"', "mail-classifier",
           "/run/current-system/sw/bin/mail-classifier-runtime", ...args],
-        {stdio: ["pipe", "ignore", "pipe"], timeout: 30_000});
+        {stdio: ["pipe", "ignore", "pipe", "pipe"], timeout: 30_000});
       let stderr = "";
-      child.stderr.on("data", chunk => { stderr = (stderr + String(chunk)).slice(0, 300); });
-      child.stdin.on("error", error => resolve(String(error).slice(0, 300)));
-      child.on("error", error => resolve(String(error).slice(0, 300)));
-      child.on("close", code => resolve(code === 0 ? null : (stderr || `classifier exited ${code}`).slice(0, 300)));
-      child.stdin.end(selected.stdout);
+      let started = "";
+      let inputError = "";
+      // A private pipe distinguishes flock refusal from runtime exit 75.
+      // Reading only stderr or a numeric exit code cannot prove zero effects.
+      const startPipe = child.stdio[3] as NodeJS.ReadableStream;
+      startPipe.on("data", chunk => { started = (started + String(chunk)).slice(0, 64); });
+      child.stderr!.on("data", chunk => { stderr = (stderr + String(chunk)).slice(0, 300); });
+      child.stdin!.on("error", error => { inputError = String(error).slice(0, 300); });
+      child.on("error", error => resolve({message: String(error).slice(0, 300), retrySafe: false}));
+      child.on("close", code => {
+        if (code === 75 && started === "" && stderr === "") {
+          resolve({message: "Mail sync is running; this action has not started.", retrySafe: true});
+        } else if (code === 0 && !inputError && started === "started\n") resolve(null);
+        else resolve({message: (stderr || inputError || `Mail action failed (exit ${code}); refresh before trying again.`).slice(0, 300), retrySafe: false});
+      });
+      child.stdin!.end(selected.stdout);
     });
   } catch (error) {
-    return String(error).slice(0, 300);
+    return {message: String(error).slice(0, 300), retrySafe: false};
   }
 }
 
@@ -736,7 +757,7 @@ export function mailTools(): ToolDef[] {
             };
             if (actionName && Object.hasOwn(dispositions, actionName)) {
               const error = await classifierMutation(query, dispositions[actionName]);
-              if (error !== null) return mcpError({type: "COMMAND_FAILED", message: "Mail disposition failed", error});
+              if (error !== null) return classifierMutationError(error, query);
               return {status: "ok", message: `Recorded ${actionName} for: ${rawQuery}`};
             }
             if (rawTags?.some(tag => /^[+-](?:inbox|archive|trash|spam)$/.test(tag))) {

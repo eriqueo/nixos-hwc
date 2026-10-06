@@ -17,6 +17,10 @@ shell's aerc alias, one-shot analysis via the selected Codex package, browser vi
 - `index.nix` — imports the flake's HM module; options + programs.workbench wiring, wb-reload, shared Zellij package, versioned keymap, one-shot Codex provider, registry landing hub + shared standing-tool destinations
 
 ## Changelog
+
+- 2026-10-06: Consume current mail State keys and five-State fixtures. Unstarted
+  mail actions wait safely for the shared sync owner with bounded attempts;
+  started or uncertain writes never replay. Trash/JUNK retain Proton star semantics.
 - 2026-09-30: Share the graphics-capable Zellij package with the shell and restart helper; restart sessions only when the user invokes reload.
 - 2026-09-24: Keep empty Kanban stages keyboard-reachable so mail can move
   through Act, Look, Later, and Junk even when only one stage has messages.
