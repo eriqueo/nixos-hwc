@@ -124,6 +124,7 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-10-05: Wait for eventual Bridge COPY and Archive/Inbox acknowledgments with six readbacks, bounded jitter and one shared deadline; never retry a remote write.
 - 2026-10-05: Scope the two added Trash reconciliation passes to rendered Proton channels; ordinary initial/final sync keeps every core account.
 - 2026-10-05: Accept native Proton Trash star removal in schema-2 receipts while preserving strict schema-1 audit recovery.
 - 2026-10-05: Fix local-to-Proton Trash through reserved existing-message COPY, preserve interrupted-write and concurrent-edit guards, pull the remote result before mover/push, and recognize verified Trash label removal.
