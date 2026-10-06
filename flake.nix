@@ -2319,7 +2319,8 @@
           system = c.systemd.services."hwc-service-failure-notifier@".serviceConfig.ExecStart;
           user = c.systemd.user.services."hwc-service-failure-notifier@".serviceConfig.ExecStart;
         in lib.hasSuffix " %i" system && lib.hasSuffix " --user %i" user
-          && lib.hasInfix "ExecStart=${system}" c.systemd.units."hwc-service-failure-notifier@.service".text;
+          && lib.hasInfix (builtins.unsafeDiscardStringContext "ExecStart=${system}")
+            c.systemd.units."hwc-service-failure-notifier@.service".text;
       in
       assert lib.assertMsg (dead == [])
         ("monitored units with no ExecStart (OnFailure= on these is a silent no-op): "
