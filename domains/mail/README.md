@@ -9,6 +9,9 @@ Self-contained email domain: client UI, accounts, sync, indexing, sending, and b
 
 ## Structure
 
+`classifier/` binds `review-label-write --message-id` to the shared runtime,
+notmuch and Bridge under the sync lock. Its rebuilt view is `label-review.json`.
+
 Mailbox movement runs through classifier transport intents, marker-only afew rules, and ordered mbsync prefetch/reconciliation/readback. Explicit Trash uses reserved COPY of existing remote identities, preceded by Proton flag reconciliation and followed by mandatory Proton pull/index before local effects; the isolated Trash channel remains pull-only. Proton Trash can clear stars with its labels; versioned receipts accept that complete native effect and reject unexpected star changes. The contract owns the physical sync folders; local history remains in lessons but does not block remote move receipts.
 Durable move commands apply regardless of message age; afew adds no date filter.
 The mail role retains these hooks in both integrated and standalone Home Manager builds.
@@ -124,6 +127,11 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-10-06: Add fresh label conflict previews and fingerprint-bound operator
+  acknowledgments through the existing review command. Review keeps labels,
+  projection baselines, case decisions and learning unchanged. Label conflicts
+  remain visible in their own degraded lane.
 - 2026-10-05: Wait for eventual Bridge COPY and Archive/Inbox acknowledgments with six readbacks, bounded jitter and one shared deadline; never retry a remote write.
 - 2026-10-05: Scope the two added Trash reconciliation passes to rendered Proton channels; ordinary initial/final sync keeps every core account.
 - 2026-10-05: Accept native Proton Trash star removal in schema-2 receipts while preserving strict schema-1 audit recovery.

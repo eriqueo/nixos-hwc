@@ -1991,10 +1991,11 @@
             assert projected[projected.index('--output') + 1].endswith('/labels.json')
             reviewed = dispatch(control, 'review-label-write')
             assert reviewed[:3] == ['review-label-write', '--db', '/var/lib/hwc/mail-classifier/ledger.sqlite']
-            assert '--bridge-host' in reviewed and '--notmuch' not in reviewed
+            assert '--bridge-host' in reviewed and '--notmuch' in reviewed
+            assert reviewed[reviewed.index('--output') + 1].endswith('/label-review.json')
             try:
                 broken_review = dispatch(control.replace('|review-label-write', ""), 'review-label-write')
-                assert '--bridge-host' in broken_review and '--notmuch' not in broken_review
+                assert '--bridge-host' in broken_review and '--notmuch' in broken_review
             except AssertionError:
                 pass
             else:
@@ -2140,7 +2141,7 @@
         && budget s.ExecStartPre == 300 && budget s.ExecStopPost == 90)
         "member recovery: aggregate preparation/sole cleanup boundary missing";
       assert lib.assertMsg (u.OnFailure == "hwc-service-failure-notifier@lead-scout-member-instance.service"
-        && lib.hasSuffix " --user %I" candidate.systemd.user.services."hwc-service-failure-notifier@".serviceConfig.ExecStart)
+        && lib.hasSuffix " --user %i" candidate.systemd.user.services."hwc-service-failure-notifier@".serviceConfig.ExecStart)
         "member recovery: user terminal notifier missing";
       pkgs.runCommand "lead-scout-member-recovery" {} ''
         units=${candidate.environment.etc."systemd/user".source}
@@ -2313,10 +2314,18 @@
             in if t == null then "" else t;
         in map (n: "${host}:${n}") (lib.filter (n: !(lib.hasInfix "ExecStart=" (unitText n))) monitored);
         dead = lib.concatMap deadOn [ "hwc-home" "hwc-work" ];
+        preservesUnit = host: let
+          c = self.nixosConfigurations.${host}.config;
+          system = c.systemd.services."hwc-service-failure-notifier@".serviceConfig.ExecStart;
+          user = c.systemd.user.services."hwc-service-failure-notifier@".serviceConfig.ExecStart;
+        in lib.hasSuffix " %i" system && lib.hasSuffix " --user %i" user
+          && lib.hasInfix "ExecStart=${system}" c.systemd.units."hwc-service-failure-notifier@.service".text;
       in
       assert lib.assertMsg (dead == [])
         ("monitored units with no ExecStart (OnFailure= on these is a silent no-op): "
          + lib.concatStringsSep ", " dead);
+      assert lib.assertMsg (lib.all preservesUnit [ "hwc-home" "hwc-work" ])
+        "failure notifier must preserve literal unit names with %i, not unescape hyphens with %I";
       pkgs.runCommand "alert-onfailure-units" {} ''touch "$out"'';
 
       # ── The SR gauntlet units can actually run `flock` ──────────────────

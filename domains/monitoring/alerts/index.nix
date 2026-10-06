@@ -246,15 +246,15 @@ in
     # SYSTEMD SERVICES
     # =======================================================================
     systemd.services = lib.mkMerge [
-      # Service failure notifier (template service using %I for instance name)
+      # Callers insert literal unit names, so %i preserves their hyphens.
       (lib.mkIf cfg.sources.serviceFailures.enable {
         "hwc-service-failure-notifier@" = {
-          description = "HWC service failure notifier for %I";
+          description = "HWC service failure notifier for %i";
 
           serviceConfig = {
             Type = "oneshot";
-            # %I is the unescaped instance name (everything after @)
-            ExecStart = "${notifInternal.serviceFailureNotify}/bin/hwc-service-failure-notify %I";
+            # %I would turn hwc-crm-tick into the unrelated hwc/crm/tick.
+            ExecStart = "${notifInternal.serviceFailureNotify}/bin/hwc-service-failure-notify %i";
             User = "root";
 
             # Don't fail if notification fails - we log it
@@ -283,10 +283,10 @@ in
     # The same producer/sender in the user manager. No root log directory or
     # second delivery channel; failures remain visible in this unit's journal.
     systemd.user.services."hwc-service-failure-notifier@" = lib.mkIf cfg.sources.serviceFailures.enable {
-      description = "HWC user service terminal failure notifier for %I";
+      description = "HWC user service terminal failure notifier for %i";
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${notifInternal.serviceFailureNotify}/bin/hwc-service-failure-notify --user %I";
+        ExecStart = "${notifInternal.serviceFailureNotify}/bin/hwc-service-failure-notify --user %i";
         TimeoutStartSec = 30;
       };
     };

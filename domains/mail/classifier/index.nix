@@ -22,9 +22,12 @@ let
           transport_args=(--notmuch ${pkgs.notmuch}/bin/notmuch)
           output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/residency-shadow.json"}
           output_args=()
-          if [ "$verb" = label-probe ] || [ "$verb" = review-label-write ]; then
+          if [ "$verb" = label-probe ]; then
             transport_args=()
             output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/label-probe.json"}
+          fi
+          if [ "$verb" = review-label-write ]; then
+            output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/label-review.json"}
           fi
           if [ "$verb" = observe-phone-labels ]; then
             output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/phone-label-shadow.json"}
