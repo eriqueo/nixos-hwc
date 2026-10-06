@@ -1599,7 +1599,7 @@
                     'if name in ("reconcile-flags", "post-write-pull"):\n'
                     '    actual = [arg for arg in sys.argv[1:] if not arg.startswith("--")]\n'
                     '    import json\n'
-                    '    assert actual == json.loads(os.environ["TRANSPORT_CHANNELS"]), actual\n'
+                    '    assert actual == json.loads(os.environ["EXPECTED_TRANSPORT_CHANNELS"]), actual\n'
                     'with open(os.environ["CALL_LOG"], "a") as f: f.write(name + "\\n")\n'
                     'raise SystemExit(23 if name == os.environ["FAIL_STAGE"] else 0)\n')
                 stub.chmod(0o755)
@@ -1614,7 +1614,7 @@
                 wrapper.chmod(0o755)
                 result = subprocess.run(['${pkgs.bash}/bin/bash', str(wrapper), mode],
                     env={**os.environ, 'CALL_LOG': str(log), 'FAIL_STAGE': stage, 'SYNC_MAIL_LOCKED': '1',
-                         'TRANSPORT_CHANNELS': json.dumps(fixture['transportChannels'])},
+                         'EXPECTED_TRANSPORT_CHANNELS': json.dumps(fixture['transportChannels'])},
                     capture_output=True, text=True)
                 calls = log.read_text().splitlines()
                 lanes = json.loads(status.read_text())['lanes']
