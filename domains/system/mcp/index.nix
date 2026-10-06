@@ -46,6 +46,7 @@ let
     npmBuildScript = "build";
     dontNpmPrune = false;
     doCheck = true;
+    nativeBuildInputs = [ pkgs.util-linux ];
     checkPhase = ''
       runHook preCheck
       export HWC_MAIL_CLASSIFIER_CONTRACT_FILE=${mailClassifierContract}

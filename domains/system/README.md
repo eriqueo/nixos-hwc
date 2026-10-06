@@ -61,6 +61,8 @@ domains/system/
 
 ## Changelog
 
+- Declare the real mail lock test dependency in the Nix build so the test runs inside its sandbox.
+
 - 2026-10-06: Mail mutation responses distinguish lock refusal from started-command
   failure with a private start pipe. Version-1 no-effect context permits bounded
   Workbench waiting; selection, runtime and transport failures never permit replay.

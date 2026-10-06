@@ -361,17 +361,21 @@ it("the actual flock/start-pipe protocol separates lock refusal from runtime exi
   const actual = await vi.importActual<typeof import("node:child_process")>("node:child_process");
   const dir = await mkdtemp(join(tmpdir(), "mail-lock-protocol-"));
   const lock = join(dir, "lock");
-  const shell = '/run/current-system/sw/bin/sh';
-  const execute = (args: string[]) => new Promise<{code:number|null,start:string}>(resolve => {
-    const child = actual.spawn('/run/current-system/sw/bin/flock',args,{stdio:['pipe','ignore','pipe','pipe']});
+  const shell = 'sh';
+  const execute = (args: string[]) => new Promise<{code:number|null,start:string}>((resolve, reject) => {
+    const child = actual.spawn('flock',args,{stdio:['pipe','ignore','pipe','pipe']});
     let start = '';
     (child.stdio[3] as NodeJS.ReadableStream).on('data',chunk=>{start+=String(chunk)});
     child.on('close',code=>resolve({code,start}));
+    child.on('error',reject);
     child.stdin!.end();
   });
   try {
-    const holder = actual.spawn('/run/current-system/sw/bin/flock',[lock,shell,'-c','printf ready; sleep 1'],{stdio:['ignore','pipe','ignore']});
-    await new Promise<void>(resolve=>holder.stdout!.once('data',()=>resolve()));
+    const holder = actual.spawn('flock',[lock,shell,'-c','printf ready; sleep 1'],{stdio:['ignore','pipe','ignore']});
+    await new Promise<void>((resolve,reject)=>{
+      holder.stdout!.once('data',()=>resolve());
+      holder.once('error',reject);
+    });
     const prefix = ['-n','-E','75',lock,shell,'-c','printf "started\n" >&3; exec "$@"','classifier'];
     expect(await execute([...prefix,shell,'-c','exit 75'])).toEqual({code:75,start:''});
     await new Promise<void>(resolve=>holder.once('close',()=>resolve()));
