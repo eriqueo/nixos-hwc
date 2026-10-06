@@ -4,6 +4,7 @@
   haveProton,
   afewPkg,
   coreChannels,
+  transportChannels,
   trashChannels,
   maildirRoot,
   statusFile,
@@ -17,6 +18,7 @@
 }:
 let
   coreArgs = lib.concatMapStringsSep " " lib.escapeShellArg coreChannels;
+  transportArgs = lib.concatMapStringsSep " " lib.escapeShellArg transportChannels;
   trashArgs = lib.concatMapStringsSep " " lib.escapeShellArg trashChannels;
   unitDeps = {
     After = [ "network-online.target" ] ++ lib.optionals haveProton [ "protonmail-bridge.service" ];
@@ -54,6 +56,7 @@ in
       CONFIG_DIGEST=${lib.escapeShellArg configDigest}
       BRIDGE_VERSION=${lib.escapeShellArg bridgeVersion}
       CORE_CHANNELS=( ${coreArgs} )
+      TRANSPORT_CHANNELS=( ${transportArgs} )
       TRASH_CHANNELS=( ${trashArgs} )
 
       mode="''${1:-core}"
@@ -165,7 +168,7 @@ in
         ${lib.optionalString (transportCommand != "") ''
         # Flush pending local stars while source copies still exist. Reservations
         # record reconciled flags; Proton Trash can then clear its Starred label.
-        run_lane core --pull-flags --push-flags "''${CORE_CHANNELS[@]}"
+        run_lane core --pull-flags --push-flags "''${TRANSPORT_CHANNELS[@]}"
         if [[ ''${lane_rc[core]} -ne 0 ]]; then
           return
         fi
@@ -177,7 +180,7 @@ in
         ${lib.optionalString (transportCommand != "") ''
         # Transport can associate existing messages with remote Trash. Fetch
         # that result before a stale local Inbox can reach the mover or push.
-        run_lane core --pull-new --pull-gone --create-near --remove-near --expunge-near "''${CORE_CHANNELS[@]}"
+        run_lane core --pull-new --pull-gone --create-near --remove-near --expunge-near "''${TRANSPORT_CHANNELS[@]}"
         if [[ ''${#TRASH_CHANNELS[@]} -gt 0 ]]; then
           run_lane trash "''${TRASH_CHANNELS[@]}"
         fi

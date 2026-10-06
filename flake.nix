@@ -1494,7 +1494,9 @@
         system = self.nixosConfigurations.${mailHost}.config;
         ownerDir = builtins.dirOf system.hwc.paths.user.mailSyncStatus;
         producers = with system.systemd.services; [ morning-briefing mail-retriage ];
+        transportChannels = (import ./domains/mail/mbsync/parts/render.nix { config = home; inherit lib pkgs; }).transportChannels;
         fixture = pkgs.writeText "mail-residency-shadow.json" (builtins.toJSON {
+          inherit transportChannels;
           script = home.home.file.".local/bin/sync-mail".text;
           command = home.hwc.mail.classifier.residency.command;
           projection = home.hwc.mail.classifier.projection.command;
@@ -1594,6 +1596,10 @@
                     '    history = pathlib.Path(os.environ["CALL_LOG"])\n'
                     '    name = "post-write-pull" if history.exists() and "transport-apply" in history.read_text().splitlines() else "prefetch"\n'
                     'if name == "mbsync" and "--push-flags" in sys.argv: name = "reconcile-flags"\n'
+                    'if name in ("reconcile-flags", "post-write-pull"):\n'
+                    '    actual = [arg for arg in sys.argv[1:] if not arg.startswith("--")]\n'
+                    '    import json\n'
+                    '    assert actual == json.loads(os.environ["TRANSPORT_CHANNELS"]), actual\n'
                     'with open(os.environ["CALL_LOG"], "a") as f: f.write(name + "\\n")\n'
                     'raise SystemExit(23 if name == os.environ["FAIL_STAGE"] else 0)\n')
                 stub.chmod(0o755)
@@ -1607,7 +1613,8 @@
                 wrapper.write_text(script)
                 wrapper.chmod(0o755)
                 result = subprocess.run(['${pkgs.bash}/bin/bash', str(wrapper), mode],
-                    env={**os.environ, 'CALL_LOG': str(log), 'FAIL_STAGE': stage, 'SYNC_MAIL_LOCKED': '1'},
+                    env={**os.environ, 'CALL_LOG': str(log), 'FAIL_STAGE': stage, 'SYNC_MAIL_LOCKED': '1',
+                         'TRANSPORT_CHANNELS': json.dumps(fixture['transportChannels'])},
                     capture_output=True, text=True)
                 calls = log.read_text().splitlines()
                 lanes = json.loads(status.read_text())['lanes']
@@ -1639,6 +1646,14 @@
         for stage in ["", 'prefetch', 'reconcile-flags', 'post-write-pull', 'afew', 'mbsync', 'notmuch', 'observe-residency', 'transport-apply', 'transport-ack', 'project-labels']:
             exercise(original, stage)
         exercise(original, mode='trash')
+        narrowed = original.replace('"$' + '{TRANSPORT_CHANNELS[@]}"', '"$' + '{CORE_CHANNELS[@]}"')
+        assert narrowed != original
+        try:
+            exercise(narrowed)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('unrelated accounts entered the Proton-only reconciliation passes')
         flags = next(line for line in original.splitlines() if 'run_lane core --pull-flags --push-flags' in line)
         try:
             exercise(original.replace(flags, 'true'))

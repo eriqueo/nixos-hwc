@@ -162,9 +162,10 @@ let
       named = mapped ++ wildcard;
     in if named == [] then [ a.name ] else named;
   coreChannels = lib.concatMap channelNamesFor syncVals;
+  transportChannels = lib.concatMap channelNamesFor (lib.filter (a: a.type == "proton-bridge") syncVals);
   trashChannels = map (a: "${a.name}-trash") (lib.filter (a: a.type == "proton-bridge") syncVals);
 in
 {
-  inherit mbsyncrc haveProton coreChannels trashChannels;
+  inherit mbsyncrc haveProton coreChannels transportChannels trashChannels;
   packages = [ pkgs.isync pkgs.pass pkgs.gnupg ];
 }

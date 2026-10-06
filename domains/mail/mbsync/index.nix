@@ -16,7 +16,7 @@ let
     inherit lib pkgs afewPkg;
     haveProton = render.haveProton;
     inherit maildirRoot;
-    inherit (render) coreChannels trashChannels;
+    inherit (render) coreChannels transportChannels trashChannels;
     statusFile = config.hwc.mail.mbsync.statusFile;
     configDigest = builtins.hashString "sha256" render.mbsyncrc;
     bridgeVersion = lib.getVersion (brCfg.package or pkgs.protonmail-bridge);
