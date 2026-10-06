@@ -134,6 +134,7 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 - 2026-10-06: Pin the tested compatible-arrival and system-owned Trash label repair.
   Cleanup uses durable label-only writes and retains concurrent-edit and partial-copy guards.
+  Trash-read deadlines defer safely and publish the progress already completed.
 
 - 2026-10-06: Add fresh label conflict previews and fingerprint-bound operator
   acknowledgments through the existing review command. Review keeps labels,
