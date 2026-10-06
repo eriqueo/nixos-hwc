@@ -9,6 +9,10 @@ Self-contained email domain: client UI, accounts, sync, indexing, sending, and b
 
 ## Structure
 
+The label writer completes compatible first-arrival labels. For complete Trash
+messages it removes only labels that match its recorded projection. Changed labels
+and partial physical copies remain conflicts; folder and star values stay intact.
+
 `classifier/` binds `review-label-write --message-id` to the shared runtime,
 notmuch and Bridge under the sync lock. Its rebuilt view is `label-review.json`.
 
@@ -127,6 +131,9 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-10-06: Pin the tested compatible-arrival and system-owned Trash label repair.
+  Cleanup uses durable label-only writes and retains concurrent-edit and partial-copy guards.
 
 - 2026-10-06: Add fresh label conflict previews and fingerprint-bound operator
   acknowledgments through the existing review command. Review keeps labels,
