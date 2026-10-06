@@ -163,8 +163,8 @@ in
         ${residencyCommand} || residency_rc=$?
         ''}
         ${lib.optionalString (transportCommand != "") ''
-        # Flush pending local stars while source copies still exist. COPY must
-        # preserve the reconciled flags, not discard an unsent local flag edit.
+        # Flush pending local stars while source copies still exist. Reservations
+        # record reconciled flags; Proton Trash can then clear its Starred label.
         run_lane core --pull-flags --push-flags "''${CORE_CHANNELS[@]}"
         if [[ ''${lane_rc[core]} -ne 0 ]]; then
           return

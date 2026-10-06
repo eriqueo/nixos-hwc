@@ -9,7 +9,7 @@ Self-contained email domain: client UI, accounts, sync, indexing, sending, and b
 
 ## Structure
 
-Mailbox movement runs through classifier transport intents, marker-only afew rules, and ordered mbsync prefetch/reconciliation/readback. Explicit Trash uses reserved COPY of existing remote identities, preceded by flag reconciliation and followed by mandatory pull/index before local effects; the isolated Trash channel remains pull-only. The contract owns the physical sync folders; local history remains in lessons but does not block remote move receipts.
+Mailbox movement runs through classifier transport intents, marker-only afew rules, and ordered mbsync prefetch/reconciliation/readback. Explicit Trash uses reserved COPY of existing remote identities, preceded by flag reconciliation and followed by mandatory pull/index before local effects; the isolated Trash channel remains pull-only. Proton Trash can clear stars with its labels; versioned receipts accept that complete native effect and reject unexpected star changes. The contract owns the physical sync folders; local history remains in lessons but does not block remote move receipts.
 Durable move commands apply regardless of message age; afew adds no date filter.
 The mail role retains these hooks in both integrated and standalone Home Manager builds.
 Scheduled classification uses the same owner lock before reserving mailbox moves.
@@ -124,6 +124,7 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-10-05: Accept native Proton Trash star removal in schema-2 receipts while preserving strict schema-1 audit recovery.
 - 2026-10-05: Fix local-to-Proton Trash through reserved existing-message COPY, preserve interrupted-write and concurrent-edit guards, pull the remote result before mover/push, and recognize verified Trash label removal.
 
 - 2026-10-03: Remove afew's 30-day mover limit. It skipped older messages in explicit Inbox commands, leaving remote receipts pending and mail health critical while delivery continued. The real-tool Trash restore test now uses old mail and rejects a restored age filter.
