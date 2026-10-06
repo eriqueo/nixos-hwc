@@ -6,7 +6,8 @@
 #
 # ARCHITECTURE:
 #   - Single FastAPI process
-#   - youtube-transcript-api for captions, yt-dlp for metadata only
+#   - youtube-transcript-api for captions, yt-dlp for subtitles + metadata
+#   - Whisper fallback: yt-dlp audio -> ffmpeg chunks -> local whisper-server
 #   - No LLM, no spaCy, no PostgreSQL
 #   - Caddy vhost at transcripts.hwc.iheartwoodcraft.com (upstream 127.0.0.1:8100)
 
@@ -23,7 +24,12 @@ let
     uvicorn
     pydantic
     youtube-transcript-api
+    requests # Whisper chunk uploads
   ];
+
+  whisper = config.hwc.server.ai.whisper or { };
+  whisperUrl = lib.optionalString cfg.whisper.enable
+    "http://127.0.0.1:${toString (whisper.port or 0)}/v1/audio/transcriptions";
 
   pythonPath = pkgs.python3Packages.makePythonPath pythonPackages;
 
@@ -35,13 +41,16 @@ let
     set -euo pipefail
 
     export PYTHONPATH="${pythonPath}:${scriptDir}"
-    export PATH="${pkgs.yt-dlp}/bin:$PATH"
+    export PATH="${pkgs.yt-dlp}/bin:${pkgs.ffmpeg}/bin:$PATH"
     export YT_TRANSCRIPTS_HOST="127.0.0.1"
     export YT_TRANSCRIPTS_PORT="${toString cfg.port}"
     export YT_TRANSCRIPTS_OUTPUT_DIR="${cfg.outputDirectory}"
     export YT_TRANSCRIPTS_OUTPUT_ROOTS="${lib.concatStringsSep ":" (map toString outputRoots)}"
     export YT_TRANSCRIPTS_DEFAULT_MODE="${cfg.defaultFormat}"
     export YT_TRANSCRIPTS_LANGUAGES="${lib.concatStringsSep "," cfg.languages}"
+    export YT_TRANSCRIPTS_WHISPER_URL="${whisperUrl}"
+    export YT_TRANSCRIPTS_WHISPER_MODEL="${whisper.model or "whisper"}"
+    export YT_TRANSCRIPTS_WHISPER_MAX_SECONDS="${toString cfg.whisper.maxDuration}"
 
     exec ${pkgs.python3}/bin/python3 ${scriptDir}/api.py
   '';
@@ -116,5 +125,12 @@ in
 
     # Provide n8n integration script system-wide
     environment.systemPackages = [ n8nScript ];
+
+    assertions = [
+      {
+        assertion = cfg.whisper.enable -> (whisper.enable or false);
+        message = "hwc.media.youtube.transcripts.whisper.enable needs hwc.server.ai.whisper.enable on the same host.";
+      }
+    ];
   };
 }

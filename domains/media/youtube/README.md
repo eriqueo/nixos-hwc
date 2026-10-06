@@ -1,103 +1,62 @@
-# domains/server/native/youtube/
+# domains/media/youtube/
 
 ## Purpose
 
-YouTube content acquisition APIs for transcript extraction and video downloads. Provides REST APIs with background workers for async job processing, PostgreSQL integration for deduplication, and rate limiting.
+YouTube transcript extraction for the media library: one FastAPI service
+(`transcripts`) with a web UI at `transcripts.hwc.iheartwoodcraft.com`.
+Captions come from youtube-transcript-api, then yt-dlp subtitles; when neither
+works (no captions, or YouTube blocking this server's IP) a job falls back to
+transcribing the audio with the local whisper-server.
 
 ## Boundaries
 
-- **Manages**: YouTube transcript extraction (legacy API, new job-based API), video downloads via yt-dlp, output format configuration, rate limiting, API key management
-- **Does NOT manage**: PostgreSQL database (-> `domains/server/databases`), monitoring metrics (-> `domains/server/native/monitoring`), reverse proxy routes (-> `domains/server/routes.nix`)
+- **Manages**: the `transcripts` systemd unit, its save-location whitelist (`outputRoots`), the `n8n-transcript-extract` helper, the Whisper-fallback wiring
+- **Does NOT manage**: whisper-server itself (-> `domains/server/native/ai/whisper`), media library directories other than `outputDirectory` (-> `domains/media/directories.nix`), the Caddy vhost (-> `domains/networking/routes.nix`)
 
 ## Structure
 
 ```
 domains/media/youtube/
-├── README.md           # This file
-├── index.nix           # Domain aggregator
-├── options.nix         # hwc.media.youtube.* options
-└── parts/
-    ├── legacy-api.nix  # Original transcript API (FastAPI, direct output)
-    ├── transcripts/
-    │   └── default.nix # Job-based transcript API with worker
-    └── yt-videos-api/
-        └── default.nix # Video download API with atomic finalization
-```
+├── README.md                 # This file
+├── index.nix                 # hwc.media.youtube.transcripts.* options
+└── parts/transcripts/
+    └── default.nix           # systemd unit, wrapper env, n8n helper, assertions
 
-### Workspace Support (`workspace/media/youtube-services/`)
-
-```
-workspace/media/youtube-services/
-├── packages/
-│   ├── yt_core/             # Shared library (SQLAlchemy, Pydantic models)
-│   ├── yt_transcripts_api/  # Transcript extraction API + worker
-│   └── yt_videos_api/       # Video download API + worker
-├── transcript-formatter/    # Obsidian transcript formatter (Ollama/Qwen)
-├── DEPLOYMENT.md
+workspace/media/youtube-services/   # runtime source, read from the checkout (paths.nixos)
+├── api.py                    # FastAPI: /job, /job/{id}, /transcript, /config, /health, UI
+├── transcript.py             # caption sources, Whisper fallback, failure reasons, cleaning, markdown
+├── test_transcript.py        # unittest: reason mapping, fallback decision, library contract
 └── pyproject.toml
 ```
 
 ## Configuration
 
-### Legacy Transcript API
-
 ```nix
-hwc.server.native.youtube.legacyApi = {
-  enable = true;
-  port = 5000;  # Default: 5000
-  dataDir = "/path/to/transcripts";
-};
-```
-
-### New Transcripts API (Job-based)
-
-```nix
-hwc.server.native.youtube.transcripts = {
+hwc.media.youtube.transcripts = {
   enable = true;
   port = 8100;
-  workers = 4;
-  outputDirectory = "/mnt/hot/youtube-transcripts";
-  defaultOutputFormat = "markdown";  # or "jsonl"
-  rateLimit = {
-    requestsPerSecond = 10;
-    burst = 50;
-    quotaLimit = 10000;
-  };
+  outputDirectory = "/mnt/media/transcripts";
+  whisper.enable = true;        # default: follows hwc.server.ai.whisper.enable
+  whisper.maxDuration = 10800;  # seconds; longer videos fail as too_long
 };
 ```
 
-### Videos API
+Each failed video reports one reason: `rate_limited`, `no_captions`,
+`unavailable`, `invalid_url`, `whisper_failed`, `too_long`, `timeout`, `error`.
+Whisper output carries `**Source:** Whisper ...` in the file and a Whisper
+badge in the UI. `POST /transcript` is synchronous and never uses Whisper.
 
-```nix
-hwc.server.native.youtube.videos = {
-  enable = true;
-  port = 8101;
-  workers = 2;
-  outputDirectory = "/mnt/media/youtube";
-  containerPolicy = "webm";  # or "mp4", "mkv"
-  qualityPreference = "best";
-  embedMetadata = true;
-  embedCoverArt = true;
-};
-```
-
-## Dependencies
-
-- PostgreSQL (`hwc.server.databases.postgresql`) - Required for job-based APIs
-- YouTube API key (optional) - Only needed for playlist/channel expansion
-- Secrets: `youtube-transcripts-db-url`, `youtube-videos-db-url`, `youtube-api-key` (optional)
+Tests (run on hwc-home with the service interpreter):
+`PYTHONPATH=<wrapper PYTHONPATH>:. python3 -m unittest -v test_transcript`
 
 ## Services
 
 | Service | Port | Description |
 |---------|------|-------------|
-| `transcript-api` | 5000 | Legacy transcript extraction |
-| `transcripts` | 8100 | Job-based transcript extraction |
-| `yt-transcripts-worker` | - | Background transcript processor |
-| `yt-videos-api` | 8101 | Video download job submission |
-| `yt-videos-worker` | - | Background video downloader |
+| `transcripts` | 8100 | Transcript API + web UI |
 
 ## Changelog
+- 2026-10-06: Transcripts recover from failures instead of hiding them. (1) The youtube-transcript-api 1.2 upgrade had removed `list_transcripts`, so the primary caption source failed on every video and a bare `except` hid it; every success came from the yt-dlp fallback, which YouTube answers with 429 for many videos. Now on the 1.x instance API. (2) Failures carry one reason from a closed vocabulary (`TranscriptError`), shown in the UI and logged per source. (3) A blocked caption request is retried once after 10 s, a 429 starts a process-wide 20 s cooldown, and job videos are paced 2 s apart. (4) New Whisper fallback (`whisper.enable`, `whisper.maxDuration`): yt-dlp audio -> ffmpeg 180 s chunks -> local whisper-server, so the shared server is held per chunk, not per video. Subprocesses are killed on timeout. Rewrote this README's Structure/Configuration/Services, which still described the removed PostgreSQL/worker design, and deleted the obsolete `DEPLOYMENT.md`.
 - 2026-09-10: `parts/transcripts/default.nix` no longer creates every `outputRoot`, only its own `outputDirectory` (`/mnt/media/transcripts`). The other root it writes to, `/mnt/media/youtube`, is a shared library directory that pinchflat also uses, and all three modules were declaring it — this one as `eric users`, pinchflat as `1000 100`. The same identity spelled two ways, resolved by whichever tmpfiles rule systemd applied last. It now comes from `domains/media/directories.nix`, which owns media library paths. `ReadWritePaths` still covers every root: writability is this service's concern, existence is the owner's. **Adding a new `outputRoot` now requires adding it to `directories.nix` as well** — it will not be created from here, and the service will fail to write to a path that does not exist.
 - 2026-08-06: Transcripts UI v4 — multi-box URL input (`+ URL` / remove rows, no more comma/newline paste), playlist URLs expand (`fetch_playlist` via `yt-dlp --flat-playlist`) with each playlist saved to its own titled subfolder, and a save-location picker: new `outputRoots` option is a whitelist of base dirs (default `<media.root>/transcripts` + `media.youtube`) surfaced as a UI dropdown + free-text subfolder. `ReadWritePaths`/tmpfiles now derive from `outputRoots` (was single `outputDirectory`); base is validated against the whitelist and the subfolder is sanitized so no path escapes its root. `fetch_transcript` retries once on the intermittent datacenter-IP rate-limit. New `/config` endpoint feeds the dropdown; `/transcript` (n8n) unchanged.
 - 2026-08-06: Renamed the transcript service `yt-transcripts-api` → `transcripts` everywhere — systemd unit (`transcripts.service`), StateDirectory (`hwc/transcripts`), parts folder (`parts/transcripts/`), and the Caddy vhost (now `transcripts.hwc.iheartwoodcraft.com`). Old empty StateDirectory `hwc/yt-transcripts-api` orphaned. Loopback :8100 unchanged, so n8n callers unaffected.

@@ -17,8 +17,9 @@ from pydantic import BaseModel, Field
 import uvicorn
 
 from transcript import (
-    extract_video_id, is_playlist_url, fetch_metadata, fetch_playlist,
-    fetch_transcript, clean_transcript, raw_transcript, format_markdown,
+    TranscriptError, extract_video_id, is_playlist_url, fetch_metadata, fetch_playlist,
+    fetch_captions, transcribe_audio, clean_transcript, raw_transcript, format_markdown,
+    format_duration,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -41,8 +42,30 @@ PORT = int(os.getenv("YT_TRANSCRIPTS_PORT", "8100"))
 DEFAULT_MODE = os.getenv("YT_TRANSCRIPTS_DEFAULT_MODE", "clean")
 LANGUAGES = os.getenv("YT_TRANSCRIPTS_LANGUAGES", "en,en-US,en-GB").split(",")
 
-# Per-video wall-clock budget (metadata + transcript, incl. one retry).
+# Whisper fallback. An empty URL disables it (Nix sets it only when the local
+# whisper-server is enabled). Videos longer than WHISPER_MAX_SECONDS are not
+# transcribed: at the measured ~10x real time a 3 h video holds the shared GPU
+# server for ~18 min.
+WHISPER_URL = os.getenv("YT_TRANSCRIPTS_WHISPER_URL", "")
+WHISPER_MODEL = os.getenv("YT_TRANSCRIPTS_WHISPER_MODEL", "whisper")
+WHISPER_MAX_SECONDS = int(os.getenv("YT_TRANSCRIPTS_WHISPER_MAX_SECONDS", "10800"))
+
+# Wall-clock budgets. /transcript is synchronous and captions-only, so it keeps
+# the old 60 s ceiling; job videos bound each stage separately instead
+# (metadata 20 s inside fetch_metadata, captions CAPTION_TIMEOUT, Whisper a
+# budget scaled by duration — 5x the measured 0.1 s per audio second, plus
+# queueing behind other whisper-server users).
 VIDEO_TIMEOUT = 60
+CAPTION_TIMEOUT = 75
+def whisper_budget(duration: int) -> float:
+    return 120 + duration * 0.5
+
+# Pause between videos in a job, so a batch is not a burst.
+PACE_SECONDS = 2.0
+
+# HTTP status for each failure reason on the synchronous /transcript endpoint.
+STATUS_FOR_REASON = {"invalid_url": 400, "no_captions": 404, "unavailable": 404,
+                     "rate_limited": 503, "timeout": 504}
 
 app = FastAPI(title="YouTube Transcripts", version="4.0.0")
 
@@ -69,6 +92,7 @@ class JobStatus(BaseModel):
     total: int = 0
     output_dir: str = ""
     results: list[dict] = Field(default_factory=list)
+    current: dict = Field(default_factory=dict, description="{url, stage} of the video in progress")
     error: str = ""
 
 
@@ -124,19 +148,54 @@ def resolve_output_dir(base: str, subfolder: str) -> Path:
 # ---------------------------------------------------------------------------
 # Core extraction
 # ---------------------------------------------------------------------------
-async def _extract(url: str, mode: str, out_dir: Path) -> dict:
-    """Extract one video's transcript and write it into out_dir. Returns result dict."""
+async def _extract(url: str, mode: str, out_dir: Path, allow_whisper: bool = False,
+                   on_stage=lambda stage: None) -> dict:
+    """Extract one video's transcript and write it into out_dir. Returns result dict.
+
+    Raises TranscriptError; every failure carries one reason from REASON_TEXT.
+    """
     video_id = extract_video_id(url)
     if not video_id:
-        raise ValueError("Invalid YouTube URL")
+        raise TranscriptError("invalid_url")
 
-    meta = await fetch_metadata(video_id)
-    segments = await fetch_transcript(video_id, LANGUAGES)
+    on_stage("fetching metadata")
+    try:
+        meta = await fetch_metadata(video_id)
+    except asyncio.TimeoutError:
+        raise TranscriptError("timeout", "metadata")
 
+    on_stage("fetching captions")
+    caption_failure = None
+    try:
+        transcript = await asyncio.wait_for(fetch_captions(video_id, LANGUAGES), timeout=CAPTION_TIMEOUT)
+    except asyncio.TimeoutError:
+        caption_failure = TranscriptError("timeout", "caption sources")
+    except TranscriptError as e:
+        caption_failure = e
+
+    if caption_failure:
+        if not (allow_whisper and WHISPER_URL) or caption_failure.reason == "unavailable":
+            raise caption_failure
+        captions_said = f"captions: {caption_failure.reason}"
+        if meta.duration > WHISPER_MAX_SECONDS:
+            raise TranscriptError("too_long", f"{format_duration(meta.duration)} is over the "
+                                  f"{format_duration(WHISPER_MAX_SECONDS)} limit; {captions_said}")
+        budget = whisper_budget(meta.duration)
+        logger.info(f"{video_id}: {captions_said}; transcribing audio with Whisper (budget {budget:.0f}s)")
+        try:
+            transcript = await asyncio.wait_for(
+                transcribe_audio(video_id, WHISPER_URL, WHISPER_MODEL, on_stage), timeout=budget)
+        except asyncio.TimeoutError:
+            raise TranscriptError("timeout", f"audio transcription passed {budget:.0f}s; {captions_said}")
+        except TranscriptError as e:
+            raise TranscriptError(e.reason, f"{e.detail}; {captions_said}")
+
+    on_stage("writing file")
+    segments = transcript.segments
     mode = mode if mode in ("clean", "raw") else DEFAULT_MODE
     text = raw_transcript(segments) if mode == "raw" else clean_transcript(segments)
 
-    md = format_markdown(meta, text)
+    md = format_markdown(meta, text, transcript.source)
 
     safe_title = "".join(c if c.isalnum() or c in " -_" else "" for c in meta.title)[:80].strip()
     date = datetime.now().strftime("%Y-%m-%d")
@@ -152,6 +211,7 @@ async def _extract(url: str, mode: str, out_dir: Path) -> dict:
         "duration": f"{meta.duration}s",
         "transcript": text,
         "filename": str(filepath),
+        "source": transcript.kind,
     }
 
 
@@ -160,16 +220,14 @@ async def _extract(url: str, mode: str, out_dir: Path) -> dict:
 # ---------------------------------------------------------------------------
 @app.post("/transcript")
 async def post_transcript(body: TranscriptRequest):
+    """Captions only: synchronous callers cannot wait minutes for Whisper."""
     try:
-        result = await asyncio.wait_for(_extract(body.url, body.mode, OUTPUT_ROOTS[0]), timeout=VIDEO_TIMEOUT)
-        return result
+        return await asyncio.wait_for(_extract(body.url, body.mode, OUTPUT_ROOTS[0]), timeout=VIDEO_TIMEOUT)
     except asyncio.TimeoutError:
         raise HTTPException(504, f"Extraction timed out ({VIDEO_TIMEOUT}s limit)")
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    except Exception as e:
-        logger.error(f"Extraction failed: {e}")
-        raise HTTPException(500, f"Extraction failed: {e}")
+    except TranscriptError as e:
+        logger.warning(f"/transcript {body.url}: {e.reason}: {e.detail}")
+        raise HTTPException(STATUS_FOR_REASON.get(e.reason, 500), str(e))
 
 
 # ---------------------------------------------------------------------------
@@ -192,6 +250,10 @@ async def post_job(body: JobRequest, bg: BackgroundTasks):
     return {"job_id": job_id, "status": "queued", "output_dir": str(out_dir)}
 
 
+def _failure(url: str, e: TranscriptError, playlist: str, prefix: str = "") -> dict:
+    return {"url": url, "error": prefix + str(e), "reason": e.reason, "playlist": playlist}
+
+
 async def _run_job(job_id: str, urls: list[str], mode: str, out_dir_str: str):
     job = _jobs.get(job_id)
     if not job:
@@ -210,32 +272,43 @@ async def _run_job(job_id: str, urls: list[str], mode: str, out_dir_str: str):
             try:
                 pl = await fetch_playlist(raw)
             except Exception as e:
-                job.results.append({"url": raw, "error": f"Playlist error: {e}", "playlist": ""})
+                err = e if isinstance(e, TranscriptError) else TranscriptError("error", f"{type(e).__name__}: {e}")
+                job.results.append(_failure(raw, err, "", prefix="Playlist: "))
                 job.completed += 1
                 continue
             if not pl.video_ids:
-                job.results.append({"url": raw, "error": "Playlist has no videos", "playlist": pl.title})
+                job.results.append(_failure(raw, TranscriptError("unavailable", "playlist has no videos"), pl.title))
                 job.completed += 1
                 continue
             dest = out_dir / (_sanitize_component(pl.title) or "playlist")
             for vid in pl.video_ids:
                 work.append((f"https://www.youtube.com/watch?v={vid}", dest, pl.title))
         else:
-            job.results.append({"url": raw, "error": "Invalid YouTube URL", "playlist": ""})
+            job.results.append(_failure(raw, TranscriptError("invalid_url"), ""))
             job.completed += 1
 
     job.total = job.completed + len(work)
 
-    # Phase 2 — extract each video sequentially (rate-limit friendly).
-    for video_url, dest, playlist_title in work:
+    # Phase 2 — extract each video sequentially, paced (rate-limit friendly).
+    for i, (video_url, dest, playlist_title) in enumerate(work):
+        if i:
+            await asyncio.sleep(PACE_SECONDS)
+
+        def stage(name: str, _url: str = video_url) -> None:
+            job.current = {"url": _url, "stage": name}
+
         try:
-            result = await asyncio.wait_for(_extract(video_url, mode, dest), timeout=VIDEO_TIMEOUT)
+            result = await _extract(video_url, mode, dest, allow_whisper=True, on_stage=stage)
             result["playlist"] = playlist_title
             job.results.append(result)
+        except TranscriptError as e:
+            job.results.append(_failure(video_url, e, playlist_title))
         except Exception as e:
-            job.results.append({"url": video_url, "error": str(e), "playlist": playlist_title})
+            logger.exception(f"{video_url}: unexpected failure")
+            job.results.append(_failure(video_url, TranscriptError("error", f"{type(e).__name__}: {e}"), playlist_title))
         job.completed += 1
 
+    job.current = {}
     job.status = "complete"
 
 
@@ -266,6 +339,8 @@ async def health():
         "disk_free_gb": round(disk.free / (1024**3), 1) if disk else None,
         "output_dir": str(OUTPUT_DIR),
         "output_roots": [str(r) for r in OUTPUT_ROOTS],
+        "whisper": {"url": WHISPER_URL or None, "model": WHISPER_MODEL,
+                    "max_seconds": WHISPER_MAX_SECONDS, "ffmpeg": shutil.which("ffmpeg")},
     }
 
 
@@ -317,6 +392,7 @@ async def ui():
   .results .path { color: #059669; word-break: break-all; font-size: .78rem; }
   .results .fail .title { color: #dc2626; }
   .results .fail .path { color: #b91c1c; }
+  .badge.whisper { background: #fef3c7; color: #92400e; }
   .badge { display: inline-block; background: #ede9fe; color: #6d28d9; border-radius: 5px;
            padding: .05rem .4rem; font-size: .68rem; margin-right: .35rem; vertical-align: middle; }
   .copy { background: #e5e7eb; color: #222; border: none; border-radius: 6px; padding: .35rem .7rem;
@@ -395,7 +471,8 @@ function renderResults(status) {
       li.innerHTML=`<div class="body"><div class="title">${badge}${r.url||''}</div><div class="path">${r.error}</div></div>`;
     } else {
       li.className='ok';
-      li.innerHTML=`<div class="body"><div class="title">${badge}${r.title||''}</div><div class="path">${r.filename||''}</div></div>`;
+      const src=r.source==='whisper'?'<span class="badge whisper" title="No captions could be fetched; transcribed from the audio">Whisper</span>':'';
+      li.innerHTML=`<div class="body"><div class="title">${badge}${src}${r.title||''}</div><div class="path">${r.filename||''}</div></div>`;
       const b=document.createElement('button'); b.className='copy'; b.textContent='Copy';
       b.onclick=()=>{navigator.clipboard.writeText(_results[i].transcript||'');b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1200);};
       li.appendChild(b);
@@ -422,8 +499,9 @@ async function run() {
       const pd=await pr.json();
       _results=pd.results;
       const totalTxt=pd.total?('/'+pd.total):'';
+      const cur=(pd.current&&pd.current.stage)?' — '+pd.current.stage:'';
       $('msg').textContent=(pd.status==='complete'?'Done ':'Processing... ')
-        +'('+pd.completed+totalTxt+') → '+pd.output_dir;
+        +'('+pd.completed+totalTxt+') → '+pd.output_dir+cur;
       renderResults(pd.status);
       if(pd.status==='complete'){clearInterval(poll);$('go').disabled=false;}
     },1500);
@@ -440,4 +518,7 @@ loadConfig();
 
 
 if __name__ == "__main__":
+    # Refuse to run half-alive: the Whisper fallback shells out to ffmpeg.
+    if WHISPER_URL and not shutil.which("ffmpeg"):
+        raise SystemExit("YT_TRANSCRIPTS_WHISPER_URL is set but ffmpeg is not on PATH")
     uvicorn.run(app, host=HOST, port=PORT, workers=1, log_level="info")

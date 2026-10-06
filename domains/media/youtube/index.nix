@@ -50,6 +50,27 @@
         default = [ "en" "en-US" "en-GB" ];
         description = "Preferred transcript languages in priority order";
       };
+      whisper = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = config.hwc.server.ai.whisper.enable or false;
+          defaultText = lib.literalExpression "config.hwc.server.ai.whisper.enable";
+          description = ''
+            When captions cannot be fetched (none exist, or YouTube is blocking
+            this server), download the audio and transcribe it with the local
+            whisper-server. Job requests only; POST /transcript stays captions-only.
+          '';
+        };
+        maxDuration = lib.mkOption {
+          type = lib.types.ints.positive;
+          default = 10800;
+          description = ''
+            Longest video (seconds) sent to Whisper. Measured ~10x real time on
+            the P1000 with small.en, so the 3 h default holds the shared server
+            for about 18 minutes.
+          '';
+        };
+      };
     };
   };
 
