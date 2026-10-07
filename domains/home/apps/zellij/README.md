@@ -16,9 +16,13 @@ meta-leader which-key plugin when the unified keymap grammar is present.
 - `index.nix` — selected graphics-capable package shared with Workbench; options, config.kdl/layout/plugin via xdg.configFile
 - `parts/appearance.nix` — palette → KDL themes block
 - `parts/layout.nix` — workbench pane-grid KDL (late-bound mail command)
-- `parts/tabs.nix` — versioned hub registry consumer + structured tool tab set (order = GoToTab indices)
+- `parts/tabs.nix` — versioned hub registry consumer (schema 2 and 3) + structured tool tab set (order = GoToTab indices); exports `paneTabs` (tabs running workbench) and `hubJumps` (registry hub letters)
 
 ## Changelog
+- 2026-10-07: Accept Workbench registry schema 3 alongside 2 (expand step). Under v3 the layout
+  has one `workbench` tab (its rail switches hubs) and every `hub:<slug>` resolves to that tab;
+  hub letters come from the registry `key` via `hubJumps`. The v2 branch is removed after the
+  lock pins v3 and the cutover smoke passes.
 - 2026-09-30: Select Zellij 0.45.1 for Kitty pixels while the pinned channels ship 0.44.3; use nixpkgs once it reaches 0.45.1.
 - 2026-09-15: Add the `agents` tool tab (herdr, order 60), started suspended so
   opening the workbench does not attach a herdr session.

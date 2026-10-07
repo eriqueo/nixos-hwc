@@ -23,12 +23,14 @@ let
   mailArgsKdl = lib.optionalString (mailArgs != [])
     (" args " + lib.concatMapStringsSep " " (a: "\"${a}\"") mailArgs + ";");
 
-  # Nix owns the transport command; navigation data owns the names and order.
-  hubTab = hub: ''
-        tab name="${hub.name}"${lib.optionalString hub.landing " focus=true"} {
-            pane name="${hub.name}" { command "workbench"; args "--hub" "${hub.slug}"; }
+  # Nix owns the transport command; navigation data owns the names, order and
+  # args (one `workbench` tab under registry schema 3, a tab per hub under 2).
+  paneTab = tab: ''
+        tab name="${tab.name}"${lib.optionalString tab.landing " focus=true"} {
+            pane name="${tab.name}" { command "workbench";${lib.optionalString (tab.args != [ ])
+              " args ${lib.concatMapStringsSep " " (a: "\"${a}\"") tab.args};"} }
         }'';
-  hubTabs = lib.concatStringsSep "\n" (map hubTab tabs.hubTabs);
+  hubTabs = lib.concatStringsSep "\n" (map paneTab tabs.paneTabs);
   toolTab = tool: ''
         tab name="${tool.name}" {
             pane name="${tool.target}" { command "${if tool.target == "aerc" then mailBin else tool.target}";${lib.optionalString (tool.target == "aerc") mailArgsKdl}${lib.optionalString tool.suspended " start_suspended true;"} }

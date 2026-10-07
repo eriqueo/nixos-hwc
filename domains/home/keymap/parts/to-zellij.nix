@@ -1,6 +1,6 @@
 # domains/home/keymap/parts/to-zellij.nix
 #
-# grammar.meta + grammar.metaLeader -> zellij `keybinds` KDL block.
+# grammar.meta + tabs.hubJumps + grammar.metaLeader -> zellij `keybinds` KDL block.
 #
 # Implements the INTER-APP (meta) layer. `clear-defaults=true` strips zellij's
 # entire default keymap — this is the fix for the silent collisions (default
@@ -18,7 +18,12 @@
 let
   # Namespaced destinations and indices come from the layout's shared data.
   tabFor = tabs.tabFor;
-  targets = map (entry: entry.target) (lib.filter (entry: entry ? target) grammar.meta);
+  # Hub letters are not hand-typed here: the Workbench registry produces them
+  # (tabs.hubJumps) and they join the grammar's tool/nav entries.
+  meta = grammar.meta ++ tabs.hubJumps;
+  targets = map (entry: entry.target) (lib.filter (entry: entry ? target) meta);
+  hubKeys = map (jump: jump.key) tabs.hubJumps;
+  clashes = lib.filter (entry: lib.elem entry.key hubKeys) grammar.meta;
 
   # nav intent -> zellij action (tab jumps use GoToTab <index>, handled separately)
   navAction = {
@@ -56,7 +61,7 @@ let
     else
       ''        bind "${tok}" { ${navAction.${e.intent}} SwitchToMode "Normal"; }'';
 
-  metaBinds = lib.concatStringsSep "\n" (map bindLine grammar.meta);
+  metaBinds = lib.concatStringsSep "\n" (map bindLine meta);
 
   # ── zellij-which plugin entries (Model A) ────────────────────────────────
   # When a built plugin wasm is supplied, the meta-leader launches the
@@ -77,7 +82,7 @@ let
     else if intentVerb ? ${e.intent} then "${tok}|${intentVerb.${e.intent}}||${e.desc}"
     else null;
   pluginEntries = lib.concatStringsSep ";"
-    (lib.filter (x: x != null) (map entryFor grammar.meta));
+    (lib.filter (x: x != null) (map entryFor meta));
 
   # Distinct META accent (info/blue) so the outer/meta card reads differently
   # from the inner-app copper cards at a glance.
@@ -152,7 +157,9 @@ let
     }
   '';
 in
-assert lib.assertMsg (builtins.length grammar.meta == builtins.length (lib.unique (map (entry: entry.key) grammar.meta)))
+assert lib.assertMsg (clashes == [ ])
+  "workbench: hub key(s) ${lib.concatMapStringsSep ", " (e: "'${e.key}'") clashes} collide with tool/nav letters in keymap grammar.meta";
+assert lib.assertMsg (builtins.length meta == builtins.length (lib.unique (map (entry: entry.key) meta)))
   "workbench: duplicate meta shortcut";
 assert lib.assertMsg (lib.all (target: builtins.hasAttr target tabFor) targets)
   "workbench: unresolved grammar destination";

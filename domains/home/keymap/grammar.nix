@@ -268,19 +268,13 @@ rec {
 
   #--------------------------------------------------------------------------
   # The meta layer (metaLeader -> zellij `meta` mode -> one key). `target` is the
-  # logical hub-page/tool to focus (mapped to the layout's tab index in
-  # to-zellij.nix). Namespaced HUB jumps + TOOL jumps
-  # (t/c/m/f/e/a) are all disjoint from each other AND from the nav/utility letters
-  # (n/p/]/[/w/z/s/d/Q) — no internal collision.
+  # logical tool to focus (mapped to the layout's tab index in to-zellij.nix).
+  # HUB letters are NOT listed here: the Workbench hub registry produces them
+  # (zellij/parts/tabs.nix hubJumps) and to-zellij.nix appends them, asserting
+  # they never collide with the tool (t/c/m/f/e/a) or nav/utility letters
+  # (j/k/n/p/]/[/w/z/s/d/Q) below.
   #--------------------------------------------------------------------------
   meta = [
-    # Hub-pages (each its own workbench --hub <id> tab).
-    { key = "h"; intent = "hub-hwc";    desc = "HWC";    target = "hub:hwc"; }
-    { key = "r"; intent = "hub-crm";    desc = "CRM";    target = "hub:crm"; }
-    { key = "b"; intent = "hub-brief";  desc = "Brief";  target = "hub:brief"; }
-    { key = "R"; intent = "hub-refinery"; desc = "Refinery"; target = "hub:refinery"; }
-    { key = "i"; intent = "hub-mail"; desc = "Inbox (Workbench)"; target = "hub:mail"; }
-    { key = "N"; intent = "hub-nightly"; desc = "Nightly"; target = "hub:nightly"; }
     # Tool tabs.
     { key = "t"; intent = "tasks";    desc = "Tasks (todui)";  target = "tool:todui"; }
     { key = "c"; intent = "calendar"; desc = "Calendar (khalt)"; target = "tool:khalt"; }

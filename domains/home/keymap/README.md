@@ -93,6 +93,10 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 - todui/khalt/workbench log a missing/unread `*_KEYMAP` rather than failing silent.
 
 ## Changelog
+- 2026-10-07: Hub letters leave `grammar.nix`. The Workbench hub registry produces
+  them (`[deployment] key`, read through `zellij/parts/tabs.nix` `hubJumps`) and
+  `to-zellij.nix` appends them to `grammar.meta` for both the which-key plugin
+  entries and the mode fallback, asserting none collides with a tool/nav letter.
 - 2026-10-01: Add DONT KNOW and Bulk mail destinations; retain existing DO keys
   and assign `k` to the new one-step State correction.
 - 2026-10-01: Wire aerc to one action table and context adapter. Generate the
