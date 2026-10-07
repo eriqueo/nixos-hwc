@@ -80,6 +80,18 @@ class WhisperSegments(unittest.TestCase):
         segs = T.whisper_segments(result, offset=180.0)
         self.assertEqual([(s.text, s.start, s.duration) for s in segs], [("Hello there", 181.0, 1.5)])
 
+    def test_word_split_across_segments_is_rejoined(self):
+        # Shape seen live on 2026-10-06: "...Cl" / "oning yourself", "I" / "'ve been".
+        result = {"segments": [
+            {"text": " Cl", "start": 0.0, "end": 0.5},
+            {"text": "oning yourself takes", "start": 0.5, "end": 2.0},
+            {"text": " a new model I", "start": 2.0, "end": 3.0},
+            {"text": "'ve been using", "start": 3.0, "end": 4.0},
+        ]}
+        segs = T.whisper_segments(result, offset=0.0)
+        self.assertEqual(T.raw_transcript(segs), "Cloning yourself takes a new model I've been using")
+        self.assertEqual((segs[0].start, segs[0].duration), (0.0, 2.0))
+
 
 class FetchCaptions(unittest.TestCase):
     def setUp(self):

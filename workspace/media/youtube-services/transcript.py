@@ -393,14 +393,24 @@ def _post_whisper_chunk(whisper_url: str, path: str) -> dict:
 
 
 def whisper_segments(result: dict, offset: float) -> list[Segment]:
-    """Turn one verbose_json response into segments on the video's timeline."""
-    out = []
+    """Turn one verbose_json response into segments on the video's timeline.
+
+    Whisper starts a segment's text with a space when it begins a new word;
+    without one, the segment continues the previous word ("Cl" + "oning"), so
+    it is glued on rather than becoming a segment of its own."""
+    out: list[Segment] = []
     for s in result.get("segments") or []:
-        text = (s.get("text") or "").strip()
+        raw = s.get("text") or ""
+        text = raw.strip()
         if not text or _NON_SPEECH.match(text):
             continue
         start = float(s.get("start", 0.0))
-        out.append(Segment(text=text, start=offset + start, duration=float(s.get("end", start)) - start))
+        end = float(s.get("end", start))
+        if out and not raw[:1].isspace():
+            prev = out[-1]
+            out[-1] = Segment(text=prev.text + text, start=prev.start, duration=offset + end - prev.start)
+            continue
+        out.append(Segment(text=text, start=offset + start, duration=end - start))
     return out
 
 
