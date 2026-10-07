@@ -43,6 +43,11 @@ class ClassifyYtdlp(unittest.TestCase):
     def test_age_gate_is_unavailable(self):
         self.assertEqual(T.classify_ytdlp_error("ERROR: Sign in to confirm your age").reason, "unavailable")
 
+    def test_removed_is_unavailable(self):
+        # Exact yt-dlp 2026.08.19 wording, seen live on 2026-10-06.
+        e = T.classify_ytdlp_error("ERROR: [youtube] aaaaaaaaaaa: This video is unavailable")
+        self.assertEqual(e.reason, "unavailable")
+
     def test_private_is_unavailable(self):
         self.assertEqual(T.classify_ytdlp_error("ERROR: [youtube] x: Private video").reason, "unavailable")
 

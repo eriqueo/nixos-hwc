@@ -63,6 +63,7 @@ def classify_ytdlp_error(stderr: str) -> TranscriptError:
     errors = [line for line in stderr.splitlines() if line.startswith("ERROR")]
     detail = (errors[-1] if errors else stderr.strip().splitlines()[-1] if stderr.strip() else "")[:300]
     if "confirm your age" in s or "private video" in s or "video unavailable" in s \
+            or "video is unavailable" in s \
             or "members-only" in s or "has been removed" in s:
         return TranscriptError("unavailable", detail)
     if "429" in s or "too many requests" in s or "not a bot" in s:
