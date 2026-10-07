@@ -341,6 +341,20 @@ function priorityOf(verdict: Verdict): "critical" | "normal" | "low" {
   return "low";
 }
 
+/** The write verbs a review allows in its current state — the card's `verbs`.
+ * `merge` only for an open merge-ready PR; `requeue` for work that needs
+ * another run (needs-work, a reject recommendation, or a rejected review). */
+function reviewVerbs(review: Review): string[] {
+  if (review.status === "merged" || review.status === "requeued") return [];
+  if (review.status === "rejected") return ["requeue"];
+  if (review.verdict === "merge-ready") return review.prNumber != null ? ["merge"] : [];
+  return ["requeue"];
+}
+
+function diffstatText(d: Diffstat): string {
+  return `${d.files} files +${d.insertions} −${d.deletions}`;
+}
+
 function toCard(review: Review) {
   return {
     id: review.id,
@@ -354,6 +368,85 @@ function toCard(review: Review) {
     prNumber: review.prNumber,
     diffstat: review.diffstat,
     mergeable: review.mergeable,
+    // Workbench card contract: `url` drives opens="card-url"; `verbs` is the
+    // card's closed write set; tag/reason/facts feed the sectioned preview.
+    url: review.prUrl ?? undefined,
+    verbs: reviewVerbs(review),
+    tag: review.prNumber != null ? `PR #${review.prNumber}` : "PR",
+    reason: review.recommendation,
+    facts: [
+      ["goal", review.goal],
+      ["verdict", review.verdict],
+      ["branch", review.branch],
+      ["change", diffstatText(review.diffstat)],
+    ],
+  };
+}
+
+/** A terminal review case (dead / already-merged) as a card. */
+function caseCard(c: ReviewCase) {
+  const last = c.attempts.at(-1);
+  return {
+    id: c.id,
+    kind: "pr",
+    label: c.title,
+    priority: c.state === "dead" ? "critical" : "low",
+    sender: c.goal,
+    summary: last?.message ?? "branch already integrated",
+    branch: c.branch,
+    prUrl: null,
+    prNumber: null,
+    diffstat: { files: 0, insertions: 0, deletions: 0 },
+    mergeable: null,
+    verbs: c.state === "dead" ? ["requeue"] : [],
+    tag: "PR",
+    reason: last?.message ?? "branch already integrated",
+    facts: [
+      ["goal", c.goal],
+      ["state", c.state],
+      ["attempts", `${c.attempts.length}/${c.maxAttempts}`],
+    ],
+  };
+}
+
+export type NightlyCard = ReturnType<typeof toCard> | ReturnType<typeof caseCard>;
+
+/** One card in its lane, with the authoritative time of its last change
+ * (review: reviewedAt; case: its last attempt) for newest-first ordering. */
+export interface NightlyEntry {
+  lane: (typeof LANES)[number]["id"];
+  at: string;
+  card: NightlyCard;
+}
+
+/**
+ * Every reviewed card and terminal case, laned. The one producer behind this
+ * tool's board and hwc_refinery's merged triage board.
+ */
+export async function loadNightlyEntries(): Promise<{
+  entries: NightlyEntry[];
+  reviewed: number;
+  terminalCases: number;
+  retryableCases: number;
+  malformed: number;
+}> {
+  const { reviews, malformed } = await loadAllReviews();
+  const cases = await loadAllCases();
+  const terminal = cases.filter((x) => x.state !== "retryable");
+  const entries: NightlyEntry[] = [
+    ...reviews.map((r) => ({ lane: laneOf(r) as NightlyEntry["lane"], at: r.reviewedAt, card: toCard(r) as NightlyCard })),
+    ...terminal.map((c) => ({
+      lane: c.state as NightlyEntry["lane"],
+      at: c.attempts.at(-1)?.at ?? "",
+      card: caseCard(c) as NightlyCard,
+    })),
+  ];
+  return {
+    entries,
+    reviewed: reviews.length,
+    terminalCases: terminal.length,
+    retryableCases: cases.length - terminal.length,
+    malformed,
   };
 }
 
@@ -404,44 +497,22 @@ export function nightlyReviewTools(): ToolDef[] {
 
         /* ── board ──────────────────────────────────────────────── */
         if (action === "board") {
-          const { reviews, malformed } = await loadAllReviews();
-          const cases = await loadAllCases();
-          const terminalCases = cases.filter((x) => x.state !== "retryable");
-          const byLane = new Map<string, ReturnType<typeof toCard>[]>();
-          for (const lane of LANES) byLane.set(lane.id, []);
-          for (const review of reviews) {
-            byLane.get(laneOf(review))!.push(toCard(review));
-          }
-          for (const c of terminalCases) {
-            byLane.get(c.state)!.push({
-              id: c.id,
-              kind: "pr",
-              label: c.title,
-              priority: c.state === "dead" ? "critical" : "low",
-              sender: c.goal,
-              summary: c.attempts.at(-1)?.message ?? "branch already integrated",
-              branch: c.branch,
-              prUrl: null,
-              prNumber: null,
-              diffstat: { files: 0, insertions: 0, deletions: 0 },
-              mergeable: null,
-            });
-          }
+          const { entries, reviewed, terminalCases, retryableCases, malformed } = await loadNightlyEntries();
           const columns = LANES.map((lane) => ({
             id: lane.id,
             title: lane.title,
-            cards: byLane.get(lane.id)!,
+            cards: entries.filter((e) => e.lane === lane.id).map((e) => e.card),
           }));
           const malformedNote = malformed > 0 ? ` (${malformed} malformed record(s) skipped)` : "";
           return {
             status: "ok",
-            message: `Nightly PR review: ${reviews.length} reviewed, ${terminalCases.length} terminal case(s)${malformedNote}`,
-            data: { reviewed: reviews.length, terminalCases: terminalCases.length, retryableCases: cases.length - terminalCases.length, malformed },
+            message: `Nightly PR review: ${reviewed} reviewed, ${terminalCases} terminal case(s)${malformedNote}`,
+            data: { reviewed, terminalCases, retryableCases, malformed },
             view: contract(
               "kanban",
               "Nightly PR Review",
               { columns },
-              { source: "hwc_nightly_review", reviewed: reviews.length },
+              { source: "hwc_nightly_review", reviewed },
             ),
           };
         }

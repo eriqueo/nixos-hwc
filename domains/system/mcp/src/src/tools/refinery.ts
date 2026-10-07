@@ -27,6 +27,7 @@ import { join } from "node:path";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
 import { mcpError } from "../errors.js";
+import { loadNightlyEntries, nightlyReviewTools, type NightlyEntry } from "./nightly-review.js";
 
 const ITEMS_DIR = process.env.REFINERY_ITEMS_DIR || "/var/lib/refinery/items";
 const BOARD_URL = process.env.REFINERY_URL || "https://refinery.hwc.iheartwoodcraft.com";
@@ -67,8 +68,35 @@ interface RefineryItem {
   parkedReason?: string;
   payload?: Record<string, unknown>;
   archived?: boolean;
+  archivedAt?: string;
   history?: Array<{ step?: string; status?: string; at?: string; note?: string }>;
 }
+
+/* ── Merged triage board (action=triage): refinery items + nightly PRs ───────
+ * The workbench host sends only {action, id[, target]} for a write or detail,
+ * so a merged board names each card's owner in its id: `ref:<item id>` for a
+ * refinery item, `pr:<review id>` for a nightly PR. Every verb, `detail`
+ * included, routes on that prefix. Bare ids stay refinery ids (this tool's own
+ * board and MCP callers use them); a nightly verb without `pr:` is rejected. */
+const REF_PREFIX = "ref:";
+const PR_PREFIX = "pr:";
+/** Verbs owned by hwc_nightly_review; `rebuild` is its cardless board verb. */
+const NIGHTLY_CARD_VERBS = new Set(["merge", "requeue"]);
+const NIGHTLY_ROUTED = new Set(["detail", "merge", "requeue"]);
+/** Done keeps only the newest N; its title carries the true count. */
+const DONE_CAP = 10;
+
+/** Nightly lanes → merged stage. */
+const NIGHTLY_STAGE: Record<NightlyEntry["lane"], "needs-you" | "done"> = {
+  "merge-ready": "needs-you",
+  "needs-work": "needs-you",
+  "reject-rec": "needs-you",
+  dead: "needs-you",
+  requeued: "done",
+  merged: "done",
+  rejected: "done",
+  "already-merged": "done",
+};
 
 /** Same fenced-block extraction the engine's markdown-store uses — INCLUDING
  * its legacy-field migration (genre/phase/phaseStatus → pipeline/step-or-stage/
@@ -121,19 +149,65 @@ function bucketOf(it: RefineryItem): Bucket | null {
   return null;
 }
 
-function toCard(it: RefineryItem, bucket: Bucket) {
+/**
+ * The board write verbs an item's state allows — the card's `verbs`. The board
+ * accepts any status write, so this is where the legal set is decided: an
+ * untriaged idea is promoted, not run; a parked item resumes; a running item
+ * may only be parked; an archived item takes no card verb.
+ */
+function itemVerbs(it: RefineryItem): string[] {
+  if (it.archived === true) return [];
+  if (it.pipeline === UNTRIAGED) return ["delete"];
+  switch (it.state) {
+    case "parked": return ["resume", "delete"];
+    case "running": return ["park"];
+    case "failed":
+    case "pending":
+    case "passed": return ["run", "park", "delete"];
+    default: return [];
+  }
+}
+
+function toCard(it: RefineryItem, bucket: Bucket | "done") {
   const status = labelOf(it);
   const pipeline = it.pipeline && it.pipeline !== UNTRIAGED ? it.pipeline : "";
+  const where = [status, pipeline, it.step].filter(Boolean).join(" · ");
+  const facts: [string, string][] = [];
+  if (pipeline) facts.push(["pipeline", pipeline]);
+  if (it.step) facts.push(["step", it.step]);
+  if (it.pipeline === UNTRIAGED && it.stage) facts.push(["stage", it.stage]);
+  if (it.state) facts.push(["state", it.state]);
   return {
     id: it.id,
     kind: "refinery",
     label: titleOf(it),
     priority: it.state === "failed" ? "critical" : bucket === "hopper" ? "low" : "normal",
     // sender line = where it sits (mirrors crm_board's sender = source)
-    sender: [status, pipeline, it.step].filter(Boolean).join(" · "),
+    sender: where,
     summary: it.parkedReason || "",
     url: `${BOARD_URL}/project/${encodeURIComponent(it.id)}`,
+    verbs: itemVerbs(it),
+    tag: it.pipeline === UNTRIAGED ? "idea" : "item",
+    reason: it.parkedReason || where,
+    facts,
   };
+}
+
+/** Authoritative time of an item's last change: archive time, else last history entry. */
+function itemAt(it: RefineryItem): string {
+  return it.archivedAt ?? it.history?.at(-1)?.at ?? "";
+}
+
+/** Route a workbench verb on a `pr:` card to hwc_nightly_review (prefix stripped). */
+async function routeToNightly(action: string, args: Record<string, unknown>, id: string): Promise<ToolResult> {
+  if (!NIGHTLY_ROUTED.has(action)) {
+    return mcpError({
+      type: "VALIDATION_ERROR",
+      message: `${action} is not a nightly PR verb (pr: cards take detail, merge or requeue)`,
+      context: { action, id: `${PR_PREFIX}${id}` },
+    });
+  }
+  return nightlyReviewTools()[0].handler({ ...args, id });
 }
 
 async function loadItems(): Promise<RefineryItem[] | null> {
@@ -168,16 +242,21 @@ export function refineryTools(): ToolDef[] {
         "id+target: captured|shaping|ready) matures an idea; promote (need id; optional " +
         "target=pipeline, default project-ideation) pushes a ready idea into refinement; " +
         "run / park / resume / delete (need id) as before. Column moves are rejected — " +
-        "the board's columns are derived triage buckets, not stored lanes.",
+        "the board's columns are derived triage buckets, not stored lanes. " +
+        "action=triage merges this board with the nightly PR review into Needs you / Running / " +
+        "Hopper / Done (newest 10); its card ids are ref:<item> or pr:<review>, and every verb " +
+        "(detail included) routes on that prefix — pr: cards take merge/requeue/detail.",
       inputSchema: {
         type: "object",
         properties: {
           action: {
             type: "string",
-            enum: ["board", "summary", "detail", "intake", "amend", "stage", "promote", "run", "park", "resume", "delete", "move"],
+            enum: ["board", "triage", "summary", "detail", "intake", "amend", "stage", "promote", "run", "park", "resume", "delete", "move", "merge", "requeue", "rebuild"],
             description:
-              "board (default): kanban of action/active/hopper · summary: text rollup · " +
-              "detail: full item by id · intake/amend/stage/promote/run/park/resume/delete: write verbs",
+              "board (default): kanban of action/active/hopper · triage: merged board with nightly PRs " +
+              "(ids ref:/pr:) · summary: text rollup · detail: full item by id · " +
+              "intake/amend/stage/promote/run/park/resume/delete: write verbs · merge/requeue (pr: ids) " +
+              "and rebuild route to hwc_nightly_review",
           },
           id: { type: "string", description: "Item id (detail + write verbs)" },
           text: { type: "string", description: "intake: the idea sentence · amend: alias for note" },
@@ -188,8 +267,27 @@ export function refineryTools(): ToolDef[] {
           },
         },
       },
-      handler: async (args: Record<string, unknown>): Promise<ToolResult> => {
-        const action = String(args["action"] ?? "board");
+      handler: async (input: Record<string, unknown>): Promise<ToolResult> => {
+        const action = String(input["action"] ?? "board");
+        let args = input;
+
+        // ── merged-board routing: the id prefix names the owning tool ──────
+        const rawId = String(input["id"] ?? "");
+        if (rawId.startsWith(PR_PREFIX)) {
+          return routeToNightly(action, input, rawId.slice(PR_PREFIX.length));
+        }
+        if (rawId.startsWith(REF_PREFIX)) {
+          args = { ...input, id: rawId.slice(REF_PREFIX.length) };
+        }
+        if (NIGHTLY_CARD_VERBS.has(action)) {
+          return mcpError({
+            type: "VALIDATION_ERROR",
+            message: `${action} needs a pr:<review id> (got ${rawId ? `"${rawId}"` : "no id"})`,
+            suggestion: "Use the id from the triage board, or call hwc_nightly_review directly",
+            context: { action, id: rawId },
+          });
+        }
+        if (action === "rebuild") return nightlyReviewTools()[0].handler(input);
 
         // ── intake: capture a new idea (no id — the board mints one and also
         // appends it to the brain backlog) ─────────────────────────────────
@@ -300,6 +398,45 @@ export function refineryTools(): ToolDef[] {
               },
               { source: "hwc_refinery", url: BOARD_URL },
             ),
+          };
+        }
+
+        if (action === "triage") {
+          const nightly = await loadNightlyEntries();
+          const ref = <T extends { id: string }>(card: T) => ({ ...card, id: `${REF_PREFIX}${card.id}` });
+          const pr = <T extends { id: string }>(card: T) => ({ ...card, id: `${PR_PREFIX}${card.id}` });
+          // Within a stage, PRs keep the nightly lane order (merge-ready first).
+          const laneRank = (lane: NightlyEntry["lane"]) => Object.keys(NIGHTLY_STAGE).indexOf(lane);
+          const nightlyIn = (stage: "needs-you" | "done") =>
+            nightly.entries.filter((e) => NIGHTLY_STAGE[e.lane] === stage)
+              .sort((a, b) => laneRank(a.lane) - laneRank(b.lane));
+          // Done: archived refinery items + finished PRs, newest first by their
+          // authoritative timestamp, then capped. Lanes keep load order, so sort here.
+          const done = [
+            ...(items ?? []).filter((it) => it.archived === true)
+              .map((it) => ({ at: itemAt(it), card: ref(toCard(it, "done")) })),
+            ...nightlyIn("done").map((e) => ({ at: e.at, card: pr(e.card) })),
+          ].sort((a, b) => b.at.localeCompare(a.at));
+          const columns = [
+            {
+              id: "needs-you",
+              title: "Needs you",
+              cards: [
+                ...buckets.action.map((it) => ref(toCard(it, "action"))),
+                ...nightlyIn("needs-you").map((e) => pr(e.card)),
+              ],
+            },
+            { id: "running", title: "Running", cards: buckets.active.map((it) => ref(toCard(it, "active"))) },
+            { id: "hopper", title: "Hopper", cards: buckets.hopper.map((it) => ref(toCard(it, "hopper"))) },
+            { id: "done", title: `Done (${done.length})`, cards: done.slice(0, DONE_CAP).map((d) => d.card) },
+          ];
+          const malformedNote = nightly.malformed > 0 ? ` (${nightly.malformed} malformed review(s) skipped)` : "";
+          return {
+            status: "ok",
+            message: `Refinery triage: ${columns[0].cards.length} need you, ${counts.active} running, ` +
+              `${counts.hopper} in the hopper, ${done.length} done${storeNote}${malformedNote}`,
+            data: { counts: { ...counts, needsYou: columns[0].cards.length, done: done.length }, url: BOARD_URL },
+            view: contract("kanban", "Refinery", { columns }, { source: "hwc_refinery", url: BOARD_URL }),
           };
         }
 

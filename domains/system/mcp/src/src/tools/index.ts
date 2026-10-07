@@ -28,10 +28,11 @@ import { notifyTools } from "./notify.js";
 import { leadsTools } from "./leads.js";
 import { tasksTools } from "./tasks.js";
 import { dataxTools } from "./datax.js";
+import { serverOverviewTool } from "./server-overview.js";
 
 
 export function allTools(config: ServerConfig): ToolDef[] {
-  return [
+  const tools: ToolDef[] = [
     // Consolidated multi-action tools
     ...servicesTools(config.cacheTtl.runtime, config.nixosConfigPath),
     ...buildTools(config.nixosConfigPath, config.cacheTtl.runtime),
@@ -62,4 +63,6 @@ export function allTools(config: ServerConfig): ToolDef[] {
     morningStatusTool(),
     morningBriefTool(),
   ];
+  // Composite over registered status tools — resolved from this same list.
+  return [...tools, serverOverviewTool(tools)];
 }
