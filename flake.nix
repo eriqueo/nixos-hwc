@@ -718,32 +718,22 @@
             tabs = import ./domains/home/apps/zellij/parts/tabs.nix { inherit lib; hubRegistry = registry; };
           }).keybinds true)).success;
         registry = inputs.workbench.hubRegistry;
-        v3 = registry.schemaVersion == 3;
-        # EXPAND STEP (v2+v3): the v2 branch below goes with tabs.nix's v2 branch.
       in
-      assert lib.assertMsg (!acceptsRegistry (registry // { schemaVersion = 999; }))
-        "workbench check: unsupported registry schema accepted";
+      assert lib.assertMsg (!acceptsRegistry (registry // { schemaVersion = 2; }))
+        "workbench check: retired registry schema 2 accepted";
       assert lib.assertMsg (!acceptsRegistry (registry // { hubs = registry.hubs ++ [ (builtins.head registry.hubs) ]; }))
         "workbench check: duplicate registry hub accepted";
-      assert lib.assertMsg (v3 || !acceptsRegistry (registry // { hubs = map (hub: hub // { defaultTab = false; }) registry.hubs; }))
-        "workbench check: hidden landing accepted";
-      assert lib.assertMsg (!v3 || !acceptsKeys (registry // {
+      assert lib.assertMsg (!acceptsKeys (registry // {
           hubs = map (hub: if hub.landing then hub // { key = "t"; } else hub) registry.hubs; }))
         "workbench check: a hub key colliding with a tool letter was accepted";
-      assert lib.assertMsg (!v3 || acceptsKeys registry)
+      assert lib.assertMsg (acceptsKeys registry)
         "workbench check: the shipped registry's hub keys are rejected";
-      assert lib.assertMsg (if v3
-          then names == [ "workbench" ] ++ map (tab: tab.name) navigation.toolTabs
-            && focused == [ "workbench" ] && hubCommands == [ ]
-            && lib.all (jump: navigation.tabFor.${jump.target} == navigation.tabFor.workbench) navigation.hubJumps
-          else builtins.head names == "brief" && focused == [ "brief" ] && !(lib.elem "server" names))
-        "workbench check: one workbench tab (v3) / Brief first and Server on demand (v2)";
+      assert lib.assertMsg (names == [ "workbench" ] ++ map (tab: tab.name) navigation.toolTabs
+          && focused == [ "workbench" ] && hubCommands == [ ]
+          && lib.all (jump: navigation.tabFor.${jump.target} == navigation.tabFor.workbench) navigation.hubJumps)
+        "workbench check: one landing workbench tab, no per-hub tabs, every hub letter targets it";
       assert lib.assertMsg (names == map (tab: tab.name) navigation.destinations)
         "workbench check: generated tab names/order differ from navigation";
-      assert lib.assertMsg (v3 || hubCommands == map (tab: tab.slug) navigation.paneTabs)
-        "workbench check: generated hub commands differ from registry";
-      assert lib.assertMsg (v3 || focused == [ navigation.landingHub ])
-        "workbench check: generated landing tab differs from registry";
       assert lib.assertMsg (home.programs.workbench.defaultHub == navigation.landingHub
         && home.programs.workbench.tabs == navigation.launcherTabs)
         "workbench check: launcher destinations differ from layout";

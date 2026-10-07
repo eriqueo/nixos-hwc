@@ -2,8 +2,9 @@
 # Pure function: -> the `workbench` zellij layout (KDL).
 # No options, no side-effects.
 #
-# This is the initial geometry workbench operates inside. workbench itself runs
-# in each hub tab and drives `zellij action` to spawn/focus the PEER TUIs
+# This is the initial geometry workbench operates inside. One workbench process
+# runs in the `workbench` tab (its rail switches hubs) and drives
+# `zellij action` to spawn/focus the PEER TUIs
 # (todui, khalt, aerc, yazi, nvim) in their standing tool tabs. Treating the
 # layout as data (a KDL string) keeps "adding a pane target" a manifest/layout
 # edit, not host code — consistent with the data-driven-rendering principle.
@@ -23,14 +24,12 @@ let
   mailArgsKdl = lib.optionalString (mailArgs != [])
     (" args " + lib.concatMapStringsSep " " (a: "\"${a}\"") mailArgs + ";");
 
-  # Nix owns the transport command; navigation data owns the names, order and
-  # args (one `workbench` tab under registry schema 3, a tab per hub under 2).
+  # Nix owns the transport command; navigation data owns the name and order.
   paneTab = tab: ''
         tab name="${tab.name}"${lib.optionalString tab.landing " focus=true"} {
-            pane name="${tab.name}" { command "workbench";${lib.optionalString (tab.args != [ ])
-              " args ${lib.concatMapStringsSep " " (a: "\"${a}\"") tab.args};"} }
+            pane name="${tab.name}" { command "workbench"; }
         }'';
-  hubTabs = lib.concatStringsSep "\n" (map paneTab tabs.paneTabs);
+  workbenchTabs = lib.concatStringsSep "\n" (map paneTab tabs.paneTabs);
   toolTab = tool: ''
         tab name="${tool.name}" {
             pane name="${tool.target}" { command "${if tool.target == "aerc" then mailBin else tool.target}";${lib.optionalString (tool.target == "aerc") mailArgsKdl}${lib.optionalString tool.suspended " start_suspended true;"} }
@@ -39,10 +38,9 @@ let
 in
 {
   workbenchKdl = ''
-    // Flat tab set — peer TUIs, NONE mounted in-process. Every Workbench hub
-    // with defaultTab has its own tab (`workbench --hub <id>`), and each TOOL is its own tab; uniform
-    // whether a tab is a hub-page or a tool. The old single multi-hub "home" tab
-    // is gone. Navigate with the meta-leader then a jump key, or Ctrl+j/k.
+    // Flat tab set — peer TUIs, NONE mounted in-process. One `workbench` tab
+    // shows every hub through its rail; each TOOL is its own tab. Navigate with
+    // the meta-leader then a jump key, or Ctrl+j/k.
     layout {
         // Every tab gets a tab-bar (top, shows all tab names + which is focused)
         // and a status-bar (bottom, shows the active zellij keybinds). Without
@@ -53,8 +51,8 @@ in
             children
             pane size=1 borderless=true { plugin location="zellij:status-bar"; }
         }
-        // Hub pages precede tools; names and indices share one data source.
-${hubTabs}
+        // The workbench tab precedes tools; names and indices share one data source.
+${workbenchTabs}
         // Aerc starts suspended so an idle session does not hold an SSH link.
 ${toolTabs}
     }
