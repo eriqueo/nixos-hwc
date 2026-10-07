@@ -93,6 +93,8 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 - todui/khalt/workbench log a missing/unread `*_KEYMAP` rather than failing silent.
 
 ## Changelog
+- 2026-10-07: Final Workbench hub set from the registry: `b` Today, `r` CRM, `i` Mail,
+  `R` Refinery, `S` Server. `h` (HWC) and `N` (Nightly) are free again.
 - 2026-10-07: Hub letters emit zellij-which `goto-hub` (`key|goto-hub|<tab>:<slug>|label`):
   focus the workbench tab, then `workbench --goto <slug>` switches the running workbench.
   The no-plugin mode fallback still only focuses the workbench tab.
