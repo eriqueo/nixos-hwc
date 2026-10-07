@@ -22,6 +22,7 @@ export function useCatalog(state, overrides, removed) {
     const maxId = assembled.reduce((mx, i) => Math.max(mx, i.id), 0);
     const pickItems = catalogPicks.map((p, idx) => ({
       id: maxId + idx + 1,
+      _editKey: `pick:${p.draftId ?? idx}`,
       name: p.name,
       group: p.group || 'Catalog Picks',
       code: p.code || '',

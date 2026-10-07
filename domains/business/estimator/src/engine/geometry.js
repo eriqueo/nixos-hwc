@@ -45,6 +45,7 @@ export function deriveDeckGeometry(s) {
 
 export function enrichState(state) {
   const enriched = { ...state };
+  enriched.has_shower_work = state.shower_finish === 'panel' || state.has_shower_tile === 'yes' ? 'yes' : 'no';
 
   if ((state.projectType || state.job_type || '').toLowerCase() === 'deck') {
     const g = deriveDeckGeometry(state);

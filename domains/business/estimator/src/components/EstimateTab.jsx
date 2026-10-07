@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { C, GROUP_COLORS, mono } from '../styles/theme.js';
 import { Box } from './Section.jsx';
-import { buildParameters } from '../engine/assembler.js';
-import jtMappings from '../data/jtMappings.json';
+import { buildParameters, buildDeckParameters, buildJtItems, estimateIssues } from '../engine/assembler.js';
 
 const WEBHOOK_URL = import.meta.env.VITE_WEBHOOK_URL ?? localStorage.getItem('hwc-webhook-url') ?? '';
 const API_KEY = import.meta.env.VITE_API_KEY ?? localStorage.getItem('hwc-api-key') ?? '';
@@ -22,38 +21,25 @@ function Row({ children, style, isMobile = false }) {
 
 export function EstimateTab({ groups, totals, overrides, setOverrides, removed, setRemoved, onBack, onDetails, onOpenBrowser, state, set, isMobile = false }) {
   const [pushMsg, setPushMsg] = usePushMsg();
-  const [pushResult, setPushResult] = useState(null);
+  const [pushResult, setPushResult] = useState(state.last_push_result || null);
+  const inFlight = useRef(false);
 
-  const buildJtPayload = () => {
-    const items = Object.values(groups).flat();
-    return items.map(i => {
-      const item = {
-        name:        i.name,
-        groupName:   i.group,
-        costCodeId:  jtMappings.codes[i.code],
-        costTypeId:  jtMappings.types[i.type],
-        unitId:      jtMappings.units[i.unit],
-        unitCost:    i.uc,
-        unitPrice:   i.up,
-      };
-      // Items with JT formulas get quantityFormula; others get numeric quantity
-      if (i.quantityFormula) {
-        item.quantityFormula = i.quantityFormula;
-      } else {
-        item.quantity = i.qty;
-      }
-      return item;
-    });
-  };
+  const buildJtPayload = () => buildJtItems(Object.values(groups).flat());
+  const projectParameters = () => state.projectType === 'deck' ? buildDeckParameters(state) : buildParameters(state);
+  const issues = estimateIssues(state, Object.values(groups).flat());
+  const pushTarget = state.mode === 'existing' ? state.jobId : `${state.mode}:${state.customerId || state.newCustomerName}:${state.jobName}`;
+  const sendLocked = state.last_push_attempt?.target === pushTarget;
 
   const copyPayload = async () => {
-    const payload = { parameters: buildParameters(state), items: buildJtPayload() };
+    const payload = { parameters: projectParameters(), items: buildJtPayload() };
     await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
     setPushMsg('copied');
   };
 
   const canPush = () => {
     if (!state) return false;
+    if (issues.length) return false;
+    if (sendLocked) return false;
     if (state.mode === 'existing') return !!state.customerId && !!state.jobId;
     if (state.mode === 'new_job') return !!state.customerId && !!state.jobName;
     if (state.mode === 'new_customer') return !!state.newCustomerName && !!state.jobName;
@@ -61,11 +47,15 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
   };
 
   const pushToWebhook = async () => {
+    if (inFlight.current) return;
     if (!WEBHOOK_URL) { setPushMsg('no-url'); return; }
     if (!API_KEY) { setPushMsg('no-key'); return; }
     if (!canPush()) { setPushMsg('no-job'); return; }
 
     try {
+      // Non-retriable manual effect: never retry an uncertain CRM write automatically.
+      inFlight.current = true;
+      set('last_push_attempt', { target: pushTarget, status: 'pending' });
       setPushMsg('pushing');
       setPushResult(null);
 
@@ -102,7 +92,7 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
         } : null,
 
         // JT parameters array — pushed to createJob
-        parameters: buildParameters(state),
+        parameters: projectParameters(),
 
         // Full state for change order tracking
         projectState: state,
@@ -127,8 +117,11 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
         body: JSON.stringify(payload),
       });
 
+      if (!response.ok) throw new Error(`Request failed (${response.status}). Check JobTread before sending again.`);
       const result = await response.json();
       setPushResult(result);
+      set('last_push_result', result);
+      set('last_push_attempt', { target: pushTarget, status: result.jtPushSuccess ? 'success' : 'review_required' });
 
       if (result.success && result.jtPushSuccess) {
         setPushMsg('pushed');
@@ -138,8 +131,11 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
         setPushMsg('error');
       }
     } catch (err) {
-      setPushResult({ error: err.message });
+      setPushResult({ error: `${err.message} Check JobTread before sending again; the request may have saved.` });
+      set('last_push_attempt', { target: pushTarget, status: 'review_required' });
       setPushMsg('error');
+    } finally {
+      inFlight.current = false;
     }
   };
 
@@ -150,26 +146,26 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
   };
 
   const MobileItemCard = ({ item, gc }) => (
-    <div style={{
+    <div key={item._editKey} style={{
       padding: '10px 12px',
-      borderBottom: `1px solid ${C.brd}22`,
+      borderBottom: `1px solid ${C.brd}`,
       backgroundColor: item._edited ? 'rgba(201,149,107,0.04)' : 'transparent',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
           <div style={{ width: 3, height: 14, borderRadius: 1, backgroundColor: gc, flexShrink: 0 }} />
-          <span style={{ color: C.tx, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ color: C.tx, fontSize: 12, overflowWrap: 'anywhere' }}>
             {item.name}
             {item._source === 'catalog_pick' && <span style={{ color: C.blu, fontSize: 8, marginLeft: 4, fontWeight: 700 }}>PB</span>}
           </span>
         </div>
-        <button onClick={() => item._source === 'catalog_pick' ? removePick(item._pickIndex) : setRemoved(r => ({ ...r, [item.id]: true }))}
+        <button aria-label={`Remove ${item.name}`} onClick={() => item._source === 'catalog_pick' ? removePick(item._pickIndex) : setRemoved(r => ({ ...r, [item._editKey]: true }))}
           style={{ background: 'none', border: 'none', color: C.txD, cursor: 'pointer', fontSize: 14, fontFamily: mono, padding: '0 0 0 8px' }}>x</button>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <input type="number" value={item.qty}
-            onChange={e => setOverrides(o => ({ ...o, [item.id]: parseFloat(e.target.value) || 0 }))}
+          <input aria-label={`Quantity: ${item.name}`} type="number" min="0" step="0.01" value={item.qty}
+            onChange={e => setOverrides(o => ({ ...o, [item._editKey]: Math.max(0, parseFloat(e.target.value) || 0) }))}
             style={{ width: 56, padding: '6px 8px', borderRadius: 4,
               border: `1px solid ${C.brd}`, backgroundColor: C.card2, color: C.txB,
               fontSize: 13, textAlign: 'right', fontFamily: 'inherit', outline: 'none', minHeight: 36 }} />
@@ -190,6 +186,19 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
 
   return (
     <div>
+      <div className="draft-tools">
+        <span>HWC price: ${Math.round(totals.price).toLocaleString()}. Customer purchases: {state.owner_purchase_cost == null ? 'not entered' : `$${state.owner_purchase_cost.toLocaleString()}`}.
+          {state.owner_purchase_cost != null && ` Combined: $${Math.round(totals.price + state.owner_purchase_cost).toLocaleString()}.`}
+          {state.target_budget != null && ` Target: $${state.target_budget.toLocaleString()}.`}
+        </span>
+        {Object.keys(removed).length > 0 && <button onClick={() => setRemoved({})}>Restore removed items ({Object.keys(removed).length})</button>}
+        {Object.keys(overrides).length > 0 && <button onClick={() => setOverrides({})}>Reset quantity edits</button>}
+      </div>
+      {issues.length > 0 && <div className="estimate-issues" role="alert">
+        <strong>Draft price — inputs still need review</strong>
+        <ul>{issues.map((issue, index) => <li key={index}>{issue}</li>)}</ul>
+        <span>Complete these inputs before sending to JobTread.</span>
+      </div>}
       <Box style={{ padding: 0, overflow: 'hidden' }}>
         {!isMobile && (
           <Row style={{ padding: '7px 10px', backgroundColor: C.card2, borderBottom: `1px solid ${C.brd}`,
@@ -237,11 +246,11 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
               )}
 
               {isMobile ? (
-                items.map(item => <MobileItemCard key={item.id} item={item} gc={gc} />)
+                items.map(item => MobileItemCard({ item, gc }))
               ) : (
                 items.map(item => (
-                  <Row key={item.id} style={{ padding: '5px 10px', alignItems: 'center',
-                    borderBottom: `1px solid ${C.brd}22`, fontSize: 11,
+                  <Row key={item._editKey} style={{ padding: '5px 10px', alignItems: 'center',
+                    borderBottom: `1px solid ${C.brd}`, fontSize: 11,
                     backgroundColor: item._edited ? 'rgba(201,149,107,0.04)' : 'transparent' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
                       <div style={{ width: 2, height: 12, borderRadius: 1, backgroundColor: gc, flexShrink: 0 }} />
@@ -251,8 +260,8 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
                         {item._source === 'catalog_pick' && <span style={{ color: C.blu, fontSize: 8, marginLeft: 4, fontWeight: 700 }}>PB</span>}
                       </span>
                     </div>
-                    <input type="number" value={item.qty}
-                      onChange={e => setOverrides(o => ({ ...o, [item.id]: parseFloat(e.target.value) || 0 }))}
+                    <input aria-label={`Quantity: ${item.name}`} type="number" min="0" step="0.01" value={item.qty}
+                      onChange={e => setOverrides(o => ({ ...o, [item._editKey]: Math.max(0, parseFloat(e.target.value) || 0) }))}
                       style={{ width: 48, padding: '2px 4px', borderRadius: 3,
                         border: `1px solid ${C.brd}`, backgroundColor: C.card2, color: C.txB,
                         fontSize: 11, textAlign: 'right', fontFamily: 'inherit', outline: 'none' }} />
@@ -260,7 +269,7 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
                     <span style={{ color: C.tx,  textAlign: 'right' }}>${item.uc.toFixed(2)}</span>
                     <span style={{ color: C.tx,  textAlign: 'right' }}>${Math.round(item.extC).toLocaleString()}</span>
                     <span style={{ color: C.acc, textAlign: 'right', fontWeight: 600 }}>${Math.round(item.extP).toLocaleString()}</span>
-                    <button onClick={() => item._source === 'catalog_pick' ? removePick(item._pickIndex) : setRemoved(r => ({ ...r, [item.id]: true }))}
+                    <button aria-label={`Remove ${item.name}`} onClick={() => item._source === 'catalog_pick' ? removePick(item._pickIndex) : setRemoved(r => ({ ...r, [item._editKey]: true }))}
                       style={{ background: 'none', border: 'none', color: C.txD, cursor: 'pointer', fontSize: 10, fontFamily: mono, padding: 0 }}>x</button>
                   </Row>
                 ))
@@ -346,6 +355,11 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
       </div>
 
       {/* Status messages */}
+      <p className="site-help">Sending adds these lines to JobTread. Review the job's existing budget before sending.</p>
+      {sendLocked && <div className="estimate-issues">
+        <p>This draft already attempted a send to this job. Check JobTread for saved items before sending again.</p>
+        <button onClick={() => set('last_push_attempt', null)}>I reviewed JobTread; allow another send</button>
+      </div>}
       {pushMsg === 'no-url' && <StatusBox>No webhook URL. Set <code>VITE_WEBHOOK_URL</code> or localStorage.</StatusBox>}
       {pushMsg === 'no-key' && <StatusBox>No API key. Set <code>VITE_API_KEY</code> or localStorage.</StatusBox>}
       {pushMsg === 'no-job' && <StatusBox>Select a job, or fill in new job/customer details in Scope tab.</StatusBox>}

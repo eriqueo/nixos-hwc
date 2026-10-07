@@ -144,6 +144,22 @@
     "notes": "Client selection \u2014 vanity light fixture allowance."
   },
   {
+    "id": 1356,
+    "name": "Allowance | Shower Door",
+    "itemType": "Allowance",
+    "trade": "Finish Carpentry",
+    "code": "2100",
+    "type": "Materials",
+    "unit": "Lump Sum",
+    "unitAbbr": "ls",
+    "unitCost": 0.0,
+    "unitPrice": 0.0,
+    "group": "Allowances > Shower Door",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Site-verified hours or total supplier quote required; no assumed production rate."
+  },
+  {
     "id": 58,
     "name": "Bathroom Accessories - Premium",
     "itemType": "Allowance",
@@ -478,6 +494,38 @@
     "vendor": "",
     "finishes": "",
     "notes": "Upgraded vanity. Cost $2,000 / Price $2,857. 48\" vanity w/ top $1,825. Double vanity: 1.5x."
+  },
+  {
+    "id": 1341,
+    "name": "Allowance | Floor Covering",
+    "itemType": "Allowance",
+    "trade": "Flooring",
+    "code": "1700",
+    "type": "Materials",
+    "unit": "Lump Sum",
+    "unitAbbr": "ls",
+    "unitCost": 0.0,
+    "unitPrice": 0.0,
+    "group": "Allowances > Flooring",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Site-verified hours or total supplier quote required; no assumed production rate."
+  },
+  {
+    "id": 1339,
+    "name": "Allowance | Panel Shower Kit",
+    "itemType": "Allowance",
+    "trade": "Plumbing",
+    "code": "1100",
+    "type": "Materials",
+    "unit": "Lump Sum",
+    "unitAbbr": "ls",
+    "unitCost": 0.0,
+    "unitPrice": 0.0,
+    "group": "Allowances > Panel Shower",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Site-verified hours or total supplier quote required; no assumed production rate."
   },
   {
     "id": 52,
@@ -1424,6 +1472,22 @@
     "notes": ""
   },
   {
+    "id": 1344,
+    "name": "Labor | Finish Carpentry | Install Panel Shower",
+    "itemType": "Labor",
+    "trade": "Finish Carpentry",
+    "code": "2100",
+    "type": "Labor",
+    "unit": "Hours",
+    "unitAbbr": "hrs",
+    "unitCost": 0.0,
+    "unitPrice": 0.0,
+    "group": "Finish Carpentry > Panel Shower",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Site-verified hours or total supplier quote required; no assumed production rate."
+  },
+  {
     "id": 1260,
     "name": "Labor | Finish Carpentry | Install Vanity",
     "itemType": "Labor",
@@ -1520,6 +1584,22 @@
     "notes": ""
   },
   {
+    "id": 1342,
+    "name": "Labor | Flooring | Install Vinyl or Marmoleum",
+    "itemType": "Labor",
+    "trade": "Flooring",
+    "code": "1700",
+    "type": "Labor",
+    "unit": "Hours",
+    "unitAbbr": "hrs",
+    "unitCost": 0.0,
+    "unitPrice": 0.0,
+    "group": "Flooring > Labor",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Site-verified hours or total supplier quote required; no assumed production rate."
+  },
+  {
     "id": 943,
     "name": "Labor - LVP",
     "itemType": "Labor",
@@ -1566,6 +1646,22 @@
     "vendor": "",
     "finishes": "",
     "notes": "Installation of LVP on stairs - per tread/riser"
+  },
+  {
+    "id": 1343,
+    "name": "Labor | Flooring | Prepare Subfloor",
+    "itemType": "Labor",
+    "trade": "Flooring",
+    "code": "1700",
+    "type": "Labor",
+    "unit": "Hours",
+    "unitAbbr": "hrs",
+    "unitCost": 0.0,
+    "unitPrice": 0.0,
+    "group": "Flooring > Labor",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Site-verified hours or total supplier quote required; no assumed production rate."
   },
   {
     "id": 1284,
@@ -2270,6 +2366,22 @@
     "vendor": "",
     "finishes": "",
     "notes": "Move existing wall drain to floor drain, move supply line."
+  },
+  {
+    "id": 1340,
+    "name": "Labor | Plumbing | Panel Shower Drain Hookup",
+    "itemType": "Labor",
+    "trade": "Plumbing",
+    "code": "1100",
+    "type": "Labor",
+    "unit": "Hours",
+    "unitAbbr": "hrs",
+    "unitCost": 0.0,
+    "unitPrice": 0.0,
+    "group": "Plumbing > Panel Shower",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Site-verified hours or total supplier quote required; no assumed production rate."
   },
   {
     "id": 1080,

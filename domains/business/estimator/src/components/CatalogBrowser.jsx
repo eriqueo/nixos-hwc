@@ -208,7 +208,7 @@ export function CatalogBrowser({ open, onClose, onAdd, isMobile = false }) {
 
                 return (
                   <div key={item.id} style={{
-                    borderBottom: `1px solid ${C.brd}22`,
+                    borderBottom: `1px solid ${C.brd}`,
                     backgroundColor: inCart ? 'rgba(107,203,119,0.04)' : 'transparent',
                   }}>
                     {/* Item row */}

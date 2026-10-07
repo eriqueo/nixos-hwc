@@ -540,13 +540,13 @@
       "code": "1800",
       "type": "Labor",
       "unit": "Hours",
-      "qty": 0.4,
+      "qty": 4,
       "uc": 60.75,
       "up": 112.39,
-      "extC": 24.3,
-      "extP": 44.96,
+      "extC": 243,
+      "extP": 449.56,
       "trade": null,
-      "wasteFactor": 0.1
+      "wasteFactor": 1
     },
     {
       "name": "Material | Tile | Waterproof Backer Board 1/2\" 4x8",
@@ -1167,8 +1167,8 @@
   ],
   "totals": {
     "items": 83,
-    "laborHrs": 164.4,
-    "cost": 18695.39,
-    "price": 31058.39
+    "laborHrs": 168,
+    "cost": 18914.09,
+    "price": 31462.99
   }
 }

@@ -16,9 +16,12 @@ const TABS = [
 ];
 
 export default function App() {
-  const [state, set, reset] = useProjectState();
-  const [overrides, setOverrides] = useState({});
-  const [removed,   setRemoved]   = useState({});
+  const [state, set, reset, storageError, restore] = useProjectState();
+  const overrides = state.budget_overrides;
+  const removed = state.budget_removed;
+  const setOverrides = useCallback(value => set('budget_overrides', value), [set]);
+  const setRemoved = useCallback(value => set('budget_removed', value), [set]);
+  const [draftError, setDraftError] = useState('');
   const [view,      setView]      = useState('scope');
   const [browserOpen, setBrowserOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -26,20 +29,18 @@ export default function App() {
   const { totals, groups } = useCatalog(state, overrides, removed);
 
   const assemble = useCallback(() => {
-    setOverrides({});
-    setRemoved({});
     setView('estimate');
   }, []);
 
   const handleAddPicks = useCallback((picks) => {
     const existing = state.catalog_picks || [];
-    set('catalog_picks', [...existing, ...picks]);
+    set('catalog_picks', [...existing, ...picks.map(p => ({ ...p, draftId: crypto.randomUUID() }))]);
   }, [state.catalog_picks, set]);
 
   const tabLabel = id => id === 'estimate' ? `Budget (${totals.items})` : TABS.find(t => t.id === id)?.label;
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: C.bg, color: C.tx, fontFamily: mono }}>
+    <div className="estimator-app" style={{ minHeight: '100dvh', backgroundColor: C.bg, color: C.tx, fontFamily: mono }}>
 
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
       <div style={{
@@ -122,7 +123,25 @@ export default function App() {
       </div>
 
       {/* ── TAB CONTENT ────────────────────────────────────────────────────── */}
-      <div style={{ padding: isMobile ? 10 : 16, maxWidth: 980, margin: '0 auto' }}>
+      <div className="app-content" style={{ padding: isMobile ? 10 : 16, maxWidth: 1400, margin: '0 auto' }}>
+        <div className="draft-tools">
+          <span>{state.jobName || 'Working draft'} · saved on this device</span>
+          <button onClick={() => {
+            const url = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
+            const link = document.createElement('a'); link.href = url;
+            link.download = `estimate-${state.jobNumber || 'draft'}.json`; link.click();
+            URL.revokeObjectURL(url);
+          }}>Download draft</button>
+          <label className="import-draft">Import draft<input type="file" accept="application/json,.json" onChange={async e => {
+            try {
+              const file = e.target.files[0]; if (!file) return;
+              if (file.size > 2000000) throw new Error('Draft is too large');
+              restore(JSON.parse(await file.text())); setDraftError('');
+            } catch (error) { setDraftError(error.message); }
+            e.target.value = '';
+          }} /></label>
+        </div>
+        {(storageError || draftError) && <p role="alert">{storageError || draftError}</p>}
         {view === 'scope' && (
           <ScopeTab s={state} set={set} onAssemble={assemble} isMobile={isMobile} />
         )}

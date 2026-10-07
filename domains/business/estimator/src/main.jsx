@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
+import './styles/layout.css';
 
 // Register service worker for PWA / offline support
 if ('serviceWorker' in navigator) {

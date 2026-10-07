@@ -3,6 +3,7 @@ import { C, mono } from '../styles/theme.js';
 import { Box, Label, Divider } from './Section.jsx';
 import { Toggle } from './Toggle.jsx';
 import { Select } from './Select.jsx';
+import { fetchCrmList } from '../api/crm.js';
 
 const API_BASE = import.meta.env.VITE_WEBHOOK_URL?.replace('/estimate-push', '')
   || localStorage.getItem('hwc-webhook-base')
@@ -48,18 +49,20 @@ export function JobSelector({ s, set }) {
     if (!API_BASE || !API_KEY) return;
 
     setLoading(l => ({ ...l, customers: true }));
-    fetch(`${API_BASE}/jt-customers`, {
-      headers: { 'x-api-key': API_KEY }
-    })
-      .then(r => r.json())
-      .then(data => {
-        setCustomers(data.customers || []);
+    const controller = new AbortController();
+    setError(null);
+    fetchCrmList({ base: API_BASE, key: API_KEY, resource: 'customers', signal: controller.signal })
+      .then(rows => {
+        if (controller.signal.aborted) return;
+        setCustomers(rows);
         setLoading(l => ({ ...l, customers: false }));
       })
       .catch(err => {
+        if (controller.signal.aborted) return;
         setError(`Failed to load customers: ${err.message}`);
         setLoading(l => ({ ...l, customers: false }));
       });
+    return () => controller.abort();
   }, []);
 
   // Fetch jobs when customer changes
@@ -70,18 +73,21 @@ export function JobSelector({ s, set }) {
     }
 
     setLoading(l => ({ ...l, jobs: true }));
-    fetch(`${API_BASE}/jt-jobs?customerId=${s.customerId}`, {
-      headers: { 'x-api-key': API_KEY }
-    })
-      .then(r => r.json())
-      .then(data => {
-        setJobs(data.jobs || []);
+    setJobs([]);
+    const controller = new AbortController();
+    setError(null);
+    fetchCrmList({ base: API_BASE, key: API_KEY, resource: 'jobs', params: { customerId: s.customerId }, signal: controller.signal })
+      .then(rows => {
+        if (controller.signal.aborted) return;
+        setJobs(rows);
         setLoading(l => ({ ...l, jobs: false }));
       })
       .catch(err => {
+        if (controller.signal.aborted) return;
         setError(`Failed to load jobs: ${err.message}`);
         setLoading(l => ({ ...l, jobs: false }));
       });
+    return () => controller.abort();
   }, [s.customerId]);
 
   const handleCustomerChange = useCallback((customerId) => {
@@ -89,7 +95,7 @@ export function JobSelector({ s, set }) {
     set('customerId', customerId);
     set('customerName', customer?.name || '');
     set('address', customer?.address || '');
-    set('locationId', customer?.locations?.[0]?.id || '');
+    set('locationId', customer?.primaryLocationId || customer?.locations?.[0]?.id || '');
     // Reset job selection when customer changes
     set('jobId', '');
     set('jobNumber', '');
@@ -194,6 +200,7 @@ export function JobSelector({ s, set }) {
       {!isNewCustomer && (
         <FieldRow label="Customer">
           <select
+            aria-label="Customer"
             value={s.customerId}
             onChange={e => handleCustomerChange(e.target.value)}
             disabled={loading.customers}
@@ -211,6 +218,7 @@ export function JobSelector({ s, set }) {
       {s.mode === 'existing' && s.customerId && (
         <FieldRow label="Job">
           <select
+            aria-label="Job"
             value={s.jobId}
             onChange={e => handleJobChange(e.target.value)}
             disabled={loading.jobs}

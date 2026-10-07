@@ -27,9 +27,9 @@ export function FtInInput({ label, value, onChange, min = 0, max = 9999, show = 
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0' }}>
       <span style={{ color: C.tx, fontSize: 12, fontFamily: mono }}>{label}</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <input type="number" value={ft} onChange={handleFt} min={min} max={max} step={1} style={inputStyle} />
+        <input aria-label={`${label} feet`} inputMode="numeric" type="number" value={ft} onChange={handleFt} min={min} max={max} step={1} style={inputStyle} />
         <span style={{ color: C.txD, fontSize: 10 }}>ft</span>
-        <input type="number" value={inches} onChange={handleIn} min={0} max={11} step={1} style={{ ...inputStyle, width: 36 }} />
+        <input aria-label={`${label} inches`} inputMode="numeric" type="number" value={inches} onChange={handleIn} min={0} max={11} step={1} style={{ ...inputStyle, width: 44 }} />
         <span style={{ color: C.txD, fontSize: 10 }}>in</span>
       </div>
     </div>

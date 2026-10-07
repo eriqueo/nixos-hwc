@@ -7,9 +7,11 @@ export function NumInput({ label, value, onChange, unit, min = 0, max = 9999, st
       <span style={{ color: C.tx, fontSize: 12, fontFamily: mono }}>{label}</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <input
+          aria-label={label}
+          inputMode="decimal"
           type="number"
           value={value ?? ''}
-          onChange={e => onChange(parseFloat(e.target.value) || 0)}
+          onChange={e => onChange(e.target.value === '' ? null : Math.max(min, Math.min(max, parseFloat(e.target.value) || 0)))}
           min={min} max={max} step={step}
           style={{
             width: 60, padding: '3px 6px', borderRadius: 3,

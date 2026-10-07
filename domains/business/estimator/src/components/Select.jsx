@@ -7,6 +7,7 @@ export function Select({ label, value, onChange, options, show = true }) {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0' }}>
       <span style={{ color: C.tx, fontSize: 12, fontFamily: mono }}>{label}</span>
       <select
+        aria-label={label}
         value={value}
         onChange={e => onChange(e.target.value)}
         style={{

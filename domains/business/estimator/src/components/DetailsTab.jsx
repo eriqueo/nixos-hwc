@@ -4,6 +4,7 @@ import { Box, Label } from './Section.jsx';
 import { deriveGeometry } from '../engine/assembler.js';
 import tradeRates from '../data/tradeRates.json';
 import { tradeRate } from '../engine/pricing.js';
+import { NumInput } from './NumInput.jsx';
 
 function AllowanceRow({ label, value, onChange, enabled, onToggle, show = true }) {
   if (!show) return null;
@@ -12,15 +13,17 @@ function AllowanceRow({ label, value, onChange, enabled, onToggle, show = true }
       <button
         onClick={() => onToggle(!enabled)}
         style={{
-          width: 18, height: 18, borderRadius: 3, border: `1px solid ${C.brd}`,
+          width: 44, height: 44, borderRadius: 3, border: `1px solid ${C.brd}`,
           backgroundColor: enabled ? C.acc : 'transparent', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 11, color: enabled ? C.bg : 'transparent', fontWeight: 700, flexShrink: 0,
         }}
+        aria-label={`HWC supplies ${label}`} aria-pressed={enabled}
       >{enabled ? '\u2713' : ''}</button>
       <span style={{ color: enabled ? C.tx : C.txD, fontSize: 12, fontFamily: mono, flex: 1,
         textDecoration: enabled ? 'none' : 'line-through' }}>{label}</span>
       <input
+        aria-label={`${label} material cost`}
         type="number"
         value={value ?? ''}
         onChange={e => onChange(parseFloat(e.target.value) || 0)}
@@ -50,7 +53,7 @@ export function DetailsTab({ s, set, isMobile = false }) {
 
   const addCustomItem = () => {
     if (!newItem.name) return;
-    set('custom_items', [...(s.custom_items ?? []), { ...newItem }]);
+    set('custom_items', [...(s.custom_items ?? []), { ...newItem, draftId: crypto.randomUUID() }]);
     setNewItem({ name: '', group: 'Additional Items', qty: 1, cost: 0, type: 'Materials', unit: 'Each' });
   };
 
@@ -69,26 +72,36 @@ export function DetailsTab({ s, set, isMobile = false }) {
   });
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 10 : 14 }}>
+    <div className="form-grid">
 
       {/* Allowances with toggles */}
       <Box>
         <Label color={C.acc}>Allowances</Label>
+        <NumInput label="Target budget (all purchases)" value={s.target_budget} onChange={v => set('target_budget', v)} unit="$" step={100} max={999999} />
+        <NumInput label="Customer purchases total" value={s.owner_purchase_cost} onChange={v => set('owner_purchase_cost', v)} unit="$" step={100} max={999999} />
         <div style={{ color: C.txD, fontSize: 10, marginBottom: 8 }}>
-          Uncheck to exclude from estimate. Amounts are editable.
+          Checked: HWC buys materials. Unchecked: customer supplies materials. Installation stays in the budget. Enter HWC's purchase cost before markup.
         </div>
         <AllowanceRow label="Bathtub"     value={s.tub_allowance}         onChange={v => set('tub_allowance', v)}
-          enabled={yn(s.new_tub)}         onToggle={v => set('new_tub', v ? 'yes' : 'no')} />
+          show={yn(s.new_tub)} enabled={s.include_tub_material !== 'no'} onToggle={v => set('include_tub_material', v ? 'yes' : 'no')} />
         <AllowanceRow label="Shower Trim" value={s.shower_trim_allowance} onChange={v => set('shower_trim_allowance', v)}
-          enabled={yn(s.has_shower_tile)} onToggle={v => set('has_shower_tile', v ? 'yes' : 'no')} />
+          show={yn(s.has_shower_tile) || s.shower_finish === 'panel'} enabled={s.include_shower_trim_material !== 'no'} onToggle={v => set('include_shower_trim_material', v ? 'yes' : 'no')} />
         <AllowanceRow label="Toilet"      value={s.toilet_allowance}      onChange={v => set('toilet_allowance', v)}
-          enabled={yn(s.has_toilet)}      onToggle={v => set('has_toilet', v ? 'yes' : 'no')} />
+          show={yn(s.has_toilet)} enabled={s.include_toilet_material !== 'no'} onToggle={v => set('include_toilet_material', v ? 'yes' : 'no')} />
         <AllowanceRow label="Vanity"      value={s.vanity_allowance}      onChange={v => set('vanity_allowance', v)}
-          enabled={yn(s.has_vanity)}      onToggle={v => set('has_vanity', v ? 'yes' : 'no')} />
+          show={yn(s.has_vanity)} enabled={s.include_vanity_material !== 'no'} onToggle={v => set('include_vanity_material', v ? 'yes' : 'no')} />
         <AllowanceRow label="Accessories" value={s.accessory_allowance}   onChange={v => set('accessory_allowance', v)}
-          enabled={true}                  onToggle={() => {}} />
-        <AllowanceRow label="Electrical"  value={800}                     onChange={() => {}}
-          enabled={yn(s.new_electrical)}  onToggle={v => set('new_electrical', v ? 'yes' : 'no')} />
+          enabled={s.include_accessory_material !== 'no'} onToggle={v => set('include_accessory_material', v ? 'yes' : 'no')} />
+        <AllowanceRow label="Electrical" value={s.electrical_allowance} onChange={v => set('electrical_allowance', v)}
+          show={yn(s.new_electrical)} enabled={s.include_electrical_material !== 'no'} onToggle={v => set('include_electrical_material', v ? 'yes' : 'no')} />
+        <AllowanceRow label="Panel shower kit" value={s.panel_material_allowance} onChange={v => set('panel_material_allowance', v)}
+          show={s.shower_finish === 'panel'} enabled={s.include_shower_material !== 'no'} onToggle={v => set('include_shower_material', v ? 'yes' : 'no')} />
+        <AllowanceRow label="Floor covering" value={s.floor_material_allowance} onChange={v => set('floor_material_allowance', v)}
+          show={['vinyl', 'marmoleum'].includes(s.floor_finish)} enabled={s.include_floor_material !== 'no'} onToggle={v => set('include_floor_material', v ? 'yes' : 'no')} />
+        <AllowanceRow label="Shower door" value={s.shower_door_allowance} onChange={v => set('shower_door_allowance', v)}
+          show={s.has_shower_door === 'yes'} enabled={s.include_shower_door_material !== 'no'} onToggle={v => set('include_shower_door_material', v ? 'yes' : 'no')} />
+        {yn(s.has_floor_tile) && <button aria-pressed={s.include_floor_material !== 'no'} onClick={() => set('include_floor_material', s.include_floor_material === 'no' ? 'yes' : 'no')}>Floor tile supplied by {s.include_floor_material === 'no' ? 'customer' : 'HWC'}</button>}
+        {yn(s.has_shower_tile) && <button aria-pressed={s.include_shower_material !== 'no'} onClick={() => set('include_shower_material', s.include_shower_material === 'no' ? 'yes' : 'no')}>Shower tile supplied by {s.include_shower_material === 'no' ? 'customer' : 'HWC'}</button>}
 
         <div style={{ marginTop: 8, padding: 8, backgroundColor: C.card2, borderRadius: 4 }}>
           <span style={{ color: C.txD, fontSize: 10 }}>
