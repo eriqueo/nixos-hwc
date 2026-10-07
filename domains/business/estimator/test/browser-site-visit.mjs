@@ -11,11 +11,32 @@ await new Promise((resolve,reject) => {
 });
 const browser = await chromium.launch({ executablePath:process.env.CHROMIUM_PATH || '/run/current-system/sw/bin/chromium', headless:true });
 try {
+ const prepared=JSON.parse(readFileSync(new URL('../src/data/preparedDraft.json',import.meta.url),'utf8'));
+ const fresh=await browser.newContext({viewport:{width:390,height:900}});
+ const ready=await fresh.newPage();
+ await ready.addInitScript(()=>{
+   localStorage.setItem('hwc-webhook-base','https://example.test/webhook');
+   localStorage.setItem('hwc-api-key','test');
+ });
+ await ready.route('**/webhook/jt-customers?*',r=>r.fulfill({json:{customers:[{id:prepared.state.customerId,name:'Carrie'}]}}));
+ await ready.route('**/webhook/jt-jobs?*',r=>r.fulfill({json:{jobs:[{id:prepared.state.jobId,name:prepared.state.jobName,number:411,displayName:'#411'}]}}));
+ await ready.goto('http://127.0.0.1:5189/');
+ assert.equal(await ready.getByLabel('Site notes and open questions').inputValue(),prepared.state.site_notes);
+ await ready.getByLabel('Job',{exact:true}).locator(`option[value="${prepared.state.jobId}"]`).waitFor({state:'attached'});
+ assert.equal(await ready.getByLabel('Job',{exact:true}).inputValue(),prepared.state.jobId);
+ await ready.getByLabel('Room Length feet',{exact:true}).selectOption('9');
+ await ready.getByLabel('Site notes and open questions').fill('Answers saved on site.');
+ await ready.reload();
+ assert.equal(await ready.getByLabel('Site notes and open questions').inputValue(),'Answers saved on site.');
+ assert.equal(await ready.getByLabel('Room Length feet',{exact:true}).inputValue(),'9');
+ console.log('PASS prepared Carrie worksheet boots automatically and preserves answers on reload');
+ await fresh.close();
 for (const width of [390,768,1440]) {
  const context = await browser.newContext({ viewport:{width,height:900}, ignoreHTTPSErrors:true });
  const page = await context.newPage();
  const errors=[]; page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(({key}) => {
+   if (!localStorage.getItem('hwc-estimate-state')) localStorage.setItem('hwc-estimate-state',JSON.stringify({projectType:'bathroom'}));
    localStorage.setItem('hwc-webhook-base','https://hwc-work.ocelot-wahoo.ts.net/webhook');
    localStorage.setItem('hwc-api-key',key);
    localStorage.setItem('hwc-webhook-url','https://hwc-work.ocelot-wahoo.ts.net/webhook/estimate-push');

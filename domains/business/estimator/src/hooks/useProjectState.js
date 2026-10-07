@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import preparedDraft from '../data/preparedDraft.json';
 
 const STORAGE_KEY = 'hwc-estimate-state';
 
@@ -119,6 +120,22 @@ function loadSaved() {
   }
 }
 
+// App-owned site worksheet: REPLACEABLE from Git. The device draft remains
+// CRITICAL and downloadable. This keyed merge applies once per revision;
+// existing measurements, prices, scope choices, edits and send locks win.
+export function applyPreparedDraft(saved, prepared = preparedDraft) {
+  if (prepared.version !== 1) throw new Error('Unsupported prepared draft');
+  if (!saved) return { ...parseDraft(prepared.state), prepared_draft_revision: prepared.revision };
+  if (saved.jobId !== prepared.state.jobId || saved.prepared_draft_revision === prepared.revision) return saved;
+  const questions = prepared.state.site_notes;
+  return { ...saved,
+    target_budget: saved.target_budget ?? prepared.state.target_budget,
+    bathroom_floor_sqft: saved.bathroom_floor_sqft ?? prepared.state.bathroom_floor_sqft,
+    site_notes: saved.site_notes?.includes(questions) ? saved.site_notes : [saved.site_notes, questions].filter(Boolean).join('\n\n'),
+    prepared_draft_revision: prepared.revision,
+  };
+}
+
 export function parseDraft(saved) {
   if (!saved || typeof saved !== 'object' || Array.isArray(saved) ||
       !['bathroom', 'deck'].includes(saved.projectType) ||
@@ -147,8 +164,13 @@ export function parseDraft(saved) {
  * Returns [state, setter, resetFn].
  */
 export function useProjectState() {
-  const [state, setState] = useState(() => loadSaved() ?? DEFAULT_STATE);
+  const [state, setState] = useState(() => applyPreparedDraft(loadSaved()));
   const [storageError, setStorageError] = useState('');
+
+  // Also apply when an existing session selects the prepared job.
+  useEffect(() => {
+    setState(current => applyPreparedDraft(current));
+  }, [state.jobId]);
 
   // Persist to localStorage on every change
   useEffect(() => {

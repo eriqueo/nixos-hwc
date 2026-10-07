@@ -170,6 +170,7 @@ and is NOT a refactor gate.
 
 ## Changelog
 
+- 2026-10-07: App-owned `src/data/preparedDraft.json` loads Carrie's worksheet in fresh sessions and adds site questions once to an existing #411 draft without replacing field work. This file is separate from DB-owned templates because it is a prepared job worksheet, not a reusable template. Regenerate the downloadable worksheet from its `state` member; device edits remain local and exportable.
 - 2026-10-07: Scope measurements use native dropdowns on phones, tablets, and desktop. Lengths use feet and quarter-inch choices; areas retain automatic calculations and exact saved values. Costs remain numeric inputs.
 - 2026-09-24: The manual build service moves from unsupported Node 20 to
   Node 22. Both skip checks include the Node version so the next build
