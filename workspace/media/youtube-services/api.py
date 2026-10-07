@@ -8,6 +8,7 @@ import logging
 import os
 import shutil
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -19,7 +20,7 @@ import uvicorn
 from transcript import (
     TranscriptError, extract_video_id, is_playlist_url, fetch_metadata, fetch_playlist,
     fetch_captions, transcribe_audio, clean_transcript, raw_transcript, format_markdown,
-    format_duration,
+    format_duration, saved_video_id,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -83,6 +84,7 @@ class JobRequest(BaseModel):
     mode: str = Field(default="")
     base: str = Field(default="", description="one of OUTPUT_ROOTS; blank = first root")
     subfolder: str = Field(default="", description="optional named folder under base")
+    force: bool = Field(default=False, description="re-extract videos that are already saved")
 
 
 class JobStatus(BaseModel):
@@ -93,13 +95,51 @@ class JobStatus(BaseModel):
     output_dir: str = ""
     results: list[dict] = Field(default_factory=list)
     current: dict = Field(default_factory=dict, description="{url, stage} of the video in progress")
+    retryable: int = Field(default=0, description="failed items POST /job/{id}/retry would re-run")
     error: str = ""
 
 
 # ---------------------------------------------------------------------------
-# Job store
+# Job store — in memory, newest MAX_JOBS kept
 # ---------------------------------------------------------------------------
+MAX_JOBS = 200
+
+
+@dataclass
+class WorkItem:
+    url: str        # canonical watch URL
+    dest: Path      # folder the transcript is written to
+    playlist: str   # playlist title, "" for a single video
+
+
+@dataclass
+class RetrySpec:
+    """What POST /job/{id}/retry re-runs. Held server-side so a retry never
+    takes a save path from the client."""
+    urls: list[str]        # playlist URLs whose expansion failed
+    items: list[WorkItem]  # videos whose extraction failed
+    mode: str
+    out_dir: Path
+    force: bool
+
+
 _jobs: dict[str, JobStatus] = {}
+_retry_specs: dict[str, RetrySpec] = {}
+
+# Video IDs being extracted right now, across all jobs. The check and the add
+# happen with no await between them, so on the single event loop a video can
+# never be extracted by two jobs at once.
+_inflight: set[str] = set()
+
+
+def _new_job(output_dir: Path) -> JobStatus:
+    job = JobStatus(job_id=uuid.uuid4().hex[:12], output_dir=str(output_dir))
+    _jobs[job.job_id] = job
+    while len(_jobs) > MAX_JOBS:  # dicts keep insertion order: drop the oldest
+        old = next(iter(_jobs))
+        del _jobs[old]
+        _retry_specs.pop(old, None)
+    return job
 
 
 # ---------------------------------------------------------------------------
@@ -143,6 +183,58 @@ def resolve_output_dir(base: str, subfolder: str) -> Path:
     if out != root and root not in out.parents:
         raise ValueError("Resolved path escapes the allowed location")
     return out
+
+
+# ---------------------------------------------------------------------------
+# Saved-transcript library (idempotency). The files are the source of truth:
+# the index is rebuilt from their headers whenever it is needed, never stored.
+# ---------------------------------------------------------------------------
+HEADER_BYTES = 2048
+
+
+def _read_header(path: Path) -> str:
+    with path.open(encoding="utf-8", errors="replace") as fh:
+        return fh.read(HEADER_BYTES)
+
+
+def scan_saved(roots: list[Path]) -> dict[str, Path]:
+    """Map video ID -> first saved transcript, across every save location."""
+    index: dict[str, Path] = {}
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for path in sorted(root.rglob("*.md")):
+            try:
+                video_id = saved_video_id(_read_header(path))
+            except OSError:
+                continue
+            if video_id:
+                index.setdefault(video_id, path)
+    return index
+
+
+def _saved_result(url: str, path: Path, playlist: str) -> dict:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    title = next((l[2:].strip() for l in text.splitlines() if l.startswith("# ")), path.stem)
+    body = text.split("\n---\n", 1)[1].strip() if "\n---\n" in text else text
+    return {"url": url, "title": title, "filename": str(path), "transcript": body,
+            "status": "exists", "playlist": playlist}
+
+
+def write_transcript(out_dir: Path, title: str, video_id: str, md: str) -> Path:
+    """Write atomically (temp file + rename, so a half-written file is never
+    indexed). A same-day, same-title file of a different video keeps its name;
+    this one gets the video ID appended instead of overwriting it."""
+    safe_title = "".join(c if c.isalnum() or c in " -_" else "" for c in title)[:80].strip()
+    stem = f"{datetime.now().strftime('%Y-%m-%d')} - {safe_title}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"{stem}.md"
+    if path.exists() and saved_video_id(_read_header(path)) != video_id:
+        path = out_dir / f"{stem} [{video_id}].md"
+    tmp = path.with_name(f".{path.name}.tmp")
+    tmp.write_text(md, encoding="utf-8")
+    os.replace(tmp, path)
+    return path
 
 
 # ---------------------------------------------------------------------------
@@ -196,13 +288,7 @@ async def _extract(url: str, mode: str, out_dir: Path, allow_whisper: bool = Fal
     text = raw_transcript(segments) if mode == "raw" else clean_transcript(segments)
 
     md = format_markdown(meta, text, transcript.source)
-
-    safe_title = "".join(c if c.isalnum() or c in " -_" else "" for c in meta.title)[:80].strip()
-    date = datetime.now().strftime("%Y-%m-%d")
-    filename = f"{date} - {safe_title}.md"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    filepath = out_dir / filename
-    filepath.write_text(md, encoding="utf-8")
+    filepath = write_transcript(out_dir, meta.title, video_id, md)
 
     return {
         "url": meta.url,
@@ -220,7 +306,13 @@ async def _extract(url: str, mode: str, out_dir: Path, allow_whisper: bool = Fal
 # ---------------------------------------------------------------------------
 @app.post("/transcript")
 async def post_transcript(body: TranscriptRequest):
-    """Captions only: synchronous callers cannot wait minutes for Whisper."""
+    """Captions only: synchronous callers cannot wait minutes for Whisper.
+    A video that is already saved anywhere returns the saved file instead."""
+    video_id = extract_video_id(body.url)
+    if video_id:
+        saved = (await asyncio.to_thread(scan_saved, OUTPUT_ROOTS)).get(video_id)
+        if saved:
+            return _saved_result(f"https://www.youtube.com/watch?v={video_id}", saved, "")
     try:
         return await asyncio.wait_for(_extract(body.url, body.mode, OUTPUT_ROOTS[0]), timeout=VIDEO_TIMEOUT)
     except asyncio.TimeoutError:
@@ -243,71 +335,120 @@ async def post_job(body: JobRequest, bg: BackgroundTasks):
     except ValueError as e:
         raise HTTPException(400, str(e))
 
-    job_id = uuid.uuid4().hex[:12]
-    job = JobStatus(job_id=job_id, output_dir=str(out_dir))
-    _jobs[job_id] = job
-    bg.add_task(_run_job, job_id, urls, body.mode, str(out_dir))
-    return {"job_id": job_id, "status": "queued", "output_dir": str(out_dir)}
+    job = _new_job(out_dir)
+    bg.add_task(_run_job, job.job_id, urls, [], body.mode, out_dir, body.force)
+    return {"job_id": job.job_id, "status": "queued", "output_dir": str(out_dir)}
+
+
+@app.post("/job/{job_id}/retry")
+async def retry_job(job_id: str, bg: BackgroundTasks):
+    """Re-run a finished job's failed items into their original folders."""
+    job, spec = _jobs.get(job_id), _retry_specs.get(job_id)
+    if job is None or spec is None:
+        raise HTTPException(404, "Job not found. The service may have restarted; submit the URLs again.")
+    if not (spec.urls or spec.items):
+        raise HTTPException(400, "Nothing to retry")
+    new = _new_job(spec.out_dir)
+    bg.add_task(_run_job, new.job_id, spec.urls, spec.items, spec.mode, spec.out_dir, spec.force)
+    return {"job_id": new.job_id, "status": "queued", "output_dir": str(spec.out_dir)}
 
 
 def _failure(url: str, e: TranscriptError, playlist: str, prefix: str = "") -> dict:
-    return {"url": url, "error": prefix + str(e), "reason": e.reason, "playlist": playlist}
+    # An invalid URL fails the same way every time; everything else may not.
+    return {"url": url, "error": prefix + str(e), "reason": e.reason, "playlist": playlist,
+            "retryable": e.reason != "invalid_url"}
 
 
-async def _run_job(job_id: str, urls: list[str], mode: str, out_dir_str: str):
+async def _run_job(job_id: str, urls: list[str], items: list[WorkItem], mode: str,
+                   out_dir: Path, force: bool):
     job = _jobs.get(job_id)
     if not job:
         return
-    out_dir = Path(out_dir_str)
     job.status = "running"
+    retry = RetrySpec(urls=[], items=[], mode=mode, out_dir=out_dir, force=force)
 
-    # Phase 1 — classify + expand. Each work item is (video_url, dest_dir, playlist_title).
-    # Playlists expand into their own titled subfolder under out_dir.
-    work: list[tuple[str, Path, str]] = []
+    # Phase 1 — classify + expand. Playlists expand into their own titled
+    # subfolder under out_dir.
+    work: list[WorkItem] = list(items)
     for raw in urls:
         video_id = extract_video_id(raw)
         if video_id:
-            work.append((f"https://www.youtube.com/watch?v={video_id}", out_dir, ""))
+            work.append(WorkItem(f"https://www.youtube.com/watch?v={video_id}", out_dir, ""))
         elif is_playlist_url(raw):
             try:
                 pl = await fetch_playlist(raw)
             except Exception as e:
                 err = e if isinstance(e, TranscriptError) else TranscriptError("error", f"{type(e).__name__}: {e}")
                 job.results.append(_failure(raw, err, "", prefix="Playlist: "))
+                retry.urls.append(raw)
                 job.completed += 1
                 continue
             if not pl.video_ids:
                 job.results.append(_failure(raw, TranscriptError("unavailable", "playlist has no videos"), pl.title))
+                retry.urls.append(raw)
                 job.completed += 1
                 continue
             dest = out_dir / (_sanitize_component(pl.title) or "playlist")
             for vid in pl.video_ids:
-                work.append((f"https://www.youtube.com/watch?v={vid}", dest, pl.title))
+                work.append(WorkItem(f"https://www.youtube.com/watch?v={vid}", dest, pl.title))
         else:
             job.results.append(_failure(raw, TranscriptError("invalid_url"), ""))
             job.completed += 1
 
+    # The same video listed twice (or as a video and inside a playlist) runs once.
+    seen: set[str] = set()
+    unique: list[WorkItem] = []
+    for item in work:
+        video_id = extract_video_id(item.url)
+        if video_id in seen:
+            continue
+        seen.add(video_id)
+        unique.append(item)
+    work = unique
     job.total = job.completed + len(work)
 
-    # Phase 2 — extract each video sequentially, paced (rate-limit friendly).
-    for i, (video_url, dest, playlist_title) in enumerate(work):
-        if i:
-            await asyncio.sleep(PACE_SECONDS)
+    job.current = {"url": "", "stage": "checking saved transcripts"}
+    saved = {} if force else await asyncio.to_thread(scan_saved, OUTPUT_ROOTS)
 
-        def stage(name: str, _url: str = video_url) -> None:
+    # Phase 2 — extract each video sequentially, paced (rate-limit friendly).
+    fetched_any = False
+    for item in work:
+        video_id = extract_video_id(item.url)
+        if video_id in saved:
+            job.results.append(_saved_result(item.url, saved[video_id], item.playlist))
+            job.completed += 1
+            continue
+        if video_id in _inflight:
+            job.results.append({"url": item.url, "status": "duplicate", "playlist": item.playlist,
+                                "note": "Already being extracted by another job"})
+            job.completed += 1
+            continue
+
+        if fetched_any:
+            await asyncio.sleep(PACE_SECONDS)
+        fetched_any = True
+
+        def stage(name: str, _url: str = item.url) -> None:
             job.current = {"url": _url, "stage": name}
 
+        _inflight.add(video_id)
         try:
-            result = await _extract(video_url, mode, dest, allow_whisper=True, on_stage=stage)
-            result["playlist"] = playlist_title
+            result = await _extract(item.url, mode, item.dest, allow_whisper=True, on_stage=stage)
+            result["playlist"] = item.playlist
             job.results.append(result)
         except TranscriptError as e:
-            job.results.append(_failure(video_url, e, playlist_title))
+            job.results.append(_failure(item.url, e, item.playlist))
+            retry.items.append(item)
         except Exception as e:
-            logger.exception(f"{video_url}: unexpected failure")
-            job.results.append(_failure(video_url, TranscriptError("error", f"{type(e).__name__}: {e}"), playlist_title))
+            logger.exception(f"{item.url}: unexpected failure")
+            job.results.append(_failure(item.url, TranscriptError("error", f"{type(e).__name__}: {e}"), item.playlist))
+            retry.items.append(item)
+        finally:
+            _inflight.discard(video_id)
         job.completed += 1
 
+    _retry_specs[job_id] = retry
+    job.retryable = len(retry.urls) + len(retry.items)
     job.current = {}
     job.status = "complete"
 
@@ -395,6 +536,13 @@ async def ui():
   .badge.whisper { background: #fef3c7; color: #92400e; }
   .badge { display: inline-block; background: #ede9fe; color: #6d28d9; border-radius: 5px;
            padding: .05rem .4rem; font-size: .68rem; margin-right: .35rem; vertical-align: middle; }
+  .results .skip .title { color: #444; font-weight: 600; }
+  .results .skip .path { color: #6b7280; }
+  .badge.saved { background: #e0f2fe; color: #075985; }
+  .check { display: flex; gap: .4rem; align-items: center; font-size: .82rem; color: #444; }
+  .check input { width: auto; }
+  .retry { display: none; padding: .55rem 1rem; border-radius: 7px; border: 1px solid #fca5a5;
+           background: #fef2f2; color: #b91c1c; font-weight: 600; cursor: pointer; margin-top: .4rem; }
   .copy { background: #e5e7eb; color: #222; border: none; border-radius: 6px; padding: .35rem .7rem;
           font-size: .78rem; cursor: pointer; }
   .copy:hover { background: #d1d5db; }
@@ -424,16 +572,18 @@ async def ui():
       <label>Folder name (optional — nest with "/", e.g. woodworking/lathe)</label>
       <input type="text" id="subfolder" placeholder="leave blank to save in the location root">
     </div>
+    <label class="check full"><input type="checkbox" id="force"> Re-extract videos that are already saved</label>
   </div>
 
   <button class="go" id="go" onclick="run()">Extract</button>
   <div class="msg" id="msg"></div>
+  <button class="retry" id="retry" onclick="retry()"></button>
   <ul class="results" id="results"></ul>
 </div>
 
 <script>
 const $=id=>document.getElementById(id);
-let _results=[];
+let _results=[], _base=[], _jobId=null;
 
 function rowHtml() {
   return `<div class="urlrow">
@@ -466,12 +616,17 @@ function renderResults(status) {
   _results.forEach((r,i)=>{
     const li=document.createElement('li');
     const badge=r.playlist?`<span class="badge">${r.playlist}</span>`:'';
-    if(r.error){
+    if(r.status==='duplicate'){
+      li.className='skip';
+      li.innerHTML=`<div class="body"><div class="title">${badge}${r.url}</div><div class="path">${r.note||''}</div></div>`;
+    } else if(r.error){
       li.className='fail';
       li.innerHTML=`<div class="body"><div class="title">${badge}${r.url||''}</div><div class="path">${r.error}</div></div>`;
     } else {
       li.className='ok';
-      const src=r.source==='whisper'?'<span class="badge whisper" title="No captions could be fetched; transcribed from the audio">Whisper</span>':'';
+      if(r.status==='exists') li.className='skip';
+      const src=r.status==='exists'?'<span class="badge saved" title="Found an existing transcript for this video; not fetched again">Already saved</span>'
+        :r.source==='whisper'?'<span class="badge whisper" title="No captions could be fetched; transcribed from the audio">Whisper</span>':'';
       li.innerHTML=`<div class="body"><div class="title">${badge}${src}${r.title||''}</div><div class="path">${r.filename||''}</div></div>`;
       const b=document.createElement('button'); b.className='copy'; b.textContent='Copy';
       b.onclick=()=>{navigator.clipboard.writeText(_results[i].transcript||'');b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1200);};
@@ -481,30 +636,55 @@ function renderResults(status) {
   });
 }
 
+function poll(jobId) {
+  _jobId=jobId;
+  const timer=setInterval(async()=>{
+    const pr=await fetch('/job/'+jobId);
+    if(!pr.ok) return;
+    const pd=await pr.json();
+    _results=_base.concat(pd.results);
+    const totalTxt=pd.total?('/'+pd.total):'';
+    const cur=(pd.current&&pd.current.stage)?' — '+pd.current.stage:'';
+    $('msg').textContent=(pd.status==='complete'?'Done ':'Processing... ')
+      +'('+pd.completed+totalTxt+') → '+pd.output_dir+cur;
+    renderResults(pd.status);
+    if(pd.status==='complete'){
+      clearInterval(timer); $('go').disabled=false;
+      $('retry').textContent='Retry failed ('+pd.retryable+')';
+      $('retry').style.display=pd.retryable?'block':'none';
+    }
+  },1500);
+}
+
 async function run() {
   const urls=[...$('urls').querySelectorAll('.u')].map(i=>i.value.trim()).filter(Boolean);
   if(!urls.length){ $('msg').className='msg err'; $('msg').textContent='Add at least one URL.'; return; }
-  $('go').disabled=true; _results=[];
+  $('go').disabled=true; $('retry').style.display='none'; _results=[]; _base=[];
   $('msg').className='msg'; $('msg').textContent='Submitting '+urls.length+' URL(s)...';
   $('results').innerHTML='';
   try {
     const r=await fetch('/job',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({urls,mode:$('mode').value,base:$('base').value,subfolder:$('subfolder').value.trim()})});
+      body:JSON.stringify({urls,mode:$('mode').value,base:$('base').value,
+        subfolder:$('subfolder').value.trim(),force:$('force').checked})});
     if(!r.ok){const e=await r.json();throw new Error(e.detail||r.statusText);}
     const d=await r.json();
     $('msg').textContent='Saving to '+d.output_dir+' — expanding...';
-    const poll=setInterval(async()=>{
-      const pr=await fetch('/job/'+d.job_id);
-      if(!pr.ok) return;
-      const pd=await pr.json();
-      _results=pd.results;
-      const totalTxt=pd.total?('/'+pd.total):'';
-      const cur=(pd.current&&pd.current.stage)?' — '+pd.current.stage:'';
-      $('msg').textContent=(pd.status==='complete'?'Done ':'Processing... ')
-        +'('+pd.completed+totalTxt+') → '+pd.output_dir+cur;
-      renderResults(pd.status);
-      if(pd.status==='complete'){clearInterval(poll);$('go').disabled=false;}
-    },1500);
+    poll(d.job_id);
+  } catch(e) {
+    $('msg').className='msg err'; $('msg').textContent=e.message; $('go').disabled=false;
+  }
+}
+
+// Re-run the finished job's failed items; their new results replace the old
+// failures in the list, everything that already worked stays.
+async function retry() {
+  $('retry').style.display='none'; $('go').disabled=true; $('msg').className='msg';
+  try {
+    const r=await fetch('/job/'+_jobId+'/retry',{method:'POST'});
+    if(!r.ok){const e=await r.json();throw new Error(e.detail||r.statusText);}
+    const d=await r.json();
+    _base=_results.filter(x=>!x.retryable);
+    poll(d.job_id);
   } catch(e) {
     $('msg').className='msg err'; $('msg').textContent=e.message; $('go').disabled=false;
   }

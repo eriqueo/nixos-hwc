@@ -587,3 +587,18 @@ def format_markdown(meta: VideoMeta, transcript_text: str, source: str) -> str:
 
 {transcript_text}
 """
+
+
+def saved_video_id(header: str) -> Optional[str]:
+    """Video ID of a saved transcript, read from its header — the inverse of
+    format_markdown. Only header lines (before the first `---`) that carry a
+    URL label count, so a link quoted in the transcript body never matches.
+    Also reads the older `- **URL**: ...` header used by earlier versions."""
+    for line in header.splitlines():
+        if line.strip() == "---":
+            break
+        if "URL" in line:
+            video_id = extract_video_id(line)
+            if video_id:
+                return video_id
+    return None

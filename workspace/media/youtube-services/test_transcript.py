@@ -160,6 +160,149 @@ class ExtractWiring(unittest.TestCase):
         self.assertIn("captions: no_captions", cm.exception.detail)
 
 
+class SavedHeader(unittest.TestCase):
+    def test_current_format_round_trips(self):
+        meta = T.VideoMeta("abcdefghijk", "T", "C", 60, "", "https://www.youtube.com/watch?v=abcdefghijk")
+        self.assertEqual(T.saved_video_id(T.format_markdown(meta, "body", "src")), "abcdefghijk")
+
+    def test_older_list_format(self):
+        header = "# Lesson 7\n\n- **Channel**: X\n- **URL**: https://www.youtube.com/watch?v=bvQr6l5qyyU\n"
+        self.assertEqual(T.saved_video_id(header), "bvQr6l5qyyU")
+
+    def test_link_in_body_is_ignored(self):
+        text = "# T\n\n**Channel:** C\n\n---\n\nsee URL https://youtu.be/zzzzzzzzzzz\n"
+        self.assertIsNone(T.saved_video_id(text))
+
+
+def _md(video_id: str, title: str = "A Title") -> str:
+    meta = T.VideoMeta(video_id, title, "C", 60, "", f"https://www.youtube.com/watch?v={video_id}")
+    return T.format_markdown(meta, "saved body", "YouTube captions (manual, en)")
+
+
+@unittest.skipIf(api is None, "fastapi not installed")
+class Library(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_scan_finds_nested_files(self):
+        nested = self.root / "jake" / "deep"
+        nested.mkdir(parents=True)
+        (nested / "x.md").write_text(_md("aaaaaaaaaaa"))
+        (self.root / "notes.md").write_text("# no link here\n")
+        self.assertEqual(api.scan_saved([self.root]), {"aaaaaaaaaaa": nested / "x.md"})
+
+    def test_same_title_different_video_keeps_both(self):
+        a = api.write_transcript(self.root, "Same", "aaaaaaaaaaa", _md("aaaaaaaaaaa", "Same"))
+        b = api.write_transcript(self.root, "Same", "bbbbbbbbbbb", _md("bbbbbbbbbbb", "Same"))
+        self.assertNotEqual(a, b)
+        self.assertIn("[bbbbbbbbbbb]", b.name)
+        self.assertEqual(T.saved_video_id(a.read_text()), "aaaaaaaaaaa")
+
+    def test_same_video_rewrites_in_place(self):
+        a = api.write_transcript(self.root, "Same", "aaaaaaaaaaa", _md("aaaaaaaaaaa", "Same"))
+        b = api.write_transcript(self.root, "Same", "aaaaaaaaaaa", _md("aaaaaaaaaaa", "Same"))
+        self.assertEqual(a, b)
+        self.assertEqual(len(list(self.root.iterdir())), 1)  # no temp file left behind
+
+
+@unittest.skipIf(api is None, "fastapi not installed")
+class JobDedupAndRetry(unittest.TestCase):
+    """The production decision points: api._run_job and POST /job/{id}/retry."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.roots = mock.patch.object(api, "OUTPUT_ROOTS", [self.root])
+        self.roots.start()
+        self.sleep = mock.patch.object(api.asyncio, "sleep", new=mock.AsyncMock())
+        self.sleep.start()
+
+    def tearDown(self):
+        self.roots.stop()
+        self.sleep.stop()
+        self.tmp.cleanup()
+
+    def _job(self, urls, extract, items=(), force=False, out_dir=None):
+        job = api._new_job(out_dir or self.root)
+        with mock.patch.object(api, "_extract", new=extract):
+            run(api._run_job(job.job_id, urls, list(items), "raw", out_dir or self.root, force))
+        return job
+
+    @staticmethod
+    def _ok(url, mode, dest, allow_whisper=False, on_stage=None):
+        return {"url": url, "title": "t", "filename": str(dest / "f.md"), "transcript": "x", "source": "captions"}
+
+    def test_saved_video_is_skipped_not_fetched(self):
+        (self.root / "old.md").write_text(_md("aaaaaaaaaaa"))
+        extract = mock.AsyncMock(side_effect=self._ok)
+        job = self._job(["https://youtu.be/aaaaaaaaaaa", "https://youtu.be/bbbbbbbbbbb"], extract)
+        self.assertEqual(extract.await_count, 1)
+        self.assertEqual(job.results[0]["status"], "exists")
+        self.assertEqual(job.results[0]["transcript"], "saved body")
+
+    def test_force_refetches_saved_video(self):
+        (self.root / "old.md").write_text(_md("aaaaaaaaaaa"))
+        extract = mock.AsyncMock(side_effect=self._ok)
+        self._job(["https://youtu.be/aaaaaaaaaaa"], extract, force=True)
+        self.assertEqual(extract.await_count, 1)
+
+    def test_same_video_twice_in_one_job_runs_once(self):
+        extract = mock.AsyncMock(side_effect=self._ok)
+        job = self._job(["https://youtu.be/aaaaaaaaaaa", "https://www.youtube.com/watch?v=aaaaaaaaaaa"], extract)
+        self.assertEqual(extract.await_count, 1)
+        self.assertEqual(job.total, 1)
+
+    def test_video_in_flight_elsewhere_is_not_started(self):
+        api._inflight.add("aaaaaaaaaaa")
+        try:
+            extract = mock.AsyncMock(side_effect=self._ok)
+            job = self._job(["https://youtu.be/aaaaaaaaaaa"], extract)
+        finally:
+            api._inflight.discard("aaaaaaaaaaa")
+        extract.assert_not_awaited()
+        self.assertEqual(job.results[0]["status"], "duplicate")
+
+    def test_retry_reruns_only_failures_into_their_original_folder(self):
+        dest = self.root / "My Playlist"
+        failing = mock.AsyncMock(side_effect=[T.TranscriptError("rate_limited"), self._ok("u", "raw", dest)])
+        job = self._job(["not a url"], failing, items=[
+            api.WorkItem("https://www.youtube.com/watch?v=aaaaaaaaaaa", dest, "My Playlist"),
+            api.WorkItem("https://www.youtube.com/watch?v=bbbbbbbbbbb", dest, "My Playlist"),
+        ])
+        self.assertEqual(job.retryable, 1)  # invalid URL is not retryable
+        self.assertEqual([r.get("retryable") for r in job.results], [False, True, None])
+
+        spec = api._retry_specs[job.job_id]
+        self.assertEqual([(i.url[-11:], i.dest, i.playlist) for i in spec.items],
+                         [("aaaaaaaaaaa", dest, "My Playlist")])
+        again = mock.AsyncMock(side_effect=self._ok)
+        bg = mock.Mock()
+        resp = run(api.retry_job(job.job_id, bg))
+        _, args, _ = bg.add_task.mock_calls[0]
+        with mock.patch.object(api, "_extract", new=again):
+            run(args[0](*args[1:]))
+        again.assert_awaited_once()
+        self.assertEqual(again.await_args.args[2], dest)
+        self.assertEqual(api._jobs[resp["job_id"]].results[0]["playlist"], "My Playlist")
+
+    def test_retry_of_unknown_job_is_404(self):
+        with self.assertRaises(api.HTTPException) as cm:
+            run(api.retry_job("nope", mock.Mock()))
+        self.assertEqual(cm.exception.status_code, 404)
+
+    def test_sync_endpoint_returns_saved_file(self):
+        (self.root / "old.md").write_text(_md("aaaaaaaaaaa"))
+        extract = mock.AsyncMock()
+        with mock.patch.object(api, "_extract", new=extract):
+            res = run(api.post_transcript(api.TranscriptRequest(url="https://youtu.be/aaaaaaaaaaa")))
+        extract.assert_not_awaited()
+        self.assertEqual(res["status"], "exists")
+
+
 class LibraryContract(unittest.TestCase):
     """Pins the youtube-transcript-api surface this code calls; the 1.2 upgrade
     removed the classmethods the old code used and every fetch failed silently."""
