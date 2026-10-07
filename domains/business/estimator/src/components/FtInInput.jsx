@@ -1,35 +1,38 @@
 import { C, mono } from '../styles/theme.js';
 
 /** Feet + Inches input — stores value as decimal feet */
-export function FtInInput({ label, value, onChange, min = 0, max = 9999, show = true }) {
+export function FtInInput({ label, value, onChange, min = 0, max = 9999, pickerMax = 100, show = true }) {
   if (!show) return null;
-  const totalInches = Math.round((value || 0) * 12);
+  const totalInches = Math.round((value || 0) * 12 * 1e8) / 1e8;
   const ft = Math.floor(totalInches / 12);
   const inches = totalInches % 12;
+  const feetOptions = Array.from({ length: Math.min(pickerMax, Math.floor(max)) + 1 }, (_, i) => i);
+  if (!feetOptions.includes(ft)) feetOptions.push(ft);
+  feetOptions.sort((a, b) => a - b);
+  const inchOptions = Array.from({ length: 48 }, (_, i) => i / 4);
+  if (!inchOptions.includes(inches)) inchOptions.push(inches);
+  inchOptions.sort((a, b) => a - b);
 
   const handleFt = e => {
     const newFt = parseInt(e.target.value) || 0;
     onChange(Math.max(min, Math.min(max, newFt + inches / 12)));
   };
   const handleIn = e => {
-    const newIn = Math.min(11, Math.max(0, parseInt(e.target.value) || 0));
+    const newIn = Number(e.target.value);
     onChange(Math.max(min, Math.min(max, ft + newIn / 12)));
-  };
-
-  const inputStyle = {
-    width: 44, padding: '3px 6px', borderRadius: 3,
-    border: `1px solid ${C.brd}`,
-    backgroundColor: C.card2, color: C.txB,
-    fontSize: 13, textAlign: 'right', fontFamily: mono, outline: 'none',
   };
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0' }}>
       <span style={{ color: C.tx, fontSize: 12, fontFamily: mono }}>{label}</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <input aria-label={`${label} feet`} inputMode="numeric" type="number" value={ft} onChange={handleFt} min={min} max={max} step={1} style={inputStyle} />
+        <select className="measurement-select dimension-select" aria-label={`${label} feet`} value={ft} onChange={handleFt}>
+          {feetOptions.map(v => <option key={v} value={v}>{v}</option>)}
+        </select>
         <span style={{ color: C.txD, fontSize: 10 }}>ft</span>
-        <input aria-label={`${label} inches`} inputMode="numeric" type="number" value={inches} onChange={handleIn} min={0} max={11} step={1} style={{ ...inputStyle, width: 44 }} />
+        <select className="measurement-select dimension-select" aria-label={`${label} inches`} value={inches} onChange={handleIn}>
+          {inchOptions.map(v => <option key={v} value={v}>{v}</option>)}
+        </select>
         <span style={{ color: C.txD, fontSize: 10 }}>in</span>
       </div>
     </div>

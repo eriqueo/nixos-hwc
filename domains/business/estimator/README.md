@@ -170,6 +170,7 @@ and is NOT a refactor gate.
 
 ## Changelog
 
+- 2026-10-07: Scope measurements use native dropdowns on phones, tablets, and desktop. Lengths use feet and quarter-inch choices; areas retain automatic calculations and exact saved values. Costs remain numeric inputs.
 - 2026-09-24: The manual build service moves from unsupported Node 20 to
   Node 22. Both skip checks include the Node version so the next build
   reinstalls dependencies and rebakes the app under the new runtime.

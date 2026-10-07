@@ -33,11 +33,21 @@ for (const width of [390,768,1440]) {
  await page.getByLabel('Shower finish',{exact:true}).selectOption('panel');
  await page.getByLabel('Floor finish',{exact:true}).selectOption('vinyl');
  await page.getByLabel('Shower enclosure',{exact:true}).selectOption('no');
- await page.getByLabel('Panel installation',{exact:true}).fill('12');
- await page.getByLabel('Drain hookup',{exact:true}).fill('2');
- await page.getByLabel('Floor installation',{exact:true}).fill('6');
- await page.getByLabel('Subfloor preparation',{exact:true}).fill('0');
- await page.getByLabel('Flooring area',{exact:true}).fill('54');
+ assert.equal(await page.getByLabel('Room Length feet',{exact:true}).evaluate(e=>e.tagName),'SELECT');
+ assert.equal(await page.locator('input[type=number]').count(),0);
+ await page.getByLabel('Room Length feet',{exact:true}).selectOption('9');
+ await page.getByLabel('Room Length inches',{exact:true}).selectOption('6');
+ await page.getByLabel('Room Width feet',{exact:true}).selectOption('6');
+ await page.getByLabel('Room Width inches',{exact:true}).selectOption('0');
+ assert.equal(await page.getByLabel('Flooring area',{exact:true}).inputValue(),'57');
+ await page.getByLabel('Room Length inches',{exact:true}).selectOption('6.25');
+ assert.equal(await page.getByLabel('Flooring area',{exact:true}).inputValue(),'57.125');
+ await page.getByLabel('Room Length inches',{exact:true}).selectOption('6');
+ await page.getByLabel('Panel installation',{exact:true}).selectOption('12');
+ await page.getByLabel('Drain hookup',{exact:true}).selectOption('2');
+ await page.getByLabel('Floor installation',{exact:true}).selectOption('6');
+ await page.getByLabel('Subfloor preparation',{exact:true}).selectOption('0');
+ await page.getByLabel('Flooring area',{exact:true}).selectOption('54');
  await page.getByLabel('Site notes and open questions').fill('Verify subfloor, fixture models, and customer purchase budget.');
  await page.getByRole('button',{name:'Measurements verified on site',exact:true}).click();
  const layout = await page.evaluate(() => ({ width:innerWidth,scroll:document.documentElement.scrollWidth,
@@ -69,6 +79,7 @@ for (const width of [390,768,1440]) {
  const download = await downloadWait;
  const saved=JSON.parse(readFileSync(await download.path(),'utf8'));
  assert.equal(saved.jobId,'job-test'); assert.equal(saved.site_notes,'Verify subfloor, fixture models, and customer purchase budget.');
+ assert.equal(saved.bathroom_length_ft,9.5); assert.equal(saved.bathroom_floor_sqft,54);
  let sent;
  await page.route('**/webhook/estimate-push', async route => {
    sent=route.request().postDataJSON();

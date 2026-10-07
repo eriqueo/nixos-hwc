@@ -55,6 +55,7 @@ business/
 
 ## Changelog
 
+- 2026-10-07: Estimator measurement dropdowns replace typing in bathroom and deck scope forms. Browser checks cover feet/inches, calculated area, exact area overrides, draft persistence, and responsive touch controls.
 - 2026-10-07: Estimator supports panel showers and vinyl/Marmoleum with explicit hours and quotes, customer-supplied fixtures with installation retained, stable saved budget edits, exact numeric JobTread quantities, and responsive phone/tablet layouts. Corrected niche waste from 0.1 to 1.0. Existing trade rates stay unchanged.
 
 - 2026-10-05: Wire the existing Messenger Page credential into manual CRM replies and service restart triggers.
