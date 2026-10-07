@@ -15,7 +15,9 @@ export async function fetchCrmList({ base, key, resource, params = {}, signal, r
       throw new Error('CRM returned an invalid list');
     }
     data[resource].forEach(row => rows.set(row.id, row));
-    if (!data.nextPage) return [...rows.values()].sort((a, b) => a.name.localeCompare(b.name));
+    if (!data.nextPage) return resource === 'customers'
+      ? [...rows.values()].sort((a, b) => a.name.localeCompare(b.name))
+      : [...rows.values()];
     if (typeof data.nextPage !== 'string' || cursors.has(data.nextPage)) throw new Error('CRM returned an invalid page cursor');
     page = data.nextPage; cursors.add(page);
   }

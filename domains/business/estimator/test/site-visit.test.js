@@ -57,6 +57,9 @@ assert.ok(customers.some(c=>c.id==='carrie')); assert.equal(requests.length,2);
 await assert.rejects(fetchCrmList({base:'https://example.test',key:'test',resource:'customers',signal:new AbortController().signal,
  request:async()=>({ok:false,status:401})}), /401/);
 console.log('PASS paged CRM list and HTTP error handling');
+const jobs = await fetchCrmList({base:'https://example.test',key:'test',resource:'jobs',signal:new AbortController().signal,
+ request:async()=>({ok:true,json:async()=>({jobs:[{id:'new',name:'Zulu'},{id:'old',name:'Alpha'}]})})});
+assert.deepEqual(jobs.map(j=>j.id),['new','old'],'keep server job order');
 const workflow=JSON.parse(readFileSync(new URL('../../../automation/n8n/parts/workflows/08a-jt-data-provider.json',import.meta.url),'utf8'));
 const runNode=(name,input,env={})=>new Function('$input','$env',workflow.nodes.find(n=>n.name===name).parameters.jsCode)(input,env);
 const auth=runNode('Validate Auth (Customers)',{item:{json:{headers:{'x-api-key':'test'},query:{page:'cursor & two'}}}},{ESTIMATOR_API_KEY:'test'});
