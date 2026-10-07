@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+`apps/agent-harness` publishes final workspace ledger and guard JSON files; unfinished atomic writes remain local.
+
 `apps/pi` maps thinking-off to DX2's explicit `none` value; enabled reasoning levels retain their existing mappings.
 
 The screenshot wrapper pins its capture, clipboard and notification tools; it waits for background image output before publication.
@@ -90,6 +92,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-07: Prevent agent-state sync from publishing unfinished ledger and guard files. Refresh the pinned home-app skill to use current app loaders, roles, shared factories, and separate system options.
 
 - 2026-10-05: Honor Pi thinking-off through DX2's explicit `none` value instead of silently selecting low reasoning.
 

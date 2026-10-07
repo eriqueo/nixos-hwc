@@ -159,6 +159,17 @@ link_memories() {
   done
 }
 
+stage_json_state() {
+  local directory=$1 path
+  local paths=()
+  # Atomic writers leave .json.XXXXXX files while replacing a final .json.
+  # Include deleted tracked JSONs, but never publish those unfinished writes.
+  while IFS= read -r -d '' path; do
+    paths+=("$path")
+  done < <(git ls-files --cached --others --exclude-standard -z -- ":(glob)$directory/*.json")
+  [ "${#paths[@]}" -eq 0 ] || git add -A -- "${paths[@]}"
+}
+
 sync_state() {
   link_memories
   cd "$STATE"
@@ -191,8 +202,8 @@ sync_state() {
 
   git add -A -- MISTAKES.md projects
   git add -A -- .harness-schema.json
-  [ ! -e ledger ] || git add -A -- ledger
-  [ ! -e guard ] || git add -A -- guard
+  stage_json_state ledger
+  stage_json_state guard
   [ ! -e .mistakes-dismissed.log ] || git add -A -- .mistakes-dismissed.log
   if ! git diff --cached --quiet; then
     git commit -m "sync($HOST): agent state $(date -Iminutes)"

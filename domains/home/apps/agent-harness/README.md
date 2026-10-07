@@ -13,7 +13,7 @@ The fleet control list names hwc-home, hwc-work and hwc-laptop.
 - `contract.nix` defines the ownership and revision contract shared by both lanes.
 - `control.sh` implements local and fleet health checks plus policy publication. Skill fingerprints use fixed C collation so host locales cannot report false drift.
 - `control.test.sh` checks split revisions, mutable runtime references, skill drift (hand install, foreign root, extra Pi path, drift alert retry), fleet names, and publication to all hosts and source remotes.
-- `state-sync.sh` synchronizes only memories, the mistakes ledger, and the agent-workspace `ledger/` and `guard/` files, with one bounded validation case under `.git`.
+- `state-sync.sh` synchronizes only memories, the mistakes ledger, and final `ledger/*.json` and `guard/*.json` files, with one bounded validation case under `.git`. Atomic writer temporary files remain local.
 - `state-validate.sh` owns the memory contract for both full-store scans and projected writes on stdin.
 - `state-sync.test.sh` verifies import, links, validation blocking, recovery, commit, pull, and push against a throwaway hub.
 - The pinned `tracker/` serves legacy cause/work inputs and per-problem explanation/action confirmations with Yes, No, Not sure and correction boxes. Its browser test exercises saving, reload, completeness and navigation on disposable project data.
@@ -67,6 +67,7 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+- 2026-10-07: Stage final ledger and guard JSON files instead of whole folders. A held-open atomic-write fixture reproduced temporary-file publication before the fix and passes afterward.
 - 2026-10-05: Fix locale-dependent skill fingerprints. A seeded C/English collation test with uppercase/lowercase names checks identical content gets the same fleet identity; reverting the sort locale makes it fail.
 - 2026-10-01: Tracker pings reach any host. New `tracker-relay` user service on every host and `tracker.url` option; `hwc-tracker` drops its T3 environment and its `t3.py` restart trigger, since the hub no longer calls T3. Probed before rollout: hwc-laptop and hwc-home reach the hub (HTTP 200), and each host has T3's runtime file and CLI.
 - 2026-10-01: The doctor checks Pi's hook bridge extension (`~/.pi/agent/extensions/hwc-hook-bridge.ts`, a store path) and fails on any bridge failure logged in the last hour (`~/.local/state/agent-harness/pi-bridge-failures.log`), so the hourly drift timer alerts on it.
