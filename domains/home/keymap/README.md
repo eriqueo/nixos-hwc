@@ -93,6 +93,9 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 - todui/khalt/workbench log a missing/unread `*_KEYMAP` rather than failing silent.
 
 ## Changelog
+- 2026-10-07: Hub letters emit zellij-which `goto-hub` (`key|goto-hub|<tab>:<slug>|label`):
+  focus the workbench tab, then `workbench --goto <slug>` switches the running workbench.
+  The no-plugin mode fallback still only focuses the workbench tab.
 - 2026-10-07: Hub letters leave `grammar.nix`. The Workbench hub registry produces
   them (`[deployment] key`, read through `zellij/parts/tabs.nix` `hubJumps`) and
   `to-zellij.nix` appends them to `grammar.meta` for both the which-key plugin

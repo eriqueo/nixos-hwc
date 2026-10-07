@@ -76,9 +76,15 @@ let
     scroll = "scroll"; detach = "detach";
     # `kill` (Quit) has no plugin verb — omitted from the card on purpose.
   };
+  # Hub letters use `goto-hub`: focus the workbench tab, then `workbench --goto`
+  # switches the running workbench (zellij-which RunCommands). The mode
+  # fallback below has no quiet command action, so there a hub letter only
+  # focuses the workbench tab.
   entryFor = e:
     let tok = keyToken e.key; in
-    if (e ? target) then "${tok}|goto-tab|${toString tabFor.${e.target}}|${e.desc}"
+    if (e ? target) && lib.hasPrefix "hub:" e.target then
+      "${tok}|goto-hub|${toString tabFor.${e.target}}:${lib.removePrefix "hub:" e.target}|${e.desc}"
+    else if (e ? target) then "${tok}|goto-tab|${toString tabFor.${e.target}}|${e.desc}"
     else if intentVerb ? ${e.intent} then "${tok}|${intentVerb.${e.intent}}||${e.desc}"
     else null;
   pluginEntries = lib.concatStringsSep ";"

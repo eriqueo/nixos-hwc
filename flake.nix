@@ -742,8 +742,10 @@
         && lib.elem home.hwc.home.apps.zellij.package home.home.packages)
         "workbench check: shell and wrapper must share the graphics-capable pane host";
       assert lib.assertMsg (lib.all (entry: lib.hasInfix
-        "${entry.key}|goto-tab|${toString navigation.tabFor.${entry.target}}|${entry.desc}" configKdl) jumps)
-        "workbench check: generated grammar indices differ from navigation";
+        (if lib.hasPrefix "hub:" entry.target
+          then "${entry.key}|goto-hub|${toString navigation.tabFor.${entry.target}}:${lib.removePrefix "hub:" entry.target}|${entry.desc}"
+          else "${entry.key}|goto-tab|${toString navigation.tabFor.${entry.target}}|${entry.desc}") configKdl) jumps)
+        "workbench check: generated meta entries (goto-tab tools, goto-hub hubs) differ from navigation";
       assert lib.assertMsg (destinationFor "m" == "tool:aerc" && destinationFor "i" == "hub:mail"
         && destinationFor "R" == "hub:refinery")
         "workbench check: mail/refinery shortcuts changed destination";
