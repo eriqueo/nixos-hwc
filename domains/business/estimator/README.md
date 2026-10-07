@@ -10,7 +10,9 @@ Phones use one form column and budget cards. Tablets use two form columns and bu
 
 For panel showers and vinyl/Marmoleum, enter installation hours and supplier costs. Missing inputs block JobTread push and label the price as a draft. In Details, a checked supply box means HWC buys materials; unchecked means the customer buys them. Installation remains included. Keep the existing shower valve only after checking compatibility.
 
-Drafts are CRITICAL device-local data: one working draft in browser storage, with version 2 JSON download/import backups. Download before reset, switching devices, or clearing browser data. Budget quantity edits and removals persist through reassembly and reload. Catalogue files are REPLACEABLE exports from Postgres; regenerate them instead of editing JSON. Run `npm run test:site-visit`, `npm run test:golden`, and `npm run lint:ui` for engine and token checks. `npm run test:browser` starts a local dev server and checks three viewport widths with mocked CRM responses and intercepted writes. Set `CHROMIUM_PATH` to your browser executable outside HWC NixOS.
+Drafts are CRITICAL device-local data: a working draft plus up to 50 saved job drafts, with version 2 JSON download/import backups. Switching saves the previous job before restoring the selected job; a full or unavailable store blocks switching rather than discarding drafts. Reset removes the selected job's saved draft. Download before reset, switching devices, or clearing browser data. Budget quantity edits and removals persist through reassembly and reload. Catalogue files are REPLACEABLE exports from Postgres; regenerate them instead of editing JSON. Run `npm run test:site-visit`, `npm run test:golden`, and `npm run lint:ui` for engine and token checks. `npm run test:browser` starts a local dev server and checks three viewport widths with mocked CRM responses and intercepted writes. Set `CHROMIUM_PATH` to your browser executable outside HWC NixOS.
+
+Selecting an existing JobTread job reads its calculator inputs from the CRM through same-origin `/api/jobs/{job_id}/calculator-intake` (schema version 1). CRM owns the retained answers and resolves only the exact active canonical job link; ambiguity and read failures appear in Scope. No job or budget is created by this read. Bathroom feature choices prefill explicit work flags; deck material, railing and project choices translate to estimator picklists. Original size, arrangement, quality, timeline and unpriced features remain visible as customer preferences, with the original rough range. Unknown measurements and costs stay empty. Existing saved or imported edits take precedence; fresh drafts apply untouched fields once. Review customer selections and measure on site before sending. Changing calculator categories into exact dimensions or recalibrating its rough range needs a separate verified pricing model; this bridge does neither.
 
 JobTread receives numeric quantities from the reviewed budget, including waste and edits. Sending adds budget lines and is a manual effect without automatic retries. A saved send lock prevents repeat sends until the user explicitly checks JobTread and allows another attempt. If a request fails, inspect the job before sending again. Measurements must be marked checked before push. Customer purchases and the combined project total display separately from HWC's price.
 
@@ -71,14 +73,14 @@ domains/business/estimator/
 │   │   ├── parameters.json     # JT parameter definitions (bathroom + deck)
 │   │   └── stateKeys.json      # State key schema (informational)
 │   ├── hooks/
-│   │   ├── useProjectState.js  # State management + localStorage persistence
+│   │   ├── useProjectState.js  # State, calculator translation, bounded per-job drafts
 │   │   ├── useCatalog.js       # Routes to bathroom/deck catalog, applies edits
 │   │   └── useIsMobile.js      # Responsive breakpoint
 │   ├── components/
 │   │   ├── ScopeTab.jsx        # Measurement form (bathroom + deck), template selector
 │   │   ├── EstimateTab.jsx     # Line item table, JT push button
 │   │   ├── DetailsTab.jsx      # Allowances and custom items
-│   │   ├── JobSelector.jsx     # JT job/customer picker
+│   │   ├── JobSelector.jsx     # JT picker + linked CRM calculator preferences
 │   │   └── ...                 # NumInput, Select, Section
 │   ├── styles/theme.js         # Gruvbox Material Dark colors
 │   └── App.jsx                 # Main layout, tab routing

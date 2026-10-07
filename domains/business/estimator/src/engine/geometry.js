@@ -8,7 +8,20 @@
 
 // ─── Bathroom geometry ──────────────────────────────────────────────────────
 
-export function deriveGeometry(s) {
+export function calculatorMeasurementIssues(state) {
+  if (!state.calculator_intake) return [];
+  const keys = state.projectType === 'deck' ? ['deck_length_ft','deck_width_ft','deck_height_ft','joist_spacing_in','railing_lf','stair_tread_count','stair_stringer_count','stair_width_ft'] :
+    ['bathroom_length_ft','bathroom_width_ft','wall_height_ft',
+      ...(state.has_shower_tile === 'yes' || state.shower_finish === 'panel' ? ['shower_wall_height_ft','shower_wall_1_width_ft','shower_wall_2_width_ft','shower_wall_3_width_ft','shower_wall_4_width_ft','shower_pan_width_ft','shower_pan_length_ft','shower_curb_length_ft','shower_curb_width_in','shower_curb_height_in'] : []),
+      ...(state.has_baseboard === 'yes' ? ['baseboard_lf'] : []), ...(state.has_drywall_touchup === 'yes' ? ['bathroom_wall_repair_sqft'] : [])];
+  return keys.filter(key => typeof state[key] !== 'number' || !Number.isFinite(state[key]) || state[key] < 0 ||
+    (['bathroom_length_ft','bathroom_width_ft','wall_height_ft','deck_length_ft','deck_width_ft','joist_spacing_in'].includes(key) && state[key] === 0))
+    .map(key => `Measure ${key.replaceAll('_',' ')} on site (enter 0 only when checked and unnecessary).`);
+}
+
+export function deriveGeometry(input) {
+  // Missing measurement is unknown, not zero. Keep legacy numeric presets.
+  const s = Object.fromEntries(Object.entries(input).map(([key,value]) => [key, value === null ? NaN : value]));
   const fl        = s.bathroom_length_ft * s.bathroom_width_ft;
   const perim     = 2 * (s.bathroom_length_ft + s.bathroom_width_ft);
   const showerW   = s.shower_wall_1_width_ft + s.shower_wall_2_width_ft
@@ -29,7 +42,8 @@ export function deriveGeometry(s) {
 
 // ─── Deck geometry ──────────────────────────────────────────────────────────
 
-export function deriveDeckGeometry(s) {
+export function deriveDeckGeometry(input) {
+  const s = Object.fromEntries(Object.entries(input).map(([key,value]) => [key, value === null ? NaN : value]));
   const deckSqft   = s.deck_length_ft * s.deck_width_ft;
   const perimeter  = 2 * (s.deck_length_ft + s.deck_width_ft);
   const joistCount = Math.ceil(s.deck_length_ft / (s.joist_spacing_in / 12)) + 1;

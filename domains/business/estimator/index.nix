@@ -145,6 +145,8 @@ in {
       name = "estimator";
       mode = "vhost";
       root = "/var/lib/estimator/dist";
+      # Tailnet-only, same-origin calculator intake. Public ingress unchanged.
+      api = { path = "/api/jobs/"; upstream = "http://127.0.0.1:${toString config.hwc.business.crm.port}"; };
     }];
 
     # Open the port in the firewall (Tailscale interface only)

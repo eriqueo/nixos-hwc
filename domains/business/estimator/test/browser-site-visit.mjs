@@ -32,9 +32,10 @@ try {
  console.log('PASS prepared Carrie worksheet boots automatically and preserves answers on reload');
  await fresh.close();
 for (const width of [390,768,1440]) {
- const context = await browser.newContext({ viewport:{width,height:900}, ignoreHTTPSErrors:true });
+ const context = await browser.newContext({ viewport:{width,height:900}, ignoreHTTPSErrors:true, serviceWorkers:'block' });
  const page = await context.newPage();
  const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+ await page.route(/\/api\/jobs\/[^/]+\/calculator-intake$/, route => route.fulfill({status:404,contentType:'application/json',body:'{}'}));
  await page.addInitScript(({key}) => {
    if (!localStorage.getItem('hwc-estimate-state')) localStorage.setItem('hwc-estimate-state',JSON.stringify({projectType:'bathroom'}));
    localStorage.setItem('hwc-webhook-base','https://hwc-work.ocelot-wahoo.ts.net/webhook');
@@ -115,5 +116,68 @@ for (const width of [390,768,1440]) {
  assert.deepEqual(errors,[]);
  console.log('PASS',width,JSON.stringify(layout));
  await context.close();
+
+ const intakeContext = await browser.newContext({ viewport:{width,height:900}, ignoreHTTPSErrors:true, serviceWorkers:'block' });
+ const intakePage = await intakeContext.newPage();
+ const intakeErrors=[]; intakePage.on('pageerror',e=>intakeErrors.push(e.message));
+ await intakePage.addInitScript(() => {
+   localStorage.setItem('hwc-webhook-base','https://test.invalid/webhook'); localStorage.setItem('hwc-api-key','fixture');
+ });
+ await intakePage.route('**/webhook/jt-customers?*', r=>r.fulfill({json:{customers:[{id:'c',name:'Calculator customer'}]}}));
+ await intakePage.route('**/webhook/jt-jobs?*', r=>r.fulfill({json:{jobs:[{id:'job-carrie',name:'Bathroom',displayName:'#411 Bathroom',number:411},{id:'other',name:'Other',displayName:'#412 Other',number:412}]}}));
+ const intake = { schema_version:1,jt_job_id:'job-carrie',lead_id:'fixture',calculator:'bathroom',report_id:'i682fxmu',rough_estimate:{low:20000,high:29000},
+   answers:{project_type:'refresh',bathroom_size:'medium',shower_tub:'shower_only',tile_level:'basic',fixtures:'upgraded',timeline:'asap',features:['niches','new_toilet','lighting','mirror','door','glass_door']} };
+ let waitingRoute;
+ await intakePage.route(/\/api\/jobs\/[^/]+\/calculator-intake$/, async r=> {
+   if (r.request().url().includes('/other/')) return r.fulfill({status:404,json:{}});
+   waitingRoute=r;
+ });
+ await intakePage.goto('http://127.0.0.1:5189/');
+ await intakePage.getByLabel('Customer',{exact:true}).selectOption('c');
+ await intakePage.getByLabel('Job',{exact:true}).locator('option[value="job-carrie"]').waitFor({state:'attached'});
+ await intakePage.getByLabel('Job',{exact:true}).selectOption('job-carrie');
+ await intakePage.getByText('Loading customer inputs…',{exact:true}).waitFor();
+ await intakePage.getByRole('button',{name:'Measurements verified on site',exact:true}).click();
+ await intakePage.getByRole('button',{name:/^Budget \(/}).click();
+ assert.match(await intakePage.locator('.estimate-issues').innerText(),/Customer inputs have not loaded/);
+ assert.equal(await intakePage.getByRole('button',{name:'Push to JT',exact:true}).isDisabled(),true);
+ waitingRoute=undefined;
+ await intakePage.getByRole('button',{name:'Scope',exact:true}).first().click();
+ await intakePage.getByText('Loading customer inputs…',{exact:true}).waitFor();
+ await intakePage.getByLabel('Room Width feet',{exact:true}).selectOption('7');
+ for (let count=0;!waitingRoute && count<20;count++) await intakePage.waitForTimeout(100);
+ assert.ok(waitingRoute,await intakePage.locator('.customer-inputs').allTextContents());
+ await waitingRoute.fulfill({json:intake});
+ await intakePage.getByText('Customer calculator inputs',{exact:true}).waitFor({timeout:5000});
+ assert.equal(await intakePage.getByLabel('Room Length feet',{exact:true}).inputValue(),'');
+ assert.equal(await intakePage.getByLabel('Room Width feet',{exact:true}).inputValue(),'7');
+ assert.equal(await intakePage.getByLabel('Niches',{exact:true}).inputValue(),'unknown');
+ assert.equal(await intakePage.getByRole('button',{name:'Toilet',exact:true}).getAttribute('aria-pressed'),'true');
+ assert.equal(await intakePage.getByLabel('Shower enclosure',{exact:true}).inputValue(),'yes');
+ await intakePage.getByLabel('Site notes and open questions').fill('Retain this site note');
+ await intakePage.getByRole('button',{name:/^Budget \(/}).click();
+ assert.match(await intakePage.locator('.estimate-issues').innerText(),/Measure bathroom length ft/);
+ assert.equal(await intakePage.getByRole('button',{name:'Push to JT',exact:true}).isDisabled(),true);
+ await intakePage.getByRole('button',{name:'Scope',exact:true}).first().click();
+ await intakePage.getByLabel('Job',{exact:true}).selectOption('other');
+ assert.equal(await intakePage.getByLabel('Site notes and open questions').inputValue(),'');
+ assert.equal(await intakePage.getByText('Customer calculator inputs',{exact:true}).count(),0);
+ await intakePage.getByLabel('Job',{exact:true}).selectOption('job-carrie');
+ assert.equal(await intakePage.getByLabel('Site notes and open questions').inputValue(),'Retain this site note');
+ assert.equal(await intakePage.getByLabel('Room Width feet',{exact:true}).inputValue(),'7');
+ await intakePage.reload();
+ await intakePage.getByText('Customer calculator inputs',{exact:true}).waitFor();
+ assert.equal(await intakePage.getByLabel('Room Width feet',{exact:true}).inputValue(),'7');
+ assert.equal(await intakePage.evaluate(()=>document.documentElement.scrollWidth),width);
+ assert.deepEqual(intakeErrors,[]);
+ await intakePage.getByRole('button',{name:'New Customer',exact:true}).click();
+ await intakePage.getByPlaceholder('Customer name',{exact:true}).fill('Keep new customer');
+ await intakePage.getByPlaceholder('e.g. Master Bath Remodel',{exact:true}).fill('Keep new job');
+ await intakePage.getByRole('button',{name:'Existing Job',exact:true}).click();
+ await intakePage.getByRole('button',{name:'New Customer',exact:true}).click();
+ assert.equal(await intakePage.getByPlaceholder('Customer name',{exact:true}).inputValue(),'Keep new customer');
+ assert.equal(await intakePage.getByPlaceholder('e.g. Master Bath Remodel',{exact:true}).inputValue(),'Keep new job');
+ console.log('PASS calculator intake, measured-edit preservation and job switching',width);
+ await intakeContext.close();
 }
 } finally { await browser.close(); dev.kill('SIGTERM'); }

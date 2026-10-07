@@ -3,7 +3,7 @@ import { C, mono } from '../styles/theme.js';
 import { Box, Label, Divider } from './Section.jsx';
 import { Toggle } from './Toggle.jsx';
 import { Select } from './Select.jsx';
-import { fetchCrmList } from '../api/crm.js';
+import { fetchCrmList, fetchCalculatorIntake } from '../api/crm.js';
 
 const API_BASE = import.meta.env.VITE_WEBHOOK_URL?.replace('/estimate-push', '')
   || localStorage.getItem('hwc-webhook-base')
@@ -38,11 +38,27 @@ function FieldRow({ label, children }) {
   );
 }
 
-export function JobSelector({ s, set }) {
+export function JobSelector({ s, set, selectJob, prefill }) {
   const [customers, setCustomers] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState({ customers: false, jobs: false });
   const [error, setError] = useState(null);
+  const [intakeStatus, setIntakeStatus] = useState('');
+  const [intakeRetry, setIntakeRetry] = useState(0);
+
+  useEffect(() => {
+    if (s.mode !== 'existing' || !s.jobId || s.calculator_intake || s.calculator_input_status === 'manual') { setIntakeStatus(''); return; }
+    const controller = new AbortController();
+    setIntakeStatus('Loading customer inputs…');
+    set('calculator_input_status','pending');
+    fetchCalculatorIntake({ jobId: s.jobId, signal: controller.signal }).then(intake => {
+      if (controller.signal.aborted) return;
+      if (intake) prefill(intake);
+      else set('calculator_input_status','none');
+      setIntakeStatus(intake ? '' : 'No calculator inputs linked to this job.');
+    }).catch(error => { if (!controller.signal.aborted) { setIntakeStatus(error.message); set('calculator_input_status','failed'); } });
+    return () => controller.abort();
+  }, [s.mode, s.jobId, s.calculator_intake, s.calculator_input_status === 'manual', prefill, set, intakeRetry]);
 
   // Fetch customers on mount
   useEffect(() => {
@@ -92,51 +108,22 @@ export function JobSelector({ s, set }) {
 
   const handleCustomerChange = useCallback((customerId) => {
     const customer = customers.find(c => c.id === customerId);
-    set('customerId', customerId);
-    set('customerName', customer?.name || '');
-    set('address', customer?.address || '');
-    set('locationId', customer?.primaryLocationId || customer?.locations?.[0]?.id || '');
-    // Reset job selection when customer changes
-    set('jobId', '');
-    set('jobNumber', '');
-    set('jobName', '');
-  }, [customers, set]);
+    selectJob({ mode: s.mode, customerId, customerName: customer?.name || '',
+      ...(s.mode === 'existing' ? { address: customer?.address || '', jobNumber: '', jobName: '' } : {}),
+      locationId: customer?.primaryLocationId || customer?.locations?.[0]?.id || '', jobId: '' });
+  }, [customers, selectJob, s.mode]);
 
   const handleJobChange = useCallback((jobId) => {
     const job = jobs.find(j => j.id === jobId);
-    set('jobId', jobId);
-    set('jobNumber', job?.number || '');
-    set('jobName', job?.name || '');
-  }, [jobs, set]);
+    selectJob({ mode: 'existing', customerId: s.customerId, customerName: s.customerName, locationId: s.locationId, address: s.address,
+      jobId, jobNumber: job?.number || '', jobName: job?.name || '' });
+  }, [jobs, selectJob, s.customerId, s.customerName, s.locationId, s.address]);
 
   const handleModeChange = useCallback((newMode) => {
-    const oldMode = s.mode;
-    if (newMode === oldMode) return;
-
-    set('jobId', '');
-    set('jobNumber', '');
-
-    if (newMode === 'new_customer') {
-      set('customerId', '');
-      set('customerName', '');
-      set('locationId', '');
-      set('address', '');
-      set('jobName', '');
-    }
-
-    if (oldMode === 'new_customer') {
-      set('newCustomerName', '');
-      set('newCustomerPhone', '');
-      set('newCustomerEmail', '');
-      set('newCustomerStreet', '');
-      set('newCustomerCity', '');
-      set('newCustomerState', 'MT');
-      set('newCustomerZip', '');
-      set('jobName', '');
-    }
-
-    set('mode', newMode);
-  }, [s.mode, set]);
+    if (newMode === s.mode) return;
+    selectJob({ mode: newMode, jobId: '', ...(newMode === 'existing' ? {jobNumber:'',jobName:''} : {}), customerId: newMode === 'new_customer' ? '' : s.customerId,
+      customerName: newMode === 'new_customer' ? '' : s.customerName, locationId: newMode === 'new_customer' ? '' : s.locationId });
+  }, [s.mode, s.customerId, s.customerName, s.locationId, selectJob]);
 
   const isNewCustomer = s.mode === 'new_customer';
 
@@ -364,6 +351,27 @@ export function JobSelector({ s, set }) {
       )}
 
       {/* New customer summary */}
+      {s.mode === 'existing' && s.jobId && intakeStatus && <div className="customer-inputs" role="status">
+        <p>{intakeStatus}</p>
+        {!intakeStatus.startsWith('Loading') && <button onClick={() => setIntakeRetry(v => v + 1)}>Reload customer inputs</button>}
+        {!intakeStatus.startsWith('Loading') && <button onClick={() => set('calculator_input_status','manual')}>Use manual entry for this job</button>}
+      </div>}
+      {s.calculator_input_status === 'manual' && <div className="customer-inputs">
+        <p>Manual entry selected. Replace preset values with measured scope before sending.</p>
+        <button onClick={() => { set('calculator_input_status','pending'); setIntakeRetry(v => v + 1); }}>Reload customer inputs</button>
+      </div>}
+      {s.mode === 'existing' && s.calculator_intake && <div className="customer-inputs">
+        <Label>Customer calculator inputs</Label>
+        <p>Customer preferences. Confirm scope, counts, measurements, and purchase costs on site.</p>
+        {s.calculator_intake.rough_estimate && <p>Original rough range: ${s.calculator_intake.rough_estimate.low.toLocaleString()} – ${s.calculator_intake.rough_estimate.high.toLocaleString()}</p>}
+        <dl>{Object.entries(s.calculator_intake.answers).map(([key,value]) => <div key={key}>
+          <dt>{key.replaceAll('_',' ')}</dt><dd>{(Array.isArray(value) ? value.join(', ') : String(value ?? 'Not answered')).replaceAll('_',' ')}</dd>
+        </div>)}</dl>
+        <button aria-pressed={s.calculator_scope_checked === 'yes'} onClick={() => set('calculator_scope_checked', s.calculator_scope_checked === 'yes' ? 'no' : 'yes')}>
+          {s.calculator_scope_checked === 'yes' ? 'Customer selections reviewed ✓' : 'Mark customer selections reviewed'}
+        </button>
+      </div>}
+
       {isNewCustomer && s.newCustomerName && (
         <div style={{ marginTop: 10, padding: 10, backgroundColor: C.card2, borderRadius: 5 }}>
           <div style={{ fontSize: 10, color: C.txD, marginBottom: 4 }}>New Customer</div>

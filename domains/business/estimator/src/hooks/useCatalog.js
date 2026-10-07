@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { assemble, applyEdits, computeTotals, groupEstimate } from '../engine/assembler.js';
-import { enrichState } from '../engine/geometry.js';
+import { enrichState, calculatorMeasurementIssues } from '../engine/geometry.js';
 
 /**
  * Derives catalog, estimate, totals, and groups from project state + user edits.
@@ -12,7 +12,7 @@ export function useCatalog(state, overrides, removed) {
   const enrichedState = useMemo(() => enrichState(state), [state]);
   const pt = (state.projectType || state.job_type || 'bathroom').toLowerCase();
   const projectType = pt === 'deck' ? 'deck' : 'bathroom';
-  const assembled = useMemo(() => assemble(enrichedState, projectType), [enrichedState, projectType]);
+  const assembled = useMemo(() => calculatorMeasurementIssues(state).length ? [] : assemble(enrichedState, projectType), [enrichedState, projectType, state]);
 
   // Merge catalog picks into the assembled line items
   const catalogPicks = state.catalog_picks || [];

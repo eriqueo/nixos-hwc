@@ -23,6 +23,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .manual-work { margin: 8px 0; padding: 10px; background: var(--surface-elevated); border-radius: 6px; }
 .manual-work p { font-size: 12px; line-height: 1.5; }
 .site-help { font-size: 12px; line-height: 1.5; }
+.customer-inputs { margin-top: 12px; padding: 12px; border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-elevated); font-size: 12px; overflow-wrap: anywhere; }
+.customer-inputs p { line-height: 1.5; }
+.customer-inputs dl > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 12px; padding: 5px 0; }
+.customer-inputs dt { color: var(--text-dim); }
+.customer-inputs dd { margin: 0; }
+.customer-inputs button { padding: 8px 12px; border: 1px solid var(--border-default); color: var(--text-body); background: var(--surface-card); border-radius: 6px; cursor: pointer; }
 .measurement-select { width: 96px; padding: 3px 6px; border-radius: 3px; border: 1px solid var(--border-default); background: var(--surface-elevated); color: var(--text-body); font-family: var(--font-mono); font-size: 13px; }
 .dimension-select { width: 72px; }
 @media (min-width: 768px) { .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; } }

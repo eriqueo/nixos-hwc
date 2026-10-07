@@ -26,11 +26,13 @@ export function FtInInput({ label, value, onChange, min = 0, max = 9999, pickerM
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0' }}>
       <span style={{ color: C.tx, fontSize: 12, fontFamily: mono }}>{label}</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <select className="measurement-select dimension-select" aria-label={`${label} feet`} value={ft} onChange={handleFt}>
+        <select className="measurement-select dimension-select" aria-label={`${label} feet`} value={value == null ? '' : ft} onChange={handleFt}>
+          <option value="">Measure…</option>
           {feetOptions.map(v => <option key={v} value={v}>{v}</option>)}
         </select>
         <span style={{ color: C.txD, fontSize: 10 }}>ft</span>
-        <select className="measurement-select dimension-select" aria-label={`${label} inches`} value={inches} onChange={handleIn}>
+        <select className="measurement-select dimension-select" aria-label={`${label} inches`} value={value == null ? '' : inches} onChange={handleIn}>
+          <option value="">Measure…</option>
           {inchOptions.map(v => <option key={v} value={v}>{v}</option>)}
         </select>
         <span style={{ color: C.txD, fontSize: 10 }}>in</span>

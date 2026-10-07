@@ -8,6 +8,7 @@ import { CatalogBrowser } from './components/CatalogBrowser.jsx';
 import { useProjectState } from './hooks/useProjectState.js';
 import { useCatalog }      from './hooks/useCatalog.js';
 import { useIsMobile }     from './hooks/useIsMobile.js';
+import { calculatorMeasurementIssues } from './engine/geometry.js';
 
 const TABS = [
   { id: 'scope',    label: 'Scope' },
@@ -16,7 +17,7 @@ const TABS = [
 ];
 
 export default function App() {
-  const [state, set, reset, storageError, restore] = useProjectState();
+  const [state, set, reset, storageError, restore, selectJob, prefill] = useProjectState();
   const overrides = state.budget_overrides;
   const removed = state.budget_removed;
   const setOverrides = useCallback(value => set('budget_overrides', value), [set]);
@@ -27,6 +28,7 @@ export default function App() {
   const isMobile = useIsMobile();
 
   const { totals, groups } = useCatalog(state, overrides, removed);
+  const awaitingMeasurements = calculatorMeasurementIssues(state).length > 0 || ['pending','failed'].includes(state.calculator_input_status);
 
   const assemble = useCallback(() => {
     setView('estimate');
@@ -85,10 +87,10 @@ export default function App() {
             paddingLeft: isMobile ? 12 : 0,
             paddingRight: isMobile ? 12 : 0,
           }}>
-            <Stat label="Cost"   value={`$${Math.round(totals.cost).toLocaleString()}`} compact={isMobile} />
-            <Stat label="Price"  value={`$${Math.round(totals.price).toLocaleString()}`} color={C.acc} compact={isMobile} />
-            <Stat label="Margin" value={`${totals.margin.toFixed(1)}%`} color={C.grn} compact={isMobile} />
-            <Stat label="Labor"  value={`${Math.round(totals.laborHrs)}h`} color={C.blu} compact={isMobile} />
+            <Stat label="Cost"   value={awaitingMeasurements ? '—' : `$${Math.round(totals.cost).toLocaleString()}`} compact={isMobile} />
+            <Stat label="Price"  value={awaitingMeasurements ? '—' : `$${Math.round(totals.price).toLocaleString()}`} color={C.acc} compact={isMobile} />
+            <Stat label="Margin" value={awaitingMeasurements ? '—' : `${totals.margin.toFixed(1)}%`} color={C.grn} compact={isMobile} />
+            <Stat label="Labor"  value={awaitingMeasurements ? '—' : `${Math.round(totals.laborHrs)}h`} color={C.blu} compact={isMobile} />
           </div>
         </div>
 
@@ -143,7 +145,7 @@ export default function App() {
         </div>
         {(storageError || draftError) && <p role="alert">{storageError || draftError}</p>}
         {view === 'scope' && (
-          <ScopeTab s={state} set={set} onAssemble={assemble} isMobile={isMobile} />
+          <ScopeTab s={state} set={set} selectJob={selectJob} prefill={prefill} onAssemble={assemble} isMobile={isMobile} />
         )}
         {view === 'details' && (
           <DetailsTab s={state} set={set} isMobile={isMobile} />

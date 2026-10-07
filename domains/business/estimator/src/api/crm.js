@@ -1,4 +1,23 @@
 // Authenticated list boundary. Bounded to 20 pages; fail visibly instead of truncating.
+export async function fetchCalculatorIntake({ jobId, signal, request = fetch }) {
+  const response = await request(`/api/jobs/${encodeURIComponent(jobId)}/calculator-intake`, {
+    signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]), cache: 'no-store',
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) throw Error(response.status === 409 ? 'More than one CRM record is linked to this job. Resolve the CRM links before loading customer inputs.' : `Customer inputs could not load (${response.status}).`);
+  return parseCalculatorIntake(await response.json(), jobId);
+}
+
+export function parseCalculatorIntake(data, jobId) {
+  if (data.schema_version !== 1 || data.jt_job_id !== jobId || !['bathroom','deck'].includes(data.calculator) ||
+      typeof data.lead_id !== 'string' || (data.report_id !== null && typeof data.report_id !== 'string') || !data.answers || Array.isArray(data.answers) || typeof data.answers !== 'object' ||
+      Object.keys(data.answers).length > 40 ||
+      Object.entries(data.answers).some(([key,v]) => key === 'features' ? !Array.isArray(v) || v.some(f => typeof f !== 'string') :
+        v !== null && typeof v !== 'boolean' && typeof v !== 'string' && !(typeof v === 'number' && Number.isFinite(v)))) throw Error('Customer inputs have an unsupported format. Enter scope manually.');
+  if (data.rough_estimate !== null && (!data.rough_estimate || ![data.rough_estimate.low,data.rough_estimate.high].every(v => typeof v === 'number' && Number.isFinite(v) && v >= 0) || data.rough_estimate.low > data.rough_estimate.high)) throw Error('Customer estimate has an unsupported format.');
+  return data;
+}
+
 export async function fetchCrmList({ base, key, resource, params = {}, signal, request = fetch }) {
   const rows = new Map();
   let page;

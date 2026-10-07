@@ -14,7 +14,7 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
-The estimator adds authenticated CRM paging in `estimator/src/api/crm.js`, responsive controls and budget cards, and versioned device-local drafts with download/import backups. Catalogue changes are owned by `databases/migrations/002-estimator-site-visit.sql` and rebuilt with `export_estimator_data.py`.
+The estimator adds authenticated CRM paging and exact-job calculator intake in `estimator/src/api/crm.js`, responsive controls and budget cards, and bounded per-job device drafts with download/import backups. Calculator answers prefill known scope flags; measurements and unpriced preferences remain for site review. Catalogue changes are owned by `databases/migrations/002-estimator-site-visit.sql` and rebuilt with `export_estimator_data.py`.
 
 CRM supplies shared Messenger Page credentials to its service and import command for manual replies; send receipts share its existing database backup.
 
@@ -56,6 +56,8 @@ business/
 ## Changelog
 
 - 2026-10-07: Estimator loads the prepared Carrie #411 worksheet and adds site questions once while preserving existing device drafts.
+- 2026-10-07: Estimator reads linked calculator selections by exact JobTread job, preserves site edits in bounded per-job drafts, and blocks budget push while source-derived measurements or scope remain unknown.
+
 - 2026-10-07: Estimator measurement dropdowns replace typing in bathroom and deck scope forms. Browser checks cover feet/inches, calculated area, exact area overrides, draft persistence, and responsive touch controls.
 - 2026-10-07: Estimator supports panel showers and vinyl/Marmoleum with explicit hours and quotes, customer-supplied fixtures with installation retained, stable saved budget edits, exact numeric JobTread quantities, and responsive phone/tablet layouts. Corrected niche waste from 0.1 to 1.0. Existing trade rates stay unchanged.
 

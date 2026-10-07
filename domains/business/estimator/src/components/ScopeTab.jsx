@@ -28,13 +28,13 @@ function DerivedStat({ label, value, unit }) {
   return (
     <div style={{ textAlign: 'center' }}>
       <span style={{ color: C.txD, fontSize: 9, textTransform: 'uppercase' }}>{label}</span><br />
-      <span style={{ color: C.txB, fontSize: 13, fontWeight: 600 }}>{value}</span>
+      <span style={{ color: C.txB, fontSize: 13, fontWeight: 600 }}>{String(value) === 'NaN' ? '—' : value}</span>
       <span style={{ color: C.txD, fontSize: 10 }}> {unit}</span>
     </div>
   );
 }
 
-export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
+export function ScopeTab({ s, set, selectJob, prefill, onAssemble, isMobile = false }) {
   const geo = deriveGeometry(s);
   const { fl, perim, wallTile, panTile, curbTile, accentTile, paintSqft, wallArea, ceilArea, paintableWalls } = geo;
   const isDeck = (s.projectType || s.job_type || '').toLowerCase() === 'deck';
@@ -44,7 +44,7 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
 
       {/* Job Selection */}
       <div style={{ gridColumn: '1/-1' }}>
-        <JobSelector s={s} set={set} />
+        <JobSelector s={s} set={set} selectJob={selectJob} prefill={prefill} />
       </div>
 
       {/* Template Selector */}
@@ -118,12 +118,14 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
             <Box>
               <Label color={C.red}>Scope</Label>
               <Select label="Project" value={s.project_scope} onChange={v => set('project_scope', v)} options={[
+                { v: 'unknown', l: 'Choose on site' },
                 { v: 'new_build', l: 'New Build' },
                 { v: 'full_rebuild', l: 'Full Rebuild' },
                 { v: 'partial_rebuild', l: 'Partial Rebuild (keep frame)' },
                 { v: 'repair', l: 'Repair' },
               ]} />
               <Select label="Decking" value={s.decking_material} onChange={v => set('decking_material', v)} options={[
+                { v: 'unknown', l: 'Choose on site' },
                 { v: 'pt', l: 'Pressure-Treated' },
                 { v: 'cedar', l: 'Western Red Cedar' },
                 { v: 'redwood', l: 'Redwood' },
@@ -131,6 +133,7 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
                 { v: 'composite_premium', l: 'Composite Premium (TimberTech)' },
               ]} />
               <Select label="Railing" value={s.railing_type} onChange={v => set('railing_type', v)} options={[
+                { v: 'unknown', l: 'Choose on site' },
                 { v: 'no', l: 'None' },
                 { v: 'wood', l: 'Wood' },
                 { v: 'composite', l: 'Composite' },
@@ -150,11 +153,13 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
         <Label color={C.acc}>Scope of Work</Label>
         <div style={{ display: 'flex', gap: 12, padding: '4px 0', flexWrap: 'wrap' }}>
           <Select label="Demo" value={s.demo_scope} onChange={v => set('demo_scope', v)} options={[
+            { v: 'unknown', l: 'Choose on site' },
             { v: 'shower_only',       l: 'Shower Only' },
             { v: 'shower_and_floors', l: 'Shower + Floors' },
             { v: 'full_gut',          l: 'Full Gut' },
           ]} />
           <Select label="Niches" value={s.shower_niches} onChange={v => set('shower_niches', v)} options={[
+            { v: 'unknown', l: 'Confirm count' },
             { v: '0', l: 'None' },
             { v: '1', l: '1 Niche' },
             { v: '2', l: '2 Niches' },
@@ -171,10 +176,10 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
         </div>
         <Select label="Shower finish" value={s.shower_finish ?? (s.has_shower_tile === 'yes' ? 'tile' : 'none')} onChange={v => {
           set('shower_finish', v); set('has_shower_tile', v === 'tile' ? 'yes' : 'no');
-        }} options={[{ v: 'none', l: 'No shower work' }, { v: 'tile', l: 'Tile' }, { v: 'panel', l: 'Panel / prefab kit' }]} />
+        }} options={[{ v: 'unknown', l: 'Choose on site' }, { v: 'none', l: 'No shower work' }, { v: 'tile', l: 'Tile' }, { v: 'panel', l: 'Panel / prefab kit' }]} />
         <Select label="Floor finish" value={s.floor_finish ?? (s.has_floor_tile === 'yes' ? 'tile' : 'none')} onChange={v => {
           set('floor_finish', v); set('has_floor_tile', v === 'tile' ? 'yes' : 'no');
-        }} options={[{ v: 'none', l: 'Keep existing' }, { v: 'tile', l: 'Tile' }, { v: 'vinyl', l: 'Vinyl / LVP' }, { v: 'marmoleum', l: 'Marmoleum' }]} />
+        }} options={[{ v: 'unknown', l: 'Choose on site' }, { v: 'none', l: 'Keep existing' }, { v: 'tile', l: 'Tile' }, { v: 'vinyl', l: 'Vinyl / LVP' }, { v: 'marmoleum', l: 'Marmoleum' }]} />
         <PillToggle label="Remove existing tub" value={s.has_existing_tub} onChange={v => set('has_existing_tub', v)} />
         <Select label="Shower enclosure" value={s.has_shower_door || 'unknown'} onChange={v => set('has_shower_door', v)}
           options={[{ v: 'unknown', l: 'Choose on site' }, { v: 'yes', l: 'Install shower door' }, { v: 'no', l: 'Curtain / no new door' }]} />

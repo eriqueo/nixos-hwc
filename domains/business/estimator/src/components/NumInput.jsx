@@ -7,6 +7,7 @@ const measurementRanges = { sf: [2000, 1], sqft: [2000, 1], in: [96, 0.25], ea: 
 
 export function NumInput({ label, value, onChange, unit, min = 0, max = 9999, step = 1, show = true }) {
   if (!show) return null;
+  if (typeof value === 'number' && !Number.isFinite(value)) value = null;
   if (unit === 'ft' || unit === 'lf') return <FtInInput {...{ label, value, onChange, min, max }} pickerMax={unit === 'lf' ? 1000 : 100} />;
   const money = unit === '$';
   const [limit, increment] = measurementRanges[unit] || [200, step];

@@ -15,6 +15,7 @@
  * No React dependencies -- can be tested independently.
  */
 import { tradeRate, matPrice } from './pricing.js';
+import { calculatorMeasurementIssues } from './geometry.js';
 import { evaluateFormula, evaluateCondition } from './formulaEngine.js';
 import catalog from '../data/catalog.json' with { type: 'json' };
 import parameters from '../data/parameters.json' with { type: 'json' };
@@ -257,11 +258,25 @@ export function buildJtItems(items) {
 
 export function estimateIssues(state, items) {
   const issues = [];
+  if (['pending','failed'].includes(state.calculator_input_status)) issues.push('Customer inputs have not loaded. Return to Scope to reload them or choose manual entry.');
+  issues.push(...calculatorMeasurementIssues(state));
+  if (state.calculator_intake) {
+    if (state.calculator_scope_checked !== 'yes') issues.push('Review customer calculator selections in Scope.');
+    if (state.projectType === 'bathroom') {
+      for (const key of ['demo_scope','shower_finish','floor_finish','shower_niches']) if (state[key] === 'unknown') issues.push(`Choose ${key.replaceAll('_',' ')} in Scope.`);
+    } else {
+      for (const key of ['decking_material','railing_type','project_scope']) if (state[key] === 'unknown') issues.push(`Choose ${key.replaceAll('_',' ')} in Scope.`);
+    }
+  }
   if (state.measurements_checked !== 'yes') issues.push('Verify measurements on site and mark them checked in Scope.');
   const requireNumber = (key, label, positive = true) => {
     const value = state[key];
     if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || (positive && value === 0)) issues.push(`Enter ${label}.`);
   };
+  if (state.calculator_intake) for (const item of items) {
+    const key = ALLOWANCE_COST_KEY[item.name];
+    if (key) requireNumber(key, key.replaceAll('_',' '));
+  }
   if (!['bathroom', 'deck'].includes(state.projectType)) issues.push('Select Bathroom or Deck. Other project types have no assembly rules.');
   if (state.projectType === 'bathroom' && (state.shower_finish === 'panel' || state.has_shower_tile === 'yes')) {
     if (!['yes', 'no'].includes(state.has_shower_door)) issues.push('Choose a shower door or curtain / no new door in Scope.');
