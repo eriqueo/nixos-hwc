@@ -113,6 +113,20 @@ AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
 test -z "$(git -C "$ROOT/state" status --porcelain)"
 git -C "$ROOT/hub.git" cat-file -e main:ledger/test.json
 git -C "$ROOT/hub.git" cat-file -e main:guard/arm.json
+# Atomic ledger/guard writers leave a temporary file visible before rename.
+# Synchronization must publish final JSON files without capturing that file.
+printf 'ledger write in progress\n' > "$ROOT/state/ledger/test.json.atomic"
+printf 'guard write in progress\n' > "$ROOT/state/guard/arm.json.atomic"
+AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
+  bash "$(dirname "$0")/state-sync.sh" sync >/dev/null
+for temporary in ledger/test.json.atomic guard/arm.json.atomic; do
+  if git -C "$ROOT/hub.git" cat-file -e "main:$temporary" 2>/dev/null; then
+    echo "state-sync.test: published atomic temporary file $temporary" >&2
+    exit 1
+  fi
+done
+AGENT_STATE_DIR="$ROOT/state" bash "$VALIDATOR" >/dev/null
+rm "$ROOT/state/ledger/test.json.atomic" "$ROOT/state/guard/arm.json.atomic"
 # Anything else stays outside the contract.
 printf 'x\n' > "$ROOT/state/stray.txt"
 git -C "$ROOT/state" add stray.txt
