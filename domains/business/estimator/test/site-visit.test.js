@@ -6,6 +6,31 @@ const { calculatorPatch, applyCalculatorIntake, switchJobDraft, DEFAULT_STATE } 
 const calculatorIntake = { schema_version: 1, jt_job_id: 'job-carrie', lead_id: 'lead-carrie', calculator: 'bathroom', report_id: 'i682fxmu',
   rough_estimate: { low: 20000, high: 29000 }, answers: { fixtures: 'upgraded', timeline: 'asap', shower_tub: 'shower_only', tile_level: 'basic', project_type: 'refresh', bathroom_size: 'medium', features: ['niches', 'new_toilet', 'lighting', 'mirror', 'door', 'glass_door'] } };
 const cp = calculatorPatch(calculatorIntake);
+const { parseCalculatorIntake, CALCULATOR_FIELDS } = await import('../src/api/crm.js');
+const detailed = { ...calculatorIntake, answers: { ...calculatorIntake.answers, intake_version:2,
+  bathroom_length_ft:9.5, bathroom_width_ft:6, shower_finish:'panel', floor_finish:'vinyl', shower_niches:0 } };
+assert.equal(parseCalculatorIntake(detailed, detailed.jt_job_id),detailed);
+const filled = applyCalculatorIntake(startForDetails(), detailed);
+function startForDetails() { return { ...DEFAULT_STATE,jobId:detailed.jt_job_id,touched_fields:['bathroom_width_ft'],bathroom_width_ft:7 }; }
+assert.equal(filled.bathroom_length_ft,9.5); assert.equal(filled.bathroom_width_ft,7);
+assert.equal(filled.shower_finish,'panel'); assert.equal(filled.has_shower_tile,'no');
+assert.equal(filled.floor_finish,'vinyl'); assert.equal(filled.has_floor_tile,'no');
+assert.equal(filled.shower_niches,'0'); assert.equal(filled.measurements_checked,'no');
+for (const answers of [{intake_version:3},{intake_version:2,bathroom_length_ft:-1},
+  {intake_version:2,bathroom_length_ft:0},{intake_version:2,bathroom_length_ft:'9'},
+  {intake_version:2,shower_niches:1.5},{intake_version:2,floor_finish:'carpet'}]) {
+  assert.throws(()=>parseCalculatorIntake({...calculatorIntake,answers},calculatorIntake.jt_job_id));
+}
+const deckIntake = { ...calculatorIntake,calculator:'deck',answers:{intake_version:2,deck_length_ft:16,deck_width_ft:12,deck_height_ft:0,railing_lf:0,stair_tread_count:0} };
+assert.equal(calculatorPatch(deckIntake).deck_height_ft,0);
+for (const calculator of ['bathroom','deck']) for (const f of CALCULATOR_FIELDS[calculator]) assert.ok(Object.hasOwn(DEFAULT_STATE,f.id));
+const { buildSteps, makeCalculator } = await import('../../website/calculator/app/src/calcData.js');
+assert.equal(buildSteps({calculator:'bathroom',steps:[]})[0].type,'details');
+// Production catalog conditions use parentheses and SQL-style equality.
+const conditionRange = makeCalculator({engine:'assembly',sizeMap:{medium:{}},showerTubMap:{tub_only:{has_tub:true}},scopeItems:[
+  {item_type:'material',unit_price:2000,default_qty:1,condition_trigger:'has_tub AND (project_type = "full_gut" OR project_type = "tub_to_shower")'}]});
+assert.deepEqual(conditionRange({shower_tub:'tub_only',project_type:'full_gut'}),[1500,2500]);
+assert.deepEqual(conditionRange({shower_tub:'tub_only',project_type:'refresh'}),[0,0]);
 assert.equal(cp.bathroom_length_ft, null);
 assert.equal(cp.toilet_allowance, null);
 assert.equal(cp.shower_niches, 'unknown');
@@ -128,3 +153,22 @@ const transformed=runNode('Transform Customers',{first:()=>({json:{organization:
 }]}}}})})[0].json;
 assert.equal(transformed.version,1); assert.equal(transformed.nextPage,'next'); assert.equal(transformed.customers[0].address,'Primary');
 console.log('PASS n8n auth-to-query paging and primary location contract');
+
+const { preparePreliminary } = await import('../src/engine/preliminary.js');
+const rough = preparePreliminary(calculatorIntake);
+assert.equal(rough.quote_hold,true);
+assert.ok(rough.items.length > 0 && rough.items.every(i=>Number.isFinite(i.quantity) && !i.quantityFormula));
+assert.ok(rough.assumptions.some(a=>a.field==='bathroom_length_ft'));
+assert.ok(rough.missing_inputs.some(v=>v.includes('shower door purchase cost')));
+const knownPlan=preparePreliminary(detailed);
+assert.ok(!knownPlan.assumptions.some(a=>a.field==='bathroom_length_ft'));
+assert.ok(knownPlan.missing_inputs.some(v=>v.includes('panel kit')));
+assert.ok(knownPlan.missing_inputs.some(v=>v.includes('flooring, adhesive')));
+for (const state of ['pending','reserved','completed','uncertain']) {
+ const withBudget={...calculatorIntake,preliminary_budget:{schema_version:1,state,quote_hold:true}};
+ assert.ok(engine.estimateIssues({...customerSupply,calculator_intake:withBudget},engine.assemble(enrichState(customerSupply))).some(v=>v.includes('append another budget')));
+}
+const deckPlan=preparePreliminary({...deckIntake,answers:{...deckIntake.answers,project_type:'new_build',material:'pt_lumber',railing:'none'}});
+assert.ok(deckPlan.items.length && !deckPlan.assumptions.some(a=>a.field==='deck_height_ft'));
+assert.throws(()=>preparePreliminary({...calculatorIntake,answers:{project_type:'unsupported'}}),/unsupported_preliminary_scope/);
+console.log('PASS preliminary plans, assumption provenance, missing costs and duplicate append guard');

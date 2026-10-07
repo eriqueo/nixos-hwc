@@ -12,7 +12,9 @@ For panel showers and vinyl/Marmoleum, enter installation hours and supplier cos
 
 Drafts are CRITICAL device-local data: a working draft plus up to 50 saved job drafts, with version 2 JSON download/import backups. Switching saves the previous job before restoring the selected job; a full or unavailable store blocks switching rather than discarding drafts. Reset removes the selected job's saved draft. Download before reset, switching devices, or clearing browser data. Budget quantity edits and removals persist through reassembly and reload. Catalogue files are REPLACEABLE exports from Postgres; regenerate them instead of editing JSON. Run `npm run test:site-visit`, `npm run test:golden`, and `npm run lint:ui` for engine and token checks. `npm run test:browser` starts a local dev server and checks three viewport widths with mocked CRM responses and intercepted writes. Set `CHROMIUM_PATH` to your browser executable outside HWC NixOS.
 
-Selecting an existing JobTread job reads its calculator inputs from the CRM through same-origin `/api/jobs/{job_id}/calculator-intake` (schema version 1). CRM owns the retained answers and resolves only the exact active canonical job link; ambiguity and read failures appear in Scope. No job or budget is created by this read. Bathroom feature choices prefill explicit work flags; deck material, railing and project choices translate to estimator picklists. Original size, arrangement, quality, timeline and unpriced features remain visible as customer preferences, with the original rough range. Unknown measurements and costs stay empty. Existing saved or imported edits take precedence; fresh drafts apply untouched fields once. Review customer selections and measure on site before sending. Changing calculator categories into exact dimensions or recalibrating its rough range needs a separate verified pricing model; this bridge does neither.
+Selecting an existing JobTread job reads its calculator inputs from the CRM through same-origin `/api/jobs/{job_id}/calculator-intake` (schema version 1). CRM owns the retained answers and resolves only the exact active canonical job link; ambiguity and read failures appear in Scope. No job or budget is created by this read. Bathroom feature choices prefill explicit work flags; deck material, railing and project choices translate to estimator picklists. Original size, arrangement, quality, timeline and unpriced features remain visible as customer preferences, with the original rough range. Unknown measurements and costs stay empty. Existing saved or imported edits take precedence; fresh drafts apply untouched fields once. Review customer selections and measure on site before sending. Version 2 optionally supplies customer-reported feet, counts and finishes from the shared `CALCULATOR_FIELDS` vocabulary. Blank values remain unknown; neither categories nor these reports count as site verification. The rough public range still uses its category model.
+
+New calculator jobs may already have an automatic preliminary budget created by CRM. Scope shows that status, and manual Send reads it again. Review and update the existing budget in JobTread; the current append-only sender cannot replace it.
 
 JobTread receives numeric quantities from the reviewed budget, including waste and edits. Sending adds budget lines and is a manual effect without automatic retries. A saved send lock prevents repeat sends until the user explicitly checks JobTread and allows another attempt. If a request fails, inspect the job before sending again. Measurements must be marked checked before push. Customer purchases and the combined project total display separately from HWC's price.
 
@@ -65,6 +67,8 @@ domains/business/estimator/
 ├── src/
 │   ├── engine/
 │   │   ├── assembler.js   # Core: buildCatalog(), buildDeckCatalog(), geometry, parameters
+│   │   ├── intake.js      # Pure shared translation and browser state defaults
+│   │   ├── preliminary.js # Bounded Node plan port, template assumptions, no provider calls
 │   │   └── pricing.js     # tradeRate(), matPrice() — reads tradeRates.json
 │   ├── data/
 │   │   ├── tradeRates.json     # Exported from DB by export_estimator_data.py
@@ -171,6 +175,8 @@ templates and fails the exit code on any item/qty/price/total diff beyond
 and is NOT a refactor gate.
 
 ## Changelog
+
+- 2026-10-07: Share optional version 2 customer measurements, counts and finishes with the calculator. Add a server plan port using existing catalog/templates, visible assumptions and unpriced exclusions. Fresh job-budget status at manual Send blocks duplicate appends, including manual entry and saved drafts. CRM owns reservations and provider effects; customer proposals require review.
 
 - 2026-10-07: App-owned `src/data/preparedDraft.json` loads Carrie's worksheet in fresh sessions and adds site questions once to an existing #411 draft without replacing field work. This file is separate from DB-owned templates because it is a prepared job worksheet, not a reusable template. Regenerate the downloadable worksheet from its `state` member; device edits remain local and exportable.
 - 2026-10-07: Scope measurements use native dropdowns on phones, tablets, and desktop. Lengths use feet and quarter-inch choices; areas retain automatic calculations and exact saved values. Costs remain numeric inputs.

@@ -3,6 +3,8 @@
 // engines (assembly + bathroom + deck) and the step-transformation logic
 // that resolves image paths from the JSON's imageBase and per-option image
 // filename.
+import { CALCULATOR_FIELDS } from '../../../../estimator/src/api/crm.js';
+import { evaluateCondition } from '../../../../estimator/src/engine/formulaEngine.js';
 
 // Resolve an option's image to a full URL: imageBase + "/" + filename
 function resolveImage(imageBase, filename) {
@@ -16,7 +18,7 @@ function resolveImage(imageBase, filename) {
 // they used to: { value, label, desc, image?, icon? } per option.
 export function buildSteps(data) {
   const base = data.imageBase || "";
-  return (data.steps || []).map((step) => ({
+  const steps = (data.steps || []).map((step) => ({
     ...step,
     options: (step.options || []).map((opt) => ({
       ...opt,
@@ -28,36 +30,20 @@ export function buildSteps(data) {
       } : {}),
     })),
   }));
+  if (CALCULATOR_FIELDS[data.calculator]) steps.push({
+    id: 'project_details', type: 'details', question: 'What do you already know about the space?',
+    subtitle: 'Optional. Enter feet as decimals (5 ft 6 in = 5.5). Leave anything you have not measured blank. We will check these details at the site visit.',
+    fields: CALCULATOR_FIELDS[data.calculator],
+  });
+  return steps;
 }
 
-// ─── Condition trigger evaluator ──────────────────────────────────────────
-// Handles: true, false, AND, OR, =, !=, variable lookup.
-// These are constrained expressions we control — no need for a full parser.
+// Calculator exports use SQL-style single equality. Adapt that transport
+// spelling to the estimator's expression vocabulary; parentheses and boolean
+// precedence belong to the shared parser, not a second string splitter.
 function evalCondition(expr, state) {
-  if (!expr || expr.trim().toLowerCase() === "true") return true;
-  if (expr.trim().toLowerCase() === "false") return false;
-
-  // AND has higher precedence — split OR first
-  if (expr.includes(" OR ")) {
-    return expr.split(" OR ").some((p) => evalCondition(p.trim(), state));
-  }
-  if (expr.includes(" AND ")) {
-    return expr.split(" AND ").every((p) => evalCondition(p.trim(), state));
-  }
-
-  // != comparison
-  if (expr.includes("!=")) {
-    const [key, val] = expr.split("!=").map((s) => s.trim().replace(/"/g, ""));
-    return String(state[key] ?? "").toLowerCase() !== val.toLowerCase();
-  }
-  // = comparison
-  if (expr.includes("=")) {
-    const [key, val] = expr.split("=").map((s) => s.trim().replace(/"/g, ""));
-    return String(state[key] ?? "").toLowerCase() === val.toLowerCase();
-  }
-
-  // Boolean variable
-  return Boolean(state[expr.trim()]);
+  if (!expr || expr.trim().toLowerCase() === 'true') return true;
+  return evaluateCondition(expr.replace(/(?<![=!<>])=(?!=)/g, '=='), state);
 }
 
 // ─── Quantity formula evaluator ──────────────────────────────────────────

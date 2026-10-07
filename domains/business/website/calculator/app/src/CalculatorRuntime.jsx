@@ -13,6 +13,7 @@ import { useState, useEffect, useRef } from "react";
 import { T, fonts } from "./theme";
 import { buildSteps, makeCalculator, makeHelpers } from "./calcData";
 import CalculatorLayout from "./CalculatorLayout";
+import { CALCULATOR_INPUT_VERSION } from '../../../../estimator/src/api/crm.js';
 
 // ─── Shared styles ─────────────────────────────────────────────────────────
 const inputStyle = {
@@ -209,7 +210,7 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
   const footerCopy = data.copy?.footerCopy ?? "Based on real Heartwood Craft projects in Bozeman — not national averages.";
 
   const [step, setStep] = useState(0);
-  const [state, setState] = useState({});
+  const [state, setState] = useState({ intake_version: CALCULATOR_INPUT_VERSION });
   const [contact, setContact] = useState({ name: "", email: "", phone: "", notes: "", preferred_date: "", preferred_time: "" });
   const [phase, setPhase] = useState("quiz");
   const [fading, setFading] = useState(false);
@@ -286,7 +287,7 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
     setTimeout(goNext, 200);
   };
   const toggle = (v) => setState((p) => { const f = p.features || []; return { ...p, features: f.includes(v) ? f.filter((x) => x !== v) : [...f, v] }; });
-  const reset = () => fade(() => { setRunId(measurement?.uuid()); started.current = false; attempts.current = {}; setSaveError(""); setStep(0); setState({}); setContact({ name: "", email: "", phone: "", notes: "", preferred_date: "", preferred_time: "" }); setPhase("quiz"); setReportUrl(null); setReportId(null); });
+  const reset = () => fade(() => { setRunId(measurement?.uuid()); started.current = false; attempts.current = {}; setSaveError(""); setStep(0); setState({ intake_version: CALCULATOR_INPUT_VERSION }); setContact({ name: "", email: "", phone: "", notes: "", preferred_date: "", preferred_time: "" }); setPhase("quiz"); setReportUrl(null); setReportId(null); });
 
   const unlockGate = async () => {
     if (!hasGateInfo || submitting) return;
@@ -387,6 +388,23 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
             <h2 style={{ fontFamily: fonts.serif, fontSize: 28, fontWeight: 700, color: T.heading, margin: "0 0 6px", lineHeight: 1.3 }}>{cur.question}</h2>
             <p style={{ fontSize: 16, color: T.textMuted, margin: "0 0 12px", lineHeight: 1.5 }}>{cur.subtitle}</p>
             {cur.why && <WhyToggle text={cur.why} />}
+
+            {cur.type === "details" && <form onSubmit={e => { e.preventDefault(); goNext(); }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+                {cur.fields.map(field => <label key={field.id} style={{ display: 'grid', gap: 6, fontSize: 16, color: T.text }}>
+                  {field.label}{field.unit && ` (${field.unit})`}
+                  {field.options ? <select aria-label={field.label} value={state[field.id] ?? ''}
+                    onChange={e => setState(p => ({ ...p, [field.id]: e.target.value || null }))} style={inputStyle}>
+                    <option value="">Not sure yet</option>
+                    {field.options.filter(o => o.v !== 'unknown').map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+                  </select> : <input aria-label={field.label} type="number" inputMode="decimal" min={field.min} max={field.max} step={field.integer ? 1 : 'any'}
+                    placeholder="Not measured yet" value={state[field.id] ?? ''} style={inputStyle}
+                    onChange={e => setState(p => ({ ...p, [field.id]: e.target.value === '' ? null : Number(e.target.value) }))} />}
+                </label>)}
+              </div>
+              <p style={{ fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>These details help us prepare for your visit. The rough price range uses your earlier quiz choices. It does not yet price these measurements or finish changes.</p>
+              <button type="submit" style={{ ...btnPrimary, marginTop: 16 }}>Continue — unanswered details are fine</button>
+            </form>}
 
             {cur.type === "image-cards" && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>

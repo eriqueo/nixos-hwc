@@ -1,6 +1,7 @@
 import { chromium } from 'playwright-core';
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 const key = 'local-browser-test';
 const dev = spawn('npm', ['run', 'dev', '--', '--host', '127.0.0.1', '--port', '5189', '--strictPort'], { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -9,8 +10,10 @@ await new Promise((resolve,reject) => {
  dev.stdout.on('data',data=>{ if(data.toString().includes('Local:')){clearTimeout(timer);resolve();} });
  dev.on('exit',code=>reject(new Error(`Dev server exited: ${code}`)));
 });
+let calculatorDev;
 const browser = await chromium.launch({ executablePath:process.env.CHROMIUM_PATH || '/run/current-system/sw/bin/chromium', headless:true });
 try {
+ if (!process.env.CALCULATOR_TEST_ONLY) {
  const prepared=JSON.parse(readFileSync(new URL('../src/data/preparedDraft.json',import.meta.url),'utf8'));
  const fresh=await browser.newContext({viewport:{width:390,height:900}});
  const ready=await fresh.newPage();
@@ -103,6 +106,12 @@ for (const width of [390,768,1440]) {
  assert.equal(saved.jobId,'job-test'); assert.equal(saved.site_notes,'Verify subfloor, fixture models, and customer purchase budget.');
  assert.equal(saved.bathroom_length_ft,9.5); assert.equal(saved.bathroom_floor_sqft,54);
  let sent;
+ // Manual-entry draft still reads current server budget ownership at Send.
+ await page.route('**/api/jobs/*/preliminary-budget',r=>r.fulfill({json:{schema_version:1,preliminary_budget:{schema_version:1,state:'completed',quote_hold:true}}}));
+ await page.getByRole('button',{name:'Push to JT',exact:true}).click();
+ await page.getByText(/Sending here would append another budget/).waitFor();
+ assert.equal(sent,undefined);
+ await page.route('**/api/jobs/*/preliminary-budget',r=>r.fulfill({json:{schema_version:1,preliminary_budget:null}}));
  await page.route('**/webhook/estimate-push', async route => {
    sent=route.request().postDataJSON();
    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({success:true,jtPushSuccess:true,jobNumber:411,itemsPushed:sent.jtPayload.length})});
@@ -180,4 +189,82 @@ for (const width of [390,768,1440]) {
  console.log('PASS calculator intake, measured-edit preservation and job switching',width);
  await intakeContext.close();
 }
-} finally { await browser.close(); dev.kill('SIGTERM'); }
+ }
+ // Exercise the public form and pass its actual serialized answers into the
+ // linked-job estimator, instead of testing only a translation helper.
+ if (!process.env.HWC_WEBSITE_SITE_DIR) throw Error('HWC_WEBSITE_SITE_DIR is required for calculator contract tests');
+ calculatorDev = spawn('npm',['run','dev','--','--host','127.0.0.1','--port','5190','--strictPort'],{
+   cwd:fileURLToPath(new URL('../../website/calculator/app/',import.meta.url)),stdio:['ignore','pipe','pipe'],env:process.env,
+ });
+ await new Promise((resolve,reject)=>{
+   const timer=setTimeout(()=>reject(Error('Calculator dev server did not start')),15000);
+   calculatorDev.stderr.on('data',data=>process.stderr.write(data));
+   calculatorDev.stdout.on('data',data=>{if(data.toString().includes('Local:')){clearTimeout(timer);resolve();}});
+   calculatorDev.on('exit',code=>reject(Error(`Calculator dev server exited: ${code}`)));
+ });
+ for (const width of [390,1440]) for (const kind of ['bathroom','deck']) {
+   const context=await browser.newContext({viewport:{width,height:900},serviceWorkers:'block'});
+   const page=await context.newPage();const errors=[];page.on('pageerror',e=>{errors.push(e.message);process.stderr.write(e.stack+'\n');});
+   const data=JSON.parse(readFileSync(`${process.env.HWC_WEBSITE_SITE_DIR}/src/_data/calculator-${kind}.json`,'utf8'));
+   await page.route('http://127.0.0.1:5190/',async r=>{
+     const response=await r.fetch();
+     const html=(await response.text()).replace('id="calculator-root"',`id="${kind==='bathroom'?'calculator-root':'deck-calculator-root'}"`);
+     await r.fulfill({response,body:html});
+   });
+   let payload;
+   await page.route('**/hooks/calculator',r=>{
+     payload=r.request().postDataJSON();
+     return r.fulfill({json:{saved:true,measurement_version:payload.measurement_version,submission_id:payload.submission_id,reportId:'contract-report',reportUrl:'https://example.test/report'}});
+   });
+   await page.goto('http://127.0.0.1:5190/');
+   for (const step of data.steps) {
+     await page.getByRole('heading',{name:step.question,exact:true}).waitFor();
+     if(step.type==='multi') await page.getByRole('button',{name:'None of these — continue',exact:true}).click();
+     else await page.locator('button[aria-pressed]').first().click();
+   }
+   await page.getByRole('heading',{name:'What do you already know about the space?',exact:true}).waitFor();
+   if(kind==='bathroom') {
+     await page.getByLabel('Room length',{exact:true}).fill('-1');
+     await page.getByRole('button',{name:'Continue — unanswered details are fine',exact:true}).click();
+     assert.equal(await page.getByLabel('Your name').count(),0,'invalid dimensions must block navigation');
+     await page.getByLabel('Room length',{exact:true}).fill('9.5');
+     await page.getByLabel('Room width',{exact:true}).fill('6');
+     await page.getByLabel('Shower finish',{exact:true}).selectOption('panel');
+     await page.getByLabel('Floor finish',{exact:true}).selectOption('vinyl');
+     await page.getByLabel('Number of shower niches',{exact:true}).fill('0');
+   } else {
+     await page.getByLabel('Deck length',{exact:true}).fill('16');
+     await page.getByLabel('Deck width',{exact:true}).fill('12');
+     await page.getByLabel('Height above ground',{exact:true}).fill('0');
+   }
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width);
+   await page.getByRole('button',{name:'Continue — unanswered details are fine',exact:true}).click();
+   await page.getByLabel('Your name').fill('Contract fixture');await page.getByLabel('Email address').fill('fixture@example.test');
+   await page.getByRole('button',{name:'Show my estimate',exact:true}).click();
+   await page.getByText('Project summary saved for',{exact:false}).first().waitFor();
+   assert.equal(payload.projectState.intake_version,2);
+   assert.equal(kind==='bathroom'?payload.projectState.bathroom_length_ft:payload.projectState.deck_length_ft,kind==='bathroom'?9.5:16);
+   const received={preliminary_budget:{schema_version:1,state:'completed',quote_hold:true,budget_group_id:'fixture-budget'},schema_version:1,calculator:kind,answers:payload.projectState,rough_estimate:payload.estimate,report_id:'contract-report',lead_id:'fixture',jt_job_id:'contract-job'};
+   await page.addInitScript(kind=>{
+     localStorage.setItem('hwc-webhook-base','https://example.test/webhook');localStorage.setItem('hwc-api-key','test');
+     localStorage.setItem('hwc-estimate-state',JSON.stringify({projectType:kind,mode:'existing',jobId:'contract-job',customerId:'fixture',touched_fields:[]}));
+   },kind);
+   await page.route('**/webhook/jt-customers?*',r=>r.fulfill({json:{customers:[{id:'fixture',name:'Contract fixture'}]}}));
+   await page.route('**/webhook/jt-jobs?*',r=>r.fulfill({json:{jobs:[{id:'contract-job',name:'Fixture',number:1,displayName:'#1'}]}}));
+   await page.route('**/api/jobs/contract-job/calculator-intake',r=>r.fulfill({json:received}));
+   await page.goto('http://127.0.0.1:5189/');await page.getByText('Customer calculator inputs',{exact:true}).waitFor();
+   if(kind==='bathroom') {
+     assert.equal(await page.getByLabel('Room Length feet',{exact:true}).inputValue(),'9');
+     assert.equal(await page.getByLabel('Room Length inches',{exact:true}).inputValue(),'6');
+     assert.equal(await page.getByLabel('Shower finish',{exact:true}).inputValue(),'panel');
+   } else {
+     assert.equal(await page.getByLabel('Length feet',{exact:true}).inputValue(),'16');
+   }
+   await page.getByRole('button',{name:/^Budget \(/}).click();
+   assert.equal(await page.getByRole('button',{name:'Push to JT',exact:true}).isDisabled(),true);
+   assert.match(await page.locator('.estimate-issues').innerText(),/Verify measurements on site/);
+   assert.match(await page.locator('.estimate-issues').innerText(),/append another budget/);
+   assert.deepEqual(errors,[]);console.log('PASS calculator serialized answers -> linked estimator',kind,width);
+   await context.close();
+ }
+} finally { await browser.close(); dev.kill('SIGTERM'); calculatorDev?.kill('SIGTERM'); }

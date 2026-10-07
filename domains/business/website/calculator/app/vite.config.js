@@ -30,6 +30,7 @@ export default defineConfig({
       allow: [
         resolve(__dirname),
         resolve(siteDir),
+        resolve(__dirname, '../../../estimator/src'),
       ],
     },
   },

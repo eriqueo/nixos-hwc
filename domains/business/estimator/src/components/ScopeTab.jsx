@@ -6,6 +6,7 @@ import { Select } from './Select.jsx';
 import { JobSelector } from './JobSelector.jsx';
 import { deriveGeometry, deriveDeckGeometry } from '../engine/geometry.js';
 import templates from '../data/templates.json';
+import { CALCULATOR_FIELDS } from '../api/crm.js';
 
 function PillToggle({ label, value, onChange }) {
   const on = value === 'yes';
@@ -176,10 +177,10 @@ export function ScopeTab({ s, set, selectJob, prefill, onAssemble, isMobile = fa
         </div>
         <Select label="Shower finish" value={s.shower_finish ?? (s.has_shower_tile === 'yes' ? 'tile' : 'none')} onChange={v => {
           set('shower_finish', v); set('has_shower_tile', v === 'tile' ? 'yes' : 'no');
-        }} options={[{ v: 'unknown', l: 'Choose on site' }, { v: 'none', l: 'No shower work' }, { v: 'tile', l: 'Tile' }, { v: 'panel', l: 'Panel / prefab kit' }]} />
+        }} options={CALCULATOR_FIELDS.bathroom.find(f => f.id === 'shower_finish').options} />
         <Select label="Floor finish" value={s.floor_finish ?? (s.has_floor_tile === 'yes' ? 'tile' : 'none')} onChange={v => {
           set('floor_finish', v); set('has_floor_tile', v === 'tile' ? 'yes' : 'no');
-        }} options={[{ v: 'unknown', l: 'Choose on site' }, { v: 'none', l: 'Keep existing' }, { v: 'tile', l: 'Tile' }, { v: 'vinyl', l: 'Vinyl / LVP' }, { v: 'marmoleum', l: 'Marmoleum' }]} />
+        }} options={CALCULATOR_FIELDS.bathroom.find(f => f.id === 'floor_finish').options} />
         <PillToggle label="Remove existing tub" value={s.has_existing_tub} onChange={v => set('has_existing_tub', v)} />
         <Select label="Shower enclosure" value={s.has_shower_door || 'unknown'} onChange={v => set('has_shower_door', v)}
           options={[{ v: 'unknown', l: 'Choose on site' }, { v: 'yes', l: 'Install shower door' }, { v: 'no', l: 'Curtain / no new door' }]} />

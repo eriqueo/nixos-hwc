@@ -1,3 +1,4 @@
+import { fetchPreliminaryBudget, automaticBudgetBlocks } from '../api/crm.js';
 import { useState, useRef } from 'react';
 import { C, GROUP_COLORS, mono } from '../styles/theme.js';
 import { Box } from './Section.jsx';
@@ -52,6 +53,20 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
     if (!API_KEY) { setPushMsg('no-key'); return; }
     if (!canPush()) { setPushMsg('no-job'); return; }
 
+    // Fresh job-scoped ownership check also covers manual entry and stale drafts.
+    inFlight.current = true;
+    if (state.mode === 'existing') {
+      try {
+        const automatic=await fetchPreliminaryBudget(state.jobId);
+        if (automaticBudgetBlocks(automatic)) {
+          setPushResult({error:'This job has an automatic preliminary budget. Review it in JobTread before preparing a customer proposal. Sending here would append another budget.'});
+          inFlight.current=false;
+          return;
+        }
+      } catch (error) {
+        setPushResult({error:error.message});inFlight.current=false;return;
+      }
+    }
     try {
       // Non-retriable manual effect: never retry an uncertain CRM write automatically.
       inFlight.current = true;

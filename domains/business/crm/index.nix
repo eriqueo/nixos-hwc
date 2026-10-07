@@ -71,6 +71,11 @@ let
     exec ${pythonEnv}/bin/python3 -m hwc_crm.integrations.messenger_import "$@"
   '';
 
+  preliminarySource = lib.cleanSourceWith {
+    src = ../estimator/src;
+    filter = path: type: !(lib.hasSuffix ".env" path);
+  };
+
   crmWrapper = pkgs.writeShellScript "hwc-crm-wrapper" ''
     export PYTHONPATH="${cfg.projectDir}/src"
     export HWC_CRM_BIND_ADDR="${cfg.bindAddr}"
@@ -78,6 +83,9 @@ let
     export HWC_CRM_PG_DSN="${cfg.postgresDsn}"
     export HWC_CRM_NOTIFY_URL="${cfg.notifyUrl}"
     export HWC_CRM_LOG_LEVEL="${cfg.logLevel}"
+    export HWC_CRM_PRELIMINARY_ENABLED="${if cfg.preliminaryBudgets.enable then "1" else "0"}"
+    export HWC_CRM_PRELIMINARY_NODE="${pkgs.nodejs_22}/bin/node"
+    export HWC_CRM_PRELIMINARY_ENGINE="${preliminarySource}/engine/preliminary.js"
     export HWC_CRM_ASSISTANT_ENABLED="${if cfg.assistant.enable then "1" else "0"}"
     ${lib.optionalString cfg.assistant.enable ''
       export HWC_CRM_ASSISTANT_PI="${cfg.assistant.piExecutable}"
@@ -212,6 +220,8 @@ in
     # CRITICAL: assistant snapshots, judgments, human reviews and email
     # receipts remain in the CRM PostgreSQL database and its nightly backup.
     # One worker in the existing service; at capacity requests answer 429.
+    preliminaryBudgets.enable = lib.mkEnableOption "automatic preliminary budgets for new calculator jobs; proposals stay held for review";
+
     assistant = {
       enable = lib.mkEnableOption "on-demand reviewed Pi/DX2 inquiry assistance";
       piExecutable = lib.mkOption {
@@ -617,6 +627,10 @@ in
   config = lib.mkIf cfg.enable {
 
     assertions = [
+      {
+        assertion = !cfg.preliminaryBudgets.enable || cfg.jtGrantKeyRef != null;
+        message = "automatic preliminary budgets require a configured JobTread grant";
+      }
       {
         assertion = cfg.user != "root";
         message = "hwc-crm must not run as root";

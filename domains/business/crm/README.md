@@ -24,6 +24,7 @@ crm/
 └── index.nix      # hwc.business.crm.* options + service + tick timer
                    #   + lead_scout ingest timer + route
                    #   + bounded on-demand Pi/DX2 worker settings
+                   #   + automatic preliminary-budget worker and source-bound Node engine
                    #   + shared Messenger Page credentials for import and manual replies.
 ```
 
@@ -39,6 +40,7 @@ crm/
 | `.emailTransport` | `file` | Flip to `smtp` (Proton Bridge) to go live. |
 | `.smtp.passwordSecretRef` | `proton-bridge-password` | agenix. |
 | `.jtGrantKeyRef` | `jobtread-grant-key` | Manual-lead JT create. |
+| `.preliminaryBudgets.enable` | false | New calculator jobs receive preliminary budgets with assumptions; proposals held for review. |
 | `.tick.enable` / `.tick.onCalendar` | true / hourly | Persistent timer. |
 | `.leadscoutIngest.enable` | true | lead_scout → funnel board ingest timer. |
 | `.leadscoutIngest.onCalendar` | `*:00/30` | Every 30 min, persistent. |
@@ -63,6 +65,7 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 (`machines/work/config.nix`).
 
 ## Changelog
+- **2026-10-07** — Bind the existing estimator engine to a bounded automatic preliminary-budget worker on hwc-work. Job-scoped reservations, immutable plans and receipts use the existing CRM database backup. Historical and already-budgeted jobs remain unchanged; no customer proposal is created or sent.
 - **2026-10-05** — Share the existing Page token and Page ID with the CRM service for manual Messenger replies (app D66). Import keeps its narrow Page credential; Page-token rotation now restarts the service. CRITICAL send receipts share the existing CRM database backup.
 - **2026-10-05** — Declare the on-demand inquiry assistant in the existing CRM service. One worker, queue/day caps, tool-free Pi/DX2, explicit reviewed sends, and bounded shutdown. Its CRITICAL judgments and reviews share the CRM database backup. Enabled on hwc-work.
 - **2026-10-02** — hwc-work sets `meta.appSecretRef = "crm-meta-app-secret"`;

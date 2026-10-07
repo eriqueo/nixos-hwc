@@ -14,6 +14,7 @@
  *
  * No React dependencies -- can be tested independently.
  */
+import { automaticBudgetBlocks } from '../api/crm.js';
 import { tradeRate, matPrice } from './pricing.js';
 import { calculatorMeasurementIssues } from './geometry.js';
 import { evaluateFormula, evaluateCondition } from './formulaEngine.js';
@@ -258,6 +259,8 @@ export function buildJtItems(items) {
 
 export function estimateIssues(state, items) {
   const issues = [];
+  const automatic = state.calculator_intake?.preliminary_budget;
+  if (automaticBudgetBlocks(automatic)) issues.push('Automatic preliminary budget: review this job in JobTread. Sending here would append another budget. Customer proposals require review.');
   if (['pending','failed'].includes(state.calculator_input_status)) issues.push('Customer inputs have not loaded. Return to Scope to reload them or choose manual entry.');
   issues.push(...calculatorMeasurementIssues(state));
   if (state.calculator_intake) {

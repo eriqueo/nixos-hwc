@@ -362,9 +362,10 @@ export function JobSelector({ s, set, selectJob, prefill }) {
       </div>}
       {s.mode === 'existing' && s.calculator_intake && <div className="customer-inputs">
         <Label>Customer calculator inputs</Label>
-        <p>Customer preferences. Confirm scope, counts, measurements, and purchase costs on site.</p>
+        {s.calculator_intake.preliminary_budget && <p role="status">Preliminary budget: {s.calculator_intake.preliminary_budget.state}. Review assumptions and missing costs in JobTread before preparing a customer proposal.</p>}
+        <p>Customer-reported measurements and preferences. Confirm scope, counts, measurements, and purchase costs on site.</p>
         {s.calculator_intake.rough_estimate && <p>Original rough range: ${s.calculator_intake.rough_estimate.low.toLocaleString()} – ${s.calculator_intake.rough_estimate.high.toLocaleString()}</p>}
-        <dl>{Object.entries(s.calculator_intake.answers).map(([key,value]) => <div key={key}>
+        <dl>{Object.entries(s.calculator_intake.answers).filter(([key])=>key !== 'intake_version').map(([key,value]) => <div key={key}>
           <dt>{key.replaceAll('_',' ')}</dt><dd>{(Array.isArray(value) ? value.join(', ') : String(value ?? 'Not answered')).replaceAll('_',' ')}</dd>
         </div>)}</dl>
         <button aria-pressed={s.calculator_scope_checked === 'yes'} onClick={() => set('calculator_scope_checked', s.calculator_scope_checked === 'yes' ? 'no' : 'yes')}>

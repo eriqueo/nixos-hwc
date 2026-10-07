@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Calculator version 2 shares optional measurement and finish fields with the estimator. The estimator supplies a pure preliminary plan port. CRM binds that port to one reserved JobTread budget effect for newly linked calculator jobs, with visible assumptions and proposal review holds.
+
 The estimator adds authenticated CRM paging and exact-job calculator intake in `estimator/src/api/crm.js`, responsive controls and budget cards, and bounded per-job device drafts with download/import backups. Calculator answers prefill known scope flags; measurements and unpriced preferences remain for site review. Catalogue changes are owned by `databases/migrations/002-estimator-site-visit.sql` and rebuilt with `export_estimator_data.py`.
 
 CRM supplies shared Messenger Page credentials to its service and import command for manual replies; send receipts share its existing database backup.
@@ -54,6 +56,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-10-07: Add richer shared calculator intake, fix grouped price predicates, and enable automatic preliminary calculator budgets with explicit assumptions, durable receipts and proposal review holds. Manual estimator sends check fresh ownership before appending.
 
 - 2026-10-07: Estimator loads the prepared Carrie #411 worksheet and adds site questions once while preserving existing device drafts.
 - 2026-10-07: Estimator reads linked calculator selections by exact JobTread job, preserves site edits in bounded per-job drafts, and blocks budget push while source-derived measurements or scope remain unknown.
