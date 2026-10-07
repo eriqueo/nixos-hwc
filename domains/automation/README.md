@@ -86,6 +86,8 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-10-06: Pin screenshot-renamer 221beea. DX2 defaulted to xhigh reasoning, which used the whole 512-token cap, so every capture failed as `model-stop-failed` and deferred retries restarted the unit every 30s. The worker now requests low effort.
+
 - 2026-10-02: Refresh n8n access documentation for the `.com` receiver, work tailnet editor and pending sender cutover.
 
 - 2026-10-02: Replace the screenshot naming schedule with folder arrivals, a boot catch-up run and retries only while work remains.
