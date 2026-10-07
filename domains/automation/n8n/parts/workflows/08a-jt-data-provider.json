@@ -4,20 +4,6 @@
     {
       "parameters": {
         "httpMethod": "GET",
-        "path": "jt-customers",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "id": "webhook-customers",
-      "name": "Webhook: Get Customers",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [240, 200],
-      "webhookId": "jt-customers"
-    },
-    {
-      "parameters": {
-        "httpMethod": "GET",
         "path": "jt-jobs",
         "responseMode": "responseNode",
         "options": {}
@@ -26,18 +12,11 @@
       "name": "Webhook: Get Jobs",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [240, 500],
+      "position": [
+        240,
+        500
+      ],
       "webhookId": "jt-jobs"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Validate x-api-key header for customers endpoint\nconst apiKey = $input.item.json.headers['x-api-key'];\nconst expectedKey = $env.ESTIMATOR_API_KEY;\n\nif (!apiKey || apiKey !== expectedKey) {\n  throw new Error('UNAUTHORIZED');\n}\n\nreturn { json: { authorized: true } };"
-      },
-      "id": "validate-customers-auth",
-      "name": "Validate Auth (Customers)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [460, 200]
     },
     {
       "parameters": {
@@ -47,24 +26,10 @@
       "name": "Validate Auth (Jobs)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 500]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.jobtread.com/pave",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"query\": {\n    \"$\": { \"grantKey\": \"{{ $env.JOBTREAD_GRANT_KEY }}\" },\n    \"accounts\": {\n      \"$\": { \"filter\": { \"type\": { \"eq\": \"customer\" } }, \"first\": 200 },\n      \"nodes\": {\n        \"id\": {},\n        \"name\": {},\n        \"primaryLocationId\": {},\n        \"locations\": {\n          \"nodes\": {\n            \"id\": {},\n            \"address\": { \"street1\": {}, \"city\": {}, \"state\": {}, \"zip\": {} }\n          }\n        }\n      }\n    }\n  }\n}",
-        "options": {
-          "timeout": 15000
-        }
-      },
-      "id": "fetch-jt-customers",
-      "name": "Fetch JT Customers",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [680, 200]
+      "position": [
+        460,
+        500
+      ]
     },
     {
       "parameters": {
@@ -81,17 +46,10 @@
       "name": "Fetch JT Jobs",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [680, 500]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Transform JT customers response for dropdown\nconst response = $input.item.json;\n\nif (response.errors && response.errors.length > 0) {\n  throw new Error(`JT API error: ${response.errors[0].message}`);\n}\n\nconst nodes = response.accounts?.nodes || [];\n\nconst customers = nodes.map(node => {\n  const primaryLocation = node.locations?.nodes?.find(l => l.id === node.primaryLocationId) || node.locations?.nodes?.[0];\n  const address = primaryLocation?.address;\n  \n  return {\n    id: node.id,\n    name: node.name,\n    primaryLocationId: node.primaryLocationId,\n    address: address ? `${address.street1}, ${address.city}, ${address.state} ${address.zip}` : null,\n    locations: node.locations?.nodes?.map(l => ({\n      id: l.id,\n      address: l.address ? `${l.address.street1}, ${l.address.city}, ${l.address.state} ${l.address.zip}` : null\n    })) || []\n  };\n}).sort((a, b) => a.name.localeCompare(b.name));\n\nreturn { json: { customers, count: customers.length } };"
-      },
-      "id": "transform-customers",
-      "name": "Transform Customers",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [900, 200]
+      "position": [
+        680,
+        500
+      ]
     },
     {
       "parameters": {
@@ -101,18 +59,10 @@
       "name": "Transform Jobs",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 500]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ $json }}"
-      },
-      "id": "respond-customers",
-      "name": "Respond Customers",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [1120, 200]
+      "position": [
+        900,
+        500
+      ]
     },
     {
       "parameters": {
@@ -123,21 +73,10 @@
       "name": "Respond Jobs",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1120, 500]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={\n  \"success\": false,\n  \"error\": \"Unauthorized\",\n  \"message\": \"Invalid or missing x-api-key header\"\n}",
-        "options": {
-          "responseCode": 401
-        }
-      },
-      "id": "respond-unauthorized-customers",
-      "name": "Respond Unauthorized (Customers)",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [680, 80]
+      "position": [
+        1120,
+        500
+      ]
     },
     {
       "parameters": {
@@ -151,33 +90,201 @@
       "name": "Respond Unauthorized (Jobs)",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [680, 380]
+      "position": [
+        680,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "path": "jt-customers",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "61f7b4e7-50af-4dd2-b60a-75297485f418",
+      "name": "Webhook: Get Customers",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        272,
+        -672
+      ],
+      "webhookId": "jt-customers"
+    },
+    {
+      "parameters": {
+        "jsCode": "const grantKey = $env.JOBTREAD_GRANT_KEY;\n\nif (!grantKey) {\n  throw new Error('Missing JOBTREAD_GRANT_KEY');\n}\n\nconst query = {\n  '$': { grantKey },\n  organization: {\n    '$': { id: '22Nm3uFevXMb' },\n    id: {},\n    accounts: {\n      '$': {\n        where: ['type', '=', 'customer'],\n        size: 50,\n        ...($input.first().json.page ? { page: $input.first().json.page } : {}),\n      },\n      nextPage: {},\n      nodes: {\n        id: {},\n        name: {},\n        primaryLocation: { id: {} },\n        locations: {\n          nodes: {\n            id: {},\n            name: {},\n            address: {},\n            city: {},\n            postalCode: {},\n          },\n        },\n      },\n    },\n  },\n};\n\nreturn [{ json: { query } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        -688
+      ],
+      "id": "a7e05dc8-d415-416d-9d90-e2d42a430b8c",
+      "name": "Build JT Query"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.jobtread.com/pave",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { query: $json.query } }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        688,
+        -480
+      ],
+      "id": "53c6268c-2574-4708-9ebc-7548ae5355c4",
+      "name": "POST to JT API"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\n\nif (response.errors?.length) {\n  throw new Error(`JT API error: ${response.errors[0].message}`);\n}\n\nconst nodes = response.organization?.accounts?.nodes ?? [];\n\nconst customers = nodes.map(node => {\n  const locations = node.locations?.nodes ?? [];\n  const primaryLocation =\n    locations.find(l => l.id === node.primaryLocation?.id) ?? locations[0] ?? null;\n\n  return {\n    id: node.id,\n    name: node.name,\n    primaryLocationId: node.primaryLocation?.id,\n    address: primaryLocation\n      ? [primaryLocation.address, primaryLocation.city, primaryLocation.postalCode].filter(Boolean).join(', ')\n      : null,\n    locations: locations.map(l => ({\n      id: l.id,\n      name: l.name,\n      address: [l.address, l.city, l.postalCode].filter(Boolean).join(', ') || null,\n    })),\n  };\n}).sort((a, b) => a.name.localeCompare(b.name));\n\nreturn [{ json: { version: 1, customers, count: customers.length, nextPage: response.organization?.accounts?.nextPage || null } }];"
+      },
+      "id": "9ca0dee4-5f68-4a3b-9f91-888ccf284ef7",
+      "name": "Transform Customers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        -480
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "cff3409d-477e-4af5-871d-0bd8ea0bf05e",
+      "name": "Respond Customers",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        -480
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate x-api-key header for customers endpoint\nconst headers = $input.item.json.headers;\nconst apiKey = headers['x-api-key'];\nconst expectedKey = $env.ESTIMATOR_API_KEY;\n\nif (!apiKey || apiKey !== expectedKey) {\n  throw new Error('UNAUTHORIZED');\n}\n\nconst page = $input.item.json.query?.page;\nif (page !== undefined && (typeof page !== 'string' || page.length > 2000)) throw new Error('INVALID_PAGE');\nreturn { json: { authorized: true, page: page || null } };"
+      },
+      "id": "validate-customers-auth",
+      "name": "Validate Auth (Customers)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        -352
+      ]
     }
   ],
   "connections": {
-    "Webhook: Get Customers": {
-      "main": [[{ "node": "Validate Auth (Customers)", "type": "main", "index": 0 }]]
-    },
     "Webhook: Get Jobs": {
-      "main": [[{ "node": "Validate Auth (Jobs)", "type": "main", "index": 0 }]]
-    },
-    "Validate Auth (Customers)": {
-      "main": [[{ "node": "Fetch JT Customers", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Validate Auth (Jobs)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Validate Auth (Jobs)": {
-      "main": [[{ "node": "Fetch JT Jobs", "type": "main", "index": 0 }]]
-    },
-    "Fetch JT Customers": {
-      "main": [[{ "node": "Transform Customers", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Fetch JT Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Fetch JT Jobs": {
-      "main": [[{ "node": "Transform Jobs", "type": "main", "index": 0 }]]
-    },
-    "Transform Customers": {
-      "main": [[{ "node": "Respond Customers", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Transform Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Transform Jobs": {
-      "main": [[{ "node": "Respond Jobs", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build JT Query": {
+      "main": [
+        [
+          {
+            "node": "POST to JT API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST to JT API": {
+      "main": [
+        [
+          {
+            "node": "Transform Customers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform Customers": {
+      "main": [
+        [
+          {
+            "node": "Respond Customers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: Get Customers": {
+      "main": [
+        [
+          {
+            "node": "Validate Auth (Customers)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Auth (Customers)": {
+      "main": [
+        [
+          {
+            "node": "Build JT Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -185,9 +292,18 @@
   },
   "staticData": null,
   "tags": [
-    { "name": "business", "id": "business-tag" },
-    { "name": "estimator", "id": "estimator-tag" },
-    { "name": "jobtread", "id": "jobtread-tag" }
+    {
+      "name": "business",
+      "id": "business-tag"
+    },
+    {
+      "name": "estimator",
+      "id": "estimator-tag"
+    },
+    {
+      "name": "jobtread",
+      "id": "jobtread-tag"
+    }
   ],
   "triggerCount": 2,
   "updatedAt": "2026-03-20T00:00:00.000Z",

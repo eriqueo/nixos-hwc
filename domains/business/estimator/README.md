@@ -6,6 +6,14 @@ Heartwood Estimate Assembler — internal React PWA for building line-item estim
 
 ## How It Works
 
+Phones use one form column and budget cards. Tablets use two form columns and budget cards. Desktop uses two form columns and a budget table. Editable controls have 44px targets, with a 16px font floor below 1024px.
+
+For panel showers and vinyl/Marmoleum, enter installation hours and supplier costs. Missing inputs block JobTread push and label the price as a draft. In Details, a checked supply box means HWC buys materials; unchecked means the customer buys them. Installation remains included. Keep the existing shower valve only after checking compatibility.
+
+Drafts are CRITICAL device-local data: one working draft in browser storage, with version 2 JSON download/import backups. Download before reset, switching devices, or clearing browser data. Budget quantity edits and removals persist through reassembly and reload. Catalogue files are REPLACEABLE exports from Postgres; regenerate them instead of editing JSON. Run `npm run test:site-visit`, `npm run test:golden`, and `npm run lint:ui` for engine and token checks. `npm run test:browser` starts a local dev server and checks three viewport widths with mocked CRM responses and intercepted writes. Set `CHROMIUM_PATH` to your browser executable outside HWC NixOS.
+
+JobTread receives numeric quantities from the reviewed budget, including waste and edits. Sending adds budget lines and is a manual effect without automatic retries. A saved send lock prevents repeat sends until the user explicitly checks JobTread and allows another attempt. If a request fails, inspect the job before sending again. Measurements must be marked checked before push. Customer purchases and the combined project total display separately from HWC's price.
+
 ```
 User enters measurements → assembler.js derives geometry + scope items
   → pricing.js applies trade rates → line items with cost/price

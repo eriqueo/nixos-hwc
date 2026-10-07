@@ -1,0 +1,32 @@
+@import './palette.css';
+@import './theme.css';
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface-page); color: var(--text-body); }
+button, input, select, textarea { font: inherit; touch-action: manipulation; }
+button, select, input:not([type='file']), .import-draft { min-height: 44px !important; }
+button { min-width: 44px; }
+input, select { max-width: 100%; }
+input { min-width: 0; }
+select { min-width: 0; }
+textarea { width: 100%; padding: 12px; background: var(--surface-elevated); color: var(--text-body); border: 1px solid var(--border-default); border-radius: 6px; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .import-draft:focus-within { outline: 2px solid var(--interactive-accent) !important; outline-offset: 2px; }
+.estimator-app { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+.form-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.form-grid > * { min-width: 0; }
+.draft-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; font-size: 12px; }
+.draft-tools > span { flex: 1 1 240px; overflow-wrap: anywhere; }
+.draft-tools button, .import-draft { display: inline-flex; align-items: center; padding: 8px 12px; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-body); background: var(--surface-card); cursor: pointer; }
+.import-draft input { width: 1px; height: 1px; opacity: 0; position: absolute; }
+.estimate-issues { padding: 16px; margin-bottom: 12px; border: 1px solid var(--interactive-accent); background: var(--surface-elevated); border-radius: 6px; font-size: 13px; }
+.estimate-issues ul { padding-left: 20px; line-height: 1.6; }
+.manual-work { margin: 8px 0; padding: 10px; background: var(--surface-elevated); border-radius: 6px; }
+.manual-work p { font-size: 12px; line-height: 1.5; }
+.site-help { font-size: 12px; line-height: 1.5; }
+@media (min-width: 768px) { .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; } }
+@media (max-width: 1023px) {
+  input, select, textarea { font-size: 16px !important; }
+  .form-grid select { max-width: 62%; }
+  .app-content input[type='number'] { min-width: 52px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }

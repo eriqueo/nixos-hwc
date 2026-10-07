@@ -18,6 +18,7 @@ import { tradeRate, matPrice } from './pricing.js';
 import { evaluateFormula, evaluateCondition } from './formulaEngine.js';
 import catalog from '../data/catalog.json' with { type: 'json' };
 import parameters from '../data/parameters.json' with { type: 'json' };
+import jtMappings from '../data/jtMappings.json' with { type: 'json' };
 
 // Allowance cost keys: allowance name -> state key for unit cost
 const ALLOWANCE_COST_KEY = {
@@ -26,6 +27,10 @@ const ALLOWANCE_COST_KEY = {
   'Allowance | Toilet': 'toilet_allowance',
   'Allowance | Vanity': 'vanity_allowance',
   'Allowance | Bathroom Accessories': 'accessory_allowance',
+  'Allowance | Electrical': 'electrical_allowance',
+  'Allowance | Panel Shower Kit': 'panel_material_allowance',
+  'Allowance | Floor Covering': 'floor_material_allowance',
+  'Allowance | Shower Door': 'shower_door_allowance',
 };
 
 // Trade name -> tradeRates key mapping
@@ -99,7 +104,7 @@ export function assemble(state, projectType = 'bathroom') {
       uc = r.cost;
       up = r.price;
     } else if (ALLOWANCE_COST_KEY[item.name]) {
-      uc = state[ALLOWANCE_COST_KEY[item.name]] || 0;
+      uc = state[ALLOWANCE_COST_KEY[item.name]] ?? item.unitCost ?? 0;
       up = matPrice(uc);
     } else if (item.name.startsWith('Allowance |') && item.qtyFormula && !item.unitCost) {
       uc = evaluateFormula(item.qtyFormula, state) || 0;
@@ -112,6 +117,7 @@ export function assemble(state, projectType = 'bathroom') {
 
     return {
       id: ++id,
+      _editKey: `rule:${item.ruleId}`,
       name: item.name,
       group: item.group || '',
       code: item.code,
@@ -131,12 +137,13 @@ export function assemble(state, projectType = 'bathroom') {
   });
 
   // 5. Append custom line items
-  (state.custom_items ?? []).forEach(ci => {
+  (state.custom_items ?? []).forEach((ci, index) => {
     if (ci.name && ci.qty > 0) {
       const uc = ci.cost || 0;
       const up = ci.trade ? tradeRate(ci.trade).price : matPrice(uc);
       result.push({
         id: ++id,
+        _editKey: `custom:${ci.draftId ?? index}`,
         name: ci.name,
         group: ci.group ?? 'Additional Items',
         code: ci.code ?? '3100',
@@ -226,16 +233,57 @@ export function buildDeckParameters(s) {
 
 export function applyEdits(catalog, overrides, removed) {
   return catalog
-    .filter(i => !removed[i.id])
+    .filter(i => !removed[i._editKey ?? i.id])
     .map(i => {
-      const qty = overrides[i.id] !== undefined ? overrides[i.id] : i.qty;
+      const key = i._editKey ?? i.id;
+      const qty = overrides[key] !== undefined ? overrides[key] : i.qty;
       return {
         ...i, qty,
         extC: Math.round(i.uc * qty * 100) / 100,
         extP: Math.round(i.up * qty * 100) / 100,
-        _edited: overrides[i.id] !== undefined,
+        _edited: overrides[key] !== undefined,
       };
     });
+}
+
+/** JobTread receives the reviewed snapshot; formulas must not undo edits or waste. */
+export function buildJtItems(items) {
+  return items.map(i => ({
+    name: i.name, groupName: i.group,
+    costCodeId: jtMappings.codes[i.code], costTypeId: jtMappings.types[i.type],
+    unitId: jtMappings.units[i.unit], unitCost: i.uc, unitPrice: i.up, quantity: i.qty,
+  }));
+}
+
+export function estimateIssues(state, items) {
+  const issues = [];
+  if (state.measurements_checked !== 'yes') issues.push('Verify measurements on site and mark them checked in Scope.');
+  const requireNumber = (key, label, positive = true) => {
+    const value = state[key];
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || (positive && value === 0)) issues.push(`Enter ${label}.`);
+  };
+  if (!['bathroom', 'deck'].includes(state.projectType)) issues.push('Select Bathroom or Deck. Other project types have no assembly rules.');
+  if (state.projectType === 'bathroom' && (state.shower_finish === 'panel' || state.has_shower_tile === 'yes')) {
+    if (!['yes', 'no'].includes(state.has_shower_door)) issues.push('Choose a shower door or curtain / no new door in Scope.');
+    if (state.has_shower_door === 'yes' && state.include_shower_door_material !== 'no') requireNumber('shower_door_allowance', 'the shower door purchase cost');
+  }
+  if (state.shower_finish === 'panel') {
+    requireNumber('panel_install_hours', 'panel installation hours');
+    requireNumber('panel_drain_hours', 'shower drain hookup hours');
+    if (state.include_shower_material !== 'no') requireNumber('panel_material_allowance', 'the total panel kit and consumables cost');
+  }
+  if (['vinyl', 'marmoleum'].includes(state.floor_finish)) {
+    requireNumber('floor_install_hours', 'floor installation hours');
+    requireNumber('floor_prep_hours', 'subfloor preparation hours (0 if checked and unnecessary)', false);
+    if (state.include_floor_material !== 'no') requireNumber('floor_material_allowance', 'flooring, adhesive, and underlayment cost');
+  }
+  if (state.shower_finish === 'panel' && Number(state.shower_niches) > 0) issues.push('Panel niches need a compatible product and a separate priced line item. Set tile niches to None.');
+  for (const item of items) {
+    if (item._usedDefault) issues.push(`Review the missing quantity for ${item.name}.`);
+    if (![item.qty,item.uc,item.up].every(v => Number.isFinite(v) && v >= 0)) issues.push(`Correct the quantity or price for ${item.name}.`);
+    if (!jtMappings.codes[item.code] || !jtMappings.types[item.type] || !jtMappings.units[item.unit]) issues.push(`Set the JobTread cost code, type, and unit for ${item.name}.`);
+  }
+  return issues;
 }
 
 export function computeTotals(estimate) {

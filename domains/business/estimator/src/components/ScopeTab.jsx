@@ -11,6 +11,7 @@ function PillToggle({ label, value, onChange }) {
   const on = value === 'yes';
   return (
     <button
+      aria-pressed={on}
       onClick={() => onChange(on ? 'no' : 'yes')}
       style={{
         padding: '6px 12px', borderRadius: 20, border: 'none', cursor: 'pointer',
@@ -39,7 +40,7 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
   const isDeck = (s.projectType || s.job_type || '').toLowerCase() === 'deck';
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 10 : 14 }}>
+    <div className="form-grid">
 
       {/* Job Selection */}
       <div style={{ gridColumn: '1/-1' }}>
@@ -64,6 +65,8 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
                       const preserved = {};
                       keep.forEach(k => { if (s[k]) preserved[k] = s[k]; });
                       const ts = typeof t.state === 'string' ? JSON.parse(t.state) : t.state;
+                      set('shower_finish', null); set('floor_finish', null);
+                      set('measurements_checked', 'no');
                       Object.entries(ts).forEach(([k, v]) => set(k, v));
                       Object.entries(preserved).forEach(([k, v]) => set(k, v));
                     }}
@@ -161,13 +164,32 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
         <Divider />
         <span style={{ color: C.txD, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Work Phases</span>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '4px 0' }}>
-          <PillToggle label="Shower Tile"     value={s.has_shower_tile}      onChange={v => set('has_shower_tile',      v)} />
-          <PillToggle label="Floor Tile"      value={s.has_floor_tile}       onChange={v => set('has_floor_tile',       v)} />
           <PillToggle label="Accent Tile"     value={s.has_accent_tile}      onChange={v => set('has_accent_tile',      v)} />
           <PillToggle label="Paint"           value={s.has_paint}            onChange={v => set('has_paint',            v)} />
           <PillToggle label="Baseboard"       value={s.has_baseboard}        onChange={v => set('has_baseboard',        v)} />
           <PillToggle label="Drywall Touchup" value={s.has_drywall_touchup}  onChange={v => set('has_drywall_touchup',  v)} />
         </div>
+        <Select label="Shower finish" value={s.shower_finish ?? (s.has_shower_tile === 'yes' ? 'tile' : 'none')} onChange={v => {
+          set('shower_finish', v); set('has_shower_tile', v === 'tile' ? 'yes' : 'no');
+        }} options={[{ v: 'none', l: 'No shower work' }, { v: 'tile', l: 'Tile' }, { v: 'panel', l: 'Panel / prefab kit' }]} />
+        <Select label="Floor finish" value={s.floor_finish ?? (s.has_floor_tile === 'yes' ? 'tile' : 'none')} onChange={v => {
+          set('floor_finish', v); set('has_floor_tile', v === 'tile' ? 'yes' : 'no');
+        }} options={[{ v: 'none', l: 'Keep existing' }, { v: 'tile', l: 'Tile' }, { v: 'vinyl', l: 'Vinyl / LVP' }, { v: 'marmoleum', l: 'Marmoleum' }]} />
+        <PillToggle label="Remove existing tub" value={s.has_existing_tub} onChange={v => set('has_existing_tub', v)} />
+        <Select label="Shower enclosure" value={s.has_shower_door || 'unknown'} onChange={v => set('has_shower_door', v)}
+          options={[{ v: 'unknown', l: 'Choose on site' }, { v: 'yes', l: 'Install shower door' }, { v: 'no', l: 'Curtain / no new door' }]} />
+        {s.shower_finish === 'panel' && <div className="manual-work">
+          <PillToggle label="Keep existing shower valve" value={s.keep_shower_valve} onChange={v => set('keep_shower_valve', v)} />
+          <p>Enter installation hours and total kit cost in Details. Include base, panels, adhesive, and sealant.</p>
+          <NumInput label="Panel installation" value={s.panel_install_hours} onChange={v => set('panel_install_hours', v)} unit="hrs" step={0.5} />
+          <NumInput label="Drain hookup" value={s.panel_drain_hours} onChange={v => set('panel_drain_hours', v)} unit="hrs" step={0.5} />
+        </div>}
+        {['vinyl', 'marmoleum'].includes(s.floor_finish) && <div className="manual-work">
+          <NumInput label="Flooring area" value={s.bathroom_floor_sqft ?? fl} onChange={v => set('bathroom_floor_sqft', v)} unit="sf" />
+          <NumInput label="Floor installation" value={s.floor_install_hours} onChange={v => set('floor_install_hours', v)} unit="hrs" step={0.5} />
+          <NumInput label="Subfloor preparation" value={s.floor_prep_hours} onChange={v => set('floor_prep_hours', v)} unit="hrs" step={0.5} />
+          <p>Enter material, adhesive, and underlayment costs in Details. Enter 0 prep hours only after checking the subfloor.</p>
+        </div>}
         {/* Inline dimensions for active phases */}
         {(s.has_floor_tile === 'yes' || s.has_accent_tile === 'yes' || s.has_paint === 'yes' || s.has_baseboard === 'yes' || s.demo_scope === 'full_gut') && (() => {
           const ps = s.paint_scope || 'walls_and_ceiling';
@@ -286,6 +308,13 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
       {/* Scope dimensions now inline in Scope of Work box above */}
 
       {/* Assemble button */}
+      <Box style={{ gridColumn: '1/-1' }}>
+        <Label>Site notes and open questions</Label>
+        <PillToggle label="Measurements verified on site" value={s.measurements_checked} onChange={v => set('measurements_checked', v)} />
+        <p className="site-help">Replace preset dimensions with actual measurements. Confirm fixture models, who buys each item, plumbing changes, and hidden repair work before marking these checked.</p>
+        <textarea aria-label="Site notes and open questions" value={s.site_notes || ''} onChange={e => set('site_notes', e.target.value)} rows={5}
+          placeholder="Record fixture models, supplier, plumbing locations, access, subfloor condition, photos, exclusions, and whether the target budget includes customer purchases." />
+      </Box>
       <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'flex-end' }}>
         <button onClick={onAssemble} style={{
           padding: '10px 28px', borderRadius: 6, border: 'none', cursor: 'pointer',

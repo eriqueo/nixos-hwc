@@ -3,6 +3,25 @@ import { useState, useCallback, useEffect } from 'react';
 const STORAGE_KEY = 'hwc-estimate-state';
 
 export const DEFAULT_STATE = {
+  state_version: 2,
+  budget_overrides: {},
+  budget_removed: {},
+  site_notes: '',
+  measurements_checked: 'no',
+  target_budget: null,
+  owner_purchase_cost: null,
+  shower_finish: null,
+  floor_finish: null,
+  panel_install_hours: null,
+  panel_drain_hours: null,
+  panel_material_allowance: null,
+  floor_install_hours: null,
+  floor_prep_hours: null,
+  floor_material_allowance: null,
+  electrical_allowance: 800,
+  has_existing_tub: 'no',
+  has_shower_door: 'unknown',
+  shower_door_allowance: null,
   // Job selection (for JT integration)
   mode: 'existing',           // 'existing' | 'new_job' | 'new_customer'
   customerId: '',
@@ -94,10 +113,33 @@ function loadSaved() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return { ...DEFAULT_STATE, ...JSON.parse(raw) };
+    return parseDraft(JSON.parse(raw));
   } catch {
     return null;
   }
+}
+
+export function parseDraft(saved) {
+  if (!saved || typeof saved !== 'object' || Array.isArray(saved) ||
+      !['bathroom', 'deck'].includes(saved.projectType) ||
+      (saved.state_version && saved.state_version !== 2)) throw new Error('Unsupported estimator draft');
+  for (const [key, value] of Object.entries(saved)) {
+    if (typeof DEFAULT_STATE[key] === 'number' && (typeof value !== 'number' || !Number.isFinite(value))) throw new Error(`Invalid draft field: ${key}`);
+  }
+  for (const field of ['custom_items', 'catalog_picks']) {
+    if (saved[field] !== undefined && (!Array.isArray(saved[field]) || saved[field].some(item =>
+      !item || typeof item.name !== 'string' || typeof item.qty !== 'number' || !Number.isFinite(item.qty) || item.qty < 0))) throw new Error(`Invalid draft field: ${field}`);
+  }
+  for (const field of ['budget_overrides', 'budget_removed']) {
+    const values = saved[field];
+    if (values !== undefined && (!values || typeof values !== 'object' || Array.isArray(values) ||
+      Object.entries(values).some(([key,value]) => !/^(rule|pick|custom):/.test(key) ||
+        (field === 'budget_overrides' ? typeof value !== 'number' || !Number.isFinite(value) || value < 0 : typeof value !== 'boolean')))) throw new Error(`Invalid draft field: ${field}`);
+  }
+  return { ...DEFAULT_STATE, ...saved, state_version: 2,
+    custom_items: (saved.custom_items || []).map((item, index) => ({ ...item, draftId: item.draftId ?? `legacy-custom-${index}` })),
+    catalog_picks: (saved.catalog_picks || []).map((item, index) => ({ ...item, draftId: item.draftId ?? `legacy-pick-${index}` })),
+  };
 }
 
 /**
@@ -106,18 +148,20 @@ function loadSaved() {
  */
 export function useProjectState() {
   const [state, setState] = useState(() => loadSaved() ?? DEFAULT_STATE);
+  const [storageError, setStorageError] = useState('');
 
   // Persist to localStorage on every change
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      setStorageError('');
     } catch {
-      // storage full — silently ignore
+      setStorageError('This browser could not save your draft. Download a backup before leaving this page.');
     }
   }, [state]);
 
   const set = useCallback((key, value) => {
-    setState(prev => ({ ...prev, [key]: value }));
+    setState(prev => ({ ...prev, [key]: typeof value === 'function' ? value(prev[key]) : value }));
   }, []);
 
   const reset = useCallback(() => {
@@ -125,5 +169,8 @@ export function useProjectState() {
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  return [state, set, reset];
+  const restore = useCallback(saved => {
+    setState(parseDraft(saved));
+  }, []);
+  return [state, set, reset, storageError, restore];
 }

@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+The estimator adds authenticated CRM paging in `estimator/src/api/crm.js`, responsive controls and budget cards, and versioned device-local drafts with download/import backups. Catalogue changes are owned by `databases/migrations/002-estimator-site-visit.sql` and rebuilt with `export_estimator_data.py`.
+
 CRM supplies shared Messenger Page credentials to its service and import command for manual replies; send receipts share its existing database backup.
 
 CRM declares its on-demand Pi/DX2 inquiry worker, queue/day limits, and reviewed email controls in `crm/index.nix`.
@@ -52,6 +54,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-10-07: Estimator supports panel showers and vinyl/Marmoleum with explicit hours and quotes, customer-supplied fixtures with installation retained, stable saved budget edits, exact numeric JobTread quantities, and responsive phone/tablet layouts. Corrected niche waste from 0.1 to 1.0. Existing trade rates stay unchanged.
 
 - 2026-10-05: Wire the existing Messenger Page credential into manual CRM replies and service restart triggers.
 

@@ -1,0 +1,123 @@
+/* Vendored from scout/packages/ui/src/styles/theme.css; root palette: nixos domains/home/theme/palettes/hwc.nix. Verify drift with npm run lint:ui. */
+:root {
+  /* ── Surfaces ── */
+  --surface-page: var(--color-base-800);
+  --surface-card: var(--color-base-900);
+  --surface-elevated: var(--color-base-700);
+  --surface-hover: var(--color-base-600);
+
+  /* ── Text ── */
+  --text-heading: var(--color-cream-100);
+  --text-body: var(--color-cream-200);
+  --text-muted: var(--color-cream-300);
+  --text-dim: var(--color-cream-400);
+
+  /* ── Interactive ── */
+  --interactive-accent: var(--color-copper);
+  --interactive-accent-hover: var(--color-copper-dim);
+  --interactive-danger: var(--color-red);
+  --interactive-link: var(--color-copper);
+  --interactive-gold: var(--color-gold);
+
+  /* ── Borders ── */
+  --border-default: var(--color-base-600);
+  --border-subtle: var(--color-base-700);
+  --border-accent: var(--color-copper);
+
+  /* ── Card ── */
+  --card-bg: var(--surface-card);
+  --card-border: var(--border-subtle);
+  --card-border-hover: var(--border-default);
+
+  /* ── Pill (sort/filter menus) ── */
+  --pill-bg: transparent;
+  --pill-bg-active: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+  --pill-border: var(--border-default);
+  --pill-border-active: var(--border-accent);
+  --pill-fg: var(--text-dim);
+  --pill-fg-hover: var(--text-body);
+  --pill-fg-active: var(--interactive-accent);
+
+  /* ── Section header ── */
+  --section-header-fg: var(--text-muted);
+  --section-divider: var(--border-subtle);
+  --section-subgroup-fg: var(--text-dim);
+
+  /* ── Drop zone (drag-over feedback) ── */
+  --dropzone-bg: color-mix(in srgb, var(--interactive-accent) 6%, transparent);
+  --dropzone-border: var(--border-accent);
+
+  /* ── Input ── */
+  --input-bg: var(--surface-card);
+  --input-border: var(--border-default);
+  --input-text: var(--text-body);
+  --input-placeholder: var(--text-dim);
+
+  /* ── Buttons ── */
+  --button-outline-border: var(--border-default);
+  --button-outline-text: var(--text-muted);
+  --button-outline-hover-bg: var(--surface-elevated);
+  --button-primary-bg: var(--interactive-accent);
+  --button-primary-text: var(--color-base-900);
+
+  /* ── Table ── */
+  --table-header-bg: var(--surface-elevated);
+  --table-header-text: var(--text-muted);
+  --table-row-even: var(--surface-page);
+  --table-row-odd: var(--surface-card);
+  --table-row-hover: var(--surface-elevated);
+
+  /* ── Score bars ── */
+  --score-bar-filled: var(--interactive-accent);
+  --score-bar-empty: var(--border-subtle);
+
+  /* ── Pipeline bar ── */
+  --pipeline-bg: var(--surface-elevated);
+  --pipeline-text: var(--text-muted);
+
+  /* ── Charts ── */
+  --chart-tooltip-bg: var(--surface-elevated);
+  --chart-tooltip-border: var(--border-default);
+  --chart-tooltip-text: var(--text-body);
+  --chart-bar-default: var(--interactive-accent);
+  --chart-label: var(--text-dim);
+
+  /* ── Overlap severity ── */
+  --overlap-high-color: var(--color-copper);
+  --overlap-high-bg: var(--surface-elevated);
+  --overlap-medium-color: var(--color-cream-300);
+  --overlap-medium-bg: var(--surface-elevated);
+  --overlap-low-color: var(--color-cream-400);
+  --overlap-low-bg: var(--surface-elevated);
+
+  /* ── Triage action colors ── */
+  --action-ask: var(--color-blue);
+  --action-check: var(--color-copper);
+  --action-resolve: var(--color-teal);
+  --action-escalate: var(--color-coral);
+
+  /* ── Status ── */
+  --status-contacted: var(--color-copper);
+  --status-won: var(--color-gold);
+  --status-lost: var(--color-cream-400);
+  --status-dismissed: var(--color-cream-400);
+  --status-new: var(--color-cream-300);
+}
+
+/* iOS Safari auto-zooms any text input whose font-size is below 16px. The
+ * design uses 14px (text-sm) heavily, which causes the viewport to jump on
+ * focus. Force a 16px floor on every editable control at the smallest
+ * viewports — Tailwind classes still control everything else. */
+@media (max-width: 1023px) {
+  input[type='text'],
+  input[type='email'],
+  input[type='search'],
+  input[type='number'],
+  input[type='tel'],
+  input[type='url'],
+  input:not([type]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
