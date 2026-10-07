@@ -314,6 +314,7 @@ async def _try_ytdlp_subs(video_id: str, langs: list[str]) -> Transcript:
 # is held for one chunk (~20 s at the measured 10x real time on the P1000),
 # never for a whole 90-minute video.
 WHISPER_CHUNK_SECONDS = 180
+WHISPER_AUDIO_FORMAT = "bestaudio[acodec=opus]/bestaudio"
 # Whisper marks non-speech with bracketed tags ("[BLANK_AUDIO]", "[Music]").
 _NON_SPEECH = re.compile(r"^\s*[\[\(][^\]\)]*[\]\)]\s*$")
 
@@ -327,8 +328,12 @@ async def transcribe_audio(
     url = f"https://www.youtube.com/watch?v={video_id}"
     with tempfile.TemporaryDirectory() as tmpdir:
         on_stage("downloading audio")
+        # Best audio, never worst: on 2026-10-06 the 52 kbps track (format 249)
+        # turned a clearly spoken video into fluent nonsense on both GPU and
+        # CPU, while the 125 kbps track of the same minute matched the
+        # captions nearly word for word. ~15 MB per 15 min is cheap.
         code, _, stderr = await _run(
-            ["yt-dlp", "-f", "worstaudio[acodec=opus]/worstaudio/bestaudio", "--no-playlist",
+            ["yt-dlp", "-f", WHISPER_AUDIO_FORMAT, "--no-playlist",
              "-o", os.path.join(tmpdir, "audio.%(ext)s"), url],
             timeout=900,
         )
