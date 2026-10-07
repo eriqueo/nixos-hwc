@@ -33,6 +33,8 @@ interface TriageThread {
   from_name?: string;
   from_address?: string;
   date_relative?: string;
+  /** Mailbox domain the classifier routed the thread to (hwc, datax, family, …). */
+  domain?: string;
   tags: string[];
   has_attachment?: boolean;
   summary?: string;
@@ -189,7 +191,12 @@ function notmuchTagThread(id: string, ops: string[]): Promise<string | null> {
   });
 }
 
-/** Map a thread to a kanban card. */
+/**
+ * Map a thread to a kanban card. `tag` and `reason` are the workbench card
+ * presentation fields: the tag is the routed mailbox domain (present on every
+ * classified thread), the reason is the classifier's own why, when it gave one.
+ * Absent fields are omitted, so workbench falls back to `summary`.
+ */
 function toCard(thread: TriageThread, bucket: Bucket) {
   return {
     id: thread.thread_id,
@@ -201,6 +208,8 @@ function toCard(thread: TriageThread, bucket: Bucket) {
     suggested_action: thread.suggested_action,
     urgency_reason: thread.urgency_reason,
     date: thread.date_relative,
+    tag: thread.domain || undefined,
+    reason: thread.urgency_reason || thread.suggested_action || undefined,
   };
 }
 

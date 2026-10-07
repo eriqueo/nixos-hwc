@@ -206,6 +206,25 @@ describe("DONT KNOW consumer contract", () => {
       .toEqual({...empty(), do: [thread("a")]});
   });
 
+  it("board cards carry workbench presentation fields tag and reason", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "mail-fields-"));
+    try {
+      const path = join(dir, "brief.json");
+      await writeFile(path, JSON.stringify({mail_triage: {buckets: {...empty(),
+        do: [{...thread("a"), domain: "hwc", urgency_reason: "Client waiting on quote"},
+             {...thread("b"), suggested_action: "Reply today"},
+             thread("c")]}}}));
+      const live = new Map(["a", "b", "c"].map(id => [id, new Set(["state/do"])]));
+      const board = await mailTriageTools(path, async () => live)[0].handler({action: "board"});
+      const cards = (board.view!.data as {columns: {id: string; cards: Record<string, unknown>[]}[]})
+        .columns.find(column => column.id === "do")!.cards;
+      expect(cards[0]).toMatchObject({tag: "hwc", reason: "Client waiting on quote"});
+      expect(cards[1]).toMatchObject({reason: "Reply today"});
+      expect(cards[1].tag).toBeUndefined();
+      expect(cards[2].reason).toBeUndefined();
+    } finally { await rm(dir, {recursive: true, force: true}); }
+  });
+
   it("shows DONT KNOW on the board and count while keeping it out of the action digest", async () => {
     const dir = await mkdtemp(join(tmpdir(), "mail-unknown-"));
     try {
