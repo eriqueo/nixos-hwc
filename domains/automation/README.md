@@ -86,6 +86,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-10-06: Pin screenshot-renamer 3f82d68. A human `retry` now restarts the six-hour transient-retry window as well as the attempt count; before, a capture older than six hours got one attempt after a retry and failed on its first transient error. `model-stop-failed` events now record the model's stop reason and token usage.
 - 2026-10-06: Pin screenshot-renamer 221beea. DX2 defaulted to xhigh reasoning, which used the whole 512-token cap, so every capture failed as `model-stop-failed` and deferred retries restarted the unit every 30s. The worker now requests low effort.
 
 - 2026-10-02: Refresh n8n access documentation for the `.com` receiver, work tailnet editor and pending sender cutover.
