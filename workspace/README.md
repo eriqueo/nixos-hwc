@@ -28,7 +28,7 @@ workspace/
 │                    #   (each wants its own repo; see 2026-07-05 audit)
 ├── system/          # secret-manager.sh (`secret`; recipients from secrets.nix), secrets-parity,
 │                    #   couchdb/zfs utilities, diagnostics/, setup/
-│                    #   diagnostics/network/network/wifibrute.sh + tests/
+│                    #   diagnostics/network/network/wifibrute.sh (scan + saved-report guidance), tests/
 ├── tools/           # readme-freshness.sh (Law-12 drift detector), web-speed.sh
 └── utilities/       # lints/ (charter lints incl. permission-lint.sh — CHARTER §3.1),
                      #   audit/ (drift.py), setup-uptime-kuma.py
@@ -92,6 +92,38 @@ WIFIBRUTE_LIVE_TEST=1 python3 workspace/system/diagnostics/network/network/tests
 That check needs Nmap and noninteractive sudo; discovery and the other stages
 use fixtures.
 
+The default Wi-Fi audit output shows stage progress and five ranked concerns.
+Each concern names the host/service, explains uncertainty, gives a next action,
+and points to XML evidence. Duplicate findings merge by host, service and rule.
+`REVIEW` means inspect a reported setting or login; `VERIFY` means confirm a
+vulnerability lead. Coverage gaps remain visible. Unknown script output is
+retained for manual review, so an empty concern list does not certify security.
+The device table uses vendor and service hints; unidentified port names stay
+unidentified instead of showing misleading port-table labels.
+
+`summary.txt` contains the complete guidance. `findings.json` is a private,
+replaceable version-1 interpretation of the XML and stage status. It omits
+account names and passwords. Raw `.xml`, `.nmap` and `.log` files retain the
+original evidence and may contain credentials. `--details` expands the guidance
+and shows raw probe output during a scan. Normal output hides certificate
+fingerprints, NULL compression, version-only CVE lists, guessed usernames and
+RTSP path attempts. These remain distinct from real cipher findings, positive
+script states and recorded logins. Runtime failures outside scan stages are
+retained in `stages.tsv` as `audit-runtime` so report refresh preserves coverage.
+
+Rebuild guidance from a saved run without probes, root access or network tools:
+
+```bash
+cd ~/.nixos/workspace/system/diagnostics/network/network
+bash wifibrute.sh report reports/20261008-134054.udOoJt
+```
+
+`net-tools` opens a picker; run the script directly to pass report arguments.
+Use an absolute directory path when invoking `wifibrute.sh` from another folder.
+This replaces only derived `summary.txt` and `findings.json`. Raw evidence stays
+intact. The CLI suite covers positive findings, false alarms, credential
+redaction, report regeneration, display limits and saved-report mode.
+
 ## Frigate field evidence
 
 For the first post-change Frigate storage window, run on hwc-server after
@@ -114,6 +146,10 @@ that a person walking every approach gets detected or notified.
 
 ## Changelog
 
+- 2026-10-08: Replace wifibrute raw excerpts and keyword alarms with ranked XML
+  findings, deduplication, guidance, coverage gaps and bounded device summaries.
+  Add `report DIRECTORY` to reinterpret saved runs without probes; retain raw
+  evidence and test positive/negative findings plus credential redaction.
 - 2026-10-08: Fix issue #106: fingerprint discovered ports per host, record
   skipped/untested hosts, and offer one bounded follow-up for host timeouts.
   Preserve partial coverage and original reports. Add CLI regression cases

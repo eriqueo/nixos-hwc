@@ -99,8 +99,22 @@ if name == 'nmap':
         ''.join('<port protocol="tcp" portid="' + str(p) + '"><state state="open"/></port>'
                 for p in ports) +
         '<port protocol="tcp" portid="9999"><state state="closed"/></port>' +
-        '<port protocol="udp" portid="161"><state state="open"/></port>' +
+        '<port protocol="udp" portid="53"><state state="open"/></port>' +
         '</ports></host>' for ip, ports in inventory.items())
+    fixture = os.environ.get('FINDING_FIXTURE')
+    if fixture:
+        scripts = {
+            'noise': '<script id="ssl-cert" output="MD5: abc"/><script id="ssl-enum-ciphers"><table key="TLSv1.2"><table key="compressors"><elem>NULL</elem></table></table></script><script id="vulners"><table><elem key="id">CVE-NOISE</elem></table></script><script id="http-brute" output="Path / does not require authentication"/><script id="sniffer-detect" output="Likely in promiscuous mode"/><script id="http-title"><elem>Valid credentials</elem></script><script id="http-default-accounts"><table><table key="credentials"/></table></script>',
+            'weak': '<script id="ssl-enum-ciphers"><table key="TLSv1.2"><table key="ciphers"><table><elem key="name">TLS_NULL_WITH_NULL_NULL</elem><elem key="strength">F</elem></table></table></table></script>',
+            'old': '<script id="ssl-enum-ciphers"><table key="TLSv1.0"><table key="ciphers"><table><elem key="strength">A</elem></table></table></table><table key="TLSv1.1"/></script>',
+            'slow': '<script id="http-slowloris-check"><table><elem key="state">LIKELY VULNERABLE</elem></table></script>',
+            'credential': '<script id="ssh-brute"><table><elem>admin:fixture-secret => Valid credentials</elem></table></script>',
+            'default': '<script id="http-default-accounts"><table key="Device"><table key="credentials"><table><elem key="username">admin</elem><elem key="password">fixture-secret</elem></table></table></table></script>',
+            'unknown': '<script id="vendor-vuln"><table><elem key="state">VULNERABLE</elem></table></script>',
+        }[fixture]
+        hosts_xml = hosts_xml.replace('<port protocol="tcp" portid="80"><state state="open"/></port>',
+                                     '<port protocol="tcp" portid="443"><state state="open"/>' + scripts + '</port>', 1)
+        print('RAW-NMAP-NOISE CVE-NOISE fixture-secret')
     Path(str(prefix) + '.xml').write_text(
         '<nmaprun>' + hosts_xml + '<runstats><finished exit="success"/></runstats></nmaprun>')
     if os.environ.get('BAD_XML') and prefix.name == 'tcp-all':
@@ -141,6 +155,10 @@ class AuditTests(unittest.TestCase):
                                     text=True, capture_output=True, cwd=root,
                                     env=env, timeout=90 if flags.get("LIVE_TCP_PORT") else 10)
             reports = list((root / "reports").glob("*"))
+            if flags.get("RERENDER"):
+                refreshed = subprocess.run(["bash", str(entry), "report", str(reports[0])],
+                                           text=True, capture_output=True, env=env, timeout=5)
+                self.assertEqual(refreshed.returncode, 0, refreshed.stderr)
             files = {f.name: f.read_text() for report in reports
                      for f in report.iterdir() if f.is_file()}
             if reports:
@@ -210,6 +228,83 @@ class AuditTests(unittest.TestCase):
         result, files, _ = self.run_audit(PARTIAL="1")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("incomplete", files["summary.txt"])
+
+    def test_default_hides_raw_noise_and_false_tls_alarms(self):
+        result, files, _ = self.run_audit(FINDING_FIXTURE="noise")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("RAW-NMAP-NOISE", result.stdout)
+        self.assertNotIn("fixture-secret", result.stdout)
+        self.assertEqual(json.loads(files["findings.json"])["findings"], [])
+
+    def test_findings_are_deduplicated_and_include_actions(self):
+        for fixture, code in (("weak", "weak-tls"), ("old", "old-tls"),
+                              ("slow", "slowloris"), ("credential", "credential"), ("default", "credential"),
+                              ("unknown", "vulnerability")):
+            with self.subTest(fixture=fixture):
+                result, files, _ = self.run_audit(FINDING_FIXTURE=fixture)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                records = json.loads(files["findings.json"])["findings"]
+                self.assertEqual(len(records), 1)
+                self.assertEqual(records[0]["code"], code)
+                for field in ("meaning", "next", "evidence"):
+                    self.assertTrue(records[0][field])
+                self.assertNotIn("fixture-secret", result.stdout + files["summary.txt"] + files["findings.json"])
+
+    def test_details_keeps_raw_scan_evidence(self):
+        result, _, _ = self.run_audit(args=("--details",), FINDING_FIXTURE="noise")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("RAW-NMAP-NOISE", result.stdout)
+
+    def test_saved_report_needs_no_network_tools(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "live-hosts.txt").write_text("192.168.0.1\n")
+            (root / "stages.tsv").write_text("# format-version: 1\nstage\tstatus\texit_code\ntcp-all\tincomplete\t0\n")
+            (root / "tcp-all.xml").write_text('<nmaprun><host timedout="true"><status state="up"/><address addr="192.168.0.1" addrtype="ipv4"/></host></nmaprun>')
+            before = (root / "tcp-all.xml").read_bytes()
+            tools = root / "bin"
+            tools.mkdir()
+            for tool in ("bash", "dirname", "python3"):
+                (tools / tool).symlink_to(shutil.which(tool))
+            env = {**os.environ, "PATH": str(tools)}
+            env.pop("BASH_ENV", None)
+            result = subprocess.run([str(tools / "bash"), str(SCRIPT), "report", str(root)],
+                                    text=True, capture_output=True, env=env, timeout=5)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("Coverage gaps", result.stdout)
+            self.assertIn("tcp-all", result.stdout)
+            self.assertEqual((root / "tcp-all.xml").read_bytes(), before)
+            self.assertTrue((root / "findings.json").exists())
+            # Corrupt generated data is rebuildable. The default display is
+            # bounded; the saved guidance retains every distinct concern.
+            many = '<nmaprun>' + ''.join(
+                f'<host><address addr="192.168.0.{number}" addrtype="ipv4"/>'
+                '<address addr="aa:bb:cc:dd:ee:ff" addrtype="mac" vendor="Safe\u202eVendor"/>'
+                '<ports><port protocol="tcp" portid="443"><state state="open"/>'
+                '<script id="http-slowloris-check"><table><elem key="state">LIKELY VULNERABLE</elem>'
+                '</table></script></port></ports></host>' for number in range(1, 9)) + '</nmaprun>'
+            (root / "tcp-all.xml").write_text(many)
+            (root / "findings.json").write_text('broken generated artifact')
+            expanded = subprocess.run([str(tools / "bash"), str(SCRIPT), "report", str(root)],
+                                      text=True, capture_output=True, env=env, timeout=5)
+            self.assertEqual(expanded.returncode, 0, expanded.stderr)
+            self.assertEqual(expanded.stdout.count('[VERIFY]'), 5)
+            self.assertIn('+3 more items', expanded.stdout)
+            self.assertEqual((root / "summary.txt").read_text().count('[VERIFY]'), 8)
+            self.assertEqual(len(json.loads((root / "findings.json").read_text())["findings"]), 8)
+            self.assertNotIn('\u202e', expanded.stdout)
+            (root / "tcp-all.xml").write_text('<broken')
+            invalid = subprocess.run([str(tools / "bash"), str(SCRIPT), "report", str(root)],
+                                     text=True, capture_output=True, env=env, timeout=5)
+            self.assertEqual(invalid.returncode, 0, invalid.stderr)
+            self.assertIn('Unreadable XML', invalid.stdout)
+
+    def test_report_refresh_preserves_runtime_coverage_failure(self):
+        result, files, _ = self.run_audit(inputs="\nn\nn\nn\ny\ny\n", radio=True,
+                                         CAPTURE_FAIL="1", RERENDER="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("audit-runtime\tfailed\t1", files["stages.tsv"])
+        self.assertGreater(json.loads(files["findings.json"])["metrics"]["failures"], 0)
 
     def test_fingerprints_each_hosts_discovered_ports(self):
         result, files, calls = self.run_audit()

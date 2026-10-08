@@ -70,12 +70,17 @@ elif name == 'nmap':
         Path(str(prefix) + '.nmap').write_text(text)
         Path(str(prefix) + '.gnmap').write_text('Host: 192.168.0.1 ()\tStatus: Up\n')
         timedout = 'true' if scenario == 'partial-audit' and not discovery else 'false'
-        credential = ('<script><elem>admin:fixture-secret => Valid credentials</elem></script>'
+        credential = ('<script id="ssh-brute"><elem>admin:fixture-secret => Valid credentials</elem></script>'
                       if scenario == 'credential-lead' and 'brute,auth' in args else '')
+        vulnerability = ('<script id="fixture-vuln"><table><elem key="state">VULNERABLE</elem></table></script>'
+                         if scenario == 'vulnerability' else '')
+        cleartext_port = ('<port protocol="tcp" portid="23"><state state="open"/></port>'
+                          if scenario == 'cleartext' else '')
         Path(str(prefix) + '.xml').write_text(
             '<nmaprun><host timedout="'+timedout+'"><status state="up"/><address addr="192.168.0.1" addrtype="ipv4"/>'
-            '<ports><port protocol="tcp" portid="80"><state state="open"/></port></ports>'
-            +credential+'</host><runstats><finished exit="success"/></runstats></nmaprun>\n')
+            '<ports><port protocol="tcp" portid="80"><state state="open"/></port>'
+            +cleartext_port+'</ports><hostscript>'+credential+vulnerability+'</hostscript>'
+            '</host><runstats><finished exit="success"/></runstats></nmaprun>\n')
     print(text)
 elif name in ('mtr', 'traceroute'):
     print('HOST: laptop Loss%\n1. router 66.7%\n2. destination 0.0%')
