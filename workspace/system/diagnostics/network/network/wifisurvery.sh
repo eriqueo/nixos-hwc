@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# shellcheck source=network-report.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/network-report.sh"
+report_init 'WiFi radio survey and capture' 'Observe access points, WPS advertisements and packet samples; optionally collect IDS logs.' \
+  'Enables monitor mode and interrupts this computer WiFi; cleanup attempts to restore networking.' '[-i IFACE] [--channel CH] [--band all|5] [--ids none|suricata|zeek|both] [--details]' "$@" || exit 0
+set -- "${REPORT_ARGS[@]}"
+
+
 # Safe-by-default Wi-Fi survey:
 # - Monitor mode ON → wash survey/scan → airodump survey (CSV+PCAP)
 # - Optional IDS (Suricata/Zeek)
@@ -41,10 +48,16 @@ OUTDIR="$(pwd)/wifi_report_${TSTAMP}"
 mkdir -p "$OUTDIR"/{wifi,ids}
 
 log()   { printf "%s\n" "$*"; }
-ok()    { printf "OK  %s\n" "$*"; }
-warn()  { printf "!!  %s\n" "$*" >&2; }
-run()   { printf ">>  %s\n" "$*" ; eval "$@"; }
+run() {
+  local rc=0
+  if (( REPORT_DETAILS )); then info "Command: $*"; fi
+  eval "$@" || rc=$?
+  if (( rc == 124 )); then info "Capture time window ended; inspect the saved sample."; return 0; fi
+  if (( rc != 0 )); then warn "This stage failed (exit $rc); its result is incomplete."; fi
+  return "$rc"
+}
 
+report_section "Preparation" "Find the WiFi adapter and capture tools." "Monitor mode listens to radio frames; the normal WiFi connection will pause." "Use Ctrl-C to stop; cleanup then attempts to restore networking."
 # ---------- preflight ----------
 # Create reaver state dir once (wash needs it)
 if [[ ! -d /var/db/reaver-wps-1.4 ]]; then
@@ -75,6 +88,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
+report_section "1. Enable radio monitoring" "Stop conflicting WiFi services and enable monitor mode." "This computer may lose network access during the survey."
 # ---------- enter monitor mode ----------
 run "sudo airmon-ng check kill"
 run "sudo airmon-ng start $IFACE"
@@ -83,7 +97,7 @@ run "sudo airmon-ng start $IFACE"
 if ip link show "${IFACE}mon" >/dev/null 2>&1; then
   MON_IF="${IFACE}mon"
 else
-  MON_IF="$(iw dev | awk 'name && $1==\"type\" && $2==\"monitor\"{print name} {if($1==\"Interface\") name=$2}')"
+  MON_IF="$(iw dev | awk 'name && $1=="type" && $2=="monitor"{print name} {if($1=="Interface") name=$2}')"
 fi
 
 [[ -n "$MON_IF" ]] || { warn "Could not determine monitor interface"; exit 1; }
@@ -108,23 +122,26 @@ case "$IDS_MODE" in
   *) warn "Unknown IDS mode '$IDS_MODE' (use: none|suricata|zeek|both)";;
 esac
 
+report_section "2. WPS advertisements" "Observe WPS announcements, then send discovery probes for 30 seconds per pass." "Enabled WPS is a router setting to review. This survey does not recover a PIN or password."
 # ---------- WPS survey/scan ----------
 # Survey (passive)
 WASH_BAND_FLAG=""
 [[ "$BAND" == "5" ]] && WASH_BAND_FLAG="-5"
 
-run "sudo wash -i $MON_IF -u $WASH_BAND_FLAG | tee \"$OUTDIR/wifi/wps_survey.txt\""
+run "sudo timeout 30 wash -i $MON_IF -u $WASH_BAND_FLAG | tee \"$OUTDIR/wifi/wps_survey.txt\""
 
 # Scan (active probes)
 if [[ -n "$FOCUS_CHANNEL" ]]; then
-  run "sudo wash -i $MON_IF -s -c $FOCUS_CHANNEL $WASH_BAND_FLAG | tee \"$OUTDIR/wifi/wps_scan_ch${FOCUS_CHANNEL}.txt\""
+  run "sudo timeout 30 wash -i $MON_IF -s -c $FOCUS_CHANNEL $WASH_BAND_FLAG | tee \"$OUTDIR/wifi/wps_scan_ch${FOCUS_CHANNEL}.txt\""
 else
-  run "sudo wash -i $MON_IF -s $WASH_BAND_FLAG | tee \"$OUTDIR/wifi/wps_scan.txt\""
+  run "sudo timeout 30 wash -i $MON_IF -s $WASH_BAND_FLAG | tee \"$OUTDIR/wifi/wps_scan.txt\""
 fi
 
+report_section "3. Access points and encryption" "Capture announcements for 25 seconds and save CSV/packet data." "OPN is open WiFi; WEP is obsolete; WPA2/WPA3 identify advertised security, not password strength."
 # ---------- WPA inventory (passive), CSV+PCAP ----------
 run "sudo timeout 25 airodump-ng $MON_IF --band abg --output-format csv,pcap --write \"$OUTDIR/wifi/wifi_survey\""
 
+report_section "4. Packet sample" "Capture up to 40 frames within eight seconds." "A nonempty packet file shows observed traffic, not a security pass or a successful handshake."
 # ---------- monitor sanity capture ----------
 run "sudo timeout 8 tcpdump -I -i $MON_IF -c 40 -w \"$OUTDIR/wifi/monitor_sample.pcap\""
 
@@ -164,8 +181,8 @@ SUMMARY="$OUTDIR/SUMMARY.txt"
   echo "Interpretation:"
   echo "  - wash_* : Look for columns \"WPS\" and \"Lck\" → Disable WPS if WPS=Yes and Lck=No on your AP."
   echo "  - wifi_survey-01.csv : \"privacy/cipher/auth\" show OPN/WEP/WPA2/WPA3 and modes (CCMP/SAE)."
-  echo "  - Channel counts : pick a less crowded channel for your AP."
-  echo "  - monitor_sample.pcap : proves monitor mode capture worked (open in Wireshark)."
+  echo "  - Channel counts : compare nearby channels; counts do not measure airtime or prove congestion."
+  echo "  - monitor_sample.pcap : inspect in Wireshark to confirm usable frames were captured."
   if [[ "$IDS_MODE" != "none" ]]; then
     echo "  - Suricata/Zeek logs : see flows/alerts during the scan."
   fi
@@ -179,5 +196,7 @@ SUMMARY="$OUTDIR/SUMMARY.txt"
   echo "      aircrack-ng $OUTDIR/wifi/wifi_survey-01.cap"
 } > "$SUMMARY"
 
-ok "Wrote: $SUMMARY"
-echo "Done."
+report_heading "WiFi survey summary"
+cat "$SUMMARY" | report_evidence
+info "Full summary: $SUMMARY"
+info "Next: inspect your access point security and channels in the summary; cleanup runs when this script exits."

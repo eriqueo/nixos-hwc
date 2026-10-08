@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# shellcheck source=network-report.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/network-report.sh"
+report_init 'Guided connection diagnosis' 'Explain router, internet, DNS, LAN and optional performance checks.' \
+  'Sends active probes and LAN scans; --perf also transfers speed-test data.' '[--detailed] [--perf] [--details]' "$@" || exit 0
+set -- "${REPORT_ARGS[@]}"
+
+
 # Ensure UTF-8 for proper SSID display
 export LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
-
-# ===== UI =====
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; BOLD='\033[1m'; NC='\033[0m'
-bold(){ printf "\n${BOLD}%s${NC}\n" "$*"; }
-info(){ printf "%s\n" "$*"; }
-warn(){ printf "${YELLOW}⚠ %s${NC}\n" "$*"; }
-ok(){ printf "${GREEN}✓ %s${NC}\n" "$*"; }
-fail(){ printf "${RED}✗ %s${NC}\n" "$*"; }
-explain(){ printf "${BLUE}💡 %s${NC}\n" "$*"; }
 
 HAD_SUDO=0
 need_sudo() { if [[ $EUID -ne 0 ]]; then HAD_SUDO=1; sudo -v || true; fi; }
@@ -36,7 +34,7 @@ egress_blocked() {
 # ===== Quick Triage (30 seconds max) =====
 quick_triage() {
     bold "🚀 QUICK TRIAGE - Is your connection working?"
-    explain "This tests the basics in 30 seconds to tell you if it's your problem or the network's problem"
+    explain "These probes locate the next check. Their timeouts can add up; they do not assign fault."
     
     echo -n "Testing gateway (your router): "
     if timeout 3 ping -c 1 -W 1 "$GATEWAY" >/dev/null 2>&1; then
@@ -46,7 +44,7 @@ quick_triage() {
         warn "Gateway blocks ping but is reachable"
         GW_PING_OK=1
     else
-        fail "Cannot reach gateway at all"
+        warn "Router did not answer the selected probes"
         GW_PING_OK=0
     fi
     
@@ -55,22 +53,22 @@ quick_triage() {
         ok "Internet connection works"
         INTERNET_OK=1
     else
-        fail "No internet access"
+        warn "The public DNS TCP port did not answer"
         INTERNET_OK=0
     fi
     
     echo -n "Testing DNS resolution: "
-    if timeout 3 nslookup google.com 8.8.8.8 >/dev/null 2>&1; then
-        ok "DNS works"
+    if report_dns_answer google.com; then
+        ok "The configured resolver returned an address"
         DNS_OK=1
     else
-        fail "DNS broken"
+        warn "The configured resolver returned no address"
         DNS_OK=0
     fi
     
     echo -n "Testing for captive portal: "
     if timeout 5 curl -s --connect-timeout 3 http://detectportal.firefox.com/canonical.html 2>/dev/null | grep -q "success"; then
-        ok "No captive portal"
+        ok "The expected browser-check response arrived"
         CAPTIVE_PORTAL=0
     else
         warn "Possible captive portal detected"
@@ -85,7 +83,7 @@ triage_verdict() {
     bold "📊 QUICK VERDICT"
     
     if [[ $GW_PING_OK -eq 0 ]]; then
-        fail "❌ YOUR CONNECTION IS BROKEN"
+        warn "Router reachability is unconfirmed"
         explain "Problem: Can't reach your router/gateway"
         echo "🔧 What this means:"
         echo "  • Your WiFi might be disconnected"
@@ -100,7 +98,7 @@ triage_verdict() {
         
     elif [[ $INTERNET_OK -eq 0 ]]; then
         if [[ $CAPTIVE_PORTAL -eq 1 ]]; then
-            warn "🌐 CAPTIVE PORTAL DETECTED"
+            warn "Browser login or HTTP failure is possible"
             explain "Problem: Connected to WiFi but need to login through web browser"
             echo "🔧 What this means:"
             echo "  • Hotel/coffee shop WiFi requiring login"
@@ -112,8 +110,8 @@ triage_verdict() {
             echo "  2. You should be redirected to login page"
             echo "  3. Or try: firefox http://$GATEWAY &"
         else
-            fail "❌ INTERNET/ISP PROBLEM"
-            explain "Problem: Router works but internet is down - NOT YOUR FAULT"
+            warn "Public service reachability is unconfirmed"
+            explain "The router answered, but the public probe did not. Filtering or a service-specific failure is possible."
             echo "🔧 What this means:"
             echo "  • ISP outage or maintenance"
             echo "  • Router's internet connection failed"
@@ -136,7 +134,7 @@ triage_verdict() {
         echo ""
         echo "🛠️ Try these fixes:"
         echo "  1. sudo resolvectl dns $IFACE 8.8.8.8 1.1.1.1"
-        echo "  2. Or: echo 'nameserver 8.8.8.8' | sudo tee /etc/resolv.conf"
+        echo "  2. Configure permanent DNS through NetworkManager or NixOS; /etc/resolv.conf is managed."
         echo "  3. Test: nslookup google.com"
         return 1
         
@@ -193,8 +191,8 @@ discover() {
     bold "=== 🔌 What's Running on Your Computer ==="
     explain "These are network services your computer is listening for (like web servers, SSH, etc.)"
     if have ss; then 
-        ss -tulpn 2>/dev/null | head -10 || true
-        echo "  (Showing first 10 services - 't'=TCP, 'u'=UDP, 'l'=listening)"
+        ss -tulpn 2>/dev/null | report_evidence || true
+        echo "  TCP/UDP lists show local listening sockets; firewall rules control remote access."
     else 
         warn "ss not available"
     fi
@@ -203,7 +201,7 @@ discover() {
     explain "DNS translates website names (google.com) into IP addresses (172.217.164.142)"
     if have resolvectl; then
         echo "Current DNS settings:"
-        resolvectl status "$IFACE" 2>/dev/null | sed -n '1,60p' || resolvectl status | sed -n '1,60p' || true
+        resolvectl status "$IFACE" 2>/dev/null | report_evidence || true
         
         # Fixed DNS collection - only collect valid IPs
         DNS_ACTIVE=()
@@ -215,7 +213,7 @@ discover() {
         fi
         
         # Drop unscoped IPv6 link-local (dig would need %IFACE)
-        DNS_ACTIVE=($(printf "%s\n" "${DNS_ACTIVE[@]}" | awk '!/^fe80::/'))
+        mapfile -t DNS_ACTIVE < <(printf "%s\n" "${DNS_ACTIVE[@]}" | awk 'NF && !/^fe80::/')
         
         if ((${#DNS_ACTIVE[@]})); then
             info "Active DNS servers: ${DNS_ACTIVE[*]}"
@@ -232,7 +230,8 @@ discover() {
 
 # ===== Phase 1: Reachability & egress policy =====
 phase1() {
-    bold "=== 📋 Phase 1: Router Reachability & Internet Access ==="
+    report_section "1. Router and public services" "Try router ARP/ping and public DNS/HTTP/HTTPS ports." "A reply confirms that path. Filtered or silent probes are inconclusive."
+    report_port_legend
     explain "Testing if you can reach your router and if your router can reach the internet"
 
     echo "🔍 Testing your router ($GATEWAY):"
@@ -252,7 +251,7 @@ phase1() {
         ok "Router responds to ping"
         GW_PING_OK=1
     else 
-        warn "Router blocks ping (normal security)"
+        warn "No ping reply; filtering or loss is possible"
         GW_PING_OK=0
     fi
 
@@ -260,8 +259,8 @@ phase1() {
     if have nmap; then
         echo ""
         explain "Checking if router has web interface or other services running"
-        sudo nmap -Pn -p 80,443,53,22,23 --host-timeout 5s "$GATEWAY" 2>/dev/null | grep -E "(open|filtered|Port)"
-        if sudo nmap -Pn -p 80,443,53 --host-timeout 5s "$GATEWAY" 2>/dev/null | grep -qE "open|filtered"; then
+        sudo nmap -Pn -p 80,443,53,22,23 --host-timeout 5s "$GATEWAY" 2>/dev/null | grep -E "(open|filtered|Port)" || true
+        if sudo nmap -Pn -p 80,443,53 --host-timeout 5s "$GATEWAY" 2>/dev/null | awk '$2 == "open" {found=1} END {exit !found}'; then
             GW_TCP_OK=1
         fi
     else
@@ -272,7 +271,7 @@ phase1() {
     explain "Checking if you can reach major internet services (Google DNS, Cloudflare)"
     if have nmap; then
         echo "Testing connections to 8.8.8.8 (Google) and 1.1.1.1 (Cloudflare):"
-        PUB_NMAP_OUT=$(sudo nmap "${NMAP_FAST[@]}" -p 53,80,443 8.8.8.8 1.1.1.1 2>/dev/null)
+        PUB_NMAP_OUT=$(sudo nmap "${NMAP_FAST[@]}" -p 53,80,443 8.8.8.8 1.1.1.1 2>&1 || true)
         echo "$PUB_NMAP_OUT" | grep -E "(Nmap scan report|53/tcp|80/tcp|443/tcp)" || warn "No internet access detected"
         
         # Set INTERNET_OK based on results
@@ -294,12 +293,12 @@ phase1() {
     explain "Shows the route your data takes to reach the internet"
     if have mtr; then
         echo "Using MTR (shows packet loss and latency):"
-        timeout 30 mtr -r -c 3 --no-dns 8.8.8.8 | sed -n '1,12p' || warn "MTR timeout"
-        explain "Each line shows a 'hop' - a router your data passes through. '???' is normal for carrier networks."
+        timeout 30 mtr -r -c 3 --no-dns 8.8.8.8 | report_evidence || warn "MTR timeout"
+        report_path_legend
     else
         if have traceroute; then 
             echo "Using traceroute:"
-            timeout 30 traceroute -n 8.8.8.8 | sed -n '1,12p' || warn "Traceroute timeout"
+            timeout 30 traceroute -n 8.8.8.8 | report_evidence || warn "Traceroute timeout"
         else 
             warn "mtr/traceroute not available"
         fi
@@ -314,10 +313,9 @@ phase2_dns() {
     
     # Check if egress is blocked before doing DNS tests
     if [[ -n "$PUB_NMAP_OUT" ]] && egress_blocked; then
-        warn "DNS Matrix: skipped (egress on 53/80/443 is blocked by the network)"
-        explain "The network is blocking outbound connections, so DNS tests would fail anyway"
+        warn "Public TCP filtering was observed; DNS uses separate probes."
+        explain "TCP port filtering does not establish that UDP DNS is blocked. Continuing DNS probes."
         DNS_OK=0
-        return
     fi
     
     local names=(google.com cloudflare.com example.com)
@@ -342,7 +340,7 @@ phase2_dns() {
             printf "%-20s" "$s"
             local this_server_working=0
             for n in "${names[@]}"; do
-                if timeout 3 dig @"$s" +short "$n" A >/dev/null 2>&1; then 
+                if report_dns_answer @"$s" "$n"; then
                     printf "%-18s" "✓ OK"
                     any_dns_working=1
                     this_server_working=1
@@ -351,9 +349,9 @@ phase2_dns() {
                 fi
             done
             if [[ $this_server_working -eq 1 ]]; then
-                echo " ← This DNS server works!"
+                echo " ← Returned at least one address"
             else
-                echo " ← This DNS server is broken"
+                echo " ← No address answer in these probes"
             fi
         done
         
@@ -362,12 +360,12 @@ phase2_dns() {
             explain "✅ At least one DNS server is working"
         else
             DNS_OK=0
-            explain "❌ All DNS servers failed - this indicates network egress filtering"
+            explain "No resolver returned an address; timeout, filtering and DNS data problems remain possible."
         fi
     else
         warn "dig not available - cannot test DNS properly"
         # Fallback test
-        if timeout 3 nslookup google.com >/dev/null 2>&1; then
+        if report_dns_answer google.com; then
             ok "Basic DNS test passed"
             DNS_OK=1
         else
@@ -398,7 +396,7 @@ phase3_l2() {
         while IFS= read -r line; do
             if [[ $line =~ "Nmap scan report" ]]; then
                 echo "  Device: $line"
-                ((hosts_found++))
+                ((hosts_found+=1))
             elif [[ $line =~ "MAC Address" ]]; then
                 echo "    $line"
             fi
@@ -412,7 +410,7 @@ phase3_l2() {
             echo "  • Network security settings blocking discovery"
         else
             ok "Found $hosts_found devices on the network"
-            explain "This looks like a normal, active network"
+            explain "These devices answered discovery. This does not measure traffic load or security."
         fi
     else
         warn "arp-scan/nmap not available"
@@ -421,13 +419,14 @@ phase3_l2() {
 
 # ===== Phase 4: Gateway fingerprint (safe) =====
 phase4_gateway() {
-    bold "=== 🔍 Phase 4: Router Analysis ==="
+    report_section "4. Router services" "Probe common router TCP ports." "Port names are guesses unless version detection confirms them. Open services are not confirmed vulnerabilities."
+    report_port_legend
     explain "Examining your router to identify what type it is and what services it offers"
     
     if have nmap; then
         echo "Scanning router $GATEWAY for open ports and services..."
         timeout 30 sudo nmap "${NMAP_FAST[@]}" --top-ports 100 --open "$GATEWAY" 2>/dev/null | \
-            head -50 || warn "Gateway scan timeout/failed"
+            report_evidence || warn "Gateway scan timeout/failed"
         
         echo ""
         echo "Looking for router web interface and common services..."
@@ -501,14 +500,14 @@ verdict() {
     fi
 
     if have arp-scan; then
-        lan_peers=$(sudo arp-scan --interface "$IFACE" --localnet 2>/dev/null | grep -cE '^[0-9]+\.[0-9]+' || echo "0")
+        lan_peers=$(sudo arp-scan --interface "$IFACE" --localnet 2>/dev/null | awk '/^[0-9]+\.[0-9]+/{n++} END{print n+0}' || echo "unknown")
     elif have nmap; then
-        lan_peers=$(sudo nmap -sn "$SUB24" 2>/dev/null | grep -c "Nmap scan report" || echo "0")
+        lan_peers=$(sudo nmap -sn "$SUB24" 2>/dev/null | awk '/Nmap scan report/{n++} END{print n+0}' || echo "unknown")
     fi
 
     echo "🔍 Test Results Summary:"
-    [[ "$eg_ok" == "yes" ]] && ok "✅ Internet access: Working" || fail "❌ Internet access: $eg_ok"
-    [[ "$dns_ok" == "yes" ]] && ok "✅ DNS resolution: Working" || warn "⚠️ DNS resolution: $dns_ok"
+    [[ "$eg_ok" == "yes" ]] && ok "Public service probe answered" || warn "Public service reply: not confirmed"
+    [[ "$dns_ok" == "yes" ]] && ok "At least one tested DNS resolver answered" || warn "DNS answer: not confirmed"
     info "📱 Other devices visible: ${lan_peers} (low numbers may indicate client isolation)"
     [[ $GW_PING_OK -eq 1 ]] && ok "✅ Router connection: Good" || warn "⚠️ Router connection: Limited"
 
@@ -516,7 +515,7 @@ verdict() {
     bold "🎯 WHAT THIS MEANS FOR YOU:"
     
     if [[ "$eg_ok" == "yes" && "$dns_ok" == "yes" ]]; then
-        ok "🎉 YOUR NETWORK IS WORKING PERFECTLY!"
+        ok "Public and DNS probes answered; other services and performance may still need checks."
         explain "All tests passed. If you're still having issues:"
         echo "  • Try different websites"
         echo "  • Check for application-specific problems"
@@ -524,7 +523,7 @@ verdict() {
         
     elif [[ "$eg_ok" == "no" ]]; then
         if [[ $CAPTIVE_PORTAL -eq 1 ]]; then
-            warn "🌐 CAPTIVE PORTAL ISSUE"
+            warn "Browser login or HTTP failure needs investigation"
             echo "🔧 Next steps:"
             echo "  1. Open your web browser"
             echo "  2. Try to visit any website (like google.com)"
@@ -532,8 +531,8 @@ verdict() {
             echo "  4. Complete the login or accept terms"
             echo "  5. Or try going directly to: http://$GATEWAY"
         else
-            fail "🚨 INTERNET CONNECTION PROBLEM"
-            echo "🔧 This is likely NOT your fault. Next steps:"
+            warn "Public connectivity needs investigation"
+            echo "Next: compare another device to locate the failure."
             echo "  1. Test with another device (phone, tablet) on same WiFi"
             echo "  2. If other devices also fail: contact network admin/ISP"
             echo "  3. If other devices work: restart your network interface"
@@ -552,13 +551,13 @@ verdict() {
         echo "     to use DNS servers: 8.8.8.8, 1.1.1.1"
     fi
 
-    if [[ "$lan_peers" != "unknown" && $lan_peers -le 2 ]]; then
+    if [[ "$lan_peers" =~ ^[0-9]+$ ]] && (( lan_peers <= 2 )); then
         echo ""
-        warn "🔒 CLIENT ISOLATION DETECTED"
-        explain "Your device can't see others on the network"
+        warn "Few devices answered discovery; isolation is one possible cause"
+        explain "Sleeping devices and a small LAN can produce the same count. Isolation is not confirmed."
         echo "  • This is normal on guest networks"
         echo "  • Provides security but limits some features"
-        echo "  • File sharing and network discovery won't work"
+        echo "  • If isolation is confirmed, it can restrict discovery and sharing"
     fi
 
     echo ""
@@ -584,15 +583,15 @@ Basic Information:
 - Network: $SUB24
 
 Test Results:
-- Internet Access: $eg_ok
-- DNS Resolution: $dns_ok
+- Public service reply: $eg_ok
+- At least one tested DNS resolver answered: $dns_ok
 - Gateway Connection: $([ $GW_PING_OK -eq 1 ] && echo "good" || echo "limited")
 - Other Devices Visible: $lan_peers
-- Captive Portal: $([ $CAPTIVE_PORTAL -eq 1 ] && echo "detected" || echo "none")
+- Browser login check: $([ $CAPTIVE_PORTAL -eq 1 ] && echo "unexpected response or timeout" || echo "expected response")
 
 Overall Status: $(
     if [[ "$eg_ok" == "yes" && "$dns_ok" == "yes" ]]; then
-        echo "WORKING PERFECTLY"
+        echo "TESTED PUBLIC AND DNS PROBES ANSWERED"
     elif [[ "$eg_ok" == "no" ]]; then
         echo "INTERNET/NETWORK ISSUE"
     elif [[ "$dns_ok" == "no" ]]; then
@@ -623,8 +622,8 @@ main() {
     if [[ ${#missing_tools[@]} -gt 0 ]]; then
         warn "Some advanced tools are missing: ${missing_tools[*]}"
         echo "For full functionality, install with:"
-        echo "  Ubuntu/Debian: sudo apt install nmap dnsutils"
-        echo "  Fedora/RHEL: sudo dnf install nmap bind-utils"
+        echo "  NixOS: add nmap and bind tools to your managed packages"
+        echo "  Use net-tools toolscan to inspect installed tools"
         echo ""
         echo "Continuing with available tools..."
     fi
@@ -632,7 +631,7 @@ main() {
     discover
     
     # Run quick triage first
-    quick_triage
+    quick_triage || true
     
     # If basic tests failed, ask if they want detailed analysis
     if [[ $GW_PING_OK -eq 0 || $INTERNET_OK -eq 0 || $DNS_OK -eq 0 ]]; then

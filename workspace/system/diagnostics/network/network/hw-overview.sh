@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# shellcheck source=network-report.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/network-report.sh"
+report_init 'Hardware and system inventory' 'Identify this computer, its network adapters and available system information.' \
+  'Reads local system information; does not scan other devices.' '[--details]' "$@" || exit 0
+set -- "${REPORT_ARGS[@]}"
+
+
 have(){ command -v "$1" >/dev/null 2>&1; }
-section(){ printf "\n=== %s ===\n" "$1"; }
 kv(){ printf "%-18s %s\n" "$1:" "$2"; }
 
 human_uptime_linux(){
@@ -27,16 +33,16 @@ h_kib(){
 }
 
 linux_summary(){
-  section "Summary"
+  report_section "Summary" "Collect hardware identity and installed capacity." "This is inventory, not a health verdict."
   os=""; [ -r /etc/os-release ] && . /etc/os-release && os="${PRETTY_NAME}"
   host=$(hostname 2>/dev/null || true)
   vendor=$(cat /sys/devices/virtual/dmi/id/sys_vendor 2>/dev/null || true)
   product=$(cat /sys/devices/virtual/dmi/id/product_name 2>/dev/null || true)
-  cpu=$(have lscpu && lscpu | awk -F: '/^Model name/{sub(/^[ \t]*/,"",$2);print $2; exit}')
-  cpus=$(have lscpu && lscpu | awk -F: '/^CPU\(s\)/{sub(/^[ \t]*/,"",$2);print $2; exit}')
+  cpu=$(have lscpu && lscpu | awk -F: '/^Model name/{sub(/^[ \t]*/,"",$2);print $2; exit}' || true)
+  cpus=$(have lscpu && lscpu | awk -F: '/^CPU\(s\)/{sub(/^[ \t]*/,"",$2);print $2; exit}' || true)
   memk=$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
   mem=$(h_kib "$memk")
-  gpus=$(have lspci && lspci | grep -Ei 'vga|3d|display' | sed 's/^.*controller: //; s/^/ - /')
+  gpus=$(have lspci && lspci | grep -Ei 'vga|3d|display' | sed 's/^.*controller: //; s/^/ - /' || true)
   disks_n=0
   disks_sz=0
   if have lsblk; then
@@ -57,7 +63,7 @@ linux_summary(){
 }
 
 linux_system(){
-  section "System"
+  report_section "System" "Read OS, kernel and uptime." "These identify the running system; uptime alone does not measure stability."
   kv "Hostname" "$(hostname 2>/dev/null || true)"
   if [ -r /etc/os-release ]; then . /etc/os-release; kv "OS" "${PRETTY_NAME:-Linux}"; else kv "OS" "$(uname -sr)"; fi
   kv "Kernel" "$(uname -r)"
@@ -67,7 +73,7 @@ linux_system(){
 }
 
 linux_cpu(){
-  section "CPU"
+  report_section "CPU" "Read processor model and core counts." "Logical CPUs include hardware threads; frequency limits are not current performance."
   if have lscpu; then
     lscpu | awk -F: '
       /^Model name/ {printf "%-18s %s\n","Model",$2}
@@ -88,7 +94,7 @@ linux_cpu(){
 }
 
 linux_memory(){
-  section "Memory"
+  report_section "Memory" "Read RAM and swap use." "Available memory estimates usable RAM including reclaimable cache."
   if [ -r /proc/meminfo ]; then
     awk '
       function kv(k,v){printf "%-18s %s\n", k":", v}
@@ -109,7 +115,7 @@ linux_memory(){
 }
 
 linux_mobo_bios(){
-  section "Motherboard/BIOS"
+  report_section "Motherboard/BIOS" "Read board and firmware information when permitted." "Missing privileged details are not a hardware failure."
   if have dmidecode && [ "$(id -u)" -eq 0 ]; then
     dmidecode -t baseboard -t bios | awk -F: '
       /Manufacturer:/ && !seen1++ {printf "%-18s %s\n","Board Vendor",$2}
@@ -125,7 +131,7 @@ linux_mobo_bios(){
 }
 
 linux_gpu(){
-  section "Graphics"
+  report_section "Graphics" "Identify graphics adapters and optional driver information." "Inventory does not test graphics performance or driver health."
   if have lspci; then
     lspci | grep -Ei 'vga|3d|display' | sed 's/^/ - /'
   fi
@@ -136,7 +142,7 @@ linux_gpu(){
 }
 
 linux_storage(){
-  section "Storage"
+  report_section "Storage" "Read disk identity, capacity and available health data." "Missing SMART data is untested, not healthy; permission may be required."
   have lsblk && lsblk -o NAME,SIZE,TYPE,MODEL,SERIAL,ROTA,TRAN,MOUNTPOINT -e7
   if have nvme; then
     printf "\nNVMe\n"; nvme list || true
@@ -158,12 +164,12 @@ linux_storage(){
 }
 
 linux_filesystems(){
-  section "Filesystems"
+  report_section "Filesystems" "Read mounted filesystem capacity and free space." "A nearly full filesystem can prevent writes. This is not a disk integrity test."
   have df && df -hT -x tmpfs -x devtmpfs
 }
 
 linux_network(){
-  section "Network"
+  report_section "Network" "Read adapter addresses, default route, DNS and network hardware." "UP describes local state; it does not prove internet access. Use net-tools quicknet for probes."
   if have ip; then ip -br addr show; fi
   def=""
   if have ip; then
@@ -197,12 +203,12 @@ linux_network(){
 }
 
 linux_usb(){
-  section "USB"
+  report_section "USB" "List attached USB devices." "Absence may mean disconnected hardware or missing tooling."
   if have lsusb; then lsusb; else kv "Note" "usbutils not installed"; fi
 }
 
 linux_audio(){
-  section "Audio"
+  report_section "Audio" "List sound cards and output devices." "This does not play sound or test audio quality."
   if [ -r /proc/asound/cards ]; then
     awk '
       /^[[:space:]]*[0-9]+[[:space:]]*\[[^]]+\][[:space:]]*:/{
@@ -221,7 +227,7 @@ linux_audio(){
 }
 
 linux_power(){
-  section "Power/Battery"
+  report_section "Power/Battery" "Read battery and power information." "No battery is normal on a desktop; unavailable data is not a failed battery."
   if have upower; then
     bat=$(upower -e 2>/dev/null | grep -m1 BAT || true)
     if [ -n "${bat:-}" ]; then
@@ -235,7 +241,7 @@ linux_power(){
 
 linux_temps(){
   if have sensors; then
-    section "Temperatures"
+    report_section "Temperatures" "Read reported sensor temperatures." "Limits vary by component. Compare with its reported high/critical values."
     sensors 2>/dev/null | awk '
       BEGIN{skip=0}
       /^ucsi_source_psy_/ {skip=1; next}
@@ -246,7 +252,7 @@ linux_temps(){
 }
 
 mac_system(){
-  section "System"
+  report_section "System" "Read OS, kernel and uptime." "These identify the running system; uptime alone does not measure stability."
   kv "Hostname" "$(scutil --get ComputerName 2>/dev/null || hostname)"
   kv "OS" "$(sw_vers -productName) $(sw_vers -productVersion) ($(sw_vers -buildVersion))"
   kv "Kernel" "$(uname -r)"
@@ -256,40 +262,44 @@ mac_system(){
 mac_prof(){ have system_profiler && system_profiler -detailLevel mini "$1" 2>/dev/null; }
 
 mac_all(){
-  section "Summary"
+  report_section "Summary" "Collect hardware identity and installed capacity." "This is inventory, not a health verdict."
   kv "Host" "$(scutil --get ComputerName 2>/dev/null || hostname)"
   hw=$(system_profiler SPHardwareDataType 2>/dev/null | sed -n 's/^[[:space:]]*Model Name:[[:space:]]*//p; s/^[[:space:]]*Model Identifier:[[:space:]]*/Identifier: /p; s/^[[:space:]]*Memory:[[:space:]]*/Memory: /p' | paste -sd' | ' -)
   [ -n "$hw" ] && kv "Hardware" "$hw"
   mac_system
-  section "Hardware"; mac_prof SPHardwareDataType
-  section "Graphics/Displays"; mac_prof SPDisplaysDataType
-  section "Storage"; mac_prof SPNVMeDataType; mac_prof SPSerialATADataType; mac_prof SPStorageDataType
-  section "USB"; mac_prof SPUSBDataType
-  section "Network"; mac_prof SPNetworkDataType
-  section "Power/Battery"; mac_prof SPPowerDataType
-  section "Audio"; mac_prof SPAudioDataType
+  report_section "Hardware" "Read hardware identity." "This is inventory, not a component stress test."; mac_prof SPHardwareDataType
+  report_section "Graphics/Displays" "Read display and graphics inventory." "This does not test display or graphics performance."; mac_prof SPDisplaysDataType
+  report_section "Storage" "Read disk identity, capacity and available health data." "Missing SMART data is untested, not healthy; permission may be required."; mac_prof SPNVMeDataType; mac_prof SPSerialATADataType; mac_prof SPStorageDataType
+  report_section "USB" "List attached USB devices." "Absence may mean disconnected hardware or missing tooling."; mac_prof SPUSBDataType
+  report_section "Network" "Read adapter addresses, default route, DNS and network hardware." "UP describes local state; it does not prove internet access. Use net-tools quicknet for probes."; mac_prof SPNetworkDataType
+  report_section "Power/Battery" "Read battery and power information." "No battery is normal on a desktop; unavailable data is not a failed battery."; mac_prof SPPowerDataType
+  report_section "Audio" "List sound cards and output devices." "This does not play sound or test audio quality."; mac_prof SPAudioDataType
 }
 
 main(){
   case "$(uname -s)" in
     Linux)
-      linux_summary
-      linux_system
-      linux_cpu
-      linux_memory
-      linux_mobo_bios
-      linux_gpu
-      linux_storage
-      linux_filesystems
-      linux_network
-      linux_usb
-      linux_audio
-      linux_power
-      linux_temps
+      linux_summary || warn "Hardware summary is incomplete."
+      linux_system || warn "Optional inventory section could not finish: linux_system"
+      linux_cpu || warn "Optional inventory section could not finish: linux_cpu"
+      linux_memory || warn "Optional inventory section could not finish: linux_memory"
+      linux_mobo_bios || warn "Optional inventory section could not finish: linux_mobo_bios"
+      linux_gpu || warn "Optional inventory section could not finish: linux_gpu"
+      linux_storage || warn "Optional inventory section could not finish: linux_storage"
+      linux_filesystems || warn "Optional inventory section could not finish: linux_filesystems"
+      linux_network || warn "Optional inventory section could not finish: linux_network"
+      linux_usb || warn "Optional inventory section could not finish: linux_usb"
+      linux_audio || warn "Optional inventory section could not finish: linux_audio"
+      linux_power || warn "Optional inventory section could not finish: linux_power"
+      linux_temps || warn "Optional inventory section could not finish: linux_temps"
       ;;
     Darwin) mac_all ;;
-    *) section "System"; kv "OS" "$(uname -a)";;
+    *) report_section "System" "Read OS, kernel and uptime." "These identify the running system; uptime alone does not measure stability."; kv "OS" "$(uname -a)";;
   esac
 }
 
 main
+
+report_heading "Inventory summary"
+info "This report identifies hardware; it does not prove hardware or network health."
+info "Next: run net-tools quicknet for connection checks, or net-tools toolscan for missing tools."

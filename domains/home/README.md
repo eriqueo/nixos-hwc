@@ -18,7 +18,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
-`core/shell/index.nix` packages `net-tools`, a searchable purpose-based picker for the existing network diagnostic scripts; Enter runs one script and Ctrl-Y prints its command.
+`core/shell/index.nix` packages `net-tools`, a searchable purpose-based picker for the existing network diagnostic scripts; Enter runs one script and Ctrl-Y prints its command. `--details` passes full-evidence mode to the selected script.
 
 `apps/agent-harness` publishes final workspace ledger and guard JSON files; unfinished atomic writes remain local.
 
@@ -95,6 +95,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-08: Forward `net-tools --details` to the chosen script for full evidence; default script output explains checks and results with short excerpts.
 - 2026-10-08: Install `net-tools` through the shared shell module, with searchable descriptions, script effect labels, cancellation and command-only selection.
 
 - 2026-10-07: Prevent agent-state sync from publishing unfinished ledger and guard files. Refresh the pinned home-app skill to use current app loaders, roles, shared factories, and separate system options.

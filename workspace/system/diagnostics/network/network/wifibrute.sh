@@ -3,6 +3,14 @@
 # shellcheck disable=SC2024
 set -Eeuo pipefail
 
+# shellcheck source=network-report.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/network-report.sh"
+report_init 'Household security audit' 'Discover devices, inspect service ports and optionally run vulnerability, credential and WiFi tests.' \
+  'Intrusive options remain interactive; credential tests can lock accounts and deauth can disconnect clients.' '[audit|discover] [--details]' "$@" || exit 0
+set -- "${REPORT_ARGS[@]}"
+
+
+
 # ===== Owner-only intrusive LAN + Wi-Fi audit (interactive toggles) =====
 # Tools used (install what you need):
 #  - nmap, ip, awk, python3, rg, sudo, coreutils
@@ -16,12 +24,6 @@ set -Eeuo pipefail
 # Output: private ./reports/<timestamp>.<unique>/; user-managed, replaceable.
 # Scans are non-retriable here; partial results are retained for inspection.
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BOLD='\033[1m'; NC='\033[0m'
-say(){ printf "%b%s%b\n" "$1" "$2" "$NC"; }
-ok(){ say "$GREEN" "OK  - $1"; }
-warn(){ say "$YELLOW" "WARN- $1"; }
-fail(){ say "$RED" "FAIL- $1"; }
-hdr(){ printf "\n${BOLD}%s${NC}\n" "$1"; }
 have(){ command -v "$1" >/dev/null 2>&1; }
 
 # One command vocabulary; discovery never runs the audit stages.
@@ -94,7 +96,7 @@ IDS_NAMES=()
 IDS_PIDS=()
 
 echo
-hdr "🔎 Intrusive Home Audit — interactive setup"
+report_section "Choose the checks" "Select the target network and optional tests." "UDP finds different services; vulnerability scripts probe known weaknesses; credential scripts try logins." "Leave an option off to skip it. Full raw results are saved under reports/."
 echo "Detected IFACE: $IFACE   My IP: $IP_SELF   Default target: $DEFAULT_SUBNET"
 read -r -p "Target IPv4 subnet [$DEFAULT_SUBNET]: " ans || { fail "Input closed; cancelled"; exit 2; }
 TARGET_INFO=$(parse_target "${ans:-$DEFAULT_SUBNET}" "$CIDR_SELF") || { fail "Invalid target"; exit 2; }
@@ -241,7 +243,7 @@ scan(){
   # Otherwise umask 077 produces root-owned files the parser cannot read.
   local format
   for format in nmap gnmap xml; do : > "$OUTDIR/$name.$format"; done
-  sudo -n timeout -k 5s "$deadline" nmap "$@" -oA "$OUTDIR/$name" 2>&1 | tee "$OUTDIR/$name.log" || rc=$?
+  sudo -n timeout -k 5s "$deadline" nmap "$@" -oA "$OUTDIR/$name" 2>&1 | tee "$OUTDIR/$name.log" | report_evidence || rc=$?
   if (( rc != 0 )); then
     status=failed
   elif ! scan_complete "$OUTDIR/$name.xml"; then
@@ -283,7 +285,7 @@ if (( RUN_SURI==1 )); then start_suricata; fi
 if (( RUN_ZEEK==1 )); then start_zeek; fi
 
 # ---------- Stage 0: Host discovery ----------
-hdr "Stage 0 — Host discovery on $CUSTOM_SUBNET"
+report_section "1. Discover target devices" "Send host discovery probes to $CUSTOM_SUBNET." "A discovered host answered these probes. No hosts can mean filtering, isolation, a wrong range or a failed scan." "Check the selected adapter and subnet if no hosts appear."
 LIVE_LIST="$OUTDIR/live-hosts.txt"
 if [[ "$TARGET_SCOPE" == local ]] && have arp-scan; then
   if sudo -n timeout -k 5s 60s arp-scan --interface "$IFACE" "$CUSTOM_SUBNET" > "$OUTDIR/arp-scan.txt" 2> "$OUTDIR/arp-scan.log"; then
@@ -303,25 +305,26 @@ ok "Discovered $COUNT host(s) → $LIVE_LIST"
 if [[ "$MODE" == discover ]]; then exit 0; fi
 
 # ---------- Stage 1: Full TCP sweep (-p-) ----------
-hdr "Stage 1 — Full TCP sweep (-p-)"
+report_section "2. TCP service ports" "Probe all TCP ports on the discovered targets." "Open ports show exposed services, not confirmed flaws. Host and stage deadlines can leave the scan incomplete."
 NMAP_BASE=(-Pn -n --max-retries 2 --host-timeout 5m --script-timeout 60s -T3)
 scan tcp-all 20m "${NMAP_BASE[@]}" -sS -p- -iL "$LIVE_LIST" || true
 
 # ---------- Stage 2: Service/OS fingerprint ----------
-hdr "Stage 2 — Version & OS fingerprint"
+report_section "3. Service and OS identification" "Ask services for version hints and estimate device operating systems." "Fingerprints can be wrong or missing. Confirm device identity in its own settings before acting."
 scan tcp-svcos 20m "${NMAP_BASE[@]}" -sS -sV -O --reason --version-all -iL "$LIVE_LIST" || true
 
 # ---------- Stage 3: Top UDP ports (optional) ----------
 if (( DO_UDP==1 )); then
-  hdr "Stage 3 — UDP top 50 ports"
+  report_section "4. UDP services" "Probe the 50 most common UDP ports." "open|filtered means no clear answer; UDP often stays silent. It is not proof a service is open."
   scan udp-top50 20m "${NMAP_BASE[@]}" -sU --top-ports 50 -iL "$LIVE_LIST" || true
 fi
 
 # ---------- Stage 4: Protocol-focused NSE (safe/discovery) ----------
-hdr "Stage 4 — NSE (safe/discovery)"
+report_section "5. Service discovery scripts" "Run discovery scripts and HTTP, TLS, SMB and SNMP checks." "These can reveal titles, certificates and shares. Discovery categories can still send active requests." "Review unexpected services, anonymous shares and outdated device firmware."
 SAFE_SCRIPTS="(default or safe or discovery) and not (intrusive or brute or auth or dos or exploit or external or broadcast or fuzzer)"
 scan nse-safe 20m "${NMAP_BASE[@]}" -sS -sV --script "$SAFE_SCRIPTS" -iL "$LIVE_LIST" || true
 
+report_section "Web services and encryption" "Inspect HTTP headers, methods and TLS ciphers." "Weak-cipher hints need confirmation in nse-http.nmap. Credential probes run only when selected."
 # HTTP/HTTPS detail
 HTTP_SCRIPTS="http-title,http-headers,http-methods,http-server-header,ssl-cert,ssl-enum-ciphers"
 (( INTRUSIVE==1 )) && HTTP_SCRIPTS+=",http-enum"
@@ -329,6 +332,7 @@ HTTP_SCRIPTS="http-title,http-headers,http-methods,http-server-header,ssl-cert,s
 scan nse-http 20m "${NMAP_BASE[@]}" -p 80,8080,8000,443,8443,8888 \
   --script "$HTTP_SCRIPTS" -iL "$LIVE_LIST" || true
 
+report_section "File sharing (SMB)" "Inspect sharing capabilities; share enumeration follows the intrusive option." "A visible share is not necessarily readable without login. Review access on the target device."
 # SMB
 SMB_SCRIPTS="smb-os-discovery,smb2-security-mode,smb2-capabilities,smb-protocols,smb2-time"
 (( INTRUSIVE==1 )) && SMB_SCRIPTS+=",smb-enum-shares"
@@ -336,20 +340,26 @@ scan nse-smb 20m "${NMAP_BASE[@]}" -p 445,139 \
   --script "$SMB_SCRIPTS" \
   -iL "$LIVE_LIST" || true
 
+report_section "Management services (SNMP)" "Probe UDP 161 for management information." "Accessible management data can expose device details; review authentication and scope."
 # SNMP
 scan nse-snmp 20m "${NMAP_BASE[@]}" -sU -p 161 --script "snmp-info,snmp-interfaces" -iL "$LIVE_LIST" || true
 
 # ---------- Stage 5: Intrusive/vuln/brute (gated) ----------
 if (( INTRUSIVE==1 )); then
-  hdr "Stage 5 — Intrusive/Vuln NSE"
+  report_section "6. Vulnerability probes" "Run the selected intrusive and vulnerability script categories." "A positive script finding is a lead to verify, not proof of exploitation. No finding is not a clean bill of health." "Confirm the affected service, patch level and matching finding in nse-intrusive.nmap."
   INTRUSIVE_SCRIPTS="intrusive or vuln"
   (( BRUTE==0 )) && INTRUSIVE_SCRIPTS="($INTRUSIVE_SCRIPTS) and not (brute or auth)"
   scan nse-intrusive 20m "${NMAP_BASE[@]}" -sS -sV --script "$INTRUSIVE_SCRIPTS" -iL "$LIVE_LIST" || true
 fi
 if (( BRUTE==1 )); then
-  hdr "Stage 6 — Brute/Auth NSE"
+  report_section "7. Credential and authentication tests" "Run brute-force and authentication scripts on responding services." "A reported valid credential needs review; failed attempts can lock accounts. An interrupted scan does not prove passwords are strong." "Change confirmed weak/default credentials and inspect target authentication logs."
   scan nse-brute 20m "${NMAP_BASE[@]}" -sS -sV --script "brute,auth" -iL "$LIVE_LIST" || true
 fi
+
+if (( INTRUSIVE == 0 )); then report_result SKIP 'Vulnerability script category not selected.'; fi
+if (( BRUTE == 0 )); then report_result SKIP 'Credential script category not selected.'; fi
+if (( DO_UDP == 0 )); then report_result SKIP 'Top-50 UDP scan not selected; the focused SNMP probe still runs.'; fi
+if (( DO_WIFI == 0 )); then report_result SKIP 'WiFi monitor/capture tests not selected.'; fi
 
 # ---------- Stage 7: Wi-Fi (optional) ----------
 wifi_start_monitor(){
@@ -383,7 +393,7 @@ wifi_start_monitor(){
 
 wifi_scan_wpa(){
   (( WIFI_WPA_SCAN==1 && HAVE_AIRODUMP==1 )) || return 0
-  hdr "Wi-Fi: WPA scan (airodump-ng)"
+  report_section "WiFi access points and handshake capture" "Observe access point announcements and authentication traffic." "A saved capture does not prove a handshake was captured or a password was recovered." "Inspect the capture in Wireshark or aircrack-ng."
   mkdir -p "$OUTDIR/wifi"
   local rc=0
   sudo -n timeout -k 5s 20s airodump-ng "$MON_IF" --band abg --output-format csv,pcap \
@@ -426,7 +436,7 @@ wifi_scan_wpa(){
 
 wifi_wps_discovery(){
   (( WIFI_WPS_DISC==1 && HAVE_WASH==1 )) || return 0
-  hdr "Wi-Fi: WPS discovery (wash) — *no attack*"
+  report_section "WiFi WPS discovery" "Read WPS advertisements; this stage does not attack a PIN." "WPS enabled is a configuration finding. Locked status does not guarantee security." "Disable unused WPS in your router settings."
   mkdir -p "$OUTDIR/wifi"
   local rc=0
   sudo -n timeout -k 5s 30s wash -i "$MON_IF" -2 -s -g -j > "$OUTDIR/wifi/wps.json" 2> "$OUTDIR/wifi/wps.log" || rc=$?
@@ -448,7 +458,7 @@ fi
 # ---------- Summary ----------
 # Include cleanup and background failures in the result shown to the operator.
 release_resources
-hdr "Summary — quick findings"
+report_section "Security findings summary" "Collect service and script findings from saved reports." "No matching line means no recorded finding, not a passed security audit. Skipped and failed checks remain untested." "Use the file and line references below to confirm each finding before changing the device."
 SUMMARY="$OUTDIR/summary.txt"
 {
   echo "Intrusive LAN + Wi-Fi Audit — $TS"
@@ -456,27 +466,27 @@ SUMMARY="$OUTDIR/summary.txt"
   echo "Failed or incomplete stages: $FAILURES"
   cat "$STAGES"
   echo
-  echo "# Telnet/FTP:"
+  echo "Telnet/FTP: cleartext services; review and disable if unused."
   rg -n '23/tcp\s+open|21/tcp\s+open' "$OUTDIR"/*.nmap || true
   echo
-  echo "# SMB (445) / shares:"
+  echo "SMB/shares: review access; port 445 alone is not a flaw."
   rg -n '445/tcp\s+open|smb-enum-shares' "$OUTDIR"/*.nmap || true
   echo
-  echo "# SNMP (161):"
+  echo "SNMP: review management exposure and authentication."
   rg -n '161/(udp|tcp)\s+open' "$OUTDIR"/*.nmap || true
   echo
-  echo "# Weak TLS hints:"
+  echo "TLS hints: review the matching cipher and protocol in nse-http.nmap."
   rg -n '(RC4|MD5|NULL|EXPORT|LOW)' "$OUTDIR"/nse-http.nmap || true
   echo
-  echo "# NSE 'VULNERABLE' findings:"
-  rg -n 'VULNERABLE' "$OUTDIR"/*.nmap || true
+  echo "Positive vulnerability leads: verify script details and device firmware."
+  rg -n '(^|[^[:alpha:]])VULNERABLE([^[:alpha:]]|$)' "$OUTDIR"/*.nmap | awk '!/NOT VULNERABLE/' || true
   echo
   if [[ -d "$OUTDIR/wifi" ]]; then
     echo "# Wi-Fi artifacts:"
     ls -1 "$OUTDIR/wifi" 2>/dev/null || true
   fi
 } > "$SUMMARY"
-head -n 200 "$SUMMARY"
+cat "$SUMMARY" | report_evidence
 
 echo
 if (( FAILURES > 0 )); then
