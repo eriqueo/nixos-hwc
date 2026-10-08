@@ -6,7 +6,7 @@ set -Eeuo pipefail
 # shellcheck source=network-report.sh
 source "$(dirname -- "${BASH_SOURCE[0]}")/network-report.sh"
 report_init 'Household security audit' 'Discover devices, inspect service ports and optionally run vulnerability, credential and WiFi tests.' \
-  'Intrusive options remain interactive; credential tests can lock accounts and deauth can disconnect clients.' '[audit|discover] [--details]' "$@" || exit 0
+  'Intrusive options remain interactive; credential tests can lock accounts and deauth can disconnect clients.' '[audit|discover|report DIRECTORY] [--details]' "$@" || exit 0
 set -- "${REPORT_ARGS[@]}"
 
 
@@ -26,12 +26,232 @@ set -- "${REPORT_ARGS[@]}"
 
 have(){ command -v "$1" >/dev/null 2>&1; }
 
+# Audit interpretation belongs here; network-report.sh owns shared presentation.
+# Derived artifacts are replaceable: `report DIRECTORY` rebuilds from raw XML.
+audit_report(){
+  python3 - "$1" "$REPORT_DETAILS" "${2:--1}" <<'PYREPORT'
+import csv
+import ipaddress
+import json
+from pathlib import Path
+import re
+import sys
+import unicodedata
+import xml.etree.ElementTree as ET
+
+directory = Path(sys.argv[1])
+details = bool(int(sys.argv[2]))
+reported_failures = int(sys.argv[3])
+
+def clean(value, limit=120):
+    return " ".join("".join(c for c in value if not unicodedata.category(c).startswith("C")).split())[:limit]
+
+stages_path = directory / "stages.tsv"
+if not stages_path.is_file():
+    print("REPORT_MISSING: stages.tsv is required; select a saved wifibrute report directory.", file=sys.stderr)
+    sys.exit(2)
+with stages_path.open() as stream:
+    stages = list(csv.DictReader((line for line in stream if not line.startswith("#")), delimiter="\t"))
+gaps = [row for row in stages if row.get("status") in {"failed", "incomplete", "untested"}]
+# Preserve errors previously held only in the shell counter (capture/cleanup).
+# This primary status row keeps report regeneration from claiming coverage.
+if reported_failures > len(gaps) and not any(row.get("stage") == "audit-runtime" for row in stages):
+    row = dict(stage="audit-runtime", status="failed", exit_code="1")
+    with stages_path.open("a") as stream:
+        stream.write("audit-runtime\tfailed\t1\n")
+    stages.append(row)
+    gaps.append(row)
+hosts = {}
+findings = {}
+advisories = set()
+unreadable = []
+
+def add(ip, port, code, level, title, meaning, action, source):
+    key = (ip, port, code)
+    evidence = f"{source}: host {ip}, {port}"
+    if key in findings:
+        if evidence not in findings[key]["evidence"]:
+            findings[key]["evidence"].append(evidence)
+        return
+    findings[key] = dict(host=ip, port=port, code=code, level=level, title=title,
+                         meaning=meaning, next=action, evidence=[evidence])
+
+xml_paths = sorted(directory.glob("*.xml"))
+if not xml_paths:
+    unreadable.append("no Nmap XML reports")
+for path in xml_paths:
+    try:
+        root = ET.parse(path).getroot()
+        if root.tag != "nmaprun":
+            raise ValueError("not Nmap XML")
+    except (OSError, ET.ParseError, ValueError):
+        unreadable.append(path.name)
+        continue
+    for host in root.findall("host"):
+        address = host.find("address[@addrtype='ipv4']")
+        if address is None:
+            continue
+        try:
+            ip = str(ipaddress.IPv4Address(address.get("addr")))
+        except (ValueError, TypeError):
+            continue
+        device = hosts.setdefault(ip, {"host": ip, "label": "unidentified", "services": {}})
+        mac = host.find("address[@addrtype='mac']")
+        if mac is not None and mac.get("vendor"):
+            device["label"] = clean(mac.get("vendor"))
+        ports = host.findall("ports/port")
+        entries = [("host", host.findall("hostscript/script"))]
+        for port in ports:
+            state = port.find("state")
+            if state is None or state.get("state") != "open":
+                continue
+            try:
+                number = int(port.get("portid"))
+                if not 1 <= number <= 65535:
+                    continue
+            except (ValueError, TypeError):
+                continue
+            protocol = port.get("protocol")
+            if protocol not in {"tcp", "udp"}:
+                continue
+            endpoint = f"{number}/{protocol}"
+            service = port.find("service")
+            hint = "unknown"
+            if service is not None:
+                hint = clean(service.get("product") or service.get("name") or hint, 40)
+                if service.get("method") != "probed":
+                    hint = "unidentified?"
+                elif hint in {"unknown", "tcpwrapped"}:
+                    hint = "identity not returned"
+            previous = device["services"].get(endpoint, "unknown?")
+            if endpoint not in device["services"] or previous.endswith("?"):
+                device["services"][endpoint] = hint
+            source = f"{path.name}: open {endpoint}"
+            if protocol == "tcp" and number in {21, 23}:
+                add(ip, endpoint, "cleartext", "REVIEW", "FTP or Telnet port answered",
+                    "This is a port observation; confirm the service before calling it cleartext access.",
+                    "Identify the service in device settings. Disable unused FTP/Telnet or restrict access to trusted clients.", source)
+            if protocol == "udp" and number == 161:
+                add(ip, endpoint, "snmp", "REVIEW", "Network management service answered",
+                    "SNMP is reachable from this network. This alone does not prove it allows writes or uses a default community.",
+                    "Inspect the device SNMP settings and snmp-interfaces results. Disable unused SNMP or restrict it to your management host.", source)
+            entries.append((endpoint, port.findall("script")))
+        for endpoint, scripts in entries:
+            for script in scripts:
+                script_id = script.get("id", "unknown")
+                source = f"{path.name}: script {clean(script_id)}"
+                if script_id == "vulners":
+                    advisories.add((ip, endpoint))
+                    continue  # Version lookup, never confirmed exploit evidence.
+                if script_id == "ssl-enum-ciphers":
+                    weak = any((elem.text or "").startswith("TLS_") and "_NULL_" in (elem.text or "")
+                               for elem in script.findall(".//table[@key='ciphers']//elem[@key='name']"))
+                    grades = {(elem.text or "") for elem in script.findall(".//table[@key='ciphers']//elem[@key='strength']")}
+                    if weak or grades.intersection({"F", "D", "C"}):
+                        add(ip, endpoint, "weak-tls", "REVIEW", "Weak encryption option reported",
+                            "The cipher test reported a weak or unencrypted connection option. Confirm the device and handshake; this is not proof of compromise.",
+                            "Check firmware and TLS settings on this device. Verify the reported cipher before disabling weak options; use an isolated IoT network if settings cannot be changed.", source)
+                    old = {table.get("key") for table in script.findall("table")
+                           if table.findall("table[@key='ciphers']/table")} & {"SSLv3", "TLSv1.0", "TLSv1.1"}
+                    if old:
+                        add(ip, endpoint, "old-tls", "REVIEW", "Old encryption protocols enabled",
+                            "The service accepted " + ", ".join(sorted(old)) + ". An A cipher grade does not make an old protocol current.",
+                            "Check firmware and configure TLS 1.2 or newer if supported. Confirm required clients still work before disabling old protocols.", source)
+                states = {(elem.text or "").strip() for elem in script.findall(".//elem[@key='state']")}
+                if states.intersection({"VULNERABLE", "LIKELY VULNERABLE"}):
+                    slow = script_id == "http-slowloris-check"
+                    add(ip, endpoint, "slowloris" if slow else "vulnerability", "VERIFY",
+                        "Slow-request denial-of-service lead" if slow else f"Vulnerability test reported a lead ({clean(script_id)})",
+                        "The server prolonged an incomplete request. This does not prove an attacker can take it offline." if slow else "A script reported a positive state. Confirm the affected service and applicability before treating it as a confirmed flaw.",
+                        "Review this server's HTTP header timeouts and connection limits. Check the reverse proxy configuration; do not run a denial-of-service test on the household network." if slow else "Inspect the named script and advisory. Match the device firmware and service version before applying the vendor fix.", source)
+                credential_marker = (script_id.endswith("-brute") and
+                    any(re.search(r"\bValid credentials\b", elem.text or "", re.I) for elem in script.iter("elem")))
+                default_login = (script_id == "http-default-accounts" and
+                    bool(script.findall(".//table[@key='credentials']/table/elem[@key='username']")))
+                if credential_marker or default_login:
+                    add(ip, endpoint, "credential", "REVIEW", "Credential test reported a login",
+                        "A success marker was recorded. Account names and passwords are omitted from this summary.",
+                        "Confirm the login in target authentication logs. Change confirmed default or weak credentials and revoke unwanted access.", source)
+
+priority = {"credential": 0, "weak-tls": 1, "old-tls": 2, "cleartext": 3,
+            "snmp": 4, "slowloris": 5, "vulnerability": 6}
+records = sorted(findings.values(), key=lambda item: (priority[item["code"]], ipaddress.IPv4Address(item["host"]), item["port"]))
+devices = sorted(hosts.values(), key=lambda item: ipaddress.IPv4Address(item["host"]))
+for device in devices:
+    device["services"] = [f"{port} {hint}" for port, hint in sorted(device["services"].items(), key=lambda item: (item[0].split("/")[1], int(item[0].split("/")[0])))]
+failures = max(len(gaps), reported_failures, len(unreadable))
+metrics = dict(failures=failures, hosts=len(devices), findings=len(records),
+               vuln=sum(item["code"] in {"slowloris", "vulnerability"} for item in records),
+               credentials=sum(item["code"] == "credential" for item in records),
+               cleartext=sum(item["code"] == "cleartext" for item in records))
+data = dict(format_version=1, findings=records, devices=devices, stages=stages,
+            unreadable_reports=unreadable, version_lookup_services=len(advisories), metrics=metrics)
+
+def render(full):
+    lines = ["Household security findings", f"{len(devices)} devices observed; {len(records)} review/verification items; {failures} failed or incomplete checks.",
+             "This is LAN evidence, not proof of internet exposure or a break-in.", "", "Review and verify"]
+    if not records:
+        lines.append("  No recognized concern recorded. This is not a clean security audit.")
+    for item in records if full else records[:5]:
+        lines += [f"  [{item['level']}] {item['host']} {item['port']} - {item['title']}",
+                  f"    Meaning: {item['meaning']}", f"    Next: {item['next']}",
+                  "    Evidence: " + "; ".join(item["evidence"] if full else item["evidence"][:1])]
+    if not full and len(records) > 5:
+        lines.append(f"  +{len(records)-5} more items in summary.txt; use --details to expand.")
+    lines += ["", "Coverage gaps"]
+    if not gaps and not unreadable and not failures:
+        lines.append("  Requested stages finished. Individual scripts can still be inconclusive or require arguments.")
+    for row in gaps if full else gaps[:5]:
+        lines.append(f"  {clean(row.get('stage', '?'))}: {clean(row.get('status', '?'))} (exit {clean(row.get('exit_code', '?'))}); inspect its .log/.xml report.")
+    if not full and len(gaps) > 5:
+        lines.append(f"  +{len(gaps)-5} more coverage gaps in stages.tsv.")
+    for filename in unreadable if full else unreadable[:5]:
+        lines.append(f"  Unreadable XML: {clean(filename)}. Findings from that report are untested.")
+    if failures > len(gaps) and not unreadable:
+        lines.append("  Additional runtime/cleanup failures were recorded; inspect the audit warnings and capture/IDS logs.")
+    lines += ["  Partial port inventories remain partial after smaller scans. Skipped checks remain untested.",
+              "  Next: inspect the named log and target before repeating only the needed check.", "", "Devices and service hints"]
+    for device in devices if full else devices[:15]:
+        services = device["services"]
+        shown = services if full else services[:8]
+        suffix = f"; +{len(services)-8} more" if not full and len(services) > 8 else ""
+        lines.append(f"  {device['host']:15} {device['label']}: {', '.join(shown) or 'no recorded open ports'}{suffix}")
+    if not full and len(devices) > 15:
+        lines.append(f"  +{len(devices)-15} more devices in summary.txt.")
+    lines += ["  Vendor/service names are hints; ? means a port-table guess. Silence does not prove security.", "", "Noise hidden"]
+    lines += [f"  Software-version advisory lookups: {len(advisories)} services. These are unconfirmed matches, not demonstrated exploits.",
+              "  Certificate fingerprints, NULL compression, guessed users, failed login attempts and RTSP path guesses stay in raw reports.",
+              "  Unknown script output is retained for manual review; this summary recognizes a limited set of findings.",
+              f"  Full guidance: {directory / 'summary.txt'}", f"  Raw evidence and stage status: {directory}"]
+    if full:
+        lines += ["", "Stage status (raw)", stages_path.read_text()]
+        inventory = directory / "tcp-inventory.tsv"
+        if inventory.exists():
+            lines += ["TCP inventory (raw)", inventory.read_text()]
+    return "\n".join(lines) + "\n"
+
+# User-owned private directory; deterministic replacement, no scan side effects.
+(directory / "findings.json").write_text(json.dumps(data, indent=2) + "\n")
+(directory / "summary.txt").write_text(render(True))
+print(render(details), end="")
+PYREPORT
+}
+
 # One command vocabulary; discovery never runs the audit stages.
 MODE=${1:-audit}
 case "$MODE" in
   audit|discover) [[ $# -le 1 ]] || { fail "Expected one command"; exit 2; } ;;
+  report) [[ $# == 2 && -d "$2" ]] || { fail "Usage: report DIRECTORY"; exit 2; }
+    umask 077
+    OUTDIR=$(cd -- "$2" && pwd)
+    audit_report "$OUTDIR" || exit $?
+    report_tldr CHECK 'Saved audit reports interpreted; no probes ran.' \
+      "Guidance: $OUTDIR/summary.txt; evidence: $OUTDIR/*.xml and stages.tsv." \
+      'Review the ranked findings and coverage gaps above. Act on the device named in each item.' \
+      'This command regenerates derived reports. It does not retest or fix the devices.'
+    exit 0 ;;
   -h|--help) echo "Usage: bash $0 [audit|discover]"; exit 0 ;;
-  *) fail "Unknown command: $MODE (use audit or discover)"; exit 2 ;;
+  *) fail "Unknown command: $MODE (use audit, discover or report)"; exit 2 ;;
 esac
 
 # Parse once at the input boundary; return canonical CIDR and local/routed scope.
@@ -247,7 +467,8 @@ scan(){
   # Otherwise umask 077 produces root-owned files the parser cannot read.
   local format
   for format in nmap gnmap xml; do : > "$OUTDIR/$name.$format"; done
-  sudo -n timeout -k 5s "$deadline" nmap "$@" -oA "$OUTDIR/$name" 2>&1 | tee "$OUTDIR/$name.log" | report_evidence || rc=$?
+  info "$name: running (limit $deadline)."
+  sudo -n timeout -k 5s "$deadline" nmap "$@" -oA "$OUTDIR/$name" 2>&1 | tee "$OUTDIR/$name.log" | scan_output || rc=$?
   if (( rc != 0 )); then
     status=failed
   elif ! scan_complete "$OUTDIR/$name.xml"; then
@@ -259,6 +480,11 @@ scan(){
     warn "$name $status (exit $rc); inspect $OUTDIR/$name.log and $STAGES"
     return 1
   fi
+  ok "$name finished; raw evidence saved."
+}
+
+scan_output(){
+  if (( REPORT_DETAILS )); then report_evidence; else cat > /dev/null; fi
 }
 
 # ---------- Launch IDS (optional) ----------
@@ -430,7 +656,7 @@ if tcp_inventory "$OUTDIR/tcp-all.xml"; then
       fi
       continue
     fi
-    echo "$HOST: fingerprinting TCP $PORTS (inventory: $COVERAGE; source: $SOURCE)."
+    info "$HOST: identifying recorded TCP services (inventory: $COVERAGE; source: $SOURCE). Ports: tcp-inventory.tsv."
     # Linux limits one argument to 128 KiB. Partition validated port tokens,
     # never ports from different hosts; groups share this host's time budget.
     mapfile -t PORT_GROUPS < <(printf '%s\n' "$PORTS" | python3 -c '
@@ -620,42 +846,16 @@ fi
 # ---------- Summary ----------
 # Include cleanup and background failures in the result shown to the operator.
 release_resources
-report_section "Security findings summary" "Collect service and script findings from saved reports." "No matching line means no recorded finding, not a passed security audit. Skipped and failed checks remain untested." "Use the file and line references below to confirm each finding before changing the device."
+report_section "Security findings summary" "Collect service and script findings from saved reports." "No matching line means no recorded finding, not a passed security audit. Skipped and failed checks remain untested." "Use the report references below to confirm each finding before changing the device."
 SUMMARY="$OUTDIR/summary.txt"
-{
-  echo "Intrusive LAN + Wi-Fi Audit — $TS"
-  echo "Targets: $CUSTOM_SUBNET  (hosts: $COUNT)"
-  echo "Failed or incomplete stages: $FAILURES"
-  cat "$STAGES"
-  if [[ -f "$OUTDIR/tcp-inventory.tsv" ]]; then
-    echo
-    echo "TCP inventory coverage (full applies only to the TCP sweep, not security):"
-    cat "$OUTDIR/tcp-inventory.tsv"
-    echo "Partial/unavailable inventories remain incomplete even after a smaller follow-up."
-    echo "Service fingerprints: tcp-svcos-<host>.nmap; combined report: tcp-svcos.nmap."
-  fi
-  echo
-  echo "Telnet/FTP: cleartext services; review and disable if unused."
-  rg -n '23/tcp\s+open|21/tcp\s+open' "$OUTDIR"/*.nmap || true
-  echo
-  echo "SMB/shares: review access; port 445 alone is not a flaw."
-  rg -n '445/tcp\s+open|smb-enum-shares' "$OUTDIR"/*.nmap || true
-  echo
-  echo "SNMP: review management exposure and authentication."
-  rg -n '161/(udp|tcp)\s+open' "$OUTDIR"/*.nmap || true
-  echo
-  echo "TLS hints: review the matching cipher and protocol in nse-http.nmap."
-  rg -n '(RC4|MD5|NULL|EXPORT|LOW)' "$OUTDIR"/nse-http.nmap || true
-  echo
-  echo "Positive vulnerability leads: verify script details and device firmware."
-  rg -n '(^|[^[:alpha:]])VULNERABLE([^[:alpha:]]|$)' "$OUTDIR"/*.nmap | awk '!/NOT VULNERABLE/' || true
-  echo
-  if [[ -d "$OUTDIR/wifi" ]]; then
-    echo "# Wi-Fi artifacts:"
-    ls -1 "$OUTDIR/wifi" 2>/dev/null || true
-  fi
-} > "$SUMMARY"
-cat "$SUMMARY" | report_evidence
+audit_report "$OUTDIR" "$FAILURES"
+read -r FAILURES vuln_leads credential_leads cleartext finding_count < <(python3 - "$OUTDIR/findings.json" <<'PYMETRICS'
+import json, sys
+from pathlib import Path
+metrics = json.loads(Path(sys.argv[1]).read_text())["metrics"]
+print(*(metrics[key] for key in ("failures", "vuln", "credentials", "cleartext", "findings")))
+PYMETRICS
+)
 
 echo
 if (( FAILURES > 0 )); then
@@ -666,25 +866,7 @@ fi
 echo "If you started Suricata/Zeek, their logs are under $OUTDIR/suricata and $OUTDIR/zeek."
 echo "Monitor and IDS cleanup attempted. Inspect any warnings above."
 REPORT_TLDR_FILE="$SUMMARY"
-vuln_leads=$( { rg '(^|[^[:alpha:]])VULNERABLE([^[:alpha:]]|$)' "$OUTDIR"/*.nmap || true; } | awk '!/NOT VULNERABLE/ {n++} END {print n+0}')
-cleartext=$( { rg '^(21|23)/tcp[[:space:]]+open' "$OUTDIR"/*.nmap || true; } | awk 'END {print NR+0}')
-# Count explicit credential success markers without printing account secrets.
-credential_leads=$(python3 - "$OUTDIR" <<'PYXML'
-from pathlib import Path
-import re, sys
-import xml.etree.ElementTree as ET
-count = 0
-for path in Path(sys.argv[1]).glob('*.xml'):
-    try:
-        root = ET.parse(path).getroot()
-    except (OSError, ET.ParseError):
-        continue  # scan_complete already marks unreadable XML incomplete
-    count += sum(bool(re.search(r'\bValid credentials\b', elem.text or '', re.I))
-                 for elem in root.iter('elem'))
-print(count)
-PYXML
-)
-coverage="Hosts: $COUNT; failed/incomplete stages: $FAILURES; positive vulnerability lines: $vuln_leads; credential success markers: $credential_leads; FTP/Telnet port observations: $cleartext."
+coverage="Hosts: $COUNT; failed/incomplete checks: $FAILURES; distinct review/verification items: $finding_count."
 if (( FAILURES > 0 )); then
   report_tldr CHECK 'The audit is incomplete; security conclusions are limited.' "$coverage" \
     "Inspect failed/incomplete rows in $STAGES and their logs. Review any positive findings in $SUMMARY before repeating only the needed checks." \
@@ -703,7 +885,7 @@ elif (( cleartext > 0 )); then
     'Port names alone do not confirm the service or a vulnerability; this observation is from the scanned network, not proof of WAN exposure.'
 else
   report_tldr CHECK 'Requested audit stages finished; findings still need review.' "$coverage" \
-    "Review service exposure, TLS and sharing findings in $SUMMARY. If credentials were tested, inspect nse-brute.nmap and target authentication logs." \
+    "Start with the ranked findings and their next actions in $SUMMARY. Confirm device identity before changing its settings." \
     'No matching vulnerability line is not a clean security audit. Open ports and fingerprints need context.'
 fi
 info "Selected coverage: vulnerability category=$INTRUSIVE; credential tests=$BRUTE; top UDP=$DO_UDP; WiFi=$DO_WIFI (1 selected, 0 untested)."
