@@ -46,6 +46,7 @@ ts() { date +"%Y%m%d_%H%M%S"; }
 TSTAMP="$(ts)"
 OUTDIR="$(pwd)/wifi_report_${TSTAMP}"
 mkdir -p "$OUTDIR"/{wifi,ids}
+REPORT_CONTEXT="Artifacts: $OUTDIR"
 
 log()   { printf "%s\n" "$*"; }
 run() {
@@ -86,7 +87,7 @@ cleanup() {
   fi
   run "sudo systemctl restart NetworkManager wpa_supplicant"
 }
-trap cleanup EXIT
+trap 'exit_rc=$?; cleanup; report_exit "$exit_rc"' EXIT
 
 report_section "1. Enable radio monitoring" "Stop conflicting WiFi services and enable monitor mode." "This computer may lose network access during the survey."
 # ---------- enter monitor mode ----------
@@ -200,3 +201,28 @@ report_heading "WiFi survey summary"
 cat "$SUMMARY" | report_evidence
 info "Full summary: $SUMMARY"
 info "Next: inspect your access point security and channels in the summary; cleanup runs when this script exits."
+
+REPORT_TLDR_FILE="$SUMMARY"
+ap_count=0; obsolete_count=0
+if [[ -n ${CSV:-} && -s $CSV ]]; then
+  read -r ap_count obsolete_count < <(awk -F, '
+    NR>1 && $1 ~ /([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}/ {
+      n++; if ($6 ~ /OPN|WEP/) weak++
+    } END {print n+0, weak+0}' "$CSV")
+fi
+if (( ap_count == 0 )); then
+  report_tldr UNKNOWN 'No access point rows were captured.' \
+    "The capture summary contains $ap_count AP rows. Artifacts: $OUTDIR/wifi." \
+    "Inspect $SUMMARY and the capture files. Check adapter monitor support and channel selection before repeating the survey." \
+    'No observations do not prove there are no access points. Networking restoration is attempted when the script exits.'
+elif (( obsolete_count > 0 )); then
+  report_tldr CHECK 'Nearby open or obsolete WiFi security was observed.' \
+    "$ap_count AP rows captured; $obsolete_count advertise OPN or WEP. Evidence: $CSV." \
+    'Match the BSSID to your own router. If it is yours, replace WEP/open access with WPA2-CCMP or WPA3 and review WPS. Do not change settings on unrelated APs.' \
+    'Advertisements do not test password strength or establish which AP belongs to you. Channel counts do not measure congestion. Cleanup runs on exit.'
+else
+  report_tldr PASS 'Access point observations were captured for review.' \
+    "$ap_count AP rows captured; no OPN/WEP row matched. Full summary: $SUMMARY." \
+    "Match your router BSSID in $CSV. Review its advertised encryption and WPS output under $OUTDIR/wifi; inspect packet samples if needed." \
+    'No OPN/WEP row is not a security pass or a verified handshake. This survey does not measure connection speed; networking restoration is attempted on exit.'
+fi

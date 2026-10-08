@@ -46,7 +46,7 @@ referencing site):
 | `media/youtube-services/` | `domains/media/youtube/parts/transcripts` |
 | `tools/readme-freshness.sh` | `domains/automation/readme-freshness` |
 | `system/secret-manager.sh` | `secret` alias (`domains/home/core/shell/parts/aliases.nix`) |
-| `system/diagnostics/network/network/` | `net-tools` picker (`domains/home/core/shell/index.nix`); nine scripts share `network-report.sh` for explained output |
+| `system/diagnostics/network/network/` | `net-tools` picker (`domains/home/core/shell/index.nix`); nine scripts share `network-report.sh` for explained output and outcome-based TLDRs |
 | `utilities/lints/permission-lint.sh` | `CHARTER.md` §3.1 (Law 4) |
 | `plans/` | `CHARTER.md` §6 (proposals convention) |
 
@@ -55,7 +55,11 @@ referencing site):
 ## Network diagnostic output
 
 Run `net-tools` to choose a tool by purpose. Each tool explains what it checks,
-what the result means, and what to inspect next. Run `net-tools --details`
+what the result means, and what to inspect next. Each run ends with a TLDR:
+an outcome, the findings behind it, the first next action and the limits.
+Connection summaries distinguish configured DNS from public resolver answers.
+Security summaries give incomplete stages priority and point to saved evidence.
+Inventory summaries describe coverage rather than claim network health. Run `net-tools --details`
 for full evidence; the default shows short excerpts with omitted-line counts.
 Use Ctrl-Y in the picker to print the selected command. Add `--help` to that
 command for a description without probes.
@@ -88,6 +92,8 @@ Counts use retained database segments and event metadata; they do not prove
 that a person walking every approach gets detected or notified.
 
 ## Changelog
+
+- 2026-10-08: Add outcome-based TLDRs to the nine network tools, including early exits, DNS comparison gaps, weak signal, security leads and missing inventory tools. Preserve probe options and raw report formats; replay result branches with isolated commands.
 
 - 2026-10-08: Explain checks and findings in the nine `net-tools` scripts, share terminal formatting, add full-evidence mode and isolated output tests. Correct false DNS success, timed-out public scan verdicts; preserve the new wifibrute discovery and stage tracking. Let bounded WiFi capture timeouts reach the summary.
 - 2026-10-08: Repaired `wifibrute.sh` discovery parsing, CIDR and target handling;

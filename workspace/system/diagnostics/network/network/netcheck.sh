@@ -15,6 +15,17 @@ GATEWAY_OK=0
 INTERNET_IP_OK=0
 DNS_RESOLVE_OK=0
 
+ALT_DNS=unknown
+BROWSER_CHECK=skipped
+
+connection_tldr() {
+    local router=unknown public=unknown dns=no
+    (( GATEWAY_OK == 0 )) || router=yes
+    (( INTERNET_IP_OK == 0 )) || public=yes
+    (( DNS_RESOLVE_OK == 0 )) || dns=yes
+    report_connection_tldr "$router" "$public" "$dns" "$ALT_DNS" "$BROWSER_CHECK" "net-tools advnetcheck"
+}
+
 # Quick network discovery
 get_network_info() {
     DEF_LINE=$(ip route show default | head -n1 || true)
@@ -156,6 +167,7 @@ analyze_triage() {
           echo
         else REPLY=y; fi
         if [[ ! ${REPLY:-} =~ ^[Yy]$ ]]; then
+            connection_tldr
             echo "Stopping here. Run with -f to force detailed scan."
             exit 1
         fi
@@ -170,9 +182,11 @@ analyze_triage() {
         # Test if it's captive portal
         echo "Testing for captive portal..."
         if timeout 5 curl -s --connect-timeout 3 http://detectportal.firefox.com/canonical.html 2>/dev/null | grep -q "success"; then
+            BROWSER_CHECK=yes
             info "The expected browser-check response arrived"
         else
-            warn "Possible captive portal or redirect detected"
+            BROWSER_CHECK=unexpected
+            warn "Unexpected browser-check response or timeout; login is unconfirmed"
         fi
         
         # Check gateway services
@@ -226,6 +240,7 @@ analyze_triage() {
             echo -n "Testing DNS $dns: "
             if report_dns_answer @"$dns" google.com; then
                 success "Working"
+                ALT_DNS=yes
                 DNS_RESULTS+=("$dns")
             else
                 error "Failed"
@@ -348,10 +363,12 @@ apply_dns_fix() {
     
     sleep 3
     echo "Testing DNS fix..."
-    if timeout 5 nslookup google.com >/dev/null 2>&1; then
+    if report_dns_answer google.com; then
+        DNS_RESOLVE_OK=1
         success "The DNS verification probe answered after the change."
         echo "Try opening a website to confirm."
     else
+        DNS_RESOLVE_OK=0
         error "DNS fix didn't work immediately. Try manually:"
         echo "sudo systemctl restart systemd-resolved"
     fi
@@ -401,6 +418,7 @@ detailed_analysis() {
     echo "Testing multiple DNS servers:"
     for dns in "8.8.8.8" "1.1.1.1" "9.9.9.9"; do
         if report_dns_answer @"$dns" google.com; then
+            ALT_DNS=yes
             success "DNS $dns: Working"
         else
             error "DNS $dns: Failed"
@@ -428,9 +446,11 @@ advanced_diagnostics() {
     echo -n "Captive portal test: "
     if timeout 5 curl -s --connect-timeout 3 http://detectportal.firefox.com/canonical.html | \
         grep -q "success"; then
+        BROWSER_CHECK=yes
         success "The expected browser-check response arrived"
     else
-        warn "Possible captive portal - try opening browser"
+        BROWSER_CHECK=unexpected
+        warn "Unexpected browser-check response or timeout; login is unconfirmed"
     fi
     
     # Check for proxy requirements
@@ -477,17 +497,8 @@ SUBNET="$SUBNET"
 TIMESTAMP="$(date)"
 EOF
     
-    echo "Quick diagnosis:"
-    if [[ $GATEWAY_OK -eq 1 && $INTERNET_IP_OK -eq 1 && $DNS_RESOLVE_OK -eq 1 ]]; then
-        success "Router, public-IP and configured DNS probes answered."
-    elif [[ $GATEWAY_OK -eq 1 && $INTERNET_IP_OK -eq 1 && $DNS_RESOLVE_OK -eq 0 ]]; then
-        warn "⚠️  DNS issues - change DNS servers to 8.8.8.8"
-    elif [[ $GATEWAY_OK -eq 1 && $INTERNET_IP_OK -eq 0 ]]; then
-        warn "Public-IP probes did not answer; compare another device to locate the cause"
-    else
-        warn "Router probe did not answer; check WiFi association and compare another device"
-    fi
-    
+    connection_tldr
+
     echo ""
     echo "Results saved to: /tmp/netcheck_results.env"
     echo "For ongoing monitoring: watch -n 5 'ping -c 1 8.8.8.8'"

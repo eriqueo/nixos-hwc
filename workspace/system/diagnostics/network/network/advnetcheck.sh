@@ -7,6 +7,7 @@ report_init 'Detailed connection check' 'Compare router reachability, internet p
   'Sends active router and LAN scans; may request sudo.' '[--details]' "$@" || exit 0
 set -- "${REPORT_ARGS[@]}"
 PUB_OUT=''; LAN_PEERS='unknown'; SYSTEM_DNS='unknown'
+ROUTER_REPLY=unknown; ALT_DNS=unknown; DNS_MATRIX_MISSING=0
 
 HAD_SUDO=0
 need_sudo() { if [[ $EUID -ne 0 ]]; then HAD_SUDO=1; sudo -v || true; fi; }
@@ -61,15 +62,15 @@ phase1() {
 
   printf "Gateway ARP/ICMP: "
   if have arping; then
-    if sudo arping -c 1 -w 2 "$GATEWAY" >/dev/null 2>&1; then ok "ARP OK"; else warn "no ARP reply"; fi
+    if sudo arping -c 1 -w 2 "$GATEWAY" >/dev/null 2>&1; then ROUTER_REPLY=yes; ok "ARP OK"; else warn "no ARP reply"; fi
   fi
-  if ping -c1 -W1 "$GATEWAY" >/dev/null 2>&1; then ok "Ping answered"; else warn "No ping reply; cause unconfirmed"; fi
+  if ping -c1 -W1 "$GATEWAY" >/dev/null 2>&1; then ROUTER_REPLY=yes; ok "Ping answered"; else warn "No ping reply; cause unconfirmed"; fi
 
   printf "Gateway TCP probes: "
   local gw_tcp_ok=0
   if have nmap; then
     if sudo nmap -Pn -p 80,443,53 --host-timeout 5s "$GATEWAY" 2>/dev/null | awk '$2 == "open" {found=1} END {exit !found}'; then
-      ok "A router service port answered"; gw_tcp_ok=1
+      ok "A router service port answered"; gw_tcp_ok=1; ROUTER_REPLY=yes
     else
       warn "no service ports visible"
     fi
@@ -118,7 +119,9 @@ phase2_dns() {
     for s in "${servers[@]}"; do
       printf "%-18s" "$s"
       for n in "${names[@]}"; do
-        if report_dns_answer @"$s" "$n"; then printf "%-18s" "OK"; else printf "%-18s" "NO ANSWER"; fi
+        if report_dns_answer @"$s" "$n"; then
+          case "$s" in 1.1.1.1|8.8.8.8|9.9.9.9) ALT_DNS=yes;; esac
+          printf "%-18s" "OK"; else DNS_MATRIX_MISSING=$((DNS_MATRIX_MISSING+1)); printf "%-18s" "NO ANSWER"; fi
       done
       printf "\n"
     done
@@ -175,12 +178,9 @@ verdict() {
   [[ "$dns_ok" == "yes" ]] && ok 'System DNS returned an address.' || warn "System DNS answer: $dns_ok"
   info "LAN peers seen (approx): ${lan_peers}"
 
-  echo ""
-  if [[ "$eg_ok" != "yes" ]]; then
-    warn 'Next: compare another device and check VPN or browser login requirements.'
-  elif [[ "$dns_ok" == "no" ]]; then
-    warn 'Next: compare the DNS table above before changing connection settings.'
-  fi
+  [[ "$eg_ok" == yes ]] || eg_ok=unknown
+  report_connection_tldr "$ROUTER_REPLY" "$eg_ok" "$SYSTEM_DNS" "$ALT_DNS" skipped 'net-tools advnetcheck' "$DNS_MATRIX_MISSING"
+  info "Visible LAN devices: $LAN_PEERS. Router ports above describe LAN access, not WAN exposure."
 
   [[ $HAD_SUDO -eq 1 ]] && echo "(sudo was used for some probes)"
   return 0

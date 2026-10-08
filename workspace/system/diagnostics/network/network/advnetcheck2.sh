@@ -18,6 +18,7 @@ need_sudo() { if [[ $EUID -ne 0 ]]; then HAD_SUDO=1; sudo -v || true; fi; }
 IFACE=""; GATEWAY=""; MYCIDR=""; MYIP=""; SUB24=""; DNS_ACTIVE=(); DNS_ALT=(1.1.1.1 8.8.8.8 9.9.9.9)
 GW_PING_OK=0; GW_TCP_OK=0; INTERNET_OK=0; DNS_OK=0; CAPTIVE_PORTAL=0; DO_PERF=0
 PUB_NMAP_OUT=""
+SYSTEM_DNS=unknown; ALT_DNS=unknown; DNS_MATRIX_MISSING=0; ROUTER_ARP=unknown; BROWSER_CHECK=skipped
 
 # Fast nmap options for hostile networks
 NMAP_FAST=(-Pn --max-retries 1 --host-timeout 6s -T4)
@@ -60,8 +61,9 @@ quick_triage() {
     echo -n "Testing DNS resolution: "
     if report_dns_answer google.com; then
         ok "The configured resolver returned an address"
-        DNS_OK=1
+        DNS_OK=1; SYSTEM_DNS=yes
     else
+        SYSTEM_DNS=no
         warn "The configured resolver returned no address"
         DNS_OK=0
     fi
@@ -69,10 +71,10 @@ quick_triage() {
     echo -n "Testing for captive portal: "
     if timeout 5 curl -s --connect-timeout 3 http://detectportal.firefox.com/canonical.html 2>/dev/null | grep -q "success"; then
         ok "The expected browser-check response arrived"
-        CAPTIVE_PORTAL=0
+        CAPTIVE_PORTAL=0; BROWSER_CHECK=yes
     else
         warn "Possible captive portal detected"
-        CAPTIVE_PORTAL=1
+        CAPTIVE_PORTAL=1; BROWSER_CHECK=unexpected
     fi
     
     # Quick verdict
@@ -238,6 +240,7 @@ phase1() {
     printf "  ARP test (hardware-level): "
     if have arping; then
         if sudo arping -c 1 -w 2 "$GATEWAY" >/dev/null 2>&1; then 
+            ROUTER_ARP=yes
             ok "Router responds at hardware level"
         else 
             warn "No ARP reply (router might be down)"
@@ -267,6 +270,7 @@ phase1() {
         warn "nmap not available"
     fi
 
+    INTERNET_OK=0
     bold "🌍 Testing Internet Access"
     explain "Checking if you can reach major internet services (Google DNS, Cloudflare)"
     if have nmap; then
@@ -329,6 +333,7 @@ phase2_dns() {
     servers=("${uniq[@]}")
 
     if have dig; then
+        if report_dns_answer google.com; then SYSTEM_DNS=yes; else SYSTEM_DNS=no; fi
         echo "DNS Test Results:"
         printf "%-20s" "DNS Server"
         for n in "${names[@]}"; do printf "%-18s" "$n"; done; printf "\n"
@@ -343,8 +348,10 @@ phase2_dns() {
                 if report_dns_answer @"$s" "$n"; then
                     printf "%-18s" "✓ OK"
                     any_dns_working=1
+                    case "$s" in 1.1.1.1|8.8.8.8|9.9.9.9) ALT_DNS=yes;; esac
                     this_server_working=1
                 else 
+                    DNS_MATRIX_MISSING=$((DNS_MATRIX_MISSING+1))
                     printf "%-18s" "✗ FAIL"
                 fi
             done
@@ -364,6 +371,7 @@ phase2_dns() {
         fi
     else
         warn "dig not available - cannot test DNS properly"
+        SYSTEM_DNS=unknown
         # Fallback test
         if report_dns_answer google.com; then
             ok "Basic DNS test passed"
@@ -511,62 +519,7 @@ verdict() {
     info "📱 Other devices visible: ${lan_peers} (low numbers may indicate client isolation)"
     [[ $GW_PING_OK -eq 1 ]] && ok "✅ Router connection: Good" || warn "⚠️ Router connection: Limited"
 
-    echo ""
-    bold "🎯 WHAT THIS MEANS FOR YOU:"
-    
-    if [[ "$eg_ok" == "yes" && "$dns_ok" == "yes" ]]; then
-        ok "Public and DNS probes answered; other services and performance may still need checks."
-        explain "All tests passed. If you're still having issues:"
-        echo "  • Try different websites"
-        echo "  • Check for application-specific problems"
-        echo "  • Consider if it's a performance issue (run speed test)"
-        
-    elif [[ "$eg_ok" == "no" ]]; then
-        if [[ $CAPTIVE_PORTAL -eq 1 ]]; then
-            warn "Browser login or HTTP failure needs investigation"
-            echo "🔧 Next steps:"
-            echo "  1. Open your web browser"
-            echo "  2. Try to visit any website (like google.com)"
-            echo "  3. You should be redirected to a login page"
-            echo "  4. Complete the login or accept terms"
-            echo "  5. Or try going directly to: http://$GATEWAY"
-        else
-            warn "Public connectivity needs investigation"
-            echo "Next: compare another device to locate the failure."
-            echo "  1. Test with another device (phone, tablet) on same WiFi"
-            echo "  2. If other devices also fail: contact network admin/ISP"
-            echo "  3. If other devices work: restart your network interface"
-            echo "     • sudo systemctl restart NetworkManager"
-            echo "  4. Check router status lights (should be solid, not blinking)"
-        fi
-        
-    elif [[ "$dns_ok" == "no" ]]; then
-        warn "🔍 DNS PROBLEM (Easy to fix!)"
-        echo "🔧 Try these fixes in order:"
-        echo "  1. Quick fix (temporary):"
-        echo "     sudo resolvectl dns $IFACE 8.8.8.8 1.1.1.1"
-        echo "  2. Test it worked:"
-        echo "     nslookup google.com"
-        echo "  3. For permanent fix, configure your network connection"
-        echo "     to use DNS servers: 8.8.8.8, 1.1.1.1"
-    fi
-
-    if [[ "$lan_peers" =~ ^[0-9]+$ ]] && (( lan_peers <= 2 )); then
-        echo ""
-        warn "Few devices answered discovery; isolation is one possible cause"
-        explain "Sleeping devices and a small LAN can produce the same count. Isolation is not confirmed."
-        echo "  • This is normal on guest networks"
-        echo "  • Provides security but limits some features"
-        echo "  • If isolation is confirmed, it can restrict discovery and sharing"
-    fi
-
-    echo ""
-    bold "🛠️ USEFUL COMMANDS FOR ONGOING MONITORING:"
-    echo "  • Check connection: ping -c 3 8.8.8.8"
-    echo "  • Check DNS: nslookup google.com"
-    echo "  • Monitor network: watch -n 5 'ping -c 1 $GATEWAY'"
-    echo "  • Restart networking: sudo systemctl restart NetworkManager"
-    echo "  • View WiFi networks: iwlist scan | grep ESSID"
+    info "Visible devices: $lan_peers. Router service findings describe LAN access, not WAN exposure."
 
     [[ $HAD_SUDO -eq 1 ]] && echo "" && info "ℹ️ Some tests required sudo privileges for detailed network scanning"
     
@@ -602,6 +555,15 @@ Overall Status: $(
 )
 EOF
     ok "Report saved to: /tmp/netprobe_results.txt"
+    REPORT_TLDR_FILE=/tmp/netprobe_results.txt
+    connection_tldr
+}
+
+connection_tldr() {
+    local router=unknown public=unknown
+    if (( GW_PING_OK == 1 || GW_TCP_OK == 1 )) || [[ $ROUTER_ARP == yes ]]; then router=yes; fi
+    (( INTERNET_OK == 0 )) || public=yes
+    report_connection_tldr "$router" "$public" "$SYSTEM_DNS" "$ALT_DNS" "$BROWSER_CHECK" 'net-tools advnetcheck' "$DNS_MATRIX_MISSING"
 }
 
 # ===== Main =====
@@ -639,6 +601,7 @@ main() {
         read -p "🤔 Run detailed analysis anyway to learn more? (y/N): " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            connection_tldr
             echo "Stopping here. You can run detailed analysis with: $0 --detailed"
             exit 0
         fi

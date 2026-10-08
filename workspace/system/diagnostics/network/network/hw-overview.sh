@@ -303,3 +303,23 @@ main
 report_heading "Inventory summary"
 info "This report identifies hardware; it does not prove hardware or network health."
 info "Next: run net-tools quicknet for connection checks, or net-tools toolscan for missing tools."
+
+missing_inventory=()
+case "$(uname -s)" in
+  Linux)
+    for command in ip lscpu lspci lsblk lsusb smartctl sensors; do
+      have "$command" || missing_inventory+=("$command")
+    done;;
+  Darwin) have system_profiler || missing_inventory+=(system_profiler);;
+esac
+if ((${#missing_inventory[@]})); then
+  report_tldr CHECK 'Hardware inventory has tool coverage gaps.' \
+    "Commands absent from PATH: ${missing_inventory[*]}. Available sections are shown above." \
+    'Use net-tools toolscan to inspect missing commands. For a connection problem, use net-tools quicknet instead.' \
+    'This inventory does not prove hardware health. Available commands may still lack permission or device support.'
+else
+  report_tldr PASS 'Hardware inventory collected; this is not a health verdict.' \
+    'The inventory tools checked here are available; component details appear in the sections above.' \
+    'Use the adapter and hardware details when troubleshooting. Run net-tools quicknet to test a connection.' \
+    'Command availability does not confirm every section succeeded. This run does not stress-test components or certify SMART health.'
+fi

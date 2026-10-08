@@ -237,13 +237,31 @@ state_of_parts(){
   echo "- MTU: $MTU_STATUS"
   echo "- LAN devices: $LAN_COUNT"
   echo
-  # Overall steer
-  if [[ "$RADIO_STATUS" == "good" && "$CHANNEL_CROWD" != "crowded" && $ROUTER_RISK -eq 0 && "$EGRESS_STATUS" == "ok" ]]; then
-    ok "The sampled signal and public access checks look usable; review service findings above."
-    echo "Improvements: add local DNS cache, wire heavy devices, keep firmware current."
+  local basis="Signal: $RADIO_STATUS; public access: $EGRESS_STATUS; public DNS timing: $DNS_LAT_MSG; selected service flags: $ROUTER_RISK; packet size reply: $MTU_STATUS."
+  local limits='Nearby AP counts do not prove congestion. Public DNS timing does not test system DNS. Router probes are LAN-only; no finding does not prove security.'
+  if [[ $RADIO_STATUS == weak ]]; then
+    report_tldr CHECK 'Weak WiFi signal is a lead to investigate.' "$basis" \
+      'Move nearer your access point and rerun net-tools homewifi-audit. Compare the signal and the actual app performance before changing channels.' "$limits"
+  elif (( ROUTER_RISK > 0 )); then
+    report_tldr CHECK 'Selected router services need review.' "$basis" \
+      "Review ${ROUTER_FLAGS[*]} in the router settings. Confirm each service is needed and restricted before disabling it." "$limits"
+  elif [[ $EGRESS_STATUS != ok ]]; then
+    report_tldr UNKNOWN 'Public access is unconfirmed.' "$basis" \
+      'Run net-tools advnetcheck to separate router, public access and DNS results. Compare another device on this WiFi.' "$limits"
+  elif [[ $RADIO_STATUS == moderate ]]; then
+    report_tldr CHECK 'Public access answered; WiFi signal is moderate.' "$basis" \
+      'If speed or stability is poor, compare nearer the access point and test a wired connection. Keep settings until the comparison identifies a cause.' "$limits"
+  elif [[ $RADIO_STATUS != good || $DNS_LAT_MSG == unknown || $MTU_STATUS != 1500 ]]; then
+    report_tldr UNKNOWN 'Public access answered; some WiFi or path checks remain inconclusive.' "$basis" \
+      'Review the untested radio, DNS timing or packet-size section above. Use net-tools advnetcheck if browsing fails; do not change MTU from silence alone.' "$limits"
+  elif [[ $DNS_LAT_MSG == slow ]]; then
+    report_tldr CHECK 'Signal is strong; sampled public DNS replies were slow.' "$basis" \
+      'Repeat the DNS timing check before changing resolvers. Use net-tools advnetcheck to compare with your configured DNS.' "$limits"
   else
-    warn "Overall: see explanations above for targeted fixes."
+    report_tldr PASS 'Signal and sampled public access look usable.' "$basis" \
+      'No setting change is indicated by these samples. If speed remains poor, compare a wired connection or measure LAN throughput with an iperf3 server.' "$limits"
   fi
+
 }
 
 # ---------- Print explanations ----------

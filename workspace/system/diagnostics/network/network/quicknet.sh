@@ -129,12 +129,12 @@ explain_dns(){
   case "$DNS_STATUS" in
     ok)
       ok "DNS lookups succeeded."
-      echo "Meaning: Name resolution works; websites should load by name."
+      echo "Meaning: The tested name resolved; website access is a separate check."
       ;;
     fail)
       warn "DNS lookups failed."
       echo "Meaning: You might reach the internet by IP, but names won’t resolve."
-      echo "Next: Temporarily set resolvers (e.g., 1.1.1.1, 8.8.8.8) with resolvectl or NetworkManager."
+      echo "Next: Compare configured and public resolvers with net-tools advnetcheck."
       ;;
     skipped)
       warn "DNS test skipped."
@@ -147,7 +147,7 @@ explain_lan(){
   hdr "Local network (who else is here)"
   echo "Approximate devices seen on LAN: $LAN_PEERS"
   if [[ "$LAN_PEERS" == "1" || "$LAN_PEERS" == "0" ]]; then
-    echo "Meaning: Likely client isolation (typical for hotspots/guest Wi-Fi). Only the router is visible."
+    echo "Meaning: Few devices answered; isolation, sleeping devices or a small LAN can produce this count."
   else
     echo "Meaning: This is a discovery count, not a congestion or security measurement."
   fi
@@ -160,23 +160,12 @@ state_of_parts(){
   echo "- Name resolution (DNS): $(case $DNS_STATUS in ok) echo 'working';; fail) echo 'failing';; *) echo 'unknown';; esac)"
   echo "- LAN visibility: $LAN_PEERS device(s) detected"
   echo
-  # Overall verdict
-  if [[ "$GW_STATUS" == "icmp_ok" && "$EGRESS_STATUS" == "ok" && "$DNS_STATUS" == "ok" ]]; then
-    ok "Overall: router, public service and DNS probes succeeded."
-    echo "If you still see issues, they’re likely app/site-specific or performance-related."
-  elif [[ "$GW_STATUS" == "unreachable" ]]; then
-    warn "Overall: router probes did not confirm reachability."
-    echo "Try reconnecting Wi-Fi, renewing DHCP, or switching networks."
-  elif [[ "$EGRESS_STATUS" == "blocked" ]]; then
-    warn "Overall: public TCP probes received no clear answers."
-    echo "Look for captive portals or use an alternate uplink."
-  elif [[ "$DNS_STATUS" == "fail" ]]; then
-    warn "Overall: DNS problem."
-    echo "Set known-good resolvers (1.1.1.1, 8.8.8.8) and retest."
-  else
-    warn "Overall: inconclusive."
-    echo "Next: run net-tools advnetcheck for route and DNS comparisons."
-  fi
+  local router=unknown public=unknown dns=unknown
+  case "$GW_STATUS" in icmp_ok|arp_only) router=yes;; esac
+  [[ $EGRESS_STATUS != ok ]] || public=yes
+  case "$DNS_STATUS" in ok) dns=yes;; fail) dns=no;; esac
+  report_connection_tldr "$router" "$public" "$dns" unknown skipped 'net-tools advnetcheck'
+
 }
 
 # ---------- PRINT EXPLANATIONS ----------

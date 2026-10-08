@@ -156,6 +156,7 @@ REPORT_OWNER="$(id -u):$(id -g)"
 FAILURES=0
 STAGES="$OUTDIR/stages.tsv"
 printf '# format-version: 1\nstage\tstatus\texit_code\n' > "$STAGES"
+REPORT_CONTEXT="Reports: $OUTDIR; stage status: $STAGES"
 ok "Reports will be saved to: $OUTDIR"
 echo
 
@@ -179,6 +180,7 @@ stop_job(){
 }
 
 release_resources(){
+  (( ${RESOURCES_RELEASED:-0} == 0 )) || return 0
   # A signal can arrive during setup, before MON_IF has been assigned.
   if (( MON_START_ATTEMPTED==1 )) && [[ -z "$MON_IF" ]]; then
     local candidate
@@ -206,12 +208,14 @@ release_resources(){
     FAILURES=$((FAILURES + 1))
     warn "Could not restore report ownership; inspect $OUTDIR as root"
   fi
+  RESOURCES_RELEASED=1
 }
 cleanup(){
   local rc=$?
   trap - EXIT
   release_resources
   if (( rc == 0 && FAILURES > 0 )); then rc=1; fi
+  report_exit "$rc"
   exit "$rc"
 }
 trap cleanup EXIT
@@ -302,7 +306,13 @@ fi
 if [[ ! -s "$LIVE_LIST" ]]; then fail "No live hosts found; inspect $OUTDIR/pingscan.nmap and check the target or client isolation"; exit 1; fi
 COUNT=$(wc -l < "$LIVE_LIST" | tr -d ' ')
 ok "Discovered $COUNT host(s) → $LIVE_LIST"
-if [[ "$MODE" == discover ]]; then exit 0; fi
+if [[ "$MODE" == discover ]]; then
+  report_tldr PASS 'Target discovery returned responding devices.' \
+    "$COUNT hosts discovered in $CUSTOM_SUBNET; addresses: $LIVE_LIST." \
+    'Confirm these addresses belong to your intended household targets. Run net-tools wifibrute and select audit options for service/security checks.' \
+    'Discovery does not test vulnerabilities, credentials or every device. No later audit stage ran.'
+  exit 0
+fi
 
 # ---------- Stage 1: Full TCP sweep (-p-) ----------
 report_section "2. TCP service ports" "Probe all TCP ports on the discovered targets." "Open ports show exposed services, not confirmed flaws. Host and stage deadlines can leave the scan incomplete."
@@ -496,4 +506,47 @@ else
 fi
 echo "If you started Suricata/Zeek, their logs are under $OUTDIR/suricata and $OUTDIR/zeek."
 echo "Monitor and IDS cleanup attempted. Inspect any warnings above."
-(( FAILURES == 0 ))
+REPORT_TLDR_FILE="$SUMMARY"
+vuln_leads=$( { rg '(^|[^[:alpha:]])VULNERABLE([^[:alpha:]]|$)' "$OUTDIR"/*.nmap || true; } | awk '!/NOT VULNERABLE/ {n++} END {print n+0}')
+cleartext=$( { rg '^(21|23)/tcp[[:space:]]+open' "$OUTDIR"/*.nmap || true; } | awk 'END {print NR+0}')
+# Count explicit credential success markers without printing account secrets.
+credential_leads=$(python3 - "$OUTDIR" <<'PYXML'
+from pathlib import Path
+import re, sys
+import xml.etree.ElementTree as ET
+count = 0
+for path in Path(sys.argv[1]).glob('*.xml'):
+    try:
+        root = ET.parse(path).getroot()
+    except (OSError, ET.ParseError):
+        continue  # scan_complete already marks unreadable XML incomplete
+    count += sum(bool(re.search(r'\bValid credentials\b', elem.text or '', re.I))
+                 for elem in root.iter('elem'))
+print(count)
+PYXML
+)
+coverage="Hosts: $COUNT; failed/incomplete stages: $FAILURES; positive vulnerability lines: $vuln_leads; credential success markers: $credential_leads; FTP/Telnet port observations: $cleartext."
+if (( FAILURES > 0 )); then
+  report_tldr CHECK 'The audit is incomplete; security conclusions are limited.' "$coverage" \
+    "Inspect failed/incomplete rows in $STAGES and their logs. Review any positive findings in $SUMMARY before repeating only the needed checks." \
+    'Failed or skipped checks are untested. A failed scan does not establish a device is secure or unreachable.'
+elif (( vuln_leads > 0 )); then
+  report_tldr CHECK 'Vulnerability scripts reported leads that need confirmation.' "$coverage" \
+    "Read the host, script and service details in $SUMMARY and the matching .nmap report. Confirm firmware/version and the advisory before patching the affected device." \
+    'A script match is not confirmed exploitation. Several lines can describe one finding; no match does not establish security.'
+elif (( credential_leads > 0 )); then
+  report_tldr CHECK 'Credential scripts reported login leads that need review.' "$coverage" \
+    "Inspect the matching credential script in the reports under $OUTDIR. Confirm it against target authentication logs; change confirmed weak/default credentials." \
+    'Markers can repeat and do not identify unique accounts. Other credential output formats still need manual review; the TLDR omits passwords.'
+elif (( cleartext > 0 )); then
+  report_tldr CHECK 'FTP or Telnet ports answered on household targets.' "$coverage" \
+    "Identify the host in $SUMMARY. Confirm the service, then disable unused cleartext access or restrict it in that device settings." \
+    'Port names alone do not confirm the service or a vulnerability; this observation is from the scanned network, not proof of WAN exposure.'
+else
+  report_tldr CHECK 'Requested audit stages finished; findings still need review.' "$coverage" \
+    "Review service exposure, TLS and sharing findings in $SUMMARY. If credentials were tested, inspect nse-brute.nmap and target authentication logs." \
+    'No matching vulnerability line is not a clean security audit. Open ports and fingerprints need context.'
+fi
+info "Selected coverage: vulnerability category=$INTRUSIVE; credential tests=$BRUTE; top UDP=$DO_UDP; WiFi=$DO_WIFI (1 selected, 0 untested)."
+if (( FAILURES > 0 )); then exit 1; fi
+exit 0

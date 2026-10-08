@@ -8,7 +8,7 @@ report_init 'Installed tool inventory' 'Check which workstation and network comm
 set -- "${REPORT_ARGS[@]}"
 
 # save as check-tools.sh && bash check-tools.sh
-missing=0; available=0; absent=0
+missing=0; available=0; absent=0; missing_groups=()
 need() {
   label="$1"; shift
   for c in "$@"; do
@@ -18,7 +18,7 @@ need() {
       available=$((available+1)); return 0
     fi
   done
-  printf "  [MISSING] %-20s checked: %s\n" "$label" "$*"; missing=1; absent=$((absent+1))
+  printf "  [MISSING] %-20s checked: %s\n" "$label" "$*"; missing=1; absent=$((absent+1)); missing_groups+=("$label")
 }
 
 report_section "Shells, editors and terminal apps" "Inspect basic workstation commands." "MISSING means absent from PATH, not a broken computer. Some rows accept alternative commands."
@@ -167,4 +167,15 @@ report_heading "Tool inventory summary"
 info "Available tool groups: $available | Missing tool groups: $absent"
 info "Next: add only the tools needed for your chosen script to NixOS/Home Manager."
 info "This broad inventory includes optional workstation tools. Missing rows do not prevent every network script from running."
+if (( missing )); then
+  report_tldr CHECK 'Some listed tools are missing; this is not a network fault.' \
+    "$available tool groups found; $absent missing. First missing groups: ${missing_groups[*]:0:5}; full list above." \
+    'Match missing tools to the script you intend to run. Add only required commands to NixOS/Home Manager; do not install the entire list.' \
+    'Availability in PATH does not test a tool, its permissions or any connection.'
+else
+  report_tldr PASS 'Every listed tool group has an available command.' \
+    "$available groups found; none missing." \
+    'Run net-tools quicknet for connection diagnosis, or choose the household audit for security testing.' \
+    'Alternative commands can satisfy a group; individual script dependencies and permissions still need preflight checks.'
+fi
 exit "$missing"
