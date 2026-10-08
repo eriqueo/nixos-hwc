@@ -28,6 +28,7 @@ workspace/
 │                    #   (each wants its own repo; see 2026-07-05 audit)
 ├── system/          # secret-manager.sh (`secret`; recipients from secrets.nix), secrets-parity,
 │                    #   couchdb/zfs utilities, diagnostics/, setup/
+│                    #   diagnostics/network/network/wifibrute.sh + tests/
 ├── tools/           # readme-freshness.sh (Law-12 drift detector), web-speed.sh
 └── utilities/       # lints/ (charter lints incl. permission-lint.sh — CHARTER §3.1),
                      #   audit/ (drift.py), setup-uptime-kuma.py
@@ -72,6 +73,11 @@ that a person walking every approach gets detected or notified.
 
 ## Changelog
 
+- 2026-10-08: Repaired `wifibrute.sh` discovery parsing, CIDR and target handling;
+  added `discover`, private report directories, bounded scans, stage status,
+  opt-in credential/share checks, UDP SNMP, and privileged monitor cleanup.
+  The legacy `network-utils` entry forwards to the active script. Regression
+  tests: `python3 workspace/system/diagnostics/network/network/tests/test_wifibrute.py`.
 - 2026-09-24: `secret-manager.sh` reads recipient rules from `secrets.nix`, so host enrollment also applies to interactive secret creation and edits. It fails before encryption if rules cannot be read or disagree.
 - 2026-09-24: Repaired `monitoring/frigate-health.sh`: use the live API on port
   5000, omit raw logs and process arguments, return nonzero on collection/health
