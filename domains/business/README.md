@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Estimator Details supports mapped custom scope, trade labor and subcontractor quote entry. Saved-item edits retain draft identity and budget exclusions; missing custom costs appear in the shared send-review checks.
+
 Calculator version 2 shares optional measurement and finish fields with the estimator. The estimator supplies a pure preliminary plan port. CRM binds that port to one reserved JobTread budget effect for newly linked calculator jobs, with visible assumptions and proposal review holds.
 
 Preliminary preset notes use the estimator parameter registry to separate bathroom and deck assumptions. This filter changes future plan notes; stored budgets and prices remain intact.
@@ -58,6 +60,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-10-08: Extend estimator custom scope entry and editing for site visits. Preserve saved item identities and budget edits, expose existing JobTread mappings and trade rates, and flag unpriced custom work before sending.
 
 - 2026-10-08: Filter cross-scope preset assumptions in preliminary plans using the existing estimator parameter registry; preserve budget items, prices, missing-input warnings and historical receipts.
 

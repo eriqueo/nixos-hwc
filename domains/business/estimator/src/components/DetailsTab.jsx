@@ -5,6 +5,12 @@ import { deriveGeometry } from '../engine/assembler.js';
 import tradeRates from '../data/tradeRates.json';
 import { tradeRate } from '../engine/pricing.js';
 import { NumInput } from './NumInput.jsx';
+import jtMappings from '../data/jtMappings.json';
+
+const EMPTY_CUSTOM_ITEM = {
+  name: '', group: 'Additional Items', qty: 1, cost: 0,
+  type: 'Materials', unit: 'Each', code: '3100', trade: null,
+};
 
 function AllowanceRow({ label, value, onChange, enabled, onToggle, show = true }) {
   if (!show) return null;
@@ -46,30 +52,41 @@ export function DetailsTab({ s, set, isMobile = false }) {
   const { fl, wallTile } = deriveGeometry(s);
   const yn = v => v === 'yes';
 
-  const [newItem, setNewItem] = useState({
-    name: '', group: 'Additional Items', qty: 1,
-    cost: 0, type: 'Materials', unit: 'Each',
-  });
-
-  const addCustomItem = () => {
-    if (!newItem.name) return;
-    set('custom_items', [...(s.custom_items ?? []), { ...newItem, draftId: crypto.randomUUID() }]);
-    setNewItem({ name: '', group: 'Additional Items', qty: 1, cost: 0, type: 'Materials', unit: 'Each' });
+  const [editor, setEditor] = useState({ mode: 'add', item: EMPTY_CUSTOM_ITEM });
+  const [itemError, setItemError] = useState('');
+  const updateItem = patch => setEditor(current => ({ ...current, item: { ...current.item, ...patch } }));
+  const resetEditor = () => { setEditor({ mode: 'add', item: EMPTY_CUSTOM_ITEM }); setItemError(''); };
+  const editItem = item => {
+    setItemError('');
+    setEditor({ mode: 'edit', item: { ...EMPTY_CUSTOM_ITEM, ...item,
+      qty: s.budget_overrides?.[`custom:${item.draftId}`] ?? item.qty,
+    } });
   };
-
-  const removeCustomItem = idx => {
-    set('custom_items', s.custom_items.filter((_, i) => i !== idx));
-  };
-
-  const inp = (overrides) => ({
-    padding: isMobile ? '10px 10px' : '6px 8px',
-    borderRadius: isMobile ? 4 : 3,
-    border: `1px solid ${C.brd}`,
-    backgroundColor: C.card2, color: C.txB,
-    fontSize: isMobile ? 14 : 12, fontFamily: mono, outline: 'none',
-    minHeight: isMobile ? 44 : 'auto',
-    ...overrides,
+  const clearQuantityEdit = draftId => set('budget_overrides', current => {
+    const next = { ...current }; delete next[`custom:${draftId}`]; return next;
   });
+  const saveItem = event => {
+    event.preventDefault();
+    const name = editor.item.name.trim();
+    if (!name) { setItemError('Enter an item name.'); return; }
+    const item = { ...editor.item, name, group: editor.item.group.trim() || EMPTY_CUSTOM_ITEM.group };
+    if (editor.mode === 'edit') {
+      set('custom_items', items => items.map(current => current.draftId === item.draftId ? item : current));
+      // Details edits the effective quantity; an earlier Budget override must not undo it.
+      clearQuantityEdit(item.draftId);
+    } else {
+      const added = { ...item, draftId: crypto.randomUUID() };
+      set('custom_items', items => [...items, added]);
+    }
+    resetEditor();
+  };
+  const removeItem = draftId => {
+    set('custom_items', items => items.filter(item => item.draftId !== draftId));
+    clearQuantityEdit(draftId);
+    set('budget_removed', current => { const next = { ...current }; delete next[`custom:${draftId}`]; return next; });
+    if (editor.mode === 'edit' && editor.item.draftId === draftId) resetEditor();
+  };
+  const item = editor.item;
 
   return (
     <div className="form-grid">
@@ -112,53 +129,64 @@ export function DetailsTab({ s, set, isMobile = false }) {
         </div>
       </Box>
 
-      {/* Custom Line Items */}
+      {/* Existing custom-item contract: Details edits; assembler prices and maps. */}
       <Box>
-        <Label color={C.txD}>Add Custom Line Item</Label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <input placeholder="Item name" value={newItem.name}
-            onChange={e => setNewItem(p => ({ ...p, name: e.target.value }))}
-            style={inp({ width: '100%' })} />
-          <div style={{ display: 'flex', gap: 6 }}>
-            <input placeholder="Group" value={newItem.group}
-              onChange={e => setNewItem(p => ({ ...p, group: e.target.value }))}
-              style={inp({ flex: 1 })} />
-            <select value={newItem.type} onChange={e => setNewItem(p => ({ ...p, type: e.target.value }))}
-              style={inp({ padding: '6px' })}>
-              <option value="Materials">Materials</option>
-              <option value="Labor">Labor</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
-            <input type="number" placeholder="Qty" value={newItem.qty}
-              onChange={e => setNewItem(p => ({ ...p, qty: parseFloat(e.target.value) || 0 }))}
-              style={inp({ width: isMobile ? '30%' : 60, textAlign: 'right', flex: isMobile ? '1' : 'none' })} />
-            <input type="number" placeholder="Unit Cost" value={newItem.cost || ''}
-              onChange={e => setNewItem(p => ({ ...p, cost: parseFloat(e.target.value) || 0 }))}
-              style={inp({ width: isMobile ? '50%' : 80, textAlign: 'right', flex: isMobile ? '2' : 'none' })} />
-            <button onClick={addCustomItem} style={{
-              padding: isMobile ? '12px 18px' : '6px 14px',
-              borderRadius: isMobile ? 4 : 3, border: 'none', cursor: 'pointer',
-              backgroundColor: C.acc, color: C.bg,
-              fontSize: isMobile ? 13 : 11, fontWeight: 700, fontFamily: mono,
-              flex: isMobile ? '1' : 'none',
-              minHeight: isMobile ? 44 : 'auto',
-            }}>+ Add</button>
-          </div>
-        </div>
-
-        {(s.custom_items?.length ?? 0) > 0 && (
-          <div style={{ marginTop: 10 }}>
-            {s.custom_items.map((ci, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: `1px solid ${C.brd}` }}>
-                <span style={{ color: C.tx, fontSize: 11 }}>{ci.name} ({ci.qty}x ${ci.cost})</span>
-                <button onClick={() => removeCustomItem(idx)}
-                  style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: 11, fontFamily: mono }}>x</button>
+        <div className="custom-items">
+          <Label color={C.acc}>Additional scope</Label>
+          <p>Add work missing from the template. Enter HWC's cost before markup.
+            Use Subcontractor and Lump Sum for a complete quote.</p>
+          <form aria-label="Custom item" onSubmit={saveItem}>
+            <strong>{editor.mode === 'edit' ? 'Edit custom item' : 'Add custom item'}</strong>
+            <label>Item name<input required value={item.name} onChange={e => updateItem({ name: e.target.value })} /></label>
+            <label>Group<input value={item.group} onChange={e => updateItem({ group: e.target.value })} /></label>
+            <div className="custom-fields">
+              <label>Cost type<select aria-label="Cost type" value={item.type} onChange={e => updateItem({
+                type: e.target.value, trade: null,
+                unit: e.target.value === 'Labor' ? 'Hours' : e.target.value === 'Subcontractor' ? 'Lump Sum' : 'Each',
+              })}>
+                {Object.keys(jtMappings.types).map(type => <option key={type}>{type}</option>)}
+              </select></label>
+              <label>Cost code<select aria-label="Cost code" value={item.code} onChange={e => updateItem({ code: e.target.value })}>
+                {Object.keys(jtMappings.codes).sort().map(code => <option key={code}>{code}</option>)}
+              </select></label>
+            </div>
+            {item.type === 'Labor' && <label>Trade rate<select aria-label="Trade rate" value={item.trade || ''} onChange={e => updateItem({
+              trade: e.target.value || null, unit: 'Hours',
+              cost: e.target.value ? tradeRate(e.target.value).cost : item.cost,
+            })}>
+              <option value="">Manual cost (standard markup)</option>
+              {Object.keys(tradeRates).map(trade => <option key={trade} value={trade}>{trade.replaceAll('_', ' ')} — ${tradeRate(trade).price.toFixed(2)}/hr price</option>)}
+            </select></label>}
+            <div className="custom-fields">
+              <label>Quantity<input type="number" required min="0.01" step="any" value={item.qty}
+                onChange={e => updateItem({ qty: e.target.value === '' ? '' : Number(e.target.value) })} /></label>
+              <label>Unit<select aria-label="Unit" value={item.unit} disabled={item.type === 'Labor'} onChange={e => updateItem({ unit: e.target.value })}>
+                {Object.keys(jtMappings.units).map(unit => <option key={unit}>{unit}</option>)}
+              </select></label>
+            </div>
+            <label>Unit cost<input type="number" min="0" step="0.01" value={item.cost || ''} disabled={!!item.trade}
+              onChange={e => updateItem({ cost: Number(e.target.value) })} /></label>
+            <p>{item.trade ? 'The selected trade supplies the hourly cost and selling rate.' : 'The standard material markup applies to this cost.'}
+              {' '}Leave cost blank to flag it for review. Unpriced work blocks sending.</p>
+            {itemError && <p role="alert">{itemError}</p>}
+            <div className="custom-actions">
+              <button className="custom-save" type="submit">{editor.mode === 'edit' ? 'Save item' : 'Add item'}</button>
+              {editor.mode === 'edit' && <button type="button" onClick={resetEditor}>Cancel edit</button>}
+            </div>
+          </form>
+          {(s.custom_items || []).map(ci => (
+            <div key={ci.draftId} className="custom-saved">
+              <strong>{ci.name}</strong>
+              <span>{s.budget_overrides?.[`custom:${ci.draftId}`] ?? ci.qty} {ci.unit || 'Each'} · ${ci.cost || 0} cost/unit · {ci.type || 'Materials'}</span>
+              {s.budget_removed?.[`custom:${ci.draftId}`] && <span>Excluded from budget. Restore removed items in Budget to include it.</span>}
+              {!ci.cost && <span>Cost needed before sending.</span>}
+              <div className="custom-actions">
+                <button type="button" aria-label={`Edit ${ci.name}`} onClick={() => editItem(ci)}>Edit</button>
+                <button type="button" aria-label={`Delete ${ci.name}`} onClick={() => removeItem(ci.draftId)}>Delete</button>
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          ))}
+        </div>
       </Box>
 
       {/* Trade Rate Reference */}

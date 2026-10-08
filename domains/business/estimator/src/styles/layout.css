@@ -38,3 +38,15 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .app-content input[type='number'] { min-width: 52px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+.custom-items { font-size: 12px; overflow-wrap: anywhere; }
+.custom-items p { color: var(--text-dim); line-height: 1.5; }
+.custom-items form, .custom-items label, .custom-saved { display: flex; flex-direction: column; gap: 8px; }
+.custom-items form { gap: 12px; }
+.custom-items input, .custom-items select, .custom-items button { padding: 8px; border: 1px solid var(--border-default); border-radius: 4px; background: var(--surface-elevated); color: var(--text-body); }
+.custom-items input, .custom-items select { width: 100%; max-width: 100%; }
+.custom-items button { cursor: pointer; }
+.custom-items .custom-save { background: var(--interactive-accent); color: var(--surface-page); font-weight: bold; }
+.custom-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.custom-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.custom-saved { padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default); }

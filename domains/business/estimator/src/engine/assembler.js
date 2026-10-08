@@ -298,6 +298,7 @@ export function estimateIssues(state, items) {
   if (state.shower_finish === 'panel' && Number(state.shower_niches) > 0) issues.push('Panel niches need a compatible product and a separate priced line item. Set tile niches to None.');
   for (const item of items) {
     if (item._usedDefault) issues.push(`Review the missing quantity for ${item.name}.`);
+    if (item._editKey?.startsWith('custom:') && item.uc === 0) issues.push(`Enter the cost for ${item.name} in Details.`);
     if (![item.qty,item.uc,item.up].every(v => Number.isFinite(v) && v >= 0)) issues.push(`Correct the quantity or price for ${item.name}.`);
     if (!jtMappings.codes[item.code] || !jtMappings.types[item.type] || !jtMappings.units[item.unit]) issues.push(`Set the JobTread cost code, type, and unit for ${item.name}.`);
   }

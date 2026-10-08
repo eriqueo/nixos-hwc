@@ -79,6 +79,20 @@ const payload = engine.buildJtItems(reviewed);
 assert.equal(payload[reviewed.indexOf(reviewed.find(i => i._ruleId === target._ruleId))].quantity, 9.25);
 assert.ok(payload.every(i => i.quantityFormula === undefined && Number.isFinite(i.quantity)), 'push exact reviewed quantities, including waste');
 console.log('PASS stable edits across scope changes and exact JobTread quantities');
+for (const projectType of ['bathroom','deck']) {
+  const customState = { ...state, projectType, measurements_checked:'yes', custom_items:[
+    { draftId:'quote', name:'Window quote', qty:1, cost:0, type:'Subcontractor', unit:'Lump Sum', code:'1300' },
+  ] };
+  const assembled = engine.assemble(enrichState(customState));
+  assert.ok(engine.estimateIssues(customState,assembled).includes('Enter the cost for Window quote in Details.'));
+  const excluded = engine.applyEdits(assembled,{}, { 'custom:quote':true });
+  assert.ok(!engine.estimateIssues(customState,excluded).some(issue=>issue.includes('Window quote')));
+  customState.custom_items[0].cost=800;
+  const priced = engine.assemble(enrichState(customState));
+  assert.ok(!engine.estimateIssues(customState,priced).some(issue=>issue.includes('Window quote')));
+}
+console.log('PASS unpriced custom scope blocks sending only while included, for bathroom and deck');
+
 const panelState = { ...state, measurements_checked: 'yes', shower_finish: 'panel', floor_finish: 'vinyl', has_shower_tile: 'no', has_floor_tile: 'no',
   has_shower_door: 'no', has_toilet: 'yes', shower_niches: '0', panel_install_hours: 12, panel_drain_hours: 2, panel_material_allowance: 1100,
   floor_install_hours: 6, floor_prep_hours: 1.5, floor_material_allowance: 400,

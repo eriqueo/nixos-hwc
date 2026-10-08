@@ -10,6 +10,8 @@ Phones use one form column and budget cards. Tablets use two form columns and bu
 
 For panel showers and vinyl/Marmoleum, enter installation hours and supplier costs. Missing inputs block JobTread push and label the price as a draft. In Details, a checked supply box means HWC buys materials; unchecked means the customer buys them. Installation remains included. Keep the existing shower valve only after checking compatibility.
 
+In Details, Additional scope supports material quantities, labor hours at an existing trade rate, and subcontractor lump-sum quotes. Select the JobTread cost code, cost type and unit. Custom costs use the standard material markup unless a labor trade is selected. Blank costs remain visible but block sending while the item is included. Edit and Save preserve the item identity and replace its effective quantity, including earlier Budget edits. Cancel leaves the saved item intact. Editing an excluded item does not restore it; use Restore removed items in Budget. Download the draft to back up custom work.
+
 Drafts are CRITICAL device-local data: a working draft plus up to 50 saved job drafts, with version 2 JSON download/import backups. Switching saves the previous job before restoring the selected job; a full or unavailable store blocks switching rather than discarding drafts. Reset removes the selected job's saved draft. Download before reset, switching devices, or clearing browser data. Budget quantity edits and removals persist through reassembly and reload. Catalogue files are REPLACEABLE exports from Postgres; regenerate them instead of editing JSON. Run `npm run test:site-visit`, `npm run test:golden`, and `npm run lint:ui` for engine and token checks. `npm run test:browser` starts a local dev server and checks three viewport widths with mocked CRM responses and intercepted writes. Set `CHROMIUM_PATH` to your browser executable outside HWC NixOS.
 
 Selecting an existing JobTread job reads its calculator inputs from the CRM through same-origin `/api/jobs/{job_id}/calculator-intake` (schema version 1). CRM owns the retained answers and resolves only the exact active canonical job link; ambiguity and read failures appear in Scope. No job or budget is created by this read. Bathroom feature choices prefill explicit work flags; deck material, railing and project choices translate to estimator picklists. Original size, arrangement, quality, timeline and unpriced features remain visible as customer preferences, with the original rough range. Unknown measurements and costs stay empty. Existing saved or imported edits take precedence; fresh drafts apply untouched fields once. Review customer selections and measure on site before sending. Version 2 optionally supplies customer-reported feet, counts and finishes from the shared `CALCULATOR_FIELDS` vocabulary. Blank values remain unknown; neither categories nor these reports count as site verification. The rough public range still uses its category model.
@@ -83,7 +85,7 @@ domains/business/estimator/
 │   ├── components/
 │   │   ├── ScopeTab.jsx        # Measurement form (bathroom + deck), template selector
 │   │   ├── EstimateTab.jsx     # Line item table, JT push button
-│   │   ├── DetailsTab.jsx      # Allowances and custom items
+│   │   ├── DetailsTab.jsx      # Allowances, mapped custom scope and saved-item editing
 │   │   ├── JobSelector.jsx     # JT picker + linked CRM calculator preferences
 │   │   └── ...                 # NumInput, Select, Section
 │   ├── styles/theme.js         # Gruvbox Material Dark colors
@@ -175,6 +177,8 @@ templates and fails the exit code on any item/qty/price/total diff beyond
 and is NOT a refactor gate.
 
 ## Changelog
+
+- 2026-10-08: Expose mapped custom scope and quote entry with saved-item editing, existing trade rates, stable draft identities and effective quantity edits. Included custom lines without costs block sending. Browser coverage checks saved drafts and exact payloads at phone, tablet and desktop widths.
 
 - 2026-10-08: Scope preliminary preset notes with the existing parameter registry. Bathroom plans omit deck defaults; deck plans omit bathroom defaults. Regression checks retain relevant provenance and existing items/prices/warnings. Stored budgets are not rewritten.
 
