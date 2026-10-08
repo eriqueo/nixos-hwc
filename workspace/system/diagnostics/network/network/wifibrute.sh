@@ -212,15 +212,28 @@ sudo -v || { fail "Administrator access failed"; exit 2; }
 
 # Nmap exit zero does not imply a complete scan: host deadlines can skip targets.
 # Each stage has a wall deadline; at the limit TERM then KILL, retain logs, no retry.
+scan_complete(){
+  python3 - "$1" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+try:
+    root = ET.parse(sys.argv[1]).getroot()
+    finished = root.find('runstats/finished')
+    complete = (finished is not None and finished.get('exit') == 'success'
+                and not any(host.get('timedout') == 'true' for host in root.findall('host')))
+except (OSError, ET.ParseError):
+    complete = False
+sys.exit(0 if complete else 1)
+PY
+}
+
 scan(){
   local name=$1 deadline=$2 rc=0 status=ok
   shift 2
   sudo -n timeout -k 5s "$deadline" nmap "$@" -oA "$OUTDIR/$name" 2>&1 | tee "$OUTDIR/$name.log" || rc=$?
   if (( rc != 0 )); then
     status=failed
-  elif [[ ! -f "$OUTDIR/$name.nmap" ]]; then
-    status=incomplete
-  elif rg -qi 'Skipping host.*(timeout|timed out)' "$OUTDIR/$name.nmap" "$OUTDIR/$name.log"; then
+  elif ! scan_complete "$OUTDIR/$name.xml"; then
     status=incomplete
   fi
   printf '%s\t%s\t%s\n' "$name" "$status" "$rc" >> "$STAGES"

@@ -63,7 +63,10 @@ if name == 'nmap':
     prefix.with_suffix('.nmap').write_text(
         'Skipping host 192.168.0.97 due to host timeout\n'
         if os.environ.get('PARTIAL') and prefix.name == 'tcp-all' else '')
-    prefix.with_suffix('.xml').write_text('<nmaprun/>')
+    partial = os.environ.get('PARTIAL') and prefix.name == 'tcp-all'
+    prefix.with_suffix('.xml').write_text(
+        '<nmaprun><host timedout="' + ('true' if partial else 'false') +
+        '"/><runstats><finished exit="success"/></runstats></nmaprun>')
 '''
 
 
