@@ -68,7 +68,7 @@ domains/business/estimator/
 │   ├── engine/
 │   │   ├── assembler.js   # Core: buildCatalog(), buildDeckCatalog(), geometry, parameters
 │   │   ├── intake.js      # Pure shared translation and browser state defaults
-│   │   ├── preliminary.js # Bounded Node plan port, template assumptions, no provider calls
+│   │   ├── preliminary.js # Bounded Node plan port, scope-filtered template/preset assumptions, no provider calls
 │   │   └── pricing.js     # tradeRate(), matPrice() — reads tradeRates.json
 │   ├── data/
 │   │   ├── tradeRates.json     # Exported from DB by export_estimator_data.py
@@ -175,6 +175,8 @@ templates and fails the exit code on any item/qty/price/total diff beyond
 and is NOT a refactor gate.
 
 ## Changelog
+
+- 2026-10-08: Scope preliminary preset notes with the existing parameter registry. Bathroom plans omit deck defaults; deck plans omit bathroom defaults. Regression checks retain relevant provenance and existing items/prices/warnings. Stored budgets are not rewritten.
 
 - 2026-10-07: Share optional version 2 customer measurements, counts and finishes with the calculator. Add a server plan port using existing catalog/templates, visible assumptions and unpriced exclusions. Fresh job-budget status at manual Send blocks duplicate appends, including manual entry and saved drafts. CRM owns reservations and provider effects; customer proposals require review.
 

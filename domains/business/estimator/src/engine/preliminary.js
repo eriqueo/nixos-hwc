@@ -9,6 +9,7 @@ import { calculatorPatch, DEFAULT_STATE } from './intake.js';
 import { enrichState } from './geometry.js';
 import { assemble, buildJtItems, estimateIssues, computeTotals } from './assembler.js';
 import templates from '../data/templates.json' with { type: 'json' };
+import parameters from '../data/parameters.json' with { type: 'json' };
 
 export function preparePreliminary(raw) {
   const intake = parseCalculatorIntake(raw, raw.jt_job_id);
@@ -33,9 +34,13 @@ export function preparePreliminary(raw) {
     if (answers.shower_tub === 'tub_only' || answers.shower_tub === 'tub_shower' || answers.shower_tub === 'both_separate') state.new_tub = 'yes';
   }
   state.measurements_checked = 'no';
+  // Shared browser defaults include both scopes. Use the existing parameter
+  // registry to scope preset provenance without changing assembly or pricing.
+  const deckFields = new Set(parameters.deck_numeric.map(p => p.name));
+  const presetInScope = key => intake.calculator === 'deck' ? deckFields.has(key) : !deckFields.has(key);
   const assumptions = Object.entries(state).filter(([key]) =>
     !['state_version','projectType','job_type','measurements_checked','calculator_scope_checked'].includes(key) &&
-    (Object.hasOwn(template.state,key) || /(_ft|_in|_sqft|_lf|_allowance)$/.test(key)) &&
+    (Object.hasOwn(template.state,key) || (presetInScope(key) && /(_ft|_in|_sqft|_lf|_allowance)$/.test(key))) &&
     (patch[key] === undefined || patch[key] === null || patch[key] === 'unknown'))
     .filter(([,value])=>value !== null)
     .map(([field,value]) => ({ field, value, source:Object.hasOwn(template.state,field) ? `Template: ${template.name}` : 'Estimator preset — review' }));

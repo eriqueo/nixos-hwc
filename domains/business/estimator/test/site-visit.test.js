@@ -159,6 +159,8 @@ const rough = preparePreliminary(calculatorIntake);
 assert.equal(rough.quote_hold,true);
 assert.ok(rough.items.length > 0 && rough.items.every(i=>Number.isFinite(i.quantity) && !i.quantityFormula));
 assert.ok(rough.assumptions.some(a=>a.field==='bathroom_length_ft'));
+assert.ok(!rough.assumptions.some(a=>/^(deck_|joist_|railing_|stair_)/.test(a.field)), 'Bathroom assumptions exclude deck presets');
+assert.ok(rough.assumptions.some(a=>a.field==='baseboard_lf'), 'Keep bathroom preset provenance');
 assert.ok(rough.missing_inputs.some(v=>v.includes('shower door purchase cost')));
 const knownPlan=preparePreliminary(detailed);
 assert.ok(!knownPlan.assumptions.some(a=>a.field==='bathroom_length_ft'));
@@ -170,5 +172,7 @@ for (const state of ['pending','reserved','completed','uncertain']) {
 }
 const deckPlan=preparePreliminary({...deckIntake,answers:{...deckIntake.answers,project_type:'new_build',material:'pt_lumber',railing:'none'}});
 assert.ok(deckPlan.items.length && !deckPlan.assumptions.some(a=>a.field==='deck_height_ft'));
+assert.ok(!deckPlan.assumptions.some(a=>/^(bathroom_|shower_|wall_height|baseboard_)|_allowance$/.test(a.field)), 'Deck assumptions exclude bathroom presets');
+assert.ok(deckPlan.assumptions.some(a=>a.field==='joist_spacing_in'), 'Keep deck preset provenance');
 assert.throws(()=>preparePreliminary({...calculatorIntake,answers:{project_type:'unsupported'}}),/unsupported_preliminary_scope/);
 console.log('PASS preliminary plans, assumption provenance, missing costs and duplicate append guard');
