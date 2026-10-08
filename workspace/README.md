@@ -114,9 +114,11 @@ retained in `stages.tsv` as `audit-runtime` so report refresh preserves coverage
 Rebuild guidance from a saved run without probes, root access or network tools:
 
 ```bash
-net-tools wifibrute report reports/20261008-134054.udOoJt
+cd ~/.nixos/workspace/system/diagnostics/network/network
+bash wifibrute.sh report reports/20261008-134054.udOoJt
 ```
 
+`net-tools` opens a picker; run the script directly to pass report arguments.
 Use an absolute directory path when invoking `wifibrute.sh` from another folder.
 This replaces only derived `summary.txt` and `findings.json`. Raw evidence stays
 intact. The CLI suite covers positive findings, false alarms, credential
