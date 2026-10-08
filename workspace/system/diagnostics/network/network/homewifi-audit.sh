@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# ---------- UI ----------
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BOLD='\033[1m'; NC='\033[0m'
-say(){ printf "%b%s%b\n" "$1" "$2" "$NC"; }
-ok(){ say "$GREEN" "OK  - $1"; }
-warn(){ say "$YELLOW" "WARN- $1"; }
-fail(){ say "$RED" "FAIL- $1"; }
-hdr(){ printf "\n${BOLD}%s${NC}\n" "$1"; }
+# shellcheck source=network-report.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/network-report.sh"
+report_init 'Home WiFi checks' 'Inspect signal strength, nearby access points, router services, DNS latency and packet size.' \
+  'Sends radio and LAN probes; scans router services and may request sudo.' '[--details]' "$@" || exit 0
+set -- "${REPORT_ARGS[@]}"
+
+
 have(){ command -v "$1" >/dev/null 2>&1; }
 
 # ---------- Requirements (best-effort) ----------
@@ -26,7 +26,7 @@ IP="${CIDR%%/*}"
 SUB24="$(cut -d. -f1-3 <<<"$IP").0/24"
 NMAP_FAST=(-Pn --max-retries 1 --host-timeout 8s -T4)
 
-hdr "🏠 Home Wi-Fi Audit (owner-safe)"
+hdr "Home WiFi probe results"
 echo "IFACE=$IFACE  IP=$IP  GW=$GW  LAN=$SUB24  $(date)"
 
 # ---------- Status buckets ----------
@@ -41,9 +41,9 @@ MTU_STATUS="unknown"        # 1500 | 1492 | unsure
 LAN_COUNT="n/a"
 
 # ---------- 1) Radio & Link ----------
-hdr "📡 Radio & Link"
+report_section "1. WiFi signal and nearby access points" "Read signal strength and count nearby strong access points." "Less negative dBm is stronger. Nearby AP counts do not measure channel airtime." "Compare signal from another room before changing router channels."
 if [[ "$IFACE" =~ ^wl ]] && have iw; then
-  iw dev "$IFACE" link 2>/dev/null | sed 's/^/  /' || true
+  iw dev "$IFACE" link 2>/dev/null | report_evidence || true
 
   # RSSI classification
   RSSI="$(iw dev "$IFACE" link 2>/dev/null | awk '/signal:/ {print $2}' || true)"
@@ -59,13 +59,13 @@ if [[ "$IFACE" =~ ^wl ]] && have iw; then
 
   # Channel crowding: count strong neighbors (signal > -65 dBm)
   STRONG_NEI=0
-  if iw dev "$IFACE" scan >/tmp/_iwscan 2>/dev/null; then
+  if IW_SCAN=$(iw dev "$IFACE" scan 2>/dev/null); then
     STRONG_NEI="$(awk '
       /^BSS /{sig=""}
       /signal:/ {gsub(/dBm/,""); sig=$2}
-      /^SSID:/ { if (sig != "" && sig+0 > -65) c++ }
+      /^[[:space:]]*SSID:/ { if (sig != "" && sig+0 > -65) c++ }
       END{print c+0}
-    ' /tmp/_iwscan 2>/dev/null || echo 0)"
+    ' <<< "$IW_SCAN" 2>/dev/null || echo 0)"
     if   (( STRONG_NEI <= 2 )); then CHANNEL_CROWD="clear"
     elif (( STRONG_NEI <= 5 )); then CHANNEL_CROWD="moderate"
     else CHANNEL_CROWD="crowded"; fi
@@ -78,8 +78,9 @@ else
 fi
 
 # ---------- 2) Router Surface (safe scan) ----------
-hdr "🛡️  Router Surface (safe scan)"
-sudo nmap "${NMAP_FAST[@]}" --top-ports 100 --open --script "default,safe,discovery" "$GW" | sed -n '1,160p'
+report_section "2. Router services" "Probe common ports and run discovery scripts on the router." "Open services expand the router surface; this does not confirm a vulnerability." "Review unexpected services and firmware in the router settings."
+report_port_legend
+sudo nmap "${NMAP_FAST[@]}" --top-ports 100 --open --script "default,safe,discovery" "$GW" | report_evidence || warn "Router scan failed or timed out; results are incomplete."
 
 # Flag risky services (FTP/Telnet/CWMP/UPnP hints)
 if sudo nmap "${NMAP_FAST[@]}" -p 21 "$GW" | grep -qE '21/tcp\s+open'; then
@@ -94,33 +95,33 @@ fi
 # (We avoid loud UDP SSDP scans; if you care, run a focused check later.)
 
 # ---------- 3) LAN Inventory ----------
-hdr "🧭 LAN Inventory (owner network)"
+report_section "3. Visible LAN devices" "Discover local device addresses and vendor hints." "Vendor names identify the network chip maker, not necessarily the device brand. Quiet devices can be missed."
 if have arp-scan; then
   sudo arp-scan --interface "$IFACE" --localnet 2>/dev/null \
     | awk 'match($0,/^([0-9.]+)[ \t]+(([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2})[ \t]+(.+)$/,m){printf "  %-15s %-17s %s\n", m[1], m[2], m[4]}' \
-    | head -40
-  LAN_COUNT="$(sudo arp-scan --interface "$IFACE" --localnet 2>/dev/null | grep -cE '^[0-9]+\.[0-9]+')"
+    | report_evidence || warn 'Discovery did not complete.'
+  LAN_COUNT="$(sudo arp-scan --interface "$IFACE" --localnet 2>/dev/null | awk '/^[0-9]+\.[0-9]+/{n++} END{print n+0}' || echo unknown)"
 else
   warn "arp-scan missing; using quick ping sweep"
-  sudo nmap -sn "$SUB24" --host-timeout 5s | grep -E 'Nmap scan report|MAC Address' | sed 's/^/  /' | head -40
-  LAN_COUNT="$(sudo nmap -sn "$SUB24" --host-timeout 5s 2>/dev/null | grep -c 'Nmap scan report' || echo 0)"
+  sudo nmap -sn "$SUB24" --host-timeout 5s | report_evidence || warn 'Discovery did not complete.'
+  LAN_COUNT="$(sudo nmap -sn "$SUB24" --host-timeout 5s 2>/dev/null | awk '/Nmap scan report/{n++} END{print n+0}' || echo unknown)"
 fi
 
 # ---------- 4) Egress & DNS ----------
-hdr "🌍 Egress & DNS"
-PUB_OUT="$(sudo nmap "${NMAP_FAST[@]}" -p 53,80,443 1.1.1.1 8.8.8.8 2>/dev/null | sed -n '1,120p')"
-echo "$PUB_OUT"
-if grep -qE '53/tcp\s+filtered'  <<<"$PUB_OUT" && \
-   grep -qE '80/tcp\s+filtered'  <<<"$PUB_OUT" && \
-   grep -qE '443/tcp\s+filtered' <<<"$PUB_OUT"; then
-  EGRESS_STATUS="blocked"
+report_section "4. Public access and DNS delay" "Probe public TCP ports and time two public DNS lookups." "A TCP reply confirms that service; DNS timings are a small sample, not a benchmark."
+PUB_OUT="$(sudo nmap "${NMAP_FAST[@]}" -p 53,80,443 1.1.1.1 8.8.8.8 2>&1 || true)"
+printf '%s\n' "$PUB_OUT" | report_evidence
+if awk '$1 ~ /^(53|80|443)\/tcp$/ && $2 == "open" {found=1} END{exit !found}' <<< "$PUB_OUT"; then
+  EGRESS_STATUS=ok
 else
-  EGRESS_STATUS="ok"
+  EGRESS_STATUS=unknown
 fi
 
 dns_latency_ms() {
-  local s="$1" d="$2"
-  timeout 3 dig @"$s" +time=1 +tries=1 +stats "$d" A 2>/dev/null | awk '/Query time:/{print $4}'
+  local s="$1" d="$2" response
+  response=$(timeout 3 dig @"$s" +time=1 +tries=1 +stats "$d" A 2>/dev/null) || return 1
+  awk '$4 == "A" && $5 ~ /^[0-9]+\./ {answer=1} /Query time:/ {ms=$4}
+    END {if(answer && ms ~ /^[0-9]+$/) print ms; else exit 1}' <<< "$response"
 }
 if [[ "$EGRESS_STATUS" == "ok" ]]; then
   for s in 1.1.1.1 8.8.8.8; do
@@ -140,7 +141,7 @@ if [[ "$EGRESS_STATUS" == "ok" ]]; then
 fi
 
 # ---------- 5) MTU sanity ----------
-hdr "📦 MTU sanity"
+report_section "5. Packet size (MTU)" "Send non-fragmenting ping packets sized for 1500 and 1492 bytes." "A reply gives a tested lower bound. No reply may mean ping filtering, not a packet-size fault." "Do not change WAN MTU from this result alone."
 if ping -M do -s 1472 -c1 -W1 1.1.1.1 >/dev/null 2>&1; then
   MTU_STATUS="1500"
 elif ping -M do -s 1464 -c1 -W1 1.1.1.1 >/dev/null 2>&1; then
@@ -148,22 +149,22 @@ elif ping -M do -s 1464 -c1 -W1 1.1.1.1 >/dev/null 2>&1; then
 else
   MTU_STATUS="unsure"
 fi
-echo "Likely working MTU: $MTU_STATUS"
+echo "Packet size that answered: $MTU_STATUS"
 
 # ---------- Explanations ----------
 explain_radio(){
   hdr "Explanation — Radio & Link"
   case "$RADIO_STATUS" in
-    good)     ok "Signal is strong (>-60 dBm). Expect stable throughput."; echo "Tip: keep using this AP/channel.";;
+    good)     ok "Signal is strong (>-60 dBm); throughput is not measured here."; echo "Tip: compare signal in the rooms you use.";;
     moderate) warn "Signal is moderate (-60..-70 dBm)."; echo "Tip: move AP closer, reduce walls, or add a wired AP/mesh."; ;;
     weak)     fail "Signal is weak (<-70 dBm)."; echo "Tip: relocate AP, add wired backhaul, or use a less crowded channel."; ;;
     notwifi)  warn "Radio analysis skipped (not Wi-Fi or 'iw' missing).";;
     *)        warn "Radio status unknown."; ;;
   esac
   case "$CHANNEL_CROWD" in
-    clear)    ok "Channel looks clear (few strong neighboring APs).";;
-    moderate) warn "Channel is moderately crowded."; echo "Tip: try another channel or 5/6 GHz band if supported.";;
-    crowded)  fail "Channel is crowded (many strong neighbors)."; echo "Tip: pick a cleaner channel; limit 80 MHz widths unless DFS is clean."; ;;
+    clear)    ok "Few strong access points were seen nearby; channel congestion is unmeasured.";;
+    moderate) warn "Several strong access points were seen; compare their channels before changing yours."; echo "Tip: try another channel or 5/6 GHz band if supported.";;
+    crowded)  warn "Many strong access points were seen; this does not establish congestion on your channel."; echo "Tip: pick a cleaner channel; limit 80 MHz widths unless DFS is clean."; ;;
     *)        ;;
   esac
 }
@@ -171,10 +172,10 @@ explain_radio(){
 explain_router(){
   hdr "Explanation — Router Surface"
   if (( ROUTER_RISK == 0 )); then
-    ok "No obvious risky services found on the router."
+    info "No selected service probe reported FTP, Telnet or CWMP open; scan failures can hide services."
     echo "Keep admin HTTPS-only and LAN-only; keep firmware updated; disable WPS."
   else
-    fail "Risky services detected:"
+    warn "Services to review:"
     for f in "${ROUTER_FLAGS[@]}"; do echo "  - $f"; done
     echo "Action: disable legacy services (FTP/Telnet), restrict management to LAN over HTTPS, update firmware."
   fi
@@ -184,7 +185,7 @@ explain_egress_dns(){
   hdr "Explanation — Egress & DNS"
   case "$EGRESS_STATUS" in
     ok)
-      ok "Outbound traffic is allowed."
+      ok "At least one tested public service port answered."
       if [[ "$DNS_LAT_MSG" == "fast" ]]; then
         echo "DNS is fast (resolver replies quickly)."
       elif [[ "$DNS_LAT_MSG" == "moderate" ]]; then
@@ -207,9 +208,9 @@ explain_egress_dns(){
 explain_mtu(){
   hdr "Explanation — MTU"
   case "$MTU_STATUS" in
-    1500) ok "Standard Ethernet MTU is working (no fragmentation expected).";;
-    1492) warn "Path behaves like PPPoE (1492)."; echo "Set WAN MTU accordingly to avoid fragmentation (router setting).";;
-    *)    warn "MTU unclear. If you see odd hangs on large transfers, try lowering MTU on WAN and retest."; ;;
+    1500) ok "A 1500-byte non-fragmenting packet answered on the tested path.";;
+    1492) info "The 1492-byte probe answered; the 1500-byte probe did not."; echo "Meaning: This does not identify PPPoE or prove an exact MTU.";;
+    *)    warn "MTU unconfirmed. Ping filtering can make both probes fail."; ;;
   esac
 }
 
@@ -230,7 +231,7 @@ explain_lan(){
 state_of_parts(){
   hdr "State of the system’s parts (plain English)"
   echo "- Radio link: $RADIO_STATUS (channel: $CHANNEL_CROWD)"
-  echo "- Router surface: $([[ $ROUTER_RISK -eq 0 ]] && echo safe || echo needs hardening)"
+  echo "- Selected router service flags: $ROUTER_RISK (0 does not prove security)"
   echo "- Internet egress: $EGRESS_STATUS"
   echo "- DNS: $DNS_LAT_MSG (times: ${DNS_TIMES[*]:-n/a})"
   echo "- MTU: $MTU_STATUS"
@@ -238,7 +239,7 @@ state_of_parts(){
   echo
   # Overall steer
   if [[ "$RADIO_STATUS" == "good" && "$CHANNEL_CROWD" != "crowded" && $ROUTER_RISK -eq 0 && "$EGRESS_STATUS" == "ok" ]]; then
-    ok "Overall: solid home Wi-Fi posture."
+    ok "The sampled signal and public access checks look usable; review service findings above."
     echo "Improvements: add local DNS cache, wire heavy devices, keep firmware current."
   else
     warn "Overall: see explanations above for targeted fixes."

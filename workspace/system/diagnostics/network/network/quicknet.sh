@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# --- UI helpers ---
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BOLD='\033[1m'; NC='\033[0m'
-say(){ printf "%b%s%b\n" "$1" "$2" "$NC"; }
-ok(){ say "$GREEN" "OK  - $1"; }
-warn(){ say "$YELLOW" "WARN- $1"; }
-fail(){ say "$RED" "FAIL- $1"; }
-hdr(){ printf "\n${BOLD}%s${NC}\n" "$1"; }
+# shellcheck source=network-report.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/network-report.sh"
+report_init 'Quick connection check' 'Check the router, public service ports, DNS and visible LAN devices.' \
+  'Sends connectivity probes and may request sudo for scans.' '[--details]' "$@" || exit 0
+set -- "${REPORT_ARGS[@]}"
 
 have(){ command -v "$1" >/dev/null 2>&1; }
 need(){ have "$1" || { fail "Missing '$1'"; exit 2; }; }
@@ -37,10 +35,12 @@ EGRESS_STATUS="unknown"     # ok | blocked
 DNS_STATUS="skipped"        # ok | fail | skipped
 LAN_PEERS="n/a"
 
-hdr "QuickNet — fast triage"
-echo "IFACE=$IFACE  IP=$IP  GW=$GW  SCAN=$SUB24"
+info "Network adapter: $IFACE | Your address: $IP | Router: $GW"
+info "Discovery range: $SUB24 (a /24 sample; not necessarily the full LAN)"
 
 # === 1) Gateway reachability ===
+report_section '1. Reach the router' 'Ping, then ARP if available.' \
+  'A reply confirms a local path. No reply can also mean probe filtering.' 'Compare with another device before reconnecting WiFi.'
 if ping -c1 -W1 "$GW" >/dev/null 2>&1; then
   ok "Gateway replies to ICMP"
   GW_STATUS="icmp_ok"
@@ -48,27 +48,32 @@ elif have arping && sudo arping -c1 -w2 "$GW" >/dev/null 2>&1; then
   warn "Gateway reachable by ARP (ICMP blocked)"
   GW_STATUS="arp_only"
 else
-  fail "Gateway unreachable"
+  warn "Router reachability not confirmed by these probes"
   GW_STATUS="unreachable"
 fi
 
 # === 2) Public egress sanity (53/80/443) ===
+report_section '2. Reach public services' 'TCP ports 53 (DNS), 80 (HTTP) and 443 (HTTPS) on two public hosts.' \
+  'An open port confirms that connection; it does not test every website.' 'If no service answers, check VPN settings and any browser login page.'
+report_port_legend
 NMAP_OPTS=(-Pn --max-retries 1 --host-timeout 6s -T4)
-PUB_OUT="$(sudo nmap "${NMAP_OPTS[@]}" -p 53,80,443 1.1.1.1 8.8.8.8 2>/dev/null | sed -n '1,120p')"
-echo "$PUB_OUT"
+PUB_OUT="$(sudo nmap "${NMAP_OPTS[@]}" -p 53,80,443 1.1.1.1 8.8.8.8 2>&1 || true)"
+printf '%s\n' "$PUB_OUT" | report_evidence
 
 # Decide egress: if all three ports appear filtered in the combined output → blocked
-if grep -qE '53/tcp\s+filtered'  <<<"$PUB_OUT" && \
-   grep -qE '80/tcp\s+filtered'  <<<"$PUB_OUT" && \
-   grep -qE '443/tcp\s+filtered' <<<"$PUB_OUT"; then
+if awk '$1 ~ /^(53|80|443)\/tcp$/ && $2 == "open" {found=1} END {exit !found}' <<< "$PUB_OUT"; then
+  EGRESS_STATUS="ok"
+elif awk '$1 ~ /^(53|80|443)\/tcp$/ && $2 == "filtered" {n++} END {exit !(n >= 6)}' <<< "$PUB_OUT"; then
   EGRESS_STATUS="blocked"
 else
-  EGRESS_STATUS="ok"
+  EGRESS_STATUS="unknown"
 fi
 
 # === 3) DNS quick test ===
-if [[ "$EGRESS_STATUS" == "ok" ]] && have dig; then
-  if timeout 3 dig +short google.com >/dev/null 2>&1; then
+report_section '3. Resolve a website name' 'Ask the configured resolver for google.com.' \
+  'An address answer confirms this lookup. An empty answer does not count as success.' 'Compare configured and public DNS with net-tools advnetcheck.'
+if have dig; then
+  if report_dns_answer google.com; then
     DNS_STATUS="ok"
   else
     DNS_STATUS="fail"
@@ -76,8 +81,10 @@ if [[ "$EGRESS_STATUS" == "ok" ]] && have dig; then
 fi
 
 # === 4) LAN peers (quick count) ===
+report_section '4. Discover local devices' 'Count ARP replies on the local network, if arp-scan is installed.' \
+  'This is a snapshot. Quiet or isolated devices may not appear.'
 if have arp-scan; then
-  LAN_PEERS="$(sudo arp-scan --interface "$IFACE" --localnet 2>/dev/null | grep -cE '^[0-9]+\.[0-9]+')"
+  LAN_PEERS="$(sudo arp-scan --interface "$IFACE" --localnet 2>/dev/null | awk '/^[0-9]+\.[0-9]+/{n++} END{print n+0}' || printf 'unknown')"
 fi
 
 # ---------- EXPLANATIONS PER CHECK ----------
@@ -90,11 +97,11 @@ explain_gateway(){
       ;;
     arp_only)
       warn "Router seen at hardware level, but it ignores ping."
-      echo "Meaning: You are connected to the same LAN, but the router blocks ICMP. That’s a policy choice, not a failure."
+      echo "Meaning: The router answered locally. Ping filtering or loss is possible."
       ;;
     unreachable)
-      fail "Your computer cannot reach the router."
-      echo "Meaning: Local connection problem (wrong network/credentials, DHCP lease expired, or the AP is misbehaving)."
+      warn "The router did not answer these probes."
+      echo "Meaning: Reachability is unconfirmed. This alone does not prove a local connection failure."
       echo "Next: Reconnect Wi-Fi, renew DHCP, or try another SSID/hotspot."
       ;;
     *) warn "Gateway status unknown." ;;
@@ -105,12 +112,12 @@ explain_egress(){
   hdr "Internet egress (can traffic leave this network?)"
   case "$EGRESS_STATUS" in
     ok)
-      ok "Key internet ports (DNS/HTTP/HTTPS) are reachable."
-      echo "Meaning: The network lets outbound traffic through. If something fails, it’s likely app/site-specific."
+      ok "At least one tested public service port answered."
+      echo "Meaning: Some outbound traffic works. Browsing, VPNs and other services need their own checks."
       ;;
     blocked)
       fail "Common outbound ports 53/80/443 look filtered."
-      echo "Meaning: Guest/quarantine VLAN or a captive portal is blocking you."
+      echo "Meaning: These probes did not get a clear answer. A firewall or login page is possible, not confirmed."
       echo "Next: Open a browser for a login page, switch SSID, or use a different uplink (e.g., phone hotspot)."
       ;;
     *) warn "Egress status unknown." ;;
@@ -131,7 +138,7 @@ explain_dns(){
       ;;
     skipped)
       warn "DNS test skipped."
-      echo "Reason: Either egress is blocked or 'dig' isn’t installed."
+      echo "Reason: 'dig' is not installed. Run net-tools toolscan to check tools."
       ;;
   esac
 }
@@ -142,33 +149,33 @@ explain_lan(){
   if [[ "$LAN_PEERS" == "1" || "$LAN_PEERS" == "0" ]]; then
     echo "Meaning: Likely client isolation (typical for hotspots/guest Wi-Fi). Only the router is visible."
   else
-    echo "Meaning: Multiple devices share this LAN. Normal at home/work; noisy cafés can be crowded."
+    echo "Meaning: This is a discovery count, not a congestion or security measurement."
   fi
 }
 
 state_of_parts(){
   hdr "State of the system's parts (plain English)"
-  echo "- Wi-Fi/Local link: $(case $GW_STATUS in icmp_ok) echo 'healthy';; arp_only) echo 'connected (router blocks ping)';; unreachable) echo 'broken';; *) echo 'unknown';; esac)"
-  echo "- Router → Internet: $( [[ $EGRESS_STATUS == ok ]] && echo 'open' || echo 'blocked' )"
+  echo "- Router probe: $GW_STATUS"
+  echo "- Public service probes: $EGRESS_STATUS"
   echo "- Name resolution (DNS): $(case $DNS_STATUS in ok) echo 'working';; fail) echo 'failing';; *) echo 'unknown';; esac)"
   echo "- LAN visibility: $LAN_PEERS device(s) detected"
   echo
   # Overall verdict
   if [[ "$GW_STATUS" == "icmp_ok" && "$EGRESS_STATUS" == "ok" && "$DNS_STATUS" == "ok" ]]; then
-    ok "Overall: healthy connection."
+    ok "Overall: router, public service and DNS probes succeeded."
     echo "If you still see issues, they’re likely app/site-specific or performance-related."
   elif [[ "$GW_STATUS" == "unreachable" ]]; then
-    fail "Overall: local connection issue."
+    warn "Overall: router probes did not confirm reachability."
     echo "Try reconnecting Wi-Fi, renewing DHCP, or switching networks."
   elif [[ "$EGRESS_STATUS" == "blocked" ]]; then
-    fail "Overall: network is blocking outbound traffic."
+    warn "Overall: public TCP probes received no clear answers."
     echo "Look for captive portals or use an alternate uplink."
   elif [[ "$DNS_STATUS" == "fail" ]]; then
     warn "Overall: DNS problem."
     echo "Set known-good resolvers (1.1.1.1, 8.8.8.8) and retest."
   else
     warn "Overall: inconclusive."
-    echo "Run the deeper tool: sudo ./advnetcheck2.sh"
+    echo "Next: run net-tools advnetcheck for route and DNS comparisons."
   fi
 }
 
@@ -182,5 +189,5 @@ state_of_parts
 # Suggest deeper run if anything is off
 if [[ "$GW_STATUS" != "icmp_ok" || "$EGRESS_STATUS" != "ok" || "$DNS_STATUS" != "ok" ]]; then
   echo
-  echo "→ For deeper diagnostics (path, ports, DNS matrix), run: sudo ./advnetcheck2.sh"
+  echo "Next: run net-tools advnetcheck for path, port and DNS comparisons."
 fi

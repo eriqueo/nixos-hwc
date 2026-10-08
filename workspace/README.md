@@ -45,10 +45,26 @@ referencing site):
 | `media/youtube-services/` | `domains/media/youtube/parts/transcripts` |
 | `tools/readme-freshness.sh` | `domains/automation/readme-freshness` |
 | `system/secret-manager.sh` | `secret` alias (`domains/home/core/shell/parts/aliases.nix`) |
+| `system/diagnostics/network/network/` | `net-tools` picker (`domains/home/core/shell/index.nix`); nine scripts share `network-report.sh` for explained output |
 | `utilities/lints/permission-lint.sh` | `CHARTER.md` §3.1 (Law 4) |
 | `plans/` | `CHARTER.md` §6 (proposals convention) |
 
 ---
+
+## Network diagnostic output
+
+Run `net-tools` to choose a tool by purpose. Each tool explains what it checks,
+what the result means, and what to inspect next. Run `net-tools --details`
+for full evidence; the default shows short excerpts with omitted-line counts.
+Use Ctrl-Y in the picker to print the selected command. Add `--help` to that
+command for a description without probes.
+
+`system/diagnostics/network/network/network-report.sh` owns presentation,
+result labels and DNS answer validation. It does not initiate probes.
+`test-output.py` replays the nine scripts with fake commands, including empty
+DNS answers, scan timeouts and security discovery. Run it with Python 3.
+Saved capture and audit reports retain their existing locations and raw data.
+The older `network-utils/network/` copies are outside this picker and unchanged.
 
 ## Frigate field evidence
 
@@ -72,6 +88,7 @@ that a person walking every approach gets detected or notified.
 
 ## Changelog
 
+- 2026-10-08: Explain checks and findings in the nine `net-tools` scripts, share terminal formatting, add full-evidence mode and isolated output tests. Correct false DNS success, timed-out public scan verdicts and wifibrute discovery parsing. Let bounded WiFi capture timeouts reach the summary.
 - 2026-09-24: `secret-manager.sh` reads recipient rules from `secrets.nix`, so host enrollment also applies to interactive secret creation and edits. It fails before encryption if rules cannot be read or disagree.
 - 2026-09-24: Repaired `monitoring/frigate-health.sh`: use the live API on port
   5000, omit raw logs and process arguments, return nonzero on collection/health

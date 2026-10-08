@@ -1,19 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Colors and formatting
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-BOLD='\033[1m'
-NC='\033[0m'
+# shellcheck source=network-report.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/network-report.sh"
+report_init 'Interactive browsing diagnosis' 'Check router access, public reachability, DNS and browser login requirements.' \
+  'Runs active probes; offers DNS changes only after a prompt.' '[-f] [--details]' "$@" || exit 0
+set -- "${REPORT_ARGS[@]}"
 
-bold(){ printf "\n${BOLD}%s${NC}\n" "$*"; }
-info(){ printf "%s\n" "$*"; }
-warn(){ printf "${YELLOW}⚠️  %s${NC}\n" "$*"; }
-error(){ printf "${RED}❌ %s${NC}\n" "$*"; }
-success(){ printf "${GREEN}✅ %s${NC}\n" "$*"; }
 
 # Global variables for test results
 BASIC_NET_OK=0
@@ -42,7 +35,7 @@ get_network_info() {
 
 # PHASE 1: Fast triage tests (30 seconds max)
 fast_triage() {
-    bold "🚀 PHASE 1: Fast Triage (Is it me or the network?)"
+    report_section "1. Basic connection probes" "Try router ping/service ports, public access, DNS and HTTP." "Each reply confirms only that probe. A redirect can come from a browser login page."
     
     echo "Testing basic connectivity..."
     
@@ -56,7 +49,7 @@ fast_triage() {
         warn "Gateway reachable but blocks ping"
         GATEWAY_OK=1
     else
-        error "Gateway completely unreachable"
+        warn "No router ping or web-port reply; reachability is unconfirmed"
         GATEWAY_OK=0
     fi
     
@@ -69,14 +62,14 @@ fast_triage() {
         success "Can ping 8.8.8.8"
         INTERNET_IP_OK=1
     else
-        error "Cannot reach internet IPs"
+        warn "Neither tested public-IP probe answered"
         INTERNET_IP_OK=0
     fi
     
     # Test 3: DNS resolution working?
     echo -n "DNS resolution: "
-    if timeout 3 nslookup google.com 8.8.8.8 >/dev/null 2>&1; then
-        success "DNS resolution works"
+    if report_dns_answer google.com; then
+        success "The configured DNS resolver returned a website address"
         DNS_RESOLVE_OK=1
     else
         error "DNS resolution failed"
@@ -86,11 +79,11 @@ fast_triage() {
     # Test 4: Can we fetch a webpage?
     echo -n "HTTP connectivity: "
     if timeout 10 curl -s --connect-timeout 5 http://httpbin.org/ip >/dev/null 2>&1; then
-        success "HTTP works"
+        success "An HTTP request returned a response; a login redirect can also answer"
     elif timeout 10 curl -s --connect-timeout 5 -I http://8.8.8.8 >/dev/null 2>&1; then
-        warn "HTTP works to IP but not domains (DNS issue)"
+        warn "HTTP by IP answered; compare DNS and browser login requirements"
     else
-        error "HTTP completely blocked"
+        warn "Neither tested HTTP request completed; filtering, DNS or a timeout may be involved"
     fi
 }
 
@@ -99,8 +92,8 @@ analyze_triage() {
     bold "📊 TRIAGE VERDICT"
     
     if [[ $GATEWAY_OK -eq 0 ]]; then
-        error "VERDICT: YOUR CONNECTION IS BROKEN"
-        echo "Problem: Cannot reach gateway"
+        warn "Router access needs investigation"
+        echo "Meaning: The router did not answer the selected probes. That does not prove the local link is broken."
         
         # Run automatic diagnostics
         bold "🔍 Running Connection Diagnostics..."
@@ -135,14 +128,14 @@ analyze_triage() {
         fi
         
         bold "🛠️ RECOMMENDED FIX COMMANDS:"
-        echo "Try these commands in order:"
+        echo "First compare another device and check the active WiFi connection. The commands below can interrupt networking."
         echo ""
         echo "1️⃣ Restart NetworkManager (most common fix):"
         echo "   sudo systemctl restart NetworkManager"
         echo ""
         echo "2️⃣ If that fails, reconnect to WiFi:"
-        echo "   sudo nmcli connection down \"$(iwconfig $IFACE 2>/dev/null | grep ESSID | cut -d'\"' -f2)\""
-        echo "   sudo nmcli connection up \"$(iwconfig $IFACE 2>/dev/null | grep ESSID | cut -d'\"' -f2)\""
+        echo "   sudo nmcli device disconnect $IFACE"
+        echo "   sudo nmcli device connect $IFACE"
         echo ""
         echo "3️⃣ If NetworkManager isn't working, try interface reset:"
         echo "   sudo ip link set $IFACE down"
@@ -158,16 +151,18 @@ analyze_triage() {
         echo "   sudo ./$(basename "$0") -f  # Force detailed scan"
         echo ""
         
-        read -p "Continue with detailed analysis anyway? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        if [[ "${1:-}" != -f ]]; then
+          read -p "Continue with detailed analysis anyway? (y/N): " -n 1 -r || true
+          echo
+        else REPLY=y; fi
+        if [[ ! ${REPLY:-} =~ ^[Yy]$ ]]; then
             echo "Stopping here. Run with -f to force detailed scan."
             exit 1
         fi
         
     elif [[ $INTERNET_IP_OK -eq 0 ]]; then
-        error "VERDICT: NETWORK/ISP PROBLEM"
-        echo "Problem: Gateway works but internet is down"
+        warn "Public reachability needs investigation"
+        echo "Meaning: The router answered, but selected public probes did not. The cause is not established."
         
         # Run automatic diagnostics for upstream issues
         bold "🔍 Diagnosing Upstream Issues..."
@@ -175,7 +170,7 @@ analyze_triage() {
         # Test if it's captive portal
         echo "Testing for captive portal..."
         if timeout 5 curl -s --connect-timeout 3 http://detectportal.firefox.com/canonical.html 2>/dev/null | grep -q "success"; then
-            info "No captive portal detected"
+            info "The expected browser-check response arrived"
         else
             warn "Possible captive portal or redirect detected"
         fi
@@ -193,15 +188,15 @@ analyze_triage() {
         
         # Check other devices on network
         echo -e "\nChecking for other active devices:"
-        OTHER_HOSTS=$(timeout 10 sudo nmap -sn "${SUBNET}" 2>/dev/null | grep -c "Nmap scan report" || echo "0")
-        if [[ $OTHER_HOSTS -gt 1 ]]; then
+        OTHER_HOSTS=$(timeout 10 sudo nmap -sn "${SUBNET}" 2>/dev/null | awk '/Nmap scan report/{n++} END{print n+0}' || echo "unknown")
+        if [[ "$OTHER_HOSTS" =~ ^[0-9]+$ ]] && (( OTHER_HOSTS > 1 )); then
             info "Found $OTHER_HOSTS devices - network seems active"
         else
-            warn "Only 1 device visible - possible client isolation"
+            warn "Few or no devices answered; isolation is only one possible cause"
         fi
         
         bold "🛠️ RECOMMENDED ACTIONS:"
-        echo "This is NOT your fault. Try these:"
+        echo "Next: Compare another device on this WiFi before changing settings."
         echo ""
         echo "1️⃣ Test for captive portal:"
         echo "   firefox http://detectportal.firefox.com &"
@@ -221,15 +216,15 @@ analyze_triage() {
         echo "   # If hotspot works, confirms it's the network"
         
     elif [[ $DNS_RESOLVE_OK -eq 0 ]]; then
-        warn "VERDICT: DNS PROBLEM"
-        echo "Problem: Internet works but DNS is broken"
+        warn "Configured DNS returned no address"
+        echo "Meaning: A public-IP probe answered, but configured DNS returned no address."
         
         # Test multiple DNS servers
         bold "🔍 Testing DNS Servers..."
         DNS_RESULTS=()
         for dns in "8.8.8.8" "1.1.1.1" "9.9.9.9" "208.67.222.222"; do
             echo -n "Testing DNS $dns: "
-            if timeout 3 dig @"$dns" google.com +short >/dev/null 2>&1; then
+            if report_dns_answer @"$dns" google.com; then
                 success "Working"
                 DNS_RESULTS+=("$dns")
             else
@@ -255,7 +250,7 @@ analyze_triage() {
             echo "   sudo nmcli connection up \"$(nmcli -t -f NAME connection show --active | head -1)\""
             echo ""
             echo "3️⃣ Alternative permanent fix:"
-            echo "   echo -e 'nameserver 8.8.8.8\\nnameserver 1.1.1.1' | sudo tee /etc/resolv.conf"
+            echo "   Configure DNS through NetworkManager or NixOS; /etc/resolv.conf is managed."
             echo ""
             echo "4️⃣ Verify the fix:"
             echo "   nslookup google.com"
@@ -272,7 +267,7 @@ analyze_triage() {
         
     else
         success "VERDICT: BASIC CONNECTIVITY LOOKS GOOD"
-        echo "All basic tests passed. If you're still having issues:"
+        echo "The router, public-IP and DNS probes passed. HTTP results are listed above. If browsing still fails:"
         echo "  • Try different websites"
         echo "  • Check for proxy requirements"
         echo "  • Look for application-specific problems"
@@ -354,7 +349,7 @@ apply_dns_fix() {
     sleep 3
     echo "Testing DNS fix..."
     if timeout 5 nslookup google.com >/dev/null 2>&1; then
-        success "🎉 DNS FIX SUCCESSFUL! You should now be able to browse."
+        success "The DNS verification probe answered after the change."
         echo "Try opening a website to confirm."
     else
         error "DNS fix didn't work immediately. Try manually:"
@@ -364,7 +359,8 @@ apply_dns_fix() {
 
 # PHASE 2: Detailed network analysis (original comprehensive stuff)
 detailed_analysis() {
-    bold "🔍 PHASE 2: Detailed Network Analysis"
+    report_section "2. Detailed checks" "Inspect WiFi, router ports, LAN discovery, routes and DNS." "Open ports are services, not proven vulnerabilities. Discovery is only a snapshot."
+    report_port_legend
     
     # Enhanced network discovery
     echo "=== Network Details ==="
@@ -386,24 +382,25 @@ detailed_analysis() {
     
     # Network topology (limited scan)
     echo -e "\n=== Active Hosts Discovery ==="
-    echo "Scanning for other devices (limited to 10 hosts max)..."
+    echo "Scanning the /24 range; only the first discovery lines are displayed."
     timeout 30 sudo nmap -sn "$SUBNET" 2>/dev/null | \
-        grep -E 'Nmap scan report|MAC Address' | head -20 || warn "Host discovery timeout"
+        grep -E 'Nmap scan report|MAC Address' | report_evidence || warn "Host discovery timeout"
     
     # Internet path analysis
     echo -e "\n=== Internet Path Analysis ==="
-    echo "Traceroute to 8.8.8.8 (first 10 hops):"
+    echo "Route to 8.8.8.8:"
+    report_path_legend
     if command -v mtr >/dev/null 2>&1; then
-        timeout 30 mtr -r -c 3 --no-dns 8.8.8.8 | head -12 || warn "MTR timeout"
+        timeout 30 mtr -r -c 3 --no-dns 8.8.8.8 | report_evidence || warn "MTR timeout"
     else
-        timeout 30 traceroute -n 8.8.8.8 2>/dev/null | head -12 || warn "Traceroute timeout"
+        timeout 30 traceroute -n 8.8.8.8 2>/dev/null | report_evidence || warn "Traceroute timeout"
     fi
     
     # DNS deep dive
     echo -e "\n=== DNS Analysis ==="
     echo "Testing multiple DNS servers:"
     for dns in "8.8.8.8" "1.1.1.1" "9.9.9.9"; do
-        if timeout 3 dig @"$dns" google.com +short >/dev/null 2>&1; then
+        if report_dns_answer @"$dns" google.com; then
             success "DNS $dns: Working"
         else
             error "DNS $dns: Failed"
@@ -422,7 +419,7 @@ detailed_analysis() {
 
 # PHASE 3: Advanced diagnostics and tools
 advanced_diagnostics() {
-    bold "🛠️ PHASE 3: Advanced Diagnostics"
+    report_section "3. Browser and service checks" "Check login-page response, proxy settings and selected TCP ports." "A failed connection can mean no service is running; it does not automatically mean a firewall block."
     
     echo "=== Security Analysis ==="
     echo "Checking for common network issues..."
@@ -431,14 +428,14 @@ advanced_diagnostics() {
     echo -n "Captive portal test: "
     if timeout 5 curl -s --connect-timeout 3 http://detectportal.firefox.com/canonical.html | \
         grep -q "success"; then
-        success "No captive portal detected"
+        success "The expected browser-check response arrived"
     else
         warn "Possible captive portal - try opening browser"
     fi
     
     # Check for proxy requirements
     echo -n "Proxy detection: "
-    if env | grep -i proxy; then
+    if env | awk -F= 'tolower($1) ~ /proxy/ {print $1 "=[configured]"; found=1} END{exit !found}'; then
         warn "Proxy environment variables set"
     else
         info "No proxy settings detected"
@@ -451,13 +448,13 @@ advanced_diagnostics() {
         if timeout 3 bash -c "</dev/tcp/8.8.8.8/$port" 2>/dev/null; then
             success "Open"
         else
-            warn "Blocked/Filtered"
+            warn "No TCP connection; the service may be absent, filtered or timed out"
         fi
     done
     
     echo -e "\n=== Additional Tools Available ==="
     echo "For deeper analysis, try these commands:"
-    echo "  • Bandwidth test: iperf3 -c speedtest.net"
+    echo "  • Bandwidth test: iperf3 -c <your-LAN-iperf3-server>"
     echo "  • Packet capture: sudo tcpdump -i $IFACE -w capture.pcap"
     echo "  • WiFi analysis: wavemon"
     echo "  • Real-time traffic: sudo iftop -i $IFACE"
@@ -482,13 +479,13 @@ EOF
     
     echo "Quick diagnosis:"
     if [[ $GATEWAY_OK -eq 1 && $INTERNET_IP_OK -eq 1 && $DNS_RESOLVE_OK -eq 1 ]]; then
-        success "✅ Network connectivity is good"
+        success "Router, public-IP and configured DNS probes answered."
     elif [[ $GATEWAY_OK -eq 1 && $INTERNET_IP_OK -eq 1 && $DNS_RESOLVE_OK -eq 0 ]]; then
         warn "⚠️  DNS issues - change DNS servers to 8.8.8.8"
     elif [[ $GATEWAY_OK -eq 1 && $INTERNET_IP_OK -eq 0 ]]; then
-        error "❌ Internet/ISP problem - not your fault"
+        warn "Public-IP probes did not answer; compare another device to locate the cause"
     else
-        error "❌ Local connectivity issues - check your connection"
+        warn "Router probe did not answer; check WiFi association and compare another device"
     fi
     
     echo ""
@@ -504,7 +501,7 @@ main() {
     
     # Check for required tools
     MISSING_TOOLS=()
-    for tool in ip ipcalc; do
+    for tool in ip ipcalc dig; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             MISSING_TOOLS+=("$tool")
         fi
@@ -512,7 +509,7 @@ main() {
     
     if [[ ${#MISSING_TOOLS[@]} -gt 0 ]]; then
         error "Missing required tools: ${MISSING_TOOLS[*]}"
-        echo "Install with: sudo apt install iproute2 ipcalc"
+        echo "Next: add the missing tools to your NixOS/Home Manager packages."
         exit 1
     fi
     
@@ -521,7 +518,7 @@ main() {
     
     # Phase 1: Fast triage (always run)
     fast_triage
-    analyze_triage || exit 0
+    analyze_triage "${1:-}" || exit 0
     
     # Phase 2: Detailed analysis (only if triage passes or forced)
     if [[ "${1:-}" == "-f" ]] || [[ $GATEWAY_OK -eq 1 ]]; then

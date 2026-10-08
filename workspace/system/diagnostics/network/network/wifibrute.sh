@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# shellcheck source=network-report.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/network-report.sh"
+report_init 'Household security audit' 'Discover devices, inspect service ports and optionally run vulnerability, credential and WiFi tests.' \
+  'Intrusive options remain interactive; credential tests can lock accounts and deauth can disconnect clients.' '[--details]' "$@" || exit 0
+set -- "${REPORT_ARGS[@]}"
+
+
 # ===== Owner-only intrusive LAN + Wi-Fi audit (interactive toggles) =====
 # Tools used (install what you need):
 #  - nmap, ip, awk, sed, grep
@@ -12,12 +19,6 @@ set -Eeuo pipefail
 #
 # Output saved under ./reports/<timestamp>/
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BOLD='\033[1m'; NC='\033[0m'
-say(){ printf "%b%s%b\n" "$1" "$2" "$NC"; }
-ok(){ say "$GREEN" "OK  - $1"; }
-warn(){ say "$YELLOW" "WARN- $1"; }
-fail(){ say "$RED" "FAIL- $1"; }
-hdr(){ printf "\n${BOLD}%s${NC}\n" "$1"; }
 have(){ command -v "$1" >/dev/null 2>&1; }
 
 # ---------- Preflight ----------
@@ -57,7 +58,7 @@ WIFI_DEAUTH=0      # aireplay deauth to trigger handshake (DANGEROUS)
 MON_IF=""          # monitor interface if created
 
 echo
-hdr "🔎 Intrusive Home Audit — interactive setup"
+report_section "Choose the checks" "Select the target network and optional tests." "UDP finds different services; vulnerability scripts probe known weaknesses; credential scripts try logins." "Leave an option off to skip it. Full raw results are saved under reports/."
 echo "Detected IFACE: $IFACE   My IP: $IP_SELF   Default target: $SUB24_DEFAULT"
 read -r -p "Target subnet [$SUB24_DEFAULT]: " ans || true
 CUSTOM_SUBNET="${ans:-$SUB24_DEFAULT}"
@@ -144,7 +145,7 @@ if (( RUN_SURI==1 )); then start_suricata; fi
 if (( RUN_ZEEK==1 )); then start_zeek; fi
 
 # ---------- Stage 0: Host discovery ----------
-hdr "Stage 0 — Host discovery on $CUSTOM_SUBNET"
+report_section "1. Discover target devices" "Send host discovery probes to $CUSTOM_SUBNET." "A discovered host answered these probes. No hosts can mean filtering, isolation, a wrong range or a failed scan." "Check the selected adapter and subnet if no hosts appear."
 LIVE_LIST="$OUTDIR/live-hosts.txt"
 if have arp-scan; then
   sudo arp-scan --interface "$IFACE" --localnet 2>/dev/null > "$OUTDIR/arp-scan.txt" || true
@@ -152,54 +153,67 @@ if have arp-scan; then
 fi
 if [[ ! -s "$LIVE_LIST" ]]; then
   sudo nmap -sn -T4 --max-retries 1 --host-timeout 8s "$CUSTOM_SUBNET" -oA "$OUTDIR/pingscan" >/dev/null
-  awk '/Nmap scan report/{ip=$NF} /Host is up/{print ip}' "$OUTDIR/pingscan.gnmap" | tr -d '()' | sort -u > "$LIVE_LIST"
+  awk '/^Host:/ && /Status: Up/ {print $2}' "$OUTDIR/pingscan.gnmap" | tr -d '()' | sort -u > "$LIVE_LIST"
 fi
-if [[ ! -s "$LIVE_LIST" ]]; then fail "No live hosts found"; exit 1; fi
+if [[ ! -s "$LIVE_LIST" ]]; then
+  warn "No targets answered discovery; the security audit did not run."
+  info "Next: check net-tools quicknet and inspect $OUTDIR/pingscan.nmap or arp-scan.txt with --details."
+  exit 1
+fi
 COUNT=$(wc -l < "$LIVE_LIST" | tr -d ' ')
 ok "Discovered $COUNT host(s) → $LIVE_LIST"
 
 # ---------- Stage 1: Full TCP sweep (-p-) ----------
-hdr "Stage 1 — Full TCP sweep (-p-)"
+report_section "2. TCP service ports" "Probe all TCP ports on the discovered targets." "Open ports show exposed services, not confirmed flaws. The 15-second host limit can leave the scan incomplete."
+report_port_legend
 NMAP_BASE=(-Pn --defeat-rst-ratelimit --min-rate 600 --max-retries 1 --host-timeout 15s -T4)
-sudo nmap "${NMAP_BASE[@]}" -sS -p- -iL "$LIVE_LIST" -oA "$OUTDIR/tcp-all" || true
+sudo nmap "${NMAP_BASE[@]}" -sS -p- -iL "$LIVE_LIST" -oA "$OUTDIR/tcp-all" 2>&1 | report_evidence || warn "Scan did not complete; inspect its saved report."
 
 # ---------- Stage 2: Service/OS fingerprint ----------
-hdr "Stage 2 — Version & OS fingerprint"
-sudo nmap "${NMAP_BASE[@]}" -sS -sV -O --reason --version-all -iL "$LIVE_LIST" -oA "$OUTDIR/tcp-svcos" || true
+report_section "3. Service and OS identification" "Ask services for version hints and estimate device operating systems." "Fingerprints can be wrong or missing. Confirm device identity in its own settings before acting."
+sudo nmap "${NMAP_BASE[@]}" -sS -sV -O --reason --version-all -iL "$LIVE_LIST" -oA "$OUTDIR/tcp-svcos" 2>&1 | report_evidence || warn "Scan did not complete; inspect its saved report."
 
 # ---------- Stage 3: Top UDP ports (optional) ----------
 if (( DO_UDP==1 )); then
-  hdr "Stage 3 — UDP top 50 ports"
-  sudo nmap "${NMAP_BASE[@]}" -sU --top-ports 50 --defeat-icmp-ratelimit -iL "$LIVE_LIST" -oA "$OUTDIR/udp-top50" || true
+  report_section "4. UDP services" "Probe the 50 most common UDP ports." "open|filtered means no clear answer; UDP often stays silent. It is not proof a service is open."
+  sudo nmap "${NMAP_BASE[@]}" -sU --top-ports 50 --defeat-icmp-ratelimit -iL "$LIVE_LIST" -oA "$OUTDIR/udp-top50" 2>&1 | report_evidence || warn "Scan did not complete; inspect its saved report."
 fi
 
 # ---------- Stage 4: Protocol-focused NSE (safe/discovery) ----------
-hdr "Stage 4 — NSE (safe/discovery)"
+report_section "5. Service discovery scripts" "Run discovery scripts and HTTP, TLS, SMB and SNMP checks." "These can reveal titles, certificates and shares. Discovery categories can still send active requests." "Review unexpected services, anonymous shares and outdated device firmware."
 SAFE_SCRIPTS="default,safe,discovery"
-sudo nmap "${NMAP_BASE[@]}" -sS -sV --script "$SAFE_SCRIPTS" -iL "$LIVE_LIST" -oA "$OUTDIR/nse-safe" || true
+sudo nmap "${NMAP_BASE[@]}" -sS -sV --script "$SAFE_SCRIPTS" -iL "$LIVE_LIST" -oA "$OUTDIR/nse-safe" 2>&1 | report_evidence || warn "Scan did not complete; inspect its saved report."
 
+report_section "Web services and encryption" "Inspect HTTP headers, methods, authentication hints and TLS ciphers." "A title identifies a page; a weak-cipher hint needs confirmation in the saved report. This stage includes default-account checks."
 # HTTP/HTTPS detail
 sudo nmap "${NMAP_BASE[@]}" -p 80,8080,8000,443,8443,8888 \
   --script "http-title,http-headers,http-methods,http-server-header,http-enum,http-auth,http-default-accounts,ssl-cert,ssl-enum-ciphers" \
-  -iL "$LIVE_LIST" -oA "$OUTDIR/nse-http" || true
+  -iL "$LIVE_LIST" -oA "$OUTDIR/nse-http" 2>&1 | report_evidence || warn "Scan did not complete; inspect its saved report."
 
+report_section "File sharing (SMB)" "Inspect Windows-style sharing capabilities and shares." "A visible share is not necessarily readable without login. Review access on the target device."
 # SMB
 sudo nmap "${NMAP_BASE[@]}" -p 445,139 \
   --script "smb-os-discovery,smb2-security-mode,smb2-capabilities,smb-enum-shares,smb-protocols,smb2-time" \
-  -iL "$LIVE_LIST" -oA "$OUTDIR/nse-smb" || true
+  -iL "$LIVE_LIST" -oA "$OUTDIR/nse-smb" 2>&1 | report_evidence || warn "Scan did not complete; inspect its saved report."
 
+report_section "Management services (SNMP)" "Inspect management information when a service responds." "Accessible management data can expose device details. This existing probe targets TCP 161; UDP SNMP is only covered by optional UDP scans."
 # SNMP
-sudo nmap "${NMAP_BASE[@]}" -p 161 --script "snmp-info,snmp-interfaces" -iL "$LIVE_LIST" -oA "$OUTDIR/nse-snmp" || true
+sudo nmap "${NMAP_BASE[@]}" -p 161 --script "snmp-info,snmp-interfaces" -iL "$LIVE_LIST" -oA "$OUTDIR/nse-snmp" 2>&1 | report_evidence || warn "Scan did not complete; inspect its saved report."
 
 # ---------- Stage 5: Intrusive/vuln/brute (gated) ----------
 if (( INTRUSIVE==1 )); then
-  hdr "Stage 5 — Intrusive/Vuln NSE"
-  sudo nmap "${NMAP_BASE[@]}" -sS -sV --script "intrusive,vuln" -iL "$LIVE_LIST" -oA "$OUTDIR/nse-intrusive" || true
+  report_section "6. Vulnerability probes" "Run the selected intrusive and vulnerability script categories." "A positive script finding is a lead to verify, not proof of exploitation. No finding is not a clean bill of health." "Confirm the affected service, patch level and matching finding in nse-intrusive.nmap."
+  sudo nmap "${NMAP_BASE[@]}" -sS -sV --script "intrusive,vuln" -iL "$LIVE_LIST" -oA "$OUTDIR/nse-intrusive" 2>&1 | report_evidence || warn "Scan did not complete; inspect its saved report."
 fi
 if (( BRUTE==1 )); then
-  hdr "Stage 6 — Brute/Auth NSE"
-  sudo nmap "${NMAP_BASE[@]}" -sS -sV --script "brute,auth" -iL "$LIVE_LIST" -oA "$OUTDIR/nse-brute" || true
+  report_section "7. Credential and authentication tests" "Run brute-force and authentication scripts on responding services." "A reported valid credential needs review; failed attempts can lock accounts. An interrupted scan does not prove passwords are strong." "Change confirmed weak/default credentials and inspect target authentication logs."
+  sudo nmap "${NMAP_BASE[@]}" -sS -sV --script "brute,auth" -iL "$LIVE_LIST" -oA "$OUTDIR/nse-brute" 2>&1 | report_evidence || warn "Scan did not complete; inspect its saved report."
 fi
+
+if (( INTRUSIVE == 0 )); then report_result SKIP 'Vulnerability script category not selected.'; fi
+if (( BRUTE == 0 )); then report_result SKIP 'Credential script category not selected (web default-account probes still ran).'; fi
+if (( DO_UDP == 0 )); then report_result SKIP 'UDP service scan not selected.'; fi
+if (( DO_WIFI == 0 )); then report_result SKIP 'WiFi monitor/capture tests not selected.'; fi
 
 # ---------- Stage 7: Wi-Fi (optional) ----------
 wifi_start_monitor(){
@@ -217,11 +231,11 @@ wifi_start_monitor(){
 
 wifi_scan_wpa(){
   (( WIFI_WPA_SCAN==1 && HAVE_AIRODUMP==1 )) || return 0
-  hdr "Wi-Fi: WPA scan (airodump-ng)"
+  report_section "WiFi access points and handshake capture" "Observe access point announcements and authentication traffic." "A saved capture does not prove a handshake was captured or a password was recovered." "Inspect the capture in Wireshark or aircrack-ng."
   mkdir -p "$OUTDIR/wifi"
   timeout 20 sudo airodump-ng "$MON_IF" --band abg --output-format csv,pcap \
     --write "$OUTDIR/wifi/airodump" >/dev/null 2>&1 || true
-  ok "Scan saved: $OUTDIR/wifi/airodump*.csv / .pcap"
+  info "Capture attempt finished. Inspect files matching $OUTDIR/wifi/airodump*; a timeout or error may leave incomplete data."
   echo "To target a specific BSSID/channel for handshake capture:"
   echo "  sudo airodump-ng --bssid <BSSID> --channel <CH> -w $OUTDIR/wifi/handshake $MON_IF"
   if (( WIFI_DEAUTH==1 && HAVE_AIREPLAY==1 )); then
@@ -249,10 +263,10 @@ wifi_scan_wpa(){
 
 wifi_wps_discovery(){
   (( WIFI_WPS_DISC==1 && HAVE_WASH==1 )) || return 0
-  hdr "Wi-Fi: WPS discovery (wash) — *no attack*"
+  report_section "WiFi WPS discovery" "Read WPS advertisements; this stage does not attack a PIN." "WPS enabled is a configuration finding. Locked status does not guarantee security." "Disable unused WPS in your router settings."
   mkdir -p "$OUTDIR/wifi"
   timeout 30 sudo wash -i "$MON_IF" -2 -s -g -j > "$OUTDIR/wifi/wps.json" 2>/dev/null || true
-  ok "WPS scan saved: $OUTDIR/wifi/wps.json"
+  info "WPS probe finished. Inspect $OUTDIR/wifi/wps.json; an empty file means no usable result."
   echo "• If 'WPS Locked' is false and WPS enabled, disable WPS on the AP."
 }
 
@@ -263,36 +277,36 @@ if (( DO_WIFI==1 )); then
 fi
 
 # ---------- Summary ----------
-hdr "Summary — quick findings"
+report_section "Security findings summary" "Collect service and script findings from saved reports." "No matching line means no recorded finding, not a passed security audit. Skipped and failed checks remain untested." "Use the file and line references below to confirm each finding before changing the device."
 SUMMARY="$OUTDIR/summary.txt"
 {
   echo "Intrusive LAN + Wi-Fi Audit — $TS"
   echo "Targets: $CUSTOM_SUBNET  (hosts: $COUNT)"
   echo
-  echo "# Telnet/FTP:"
+  echo "Telnet/FTP: cleartext services; review and disable if unused."
   grep -HnE '23/tcp\s+open|21/tcp\s+open' "$OUTDIR"/* 2>/dev/null || true
   echo
-  echo "# SMB (445) / shares:"
+  echo "SMB/shares: review who can access files; port 445 alone is not a flaw."
   grep -HnE '445/tcp\s+open' "$OUTDIR"/* 2>/dev/null || true
   grep -Hn 'smb-enum-shares' "$OUTDIR"/* 2>/dev/null || true
   echo
-  echo "# SNMP (161):"
+  echo "SNMP: review management exposure and authentication."
   grep -HnE '161/(udp|tcp)\s+open' "$OUTDIR"/* 2>/dev/null || true
   echo
-  echo "# Weak TLS hints:"
+  echo "TLS hints: review the matching cipher and protocol in nse-http.nmap."
   grep -HnE '(RC4|MD5|NULL|EXPORT|LOW)' "$OUTDIR"/nse-http.nmap 2>/dev/null || true
   echo
-  echo "# NSE 'VULNERABLE' findings:"
-  grep -Hn 'VULNERABLE' "$OUTDIR"/* 2>/dev/null || true
+  echo "Positive vulnerability leads: verify script details and device firmware."
+  grep -HnE '(^|[^[:alpha:]])VULNERABLE([^[:alpha:]]|$)' "$OUTDIR"/*.nmap 2>/dev/null | awk '!/NOT VULNERABLE/' || true
   echo
   if [[ -d "$OUTDIR/wifi" ]]; then
     echo "# Wi-Fi artifacts:"
     ls -1 "$OUTDIR/wifi" 2>/dev/null || true
   fi
 } > "$SUMMARY"
-sed -n '1,200p' "$SUMMARY"
+cat "$SUMMARY" | report_evidence
 
 echo
-ok "Done. Artifacts in: $OUTDIR"
+info "Audit attempts finished. Full evidence: $OUTDIR | Summary: $SUMMARY"
 echo "If you started Suricata/Zeek, their logs are under $OUTDIR/suricata and $OUTDIR/zeek."
 echo "This script will stop monitor mode and IDS on exit."

@@ -45,8 +45,10 @@ let
     text = ''
       scripts=${lib.escapeShellArg "${nixosPath}/workspace/system/diagnostics/network/network"}
       print_name=""
+      script_args=()
       while [[ $# -gt 0 ]]; do
         case "$1" in
+          --details) script_args+=(--details); shift ;;
           --directory|--print)
             if [[ $# -lt 2 || -z "$2" ]]; then
               printf 'net-tools: %s requires a value\n' "$1" >&2
@@ -58,10 +60,11 @@ let
           --list) mode=list; shift; break ;;
           -h|--help)
             printf '%s\n' \
-              'usage: net-tools [search words]' \
+              'usage: net-tools [--details] [search words]' \
               '       net-tools --list' \
               '       net-tools --print SCRIPT' \
               '       net-tools --directory DIR [search words]' \
+              '--details shows full evidence from the selected script' \
               'type to search; arrows to choose; Enter to run; Ctrl-Y to print; Esc to cancel'
             exit 0
             ;;
@@ -117,12 +120,14 @@ let
         exit 2
       fi
       if [[ "$action" == ctrl-y ]]; then
-        printf 'cd -- %q && bash -- %q\n' "$scripts" "$filename"
+        printf 'cd -- %q && bash -- %q' "$scripts" "$filename"
+        if (( ''${#script_args[@]} )); then printf ' %q' "''${script_args[@]}"; fi
+        printf '\n'
         exit 0
       fi
       printf 'running %s\n' "$filename"
       cd -- "$scripts"
-      exec bash -- "$filename"
+      exec bash -- "$filename" "''${script_args[@]}"
     '';
   };
 in
