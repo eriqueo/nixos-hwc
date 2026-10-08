@@ -71,6 +71,27 @@ DNS answers, scan timeouts and security discovery. Run it with Python 3.
 Saved capture and audit reports retain their existing locations and raw data.
 The legacy `network-utils/network/wifibrute.sh` forwards to the active implementation; other old copies remain outside this picker.
 
+`wifibrute.sh` fingerprints each host's recorded open TCP ports. Read
+`tcp-inventory.tsv` for port ownership, coverage and source, and
+`tcp-svcos-<host>.nmap` for service identification. `tcp-svcos.nmap` combines
+the readable per-host reports. A host with a complete sweep and no open TCP
+ports is skipped; missing or partial evidence remains untested.
+After a host timeout, the script offers one top-100 TCP follow-up with a
+120-second stage limit and a 30-second host limit. It preserves `tcp-all.*`
+and keeps coverage partial even if the follow-up succeeds. A failed follow-up
+keeps known ports and returns a nonzero audit result. Fingerprints share a
+20-minute budget, with at most 120 seconds per host; remaining hosts are
+untested when the budget ends. No intrusive or credential stage is repeated.
+Run the CLI regression suite with Python 3. For the controlled loopback
+fingerprint check, run:
+
+```bash
+WIFIBRUTE_LIVE_TEST=1 python3 workspace/system/diagnostics/network/network/tests/test_wifibrute.py AuditTests.test_live_loopback_fingerprinting
+```
+
+That check needs Nmap and noninteractive sudo; discovery and the other stages
+use fixtures.
+
 ## Frigate field evidence
 
 For the first post-change Frigate storage window, run on hwc-server after
@@ -93,8 +114,11 @@ that a person walking every approach gets detected or notified.
 
 ## Changelog
 
+- 2026-10-08: Fix issue #106: fingerprint discovered ports per host, record
+  skipped/untested hosts, and offer one bounded follow-up for host timeouts.
+  Preserve partial coverage and original reports. Add CLI regression cases
+  and an opt-in controlled loopback fingerprint check.
 - 2026-10-08: Add outcome-based TLDRs to the nine network tools, including early exits, DNS comparison gaps, weak signal, security leads and missing inventory tools. Preserve probe options and raw report formats; replay result branches with isolated commands.
-
 - 2026-10-08: Explain checks and findings in the nine `net-tools` scripts, share terminal formatting, add full-evidence mode and isolated output tests. Correct false DNS success, timed-out public scan verdicts; preserve the new wifibrute discovery and stage tracking. Let bounded WiFi capture timeouts reach the summary.
 - 2026-10-08: Repaired `wifibrute.sh` discovery parsing, CIDR and target handling;
   added `discover`, private report directories, bounded scans, stage status,

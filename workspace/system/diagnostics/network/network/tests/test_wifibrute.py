@@ -1,11 +1,14 @@
-"""Run the production script with fake tools; never probe a real network."""
+"""Replay production CLI with fake tools. Opt-in live test probes loopback only."""
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import threading
 import unittest
+import xml.etree.ElementTree as ET
 
 SCRIPT = Path(__file__).resolve().parents[1] / "wifibrute.sh"
 FAKE = r'''#!/usr/bin/env python3
@@ -51,9 +54,17 @@ if name == 'arp-scan':
     sys.exit(0)
 if name == 'nmap':
     prefix = Path(args[args.index('-oA') + 1])
+    if os.environ.get('LIVE_TCP_PORT') and prefix.name.startswith('tcp-svcos-'):
+        # Only the production fingerprint command crosses into real tools.
+        # Fail closed on any unexpected target or port; every other stage is fake.
+        if (args[-3] != '127.0.0.1' or '-iL' in args or
+                args[args.index('-p') + 1] != os.environ['LIVE_TCP_PORT']):
+            sys.exit(5)
+        os.execv(os.environ['REAL_SUDO'], [os.environ['REAL_SUDO'], '-n',
+                                          os.environ['REAL_NMAP'], *args])
     if os.environ.get('REQUIRE_RESERVED'):
         for ext in ('.nmap', '.gnmap', '.xml'):
-            path = prefix.with_suffix(ext)
+            path = Path(str(prefix) + ext)
             if not path.exists() or path.stat().st_uid != os.getuid():
                 print('output was not reserved by the report owner', file=sys.stderr)
                 sys.exit(4)
@@ -65,14 +76,37 @@ if name == 'nmap':
         'Host: 192.168.0.97 (hwc-home.local)\tStatus: Up\n'
         'Host: 192.168.0.136 (hwc-laptop.local)\tStatus: Up\n'
         'Host: 192.168.0.200 ()\tStatus: Down\n')
-    prefix.with_suffix('.gnmap').write_text(hosts)
-    prefix.with_suffix('.nmap').write_text(
+    if os.environ.get('LIVE_TCP_PORT'): hosts = 'Host: 127.0.0.1 ()\tStatus: Up\n'
+    Path(str(prefix) + '.gnmap').write_text(hosts)
+    Path(str(prefix) + '.nmap').write_text(
         'Skipping host 192.168.0.97 due to host timeout\n'
         if os.environ.get('PARTIAL') and prefix.name == 'tcp-all' else '')
     partial = os.environ.get('PARTIAL') and prefix.name == 'tcp-all'
-    prefix.with_suffix('.xml').write_text(
-        '<nmaprun><host timedout="' + ('true' if partial else 'false') +
-        '"/><runstats><finished exit="success"/></runstats></nmaprun>')
+    inventory = {'192.168.0.1': [80], '192.168.0.97': [54429, 62078],
+                 '192.168.0.136': []}
+    if os.environ.get('NO_PORTS'): inventory = {ip: [] for ip in inventory}
+    if os.environ.get('PARTIAL_NO_PORTS'): inventory['192.168.0.97'] = []
+    if os.environ.get('MISSING_HOST'): inventory.pop('192.168.0.97')
+    if os.environ.get('MANY_PORTS') and prefix.name == 'tcp-all':
+        inventory['192.168.0.97'] = list(range(1, 65536))
+    if os.environ.get('SPARSE_PORTS') and prefix.name == 'tcp-all':
+        inventory['192.168.0.97'] = list(range(1, 65536, 2))
+    if os.environ.get('LIVE_TCP_PORT'): inventory = {'127.0.0.1': [int(os.environ['LIVE_TCP_PORT'])]}
+    if prefix.name == 'tcp-followup': inventory = {'192.168.0.97': [443]}
+    hosts_xml = ''.join(
+        '<host timedout="' + ('true' if partial and ip == '192.168.0.97' else 'false') +
+        '"><status state="up"/><address addr="' + ip + '" addrtype="ipv4"/><ports>' +
+        ''.join('<port protocol="tcp" portid="' + str(p) + '"><state state="open"/></port>'
+                for p in ports) +
+        '<port protocol="tcp" portid="9999"><state state="closed"/></port>' +
+        '<port protocol="udp" portid="161"><state state="open"/></port>' +
+        '</ports></host>' for ip, ports in inventory.items())
+    Path(str(prefix) + '.xml').write_text(
+        '<nmaprun>' + hosts_xml + '<runstats><finished exit="success"/></runstats></nmaprun>')
+    if os.environ.get('BAD_XML') and prefix.name == 'tcp-all':
+        Path(str(prefix) + '.xml').write_text('<broken')
+    if os.environ.get('BAD_FOLLOWUP_XML') and prefix.name == 'tcp-followup':
+        Path(str(prefix) + '.xml').write_text('<broken')
 '''
 
 
@@ -98,9 +132,14 @@ class AuditTests(unittest.TestCase):
             calls = root / "calls"
             env = {**os.environ, "PATH": str(bin_dir), "CALLS": str(calls),
                    "MON_STATE": str(root / "monitor"), **flags}
+            env.pop("BASH_ENV", None)
+            if flags.get("EXHAUST_BUDGET"):
+                clock = root / "clock.sh"
+                clock.write_text("trap 'case \"$BASH_COMMAND\" in REMAINING=*) SECONDS=999999 ;; esac' DEBUG\n")
+                env["BASH_ENV"] = str(clock)
             result = subprocess.run(["bash", str(entry), *args], input=inputs,
                                     text=True, capture_output=True, cwd=root,
-                                    env=env, timeout=10)
+                                    env=env, timeout=90 if flags.get("LIVE_TCP_PORT") else 10)
             reports = list((root / "reports").glob("*"))
             files = {f.name: f.read_text() for report in reports
                      for f in report.iterdir() if f.is_file()}
@@ -171,6 +210,142 @@ class AuditTests(unittest.TestCase):
         result, files, _ = self.run_audit(PARTIAL="1")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("incomplete", files["summary.txt"])
+
+    def test_fingerprints_each_hosts_discovered_ports(self):
+        result, files, calls = self.run_audit()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        scans = [c for c in calls if c[0] == "nmap" and "-sV" in c and "-O" in c]
+        self.assertEqual(len(scans), 2)
+        ports = {c[-3]: c[c.index("-p") + 1] for c in scans}
+        self.assertEqual(ports, {"192.168.0.1": "80", "192.168.0.97": "54429,62078"})
+        self.assertIn("tcp-svcos-192.168.0.136\tskipped\t0", files["stages.tsv"])
+        self.assertIn("tcp-inventory.tsv", files)
+        self.assertTrue(all(c[c.index("--host-timeout") + 1] == "60s" for c in scans))
+        self.assertTrue(all("-iL" not in c for c in scans))
+
+    def test_empty_tcp_inventory_never_falls_back_to_default_ports(self):
+        result, files, calls = self.run_audit(NO_PORTS="1")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertFalse(any(c[0] == "nmap" and "-O" in c for c in calls))
+        self.assertEqual(files["stages.tsv"].count("\tskipped\t0"), 3)
+
+    def test_full_port_set_fits_in_one_explicit_argument(self):
+        result, files, calls = self.run_audit(MANY_PORTS="1")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        scan = next(c for c in calls if c[0] == "nmap" and c[-1].endswith("tcp-svcos-192.168.0.97"))
+        self.assertEqual(scan[scan.index("-p") + 1], "1-65535")
+        self.assertIn("192.168.0.97\t1-65535\tfull", files["tcp-inventory.tsv"])
+
+    def test_sparse_port_set_is_partitioned_without_losing_ports(self):
+        result, _, calls = self.run_audit(SPARSE_PORTS="1")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        scans = [c for c in calls if c[0] == "nmap" and
+                 c[-1].rsplit("/", 1)[-1].startswith("tcp-svcos-192.168.0.97-part")]
+        self.assertGreater(len(scans), 1)
+        specs = [c[c.index("-p") + 1] for c in scans]
+        self.assertTrue(all(len(spec) <= 60000 for spec in specs))
+        ports = [int(p) for spec in specs for p in spec.split(",")]
+        self.assertEqual(ports, list(range(1, 65536, 2)))
+
+    def test_exhausted_budget_records_untested_hosts_without_probing(self):
+        result, files, calls = self.run_audit(EXHAUST_BUDGET="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(any(c[0] == "nmap" and "-O" in c for c in calls))
+        for ip in ("192.168.0.1", "192.168.0.97"):
+            self.assertIn(f"tcp-svcos-{ip}\tuntested\t124", files["stages.tsv"])
+
+    def test_partial_followup_is_optional(self):
+        result, files, calls = self.run_audit(PARTIAL="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(any(c[0] == "nmap" and c[-1].endswith("tcp-followup") for c in calls))
+        self.assertIn("192.168.0.97\t54429,62078\tpartial", files["tcp-inventory.tsv"])
+
+    def test_followup_is_bounded_and_keeps_original_partial_report(self):
+        result, files, calls = self.run_audit(inputs="\nn\nn\nn\ny\n", PARTIAL="1")
+        self.assertNotEqual(result.returncode, 0)
+        scans = [c for c in calls if c[0] == "nmap"]
+        followup = next(c for c in scans if c[-1].endswith("tcp-followup"))
+        self.assertEqual(followup[followup.index("--top-ports") + 1], "100")
+        self.assertEqual(followup[followup.index("--host-timeout") + 1], "30s")
+        self.assertEqual(files["tcp-timeout-hosts.txt"], "192.168.0.97\n")
+        self.assertTrue(any(c[:5] == ["sudo", "-n", "timeout", "-k", "5s"] and
+                            "120s" in c and "--top-ports" in c for c in calls))
+        self.assertIn('timedout="true"', files["tcp-all.xml"])
+        self.assertIn("192.168.0.97\t443,54429,62078\tpartial", files["tcp-inventory.tsv"])
+        self.assertEqual(sum(c[-1].endswith("tcp-followup") for c in scans), 1)
+        self.assertFalse(any("brute,auth" in c for c in scans))
+
+    def test_failed_followup_keeps_known_ports(self):
+        result, files, _ = self.run_audit(inputs="\nn\nn\nn\ny\n", PARTIAL="1",
+                                         FAIL_STAGE="tcp-followup")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("tcp-followup\tfailed\t3", files["summary.txt"])
+        self.assertIn("192.168.0.97\t54429,62078\tpartial", files["tcp-inventory.tsv"])
+
+    def test_malformed_inventory_never_fingerprints_default_ports(self):
+        result, files, calls = self.run_audit(BAD_XML="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("tcp-inventory\tfailed", files["summary.txt"])
+        self.assertFalse(any(c[0] == "nmap" and "-O" in c for c in calls))
+
+    def test_missing_host_is_untested_instead_of_no_open_ports(self):
+        result, files, _ = self.run_audit(MISSING_HOST="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("192.168.0.97\t-\tunavailable", files["tcp-inventory.tsv"])
+        self.assertIn("tcp-svcos-192.168.0.97\tuntested\t0", files["stages.tsv"])
+
+    def test_invalid_followup_preserves_original_inventory(self):
+        result, files, _ = self.run_audit(inputs="\nn\nn\nn\ny\n", PARTIAL="1",
+                                         BAD_FOLLOWUP_XML="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("tcp-followup\tincomplete\t0", files["stages.tsv"])
+        self.assertIn("192.168.0.97\t54429,62078\tpartial", files["tcp-inventory.tsv"])
+
+    def test_timedout_host_without_ports_can_get_followup_ports(self):
+        result, files, calls = self.run_audit(inputs="\nn\nn\nn\ny\n", PARTIAL="1",
+                                             PARTIAL_NO_PORTS="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("192.168.0.97\t443\tpartial", files["tcp-inventory.tsv"])
+        scan = next(c for c in calls if c[0] == "nmap" and c[-1].endswith("tcp-svcos-192.168.0.97"))
+        self.assertEqual(scan[scan.index("-p") + 1], "443")
+
+    def test_followup_does_not_repeat_intrusive_or_auth_stages(self):
+        result, _, calls = self.run_audit(inputs="\nn\ny\ny\ny\n", PARTIAL="1")
+        self.assertNotEqual(result.returncode, 0)
+        for stage in ("tcp-followup", "nse-intrusive", "nse-brute"):
+            self.assertEqual(sum(c[0] == "nmap" and c[-1].endswith(stage) for c in calls), 1)
+
+    @unittest.skipUnless(os.environ.get("WIFIBRUTE_LIVE_TEST") == "1", "opt-in loopback check")
+    def test_live_loopback_fingerprinting(self):
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200)
+                self.send_header("Content-Type", "text/plain")
+                self.end_headers()
+                self.wfile.write(b"Controlled wifibrute fixture\n")
+
+            def log_message(self, *_):
+                pass
+
+        with ThreadingHTTPServer(("127.0.0.1", 0), Handler) as server:
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = server.server_port
+                self.assertGreaterEqual(port, 32768)
+                result, files, _ = self.run_audit(
+                    inputs="127.0.0.1/32\nn\nn\nn\n", LIVE_TCP_PORT=str(port),
+                    REAL_SUDO=shutil.which("sudo"), REAL_NMAP=shutil.which("nmap"))
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                root = ET.fromstring(files["tcp-svcos-127.0.0.1.xml"])
+                found = root.find(f"host/ports/port[@portid='{port}']/service")
+                self.assertIsNotNone(found)
+                self.assertEqual(found.get("name"), "http")
+                self.assertIn(f"{port}/tcp", files["tcp-svcos.nmap"])
+                print(f"Live fingerprint: 127.0.0.1:{port} identified as {found.attrib}")
+            finally:
+                server.shutdown()
+                thread.join(timeout=5)
 
     def test_auth_requires_opt_in_and_snmp_uses_udp(self):
         result, _, calls = self.run_audit()

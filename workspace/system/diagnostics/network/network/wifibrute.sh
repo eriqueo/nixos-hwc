@@ -321,7 +321,159 @@ scan tcp-all 20m "${NMAP_BASE[@]}" -sS -p- -iL "$LIVE_LIST" || true
 
 # ---------- Stage 2: Service/OS fingerprint ----------
 report_section "3. Service and OS identification" "Ask services for version hints and estimate device operating systems." "Fingerprints can be wrong or missing. Confirm device identity in its own settings before acting."
-scan tcp-svcos 20m "${NMAP_BASE[@]}" -sS -sV -O --reason --version-all -iL "$LIVE_LIST" || true
+# XML is the source of port ownership. Never substitute Nmap's default ports or
+# the union of other hosts' ports when a host has no recorded open TCP ports.
+tcp_inventory(){
+  python3 - "$LIVE_LIST" "$OUTDIR/tcp-inventory.tsv" "$OUTDIR/tcp-timeout-hosts.txt" "$@" <<'PY'
+import ipaddress
+from pathlib import Path
+import sys
+import xml.etree.ElementTree as ET
+
+live, output, timedout, *reports = sys.argv[1:]
+expected = {str(ipaddress.IPv4Address(ip)) for ip in Path(live).read_text().splitlines()}
+records = {ip: [set(), "unavailable", "tcp-all"] for ip in expected}
+timeouts = set()
+try:
+    for index, report in enumerate(reports):
+        root = ET.parse(report).getroot()
+        if root.tag != "nmaprun":
+            raise ValueError("not an Nmap report")
+        finished = root.find("runstats/finished")
+        complete = finished is not None and finished.get("exit") == "success"
+        for host in root.findall("host"):
+            address = host.find("address[@addrtype='ipv4']")
+            if address is None:
+                continue
+            ip = str(ipaddress.IPv4Address(address.get("addr")))
+            if ip not in expected or (index and ip not in timeouts):
+                continue
+            if index == 0 and host.get("timedout") == "true":
+                timeouts.add(ip)
+                records[ip][1] = "partial"
+            status = host.find("status")
+            if status is None or status.get("state") != "up":
+                continue
+            ports = set()
+            for port in host.findall("ports/port[@protocol='tcp']"):
+                state = port.find("state")
+                if state is not None and state.get("state") == "open":
+                    number = int(port.get("portid"))
+                    if not 1 <= number <= 65535:
+                        raise ValueError("TCP port outside 1..65535")
+                    ports.add(number)
+            records[ip][0].update(ports)
+            if index == 0:
+                records[ip][1] = "full" if complete and host.get("timedout") != "true" else "partial"
+            else:
+                # A top-port follow-up can add evidence, never full coverage.
+                records[ip][2] = "tcp-all+tcp-followup"
+except (OSError, ET.ParseError, ValueError, TypeError) as exc:
+    print(f"Cannot read TCP inventory: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+# Publish only after every input parses; a failed follow-up preserves inventory.
+def port_spec(ports):
+    # Collapse consecutive ports; the CLI also chunks sparse, long lists.
+    ranges = []
+    start = end = None
+    for number in sorted(ports):
+        if end is not None and number == end + 1:
+            end = number
+        else:
+            if start is not None:
+                ranges.append(str(start) if start == end else f"{start}-{end}")
+            start = end = number
+    if start is not None:
+        ranges.append(str(start) if start == end else f"{start}-{end}")
+    return ",".join(ranges) or "-"
+
+Path(output).write_text("# format-version: 1\nhost\topen_tcp_ports\tcoverage\tsource\n" +
+    "".join(f"{ip}\t{port_spec(ports)}\t{scope}\t{source}\n"
+            for ip, (ports, scope, source) in sorted(records.items())))
+Path(timedout).write_text("".join(ip + "\n" for ip in sorted(timeouts)))
+PY
+}
+
+if tcp_inventory "$OUTDIR/tcp-all.xml"; then
+  if [[ -s "$OUTDIR/tcp-timeout-hosts.txt" ]]; then
+    warn "Full TCP inventory is partial. Timed-out hosts: $(tr '\n' ' ' < "$OUTDIR/tcp-timeout-hosts.txt")"
+    echo "Optional follow-up: top 100 TCP ports, once, at most 120 seconds (30 seconds per host)."
+    echo "It preserves tcp-all reports and does not retry script or credential stages. Coverage stays partial."
+    read -r -p "Run the smaller scan for these hosts? (y/N): " FOLLOWUP || FOLLOWUP=n
+    if [[ "$FOLLOWUP" =~ ^[Yy]$ ]]; then
+      scan tcp-followup 120s -Pn -n -T3 --max-retries 2 --host-timeout 30s \
+        -sS --top-ports 100 -iL "$OUTDIR/tcp-timeout-hosts.txt" || true
+      # Valid partial XML still contains useful ports. Invalid XML leaves the
+      # original inventory intact and the scan failure visible in stages.tsv.
+      tcp_inventory "$OUTDIR/tcp-all.xml" "$OUTDIR/tcp-followup.xml" || warn "Follow-up inventory unavailable; retaining original TCP inventory."
+    else
+      printf 'tcp-followup\tskipped\t0\n' >> "$STAGES"
+      report_result SKIP "Smaller scan declined. Original inventory stays partial."
+    fi
+  fi
+
+  # Per-host scans share one total budget; reaching it leaves hosts untested.
+  FINGERPRINT_END=$((SECONDS + 1200))
+  : > "$OUTDIR/tcp-svcos.nmap"
+  while IFS=$'\t' read -r HOST PORTS COVERAGE SOURCE; do
+    [[ "$HOST" == \#* || "$HOST" == host ]] && continue
+    STAGE="tcp-svcos-$HOST"
+    if [[ "$PORTS" == - ]]; then
+      if [[ "$COVERAGE" == full ]]; then
+        report_result SKIP "$HOST: no open TCP ports found."
+        printf '%s\tskipped\t0\n' "$STAGE" >> "$STAGES"
+      else
+        warn "$HOST: no recorded open TCP ports; inventory $COVERAGE. Service identification untested."
+        printf '%s\tuntested\t0\n' "$STAGE" >> "$STAGES"
+        FAILURES=$((FAILURES + 1))
+      fi
+      continue
+    fi
+    echo "$HOST: fingerprinting TCP $PORTS (inventory: $COVERAGE; source: $SOURCE)."
+    # Linux limits one argument to 128 KiB. Partition validated port tokens,
+    # never ports from different hosts; groups share this host's time budget.
+    mapfile -t PORT_GROUPS < <(printf '%s\n' "$PORTS" | python3 -c '
+import sys
+group = []
+size = 0
+for token in sys.stdin.read().strip().split(","):
+    if size + len(token) + 1 > 60000:
+        print(",".join(group))
+        group, size = [], 0
+    group.append(token)
+    size += len(token) + 1
+if group:
+    print(",".join(group))
+')
+    HOST_END=$((SECONDS + 120))
+    : > "$OUTDIR/tcp-svcos-$HOST.nmap"
+    for GROUP_INDEX in "${!PORT_GROUPS[@]}"; do
+      STAGE="tcp-svcos-$HOST"
+      (( ${#PORT_GROUPS[@]} > 1 )) && STAGE+="-part$((GROUP_INDEX + 1))"
+      REMAINING=$((FINGERPRINT_END - SECONDS))
+      HOST_REMAINING=$((HOST_END - SECONDS))
+      (( REMAINING > HOST_REMAINING )) && REMAINING=$HOST_REMAINING
+      if (( REMAINING <= 0 )); then
+        warn "$HOST: service identification budget exhausted."
+        printf '%s\tuntested\t124\n' "$STAGE" >> "$STAGES"
+        FAILURES=$((FAILURES + 1))
+        continue
+      fi
+      scan "$STAGE" "${REMAINING}s" -Pn -n -T3 --max-retries 2 --host-timeout 60s \
+        --script-timeout 60s -sS -sV -O --reason --version-all -p "${PORT_GROUPS[$GROUP_INDEX]}" "$HOST" || true
+      if (( ${#PORT_GROUPS[@]} > 1 )); then
+        cat "$OUTDIR/$STAGE.nmap" >> "$OUTDIR/tcp-svcos-$HOST.nmap"
+      fi
+    done
+    # Retain the old human-readable report path; per-host XML remains separate.
+    cat "$OUTDIR/tcp-svcos-$HOST.nmap" >> "$OUTDIR/tcp-svcos.nmap"
+  done < "$OUTDIR/tcp-inventory.tsv"
+else
+  FAILURES=$((FAILURES + 1))
+  printf 'tcp-inventory\tfailed\t1\n' >> "$STAGES"
+  warn "TCP inventory unavailable. Skipping service identification; inspect tcp-all.xml."
+fi
 
 # ---------- Stage 3: Top UDP ports (optional) ----------
 if (( DO_UDP==1 )); then
@@ -475,6 +627,13 @@ SUMMARY="$OUTDIR/summary.txt"
   echo "Targets: $CUSTOM_SUBNET  (hosts: $COUNT)"
   echo "Failed or incomplete stages: $FAILURES"
   cat "$STAGES"
+  if [[ -f "$OUTDIR/tcp-inventory.tsv" ]]; then
+    echo
+    echo "TCP inventory coverage (full applies only to the TCP sweep, not security):"
+    cat "$OUTDIR/tcp-inventory.tsv"
+    echo "Partial/unavailable inventories remain incomplete even after a smaller follow-up."
+    echo "Service fingerprints: tcp-svcos-<host>.nmap; combined report: tcp-svcos.nmap."
+  fi
   echo
   echo "Telnet/FTP: cleartext services; review and disable if unused."
   rg -n '23/tcp\s+open|21/tcp\s+open' "$OUTDIR"/*.nmap || true

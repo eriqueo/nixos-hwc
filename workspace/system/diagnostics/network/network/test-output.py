@@ -67,12 +67,15 @@ elif name == 'nmap':
         if scenario == 'cleartext': text += '23/tcp open telnet\n'
     if '-oA' in args:
         prefix = Path(args[args.index('-oA')+1])
-        prefix.with_suffix('.nmap').write_text(text)
-        prefix.with_suffix('.gnmap').write_text('Host: 192.168.0.1 ()\tStatus: Up\n')
-        host = '<host timedout="true"/>' if scenario == 'partial-audit' and not discovery else ''
-        if scenario == 'credential-lead' and 'brute,auth' in args:
-            host = '<host><script><elem>admin:fixture-secret => Valid credentials</elem></script></host>'
-        prefix.with_suffix('.xml').write_text('<nmaprun>'+host+'<runstats><finished exit="success"/></runstats></nmaprun>\n')
+        Path(str(prefix) + '.nmap').write_text(text)
+        Path(str(prefix) + '.gnmap').write_text('Host: 192.168.0.1 ()\tStatus: Up\n')
+        timedout = 'true' if scenario == 'partial-audit' and not discovery else 'false'
+        credential = ('<script><elem>admin:fixture-secret => Valid credentials</elem></script>'
+                      if scenario == 'credential-lead' and 'brute,auth' in args else '')
+        Path(str(prefix) + '.xml').write_text(
+            '<nmaprun><host timedout="'+timedout+'"><status state="up"/><address addr="192.168.0.1" addrtype="ipv4"/>'
+            '<ports><port protocol="tcp" portid="80"><state state="open"/></port></ports>'
+            +credential+'</host><runstats><finished exit="success"/></runstats></nmaprun>\n')
     print(text)
 elif name in ('mtr', 'traceroute'):
     print('HOST: laptop Loss%\n1. router 66.7%\n2. destination 0.0%')
