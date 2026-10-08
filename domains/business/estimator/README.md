@@ -185,6 +185,8 @@ and is NOT a refactor gate.
 
 ## Changelog
 
+- 2026-10-08: Make site-review guidance apply to flooring, bathroom and deck work.
+
 - 2026-10-08: Add multiple-area click-lock LVT/LVP and tile estimates with explicit prices/hours, product-only waste and box rounding, customer supply and scoped JobTread lines. Migrate device drafts to v3 keys while retaining legacy recovery snapshots; malformed active drafts stop autosave.
 
 - 2026-10-08: Expose mapped custom scope and quote entry with saved-item editing, existing trade rates, stable draft identities and effective quantity edits. Included custom lines without costs block sending. Browser coverage checks saved drafts and exact payloads at phone, tablet and desktop widths.

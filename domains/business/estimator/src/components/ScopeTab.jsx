@@ -319,9 +319,9 @@ export function ScopeTab({ s, set, selectJob, prefill, onAssemble, isMobile = fa
       <Box style={{ gridColumn: '1/-1' }}>
         <Label>Site notes and open questions</Label>
         <PillToggle label="Measurements verified on site" value={s.measurements_checked} onChange={v => set('measurements_checked', v)} />
-        <p className="site-help">Replace preset dimensions with actual measurements. Confirm fixture models, who buys each item, plumbing changes, and hidden repair work before marking these checked.</p>
+        <p className="site-help">Use actual site measurements. Confirm selected products, who buys each item, preparation, access and hidden repair work before marking these checked.</p>
         <textarea aria-label="Site notes and open questions" value={s.site_notes || ''} onChange={e => set('site_notes', e.target.value)} rows={5}
-          placeholder="Record fixture models, supplier, plumbing locations, access, subfloor condition, photos, exclusions, and whether the target budget includes customer purchases." />
+          placeholder="Record product models, supplier, site conditions, access, photos, exclusions, and whether the target budget includes customer purchases." />
       </Box>
       <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'flex-end' }}>
         <button onClick={onAssemble} style={{

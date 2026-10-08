@@ -63,6 +63,8 @@ business/
 
 ## Changelog
 
+- 2026-10-08: Make site-review guidance apply to flooring, bathroom and deck work.
+
 - 2026-10-08: Extend estimator project types with mixed flooring areas, product-only waste/box rounding and explicit labor/pricing review. Preserve legacy device drafts during the v3 storage upgrade and block overwriting malformed active data.
 
 - 2026-10-08: Extend estimator custom scope entry and editing for site visits. Preserve saved item identities and budget edits, expose existing JobTread mappings and trade rates, and flag unpriced custom work before sending.
