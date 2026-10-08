@@ -51,6 +51,12 @@ if name == 'arp-scan':
     sys.exit(0)
 if name == 'nmap':
     prefix = Path(args[args.index('-oA') + 1])
+    if os.environ.get('REQUIRE_RESERVED'):
+        for ext in ('.nmap', '.gnmap', '.xml'):
+            path = prefix.with_suffix(ext)
+            if not path.exists() or path.stat().st_uid != os.getuid():
+                print('output was not reserved by the report owner', file=sys.stderr)
+                sys.exit(4)
     if os.environ.get('FAIL_STAGE') == prefix.name:
         print('fixture scan failure', file=sys.stderr)
         sys.exit(3)
@@ -79,7 +85,7 @@ class AuditTests(unittest.TestCase):
             # Isolated PATH prevents ambient radio/IDS tools and real sudo/nmap.
             for tool in ("bash", "python3", "awk", "sort", "tr", "wc", "head",
                          "cut", "date", "mkdir", "mktemp", "timeout", "tee", "rg",
-                         "grep", "sed", "cat", "dirname", "sleep", "kill", "ls"):
+                         "grep", "sed", "cat", "dirname", "sleep", "kill", "ls", "id", "chown"):
                 found = shutil.which(tool)
                 if found:
                     (bin_dir / tool).symlink_to(found)
@@ -220,6 +226,11 @@ class AuditTests(unittest.TestCase):
         result, files, _ = self.run_audit(inputs="\nn\nn\nn\ny\ny\n", ids=True)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("suricata\tfailed\t3", files["summary.txt"])
+
+    def test_output_files_reserved_before_privileged_scan(self):
+        result, _, calls = self.run_audit(REQUIRE_RESERVED="1")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(any(c[:4] == ["sudo", "-n", "chown", "-hR"] for c in calls))
 
     def test_intrusive_does_not_override_brute_decline(self):
         result, _, calls = self.run_audit(inputs="\nn\ny\nn\n")

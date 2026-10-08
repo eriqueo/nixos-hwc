@@ -49,7 +49,7 @@ PY
 }
 
 # ---------- Preflight ----------
-for t in ip nmap awk python3 rg sudo timeout mktemp tee sort tr wc; do have "$t" || { fail "Missing '$t'"; exit 2; }; done
+for t in ip nmap awk python3 rg sudo timeout mktemp tee sort tr wc id chown; do have "$t" || { fail "Missing '$t'"; exit 2; }; done
 have arp-scan || warn "arp-scan not found (will fall back to nmap -sn for discovery)"
 have dig || true
 
@@ -150,6 +150,7 @@ mkdir -p reports
 # Atomic reservation prevents simultaneous runs from sharing reports or PIDs.
 OUTDIR=$(mktemp -d "reports/$TS.XXXXXX")
 OUTDIR="$(cd "$OUTDIR" && pwd)"
+REPORT_OWNER="$(id -u):$(id -g)"
 FAILURES=0
 STAGES="$OUTDIR/stages.tsv"
 printf '# format-version: 1\nstage\tstatus\texit_code\n' > "$STAGES"
@@ -197,6 +198,12 @@ release_resources(){
   IDS_PIDS=()
   IDS_NAMES=()
   if [[ -n "$DUMP_PID" ]]; then stop_job handshake "$DUMP_PID"; DUMP_PID=""; fi
+  # Radio captures and IDS logs are also written by privileged tools. Restore
+  # ownership only inside this run's atomically reserved directory, no symlinks.
+  if ! sudo -n chown -hR -- "$REPORT_OWNER" "$OUTDIR"; then
+    FAILURES=$((FAILURES + 1))
+    warn "Could not restore report ownership; inspect $OUTDIR as root"
+  fi
 }
 cleanup(){
   local rc=$?
@@ -230,6 +237,10 @@ PY
 scan(){
   local name=$1 deadline=$2 rc=0 status=ok
   shift 2
+  # Reserve output files as the report owner before privileged Nmap opens them.
+  # Otherwise umask 077 produces root-owned files the parser cannot read.
+  local format
+  for format in nmap gnmap xml; do : > "$OUTDIR/$name.$format"; done
   sudo -n timeout -k 5s "$deadline" nmap "$@" -oA "$OUTDIR/$name" 2>&1 | tee "$OUTDIR/$name.log" || rc=$?
   if (( rc != 0 )); then
     status=failed
