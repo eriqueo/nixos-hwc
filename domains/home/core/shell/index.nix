@@ -25,6 +25,106 @@ let
   # values so the module renders identically without the theme module.
   themeColors = (config.hwc.home.theme or {}).colors or {};
   col = name: fallback: themeColors.${name} or fallback;
+
+  # HELPERS — one registry supplies search rows and accepted script names.
+  # These remain the existing workspace tools, not the proposed replacements.
+  networkTools = [
+    { file = "quicknet.sh"; purpose = "quick internet, gateway and DNS checks"; effect = "connectivity probes; may use sudo"; }
+    { file = "netcheck.sh"; purpose = "diagnose browsing, DNS and captive portal problems"; effect = "interactive diagnosis; can offer DNS changes"; }
+    { file = "advnetcheck.sh"; purpose = "trace routes, compare DNS and discover LAN devices"; effect = "active LAN and router scans"; }
+    { file = "advnetcheck2.sh"; purpose = "guided detailed connectivity and WiFi diagnosis"; effect = "active scans with explanations"; }
+    { file = "homewifi-audit.sh"; purpose = "home WiFi signal, channels, router services and MTU"; effect = "active radio and LAN scans"; }
+    { file = "wifisurvery.sh"; purpose = "survey WiFi access points, WPS and capture packets"; effect = "monitor mode; interrupts local WiFi"; }
+    { file = "wifibrute.sh"; purpose = "household security: ports, vulnerabilities, passwords and deauth"; effect = "intrusive options; can disconnect WiFi clients"; }
+    { file = "hw-overview.sh"; purpose = "inspect hardware and network adapter information"; effect = "system inventory"; }
+    { file = "toolscan.sh"; purpose = "check installed network and workstation tools"; effect = "dependency inventory"; }
+  ];
+  netTools = pkgs.writeShellApplication {
+    name = "net-tools";
+    runtimeInputs = [ pkgs.bash pkgs.fzf ];
+    text = ''
+      scripts=${lib.escapeShellArg "${nixosPath}/workspace/system/diagnostics/network/network"}
+      print_name=""
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          --directory|--print)
+            if [[ $# -lt 2 || -z "$2" ]]; then
+              printf 'net-tools: %s requires a value\n' "$1" >&2
+              exit 2
+            fi
+            if [[ "$1" == --directory ]]; then scripts=$2; else print_name=$2; fi
+            shift 2
+            ;;
+          --list) mode=list; shift; break ;;
+          -h|--help)
+            printf '%s\n' \
+              'usage: net-tools [search words]' \
+              '       net-tools --list' \
+              '       net-tools --print SCRIPT' \
+              '       net-tools --directory DIR [search words]' \
+              'type to search; arrows to choose; Enter to run; Ctrl-Y to print; Esc to cancel'
+            exit 0
+            ;;
+          --) shift; break ;;
+          -*) printf 'net-tools: unknown option: %s\n' "$1" >&2; exit 2 ;;
+          *) break ;;
+        esac
+      done
+      mapfile -t choices <<'TOOLS'
+      ${lib.concatMapStringsSep "\n" (tool: "${tool.file}\t${tool.purpose}\t${tool.effect}") networkTools}
+      TOOLS
+      if [[ "''${mode:-}" == list ]]; then
+        printf '%s\n' "''${choices[@]}"
+        exit 0
+      fi
+      selected=""
+      action=""
+      if [[ -n "$print_name" ]]; then
+        for row in "''${choices[@]}"; do
+          filename=''${row%%$'\t'*}
+          if [[ "$print_name" == "$filename" || "$print_name.sh" == "$filename" ]]; then
+            selected=$row
+            action=ctrl-y
+            break
+          fi
+        done
+      else
+        if picked=$(printf '%s\n' "''${choices[@]}" | fzf \
+          --no-multi --no-select-1 --no-exit-0 --no-print-query \
+          --delimiter=$'\t' --query="$*" --expect=ctrl-y \
+          --prompt='network purpose > ' --layout=reverse --height=80% --border \
+          --header='Enter: run | Ctrl-Y: print command | Esc: cancel'); then
+          action=''${picked%%$'\n'*}
+          selected=''${picked#*$'\n'}
+        else
+          rc=$?
+          if [[ $rc == 1 || $rc == 130 ]]; then exit 0; fi
+          printf 'net-tools: picker failed (%s)\n' "$rc" >&2
+          exit "$rc"
+        fi
+      fi
+      valid=false
+      for row in "''${choices[@]}"; do
+        if [[ "$selected" == "$row" ]]; then valid=true; break; fi
+      done
+      if [[ "$valid" != true ]]; then
+        printf 'net-tools: select a known script; use --list to see names\n' >&2
+        exit 2
+      fi
+      filename=''${selected%%$'\t'*}
+      if [[ ! -r "$scripts/$filename" ]]; then
+        printf 'net-tools: missing script: %s/%s\n' "$scripts" "$filename" >&2
+        exit 2
+      fi
+      if [[ "$action" == ctrl-y ]]; then
+        printf 'cd -- %q && bash -- %q\n' "$scripts" "$filename"
+        exit 0
+      fi
+      printf 'running %s\n' "$filename"
+      cd -- "$scripts"
+      exec bash -- "$filename"
+    '';
+  };
 in
 {
   #============================================================================
@@ -125,7 +225,7 @@ in
   config = lib.mkIf cfg.enable {
 
     # Base packages plus optional modern Unix tools
-    home.packages = cfg.packages
+    home.packages = cfg.packages ++ [ netTools ]
       ++ lib.optionals cfg.modernUnix (with pkgs; [
         eza bat procs dust zoxide
       ]);

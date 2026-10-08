@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+`core/shell/index.nix` packages `net-tools`, a searchable purpose-based picker for the existing network diagnostic scripts; Enter runs one script and Ctrl-Y prints its command.
+
 `apps/agent-harness` publishes final workspace ledger and guard JSON files; unfinished atomic writes remain local.
 
 `apps/pi` maps thinking-off to DX2's explicit `none` value; enabled reasoning levels retain their existing mappings.
@@ -92,6 +94,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-08: Install `net-tools` through the shared shell module, with searchable descriptions, script effect labels, cancellation and command-only selection.
 
 - 2026-10-07: Prevent agent-state sync from publishing unfinished ledger and guard files. Refresh the pinned home-app skill to use current app loaders, roles, shared factories, and separate system options.
 

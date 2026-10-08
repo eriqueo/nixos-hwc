@@ -10,6 +10,7 @@ environment and user directory layout.
 - Does NOT manage: app-specific config → `apps/`, theming → `theme/`.
 
 ## Structure
+`shell/index.nix` installs `net-tools` for interactive network-script search from any directory. Its single registry supplies descriptions and accepted filenames.
 `xdg-dirs.nix` maps PROJECTS to the declared app checkout root and disables
 Home Manager's visible Projects default when that option exists.
 `development/` applies Go workspace/cache/bin paths in session variables and
@@ -30,6 +31,7 @@ core/
 ```
 
 ## Changelog
+- 2026-10-08: Add the `net-tools` searchable network diagnostic picker with Enter to run, Ctrl-Y to print, and Esc to cancel.
 - 2026-09-30: Map projects to `~/600_apps` across both HM API lanes; apply central Go paths and monthly whole-cache retention.
 - 2026-09-30: Replace `website`'s missing `hostinger_deploy` identity with `id_ed25519`; its public key needs authorization in Hostinger.
 - 2026-09-30: Add `home`, `work`, `foxtrot`, `datax`, `lil-box` and `home-lan` SSH shortcuts; retain `xps`, `website`, and legacy SSH hostnames.
