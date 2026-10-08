@@ -93,9 +93,11 @@ export function DetailsTab({ s, set, isMobile = false }) {
 
       {/* Allowances with toggles */}
       <Box>
-        <Label color={C.acc}>Allowances</Label>
+        <Label color={C.acc}>Project budget</Label>
         <NumInput label="Target budget (all purchases)" value={s.target_budget} onChange={v => set('target_budget', v)} unit="$" step={100} max={999999} />
         <NumInput label="Customer purchases total" value={s.owner_purchase_cost} onChange={v => set('owner_purchase_cost', v)} unit="$" step={100} max={999999} />
+        {s.projectType === 'flooring' && <p className="site-help">Enter flooring product costs and area work in Scope.</p>}
+        {s.projectType === 'bathroom' && <>
         <div style={{ color: C.txD, fontSize: 10, marginBottom: 8 }}>
           Checked: HWC buys materials. Unchecked: customer supplies materials. Installation stays in the budget. Enter HWC's purchase cost before markup.
         </div>
@@ -127,6 +129,7 @@ export function DetailsTab({ s, set, isMobile = false }) {
             Shower: ${Math.max(800, Math.round(wallTile * 12)).toLocaleString()}
           </span>
         </div>
+        </>}
       </Box>
 
       {/* Existing custom-item contract: Details edits; assembler prices and maps. */}

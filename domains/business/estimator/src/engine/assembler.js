@@ -14,6 +14,8 @@
  *
  * No React dependencies -- can be tested independently.
  */
+import { assembleFlooring, flooringIssues } from './flooring.js';
+import { PROJECT_TYPES } from './intake.js';
 import { automaticBudgetBlocks } from '../api/crm.js';
 import { tradeRate, matPrice } from './pricing.js';
 import { calculatorMeasurementIssues } from './geometry.js';
@@ -62,7 +64,7 @@ function tradeRateKey(itemName) {
  * @param {string} projectType -- 'bathroom', 'deck', 'kitchen', etc.
  * @returns {Array} line items
  */
-export function assemble(state, projectType = 'bathroom') {
+export function assemble(state, projectType = state.projectType || 'bathroom') {
   // 1. Filter to rules for this project type (or 'general' = all types)
   //    Each entry in catalog is an assembly rule with catalog item data
   const applicable = catalog.filter(item =>
@@ -81,7 +83,7 @@ export function assemble(state, projectType = 'bathroom') {
 
   // 4. Compute qty and pricing for each item
   let id = 0;
-  const result = included.map(item => {
+  const result = projectType === 'flooring' ? assembleFlooring(state) : included.map(item => {
     let qty;
     let usedDefault = false;
 
@@ -137,6 +139,8 @@ export function assemble(state, projectType = 'bathroom') {
       _ruleId: item.ruleId || null,
     };
   });
+
+  id = result.length;
 
   // 5. Append custom line items
   (state.custom_items ?? []).forEach((ci, index) => {
@@ -231,6 +235,14 @@ export function buildDeckParameters(s) {
   ];
 }
 
+export function buildProjectParameters(s) {
+  if (s.projectType === 'flooring') return [
+    { name: 'flooring_area_sqft', value: s.flooring.areas.reduce((sum, a) => sum + (a.net_sqft || 0), 0) },
+    { name: 'flooring_area_count', value: s.flooring.areas.length },
+  ];
+  return s.projectType === 'deck' ? buildDeckParameters(s) : buildParameters(s);
+}
+
 // -- Utilities ----------------------------------------------------------------
 
 export function applyEdits(catalog, overrides, removed) {
@@ -267,7 +279,7 @@ export function estimateIssues(state, items) {
     if (state.calculator_scope_checked !== 'yes') issues.push('Review customer calculator selections in Scope.');
     if (state.projectType === 'bathroom') {
       for (const key of ['demo_scope','shower_finish','floor_finish','shower_niches']) if (state[key] === 'unknown') issues.push(`Choose ${key.replaceAll('_',' ')} in Scope.`);
-    } else {
+    } else if (state.projectType === 'deck') {
       for (const key of ['decking_material','railing_type','project_scope']) if (state[key] === 'unknown') issues.push(`Choose ${key.replaceAll('_',' ')} in Scope.`);
     }
   }
@@ -280,22 +292,23 @@ export function estimateIssues(state, items) {
     const key = ALLOWANCE_COST_KEY[item.name];
     if (key) requireNumber(key, key.replaceAll('_',' '));
   }
-  if (!['bathroom', 'deck'].includes(state.projectType)) issues.push('Select Bathroom or Deck. Other project types have no assembly rules.');
+  if (!Object.hasOwn(PROJECT_TYPES, state.projectType)) issues.push('Select a supported project type in Scope.');
+  if (state.projectType === 'flooring') issues.push(...flooringIssues(state));
   if (state.projectType === 'bathroom' && (state.shower_finish === 'panel' || state.has_shower_tile === 'yes')) {
     if (!['yes', 'no'].includes(state.has_shower_door)) issues.push('Choose a shower door or curtain / no new door in Scope.');
     if (state.has_shower_door === 'yes' && state.include_shower_door_material !== 'no') requireNumber('shower_door_allowance', 'the shower door purchase cost');
   }
-  if (state.shower_finish === 'panel') {
+  if (state.projectType === 'bathroom' && state.shower_finish === 'panel') {
     requireNumber('panel_install_hours', 'panel installation hours');
     requireNumber('panel_drain_hours', 'shower drain hookup hours');
     if (state.include_shower_material !== 'no') requireNumber('panel_material_allowance', 'the total panel kit and consumables cost');
   }
-  if (['vinyl', 'marmoleum'].includes(state.floor_finish)) {
+  if (state.projectType === 'bathroom' && ['vinyl', 'marmoleum'].includes(state.floor_finish)) {
     requireNumber('floor_install_hours', 'floor installation hours');
     requireNumber('floor_prep_hours', 'subfloor preparation hours (0 if checked and unnecessary)', false);
     if (state.include_floor_material !== 'no') requireNumber('floor_material_allowance', 'flooring, adhesive, and underlayment cost');
   }
-  if (state.shower_finish === 'panel' && Number(state.shower_niches) > 0) issues.push('Panel niches need a compatible product and a separate priced line item. Set tile niches to None.');
+  if (state.projectType === 'bathroom' && state.shower_finish === 'panel' && Number(state.shower_niches) > 0) issues.push('Panel niches need a compatible product and a separate priced line item. Set tile niches to None.');
   for (const item of items) {
     if (item._usedDefault) issues.push(`Review the missing quantity for ${item.name}.`);
     if (item._editKey?.startsWith('custom:') && item.uc === 0) issues.push(`Enter the cost for ${item.name} in Details.`);

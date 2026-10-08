@@ -11,7 +11,7 @@ import { enrichState, calculatorMeasurementIssues } from '../engine/geometry.js'
 export function useCatalog(state, overrides, removed) {
   const enrichedState = useMemo(() => enrichState(state), [state]);
   const pt = (state.projectType || state.job_type || 'bathroom').toLowerCase();
-  const projectType = pt === 'deck' ? 'deck' : 'bathroom';
+  const projectType = pt;
   const assembled = useMemo(() => calculatorMeasurementIssues(state).length ? [] : assemble(enrichedState, projectType), [enrichedState, projectType, state]);
 
   // Merge catalog picks into the assembled line items

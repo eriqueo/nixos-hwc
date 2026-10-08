@@ -50,3 +50,15 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .custom-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .custom-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .custom-saved { padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default); }
+
+.flooring-scope { grid-column: 1 / -1; display: grid; gap: 16px; font-size: 13px; }
+.flooring-scope p { color: var(--text-dim); line-height: 1.6; }
+.flooring-scope label { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 8px 0; }
+.flooring-scope input, .flooring-scope select, .flooring-scope button { padding: 8px; border: 1px solid var(--border-default); border-radius: 4px; background: var(--surface-elevated); color: var(--text-body); }
+.flooring-scope input, .flooring-scope select { width: 100%; max-width: 100%; }
+.flooring-scope button { cursor: pointer; }
+.flooring-scope button:disabled { opacity: 0.5; cursor: default; }
+.flooring-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px 16px; }
+.flooring-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.flooring-actions label { flex: 1 1 240px; }
+@media (min-width: 768px) { .flooring-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

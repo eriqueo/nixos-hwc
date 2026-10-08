@@ -2,7 +2,7 @@ import { fetchPreliminaryBudget, automaticBudgetBlocks } from '../api/crm.js';
 import { useState, useRef } from 'react';
 import { C, GROUP_COLORS, mono } from '../styles/theme.js';
 import { Box } from './Section.jsx';
-import { buildParameters, buildDeckParameters, buildJtItems, estimateIssues } from '../engine/assembler.js';
+import { buildProjectParameters, buildJtItems, estimateIssues } from '../engine/assembler.js';
 
 const WEBHOOK_URL = import.meta.env.VITE_WEBHOOK_URL ?? localStorage.getItem('hwc-webhook-url') ?? '';
 const API_KEY = import.meta.env.VITE_API_KEY ?? localStorage.getItem('hwc-api-key') ?? '';
@@ -26,7 +26,7 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
   const inFlight = useRef(false);
 
   const buildJtPayload = () => buildJtItems(Object.values(groups).flat());
-  const projectParameters = () => state.projectType === 'deck' ? buildDeckParameters(state) : buildParameters(state);
+  const projectParameters = () => buildProjectParameters(state);
   const issues = estimateIssues(state, Object.values(groups).flat());
   const pushTarget = state.mode === 'existing' ? state.jobId : `${state.mode}:${state.customerId || state.newCustomerName}:${state.jobName}`;
   const sendLocked = state.last_push_attempt?.target === pushTarget;

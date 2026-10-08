@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Estimator Flooring supports named click-lock LVT/LVP and tile areas with shared trade pricing, explicit scope costs and exact JobTread quantities. The area contract lives in `estimator/src/engine/flooring.js`; its editor is `FlooringScope.jsx`. Draft v3 uses separate storage keys and retains legacy recovery snapshots.
+
 Estimator Details supports mapped custom scope, trade labor and subcontractor quote entry. Saved-item edits retain draft identity and budget exclusions; missing custom costs appear in the shared send-review checks.
 
 Calculator version 2 shares optional measurement and finish fields with the estimator. The estimator supplies a pure preliminary plan port. CRM binds that port to one reserved JobTread budget effect for newly linked calculator jobs, with visible assumptions and proposal review holds.
@@ -60,6 +62,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-10-08: Extend estimator project types with mixed flooring areas, product-only waste/box rounding and explicit labor/pricing review. Preserve legacy device drafts during the v3 storage upgrade and block overwriting malformed active data.
 
 - 2026-10-08: Extend estimator custom scope entry and editing for site visits. Preserve saved item identities and budget edits, expose existing JobTread mappings and trade rates, and flag unpriced custom work before sending.
 

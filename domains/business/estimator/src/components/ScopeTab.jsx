@@ -3,6 +3,7 @@ import { Box, Label, Divider } from './Section.jsx';
 import { NumInput } from './NumInput.jsx';
 import { FtInInput } from './FtInInput.jsx';
 import { Select } from './Select.jsx';
+import { FlooringScope } from './FlooringScope.jsx';
 import { JobSelector } from './JobSelector.jsx';
 import { deriveGeometry, deriveDeckGeometry } from '../engine/geometry.js';
 import templates from '../data/templates.json';
@@ -147,7 +148,8 @@ export function ScopeTab({ s, set, selectJob, prefill, onAssemble, isMobile = fa
       })()}
 
       {/* ── BATHROOM FORM ──────────────────────────────────────────────── */}
-      {!isDeck && <>
+      {s.projectType === 'flooring' && <FlooringScope key={`${s.mode}:${s.customerId}:${s.jobId}`} s={s} set={set} />}
+      {s.projectType === 'bathroom' && <>
 
       {/* Scope of Work — phases with dimensions */}
       <Box>

@@ -1,6 +1,9 @@
 // Pure intake/state contract shared by the browser and preliminary-budget engine.
 import { CALCULATOR_FIELDS, CALCULATOR_INPUT_VERSION } from '../api/crm.js';
 
+import { createFlooring } from './flooring.js';
+export const PROJECT_TYPES = { bathroom: 'Bathroom', deck: 'Deck', flooring: 'Flooring' };
+
 // Customer categories stay preferences, never measured dimensions or prices.
 export function calculatorPatch(intake) {
   const patch = { projectType: intake.calculator, job_type: intake.calculator === 'deck' ? 'Deck' : 'Bathroom', measurements_checked: 'no', calculator_scope_checked: 'no' };
@@ -41,7 +44,8 @@ export function applyCalculatorIntake(current, intake) {
 }
 
 export const DEFAULT_STATE = {
-  state_version: 2,
+  state_version: 3,
+  flooring: createFlooring(),
   budget_overrides: {},
   budget_removed: {},
   site_notes: '',

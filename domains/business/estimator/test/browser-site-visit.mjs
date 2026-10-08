@@ -15,7 +15,7 @@ await new Promise((resolve,reject) => {
 let calculatorDev;
 const browser = await chromium.launch({ executablePath:process.env.CHROMIUM_PATH || '/run/current-system/sw/bin/chromium', headless:true });
 try {
- if (!process.env.CALCULATOR_TEST_ONLY) {
+ if (!process.env.CALCULATOR_TEST_ONLY && !process.env.FLOORING_TEST_ONLY) {
  const prepared=JSON.parse(readFileSync(new URL('../src/data/preparedDraft.json',import.meta.url),'utf8'));
  const fresh=await browser.newContext({viewport:{width:390,height:900}});
  const ready=await fresh.newPage();
@@ -115,7 +115,7 @@ for (const width of [390,768,1440]) {
  assert.equal(await customForm.getByLabel('Unit',{exact:true}).inputValue(),'Hours');
  assert.equal(await customForm.getByLabel('Unit cost',{exact:true}).isDisabled(),true);
  await customForm.getByRole('button',{name:'Add item',exact:true}).click();
- const customBefore = await page.evaluate(()=>JSON.parse(localStorage.getItem('hwc-estimate-state')).custom_items);
+ const customBefore = await page.evaluate(()=>JSON.parse(localStorage.getItem('hwc-estimate-state-v3')).custom_items);
  await page.getByRole('button',{name:/^Budget \(/}).click();
  await page.getByLabel('Quantity: Window trim',{exact:true}).fill('14');
  await page.getByRole('button',{name:'Details',exact:true}).click();
@@ -133,7 +133,7 @@ for (const width of [390,768,1440]) {
  const customLayout = await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,
    small:[...document.querySelectorAll('.custom-items input,.custom-items select,.custom-items button')].filter(e=>e.getBoundingClientRect().height<44).length}));
  assert.equal(customLayout.scroll,width);assert.equal(customLayout.small,0);
- const customAfter = await page.evaluate(()=>JSON.parse(localStorage.getItem('hwc-estimate-state')).custom_items);
+ const customAfter = await page.evaluate(()=>JSON.parse(localStorage.getItem('hwc-estimate-state-v3')).custom_items);
  assert.equal(customAfter.length,3);
  assert.deepEqual(customAfter.map(i=>i.draftId),customBefore.map(i=>i.draftId));
  assert.equal(customAfter[0].qty,15);assert.equal(customAfter[0].cost,4);
@@ -155,12 +155,12 @@ for (const width of [390,768,1440]) {
  assert.equal(await page.locator('.estimate-issues').count(),0);
  await page.getByRole('button',{name:'Details',exact:true}).click();
  await page.getByRole('button',{name:'Delete Optional work',exact:true}).click();
- assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('hwc-estimate-state')).custom_items),customAfter);
+ assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('hwc-estimate-state-v3')).custom_items),customAfter);
  await page.getByRole('button',{name:'Scope',exact:true}).first().click();
  await page.getByLabel('Job',{exact:true}).selectOption('other-test');
- assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('hwc-estimate-state')).custom_items),[]);
+ assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('hwc-estimate-state-v3')).custom_items),[]);
  await page.getByLabel('Job',{exact:true}).selectOption('job-test');
- assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('hwc-estimate-state')).custom_items),customAfter);
+ assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('hwc-estimate-state-v3')).custom_items),customAfter);
 
  await page.getByRole('button',{name:/^Budget \(/}).click();
  assert.equal(await page.locator('.estimate-issues').count(),0,await page.locator('.estimate-issues').allTextContents());
@@ -278,6 +278,118 @@ for (const width of [390,768,1440]) {
  await intakeContext.close();
 }
  }
+
+ if (!process.env.CALCULATOR_TEST_ONLY) for (const width of [390, 768, 1440]) {
+   const context = await browser.newContext({viewport:{width,height:900},serviceWorkers:'block'});
+   const page = await context.newPage(); const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+   const legacy = JSON.stringify({state_version:2,projectType:'bathroom',mode:'existing',jobId:'floor-test',customerId:'floor-customer',jobName:'Flooring fixture',calculator_input_status:'none'});
+   await page.addInitScript(legacy=>{
+     if (!localStorage.getItem('hwc-estimate-state')) localStorage.setItem('hwc-estimate-state',legacy);
+     localStorage.setItem('hwc-webhook-base','https://example.test/webhook');
+     localStorage.setItem('hwc-webhook-url','https://example.test/webhook/estimate-push');
+     localStorage.setItem('hwc-api-key','fixture');
+   },legacy);
+   await page.route('**/webhook/jt-customers?*',r=>r.fulfill({json:{customers:[{id:'floor-customer',name:'Flooring fixture'}]}}));
+   await page.route('**/webhook/jt-jobs?*',r=>r.fulfill({json:{jobs:[{id:'floor-test',name:'Flooring fixture',number:1,displayName:'#1'},{id:'other-floor',name:'Other fixture',number:2,displayName:'#2'}]}}));
+   await page.route('**/api/jobs/*/calculator-intake',r=>r.fulfill({status:404,json:{}}));
+   await page.route('**/api/jobs/*/preliminary-budget',r=>r.fulfill({json:{schema_version:1,preliminary_budget:null}}));
+   let sent;
+   await page.route('**/webhook/estimate-push',r=>{
+     sent=r.request().postDataJSON();
+     return r.fulfill({json:{success:true,jtPushSuccess:true,jobNumber:1,itemsPushed:sent.jtPayload.length}});
+   });
+   await page.goto(process.env.ESTIMATOR_TEST_URL || 'http://127.0.0.1:5189/');
+   await page.getByLabel('Project Type',{exact:true}).selectOption('flooring');
+   assert.equal(await page.getByLabel('Room Length feet',{exact:true}).count(),0);
+   await page.getByRole('button',{name:/^Budget \(/}).click();
+   assert.match(await page.locator('.estimate-issues').innerText(),/Add at least one flooring area/);
+   assert.equal(await page.getByRole('button',{name:'Push to JT',exact:true}).isDisabled(),true);
+   await page.getByRole('button',{name:'Scope',exact:true}).first().click();
+   for (const [name,finish,net,cost,hours] of [['Living','lvp',101,3,8],['Entry','tile',40,6,6]]) {
+     await page.getByRole('button',{name:'Add flooring area',exact:true}).click();
+     await page.getByLabel('Area name',{exact:true}).fill(name);
+     await page.getByLabel('Flooring',{exact:true}).selectOption(finish);
+     await page.getByLabel('Substrate',{exact:true}).selectOption('wood');
+     await page.getByLabel('Substrate reviewed for chosen product',{exact:true}).selectOption('yes');
+     await page.getByLabel('Floor product supplied by',{exact:true}).selectOption('hwc');
+     await page.getByLabel('Existing flooring removal',{exact:true}).selectOption('none');
+     await page.getByLabel('Baseboard / shoe molding',{exact:true}).selectOption('none');
+     for (const [label,value] of Object.entries({
+       'Net area (sq ft)':net,'Floor product waste (%)':10,'Coverage per box (sq ft; 0 for loose product)':20,
+       'Floor product cost per sq ft ($)':cost,'Installation hours':hours,
+       'Subfloor preparation hours':0,'Subfloor preparation materials cost ($ total)':0,
+       'Underlayment / membrane hours':0,'Underlayment / membrane cost ($ total)':0,'Transition count':0,
+       ...(finish==='tile'?{'Tile setting materials cost ($ total)':50,'Grout cost ($ total)':30}:{}),
+     })) await page.getByLabel(label,{exact:true}).fill(String(value));
+   }
+   for (const label of ['Moving and protection hours (whole job)','Cleanup hours (whole job)','Hauling / disposal cost ($ whole job)']) await page.getByLabel(label,{exact:true}).fill('1');
+   const layout=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,
+     small:[...document.querySelectorAll('button,input:not([type=file]),select')].filter(e=>e.getBoundingClientRect().height>0&&e.getBoundingClientRect().height<44).length,
+     fonts:[...document.querySelectorAll('input:not([type=file]),select,textarea')].filter(e=>e.getBoundingClientRect().height>0&&parseFloat(getComputedStyle(e).fontSize)<16).length}));
+   assert.equal(layout.scroll,width);assert.equal(layout.small,0);if(width<1024)assert.equal(layout.fonts,0);
+   await page.getByRole('button',{name:'Measurements verified on site',exact:true}).click();
+   await page.getByRole('button',{name:/^Budget \(/}).click();
+   assert.equal(await page.locator('.estimate-issues').count(),0);
+   await page.getByLabel('Quantity: Living | Install flooring',{exact:true}).fill('9.5');
+   await page.getByRole('button',{name:'Scope',exact:true}).first().click();
+   await page.getByLabel('Area to edit',{exact:true}).selectOption({label:'2. Entry'});
+   await page.getByLabel('Floor product supplied by',{exact:true}).selectOption('customer');
+   // Area deletion and undo preserve the exact identity and quote fields.
+   const snapshot=await page.evaluate(()=>JSON.parse(localStorage.getItem('hwc-estimate-state-v3')));
+   await page.getByRole('button',{name:'Remove this area',exact:true}).click();
+   assert.equal(await page.getByLabel('Area to edit',{exact:true}).locator('option').count(),1);
+   await page.getByRole('button',{name:'Undo area removal',exact:true}).click();
+   assert.equal(await page.getByLabel('Area name',{exact:true}).inputValue(),'Entry');
+   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('hwc-estimate-state-v3')).flooring),snapshot.flooring);
+   await page.getByLabel('Job',{exact:true}).selectOption('other-floor');
+   await page.getByLabel('Job',{exact:true}).selectOption('floor-test');
+   await page.getByLabel('Project Type',{exact:true}).waitFor();
+   assert.equal(await page.getByLabel('Project Type',{exact:true}).inputValue(),'flooring');
+   await page.getByLabel('Area to edit',{exact:true}).selectOption(snapshot.flooring.areas[1].id);
+   await page.getByLabel('Grout cost ($ total)',{exact:true}).fill('');
+   await page.getByRole('button',{name:/^Budget \(/}).click();
+   assert.equal(await page.getByRole('button',{name:'Push to JT',exact:true}).isDisabled(),true);
+   assert.match(await page.locator('.estimate-issues').innerText(),/Grout cost/);
+   await page.getByRole('button',{name:'Scope',exact:true}).first().click();
+   await page.getByLabel('Area to edit',{exact:true}).selectOption(snapshot.flooring.areas[1].id);
+   await page.getByLabel('Grout cost ($ total)',{exact:true}).fill('30');
+   await page.getByRole('button',{name:'Measurements verified on site',exact:true}).click();
+   const downloadWait=page.waitForEvent('download');await page.getByRole('button',{name:'Download draft',exact:true}).click();
+   const saved=JSON.parse(readFileSync(await (await downloadWait).path(),'utf8'));
+   assert.equal(saved.state_version,3);assert.equal(saved.flooring.areas.length,2);
+   await page.getByLabel('Import draft',{exact:true}).setInputFiles({name:'flooring.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(saved))});
+   await page.reload();
+   assert.equal(await page.evaluate(()=>localStorage.getItem('hwc-estimate-state')),legacy,'migration never overwrites legacy recovery data');
+   await page.getByRole('button',{name:'Details',exact:true}).click();
+   assert.equal(await page.getByLabel('Accessories material cost',{exact:true}).count(),0);
+   await page.getByRole('button',{name:/^Budget \(/}).click();
+   assert.equal(await page.locator('.estimate-issues').count(),0);
+   await page.getByRole('button',{name:'Push to JT',exact:true}).click();
+   await page.getByText('Pushed to JobTread',{exact:true}).waitFor();
+   assert.equal(sent.projectType,'flooring');
+   assert.deepEqual(sent.parameters,[{name:'flooring_area_sqft',value:141},{name:'flooring_area_count',value:2}]);
+   assert.equal(sent.jtPayload.find(i=>i.name==='Living | Click-lock LVT / LVP').quantity,120);
+   assert.equal(sent.jtPayload.find(i=>i.name==='Living | Install flooring').quantity,9.5);
+   assert.equal(sent.jtPayload.find(i=>i.name==='Entry | Install flooring').quantity,6);
+   assert.ok(!sent.jtPayload.some(i=>i.name==='Entry | Floor tile'));
+   assert.equal(sent.jtPayload.find(i=>i.name==='Entry | Tile setting materials').unitCost,50);
+   assert.equal(sent.jtPayload.filter(i=>i.name==='Moving and floor protection').length,1);
+   assert.ok(sent.jtPayload.every(i=>i.costCodeId&&i.costTypeId&&i.unitId&&i.quantityFormula===undefined));
+   assert.deepEqual(errors,[]);
+   // Unsupported active data is downloadable and never silently replaced.
+   const corrupt=JSON.stringify({...saved,state_version:99});
+   await page.evaluate(raw=>localStorage.setItem('hwc-estimate-state-v3',raw),corrupt);
+   await page.reload();await page.getByText(/Saved draft could not be loaded/).waitFor();
+   assert.equal(await page.getByLabel('Project Type',{exact:true}).count(),0);
+   assert.equal(await page.evaluate(()=>localStorage.getItem('hwc-estimate-state-v3')),corrupt);
+   const recoverWait=page.waitForEvent('download');await page.getByRole('button',{name:'Download saved data',exact:true}).click();
+   assert.equal(readFileSync(await (await recoverWait).path(),'utf8'),corrupt);
+   await page.getByLabel('Import draft',{exact:true}).setInputFiles({name:'flooring.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(saved))});
+   assert.equal(await page.getByLabel('Project Type',{exact:true}).inputValue(),'flooring');
+   console.log('PASS multi-area flooring form, exact intercepted budget, migration and recovery',width);
+   await context.close();
+ }
+ if (!process.env.FLOORING_TEST_ONLY) {
  // Exercise the public form and pass its actual serialized answers into the
  // linked-job estimator, instead of testing only a translation helper.
  if (!process.env.HWC_WEBSITE_SITE_DIR) throw Error('HWC_WEBSITE_SITE_DIR is required for calculator contract tests');
@@ -355,4 +467,5 @@ for (const width of [390,768,1440]) {
    assert.deepEqual(errors,[]);console.log('PASS calculator serialized answers -> linked estimator',kind,width);
    await context.close();
  }
+}
 } finally { await browser.close(); dev.kill('SIGTERM'); calculatorDev?.kill('SIGTERM'); }

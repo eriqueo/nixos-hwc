@@ -3,6 +3,7 @@ import { C, mono } from '../styles/theme.js';
 import { Box, Label, Divider } from './Section.jsx';
 import { Toggle } from './Toggle.jsx';
 import { Select } from './Select.jsx';
+import { PROJECT_TYPES } from '../engine/intake.js';
 import { fetchCrmList, fetchCalculatorIntake } from '../api/crm.js';
 
 const API_BASE = import.meta.env.VITE_WEBHOOK_URL?.replace('/estimate-push', '')
@@ -330,13 +331,8 @@ export function JobSelector({ s, set, selectJob, prefill }) {
       <Select
         label="Project Type"
         value={s.projectType}
-        onChange={v => set('projectType', v)}
-        options={[
-          { v: 'bathroom', l: 'Bathroom' },
-          { v: 'kitchen',  l: 'Kitchen' },
-          { v: 'deck',     l: 'Deck' },
-          { v: 'general',  l: 'General' },
-        ]}
+        onChange={v => { set('projectType', v); set('job_type', PROJECT_TYPES[v]); set('measurements_checked', 'no'); }}
+        options={Object.entries(PROJECT_TYPES).map(([v, l]) => ({ v, l }))}
       />
 
       {/* Selected job summary */}

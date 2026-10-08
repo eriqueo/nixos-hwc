@@ -2,26 +2,40 @@ import { useState, useCallback, useEffect } from 'react';
 import preparedDraft from '../data/preparedDraft.json';
 import { parseCalculatorIntake } from '../api/crm.js';
 
-import { calculatorPatch, applyCalculatorIntake, DEFAULT_STATE } from '../engine/intake.js';
+import { parseFlooring, createFlooring } from '../engine/flooring.js';
+import { calculatorPatch, applyCalculatorIntake, DEFAULT_STATE, PROJECT_TYPES } from '../engine/intake.js';
 export { calculatorPatch, applyCalculatorIntake, DEFAULT_STATE } from '../engine/intake.js';
 
-const STORAGE_KEY = 'hwc-estimate-state';
-const JOB_DRAFTS_KEY = 'hwc-estimate-job-drafts';
+export const STORAGE_KEY = 'hwc-estimate-state-v3';
+export const JOB_DRAFTS_KEY = 'hwc-estimate-job-drafts-v3';
+// Legacy keys are read-only recovery snapshots for rollback. Remove only after
+// explicit backup/disposition; tracked in README, never automatically evicted.
+const LEGACY_STORAGE_KEY = 'hwc-estimate-state';
+const LEGACY_JOB_DRAFTS_KEY = 'hwc-estimate-job-drafts';
 const draftKey = draft => draft.jobId ? `job:${draft.jobId}` : `unassigned:${draft.mode}:${draft.customerId || ''}`;
 
 // CRITICAL device drafts: bounded to 50 jobs, never evicted. Download/import
 // remains the backup path; at capacity switching to another job is blocked.
+function loadJobDrafts(storage) {
+  const raw = storage.getItem(JOB_DRAFTS_KEY) ?? storage.getItem(LEGACY_JOB_DRAFTS_KEY);
+  const saved = raw === null ? { schema_version: 2, jobs: {} } : JSON.parse(raw);
+  if (!saved || ![1, 2].includes(saved.schema_version) || !saved.jobs || typeof saved.jobs !== 'object' || Array.isArray(saved.jobs) || Object.keys(saved.jobs).length > 50) throw Error('Invalid saved job drafts');
+  return { ...saved, schema_version: 2 };
+}
+export function removeJobDraft(current, storage) {
+  const saved = loadJobDrafts(storage);
+  delete saved.jobs[draftKey(current)];
+  storage.setItem(JOB_DRAFTS_KEY, JSON.stringify(saved));
+}
 export function switchJobDraft(current, identity, storage) {
-  const raw = storage.getItem(JOB_DRAFTS_KEY);
-  const saved = raw ? JSON.parse(raw) : { schema_version: 1, jobs: {} };
-  if (saved.schema_version !== 1 || !saved.jobs || typeof saved.jobs !== 'object' || Array.isArray(saved.jobs)) throw Error('Invalid saved job drafts');
+  const saved = loadJobDrafts(storage);
   const currentKey = draftKey(current);
   const nextKey = draftKey(identity);
   if (!Object.hasOwn(saved.jobs, currentKey) && Object.keys(saved.jobs).length >= 50) throw Error('50 drafts saved. Download backups and remove a finished draft before switching jobs.');
-  saved.jobs[currentKey] = current;
-  storage.setItem(JOB_DRAFTS_KEY, JSON.stringify(saved));
+  saved.jobs[currentKey] = parseDraft(current);
   const next = Object.hasOwn(saved.jobs, nextKey) ? parseDraft(saved.jobs[nextKey]) : { ...DEFAULT_STATE, touched_fields: [], calculator_input_status: identity.jobId && identity.mode === 'existing' ? 'pending' : 'none' };
   const selected = { ...next, ...identity };
+  storage.setItem(JOB_DRAFTS_KEY, JSON.stringify({ ...saved, schema_version: 2 }));
   // A newly selected prepared job gets its newer worksheet, not generic
   // presets. Existing saved job drafts continue through the preserve merge.
   if (!Object.hasOwn(saved.jobs, nextKey) && identity.jobId === preparedDraft.state.jobId) {
@@ -30,13 +44,13 @@ export function switchJobDraft(current, identity, storage) {
   return selected;
 }
 
-function loadSaved() {
+export function loadSaved(storage) {
+  let raw = null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return parseDraft(JSON.parse(raw));
-  } catch {
-    return null;
+    raw = storage.getItem(STORAGE_KEY) ?? storage.getItem(LEGACY_STORAGE_KEY);
+    return { state: raw === null ? null : parseDraft(JSON.parse(raw)), recovery: null };
+  } catch (error) {
+    return { state: null, recovery: { raw, message: `Saved draft could not be loaded: ${error.message}. Download it before importing a valid draft. The saved data has not been replaced.` } };
   }
 }
 
@@ -65,8 +79,8 @@ export function applyPreparedDraft(saved, prepared = preparedDraft) {
 
 export function parseDraft(saved) {
   if (!saved || typeof saved !== 'object' || Array.isArray(saved) ||
-      !['bathroom', 'deck'].includes(saved.projectType) ||
-      (saved.state_version && saved.state_version !== 2)) throw new Error('Unsupported estimator draft');
+      !Object.hasOwn(PROJECT_TYPES, saved.projectType) ||
+      (saved.state_version !== undefined && ![2, 3].includes(saved.state_version))) throw new Error('Unsupported estimator draft');
   if (saved.touched_fields !== undefined && (!Array.isArray(saved.touched_fields) || saved.touched_fields.some(key => typeof key !== 'string'))) throw Error('Invalid draft field: touched_fields');
   if (saved.calculator_intake) parseCalculatorIntake(saved.calculator_intake, saved.jobId);
   for (const [key, value] of Object.entries(saved)) {
@@ -82,7 +96,8 @@ export function parseDraft(saved) {
       Object.entries(values).some(([key,value]) => !/^(rule|pick|custom):/.test(key) ||
         (field === 'budget_overrides' ? typeof value !== 'number' || !Number.isFinite(value) || value < 0 : typeof value !== 'boolean')))) throw new Error(`Invalid draft field: ${field}`);
   }
-  return { ...DEFAULT_STATE, ...saved, state_version: 2,
+  return { ...DEFAULT_STATE, ...saved, state_version: 3,
+    flooring: saved.flooring === undefined ? createFlooring() : parseFlooring(saved.flooring),
     custom_items: (saved.custom_items || []).map((item, index) => ({ ...item, draftId: item.draftId ?? `legacy-custom-${index}` })),
     catalog_picks: (saved.catalog_picks || []).map((item, index) => ({ ...item, draftId: item.draftId ?? `legacy-pick-${index}` })),
   };
@@ -93,23 +108,26 @@ export function parseDraft(saved) {
  * Returns [state, setter, resetFn].
  */
 export function useProjectState() {
-  const [state, setState] = useState(() => applyPreparedDraft(loadSaved()));
+  const [initial] = useState(() => loadSaved(localStorage));
+  const [recovery, setRecovery] = useState(initial.recovery);
+  const [state, setState] = useState(() => initial.recovery ? DEFAULT_STATE : applyPreparedDraft(initial.state));
   const [storageError, setStorageError] = useState('');
 
   // Also apply when an existing session selects the prepared job.
   useEffect(() => {
-    setState(current => applyPreparedDraft(current));
-  }, [state.jobId]);
+    if (!recovery) setState(current => applyPreparedDraft(current));
+  }, [state.jobId, recovery]);
 
-  // Persist to localStorage on every change
+  // Idempotent critical-data snapshot; invalid/newer raw data is never replaced.
   useEffect(() => {
+    if (recovery) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       setStorageError('');
     } catch {
       setStorageError('This browser could not save your draft. Download a backup before leaving this page.');
     }
-  }, [state]);
+  }, [state, recovery]);
 
   const set = useCallback((key, value) => {
     setState(prev => ({ ...prev, touched_fields: [...new Set([...(prev.touched_fields || Object.keys(prev)), key])], [key]: typeof value === 'function' ? value(prev[key]) : value }));
@@ -126,8 +144,7 @@ export function useProjectState() {
 
   const reset = useCallback(() => {
     try {
-      const raw = localStorage.getItem(JOB_DRAFTS_KEY);
-      if (raw) { const saved = JSON.parse(raw); delete saved.jobs[draftKey(state)]; localStorage.setItem(JOB_DRAFTS_KEY, JSON.stringify(saved)); }
+      removeJobDraft(state, localStorage);
     } catch { setStorageError('Saved draft could not be removed. Download a backup.'); return; }
     setState(DEFAULT_STATE);
     localStorage.removeItem(STORAGE_KEY);
@@ -135,6 +152,7 @@ export function useProjectState() {
 
   const restore = useCallback(saved => {
     setState(parseDraft(saved));
+    setRecovery(null);
   }, []);
-  return [state, set, reset, storageError, restore, selectJob, prefill];
+  return [state, set, reset, storageError, restore, selectJob, prefill, recovery];
 }

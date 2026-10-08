@@ -17,7 +17,7 @@ const TABS = [
 ];
 
 export default function App() {
-  const [state, set, reset, storageError, restore, selectJob, prefill] = useProjectState();
+  const [state, set, reset, storageError, restore, selectJob, prefill, recovery] = useProjectState();
   const overrides = state.budget_overrides;
   const removed = state.budget_removed;
   const setOverrides = useCallback(value => set('budget_overrides', value), [set]);
@@ -65,9 +65,9 @@ export default function App() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <span style={{ color: C.acc, fontSize: isMobile ? 14 : 15, fontWeight: 800 }}>⬡ Heartwood</span>
-              {!isMobile && <span style={{ color: C.txD, fontSize: 11, marginLeft: 8 }}>Estimate Assembler v2</span>}
+              {!isMobile && <span style={{ color: C.txD, fontSize: 11, marginLeft: 8 }}>Estimate Assembler v3</span>}
             </div>
-            {isMobile && (
+            {isMobile && !recovery && (
               <button onClick={reset} title="Reset all fields" style={{
                 padding: '6px 10px', border: 'none', cursor: 'pointer',
                 background: 'transparent', color: C.txD, fontSize: 10, fontFamily: mono,
@@ -113,7 +113,7 @@ export default function App() {
             </button>
           ))}
           {!isMobile && <div style={{ flex: 1 }} />}
-          {!isMobile && (
+          {!isMobile && !recovery && (
             <button onClick={reset} title="Reset all fields" style={{
               padding: '7px 12px', border: 'none', cursor: 'pointer',
               background: 'transparent', color: C.txD, fontSize: 10, fontFamily: mono,
@@ -127,13 +127,13 @@ export default function App() {
       {/* ── TAB CONTENT ────────────────────────────────────────────────────── */}
       <div className="app-content" style={{ padding: isMobile ? 10 : 16, maxWidth: 1400, margin: '0 auto' }}>
         <div className="draft-tools">
-          <span>{state.jobName || 'Working draft'} · saved on this device</span>
+          <span>{recovery ? 'Saved draft needs recovery' : `${state.jobName || 'Working draft'} · saved on this device`}</span>
           <button onClick={() => {
-            const url = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
+            const url = URL.createObjectURL(new Blob([recovery ? recovery.raw ?? '' : JSON.stringify(state, null, 2)], { type: 'application/json' }));
             const link = document.createElement('a'); link.href = url;
             link.download = `estimate-${state.jobNumber || 'draft'}.json`; link.click();
             URL.revokeObjectURL(url);
-          }}>Download draft</button>
+          }}>{recovery ? 'Download saved data' : 'Download draft'}</button>
           <label className="import-draft">Import draft<input type="file" accept="application/json,.json" onChange={async e => {
             try {
               const file = e.target.files[0]; if (!file) return;
@@ -143,14 +143,15 @@ export default function App() {
             e.target.value = '';
           }} /></label>
         </div>
+        {recovery && <p role="alert">{recovery.message}</p>}
         {(storageError || draftError) && <p role="alert">{storageError || draftError}</p>}
-        {view === 'scope' && (
+        {!recovery && view === 'scope' && (
           <ScopeTab s={state} set={set} selectJob={selectJob} prefill={prefill} onAssemble={assemble} isMobile={isMobile} />
         )}
-        {view === 'details' && (
+        {!recovery && view === 'details' && (
           <DetailsTab s={state} set={set} isMobile={isMobile} />
         )}
-        {view === 'estimate' && (
+        {!recovery && view === 'estimate' && (
           <EstimateTab
             groups={groups}
             totals={totals}

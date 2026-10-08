@@ -9,7 +9,7 @@
 // ─── Bathroom geometry ──────────────────────────────────────────────────────
 
 export function calculatorMeasurementIssues(state) {
-  if (!state.calculator_intake) return [];
+  if (!state.calculator_intake || state.projectType === 'flooring') return [];
   const keys = state.projectType === 'deck' ? ['deck_length_ft','deck_width_ft','deck_height_ft','joist_spacing_in','railing_lf','stair_tread_count','stair_stringer_count','stair_width_ft'] :
     ['bathroom_length_ft','bathroom_width_ft','wall_height_ft',
       ...(state.has_shower_tile === 'yes' || state.shower_finish === 'panel' ? ['shower_wall_height_ft','shower_wall_1_width_ft','shower_wall_2_width_ft','shower_wall_3_width_ft','shower_wall_4_width_ft','shower_pan_width_ft','shower_pan_length_ft','shower_curb_length_ft','shower_curb_width_in','shower_curb_height_in'] : []),
@@ -59,6 +59,7 @@ export function deriveDeckGeometry(input) {
 
 export function enrichState(state) {
   const enriched = { ...state };
+  if (state.projectType === 'flooring') return enriched;
   enriched.has_shower_work = state.shower_finish === 'panel' || state.has_shower_tile === 'yes' ? 'yes' : 'no';
 
   if ((state.projectType || state.job_type || '').toLowerCase() === 'deck') {

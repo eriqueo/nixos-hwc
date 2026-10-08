@@ -93,7 +93,7 @@ for (const projectType of ['bathroom','deck']) {
 }
 console.log('PASS unpriced custom scope blocks sending only while included, for bathroom and deck');
 
-const panelState = { ...state, measurements_checked: 'yes', shower_finish: 'panel', floor_finish: 'vinyl', has_shower_tile: 'no', has_floor_tile: 'no',
+const panelState = { ...state, projectType: 'bathroom', measurements_checked: 'yes', shower_finish: 'panel', floor_finish: 'vinyl', has_shower_tile: 'no', has_floor_tile: 'no',
   has_shower_door: 'no', has_toilet: 'yes', shower_niches: '0', panel_install_hours: 12, panel_drain_hours: 2, panel_material_allowance: 1100,
   floor_install_hours: 6, floor_prep_hours: 1.5, floor_material_allowance: 400,
   include_toilet_material: 'no', include_vanity_material: 'no', include_shower_trim_material: 'no' };
@@ -135,7 +135,7 @@ const other={...fieldDraft,jobId:'other'};
 assert.equal(applyPreparedDraft(other,prepared),other);
 console.log('PASS prepared job draft loads once and preserves saved field work and other jobs');
 const migrated = parseDraft({ projectType: 'bathroom', custom_items: [{ name: 'Work', qty: 1, cost: 50 }], catalog_picks: [] });
-assert.equal(migrated.state_version,2); assert.equal(migrated.custom_items[0].draftId,'legacy-custom-0');
+assert.equal(migrated.state_version,3); assert.equal(migrated.custom_items[0].draftId,'legacy-custom-0');
 assert.deepEqual(parseDraft({ ...migrated, budget_overrides: edits }).budget_overrides,edits);
 assert.throws(() => parseDraft({ ...migrated, budget_overrides: { 'rule:1': -1 } }));
 assert.throws(() => parseDraft({ ...migrated, custom_items: {} }));
@@ -190,3 +190,115 @@ assert.ok(!deckPlan.assumptions.some(a=>/^(bathroom_|shower_|wall_height|baseboa
 assert.ok(deckPlan.assumptions.some(a=>a.field==='joist_spacing_in'), 'Keep deck preset provenance');
 assert.throws(()=>preparePreliminary({...calculatorIntake,answers:{project_type:'unsupported'}}),/unsupported_preliminary_scope/);
 console.log('PASS preliminary plans, assumption provenance, missing costs and duplicate append guard');
+
+const flooring = await import('../src/engine/flooring.js');
+const makeArea = (id, finish, values = {}) => ({ ...flooring.createFlooringArea(id, id),
+  finish, substrate:'wood', substrate_checked:'yes', supply:'hwc', net_sqft:101,
+  waste_percent:10, box_sqft:20, product_cost:3, install_hours:8,
+  prep_hours:2, prep_cost:50, underlay_hours:1, underlay_cost:60,
+  removal:'vinyl', removal_hours:2, trim:'new', trim_lf:30, trim_hours:2, trim_cost:2,
+  transitions:2, transition_hours:1, transition_cost:25, ...values });
+const floorState = { ...DEFAULT_STATE, projectType:'flooring', measurements_checked:'yes', flooring:{
+  ...flooring.createFlooring(), setup_hours:2, cleanup_hours:1, haul_cost:40,
+  areas:[makeArea('living','lvp'),makeArea('entry','tile',{net_sqft:40,waste_percent:15,box_sqft:10,
+    product_cost:6,install_hours:6,prep_hours:1,prep_cost:20,underlay_cost:80,
+    removal:'none',trim:'none',transitions:0,setting_cost:50,grout_cost:30})],
+} };
+const floorItems = engine.assemble(enrichState(floorState), 'flooring');
+assert.deepEqual(engine.estimateIssues(floorState,floorItems),[]);
+assert.equal(floorItems.find(i=>i._editKey==='rule:flooring:living:lvp:product').qty,120);
+assert.equal(floorItems.find(i=>i._editKey==='rule:flooring:living:lvp:install').qty,8);
+assert.equal(floorItems.find(i=>i._editKey==='rule:flooring:entry:tile:product').qty,50);
+assert.equal(floorItems.filter(i=>i._editKey==='rule:flooring:job:setup').length,1);
+assert.ok(floorItems.every(i=>i._editKey.startsWith('rule:flooring:')));
+assert.ok(engine.buildJtItems(floorItems).every(i=>i.costCodeId && i.costTypeId && i.unitId));
+assert.deepEqual(engine.buildProjectParameters(floorState),[{name:'flooring_area_sqft',value:141},{name:'flooring_area_count',value:2}]);
+const ownerFloor = structuredClone(floorState); ownerFloor.flooring.areas[1].supply='customer';ownerFloor.flooring.areas[1].product_cost=null;
+const ownerItems = engine.assemble(enrichState(ownerFloor),'flooring');
+assert.deepEqual(engine.estimateIssues(ownerFloor,ownerItems),[]);
+assert.ok(!ownerItems.some(i=>i._editKey==='rule:flooring:entry:tile:product'));
+assert.ok(ownerItems.some(i=>i._editKey==='rule:flooring:entry:tile:install'));
+assert.ok(ownerItems.some(i=>i._editKey==='rule:flooring:entry:tile:setting'));
+const noPrices = structuredClone(floorState); noPrices.flooring.areas[1].grout_cost=null;
+assert.ok(engine.estimateIssues(noPrices,engine.assemble(noPrices,'flooring')).some(i=>i.includes('Grout cost')));
+const switchedFinish = structuredClone(floorState);switchedFinish.flooring.areas[0].finish='tile';
+assert.ok(!engine.applyEdits(engine.assemble(switchedFinish,'flooring'),{'rule:flooring:living:lvp:install':999},{}).some(i=>i.qty===999));
+assert.equal(flooring.flooringQuantities({...floorState.flooring.areas[0],net_sqft:100,box_sqft:0}).purchaseSqft,110);
+assert.equal(flooring.flooringQuantities({...floorState.flooring.areas[0],net_sqft:100,box_sqft:22}).boxes,5);
+assert.equal(flooring.flooringQuantities({...floorState.flooring.areas[0],net_sqft:0.25,waste_percent:0,box_sqft:0}).purchaseSqft,0.25);
+assert.deepEqual(flooring.parseFlooring(JSON.parse(JSON.stringify(floorState.flooring))),floorState.flooring);
+for (const bad of [
+ {...floorState.flooring,schema_version:2}, {...floorState.flooring,areas:[floorState.flooring.areas[0],floorState.flooring.areas[0]]},
+ {...floorState.flooring,areas:Array.from({length:51},(_,i)=>makeArea(`a${i}`,'lvp'))},
+ {...floorState.flooring,areas:[makeArea('bad','glue_down')]},
+ {...floorState.flooring,areas:[makeArea('bad','lvp',{net_sqft:-1})]},
+ {...floorState.flooring,areas:[makeArea('bad','lvp',{net_sqft:'100'})]},
+]) assert.throws(()=>flooring.parseFlooring(bad));
+assert.equal(parseDraft(floorState).state_version,3);
+const floorStorage = new Map();const floorStore={getItem:k=>floorStorage.get(k)??null,setItem:(k,v)=>floorStorage.set(k,v)};
+const away = switchJobDraft({...floorState,jobId:'floor-job'}, {jobId:'bath-job'},floorStore);
+assert.deepEqual(switchJobDraft(away,{jobId:'floor-job'},floorStore).flooring,floorState.flooring);
+console.log('PASS mixed flooring areas, purchase quantities, owner supply, scoped edits, missing costs, mappings and bounded drafts');
+
+const { loadSaved, STORAGE_KEY, JOB_DRAFTS_KEY } = await import('../src/hooks/useProjectState.js');
+const legacyDraft = JSON.stringify({...DEFAULT_STATE,state_version:2,site_notes:'Legacy measurements'});
+const legacyJobs = JSON.stringify({schema_version:1,jobs:{'job:old':{...DEFAULT_STATE,state_version:2,jobId:'old',site_notes:'Older job'}}});
+const migrationData = new Map([['hwc-estimate-state',legacyDraft],['hwc-estimate-job-drafts',legacyJobs]]);
+const migrationStore = {getItem:k=>migrationData.get(k)??null,setItem:(k,v)=>migrationData.set(k,v)};
+assert.equal(loadSaved(migrationStore).state.state_version,3);
+const oldJob = switchJobDraft({...floorState,jobId:'floor'}, {jobId:'old'},migrationStore);
+assert.equal(oldJob.site_notes,'Older job');
+assert.equal(migrationData.get('hwc-estimate-job-drafts'),legacyJobs);
+assert.equal(migrationData.get('hwc-estimate-state'),legacyDraft);
+assert.equal(JSON.parse(migrationData.get(JOB_DRAFTS_KEY)).schema_version,2);
+for (const corrupt of ['{',JSON.stringify({...floorState,state_version:99}),JSON.stringify({...floorState,flooring:{schema_version:9}})]) {
+ migrationData.set(STORAGE_KEY,corrupt);
+ const recovery=loadSaved(migrationStore);
+ assert.equal(recovery.state,null);assert.equal(recovery.recovery.raw,corrupt);
+ assert.equal(migrationData.get(STORAGE_KEY),corrupt);
+}
+const full=JSON.stringify({schema_version:2,jobs:Object.fromEntries(Array.from({length:50},(_,i)=>[`job:${i}`,DEFAULT_STATE]))});
+migrationData.set(JOB_DRAFTS_KEY,full);
+assert.throws(()=>switchJobDraft({...floorState,jobId:'overflow'},{jobId:'other'},migrationStore),/50 drafts/);
+assert.equal(migrationData.get(JOB_DRAFTS_KEY),full);
+const pendingFloor = {...floorState,flooring:flooring.createFlooring()};
+assert.ok(engine.estimateIssues(pendingFloor,engine.assemble(pendingFloor)).some(i=>i.includes('Add at least one')));
+for (const value of [0,null]) {
+ const missing=structuredClone(floorState);missing.flooring.areas[0].product_cost=value;
+ assert.ok(engine.estimateIssues(missing,engine.assemble(missing)).some(i=>i.includes('product cost')));
+}
+// The contract guard must reject malformed imported counts, even if HTML did not.
+assert.throws(()=>parseDraft({...floorState,flooring:{...floorState.flooring,areas:[makeArea('bad','lvp',{transitions:1.5})]}}));
+console.log('PASS legacy recovery snapshots, future/corrupt draft containment and capacity blocking');
+
+// Run the existing export workflow through its actual mapping boundary, with
+// the provider port captured. No JobTread request is made.
+const exportWorkflow=JSON.parse(readFileSync(new URL('../../../automation/n8n/parts/workflows/08b-estimate-router.json',import.meta.url),'utf8'));
+const validateExport=exportWorkflow.nodes.find(n=>n.name==='Validate Request').parameters.jsCode;
+const floorExport=new Function('$input','$env',validateExport)({item:{json:{headers:{'x-api-key':'fixture'},body:{
+ action:'push_estimate',mode:'existing',jobId:'floor-fixture',projectType:'flooring',projectState:floorState,jtPayload:engine.buildJtItems(floorItems),totals:engine.computeTotals(floorItems),
+}}}},{ESTIMATOR_API_KEY:'fixture'}).json;
+assert.equal(floorExport.projectType,'flooring');assert.deepEqual(floorExport.projectState.flooring,floorState.flooring);
+const providerCalls=[];
+const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;
+const pushed=await new AsyncFunction('$json','$env',exportWorkflow.nodes.find(n=>n.name==='Additive Budget Push').parameters.jsCode).call({helpers:{httpRequest:async request=>{
+ providerCalls.push(request.body.query.createCostGroup.$);
+ return {createCostGroup:{createdCostGroup:{id:'fixture-group'}}};
+}}},floorExport,{JOBTREAD_GRANT_KEY:'fixture'});
+assert.equal(providerCalls.length,1);assert.equal(providerCalls[0].name,'Flooring');
+assert.deepEqual(providerCalls[0].lineItems.map(g=>g.name),['1. living','2. entry','Whole job']);
+assert.equal(providerCalls[0].lineItems[0].lineItems.find(i=>i.name==='living | Click-lock LVT / LVP').quantity,120);
+assert.equal(pushed.json.itemsPushed,floorItems.length);
+console.log('PASS flooring through existing n8n validation and captured nested JobTread export');
+
+const { removeJobDraft } = await import('../src/hooks/useProjectState.js');
+const resetData = new Map([['hwc-estimate-job-drafts',legacyJobs]]);
+const resetStore={getItem:k=>resetData.get(k)??null,setItem:(k,v)=>resetData.set(k,v)};
+removeJobDraft({jobId:'old'},resetStore);
+assert.ok(!Object.hasOwn(JSON.parse(resetData.get(JOB_DRAFTS_KEY)).jobs,'job:old'));
+assert.equal(resetData.get('hwc-estimate-job-drafts'),legacyJobs);
+assert.equal(switchJobDraft({...DEFAULT_STATE,jobId:'different'},{jobId:'old'},resetStore).site_notes,'');
+resetData.set(JOB_DRAFTS_KEY,'');
+assert.throws(()=>removeJobDraft({jobId:'old'},resetStore));
+assert.equal(resetData.get(JOB_DRAFTS_KEY),'');
+console.log('PASS reset migrates legacy job store without resurrecting removed drafts');
