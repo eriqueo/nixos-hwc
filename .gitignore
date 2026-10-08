@@ -21,6 +21,8 @@ secrets/keys/*
 .cache/
 .lint-reports/
 .script-inventory/
+workspace/system/diagnostics/network/network/reports/
+workspace/system/diagnostics/network-utils/network/reports/
 
 # Obsidian
 .obsidian/
