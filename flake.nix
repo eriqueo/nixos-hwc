@@ -1521,7 +1521,9 @@
                     assert 'STATE:true' in lines and any(line.startswith('critical: Mailbox commands') for line in lines),lines
                     assert not any(line.startswith('F:') for line in lines),lines
         transition_review(fragment)
-        broken=fragment.replace('if [[ $(${pkgs.jq}/bin/jq -r '+"'.schemaVersion'"+' "$SYNC_STATUS") == 2 ]]; then','if false; then',1)
+        guards=[line for line in fragment.splitlines() if "'.schemaVersion'" in line and '== 2 ]]; then' in line]
+        assert len(guards)==1
+        broken=fragment.replace(guards[0],'if false; then',1)
         assert broken!=fragment
         try: transition_review(broken)
         except AssertionError: pass
