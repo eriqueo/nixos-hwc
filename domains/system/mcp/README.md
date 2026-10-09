@@ -1,11 +1,10 @@
 # domains/system/mcp — HWC MCP Gateway
 
-Unified MCP gateway (v0.3.2) aggregating 121 tools from three sources. One Nix-built service on hwc-server serves Claude Code/T3 sessions on every host (Streamable HTTP over the tailnet route), Claude.ai, and any MCP-compatible client. JT and n8n backends use lazy loading — 46 tools visible by default, backends activate on demand.
+Unified MCP gateway (v0.3.2) aggregating tools from three sources. One Nix-built service on hwc-work serves Claude Code/T3 sessions on every host (Streamable HTTP over the tailnet route), Claude.ai, and any MCP-compatible client. The n8n backend uses lazy loading. JobTread tools are not served here: they come from DataX (dx-mcp); the jt-mcp backend was retired 2026-10-09.
 
 | Source | Tools | Transport | Loading |
 |--------|-------|-----------|---------|
 | hwc-sys (local, in-process) | 44 | Direct function calls | Always |
-| jt-mcp (JobTread) | 56 | stdio child process | Lazy (`hwc_connect_jt_mcp`) |
 | n8n-mcp (workflow automation) | 21 | stdio child process | Lazy (`hwc_connect_n8n_mcp`) |
 | hwc-crm (front-of-funnel CRM) | 8 | python stdio child | Always (`crm_*`) |
 
@@ -487,6 +486,8 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-10-09: Retire the jt-mcp backend. `hwc.system.mcp.jt.*`, `parts/jt.nix`, its env vars, read-only mount and JT grant key injection are gone, and the gateway no longer spawns `/opt/business/jt-mcp`. JobTread tools come from DataX (dx-mcp). Earlier entries below describe the removed backend.
+
 - Declare the real mail lock test dependency in the Nix build so the test runs inside its sandbox.
 
 - 2026-10-06: Mail mutation responses distinguish lock refusal from started-command
@@ -775,7 +776,7 @@ domains/system/mcp/
 │   └── hwc-mcp-call.py            # single-shot Streamable HTTP CLI adapter
 ├── parts/
 │   ├── caddy.nix                  # tailnet route on tailnetPort
-│   └── jt.nix
+│   └── n8n-mcp/                   # n8n backend manifest, lockfile, smoke test
 ├── README.md
 └── src/
     ├── package.json

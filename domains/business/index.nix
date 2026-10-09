@@ -9,8 +9,6 @@
 #   - firefly        — Firefly III + Pico (personal finance, containerized)
 #   - paperless      — Paperless-ngx (document management, containerized)
 #   - website         — iheartwoodcraft.com (CMS + 11ty site content)
-#
-# NOTE: Heartwood MCP (JT tools) moved to domains/system/mcp/parts/jt.nix (hwc.system.mcp.jt.*)
 
 { config, lib, ... }:
 {

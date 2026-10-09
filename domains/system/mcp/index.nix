@@ -1,15 +1,16 @@
 # domains/system/mcp/index.nix
 #
 # HWC Infrastructure MCP Gateway — unified entry point for all MCP tools.
-# Aggregates hwc-sys (local), jt-mcp (stdio), and n8n-mcp (stdio)
+# Aggregates hwc-sys (local), n8n-mcp (stdio) and hwc-crm (stdio)
 # into a single Streamable HTTP transport for Claude.ai and stdio for Claude Code.
+# JobTread tools come from DataX (dx-mcp); the jt-mcp backend was retired 2026-10-09.
 #
 # NAMESPACE: hwc.system.mcp.*
 #
 # DEPENDENCIES:
 #   - hwc.paths (storage paths, repo location)
 #   - Node.js 22 (runtime)
-#   - agenix secrets: jobtread-grant-key, n8n-api-key
+#   - agenix secrets: n8n-api-key
 
 { config, lib, pkgs, inputs, ... }:
 
@@ -64,9 +65,6 @@ let
   # One versioned workflow/Domain/trait vocabulary for Laya, aerc, and MCP.
   mailClassifierContract = "${inputs.system-one}/scripts/mail_classifier_contract.json";
 
-  # JT config (options from parts/jt.nix)
-  jtCfg = config.hwc.system.mcp.jt;
-
   # Law 3: derive from hwc.paths. apps/business/mail roots are nullable
   # (machine-scoped options), so fall back to their canonical defaults to
   # keep evaluation safe on machines where they are null.
@@ -114,11 +112,6 @@ let
     touch "$ENV_FILE"
     chmod 600 "$ENV_FILE"
 
-    # JT secret
-    if [ -f "${config.age.secrets.jobtread-grant-key.path}" ]; then
-      echo "JT_GRANT_KEY=$(cat ${config.age.secrets.jobtread-grant-key.path})" >> "$ENV_FILE"
-    fi
-
     # n8n API key
     if [ -f "/run/agenix/n8n-api-key" ]; then
       echo "N8N_API_KEY=$(cat /run/agenix/n8n-api-key)" >> "$ENV_FILE"
@@ -130,7 +123,6 @@ in
 {
   imports = [
     ./parts/caddy.nix
-    ./parts/jt.nix
   ];
 
   #==========================================================================
@@ -239,56 +231,6 @@ in
     };
   };
 
-  # JT PAVE tools — gateway stdio backend (moved from parts/jt.nix; parts/ must be pure)
-  options.hwc.system.mcp.jt = {
-    enable = lib.mkEnableOption "HWC JobTread MCP tools — JT PAVE tools via gateway stdio backend";
-
-    port = lib.mkOption {
-      type = lib.types.port;
-      default = 6102;
-      description = "Legacy option — no longer used (JT is a stdio backend). Kept for config compat.";
-    };
-
-    host = lib.mkOption {
-      type = lib.types.str;
-      default = "127.0.0.1";
-      description = "Legacy option — no longer used (JT is a stdio backend).";
-    };
-
-    logLevel = lib.mkOption {
-      type = lib.types.enum [ "debug" "info" "warn" "error" ];
-      default = "info";
-      description = "Server log level (passed to jt-mcp child process)";
-    };
-
-    srcDir = lib.mkOption {
-      type = lib.types.path;
-      default = "${paths.business.root or "/opt/business"}/jt-mcp";
-      description = "Path to the built JT MCP server (contains dist/)";
-    };
-
-    # ── JobTread configuration ───────────────────────────────────────────
-    jt = {
-      orgId = lib.mkOption {
-        type = lib.types.str;
-        default = "22Nm3uFevXMb";
-        description = "JobTread organization ID";
-      };
-
-      userId = lib.mkOption {
-        type = lib.types.str;
-        default = "22Nm3uFeRB7s";
-        description = "JobTread user ID";
-      };
-
-      apiUrl = lib.mkOption {
-        type = lib.types.str;
-        default = "https://api.jobtread.com/pave";
-        description = "JobTread PAVE API endpoint";
-      };
-    };
-  };
-
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
@@ -377,12 +319,6 @@ in
         # another host than the gateway).
         HWC_NOTIFY_URL = config.hwc.notifications.notify.url;
 
-        # stdio backend: jt-mcp (JT tools)
-        HWC_JT_SRC_DIR = jtCfg.srcDir;
-        JT_ORG_ID = jtCfg.jt.orgId;
-        JT_USER_ID = jtCfg.jt.userId;
-        JT_API_URL = jtCfg.jt.apiUrl;
-
         # stdio backend: n8n-mcp
         HWC_N8N_ENTRY_POINT = n8nMcpMain;
         N8N_API_URL = "http://localhost:${toString n8nPort}";
@@ -467,8 +403,6 @@ in
             "/run/user/1000/gnupg"
             # agenix secrets for gmail passwordeval
             "/run/agenix"
-            # jt-mcp source (stdio backend reads dist/)
-            jtCfg.srcDir
             # hwc-crm source (python stdio backend reads src/)
             crmSrcDir
           ];

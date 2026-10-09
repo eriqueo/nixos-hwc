@@ -186,10 +186,9 @@
   # Permanent by design: these reads supply detail absent from Prometheus.
   hwc.business.morningBriefing.hostHealthFrom = "main";
 
-  # The hwc-sys gateway (+ JT tools). Binds all interfaces for tailnet
+  # The hwc-sys gateway. Binds all interfaces for tailnet
   # callers (laptop workbench, hwc-server Prometheus); tailscale0 is trusted.
   hwc.system.mcp.enable = true;
-  hwc.system.mcp.jt.enable = true;
   hwc.system.mcp.host = "0.0.0.0";
 
   # Lead Scout — Facebook group lead scraper/classifier, MCP + HTTP on port 8420
@@ -444,7 +443,7 @@
       # these three; the databases ride the pg_dumpall above.
       "/var/lib/radicale"    # CalDAV/CardDAV collections (CRITICAL)
       "/var/lib/estimator"   # built estimator bundle (REPLACEABLE, small)
-      "/opt/business"        # CMS app, website repo working tree, jt-mcp
+      "/opt/business"        # CMS app, website repo working tree
       # T3 Code state (CRITICAL): event-sourced SQLite store + this host's own
       # signing key and pairing credentials. Copied live; see the same note on
       # hwc-server. caches/ and worktrees/ are replaceable and not listed.

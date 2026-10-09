@@ -3,8 +3,9 @@
  *
  * Per-session Streamable HTTP transport serving tools from:
  *   - hwc-sys (local, in-process): NixOS config + runtime tools
- *   - jt-mcp (stdio backend): JobTread PAVE tools
  *   - n8n-mcp (stdio backend): workflow automation tools
+ *   - hwc-crm (stdio backend): CRM tools
+ *   (JobTread tools come from DataX dx-mcp; jt-mcp was retired 2026-10-09.)
  *
  * Transports:
  *   - stdio  (Claude Code, local)
@@ -121,33 +122,6 @@ function createMCPServer(
 function buildBackends(): Array<{ backend: StdioBackend; lazy: boolean }> {
   const backends: Array<{ backend: StdioBackend; lazy: boolean }> = [];
   const nodePath = process.env.HWC_NODE_PATH || "node";
-
-  // jt-mcp (JobTread tools) — spawned as stdio child
-  const jtSrcDir = process.env.HWC_JT_SRC_DIR;
-  if (jtSrcDir) {
-    backends.push({
-      backend: new StdioBackend({
-        name: "jt-mcp",
-        command: nodePath,
-        args: [`${jtSrcDir}/dist/index.js`],
-        env: {
-          TRANSPORT: "stdio",
-          JT_GRANT_KEY: process.env.JT_GRANT_KEY || "",
-          JT_ORG_ID: process.env.JT_ORG_ID || "22Nm3uFevXMb",
-          JT_USER_ID: process.env.JT_USER_ID || "22Nm3uFeRB7s",
-          JT_API_URL: process.env.JT_API_URL || "https://api.jobtread.com/pave",
-          LOG_LEVEL: process.env.HWC_MCP_LOG_LEVEL || "info",
-          NODE_ENV: "production",
-        },
-        cwd: jtSrcDir,
-        callTimeoutMs: 60_000, // JT API calls can be slow
-      }),
-      lazy: false,
-    });
-    log.info("Configured jt-mcp backend", { srcDir: jtSrcDir });
-  } else {
-    log.info("jt-mcp backend skipped (HWC_JT_SRC_DIR not set)");
-  }
 
   // n8n-mcp (workflow automation tools) — spawned as stdio child
   const n8nEntryPoint = process.env.HWC_N8N_ENTRY_POINT;
