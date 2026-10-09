@@ -249,9 +249,31 @@ let
         warn "mbsync-trash.timer is not enabled"
       fi
 
-      if ! ${pkgs.jq}/bin/jq -e '.schemaVersion == 1 and (.lanes | type == "object")' \
+      if ! ${pkgs.jq}/bin/jq -e '(.schemaVersion == 1 or .schemaVersion == 2) and (.lanes | type == "object")' \
           "$SYNC_STATUS" >/dev/null 2>&1; then
         fail "Mail sync status is missing or invalid: $SYNC_STATUS"
+        return
+      fi
+
+      # Version 2 publishes availability before enrichment. A command outcome
+      # cannot invalidate a successful download or become a delivery outage.
+      if [[ $(${pkgs.jq}/bin/jq -r '.schemaVersion' "$SYNC_STATUS") == 2 ]]; then
+        local lane success_epoch age_min state
+        while IFS= read -r lane; do
+          success_epoch=$(${pkgs.jq}/bin/jq -r --arg lane "$lane" '.lanes[$lane].lastSuccessEpoch // 0 | floor' "$SYNC_STATUS")
+          age_min=$(( ($(now_epoch) - success_epoch) / 60 ))
+          if (( success_epoch == 0 || age_min > SYNC_MAX_AGE_MIN )); then
+            fail "Mail $lane has no fresh success. Inspect $SYNC_STATUS."
+          elif [[ $(${pkgs.jq}/bin/jq -r --arg lane "$lane" '.lanes[$lane].state' "$SYNC_STATUS") != healthy ]]; then
+            warn "Mail $lane failed this attempt. Its last success is still fresh. Inspect $SYNC_STATUS."
+          fi
+        done < <(${pkgs.jq}/bin/jq -r '.lanes | keys[] | select(startswith("fetch/") or . == "index")' "$SYNC_STATUS")
+        if ! ${pkgs.jq}/bin/jq -e '.lanes.index and ([.lanes | keys[] | select(startswith("fetch/"))] | length > 0)' "$SYNC_STATUS" >/dev/null; then
+          fail "Mail availability results are missing. Inspect $SYNC_STATUS."
+        fi
+        while IFS= read -r lane; do
+          warn "Mail $lane needs review. Run mail-classifier review-transport. Inspect $SYNC_STATUS."
+        done < <(${pkgs.jq}/bin/jq -r '.lanes | to_entries[] | select(.key == "commands" or .key == "labels" or .key == "residency") | select(.value.state != "healthy") | .key' "$SYNC_STATUS")
         return
       fi
 

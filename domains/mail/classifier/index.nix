@@ -14,6 +14,10 @@ let
         exit 69
       fi
       case "''${1:-}" in
+        review-transport)
+          shift
+          exec "$runtime" review-transport --db /var/lib/hwc/mail-classifier/ledger.sqlite "$@"
+          ;;
         ${lib.optionalString cfg.residency.enable ''
         observe-residency|observe-phone-labels|label-probe|project-labels|review-label-write|transport)
           verb="$1"

@@ -9,6 +9,11 @@
 
 ## Structure
 
+MCP mail health accepts sync status versions 1 and 2. Version 2 measures fetch
+and index freshness separately from commands. A sync response uses the completed
+run's receipt; unit exit alone cannot prove completion. Unknown completion is
+pending and does not grant replay authority.
+
 MCP mail tools require the pinned System One contract at startup. They accept
 versions 2 and 3 during expansion and show DONT KNOW separately from confirmed DO.
 
@@ -60,6 +65,10 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-10-09: Read independent mail availability results and return run IDs with
+  verified fetch and pending commands. Reject completion claims from an unchanged
+  status receipt, including a successful systemctl exit.
 
 - Declare the real mail lock test dependency in the Nix build so the test runs inside its sandbox.
 

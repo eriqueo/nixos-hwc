@@ -356,6 +356,43 @@ describe("mail mutation contention", () => {
   });
 });
 
+describe("mail sync authoritative status", () => {
+  it("returns pending commands after fresh fetch, even when the unit reports an error", async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'mail-sync-status-'));
+    const file = join(dir, 'status.json');
+    try {
+      await writeFile(file, JSON.stringify({schemaVersion: 2, runId: 'before', lanes: {}}));
+      vi.stubEnv('HWC_MAIL_SYNC_STATUS', file); vi.resetModules();
+      const module = await import('../src/tools/mail.js');
+      run.mockReset();
+      run.mockImplementation((_bin, _args, _options, callback) => {
+        writeFile(file, JSON.stringify({schemaVersion: 2, runId: 'after', completedEpoch: 200,
+          lanes: {'fetch/proton': {state: 'healthy', runId: 'after'},
+                  index: {state: 'healthy', runId: 'after'},
+                  commands: {state: 'degraded', exitCode: 69, runId: 'after'}}}))
+          .then(() => callback({code: 1}, '', 'command needs review'));
+      });
+      const result = await module.mailTools()[0].handler({action: 'sync', wait: true});
+      expect(result.status).toBe('partial');
+      expect(result.data).toMatchObject({runId: 'after', fetch: 'verified', commands: 'pending', retry_safe: false});
+    } finally {vi.unstubAllEnvs(); vi.resetModules(); await rm(dir, {recursive: true, force: true});}
+  });
+
+  it("never reports completion from a zero exit with unchanged status", async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'mail-sync-pending-'));
+    const file = join(dir, 'status.json');
+    try {
+      await writeFile(file, JSON.stringify({schemaVersion: 2, runId: 'before', completedEpoch: 200, lanes: {}}));
+      vi.stubEnv('HWC_MAIL_SYNC_STATUS', file); vi.resetModules();
+      const module = await import('../src/tools/mail.js');
+      run.mockReset(); run.mockImplementation((_bin, _args, _options, callback) => callback(null, '', ''));
+      const result = await module.mailTools()[0].handler({action: 'sync', wait: true});
+      expect(result.status).toBe('partial');
+      expect(result.data).toMatchObject({completion: 'pending', retry_safe: false});
+    } finally {vi.unstubAllEnvs(); vi.resetModules(); await rm(dir, {recursive: true, force: true});}
+  });
+});
+
 
 it("the actual flock/start-pipe protocol separates lock refusal from runtime exit 75", async () => {
   const actual = await vi.importActual<typeof import("node:child_process")>("node:child_process");
