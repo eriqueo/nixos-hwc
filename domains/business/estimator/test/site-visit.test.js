@@ -188,6 +188,26 @@ const deckPlan=preparePreliminary({...deckIntake,answers:{...deckIntake.answers,
 assert.ok(deckPlan.items.length && !deckPlan.assumptions.some(a=>a.field==='deck_height_ft'));
 assert.ok(!deckPlan.assumptions.some(a=>/^(bathroom_|shower_|wall_height|baseboard_)|_allowance$/.test(a.field)), 'Deck assumptions exclude bathroom presets');
 assert.ok(deckPlan.assumptions.some(a=>a.field==='joist_spacing_in'), 'Keep deck preset provenance');
+// Taylor Chernock 2026-10-07: category-only deck answers reached the engine
+// and priced a 12×10 template deck with no railing.
+const deckAnswers={project_type:'full_rebuild',deck_size:'xl',deck_shape:'l_shape',deck_height:'low',site_conditions:'gentle_slope',
+  material:'composite_mid',railing:'metal_cable',features:['stairs','hottub_pad','skirting'],timeline:'3_6_months'};
+const bucketPlan=preparePreliminary({...calculatorIntake,calculator:'deck',answers:deckAnswers});
+const assumed=Object.fromEntries(bucketPlan.assumptions.map(a=>[a.field,a]));
+assert.equal(assumed.deck_length_ft.value*assumed.deck_width_ft.value,600);
+assert.equal(assumed.deck_height_ft.value,1.75); assert.equal(assumed.stair_tread_count.value,2);
+assert.equal(assumed.railing_lf.value,30+2*20-4);
+for (const f of ['deck_length_ft','deck_height_ft','railing_lf','stair_tread_count']) assert.match(assumed[f].source,/verify on site/);
+assert.ok(bucketPlan.items.some(i=>i.name.includes('Railing Package | Metal Cable')));
+assert.ok(bucketPlan.items.some(i=>i.name.includes('Install Stairs')));
+assert.ok(!bucketPlan.missing_inputs.some(v=>v.includes('feature: stairs')));
+assert.ok(bucketPlan.missing_inputs.some(v=>v.includes('feature: hottub pad')));
+assert.ok(bucketPlan.totals.price > 39000, 'XL deck lands in the calculator range, not a template deck');
+// A customer number beats the category estimate and is not labelled as one.
+const measured=preparePreliminary({...calculatorIntake,calculator:'deck',answers:{...deckAnswers,intake_version:2,deck_length_ft:40,deck_width_ft:18}});
+assert.ok(!measured.assumptions.some(a=>a.field==='deck_length_ft'));
+assert.equal(measured.assumptions.find(a=>a.field==='railing_lf').value,40+2*18-4, 'railing edge follows the customer dimensions');
+assert.equal(calculatorPatch({...deckIntake,answers:{...deckAnswers,railing:'none',features:[]}}).railing_lf,null);
 assert.throws(()=>preparePreliminary({...calculatorIntake,answers:{project_type:'unsupported'}}),/unsupported_preliminary_scope/);
 console.log('PASS preliminary plans, assumption provenance, missing costs and duplicate append guard');
 

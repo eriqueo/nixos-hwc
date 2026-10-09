@@ -1,10 +1,12 @@
 // Pure intake/state contract shared by the browser and preliminary-budget engine.
-import { CALCULATOR_FIELDS, CALCULATOR_INPUT_VERSION } from '../api/crm.js';
+import { CALCULATOR_FIELDS, CALCULATOR_INPUT_VERSION, deckAnswerEstimates } from '../api/crm.js';
 
 import { createFlooring } from './flooring.js';
 export const PROJECT_TYPES = { bathroom: 'Bathroom', deck: 'Deck', flooring: 'Flooring' };
 
-// Customer categories stay preferences, never measured dimensions or prices.
+// Customer categories are never measured dimensions or prices. Deck size,
+// height, stairs and railing become rough dimensions (deckAnswerEstimates)
+// only where no number was given; customer numbers override them.
 export function calculatorPatch(intake) {
   const patch = { projectType: intake.calculator, job_type: intake.calculator === 'deck' ? 'Deck' : 'Bathroom', measurements_checked: 'no', calculator_scope_checked: 'no' };
   for (const key of Object.keys(DEFAULT_STATE)) {
@@ -24,6 +26,7 @@ export function calculatorPatch(intake) {
     patch.decking_material = { pt_lumber: 'pt', cedar: 'cedar', composite_mid: 'composite_mid', composite_premium: 'composite_premium' }[answers.material] || 'unknown';
     patch.railing_type = { none: 'no', wood: 'wood', metal_cable: 'metal_cable', glass: 'glass' }[answers.railing] || 'unknown';
     patch.project_scope = { new_build: 'new_build', full_rebuild: 'full_rebuild', partial_rebuild: 'partial_rebuild', repair_refresh: 'repair' }[answers.project_type] || 'unknown';
+    for (const [key, { value }] of Object.entries(deckAnswerEstimates(answers))) patch[key] = value;
   }
   if (answers.intake_version === CALCULATOR_INPUT_VERSION) {
     for (const field of CALCULATOR_FIELDS[intake.calculator]) {

@@ -4,7 +4,7 @@
  */
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { parseCalculatorIntake } from '../api/crm.js';
+import { parseCalculatorIntake, deckAnswerEstimates, CALCULATOR_INPUT_VERSION } from '../api/crm.js';
 import { calculatorPatch, DEFAULT_STATE } from './intake.js';
 import { enrichState } from './geometry.js';
 import { assemble, buildJtItems, estimateIssues, computeTotals } from './assembler.js';
@@ -44,6 +44,10 @@ export function preparePreliminary(raw) {
     (patch[key] === undefined || patch[key] === null || patch[key] === 'unknown'))
     .filter(([,value])=>value !== null)
     .map(([field,value]) => ({ field, value, source:Object.hasOwn(template.state,field) ? `Template: ${template.name}` : 'Estimator preset — review' }));
+  if (intake.calculator === 'deck') for (const [field,{value,basis}] of Object.entries(deckAnswerEstimates(answers))) {
+    if (state[field] === value && !(answers.intake_version === CALCULATOR_INPUT_VERSION && typeof answers[field] === 'number'))
+      assumptions.push({ field, value, source:`From calculator answer (${basis}) — verify on site` });
+  }
   for (const key of ['shower_finish','floor_finish','shower_niches','has_shower_door']) {
     if (patch[key] === 'unknown' && !assumptions.some(a=>a.field===key)) assumptions.push({field:key,value:state[key],source:'Preliminary scope assumption'});
   }
@@ -56,7 +60,8 @@ export function preparePreliminary(raw) {
   const missing = estimateIssues({ ...state, calculator_intake:intake },items);
   for (const item of items.filter(i=>!mapped.includes(i))) missing.push(`Excluded ${item.name}: catalog JobTread mapping is missing. Add and price this line before quoting.`);
   for (const item of items) if (item.qty === 0 || item.uc === 0) missing.push(`Confirm quantity and purchase cost for ${item.name}; this line is not fully priced.`);
-  const supported = new Set(['niches','new_toilet','lighting','mirror','ventilation','double_vanity','paint','baseboard','gfci','glass_door']);
+  const supported = new Set(['niches','new_toilet','lighting','mirror','ventilation','double_vanity','paint','baseboard','gfci','glass_door',
+    ...(intake.calculator === 'deck' && state.stair_tread_count > 0 ? ['stairs'] : [])]);
   const unpriced = (answers.features || []).filter(f=>!supported.has(f)).map(f=>`Confirm and price requested feature: ${f.replaceAll('_',' ')}.`);
   for (const item of items.filter(i=>i._usedDefault)) assumptions.push({field:item.name,value:item.qty,source:'Catalog fallback quantity — review'});
   return { schema_version:1, jt_job_id:intake.jt_job_id, lead_id:intake.lead_id, preliminary:true, quote_hold:true,

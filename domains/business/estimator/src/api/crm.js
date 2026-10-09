@@ -21,6 +21,43 @@ export const CALCULATOR_FIELDS = {
   ],
 };
 
+// Deck category answers -> rough dimensions, used only where the customer gave
+// no number. Square feet are the calculator's own (website-site
+// src/_data/calculator-deck.json, deck_size options); keep the two in step.
+const DECK_SIZE_SQFT = { small: 120, medium: 225, large: 400, xl: 600 };
+const DECK_HEIGHT_FT = { ground_level: 0.75, low: 1.75, standard: 3.75, elevated: 6 };
+const STAIR_RISE_IN = 7.5;
+
+// Returns { field: { value, basis } }. Footprint is 2:3. Railing runs the
+// exposed edge of a deck attached along its length (an L's outer edge equals
+// its bounding box's); a multi-level deck adds one tier edge; a stair opening
+// is left out. Every value is an assumption to verify, never a measurement.
+export function deckAnswerEstimates(answers, stairWidthFt = 4) {
+  const out = {};
+  const sqft = DECK_SIZE_SQFT[answers.deck_size];
+  if (sqft) {
+    const width = Math.round(Math.sqrt(sqft * 2 / 3));
+    const basis = `deck size "${answers.deck_size}" ≈ ${sqft} sq ft`;
+    out.deck_width_ft = { value: width, basis };
+    out.deck_length_ft = { value: Math.round(sqft / width), basis };
+  }
+  const height = DECK_HEIGHT_FT[answers.deck_height];
+  if (height !== undefined) out.deck_height_ft = { value: height, basis: `deck height "${answers.deck_height}"` };
+  const stairs = (answers.features || []).includes('stairs');
+  if (stairs && height !== undefined) {
+    out.stair_tread_count = { value: Math.max(1, Math.ceil(height * 12 / STAIR_RISE_IN) - 1),
+      basis: `stairs requested, ${STAIR_RISE_IN}" rise from ${height} ft` };
+  }
+  // A customer's own numbers (v2 fields) shape the railing edge over the bucket.
+  const given = key => answers.intake_version === CALCULATOR_INPUT_VERSION && typeof answers[key] === 'number' ? answers[key] : out[key]?.value;
+  const l = given('deck_length_ft'), w = given('deck_width_ft');
+  if (l && w && answers.railing && answers.railing !== 'none') {
+    const edge = l + 2 * w + (answers.deck_shape === 'multi_level' ? w : 0) - (stairs ? stairWidthFt : 0);
+    out.railing_lf = { value: Math.max(0, edge), basis: `${answers.railing.replaceAll('_',' ')} railing on the exposed edge of ${l}×${w} ft` };
+  }
+  return out;
+}
+
 export function validateCalculatorFields(calculator, answers) {
   if (answers.intake_version === undefined) return; // Permanent legacy reader.
   if (answers.intake_version !== CALCULATOR_INPUT_VERSION) throw Error('Unsupported customer input version.');

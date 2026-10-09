@@ -72,6 +72,7 @@ Material markup: cost x 1.429
 domains/business/estimator/
 ├── index.nix              # NixOS module: build service, Caddy, firewall
 ├── src/
+│   ├── api/crm.js         # Calculator↔estimator contract: v2 fields, deck answer estimates, CRM intake parsing
 │   ├── engine/
 │   │   ├── assembler.js   # Core: buildCatalog(), buildDeckCatalog(), geometry, parameters
 │   │   ├── flooring.js    # Versioned area inputs, quantities, validation and mapped composition
@@ -184,6 +185,8 @@ templates and fails the exit code on any item/qty/price/total diff beyond
 and is NOT a refactor gate.
 
 ## Changelog
+
+- 2026-10-09: Deck calculator categories become rough dimensions where the customer gave no number: size → the calculator's own sq ft at a 2:3 footprint, height band → midpoint, stairs → treads at a 7.5" rise, a chosen railing → the exposed edge. Each is a "verify on site" assumption; customer numbers win. Taylor Chernock's XL L-shaped deck had priced as the 12×10 template with no railing ($11.3k against a $39–72k calculator range).
 
 - 2026-10-08: Make site-review guidance apply to flooring, bathroom and deck work.
 
