@@ -1622,7 +1622,7 @@
         with tempfile.TemporaryDirectory() as directory:
             rcfile=pathlib.Path(directory)/'mbsyncrc';rcfile.write_text(fixture['mbsyncrc'])
             parsed=subprocess.run(['${pkgs.isync}/bin/mbsync','-c',str(rcfile),'nonexistent-fixture-channel'],capture_output=True,text=True)
-            assert parsed.returncode==1 and 'No channel named' in parsed.stderr, parsed.stderr
+            assert parsed.returncode==1 and "No channel or group named 'nonexistent-fixture-channel' defined." in parsed.stderr, parsed.stderr
             assert 'global options' not in parsed.stderr, parsed.stderr
         blocks=fixture['mbsyncrc'].split('Channel ')
         proton=next(block for block in blocks if block.startswith('proton-wildcards\n'))
