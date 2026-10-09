@@ -1551,6 +1551,9 @@
                 root = pathlib.Path(tmp)
                 script = root / 'triage-mail.sh'
                 script.write_text(source.replace('/run/current-system/sw/bin/flock', '${pkgs.util-linux}/bin/flock'))
+                (root / 'output').mkdir()
+                (root / 'output' / 'briefing.json').write_text('{}')
+                (root / 'output' / 'mail-triage.json').write_text('{"generated_at":"retained-report","threads_by_state":{}}')
                 effect = root / 'effect'
                 classifier = root / 'classifier'
                 classifier.write_text('#!/bin/sh\ntouch "$CALLS"\nexit 0\n')
@@ -1559,11 +1562,13 @@
                 model.bind(str(root / 'model.sock'))
                 with open(root / 'sync.lock', 'w') as lock:
                     fcntl.flock(lock, fcntl.LOCK_EX)
-                    env = {**os.environ, 'CLASSIFIER_BIN': str(classifier),
+                    env = {**os.environ, 'PATH': '${lib.makeBinPath [ pkgs.coreutils pkgs.jq ]}', 'CLASSIFIER_BIN': str(classifier),
                         'MAIL_CLASSIFIER_SOCKET': str(root / 'model.sock'),
                         'MAIL_SYNC_LOCK_FILE': str(root / 'sync.lock'), 'CALLS': str(effect)}
                     result = subprocess.run(['${pkgs.bash}/bin/bash', str(script), 'delta'], env=env, capture_output=True, timeout=10)
                     assert result.returncode == 75 and not effect.exists(), result.stderr
+                    published = json.loads((root / 'dashboard' / 'briefing.json').read_text())
+                    assert published['mail_triage']['generated_at'] == 'retained-report'
                 model.close()
         classifier_busy(fixture['triage'])
         stripped = fixture['triage'].replace('/run/current-system/sw/bin/flock -n -E 75 "$' + '{MAIL_SYNC_LOCK_FILE:?mail owner lock binding required}" ', "")
