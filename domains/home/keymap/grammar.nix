@@ -62,6 +62,7 @@ rec {
     o = "open";     # open / create external
     m = "major";    # THIS app's own verbs (the per-app drawer)
     q = "quit";     # quit / sync / reload
+    a = "agent";    # anything involving an AI agent (ask, send, nvim Claude)
   };
 
   #--------------------------------------------------------------------------
@@ -114,8 +115,8 @@ rec {
         nvim = "<cmd>bprevious<cr>";
       }; }
 
-    # --- o : open / create external -------------------------------------
-    { keys = "o a"; desc = "Ask agent about item"; cmd = {
+    # --- a : agent --------------------------------------------------------
+    { keys = "a a"; desc = "Ask agent about item"; cmd = {
         workbench = "ask-agent";
       }; }
   ];
