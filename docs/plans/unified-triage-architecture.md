@@ -61,6 +61,43 @@ Legacy direct-call regression helpers and v1 status readers are temporary;
 remove them after that soak and measured consumer coverage. Migration completion
 requires their deletion and the production wiring checks.
 
+### Release evidence and remaining acceptance
+
+The incident replay used the installed 171-test source and generated runner.
+A deadline after reservation produced zero COPY calls, persistent uncertainty,
+and blocked unrelated Archive work. Read-only Bridge inspection found two
+provider identities with one Message-ID. The retained October 7–9 journal
+contained 260 label-conflict cycles alongside successful downloads. The earlier
+September 30 label repair had addressed this preflight gap without establishing
+a shared operation protocol. These observations determined the owner repair.
+
+Nix a710dc2a switched on hwc-work after eight mail/consumer checks, nine charter
+checks and the system build passed. Subsequent main 205ce030 and System One
+cb91a2c removed report aliases while preserving the physical owner. Their fresh
+source build/full suite passed, including 202 mail tests. The combined gateway
+passed 121 tests and typecheck; the same eight Nix checks passed again.
+Workbench e011dca passed 415 tests before its small deadline repair, then 33
+affected Kanban tests and Ruff. Its laptop Home Manager activation passed.
+
+Disposable Bridge trials verified exact identities for Archive, reopen, Trash,
+restore, stars and managed labels. Dedicated Drafts/Sent channels pulled owned
+fixtures; the following full sync produced zero uploads or deletions. A temporary
+SQLite restore preserved all 15 tables and passed integrity_check. Live
+effects-off recovery fetched and indexed all three accounts.
+
+Installed MCP accepted a disposable restore command and returned its durable ID.
+The installed service verified it while historical commands stayed quarantined.
+The laptop's installed Workbench action then submitted Trash once and made nine
+receipt reads until verified. The running pane uses that package. The original
+unknown Trash reservation remains intact. Thirty-six pre-cutover commands have
+unproven physical scope; 15 label conflicts remain preserved for review.
+
+The scheduled-cycle check and seven-day soak remain open. Inspect status.json,
+labels.json, durable command receipts and health case transitions. The expected
+signal is fresh per-account fetch/index with visible, contained review work.
+Close P15 only after sustained use meets that contract and compatibility readers
+and direct-call helpers are deleted. The project handoff holds current progress.
+
 ## Observable contract
 
 Each managed thread has exactly one active workflow state and one Domain:
@@ -152,9 +189,9 @@ The contract owns eight projected labels, including @do and @dont-know. Other ha
 no Domain label. A changed label vocabulary rebases the phone observer without
 inferring a human edit. Phone correction application remains disabled.
 
-The classifier ledger and cached report format stay schema 2. Reports expose
-optional State vocabulary/display metadata; consumers treat absent old buckets as
-empty. MCP validates either contract version 2 or 3 from the configured producer.
+The classifier ledger stays schema 2. Reports use schema 3 and `threads_by_state`;
+the retired `buckets` alias is removed. Reports expose State vocabulary/display
+metadata. MCP validates contract version 2 or 3 from the configured producer.
 The model protocol and model labels remain unchanged.
 
 `migrate-uncertainty` previews by default. Under the shared mail lock, it requires
