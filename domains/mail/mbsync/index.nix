@@ -1,4 +1,4 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
+{ config, lib, pkgs, inputs, osConfig ? {}, ...}:
 let
   on =
     (config.hwc.mail.enable or true) &&
@@ -14,9 +14,10 @@ let
     in if base != "" then base else "${config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail"}/Maildir";
   svc      = import ./parts/service.nix {
     inherit lib pkgs afewPkg;
+    source = inputs.system-one;
     haveProton = render.haveProton;
     inherit maildirRoot;
-    inherit (render) coreChannels transportChannels trashChannels;
+    inherit (render) coreChannels transportChannels trashChannels accountChannels;
     statusFile = config.hwc.mail.mbsync.statusFile;
     configDigest = builtins.hashString "sha256" render.mbsyncrc;
     bridgeVersion = lib.getVersion (brCfg.package or pkgs.protonmail-bridge);

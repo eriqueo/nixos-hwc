@@ -22,6 +22,22 @@ const MAIL_SYNC_STATUS = process.env.HWC_MAIL_SYNC_STATUS || join(HOME, ".local/
 const MAILDIR = join(HOME, "400_mail/Maildir");
 const SYSTEMCTL = process.env.HWC_SYSTEMCTL_BIN || "systemctl";
 
+interface SyncStatus {
+  schemaVersion: number;
+  runId?: string;
+  completedEpoch?: number;
+  lanes: Record<string, Record<string, unknown>>;
+}
+async function readSyncStatus(): Promise<SyncStatus> {
+  const raw = await readFile(MAIL_SYNC_STATUS, "utf8");
+  if (raw.length > 2 * 1024 * 1024) throw new Error("mail status exceeds 2 MiB");
+  const value = JSON.parse(raw);
+  if (![1, 2].includes(value?.schemaVersion) || !value.lanes || typeof value.lanes !== "object") {
+    throw new Error("unsupported status schema");
+  }
+  return value as SyncStatus;
+}
+
 /* ─── Classifier contract (same versioned producer as Laya and aerc) ─────── */
 interface MailContract {
   schemaVersion: number;
@@ -529,14 +545,8 @@ export async function executeMailHealth(): Promise<ToolResult> {
     }
 
     try {
-      const projection = JSON.parse(await readFile(MAIL_SYNC_STATUS, "utf8")) as {
-        schemaVersion?: number;
-        lanes?: Record<string, Record<string, unknown>>;
-      };
-      if (projection.schemaVersion !== 1 || !projection.lanes) {
-        throw new Error("unsupported status schema");
-      }
-      result.sync = { statusFile: MAIL_SYNC_STATUS, lanes: projection.lanes };
+      const projection = await readSyncStatus();
+      result.sync = { statusFile: MAIL_SYNC_STATUS, ...projection };
     } catch (err) {
       result.sync = { error: `Mail sync status unavailable: ${String(err)}` };
     }
@@ -556,7 +566,13 @@ export async function executeMailHealth(): Promise<ToolResult> {
 
     const bridgeOk = (result.bridge as Record<string, unknown>)?.active === true;
     const syncLanes = (result.sync as { lanes?: Record<string, Record<string, unknown>> })?.lanes;
-    const syncOk = syncLanes?.core?.state === "healthy";
+    const syncVersion = (result.sync as SyncStatus)?.schemaVersion;
+    const availability = Object.entries(syncLanes ?? {}).filter(([name]) => name.startsWith("fetch/") || name === "index");
+    const syncOk = syncVersion === 2
+      ? availability.some(([name]) => name.startsWith("fetch/")) && !!syncLanes?.index
+        && availability.every(([, lane]) => typeof lane.lastSuccessEpoch === "number"
+          && Date.now() / 1000 - lane.lastSuccessEpoch <= 45 * 60)
+      : syncLanes?.core?.state === "healthy";
     const hasFailure = !!firstFailureRaw;
 
     let status: "ok" | "partial" | "error";
@@ -1011,6 +1027,7 @@ export function mailTools(): ToolDef[] {
             const wait = (args.wait as boolean) ?? true;
 
             if (wait) {
+              const before = await readSyncStatus().catch(() => null);
               const result = await new Promise<{ exitCode: number; stdout: string; stderr: string }>((resolve) => {
                 execFile(SYSTEMCTL, ["--user", "start", "--wait", "mbsync.service"], { timeout: 120000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
                   const code = error && "code" in error ? (error.code as number) : 0;
@@ -1021,6 +1038,23 @@ export function mailTools(): ToolDef[] {
                   });
                 });
               });
+
+              const projection = await readSyncStatus().catch(() => null);
+              if (projection?.schemaVersion === 2) {
+                if (!projection.runId || projection.runId === before?.runId || !projection.completedEpoch) {
+                  return {status: "partial", message: "Sync completion is pending. Inspect mail status.",
+                    data: {completion: "pending", retry_safe: false, statusFile: MAIL_SYNC_STATUS}};
+                }
+                const availability = Object.entries(projection.lanes)
+                  .filter(([name]) => name.startsWith("fetch/") || name === "index");
+                const fetched = !!projection.lanes.index && availability.some(([name]) => name.startsWith("fetch/"))
+                  && availability.every(([, lane]) => lane.runId === projection.runId && lane.state === "healthy");
+                const commands = projection.lanes.commands?.state === "healthy" ? "verified" : "pending";
+                return {status: fetched ? (commands === "verified" ? "ok" : "partial") : "error",
+                  message: fetched ? `Mail fetched and indexed. Commands are ${commands}.` : "Mail fetch or index failed. Inspect mail status.",
+                  data: {runId: projection.runId, fetch: fetched ? "verified" : "failed", commands,
+                    retry_safe: false, statusFile: MAIL_SYNC_STATUS, lanes: projection.lanes}};
+              }
 
               if (result.exitCode !== 0) {
                 return {
