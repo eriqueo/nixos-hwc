@@ -11,6 +11,9 @@ import { morningBriefTool } from "../src/tools/morning-brief.js";
 
 function classifierChild(exitCode = 0, started = true) {
   const child = {stdin: {end: vi.fn(), on: vi.fn()}, stderr: {on: vi.fn()},
+    stdout: {on: vi.fn((event: string, callback: (chunk: Buffer) => void) => {
+      if (event === "data") callback(Buffer.from(JSON.stringify({schemaVersion:1,code:"mail-action-accepted",commandIds:["a".repeat(64)],local:"applied",remote:"pending"})));
+    })},
     stdio: [null, null, null, {on: vi.fn((event: string, callback: (chunk: Buffer) => void) => {
       if (event === "data" && started) callback(Buffer.from("started\n"));
     })}],
@@ -103,7 +106,7 @@ describe("authoritative mail placement", () => {
       ["-n", "-E", "75", expect.stringMatching(/\/mail-sync\/sync\.lock$/),
         "/run/current-system/sw/bin/sh", "-c", expect.stringContaining("exec"), "mail-classifier",
         "/run/current-system/sw/bin/mail-classifier-runtime", "correct", "--db",
-        "/var/lib/hwc/mail-classifier/ledger.sqlite", "--notmuch", expect.any(String),
+        "/var/lib/hwc/mail-classifier/ledger.sqlite", "--notmuch", expect.any(String), "--receipt",
         "--state", "did"], expect.any(Object));
     expect(stdin.end).toHaveBeenCalledWith(expect.stringContaining("Message-ID"));
   });
@@ -365,6 +368,26 @@ describe("disposition command failure", () => {
 
 
 describe("mail mutation contention", () => {
+  it("publishes accepted command IDs without claiming remote completion", async () => {
+    run.mockReset(); spawnRun.mockReset();
+    run.mockImplementation((_bin,_args,_options,callback)=>callback(null,"From fixture@example.invalid\nMessage-ID: <accepted@example.invalid>\n\nfixture\n", ""));
+    spawnRun.mockImplementation(() => classifierChild());
+    const result=await mailTools()[0].handler({action:"tag",query:"thread:a",tag_action:"trash"});
+    expect(result.status).toBe("ok");
+    expect(result.data).toMatchObject({completion:"accepted",commandIds:["a".repeat(64)],retry_safe:false});
+    expect(result.message).toContain("pending");
+  });
+
+  it("a successful process without its receipt remains unknown and cannot be resubmitted", async () => {
+    run.mockReset(); spawnRun.mockReset();
+    run.mockImplementation((_bin,_args,_options,callback)=>callback(null,"From fixture@example.invalid\nMessage-ID: <missing@example.invalid>\n\nfixture\n", ""));
+    spawnRun.mockImplementation(() => ({...classifierChild(),stdout:{on:vi.fn()}}));
+    const result=await mailTools()[0].handler({action:"tag",query:"thread:a",tag_action:"trash"});
+    expect(result.status).toBe("error");
+    expect(result.context).toMatchObject({mutation_status:"unknown",retry_safe:false});
+    expect(spawnRun).toHaveBeenCalledTimes(1);
+  });
+
   it("reports a proven pre-command lock refusal as safely waiting, not a tag failure", async () => {
     run.mockReset(); spawnRun.mockReset();
     run.mockImplementation((_bin,_args,_options,callback)=>callback(null,"From fixture@example.invalid\nMessage-ID: <busy@example.invalid>\n\nfixture\n", ""));
@@ -377,6 +400,21 @@ describe("mail mutation contention", () => {
 });
 
 describe("mail sync authoritative status", () => {
+  it("reads command receipts without submitting another mutation", async () => {
+    run.mockReset(); spawnRun.mockReset();
+    run.mockImplementation((_bin,_args,_options,callback)=>callback(null,JSON.stringify({schemaVersion:1,commandId:"b".repeat(64),state:"verified",retrySafe:false}),""));
+    const result=await mailTools()[0].handler({action:"commands",command_id:"b".repeat(64)});
+    expect(result.data).toMatchObject({state:"verified",retrySafe:false});
+    expect(run.mock.calls[0][1]).toContain("--command-id");
+    expect(spawnRun).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid receipt IDs at the edge", async () => {
+    run.mockReset();
+    expect((await mailTools()[0].handler({action:"commands",command_id:"../../invalid"})).status).toBe("error");
+    expect(run).not.toHaveBeenCalled();
+  });
+
   it("returns pending commands after fresh fetch, even when the unit reports an error", async () => {
     const dir = await mkdtemp(join(tmpdir(), 'mail-sync-status-'));
     const file = join(dir, 'status.json');
@@ -389,7 +427,7 @@ describe("mail sync authoritative status", () => {
         writeFile(file, JSON.stringify({schemaVersion: 2, runId: 'after', completedEpoch: 200,
           lanes: {'fetch/proton': {state: 'healthy', runId: 'after'},
                   index: {state: 'healthy', runId: 'after'},
-                  commands: {state: 'degraded', exitCode: 69, runId: 'after'}}}))
+                  commands: {state: 'healthy', exitCode: 0, pendingCount: 22, runId: 'after'}}}))
           .then(() => callback({code: 1}, '', 'command needs review'));
       });
       const result = await module.mailTools()[0].handler({action: 'sync', wait: true});

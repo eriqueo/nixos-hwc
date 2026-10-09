@@ -56,97 +56,15 @@ Proton Mail <--IMAP--> Proton Bridge (localhost:1143/1025)
 
 ### Sync Lifecycle (`<C-r>` or systemd timer)
 
-1. **Pre-sync**: afew MailMover physically moves files based on tags (archive/trash/spam)
-2. **Sync**: `mbsync.service` runs the ten-minute core lane; Proton Trash is an isolated daily pull-only mirror
-3. **Post-sync**: `notmuch new` indexes new messages, triggers post-new hook
-4. **Hook**: Applies folder-state tags, auto-classification rules, Proton label tags
+1. Fetch each account independently and index new mail.
+2. Execute captured Proton commands through shared physical identity reservations.
+3. Mirror provider results and publish exact command receipts.
+4. Observe residency and project compatible labels within bounded budgets.
 
-The `<C-r>` keybind waits for `mbsync.service`, which runs the locked core pipeline (MailMover + mbsync + notmuch new). `sync-mail trash` never runs MailMover because Proton Bridge rejects uploads into Trash. Never run bare `mbsync -a` from aerc — it skips lane status and notmuch indexing.
-
-### Daily workflow semantics
-
-The sidebar has `DO`, `DONT KNOW`, `DID`, `LOOK`, `JUNK`, and a separate Bulk view.
-`DO` is confirmed action. `DONT KNOW` holds uncertain mail and is the default.
-`DID` means Eric acted and is waiting; new context reopens it for classification.
-`LOOK` needs no response. `JUNK` is recoverable Trash. Archive removes
-the active state and records completion. Opening or reading mail never changes
-state. Domain (`HWC`, `DataX`, `Family`, `Personal`, `Other`) is a column/filter,
-never a folder or placement rule. Factual Tags never move mail.
-
-Bulk groups unknown newsletters and recurring mail with unsubscribe headers.
-Security, finance, deadline and calendar facts stay outside Bulk. Both groups
-remain in Inbox. DONT KNOW excludes the adjacent Bulk pile; `:cf state/dont-know`
-shows the complete State, and `Space g I` shows raw Inbox. Use `Space g k` for
-DONT KNOW, `Space g b` for Bulk, and `Space g i` for DO. `Space m s k Enter`
-sets DONT KNOW in one operation without a positive sender-learning vote.
-
-`D` uses the same recorded Trash action as `d`. `X` and `Y` are explicit
-physical move/copy commands and do not teach. Use shared State and disposition
-commands for normal workflow decisions.
-
-A folded row expands to its complete thread. When `J`/`K` marks exist, `a` or
-`d` applies thread-wide to the marked set through the classifier ledger.
-
-Archive, Trash and State/Domain corrections run without opening a results tab.
-Aerc reports completion or failure in its status line. Interactive rule review,
-calendar/task review, URL pickers and image previews keep their terminal UI.
-
-### Current and historical searches
-
-Use `:cf domain/hwc` or `:cf domain/datax` for a Domain view, and
-`:cf fact/finance` for factual finance. `:cf finance` is the same finance view.
-Use `:cf history/business`, `:cf history/money`, `:cf history/growth`, or
-`:cf history/system` for old category aggregates. Unmapped coaching and tech
-remain available as `history/label/coaching` and `history/label/tech`.
-Old aerc account searches also start with `history/`. MCP and the notmuch
-registry use the same addresses with colons, such as `history:business`.
-Aerc uses slashes because its configuration parser treats colons as separators. These names describe retained
-history; no tag or physical folder is removed. Restart aerc after deployment to
-load the new map and bindings. MCP loads the same registry when its service starts.
-
-### Tag System (tags.nix)
-
-Shared factual-tag metadata originates in `domains/mail/taxonomy/data.nix`;
-the versioned classifier contract supplies State and Domain. `tags.nix` adapts
-optional tags for aerc, and `tags-custom.json` holds aerc-only additions.
-
-- Notmuch query-map entries for direct drill-down
-- `[user]` styles for virtual folder names
-- nested `Space m t a …` optional factual-tag bindings
-
-The message list renders Domain, State, and factual Tags as separate columns.
-Legacy `action` and `pending` tags do not participate in workflow.
-
-#### Tag Types
-
-| Type | Behavior | Example |
-|------|----------|---------|
-| **Domain** | Exactly one; independent of State | hwc, datax, family, personal, other |
-| **State** | Exactly one while active | do, dont-know, did, look, junk |
-| **Tag** | Additive fact; never controls placement | attachment, finance, receipt |
-
-#### Tag Attributes
-
-| Attribute | Required | Description |
-|-----------|----------|-------------|
-| `tag` | yes | Notmuch tag name |
-| `color` | yes | Hex color for `[user]` styleset section |
-| `spaceKey` | no | Key for `<Space>m*` and `<Space>g*` bindings (defaults to first char of tag) |
-| `display` | no | Display name in query-map and stylesets (defaults to tag) |
-| `query` | no | Custom notmuch query (defaults to `tag:<name> AND NOT tag:trash`) |
-| `extra` | no | Extra styleset lines (e.g., `"insurance.dim = true"`) |
-| `noGoTo` | no | Skip `<Space>g*` generation (avoids key conflicts) |
-
-The current tag vocabulary, leader keys, and palette roles live in
-`domains/mail/taxonomy/data.nix`; this README does not duplicate that registry.
-
-### Stylesets
-
-All 9 bundled aerc stylesets (blue, catppuccin, default, dracula, monochrome, nord, pink, solarized, solarized-dark) are copied at Nix eval time with a `[user]` section appended for folder-name styles.
-
-Switch themes live with `<Space>ws` followed by the theme name (tab-completes).
-
-The custom `hwc` styleset in `appearance.nix` is palette-driven from `hwc.home.theme.colors`. Message state supplies row emphasis; categories do not recolor the row.
+`<C-r>` invokes `mbsync.service`, the same coordinator used by the timer and MCP.
+Afew does not move messages. Proton wildcard sync does not push membership;
+Drafts and Sent use dedicated upload channels. `sync-mail core --effects-off`
+keeps fetching and indexing while remote effects remain paused.
 
 ## Keybindings
 
@@ -331,6 +249,7 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
    `proton/Labels/<name>/`.
 
 ## Changelog
+- 2026-10-09: Document physical command ownership, separate availability and dedicated Drafts/Sent uploads; retire the described MailMover pipeline.
 - 2026-10-01: Add canonical DONT KNOW display/default, one-step correction,
   navigation and widened State column; separate reversible Bulk view.
 - 2026-10-01: Run completed workflow actions with native background pipes in

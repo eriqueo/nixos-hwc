@@ -9,21 +9,26 @@ Self-contained email domain: client UI, accounts, sync, indexing, sending, and b
 
 ## Structure
 
-`mbsync/` binds a bounded System One coordinator. It fetches accounts separately,
-indexes before command work, and publishes version-2 availability results at once.
-Command review cannot replace fetch success. `review-transport` reads uncertain
-Trash receipts without changing the ledger. The legacy membership owner remains
-gated until the physical executor passes provider and live parity tests.
+`mbsync/` binds the bounded System One coordinator. Each account fetches
+independently, then notmuch indexes before mailbox effects. Status schema 2 keeps
+fetch/index success separate from command, observation and label outcomes.
 
-The label writer completes compatible first-arrival labels. For complete Trash
-messages it removes only labels that match its recorded projection. Changed labels
-and partial physical copies remain conflicts; folder and star values stay intact.
+The shared physical effect owner executes Proton Archive, reopen and Trash by
+reserved COPY of existing provider identities. Managed labels share its identity
+leases. Unknown dispatches receive readback only; unrelated records continue.
+`review-transport --command-id ID` reads completion without changing the ledger.
 
-`classifier/` binds `review-label-write --message-id` to the shared runtime,
-notmuch and Bridge under the sync lock. Its rebuilt view is `label-review.json`.
+Proton wildcard channels pull membership and reconcile flags. Dedicated Drafts
+and Sent channels retain uploads. Gmail keeps its provider sync behavior. Afew
+supplies passive folder tags and has no mailbox mover. Exact readback precedes
+command acknowledgment; Archive/reopen and labels preserve stars, while Trash
+permits complete native star removal. `sync-mail core --effects-off` retains
+fetch, index and observation while stopping writes.
 
-Mailbox movement runs through classifier transport intents, marker-only afew rules, and ordered mbsync prefetch/reconciliation/readback. Explicit Trash uses reserved COPY of existing remote identities, preceded by Proton flag reconciliation and followed by mandatory Proton pull/index before local effects; the isolated Trash channel remains pull-only. Proton Trash can clear stars with its labels; versioned receipts accept that complete native effect and reject unexpected star changes. The contract owns the physical sync folders; local history remains in lessons but does not block remote move receipts.
-Durable move commands apply regardless of message age; afew adds no date filter.
+Health records bounded case judgments and alerts on transitions. Delivery becomes
+critical after 45 minutes without fresh fetch/index; pending commands escalate
+after 30 minutes. Label conflicts remain visible as review work.
+
 The mail role retains these hooks in both integrated and standalone Home Manager builds.
 Scheduled classification uses the same owner lock before reserving mailbox moves.
 The pinned classifier contract supplies DONT KNOW, display names and the Bulk
@@ -51,7 +56,7 @@ mail/
 │       ├── sieve.nix          # Deploys ~/.config/aerc/sieve/{01-junk,02-routing}.sieve
 │       └── sieve-filters.nix  # Taxonomy junk + label-free Seen/Archive routing; parsed delivery checks
 ├── afew/
-│   ├── index.nix              # afew config generation (filters, MailMover)
+│   ├── index.nix              # Passive afew folder filters
 │   └── package.nix            # afew package derivation
 ├── bridge/
 │   ├── index.nix              # Proton Bridge HM user service
@@ -137,6 +142,7 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-10-09: Switch Proton membership and managed labels to shared physical identity reservations; remove afew moves and wildcard membership pushes. Keep Drafts/Sent uploads and Gmail sync. Add command receipts, effects-off recovery, fair bounded work and transition-based health.
 
 - 2026-10-09: Separate fetch/index availability from command, observation and label
   outcomes. Use the pinned coordinator behind sync-mail, bound account subprocesses

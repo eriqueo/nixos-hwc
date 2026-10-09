@@ -19,7 +19,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
 import { mcpError } from "../errors.js";
-import { mailThreadsByState, MAIL_STATES, MAIL_ACTION_STATE, MAIL_STATE_DISPLAY_NAMES, mailStateTag, mailTagActions, classifierMutation, classifierMutationError } from "./mail.js";
+import { mailThreadsByState, MAIL_STATES, MAIL_ACTION_STATE, MAIL_STATE_DISPLAY_NAMES, mailStateTag, mailTagActions, classifierMutation, classifierMutationError, acceptedMailCommand } from "./mail.js";
 
 /** Default briefing output path (run.sh writes here, then injects .mail_triage). */
 const DEFAULT_BRIEFING_JSON =
@@ -315,10 +315,12 @@ export function mailTriageTools(
             });
           }
           if (requestedState || action === "archive" || action === "trash") {
-            const failure = await classifierMutation(`thread:${id}`, requestedState
+            const outcome = await classifierMutation(`thread:${id}`, requestedState
               ? {kind: "state", value: requestedState}
               : {kind: "outcome", value: action === "archive" ? "done" : "trash"});
-            if (failure) return classifierMutationError(failure, `thread:${id}`);
+            if (!("accepted" in outcome)) return classifierMutationError(outcome, `thread:${id}`);
+            return {status:"ok",message:`Accepted ${action}. Remote completion is pending.`,
+              data:{action,id,state:requestedState ?? null,...acceptedMailCommand(outcome.accepted)}};
           } else if (action === "mark-read") {
             const err = await notmuchTagThread(id, mailTagActions().read);
             if (err) return mcpError({type: "COMMAND_FAILED", message: "Mark-read failed", error: err});

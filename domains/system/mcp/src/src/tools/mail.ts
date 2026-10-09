@@ -304,6 +304,12 @@ type ClassifierMutation =
   | { kind: "outcome"; value: "done" | "trash" }
   | { kind: "reopen" };
 interface ClassifierFailure { message: string; retrySafe: boolean }
+interface CommandReceipt {schemaVersion: 1; code: "mail-action-accepted"; commandIds: string[]; local: "applied"; remote: "pending" | "not-applicable"}
+export function acceptedMailCommand(receipt: CommandReceipt) {
+  return {completion:"accepted", commandIds:receipt.commandIds, retry_safe:false,
+    receiptPoll:{schemaVersion:1,tool:"hwc_mail",action:"commands",idParam:"command_id"}};
+}
+type ClassifierOutcome = ClassifierFailure | {accepted: CommandReceipt};
 
 /** Version 1: retry is permitted only when the classifier never started. */
 export function classifierMutationError(failure: ClassifierFailure, query: string): ToolResult {
@@ -314,14 +320,14 @@ export function classifierMutationError(failure: ClassifierFailure, query: strin
 }
 export async function classifierMutation(
   query: string, mutation: ClassifierMutation,
-): Promise<ClassifierFailure | null> {
+): Promise<ClassifierOutcome> {
   try {
     const bin = await notmuchBin();
     const selected = await notmuchExec(bin,
       ["show", "--format=mbox", "--entire-thread=true", "--", query],
       { timeout: 10_000, maxBuffer: 20 * 1024 * 1024 });
     if (selected.exitCode !== 0) return {message: (selected.stderr || "notmuch selection failed").slice(0, 300), retrySafe: false};
-    const base = ["--db", "/var/lib/hwc/mail-classifier/ledger.sqlite", "--notmuch", bin];
+    const base = ["--db", "/var/lib/hwc/mail-classifier/ledger.sqlite", "--notmuch", bin, "--receipt"];
     const args = mutation.kind === "state" ? ["correct", ...base, "--state", mutation.value]
       : mutation.kind === "outcome" ? ["transition", ...base, "--outcome", mutation.value]
       : ["reopen", ...base];
@@ -330,21 +336,40 @@ export async function classifierMutation(
         ["-n", "-E", "75", join(dirname(MAIL_SYNC_STATUS), "sync.lock"),
           "/run/current-system/sw/bin/sh", "-c", 'printf "started\\n" >&3; exec "$@"', "mail-classifier",
           "/run/current-system/sw/bin/mail-classifier-runtime", ...args],
-        {stdio: ["pipe", "ignore", "pipe", "pipe"], timeout: 30_000});
+        {stdio: ["pipe", "pipe", "pipe", "pipe"], timeout: 30_000});
       let stderr = "";
+      let stdout = "";
+      let overflow = false;
       let started = "";
       let inputError = "";
       // A private pipe distinguishes flock refusal from runtime exit 75.
       // Reading only stderr or a numeric exit code cannot prove zero effects.
       const startPipe = child.stdio[3] as NodeJS.ReadableStream;
       startPipe.on("data", chunk => { started = (started + String(chunk)).slice(0, 64); });
+      child.stdout!.on("data", chunk => {
+        stdout += String(chunk);
+        if (stdout.length > 16 * 1024) {overflow = true; stdout = stdout.slice(0, 16 * 1024);}
+      });
       child.stderr!.on("data", chunk => { stderr = (stderr + String(chunk)).slice(0, 300); });
       child.stdin!.on("error", error => { inputError = String(error).slice(0, 300); });
       child.on("error", error => resolve({message: String(error).slice(0, 300), retrySafe: false}));
       child.on("close", code => {
         if (code === 75 && started === "" && stderr === "") {
           resolve({message: "Mail sync is running; this action has not started.", retrySafe: true});
-        } else if (code === 0 && !inputError && started === "started\n") resolve(null);
+        } else if (code === 0 && !inputError && !overflow && started === "started\n") {
+          try {
+            const receipt = JSON.parse(stdout);
+            if (receipt?.schemaVersion !== 1 || receipt.code !== "mail-action-accepted"
+                || receipt.local !== "applied" || !["pending", "not-applicable"].includes(receipt.remote)
+                || !Array.isArray(receipt.commandIds) || receipt.commandIds.length > 100
+                || !receipt.commandIds.every((id: unknown) => typeof id === "string" && /^[0-9a-f]{64}$/.test(id))) {
+              throw new Error("invalid receipt");
+            }
+            resolve({accepted: receipt as CommandReceipt});
+          } catch {
+            resolve({message: "Mail action receipt is missing. Refresh before trying again.", retrySafe: false});
+          }
+        }
         else resolve({message: (stderr || inputError || `Mail action failed (exit ${code}); refresh before trying again.`).slice(0, 300), retrySafe: false});
       });
       child.stdin!.end(selected.stdout);
@@ -601,14 +626,14 @@ export function mailTools(): ToolDef[] {
     {
       name: "hwc_mail",
       description:
-        "Mail management. Actions: search, read, send, reply, tag, sync, health, accounts, folders. " +
+        "Mail management. Actions: search, read, send, reply, tag, sync, commands, health, accounts, folders. " +
         "Workflow state changes belong to hwc_mail_triage so they are recorded as human decisions.",
       inputSchema: {
         type: "object",
         properties: {
           action: {
             type: "string",
-            enum: ["search", "read", "send", "reply", "tag", "sync", "health", "accounts", "folders"],
+            enum: ["search", "read", "send", "reply", "tag", "sync", "commands", "health", "accounts", "folders"],
             description: "Action to perform",
           },
           // [search] params
@@ -617,6 +642,7 @@ export function mailTools(): ToolDef[] {
             description: "[search/tag] Notmuch query or saved search name (inbox, state:do, domain:hwc, fact:finance, history:business)",
           },
           limit: { type: "number", description: "[search] Max results (default 20)" },
+          command_id: { type: "string", description: "[commands] Accepted command ID; omit to inspect pending commands and uncertain effects" },
           offset: { type: "number", description: "[search] Skip first N results" },
           count_only: { type: "boolean", description: "[search] Return message count only (default false)" },
           // [read] params
@@ -670,6 +696,27 @@ export function mailTools(): ToolDef[] {
         // ── health ──────────────────────────────────────────────
         if (action === "health") {
           return executeMailHealth();
+        }
+
+        if (action === "commands") {
+          const id = args.command_id;
+          if (id !== undefined && (typeof id !== "string" || !/^[0-9a-f]{64}$/.test(id))) {
+            return mcpError({type:"VALIDATION_ERROR", message:"command_id must be a returned command ID"});
+          }
+          try {
+            const argv = ["review-transport", "--db", "/var/lib/hwc/mail-classifier/ledger.sqlite",
+              ...(typeof id === "string" ? ["--command-id", id] : [])];
+            const data = await new Promise<Record<string, unknown>>((resolve, reject) => {
+              execFile("/run/current-system/sw/bin/mail-classifier-runtime", argv,
+                {timeout:10_000, maxBuffer:2 * 1024 * 1024}, (error, stdout) => {
+                  if (error) return reject(error);
+                  try { resolve(JSON.parse(stdout.toString())); } catch (error) { reject(error); }
+                });
+            });
+            return {status:"ok", message:"Command receipts read. Uncertain effects require review; do not resubmit them.", data};
+          } catch (error) {
+            return catchError("INTERNAL_ERROR", "Command receipts unavailable", error, "Run mail-classifier review-transport");
+          }
         }
 
         // ── search ──────────────────────────────────────────────
@@ -772,9 +819,10 @@ export function mailTools(): ToolDef[] {
               spam: {kind: "state", value: "junk"}, unspam: {kind: "reopen"},
             };
             if (actionName && Object.hasOwn(dispositions, actionName)) {
-              const error = await classifierMutation(query, dispositions[actionName]);
-              if (error !== null) return classifierMutationError(error, query);
-              return {status: "ok", message: `Recorded ${actionName} for: ${rawQuery}`};
+              const outcome = await classifierMutation(query, dispositions[actionName]);
+              if (!("accepted" in outcome)) return classifierMutationError(outcome, query);
+              return {status: "ok", message: `Accepted ${actionName}. Remote completion is pending.`,
+                data: acceptedMailCommand(outcome.accepted)};
             }
             if (rawTags?.some(tag => /^[+-](?:inbox|archive|trash|spam)$/.test(tag))) {
               return mcpError({type: "VALIDATION_ERROR",
@@ -1049,7 +1097,8 @@ export function mailTools(): ToolDef[] {
                   .filter(([name]) => name.startsWith("fetch/") || name === "index");
                 const fetched = !!projection.lanes.index && availability.some(([name]) => name.startsWith("fetch/"))
                   && availability.every(([, lane]) => lane.runId === projection.runId && lane.state === "healthy");
-                const commands = projection.lanes.commands?.state === "healthy" ? "verified" : "pending";
+                const commandLane = projection.lanes.commands;
+                const commands = commandLane?.state === "healthy" && commandLane.pendingCount === 0 ? "verified" : "pending";
                 return {status: fetched ? (commands === "verified" ? "ok" : "partial") : "error",
                   message: fetched ? `Mail fetched and indexed. Commands are ${commands}.` : "Mail fetch or index failed. Inspect mail status.",
                   data: {runId: projection.runId, fetch: fetched ? "verified" : "failed", commands,

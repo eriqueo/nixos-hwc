@@ -30,15 +30,20 @@ let
   # Generate one Channel per mailbox mapping
   channelsFor = a:
     let
-      mapping = a.mailboxMapping or {};
+      mapping = lib.filterAttrs (remote: _: a.type != "proton-bridge" || !lib.elem remote [ "Drafts" "Sent" "Trash" ]) (a.mailboxMapping or {});
       wildcards = a.sync.wildcards or [];
       effectiveWildcards = wildcards ++ lib.optionals (a.type == "proton-bridge") [
         "!Trash"
+        "!Drafts"
+        "!Sent"
         # Eric deleted every legacy label on 2026-09-30. Never revisit or
         # recreate them from retained local copies. System One owns @ labels.
         "!${syncContract.labelMailboxPrefix}*"
       ];
       createPolicy = if common.isGmail a then "Create Near" else "Create Both";
+      membershipPolicy = lib.concatStringsSep "\n" (if a.type == "proton-bridge" then
+        [ "Sync Pull PushFlags" "Create Near" "Expunge Near" ]
+        else [ createPolicy "Expunge Both" ]);
 
       # Create one channel per mailbox mapping
       makeChannel = remoteName: localName:
@@ -53,9 +58,8 @@ let
           Channel ${channelName}
           Far :${a.name}-remote:${quotedRemote}
           Near :${a.name}-local:${quotedLocal}
-          ${createPolicy}
+          ${membershipPolicy}
           Remove Near
-          Expunge Both
           SyncState *
         '';
 
@@ -80,9 +84,8 @@ let
           Far :${a.name}-remote:
           Near :${a.name}-local:
           Patterns ${wildcardPatterns}
-          ${createPolicy}
+          ${membershipPolicy}
           ${removePolicy}
-          Expunge Both
           SyncState *
         ''
       else "";
@@ -101,9 +104,23 @@ let
         SyncState *
       '' else "";
 
+      # Dedicated ancillary channels retain draft uploads and sent copies.
+      # They never share the wildcard membership writer.
+      ancillaryChannels = lib.optionals (a.type == "proton-bridge") (map (folder: ''
+        Channel ${a.name}-${lib.toLower folder}
+        Far :${a.name}-remote:${confQuote folder}
+        Near :${a.name}-local:${confQuote folder}
+        Sync All
+        Create Both
+        Remove Near
+        Expunge Both
+        SyncState *
+      '') [ "Drafts" "Sent" ]);
+
       allChannels = mappedChannels
         ++ (if wildcardChannel != "" then [ wildcardChannel ] else [])
-        ++ (if trashChannel != "" then [ trashChannel ] else []);
+        ++ (if trashChannel != "" then [ trashChannel ] else [])
+        ++ ancillaryChannels;
     in
       if allChannels == [] then
         # Fallback to simple INBOX channel if no mapping
@@ -157,16 +174,16 @@ let
     let
       mapped = map
         (remoteName: "${a.name}-${lib.replaceStrings ["[" "]" "/" " "] ["" "" "-" "-"] remoteName}")
-        (builtins.attrNames (a.mailboxMapping or {}));
+        (lib.filter (remote: a.type != "proton-bridge" || !lib.elem remote [ "Drafts" "Sent" "Trash" ]) (builtins.attrNames (a.mailboxMapping or {})));
       wildcard = lib.optionals ((a.sync.wildcards or []) != [] || a.type == "proton-bridge") [ "${a.name}-wildcards" ];
-      named = mapped ++ wildcard;
+      named = mapped ++ wildcard ++ lib.optionals (a.type == "proton-bridge") [ "${a.name}-drafts" "${a.name}-sent" ];
     in if named == [] then [ a.name ] else named;
   coreChannels = lib.concatMap channelNamesFor syncVals;
   accountChannels = builtins.listToAttrs (map (a: {
     name = a.name;
     value = channelNamesFor a;
   }) syncVals);
-  transportChannels = lib.concatMap channelNamesFor (lib.filter (a: a.type == "proton-bridge") syncVals);
+  transportChannels = lib.concatMap (a: lib.filter (name: !lib.elem name [ "${a.name}-drafts" "${a.name}-sent" ]) (channelNamesFor a)) (lib.filter (a: a.type == "proton-bridge") syncVals);
   trashChannels = map (a: "${a.name}-trash") (lib.filter (a: a.type == "proton-bridge") syncVals);
 in
 {

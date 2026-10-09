@@ -10,9 +10,10 @@
 ## Structure
 
 MCP mail health accepts sync status versions 1 and 2. Version 2 measures fetch
-and index freshness separately from commands. A sync response uses the completed
-run's receipt; unit exit alone cannot prove completion. Unknown completion is
-pending and does not grant replay authority.
+and index separately. Mutation responses return accepted command IDs; the
+`commands` action reads queued, review, superseded or verified receipts. A
+successful worker cannot prove completion while its pending count is nonzero.
+Unknown completion remains pending and never grants replay authority.
 
 MCP mail tools require the pinned System One contract at startup. They accept
 versions 2 and 3 during expansion and show DONT KNOW separately from confirmed DO.
@@ -65,6 +66,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-10-09: Return durable mail command acceptance receipts and add read-only command polling. Require zero pending commands before sync reports remote completion.
 
 - 2026-10-09: Read independent mail availability results and return run IDs with
   verified fetch and pending commands. Reject completion claims from an unchanged

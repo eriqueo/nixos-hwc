@@ -1508,6 +1508,9 @@
         fixture = pkgs.writeText "mail-residency-shadow.json" (builtins.toJSON {
           inherit transportChannels;
           script = home.home.file.".local/bin/sync-mail".text;
+          standaloneScript = standalone.home.file.".local/bin/sync-mail".text;
+          mbsyncrc = home.home.file.".mbsyncrc".text;
+          afew = home.xdg.configFile."afew/config".text;
           command = home.hwc.mail.classifier.residency.command;
           projection = home.hwc.mail.classifier.projection.command;
           statusFile = home.hwc.mail.mbsync.statusFile;
@@ -1522,8 +1525,7 @@
         "mail-residency-shadow: scheduled classification must share the writable mail owner lock and defer busy runs";
       assert lib.assertMsg (standalone.hwc.mail.classifier.residency.enable
         && standalone.hwc.mail.classifier.projection.enable
-        && lib.hasInfix (builtins.unsafeDiscardStringContext standalone.hwc.mail.classifier.residency.command) standalone.home.file.".local/bin/sync-mail".text
-        && lib.hasInfix (builtins.unsafeDiscardStringContext standalone.hwc.mail.classifier.projection.command) standalone.home.file.".local/bin/sync-mail".text)
+        && lib.hasInfix "coordinate" standalone.home.file.".local/bin/sync-mail".text)
         "mail-residency-shadow: standalone client activation must retain mail reconciliation and projection";
       assert lib.assertMsg home.hwc.mail.classifier.residency.enable
         "mail-residency-shadow: mail host must observe in shadow";
@@ -1572,135 +1574,62 @@
             pass
         else:
             raise AssertionError('removed scheduled classifier lock escaped its effect test')
-        assert original.count(fixture['command']) == 1
-        assert original.count(fixture['projection']) == 1
-
-        def validate_prefetch(source):
-            options = re.search(r'run_lane core (--pull-new.*?) "', source)[1]
-            result = subprocess.run(['${pkgs.isync}/bin/mbsync', '-c', '/dev/null',
-                                     *shlex.split(options)], capture_output=True, text=True, timeout=10)
-            # Empty config is intentional: exercise the real option parser
-            # without reading credentials, opening mail, or contacting a server.
-            assert result.returncode == 1 and result.stderr.startswith('No channels defined.'), result.stderr
-
-        validate_prefetch(original)
-        try:
-            validate_prefetch(original.replace('--remove-near', '--remove-none'))
-        except AssertionError:
-            pass
-        else:
-            raise AssertionError('invalid prefetch option escaped the real mbsync parser')
-
-        def exercise(source, stage="", mode='core'):
-            with tempfile.TemporaryDirectory() as directory:
-                root = pathlib.Path(directory)
-                log = root / 'calls'
-                status = root / 'status.json'
-                stub = root / 'command'
-                stub.write_text('#!${pkgs.python3}/bin/python3\n'
-                    'import os, pathlib, sys\n'
-                    'name = pathlib.Path(sys.argv[0]).name\n'
-                    'if name == "mail-classifier": name = sys.argv[1]\n'
-                    'if name == "transport": name += "-" + sys.argv[sys.argv.index("--phase") + 1]\n'
-                    'if name == "mbsync" and "--pull-new" in sys.argv:\n'
-                    '    history = pathlib.Path(os.environ["CALL_LOG"])\n'
-                    '    name = "post-write-pull" if history.exists() and "transport-apply" in history.read_text().splitlines() else "prefetch"\n'
-                    'if name == "mbsync" and "--push-flags" in sys.argv: name = "reconcile-flags"\n'
-                    'if name in ("reconcile-flags", "post-write-pull"):\n'
-                    '    actual = [arg for arg in sys.argv[1:] if not arg.startswith("--")]\n'
-                    '    import json\n'
-                    '    assert actual == json.loads(os.environ["EXPECTED_TRANSPORT_CHANNELS"]), actual\n'
-                    'with open(os.environ["CALL_LOG"], "a") as f: f.write(name + "\\n")\n'
-                    'raise SystemExit(23 if name == os.environ["FAIL_STAGE"] else 0)\n')
-                stub.chmod(0o755)
-                for name in ['afew', 'mbsync', 'notmuch', 'mail-classifier']:
-                    (root / name).symlink_to(stub)
-                script = source.replace(fixture['statusFile'], str(status))
-                script = script.replace(fixture['maildirRoot'], str(root / 'Maildir'))
-                script = re.sub(r'/nix/store/[^\s"\x27]+/bin/(afew|mbsync|notmuch|mail-classifier)\b',
-                    lambda m: str(root / m[1]), script)
-                wrapper = root / 'sync-mail'
-                wrapper.write_text(script)
-                wrapper.chmod(0o755)
-                result = subprocess.run(['${pkgs.bash}/bin/bash', str(wrapper), mode],
-                    env={**os.environ, 'CALL_LOG': str(log), 'FAIL_STAGE': stage, 'SYNC_MAIL_LOCKED': '1',
-                         'EXPECTED_TRANSPORT_CHANNELS': json.dumps(fixture['transportChannels'])},
-                    capture_output=True, text=True)
-                calls = log.read_text().splitlines()
-                lanes = json.loads(status.read_text())['lanes']
-                assert 'notmuch' in calls, 'indexing must survive transport/mover failure'
-                if mode == 'trash':
-                    assert calls == ['mbsync', 'notmuch'], calls
-                    assert 'residency' not in lanes
-                    assert 'labels' not in lanes
-                else:
-                    expected = ['prefetch', 'mbsync', 'notmuch']
-                    fetched = stage not in ['prefetch', 'mbsync', 'notmuch']
-                    if fetched:
-                        expected += ['observe-residency', 'reconcile-flags']
-                        if stage != 'reconcile-flags': expected.append('transport-apply')
-                        if stage not in ['transport-apply', 'reconcile-flags']:
-                            expected += ['post-write-pull', 'mbsync', 'notmuch']
-                            if stage != 'post-write-pull': expected.append('afew')
-                            if stage not in ['afew', 'post-write-pull']:
-                                expected += ['mbsync', 'transport-ack']
-                    expected.append('notmuch')
-                    healthy = fetched and stage not in ['reconcile-flags', 'transport-apply', 'post-write-pull', 'afew', 'transport-ack']
-                    if healthy and stage != 'observe-residency': expected.append('project-labels')
-                    assert calls == expected, calls
-                    assert lanes['core']['state'] == ('healthy' if healthy else 'degraded')
-                    assert lanes['residency']['state'] == ('healthy' if healthy and stage != 'observe-residency' else 'degraded')
-                    assert lanes['labels']['state'] == ('healthy' if healthy and not stage else 'degraded')
-                assert result.returncode == (23 if stage else 0), result.stderr
-
-        for stage in ["", 'prefetch', 'reconcile-flags', 'post-write-pull', 'afew', 'mbsync', 'notmuch', 'observe-residency', 'transport-apply', 'transport-ack', 'project-labels']:
-            exercise(original, stage)
-        exercise(original, mode='trash')
-        narrowed = original.replace('"$' + '{TRANSPORT_CHANNELS[@]}"', '"$' + '{CORE_CHANNELS[@]}"')
-        assert narrowed != original
-        try:
-            exercise(narrowed)
-        except AssertionError:
-            pass
-        else:
-            raise AssertionError('unrelated accounts entered the Proton-only reconciliation passes')
-        flags = next(line for line in original.splitlines() if 'run_lane core --pull-flags --push-flags' in line)
-        try:
-            exercise(original.replace(flags, 'true'))
-        except AssertionError:
-            pass
-        else:
-            raise AssertionError('removed flag reconciliation escaped the owner wiring test')
-        # Remove just the second pull: success and failure ordering assertions
-        # must both detect the missing production integration.
-        pull = 'run_lane core --pull-new --pull-gone --create-near --remove-near --expunge-near '
-        start = original.index(pull, original.index(pull) + len(pull))
-        end = original.index('# Only durable intent markers', start)
-        try:
-            exercise(original[:start] + original[end:])
-        except AssertionError:
-            pass
-        else:
-            raise AssertionError('removed post-write pull escaped the owner wiring test')
-        for missing in ['--pull-new --pull-gone --create-near --remove-near --expunge-near', '--phase apply', '--phase ack']:
-            try:
-                exercise(original.replace(missing, '--missing-wiring'))
-            except AssertionError:
-                pass
-            else:
-                raise AssertionError('removed reconciliation wiring passed: ' + missing)
-        try:
-            exercise(original.replace(fixture['command'], 'true'))
-        except AssertionError:
-            pass
-        else:
-            raise AssertionError('removed observer wiring passed its check')
-        try:
-            exercise(original.replace(fixture['projection'], 'true'))
-        except AssertionError:
-            pass
-        else:
-            raise AssertionError('removed projector wiring passed its check')
+        import copy, importlib.util
+        runtime = '${inputs.system-one}/scripts/mail_classifier.py'
+        spec = importlib.util.spec_from_file_location('mail', runtime)
+        mail = importlib.util.module_from_spec(spec); spec.loader.exec_module(mail)
+        def configuration(wrapper):
+            return json.loads(pathlib.Path(re.search(r'--config (\S+)',wrapper)[1]).read_text())
+        config = configuration(original)
+        def wiring(candidate):
+            steps = dict(candidate['commandSteps'])
+            assert list(steps) == ['flags','apply','mirror','index','ack','final-index']
+            assert '--push-flags' in steps['flags']
+            assert steps['flags'][-len(fixture['transportChannels']):] == fixture['transportChannels']
+            assert '--phase apply' in steps['apply'][-1]
+            assert '--phase ack' in steps['ack'][-1]
+            assert '--pull-gone' in steps['mirror']
+            assert fixture['command'] == candidate['observation'][-1]
+            assert fixture['projection'] == candidate['labels'][-1]
+            assert candidate['accounts']['proton']['upload'][-2:] == ['proton-drafts','proton-sent']
+            assert '[MailMover]' not in fixture['afew']
+        wiring(config); wiring(configuration(fixture['standaloneScript']))
+        for step in ['flags','mirror','apply','ack']:
+            broken=copy.deepcopy(config);broken['commandSteps']=[row for row in broken['commandSteps'] if row[0]!=step]
+            try: wiring(broken)
+            except AssertionError: pass
+            else: raise AssertionError('removed owner wiring passed: '+step)
+        broken=copy.deepcopy(config);broken['commandSteps'].append(['mover',['afew','-m','-a']])
+        try: wiring(broken)
+        except AssertionError: pass
+        else: raise AssertionError('competing mover escaped wiring test')
+        for failed in ["", 'fetch/proton','fetch/gmail-personal','index','commands/apply','labels','residency']:
+            status={};calls=[]
+            def execute(argv, timeout):
+                calls.append(argv)
+                if failed.startswith('fetch/'):
+                    return 23 if argv == config['accounts'][failed.split('/')[1]]['fetch'] else 0
+                actual = config['index'] if failed=='index' else dict(config['commandSteps']).get(failed.removeprefix('commands/')) if failed.startswith('commands/') else config.get('observation' if failed=='residency' else failed)
+                return 23 if actual and argv==actual else 0
+            rc=mail.coordinate_mail(config,'core',status,execute,lambda:10000,lambda _:None,
+                lambda:{'commands':[],'unknownEffects':[]})
+            assert rc == (23 if failed.startswith('fetch/') or failed=='index' else 0)
+            assert config['index'] in calls
+            assert status['lanes']['fetch/gmail-business']['state']=='healthy'
+            if failed=='commands/apply':
+                assert status['lanes']['core']['state']=='healthy'
+                assert status['lanes']['commands']['state']=='degraded'
+        with tempfile.TemporaryDirectory() as directory:
+            rcfile=pathlib.Path(directory)/'mbsyncrc';rcfile.write_text(fixture['mbsyncrc'])
+            parsed=subprocess.run(['${pkgs.isync}/bin/mbsync','-c',str(rcfile),'nonexistent-fixture-channel'],capture_output=True,text=True)
+            assert parsed.returncode==1 and 'No channel named' in parsed.stderr, parsed.stderr
+            assert 'global options' not in parsed.stderr, parsed.stderr
+        blocks=fixture['mbsyncrc'].split('Channel ')
+        proton=next(block for block in blocks if block.startswith('proton-wildcards\n'))
+        assert 'Sync Pull PushFlags' in proton and 'Expunge Near' in proton
+        assert 'Expunge Both' not in proton and 'Create Both' not in proton
+        assert all('!"'+name+'"' in proton for name in ['Trash','Drafts','Sent'])
+        print('actual coordinator configuration: independent fetch, physical owner, ancillary parity, parser and seeded wiring failures pass')
         PY
         touch "$out"
       '';
@@ -1876,7 +1805,7 @@
                 (mail / 'proton' / 'inbox' / 'cur' / 'reopened:2,S').write_text(raw)
                 for _ in range(3):
                     nm('new')
-                    subprocess.run(['${afewTest}/bin/afew', '-m', '-a'], env=env, check=True, capture_output=True)
+                    subprocess.run(['${afewTest}/bin/afew', '-t', '-a'], env=env, check=True, capture_output=True)
                     tags = json.loads(nm('search', '--format=json', '--output=tags', 'id:reopen@example.invalid'))
                     assert 'inbox' in tags and 'archive' not in tags, tags
                     assert 'workflow/done' in tags, 'transport repair must not promote S1'
@@ -1891,6 +1820,7 @@
             raise AssertionError('removed remote-reopen wiring passed its real-tool replay')
 
         def check_phone_trash(source):
+            assert '[MailMover]' not in source, 'retired mailbox writer returned'
             with tempfile.TemporaryDirectory() as directory:
                 root = pathlib.Path(directory); mail = root / 'Maildir'
                 for folder in ['inbox', 'Archive', 'Trash', 'Spam']:
@@ -1903,7 +1833,7 @@
                 hp = mail / '.notmuch' / 'hooks' / 'post-new'; hp.parent.mkdir(parents=True)
                 hp.write_text(hook.replace('export NOTMUCH_CONFIG="$HOME/.notmuch-config"', 'export NOTMUCH_CONFIG=' + shlex.quote(str(config)))); hp.chmod(0o700)
                 def nm(*args): return subprocess.check_output(['${pkgs.notmuch}/bin/notmuch', *args], env=env, text=True)
-                def move(): subprocess.run(['${afewTest}/bin/afew', '-m', '-a'],env=env,check=True,capture_output=True)
+                def move(): subprocess.run(['${afewTest}/bin/afew', '-t', '-a'],env=env,check=True,capture_output=True)
                 # Durable human commands also apply to old mail. A fixed old
                 # date catches an accidental MailMover age filter.
                 raw = 'Message-ID: <trash@example.invalid>\nFrom: sender@example.invalid\nTo: fixture@example.invalid\nSubject: Fixture\nDate: Sat, 01 Jan 2000 12:00:00 +0000\n\nSynthetic content\n'
@@ -1916,24 +1846,18 @@
                 for _ in range(3):
                     move(); nm('new')
                     assert trash.exists() and not list((mail/'proton/inbox/cur').iterdir())
-                # Only the durable command projection marker authorizes restoration.
+                # Tags and old intent markers cannot move a physical file.
                 nm('tag','+transport/inbox','+inbox','-trash','--','id:trash@example.invalid')
                 move(); nm('new')
-                assert not trash.exists() and len(list((mail/'proton/inbox/cur').iterdir())) == 1
+                assert trash.exists() and not list((mail/'proton/inbox/cur').iterdir())
         afew_source = pathlib.Path(sys.argv[3]).read_text()
         check_phone_trash(afew_source)
         try:
-            check_phone_trash(afew_source.replace('rename = True', 'rename = True\nmax_age = 30'))
+            check_phone_trash(afew_source + "\n[MailMover]\nrename = True\n")
         except AssertionError:
             pass
         else:
-            raise AssertionError('age filter silently skipped a durable restore command')
-        try:
-            check_phone_trash(afew_source.replace('tag:transport/inbox','tag:inbox'))
-        except AssertionError:
-            pass
-        else:
-            raise AssertionError('generic Inbox tags still authorize Trash restoration')
+            raise AssertionError('retired mover passed the writer isolation check')
 
         # Exercise the actual generated dispatcher with only its runtime binding
         # substituted. Removing reopen from that dispatcher must lose db/notmuch.

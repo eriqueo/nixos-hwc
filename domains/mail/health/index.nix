@@ -12,7 +12,7 @@
 #   - Owns: health check script, systemd timer, alert routing, state tracking
 #   - Depends on: mail domain (accounts, bridge, mbsync, notmuch paths)
 #   - Does NOT touch: mail data, configs, or services (read-only + GPG lock cleanup)
-{ config, lib, pkgs, osConfig ? {}, ... }:
+{ config, lib, pkgs, inputs, osConfig ? {}, ... }:
 let
   cfg = config.hwc.mail.health;
   mailCfg = config.hwc.mail;
@@ -54,6 +54,7 @@ let
     FAILURES=()
     WARNINGS=()
     REMEDIATIONS=()
+    SYNC_FAILED=false
 
     fail()  { FAILURES+=("$1"); }
     warn()  { WARNINGS+=("$1"); }
@@ -258,22 +259,31 @@ let
       # Version 2 publishes availability before enrichment. A command outcome
       # cannot invalidate a successful download or become a delivery outage.
       if [[ $(${pkgs.jq}/bin/jq -r '.schemaVersion' "$SYNC_STATUS") == 2 ]]; then
-        local lane success_epoch age_min state
-        while IFS= read -r lane; do
-          success_epoch=$(${pkgs.jq}/bin/jq -r --arg lane "$lane" '.lanes[$lane].lastSuccessEpoch // 0 | floor' "$SYNC_STATUS")
-          age_min=$(( ($(now_epoch) - success_epoch) / 60 ))
-          if (( success_epoch == 0 || age_min > SYNC_MAX_AGE_MIN )); then
-            fail "Mail $lane has no fresh success. Inspect $SYNC_STATUS."
-          elif [[ $(${pkgs.jq}/bin/jq -r --arg lane "$lane" '.lanes[$lane].state' "$SYNC_STATUS") != healthy ]]; then
-            warn "Mail $lane failed this attempt. Its last success is still fresh. Inspect $SYNC_STATUS."
-          fi
-        done < <(${pkgs.jq}/bin/jq -r '.lanes | keys[] | select(startswith("fetch/") or . == "index")' "$SYNC_STATUS")
-        if ! ${pkgs.jq}/bin/jq -e '.lanes.index and ([.lanes | keys[] | select(startswith("fetch/"))] | length > 0)' "$SYNC_STATUS" >/dev/null; then
-          fail "Mail availability results are missing. Inspect $SYNC_STATUS."
+        local assessment
+        if ! assessment=$(${pkgs.python3}/bin/python3 ${inputs.system-one}/scripts/mail_classifier.py health-cases \
+            --status "$SYNC_STATUS" --db "$STATE_DIR/cases.sqlite" \
+            --availability-seconds "$(( SYNC_MAX_AGE_MIN * 60 ))"); then
+          fail "Mail health case assessment failed. Inspect $SYNC_STATUS."
+          return
         fi
-        while IFS= read -r lane; do
-          warn "Mail $lane needs review. Run mail-classifier review-transport. Inspect $SYNC_STATUS."
-        done < <(${pkgs.jq}/bin/jq -r '.lanes | to_entries[] | select(.key == "commands" or .key == "labels" or .key == "residency") | select(.value.state != "healthy") | .key' "$SYNC_STATUS")
+        # Each content-keyed case records append-only judgments. Alerts fire
+        # on open/escalation transitions, not on each repeated observation.
+        while IFS= read -r item; do
+          local outcome message lane
+          outcome=$(${pkgs.jq}/bin/jq -r '.outcome' <<<"$item")
+          message=$(${pkgs.jq}/bin/jq -r '.message' <<<"$item")
+          lane=$(${pkgs.jq}/bin/jq -r '.lane // "mail"' <<<"$item")
+          if [[ "$outcome" == critical ]]; then
+            send_webhook critical "$message"
+            send_notify "Mail $lane needs action" "$message"
+          elif [[ "$outcome" == warning ]]; then
+            send_webhook warning "$message"
+          fi
+        done < <(${pkgs.jq}/bin/jq -c '.transitions[]' <<<"$assessment")
+        ${pkgs.jq}/bin/jq -r '.issues[] | .outcome + ": " + .message' <<<"$assessment"
+        if ${pkgs.jq}/bin/jq -e '.issues | any(.outcome == "critical")' <<<"$assessment" >/dev/null; then
+          SYNC_FAILED=true
+        fi
         return
       fi
 
@@ -391,6 +401,9 @@ let
 
       # All clear — reset failure escalation tracking
       rm -f "$STATE_DIR/first-failure"
+      if [[ "$SYNC_FAILED" == true ]]; then
+        exit 1
+      fi
       echo "OK — $(${pkgs.coreutils}/bin/date -Iseconds)"
     }
     report_results

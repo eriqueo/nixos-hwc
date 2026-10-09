@@ -6,14 +6,12 @@ let
     ((lib.attrValues (config.hwc.mail.accounts or {})) != []);
 
   render   = import ./parts/render.nix { inherit lib pkgs config; };
-  afewCfg  = config.hwc.mail.afew or {};
-  afewPkg  = import ../afew/package.nix { inherit lib pkgs; cfg = afewCfg; };
   brCfg = config.hwc.mail.bridge or {};
   maildirRoot =
     let base = (config.hwc.mail.notmuch or {}).maildirRoot or "";
     in if base != "" then base else "${config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail"}/Maildir";
   svc      = import ./parts/service.nix {
-    inherit lib pkgs afewPkg;
+    inherit lib pkgs;
     source = inputs.system-one;
     haveProton = render.haveProton;
     inherit maildirRoot;

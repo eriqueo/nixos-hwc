@@ -1,7 +1,65 @@
 # Local mail workflow architecture
 
-Status: workflow contract v3 implemented and under deployment checks on October 1.
-Laya remains in State shadow. The dated sections below preserve earlier evidence.
+Status: workflow contract v3 remains active. The October 9 reliability repair
+adds physical effect ownership and independent availability. Its seven-day soak
+and compatibility retirement remain acceptance work; model State stays shadow.
+
+## Mail sync reliability — approved October 9
+
+Eric approved the rigorous repair in chat. The reproduced failure reserved an
+effect before later preflight reads. A deadline left a zero-wire fixture uncertain,
+and global recovery blocked unrelated commands. Aggregate core status then
+misreported successful fetch/index as a mail outage. Two provider identities
+sharing one Message-ID demonstrated why threading keys cannot authorize copies.
+
+System One owns one bounded coordinator and one keyed physical effect lifecycle.
+Nix owns credentials, paths, scheduling and activation. Each account fetches
+independently and indexes before enrichment. Version-2 status publishes those
+facts immediately. Labels, model availability and command review cannot replace
+a successful fetch. MCP returns accepted command IDs and polls durable receipts.
+
+Effects are keyed by account, provider identity, intent generation and operation.
+Preflight validates exact identity, placement, stars and UIDVALIDITY before
+reservation. Dispatch state commits before the wire call. Prepared or proven
+no-dispatch effects can resume; dispatching, awaiting-readback and unknown effects
+receive reads only. Exact postconditions establish verified completion. Original
+uncertain receipts remain intact and conservatively quarantine their Message-ID
+group when historical physical scope cannot be proved.
+
+Proton dispositions use COPY of existing records. Managed labels share physical
+identity leases. Real-folder EXPUNGE and mail recreation are outside this owner.
+Afew membership moves and general Proton membership pushes are removed. Dedicated
+Drafts/Sent channels retain their uploads; Gmail retains its provider behavior.
+Archive/reopen and labels preserve stars. Trash permits Proton's complete native
+star removal. Captured placement changes become conflicts rather than overwrites.
+IMAP has no atomic compare-and-COPY across clients: phone edits between the final
+preflight and COPY remain a provider concurrency limit, detected by readback.
+
+The contract bounds accepted commands and active effects at 100, command identities
+and label effects at 20 per run, and copies at eight per group. Accepted work is
+retained at capacity. Durable cursors rotate work. Fetch has a 120-second ceiling
+per account. Enrichment has a 120-second total budget with time reserved for labels.
+Readback repeats at most six times with capped exponential delay and jitter;
+wire mutations never retry from an uncertain receipt.
+
+Health uses content-derived cases with state separate from outcome. It appends
+judgments, emits alerts on transitions, and escalates pending commands at 30
+minutes or stale fetch/index at 45 minutes. Its AUTO-MANAGED projection retains
+30 days and at most 5,000 judgments; active cases are capped at 128. The effect
+and human-event ledger remains CRITICAL and backed up.
+
+Recovery uses `sync-mail core --effects-off`. Keep the current ledger. Code
+rollback must retain effect containment; restoring an old database over newer
+human events is not a recovery procedure. Historical uncertainty never becomes
+retry authority merely because current placement matches its preimage.
+
+Offline crash/collision/containment fixtures and disposable Bridge trials precede
+activation. Live trials covered Archive, reopen, Trash, restore, stars, managed
+labels, Drafts and Sent. Scheduled cycles and seven days without unexplained
+reversal or unreported backlog are required before compatibility retirement.
+Legacy direct-call regression helpers and v1 status readers are temporary;
+remove them after that soak and measured consumer coverage. Migration completion
+requires their deletion and the production wiring checks.
 
 ## Observable contract
 

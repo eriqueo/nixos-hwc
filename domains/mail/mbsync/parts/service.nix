@@ -2,7 +2,6 @@
   lib,
   pkgs,
   haveProton,
-  afewPkg,
   source,
   accountChannels,
   coreChannels,
@@ -29,19 +28,18 @@ let
     accounts = lib.mapAttrs (name: channels: {
       fetch = sync (fetchFlags ++ channels ++ lib.optionals (name == "proton") trashChannels);
       trash = if name == "proton" then sync trashChannels else [];
+      upload = sync (if name == "proton" then [ "${name}-drafts" "${name}-sent" ] else channels);
     }) accountChannels;
     index = [ "${pkgs.notmuch}/bin/notmuch" "new" ];
     observation = shell residencyCommand;
     labels = shell projectionCommand;
-    # Temporary legacy owner; remove when physical executor passes live parity.
+    labelReport = "${builtins.dirOf statusFile}/labels.json";
+    # One physical membership owner; mbsync mirrors verified provider effects.
     commandSteps = lib.optionals (transportCommand != "") [
       [ "flags" (sync ([ "--pull-flags" "--push-flags" ] ++ transportChannels)) ]
       [ "apply" (shell "${transportCommand} --phase apply") ]
       [ "mirror" (sync (fetchFlags ++ transportChannels ++ trashChannels)) ]
       [ "index" [ "${pkgs.notmuch}/bin/notmuch" "new" ] ]
-    ] ++ [
-      [ "mover" [ "${afewPkg}/bin/afew" "-m" "-a" ] ]
-      [ "push" (sync coreChannels) ]
     ] ++ lib.optionals (transportCommand != "") [
       [ "ack" (shell "${transportCommand} --phase ack") ]
     ] ++ [ [ "final-index" [ "${pkgs.notmuch}/bin/notmuch" "new" ] ] ];
@@ -76,7 +74,7 @@ in
       export NOTMUCH_CONFIG="$HOME/.notmuch-config"
       exec ${pkgs.python3}/bin/python3 ${source}/scripts/mail_classifier.py coordinate \
         --config ${coordinatorConfig} --status ${lib.escapeShellArg statusFile} \
-        --mode "''${1:-core}"
+        --mode "''${1:-core}" "''${@:2}"
     '';
   };
 

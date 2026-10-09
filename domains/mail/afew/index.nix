@@ -4,7 +4,6 @@ let
   nmCfg = config.hwc.mail.notmuch or {};
   transport = config.hwc.mail.classifier.contract.mailboxTransport;
   folders = transport.localMailboxes;
-  intent = target: "tag:${transport.intentTagPrefix}${target}";
 
   afewPkg = import ./package.nix { inherit lib pkgs; cfg = cfg; };
 
@@ -33,29 +32,12 @@ tags = +spam
 message = Tag messages already in Proton Spam
 '';
 
-  # Only durable shared-command intents authorize a move. Folder tags describe
-  # fetched residency and must never resurrect a phone Trash/Archive action.
-  mailMoverSection = ''
-[MailMover]
-folders = ${lib.concatStringsSep " " (map (name: folders.${name}) [ "inbox" "archive" "trash" "spam" ])}
-rename = True
-# Intent markers come from bounded, durable commands, including old threads.
-# A date filter would silently skip their moves and leave receipts pending.
-# Omit max_age: afew reads a configured 0 as a truthy string (today only).
-
-${folders.inbox} = '${intent "archive"}':${folders.archive} '${intent "trash"}':${folders.trash}
-${folders.archive} = '${intent "inbox"}':${folders.inbox} '${intent "trash"}':${folders.trash}
-${folders.trash} = '${intent "inbox"}':${folders.inbox} '${intent "archive"}':${folders.archive}
-${folders.spam} = '${intent "inbox"}':${folders.inbox} '${intent "archive"}':${folders.archive} '${intent "trash"}':${folders.trash}
-'';
-
   conf = ''
 [global]
 # notmuch config discovery is done via NOTMUCH_CONFIG; no database path needed here
 maildir = ${mailRoot}
 
 ${folderStateFilters}
-${mailMoverSection}
 ''; # trailing newline expected by afew
 in
 {
