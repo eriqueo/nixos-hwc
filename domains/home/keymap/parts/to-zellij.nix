@@ -18,12 +18,11 @@
 let
   # Namespaced destinations and indices come from the layout's shared data.
   tabFor = tabs.tabFor;
-  # Hub letters are not hand-typed here: the Workbench registry produces them
+  # Hub digits are not hand-typed here: the Workbench registry produces them
   # (tabs.hubJumps) and they join the grammar's tool/nav entries.
   meta = grammar.meta ++ tabs.hubJumps;
   targets = map (entry: entry.target) (lib.filter (entry: entry ? target) meta);
-  hubKeys = map (jump: jump.key) tabs.hubJumps;
-  clashes = lib.filter (entry: lib.elem entry.key hubKeys) grammar.meta;
+  clashes = lib.filter (entry: builtins.match "[0-9]" entry.key != null) grammar.meta;
 
   # nav intent -> zellij action (tab jumps use GoToTab <index>, handled separately)
   navAction = {
@@ -76,9 +75,9 @@ let
     scroll = "scroll"; detach = "detach";
     # `kill` (Quit) has no plugin verb — omitted from the card on purpose.
   };
-  # Hub letters use `goto-hub`: focus the workbench tab, then `workbench --goto`
+  # Hub digits use `goto-hub`: focus the workbench tab, then `workbench --goto`
   # switches the running workbench (zellij-which RunCommands). The mode
-  # fallback below has no quiet command action, so there a hub letter only
+  # fallback below has no quiet command action, so there a hub digit only
   # focuses the workbench tab.
   entryFor = e:
     let tok = keyToken e.key; in
@@ -164,7 +163,7 @@ let
   '';
 in
 assert lib.assertMsg (clashes == [ ])
-  "workbench: hub key(s) ${lib.concatMapStringsSep ", " (e: "'${e.key}'") clashes} collide with tool/nav letters in keymap grammar.meta";
+  "workbench: digit key(s) ${lib.concatMapStringsSep ", " (e: "'${e.key}'") clashes} in grammar.meta; hub positions own 1–9";
 assert lib.assertMsg (builtins.length meta == builtins.length (lib.unique (map (entry: entry.key) meta)))
   "workbench: duplicate meta shortcut";
 assert lib.assertMsg (lib.all (target: builtins.hasAttr target tabFor) targets)

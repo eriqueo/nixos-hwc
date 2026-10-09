@@ -93,6 +93,8 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 - todui/khalt/workbench log a missing/unread `*_KEYMAP` rather than failing silent.
 
 ## Changelog
+- 2026-10-09: Hubs use Ctrl+Space 1–9 by visible rail position; reject digit
+  keys in `grammar.meta` and retain tool letters t/c/m/f/e/a.
 - 2026-10-09: New `a` = agent group in every app; the workbench's ask-agent moves from
   `Space o a` to `Space a a`. CRM is two hubs: `r` CRM Jobs, `N` CRM Network.
 - 2026-10-07: Final Workbench hub set from the registry: `b` Today, `r` CRM, `i` Mail,

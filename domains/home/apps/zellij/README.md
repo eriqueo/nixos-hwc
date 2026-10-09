@@ -16,9 +16,11 @@ meta-leader which-key plugin when the unified keymap grammar is present.
 - `index.nix` — selected graphics-capable package shared with Workbench; options, config.kdl/layout/plugin via xdg.configFile
 - `parts/appearance.nix` — palette → KDL themes block
 - `parts/layout.nix` — workbench pane-grid KDL (late-bound mail command)
-- `parts/tabs.nix` — hub registry (schema 3) consumer + structured tool tab set (order = GoToTab indices); exports `paneTabs` (the workbench tab) and `hubJumps` (registry hub letters)
+- `parts/tabs.nix` — hub registry (schema 4) consumer + structured tool tab set (order = GoToTab indices); exports `paneTabs` (the workbench tab) and `hubJumps` (visible rail positions 1–9)
 
 ## Changelog
+- 2026-10-09: Hubs use Ctrl+Space 1–9 by visible rail position. Workbench's
+  `hubOrder` and `hiddenHubs` feed both the app and `hubRegistryFor`; require schema 4.
 - 2026-10-07: Contract step — drop registry schema 2. The layout is one `workbench` tab plus the
   tool tabs; rollback past this point is one commit reverting this change and the lock bump together.
 - 2026-10-07: Accept Workbench registry schema 3 alongside 2 (expand step). Under v3 the layout

@@ -41,7 +41,11 @@ let
   # emits its tab names from, so the host can never navigate to a tab name the
   # layout uses. Hub pages are separate from tool launch targets.
   navigation = import ../zellij/parts/tabs.nix {
-    inherit lib; hubRegistry = inputs.workbench.hubRegistry;
+    inherit lib;
+    hubRegistry = inputs.workbench.hubRegistryFor {
+      order = cfg.hubOrder;
+      hidden = cfg.hiddenHubs;
+    };
   };
 
   # Unified keymap grammar → ~/.config/workbench/keymap.json. Workbench parses
@@ -73,6 +77,18 @@ in
   #============================================================================
   options.hwc.home.apps.workbench = {
     enable = lib.mkEnableOption "workbench — Textual TUI ops host (zellij-orchestrated)";
+
+    hubOrder = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [];
+      description = "Hub slugs in custom rail order; empty uses manifest defaults.";
+    };
+
+    hiddenHubs = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [];
+      description = "Hub slugs hidden from the rail and its position shortcuts.";
+    };
 
     gatewayUrl = lib.mkOption {
       type = lib.types.str;
@@ -114,6 +130,7 @@ in
       gatewayUrl = cfg.gatewayUrl;
       offline = cfg.offline;
       hubsDir = cfg.hubsDir;
+      inherit (cfg) hubOrder hiddenHubs;
       defaultHub = navigation.landingHub;   # application-owned landing designation
       tabs = navigation.launcherTabs;    # plain jumps navigate to the tool's standing tab
       agentCommand = lib.getExe codexPkg;

@@ -1,8 +1,8 @@
 # Shared navigation data for layout, keymap, and Workbench standing tools.
 #
-# Consumes Workbench hubRegistry schema 3: one `workbench` tab whose rail
+# Consumes Workbench hubRegistryFor schema 4: one `workbench` tab whose rail
 # switches hubs, so every hub destination resolves to that tab, and each hub's
-# registry `key` is its Ctrl+Space letter (hubJumps).
+# registry `position` is its Ctrl+Space digit (hubJumps, positions 1–9).
 { lib, hubRegistry }:
 let
   registryHubs = hubRegistry.hubs;
@@ -27,10 +27,13 @@ let
 
   # The one tab that runs workbench; its rail shows every hub.
   paneTabs = [ { name = "workbench"; destination = "workbench"; landing = true; } ];
-  # {key, desc, target} per hub, in rail default order, for the Ctrl+Space
-  # letters (to-zellij.nix appends them to grammar.meta).
-  hubJumps = map (hub: { inherit (hub) key; desc = hub.label; target = "hub:${hub.slug}"; })
-    (lib.sort (a: b: a.order < b.order) registryHubs);
+  # The keymap adapter emits key|goto-hub|<tab>:<slug>|label from these targets.
+  hubJumps = map (hub: {
+    key = toString hub.position;
+    desc = hub.label;
+    target = "hub:${hub.slug}";
+  }) (lib.sort (a: b: a.position < b.position)
+    (lib.filter (hub: hub.position >= 1 && hub.position <= 9) registryHubs));
   destinations = paneTabs ++ toolTabs;
   tabIndex = builtins.listToAttrs (lib.imap1 (index: tab: {
     name = tab.destination; value = index;
@@ -38,7 +41,7 @@ let
   keys = map (tab: tab.destination) destinations;
   names = map (tab: tab.name) destinations;
 in
-assert lib.assertMsg (hubRegistry.schemaVersion == 3) "workbench: unsupported hub registry schema version";
+assert lib.assertMsg (hubRegistry.schemaVersion == 4) "workbench: unsupported hub registry schema version";
 assert lib.assertMsg (unique (map (hub: hub.slug) registryHubs)) "workbench: duplicate hub slug";
 assert lib.assertMsg (builtins.length (lib.filter (hub: hub.landing) registryHubs) == 1)
   "workbench: exactly one landing hub is required";
@@ -50,8 +53,8 @@ assert lib.assertMsg (unique (map (tab: tab.order) toolTabs)) "workbench: duplic
   inherit paneTabs hubJumps toolTabs destinations;
   landingHub = (builtins.head (lib.filter (hub: hub.landing) registryHubs)).slug;
   # Destination → GoToTab index; every hub destination is the workbench tab.
-  tabFor = tabIndex // builtins.listToAttrs (map (jump: {
-    name = jump.target; value = tabIndex.workbench;
-  }) hubJumps);
+  tabFor = tabIndex // builtins.listToAttrs (map (hub: {
+    name = "hub:${hub.slug}"; value = tabIndex.workbench;
+  }) registryHubs);
   launcherTabs = lib.mapAttrs (_: spec: spec.name) tools;
 }

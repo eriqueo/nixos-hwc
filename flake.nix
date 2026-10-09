@@ -696,7 +696,7 @@
       workbench-navigation = let
         home = self.homeConfigurations."eric@hwc-laptop".config;
         navigation = import ./domains/home/apps/zellij/parts/tabs.nix {
-          inherit lib; hubRegistry = inputs.workbench.hubRegistry;
+          inherit lib; hubRegistry = registry;
         };
         layout = home.xdg.configFile."zellij/layouts/workbench.kdl".text;
         configKdl = home.xdg.configFile."zellij/config.kdl".text;
@@ -706,36 +706,43 @@
         hubCommands = captures ''args "--hub" "([^"]+)"'' layout;
         focused = captures ''tab name="([^"]+)" focus=true'' layout;
         grammar = home.hwc.home.keymap.grammar;
-        # Hub letters come from the registry (navigation.hubJumps), tools/nav from the grammar.
+        # Hub digits come from rail positions, tools/nav from the grammar.
         jumps = lib.filter (entry: entry ? target) grammar.meta ++ navigation.hubJumps;
         destinationFor = key: (builtins.head (lib.filter (entry: entry.key == key) jumps)).target;
         acceptsRegistry = registry: (builtins.tryEval (builtins.deepSeq
           (import ./domains/home/apps/zellij/parts/tabs.nix { inherit lib; hubRegistry = registry; }) true)).success;
-        # The keymap generator must refuse a hub letter that a tool already owns.
-        acceptsKeys = registry: (builtins.tryEval (builtins.deepSeq
+        # Seed digit keys in the grammar to verify the reserved hub namespace.
+        acceptsKeys = candidateGrammar: (builtins.tryEval (builtins.deepSeq
           (import ./domains/home/keymap/parts/to-zellij.nix {
-            inherit lib grammar;
-            tabs = import ./domains/home/apps/zellij/parts/tabs.nix { inherit lib; hubRegistry = registry; };
+            inherit lib;
+            grammar = candidateGrammar;
+            tabs = navigation;
           }).keybinds true)).success;
-        registry = inputs.workbench.hubRegistry;
+        registry = inputs.workbench.hubRegistryFor {
+          order = home.hwc.home.apps.workbench.hubOrder;
+          hidden = home.hwc.home.apps.workbench.hiddenHubs;
+        };
       in
-      assert lib.assertMsg (!acceptsRegistry (registry // { schemaVersion = 2; }))
-        "workbench check: retired registry schema 2 accepted";
+      assert lib.assertMsg (!acceptsRegistry (registry // { schemaVersion = 3; }))
+        "workbench check: retired registry schema 3 accepted";
       assert lib.assertMsg (!acceptsRegistry (registry // { hubs = registry.hubs ++ [ (builtins.head registry.hubs) ]; }))
         "workbench check: duplicate registry hub accepted";
-      assert lib.assertMsg (!acceptsKeys (registry // {
-          hubs = map (hub: if hub.landing then hub // { key = "t"; } else hub) registry.hubs; }))
-        "workbench check: a hub key colliding with a tool letter was accepted";
-      assert lib.assertMsg (acceptsKeys registry)
+      assert lib.assertMsg (lib.all (key: !acceptsKeys (grammar // {
+          meta = grammar.meta ++ [ { inherit key; target = "tool:todui"; desc = "Reserved digit"; } ];
+        })) [ "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" ])
+        "workbench check: a digit key in grammar.meta was accepted";
+      assert lib.assertMsg (acceptsKeys grammar)
         "workbench check: the shipped registry's hub keys are rejected";
       assert lib.assertMsg (names == [ "workbench" ] ++ map (tab: tab.name) navigation.toolTabs
           && focused == [ "workbench" ] && hubCommands == [ ]
           && lib.all (jump: navigation.tabFor.${jump.target} == navigation.tabFor.workbench) navigation.hubJumps)
-        "workbench check: one landing workbench tab, no per-hub tabs, every hub letter targets it";
+        "workbench check: one landing workbench tab, no per-hub tabs, every hub digit targets it";
       assert lib.assertMsg (names == map (tab: tab.name) navigation.destinations)
         "workbench check: generated tab names/order differ from navigation";
       assert lib.assertMsg (home.programs.workbench.defaultHub == navigation.landingHub
-        && home.programs.workbench.tabs == navigation.launcherTabs)
+        && home.programs.workbench.tabs == navigation.launcherTabs
+        && home.programs.workbench.hubOrder == home.hwc.home.apps.workbench.hubOrder
+        && home.programs.workbench.hiddenHubs == home.hwc.home.apps.workbench.hiddenHubs)
         "workbench check: launcher destinations differ from layout";
       assert lib.assertMsg (lib.versionAtLeast home.hwc.home.apps.zellij.package.version "0.45.1"
         && lib.elem home.hwc.home.apps.zellij.package home.programs.workbench.extraRuntimePackages
@@ -746,9 +753,15 @@
           then "${entry.key}|goto-hub|${toString navigation.tabFor.${entry.target}}:${lib.removePrefix "hub:" entry.target}|${entry.desc}"
           else "${entry.key}|goto-tab|${toString navigation.tabFor.${entry.target}}|${entry.desc}") configKdl) jumps)
         "workbench check: generated meta entries (goto-tab tools, goto-hub hubs) differ from navigation";
-      assert lib.assertMsg (destinationFor "m" == "tool:aerc" && destinationFor "i" == "hub:mail"
-        && destinationFor "R" == "hub:refinery")
-        "workbench check: mail/refinery shortcuts changed destination";
+      assert lib.assertMsg (destinationFor "1" == "hub:${(builtins.head
+        (lib.sort (a: b: a.order < b.order) registry.hubs)).slug}")
+        "workbench check: digit 1 must target the first visible hub";
+      assert lib.assertMsg (lib.all (entry: builtins.match "[0-9]" entry.key == null) grammar.meta)
+        "workbench check: grammar.meta contains a reserved digit";
+      assert lib.assertMsg (destinationFor "t" == "tool:todui" && destinationFor "c" == "tool:khalt"
+        && destinationFor "m" == "tool:aerc" && destinationFor "f" == "tool:yazi"
+        && destinationFor "e" == "tool:nvim" && destinationFor "a" == "tool:herdr")
+        "workbench check: tool shortcuts changed destination";
       pkgs.runCommand "workbench-navigation" {} ''
         ${lib.getExe home.hwc.home.apps.zellij.package} --version
         touch "$out"

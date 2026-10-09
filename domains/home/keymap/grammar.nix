@@ -270,9 +270,9 @@ rec {
   #--------------------------------------------------------------------------
   # The meta layer (metaLeader -> zellij `meta` mode -> one key). `target` is the
   # logical tool to focus (mapped to the layout's tab index in to-zellij.nix).
-  # HUB letters are NOT listed here: the Workbench hub registry produces them
+  # HUB digits are NOT listed here: the Workbench hub registry produces them
   # (zellij/parts/tabs.nix hubJumps) and to-zellij.nix appends them, asserting
-  # they never collide with the tool (t/c/m/f/e/a) or nav/utility letters
+  # grammar.meta contains no digits. Tool (t/c/m/f/e/a) and nav/utility letters
   # (j/k/n/p/]/[/w/z/s/d/Q) below.
   #--------------------------------------------------------------------------
   meta = [

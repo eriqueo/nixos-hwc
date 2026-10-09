@@ -61,7 +61,13 @@ let
   # assumed local `aerc`. Derived from the single declaration in the shell
   # domain (on the laptop: "ssh -t server aerc"; falls back to "aerc").
   mailCommand = (config.hwc.home.core.shell.aliases or {}).aerc or "aerc";
-  tabs = import ./parts/tabs.nix { inherit lib; hubRegistry = inputs.workbench.hubRegistry; };
+  tabs = import ./parts/tabs.nix {
+    inherit lib;
+    hubRegistry = inputs.workbench.hubRegistryFor {
+      order = config.hwc.home.apps.workbench.hubOrder;
+      hidden = config.hwc.home.apps.workbench.hiddenHubs;
+    };
+  };
   layout = import ./parts/layout.nix { inherit lib mailCommand tabs; };
 
   # INTER-APP meta layer (Ctrl+Space). Generated from the unified keymap grammar
