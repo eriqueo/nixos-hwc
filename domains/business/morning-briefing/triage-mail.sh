@@ -17,6 +17,7 @@ EMAIL_TO_KHAL="${EMAIL_TO_KHAL:-/etc/profiles/per-user/eric/bin/email-to-khal}"
 LEDGER="${MAIL_CLASSIFIER_LEDGER:-/var/lib/hwc/mail-classifier/ledger.sqlite}"
 SOCKET="${MAIL_CLASSIFIER_SOCKET:-/run/hwc-mail-classifier/laya.sock}"
 DRAFT_DIR="${OUTPUT_DIR}/calendar-drafts"
+deferred=0
 
 log() { echo "$(date -Iseconds) [triage-${MODE}] $*" >> "${LOG_FILE}"; }
 
@@ -70,15 +71,18 @@ else
   else
     classifier_rc=$?
     if [ "$classifier_rc" -eq 75 ]; then
+      # Defer classification, not the report: a rebuilt briefing still carries
+      # the last report (its generated_at shows its age) instead of no mail.
       log "mail owner busy; classification deferred to the next scheduled run"
-      exit 75
+      deferred=75
+    else
+      log "ERROR: classifier run failed; unclassified mail remains DONT KNOW"
+      exit 1
     fi
-    log "ERROR: classifier run failed; unclassified mail remains DONT KNOW"
-    exit 1
   fi
 fi
 
-if [ -f "${BRIEFING_JSON}" ]; then
+if [ -f "${BRIEFING_JSON}" ] && [ -f "${MAIL_TRIAGE_JSON}" ]; then
   jq --slurpfile triage "${MAIL_TRIAGE_JSON}" \
     '. + {mail_triage: $triage[0]}' \
     "${BRIEFING_JSON}" > "${BRIEFING_JSON}.tmp" \
@@ -91,4 +95,4 @@ publish_dashboard || {
   exit 1
 }
 
-exit 0
+exit "${deferred}"
