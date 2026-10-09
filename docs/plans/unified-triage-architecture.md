@@ -105,6 +105,22 @@ durable uncertainty independently of report freshness. Its build and full suite
 passed, including 206 mail tests; removing budget propagation made the regression
 fail. Scheduled acceptance restarts on this repaired release.
 
+Nix bb72ac66 passed eight mail/consumer checks and the system build, then switched
+successfully. Installed source matches tested 8689ee3 byte for byte. A scheduled
+command child received the parent's 66.316-second remaining budget. The repaired
+16:05 cycle (4cc41a823500d62ba5921373f096186b22b17d8db54af176f592b77739da3d31)
+finished successfully with healthy fetch/index, a fresh label report, one recovered
+receipt and no uncertain physical effects. It reported 97 deferred label checks
+and 18 conflicts. These are visible review work, not a delivery outage.
+
+Consumer inventory used rg over Nix, System One and Workbench, excluding dependency
+and generated output trees. Status readers found are health/index.nix and gateway
+mail.ts; paths, module bindings and tests also reference the status file. Workbench
+reads command receipts through the gateway. After the soak, retire health's v1
+fallback, gateway's v1 status/completion fallback, the coordinator's v1 core
+projection/input compatibility and its temporary direct-call transport harness.
+Preserve historical uncertain-effect schemas and their readback support.
+
 Inspect status.json,
 labels.json, durable command receipts and health case transitions. The expected
 signal is fresh per-account fetch/index with visible, contained review work.
