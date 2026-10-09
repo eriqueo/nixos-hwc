@@ -1493,6 +1493,39 @@
         try: label_failure(broken)
         except AssertionError: pass
         else: raise AssertionError('removed health distinction passed wiring test')
+        # Exercise the generated v2 reader and its real durable case producer.
+        # Repeated judgments keep review visible without sending another alert.
+        import time
+        fresh = {**healthy, 'lastSuccessEpoch': time.time()}
+        v2 = {'schemaVersion':2, 'lanes':{key:copy.deepcopy(fresh) for key in ['core','fetch/proton','index','commands','labels','residency']}}
+        v2['lanes']['commands'].update(pendingCount=1,oldestPendingAgeSeconds=1801)
+        v2['lanes']['labels'].update(state='degraded',conflictCount=1)
+        def transition_review(text):
+            with tempfile.TemporaryDirectory() as d:
+                root=pathlib.Path(d); status=root/'status.json';status.write_text(json.dumps(v2))
+                ctl=root/'systemctl';ctl.write_text('#!${pkgs.bash}/bin/bash\nexit 0\n');ctl.chmod(0o700)
+                script=re.sub(r'/nix/store/[^\s]+/bin/systemctl',str(ctl),text)
+                header='set -eu\nSYNC_STATUS='+shlex.quote(str(status))+'\nSTATE_DIR='+shlex.quote(str(root))+'\n'
+                header+='SYNC_MAX_AGE_MIN=45\nTRASH_TIMER_ENABLED=false\nLABEL_PROJECTION_ENABLED=true\nSYNC_FAILED=false\n'
+                header+='fail() { echo "F:$*"; }\nwarn() { echo "W:$*"; }\nsend_webhook() { echo "A:$*"; }\nsend_notify() { echo "N:$*"; }\n'
+                outputs=[]
+                for _ in range(2):
+                    result=subprocess.run(['${pkgs.bash}/bin/bash','-c',header+script+'\ncheck_mbsync\nprintf "STATE:%s\\n" "$SYNC_FAILED"\n'],capture_output=True,text=True)
+                    assert result.returncode==0,result.stderr
+                    outputs.append(result.stdout.splitlines())
+                first,repeat=outputs
+                assert sum(line.startswith('A:') for line in first)==2,first
+                assert sum(line.startswith('N:') for line in first)==1,first
+                assert not any(line.startswith(('A:','N:')) for line in repeat),repeat
+                for lines in outputs:
+                    assert 'STATE:true' in lines and any(line.startswith('critical: Mailbox commands') for line in lines),lines
+                    assert not any(line.startswith('F:') for line in lines),lines
+        transition_review(fragment)
+        broken=fragment.replace('if [[ $(${pkgs.jq}/bin/jq -r '+"'.schemaVersion'"+' "$SYNC_STATUS") == 2 ]]; then','if false; then',1)
+        assert broken!=fragment
+        try: transition_review(broken)
+        except AssertionError: pass
+        else: raise AssertionError('removed v2 case reader escaped the generated health test')
         print('generated mail health: label warning, healthy transport, real failures, stale lanes and removed wiring pass')
         PY
         touch "$out"
