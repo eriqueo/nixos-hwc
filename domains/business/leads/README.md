@@ -141,6 +141,7 @@ Hardening: same set as hwc-notify (`NoNewPrivileges`, `ProtectSystem=strict`, `P
 
 ## Changelog
 
+- **2026-10-09** — `parts/jt-mappings.nix` gained `costItemCustomFields.needsConfirmation` (hwc-crm only): the boolean JobTread cost item field that marks preliminary budget lines whose quantity is not traced to the customer's calculator answers.
 - **2026-10-05** — `parts/jt-mappings.nix` `jobSync` gained `stagePhases` and `wonPhases` (hwc-crm D62): the Job Funnel's Visited, Budgeting and Budget Sent stages mirror JobTread Phase 2–4, and a change to Phase 5 or later moves the lead to Won. Texts verified against the live Phase options on 2026-10-05.
 - **2026-09-19** — `parts/jt-mappings.nix` gained `jobSync` (hwc-crm D45): the Deferred phase, the default phase and the CRM-loss-reason → `Job Lost Reason` map. Its presence turns on hwc-crm's two-way job link. The tunnel route for `crm.iheartwoodcraft.com` (`machines/server/config.nix`) now also admits `/hooks/jt`, JobTread's webhook into the CRM.
 - **2026-09-19** — `parts/jt-mappings.nix` `intakeValues` gained `leadSourceOptions`, `projectTypeOptions` and `jobTypeByProjectType` (hwc-crm only). The website contact and inline forms now post to hwc-crm, which writes the customer's chosen Lead Source and Project Type to JobTread only when the choice is a listed live option.

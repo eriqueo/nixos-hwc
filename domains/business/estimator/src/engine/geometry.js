@@ -57,6 +57,32 @@ export function deriveDeckGeometry(input) {
 // ─── Enrich state with derived geometry keys ────────────────────────────────
 // Catalog formulas reference these canonical key names.
 
+// Which raw state keys each derived key below is computed from. Keep in step
+// with enrichState; a key absent here is raw state. Used to trace whether a
+// line's quantity came from customer input.
+const SHOWER_WALLS = ['shower_wall_1_width_ft','shower_wall_2_width_ft','shower_wall_3_width_ft','shower_wall_4_width_ft'];
+const ROOM = ['bathroom_length_ft','bathroom_width_ft'];
+export const DERIVED_INPUTS = {
+  deck_sqft: ['deck_length_ft','deck_width_ft'],
+  deck_perimeter_lf: ['deck_length_ft','deck_width_ft'],
+  deck_joist_count: ['deck_length_ft','joist_spacing_in'],
+  deck_footing_count: ['deck_length_ft','deck_width_ft'],
+  deck_decking_lf: ['deck_length_ft','deck_width_ft'],
+  has_shower_work: ['shower_finish','has_shower_tile'],
+  bathroom_floor_sqft: ROOM,
+  bathroom_perimeter_lf: ROOM,
+  shower_wall_tile_sqft: [...SHOWER_WALLS,'shower_wall_height_ft'],
+  shower_pan_tile_sqft: ['shower_pan_width_ft','shower_pan_length_ft'],
+  shower_curb_tile_sqft: ['shower_curb_height_in','shower_curb_width_in','shower_curb_length_ft'],
+  shower_accent_tile_sqft: SHOWER_WALLS,
+  bathroom_wall_paint_sqft: [...ROOM,'wall_height_ft',...SHOWER_WALLS,'shower_wall_height_ft','paint_scope'],
+  drywall_sqft: [...ROOM,'wall_height_ft',...SHOWER_WALLS,'shower_wall_height_ft','drywall_scope'],
+};
+
+export function rawInputs(key) {
+  return DERIVED_INPUTS[key] ? DERIVED_INPUTS[key].flatMap(rawInputs) : [key];
+}
+
 export function enrichState(state) {
   const enriched = { ...state };
   if (state.projectType === 'flooring') return enriched;

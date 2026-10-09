@@ -6,7 +6,7 @@ import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseCalculatorIntake, deckAnswerEstimates, CALCULATOR_INPUT_VERSION } from '../api/crm.js';
 import { calculatorPatch, DEFAULT_STATE } from './intake.js';
-import { enrichState } from './geometry.js';
+import { enrichState, rawInputs } from './geometry.js';
 import { assemble, buildJtItems, estimateIssues, computeTotals } from './assembler.js';
 import templates from '../data/templates.json' with { type: 'json' };
 import parameters from '../data/parameters.json' with { type: 'json' };
@@ -53,7 +53,16 @@ export function preparePreliminary(raw) {
   }
   const items = assemble(enrichState(state), intake.calculator);
   const mapped = items.filter(item=> { const i=buildJtItems([item])[0]; return i.costCodeId && i.costTypeId && i.unitId; });
-  const jtItems = buildJtItems(mapped);
+  // A line needs confirmation unless every input to its quantity came from the
+  // customer's calculator answers. Fixed quantities, template/preset inputs,
+  // fallback quantities and allowances are confirmed in the budget.
+  const fromCalculator = new Set(Object.entries(patch).filter(([key,value]) => value !== null && value !== 'unknown' &&
+    !['projectType','job_type','measurements_checked','calculator_scope_checked'].includes(key)).map(([key]) => key));
+  const derived = item => {
+    const inputs = [...(item.quantityFormula || '').matchAll(/\{(\w+)\}/g)].flatMap(m => rawInputs(m[1]));
+    return !item._usedDefault && !item.name.startsWith('Allowance |') && inputs.length > 0 && inputs.every(k => fromCalculator.has(k));
+  };
+  const jtItems = buildJtItems(mapped).map((i,n) => ({ ...i, needsConfirmation: !derived(mapped[n]) }));
   if (!jtItems.length || jtItems.length > 400 || jtItems.some(i =>
     !i.costCodeId || !i.costTypeId || !i.unitId ||
     ![i.quantity,i.unitCost,i.unitPrice].every(v=>typeof v === 'number' && Number.isFinite(v) && v >= 0))) throw Error('invalid_preliminary_items');

@@ -46,6 +46,13 @@
     siteVisit = "22PVyDzw2gXH";
   };
 
+  # Cost item custom fields. needsConfirmation (boolean, created 2026-10-09)
+  # marks preliminary budget lines whose quantity is not traced to the
+  # customer's calculator answers; JT has no cost group custom fields.
+  costItemCustomFields = {
+    needsConfirmation = "22Pfz2fHqTrf";
+  };
+
   # Customer (account) custom fields.
   accountCustomFields = {
     leadSource = "22PUGvBnXeYs";

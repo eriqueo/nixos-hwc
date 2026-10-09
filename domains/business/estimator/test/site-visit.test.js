@@ -203,6 +203,14 @@ assert.ok(bucketPlan.items.some(i=>i.name.includes('Install Stairs')));
 assert.ok(!bucketPlan.missing_inputs.some(v=>v.includes('feature: stairs')));
 assert.ok(bucketPlan.missing_inputs.some(v=>v.includes('feature: hottub pad')));
 assert.ok(bucketPlan.totals.price > 39000, 'XL deck lands in the calculator range, not a template deck');
+// Lines whose quantity is not traced to calculator answers are flagged for confirmation.
+const flag=name=>bucketPlan.items.find(i=>i.name===name).needsConfirmation;
+assert.equal(flag('Material | Decking | Deck Board | Composite Mid'),false, 'size answer -> sqft -> boards');
+assert.equal(flag('Material | Railing | Railing Package | Metal Cable'),false);
+assert.equal(flag('Building Permit | Deck'),true, 'fixed quantity');
+assert.equal(flag('Material | Framing | Joists 2x8'),true, 'template joist spacing');
+assert.equal(flag('Material | Stairs | Stringers 2x12x14'),true, 'template stringer count');
+assert.ok(rough.items.every(i=>typeof i.needsConfirmation === 'boolean'));
 // A customer number beats the category estimate and is not labelled as one.
 const measured=preparePreliminary({...calculatorIntake,calculator:'deck',answers:{...deckAnswers,intake_version:2,deck_length_ft:40,deck_width_ft:18}});
 assert.ok(!measured.assumptions.some(a=>a.field==='deck_length_ft'));

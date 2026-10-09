@@ -186,6 +186,8 @@ and is NOT a refactor gate.
 
 ## Changelog
 
+- 2026-10-09: Preliminary plan lines carry `needsConfirmation` unless every input to their quantity traces to calculator answers (`geometry.js` `DERIVED_INPUTS` maps derived keys to raw inputs). Fixed quantities, template/preset inputs, fallbacks and allowances are marked; the CRM writes the mark to JobTread's `Needs Confirmation` cost item field.
+
 - 2026-10-09: Deck calculator categories become rough dimensions where the customer gave no number: size → the calculator's own sq ft at a 2:3 footprint, height band → midpoint, stairs → treads at a 7.5" rise, a chosen railing → the exposed edge. Each is a "verify on site" assumption; customer numbers win. Taylor Chernock's XL L-shaped deck had priced as the 12×10 template with no railing ($11.3k against a $39–72k calculator range).
 
 - 2026-10-08: Make site-review guidance apply to flooring, bathroom and deck work.
