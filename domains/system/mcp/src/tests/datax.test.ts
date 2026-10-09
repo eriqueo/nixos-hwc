@@ -63,6 +63,7 @@ describe("datax_support_requests", () => {
     const res = await tool(dir, "datax_support_requests").handler({});
     expect(res.status).toBe("ok");
     const view = res.view as { data: { columns: Array<{ id: string; cards: Json[] }> }; meta: Json };
+    expect((view.data as any).stages).toBe(view.data.columns);
     expect(view.data.columns.map((c) => c.id)).toEqual(["new", "engaged"]);
     const [a] = view.data.columns[0].cards;
     expect(a).toMatchObject({ id: "a", needsReply: true, investigatedAt: "2026-09-03", run: "run-a" });

@@ -6,7 +6,7 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mailTools, mailTagActions, MAIL_STATES } from "../src/tools/mail.js";
-import { mailTriageTools, reflectLiveBuckets } from "../src/tools/mail-triage.js";
+import { mailTriageTools, reflectLiveStates } from "../src/tools/mail-triage.js";
 import { morningBriefTool } from "../src/tools/morning-brief.js";
 
 function classifierChild(exitCode = 0, started = true) {
@@ -112,12 +112,12 @@ describe("authoritative mail placement", () => {
     "rejects malformed live snapshots: %s", async (output) => {
       run.mockReset();
       run.mockImplementation((_bin, _args, _options, callback) => callback(null, output, ""));
-      await expect(reflectLiveBuckets({...empty(),do:[thread("a")]})).rejects.toThrow();
+      await expect(reflectLiveStates({...empty(),do:[thread("a")]})).rejects.toThrow();
       expect(run).toHaveBeenCalledTimes(1);
     });
 
   it("uses conservative DO precedence for conflicting live tags", async () => {
-    expect(await reflectLiveBuckets({...empty(),do:[thread("a")]},
+    expect(await reflectLiveStates({...empty(),do:[thread("a")]},
       async () => new Map([["a",new Set(["state/do","state/did","state/look","state/junk"])]])))
       .toEqual({...empty(),do:[thread("a")]});
   });
@@ -125,23 +125,23 @@ describe("authoritative mail placement", () => {
   it("rejects oversized or invalid cached identities before running notmuch", async () => {
     run.mockReset();
     for (const ids of [Array.from({length:513},(_,i)=>i.toString(16)), ["a OR tag:inbox"]]) {
-      await expect(reflectLiveBuckets({...empty(),do:ids.map(thread)})).rejects.toThrow("512 valid hexadecimal");
+      await expect(reflectLiveStates({...empty(),do:ids.map(thread)})).rejects.toThrow("512 valid hexadecimal");
     }
     expect(run).not.toHaveBeenCalled();
   });
 
   it("empty classification requires no subprocess", async () => {
     run.mockReset();
-    expect(await reflectLiveBuckets(empty())).toEqual(empty());
+    expect(await reflectLiveStates(empty())).toEqual(empty());
     expect(run).not.toHaveBeenCalled();
   });
 
   it("does not resurrect mail from a successful empty snapshot", async () => {
-    expect(await reflectLiveBuckets({...empty(),do:[thread("a")]}, async () => new Map())).toEqual(empty());
+    expect(await reflectLiveStates({...empty(),do:[thread("a")]}, async () => new Map())).toEqual(empty());
   });
 
   it("fails when live placement cannot be read", async () => {
-    await expect(reflectLiveBuckets({...empty(),do:[thread("a")]}, async () => {throw Error("offline")}))
+    await expect(reflectLiveStates({...empty(),do:[thread("a")]}, async () => {throw Error("offline")}))
       .rejects.toThrow("offline");
   });
 
@@ -200,9 +200,9 @@ describe("current mail views and metadata preservation", () => {
 describe("DONT KNOW consumer contract", () => {
   it("rebuckets an old four-State cache into DONT KNOW without losing its thread", async () => {
     const legacy = {do: [thread("a")], did: [], look: [], junk: []};
-    expect(await reflectLiveBuckets(legacy, async () => new Map([["a", new Set(["state/dont-know", "state/did"])]])))
+    expect(await reflectLiveStates(legacy, async () => new Map([["a", new Set(["state/dont-know", "state/did"])]])))
       .toEqual({...empty(), "dont-know": [thread("a")]});
-    expect(await reflectLiveBuckets(legacy, async () => new Map([["a", new Set(["state/do", "state/dont-know"])]])))
+    expect(await reflectLiveStates(legacy, async () => new Map([["a", new Set(["state/do", "state/dont-know"])]])))
       .toEqual({...empty(), do: [thread("a")]});
   });
 
@@ -216,6 +216,7 @@ describe("DONT KNOW consumer contract", () => {
              thread("c")]}}}));
       const live = new Map(["a", "b", "c"].map(id => [id, new Set(["state/do"])]));
       const board = await mailTriageTools(path, async () => live)[0].handler({action: "board"});
+      expect((board.view!.data as any).stages).toBe((board.view!.data as any).columns);
       const cards = (board.view!.data as {columns: {id: string; cards: Record<string, unknown>[]}[]})
         .columns.find(column => column.id === "do")!.cards;
       expect(cards[0]).toMatchObject({tag: "hwc", reason: "Client waiting on quote"});
@@ -437,4 +438,23 @@ it("the actual flock/start-pipe protocol separates lock refusal from runtime exi
     await new Promise<void>(resolve=>holder.once('close',()=>resolve()));
     expect(await execute([...prefix,shell,'-c','exit 75'])).toEqual({code:75,start:'started\n'});
   } finally { await rm(dir,{recursive:true,force:true}); }
+});
+
+it.each(["threads_by_state", "buckets"])("reads %s mail reports in the status tool", async key => {
+  const dir = await mkdtemp(join(tmpdir(), "mail-state-status-"));
+  try {
+    const path = join(dir, "brief.json");
+    await writeFile(path, JSON.stringify({mail_triage: {[key]: {do: [thread("a")], look: [thread("b")], "dont-know": [thread("c")]}}}));
+    const {morningStatusTool} = await import("../src/tools/morning-status.js");
+    const result = await morningStatusTool(path).handler({});
+    expect((result.data as any).briefing).toContain("1 DO / 1 DONT KNOW / 0 DID / 1 LOOK / 0 JUNK");
+    const board = await mailTriageTools(path, async () => new Map([["a", new Set(["state/do"])], ["b", new Set(["state/look"])], ["c", new Set(["state/dont-know"])]]))[0].handler({});
+    expect((board.view!.data as any).stages).toBe((board.view!.data as any).columns);
+  } finally { await rm(dir, {recursive: true, force: true}); }
+});
+
+it("prefers new mail groups over stale aliases", async () => {
+  const {mailThreadsByState} = await import("../src/tools/mail.js");
+  const states = {do: [thread("a")]};
+  expect(mailThreadsByState({threads_by_state: states, buckets: {do: []}})).toBe(states);
 });

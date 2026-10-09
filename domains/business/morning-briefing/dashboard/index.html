@@ -413,7 +413,7 @@ function makeMailTile(triage,liveThreads,mailHealth){
     return sec;
   }
 
-  const b=merged.buckets||{};
+  const b=merged.threads_by_state ?? merged.buckets ?? {};
   const rules=merged.routing_rules||[];
   if(rules.length){
     const ruleBox=$('div',{class:'mail-detail',style:'margin-bottom:12px'});
@@ -900,7 +900,7 @@ function makeToday(t){
       return b};
     if(it.url)verbs.appendChild((()=>{const a=$('a',{class:'today-btn primary',href:it.url,target:'_blank'},'explore →');return a})());
     if(it.report)verbs.appendChild($('a',{class:'today-btn primary',href:it.report,target:'_blank'},'explore report →'));
-    (it.verbs||[]).forEach(v=>{
+    (it.actions ?? it.verbs ?? []).forEach(v=>{
       if(v==='complete')verbs.appendChild(btn('✓ done',()=>todayVerb('complete',it.id),'primary'));
       if(v==='agent')verbs.appendChild(btn('⚡ agent',()=>todayVerb('agent',it.id)));
       if(v==='dismiss')verbs.appendChild(btn('dismiss',()=>todayVerb('dismiss',it.id)));

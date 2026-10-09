@@ -207,7 +207,7 @@ export function serverOverviewTool(registry: ToolDef[], opts: OverviewOptions = 
           ? "Server: all checks healthy"
           : `Server: ${value.needsYou} check(s) need you`,
         data: { needsYou: value.needsYou },
-        view: contract("kanban", "Server", { columns: value.columns }, {
+        view: contract("kanban", "Server", { stages: value.columns, columns: value.columns }, {
           source: "hwc_server_overview",
           cached: hit,
           elapsed_ms: value.elapsedMs,

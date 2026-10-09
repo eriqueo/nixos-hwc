@@ -29,7 +29,9 @@ function registry(overrides: Record<string, ToolDef["handler"]> = {}): { tools: 
 }
 
 async function columns(tool: ToolDef, args: Record<string, unknown> = {}): Promise<Column[]> {
-  return ((await tool.handler(args)).view!.data as { columns: Column[] }).columns;
+  const data = (await tool.handler(args)).view!.data as { stages: Column[]; columns: Column[] };
+  expect(data.stages).toBe(data.columns);
+  return data.stages;
 }
 
 describe("hwc_server_overview", () => {

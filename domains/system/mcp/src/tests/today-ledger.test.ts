@@ -7,8 +7,8 @@
  * gateway ships; vitest's default glob picks it up regardless.
  */
 
-import { describe, it, expect } from "vitest";
-import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { describe, it, expect, vi } from "vitest";
+import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -429,4 +429,24 @@ describe("hwc_today wiring (temp HWC_BRIEFING_DIR)", () => {
     expect(delta.status).toBe("ok");
     expect((delta.data as any).reopened.map((e: any) => e.id)).toContain(SYSTEM_ID);
   });
+});
+
+it.each(["new", "legacy"])("hwc_today lists DO threads and refinery actions from %s reports", async vocabulary => {
+  const dir = await mkdtemp(join(tmpdir(), "today-vocabulary-"));
+  await mkdir(join(dir, "output"), {recursive: true});
+  try {
+    await writeFile(join(dir, "output", "briefing.json"), JSON.stringify({
+      generated_at: new Date().toISOString(),
+      mail_triage: {[vocabulary === "new" ? "threads_by_state" : "buckets"]: {do: [{thread_id: "a", subject: "Reply today"}], look: [{thread_id: "b", subject: "Later"}]}},
+      sections: {refinery: {[vocabulary === "new" ? "stages" : "buckets"]: {action: [{id: "r", title: "Repair", state: "failed"}]}}}
+    }));
+    vi.stubEnv("HWC_BRIEFING_DIR", dir);
+    vi.resetModules();
+    const {todayTools} = await import("../src/tools/today.js");
+    const board = await todayTools()[0].handler({action: "board"});
+    const items = (board.data as any).items;
+    expect(items.map((i: any) => i.id)).toEqual(expect.arrayContaining(["mail:a", "refinery:r"]));
+    expect(items.map((i: any) => i.id)).not.toContain("mail:b");
+    for (const item of items) expect(item.actions).toBe(item.verbs);
+  } finally {vi.unstubAllEnvs(); vi.resetModules(); await rm(dir, {recursive: true, force: true});}
 });

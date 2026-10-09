@@ -19,7 +19,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
 import { mcpError } from "../errors.js";
-import { MAIL_STATES, MAIL_ACTION_STATE, MAIL_STATE_DISPLAY_NAMES, mailStateTag, mailTagActions, classifierMutation, classifierMutationError } from "./mail.js";
+import { mailThreadsByState, MAIL_STATES, MAIL_ACTION_STATE, MAIL_STATE_DISPLAY_NAMES, mailStateTag, mailTagActions, classifierMutation, classifierMutationError } from "./mail.js";
 
 /** Default briefing output path (run.sh writes here, then injects .mail_triage). */
 const DEFAULT_BRIEFING_JSON =
@@ -46,14 +46,16 @@ interface MailTriage {
   generated_at: string;
   query_window_hours?: number;
   total_unread?: number;
-  buckets: Record<string, TriageThread[]>;
+  threads_by_state?: Record<string, TriageThread[]>;
+  /** @deprecated schema-2 alias */
+  buckets?: Record<string, TriageThread[]>;
   stats: Record<string, number>;
   routing_rules?: unknown[];
 }
 
-type Bucket = string;
+type State = string;
 
-const emptyBuckets = (): Record<Bucket, TriageThread[]> =>
+const emptyStates = (): Record<State, TriageThread[]> =>
   Object.fromEntries(MAIL_STATES.map(state => [state, []]));
 
 /** Read + JSON-parse the briefing file and pull .mail_triage. null on any failure. */
@@ -69,9 +71,9 @@ async function loadTriage(path: string): Promise<MailTriage | null> {
   }
 }
 
-/** Defensive accessor: always returns an array of threads for a bucket. */
-function bucketThreads(triage: MailTriage | null, bucket: Bucket): TriageThread[] {
-  const arr = triage?.buckets?.[bucket];
+/** Defensive accessor: always returns an array of threads for a state. */
+function stateThreads(triage: MailTriage | null, state: State): TriageThread[] {
+  const arr = mailThreadsByState<TriageThread>(triage)[state];
   return Array.isArray(arr) ? arr : [];
 }
 
@@ -79,7 +81,7 @@ const NOTMUCH_CANDIDATES = ["notmuch", "/etc/profiles/per-user/eric/bin/notmuch"
 
 type Inbox = Map<string, Set<string>>;
 
-/** One scan, bounded at 3.5s/2MiB; never fan out per bucket under the gateway CPU quota. */
+/** One scan, bounded at 3.5s/2MiB; never fan out per state under the gateway CPU quota. */
 function notmuchInbox(ids: readonly string[]): Promise<Inbox> {
   return new Promise((resolve, reject) => {
     const tryBin = (i: number): void => {
@@ -122,31 +124,31 @@ function notmuchInbox(ids: readonly string[]): Promise<Inbox> {
 }
 
 /**
- * Re-bucket the cached snapshot by LIVE `state/<state>` tags.
+ * Re-state the cached snapshot by LIVE `state/<state>` tags.
  * WITHOUT re-running the daily briefing. The briefing remains the content
  * source (subject/summary/sender); the tag is the source of truth for
  * PLACEMENT. A thread carrying no active state is completed and is dropped,
  * so archive never resurrects from stale JSON.
  */
-export async function reflectLiveBuckets(
-  cached: Record<Bucket, TriageThread[]>,
+export async function reflectLiveStates(
+  cached: Record<State, TriageThread[]>,
   readInbox: (ids: readonly string[]) => Promise<Inbox> = notmuchInbox,
   _unreadOnly = false,
-): Promise<Record<Bucket, TriageThread[]>> {
+): Promise<Record<State, TriageThread[]>> {
   // Only cached threads can appear on this surface. Scanning the entire inbox
   // starves khal under the gateway CPU quota. Bound argv/query work at 512 IDs;
   // overflow or invalid cache identity fails visibly, never falls back to all mail.
-  const ids = [...new Set(MAIL_STATES.flatMap(bucket =>
-    (cached[bucket] ?? []).map(thread => thread.thread_id)))];
+  const ids = [...new Set(MAIL_STATES.flatMap(state =>
+    (cached[state] ?? []).map(thread => thread.thread_id)))];
   if (ids.length > 512 || ids.some(id => typeof id !== "string" || !/^[0-9a-f]{1,64}$/.test(id))) {
     throw Error("Mail triage requires at most 512 valid hexadecimal thread IDs");
   }
-  if (ids.length === 0) return emptyBuckets();
+  if (ids.length === 0) return emptyStates();
   const inbox = await readInbox(ids);
   const seen = new Set<string>();
-  const out = emptyBuckets();
-  for (const bucket of MAIL_STATES) {
-    for (const thread of cached[bucket] ?? []) {
+  const out = emptyStates();
+  for (const state of MAIL_STATES) {
+    for (const thread of cached[state] ?? []) {
       const tags = inbox.get(thread.thread_id);
       if (!tags || seen.has(thread.thread_id)) continue;
       seen.add(thread.thread_id);
@@ -155,7 +157,7 @@ export async function reflectLiveBuckets(
       // before DONT KNOW, which wins over a stale completed workflow State.
       // This precedence remains defined by the contract until the classifier
       // normalizes the whole thread.
-      const live = MAIL_STATES.find(state => tags.has(mailStateTag(state))) as Bucket | undefined;
+      const live = MAIL_STATES.find(state => tags.has(mailStateTag(state))) as State | undefined;
       if (live) out[live].push(thread);
     }
   }
@@ -197,12 +199,12 @@ function notmuchTagThread(id: string, ops: string[]): Promise<string | null> {
  * classified thread), the reason is the classifier's own why, when it gave one.
  * Absent fields are omitted, so workbench falls back to `summary`.
  */
-function toCard(thread: TriageThread, bucket: Bucket) {
+function toCard(thread: TriageThread, state: State) {
   return {
     id: thread.thread_id,
     kind: "mail",
     label: thread.subject,
-    priority: bucket === MAIL_ACTION_STATE ? "critical" : bucket === "junk" ? "low" : "normal",
+    priority: state === MAIL_ACTION_STATE ? "critical" : state === "junk" ? "low" : "normal",
     sender: thread.sender ?? thread.from_name ?? thread.from_address ?? "?",
     summary: thread.summary,
     suggested_action: thread.suggested_action,
@@ -333,9 +335,9 @@ export function mailTriageTools(
 
         if (!triage) return mcpError({ type: "UNAVAILABLE", message: "Mail digest is unavailable. Open aerc or run mail triage." });
         // Reflect persisted decisions from their live active-state tag.
-        let reflected: Record<Bucket, TriageThread[]>;
-        try { reflected = await reflectLiveBuckets(Object.fromEntries(MAIL_STATES.map(state =>
-          [state, bucketThreads(triage, state)])), readInbox, action === "digest"); } catch {
+        let reflected: Record<State, TriageThread[]>;
+        try { reflected = await reflectLiveStates(Object.fromEntries(MAIL_STATES.map(state =>
+          [state, stateThreads(triage, state)])), readInbox, action === "digest"); } catch {
           return mcpError({ type: "COMMAND_FAILED", message: "Cannot verify inbox membership. Open aerc or refresh." });
         }
         const doMail = reflected[MAIL_ACTION_STATE];
@@ -406,7 +408,7 @@ export function mailTriageTools(
           view: contract(
             "kanban",
             "Mail Triage",
-            { columns },
+            { stages: columns, columns },
             { generated_at: generatedAt, total_unread: totalUnread, source: "hwc_mail_triage" },
           ),
         };

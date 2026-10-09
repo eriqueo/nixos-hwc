@@ -125,6 +125,7 @@ async function main() {
   const rank = (s) => (s === "failed" ? 0 : s === "parked" ? 1 : 2);
   action.sort((a, b) => rank(a.state) - rank(b.state));
 
+  const stages = { action, active, hopper };
   process.stdout.write(JSON.stringify({
     url: BASE,
     available,
@@ -134,7 +135,8 @@ async function main() {
       hopper: hopper.length,
       total: items.length,
     },
-    buckets: { action, active, hopper },
+    stages,
+    buckets: stages,
   }));
 }
 

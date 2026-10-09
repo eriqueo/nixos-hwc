@@ -9,13 +9,14 @@
 
 import { readFile, stat } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
+import { mailThreadsByState, MAIL_STATES, MAIL_STATE_DISPLAY_NAMES } from "./mail.js";
 import { contract } from "../result.js";
 
 const BRIEFING_PATH =
   "/home/eric/.nixos/domains/business/morning-briefing/output/briefing.json";
 const STALE_HOURS = 26;
 
-export function morningStatusTool(): ToolDef {
+export function morningStatusTool(briefingPath = BRIEFING_PATH): ToolDef {
   return {
     name: "hwc_morning_status",
     description:
@@ -27,8 +28,8 @@ export function morningStatusTool(): ToolDef {
       let raw: string;
       let mtime: Date | null = null;
       try {
-        raw = await readFile(BRIEFING_PATH, "utf-8");
-        mtime = (await stat(BRIEFING_PATH)).mtime;
+        raw = await readFile(briefingPath, "utf-8");
+        mtime = (await stat(briefingPath)).mtime;
       } catch {
         return {
           status: "error",
@@ -87,7 +88,7 @@ export function morningStatusTool(): ToolDef {
       const triage = b.mail_triage;
       if (mail || triage) {
         const t = triage
-          ? ` · triage: ${(triage.urgent ?? []).length} urgent / ${(triage.review ?? []).length} review / ${(triage.noise ?? []).length} noise`
+          ? ` · triage: ${MAIL_STATES.map(state => `${(mailThreadsByState(triage)[state] ?? []).length} ${MAIL_STATE_DISPLAY_NAMES[state]}`).join(" / ")}`
           : "";
         lines.push(`Mail: ${mail?.healthy === false ? "DEGRADED" : "healthy"} · ${mail?.inbox_unread ?? mail?.unread ?? "?"} unread${t}`);
       }

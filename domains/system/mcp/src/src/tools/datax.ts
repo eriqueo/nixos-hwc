@@ -142,7 +142,7 @@ export function dataxTools(stateDir: string): ToolDef[] {
           return {
             status: "ok",
             message: `${shown} SR(s) across ${columns.length} phase(s), ${needsReply} need a reply`,
-            view: contract("kanban", "Support Requests", { columns }, {
+            view: contract("kanban", "Support Requests", { stages: columns, columns }, {
               source: "sr_gauntlet:sr-cache",
               syncedAt: cache.syncedAt,
               totalTickets: cache.records.length,

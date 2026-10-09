@@ -491,7 +491,7 @@ REFINERY_JSON=$(REFINERY_ITEMS_DIR="${REFINERY_ITEMS_DIR}" node "${AGENT_DIR}/ga
 echo "${REFINERY_JSON}" | jq empty 2>/dev/null || REFINERY_JSON='{}'
 # Alert only on FAILED items — parked is normal "waiting on a decision", not an
 # error; a broken gate/executor run is what's worth surfacing.
-REFINERY_FAILED=$(echo "${REFINERY_JSON}" | jq '[.buckets.action[]? | select(.state=="failed")] | length' 2>/dev/null || echo 0)
+REFINERY_FAILED=$(echo "${REFINERY_JSON}" | jq '[(.stages // .buckets).action[]? | select(.state=="failed")] | length' 2>/dev/null || echo 0)
 if [ "${REFINERY_FAILED:-0}" -gt 0 ] 2>/dev/null; then
   ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq --argjson n "${REFINERY_FAILED}" '. + [{level:"warning",section:"refinery",message:"\($n) refinery item(s) in a failed state"}]' 2>/dev/null || echo "${ALERTS_JSON}")
   echo "${ALERTS_JSON}" | jq empty 2>/dev/null || ALERTS_JSON='[]'
@@ -783,18 +783,18 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
             "\n  routing rules: " + (((.mail_triage.routing_rules | length)) | tostring) + " active"
             + (.mail_triage as $triage | ($triage.routing_rules // []) | map("\n    " + .sender + " + ‘" + .subject_contains + "’ → " + ($triage.state_display_names[.state] // (.state | ascii_upcase)) + " · " + (.domain | ascii_upcase)) | join(""))
           else "" end)
-        + (((.mail_triage.buckets.do // [])[:5]) | map("\n  ! " + (.sender // "?") + ": " + (.subject // "?") + (if .summary then "\n      " + .summary else "" end)) | join(""))
-        + (((.mail_triage.buckets.look // [])[:5]) | map("\n  · " + (.sender // "?") + ": " + (.subject // "?") + (if .summary then "\n      " + .summary else "" end)) | join(""))
+        + ((((.mail_triage | (.threads_by_state // .buckets)).do // [])[:5]) | map("\n  ! " + (.sender // "?") + ": " + (.subject // "?") + (if .summary then "\n      " + .summary else "" end)) | join(""))
+        + ((((.mail_triage | (.threads_by_state // .buckets)).look // [])[:5]) | map("\n  · " + (.sender // "?") + ": " + (.subject // "?") + (if .summary then "\n      " + .summary else "" end)) | join(""))
       else "" end)
     + (if (.sections.refinery.counts.total // 0) > 0 then
         sec("REFINERY")
         + "action: " + ((.sections.refinery.counts.action // 0) | tostring)
         + " · active: " + ((.sections.refinery.counts.active // 0) | tostring)
         + " · hopper: " + ((.sections.refinery.counts.hopper // 0) | tostring)
-        + (((.sections.refinery.buckets.action // [])[:6]) | map("\n  ! " + (.title // .id)
+        + ((((.sections.refinery | (.stages // .buckets)).action // [])[:6]) | map("\n  ! " + (.title // .id)
             + " [" + (.label // .state // "?") + (if .pipeline and .pipeline != "untriaged" then " · " + .pipeline else "" end) + "]"
             + (if .reason then "\n      " + .reason else "" end)) | join(""))
-        + (((.sections.refinery.buckets.active // [])[:5]) | map("\n  · " + (.title // .id)
+        + ((((.sections.refinery | (.stages // .buckets)).active // [])[:5]) | map("\n  · " + (.title // .id)
             + " [" + (.pipeline // "?") + (if .step then " · " + .step else "" end) + "]") | join(""))
       else "" end)
     + (if (.sections.agents.line // "") != "" then sec("AGENTS") + .sections.agents.line else "" end)
@@ -930,10 +930,10 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
               + (.mail_triage as $triage | ($triage.routing_rules // []) | map(
                   item(meta((.sender|h) + " + &lsquo;" + (.subject_contains|h) + "&rsquo; &rarr; " + (($triage.state_display_names[.state] // (.state | ascii_upcase))|h) + " &middot; " + ((.domain | ascii_upcase)|h)))) | join(""))
             else "" end)
-          + (((.mail_triage.buckets.do // [])[:5]) | map(
+          + ((((.mail_triage | (.threads_by_state // .buckets)).do // [])[:5]) | map(
               item(red("!") + " " + ((.sender // "?")|h) + ": " + ((.subject // "?")|h)
                 + (if .summary then "<br>" + meta((.summary|h)) else "" end))) | join(""))
-          + (((.mail_triage.buckets.look // [])[:5]) | map(
+          + ((((.mail_triage | (.threads_by_state // .buckets)).look // [])[:5]) | map(
               item(meta("&middot;") + " " + ((.sender // "?")|h) + ": " + ((.subject // "?")|h)
                 + (if .summary then "<br>" + meta((.summary|h)) else "" end))) | join("")))
       else "" end)
@@ -943,12 +943,12 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
           item("action " + ((($s.refinery.counts.action // 0)|tostring)|h)
             + " &middot; active " + ((($s.refinery.counts.active // 0)|tostring)|h)
             + " &middot; hopper " + ((($s.refinery.counts.hopper // 0)|tostring)|h))
-          + (($s.refinery.buckets.action // [])[:6] | map(
+          + ((($s.refinery | (.stages // .buckets)).action // [])[:6] | map(
               item((if .state == "failed" then red("&#10007;") else red("!") end) + " "
                 + (if .url then link(.url; ((.title // .id)|h)) else ((.title // .id)|h) end)
                 + " " + meta("[" + ((.label // .state // "?")|h) + (if .pipeline and .pipeline != "untriaged" then " &middot; " + (.pipeline|h) else "" end) + "]")
                 + (if .reason then "<br><span style=\"color:#a7aaad;font-size:13px;padding-left:14px\">" + (.reason|h) + "</span>" else "" end))) | join(""))
-          + (($s.refinery.buckets.active // [])[:5] | map(
+          + ((($s.refinery | (.stages // .buckets)).active // [])[:5] | map(
               item(meta("&middot;") + " "
                 + (if .url then link(.url; ((.title // .id)|h)) else ((.title // .id)|h) end)
                 + " " + meta("[" + ((.pipeline // "?")|h) + (if .step then " &middot; " + (.step|h) else "" end) + "]"))) | join("")))

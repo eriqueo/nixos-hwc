@@ -43,6 +43,8 @@ import { join } from "node:path";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
 import { mcpError, catchError } from "../errors.js";
+import { mailThreadsByState, MAIL_ACTION_STATE } from "./mail.js";
+import { refineryStages } from "./refinery.js";
 import { tasksTools } from "./tasks.js";
 import {
   migrateState,
@@ -82,6 +84,8 @@ interface TodayItem {
   effort_min: number;
   age_days: number;
   url: string | null;
+  actions: Verb[];
+  /** @deprecated use actions */
   verbs: Verb[];
   /** Present once an agent verb has run and its report exists. */
   report: string | null;
@@ -124,6 +128,10 @@ const EFFORT: Record<TodayItem["source"], number> = {
   invoice: 15, task: 10, lead: 10, refinery: 10, nightly: 15, system: 5, mail: 5,
 };
 
+function itemActions(actions: Verb[]): Pick<TodayItem, "actions" | "verbs"> {
+  return { actions, verbs: actions };
+}
+
 function deriveItems(b: Record<string, any>): TodayItem[] {
   const s = b.sections ?? {};
   const items: TodayItem[] = [];
@@ -139,7 +147,7 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
       effort_min: EFFORT.invoice,
       age_days: days,
       url: inv.url ?? null,
-      verbs: ["dismiss"],
+      ...itemActions(["dismiss"]),
       report: null,
     });
   }
@@ -158,7 +166,7 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
       effort_min: EFFORT.task,
       age_days: days,
       url: null,
-      verbs: uid ? ["complete", "dismiss"] : ["dismiss"],
+      ...itemActions(uid ? ["complete", "dismiss"] : ["dismiss"]),
       report: null,
     });
   }
@@ -175,12 +183,12 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
       effort_min: EFFORT.lead,
       age_days: days,
       url: l.url ?? null,
-      verbs: ["dismiss"],
+      ...itemActions(["dismiss"]),
       report: null,
     });
   }
 
-  for (const r of s.refinery?.buckets?.action ?? []) {
+  for (const r of refineryStages(s.refinery).action ?? []) {
     const failed = r.state === "failed";
     items.push({
       id: `refinery:${String(r.id)}`,
@@ -195,7 +203,7 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
       effort_min: EFFORT.refinery,
       age_days: 0, // the item store carries no timestamps in its card form
       url: r.url ?? null,
-      verbs: ["agent", "dismiss"],
+      ...itemActions(["agent", "dismiss"]),
       report: null,
     });
   }
@@ -211,7 +219,7 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
       effort_min: EFFORT.nightly,
       age_days: 0,
       url: null,
-      verbs: ["dismiss"],
+      ...itemActions(["dismiss"]),
       report: null,
     });
   }
@@ -231,12 +239,12 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
       effort_min: EFFORT.system,
       age_days: 0,
       url: a.url ?? null,
-      verbs: ["agent", "dismiss"],
+      ...itemActions(["agent", "dismiss"]),
       report: null,
     });
   }
 
-  for (const m of b.mail_triage?.buckets?.act ?? []) {
+  for (const m of mailThreadsByState(b.mail_triage)[MAIL_ACTION_STATE] ?? []) {
     items.push({
       id: `mail:${String(m.thread_id ?? slug(String(m.subject ?? "mail")))}`,
       source: "mail",
@@ -246,7 +254,7 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
       effort_min: EFFORT.mail,
       age_days: 0,
       url: null,
-      verbs: ["dismiss"],
+      ...itemActions(["dismiss"]),
       report: null,
     });
   }
@@ -530,7 +538,7 @@ export function todayTools(): ToolDef[] {
                 sender: `${i.source} · ~${i.effort_min} min${i.age_days ? ` · ${i.age_days}d` : ""}`,
                 summary: i.why + (i.report ? ` · report ready` : ""),
                 url: i.url,
-                verbs: i.verbs,
+                ...itemActions(i.actions),
               })),
             },
             { source: "hwc_today", spillover, generated_at: generatedAt },

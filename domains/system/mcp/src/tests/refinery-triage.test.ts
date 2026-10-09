@@ -34,7 +34,10 @@ const review = (id: string, fields: Record<string, unknown>) => ({
 async function triage(): Promise<Column[]> {
   const result = await tool.handler({ action: "triage" });
   expect(result.status).toBe("ok");
-  return (result.view!.data as { columns: Column[] }).columns;
+  const data = result.view!.data as { stages: Column[]; columns: Column[] };
+  expect(data.stages).toBe(data.columns);
+  for (const stage of data.stages) for (const card of stage.cards) expect((card as any).actions).toBe(card.verbs);
+  return data.stages;
 }
 
 beforeAll(async () => {
@@ -174,4 +177,12 @@ describe("hwc_refinery prefix routing", () => {
     expect((await tool.handler({ action: "run", id: "f" })).status).toBe("ok");
     expect(fetchMock.mock.calls[0][0]).toBe("http://board.test/run");
   });
+});
+
+it("reads old refinery groups and prefers stages when both exist", async () => {
+  const {refineryStages} = await import("../src/tools/refinery.js");
+  const legacy = {action: [{id: "old"}]};
+  expect(refineryStages({buckets: legacy})).toBe(legacy);
+  const stages = {action: [{id: "new"}]};
+  expect(refineryStages({stages, buckets: legacy})).toBe(stages);
 });

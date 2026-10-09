@@ -49,11 +49,11 @@ fi
 
 if [ ! -x "${CLASSIFIER_BIN}" ] || [ ! -S "${SOCKET}" ]; then
   log "WARN: Laya classifier unavailable; unclassified mail remains DONT KNOW"
-  jq -n --arg now "$(date -Iseconds)" --slurpfile contract "${HWC_MAIL_CLASSIFIER_CONTRACT_FILE:?mail vocabulary binding required}" '{
-    schemaVersion: 2, generated_at: $now, provider: "laya",
+  jq -n --arg now "$(date -Iseconds)" --slurpfile contract "${HWC_MAIL_CLASSIFIER_CONTRACT_FILE:?mail vocabulary binding required}" '($contract[0].states | map({key: ., value: []}) | from_entries) as $threads_by_state | {
+    schemaVersion: 3, generated_at: $now, provider: "laya",
     error: "classifier unavailable; unclassified mail remains DONT KNOW",
     states: $contract[0].states, state_display_names: $contract[0].stateDisplayNames,
-    buckets: ($contract[0].states | map({key: ., value: []}) | from_entries),
+    threads_by_state: $threads_by_state, buckets: $threads_by_state,
     stats: ($contract[0].states | map({key: (. + "_count"), value: 0}) | from_entries)
   }' > "${MAIL_TRIAGE_JSON}.tmp" && mv "${MAIL_TRIAGE_JSON}.tmp" "${MAIL_TRIAGE_JSON}"
 else

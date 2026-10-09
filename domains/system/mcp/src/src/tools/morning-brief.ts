@@ -10,10 +10,11 @@
  * Mirrors the sibling tools' "unavailable" style rather than failing.
  */
 
+import { refineryStages } from "./refinery.js";
 import { readFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
-import { MAIL_STATES, MAIL_STATE_DISPLAY_NAMES } from "./mail.js";
+import { mailThreadsByState, MAIL_STATES, MAIL_STATE_DISPLAY_NAMES } from "./mail.js";
 
 const BRIEFING_PATH =
   "/home/eric/.nixos/domains/business/morning-briefing/output/briefing.json";
@@ -152,7 +153,7 @@ export function morningBriefTool(briefingPath = BRIEFING_PATH): ToolDef {
       const recentDocs = asObj(sections["recent_documents"]);
       const refinery = asObj(sections["refinery"]);
       const refCounts = asObj(refinery["counts"]);
-      const refBuckets = asObj(refinery["buckets"]);
+      const refStages = refineryStages(refinery);
       // Rendered by `ws ledger --json` (the one producer); printed as-is here.
       const agentsLine = asStr(asObj(sections["agents"])["line"]);
 
@@ -317,7 +318,7 @@ export function morningBriefTool(briefingPath = BRIEFING_PATH): ToolDef {
           const counts = MAIL_STATES.map(state => `${num(stats[`${state}_count`]) ?? 0} ${MAIL_STATE_DISPLAY_NAMES[state]}`).join(", ");
           mailLines.push(`- Workflow: ${total ?? "?"} unread — ${counts}`);
         }
-        const doMail = bullets(asArr(asObj(mailTriage["buckets"])["do"]), 5);
+        const doMail = bullets(asArr(mailThreadsByState(mailTriage)["do"]), 5);
         for (const item of doMail) mailLines.push(`  - 🔴 ${item}`);
         const routingRules = asArr(mailTriage["routing_rules"]);
         if (routingRules.length) {
@@ -341,7 +342,7 @@ export function morningBriefTool(briefingPath = BRIEFING_PATH): ToolDef {
         refLines.push(
           `Action: **${num(refCounts["action"]) ?? 0}** · active: ${num(refCounts["active"]) ?? 0} · hopper: ${num(refCounts["hopper"]) ?? 0}`,
         );
-        for (const raw of asArr(refBuckets["action"]).slice(0, 8)) {
+        for (const raw of asArr(refStages["action"]).slice(0, 8)) {
           const o = asObj(raw);
           const t = pick(o, "title", "id");
           const st = pick(o, "state");

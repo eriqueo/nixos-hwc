@@ -356,6 +356,7 @@ function diffstatText(d: Diffstat): string {
 }
 
 function toCard(review: Review) {
+  const actions = reviewVerbs(review);
   return {
     id: review.id,
     kind: "pr",
@@ -371,7 +372,8 @@ function toCard(review: Review) {
     // Workbench card contract: `url` drives opens="card-url"; `verbs` is the
     // card's closed write set; tag/reason/facts feed the sectioned preview.
     url: review.prUrl ?? undefined,
-    verbs: reviewVerbs(review),
+    actions,
+    verbs: actions,
     tag: review.prNumber != null ? `PR #${review.prNumber}` : "PR",
     reason: review.recommendation,
     facts: [
@@ -385,6 +387,7 @@ function toCard(review: Review) {
 
 /** A terminal review case (dead / already-merged) as a card. */
 function caseCard(c: ReviewCase) {
+  const actions = c.state === "dead" ? ["requeue"] : [];
   const last = c.attempts.at(-1);
   return {
     id: c.id,
@@ -398,7 +401,8 @@ function caseCard(c: ReviewCase) {
     prNumber: null,
     diffstat: { files: 0, insertions: 0, deletions: 0 },
     mergeable: null,
-    verbs: c.state === "dead" ? ["requeue"] : [],
+    actions,
+    verbs: actions,
     tag: "PR",
     reason: last?.message ?? "branch already integrated",
     facts: [
@@ -511,7 +515,7 @@ export function nightlyReviewTools(): ToolDef[] {
             view: contract(
               "kanban",
               "Nightly PR Review",
-              { columns },
+              { stages: columns, columns },
               { source: "hwc_nightly_review", reviewed },
             ),
           };

@@ -1121,3 +1121,10 @@ export function mailTools(): ToolDef[] {
     },
   ];
 }
+
+/** Schema-3 report vocabulary; schema-2 caches remain readable during expansion. */
+export function mailThreadsByState<T = any>(report: unknown): Record<string, T[]> {
+  const r = report && typeof report === "object" ? report as Record<string, unknown> : {};
+  const groups = r.threads_by_state ?? r.buckets;
+  return groups && typeof groups === "object" && !Array.isArray(groups) ? groups as Record<string, T[]> : {};
+}
