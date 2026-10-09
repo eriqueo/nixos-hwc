@@ -41,6 +41,9 @@ retained at capacity. Durable cursors rotate work. Fetch has a 120-second ceilin
 per account. Enrichment has a 120-second total budget with time reserved for labels.
 Readback repeats at most six times with capped exponential delay and jitter;
 wire mutations never retry from an uncertain receipt.
+Each child binds its remaining parent budget before provider access, including
+preflight scans. Provider IO is capped below the parent's cancellation allowance.
+Label status marks stale reports and reads uncertain effects from the ledger.
 
 Health uses content-derived cases with state separate from outcome. It appends
 judgments, emits alerts on transitions, and escalates pending commands at 30
@@ -92,7 +95,17 @@ receipt reads until verified. The running pane uses that package. The original
 unknown Trash reservation remains intact. Thirty-six pre-cutover commands have
 unproven physical scope; 15 label conflicts remain preserved for review.
 
-The scheduled-cycle check and seven-day soak remain open. Inspect status.json,
+The scheduled-cycle check and seven-day soak remain open.
+The first scheduled cycle fetched and indexed all three accounts, but timed out
+the label worker. Investigation found that the parent allotted less time than
+the worker's independent 120-second deadline. This stranded one contained label
+receipt and exposed an old pending count. System One 8689ee3 binds the remaining
+budget at the CLI edge, carries it through preflight and effects, and reports
+durable uncertainty independently of report freshness. Its build and full suite
+passed, including 206 mail tests; removing budget propagation made the regression
+fail. Scheduled acceptance restarts on this repaired release.
+
+Inspect status.json,
 labels.json, durable command receipts and health case transitions. The expected
 signal is fresh per-account fetch/index with visible, contained review work.
 Close P15 only after sustained use meets that contract and compatibility readers

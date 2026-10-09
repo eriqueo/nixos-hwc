@@ -12,6 +12,8 @@ Self-contained email domain: client UI, accounts, sync, indexing, sending, and b
 `mbsync/` binds the bounded System One coordinator. Each account fetches
 independently, then notmuch indexes before mailbox effects. Status schema 2 keeps
 fetch/index success separate from command, observation and label outcomes.
+The parent supplies each worker's remaining budget before provider access.
+Label status includes durable uncertain writes and marks stale reports explicitly.
 
 The shared physical effect owner executes Proton Archive, reopen and Trash by
 reserved COPY of existing provider identities. Managed labels share its identity
@@ -142,6 +144,8 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-10-09: Bind command and label deadlines to their parent budget. Bound provider IO below the cancellation allowance; report durable label uncertainty even after a stale or interrupted report.
 - 2026-10-09: Switch Proton membership and managed labels to shared physical identity reservations; remove afew moves and wildcard membership pushes. Keep Drafts/Sent uploads and Gmail sync. Add command receipts, effects-off recovery, fair bounded work and transition-based health.
 
 - 2026-10-09: Separate fetch/index availability from command, observation and label
