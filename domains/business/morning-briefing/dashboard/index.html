@@ -62,7 +62,7 @@
   .today-title{font-weight:600}
   .today-why{font-size:12px;opacity:.75;margin-top:2px}
   .today-meta{font-size:11px;opacity:.5;margin-top:2px}
-  .today-verbs{display:flex;gap:6px;flex-wrap:wrap;flex:none}
+  .today-actions{display:flex;gap:6px;flex-wrap:wrap;flex:none}
   .today-btn{font:inherit;font-size:11px;padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface2,rgba(255,255,255,.05));color:inherit;cursor:pointer}
   .today-btn:hover{border-color:var(--accent,#d8a657)}
   .today-btn:disabled{opacity:.4;cursor:default}
@@ -332,8 +332,8 @@ function fmtShortDate(iso){
 }
 
 // ── Thread card ───────────────────────────────────────────────────────────────
-function makeThread(t,bucket){
-  const wrap=$('div',{class:`thread ${bucket}`});
+function makeThread(t,stage){
+  const wrap=$('div',{class:`thread ${stage}`});
   const body=$('div',{class:'thread-body'});
   const top=$('div',{class:'thread-top'});
   top.appendChild($('span',{class:'thread-from'},t.sender||t.from_name||t.from_address||'?'));
@@ -399,7 +399,7 @@ function makeCalendar(cal){
 // ── Mail tile with tabs ──────────────────────────────────────────────────────
 function makeMailTile(triage,liveThreads,mailHealth){
   const sec=$('div',{class:'section'});
-  const merged=triage||{buckets:{},stats:{}};
+  const merged=triage||{threads_by_state:{},stats:{}};
 
   sec.appendChild($('div',{class:'sec-hdr'},
     $('span',null,'Mail'),
@@ -413,7 +413,7 @@ function makeMailTile(triage,liveThreads,mailHealth){
     return sec;
   }
 
-  const b=merged.threads_by_state ?? merged.buckets ?? {};
+  const b=merged.threads_by_state ?? {};
   const rules=merged.routing_rules||[];
   if(rules.length){
     const ruleBox=$('div',{class:'mail-detail',style:'margin-bottom:12px'});
@@ -884,26 +884,26 @@ function makeToday(t){
   if(spill)hdr.appendChild(spill);
   box.appendChild(hdr);
   items.forEach((it,index)=>{
-    const verbs=$('div',{class:'today-verbs'});
+    const actions=$('div',{class:'today-actions'});
     const row=$('div',{class:`today-item${index>=initial?' extra':''}`},
       $('div',{class:`today-sev sev-${it.severity==='red'?'red':'amber'}`}),
       $('div',{class:'today-body'},
         $('div',{class:'today-title'},it.title),
         $('div',{class:'today-why'},it.why||''),
         $('div',{class:'today-meta'},`${it.source} · ~${it.effort_min||10} min${it.age_days?` · ${it.age_days}d`:''}${it.report?' · report ready':''}`)),
-      verbs);
-    const setDone=label=>{verbs.innerHTML='';verbs.appendChild($('span',{class:'today-done'},`✓ ${label}`))};
+      actions);
+    const setDone=label=>{actions.innerHTML='';actions.appendChild($('span',{class:'today-done'},`✓ ${label}`))};
     const btn=(label,fn,cls='')=>{const b=$('button',{class:`today-btn ${cls}`},label);
-      b.onclick=async()=>{verbs.querySelectorAll('.today-btn').forEach(x=>x.disabled=true);
-        try{await fn();setDone(label)}catch(e){verbs.querySelectorAll('.today-btn').forEach(x=>x.disabled=false);
-          verbs.insertBefore($('span',{class:'today-done'},'failed — retry'),verbs.firstChild)}};
+      b.onclick=async()=>{actions.querySelectorAll('.today-btn').forEach(x=>x.disabled=true);
+        try{await fn();setDone(label)}catch(e){actions.querySelectorAll('.today-btn').forEach(x=>x.disabled=false);
+          actions.insertBefore($('span',{class:'today-done'},'failed — retry'),actions.firstChild)}};
       return b};
-    if(it.url)verbs.appendChild((()=>{const a=$('a',{class:'today-btn primary',href:it.url,target:'_blank'},'explore →');return a})());
-    if(it.report)verbs.appendChild($('a',{class:'today-btn primary',href:it.report,target:'_blank'},'explore report →'));
-    (it.actions ?? it.verbs ?? []).forEach(v=>{
-      if(v==='complete')verbs.appendChild(btn('✓ done',()=>todayVerb('complete',it.id),'primary'));
-      if(v==='agent')verbs.appendChild(btn('⚡ agent',()=>todayVerb('agent',it.id)));
-      if(v==='dismiss')verbs.appendChild(btn('dismiss',()=>todayVerb('dismiss',it.id)));
+    if(it.url)actions.appendChild((()=>{const a=$('a',{class:'today-btn primary',href:it.url,target:'_blank'},'explore →');return a})());
+    if(it.report)actions.appendChild($('a',{class:'today-btn primary',href:it.report,target:'_blank'},'explore report →'));
+    (it.actions ?? []).forEach(v=>{
+      if(v==='complete')actions.appendChild(btn('✓ done',()=>todayVerb('complete',it.id),'primary'));
+      if(v==='agent')actions.appendChild(btn('⚡ agent',()=>todayVerb('agent',it.id)));
+      if(v==='dismiss')actions.appendChild(btn('dismiss',()=>todayVerb('dismiss',it.id)));
     });
     box.appendChild(row);
   });

@@ -3,7 +3,7 @@
 //
 // Reads the Refinery engine's item store directly — one .md per Item, with the
 // canonical Item JSON in a fenced ```json block (same format
-// MarkdownItemStore.load parses) — and buckets the items for the briefing,
+// MarkdownItemStore.load parses) — and groups the items by stage for the briefing,
 // TRIAGED LIKE MAIL:
 //
 //   action  — needs Eric: parked (a decision unblocks it), failed (a gate/run
@@ -109,7 +109,7 @@ async function main() {
   for (const it of items) {
     if (it.archived === true) continue; // exit-ramped to /finished — not briefing material
     // Untriaged FIRST: brain-sourced ideas carry state:"parked" by design
-    // (parked-for-triage) — state-based bucketing would misfile the hopper
+    // (parked-for-triage) — grouping by state would misfile the hopper
     // as action items. Only a matured (ready) idea is an action.
     if (it.pipeline === UNTRIAGED) {
       if (it.stage === "ready") action.push(card(it)); // awaiting a promote decision
@@ -136,7 +136,6 @@ async function main() {
       total: items.length,
     },
     stages,
-    buckets: stages,
   }));
 }
 

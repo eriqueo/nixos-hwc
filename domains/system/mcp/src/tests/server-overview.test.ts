@@ -28,9 +28,9 @@ function registry(overrides: Record<string, ToolDef["handler"]> = {}): { tools: 
   return { tools, calls };
 }
 
-async function columns(tool: ToolDef, args: Record<string, unknown> = {}): Promise<Column[]> {
-  const data = (await tool.handler(args)).view!.data as { stages: Column[]; columns: Column[] };
-  expect(data.stages).toBe(data.columns);
+async function stages(tool: ToolDef, args: Record<string, unknown> = {}): Promise<Column[]> {
+  const data = (await tool.handler(args)).view!.data as { stages: Column[] };
+  expect(data).not.toHaveProperty("columns");
   return data.stages;
 }
 
@@ -39,7 +39,7 @@ describe("hwc_server_overview", () => {
     const { tools } = registry({
       hwc_media_status: async () => status([{ status: "down", name: "sonarr", note: ":8989" }, { status: "up", name: "jellyfin" }]),
     });
-    const cols = await columns(serverOverviewTool(tools));
+    const cols = await stages(serverOverviewTool(tools));
     expect(cols[0]).toMatchObject({ id: "needs-you", title: "Needs you" });
     expect(cols[0].cards.map((c) => c.id)).toEqual(["hwc_media_status:sonarr"]);
     expect(cols.find((c) => c.id === "hwc_media_status")!.cards.map((c) => c.id)).toEqual(["hwc_media_status:jellyfin"]);
@@ -57,7 +57,7 @@ describe("hwc_server_overview", () => {
     ["a partial result", async () => ({ ...status([{ status: "ok", name: "half" }]), status: "partial" as const, message: "1 of 2" }), "PARTIAL"],
   ] as [string, ToolDef["handler"], string][])("turns %s into a Needs-you card naming the tool and code", async (_name, handler, code) => {
     const { tools } = registry({ hwc_storage_status: handler });
-    const needs = (await columns(serverOverviewTool(tools)))[0].cards;
+    const needs = (await stages(serverOverviewTool(tools)))[0].cards;
     expect(needs).toHaveLength(1);
     expect(needs[0]).toMatchObject({ id: "hwc_storage_status:read", status: "error" });
     expect(needs[0].facts).toContainEqual(["tool", "hwc_storage_status"]);
@@ -66,13 +66,13 @@ describe("hwc_server_overview", () => {
 
   it("times a slow sub-read out without holding the board", async () => {
     const { tools } = registry({ hwc_network: () => new Promise(() => {}) });
-    const needs = (await columns(serverOverviewTool(tools, { timeoutMs: 20 })))[0].cards;
+    const needs = (await stages(serverOverviewTool(tools, { timeoutMs: 20 })))[0].cards;
     expect(needs[0].facts).toContainEqual(["code", "TIMEOUT"]);
   });
 
   it("names a tool missing from the registry", async () => {
     const { tools } = registry();
-    const needs = (await columns(serverOverviewTool(tools.filter((t) => t.name !== "hwc_network"))))[0].cards;
+    const needs = (await stages(serverOverviewTool(tools.filter((t) => t.name !== "hwc_network"))))[0].cards;
     expect(needs[0].facts).toContainEqual(["code", "NOT_FOUND"]);
   });
 
@@ -120,7 +120,7 @@ describe("gateway registration", () => {
     // with a board whose stages cover every system.
     const result = await overview!.handler({});
     expect(result.status).toBe("ok");
-    const cols = (result.view!.data as { columns: Column[] }).columns;
+    const cols = (result.view!.data as { stages: Column[] }).stages;
     expect(cols.map((c) => c.id)).toEqual(["needs-you", ...OVERVIEW_SOURCES.map((s) => s.tool)]);
   }, 30_000);
 });

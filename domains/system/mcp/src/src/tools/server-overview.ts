@@ -138,7 +138,7 @@ async function readSource(src: Source, tools: Map<string, ToolDef>, timeoutMs: n
 }
 
 interface Composed {
-  columns: { id: string; title: string; cards: Card[] }[];
+  stages: { id: string; title: string; cards: Card[] }[];
   needsYou: number;
   elapsedMs: number;
 }
@@ -147,14 +147,14 @@ async function compose(tools: Map<string, ToolDef>, timeoutMs: number, now: () =
   const started = now();
   const perSource = await Promise.all(OVERVIEW_SOURCES.map((src) => readSource(src, tools, timeoutMs)));
   const needs: Card[] = [];
-  const columns: Composed["columns"] = [];
+  const stages: Composed["stages"] = [];
   OVERVIEW_SOURCES.forEach((src, i) => {
     const healthy: Card[] = [];
     for (const card of perSource[i]) (HEALTHY.has(card.status) ? healthy : needs).push(card);
-    columns.push({ id: src.tool, title: src.system, cards: healthy });
+    stages.push({ id: src.tool, title: src.system, cards: healthy });
   });
   return {
-    columns: [{ id: "needs-you", title: "Needs you", cards: needs }, ...columns],
+    stages: [{ id: "needs-you", title: "Needs you", cards: needs }, ...stages],
     needsYou: needs.length,
     elapsedMs: now() - started,
   };
@@ -207,7 +207,7 @@ export function serverOverviewTool(registry: ToolDef[], opts: OverviewOptions = 
           ? "Server: all checks healthy"
           : `Server: ${value.needsYou} check(s) need you`,
         data: { needsYou: value.needsYou },
-        view: contract("kanban", "Server", { stages: value.columns, columns: value.columns }, {
+        view: contract("kanban", "Server", { stages: value.stages }, {
           source: "hwc_server_overview",
           cached: hit,
           elapsed_ms: value.elapsedMs,

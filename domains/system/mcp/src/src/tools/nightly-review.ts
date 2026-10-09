@@ -341,7 +341,7 @@ function priorityOf(verdict: Verdict): "critical" | "normal" | "low" {
   return "low";
 }
 
-/** The write verbs a review allows in its current state — the card's `verbs`.
+/** The write actions a review allows in its current state — the card's `actions`.
  * `merge` only for an open merge-ready PR; `requeue` for work that needs
  * another run (needs-work, a reject recommendation, or a rejected review). */
 function reviewVerbs(review: Review): string[] {
@@ -369,11 +369,10 @@ function toCard(review: Review) {
     prNumber: review.prNumber,
     diffstat: review.diffstat,
     mergeable: review.mergeable,
-    // Workbench card contract: `url` drives opens="card-url"; `verbs` is the
+    // Workbench card contract: `url` drives opens="card-url"; `actions` is the
     // card's closed write set; tag/reason/facts feed the sectioned preview.
     url: review.prUrl ?? undefined,
     actions,
-    verbs: actions,
     tag: review.prNumber != null ? `PR #${review.prNumber}` : "PR",
     reason: review.recommendation,
     facts: [
@@ -402,7 +401,6 @@ function caseCard(c: ReviewCase) {
     diffstat: { files: 0, insertions: 0, deletions: 0 },
     mergeable: null,
     actions,
-    verbs: actions,
     tag: "PR",
     reason: last?.message ?? "branch already integrated",
     facts: [
@@ -502,7 +500,7 @@ export function nightlyReviewTools(): ToolDef[] {
         /* ── board ──────────────────────────────────────────────── */
         if (action === "board") {
           const { entries, reviewed, terminalCases, retryableCases, malformed } = await loadNightlyEntries();
-          const columns = LANES.map((lane) => ({
+          const stages = LANES.map((lane) => ({
             id: lane.id,
             title: lane.title,
             cards: entries.filter((e) => e.lane === lane.id).map((e) => e.card),
@@ -515,7 +513,7 @@ export function nightlyReviewTools(): ToolDef[] {
             view: contract(
               "kanban",
               "Nightly PR Review",
-              { stages: columns, columns },
+              { stages },
               { source: "hwc_nightly_review", reviewed },
             ),
           };

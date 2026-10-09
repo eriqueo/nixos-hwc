@@ -12,10 +12,10 @@
  *
  * This is a LOCAL FILE READ on hwc-server (the gateway and the refinery board
  * share the host) — the board at :8060 serves only HTML, but the .md store is
- * the source of truth. Same bucketing as the morning briefing's
+ * the source of truth. Same stageing as the morning briefing's
  * gather-refinery.mjs; keep the two in lockstep.
  *
- * WRITES are the generic workbench card_actions verbs ({action, id}) proxied
+ * WRITES are the generic workbench card_actions actions ({action, id}) proxied
  * to the board service's form-POST routes on loopback (the gateway and the
  * board share hwc-server): run → /run, park/resume → /status, delete →
  * /delete, intake → /intake, amend → /amend, stage → /stage, promote →
@@ -141,7 +141,7 @@ type Stage = "action" | "active" | "hopper";
 function stageOf(it: RefineryItem): Stage | null {
   if (it.archived === true) return null; // exit-ramped to /finished — off the working board
   // Untriaged FIRST: brain-sourced ideas carry state:"parked" by design
-  // (parked-for-triage), so state-based bucketing would misfile the whole
+  // (parked-for-triage), so state-based stageing would misfile the whole
   // hopper as action items. Only a matured (ready) idea is an action.
   if (it.pipeline === UNTRIAGED) return it.stage === "ready" ? "action" : "hopper";
   if (it.state === "parked" || it.state === "failed") return "action";
@@ -150,7 +150,7 @@ function stageOf(it: RefineryItem): Stage | null {
 }
 
 /**
- * The board write verbs an item's state allows — the card's `verbs`. The board
+ * The board write actions an item's state allows — the card's `actions`. The board
  * accepts any status write, so this is where the legal set is decided: an
  * untriaged idea is promoted, not run; a parked item resumes; a running item
  * may only be parked; an archived item takes no card verb.
@@ -188,7 +188,6 @@ function toCard(it: RefineryItem, stage: Stage | "done") {
     summary: it.parkedReason || "",
     url: `${BOARD_URL}/project/${encodeURIComponent(it.id)}`,
     actions,
-    verbs: actions,
     tag: it.pipeline === UNTRIAGED ? "idea" : "item",
     reason: it.parkedReason || where,
     facts,
@@ -244,7 +243,7 @@ export function refineryTools(): ToolDef[] {
         "id+target: captured|shaping|ready) matures an idea; promote (need id; optional " +
         "target=pipeline, default project-ideation) pushes a ready idea into refinement; " +
         "run / park / resume / delete (need id) as before. Column moves are rejected — " +
-        "the board's columns are derived triage stages, not stored lanes. " +
+        "the board's stages are derived triage stages, not stored lanes. " +
         "action=triage merges this board with the nightly PR review into Needs you / Running / " +
         "Hopper / Done (newest 10); its card ids are ref:<item> or pr:<review>, and every verb " +
         "(detail included) routes on that prefix — pr: cards take merge/requeue/detail.",
@@ -257,10 +256,10 @@ export function refineryTools(): ToolDef[] {
             description:
               "board (default): kanban of action/active/hopper · triage: merged board with nightly PRs " +
               "(ids ref:/pr:) · summary: text rollup · detail: full item by id · " +
-              "intake/amend/stage/promote/run/park/resume/delete: write verbs · merge/requeue (pr: ids) " +
+              "intake/amend/stage/promote/run/park/resume/delete: write actions · merge/requeue (pr: ids) " +
               "and rebuild route to hwc_nightly_review",
           },
-          id: { type: "string", description: "Item id (detail + write verbs)" },
+          id: { type: "string", description: "Item id (detail + write actions)" },
           text: { type: "string", description: "intake: the idea sentence · amend: alias for note" },
           note: { type: "string", description: "amend: the answer/decision that unblocks the parked item" },
           target: {
@@ -304,7 +303,7 @@ export function refineryTools(): ToolDef[] {
           return { status: "ok", message: `refinery intake: "${text.slice(0, 80)}" — landed in the hopper (and the brain backlog)`, data: { url: BOARD_URL } };
         }
 
-        // ── amend / stage / promote: the edit verbs (board-owned state machine) ──
+        // ── amend / stage / promote: the edit actions (board-owned state machine) ──
         if (action === "amend" || action === "stage" || action === "promote") {
           const id = String(args["id"] ?? "");
           if (!id) return mcpError({ type: "VALIDATION_ERROR", message: `${action}: id is required` });
@@ -346,10 +345,10 @@ export function refineryTools(): ToolDef[] {
         if (action in WRITE_VERBS || action === "move") {
           if (action === "move") {
             // H/L on the workbench board rides the generic move path, but these
-            // columns are DERIVED (triage stages over state), not stored lanes.
+            // stages are DERIVED (triage stages over state), not stored lanes.
             return mcpError({
               type: "VALIDATION_ERROR",
-              message: "refinery columns are derived — use run/park/resume instead of a move",
+              message: "refinery stages are derived — use run/park/resume instead of a move",
             });
           }
           const id = String(args["id"] ?? "");
@@ -369,19 +368,19 @@ export function refineryTools(): ToolDef[] {
 
         const items = await loadItems();
 
-        const stages: Record<Stage, RefineryItem[]> = { action: [], active: [], hopper: [] };
+        const itemsByStage: Record<Stage, RefineryItem[]> = { action: [], active: [], hopper: [] };
         for (const it of items ?? []) {
           const b = stageOf(it);
-          if (b) stages[b].push(it);
+          if (b) itemsByStage[b].push(it);
         }
         // failed first, then parked, then ready-to-promote — most-actionable on top.
         const rank = (it: RefineryItem) => (it.state === "failed" ? 0 : it.state === "parked" ? 1 : 2);
-        stages.action.sort((a, b) => rank(a) - rank(b));
+        itemsByStage.action.sort((a, b) => rank(a) - rank(b));
 
         const counts = {
-          action: stages.action.length,
-          active: stages.active.length,
-          hopper: stages.hopper.length,
+          action: itemsByStage.action.length,
+          active: itemsByStage.active.length,
+          hopper: itemsByStage.hopper.length,
         };
         const storeNote = items === null ? " (item store unreadable)" : "";
 
@@ -396,7 +395,7 @@ export function refineryTools(): ToolDef[] {
               {
                 greeting: `${counts.action} action · ${counts.active} active · ${counts.hopper} hopper`,
                 summary: items === null ? "item store unreadable" : `${(items ?? []).length} items on the board`,
-                highlights: stages.action.slice(0, 5).map((it) => `${labelOf(it)}: ${titleOf(it)}`),
+                highlights: itemsByStage.action.slice(0, 5).map((it) => `${labelOf(it)}: ${titleOf(it)}`),
               },
               { source: "hwc_refinery", url: BOARD_URL },
             ),
@@ -419,34 +418,34 @@ export function refineryTools(): ToolDef[] {
               .map((it) => ({ at: itemAt(it), card: ref(toCard(it, "done")) })),
             ...nightlyIn("done").map((e) => ({ at: e.at, card: pr(e.card) })),
           ].sort((a, b) => b.at.localeCompare(a.at));
-          const columns = [
+          const stages = [
             {
               id: "needs-you",
               title: "Needs you",
               cards: [
-                ...stages.action.map((it) => ref(toCard(it, "action"))),
+                ...itemsByStage.action.map((it) => ref(toCard(it, "action"))),
                 ...nightlyIn("needs-you").map((e) => pr(e.card)),
               ],
             },
-            { id: "running", title: "Running", cards: stages.active.map((it) => ref(toCard(it, "active"))) },
-            { id: "hopper", title: "Hopper", cards: stages.hopper.map((it) => ref(toCard(it, "hopper"))) },
+            { id: "running", title: "Running", cards: itemsByStage.active.map((it) => ref(toCard(it, "active"))) },
+            { id: "hopper", title: "Hopper", cards: itemsByStage.hopper.map((it) => ref(toCard(it, "hopper"))) },
             { id: "done", title: `Done (${done.length})`, cards: done.slice(0, DONE_CAP).map((d) => d.card) },
           ];
           const malformedNote = nightly.malformed > 0 ? ` (${nightly.malformed} malformed review(s) skipped)` : "";
           return {
             status: "ok",
-            message: `Refinery triage: ${columns[0].cards.length} need you, ${counts.active} running, ` +
+            message: `Refinery triage: ${stages[0].cards.length} need you, ${counts.active} running, ` +
               `${counts.hopper} in the hopper, ${done.length} done${storeNote}${malformedNote}`,
-            data: { counts: { ...counts, needsYou: columns[0].cards.length, done: done.length }, url: BOARD_URL },
-            view: contract("kanban", "Refinery", { stages: columns, columns }, { source: "hwc_refinery", url: BOARD_URL }),
+            data: { counts: { ...counts, needsYou: stages[0].cards.length, done: done.length }, url: BOARD_URL },
+            view: contract("kanban", "Refinery", { stages }, { source: "hwc_refinery", url: BOARD_URL }),
           };
         }
 
         // action === "board" (default)
-        const columns = [
-          { id: "action", title: "Action", cards: stages.action.map((it) => toCard(it, "action")) },
-          { id: "active", title: "Active", cards: stages.active.map((it) => toCard(it, "active")) },
-          { id: "hopper", title: "Hopper", cards: stages.hopper.map((it) => toCard(it, "hopper")) },
+        const stages = [
+          { id: "action", title: "Action", cards: itemsByStage.action.map((it) => toCard(it, "action")) },
+          { id: "active", title: "Active", cards: itemsByStage.active.map((it) => toCard(it, "active")) },
+          { id: "hopper", title: "Hopper", cards: itemsByStage.hopper.map((it) => toCard(it, "hopper")) },
         ];
 
         return {
@@ -456,7 +455,7 @@ export function refineryTools(): ToolDef[] {
           view: contract(
             "kanban",
             "Refinery",
-            { stages: columns, columns },
+            { stages },
             { source: "hwc_refinery", url: BOARD_URL, ...counts },
           ),
         };
@@ -465,9 +464,9 @@ export function refineryTools(): ToolDef[] {
   ];
 }
 
-/** Gatherer stage vocabulary with compatibility for cached reports. */
+/** Gatherer stage vocabulary. */
 export function refineryStages<T = any>(section: unknown): Record<string, T[]> {
   const r = section && typeof section === "object" ? section as Record<string, unknown> : {};
-  const groups = r.stages ?? r.buckets;
+  const groups = r.stages;
   return groups && typeof groups === "object" && !Array.isArray(groups) ? groups as Record<string, T[]> : {};
 }

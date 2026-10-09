@@ -38,7 +38,7 @@ describe("morning briefing mail routing rules", () => {
         alerts: [],
         mail_triage: {
           stats: {do_count: 1, did_count: 0, look_count: 0, junk_count: 0},
-          buckets: {do: [], did: [], look: [], junk: []},
+          threads_by_state: {do: [], did: [], look: [], junk: []},
           routing_rules: [{
             sender: "office@example.com",
             subject_contains: "[P1 CRITICAL]",
@@ -67,7 +67,7 @@ describe("authoritative mail placement", () => {
     const dir = await mkdtemp(join(tmpdir(), "mail-scan-"));
     try {
       const path = join(dir, "brief.json");
-      await writeFile(path, JSON.stringify({mail_triage:{buckets:{...empty(),do:[thread("a")]}}}));
+      await writeFile(path, JSON.stringify({mail_triage:{threads_by_state:{...empty(),do:[thread("a")]}}}));
       run.mockReset();
       run.mockImplementation((_bin, args, _options, callback) => callback(null,
         args.includes("--format=json") ? JSON.stringify([{thread:"a", tags:["archive","state/look"]}]) : "thread:a\n", ""));
@@ -84,7 +84,7 @@ describe("authoritative mail placement", () => {
     const dir = await mkdtemp(join(tmpdir(), "mail-read-"));
     try {
       const path = join(dir,"brief.json");
-      await writeFile(path,JSON.stringify({mail_triage:{buckets:{...empty(),do:[thread("a")]}}}));
+      await writeFile(path,JSON.stringify({mail_triage:{threads_by_state:{...empty(),do:[thread("a")]}}}));
       run.mockReset();
       run.mockImplementation((_bin,_args,_options,callback)=>callback(null,"",""));
       const tool=mailTriageTools(path,async()=>new Map([["a",new Set(["inbox","state/do"])]]))[0];
@@ -152,7 +152,7 @@ describe("authoritative mail placement", () => {
     const dir = await mkdtemp(join(tmpdir(),"mail-digest-"));
     try {
       const path = join(dir,"brief.json");
-      await writeFile(path, JSON.stringify({mail_triage:{generated_at:"2026-09-07T12:00:00Z",routing_rules:[{},{}],buckets:{
+      await writeFile(path, JSON.stringify({mail_triage:{generated_at:"2026-09-07T12:00:00Z",routing_rules:[{},{}],threads_by_state:{
         ...empty(),do:[thread("a"),...Array.from({length:10},(_,i)=>thread(String(i)))],look:[thread("e")],junk:[thread("f")]
       }}}));
       const tool = mailTriageTools(path, async () => new Map(
@@ -201,7 +201,7 @@ describe("current mail views and metadata preservation", () => {
 });
 
 describe("DONT KNOW consumer contract", () => {
-  it("rebuckets an old four-State cache into DONT KNOW without losing its thread", async () => {
+  it("regroups a four-State cache into DONT KNOW without losing its thread", async () => {
     const legacy = {do: [thread("a")], did: [], look: [], junk: []};
     expect(await reflectLiveStates(legacy, async () => new Map([["a", new Set(["state/dont-know", "state/did"])]])))
       .toEqual({...empty(), "dont-know": [thread("a")]});
@@ -213,15 +213,15 @@ describe("DONT KNOW consumer contract", () => {
     const dir = await mkdtemp(join(tmpdir(), "mail-fields-"));
     try {
       const path = join(dir, "brief.json");
-      await writeFile(path, JSON.stringify({mail_triage: {buckets: {...empty(),
+      await writeFile(path, JSON.stringify({mail_triage: {threads_by_state: {...empty(),
         do: [{...thread("a"), domain: "hwc", urgency_reason: "Client waiting on quote"},
              {...thread("b"), suggested_action: "Reply today"},
              thread("c")]}}}));
       const live = new Map(["a", "b", "c"].map(id => [id, new Set(["state/do"])]));
       const board = await mailTriageTools(path, async () => live)[0].handler({action: "board"});
-      expect((board.view!.data as any).stages).toBe((board.view!.data as any).columns);
-      const cards = (board.view!.data as {columns: {id: string; cards: Record<string, unknown>[]}[]})
-        .columns.find(column => column.id === "do")!.cards;
+      expect(board.view!.data).not.toHaveProperty("columns");
+      const cards = (board.view!.data as {stages: {id: string; cards: Record<string, unknown>[]}[]})
+        .stages.find(column => column.id === "do")!.cards;
       expect(cards[0]).toMatchObject({tag: "hwc", reason: "Client waiting on quote"});
       expect(cards[1]).toMatchObject({reason: "Reply today"});
       expect(cards[1].tag).toBeUndefined();
@@ -233,17 +233,17 @@ describe("DONT KNOW consumer contract", () => {
     const dir = await mkdtemp(join(tmpdir(), "mail-unknown-"));
     try {
       const path = join(dir, "brief.json");
-      await writeFile(path, JSON.stringify({mail_triage: {buckets: {do: [thread("a")], did: [], look: [], junk: []}}}));
+      await writeFile(path, JSON.stringify({mail_triage: {threads_by_state: {do: [thread("a")], did: [], look: [], junk: []}}}));
       const tool = mailTriageTools(path, async () => new Map([["a", new Set(["state/dont-know"])]]))[0];
       const board = await tool.handler({action: "board"});
       expect(board.status).toBe("ok");
       expect(board.data).toMatchObject({stats: {"dont-know_count": 1, do_count: 0}});
-      expect(board.view!.data).toMatchObject({columns: expect.arrayContaining([
+      expect(board.view!.data).toMatchObject({stages: expect.arrayContaining([
         {id: "dont-know", title: "DONT KNOW", cards: [expect.objectContaining({id: "a", priority: "normal"})]},
       ])});
       const digest = await tool.handler({action: "digest"});
       expect(digest.view!.data).toMatchObject({items: [], summary: expect.stringContaining("1 DONT KNOW")});
-      await writeFile(path, JSON.stringify({mail_triage: {stats: {"dont-know_count": 1}, buckets: {"dont-know": [thread("a")]}}}));
+      await writeFile(path, JSON.stringify({mail_triage: {stats: {"dont-know_count": 1}, threads_by_state: {"dont-know": [thread("a")]}}}));
       expect((await morningBriefTool(path).handler({})).view!.data)
         .toMatchObject({body: expect.stringContaining("1 DONT KNOW")});
     } finally {await rm(dir, {recursive: true, force: true});}
@@ -478,21 +478,15 @@ it("the actual flock/start-pipe protocol separates lock refusal from runtime exi
   } finally { await rm(dir,{recursive:true,force:true}); }
 });
 
-it.each(["threads_by_state", "buckets"])("reads %s mail reports in the status tool", async key => {
+it("reads threads_by_state mail reports in the status tool", async () => {
   const dir = await mkdtemp(join(tmpdir(), "mail-state-status-"));
   try {
     const path = join(dir, "brief.json");
-    await writeFile(path, JSON.stringify({mail_triage: {[key]: {do: [thread("a")], look: [thread("b")], "dont-know": [thread("c")]}}}));
+    await writeFile(path, JSON.stringify({mail_triage: {threads_by_state: {do: [thread("a")], look: [thread("b")], "dont-know": [thread("c")]}}}));
     const {morningStatusTool} = await import("../src/tools/morning-status.js");
     const result = await morningStatusTool(path).handler({});
     expect((result.data as any).briefing).toContain("1 DO / 1 DONT KNOW / 0 DID / 1 LOOK / 0 JUNK");
     const board = await mailTriageTools(path, async () => new Map([["a", new Set(["state/do"])], ["b", new Set(["state/look"])], ["c", new Set(["state/dont-know"])]]))[0].handler({});
-    expect((board.view!.data as any).stages).toBe((board.view!.data as any).columns);
+    expect(board.view!.data).not.toHaveProperty("columns");
   } finally { await rm(dir, {recursive: true, force: true}); }
-});
-
-it("prefers new mail groups over stale aliases", async () => {
-  const {mailThreadsByState} = await import("../src/tools/mail.js");
-  const states = {do: [thread("a")]};
-  expect(mailThreadsByState({threads_by_state: states, buckets: {do: []}})).toBe(states);
 });

@@ -26,7 +26,7 @@ import {
 
 // SR2's canonical phase ids (datax lib/sr2/types.ts CANONICAL_PHASE_IDS). The
 // cache carries phase ids only, not the srPhases docs with names and
-// positions, so columns order as: open canonical phases, custom lanes
+// positions, so stages order as: open canonical phases, custom lanes
 // (alphabetical), then the terminal phases, which are hidden by default —
 // closed/archived SRs are noise on an ops board. `includeClosed` shows them.
 const LEADING_PHASES = ["new", "engaged"];
@@ -123,7 +123,7 @@ export function dataxTools(stateDir: string): ToolDef[] {
           let investigated = 0;
           let needsReply = 0;
 
-          const columns = phases.map((phase) => {
+          const stages = phases.map((phase) => {
             const all = cache.records
               .filter((r) => r.phase === phase)
               .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
@@ -141,8 +141,8 @@ export function dataxTools(stateDir: string): ToolDef[] {
 
           return {
             status: "ok",
-            message: `${shown} SR(s) across ${columns.length} phase(s), ${needsReply} need a reply`,
-            view: contract("kanban", "Support Requests", { stages: columns, columns }, {
+            message: `${shown} SR(s) across ${stages.length} phase(s), ${needsReply} need a reply`,
+            view: contract("kanban", "Support Requests", { stages }, {
               source: "sr_gauntlet:sr-cache",
               syncedAt: cache.syncedAt,
               totalTickets: cache.records.length,

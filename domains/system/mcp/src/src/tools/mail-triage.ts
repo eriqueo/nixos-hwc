@@ -3,10 +3,10 @@
  *
  * READS (board/summary) come from the CACHED mail-triage produced daily by
  * domains/business/morning-briefing (run.sh injects a `.mail_triage` key into
- * output/briefing.json), re-bucketed by LIVE notmuch state/* tags so human
+ * output/briefing.json), re-stageed by LIVE notmuch state/* tags so human
  * decisions persist. Completed threads have no active state and disappear.
  *
- * WRITES are the generic workbench card_actions verbs ({action, id[,target]}):
+ * WRITES are the generic workbench card_actions actions ({action, id[,target]}):
  * state-<state> / move, archive, and trash route through the classifier ledger,
  * the same authoritative human-decision path as aerc. Never runs an LLM.
  *
@@ -47,8 +47,6 @@ interface MailTriage {
   query_window_hours?: number;
   total_unread?: number;
   threads_by_state?: Record<string, TriageThread[]>;
-  /** @deprecated schema-2 alias */
-  buckets?: Record<string, TriageThread[]>;
   stats: Record<string, number>;
   routing_rules?: unknown[];
 }
@@ -164,7 +162,7 @@ export async function reflectLiveStates(
   return out;
 }
 
-/* ─── Write verbs (generic workbench card_actions path) ──────────────────── */
+/* ─── Write actions (generic workbench card_actions path) ──────────────────── */
 
 const WRITE_VERBS = ["move", "archive", "trash", "mark-read", "retriage"] as const;
 
@@ -345,7 +343,7 @@ export function mailTriageTools(
         const doMail = reflected[MAIL_ACTION_STATE];
 
         // Counts derive from the REFLECTED arrays (post-move), not the stale
-        // cached stats — a move shifts a thread between buckets at read time.
+        // cached stats — a move shifts a thread between stages at read time.
         const doCount = doMail.length;
         const stateCounts = Object.fromEntries(MAIL_STATES.map(state => [`${state}_count`, reflected[state].length]));
         const countsText = MAIL_STATES.map(state => `${reflected[state].length} ${MAIL_STATE_DISPLAY_NAMES[state]}`).join(" · ");
@@ -398,7 +396,7 @@ export function mailTriageTools(
         }
 
         // action === "board" (default)
-        const columns = MAIL_STATES.map(state => ({id: state, title: MAIL_STATE_DISPLAY_NAMES[state],
+        const stages = MAIL_STATES.map(state => ({id: state, title: MAIL_STATE_DISPLAY_NAMES[state],
           cards: reflected[state].map(thread => toCard(thread, state))}));
 
         return {
@@ -410,7 +408,7 @@ export function mailTriageTools(
           view: contract(
             "kanban",
             "Mail Triage",
-            { stages: columns, columns },
+            { stages },
             { generated_at: generatedAt, total_unread: totalUnread, source: "hwc_mail_triage" },
           ),
         };

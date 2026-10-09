@@ -29,7 +29,7 @@ gather-live.mjs        # Step 1b: JobTread jobs/leads/overdue + CalDAV tasks via
 gather-today.mjs       # Step 2c: expanded hwc_today board + case-ledger delta →
                        #   sections.today (bounded view, explorable depth, changes)
 gather-refinery.mjs    # Step 1c: refinery item store (local .md read) →
-                       #   sections.refinery (action/active/hopper buckets)
+                       #   sections.refinery (action/active/hopper stages)
 gather-research.mjs    # Step 1c: research-scout review lane over loopback REST
                        #   (:8422/api/<tool>) → sections.research (articles
                        #   awaiting review + the standing themes report)
@@ -167,6 +167,8 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+- 2026-10-09: Finish the vocabulary migration: emit only mail `threads_by_state`,
+  refinery `stages`, and Today `actions`; remove cached-report alias fallbacks.
 - 2026-10-01: Render canonical DONT KNOW counts and tabs, preserve old snapshots,
   and bind the source contract for unavailable-model fallback reports.
 
@@ -362,4 +364,4 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 - **2026-06-27** — **Step 1 no longer uses Claude/MCP.** The headless 6am run can't get tool-permission approvals (`~/.claude` `defaultMode=acceptEdits` doesn't cover Bash/MCP), so every MCP gather was auto-denied → briefings full of bogus `[CRITICAL] permission denied` alerts. Rewrote Step 1 to gather system/mail/calendar directly in bash (`systemctl`/`df`/`notmuch`/`khal`→`jq`), compute alerts locally, and assemble `briefing.json` atomically. Fixed the calendar injector (`python3` → `jq`; python3 isn't on the unit PATH). JobTread sections are placeholders pending a local source (see "JobTread follow-up"). Claude is kept only for Step 2 mail-triage reasoning. Deploy = `git pull` on the server + a manual run (run.sh is read from the live repo path; no nixos rebuild).
 - **2026-04-12** — Update tool references for MCP consolidation: `hwc_calendar_week`→`hwc_calendar_list` (range=week), `hwc_storage_backup_status`→`hwc_storage_status`. Rename heartwood-mcp→jt-mcp in docs.
 - **2026-04-09** — Add backup status, tasks due, and recent documents sections. Expand mail triage with known noise senders (nextdoor, quora, zillow, angi, thumbtack, yelp) and review senders (Quo, Stripe, QuickBooks, JobTread). Add reasoning rules for 'sent' tag and flagged+work threads. Dashboard: add backup row, collapsible tasks view, recent docs with type badges, footer with section count, keyboard 'r' refresh, fade-in animation, prominent day-of-week header. Pipeline: add pre-flight check, post-step-1 validation, per-step timing. New alert rules: backup errors, stale backups, overdue tasks, incomplete tasks after 3pm
-- **2026-04-07** — Upgrade dashboard with mail triage UI (expandable thread cards, action buttons, urgent/review/noise buckets). Add `jt_get_overdue_documents` tool to heartwood-mcp. Make `jt_search_jobs` searchTerm optional (allows listing all open jobs). Fix stale paths (routes.nix + old systemd unit), fix mail triage JSON parsing (remove `--output=threads`, extract JSON with sed range instead of fence strip), fix `cp` same-file error on dashboard symlink, stamp `generated_at` from shell, pass explicit date in prompt, increase timeout to 300s, reduce thread limit to 30, add debug logging on triage parse failure
+- **2026-04-07** — Upgrade dashboard with mail triage UI (expandable thread cards, action buttons, urgent/review/noise groups). Add `jt_get_overdue_documents` tool to heartwood-mcp. Make `jt_search_jobs` searchTerm optional (allows listing all open jobs). Fix stale paths (routes.nix + old systemd unit), fix mail triage JSON parsing (remove `--output=threads`, extract JSON with sed range instead of fence strip), fix `cp` same-file error on dashboard symlink, stamp `generated_at` from shell, pass explicit date in prompt, increase timeout to 300s, reduce thread limit to 30, add debug logging on triage parse failure

@@ -62,18 +62,18 @@ describe("datax_support_requests", () => {
     );
     const res = await tool(dir, "datax_support_requests").handler({});
     expect(res.status).toBe("ok");
-    const view = res.view as { data: { columns: Array<{ id: string; cards: Json[] }> }; meta: Json };
-    expect((view.data as any).stages).toBe(view.data.columns);
-    expect(view.data.columns.map((c) => c.id)).toEqual(["new", "engaged"]);
-    const [a] = view.data.columns[0].cards;
+    const view = res.view as { data: { stages: Array<{ id: string; cards: Json[] }> }; meta: Json };
+    expect(view.data).not.toHaveProperty("columns");
+    expect(view.data.stages.map((c) => c.id)).toEqual(["new", "engaged"]);
+    const [a] = view.data.stages[0].cards;
     expect(a).toMatchObject({ id: "a", needsReply: true, investigatedAt: "2026-09-03", run: "run-a" });
     // A failed attempt has no investigatedAt, so no badge and no run link.
-    expect(view.data.columns[1].cards[0]).toMatchObject({ id: "b", investigatedAt: null, run: null });
+    expect(view.data.stages[1].cards[0]).toMatchObject({ id: "b", investigatedAt: null, run: null });
     expect(view.meta).toMatchObject({ totalTickets: 3, shownTickets: 2, needsReplyTickets: 1 });
 
     const all = await tool(dir, "datax_support_requests").handler({ includeClosed: true });
-    const allView = all.view as { data: { columns: Array<{ id: string }> } };
-    expect(allView.data.columns.map((c) => c.id)).toEqual(["new", "engaged", "closed"]);
+    const allView = all.view as { data: { stages: Array<{ id: string }> } };
+    expect(allView.data.stages.map((c) => c.id)).toEqual(["new", "engaged", "closed"]);
   });
 
   it("fails loudly on a cache written before the phase stamp", async () => {

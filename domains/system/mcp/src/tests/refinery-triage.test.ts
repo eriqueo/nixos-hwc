@@ -17,7 +17,7 @@ let reviews = "";
 let tool: ToolDef;
 const fetchMock = vi.fn();
 
-type Card = { id: string; kind: string; verbs: string[]; url?: string; tag?: string };
+type Card = { id: string; kind: string; actions: string[]; url?: string; tag?: string };
 type Column = { id: string; title: string; cards: Card[] };
 
 const item = (id: string, fields: Record<string, unknown>) =>
@@ -34,9 +34,9 @@ const review = (id: string, fields: Record<string, unknown>) => ({
 async function triage(): Promise<Column[]> {
   const result = await tool.handler({ action: "triage" });
   expect(result.status).toBe("ok");
-  const data = result.view!.data as { stages: Column[]; columns: Column[] };
-  expect(data.stages).toBe(data.columns);
-  for (const stage of data.stages) for (const card of stage.cards) expect((card as any).actions).toBe(card.verbs);
+  const data = result.view!.data as { stages: Column[] };
+  expect(data).not.toHaveProperty("columns");
+  for (const stage of data.stages) for (const card of stage.cards) expect(card).not.toHaveProperty("verbs");
   return data.stages;
 }
 
@@ -85,10 +85,10 @@ beforeEach(() => {
 });
 
 describe("hwc_refinery triage board", () => {
-  it("maps refinery buckets and nightly lanes onto the four stages with prefixed ids", async () => {
-    const columns = await triage();
-    expect(columns.map((c) => c.id)).toEqual(["needs-you", "running", "hopper", "done"]);
-    const ids = (stage: string) => columns.find((c) => c.id === stage)!.cards.map((c) => c.id);
+  it("maps refinery stages and nightly lanes onto the four stages with prefixed ids", async () => {
+    const stages = await triage();
+    expect(stages.map((c) => c.id)).toEqual(["needs-you", "running", "hopper", "done"]);
+    const ids = (stage: string) => stages.find((c) => c.id === stage)!.cards.map((c) => c.id);
     expect(ids("needs-you")).toEqual(["ref:f", "ref:p", "pr:ready", "pr:work", "pr:rej"]);
     expect(ids("running")).toEqual(["ref:r"]);
     expect(ids("hopper")).toEqual(["ref:i"]);
@@ -103,17 +103,17 @@ describe("hwc_refinery triage board", () => {
     ]);
   });
 
-  it("derives verbs from state: merge only on a merge-ready PR", async () => {
+  it("derives actions from state: merge only on a merge-ready PR", async () => {
     const cards = (await triage()).flatMap((c) => c.cards);
-    const verbs = (id: string) => cards.find((c) => c.id === id)!.verbs;
-    expect(verbs("pr:ready")).toEqual(["merge"]);
-    expect(verbs("pr:work")).toEqual(["requeue"]);
-    expect(verbs("pr:rej")).toEqual(["requeue"]);
-    expect(verbs("pr:merged")).toEqual([]);
-    expect(verbs("ref:f")).toEqual(["run", "park", "delete"]);
-    expect(verbs("ref:p")).toEqual(["resume", "delete"]);
-    expect(verbs("ref:r")).toEqual(["park"]);
-    expect(verbs("ref:i")).toEqual(["delete"]);
+    const actions = (id: string) => cards.find((c) => c.id === id)!.actions;
+    expect(actions("pr:ready")).toEqual(["merge"]);
+    expect(actions("pr:work")).toEqual(["requeue"]);
+    expect(actions("pr:rej")).toEqual(["requeue"]);
+    expect(actions("pr:merged")).toEqual([]);
+    expect(actions("ref:f")).toEqual(["run", "park", "delete"]);
+    expect(actions("ref:p")).toEqual(["resume", "delete"]);
+    expect(actions("ref:r")).toEqual(["park"]);
+    expect(actions("ref:i")).toEqual(["delete"]);
   });
 
   it("gives PR cards a url and kind, refinery cards theirs", async () => {
@@ -177,12 +177,20 @@ describe("hwc_refinery prefix routing", () => {
     expect((await tool.handler({ action: "run", id: "f" })).status).toBe("ok");
     expect(fetchMock.mock.calls[0][0]).toBe("http://board.test/run");
   });
-});
 
-it("reads old refinery groups and prefers stages when both exist", async () => {
-  const {refineryStages} = await import("../src/tools/refinery.js");
-  const legacy = {action: [{id: "old"}]};
-  expect(refineryStages({buckets: legacy})).toBe(legacy);
-  const stages = {action: [{id: "new"}]};
-  expect(refineryStages({stages, buckets: legacy})).toBe(stages);
+  it("emits only stages and actions on the refinery and nightly boards", async () => {
+    const { nightlyReviewTools } = await import("../src/tools/nightly-review.js");
+    for (const boardTool of [tool, nightlyReviewTools()[0]]) {
+      const result = await boardTool.handler({ action: "board" });
+      expect(result.status).toBe("ok");
+      const data = result.view!.data as { stages: Column[] };
+      expect(data).not.toHaveProperty("columns");
+      const cards = data.stages.flatMap(stage => stage.cards);
+      expect(cards.length).toBeGreaterThan(0);
+      for (const card of cards) {
+        expect(card.actions).toEqual(expect.any(Array));
+        expect(card).not.toHaveProperty("verbs");
+      }
+    }
+  });
 });

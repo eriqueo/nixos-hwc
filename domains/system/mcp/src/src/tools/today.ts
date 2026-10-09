@@ -4,16 +4,16 @@
  *
  * READS output/briefing.json (the merged artifact run.sh builds 3×/day) and
  * derives action_items from its sections — overdue invoices, overdue CalDAV
- * tasks, stale leads, the refinery action bucket, finished nightly builds,
+ * tasks, stale leads, the refinery action stage, finished nightly builds,
  * system alerts, action mail. No new collection: the briefing pipeline stays
- * the single gatherer; this tool is triage + verbs.
+ * the single gatherer; this tool is triage + actions.
  *
  * Every item carries a stable id (`<source>:<entity>`), a one-line `why`, an
  * effort estimate, a severity, and its verb set. Ranking: red before amber,
  * then oldest first. The queue caps at TOP_N with a spillover count — the
  * point is "do these today", not another unbounded list.
  *
- * WRITES (Triage Surface Contract verbs, {action, id}):
+ * WRITES (Triage Surface Contract actions, {action, id}):
  *   dismiss  — snooze the item's case: optional `reason` recorded; wakes if a
  *              system: item resurfaces WORSE than at dismissal, else on the
  *              30-day expiry (TTL is the fallback, not the mechanism).
@@ -85,8 +85,6 @@ interface TodayItem {
   age_days: number;
   url: string | null;
   actions: Verb[];
-  /** @deprecated use actions */
-  verbs: Verb[];
   /** Present once an agent verb has run and its report exists. */
   report: string | null;
 }
@@ -128,10 +126,6 @@ const EFFORT: Record<TodayItem["source"], number> = {
   invoice: 15, task: 10, lead: 10, refinery: 10, nightly: 15, system: 5, mail: 5,
 };
 
-function itemActions(actions: Verb[]): Pick<TodayItem, "actions" | "verbs"> {
-  return { actions, verbs: actions };
-}
-
 function deriveItems(b: Record<string, any>): TodayItem[] {
   const s = b.sections ?? {};
   const items: TodayItem[] = [];
@@ -147,7 +141,7 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
       effort_min: EFFORT.invoice,
       age_days: days,
       url: inv.url ?? null,
-      ...itemActions(["dismiss"]),
+      actions: ["dismiss"],
       report: null,
     });
   }
@@ -166,7 +160,7 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
       effort_min: EFFORT.task,
       age_days: days,
       url: null,
-      ...itemActions(uid ? ["complete", "dismiss"] : ["dismiss"]),
+      actions: uid ? ["complete", "dismiss"] : ["dismiss"],
       report: null,
     });
   }
@@ -183,7 +177,7 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
       effort_min: EFFORT.lead,
       age_days: days,
       url: l.url ?? null,
-      ...itemActions(["dismiss"]),
+      actions: ["dismiss"],
       report: null,
     });
   }
@@ -203,7 +197,7 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
       effort_min: EFFORT.refinery,
       age_days: 0, // the item store carries no timestamps in its card form
       url: r.url ?? null,
-      ...itemActions(["agent", "dismiss"]),
+      actions: ["agent", "dismiss"],
       report: null,
     });
   }
@@ -219,7 +213,7 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
       effort_min: EFFORT.nightly,
       age_days: 0,
       url: null,
-      ...itemActions(["dismiss"]),
+      actions: ["dismiss"],
       report: null,
     });
   }
@@ -239,7 +233,7 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
       effort_min: EFFORT.system,
       age_days: 0,
       url: a.url ?? null,
-      ...itemActions(["agent", "dismiss"]),
+      actions: ["agent", "dismiss"],
       report: null,
     });
   }
@@ -254,7 +248,7 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
       effort_min: EFFORT.mail,
       age_days: 0,
       url: null,
-      ...itemActions(["dismiss"]),
+      actions: ["dismiss"],
       report: null,
     });
   }
@@ -341,9 +335,9 @@ export function todayTools(): ToolDef[] {
             enum: ["board", "summary", "delta", "dismiss", "complete", "agent"],
             description:
               `board (default): ranked top ${TOP_N} · summary: text rollup · ` +
-              "delta: changes since last run · dismiss/complete/agent: write verbs (need id)",
+              "delta: changes since last run · dismiss/complete/agent: write actions (need id)",
           },
-          id: { type: "string", description: "Item id (write verbs), e.g. task:<uid>" },
+          id: { type: "string", description: "Item id (write actions), e.g. task:<uid>" },
           reason: {
             type: "string",
             description: "dismiss only: why — recorded on the case for later runs",
@@ -538,7 +532,7 @@ export function todayTools(): ToolDef[] {
                 sender: `${i.source} · ~${i.effort_min} min${i.age_days ? ` · ${i.age_days}d` : ""}`,
                 summary: i.why + (i.report ? ` · report ready` : ""),
                 url: i.url,
-                ...itemActions(i.actions),
+                actions: i.actions,
               })),
             },
             { source: "hwc_today", spillover, generated_at: generatedAt },
