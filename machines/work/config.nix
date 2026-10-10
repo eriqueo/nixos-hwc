@@ -91,9 +91,10 @@
   hwc.automation.refinery = {
     enable = true;
     mode = "container";
-    # eriqueo/refinery f5d2a41: atomic review storage and collision-safe keys, tested locally
-    # with deploy/build-image.sh from that commit; no registry pull.
-    image = "localhost/refinery:f5d2a41-docker";
+    # eriqueo/refinery dd19fa8: items carry a tracker project link and the hub's
+    # /api/items read model; built locally with deploy/build-image.sh from that
+    # commit (355/355 engine tests); no registry pull.
+    image = "localhost/refinery:dd19fa8-docker";
     imagePull = "never";
   };
   hwc.automation.nightlyBuilds = {
