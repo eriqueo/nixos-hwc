@@ -67,6 +67,7 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+- 2026-10-10: The hub's Backlog tab reads the Refinery. New `tracker.refineryUrl` (loopback board, proxied with a 2 s timeout) and `tracker.refineryPublicUrl` (browser links and the add-to-backlog form) options feed `hwc-tracker` as `TRACKER_REFINERY_URL` / `TRACKER_REFINERY_PUBLIC_URL`. The Refinery stays the one store of work items; the hub also learns `stage` and question cards (claude-config `tracker/`).
 - 2026-10-07: Stage final ledger and guard JSON files instead of whole folders. A held-open atomic-write fixture reproduced temporary-file publication before the fix and passes afterward.
 - 2026-10-05: Fix locale-dependent skill fingerprints. A seeded C/English collation test with uppercase/lowercase names checks identical content gets the same fleet identity; reverting the sort locale makes it fail.
 - 2026-10-01: Tracker pings reach any host. New `tracker-relay` user service on every host and `tracker.url` option; `hwc-tracker` drops its T3 environment and its `t3.py` restart trigger, since the hub no longer calls T3. Probed before rollout: hwc-laptop and hwc-home reach the hub (HTTP 200), and each host has T3's runtime file and CLI.

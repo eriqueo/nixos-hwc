@@ -300,6 +300,20 @@ in
         default = "http://hwc-work:8765";
         description = "The hub as every host's tracker-relay reaches it (tailnet).";
       };
+      refineryUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "http://127.0.0.1:${toString (lib.attrByPath [ "hwc" "automation" "refinery" "port" ] 8060 osConfig)}";
+        defaultText = lib.literalExpression ''"http://127.0.0.1:''${osConfig.hwc.automation.refinery.port or 8060}"'';
+        description = ''
+          The Refinery board as the hub reaches it. The Refinery is the one store of
+          work items; the hub's Backlog tab proxies GET /api/items?project=<id> from
+          here with a short timeout, so a slow board never holds the single-threaded hub.'';
+      };
+      refineryPublicUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "https://refinery.hwc.iheartwoodcraft.com";
+        description = "The Refinery board as Eric's browser reaches it: item links and the add-to-backlog form.";
+      };
     };
     claudeConfigDirs = lib.mkOption {
       type = lib.types.listOf lib.types.str;
@@ -518,7 +532,13 @@ in
         # No T3 environment: the hub only queues pings; each host's
         # tracker-relay posts them into its own T3.
         # TRACKER_LEDGERS: every host's ws ledger, for the handoff coverage check.
-        Environment = [ "TRACKER_ROOT=${cfg.tracker.root}" "TRACKER_LEDGERS=${cfg.stateDir}/ledger" ];
+        Environment = [
+          "TRACKER_ROOT=${cfg.tracker.root}"
+          "TRACKER_LEDGERS=${cfg.stateDir}/ledger"
+          # The Backlog tab's read model lives on the Refinery board (one store of work items).
+          "TRACKER_REFINERY_URL=${cfg.tracker.refineryUrl}"
+          "TRACKER_REFINERY_PUBLIC_URL=${cfg.tracker.refineryPublicUrl}"
+        ];
         Restart = "on-failure";
         RestartSec = 5;
       };
