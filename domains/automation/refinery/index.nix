@@ -146,6 +146,12 @@ in
       description = "Canonical DataX origin used for actionable SR deep links";
     };
 
+    trackerUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "http://hwc-work:8765";
+      description = "The project tracker hub as Eric's browser reaches it: an item linked to a project links back to its hub page";
+    };
+
     # The dormant `ollama` adapter (engine/src/adapters/ollama.ts) is retained
     # but no longer advertised here: the container ollama stack was retired
     # 2026-06-27. Local-LLM provider intent parked:
@@ -241,6 +247,7 @@ in
           "REFINERY_WORKBENCH_AREAS_FILE=${workbench.site}/areas.json"
         ] ++ [
           "REFINERY_DATAX_BASE_URL=${cfg.dataxBaseUrl}"
+          "REFINERY_TRACKER_URL=${cfg.trackerUrl}"
           # claude-cli triage shells out to headless `claude`, which reads the
           # Claude subscription creds from $HOME/.claude (bound read-only below).
           "HOME=${paths.user.home}"

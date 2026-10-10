@@ -70,6 +70,7 @@ in
       environmentFiles = [ config.age.secrets."refinery-env".path ];
       environment = {
         REFINERY_DATAX_BASE_URL = cfg.dataxBaseUrl;
+        REFINERY_TRACKER_URL = cfg.trackerUrl;
         REFINERY_NATIVE_DRAIN = "inline";
       } // lib.optionalAttrs (cfg.vaultDir != null) { REFINERY_VAULT_DIR = vaultMount; }
         // lib.optionalAttrs (cfg.srGauntletDir != null) { REFINERY_SR_GAUNTLET_DIR = srMount; }

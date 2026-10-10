@@ -91,10 +91,10 @@
   hwc.automation.refinery = {
     enable = true;
     mode = "container";
-    # eriqueo/refinery dd19fa8: items carry a tracker project link and the hub's
-    # /api/items read model; built locally with deploy/build-image.sh from that
-    # commit (355/355 engine tests); no registry pull.
-    image = "localhost/refinery:dd19fa8-docker";
+    # eriqueo/refinery 6a1cb1f: tracker project link, /api/items and
+    # /api/attention read models for the hub, hub back-links; built locally with
+    # deploy/build-image.sh from that commit (356/356 engine tests); no registry pull.
+    image = "localhost/refinery:6a1cb1f-docker";
     imagePull = "never";
   };
   hwc.automation.nightlyBuilds = {
