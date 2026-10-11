@@ -705,6 +705,7 @@
         "refinery": "refinery",
         "screenshot-renamer": "screenshot-renamer",
         "system-one": "system-one",
+        "tether": "tether",
         "tetro": "tetro",
         "todui": "todui",
         "workbench": "workbench",
@@ -951,6 +952,26 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "tether": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791665743,
+        "narHash": "sha256-ry4yIWhFdkXHhQqS11E9cqUVPky4e/P/Zg3yWHs71Sg=",
+        "owner": "zackb",
+        "repo": "tether",
+        "rev": "62b4670b50ce5422e4ceeb510849790a512ee10d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zackb",
+        "repo": "tether",
         "type": "github"
       }
     },

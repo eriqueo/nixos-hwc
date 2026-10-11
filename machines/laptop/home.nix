@@ -53,6 +53,7 @@ in
     # ~/600_apps/brain checkout and the vault, which only laptop + server carry.
     brain.enable = true;
     gpu-screen-recorder.enable = true;  # gsr-toggle / SHIFT+PRINT call recording
+    tether.enable = true;               # iMessage/SMS from the iPhone over Bluetooth (tetherd + clients)
     hwc-dictation = {
       enable = true;
       model = toString config.hwc.home.apps.whisper-cpp.modelPaths.${dictationModel};

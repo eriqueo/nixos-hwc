@@ -32,6 +32,12 @@
     # Ingest code deploys with the system generation, never from a timer pull.
     brainvec = { url = "github:eriqueo/brainvec"; flake = false; };
     refinery = { url = "github:eriqueo/refinery"; flake = false; };
+    # Tether: iPhone messages over Bluetooth for the laptop (domains/home/apps/tether).
+    # Its nixpkgs is unused: the module builds the package with ours.
+    tether = {
+      url = "github:zackb/tether";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     screenshot-renamer = {
       url = "github:eriqueo/screenshot-renamer";
       inputs.nixpkgs.follows = "nixpkgs-stable";

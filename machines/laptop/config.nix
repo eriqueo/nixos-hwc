@@ -501,6 +501,7 @@ in
     powerHub.enable = true;
   };
   hwc.system.apps.chromium.enable = true; # System integration (dconf, dbus)
+  hwc.system.apps.tether.enable = true;   # iPhone messages over Bluetooth (BlueZ bearer API, adapter class)
   hwc.system.apps.gpu-screen-recorder.enable = true; # setcap gsr-kms-server (Wayland capture)
 
   #============================================================================
