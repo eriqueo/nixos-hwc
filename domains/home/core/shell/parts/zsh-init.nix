@@ -27,7 +27,11 @@
         # switch of 2026-10-10: no starship, no aliases). The eza options come
         # from programs.eza (one producer); HM's own `eza` alias is defined
         # after this function and does not expand inside it.
-        function _hwc_ls {
+        # NO leading underscore: Claude Code's shell snapshot drops functions
+        # named `_x` (completion functions) but keeps aliases, so `_hwc_ls`
+        # left agent shells with an alias to a missing function and every
+        # `ls` failed "command not found" (2026-10-11).
+        function hwc_ls {
           if [[ -t 0 && -t 1 ]]; then
             command eza ${lib.escapeShellArgs (lib.optionals (config.programs.eza.icons != null) [ "--icons" config.programs.eza.icons ] ++ config.programs.eza.extraOptions)} "$@"
           else

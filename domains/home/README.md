@@ -102,6 +102,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-11: core/shell: `_hwc_ls` renamed `hwc_ls`. Claude Code's shell snapshot drops functions with a leading underscore but keeps aliases, so every `ls` in an agent shell failed "command not found".
 - 2026-10-11: apps/rea added: rea-agents 6.3.0 (CLI, MCP server, skill) on every x86_64 host, enabled in profiles/base. apps/agent-harness grows two producer hooks for it: `extraSkills` (home) and `userMcp.extraServers` (system). Ghidra 12.1.2 backported to stable via `overlays/ghidra.nix` because REA refuses 12.0.4; verified with a Ghidra-backed `rea inspect` of coreutils on hwc-work.
 - 2026-10-10: core/shell: `ls` aliases to the `_hwc_ls` function, which runs eza only when stdin and stdout are terminals; eza 0.23 reads file names from stdin when it is not a tty, so `ls` printed nothing in agent shells and pipes. apps/agent-harness: `tracker-relay` also restarts on `handoff_doc.py` changes (it imports it).
 - 2026-10-08: Forward `net-tools --details` to the chosen script for full evidence; default script output explains checks and results with short excerpts.
