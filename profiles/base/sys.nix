@@ -112,6 +112,9 @@ in
   hwc.system.hardware.monitoring.enable = true;
 
   hwc.system.apps.agent-harness.enable = lib.mkDefault true;
+  # REA's MCP server in the generated ~/.mcp.json (its CLI is the home lane).
+  # x86_64 only, same reason as the home lane: no aarch64 Apktool.
+  hwc.system.apps.rea.enable = lib.mkDefault pkgs.stdenv.hostPlatform.isx86_64;
 
   # Backup — defaults off, machines enable per-need.
   # Value defaults (retention, sources, excludes, schedule, paths) live as

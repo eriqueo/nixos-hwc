@@ -74,7 +74,8 @@ let
           type = "http";
           url = cfg.userMcp.brainUrl;
         };
-      };
+      }
+      // cfg.userMcp.extraServers;
     }
   );
   projectMcpJson = pkgs.writeText "nixos-mcp.json" (
@@ -151,6 +152,16 @@ in
         description = ''
           brain-mcp's tailnet endpoint. The host running brain-mcp asserts that
           this names its own route, so a move or port change fails the build.
+        '';
+      };
+      extraServers = lib.mkOption {
+        type = lib.types.attrsOf lib.types.attrs;
+        default = { };
+        description = ''
+          MCP servers other system-lane modules add to ~/.mcp.json (Claude
+          Code entries), so a Nix-built server registers itself beside the
+          shared set instead of a hand edit. `rg userMcp.extraServers domains`
+          lists the producers (rea).
         '';
       };
     };

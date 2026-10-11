@@ -60,6 +60,9 @@
       pi.enable = lib.mkDefault true;
       aider.enable = lib.mkDefault true;
       gemini-cli.enable = lib.mkDefault true;
+      # x86_64 only: its Apktool (aapt) has no aarch64 build, and REA's own
+      # engine support is Linux x64.
+      rea.enable = lib.mkDefault pkgs.stdenv.hostPlatform.isx86_64;
     };
   };
 

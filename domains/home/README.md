@@ -24,6 +24,13 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 `apps/pi` maps thinking-off to DX2's explicit `none` value; enabled reasoning levels retain their existing mappings.
 
+`apps/rea/` — REA (Reverse Engineer Anything) pinned from its npm release:
+`index.nix` installs the `rea` CLI and adds its skill through
+`agent-harness.extraSkills`; `sys.nix` registers `rea mcp` in `~/.mcp.json`
+through `agent-harness.userMcp.extraServers`; `parts/package.nix` wires
+nixpkgs Ghidra 12.1 (stable hosts via `overlays/ghidra.nix`), JDK 21,
+Apktool and Binwalk. x86_64 only.
+
 The screenshot wrapper pins its capture, clipboard and notification tools; it waits for background image output before publication.
 
 The shared keymap supplies DONT KNOW and Bulk mail navigation and the DONT KNOW
@@ -95,6 +102,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-11: apps/rea added: rea-agents 6.3.0 (CLI, MCP server, skill) on every x86_64 host, enabled in profiles/base. apps/agent-harness grows two producer hooks for it: `extraSkills` (home) and `userMcp.extraServers` (system). Ghidra 12.1.2 backported to stable via `overlays/ghidra.nix` because REA refuses 12.0.4; verified with a Ghidra-backed `rea inspect` of coreutils on hwc-work.
 - 2026-10-10: core/shell: `ls` aliases to the `_hwc_ls` function, which runs eza only when stdin and stdout are terminals; eza 0.23 reads file names from stdin when it is not a tty, so `ls` printed nothing in agent shells and pipes. apps/agent-harness: `tracker-relay` also restarts on `handoff_doc.py` changes (it imports it).
 - 2026-10-08: Forward `net-tools --details` to the chosen script for full evidence; default script output explains checks and results with short excerpts.
 - 2026-10-08: Install `net-tools` through the shared shell module, with searchable descriptions, script effect labels, cancellation and command-only selection.

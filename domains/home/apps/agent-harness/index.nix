@@ -134,6 +134,19 @@ let
       fi
       cp -R --no-preserve=mode "$src" "$out/$name"
     done
+    ${lib.concatStrings (
+      lib.mapAttrsToList (name: src: ''
+        if [ ! -f ${src}/SKILL.md ]; then
+          echo "agent-skills: extra skill '${name}' has no SKILL.md at ${src}" >&2
+          exit 1
+        fi
+        if [ -e "$out/${name}" ]; then
+          echo "agent-skills: extra skill '${name}' collides with a harness or adopted skill" >&2
+          exit 1
+        fi
+        cp -R --no-preserve=mode ${src} "$out/${name}"
+      '') cfg.extraSkills
+    )}
   '';
   skillRoots = map (dir: "${dir}/skills") ([ ".claude" ] ++ cfg.claudeConfigDirs) ++ [ ".agents/skills" ];
 
@@ -347,6 +360,16 @@ in
       description = ''
         Skills from the cloudflare-skills flake input added to the shared skill
         set. A new upstream skill joins only when named here.
+      '';
+    };
+    extraSkills = lib.mkOption {
+      type = lib.types.attrsOf lib.types.path;
+      default = { };
+      description = ''
+        Skills other home modules add to the one skill set: name → directory
+        holding SKILL.md (a store path, so the set stays one fingerprint across
+        hosts). A name already taken fails the build. `rg extraSkills domains`
+        lists the producers (rea).
       '';
     };
     syncInterval = lib.mkOption {

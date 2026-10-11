@@ -279,6 +279,10 @@
       tailscale = inputs.nixpkgs-tailscale.legacyPackages.${prev.stdenv.hostPlatform.system}.tailscale;
     };
 
+    # Ghidra overlay — TEMPORARY (tracked). REA accepts only Ghidra 12.1.x;
+    # stable 26.05 has 12.0.4. See the file header for the removal condition.
+    ghidraOverlay = import ./overlays/ghidra.nix { nixpkgs-unstable = nixpkgs; };
+
     # pandas-stubs overlay — TEMPORARY (tracked). Skips pandas-stubs' failing test
     # phase on the 2026-07-25 nixpkgs (upstream pytest-9.1.1 deprecation-as-error
     # that otherwise fails the whole HM user-environment). See the file header for
@@ -306,10 +310,10 @@
     pkgs-laptop = mkPkgs system nixpkgs [ tailscaleOverlay ];
 
     # Stable package set with the temporary Tailscale security update.
-    pkgs-stable = mkPkgs system nixpkgs-stable [ tailscaleOverlay ];
+    pkgs-stable = mkPkgs system nixpkgs-stable [ tailscaleOverlay ghidraOverlay ];
 
     # pkgs-stable with CUDA overlay for server (Immich ML GPU acceleration)
-    pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ serverOverlay tailscaleOverlay ];
+    pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ serverOverlay tailscaleOverlay ghidraOverlay ];
 
     # Firestick is the one aarch64 machine
     pkgs-firestick = mkPkgs "aarch64-linux" nixpkgs [];
