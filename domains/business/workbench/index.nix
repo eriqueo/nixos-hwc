@@ -214,6 +214,8 @@ in
           description = "Event discovery and curation"; }
         { id = "refinery"; label = "Refinery"; route = "refinery";
           description = "Automated work hopper"; }
+        { id = "projects"; label = "Projects"; route = "projects";
+          description = "Project roadmaps, decisions and handoffs"; }
       ];
     };
 

@@ -63,6 +63,7 @@ business/
 
 ## Changelog
 
+- 2026-10-10: workbench: `projects` joins the area registry (route `projects`, the agent project tracker hub). The hub renders the registry's switcher from `areas.json` like the Refinery does; no app edit elsewhere.
 - 2026-10-08: Make site-review guidance apply to flooring, bathroom and deck work.
 
 - 2026-10-08: Extend estimator project types with mixed flooring areas, product-only waste/box rounding and explicit labor/pricing review. Preserve legacy device drafts during the v3 storage upgrade and block overwriting malformed active data.

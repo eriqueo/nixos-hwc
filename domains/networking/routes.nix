@@ -37,6 +37,7 @@ in
     map = "work";        # private fleet topology, hosted by monitoring
     calculator = "work";
     refinery = "work";   # wave 1: board + gauntlets
+    projects = "work";   # the project tracker hub (agent-harness tracker), a Workbench area
     workbench = "work";  # wave 1: hub; hwc-server keeps the module on for its areas.json
     t3-work = "work";
     brain-mcp = { owner = "work"; mode = "port"; };  # wave 1
@@ -394,6 +395,17 @@ in
       name = "refinery";
       mode = "vhost";
       upstream = "http://127.0.0.1:8060";
+    }
+
+    # Projects — the agent project tracker hub, name-based vhost
+    # (projects.hwc.iheartwoodcraft.com), so it is a Workbench area like the
+    # Refinery. Proxies the user service on :8765
+    # (hwc.home.apps.agent-harness.tracker). Agents and relays keep using
+    # tracker.url (http://hwc-work:8765) directly.
+    {
+      name = "projects";
+      mode = "vhost";
+      upstream = "http://127.0.0.1:8765";
     }
 
     # lead_scout — intelligence pipeline dashboard, name-based vhost

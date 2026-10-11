@@ -11,6 +11,12 @@ let
   home = config.home.homeDirectory;
   harness = inputs.agent-harness;
   revision = inputs.agent-harness.rev or "dirty";
+  # The Workbench area registry lives in the system config (hwc.business.workbench);
+  # null when the host has no workbench, so the tracker shows no switcher there.
+  workbenchSite =
+    if lib.attrByPath [ "hwc" "business" "workbench" "enable" ] false osConfig
+    then lib.attrByPath [ "hwc" "business" "workbench" "site" ] null osConfig
+    else null;
   contract = import ./contract.nix { inherit revision; };
   expectedManifest = pkgs.writeText "agent-harness-manifest.json" (builtins.toJSON contract);
   configDirs = map (name: "${home}/${name}") ([ ".claude" ] ++ cfg.claudeConfigDirs);
@@ -538,7 +544,11 @@ in
           # The Backlog tab's read model lives on the Refinery board (one store of work items).
           "TRACKER_REFINERY_URL=${cfg.tracker.refineryUrl}"
           "TRACKER_REFINERY_PUBLIC_URL=${cfg.tracker.refineryPublicUrl}"
-        ];
+        ] ++ lib.optional (workbenchSite != null)
+          # Workbench area switcher: the page renders the Nix-produced registry
+          # (hwc.business.workbench, the one producer of the area list) from the
+          # hub's own areas.json. Absent → the switcher is not shown.
+          "TRACKER_WORKBENCH_AREAS_FILE=${workbenchSite}/areas.json";
         Restart = "on-failure";
         RestartSec = 5;
       };

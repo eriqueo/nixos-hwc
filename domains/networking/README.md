@@ -59,6 +59,7 @@ networking/
 
 ## Changelog
 
+- 2026-10-10: New `projects` vhost (owner `work`) proxies the agent project tracker hub on `:8765`, so it can be a Workbench area beside `refinery`. Agents and relays keep `tracker.url` (`http://hwc-work:8765`); the vhost is for the browser.
 - 2026-10-02: Remove the last `.me` tunnel route after Eric confirmed Quo’s dashboard webhook uses `.com`. Keep the existing webhook path restriction and tailnet editor.
 
 - 2026-10-02: Complete protected-origin withdrawal after live recovery passed for Brain, Leads and HWC. Claude and ChatGPT now use `.com`; retain only the old n8n hostname pending Quo dashboard verification.
