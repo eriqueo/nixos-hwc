@@ -1,7 +1,7 @@
 # domains/home/core/shell/parts/zsh-init.nix
 # zsh initContent: hash refresh, rebuild helpers (snix/tnix/bnix/hms),
 # ff/status/add-app/graph functions.
-{ config }:
+{ config, lib }:
 ''
         # Refresh zsh's command hash table before every prompt. Required because
         # this host runs BOTH HM-as-module (via nixos-rebuild, useUserPackages=true)
@@ -14,14 +14,25 @@
         _hwc_hash_refresh() { hash -r; }
         add-zsh-hook precmd _hwc_hash_refresh
 
-        # `ls` → eza only when both stdin and stdout are terminals. eza 0.23
-        # reads file names FROM STDIN whenever stdin is not a tty, so with a
-        # /dev/null stdin (every agent tool shell) or inside `ls | wc -l` it
-        # listed nothing and exited 0 (measured 2026-10-10 on hwc-work: 203
-        # files, `ls` printed 0 lines; `eza .` printed 202). Programs reading
-        # ls output get coreutils; humans at a prompt keep eza.
-        ls() {
-          if [[ -t 0 && -t 1 ]]; then eza "$@"; else command ls "$@"; fi
+        # `ls` (alias in parts/aliases.nix) → this function → eza only when
+        # both stdin and stdout are terminals. eza 0.23 reads file names FROM
+        # STDIN whenever stdin is not a tty, so with a /dev/null stdin (every
+        # agent tool shell) or inside `ls | wc -l` it listed nothing and exited
+        # 0 (measured 2026-10-10 on hwc-work: 203 files, `ls` printed 0 lines;
+        # `eza .` printed 202). Programs reading ls output get coreutils;
+        # humans at a prompt keep eza.
+        # NOT named `ls`: /etc/zshrc already aliases ls='ls --color=tty', and
+        # zsh alias-expands a function NAME at definition, so `ls() {` parsed
+        # as `ls --color=tty() {` and aborted the rest of .zshrc (first
+        # switch of 2026-10-10: no starship, no aliases). The eza options come
+        # from programs.eza (one producer); HM's own `eza` alias is defined
+        # after this function and does not expand inside it.
+        function _hwc_ls {
+          if [[ -t 0 && -t 1 ]]; then
+            command eza ${lib.escapeShellArgs (lib.optionals (config.programs.eza.icons != null) [ "--icons" config.programs.eza.icons ] ++ config.programs.eza.extraOptions)} "$@"
+          else
+            command ls "$@"
+          fi
         }
 
         # Starship prompt init — owned here, not by HM's enableZshIntegration.

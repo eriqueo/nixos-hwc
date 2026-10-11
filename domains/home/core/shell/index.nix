@@ -306,7 +306,7 @@ in
         save = 5000;
       };
       shellAliases = (import ./parts/aliases.nix { inherit ws nixosPath; }) // cfg.aliases;
-      initContent = import ./parts/zsh-init.nix { inherit config; };
+      initContent = import ./parts/zsh-init.nix { inherit config lib; };
     };
 
     # Global fd ignore

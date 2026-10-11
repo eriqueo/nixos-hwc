@@ -29,9 +29,11 @@
   "downloads" = "cd ~/000_inbox/downloads"; "hwc" = "cd ~/100_hwc"; "inbox" = "cd ~/000_inbox";
   "screenshots" = "cd ~/500_media/510_pictures/screenshots";
   "cameras" = "echo 'Frigate: http://100.115.126.41:5000'";
-  # `ls` is a FUNCTION in zsh-init.nix, not an alias: eza 0.23 reads file
-  # names from stdin whenever stdin is not a terminal, so `ls | wc -l` and
-  # every agent tool shell (stdin is /dev/null) printed nothing and exited 0.
+  # `ls` → _hwc_ls (zsh-init.nix): eza at a terminal, coreutils otherwise.
+  # eza 0.23 reads file names from stdin whenever stdin is not a terminal, so
+  # `ls | wc -l` and every agent tool shell (stdin is /dev/null) printed
+  # nothing and exited 0. Overrides programs.eza's mkDefault `ls = eza`.
+  "ls" = "_hwc_ls";
   "vpn" = "vpnstatus"; "which-command" = "whence"; "run-help" = "man";
   # workbench = the full zellij ops layout (bare `workbench` is just the host
   # pane). attach -c reuses/creates the named session; `command workbench`
