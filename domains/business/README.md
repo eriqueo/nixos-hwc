@@ -63,6 +63,7 @@ business/
 
 ## Changelog
 
+- 2026-10-10: morning-briefing: `output/` is ignored as a whole (only `.gitkeep` tracked) so dispatch cards, reports and calendar drafts stop dirtying the checkout; two accidentally committed reports untracked. `run.sh` also scans Eric's failed `systemd --user` units (prefixed `user:`), which is where hwc-tracker, tracker-relay and mail-health run; mail-health had sat failed with no card.
 - 2026-10-10: workbench: `projects` joins the area registry (route `projects`, the agent project tracker hub). The hub renders the registry's switcher from `areas.json` like the Refinery does; no app edit elsewhere.
 - 2026-10-08: Make site-review guidance apply to flooring, bathroom and deck work.
 

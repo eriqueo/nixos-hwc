@@ -167,6 +167,10 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+- 2026-10-10: `run.sh` also lists Eric's failed `systemd --user` units (as `user:<unit>`)
+  in `failed_units`; the system scan could not see hwc-tracker, tracker-relay or
+  mail-health, and mail-health sat failed on hwc-work with no card. `output/` is
+  gitignored as a whole (only `.gitkeep` tracked); two committed reports untracked.
 - 2026-10-09: Finish the vocabulary migration: emit only mail `threads_by_state`,
   refinery `stages`, and Today `actions`; remove cached-report alias fallbacks.
 - 2026-10-01: Render canonical DONT KNOW counts and tabs, preserve old snapshots,

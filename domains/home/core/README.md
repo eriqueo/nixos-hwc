@@ -31,6 +31,7 @@ core/
 ```
 
 ## Changelog
+- 2026-10-10: shell: `ls` is a function (`parts/zsh-init.nix`), not the `eza` alias. eza 0.23 reads file names from stdin when stdin is not a terminal, so `ls` printed nothing in agent tool shells and in pipes; the function uses eza only when stdin and stdout are both terminals, coreutils `ls` otherwise.
 - 2026-10-08: Add `net-tools --details` forwarding to both execution and printed commands.
 - 2026-10-08: Add the `net-tools` searchable network diagnostic picker with Enter to run, Ctrl-Y to print, and Esc to cancel.
 - 2026-09-30: Map projects to `~/600_apps` across both HM API lanes; apply central Go paths and monthly whole-cache retention.

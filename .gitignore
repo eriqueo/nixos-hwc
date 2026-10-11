@@ -57,7 +57,11 @@ domains/business/datax/dashboard/dashboard.json
 
 # morning-briefing - generated runtime artifacts
 domains/business/morning-briefing/logs/*.log
-domains/business/morning-briefing/output/*.json
+# Everything the briefing and dispatch units write at runtime (briefing.json,
+# dispatch cards, dispatch-done, reports, calendar-drafts). Only .gitkeep is
+# tracked so the directory exists on a fresh clone.
+domains/business/morning-briefing/output/*
+!domains/business/morning-briefing/output/.gitkeep
 domains/business/morning-briefing/dashboard/briefing.json
 .backups/
 .wrangler/

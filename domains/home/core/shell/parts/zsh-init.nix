@@ -14,6 +14,16 @@
         _hwc_hash_refresh() { hash -r; }
         add-zsh-hook precmd _hwc_hash_refresh
 
+        # `ls` → eza only when both stdin and stdout are terminals. eza 0.23
+        # reads file names FROM STDIN whenever stdin is not a tty, so with a
+        # /dev/null stdin (every agent tool shell) or inside `ls | wc -l` it
+        # listed nothing and exited 0 (measured 2026-10-10 on hwc-work: 203
+        # files, `ls` printed 0 lines; `eza .` printed 202). Programs reading
+        # ls output get coreutils; humans at a prompt keep eza.
+        ls() {
+          if [[ -t 0 && -t 1 ]]; then eza "$@"; else command ls "$@"; fi
+        }
+
         # Starship prompt init — owned here, not by HM's enableZshIntegration.
         # `starship init zsh` bakes an ABSOLUTE path into the prompt hooks
         # (__starship_get_time, PROMPT, RPROMPT), and the path it bakes is the

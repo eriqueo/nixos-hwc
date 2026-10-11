@@ -67,6 +67,7 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+- 2026-10-10 (c): `tracker-relay` restarts on `handoff_doc.py` changes too (relay.py imports it; it was missing from the triggers). Pins claude-config 837de39: the hub marks decided-but-unactioned cards as stalled, shows the newest brief date as "last work", and the python `-c` hook rule allows new-file writes.
 - 2026-10-10 (b): `hwc-tracker` gets `TRACKER_WORKBENCH_AREAS_FILE` (the system `hwc.business.workbench.site` areas.json, read through osConfig; absent on hosts without the workbench) so the hub renders the Workbench area switcher in its rail. The page itself now uses the canonical `@scout/ui` shell (`/tokens/shell.css`, served live).
 - 2026-10-10: The hub's Backlog tab reads the Refinery. New `tracker.refineryUrl` (loopback board, proxied with a 2 s timeout) and `tracker.refineryPublicUrl` (browser links and the add-to-backlog form) options feed `hwc-tracker` as `TRACKER_REFINERY_URL` / `TRACKER_REFINERY_PUBLIC_URL`. The Refinery stays the one store of work items; the hub also learns `stage` and question cards (claude-config `tracker/`).
 - 2026-10-07: Stage final ledger and guard JSON files instead of whole folders. A held-open atomic-write fixture reproduced temporary-file publication before the fix and passes afterward.

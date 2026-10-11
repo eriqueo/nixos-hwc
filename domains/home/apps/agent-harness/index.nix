@@ -563,7 +563,8 @@ in
       Unit = {
         Description = "Deliver tracker pings into this host's T3 threads";
         After = [ "network-online.target" ];
-        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "relay.py" "t3.py" ];
+        # relay.py imports handoff_doc; a change there must restart the relay too.
+        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "relay.py" "t3.py" "handoff_doc.py" ];
       };
       Service = {
         ExecStart = "${pkgs.python3}/bin/python3 ${harness}/tracker/relay.py";

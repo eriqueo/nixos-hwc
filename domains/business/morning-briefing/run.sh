@@ -69,6 +69,17 @@ SERVICES_FAILED=$(host_exec "${SYSTEMCTL}" list-units --type=service --state=fai
 FAILED_UNITS_JSON=$(host_exec "${SYSTEMCTL}" list-units --type=service --state=failed --no-legend --plain 2>/dev/null \
   | awk '{print $1}' | jq -R -s 'split("\n") | map(select(length>0))' 2>/dev/null || echo '[]')
 echo "${FAILED_UNITS_JSON}" | jq empty 2>/dev/null || FAILED_UNITS_JSON='[]'
+# Eric's USER units too (hwc-tracker, tracker-relay, mail-health, agent-state-sync
+# all run under `systemd --user`). The system scan above cannot see them, so
+# mail-health sat failed on hwc-work with no card (2026-10-10). Names carry a
+# `user:` prefix so the alert says which manager to inspect. Needs the user bus;
+# when it is unreachable (ssh without a session) the list is simply empty.
+FAILED_USER_UNITS_JSON=$(XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" \
+  host_exec "${SYSTEMCTL}" --user list-units --type=service --state=failed --no-legend --plain 2>/dev/null \
+  | awk '{print "user:" $1}' | jq -R -s 'split("\n") | map(select(length>5))' 2>/dev/null || echo '[]')
+echo "${FAILED_USER_UNITS_JSON}" | jq empty 2>/dev/null || FAILED_USER_UNITS_JSON='[]'
+FAILED_UNITS_JSON=$(jq -nc --argjson a "${FAILED_UNITS_JSON}" --argjson b "${FAILED_USER_UNITS_JSON}" '$a + $b')
+SERVICES_FAILED=$(echo "${FAILED_UNITS_JSON}" | jq 'length')
 # Containers = running podman-*.service units (works as eric; podman ps would
 # need the root socket). The dashboard used to render literal "undefined" here.
 CONTAINERS_RUNNING=$(host_exec "${SYSTEMCTL}" list-units --type=service --state=running --no-legend --plain 'podman-*' 2>/dev/null | wc -l | tr -d ' ' || echo 0)
