@@ -63,6 +63,7 @@ business/
 
 ## Changelog
 
+- 2026-10-12: workbench: `tasks` (route `todo`) and `calendar` (route `calendar`) join the area registry. Both are phone apps served by the wall-display process (`domains/server/services/wall-display/parts/apps.py`).
 - 2026-10-12: morning-briefing reads JobTread through PAVE directly (`jobtread-grant-key` + org id from `leads/parts/jt-mappings.nix`). The jt-mcp retirement had left its jobs and overdue gathers calling deleted tools.
 - 2026-10-12: morning-briefing: read-only `outputDir` option for consumers of `briefing.json` (first: the wall display).
 - 2026-10-10: morning-briefing: `output/` is ignored as a whole (only `.gitkeep` tracked) so dispatch cards, reports and calendar drafts stop dirtying the checkout; two accidentally committed reports untracked. `run.sh` also scans Eric's failed `systemd --user` units (prefixed `user:`), which is where hwc-tracker, tracker-relay and mail-health run; mail-health had sat failed with no card.

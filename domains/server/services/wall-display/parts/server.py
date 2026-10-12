@@ -33,6 +33,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import apps
 import screens
 from screens import CONFIG, SCREENS, SOURCES, TZ
 
@@ -198,6 +199,7 @@ def health():
 # (todo.<vhostDomain> → HOST_APPS["todo"]). Each app is an object with
 # get(handler, path) and post(handler, path); anything else is the wall face.
 HOST_APPS = {}
+HOST_APPS.update(apps.HOST_APPS)  # todo.* Tasks, calendar.* Calendar (apps.py)
 
 TAILNET = ipaddress.ip_network("100.64.0.0/10")
 

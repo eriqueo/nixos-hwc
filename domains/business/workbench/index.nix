@@ -1,7 +1,7 @@
 # domains/business/workbench — HWC Workbench hub
 #
-# The product home for the seven HWC operator areas (CRM, Finance, Lead Scout,
-# Home Scout, Research Scout, Event Scout, Refinery). This module is the ONE producer of the
+# The product home for the HWC operator areas (CRM, Finance, Lead Scout, Home
+# Scout, Research Scout, Event Scout, Refinery, Projects, Tasks, Calendar). This module is the ONE producer of the
 # area registry: ids, labels, order and descriptions are declared here; each
 # area's destination is RESOLVED from hwc.networking.shared.routes rather than
 # copied, so a route rename or removal fails evaluation instead of shipping a
@@ -216,6 +216,11 @@ in
           description = "Automated work hopper"; }
         { id = "projects"; label = "Projects"; route = "projects";
           description = "Project roadmaps, decisions and handoffs"; }
+        # Served by the wall-display process (hwc.server.services.wallDisplay).
+        { id = "tasks"; label = "Tasks"; route = "todo";
+          description = "Every task list: add, complete, edit"; }
+        { id = "calendar"; label = "Calendar"; route = "calendar";
+          description = "Day, week and month agenda; add and edit events"; }
       ];
     };
 

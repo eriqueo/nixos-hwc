@@ -59,6 +59,7 @@ networking/
 
 ## Changelog
 
+- 2026-10-12: routeOwners gains `todo` and `calendar` (owner `work`). These are the wall-display Tasks and Calendar phone apps, which the module registers next to `wall` on `:8424`. Each needs a deSEC A record (`todo.` / `calendar.hwc.iheartwoodcraft.com → 100.77.38.32`) and a laptop rebuild for the pins.
 - 2026-10-12: New `wall` vhost (owner `work`) for the wall tablet calendar page (`domains/server/services/wall-calendar`, `:8424`). Needs the deSEC A record `wall.hwc.iheartwoodcraft.com → 100.77.38.32` like the other work-owned names.
 - 2026-10-10: New `projects` vhost (owner `work`) proxies the agent project tracker hub on `:8765`, so it can be a Workbench area beside `refinery`. Agents and relays keep `tracker.url` (`http://hwc-work:8765`); the vhost is for the browser.
 - 2026-10-02: Remove the last `.me` tunnel route after Eric confirmed Quo’s dashboard webhook uses `.com`. Keep the existing webhook path restriction and tailnet editor.
