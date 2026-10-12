@@ -102,6 +102,13 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-12: Law-12 refresh only, no code change: `apps/README.md` gained a
+  changelog for 2026-09-26 → 2026-10-11 and its Structure block was rebuilt against
+  the real 68 entries (LibreWolf is gone, the agent-harness/workbench/rea tree was
+  absent); `apps/nvim/`, `apps/proton-pass/` and `apps/workbench/` READMEs picked up
+  the which-key HWC popup look, the narrowed tray-patch match string, and
+  `hubOrder`/`hiddenHubs`.
+
 - 2026-10-11: apps/agent-harness: the pinned revision's hermetic hook suites
   (`hooks/tests/run.sh`) run as a `system.checks` in `sys.nix`, so a leaking guard
   fails the system build instead of reaching `/etc/agent-harness`; `agent-harness

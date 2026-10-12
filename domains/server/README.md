@@ -67,6 +67,9 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+- 2026-10-12: Law-12 refresh only, no code change: `services/radicale/README.md`
+  records that its header `USAGE:` pointer followed the home-machine rename
+  (`machines/server/config.nix` → `machines/home/config.nix`, `4ac9941d`).
 - 2026-10-12: Added `services/wall-calendar/` (`hwc.server.services.wallCalendar`, enabled on work). A stdlib Python page on `127.0.0.1:8424`, vhost `wall`, for the Fire HD 8 wall tablet. It shows seven days of events from every Radicale collection that holds VEVENTs (found by PROPFIND on each refresh; recurrences expanded by Radicale) and the api.weather.gov forecast and active alerts for Bozeman. Black on white only. It keeps no state; a failed refresh keeps the last good copy and names the failure in the footer. `/healthz` returns 503 until both sources have loaded.
 - 2026-10-02: Move Brain MCP’s new-repository Git identity to `brain-mcp@iheartwoodcraft.com` and document the deployed OAuth gateway and verified origin restriction. Legacy public aliases still require consumer reconciliation.
 - 2026-10-01: Added optional private invitation SMTP socket, bounded loopback relay and runtime preparation for the member Scout app. Enabled on work with eric@iheartwoodcraft.com.

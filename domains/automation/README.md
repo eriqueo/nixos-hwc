@@ -109,6 +109,13 @@ workspace/automation/
 
 ## Changelog
 
+- 2026-10-12: Law-12 refresh only, no code change: `brain-sweep/`, `mail-janitor/`,
+  `n8n/` and `n8n/parts/{estimator-integration,workflows}/` READMEs brought current
+  (wave-3 notify-URL derivation, the 2026-10-07 `08a-jt-data-provider` re-export, and
+  the `hwc-server` tailnet rename in the estimator runbook). Structure block above
+  gained the five module directories it was missing — `brain-sweep/`,
+  `mail-janitor/`, `refinery/`, `screenshot-renamer/`, `vault-sync/`.
+
 - 2026-10-10: Refinery gains `trackerUrl` (default `http://hwc-work:8765`), exported to
   both the native bundle and the container as `REFINERY_TRACKER_URL`, so an item linked
   to a project can link back to its tracker hub page. One producer, two consumers —

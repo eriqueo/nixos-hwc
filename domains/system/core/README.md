@@ -23,6 +23,10 @@ core/
 ```
 
 ## Changelog
+- 2026-10-12: Law-12 refresh only, no code change: `authentik/README.md` records the
+  2026-08-28 move of its DB role from a dead `postgresql.postStart` script to
+  `ensureUsers` + `ensureDBOwnership` — the one case in that audit where the dead
+  code was load-bearing (a rebuilt cluster would have had the database and no role).
 - 2026-09-27: Declare `SystemMaxUse=1G` as a default independent of audit enablement; home keeps its explicit 8G policy.
 - 2026-09-24: `coredump.nix` uses `settings.Coredump` on 26.05 while retaining
   the 500M use and 2G free-space limits.
