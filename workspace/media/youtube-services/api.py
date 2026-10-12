@@ -1,6 +1,6 @@
 """
-YouTube Transcript API — hwc-server
-FastAPI service for extracting YouTube transcripts.
+Transcripts — hwc-server
+FastAPI service that saves YouTube transcripts and X posts/threads as Markdown.
 """
 
 import asyncio
@@ -22,6 +22,7 @@ from transcript import (
     fetch_captions, transcribe_audio, clean_transcript, raw_transcript, format_markdown,
     format_duration, saved_video_id,
 )
+import xpost
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger("transcripts")
@@ -58,6 +59,7 @@ WHISPER_MAX_SECONDS = int(os.getenv("YT_TRANSCRIPTS_WHISPER_MAX_SECONDS", "10800
 # queueing behind other whisper-server users).
 VIDEO_TIMEOUT = 60
 CAPTION_TIMEOUT = 75
+POST_TIMEOUT = 120  # an X thread walk: up to xpost.MAX_THREAD posts, ~1 s each
 def whisper_budget(duration: int) -> float:
     return 120 + duration * 0.5
 
@@ -68,7 +70,7 @@ PACE_SECONDS = 2.0
 STATUS_FOR_REASON = {"invalid_url": 400, "no_captions": 404, "unavailable": 404,
                      "rate_limited": 503, "timeout": 504}
 
-app = FastAPI(title="YouTube Transcripts", version="4.0.0")
+app = FastAPI(title="Transcripts", version="4.1.0")
 
 
 # ---------------------------------------------------------------------------
@@ -77,6 +79,10 @@ app = FastAPI(title="YouTube Transcripts", version="4.0.0")
 class TranscriptRequest(BaseModel):
     url: str
     mode: str = Field(default="", description="clean or raw")
+
+
+class PostRequest(BaseModel):
+    url: str
 
 
 class JobRequest(BaseModel):
@@ -107,7 +113,7 @@ MAX_JOBS = 200
 
 @dataclass
 class WorkItem:
-    url: str        # canonical watch URL
+    url: str        # canonical watch URL or X post URL
     dest: Path      # folder the transcript is written to
     playlist: str   # playlist title, "" for a single video
 
@@ -126,7 +132,7 @@ class RetrySpec:
 _jobs: dict[str, JobStatus] = {}
 _retry_specs: dict[str, RetrySpec] = {}
 
-# Video IDs being extracted right now, across all jobs. The check and the add
+# Item keys (see item_key) being extracted right now, across all jobs. The check and the add
 # happen with no await between them, so on the single event loop a video can
 # never be extracted by two jobs at once.
 _inflight: set[str] = set()
@@ -192,24 +198,37 @@ def resolve_output_dir(base: str, subfolder: str) -> Path:
 HEADER_BYTES = 2048
 
 
+def item_key(url: str) -> str | None:
+    """Library key of a URL: the YouTube video ID, or `x:<post id>`. X is
+    checked first, so a YouTube link quoted inside a post URL never wins."""
+    post_id = xpost.extract_post_id(url)
+    return f"x:{post_id}" if post_id else extract_video_id(url)
+
+
+def saved_key(header: str) -> str | None:
+    """Library key of a saved file, read from its header."""
+    post_id = xpost.saved_post_id(header)
+    return f"x:{post_id}" if post_id else saved_video_id(header)
+
+
 def _read_header(path: Path) -> str:
     with path.open(encoding="utf-8", errors="replace") as fh:
         return fh.read(HEADER_BYTES)
 
 
 def scan_saved(roots: list[Path]) -> dict[str, Path]:
-    """Map video ID -> first saved transcript, across every save location."""
+    """Map item key -> first saved file, across every save location."""
     index: dict[str, Path] = {}
     for root in roots:
         if not root.is_dir():
             continue
         for path in sorted(root.rglob("*.md")):
             try:
-                video_id = saved_video_id(_read_header(path))
+                key = saved_key(_read_header(path))
             except OSError:
                 continue
-            if video_id:
-                index.setdefault(video_id, path)
+            if key:
+                index.setdefault(key, path)
     return index
 
 
@@ -221,16 +240,16 @@ def _saved_result(url: str, path: Path, playlist: str) -> dict:
             "status": "exists", "playlist": playlist}
 
 
-def write_transcript(out_dir: Path, title: str, video_id: str, md: str) -> Path:
+def write_transcript(out_dir: Path, title: str, key: str, md: str) -> Path:
     """Write atomically (temp file + rename, so a half-written file is never
-    indexed). A same-day, same-title file of a different video keeps its name;
-    this one gets the video ID appended instead of overwriting it."""
+    indexed). A same-day, same-title file of a different item keeps its name;
+    this one gets the item's ID appended instead of overwriting it."""
     safe_title = "".join(c if c.isalnum() or c in " -_" else "" for c in title)[:80].strip()
     stem = f"{datetime.now().strftime('%Y-%m-%d')} - {safe_title}"
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{stem}.md"
-    if path.exists() and saved_video_id(_read_header(path)) != video_id:
-        path = out_dir / f"{stem} [{video_id}].md"
+    if path.exists() and saved_key(_read_header(path)) != key:
+        path = out_dir / f"{stem} [{key.removeprefix('x:')}].md"
     tmp = path.with_name(f".{path.name}.tmp")
     tmp.write_text(md, encoding="utf-8")
     os.replace(tmp, path)
@@ -301,19 +320,49 @@ async def _extract(url: str, mode: str, out_dir: Path, allow_whisper: bool = Fal
     }
 
 
+async def _extract_post(url: str, out_dir: Path, on_stage=lambda stage: None) -> dict:
+    """Save one X post, with the author's thread above it, into out_dir.
+    The walk runs in a worker thread; MAX_THREAD and the per-request HTTP
+    timeout bound it, POST_TIMEOUT bounds the wait."""
+    post_id = xpost.extract_post_id(url)
+    if not post_id:
+        raise TranscriptError("invalid_url")
+    try:
+        thread = await asyncio.wait_for(asyncio.to_thread(xpost.fetch_thread, post_id, on_stage),
+                                        timeout=POST_TIMEOUT)
+    except asyncio.TimeoutError:
+        raise TranscriptError("timeout", f"X thread walk passed {POST_TIMEOUT}s")
+
+    on_stage("writing file")
+    md = xpost.format_markdown(thread, post_id)
+    title = xpost.post_title(thread)
+    filepath = write_transcript(out_dir, title, f"x:{post_id}", md)
+    return {
+        "url": thread[-1]["url"],
+        "title": title,
+        "channel": f"@{thread[0]['author']['handle']}",
+        "transcript": md.split("\n---\n", 1)[1].strip(),
+        "filename": str(filepath),
+        "source": "x",
+        "posts": len(thread),
+    }
+
+
 # ---------------------------------------------------------------------------
 # POST /transcript — single video, default location (n8n integration path)
 # ---------------------------------------------------------------------------
 @app.post("/transcript")
 async def post_transcript(body: TranscriptRequest):
     """Captions only: synchronous callers cannot wait minutes for Whisper.
-    A video that is already saved anywhere returns the saved file instead."""
-    video_id = extract_video_id(body.url)
-    if video_id:
-        saved = (await asyncio.to_thread(scan_saved, OUTPUT_ROOTS)).get(video_id)
+    A video or post that is already saved anywhere returns the saved file instead."""
+    key = item_key(body.url)
+    if key:
+        saved = (await asyncio.to_thread(scan_saved, OUTPUT_ROOTS)).get(key)
         if saved:
-            return _saved_result(f"https://www.youtube.com/watch?v={video_id}", saved, "")
+            return _saved_result(_canonical_url(key), saved, "")
     try:
+        if key and key.startswith("x:"):
+            return await _extract_post(body.url, OUTPUT_ROOTS[0])
         return await asyncio.wait_for(_extract(body.url, body.mode, OUTPUT_ROOTS[0]), timeout=VIDEO_TIMEOUT)
     except asyncio.TimeoutError:
         raise HTTPException(504, f"Extraction timed out ({VIDEO_TIMEOUT}s limit)")
@@ -322,8 +371,31 @@ async def post_transcript(body: TranscriptRequest):
         raise HTTPException(STATUS_FOR_REASON.get(e.reason, 500), str(e))
 
 
+def _canonical_url(key: str) -> str:
+    if key.startswith("x:"):
+        return xpost.post_url(key[2:])
+    return f"https://www.youtube.com/watch?v={key}"
+
+
 # ---------------------------------------------------------------------------
-# POST /job + GET /job/{id} — batch of videos and/or playlists
+# POST /xpost — an X post and its thread as JSON; writes nothing
+# ---------------------------------------------------------------------------
+@app.post("/xpost")
+async def post_xpost(body: PostRequest):
+    post_id = xpost.extract_post_id(body.url)
+    if not post_id:
+        raise HTTPException(400, str(TranscriptError("invalid_url")))
+    try:
+        thread = await asyncio.wait_for(asyncio.to_thread(xpost.fetch_thread, post_id), timeout=POST_TIMEOUT)
+    except asyncio.TimeoutError:
+        raise HTTPException(504, f"X thread walk timed out ({POST_TIMEOUT}s limit)")
+    except TranscriptError as e:
+        raise HTTPException(STATUS_FOR_REASON.get(e.reason, 500), str(e))
+    return {"id": post_id, "count": len(thread), "posts": thread}
+
+
+# ---------------------------------------------------------------------------
+# POST /job + GET /job/{id} — batch of videos, playlists and X posts
 # ---------------------------------------------------------------------------
 @app.post("/job")
 async def post_job(body: JobRequest, bg: BackgroundTasks):
@@ -371,9 +443,9 @@ async def _run_job(job_id: str, urls: list[str], items: list[WorkItem], mode: st
     # subfolder under out_dir.
     work: list[WorkItem] = list(items)
     for raw in urls:
-        video_id = extract_video_id(raw)
-        if video_id:
-            work.append(WorkItem(f"https://www.youtube.com/watch?v={video_id}", out_dir, ""))
+        key = item_key(raw)
+        if key:
+            work.append(WorkItem(_canonical_url(key), out_dir, ""))
         elif is_playlist_url(raw):
             try:
                 pl = await fetch_playlist(raw)
@@ -395,14 +467,14 @@ async def _run_job(job_id: str, urls: list[str], items: list[WorkItem], mode: st
             job.results.append(_failure(raw, TranscriptError("invalid_url"), ""))
             job.completed += 1
 
-    # The same video listed twice (or as a video and inside a playlist) runs once.
+    # The same item listed twice (or as a video and inside a playlist) runs once.
     seen: set[str] = set()
     unique: list[WorkItem] = []
     for item in work:
-        video_id = extract_video_id(item.url)
-        if video_id in seen:
+        key = item_key(item.url)
+        if key in seen:
             continue
-        seen.add(video_id)
+        seen.add(key)
         unique.append(item)
     work = unique
     job.total = job.completed + len(work)
@@ -410,15 +482,15 @@ async def _run_job(job_id: str, urls: list[str], items: list[WorkItem], mode: st
     job.current = {"url": "", "stage": "checking saved transcripts"}
     saved = {} if force else await asyncio.to_thread(scan_saved, OUTPUT_ROOTS)
 
-    # Phase 2 — extract each video sequentially, paced (rate-limit friendly).
+    # Phase 2 — extract each item sequentially, paced (rate-limit friendly).
     fetched_any = False
     for item in work:
-        video_id = extract_video_id(item.url)
-        if video_id in saved:
-            job.results.append(_saved_result(item.url, saved[video_id], item.playlist))
+        key = item_key(item.url)
+        if key in saved:
+            job.results.append(_saved_result(item.url, saved[key], item.playlist))
             job.completed += 1
             continue
-        if video_id in _inflight:
+        if key in _inflight:
             job.results.append({"url": item.url, "status": "duplicate", "playlist": item.playlist,
                                 "note": "Already being extracted by another job"})
             job.completed += 1
@@ -431,9 +503,12 @@ async def _run_job(job_id: str, urls: list[str], items: list[WorkItem], mode: st
         def stage(name: str, _url: str = item.url) -> None:
             job.current = {"url": _url, "stage": name}
 
-        _inflight.add(video_id)
+        _inflight.add(key)
         try:
-            result = await _extract(item.url, mode, item.dest, allow_whisper=True, on_stage=stage)
+            if key.startswith("x:"):
+                result = await _extract_post(item.url, item.dest, on_stage=stage)
+            else:
+                result = await _extract(item.url, mode, item.dest, allow_whisper=True, on_stage=stage)
             result["playlist"] = item.playlist
             job.results.append(result)
         except TranscriptError as e:
@@ -444,7 +519,7 @@ async def _run_job(job_id: str, urls: list[str], items: list[WorkItem], mode: st
             job.results.append(_failure(item.url, TranscriptError("error", f"{type(e).__name__}: {e}"), item.playlist))
             retry.items.append(item)
         finally:
-            _inflight.discard(video_id)
+            _inflight.discard(key)
         job.completed += 1
 
     _retry_specs[job_id] = retry
@@ -495,7 +570,7 @@ async def ui():
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>YouTube Transcripts</title>
+<title>Transcripts</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #222; padding: 1.5rem;
@@ -539,6 +614,7 @@ async def ui():
   .results .skip .title { color: #444; font-weight: 600; }
   .results .skip .path { color: #6b7280; }
   .badge.saved { background: #e0f2fe; color: #075985; }
+  .badge.x { background: #111; color: #fff; }
   .check { display: flex; gap: .4rem; align-items: center; font-size: .82rem; color: #444; }
   .check input { width: auto; }
   .retry { display: none; padding: .55rem 1rem; border-radius: 7px; border: 1px solid #fca5a5;
@@ -549,10 +625,10 @@ async def ui():
 </style>
 </head>
 <body>
-<h1>YouTube Transcripts</h1>
+<h1>Transcripts</h1>
 
 <div class="card">
-  <h2>URLs — videos or playlists</h2>
+  <h2>URLs — YouTube videos or playlists, X posts (paste the last post of a thread to save all of it)</h2>
   <div id="urls"></div>
   <button class="addbtn" id="add" onclick="addRow()">+ URL</button>
 
@@ -587,7 +663,7 @@ let _results=[], _base=[], _jobId=null;
 
 function rowHtml() {
   return `<div class="urlrow">
-    <input type="text" placeholder="Paste a YouTube video or playlist URL..." class="u">
+    <input type="text" placeholder="Paste a YouTube or X URL..." class="u">
     <button class="del" onclick="delRow(this)" title="remove">&times;</button>
   </div>`;
 }
@@ -626,7 +702,8 @@ function renderResults(status) {
       li.className='ok';
       if(r.status==='exists') li.className='skip';
       const src=r.status==='exists'?'<span class="badge saved" title="Found an existing transcript for this video; not fetched again">Already saved</span>'
-        :r.source==='whisper'?'<span class="badge whisper" title="No captions could be fetched; transcribed from the audio">Whisper</span>':'';
+        :r.source==='whisper'?'<span class="badge whisper" title="No captions could be fetched; transcribed from the audio">Whisper</span>'
+        :r.source==='x'?`<span class="badge x">${r.posts>1?'X thread · '+r.posts:'X post'}</span>`:'';
       li.innerHTML=`<div class="body"><div class="title">${badge}${src}${r.title||''}</div><div class="path">${r.filename||''}</div></div>`;
       const b=document.createElement('button'); b.className='copy'; b.textContent='Copy';
       b.onclick=()=>{navigator.clipboard.writeText(_results[i].transcript||'');b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1200);};

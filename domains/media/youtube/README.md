@@ -8,6 +8,12 @@ Captions come from youtube-transcript-api, then yt-dlp subtitles; when neither
 works (no captions, or YouTube blocking this server's IP) a job falls back to
 transcribing the audio with the local whisper-server.
 
+The same service saves X (Twitter) posts. Paste a post URL and it writes the
+post as Markdown, with the author's own thread above it (pass the last post of
+a thread to get all of it; X needs a login to list replies, so the walk only
+goes backward). `POST /xpost {"url": ...}` returns the post and thread as JSON
+and writes nothing. No X account or API key is used.
+
 ## Boundaries
 
 - **Manages**: the `transcripts` systemd unit, its save-location whitelist (`outputRoots`), the `n8n-transcript-extract` helper, the Whisper-fallback wiring
@@ -23,9 +29,10 @@ domains/media/youtube/
     └── default.nix           # systemd unit, wrapper env, n8n helper, assertions
 
 workspace/media/youtube-services/   # runtime source, read from the checkout (paths.nixos)
-├── api.py                    # FastAPI: /job, /job/{id}, /job/{id}/retry, /transcript, /config, /health, UI; saved-transcript scan
+├── api.py                    # FastAPI: /job, /job/{id}, /job/{id}/retry, /transcript, /xpost, /config, /health, UI; saved-file scan
 ├── transcript.py             # caption sources, Whisper fallback, failure reasons, cleaning, markdown
-├── test_transcript.py        # unittest: reasons, Whisper decision, dedup, retry, library contract
+├── xpost.py                  # X posts: syndication + guest GraphQL fetch, thread walk, markdown
+├── test_transcript.py        # unittest: reasons, Whisper decision, dedup, retry, library contract, X posts
 └── pyproject.toml
 ```
 
@@ -62,6 +69,7 @@ Tests (run on hwc-home with the service interpreter):
 | `transcripts` | 8100 | Transcript API + web UI |
 
 ## Changelog
+- 2026-10-11: X posts. A post URL in the job box (or `POST /transcript`) saves the post as Markdown, with the author's thread above it, long-form text, media links, quoted post and stats. New `xpost.py` ports the fetch engine of github.com/itsbigdill/x-post-to-json: public syndication endpoint, then guest-token GraphQL for full text and metrics (best effort). New `POST /xpost` returns the thread as JSON. The saved-file scan keys X files as `x:<post id>` next to video IDs, so dedup, in-flight checks and retry cover both. Failure texts for `unavailable` and `invalid_url` no longer say "video"/"YouTube"; the reason codes are unchanged.
 - 2026-10-06: Whisper segments that continue the previous word (no leading space, e.g. "Cl" + "oning") are joined to it instead of becoming their own segment, which had produced "Cl oning" and "you 're" in output.
 - 2026-10-06: Whisper fallback downloads the best audio track (`WHISPER_AUDIO_FORMAT`), not the worst. The 52 kbps track (format 249) produced fluent nonsense on both GPU and CPU; the 125 kbps track of the same minute matched the captions nearly word for word. Every Whisper transcript made before this change is unreliable.
 - 2026-10-06: Retry and duplicate check. A finished job with failures shows "Retry failed (N)", which calls the new `POST /job/{id}/retry`; the failed items' folders and playlists are held server-side (newest 200 jobs kept), so a retry never takes a save path from the browser. Jobs and `POST /transcript` now skip videos already saved anywhere under the save locations, keyed on the video ID in each file's header (both the current `**URL:**` and the older `- **URL**:` format); a "Re-extract" checkbox overrides. The same video listed twice in a batch runs once, and a video being extracted by another job is not started again. Fixed a silent overwrite: two different videos with the same title on the same day wrote the same file; the second now gets ` [videoid]` appended. Files are written to a temp name and renamed. Also: yt-dlp's "This video is unavailable" was classified as `error`; it is now `unavailable`.

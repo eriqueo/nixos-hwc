@@ -26,8 +26,8 @@ logger = logging.getLogger("transcripts")
 REASON_TEXT = {
     "rate_limited": "YouTube is rate-limiting or blocking this server",
     "no_captions": "Video has no captions",
-    "unavailable": "Video is unavailable (private, removed, age- or member-restricted)",
-    "invalid_url": "Invalid YouTube URL",
+    "unavailable": "Unavailable (private, removed, age- or member-restricted)",
+    "invalid_url": "Not a YouTube or X URL",
     "whisper_failed": "Audio transcription failed",
     "too_long": "Video is too long for audio transcription",
     "timeout": "Timed out",

@@ -338,5 +338,98 @@ class LibraryContract(unittest.TestCase):
         self.assertTrue({"text", "start", "duration"} <= set(fields))
 
 
+def _raw_post(pid, handle="alice", reply_to=None, text="hello"):
+    return {"id_str": pid, "text": text, "created_at": "2026-01-02T03:04:05.000Z",
+            "user": {"screen_name": handle, "name": handle.title()},
+            "in_reply_to_status_id_str": reply_to, "entities": {}, "favorite_count": 1500}
+
+
+class XPost(unittest.TestCase):
+    def setUp(self):
+        import xpost
+        self.X = xpost
+
+    def test_post_id_from_url_forms(self):
+        for url in ("https://x.com/jack/status/20", "https://twitter.com/jack/status/20?s=46",
+                    "https://mobile.twitter.com/jack/statuses/20/photo/1", "https://x.com/i/web/status/20"):
+            self.assertEqual(self.X.extract_post_id(url), "20", url)
+        self.assertIsNone(self.X.extract_post_id("https://youtu.be/aaaaaaaaaaa"))
+        self.assertIsNone(self.X.extract_post_id("https://notx.com/a/status/20"))
+
+    def test_tco_links_expand_and_media_links_drop(self):
+        raw = _raw_post("1", text="read https://t.co/a pic https://t.co/m")
+        raw["entities"] = {"urls": [{"url": "https://t.co/a", "expanded_url": "https://example.com"}],
+                           "media": [{"url": "https://t.co/m"}]}
+        self.assertEqual(self.X.normalize(raw)["text"], "read https://example.com pic")
+
+    def test_thread_walk_stops_at_another_author(self):
+        posts = {"3": _raw_post("3", reply_to="2", text="third"), "2": _raw_post("2", reply_to="1", text="second"),
+                 "1": _raw_post("1", handle="bob", text="not ours")}
+        with mock.patch.object(self.X, "fetch_syndication", side_effect=lambda p: posts[p]), \
+             mock.patch.object(self.X, "fetch_graphql", return_value=None):
+            thread = self.X.fetch_thread("3")
+        self.assertEqual([p["id"] for p in thread], ["2", "3"])
+        md = self.X.format_markdown(thread, "3")
+        self.assertIn("**Source:** X thread (2 posts)", md)
+        self.assertIn("1.5K likes", md)
+        self.assertEqual(self.X.saved_post_id(md), "3")
+
+    def test_unavailable_parent_ends_walk(self):
+        def fetch(p):
+            if p == "1":
+                raise T.TranscriptError("unavailable")
+            return _raw_post("2", reply_to="1")
+        with mock.patch.object(self.X, "fetch_syndication", side_effect=fetch), \
+             mock.patch.object(self.X, "fetch_graphql", return_value=None):
+            self.assertEqual(len(self.X.fetch_thread("2")), 1)
+
+
+@unittest.skipIf(api is None, "fastapi not installed")
+class XPostJobs(unittest.TestCase):
+    def setUp(self):
+        import xpost
+        self.X = xpost
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.roots = mock.patch.object(api, "OUTPUT_ROOTS", [self.root])
+        self.roots.start()
+        self.sleep = mock.patch.object(api.asyncio, "sleep", new=mock.AsyncMock())
+        self.sleep.start()
+
+    def tearDown(self):
+        self.roots.stop()
+        self.sleep.stop()
+        self.tmp.cleanup()
+
+    def _job(self, urls, post):
+        job = api._new_job(self.root)
+        with mock.patch.object(api, "_extract", new=mock.AsyncMock()) as yt, \
+             mock.patch.object(api, "_extract_post", new=post):
+            run(api._run_job(job.job_id, urls, [], "raw", self.root, False))
+        yt.assert_not_awaited()
+        return job
+
+    def test_x_url_goes_to_post_extractor_once(self):
+        post = mock.AsyncMock(return_value={"url": "u", "title": "t", "filename": "f", "source": "x"})
+        job = self._job(["https://x.com/a/status/5", "https://twitter.com/a/status/5?s=1"], post)
+        post.assert_awaited_once()
+        self.assertEqual(job.total, 1)
+
+    def test_saved_post_is_not_fetched_again(self):
+        thread = [self.X.normalize(_raw_post("5"))]
+        (self.root / "old.md").write_text(self.X.format_markdown(thread, "5"))
+        post = mock.AsyncMock()
+        job = self._job(["https://x.com/alice/status/5"], post)
+        post.assert_not_awaited()
+        self.assertEqual(job.results[0]["status"], "exists")
+
+    def test_post_writes_markdown_file(self):
+        with mock.patch.object(self.X, "fetch_syndication", return_value=_raw_post("5")), \
+             mock.patch.object(self.X, "fetch_graphql", return_value=None):
+            res = run(api._extract_post("https://x.com/alice/status/5", self.root))
+        self.assertEqual(api.scan_saved([self.root]), {"x:5": Path(res["filename"])})
+        self.assertEqual(res["transcript"], "hello")
+
+
 if __name__ == "__main__":
     unittest.main()
