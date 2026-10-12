@@ -31,9 +31,17 @@ profile (`xbrowser.py`), which opens the post, scrolls, and reads X's own
 `x-client-transaction-id` its client generates. `GET /x/session` and
 `/health` report the login; captures fail as `login_required` when it lapses.
 
+Non-English posts are saved in English only. X's own `lang` tag picks them
+(including quoted posts); DX2 translates them in batches, 4 requests at a
+time, before the file is written, so titles and filenames are English too. The
+header says what happened, e.g. `**Translated:** to English from zh by DX2
+(5 texts)`. A failed request keeps its posts in the original language and the
+header counts them. `translate.enable` (default: on wherever
+`hwc.server.ai.dx2` is imported) controls it; `POST /xpost` is not translated.
+
 ## Boundaries
 
-- **Manages**: the `transcripts` systemd unit, its save-location whitelist (`outputRoots`), the `n8n-transcript-extract` helper, the Whisper-fallback wiring
+- **Manages**: the `transcripts` systemd unit, its save-location whitelist (`outputRoots`), the `n8n-transcript-extract` helper, the Whisper-fallback wiring, the DX2 translation wiring
 - **Does NOT manage**: whisper-server itself (-> `domains/server/native/ai/whisper`), media library directories other than `outputDirectory` (-> `domains/media/directories.nix`), the Caddy vhost (-> `domains/networking/routes.nix`)
 
 ## Structure
@@ -48,7 +56,7 @@ domains/media/youtube/
 workspace/media/youtube-services/   # runtime source, read from the checkout (paths.nixos)
 ├── api.py                    # FastAPI: /job, /job/{id}, /job/{id}/retry, /transcript, /xpost, /x/session, /config, /health, UI; saved-file scan
 ├── transcript.py             # caption sources, Whisper fallback, failure reasons, cleaning, markdown
-├── xpost.py                  # X posts: syndication + guest GraphQL fetch, thread walk, TweetDetail parser, modes, markdown
+├── xpost.py                  # X posts: syndication + guest GraphQL fetch, thread walk, TweetDetail parser, modes, DX2 translation, markdown
 ├── xbrowser.py               # logged-in X capture: Playwright profile, scroll loop, cookie import
 ├── fixtures/                 # trimmed real TweetDetail response for parser tests
 ├── test_transcript.py        # unittest: reasons, Whisper decision, dedup, retry, library contract, X posts, capture loop
@@ -88,6 +96,7 @@ Tests (run on hwc-home with the service interpreter):
 | `transcripts` | 8100 | Transcript API + web UI |
 
 ## Changelog
+- 2026-10-12: English translation of X posts. Posts carry X's `lang` tag; `xpost.translate_posts` sends every non-English text (and quoted text) to DX2 through `xpost.dx2_translator` (OpenAI-compatible, thinking off, key read per request from `hwc.server.ai.dx2.apiKeyFile`) and replaces it with English before the file is written. Fail-open per request; the new `**Translated:**` header line records languages, count and failures. New option `translate.enable`, asserted to need the dx2 module. The translator lives in `xpost.py`, not a new file: it acts only on the X post shape, and `transcript.py` is the YouTube side.
 - 2026-10-12: X capture stop rule. A capture ends only on X's bottom `TimelineTerminateTimeline` (`Conversation.ended`), not on a page without a Bottom cursor; while X has not ended the timeline it waits up to 12 stale scrolls (was 4). Measured live: X sends a page every 3-7 s, and the old rule saved 60 of ~400 replies as if complete.
 - 2026-10-12: X capture modes end to end. `POST /job` and `POST /xpost` take `x_mode` (`post`, `thread`, `replies`, `author_replies`) and `limit`; `api._fetch_x` dispatches `post` to the logged-out walk and the rest to `xbrowser.capture`. Jobs, in-flight checks, dedup and retry key X items by `xpost.x_key(id, mode)`, and retry replays mode and limit. The UI gains an "X capture" select (labels from `xpost.X_MODE_LABELS` via `/config`) and a replies limit. Saved titles name the mode; replies files state coverage. Gate passed before the build: a logged-in `replies` capture of poteto's post under the unit's sandbox returned 204 direct replies.
 - 2026-10-11: X login and capture groundwork. New `xbrowser.py` drives headless Chromium (`playwright`, browsers from `playwright-driver.browsers`) with a profile at `/var/lib/hwc/transcripts/x-profile`; `GET/POST /x/session` and a UI card import a spare account's cookies and prove them by loading x.com/home. `xpost.py` gains a parser for logged-in `TweetDetail` responses (promoted posts dropped) and the selectors for direct replies, the author's thread below a post, and the author's posts in a conversation; saved X files now carry a `**Mode:**` line (files without one stay `post`). New failure reason `login_required`. The unit sets `HOME` to its state directory (Chromium needs a writable home; `ProtectHome` keeps `/home` read-only) and `StateDirectoryMode = "0700"` because the profile holds a login. Verified: Chromium runs under the unit's sandbox via `systemd-run` with the same properties, and loads x.com with HTTP 200.

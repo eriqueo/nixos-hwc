@@ -71,6 +71,16 @@
           '';
         };
       };
+      translate.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = config.hwc.server.ai ? dx2;
+        defaultText = lib.literalExpression "config.hwc.server.ai ? dx2";
+        description = ''
+          Save non-English X posts in English, translated by DX2 (endpoint facts
+          from hwc.server.ai.dx2). X's own `lang` tag picks the posts. A failed
+          translation keeps the original text, and the file header says so.
+        '';
+      };
     };
   };
 

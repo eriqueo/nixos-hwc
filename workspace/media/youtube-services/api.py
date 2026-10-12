@@ -53,6 +53,13 @@ WHISPER_URL = os.getenv("YT_TRANSCRIPTS_WHISPER_URL", "")
 WHISPER_MODEL = os.getenv("YT_TRANSCRIPTS_WHISPER_MODEL", "whisper")
 WHISPER_MAX_SECONDS = int(os.getenv("YT_TRANSCRIPTS_WHISPER_MAX_SECONDS", "10800"))
 
+# English translation of non-English X posts through DX2. An empty URL
+# disables it and posts save in their original language.
+DX2_URL = os.getenv("YT_TRANSCRIPTS_DX2_URL", "")
+DX2_KEY_FILE = os.getenv("YT_TRANSCRIPTS_DX2_KEY_FILE", "")
+translator = (xpost.dx2_translator(DX2_URL, os.getenv("YT_TRANSCRIPTS_DX2_MODEL", "llm"), DX2_KEY_FILE)
+              if DX2_URL else None)
+
 # Wall-clock budgets. /transcript is synchronous and captions-only, so it keeps
 # the old 60 s ceiling; job videos bound each stage separately instead
 # (metadata 20 s inside fetch_metadata, captions CAPTION_TIMEOUT, Whisper a
@@ -389,9 +396,13 @@ async def _extract_post(url: str, out_dir: Path, x_mode: str = "post",
     if not post_id:
         raise TranscriptError("invalid_url")
     x = await _fetch_x(post_id, x_mode, limit, on_stage)
+    translated = ""
+    if translator:
+        posts = x.thread + (x.listed or [])
+        translated = (await asyncio.to_thread(xpost.translate_posts, posts, translator, on_stage)).note()
 
     on_stage("writing file")
-    md = xpost.format_markdown(x.thread, post_id, x_mode, x.listed, x.coverage)
+    md = xpost.format_markdown(x.thread, post_id, x_mode, x.listed, x.coverage, translated)
     title = xpost.post_title(x.thread, x_mode)
     filepath = write_transcript(out_dir, title, xpost.x_key(post_id, x_mode), md)
     return {
@@ -639,6 +650,7 @@ async def health():
         "whisper": {"url": WHISPER_URL or None, "model": WHISPER_MODEL,
                     "max_seconds": WHISPER_MAX_SECONDS, "ffmpeg": shutil.which("ffmpeg")},
         "x_session": xbrowser.session_status(),
+        "translate": {"url": DX2_URL or None},
     }
 
 
@@ -918,4 +930,7 @@ if __name__ == "__main__":
     browsers = os.getenv("PLAYWRIGHT_BROWSERS_PATH", "")
     if not browsers or not any(Path(browsers).glob("chromium-*")):
         raise SystemExit(f"PLAYWRIGHT_BROWSERS_PATH has no Chromium: {browsers!r}")
+    # Translation reads the DX2 key per request; an unreadable key would fail every one.
+    if DX2_URL and not os.access(DX2_KEY_FILE, os.R_OK):
+        raise SystemExit(f"YT_TRANSCRIPTS_DX2_URL is set but the key file is unreadable: {DX2_KEY_FILE!r}")
     uvicorn.run(app, host=HOST, port=PORT, workers=1, log_level="info")

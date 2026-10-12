@@ -225,6 +225,7 @@ def normalize(raw: dict) -> dict:
         "id": raw.get("id_str"),
         "url": f"https://x.com/{handle}/status/{raw.get('id_str')}" if handle else post_url(raw.get("id_str") or ""),
         "text": _expand_links(raw.get("text") or "", raw.get("entities") or {}, media_links),
+        "lang": raw.get("lang"),
         "is_long_form": bool(raw.get("note_tweet")),
         "truncated": bool(raw.get("note_tweet")),
         "created_at": raw.get("created_at"),
@@ -263,6 +264,7 @@ def apply_graphql(post: dict, g: Optional[dict]) -> dict:
                        "views": int(views) if views else m["views"]}
     if legacy.get("in_reply_to_status_id_str"):
         post["in_reply_to"] = legacy["in_reply_to_status_id_str"]
+    post["lang"] = legacy.get("lang") or post["lang"]
     return post
 
 
@@ -347,6 +349,7 @@ def normalize_graphql(result: Optional[dict]) -> Optional[dict]:
         "id": result["rest_id"],
         "url": f"https://x.com/{handle}/status/{result['rest_id']}" if handle else post_url(result["rest_id"]),
         "text": text,
+        "lang": legacy.get("lang"),
         "is_long_form": bool(note),
         "truncated": False,
         "created_at": _iso_from_legacy(legacy.get("created_at")),
@@ -440,6 +443,113 @@ def author_posts(conv: Conversation, focal_id: str, handle: str) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Translation to English
+# ---------------------------------------------------------------------------
+# X's own `lang` tag picks what to translate. Left alone: English, `und`
+# (undetermined), `zxx` (no text) and the `q*` codes (only hashtags,
+# mentions, links or emoji).
+TRANSLATE_CHUNK_CHARS = 3000  # source text per request; DX2 writes ~57 tokens/s
+TRANSLATE_PARALLEL = 4        # requests in flight at once
+TRANSLATE_HTTP_TIMEOUT = 150
+_TRANSLATE_PROMPT = (
+    "Translate each value of the JSON object into natural English. Keep @handles, "
+    "URLs, emoji, product names and line breaks. Return a value that is already "
+    "English unchanged. Reply with only a JSON object with the same keys.")
+# translate_posts has no outer timeout: TRANSLATE_HTTP_TIMEOUT bounds each
+# request, so a capture's translation is bounded by its number of request rounds.
+
+
+def needs_translation(post: dict) -> bool:
+    lang = post.get("lang") or ""
+    return bool(lang) and lang not in ("en", "und", "zxx") and not lang.startswith("q")
+
+
+def dx2_translator(base_url: str, model: str, key_file: str):
+    """A batch translator over DX2's OpenAI-compatible API: {key: text} ->
+    {key: English}. The key is read per call, so a rotated secret needs no
+    restart, and it never reaches a log or an argument list."""
+    def translate(items: dict[str, str]) -> dict[str, str]:
+        with open(key_file) as fh:
+            key = fh.read().strip()
+        body = {"model": model, "temperature": 0.2, "max_tokens": 4 * TRANSLATE_CHUNK_CHARS,
+                "chat_template_kwargs": {"enable_thinking": False},
+                "messages": [{"role": "system", "content": _TRANSLATE_PROMPT},
+                             {"role": "user", "content": json.dumps(items, ensure_ascii=False)}]}
+        res = requests.post(f"{base_url}/chat/completions", json=body, timeout=TRANSLATE_HTTP_TIMEOUT,
+                            headers={"Authorization": f"Bearer {key}"})
+        res.raise_for_status()
+        content = res.json()["choices"][0]["message"]["content"]
+        content = re.sub(r"^\s*```(?:json)?\s*|\s*```\s*$", "", content)
+        out = json.loads(content)
+        if not isinstance(out, dict):
+            raise ValueError("DX2 reply is not a JSON object")
+        return out
+    return translate
+
+
+def _chunks(units: dict[str, str]) -> list[dict[str, str]]:
+    chunks, cur, size = [], {}, 0
+    for key, text in units.items():
+        if cur and size + len(text) > TRANSLATE_CHUNK_CHARS:
+            chunks.append(cur)
+            cur, size = {}, 0
+        cur[key] = text
+        size += len(text)
+    return chunks + [cur] if cur else chunks
+
+
+@dataclass
+class Translation:
+    langs: set = field(default_factory=set)  # source languages of the texts sent
+    done: int = 0                            # texts now in English
+    failed: int = 0                          # texts left in the original
+
+    def note(self) -> str:
+        """The **Translated:** header value; empty when nothing needed it."""
+        if not (self.done or self.failed):
+            return ""
+        text = f"to English from {', '.join(sorted(self.langs))} by DX2 ({self.done} texts)"
+        return text + (f"; {self.failed} left in the original (DX2 failed)" if self.failed else "")
+
+
+def translate_posts(posts: list[dict], translate, on_stage=lambda stage: None) -> Translation:
+    """Replace the text of every non-English post (and quoted post) with
+    English, in place. Each request fails alone: its texts keep the original
+    and count as failed. Blocking; run it in a worker thread."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    units, targets, result = {}, {}, Translation()
+    for post in posts:
+        for p in (post, post.get("quoted")):
+            if p and p["id"] not in targets and needs_translation(p) and (p["text"] or "").strip():
+                units[p["id"]] = p["text"]
+                targets[p["id"]] = p
+    if not units:
+        return result
+    result.langs = {p["lang"] for p in targets.values()}
+    chunks = _chunks(units)
+    on_stage(f"translating {len(units)} texts")
+
+    def run(chunk: dict[str, str]) -> dict[str, str]:
+        try:
+            return translate(chunk)
+        except Exception as e:  # fail-open per request
+            logger.warning(f"DX2 translation of {len(chunk)} texts failed: {type(e).__name__}: {e}")
+            return {}
+
+    with ThreadPoolExecutor(max_workers=TRANSLATE_PARALLEL) as pool:
+        for chunk, out in zip(chunks, pool.map(run, chunks)):
+            for key in chunk:
+                english = out.get(key)
+                if isinstance(english, str) and english.strip():
+                    targets[key]["text"] = english.strip()
+                    result.done += 1
+                else:
+                    result.failed += 1
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Markdown
 # ---------------------------------------------------------------------------
 def _fmt_num(n: Optional[int]) -> str:
@@ -513,11 +623,13 @@ SECTION_TITLE = {m: X_MODE_LABELS[m] for m in ("replies", "author_replies")}
 
 
 def format_markdown(thread: list[dict], requested_id: str, mode: str = "post",
-                    listed: Optional[list[dict]] = None, coverage: str = "") -> str:
+                    listed: Optional[list[dict]] = None, coverage: str = "",
+                    translated: str = "") -> str:
     """Same header shape as transcript.format_markdown. The **URL:** and
     **Mode:** lines hold the requested post and mode: the key the saved-file
     scan reads back (saved_x_key). `listed` is the replies / author's replies
-    section for those modes; `coverage` says how complete it is."""
+    section for those modes; `coverage` says how complete it is; `translated`
+    is Translation.note()."""
     first, last = thread[0], thread[-1]
     a = first["author"]
     if mode in SECTION_TITLE:
@@ -539,7 +651,7 @@ def format_markdown(thread: list[dict], requested_id: str, mode: str = "post",
 **URL:** https://x.com/{a['handle']}/status/{requested_id}
 **Mode:** {mode}
 **Source:** {source}
-**Stats:** {_stats(last['metrics'])}
+{f"**Translated:** {translated}{chr(10)}" if translated else ""}**Stats:** {_stats(last['metrics'])}
 
 ---
 

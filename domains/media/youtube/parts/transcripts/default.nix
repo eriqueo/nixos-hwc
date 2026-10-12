@@ -8,7 +8,8 @@
 #   - Single FastAPI process
 #   - youtube-transcript-api for captions, yt-dlp for subtitles + metadata
 #   - Whisper fallback: yt-dlp audio -> ffmpeg chunks -> local whisper-server
-#   - No LLM, no spaCy, no PostgreSQL
+#   - DX2 (remote, OpenAI-compatible) translates non-English X posts to English
+#   - No local LLM, no spaCy, no PostgreSQL
 #   - Caddy vhost at transcripts.hwc.iheartwoodcraft.com (upstream 127.0.0.1:8100)
 
 { config, lib, pkgs, ... }:
@@ -35,6 +36,10 @@ let
   whisperUrl = lib.optionalString cfg.whisper.enable
     "http://127.0.0.1:${toString (whisper.port or 0)}/v1/audio/transcriptions";
 
+  # DX2 endpoint facts. The `or` keeps this file evaluable when the dx2 module
+  # is not imported; the assertion below rejects translate.enable without it.
+  dx2 = config.hwc.server.ai.dx2 or { baseUrl = ""; model = ""; apiKeyFile = ""; };
+
   pythonPath = pkgs.python3Packages.makePythonPath pythonPackages;
 
   # The set of writable save locations, default first. Sandbox writability
@@ -59,6 +64,10 @@ let
     # crash files, and ProtectHome leaves /home/eric read-only.
     export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
     export X_PROFILE_DIR="${stateDir}/x-profile"
+    # English translation of non-English X posts. An empty URL disables it.
+    export YT_TRANSCRIPTS_DX2_URL="${lib.optionalString cfg.translate.enable dx2.baseUrl}"
+    export YT_TRANSCRIPTS_DX2_MODEL="${dx2.model}"
+    export YT_TRANSCRIPTS_DX2_KEY_FILE="${dx2.apiKeyFile}"
     export HOME="${stateDir}"
 
     exec ${pkgs.python3}/bin/python3 ${scriptDir}/api.py
@@ -141,6 +150,10 @@ in
       {
         assertion = cfg.whisper.enable -> (whisper.enable or false);
         message = "hwc.media.youtube.transcripts.whisper.enable needs hwc.server.ai.whisper.enable on the same host.";
+      }
+      {
+        assertion = cfg.translate.enable -> (config.hwc.server.ai ? dx2);
+        message = "hwc.media.youtube.transcripts.translate.enable needs domains/server/native/ai/dx2/index.nix imported (it supplies the DX2 URL, model and key path).";
       }
     ];
   };

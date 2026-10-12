@@ -718,5 +718,92 @@ class XModeJobs(unittest.TestCase):
             api.JobRequest(urls=[self.URL], x_mode="replies", limit=self.X.REPLY_LIMIT_MAX + 1)
 
 
+def _zh_post(pid, text="你好世界", lang="zh", quoted=None):
+    import xpost
+    p = xpost.normalize(_raw_post(pid, text=text))
+    p.pop("_media_links")
+    p["lang"], p["quoted"] = lang, quoted
+    return p
+
+
+class XTranslate(unittest.TestCase):
+    def setUp(self):
+        import xpost
+        self.X = xpost
+
+    def test_only_non_english_texts_are_sent_and_replaced(self):
+        posts = [_zh_post("1"), _zh_post("2", "hello", "en"), _zh_post("3", "#tag", "qht"),
+                 _zh_post("4", "hi", "en", quoted=_zh_post("5", "引用", "zh"))]
+        sent = []
+        def fake(items):
+            sent.append(dict(items))
+            return {k: f"EN {k}" for k in items}
+        t = self.X.translate_posts(posts, fake)
+        self.assertEqual(sorted(k for s in sent for k in s), ["1", "5"])
+        self.assertEqual([p["text"] for p in posts], ["EN 1", "hello", "#tag", "hi"])
+        self.assertEqual(posts[3]["quoted"]["text"], "EN 5")
+        self.assertEqual(t.note(), "to English from zh by DX2 (2 texts)")
+
+    def test_a_failed_request_keeps_its_originals_and_says_so(self):
+        long = "长" * self.X.TRANSLATE_CHUNK_CHARS
+        posts = [_zh_post("1", long), _zh_post("2", long)]
+        def flaky(items):
+            if "2" in items:
+                raise RuntimeError("pod down")
+            return {k: "English" for k in items}
+        t = self.X.translate_posts(posts, flaky)
+        self.assertEqual([p["text"] for p in posts], ["English", long])
+        self.assertEqual(t.note(), "to English from zh by DX2 (1 texts); 1 left in the original (DX2 failed)")
+
+    def test_nothing_to_translate_writes_no_header(self):
+        posts = [_zh_post("1", "hello", "en")]
+        self.assertEqual(self.X.translate_posts(posts, mock.Mock(side_effect=AssertionError)).note(), "")
+        self.assertNotIn("**Translated:**", self.X.format_markdown(posts, "1"))
+
+    def test_dx2_reply_in_a_code_fence_parses(self):
+        with tempfile.NamedTemporaryFile("w") as key:
+            key.write("k\n")
+            key.flush()
+            reply = mock.Mock(status_code=200)
+            reply.json.return_value = {"choices": [{"message": {"content": '```json\n{"1": "Hello"}\n```'}}]}
+            with mock.patch.object(self.X.requests, "post", return_value=reply) as post:
+                out = self.X.dx2_translator("https://dx2.test/v1", "llm", key.name)({"1": "你好"})
+        self.assertEqual(out, {"1": "Hello"})
+        self.assertEqual(post.call_args.kwargs["headers"]["Authorization"], "Bearer k")
+
+
+@unittest.skipIf(api is None, "fastapi not installed")
+class XTranslateWiring(unittest.TestCase):
+    """The production decision point: api._extract_post translates before it
+    writes, when a translator is configured."""
+    def setUp(self):
+        import xpost
+        self.X = xpost
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _save(self, translator):
+        raw = _raw_post("5", text="你好世界")
+        raw["lang"] = "zh"
+        with mock.patch.object(api, "translator", translator), \
+             mock.patch.object(self.X, "fetch_syndication", return_value=raw), \
+             mock.patch.object(self.X, "fetch_graphql", return_value=None):
+            res = run(api._extract_post("https://x.com/alice/status/5", self.root))
+        return Path(res["filename"]).read_text()
+
+    def test_saved_file_is_english_and_keeps_its_key(self):
+        md = self._save(lambda items: {k: "Hello world" for k in items})
+        self.assertIn("# @alice: Hello world", md)
+        self.assertIn("**Translated:** to English from zh by DX2 (1 texts)", md)
+        self.assertNotIn("你好", md)
+        self.assertEqual(self.X.saved_x_key(md), "x:5")
+
+    def test_without_a_translator_the_original_is_saved(self):
+        self.assertIn("你好世界", self._save(None))
+
+
 if __name__ == "__main__":
     unittest.main()
