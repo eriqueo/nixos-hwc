@@ -138,15 +138,14 @@ journalctl -u morning-briefing.service -f
 
 ## MCP Tools Used
 
-The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gateway):
+**JobTread** — not an MCP tool any more. `gather-live.mjs` queries PAVE
+(`https://api.jobtread.com/pave`) directly, read-only, with the
+`jobtread-grant-key` agenix secret (`HWC_JT_GRANT_KEY_FILE`) and the org id from
+`leads/parts/jt-mappings.nix` (`HWC_JT_ORG_ID`):
+- open jobs (`closedOn` null, size 50) → `jobs`, `leads`, weekly snapshot
+- documents past `dueDate` with `balance` > 0, not draft → `overdue`
 
-**HWC-JT (jt-mcp)** — JobTread data at `/opt/business/jt-mcp/`
-- `jt_search_jobs` — list all open jobs (`status: "open"`, searchTerm optional)
-- `jt_get_overdue_documents` — docs past due with outstanding balances
-- `jt_get_tasks` — tasks due today/this week/overdue for active jobs
-- `jt_get_documents` — estimates, invoices, change orders (last 48h)
-
-**HWC-SYS** — server health
+**HWC-SYS** (via the `hwc-sys-mcp` gateway) — server health and tasks
 - `hwc_monitoring_health_check` — services, containers, storage
 - `hwc_mail_health` — mail system status
 - `hwc_storage_status` — Borg backup and disk usage
@@ -168,6 +167,7 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+- 2026-10-12: Jobs, leads and overdue invoices work again. Since jt-mcp was retired (2026-10-09), every run had failed with "Unknown tool: jt_jobs / jt_documents"; the retirement missed this consumer. `gather-live.mjs` now reads PAVE directly with the `jobtread-grant-key` secret and the shared org id, using the same filters jt-mcp used. Verified on hwc-work: no errors, 25 active jobs, 0 overdue invoices.
 - 2026-10-12: New read-only option `outputDir` (`<agentDir>/output`), so the wall display
   (`domains/server/services/wall-display`) reads `briefing.json` without rebuilding the path.
 - 2026-10-10: `run.sh` also lists Eric's failed `systemd --user` units (as `user:<unit>`)

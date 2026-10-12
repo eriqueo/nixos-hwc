@@ -58,6 +58,11 @@ in
         MAIL_SYNC_LOCK_FILE = "${builtins.dirOf paths.user.mailSyncStatus}/sync.lock";
         HWC_MAIL_CLASSIFIER_CONTRACT_FILE = mailContractFile;
         PROM_URL = cfg.prometheusUrl;
+        # JobTread PAVE reads in gather-live.mjs (jt-mcp retired 2026-10-09).
+        # The org id has one producer (leads/parts/jt-mappings.nix, as the CRM
+        # uses); the grant key is the agenix secret, readable via `secrets`.
+        HWC_JT_ORG_ID = (import ../leads/parts/jt-mappings.nix).organizationId;
+        HWC_JT_GRANT_KEY_FILE = config.age.secrets.jobtread-grant-key.path;
       } // lib.optionalAttrs (cfg.hostHealthFrom != null) {
         BRIEFING_HOST = config.hwc.networking.hosts.servers.${cfg.hostHealthFrom};
       };

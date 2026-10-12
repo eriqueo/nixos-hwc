@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // domains/business/morning-briefing/gather-live.mjs
 //
-// Live business data for the morning briefing, fetched from the local HWC MCP
-// gateway (StreamableHTTP, :6200/mcp). Runs headless as eric with NO Claude and
-// NO tool-permission prompts — plain JSON-RPC over loopback HTTP, which is the
-// path the README's "JobTread follow-up" prescribed.
+// Live business data for the morning briefing. Tasks come from the local HWC
+// MCP gateway (StreamableHTTP, :6200/mcp); jobs, leads and overdue invoices
+// come straight from JobTread's PAVE API with the jobtread-grant-key secret,
+// because the gateway's jt_* tools were retired with jt-mcp on 2026-10-09.
+// Runs headless as eric with NO Claude and NO tool-permission prompts.
 //
 // Emits ONE JSON object on stdout:
 //   { sections: {jobs, leads, overdue, tasks, weekly_snapshot}, alerts: [...], errors: [...] }
@@ -15,6 +16,48 @@
 const GATEWAY = process.env.HWC_GATEWAY_URL || "http://127.0.0.1:6200/mcp";
 const FETCH_TIMEOUT_MS = 30_000;
 const JT_JOB_URL = (id) => `https://app.jobtread.com/jobs/${id}`;
+const PAVE_URL = "https://api.jobtread.com/pave";
+// Both set by index.nix: the org id from leads/parts/jt-mappings.nix (its one
+// producer) and the agenix grant key file (read at call time, never logged).
+const JT_ORG_ID = process.env.HWC_JT_ORG_ID;
+const JT_GRANT_KEY_FILE = process.env.HWC_JT_GRANT_KEY_FILE;
+
+// ── JobTread PAVE (read-only) ────────────────────────────────────────────────
+// One organization-scoped list query. PAVE answers HTTP 413 for query
+// complexity (size × nested fields), so callers keep size ≤ 50.
+async function paveNodes(entityPlural, nodes, where, size = 50) {
+  if (!JT_ORG_ID || !JT_GRANT_KEY_FILE) throw new Error("JobTread not configured (HWC_JT_ORG_ID / HWC_JT_GRANT_KEY_FILE)");
+  const { readFile } = await import("node:fs/promises");
+  const grantKey = (await readFile(JT_GRANT_KEY_FILE, "utf8")).trim();
+  const body = {
+    query: {
+      $: { grantKey, notify: false },
+      organization: { $: { id: JT_ORG_ID }, [entityPlural]: { $: { where, size }, nodes } },
+    },
+  };
+  const res = await fetch(PAVE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`PAVE ${entityPlural}: HTTP ${res.status} ${text.slice(0, 150)}`);
+  const list = JSON.parse(text)?.organization?.[entityPlural]?.nodes;
+  if (!Array.isArray(list)) throw new Error(`PAVE ${entityPlural}: no nodes in response`);
+  return list;
+}
+
+const JOB_FIELDS = {
+  id: {}, name: {}, number: {}, description: {}, createdAt: {},
+  location: { city: {}, account: { name: {} } },
+  customFieldValues: { nodes: { value: {}, customField: { name: {} } } },
+};
+const DOCUMENT_FIELDS = {
+  id: {}, name: {}, type: {}, description: {}, price: {}, balance: {}, dueDate: {},
+  job: { id: {}, name: {}, number: {} },
+  account: { name: {} },
+};
 
 // ── Minimal StreamableHTTP MCP client ────────────────────────────────────────
 const session = { id: null, protocolVersion: "2025-06-18", seq: 0 };
@@ -109,8 +152,8 @@ function customField(job, name) {
 async function gatherJobs() {
   // Pave rejects size>~50 with the nested JOB_FIELDS as HTTP 413 (query
   // complexity, not body bytes). 18 open jobs today; 50 keeps headroom.
-  const raw = await callTool("jt_jobs", { action: "search", status: "open", format: "json", limit: 50 });
-  if (!Array.isArray(raw)) throw new Error("jt_jobs returned non-array");
+  // Open = closedOn null (PAVE jobs have no status field).
+  const raw = await paveNodes("jobs", JOB_FIELDS, { "=": [{ field: ["closedOn"] }, { value: null }] });
   const mapped = raw.map((j) => ({
     id: j.id,
     name: j.name || "(unnamed)",
@@ -177,8 +220,14 @@ async function gatherJobs() {
 }
 
 async function gatherOverdue() {
-  const raw = await callTool("jt_documents", { action: "list_overdue", format: "json" });
-  const docs = raw?.documents ?? [];
+  // Same rule jt-mcp's list_overdue used: past due, money still owed, not a draft.
+  const docs = await paveNodes("documents", DOCUMENT_FIELDS, {
+    and: [
+      { "<": [{ field: ["dueDate"] }, { value: todayYmd }] },
+      { ">": [{ field: ["balance"] }, { value: 0 }] },
+      { "!=": [{ field: ["status"] }, { value: "draft" }] },
+    ],
+  });
   const items = docs.map((d) => ({
     name: d.name || d.type || "Document",
     description: d.description || null,
@@ -190,7 +239,7 @@ async function gatherOverdue() {
     account: d.account?.name || "",
     url: d.job?.id ? JT_JOB_URL(d.job.id) : null,
   }));
-  const total = raw?.total_outstanding ?? items.reduce((s, i) => s + (i.amount || 0), 0);
+  const total = items.reduce((s, i) => s + (i.amount || 0), 0);
   out.sections.overdue = { ok: true, count: items.length, total_amount: total, items };
   if (items.length) {
     out.alerts.push({
@@ -251,7 +300,7 @@ out.sections.weekly_snapshot = {
   week_start: out._snapshot?.week_start ?? weekStart().toISOString(),
   active_job_count: out._snapshot?.active_job_count ?? null,
   leads_received_this_week: out._snapshot?.leads_received_this_week ?? null,
-  // jt_documents has no created-since filter and lists oldest-first, so a
+  // The overdue query has no created-since filter and lists oldest-first, so a
   // cheap "estimates sent this week" isn't available — null renders as "—".
   estimates_sent_this_week: null,
   invoices_outstanding: out._outstanding?.count ?? null,
