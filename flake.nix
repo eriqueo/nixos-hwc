@@ -1897,85 +1897,94 @@
       '';
 
       mail-health-lanes = pkgs.runCommand "mail-health-lanes" {} ''
-        ${pkgs.python3}/bin/python3 - ${mailHome.home.file.".local/bin/mail-health-check".source} <<'PY'
-        import copy, json, os, pathlib, re, shlex, subprocess, sys, tempfile
+        ${pkgs.python3}/bin/python3 - ${mailHome.home.file.".local/bin/mail-health-check".source} <<'PYTEST'
+        import copy, json, os, pathlib, re, shlex, sqlite3, subprocess, sys, tempfile, time
         source = pathlib.Path(sys.argv[1]).read_text()
-        start = source.index('check_mbsync() {')
-        fragment = source[start:source.index('# ─── Check 5:', start)]
-        healthy = {'state': 'healthy', 'lastOutcome': 'success', 'exitCode': 0, 'lastSuccessEpoch': 9900}
-        base = {'schemaVersion': 1, 'lanes': {k: copy.deepcopy(healthy) for k in ['core', 'trash', 'labels']}}
-        def run(text, status, result='success', exit_code=0, projection=True):
-            with tempfile.TemporaryDirectory() as d:
-                root = pathlib.Path(d); state = root/'status.json'; state.write_text(json.dumps(status))
-                ctl = root/'systemctl'
-                ctl.write_text('#!${pkgs.python3}/bin/python3\nimport os,sys\n'
-                    'if "show" in sys.argv: print(os.environ["RESULT"] if "Result" in sys.argv else os.environ["EXIT_CODE"])\n')
-                ctl.chmod(0o700)
-                script = re.sub(r'/nix/store/[^\s]+/bin/systemctl', str(ctl), text)
-                header = 'set -eu\nSYNC_STATUS='+shlex.quote(str(state))+'\nSYNC_MAX_AGE_MIN=45\nTRASH_SYNC_MAX_AGE_MIN=1800\nTRASH_TIMER_ENABLED=true\n'
-                header += 'LABEL_PROJECTION_ENABLED='+str(projection).lower()+'\nnow_epoch() { echo 10000; }\nfail() { echo "F:$*"; }\nwarn() { echo "W:$*"; }\n'
-                r = subprocess.run(['${pkgs.bash}/bin/bash','-c',header+script+'\ncheck_mbsync\n'],capture_output=True,text=True,
-                    env={**os.environ,'RESULT':result,'EXIT_CODE':str(exit_code)})
-                assert r.returncode == 0, r.stderr
-                return r.stdout.splitlines()
-        def label_failure(text):
-            s = copy.deepcopy(base); s['lanes']['labels'].update(state='degraded',lastOutcome='projection-failed',exitCode=69)
-            lines = run(text,s,'exit-code',69)
-            assert not any(x.startswith('F:') for x in lines), lines
-            assert any(x.startswith('W:Mail sync lane labels is degraded') for x in lines), lines
-        label_failure(fragment)
-        assert run(fragment,base) == []
-        s = copy.deepcopy(base); s['lanes']['core'].update(state='degraded',exitCode=1)
-        assert any(x.startswith('F:Mail sync lane core') for x in run(fragment,s,'exit-code',1))
-        s = copy.deepcopy(base); s['lanes']['core']['lastSuccessEpoch']=1
-        assert any(x.startswith('F:Mail sync lane core last succeeded') for x in run(fragment,s))
-        assert any(x.startswith('F:Mail sync status is missing') for x in run(fragment,{}))
-        assert any(x.startswith('F:mbsync.service') for x in run(fragment,base,'exit-code',23))
-        s = copy.deepcopy(base); s['lanes']['labels']['lastSuccessEpoch']=1
-        assert any(x.startswith('W:Mail sync lane labels last succeeded') for x in run(fragment,s))
-        del s['lanes']['labels']; assert run(fragment,s,projection=False)==[]
-        broken,count=re.subn(r'if \[\[ "\$core_result" != exit-code.*?\]\]; then','if true; then',fragment,flags=re.S)
-        assert count==1
-        try: label_failure(broken)
-        except AssertionError: pass
-        else: raise AssertionError('removed health distinction passed wiring test')
-        # Exercise the generated v2 reader and its real durable case producer.
-        # Repeated judgments keep review visible without sending another alert.
-        import time
-        fresh = {**healthy, 'lastSuccessEpoch': time.time()}
-        v2 = {'schemaVersion':2, 'lanes':{key:copy.deepcopy(fresh) for key in ['core','fetch/proton','index','commands','labels','residency']}}
-        v2['lanes']['commands'].update(pendingCount=1,oldestPendingAgeSeconds=1801)
-        v2['lanes']['labels'].update(state='degraded',conflictCount=1)
-        def transition_review(text):
-            with tempfile.TemporaryDirectory() as d:
-                root=pathlib.Path(d); status=root/'status.json';status.write_text(json.dumps(v2))
-                ctl=root/'systemctl';ctl.write_text('#!${pkgs.bash}/bin/bash\nexit 0\n');ctl.chmod(0o700)
-                script=re.sub(r'/nix/store/[^\s]+/bin/systemctl',str(ctl),text)
-                header='set -eu\nSYNC_STATUS='+shlex.quote(str(status))+'\nSTATE_DIR='+shlex.quote(str(root))+'\n'
-                header+='SYNC_MAX_AGE_MIN=45\nTRASH_TIMER_ENABLED=false\nLABEL_PROJECTION_ENABLED=true\nSYNC_FAILED=false\n'
-                header+='fail() { echo "F:$*"; }\nwarn() { echo "W:$*"; }\nsend_webhook() { echo "A:$*"; }\nsend_notify() { echo "N:$*"; }\n'
-                outputs=[]
-                for _ in range(2):
-                    result=subprocess.run(['${pkgs.bash}/bin/bash','-c',header+script+'\ncheck_mbsync\nprintf "STATE:%s\\n" "$SYNC_FAILED"\n'],capture_output=True,text=True)
-                    assert result.returncode==0,result.stderr
-                    outputs.append(result.stdout.splitlines())
-                first,repeat=outputs
-                assert sum(line.startswith('A:') for line in first)==2,first
-                assert sum(line.startswith('N:') for line in first)==1,first
-                assert not any(line.startswith(('A:','N:')) for line in repeat),repeat
-                for lines in outputs:
-                    assert 'STATE:true' in lines and any(line.startswith('critical: Mailbox commands') for line in lines),lines
-                    assert not any(line.startswith('F:') for line in lines),lines
-        transition_review(fragment)
-        guards=[line for line in fragment.splitlines() if "'.schemaVersion'" in line and '== 2 ]]; then' in line]
-        assert len(guards)==1
-        broken=fragment.replace(guards[0],'if false; then',1)
-        assert broken!=fragment
-        try: transition_review(broken)
-        except AssertionError: pass
-        else: raise AssertionError('removed v2 case reader escaped the generated health test')
-        print('generated mail health: label warning, healthy transport, real failures, stale lanes and removed wiring pass')
-        PY
+        fresh = {'state':'healthy','lastOutcome':'success','exitCode':0,'lastSuccessEpoch':time.time()}
+        base = {'schemaVersion':2,'lanes':{key:copy.deepcopy(fresh) for key in ['fetch/proton','index','commands','labels','residency']}}
+        review = copy.deepcopy(base)
+        review['lanes']['commands'].update(pendingCount=1,oldestPendingAgeSeconds=1801)
+        review['lanes']['labels'].update(state='degraded',conflictCount=1)
+
+        def runner(text, root, infrastructure=False):
+            # Run the generated producer, routing, cards and publisher. Local
+            # probe ports are controlled; no real credentials or services run.
+            for name in ['check_gpg','check_pass','check_bridge','check_freshness']:
+                injected = 'infra fixture-auth-failed "Fixture authentication is unavailable."' if name=='check_gpg' and infrastructure else ':'
+                text,count = re.subn(r'(?m)^\s*'+name+r'\s*$',injected,text)
+                assert count==1,(name,count)
+            bindings={'SYNC_STATUS':str(root/'status.json'),'TRACKER_FILE':str(root/'tracker.json'),
+                      'HOST':'fixture','STALE_SECONDS':'0','ESCALATE_SECONDS':'1800'}
+            for name,value in bindings.items():
+                text,count=re.subn(r'(?m)^\s*'+name+r'=.*$',name+'='+shlex.quote(value),text)
+                assert count==1,(name,count)
+            ports='send_webhook() { printf "A:%s\\n" "$*"; }\nsend_notify() { printf "N:%s\\n" "$*"; }\n'
+            needle='if ! REPORT=$('
+            assert text.count(needle)==1
+            return text.replace(needle,ports+needle,1)
+
+        def run(script, root, status):
+            (root/'status.json').write_text(json.dumps(status))
+            result=subprocess.run(['${pkgs.bash}/bin/bash','-c',script],capture_output=True,text=True,
+                env={**os.environ,'HOME':str(root),'XDG_STATE_HOME':str(root/'state')})
+            assert result.returncode==0,result.stderr
+            summary=json.loads((root/'state/mail-health/summary.json').read_text())
+            assert summary['checker']=='ok'
+            return result.stdout.splitlines(),summary
+
+        def notifications(lines,prefix):return sum(line.startswith(prefix) for line in lines)
+        sentinel={'id':'human-card','done':False,'context':'Preserve the human decision.'}
+        with tempfile.TemporaryDirectory() as directory:
+            root=pathlib.Path(directory);(root/'tracker.json').write_text(json.dumps({'cards':[sentinel]}))
+            script=runner(source,root)
+            first,summary=run(script,root,review)
+            assert {(i['lane'],i['outcome']) for i in summary['issues']}=={('commands','warning'),('labels','warning')},summary
+            assert notifications(first,'A:')==2 and notifications(first,'N:')==0,first
+            repeated,_=run(script,root,review)
+            assert notifications(repeated,'A:')==notifications(repeated,'N:')==0,repeated
+            cards=json.loads((root/'tracker.json').read_text())['cards']
+            assert sentinel in cards and len([c for c in cards if c['id'].startswith('MH-')])==2,cards
+            stale=copy.deepcopy(review);stale['lanes']['index']['lastSuccessEpoch']=1
+            opened,summary=run(script,root,stale)
+            assert ('index','critical') in {(i['lane'],i['outcome']) for i in summary['issues']},summary
+            assert notifications(opened,'N:')==1,opened
+            repeated,_=run(script,root,stale)
+            assert notifications(repeated,'A:')==notifications(repeated,'N:')==0,repeated
+            closed,summary=run(script,root,base)
+            assert summary['issues']==[],summary
+            assert notifications(closed,'A:')==3 and notifications(closed,'N:')==0,closed
+            cards=json.loads((root/'tracker.json').read_text())['cards']
+            assert sentinel in cards and all(c['done'] for c in cards if c['id'].startswith('MH-')),cards
+            missing,summary=run(script,root,{})
+            assert ('availability','critical') in {(i['lane'],i['outcome']) for i in summary['issues']},summary
+            assert notifications(missing,'N:')>=1,missing
+            db=sqlite3.connect(root/'state/mail-health/cases.sqlite')
+            assert db.execute('SELECT count(*) FROM health_judgments').fetchone()[0]>6
+            db.close()
+
+        def check_infrastructure(text):
+            with tempfile.TemporaryDirectory() as directory:
+                root=pathlib.Path(directory);(root/'tracker.json').write_text(json.dumps({'cards':[sentinel]}))
+                script=runner(text,root,infrastructure=True)
+                lines,summary=run(script,root,base)
+                issue=next((i for i in summary['issues'] if i['code']=='fixture-auth-failed'),None)
+                assert issue and issue['outcome']=='warning',summary
+                db=sqlite3.connect(root/'state/mail-health/cases.sqlite')
+                db.execute('UPDATE health_judgments SET at=? WHERE case_id=?',(time.time()-1900,issue['caseId']))
+                db.commit();db.close()
+                lines,summary=run(script,root,base)
+                issue=next(i for i in summary['issues'] if i['code']=='fixture-auth-failed')
+                assert issue['outcome']=='critical' and notifications(lines,'N:')==1,(lines,summary)
+                lines,_=run(script,root,base)
+                assert notifications(lines,'A:')==notifications(lines,'N:')==0,lines
+        check_infrastructure(source)
+        needle='--extra-issues "$ISSUES_FILE"'
+        assert source.count(needle)==1
+        try:check_infrastructure(source.replace(needle,"",1))
+        except AssertionError:pass
+        else:raise AssertionError('removed infrastructure input passed the generated health check')
+        print('generated health: one case store, warnings, missing/stale delivery, escalation, transition alerts and bounded cards pass')
+        PYTEST
         touch "$out"
       '';
 
