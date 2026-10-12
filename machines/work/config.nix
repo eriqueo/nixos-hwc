@@ -23,6 +23,7 @@
     ../../domains/server/native/ai/event-scout/index.nix
     ../../domains/server/native/ai/dx2/index.nix
     ../../domains/server/services/radicale/index.nix
+    ../../domains/server/services/wall-calendar/index.nix
   ];
 
   networking.hostName = "hwc-work";
@@ -325,6 +326,13 @@
       proton-work   = { secret = "proton-ical-link"; displayName = "Proton work";   color = "#BF5AF2"; };
       google-family = { secret = "hwcmt-ical-link";  displayName = "Google family"; color = "#30D158"; };
     };
+  };
+
+  # Wall tablet page: every Radicale event calendar for the week plus the
+  # NOAA forecast, at wall.hwc.iheartwoodcraft.com.
+  hwc.server.services.wallCalendar = {
+    enable = true;
+    reverseProxy.enable = true;
   };
 
 

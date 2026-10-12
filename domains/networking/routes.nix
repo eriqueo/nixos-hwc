@@ -48,6 +48,7 @@ in
     estimator = "work";
     event-scout = "work";
     tasks = "work";            # Radicale
+    wall = "work";             # wall tablet calendar page
     lead-scout = "work";
     lead-scout-datax = "work";  # member instance; route registered by hwc.server.ai.leadScout.memberInstance.vhost
     home-scout = "work";
