@@ -10,6 +10,9 @@
   # (04:00), before the 05:00 home-scout jobs. Weekly, not daily: cadvisor's
   # 7-day RSS trace showed churn between 150 and 830 MB, no daily climb.
   hwc.mail.bridge.restart.onCalendar = "Sun *-*-* 04:20:00";
+  # A mail health case open past a day becomes a card on proton-mail. Only
+  # here: the tracker root is Syncthing-shared, so one writer host.
+  hwc.mail.health.tracker.project = "proton-mail";
 
   # The read-only mirrors this machine keeps in Radicale (config.nix
   # hwc.server.services.radicale.mirrors), so hwc_calendar sees them too.

@@ -327,7 +327,7 @@ in
       root = lib.mkOption {
         type = lib.types.str;
         default = "${home}/000_inbox/downloads/agent";
-        description = "Deliverables root scanned for <project>/tracker.json (depth 1-2).";
+        description = "Deliverables root scanned for <project>/tracker.json.";
       };
       url = lib.mkOption {
         type = lib.types.str;

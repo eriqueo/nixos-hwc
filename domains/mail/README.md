@@ -148,6 +148,7 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-10-12: health: one case store. The local GPG, pass, Bridge and freshness checks become issues in System One's shape and go through `health-cases --extra-issues`, so every mail health fact alerts on transitions from one store; the script's own cooldown and first-failure files are gone. Infrastructure failures are a warning for `escalateMin` (30) minutes, then critical. A case open past `staleHours` (24) becomes an `MH-*` card on `tracker.project` (proton-mail on hwc-work) and closes itself when the case clears. The unit exits 1 only when the checker itself fails; health is published to `summary.json` for the MCP `hwc_mail health` action. Re-applied: a command backlog is a warning, not an outage (System One ee6a92a; 2dc277c had restored the 30-minute escalation).
 - 2026-10-12: Add exact, append-only command withdrawal under the mail owner lock. Preserve unknown receipts and identity leases; commit the fair-work cursor before provider reads so cancellation cannot starve unrelated commands. Test withdrawal guard removal through the generated wrapper.
 
 - 2026-10-12: classifier: `mail-classifier withdraw-transport --command-id <id>` records that a pending command is no longer wanted (System One pin bump). It refuses while any physical effect of that command is unknown. Health: a command backlog is now a warning however old; only fetch/index availability is critical, so mail-health.service fails only when mail is not arriving.

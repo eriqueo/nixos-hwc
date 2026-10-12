@@ -2,107 +2,68 @@
 
 ## Purpose
 
-Monitors the full mail dependency chain and alerts when things break. Prevents silent multi-hour outages where GPG/pass/Bridge/mbsync failures go unnoticed because systemd timers keep re-triggering failures quietly.
+Catch a mail outage before Eric notices a day of silence, without turning every
+review item into an alarm. Every five minutes the local checks run and System
+One's `health-cases` assesses them together with the sync status in one case
+store. Alerts fire on transitions (open, escalate, close), never on repeats.
 
-## Boundaries
+## Severity (Eric, 2026-10-12)
 
-- **Owns**: Health check script, systemd timer, alert routing, state tracking
-- **Depends on**: mail domain (accounts, bridge, mbsync, notmuch paths), `hwc-ntfy-send`
-- **Does NOT touch**: Mail data, configs, or running services (read-only checks + GPG lock cleanup)
+| outcome | means | examples |
+|---|---|---|
+| critical | mail is not arriving | fetch/index stale or missing; GPG, pass or Bridge failure open 30+ min |
+| warning | a person should look, delivery still works | command backlog, label conflicts, a fresh failed attempt, stale inbox |
 
-## What It Checks (dependency order)
+The unit's exit code means "did the checker run". A failed `mail-health.service`
+is a broken checker. Health itself is in `summary.json`, the case store, the
+alerts and the tracker card.
 
-| # | Check | What | Failure mode it catches |
-|---|-------|------|------------------------|
-| 1 | GPG keyboxd | Stale locks, zombie processes, agent responsiveness | Mar 25 incident root cause |
-| 2 | pass | Can decrypt `email/proton/bridge` | GPG cascading failure |
-| 3 | Proton Bridge | Service running, IMAP/SMTP ports, vault state | Bridge crash or degraded startup |
-| 4 | mbsync | Sync state age, recent failure count in journal | Silent sync failures |
-| 5 | Mail freshness | Newest inbox message age | Everything looks ok but mail isn't flowing |
+## What it checks
 
-## Auto-Remediation
+| lane | source | failure it catches |
+|---|---|---|
+| infrastructure | this script: GPG locks and agent, `pass`, Bridge service and IMAP/SMTP greetings, vault mode | the Mar 25 stale-lock cascade; Bridge down |
+| freshness | this script: newest inbox file age | everything looks fine but nothing arrives |
+| availability, commands, labels, residency | System One from `mail-sync/status.json` | stale fetch/index, pending commands, label conflicts |
 
-When `autoRemediate = true` (default):
+Auto-remediation (default on) removes dead GPG locks, restarts gpg-agent and
+restarts a stopped Bridge. Remediations are events, reported once to Slack, not cases.
 
-- Removes stale GPG lock files where the holding PID is dead
-- Restarts gpg-agent if unresponsive
+## Where it goes
 
-Reports remediations as Slack warnings so you know it happened.
+| transition | channel |
+|---|---|
+| critical opened or escalated | n8n webhook (Slack) and hwc-notify priority 1 (Discord + email) |
+| warning opened | n8n webhook |
+| case closed | n8n webhook, `cleared:` |
+| case open past `staleHours` | decision card `MH-*` on `tracker.project`; closes when the case clears |
 
-## Alert Routing
-
-| Condition | Channel | How |
-|-----------|---------|-----|
-| First failure | Slack | n8n webhook → `#infra-alerts` |
-| Mail down 30+ min | Phone push | `hwc-ntfy-send` → ntfy topic |
-| Auto-remediation | Slack | n8n webhook (informational) |
-| Warning (freshness, etc.) | Slack | n8n webhook |
-
-Cooldown prevents spam: same failure fingerprint won't re-alert within 60 minutes.
+State: `~/.local/state/mail-health/{cases.sqlite,summary.json,infra-issues.json,last-healthy}`.
+`hwc_mail health` (MCP) reads `summary.json`.
 
 ## Configuration
 
 ```nix
 hwc.mail.health = {
   enable = true;
-  ntfy.topic = "hwc-mail";                    # Uses hwc-ntfy-send (system ntfy config)
-  webhook.url = "https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/mail-health";
-  syncMaxAgeMin = 30;
-  freshnessHours = 6;
-  alertCooldownMin = 60;
-  autoRemediate = true;
-  intervalMin = 5;
+  webhook.url = "https://…/webhook/mail-health";   # machine one-off, Law 16
+  tracker.project = "proton-mail";                  # one host only: the root syncs
+  syncMaxAgeMin = 45;  freshnessHours = 6;
+  escalateMin = 30;    staleHours = 24;
+  autoRemediate = true; intervalMin = 5;
 };
 ```
 
-## n8n Webhook Setup
-
-Create an n8n workflow at `/webhook/mail-health`:
-
-1. **Trigger**: Webhook node (POST)
-2. **Switch** on `severity`: `critical` vs `warning`
-3. **Slack**: Post to `#infra-alerts` with emoji based on severity
-
-Expected payload:
-```json
-{
-  "severity": "warning",
-  "host": "homeserver",
-  "timestamp": "2026-03-26T14:30:00-06:00",
-  "details": "• Bridge IMAP port 1143 not accepting connections"
-}
-```
-
-## Manual Usage
+## Manual use
 
 ```bash
-# Run health check manually
-~/.local/bin/mail-health-check
-
-# Check timer status
-systemctl --user status mail-health.timer
-
-# View recent results
-journalctl --user -u mail-health.service --since "1 hour ago"
-
-# View state files
-ls -la ~/.local/state/mail-health/
-```
-
-## What This Catches (Mar 25 Scenario)
-
-```
-T+0     check_gpg detects stale keyboxd lock (PID 3804, dead)
-        → auto-removes lock, restarts agent
-        → Slack: "Auto-remediated: Removed stale GPG lock"
-        → Total downtime: 0
-
-Without this module:
-T+0     GPG lock stale, pass hangs
-T+10m   mbsync fails silently, timer re-fires
-T+24h   Eric notices he hasn't gotten email in a day
+~/.local/bin/mail-health-check                     # run once, prints issues
+jq . ~/.local/state/mail-health/summary.json
+mail-classifier review-transport                   # the command backlog
+mail-classifier withdraw-transport --command-id X  # drop a stale command
 ```
 
 ## Changelog
 
+- 2026-10-12: One case store with System One (`--extra-issues`); severity by consequence; MH-* tracker cards for stale cases; exit code means the checker ran; `summary.json` for the MCP tool. Cooldown and first-failure files retired.
 - 2026-03-26: Initial implementation

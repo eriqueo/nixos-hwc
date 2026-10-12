@@ -515,7 +515,10 @@ export async function executeMailHealth(): Promise<ToolResult> {
     const now = Math.floor(Date.now() / 1000);
 
     const lastHealthyRaw = await readSafe(join(MAIL_HEALTH_STATE, "last-healthy"));
-    const firstFailureRaw = await readSafe(join(MAIL_HEALTH_STATE, "first-failure"));
+    // summary.json is what mail-health.service publishes each run: the open
+    // cases from the single case store (System One health-cases), each with
+    // outcome, message and how long it has been open.
+    const summaryRaw = await readSafe(join(MAIL_HEALTH_STATE, "summary.json"));
 
     if (lastHealthyRaw) {
       const ts = parseInt(lastHealthyRaw, 10);
@@ -525,44 +528,20 @@ export async function executeMailHealth(): Promise<ToolResult> {
         ageMinutes: Math.round((now - ts) / 60),
       };
     }
-    if (firstFailureRaw) {
-      const ts = parseInt(firstFailureRaw, 10);
-      const downMin = Math.round((now - ts) / 60);
-      result.ongoingFailure = {
-        since: new Date(ts * 1000).toISOString(),
-        downMinutes: downMin,
-        severity: downMin >= 30 ? "critical" : "warning",
-      };
-    }
-
-    try {
-      const entries = await readdir(MAIL_HEALTH_STATE);
-      const cooldownFiles = entries.filter((e) => e.startsWith("cooldown-"));
-      if (cooldownFiles.length > 0) {
-        const byLevel: Record<string, { count: number; oldest: number; newest: number }> = {};
-        for (const c of cooldownFiles) {
-          const level = c.replace("cooldown-", "").split("-")[0] || "unknown";
-          const tsRaw = await readSafe(join(MAIL_HEALTH_STATE, c));
-          const ts = tsRaw ? parseInt(tsRaw, 10) : 0;
-          if (!byLevel[level]) {
-            byLevel[level] = { count: 0, oldest: ts || Infinity, newest: 0 };
-          }
-          byLevel[level].count++;
-          if (ts && ts < byLevel[level].oldest) byLevel[level].oldest = ts;
-          if (ts && ts > byLevel[level].newest) byLevel[level].newest = ts;
-        }
-        const cooldowns: Record<string, { count: number; oldestAt: string; newestAt: string }> = {};
-        for (const [level, info] of Object.entries(byLevel)) {
-          cooldowns[level] = {
-            count: info.count,
-            oldestAt: info.oldest !== Infinity ? new Date(info.oldest * 1000).toISOString() : "unknown",
-            newestAt: info.newest > 0 ? new Date(info.newest * 1000).toISOString() : "unknown",
-          };
-        }
-        result.cooldowns = cooldowns;
+    type HealthIssue = { lane: string; code: string; outcome: string; message: string; openSeconds?: number };
+    let issues: HealthIssue[] = [];
+    if (summaryRaw) {
+      try {
+        const summary = JSON.parse(summaryRaw) as { at?: string; issues?: HealthIssue[]; stale?: HealthIssue[] };
+        issues = summary.issues ?? [];
+        result.health = {
+          checkedAt: summary.at,
+          issues: issues.map((i) => ({ ...i, openHours: Math.round((i.openSeconds ?? 0) / 360) / 10 })),
+          stale: (summary.stale ?? []).map((i) => `${i.lane} ${i.code}`),
+        };
+      } catch {
+        result.health = { error: "summary.json unreadable" };
       }
-    } catch {
-      /* state dir may not exist yet */
     }
 
     try {
@@ -606,16 +585,17 @@ export async function executeMailHealth(): Promise<ToolResult> {
         && availability.every(([, lane]) => typeof lane.lastSuccessEpoch === "number"
           && Date.now() / 1000 - lane.lastSuccessEpoch <= 45 * 60)
       : syncLanes?.core?.state === "healthy";
-    const hasFailure = !!firstFailureRaw;
+    const critical = issues.filter((i) => i.outcome === "critical");
+    const warnings = issues.filter((i) => i.outcome !== "critical");
 
     let status: "ok" | "partial" | "error";
-    if (!hasFailure && bridgeOk && syncOk) status = "ok";
-    else if (hasFailure && (result.ongoingFailure as Record<string, unknown>)?.severity === "critical")
-      status = "error";
-    else status = "partial";
+    if (critical.length > 0) status = "error";
+    else if (warnings.length > 0 || !bridgeOk || !syncOk) status = "partial";
+    else status = "ok";
 
     const parts: string[] = [];
-    if (hasFailure) parts.push(`Failing ${(result.ongoingFailure as Record<string, unknown>)?.downMinutes}m`);
+    if (critical.length > 0) parts.push(`Critical: ${critical.map((i) => i.code).join(", ")}`);
+    if (warnings.length > 0) parts.push(`${warnings.length} warning(s)`);
     parts.push(`Bridge: ${bridgeOk ? "up" : "down"}`);
     parts.push(`Sync: ${syncOk ? "fresh" : "stale"}`);
 
