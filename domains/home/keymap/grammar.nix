@@ -327,15 +327,6 @@ rec {
       { keys = "d d"; desc = "Delete"; cmd.khalt = "delete"; bare = [ "d" ]; }
       { keys = "o o"; desc = "Open / view"; cmd.khalt = "open"; bare = [ "enter" ]; }
   ];
-  apps.nvim = [
-      { keys = "l r"; desc = "LSP rename"; cmd.nvim = "<cmd>lua vim.lsp.buf.rename()<cr>"; }
-      { keys = "l a"; desc = "LSP code action"; cmd.nvim = "<cmd>lua vim.lsp.buf.code_action()<cr>"; }
-      { keys = "l f"; desc = "LSP format"; cmd.nvim = "<cmd>lua vim.lsp.buf.format()<cr>"; }
-      { keys = "l R"; desc = "LSP references"; cmd.nvim = "<cmd>Telescope lsp_references<cr>"; }
-      { keys = "p s"; desc = "Save session"; cmd.nvim = "<cmd>mksession!<cr>"; }
-
-  ];
-
   # Aerc actions and descriptions have one producer. The mail adapter supplies
   # native commands and dynamic State/Domain/fact options from their contracts.
   aerc = let
