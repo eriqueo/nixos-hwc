@@ -10,8 +10,9 @@
 # Analysis engines are not installed by REA; the wrapper hands it the Nix
 # ones. Ghidra (nixpkgs layout: $out/lib/ghidra) with its JDK 21, Apktool on
 # PATH, Binwalk by REA's own variable. Hopper and IDA are commercial and stay
-# unconfigured; JADX needs REA's own headless-MCP jar rather than the nixpkgs
-# jadx CLI, so Android decompilation is not wired. Unblob is left out: it is
+# unconfigured. JADX is REA's audited jadx-headless-mcp release jar (not the
+# nixpkgs jadx CLI), fetched by the URL and sha256 REA itself pins in
+# dist/android/JadxRelease.js; bump it with REA. Unblob is left out: it is
 # not in the binary cache and its 26.3.30 test suite fails locally (tar
 # timestamp prefix case); set REA_UNBLOB_COMMAND yourself if you need it.
 #
@@ -23,6 +24,7 @@
   buildNpmPackage,
   nodejs,
   makeWrapper,
+  fetchurl,
   ghidra,
   openjdk21,
   apktool,
@@ -35,6 +37,15 @@
 # overlays/ghidra.nix; bump this range together with the REA version.
 assert lib.assertMsg (lib.versionAtLeast ghidra.version "12.1" && lib.versionOlder ghidra.version "12.2")
   "rea-agents 6.3.0 needs Ghidra 12.1.x, got ${ghidra.version}. Check overlays/ghidra.nix on stable hosts, or bump REA.";
+let
+  # The Android provider (REA_JADX_MCP_JAR). Identity copied from
+  # rea-agents 6.3.0 dist/android/JadxRelease.js; installCheck re-reads it.
+  jadxSha256 = "6e5eacf500b64292bfb73c49797c1958f6ee44646e43e868039ae7feb573ff75";
+  jadxMcpJar = fetchurl {
+    url = "https://github.com/1013503897/jadx-headless-mcp/releases/download/v0.7.1/jadx-headless-mcp-0.7.1-all.jar";
+    sha256 = jadxSha256;
+  };
+in
 buildNpmPackage {
   pname = "rea-agents";
   version = "6.3.0";
@@ -61,7 +72,8 @@ buildNpmPackage {
       --prefix PATH : ${lib.makeBinPath ([ nodejs openjdk21 apktool ] ++ extraTools)} \
       --set-default GHIDRA_INSTALL_DIR ${ghidra}/lib/ghidra \
       --set-default JAVA_HOME ${openjdk21.home} \
-      --set-default REA_BINWALK_COMMAND ${binwalk}/bin/binwalk
+      --set-default REA_BINWALK_COMMAND ${binwalk}/bin/binwalk \
+      --set-default REA_JADX_MCP_JAR ${jadxMcpJar}
 
     runHook postInstall
   '';
@@ -72,6 +84,9 @@ buildNpmPackage {
     export HOME="$(mktemp -d)"
     "$out/bin/rea" --help > /dev/null
     [ -f "$out/lib/node_modules/rea-agents/skills/reverse-engineer-anything/SKILL.md" ]
+    # A REA bump that moves the audited JADX release fails here, not at analysis time.
+    grep -q '${jadxSha256}' \
+      "$out/lib/node_modules/rea-agents/dist/android/JadxRelease.js"
     runHook postInstallCheck
   '';
 

@@ -9,11 +9,11 @@ shared skill set. Pinned to the published `rea-agents` **6.3.0** release.
 ## Boundaries
 
 - ✅ The pinned package, the Nix-provided analysis engines it can see
-  (Ghidra 12 + JDK 21, Apktool, Binwalk, Unblob), the `~/.mcp.json` entry,
+  (Ghidra 12 + JDK 21, Apktool, Binwalk, Unblob, and REA's audited
+  jadx-headless-mcp 0.7.1 jar for Android APKs), the `~/.mcp.json` entry,
   the `reverse-engineer-anything` skill.
 - ❌ `rea setup` / `rea update` (they edit agent configs and npm globals; both
-  are Nix-owned here). Hopper and IDA (commercial, unconfigured). JADX
-  decompilation (needs REA's headless-MCP jar, not nixpkgs `jadx`). A
+  are Nix-owned here). Hopper and IDA (commercial, unconfigured). A
   Chrome-family browser for website capture: install one on the host.
   Claude Code's MCP file itself → `apps/agent-harness/sys.nix`.
 
@@ -52,6 +52,12 @@ nix run nixpkgs#prefetch-npm-deps -- ./package-lock.json   # → npmDepsHash in 
 
 ## Changelog
 
+- 2026-10-12: Android APK analysis wired. `parts/package.nix` fetches the
+  jadx-headless-mcp 0.7.1 release jar by the URL and sha256 that rea-agents
+  pins in `dist/android/JadxRelease.js`, and the wrapper sets
+  `REA_JADX_MCP_JAR` to it (JDK 21 was already there). The install check fails
+  if a REA bump moves that pin. Verified with `rea inspect-android-package` on
+  the TRMNL Android APK.
 - 2026-10-11: Created. rea-agents 6.3.0 from the npm release (no source build);
   wrapper wires nixpkgs Ghidra 12.0.4, OpenJDK 21, Apktool, Binwalk and
   Unblob. `sys.nix` registers `rea mcp` through the new agent-harness
