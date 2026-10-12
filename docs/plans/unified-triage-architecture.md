@@ -121,6 +121,25 @@ fallback, gateway's v1 status/completion fallback, the coordinator's v1 core
 projection/input compatibility and its temporary direct-call transport harness.
 Preserve historical uncertain-effect schemas and their readback support.
 
+### Operator withdrawal — approved October 12
+
+C15 authorizes withdrawing 34 pre-cutover intents: five Trash and 29 Inbox.
+`review-transport --withdraw ID` appends a schema-1 operator event under the owner
+lock. It neither changes remote mail nor deletes or acknowledges effect receipts.
+Repeating the exact ID adds no event. Withdrawal removes that intent from pending
+work without resurrecting an older intent. Receipts retain the existing superseded
+terminal state and add disposition withdrawn. The conservative withdraw-transport
+entry point shares the event writer and still refuses unresolved physical effects.
+An explicit operator review can withdraw unwanted intent while its uncertain
+effect and identity lease remain visible and readback-only.
+
+The October 12 replay also found that cancellation during a large thread preceded
+the fair-work cursor commit. The repaired owner commits the cursor before provider
+reads, so the next cycle starts with neighbouring commands. An interrupted-command
+fixture failed before this correction and then verified unrelated work progressing.
+The original 30-minute command escalation remains; reducing its severity does not
+establish withdrawal or remote completion. Sustained acceptance remains open.
+
 Inspect status.json,
 labels.json, durable command receipts and health case transitions. The expected
 signal is fresh per-account fetch/index with visible, contained review work.

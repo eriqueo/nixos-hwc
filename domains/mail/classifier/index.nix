@@ -15,8 +15,18 @@ let
       fi
       case "''${1:-}" in
         review-transport|withdraw-transport)
-          verb=$1; shift
-          exec "$runtime" "$verb" --db /var/lib/hwc/mail-classifier/ledger.sqlite "$@"
+          verb="$1"
+          shift
+          guard=()
+          if [[ "$verb" == withdraw-transport ]]; then
+            guard=(${pkgs.util-linux}/bin/flock -n -E 75 ${lib.escapeShellArg "${builtins.dirOf syncStatus}/sync.lock"})
+          fi
+          for arg in "$@"; do
+            if [[ "$arg" == --withdraw || "$arg" == --withdraw=* ]]; then
+              guard=(${pkgs.util-linux}/bin/flock -n -E 75 ${lib.escapeShellArg "${builtins.dirOf syncStatus}/sync.lock"})
+            fi
+          done
+          exec "''${guard[@]}" "$runtime" "$verb" --db /var/lib/hwc/mail-classifier/ledger.sqlite "$@"
           ;;
         ${lib.optionalString cfg.residency.enable ''
         observe-residency|observe-phone-labels|label-probe|project-labels|review-label-write|transport)

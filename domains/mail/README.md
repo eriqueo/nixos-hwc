@@ -19,6 +19,9 @@ The shared physical effect owner executes Proton Archive, reopen and Trash by
 reserved COPY of existing provider identities. Managed labels share its identity
 leases. Unknown dispatches receive readback only; unrelated records continue.
 `review-transport --command-id ID` reads completion without changing the ledger.
+`review-transport --withdraw ID` takes the owner lock and appends an explicit
+operator withdrawal. It removes only that intent from pending work, preserves
+uncertain effects and never contacts Proton. Fairness commits before provider reads.
 
 Proton wildcard channels pull membership and reconcile flags. Dedicated Drafts
 and Sent channels retain uploads. Gmail keeps its provider sync behavior. Afew
@@ -144,6 +147,8 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-10-12: Add exact, append-only command withdrawal under the mail owner lock. Preserve unknown receipts and identity leases; commit the fair-work cursor before provider reads so cancellation cannot starve unrelated commands. Test withdrawal guard removal through the generated wrapper.
 
 - 2026-10-12: classifier: `mail-classifier withdraw-transport --command-id <id>` records that a pending command is no longer wanted (System One pin bump). It refuses while any physical effect of that command is unknown. Health: a command backlog is now a warning however old; only fetch/index availability is critical, so mail-health.service fails only when mail is not arriving.
 - 2026-10-12: health: `README (1).md` renamed `README.md` (a download-rename accident committed in 2026-02). Investigation of the standing mail-health failure is on the tracker hub at `agent/proton-mail/mail-health-investigation.md`: 34 pre-cutover commands without a physical scope have no disposition path (card C15).

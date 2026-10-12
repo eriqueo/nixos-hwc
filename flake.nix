@@ -2247,12 +2247,29 @@
             runtime = root / "runtime"
             runtime.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\"\n")
             runtime.chmod(0o755)
-            def dispatch(text, verb="reopen"):
+            def dispatch(text, verb="reopen", *arguments):
                 wrapper = root / "wrapper"
                 lock_path = ${builtins.toJSON "${builtins.dirOf mailHome.hwc.mail.mbsync.statusFile}/sync.lock"}
                 wrapper.write_text(text.replace(runtime_path, str(runtime)).replace(lock_path, str(root / 'sync.lock')))
                 wrapper.chmod(0o755)
-                return subprocess.check_output([str(wrapper), verb], text=True).splitlines()
+                return subprocess.check_output([str(wrapper), verb, *arguments], text=True).splitlines()
+            def check_withdraw_lock(source):
+                import fcntl
+                with (root / 'sync.lock').open('a') as owner:
+                    fcntl.flock(owner,fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    assert dispatch(source,'review-transport')[0]=='review-transport'
+                    for arguments in [('--withdraw','a'*64),('--withdraw='+'a'*64,)]:
+                        try: dispatch(source,'review-transport',*arguments)
+                        except subprocess.CalledProcessError as error: assert error.returncode==75
+                        else: raise AssertionError('withdraw bypassed the active effect owner')
+                    try: dispatch(source,'withdraw-transport','--command-id','a'*64)
+                    except subprocess.CalledProcessError as error: assert error.returncode==75
+                    else: raise AssertionError('withdraw alias bypassed the active effect owner')
+                assert '--withdraw' in dispatch(source,'review-transport','--withdraw','a'*64)
+            check_withdraw_lock(control)
+            try: check_withdraw_lock(control.replace('"$arg" == --withdraw || "$arg" == --withdraw=*','"$arg" == --removed-withdraw'))
+            except AssertionError: pass
+            else: raise AssertionError('removed withdrawal guard passed its wiring check')
             def check(arguments):
                 assert arguments[0] == "reopen"
                 assert arguments[1:3] == ["--db", "/var/lib/hwc/mail-classifier/ledger.sqlite"]
