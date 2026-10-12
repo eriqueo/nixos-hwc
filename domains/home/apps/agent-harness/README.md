@@ -35,7 +35,7 @@ local `AGENTS.md` or `CLAUDE.md` files.
 The agent workspace (`~/800_agents`: `projects/`, `closed/`, `log/`,
 `LEDGER.md`) is local to each host. Its allocator, guard and worktree hooks are
 static policy in claude-config (`bin/ws`, `hooks/workspace-*.sh`); the design
-is `~/000_inbox/downloads/agent/tech/agent-workspace/design.md`.
+is `~/000_inbox/downloads/agent/agent-workspace/design.md`.
 
 New or changed memories declare `authority: observation|reference|decision` and
 a non-empty `source:`, at the top level or directly under `metadata:` (where

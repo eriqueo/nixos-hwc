@@ -104,6 +104,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-12: apps/agent-harness: pin claude-config f66fc16. The tracker hub, `tracker-handoff` and `ws` scan `agent/<project>/tracker.json` only; the legacy `agent/<area>/<project>/` fallback is gone because the area folders were flattened on 2026-10-12 (97 folders, 108 citing files rewritten). README cites the design doc at its flat path.
 - 2026-10-12: apps/tether: `tether-btclass@<adapter>` is also wanted by `multi-user.target`. Upstream ties it only to `bluetooth.service`, so a switch installed it without starting it and the adapter class stayed wrong.
 - 2026-10-11: New `apps/tether/` (HM + system halves) and `tether` flake input; enabled on hwc-laptop. The research and the pairing wizard live in `agent/imessage-linux/` on the tracker hub.
 - 2026-10-11: core/shell: `_hwc_ls` renamed `hwc_ls`. Claude Code's shell snapshot drops functions with a leading underscore but keeps aliases, so every `ls` in an agent shell failed "command not found".

@@ -145,6 +145,7 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-10-12: health: `README (1).md` renamed `README.md` (a download-rename accident committed in 2026-02). Investigation of the standing mail-health failure is on the tracker hub at `agent/proton-mail/mail-health-investigation.md`: 34 pre-cutover commands without a physical scope have no disposition path (card C15).
 - 2026-10-09: Bind command and label deadlines to their parent budget. Bound provider IO below the cancellation allowance; report durable label uncertainty even after a stale or interrupted report.
 - 2026-10-09: Switch Proton membership and managed labels to shared physical identity reservations; remove afew moves and wildcard membership pushes. Keep Drafts/Sent uploads and Gmail sync. Add command receipts, effects-off recovery, fair bounded work and transition-based health.
 
