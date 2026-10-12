@@ -21,6 +21,43 @@ let
         ' ${inputs.agent-harness}/settings.json > "$out"
       '';
 
+  # The pinned hooks pass their own suites or the system does not build.
+  # hooks/tests/run.sh is the one list of hermetic suites and the coverage
+  # manifest (every wired guard names its suite). Added 2026-10-11, after a live
+  # probe found shipped guards that leaked and suites that had never run.
+  # TMPDIR sits beside HOME, not above it: write-guard exempts $TMPDIR, and its
+  # suite needs a repo the guard does not exempt.
+  hookTests =
+    pkgs.runCommand "agent-harness-hook-tests"
+      {
+        nativeBuildInputs = with pkgs; [
+          bash
+          coreutils
+          diffutils
+          findutils
+          gawk
+          git
+          gnugrep
+          gnused
+          jq
+          perl
+          ripgrep
+          util-linux
+          (python3.withPackages (p: [
+            p.jsonschema
+            p.pyyaml
+          ]))
+        ];
+      }
+      ''
+        export HOME=$PWD/home TMPDIR=$PWD/tmp
+        mkdir -p "$HOME" "$TMPDIR"
+        cp -r ${inputs.agent-harness} src
+        chmod -R u+w src
+        bash src/hooks/tests/run.sh
+        touch $out
+      '';
+
   # The GitHub server takes its token from gh's own login at launch, so the
   # generated file holds no credential.
   githubMcp = pkgs.writeShellScript "mcp-github" ''
@@ -188,6 +225,7 @@ in
     environment.etc."agent-harness".source = inputs.agent-harness;
     environment.etc."agent-harness-manifest.json".text = builtins.toJSON contract;
     environment.etc."claude-code/managed-settings.json".source = managedClaudeSettings;
+    system.checks = [ hookTests ];
 
     systemd.tmpfiles.rules =
       lib.optional cfg.userMcp.enable "L+ ${config.hwc.paths.user.home}/.mcp.json - - - - ${userMcpJson}"

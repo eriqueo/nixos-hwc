@@ -158,6 +158,11 @@ cat > "$SOURCE_REPO/bin/harness-policy-check" <<'EOF'
 exit 0
 EOF
 chmod +x "$SOURCE_REPO/bin/harness-policy-check"
+mkdir -p "$SOURCE_REPO/hooks/tests"
+cat > "$SOURCE_REPO/hooks/tests/run.sh" <<'EOF'
+#!/usr/bin/env bash
+[ "$1" = --live ]
+EOF
 printf 'static\n' > "$SOURCE_REPO/policy"
 git -C "$SOURCE_REPO" add .
 git -C "$SOURCE_REPO" commit -q -m static

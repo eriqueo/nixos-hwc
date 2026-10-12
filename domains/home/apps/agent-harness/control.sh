@@ -213,6 +213,9 @@ publish_preflight() {
   [ "$(git -C "$NIXOS" branch --show-current)" = main ] || { printf 'agent-harness: nixos-hwc must be on main\n' >&2; return 1; }
 
   (cd "$SOURCE" && bin/harness-policy-check)
+  # The live tier too: suites that need GitHub, ~/.nixos sources and this
+  # host's transcripts, which neither the commit gate nor the build check sees.
+  (cd "$SOURCE" && bash hooks/tests/run.sh --live)
   git -C "$SOURCE" fetch github refs/heads/main:refs/remotes/github/main
   git -C "$SOURCE" merge-base --is-ancestor github/main HEAD || { printf 'agent-harness: static policy is behind github/main\n' >&2; return 1; }
 

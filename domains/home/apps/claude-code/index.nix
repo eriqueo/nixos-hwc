@@ -2,14 +2,6 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.claude-code;
-  claimcheckPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.jsonschema ]);
-  claimcheckPackage = pkgs.writeShellApplication {
-    name = "claimcheck";
-    text = ''
-      exec ${claimcheckPython}/bin/python3 \
-        "${cfg.shareConfig.repoPath}/claimcheck/bin/claimcheck" "$@"
-    '';
-  };
 
   # Every Claude config dir that receives the shared items and memory links.
   configDirs = map (dir: "${config.home.homeDirectory}/${dir}")
@@ -200,10 +192,8 @@ in
     # Live symlinks from the shared config repo into ~/.claude/. Independent of
     # the package so headless hosts can share skills without the Nix binary.
     (lib.mkIf cfg.shareConfig.enable {
-      # claimcheck's JSON schemas are executable policy, not documentation.
-      # Own the validator runtime here so a host cannot appear wired while its
-      # Artifact hook blocks every report on an undeclared Python dependency.
-      home.packages = [ claimcheckPackage ];
+      # claimcheck moved to apps/agent-harness (2026-10-11): no host enables
+      # shareConfig, so the wrapper here never installed anywhere.
       home.file = lib.listToAttrs (lib.concatMap (dir:
         map (item:
           lib.nameValuePair "${dir}/${item}" {
