@@ -486,6 +486,8 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-10-12: Drop "JT" from the gateway's option and unit descriptions; the jt-mcp backend is gone.
+
 - 2026-10-09: Retire the jt-mcp backend. `hwc.system.mcp.jt.*`, `parts/jt.nix`, its env vars, read-only mount and JT grant key injection are gone, and the gateway no longer spawns `/opt/business/jt-mcp`. JobTread tools come from DataX (dx-mcp). Earlier entries below describe the removed backend.
 
 - Declare the real mail lock test dependency in the Nix build so the test runs inside its sandbox.

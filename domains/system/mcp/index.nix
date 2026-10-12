@@ -129,7 +129,7 @@ in
   # OPTIONS
   #==========================================================================
   options.hwc.system.mcp = {
-    enable = lib.mkEnableOption "HWC Infrastructure MCP Gateway — unified system, JT, and n8n tools";
+    enable = lib.mkEnableOption "HWC Infrastructure MCP Gateway — unified system, n8n and CRM tools";
 
     port = lib.mkOption {
       type = lib.types.port;
@@ -270,7 +270,7 @@ in
     # GATEWAY SERVICE
     #--------------------------------------------------------------------------
     systemd.services.hwc-sys-mcp = {
-      description = "HWC MCP Gateway — unified system, JT, and n8n tools";
+      description = "HWC MCP Gateway — unified system, n8n and CRM tools";
       wantedBy = [ "multi-user.target" ];
       after = [ "network-online.target" "tailscaled.service" "hwc-sys-mcp-env.service" "podman-n8n.service" ];
       wants = [ "network-online.target" "podman-n8n.service" ];
