@@ -104,6 +104,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-12: apps/tether: `tether-btclass@<adapter>` is also wanted by `multi-user.target`. Upstream ties it only to `bluetooth.service`, so a switch installed it without starting it and the adapter class stayed wrong.
 - 2026-10-11: New `apps/tether/` (HM + system halves) and `tether` flake input; enabled on hwc-laptop. The research and the pairing wizard live in `agent/imessage-linux/` on the tracker hub.
 - 2026-10-11: core/shell: `_hwc_ls` renamed `hwc_ls`. Claude Code's shell snapshot drops functions with a leading underscore but keeps aliases, so every `ls` in an agent shell failed "command not found".
 - 2026-10-11: apps/rea added: rea-agents 6.3.0 (CLI, MCP server, skill) on every x86_64 host, enabled in profiles/base. apps/agent-harness grows two producer hooks for it: `extraSkills` (home) and `userMcp.extraServers` (system). Ghidra 12.1.2 backported to stable via `overlays/ghidra.nix` because REA refuses 12.0.4; verified with a Ghidra-backed `rea inspect` of coreutils on hwc-work.

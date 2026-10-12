@@ -70,6 +70,15 @@ in
       extensions = cfg.extensions;
     };
 
+    # Upstream wants the class oneshot only from bluetooth.service. A switch
+    # starts the new wants of active targets, not of a running service, so the
+    # unit installed but never ran until bluetooth restarted. multi-user.target
+    # makes the first switch (and every boot) apply the class too.
+    systemd.services = lib.listToAttrs (map (adapter: {
+      name = "tether-btclass@${adapter}";
+      value.wantedBy = [ "multi-user.target" ];
+    }) cfg.adapters);
+
     #==========================================================================
     # VALIDATION
     #==========================================================================
