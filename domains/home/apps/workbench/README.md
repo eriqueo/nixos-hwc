@@ -14,9 +14,17 @@ shell's aerc alias, one-shot analysis via the selected Codex package, browser vi
 - ❌ Pane grid/theme belong to `domains/home/apps/zellij/`; keymap grammar to `domains/home/keymap/`
 
 ## Structure
-- `index.nix` — imports the flake's HM module; options + programs.workbench wiring, wb-reload, shared Zellij package, versioned keymap, one-shot Codex provider, registry landing hub + shared standing-tool destinations
+- `index.nix` — imports the flake's HM module; options (incl. `hubOrder` / `hiddenHubs`) + programs.workbench wiring, wb-reload, shared Zellij package, versioned keymap, one-shot Codex provider, registry landing hub + shared standing-tool destinations
 
 ## Changelog
+
+- 2026-10-09: Hub rail order is configurable. New `hubOrder` and `hiddenHubs`
+  option lists (both default `[]`, i.e. manifest defaults) feed
+  `inputs.workbench.hubRegistryFor { order; hidden; }` instead of the flat
+  `hubRegistry`, and are passed through to `programs.workbench`. Ctrl+Space 1–9
+  then follows rail position rather than a fixed manifest order, and a hidden hub
+  drops out of both the rail and its position shortcut (workbench registry
+  schema 4).
 
 - 2026-10-06: Consume current mail State keys and five-State fixtures. Unstarted
   mail actions wait safely for the shared sync owner with bounded attempts;

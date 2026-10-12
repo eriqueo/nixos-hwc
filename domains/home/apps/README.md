@@ -10,29 +10,60 @@ User application configuration via Home Manager.
 ## Structure
 ```
 apps/
-├── aerc/           # Email client
-├── aider/          # AI coding assistant
-├── blender/        # 3D modeling
-├── bitwarden/      # Desktop client for the self-hosted vault
-├── chromium/       # Browser
-├── freecad/        # CAD software
-├── gpu-screen-recorder/  # Call/screen recording (gsr-toggle script + sys.nix capture wrapper)
+├── index.nix       # App loader
+├── agent-harness/  # The shared agent harness: skills, hooks, state, publish/doctor CLIs
+├── claude-code/    # Claude Code wiring (claude-config pin)
+├── codex/ · pi/ · gemini-cli/ · opencode/ · t3code/ · herdr/  # Other agent harnesses
+├── workbench/      # Textual TUI ops host (zellij-orchestrated; hub rail order)
+├── zellij/         # Multiplexer + the tab table Workbench navigates by
+├── firefox/        # Browser (LibreWolf retired; see domains/home/README.md)
+├── chromium/ · qutebrowser/  # Secondary browsers
 ├── hyprland/       # Wayland compositor
+├── waybar/ · swaync/  # Status bar + notification daemon
 ├── kitty/          # Terminal emulator
-├── librewolf/      # Privacy browser
-├── mpv/            # Media player
-├── obsidian/       # Note-taking
-├── xournalpp/      # PDF annotator / handwritten notes
-├── vesktop/        # Discord client with Vencord built in
-├── waybar/         # Status bar
-├── tuxedo/         # todo.txt TUI (keyboard-driven task manager)
-├── todui/          # VTODO task TUI (external flake input; HWC adapter only)
+├── nvim/           # Editor (generated colorscheme + lua config)
+├── aerc/ · neomutt/ · proton-mail/  # Mail clients
+├── bitwarden/ · proton-pass/ · proton-authenticator/ · gpg/  # Credentials
+├── obsidian/ · brain/  # Vault + the brain CLI
+├── calcure/ · calcurse/ · tuxedo/ · todui/  # Calendar and task TUIs
+├── blender/ · freecad/ · xournalpp/ · onlyoffice-desktopeditors/  # Documents and CAD
+├── mpv/ · imv/ · jellyfin-media-player/ · gpu-screen-recorder/  # Media
+├── eden/ · exodos/ · bottles-unwrapped/  # Games and emulation
 ├── pave-query-builder/  # Pave/JobTread API query TUI+CLI (external flake input; HWC adapter only)
-├── eden/            # Switch 1 emulator derived from Yuzu and Sudachi
-└── ... (30+ apps)
+├── rea/            # Reverse Engineer Anything (rea-agents CLI, MCP server, skill)
+└── ... (68 entries in all — run `ls domains/home/apps`)
 ```
 
 ## Changelog
+
+The per-app detail for everything below lives in `domains/home/README.md`, which
+carries one entry per change; this list records what moved in this tree.
+
+- 2026-10-11: agent-harness — the pinned revision's hook suites run as a
+  `system.checks` gate, `publish` runs the live tier before switching, and
+  `claimcheck` + `guard-audit` install from the pinned revision. claude-code drops
+  its dead claimcheck wrapper (one producer).
+- 2026-10-09: workbench — `hubOrder` / `hiddenHubs` drive the hub rail and its
+  Ctrl+Space 1–9 position shortcuts (registry schema 4). Schema 2 support was
+  dropped and schema 3 accepted in the preceding expand/contract pair.
+- 2026-10-09: Added `rea/` — rea-agents on every x86_64 host; agent-harness grew
+  `extraSkills` and `userMcp.extraServers` as its producer hooks.
+- 2026-10-06: mail — distinguish sync contention from failure; Workbench actions
+  updated to match.
+- 2026-10-02: hyprland/waybar — screenshot clipboard copying restored with a
+  complete PNG capture and pinned tools; chromium profile singleton files kept out
+  of `/tmp` aging.
+- 2026-09-30: agent-harness — the pipeline marker comes from
+  `hwc.system.apps.agent-harness.pipelineEnvironment`; tracker-relay, tracker-link,
+  tracker-handoff and tracker-wait install per host, and the hub stopped calling T3.
+  Agent workspace state settled at `~/800_agents/state` with an hourly ws audit.
+- 2026-09-28: yazi — persistent favorites sidebar and Alt navigation.
+- 2026-09-26: Credential clients — proton-pass tray activation and its stable
+  handler match, native Bitwarden tray in waybar, packaged credential icons,
+  Authenticator icon alignment, and headless Bitwarden launch recovery.
+- 2026-09-26: Fleet consumers follow the home-machine rename and the mail
+  consumers were repaired after the service split; `hwc.paths` declares user
+  runtime storage so stray home directories stop appearing.
 - 2026-09-26: Added the Bitwarden desktop client as an independent app module; Proton app buttons share Hyprland's window toggle.
 - 2026-09-14: Added Vesktop through Home Manager's native `programs.vesktop`
   module; enabled only on hwc-laptop.
