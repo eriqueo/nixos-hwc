@@ -881,8 +881,12 @@
           binds = mailHome.home.file.".config/aerc/binds.conf".text;
         });
       in pkgs.runCommand "workbench-keymap" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        export PYTHONPATH=${inputs.workbench}/src
         python3 - ${fixture} ${./domains/system/mcp/src/src/tools/mail-triage.ts} ${inputs.workbench}/hubs/mail.toml <<'PY'
-        import json, pathlib, re, sys, tomllib
+        import copy, json, pathlib, re, sys, tomllib
+        from workbench.adapters.manifest_loader import TomlHubProvider
+        from workbench.config import _parse_keymap, parse_hub_keymaps
+        from workbench.core.errors import ManifestError, ValidationError
         data = json.loads(pathlib.Path(sys.argv[1]).read_text())
         grammar, registry = data['grammar'], data['registry']
         hub = registry['hubs']['mail']
@@ -918,14 +922,40 @@
             assert not any(overlaps([r['key']], g) for r in payload['hubs']['mail']['bare'] for g in [['q'], ['?'], ['R']]), 'bare global shadow'
             bare = {r['key']: r['intent'] for r in payload['hubs']['mail']['bare']}
             expected = {(k if isinstance(k, str) else k['key']):
-                        (r['wb'].get('verb', r['wb'].get('handoff')) if isinstance(k, str) else k['verb'])
-                        for r in grammar['aerc']['bindings'] for k in r.get('bare', {}).get('list', []) if 'omit' not in r['wb']}
+                        (r['wb']['verb'] if isinstance(k, str) else k['verb'])
+                        for r in grammar['aerc']['bindings'] for k in r.get('bare', {}).get('list', []) if 'verb' in r['wb'] or r['wb'].get('menu') == 'read-status'}
             assert bare == expected
+            item_intents = {r['intent'] for r in rows if r['target'] == 'item'}
+            assert all(r['intent'] in item_intents for r in payload['hubs']['mail']['bare'])
+            assert not item_intents.intersection({'move', 'fact-add', 'fact-clear'}), 'unavailable item parameters'
             sections = data['binds'].split('[messages]', 1)[1].split('[view]', 1)[0]
             for key in bare:
                 assert re.search(r'^\s*' + re.escape(key) + r' = ', sections, re.M), key
         validate(registry)
-        import copy
+        def load_hubs(payload):
+            globals_ = _parse_keymap(payload, where='generated keymap')
+            assert globals_ is not None, 'registry rejected by Workbench parser'
+            overlays = parse_hub_keymaps(payload, where='generated keymap')
+            manifests = sorted(pathlib.Path(sys.argv[3]).parent.glob('*.toml'))
+            assert manifests, 'no Workbench manifests'
+            provider = TomlHubProvider(str(manifests[0].parent), groups=payload['groups'],
+                                       globals_=globals_, hub_keymaps=overlays)
+            # reload skips invalid manifests; call the real single-file loader
+            # too, so ManifestError/ValidationError fail this build directly.
+            loaded = [provider._load_file(str(path)) for path in manifests]
+            assert len(provider.list_hubs()) == len(loaded), 'a hub was skipped'
+            return loaded
+        loaded = load_hubs(registry)
+        print('real Workbench loader accepted hubs: ' + ', '.join(h.id for h in loaded))
+        bad = copy.deepcopy(registry)
+        bad['hubs']['mail']['bare'].append({'key': 'c', 'intent': 'compose'})
+        try:
+            load_hubs(bad)
+        except (ManifestError, ValidationError) as exc:
+            assert 'every item_keys action requires a Space path' in str(exc), str(exc)
+            print('seeded original bare compose regression rejected: ' + str(exc))
+        else:
+            raise AssertionError('real loader accepted bare compose regression')
         for kind in ('coverage', 'bare', 'prefix', 'verb', 'launcher', 'global', 'bare-global'):
             bad = copy.deepcopy(registry)
             if kind == 'coverage':

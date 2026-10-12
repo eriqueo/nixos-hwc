@@ -15,12 +15,7 @@ let
       else if menu == "domain" then map (domain: choice grammar.aerc.domainKeys.${domain}
           "domain-${domain}" domain) mailContract.domains
       else if menu == "read-status" then [ (choice "r" "mark-read" "Read") (choice "u" "mark-unread" "Unread") ]
-      else if menu == "tags" then [
-        (choice "a" "fact-add" "Add optional fact")
-        (choice "x" "fact-clear" "Clear optional facts")
-        # Labels/new-tag require the same unavailable selected-message handoff
-        # contract as the omitted message tools; do not emit broken launchers.
-      ] else throw "Unknown Workbench mail menu: ${menu}"
+      else throw "Unknown Workbench mail menu: ${menu}"
     else [ (entry row row.keys (row.wb.verb or row.wb.handoff)
       (if row.wb ? verb then "item" else "handoff") row.desc) ];
   registry = {
@@ -32,14 +27,10 @@ let
       bindings = lib.concatMap expand rows;
       bare = lib.concatMap (row: map (alias: {
         key = if builtins.isString alias then alias else alias.key;
-        intent = if builtins.isString alias then row.wb.verb or row.wb.handoff else alias.verb;
-      }) ((row.bare or {}).list or [])) (lib.filter (row: !(row.wb ? omit)) rows);
+        intent = if builtins.isString alias then row.wb.verb else alias.verb;
+      }) ((row.bare or {}).list or [])) (lib.filter (row: builtins.any (binding: binding.target == "item") (expand row)) rows);
       omitted = map (row: { chord = row.keys; reason = row.wb.omit; })
-        (lib.filter (row: row.wb ? omit) rows)
-        ++ lib.concatMap (row: map (key: {
-          chord = "${row.keys} ${key}";
-          reason = "No aerc thread-load completion or message-selection contract";
-        }) [ "l" "n" ]) (lib.filter (row: (row.wb.menu or "") == "tags") rows);
+        (lib.filter (row: row.wb ? omit) rows);
     };
   };
 in

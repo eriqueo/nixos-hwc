@@ -23,7 +23,8 @@ parts/
   to-aerc.nix          aerc action table -> context bindings, groups and reference
   to-khalt.nix         grammar -> [keybindings] block + KHALT_LEADER_TREE json
   to-todui.nix         grammar -> TODUI_KEYMAP json (env)
-  to-workbench.nix     grammar -> schema-2 Workbench global and Mail hub JSON
+  to-workbench.nix     grammar -> schema-2 Workbench global and Mail hub JSON;
+                       bare aliases only for item verbs, compose stays a handoff
 ```
 
 ## The two layers
@@ -99,6 +100,7 @@ chords within each section, compares its Space rows with the grammar, and
 requires each configured native manager command to have a Space path.
 
 ## Changelog
+- 2026-10-12: Fix Mail bare compose regression; omit folder move and fact/tag menus that item intents cannot supply. Workbench check loads real upstream manifests and rejects seeded bare compose.
 - 2026-10-12: Share aerc rows with Workbench schema 2; generate isolated compose launcher, omit aerc view controls and unsafe thread actions, guard launcher coverage and global keys; move compose/replies/forward to c; retain routing, unsubscribe and read-status menus under m.
 - 2026-10-12: Rename find; add compose/language; wire grouped Yazi actions and grammar/TOML checks. Major tables and Aerc rows remain unchanged.
 - 2026-10-09: Hubs use Ctrl+Space 1–9 by visible rail position; reject digit
