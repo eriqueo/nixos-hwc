@@ -16,7 +16,7 @@ Provides a complete Neovim setup with:
 
 ## Boundaries
 
-- **Owns**: All Neovim configuration, plugins, and keymaps
+- **Owns**: Neovim configuration, plugins, and native keymaps; keymap grammar owns leader actions
 - **Does NOT own**: Editor selection logic (handled by development domain)
 
 ## Structure
@@ -29,7 +29,7 @@ nvim/
     └── lua/
         ├── core/
         │   ├── init.lua        # Entry point, requires all modules
-        │   ├── keymaps.lua     # All keybindings (leader=space)
+        │   ├── keymaps.lua     # Native keys and mapleader; generated core/leader.lua owns Space actions
         │   ├── options.lua     # Vim options
         │   ├── plugins.lua     # lazy.nvim plugin definitions
         │   └── colorscheme.lua # Gruvbox with Deep Nord colors
@@ -50,11 +50,13 @@ nvim/
 | `<leader>fg` | Live grep |
 | `<leader>fb` | Find buffers |
 | `<leader>ov` | Open Oil file explorer |
-| `<leader>1-4` | Harpoon quick files |
+| `<leader>g1-4` | Harpoon quick files |
 | `gd` | Go to definition |
 | `K` | Hover documentation |
 
 ## Changelog
+
+- 2026-10-12: Source generated Space actions and which-key labels from keymap grammar. Keep one LSP attach producer. Group language, git, sessions, tabs, marks and agent actions by intent.
 
 - 2026-03-12: Initial domain creation, migrated from ~/.config/nvim
 - 2026-06-02: Migrate `nvim-treesitter-textobjects` block to the new `main`-branch API (`require("nvim-treesitter-textobjects").setup` + explicit keymaps). Fixes "module 'nvim-treesitter.configs' not found" startup error caused by the v1.0 rewrite removing the legacy entry point.

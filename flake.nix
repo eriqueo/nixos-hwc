@@ -803,6 +803,73 @@
         touch "$out"
       '';
 
+      nvim-keymap = let
+        home = self.homeConfigurations."eric@hwc-laptop".config;
+        grammar = home.hwc.home.keymap.grammar;
+        rendered = import ./domains/home/keymap/parts/to-nvim.nix { inherit lib grammar; };
+        generated = pkgs.writeText "nvim-leader.lua"
+          home.xdg.configFile."nvim/lua/core/leader.lua".text;
+        expected = pkgs.writeText "nvim-keymap.json" (builtins.toJSON {
+          inherit (grammar) groups leader;
+          rows = rendered.rows;
+        });
+        runner = pkgs.writeText "nvim-keymap-check.lua" ''
+          local spec = vim.json.decode(table.concat(vim.fn.readfile("${expected}"), "\n"))
+          vim.g.mapleader = spec.leader
+          vim.opt.rtp:append("${pkgs.vimPlugins.which-key-nvim}")
+          dofile("${./domains/home/apps/nvim/parts/lua/core/keymaps.lua}")
+          dofile("${generated}")
+          local function validate()
+            for _, mode in ipairs({ "n", "x", "v" }) do
+              local chords = {}
+              for _, entry in ipairs(vim.api.nvim_get_keymap(mode)) do
+                if entry.lhs:sub(1, #spec.leader) == spec.leader then
+                  local key = entry.lhs:sub(#spec.leader + 1)
+                  assert(spec.groups[key:sub(1, 1)], "unknown leader group: " .. key)
+                  table.insert(chords, key)
+                end
+              end
+              for i, a in ipairs(chords) do
+                for j, b in ipairs(chords) do
+                  assert(i == j or b:sub(1, #a) ~= a, "duplicate/prefix: " .. a .. " / " .. b)
+                end
+              end
+            end
+            for _, row in ipairs(spec.rows) do
+              local modes = row.nvim and row.nvim.mode or { "n" }
+              for _, mode in ipairs(modes) do
+                local lhs = spec.leader .. row.keys:gsub(" ", "")
+                assert(vim.fn.maparg(lhs, mode) ~= "", "missing grammar row: " .. row.keys)
+              end
+            end
+          end
+          validate()
+          -- Seed a forbidden group through the real runtime map, then remove it.
+          vim.keymap.set("n", spec.leader .. "!z", "<Nop>")
+          assert(not pcall(validate), "unknown-group seed was accepted")
+          vim.keymap.del("n", spec.leader .. "!z")
+          vim.keymap.set("n", spec.leader .. "g", "<Nop>")
+          assert(not pcall(validate), "strict-prefix seed was accepted")
+          vim.keymap.del("n", spec.leader .. "g")
+          validate()
+          -- Parse handwritten plugin modules without bootstrapping/network access.
+          for _, path in ipairs(vim.fn.glob("${./domains/home/apps/nvim/parts/lua}/**/*.lua", false, true)) do
+            assert(loadfile(path))
+          end
+          print("nvim-keymap: runtime rows present; groups/prefixes pass; both seeds rejected")
+        '';
+      in
+      assert lib.assertMsg (lib.hasInfix ''require("core.leader")''
+        (home.programs.neovim.initLua or home.programs.neovim.extraLuaConfig))
+        "nvim-keymap: generated leader module is not sourced";
+      pkgs.runCommand "nvim-keymap" {
+        nativeBuildInputs = [ pkgs.neovim-unwrapped ];
+      } ''
+        export HOME="$TMPDIR"
+        nvim --headless -u NONE -i NONE -l ${runner}
+        touch "$out"
+      '';
+
       yazi-keymap = let
         home = self.homeConfigurations."eric@hwc-laptop".config;
         keymap = pkgs.writeText "yazi-keymap.toml" home.xdg.configFile."yazi/keymap.toml".text;

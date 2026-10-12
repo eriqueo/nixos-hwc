@@ -101,7 +101,7 @@ require("lazy").setup({
   -- Formatting (replaces none-ls)
   {
     "stevearc/conform.nvim",
-    event = { "BufWritePre" },
+    lazy = false,
     cmd = { "ConformInfo" },
     config = function()
       require("conform").setup({
@@ -120,9 +120,6 @@ require("lazy").setup({
           lsp_format = "fallback",
         },
       })
-      vim.keymap.set({ "n", "v" }, "<leader>gf", function()
-        require("conform").format({ async = true, lsp_format = "fallback" })
-      end, { desc = "Format file" })
     end,
   },
 
@@ -134,14 +131,6 @@ require("lazy").setup({
     config = function()
       require("trouble").setup()
     end,
-    keys = {
-      { "<leader>xx", "<cmd>Trouble diagnostics toggle<cr>", desc = "Diagnostics (Trouble)" },
-      { "<leader>xX", "<cmd>Trouble diagnostics toggle filter.buf=0<cr>", desc = "Buffer diagnostics (Trouble)" },
-      { "<leader>xs", "<cmd>Trouble symbols toggle focus=false<cr>", desc = "Symbols (Trouble)" },
-      { "<leader>xr", "<cmd>Trouble lsp toggle focus=false win.position=right<cr>", desc = "LSP references (Trouble)" },
-      { "<leader>xl", "<cmd>Trouble loclist toggle<cr>", desc = "Location list (Trouble)" },
-      { "<leader>xq", "<cmd>Trouble qflist toggle<cr>", desc = "Quickfix list (Trouble)" },
-    },
   },
 
   -- Highlight and search TODO/FIXME/HACK comments
@@ -153,7 +142,6 @@ require("lazy").setup({
       require("todo-comments").setup()
     end,
     keys = {
-      { "<leader>ft", "<cmd>TodoTelescope<cr>", desc = "Find: TODOs" },
       { "]t", function() require("todo-comments").jump_next() end, desc = "Next TODO" },
       { "[t", function() require("todo-comments").jump_prev() end, desc = "Previous TODO" },
     },
@@ -161,14 +149,10 @@ require("lazy").setup({
 
   -- tuxedo.nvim — floating todo.txt popup (IogaMaster/tuxedo.nvim).
   -- Companion to the tuxedo CLI (hwc.home.apps.tuxedo). Lazy-loaded on the
-  -- :Tuxedo command / <leader>td. Intended to edit the same todo.txt the CLI
   -- uses (TODO_FILE is set in the session env) — verify after first launch.
   {
     "IogaMaster/tuxedo.nvim",
     cmd = "Tuxedo",
-    keys = {
-      { "<leader>td", "<cmd>Tuxedo<cr>", desc = "Tuxedo: todo.txt popup" },
-    },
     config = function()
       require("tuxedo").setup({
         create_todo_file = true,
@@ -187,12 +171,7 @@ require("lazy").setup({
       local harpoon = require("harpoon")
       harpoon:setup()
 
-      vim.keymap.set("n", "<leader>a", function() harpoon:list():append() end, { desc = "Add to harpoon" })
       vim.keymap.set("n", "<C-e>", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end, { desc = "Toggle harpoon menu" })
-      vim.keymap.set("n", "<leader>1", function() harpoon:list():select(1) end, { desc = "Harpoon file 1" })
-      vim.keymap.set("n", "<leader>2", function() harpoon:list():select(2) end, { desc = "Harpoon file 2" })
-      vim.keymap.set("n", "<leader>3", function() harpoon:list():select(3) end, { desc = "Harpoon file 3" })
-      vim.keymap.set("n", "<leader>4", function() harpoon:list():select(4) end, { desc = "Harpoon file 4" })
       vim.keymap.set("n", "<C-S-P>", function() harpoon:list():prev() end, { desc = "Previous harpoon file" })
       vim.keymap.set("n", "<C-S-N>", function() harpoon:list():next() end, { desc = "Next harpoon file" })
     end,
@@ -273,58 +252,7 @@ require("lazy").setup({
   {
     "neovim/nvim-lspconfig",
     config = function()
-      local capabilities = vim.lsp.protocol.make_client_capabilities()
-      local cmp_ok, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
-      if cmp_ok then
-        capabilities = cmp_nvim_lsp.default_capabilities(capabilities)
-      end
-
-      -- Keymaps on attach
-      vim.api.nvim_create_autocmd("LspAttach", {
-        group = vim.api.nvim_create_augroup("UserLspConfig", { clear = true }),
-        callback = function(ev)
-          local opts = { buffer = ev.buf }
-          vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
-          vim.keymap.set("n", "gD", vim.lsp.buf.declaration, opts)
-          vim.keymap.set("n", "gi", vim.lsp.buf.implementation, opts)
-          vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, opts)
-          vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
-          vim.keymap.set("n", "<leader>vd", vim.diagnostic.open_float, opts)
-          vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts)
-          vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts)
-          vim.keymap.set("n", "<leader>vca", vim.lsp.buf.code_action, opts)
-          vim.keymap.set("n", "<leader>vrr", vim.lsp.buf.references, opts)
-          vim.keymap.set("n", "<leader>vrn", vim.lsp.buf.rename, opts)
-          vim.keymap.set("n", "<leader>vf", vim.lsp.buf.format, opts)
-        end,
-      })
-
-      -- Diagnostics
-      vim.diagnostic.config({ virtual_text = true, signs = true, underline = true })
-
-      -- Server configs
-      local servers = {
-        lua_ls = { settings = { Lua = { diagnostics = { globals = { "vim" } } } } },
-        nil_ls = { settings = { ["nil"] = { nix = { flake = { autoArchive = true } } } } },
-        pyright = {}, ts_ls = {}, gopls = {},
-        rust_analyzer = { settings = { ["rust-analyzer"] = { cargo = { allFeatures = true } } } },
-        clangd = { cmd = { "clangd", "--offset-encoding=utf-16" } },
-      }
-
-      -- Use vim.lsp.config (0.11+) or fallback
-      if vim.lsp.config then
-        for name, cfg in pairs(servers) do
-          cfg.capabilities = capabilities
-          vim.lsp.config(name, cfg)
-        end
-        vim.lsp.enable(vim.tbl_keys(servers))
-      else
-        local lspconfig = require("lspconfig")
-        for name, cfg in pairs(servers) do
-          cfg.capabilities = capabilities
-          if lspconfig[name] then lspconfig[name].setup(cfg) end
-        end
-      end
+      require("plugins.lsp")
     end,
   },
 
@@ -357,14 +285,6 @@ require("lazy").setup({
 
           map("n", "]h", gs.next_hunk, vim.tbl_extend("force", opts, { desc = "Next hunk" }))
           map("n", "[h", gs.prev_hunk, vim.tbl_extend("force", opts, { desc = "Previous hunk" }))
-          map("n", "<leader>hp", gs.preview_hunk, vim.tbl_extend("force", opts, { desc = "Preview hunk" }))
-          map("n", "<leader>hs", gs.stage_hunk, vim.tbl_extend("force", opts, { desc = "Stage hunk" }))
-          map("n", "<leader>hr", gs.reset_hunk, vim.tbl_extend("force", opts, { desc = "Reset hunk" }))
-          map("n", "<leader>hu", gs.undo_stage_hunk, vim.tbl_extend("force", opts, { desc = "Undo stage hunk" }))
-          map("n", "<leader>hb", gs.blame_line, vim.tbl_extend("force", opts, { desc = "Blame line" }))
-          map("n", "<leader>hB", function() gs.blame_line({ full = true }) end, vim.tbl_extend("force", opts, { desc = "Blame line (full)" }))
-          map("n", "<leader>tb", gs.toggle_current_line_blame, vim.tbl_extend("force", opts, { desc = "Toggle: blame" }))
-          map("n", "<leader>hd", gs.diffthis, vim.tbl_extend("force", opts, { desc = "Diff this" }))
         end,
       })
     end,
@@ -457,17 +377,10 @@ require("lazy").setup({
   -- Claude Code CLI integration (VS Code-like)
   {
     "coder/claudecode.nvim",
+    cmd = { "ClaudeCode", "ClaudeCodeFocus", "ClaudeCodeAdd", "ClaudeCodeSend",
+      "ClaudeCodeDiffAccept", "ClaudeCodeDiffDeny" },
     dependencies = { "folke/snacks.nvim" },
     config = true,
-    keys = {
-      { "<leader>cc", "<cmd>ClaudeCode<cr>", desc = "Claude: toggle" },
-      { "<leader>cf", "<cmd>ClaudeCodeFocus<cr>", desc = "Claude: focus" },
-      { "<leader>cr", "<cmd>ClaudeCode --resume<cr>", desc = "Claude: resume" },
-      { "<leader>cb", "<cmd>ClaudeCodeAdd %<cr>", desc = "Claude: add buffer" },
-      { "<leader>cs", "<cmd>ClaudeCodeSend<cr>", mode = "v", desc = "Claude: send selection" },
-      { "<leader>ca", "<cmd>ClaudeCodeDiffAccept<cr>", desc = "Claude: accept diff" },
-      { "<leader>cd", "<cmd>ClaudeCodeDiffDeny<cr>", desc = "Claude: deny diff" },
-    },
   },
 }, {
   rocks = {

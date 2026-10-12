@@ -12,6 +12,8 @@
 
 let
   cfg = config.hwc.home.apps.nvim;
+  grammar = config.hwc.home.keymap.grammar or (import ../../keymap/grammar.nix { inherit lib; });
+  leaderMap = import ../../keymap/parts/to-nvim.nix { inherit lib grammar; };
   colors = (config.hwc.home.theme or {}).colors or {};
   appearance = import ./parts/appearance.nix { inherit lib colors; };
 
@@ -23,6 +25,7 @@ let
   # warning-free on unstable AND functional on stable.
   luaInit = ''
     require("core")
+    require("core.leader")
   '';
   initLuaAttr =
     if nixosApiVersion == "stable"
@@ -65,6 +68,7 @@ in
     # Deploy lua configuration declaratively via xdg.configFile
     # This mirrors the yazi pattern for managing config files
     xdg.configFile = {
+      "nvim/lua/core/leader.lua".text = leaderMap.lua;
       # Core modules
       "nvim/lua/core/init.lua".source = "${luaDir}/core/init.lua";
       "nvim/lua/core/keymaps.lua".source = "${luaDir}/core/keymaps.lua";

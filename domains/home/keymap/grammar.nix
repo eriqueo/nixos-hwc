@@ -65,6 +65,7 @@ rec {
     o = "open";     # open / create external
     m = "major";    # THIS app's own verbs (the per-app drawer)
     q = "quit";     # quit / sync / reload
+    v = "version";  # git hunks, blame and diff
     a = "agent";    # anything involving an AI agent (ask, send, nvim Claude)
   };
 
@@ -125,6 +126,97 @@ rec {
   ];
 
   # App-specific grouped Space rows. Runtime paths are bound by the adapter.
+  apps.nvim = [
+    { keys = "g o"; desc = "Go: documents"; cmd.nvim = "<cmd>cd ~/Documents<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "g r"; desc = "Go: root"; cmd.nvim = "<cmd>cd /<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "f b"; desc = "Find: buffers"; cmd.nvim = "<cmd>FzfLua buffers<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "f h"; desc = "Find: help"; cmd.nvim = "<cmd>Telescope help_tags<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "f c"; desc = "Find: commands"; cmd.nvim = "<cmd>Telescope commands<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "f k"; desc = "Find: keymaps"; cmd.nvim = "<cmd>Telescope keymaps<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "f n"; desc = "Find: nixos files"; cmd.nvim = "function() require(\"fzf-lua\").files({ cwd = \"~/.nixos\" }) end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "f s"; desc = "Find: neovim config"; cmd.nvim = "function() require(\"fzf-lua\").files({ cwd = vim.fn.stdpath(\"config\") }) end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "p s"; desc = "Session: save"; cmd.nvim = "<cmd>mksession! Session.vim<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "p l"; desc = "Session: load"; cmd.nvim = "<cmd>source Session.vim<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "f R"; desc = "Search: resume"; cmd.nvim = "<cmd>Telescope resume<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "t w"; desc = "Toggle: wrap"; cmd.nvim = "<cmd>lua vim.wo.wrap = not vim.wo.wrap<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "t h"; desc = "Toggle: highlight search"; cmd.nvim = "<cmd>set hlsearch!<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "t n"; desc = "Toggle: line numbers"; cmd.nvim = "<cmd>set number!<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "t r"; desc = "Toggle: relative numbers"; cmd.nvim = "<cmd>set relativenumber!<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "t s"; desc = "Toggle: spell check"; cmd.nvim = "<cmd>set spell!<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "b t"; desc = "Tab: new"; cmd.nvim = "<cmd>tabnew<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "b x"; desc = "Tab: close"; cmd.nvim = "<cmd>tabclose<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "b 1"; desc = "Tab: 1"; cmd.nvim = "1gt"; nvim.mode = [ "n" ]; }
+    { keys = "b 2"; desc = "Tab: 2"; cmd.nvim = "2gt"; nvim.mode = [ "n" ]; }
+    { keys = "b 3"; desc = "Tab: 3"; cmd.nvim = "3gt"; nvim.mode = [ "n" ]; }
+    { keys = "b 4"; desc = "Tab: 4"; cmd.nvim = "4gt"; nvim.mode = [ "n" ]; }
+    { keys = "y c"; desc = "Yank: to system clipboard"; cmd.nvim = "\"+y"; nvim.mode = [ "n" "x" ]; }
+    { keys = "y y"; desc = "Yank: line to clipboard"; cmd.nvim = "\"+yy"; nvim.mode = [ "n" ]; }
+    { keys = "d x"; desc = "Cut: to system clipboard"; cmd.nvim = "\"+d"; nvim.mode = [ "n" "x" ]; }
+    { keys = "y P"; desc = "Paste: from system clipboard"; cmd.nvim = "\"+p"; nvim.mode = [ "n" "x" ]; }
+    { keys = "y p"; desc = "Yank: file path"; cmd.nvim = "<cmd>let @+=expand('%:p')<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "y n"; desc = "Yank: filename"; cmd.nvim = "<cmd>let @+=expand('%:t')<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "y d"; desc = "Yank: directory"; cmd.nvim = "<cmd>let @+=expand('%:h')<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "y a"; desc = "Yank: entire buffer to system clipboard"; cmd.nvim = ":%y+<CR>"; nvim.mode = [ "n" ]; }
+    { keys = "d d"; desc = "Delete: to black hole"; cmd.nvim = "\"_d"; nvim.mode = [ "n" "v" ]; }
+    { keys = "d b"; desc = "Delete: buffer"; cmd.nvim = "<cmd>bd<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "d w"; desc = "Delete: trailing whitespace"; cmd.nvim = "<cmd>%s/\\s\\+$//e<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "w v"; desc = "Window: vertical split"; cmd.nvim = "<C-w>v"; nvim.mode = [ "n" ]; }
+    { keys = "w s"; desc = "Window: horizontal split"; cmd.nvim = "<C-w>s"; nvim.mode = [ "n" ]; }
+    { keys = "w q"; desc = "Window: close"; cmd.nvim = "<C-w>q"; nvim.mode = [ "n" ]; }
+    { keys = "w o"; desc = "Window: close others"; cmd.nvim = "<C-w>o"; nvim.mode = [ "n" ]; }
+    { keys = "w ="; desc = "Window: equal size"; cmd.nvim = "<C-w>="; nvim.mode = [ "n" ]; }
+    { keys = "w +"; desc = "Window: increase height"; cmd.nvim = "<C-w>+"; nvim.mode = [ "n" ]; }
+    { keys = "w -"; desc = "Window: decrease height"; cmd.nvim = "<C-w>-"; nvim.mode = [ "n" ]; }
+    { keys = "w >"; desc = "Window: increase width"; cmd.nvim = "<C-w>>"; nvim.mode = [ "n" ]; }
+    { keys = "w <"; desc = "Window: decrease width"; cmd.nvim = "<C-w><"; nvim.mode = [ "n" ]; }
+    { keys = "b d"; desc = "Buffer: delete"; cmd.nvim = "<cmd>bd<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "b a"; desc = "Buffer: delete all others"; cmd.nvim = "<cmd>%bd|e#|bd#<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "b l"; desc = "Buffer: last"; cmd.nvim = "<cmd>blast<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "b f"; desc = "Buffer: first"; cmd.nvim = "<cmd>bfirst<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "o v"; desc = "Open: file explorer (Oil)"; cmd.nvim = "<cmd>Oil<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "o n"; desc = "Open: nixos config"; cmd.nvim = "<cmd>Oil ~/.nixos<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "o c"; desc = "Open: config dir"; cmd.nvim = "<cmd>Oil ~/.config<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "o h"; desc = "Open: home dir"; cmd.nvim = "<cmd>Oil ~<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "c r"; desc = "Replace: word under cursor"; cmd.nvim = ":%s/\\<<C-r><C-w>\\>/<C-r><C-w>/gI<Left><Left><Left>"; nvim.mode = [ "n" ]; }
+    { keys = "t a"; desc = "Select: all"; cmd.nvim = "ggVG"; nvim.mode = [ "n" ]; }
+    { keys = "l r"; desc = "Language: rename"; cmd.nvim = "function() vim.lsp.buf.rename() end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "l a"; desc = "Language: code action"; cmd.nvim = "function() vim.lsp.buf.code_action() end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "l R"; desc = "Language: references"; cmd.nvim = "function() vim.lsp.buf.references() end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "l s"; desc = "Language: workspace symbols"; cmd.nvim = "function() vim.lsp.buf.workspace_symbol() end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "l D"; desc = "Language: definition"; cmd.nvim = "function() vim.lsp.buf.definition() end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "l d"; desc = "Diagnostics"; cmd.nvim = "function() vim.diagnostic.open_float() end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "l f"; desc = "Format"; cmd.nvim = "function() require(\"conform\").format({ async = true, lsp_format = \"fallback\" }) end"; nvim = { lua = true; mode = [ "n" "v" ]; }; }
+    { keys = "l x"; desc = "Trouble: diagnostics toggle"; cmd.nvim = "<cmd>Trouble diagnostics toggle<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "l X"; desc = "Trouble: diagnostics toggle filter.buf=0"; cmd.nvim = "<cmd>Trouble diagnostics toggle filter.buf=0<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "l S"; desc = "Trouble: symbols toggle focus=false"; cmd.nvim = "<cmd>Trouble symbols toggle focus=false<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "l L"; desc = "Trouble: lsp toggle focus=false win.position=right"; cmd.nvim = "<cmd>Trouble lsp toggle focus=false win.position=right<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "l l"; desc = "Trouble: loclist toggle"; cmd.nvim = "<cmd>Trouble loclist toggle<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "l q"; desc = "Trouble: qflist toggle"; cmd.nvim = "<cmd>Trouble qflist toggle<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "f t"; desc = "Find TODOs"; cmd.nvim = "<cmd>TodoTelescope<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "o t"; desc = "Tuxedo"; cmd.nvim = "<cmd>Tuxedo<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "m h"; desc = "Mark: harpoon add"; cmd.nvim = "function() require(\"harpoon\"):list():append() end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "g 1"; desc = "Harpoon file 1"; cmd.nvim = "function() require(\"harpoon\"):list():select(1) end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "g 2"; desc = "Harpoon file 2"; cmd.nvim = "function() require(\"harpoon\"):list():select(2) end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "g 3"; desc = "Harpoon file 3"; cmd.nvim = "function() require(\"harpoon\"):list():select(3) end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "g 4"; desc = "Harpoon file 4"; cmd.nvim = "function() require(\"harpoon\"):list():select(4) end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "t m"; desc = "Toggle harpoon menu"; cmd.nvim = "function() local h = require(\"harpoon\"); h.ui:toggle_quick_menu(h:list()) end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "v p"; desc = "Git: preview hunk"; cmd.nvim = "function() require(\"gitsigns\").preview_hunk() end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "v s"; desc = "Git: stage hunk"; cmd.nvim = "function() require(\"gitsigns\").stage_hunk() end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "v r"; desc = "Git: reset hunk"; cmd.nvim = "function() require(\"gitsigns\").reset_hunk() end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "v u"; desc = "Git: undo stage hunk"; cmd.nvim = "function() require(\"gitsigns\").undo_stage_hunk() end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "v b"; desc = "Git: blame line"; cmd.nvim = "function() require(\"gitsigns\").blame_line() end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "v d"; desc = "Git: diff"; cmd.nvim = "function() require(\"gitsigns\").diffthis() end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "v t"; desc = "Git: toggle line blame"; cmd.nvim = "function() require(\"gitsigns\").toggle_current_line_blame() end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "v B"; desc = "Git: full blame"; cmd.nvim = "function() require(\"gitsigns\").blame_line({ full = true }) end"; nvim = { lua = true; mode = [ "n" ]; }; }
+    { keys = "a a"; desc = "Agent: ClaudeCode"; cmd.nvim = "<cmd>ClaudeCode<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "a f"; desc = "Agent: ClaudeCodeFocus"; cmd.nvim = "<cmd>ClaudeCodeFocus<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "a r"; desc = "Agent: ClaudeCode --resume"; cmd.nvim = "<cmd>ClaudeCode --resume<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "a b"; desc = "Agent: ClaudeCodeAdd %"; cmd.nvim = "<cmd>ClaudeCodeAdd %<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "a s"; desc = "Agent: ClaudeCodeSend"; cmd.nvim = "<cmd>ClaudeCodeSend<cr>"; nvim.mode = [ "v" ]; }
+    { keys = "a A"; desc = "Agent: ClaudeCodeDiffAccept"; cmd.nvim = "<cmd>ClaudeCodeDiffAccept<cr>"; nvim.mode = [ "n" ]; }
+    { keys = "a d"; desc = "Agent: ClaudeCodeDiffDeny"; cmd.nvim = "<cmd>ClaudeCodeDiffDeny<cr>"; nvim.mode = [ "n" ]; }
+  ];
+
   apps.yazi = [
       { keys = "g t"; desc = "Go: tmp"; cmd.yazi = "cd /tmp"; }
       { keys = "g 0"; desc = "Go: inbox"; cmd.yazi = "cd ~/000_inbox"; }
