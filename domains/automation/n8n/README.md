@@ -124,6 +124,18 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
+- 2026-10-12: Law-12 refresh only, no code change: `parts/workflows/README.md` gained
+  a Changelog section and its regeneration status for the 2026-10-07 re-export;
+  `parts/estimator-integration/README.md` gained Structure and Changelog sections
+  recording the `hwc-server` tailnet rename in its runbook.
+
+- 2026-10-07: Re-exported `parts/workflows/08a-jt-data-provider.json` from live n8n
+  (`ad7d89e3`). The customer-lookup branch now forwards JobTread's next-page cursor
+  instead of stopping at the first 50 records; the node set was rebuilt around a
+  shared `Build JT Query` → `POST to JT API` pair and the workflow tags were
+  re-emitted in the canonicalizer's expanded form. Derived export — live n8n
+  remains the source of truth.
+
 - 2026-10-02: Document `.com` public webhook receivers and the current work tailnet editor. `publicUrl` is derived from the tailnet route; there is no separate `webhookUrl` option. Retain `.me` until actual external sender settings are verified.
 
 - 2026-09-08: Event discovery, curation and calendar review moved to Event Scout

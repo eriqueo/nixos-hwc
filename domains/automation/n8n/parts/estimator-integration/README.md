@@ -83,3 +83,20 @@ All webhook endpoints require `x-api-key` header matching `ESTIMATOR_API_KEY` en
 - Workflows: `/home/eric/.nixos/domains/automation/n8n/parts/workflows/`
 - Estimator App: `/home/eric/.nixos/workspace/projects/react/heartwood-assembler/`
 - Server Config: `/home/eric/.nixos/machines/server/config.nix`
+
+## Structure
+
+```
+domains/automation/n8n/parts/estimator-integration/
+├── README.md       # This file — architecture, endpoints, auth, custom fields
+├── CHANGELOG.md    # Per-session deployment log (2026-03-19 onward)
+└── NEXT-SESSION.md # Operator runbook: rebuild, credentials, curl smoke tests
+```
+
+## Changelog
+
+Session-level detail lives in `CHANGELOG.md`; structural changes are recorded here.
+
+- 2026-06-02: `NEXT-SESSION.md` tailnet host swept `hwc.ocelot-wahoo.ts.net` →
+  `hwc-server.ocelot-wahoo.ts.net` (`56c1f6c8`) — four URLs, the n8n UI access line
+  and the three curl smoke tests. Mechanical rename only; no endpoint or auth change.

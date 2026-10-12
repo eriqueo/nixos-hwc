@@ -39,6 +39,12 @@ Secrets belong in the container env, referenced from the workflow as
 
 ### Regeneration status
 
+`08a-jt-data-provider.json` was regenerated from live n8n on 2026-10-07. The
+customer branch now forwards JobTread's next-page cursor instead of stopping at the
+first 50 records, the nodes were rebuilt around a shared `Build JT Query` →
+`POST to JT API` pair, and the workflow tag list came back in the canonicalizer's
+expanded object form.
+
 Both `01-media-pipeline-orchestration.json` and
 `02-frigate-surveillance-intelligence.json` were regenerated from live n8n on
 2026-09-25 for wave 4. They use the Jellyfin and Frigate vhosts instead of
@@ -373,6 +379,27 @@ flake check); unit tests at `workspace/automation/test_n8n_workflow_export.py`.
 
 ---
 
+## Changelog
+
+- 2026-10-07: Regenerated `08a-jt-data-provider.json` from live n8n — cursor-following
+  customer lookup, `Build JT Query` / `POST to JT API` node restructure, expanded tag
+  form. See [Regeneration status](#regeneration-status).
+- 2026-09-25: Regenerated `01-media-pipeline-orchestration.json` and
+  `02-frigate-surveillance-intelligence.json` for service-split wave 4 (Jellyfin and
+  Frigate vhosts instead of server loopback). Retired `04`, `06`, `07`, `09` and `10`
+  from live n8n and deleted their exports.
+- 2026-09-24: Regenerated `02-frigate-surveillance-intelligence.json` from the
+  published live workflow.
+- 2026-09-07: This directory became a derived, redacted export rather than a
+  hand-synced twin; `01-media-pipeline-orchestration.json` is the first canonical one.
+- 2026-07-09: Removed `03`, `05` and `11` as redundant with the
+  Prometheus/Alertmanager → hwc-notify stack. Their sections below are retained as
+  history — the files are gone.
+
+Note: the `03` and `05` sections below describe deleted workflows and still reference
+ntfy/Slack routing that no longer exists. They are kept for the restart-loop and
+critical-service-protection rationale, not as current behaviour.
+
 ## Related Documentation
 
 - **Full Implementation Guide:** `/home/eric/.nixos/docs/automation/n8n-workflows-implementation-guide.md`
@@ -382,5 +409,5 @@ flake check); unit tests at `workspace/automation/test_n8n_workflow_export.py`.
 
 ---
 
-**Last Updated:** 2026-03-24
+**Last Updated:** 2026-10-07 (see Changelog above)
 **Author:** Eric (with Claude assistance)

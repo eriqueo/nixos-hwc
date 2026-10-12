@@ -423,6 +423,45 @@ shares.directories = [
 
 ---
 
-**Last Updated**: 2025-11-06
+## Structure
+
+```
+domains/media/slskd/
+├── index.nix          # Options (network.mode, vpnInstance, allowClearnet,
+│                      #   listenPort, gpu, directories) + VPN assertions
+├── sys.nix            # Container via mkContainer; VPN-conditional ports,
+│                      #   firewall and tunnel bindsTo/partOf
+├── parts/config.nix   # Runtime slskd.yml generator (secrets + forwarded port)
+├── VERSION.md         # Pinned image notes
+└── README.md          # This file
+```
+
+## Changelog
+
+- 2026-09-10: `/mnt/media/youtube` got a single producer (`ca49bf2b`); the
+  `_shared/directories.nix` pointer in `parts/config.nix` was corrected to
+  `media/directories.nix` in the same sweep.
+- 2026-08-20: **slskd moved inside its own VPN tunnel, and clearnet became a build
+  failure** (`0f102aa4`, the multi-instance gluetun change). `network.mode` now
+  defaults to `"vpn"` and an assertion rejects `"media"` unless the new
+  `allowClearnet` is set deliberately — the option had defaulted to `"media"` since
+  the module was written, so slskd egressed on the house IP for six weeks (~29.4 GB
+  out, 15.5 GB in) while every sibling downloader was tunnelled; the ordering line
+  that appeared to wire it to gluetun lived in a module whose `enable` was never set.
+  New `vpnInstance` (default `gluetun-slskd`) gives slskd its **own** tunnel, because
+  Proton forwards exactly one port per WireGuard session and Soulseek without an
+  inbound port loses uploads and degrades search and browse — which is what soularr
+  depends on. New `listenPort` (default 50300) is only the off-VPN fallback: the
+  config generator reads the tunnel's NAT-PMP `forwarded-port` file when present, and
+  it is the sole writer of `slskd.yml`, so the port cannot drift between producers.
+  On the VPN, host port publishes and the P2P firewall hole are dropped (the tunnel
+  owns the interface), and `podman-slskd` takes `bindsTo`/`partOf` on the tunnel unit
+  the way qBittorrent does — a container whose netns went away goes away with it,
+  at the cost of a restart whenever the tunnel restarts. The **Ports**, **Firewall**
+  and **Service Dependencies** sections above still describe the pre-VPN shape.
+
+---
+
+**Last Updated**: 2026-09-10 (see Changelog above)
 **Architecture Version**: HWC 6.0
 **Module Version**: Container with runtime secret injection

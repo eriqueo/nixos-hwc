@@ -41,7 +41,9 @@ authentik/
 - Two containers: `authentik-server` (HTTP/API) and `authentik-worker` (background tasks/Celery)
 - Custom Caddy block in `parts/config.nix` (not in `networking/routes.nix`) — requires WebSocket headers (`Connection`, `Upgrade`) and `flush_interval -1`
 - Known upstream bug (#16684): WebSocket connections may fail on non-standard ports — cosmetic only, app still functions
-- DB role created via `postgresql.postStart` script
+- DB role and its database ownership are declared via
+  `services.postgresql.ensureUsers` + `ensureDBOwnership` (was a
+  `postgresql.postStart` script until 2026-08-28; see Changelog)
 
 ## Dependencies
 - agenix secrets: `authentik-secret-key`, `authentik-db-password`
@@ -50,4 +52,17 @@ authentik/
 - Podman + media network (when `network.mode = "media"`)
 
 ## Changelog
+- 2026-08-28: Role creation and grants moved from `postgresql.postStart` to
+  `services.postgresql.ensureUsers` with `ensureDBOwnership` (`e82ca994`). The old
+  block issued a `CREATE ROLE` plus four GRANT / ALTER DEFAULT PRIVILEGES statements
+  through `$PSQL` — undefined in the generated post-start script, with `|| true`
+  swallowing the command-not-found, so none of it ever ran. Of the ten modules that
+  wrote `postStart`, this was the only one whose dead code was load-bearing: the
+  live `authentik` role exists because someone created it by hand, and a rebuilt
+  cluster would have had the database and no role. `ensureDBOwnership` reproduces
+  live state exactly (the role already owns the database) and an owner's privileges
+  are implicit, so the four grants have no work left. Dropping
+  `PASSWORD 'placeholder'` is not a regression — authentik reaches Postgres over the
+  podman bridge, where `pg_hba` matches `host all all 10.89.0.0/16 trust` before any
+  md5 rule. Full audit in `domains/data/databases/README.md`.
 - 2026-03-26: Initial scaffolding — server/worker containers, DB provisioning, Caddy reverse proxy, secret integration

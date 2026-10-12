@@ -17,9 +17,18 @@ domains/ai/
 └── mcp/                # Model Context Protocol servers
 ```
 
+`mcp/` holds only `default.nix` and `index.nix`; its `heartwood/` subtree (the JT
+MCP server module) was deleted 2026-05-21.
+
 Boundaries: this listing reflects what `ai/index.nix` actually imports. Any other directory you see in the tree (e.g. `anything-llm/`, `open-webui/`, `router/`, `agent/`, `personas/`, `profiles/`) used to live here and has been removed as dead code.
 
 ## Changelog
+
+- 2026-10-12: Law-12 refresh only, no code change: recorded in `mcp/README.md` that
+  `mcp/heartwood/` — the JT MCP server module, its `default.nix` and its README,
+  220 lines — was deleted on 2026-05-21 by `4f199955` ("delete re-introduced dead
+  trees + options.nix orphans"), after the `254f799c` xps/remote-main merge had
+  re-introduced it. Structure note above updated to match.
 
 - 2026-09-19: **Retired the local chat stack**: removed `agent/` (hwc-ai-agent, the tool API built for Open WebUI; its audit log was last written Dec 2025), `personas/` (`hwc-llm`) and `profiles/` (hardware profile detection; nothing read `aiProfile`). Removed with them: `domains/server/native/ai/persona-daemon/`, the `llama-gpu` and `llama-cpu` services on hwc-server, their vhosts, probes and alerts. Evidence of non-use: persona-daemon's database held one conversation, from the day it was built (2026-05-30); 12 days of Caddy vhost logs showed no request to the chat hosts. Why it stalled: the models that fit a 4 GB P1000 or CPU RAM were too weak to trust, and Claude Code / Pi / T3 took over interactive work. What stays local: `llama-embed` (brain semantic search) and whisper. Hosted DX2 (`dx2.datax.to`) is the text model now. Machine configs for server, laptop and xps lost their `hwc.ai.profiles` / `hwc.ai.agent` settings. Recover from git history if needed.
 

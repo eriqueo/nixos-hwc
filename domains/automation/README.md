@@ -28,6 +28,26 @@ The nightly rebuild allowlist uses hwc-home; machine-directory references follow
 automation/
 ├── index.nix    # Domain aggregator
 ├── README.md    # This file
+├── brain-sweep/    # Nightly brain-vault drift detector (hwc.automation.brainSweep.*)
+│   ├── index.nix   # Sweep service + nightly timer; notifyUrl defaults to the dispatcher
+│   └── README.md   # Detector-not-fixer rationale + check-set ownership
+├── mail-janitor/   # Weekly Gmail anti-buildup sweep (hwc.automation.mailJanitor.*)
+│   ├── index.nix   # Options + timer/service; dryRun default on
+│   ├── janitor.py  # Three-tier classifier + per-account IMAP sweep
+│   └── README.md   # PRESERVE/TXN/NOISE model + rollout
+├── refinery/       # Refinery engine + board (hwc.automation.refinery.*)
+│   ├── index.nix   # Options (incl. dataxBaseUrl, trackerUrl) + native bundle units
+│   ├── parts/      # container.nix + the native review writer
+│   ├── engine/     # Board/engine sources (shells, adapters)
+│   ├── pipelines/  # Profile pipeline definitions
+│   ├── gauntlets/  # Gauntlet definitions consumed by the engine
+│   ├── domains.yaml  # Profile/domain table
+│   └── README.md
+├── screenshot-renamer/  # Folder-triggered screenshot naming (pinned app)
+│   └── index.nix        # Path units, work-driven retries, progress checker, receipt backup
+├── vault-sync/     # Brain-vault git replication to the bare hub
+│   ├── index.nix   # Timers/watcher; a rejected push is FATAL
+│   └── README.md
 ├── inbox-janitor/  # Server-only timer draining ~/000_inbox/downloads (hwc.automation.inboxJanitor.*)
 │   ├── index.nix   # Options + systemd oneshot service/timer (every 30m); dryRun default on
 │   ├── janitor.py  # Engine: pure classify() core + I/O edges; reads ~/000_inbox/_inbox-routing.yaml
@@ -88,6 +108,18 @@ workspace/automation/
 ```
 
 ## Changelog
+
+- 2026-10-12: Law-12 refresh only, no code change: `brain-sweep/`, `mail-janitor/`,
+  `n8n/` and `n8n/parts/{estimator-integration,workflows}/` READMEs brought current
+  (wave-3 notify-URL derivation, the 2026-10-07 `08a-jt-data-provider` re-export, and
+  the `hwc-server` tailnet rename in the estimator runbook). Structure block above
+  gained the five module directories it was missing — `brain-sweep/`,
+  `mail-janitor/`, `refinery/`, `screenshot-renamer/`, `vault-sync/`.
+
+- 2026-10-10: Refinery gains `trackerUrl` (default `http://hwc-work:8765`), exported to
+  both the native bundle and the container as `REFINERY_TRACKER_URL`, so an item linked
+  to a project can link back to its tracker hub page. One producer, two consumers —
+  the native and container writers take the same option.
 
 - 2026-10-07: Estimator customer lookup now returns JobTread's next-page cursor instead of silently stopping at 50 customers. Client loading is bounded to 20 pages and reports overflow.
 - 2026-10-06: Pin screenshot-renamer 3f82d68. A human `retry` now restarts the six-hour transient-retry window as well as the attempt count; before, a capture older than six hours got one attempt after a retry and failed on its first transient error. `model-stop-failed` events now record the model's stop reason and token usage.

@@ -102,6 +102,22 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-12: Law-12 refresh only, no code change: `apps/README.md` gained a
+  changelog for 2026-09-26 → 2026-10-11 and its Structure block was rebuilt against
+  the real 68 entries (LibreWolf is gone, the agent-harness/workbench/rea tree was
+  absent); `apps/nvim/`, `apps/proton-pass/` and `apps/workbench/` READMEs picked up
+  the which-key HWC popup look, the narrowed tray-patch match string, and
+  `hubOrder`/`hiddenHubs`.
+
+- 2026-10-11: apps/agent-harness: the pinned revision's hermetic hook suites
+  (`hooks/tests/run.sh`) run as a `system.checks` in `sys.nix`, so a leaking guard
+  fails the system build instead of reaching `/etc/agent-harness`; `agent-harness
+  publish` (`control.sh`) runs the live tier before switching any host. `claimcheck`
+  is now installed from the pinned revision with a jsonschema Python — its only
+  wrapper sat behind claude-code's `shareConfig`, which no host enables, so the
+  Artifact gate had been failing every textual report with DEPENDENCY-MISSING.
+  `guard-audit` (per-guard fire counts) installs alongside it, and apps/claude-code
+  drops its dead claimcheck wrapper (one producer). claude-config pinned 3424e6d.
 - 2026-10-11: core/shell: `_hwc_ls` renamed `hwc_ls`. Claude Code's shell snapshot drops functions with a leading underscore but keeps aliases, so every `ls` in an agent shell failed "command not found".
 - 2026-10-11: apps/rea added: rea-agents 6.3.0 (CLI, MCP server, skill) on every x86_64 host, enabled in profiles/base. apps/agent-harness grows two producer hooks for it: `extraSkills` (home) and `userMcp.extraServers` (system). Ghidra 12.1.2 backported to stable via `overlays/ghidra.nix` because REA refuses 12.0.4; verified with a Ghidra-backed `rea inspect` of coreutils on hwc-work.
 - 2026-10-10: core/shell: `ls` aliases to the `_hwc_ls` function, which runs eza only when stdin and stdout are terminals; eza 0.23 reads file names from stdin when it is not a tty, so `ls` printed nothing in agent shells and pipes. apps/agent-harness: `tracker-relay` also restarts on `handoff_doc.py` changes (it imports it).

@@ -117,11 +117,35 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 ## Structure
 
 ```
-├── index.mjs    CLI, browser lifecycle, scroll loop, comment expansion
-├── parse.mjs    FB GraphQL response parsers (ported from API Monitor)
-├── store.mjs    SQLite persistence layer
-├── data/
-│   ├── posts.db       ← created on first run
-│   └── session.json   ← created on login
-└── package.json
+├── index.mjs       CLI, browser lifecycle, login, scroll loop, comment expansion,
+│                   SQLite persistence
+├── parse.mjs       FB GraphQL response parsers (ported from API Monitor)
+├── Containerfile   mcr.microsoft.com/playwright:v1.59.1-noble base image
+├── package.json    pins playwright to exactly 1.59.1 (must match the image)
+├── package-lock.json
+└── README.md
 ```
+
+`data/posts.db` and the browser profile directory (`data/browser-profile` by default)
+are created at runtime and are not tracked.
+
+## Changelog
+
+- 2026-05-21: `shell.nix` removed (`5da97868`) — the NixOS Playwright dev shell that
+  pointed at the system chromium (`c1723479`, added `8b1715d8`).
+- 2026-05-21: Login flow reworked across `index.mjs`: the browser now starts via
+  `launchPersistentContext` with a `--profile` flag (`14bb2b86`); login completion is
+  detected from the `c_user` cookie rather than the DOM (`be21c3c0`) after earlier
+  passes polled for logged-in UI and tried to survive passkey redirects
+  (`a215218e`, `c000f1b2`, `c03a3c62`) — no Enter press is needed. The **Auth**,
+  **Usage** and **Options** sections above still describe the retired
+  `--session ./data/session.json` state file and the manual Enter step; the CLI now
+  takes `--profile <dir>` and persists the whole browser profile.
+- 2026-05-21: Playwright pinned to exactly `1.59.1` in `package.json` and the
+  Containerfile base image moved `v1.49.0-noble` → `v1.59.1-noble` (`96bcad2c`),
+  so the client library and the browser build in the image match.
+- 2026-05-21: Structure block corrected — `store.mjs` and `data/` were never tracked
+  files here; persistence lives in `index.mjs`.
+- 2026-05-21: `index.mjs` project path updated to `300_tech/320_projects` (`b6f1fc59`),
+  plus three `jobber mcp` commits (`5cf2ab77`, `2d15e31f`, `aa12b637`) whose messages
+  record no detail beyond that.

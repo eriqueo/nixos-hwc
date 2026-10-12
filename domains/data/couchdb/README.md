@@ -73,4 +73,9 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-03-31: Secret defaults now read `config.hwc.secrets.api."couchdb-admin-username"`
+  and `."couchdb-admin-password"` (with `or null`) instead of the old
+  `couchdbAdminUsernameFile` / `couchdbAdminPasswordFile` attribute names — the
+  `hwc.secrets.api` set is keyed by the secret's own name. The two option
+  descriptions were updated to match. Commit `17b9283b`, message "update".
 - 2026-03-25: Created README per Law 12

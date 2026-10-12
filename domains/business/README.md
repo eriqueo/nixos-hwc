@@ -63,6 +63,13 @@ business/
 
 ## Changelog
 
+- 2026-10-12: Law-12 refresh only, no code change: `databases/`, `datax/fb-group-scraper/`,
+  `firefly/` and `paperless/` READMEs brought current — the 2026-08-28 dead-`$PSQL`
+  deletion and `business_user` declaration, `migrations/002-estimator-site-visit.sql`,
+  the scraper's Playwright 1.59.1 pin and `--profile` login rework, firefly-explorer's
+  bounded wait for Firefly, and the wave-3 receipts-watcher split from the Paperless
+  host. Three Structure blocks corrected against their directories.
+
 - 2026-10-10: morning-briefing: `output/` is ignored as a whole (only `.gitkeep` tracked) so dispatch cards, reports and calendar drafts stop dirtying the checkout; two accidentally committed reports untracked. `run.sh` also scans Eric's failed `systemd --user` units (prefixed `user:`), which is where hwc-tracker, tracker-relay and mail-health run; mail-health had sat failed with no card.
 - 2026-10-10: workbench: `projects` joins the area registry (route `projects`, the agent project tracker hub). The hub renders the registry's switcher from `areas.json` like the Refinery does; no app edit elsewhere.
 - 2026-10-08: Make site-review guidance apply to flooring, bathroom and deck work.
