@@ -17,6 +17,13 @@ domains/business/databases/
 ├── schema.sql                   # Full business schema (690 lines, 15+ tables, views, triggers)
 ├── catalog.db                   # SQLite catalog (source for migration to Postgres)
 ├── migrate_catalog.py           # Migration script: SQLite -> Postgres catalog_items table
+├── migrate_canonical.sql        # Canonical-naming migration for the catalog tables
+├── populate_assembly_logic.py   # Seeds assembly logic for catalog items
+├── seed_catalog.py              # Seeds the catalog tables
+├── CATALOG_NAMING_CONVENTION.md # Naming contract for catalog item ids
+├── migrations/                  # Numbered SQL migrations applied by hand
+│   ├── 001-catalog-schema-split.sql
+│   └── 002-estimator-site-visit.sql
 ├── export_calculator_json.py    # Export DB → calculator-bathroom.json for website calculator
 ├── export_estimator_data.py     # Export DB → tradeRates.json, templates.json, catalog_export.json
 └── README.md
@@ -85,6 +92,21 @@ After enabling and rebuilding:
 
 ## Changelog
 
+- 2026-10-07: Added `migrations/002-estimator-site-visit.sql` — an idempotent
+  catalogue repair that rewrites `assembly_rules.condition_trigger` for the shower,
+  tile and tub rules (quote-driven panel shower, vinyl/Marmoleum, customer purchase
+  vs installation) and corrects the niche waste factor from 0.1 to 1.0. Existing
+  trade rates are unchanged. Rebuild the JSON with `export_estimator_data.py`
+  after applying it.
+- 2026-08-28: Removed the four `$PSQL` GRANT lines from `index.nix` — none ever ran
+  (`$PSQL` is undefined in the generated postgresql post-start script and `|| true`
+  swallowed the command-not-found), and they were not load-bearing: `eric` is a
+  cluster superuser and owns this database. Declared `business_user` via
+  `ensureUsers` instead, because `schema.sql` and `migrations/001-catalog-schema-split.sql`
+  grant to that role by name and it had only ever existed by hand on the live
+  cluster. Dropped the `perDatabase` backup registration too — `postgresql-db-backup`
+  was retired 2026-08-26, so it was dead config that read as a backup; the borg
+  pre-hook's nightly `pg_dumpall` covers `hwc`.
 - 2026-05-01: Added export scripts, estimate_templates table, 70 catalog items with Craftsman/JT rates
 - 2026-04-12: Created index.nix module (hwc.business.databases.*), wired into business domain
 - 2026-03-24: Granted n8n postgres user access to hwc schema
