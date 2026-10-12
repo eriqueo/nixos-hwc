@@ -9,12 +9,16 @@ v2.14.0 (REA, 2026-10-12):
 The client never reports its screen size, so each device's resolution, grey
 depth and playlist come from the Nix config (index.nix → WALL_CONFIG).
 
-Screens (screens.py) are HTML pages. A single render worker screenshots each
-(screen, size, greys) with headless Chromium and quantises it with ImageMagick
-into images/<screen>-<W>x<H>g<greys>-<hash>.png. A device is served the last
-good image; a failed render keeps it and is reported in /healthz.
+Screens (screens.py) are HTML pages in the TRMNL framework, whose CSS, JS,
+fonts and weather icons are served from the store at /framework/. A single
+render worker screenshots each (screen, size, greys) with headless Chromium,
+laid out at the device's CSS size and captured at its device scale, and
+quantises it with ImageMagick into images/<screen>-<W>x<H>g<greys>-<hash>.png.
+A device is served the last good image; a failed render keeps it and is
+reported in /healthz.
 
-The same pages are served as HTML at /<screen> for browser kiosks ("/" = week),
+The same pages are served as HTML at /<screen> for browser kiosks ("/" = week;
+?device=<name> picks the layout, default the first declared device),
 and /device/<name> is a web client: a browser shows that device's rotation as
 images and reloads itself, which survives reboots where the TRMNL app cannot.
 """
@@ -47,6 +51,14 @@ RENDER_TIMEOUT = 60    # per Chromium/ImageMagick call
 STALE_DEVICE = 2400    # /healthz fails when a device that has called is silent this long
 IMAGE_NAME = re.compile(r"^[a-z]+-\d+x\d+g\d+-[0-9a-f]{16}\.png$")
 BITS = {2: 1, 4: 2, 16: 4}
+ASSET_ROOT = os.path.realpath(os.path.join(screens.ASSETS, "framework"))
+ASSET_TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+               ".woff2": "font/woff2", ".ttf": "font/ttf", ".svg": "image/svg+xml",
+               ".txt": "text/plain; charset=utf-8", ".md": "text/plain; charset=utf-8",
+               "": "text/plain; charset=utf-8"}  # licenses/LICENSE
+# 2- and 4-grey renders draw text without antialiasing: antialiased glyph
+# edges at fractional x dither into noise when quantised to 1-2 bits.
+CRISP_ENV = {**os.environ, "FONTCONFIG_FILE": CONFIG["crispFontsConf"]}
 
 
 def log(msg):
@@ -83,25 +95,31 @@ def key_for(device_id):
 # ── rendering ───────────────────────────────────────────────────────────────
 
 class Renderer:
-    """One worker: every (screen, W, H, greys) any playlist needs."""
+    """One worker: every (screen, W, H, greys) any playlist needs. A target is
+    drawn with the profile (scale, framework classes) of the first device
+    that declares it."""
 
     def __init__(self):
         self.lock = threading.Lock()
         self.current = {}   # target -> filename
         self.status = {}    # target -> {"ok", "at", "error"}
-        self.targets = sorted({(s, d["width"], d["height"], d["grays"])
-                               for d in DEVICES.values() for s in d["playlist"]})
+        self.specs = {}     # target -> device spec
+        for d in DEVICES.values():
+            for s in d["playlist"]:
+                self.specs.setdefault((s, d["width"], d["height"], d["grays"]), d)
+        self.targets = sorted(self.specs)
 
     def render(self, target):
         screen, w, h, greys = target
         with self.lock:
             try:
-                page = SCREENS[screen](dt.datetime.now(TZ))
+                device = self.specs.get(target) or {"width": w, "height": h, "grays": greys}
+                page = SCREENS[screen](dt.datetime.now(TZ), device)
                 digest = hashlib.sha256(f"{w}x{h}g{greys}\n{page}".encode()).hexdigest()[:16]
                 name = f"{screen}-{w}x{h}g{greys}-{digest}.png"
                 path = os.path.join(IMAGES, name)
                 if not os.path.exists(path):
-                    self.screenshot(page, w, h, greys, path)
+                    self.screenshot(page, device, path)
                 previous = self.current.get(target)
                 self.current[target] = name
                 self.prune(target, keep={name, previous})
@@ -112,15 +130,24 @@ class Renderer:
                 log(f"render {screen} {w}x{h}g{greys} failed: {exc}")
             return self.current.get(target)
 
-    def screenshot(self, page, w, h, greys, out):
+    def screenshot(self, page, device, out):
+        """Lay the page out at the device's CSS size and capture it at its
+        pixel size (Chromium's device scale factor), then quantise it to the
+        device's greys. The page loads the framework from the store
+        (screens.for_file); file:// fonts need file access from files."""
+        css_w, css_h, _ = screens.profile(device)
+        scale = float(device.get("scale") or 1)
+        greys = device["grays"]
         with tempfile.TemporaryDirectory(dir=STATE) as tmp:
             src, raw = os.path.join(tmp, "page.html"), os.path.join(tmp, "raw.png")
             with open(src, "w") as f:
-                f.write(page)
+                f.write(screens.for_file(page))
             run([CONFIG["chromium"], "--headless=new", "--no-sandbox", "--disable-gpu",
-                 "--hide-scrollbars", "--force-device-scale-factor=1",
+                 "--hide-scrollbars", f"--force-device-scale-factor={scale:g}",
+                 "--allow-file-access-from-files", "--virtual-time-budget=3000",
                  f"--user-data-dir={os.path.join(STATE, 'chromium')}",
-                 f"--window-size={w},{h}", f"--screenshot={raw}", f"file://{src}"])
+                 f"--window-size={css_w},{css_h}", f"--screenshot={raw}", f"file://{src}"],
+                env=CRISP_ENV if greys < 16 else None)
             part = out + ".part"
             run([CONFIG["magick"], raw, "-colorspace", "Gray", "-dither", "FloydSteinberg",
                  "-posterize", str(greys), "-define", f"png:bit-depth={BITS[greys]}",
@@ -145,8 +172,8 @@ class Renderer:
             time.sleep(RENDER_EVERY)
 
 
-def run(cmd):
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=RENDER_TIMEOUT)
+def run(cmd, env=None):
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=RENDER_TIMEOUT, env=env)
     if r.returncode != 0:
         raise RuntimeError(f"{os.path.basename(cmd[0])} exited {r.returncode}: {r.stderr.strip()[-300:]}")
 
@@ -255,9 +282,12 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/healthz":
             ok, body = health()
             self.send(200 if ok else 503, "application/json", json.dumps(body))
+        elif path.startswith("/framework/"):
+            self.serve_asset(path[len("/framework/"):])
         elif path.strip("/") in ("", *SCREENS):
             screen = path.strip("/") or "week"
-            self.send(200, "text/html; charset=utf-8", SCREENS[screen](dt.datetime.now(TZ)))
+            self.send(200, "text/html; charset=utf-8",
+                      SCREENS[screen](dt.datetime.now(TZ), self.preview_device()))
         else:
             self.send(404, "text/plain", "not found")
 
@@ -357,6 +387,24 @@ a{{position:fixed;top:0;bottom:0}}
         except FileNotFoundError:
             return self.send(404, "text/plain", "not found")
         self.send(200, "image/png", data, cache="public, max-age=86400, immutable")
+
+    def preview_device(self):
+        """The device an HTML preview is laid out for: ?device=<name>, else
+        the first declared device, else the Fire HD 8 profile."""
+        query = dict(p.partition("=")[::2] for p in self.path.partition("?")[2].split("&") if p)
+        if query.get("device") in DEVICES:
+            return DEVICES[query["device"]]
+        return next(iter(DEVICES.values()), screens.PREVIEW_DEVICE)
+
+    def serve_asset(self, rel):
+        """Framework CSS/JS/fonts, weather icons and their licenses, from the
+        store path in the config (pages link them as framework/…)."""
+        path = os.path.realpath(os.path.join(ASSET_ROOT, rel))
+        ctype = ASSET_TYPES.get(os.path.splitext(path)[1])
+        if ctype is None or not path.startswith(ASSET_ROOT + os.sep) or not os.path.isfile(path):
+            return self.send(404, "text/plain", "not found")
+        with open(path, "rb") as f:
+            self.send(200, ctype, f.read(), cache="public, max-age=86400")
 
     # plumbing --------------------------------------------------------------
 

@@ -1,10 +1,18 @@
-"""Screen producers for the wall display: each screen turns one data source
-into a full HTML page drawn black on white (an e-ink look).
+"""Screen producers for the wall display: each screen turns cached data into
+a full HTML page in the TRMNL framework's look (black, white and greys).
 
-A screen is a function `html(now) -> str` registered in SCREENS. Pages size
-themselves in vh/vw, so one page renders at any device resolution. Data is
-cached here (Cached) so the HTML preview, the renderer and every device share
-one fetch per source.
+A screen is a function `html(now, device) -> str` registered in SCREENS.
+`device` is a device spec from the config (width, height, grays, scale):
+the page is laid out at width/scale x height/scale CSS pixels with the
+framework's device classes for that grey depth (profile()), and the
+renderer captures it at width x height. The framework CSS/JS/fonts and the
+weather icons are local files under CONFIG["assets"]/framework, linked
+relative to <base href="/">: the server serves them at /framework/, and
+for_file() points a page at the store path for the file:// render. Nothing
+is fetched from the network at render time.
+
+Data is cached here (Cached) so the HTML preview, the renderer and every
+device share one fetch per source.
 """
 import base64
 import datetime as dt
@@ -18,6 +26,7 @@ import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo
 
 import icalendar
+import segno
 
 CONFIG = json.load(open(os.environ["WALL_CONFIG"]))
 RADICALE = CONFIG["radicale"]["url"].rstrip("/")
@@ -28,13 +37,13 @@ PLACE = CONFIG["noaa"]["place"]
 UA = CONFIG["noaa"]["userAgent"]
 BRIEFING = CONFIG.get("briefingFile")
 TZ = ZoneInfo(CONFIG["timeZone"])
+ASSETS = CONFIG["assets"]          # store path holding framework/
+LINKS = CONFIG.get("links") or {}  # screen -> URL its QR code opens
 
 DAYS = 7
 CAL_TTL = 300
 WX_TTL = 900
 RETRY = 60
-MAX_EVENTS = 9   # per day column; the rest collapse to "+N more"
-MAX_ROWS = 14    # list screens (tasks, briefing)
 
 NS = {"d": "DAV:", "c": "urn:ietf:params:xml:ns:caldav"}
 
@@ -115,6 +124,10 @@ def utc_stamp(t):
     return t.astimezone(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
+def day_of(t):
+    return t.date() if isinstance(t, dt.datetime) else t
+
+
 def load_events(first_day):
     start = dt.datetime.combine(first_day, dt.time(), TZ)
     query = EVENT_REPORT.format(s=utc_stamp(start), e=utc_stamp(start + dt.timedelta(days=DAYS)))
@@ -143,35 +156,92 @@ def load_events(first_day):
 
 
 def load_tasks(today):
-    """Open tasks due today or earlier, plus undated high-priority ones (iCal 1-4)."""
-    tasks = []
+    """Every open task across every Radicale task list ("open": dated first by
+    due day, then undated; overdue first) and the ones completed today
+    ("done", newest first)."""
+    open_, done = [], []
     for href, name in collections("VTODO"):
         for t in components(href, TODO_REPORT, "VTODO"):
-            if str(t.get("STATUS", "")).upper() in ("COMPLETED", "CANCELLED") or "COMPLETED" in t:
+            status = str(t.get("STATUS", "")).upper()
+            if status == "CANCELLED":
+                continue
+            summary = str(t.get("SUMMARY", "")).strip() or "(untitled)"
+            if status == "COMPLETED" or "COMPLETED" in t:
+                at = local(t.decoded("COMPLETED")) if "COMPLETED" in t else None
+                if at is not None and day_of(at) == today:
+                    done.append({"summary": summary, "list": name, "completed": at})
                 continue
             due = local(t.decoded("DUE")) if "DUE" in t else None
-            due_day = due.date() if isinstance(due, dt.datetime) else due
-            prio = int(t.get("PRIORITY", 0) or 0)
-            if due_day is not None and due_day > today:
-                continue
-            if due_day is None and not 1 <= prio <= 4:
-                continue
-            tasks.append({"summary": str(t.get("SUMMARY", "")).strip() or "(untitled)",
-                          "due": due, "due_day": due_day, "list": name, "priority": prio})
-    tasks.sort(key=lambda t: (t["due_day"] is None, t["due_day"] or today, t["priority"] or 9, t["summary"]))
-    return tasks
+            open_.append({"summary": summary, "due": due, "due_day": day_of(due),
+                          "list": name, "priority": int(t.get("PRIORITY", 0) or 0)})
+    open_.sort(key=lambda t: (t["due_day"] is None, t["due_day"] or today,
+                              t["priority"] or 10, t["summary"].lower()))
+    done.sort(key=lambda t: t["completed"] if isinstance(t["completed"], dt.datetime)
+              else dt.datetime.combine(t["completed"], dt.time(), TZ), reverse=True)
+    return {"open": open_, "done": done}
 
 
-_forecast_url = None
+# api.weather.gov icon codes (…/icons/land/day/rain_showers,40/tsra,60) →
+# Weather Icons glyphs (day, night).
+ICONS = {
+    "skc": ("wi-day-sunny", "wi-night-clear"),
+    "few": ("wi-day-sunny-overcast", "wi-night-alt-partly-cloudy"),
+    "sct": ("wi-day-cloudy", "wi-night-alt-cloudy"),
+    "bkn": ("wi-cloudy", "wi-cloudy"),
+    "ovc": ("wi-cloudy", "wi-cloudy"),
+    "wind_skc": ("wi-day-windy", "wi-windy"),
+    "wind_few": ("wi-day-windy", "wi-windy"),
+    "wind_sct": ("wi-day-cloudy-windy", "wi-night-alt-cloudy-windy"),
+    "wind_bkn": ("wi-cloudy-windy", "wi-cloudy-windy"),
+    "wind_ovc": ("wi-cloudy-windy", "wi-cloudy-windy"),
+    "snow": ("wi-day-snow", "wi-night-alt-snow"),
+    "rain_snow": ("wi-day-rain-mix", "wi-night-alt-rain-mix"),
+    "rain_sleet": ("wi-day-sleet", "wi-night-alt-sleet"),
+    "snow_sleet": ("wi-day-sleet", "wi-night-alt-sleet"),
+    "fzra": ("wi-rain-mix", "wi-rain-mix"),
+    "rain_fzra": ("wi-rain-mix", "wi-rain-mix"),
+    "snow_fzra": ("wi-rain-mix", "wi-rain-mix"),
+    "sleet": ("wi-sleet", "wi-sleet"),
+    "rain": ("wi-day-rain", "wi-night-alt-rain"),
+    "rain_showers": ("wi-day-showers", "wi-night-alt-showers"),
+    "rain_showers_hi": ("wi-day-showers", "wi-night-alt-showers"),
+    "tsra": ("wi-day-thunderstorm", "wi-night-alt-thunderstorm"),
+    "tsra_sct": ("wi-day-storm-showers", "wi-night-alt-storm-showers"),
+    "tsra_hi": ("wi-day-storm-showers", "wi-night-alt-storm-showers"),
+    "tornado": ("wi-tornado", "wi-tornado"),
+    "hurricane": ("wi-hurricane", "wi-hurricane"),
+    "tropical_storm": ("wi-hurricane", "wi-hurricane"),
+    "dust": ("wi-dust", "wi-dust"),
+    "smoke": ("wi-smoke", "wi-smoke"),
+    "haze": ("wi-day-haze", "wi-night-fog"),
+    "hot": ("wi-hot", "wi-hot"),
+    "cold": ("wi-snowflake-cold", "wi-snowflake-cold"),
+    "blizzard": ("wi-snow-wind", "wi-snow-wind"),
+    "fog": ("wi-day-fog", "wi-night-fog"),
+}
+
+
+def noaa_icon(url):
+    """The glyph for an api.weather.gov icon URL: its first (earliest) condition."""
+    try:
+        parts = url.split("/icons/", 1)[1].split("?")[0].split("/")
+        night, code = parts[1] == "night", parts[2].split(",")[0]
+    except (AttributeError, IndexError):
+        return "wi-na"
+    pair = ICONS.get(code)
+    return pair[night] if pair else "wi-na"
+
+
+_urls = None  # (forecast, hourly) for POINT
 
 
 def load_weather():
-    global _forecast_url
+    global _urls
     geo = {"Accept": "application/geo+json"}
-    if _forecast_url is None:
-        point = json.loads(fetch(f"https://api.weather.gov/points/{POINT}", headers=geo))
-        _forecast_url = point["properties"]["forecast"]
-    periods = json.loads(fetch(_forecast_url, headers=geo))["properties"]["periods"]
+    if _urls is None:
+        point = json.loads(fetch(f"https://api.weather.gov/points/{POINT}", headers=geo))["properties"]
+        _urls = (point["forecast"], point["forecastHourly"])
+    periods = json.loads(fetch(_urls[0], headers=geo))["properties"]["periods"]
     alerts = json.loads(fetch(f"https://api.weather.gov/alerts/active?point={POINT}",
                               headers=geo))["features"]
     days = {}
@@ -180,18 +250,52 @@ def load_weather():
         slot = days.setdefault(day, {})
         pop = (p.get("probabilityOfPrecipitation") or {}).get("value")
         if p["isDaytime"]:
-            slot.update(hi=p["temperature"], sky=p["shortForecast"], pop=pop)
+            slot.update(hi=p["temperature"], sky=p["shortForecast"], pop=pop,
+                        icon=noaa_icon(p.get("icon")))
         else:
             slot["lo"] = p["temperature"]
             slot.setdefault("sky", p["shortForecast"])
+            slot.setdefault("icon", noaa_icon(p.get("icon")))
             slot["pop"] = max(slot.get("pop") or 0, pop or 0) or None
     now = periods[0]
     return {
         "days": days,
         "now": f'{now["name"]} · {now["temperature"]}° · {now["shortForecast"]}'
                f' · {now["windDirection"]} {now["windSpeed"]}',
-        "alerts": [a["properties"]["event"] + (": " + a["properties"]["headline"]
-                   if a["properties"].get("headline") else "") for a in alerts],
+        "current": load_current(geo),
+        "alerts": [alert_text(a["properties"]) for a in alerts],
+    }
+
+
+def alert_text(p):
+    """"Dense Fog Advisory until Tue 12p": the event and when it ends."""
+    ends = p.get("ends") or p.get("expires")
+    if not ends:
+        return p["event"]
+    t = dt.datetime.fromisoformat(ends).astimezone(TZ)
+    return f'{p["event"]} until {t:%a} {clock(t)}'
+
+
+def load_current(geo):
+    """This hour from the hourly forecast (temperature, humidity, precip,
+    wind); None when that endpoint fails, so the daily data still shows."""
+    try:
+        hours = json.loads(fetch(_urls[1], headers=geo))["properties"]["periods"]
+    except Exception:
+        return None
+    now = dt.datetime.now(TZ)
+    pick = next((h for h in hours if dt.datetime.fromisoformat(h["startTime"]) <= now
+                 < dt.datetime.fromisoformat(h["endTime"])), hours[0] if hours else None)
+    if pick is None:
+        return None
+    return {
+        "temp": pick["temperature"],
+        "at": dt.datetime.fromisoformat(pick["startTime"]).astimezone(TZ),
+        "sky": pick["shortForecast"],
+        "icon": noaa_icon(pick.get("icon")),
+        "humidity": (pick.get("relativeHumidity") or {}).get("value"),
+        "pop": (pick.get("probabilityOfPrecipitation") or {}).get("value"),
+        "wind": f'{pick.get("windDirection", "")} {pick.get("windSpeed", "")}'.strip(),
     }
 
 
@@ -239,7 +343,34 @@ briefing = Cached("briefing", load_briefing, CAL_TTL)
 SOURCES = [calendar, weather, todo] + ([briefing] if BRIEFING else [])
 
 
-# ── rendering ───────────────────────────────────────────────────────────────
+# ── page frame: framework, device profile, shared pieces ────────────────────
+
+BASE = '<base href="/">'
+BIT_CLASS = {2: "screen--1bit", 4: "screen--2bit", 16: "screen--4bit"}
+# /<screen> previews without a declared device: the Fire HD 8 profile.
+PREVIEW_DEVICE = {"width": 1280, "height": 800, "grays": 16, "scale": 1.6}
+ICON_DIR = os.path.join(ASSETS, "framework", "icons")
+ICON_NAMES = {n[:-4] for n in os.listdir(ICON_DIR) if n.endswith(".svg")}
+
+
+def profile(device):
+    """(CSS width, CSS height, framework device classes) for a device spec.
+    16 greys lays out as a TRMNL X ("v2", md); 2 and 4 greys as a TRMNL OG
+    (sm). The framework needs a device class with its bit-depth class, or
+    its views render blank. Its own --pixel-ratio is pinned to 1 in page():
+    Chromium's device scale factor does the scaling instead."""
+    scale = float(device.get("scale") or 1)
+    w, h = round(device["width"] / scale), round(device["height"] / scale)
+    model = "screen--v2 screen--md" if device["grays"] == 16 else "screen--og screen--sm"
+    density = " screen--density-2x" if scale >= 1.5 else ""
+    return w, h, f"{model} {BIT_CLASS[device['grays']]}{density}"
+
+
+def for_file(page):
+    """The page with its base pointed at the asset store path, for a
+    file:// render by Chromium."""
+    return page.replace(BASE, f'<base href="file://{ASSETS}/">', 1)
+
 
 def clock(t):
     h, m = t.hour, t.minute
@@ -250,25 +381,75 @@ def stamp(c):
     return clock(dt.datetime.fromtimestamp(c.at, TZ)) if c.at else "never"
 
 
-def page(title, now, body, sources):
-    notes = " · ".join(f"{c.name} {stamp(c)}" for c in sources)
-    errors = " · ".join(f"{c.name} failed: {html.escape(c.error)}" for c in sources if c.error)
+E = html.escape
+
+
+def page(title, now, device, body, sources, instance=None):
+    """A framework page: one full view, its layout and a title bar naming the
+    screen, the sources' freshness and any source that failed."""
+    w, h, classes = profile(device)
+    failed = "".join(f'<span class="label label--small label--inverted">{E(c.name)} failed {stamp(c)}</span>'
+                     for c in sources if c.error)
+    errors = " · ".join(f"{c.name}: {c.error}" for c in sources if c.error)
+    if instance is None:
+        instance = ("updated " + stamp(sources[0]) if len(sources) == 1
+                    else " · ".join(f"{c.name} {stamp(c)}" for c in sources))
     return f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="en"><head><meta charset="utf-8">{BASE}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="refresh" content="300">
-<title>{html.escape(title)}</title>
-<style>{CSS}</style></head>
-<body>
-{body}
-<footer><span>{notes}</span><span class="err">{errors}</span></footer>
-</body></html>"""
+<title>{E(title)}</title>
+<link rel="stylesheet" href="framework/plugins.css">
+<script src="framework/plugins.js" defer></script>
+<style>:root,.screen{{--screen-w:{w}px!important;--screen-h:{h}px!important;--pixel-ratio:1!important}}
+{CSS}</style></head>
+<body class="environment trmnl" data-errors="{E(errors)}">
+<div class="screen screen--fonts-trmnl {classes}"><div class="view view--full">
+<div class="layout w-fill">{body}</div>
+<div class="title_bar"><span class="title">{E(title)}</span>{failed}<span class="instance">{E(instance)}</span></div>
+</div></div></body></html>"""
 
 
-def header(now, right):
-    return (f'<header><div class="date">{now:%A} {now.day} {now:%B}</div>'
-            f'<div class="now">{right}</div></header>')
+def icon(name, cls=""):
+    name = name if name in ICON_NAMES else "wi-na"
+    return f'<img class="w-ico {cls}" src="framework/icons/{name}.svg" alt="">'
 
+
+QR_CSS_PX = 96  # target QR edge on the 800-wide layout
+
+
+def qr(screen, device, caption):
+    """The screen's QR code (LINKS[screen]) as inline SVG, sized so every
+    module is a whole number of device pixels (crisp at 1 bit), or ''."""
+    url = LINKS.get(screen)
+    if not url:
+        return ""
+    code = segno.make(url, error="m", micro=False)
+    modules = code.symbol_size(border=0)[0]
+    scale = float(device.get("scale") or 1)
+    per = max(2, int(QR_CSS_PX * scale // modules))
+    edge = modules * per / scale
+    svg = code.svg_inline(border=0, omitsize=True, dark="#000", svgclass="w-qrsvg")
+    return (f'<div class="w-qr"><div style="width:{edge:.3f}px;height:{edge:.3f}px">{svg}</div>'
+            f'<span class="label label--small">{E(caption)}</span></div>')
+
+
+def rail(screen, device, stats, caption):
+    """Right-hand column: big counts, then the QR code with its caption."""
+    cells = "".join(f'<div class="w-stat"><span class="value value--small value--tnums">{E(str(v))}</span>'
+                    f'<span class="label label--small">{E(k)}</span></div>' for k, v in stats)
+    return f'<div class="w-rail">{cells}<div class="w-grow"></div>{qr(screen, device, caption)}</div>'
+
+
+def more(n):
+    return f'<span class="label label--small label--outline w-more">+{n} more</span>' if n > 0 else ""
+
+
+def none(text):
+    return f'<span class="description w-none">{E(text)}</span>'
+
+
+# ── events ──────────────────────────────────────────────────────────────────
 
 def on_day(ev, day):
     if ev["allday"]:
@@ -278,138 +459,335 @@ def on_day(ev, day):
     return ds <= ev["start"] < de or ev["start"] < ds < ev["end"]
 
 
-def day_events(events, day):
+def events_on(events, day):
     todays = [e for e in events if on_day(e, day)]
     todays.sort(key=lambda e: (not e["allday"],
                                e["start"] if not e["allday"] else dt.datetime.min.replace(tzinfo=TZ),
                                e["summary"]))
-    items = []
-    for e in todays:
-        title = html.escape(e["summary"])
+    return todays
+
+
+def event_rows(evs, day, limit, clamp=2):
+    rows = []
+    for e in evs[:limit]:
         if e["allday"]:
-            items.append(f'<li class="allday">{title}</li>')
+            when, cls = "all day", "label--inverted"
         else:
-            when = clock(e["start"]) if e["start"].date() == day else "cont."
-            items.append(f'<li><span class="t">{when}</span>{title}</li>')
-    return capped(items, MAX_EVENTS) or '<li class="none">—</li>'
+            when, cls = (clock(e["start"]) if e["start"].date() == day else "cont."), "label--outline"
+        rows.append(f'<div class="w-ev"><span class="label label--small {cls}">{when}</span>'
+                    f'<span class="description w-c{clamp}">{E(e["summary"])}</span></div>')
+    return "".join(rows) + more(len(evs) - limit)
 
 
-def capped(items, limit):
-    if len(items) > limit:
-        extra = len(items) - (limit - 1)
-        items = items[:limit - 1] + [f'<li class="more">+{extra} more</li>']
-    return "".join(items)
+def agenda_row(e, day):
+    """One event as a single line: time chip, then the title (home screen)."""
+    if e["allday"]:
+        when, cls = "all day", "label--inverted"
+    else:
+        when, cls = (clock(e["start"]) if e["start"].date() == day else "cont."), "label--outline"
+    return (f'<div class="w-agenda"><span class="label {cls}">{when}</span>'
+            f'<span class="title title--small w-c1">{E(e["summary"])}</span></div>')
 
 
-def day_weather(wx, day):
-    w = wx["days"].get(day) if wx else None
-    if not w:
-        return '<div class="wx"><div class="sky">no forecast</div></div>'
-    hi = f'<span class="hi">{w["hi"]}°</span>' if "hi" in w else ""
-    lo = f'<span class="lo">{w["lo"]}°</span>' if "lo" in w else ""
-    pop = f'<div class="pop">{w["pop"]}% precip</div>' if (w.get("pop") or 0) >= 10 else ""
-    return f'<div class="wx"><div>{hi}{lo}</div><div class="sky">{html.escape(w["sky"])}</div>{pop}</div>'
+def wx_day(wx, day):
+    return (wx or {}).get("days", {}).get(day) or {}
 
 
-def now_line(wx):
-    place = f"{html.escape(PLACE)} — " if PLACE else ""
-    return place + html.escape(wx["now"]) if wx else "forecast unavailable"
+def deg(v):
+    return f"{v}°" if v is not None else "–"
 
 
-def week(now):
+def hi_lo(w):
+    return f'{deg(w.get("hi"))} / {deg(w.get("lo"))}'
+
+
+def alert_bar(wx, limit=1, clamp=1):
+    alerts = (wx or {}).get("alerts", [])[:limit]
+    return "".join(f'<div class="w-alert w-c{clamp}">{E(a)}</div>' for a in alerts)
+
+
+# ── tasks ───────────────────────────────────────────────────────────────────
+
+def due_chip(t, today):
+    """(text, label class) for a task's due day; (None, None) when undated."""
+    d = t["due_day"]
+    if d is None:
+        return None, None
+    if d < today:
+        n = (today - d).days
+        return ("yesterday" if n == 1 else f"{n} days ago"), "label--inverted"
+    if d == today:
+        return (clock(t["due"]) if isinstance(t["due"], dt.datetime) else "today"), "label--inverted"
+    if (d - today).days == 1:
+        return "tomorrow", "label--outline"
+    if (d - today).days < 7:
+        return f"{d:%a}", "label--outline"
+    return f"{d:%b} {d.day}", "label--outline"
+
+
+def task_row(t, today, clamp=2):
+    text, cls = due_chip(t, today)
+    chip = f'<span class="label label--small {cls}">{E(text)}</span>' if text else ""
+    prio = '<span class="label label--small label--outline">!</span>' if 1 <= t["priority"] <= 4 and not text else ""
+    return (f'<div class="w-task"><span class="w-box"></span><div class="w-tbody">'
+            f'<span class="title title--small w-c{clamp}">{E(t["summary"])}</span>'
+            f'<div class="w-meta">{chip}{prio}<span class="description w-c1">{E(t["list"])}</span></div></div></div>')
+
+
+def done_row(t):
+    when = clock(t["completed"]) if isinstance(t["completed"], dt.datetime) else "today"
+    return (f'<div class="w-task w-done"><span class="w-box w-checked"></span><div class="w-tbody">'
+            f'<span class="title title--small w-c2">{E(t["summary"])}</span>'
+            f'<div class="w-meta"><span class="description w-c1">{E(when)} · {E(t["list"])}</span></div></div></div>')
+
+
+def top_tasks(open_, today, n=3):
+    """Overdue first, then due today, then undated by priority (unset last),
+    then the next dated ones."""
+    due = [t for t in open_ if t["due_day"] is not None and t["due_day"] <= today]
+    undated = sorted((t for t in open_ if t["due_day"] is None),
+                     key=lambda t: (t["priority"] or 10, t["summary"].lower()))
+    later = [t for t in open_ if t["due_day"] is not None and t["due_day"] > today]
+    return (due + undated + later)[:n]
+
+
+def column(heading, rows, total, limit, empty, extra=None):
+    """A headed list: the heading, then `extra` (default: the count), then
+    up to `limit` rows and "+N more"."""
+    shown = "".join(rows[:limit]) or none(empty)
+    if extra is None:
+        extra = f'<span class="label label--small">{total}</span>'
+    return (f'<div class="w-col"><div class="w-head"><span class="title">{E(heading)}</span>{extra}</div>'
+            f'<div class="w-list">{shown}{more(total - limit)}</div></div>')
+
+
+# ── screens ─────────────────────────────────────────────────────────────────
+
+def home(now, device):
+    today = now.date()
+    tomorrow = today + dt.timedelta(days=1)
+    cal = calendar.get(today)
+    wx = weather.get()
+    tk = todo.get(today)
+    events = cal["events"] if cal else []
+    w = wx_day(wx, today)
+    cur = (wx or {}).get("current") or {}
+    pop = w.get("pop")
+
+    weather_col = (
+        f'<div class="w-col w-homewx">'
+        f'<div class="w-head"><span class="title">{now:%A}</span><span class="label label--small">{now:%B} {now.day}</span></div>'
+        f'<div class="w-wxrow">{icon(w.get("icon") or cur.get("icon") or "wi-na", "w-ico-home")}'
+        f'<div class="w-stack"><span class="value value--xlarge value--tnums">{deg(w.get("hi", cur.get("temp")))}</span>'
+        f'<span class="label">low {deg(w.get("lo"))}</span></div></div>'
+        f'<span class="title title--small w-c2">{E(w.get("sky") or cur.get("sky") or "no forecast")}</span>'
+        f'<div class="w-meta">'
+        + (f'<span class="label label--small label--outline">{pop}% precip</span>' if pop else
+           '<span class="label label--small label--outline">dry</span>')
+        + (f'<span class="label label--small">now {deg(cur.get("temp"))}</span>' if cur else "")
+        + f'</div>{alert_bar(wx, clamp=2)}</div>')
+
+    upcoming = [e for e in events_on(events, today) if e["allday"] or e["end"] > now]
+    later = events_on(events, tomorrow)
+    today_col = column("Today", [agenda_row(e, today) for e in upcoming], len(upcoming), 6,
+                       "Nothing else today")
+    tomorrow_col = column("Tomorrow", [agenda_row(e, tomorrow) for e in later], len(later), 6,
+                          "Nothing scheduled",
+                          extra=f'<span class="label label--small label--outline">{hi_lo(wx_day(wx, tomorrow))}</span>')
+
+    top = top_tasks(tk["open"], today) if tk else []
+    late = sum(1 for t in (tk or {}).get("open", []) if t["due_day"] and t["due_day"] < today)
+    cards = "".join(f'<div class="w-card">{task_row(t, today)}</div>' for t in top) or none("No tasks due today")
+    tasks_strip = (f'<div class="w-strip"><div class="w-head"><span class="title">Top tasks</span>'
+                   + (f'<span class="label label--small label--inverted">{late} overdue</span>' if late else "")
+                   + f'</div><div class="w-cards">{cards}</div></div>')
+
+    body = f'<div class="w-row w-flex">{weather_col}{today_col}{tomorrow_col}</div>{tasks_strip}'
+    return page("Home", now, device, body, [calendar, weather, todo],
+                instance=f"{PLACE} · {now:%a} {now.day} {now:%b}" if PLACE else None)
+
+
+def week(now, device):
     today = now.date()
     cal = calendar.get(today)
     wx = weather.get()
     events = cal["events"] if cal else []
-    columns = []
+    cols = []
     for i in range(DAYS):
         day = today + dt.timedelta(days=i)
-        columns.append(
-            f'<section class="day{" today" if i == 0 else ""}">'
-            f'<h2><span>{day:%a}</span><span class="dom">{day.day}</span></h2>'
-            f'{day_weather(wx, day)}<ul class="events">{day_events(events, day)}</ul></section>')
-    alerts = "".join(f'<div class="alert">{html.escape(a)}</div>' for a in (wx or {}).get("alerts", []))
-    body = f'{header(now, now_line(wx))}{alerts}<main class="week">{"".join(columns)}</main>'
-    return page("Week", now, body, [calendar, weather])
+        w = wx_day(wx, day)
+        pop = f'<span class="label label--small">{w["pop"]}%</span>' if (w.get("pop") or 0) >= 20 else ""
+        evs = events_on(events, day)
+        cols.append(
+            f'<div class="w-day{" w-today" if i == 0 else ""}">'
+            f'<div class="w-dayhead"><span>{day:%a}</span><span>{day.day}</span></div>'
+            f'<div class="w-daywx">{icon(w.get("icon", "wi-na"), "w-ico-s")}'
+            f'<span class="label label--small value--tnums">{deg(w.get("hi"))}/{deg(w.get("lo"))}</span>{pop}</div>'
+            f'<div class="w-list">{event_rows(evs, day, 5, clamp=3) or none("—")}</div></div>')
+    body = (f'{alert_bar(wx)}<div class="w-row w-flex"><div class="w-week">{"".join(cols)}</div>'
+            f'{rail("week", device, [], "Scan for calendar")}</div>')
+    return page("Week", now, device, body, [calendar, weather],
+                instance=(f"{PLACE} · " if PLACE else "") + ((wx or {}).get("now") or "forecast unavailable"))
 
 
-def tasks(now):
+def weather_screen(now, device):
     today = now.date()
-    items = todo.get(today) or []
-    rows = []
-    for t in items:
-        if t["due_day"] is None:
-            when = "priority"
-        elif t["due_day"] < today:
-            n = (today - t["due_day"]).days
-            when = f"{n}d overdue"
-        elif isinstance(t["due"], dt.datetime):
-            when = clock(t["due"])
-        else:
-            when = "today"
-        cls = "late" if t["due_day"] is not None and t["due_day"] < today else ""
-        rows.append(f'<li class="{cls}"><span class="t">{when}</span><span class="title">{html.escape(t["summary"])}</span>'
-                    f'<span class="tag">{html.escape(t["list"])}</span></li>')
-    body = (f'{header(now, "Tasks — due today and overdue")}'
-            f'<main class="list"><ul class="rows">{capped(rows, MAX_ROWS) or "<li class=none>Nothing due.</li>"}</ul></main>')
-    return page("Tasks", now, body, [todo])
+    wx = weather.get()
+    t = wx_day(wx, today)
+    cur = (wx or {}).get("current") or {}
+    temp = cur.get("temp", t.get("hi"))
+    at = f'Now · {clock(cur["at"])}' if cur.get("at") else "Today"
+
+    def stat(glyph, value, label):
+        return (f'<div class="w-wxstat">{icon(glyph, "w-ico-m")}<div class="w-stack">'
+                f'<span class="value value--xsmall value--tnums">{E(value)}</span>'
+                f'<span class="label label--small">{E(label)}</span></div></div>')
+
+    pop = cur.get("pop") if cur.get("pop") is not None else t.get("pop")
+    stats = (stat("wi-thermometer", hi_lo(t), "High / Low")
+             + stat("wi-humidity", f'{cur["humidity"]}%' if cur.get("humidity") is not None else "–", "Humidity")
+             + stat("wi-umbrella", f"{pop or 0}%", "Precipitation")
+             + stat("wi-strong-wind", cur.get("wind") or "–", "Wind"))
+    top = (f'<div class="w-wxtop">'
+           f'<div class="w-wxbig">{icon(cur.get("icon") or t.get("icon") or "wi-na", "w-ico-xl")}</div>'
+           f'<div class="w-wxnow"><span class="value value--xxxlarge value--tnums">{deg(temp)}</span>'
+           f'<span class="label">{E(at)}</span>'
+           f'<span class="description w-c1">{E(cur.get("sky") or t.get("sky") or "")}</span></div>'
+           f'<div class="w-wxstats">{stats}</div>{qr("weather", device, "Scan for forecast")}</div>')
+    cards = []
+    for i in range(1, 6):
+        day = today + dt.timedelta(days=i)
+        w = wx_day(wx, day)
+        if not w:
+            continue
+        name = "Tomorrow" if i == 1 else f"{day:%A}"
+        cards.append(f'<div class="w-wxcard"><span class="title title--small">{name}</span>'
+                     f'{icon(w.get("icon", "wi-na"), "w-ico-l")}'
+                     f'<span class="description w-c2 w-center">{E(w.get("sky", ""))}</span>'
+                     f'<span class="value value--xsmall value--tnums">{hi_lo(w)}</span>'
+                     f'<span class="w-pop">{icon("wi-raindrop", "w-ico-xs")}{w.get("pop") or 0}%</span></div>')
+    body = (f'{top}{alert_bar(wx)}<div class="w-wxcards">{"".join(cards) or none("no forecast")}</div>')
+    return page("Weather", now, device, body, [weather],
+                instance=f"{PLACE} · NWS forecast · updated {stamp(weather)}" if PLACE else None)
 
 
-SEVERITY = {"red": "late", "amber": "", "green": ""}
+def tasks(now, device):
+    today = now.date()
+    tk = todo.get(today) or {"open": [], "done": []}
+    dated = [t for t in tk["open"] if t["due_day"] is not None]
+    undated = sorted((t for t in tk["open"] if t["due_day"] is None),
+                     key=lambda t: (t["priority"] or 10, t["summary"].lower()))
+    late = sum(1 for t in dated if t["due_day"] < today)
+    cols = (column("Deadlines", [task_row(t, today) for t in dated], len(dated), 6, "No deadlines",
+                   extra=f'<span class="label label--small">{len(dated)}</span>'
+                   + (f'<span class="label label--small label--inverted">{late} late</span>' if late else ""))
+            + column("To-Dos", [task_row(t, today) for t in undated], len(undated), 6, "Nothing to do")
+            + column("Finished", [done_row(t) for t in tk["done"]], len(tk["done"]), 6, "Nothing yet today"))
+    body = (f'<div class="w-row w-flex"><div class="w-cols">{cols}</div>'
+            f'{rail("tasks", device, [("Pending", len(tk["open"])), ("Done today", len(tk["done"]))], "Scan to manage")}</div>')
+    return page("Tasks", now, device, body, [todo])
 
 
-def brief(now):
+SEVERITY = {"red": "label--inverted", "amber": "label--outline", "green": ""}
+SEVERITY_TEXT = {"red": "urgent", "amber": "soon", "green": "fyi"}
+
+
+def brief(now, device):
     b = briefing.get(now.date()) if BRIEFING else None
+    items = (b or {}).get("items", [])
     rows = []
-    for i in (b or {}).get("items", []):
-        title = html.escape(i.get("title", "").splitlines()[0][:140])
-        why = html.escape(i.get("why") or "")
-        rows.append(f'<li class="{SEVERITY.get(i.get("severity"), "")}"><span class="title">{title}</span>'
-                    f'<span class="tag">{why}</span></li>')
+    for n, i in enumerate(items, 1):
+        sev = i.get("severity")
+        title = (i.get("title") or "").splitlines()[0][:160] if i.get("title") else ""
+        chip = (f'<span class="label label--small {SEVERITY[sev]}">{SEVERITY_TEXT[sev]}</span>'
+                if sev in SEVERITY else "")
+        src = f'<span class="label label--small label--outline">{E(i["source"])}</span>' if i.get("source") else ""
+        rows.append(f'<div class="w-brief"><span class="title w-num">{n}</span><div class="w-tbody">'
+                    f'<span class="title w-c1">{E(title)}</span>'
+                    f'<div class="w-meta">{chip}{src}<span class="description w-c1">{E(i.get("why") or "")}</span></div>'
+                    f'</div></div>')
+    limit = 6
+    shown = "".join(rows[:limit]) or none("Nothing flagged.")
     when = ""
     if b and b.get("generated_at"):
         when = "as of " + clock(dt.datetime.fromisoformat(b["generated_at"]).astimezone(TZ))
-    body = (f'{header(now, "Morning briefing " + when)}'
-            f'<main class="list"><ul class="rows">{capped(rows, MAX_ROWS) or "<li class=none>Nothing flagged.</li>"}</ul></main>')
-    return page("Briefing", now, body, [briefing])
+    urgent = sum(1 for i in items if i.get("severity") == "red")
+    body = (f'<div class="w-row w-flex"><div class="w-col w-wide"><div class="w-list">{shown}{more(len(rows) - limit)}</div></div>'
+            f'{rail("briefing", device, [("Items", len(items)), ("Urgent", urgent)], "Scan for Workbench")}</div>')
+    return page("Morning briefing", now, device, body, [briefing] if BRIEFING else [],
+                instance=when or "no briefing yet")
 
 
 # The closed screen vocabulary: index.nix validates playlists against these
 # names through the generated config, and the server serves nothing else.
-SCREENS = {"week": week, "tasks": tasks, "briefing": brief}
+SCREENS = {"home": home, "week": week, "weather": weather_screen, "tasks": tasks, "briefing": brief}
 
 
-# Black on white only: no colour, no grey fills, no shadows, no transitions.
+# Layout on top of the framework: its type scale, labels and title bar do
+# the look; these rules only place things. Black, white and the framework's
+# greys; no motion.
 CSS = """
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:#fff;color:#000}
-body{font-family:"Noto Serif",Georgia,serif;display:flex;flex-direction:column;padding:1.4vh 1.2vw}
-header{display:flex;justify-content:space-between;align-items:baseline;gap:2vw;border-bottom:3px solid #000;padding-bottom:.8vh}
-.date{font-size:4.6vh;font-weight:700;white-space:nowrap}
-.now{font-size:2.4vh;text-align:right}
-.alert{background:#000;color:#fff;font-size:2.2vh;font-weight:700;padding:.5vh .8vw;margin-top:.8vh}
-.week{flex:1;display:grid;grid-template-columns:repeat(7,1fr);min-height:0;margin-top:1vh}
-.day{border-right:1px solid #000;padding:0 .5vw;overflow:hidden;min-width:0}
-.day:last-child{border-right:0}
-.day h2{display:flex;justify-content:space-between;align-items:baseline;font-size:2.6vh;border-bottom:2px solid #000;padding:.3vh .4vw}
-.today h2{background:#000;color:#fff}
-.dom{font-size:3.4vh}
-.wx{border-bottom:1px dotted #000;padding:.7vh 0;font-size:2vh;line-height:1.2}
-.hi{font-size:3.8vh;font-weight:700}
-.lo{font-size:2.6vh;margin-left:.5vw}
-.sky{min-height:4.8vh}
-.events{list-style:none;font-size:2.1vh;line-height:1.2}
-.events li{padding:.5vh 0;border-bottom:1px dotted #000;overflow-wrap:anywhere}
-.events .allday{font-weight:700;border:2px solid #000;padding:.3vh .3vw;margin:.5vh 0}
-.t{font-weight:700;margin-right:.6em}
-.none,.more{font-style:italic;border-bottom:0}
-.list{flex:1;min-height:0;overflow:hidden;margin-top:1.5vh}
-.rows{list-style:none;font-size:3.4vh;line-height:1.25}
-.rows li{display:flex;align-items:baseline;gap:1vw;padding:.9vh 0;border-bottom:1px dotted #000}
-.rows .title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rows .late{font-weight:700}
-.rows .t{min-width:16vw}
-.tag{margin-left:auto;font-size:2.2vh;font-style:italic;white-space:nowrap;padding-left:2vw}
-footer{display:flex;justify-content:space-between;gap:2vw;font-size:1.6vh;border-top:1px solid #000;padding-top:.5vh}
-.err{font-weight:700;text-align:right}
+.w-fill{display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:8px;overflow:hidden}
+.w-row{display:flex;gap:12px;min-height:0}
+.w-flex{flex:1}
+.w-grow{flex:1}
+.w-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+.w-wide{flex:1}
+.w-head{display:flex;align-items:baseline;gap:6px;border-bottom:2px solid #000;padding-bottom:3px}
+.w-head .title{margin-right:auto}
+.w-list{display:flex;flex-direction:column;gap:6px;min-height:0;overflow:hidden}
+.w-c1{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.w-c2,.w-c3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.w-c3{-webkit-line-clamp:3}
+.w-center{text-align:center}
+.w-none{font-style:italic}
+.w-more{align-self:flex-start}
+.w-meta{display:flex;align-items:center;gap:5px;min-width:0}
+.w-meta .label{flex:none}
+.w-stack{display:flex;flex-direction:column;align-items:flex-start}
+.w-ico{display:block;flex:none}
+.w-ico-xs{width:16px;height:16px}.w-ico-s{width:24px;height:24px}.w-ico-m{width:34px;height:34px}
+.w-ico-l{width:64px;height:64px}.w-ico-xl{width:132px;height:132px}
+.w-agenda{display:flex;align-items:center;gap:8px;min-width:0}
+.w-agenda .label{flex:none}
+.w-qr .label{text-align:center}
+.w-brief{padding-bottom:6px;border-bottom:1px solid #000}
+.w-brief:last-child{border-bottom:0}
+.w-alert{background:#000;color:#fff;font-weight:700;padding:3px 8px;border-radius:6px;flex:none}
+.w-ev{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+.w-rail{flex:none;width:112px;display:flex;flex-direction:column;align-items:center;gap:6px;border-left:2px solid #000;padding-left:10px}
+.w-stat{display:flex;flex-direction:column;align-items:center}
+.w-qr{display:flex;flex-direction:column;align-items:center;gap:4px}
+.w-qrsvg{display:block;width:100%;height:100%;shape-rendering:crispEdges}
+.w-week{flex:1;min-width:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.w-day{display:flex;flex-direction:column;gap:5px;min-width:0;overflow:hidden}
+.w-dayhead{display:flex;justify-content:space-between;align-items:baseline;border:2px solid #000;border-radius:6px;padding:1px 6px;font-weight:700}
+.w-today .w-dayhead{background:#000;color:#fff}
+.w-daywx{display:flex;align-items:center;gap:3px;flex-wrap:wrap;border-bottom:1px solid #000;padding-bottom:4px}
+.w-task,.w-brief{display:flex;gap:7px;align-items:flex-start;min-width:0}
+.w-tbody{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.w-box{flex:none;width:14px;height:14px;border:2px solid #000;border-radius:3px;margin-top:3px}
+.w-checked{background:#000}
+.w-done .title{text-decoration:line-through}
+.w-num{flex:none;width:22px;text-align:right}
+.w-cols{flex:1;min-width:0;display:flex;gap:14px}
+.w-homewx{flex:0 0 236px}
+.w-wxrow{display:flex;align-items:center;gap:10px}
+.w-strip{flex:none;display:flex;flex-direction:column;gap:6px}
+.w-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.w-card{border:2px solid #000;border-radius:8px;padding:6px 8px;min-width:0}
+.w-wxtop{flex:none;display:flex;align-items:center;gap:14px}
+.w-wxbig{flex:none}
+.w-wxnow{flex:none;display:flex;flex-direction:column;align-items:flex-start;border-left:2px solid #000;border-right:2px solid #000;padding:0 14px;max-width:230px}
+.w-wxstats{flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:10px 8px}
+.w-wxstat{display:flex;align-items:center;gap:6px;min-width:0}
+.w-wxcards{flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.w-wxcard{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;border:2px solid #000;border-radius:8px;padding:5px 4px;min-width:0;overflow:hidden}
+.w-wxcard{justify-content:space-evenly}
+.w-wxcard .w-ico-l{width:60px;height:60px}
+.w-wxcard .description{min-height:2.4em}
+.w-wxstat .value{white-space:nowrap}
+.w-ico-home{width:88px;height:88px}
+.w-wxrow .value{white-space:nowrap}
+.w-pop{display:flex;align-items:center;gap:3px;font-weight:700}
 """
