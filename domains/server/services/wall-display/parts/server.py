@@ -14,7 +14,9 @@ Screens (screens.py) are HTML pages. A single render worker screenshots each
 into images/<screen>-<W>x<H>g<greys>-<hash>.png. A device is served the last
 good image; a failed render keeps it and is reported in /healthz.
 
-The same pages are served as HTML at /<screen> for browser kiosks ("/" = week).
+The same pages are served as HTML at /<screen> for browser kiosks ("/" = week),
+and /device/<name> is a web client: a browser shows that device's rotation as
+images and reloads itself, which survives reboots where the TRMNL app cannot.
 """
 import datetime as dt
 import hashlib
@@ -38,7 +40,7 @@ STATE = CONFIG["stateDir"]
 IMAGES = os.path.join(STATE, "images")
 KEYS_FILE = os.path.join(STATE, "keys.json")
 DEVICES = CONFIG["devices"]
-BY_ID = {d["id"]: name for name, d in DEVICES.items()}
+BY_ID = {d["id"]: name for name, d in DEVICES.items() if d.get("id")}  # web-only devices have no id
 RENDER_EVERY = 60      # seconds between render passes
 RENDER_TIMEOUT = 60    # per Chromium/ImageMagick call
 STALE_DEVICE = 2400    # /healthz fails when a device that has called is silent this long
@@ -181,7 +183,7 @@ def health():
     body = {
         "sources": {c.name: c.status() for c in SOURCES},
         "renders": {f"{s}-{w}x{h}g{g}": st for (s, w, h, g), st in renderer.status.items()},
-        "devices": {d.name: {"id": d.spec["id"], "last_seen": d.seen,
+        "devices": {d.name: {"id": d.spec.get("id"), "last_seen": d.seen,
                              "age_s": round(now - d.seen) if d.seen else None, **d.report}
                     for d in devices.values()},
     }
@@ -200,6 +202,8 @@ class Handler(BaseHTTPRequestHandler):
             self.byos_display()
         elif path.startswith("/images/"):
             self.serve_image(path[len("/images/"):])
+        elif path.startswith("/device/"):
+            self.web_client(path[len("/device/"):].strip("/"))
         elif path == "/healthz":
             ok, body = health()
             self.send(200 if ok else 503, "application/json", json.dumps(body))
@@ -254,6 +258,32 @@ class Handler(BaseHTTPRequestHandler):
         self.json(200, {"status": 0, "image_url": self.url(img), "filename": img,
                         "refresh_rate": device.spec["refreshRate"], "reset_firmware": False,
                         "update_firmware": False, "firmware_url": None, "special_function": "sleep"})
+
+    # Web client ------------------------------------------------------------
+
+    def web_client(self, name):
+        """A browser acting as the device: each load shows the next playlist
+        image and reloads after refreshRate. For kiosks that must come back
+        on their own after a reboot (the TRMNL Android app cannot)."""
+        device = devices.get(name)
+        if device is None:
+            return self.send(404, "text/plain", "unknown device")
+        with _devices_lock:
+            target = device.next_target()
+            device.seen = time.time()
+            device.report = {"client": "web"}
+        img = renderer.image(target)
+        wait = device.spec["refreshRate"] if img else 60
+        body = (f'<img src="/images/{img}" alt="">' if img
+                else "<p>No image rendered yet.</p>")
+        self.send(200, "text/html; charset=utf-8", f"""<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="{wait}">
+<title>{name}</title>
+<style>html,body{{margin:0;height:100%;background:#fff;overflow:hidden}}
+img{{display:block;width:100vw;height:100vh;object-fit:contain}}</style>
+</head><body>{body}</body></html>""")
 
     def serve_image(self, name):
         if not IMAGE_NAME.match(name):

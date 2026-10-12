@@ -4,7 +4,9 @@
 # renders e-ink style screens (black on white, no colour, no motion) to
 # greyscale PNGs and serves them to any device speaking the TRMNL BYOS
 # protocol (the TRMNL Android app, TRMNL hardware, Kindle/Kobo clients).
-# The same screens are served as HTML at /<screen> for browser kiosks.
+# The same screens are served as HTML at /<screen> for browser kiosks, and
+# /device/<name> is a web client (a browser shows the device's rotation as
+# images and reloads itself; it survives reboots, which the TRMNL app does not).
 #
 # NAMESPACE: hwc.server.services.wallDisplay.*   (Charter Law 2: namespace = folder)
 # USAGE:     hwc.server.services.wallDisplay.enable = true;   (machines/work/config.nix)
@@ -99,9 +101,13 @@ in
       type = lib.types.attrsOf (lib.types.submodule {
         options = {
           id = lib.mkOption {
-            type = lib.types.str;
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             example = "44:00:49:05:31:49";
-            description = "The ID header the device sends (the MAC or device ID entered in the client).";
+            description = ''
+              The ID header a TRMNL BYOS client sends (the MAC or device ID
+              entered in the client). null = web client only, at /device/<name>.
+            '';
           };
           width = lib.mkOption { type = lib.types.ints.positive; description = "Screen width in pixels, as the device will show the image."; };
           height = lib.mkOption { type = lib.types.ints.positive; description = "Screen height in pixels."; };
@@ -185,7 +191,7 @@ in
         message = "hwc.server.services.wallDisplay needs time.timeZone set to place events on local days.";
       }
       {
-        assertion = lib.allUnique (lib.mapAttrsToList (_: d: d.id) cfg.devices);
+        assertion = lib.allUnique (lib.filter (id: id != null) (lib.mapAttrsToList (_: d: d.id) cfg.devices));
         message = "hwc.server.services.wallDisplay.devices: two devices share one id.";
       }
     ];
