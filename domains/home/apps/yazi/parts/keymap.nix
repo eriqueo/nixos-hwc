@@ -1,5 +1,10 @@
 # domains/home/apps/yazi/parts/keymap.nix
-{ mediaRoot }:
+{ lib, grammar, mediaRoot }:
+let
+  spaceKeymap = import ../../../keymap/parts/to-yazi.nix {
+    inherit lib grammar mediaRoot;
+  };
+in
 {
   # Keymap configuration for Yazi - Neovim-style bindings
   "yazi/keymap.toml" = {
@@ -39,62 +44,11 @@
       # Special locations
       { on = [ "g", "T" ], run = "cd ~/.local/share/Trash/files", desc = "Go: trash" },
 
-      # ══════════════════════════════════════════════════════════════════
-      # LEADER COMMANDS - Space prefix (like neovim leader)
-      # ══════════════════════════════════════════════════════════════════
-
-      # <Space>g - Alternative go commands (via plugin for extensibility)
-      { on = [ "<Space>", "g", "g" ], run = "plugin bookmarks focus", desc = "Go: favorites" },
-      { on = [ "<Space>", "g", "m" ], run = "cd ${mediaRoot}", desc = "Go: media mount" },
-
-      # <Space>f - Find/Search
-      { on = [ "<Space>", "f" ], run = "filter --smart", desc = "Filter" },
-      { on = [ "<Space>", "/" ], run = "search --via=rg", desc = "Find: content (ripgrep)" },
-      { on = [ "<Space>", "n" ], run = 'search --via=fd --args="--type f"', desc = "Find: files by name" },
-      { on = [ "<Space>", "<Space>" ], run = "plugin zoxide", desc = "Zoxide jump" },
-      { on = [ "<Space>", "b", "a" ], run = "plugin bookmarks add", desc = "Favorite: add current folder" },
-      { on = [ "<Space>", "b", "b" ], run = "plugin bookmarks focus", desc = "Favorite: focus list" },
-
-      # Filter
+      # Space actions come from the shared grammar.
+      ${spaceKeymap.keymapFragment}
       { on = [ "f" ], run = "filter --smart", desc = "Filter" },
-
-      # <Space>s - Sort
-      { on = [ "<Space>", "s", "n" ], run = "sort natural", desc = "Sort: natural" },
-      { on = [ "<Space>", "s", "a" ], run = "sort alphabetical", desc = "Sort: alphabetical" },
-      { on = [ "<Space>", "s", "s" ], run = "sort size", desc = "Sort: size" },
-      { on = [ "<Space>", "s", "m" ], run = "sort mtime", desc = "Sort: modified" },
-      { on = [ "<Space>", "s", "c" ], run = "sort btime", desc = "Sort: created" },
-      { on = [ "<Space>", "s", "e" ], run = "sort extension", desc = "Sort: extension" },
-      { on = [ "<Space>", "s", "r" ], run = "sort --reverse", desc = "Sort: reverse" },
-
-      # <Space>t - Tabs
-      { on = [ "<Space>", "t", "n" ], run = "tab_create --current", desc = "Tab: new" },
-      { on = [ "<Space>", "t", "c" ], run = "tab_close", desc = "Tab: close" },
-      { on = [ "<Space>", "t", "o" ], run = "tab_close --all", desc = "Tab: close others" },
-      { on = [ "<Space>", "t", "1" ], run = "tab_switch 0", desc = "Tab: 1" },
-      { on = [ "<Space>", "t", "2" ], run = "tab_switch 1", desc = "Tab: 2" },
-      { on = [ "<Space>", "t", "3" ], run = "tab_switch 2", desc = "Tab: 3" },
-      { on = [ "<Space>", "t", "4" ], run = "tab_switch 3", desc = "Tab: 4" },
       { on = [ "<Tab>" ], run = "tab_switch 1 --relative", desc = "Next tab" },
       { on = [ "<S-Tab>" ], run = "tab_switch -1 --relative", desc = "Prev tab" },
-
-      # <Space>w - Window/View (linemodes)
-      { on = [ "<Space>", "w", "s" ], run = "linemode size", desc = "View: sizes" },
-      { on = [ "<Space>", "w", "p" ], run = "linemode permissions", desc = "View: permissions" },
-      { on = [ "<Space>", "w", "m" ], run = "linemode mtime", desc = "View: modified time" },
-      { on = [ "<Space>", "w", "c" ], run = "linemode btime", desc = "View: created time" },
-      { on = [ "<Space>", "w", "n" ], run = "linemode none", desc = "View: clean" },
-
-      # <Space>y - Yank/Copy paths
-      { on = [ "<Space>", "y", "p" ], run = "copy path", desc = "Copy: full path" },
-      { on = [ "<Space>", "y", "n" ], run = "copy filename", desc = "Copy: filename" },
-      { on = [ "<Space>", "y", "d" ], run = "copy dirname", desc = "Copy: directory" },
-
-      # <Space>c - Chmod
-      { on = [ "<Space>", "c" ], run = "plugin bookmarks 'route plugin chmod'", desc = "Change permissions" },
-
-      # <Space>a - Select all
-      { on = [ "<Space>", "a" ], run = "plugin bookmarks 'route toggle_all --state=on'", desc = "Select all" },
 
       # ══════════════════════════════════════════════════════════════════
       # CORE VIM MOTIONS
@@ -130,13 +84,10 @@
       # FILE OPERATIONS (vim-inspired)
       # ══════════════════════════════════════════════════════════════════
       # Yank/Copy
-      { on = [ "y", "y" ], run = "plugin bookmarks 'route yank'", desc = "Yank (copy)" },
       { on = [ "y" ], run = "plugin bookmarks 'route yank'", desc = "Yank (copy)" },
 
       # Delete
       { on = [ "d" ], run = "plugin bookmarks 'route remove'", desc = "Delete (to trash) / remove favorite" },
-      { on = [ "d", "d" ], run = "plugin bookmarks 'route remove'", desc = "Delete (to trash) / remove favorite" },
-      { on = [ "d", "D" ], run = "plugin bookmarks 'route remove --permanently'", desc = "Delete permanently" },
       { on = [ "D" ], run = "plugin bookmarks 'route remove --permanently'", desc = "Delete permanently" },
 
       # Cut (like vim's d but for moving)
@@ -147,9 +98,9 @@
       { on = [ "P" ], run = "plugin bookmarks 'route paste-into'", desc = "Paste into hovered dir" },
 
       # Create/Rename
-      { on = [ "o" ], run = "plugin bookmarks 'route create'", desc = "Create file/dir" },
+      { on = [ "o" ], run = "plugin bookmarks 'route open'", desc = "Open" },
       { on = [ "a" ], run = "plugin bookmarks 'route create'", desc = "Create file/dir / add favorite" },
-      { on = [ "O" ], run = "plugin bookmarks 'route create --dir'", desc = "Create directory" },
+      { on = [ "O" ], run = "plugin bookmarks 'route open --interactive'", desc = "Open with" },
       { on = [ "r" ], run = "plugin bookmarks 'route rename --cursor=before_ext'", desc = "Rename" },
       { on = [ "R" ], run = "plugin bookmarks 'route rename'", desc = "Rename (full)" },
 

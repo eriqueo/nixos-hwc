@@ -21,6 +21,7 @@
 #   leader / metaLeader : the two prefixes (Nix-swappable in one edit).
 #   groups              : letter -> mnemonic name (the contract; meaning is fixed).
 #   shared              : Space-layer bindings present in >1 app.
+#   apps.<app>          : app-specific grouped Space rows with cmd.<app>.
 #   major.<app>         : that app's `Space m` (major-mode) table.
 #   aerc                : mail action metadata; native realization in mail/aerc.
 #   listVerbs           : bare CRUD verbs shared by todui + khalt.
@@ -51,7 +52,9 @@ rec {
   #--------------------------------------------------------------------------
   groups = {
     g = "go";       # navigate: dirs, mail folders, calendar dates, top/bottom
-    f = "search";   # look for something: find files, grep, filter
+    f = "find";   # look for something: find files, grep, filter
+    c = "compose";  # create / new / reply
+    l = "language"; # LSP / language tools
     s = "sort";     # sort the current list
     b = "buffer";   # switch open things: buffers / tabs / lists
     t = "toggle";   # flip a setting: hidden, wrap, numbers, threads
@@ -91,14 +94,14 @@ rec {
         nvim = "<cmd>cd ~/Downloads<cr>";
       }; }
 
-    # --- f : search / find -------------------------------------------------
+    # --- f : find -------------------------------------------------
     { keys = "f f"; desc = "Find file"; cmd = {
         nvim = "<cmd>Telescope find_files<cr>";
-        # yazi: handled by its native smart-filter (kept in keymap.nix); listed
-        # here so which-key shows the group consistently.
+        yazi = "search --via=fd --args=\"--type f\"";
       }; }
     { keys = "f g"; desc = "Grep / search content"; cmd = {
         nvim = "<cmd>Telescope live_grep<cr>";
+        yazi = "search --via=rg";
       }; }
     { keys = "f r"; desc = "Recent files"; cmd = {
         nvim = "<cmd>Telescope oldfiles<cr>";
@@ -119,6 +122,95 @@ rec {
     { keys = "a a"; desc = "Ask agent about item"; cmd = {
         workbench = "ask-agent";
       }; }
+  ];
+
+  # App-specific grouped Space rows. Runtime paths are bound by the adapter.
+  apps.yazi = [
+      { keys = "g t"; desc = "Go: tmp"; cmd.yazi = "cd /tmp"; }
+      { keys = "g 0"; desc = "Go: inbox"; cmd.yazi = "cd ~/000_inbox"; }
+      { keys = "g 1"; desc = "Go: work"; cmd.yazi = "cd ~/100_hwc"; }
+      { keys = "g 2"; desc = "Go: personal"; cmd.yazi = "cd ~/200_personal"; }
+      { keys = "g 3"; desc = "Go: tech"; cmd.yazi = "cd ~/300_tech"; }
+      { keys = "g 5"; desc = "Go: media"; cmd.yazi = "cd ~/500_media"; }
+      { keys = "g 9"; desc = "Go: vaults"; cmd.yazi = "cd ~/900_vaults"; }
+      { keys = "g p"; desc = "Go: pictures"; cmd.yazi = "cd ~/500_media/pictures"; }
+      { keys = "g M"; desc = "Go: music"; cmd.yazi = "cd ~/500_media/music"; }
+      { keys = "g v"; desc = "Go: videos"; cmd.yazi = "cd ~/500_media/videos"; }
+      { keys = "g T"; desc = "Go: trash"; cmd.yazi = "cd ~/.local/share/Trash/files"; }
+      { keys = "g m"; desc = "Go: media mount"; cmd.yazi = "cd @mediaRoot@"; }
+      { keys = "g f"; desc = "Go: favorites"; cmd.yazi = "plugin bookmarks focus"; }
+      { keys = "f l"; desc = "Filter"; cmd.yazi = "filter --smart"; }
+      { keys = "g z"; desc = "Zoxide jump"; cmd.yazi = "plugin zoxide"; }
+      { keys = "m f"; desc = "Favorite: add current folder"; cmd.yazi = "plugin bookmarks add"; }
+      { keys = "m p"; desc = "Change permissions"; cmd.yazi = "plugin bookmarks 'route plugin chmod'"; }
+      { keys = "t a"; desc = "Select all"; cmd.yazi = "plugin bookmarks 'route toggle_all --state=on'"; }
+      { keys = "g g"; desc = "Go to top"; cmd.yazi = "plugin bookmarks 'route arrow top'"; }
+      { keys = "g G"; desc = "Go to bottom"; cmd.yazi = "plugin bookmarks 'route arrow bot'"; }
+      { keys = "g k"; desc = "Move up"; cmd.yazi = "plugin bookmarks 'route arrow -1'"; }
+      { keys = "g j"; desc = "Move down"; cmd.yazi = "plugin bookmarks 'route arrow 1'"; }
+      { keys = "g b"; desc = "Go back/parent"; cmd.yazi = "plugin bookmarks 'route leave'"; }
+      { keys = "g e"; desc = "Enter/Open"; cmd.yazi = "plugin bookmarks 'route enter'"; }
+      { keys = "g u"; desc = "Half page up"; cmd.yazi = "plugin bookmarks 'route arrow -50%'"; }
+      { keys = "g D"; desc = "Half page down"; cmd.yazi = "plugin bookmarks 'route arrow 50%'"; }
+      { keys = "g U"; desc = "Page up"; cmd.yazi = "plugin bookmarks 'route arrow -100%'"; }
+      { keys = "g F"; desc = "Page down"; cmd.yazi = "plugin bookmarks 'route arrow 100%'"; }
+      { keys = "o o"; desc = "Open"; cmd.yazi = "plugin bookmarks 'route open'"; }
+      { keys = "o O"; desc = "Open with"; cmd.yazi = "plugin bookmarks 'route open --interactive'"; }
+      { keys = "q q"; desc = "Quit"; cmd.yazi = "plugin bookmarks 'route quit'"; }
+      { keys = "q c"; desc = "Cancel/Clear"; cmd.yazi = "plugin bookmarks 'route escape'"; }
+      { keys = "t s"; desc = "Toggle select"; cmd.yazi = "plugin bookmarks 'route toggle'"; }
+      { keys = "t A"; desc = "Toggle all"; cmd.yazi = "plugin bookmarks 'route toggle_all'"; }
+      { keys = "t j"; desc = "Select & down"; cmd.yazi = "plugin bookmarks 'route select-down'"; }
+      { keys = "t k"; desc = "Up & select"; cmd.yazi = "plugin bookmarks 'route select-up'"; }
+      { keys = "t c"; desc = "Clear selection"; cmd.yazi = "plugin bookmarks 'route escape --select'"; }
+      { keys = "y y"; desc = "Yank (copy)"; cmd.yazi = "plugin bookmarks 'route yank'"; }
+      { keys = "y x"; desc = "Cut"; cmd.yazi = "plugin bookmarks 'route yank --cut'"; }
+      { keys = "d d"; desc = "Delete (to trash) / remove favorite"; cmd.yazi = "plugin bookmarks 'route remove'"; }
+      { keys = "d D"; desc = "Delete permanently"; cmd.yazi = "plugin bookmarks 'route remove --permanently'"; }
+      { keys = "y v"; desc = "Paste here"; cmd.yazi = "plugin bookmarks 'route paste'"; }
+      { keys = "y V"; desc = "Paste into hovered dir"; cmd.yazi = "plugin bookmarks 'route paste-into'"; }
+      { keys = "c f"; desc = "Create file/dir"; cmd.yazi = "plugin bookmarks 'route create'"; }
+      { keys = "c d"; desc = "Create directory"; cmd.yazi = "plugin bookmarks 'route create --dir'"; }
+      { keys = "c r"; desc = "Rename"; cmd.yazi = "plugin bookmarks 'route rename --cursor=before_ext'"; }
+      { keys = "c R"; desc = "Rename (full)"; cmd.yazi = "plugin bookmarks 'route rename'"; }
+      { keys = "c l"; desc = "Symlink"; cmd.yazi = "plugin bookmarks 'route link'"; }
+      { keys = "c L"; desc = "Relative symlink"; cmd.yazi = "plugin bookmarks 'route link --relative'"; }
+      { keys = "c h"; desc = "Hardlink"; cmd.yazi = "plugin bookmarks 'route hardlink'"; }
+      { keys = "g Z"; desc = "FZF jump"; cmd.yazi = "plugin fzf"; }
+      { keys = "g l"; desc = "Focus files"; cmd.yazi = "plugin bookmarks close"; }
+      { keys = "g N"; desc = "Next favorite"; cmd.yazi = "plugin bookmarks next"; }
+      { keys = "g P"; desc = "Previous favorite"; cmd.yazi = "plugin bookmarks previous"; }
+      { keys = "t h"; desc = "Toggle hidden"; cmd.yazi = "hidden toggle"; }
+      { keys = "w i"; desc = "Inspect"; cmd.yazi = "inspect"; }
+      { keys = "w h"; desc = "Help"; cmd.yazi = "help"; }
+      { keys = "o s"; desc = "Shell command"; cmd.yazi = "plugin bookmarks 'route shell --block --confirm'"; }
+      { keys = "o S"; desc = "Shell command"; cmd.yazi = "plugin bookmarks 'route shell --interactive'"; }
+      { keys = "w j"; desc = "Preview: down"; cmd.yazi = "seek 5"; }
+      { keys = "w k"; desc = "Preview: up"; cmd.yazi = "seek -5"; }
+      { keys = "b j"; desc = "Next tab"; cmd.yazi = "tab_switch 1 --relative"; }
+      { keys = "b k"; desc = "Prev tab"; cmd.yazi = "tab_switch -1 --relative"; }
+      { keys = "s n"; desc = "Sort: natural"; cmd.yazi = "sort natural"; }
+      { keys = "s a"; desc = "Sort: alphabetical"; cmd.yazi = "sort alphabetical"; }
+      { keys = "s s"; desc = "Sort: size"; cmd.yazi = "sort size"; }
+      { keys = "s m"; desc = "Sort: modified"; cmd.yazi = "sort mtime"; }
+      { keys = "s c"; desc = "Sort: created"; cmd.yazi = "sort btime"; }
+      { keys = "s e"; desc = "Sort: extension"; cmd.yazi = "sort extension"; }
+      { keys = "s r"; desc = "Sort: reverse"; cmd.yazi = "sort --reverse"; }
+      { keys = "b n"; desc = "Tab: new"; cmd.yazi = "tab_create --current"; }
+      { keys = "b c"; desc = "Tab: close"; cmd.yazi = "tab_close"; }
+      { keys = "b o"; desc = "Tab: close others"; cmd.yazi = "tab_close --all"; }
+      { keys = "b 1"; desc = "Tab: 1"; cmd.yazi = "tab_switch 0"; }
+      { keys = "b 2"; desc = "Tab: 2"; cmd.yazi = "tab_switch 1"; }
+      { keys = "b 3"; desc = "Tab: 3"; cmd.yazi = "tab_switch 2"; }
+      { keys = "b 4"; desc = "Tab: 4"; cmd.yazi = "tab_switch 3"; }
+      { keys = "w s"; desc = "View: sizes"; cmd.yazi = "linemode size"; }
+      { keys = "w p"; desc = "View: permissions"; cmd.yazi = "linemode permissions"; }
+      { keys = "w m"; desc = "View: modified time"; cmd.yazi = "linemode mtime"; }
+      { keys = "w c"; desc = "View: created time"; cmd.yazi = "linemode btime"; }
+      { keys = "w n"; desc = "View: clean"; cmd.yazi = "linemode none"; }
+      { keys = "y p"; desc = "Copy: full path"; cmd.yazi = "copy path"; }
+      { keys = "y n"; desc = "Copy: filename"; cmd.yazi = "copy filename"; }
+      { keys = "y d"; desc = "Copy: directory"; cmd.yazi = "copy dirname"; }
   ];
 
   #--------------------------------------------------------------------------

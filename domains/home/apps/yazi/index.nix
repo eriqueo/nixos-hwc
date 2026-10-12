@@ -12,7 +12,11 @@ let
   mediaRoot =
     let v = lib.attrByPath [ "hwc" "paths" "media" "root" ] null osConfig;
     in if v == null then "/mnt/media" else v;
-  keymapConfig = import ./parts/keymap.nix { inherit mediaRoot; };
+  grammar = (config.hwc.home.keymap or {}).grammar or {};
+  effectiveGrammar = if grammar == {} then import ../../keymap/grammar.nix { inherit lib; } else grammar;
+  keymapConfig = import ./parts/keymap.nix {
+    inherit lib mediaRoot; grammar = effectiveGrammar;
+  };
   colors       = (config.hwc.home.theme or {}).colors or {};
   appearance   = import ./parts/appearance.nix { inherit lib colors; };
   home = config.home.homeDirectory;

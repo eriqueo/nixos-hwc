@@ -25,7 +25,7 @@ let
   majorLine = m:
     ''vim.keymap.set("n", "<leader>m${m.keys}", "${esc (m.cmd or "")}", { desc = "${esc m.desc}", silent = true })'';
 
-  # which-key group labels so the popup names the groups (g=go, f=search, …)
+  # which-key group labels so the popup names the groups (g=go, f=find, …)
   groupRegister = lib.concatStringsSep "\n" (lib.mapAttrsToList (k: name:
     ''  ok, wk = pcall(require, "which-key"); if ok then wk.add({ { "<leader>${k}", group = "${name}" } }) end''
   ) grammar.groups);

@@ -15,7 +15,7 @@ key `k` corrects a thread to DONT KNOW; mail-contract data supplies its display.
 index.nix              Options hwc.home.keymap.{enable,leader,metaLeader,grammar};
                        materializes grammar.nix as the read-only token set.
 grammar.nix            THE file you edit. Groups, shared Space bindings, per-app
-                       major modes, list-app bare verbs, two-column nav, meta map.
+                       grouped apps rows, major modes, list-app bare verbs, nav, meta map.
 parts/
   to-zellij.nix        registry hub + tool destinations -> zellij keybinds KDL (inter-app Ctrl+Space layer)
   to-yazi.nix          grammar -> keymap.toml [mgr] fragment
@@ -29,8 +29,8 @@ parts/
 ## The two layers
 
 - **`Space`** (intra-app): act inside the focused app. Same grammar everywhere.
-  Groups: `g`go `f`search `s`sort `b`buffer `t`toggle `y`yank `d`delete `w`window
-  `p`project `o`open `m`major(app's-own) `q`quit.
+  Groups: `g`go `f`find `s`sort `b`buffer `t`toggle `y`yank `d`delete `w`window
+  `c`compose `l`language `p`project `o`open `m`major(app's-own) `q`quit.
 - **`Alt+Space`** (inter-app): jump between panes. Lives ONLY in zellij. Audited
   clear of Hyprland (all SUPER; only Super+Space=wofi) and every TUI (only
   nvim-cmp uses Ctrl+Space). One Nix variable — swap in `grammar.nix`.
@@ -55,11 +55,10 @@ WIRED (staged):
    its versioned `~/.config/workbench/keymap.json` and merges explicit
    `cmd.workbench` bindings with the active hub actions.
 
-DEFERRED (intentionally NOT auto-edited — they already implement the grammar by
-hand, so converting them to generator-sourced is a no-behavior-change refactor
-that needs runtime QA, not a blind stage-and-hms):
-   - **yazi** — append `to-yazi`'s `keymapFragment` inside the existing
-     `[mgr] prepend_keymap` array (replacing the hand-written g/f/s/b block).
+5. **Yazi** consumes `shared` and `apps.yazi` through `to-yazi`; runtime media
+   paths bind in the adapter. Native manager keys remain in the app module.
+
+DEFERRED (requires runtime QA):
    - **nvim** — source `to-nvim`'s `lua` after `mapleader`; add the `which-key`
      plugin (today absent) so the popup renders (incl. baked-in keymaps).
 Aerc now consumes `grammar.aerc` through the mail module, including on hosts
@@ -92,7 +91,15 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 - kitty keyboard protocol on, so `Ctrl+j` ≠ Enter (two-column nav, spec §3.1b).
 - todui/khalt/workbench log a missing/unread `*_KEYMAP` rather than failing silent.
 
+The `keymap-grammar` check rejects unknown groups, duplicate chords and strict
+prefixes within each app (and each Aerc context). The existing Aerc `Space ?`
+help row has an explicit group-only exception until Aerc regrouping; duplicate
+and prefix checks still apply. `yazi-keymap` parses the installed TOML, checks
+chords within each section, compares its Space rows with the grammar, and
+requires each configured native manager command to have a Space path.
+
 ## Changelog
+- 2026-10-12: Rename find; add compose/language; wire grouped Yazi actions and grammar/TOML checks. Major tables and Aerc rows remain unchanged.
 - 2026-10-09: Hubs use Ctrl+Space 1–9 by visible rail position; reject digit
   keys in `grammar.meta` and retain tool letters t/c/m/f/e/a.
 - 2026-10-09: New `a` = agent group in every app; the workbench's ask-agent moves from
