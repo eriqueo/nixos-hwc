@@ -1,6 +1,17 @@
 # Headless Home Manager lane. Base supplies the CLI and development tools.
-{ ... }: {
+{ pkgs, ... }: {
   hwc.home.theme.graphical = false;
+
+  # Claude Code sandbox TRIAL (2026-10-11 to 2026-10-25), this host only.
+  # Claude Code finds bwrap and socat on PATH; T3 serve's PATH includes the
+  # per-user profile. The sandbox settings live in this host's
+  # ~/.claude/settings.json. Review and revert notes:
+  # ~/000_inbox/downloads/agent/sandbox-trial/trial.md. Remove both lines if
+  # the trial ends without moving the sandbox into agent-harness.
+  home.packages = [
+    pkgs.bubblewrap
+    pkgs.socat
+  ];
   hwc.home.core.development.rootlessImagePrune.enable = true;
 
   # Mail role (service split wave 2): this host runs the Proton Bridge session
