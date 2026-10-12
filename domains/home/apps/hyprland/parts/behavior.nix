@@ -329,13 +329,6 @@ in {
       # Floating keeps opening one from splitting the browser into narrow tiles.
       "match:class ^(bitwarden|proton-pass|[Pp]roton-authenticator)$, float on, size (monitor_w*0.7) (monitor_h*0.8), center 1, suppress_event fullscreen"
 
-      # courier (iPhone messages) — a Chromium app window; float it like the
-      # other toggled utilities so opening it never re-tiles the workspace.
-    ]
-    ++ lib.optionals courierEnabled [
-      "match:class ^(${lib.escapeRegex courierClass})$, float on, size (monitor_w*0.6) (monitor_h*0.75), center 1"
-    ]
-    ++ [
       # DOSBox ECE (eXoWin3x) — inhibit idle during play
       "match:class ^(dosbox)$, idle_inhibit always"
 

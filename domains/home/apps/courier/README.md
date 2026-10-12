@@ -13,7 +13,7 @@ it the HWC palette, and wires the desktop.
   - the read-only window class
 - ❌ does not:
   - the Bluetooth daemon or pairing → `apps/tether`
-  - the hotkey and window rule → `apps/hyprland/parts/behavior.nix`
+  - the hotkey → `apps/hyprland/parts/behavior.nix` (the window tiles; no float rule)
   - app behaviour, protocol handling or tests → the courier repo
 
 ## Structure
@@ -26,4 +26,5 @@ The window is `chromium-hwc --app=http://courier.localhost:<port>`. Chromium ign
 the app_id from the host, so the class is `chrome-courier.localhost__-Default` (measured 2026-10-12).
 
 ## Changelog
+- 2026-10-12: courier 20674d5 fixes a blank screen on opening a conversation. The window now tiles: the float rule was removed at Eric's request.
 - 2026-10-12: New. Slice 1, a read-only window over tetherd. Enabled on hwc-laptop. SUPER+U toggles the window.
