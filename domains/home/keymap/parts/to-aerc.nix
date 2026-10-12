@@ -14,7 +14,6 @@ let
   groupNames = grammar.groups;
   activeGroups = lib.unique (map (b: builtins.substring 0 1 b.keys)
     (lib.filter (b: b.keys != "?") grammar.aerc.bindings));
-  helpRow = b: "| Space ${b.keys} | ${b.desc} | ${b.scope} |";
   menuRows = lib.concatStringsSep "\n" (lib.mapAttrsToList (name: choices:
     "\n${name}:\n" + lib.concatStringsSep "\n" (map (c: "  ${c.key}  ${c.desc}") choices)
   ) menus);
@@ -28,10 +27,6 @@ in {
     (bindings context);
   bindsFor = context: lib.concatStringsSep "\n" (map (line context) (bindings context));
   whichKeyGroups = lib.concatStringsSep ", " (map (g: "${g}:${groupNames.${g}}") activeGroups);
-  markdown = lib.concatStringsSep "\n" ([
-    "| Keys | Action | Context |"
-    "|---|---|---|"
-  ] ++ map helpRow grammar.aerc.bindings);
   leaderHelp = ''
     AERC — Space is the leader. Space ? opens this sheet.
     Press Space, then a group letter. Pause to see the available actions.

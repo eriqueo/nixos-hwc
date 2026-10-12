@@ -4,6 +4,11 @@ The **single source of truth** for the unified workbench keymap. Edit
 `grammar.nix` and every TUI re-keys on the next `hms` — the keybinding analogue
 of `domains/home/theme/` (palette → every app's colours).
 
+Generated bindings: [KEYMAP.md](KEYMAP.md). Run `nix run .#keymap-docs` to refresh.
+The `keymap-docs` flake check rejects drift. Use `--brain <path>` to replace only
+the region between exact `<!-- keymap:begin -->` and `<!-- keymap:end -->` lines;
+missing, duplicate, or reversed markers fail before writing.
+
 Plain-language design + rationale: `docs/UNIFIED-KEYMAP-SPEC.md`.
 
 ## Structure
@@ -20,7 +25,8 @@ parts/
   to-zellij.nix        registry hub + tool destinations -> zellij keybinds KDL (inter-app Ctrl+Space layer)
   to-yazi.nix          grammar -> keymap.toml [mgr] fragment
   to-nvim.nix          grammar -> lua (Space layer + which-key groups)
-  to-aerc.nix          aerc action table -> context bindings, groups and reference
+  to-aerc.nix          aerc action table -> context bindings, groups and installed help
+  to-docs.nix          grammar -> KEYMAP.md and optional marked brain region
   to-khalt.nix         grammar -> [keybindings] block + KHALT_LEADER_TREE json
   to-todui.nix         grammar -> TODUI_KEYMAP json (env)
   to-workbench.nix     grammar -> schema-2 Workbench global and Mail hub JSON;
@@ -30,8 +36,7 @@ parts/
 ## The two layers
 
 - **`Space`** (intra-app): act inside the focused app. Same grammar everywhere.
-  Groups: `g`go `f`find `s`sort `b`buffer `t`toggle `y`yank `d`delete `w`window
-  `c`compose `l`language `p`project `o`open `m`mark `q`quit.
+  Group meanings and per-app chords are generated in KEYMAP.md.
 - **`Alt+Space`** (inter-app): jump between panes. Lives ONLY in zellij. Audited
   clear of Hyprland (all SUPER; only Super+Space=wofi) and every TUI (only
   nvim-cmp uses Ctrl+Space). One Nix variable — swap in `grammar.nix`.
@@ -64,7 +69,7 @@ DEFERRED (requires runtime QA):
      plugin (today absent) so the popup renders (incl. baked-in keymaps).
 Aerc now consumes `grammar.aerc` through the mail module, including on hosts
 without the desktop keymap option. `to-aerc` generates context bindings, group
-labels, installed help and the Markdown table exported to the universal worksheet.
+labels and installed help. `to-docs` produces the Markdown reference.
 Dynamic State/Domain/fact choices still come from the mail contract and tag data.
 
 ## App-side prerequisites (separate repos under ~/600_apps, staged not done)
@@ -100,6 +105,7 @@ chords within each section, compares its Space rows with the grammar, and
 requires each configured native manager command to have a Space path.
 
 ## Changelog
+- 2026-10-12: Generate KEYMAP.md from grammar; add drift check and docs app with bounded brain marker replacement; remove the unused aerc Markdown export.
 - 2026-10-12: Fix Mail bare compose regression; omit folder move and fact/tag menus that item intents cannot supply. Workbench check loads real upstream manifests and rejects seeded bare compose.
 - 2026-10-12: Share aerc rows with Workbench schema 2; generate isolated compose launcher, omit aerc view controls and unsafe thread actions, guard launcher coverage and global keys; move compose/replies/forward to c; retain routing, unsubscribe and read-status menus under m.
 - 2026-10-12: Rename find; add compose/language; wire grouped Yazi actions and grammar/TOML checks. Major tables and Aerc rows remain unchanged.

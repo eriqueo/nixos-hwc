@@ -476,9 +476,46 @@
       main()
     '';
 
+    keymapDocs = pkgs.writeText "KEYMAP.md" (import ./domains/home/keymap/parts/to-docs.nix {
+      inherit lib;
+      grammar = import ./domains/home/keymap/grammar.nix { inherit lib; };
+    });
+    keymapDocsApp = pkgs.writeShellApplication {
+      name = "keymap-docs";
+      runtimeInputs = [ pkgs.python3 ];
+      text = ''
+        python3 - "$@" <<'PY'
+        import argparse, pathlib, sys
+        parser = argparse.ArgumentParser(description="Generate keymap docs in the current checkout")
+        parser.add_argument("--brain", type=pathlib.Path)
+        args = parser.parse_args()
+        output = pathlib.Path("domains/home/keymap/KEYMAP.md")
+        if not output.parent.is_dir() or not pathlib.Path("flake.nix").is_file():
+            sys.exit("keymap-docs: run from the checkout root")
+        rendered = pathlib.Path("${keymapDocs}").read_bytes()
+        if args.brain:
+            if args.brain.resolve() == output.resolve():
+                sys.exit("keymap-docs: brain target must differ from KEYMAP.md")
+            original = args.brain.read_bytes()
+            begin, end = b"<!-- keymap:begin -->", b"<!-- keymap:end -->"
+            lines = original.splitlines(keepends=True)
+            starts = [i for i, line in enumerate(lines) if line.rstrip(b"\r\n") == begin]
+            ends = [i for i, line in enumerate(lines) if line.rstrip(b"\r\n") == end]
+            if len(starts) != 1 or len(ends) != 1 or starts[0] >= ends[0]:
+                sys.exit("keymap-docs: expected one ordered pair of exact keymap:begin/keymap:end marker lines")
+            if not lines[starts[0]].endswith(b"\n"):
+                sys.exit("keymap-docs: begin marker must end with a newline")
+            replacement = b"".join(lines[:starts[0]+1]) + rendered + b"".join(lines[ends[0]:])
+        output.write_bytes(rendered)
+        if args.brain:
+            args.brain.write_bytes(replacement)
+        PY
+      '';
+    };
   in {
     # Apps - CLI utilities
     apps.${system} = {
+      keymap-docs = { type = "app"; program = "${keymapDocsApp}/bin/keymap-docs"; };
       hwc-graph = {
         type = "app";
         program = "${hwc-graph-pkg}/bin/hwc-graph";
@@ -794,6 +831,11 @@
                 print(f"{host} {name}: selected only its user's complete password")
         PY
         touch $out
+      '';
+
+      keymap-docs = pkgs.runCommand "keymap-docs" { nativeBuildInputs = [ pkgs.diffutils ]; } ''
+        diff -u ${./domains/home/keymap/KEYMAP.md} ${keymapDocs}
+        touch "$out"
       '';
 
       keymap-grammar = pkgs.runCommand "keymap-grammar" {
