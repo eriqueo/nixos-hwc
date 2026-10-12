@@ -8,7 +8,6 @@ import { readFile, readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { ToolDef, ToolResult } from "../types.js";
-import { getServiceStatus } from "../executors/systemd.js";
 import { log } from "../log.js";
 import { mcpError, catchError } from "../errors.js";
 
@@ -544,17 +543,15 @@ export async function executeMailHealth(): Promise<ToolResult> {
       }
     }
 
-    try {
-      const bs = await getServiceStatus("protonmail-bridge.service");
-      result.bridge = {
-        active: bs.activeState === "active",
-        state: bs.activeState,
-        uptime: bs.uptime,
-        memoryUsage: bs.memoryUsage,
-      };
-    } catch {
-      result.bridge = { active: false, error: "Service not queryable" };
-    }
+    // The bridge is a `systemd --user` unit. This server runs as a system
+    // service and `systemctl show` without --user always said "inactive", so
+    // health read "Bridge: down" forever. mail-health checks the bridge in the
+    // right scope (service, IMAP and SMTP greetings); its open cases are the
+    // authoritative signal here.
+    const bridgeIssues = issues.filter((i) => i.lane === "infrastructure" && i.code.startsWith("bridge-"));
+    result.bridge = summaryRaw
+      ? { active: bridgeIssues.length === 0, source: "mail-health", issues: bridgeIssues.map((i) => i.code) }
+      : { active: false, error: "mail-health has not published summary.json yet" };
 
     try {
       const projection = await readSyncStatus();
