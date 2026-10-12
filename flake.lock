@@ -792,11 +792,11 @@
     "system-one": {
       "flake": false,
       "locked": {
-        "lastModified": 1791583325,
-        "narHash": "sha256-YRT+agxi1rVDs38mTTnEYTYYIAddTWABqceMsCrACt0=",
+        "lastModified": 1791832309,
+        "narHash": "sha256-Hyw7fxycVik7mysi9tEdh4xfAciMovJwuLq3Xt+3xM4=",
         "owner": "eriqueo",
         "repo": "system-one",
-        "rev": "8689ee331f37a03dbb93ccb5369cbee805da2f1d",
+        "rev": "c62c7885e9d47255f988bcfaf3e4a292ef0c8bef",
         "type": "github"
       },
       "original": {
