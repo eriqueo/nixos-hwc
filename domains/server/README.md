@@ -51,7 +51,7 @@ domains/server/
 │   ├── bloxels-cv/       # Bloxels grid photo classifier (path watcher on inbox-mobile)
 │   ├── inbox-processor/  # Phone capture processor (whisper-server + Tesseract; optional DX2 voice-note cleanup)
 │   ├── radicale/         # Self-hosted CalDAV (tasks.hwc.*, two-way task sync)
-│   └── wall-calendar/    # Wall tablet page (wall.hwc.*): Radicale week + NOAA forecast, e-ink style
+│   └── wall-display/     # TRMNL-compatible BYOS server (wall.hwc.*): week+NOAA, tasks, briefing screens, e-ink style
 └── deploy/       # Deployment helpers
 ```
 
@@ -67,6 +67,7 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+- 2026-10-12: `services/wall-calendar/` became `services/wall-display/` (`hwc.server.services.wallDisplay`); same port 8424, vhost `wall` and `/` page. It is now a TRMNL-compatible BYOS server. The protocol was read from the TRMNL Android app v2.14.0 with REA: `GET /api/setup/` (header `ID`) mints a per-device `api_key` kept in `/var/lib/wall-display/keys.json`, `GET /api/display` (headers `ID`, `access-token`, `RSSI`, `Percent-Charged`) returns the next playlist image, and `POST /api/log` goes to the journal. Devices are declared in Nix (`devices.<name> = { id; width; height; grays; playlist; refreshRate; }`), because the protocol never reports a screen size. Screens (`parts/screens.py`): `week`, `tasks` (every Radicale VTODO list: due today, overdue, undated priority 1–4) and `briefing` (morning-briefing `today` items minus mail, read through `hwc.business.morningBriefing.outputDir` with `ProtectHome=tmpfs` + `BindReadOnlyPaths`). One render worker screenshots each screen per size with headless Chromium (Noto fonts via `makeFontsConf`) and quantises it with ImageMagick to 2, 4 or 16 greys at the matching PNG bit depth. Images are named by content hash (never containing "setup", which the client reads as "setup required"), and only the current and previous image per screen and size are kept. `/healthz` reports sources, renders and per-device last report, and returns 503 when a device that has called is silent for over 40 minutes. Unknown IDs are refused and logged.
 - 2026-10-12: Added `services/wall-calendar/` (`hwc.server.services.wallCalendar`, enabled on work). A stdlib Python page on `127.0.0.1:8424`, vhost `wall`, for the Fire HD 8 wall tablet. It shows seven days of events from every Radicale collection that holds VEVENTs (found by PROPFIND on each refresh; recurrences expanded by Radicale) and the api.weather.gov forecast and active alerts for Bozeman. Black on white only. It keeps no state; a failed refresh keeps the last good copy and names the failure in the footer. `/healthz` returns 503 until both sources have loaded.
 - 2026-10-02: Move Brain MCP’s new-repository Git identity to `brain-mcp@iheartwoodcraft.com` and document the deployed OAuth gateway and verified origin restriction. Legacy public aliases still require consumer reconciliation.
 - 2026-10-01: Added optional private invitation SMTP socket, bounded loopback relay and runtime preparation for the member Scout app. Enabled on work with eric@iheartwoodcraft.com.

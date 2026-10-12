@@ -10,6 +10,16 @@ in
 {
   options.hwc.business.morningBriefing = {
     enable = lib.mkEnableOption "deterministic morning briefing and local mail classification";
+    outputDir = lib.mkOption {
+      type = lib.types.str;
+      default = "${agentDir}/output";
+      readOnly = true;
+      description = ''
+        Where run.sh writes briefing.json and its other outputs. Read-only:
+        consumers (the wall display) read the briefing from here instead of
+        rebuilding the path.
+      '';
+    };
     hostHealthFrom = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;

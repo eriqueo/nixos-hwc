@@ -1,10 +1,10 @@
-"""Wall calendar: one week of Radicale events and the NOAA forecast, drawn
-for an e-ink look (black on white, no colour, no motion).
+"""Screen producers for the wall display: each screen turns one data source
+into a full HTML page drawn black on white (an e-ink look).
 
-A stdlib HTTP server. Every request renders from an in-memory cache; the
-calendar refreshes after CAL_TTL seconds and the forecast after WX_TTL. A
-failed refresh keeps the last good copy and says so in the footer.
-Configuration comes from WALL_* environment variables set by index.nix.
+A screen is a function `html(now) -> str` registered in SCREENS. Pages size
+themselves in vh/vw, so one page renders at any device resolution. Data is
+cached here (Cached) so the HTML preview, the renderer and every device share
+one fetch per source.
 """
 import base64
 import datetime as dt
@@ -15,26 +15,26 @@ import threading
 import time
 import urllib.request
 import xml.etree.ElementTree as ET
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from zoneinfo import ZoneInfo
 
 import icalendar
 
-ENV = os.environ
-PORT = int(ENV["WALL_PORT"])
-RADICALE = ENV["WALL_RADICALE_URL"].rstrip("/")
-CAL_USER = ENV["WALL_RADICALE_USER"]
-HTPASSWD = ENV["WALL_HTPASSWD_FILE"]
-POINT = ENV["WALL_NOAA_POINT"]  # "lat,lon"
-PLACE = ENV.get("WALL_PLACE", "")
-TZ = ZoneInfo(ENV["WALL_TZ"])
-UA = ENV["WALL_USER_AGENT"]
+CONFIG = json.load(open(os.environ["WALL_CONFIG"]))
+RADICALE = CONFIG["radicale"]["url"].rstrip("/")
+CAL_USER = CONFIG["radicale"]["user"]
+HTPASSWD = CONFIG["radicale"]["htpasswdFile"]
+POINT = CONFIG["noaa"]["point"]  # "lat,lon"
+PLACE = CONFIG["noaa"]["place"]
+UA = CONFIG["noaa"]["userAgent"]
+BRIEFING = CONFIG.get("briefingFile")
+TZ = ZoneInfo(CONFIG["timeZone"])
 
 DAYS = 7
 CAL_TTL = 300
 WX_TTL = 900
 RETRY = 60
-MAX_EVENTS = 9  # per day column; the rest collapse to "+N more"
+MAX_EVENTS = 9   # per day column; the rest collapse to "+N more"
+MAX_ROWS = 14    # list screens (tasks, briefing)
 
 NS = {"d": "DAV:", "c": "urn:ietf:params:xml:ns:caldav"}
 
@@ -45,12 +45,18 @@ PROPFIND = """<?xml version="1.0" encoding="utf-8"?>
 
 # Radicale expands recurrences server-side, so each instance arrives as its
 # own VEVENT with a UTC start.
-REPORT = """<?xml version="1.0" encoding="utf-8"?>
+EVENT_REPORT = """<?xml version="1.0" encoding="utf-8"?>
 <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
   <d:prop><c:calendar-data><c:expand start="{s}" end="{e}"/></c:calendar-data></d:prop>
   <c:filter><c:comp-filter name="VCALENDAR"><c:comp-filter name="VEVENT">
     <c:time-range start="{s}" end="{e}"/>
   </c:comp-filter></c:comp-filter></c:filter>
+</c:calendar-query>"""
+
+TODO_REPORT = """<?xml version="1.0" encoding="utf-8"?>
+<c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+  <d:prop><c:calendar-data/></d:prop>
+  <c:filter><c:comp-filter name="VCALENDAR"><c:comp-filter name="VTODO"/></c:comp-filter></c:filter>
 </c:calendar-query>"""
 
 
@@ -81,19 +87,25 @@ def dav(url, method, body):
     return ET.fromstring(xml)
 
 
-def calendars():
-    """Every collection under the principal that can hold events."""
+def collections(component):
+    """Every collection under the principal that can hold `component`."""
     found = []
     for resp in dav(f"{RADICALE}/{CAL_USER}/", "PROPFIND", PROPFIND).findall("d:response", NS):
         comps = {c.get("name") for c in resp.iter(f"{{{NS['c']}}}comp")}
-        if "VEVENT" in comps:
+        if component in comps:
             href = resp.findtext("d:href", namespaces=NS)
             found.append((href, resp.findtext(".//d:displayname", namespaces=NS) or href))
     return found
 
 
+def components(href, query, kind):
+    for data in dav(RADICALE + href, "REPORT", query).iter(f"{{{NS['c']}}}calendar-data"):
+        if data.text:
+            yield from icalendar.Calendar.from_ical(data.text).walk(kind)
+
+
 def local(t):
-    """A DTSTART/DTEND value as an aware local datetime, or a date if all-day."""
+    """An iCal date-time as an aware local datetime, or a date if all-day."""
     if not isinstance(t, dt.datetime):
         return t
     return (t if t.tzinfo else t.replace(tzinfo=TZ)).astimezone(TZ)
@@ -105,33 +117,49 @@ def utc_stamp(t):
 
 def load_events(first_day):
     start = dt.datetime.combine(first_day, dt.time(), TZ)
-    end = start + dt.timedelta(days=DAYS)
-    query = REPORT.format(s=utc_stamp(start), e=utc_stamp(end))
-    cals, events, seen = calendars(), [], set()
+    query = EVENT_REPORT.format(s=utc_stamp(start), e=utc_stamp(start + dt.timedelta(days=DAYS)))
+    cals, events, seen = collections("VEVENT"), [], set()
     for href, name in cals:
-        for data in dav(RADICALE + href, "REPORT", query).iter(f"{{{NS['c']}}}calendar-data"):
-            if not data.text:
+        for ev in components(href, query, "VEVENT"):
+            if str(ev.get("STATUS", "")).upper() == "CANCELLED":
                 continue
-            for ev in icalendar.Calendar.from_ical(data.text).walk("VEVENT"):
-                if str(ev.get("STATUS", "")).upper() == "CANCELLED":
-                    continue
-                s = local(ev.decoded("DTSTART"))
-                allday = not isinstance(s, dt.datetime)
-                if "DTEND" in ev:
-                    e = local(ev.decoded("DTEND"))
-                elif "DURATION" in ev:
-                    e = s + ev.decoded("DURATION")
-                else:
-                    e = s + dt.timedelta(days=1) if allday else s
-                summary = str(ev.get("SUMMARY", "")).strip() or "(busy)"
-                # The mirrored feeds can carry the same event twice.
-                key = (summary.lower(), s)
-                if key in seen:
-                    continue
-                seen.add(key)
-                events.append({"summary": summary, "start": s, "end": e,
-                               "allday": allday, "calendar": name})
+            s = local(ev.decoded("DTSTART"))
+            allday = not isinstance(s, dt.datetime)
+            if "DTEND" in ev:
+                e = local(ev.decoded("DTEND"))
+            elif "DURATION" in ev:
+                e = s + ev.decoded("DURATION")
+            else:
+                e = s + dt.timedelta(days=1) if allday else s
+            summary = str(ev.get("SUMMARY", "")).strip() or "(busy)"
+            # The mirrored feeds can carry the same event twice.
+            key = (summary.lower(), s)
+            if key in seen:
+                continue
+            seen.add(key)
+            events.append({"summary": summary, "start": s, "end": e,
+                           "allday": allday, "calendar": name})
     return {"calendars": [n for _, n in cals], "events": events}
+
+
+def load_tasks(today):
+    """Open tasks due today or earlier, plus undated high-priority ones (iCal 1-4)."""
+    tasks = []
+    for href, name in collections("VTODO"):
+        for t in components(href, TODO_REPORT, "VTODO"):
+            if str(t.get("STATUS", "")).upper() in ("COMPLETED", "CANCELLED") or "COMPLETED" in t:
+                continue
+            due = local(t.decoded("DUE")) if "DUE" in t else None
+            due_day = due.date() if isinstance(due, dt.datetime) else due
+            prio = int(t.get("PRIORITY", 0) or 0)
+            if due_day is not None and due_day > today:
+                continue
+            if due_day is None and not 1 <= prio <= 4:
+                continue
+            tasks.append({"summary": str(t.get("SUMMARY", "")).strip() or "(untitled)",
+                          "due": due, "due_day": due_day, "list": name, "priority": prio})
+    tasks.sort(key=lambda t: (t["due_day"] is None, t["due_day"] or today, t["priority"] or 9, t["summary"]))
+    return tasks
 
 
 _forecast_url = None
@@ -167,11 +195,23 @@ def load_weather():
     }
 
 
-class Cached:
-    """Last good value of a loader, refreshed when older than ttl."""
+def load_briefing(_day):
+    """Allowlisted view of the morning briefing: its prioritised items minus
+    mail (mail subjects stay off a wall screen). Keyed by day like the other
+    loaders so a new day re-reads the file."""
+    with open(BRIEFING) as f:
+        b = json.load(f)
+    items = [i for i in (b.get("sections", {}).get("today", {}).get("items") or [])
+             if i.get("source") != "mail"]
+    return {"generated_at": b.get("generated_at"), "items": items}
 
-    def __init__(self, loader, ttl):
-        self.loader, self.ttl = loader, ttl
+
+class Cached:
+    """Last good value of a loader, refreshed when older than ttl or when the
+    key (e.g. today's date) changes. A failed refresh keeps the last value."""
+
+    def __init__(self, name, loader, ttl):
+        self.name, self.loader, self.ttl = name, loader, ttl
         self.value, self.key, self.at, self.next_try, self.error = None, None, 0.0, 0.0, None
         self.lock = threading.Lock()
 
@@ -188,9 +228,15 @@ class Cached:
                     self.next_try = now + RETRY
             return self.value
 
+    def status(self):
+        return {"ok": self.value is not None and self.error is None, "updated": self.at, "error": self.error}
 
-calendar = Cached(load_events, CAL_TTL)
-weather = Cached(load_weather, WX_TTL)
+
+calendar = Cached("calendar", load_events, CAL_TTL)
+weather = Cached("forecast", load_weather, WX_TTL)
+todo = Cached("tasks", load_tasks, CAL_TTL)
+briefing = Cached("briefing", load_briefing, CAL_TTL)
+SOURCES = [calendar, weather, todo] + ([briefing] if BRIEFING else [])
 
 
 # ── rendering ───────────────────────────────────────────────────────────────
@@ -198,6 +244,30 @@ weather = Cached(load_weather, WX_TTL)
 def clock(t):
     h, m = t.hour, t.minute
     return f"{h % 12 or 12}{f':{m:02d}' if m else ''}{'a' if h < 12 else 'p'}"
+
+
+def stamp(c):
+    return clock(dt.datetime.fromtimestamp(c.at, TZ)) if c.at else "never"
+
+
+def page(title, now, body, sources):
+    notes = " · ".join(f"{c.name} {stamp(c)}" for c in sources)
+    errors = " · ".join(f"{c.name} failed: {html.escape(c.error)}" for c in sources if c.error)
+    return f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="300">
+<title>{html.escape(title)}</title>
+<style>{CSS}</style></head>
+<body>
+{body}
+<footer><span>{notes}</span><span class="err">{errors}</span></footer>
+</body></html>"""
+
+
+def header(now, right):
+    return (f'<header><div class="date">{now:%A} {now.day} {now:%B}</div>'
+            f'<div class="now">{right}</div></header>')
 
 
 def on_day(ev, day):
@@ -221,14 +291,18 @@ def day_events(events, day):
         else:
             when = clock(e["start"]) if e["start"].date() == day else "cont."
             items.append(f'<li><span class="t">{when}</span>{title}</li>')
-    if len(items) > MAX_EVENTS:
-        extra = len(items) - (MAX_EVENTS - 1)
-        items = items[:MAX_EVENTS - 1] + [f'<li class="more">+{extra} more</li>']
-    return "".join(items) or '<li class="none">—</li>'
+    return capped(items, MAX_EVENTS) or '<li class="none">—</li>'
+
+
+def capped(items, limit):
+    if len(items) > limit:
+        extra = len(items) - (limit - 1)
+        items = items[:limit - 1] + [f'<li class="more">+{extra} more</li>']
+    return "".join(items)
 
 
 def day_weather(wx, day):
-    w = (wx or {}).get("days", {}).get(day) if wx else None
+    w = wx["days"].get(day) if wx else None
     if not w:
         return '<div class="wx"><div class="sky">no forecast</div></div>'
     hi = f'<span class="hi">{w["hi"]}°</span>' if "hi" in w else ""
@@ -237,16 +311,16 @@ def day_weather(wx, day):
     return f'<div class="wx"><div>{hi}{lo}</div><div class="sky">{html.escape(w["sky"])}</div>{pop}</div>'
 
 
-def stamp(c):
-    return clock(dt.datetime.fromtimestamp(c.at, TZ)) if c.at else "never"
+def now_line(wx):
+    place = f"{html.escape(PLACE)} — " if PLACE else ""
+    return place + html.escape(wx["now"]) if wx else "forecast unavailable"
 
 
-def render(now):
+def week(now):
     today = now.date()
     cal = calendar.get(today)
     wx = weather.get()
     events = cal["events"] if cal else []
-
     columns = []
     for i in range(DAYS):
         day = today + dt.timedelta(days=i)
@@ -254,26 +328,55 @@ def render(now):
             f'<section class="day{" today" if i == 0 else ""}">'
             f'<h2><span>{day:%a}</span><span class="dom">{day.day}</span></h2>'
             f'{day_weather(wx, day)}<ul class="events">{day_events(events, day)}</ul></section>')
-
     alerts = "".join(f'<div class="alert">{html.escape(a)}</div>' for a in (wx or {}).get("alerts", []))
-    place = f"{html.escape(PLACE)} — " if PLACE else ""
-    now_line = place + html.escape(wx["now"]) if wx else "forecast unavailable"
-    notes = [f"calendar {stamp(calendar)}", f"forecast {stamp(weather)}"]
-    errors = " · ".join(f"{n} failed: {html.escape(c.error)}"
-                        for n, c in (("calendar", calendar), ("forecast", weather)) if c.error)
+    body = f'{header(now, now_line(wx))}{alerts}<main class="week">{"".join(columns)}</main>'
+    return page("Week", now, body, [calendar, weather])
 
-    return f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="300">
-<title>Week</title>
-<style>{CSS}</style></head>
-<body>
-<header><div class="date">{now:%A} {today.day} {now:%B}</div><div class="now">{now_line}</div></header>
-{alerts}
-<main class="week">{"".join(columns)}</main>
-<footer><span>{" · ".join(notes)}</span><span class="err">{errors}</span></footer>
-</body></html>"""
+
+def tasks(now):
+    today = now.date()
+    items = todo.get(today) or []
+    rows = []
+    for t in items:
+        if t["due_day"] is None:
+            when = "priority"
+        elif t["due_day"] < today:
+            n = (today - t["due_day"]).days
+            when = f"{n}d overdue"
+        elif isinstance(t["due"], dt.datetime):
+            when = clock(t["due"])
+        else:
+            when = "today"
+        cls = "late" if t["due_day"] is not None and t["due_day"] < today else ""
+        rows.append(f'<li class="{cls}"><span class="t">{when}</span><span class="title">{html.escape(t["summary"])}</span>'
+                    f'<span class="tag">{html.escape(t["list"])}</span></li>')
+    body = (f'{header(now, "Tasks — due today and overdue")}'
+            f'<main class="list"><ul class="rows">{capped(rows, MAX_ROWS) or "<li class=none>Nothing due.</li>"}</ul></main>')
+    return page("Tasks", now, body, [todo])
+
+
+SEVERITY = {"red": "late", "amber": "", "green": ""}
+
+
+def brief(now):
+    b = briefing.get(now.date()) if BRIEFING else None
+    rows = []
+    for i in (b or {}).get("items", []):
+        title = html.escape(i.get("title", "").splitlines()[0][:140])
+        why = html.escape(i.get("why") or "")
+        rows.append(f'<li class="{SEVERITY.get(i.get("severity"), "")}"><span class="title">{title}</span>'
+                    f'<span class="tag">{why}</span></li>')
+    when = ""
+    if b and b.get("generated_at"):
+        when = "as of " + clock(dt.datetime.fromisoformat(b["generated_at"]).astimezone(TZ))
+    body = (f'{header(now, "Morning briefing " + when)}'
+            f'<main class="list"><ul class="rows">{capped(rows, MAX_ROWS) or "<li class=none>Nothing flagged.</li>"}</ul></main>')
+    return page("Briefing", now, body, [briefing])
+
+
+# The closed screen vocabulary: index.nix validates playlists against these
+# names through the generated config, and the server serves nothing else.
+SCREENS = {"week": week, "tasks": tasks, "briefing": brief}
 
 
 # Black on white only: no colour, no grey fills, no shadows, no transitions.
@@ -298,42 +401,15 @@ header{display:flex;justify-content:space-between;align-items:baseline;gap:2vw;b
 .events{list-style:none;font-size:2.1vh;line-height:1.2}
 .events li{padding:.5vh 0;border-bottom:1px dotted #000;overflow-wrap:anywhere}
 .events .allday{font-weight:700;border:2px solid #000;padding:.3vh .3vw;margin:.5vh 0}
-.t{font-weight:700;margin-right:.3em}
+.t{font-weight:700;margin-right:.6em}
 .none,.more{font-style:italic;border-bottom:0}
+.list{flex:1;min-height:0;overflow:hidden;margin-top:1.5vh}
+.rows{list-style:none;font-size:3.4vh;line-height:1.25}
+.rows li{display:flex;align-items:baseline;gap:1vw;padding:.9vh 0;border-bottom:1px dotted #000}
+.rows .title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rows .late{font-weight:700}
+.rows .t{min-width:16vw}
+.tag{margin-left:auto;font-size:2.2vh;font-style:italic;white-space:nowrap;padding-left:2vw}
 footer{display:flex;justify-content:space-between;gap:2vw;font-size:1.6vh;border-top:1px solid #000;padding-top:.5vh}
 .err{font-weight:700;text-align:right}
 """
-
-
-class Handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        path = self.path.split("?")[0]
-        if path in ("/", "/index.html"):
-            self.send(200, "text/html; charset=utf-8", render(dt.datetime.now(TZ)))
-        elif path == "/healthz":
-            calendar.get(dt.datetime.now(TZ).date())
-            weather.get()
-            body = {n: {"ok": c.value is not None and c.error is None, "updated": c.at, "error": c.error}
-                    for n, c in (("calendar", calendar), ("forecast", weather))}
-            body["calendars"] = (calendar.value or {}).get("calendars", [])
-            ok = all(v["ok"] for k, v in body.items() if k != "calendars")
-            self.send(200 if ok else 503, "application/json", json.dumps(body))
-        else:
-            self.send(404, "text/plain", "not found")
-
-    def send(self, code, ctype, body):
-        data = body.encode()
-        self.send_response(code)
-        self.send_header("Content-Type", ctype)
-        self.send_header("Content-Length", str(len(data)))
-        self.send_header("Cache-Control", "no-store")
-        self.end_headers()
-        self.wfile.write(data)
-
-    def log_message(self, format, *args):
-        pass  # the tablet reloads every five minutes; keep the journal for errors
-
-
-if __name__ == "__main__":
-    password()  # refuse to start without a readable credential
-    ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()

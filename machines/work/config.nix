@@ -23,7 +23,7 @@
     ../../domains/server/native/ai/event-scout/index.nix
     ../../domains/server/native/ai/dx2/index.nix
     ../../domains/server/services/radicale/index.nix
-    ../../domains/server/services/wall-calendar/index.nix
+    ../../domains/server/services/wall-display/index.nix
   ];
 
   networking.hostName = "hwc-work";
@@ -328,11 +328,21 @@
     };
   };
 
-  # Wall tablet page: every Radicale event calendar for the week plus the
-  # NOAA forecast, at wall.hwc.iheartwoodcraft.com.
-  hwc.server.services.wallCalendar = {
+  # Wall display: TRMNL-compatible server at wall.hwc.iheartwoodcraft.com
+  # (week + NOAA, tasks, briefing). Add a device here to pair it.
+  hwc.server.services.wallDisplay = {
     enable = true;
     reverseProxy.enable = true;
+    devices = {
+      # Fire HD 8 (2018, LineageOS 20) running the TRMNL Android app; the id
+      # is its wlan0 MAC, entered in the app's BYOS settings.
+      fire-hd8 = {
+        id = "44:00:49:05:31:49";
+        width = 1280;
+        height = 800;
+        grays = 16;
+      };
+    };
   };
 
 

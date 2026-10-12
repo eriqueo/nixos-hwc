@@ -125,6 +125,7 @@ morning run and each intraday mail retriage publish that copy atomically.
 
 - `hwc.business.morningBriefing.enable` — enable the service + timer
 - `hwc.business.morningBriefing.onCalendar` — systemd calendar expression (default: `*-*-* 06:00:00`)
+- `hwc.business.morningBriefing.outputDir` — read-only; where `briefing.json` lands. Consumers (the wall display) read it from here.
 
 Service runs as `eric`, hardened with `ProtectSystem=strict`, 300s timeout.
 
@@ -167,6 +168,8 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+- 2026-10-12: New read-only option `outputDir` (`<agentDir>/output`), so the wall display
+  (`domains/server/services/wall-display`) reads `briefing.json` without rebuilding the path.
 - 2026-10-10: `run.sh` also lists Eric's failed `systemd --user` units (as `user:<unit>`)
   in `failed_units`; the system scan could not see hwc-tracker, tracker-relay or
   mail-health, and mail-health sat failed on hwc-work with no card. `output/` is
