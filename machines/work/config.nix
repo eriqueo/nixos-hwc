@@ -329,7 +329,8 @@
   };
 
   # Wall display: TRMNL-compatible server at wall.hwc.iheartwoodcraft.com
-  # (week + NOAA, tasks, briefing). Add a device here to pair it.
+  # (home, week, weather, tasks, briefing: the default playlist). Add a
+  # device here to pair it.
   hwc.server.services.wallDisplay = {
     enable = true;
     reverseProxy.enable = true;
