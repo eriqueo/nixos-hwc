@@ -5,6 +5,7 @@ Run with the service's interpreter (needs fastapi + youtube-transcript-api):
 """
 
 import asyncio
+import json
 import os
 import tempfile
 import unittest
@@ -372,7 +373,7 @@ class XPost(unittest.TestCase):
         md = self.X.format_markdown(thread, "3")
         self.assertIn("**Source:** X thread (2 posts)", md)
         self.assertIn("1.5K likes", md)
-        self.assertEqual(self.X.saved_post_id(md), "3")
+        self.assertEqual(self.X.saved_x_key(md), "x:3")
 
     def test_unavailable_parent_ends_walk(self):
         def fetch(p):
@@ -382,6 +383,186 @@ class XPost(unittest.TestCase):
         with mock.patch.object(self.X, "fetch_syndication", side_effect=fetch), \
              mock.patch.object(self.X, "fetch_graphql", return_value=None):
             self.assertEqual(len(self.X.fetch_thread("2")), 1)
+
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+class XConversation(unittest.TestCase):
+    """Parser + mode selectors over a real logged-in TweetDetail response
+    (trimmed). Focal post: FoxxAndCo's reply 2108948824337080592 to @poteto."""
+    FOCAL = "2108948824337080592"
+
+    def setUp(self):
+        import xpost
+        self.X = xpost
+        self.conv = xpost.Conversation()
+        self.conv.add(json.loads((FIXTURES / "tweet_detail_logged_in.json").read_text()))
+
+    def test_promoted_post_is_dropped(self):
+        self.assertNotIn("2092669931368403176", self.conv.posts)
+
+    def test_direct_replies_exclude_ancestors_and_sub_replies(self):
+        ids = [p["id"] for p in self.X.direct_replies(self.conv, self.FOCAL)]
+        self.assertEqual(len(ids), 6)
+        self.assertIn("2108960927093755917", ids)          # poteto's reply
+        self.assertNotIn("2109345169770205368", ids)       # a reply to a reply
+        self.assertNotIn("2108808972954423578", ids)       # the ancestor
+
+    def test_author_thread_and_author_posts(self):
+        below = self.X.author_thread_below(self.conv, self.FOCAL, "FoxxAndCo")
+        self.assertEqual(below, [])  # FoxxAndCo answered a reply, not their own post
+        own = self.X.author_posts(self.conv, self.FOCAL, "foxxandco")
+        self.assertEqual([p["id"] for p in own], ["2109345169770205368"])
+
+    def test_cursors_and_normalized_shape(self):
+        self.assertTrue(self.conv.has_bottom_cursor)
+        self.assertEqual(self.conv.show_more, 1)
+        p = self.conv.posts[self.FOCAL]
+        self.assertEqual(p["author"]["handle"], "FoxxAndCo")
+        self.assertEqual(p["in_reply_to"], "2108808972954423578")
+        self.assertTrue(p["created_at"].startswith("2026-"))
+        self.assertEqual(set(p), set(self.X.normalize(_raw_post("1")).keys()) - {"_media_links"})
+
+    def test_mode_keys_round_trip_and_old_files_stay_post(self):
+        thread = [self.conv.posts[self.FOCAL]]
+        replies = self.X.direct_replies(self.conv, self.FOCAL)
+        md = self.X.format_markdown(thread, self.FOCAL, "replies", replies, " of 6")
+        self.assertEqual(self.X.saved_x_key(md), f"x:{self.FOCAL}:replies")
+        self.assertIn("## Replies (6 of 6)", md)
+        old = "# t\n\n**URL:** https://x.com/a/status/5\n**Source:** X post\n\n---\n\nbody\n"
+        self.assertEqual(self.X.saved_x_key(old), "x:5")
+
+
+def _gql_tweet(pid, handle, reply_to):
+    return {"__typename": "Tweet", "rest_id": pid,
+            "core": {"user_results": {"result": {"core": {"name": handle, "screen_name": handle}}}},
+            "legacy": {"full_text": f"text {pid}", "created_at": "Sat Oct 10 06:36:53 +0000 2026",
+                       "in_reply_to_status_id_str": reply_to, "favorite_count": 1}}
+
+
+def _page_payload(focal, reply_ids, bottom=True):
+    """One TweetDetail page: each reply as its own conversation module."""
+    entries = [{"entryId": f"conversationthread-{r}", "content": {
+        "entryType": "TimelineTimelineModule", "items": [{"entryId": f"conversationthread-{r}-tweet-{r}",
+            "item": {"itemContent": {"itemType": "TimelineTweet",
+                                     "tweet_results": {"result": _gql_tweet(r, f"u{r}", focal)}}}}]}}
+        for r in reply_ids]
+    if bottom:
+        entries.append({"entryId": "cursor-bottom-1",
+                        "content": {"entryType": "TimelineTimelineCursor", "cursorType": "Bottom"}})
+    return {"data": {"threaded_conversation_with_injections_v2": {
+        "instructions": [{"type": "TimelineAddEntries", "entries": entries}]}}}
+
+
+class FakePage:
+    """Feeds one TweetDetail page per scroll, the way X's client loads them."""
+    def __init__(self, conv, pages, url="https://x.com/a/status/1", show_more_pages=()):
+        self.conv, self.pages, self._url = conv, list(pages), url
+        self.show_more_pages = list(show_more_pages)
+        self.seen = 0
+        self.clicks = 0
+
+    def _deliver(self, queue):
+        if queue:
+            self.conv.add(queue.pop(0))
+            self.seen += 1
+
+    async def open(self, url):
+        self._deliver(self.pages)
+
+    def url(self):
+        return self._url
+
+    async def scroll(self):
+        self._deliver(self.pages)
+
+    async def click_show_more(self):
+        if not self.show_more_pages:
+            return False
+        self.clicks += 1
+        self._deliver(self.show_more_pages)
+        return True
+
+    async def settle(self):
+        pass
+
+
+class XCaptureLoop(unittest.TestCase):
+    def setUp(self):
+        import xbrowser
+        import xpost
+        self.B, self.X = xbrowser, xpost
+
+    def _drive(self, page, mode="replies", limit=200, clock=None):
+        kw = {"clock": clock} if clock else {}
+        return run(self.B.drive(page, page.conv, lambda: page.seen, lambda: False,
+                                "1", mode, limit, **kw))
+
+    def test_stops_at_the_reply_limit(self):
+        conv = self.X.Conversation()
+        pages = [_page_payload("1", [str(i) for i in range(n, n + 10)]) for n in range(10, 200, 10)]
+        cap = self._drive(FakePage(conv, pages), limit=25)
+        self.assertTrue(cap.hit_limit)
+        self.assertGreaterEqual(len(self.X.direct_replies(conv, "1")), 25)
+
+    def test_show_more_then_end_of_conversation(self):
+        conv = self.X.Conversation()
+        page = FakePage(conv, [_page_payload("1", ["10", "11"], bottom=False)],
+                        show_more_pages=[_page_payload("1", ["12"], bottom=False)])
+        cap = self._drive(page)
+        self.assertTrue(cap.reached_end)
+        self.assertEqual(page.clicks, 1)
+        self.assertEqual(len(self.X.direct_replies(conv, "1")), 3)
+
+    def test_login_wall_is_login_required(self):
+        page = FakePage(self.X.Conversation(), [], url="https://x.com/i/flow/login?redirect_after_login=%2F")
+        with self.assertRaises(T.TranscriptError) as cm:
+            self._drive(page)
+        self.assertEqual(cm.exception.reason, "login_required")
+
+    def test_no_api_data_means_logged_out(self):
+        with self.assertRaises(T.TranscriptError) as cm:
+            self._drive(FakePage(self.X.Conversation(), []))
+        self.assertEqual(cm.exception.reason, "login_required")
+
+    def test_budget_ends_capture_with_what_it_has(self):
+        conv = self.X.Conversation()
+        ticks = iter(range(0, 10_000, 100))
+        pages = [_page_payload("1", [str(i)]) for i in range(10, 100)]
+        cap = self._drive(FakePage(conv, pages), clock=lambda: next(ticks))
+        self.assertTrue(cap.hit_budget)
+        self.assertGreater(len(conv.posts), 0)
+
+    def test_429_is_rate_limited(self):
+        page = FakePage(self.X.Conversation(), [])
+        with self.assertRaises(T.TranscriptError) as cm:
+            run(self.B.drive(page, page.conv, lambda: 0, lambda: True, "1", "replies", 200))
+        self.assertEqual(cm.exception.reason, "rate_limited")
+
+
+class XCookieImport(unittest.TestCase):
+    def setUp(self):
+        import xbrowser
+        self.B = xbrowser
+
+    def test_netscape_export_parses(self):
+        text = ("# Netscape HTTP Cookie File\n"
+                "#HttpOnly_.x.com\tTRUE\t/\tTRUE\t1893456000\tauth_token\tAAA\n"
+                ".x.com\tTRUE\t/\tTRUE\t1893456000\tct0\tBBB\n")
+        cookies = self.B.parse_cookies(text)
+        self.assertEqual({c["name"] for c in cookies}, {"auth_token", "ct0"})
+        self.assertTrue(cookies[0]["httpOnly"])
+
+    def test_foreign_domain_rejected(self):
+        text = '[{"name":"auth_token","value":"a","domain":".x.com"},{"name":"ct0","value":"b","domain":".x.com"},' \
+               '{"name":"c_user","value":"c","domain":".facebook.com"}]'
+        with self.assertRaisesRegex(ValueError, "facebook.com"):
+            self.B.parse_cookies(text)
+
+    def test_logged_out_export_rejected(self):
+        with self.assertRaisesRegex(ValueError, "auth_token"):
+            self.B.parse_cookies('[{"name":"guest_id","value":"a","domain":".x.com"}]')
 
 
 @unittest.skipIf(api is None, "fastapi not installed")

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 import uvicorn
@@ -22,6 +22,7 @@ from transcript import (
     fetch_captions, transcribe_audio, clean_transcript, raw_transcript, format_markdown,
     format_duration, saved_video_id,
 )
+import xbrowser
 import xpost
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -68,7 +69,7 @@ PACE_SECONDS = 2.0
 
 # HTTP status for each failure reason on the synchronous /transcript endpoint.
 STATUS_FOR_REASON = {"invalid_url": 400, "no_captions": 404, "unavailable": 404,
-                     "rate_limited": 503, "timeout": 504}
+                     "rate_limited": 503, "timeout": 504, "login_required": 409}
 
 app = FastAPI(title="Transcripts", version="4.1.0")
 
@@ -207,8 +208,7 @@ def item_key(url: str) -> str | None:
 
 def saved_key(header: str) -> str | None:
     """Library key of a saved file, read from its header."""
-    post_id = xpost.saved_post_id(header)
-    return f"x:{post_id}" if post_id else saved_video_id(header)
+    return xpost.saved_x_key(header) or saved_video_id(header)
 
 
 def _read_header(path: Path) -> str:
@@ -541,7 +541,28 @@ async def get_job(job_id: str):
 # ---------------------------------------------------------------------------
 @app.get("/config")
 async def config():
-    return {"roots": [str(r) for r in OUTPUT_ROOTS], "default_mode": DEFAULT_MODE}
+    return {"roots": [str(r) for r in OUTPUT_ROOTS], "default_mode": DEFAULT_MODE,
+            "x_modes": list(xpost.X_MODES), "x_login_modes": sorted(xpost.LOGIN_MODES),
+            "x_limit_default": xpost.REPLY_LIMIT_DEFAULT, "x_limit_max": xpost.REPLY_LIMIT_MAX}
+
+
+# ---------------------------------------------------------------------------
+# /x/session — the X login the browser captures use (imported cookies)
+# ---------------------------------------------------------------------------
+@app.get("/x/session")
+async def get_x_session():
+    return xbrowser.session_status()
+
+
+@app.post("/x/session")
+async def post_x_session(request: Request):
+    body = await request.body()
+    if len(body) > 64 * 1024:
+        raise HTTPException(413, "Cookie export is larger than 64 KB")
+    try:
+        return await xbrowser.import_session(body.decode("utf-8", errors="replace"))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
 
 
 # ---------------------------------------------------------------------------
@@ -557,6 +578,7 @@ async def health():
         "output_roots": [str(r) for r in OUTPUT_ROOTS],
         "whisper": {"url": WHISPER_URL or None, "model": WHISPER_MODEL,
                     "max_seconds": WHISPER_MAX_SECONDS, "ffmpeg": shutil.which("ffmpeg")},
+        "x_session": xbrowser.session_status(),
     }
 
 
@@ -655,6 +677,16 @@ async def ui():
   <div class="msg" id="msg"></div>
   <button class="retry" id="retry" onclick="retry()"></button>
   <ul class="results" id="results"></ul>
+</div>
+
+<div class="card">
+  <h2>X login — needed for replies and the author's full thread</h2>
+  <div class="msg" id="xstatus">Checking…</div>
+  <label>Log in to the spare X account in a browser, export its x.com cookies with a
+    cookies.txt extension (Netscape format or JSON), and paste the file here.</label>
+  <textarea id="xcookies" rows="4" style="width:100%;font-family:monospace;font-size:.75rem"
+    placeholder="# Netscape HTTP Cookie File ..."></textarea>
+  <button class="addbtn" onclick="importX()">Import X login</button>
 </div>
 
 <script>
@@ -767,8 +799,30 @@ async function retry() {
   }
 }
 
+function showX(s) {
+  $('xstatus').className='msg'+(s.linked?'':' err');
+  $('xstatus').textContent=s.linked?('Logged in as @'+s.handle+' (imported '+(s.imported_at||'?')+')')
+    :'Not logged in. Post captures work; replies need a login.';
+}
+async function loadX() {
+  try { showX(await (await fetch('/x/session')).json()); }
+  catch(e) { $('xstatus').textContent='X login status unavailable'; }
+}
+async function importX() {
+  const text=$('xcookies').value.trim();
+  if(!text) return;
+  $('xstatus').className='msg'; $('xstatus').textContent='Checking the login with X (up to 30 s)...';
+  try {
+    const r=await fetch('/x/session',{method:'POST',headers:{'Content-Type':'text/plain'},body:text});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.detail||r.statusText);
+    $('xcookies').value=''; showX(d);
+  } catch(e) { $('xstatus').className='msg err'; $('xstatus').textContent=e.message; }
+}
+
 addRow();
 loadConfig();
+loadX();
 </script>
 </body>
 </html>"""
@@ -778,4 +832,8 @@ if __name__ == "__main__":
     # Refuse to run half-alive: the Whisper fallback shells out to ffmpeg.
     if WHISPER_URL and not shutil.which("ffmpeg"):
         raise SystemExit("YT_TRANSCRIPTS_WHISPER_URL is set but ffmpeg is not on PATH")
+    # X captures need the bundled Chromium.
+    browsers = os.getenv("PLAYWRIGHT_BROWSERS_PATH", "")
+    if not browsers or not any(Path(browsers).glob("chromium-*")):
+        raise SystemExit(f"PLAYWRIGHT_BROWSERS_PATH has no Chromium: {browsers!r}")
     uvicorn.run(app, host=HOST, port=PORT, workers=1, log_level="info")

@@ -1,0 +1,976 @@
+{
+ "data": {
+  "threaded_conversation_with_injections_v2": {
+   "instructions": [
+    {
+     "type": "TimelineClearCache"
+    },
+    {
+     "type": "TimelineAddEntries",
+     "entries": [
+      {
+       "entryId": "tweet-2108808972954423578",
+       "content": {
+        "entryType": "TimelineTimelineItem",
+        "itemContent": {
+         "__typename": "TimelineTweet",
+         "itemType": "TimelineTweet",
+         "tweet_results": {
+          "result": {
+           "__typename": "Tweet",
+           "rest_id": "2108808972954423578",
+           "core": {
+            "user_results": {
+             "result": {
+              "core": {
+               "created_at": "Fri Sep 26 01:06:36 +0000 2014",
+               "name": "lauren",
+               "screen_name": "poteto"
+              },
+              "is_blue_verified": true
+             }
+            }
+           },
+           "legacy": {
+            "bookmark_count": 1787,
+            "conversation_id_str": "2108808972954423578",
+            "created_at": "Sat Oct 10 06:36:53 +0000 2026",
+            "entities": {
+             "user_mentions": [
+              {
+               "id_str": "2085838061347217408",
+               "indices": [
+                37,
+                41
+               ],
+               "name": "Grok Bot",
+               "screen_name": "bot"
+              }
+             ]
+            },
+            "favorite_count": 1660,
+            "full_text": "what did you get done this week with @bot?",
+            "id_str": "2108808972954423578",
+            "quote_count": 189,
+            "reply_count": 1146,
+            "retweet_count": 62
+           },
+           "views": {
+            "count": "640887",
+            "state": "EnabledWithCount"
+           }
+          }
+         }
+        }
+       }
+      },
+      {
+       "entryId": "tweet-2108948824337080592",
+       "content": {
+        "entryType": "TimelineTimelineItem",
+        "itemContent": {
+         "__typename": "TimelineTweet",
+         "itemType": "TimelineTweet",
+         "tweet_results": {
+          "result": {
+           "__typename": "Tweet",
+           "rest_id": "2108948824337080592",
+           "core": {
+            "user_results": {
+             "result": {
+              "core": {
+               "created_at": "Sun May 03 02:04:20 +0000 2015",
+               "name": "JustinTrue",
+               "screen_name": "FoxxAndCo"
+              },
+              "is_blue_verified": true
+             }
+            }
+           },
+           "legacy": {
+            "bookmark_count": 33,
+            "conversation_id_str": "2108808972954423578",
+            "created_at": "Sat Oct 10 15:52:36 +0000 2026",
+            "entities": {
+             "user_mentions": [
+              {
+               "id_str": "2832427459",
+               "indices": [
+                0,
+                7
+               ],
+               "name": "lauren",
+               "screen_name": "poteto"
+              },
+              {
+               "id_str": "2085838061347217408",
+               "indices": [
+                8,
+                12
+               ],
+               "name": "Grok Bot",
+               "screen_name": "bot"
+              }
+             ]
+            },
+            "favorite_count": 377,
+            "full_text": "@poteto @bot A few nights ago I was out walking my dog Foxx, I noticed two of the neighborhood street lights were out, I asked my Bot to please look up the two closest street lights from my home by proximity and submit a report to get them repaired.... That's it, that was the prompt, all the",
+            "id_str": "2108948824337080592",
+            "in_reply_to_status_id_str": "2108808972954423578",
+            "quote_count": 1,
+            "reply_count": 6,
+            "retweet_count": 4
+           },
+           "views": {
+            "count": "30905",
+            "state": "EnabledWithCount"
+           },
+           "note_tweet": {
+            "is_expandable": true,
+            "note_tweet_results": {
+             "result": {
+              "entity_set": {
+               "hashtags": [],
+               "smarttags": [],
+               "symbols": [],
+               "urls": [],
+               "user_mentions": [
+                {
+                 "id_str": "1720665183188922368",
+                 "indices": [
+                  595,
+                  600
+                 ],
+                 "name": "Grok",
+                 "screen_name": "Grok"
+                },
+                {
+                 "id_str": "2085838061347217408",
+                 "indices": [
+                  601,
+                  605
+                 ],
+                 "name": "Grok Bot",
+                 "screen_name": "Bot"
+                }
+               ]
+              },
+              "id": "Tm90ZVR3ZWV0OjIxMDg5NDg4MjQyNDkwMTYzMjA=",
+              "text": "A few nights ago I was out walking my dog Foxx, I noticed two of the neighborhood street lights were out, I asked my Bot to please look up the two closest street lights from my home by proximity and submit a report to get them repaired.... That's it, that was the prompt, all the information I gave it, from there it was able to look up and find the asset numbers assigned to the street lights by using the utility company's website. It submitted the repair requests and had the responses routed to my email.\nBoth lights were repaired within two days. \n\nAbsolutely outstanding 👏🏻\n\nJob well done @Grok @Bot"
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      },
+      {
+       "entryId": "conversationthread-2108960927093755917",
+       "content": {
+        "entryType": "TimelineTimelineModule",
+        "displayType": "VerticalConversation",
+        "items": [
+         {
+          "entryId": "conversationthread-2108960927093755917-tweet-2108960927093755917",
+          "item": {
+           "itemContent": {
+            "__typename": "TimelineTweet",
+            "itemType": "TimelineTweet",
+            "tweet_results": {
+             "result": {
+              "__typename": "Tweet",
+              "rest_id": "2108960927093755917",
+              "core": {
+               "user_results": {
+                "result": {
+                 "core": {
+                  "created_at": "Fri Sep 26 01:06:36 +0000 2014",
+                  "name": "lauren",
+                  "screen_name": "poteto"
+                 },
+                 "is_blue_verified": true
+                }
+               }
+              },
+              "legacy": {
+               "bookmark_count": 5,
+               "conversation_id_str": "2108808972954423578",
+               "created_at": "Sat Oct 10 16:40:42 +0000 2026",
+               "entities": {
+                "user_mentions": [
+                 {
+                  "id_str": "3183483102",
+                  "indices": [
+                   0,
+                   10
+                  ],
+                  "name": "JustinTrue",
+                  "screen_name": "FoxxAndCo"
+                 },
+                 {
+                  "id_str": "2085838061347217408",
+                  "indices": [
+                   11,
+                   15
+                  ],
+                  "name": "Grok Bot",
+                  "screen_name": "bot"
+                 }
+                ]
+               },
+               "favorite_count": 70,
+               "full_text": "@FoxxAndCo @bot wow bot irl!!",
+               "id_str": "2108960927093755917",
+               "in_reply_to_status_id_str": "2108948824337080592",
+               "quote_count": 0,
+               "reply_count": 0,
+               "retweet_count": 1
+              },
+              "views": {
+               "count": "29194",
+               "state": "EnabledWithCount"
+              }
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      {
+       "entryId": "conversationthread-2109344501055828062",
+       "content": {
+        "entryType": "TimelineTimelineModule",
+        "displayType": "VerticalConversation",
+        "items": [
+         {
+          "entryId": "conversationthread-2109344501055828062-tweet-2109344501055828062",
+          "item": {
+           "itemContent": {
+            "__typename": "TimelineTweet",
+            "itemType": "TimelineTweet",
+            "tweet_results": {
+             "result": {
+              "__typename": "Tweet",
+              "rest_id": "2109344501055828062",
+              "core": {
+               "user_results": {
+                "result": {
+                 "core": {
+                  "created_at": "Thu Nov 07 21:58:04 +0000 2019",
+                  "name": "Simon Unleashed",
+                  "screen_name": "SimonSaysKnow"
+                 },
+                 "is_blue_verified": true
+                }
+               }
+              },
+              "legacy": {
+               "bookmark_count": 0,
+               "conversation_id_str": "2108808972954423578",
+               "created_at": "Sun Oct 11 18:04:53 +0000 2026",
+               "entities": {
+                "user_mentions": [
+                 {
+                  "id_str": "3183483102",
+                  "indices": [
+                   0,
+                   10
+                  ],
+                  "name": "JustinTrue",
+                  "screen_name": "FoxxAndCo"
+                 },
+                 {
+                  "id_str": "2832427459",
+                  "indices": [
+                   11,
+                   18
+                  ],
+                  "name": "lauren",
+                  "screen_name": "poteto"
+                 },
+                 {
+                  "id_str": "2085838061347217408",
+                  "indices": [
+                   19,
+                   23
+                  ],
+                  "name": "Grok Bot",
+                  "screen_name": "bot"
+                 }
+                ]
+               },
+               "favorite_count": 2,
+               "full_text": "@FoxxAndCo @poteto @bot Outstanding use case. \n\nImagine if everyone did this. \n\nOur public infrastructure would be top notch.",
+               "id_str": "2109344501055828062",
+               "in_reply_to_status_id_str": "2108948824337080592",
+               "quote_count": 0,
+               "reply_count": 1,
+               "retweet_count": 0
+              },
+              "views": {
+               "count": "180",
+               "state": "EnabledWithCount"
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "entryId": "conversationthread-2109344501055828062-tweet-2109345169770205368",
+          "item": {
+           "itemContent": {
+            "__typename": "TimelineTweet",
+            "itemType": "TimelineTweet",
+            "tweet_results": {
+             "result": {
+              "__typename": "Tweet",
+              "rest_id": "2109345169770205368",
+              "core": {
+               "user_results": {
+                "result": {
+                 "core": {
+                  "created_at": "Sun May 03 02:04:20 +0000 2015",
+                  "name": "JustinTrue",
+                  "screen_name": "FoxxAndCo"
+                 },
+                 "is_blue_verified": true
+                }
+               }
+              },
+              "legacy": {
+               "bookmark_count": 0,
+               "conversation_id_str": "2108808972954423578",
+               "created_at": "Sun Oct 11 18:07:32 +0000 2026",
+               "entities": {
+                "user_mentions": [
+                 {
+                  "id_str": "1192561768574472192",
+                  "indices": [
+                   0,
+                   14
+                  ],
+                  "name": "Simon Unleashed",
+                  "screen_name": "SimonSaysKnow"
+                 },
+                 {
+                  "id_str": "2832427459",
+                  "indices": [
+                   15,
+                   22
+                  ],
+                  "name": "lauren",
+                  "screen_name": "poteto"
+                 },
+                 {
+                  "id_str": "2085838061347217408",
+                  "indices": [
+                   23,
+                   27
+                  ],
+                  "name": "Grok Bot",
+                  "screen_name": "bot"
+                 }
+                ]
+               },
+               "favorite_count": 1,
+               "full_text": "@SimonSaysKnow @poteto @bot Yes sir, my thoughts exactly. \nWhat have you used Grok Bot for?",
+               "id_str": "2109345169770205368",
+               "in_reply_to_status_id_str": "2109344501055828062",
+               "quote_count": 0,
+               "reply_count": 1,
+               "retweet_count": 0
+              },
+              "views": {
+               "count": "123",
+               "state": "EnabledWithCount"
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "entryId": "conversationthread-2109344501055828062-cursor-showmore-1452129002",
+          "item": {
+           "itemContent": {
+            "__typename": "TimelineTimelineCursor",
+            "itemType": "TimelineTimelineCursor",
+            "cursorType": "ShowMore",
+            "value": "CURSOR",
+            "displayTreatment": {
+             "actionText": "Show replies"
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      {
+       "entryId": "conversationthread-2092669931368403176",
+       "content": {
+        "entryType": "TimelineTimelineModule",
+        "displayType": "VerticalConversation",
+        "items": [
+         {
+          "entryId": "conversationthread-2092669931368403176-promoted-tweet-2092669931368403176-16dc7781e7c5a145",
+          "item": {
+           "itemContent": {
+            "__typename": "TimelineTweet",
+            "itemType": "TimelineTweet",
+            "tweet_results": {
+             "result": {
+              "__typename": "Tweet",
+              "rest_id": "2092669931368403176",
+              "core": {
+               "user_results": {
+                "result": {
+                 "core": {
+                  "created_at": "Sat Nov 21 15:25:07 +0000 2020",
+                  "name": "Starlink",
+                  "screen_name": "Starlink"
+                 },
+                 "is_blue_verified": true
+                }
+               }
+              },
+              "legacy": {
+               "bookmark_count": 384,
+               "conversation_id_str": "2092669931368403176",
+               "created_at": "Wed Aug 26 17:46:06 +0000 2026",
+               "entities": {},
+               "favorite_count": 4793,
+               "full_text": "Starlink offers fast, reliable internet in the most rural and remote locations. Portable and easy to set up, Starlink Mini works wherever you are.\n\nOrder online in minutes.",
+               "id_str": "2092669931368403176",
+               "quote_count": 19,
+               "reply_count": 284,
+               "retweet_count": 714
+              },
+              "views": {
+               "count": "114608416",
+               "state": "EnabledWithCount"
+              }
+             }
+            },
+            "promotedMetadata": {}
+           }
+          }
+         }
+        ]
+       }
+      },
+      {
+       "entryId": "conversationthread-2108951577738281241",
+       "content": {
+        "entryType": "TimelineTimelineModule",
+        "displayType": "VerticalConversation",
+        "items": [
+         {
+          "entryId": "conversationthread-2108951577738281241-tweet-2108951577738281241",
+          "item": {
+           "itemContent": {
+            "__typename": "TimelineTweet",
+            "itemType": "TimelineTweet",
+            "tweet_results": {
+             "result": {
+              "__typename": "Tweet",
+              "rest_id": "2108951577738281241",
+              "core": {
+               "user_results": {
+                "result": {
+                 "core": {
+                  "created_at": "Sun Apr 12 15:38:10 +0000 2026",
+                  "name": "JE4NDEV | Software & AI",
+                  "screen_name": "je4ndev"
+                 },
+                 "is_blue_verified": true
+                }
+               }
+              },
+              "legacy": {
+               "bookmark_count": 0,
+               "conversation_id_str": "2108808972954423578",
+               "created_at": "Sat Oct 10 16:03:33 +0000 2026",
+               "entities": {
+                "user_mentions": [
+                 {
+                  "id_str": "3183483102",
+                  "indices": [
+                   0,
+                   10
+                  ],
+                  "name": "JustinTrue",
+                  "screen_name": "FoxxAndCo"
+                 },
+                 {
+                  "id_str": "2832427459",
+                  "indices": [
+                   11,
+                   18
+                  ],
+                  "name": "lauren",
+                  "screen_name": "poteto"
+                 },
+                 {
+                  "id_str": "2085838061347217408",
+                  "indices": [
+                   19,
+                   23
+                  ],
+                  "name": "Grok Bot",
+                  "screen_name": "bot"
+                 }
+                ]
+               },
+               "favorite_count": 1,
+               "full_text": "@FoxxAndCo @poteto @bot Love this. Finding the right streetlight to report is the annoying bit, and it even got the replies back to your email.",
+               "id_str": "2108951577738281241",
+               "in_reply_to_status_id_str": "2108948824337080592",
+               "quote_count": 0,
+               "reply_count": 0,
+               "retweet_count": 0
+              },
+              "views": {
+               "count": "235",
+               "state": "EnabledWithCount"
+              }
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      {
+       "entryId": "conversationthread-2108958227228422487",
+       "content": {
+        "entryType": "TimelineTimelineModule",
+        "displayType": "VerticalConversation",
+        "items": [
+         {
+          "entryId": "conversationthread-2108958227228422487-tweet-2108958227228422487",
+          "item": {
+           "itemContent": {
+            "__typename": "TimelineTweet",
+            "itemType": "TimelineTweet",
+            "tweet_results": {
+             "result": {
+              "__typename": "Tweet",
+              "rest_id": "2108958227228422487",
+              "core": {
+               "user_results": {
+                "result": {
+                 "core": {
+                  "created_at": "Sun May 17 03:32:30 +0000 2009",
+                  "name": "giulio",
+                  "screen_name": "itsjuuulio"
+                 },
+                 "is_blue_verified": false
+                }
+               }
+              },
+              "legacy": {
+               "bookmark_count": 0,
+               "conversation_id_str": "2108808972954423578",
+               "created_at": "Sat Oct 10 16:29:58 +0000 2026",
+               "entities": {
+                "user_mentions": [
+                 {
+                  "id_str": "3183483102",
+                  "indices": [
+                   0,
+                   10
+                  ],
+                  "name": "JustinTrue",
+                  "screen_name": "FoxxAndCo"
+                 },
+                 {
+                  "id_str": "2832427459",
+                  "indices": [
+                   11,
+                   18
+                  ],
+                  "name": "lauren",
+                  "screen_name": "poteto"
+                 },
+                 {
+                  "id_str": "2085838061347217408",
+                  "indices": [
+                   19,
+                   23
+                  ],
+                  "name": "Grok Bot",
+                  "screen_name": "bot"
+                 }
+                ]
+               },
+               "favorite_count": 1,
+               "full_text": "@FoxxAndCo @poteto @bot Wow, this is exactly the kind of stuff that sold me too. Mine was way less heroic, just tracking a DHL package. Love that the city actually fixed them. Great job, bud 🫡",
+               "id_str": "2108958227228422487",
+               "in_reply_to_status_id_str": "2108948824337080592",
+               "quote_count": 0,
+               "reply_count": 0,
+               "retweet_count": 0
+              },
+              "views": {
+               "count": "274",
+               "state": "EnabledWithCount"
+              },
+              "note_tweet": {
+               "is_expandable": false,
+               "note_tweet_results": {
+                "result": {
+                 "entity_set": {
+                  "hashtags": [],
+                  "smarttags": [],
+                  "symbols": [],
+                  "urls": [],
+                  "user_mentions": []
+                 },
+                 "id": "Tm90ZVR3ZWV0OjIxMDg5NTgyMjcxNzM5MjA3Njg=",
+                 "richtext": {
+                  "richtext_tags": [
+                   {
+                    "from_index": 0,
+                    "richtext_types": [
+                     "Bold"
+                    ],
+                    "to_index": 3
+                   }
+                  ]
+                 },
+                 "text": "Wow, this is exactly the kind of stuff that sold me too. Mine was way less heroic, just tracking a DHL package. Love that the city actually fixed them. Great job, bud 🫡"
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      {
+       "entryId": "conversationthread-2109340264854659398",
+       "content": {
+        "entryType": "TimelineTimelineModule",
+        "displayType": "VerticalConversation",
+        "items": [
+         {
+          "entryId": "conversationthread-2109340264854659398-tweet-2109340264854659398",
+          "item": {
+           "itemContent": {
+            "__typename": "TimelineTweet",
+            "itemType": "TimelineTweet",
+            "tweet_results": {
+             "result": {
+              "__typename": "Tweet",
+              "rest_id": "2109340264854659398",
+              "core": {
+               "user_results": {
+                "result": {
+                 "core": {
+                  "created_at": "Fri Jun 09 15:10:55 +0000 2023",
+                  "name": "Phoenix",
+                  "screen_name": "opsverum"
+                 },
+                 "is_blue_verified": false
+                }
+               }
+              },
+              "legacy": {
+               "bookmark_count": 0,
+               "conversation_id_str": "2108808972954423578",
+               "created_at": "Sun Oct 11 17:48:03 +0000 2026",
+               "entities": {
+                "user_mentions": [
+                 {
+                  "id_str": "3183483102",
+                  "indices": [
+                   0,
+                   10
+                  ],
+                  "name": "JustinTrue",
+                  "screen_name": "FoxxAndCo"
+                 },
+                 {
+                  "id_str": "2832427459",
+                  "indices": [
+                   11,
+                   18
+                  ],
+                  "name": "lauren",
+                  "screen_name": "poteto"
+                 },
+                 {
+                  "id_str": "2085838061347217408",
+                  "indices": [
+                   19,
+                   23
+                  ],
+                  "name": "Grok Bot",
+                  "screen_name": "bot"
+                 }
+                ]
+               },
+               "favorite_count": 2,
+               "full_text": "@FoxxAndCo @poteto @bot Bravo 👏",
+               "id_str": "2109340264854659398",
+               "in_reply_to_status_id_str": "2108948824337080592",
+               "quote_count": 0,
+               "reply_count": 0,
+               "retweet_count": 0
+              },
+              "views": {
+               "count": "78",
+               "state": "EnabledWithCount"
+              }
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      {
+       "entryId": "conversationthread-2109000318625493215",
+       "content": {
+        "entryType": "TimelineTimelineModule",
+        "displayType": "VerticalConversation",
+        "items": [
+         {
+          "entryId": "conversationthread-2109000318625493215-tweet-2109000318625493215",
+          "item": {
+           "itemContent": {
+            "__typename": "TimelineTweet",
+            "itemType": "TimelineTweet",
+            "tweet_results": {
+             "result": {
+              "__typename": "Tweet",
+              "rest_id": "2109000318625493215",
+              "core": {
+               "user_results": {
+                "result": {
+                 "core": {
+                  "created_at": "Tue Dec 01 07:20:32 +0000 2015",
+                  "name": "Josh Read",
+                  "screen_name": "joshuagrayread"
+                 },
+                 "is_blue_verified": false
+                }
+               }
+              },
+              "legacy": {
+               "bookmark_count": 0,
+               "conversation_id_str": "2108808972954423578",
+               "created_at": "Sat Oct 10 19:17:13 +0000 2026",
+               "entities": {
+                "media": [
+                 {
+                  "display_url": "pic.x.com/l5lMYz50Jh",
+                  "expanded_url": "https://x.com/joshuagrayread/status/2109000318625493215/photo/1",
+                  "ext_alt_text": "Schitts Creek Wow GIF by Emmys",
+                  "ext_media_availability": {
+                   "status": "Available"
+                  },
+                  "id_str": "2109000311280963585",
+                  "indices": [
+                   38,
+                   61
+                  ],
+                  "media_key": "16_2109000311280963585",
+                  "media_results": {
+                   "result": {
+                    "media_key": "16_2109000311280963585"
+                   }
+                  },
+                  "media_url_https": "https://pbs.twimg.com/tweet_video_thumb/HUSsm_EXEAEUGyq.jpg",
+                  "original_info": {
+                   "focus_rects": [],
+                   "height": 244,
+                   "width": 480
+                  },
+                  "sizes": {
+                   "large": {
+                    "h": 244,
+                    "resize": "fit",
+                    "w": 480
+                   },
+                   "medium": {
+                    "h": 244,
+                    "resize": "fit",
+                    "w": 480
+                   },
+                   "small": {
+                    "h": 244,
+                    "resize": "fit",
+                    "w": 480
+                   },
+                   "thumb": {
+                    "h": 150,
+                    "resize": "crop",
+                    "w": 150
+                   }
+                  },
+                  "type": "animated_gif",
+                  "url": "https://t.co/l5lMYz50Jh",
+                  "video_info": {
+                   "aspect_ratio": [
+                    120,
+                    61
+                   ],
+                   "variants": [
+                    {
+                     "bitrate": 0,
+                     "content_type": "video/mp4",
+                     "url": "https://video.twimg.com/tweet_video/HUSsm_EXEAEUGyq.mp4"
+                    }
+                   ]
+                  }
+                 }
+                ],
+                "user_mentions": [
+                 {
+                  "id_str": "3183483102",
+                  "indices": [
+                   0,
+                   10
+                  ],
+                  "name": "JustinTrue",
+                  "screen_name": "FoxxAndCo"
+                 },
+                 {
+                  "id_str": "2832427459",
+                  "indices": [
+                   11,
+                   18
+                  ],
+                  "name": "lauren",
+                  "screen_name": "poteto"
+                 },
+                 {
+                  "id_str": "2085838061347217408",
+                  "indices": [
+                   19,
+                   23
+                  ],
+                  "name": "Grok Bot",
+                  "screen_name": "bot"
+                 }
+                ]
+               },
+               "extended_entities": {
+                "media": [
+                 {
+                  "display_url": "pic.x.com/l5lMYz50Jh",
+                  "expanded_url": "https://x.com/joshuagrayread/status/2109000318625493215/photo/1",
+                  "ext_alt_text": "Schitts Creek Wow GIF by Emmys",
+                  "ext_media_availability": {
+                   "status": "Available"
+                  },
+                  "id_str": "2109000311280963585",
+                  "indices": [
+                   38,
+                   61
+                  ],
+                  "media_key": "16_2109000311280963585",
+                  "media_results": {
+                   "result": {
+                    "media_key": "16_2109000311280963585"
+                   }
+                  },
+                  "media_url_https": "https://pbs.twimg.com/tweet_video_thumb/HUSsm_EXEAEUGyq.jpg",
+                  "original_info": {
+                   "focus_rects": [],
+                   "height": 244,
+                   "width": 480
+                  },
+                  "sizes": {
+                   "large": {
+                    "h": 244,
+                    "resize": "fit",
+                    "w": 480
+                   },
+                   "medium": {
+                    "h": 244,
+                    "resize": "fit",
+                    "w": 480
+                   },
+                   "small": {
+                    "h": 244,
+                    "resize": "fit",
+                    "w": 480
+                   },
+                   "thumb": {
+                    "h": 150,
+                    "resize": "crop",
+                    "w": 150
+                   }
+                  },
+                  "type": "animated_gif",
+                  "url": "https://t.co/l5lMYz50Jh",
+                  "video_info": {
+                   "aspect_ratio": [
+                    120,
+                    61
+                   ],
+                   "variants": [
+                    {
+                     "bitrate": 0,
+                     "content_type": "video/mp4",
+                     "url": "https://video.twimg.com/tweet_video/HUSsm_EXEAEUGyq.mp4"
+                    }
+                   ]
+                  }
+                 }
+                ]
+               },
+               "favorite_count": 1,
+               "full_text": "@FoxxAndCo @poteto @bot Incredible!!! https://t.co/l5lMYz50Jh",
+               "id_str": "2109000318625493215",
+               "in_reply_to_status_id_str": "2108948824337080592",
+               "quote_count": 0,
+               "reply_count": 0,
+               "retweet_count": 0
+              },
+              "views": {
+               "count": "137",
+               "state": "EnabledWithCount"
+              }
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      {
+       "entryId": "cursor-bottom-2109455709581082543",
+       "content": {
+        "entryType": "TimelineTimelineCursor",
+        "cursorType": "Bottom",
+        "value": "CURSOR"
+       }
+      }
+     ]
+    },
+    {
+     "type": "TimelineTerminateTimeline",
+     "direction": "Top"
+    },
+    {
+     "type": "TimelineTerminateTimeline",
+     "direction": "Bottom"
+    }
+   ]
+  }
+ }
+}

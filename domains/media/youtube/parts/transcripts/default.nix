@@ -25,7 +25,11 @@ let
     pydantic
     youtube-transcript-api
     requests # Whisper chunk uploads
+    playwright # logged-in X captures (xbrowser.py)
   ];
+
+  # Writable state: the X browser profile (imported login cookies) lives here.
+  stateDir = "/var/lib/hwc/transcripts";
 
   whisper = config.hwc.server.ai.whisper or { };
   whisperUrl = lib.optionalString cfg.whisper.enable
@@ -51,6 +55,11 @@ let
     export YT_TRANSCRIPTS_WHISPER_URL="${whisperUrl}"
     export YT_TRANSCRIPTS_WHISPER_MODEL="${whisper.model or "whisper"}"
     export YT_TRANSCRIPTS_WHISPER_MAX_SECONDS="${toString cfg.whisper.maxDuration}"
+    # Chromium for X captures. HOME must be writable for Chromium's config and
+    # crash files, and ProtectHome leaves /home/eric read-only.
+    export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
+    export X_PROFILE_DIR="${stateDir}/x-profile"
+    export HOME="${stateDir}"
 
     exec ${pkgs.python3}/bin/python3 ${scriptDir}/api.py
   '';
@@ -95,6 +104,8 @@ in
         Group = lib.mkForce "users";
 
         StateDirectory = "hwc/transcripts";
+        # Owner-only: the X profile holds a login session.
+        StateDirectoryMode = "0700";
 
         # Hardening
         NoNewPrivileges = true;

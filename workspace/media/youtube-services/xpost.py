@@ -18,6 +18,7 @@ import math
 import re
 import time
 import urllib.parse
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
@@ -180,9 +181,11 @@ def fetch_graphql(post_id: str) -> Optional[dict]:
 # ---------------------------------------------------------------------------
 # Normalize
 # ---------------------------------------------------------------------------
-def _media(t: dict) -> list[dict]:
+def _media(items: list[dict]) -> list[dict]:
+    """Syndication `mediaDetails` and GraphQL `extended_entities.media` share
+    this item shape."""
     out = []
-    for m in t.get("mediaDetails") or []:
+    for m in items:
         url = m.get("media_url_https")
         if m.get("type") != "photo":
             mp4 = [v for v in (m.get("video_info") or {}).get("variants") or []
@@ -230,7 +233,7 @@ def normalize(raw: dict) -> dict:
                     "replies": raw.get("reply_count") or raw.get("conversation_count"),
                     "quotes": raw.get("quote_count"), "bookmarks": raw.get("bookmark_count"),
                     "views": int(raw["view_count_str"]) if raw.get("view_count_str") else None},
-        "media": _media(raw),
+        "media": _media(raw.get("mediaDetails") or []),
         "in_reply_to": raw.get("in_reply_to_status_id_str"),
         "quoted": normalize(quoted) if quoted else None,
         "_media_links": media_links,
@@ -291,6 +294,151 @@ def fetch_thread(post_id: str, on_stage=lambda stage: None) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Logged-in conversation (TweetDetail responses captured by xbrowser)
+# ---------------------------------------------------------------------------
+# What a capture saves. `post` needs no login; the other three read the
+# conversation through a logged-in browser.
+X_MODES = ("post", "thread", "replies", "author_replies")
+LOGIN_MODES = frozenset({"thread", "replies", "author_replies"})
+REPLY_LIMIT_DEFAULT = 200
+REPLY_LIMIT_MAX = 1000
+
+
+def x_key(post_id: str, mode: str) -> str:
+    """Library key of a saved X capture. `post` keeps the bare `x:<id>` key
+    that files saved before modes existed carry."""
+    return f"x:{post_id}" if mode == "post" else f"x:{post_id}:{mode}"
+
+
+def _iso_from_legacy(stamp: Optional[str]) -> Optional[str]:
+    """GraphQL `legacy.created_at` ("Sun May 03 02:04:20 +0000 2015") -> ISO."""
+    if not stamp:
+        return None
+    try:
+        return datetime.strptime(stamp, "%a %b %d %H:%M:%S %z %Y").isoformat()
+    except ValueError:
+        return stamp
+
+
+def normalize_graphql(result: Optional[dict]) -> Optional[dict]:
+    """A GraphQL tweet result in the same shape normalize() returns."""
+    if not result:
+        return None
+    if result.get("__typename") == "TweetWithVisibilityResults":
+        result = result.get("tweet") or {}
+    if not result.get("rest_id"):
+        return None  # TweetTombstone / TweetUnavailable
+    legacy = result.get("legacy") or {}
+    user = ((result.get("core") or {}).get("user_results") or {}).get("result") or {}
+    ucore = user.get("core") or user.get("legacy") or {}
+    handle = ucore.get("screen_name")
+    media_items = (legacy.get("extended_entities") or {}).get("media") or []
+    media_links = {m["url"] for m in media_items if m.get("url")}
+    note = ((result.get("note_tweet") or {}).get("note_tweet_results") or {}).get("result") or {}
+    if note.get("text"):
+        text = _expand_links(note["text"], note.get("entity_set") or {}, media_links)
+    else:
+        text = _expand_links(legacy.get("full_text") or "", legacy.get("entities") or {}, media_links)
+    views = (result.get("views") or {}).get("count")
+    quoted = ((result.get("quoted_status_result") or {}).get("result"))
+    return {
+        "id": result["rest_id"],
+        "url": f"https://x.com/{handle}/status/{result['rest_id']}" if handle else post_url(result["rest_id"]),
+        "text": text,
+        "is_long_form": bool(note),
+        "truncated": False,
+        "created_at": _iso_from_legacy(legacy.get("created_at")),
+        "author": {"name": ucore.get("name"), "handle": handle,
+                   "url": f"https://x.com/{handle}" if handle else None,
+                   "verified": bool(user.get("is_blue_verified"))},
+        "metrics": {"likes": legacy.get("favorite_count"), "reposts": legacy.get("retweet_count"),
+                    "replies": legacy.get("reply_count"), "quotes": legacy.get("quote_count"),
+                    "bookmarks": legacy.get("bookmark_count"), "views": int(views) if views else None},
+        "media": _media(media_items),
+        "in_reply_to": legacy.get("in_reply_to_status_id_str"),
+        "quoted": normalize_graphql(quoted) if quoted else None,
+    }
+
+
+@dataclass
+class Conversation:
+    """Posts seen across a capture's TweetDetail responses, in first-seen
+    order. Promoted posts are dropped at parse time."""
+    posts: dict = field(default_factory=dict)   # id -> normalized post
+    has_bottom_cursor: bool = False             # of the LAST page parsed
+    show_more: int = 0                          # ShowMore/ShowMoreThreads cursors seen
+
+    def add(self, payload: dict) -> None:
+        self.has_bottom_cursor = False
+        data = (payload.get("data") or {}).get("threaded_conversation_with_injections_v2") or {}
+        for ins in data.get("instructions") or []:
+            for entry in ins.get("entries") or []:
+                self._entry(entry)
+            if ins.get("entry"):  # TimelineReplaceEntry / AddToModule carry one
+                self._entry(ins["entry"])
+            for item in ins.get("moduleItems") or []:
+                self._item(item.get("entryId", ""), (item.get("item") or {}).get("itemContent") or {})
+
+    def _entry(self, entry: dict) -> None:
+        c = entry.get("content") or {}
+        kind = c.get("entryType") or c.get("__typename")
+        if kind == "TimelineTimelineItem":
+            self._item(entry.get("entryId", ""), c.get("itemContent") or {})
+        elif kind == "TimelineTimelineModule":
+            for it in c.get("items") or []:
+                self._item(it.get("entryId", ""), (it.get("item") or {}).get("itemContent") or {})
+        elif kind == "TimelineTimelineCursor":
+            self._cursor(c)
+
+    def _item(self, entry_id: str, ic: dict) -> None:
+        if ic.get("itemType") == "TimelineTimelineCursor" or ic.get("__typename") == "TimelineTimelineCursor":
+            self._cursor(ic)
+            return
+        if "promoted" in entry_id or "promotedMetadata" in ic:
+            return
+        post = normalize_graphql((ic.get("tweet_results") or {}).get("result"))
+        if post:
+            self.posts.setdefault(post["id"], post)
+
+    def _cursor(self, c: dict) -> None:
+        if c.get("cursorType") == "Bottom":
+            self.has_bottom_cursor = True
+        elif c.get("cursorType") in ("ShowMore", "ShowMoreThreads", "ShowMoreThreadsPrompt"):
+            self.show_more += 1
+
+
+def _by_id(posts) -> list[dict]:
+    return sorted(posts, key=lambda p: int(p["id"]))
+
+
+def direct_replies(conv: Conversation, focal_id: str) -> list[dict]:
+    """Replies to the focal post itself, in the order X ranked them."""
+    return [p for p in conv.posts.values() if p["in_reply_to"] == focal_id]
+
+
+def author_thread_below(conv: Conversation, focal_id: str, handle: str) -> list[dict]:
+    """The author's chain continuing below the focal post: each link is the
+    author's earliest reply to the previous link."""
+    handle = handle.lower()
+    chain, cur = [], focal_id
+    while len(chain) < MAX_THREAD:
+        nxt = [p for p in conv.posts.values()
+               if p["in_reply_to"] == cur and (p["author"]["handle"] or "").lower() == handle]
+        if not nxt:
+            break
+        cur = _by_id(nxt)[0]["id"]
+        chain.append(conv.posts[cur])
+    return chain
+
+
+def author_posts(conv: Conversation, focal_id: str, handle: str) -> list[dict]:
+    """Every captured post by the author in the conversation, oldest first."""
+    handle = handle.lower()
+    return _by_id(p for p in conv.posts.values()
+                  if p["id"] != focal_id and (p["author"]["handle"] or "").lower() == handle)
+
+
+# ---------------------------------------------------------------------------
 # Markdown
 # ---------------------------------------------------------------------------
 def _fmt_num(n: Optional[int]) -> str:
@@ -335,26 +483,48 @@ def _post_body(post: dict) -> str:
     return "\n\n".join(p for p in parts if p)
 
 
-def format_markdown(thread: list[dict], requested_id: str) -> str:
-    """Same header shape as transcript.format_markdown; the **URL:** line holds
-    the requested post, which is the key the saved-file scan reads back."""
+def _stats(m: dict) -> str:
+    return (f"{_fmt_num(m['likes'])} likes · {_fmt_num(m['reposts'])} reposts · "
+            f"{_fmt_num(m['replies'])} replies · {_fmt_num(m['views'])} views")
+
+
+def _listed(post: dict) -> str:
+    a = post["author"]
+    return (f"### @{a['handle']} · {_fmt_date(post['created_at'])} · "
+            f"{_fmt_num(post['metrics']['likes'])} likes\n\n{_post_body(post)}\n\n{post['url']}")
+
+
+SECTION_TITLE = {"replies": "Replies", "author_replies": "Author's replies"}
+
+
+def format_markdown(thread: list[dict], requested_id: str, mode: str = "post",
+                    listed: Optional[list[dict]] = None, coverage: str = "") -> str:
+    """Same header shape as transcript.format_markdown. The **URL:** and
+    **Mode:** lines hold the requested post and mode: the key the saved-file
+    scan reads back (saved_x_key). `listed` is the replies / author's replies
+    section for those modes; `coverage` says how complete it is."""
     first, last = thread[0], thread[-1]
-    a, m = first["author"], last["metrics"]
-    source = "X post" if len(thread) == 1 else f"X thread ({len(thread)} posts)"
-    stats = (f"{_fmt_num(m['likes'])} likes · {_fmt_num(m['reposts'])} reposts · "
-             f"{_fmt_num(m['replies'])} replies · {_fmt_num(m['views'])} views")
+    a = first["author"]
+    if mode in SECTION_TITLE:
+        source = f"X {SECTION_TITLE[mode].lower()} ({len(listed or [])}{coverage})"
+    else:
+        source = "X post" if len(thread) == 1 else f"X thread ({len(thread)} posts)"
     if len(thread) == 1:
         body = _post_body(first)
     else:
         body = "\n\n---\n\n".join(f"**{i}/{len(thread)}**\n\n{_post_body(p)}"
                                   for i, p in enumerate(thread, 1))
+    if mode in SECTION_TITLE:
+        items = "\n\n---\n\n".join(_listed(p) for p in listed or []) or "*(none captured)*"
+        body += f"\n\n## {SECTION_TITLE[mode]} ({len(listed or [])}{coverage})\n\n{items}"
     return f"""# {post_title(thread)}
 
 **Author:** {a['name']} (@{a['handle']}){' ✓' if a['verified'] else ''}
 **Posted:** {_fmt_date(first['created_at'])}
 **URL:** https://x.com/{a['handle']}/status/{requested_id}
+**Mode:** {mode}
 **Source:** {source}
-**Stats:** {stats}
+**Stats:** {_stats(last['metrics'])}
 
 ---
 
@@ -362,14 +532,17 @@ def format_markdown(thread: list[dict], requested_id: str) -> str:
 """
 
 
-def saved_post_id(header: str) -> Optional[str]:
-    """Post ID of a saved X file — the inverse of format_markdown. Header
-    lines only, as in transcript.saved_video_id."""
+def saved_x_key(header: str) -> Optional[str]:
+    """Library key (x_key) of a saved X file — the inverse of format_markdown.
+    Header lines only, as in transcript.saved_video_id. A file without a
+    **Mode:** line predates modes and is a `post` capture."""
+    post_id, mode = None, "post"
     for line in header.splitlines():
         if line.strip() == "---":
             break
-        if "URL" in line:
+        if line.startswith("**Mode:**"):
+            value = line.removeprefix("**Mode:**").strip()
+            mode = value if value in X_MODES else mode
+        elif "URL" in line and not post_id:
             post_id = extract_post_id(line)
-            if post_id:
-                return post_id
-    return None
+    return x_key(post_id, mode) if post_id else None

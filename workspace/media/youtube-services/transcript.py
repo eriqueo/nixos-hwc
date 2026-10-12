@@ -31,6 +31,7 @@ REASON_TEXT = {
     "whisper_failed": "Audio transcription failed",
     "too_long": "Video is too long for audio transcription",
     "timeout": "Timed out",
+    "login_required": "X login is missing or expired; import the cookies again",
     "error": "Unexpected error",
 }
 
