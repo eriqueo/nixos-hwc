@@ -4,7 +4,7 @@
 
 import { execFile, spawn } from "node:child_process";
 import { readdir, readFile, unlink } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { catchError, mcpError } from "../errors.js";
 import { icsUnescape, unfoldIcs } from "../executors/caldav.js";
@@ -281,6 +281,20 @@ function timeLabel(t: IcsTime | null): string | null {
 
 // Recursively collect every *.ics path under a root (≤3 levels deep). Radicale
 // stores at calendars-radicale/<collection>/*.ics (1 level).
+// The khal calendar an .ics file belongs to. The khalt config discovers one
+// calendar per collection directory and names it by that collection's
+// displayname file (vdirsyncer metasync); khal falls back to the directory name.
+async function khalCalendarOf(icsPath: string): Promise<string> {
+  const collection = dirname(icsPath);
+  try {
+    const name = (await readFile(join(collection, "displayname"), "utf-8")).trim();
+    if (name) return name;
+  } catch {
+    // no metasync file: khal uses the directory name
+  }
+  return basename(collection);
+}
+
 async function collectIcsPaths(dir: string, depth = 0): Promise<string[]> {
   if (depth > 3) return [];
   const out: string[] = [];
@@ -665,10 +679,11 @@ export function calendarTools(): ToolDef[] {
               };
             }
 
-            await unlink(event.path);
-            log.debug("Deleted old .ics for edit", { path: event.path });
-
-            const khalArgs: string[] = [...khalConfigArgs(), "new"];
+            // Create the replacement first, on the event's own calendar, and
+            // remove the old file only once that worked. The old order (delete,
+            // then `khal new` with no -a) lost the event whenever khal had no
+            // default calendar, which is the case for the khalt config.
+            const khalArgs: string[] = [...khalConfigArgs(), "new", "-a", await khalCalendarOf(event.path)];
             if (finalStartTime) {
               const end = finalEndTime || (() => {
                 const [h, m] = finalStartTime.split(":").map(Number);
@@ -687,8 +702,11 @@ export function calendarTools(): ToolDef[] {
             const { exitCode, stderr } = await runBin(bin, khalArgs, { timeout: 10000 });
 
             if (exitCode !== 0) {
-              return mcpError({ type: "COMMAND_FAILED", message: "Deleted old event but failed to create updated event", error: stderr.trim(), suggestion: "Use hwc_calendar action=create to manually recreate the event", context: { original: event.summary, changes } });
+              return mcpError({ type: "COMMAND_FAILED", message: "Could not create the updated event, so the original was kept unchanged", error: stderr.trim(), suggestion: "Check the khal calendar name and arguments, then retry", context: { original: event.summary, changes } });
             }
+
+            await unlink(event.path);
+            log.debug("Deleted old .ics after creating its replacement", { path: event.path });
 
             await triggerSync();
 

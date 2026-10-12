@@ -87,11 +87,28 @@ describe("delete and edit read the event itself",()=>{
   }});
  });
 
- it("recreates an edited event at the same local time",async()=>{
+ it("recreates an edited event at the same local time, on its own calendar",async()=>{
+  // khal names a discovered calendar by the collection's displayname file.
+  await writeFile(join(store,"displayname"),"Work jobs\n");
   const result=await calendar({action:"edit",query:"client call",newSummary:"Client call",confirm:true});
   expect(result.status).toBe("ok");
   const created=run.mock.calls.find(c=>c[1].includes("new"));
-  expect(created![1]).toEqual(["new","2026-10-02","09:00","10:00","Client call","::","Kitchen remodel scope"]);
+  expect(created![1]).toEqual(["new","-a","Work jobs","2026-10-02","09:00","10:00","Client call","::","Kitchen remodel scope"]);
+  expect(existsSync(files.call)).toBe(false);
+ });
+
+ it("falls back to the collection directory name when there is no displayname",async()=>{
+  await calendar({action:"edit",query:"client call",newSummary:"Client call",confirm:true});
+  const created=run.mock.calls.find(c=>c[1].includes("new"));
+  expect(created![1].slice(0,3)).toEqual(["new","-a","hwc"]);
+ });
+
+ it("keeps the original event when khal cannot create the replacement",async()=>{
+  run.mockImplementation((_bin,args,_options,callback)=>
+   args.includes("new") ? callback(Error("failed"),"","Unknown calendar") : callback(null,"",""));
+  const result=await calendar({action:"edit",query:"client call",newSummary:"Client call",confirm:true});
+  expect(result.status).toBe("error");
+  expect(existsSync(files.call)).toBe(true);
  });
 
  it("refuses to flatten a recurring series into one event",async()=>{
