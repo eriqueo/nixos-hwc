@@ -612,5 +612,87 @@ class XPostJobs(unittest.TestCase):
         self.assertEqual(res["transcript"], "hello")
 
 
+@unittest.skipIf(api is None, "fastapi not installed")
+class XModeJobs(unittest.TestCase):
+    """The production decision point for modes: api._fetch_x, reached through
+    _run_job. The capture port is xbrowser.capture; the logged-out walk is
+    xpost.fetch_syndication."""
+    FOCAL = XConversation.FOCAL
+    URL = f"https://x.com/FoxxAndCo/status/{XConversation.FOCAL}"
+
+    def setUp(self):
+        import xbrowser
+        import xpost
+        self.B, self.X = xbrowser, xpost
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.patches = [mock.patch.object(api, "OUTPUT_ROOTS", [self.root]),
+                        mock.patch.object(api.asyncio, "sleep", new=mock.AsyncMock())]
+        for p in self.patches:
+            p.start()
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+        self.tmp.cleanup()
+
+    def _capture(self, hit_limit=True):
+        conv = self.X.Conversation()
+        conv.add(json.loads((FIXTURES / "tweet_detail_logged_in.json").read_text()))
+        return self.B.Capture(conv, reached_end=not hit_limit, hit_limit=hit_limit, hit_budget=False)
+
+    def _job(self, capture, x_mode, limit=200, syndication=None):
+        job = api._new_job(self.root)
+        syndication = syndication or mock.Mock(side_effect=AssertionError("logged-out walk used"))
+        with mock.patch.object(api.xbrowser, "capture", new=capture), \
+             mock.patch.object(self.X, "fetch_syndication", new=syndication), \
+             mock.patch.object(self.X, "fetch_graphql", return_value=None):
+            run(api._run_job(job.job_id, [self.URL], [], "raw", self.root, False, x_mode, limit))
+        return job
+
+    def test_replies_job_reads_the_capture_not_the_logged_out_walk(self):
+        capture = mock.AsyncMock(return_value=self._capture())
+        job = self._job(capture, "replies", limit=3)
+        self.assertEqual(capture.await_args.args[:3], (self.FOCAL, "replies", 3))
+        self.assertEqual(job.results[0]["listed"], 3, job.results)
+        saved = api.scan_saved([self.root])
+        self.assertEqual(list(saved), [f"x:{self.FOCAL}:replies"])
+        md = saved[f"x:{self.FOCAL}:replies"].read_text()
+        self.assertRegex(md, r"## Replies \(3 of [\d,]+; limit reached\)")
+        self.assertIn("**Mode:** replies", md)
+
+    def test_author_replies_lists_only_the_authors_posts(self):
+        job = self._job(mock.AsyncMock(return_value=self._capture(hit_limit=False)), "author_replies")
+        self.assertEqual(job.results[0]["listed"], 1, job.results)
+        self.assertIn("2109345169770205368", job.results[0]["transcript"])
+
+    def test_post_and_replies_of_one_post_save_as_two_files(self):
+        raw = _raw_post(self.FOCAL, handle="FoxxAndCo")
+        self._job(mock.AsyncMock(side_effect=AssertionError("capture used")), "post",
+                  syndication=mock.Mock(return_value=raw))
+        self._job(mock.AsyncMock(return_value=self._capture()), "replies")
+        self.assertEqual(set(api.scan_saved([self.root])), {f"x:{self.FOCAL}", f"x:{self.FOCAL}:replies"})
+        again = self._job(mock.AsyncMock(), "replies")
+        self.assertEqual(again.results[0]["status"], "exists")
+
+    def test_retry_replays_mode_and_limit(self):
+        failing = mock.AsyncMock(side_effect=T.TranscriptError("rate_limited"))
+        job = self._job(failing, "replies", limit=7)
+        self.assertEqual(job.retryable, 1)
+        bg = mock.Mock()
+        run(api.retry_job(job.job_id, bg))
+        _, args, _ = bg.add_task.mock_calls[0]
+        capture = mock.AsyncMock(return_value=self._capture())
+        with mock.patch.object(api.xbrowser, "capture", new=capture):
+            run(args[0](*args[1:]))
+        self.assertEqual(capture.await_args.args[1:3], ("replies", 7))
+
+    def test_unknown_mode_and_limit_are_rejected(self):
+        with self.assertRaises(Exception):
+            api.JobRequest(urls=[self.URL], x_mode="quotes")
+        with self.assertRaises(Exception):
+            api.JobRequest(urls=[self.URL], x_mode="replies", limit=self.X.REPLY_LIMIT_MAX + 1)
+
+
 if __name__ == "__main__":
     unittest.main()

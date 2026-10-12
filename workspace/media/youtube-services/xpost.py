@@ -297,8 +297,10 @@ def fetch_thread(post_id: str, on_stage=lambda stage: None) -> list[dict]:
 # Logged-in conversation (TweetDetail responses captured by xbrowser)
 # ---------------------------------------------------------------------------
 # What a capture saves. `post` needs no login; the other three read the
-# conversation through a logged-in browser.
-X_MODES = ("post", "thread", "replies", "author_replies")
+# conversation through a logged-in browser. The labels are the UI's (/config).
+X_MODE_LABELS = {"post": "Post", "thread": "Author's thread", "replies": "Replies",
+                 "author_replies": "Author's replies"}
+X_MODES = tuple(X_MODE_LABELS)
 LOGIN_MODES = frozenset({"thread", "replies", "author_replies"})
 REPLY_LIMIT_DEFAULT = 200
 REPLY_LIMIT_MAX = 1000
@@ -459,11 +461,25 @@ def _fmt_date(iso: Optional[str]) -> str:
         return iso
 
 
-def post_title(thread: list[dict]) -> str:
+def post_title(thread: list[dict], mode: str = "post") -> str:
+    """The post's title; other modes name themselves, so a post and its
+    replies saved the same day get distinct filenames."""
     first = thread[0]
     words = " ".join((first["text"] or "").split())
     snippet = words[:70].rsplit(" ", 1)[0] + "…" if len(words) > 70 else words
-    return f"@{first['author']['handle']}: {snippet or 'post ' + first['id']}"
+    title = f"@{first['author']['handle']}: {snippet or 'post ' + first['id']}"
+    return title if mode == "post" else f"{title} ({X_MODE_LABELS[mode]})"
+
+
+def coverage(total: Optional[int], reached_end: bool, hit_limit: bool, hit_budget: bool) -> str:
+    """How complete a listed section is, appended after its count:
+    " of 1,146; limit reached". `total` is X's own count, when there is one."""
+    of = f" of {total:,}" if total is not None else ""
+    if hit_limit:
+        return f"{of}; limit reached"
+    if hit_budget:
+        return f"{of}; time budget reached"
+    return of if reached_end else f"{of}; X stopped loading more"
 
 
 def _post_body(post: dict) -> str:
@@ -494,7 +510,7 @@ def _listed(post: dict) -> str:
             f"{_fmt_num(post['metrics']['likes'])} likes\n\n{_post_body(post)}\n\n{post['url']}")
 
 
-SECTION_TITLE = {"replies": "Replies", "author_replies": "Author's replies"}
+SECTION_TITLE = {m: X_MODE_LABELS[m] for m in ("replies", "author_replies")}
 
 
 def format_markdown(thread: list[dict], requested_id: str, mode: str = "post",
@@ -517,7 +533,7 @@ def format_markdown(thread: list[dict], requested_id: str, mode: str = "post",
     if mode in SECTION_TITLE:
         items = "\n\n---\n\n".join(_listed(p) for p in listed or []) or "*(none captured)*"
         body += f"\n\n## {SECTION_TITLE[mode]} ({len(listed or [])}{coverage})\n\n{items}"
-    return f"""# {post_title(thread)}
+    return f"""# {post_title(thread, mode)}
 
 **Author:** {a['name']} (@{a['handle']}){' ✓' if a['verified'] else ''}
 **Posted:** {_fmt_date(first['created_at'])}

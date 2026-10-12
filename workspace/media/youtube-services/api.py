@@ -14,7 +14,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 import uvicorn
 
 from transcript import (
@@ -61,6 +61,9 @@ WHISPER_MAX_SECONDS = int(os.getenv("YT_TRANSCRIPTS_WHISPER_MAX_SECONDS", "10800
 VIDEO_TIMEOUT = 60
 CAPTION_TIMEOUT = 75
 POST_TIMEOUT = 120  # an X thread walk: up to xpost.MAX_THREAD posts, ~1 s each
+# A logged-in capture: the scroll budget plus browser start, page load and the
+# wait for its first response.
+CAPTURE_TIMEOUT = xbrowser.CAPTURE_BUDGET_SECONDS + 90
 def whisper_budget(duration: int) -> float:
     return 120 + duration * 0.5
 
@@ -82,11 +85,25 @@ class TranscriptRequest(BaseModel):
     mode: str = Field(default="", description="clean or raw")
 
 
-class PostRequest(BaseModel):
+class XOptions(BaseModel):
+    """What to save from an X post; ignored for YouTube URLs."""
+    x_mode: str = Field(default="post", description="one of xpost.X_MODES")
+    limit: int = Field(default=xpost.REPLY_LIMIT_DEFAULT, ge=1, le=xpost.REPLY_LIMIT_MAX,
+                       description="direct replies to save in `replies` mode")
+
+    @field_validator("x_mode")
+    @classmethod
+    def _known_mode(cls, value: str) -> str:
+        if value not in xpost.X_MODES:
+            raise ValueError(f"must be one of {', '.join(xpost.X_MODES)}")
+        return value
+
+
+class PostRequest(XOptions):
     url: str
 
 
-class JobRequest(BaseModel):
+class JobRequest(XOptions):
     urls: list[str]
     mode: str = Field(default="")
     base: str = Field(default="", description="one of OUTPUT_ROOTS; blank = first root")
@@ -117,6 +134,8 @@ class WorkItem:
     url: str        # canonical watch URL or X post URL
     dest: Path      # folder the transcript is written to
     playlist: str   # playlist title, "" for a single video
+    x_mode: str = "post"                     # X posts only; retry replays these two
+    limit: int = xpost.REPLY_LIMIT_DEFAULT
 
 
 @dataclass
@@ -199,11 +218,11 @@ def resolve_output_dir(base: str, subfolder: str) -> Path:
 HEADER_BYTES = 2048
 
 
-def item_key(url: str) -> str | None:
-    """Library key of a URL: the YouTube video ID, or `x:<post id>`. X is
-    checked first, so a YouTube link quoted inside a post URL never wins."""
+def item_key(url: str, x_mode: str = "post") -> str | None:
+    """Library key of a URL: the YouTube video ID, or xpost.x_key for an X
+    post. X is checked first, so a YouTube link quoted inside a post URL never wins."""
     post_id = xpost.extract_post_id(url)
-    return f"x:{post_id}" if post_id else extract_video_id(url)
+    return xpost.x_key(post_id, x_mode) if post_id else extract_video_id(url)
 
 
 def saved_key(header: str) -> str | None:
@@ -249,7 +268,7 @@ def write_transcript(out_dir: Path, title: str, key: str, md: str) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{stem}.md"
     if path.exists() and saved_key(_read_header(path)) != key:
-        path = out_dir / f"{stem} [{key.removeprefix('x:')}].md"
+        path = out_dir / f"{stem} [{key.removeprefix('x:').replace(':', ' ')}].md"
     tmp = path.with_name(f".{path.name}.tmp")
     tmp.write_text(md, encoding="utf-8")
     os.replace(tmp, path)
@@ -320,31 +339,71 @@ async def _extract(url: str, mode: str, out_dir: Path, allow_whisper: bool = Fal
     }
 
 
-async def _extract_post(url: str, out_dir: Path, on_stage=lambda stage: None) -> dict:
-    """Save one X post, with the author's thread above it, into out_dir.
-    The walk runs in a worker thread; MAX_THREAD and the per-request HTTP
-    timeout bound it, POST_TIMEOUT bounds the wait."""
-    post_id = xpost.extract_post_id(url)
-    if not post_id:
-        raise TranscriptError("invalid_url")
+@dataclass
+class XResult:
+    thread: list[dict]         # the post, with the author's thread around it in `thread` mode
+    listed: list[dict] | None  # the replies / author's replies section, None for post/thread
+    coverage: str              # xpost.coverage of `listed`
+
+
+async def _thread_above(post_id: str, on_stage) -> list[dict]:
+    """The logged-out walk: the post and the author's thread above it. Runs in
+    a worker thread; MAX_THREAD and the per-request HTTP timeout bound it,
+    POST_TIMEOUT bounds the wait."""
     try:
-        thread = await asyncio.wait_for(asyncio.to_thread(xpost.fetch_thread, post_id, on_stage),
-                                        timeout=POST_TIMEOUT)
+        return await asyncio.wait_for(asyncio.to_thread(xpost.fetch_thread, post_id, on_stage),
+                                      timeout=POST_TIMEOUT)
     except asyncio.TimeoutError:
         raise TranscriptError("timeout", f"X thread walk passed {POST_TIMEOUT}s")
 
+
+async def _fetch_x(post_id: str, x_mode: str, limit: int, on_stage=lambda stage: None) -> XResult:
+    """What one X mode saves. `post` is the logged-out walk; the other modes
+    read the conversation through the logged-in browser (xbrowser.capture)."""
+    if x_mode == "post":
+        return XResult(await _thread_above(post_id, on_stage), None, "")
+    try:
+        cap = await asyncio.wait_for(xbrowser.capture(post_id, x_mode, limit, on_stage),
+                                     timeout=CAPTURE_TIMEOUT)
+    except asyncio.TimeoutError:
+        raise TranscriptError("timeout", f"X capture passed {CAPTURE_TIMEOUT}s")
+    conv = cap.conversation
+    focal = conv.posts.get(post_id) or await asyncio.to_thread(xpost.fetch_post, post_id)
+    handle = focal["author"]["handle"] or ""
+    if x_mode == "thread":
+        above = await _thread_above(post_id, on_stage)
+        return XResult(above + xpost.author_thread_below(conv, post_id, handle), None, "")
+    if x_mode == "replies":
+        listed = xpost.direct_replies(conv, post_id)[:limit]
+        total = focal["metrics"]["replies"]
+    else:
+        listed = xpost.author_posts(conv, post_id, handle)
+        total = None
+    return XResult([focal], listed, xpost.coverage(total, cap.reached_end, cap.hit_limit, cap.hit_budget))
+
+
+async def _extract_post(url: str, out_dir: Path, x_mode: str = "post",
+                        limit: int = xpost.REPLY_LIMIT_DEFAULT, on_stage=lambda stage: None) -> dict:
+    """Save one X post in one mode (xpost.X_MODES) into out_dir."""
+    post_id = xpost.extract_post_id(url)
+    if not post_id:
+        raise TranscriptError("invalid_url")
+    x = await _fetch_x(post_id, x_mode, limit, on_stage)
+
     on_stage("writing file")
-    md = xpost.format_markdown(thread, post_id)
-    title = xpost.post_title(thread)
-    filepath = write_transcript(out_dir, title, f"x:{post_id}", md)
+    md = xpost.format_markdown(x.thread, post_id, x_mode, x.listed, x.coverage)
+    title = xpost.post_title(x.thread, x_mode)
+    filepath = write_transcript(out_dir, title, xpost.x_key(post_id, x_mode), md)
     return {
-        "url": thread[-1]["url"],
+        "url": x.thread[-1]["url"],
         "title": title,
-        "channel": f"@{thread[0]['author']['handle']}",
+        "channel": f"@{x.thread[0]['author']['handle']}",
         "transcript": md.split("\n---\n", 1)[1].strip(),
         "filename": str(filepath),
         "source": "x",
-        "posts": len(thread),
+        "x_mode": x_mode,
+        "posts": len(x.thread),
+        "listed": None if x.listed is None else len(x.listed),
     }
 
 
@@ -386,12 +445,11 @@ async def post_xpost(body: PostRequest):
     if not post_id:
         raise HTTPException(400, str(TranscriptError("invalid_url")))
     try:
-        thread = await asyncio.wait_for(asyncio.to_thread(xpost.fetch_thread, post_id), timeout=POST_TIMEOUT)
-    except asyncio.TimeoutError:
-        raise HTTPException(504, f"X thread walk timed out ({POST_TIMEOUT}s limit)")
+        x = await _fetch_x(post_id, body.x_mode, body.limit)
     except TranscriptError as e:
         raise HTTPException(STATUS_FOR_REASON.get(e.reason, 500), str(e))
-    return {"id": post_id, "count": len(thread), "posts": thread}
+    return {"id": post_id, "mode": body.x_mode, "count": len(x.thread), "posts": x.thread,
+            "listed": x.listed, "coverage": x.coverage}
 
 
 # ---------------------------------------------------------------------------
@@ -408,7 +466,7 @@ async def post_job(body: JobRequest, bg: BackgroundTasks):
         raise HTTPException(400, str(e))
 
     job = _new_job(out_dir)
-    bg.add_task(_run_job, job.job_id, urls, [], body.mode, out_dir, body.force)
+    bg.add_task(_run_job, job.job_id, urls, [], body.mode, out_dir, body.force, body.x_mode, body.limit)
     return {"job_id": job.job_id, "status": "queued", "output_dir": str(out_dir)}
 
 
@@ -432,7 +490,9 @@ def _failure(url: str, e: TranscriptError, playlist: str, prefix: str = "") -> d
 
 
 async def _run_job(job_id: str, urls: list[str], items: list[WorkItem], mode: str,
-                   out_dir: Path, force: bool):
+                   out_dir: Path, force: bool, x_mode: str = "post",
+                   limit: int = xpost.REPLY_LIMIT_DEFAULT):
+    """`x_mode`/`limit` apply to the X URLs in `urls`; `items` carry their own."""
     job = _jobs.get(job_id)
     if not job:
         return
@@ -445,7 +505,7 @@ async def _run_job(job_id: str, urls: list[str], items: list[WorkItem], mode: st
     for raw in urls:
         key = item_key(raw)
         if key:
-            work.append(WorkItem(_canonical_url(key), out_dir, ""))
+            work.append(WorkItem(_canonical_url(key), out_dir, "", x_mode, limit))
         elif is_playlist_url(raw):
             try:
                 pl = await fetch_playlist(raw)
@@ -471,7 +531,7 @@ async def _run_job(job_id: str, urls: list[str], items: list[WorkItem], mode: st
     seen: set[str] = set()
     unique: list[WorkItem] = []
     for item in work:
-        key = item_key(item.url)
+        key = item_key(item.url, item.x_mode)
         if key in seen:
             continue
         seen.add(key)
@@ -485,7 +545,7 @@ async def _run_job(job_id: str, urls: list[str], items: list[WorkItem], mode: st
     # Phase 2 — extract each item sequentially, paced (rate-limit friendly).
     fetched_any = False
     for item in work:
-        key = item_key(item.url)
+        key = item_key(item.url, item.x_mode)
         if key in saved:
             job.results.append(_saved_result(item.url, saved[key], item.playlist))
             job.completed += 1
@@ -506,7 +566,7 @@ async def _run_job(job_id: str, urls: list[str], items: list[WorkItem], mode: st
         _inflight.add(key)
         try:
             if key.startswith("x:"):
-                result = await _extract_post(item.url, item.dest, on_stage=stage)
+                result = await _extract_post(item.url, item.dest, item.x_mode, item.limit, on_stage=stage)
             else:
                 result = await _extract(item.url, mode, item.dest, allow_whisper=True, on_stage=stage)
             result["playlist"] = item.playlist
@@ -542,7 +602,7 @@ async def get_job(job_id: str):
 @app.get("/config")
 async def config():
     return {"roots": [str(r) for r in OUTPUT_ROOTS], "default_mode": DEFAULT_MODE,
-            "x_modes": list(xpost.X_MODES), "x_login_modes": sorted(xpost.LOGIN_MODES),
+            "x_modes": xpost.X_MODE_LABELS, "x_login_modes": sorted(xpost.LOGIN_MODES),
             "x_limit_default": xpost.REPLY_LIMIT_DEFAULT, "x_limit_max": xpost.REPLY_LIMIT_MAX}
 
 
@@ -650,7 +710,7 @@ async def ui():
 <h1>Transcripts</h1>
 
 <div class="card">
-  <h2>URLs — YouTube videos or playlists, X posts (paste the last post of a thread to save all of it)</h2>
+  <h2>URLs — YouTube videos or playlists, X posts (choose what to save under X capture)</h2>
   <div id="urls"></div>
   <button class="addbtn" id="add" onclick="addRow()">+ URL</button>
 
@@ -665,6 +725,14 @@ async def ui():
     <div>
       <label>Save location</label>
       <select id="base"></select>
+    </div>
+    <div>
+      <label>X capture</label>
+      <select id="xmode" onchange="showLimit()"></select>
+    </div>
+    <div id="limitbox">
+      <label>Replies to save (top-ranked first, max <span id="limitmax"></span>)</label>
+      <input type="number" id="limit" min="1" style="width:100%;padding:.6rem .7rem;border-radius:7px;border:1px solid #ccc;font-size:.9rem">
     </div>
     <div class="full">
       <label>Folder name (optional — nest with "/", e.g. woodworking/lathe)</label>
@@ -691,7 +759,7 @@ async def ui():
 
 <script>
 const $=id=>document.getElementById(id);
-let _results=[], _base=[], _jobId=null;
+let _results=[], _base=[], _jobId=null, _xmodes={post:'Post'};
 
 function rowHtml() {
   return `<div class="urlrow">
@@ -716,7 +784,20 @@ async function loadConfig() {
     const r=await fetch('/config'); const d=await r.json();
     $('base').innerHTML=d.roots.map(p=>`<option value="${p}">${p}</option>`).join('');
     if(d.default_mode) $('mode').value=d.default_mode==='raw'?'raw':'clean';
-  } catch(e) { $('base').innerHTML='<option value="">(default)</option>'; }
+    _xmodes=d.x_modes;
+    $('xmode').innerHTML=Object.entries(d.x_modes).map(([v,l])=>
+      `<option value="${v}">${l}${d.x_login_modes.includes(v)?' (needs X login)':''}</option>`).join('');
+    $('limit').value=d.x_limit_default; $('limit').max=d.x_limit_max; $('limitmax').textContent=d.x_limit_max;
+  } catch(e) {
+    $('base').innerHTML='<option value="">(default)</option>';
+    $('xmode').innerHTML='<option value="post">Post</option>';
+  }
+  showLimit();
+}
+function showLimit() { $('limitbox').style.visibility=$('xmode').value==='replies'?'visible':'hidden'; }
+function xBadge(r) {
+  if(r.x_mode&&r.x_mode!=='post'&&r.x_mode!=='thread') return `X ${_xmodes[r.x_mode]||r.x_mode} · ${r.listed}`;
+  return r.posts>1?'X thread · '+r.posts:'X post';
 }
 
 function renderResults(status) {
@@ -735,7 +816,7 @@ function renderResults(status) {
       if(r.status==='exists') li.className='skip';
       const src=r.status==='exists'?'<span class="badge saved" title="Found an existing transcript for this video; not fetched again">Already saved</span>'
         :r.source==='whisper'?'<span class="badge whisper" title="No captions could be fetched; transcribed from the audio">Whisper</span>'
-        :r.source==='x'?`<span class="badge x">${r.posts>1?'X thread · '+r.posts:'X post'}</span>`:'';
+        :r.source==='x'?`<span class="badge x">${xBadge(r)}</span>`:'';
       li.innerHTML=`<div class="body"><div class="title">${badge}${src}${r.title||''}</div><div class="path">${r.filename||''}</div></div>`;
       const b=document.createElement('button'); b.className='copy'; b.textContent='Copy';
       b.onclick=()=>{navigator.clipboard.writeText(_results[i].transcript||'');b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1200);};
@@ -774,7 +855,8 @@ async function run() {
   try {
     const r=await fetch('/job',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({urls,mode:$('mode').value,base:$('base').value,
-        subfolder:$('subfolder').value.trim(),force:$('force').checked})});
+        subfolder:$('subfolder').value.trim(),force:$('force').checked,
+        x_mode:$('xmode').value,limit:parseInt($('limit').value,10)||undefined})});
     if(!r.ok){const e=await r.json();throw new Error(e.detail||r.statusText);}
     const d=await r.json();
     $('msg').textContent='Saving to '+d.output_dir+' — expanding...';

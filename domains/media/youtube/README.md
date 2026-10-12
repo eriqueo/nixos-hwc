@@ -8,13 +8,22 @@ Captions come from youtube-transcript-api, then yt-dlp subtitles; when neither
 works (no captions, or YouTube blocking this server's IP) a job falls back to
 transcribing the audio with the local whisper-server.
 
-The same service saves X (Twitter) posts. Paste a post URL and it writes the
-post as Markdown, with the author's own thread above it (pass the last post of
-a thread to get all of it; X needs a login to list replies, so the walk only
-goes backward). `POST /xpost {"url": ...}` returns the post and thread as JSON
-and writes nothing. No X account or API key is used for this.
+The same service saves X (Twitter) posts. Paste a post URL and choose an
+**X capture** mode (`x_mode` on `POST /job` and `POST /xpost`):
 
-Replies and the author's thread below a post need an X login: logged out, X
+| Mode | Saves | Login |
+|------|-------|-------|
+| `post` | the post and the author's thread above it | no |
+| `thread` | the author's thread above and below the post | yes |
+| `replies` | the post and its direct replies, X's ranking, top `limit` (default 200, max 1000) | yes |
+| `author_replies` | the post and every other post by its author in the conversation | yes |
+
+Each mode is its own file (key `x:<id>` for `post`, `x:<id>:<mode>`
+otherwise), so a post and its replies dedup separately. A replies file states
+its coverage, e.g. `Replies (200 of 1,146; limit reached)`. `POST /xpost`
+returns the same data as JSON and writes nothing.
+
+Every mode except `post` needs an X login: logged out, X
 shows only 3 replies and no next page. The "X login" card imports a spare
 account's x.com cookies (cookies.txt or JSON export) into a headless Chromium
 profile (`xbrowser.py`), which opens the post, scrolls, and reads X's own
@@ -79,6 +88,7 @@ Tests (run on hwc-home with the service interpreter):
 | `transcripts` | 8100 | Transcript API + web UI |
 
 ## Changelog
+- 2026-10-12: X capture modes end to end. `POST /job` and `POST /xpost` take `x_mode` (`post`, `thread`, `replies`, `author_replies`) and `limit`; `api._fetch_x` dispatches `post` to the logged-out walk and the rest to `xbrowser.capture`. Jobs, in-flight checks, dedup and retry key X items by `xpost.x_key(id, mode)`, and retry replays mode and limit. The UI gains an "X capture" select (labels from `xpost.X_MODE_LABELS` via `/config`) and a replies limit. Saved titles name the mode; replies files state coverage. Gate passed before the build: a logged-in `replies` capture of poteto's post under the unit's sandbox returned 204 direct replies.
 - 2026-10-11: X login and capture groundwork. New `xbrowser.py` drives headless Chromium (`playwright`, browsers from `playwright-driver.browsers`) with a profile at `/var/lib/hwc/transcripts/x-profile`; `GET/POST /x/session` and a UI card import a spare account's cookies and prove them by loading x.com/home. `xpost.py` gains a parser for logged-in `TweetDetail` responses (promoted posts dropped) and the selectors for direct replies, the author's thread below a post, and the author's posts in a conversation; saved X files now carry a `**Mode:**` line (files without one stay `post`). New failure reason `login_required`. The unit sets `HOME` to its state directory (Chromium needs a writable home; `ProtectHome` keeps `/home` read-only) and `StateDirectoryMode = "0700"` because the profile holds a login. Verified: Chromium runs under the unit's sandbox via `systemd-run` with the same properties, and loads x.com with HTTP 200.
 - 2026-10-11: X posts. A post URL in the job box (or `POST /transcript`) saves the post as Markdown, with the author's thread above it, long-form text, media links, quoted post and stats. New `xpost.py` ports the fetch engine of github.com/itsbigdill/x-post-to-json: public syndication endpoint, then guest-token GraphQL for full text and metrics (best effort). New `POST /xpost` returns the thread as JSON. The saved-file scan keys X files as `x:<post id>` next to video IDs, so dedup, in-flight checks and retry cover both. Failure texts for `unavailable` and `invalid_url` no longer say "video"/"YouTube"; the reason codes are unchanged.
 - 2026-10-06: Whisper segments that continue the previous word (no leading space, e.g. "Cl" + "oning") are joined to it instead of becoming their own segment, which had produced "Cl oning" and "you 're" in output.
