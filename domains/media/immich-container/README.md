@@ -79,6 +79,26 @@ journalctl -u immich-machine-learning | grep -i "onnx\|cuda"  # CUDA provider
 
 ## Changelog
 
+- 2026-09-26: External-library mount repointed. Both the server and machine-learning
+  containers mounted `${hwc.paths.media.root}/pictures` read-only; they now mount
+  `${hwc.paths.photos}/external` as `/mnt/media/photos/external` — the laptop-photos
+  external library — and the unused `pictures` mount is gone (`4ac9941d`, with the
+  earlier `0a0f7414`).
+- 2026-08-28: Deleted fifteen dead `$PSQL` GRANT / `ALTER DEFAULT PRIVILEGES` lines
+  from `parts/config.nix` — eight for schema `public`, seven for the pgvector
+  `vectors` schema. None had ever run: `$PSQL` is undefined in the generated
+  postgresql post-start script and `|| true` swallowed the command-not-found (full
+  audit in `domains/data/databases/README.md`). They were not restored, because
+  Immich connects as its own `immich` role which owns the database, and the only
+  other beneficiary was `eric` — a superuser. Deleting them exposed that neither the
+  `immich` database nor its owning role was declared anywhere: both existed on the
+  live cluster by hand. They are now declared via
+  `hwc.data.databases.postgresql.databases` and `ensureUsers` with
+  `ensureDBOwnership`, keyed on `database.name` and **not** `database.user` — those
+  are different facts here (`database.user = "eric"` is the role the container
+  connects as), and using the latter would have emitted
+  `ALTER DATABASE immich OWNER TO eric`, a live ownership change wearing a cleanup's
+  clothes.
 - 2026-03-27: Fixed Prometheus metrics port mappings — added host-side port publishing for apiPort (8091) and microservicesPort (8092) which were only set as container env vars but never exposed, causing false ServiceDown alerts
 - 2026-02-26: Created README per Law 12 (migrated from docs/infrastructure/)
 - 2025-11-21: Initial GPU optimization implementation

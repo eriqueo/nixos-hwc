@@ -17,12 +17,12 @@ Machine references follow machines/home; media state and service ownership are u
 ```
 media/
 ├── index.nix                # Domain aggregator
+├── directories.nix          # tmpfiles rules for the media trees (sole producer)
+├── scripts/                 # Operator helper scripts
 ├── README.md                # This file
 │
-├── jellyfin-container/      # Jellyfin media server (container)
 ├── jellyfin-native/         # Jellyfin media server (native NixOS)
 ├── navidrome-container/     # Navidrome music server (container)
-├── navidrome-native/        # Navidrome music server (native NixOS)
 ├── audiobookshelf/          # Audiobook/podcast server
 ├── jellyseerr/              # Media request management
 │
@@ -39,7 +39,6 @@ media/
 ├── mousehole/               # MAM IP updater
 ├── pinchflat/               # YouTube subscription manager
 ├── beets-container/         # Music organizer (container)
-├── beets-native/            # Music organizer (native)
 ├── recyclarr/               # *arr quality profile sync; preserves Radarr executable rejection
 ├── slskd/                   # Soulseek client
 ├── soularr/                 # Soulseek-Lidarr integration
@@ -47,9 +46,9 @@ media/
 ├── books/                   # LazyLibrarian
 │
 ├── immich-container/        # Photo management (container)
-├── immich-native/           # Photo management (native NixOS)
 ├── frigate/                 # NVR, model-derived labels and native camera metrics
-├── youtube/                 # YouTube services
+├── youtube/                 # YouTube + X capture: pinchflat-adjacent transcripts API
+│                            #   (captions, Whisper fallback, Playwright X adapter)
 │
 ├── orchestration/           # Media pipeline orchestration
 └── media-native/            # Native media service aggregator
@@ -70,6 +69,25 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-10-12: `youtube/` transcripts — X (Twitter) capture. A Playwright-driven
+  logged-in capture adapter (`xbrowser.py`) with a TweetDetail parser saves posts and
+  threads as Markdown, in thread / replies / author-replies modes; capture ends on
+  X's own terminate signal and waits for slow pages. The unit gains `playwright`,
+  `PLAYWRIGHT_BROWSERS_PATH` and a writable `HOME`/`X_PROFILE_DIR` under
+  `/var/lib/hwc/transcripts` (needed because `ProtectHome` leaves `/home/eric`
+  read-only), with `StateDirectoryMode = "0700"` since that profile holds a login
+  session (`8dc54fc3`, `d5136885`, `d714a02b`, `208e267f`).
+- 2026-10-06: `youtube/` transcripts — Whisper fallback for videos with no fetchable
+  captions. New `transcripts.whisper.{enable,maxDuration}` (enable defaults to
+  `hwc.server.ai.whisper.enable`; 3 h cap, measured ~10× real time on the P1000 with
+  `small.en`, so a max-length job holds the shared server ~18 minutes) feeds
+  `yt-dlp` audio through `ffmpeg` chunks to the local whisper-server. An assertion
+  requires whisper on the same host. Job requests only — `POST /transcript` stays
+  captions-only. Also: the fallback downloads the best audio track, yt-dlp's
+  "This video is unavailable" is classified as unavailable rather than a failure,
+  failed items retry while already-saved videos are skipped, and words Whisper
+  splits across segment boundaries are rejoined (`9f9f1240`, `cd35f416`,
+  `c32e3ae1`, `993b4950`, `1eb17a7f`).
 - 2026-09-30: Preserve Radarr's local executable-title rejection score during Recyclarr sync. Sonarr and Radarr runtime settings prefer Usenet with a 24-hour torrent delay and fail executable/dangerous downloads for automatic replacement.
 - 2026-09-26: Machine references follow machines/home; media state and service ownership are unchanged.
 - 2026-09-25: Service split wave 4: sonarr/radarr/lidarr pass the media-pipeline webhook URL from `hwc.automation.n8n.publicUrl` (n8n on hwc-work); `lib/arr-config.nix` no longer defaults it to a host literal.
