@@ -21,6 +21,7 @@ images and reloads itself, which survives reboots where the TRMNL app cannot.
 import datetime as dt
 import hashlib
 import hmac
+import ipaddress
 import json
 import os
 import re
@@ -193,10 +194,57 @@ def health():
     return ok, body
 
 
+# Other faces of this server, chosen by the first label of the request host
+# (todo.<vhostDomain> → HOST_APPS["todo"]). Each app is an object with
+# get(handler, path) and post(handler, path); anything else is the wall face.
+HOST_APPS = {}
+
+TAILNET = ipaddress.ip_network("100.64.0.0/10")
+
+
 class Handler(BaseHTTPRequestHandler):
+    # Requests that change data must come from a tailnet device. Caddy sets
+    # X-Real-IP to its {remote} ("ip:port", "[v6]:port"); the server binds
+    # loopback only, so the header is Caddy's word, not the client's.
+    def client_ip(self):
+        raw = self.headers.get("X-Real-IP") or self.client_address[0]
+        if raw.startswith("["):
+            raw = raw[1:].partition("]")[0]
+        elif raw.count(":") == 1:
+            raw = raw.partition(":")[0]
+        try:
+            return ipaddress.ip_address(raw)
+        except ValueError:
+            return None
+
+    def from_tailnet(self):
+        ip = self.client_ip()
+        return ip is not None and ip.version == 4 and ip in TAILNET
+
+    def refuse_unless_tailnet(self):
+        """True (and a 403 sent) when a data-changing request is not from the tailnet."""
+        if self.from_tailnet():
+            return False
+        log(f"refused write from {self.client_ip()} to {self.headers.get('Host')}{self.path}")
+        self.json(403, {"error": "changes are only accepted from tailnet devices"})
+        return True
+
+    def read_body(self, limit=1 << 20):
+        length = int(self.headers.get("Content-Length") or 0)
+        if length > limit:
+            raise ValueError(f"body over {limit} bytes")
+        return self.rfile.read(length)
+
+    def host_app(self):
+        host = self.headers.get("X-Forwarded-Host") or self.headers.get("Host") or ""
+        return HOST_APPS.get(host.split(".")[0].split(":")[0])
+
     def do_GET(self):
         path = self.path.split("?")[0]
-        if path in ("/api/setup", "/api/setup/"):
+        app = self.host_app()
+        if app is not None:
+            app.get(self, path)
+        elif path in ("/api/setup", "/api/setup/"):
             self.byos_setup()
         elif path == "/api/display":
             self.byos_display()
@@ -214,13 +262,19 @@ class Handler(BaseHTTPRequestHandler):
             self.send(404, "text/plain", "not found")
 
     def do_POST(self):
-        if self.path.split("?")[0] == "/api/log":
-            length = int(self.headers.get("Content-Length") or 0)
-            body = self.rfile.read(min(length, 65536)).decode(errors="replace")
-            log(f"device log {self.headers.get('ID', '?')}: {body[:2000]}")
-            self.json(200, {"status": 200})
+        path = self.path.split("?")[0]
+        app = self.host_app()
+        if app is not None:
+            app.post(self, path)
+        elif path in POST_ROUTES:
+            POST_ROUTES[path](self)
         else:
             self.send(404, "text/plain", "not found")
+
+    def device_log(self):
+        body = self.read_body(65536).decode(errors="replace")
+        log(f"device log {self.headers.get('ID', '?')}: {body[:2000]}")
+        self.json(200, {"status": 200})
 
     # BYOS (names avoid BaseRequestHandler's own setup/handle hooks) ---------
 
@@ -326,6 +380,10 @@ a{{position:fixed;top:0;bottom:0}}
 
     def log_message(self, format, *args):
         pass  # devices poll constantly; the journal keeps setup, refusals and failures
+
+
+# POST paths of the wall face (other faces route through HOST_APPS).
+POST_ROUTES = {"/api/log": Handler.device_log}
 
 
 def main():
