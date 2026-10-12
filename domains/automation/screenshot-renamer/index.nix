@@ -17,7 +17,9 @@ let
     allow_apply = cfg.mode == "apply";
     operator_review = cfg.operatorReview;
     coverage = 0.5;
-    notify_url = config.hwc.notifications.notify.url;
+    # The app POSTs here as-is; the dispatcher's route is /notify (the base
+    # URL answers 404, which failed every check run from 2026-10-09).
+    notify_url = "${config.hwc.notifications.notify.url}/notify";
   });
   command = action: "${lib.getExe app} --config ${settings} ${action}";
   base = {

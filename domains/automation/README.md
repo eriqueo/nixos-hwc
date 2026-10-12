@@ -90,6 +90,7 @@ workspace/automation/
 ## Changelog
 
 - 2026-10-07: Estimator customer lookup now returns JobTread's next-page cursor instead of silently stopping at 50 customers. Client loading is bounded to 20 pages and reports overflow.
+- 2026-10-12: screenshot-renamer alerts post to `<notify.url>/notify`. The app got the bare dispatcher URL, which answers 404; urllib raised it as an I/O error, so `screenshot-renamer-check` exited 1 every 5 minutes (864 failures from 2026-10-09) and never recorded or delivered its `review-backlog` alert.
 - 2026-10-12: screenshot-renamer exit 75 ("work remains, run again") no longer counts as a failure: the dispatch unit is `Type=exec` with `SuccessExitStatus=75`, still restarted 30 s later by `RestartForceExitStatus`, and `RuntimeMaxSec=615s` keeps the run cap the oneshot's start timeout used to provide. Before, every rerun was logged as a failed start (1,089 in one week) and appeared in deploy output.
 - 2026-10-06: Pin screenshot-renamer 3f82d68. A human `retry` now restarts the six-hour transient-retry window as well as the attempt count; before, a capture older than six hours got one attempt after a retry and failed on its first transient error. `model-stop-failed` events now record the model's stop reason and token usage.
 - 2026-10-06: Pin screenshot-renamer 221beea. DX2 defaulted to xhigh reasoning, which used the whole 512-token cap, so every capture failed as `model-stop-failed` and deferred retries restarted the unit every 30s. The worker now requests low effort.
