@@ -22,6 +22,8 @@ leases. Unknown dispatches receive readback only; unrelated records continue.
 `review-transport --withdraw ID` takes the owner lock and appends an explicit
 operator withdrawal. It removes only that intent from pending work, preserves
 uncertain effects and never contacts Proton. Fairness commits before provider reads.
+Classifier startup rebuilds event lookup indexes so retained history does not
+consume the command budget through repeated disposition scans.
 
 Proton wildcard channels pull membership and reconcile flags. Dedicated Drafts
 and Sent channels retain uploads. Gmail keeps its provider sync behavior. Afew
@@ -30,9 +32,9 @@ command acknowledgment; Archive/reopen and labels preserve stars, while Trash
 permits complete native star removal. `sync-mail core --effects-off` retains
 fetch, index and observation while stopping writes.
 
-Health records bounded case judgments and alerts on transitions. Delivery becomes
-critical after 45 minutes without fresh fetch/index; pending commands escalate
-after 30 minutes. Label conflicts remain visible as review work.
+Health records bounded case judgments and alerts on transitions. Stale delivery
+and sustained infrastructure failures are critical. Command and label backlogs
+remain warnings. The checker exit reports execution; summary.json carries health.
 
 The mail role retains these hooks in both integrated and standalone Home Manager builds.
 Scheduled classification uses the same owner lock before reserving mailbox moves.
@@ -147,6 +149,8 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-10-12: Index retained case history and exact intent dispositions before command work. A restored 15,131-event ledger returned identical pending results in 0.24 seconds instead of 4.43 seconds, with every event row unchanged. Seeded index removal fails the rebuild regression.
 
 - 2026-10-12: health: one case store. The local GPG, pass, Bridge and freshness checks become issues in System One's shape and go through `health-cases --extra-issues`, so every mail health fact alerts on transitions from one store; the script's own cooldown and first-failure files are gone. Infrastructure failures are a warning for `escalateMin` (30) minutes, then critical. A case open past `staleHours` (24) becomes an `MH-*` card on `tracker.project` (proton-mail on hwc-work) and closes itself when the case clears. The unit exits 1 only when the checker itself fails; health is published to `summary.json` for the MCP `hwc_mail health` action. Re-applied: a command backlog is a warning, not an outage (System One ee6a92a; 2dc277c had restored the 30-minute escalation).
 - 2026-10-12: Add exact, append-only command withdrawal under the mail owner lock. Preserve unknown receipts and identity leases; commit the fair-work cursor before provider reads so cancellation cannot starve unrelated commands. Test withdrawal guard removal through the generated wrapper.

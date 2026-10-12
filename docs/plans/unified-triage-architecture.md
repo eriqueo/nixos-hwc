@@ -46,8 +46,11 @@ preflight scans. Provider IO is capped below the parent's cancellation allowance
 Label status marks stale reports and reads uncertain effects from the ledger.
 
 Health uses content-derived cases with state separate from outcome. It appends
-judgments, emits alerts on transitions, and escalates pending commands at 30
-minutes or stale fetch/index at 45 minutes. Its AUTO-MANAGED projection retains
+judgments and emits alerts on transitions. Eric's October 12 policy makes command
+and label backlogs warnings; stale delivery and sustained infrastructure failures
+are critical. The checker exit reports execution; summary.json reports health.
+Current thresholds and routing live in domains/mail/health/index.nix.
+Its AUTO-MANAGED projection retains
 30 days and at most 5,000 judgments; active cases are capped at 128. The effect
 and human-event ledger remains CRITICAL and backed up.
 
@@ -137,8 +140,22 @@ The October 12 replay also found that cancellation during a large thread precede
 the fair-work cursor commit. The repaired owner commits the cursor before provider
 reads, so the next cycle starts with neighbouring commands. An interrupted-command
 fixture failed before this correction and then verified unrelated work progressing.
-The original 30-minute command escalation remains; reducing its severity does not
-establish withdrawal or remote completion. Sustained acceptance remains open.
+Command warnings follow Eric's current consequence-based policy. A successful
+health unit alone does not establish zero pending work or remote completion.
+Sustained acceptance remains open.
+
+The final C15 action left all 34 original intents and the original uncertain
+Trash receipt byte-for-byte unchanged. Every approved ID has exactly one withdrawal
+event and is absent from pending commands. Newer commands remain independently
+eligible; the old uncertain receipt still leases its Message-ID group.
+
+Live draining exposed a scale defect in the retained ledger. Reading two pending
+commands from 15,123 events took 3.8 seconds without provider IO. Correlated queries
+scanned acknowledgment and withdrawal history for each candidate. Startup now
+rebuilds indexes for event type/case/generation and exact intent disposition.
+A restored 15,131-event copy returned identical pending results in 0.24 seconds
+instead of 4.43 seconds, with every event row equal. Dropping the indexes made the
+query-plan regression fail; startup rebuilt them without altering history.
 
 Inspect status.json,
 labels.json, durable command receipts and health case transitions. The expected
