@@ -39,6 +39,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import apps
 import screens
+import voice
 from screens import CONFIG, SCREENS, SOURCES, TZ
 
 PORT = CONFIG["port"]
@@ -215,8 +216,10 @@ def health():
         "devices": {d.name: {"id": d.spec.get("id"), "last_seen": d.seen,
                              "age_s": round(now - d.seen) if d.seen else None, **d.report}
                     for d in devices.values()},
+        "voice": voice.status(),
     }
-    ok = (all(v["ok"] for v in body["sources"].values())
+    ok = (voice.healthy()
+          and all(v["ok"] for v in body["sources"].values())
           and all(v["ok"] for v in body["renders"].values())
           and all(v["age_s"] is None or v["age_s"] < STALE_DEVICE for v in body["devices"].values()))
     return ok, body
@@ -369,10 +372,16 @@ class Handler(BaseHTTPRequestHandler):
         here = f"/device/{name}"
         body = (f'<img src="/images/{img}" alt="">' if img
                 else "<p>No image rendered yet.</p>")
+        # With voice on, a script reloads instead (it waits out a recording
+        # or an answer on screen); the meta refresh stays for script-less browsers.
+        refresh = f'<meta http-equiv="refresh" content="{wait};url={here}">'
+        voice_head, voice_body = voice.client(here, wait)
+        if voice_body:
+            refresh, body = f"<noscript>{refresh}</noscript>{voice_head}", body + voice_body
         self.send(200, "text/html; charset=utf-8", f"""<!doctype html>
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="{wait};url={here}">
+{refresh}
 <title>{name}</title>
 <style>html,body{{margin:0;height:100%;background:#fff;overflow:hidden}}
 img{{display:block;width:100vw;height:100vh;object-fit:contain}}
@@ -434,6 +443,8 @@ a{{position:fixed;top:0;bottom:0}}
 
 # POST paths of the wall face (other faces route through HOST_APPS).
 POST_ROUTES = {"/api/log": Handler.device_log}
+if voice.ENABLED:
+    POST_ROUTES.update({"/voice": voice.handle_voice, "/voice/confirm": voice.handle_confirm})
 
 
 def main():
@@ -444,6 +455,7 @@ def main():
             raise SystemExit(f"bad device config {d}: unknown screens {unknown} or grays not in {sorted(BITS)}")
     os.makedirs(IMAGES, exist_ok=True)
     threading.Thread(target=renderer.loop, daemon=True, name="render").start()
+    voice.start()  # resident Piper, when voice is on
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
 
 

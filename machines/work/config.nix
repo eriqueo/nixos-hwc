@@ -334,6 +334,8 @@
   hwc.server.services.wallDisplay = {
     enable = true;
     reverseProxy.enable = true;
+    # Tap-to-talk in the web client (whisper on home, DX2, Piper here).
+    voice.enable = true;
     devices = {
       # Fire HD 8 (2018, LineageOS 20) running the TRMNL Android app; the id
       # is its wlan0 MAC, entered in the app's BYOS settings.

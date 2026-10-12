@@ -27,6 +27,12 @@
 # tailnet clients. The mirror calendars (radicale.mirrors) are passed in as
 # read-only, so that list has one producer. No local gateway → read-only apps.
 #
+# Voice (voice.enable, parts/voice.py): the web client gets a mic button.
+# POST /voice sends the recording to whisper, asks DX2 with a closed list of
+# read tools (calendar, tasks, today queue, weather) and speaks the answer
+# with a resident Piper. Task adds/completes only run after POST
+# /voice/confirm (Yes button or a spoken "yes").
+#
 # Devices are declared here: the protocol never reports a screen size, so
 # each device's ID, resolution, scale, grey depth and playlist come from Nix. A
 # device's api_key is minted at setup and kept in /var/lib/wall-display
@@ -40,6 +46,8 @@ let
   radicale = config.hwc.server.services.radicale;
   briefing = config.hwc.business.morningBriefing or { enable = false; };
   gateway = config.hwc.system.mcp or { enable = false; };
+  # The one producer of the gateway URL for both the phone apps and voice.
+  gatewayUrl = if gateway.enable then "http://127.0.0.1:${toString gateway.port}/mcp" else null;
 
   # Same tolerant lookup as the radicale module: the shared htpasswd secret.
   htpasswdPath = lib.attrByPath
@@ -52,6 +60,30 @@ let
 
   # segno: QR codes as inline SVG (pure Python, no image stack).
   python = pkgs.python3.withPackages (p: [ p.icalendar p.segno ]);
+
+  # Piper voice, pinned by hash at a fixed rhasspy/piper-voices revision.
+  # piper 1.4 ignores -c and opens <model>.json, so both sit in one dir.
+  piperVoiceName = "en_US-lessac-medium";
+  piperVoiceBase = "https://huggingface.co/rhasspy/piper-voices/resolve/c10ece1aade47bb51c153c893d14e5bf8e5b7117/en/en_US/lessac/medium/${piperVoiceName}";
+  piperVoice = pkgs.linkFarm "piper-voice-${piperVoiceName}" [
+    {
+      name = "${piperVoiceName}.onnx";
+      path = pkgs.fetchurl {
+        url = "${piperVoiceBase}.onnx";
+        sha256 = "5efe09e69902187827af646e1a6e9d269dee769f9877d17b16b1b46eeaaf019f";
+      };
+    }
+    {
+      name = "${piperVoiceName}.onnx.json";
+      path = pkgs.fetchurl {
+        url = "${piperVoiceBase}.onnx.json";
+        sha256 = "efe19c417bed055f2d69908248c6ba650fa135bc868b0e6abb3da181dab690a0";
+      };
+    }
+  ];
+
+  # Read only when voice is on: hosts without the DX2 module still evaluate.
+  dx2 = config.hwc.server.ai.dx2;
 
   # Chromium lays out pages with these fonts only, so a render does not
   # depend on what the host happens to have installed.
@@ -170,8 +202,16 @@ let
     inherit links;
     devices = cfg.devices;
     apps = {
-      gatewayUrl = if gateway.enable then "http://127.0.0.1:${toString gateway.port}/mcp" else null;
+      inherit gatewayUrl;
       readOnlyCalendars = lib.attrNames radicale.mirrors;
+    };
+    voice = if !cfg.voice.enable then null else {
+      inherit gatewayUrl;
+      whisperUrl = cfg.voice.whisperUrl;
+      dx2 = { inherit (dx2) baseUrl model apiKeyFile; };
+      piper = lib.getExe pkgs.piper-tts;
+      model = "${piperVoice}/${piperVoiceName}.onnx";
+      ffmpeg = lib.getExe pkgs.ffmpeg-headless;
     };
   });
 in
@@ -254,6 +294,20 @@ in
 
     reverseProxy.enable = lib.mkEnableOption
       "Caddy vhost routes (wall., todo. and calendar.hwc.iheartwoodcraft.com → this server)";
+
+    voice = {
+      enable = lib.mkEnableOption ''
+        tap-to-talk in the web client: whisper → DX2 with a closed tool list
+        → Piper. Writes (task add/complete) wait for a confirmation. Needs the
+        hwc-sys MCP gateway and the DX2 module on this host'';
+
+      whisperUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "https://whisper.${config.hwc.networking.shared.vhostDomain}";
+        defaultText = lib.literalExpression ''"https://whisper.''${hwc.networking.shared.vhostDomain}"'';
+        description = "Base URL of a whisper-server (POST <url>/v1/audio/transcriptions). Default: the `whisper` vhost.";
+      };
+    };
   };
 
   #============================================================================
@@ -286,7 +340,8 @@ in
         ProtectHome = "tmpfs";
         BindReadOnlyPaths = lib.optional (briefingDir != null) briefingDir;
         PrivateTmp = true;
-        MemoryMax = "1G";
+        # Resident Piper holds ~200 MB beside the Chromium renders.
+        MemoryMax = if cfg.voice.enable then "1536M" else "1G";
       };
     };
 
@@ -308,6 +363,11 @@ in
       {
         assertion = config.time.timeZone != null;
         message = "hwc.server.services.wallDisplay needs time.timeZone set to place events on local days.";
+      }
+      {
+        assertion = cfg.voice.enable -> (lib.hasAttrByPath [ "hwc" "server" "ai" "dx2" ] config
+          && (config.hwc.system.mcp.enable or false));
+        message = "hwc.server.services.wallDisplay.voice needs the DX2 module (domains/server/native/ai/dx2) and hwc.system.mcp.enable on this host.";
       }
       {
         assertion = lib.allUnique (lib.filter (id: id != null) (lib.mapAttrsToList (_: d: d.id) cfg.devices));
