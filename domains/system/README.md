@@ -66,6 +66,15 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-10-09: `mcp/` — the jt-mcp gateway backend is retired; JobTread tools come
+  from DataX (dx-mcp). Dropped `hwc.system.mcp.jt.*`, `parts/jt.nix`, the `HWC_JT_*`
+  env, the read-only mount, the `jobtread-grant-key` injection and the stdio spawn.
+  The gateway now aggregates hwc-sys (local), n8n-mcp (stdio) and hwc-crm (stdio);
+  `n8n-api-key` is its only remaining agenix dependency.
+- 2026-10-09: `mcp/` — gateway and briefing contract step: producers emit only the
+  new `stages`, `actions` and `threads_by_state` names, and readers no longer fall
+  back to the retired columns, verbs and buckets. Every reader was verified live
+  against those three before the fallbacks came out.
 - 2026-10-09: Return durable mail command acceptance receipts and add read-only command polling. Require zero pending commands before sync reports remote completion.
 
 - 2026-10-09: Read independent mail availability results and return run IDs with
