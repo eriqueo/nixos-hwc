@@ -23,10 +23,19 @@ data/
 ├── borg/           # Borg backup job and atomic PostgreSQL snapshots: local or SSH remote (hwc.data.borg.*)
 ├── storage/        # Storage mount management
 ├── syncthing/      # Bidirectional file sync over Tailscale
+│   └── parts/datax-ignores.nix  # One ignore list for 700_datax, shared by both peers
 └── couchdb/        # CouchDB for Obsidian LiveSync
 ```
 
 ## Changelog
+- 2026-09-29: `syncthing/` — the `700_datax` folder is peered laptop↔work directly and
+  dropped from hwc-home (`21233cb9`). Its ignore list moved into the new
+  `syncthing/parts/datax-ignores.nix`, declared once and consumed by both peers because
+  Syncthing never syncs `.stignore` — a list declared on one host only would let a
+  checkout leak through the other. Only loose notes at the folder root sync; `datax`,
+  `dx-mcp`, `tools`, `gauntlets`, every `.git`, and `.secrets-backup` are ignored, with
+  GitHub as the cross-machine git transport. Updated for the `700_datax` layout move
+  (gauntlets under `gauntlets/`, `jt-mcp` → `dx-mcp`; `8a938abe`, `1ce31fe8`).
 - 2026-09-26: Machine references follow machines/home; the home job pins its historical Borg archive/prune identity.
 - 2026-09-26: Centralize version-matched PostgreSQL dumps with atomic publication and failure propagation. Restore helpers preserve failure status; jobs respect repository locks. Local dump retention excludes nested migration archives.
 - 2026-09-25: Retired `cloudbeaver/` (service-split audit: 0 requests in the 9 days of vhost logs; Eric: no longer used). Workspace archived to hwc-server `/var/lib/backups/service-split-wave3/cloudbeaver.tar.zst` before deletion.

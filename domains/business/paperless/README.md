@@ -117,6 +117,20 @@ hwc.business.paperless = {
 
 ## Changelog
 
+- 2026-09-25: Stopped pre-creating `mediaDir/{originals,archive,thumbnails}` in
+  `parts/directories.nix`. Paperless creates them under `media/documents/` itself;
+  the three top-level siblings declared here were never used. The **Storage Layout**
+  table above still names the old top-level paths.
+- 2026-09-25: Receipts watcher decoupled from the Paperless host (service split
+  wave 3: phone ingest stays on hwc-server, Paperless runs on hwc-work).
+  `receipts.enable` is now independent of `enable` — it belongs to whichever host
+  holds `receipts.mobileDir` — and new `serverAlias` (default `work`) names the
+  Paperless host in `hwc.networking.hosts`. When that host is this one the mover
+  still does a local `mv`; otherwise it rsyncs over SSH as `eric` into the remote
+  consume dir, read from that host's evaluated config so the path has one producer.
+  rsync writes a temp file and renames, so the consumer never sees a partial file,
+  and an assertion fails the build if the Paperless host has no `consumeDir`.
+
 - 2026-09-16: `ocr.continueOnSoftRenderError` (on by default) sets
   `PAPERLESS_OCR_USER_ARGS={"continue_on_soft_render_error":true}`. Ghostscript
   10.05.1 refuses to write a PDF/A copy of a file that breaks PDF/A rules — two
