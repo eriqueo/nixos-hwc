@@ -108,6 +108,15 @@ in {
         Restart = "no";
         RestartForceExitStatus = [ 75 ];
         RestartSec = "30s";
+        # 75 is a planned rerun, not a failure. Without SuccessExitStatus it
+        # was logged as failed (1,089 times in the week to 2026-10-12) and
+        # showed up in every deploy. A oneshot ignores RestartForceExitStatus
+        # for a success status (tested on hwc-home), so this unit is `exec`.
+        # `exec` ends TimeoutStartSec's cover of the run, so RuntimeMaxSec
+        # keeps the 615 s cap (app run budget 600 s).
+        Type = "exec";
+        SuccessExitStatus = [ 75 ];
+        RuntimeMaxSec = "615s";
       };
     };
     systemd.paths.screenshot-renamer = {
