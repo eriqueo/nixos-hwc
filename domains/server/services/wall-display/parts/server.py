@@ -264,26 +264,35 @@ class Handler(BaseHTTPRequestHandler):
     def web_client(self, name):
         """A browser acting as the device: each load shows the next playlist
         image and reloads after refreshRate. For kiosks that must come back
-        on their own after a reboot (the TRMNL Android app cannot)."""
+        on their own after a reboot (the TRMNL Android app cannot).
+
+        Touch: the left third links to ?go=prev (one screen back), the rest
+        to the next screen. Plain links, no script, so any browser works."""
         device = devices.get(name)
         if device is None:
             return self.send(404, "text/plain", "unknown device")
+        back = "go=prev" in self.path.partition("?")[2].split("&")
         with _devices_lock:
+            if back:
+                device.cursor -= 2  # the cursor already points past the screen on view
             target = device.next_target()
             device.seen = time.time()
             device.report = {"client": "web"}
         img = renderer.image(target)
         wait = device.spec["refreshRate"] if img else 60
+        here = f"/device/{name}"
         body = (f'<img src="/images/{img}" alt="">' if img
                 else "<p>No image rendered yet.</p>")
         self.send(200, "text/html; charset=utf-8", f"""<!doctype html>
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="{wait}">
+<meta http-equiv="refresh" content="{wait};url={here}">
 <title>{name}</title>
 <style>html,body{{margin:0;height:100%;background:#fff;overflow:hidden}}
-img{{display:block;width:100vw;height:100vh;object-fit:contain}}</style>
-</head><body>{body}</body></html>""")
+img{{display:block;width:100vw;height:100vh;object-fit:contain}}
+a{{position:fixed;top:0;bottom:0}}
+.prev{{left:0;width:33vw}}.next{{left:33vw;right:0}}</style>
+</head><body>{body}<a class="prev" href="{here}?go=prev" aria-label="previous"></a><a class="next" href="{here}" aria-label="next"></a></body></html>""")
 
     def serve_image(self, name):
         if not IMAGE_NAME.match(name):
