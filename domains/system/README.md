@@ -66,6 +66,9 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-10-12: Law-12 refresh only, no code change: `core/README.md` and
+  `core/authentik/README.md` record the 2026-08-28 move of authentik's DB role from a
+  dead `postgresql.postStart` script to `ensureUsers` + `ensureDBOwnership`.
 - 2026-10-09: `mcp/` — the jt-mcp gateway backend is retired; JobTread tools come
   from DataX (dx-mcp). Dropped `hwc.system.mcp.jt.*`, `parts/jt.nix`, the `HWC_JT_*`
   env, the read-only mount, the `jobtread-grant-key` injection and the stdio spawn.
