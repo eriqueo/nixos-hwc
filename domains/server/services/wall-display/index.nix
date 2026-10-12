@@ -20,6 +20,13 @@
 # the matching phone page (`links` below). Protocol and rendering:
 # parts/server.py.
 #
+# Phone apps (parts/apps.py), the same process chosen by request host:
+# todo.<vhostDomain> (Tasks) and calendar.<vhostDomain> (Calendar), both
+# Workbench areas. They read Radicale over CalDAV and write ONLY through this
+# host's hwc-sys MCP gateway (closed tool/action allowlist), and only for
+# tailnet clients. The mirror calendars (radicale.mirrors) are passed in as
+# read-only, so that list has one producer. No local gateway → read-only apps.
+#
 # Devices are declared here: the protocol never reports a screen size, so
 # each device's ID, resolution, scale, grey depth and playlist come from Nix. A
 # device's api_key is minted at setup and kept in /var/lib/wall-display
@@ -32,6 +39,7 @@ let
   cfg = config.hwc.server.services.wallDisplay;
   radicale = config.hwc.server.services.radicale;
   briefing = config.hwc.business.morningBriefing or { enable = false; };
+  gateway = config.hwc.system.mcp or { enable = false; };
 
   # Same tolerant lookup as the radicale module: the shared htpasswd secret.
   htpasswdPath = lib.attrByPath
@@ -161,6 +169,10 @@ let
     crispFontsConf = "${crispFontsConf}";
     inherit links;
     devices = cfg.devices;
+    apps = {
+      gatewayUrl = if gateway.enable then "http://127.0.0.1:${toString gateway.port}/mcp" else null;
+      readOnlyCalendars = lib.attrNames radicale.mirrors;
+    };
   });
 in
 {
@@ -241,7 +253,7 @@ in
     };
 
     reverseProxy.enable = lib.mkEnableOption
-      "Caddy vhost route (wall.hwc.iheartwoodcraft.com → this server)";
+      "Caddy vhost routes (wall., todo. and calendar.hwc.iheartwoodcraft.com → this server)";
   };
 
   #============================================================================
@@ -249,7 +261,7 @@ in
   #============================================================================
   config = lib.mkIf cfg.enable {
     systemd.services.wall-display = {
-      description = "Wall display (TRMNL BYOS server: home, week, weather, tasks, briefing)";
+      description = "Wall display (TRMNL BYOS server: home, week, weather, tasks, briefing; Tasks and Calendar phone apps)";
       wantedBy = [ "multi-user.target" ];
       after = [ "network-online.target" "radicale.service" ];
       wants = [ "network-online.target" ];
@@ -278,13 +290,12 @@ in
       };
     };
 
-    hwc.networking.shared.routes = lib.mkIf cfg.reverseProxy.enable [
-      {
-        name = "wall";
-        mode = "vhost";
-        upstream = "http://127.0.0.1:${toString cfg.port}";
-      }
-    ];
+    # One process, three faces chosen by host (server.py HOST_APPS).
+    hwc.networking.shared.routes = lib.mkIf cfg.reverseProxy.enable (map (name: {
+      inherit name;
+      mode = "vhost";
+      upstream = "http://127.0.0.1:${toString cfg.port}";
+    }) [ "wall" "todo" "calendar" ]);
 
     #==========================================================================
     # VALIDATION
