@@ -141,6 +141,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # courier — our iPhone messages app over tetherd (domains/home/apps/courier).
+    # Same shared-remote model as todui: private github: input, never git+file.
+    courier = {
+      url = "github:eriqueo/courier";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # khalt — forked khal/ikhal calendar TUI (zoomable agenda/quarter/month views +
     # space-leader keybindings). Same shared-remote model as todui: private GitHub
     # repo via a github: input (no local-clone ghost-rev). Ship: push to

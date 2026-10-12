@@ -46,6 +46,8 @@
   dtBindEnabled = (dtCfg.enable or false) && (dtCfg.hyprland.enable or false);
   dtToggleBind = dtCfg.hyprland.toggleBind or null;
   toduiEnabled = config.hwc.home.apps.todui.enable or false;
+  courierEnabled = config.hwc.home.apps.courier.enable or false;
+  courierClass = config.hwc.home.apps.courier.windowClass or "";
   gsrEnabled = config.hwc.home.apps.gpu-screen-recorder.enable or false;
   dictateEnabled = config.hwc.home.apps.hwc-dictation.enable or false;
   dictateCommand = "hwc-dictation record toggle";
@@ -123,6 +125,9 @@
         ]
         ++ lib.optionals toduiEnabled [
           {mods = mod; key = "T"; act = "exec,kitty -e todui"; desc = "Tasks (todui)";}
+        ]
+        ++ lib.optionals courierEnabled [
+          {mods = mod; key = "U"; act = "exec,hyprland-app-toggle ${courierClass} courier open"; desc = "Messages (courier)";}
         ]
         ++ lib.optionals dtBindEnabled [
           {mods = mod; key = "D"; act = "exec,kitty --class dt-tui -e dt tui"; desc = "dt TUI";}
@@ -324,6 +329,13 @@ in {
       # Floating keeps opening one from splitting the browser into narrow tiles.
       "match:class ^(bitwarden|proton-pass|[Pp]roton-authenticator)$, float on, size (monitor_w*0.7) (monitor_h*0.8), center 1, suppress_event fullscreen"
 
+      # courier (iPhone messages) — a Chromium app window; float it like the
+      # other toggled utilities so opening it never re-tiles the workspace.
+    ]
+    ++ lib.optionals courierEnabled [
+      "match:class ^(${lib.escapeRegex courierClass})$, float on, size (monitor_w*0.6) (monitor_h*0.75), center 1"
+    ]
+    ++ [
       # DOSBox ECE (eXoWin3x) — inhibit idle during play
       "match:class ^(dosbox)$, idle_inhibit always"
 

@@ -20,6 +20,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 `apps/tether/` runs Tether (iMessage and SMS from the iPhone over Bluetooth, no Mac): `index.nix` is the HM half (`tetherd` user service, CLI, TUI, GTK client), `sys.nix` the system half (upstream module, BlueZ bearer API, adapter class). Laptop only. Pinned `tether` flake input.
 
+`apps/courier/` runs courier, our messages app on tetherd (`github:eriqueo/courier`, a private input). It provides a user service, CSS generated from the HWC palette, and a Chromium app window whose class is `chrome-courier.localhost__-Default`. The SUPER+U toggle and the float rule are in `apps/hyprland/parts/behavior.nix`.
+
 `core/shell/index.nix` packages `net-tools`, a searchable purpose-based picker for the existing network diagnostic scripts; Enter runs one script and Ctrl-Y prints its command. `--details` passes full-evidence mode to the selected script.
 
 `apps/agent-harness` publishes final workspace ledger and guard JSON files; unfinished atomic writes remain local.
@@ -104,6 +106,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-12: New `apps/courier/` and `courier` flake input: iPhone messages app, slice 1 (read-only window). Enabled on hwc-laptop. apps/hyprland adds SUPER+U and a float rule for its window.
 - 2026-10-12: apps/agent-harness: pin claude-config f66fc16. The tracker hub, `tracker-handoff` and `ws` scan `agent/<project>/tracker.json` only; the legacy `agent/<area>/<project>/` fallback is gone because the area folders were flattened on 2026-10-12 (97 folders, 108 citing files rewritten). README cites the design doc at its flat path.
 - 2026-10-12: apps/tether: `tether-btclass@<adapter>` is also wanted by `multi-user.target`. Upstream ties it only to `bluetooth.service`, so a switch installed it without starting it and the adapter class stayed wrong.
 - 2026-10-11: New `apps/tether/` (HM + system halves) and `tether` flake input; enabled on hwc-laptop. The research and the pairing wizard live in `agent/imessage-linux/` on the tracker hub.

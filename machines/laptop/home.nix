@@ -54,6 +54,7 @@ in
     brain.enable = true;
     gpu-screen-recorder.enable = true;  # gsr-toggle / SHIFT+PRINT call recording
     tether.enable = true;               # iMessage/SMS from the iPhone over Bluetooth (tetherd + clients)
+    courier.enable = true;              # our messages app on tetherd (SUPER+U)
     hwc-dictation = {
       enable = true;
       model = toString config.hwc.home.apps.whisper-cpp.modelPaths.${dictationModel};
