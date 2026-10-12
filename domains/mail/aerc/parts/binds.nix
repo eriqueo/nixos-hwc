@@ -56,6 +56,7 @@ let
     task = "pipe -m email-to-task"; calendar = "pipe -m email-to-khal";
     paperless = "pipe -m email-to-paperless";
     compose = "compose"; forward = "forward"; reply = "reply"; reply-all = "reply -aq";
+    mark-next = "mark -t<Enter>:next"; mark-prev = "mark -t<Enter>:prev";
     archive = archivePipe; trash = trashPipe;
     unsubscribe = "unsubscribe -s"; read = "read"; unread = "unread";
     rule-create = "pipe -m mail-classifier route-review";
@@ -120,25 +121,15 @@ ${tabBinds}
       <C-u> = :prev 50%<Enter>
       <Enter> = :view<Enter>
       q = :quit<Enter>
-      J = :mark -t<Enter>:next<Enter>
-      K = :mark -t<Enter>:prev<Enter>
       V = :mark -v<Enter>
-      r = :read<Enter>
-      D = :${trashPipe}<Enter> # Trash (record outcome)
-      u = :unread<Enter>
 
       # Static system tags (single-key for speed)
       # Native marked-or-selected semantics preserve J/K bulk selections.
       # A selected folded row expands to its complete thread.
-      a = :${archivePipe}<Enter>
-      d = :${trashPipe}<Enter>
 
-      c = :compose<Enter>
-      C = :reply -aq<Enter>
 
-      X = :mv<space>
-      Y = :cp<space>
       / = :filter<space> # filter folder by words…
+${keymap.bareFor "messages"}
 ${keymap.bindsFor "messages"}
 
       [view]
@@ -147,13 +138,7 @@ ${tabBinds}
       q = :close<Enter>
       J = :next<Enter>
       K = :prev<Enter>
-      r = :reply<Enter>
-      R = :reply -aq<Enter>
-      f = :forward<Enter>
-      a = :${archivePipe}<Enter>:close<Enter>
-      d = :${trashPipe}<Enter>:close<Enter>
       H = :toggle-headers<Enter>
-      u = ${urlPicker}
       / = :toggle-key-passthrough<Enter>/
       O = :open<Enter>
       S = :save<space>
@@ -161,8 +146,7 @@ ${tabBinds}
       l = :next-part<Enter>
       h = :prev-part<Enter>
       o = :open<Enter>
-      t = :pipe -m email-to-task<Enter>
-      p = :pipe -m email-to-paperless<Enter>
+${keymap.bareFor "view"}
 ${keymap.bindsFor "view"}
 
       [view::passthrough]

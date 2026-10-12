@@ -11,7 +11,7 @@ let
   line = context: b: "      ${lhs b.keys} = "
     + lib.optionalString (context == "view" && b.scope == "account") ":close<Enter>"
     + commands.${b.action} + " # ${b.desc}";
-  groupNames = grammar.groups // { m = "mail"; w = "view"; o = "handoff"; q = "app"; };
+  groupNames = grammar.groups;
   activeGroups = lib.unique (map (b: builtins.substring 0 1 b.keys)
     (lib.filter (b: b.keys != "?") grammar.aerc.bindings));
   helpRow = b: "| Space ${b.keys} | ${b.desc} | ${b.scope} |";
@@ -19,6 +19,13 @@ let
     "\n${name}:\n" + lib.concatStringsSep "\n" (map (c: "  ${c.key}  ${c.desc}") choices)
   ) menus);
 in {
+  bareFor = context: lib.concatMapStringsSep "\n" (b:
+    lib.concatMapStringsSep "\n" (alias: let key = if builtins.isString alias then alias else alias.key;
+        action = if builtins.isString alias then b.action else alias.action;
+      in "      ${key} = ${commands.${action}}"
+      + lib.optionalString (context == "view" && lib.elem b.action [ "archive" "trash" ]) ":close<Enter>")
+      ((b.bare or {}).${if context == "messages" then "list" else context} or []))
+    (bindings context);
   bindsFor = context: lib.concatStringsSep "\n" (map (line context) (bindings context));
   whichKeyGroups = lib.concatStringsSep ", " (map (g: "${g}:${groupNames.${g}}") activeGroups);
   markdown = lib.concatStringsSep "\n" ([

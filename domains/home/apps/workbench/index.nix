@@ -51,8 +51,10 @@ let
   # Unified keymap grammar → ~/.config/workbench/keymap.json. Workbench parses
   # this versioned contract and merges its global bindings with hub actions.
   km   = (config.hwc.home.keymap or {}).grammar or {};
-  kmWb = lib.optionalString (km ? meta)
-    (import ../../keymap/parts/to-workbench.nix { inherit lib; grammar = km; }).json;
+  kmOutput =
+    import ../../keymap/parts/to-workbench.nix { inherit lib; grammar = km;
+      mailContract = builtins.fromJSON (builtins.readFile "${inputs.system-one}/scripts/mail_classifier_contract.json"); };
+  kmWb = lib.optionalString (km ? meta) kmOutput.json;
 
   # `wb-reload` as a REAL binary on the session PATH (not just a shell alias).
   # The SUPER+W keybind runs `kitty -e wb-reload`, and `kitty -e` execs its
@@ -138,7 +140,8 @@ in
       # Peer launch overrides (late binding). Mail runs wherever the shell alias
       # says — on the laptop that's the server over ssh, so DON'T bake a local
       # aerc onto PATH; the launcher invokes `ssh -t server aerc` instead.
-      launchers.aerc = aercCmd;
+      launchers = (lib.optionalAttrs (km ? meta) (kmOutput.handoffCommands aercCmd)) // { aerc = aercCmd;
+        browser = "gpu-launch chromium-hwc-workbench"; };
       # `opens = "url:…"` (e.g. the DataX SR2 dashboard on Enter) opens in the GUI
       # browser. Use `chromium-hwc-workbench`, NOT the SUPER+B `chromium-hwc`: it
       # carries the same GPU/ANGLE/WebGL flags but a DEDICATED --user-data-dir, so
@@ -147,7 +150,7 @@ in
       # live instances over one profile (after a suspend/resume singleton race) is
       # what stacked the "couldn't open profile" dialogs. gpu-launch is on the
       # session PATH (same as the Hyprland keybind in apps/hyprland/parts/behavior.nix).
-      launchers.browser = "gpu-launch chromium-hwc-workbench";
+
       extraRuntimePackages = with pkgs; [
         zellijPkg     # same pane host as the shell and restart helper
         yazi          # peer pane: files

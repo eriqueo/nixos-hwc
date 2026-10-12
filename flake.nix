@@ -522,13 +522,13 @@
                     assert chord[:length] not in seen, f"prefix: {chord[:length]} shadows {chord}"
 
         def grammar_contexts(grammar):
-            apps = set(grammar.get("apps", {})) | set(grammar["major"])
+            apps = set(grammar.get("apps", {})) | set(grammar.get("major", {}))
             apps |= {app for row in grammar["shared"] for app in row.get("cmd", {})}
             for app in sorted(apps - {"aerc"}):
                 rows = [r for r in grammar["shared"] if app in r.get("cmd", {})]
                 rows += grammar.get("apps", {}).get(app, [])
                 chords = [r["keys"].split(" ") for r in rows]
-                major = grammar["major"].get(app, [])
+                major = grammar.get("major", {}).get(app, [])
                 if isinstance(major, list):
                     chords += [["m"] + r["keys"].split(" ") for r in major]
                 yield app, chords
@@ -867,6 +867,88 @@
       } ''
         export HOME="$TMPDIR"
         nvim --headless -u NONE -i NONE -l ${runner}
+        touch "$out"
+      '';
+
+      workbench-keymap = let
+        contract = mailHome.hwc.mail.classifier.contract;
+        output = import ./domains/home/keymap/parts/to-workbench.nix {
+          inherit lib; grammar = keymapGrammar; mailContract = contract;
+        };
+        fixture = pkgs.writeText "workbench-keymap.json" (builtins.toJSON {
+          grammar = keymapGrammar; registry = output.registry; inherit contract;
+          launchers = self.homeConfigurations."eric@hwc-laptop".config.programs.workbench.launchers;
+          binds = mailHome.home.file.".config/aerc/binds.conf".text;
+        });
+      in pkgs.runCommand "workbench-keymap" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${fixture} ${./domains/system/mcp/src/src/tools/mail-triage.ts} ${inputs.workbench}/hubs/mail.toml <<'PY'
+        import json, pathlib, re, sys, tomllib
+        data = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        grammar, registry = data['grammar'], data['registry']
+        hub = registry['hubs']['mail']
+        source = pathlib.Path(sys.argv[2]).read_text()
+        producer = source.split('const THREAD_VERBS = ', 1)[1].split(';', 1)[0]
+        verbs = set(re.findall(r'"([^"\n]+)"', producer))
+        verbs.update('state-' + s for s in data['contract']['states'])
+        verbs.update('domain-' + d for d in data['contract']['domains'])
+        manifest = tomllib.loads(pathlib.Path(sys.argv[3]).read_text())
+        manifest_chords = [a['key'] for a in manifest.get('action', [])]
+        for tile in manifest.get('tile', []):
+            manifest_chords.extend(tile.get('item_actions', {}))
+            manifest_chords.extend(tile.get('board_actions', {}))
+        def validate(payload):
+            rows = payload['hubs']['mail']['bindings']
+            chords = [r['chord'] for r in rows]
+            for row in grammar['aerc']['bindings']:
+                if 'omit' not in row['wb']:
+                    assert any(c == row['keys'] or c.startswith(row['keys'] + ' ') for c in chords), row
+            paths = [c.split() for c in chords + [r['chord'] for r in payload['bindings']]]
+            assert len({tuple(p) for p in paths}) == len(paths)
+            assert not any(p != q and q[:len(p)] == p for p in paths for q in paths)
+            merged = [c.split() for c in dict.fromkeys(chords + manifest_chords
+                      + [r['chord'] for r in payload['bindings']])]
+            assert not any(p != q and q[:len(p)] == p for p in merged for q in merged)
+            assert all(r['intent'] in verbs for r in rows if r['target'] == 'item')
+            assert all(data['launchers'].get(r['intent']) for r in rows if r['target'] == 'handoff'), 'missing launcher'
+            global_paths = [r['chord'].split() for r in payload['bindings']]
+            global_paths += [['q'], ['?'], ['R'], ['a']] + [['g', str(n)] for n in range(1, 10)]
+            def overlaps(p, q):
+                return p[:len(q)] == q or q[:len(p)] == p
+            assert not any(overlaps(r['chord'].split(), g) for r in rows for g in global_paths), 'global shadow'
+            assert not any(overlaps([r['key']], g) for r in payload['hubs']['mail']['bare'] for g in [['q'], ['?'], ['R']]), 'bare global shadow'
+            bare = {r['key']: r['intent'] for r in payload['hubs']['mail']['bare']}
+            expected = {(k if isinstance(k, str) else k['key']):
+                        (r['wb'].get('verb', r['wb'].get('handoff')) if isinstance(k, str) else k['verb'])
+                        for r in grammar['aerc']['bindings'] for k in r.get('bare', {}).get('list', []) if 'omit' not in r['wb']}
+            assert bare == expected
+            sections = data['binds'].split('[messages]', 1)[1].split('[view]', 1)[0]
+            for key in bare:
+                assert re.search(r'^\s*' + re.escape(key) + r' = ', sections, re.M), key
+        validate(registry)
+        import copy
+        for kind in ('coverage', 'bare', 'prefix', 'verb', 'launcher', 'global', 'bare-global'):
+            bad = copy.deepcopy(registry)
+            if kind == 'coverage':
+                bad['hubs']['mail']['bindings'] = []
+            elif kind == 'bare':
+                bad['hubs']['mail']['bare'] = []
+            elif kind == 'prefix':
+                bad['bindings'].append({'chord': 'a a x'})
+            elif kind == 'launcher':
+                bad['hubs']['mail']['bindings'].append({'chord': 'o Z', 'intent': 'missing-launcher', 'target': 'handoff'})
+            elif kind == 'global':
+                bad['hubs']['mail']['bindings'].append({'chord': 'q q', 'intent': 'compose', 'target': 'handoff'})
+            elif kind == 'bare-global':
+                bad['hubs']['mail']['bare'].append({'key': 'R', 'intent': 'compose'})
+            else:
+                bad['hubs']['mail']['bindings'].append({'chord': 'm Z', 'intent': 'invalid-verb', 'target': 'item'})
+            try:
+                validate(bad)
+            except AssertionError:
+                print('seeded ' + kind + ' violation rejected')
+            else:
+                raise AssertionError('accepted seeded ' + kind)
+        PY
         touch "$out"
       '';
 
@@ -1296,9 +1378,34 @@
             for key in keys:
                 assert not any(other != key and other.startswith(key) for other in keys), (section, key)
             assert 'i' not in rows and 'I' not in rows, (section, 'retired shortcuts')
+        for section in ['[messages]', '[view]']:
+            for key in ['mc', 'mr', 'mf']:
+                if key == 'mr':
+                    assert ':choose ' not in sections[section].get("<Space>" + key, "")
+                else:
+                    assert '<Space>' + key not in sections[section]
+            for key in ['cc', 'cr', 'ca', 'cf']:
+                assert '<Space>' + key in sections[section]
+        for section, aliases in {
+            '[messages]': {'a': 'ma', 'd': 'dd', 'D': 'dd',
+                           'J': 'mj', 'K': 'mk', 'c': 'cc', 'C': 'ca', 'X': 'mx', 'Y': 'ym'},
+            '[view]': {'r': 'cr', 'R': 'ca', 'f': 'cf', 'a': 'ma', 'd': 'dd',
+                       'u': 'ol', 't': 'ot', 'p': 'op'},
+        }.items():
+            for bare, chord in aliases.items():
+                command = lambda line: line.split(' = ', 1)[1].split(' # ', 1)[0]
+                wanted = command(sections[section]['<Space>' + chord])
+                if section == '[view]' and bare in ('a', 'd'):
+                    wanted += ':close<Enter>'
+                assert command(sections[section][bare]) == wanted, (section, bare, chord)
+        assert ':read<Enter>' in sections['[messages]']['r']
+        assert ':unread<Enter>' in sections['[messages]']['u']
+        # Explicit accepted viewer exceptions: r replies; u opens the URL picker.
+        assert ':reply<Enter>' in sections['[view]']['r']
+        assert 'urlscan' in sections['[view]']['u']
         assert '<Space>bc' not in sections['[messages]']
         assert '<Space>wi' in sections['[view]'] and '<Space>wi' not in sections['[messages]']
-        for key in ['<Space>ms', '<Space>md', '<Space>mt', '<Space>mr', '<Space>ml', '<Space>mv', '<Space>fd']:
+        for key in ['<Space>ms', '<Space>md', '<Space>mt', '<Space>ml', '<Space>mv', '<Space>fd']:
             for section in ['[messages]', '[view]']:
                 line = sections[section][key]
                 options = shlex.split(command_text(line.split(':choose ', 1)[1].split('<Enter>', 1)[0]))

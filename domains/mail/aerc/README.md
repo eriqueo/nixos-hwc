@@ -249,6 +249,7 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
    `proton/Labels/<name>/`.
 
 ## Changelog
+- 2026-10-12: Share aerc action rows and bare aliases with Workbench schema 2; move compose/replies/forward to c; retain routing, unsubscribe and read-status menus under m.
 - 2026-10-09: Document physical command ownership, separate availability and dedicated Drafts/Sent uploads; retire the described MailMover pipeline.
 - 2026-10-01: Add canonical DONT KNOW display/default, one-step correction,
   navigation and widened State column; separate reversible Bulk view.

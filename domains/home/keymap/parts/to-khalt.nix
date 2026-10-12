@@ -16,7 +16,7 @@
 
 let
   # list-app bare verbs khalt shares with todui (a=add, e=edit, d=delete, Enter=open)
-  verb = name: lib.findFirst (v: v.intent == name) null grammar.listVerbs;
+  verb = name: lib.findFirst (v: v.intent == name) null (map (r: { key = builtins.head r.bare; intent = r.cmd.khalt; desc = r.desc; }) (lib.filter (r: r ? bare) grammar.apps.khalt));
   keyOf = name: let v = verb name; in if v == null then "" else v.key;
 
   # khal's [keybindings] uses comma-lists of keys per command. We map the shared
@@ -39,8 +39,8 @@ let
   leaderTree = builtins.toJSON {
     leader = grammar.leader;
     groups = grammar.groups;
-    major  = map (m: { key = m.keys; desc = m.desc; }) (grammar.major.khalt or []);
-    verbs  = grammar.listVerbs;
+    major  = map (m: { key = lib.removePrefix "m " m.keys; desc = m.desc; }) (lib.filter (r: !(r ? bare)) grammar.apps.khalt);
+    verbs  = (map (r: { key = builtins.head r.bare; intent = r.cmd.khalt; desc = r.desc; }) (lib.filter (r: r ? bare) grammar.apps.khalt));
   };
 in
 { inherit keybindingsBlock leaderTree; }

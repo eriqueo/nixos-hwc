@@ -17,6 +17,7 @@ shell's aerc alias, one-shot analysis via the selected Codex package, browser vi
 - `index.nix` — imports the flake's HM module; options + programs.workbench wiring, wb-reload, shared Zellij package, versioned keymap, one-shot Codex provider, registry landing hub + shared standing-tool destinations
 
 ## Changelog
+- 2026-10-12: Share aerc rows with Workbench schema 2; generate isolated compose launcher, omit aerc view controls and unsafe thread actions, guard launcher coverage and global keys; move compose/replies/forward to c; retain routing, unsubscribe and read-status menus under m.
 
 - 2026-10-06: Consume current mail State keys and five-State fixtures. Unstarted
   mail actions wait safely for the shared sync owner with bounded attempts;

@@ -19,9 +19,9 @@ let
     leader    = grammar.leader;
     groups    = grammar.groups;
     # bare list-app verbs (a/e/d/Enter) — todui's fast keys, also Space-aliased
-    listVerbs = grammar.listVerbs;
+    listVerbs = (map (r: { key = builtins.head r.bare; intent = r.cmd.todui; desc = r.desc; }) (lib.filter (r: r ? bare) grammar.apps.todui));
     columns   = grammar.columns;              # j/k primary, ctrl+j/k side column
-    major     = map (m: { key = m.keys; desc = m.desc; }) (grammar.major.todui or []);
+    major     = map (m: { key = lib.removePrefix "m " m.keys; desc = m.desc; }) (lib.filter (r: !(r ? bare)) grammar.apps.todui);
   };
 in
 { inherit json; }

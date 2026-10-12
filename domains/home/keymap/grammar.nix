@@ -11,7 +11,7 @@
 #   * Two layers. `leader` (Space) = act INSIDE the focused app. `metaLeader`
 #     (Alt+Space) = jump BETWEEN apps; lives in zellij, never in an app.
 #   * Consistency is by ROLE, not global. The Space groups below are universal;
-#     the bare `listVerbs` (a/e/d/Enter) are shared only by the list apps
+#     the bare CRUD aliases (a/e/d/Enter) are shared only by the list apps
 #     (todui + khalt); nvim keeps vim motions; aerc/yazi keep native bare keys.
 #   * Same intent, different native command per app. A binding carries `cmd.<app>`
 #     and an app participates in a binding IFF its command is present — so the
@@ -22,9 +22,7 @@
 #   groups              : letter -> mnemonic name (the contract; meaning is fixed).
 #   shared              : Space-layer bindings present in >1 app.
 #   apps.<app>          : app-specific grouped Space rows with cmd.<app>.
-#   major.<app>         : that app's `Space m` (major-mode) table.
 #   aerc                : mail action metadata; native realization in mail/aerc.
-#   listVerbs           : bare CRUD verbs shared by todui + khalt.
 #   columns             : the two-column nav convention (primary vs side column).
 #   meta                : the Alt+Space jump map (key -> pane target).
 
@@ -63,7 +61,7 @@ rec {
     w = "window";   # splits / view modes / layout
     p = "project";  # project-scoped actions
     o = "open";     # open / create external
-    m = "major";    # THIS app's own verbs (the per-app drawer)
+    m = "mark";     # mark, classify and assign metadata
     q = "quit";     # quit / sync / reload
     v = "version";  # git hunks, blame and diff
     a = "agent";    # anything involving an AI agent (ask, send, nvim Claude)
@@ -123,6 +121,7 @@ rec {
     { keys = "a a"; desc = "Ask agent about item"; cmd = {
         workbench = "ask-agent";
       }; }
+    { keys = "a s"; desc = "Send item to agent"; cmd.workbench = "send-agent"; }
   ];
 
   # App-specific grouped Space rows. Runtime paths are bound by the adapter.
@@ -305,111 +304,109 @@ rec {
       { keys = "y d"; desc = "Copy: directory"; cmd.yazi = "copy dirname"; }
   ];
 
-  #--------------------------------------------------------------------------
-  # Per-app major mode (Space m ...). These are the app-specific verbs that do
-  # NOT generalize; quarantined here so the shared groups stay clean. aerc =
-  # "tags" => its Space m table is generated from domains/mail/aerc/parts/tags.nix
-  # and composed in, not duplicated here.
-  #--------------------------------------------------------------------------
-  major = {
-    todui = [
-      { keys = "p"; desc = "Priority"; }
-      { keys = "u"; desc = "Due date"; }
-      { keys = "l"; desc = "Assign list"; }
-      { keys = "j"; desc = "Assign project"; }
-      { keys = "k"; desc = "Assign context"; }
-    ];
-    khalt = [
-      { keys = "p"; desc = "Duplicate event"; }
-      { keys = "x"; desc = "Export event"; }
-      { keys = "v"; desc = "View cycle (agenda/month/quarter)"; }
-    ];
-    yazi = [
-      { keys = "c"; desc = "Change permissions"; }
-      { keys = "v"; desc = "View mode"; }
-    ];
-    nvim = [
-      { keys = "r"; desc = "LSP rename"; cmd = "<cmd>lua vim.lsp.buf.rename()<cr>"; }
-      { keys = "a"; desc = "LSP code action"; cmd = "<cmd>lua vim.lsp.buf.code_action()<cr>"; }
-      { keys = "f"; desc = "LSP format"; cmd = "<cmd>lua vim.lsp.buf.format()<cr>"; }
-      { keys = "R"; desc = "LSP references"; cmd = "<cmd>Telescope lsp_references<cr>"; }
-      { keys = "s"; desc = "Save session"; cmd = "<cmd>mksession!<cr>"; }
-    ];
-    aerc = "mail";
-  };
+  # Grouped rows retain each app's action metadata and bare aliases.
+  apps.todui = [
+      { keys = "m p"; desc = "Priority"; }
+      { keys = "m u"; desc = "Due date"; }
+      { keys = "m l"; desc = "Assign list"; }
+      { keys = "m j"; desc = "Assign project"; }
+      { keys = "m k"; desc = "Assign context"; }
+
+      { keys = "c c"; desc = "Add"; cmd.todui = "add"; bare = [ "a" ]; }
+      { keys = "o e"; desc = "Edit"; cmd.todui = "edit"; bare = [ "e" ]; }
+      { keys = "d d"; desc = "Delete"; cmd.todui = "delete"; bare = [ "d" ]; }
+      { keys = "o o"; desc = "Open / view"; cmd.todui = "open"; bare = [ "enter" ]; }
+  ];
+  apps.khalt = [
+      { keys = "c d"; desc = "Duplicate event"; }
+      { keys = "o x"; desc = "Export event"; }
+      { keys = "w v"; desc = "View cycle (agenda/month/quarter)"; }
+
+      { keys = "c c"; desc = "Add"; cmd.khalt = "add"; bare = [ "a" ]; }
+      { keys = "o e"; desc = "Edit"; cmd.khalt = "edit"; bare = [ "e" ]; }
+      { keys = "d d"; desc = "Delete"; cmd.khalt = "delete"; bare = [ "d" ]; }
+      { keys = "o o"; desc = "Open / view"; cmd.khalt = "open"; bare = [ "enter" ]; }
+  ];
+  apps.nvim = [
+      { keys = "l r"; desc = "LSP rename"; cmd.nvim = "<cmd>lua vim.lsp.buf.rename()<cr>"; }
+      { keys = "l a"; desc = "LSP code action"; cmd.nvim = "<cmd>lua vim.lsp.buf.code_action()<cr>"; }
+      { keys = "l f"; desc = "LSP format"; cmd.nvim = "<cmd>lua vim.lsp.buf.format()<cr>"; }
+      { keys = "l R"; desc = "LSP references"; cmd.nvim = "<cmd>Telescope lsp_references<cr>"; }
+      { keys = "p s"; desc = "Save session"; cmd.nvim = "<cmd>mksession!<cr>"; }
+
+  ];
 
   # Aerc actions and descriptions have one producer. The mail adapter supplies
   # native commands and dynamic State/Domain/fact options from their contracts.
   aerc = let
-    row = keys: action: desc: scope: { inherit keys action desc scope; };
+    row = keys: action: desc: scope: extras: { inherit keys action desc scope; } // extras;
   in {
     stateKeys = { "do" = "a"; "dont-know" = "k"; did = "d"; look = "l"; junk = "j"; };
     domainKeys = { hwc = "h"; datax = "d"; family = "f"; personal = "p"; other = "o"; };
     bindings = [
-      (row "g i" "go-do" "DO" "account")
-      (row "g k" "go-dont-know" "DONT KNOW" "account")
-      (row "g b" "go-bulk" "Bulk" "account")
-      (row "g d" "go-did" "DID" "account")
-      (row "g l" "go-look" "LOOK" "account")
-      (row "g j" "go-junk" "JUNK" "account")
-      (row "g B" "go-backlog" "Backlog" "account")
-      (row "g I" "go-inbox" "Raw inbox" "account")
-      (row "g A" "go-all" "All mail" "account")
-      (row "g u" "go-unread" "Unread" "account")
-      (row "g a" "go-archive" "Archive" "account")
-      (row "g s" "go-sent" "Sent" "account")
-      (row "g T" "go-trash" "Trash" "account")
-      (row "g z" "go-spam" "Spam" "account")
-      (row "g _" "go-hide" "Hide-my-email" "account")
-      (row "f f" "filter" "Filter folder by words…" "account")
-      (row "f a" "all-search" "Search all mail by words…" "account")
-      (row "f s" "search" "Jump to matching words…" "account")
-      (row "f t" "tag-filter" "Filter folder by tag…" "account")
-      (row "f T" "tag-search" "Search all mail by tag…" "account")
-      (row "f d" "domain-filter" "Filter by Domain…" "account")
-      (row "f c" "clear" "Clear filter/search" "account")
-      (row "s d" "sort-date" "Newest first" "account")
-      (row "s f" "sort-from" "Sender, then newest" "account")
-      (row "s s" "sort-subject" "Subject, then newest" "account")
-      (row "s a" "sort-alpha" "Alphabetical subject A–Z" "account")
-      (row "b n" "tab-next" "Next tab" "global")
-      (row "b p" "tab-prev" "Previous tab" "global")
-      (row "b c" "tab-close" "Close tab" "closable")
-      (row "t h" "headers" "Toggle headers" "view")
-      (row "t t" "fold" "Toggle selected fold" "account")
-      (row "t a" "fold-all" "Fold all threads" "account")
-      (row "w i" "images" "Local image preview (remote images blocked)" "view")
-      (row "w n" "part-next" "Next MIME part / attachment" "view")
-      (row "w p" "part-prev" "Previous MIME part / attachment" "view")
-      (row "w s" "styleset" "Switch styleset…" "global")
-      (row "o t" "task" "Task handoff" "message")
-      (row "o c" "calendar" "Import calendar event (no RSVP)" "message")
-      (row "o p" "paperless" "Paperless handoff" "message")
-      (row "o l" "links" "URL picker" "message")
-      (row "m c" "compose" "Compose" "account")
-      (row "m r" "replies" "Reply…" "message")
-      (row "m f" "forward" "Forward" "message")
-      (row "m a" "archive" "Archive (record outcome)" "message")
-      (row "m s" "state" "Set State…" "message")
-      (row "m d" "domain" "Set Domain…" "message")
-      (row "m t" "tags" "Optional tags…" "message")
-      (row "m l" "rules" "Routing rules…" "message")
-      (row "m u" "unsubscribe" "Review unsubscribe" "message")
-      (row "m v" "read-status" "Read/unread…" "message")
-      (row "m x" "move" "Move to folder… (no learning)" "message")
-      (row "y l" "links" "Copy URL via picker" "message")
-      (row "y m" "copy" "Copy to folder…" "message")
-      (row "d d" "trash" "Trash (record outcome)" "message")
-      (row "q s" "sync" "Sync mail" "global")
-      (row "q r" "reload" "Reload configuration" "global")
-      (row "q q" "quit" "Confirm quit" "global")
-      (row "?" "help" "Binding sheet" "global")
+      (row "g i" "go-do" "DO" "account" { wb = { omit = "aerc folder navigation; Workbench Mail uses stages"; }; })
+      (row "g k" "go-dont-know" "DONT KNOW" "account" { wb = { omit = "aerc folder navigation; Workbench Mail uses stages"; }; })
+      (row "g b" "go-bulk" "Bulk" "account" { wb = { omit = "aerc folder navigation; Workbench Mail uses stages"; }; })
+      (row "g d" "go-did" "DID" "account" { wb = { omit = "aerc folder navigation; Workbench Mail uses stages"; }; })
+      (row "g l" "go-look" "LOOK" "account" { wb = { omit = "aerc folder navigation; Workbench Mail uses stages"; }; })
+      (row "g j" "go-junk" "JUNK" "account" { wb = { omit = "aerc folder navigation; Workbench Mail uses stages"; }; })
+      (row "g B" "go-backlog" "Backlog" "account" { wb = { omit = "aerc folder navigation; Workbench Mail uses stages"; }; })
+      (row "g I" "go-inbox" "Raw inbox" "account" { wb = { omit = "aerc folder navigation; Workbench Mail uses stages"; }; })
+      (row "g A" "go-all" "All mail" "account" { wb = { omit = "aerc folder navigation; Workbench Mail uses stages"; }; })
+      (row "g u" "go-unread" "Unread" "account" { wb = { omit = "aerc folder navigation; Workbench Mail uses stages"; }; })
+      (row "g a" "go-archive" "Archive" "account" { wb = { omit = "aerc folder navigation; Workbench Mail uses stages"; }; })
+      (row "g s" "go-sent" "Sent" "account" { wb = { omit = "aerc folder navigation; Workbench Mail uses stages"; }; })
+      (row "g T" "go-trash" "Trash" "account" { wb = { omit = "aerc folder navigation; Workbench Mail uses stages"; }; })
+      (row "g z" "go-spam" "Spam" "account" { wb = { omit = "aerc folder navigation; Workbench Mail uses stages"; }; })
+      (row "g _" "go-hide" "Hide-my-email" "account" { wb = { omit = "aerc folder navigation; Workbench Mail uses stages"; }; })
+      (row "f f" "filter" "Filter folder by words…" "account" { wb = { omit = "aerc list filtering and search"; }; })
+      (row "f a" "all-search" "Search all mail by words…" "account" { wb = { omit = "aerc list filtering and search"; }; })
+      (row "f s" "search" "Jump to matching words…" "account" { wb = { omit = "aerc list filtering and search"; }; })
+      (row "f t" "tag-filter" "Filter folder by tag…" "account" { wb = { omit = "aerc list filtering and search"; }; })
+      (row "f T" "tag-search" "Search all mail by tag…" "account" { wb = { omit = "aerc list filtering and search"; }; })
+      (row "f d" "domain-filter" "Filter by Domain…" "account" { wb = { omit = "aerc list filtering and search"; }; })
+      (row "f c" "clear" "Clear filter/search" "account" { wb = { omit = "aerc list filtering and search"; }; })
+      (row "s d" "sort-date" "Newest first" "account" { wb = { omit = "aerc list sorting"; }; })
+      (row "s f" "sort-from" "Sender, then newest" "account" { wb = { omit = "aerc list sorting"; }; })
+      (row "s s" "sort-subject" "Subject, then newest" "account" { wb = { omit = "aerc list sorting"; }; })
+      (row "s a" "sort-alpha" "Alphabetical subject A–Z" "account" { wb = { omit = "aerc list sorting"; }; })
+      (row "b n" "tab-next" "Next tab" "global" { wb = { omit = "Tabs belong to aerc"; }; })
+      (row "b p" "tab-prev" "Previous tab" "global" { wb = { omit = "Tabs belong to aerc"; }; })
+      (row "b c" "tab-close" "Close tab" "closable" { wb = { omit = "Tabs belong to aerc"; }; })
+      (row "t h" "headers" "Toggle headers" "view" { wb = { omit = "Raw headers belong to aerc viewer"; }; })
+      (row "t t" "fold" "Toggle selected fold" "account" { wb = { omit = "aerc thread folding"; }; })
+      (row "t a" "fold-all" "Fold all threads" "account" { wb = { omit = "aerc thread folding"; }; })
+      (row "w i" "images" "Local image preview (remote images blocked)" "view" { wb = { omit = "MIME image preview belongs to aerc viewer"; }; })
+      (row "w n" "part-next" "Next MIME part / attachment" "view" { wb = { omit = "MIME parts belong to aerc viewer"; }; })
+      (row "w p" "part-prev" "Previous MIME part / attachment" "view" { wb = { omit = "MIME parts belong to aerc viewer"; }; })
+      (row "w s" "styleset" "Switch styleset…" "global" { wb = { omit = "Stylesets belong to aerc"; }; })
+      (row "o t" "task" "Task handoff" "message" { wb = { omit = "No aerc thread-load completion or message-selection contract; action could target another message"; }; bare = { view = [ "t" ]; }; })
+      (row "o c" "calendar" "Import calendar event (no RSVP)" "message" { wb = { omit = "No aerc thread-load completion or message-selection contract; action could target another message"; }; })
+      (row "o p" "paperless" "Paperless handoff" "message" { wb = { omit = "No aerc thread-load completion or message-selection contract; action could target another message"; }; bare = { view = [ "p" ]; }; })
+      (row "o l" "links" "URL picker" "message" { wb = { omit = "No aerc thread-load completion or message-selection contract; action could target another message"; }; bare = { view = [ "u" ]; }; })
+      (row "c c" "compose" "Compose" "account" { wb = { handoff = "compose"; }; handoffArgs = [ "-I" ":compose" ]; bare = { list = [ "c" ]; }; })
+      (row "c r" "reply" "Reply" "message" { wb = { omit = "No aerc thread-load completion or message-selection contract; action could target another message"; }; bare = { view = [ "r" ]; }; })
+      (row "c a" "reply-all" "Reply all" "message" { wb = { omit = "No aerc thread-load completion or message-selection contract; action could target another message"; }; bare = { list = [ "C" ]; view = [ "R" ]; }; })
+      (row "c f" "forward" "Forward" "message" { wb = { omit = "No aerc thread-load completion or message-selection contract; action could target another message"; }; bare = { view = [ "f" ]; }; })
+      (row "m j" "mark-next" "Mark and move down" "message" { wb = { omit = "aerc list selection and movement"; }; bare.list = [ "J" ]; })
+      (row "m k" "mark-prev" "Mark and move up" "message" { wb = { omit = "aerc list selection and movement"; }; bare.list = [ "K" ]; })
+      (row "m a" "archive" "Archive (record outcome)" "message" { wb = { verb = "archive"; }; bare = { list = [ "a" ]; view = [ "a" ]; }; })
+      (row "m s" "state" "Set State…" "message" { wb = { menu = "state"; }; })
+      (row "m d" "domain" "Set Domain…" "message" { wb = { menu = "domain"; }; })
+      (row "m t" "tags" "Optional tags…" "message" { wb = { menu = "tags"; }; })
+      (row "m l" "rules" "Routing rules…" "message" { wb = { omit = "No aerc thread-load completion or message-selection contract; action could target another message"; }; })
+      (row "m u" "unsubscribe" "Review unsubscribe" "message" { wb = { omit = "No aerc thread-load completion or message-selection contract; action could target another message"; }; })
+      (row "m v" "read-status" "Read/unread…" "message" { wb = { menu = "read-status"; }; bare.list = [ { key = "r"; action = "read"; verb = "mark-read"; } { key = "u"; action = "unread"; verb = "mark-unread"; } ]; })
+      (row "m x" "move" "Move to folder… (no learning)" "message" { wb = { verb = "move"; }; bare = { list = [ "X" ]; }; })
+      (row "y l" "links" "Copy URL via picker" "message" { wb = { omit = "No aerc thread-load completion or message-selection contract; action could target another message"; }; })
+      (row "y m" "copy" "Copy to folder…" "message" { wb = { omit = "No aerc thread-load completion or message-selection contract; action could target another message"; }; bare = { list = [ "Y" ]; }; })
+      (row "d d" "trash" "Trash (record outcome)" "message" { wb = { verb = "trash"; }; bare = { list = [ "d" "D" ]; view = [ "d" ]; }; })
+      (row "q s" "sync" "Sync mail" "global" { wb = { omit = "aerc app control"; }; })
+      (row "q r" "reload" "Reload configuration" "global" { wb = { omit = "aerc app control"; }; })
+      (row "q q" "quit" "Confirm quit" "global" { wb = { omit = "aerc app control"; }; })
+      (row "?" "help" "Binding sheet" "global" { wb = { omit = "aerc app control"; }; })
     ];
     menus = {
-      replies = [
-        { key = "r"; action = "reply"; desc = "Reply"; }
-        { key = "a"; action = "reply-all"; desc = "Reply all"; }
-      ];
       rules = [
         { key = "a"; action = "rule-create"; desc = "Create from selected mail"; }
         { key = "m"; action = "rule-manage"; desc = "Review / disable rules"; }
@@ -432,12 +429,6 @@ rec {
   # speed; also aliased under Space (the generators emit a `Space <verb>` alias
   # so which-key/forgetfulness has a safety net — see spec 3.1c).
   #--------------------------------------------------------------------------
-  listVerbs = [
-    { key = "a";     intent = "add";    desc = "Add"; }
-    { key = "e";     intent = "edit";   desc = "Edit"; }
-    { key = "d";     intent = "delete"; desc = "Delete"; }
-    { key = "enter"; intent = "open";   desc = "Open / view"; }
-  ];
 
   #--------------------------------------------------------------------------
   # Two-column nav: same keys, modifier picks the column. Modifier doctrine:

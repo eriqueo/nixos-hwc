@@ -15,7 +15,7 @@ key `k` corrects a thread to DONT KNOW; mail-contract data supplies its display.
 index.nix              Options hwc.home.keymap.{enable,leader,metaLeader,grammar};
                        materializes grammar.nix as the read-only token set.
 grammar.nix            THE file you edit. Groups, shared Space bindings, per-app
-                       grouped apps rows, major modes, list-app bare verbs, nav, meta map.
+                       grouped apps rows, mail realizations, grouped bare aliases, nav, meta map.
 parts/
   to-zellij.nix        registry hub + tool destinations -> zellij keybinds KDL (inter-app Ctrl+Space layer)
   to-yazi.nix          grammar -> keymap.toml [mgr] fragment
@@ -23,14 +23,14 @@ parts/
   to-aerc.nix          aerc action table -> context bindings, groups and reference
   to-khalt.nix         grammar -> [keybindings] block + KHALT_LEADER_TREE json
   to-todui.nix         grammar -> TODUI_KEYMAP json (env)
-  to-workbench.nix     grammar -> versioned Workbench global-binding JSON
+  to-workbench.nix     grammar -> schema-2 Workbench global and Mail hub JSON
 ```
 
 ## The two layers
 
 - **`Space`** (intra-app): act inside the focused app. Same grammar everywhere.
   Groups: `g`go `f`find `s`sort `b`buffer `t`toggle `y`yank `d`delete `w`window
-  `c`compose `l`language `p`project `o`open `m`major(app's-own) `q`quit.
+  `c`compose `l`language `p`project `o`open `m`mark `q`quit.
 - **`Alt+Space`** (inter-app): jump between panes. Lives ONLY in zellij. Audited
   clear of Hyprland (all SUPER; only Super+Space=wofi) and every TUI (only
   nvim-cmp uses Ctrl+Space). One Nix variable — swap in `grammar.nix`.
@@ -99,6 +99,7 @@ chords within each section, compares its Space rows with the grammar, and
 requires each configured native manager command to have a Space path.
 
 ## Changelog
+- 2026-10-12: Share aerc rows with Workbench schema 2; generate isolated compose launcher, omit aerc view controls and unsafe thread actions, guard launcher coverage and global keys; move compose/replies/forward to c; retain routing, unsubscribe and read-status menus under m.
 - 2026-10-12: Rename find; add compose/language; wire grouped Yazi actions and grammar/TOML checks. Major tables and Aerc rows remain unchanged.
 - 2026-10-09: Hubs use Ctrl+Space 1–9 by visible rail position; reject digit
   keys in `grammar.meta` and retain tool letters t/c/m/f/e/a.
