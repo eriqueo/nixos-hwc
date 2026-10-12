@@ -26,12 +26,12 @@ let
   calCfg = config.hwc.mail.calendar;
   themeColors = (config.hwc.home.theme or {}).colors or {};
 
-  # Unified keymap: list-app bare verbs (a=add, e=edit, d=delete, Enter=open),
-  # shared with todui. Generated [keybindings] block, appended below. Guarded so
-  # khalt still evaluates when the keymap module is not imported.
-  km        = (config.hwc.home.keymap or {}).grammar or {};
-  kmKhalt   = lib.optionalString (km ? listVerbs)
-    (import ../../keymap/parts/to-khalt.nix { inherit lib; grammar = km; }).keybindingsBlock;
+  # The upstream wrapper inherits Home Manager session variables.
+  km = (config.hwc.home.keymap or {}).grammar or {};
+  hasKeymap = km ? apps && km.apps ? khalt;
+  kmKhalt = if hasKeymap then
+    import ../../keymap/parts/to-khalt.nix { inherit lib; grammar = km; }
+    else { keybindingsBlock = ""; leaderTree = ""; };
 
   dataDir = "~/.local/share/vdirsyncer";
 
@@ -127,10 +127,16 @@ in
   # IMPLEMENTATION
   #============================================================================
   config = lib.mkIf cfg.enable {
+    xdg.configFile."khalt/keymap.json" = lib.mkIf hasKeymap {
+      text = kmKhalt.leaderTree;
+    };
+    home.sessionVariables = lib.optionalAttrs hasKeymap {
+      KHALT_LEADER_TREE = "${config.xdg.configHome}/khalt/keymap.json";
+    };
     programs.khalt = {
       enable = true;
       configText = generatedConfig
-        + lib.optionalString (kmKhalt != "") ("\n" + kmKhalt)
+        + lib.optionalString hasKeymap ("\n" + kmKhalt.keybindingsBlock)
         + lib.optionalString (cfg.extraConfig != "") ("\n" + cfg.extraConfig);
       extraRuntimePackages = [ pkgs.vdirsyncer ];
     };

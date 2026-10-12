@@ -37,12 +37,9 @@ let
   paletteColors = lib.filterAttrs (_: v: builtins.isString v)
     (((config.hwc.home.theme or {}).colors or {}));
 
-  # Unified keymap grammar → staged as ~/.config/todui/keymap.json. todui does
-  # not read it YET (app-side reader is the staged prerequisite — see
-  # domains/home/keymap/README.md); writing the file is harmless and ready, and
-  # the app must LOG when it finds-but-ignores it so the drift can't hide.
-  km      = (config.hwc.home.keymap or {}).grammar or {};
-  kmTodui = lib.optionalString (km ? listVerbs)
+  # The app reads schema 1 at its default config location.
+  km = (config.hwc.home.keymap or {}).grammar or {};
+  kmTodui = lib.optionalString (km ? apps && km.apps ? todui)
     (import ../../keymap/parts/to-todui.nix { inherit lib; grammar = km; }).json;
 in
 {
@@ -80,8 +77,7 @@ in
       extraRuntimePackages = [ pkgs.khal pkgs.vdirsyncer ];
     };
 
-    # Staged unified-keymap data (see let-block note). Harmless until the
-    # app-side reader lands; written only when the keymap module is imported.
+    # Written when the grammar is present.
     xdg.configFile = lib.optionalAttrs (kmTodui != "") {
       "todui/keymap.json".text = kmTodui;
     };

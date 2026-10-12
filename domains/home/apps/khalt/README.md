@@ -26,6 +26,9 @@ khal binary.
 
 ## Structure
 
+`index.nix` also writes schema-1 `khalt/keymap.json` from the shared grammar.
+`KHALT_LEADER_TREE` is exported through Home Manager session variables.
+
 ```
 domains/home/apps/khalt/
 ├── index.nix    # hwc.home.apps.khalt.* — imports khalt HM module, builds config
@@ -33,6 +36,8 @@ domains/home/apps/khalt/
 ```
 
 ## Changelog
+
+- 2026-10-12: Restore grammar gates and generate the app default leader bindings in schema 1.
 
 - **2026-09-24**: The `[[radicale]]` calendar now follows
   `hwc.mail.calendar.enable`; the iCloud `accounts` calendars are gone with the

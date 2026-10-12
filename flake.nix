@@ -803,6 +803,114 @@
         touch "$out"
       '';
 
+      khalt-keymap = let
+        home = self.homeConfigurations."eric@hwc-laptop".config;
+        appPkgs = inputs.khalt.inputs.nixpkgs.legacyPackages.x86_64-linux;
+        python = appPkgs.python3.withPackages (ps: [
+          ps.click ps.click-log ps.icalendar ps.urwid ps.pyxdg
+          ps.pytz ps.python-dateutil ps.configobj ps.tzlocal
+        ]);
+        generated = pkgs.writeText "khalt-keymap.json"
+          home.xdg.configFile."khalt/keymap.json".text;
+        runner = pkgs.writeText "khalt-keymap-check.py" ''
+          import copy, importlib.util, json, logging, os, pathlib
+          from types import SimpleNamespace
+          # Import the real loader without khal's build-generated version.py.
+          spec = importlib.util.spec_from_file_location("khalt_leader",
+              "${inputs.khalt}/khal/ui/khalt_leader.py")
+          leader = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(leader)
+
+          class FailFallback(logging.Handler):
+              def emit(self, record):
+                  raise AssertionError(record.getMessage())
+          leader.logger.addHandler(FailFallback())
+          view = SimpleNamespace(_conf={"keybindings": {
+              "new": ["a"], "delete": ["d"], "view": ["enter"], "leader": [" "]}})
+          def check(path):
+              os.environ["KHALT_LEADER_TREE"] = str(path)
+              entries = leader.build_keymap(view)
+              assert entries, "loader returned an empty tree"
+              data = json.loads(pathlib.Path(path).read_text())
+              for leaf in data["bindings"].values():
+                  if leaf.startswith("call:"):
+                      assert leaf[5:] in leader.LEADER_ACTION_NAMES, leaf
+                  else:
+                      assert leaf.startswith("key:") and leaf[4:] in leader.COMMAND_KEYS, leaf
+              assert data["bindings"] == leader.DEFAULT_TREE["bindings"], "default bindings drift"
+          check("${generated}")
+          bad = copy.deepcopy(json.loads(pathlib.Path("${generated}").read_text()))
+          bad["bindings"]["w a"] = "call:invalid_seed"
+          seed = pathlib.Path("bad-keymap.json")
+          seed.write_text(json.dumps(bad))
+          try:
+              check(seed)
+          except AssertionError as error:
+              assert "invalid_seed" in str(error), error
+              print("khalt-keymap: bad leaf rejected:", error)
+          else:
+              raise AssertionError("bad leaf seed accepted")
+          seed.unlink()
+          check("${generated}")
+          print("khalt-keymap: real loader accepted generated bindings; defaults match")
+        '';
+      in
+      assert lib.assertMsg (home.home.sessionVariables.KHALT_LEADER_TREE
+        == "${home.xdg.configHome}/khalt/keymap.json") "khalt-keymap: session path is not wired";
+      assert lib.assertMsg (lib.hasInfix "new = a"
+        home.programs.khalt.configText && lib.hasInfix "delete = d"
+        home.programs.khalt.configText && lib.hasInfix "view = enter"
+        home.programs.khalt.configText) "khalt-keymap: native aliases are not wired";
+      pkgs.runCommand "khalt-keymap" { nativeBuildInputs = [ python ]; } ''
+        export PYTHONPATH=${inputs.khalt}
+        python ${runner}
+        touch "$out"
+      '';
+
+      todui-keymap = let
+        home = self.homeConfigurations."eric@hwc-laptop".config;
+        appPkgs = inputs.todui.inputs.nixpkgs.legacyPackages.x86_64-linux;
+        python = appPkgs.python3.withPackages (ps: [ ps.textual ps.icalendar ps.python-dateutil ]);
+        generated = pkgs.writeText "todui-keymap.json"
+          home.xdg.configFile."todui/keymap.json".text;
+        runner = pkgs.writeText "todui-keymap-check.py" ''
+          import copy, json, logging, os, pathlib
+          from todui import keymap
+
+          class FailFallback(logging.Handler):
+              def emit(self, record):
+                  raise AssertionError(record.getMessage())
+          keymap.log.addHandler(FailFallback())
+          def check(path):
+              os.environ["TODUI_KEYMAP"] = str(path)
+              loaded = keymap.load_keymap()
+              data = json.loads(pathlib.Path(path).read_text())
+              assert loaded == data, "loader did not return generated file"
+              assert all(leaf.startswith("call:") and leaf[5:] in keymap.LEADER_ACTIONS
+                         for leaf in loaded["bindings"].values()), "unregistered action"
+              assert loaded["bindings"] == keymap.DEFAULT_KEYMAP["bindings"], "default bindings drift"
+          check("${generated}")
+          bad = copy.deepcopy(json.loads(pathlib.Path("${generated}").read_text()))
+          bad["bindings"]["c c"] = "call:invalid_seed"
+          seed = pathlib.Path("bad-keymap.json")
+          seed.write_text(json.dumps(bad))
+          try:
+              check(seed)
+          except AssertionError as error:
+              assert "invalid_seed" in str(error), error
+              print("todui-keymap: bad leaf rejected:", error)
+          else:
+              raise AssertionError("bad leaf seed accepted")
+          seed.unlink()
+          check("${generated}")
+          print("todui-keymap: real loader accepted generated bindings; defaults match")
+        '';
+      in pkgs.runCommand "todui-keymap" { nativeBuildInputs = [ python ]; } ''
+        export PYTHONPATH=${inputs.todui}/src
+        python ${runner}
+        touch "$out"
+      '';
+
       nvim-keymap = let
         home = self.homeConfigurations."eric@hwc-laptop".config;
         grammar = home.hwc.home.keymap.grammar;

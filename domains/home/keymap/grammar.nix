@@ -49,6 +49,7 @@ rec {
   # has no use for, but never repurposes a letter.
   #--------------------------------------------------------------------------
   groups = {
+    "?" = "help"; # Khalt defaults include Space ?; validate this root too.
     g = "go";       # navigate: dirs, mail folders, calendar dates, top/bottom
     f = "find";   # look for something: find files, grep, filter
     c = "compose";  # create / new / reply
@@ -306,26 +307,43 @@ rec {
 
   # Grouped rows retain each app's action metadata and bare aliases.
   apps.todui = [
-      { keys = "m p"; desc = "Priority"; }
-      { keys = "m u"; desc = "Due date"; }
-      { keys = "m l"; desc = "Assign list"; }
-      { keys = "m j"; desc = "Assign project"; }
-      { keys = "m k"; desc = "Assign context"; }
-
-      { keys = "c c"; desc = "Add"; cmd.todui = "add"; bare = [ "a" ]; }
-      { keys = "o e"; desc = "Edit"; cmd.todui = "edit"; bare = [ "e" ]; }
-      { keys = "d d"; desc = "Delete"; cmd.todui = "delete"; bare = [ "d" ]; }
-      { keys = "o o"; desc = "Open / view"; cmd.todui = "open"; bare = [ "enter" ]; }
+    { keys = "c c"; desc = "add"; cmd.todui = "call:add"; bare = [ "a" ]; }
+    { keys = "d d"; desc = "delete"; cmd.todui = "call:delete"; bare = [ "d" ]; }
+    { keys = "m p"; desc = "set priority"; cmd.todui = "call:set_priority"; }
+    { keys = "m u"; desc = "set due"; cmd.todui = "call:set_due"; }
+    { keys = "m l"; desc = "move list"; cmd.todui = "call:move_list"; }
+    { keys = "m j"; desc = "set project"; cmd.todui = "call:set_project"; }
+    { keys = "m k"; desc = "set context"; cmd.todui = "call:set_context"; }
+    { keys = "m x"; desc = "toggle done"; cmd.todui = "call:toggle_done"; }
+    { keys = "o e"; desc = "edit"; cmd.todui = "call:edit"; bare = [ "e" "enter" ]; }
+    { keys = "t c"; desc = "toggle completed"; cmd.todui = "call:toggle_completed"; }
+    { keys = "w w"; desc = "toggle week"; cmd.todui = "call:toggle_week"; }
+    { keys = "s p"; desc = "sort priority"; cmd.todui = "call:sort_priority"; }
+    { keys = "s d"; desc = "sort due"; cmd.todui = "call:sort_due"; }
+    { keys = "s c"; desc = "sort created"; cmd.todui = "call:sort_created"; }
+    { keys = "q r"; desc = "reload"; cmd.todui = "call:reload"; }
+    { keys = "q s"; desc = "sync"; cmd.todui = "call:sync"; }
+    { keys = "b n"; desc = "next list"; cmd.todui = "call:next_list"; }
+    { keys = "b p"; desc = "previous list"; cmd.todui = "call:previous_list"; }
+    { keys = "b l"; desc = "lists menu"; cmd.todui = "call:lists_menu"; }
   ];
   apps.khalt = [
-      { keys = "c d"; desc = "Duplicate event"; }
-      { keys = "o x"; desc = "Export event"; }
-      { keys = "w v"; desc = "View cycle (agenda/month/quarter)"; }
-
-      { keys = "c c"; desc = "Add"; cmd.khalt = "add"; bare = [ "a" ]; }
-      { keys = "o e"; desc = "Edit"; cmd.khalt = "edit"; bare = [ "e" ]; }
-      { keys = "d d"; desc = "Delete"; cmd.khalt = "delete"; bare = [ "d" ]; }
-      { keys = "o o"; desc = "Open / view"; cmd.khalt = "open"; bare = [ "enter" ]; }
+    { keys = "w a"; desc = "view agenda"; cmd.khalt = "call:view_agenda"; }
+    { keys = "w m"; desc = "view month"; cmd.khalt = "call:view_month"; }
+    { keys = "w q"; desc = "view quarter"; cmd.khalt = "call:view_quarter"; }
+    { keys = "w z"; desc = "cycle view"; cmd.khalt = "call:cycle_view"; }
+    { keys = "g t"; desc = "today"; cmd.khalt = "key:today"; }
+    { keys = "g o"; desc = "other"; cmd.khalt = "key:other"; }
+    { keys = "f f"; desc = "search"; cmd.khalt = "key:search"; }
+    { keys = "c c"; desc = "new"; cmd.khalt = "key:new"; bare = [ "a" ]; }
+    { keys = "c d"; desc = "duplicate"; cmd.khalt = "key:duplicate"; }
+    { keys = "o e"; desc = "view"; cmd.khalt = "key:view"; bare = [ "enter" ]; }
+    { keys = "o E"; desc = "external edit"; cmd.khalt = "key:external_edit"; }
+    { keys = "o x"; desc = "export"; cmd.khalt = "key:export"; }
+    { keys = "d d"; desc = "delete"; cmd.khalt = "key:delete"; bare = [ "d" ]; }
+    { keys = "t v"; desc = "mark"; cmd.khalt = "key:mark"; }
+    { keys = "q r"; desc = "reload"; cmd.khalt = "call:reload"; }
+    { keys = "?"; desc = "?"; cmd.khalt = "key:?"; }
   ];
   # Aerc actions and descriptions have one producer. The mail adapter supplies
   # native commands and dynamic State/Domain/fact options from their contracts.

@@ -23,6 +23,9 @@ owns its own engine, tests, packaging, and release cadence.
   todui`, rebuild. Swap to `path:~/600_apps/todui` for a live-edit session.
 
 ## Structure
+
+`index.nix` also writes schema-1 `todui/keymap.json` from the shared grammar.
+Todui reads the file at its default config path.
 ```
 todui/
 └── index.nix     # imports inputs.todui.homeManagerModules.todui;
@@ -45,6 +48,8 @@ todui/
 - khal + vdirsyncer are put on todui's PATH via `extraRuntimePackages`.
 
 ## Changelog
+
+- 2026-10-12: Restore grammar gates and generate the app default leader bindings in schema 1.
 - 2026-09-24: Follows `hwc.mail.tasks.enable` (the tasks module's
   `radicale.enable` was removed with its iCloud path). The glob no longer falls
   back to the dead iCloud `tasks/*` vdir. Laptop render unchanged.
