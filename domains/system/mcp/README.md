@@ -487,7 +487,7 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 ## Changelog
 
 - 2026-10-12: Drop "JT" from the gateway's option and unit descriptions; the jt-mcp backend is gone.
-
+- 2026-10-12: `hwc_calendar` `edit` no longer loses events. It used to delete the `.ics` file and then run `khal new` without `-a`, and the khalt config has no default calendar, so khal failed and the event was gone. It now runs `khal new -a <the event's own calendar>` first (the name comes from the collection's vdirsyncer `displayname` file, falling back to the directory name, the same name khal discovers) and deletes the old file only after khal succeeds. Tests cover the calendar name, the fallback, and keeping the original when khal fails.
 - 2026-10-09: Retire the jt-mcp backend. `hwc.system.mcp.jt.*`, `parts/jt.nix`, its env vars, read-only mount and JT grant key injection are gone, and the gateway no longer spawns `/opt/business/jt-mcp`. JobTread tools come from DataX (dx-mcp). Earlier entries below describe the removed backend.
 
 - Declare the real mail lock test dependency in the Nix build so the test runs inside its sandbox.
