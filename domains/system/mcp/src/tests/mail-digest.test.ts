@@ -5,7 +5,7 @@ vi.mock("node:child_process", () => ({execFile: run, spawn: spawnRun}));
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mailTools, mailTagActions, MAIL_STATES } from "../src/tools/mail.js";
+import { mailTools, mailTagActions, MAIL_DOMAINS, MAIL_FACTS, mailFactTag, mailDomainTag, MAIL_STATES } from "../src/tools/mail.js";
 import { mailTriageTools, reflectLiveStates } from "../src/tools/mail-triage.js";
 import { morningBriefTool } from "../src/tools/morning-brief.js";
 
@@ -489,4 +489,60 @@ it("reads threads_by_state mail reports in the status tool", async () => {
     const board = await mailTriageTools(path, async () => new Map([["a", new Set(["state/do"])], ["b", new Set(["state/look"])], ["c", new Set(["state/dont-know"])]]))[0].handler({});
     expect(board.view!.data).not.toHaveProperty("columns");
   } finally { await rm(dir, {recursive: true, force: true}); }
+});
+
+
+describe("mail hub metadata verbs", () => {
+  it.each(["mark-unread", "fact-add", "fact-clear"])("backs %s with thread tag writes", async action => {
+    run.mockReset();
+    run.mockImplementation((_bin, _args, _options, callback) => callback(null, "", ""));
+    const fact = MAIL_FACTS[0];
+    expect((await mailTriageTools("unused")[0].handler({action, id: "a", fact})).status).toBe("ok");
+    expect(run.mock.calls[0][1]).toEqual(["tag", action === "mark-unread" ? "+unread" : `${action === "fact-add" ? "+" : "-"}${mailFactTag(fact)}`, "--", "thread:a"]);
+  });
+  it.each(MAIL_DOMAINS)("records domain-%s through the correction owner", async domain => {
+    run.mockReset(); spawnRun.mockReset();
+    run.mockImplementation((_bin, _args, _options, callback) => callback(null, "Message-ID: <fixture@example.com>\n\nbody", ""));
+    spawnRun.mockImplementation(() => ({...classifierChild(), stdout: {on: vi.fn((event, callback) => {
+      if (event === "data") callback(Buffer.from(JSON.stringify({schemaVersion: 1, code: "mail-action-accepted", commandIds: [], local: "applied", remote: "not-applicable"})));
+    })}}));
+    const result = await mailTriageTools("unused")[0].handler({action: `domain-${domain}`, id: "a"});
+    expect(result.status).toBe("ok");
+    expect(result.data).toMatchObject({completion: "accepted", commandIds: []});
+    expect(result.message).toContain("locally");
+    expect(spawnRun.mock.calls[0][1]).toEqual(expect.arrayContaining(["correct", "--domain", domain, "--receipt"]));
+    expect(run.mock.calls.some(call => call[1][0] === "tag")).toBe(false);
+  });
+  it.each([{action: "domain-unknown"}, {action: "fact-add", fact: "free text"}, {action: "fact-clear", fact: "state/do"}])("rejects invalid metadata %j before writing", async args => {
+    run.mockReset(); spawnRun.mockReset();
+    expect((await mailTriageTools("unused")[0].handler({...args, id: "a"})).status).toBe("error");
+    expect(run).not.toHaveBeenCalled(); expect(spawnRun).not.toHaveBeenCalled();
+  });
+  it("clears optional facts with the shared protected metadata operation", async () => {
+    run.mockReset();
+    run.mockImplementation((_bin, _args, _options, callback) => callback(null, "", ""));
+    expect((await mailTriageTools("unused")[0].handler({action: "fact-clear", id: "a"})).status).toBe("ok");
+    expect(run.mock.calls[0][1]).toEqual(["tag", ...mailTagActions()["clear-metadata"], "--", "thread:a"]);
+  });
+  it("advertises new verbs and renders live domain and facts", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "mail-verbs-"));
+    try {
+      const file = join(dir, "brief.json");
+      await writeFile(file, JSON.stringify({mail_triage: {threads_by_state: {...empty(), do: [thread("a")]}}}));
+      const tool = mailTriageTools(file, async () => new Map([["a", new Set(["state/do", mailDomainTag(MAIL_DOMAINS[0]), mailFactTag(MAIL_FACTS[0])])]]))[0];
+      const verbs = ["mark-unread", "fact-add", "fact-clear", ...MAIL_DOMAINS.map(domain => `domain-${domain}`)];
+      expect((tool.inputSchema.properties as any).action.enum).toEqual(expect.arrayContaining(verbs));
+      for (const action of ["board", "digest"]) {
+        const data = (await tool.handler({action})).view!.data as any;
+        const card = action === "board" ? data.stages[0].cards[0] : data.items[0];
+        expect(card.actions).toEqual(expect.arrayContaining(verbs));
+        expect(card).toMatchObject({tag: MAIL_DOMAINS[0], facts: [["fact", MAIL_FACTS[0]]]});
+      }
+    } finally { await rm(dir, {recursive: true, force: true}); }
+  });
+  it.each(["mark-unread", "fact-add", "fact-clear"])("reports failed %s writes", async action => {
+    run.mockReset();
+    run.mockImplementation((_bin, _args, _options, callback) => callback({code: 1}, "", "write failed"));
+    expect((await mailTriageTools("unused")[0].handler({action, id: "a", fact: MAIL_FACTS[0]})).status).toBe("error");
+  });
 });

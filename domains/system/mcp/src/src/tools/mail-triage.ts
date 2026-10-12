@@ -19,7 +19,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
 import { mcpError } from "../errors.js";
-import { mailThreadsByState, MAIL_STATES, MAIL_ACTION_STATE, MAIL_STATE_DISPLAY_NAMES, mailStateTag, mailTagActions, classifierMutation, classifierMutationError, acceptedMailCommand } from "./mail.js";
+import { mailThreadsByState, MAIL_DOMAINS, MAIL_FACTS, mailFactTag, mailDomainTag, MAIL_STATES, MAIL_ACTION_STATE, MAIL_STATE_DISPLAY_NAMES, mailStateTag, mailTagActions, classifierMutation, classifierMutationError, acceptedMailCommand } from "./mail.js";
 
 /** Default briefing output path (run.sh writes here, then injects .mail_triage). */
 const DEFAULT_BRIEFING_JSON =
@@ -156,7 +156,10 @@ export async function reflectLiveStates(
       // This precedence remains defined by the contract until the classifier
       // normalizes the whole thread.
       const live = MAIL_STATES.find(state => tags.has(mailStateTag(state))) as State | undefined;
-      if (live) out[live].push(thread);
+      if (live) out[live].push({...thread,
+        domain: MAIL_DOMAINS.find(domain => tags.has(mailDomainTag(domain))) ?? thread.domain,
+        tags: MAIL_FACTS.filter(fact => tags.has(mailFactTag(fact))),
+      });
     }
   }
   return out;
@@ -164,7 +167,9 @@ export async function reflectLiveStates(
 
 /* ─── Write actions (generic workbench card_actions path) ──────────────────── */
 
-const WRITE_VERBS = ["move", "archive", "trash", "mark-read", "retriage"] as const;
+const THREAD_VERBS = [...MAIL_STATES.map(state => `state-${state}`),
+  ...MAIL_DOMAINS.map(domain => `domain-${domain}`),
+  "move", "archive", "trash", "mark-read", "mark-unread", "fact-add", "fact-clear"];
 
 /** Apply tag ops to thread:<id>. Resolves an error string or null on success. */
 function notmuchTagThread(id: string, ops: string[]): Promise<string | null> {
@@ -210,6 +215,8 @@ function toCard(thread: TriageThread, state: State) {
     date: thread.date_relative,
     tag: thread.domain || undefined,
     reason: thread.urgency_reason || thread.suggested_action || undefined,
+    facts: thread.tags.map(fact => ["fact", fact]),
+    actions: THREAD_VERBS,
   };
 }
 
@@ -240,16 +247,19 @@ export function mailTriageTools(
             type: "string",
             enum: [
               "board", "summary", "digest",
-              ...MAIL_STATES.map((state) => `state-${state}`),
-              ...WRITE_VERBS,
+              ...THREAD_VERBS, "retriage",
             ],
             default: "board",
             description:
-              "board/summary/digest = reads; state-<state>, move (+target), archive, trash, mark-read = per-thread writes (require id)",
+              "board/summary/digest = reads; state-<state>, move (+target), archive, trash, mark-read, mark-unread, domain-<domain>, fact-add (+fact), fact-clear (optional fact; omit to clear optional metadata) = per-thread writes (require id)",
           },
           id: {
             type: "string",
             description: "[writes] notmuch thread id (hex, no 'thread:' prefix) — the kanban card id",
+          },
+          fact: {
+            type: "string", enum: [...MAIL_FACTS],
+            description: "[fact-add/fact-clear] existing contract fact key; no free-text notes",
           },
           target: {
             type: "string",
@@ -309,19 +319,34 @@ export function mailTriageTools(
             return mcpError({
               type: "VALIDATION_ERROR",
               message: `unknown verb or missing/invalid target for '${action}'`,
-              suggestion: `Verbs: ${MAIL_STATES.map((state) => `state-${state}`).join(", ")}, move (target=${MAIL_STATES.join("|")}), archive, trash, mark-read`,
+              suggestion: `Verbs: ${THREAD_VERBS.join(", ")}; move target=${MAIL_STATES.join("|")}`,
             });
           }
-          if (requestedState || action === "archive" || action === "trash") {
+          const requestedDomain = action.startsWith("domain-") ? action.slice(7) : undefined;
+          if (requestedDomain !== undefined && !MAIL_DOMAINS.includes(requestedDomain)) {
+            return mcpError({type: "VALIDATION_ERROR", message: "Unknown mailbox domain"});
+          }
+          if ((action === "fact-add" || action === "fact-clear") &&
+              ((action === "fact-add" || args.fact !== undefined) &&
+               (typeof args.fact !== "string" || !MAIL_FACTS.includes(args.fact)))) {
+            return mcpError({type: "VALIDATION_ERROR", message: "Use an existing contract fact key"});
+          }
+          if (requestedState || requestedDomain || action === "archive" || action === "trash") {
             const outcome = await classifierMutation(`thread:${id}`, requestedState
               ? {kind: "state", value: requestedState}
+              : requestedDomain ? {kind: "domain", value: requestedDomain}
               : {kind: "outcome", value: action === "archive" ? "done" : "trash"});
             if (!("accepted" in outcome)) return classifierMutationError(outcome, `thread:${id}`);
-            return {status:"ok",message:`Accepted ${action}. Remote completion is pending.`,
+            return {status:"ok",message: outcome.accepted.remote === "pending"
+              ? `Accepted ${action}. Remote completion is pending.` : `Applied ${action} locally.`,
               data:{action,id,state:requestedState ?? null,...acceptedMailCommand(outcome.accepted)}};
-          } else if (action === "mark-read") {
-            const err = await notmuchTagThread(id, mailTagActions().read);
-            if (err) return mcpError({type: "COMMAND_FAILED", message: "Mark-read failed", error: err});
+          } else if (["mark-read", "mark-unread", "fact-add", "fact-clear"].includes(action)) {
+            const ops = action === "mark-read" ? mailTagActions().read
+              : action === "mark-unread" ? mailTagActions().unread
+              : action === "fact-clear" && args.fact === undefined ? mailTagActions()["clear-metadata"]
+              : [`${action === "fact-add" ? "+" : "-"}${mailFactTag(args.fact as string)}`];
+            const err = await notmuchTagThread(id, ops);
+            if (err) return mcpError({type: "COMMAND_FAILED", message: `${action} failed`, error: err});
           } else return mcpError({type: "VALIDATION_ERROR", message: "Unknown workflow action"});
           return {
             status: "ok",

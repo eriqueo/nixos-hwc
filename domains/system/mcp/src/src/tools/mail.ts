@@ -101,8 +101,16 @@ const MAIL_CONTRACT = loadContract();
 export const MAIL_STATES: readonly string[] = MAIL_CONTRACT.states;
 export const MAIL_ACTION_STATE = MAIL_CONTRACT.actionState;
 export const MAIL_STATE_DISPLAY_NAMES = MAIL_CONTRACT.stateDisplayNames;
-const DOMAIN_TAGS = MAIL_CONTRACT.domains;
-const TRAIT_TAGS = MAIL_CONTRACT.factTags;
+export const MAIL_DOMAINS: readonly string[] = MAIL_CONTRACT.domains;
+const DOMAIN_TAGS = MAIL_DOMAINS;
+export const MAIL_FACTS: readonly string[] = MAIL_CONTRACT.factTags;
+const TRAIT_TAGS = MAIL_FACTS;
+export function mailDomainTag(domain: string): string {
+  return `${MAIL_CONTRACT.domainTagPrefix}${domain}`;
+}
+export function mailFactTag(fact: string): string {
+  return `${MAIL_CONTRACT.traitTagPrefix}${fact}`;
+}
 
 /** Shared named tag effects for the mail and triage transports. */
 export function mailTagActions(): Record<string, string[]> {
@@ -300,7 +308,7 @@ function msmtpSend(
 
 /** Shared durable human disposition path; never retried after a write. */
 type ClassifierMutation =
-  | { kind: "state"; value: string }
+  | { kind: "state" | "domain"; value: string }
   | { kind: "outcome"; value: "done" | "trash" }
   | { kind: "reopen" };
 interface ClassifierFailure { message: string; retrySafe: boolean }
@@ -328,7 +336,7 @@ export async function classifierMutation(
       { timeout: 10_000, maxBuffer: 20 * 1024 * 1024 });
     if (selected.exitCode !== 0) return {message: (selected.stderr || "notmuch selection failed").slice(0, 300), retrySafe: false};
     const base = ["--db", "/var/lib/hwc/mail-classifier/ledger.sqlite", "--notmuch", bin, "--receipt"];
-    const args = mutation.kind === "state" ? ["correct", ...base, "--state", mutation.value]
+    const args = (mutation.kind === "state" || mutation.kind === "domain") ? ["correct", ...base, `--${mutation.kind}`, mutation.value]
       : mutation.kind === "outcome" ? ["transition", ...base, "--outcome", mutation.value]
       : ["reopen", ...base];
     return await new Promise((resolve) => {
