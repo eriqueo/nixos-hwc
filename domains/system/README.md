@@ -66,7 +66,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
-- 2026-10-12: mcp: `hwc_mail health` reads mail-health's `summary.json` (open cases with outcome, message and open time) instead of the retired first-failure and cooldown files; status is error on any critical case, partial on warnings or a down bridge or stale sync.
+- 2026-10-12: mcp: `hwc_mail health` reads mail-health's `summary.json` (open cases with outcome, message and open time) instead of the retired first-failure and cooldown files; status is error on any critical case, partial on warnings or a down bridge or stale sync. Bridge state comes from mail-health's infrastructure cases: the old `systemctl show protonmail-bridge.service` ran in system scope against a user unit and reported the bridge down on every call.
 - 2026-10-09: Return durable mail command acceptance receipts and add read-only command polling. Require zero pending commands before sync reports remote completion.
 
 - 2026-10-09: Read independent mail availability results and return run IDs with
