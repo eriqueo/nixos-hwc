@@ -9,13 +9,6 @@ on both hosts with separate histories and the same pinned harness.
 The bootstrap steps below are historical setup instructions. The fleet flake is
 already active; routine changes use the normal commit, local build and switch path.
 
-## Claude Code sandbox trial (2026-10-11 to 2026-10-25)
-
-`home.nix` installs `bubblewrap` and `socat` for a one-host trial of Claude
-Code's Bash sandbox. The sandbox settings sit in this host's
-`~/.claude/settings.json`, not in the fleet's managed settings. Trial notes and
-the revert steps: `~/000_inbox/downloads/agent/sandbox-trial/trial.md`.
-
 ## Member recovery source
 
 The work configuration enables the existing member supervisor for the measured
