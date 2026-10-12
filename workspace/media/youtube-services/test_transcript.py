@@ -416,7 +416,7 @@ class XConversation(unittest.TestCase):
         self.assertEqual([p["id"] for p in own], ["2109345169770205368"])
 
     def test_cursors_and_normalized_shape(self):
-        self.assertTrue(self.conv.has_bottom_cursor)
+        self.assertTrue(self.conv.ended)
         self.assertEqual(self.conv.show_more, 1)
         p = self.conv.posts[self.FOCAL]
         self.assertEqual(p["author"]["handle"], "FoxxAndCo")
@@ -441,8 +441,9 @@ def _gql_tweet(pid, handle, reply_to):
                        "in_reply_to_status_id_str": reply_to, "favorite_count": 1}}
 
 
-def _page_payload(focal, reply_ids, bottom=True):
-    """One TweetDetail page: each reply as its own conversation module."""
+def _page_payload(focal, reply_ids, bottom=True, end=False):
+    """One TweetDetail page: each reply as its own conversation module. `end`
+    adds X's bottom TimelineTerminateTimeline."""
     entries = [{"entryId": f"conversationthread-{r}", "content": {
         "entryType": "TimelineTimelineModule", "items": [{"entryId": f"conversationthread-{r}-tweet-{r}",
             "item": {"itemContent": {"itemType": "TimelineTweet",
@@ -451,15 +452,19 @@ def _page_payload(focal, reply_ids, bottom=True):
     if bottom:
         entries.append({"entryId": "cursor-bottom-1",
                         "content": {"entryType": "TimelineTimelineCursor", "cursorType": "Bottom"}})
-    return {"data": {"threaded_conversation_with_injections_v2": {
-        "instructions": [{"type": "TimelineAddEntries", "entries": entries}]}}}
+    instructions = [{"type": "TimelineAddEntries", "entries": entries}]
+    if end:
+        instructions.append({"type": "TimelineTerminateTimeline", "direction": "Bottom"})
+    return {"data": {"threaded_conversation_with_injections_v2": {"instructions": instructions}}}
 
 
 class FakePage:
-    """Feeds one TweetDetail page per scroll, the way X's client loads them."""
-    def __init__(self, conv, pages, url="https://x.com/a/status/1", show_more_pages=()):
+    """Feeds one TweetDetail page every `every` scrolls, the way X's client
+    loads them."""
+    def __init__(self, conv, pages, url="https://x.com/a/status/1", show_more_pages=(), every=1):
         self.conv, self.pages, self._url = conv, list(pages), url
         self.show_more_pages = list(show_more_pages)
+        self.every, self.scrolls = every, 0
         self.seen = 0
         self.clicks = 0
 
@@ -475,7 +480,9 @@ class FakePage:
         return self._url
 
     async def scroll(self):
-        self._deliver(self.pages)
+        self.scrolls += 1
+        if self.scrolls % self.every == 0:
+            self._deliver(self.pages)
 
     async def click_show_more(self):
         if not self.show_more_pages:
@@ -509,11 +516,28 @@ class XCaptureLoop(unittest.TestCase):
     def test_show_more_then_end_of_conversation(self):
         conv = self.X.Conversation()
         page = FakePage(conv, [_page_payload("1", ["10", "11"], bottom=False)],
-                        show_more_pages=[_page_payload("1", ["12"], bottom=False)])
+                        show_more_pages=[_page_payload("1", ["12"], bottom=False, end=True)])
         cap = self._drive(page)
         self.assertTrue(cap.reached_end)
         self.assertEqual(page.clicks, 1)
         self.assertEqual(len(self.X.direct_replies(conv, "1")), 3)
+
+    def test_slow_pages_are_waited_for_until_x_ends_the_timeline(self):
+        # Live 2026-10-12: X sent a page every 3-7 scrolls; 4 stale scrolls cut
+        # a capture at 60 replies and called it the end.
+        conv = self.X.Conversation()
+        pages = [_page_payload("1", [str(i)]) for i in range(10, 15)]
+        pages.append(_page_payload("1", ["15"], end=True))
+        cap = self._drive(FakePage(conv, pages, every=7))
+        self.assertTrue(cap.reached_end)
+        self.assertEqual(len(self.X.direct_replies(conv, "1")), 6)
+
+    def test_no_end_signal_stops_without_claiming_the_end(self):
+        conv = self.X.Conversation()
+        cap = self._drive(FakePage(conv, [_page_payload("1", ["10"])]))
+        self.assertFalse(cap.reached_end)
+        self.assertEqual(self.X.coverage(5, cap.reached_end, cap.hit_limit, cap.hit_budget),
+                         " of 5; X stopped loading more")
 
     def test_login_wall_is_login_required(self):
         page = FakePage(self.X.Conversation(), [], url="https://x.com/i/flow/login?redirect_after_login=%2F")

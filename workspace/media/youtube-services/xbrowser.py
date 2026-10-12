@@ -33,7 +33,12 @@ STATUS_FILE = "hwc-x-session.json"   # derived from the last import/capture; nev
 
 CAPTURE_BUDGET_SECONDS = 150
 FIRST_RESPONSE_SECONDS = 20
-STALE_SCROLLS = 4          # scrolls with no new posts before trying "show more" / stopping
+# Scrolls with no new posts before trying "show more" or accepting X's end
+# signal. While X has not ended the timeline, wait up to STALE_SCROLLS_PENDING:
+# measured 2026-10-12, X sends a page every 3-7 s and one scroll takes 1-1.7 s,
+# so 4 scrolls stopped a live capture at 60 of ~400 replies.
+STALE_SCROLLS = 4
+STALE_SCROLLS_PENDING = 12
 MAX_SHOW_MORE_CLICKS = 5
 SCROLL_PIXELS = 3000
 
@@ -119,9 +124,9 @@ async def drive(page: PagePort, conv: xpost.Conversation, seen: Callable[[], int
             if clicks < MAX_SHOW_MORE_CLICKS and await page.click_show_more():
                 clicks += 1
                 stale = 0
-            elif not conv.has_bottom_cursor:
+            elif conv.ended:
                 return Capture(conv, True, False, False)
-            else:
+            elif stale >= STALE_SCROLLS_PENDING:
                 return Capture(conv, False, False, False)
         await page.scroll()
         await page.settle()

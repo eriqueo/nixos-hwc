@@ -367,13 +367,14 @@ class Conversation:
     """Posts seen across a capture's TweetDetail responses, in first-seen
     order. Promoted posts are dropped at parse time."""
     posts: dict = field(default_factory=dict)   # id -> normalized post
-    has_bottom_cursor: bool = False             # of the LAST page parsed
+    ended: bool = False                         # X terminated the timeline at the bottom
     show_more: int = 0                          # ShowMore/ShowMoreThreads cursors seen
 
     def add(self, payload: dict) -> None:
-        self.has_bottom_cursor = False
         data = (payload.get("data") or {}).get("threaded_conversation_with_injections_v2") or {}
         for ins in data.get("instructions") or []:
+            if ins.get("type") == "TimelineTerminateTimeline" and ins.get("direction") == "Bottom":
+                self.ended = True
             for entry in ins.get("entries") or []:
                 self._entry(entry)
             if ins.get("entry"):  # TimelineReplaceEntry / AddToModule carry one
@@ -403,9 +404,7 @@ class Conversation:
             self.posts.setdefault(post["id"], post)
 
     def _cursor(self, c: dict) -> None:
-        if c.get("cursorType") == "Bottom":
-            self.has_bottom_cursor = True
-        elif c.get("cursorType") in ("ShowMore", "ShowMoreThreads", "ShowMoreThreadsPrompt"):
+        if c.get("cursorType") in ("ShowMore", "ShowMoreThreads", "ShowMoreThreadsPrompt"):
             self.show_more += 1
 
 
