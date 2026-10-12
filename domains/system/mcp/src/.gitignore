@@ -1,2 +1,3 @@
-node_modules/
+# No trailing slash: a test checkout's node_modules is a symlink, which `node_modules/` misses.
+node_modules
 dist/

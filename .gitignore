@@ -28,8 +28,8 @@ workspace/system/diagnostics/network-utils/network/reports/
 .obsidian/
 .trash/
 
-# Node
-node_modules/
+# Node (no trailing slash: also ignores node_modules symlinks in worktrees)
+node_modules
 domains/business/estimator/app/.env*
 
 # Python
