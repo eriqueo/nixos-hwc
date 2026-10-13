@@ -106,6 +106,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-13: Group messages. apps/tether gains `settings` (merged into tetherd's `bluetooth.json` before each start); hwc-laptop turns on `group_messages_enabled`. apps/courier: input bumped to a2da8ef, which tags group threads, names each sender, and refuses replies tetherd cannot route.
 - 2026-10-12: apps/courier: input bumped to d7130f7 (slice 3: read state). apps/waybar adds the `custom/courier` unread badge. apps/hyprland exports `courierCommand` for SUPER+U and the badge click.
 - 2026-10-12: apps/courier: input bumped to 9a4146e (slice 2: reply and New Message).
 - 2026-10-12: apps/courier: input bumped to 20674d5, which fixes the crash on opening a conversation and adds `npm run smoke`. apps/hyprland drops courier's float rule, so the window tiles (Eric's preference).

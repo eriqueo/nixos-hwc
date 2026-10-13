@@ -19,6 +19,24 @@ let
   # host without the system half (standalone HM) there is nothing to run.
   sysCfg = lib.attrByPath [ "hwc" "system" "apps" "tether" ] { } osConfig;
   package = sysCfg.package or null;
+
+  # tetherd owns $XDG_CONFIG_HOME/tether/bluetooth.json (it writes the paired
+  # phone and its own toggles there) and has no socket command for some keys,
+  # group_messages_enabled among them. So Nix does not own the file: before
+  # each start it merges the declared keys over whatever tetherd last wrote,
+  # atomically and at mode 0600. tetherd reads the file only at startup.
+  settingsJson = pkgs.writeText "tether-settings.json" (builtins.toJSON cfg.settings);
+  applySettings = pkgs.writeShellScript "tether-apply-settings" ''
+    set -eu
+    dir="''${XDG_CONFIG_HOME:-$HOME/.config}/tether"
+    file="$dir/bluetooth.json"
+    mkdir -p "$dir"
+    [ -s "$file" ] || echo '{}' > "$file"
+    tmp=$(mktemp "$dir/.bluetooth.json.XXXXXX")
+    ${pkgs.jq}/bin/jq -s '.[0] * .[1]' "$file" ${settingsJson} > "$tmp"
+    chmod 600 "$tmp"
+    mv "$tmp" "$file"
+  '';
 in
 {
   #==========================================================================
@@ -26,6 +44,16 @@ in
   #==========================================================================
   options.hwc.home.apps.tether = {
     enable = lib.mkEnableOption "Tether daemon and clients (iPhone messages over Bluetooth)";
+
+    settings = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.oneOf [ lib.types.bool lib.types.int lib.types.str ]);
+      default = { };
+      example = { group_messages_enabled = true; };
+      description = ''
+        Keys merged into tetherd's bluetooth.json before every start. Keys not
+        set here stay as tetherd or its clients left them.
+      '';
+    };
   };
 
   #==========================================================================
@@ -44,6 +72,7 @@ in
         PartOf = [ "graphical-session.target" ];
       };
       Service = {
+        ExecStartPre = lib.mkIf (cfg.settings != { }) "${applySettings}";
         ExecStart = "${package}/bin/tetherd";
         Restart = "on-failure";
         RestartSec = 5;

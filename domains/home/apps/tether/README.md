@@ -10,7 +10,7 @@ flake input. Project record: `agent/imessage-linux/` on the tracker hub.
 
 | Path | Purpose |
 |---|---|
-| `index.nix` | HM half: `hwc.home.apps.tether.enable` runs `tetherd` as a user service bound to the graphical session and installs the CLI, TUI and GTK client. Takes the package from the system half through osConfig; one producer. |
+| `index.nix` | HM half: `hwc.home.apps.tether.{enable,settings}` runs `tetherd` as a user service bound to the graphical session and installs the CLI, TUI and GTK client. Takes the package from the system half through osConfig; one producer. `settings` keys are merged into tetherd's own `bluetooth.json` by an `ExecStartPre` (tetherd writes that file too, so Nix never owns it). |
 | `sys.nix` | System half: `hwc.system.apps.tether.{enable,adapters,wifi.enable,extensions}` imports the upstream NixOS module and turns on BlueZ's experimental bearer API and the per-adapter Class-of-Device oneshot (`tether-btclass@hciN`). Builds the package from the input with this repo's nixpkgs. Asserts `hwc.system.hardware.bluetooth.enable`. |
 
 Limits shared by every Mac-free route: no attachments, reactions, typing
@@ -18,5 +18,9 @@ indicators or read receipts; SMS and iMessage look the same on the wire; only
 messages seen while connected. Never a sole channel for important messages.
 
 ## Changelog
+- 2026-10-13: `settings` option, merged into `bluetooth.json` before each start. hwc-laptop
+  turns on `group_messages_enabled`: MAP has no group identity, so without it a group
+  member's messages sat in their one-to-one thread and a reply went to them alone.
+  tetherd now builds group threads from the phone's notifications (new messages only).
 - 2026-10-11: New. Enabled on hwc-laptop (system and HM halves). Messages need no
   phone app; the Wi-Fi half for the companion app stays off.

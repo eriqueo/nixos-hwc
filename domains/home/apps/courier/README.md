@@ -26,6 +26,7 @@ The window is `chromium-hwc --app=http://courier.localhost:<port>`. Chromium ign
 the app_id from the host, so the class is `chrome-courier.localhost__-Default` (measured 2026-10-12).
 
 ## Changelog
+- 2026-10-13: courier a2da8ef: group threads (with tether's `group_messages_enabled`) are tagged "group" and name each sender. A reply tetherd cannot route is refused with its reason.
 - 2026-10-12: courier d7130f7, slice 3: opening a conversation in a focused window marks it read on the phone; mark unread; Waybar `custom/courier` badge (see apps/waybar).
 - 2026-10-12: courier 9a4146e, slice 2: reply and New Message with contact search. Sends are at most once (no retries; a reused id is refused).
 - 2026-10-12: courier 20674d5 fixes a blank screen on opening a conversation. The window now tiles: the float rule was removed at Eric's request.
