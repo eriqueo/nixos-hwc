@@ -148,6 +148,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # vectorcraft — our fork of storytold/vectorcraft (domains/home/apps/vectorcraft),
+    # tailored for GIS map finishing. hwc/main carries the flake and our changes;
+    # the fork's main tracks upstream. Ship: push hwc/main → `nix flake update vectorcraft`.
+    vectorcraft = {
+      url = "github:eriqueo/vectorcraft?ref=hwc/main";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # khalt — forked khal/ikhal calendar TUI (zoomable agenda/quarter/month views +
     # space-leader keybindings). Same shared-remote model as todui: private GitHub
     # repo via a github: input (no local-clone ghost-rev). Ship: push to
