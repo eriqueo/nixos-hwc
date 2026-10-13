@@ -454,3 +454,26 @@ it("hwc_today lists DO threads and refinery actions", async () => {
     }
   } finally {vi.unstubAllEnvs(); vi.resetModules(); await rm(dir, {recursive: true, force: true});}
 });
+
+it("hwc_today does not repeat itemized cases as a summary alert", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "today-itemized-"));
+  await mkdir(join(dir, "output"), {recursive: true});
+  try {
+    await writeFile(join(dir, "output", "briefing.json"), JSON.stringify({
+      generated_at: new Date().toISOString(),
+      sections: {tasks: {overdue: [{uid: "t1", name: "Call back", due_date: "2026-01-01"}]}},
+      alerts: [
+        {level: "warning", section: "tasks", message: "1 overdue task(s): Call back"},
+        {level: "warning", section: "overdue", message: "1 overdue invoice(s) — $10 outstanding"},
+        {level: "warning", section: "leads", message: "1 lead(s) need a first touch"},
+      ],
+    }));
+    vi.stubEnv("HWC_BRIEFING_DIR", dir);
+    vi.resetModules();
+    const {todayTools} = await import("../src/tools/today.js");
+    const board = await todayTools()[0].handler({action: "board"});
+    const items = (board.data as any).items;
+    expect(items.map((i: any) => i.id)).toContain("task:t1");
+    expect(items.map((i: any) => i.title)).toEqual(["Call back", "1 lead(s) need a first touch"]);
+  } finally {vi.unstubAllEnvs(); vi.resetModules(); await rm(dir, {recursive: true, force: true});}
+});

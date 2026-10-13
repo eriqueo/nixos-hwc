@@ -126,6 +126,11 @@ const EFFORT: Record<TodayItem["source"], number> = {
   invoice: 15, task: 10, lead: 10, refinery: 10, nightly: 15, system: 5, mail: 5,
 };
 
+// Briefing sections (gather-live.mjs) whose cases deriveItems lists one by
+// one. Leads stay out: the "first touch" alert covers leads under
+// STALE_LEAD_DAYS, which are not itemized.
+const ITEMIZED_SECTIONS = new Set(["refinery", "tasks", "overdue"]);
+
 function deriveItems(b: Record<string, any>): TodayItem[] {
   const s = b.sections ?? {};
   const items: TodayItem[] = [];
@@ -220,7 +225,9 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
 
   for (const a of b.alerts ?? []) {
     if (a.level !== "critical" && a.level !== "warning") continue;
-    if (a.section === "refinery") continue; // itemized above, don't double-count
+    // Sections whose every case is itemized above: their summary alert
+    // ("2 overdue task(s): …") would list the same cases a second time.
+    if (ITEMIZED_SECTIONS.has(String(a.section))) continue;
     // Strip numbers before slugging: "Grafana (89%)" and "Grafana (63%)" are
     // the same underlying problem — a fluctuating figure must not mint a new
     // id every run or dismissals never stick.
@@ -228,7 +235,9 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
       id: `system:${slug(String(a.message ?? a.section ?? "alert").replace(/[\d.,%]+/g, ""))}`,
       source: "system",
       title: String(a.message ?? "System alert"),
-      why: a.level === "critical" ? "critical — something is down right now" : "recurring warning — worth a look",
+      // Alerts include forecasts ("disk full in ~3d"), so the reason states
+      // the level, not that something is already down.
+      why: a.level === "critical" ? "critical alert — act today" : "warning — worth a look",
       severity: a.level === "critical" ? "red" : "amber",
       effort_min: EFFORT.system,
       age_days: 0,

@@ -275,19 +275,16 @@ def dedupe_busy(data):
     if not events:
         return data
 
-    def span(e):
-        return (e.get("startTime") or "00:00", e.get("endTime") or e.get("startTime") or "23:59")
+    def span(e):  # "HH:MM" strings compare in time order
+        start = e.get("startTime") or "00:00"
+        return ((e.get("date"), e.get("allDay") is True), start, e.get("endTime") or e.get("startTime") or "23:59")
 
-    named = [e for e in events if (e.get("summary") or "").strip().lower() != "busy"]
     kept, seen = [], set()
-    for e in events:
-        if (e.get("summary") or "").strip().lower() == "busy":
-            s, en = span(e)
-            key = (e.get("date"), s, en)
-            if key in seen or any(n.get("date") == e.get("date") and n.get("allDay") is not True
-                                  and span(n)[0] < en and s < span(n)[1] for n in named):
+    for e in screens.drop_shadowed_busy(events, lambda e: e.get("summary"), span):
+        if screens.is_placeholder(e.get("summary")):
+            if span(e) in seen:  # the mirrors can repeat one block
                 continue
-            seen.add(key)
+            seen.add(span(e))
         kept.append(e)
     return {**data, "events": kept, "event_count": len(kept)}
 

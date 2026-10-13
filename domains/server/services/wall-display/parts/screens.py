@@ -152,7 +152,33 @@ def load_events(first_day):
             seen.add(key)
             events.append({"summary": summary, "start": s, "end": e,
                            "allday": allday, "calendar": name})
-    return {"calendars": [n for _, n in cals], "events": events}
+    shown = drop_shadowed_busy(events, lambda e: e["summary"],
+                               lambda e: (e["allday"], e["start"], e["end"]))
+    return {"calendars": [n for _, n in cals], "events": shown}
+
+
+# Titles a free/busy feed gives an event it will not describe. Proton work
+# mirrors other calendars this way, so most of them shadow a real event.
+PLACEHOLDERS = {"busy", "(busy)"}
+
+
+def is_placeholder(summary):
+    return (summary or "").strip().lower() in PLACEHOLDERS
+
+
+def drop_shadowed_busy(events, summary, span):
+    """Drop a placeholder "Busy" event that coincides with a titled event:
+    the titled one already says what the time is for. A lone Busy stays.
+    span(e) -> (group, start, end); two events coincide when they share a
+    group and start together or overlap. The one rule for the screens and
+    for voice (voice.dedupe_busy), which pass their own event shapes."""
+    def coincide(a, b):
+        (ga, sa, ea), (gb, sb, eb) = span(a), span(b)
+        return ga == gb and (sa == sb or (sa < eb and sb < ea))
+
+    titled = [e for e in events if not is_placeholder(summary(e))]
+    return [e for e in events
+            if not is_placeholder(summary(e)) or not any(coincide(e, t) for t in titled)]
 
 
 def load_tasks(today):
@@ -479,13 +505,14 @@ def event_rows(evs, day, limit, clamp=2):
     return "".join(rows) + more(len(evs) - limit)
 
 
-def agenda_row(e, day):
-    """One event as a single line: time chip, then the title (home screen)."""
+def agenda_row(e, day, past=False):
+    """One event as a single line: time chip, then the title (home screen).
+    A past event is struck through, like a finished task."""
     if e["allday"]:
         when, cls = "all day", "label--inverted"
     else:
         when, cls = (clock(e["start"]) if e["start"].date() == day else "cont."), "label--outline"
-    return (f'<div class="w-agenda"><span class="label {cls}">{when}</span>'
+    return (f'<div class="w-agenda{" w-past" if past else ""}"><span class="label {cls}">{when}</span>'
             f'<span class="title title--small w-c1">{E(e["summary"])}</span></div>')
 
 
@@ -574,23 +601,31 @@ def home(now, device):
     cur = (wx or {}).get("current") or {}
     pop = w.get("pop")
 
+    # The big number is the temperature now, as on the weather screen; the
+    # day's high and low sit under it (after dusk NOAA drops today's high).
+    range_ = " · ".join(f"{k} {deg(w[k2])}" for k, k2 in (("high", "hi"), ("low", "lo")) if w.get(k2) is not None)
     weather_col = (
         f'<div class="w-col w-homewx">'
         f'<div class="w-head"><span class="title">{now:%A}</span><span class="label label--small">{now:%B} {now.day}</span></div>'
-        f'<div class="w-wxrow">{icon(w.get("icon") or cur.get("icon") or "wi-na", "w-ico-home")}'
-        f'<div class="w-stack"><span class="value value--xlarge value--tnums">{deg(w.get("hi", cur.get("temp")))}</span>'
-        f'<span class="label">low {deg(w.get("lo"))}</span></div></div>'
+        f'<div class="w-wxrow">{icon(cur.get("icon") or w.get("icon") or "wi-na", "w-ico-home")}'
+        f'<div class="w-stack"><span class="value value--xlarge value--tnums">{deg(cur.get("temp", w.get("hi")))}</span>'
+        f'<span class="label">{range_}</span></div></div>'
         f'<span class="title title--small w-c2">{E(w.get("sky") or cur.get("sky") or "no forecast")}</span>'
         f'<div class="w-meta">'
         + (f'<span class="label label--small label--outline">{pop}% precip</span>' if pop else
            '<span class="label label--small label--outline">dry</span>')
-        + (f'<span class="label label--small">now {deg(cur.get("temp"))}</span>' if cur else "")
         + f'</div>{alert_bar(wx, clamp=2)}</div>')
 
-    upcoming = [e for e in events_on(events, today) if e["allday"] or e["end"] > now]
+    # The whole day: finished events struck through above what is still to
+    # come. When they do not all fit, the oldest finished ones give way.
+    todays = events_on(events, today)
+    upcoming = [e for e in todays if e["allday"] or e["end"] > now]
+    past = [e for e in todays if e not in upcoming]
+    keep = max(0, 6 - len(upcoming))
+    rows = ([agenda_row(e, today, past=True) for e in past[len(past) - keep:]] if keep else []) \
+        + [agenda_row(e, today) for e in upcoming]
     later = events_on(events, tomorrow)
-    today_col = column("Today", [agenda_row(e, today) for e in upcoming], len(upcoming), 6,
-                       "Nothing else today")
+    today_col = column("Today", rows, len(todays), 6, "Nothing today")
     tomorrow_col = column("Tomorrow", [agenda_row(e, tomorrow) for e in later], len(later), 6,
                           "Nothing scheduled",
                           extra=f'<span class="label label--small label--outline">{hi_lo(wx_day(wx, tomorrow))}</span>')
@@ -750,6 +785,7 @@ CSS = """
 .w-ico-l{width:64px;height:64px}.w-ico-xl{width:132px;height:132px}
 .w-agenda{display:flex;align-items:center;gap:8px;min-width:0}
 .w-agenda .label{flex:none}
+.w-past .title{text-decoration:line-through}
 .w-qr .label{text-align:center}
 .w-brief{padding-bottom:6px;border-bottom:1px solid #000}
 .w-brief:last-child{border-bottom:0}
