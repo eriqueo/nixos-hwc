@@ -48,6 +48,8 @@
   toduiEnabled = config.hwc.home.apps.todui.enable or false;
   courierEnabled = config.hwc.home.apps.courier.enable or false;
   courierClass = config.hwc.home.apps.courier.windowClass or "";
+  # One producer for "show/hide courier": SUPER+U here, the Waybar badge click.
+  courierCommand = "hyprland-app-toggle ${courierClass} courier open";
   gsrEnabled = config.hwc.home.apps.gpu-screen-recorder.enable or false;
   dictateEnabled = config.hwc.home.apps.hwc-dictation.enable or false;
   dictateCommand = "hwc-dictation record toggle";
@@ -127,7 +129,7 @@
           {mods = mod; key = "T"; act = "exec,kitty -e todui"; desc = "Tasks (todui)";}
         ]
         ++ lib.optionals courierEnabled [
-          {mods = mod; key = "U"; act = "exec,hyprland-app-toggle ${courierClass} courier open"; desc = "Messages (courier)";}
+          {mods = mod; key = "U"; act = "exec,${courierCommand}"; desc = "Messages (courier)";}
         ]
         ++ lib.optionals dtBindEnabled [
           {mods = mod; key = "D"; act = "exec,kitty --class dt-tui -e dt tui"; desc = "dt TUI";}
@@ -281,7 +283,7 @@
 in {
   # Waybar uses the same commands as these compositor bindings; session.nix
   # autostarts Workbench with the SUPER+W command.
-  inherit keybinds dictateCommand dictateCancelCommand workbenchCommand;
+  inherit keybinds dictateCommand dictateCancelCommand workbenchCommand courierCommand;
 
   submaps = lib.listToAttrs (map mkSubmap submapGroups);
 

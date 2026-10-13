@@ -87,7 +87,7 @@ window#waybar {
 #custom-battery, #custom-power-hub, #custom-ollama, #custom-dt, #idle_inhibitor, #mpd, #tray,
 #custom-notification, #custom-power, #custom-disk-space, #backlight, #bluetooth,
 #custom-proton-auth,
-#custom-recording, #custom-dictation, #hyprland-language {
+#custom-recording, #custom-dictation, #custom-courier, #hyprland-language {
   padding: 8px 6px;
   min-height: 0;
   margin: 0px 0px;
@@ -103,9 +103,14 @@ window#waybar {
 /* In gruv, sectionA-C are exact 50% accent blends over surface0; sectionD is bg3. */
 
 /* Toggles */
-#custom-power-hub, #custom-ollama, #custom-dt, #idle_inhibitor, #custom-recording, #custom-dictation {
+#custom-power-hub, #custom-ollama, #custom-dt, #idle_inhibitor, #custom-recording, #custom-dictation, #custom-courier {
   background-color: #${colors.sectionB};
 }
+
+/* courier (iPhone messages) classes come from `courier status --waybar`. */
+#custom-courier.unread  { color: #${colors.info}; font-weight: bold; }
+#custom-courier.offline { opacity: 0.55; }
+#custom-courier.down    { opacity: 0.35; }
 
 /* recording status-classes (driven by `gsr-status` JSON `class` field) */
 #custom-recording.recording { color: #${colors.error}; font-weight: bold; }
@@ -186,7 +191,7 @@ window#waybar {
 #idle_inhibitor:hover, #mpd:hover, #tray:hover, #custom-notification:hover,
 #custom-power:hover, #custom-disk-space:hover, #backlight:hover, #bluetooth:hover,
 #custom-weather:hover, #custom-khal:hover, #custom-proton-auth:hover,
-#custom-workspace-link:hover, #custom-recording:hover, #custom-dictation:hover, #hyprland-language:hover {
+#custom-workspace-link:hover, #custom-recording:hover, #custom-dictation:hover, #custom-courier:hover, #hyprland-language:hover {
   background-color: #${colors.bg3};
 }
 

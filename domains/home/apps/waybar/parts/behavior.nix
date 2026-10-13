@@ -10,6 +10,7 @@ let
   gsrEnabled = gsrCfg.enable or false;
 
   dictateEnabled = config.hwc.home.apps.hwc-dictation.enable or false;
+  courierEnabled = config.hwc.home.apps.courier.enable or false;
   authEnabled = config.hwc.home.apps.proton-authenticator.enable or false;
   # Consume the same structured record as Hyprland and its keybind legend.
   hyprlandBehavior = import ../../hyprland/parts/behavior.nix { inherit config lib pkgs; };
@@ -36,6 +37,7 @@ let
       "idle_inhibitor"
     ] ++ lib.optionals gsrEnabled [ "custom/recording" ]
       ++ lib.optionals dictateEnabled [ "custom/dictation" ]
+      ++ lib.optionals courierEnabled [ "custom/courier" ]
       ++ [
       "custom/sep-1"
       "pulseaudio" "bluetooth" "custom/network"
@@ -123,13 +125,26 @@ let
     };
   };
 
+  # iPhone messages: unread count from courier's control socket, one JSON line
+  # per change (no polling). It exits when courier stops; Waybar restarts it.
+  courierWidget = lib.optionalAttrs courierEnabled {
+    "custom/courier" = {
+      format = "{}";
+      exec = "courier status --follow --waybar";
+      return-type = "json";
+      restart-interval = 5;
+      tooltip = true;
+      on-click = hyprlandBehavior.courierCommand;
+    };
+  };
+
   powerHubWidget = lib.optionalAttrs powerHubEnabled {
     # Aggregates authoritative status while actions remain owned by TLP, the
     # lid policy, brightnessctl, and the GPU-launch capability respectively.
     "custom/power-hub" = { format = "{}"; exec = "hwc-power-status --waybar"; return-type = "json"; interval = 10; on-click = "waybar-power-hub-menu"; };
   };
 
-  commonWidgetsBase = ollamaWidget // dtWidget // gsrWidget // dictateWidget // powerHubWidget // {
+  commonWidgetsBase = ollamaWidget // dtWidget // gsrWidget // dictateWidget // courierWidget // powerHubWidget // {
     "hyprland/submap" = { format = "mode: {}"; max-length = 12; tooltip = false; };
     "hyprland/window" = {
       format = "{title}";

@@ -13,7 +13,7 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 ## Structure
 - `index.nix` — options, packages, programs.waybar, systemd service, assertions
 - `sys.nix` — system-lane option + hardware/network assertions
-- `parts/behavior.nix` — module layout and per-widget settings, including daemon-driven dictation status and a tooltip shortcut derived from Hyprland's binding record
+- `parts/behavior.nix` — module layout and per-widget settings, including daemon-driven dictation status and a tooltip shortcut derived from Hyprland's binding record, and the courier unread badge (`courier status --follow --waybar`; click runs Hyprland's `courierCommand`)
 - `parts/behavior.nix` includes the app-gated Authenticator button; Bitwarden and Proton Pass use their native color tray icons.
 - `parts/scripts.nix` includes a Bitwarden recovery command (`waybar-bitwarden-open`) for a headless Electron process.
 - `parts/appearance.nix` — HWC-branded CSS mapped onto shared theme tokens
@@ -22,6 +22,7 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 - `parts/scripts.nix` — writeShellScriptBin helpers including `waybar-launch` and the structured `hwc-power-status` telemetry producer
 
 ## Changelog
+- 2026-10-12: `custom/courier`: iPhone messages unread badge next to dictation, shown when courier is enabled. It streams from courier's control socket. Classes: `unread` (blue, count), `idle`, `offline` (dimmed), `down`. Click toggles the window.
 - 2026-09-27: Use Bitwarden's native tray icon as its only bar button and enlarge Authenticator's visible mark to match the tray.
 - 2026-09-27: Recover a headless Bitwarden process when its Waybar button cannot open a window; focus an existing window directly.
 - 2026-09-26: Removed the duplicate Proton Pass text button. Authenticator and Bitwarden buttons now show their packages' color icons.
