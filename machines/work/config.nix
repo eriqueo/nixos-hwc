@@ -344,6 +344,9 @@
         width = 1280;
         height = 800;
         grays = 16;
+        # Its LineageOS audio HAL hands every app silence (createAudioPatch
+        # failures), so a mic button could only cover the screen.
+        voice = false;
       };
     };
   };

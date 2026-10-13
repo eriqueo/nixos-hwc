@@ -281,6 +281,15 @@ in
             default = [ "home" "week" "weather" "tasks" "briefing" ];
             description = "Screens shown in turn, one per refresh. Names: home, week, weather, tasks, briefing (the server refuses others at boot).";
           };
+          voice = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = ''
+              Show the tap-to-talk button in this device's web client (with
+              voice.enable). Turn it off for a device whose microphone
+              cannot record: the button would only cover the screen.
+            '';
+          };
           refreshRate = lib.mkOption {
             type = lib.types.ints.positive;
             default = 900;

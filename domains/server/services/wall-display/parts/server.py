@@ -375,7 +375,7 @@ class Handler(BaseHTTPRequestHandler):
         # With voice on, a script reloads instead (it waits out a recording
         # or an answer on screen); the meta refresh stays for script-less browsers.
         refresh = f'<meta http-equiv="refresh" content="{wait};url={here}">'
-        voice_head, voice_body = voice.client(here, wait)
+        voice_head, voice_body = voice.client(here, wait) if device.spec["voice"] else ("", "")
         if voice_body:
             refresh, body = f"<noscript>{refresh}</noscript>{voice_head}", body + voice_body
         self.send(200, "text/html; charset=utf-8", f"""<!doctype html>
