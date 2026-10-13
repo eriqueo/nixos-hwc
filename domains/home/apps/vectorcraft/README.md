@@ -15,4 +15,5 @@ improvements land; see the `vectorcraft-gis-feasibility` project.
 - `index.nix` — `enable` option; installs `inputs.vectorcraft.packages.<system>.default`
 
 ## Changelog
+- 2026-10-13: Input bumped to db6a675: Type on a Path puts type on the clicked piece of a compound path (GIS rivers and roads); sent upstream as storytold/vectorcraft#1818.
 - 2026-10-13: Module added; consumes the `vectorcraft` flake input (fork of storytold/vectorcraft). Enabled on hwc-laptop.

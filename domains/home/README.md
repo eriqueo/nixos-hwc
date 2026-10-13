@@ -108,6 +108,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-13: apps/vectorcraft: input bumped to db6a675 (Type on a Path on compound paths, storytold/vectorcraft#1818).
 - 2026-10-13: New `apps/vectorcraft/` and `vectorcraft` flake input (our fork of storytold/vectorcraft, branch hwc/main): vector editor being tailored for Julia's GIS maps. Enabled on hwc-laptop.
 - 2026-10-13: apps/tether takes its package from the flake's `tetherPackage` special arg (both HM lanes), not osConfig; standalone `hms` had been dropping the `tetherd` unit.
 - 2026-10-13: Group messages. apps/tether gains `settings` (merged into tetherd's `bluetooth.json` before each start); hwc-laptop turns on `group_messages_enabled`. apps/courier: input bumped to a2da8ef, which tags group threads, names each sender, and refuses replies tetherd cannot route.

@@ -1082,11 +1082,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791913582,
-        "narHash": "sha256-6PK81f7mI6V5OzwJxxgvn4Ub/O2EedL7iSUcJQSn/F0=",
+        "lastModified": 1791920796,
+        "narHash": "sha256-T6WyjNbzzgETX7gsDwE7Q0vSx9djk/OSs6oErnT4FsE=",
         "owner": "eriqueo",
         "repo": "vectorcraft",
-        "rev": "4b1111b2531f4cb08f3b1a44fb02cbad4fa8738d",
+        "rev": "db6a675fae619127d1544519e45ce60238045513",
         "type": "github"
       },
       "original": {
