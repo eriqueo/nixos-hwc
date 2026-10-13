@@ -26,5 +26,6 @@ The window is `chromium-hwc --app=http://courier.localhost:<port>`. Chromium ign
 the app_id from the host, so the class is `chrome-courier.localhost__-Default` (measured 2026-10-12).
 
 ## Changelog
+- 2026-10-12: courier 9a4146e, slice 2: reply and New Message with contact search. Sends are at most once (no retries; a reused id is refused).
 - 2026-10-12: courier 20674d5 fixes a blank screen on opening a conversation. The window now tiles: the float rule was removed at Eric's request.
 - 2026-10-12: New. Slice 1, a read-only window over tetherd. Enabled on hwc-laptop. SUPER+U toggles the window.

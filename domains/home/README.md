@@ -106,6 +106,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-12: apps/courier: input bumped to 9a4146e (slice 2: reply and New Message).
 - 2026-10-12: apps/courier: input bumped to 20674d5, which fixes the crash on opening a conversation and adds `npm run smoke`. apps/hyprland drops courier's float rule, so the window tiles (Eric's preference).
 - 2026-10-12: New `apps/courier/` and `courier` flake input: iPhone messages app, slice 1 (read-only window). Enabled on hwc-laptop. apps/hyprland adds SUPER+U and a float rule for its window.
 - 2026-10-12: apps/agent-harness: pin claude-config f66fc16. The tracker hub, `tracker-handoff` and `ws` scan `agent/<project>/tracker.json` only; the legacy `agent/<area>/<project>/` fallback is gone because the area folders were flattened on 2026-10-12 (97 folders, 108 citing files rewritten). README cites the design doc at its flat path.
