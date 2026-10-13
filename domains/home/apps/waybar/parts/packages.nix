@@ -3,8 +3,7 @@
 { lib, pkgs, osConfig ? {}, ... }:
 
 with pkgs; [
-  # Core Waybar package
-  waybar
+  # Waybar itself comes from programs.waybar.package (patched) in index.nix.
 
   # Dependencies for built-in modules
   pavucontrol

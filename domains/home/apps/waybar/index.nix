@@ -41,7 +41,12 @@ in
 
     programs.waybar = {
       enable = true;
-      package = pkgs.waybar;
+      # A timed-out org.bluez manager segfaulted the whole bar; the patch drops
+      # just the bluetooth module instead. Remove once upstream
+      # src/modules/bluetooth.cpp checks manager_ before use.
+      package = pkgs.waybar.overrideAttrs (old: {
+        patches = (old.patches or []) ++ [ ./patches/bluetooth-null-manager.patch ];
+      });
       settings = behavior;
       systemd.enable = true;
     };

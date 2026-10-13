@@ -1,0 +1,22 @@
+--- a/src/modules/bluetooth.cpp	2026-10-13 07:59:10.721294419 -0600
++++ b/src/modules/bluetooth.cpp	2026-10-13 07:59:26.653893399 -0600
+@@ -5,6 +5,7 @@
+ 
+ #include <algorithm>
+ #include <sstream>
++#include <stdexcept>
+ 
+ #include "util/scope_guard.hpp"
+ 
+@@ -91,6 +92,11 @@
+       rfkill_{RFKILL_TYPE_BLUETOOTH},
+ #endif
+       manager_(generateManager()) {
++  // A wedged bluetoothd makes generateManager() time out and return null.
++  // Every later use dereferences it, so fail the module, not the bar.
++  if (!manager_) {
++    throw std::runtime_error("org.bluez object manager unavailable");
++  }
+ 
+   if (config_["format-device-preference"].isArray()) {
+     std::transform(config_["format-device-preference"].begin(),

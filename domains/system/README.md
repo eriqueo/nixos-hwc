@@ -42,7 +42,8 @@ domains/system/
 ├── networking/
 │   └── index.nix         # SSH, declarative Tailscale up/set flags, NFS, Samba, firewall, wait-online
 ├── hardware/
-│   └── index.nix         # Audio/input/Sensel/fan/peripheral hardware capabilities
+│   ├── index.nix         # Audio/input/Sensel/fan/peripheral hardware capabilities
+│   └── patches/          # Source patches for hardware daemons (bluez)
 ├── gpu/
 │   └── index.nix         # Graphics stack, PRIME offload, and boot-scoped wrapped-launch policy
 ├── mcp/                  # HWC Infrastructure MCP Server (25 tools, 5 resources)
@@ -66,6 +67,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-10-13: `hardware/` — patch bluetoothd (`hardware.bluetooth.package` only; no overlay, so no libbluetooth rebuild). On a peer-closed ATT channel, bluez 5.86 `can_read_data()` read 0 bytes and re-armed its read watch forever. That watch outranks the idle-priority HUP watch, so the channel was never torn down; bluetoothd sat at 100% CPU and stopped answering D-Bus, which segfaulted Waybar. The patch treats EOF as end of reads. Remove once upstream fixes it.
 - 2026-10-12: mcp: `hwc_mail health` reads mail-health's `summary.json` (open cases with outcome, message and open time) instead of the retired first-failure and cooldown files; status is error on any critical case, partial on warnings or a down bridge or stale sync. Bridge state comes from mail-health's infrastructure cases: the old `systemctl show protonmail-bridge.service` ran in system scope against a user unit and reported the bridge down on every call.
 - 2026-10-09: Return durable mail command acceptance receipts and add read-only command polling. Require zero pending commands before sync reports remote completion.
 

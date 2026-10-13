@@ -337,6 +337,14 @@ in
     #==========================================================================
     hardware.bluetooth = lib.mkIf cfg.bluetooth.enable {
       enable = true;
+      # Daemon-only patch (no overlay, so libbluetooth consumers don't rebuild):
+      # a peer-closed ATT channel read 0 bytes forever and starved its HUP
+      # watch, wedging bluetoothd at 100% CPU (2026-10-13). Remove once
+      # src/shared/att.c can_read_data() returns false on bytes_read == 0
+      # upstream.
+      package = pkgs.bluez.overrideAttrs (old: {
+        patches = (old.patches or []) ++ [ ./patches/bluez-att-eof-teardown.patch ];
+      });
       powerOnBoot = true;
       settings.General = {
         DiscoverableTimeout = 0;

@@ -1,0 +1,16 @@
+--- a/src/shared/att.c	2026-10-13 07:59:10.712068214 -0600
++++ b/src/shared/att.c	2026-10-13 07:59:18.468871414 -0600
+@@ -1045,7 +1045,12 @@
+ 	ssize_t bytes_read;
+ 
+ 	bytes_read = read(chan->fd, chan->buf, chan->mtu);
+-	if (bytes_read < 0)
++	/* 0 is EOF: the peer closed the channel. Returning true would re-arm
++	 * the always-ready read watch, which runs above the idle-priority HUP
++	 * watch and starves it, so the channel is never torn down and
++	 * bluetoothd spins. Drop the read watch and let disconnect_cb run.
++	 */
++	if (bytes_read <= 0)
+ 		return false;
+ 
+ 	VERBOSE(att, "(chan %p) ATT received: %zd", chan, bytes_read);
