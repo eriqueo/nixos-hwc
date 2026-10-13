@@ -57,13 +57,14 @@ in
           };
         };
       });
-      default = {};
-      example = lib.literalExpression ''{ cto = { secret = "cto-ical-link"; displayName = "ContractorCTO"; }; }'';
+      default = import ./parts/mirror-catalog.nix;
+      defaultText = lib.literalExpression "import ./parts/mirror-catalog.nix";
       description = ''
         Outside calendars mirrored read-only into Radicale every mirrorInterval
         (parts/mirrors.nix), keyed by the collection id created under
-        /<mirrorUser>/. Add the same ids to
-        hwc.mail.calendar.radicale.extraCollections on each khal machine.
+        /<mirrorUser>/. Defaults to parts/mirror-catalog.nix, the one list:
+        hwc.mail.calendar.radicale.extraCollections defaults to its ids on
+        every khal machine. Edit the catalog, not this option.
       '';
     };
 

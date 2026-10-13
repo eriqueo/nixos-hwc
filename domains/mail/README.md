@@ -150,6 +150,8 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-10-13: `calendar/`: `radicale.extraCollections` defaults to the ids in the radicale mirror catalog; the laptop and hwc-work no longer list them. todui input bumped to 461387b, which hides read-only calendars from the task lists. The tasks pair keeps `"from a"`/`"from b"`, so lists made in todui still reach the server.
+
 - 2026-10-12: Index retained case history and exact intent dispositions before command work. A restored 15,131-event ledger returned identical pending results in 0.24 seconds instead of 4.43 seconds, with every event row unchanged. Seeded index removal fails the rebuild regression.
 
 - 2026-10-12: health: one case store. The local GPG, pass, Bridge and freshness checks become issues in System One's shape and go through `health-cases --extra-issues`, so every mail health fact alerts on transitions from one store; the script's own cooldown and first-failure files are gone. Infrastructure failures are a warning for `escalateMin` (30) minutes, then critical. A case open past `staleHours` (24) becomes an `MH-*` card on `tracker.project` (proton-mail on hwc-work) and closes itself when the case clears. The unit exits 1 only when the checker itself fails; health is published to `summary.json` for the MCP `hwc_mail health` action. Re-applied: a command backlog is a warning, not an outage (System One ee6a92a; 2dc277c had restored the 30-minute escalation).

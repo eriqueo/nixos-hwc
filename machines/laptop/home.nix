@@ -81,9 +81,8 @@ in
   hwc.mail.calendar = {
     enable = true;
     icsWatch.enable = false;
-    # Read-only mirrors the server keeps in Radicale
-    # (machines/home/config.nix hwc.server.services.radicale.mirrors).
-    radicale.extraCollections = [ "cto" "proton-work" "google-family" ];
+    # radicale.extraCollections (the server's read-only mirrors) comes from
+    # the radicale mirror catalog by default.
   };
 
   # CardDAV rolodex (khard + aerc completion) against the CRM-owned

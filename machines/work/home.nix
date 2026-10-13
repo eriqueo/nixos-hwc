@@ -14,10 +14,6 @@
   # here: the tracker root is Syncthing-shared, so one writer host.
   hwc.mail.health.tracker.project = "proton-mail";
 
-  # The read-only mirrors this machine keeps in Radicale (config.nix
-  # hwc.server.services.radicale.mirrors), so hwc_calendar sees them too.
-  hwc.mail.calendar.radicale.extraCollections = [ "cto" "proton-work" "google-family" ];
-
   # khalt (forked khal/ikhal) — supersedes plain khal. Enabled only to
   # materialise the khalt package + ~/.config/khalt/config that the hwc-sys
   # gateway (on this host since wave 2) points HWC_KHAL_BIN / HWC_KHALT_CONFIG at.

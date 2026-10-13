@@ -87,6 +87,45 @@ let
     EOF
   '';
 
+  # Lists tasks (VTODO) found in any mirror; exits 1 if there is one.
+  # Args: password file, then the mirror ids.
+  strayCheck = pkgs.writers.writePython3 "radicale-mirror-stray-tasks" { } ''
+    import base64
+    import re
+    import sys
+    import urllib.request
+
+    base = "${radicaleUrl}/${cfg.mirrorUser}/"
+    with open(sys.argv[1]) as f:
+        token = base64.b64encode(
+            ("${cfg.mirrorUser}:" + f.read()).encode()).decode()
+    query = (
+        b'<?xml version="1.0" encoding="utf-8"?>'
+        b'<c:calendar-query xmlns:d="DAV:" '
+        b'xmlns:c="urn:ietf:params:xml:ns:caldav">'
+        b'<d:prop><c:calendar-data/></d:prop><c:filter>'
+        b'<c:comp-filter name="VCALENDAR"><c:comp-filter name="VTODO"/>'
+        b'</c:comp-filter></c:filter></c:calendar-query>')
+    found = 0
+    for coll in sys.argv[2:]:
+        req = urllib.request.Request(base + coll + "/", data=query,
+                                     method="REPORT")
+        req.add_header("Authorization", "Basic " + token)
+        req.add_header("Depth", "1")
+        req.add_header("Content-Type", "application/xml")
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            body = resp.read().decode("utf-8", "replace")
+        for todo in body.split("BEGIN:VTODO")[1:]:
+            found += 1
+            m = re.search(r"^SUMMARY[^:\r\n]*:(.*?)\r?$", todo, re.M)
+            name = m.group(1)[:80] if m else "(no title)"
+            print(f"radicale-mirror: task '{name}' is in the read-only "
+                  f"calendar '{coll}'. The phone, the wall and voice do "
+                  "not show it. Move it to a task list in todui "
+                  "(space m l).", file=sys.stderr)
+    sys.exit(1 if found else 0)
+  '';
+
   script = pkgs.writeShellScript "radicale-mirror" ''
     set -euo pipefail
     umask 077
@@ -114,8 +153,14 @@ let
     # nothing to create it never prompts, so it is safe to run every time.
     ${pkgs.vdirsyncer}/bin/vdirsyncer -c "$conf" discover 2>&1 | redact
     ${pkgs.vdirsyncer}/bin/vdirsyncer -c "$conf" sync 2>&1 | redact
+    # Radicale accepts a VTODO PUT into a VEVENT-only collection, and the
+    # mirror pair (item_types VEVENT) never sees it. Fail the run so the
+    # failure notifier reports the stray task; leave the task in place.
+    stray=0
+    ${strayCheck} "$RUNTIME_DIRECTORY/pw" ${lib.escapeShellArgs (lib.attrNames mirrors)} || stray=1
     # Feed URLs are secrets: the config dies with the run.
     rm -f "$conf" "$RUNTIME_DIRECTORY/pw"
+    exit "$stray"
   '';
 in
 # Implementation only: the options (mirrors, mirrorUser, mirrorInterval) are

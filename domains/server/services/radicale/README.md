@@ -27,6 +27,7 @@ radicale/
 ├── index.nix         # Module: options hwc.server.services.radicale.*,
 │                     #   services.radicale settings, secrets group, Caddy route
 └── parts/
+    ├── mirror-catalog.nix  # the one list of mirrors (id → secret, name, colour)
     └── mirrors.nix   # radicale-mirror timer: outside iCal feeds → read-only collections
 ```
 
@@ -60,6 +61,15 @@ password (`cut -d: -f2-`).
    phone; add a task on the phone in that list → sync → visible in todui.
 
 ## Changelog
+- 2026-10-13: `parts/mirror-catalog.nix` is the one list of mirrors. It is the
+  default of `mirrors` (machines/work/config.nix no longer lists them) and of
+  `hwc.mail.calendar.radicale.extraCollections` (the two machine `home.nix`
+  copies are gone). `radicale-mirror` now also lists every task (VTODO) in a
+  mirror after each sync and fails if it finds one, so the failure notifier
+  reports it. Radicale accepts such a PUT, and the phone, the wall and voice
+  never show it. Three todui tasks had landed in `cto` that way; todui
+  (eriqueo/todui 461387b) now hides VEVENT-only collections and refuses to
+  write into them.
 - 2026-09-24: Radicale is the only calendar + tasks backend on every machine
   (client-side iCloud paths deleted; see `domains/mail/calendar` and
   `domains/mail/tasks`). The retired `cal/migrated` collection (a 07-16 copy

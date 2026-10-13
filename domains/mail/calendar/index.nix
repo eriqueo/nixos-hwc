@@ -144,13 +144,17 @@ in
 
       extraCollections = lib.mkOption {
         type = with lib.types; listOf str;
-        default = [];
-        example = [ "cto" "proton-work" "google-family" ];
+        # Pure data file, so this resolves under standalone HM too.
+        default = builtins.attrNames
+          (import ../../server/services/radicale/parts/mirror-catalog.nix);
+        defaultText = lib.literalExpression
+          "builtins.attrNames (import domains/server/services/radicale/parts/mirror-catalog.nix)";
         description = ''
           Further VEVENT collection ids under the Radicale principal to sync
-          into khal, beyond work/family/personal. Used for the read-only
-          mirrors the server creates (hwc.server.services.radicale.mirrors);
-          the pair pins ids, so each machine must name them. After adding one,
+          into khal, beyond work/family/personal. Defaults to the ids of the
+          read-only mirrors the server creates (the radicale mirror catalog,
+          also the default of hwc.server.services.radicale.mirrors), so no
+          machine names them. After adding one,
           run once: `yes | vdirsyncer discover calendar_radicale`, then
           `vdirsyncer sync calendar_radicale`, then
           `vdirsyncer metasync calendar_radicale` (the timer runs sync only,
