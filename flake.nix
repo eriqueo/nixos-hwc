@@ -405,13 +405,19 @@
       builtins.filter builtins.pathExists
         (map (r: ./profiles + "/${r}/${lane}") roles);
 
-    # Both Home Manager lanes receive the same system-owned capture path.
-    homeSpecialArgs = name: ch: {
-      inherit inputs;
-      nixosApiVersion = ch.apiVersion;
-      screenshotRoot = lib.attrByPath [ "hwc" "paths" "screenshots" ] null
-        self.nixosConfigurations."hwc-${name}".config;
-    };
+    # Both Home Manager lanes receive the same system-owned values: the capture
+    # path, and the Tether package (built once by the system half; without it
+    # standalone `hms` dropped the tetherd unit).
+    homeSpecialArgs = name: ch:
+      let sysConfig = self.nixosConfigurations."hwc-${name}".config; in {
+        inherit inputs;
+        nixosApiVersion = ch.apiVersion;
+        screenshotRoot = lib.attrByPath [ "hwc" "paths" "screenshots" ] null sysConfig;
+        tetherPackage =
+          if lib.attrByPath [ "hwc" "system" "apps" "tether" "enable" ] false sysConfig
+          then sysConfig.hwc.system.apps.tether.package
+          else null;
+      };
 
     # NixOS lane: framework modules + role sys halves + machine one-offs +
     # HM-as-module wiring (home halves + machine home.nix as users.eric).

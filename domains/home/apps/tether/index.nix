@@ -9,16 +9,16 @@
 # One-time pairing is a hands-on step at the laptop with the phone: see the
 # project wizard (agent/imessage-linux/pair-tether.sh).
 
-{ config, lib, pkgs, osConfig ? { }, ... }:
+{ config, lib, pkgs, osConfig ? { }, tetherPackage ? null, ... }:
 
 let
   cfg = config.hwc.home.apps.tether;
   hmLib = import ../../../lib/hm.nix { inherit lib; };
   isNixOSHost = hmLib.isNixOSHost osConfig;
-  # The package is produced once, by the system half; HM only runs it. On a
-  # host without the system half (standalone HM) there is nothing to run.
-  sysCfg = lib.attrByPath [ "hwc" "system" "apps" "tether" ] { } osConfig;
-  package = sysCfg.package or null;
+  # The package is produced once, by the system half; HM only runs it. The
+  # flake hands it to both lanes as `tetherPackage` (standalone `hms` has no
+  # osConfig). On a host without the system half there is nothing to run.
+  package = tetherPackage;
 
   # tetherd owns $XDG_CONFIG_HOME/tether/bluetooth.json (it writes the paired
   # phone and its own toggles there) and has no socket command for some keys,
