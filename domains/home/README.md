@@ -22,6 +22,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 `apps/courier/` runs courier, our messages app on tetherd (`github:eriqueo/courier`, a private input). It provides a user service, CSS generated from the HWC palette, and a Chromium app window whose class is `chrome-courier.localhost__-Default`. The SUPER+U toggle is in `apps/hyprland/parts/behavior.nix`; the window tiles like any other app.
 
+`apps/vectorcraft/` installs VectorCraft, the Illustrator-style vector editor, from our fork (`github:eriqueo/vectorcraft?ref=hwc/main`, a public input). The fork's flake builds it; the module only installs it. Laptop only.
+
 `core/shell/index.nix` packages `net-tools`, a searchable purpose-based picker for the existing network diagnostic scripts; Enter runs one script and Ctrl-Y prints its command. `--details` passes full-evidence mode to the selected script.
 
 `apps/agent-harness` publishes final workspace ledger and guard JSON files; unfinished atomic writes remain local.
@@ -106,6 +108,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-13: New `apps/vectorcraft/` and `vectorcraft` flake input (our fork of storytold/vectorcraft, branch hwc/main): vector editor being tailored for Julia's GIS maps. Enabled on hwc-laptop.
 - 2026-10-13: apps/tether takes its package from the flake's `tetherPackage` special arg (both HM lanes), not osConfig; standalone `hms` had been dropping the `tetherd` unit.
 - 2026-10-13: Group messages. apps/tether gains `settings` (merged into tetherd's `bluetooth.json` before each start); hwc-laptop turns on `group_messages_enabled`. apps/courier: input bumped to a2da8ef, which tags group threads, names each sender, and refuses replies tetherd cannot route.
 - 2026-10-12: apps/courier: input bumped to d7130f7 (slice 3: read state). apps/waybar adds the `custom/courier` unread badge. apps/hyprland exports `courierCommand` for SUPER+U and the badge click.

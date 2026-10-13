@@ -56,6 +56,7 @@ in
     tether.enable = true;               # iMessage/SMS from the iPhone over Bluetooth (tetherd + clients)
     tether.settings.group_messages_enabled = true; # group threads via ANCS correlation (courier shows them)
     courier.enable = true;              # our messages app on tetherd (SUPER+U)
+    vectorcraft.enable = true;          # Illustrator-style editor, our fork, for Julia's GIS maps
     hwc-dictation = {
       enable = true;
       model = toString config.hwc.home.apps.whisper-cpp.modelPaths.${dictationModel};

@@ -748,6 +748,7 @@
         "tether": "tether",
         "tetro": "tetro",
         "todui": "todui",
+        "vectorcraft": "vectorcraft",
         "workbench": "workbench",
         "zellij-which": "zellij-which"
       }
@@ -1071,6 +1072,27 @@
       "original": {
         "owner": "eriqueo",
         "repo": "todui",
+        "type": "github"
+      }
+    },
+    "vectorcraft": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791913582,
+        "narHash": "sha256-6PK81f7mI6V5OzwJxxgvn4Ub/O2EedL7iSUcJQSn/F0=",
+        "owner": "eriqueo",
+        "repo": "vectorcraft",
+        "rev": "4b1111b2531f4cb08f3b1a44fb02cbad4fa8738d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "eriqueo",
+        "ref": "hwc/main",
+        "repo": "vectorcraft",
         "type": "github"
       }
     },
