@@ -10,8 +10,6 @@
 
 let
   cfg = config.hwc.home.core.shell;
-  # HELPERS — one Git package for the shell bundle and Home Manager program.
-  gitPackage = import ./parts/git-package.nix { inherit pkgs; };
   ws = "$HWC_WORKSPACE_ROOT";
   hmLib = import ../../../lib/hm.nix { inherit lib; };
   # Tailnet addresses from hwc.networking.hosts (Law 1 fallback lives in hmLib,
@@ -233,7 +231,7 @@ in
 
     # Base packages plus optional modern Unix tools
     home.packages = (map (package:
-      if package == pkgs.git then gitPackage else package
+      if package == pkgs.git then pkgs.gitWithPackCleanup else package
     ) cfg.packages) ++ [ netTools ]
       ++ lib.optionals cfg.modernUnix (with pkgs; [
         eza bat procs dust zoxide
@@ -288,7 +286,7 @@ in
     # Git configuration
     programs.git = lib.mkIf cfg.git.enable {
       enable = true;
-      package = gitPackage;
+      package = lib.hiPrio pkgs.gitWithPackCleanup;
       signing.format = null;
       settings = {
         user.name = cfg.git.userName;

@@ -26,7 +26,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 `core/shell/index.nix` packages `net-tools`, a searchable purpose-based picker for the existing network diagnostic scripts; Enter runs one script and Ctrl-Y prints its command. `--details` passes full-evidence mode to the selected script.
 
-`core/shell/parts/git-package.nix` supplies the shell and Home Manager Git package with native cleanup of cancelled anonymous pack downloads. Its install check covers cancellation, early EOF, concurrent writers and successful packs in SHA-1 and SHA-256 repositories.
+The shared `overlays/git.nix` package supplies native cleanup of cancelled anonymous pack downloads to the system and Home Manager command profiles. Runtime modules explicitly select `gitWithPackCleanup`; compiler bootstrap Git remains unchanged. Its install check covers cancellation, early EOF, concurrent writers and successful packs in SHA-1 and SHA-256 repositories.
 
 `apps/agent-harness` publishes final workspace ledger and guard JSON files; unfinished atomic writes remain local.
 
@@ -110,7 +110,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
-- 2026-10-14: core/shell: register anonymous Git index-pack downloads with Git's process-owned tempfile cleanup; reuse the patched package in the shell bundle and programs.git, with cancellation and pack-integrity install checks.
+- 2026-10-14: shared Git overlay: register anonymous index-pack downloads with Git's process-owned tempfile cleanup, with cancellation and pack-integrity install checks; system activation updates the Git command used by the running T3 server.
 - 2026-10-14: courier slice 4, desktop alerts. apps/courier: input bumped to 1f38d0c; new `alerts.enable` (default on) wires notify-send, wl-copy and a show-window script and sets tether's `message_popups_enabled = false`. apps/tether: `patches/message-popups.patch` adds that setting and a `backfill` flag on message events. apps/hyprland: `hyprland-app-toggle --show`.
 - 2026-10-14: apps/agent-harness: the agent-state hub on hwc-home refuses pushes that fail `agent-state-validate` (new `stateHub` option). core/repo-hooks: a listed repo qualifies when its git dir is exactly `<path>/.git` or `<path>`, so bare repos can take pinned hooks and a non-repo path never pins an enclosing repo.
 - 2026-10-14: apps/agent-harness: state sync merges the hub before it validates, so a blocked host receives the hub's fix instead of staying blocked.

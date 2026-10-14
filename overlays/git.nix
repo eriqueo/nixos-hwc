@@ -1,8 +1,9 @@
 # TEMPORARY: pinned Git leaks anonymous tmp_pack_* downloads on cancellation.
 # Remove when unpatched Git passes the cancellation regression below.
-# ssh.nix owns SSH settings, not a Git package and its native lifecycle test.
-{ pkgs }:
+# Existing ghidra.nix backports Ghidra; this correction belongs to Git.
+final: prev:
 let
+  pkgs = prev;
   cleanupPatch = pkgs.writeText "git-index-pack-cleanup.patch" (
     builtins.concatStringsSep "\n" [
       "--- a/builtin/index-pack.c"
@@ -129,12 +130,14 @@ let
                         os.killpg(child.pid, signal.SIGKILL)
                         child.wait()
   '';
-in
-pkgs.git.overrideAttrs (old: {
+in {
+  # Explicit runtime selection avoids changing bootstrap gitMinimal/toolchains.
+  gitWithPackCleanup = prev.git.overrideAttrs (old: {
   patches = (old.patches or []) ++ [ cleanupPatch ];
   doInstallCheck = true;
   installCheckFlags = (old.installCheckFlags or []) ++ [ "T=t5302-pack-index.sh" ];
   postInstallCheck = (old.postInstallCheck or "") + ''
     ${pkgs.python3}/bin/python ${regression} "$out/bin/git"
   '';
-})
+  });
+}

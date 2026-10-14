@@ -23,7 +23,7 @@ in
       # Base bundle
       ++ (lib.optionals cfg.base.enable (with pkgs; [
         # Core shells and editors
-        zsh git micro neovim vim tmux
+        zsh (lib.hiPrio gitWithPackCleanup) micro neovim vim tmux
 
         # Secrets and password management
         pass gnupg sops age ssh-to-age

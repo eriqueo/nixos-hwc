@@ -19,10 +19,11 @@ core/
 ├── coredump.nix     # systemd-coredump retention caps
 ├── nix-build-limits.nix # nix-daemon MemoryHigh/MemoryMax cgroup ceiling
 ├── index.nix        # Core aggregator and overridable journal ceiling
-└── packages.nix     # Base system packages
+└── packages.nix     # Base system packages; shared Git runtime cleanup variant
 ```
 
 ## Changelog
+- 2026-10-14: Select the shared gitWithPackCleanup runtime package for the system command profile, preserving bootstrap Git.
 - 2026-09-27: Declare `SystemMaxUse=1G` as a default independent of audit enablement; home keeps its explicit 8G policy.
 - 2026-09-24: `coredump.nix` uses `settings.Coredump` on 26.05 while retaining
   the 500M use and 2G free-space limits.
