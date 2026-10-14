@@ -279,6 +279,18 @@ in
       defaultText = lib.literalExpression ''"''${workspaceRoot}/state"'';
       description = "The agent-state git clone: memories, MISTAKES.md, ledger/ and guard/.";
     };
+    stateHub = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "/home/eric/git/agent-state.git";
+      description = ''
+        The bare agent-state hub, set only on the host that holds it. Its
+        pre-receive hook (pinned through hwc.home.core.repoHooks) refuses any
+        push whose tip fails agent-state-validate, so a hand push cannot land
+        state that would block every host. Emergency bypass on that host:
+        git -C <hub> config --unset core.hooksPath (the next activation re-pins).
+      '';
+    };
     workspaceRoot = lib.mkOption {
       type = lib.types.str;
       default = osConfig.hwc.paths.user.agents or "${home}/800_agents";
@@ -426,6 +438,14 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    hwc.home.core.repoHooks.repos = lib.mkIf (cfg.stateHub != null) [ {
+      path = cfg.stateHub;
+      dispatched = [ ];
+      pinned.pre-receive = pkgs.writeShellScript "agent-state-hub-pre-receive" ''
+        exec ${stateValidator}/bin/agent-state-validate pre-receive
+      '';
+    } ];
+
     home.packages = [
       cli
       doctor

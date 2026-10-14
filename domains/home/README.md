@@ -108,6 +108,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-14: apps/agent-harness: the agent-state hub on hwc-home refuses pushes that fail `agent-state-validate` (new `stateHub` option). core/repo-hooks: a listed repo qualifies when its git dir is exactly `<path>/.git` or `<path>`, so bare repos can take pinned hooks and a non-repo path never pins an enclosing repo.
 - 2026-10-14: apps/agent-harness: state sync merges the hub before it validates, so a blocked host receives the hub's fix instead of staying blocked.
 - 2026-10-13: apps/vectorcraft: input bumped to db6a675 (Type on a Path on compound paths, storytold/vectorcraft#1818).
 - 2026-10-13: New `apps/vectorcraft/` and `vectorcraft` flake input (our fork of storytold/vectorcraft, branch hwc/main): vector editor being tailored for Julia's GIS maps. Enabled on hwc-laptop.

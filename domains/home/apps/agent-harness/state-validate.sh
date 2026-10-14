@@ -47,8 +47,50 @@ if [ "${1:-}" = memory-stdin ]; then
   exit 0
 fi
 
+# The state hub's pre-receive hook. A hand push (e6d3151, 2026-10-12) landed
+# memories this validator rejects and blocked every host, because only
+# state-sync validated before pushing. Each pushed tip is checked out into a
+# throwaway repo that borrows the hub's objects and the push quarantine, then
+# validated by re-running THIS script on it. Re-run the script, not the
+# agent-state-validate wrapper: the wrapper pins AGENT_STATE_DIR to the host's
+# own clone and would validate that instead (S0 spike). Any error rejects.
+if [ "${1:-}" = pre-receive ]; then
+  hub=$(cd "${GIT_DIR:-.}" && pwd)
+  quarantine=${GIT_QUARANTINE_PATH:-}
+  status=0
+  while read -r _old new ref; do
+    if [ "$ref" != refs/heads/main ]; then
+      printf 'agent-state-validate: REJECT %s: the state hub accepts only refs/heads/main\n' "$ref" >&2
+      status=1
+      continue
+    fi
+    if [ -z "${new//0/}" ]; then
+      printf 'agent-state-validate: REJECT deleting refs/heads/main\n' >&2
+      status=1
+      continue
+    fi
+    tree=$(mktemp -d)
+    # errexit does not apply inside an if condition, so every step is chained.
+    if ! (
+      for name in $(compgen -e); do
+        if [[ $name == GIT_* ]]; then unset "$name"; fi
+      done
+      git -c init.defaultBranch=main init -q "$tree" \
+        && { printf '%s\n' "$hub/objects"; [ -z "$quarantine" ] || printf '%s\n' "$quarantine"; } \
+             > "$tree/.git/objects/info/alternates" \
+        && git -C "$tree" -c advice.detachedHead=false checkout -q --detach "$new" \
+        && AGENT_STATE_DIR="$tree" bash "${BASH_SOURCE[0]}"
+    ); then
+      printf 'agent-state-validate: REJECT %s: %s failed validation or could not be checked\n' "$ref" "$new" >&2
+      status=1
+    fi
+    rm -rf "$tree"
+  done
+  exit "$status"
+fi
+
 [ "$#" -eq 0 ] || {
-  printf 'usage: agent-state-validate [memory-stdin [display-name]]\n' >&2
+  printf 'usage: agent-state-validate [memory-stdin [display-name] | pre-receive]\n' >&2
   exit 2
 }
 

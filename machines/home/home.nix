@@ -4,7 +4,7 @@
 # CLI defaults come from the base role's home half. Mail runs on work.
 # Only genuine headless one-offs live here.
 
-{ lib, ... }:
+{ config, lib, ... }:
 
 {
   # The mail role and its timers moved to work; retained mail state is recovery data.
@@ -44,6 +44,10 @@
   # Without this, T3 hides every model whose manifest minVersion is newer than
   # the installed CLI.
   hwc.home.apps.agent-harness.cliUpdates.enable = true;
+
+  # This host holds the agent-state hub; its pre-receive hook refuses pushes that
+  # fail agent-state-validate (agent-harness README, 2026-10-14).
+  hwc.home.apps.agent-harness.stateHub = "${config.home.homeDirectory}/git/agent-state.git";
 
   # Headless: no font deployment (overrides nothing today — the desktop
   # role is what turns fonts on — but states the intent explicitly).

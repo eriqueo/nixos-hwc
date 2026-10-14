@@ -73,8 +73,12 @@ in
   #============================================================================
   config = lib.mkIf cfg.enable {
     home.activation.repoHooksPath = lib.hm.dag.entryAfter [ "writeBoundary" ] (
+      # A repo qualifies when its own git dir is <path>/.git (checkout) or
+      # <path> (bare, e.g. a hub). Exact match, so a path that is not a repo
+      # never pins the hooks of an enclosing one.
       lib.concatMapStrings (r: ''
-        if [ -e "${r.path}/.git" ]; then
+        _gd=$(${pkgs.git}/bin/git -C "${r.path}" rev-parse --absolute-git-dir 2>/dev/null || true)
+        if [ -n "$_gd" ] && { [ "$_gd" = "$(${pkgs.coreutils}/bin/realpath -m "${r.path}/.git")" ] || [ "$_gd" = "$(${pkgs.coreutils}/bin/realpath -m "${r.path}")" ]; }; then
           _cur=$(${pkgs.git}/bin/git -C "${r.path}" config --local core.hooksPath || true)
           if [ "$_cur" != "${hooksFor r}" ]; then
             run ${pkgs.git}/bin/git -C "${r.path}" config core.hooksPath "${hooksFor r}"

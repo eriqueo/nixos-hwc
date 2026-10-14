@@ -115,6 +115,8 @@ fi
 # A host blocked by invalid state that arrived FROM the hub must receive the
 # hub's fix. Before, a blocked host skipped the fetch and stayed blocked
 # forever (2026-10-14). Both sides also append to MISTAKES.md, as they did then.
+# This hub has no pre-receive gate on purpose: it models invalid state that
+# predates the gate, or that a stricter validator newly rejects.
 git clone "$ROOT/hub.git" "$ROOT/peer" >/dev/null 2>&1
 git -C "$ROOT/peer" config user.name peer
 git -C "$ROOT/peer" config user.email peer@example.invalid
@@ -187,4 +189,44 @@ for bad in $'meta:\n  authority: decision\n  source: x' \
     exit 1
   fi
 done
+# The hub's pre-receive gate: a hand push of invalid state is refused at the hub,
+# not only by state-sync (e6d3151 reached the hub by hand on 2026-10-12).
+git clone --bare -q "$ROOT/hub.git" "$ROOT/gated.git"
+git -C "$ROOT/gated.git" config receive.denyDeleteCurrent ignore
+printf '#!/usr/bin/env bash\nexec bash %q pre-receive\n' "$VALIDATOR" > "$ROOT/gated.git/hooks/pre-receive"
+chmod +x "$ROOT/gated.git/hooks/pre-receive"
+git clone -q "$ROOT/gated.git" "$ROOT/hand"
+git -C "$ROOT/hand" config user.name hand
+git -C "$ROOT/hand" config user.email hand@example.invalid
+gated_main() { git -C "$ROOT/gated.git" rev-parse main; }
+refused() {  # refused <label> <push args...>: the push must fail and leave main unchanged
+  local label=$1 before; shift
+  before=$(gated_main)
+  if git -C "$ROOT/hand" push "$@" > "$ROOT/push.log" 2>&1; then
+    echo "state-sync.test: hub accepted $label" >&2
+    exit 1
+  fi
+  test "$(gated_main)" = "$before"
+}
+printf -- '---\nname: ok\nauthority: observation\nsource: test fixture\n---\n\nbody\n' \
+  > "$ROOT/hand/projects/demo/memory/ok.md"
+git -C "$ROOT/hand" add -A && git -C "$ROOT/hand" commit -qm 'valid hand push'
+git -C "$ROOT/hand" push -q origin main
+test "$(gated_main)" = "$(git -C "$ROOT/hand" rev-parse HEAD)"
+
+printf -- '---\nname: bad\n---\n\nbody\n' > "$ROOT/hand/projects/demo/memory/bad.md"
+git -C "$ROOT/hand" add -A && git -C "$ROOT/hand" commit -qm 'invalid hand push'
+refused 'an invalid memory' origin main
+rg -q 'remote: agent-state-validate: FAIL projects/demo/memory/bad.md' "$ROOT/push.log"
+git -C "$ROOT/hand" reset -q --hard origin/main
+
+refused 'a ref other than main' origin HEAD:refs/heads/other
+rg -q 'accepts only refs/heads/main' "$ROOT/push.log"
+refused 'deleting main' origin :main
+rg -q 'REJECT deleting refs/heads/main' "$ROOT/push.log"
+
+git -C "$ROOT/hand" rm -q .harness-schema.json
+git -C "$ROOT/hand" commit -qm 'drop the schema'
+refused 'a tip it cannot check' origin main
+rg -q 'failed validation or could not be checked' "$ROOT/push.log"
 printf 'state-sync.test: PASS\n'
