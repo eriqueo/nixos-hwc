@@ -18,7 +18,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
-`apps/tether/` runs Tether (iMessage and SMS from the iPhone over Bluetooth, no Mac): `index.nix` is the HM half (`tetherd` user service, CLI, TUI, GTK client), `sys.nix` the system half (upstream module, BlueZ bearer API, adapter class). Laptop only. Pinned `tether` flake input.
+`apps/tether/` runs Tether (iMessage and SMS from the iPhone over Bluetooth, no Mac): `index.nix` is the HM half (`tetherd` user service, CLI, TUI, GTK client), `sys.nix` the system half (upstream module, BlueZ bearer API, adapter class), `patches/` our tetherd patches (message-only popup switch, backfill flag). Laptop only. Pinned `tether` flake input.
 
 `apps/courier/` runs courier, our messages app on tetherd (`github:eriqueo/courier`, a private input). It provides a user service, CSS generated from the HWC palette, and a Chromium app window whose class is `chrome-courier.localhost__-Default`. The SUPER+U toggle is in `apps/hyprland/parts/behavior.nix`; the window tiles like any other app.
 
@@ -108,6 +108,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-14: courier slice 4, desktop alerts. apps/courier: input bumped to 1f38d0c; new `alerts.enable` (default on) wires notify-send, wl-copy and a show-window script and sets tether's `message_popups_enabled = false`. apps/tether: `patches/message-popups.patch` adds that setting and a `backfill` flag on message events. apps/hyprland: `hyprland-app-toggle --show`.
 - 2026-10-14: apps/agent-harness: the agent-state hub on hwc-home refuses pushes that fail `agent-state-validate` (new `stateHub` option). core/repo-hooks: a listed repo qualifies when its git dir is exactly `<path>/.git` or `<path>`, so bare repos can take pinned hooks and a non-repo path never pins an enclosing repo.
 - 2026-10-14: apps/agent-harness: state sync merges the hub before it validates, so a blocked host receives the hub's fix instead of staying blocked.
 - 2026-10-13: apps/vectorcraft: input bumped to db6a675 (Type on a Path on compound paths, storytold/vectorcraft#1818).

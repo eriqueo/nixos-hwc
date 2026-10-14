@@ -13,9 +13,14 @@
 
 let
   cfg = config.hwc.system.apps.tether;
-  package = pkgs.callPackage "${inputs.tether}/nix/package.nix" {
+  package = (pkgs.callPackage "${inputs.tether}/nix/package.nix" {
     npmConfigHook = pkgs.npmHooks.npmConfigHook;
-  };
+  }).overrideAttrs (old: {
+    # message_popups_enabled: turns off tetherd's own popup for new messages
+    # only, so courier can own message alerts while ANCS notifications keep
+    # popping up. desktop_popups_enabled would silence both.
+    patches = (old.patches or [ ]) ++ [ ./patches/message-popups.patch ];
+  });
 in
 {
   imports = [ inputs.tether.nixosModules.default ];

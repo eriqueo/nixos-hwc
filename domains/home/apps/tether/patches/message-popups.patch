@@ -1,0 +1,112 @@
+diff --git a/src/core/include/tether/bluetooth/config.hpp b/src/core/include/tether/bluetooth/config.hpp
+index 10c7f54..18e4f4f 100644
+--- a/src/core/include/tether/bluetooth/config.hpp
++++ b/src/core/include/tether/bluetooth/config.hpp
+@@ -49,6 +49,9 @@ namespace tether::bluetooth {
+         Retention retention = Retention::Encrypted;
+         // Whether the daemon shows desktop popups at all.
+         bool desktop_popups_enabled = true;
++        // Whether new messages (MAP) get a desktop popup. Off lets another client
++        // own message alerts while ANCS notifications keep popping up.
++        bool message_popups_enabled = true;
+         // Whether popups include the message text. Off shows only the sender.
+         bool popup_previews_enabled = true;
+         // Whether Tether manages AirPods at all. Off until asked.
+diff --git a/src/core/src/bluetooth/config.cpp b/src/core/src/bluetooth/config.cpp
+index 31d31ef..83cb6f9 100644
+--- a/src/core/src/bluetooth/config.cpp
++++ b/src/core/src/bluetooth/config.cpp
+@@ -64,6 +64,7 @@ namespace tether::bluetooth {
+         j["adapter"] = config.adapter;
+         j["retention"] = to_string(config.retention);
+         j["desktop_popups_enabled"] = config.desktop_popups_enabled;
++        j["message_popups_enabled"] = config.message_popups_enabled;
+         j["popup_previews_enabled"] = config.popup_previews_enabled;
+         j["airpods_enabled"] = config.airpods_enabled;
+         j["airpods_pause"] = to_string(config.airpods_pause);
+@@ -91,6 +92,7 @@ namespace tether::bluetooth {
+             config.adapter = j.value("adapter", "");
+             config.retention = retention_from_string(j.value("retention", "encrypted"));
+             config.desktop_popups_enabled = j.value("desktop_popups_enabled", true);
++            config.message_popups_enabled = j.value("message_popups_enabled", true);
+             config.popup_previews_enabled = j.value("popup_previews_enabled", true);
+             config.airpods_enabled = j.value("airpods_enabled", false);
+             config.airpods_pause = pause_mode_from_string(j.value("airpods_pause", ""));
+diff --git a/src/core/src/net.cpp b/src/core/src/net.cpp
+index 9c2e2c6..0f4eaa5 100644
+--- a/src/core/src/net.cpp
++++ b/src/core/src/net.cpp
+@@ -424,6 +424,7 @@ namespace tether {
+         status["retention"] = to_string(config.retention);
+         status["retention_ready"] = secret::have_key();
+         status["desktop_popups_enabled"] = config.desktop_popups_enabled;
++        status["message_popups_enabled"] = config.message_popups_enabled;
+         status["popup_previews_enabled"] = config.popup_previews_enabled;
+         status["airpods_enabled"] = config.airpods_enabled;
+         status["airpods_pause"] = to_string(config.airpods_pause);
+diff --git a/src/daemon/main.cpp b/src/daemon/main.cpp
+index 491f299..16d6b18 100644
+--- a/src/daemon/main.cpp
++++ b/src/daemon/main.cpp
+@@ -1,4 +1,5 @@
+ #include "notification.hpp"
++#include <atomic>
+ #include <csignal>
+ #include <cstdio>
+ #include <cstdlib>
+@@ -30,6 +31,9 @@
+ 
+ tether::EpollEventLoop* g_loop = nullptr;
+ 
++// message_popups_enabled from bluetooth.json, read at startup like the other popup settings.
++static std::atomic<bool> g_message_popups_enabled{true};
++
+ void signal_handler(int) {
+     if (g_loop) {
+         debug::log(INFO, "\nStopping tetherd...");
+@@ -225,6 +229,8 @@ int main(int argc, char** argv) {
+         [&notifier](const tether::bluetooth::Message& message, bool backfill) {
+             nlohmann::json event = tether::bluetooth::to_json(message);
+             event["command"] = "bt_message";
++            // Catch-up after a reconnect, not a new arrival: clients that alert skip it, as below.
++            event["backfill"] = backfill;
+             tether::broadcast_local_event(event.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace));
+ 
+             std::string otp;
+@@ -235,7 +241,7 @@ int main(int argc, char** argv) {
+ 
+             // ANCS deliberately shows no popup for Messages, because MAP is the
+             // copy whose read state stays in sync with the phone. This is that popup.
+-            if (backfill || message.outgoing || message.read)
++            if (backfill || message.outgoing || message.read || !g_message_popups_enabled.load())
+                 return;
+ 
+             std::string who;
+@@ -267,6 +273,7 @@ int main(int argc, char** argv) {
+ 
+     tether::secret::set_retention(bt_config.retention);
+     tether::set_desktop_popups_enabled(bt_config.desktop_popups_enabled);
++    g_message_popups_enabled.store(bt_config.message_popups_enabled);
+     tether::set_popup_previews_enabled(bt_config.popup_previews_enabled);
+ 
+     // Pick the controller before the first capability, a second adapter never comes up bound to the wrong one.
+diff --git a/test/test_bluetooth_pairing.cpp b/test/test_bluetooth_pairing.cpp
+index eb26741..f88276c 100644
+--- a/test/test_bluetooth_pairing.cpp
++++ b/test/test_bluetooth_pairing.cpp
+@@ -88,6 +88,7 @@ TEST(BluetoothConfig, RoundTrips) {
+     config.adapter = "hci1";
+     config.calls_enabled = true;
+     config.desktop_popups_enabled = false;
++    config.message_popups_enabled = false;
+     config.popup_previews_enabled = false;
+     config.lock_on_away = true;
+     config.lock_away_seconds = 45;
+@@ -110,6 +111,7 @@ TEST(BluetoothConfig, DefaultsToConnectFirstAndAncsEnabled) {
+     EXPECT_FALSE(config.calls_enabled);
+     // A config written before the switch existed keeps showing popups.
+     EXPECT_TRUE(config.desktop_popups_enabled);
++    EXPECT_TRUE(config.message_popups_enabled);
+     EXPECT_TRUE(config.popup_previews_enabled);
+     // AirPods are not managed until asked: the channel takes one client per machine.
+     EXPECT_FALSE(config.airpods_enabled);

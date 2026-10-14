@@ -14,7 +14,7 @@ The screenshot wrapper pins its capture, clipboard and notification tools; it wa
 Print uses `hwc-screenshot` with a hash-bound policy marker. Ctrl+Print makes a private capture; the worker excludes it before OCR. Both bindings and their legend come from `parts/behavior.nix`.
 - The mail binding derives from `hwc.home.core.shell.aliases.aerc`, shared with Zellij and Workbench, with local `aerc` as its fallback.
 - `index.nix` — HM options + implementation: packages, hyprland settings merge, submaps, monitor-listener service, NixOS session-variable bridge, cross-lane and dependency assertions. Threads `behavior.keybinds` → `theme`, `theme.card` → `session`.
-- `index.nix` also provides `hyprland-app-toggle`, the shared window show/hide and graphical launch command for credential apps.
+- `index.nix` also provides `hyprland-app-toggle`, the shared window show/hide and graphical launch command for credential apps. `--show` only brings the window to the current workspace and focuses it, never hides it (courier's alert Open).
 - `sys.nix` — system-lane options; exposes helper scripts via `environment.systemPackages`.
 - `parts/behavior.nix` — the keybind records (SUPER-based, conditional todui/dt/gsr/dictation binds), mouse binds, the `resize` submap, and window rules. Returns settings, keybinds, submaps, the dictation toggle/cancel commands and the courier toggle (`courierCommand`) shared with Waybar, and the SUPER+W Workbench command shared with session autostart. `settings` is what Hyprland loads; `keybinds` supplies the legend.
 - Floating windows are centered and limited to 80% of their current monitor's logical width and height. Small dialogs retain their requested size. Bluetooth starts at 40% width / 50% height; title-matched file pickers start at 50% / 60%. Hyprland supplies monitor dimensions and scale at runtime; no screen dimensions are copied into these rules.
@@ -32,6 +32,7 @@ It is deliberately *not* read from `hyprctl binds -j`: that API emits malformed 
 
 ## Changelog
 
+- 2026-10-14: `hyprland-app-toggle --show CLASS CMD…`: show and focus, never hide. courier's alert Open uses it.
 - 2026-10-12: SUPER+U toggles courier (iPhone messages). `parts/behavior.nix` exports the toggle as `courierCommand` so Waybar's badge click runs the same command.
 - 2026-10-02: Fix screenshot clipboard copying: wait for complete Hyprshot raw output, then copy the saved PNG through a pinned wl-copy and retain the save notification.
 - 2026-10-01: Standalone Home Manager receives the system screenshot path explicitly, preserving policy-marked capture across both activation lanes.

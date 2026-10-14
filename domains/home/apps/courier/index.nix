@@ -15,6 +15,12 @@ let
   app = inputs.courier.packages.${pkgs.stdenv.hostPlatform.system}.default;
   colors = config.hwc.home.theme.colors;
 
+  # An alert's Open: show the window, never toggle it. The same helper as
+  # SUPER+U (hyprland/index.nix), which is on the session PATH.
+  showWindow = pkgs.writeShellScript "courier-show-window" ''
+    exec hyprland-app-toggle --show ${lib.escapeShellArg cfg.windowClass} courier open
+  '';
+
   # The HWC palette as CSS variables. hwc.nix stays the only producer: every
   # 6-digit hex token is exported under its own name (--bg1, --accent, …).
   isHex = v: builtins.isString v && builtins.match "[0-9a-fA-F]{6}" v != null;
@@ -43,6 +49,18 @@ in
       default = "chrome-courier.localhost__-Default";
       description = "Wayland app_id of the courier window, for Hyprland rules.";
     };
+
+    alerts.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        courier shows the desktop alerts for new messages (Open, Mark read,
+        Copy code, per-conversation hide, burst cap). This turns tetherd's own
+        message popup off (message_popups_enabled, from the HWC tether patch);
+        tetherd keeps showing other phone notifications. Off: courier shows no
+        alerts and tetherd's message popup stays on.
+      '';
+    };
   };
 
   #==========================================================================
@@ -64,13 +82,20 @@ in
         Environment = [
           "COURIER_PORT=${toString cfg.port}"
           "COURIER_THEME=${themeFile}"
-        ];
+        ] ++ (if cfg.alerts.enable then [
+          "COURIER_NOTIFY_SEND=${pkgs.libnotify}/bin/notify-send"
+          "COURIER_WL_COPY=${pkgs.wl-clipboard}/bin/wl-copy"
+          "COURIER_SHOW_WINDOW=${showWindow}"
+        ] else [ "COURIER_ALERTS=off" ]);
         UMask = "0077";
         Restart = "on-failure";
         RestartSec = 5;
       };
       Install.WantedBy = [ "graphical-session.target" ];
     };
+
+    # One producer of message alerts: courier. tetherd's other popups stay on.
+    hwc.home.apps.tether.settings.message_popups_enabled = !cfg.alerts.enable;
 
     #========================================================================
     # VALIDATION

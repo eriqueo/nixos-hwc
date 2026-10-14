@@ -41,8 +41,14 @@ let
   # Hyprland owns app launches, so Waybar restarts cannot kill an app.
   appToggle = pkgs.writeShellScriptBin "hyprland-app-toggle" ''
     set -euo pipefail
+    # --show: bring the window here and focus it, never hide it (an alert's Open).
+    show=0
+    if [[ "''${1:-}" == "--show" ]]; then
+      show=1
+      shift
+    fi
     if [[ $# -lt 2 ]]; then
-      echo "usage: hyprland-app-toggle CLASS COMMAND [ARGS...]" >&2
+      echo "usage: hyprland-app-toggle [--show] CLASS COMMAND [ARGS...]" >&2
       exit 64
     fi
     class="$1"
@@ -55,7 +61,10 @@ let
     fi
     window_workspace=$(printf '%s' "$clients" | ${pkgs.jq}/bin/jq -r --arg address "$address" '.[] | select(.address == $address) | .workspace.id')
     current_workspace=$(${pkgs.hyprland}/bin/hyprctl activeworkspace -j | ${pkgs.jq}/bin/jq -r '.id')
-    if [[ "$window_workspace" == "$current_workspace" ]]; then
+    if [[ "$show" == 1 ]]; then
+      ${pkgs.hyprland}/bin/hyprctl dispatch movetoworkspace "$current_workspace,address:$address"
+      ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "address:$address"
+    elif [[ "$window_workspace" == "$current_workspace" ]]; then
       ${pkgs.hyprland}/bin/hyprctl dispatch movetoworkspacesilent "special:password-managers,address:$address"
     else
       ${pkgs.hyprland}/bin/hyprctl dispatch movetoworkspace "$current_workspace,address:$address"
