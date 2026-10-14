@@ -51,7 +51,7 @@ domains/server/
 │   ├── bloxels-cv/       # Bloxels grid photo classifier (path watcher on inbox-mobile)
 │   ├── inbox-processor/  # Phone capture processor (whisper-server + Tesseract; optional DX2 voice-note cleanup)
 │   ├── radicale/         # Self-hosted CalDAV (tasks.hwc.*, two-way task sync)
-│   └── wall-display/     # TRMNL-compatible BYOS server (wall.hwc.*): home, week, weather, tasks, briefing screens in the TRMNL framework look, QR links to phone apps
+│   └── wall-display/     # TRMNL BYOS + tablet rotation; /review/<device>/<scene> fixed scene previews; TRMNL framework screens and QR links to phone apps
 │       └── parts/        #   server.py (protocol, host dispatch, renderer, web client), screens.py (screens, CalDAV reads),
 │                         #   apps.py (todo.* Tasks and calendar.* Calendar phone apps; writes via the MCP gateway),
 │                         #   voice.py (tap-to-talk: whisper → DX2 → Piper, writes need confirmation)
@@ -70,6 +70,8 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+
+- 2026-10-14: `services/wall-display/` root opens a scene review page, defaulting to the iPad profile. `/review/<device>/<scene>` shows the same PNG as the tablet with named scenes, device selection, previous/next and reload controls. Reviews stay on the chosen scene and leave device cursors and presence untouched. The default rotation is now home, week, weather and tasks; the explicit `/briefing` HTML page remains available.
 - 2026-10-14: `services/wall-display/` web client pages carry `apple-mobile-web-app-capable` (and `mobile-web-app-capable`), so a page added to an iPad's Home Screen opens full screen without Safari's address bar. hwc-work adds the `ipad` device (iPad 6th gen, 2048×1536, scale 2.56 for the framework's 800×600 layout, voice off until the mic button has a spot that covers nothing).
 - 2026-10-13: `services/radicale/`: the mirror list moved to `parts/mirror-catalog.nix` (default of `mirrors`, and of the khal machines' pinned ids). `radicale-mirror` fails when a task (VTODO) sits in a mirror, so the failure notifier reports it.
 - 2026-10-13: `services/wall-display/` screen fixes. (1) The screens drop a "Busy" event when a titled event starts with it or overlaps it; the Proton work feed mirrors other calendars as "Busy", so the week showed "9a Busy" beside "9a DATAx - Weekly Meeting". A Busy with no titled event stays. The rule (`screens.drop_shadowed_busy`, with `is_placeholder`) is now the one producer for the screens and for voice: `voice.dedupe_busy` passes its gateway event shape through a `span` function and keeps only its repeat-block check. (2) Home's Today column lists the whole day: finished events are struck through above the ones still to come, and the oldest finished ones give way when the column is full. It used to hide them, so by late morning it read "Nothing else today 0" on a day with three meetings. (3) Home's big number is the temperature now, as on the weather screen, with the day's high and low under it; it was the high with only "low" labelled. (4) `devices.<name>.voice` (default true) decides whether that device's web client shows the mic button. hwc-work sets it false for `fire-hd8`: its LineageOS audio HAL records silence, and the button covered the QR caption and the title bar's right end.

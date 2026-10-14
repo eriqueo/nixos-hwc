@@ -5,6 +5,7 @@
 # greyscale PNGs and serves them to any device speaking the TRMNL BYOS
 # protocol (the TRMNL Android app, TRMNL hardware, Kindle/Kobo clients).
 # The same screens are served as HTML at /<screen> for browser kiosks, and
+# /review/<device>/<screen> shows fixed tablet images with scene controls;
 # /device/<name> is a web client (a browser shows the device's rotation as
 # images and reloads itself; it survives reboots, which the TRMNL app does not).
 #
@@ -278,7 +279,7 @@ in
           };
           playlist = lib.mkOption {
             type = lib.types.nonEmptyListOf lib.types.str;
-            default = [ "home" "week" "weather" "tasks" "briefing" ];
+            default = [ "home" "week" "weather" "tasks" ];
             description = "Screens shown in turn, one per refresh. Names: home, week, weather, tasks, briefing (the server refuses others at boot).";
           };
           voice = lib.mkOption {

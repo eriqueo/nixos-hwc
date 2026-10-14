@@ -17,13 +17,16 @@ quantises it with ImageMagick into images/<screen>-<W>x<H>g<greys>-<hash>.png.
 A device is served the last good image; a failed render keeps it and is
 reported in /healthz.
 
-The same pages are served as HTML at /<screen> for browser kiosks ("/" = week;
-?device=<name> picks the layout, default the first declared device),
-and /device/<name> is a web client: a browser shows that device's rotation as
+The same pages are served as HTML at /<screen> for browser kiosks
+(?device=<name> picks the layout, default the first declared device).
+The root opens /review/<device>/<screen>, a fixed image preview with scene
+navigation. Reviews leave device rotation and presence untouched.
+And /device/<name> is a web client: a browser shows that device's rotation as
 images and reloads itself, which survives reboots where the TRMNL app cannot.
 """
 import datetime as dt
 import hashlib
+import html
 import hmac
 import ipaddress
 import json
@@ -35,6 +38,7 @@ import sys
 import tempfile
 import threading
 import time
+from urllib.parse import quote, unquote
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import apps
@@ -180,6 +184,38 @@ def run(cmd, env=None):
         raise RuntimeError(f"{os.path.basename(cmd[0])} exited {r.returncode}: {r.stderr.strip()[-300:]}")
 
 
+def review_url(name, scene):
+    return f"/review/{quote(name, safe='')}/{quote(scene, safe='')}"
+
+
+# HWC UI tokens vendored from scout/packages/ui/src/styles/{palette,theme}.css.
+# HWC-EXCEPTION(Law 13): text-only token subset; remove when the wall server
+# consumes a shared @scout/ui asset package. Scene images remain grayscale.
+REVIEW_CSS = """
+:root{color-scheme:dark;
+--color-base-900:#1d2021;--color-base-800:#23282d;--color-base-700:#2a2f34;--color-base-600:#3a3f44;
+--color-cream-100:#ebdbb2;--color-cream-200:#d5c4a1;--color-cream-300:#a7aaad;--color-copper:#cf995f;
+--font-display:'Playfair Display',Georgia,serif;--font-body:'DM Sans',system-ui,sans-serif;
+--surface-page:var(--color-base-800);--surface-card:var(--color-base-900);--surface-elevated:var(--color-base-700);
+--text-heading:var(--color-cream-100);--text-body:var(--color-cream-200);--text-muted:var(--color-cream-300);
+--interactive-accent:var(--color-copper);--border-default:var(--color-base-600);--border-accent:var(--color-copper)}
+*{box-sizing:border-box}body{margin:0;background:var(--surface-page);color:var(--text-body);font:16px var(--font-body)}
+header,main{max-width:1200px;margin:auto;padding:20px 24px}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+h1{margin:0;font:28px var(--font-display);color:var(--text-heading)}h2{margin:0;font-size:20px;color:var(--text-heading)}
+nav{display:flex;gap:8px;flex-wrap:wrap}a{display:inline-flex;align-items:center;justify-content:center;
+min-height:44px;padding:10px 16px;border:1px solid var(--border-default);border-radius:6px;color:var(--text-body);text-decoration:none}
+a:hover{background:var(--surface-elevated)}a[aria-current=page]{border-color:var(--border-accent);color:var(--interactive-accent)}
+a:focus-visible{outline:2px solid var(--interactive-accent);outline-offset:3px}
+.scene-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:20px 0 12px;flex-wrap:wrap}
+.scene-heading span,footer p{color:var(--text-muted);font-size:14px}
+.preview{background:var(--surface-card);border:1px solid var(--border-default);overflow:hidden}
+.preview img{display:block;width:100%;height:auto}.preview p{padding:24px}
+footer{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:16px}
+@media(max-width:600px){header,main{padding:16px}nav a{padding:10px 12px}}
+"""
+
+
 renderer = Renderer()
 
 
@@ -289,8 +325,19 @@ class Handler(BaseHTTPRequestHandler):
             self.send(200 if ok else 503, "application/json", json.dumps(body))
         elif path.startswith("/framework/"):
             self.serve_asset(path[len("/framework/"):])
-        elif path.strip("/") in ("", *SCREENS):
-            screen = path.strip("/") or "week"
+        elif path in ("/", "/review", "/review/"):
+            name = "ipad" if "ipad" in DEVICES else next(iter(DEVICES), None)
+            if name is None:
+                return self.send(503, "text/plain", "No display devices configured.")
+            self.send_response(302)
+            self.send_header("Location", review_url(name, DEVICES[name]["playlist"][0]))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+        elif path.startswith("/review/"):
+            self.review(path[len("/review/"):].split("/"))
+        elif path.strip("/") in SCREENS:
+            screen = path.strip("/")
             self.send(200, "text/html; charset=utf-8",
                       SCREENS[screen](dt.datetime.now(TZ), self.preview_device()))
         else:
@@ -349,6 +396,45 @@ class Handler(BaseHTTPRequestHandler):
                         "update_firmware": False, "firmware_url": None, "special_function": "sleep"})
 
     # Web client ------------------------------------------------------------
+
+    def review(self, address):
+        """A fixed scene using the tablet's image, without touching its cursor."""
+        if len(address) != 2:
+            return self.send(404, "text/plain", "unknown preview")
+        name, scene = map(unquote, address)
+        device = DEVICES.get(name)
+        if device is None or scene not in device["playlist"]:
+            return self.send(404, "text/plain", "unknown device or scene")
+        playlist = device["playlist"]
+        index = playlist.index(scene)
+        here = review_url(name, scene)
+        escape = html.escape
+
+        def link(url, label, selected=False):
+            current = ' aria-current="page"' if selected else ''
+            return f'<a href="{escape(url, quote=True)}"{current}>{escape(label)}</a>'
+
+        scene_links = ''.join(link(review_url(name, s), s.capitalize(), s == scene) for s in playlist)
+        device_links = ''.join(link(review_url(n, scene if scene in d["playlist"] else d["playlist"][0]),
+                                   n, n == name) for n, d in DEVICES.items())
+        previous = review_url(name, playlist[(index - 1) % len(playlist)])
+        following = review_url(name, playlist[(index + 1) % len(playlist)])
+        image = renderer.image((scene, device["width"], device["height"], device["grays"]))
+        preview = (f'<img src="/images/{image}" width="{device["width"]}" height="{device["height"]}" '
+                   f'alt="{escape(scene.capitalize())} scene on {escape(name)}">' if image else
+                   '<p role="status">Scene image is not ready. Reload to try again.</p>')
+        self.send(200 if image else 503, "text/html; charset=utf-8", f'''<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{escape(scene.capitalize())} · Wall Display</title><style>{REVIEW_CSS}</style></head>
+<body><header><h1>Wall Display</h1><nav aria-label="Display">{device_links}</nav></header>
+<main><nav aria-label="Scenes">{scene_links}</nav>
+<div class="scene-heading"><h2>{escape(scene.capitalize())}</h2>
+<span>{index + 1} of {len(playlist)} · {device["width"]} × {device["height"]}</span></div>
+<div class="preview">{preview}</div>
+<footer><nav aria-label="Scene controls">{link(previous, '← Previous')}{link(following, 'Next →')}
+{link(here, 'Reload scene')}</nav><p>This preview stays on this scene.</p></footer>
+</main></body></html>''')
 
     def web_client(self, name):
         """A browser acting as the device: each load shows the next playlist

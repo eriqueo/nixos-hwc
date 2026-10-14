@@ -324,7 +324,7 @@
   };
 
   # Wall display: TRMNL-compatible server at wall.hwc.iheartwoodcraft.com
-  # (home, week, weather, tasks, briefing: the default playlist). Add a
+  # (home, week, weather, tasks: the default playlist). Add a
   # device here to pair it.
   hwc.server.services.wallDisplay = {
     enable = true;
