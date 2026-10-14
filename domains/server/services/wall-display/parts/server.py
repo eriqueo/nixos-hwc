@@ -381,6 +381,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send(200, "text/html; charset=utf-8", f"""<!doctype html>
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 {refresh}
 <title>{name}</title>
 <style>html,body{{margin:0;height:100%;background:#fff;overflow:hidden}}

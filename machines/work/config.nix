@@ -332,8 +332,8 @@
     # Tap-to-talk in the web client (whisper on home, DX2, Piper here).
     voice.enable = true;
     devices = {
-      # Fire HD 8 (2018, LineageOS 20) running the TRMNL Android app; the id
-      # is its wlan0 MAC, entered in the app's BYOS settings.
+      # Fire HD 8 (2018, LineageOS 20): a kiosk browser on /device/fire-hd8.
+      # The id is its wlan0 MAC, from when it ran the TRMNL Android app.
       fire-hd8 = {
         id = "44:00:49:05:31:49";
         width = 1280;
@@ -341,6 +341,17 @@
         grays = 16;
         # Its LineageOS audio HAL hands every app silence (createAudioPatch
         # failures), so a mic button could only cover the screen.
+        voice = false;
+      };
+      # iPad 6th gen (iOS 17.7, 9.7" 2048x1536, landscape) in Safari as a
+      # Home Screen web app at /device/ipad. Scale 2.56 lays out at the
+      # framework's 800x600. Voice waits until the mic button has a spot
+      # that covers nothing.
+      ipad = {
+        width = 2048;
+        height = 1536;
+        grays = 16;
+        scale = 2.56;
         voice = false;
       };
     };
