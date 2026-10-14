@@ -89,6 +89,7 @@ workspace/automation/
 
 ## Changelog
 
+- 2026-10-14: vault-sync retries pull+push 3 times, 30 s apart, before failing. A one-off network gap after resume or a push race with another host paged P1 even though the next cycle succeeded.
 - 2026-10-07: Estimator customer lookup now returns JobTread's next-page cursor instead of silently stopping at 50 customers. Client loading is bounded to 20 pages and reports overflow.
 - 2026-10-12: screenshot-renamer alerts post to `<notify.url>/notify`. The app got the bare dispatcher URL, which answers 404; urllib raised it as an I/O error, so `screenshot-renamer-check` exited 1 every 5 minutes (864 failures from 2026-10-09) and never recorded or delivered its `review-backlog` alert.
 - 2026-10-12: screenshot-renamer exit 75 ("work remains, run again") no longer counts as a failure: the dispatch unit is `Type=exec` with `SuccessExitStatus=75`, still restarted 30 s later by `RestartForceExitStatus`, and `RuntimeMaxSec=615s` keeps the run cap the oneshot's start timeout used to provide. Before, every rerun was logged as a failed start (1,089 in one week) and appeared in deploy output.

@@ -47,20 +47,29 @@ let
         git commit -m "vault-sync: ${config.networking.hostName} auto-commit $(date -Iminutes)" || true
       fi
 
-      # 2. Integrate hub (laptop) changes. --autostash guards any stray
-      #    working-tree edit; abort cleanly on conflict rather than leaving a
-      #    half-merged tree for a timer to trip over.
-      if ! git pull --no-rebase --autostash --no-edit; then
-        git merge --abort 2>/dev/null || true
-        echo "vault-sync: pull failed (conflict?) — aborted, will retry" >&2
-        exit 1
-      fi
-
-      # 3. Publish to the hub. FATAL on failure: the unit must go red so
-      #    OnFailure notifies — a swallowed push once left the hub silently
-      #    stale while divergence built up (2026-08 investigation). The next
-      #    timer cycle still retries.
-      git push || { echo "vault-sync: PUSH FAILED — hub not updated" >&2; exit 1; }
+      # 2+3. Integrate hub changes, then publish. Pull+push form one attempt:
+      #    a push rejected because another host pushed first needs a fresh
+      #    pull, and a laptop waking from suspend fires this Persistent timer
+      #    before the tailnet can reach the hub. Each was a one-off P1 alert
+      #    that the next cycle cleared (2026-10-13), so retry within the run.
+      #    --autostash guards any stray working-tree edit; a conflicting merge
+      #    is aborted rather than left half-applied. Still FATAL after the
+      #    last attempt: the unit must go red so OnFailure notifies — a
+      #    swallowed push once left the hub silently stale while divergence
+      #    built up (2026-08 investigation).
+      attempts=${toString cfg.attempts}
+      for attempt in $(seq 1 "$attempts"); do
+        if git pull --no-rebase --autostash --no-edit; then
+          git push && exit 0
+          echo "vault-sync: push failed (attempt $attempt/$attempts)" >&2
+        else
+          git merge --abort 2>/dev/null || true
+          echo "vault-sync: pull failed (attempt $attempt/$attempts)" >&2
+        fi
+        [ "$attempt" -lt "$attempts" ] && sleep ${toString cfg.retryDelaySec}
+      done
+      echo "vault-sync: PUSH FAILED after $attempts attempts — hub not updated" >&2
+      exit 1
     '';
   };
 
@@ -125,6 +134,18 @@ in
       type = lib.types.str;
       default = "*:0/15";
       description = "systemd OnCalendar expression for the sync cadence (default every 15 min)";
+    };
+
+    attempts = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 3;
+      description = "Pull+push attempts per run before the unit fails and alerts";
+    };
+
+    retryDelaySec = lib.mkOption {
+      type = lib.types.ints.unsigned;
+      default = 30;
+      description = "Seconds between pull+push attempts (covers resume-from-suspend network gaps and push races)";
     };
 
     watch = {

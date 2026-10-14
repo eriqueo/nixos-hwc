@@ -50,8 +50,9 @@ hwc.automation.vaultSync.watch.enable = false;     # debounce 3s (watch.debounce
 - **Concurrency**: all git access is serialized through `flock` on `<vault>/.git/.sync.lock`.
   `brain-mcp` and the watcher take the **same** lock, so the timer, the watcher, and brain-mcp's
   checkpoint commits can never collide on `index.lock`.
-- **Order**: commit local changes → `pull --no-rebase --autostash` → `push`. A merge that
-  conflicts is aborted (not left half-applied) and retried next cycle.
+- **Order**: commit local changes → `pull --no-rebase --autostash` → `push`. Pull+push is one
+  attempt; a run makes `attempts` (3) of them `retryDelaySec` (30s) apart before the unit fails
+  and alerts. A merge that conflicts is aborted (not left half-applied) before the next attempt.
 - **Attributable commit messages**: the auto-commit message interpolates
   `${config.networking.hostName}` (`vault-sync: <host> auto-commit <ts>`) so hub history shows
   which clone authored each commit. Previously the literal was hardcoded `server`, so every
@@ -64,6 +65,12 @@ hwc.automation.vaultSync.watch.enable = false;     # debounce 3s (watch.debounce
 
 ## Changelog
 
+- 2026-10-14: **Retry pull+push within a run** (`attempts` = 3, `retryDelaySec` = 30). On
+  2026-10-13 hwc-laptop paged P1 twice for faults the next cycle cleared: at 07:02 the
+  Persistent timer fired on resume before the tailnet reached the hub ("Could not read from
+  remote repository"), and at 13:15 a push lost a race with another host ("rejected (fetch
+  first)"). A rejected push needs a fresh pull, so both steps retry together. The unit still
+  fails after the last attempt, so a real outage still alerts.
 - 2026-08-20: **Watcher disabled on hwc-laptop** (`watch.enable = false`); both hosts are
   now timer-only. The 3s debounce was correct when humans were the dominant write source;
   agents now are — 475 of 621 vault commits in the prior 30 days were
