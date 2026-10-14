@@ -486,6 +486,8 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-10-14: Calendar create/edit/delete replace an unobserved detached sync with one bounded Radicale-pair sync. Responses expose `syncComplete`; partial failures retain the local mutation and state that sync did not complete.
+
 - 2026-10-14: `hwc_calendar create` carries `endDate` for timed multi-day events as well as all-day ranges. Explicit reversed ranges fail validation before khal runs. `tests/calendar.test.ts` checks both behaviors.
 
 - 2026-10-13: `hwc_today` no longer repeats cases as a summary alert. Overdue tasks and overdue invoices are listed one by one, so their briefing alerts ("2 overdue task(s): …", "N overdue invoice(s) …") are skipped like refinery's already were (`ITEMIZED_SECTIONS`). Lead alerts stay, because "need a first touch" covers leads younger than `STALE_LEAD_DAYS`, which are not itemized. System items now say "critical alert — act today" or "warning — worth a look": the old "something is down right now" was also shown for forecasts such as "disk full in ~3d". A wiring test covers the skipped and kept sections.
@@ -740,7 +742,7 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Structure
 
-`src/tools/calendar.ts` owns calendar command arguments; `tests/calendar.test.ts` covers timed multi-day creation and existing edit/delete recovery.
+`src/tools/calendar.ts` owns calendar command arguments and bounded Radicale sync receipts; `tests/calendar.test.ts` covers timed ranges, sync outcomes and existing edit/delete recovery.
 
 `mail.ts` requires `HWC_MAIL_CLASSIFIER_CONTRACT_FILE` at startup and fails on a
 missing or malformed contract. Nix binds the pinned System One JSON for both

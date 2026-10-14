@@ -10,6 +10,7 @@
 ## Structure
 
 `mcp/src/src/tools/calendar.ts` carries timed multi-day end dates through to khal; calendar tests cover range validation and command arguments.
+Calendar changes wait for a bounded `calendar_radicale` sync and return its completion status separately from the saved local change.
 
 `core/packages.nix` selects the shared `gitWithPackCleanup` runtime package for the system command profile; its process-owned temporary pack cleanup does not change compiler bootstrap Git.
 
@@ -71,6 +72,8 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-10-14: Calendar changes now wait up to 30 seconds for the Radicale pair and report actual sync completion. A failed sync preserves the local result and instructs callers to sync instead of repeating the mutation.
 
 - 2026-10-14: MCP calendar create accepts timed multi-day ranges, carries both dates and times to khal, and rejects reversed explicit ranges. Same-day and all-day creation remain supported.
 - 2026-10-14: core/packages: select the shared patched Git command at runtime so cancelled pack downloads are removed; keep Git used for compiler bootstrap unchanged.

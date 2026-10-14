@@ -2,7 +2,7 @@
  * hwc_calendar — consolidated calendar tool (list, create, edit, delete, sync).
  */
 
-import { execFile, spawn } from "node:child_process";
+import { execFile } from "node:child_process";
 import { readdir, readFile, unlink } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { homedir } from "node:os";
@@ -363,15 +363,24 @@ async function searchIcsFiles(query: string, dateFilter: string | undefined, zon
   return results;
 }
 
-async function triggerSync(): Promise<void> {
+interface CalendarSync { syncTriggered: boolean; syncComplete: boolean }
+
+async function triggerSync(): Promise<CalendarSync> {
   try {
     const bin = await vdirsyncerBin();
-    const proc = spawn(bin, ["sync"], { detached: true, stdio: "ignore" });
-    proc.unref();
-    log.debug("Triggered vdirsyncer sync (fire-and-forget)");
+    // Calendar mutations are already saved locally. Synchronize only their
+    // owner pair, once, with a deadline; never retry the mutation on sync failure.
+    const result = await runBin(bin, ["sync", "calendar_radicale"], { timeout: 30000 });
+    if (result.exitCode !== 0) log.warn("Radicale calendar sync did not complete", { exitCode: result.exitCode });
+    return { syncTriggered: true, syncComplete: result.exitCode === 0 };
   } catch (err) {
     log.warn("Failed to trigger vdirsyncer sync", { error: err });
+    return { syncTriggered: false, syncComplete: false };
   }
+}
+
+function syncNotice(sync: CalendarSync): string {
+  return sync.syncComplete ? "" : " (local change saved; Radicale sync did not complete; run calendar sync rather than repeating the change)";
 }
 
 /* ════════════════════════════════════════════════════════════════ */
@@ -552,12 +561,12 @@ export function calendarTools(): ToolDef[] {
               return mcpError({ type: "COMMAND_FAILED", message: "Failed to create calendar event", error: stderr.trim() || stdout.trim() || "khal returned non-zero", suggestion: "Check that the date/time format is correct and khal is properly configured", context: { date, startTime, endTime, summary } });
             }
 
-            await triggerSync();
+            const sync = await triggerSync();
 
             return {
               status: "ok",
-              message: `Created event: "${summary}" on ${date}${startTime ? ` at ${startTime}` : " (all-day)"}`,
-              data: { summary, date, startTime: startTime || null, endTime: endTime || null, endDate: endDate || null, location: location || null, description: description || null, calendar: calendar || "default", syncTriggered: true },
+              message: `Created event: "${summary}" on ${date}${startTime ? ` at ${startTime}` : " (all-day)"}${syncNotice(sync)}`,
+              data: { summary, date, startTime: startTime || null, endTime: endTime || null, endDate: endDate || null, location: location || null, description: description || null, calendar: calendar || "default", ...sync },
             };
           } catch (err) {
             return catchError("INTERNAL_ERROR", "Failed to create calendar event", err, "Check that khal is installed and calendar storage is accessible");
@@ -600,12 +609,12 @@ export function calendarTools(): ToolDef[] {
             const event = matches[0];
             await unlink(event.path);
             log.debug("Deleted .ics file", { path: event.path, summary: event.summary });
-            await triggerSync();
+            const sync = await triggerSync();
 
             return {
               status: "ok",
-              message: `Deleted ${event.recurring ? "recurring event (every occurrence)" : "event"}: "${event.summary}"`,
-              data: { deleted: { summary: event.summary, start: timeLabel(event.start), dtstart: event.dtstart, recurring: event.recurring, uid: event.uid }, syncTriggered: true },
+              message: `Deleted ${event.recurring ? "recurring event (every occurrence)" : "event"}: "${event.summary}"${syncNotice(sync)}`,
+              data: { deleted: { summary: event.summary, start: timeLabel(event.start), dtstart: event.dtstart, recurring: event.recurring, uid: event.uid }, ...sync },
             };
           } catch (err) {
             return catchError("INTERNAL_ERROR", "Failed to delete calendar event", err, "Check that vdirsyncer calendar storage is accessible");
@@ -711,12 +720,12 @@ export function calendarTools(): ToolDef[] {
             await unlink(event.path);
             log.debug("Deleted old .ics after creating its replacement", { path: event.path });
 
-            await triggerSync();
+            const sync = await triggerSync();
 
             return {
               status: "ok",
-              message: `Updated event: "${event.summary}" → "${finalSummary}"`,
-              data: { changes, syncTriggered: true },
+              message: `Updated event: "${event.summary}" → "${finalSummary}"${syncNotice(sync)}`,
+              data: { changes, ...sync },
             };
           } catch (err) {
             return catchError("INTERNAL_ERROR", "Failed to edit calendar event", err, "Check that vdirsyncer calendar storage is accessible");

@@ -481,13 +481,13 @@ PENDING = ("saved, but Radicale does not show it yet (the sync is still running)
            "refresh in a minute, and check the calendar on your phone if it never appears")
 
 
-def cal_reply(h, body, message, synced):
+def cal_reply(h, body, message, synced, sync_complete=None):
     view = body.get("view") if body.get("view") in ("day", "week", "month") else "week"
     try:
         day = date_field(body.get("viewDate"), "viewDate")
     except Invalid:
         day = now().date()
-    return {"ok": True, "synced": synced, "message": message if synced else PENDING,
+    return {"ok": True, "synced": synced, "message": message if synced or sync_complete is False else PENDING,
             "state": agenda(h, view, day)}
 
 
@@ -498,8 +498,9 @@ def cal_create(h, body):
     sig = signature(args)
     before = count_like(read_events(day, day)[1], sig)
     env = gateway_call("hwc_calendar", args)
-    synced = wait_until(day, day, lambda evs: count_like(evs, sig) > before)
-    return cal_reply(h, body, env.get("message"), synced)
+    complete = (env.get("data") or {}).get("syncComplete")
+    synced = complete is not False and wait_until(day, day, lambda evs: count_like(evs, sig) > before)
+    return cal_reply(h, body, env.get("message"), synced, complete)
 
 
 def cal_delete(h, body):
@@ -509,8 +510,9 @@ def cal_delete(h, body):
     day = dt.date.fromisoformat(ev["date"])
     env = gateway_call("hwc_calendar", {"action": "delete", "query": ev["summary"],
                                         "filter_date": ev["date"], "confirm": True})
-    synced = wait_until(day, day, lambda evs: not any(e["uid"] == ev["uid"] for e in evs))
-    return cal_reply(h, body, env.get("message"), synced)
+    complete = (env.get("data") or {}).get("syncComplete")
+    synced = complete is not False and wait_until(day, day, lambda evs: not any(e["uid"] == ev["uid"] for e in evs))
+    return cal_reply(h, body, env.get("message"), synced, complete)
 
 
 def as_create(ev):
@@ -550,9 +552,10 @@ def cal_edit(h, body):
     # one of `before`, so the edited copy only brings the count back to it.
     target = before if sig == signature(as_create(ev)) else before + 1
     first, last = min(old_day, new_day), max(old_day, new_day)
-    synced = wait_until(first, last, lambda evs: count_like(evs, sig) >= target
+    complete = (env.get("data") or {}).get("syncComplete")
+    synced = complete is not False and wait_until(first, last, lambda evs: count_like(evs, sig) >= target
                         and not any(e["uid"] == ev["uid"] for e in evs))
-    return cal_reply(h, body, env.get("message"), synced)
+    return cal_reply(h, body, env.get("message"), synced, complete)
 
 
 # ── HTTP faces ──────────────────────────────────────────────────────────────

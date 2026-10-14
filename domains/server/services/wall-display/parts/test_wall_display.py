@@ -99,6 +99,16 @@ class DisplayContract(unittest.TestCase):
         self.assertEqual(screens.todo.at, 0)
         self.assertTrue(server.renderer.wake.is_set())
 
+    def test_calendar_sync_failure_is_visible_without_a_second_wait(self):
+        with patch.object(apps, "read_events", return_value=([dict(name="Family", writable=True)], [])), \
+             patch.object(apps, "gateway_call", return_value={"message": "local change saved; sync failed", "data": {"syncComplete": False}}), \
+             patch.object(apps, "wait_until") as wait, \
+             patch.object(apps, "agenda", return_value={}):
+            result = apps.cal_create(None, dict(summary="Family trip", calendar="Family", date="2026-11-01", allday=True))
+        wait.assert_not_called()
+        self.assertFalse(result["synced"])
+        self.assertIn("sync failed", result["message"])
+
     def test_image_endpoint_does_not_change_rotation(self):
         http = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
         thread = threading.Thread(target=http.serve_forever, daemon=True)

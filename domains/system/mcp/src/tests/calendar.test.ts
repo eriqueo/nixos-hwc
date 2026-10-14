@@ -64,6 +64,18 @@ describe("timed multi-day creation",()=>{
   expect(result.status).toBe("error");
   expect(run.mock.calls.some(c=>c[1].includes("new"))).toBe(false);
  });
+ it("waits for the Radicale calendar pair after creating an event",async()=>{
+  const result=await calendar({action:"create",summary:"Family trip",date:"2026-11-01",startTime:"18:00"});
+  expect(run.mock.calls.find(c=>c[1][0]==="sync")?.[1]).toEqual(["sync","calendar_radicale"]);
+  expect(result.data).toMatchObject({syncTriggered:true,syncComplete:true});
+ });
+ it("reports a failed sync without treating the saved event as a failed create",async()=>{
+  run.mockImplementation((_bin,args,_options,callback)=>args[0]==="sync" ? callback(Error("failed"),"","sync failed") : callback(null,"",""));
+  const result=await calendar({action:"create",summary:"Family trip",date:"2026-11-01"});
+  expect(result.status).toBe("ok");
+  expect(result.data).toMatchObject({syncComplete:false});
+  expect(result.message).toContain("local change saved");
+ });
 });
 
 describe("delete and edit read the event itself",()=>{
