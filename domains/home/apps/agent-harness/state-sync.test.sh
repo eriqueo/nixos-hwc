@@ -73,6 +73,11 @@ if AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=tes
 fi
 test "$(wc -l < "$ROOT/alerts")" -eq 1
 test "$(wc -l < "$ROOT/validations")" -eq 1
+# Blocked state is committed locally but never published.
+if git -C "$ROOT/hub.git" cat-file -e main:projects/demo/memory/invalid.md 2>/dev/null; then
+  echo 'state-sync.test: blocked invalid memory reached the hub' >&2
+  exit 1
+fi
 set +e
 AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
   AGENT_STATE_VALIDATOR="$ROOT/bin/counting-validator" \
@@ -102,6 +107,38 @@ AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
   bash "$(dirname "$0")/state-sync.sh" sync >/dev/null
 test "$(wc -l < "$ROOT/alerts")" -eq 3
 test "$(wc -l < "$ROOT/validations")" -eq 3
+if git -C "$ROOT/hub.git" cat-file -e main:projects/demo/memory/invalid.md 2>/dev/null; then
+  echo 'state-sync.test: deleted invalid memory is on the hub' >&2
+  exit 1
+fi
+
+# A host blocked by invalid state that arrived FROM the hub must receive the
+# hub's fix. Before, a blocked host skipped the fetch and stayed blocked
+# forever (2026-10-14). Both sides also append to MISTAKES.md, as they did then.
+git clone "$ROOT/hub.git" "$ROOT/peer" >/dev/null 2>&1
+git -C "$ROOT/peer" config user.name peer
+git -C "$ROOT/peer" config user.email peer@example.invalid
+printf -- '---\nname: hub\ndescription: from the hub\n---\n\nbody\n' \
+  > "$ROOT/peer/projects/demo/memory/hub.md"
+git -C "$ROOT/peer" add -A && git -C "$ROOT/peer" commit -qm 'unvalidated hand commit'
+git -C "$ROOT/peer" push -q
+printf 'local mistake\n' >> "$ROOT/state/MISTAKES.md"
+if AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
+    bash "$(dirname "$0")/state-sync.sh" sync >/dev/null 2>&1; then
+  echo 'state-sync.test: invalid hub memory did not block' >&2
+  exit 1
+fi
+test "$(jq -r .state "$ROOT/state/.git/.sync-case.json")" = blocked
+printf -- '---\nname: hub\ndescription: from the hub\nauthority: observation\nsource: test fixture\n---\n\nbody\n' \
+  > "$ROOT/peer/projects/demo/memory/hub.md"
+printf 'peer mistake\n' >> "$ROOT/peer/MISTAKES.md"
+git -C "$ROOT/peer" add -A && git -C "$ROOT/peer" commit -qm 'fix hub memory'
+git -C "$ROOT/peer" push -q
+AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
+  bash "$(dirname "$0")/state-sync.sh" sync >/dev/null
+test "$(jq -r .state "$ROOT/state/.git/.sync-case.json")" = resolved
+git -C "$ROOT/hub.git" show main:MISTAKES.md | rg -q '^local mistake$'
+git -C "$ROOT/hub.git" show main:MISTAKES.md | rg -q '^peer mistake$'
 
 # The agent-workspace ledger and guard files are part of the contract: they
 # validate, and a sync commits and pushes them to the hub.

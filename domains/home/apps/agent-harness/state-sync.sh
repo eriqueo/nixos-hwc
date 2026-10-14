@@ -170,16 +170,69 @@ stage_json_state() {
   [ "${#paths[@]}" -eq 0 ] || git add -A -- "${paths[@]}"
 }
 
+commit_local_state() {
+  git add -A -- MISTAKES.md projects
+  git add -A -- .harness-schema.json
+  stage_json_state ledger
+  stage_json_state guard
+  [ ! -e .mistakes-dismissed.log ] || git add -A -- .mistakes-dismissed.log
+  if ! git diff --cached --quiet; then
+    git commit -m "sync($HOST): agent state $(date -Iminutes)"
+  fi
+}
+
+integrate_upstream() {
+  local unresolved path copy
+  git fetch origin
+  git rev-parse --verify '@{upstream}' >/dev/null 2>&1 || return 0
+  git merge --no-edit '@{upstream}' && return 0
+  unresolved=$(git diff --name-only --diff-filter=U)
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    case "$path" in
+      projects/*/memory/*.md)
+        copy="${path%.md}.from-$HOST.md"
+        git show ":3:$path" > "$copy"
+        git checkout --ours -- "$path"
+        git add -- "$path" "$copy"
+        log "kept hub conflict as $copy"
+        notify "Agent memory conflict" "$path kept with $copy on $HOST" || true
+        ;;
+      MISTAKES.md)
+        git checkout --ours -- "$path"
+        git show ":3:$path" >> "$path"
+        git add -- "$path"
+        ;;
+      *)
+        git merge --abort 2>/dev/null || true
+        log "unsupported merge conflict: $path"
+        return 1
+        ;;
+    esac
+  done <<< "$unresolved"
+  git commit --no-edit
+}
+
+# Validation gates PUBLISHING, not receiving. Local work is committed and the
+# hub is merged before validating, so a host blocked by invalid state that
+# arrived from the hub (or by a validator change) picks up the hub's fix on the
+# next run. Validating before the fetch deadlocked: a blocked host never
+# fetched, so it could not receive the commit that would unblock it — on
+# 2026-10-14 hwc-home and hwc-laptop stayed blocked after the fix reached the
+# hub. Invalid state is committed locally but never pushed.
 sync_state() {
   link_memories
   cd "$STATE"
   exec 9>.git/.sync.lock
   flock 9
   CURRENT_FINGERPRINT=$(state_fingerprint)
+  commit_local_state
+  integrate_upstream
+  CURRENT_FINGERPRINT=$(state_fingerprint)
   if [ "$(case_field '.state')" = blocked ] \
       && [ "$(case_field '.lastOutcome')" = validation-failed ] \
       && [ "$(case_field '.caseId')" = "$CURRENT_FINGERPRINT" ]; then
-    log "unchanged blocked case $CURRENT_FINGERPRINT; validation and network skipped"
+    log "unchanged blocked case $CURRENT_FINGERPRINT; validation skipped, nothing pushed"
     trap - ERR
     return 75
   fi
@@ -200,44 +253,6 @@ sync_state() {
     return 1
   fi
 
-  git add -A -- MISTAKES.md projects
-  git add -A -- .harness-schema.json
-  stage_json_state ledger
-  stage_json_state guard
-  [ ! -e .mistakes-dismissed.log ] || git add -A -- .mistakes-dismissed.log
-  if ! git diff --cached --quiet; then
-    git commit -m "sync($HOST): agent state $(date -Iminutes)"
-  fi
-  git fetch origin
-  if git rev-parse --verify '@{upstream}' >/dev/null 2>&1; then
-    if ! git merge --no-edit '@{upstream}'; then
-      unresolved=$(git diff --name-only --diff-filter=U)
-      while IFS= read -r path; do
-        [ -n "$path" ] || continue
-        case "$path" in
-          projects/*/memory/*.md)
-            copy="${path%.md}.from-$HOST.md"
-            git show ":3:$path" > "$copy"
-            git checkout --ours -- "$path"
-            git add -- "$path" "$copy"
-            log "kept hub conflict as $copy"
-            notify "Agent memory conflict" "$path kept with $copy on $HOST" || true
-            ;;
-          MISTAKES.md)
-            git checkout --ours -- "$path"
-            git show ":3:$path" >> "$path"
-            git add -- "$path"
-            ;;
-          *)
-            git merge --abort 2>/dev/null || true
-            log "unsupported merge conflict: $path"
-            return 1
-            ;;
-        esac
-      done <<< "$unresolved"
-      git commit --no-edit
-    fi
-  fi
   git push
   CURRENT_FINGERPRINT=$(state_fingerprint)
   record_case resolved synced "$CURRENT_FINGERPRINT"

@@ -108,6 +108,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-14: apps/agent-harness: state sync merges the hub before it validates, so a blocked host receives the hub's fix instead of staying blocked.
 - 2026-10-13: apps/vectorcraft: input bumped to db6a675 (Type on a Path on compound paths, storytold/vectorcraft#1818).
 - 2026-10-13: New `apps/vectorcraft/` and `vectorcraft` flake input (our fork of storytold/vectorcraft, branch hwc/main): vector editor being tailored for Julia's GIS maps. Enabled on hwc-laptop.
 - 2026-10-13: apps/tether takes its package from the flake's `tetherPackage` special arg (both HM lanes), not osConfig; standalone `hms` had been dropping the `tetherd` unit.
