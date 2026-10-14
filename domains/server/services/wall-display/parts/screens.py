@@ -366,7 +366,10 @@ calendar = Cached("calendar", load_events, CAL_TTL)
 weather = Cached("forecast", load_weather, WX_TTL)
 todo = Cached("tasks", load_tasks, CAL_TTL)
 briefing = Cached("briefing", load_briefing, CAL_TTL)
-SOURCES = [calendar, weather, todo] + ([briefing] if BRIEFING else [])
+# A source only used by an optional screen is not loaded without a render.
+# Keep it out of health checks when no device rotates through that screen.
+SOURCES = [calendar, weather, todo] + ([briefing] if BRIEFING and any(
+    "briefing" in device["playlist"] for device in CONFIG["devices"].values()) else [])
 
 
 # ── page frame: framework, device profile, shared pieces ────────────────────
