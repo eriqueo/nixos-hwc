@@ -32,11 +32,19 @@ radicale/
 ```
 
 ## Secret
-`domains/secrets/parts/services/radicale-htpasswd.age` — one line,
-`eric:<password>` (htpasswd "plain" encryption; the file is age-encrypted at
-rest and mounted 0440 root:secrets). The same secret serves both sides: the
-server reads it as the htpasswd file; the laptop's vdirsyncer extracts the
-password (`cut -d: -f2-`).
+`domains/secrets/parts/services/radicale-htpasswd.age` — one `user:<password>`
+line per principal (htpasswd "plain" encryption; the file is age-encrypted at
+rest and mounted 0440 root:secrets):
+- `eric`: calendars, task lists and the CRM address book `eric/contacts`.
+- `cal`: retired as a principal, but the CRM still reads this line.
+- `eric-personal`: the personal address book `eric-personal/contacts`
+  (family, personal, work). It has eric's password. It is its own principal
+  because iOS shows one address book per CardDAV account, and the phone must
+  write to both books.
+
+The same secret serves both sides: the server reads it as the htpasswd file;
+clients extract one user's password (`radicalePasswordArgs` in
+`domains/lib/hm.nix`).
 
 ## Deploy runbook (in order)
 1. **Create the secret** (laptop, in `~/.nixos`):
@@ -61,6 +69,11 @@ password (`cut -d: -f2-`).
    phone; add a task on the phone in that list → sync → visible in todui.
 
 ## Changelog
+- 2026-10-14: New principal `eric-personal` in `radicale-htpasswd` (same
+  password as `eric`) for the personal address book. Radicale is now the
+  phone's contacts source: personal/family/work cards in
+  `eric-personal/contacts`, CRM cards in `eric/contacts`. The Secret section
+  lists every line.
 - 2026-10-13: `parts/mirror-catalog.nix` is the one list of mirrors. It is the
   default of `mirrors` (machines/work/config.nix no longer lists them) and of
   `hwc.mail.calendar.radicale.extraCollections` (the two machine `home.nix`
