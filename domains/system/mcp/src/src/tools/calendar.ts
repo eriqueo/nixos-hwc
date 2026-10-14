@@ -405,7 +405,7 @@ export function calendarTools(): ToolDef[] {
           date: { type: "string", description: "[create] Start date YYYY-MM-DD (required)" },
           startTime: { type: "string", description: "[create/edit] Start time HH:MM (omit for all-day)" },
           endTime: { type: "string", description: "[create/edit] End time HH:MM" },
-          endDate: { type: "string", description: "[create] End date YYYY-MM-DD for multi-day all-day" },
+          endDate: { type: "string", description: "[create] End date YYYY-MM-DD for timed multi-day events, or last day for all-day events" },
           calendar: { type: "string", description: "[create] khal calendar name (omit = default)" },
           location: { type: "string", description: "[create/edit] Event location" },
           description: { type: "string", description: "[create/edit] Event description" },
@@ -521,6 +521,9 @@ export function calendarTools(): ToolDef[] {
             if (endTime && !TIME_RE.test(endTime)) {
               return mcpError({ type: "VALIDATION_ERROR", message: `Invalid endTime format: ${endTime}. Use HH:MM.` });
             }
+            if (endDate && (endDate < date || (startTime && endTime && endDate === date && endTime <= startTime))) {
+              return mcpError({ type: "VALIDATION_ERROR", message: "The event end must be after its start." });
+            }
 
             const khalArgs: string[] = [...khalConfigArgs(), "new"];
             if (calendar) khalArgs.push("-a", calendar);
@@ -531,7 +534,7 @@ export function calendarTools(): ToolDef[] {
                 const endH = (h + 1) % 24;
                 return `${String(endH).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
               })();
-              khalArgs.push(date, startTime, end, summary);
+              khalArgs.push(date, startTime, ...(endDate ? [endDate] : []), end, summary);
             } else if (endDate) {
               khalArgs.push(date, endDate, summary);
             } else {

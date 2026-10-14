@@ -486,6 +486,8 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-10-14: `hwc_calendar create` carries `endDate` for timed multi-day events as well as all-day ranges. Explicit reversed ranges fail validation before khal runs. `tests/calendar.test.ts` checks both behaviors.
+
 - 2026-10-13: `hwc_today` no longer repeats cases as a summary alert. Overdue tasks and overdue invoices are listed one by one, so their briefing alerts ("2 overdue task(s): …", "N overdue invoice(s) …") are skipped like refinery's already were (`ITEMIZED_SECTIONS`). Lead alerts stay, because "need a first touch" covers leads younger than `STALE_LEAD_DAYS`, which are not itemized. System items now say "critical alert — act today" or "warning — worth a look": the old "something is down right now" was also shown for forecasts such as "disk full in ~3d". A wiring test covers the skipped and kept sections.
 - 2026-10-12: Drop "JT" from the gateway's option and unit descriptions; the jt-mcp backend is gone.
 - 2026-10-12: `hwc_calendar` `edit` no longer loses events. It used to delete the `.ics` file and then run `khal new` without `-a`, and the khalt config has no default calendar, so khal failed and the event was gone. It now runs `khal new -a <the event's own calendar>` first (the name comes from the collection's vdirsyncer `displayname` file, falling back to the directory name, the same name khal discovers) and deletes the old file only after khal succeeds. Tests cover the calendar name, the fallback, and keeping the original when khal fails.
@@ -737,6 +739,8 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **2026-04-02**: Root podman fix, parameter validation, `.mcp.json` registration, Phase 1-3 foundation.
 
 ## Structure
+
+`src/tools/calendar.ts` owns calendar command arguments; `tests/calendar.test.ts` covers timed multi-day creation and existing edit/delete recovery.
 
 `mail.ts` requires `HWC_MAIL_CLASSIFIER_CONTRACT_FILE` at startup and fails on a
 missing or malformed contract. Nix binds the pinned System One JSON for both

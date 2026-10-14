@@ -107,6 +107,7 @@ class Renderer:
 
     def __init__(self):
         self.lock = threading.Lock()
+        self.wake = threading.Event()  # capacity one: changes coalesce while rendering
         self.current = {}   # target -> filename
         self.status = {}    # target -> {"ok", "at", "error"}
         self.specs = {}     # target -> device spec
@@ -173,9 +174,15 @@ class Renderer:
 
     def loop(self):
         while True:
+            self.wake.clear()
             for target in self.targets:
                 self.render(target)
-            time.sleep(RENDER_EVERY)
+            self.wake.wait(RENDER_EVERY)
+
+    def changed(self):
+        screens.calendar.invalidate()
+        screens.todo.invalidate()
+        self.wake.set()
 
 
 def run(cmd, env=None):
@@ -186,6 +193,34 @@ def run(cmd, env=None):
 
 def review_url(name, scene):
     return f"/review/{quote(name, safe='')}/{quote(scene, safe='')}"
+
+
+def image_updates(name, scene):
+    """One outstanding fetch, ten-second deadline; failures keep the last image.
+    The fifteen-second next poll is the only retry. Scene rotation is unchanged."""
+    url = f"/device/{quote(name, safe='')}/images/{quote(scene, safe='')}"
+    return '''<script>
+async function refreshSceneImage() {
+  if (document.hidden) { setTimeout(refreshSceneImage, 15000); return; }
+  const controller = new AbortController(), deadline = setTimeout(() => controller.abort(), 10000);
+  try {
+    const r = await fetch(URL, {cache: 'no-store', signal: controller.signal});
+    if (r.ok) {
+      const data = await r.json(), image = document.getElementById('scene-image');
+      if (image && image.getAttribute('src') !== data.image) {
+        await new Promise(resolve => {
+          const candidate = new Image(), stop = setTimeout(() => { candidate.src = ''; resolve(); }, 10000);
+          candidate.onload = () => { clearTimeout(stop); image.src = data.image; resolve(); };
+          candidate.onerror = () => { clearTimeout(stop); resolve(); };
+          candidate.src = data.image;
+        });
+      }
+    }
+  } catch (_) { /* keep the last good image until the next scheduled poll */ }
+  finally { clearTimeout(deadline); setTimeout(refreshSceneImage, 15000); }
+}
+setTimeout(refreshSceneImage, 15000);
+</script>'''.replace('URL', json.dumps(url), 1)
 
 
 # HWC UI tokens vendored from scout/packages/ui/src/styles/{palette,theme}.css.
@@ -265,7 +300,7 @@ def health():
 # (todo.<vhostDomain> → HOST_APPS["todo"]). Each app is an object with
 # get(handler, path) and post(handler, path); anything else is the wall face.
 HOST_APPS = {}
-HOST_APPS.update(apps.HOST_APPS)  # todo.* Tasks, calendar.* Calendar (apps.py)
+HOST_APPS.update(apps.host_apps(renderer.changed))  # notification bound at composition root
 
 TAILNET = ipaddress.ip_network("100.64.0.0/10")
 
@@ -319,7 +354,11 @@ class Handler(BaseHTTPRequestHandler):
         elif path.startswith("/images/"):
             self.serve_image(path[len("/images/"):])
         elif path.startswith("/device/"):
-            self.web_client(path[len("/device/"):].strip("/"))
+            address = path[len("/device/"):].split("/")
+            if len(address) == 3 and address[1] == "images":
+                self.current_image(*map(unquote, (address[0], address[2])))
+            else:
+                self.web_client(path[len("/device/"):].strip("/"))
         elif path == "/healthz":
             ok, body = health()
             self.send(200 if ok else 503, "application/json", json.dumps(body))
@@ -420,7 +459,7 @@ class Handler(BaseHTTPRequestHandler):
         previous = review_url(name, playlist[(index - 1) % len(playlist)])
         following = review_url(name, playlist[(index + 1) % len(playlist)])
         image = renderer.image((scene, device["width"], device["height"], device["grays"]))
-        preview = (f'<img src="/images/{image}" width="{device["width"]}" height="{device["height"]}" '
+        preview = (f'<img id="scene-image" src="/images/{image}" width="{device["width"]}" height="{device["height"]}" '
                    f'alt="{escape(scene.capitalize())} scene on {escape(name)}">' if image else
                    '<p role="status">Scene image is not ready. Reload to try again.</p>')
         self.send(200 if image else 503, "text/html; charset=utf-8", f'''<!doctype html>
@@ -434,7 +473,17 @@ class Handler(BaseHTTPRequestHandler):
 <div class="preview">{preview}</div>
 <footer><nav aria-label="Scene controls">{link(previous, '← Previous')}{link(following, 'Next →')}
 {link(here, 'Reload scene')}</nav><p>This preview stays on this scene.</p></footer>
-</main></body></html>''')
+</main>{image_updates(name, scene) if image else ''}</body></html>''')
+
+    def current_image(self, name, scene):
+        device = DEVICES.get(name)
+        if device is None or scene not in device["playlist"]:
+            return self.json(404, {"error": "unknown device or scene"})
+        target = (scene, device["width"], device["height"], device["grays"])
+        image = renderer.current.get(target)
+        if image is None:
+            return self.json(503, {"error": "scene image is not ready"})
+        self.json(200, {"image": f"/images/{image}"})
 
     def web_client(self, name):
         """A browser acting as the device: each load shows the next playlist
@@ -456,7 +505,7 @@ class Handler(BaseHTTPRequestHandler):
         img = renderer.image(target)
         wait = device.spec["refreshRate"] if img else 60
         here = f"/device/{name}"
-        body = (f'<img src="/images/{img}" alt="">' if img
+        body = (f'<img id="scene-image" src="/images/{img}" alt="">' if img
                 else "<p>No image rendered yet.</p>")
         # With voice on, a script reloads instead (it waits out a recording
         # or an answer on screen); the meta refresh stays for script-less browsers.
@@ -475,7 +524,7 @@ class Handler(BaseHTTPRequestHandler):
 img{{display:block;width:100vw;height:100vh;object-fit:contain}}
 a{{position:fixed;top:0;bottom:0}}
 .prev{{left:0;width:33vw}}.next{{left:33vw;right:0}}</style>
-</head><body>{body}<a class="prev" href="{here}?go=prev" aria-label="previous"></a><a class="next" href="{here}" aria-label="next"></a></body></html>""")
+</head><body>{body}<a class="prev" href="{here}?go=prev" aria-label="previous"></a><a class="next" href="{here}" aria-label="next"></a>{image_updates(name, target[0]) if img else ''}</body></html>""")
 
     def serve_image(self, name):
         if not IMAGE_NAME.match(name):

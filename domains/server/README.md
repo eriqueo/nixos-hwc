@@ -51,7 +51,7 @@ domains/server/
 │   ├── bloxels-cv/       # Bloxels grid photo classifier (path watcher on inbox-mobile)
 │   ├── inbox-processor/  # Phone capture processor (whisper-server + Tesseract; optional DX2 voice-note cleanup)
 │   ├── radicale/         # Self-hosted CalDAV (tasks.hwc.*, two-way task sync)
-│   └── wall-display/     # TRMNL BYOS + tablet rotation; /review/<device>/<scene> fixed scene previews; TRMNL framework screens and QR links to phone apps
+│   └── wall-display/     # TRMNL scenes + tablet rotation and scene review; Family Home, week, weather, tasks, groceries; QR-linked phone apps and contract tests
 │       └── parts/        #   server.py (protocol, host dispatch, renderer, web client), screens.py (screens, CalDAV reads),
 │                         #   apps.py (todo.* Tasks and calendar.* Calendar phone apps; writes via the MCP gateway),
 │                         #   voice.py (tap-to-talk: whisper → DX2 → Piper, writes need confirmation)
@@ -70,6 +70,8 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+
+- 2026-10-14: `services/wall-display/` adds calendar-add QR links on Home/Week, dated Home headers and Family-only Home tasks. Week uses larger day cards in two rows with bounded events. Weather reserves QR space and wraps statistics. Groceries joins the rotation with a QR to `/groceries` on the Tasks host, pinned to the existing configured list. Calendar forms expose start/end dates for timed ranges and preserve them during edit recovery. Successful phone writes expire task/calendar caches and wake the single render worker; tablet/review pages poll current-scene images every 15 seconds without advancing rotation. CalDAV cache fallback is 60 seconds. `parts/test_wall_display.py` covers list isolation, dates, notification wiring and image polling; run with Python, icalendar and segno.
 
 - 2026-10-14: `services/wall-display/` root opens a scene review page, defaulting to the iPad profile. `/review/<device>/<scene>` shows the same PNG as the tablet with named scenes, device selection, previous/next and reload controls. The preview fits the viewport while preserving its aspect ratio. Reviews stay on the chosen scene and leave device cursors and presence untouched. The default rotation is now home, week, weather and tasks; the explicit `/briefing` HTML page remains available. The briefing source participates in health checks only when a device rotates through it.
 - 2026-10-14: `services/wall-display/` web client pages carry `apple-mobile-web-app-capable` (and `mobile-web-app-capable`), so a page added to an iPad's Home Screen opens full screen without Safari's address bar. hwc-work adds the `ipad` device (iPad 6th gen, 2048×1536, scale 2.56 for the framework's 800×600 layout, voice off until the mic button has a spot that covers nothing).

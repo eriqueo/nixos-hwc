@@ -9,6 +9,8 @@
 
 ## Structure
 
+`mcp/src/src/tools/calendar.ts` carries timed multi-day end dates through to khal; calendar tests cover range validation and command arguments.
+
 `core/packages.nix` selects the shared `gitWithPackCleanup` runtime package for the system command profile; its process-owned temporary pack cleanup does not change compiler bootstrap Git.
 
 MCP mail health accepts sync status versions 1 and 2. Version 2 measures fetch
@@ -69,6 +71,8 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-10-14: MCP calendar create accepts timed multi-day ranges, carries both dates and times to khal, and rejects reversed explicit ranges. Same-day and all-day creation remain supported.
 - 2026-10-14: core/packages: select the shared patched Git command at runtime so cancelled pack downloads are removed; keep Git used for compiler bootstrap unchanged.
 - 2026-10-13: `hardware/` — patch bluetoothd (`hardware.bluetooth.package` only; no overlay, so no libbluetooth rebuild). On a peer-closed ATT channel, bluez 5.86 `can_read_data()` read 0 bytes and re-armed its read watch forever. That watch outranks the idle-priority HUP watch, so the channel was never torn down; bluetoothd sat at 100% CPU and stopped answering D-Bus, which segfaulted Waybar. The patch treats EOF as end of reads. Remove once upstream fixes it.
 - 2026-10-12: mcp: `hwc_mail health` reads mail-health's `summary.json` (open cases with outcome, message and open time) instead of the retired first-failure and cooldown files; status is error on any critical case, partial on warnings or a down bridge or stale sync. Bridge state comes from mail-health's infrastructure cases: the old `systemctl show protonmail-bridge.service` ran in system scope against a user unit and reported the bridge down on every call.

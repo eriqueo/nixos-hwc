@@ -14,10 +14,11 @@
 #
 # Screens (parts/screens.py), drawn with the TRMNL framework (served
 # locally at /framework/): home (today's weather, top 3 tasks, events today
-# and tomorrow), week (every Radicale event calendar + NOAA forecast/alerts),
+# and tomorrow, Family tasks, calendar-add QR), week (every Radicale event calendar + NOAA forecast/alerts),
 # weather (NOAA now + 5 days), tasks (Things-style Deadlines / To-Dos /
 # Finished today across every Radicale task list), briefing (allowlisted
-# morning-briefing items, mail excluded). All but home carry a QR code to
+# morning-briefing items, mail excluded), groceries (existing grocery list).
+# Each active scene carries a QR code to
 # the matching phone page (`links` below). Protocol and rendering:
 # parts/server.py.
 #
@@ -168,13 +169,18 @@ let
   '';
 
   # Where each screen's QR code points (one producer; the server only reads
-  # these). week → Calendar app, tasks → Tasks app, briefing → Workbench,
-  # weather → the NWS point forecast for noaaPoint. home has none.
+  # these). home/week → Calendar add form, tasks → Tasks app,
+  # groceries → its list page, briefing → Workbench,
+  # weather → the NWS point forecast for noaaPoint.
   vhostDomain = config.hwc.networking.shared.vhostDomain;
   latLon = lib.splitString "," cfg.noaaPoint;
+  calendarAddUrl = "https://calendar.${vhostDomain}/?add=1";
+  groceryPath = "/groceries";
   links = {
-    week = "https://calendar.${vhostDomain}/";
+    home = calendarAddUrl;
+    week = calendarAddUrl;
     tasks = "https://todo.${vhostDomain}/";
+    groceries = "https://todo.${vhostDomain}${groceryPath}";
     briefing = "https://workbench.${vhostDomain}/";
     weather = "https://forecast.weather.gov/MapClick.php?lat=${lib.elemAt latLon 0}&lon=${lib.elemAt latLon 1}";
   };
@@ -201,9 +207,11 @@ let
     assets = "${assets}";
     crispFontsConf = "${crispFontsConf}";
     inherit links;
+    taskLists = { family = cfg.familyTaskList; groceries = cfg.groceryTaskList; };
     devices = cfg.devices;
     apps = {
       inherit gatewayUrl;
+      paths.groceries = groceryPath;
       readOnlyCalendars = lib.attrNames radicale.mirrors;
     };
     voice = if !cfg.voice.enable then null else {
@@ -247,6 +255,17 @@ in
       description = "Place name shown before the current conditions.";
     };
 
+    familyTaskList = lib.mkOption {
+      type = lib.types.str;
+      default = "Family";
+      description = "Radicale task list shown on Home (matched by exact display name).";
+    };
+    groceryTaskList = lib.mkOption {
+      type = lib.types.str;
+      default = "Groceries";
+      description = "Radicale task list shared by the Groceries scene and phone page.";
+    };
+
     devices = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule ({ config, ... }: {
         options = {
@@ -279,8 +298,8 @@ in
           };
           playlist = lib.mkOption {
             type = lib.types.nonEmptyListOf lib.types.str;
-            default = [ "home" "week" "weather" "tasks" ];
-            description = "Screens shown in turn, one per refresh. Names: home, week, weather, tasks, briefing (the server refuses others at boot).";
+            default = [ "home" "week" "weather" "tasks" "groceries" ];
+            description = "Screens shown in turn, one per refresh. Names: home, week, weather, tasks, groceries, briefing (the server refuses others at boot).";
           };
           voice = lib.mkOption {
             type = lib.types.bool;
@@ -325,7 +344,7 @@ in
   #============================================================================
   config = lib.mkIf cfg.enable {
     systemd.services.wall-display = {
-      description = "Wall display (TRMNL BYOS server: home, week, weather, tasks, briefing; Tasks and Calendar phone apps)";
+      description = "Wall display (TRMNL BYOS server: home, week, weather, tasks, groceries; Tasks and Calendar phone apps)";
       wantedBy = [ "multi-user.target" ];
       after = [ "network-online.target" "radicale.service" ];
       wants = [ "network-online.target" ];

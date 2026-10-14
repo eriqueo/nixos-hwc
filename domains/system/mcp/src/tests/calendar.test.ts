@@ -49,6 +49,23 @@ const files={
 };
 const calendar=(args:Record<string,unknown>)=>calendarTools()[0].handler(args);
 
+describe("timed multi-day creation",()=>{
+ beforeEach(()=>{
+  run.mockReset();
+  run.mockImplementation((_bin,_args,_options,callback)=>callback(null,"",""));
+ });
+ it("passes both dates and times to khal",async()=>{
+  const result=await calendar({action:"create",summary:"Family trip",calendar:"Family",date:"2026-11-01",startTime:"18:00",endDate:"2026-11-03",endTime:"09:00"});
+  expect(result.status).toBe("ok");
+  expect(run.mock.calls.find(c=>c[1].includes("new"))![1]).toEqual(["new","-a","Family","2026-11-01","18:00","2026-11-03","09:00","Family trip"]);
+ });
+ it("refuses a reversed range before calling khal",async()=>{
+  const result=await calendar({action:"create",summary:"Family trip",date:"2026-11-03",startTime:"18:00",endDate:"2026-11-01",endTime:"09:00"});
+  expect(result.status).toBe("error");
+  expect(run.mock.calls.some(c=>c[1].includes("new"))).toBe(false);
+ });
+});
+
 describe("delete and edit read the event itself",()=>{
  beforeEach(async()=>{
   await rm(home,{recursive:true,force:true});

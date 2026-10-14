@@ -39,9 +39,10 @@ BRIEFING = CONFIG.get("briefingFile")
 TZ = ZoneInfo(CONFIG["timeZone"])
 ASSETS = CONFIG["assets"]          # store path holding framework/
 LINKS = CONFIG.get("links") or {}  # screen -> URL its QR code opens
+TASK_LISTS = CONFIG["taskLists"]
 
 DAYS = 7
-CAL_TTL = 300
+CAL_TTL = 60
 WX_TTL = 900
 RETRY = 60
 
@@ -361,6 +362,11 @@ class Cached:
     def status(self):
         return {"ok": self.value is not None and self.error is None, "updated": self.at, "error": self.error}
 
+    def invalidate(self):
+        """A confirmed local write expires the cache, retaining its last good value."""
+        with self.lock:
+            self.at, self.next_try = 0.0, 0.0
+
 
 calendar = Cached("calendar", load_events, CAL_TTL)
 weather = Cached("forecast", load_weather, WX_TTL)
@@ -628,19 +634,21 @@ def home(now, device):
     rows = ([agenda_row(e, today, past=True) for e in past[len(past) - keep:]] if keep else []) \
         + [agenda_row(e, today) for e in upcoming]
     later = events_on(events, tomorrow)
-    today_col = column("Today", rows, len(todays), 6, "Nothing today")
-    tomorrow_col = column("Tomorrow", [agenda_row(e, tomorrow) for e in later], len(later), 6,
+    today_col = column(f"Today · {today:%b} {today.day}", rows, len(todays), 6, "Nothing today", extra="")
+    tomorrow_col = column(f"Tomorrow · {tomorrow:%b} {tomorrow.day}", [agenda_row(e, tomorrow) for e in later], len(later), 6,
                           "Nothing scheduled",
                           extra=f'<span class="label label--small label--outline">{hi_lo(wx_day(wx, tomorrow))}</span>')
 
-    top = top_tasks(tk["open"], today) if tk else []
-    late = sum(1 for t in (tk or {}).get("open", []) if t["due_day"] and t["due_day"] < today)
+    family = [t for t in (tk or {}).get("open", []) if t["list"] == TASK_LISTS["family"]]
+    top = top_tasks(family, today)
+    late = sum(1 for t in family if t["due_day"] and t["due_day"] < today)
     cards = "".join(f'<div class="w-card">{task_row(t, today)}</div>' for t in top) or none("No tasks due today")
-    tasks_strip = (f'<div class="w-strip"><div class="w-head"><span class="title">Top tasks</span>'
+    tasks_strip = (f'<div class="w-strip w-grow"><div class="w-head"><span class="title">Family tasks</span>'
                    + (f'<span class="label label--small label--inverted">{late} overdue</span>' if late else "")
                    + f'</div><div class="w-cards">{cards}</div></div>')
 
-    body = f'<div class="w-row w-flex">{weather_col}{today_col}{tomorrow_col}</div>{tasks_strip}'
+    body = (f'<div class="w-row w-flex">{weather_col}{today_col}{tomorrow_col}</div>'
+            f'<div class="w-row w-homebottom">{tasks_strip}{qr("home", device, "Add calendar event")}</div>')
     return page("Home", now, device, body, [calendar, weather, todo],
                 instance=f"{PLACE} · {now:%a} {now.day} {now:%b}" if PLACE else None)
 
@@ -650,6 +658,9 @@ def week(now, device):
     cal = calendar.get(today)
     wx = weather.get()
     events = cal["events"] if cal else []
+    # Two rows reserve enough height for larger, two-line event titles and
+    # the overflow count, including the shorter Fire tablet profile.
+    event_limit = 3 if profile(device)[1] >= 560 else 2
     cols = []
     for i in range(DAYS):
         day = today + dt.timedelta(days=i)
@@ -661,9 +672,9 @@ def week(now, device):
             f'<div class="w-dayhead"><span>{day:%a}</span><span>{day.day}</span></div>'
             f'<div class="w-daywx">{icon(w.get("icon", "wi-na"), "w-ico-s")}'
             f'<span class="label label--small value--tnums">{deg(w.get("hi"))}/{deg(w.get("lo"))}</span>{pop}</div>'
-            f'<div class="w-list">{event_rows(evs, day, 5, clamp=3) or none("—")}</div></div>')
-    body = (f'{alert_bar(wx)}<div class="w-row w-flex"><div class="w-week">{"".join(cols)}</div>'
-            f'{rail("week", device, [], "Scan for calendar")}</div>')
+            f'<div class="w-list">{event_rows(evs, day, event_limit, clamp=2) or none("—")}</div></div>')
+    cols.append(f'<div class="w-weekqr">{qr("week", device, "Add calendar event")}</div>')
+    body = f'{alert_bar(wx)}<div class="w-week w-flex">{"".join(cols)}</div>'
     return page("Week", now, device, body, [calendar, weather],
                 instance=(f"{PLACE} · " if PLACE else "") + ((wx or {}).get("now") or "forecast unavailable"))
 
@@ -726,6 +737,18 @@ def tasks(now, device):
     return page("Tasks", now, device, body, [todo])
 
 
+def groceries(now, device):
+    tk = todo.get(now.date()) or {"open": []}
+    items = [t for t in tk["open"] if t["list"] == TASK_LISTS["groceries"]]
+    rows = ''.join(f'<div class="w-task"><span class="w-box"></span>'
+                   f'<span class="title title--small w-c2">{E(t["summary"])}</span></div>' for t in items[:12])
+    body = (f'<div class="w-row w-flex"><div class="w-col"><div class="w-head">'
+            f'<span class="title">Grocery list</span></div><div class="w-groceries">'
+            f'{rows or none("Nothing to buy")}</div>{more(len(items) - 12)}</div>'
+            f'{rail("groceries", device, [("To buy", len(items))], "Add grocery items")}</div>')
+    return page("Groceries", now, device, body, [todo])
+
+
 SEVERITY = {"red": "label--inverted", "amber": "label--outline", "green": ""}
 SEVERITY_TEXT = {"red": "urgent", "amber": "soon", "green": "fyi"}
 
@@ -758,7 +781,8 @@ def brief(now, device):
 
 # The closed screen vocabulary: index.nix validates playlists against these
 # names through the generated config, and the server serves nothing else.
-SCREENS = {"home": home, "week": week, "weather": weather_screen, "tasks": tasks, "briefing": brief}
+SCREENS = {"home": home, "week": week, "weather": weather_screen, "tasks": tasks,
+           "groceries": groceries, "briefing": brief}
 
 
 # Layout on top of the framework: its type scale, labels and title bar do
@@ -796,10 +820,21 @@ CSS = """
 .w-ev{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
 .w-rail{flex:none;width:112px;display:flex;flex-direction:column;align-items:center;gap:6px;border-left:2px solid #000;padding-left:10px}
 .w-stat{display:flex;flex-direction:column;align-items:center}
-.w-qr{display:flex;flex-direction:column;align-items:center;gap:4px}
+.w-qr{display:flex;flex:none;flex-direction:column;align-items:center;gap:4px;width:112px}
 .w-qrsvg{display:block;width:100%;height:100%;shape-rendering:crispEdges}
-.w-week{flex:1;min-width:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
-.w-day{display:flex;flex-direction:column;gap:5px;min-width:0;overflow:hidden}
+.w-week{min-width:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:12px}
+.w-day{display:flex;flex-direction:column;gap:6px;min-width:0;overflow:hidden}
+.w-day .description{font-size:17px!important;line-height:1.1!important}
+.w-weekqr{display:flex;align-items:center;justify-content:center}
+.w-groceries{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-content:start}
+.w-homebottom{flex:none;align-items:flex-end}
+.w-homebottom .w-strip{flex:1;min-width:0;overflow:hidden}
+.w-homebottom .w-cards{gap:8px}
+.w-homebottom .w-card{padding:5px}
+.w-homebottom .w-meta{flex-wrap:wrap}
+.w-homebottom .w-cards .description{display:none}
+.w-homebottom .w-task .title{font-size:17px!important;line-height:1.1!important}
+.w-head{flex-wrap:wrap}
 .w-dayhead{display:flex;justify-content:space-between;align-items:baseline;border:2px solid #000;border-radius:6px;padding:1px 6px;font-weight:700}
 .w-today .w-dayhead{background:#000;color:#fff}
 .w-daywx{display:flex;align-items:center;gap:3px;flex-wrap:wrap;border-bottom:1px solid #000;padding-bottom:4px}
@@ -815,10 +850,10 @@ CSS = """
 .w-strip{flex:none;display:flex;flex-direction:column;gap:6px}
 .w-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .w-card{border:2px solid #000;border-radius:8px;padding:6px 8px;min-width:0}
-.w-wxtop{flex:none;display:flex;align-items:center;gap:14px}
+.w-wxtop{flex:none;display:grid;grid-template-columns:96px 180px minmax(0,1fr) 112px;align-items:center;gap:12px}
 .w-wxbig{flex:none}
 .w-wxnow{flex:none;display:flex;flex-direction:column;align-items:flex-start;border-left:2px solid #000;border-right:2px solid #000;padding:0 14px;max-width:230px}
-.w-wxstats{flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:10px 8px}
+.w-wxstats{flex:1;min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 8px}
 .w-wxstat{display:flex;align-items:center;gap:6px;min-width:0}
 .w-wxcards{flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
 .w-wxcard{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;border:2px solid #000;border-radius:8px;padding:5px 4px;min-width:0;overflow:hidden}
@@ -828,5 +863,10 @@ CSS = """
 .w-wxstat .value{white-space:nowrap}
 .w-ico-home{width:88px;height:88px}
 .w-wxrow .value{white-space:nowrap}
+.w-wxstat .w-stack{min-width:0}
+.w-wxstat .value{white-space:normal;overflow-wrap:anywhere;font-size:22px!important;line-height:1.1!important}
+.w-wxnow{width:180px;max-width:180px}
+.w-wxnow .value{font-size:80px!important;line-height:1!important}
+.w-wxtop .w-ico-xl{width:96px;height:96px}
 .w-pop{display:flex;align-items:center;gap:3px;font-weight:700}
 """

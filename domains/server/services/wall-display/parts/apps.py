@@ -35,6 +35,7 @@ import screens
 from screens import CONFIG, TZ
 
 APPS = CONFIG.get("apps") or {}
+GROCERY_PATH = APPS["paths"]["groceries"]
 GATEWAY = APPS.get("gatewayUrl")  # None: no gateway on this host, apps are read-only
 # Collection ids (/<user>/<id>/) mirrored from outside feeds — never written.
 READ_ONLY = set(APPS.get("readOnlyCalendars") or [])
@@ -411,18 +412,16 @@ def event_fields(body, cals):
         raise Invalid(f"{cal!r} is not a writable calendar")
     date = date_field(body.get("date"), "date")
     args = {"action": "create", "summary": summary, "calendar": cal, "date": date.isoformat()}
-    if body.get("allday"):
-        if body.get("endDate"):
-            end = date_field(body["endDate"], "endDate")
-            if end < date or (end - date).days > 366:
-                raise Invalid("endDate must be on or after date, within a year")
-            if end > date:
-                args["endDate"] = end.isoformat()
-    else:
+    last = date_field(body["endDate"], "endDate") if body.get("endDate") else date
+    if last < date or (last - date).days > 366:
+        raise Invalid("endDate must be on or after date, within a year")
+    if last > date:
+        args["endDate"] = last.isoformat()
+    if not body.get("allday"):
         start = time_field(body.get("startTime"), "startTime")
         end = time_field(body.get("endTime"), "endTime")
-        if end <= start:
-            raise Invalid("endTime must be after startTime (same day)")
+        if last == date and end <= start:
+            raise Invalid("end must be after start; choose a later end date for overnight events")
         args.update(startTime=start, endTime=end)
     loc = text_field(body, "location", 200)
     desc = text_field(body, "description", 2000, multiline=True)
@@ -517,10 +516,9 @@ def cal_delete(h, body):
 def as_create(ev):
     """Create arguments that rebuild an event read from Radicale."""
     args = {"action": "create", "summary": ev["summary"], "calendar": ev["calName"], "date": ev["date"]}
-    if ev["allday"]:
-        if ev["endDate"]:
-            args["endDate"] = ev["endDate"]
-    else:
+    if ev["endDate"]:
+        args["endDate"] = ev["endDate"]
+    if not ev["allday"]:
         args.update(startTime=ev["startTime"], endTime=ev["endTime"])
     if ev["location"]:
         args["location"] = ev["location"]
@@ -575,12 +573,18 @@ def same_site(h):
 
 class App:
     page = ""
+    pages = {}
     reads = {}
     writes = {}
+
+    def __init__(self, changed):
+        self.changed = changed
 
     def get(self, h, path):
         if path in ("/", "/index.html"):
             return h.send(200, "text/html; charset=utf-8", self.page)
+        if path in self.pages:
+            return h.send(200, "text/html; charset=utf-8", self.pages[path])
         read = self.reads.get(path)
         if read is None:
             return h.send(404, "text/plain", "not found")
@@ -601,7 +605,11 @@ class App:
                 raise ValueError("body must be a JSON object")
         except ValueError as exc:
             return h.json(400, {"error": f"bad request: {exc}"})
-        self.answer(h, lambda: write(h, body))
+        def apply():
+            result = write(h, body)
+            self.changed()
+            return result
+        self.answer(h, apply)
 
     @staticmethod
     def answer(h, fn):
@@ -755,7 +763,8 @@ TASKS_BODY = """
 </main>"""
 
 TASKS_JS = r"""
-let S = null, sel = localStorage.getItem("tasks.list") || "";
+const groceryPage = location.pathname === @@GROCERY_PATH@@, groceryList = @@GROCERY_LIST@@;
+let S = null, sel = groceryPage ? groceryList : localStorage.getItem("tasks.list") || "";
 function priOptions(select, cur) {
   select.replaceChildren(el("option", { value: 0 }, "prio –"),
     ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(p => el("option", { value: p }, "(" + PRI[p] + ")")));
@@ -769,7 +778,7 @@ function dueLabel(t) {
 }
 function render(state) {
   S = state; const names = S.lists.map(l => l.name);
-  if (sel && !names.includes(sel)) sel = "";
+  if (sel && !names.includes(sel) && !groceryPage) sel = "";
   $("#chips").replaceChildren(...["", ...names].map(n => el("button", {
     "aria-pressed": String(n === sel), onclick: () => { sel = n; localStorage.setItem("tasks.list", n); render(S); }
   }, n || "All")));
@@ -778,6 +787,13 @@ function render(state) {
   aList.value = sel || (names.includes(keep) ? keep : (names.includes("hwc") ? "hwc" : names[0] || ""));
   if (!$("#a-pri").options.length) priOptions($("#a-pri"), 0);
   $("#ro").hidden = S.canWrite; $("#add").hidden = !S.canWrite;
+  if (groceryPage) {
+    $("#chips").hidden = true;
+    aList.value = groceryList; aList.disabled = true;
+    $("#a-due").hidden = true; $("#a-pri").hidden = true;
+    $("#add").hidden = !S.canWrite || !names.includes(groceryList);
+    if (!names.includes(groceryList)) say("Grocery list is unavailable; no items can be added.", true);
+  }
   const tasks = S.lists.filter(l => !sel || l.name === sel).flatMap(l => l.tasks);
   const open = tasks.filter(t => !t.done), done = tasks.filter(t => t.done);
   const groups = [
@@ -885,27 +901,29 @@ function form(ev, close) {
   const f = {
     summary: el("input", { value: ev ? ev.summary : "", maxlength: 200, "aria-label": "title" }),
     calendar: cal,
-    date: el("input", { type: "date", value: ev ? ev.date : (S.days.find(d => d.today) ? S.today : S.date) }),
+    date: el("input", { type: "date", value: ev ? ev.date : (S.days.find(d => d.today) ? S.today : S.date), "aria-label": "start date" }),
     allday: el("input", { type: "checkbox", checked: ev ? ev.allday : false }),
     startTime: el("input", { type: "time", value: ev && ev.startTime || "09:00" }),
     endTime: el("input", { type: "time", value: ev && ev.endTime || "10:00" }),
-    endDate: el("input", { type: "date", value: ev && ev.endDate || "" }),
+    endDate: el("input", { type: "date", value: ev && (ev.endDate || ev.date) || S.today, "aria-label": "end date" }),
     location: el("input", { value: ev ? ev.location : "", maxlength: 200 }),
     description: el("textarea", { maxlength: 2000 }, ev ? ev.description : ""),
   };
   const timed = el("div", { class: "grid3", style: "grid-template-columns:1fr 1fr" },
     el("div", {}, el("label", {}, "Starts"), f.startTime), el("div", {}, el("label", {}, "Ends"), f.endTime));
-  const multi = el("div", {}, el("label", {}, "Last day (optional)"), f.endDate);
-  const sync = () => { timed.hidden = f.allday.checked; multi.hidden = !f.allday.checked; };
+  const multi = el("div", {}, el("label", {}, "End date (last day for all-day events)"), f.endDate);
+  f.date.addEventListener("change", () => { f.endDate.min = f.date.value; if (f.endDate.value < f.date.value) f.endDate.value = f.date.value; });
+  const sync = () => { timed.hidden = f.allday.checked; f.endDate.min = f.date.value; if (f.endDate.value < f.date.value) f.endDate.value = f.date.value; };
   f.allday.addEventListener("change", sync); sync();
   const value = () => {
     const b = { summary: f.summary.value, calendar: f.calendar.value, date: f.date.value, allday: f.allday.checked,
       location: f.location.value, description: f.description.value };
-    if (b.allday) { if (f.endDate.value) b.endDate = f.endDate.value; } else { b.startTime = f.startTime.value; b.endTime = f.endTime.value; }
+    if (f.endDate.value) b.endDate = f.endDate.value;
+    if (!b.allday) { b.startTime = f.startTime.value; b.endTime = f.endTime.value; }
     localStorage.setItem("cal.last", b.calendar); return b;
   };
   return { value, nodes: [el("label", {}, "Title"), f.summary, el("label", {}, "Calendar"), f.calendar,
-    el("label", {}, "Date"), f.date, el("label", { class: "check" }, f.allday, "All day"), timed, multi,
+    el("label", {}, "Start date"), f.date, multi, el("label", { class: "check" }, f.allday, "All day"), timed,
     el("label", {}, "Location"), f.location, el("label", {}, "Notes"), f.description] };
 }
 const ctx = () => ({ view, viewDate: date });
@@ -939,19 +957,20 @@ function open(ev) {
       confirmBox];
   });
 }
-$("#add").addEventListener("click", () => sheet(close => {
+function newEvent() { sheet(close => {
   const fm = form(null, close);
   return [el("h3", {}, "New event"), ...fm.nodes, el("div", { class: "actions" },
     el("button", { type: "button", onclick: close }, "Cancel"),
     el("button", { class: "ink", type: "button", onclick: async () => {
       if (await save("/api/create", fm.value(), "saving… waiting for the calendar to sync")) close(); } }, "Add"))];
-}));
+}); }
+$("#add").addEventListener("click", newEvent);
 document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => load(b.dataset.view, date)));
 $("#prev").addEventListener("click", () => load(view, S.prev));
 $("#next").addEventListener("click", () => load(view, S.next));
 $("#today").addEventListener("click", () => load(view, S.today));
 document.addEventListener("visibilitychange", () => { if (!document.hidden && !busy) load(); });
-load(view);
+load(view).then(() => { if (new URLSearchParams(location.search).get("add") === "1" && S && S.canWrite && writable().length) newEvent(); });
 """
 
 
@@ -963,8 +982,12 @@ def _page(title, body, script):
     return out
 
 
+TASKS_JS = TASKS_JS.replace("@@GROCERY_LIST@@", json.dumps(screens.TASK_LISTS["groceries"]))
+TASKS_JS = TASKS_JS.replace("@@GROCERY_PATH@@", json.dumps(GROCERY_PATH))
 TasksApp.page = _page("Tasks", TASKS_BODY, TASKS_JS)
+TasksApp.pages = {GROCERY_PATH: _page("Groceries", TASKS_BODY.replace("<h1>Tasks</h1>", "<h1>Groceries</h1>"), TASKS_JS)}
 CalendarApp.page = _page("Calendar", CAL_BODY, CAL_JS)
 
 # First host label → app (server.py merges this into HOST_APPS).
-HOST_APPS = {"todo": TasksApp(), "calendar": CalendarApp()}
+def host_apps(changed):
+    return {"todo": TasksApp(changed), "calendar": CalendarApp(changed)}
