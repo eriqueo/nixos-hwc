@@ -73,6 +73,28 @@ class DisplayContract(unittest.TestCase):
         with self.assertRaises(apps.Invalid):
             apps.event_fields(dict(body, endDate="2026-10-31"), [dict(name="Family", writable=True)])
 
+    def test_repeat_form_validation_and_gateway_wiring(self):
+        fields = dict(summary="Family event", calendar="Family", date="2026-10-14",
+                      allday=True, repeat="weekly", repeatUntil="2026-11-30")
+        args = apps.event_fields(fields, [dict(name="Family", writable=True)])
+        self.assertEqual((args["repeat"], args["until"]), ("weekly", "2026-11-30"))
+        with self.assertRaises(apps.Invalid):
+            apps.repeat_fields(dict(repeat="weekly"), None)
+        with self.assertRaises(apps.Invalid):
+            apps.repeat_fields(dict(repeat="monthly", repeatUntil="2026-01-01"), "2026-10-14")
+        with patch.object(apps, "task_lists", return_value=[("/family/", "Family")]), \
+             patch.object(apps, "tasks_state", return_value={}), \
+             patch.object(apps, "gateway_call", return_value={}) as gateway:
+            apps.task_add(None, dict(summary="Laundry", list="Family", due="2026-10-14", repeat="weekly"))
+            self.assertEqual(gateway.call_args.args[1]["recurrence"], dict(frequency="weekly", startDate="2026-10-14"))
+        with patch.object(apps, "find_task", return_value=dict(due="2026-10-14")), \
+             patch.object(apps, "tasks_state", return_value={}), \
+             patch.object(apps, "gateway_call", return_value={}) as gateway:
+            apps.task_update(None, dict(uid="fixture", action="complete", expectedDue="2026-10-14"))
+            self.assertEqual(gateway.call_args.args[1]["expectedDue"], "2026-10-14")
+        self.assertIn('id="a-repeat-controls"', apps.TASKS_BODY)
+        self.assertNotIn("@@REPEATS@@", apps.COMMON_JS)
+
     def test_post_notifies_renderer_only_after_success(self):
         from types import SimpleNamespace
         notify = unittest.mock.Mock()

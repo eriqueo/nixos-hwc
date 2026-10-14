@@ -73,6 +73,8 @@ domains/system/
 
 ## Changelog
 
+- 2026-10-14: MCP calendar creation supports repeat/until, with timed last dates inclusive through the end of that day. Tasks support versioned date-only fixed schedules, month/leap-date skipping, and ETag conditional completion that advances one occurrence without duplicating tasks. Legacy timed reminders retain their rules.
+
 - 2026-10-14: Calendar changes now wait up to 30 seconds for the Radicale pair and report actual sync completion. A failed sync preserves the local result and instructs callers to sync instead of repeating the mutation.
 
 - 2026-10-14: MCP calendar create accepts timed multi-day ranges, carries both dates and times to khal, and rejects reversed explicit ranges. Same-day and all-day creation remain supported.

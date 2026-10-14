@@ -232,6 +232,8 @@ def read_tasks(today):
                     "done": done,
                     "completed": completed.isoformat() if done else None,
                     "recurring": "RRULE" in t,
+                    "repeat": str(t["RRULE"].get("FREQ", [""])[0]).lower() if str(t.get("X-HWC-REPEAT", "")) == "fixed-v1" and "RRULE" in t else ("foreign" if "RRULE" in t else ""),
+                    "repeatUntil": t["RRULE"]["UNTIL"][0].isoformat() if "RRULE" in t and "UNTIL" in t["RRULE"] else "",
                 })
             except (ValueError, TypeError, KeyError) as exc:  # one malformed item must not hide a list
                 log(f"apps: skipped a task in {name}: {exc}")
@@ -255,6 +257,25 @@ def find_task(uid):
     return None
 
 
+REPEATS = ("daily", "weekly", "monthly", "yearly")
+
+def repeat_fields(body, start):
+    frequency = body.get("repeat")
+    if not frequency:
+        if body.get("repeatUntil"):
+            raise Invalid("choose a repeat schedule before its end date")
+        return None
+    if frequency not in REPEATS:
+        raise Invalid("repeat must be daily, weekly, monthly or yearly")
+    result = {"frequency": frequency, "startDate": date_field(start, "first due date").isoformat()}
+    if body.get("repeatUntil"):
+        until = date_field(body["repeatUntil"], "last repeat date").isoformat()
+        if until < result["startDate"]:
+            raise Invalid("last repeat date must be on or after the first date")
+        result["until"] = until
+    return result
+
+
 def task_add(h, body):
     summary = text_field(body, "summary", 200, required=True)
     list_name = text_field(body, "list", 100, required=True)
@@ -267,6 +288,9 @@ def task_add(h, body):
     prio = priority_field(body.get("priority", 0))
     if prio:
         args["priority"] = prio
+    repeat = repeat_fields(body, args.get("due"))
+    if repeat:
+        args["recurrence"] = repeat
     env = gateway_call("hwc_tasks_add", args)
     return {"ok": True, "message": env.get("message"), "state": tasks_state(h)}
 
@@ -280,6 +304,8 @@ def task_update(h, body):
     if task is None:
         raise Invalid("that task is no longer there; refresh")
     args = {"uid": uid, "action": action}
+    if action == "complete":
+        args["expectedDue"] = body.get("expectedDue")
     if action == "delete" and body.get("confirm") is not True:
         raise Invalid("delete needs confirm: true")
     if action == "edit":
@@ -289,6 +315,8 @@ def task_update(h, body):
             args["due"] = "" if body["due"] in ("", None) else date_field(body["due"], "due").isoformat()
         if "priority" in body:
             args["priority"] = priority_field(body["priority"])
+        if "repeat" in body:
+            args["recurrence"] = repeat_fields(body, args.get("due", task["due"]))
         if len(args) == 2:
             raise Invalid("nothing to change")
     env = gateway_call("hwc_tasks_update", args)
@@ -423,6 +451,11 @@ def event_fields(body, cals):
         if last == date and end <= start:
             raise Invalid("end must be after start; choose a later end date for overnight events")
         args.update(startTime=start, endTime=end)
+    repeat = repeat_fields(body, date.isoformat())
+    if repeat:
+        args["repeat"] = repeat["frequency"]
+        if repeat.get("until"):
+            args["until"] = repeat["until"]
     loc = text_field(body, "location", 200)
     desc = text_field(body, "description", 2000, multiline=True)
     if loc:
@@ -699,6 +732,21 @@ details summary{min-height:44px;display:flex;align-items:center;font-weight:700;
 """
 
 COMMON_JS = r"""
+function repeatControls(current = "", until = "", task = false) {
+  const select = el("select", { "aria-label": "Repeat" },
+    el("option", {value:""}, "Does not repeat"),
+    ...@@REPEATS@@.map(f => el("option", {value:f}, f[0].toUpperCase() + f.slice(1))),
+    current === "foreign" ? el("option", {value:"foreign"}, "Keep existing schedule") : null);
+  select.value = current;
+  const end = el("input", {type:"date", value:until, "aria-label":"Last repeat date"});
+  const endRow = el("div", {}, el("label", {}, "Last repeat date (optional)"), end);
+  const note = el("p", {class:"note"}, "Fixed schedule from the start date. Monthly/yearly repeats skip dates that do not exist." + (task ? " Completing here moves this task to its next scheduled date." : ""));
+  const sync = () => { endRow.hidden = !select.value || select.value === "foreign"; note.hidden = !select.value; };
+  select.addEventListener("change", sync); sync();
+  return {reset:() => {select.value = ""; end.value = ""; sync();}, nodes:[el("label", {}, "Repeat"), select, endRow, note],
+    value:() => ({repeat:select.value, repeatUntil:select.value && select.value !== "foreign" ? end.value : ""})};
+}
+
 const $ = (s, el = document) => el.querySelector(s);
 const el = (tag, attrs = {}, ...kids) => {
   const n = document.createElement(tag);
@@ -759,6 +807,7 @@ TASKS_BODY = """
     <input id="a-due" type="date" aria-label="due date">
     <select id="a-pri" aria-label="priority"></select>
   </div>
+  <div id="a-repeat-controls"></div>
   <button class="ink" type="submit">Add task</button>
 </form>
 <p class="note" id="ro" hidden>read-only here: changes are accepted from tailnet devices only</p>
@@ -766,6 +815,8 @@ TASKS_BODY = """
 </main>"""
 
 TASKS_JS = r"""
+const addRepeat = repeatControls("", "", true);
+$("#a-repeat-controls").append(...addRepeat.nodes);
 const groceryPage = location.pathname === @@GROCERY_PATH@@, groceryList = @@GROCERY_LIST@@;
 let S = null, sel = groceryPage ? groceryList : localStorage.getItem("tasks.list") || "";
 function priOptions(select, cur) {
@@ -793,6 +844,7 @@ function render(state) {
   if (groceryPage) {
     $("#chips").hidden = true;
     aList.value = groceryList; aList.disabled = true;
+    $("#a-repeat-controls").hidden = true;
     $("#a-due").hidden = true; $("#a-pri").hidden = true;
     $("#add").hidden = !S.canWrite || !names.includes(groceryList);
     if (!names.includes(groceryList)) say("Grocery list is unavailable; no items can be added.", true);
@@ -816,7 +868,7 @@ function row(t) {
   const meta = [dueLabel(t), t.priority ? "(" + PRI[t.priority] + ")" : "", sel ? "" : t.list, t.recurring ? "repeats" : ""].filter(Boolean).join(" · ");
   return el("li", { class: "row" + (t.done ? " done" : "") + (late ? " late" : "") },
     el("button", { class: "tick", "aria-label": (t.done ? "reopen " : "complete ") + t.summary, disabled: !S.canWrite,
-      onclick: () => update({ uid: t.uid, action: t.done ? "reopen" : "complete" }, t.done ? "reopening…" : "completing…") }, t.done ? "✓" : ""),
+      onclick: () => update({ uid: t.uid, action: t.done ? "reopen" : "complete", expectedDue: t.due }, t.done ? "reopening…" : "completing…") }, t.done ? "✓" : ""),
     el("button", { class: "body", onclick: () => edit(t) }, el("span", { class: "title" }, t.summary), meta ? el("span", { class: "meta" }, meta) : null));
 }
 async function update(body, saving) { const j = await write("/api/update", body, saving); if (j) render(j.state); return j; }
@@ -824,6 +876,7 @@ function edit(t) {
   sheet(close => {
     const sum = el("input", { value: t.summary, maxlength: 200, "aria-label": "summary" });
     const due = el("input", { type: "date", value: t.due || "", "aria-label": "due" });
+    const repeat = repeatControls(t.repeat || (t.recurring ? "foreign" : ""), t.repeatUntil || "", true);
     const pri = el("select", { "aria-label": "priority" }); priOptions(pri, t.priority);
     const confirmBox = el("div", { class: "confirm", hidden: true },
       el("p", {}, "Delete “" + t.summary + "”? This cannot be undone."),
@@ -832,7 +885,7 @@ function edit(t) {
         el("button", { class: "ink", type: "button", onclick: async () => { if (await update({ uid: t.uid, action: "delete", confirm: true }, "deleting…")) close(); } }, "Delete")));
     const ro = !S.canWrite;
     return [el("h3", {}, ro ? "Task" : "Edit task"), el("p", { class: "meta" }, t.list + (t.done ? " · done" : "")),
-      el("label", {}, "Summary"), sum, el("label", {}, "Due"), due, el("label", {}, "Priority"), pri,
+      el("label", {}, "Summary"), sum, el("label", {}, "Due"), due, el("label", {}, "Priority"), pri, ...repeat.nodes,
       el("div", { class: "actions" },
         el("button", { type: "button", onclick: close }, "Close"),
         ro ? null : el("button", { type: "button", onclick: () => { confirmBox.hidden = false; } }, "Delete…"),
@@ -851,8 +904,9 @@ $("#add").addEventListener("submit", async e => {
   e.preventDefault();
   const b = { summary: $("#a-sum").value, list: $("#a-list").value, priority: +$("#a-pri").value };
   if ($("#a-due").value) b.due = $("#a-due").value;
+  if (!groceryPage) Object.assign(b, addRepeat.value());
   const j = await write("/api/add", b, "adding…");
-  if (j) { $("#a-sum").value = ""; $("#a-due").value = ""; $("#a-pri").value = "0"; render(j.state); }
+  if (j) { addRepeat.reset(); $("#a-sum").value = ""; $("#a-due").value = ""; $("#a-pri").value = "0"; render(j.state); }
 });
 async function load() { try { render(await api("/api/state")); } catch (e) { say("could not load: " + e.message, true); } }
 $("#reload").addEventListener("click", load);
@@ -901,6 +955,7 @@ function form(ev, close) {
   const cal = el("select", { "aria-label": "calendar" }, writable().map(c => el("option", { value: c.name }, c.name)));
   cal.value = ev ? ev.calName : (localStorage.getItem("cal.last") || (writable().find(c => c.name === "hwc") || writable()[0]).name);
   if (!cal.value) cal.selectedIndex = 0;
+  const repeat = repeatControls();
   const f = {
     summary: el("input", { value: ev ? ev.summary : "", maxlength: 200, "aria-label": "title" }),
     calendar: cal,
@@ -919,14 +974,14 @@ function form(ev, close) {
   const sync = () => { timed.hidden = f.allday.checked; f.endDate.min = f.date.value; if (f.endDate.value < f.date.value) f.endDate.value = f.date.value; };
   f.allday.addEventListener("change", sync); sync();
   const value = () => {
-    const b = { summary: f.summary.value, calendar: f.calendar.value, date: f.date.value, allday: f.allday.checked,
+    const b = { ...repeat.value(), summary: f.summary.value, calendar: f.calendar.value, date: f.date.value, allday: f.allday.checked,
       location: f.location.value, description: f.description.value };
     if (f.endDate.value) b.endDate = f.endDate.value;
     if (!b.allday) { b.startTime = f.startTime.value; b.endTime = f.endTime.value; }
     localStorage.setItem("cal.last", b.calendar); return b;
   };
   return { value, nodes: [el("label", {}, "Title"), f.summary, el("label", {}, "Calendar"), f.calendar,
-    el("label", {}, "Start date"), f.date, multi, el("label", { class: "check" }, f.allday, "All day"), timed,
+    el("label", {}, "Start date"), f.date, multi, el("label", { class: "check" }, f.allday, "All day"), timed, ...repeat.nodes,
     el("label", {}, "Location"), f.location, el("label", {}, "Notes"), f.description] };
 }
 const ctx = () => ({ view, viewDate: date });
@@ -985,6 +1040,7 @@ def _page(title, body, script):
     return out
 
 
+COMMON_JS = COMMON_JS.replace("@@REPEATS@@", json.dumps(REPEATS))
 TASKS_JS = TASKS_JS.replace("@@GROCERY_LIST@@", json.dumps(screens.TASK_LISTS["groceries"]))
 TASKS_JS = TASKS_JS.replace("@@GROCERY_PATH@@", json.dumps(GROCERY_PATH))
 TasksApp.page = _page("Tasks", TASKS_BODY, TASKS_JS)

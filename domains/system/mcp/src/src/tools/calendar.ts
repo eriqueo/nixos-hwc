@@ -1,3 +1,4 @@
+import { REPEAT_FREQUENCIES, isRepeatFrequency, validDate } from "../executors/caldav.js";
 /**
  * hwc_calendar — consolidated calendar tool (list, create, edit, delete, sync).
  */
@@ -415,6 +416,8 @@ export function calendarTools(): ToolDef[] {
           startTime: { type: "string", description: "[create/edit] Start time HH:MM (omit for all-day)" },
           endTime: { type: "string", description: "[create/edit] End time HH:MM" },
           endDate: { type: "string", description: "[create] End date YYYY-MM-DD for timed multi-day events, or last day for all-day events" },
+          repeat: { type: "string", enum: REPEAT_FREQUENCIES, description: "[create] Fixed repeat schedule" },
+          until: { type: "string", description: "[create] Last repeat date YYYY-MM-DD (inclusive)" },
           calendar: { type: "string", description: "[create] khal calendar name (omit = default)" },
           location: { type: "string", description: "[create/edit] Event location" },
           description: { type: "string", description: "[create/edit] Event description" },
@@ -534,8 +537,14 @@ export function calendarTools(): ToolDef[] {
               return mcpError({ type: "VALIDATION_ERROR", message: "The event end must be after its start." });
             }
 
+            if ((args.repeat !== undefined && !isRepeatFrequency(args.repeat)) ||
+                (args.until !== undefined && (!args.repeat || !validDate(args.until) || args.until < date))) {
+              return mcpError({ type: "VALIDATION_ERROR", message: "Choose a valid repeat frequency and an until date on or after the start." });
+            }
             const khalArgs: string[] = [...khalConfigArgs(), "new"];
             if (calendar) khalArgs.push("-a", calendar);
+            if (args.repeat) khalArgs.push("--repeat", args.repeat as string);
+            if (args.until) khalArgs.push("--until", `${args.until}${startTime ? " 23:59" : ""}`);
 
             if (startTime) {
               const end = endTime || (() => {
@@ -566,7 +575,7 @@ export function calendarTools(): ToolDef[] {
             return {
               status: "ok",
               message: `Created event: "${summary}" on ${date}${startTime ? ` at ${startTime}` : " (all-day)"}${syncNotice(sync)}`,
-              data: { summary, date, startTime: startTime || null, endTime: endTime || null, endDate: endDate || null, location: location || null, description: description || null, calendar: calendar || "default", ...sync },
+              data: { summary, date, repeat: args.repeat || null, until: args.until || null, startTime: startTime || null, endTime: endTime || null, endDate: endDate || null, location: location || null, description: description || null, calendar: calendar || "default", ...sync },
             };
           } catch (err) {
             return catchError("INTERNAL_ERROR", "Failed to create calendar event", err, "Check that khal is installed and calendar storage is accessible");

@@ -15,10 +15,11 @@ import { contract } from "../result.js";
 import type { ToolDef, ToolResult } from "../types.js";
 import {
   buildVtodo,
+  fixedRecurrence, REPEAT_FREQUENCIES, managedSchedule, nextScheduledDate,
+  fetchVersionedItem, putVersionedItem, validDate,
   createTaskList,
   deleteItem,
   editVtodo,
-  fetchRawItem,
   listAllTodos,
   listTaskLists,
   listTodosIn,
@@ -138,7 +139,7 @@ async function findTask(uid: string): Promise<Task | null> {
 
 /* ── tools ────────────────────────────────────────────────────────── */
 
-export function tasksTools(): ToolDef[] {
+export function tasksTools(today: () => string = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Denver" }).format(new Date())): ToolDef[] {
   return [
     {
       name: "hwc_tasks_list",
@@ -222,15 +223,16 @@ export function tasksTools(): ToolDef[] {
           description: { type: "string", description: "Longer notes body" },
           recurrence: {
             type: "object",
-            description: "Optional weekly phone reminder schedule.",
+            description: "Fixed date-only repeat schedule, or legacy weekly timed phone reminder.",
             properties: {
-              frequency: { type: "string", enum: ["weekly"] },
+              frequency: { type: "string", enum: REPEAT_FREQUENCIES },
+              until: { type: "string", description: "Optional last scheduled date YYYY-MM-DD" },
               weekday: { type: "string", enum: WEEKDAYS },
               startDate: { type: "string", description: "First occurrence, YYYY-MM-DD" },
               time: { type: "string", description: "Local 24-hour time, HH:MM" },
               timezone: { type: "string", description: "IANA timezone, e.g. America/Denver" },
             },
-            required: ["frequency", "weekday", "startDate", "time", "timezone"],
+            required: ["frequency", "startDate"],
           },
           idempotencyKey: {
             type: "string",
@@ -266,9 +268,10 @@ export function tasksTools(): ToolDef[] {
           ];
           const due = (args.due ? parseDue(args.due as string) : null) || parsed.due;
           const priority = (args.priority as number) ?? parsed.priority;
-          const recurrence = args.recurrence === undefined ? null : weeklyRecurrence(args.recurrence);
+          const recurrence = args.recurrence === undefined ? null :
+            (args.recurrence !== null && typeof args.recurrence === "object" && "time" in args.recurrence ? weeklyRecurrence(args.recurrence) : fixedRecurrence(args.recurrence));
           if (args.recurrence !== undefined && !recurrence)
-            return mcpError({ type: "VALIDATION_ERROR", message: "recurrence must be a valid weekly schedule" });
+            return mcpError({ type: "VALIDATION_ERROR", message: "recurrence must be a valid fixed date schedule or weekly timed schedule" });
 
           const idempotencyKey = (args.idempotencyKey as string | undefined)?.trim();
           if (args.requestVersion !== undefined && args.requestVersion !== 1)
@@ -283,14 +286,14 @@ export function tasksTools(): ToolDef[] {
             priority,
             due,
             description: (args.description as string) || "",
-            ...(recurrence ? { start: recurrence.start, rrule: recurrence.rrule } : {}),
+            ...(recurrence || {}),
           });
           await putItem(`${list.href}${uid}.ics`, ics);
 
           return {
             status: "ok",
             message: `Added '${parsed.summary}' to ${listName} (phone sees it now; laptop todui on next sync)`,
-            data: { uid, list: listName, summary: parsed.summary, categories, priority, due, recurring: Boolean(recurrence), idempotent: Boolean(idempotencyKey) },
+            data: { uid, list: listName, summary: parsed.summary, categories, priority, due: recurrence && "due" in recurrence ? recurrence.due : due, recurring: Boolean(recurrence), idempotent: Boolean(idempotencyKey) },
           };
         } catch (err) {
           return catchError("NETWORK_ERROR", "Failed to add task", err);
@@ -304,11 +307,15 @@ export function tasksTools(): ToolDef[] {
         "Update a task by uid (get uids from hwc_tasks_list): edit fields, " +
         "complete, reopen, or delete. Edits are surgical — untouched fields " +
         "and foreign properties (recurrence, Apple metadata) are preserved. " +
-        "Note: completing a recurring task here just marks it completed (no " +
-        "next-instance spawning).",
+        "Web-created fixed schedules advance on completion (expectedDue required); " +
+        "foreign recurring reminders keep their existing completion behavior.",
       inputSchema: {
         type: "object",
         properties: {
+          expectedDue: { type: "string", description: "(complete) Current due date from the displayed task; prevents duplicate advancement" },
+          recurrence: { type: ["object", "null"], description: "(edit) null removes repetition; object sets frequency and startDate, optional until", properties: {
+            frequency: { type: "string", enum: REPEAT_FREQUENCIES }, startDate: { type: "string" }, until: { type: "string" }
+          }, required: ["frequency", "startDate"] },
           uid: { type: "string", description: "Task UID from hwc_tasks_list" },
           action: { type: "string", enum: ["edit", "complete", "reopen", "delete"] },
           summary: { type: "string", description: "(edit) new summary — plain text, no inline dialect" },
@@ -336,6 +343,20 @@ export function tasksTools(): ToolDef[] {
             return { status: "ok", message: `Deleted '${task.summary}'` };
           }
 
+          const version = await fetchVersionedItem(task.href);
+          const schedule = managedSchedule(version.raw);
+          if (action === "complete" && schedule) {
+            if (!validDate(args.expectedDue) || args.expectedDue !== schedule.due)
+              return mcpError({ type: "VALIDATION_ERROR", message: "This occurrence changed or was already completed; refresh the task list." });
+            const next = nextScheduledDate(schedule.due, schedule.frequency, today(), schedule.until);
+            if (next) {
+              const updated = editVtodo(version.raw, { DUE: `;VALUE=DATE:${next.replace(/-/g, "")}`,
+                DTSTART: `;VALUE=DATE:${next.replace(/-/g, "")}`, STATUS: ":NEEDS-ACTION",
+                COMPLETED: null, "PERCENT-COMPLETE": null, "X-HWC-LAST-COMPLETED-DUE": `:${schedule.due}` });
+              await putVersionedItem(task.href, updated, version.etag);
+              return { status: "ok", message: `Completed '${task.summary}'; next due ${next}`, data: { uid, due: next, recurring: true } };
+            }
+          }
           const props: Record<string, string | null> = {};
           if (action === "complete") {
             props.STATUS = ":COMPLETED";
@@ -361,14 +382,28 @@ export function tasksTools(): ToolDef[] {
             }
             if (args.description !== undefined)
               props.DESCRIPTION = (args.description as string) ? `:${icsEscape(args.description as string)}` : null;
+            if (args.recurrence !== undefined) {
+              if (args.recurrence === null) {
+                props.RRULE = null; props["X-HWC-REPEAT"] = null; props.DTSTART = null; props["X-HWC-LAST-COMPLETED-DUE"] = null;
+              } else {
+                const repeat = fixedRecurrence(args.recurrence);
+                if (!repeat) return mcpError({ type: "VALIDATION_ERROR", message: "Invalid repeat schedule" });
+                props.RRULE = `:${repeat.rrule}`; props["X-HWC-REPEAT"] = ":fixed-v1";
+                props.DUE = `;VALUE=DATE:${repeat.due.replace(/-/g, "")}`; props.DTSTART = props.DUE;
+                props.STATUS = ":NEEDS-ACTION"; props.COMPLETED = null; props["PERCENT-COMPLETE"] = null;
+                props["X-HWC-LAST-COMPLETED-DUE"] = null;
+              }
+            } else if (schedule && args.due !== undefined) {
+              if (!validDate(args.due)) return mcpError({ type: "VALIDATION_ERROR", message: "Repeating tasks need a due date" });
+              props.DTSTART = props.DUE;
+            }
             if (Object.keys(props).length === 0)
               return mcpError({ type: "VALIDATION_ERROR", message: "edit needs at least one field" });
           } else {
             return mcpError({ type: "VALIDATION_ERROR", message: `Unknown action '${action}'` });
           }
 
-          const raw = await fetchRawItem(task.href);
-          await putItem(task.href, editVtodo(raw, props));
+          await putVersionedItem(task.href, editVtodo(version.raw, props), version.etag);
           return {
             status: "ok",
             message: `${action === "edit" ? "Edited" : action === "complete" ? "Completed" : "Reopened"} '${task.summary}'`,

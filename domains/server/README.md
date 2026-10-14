@@ -73,6 +73,8 @@ Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
 
+- 2026-10-14: Wall phone forms add daily/weekly/monthly/yearly repeats with optional last date. Task add/edit exposes fixed schedules; completion sends the displayed due date to prevent duplicate advancement. Existing calendar series stay protected from lossy edits.
+
 - 2026-10-14: Calendar phone responses use the gateway's `syncComplete` receipt. A known sync failure is shown immediately, preserving the saved local change instead of adding another 40-second wait.
 
 - 2026-10-14: `services/wall-display/` adds calendar-add QR links on Home/Week, dated Home headers and Family-only Home tasks. Week uses larger day cards in two rows with bounded events. Weather reserves QR space and wraps statistics. Groceries joins the rotation with a QR to `/groceries` on the Tasks host, pinned to the existing configured list. Calendar forms expose start/end dates for timed ranges and preserve them during edit recovery. Successful phone writes expire task/calendar caches and wake the single render worker; tablet/review pages poll current-scene images every 15 seconds without advancing rotation. CalDAV cache fallback is 60 seconds. `parts/test_wall_display.py` covers list isolation, dates, notification wiring and image polling; run with Python, icalendar and segno.

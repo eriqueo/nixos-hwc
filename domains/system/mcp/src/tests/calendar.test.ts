@@ -147,3 +147,15 @@ describe("delete and edit read the event itself",()=>{
   expect(run.mock.calls.some(c=>c[1].includes("new"))).toBe(false);
  });
 });
+
+describe("repeat calendar creation",()=>{
+ beforeEach(()=>{run.mockReset();run.mockImplementation((_bin,_args,_options,callback)=>callback(null,"",""));});
+ it("passes repeat and until with a timed multi-day range",async()=>{
+  expect((await calendar({action:"create",summary:"Family trip",date:"2026-11-01",startTime:"18:00",endDate:"2026-11-03",endTime:"09:00",repeat:"monthly",until:"2027-11-01"})).status).toBe("ok");
+  expect(run.mock.calls.find(c=>c[1].includes("new"))![1]).toEqual(["new","--repeat","monthly","--until","2027-11-01 23:59","2026-11-01","18:00","2026-11-03","09:00","Family trip"]);
+ });
+ it.each([{repeat:"hourly"},{repeat:"weekly",until:"2026-02-30"},{until:"2027-01-01"},{repeat:"weekly",until:"2026-01-01"}])("rejects invalid repetition %j before writing",async fields=>{
+  expect((await calendar({action:"create",summary:"Chore",date:"2026-10-14",...fields})).status).toBe("error");
+  expect(run.mock.calls.some(c=>c[1].includes("new"))).toBe(false);
+ });
+});

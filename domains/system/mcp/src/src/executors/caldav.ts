@@ -39,7 +39,7 @@ export async function davRequest(
   method: string,
   path: string,
   opts: { body?: string; headers?: Record<string, string> } = {},
-): Promise<{ status: number; body: string }> {
+): Promise<{ status: number; body: string; etag: string | null }> {
   const { user, password } = await credential();
   const url = `${BASE_URL.replace(/\/$/, "")}${path}`;
   const res = await fetch(url, {
@@ -51,7 +51,7 @@ export async function davRequest(
     },
     body: opts.body,
   });
-  return { status: res.status, body: await res.text() };
+  return { status: res.status, body: await res.text(), etag: res.headers.get("etag") };
 }
 
 export async function davUser(): Promise<string> {
@@ -224,6 +224,7 @@ export function buildVtodo(fields: {
   description?: string;
   start?: { date: string; time: string; timezone: string };
   rrule?: string;
+  managedRepeat?: boolean;
 }): string {
   const now = utcStamp();
   const lines = [
@@ -249,7 +250,11 @@ export function buildVtodo(fields: {
   } else if (fields.due) {
     lines.push(`DUE;VALUE=DATE:${fields.due.replace(/-/g, "")}`);
   }
-  if (fields.rrule) lines.push(`RRULE:${fields.rrule}`);
+  if (fields.rrule) {
+    if (!fields.start && fields.due) lines.push(`DTSTART;VALUE=DATE:${fields.due.replace(/-/g, "")}`);
+    lines.push(`RRULE:${fields.rrule}`);
+  }
+  if (fields.managedRepeat) lines.push("X-HWC-REPEAT:fixed-v1");
   if (fields.description)
     lines.push(`DESCRIPTION:${icsEscape(fields.description)}`);
   lines.push("END:VTODO", "END:VCALENDAR");
@@ -346,4 +351,65 @@ export async function putItem(href: string, ics: string): Promise<void> {
 export async function deleteItem(href: string): Promise<void> {
   const { status } = await davRequest("DELETE", href);
   if (status < 200 || status >= 300) throw new Error(`DELETE ${href} → HTTP ${status}`);
+}
+
+/** Date-only schedules managed by the web task page. Foreign RRULEs are not rewritten. */
+export const REPEAT_FREQUENCIES = ["daily", "weekly", "monthly", "yearly"] as const;
+export type RepeatFrequency = typeof REPEAT_FREQUENCIES[number];
+export function isRepeatFrequency(value: unknown): value is RepeatFrequency {
+  return typeof value === "string" && REPEAT_FREQUENCIES.includes(value as RepeatFrequency);
+}
+export function validDate(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
+}
+export function fixedRecurrence(value: unknown): { due: string; rrule: string; managedRepeat: true } | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (!isRepeatFrequency(v.frequency) || !validDate(v.startDate) ||
+      (v.until !== undefined && (!validDate(v.until) || v.until < v.startDate))) return null;
+  return { due: v.startDate, rrule: `FREQ=${String(v.frequency).toUpperCase()}${v.until ? `;UNTIL=${String(v.until).replace(/-/g, "")}` : ""}`, managedRepeat: true };
+}
+export function nextScheduledDate(due: string, frequency: RepeatFrequency, today: string, until?: string): string | null {
+  if (!validDate(due) || !validDate(today) || (until && !validDate(until))) throw new Error("Invalid repeat date");
+  const base = new Date(due), cutoff = due > today ? due : today;
+  for (let step = 1; step <= 5000; step++) {
+    let candidate: Date;
+    if (frequency === "daily" || frequency === "weekly") {
+      const days = frequency === "daily" ? 1 : 7;
+      const periods = Math.floor((Date.parse(cutoff) - base.getTime()) / (86400000 * days)) + 1;
+      candidate = new Date(base.getTime() + periods * days * 86400000);
+    } else {
+      candidate = new Date(base);
+      candidate.setUTCDate(1);
+      if (frequency === "monthly") candidate.setUTCMonth(base.getUTCMonth() + step);
+      else candidate.setUTCFullYear(base.getUTCFullYear() + step);
+      const month = candidate.getUTCMonth();
+      candidate.setUTCDate(base.getUTCDate());
+      if (candidate.getUTCMonth() !== month) continue; // RFC 5545: skip nonexistent dates.
+    }
+    const next = candidate.toISOString().slice(0, 10);
+    if (until && next > until) return null;
+    if (next > cutoff) return next;
+  }
+  throw new Error("Repeat search exceeded 5000 periods; task was not changed");
+}
+export function managedSchedule(raw: string): { frequency: RepeatFrequency; due: string; until?: string } | null {
+  const body = unfoldIcs(raw);
+  if (icsProp(body, "X-HWC-REPEAT")?.value !== "fixed-v1") return null;
+  const rule = icsProp(body, "RRULE")?.value.match(/^FREQ=(DAILY|WEEKLY|MONTHLY|YEARLY)(?:;UNTIL=(\d{8}))?$/);
+  const due = icsProp(body, "DUE");
+  if (!rule || due?.params !== ";VALUE=DATE") throw new Error("Managed repeat schedule is invalid; nothing changed");
+  const date = (v: string) => `${v.slice(0,4)}-${v.slice(4,6)}-${v.slice(6,8)}`;
+  return { frequency: rule[1].toLowerCase() as RepeatFrequency, due: date(due.value), ...(rule[2] ? { until: date(rule[2]) } : {}) };
+}
+export async function fetchVersionedItem(href: string): Promise<{ raw: string; etag: string }> {
+  const { status, body, etag } = await davRequest("GET", href);
+  if (status !== 200 || !etag) throw new Error(`GET ${href} did not return a versioned task`);
+  return { raw: body, etag };
+}
+export async function putVersionedItem(href: string, raw: string, etag: string): Promise<void> {
+  const { status } = await davRequest("PUT", href, { body: raw, headers: { "Content-Type": "text/calendar; charset=utf-8", "If-Match": etag } });
+  if (status === 412) throw new Error("Task changed on another device; refresh before completing it");
+  if (status < 200 || status >= 300) throw new Error(`Conditional task update failed: HTTP ${status}`);
 }
