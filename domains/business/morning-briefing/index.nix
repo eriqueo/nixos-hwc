@@ -57,6 +57,8 @@ in
         HOME = paths.user.home;
         MAIL_SYNC_LOCK_FILE = "${builtins.dirOf paths.user.mailSyncStatus}/sync.lock";
         HWC_MAIL_CLASSIFIER_CONTRACT_FILE = mailContractFile;
+        # Proposed tasks from the mail dates rule land in this list (one producer: the contract).
+        HWC_MAIL_PROPOSALS_LIST = (builtins.fromJSON (builtins.readFile mailContractFile)).lifecyclePolicy.taskList or "Mail";
         PROM_URL = cfg.prometheusUrl;
         # JobTread PAVE reads in gather-live.mjs (jt-mcp retired 2026-10-09).
         # The org id has one producer (leads/parts/jt-mappings.nix, as the CRM

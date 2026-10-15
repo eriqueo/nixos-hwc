@@ -83,10 +83,14 @@ let
           if [ "''${SYNC_MAIL_LOCKED:-0}" != 1 ]; then
             guard=(${pkgs.util-linux}/bin/flock -n -E 75 ${lib.escapeShellArg "${builtins.dirOf syncStatus}/sync.lock"})
           fi
+          # The dates rule proposes a task through the gateway's tasks tool (composition root: here,
+          # not inside System One). hwc-mcp-call is a system package on this host.
           exec "''${guard[@]}" "$runtime" lifecycle \
             --db /var/lib/hwc/mail-classifier/ledger.sqlite \
             --notmuch ${pkgs.notmuch}/bin/notmuch \
-            --output ${lib.escapeShellArg "${builtins.dirOf syncStatus}/lifecycle.json"} "$@"
+            --output ${lib.escapeShellArg "${builtins.dirOf syncStatus}/lifecycle.json"} \
+            --task-command "/run/current-system/sw/bin/hwc-mcp-call --write hwc_tasks_add" \
+            --task-list ${lib.escapeShellArg cfg.lifecycle.taskList} "$@"
           ;;
         route-manage|route-list|route-set|route-disable)
           verb="$1"
@@ -142,6 +146,12 @@ in
       readOnly = true;
       default = "${command}/bin/mail-classifier lifecycle --phase apply";
       description = "Writes lifecycle.json; archives only for rules the contract marks active, through the shared transport owner";
+    };
+    taskList = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = cfg.contract.lifecyclePolicy.taskList or "Mail";
+      description = "Radicale task list that receives proposed tasks from the dates rule (one producer: the pinned contract); todui and the briefing read it";
     };
   };
 

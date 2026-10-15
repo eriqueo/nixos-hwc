@@ -167,6 +167,11 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+- 2026-10-15: "FROM YOUR MAIL" block. `gather-live.mjs` splits the CalDAV tasks that sit in the
+  mail proposals list (the classifier contract's `lifecyclePolicy.taskList`, reaching the unit as
+  `HWC_MAIL_PROPOSALS_LIST`) into `sections.mail_proposals`; `run.sh` renders them with their due
+  date and the keep / move / delete instruction. These are tasks the mail `dates` rule proposed
+  from invites and dated mail (agent/mail-labels/lifecycles.md, slice 5).
 - 2026-10-12: Jobs, leads and overdue invoices work again. Since jt-mcp was retired (2026-10-09), every run had failed with "Unknown tool: jt_jobs / jt_documents"; the retirement missed this consumer. `gather-live.mjs` now reads PAVE directly with the `jobtread-grant-key` secret and the shared org id, using the same filters jt-mcp used. Verified on hwc-work: no errors, 25 active jobs, 0 overdue invoices.
 - 2026-10-12: New read-only option `outputDir` (`<agentDir>/output`), so the wall display
   (`domains/server/services/wall-display`) reads `briefing.json` without rebuilding the path.

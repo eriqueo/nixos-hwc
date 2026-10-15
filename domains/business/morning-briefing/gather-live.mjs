@@ -267,6 +267,11 @@ async function gatherTasks() {
   const byDue = (a, b) => (a.due_date || "").localeCompare(b.due_date || "");
   overdue.sort(byDue); due_this_week.sort(byDue);
   out.sections.tasks = { ok: true, source: "caldav", due_today, due_this_week, overdue, unscheduled };
+  // Proposed tasks from the mail dates rule wait in one list for Eric to keep, move or delete.
+  // The list name has one producer (the classifier contract) and reaches us through the unit's env.
+  const proposalsList = process.env.HWC_MAIL_PROPOSALS_LIST || "Mail";
+  const proposals = items.filter((t) => (t.list || "") === proposalsList).map(task).sort(byDue);
+  out.sections.mail_proposals = { ok: true, list: proposalsList, items: proposals };
   if (overdue.length) {
     out.alerts.push({
       level: "warning",

@@ -158,7 +158,10 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
   expire, dates) ships in shadow: proposal events and the report, no mailbox effect, until the contract
   flips a rule to active. Earlier the same day: slice 1 (DID keeps the state it completed from;
   ledger widened without a version bump) and slice 2 (deterministic traits code/recovery/alert/
-  digest/shipping; never-trash guard for receipts, finance and recovery codes).
+  digest/shipping; never-trash guard for records and recovery codes). Slice 5 wiring: the wrapper
+  passes `--task-command` (hwc-mcp-call → hwc_tasks_add) and `--task-list` (the contract's
+  `lifecyclePolicy.taskList`, "Mail", created on Radicale 2026-10-15) so the `dates` rule can
+  propose tasks once active; the morning briefing lists that list.
 
 - 2026-10-13: `calendar/`: `radicale.extraCollections` defaults to the ids in the radicale mirror catalog; the laptop and hwc-work no longer list them. todui input bumped to 461387b, which hides read-only calendars from the task lists. The tasks pair keeps `"from a"`/`"from b"`, so lists made in todui still reach the server.
 

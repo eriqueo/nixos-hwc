@@ -768,6 +768,11 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
           + ((.sections.tasks.due_today // []) | map("  · today  " + .name))
           + ((.sections.tasks.due_this_week // []) | map("  · " + (.due_date // "") + "  " + .name))) | join("\n"))
       else "" end)
+    + (if (.sections.mail_proposals.items // []) | length > 0 then
+        sec("FROM YOUR MAIL — " + ((.sections.mail_proposals.items | length) | tostring) + " proposed task(s) in list " + (.sections.mail_proposals.list // "Mail"))
+        + ((.sections.mail_proposals.items | map("  ? " + (.due_date // "no date") + "  " + .name)) | join("\n"))
+        + "\n  keep, move to a real list, or delete to deny (todui or tasks.hwc.iheartwoodcraft.com)"
+      else "" end)
     + (if (.sections.leads.items // []) | length > 0 then
         sec("LEADS (" + ((.sections.leads.items | length) | tostring) + ")")
         + ([.sections.leads.items[] | "  " + .name
