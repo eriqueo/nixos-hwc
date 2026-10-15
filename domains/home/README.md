@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+The tracker supports one bulk review for grouped project choices, with browser drafts and one reviewed submission.
+
 `apps/tether/` runs Tether (iMessage and SMS from the iPhone over Bluetooth, no Mac): `index.nix` is the HM half (`tetherd` user service, CLI, TUI, GTK client), `sys.nix` the system half (upstream module, BlueZ bearer API, adapter class), `patches/` our tetherd patches (message-only popup switch, backfill flag). Laptop only. Pinned `tether` flake input.
 
 `apps/courier/` runs courier, our messages app on tetherd (`github:eriqueo/courier`, a private input). It provides a user service, CSS generated from the HWC palette, and a Chromium app window whose class is `chrome-courier.localhost__-Default`. The SUPER+U toggle is in `apps/hyprland/parts/behavior.nix`; the window tiles like any other app.
@@ -109,6 +111,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-15: Add bulk question cards with per-item advice, editable choices, version and concurrent-answer checks, replay protection, and separate save/delivery status. Make grouped project decisions use this form by default as a workflow guideline.
 
 - 2026-10-14: courier slice 4b, tailnet access. apps/courier: input bumped to 46a4f29; new `tailnet.{enable,port,host,login}` sets `COURIER_TAILNET_HOST`/`COURIER_TAILNET_LOGIN` and runs the `courier-tailnet` user unit (`tailscale serve --https=8445`). hwc-laptop enables it for `eriqueo@github`.
 - 2026-10-14: shared Git overlay: register anonymous index-pack downloads with Git's process-owned tempfile cleanup, with cancellation and pack-integrity install checks; system activation updates the Git command used by the running T3 server.

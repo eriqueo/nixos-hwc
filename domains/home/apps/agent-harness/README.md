@@ -5,6 +5,8 @@ source and one mutable state store.
 
 ## Structure
 
+The tracker supports one bulk review for grouped project choices, with browser drafts and one reviewed submission.
+
 The fleet control list names hwc-home, hwc-work and hwc-laptop.
 
 - `index.nix` installs the pinned policy, state links, health CLI, the `ws` workspace allocator, the state-sync timer (which re-renders `LEDGER.md` after each run), the hourly `ws-audit` timer, and the opt-in `agent-cli-update` timer. Its `agentWorkspace` activation creates `workspaceRoot` (`~/800_agents`); `stateDir` is `~/800_agents/state`.
@@ -70,6 +72,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-10-15: Add bulk question cards with per-item advice, editable choices, version and concurrent-answer checks, replay protection, and separate save/delivery status. Make grouped project decisions use this form by default as a workflow guideline.
 - 2026-10-11: Hook suites gate the build. A live probe found guards that leaked (`git -C <dir> checkout -- f` on a dirty file), a suite that could not run, a staleness hook that had tested nothing since the 2026-10-01 state move, and an Artifact gate blocked on a missing `jsonschema`. `system.checks` now runs `hooks/tests/run.sh` on the pinned revision; `publish` runs the live tier; `claimcheck` and `guard-audit` install here. Pins claude-config with the fixes and the per-guard fire log.
 - 2026-10-11: Two registration hooks so a Nix-built tool joins the harness without editing it: `extraSkills` (home lane, copied into `agentSkills` after harness and adopted skills, collisions fail) and `userMcp.extraServers` (system lane, merged into `~/.mcp.json` after the shared set). First producer: `apps/rea`.
 - 2026-10-10 (c): `tracker-relay` restarts on `handoff_doc.py` changes too (relay.py imports it; it was missing from the triggers). Pins claude-config 837de39: the hub marks decided-but-unactioned cards as stalled, shows the newest brief date as "last work", and the python `-c` hook rule allows new-file writes.
