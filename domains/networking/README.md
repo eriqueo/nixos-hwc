@@ -58,6 +58,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-10-15: `reverseProxy/` — vhost routes take `headersIfAbsent = { Name = value; }`, a request header set only when the client sent none (`not header` matcher + `request_header`; `header_up ?Name` is rejected for request headers). First user: `tasks` (Radicale) defaults `Authorization` to eric.
 
 - 2026-10-12: routeOwners gains `todo` and `calendar` (owner `work`). These are the wall-display Tasks and Calendar phone apps, which the module registers next to `wall` on `:8424`. Each needs a deSEC A record (`todo.` / `calendar.hwc.iheartwoodcraft.com → 100.77.38.32`) and a laptop rebuild for the pins.
 - 2026-10-12: New `wall` vhost (owner `work`) for the wall tablet calendar page (`domains/server/services/wall-calendar`, `:8424`). Needs the deSEC A record `wall.hwc.iheartwoodcraft.com → 100.77.38.32` like the other work-owned names.

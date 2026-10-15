@@ -253,9 +253,18 @@ let
           ''}
         ''
         else mkProxyBlock r;
+      # `headersIfAbsent = { Name = value; }` sets a request header only when
+      # the client sent none (header_up cannot be conditional). Rendered on the
+      # owner only; a legacy host forwards the request unchanged to it.
+      defaultHeaders = lib.optionalString (!remoteOwner) (concatStringsSep "\n"
+        (lib.mapAttrsToList (name: value: ''
+          @${r.name}_no_${name} not header ${name} *
+          request_header @${r.name}_no_${name} ${name} "${value}"
+        '') (r.headersIfAbsent or {})));
     in ''
       @${r.name} host ${r.name}.${vhostDomain}
       handle @${r.name} {
+        ${defaultHeaders}
         ${body}
       }
     '';
@@ -373,7 +382,7 @@ in
       # New schema keys supported per route:
       # name, mode=("subpath"|"port"|"static"|"vhost"), path, port, upstream,
       # root (static), needsUrlBase=bool, stripPrefix=bool (deprecated),
-      # headers=attrs, assetGlobs, assetStrategy, ws=bool, timeouts={try,fail}
+      # headers=attrs, headersIfAbsent=attrs (vhost only), assetGlobs, assetStrategy, ws=bool, timeouts={try,fail}
       # mode="vhost": served as <name>.<vhostDomain> on :443 (no port field).
       #
       # lazyAttrsOf, not attrsOf (2026-09-16): attrsOf forces EVERY attribute of

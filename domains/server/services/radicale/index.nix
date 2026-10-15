@@ -11,9 +11,13 @@
 # creates lists made in todui on the server, and the iPhone reads them via a
 # native CalDAV account (Reminders + Calendar both support CalDAV).
 #
-# Auth: htpasswd file from agenix (radicale-htpasswd.age under
-# domains/secrets/parts/services/, format "user:password", plain encryption —
-# the file is age-encrypted at rest and mounted 0440 root:secrets).
+# Auth: none. The vhost is reachable only from the tailnet, which is Eric's
+# alone (decided 2026-10-15). Radicale accepts any password and takes the
+# principal from the Basic-auth username, so clients that send eric or
+# eric-personal keep their own collections. The vhost supplies "eric" when a
+# request carries no credentials, so the web UI at /.web/ logs itself in.
+# Clients still read their password from radicale-htpasswd; the server no
+# longer does.
 
 { config, lib, pkgs, ... }:
 
@@ -21,8 +25,8 @@ let
   cfg = config.hwc.server.services.radicale;
 
   # Tolerant secret path: generated.nix mounts the .age once it exists; the
-  # fallback keeps eval working before the secret is provisioned (the service
-  # then fails at runtime with a clear "no such file" instead of breaking eval).
+  # fallback keeps eval working before the secret is provisioned. Only the
+  # mirrors read it now (their Basic-auth password).
   htpasswdPath = lib.attrByPath
     [ "age" "secrets" "radicale-htpasswd" "path" ]
     "/run/agenix/radicale-htpasswd"
@@ -98,25 +102,20 @@ in
       enable = true;
       settings = {
         server.hosts = [ "127.0.0.1:${toString cfg.port}" ];
-        auth = {
-          type = "htpasswd";
-          htpasswd_filename = htpasswdPath;
-          htpasswd_encryption = "plain";
-        };
+        auth.type = "none";
         # storage stays at the upstream default (/var/lib/radicale/collections,
         # via StateDirectory) — covered by the system borg backup of /var/lib.
       };
     };
 
-    # Read the agenix-mounted htpasswd (0440 root:secrets).
-    systemd.services.radicale.serviceConfig.SupplementaryGroups = [ "secrets" ];
-
     # tasks.hwc.iheartwoodcraft.com → Radicale (vhost, same shape as jellyfin).
+    # A request with no credentials is treated as eric ("eric:" in base64).
     hwc.networking.shared.routes = lib.mkIf cfg.reverseProxy.enable [
       {
         name = "tasks";
         mode = "vhost";
         upstream = "http://127.0.0.1:${toString cfg.port}";
+        headersIfAbsent.Authorization = "Basic ZXJpYzo=";
       }
     ];
   }) ];

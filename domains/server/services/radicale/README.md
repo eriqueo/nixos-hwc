@@ -13,7 +13,7 @@ same service, vhost, and `radicale-htpasswd` secret serve both component types
 `item_types`.
 
 ## Boundaries
-- Manages: the Radicale service (localhost:5232), its htpasswd auth wiring,
+- Manages: the Radicale service (localhost:5232, no login: tailnet-only),
   the read-only calendar mirrors, and the `tasks` Caddy vhost
   (tasks.hwc.iheartwoodcraft.com).
 - Does NOT manage: the machines' vdirsyncer pairs (`domains/mail/tasks`,
@@ -42,8 +42,8 @@ rest and mounted 0440 root:secrets):
   because iOS shows one address book per CardDAV account, and the phone must
   write to both books.
 
-The same secret serves both sides: the server reads it as the htpasswd file;
-clients extract one user's password (`radicalePasswordArgs` in
+The server no longer checks it (`auth.type = "none"` since 2026-10-15);
+clients and the mirrors still send it. Clients extract one user's password (`radicalePasswordArgs` in
 `domains/lib/hm.nix`).
 
 ## Deploy runbook (in order)
@@ -54,7 +54,7 @@ clients extract one user's password (`radicalePasswordArgs` in
 2. **Deploy the server**: on hwc-server, pull main and
    `sudo nixos-rebuild switch --flake .#hwc-server`. Check:
    `systemctl status radicale` and
-   `curl -u eric:<password> https://tasks.hwc.iheartwoodcraft.com/eric/` (401 without auth = auth on).
+   `curl -u eric:<password> https://tasks.hwc.iheartwoodcraft.com/eric/` (no login since 2026-10-15; any password works).
 3. **Enable a machine's pairs**: set `hwc.mail.calendar.enable` and
    `hwc.mail.tasks.enable` (the mail role sets both), run `hms`, then
    `yes | vdirsyncer discover`, `vdirsyncer sync`, and `vdirsyncer metasync`.
@@ -69,6 +69,14 @@ clients extract one user's password (`radicalePasswordArgs` in
    phone; add a task on the phone in that list → sync → visible in todui.
 
 ## Changelog
+- 2026-10-15: Login removed. Radicale runs `auth.type = "none"` and the
+  `tasks` vhost supplies `Authorization: Basic eric:` when a request has no
+  credentials (`headersIfAbsent`), so `/.web/` opens straight to eric's
+  collections. Reason: the vhost is tailnet-only and the tailnet is Eric's
+  alone. Clients that send a username still get that principal (the phone's
+  `eric-personal` contacts account keeps working); any password is accepted.
+  The server no longer reads `radicale-htpasswd`, so the `secrets` group was
+  dropped from the unit; clients and the mirrors still read it.
 - 2026-10-14: New principal `eric-personal` in `radicale-htpasswd` (same
   password as `eric`) for the personal address book. Radicale is now the
   phone's contacts source: personal/family/work cards in
