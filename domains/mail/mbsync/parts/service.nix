@@ -15,6 +15,7 @@
   residencyCommand,
   projectionCommand,
   transportCommand,
+  lifecycleCommand ? "",
   ...
 }:
 let
@@ -34,6 +35,9 @@ let
     observation = shell residencyCommand;
     labels = shell projectionCommand;
     labelReport = "${builtins.dirOf statusFile}/labels.json";
+    # Lifecycle rules run before the command steps so their archives ship in the same cycle.
+    lifecycle = shell lifecycleCommand;
+    lifecycleReport = "${builtins.dirOf statusFile}/lifecycle.json";
     # One physical membership owner; mbsync mirrors verified provider effects.
     commandSteps = lib.optionals (transportCommand != "") [
       [ "flags" (sync ([ "--pull-flags" "--push-flags" ] ++ transportChannels)) ]

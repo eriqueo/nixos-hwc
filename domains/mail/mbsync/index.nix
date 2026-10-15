@@ -24,6 +24,8 @@ let
       config.hwc.mail.classifier.residency.command;
     projectionCommand = lib.optionalString config.hwc.mail.classifier.projection.enable
       config.hwc.mail.classifier.projection.command;
+    lifecycleCommand = lib.optionalString config.hwc.mail.classifier.lifecycle.enable
+      config.hwc.mail.classifier.lifecycle.command;
     transportCommand = lib.optionalString config.hwc.mail.classifier.residency.enable
       (lib.replaceStrings [ "observe-residency" ] [ "transport" ] config.hwc.mail.classifier.residency.command);
   };

@@ -75,6 +75,19 @@ let
             --db /var/lib/hwc/mail-classifier/ledger.sqlite \
             --notmuch ${pkgs.notmuch}/bin/notmuch "$@"
           ;;
+        lifecycle)
+          # Behaviour rules (expire, records, keys, alerts, digests, dates): shadow or active per
+          # the pinned contract. Runs inside the sync owner's cycle; by hand it takes the same lock.
+          shift
+          guard=()
+          if [ "''${SYNC_MAIL_LOCKED:-0}" != 1 ]; then
+            guard=(${pkgs.util-linux}/bin/flock -n -E 75 ${lib.escapeShellArg "${builtins.dirOf syncStatus}/sync.lock"})
+          fi
+          exec "''${guard[@]}" "$runtime" lifecycle \
+            --db /var/lib/hwc/mail-classifier/ledger.sqlite \
+            --notmuch ${pkgs.notmuch}/bin/notmuch \
+            --output ${lib.escapeShellArg "${builtins.dirOf syncStatus}/lifecycle.json"} "$@"
+          ;;
         route-manage|route-list|route-set|route-disable)
           verb="$1"
           shift
@@ -118,6 +131,17 @@ in
       readOnly = true;
       default = "${command}/bin/mail-classifier project-labels --apply";
       description = "Shared writer for managed labels; never teaches or changes real folders";
+    };
+  };
+  options.hwc.mail.classifier.lifecycle = {
+    enable = lib.mkEnableOption "lifecycle behaviour rules evaluated each sync cycle (modes come from the pinned contract)" // {
+      default = cfg.residency.enable && cfg.contract ? lifecyclePolicy;
+    };
+    command = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = "${command}/bin/mail-classifier lifecycle --phase apply";
+      description = "Writes lifecycle.json; archives only for rules the contract marks active, through the shared transport owner";
     };
   };
 

@@ -150,6 +150,16 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-10-15: Lifecycle behaviours, slice 3 (agent/mail-labels/lifecycles.md). `classifier/` gains
+  `hwc.mail.classifier.lifecycle` (enabled when the pinned contract carries `lifecyclePolicy`) and the
+  wrapper verb `mail-classifier lifecycle`, which takes the sync lock by hand. `mbsync/` runs it as the
+  coordinator's `lifecycle` step before the command steps and publishes `lifecycle.json` beside
+  `labels.json`; its lane never blocks commands or labels. Every rule (records, keys, alerts, digests,
+  expire, dates) ships in shadow: proposal events and the report, no mailbox effect, until the contract
+  flips a rule to active. Earlier the same day: slice 1 (DID keeps the state it completed from;
+  ledger widened without a version bump) and slice 2 (deterministic traits code/recovery/alert/
+  digest/shipping; never-trash guard for receipts, finance and recovery codes).
+
 - 2026-10-13: `calendar/`: `radicale.extraCollections` defaults to the ids in the radicale mirror catalog; the laptop and hwc-work no longer list them. todui input bumped to 461387b, which hides read-only calendars from the task lists. The tasks pair keeps `"from a"`/`"from b"`, so lists made in todui still reach the server.
 
 - 2026-10-12: Index retained case history and exact intent dispositions before command work. A restored 15,131-event ledger returned identical pending results in 0.24 seconds instead of 4.43 seconds, with every event row unchanged. Seeded index removal fails the rebuild regression.
