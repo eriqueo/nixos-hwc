@@ -36,6 +36,8 @@ rec {
   #
   # If you are adding a third copy somewhere else, that is the bug.
   fleet = osConfig: {
+    tailnetSuffix = lib.attrByPath [ "hwc" "networking" "hosts" "tailnetSuffix" ] "ocelot-wahoo.ts.net" osConfig;
+
     ips = lib.attrByPath [ "hwc" "networking" "hosts" "ips" ] {
       main = "100.77.195.118";
       work = "100.77.38.32";

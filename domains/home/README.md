@@ -110,6 +110,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-14: courier slice 4b, tailnet access. apps/courier: input bumped to 46a4f29; new `tailnet.{enable,port,host,login}` sets `COURIER_TAILNET_HOST`/`COURIER_TAILNET_LOGIN` and runs the `courier-tailnet` user unit (`tailscale serve --https=8445`). hwc-laptop enables it for `eriqueo@github`.
 - 2026-10-14: shared Git overlay: register anonymous index-pack downloads with Git's process-owned tempfile cleanup, with cancellation and pack-integrity install checks; system activation updates the Git command used by the running T3 server.
 - 2026-10-14: courier slice 4, desktop alerts. apps/courier: input bumped to 1f38d0c; new `alerts.enable` (default on) wires notify-send, wl-copy and a show-window script and sets tether's `message_popups_enabled = false`. apps/tether: `patches/message-popups.patch` adds that setting and a `backfill` flag on message events. apps/hyprland: `hyprland-app-toggle --show`.
 - 2026-10-14: apps/agent-harness: the agent-state hub on hwc-home refuses pushes that fail `agent-state-validate` (new `stateHub` option). core/repo-hooks: a listed repo qualifies when its git dir is exactly `<path>/.git` or `<path>`, so bare repos can take pinned hooks and a non-repo path never pins an enclosing repo.

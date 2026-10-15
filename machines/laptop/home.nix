@@ -56,6 +56,10 @@ in
     tether.enable = true;               # iMessage/SMS from the iPhone over Bluetooth (tetherd + clients)
     tether.settings.group_messages_enabled = true; # group threads via ANCS correlation (courier shows them)
     courier.enable = true;              # our messages app on tetherd (SUPER+U)
+    courier.tailnet = {                 # paired devices at https://hwc-laptop.<tailnet>:8445
+      enable = true;
+      login = "eriqueo@github";
+    };
     vectorcraft.enable = true;          # Illustrator-style editor, our fork, for Julia's GIS maps
     hwc-dictation = {
       enable = true;

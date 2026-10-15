@@ -51,6 +51,7 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+- 2026-10-14: `hm.nix` `fleet` also returns `tailnetSuffix` (from `hwc.networking.hosts.tailnetSuffix`, literal fallback for standalone HM), for courier's tailnet host.
 - 2026-09-30: Add hwc-work's tailnet IP and FQDN to `hm.nix`'s standalone Home Manager fleet fallback for the work SSH shortcut.
 - 2026-09-29: Add `mkTsNode.nix`: `{ loader, run }` for units that run Scout TypeScript with `node --import` on the hoisted tsx loader, so the unit's main PID is the app. Consumers: lead/home/research/event scout and hwc-control-bot.
 - 2026-09-26: Standalone HM fleet fallback and dependency-update commands use hwc-home.
