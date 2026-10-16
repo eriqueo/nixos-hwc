@@ -50,7 +50,7 @@
     enable = true;
     lifecycle.intakeEnabled = true;
     lifecycle.dispatchEnabled = true;
-    # Retention candidate stays off until installed mixed-disposition proof.
-    lifecycle.close.enable = false;
+    # Installed mixed Remove/Keep native/helper acceptance passed26 checks.
+    lifecycle.close.enable = true;
   };
 }
