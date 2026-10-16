@@ -130,7 +130,7 @@ let
   #
   # Copied, not linked per entry: one real tree reads the same to every runtime's
   # discovery. A name taken by both sources fails the build.
-  agentSkills = pkgs.runCommand "agent-skills" { } ''
+  agentSkills = pkgs.runCommand "agent-skills" { nativeBuildInputs = [ harnessPython ]; } ''
     mkdir "$out"
     for dir in ${harness}/skills/*/; do
       name=$(basename "$dir")
@@ -162,6 +162,8 @@ let
         cp -R --no-preserve=mode ${src} "$out/${name}"
       '') cfg.extraSkills
     )}
+    python3 ${harness}/bin/skill-curation-check --root ${harness} --packaged "$out" \
+      ${lib.optionalString (!(cfg.extraSkills ? reverse-engineer-anything)) "--without-skill reverse-engineer-anything"}
   '';
   skillRoots = map (dir: "${dir}/skills") ([ ".claude" ] ++ cfg.claudeConfigDirs) ++ [ ".agents/skills" ];
 
@@ -367,26 +369,12 @@ in
     };
     adoptedSkills = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      # The set installed by hand with `npx skills` on hwc-laptop and hwc-home
-      # before 2026-10-01. web-perf is left out: the harness has its own.
-      default = [
-        "agents-sdk"
-        "cloudflare"
-        "cloudflare-email-service"
-        "cloudflare-one"
-        "cloudflare-one-migrations"
-        "durable-objects"
-        "nextjs-on-cloudflare"
-        "sandbox-migrate-to-next"
-        "sandbox-next"
-        "sandbox-stable"
-        "turnstile-spin"
-        "workers-best-practices"
-        "wrangler"
-      ];
+      # C5 removed the old global adoption set. Retained domain workflows live
+      # in the pinned harness's explicit project packs; they are not discovery roots.
+      default = [ ];
       description = ''
         Skills from the cloudflare-skills flake input added to the shared skill
-        set. A new upstream skill joins only when named here.
+        set. The curated inventory check rejects unapproved discovery entries.
       '';
     };
     extraSkills = lib.mkOption {

@@ -3,7 +3,7 @@
 ## Purpose
 
 REA (Reverse Engineer Anything, `morluto/rea`) on every machine: the `rea` CLI,
-its MCP server registered for Claude Code, and its investigation skill in the
+its MCP server registered for Claude Code, and its curated investigation skill in the
 shared skill set. Pinned to the published `rea-agents` **6.3.0** release.
 
 ## Boundaries
@@ -20,7 +20,7 @@ shared skill set. Pinned to the published `rea-agents` **6.3.0** release.
 ## Structure
 
 ```
-index.nix          # home lane: `rea` in home.packages; skill → agent-harness extraSkills
+index.nix          # home lane: `rea` package; curated harness skill → agent-harness extraSkills
 sys.nix            # system lane: `rea mcp` entry → agent-harness userMcp.extraServers
 parts/package.nix  # buildNpmPackage over the npm release; wrapper sets
                    # GHIDRA_INSTALL_DIR, JAVA_HOME, REA_BINWALK_COMMAND, REA_UNBLOB_COMMAND
@@ -29,6 +29,8 @@ parts/src/         # package.json + package-lock.json pinning rea-agents (the on
 
 Both lanes are on by default in `profiles/base` (`hwc.home.apps.rea.enable`,
 `hwc.system.apps.rea.enable`).
+The skill body comes from the pinned agent-harness's `skill-packs/rea/` source.
+`hwc.home.apps.rea.skill.enable = false` omits that skill while preserving the CLI and MCP configuration.
 
 ## Use
 
@@ -52,6 +54,7 @@ nix run nixpkgs#prefetch-npm-deps -- ./package-lock.json   # → npmDepsHash in 
 
 ## Changelog
 
+- 2026-10-16: Load the curated skill from the shared harness pin; preserve the REA package, MCP server and optional skill flag.
 - 2026-10-12: Android APK analysis wired. `parts/package.nix` fetches the
   jadx-headless-mcp 0.7.1 release jar by the URL and sha256 that rea-agents
   pins in `dist/android/JadxRelease.js`, and the wrapper sets

@@ -35,11 +35,14 @@ The shared `overlays/git.nix` package supplies native cleanup of cancelled anony
 `apps/pi` maps thinking-off to DX2's explicit `none` value; enabled reasoning levels retain their existing mappings.
 
 `apps/rea/` — REA (Reverse Engineer Anything) pinned from its npm release:
-`index.nix` installs the `rea` CLI and adds its skill through
+`index.nix` installs the `rea` CLI and adds the pinned harness's curated skill through
 `agent-harness.extraSkills`; `sys.nix` registers `rea mcp` in `~/.mcp.json`
 through `agent-harness.userMcp.extraServers`; `parts/package.nix` wires
 nixpkgs Ghidra 12.1 (stable hosts via `overlays/ghidra.nix`), JDK 21,
 Apktool and Binwalk. x86_64 only.
+
+`apps/agent-harness/` checks its final assembled skill set against the pinned curation inventory.
+The default set has 21 global entries; project packs require explicit loading and REA's skill flag remains optional.
 
 The screenshot wrapper pins its capture, clipboard and notification tools; it waits for background image output before publication.
 
@@ -112,6 +115,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-16: Curate shared skill discovery, remove the default upstream adoption set, validate assembled output with declared YAML support, and load REA's curated skill from the harness pin.
 - 2026-10-15: Add bulk question cards with per-item advice, editable choices, version and concurrent-answer checks, replay protection, and separate save/delivery status. Make grouped project decisions use this form by default as a workflow guideline.
 
 - 2026-10-14: courier slice 4b, tailnet access. apps/courier: input bumped to 46a4f29; new `tailnet.{enable,port,host,login}` sets `COURIER_TAILNET_HOST`/`COURIER_TAILNET_LOGIN` and runs the `courier-tailnet` user unit (`tailscale serve --https=8445`). hwc-laptop enables it for `eriqueo@github`.
