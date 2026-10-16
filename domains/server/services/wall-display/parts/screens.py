@@ -129,6 +129,20 @@ def day_of(t):
     return t.date() if isinstance(t, dt.datetime) else t
 
 
+def managed_meal(href, ev):
+    meal = CONFIG.get("meals") or {}
+    uid = str(ev.get("UID", ""))
+    return href == meal.get("href") and uid.startswith("meal-dinner-") and str(ev.get("X-HWC-MEAL-SCHEMA", "")) == "1"
+
+
+def dinner_row(events, day):
+    meals = [e for e in events_on(events, day) if e.get("meal")]
+    if not meals:
+        return ""
+    return '<div class="w-dinner"><span class="label label--small label--outline">Dinner</span>' + ''.join(
+        f'<span class="title title--small w-c2">{E(e["summary"].removeprefix("Dinner: "))}</span>' for e in meals[:1]) + more(len(meals)-1) + '</div>'
+
+
 def load_events(first_day):
     start = dt.datetime.combine(first_day, dt.time(), TZ)
     query = EVENT_REPORT.format(s=utc_stamp(start), e=utc_stamp(start + dt.timedelta(days=DAYS)))
@@ -147,12 +161,12 @@ def load_events(first_day):
                 e = s + dt.timedelta(days=1) if allday else s
             summary = str(ev.get("SUMMARY", "")).strip() or "(busy)"
             # The mirrored feeds can carry the same event twice.
-            key = (summary.lower(), s)
+            key = (str(ev.get("UID")), s) if managed_meal(href, ev) else (summary.lower(), s)
             if key in seen:
                 continue
             seen.add(key)
             events.append({"summary": summary, "start": s, "end": e,
-                           "allday": allday, "calendar": name})
+                           "allday": allday, "calendar": name, "uid": str(ev.get("UID", "")), "meal": managed_meal(href, ev)})
     shown = drop_shadowed_busy(events, lambda e: e["summary"],
                                lambda e: (e["allday"], e["start"], e["end"]))
     return {"calendars": [n for _, n in cals], "events": shown}
@@ -627,17 +641,21 @@ def home(now, device):
 
     # The whole day: finished events struck through above what is still to
     # come. When they do not all fit, the oldest finished ones give way.
-    todays = events_on(events, today)
+    ordinary = [e for e in events if not e.get("meal")]
+    todays = events_on(ordinary, today)
     upcoming = [e for e in todays if e["allday"] or e["end"] > now]
     past = [e for e in todays if e not in upcoming]
     keep = max(0, 6 - len(upcoming))
     rows = ([agenda_row(e, today, past=True) for e in past[len(past) - keep:]] if keep else []) \
         + [agenda_row(e, today) for e in upcoming]
-    later = events_on(events, tomorrow)
+    later = events_on(ordinary, tomorrow)
     today_col = column(f"Today · {today:%b} {today.day}", rows, len(todays), 6, "Nothing today", extra="")
     tomorrow_col = column(f"Tomorrow · {tomorrow:%b} {tomorrow.day}", [agenda_row(e, tomorrow) for e in later], len(later), 6,
                           "Nothing scheduled",
                           extra=f'<span class="label label--small label--outline">{hi_lo(wx_day(wx, tomorrow))}</span>')
+
+    today_col = today_col.replace('<div class="w-list">', '<div class="w-list">' + dinner_row(events, today), 1)
+    tomorrow_col = tomorrow_col.replace('<div class="w-list">', '<div class="w-list">' + dinner_row(events, tomorrow), 1)
 
     family = [t for t in (tk or {}).get("open", []) if t["list"] == TASK_LISTS["family"]]
     top = top_tasks(family, today)
@@ -666,13 +684,14 @@ def week(now, device):
         day = today + dt.timedelta(days=i)
         w = wx_day(wx, day)
         pop = f'<span class="label label--small">{w["pop"]}%</span>' if (w.get("pop") or 0) >= 20 else ""
-        evs = events_on(events, day)
+        dinner = dinner_row(events, day)
+        evs = events_on([e for e in events if not e.get("meal")], day)
         cols.append(
             f'<div class="w-day{" w-today" if i == 0 else ""}">'
             f'<div class="w-dayhead"><span>{day:%a}</span><span>{day.day}</span></div>'
             f'<div class="w-daywx">{icon(w.get("icon", "wi-na"), "w-ico-s")}'
             f'<span class="label label--small value--tnums">{deg(w.get("hi"))}/{deg(w.get("lo"))}</span>{pop}</div>'
-            f'<div class="w-list">{event_rows(evs, day, event_limit, clamp=2) or none("—")}</div></div>')
+            f'<div class="w-list">{dinner}{event_rows(evs, day, max(1, event_limit - bool(dinner)), clamp=2) or ("" if dinner else none("—"))}</div></div>')
     cols.append(f'<div class="w-weekqr">{qr("week", device, "Add calendar event")}</div>')
     body = f'{alert_bar(wx)}<div class="w-week w-flex">{"".join(cols)}</div>'
     return page("Week", now, device, body, [calendar, weather],
@@ -789,6 +808,7 @@ SCREENS = {"home": home, "week": week, "weather": weather_screen, "tasks": tasks
 # the look; these rules only place things. Black, white and the framework's
 # greys; no motion.
 CSS = """
+.w-dinner{display:flex;flex-direction:column;gap:2px;border-bottom:1px solid #000;padding-bottom:4px;flex:none}
 .w-fill{display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:8px;overflow:hidden}
 .w-row{display:flex;gap:12px;min-height:0}
 .w-flex{flex:1}

@@ -9,6 +9,8 @@
 
 ## Structure
 
+MCP `mealCollections` enables the additive version-1 conditional meal protocol in `mcp/src/src/tools/tasks.ts`; exact collection identities and ETags bound every effect.
+
 `mcp/src/src/tools/calendar.ts` carries timed multi-day end dates through to khal; calendar tests cover range validation and command arguments.
 Calendar changes wait for a bounded `calendar_radicale` sync and return its completion status separately from the saved local change.
 
@@ -72,6 +74,8 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-10-16: Add scoped Meals CalDAV read/create/update/delete with conditional headers and exact UID readback; legacy task APIs remain unchanged.
 
 - 2026-10-14: MCP calendar creation supports repeat/until, with timed last dates inclusive through the end of that day. Tasks support versioned date-only fixed schedules, month/leap-date skipping, and ETag conditional completion that advances one occurrence without duplicating tasks. Legacy timed reminders retain their rules.
 

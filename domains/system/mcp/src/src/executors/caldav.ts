@@ -38,12 +38,13 @@ async function credential(): Promise<Credential> {
 export async function davRequest(
   method: string,
   path: string,
-  opts: { body?: string; headers?: Record<string, string> } = {},
+  opts: { body?: string; headers?: Record<string, string>; timeoutMs?: number } = {},
 ): Promise<{ status: number; body: string; etag: string | null }> {
   const { user, password } = await credential();
   const url = `${BASE_URL.replace(/\/$/, "")}${path}`;
   const res = await fetch(url, {
     method,
+    ...(opts.timeoutMs ? { signal: AbortSignal.timeout(opts.timeoutMs) } : {}),
     headers: {
       Authorization: `Basic ${Buffer.from(`${user}:${password}`).toString("base64")}`,
       ...(opts.body ? { "Content-Type": "application/xml; charset=utf-8" } : {}),

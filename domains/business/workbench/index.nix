@@ -219,6 +219,8 @@ in
         # Served by the wall-display process (hwc.server.services.wallDisplay).
         { id = "tasks"; label = "Tasks"; route = "todo";
           description = "Every task list: add, complete, edit"; }
+        { id = "meals"; label = "Meals"; route = "meals";
+          description = "Recipes, planned dinners and shared groceries"; }
         { id = "calendar"; label = "Calendar"; route = "calendar";
           description = "Day, week and month agenda; add and edit events"; }
       ];

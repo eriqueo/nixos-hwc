@@ -50,6 +50,7 @@ in
     tasks = "work";            # Radicale
     wall = "work";             # wall tablet calendar page
     todo = "work";             # wall-display Tasks phone app (Workbench area)
+    meals = "work";            # reviewed meal planner
     calendar = "work";         # wall-display Calendar phone app (Workbench area)
     lead-scout = "work";
     lead-scout-datax = "work";  # member instance; route registered by hwc.server.ai.leadScout.memberInstance.vhost

@@ -24,6 +24,7 @@
     ../../domains/server/native/ai/dx2/index.nix
     ../../domains/server/services/radicale/index.nix
     ../../domains/server/services/wall-display/index.nix
+    ../../domains/server/services/meals/index.nix
   ];
 
   networking.hostName = "hwc-work";
@@ -326,6 +327,8 @@
   # Wall display: TRMNL-compatible server at wall.hwc.iheartwoodcraft.com
   # (home, week, weather, tasks, groceries: the default playlist). Add a
   # device here to pair it.
+  hwc.server.services.meals.enable = true;
+
   hwc.server.services.wallDisplay = {
     enable = true;
     reverseProxy.enable = true;

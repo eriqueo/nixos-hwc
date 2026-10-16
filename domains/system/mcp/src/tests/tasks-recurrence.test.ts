@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildVtodo, editVtodo, fixedRecurrence, nextScheduledDate, parseVtodo } from "../src/executors/caldav.js";
-import { tasksTools, weeklyRecurrence } from "../src/tools/tasks.js";
+import { tasksTools, weeklyRecurrence, mealTools } from "../src/tools/tasks.js";
 
 describe("weekly task recurrence", () => {
   it("renders a timezone-aware Thursday reminder", () => {
@@ -32,7 +32,7 @@ describe("weekly task recurrence", () => {
   });
 });
 
-const dav = vi.hoisted(() => ({listAllTodos:vi.fn(),listTaskLists:vi.fn(),fetchVersionedItem:vi.fn(),putVersionedItem:vi.fn(),putItem:vi.fn()}));
+const dav = vi.hoisted(() => ({davRequest:vi.fn(),listAllTodos:vi.fn(),listTaskLists:vi.fn(),fetchVersionedItem:vi.fn(),putVersionedItem:vi.fn(),putItem:vi.fn()}));
 vi.mock("../src/executors/caldav.js", async original => ({...await original<typeof import("../src/executors/caldav.js")>(),...dav}));
 describe("fixed task schedule through real handlers", () => {
  let raw:string;
@@ -85,4 +85,28 @@ it("keeps fixed dates, skips invalid month/leap dates, catches up, and honors un
  expect(nextScheduledDate("2026-09-30","weekly","2026-10-14")).toBe("2026-10-21");
  expect(nextScheduledDate("2026-10-14","daily","2026-10-14","2026-10-14")).toBeNull();
  expect(fixedRecurrence({frequency:"daily",startDate:"2026-02-30"})).toBeNull();
+});
+
+describe("reviewed meal conditional protocol",()=>{
+ const config={groceries:{href:"/eric/groceries/",name:"Groceries"},meals:{href:"/eric/meals/",name:"Meals"}};
+ const raw="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VTODO\r\nUID:meal-grocery-test\r\nX-HWC-MEAL-SCHEMA:1\r\nX-HWC-MEAL-OPERATION:op\r\nSUMMARY:Milk\r\nEND:VTODO\r\nEND:VCALENDAR\r\n";
+ const call=(args:Record<string,unknown>)=>mealTools(config)[0].handler({schemaVersion:1,collection:"groceries",uid:"meal-grocery-test",...args});
+ beforeEach(()=>{vi.clearAllMocks();dav.davRequest.mockImplementation(async(method)=>method==="PROPFIND"?{status:207,body:"<displayname>Groceries</displayname>"}:method==="GET"?{status:200,body:raw,etag:'"v1"'}:{status:201,body:""});});
+ it("is absent unless both collections are configured",()=>expect(mealTools({})).toEqual([]));
+ it("creates conditionally and returns exact readback identity",async()=>{
+  expect((await call({action:"create",raw})).data).toMatchObject({code:"OK",item:{uid:"meal-grocery-test",etag:'"v1"'}});
+  expect(dav.davRequest.mock.calls[1]).toMatchObject(["PUT","/eric/groceries/meal-grocery-test.ics",{headers:{"If-None-Match":"*"}}]);
+ });
+ it("refuses unversioned changes and manual item identities",async()=>{
+  expect((await call({action:"delete"})).status).toBe("error");expect((await call({action:"create",uid:"manual",raw})).status).toBe("error");expect(dav.davRequest).not.toHaveBeenCalled();
+ });
+ it("preserves conflict without an unconditional retry",async()=>{
+  dav.davRequest.mockImplementation(async(method)=>method==="PROPFIND"?{status:207,body:"<displayname>Groceries</displayname>"}:{status:412,body:""});
+  expect((await call({action:"update",raw,expectedEtag:'"old"'})).data).toMatchObject({code:"REMOTE_CONFLICT",httpStatus:412});
+  expect(dav.davRequest).toHaveBeenCalledTimes(2);expect(dav.davRequest.mock.calls[1][2].headers["If-Match"]).toBe('"old"');
+ });
+ it("refuses wrong collection name before a mutation",async()=>{
+  dav.davRequest.mockResolvedValue({status:207,body:"<displayname>Other</displayname>"});
+  expect((await call({action:"create",raw})).data).toMatchObject({code:"COLLECTION_UNAVAILABLE"});expect(dav.davRequest).toHaveBeenCalledTimes(1);
+ });
 });

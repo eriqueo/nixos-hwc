@@ -1,7 +1,7 @@
 { config, lib, pkgs, inputs, osConfig ? {}, ... }:
 let
   cfg = config.hwc.mail.calendar;
-  radicaleCalendarIds = [ "work" "family" "personal" ];
+  radicaleCalendarIds = [ "work" "family" "personal" "meals" ];
   primaryCalendarDisplayName = cfg.primaryCalendar;
 
   # khalt supersedes plain khal: its package ships the fork's full `khal`/`ikhal`
