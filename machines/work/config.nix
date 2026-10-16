@@ -281,7 +281,6 @@
   hwc.business.crm.calendar.busyFeeds = {
     "ContractorCTO" = "cto-ical-link";
     "Proton work" = "proton-ical-link";
-    "Google family" = "hwcmt-ical-link";
   };
   hwc.server.native.ai.event-scout = {
     enable = true;
@@ -319,7 +318,7 @@
     enable = true;
     reverseProxy.enable = true;
     # Outside calendars are mirrored read-only into Radicale every 15 min
-    # (same three secrets the CRM's busyFeeds read above). The list is
+    # (only cto now; the CRM's busyFeeds above also read Proton). The list is
     # domains/server/services/radicale/parts/mirror-catalog.nix, the default
     # of `mirrors`; khal machines derive their pinned ids from it.
   };

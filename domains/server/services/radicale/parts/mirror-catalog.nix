@@ -12,7 +12,7 @@
 # phone, the wall and voice all skip collections that take no VTODO.
 
 {
-  cto           = { secret = "cto-ical-link";    displayName = "ContractorCTO"; color = "#FF9F0A"; };
-  proton-work   = { secret = "proton-ical-link"; displayName = "Proton work";   color = "#BF5AF2"; };
-  google-family = { secret = "hwcmt-ical-link";  displayName = "Google family"; color = "#30D158"; };
+  # DataX (ContractorCTO) Google calendar. displayName is applied only when
+  # the collection is created; the live one was renamed by PROPPATCH.
+  cto = { secret = "cto-ical-link"; displayName = "DataX calendar"; color = "#FFCC00"; };
 }

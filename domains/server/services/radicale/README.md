@@ -69,6 +69,15 @@ clients and the mirrors still send it. Clients extract one user's password (`rad
    phone; add a task on the phone in that list → sync → visible in todui.
 
 ## Changelog
+- 2026-10-16: Collections cleaned up. Mirrors: only `cto`, renamed
+  "DataX calendar" (it is a Google calendar, not Microsoft). `proton-work`
+  was folded into `work` (hwc): its events were copied once into `work` and
+  the mirror stopped; the CRM still reads the Proton feed as a busy feed.
+  `google-family` was dropped (replaced by `family`; also removed from the
+  CRM busy feeds). Both old collections were archived to
+  `/var/lib/radicale/archive/<id>-2026-10-16` and deleted; delete the
+  archives after 2026-11-16. The open DataX task in `work` moved to the
+  DataX task list, so hwc and DataX tasks are separate.
 - 2026-10-15: Login removed. Radicale runs `auth.type = "none"` and the
   `tasks` vhost supplies `Authorization: Basic eric:` when a request has no
   credentials (`headersIfAbsent`), so `/.web/` opens straight to eric's
@@ -113,7 +122,7 @@ clients and the mirrors still send it. Clients extract one user's password (`rad
   output is passed through a redactor that replaces every feed URL, because
   the notifier forwards journal lines. The vdirsyncer config, holding the URLs
   and the password, is written to RuntimeDirectory (tmpfs, 0700) and removed
-  after each run. Feed quirks seen: the Microsoft (ContractorCTO) feed carries
+  after each run. Feed quirks seen: the ContractorCTO (DataX, Google) feed carries
   few UIDs, so vdirsyncer keys most items by content hash; DTSTAMP changes on
   every fetch and is ignored by the hash, so an unchanged feed uploads nothing.
 - 2026-06-15: Now also hosts the **calendar** (VEVENT) backend, not just tasks.
