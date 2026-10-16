@@ -12,6 +12,8 @@ source and one mutable state store.
 
 ## Structure
 
+New Close requests keep a bounded, fingerprinted checkout inventory through cleanup. Review accepts only final native messages for the adopted turn, including recovered held results. Ordinary thread creation and delivery exclude its reserved provider.
+
 `ws` checks current-user process references before checkout removal. Its immutable scanner uses existing noninteractive sudo authority to inspect protected process metadata; unavailable inspection refuses cleanup. It adds no sudoers grant.
 
 `tracker.lifecycle` keeps new Review intake and dispatch separate and disabled by default. The hub and relay restart when their shared lifecycle protocol changes. Only a host advertising the exact tested native profile can receive a Review.
@@ -83,6 +85,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-10-16: Pin final native Review result validation and stable captured Close inventory; ordinary thread selection excludes the reserved reviewer.
 
 - 2026-10-16: Bind workspace removal to an immutable, caller-scoped process inspector and declare its Python runtime. Preserve all checkouts when inspection is busy, unavailable or exceeds its bounds.
 
