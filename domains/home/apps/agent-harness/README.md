@@ -12,6 +12,8 @@ source and one mutable state store.
 
 ## Structure
 
+`tracker.lifecycle.close` defaults off. Its immutable runtime metadata captures the static revision, workspace/brain roots and explicit ordinary profile. The relay binds the installed ws path separately to avoid a derivation cycle. The ws runtime includes Bash/systemd; hub and relay restart on Close protocol changes. Canonical Close keeps pending evidence visible and accepts Closed only after the note, every supported removal and both worker shutdown proofs. Unsupported lanes remain held.
+
 A reserved Review must find its deterministic native thread absent in both detail and the command snapshot before taking a process baseline or reporting that no worker started. Existing or unknown identities stay held after an independent hub restore.
 
 Workspace close verifies current remote heads after a successful bounded refresh. Automatic WorktreeRemove uses the same immutable process inspector through the installed `ws check-processes` command; it retains its separate local-branch preservation rule.
@@ -89,6 +91,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-10-16: Declare default-disabled canonical Close runtime ports and dependencies; keep ordinary assessment separate from Review and include shared protocol restart triggers.
 
 - 2026-10-16: Hold restored native identities before fresh Review baselines and early release; retain the original baseline for in-flight recovery.
 

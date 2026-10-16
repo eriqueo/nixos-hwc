@@ -194,6 +194,8 @@ let
       gawk
       util-linux
       python3
+      bash
+      systemd
     ];
     text = ''
       export WS_ROOT=${lib.escapeShellArg cfg.workspaceRoot}
@@ -201,6 +203,16 @@ let
       exec ${pkgs.bash}/bin/bash ${harness}/bin/ws "$@"
     '';
   };
+
+  # Keep ws's own store path outside this JSON to avoid a derivation cycle.
+  # The relay binds the two immutable ports at its composition root.
+  closeRuntime = pkgs.writeText "tracker-close-runtime.json" (builtins.toJSON {
+    schemaVersion = 1;
+    inherit revision;
+    workspaceRoot = cfg.workspaceRoot;
+    brainRoot = cfg.tracker.lifecycle.close.brainRoot;
+    profile = cfg.tracker.lifecycle.close.profile;
+  });
 
   # Nothing else updates the npm-global provider CLIs on a host that drives
   # them headless (T3 serve, nightly builds). Measured 2026-09-24 on hwc-server:
@@ -349,7 +361,30 @@ in
         dispatchEnabled = lib.mkOption {
           type = lib.types.bool;
           default = false;
-          description = "Allow new Review starts; existing requests remain inspectable when disabled.";
+          description = "Allow new lifecycle worker/helper starts and prepared effects; existing requests remain inspectable when disabled.";
+        };
+        close = {
+          enable = lib.mkEnableOption "canonical Close after ordinary native, owning cleanup and shutdown acceptance";
+          brainRoot = lib.mkOption {
+            type = lib.types.str;
+            default = toString (lib.findFirst (p: p != null) "${home}/900_vaults/brain" [
+              (lib.attrByPath [ "hwc" "paths" "brain" "vault" ] null osConfig)
+              (lib.attrByPath [ "hwc" "paths" "brain" "server-replica" ] null osConfig)
+            ]);
+            description = "Existing brain vault used for the verified Close outcome note.";
+          };
+          profile = {
+            instanceId = lib.mkOption {
+              type = lib.types.str;
+              default = "codex";
+              description = "Explicit ordinary T3 provider instance; never the reserved reviewer.";
+            };
+            model = lib.mkOption {
+              type = lib.types.str;
+              default = "gpt-6.1-sol";
+              description = "Ordinary model used for the bounded Close assessment.";
+            };
+          };
         };
       };
       port = lib.mkOption {
@@ -609,7 +644,7 @@ in
         Description = "HWC project tracker hub (roadmaps, plans, decision cards)";
         After = [ "network-online.target" ];
         # The server and page are pinned harness files; a new revision restarts it.
-        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "server.py" "index.html" "handoff_doc.py" "lifecycle.py" ];
+        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "server.py" "index.html" "handoff_doc.py" "lifecycle.py" "close-contract.json" ];
       };
       Service = {
         ExecStart = "${pkgs.python3}/bin/python3 ${harness}/tracker/server.py ${toString cfg.tracker.port}";
@@ -621,6 +656,7 @@ in
           "TRACKER_LEDGERS=${cfg.stateDir}/ledger"
           "TRACKER_LIFECYCLE_INTAKE=${if cfg.tracker.lifecycle.intakeEnabled then "1" else "0"}"
           "TRACKER_LIFECYCLE_DISPATCH=${if cfg.tracker.lifecycle.dispatchEnabled then "1" else "0"}"
+          "TRACKER_CLOSE_ENABLED=${if cfg.tracker.lifecycle.close.enable then "1" else "0"}"
           # The Backlog tab's read model lives on the Refinery board (one store of work items).
           "TRACKER_REFINERY_URL=${cfg.tracker.refineryUrl}"
           "TRACKER_REFINERY_PUBLIC_URL=${cfg.tracker.refineryPublicUrl}"
@@ -644,11 +680,17 @@ in
         Description = "Deliver tracker pings into this host's T3 threads";
         After = [ "network-online.target" ];
         # relay.py imports handoff_doc; a change there must restart the relay too.
-        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "relay.py" "t3.py" "handoff_doc.py" "lifecycle.py" ];
+        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "relay.py" "t3.py" "handoff_doc.py" "lifecycle.py" "closeout.py" "close-contract.json" ];
       };
       Service = {
         ExecStart = "${pkgs.python3}/bin/python3 ${harness}/tracker/relay.py";
-        Environment = [ "TRACKER_URL=${cfg.tracker.url}" ] ++ lib.mapAttrsToList (k: v: "${k}=${v}") t3Env;
+        Environment = [
+          "TRACKER_URL=${cfg.tracker.url}"
+          "TRACKER_WS_BIN=${ws}/bin/ws"
+          "TRACKER_LOCAL_LEDGER=${cfg.stateDir}/ledger/%H.json"
+          "PATH=${lib.makeBinPath [ pkgs.systemd pkgs.git pkgs.coreutils ]}:/run/current-system/sw/bin"
+        ] ++ lib.mapAttrsToList (k: v: "${k}=${v}") t3Env
+          ++ lib.optional cfg.tracker.lifecycle.close.enable "TRACKER_CLOSE_RUNTIME=${closeRuntime}";
         Restart = "always";
         RestartSec = 10;
       };

@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+`apps/agent-harness/` declares a default-disabled canonical Close lane with immutable runtime ports, owning cleanup receipts and a pending status until required evidence is complete.
+
 `apps/agent-harness/` declares the workspace allocator and inspection runtime used by home sessions.
 
 `apps/agent-harness/` exposes separate, default-disabled Review intake and dispatch switches. `apps/t3code/` supplies the isolated native runtime; hwc-work enables the tested lane. Other hosts keep Review disabled.
@@ -118,6 +120,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-16: Declare default-disabled canonical Close runtime ports and dependencies; keep ordinary assessment separate from Review and include shared protocol restart triggers.
 
 - 2026-10-16: Bind workspace removal to an immutable, caller-scoped process inspector and declare its Python runtime. Preserve all checkouts when inspection is busy, unavailable or exceeds its bounds.
 
