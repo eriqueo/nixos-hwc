@@ -12,9 +12,9 @@ source and one mutable state store.
 
 ## Structure
 
-hwc-work enables the tested schema2 Close lane for up to4 ordinary direct worktrees after installed two-checkout acceptance. Other hosts stay disabled. Old schema1 requests keep their captured limits and readable evidence.
+The capability3 Close candidate adds explicit bulk Remove/Keep choices for up to4 ordinary direct worktrees. It stays disabled until installed mixed-disposition acceptance passes. Exact capability1/2 request readers retain their original limits and removal evidence.
 
-`tracker.lifecycle.close` defaults off and clears the relay runtime port while disabled. Its immutable runtime metadata captures the static revision, workspace/brain roots and explicit ordinary profile. The relay binds the installed ws path separately to avoid a derivation cycle. The ws runtime includes Bash/systemd; hub and relay restart on Close protocol changes. Canonical Close keeps pending evidence visible and accepts Closed only after the note, every supported removal and both worker shutdown proofs. Unsupported lanes remain held.
+`tracker.lifecycle.close` defaults off and clears the relay runtime port while disabled. Its immutable runtime metadata captures the static revision, workspace/brain roots and explicit ordinary profile. The relay binds the installed ws path separately to avoid a derivation cycle. The ws runtime includes Bash/systemd; hub and relay restart on Close protocol changes. Canonical Close keeps pending evidence visible and accepts Closed only after the note, every authorized removed-or-kept disposition and both worker shutdown proofs. Keep needs a human reason and fresh matching physical identity, clean state, preservation and process checks. Unsupported lanes remain held.
 
 A reserved Review must find its deterministic native thread absent in both detail and the command snapshot before taking a process baseline or reporting that no worker started. Existing or unknown identities stay held after an independent hub restore.
 
@@ -93,6 +93,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-10-16: Pin capability3/body2 bulk Close choices, prepared workspace identity and retained-checkout observations; keep intake disabled until installed mixed Remove/Keep proof.
 
 - 2026-10-16: Enable the hwc-work schema2 Close lane after installed20-check two-checkout native/helper proof; other hosts stay disabled.
 

@@ -50,7 +50,7 @@
     enable = true;
     lifecycle.intakeEnabled = true;
     lifecycle.dispatchEnabled = true;
-    # Installed schema2 ordinary Close passed two-checkout native/helper proof.
-    lifecycle.close.enable = true;
+    # Retention candidate stays off until installed mixed-disposition proof.
+    lifecycle.close.enable = false;
   };
 }
