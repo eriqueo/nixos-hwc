@@ -209,7 +209,7 @@ let
     assets = "${assets}";
     crispFontsConf = "${crispFontsConf}";
     inherit links;
-    meals = if meals.enable then { url = meals.url; href = meals.collections.meals.href; } else null;
+    meals = if meals.enable then { url = meals.url; href = meals.collections.meals.href; readUrl = "http://127.0.0.1:${toString meals.port}"; } else null;
     taskLists = { family = cfg.familyTaskList; groceries = cfg.groceryTaskList; };
     devices = cfg.devices;
     apps = {

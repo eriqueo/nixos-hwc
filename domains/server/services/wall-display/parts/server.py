@@ -38,7 +38,9 @@ import sys
 import tempfile
 import threading
 import time
-from urllib.parse import quote, unquote
+import urllib.request
+import urllib.error
+from urllib.parse import quote, unquote, parse_qs
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import apps
@@ -65,6 +67,29 @@ ASSET_TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; chars
 # 2- and 4-grey renders draw text without antialiasing: antialiased glyph
 # edges at fractional x dither into noise when quantised to 1-2 bits.
 CRISP_ENV = {**os.environ, "FONTCONFIG_FILE": CONFIG["crispFontsConf"]}
+
+
+COOKING_PREFIX = "/cooking"
+COOKING_PATH = re.compile(r"/cooking/(?:(?:api/|qr/)?(?:dates|dinners)/[a-zA-Z0-9_-]{1,100}|assets/(?:app\.js|app\.css|palette\.css|theme\.css))")
+COOKING_CAPACITY = 16  # matches Meals admission; browser loads assets in parallel
+COOKING_SLOTS = threading.BoundedSemaphore(COOKING_CAPACITY)  # shed excess reads with 503; no queue/retry
+COOKING_LIMIT = 262144
+
+class NoCookingRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+COOKING_HTTP = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoCookingRedirect())
+
+def dinner_controls(name, scene, now):
+    if scene not in ("home", "week") or not (CONFIG.get("meals") or {}).get("readUrl"):
+        return ""
+    day = now.date().isoformat()
+    path = COOKING_PREFIX + "/dates/" + day
+    return (f'<nav class="dinner-controls" aria-label="Dinner">'
+            f'<a href="{path}?device={quote(name)}">Tonight’s dinner</a>'
+            f'<img src="{COOKING_PREFIX}/qr/dates/{day}" alt="Open dinner on phone" width="96" height="96">'
+            '<span>Scan for dinner<br>on your phone</span></nav>')
 
 
 def log(msg):
@@ -347,6 +372,8 @@ class Handler(BaseHTTPRequestHandler):
         app = self.host_app()
         if app is not None:
             app.get(self, path)
+        elif path.startswith(COOKING_PREFIX + "/"):
+            self.cooking_read(path)
         elif path in ("/api/setup", "/api/setup/"):
             self.byos_setup()
         elif path == "/api/display":
@@ -381,6 +408,42 @@ class Handler(BaseHTTPRequestHandler):
                       SCREENS[screen](dt.datetime.now(TZ), self.preview_device()))
         else:
             self.send(404, "text/plain", "not found")
+
+    def cooking_unavailable(self, path):
+        if path.startswith((COOKING_PREFIX + "/dates/", COOKING_PREFIX + "/dinners/")):
+            device = parse_qs(self.path.partition("?")[2]).get("device", [""])[0]
+            back = "/device/" + quote(device) if device in DEVICES else "/"
+            return self.send(503, "text/html; charset=utf-8",
+                '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">'
+                '<h1>Meals is unavailable</h1><p>Your calendar and other wall pages still work.</p>'
+                f'<p><a href="{back}">Back to wall</a></p><p><a href="{html.escape(self.path, quote=True)}">Try again</a></p>')
+        return self.json(503, {"error": {"code": "MEALS_UNAVAILABLE", "message": "Meals is unavailable. Your open recipe has been kept."}})
+
+    def cooking_read(self, path):
+        """GET-only transport substitution for Meals' cooking face; never a general proxy."""
+        peer = self.client_ip()
+        if peer is None or not (peer.is_loopback or self.from_tailnet() or peer in ipaddress.ip_network("fd7a:115c:a1e0::/48")):
+            return self.json(403, {"error": {"code": "TAILNET_REQUIRED", "message": "Connect through Tailscale"}})
+        if not COOKING_PATH.fullmatch(path):
+            return self.json(404, {"error": {"code": "NOT_FOUND", "message": "Page not found"}})
+        origin = (CONFIG.get("meals") or {}).get("readUrl")
+        if not origin or not COOKING_SLOTS.acquire(False):
+            return self.cooking_unavailable(path)
+        try:
+            try:
+                response = COOKING_HTTP.open(origin + path, timeout=3)
+            except urllib.error.HTTPError as error:
+                response = error
+            with response:
+                body = response.read(COOKING_LIMIT + 1)
+                if len(body) > COOKING_LIMIT:
+                    raise ValueError("cooking response limit")
+                ctype = response.headers.get("Content-Type", "application/octet-stream")
+                self.send(response.code, ctype, body)
+        except (OSError, ValueError, urllib.error.URLError):
+            self.cooking_unavailable(path)
+        finally:
+            COOKING_SLOTS.release()
 
     def do_POST(self):
         path = self.path.split("?")[0]
@@ -467,7 +530,7 @@ class Handler(BaseHTTPRequestHandler):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{escape(scene.capitalize())} · Wall Display</title><style>{REVIEW_CSS}</style></head>
 <body><header><h1>Wall Display</h1><nav aria-label="Display">{device_links}</nav></header>
-<main><nav aria-label="Scenes">{scene_links}</nav>
+<main><nav aria-label="Scenes">{scene_links}</nav>{dinner_controls(name, scene, dt.datetime.now(TZ))}
 <div class="scene-heading"><h2>{escape(scene.capitalize())}</h2>
 <span>{index + 1} of {len(playlist)} · {device["width"]} × {device["height"]}</span></div>
 <div class="preview">{preview}</div>
@@ -505,6 +568,7 @@ class Handler(BaseHTTPRequestHandler):
         img = renderer.image(target)
         wait = device.spec["refreshRate"] if img else 60
         here = f"/device/{name}"
+        dinner = dinner_controls(name, target[0], dt.datetime.now(TZ))
         body = (f'<img id="scene-image" src="/images/{img}" alt="">' if img
                 else "<p>No image rendered yet.</p>")
         # With voice on, a script reloads instead (it waits out a recording
@@ -521,10 +585,14 @@ class Handler(BaseHTTPRequestHandler):
 {refresh}
 <title>{name}</title>
 <style>html,body{{margin:0;height:100%;background:#fff;overflow:hidden}}
-img{{display:block;width:100vw;height:100vh;object-fit:contain}}
-a{{position:fixed;top:0;bottom:0}}
-.prev{{left:0;width:33vw}}.next{{left:33vw;right:0}}</style>
-</head><body>{body}<a class="prev" href="{here}?go=prev" aria-label="previous"></a><a class="next" href="{here}" aria-label="next"></a>{image_updates(name, target[0]) if img else ''}</body></html>""")
+#scene-image{{display:block;width:100vw;height:calc(100vh - {112 if dinner else 0}px);object-fit:contain}}
+.prev,.next{{position:fixed;top:0;bottom:{112 if dinner else 0}px}}
+.prev{{left:0;width:33vw}}.next{{left:33vw;right:0}}
+.dinner-controls{{height:112px;display:flex;align-items:center;justify-content:center;gap:16px;background:white;border-top:2px solid black;box-sizing:border-box;font:18px sans-serif}}
+.dinner-controls a{{position:static;display:flex;align-items:center;min-height:48px;padding:0 16px;border:2px solid black;color:black;text-decoration:none}}
+.dinner-controls img{{width:96px;height:96px}}
+</style>
+</head><body>{body}<a class="prev" href="{here}?go=prev" aria-label="previous"></a><a class="next" href="{here}" aria-label="next"></a>{dinner}{image_updates(name, target[0]) if img else ''}</body></html>""")
 
     def serve_image(self, name):
         if not IMAGE_NAME.match(name):
@@ -571,6 +639,9 @@ a{{position:fixed;top:0;bottom:0}}
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", cache)
+        if self.path.startswith(COOKING_PREFIX + "/"):
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; frame-ancestors 'none'")
         self.end_headers()
         self.wfile.write(data)
 

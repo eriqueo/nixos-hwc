@@ -9,7 +9,7 @@
 
 ## Structure
 
-`services/meals/` deploys the independent Meals package, exact CalDAV targets, CRITICAL same-user SQLite backup and seven-day preview cleanup. Recipe conversion consumes the shared DX2 endpoint facts and existing credential path; only reviewed diagrams enter the recipe store. Wall Home/Week reserve dinner rows; Calendar routes managed edits to Meals.
+`services/meals/` deploys the independent Meals package, exact CalDAV targets, CRITICAL same-user SQLite backup and seven-day preview cleanup. Recipe conversion consumes the shared DX2 endpoint facts and existing credential path; only reviewed diagrams enter the recipe store. Wall Home/Week reserve dinner rows and provide tap/QR access to the persistent Meals-owned cooking page through a bounded GET-only loopback transport; Calendar routes managed edits to Meals.
 
 Calendar phone writes consume the gateway's sync receipt; they preserve the saved local result and show a sync failure without another wait.
 
@@ -56,7 +56,7 @@ domains/server/
 │   ├── inbox-processor/  # Phone capture processor (whisper-server + Tesseract; optional DX2 voice-note cleanup)
 │   ├── meals/            # Independent reviewed meal planner, backup and retention wiring
 │   ├── radicale/         # Self-hosted CalDAV (tasks.hwc.*, two-way task sync)
-│   └── wall-display/     # TRMNL scenes + tablet rotation and scene review; Family Home, week, weather, tasks, groceries; QR-linked phone apps and contract tests
+│   └── wall-display/     # TRMNL scenes + tablet rotation, scene review and held Meals cooking routes; Family Home, week, weather, tasks, groceries; QR-linked phone apps and contract tests
 │       └── parts/        #   server.py (protocol, host dispatch, renderer, web client), screens.py (screens, CalDAV reads),
 │                         #   apps.py (todo.* Tasks and calendar.* Calendar phone apps; writes via the MCP gateway),
 │                         #   voice.py (tap-to-talk: whisper → DX2 → Piper, writes need confirmation)
@@ -75,6 +75,8 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+
+- 2026-10-16: Home/Week tablet clients add a reserved Tonight’s dinner tap/QR footer. The cooking route proxies only Meals read pages/assets/API with 16 request slots, three-second socket timeout and 256 KiB cap; existing rotation stays separate. Meals receives the host timezone for date selection.
 
 - 2026-10-16: Meals binds the configured DX2 model for reviewed recipe-to-diagram conversion; the integration check pins that shared configuration.
 

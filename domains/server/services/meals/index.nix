@@ -8,6 +8,7 @@ let
   domain = config.hwc.networking.shared.vhostDomain;
   settings = pkgs.writeText "meals.json" (builtins.toJSON {
     inherit (cfg) port writesEnabled;
+    timeZone = config.time.timeZone;
     database = "${state}/meals.db";
     baseUrl = cfg.url;
     groceriesUrl = "https://todo.${domain}/groceries";

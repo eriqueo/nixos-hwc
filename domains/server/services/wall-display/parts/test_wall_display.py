@@ -36,6 +36,47 @@ import server
 
 
 class DisplayContract(unittest.TestCase):
+    def test_cooking_proxy_is_readonly_bounded_and_does_not_rotate(self):
+        from http.server import BaseHTTPRequestHandler
+        class Meals(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200); self.send_header('Content-Type','application/json'); self.end_headers()
+                self.wfile.write(b'x' * (server.COOKING_LIMIT+1) if self.path.endswith('/large') else b'{"schemaVersion":1}')
+            def log_message(self,*args): pass
+        upstream=ThreadingHTTPServer(('127.0.0.1',0),Meals)
+        http=ThreadingHTTPServer(('127.0.0.1',0),server.Handler)
+        threads=[threading.Thread(target=h.serve_forever,daemon=True) for h in (upstream,http)]
+        for t in threads:t.start()
+        before={n:d.cursor for n,d in server.devices.items()}
+        try:
+            with patch.dict(server.CONFIG,meals=dict(readUrl=f'http://127.0.0.1:{upstream.server_port}')):
+                url=f'http://127.0.0.1:{http.server_port}'
+                with urlopen(url+'/cooking/api/dinners/fixture') as r:self.assertEqual(json.load(r)['schemaVersion'],1)
+                with self.assertRaises(HTTPError) as raised:urlopen(Request(url+'/cooking/api/dinners/fixture',headers={'X-Real-IP':'192.168.1.2'}))
+                self.assertEqual(raised.exception.code,403);raised.exception.close()
+                for path,code in [('/cooking/api/state',404),('/cooking/assets/../server.py',404),('/cooking/api/dinners/large',503)]:
+                    with self.assertRaises(HTTPError) as raised:urlopen(url+path)
+                    self.assertEqual(raised.exception.code,code);raised.exception.close()
+                with self.assertRaises(HTTPError) as raised:urlopen(Request(url+'/cooking/api/dinners/fixture',data=b'{}'))
+                self.assertEqual(raised.exception.code,404);raised.exception.close()
+                for _ in range(server.COOKING_CAPACITY):server.COOKING_SLOTS.acquire()
+                try:
+                    with self.assertRaises(HTTPError) as raised:urlopen(url+'/cooking/api/dinners/fixture')
+                    self.assertEqual(raised.exception.code,503);raised.exception.close()
+                finally:
+                    for _ in range(server.COOKING_CAPACITY):server.COOKING_SLOTS.release()
+                controls=server.dinner_controls('ipad','home',dt.datetime(2026,10,16,tzinfo=screens.TZ))
+                self.assertIn('/cooking/dates/2026-10-16?device=ipad',controls)
+                self.assertIn('/cooking/qr/dates/2026-10-16',controls)
+                self.assertEqual(server.dinner_controls('ipad','weather',dt.datetime.now(screens.TZ)),'')
+                with patch.object(server.COOKING_HTTP,'open',side_effect=TimeoutError):
+                    with self.assertRaises(HTTPError) as raised:urlopen(url+'/cooking/api/dinners/fixture')
+                    self.assertEqual(raised.exception.code,503);raised.exception.close()
+            self.assertEqual(before,{n:d.cursor for n,d in server.devices.items()})
+        finally:
+            for h in (http,upstream):h.shutdown();h.server_close()
+            for t in threads:t.join()
+
     def test_home_filters_before_ranking_and_counting(self):
         now = dt.datetime(2026, 10, 14, 12, tzinfo=screens.TZ)
         def task(title, list_, day):
