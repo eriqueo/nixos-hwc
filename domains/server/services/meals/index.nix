@@ -48,7 +48,9 @@ in {
   # IMPLEMENTATION
   config = lib.mkIf cfg.enable {
     hwc.system.mcp.mealCollections = cfg.collections;
-    hwc.networking.shared.routes = [{ name = "meals"; mode = "vhost"; upstream = "http://127.0.0.1:${toString cfg.port}"; }];
+    hwc.networking.shared.routes = [{ name = "meals"; mode = "vhost"; upstream = "http://127.0.0.1:${toString cfg.port}";
+      # Meals validates IP addresses; the common proxy default includes a port.
+      headers."X-Forwarded-For" = "{remote_host}"; }];
     systemd.services.meals = {
       description = "Household recipes and reviewed meal planning";
       wantedBy = [ "multi-user.target" ];

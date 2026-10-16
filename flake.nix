@@ -3005,6 +3005,7 @@
         && settings.baseUrl == cfg.url
         && work.hwc.system.mcp.mealCollections == cfg.collections
         && work.hwc.networking.shared.routeOwners.meals.owner == "work"
+        && (lib.findFirst (r: r.name == "meals") {} work.hwc.networking.shared.routes).headers."X-Forwarded-For" == "{remote_host}"
         && lib.hasInfix "--check" unit.preStart
         && lib.hasInfix "--backup" work.services.borgbackup.jobs.hwc-backup.preHook
         && work.systemd.timers.meals-cleanup.timerConfig.Persistent)
