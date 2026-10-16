@@ -524,8 +524,8 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    # electronPackage is listed as well as referenced, so it is a GC root even
-    # if the launcher script is never run.
+    # Launcher references retain private Review resources in the Nix closure.
+    # Do not export that bundle's bin/codex into the user's command environment.
     home.packages = [
       updater
       handoffWorker
@@ -534,7 +534,6 @@ in
       launcher
       cfg.desktop.electronPackage
     ]
-    ++ lib.optional cfg.review.enable cfg.review.package
     ++ lib.optional cfg.serve.enable serveLauncher;
 
     systemd.user.services.t3code = lib.mkIf (cfg.desktop.enable && cfg.desktop.autoStart) {

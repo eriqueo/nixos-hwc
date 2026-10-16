@@ -117,6 +117,8 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-16: Keep the private Review native bundle off the shared command PATH; launcher references retain its Nix closure.
+
 - 2026-10-16: Wire Review lifecycle switches and shared-protocol restart triggers; enable the isolated native Review lane on hwc-work only.
 
 - 2026-10-16: Add T3's disabled-by-default immutable Review native bundle and shared startup configuration; preserve the rolling development CLI and disabled tracker dispatch.

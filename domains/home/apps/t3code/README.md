@@ -27,7 +27,7 @@ index.nix   # hwc.home.apps.t3code — desktop launcher + Electron shim + deskto
 README.md   # this file
 ```
 
-There is no `parts/`. T3 itself runs from its source checkout. Review uses a separate immutable native package.
+There is no `parts/`. T3 itself runs from its source checkout. Review uses a separate immutable native package retained through the launcher closure; its commands stay off the user PATH.
 
 ## Design decisions
 
@@ -185,6 +185,8 @@ laptop, for ad-hoc headless use. That script is hand-installed and is not manage
 here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
+
+- 2026-10-16: Retain private Review resources through launcher references, avoiding a collision with the normal Codex command.
 
 - 2026-10-16: Add the disabled-by-default isolated Review native package and startup paths, shared by desktop and headless launchers; keep the user's rolling Codex CLI separate.
 - 2026-09-24: Corrected the serve PATH doc: `codex` resolves to the npm global, not the per-user profile. Its freshness is owned by `agent-harness.cliUpdates`.
