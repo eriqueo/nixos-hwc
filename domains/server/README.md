@@ -9,7 +9,7 @@
 
 ## Structure
 
-`services/meals/` deploys the independent Meals package, exact CalDAV targets, CRITICAL SQLite backup and seven-day preview cleanup. Wall Home/Week reserve dinner rows; Calendar routes managed edits to Meals.
+`services/meals/` deploys the independent Meals package, exact CalDAV targets, CRITICAL same-user SQLite backup and seven-day preview cleanup. Wall Home/Week reserve dinner rows; Calendar routes managed edits to Meals.
 
 Calendar phone writes consume the gateway's sync receipt; they preserve the saved local result and show a sync failure without another wait.
 
@@ -76,7 +76,7 @@ Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
 
-- 2026-10-16: Add the separate Meals service and backup integration. Home/Week show managed dinners once; phone Calendar protects their stable UIDs and links to Meals.
+- 2026-10-16: Enable reviewed effects after isolated acceptance; snapshot SQLite as the application user so backup cannot change WAL ownership. Add the separate Meals service and backup integration. Home/Week show managed dinners once; phone Calendar protects their stable UIDs and links to Meals.
 
 - 2026-10-14: Wall phone forms add daily/weekly/monthly/yearly repeats with optional last date. Task add/edit exposes fixed schedules; completion sends the displayed due date to prevent duplicate advancement. Existing calendar series stay protected from lossy edits.
 

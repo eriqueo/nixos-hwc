@@ -53,6 +53,7 @@ in {
       description = "Household recipes and reviewed meal planning";
       wantedBy = [ "multi-user.target" ];
       after = [ "network-online.target" "radicale.service" "hwc-sys-mcp.service" ];
+      wants = [ "network-online.target" ];
       requires = [ "radicale.service" "hwc-sys-mcp.service" ];
       preStart = "${provision}\n${command} --check";
       serviceConfig = {
@@ -75,9 +76,10 @@ in {
     # One compressed consistent snapshot, replaced atomically before each Borg
     # archive. Historical retention belongs only to Borg's existing policy.
     hwc.data.borg.preBackupScript = lib.mkAfter ''
-      ${command} --backup /var/lib/backups/meals.db.next
-      ${pkgs.gzip}/bin/gzip -f /var/lib/backups/meals.db.next
+      ${pkgs.util-linux}/bin/runuser -u eric -- ${command} --backup ${state}/snapshot.next
+      ${pkgs.gzip}/bin/gzip -c ${state}/snapshot.next > /var/lib/backups/meals.db.next.gz
       mv /var/lib/backups/meals.db.next.gz /var/lib/backups/meals.db.gz
+      rm ${state}/snapshot.next
     '';
     # SQLite opens its WAL during online backup; this narrow exception lets the
     # existing root backup service use SQLite's consistent snapshot API.
