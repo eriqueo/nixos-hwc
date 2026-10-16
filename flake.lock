@@ -854,11 +854,11 @@
     "system-one": {
       "flake": false,
       "locked": {
-        "lastModified": 1792156755,
-        "narHash": "sha256-z8O5pykNbuMtpu5YdlRYg9RP2TQqjJ4NDQbfUYiRpvA=",
+        "lastModified": 1792164688,
+        "narHash": "sha256-nmltkjrBs67I1XINvgxGpofgtJB4DaQ4UuPf0oqypSY=",
         "owner": "eriqueo",
         "repo": "system-one",
-        "rev": "e445ffc97d07546b26d67e5379294f19c8cd0bac",
+        "rev": "6b7fdffdd40824532446186de42ed2b16ccb4e9e",
         "type": "github"
       },
       "original": {
