@@ -12,6 +12,8 @@ source and one mutable state store.
 
 ## Structure
 
+A reserved Review must find its deterministic native thread absent in both detail and the command snapshot before taking a process baseline or reporting that no worker started. Existing or unknown identities stay held after an independent hub restore.
+
 Workspace close verifies current remote heads after a successful bounded refresh. Automatic WorktreeRemove uses the same immutable process inspector through the installed `ws check-processes` command; it retains its separate local-branch preservation rule.
 
 New Close requests keep a bounded, fingerprinted checkout inventory through cleanup. Review accepts only final native messages for the adopted turn, including recovered held results. Ordinary thread creation and delivery exclude its reserved provider.
@@ -87,6 +89,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-10-16: Hold restored native identities before fresh Review baselines and early release; retain the original baseline for in-flight recovery.
 
 - 2026-10-16: Require fresh remote preservation before workspace cleanup and apply the shared process check to automatic worktree removal. Missing or oversized observations retain the checkout.
 
