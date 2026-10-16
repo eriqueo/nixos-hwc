@@ -76,6 +76,8 @@ Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
 
+- 2026-10-16: `services/meals/` now ships local photo OCR with its app package; recipe review, website import and future dinner reuse share the saved library.
+
 - 2026-10-16: Meals overrides the proxy client header with an IP-only value, matching its tailnet boundary. The integration check rejects a missing override.
 
 - 2026-10-16: Enable reviewed effects after isolated acceptance; snapshot SQLite as the application user so backup cannot change WAL ownership. Add the separate Meals service and backup integration. Home/Week reserve room for managed dinners and show them once; phone Calendar protects their stable UIDs and links to Meals.
