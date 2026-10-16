@@ -18,6 +18,8 @@ Provides network infrastructure that other domains depend on:
 
 ## Structure
 
+`routes.nix` assigns the Meals vhost to work; the service module supplies its loopback upstream.
+
 `cloudflared.domain` is optional and null on work. Public n8n ingress uses only
 `api.iheartwoodcraft.com/webhook/...`; the editor stays on the tailnet.
 Work exposes only protected `.com` MCP origins and Monitor;
@@ -58,6 +60,8 @@ networking/
 ```
 
 ## Changelog
+
+- 2026-10-16: Assign meals.hwc.iheartwoodcraft.com to work for the reviewed meal planner.
 - 2026-10-15: `reverseProxy/` — vhost routes take `headersIfAbsent = { Name = value; }`, a request header set only when the client sent none (`not header` matcher + `request_header`; `header_up ?Name` is rejected for request headers). First user: `tasks` (Radicale) defaults `Authorization` to eric.
 
 - 2026-10-12: routeOwners gains `todo` and `calendar` (owner `work`). These are the wall-display Tasks and Calendar phone apps, which the module registers next to `wall` on `:8424`. Each needs a deSEC A record (`todo.` / `calendar.hwc.iheartwoodcraft.com → 100.77.38.32`) and a laptop rebuild for the pins.

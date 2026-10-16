@@ -26,6 +26,7 @@
   description = "HWC NixOS Configuration - Modular Architecture";
 
   inputs = {
+    meals = { url = "github:eriqueo/meals"; inputs.nixpkgs.follows = "nixpkgs"; };
     # Fleet map UI and read-only capture tools have their own app lifecycle.
     fleet-map = { url = "github:eriqueo/fleet-map"; flake = false; };
 

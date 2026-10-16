@@ -131,6 +131,12 @@ in
   options.hwc.system.mcp = {
     enable = lib.mkEnableOption "HWC Infrastructure MCP Gateway — unified system, n8n and CRM tools";
 
+    mealCollections = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.attrsOf lib.types.str);
+      default = {};
+      description = "Exact collections available to the versioned meal effect protocol.";
+    };
+
     port = lib.mkOption {
       type = lib.types.port;
       default = 6200;
@@ -278,6 +284,7 @@ in
 
       environment = {
         NODE_ENV = "production";
+        HWC_MEAL_COLLECTIONS = builtins.toJSON cfg.mealCollections;
         HWC_MCP_PORT = toString cfg.port;
         HWC_MCP_HOST = cfg.host;
         HWC_MCP_TRANSPORT = cfg.transport;

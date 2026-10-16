@@ -9,6 +9,8 @@ Self-contained email domain: client UI, accounts, sync, indexing, sending, and b
 
 ## Structure
 
+`calendar/index.nix` includes the separate `meals` collection in Radicale calendar sync.
+
 `mbsync/` binds the bounded System One coordinator. Each account fetches
 independently, then notmuch indexes before mailbox effects. Status schema 2 keeps
 fetch/index success separate from command, observation and label outcomes.
@@ -149,6 +151,8 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-10-16: Sync the separate Meals calendar alongside Family, Work and Personal; managed dinner detail edits remain in the planner.
 
 - 2026-10-15: Lifecycle behaviours, slice 3 (agent/mail-labels/lifecycles.md). `classifier/` gains
   `hwc.mail.classifier.lifecycle` (enabled when the pinned contract carries `lifecyclePolicy`) and the

@@ -185,6 +185,8 @@ let
     weather = "https://forecast.weather.gov/MapClick.php?lat=${lib.elemAt latLon 0}&lon=${lib.elemAt latLon 1}";
   };
 
+  meals = config.hwc.server.services.meals or { enable = false; };
+
   # The one config the server reads (WALL_CONFIG); validated again at boot.
   serverConfig = pkgs.writeText "wall-display.json" (builtins.toJSON {
     port = cfg.port;
@@ -207,6 +209,7 @@ let
     assets = "${assets}";
     crispFontsConf = "${crispFontsConf}";
     inherit links;
+    meals = if meals.enable then { url = meals.url; href = meals.collections.meals.href; } else null;
     taskLists = { family = cfg.familyTaskList; groceries = cfg.groceryTaskList; };
     devices = cfg.devices;
     apps = {

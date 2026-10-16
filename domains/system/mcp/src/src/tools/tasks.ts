@@ -14,7 +14,7 @@ import { catchError, mcpError } from "../errors.js";
 import { contract } from "../result.js";
 import type { ToolDef, ToolResult } from "../types.js";
 import {
-  buildVtodo,
+  buildVtodo, davRequest, unfoldIcs,
   fixedRecurrence, REPEAT_FREQUENCIES, managedSchedule, nextScheduledDate,
   fetchVersionedItem, putVersionedItem, validDate,
   createTaskList,
@@ -464,4 +464,40 @@ function icsEscape(s: string): string {
     .replace(/;/g, "\\;")
     .replace(/,/g, "\\,")
     .replace(/\r?\n/g, "\\n");
+}
+
+
+/** Additive conditional protocol for reviewed meal effects; no legacy upsert reuse. */
+export function mealTools(collections: Record<string, { href: string; name: string }> = {}): ToolDef[] {
+ if (!collections.groceries || !collections.meals) return [];
+ return [{name: "hwc_meals_caldav", description: "Collection-scoped conditional Meals writes. Supply schemaVersion 1, a managed UID and the exact reviewed ETag. Read uncertain outcomes before retrying.",
+ inputSchema: {type:"object",required:["schemaVersion","collection","action","uid"],properties:{schemaVersion:{type:"number",enum:[1]},collection:{type:"string",enum:["groceries","meals"]},action:{type:"string",enum:["read","create","update","delete"]},uid:{type:"string"},raw:{type:"string"},expectedEtag:{type:"string"}}},
+ handler: async(args): Promise<ToolResult> => {
+  const kind=args.collection as string, action=args.action as string, uid=args.uid as string, target=collections[kind];
+  const invalid=(message:string)=>mcpError({type:"VALIDATION_ERROR",message});
+  const prefix=kind==="groceries"?"meal-grocery-":"meal-dinner-";
+  if(args.schemaVersion!==1 || !["groceries","meals"].includes(kind) || !target || !/^\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\/$/.test(target.href) || typeof uid!=="string" || !uid.startsWith(prefix) || !/^[a-zA-Z0-9_-]{1,100}$/.test(uid) || !["read","create","update","delete"].includes(action)) return invalid("Invalid meal operation");
+  if(["update","delete"].includes(action) && (typeof args.expectedEtag!=="string" || !/^"[^"\r\n]{1,200}"$/.test(args.expectedEtag))) return invalid("A strong reviewed ETag is required");
+  const raw=args.raw;
+  if(["create","update"].includes(action)) {
+   if(typeof raw!=="string" || raw.length>65536) return invalid("Invalid calendar payload");
+   const lines=unfoldIcs(raw).split(/\r?\n/), component=kind==="groceries"?"VTODO":"VEVENT";
+   if(lines.filter(l=>l===`BEGIN:${component}`).length!==1 || lines.filter(l=>l.startsWith("UID:")).length!==1 || !lines.includes(`UID:${uid}`) || !lines.includes("X-HWC-MEAL-SCHEMA:1") || !lines.some(l=>/^X-HWC-MEAL-OPERATION:[a-zA-Z0-9_-]+$/.test(l)) || lines.some(l=>l===`BEGIN:${component==="VTODO"?"VEVENT":"VTODO"}`)) return invalid("Payload identity does not match managed item");
+  }
+  try {
+   const metadata=await davRequest("PROPFIND",target.href,{timeoutMs:10000,headers:{Depth:"0"},body:'<D:propfind xmlns:D="DAV:"><D:prop><D:displayname/></D:prop></D:propfind>'});
+   const escaped=target.name.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+   if(metadata.status!==207 || !metadata.body.includes(`>${escaped}</`)) return {status:"ok",message:"Configured collection is unavailable",data:{code:"COLLECTION_UNAVAILABLE",httpStatus:503}};
+   const href=`${target.href}${uid}.ics`;
+   if(action!=="read") {
+    const result=await davRequest(action==="delete"?"DELETE":"PUT",href,{timeoutMs:10000,...(action!=="delete"?{body:raw as string}:{}),headers:{"Content-Type":"text/calendar; charset=utf-8",...(action==="create"?{"If-None-Match":"*"}:{"If-Match":args.expectedEtag as string})}});
+    if(result.status<200 || result.status>=300) return {status:"ok",message:"Conditional operation refused",data:{code:"REMOTE_CONFLICT",httpStatus:result.status}};
+    if(action==="delete") return {status:"ok",message:"Deleted",data:{code:"OK",item:null}};
+   }
+   const result=await davRequest("GET",href,{timeoutMs:10000});
+   if(result.status===404) return {status:"ok",message:"Absent",data:{code:"OK",item:null}};
+   if(result.status!==200 || !result.etag || !/^"[^"\r\n]{1,200}"$/.test(result.etag) || result.body.length>65536) return {status:"ok",message:"Read failed",data:{code:"REMOTE_READ",httpStatus:result.status}};
+   return {status:"ok",message:"Read",data:{code:"OK",item:{uid,href,raw:result.body,etag:result.etag}}};
+  }catch(err){return catchError("NETWORK_ERROR","Meal outcome may be uncertain; read before retrying",err);}
+ }}];
 }

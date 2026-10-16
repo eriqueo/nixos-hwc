@@ -365,6 +365,7 @@ def read_events(first, last):
                     "location": str(ev.get("LOCATION", "")).strip(),
                     "description": str(ev.get("DESCRIPTION", "")).strip(),
                     "recurring": "RECURRENCE-ID" in ev or "RRULE" in ev,
+                    "mealUrl": (CONFIG["meals"]["url"] + "/meals/" + uid.removeprefix("meal-dinner-")) if screens.managed_meal(href, ev) else None,
                 })
             except (ValueError, TypeError, KeyError) as exc:
                 log(f"apps: skipped an event in {name}: {exc}")
@@ -484,6 +485,8 @@ def locate(body):
     ev = next((e for e in events if e["uid"] == uid and e["cal"] == cid and e["date"] == day.isoformat()), None)
     if ev is None:
         raise Invalid("that event is no longer there; refresh")
+    if ev.get("mealUrl"):
+        raise Invalid("edit this dinner in Meals; grocery changes need ingredient review")
     if not ev["writable"]:
         raise Invalid(f"{ev['calName']} is a read-only mirror")
     if ev["recurring"]:
@@ -992,6 +995,7 @@ async function save(path, body, saving) {
 }
 function open(ev) {
   sheet(close => {
+    if (ev.mealUrl) return [el("h3", {}, ev.summary), el("p", {}, "Edit this dinner in Meals. Review ingredients there before changing groceries."), el("a", {href: ev.mealUrl}, "Open dinner in Meals"), el("button", {onclick: close}, "Close")];
     const editable = S.canWrite && ev.writable && !ev.recurring;
     if (!editable) {
       const why = !ev.writable ? ev.calName + " is a read-only mirror" : ev.recurring ? "repeating: change it in the phone's calendar app" : "read-only from this device";
