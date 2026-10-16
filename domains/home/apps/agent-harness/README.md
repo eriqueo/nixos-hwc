@@ -12,7 +12,7 @@ source and one mutable state store.
 
 ## Structure
 
-Close intake is disabled while installing schema2 (up to4 ordinary worktrees). Re-enable only hwc-work after installed two-checkout acceptance. Old schema1 requests keep their captured limits and readable evidence.
+hwc-work enables the tested schema2 Close lane for up to4 ordinary direct worktrees after installed two-checkout acceptance. Other hosts stay disabled. Old schema1 requests keep their captured limits and readable evidence.
 
 `tracker.lifecycle.close` defaults off and clears the relay runtime port while disabled. Its immutable runtime metadata captures the static revision, workspace/brain roots and explicit ordinary profile. The relay binds the installed ws path separately to avoid a derivation cycle. The ws runtime includes Bash/systemd; hub and relay restart on Close protocol changes. Canonical Close keeps pending evidence visible and accepts Closed only after the note, every supported removal and both worker shutdown proofs. Unsupported lanes remain held.
 
@@ -93,6 +93,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-10-16: Enable the hwc-work schema2 Close lane after installed20-check two-checkout native/helper proof; other hosts stay disabled.
 
 - 2026-10-16: Pin versioned multi-checkout Close0454772 with intake disabled until installed proof; retain exact schema1 readers and captured helper deadlines.
 

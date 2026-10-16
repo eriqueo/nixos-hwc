@@ -50,8 +50,7 @@
     enable = true;
     lifecycle.intakeEnabled = true;
     lifecycle.dispatchEnabled = true;
-    # Temporarily disabled for schema2 installation; re-enable after the
-    # installed two-checkout native/helper acceptance passes.
-    lifecycle.close.enable = false;
+    # Installed schema2 ordinary Close passed two-checkout native/helper proof.
+    lifecycle.close.enable = true;
   };
 }
