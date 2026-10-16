@@ -327,7 +327,11 @@
   # Wall display: TRMNL-compatible server at wall.hwc.iheartwoodcraft.com
   # (home, week, weather, tasks, groceries: the default playlist). Add a
   # device here to pair it.
-  hwc.server.services.meals.enable = true;
+  hwc.server.services.meals = {
+    enable = true;
+    # Contract, real MCP/Radicale, restore and importer transport checks passed.
+    writesEnabled = true;
+  };
 
   hwc.server.services.wallDisplay = {
     enable = true;
