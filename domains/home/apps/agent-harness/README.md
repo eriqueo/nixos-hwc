@@ -12,6 +12,8 @@ source and one mutable state store.
 
 ## Structure
 
+Workspace close verifies current remote heads after a successful bounded refresh. Automatic WorktreeRemove uses the same immutable process inspector through the installed `ws check-processes` command; it retains its separate local-branch preservation rule.
+
 New Close requests keep a bounded, fingerprinted checkout inventory through cleanup. Review accepts only final native messages for the adopted turn, including recovered held results. Ordinary thread creation and delivery exclude its reserved provider.
 
 `ws` checks current-user process references before checkout removal. Its immutable scanner uses existing noninteractive sudo authority to inspect protected process metadata; unavailable inspection refuses cleanup. It adds no sudoers grant.
@@ -85,6 +87,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-10-16: Require fresh remote preservation before workspace cleanup and apply the shared process check to automatic worktree removal. Missing or oversized observations retain the checkout.
 
 - 2026-10-16: Pin final native Review result validation and stable captured Close inventory; ordinary thread selection excludes the reserved reviewer.
 
