@@ -18,7 +18,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
-hwc-work enables the tested single-host code-free/one ordinary worktree Close pilot. Other hosts keep the default disabled.
+Close intake is disabled while installing schema2 (up to4 ordinary worktrees). Re-enable only hwc-work after installed two-checkout acceptance. Old schema1 requests keep their captured limits and readable evidence.
 
 `apps/agent-harness/` declares a default-disabled canonical Close lane with an explicitly cleared inactive runtime port and immutable active runtime ports, owning cleanup receipts and a pending status until required evidence is complete.
 
@@ -122,6 +122,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-16: Pin versioned multi-checkout Close0454772 with intake disabled until installed proof; retain exact schema1 readers and captured helper deadlines.
 
 - 2026-10-16: Enable the tested hwc-work Close pilot after installed21-check ordinary Close and19-check Review proof; other hosts stay disabled.
 

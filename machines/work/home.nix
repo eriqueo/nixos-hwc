@@ -50,7 +50,8 @@
     enable = true;
     lifecycle.intakeEnabled = true;
     lifecycle.dispatchEnabled = true;
-    # Installed ordinary Close passed its disposable native/helper acceptance.
-    lifecycle.close.enable = true;
+    # Temporarily disabled for schema2 installation; re-enable after the
+    # installed two-checkout native/helper acceptance passes.
+    lifecycle.close.enable = false;
   };
 }
