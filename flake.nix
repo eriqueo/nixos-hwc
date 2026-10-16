@@ -3003,6 +3003,7 @@
         && settings.database == "${work.hwc.paths.state}/meals/meals.db"
         && settings.writesEnabled == cfg.writesEnabled
         && settings.baseUrl == cfg.url
+        && settings.converter == { inherit (work.hwc.server.ai.dx2) baseUrl model apiKeyFile; }
         && work.hwc.system.mcp.mealCollections == cfg.collections
         && work.hwc.networking.shared.routeOwners.meals.owner == "work"
         && (lib.findFirst (r: r.name == "meals") {} work.hwc.networking.shared.routes).headers."X-Forwarded-For" == "{remote_host}"

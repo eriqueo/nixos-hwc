@@ -12,6 +12,7 @@ let
     baseUrl = cfg.url;
     groceriesUrl = "https://todo.${domain}/groceries";
     areas = config.hwc.business.workbench.registry;
+    converter = { inherit (config.hwc.server.ai.dx2) baseUrl model apiKeyFile; };
     gatewayUrl = "http://127.0.0.1:${toString config.hwc.system.mcp.port}/mcp";
   });
   command = "${app}/bin/hwc-meals --config ${settings}";

@@ -9,7 +9,7 @@
 
 ## Structure
 
-`services/meals/` deploys the independent Meals package, exact CalDAV targets, CRITICAL same-user SQLite backup and seven-day preview cleanup. Wall Home/Week reserve dinner rows; Calendar routes managed edits to Meals.
+`services/meals/` deploys the independent Meals package, exact CalDAV targets, CRITICAL same-user SQLite backup and seven-day preview cleanup. Recipe conversion consumes the shared DX2 endpoint facts and existing credential path; only reviewed diagrams enter the recipe store. Wall Home/Week reserve dinner rows; Calendar routes managed edits to Meals.
 
 Calendar phone writes consume the gateway's sync receipt; they preserve the saved local result and show a sync failure without another wait.
 
@@ -75,6 +75,8 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+
+- 2026-10-16: Meals binds the configured DX2 model for reviewed recipe-to-diagram conversion; the integration check pins that shared configuration.
 
 - 2026-10-16: `services/meals/` now ships local photo OCR with its app package; recipe review, website import and future dinner reuse share the saved library.
 
