@@ -22,21 +22,31 @@ index.nix   # hwc.home.apps.t3code — desktop launcher + Electron shim + deskto
             #   entry; pinned backend port and advertised host, so the phone's
             #   endpoint survives a reboot; headless t3-serve unit; t3-update;
             #   DX2 handoff adapter using the pinned delegate helper and forwarding T3's result limit without
-            #   allowing policy overrides; activation-time repo check
+            #   allowing policy overrides; opt-in isolated Review native package
+            #   and startup ports; activation-time repo check
 README.md   # this file
 ```
 
-There is no `parts/`. This module packages no source.
+There is no `parts/`. T3 itself runs from its source checkout. Review uses a separate immutable native package.
 
 ## Design decisions
 
-- **Nix packages nothing; the working tree owns the build.** T3 Code is a pnpm
+- **The working tree owns the T3 build.** T3 Code is a pnpm
   monorepo with an Electron app, a server, a web client and a mobile client.
   Packaging it as a derivation would mean vendoring a lockfile hash and
   rebuilding the whole tree on every upstream pull. Eric forked the repository
   in order to change it, so the working tree is the point. The launcher runs
   `apps/desktop/dist-electron/main.cjs` out of `cfg.repo` and prints the exact
   build commands when that file is missing.
+
+- **Review has a fixed native tool bundle.** `review.enable` defaults to false.
+  When enabled, both launchers pass startup-owned paths to T3; provider settings
+  cannot select these paths. The package contains Codex0.163 plus its code tool
+  host and sandbox resources. T3 checks their expected hashes before copying an
+  account file into private ephemeral memory. Nix stores only the account path.
+  The pin changes only with matching T3 policy and native acceptance evidence.
+  A disabled launcher clears an inherited Review launch variable. This option
+  does not enable tracker intake or dispatch.
 
 - **Electron comes from nixpkgs, through `ELECTRON_OVERRIDE_DIST_PATH`.** The
   Electron binary npm downloads expects an FHS dynamic linker and cannot run on
@@ -176,6 +186,7 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
+- 2026-10-16: Add the disabled-by-default isolated Review native package and startup paths, shared by desktop and headless launchers; keep the user's rolling Codex CLI separate.
 - 2026-09-24: Corrected the serve PATH doc: `codex` resolves to the npm global, not the per-user profile. Its freshness is owned by `agent-harness.cliUpdates`.
 - 2026-09-17: Resolve the DX2 delegate helper from `/etc/agent-harness` so T3 cannot bypass pinned policy through the mutable authoring checkout.
 - 2026-09-17: Desktop and server launchers run the shared harness doctor as a warning preflight.

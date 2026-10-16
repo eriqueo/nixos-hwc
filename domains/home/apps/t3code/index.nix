@@ -9,7 +9,7 @@
 # HTTPS through the Caddy vhost. They are mutually exclusive on one machine —
 # see the assertion below.
 #
-# THIS MODULE PACKAGES NO SOURCE. T3 Code is a pnpm monorepo, built from Eric's
+# T3 Code is a pnpm monorepo, built from Eric's
 # fork at ~/600_apps/t3code and run from that working tree. Nix supplies only
 # what a working tree cannot supply for itself:
 #
@@ -39,6 +39,45 @@
 let
   cfg = config.hwc.home.apps.t3code;
 
+  # Review's native protocol/resources are an integrity boundary, independent
+  # of the user's rolling CLI. Permanent pin by design: update only alongside
+  # T3's expected hashes and passing native read/result/termination acceptance.
+  reviewNative = pkgs.stdenvNoCC.mkDerivation {
+    pname = "t3-codex-review-native";
+    version = "0.163.0";
+    src = pkgs.fetchurl {
+      url = "https://registry.npmjs.org/@openai/codex/-/codex-0.163.0-linux-x64.tgz";
+      hash = "sha512-uwRaOsrYogLQhcxAM/GoeWrw0QIWEMRo7c9gM8sKAviVkZQHlu9kRLJ5PkufbV+ABGjyZgIwiFdJ0LCJ0N6e8w==";
+    };
+    dontConfigure = true;
+    dontBuild = true;
+    dontFixup = true;
+    installPhase = ''
+      runHook preInstall
+      mkdir -p "$out"
+      cp -a vendor/x86_64-unknown-linux-musl/. "$out/"
+      runHook postInstall
+    '';
+    meta.platforms = [ "x86_64-linux" ];
+  };
+
+  reviewEnvironment =
+    if cfg.review.enable then
+      "export T3CODE_REVIEW_LAUNCH=${
+        lib.escapeShellArg (
+          builtins.toJSON {
+            nativeDirectory = toString cfg.review.package;
+            pythonPath = lib.getExe pkgs.python3;
+            mountPath = "${pkgs.util-linux}/bin/mount";
+            unsharePath = "${pkgs.util-linux}/bin/unshare";
+            authSource = cfg.review.authSource;
+            path = lib.makeBinPath cfg.review.packages;
+          }
+        )
+      }"
+    else
+      "unset T3CODE_REVIEW_LAUNCH";
+
   # Resolve Electron from PATH at RUN time, never at build time. A store path
   # written into this script would survive until the next garbage collection
   # and then break with a file-not-found the user cannot read.
@@ -56,6 +95,7 @@ let
       START="$REPO/apps/desktop/scripts/start-electron.mjs"
 
       agent-harness-doctor >/dev/null || echo "t3code: agent harness health check failed; run agent-harness doctor" >&2
+      ${reviewEnvironment}
 
       if [ ! -f "$MAIN" ]; then
         echo "t3code: $MAIN is missing — the fork is not built." >&2
@@ -119,6 +159,7 @@ let
       CLIENT="$REPO/apps/server/dist/client/index.html"
 
       agent-harness-doctor >/dev/null || echo "t3-serve: agent harness health check failed; run agent-harness doctor" >&2
+      ${reviewEnvironment}
 
       for artifact in "$BIN" "$CLIENT"; do
         if [ ! -f "$artifact" ]; then
@@ -245,6 +286,31 @@ in
         `t3-update`, and in the error message a launcher prints when the build
         is missing, so the fix it names is the fix that works.
       '';
+    };
+
+    review = {
+      enable = lib.mkEnableOption "the server-owned isolated Codex Review profile";
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = reviewNative;
+        description = "Immutable native Review resources; T3 verifies the expected binary hashes before launch.";
+      };
+      authSource = lib.mkOption {
+        type = lib.types.str;
+        default = "${config.home.homeDirectory}/.codex/auth.json";
+        description = "Account file copied into private ephemeral memory. Only its path enters Nix; its contents never do.";
+      };
+      packages = lib.mkOption {
+        type = lib.types.listOf lib.types.package;
+        default = with pkgs; [
+          bashInteractive
+          coreutils
+          git
+          ripgrep
+          python3
+        ];
+        description = "Immutable commands available to the native read-only tool sandbox.";
+      };
     };
 
     #------------------------------------------------------------------
@@ -468,6 +534,7 @@ in
       launcher
       cfg.desktop.electronPackage
     ]
+    ++ lib.optional cfg.review.enable cfg.review.package
     ++ lib.optional cfg.serve.enable serveLauncher;
 
     systemd.user.services.t3code = lib.mkIf (cfg.desktop.enable && cfg.desktop.autoStart) {
@@ -561,6 +628,14 @@ in
     # VALIDATION
     #========================================================================
     assertions = [
+      {
+        assertion = !cfg.review.enable || pkgs.stdenv.hostPlatform.system == "x86_64-linux";
+        message = "T3 Review currently requires x86_64-linux.";
+      }
+      {
+        assertion = !cfg.review.enable || lib.hasPrefix "/" cfg.review.authSource;
+        message = "T3 Review authSource must be an absolute path string.";
+      }
       {
         assertion = !(cfg.desktop.enable && cfg.serve.enable);
         message = ''

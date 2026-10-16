@@ -80,7 +80,7 @@ Credential utility windows float at monitor-relative dimensions. Bitwarden's pac
 The shared agent-harness fleet list uses hwc-home, hwc-work and hwc-laptop without changing session stores.
 Its project tracker records substantive decisions while agents continue down the roadmap within existing authorization when no new cards are needed.
 Versioned human review inputs separate demonstrated cause from repair or feature work, with full requests and dated evidence linked from each ticket.
-- `apps/t3code/` — launchers and a restricted DX2 handoff adapter; T3 supplies the result limit.
+- `apps/t3code/` — launchers, a restricted DX2 handoff adapter, and an opt-in immutable Review native bundle with startup-only configuration; T3 supplies the result limit.
 - `apps/hwc-dictation/` — owned desktop dictation package, settings and user service.
 - `apps/bitwarden/` — desktop client for the self-hosted Vaultwarden account.
 
@@ -115,6 +115,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-16: Add T3's disabled-by-default immutable Review native bundle and shared startup configuration; preserve the rolling development CLI and disabled tracker dispatch.
 - 2026-10-16: Curate shared skill discovery, remove the default upstream adoption set, validate assembled output with declared YAML support, and load REA's curated skill from the harness pin.
 - 2026-10-15: Add bulk question cards with per-item advice, editable choices, version and concurrent-answer checks, replay protection, and separate save/delivery status. Make grouped project decisions use this form by default as a workflow guideline.
 
