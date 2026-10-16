@@ -12,7 +12,7 @@ source and one mutable state store.
 
 ## Structure
 
-`tracker.lifecycle.close` defaults off. Its immutable runtime metadata captures the static revision, workspace/brain roots and explicit ordinary profile. The relay binds the installed ws path separately to avoid a derivation cycle. The ws runtime includes Bash/systemd; hub and relay restart on Close protocol changes. Canonical Close keeps pending evidence visible and accepts Closed only after the note, every supported removal and both worker shutdown proofs. Unsupported lanes remain held.
+`tracker.lifecycle.close` defaults off and clears the relay runtime port while disabled. Its immutable runtime metadata captures the static revision, workspace/brain roots and explicit ordinary profile. The relay binds the installed ws path separately to avoid a derivation cycle. The ws runtime includes Bash/systemd; hub and relay restart on Close protocol changes. Canonical Close keeps pending evidence visible and accepts Closed only after the note, every supported removal and both worker shutdown proofs. Unsupported lanes remain held.
 
 A reserved Review must find its deterministic native thread absent in both detail and the command snapshot before taking a process baseline or reporting that no worker started. Existing or unknown identities stay held after an independent hub restore.
 
@@ -91,6 +91,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-10-16: Pin tested canonical Close source744485e with intake disabled; explicitly clear its runtime port while disabled.
 
 - 2026-10-16: Declare default-disabled canonical Close runtime ports and dependencies; keep ordinary assessment separate from Review and include shared protocol restart triggers.
 

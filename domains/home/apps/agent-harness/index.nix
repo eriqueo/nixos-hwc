@@ -688,9 +688,9 @@ in
           "TRACKER_URL=${cfg.tracker.url}"
           "TRACKER_WS_BIN=${ws}/bin/ws"
           "TRACKER_LOCAL_LEDGER=${cfg.stateDir}/ledger/%H.json"
+          "TRACKER_CLOSE_RUNTIME=${if cfg.tracker.lifecycle.close.enable then toString closeRuntime else ""}"
           "PATH=${lib.makeBinPath [ pkgs.systemd pkgs.git pkgs.coreutils ]}:/run/current-system/sw/bin"
-        ] ++ lib.mapAttrsToList (k: v: "${k}=${v}") t3Env
-          ++ lib.optional cfg.tracker.lifecycle.close.enable "TRACKER_CLOSE_RUNTIME=${closeRuntime}";
+        ] ++ lib.mapAttrsToList (k: v: "${k}=${v}") t3Env;
         Restart = "always";
         RestartSec = 10;
       };

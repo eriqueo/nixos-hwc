@@ -18,7 +18,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
-`apps/agent-harness/` declares a default-disabled canonical Close lane with immutable runtime ports, owning cleanup receipts and a pending status until required evidence is complete.
+`apps/agent-harness/` declares a default-disabled canonical Close lane with an explicitly cleared inactive runtime port and immutable active runtime ports, owning cleanup receipts and a pending status until required evidence is complete.
 
 `apps/agent-harness/` declares the workspace allocator and inspection runtime used by home sessions.
 
@@ -120,6 +120,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-16: Pin tested canonical Close source744485e with intake disabled; explicitly clear its runtime port while disabled.
 
 - 2026-10-16: Declare default-disabled canonical Close runtime ports and dependencies; keep ordinary assessment separate from Review and include shared protocol restart triggers.
 
