@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+`apps/agent-harness/` declares the workspace allocator and inspection runtime used by home sessions.
+
 `apps/agent-harness/` exposes separate, default-disabled Review intake and dispatch switches. `apps/t3code/` supplies the isolated native runtime; hwc-work enables the tested lane. Other hosts keep Review disabled.
 
 The tracker supports one bulk review for grouped project choices, with browser drafts and one reviewed submission.
@@ -116,6 +118,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-16: Bind workspace removal to an immutable, caller-scoped process inspector and declare its Python runtime. Preserve all checkouts when inspection is busy, unavailable or exceeds its bounds.
 
 - 2026-10-16: Keep the private Review native bundle off the shared command PATH; launcher references retain its Nix closure.
 

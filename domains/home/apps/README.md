@@ -8,6 +8,8 @@ User application configuration via Home Manager.
 - Does NOT manage: System deps → `system/apps/` (via sys.nix), services → `server/`
 
 ## Structure
+
+`agent-harness/` owns workspace process inspection and its pinned runtime; see its module README.
 ```
 apps/
 ├── aerc/           # Email client
@@ -33,6 +35,8 @@ apps/
 ```
 
 ## Changelog
+
+- 2026-10-16: Bind workspace removal to an immutable, caller-scoped process inspector and declare its Python runtime. Preserve all checkouts when inspection is busy, unavailable or exceeds its bounds.
 - 2026-09-26: Added the Bitwarden desktop client as an independent app module; Proton app buttons share Hyprland's window toggle.
 - 2026-09-14: Added Vesktop through Home Manager's native `programs.vesktop`
   module; enabled only on hwc-laptop.

@@ -178,6 +178,11 @@ let
   # The agent-workspace allocator. Its code is static policy (claude-config
   # bin/ws); the dependencies are declared here so it also runs from the
   # state-sync unit, whose PATH is systemd's alone.
+  # Only inspection is elevated. Existing sudo authority is required; no new
+  # sudoers grant is installed. -I excludes caller-controlled Python imports.
+  wsPreservation = pkgs.writeShellScript "ws-preservation" ''
+    exec /run/wrappers/bin/sudo -n -- ${pkgs.python3}/bin/python3 -I ${harness}/tracker/preservation.py --sudo "$@"
+  '';
   ws = pkgs.writeShellApplication {
     name = "ws";
     runtimeInputs = with pkgs; [
@@ -188,9 +193,11 @@ let
       findutils
       gawk
       util-linux
+      python3
     ];
     text = ''
       export WS_ROOT=${lib.escapeShellArg cfg.workspaceRoot}
+      export WS_PRESERVATION_HELPER=${wsPreservation}
       exec ${pkgs.bash}/bin/bash ${harness}/bin/ws "$@"
     '';
   };
