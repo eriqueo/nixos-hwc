@@ -32,6 +32,8 @@
     enable = true;
     desktop.enable = false;
     serve.enable = true;
+    # This host passed the actual tracker/native Review and termination gates.
+    review.enable = true;
     serve.port = 3773;
     # Same reasoning as hwc-server: answers on the tailnet (trustedInterfaces
     # carries tailscale0) so the phone can pair by IP; Caddy is the trusted-cert
@@ -44,5 +46,9 @@
   hwc.home.apps.agent-harness.cliUpdates.enable = true;
 
   # The project tracker hub runs here only: http://hwc-work:8765/ on the tailnet.
-  hwc.home.apps.agent-harness.tracker.enable = true;
+  hwc.home.apps.agent-harness.tracker = {
+    enable = true;
+    lifecycle.intakeEnabled = true;
+    lifecycle.dispatchEnabled = true;
+  };
 }

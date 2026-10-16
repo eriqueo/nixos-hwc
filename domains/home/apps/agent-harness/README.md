@@ -12,6 +12,8 @@ source and one mutable state store.
 
 ## Structure
 
+`tracker.lifecycle` keeps new Review intake and dispatch separate and disabled by default. The hub and relay restart when their shared lifecycle protocol changes. Only a host advertising the exact tested native profile can receive a Review.
+
 The tracker supports one bulk review for grouped project choices, with browser drafts and one reviewed submission.
 
 The fleet control list names hwc-home, hwc-work and hwc-laptop.
@@ -79,6 +81,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-10-16: Wire separate Review intake/dispatch switches and shared-protocol restart triggers; enable the tested hwc-work lane only.
 
 - 2026-10-16: Apply C5 skill discovery: no default upstream adoption, curated REA source, and a final assembled-output check with declared YAML support. Preserve explicit REA skill disablement and keep project packs outside global discovery.
 - 2026-10-15: Add bulk question cards with per-item advice, editable choices, version and concurrent-answer checks, replay protection, and separate save/delivery status. Make grouped project decisions use this form by default as a workflow guideline.

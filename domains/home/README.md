@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+`apps/agent-harness/` exposes separate, default-disabled Review intake and dispatch switches. `apps/t3code/` supplies the isolated native runtime; hwc-work enables the tested lane. Other hosts keep Review disabled.
+
 The tracker supports one bulk review for grouped project choices, with browser drafts and one reviewed submission.
 
 `apps/tether/` runs Tether (iMessage and SMS from the iPhone over Bluetooth, no Mac): `index.nix` is the HM half (`tetherd` user service, CLI, TUI, GTK client), `sys.nix` the system half (upstream module, BlueZ bearer API, adapter class), `patches/` our tetherd patches (message-only popup switch, backfill flag). Laptop only. Pinned `tether` flake input.
@@ -114,6 +116,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-16: Wire Review lifecycle switches and shared-protocol restart triggers; enable the isolated native Review lane on hwc-work only.
 
 - 2026-10-16: Add T3's disabled-by-default immutable Review native bundle and shared startup configuration; preserve the rolling development CLI and disabled tracker dispatch.
 - 2026-10-16: Curate shared skill discovery, remove the default upstream adoption set, validate assembled output with declared YAML support, and load REA's curated skill from the harness pin.

@@ -333,6 +333,18 @@ in
         the project tracker hub (claude-config tracker/server.py): every agent
         project's roadmap, plan and Eric's decision cards, on one tailnet page.
         Run it on ONE host; project data syncs through the deliverables folder'';
+      lifecycle = {
+        intakeEnabled = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Accept explicit Review requests after backup, native isolation and result/stop acceptance.";
+        };
+        dispatchEnabled = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Allow new Review starts; existing requests remain inspectable when disabled.";
+        };
+      };
       port = lib.mkOption {
         type = lib.types.port;
         default = 8765;
@@ -590,7 +602,7 @@ in
         Description = "HWC project tracker hub (roadmaps, plans, decision cards)";
         After = [ "network-online.target" ];
         # The server and page are pinned harness files; a new revision restarts it.
-        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "server.py" "index.html" "handoff_doc.py" ];
+        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "server.py" "index.html" "handoff_doc.py" "lifecycle.py" ];
       };
       Service = {
         ExecStart = "${pkgs.python3}/bin/python3 ${harness}/tracker/server.py ${toString cfg.tracker.port}";
@@ -600,6 +612,8 @@ in
         Environment = [
           "TRACKER_ROOT=${cfg.tracker.root}"
           "TRACKER_LEDGERS=${cfg.stateDir}/ledger"
+          "TRACKER_LIFECYCLE_INTAKE=${if cfg.tracker.lifecycle.intakeEnabled then "1" else "0"}"
+          "TRACKER_LIFECYCLE_DISPATCH=${if cfg.tracker.lifecycle.dispatchEnabled then "1" else "0"}"
           # The Backlog tab's read model lives on the Refinery board (one store of work items).
           "TRACKER_REFINERY_URL=${cfg.tracker.refineryUrl}"
           "TRACKER_REFINERY_PUBLIC_URL=${cfg.tracker.refineryPublicUrl}"
@@ -623,7 +637,7 @@ in
         Description = "Deliver tracker pings into this host's T3 threads";
         After = [ "network-online.target" ];
         # relay.py imports handoff_doc; a change there must restart the relay too.
-        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "relay.py" "t3.py" "handoff_doc.py" ];
+        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "relay.py" "t3.py" "handoff_doc.py" "lifecycle.py" ];
       };
       Service = {
         ExecStart = "${pkgs.python3}/bin/python3 ${harness}/tracker/relay.py";
