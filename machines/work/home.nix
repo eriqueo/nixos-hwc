@@ -50,5 +50,7 @@
     enable = true;
     lifecycle.intakeEnabled = true;
     lifecycle.dispatchEnabled = true;
+    # Installed ordinary Close passed its disposable native/helper acceptance.
+    lifecycle.close.enable = true;
   };
 }
