@@ -55,6 +55,23 @@ class DisplayContract(unittest.TestCase):
             self.assertIn("Tomorrow · Oct 15", html)
             self.assertIn("Add calendar event", html)
 
+    def test_managed_dinner_is_shown_once_without_hiding_unrelated_event(self):
+        now = dt.datetime(2026, 10, 14, 12, tzinfo=screens.TZ)
+        meal = dict(summary="Dinner: Soup", start=now.date(), end=now.date()+dt.timedelta(days=1), allday=True, calendar="Meals", uid="meal-dinner-a", meal=True)
+        other = dict(meal, summary="Family appointment", calendar="Family", uid="unrelated", meal=False)
+        with patch.object(screens.calendar, "get", return_value={"events": [meal, other]}), patch.object(screens.weather, "get", return_value={}), patch.object(screens.todo, "get", return_value={"open": []}):
+            for render in (screens.home, screens.week):
+                output = render(now, specs["ipad"])
+                self.assertEqual(output.count('Soup'), 1)
+                self.assertIn('Family appointment', output)
+                self.assertIn('w-dinner', output)
+
+    def test_managed_event_never_reaches_legacy_delete_create(self):
+        ev = dict(uid="meal-dinner-a", cal="meals", date="2026-10-14", mealUrl="https://meals.test/meals/a")
+        with patch.object(apps, "read_events", return_value=([], [ev])), patch.object(apps, "gateway_call") as gateway:
+            with self.assertRaises(apps.Invalid):apps.locate(ev)
+            gateway.assert_not_called()
+
     def test_groceries_uses_existing_list(self):
         data = dict(open=[dict(summary="Milk", list="Groceries"), dict(summary="Family chore", list="Family")])
         with patch.object(screens.todo, "get", return_value=data):

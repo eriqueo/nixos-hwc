@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+The Workbench registry includes Meals, resolving its destination from the shared route owner.
+
 Estimator Flooring supports named click-lock LVT/LVP and tile areas with shared trade pricing, explicit scope costs and exact JobTread quantities. The area contract lives in `estimator/src/engine/flooring.js`; its editor is `FlooringScope.jsx`. Draft v3 uses separate storage keys and retains legacy recovery snapshots.
 
 Estimator Details supports mapped custom scope, trade labor and subcontractor quote entry. Saved-item edits retain draft identity and budget exclusions; missing custom costs appear in the shared send-review checks.
@@ -62,6 +64,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-10-16: Register Meals beside Calendar and Tasks in the shared Workbench area list.
 
 - 2026-10-12: workbench: `tasks` (route `todo`) and `calendar` (route `calendar`) join the area registry. Both are phone apps served by the wall-display process (`domains/server/services/wall-display/parts/apps.py`).
 - 2026-10-12: morning-briefing reads JobTread through PAVE directly (`jobtread-grant-key` + org id from `leads/parts/jt-mappings.nix`). The jt-mcp retirement had left its jobs and overdue gathers calling deleted tools.

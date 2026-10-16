@@ -26,7 +26,7 @@ import { refineryTools } from "./refinery.js";
 import { todayTools } from "./today.js";
 import { notifyTools } from "./notify.js";
 import { leadsTools } from "./leads.js";
-import { tasksTools } from "./tasks.js";
+import { tasksTools, mealTools } from "./tasks.js";
 import { dataxTools } from "./datax.js";
 import { serverOverviewTool } from "./server-overview.js";
 
@@ -45,6 +45,7 @@ export function allTools(config: ServerConfig): ToolDef[] {
     ...mediaTools(),
     ...calendarTools(),
     ...tasksTools(),
+    ...mealTools(JSON.parse(process.env.HWC_MEAL_COLLECTIONS || "{}")),
     ...websiteTools(config.websiteSiteDir),
     ...siteAnalyticsTools(config.umamiWebsiteId, config.umamiDatabase, psqlRaw),
     ...cmsTools([

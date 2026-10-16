@@ -547,6 +547,26 @@
         "type": "github"
       }
     },
+    "meals": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1792158589,
+        "narHash": "sha256-AZIsEa4qEkXC2ZgD4u3m1t2EWUw+l+6fMc5dzFv7OVo=",
+        "owner": "eriqueo",
+        "repo": "meals",
+        "rev": "611c18d90b769685ca9512d553520c0878db8c09",
+        "type": "github"
+      },
+      "original": {
+        "owner": "eriqueo",
+        "repo": "meals",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1785090369,
@@ -736,6 +756,7 @@
         "home-manager-stable": "home-manager-stable",
         "hwc-dictation": "hwc-dictation",
         "khalt": "khalt",
+        "meals": "meals",
         "nixpkgs": "nixpkgs",
         "nixpkgs-stable": "nixpkgs-stable",
         "nixpkgs-tailscale": "nixpkgs-tailscale",

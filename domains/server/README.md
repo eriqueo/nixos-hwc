@@ -9,6 +9,8 @@
 
 ## Structure
 
+`services/meals/` deploys the independent Meals package, exact CalDAV targets, CRITICAL SQLite backup and seven-day preview cleanup. Wall Home/Week reserve dinner rows; Calendar routes managed edits to Meals.
+
 Calendar phone writes consume the gateway's sync receipt; they preserve the saved local result and show a sync failure without another wait.
 
 Brain MCP public clients use the `.com` OAuth gateway and Service Auth origin;
@@ -52,6 +54,7 @@ domains/server/
 ├── services/
 │   ├── bloxels-cv/       # Bloxels grid photo classifier (path watcher on inbox-mobile)
 │   ├── inbox-processor/  # Phone capture processor (whisper-server + Tesseract; optional DX2 voice-note cleanup)
+│   ├── meals/            # Independent reviewed meal planner, backup and retention wiring
 │   ├── radicale/         # Self-hosted CalDAV (tasks.hwc.*, two-way task sync)
 │   └── wall-display/     # TRMNL scenes + tablet rotation and scene review; Family Home, week, weather, tasks, groceries; QR-linked phone apps and contract tests
 │       └── parts/        #   server.py (protocol, host dispatch, renderer, web client), screens.py (screens, CalDAV reads),
@@ -72,6 +75,8 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+
+- 2026-10-16: Add the separate Meals service and backup integration. Home/Week show managed dinners once; phone Calendar protects their stable UIDs and links to Meals.
 
 - 2026-10-14: Wall phone forms add daily/weekly/monthly/yearly repeats with optional last date. Task add/edit exposes fixed schedules; completion sends the displayed due date to prevent duplicate advancement. Existing calendar series stay protected from lossy edits.
 
