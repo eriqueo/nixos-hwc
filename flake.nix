@@ -2993,6 +2993,24 @@
         touch "$out"
       '';
 
+      meals-integration = let
+        work = self.nixosConfigurations.hwc-work.config;
+        cfg = work.hwc.server.services.meals;
+        unit = work.systemd.services.meals;
+        settings = builtins.fromJSON (builtins.readFile (lib.last (lib.splitString " " unit.serviceConfig.ExecStart)));
+      in
+      assert lib.assertMsg (cfg.enable
+        && settings.database == "${work.hwc.paths.state}/meals/meals.db"
+        && settings.writesEnabled == cfg.writesEnabled
+        && settings.baseUrl == cfg.url
+        && work.hwc.system.mcp.mealCollections == cfg.collections
+        && work.hwc.networking.shared.routeOwners.meals.owner == "work"
+        && lib.hasInfix "--check" unit.preStart
+        && lib.hasInfix "--backup" work.services.borgbackup.jobs.hwc-backup.preHook
+        && work.systemd.timers.meals-cleanup.timerConfig.Persistent)
+        "Meals must bind exact effect targets, boot checks, backed-up state and cleanup";
+      pkgs.runCommand "meals-integration" {} ''touch "$out"'';
+
       charter-law1 = mkCharterLint "law1-osconfig-safety" [
         "rg 'osConfig\\.' domains/home --type nix | rg -v 'osConfig\\.[a-zA-Z0-9_.]+ or |attrByPath|osConfig \\?|lib\\.mkIf isNixOS|#'"
       ];
