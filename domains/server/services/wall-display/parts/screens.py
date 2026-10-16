@@ -645,12 +645,14 @@ def home(now, device):
     todays = events_on(ordinary, today)
     upcoming = [e for e in todays if e["allday"] or e["end"] > now]
     past = [e for e in todays if e not in upcoming]
-    keep = max(0, 6 - len(upcoming))
+    today_limit = 5 if dinner_row(events, today) else 6
+    tomorrow_limit = 5 if dinner_row(events, tomorrow) else 6
+    keep = max(0, today_limit - len(upcoming))
     rows = ([agenda_row(e, today, past=True) for e in past[len(past) - keep:]] if keep else []) \
         + [agenda_row(e, today) for e in upcoming]
     later = events_on(ordinary, tomorrow)
-    today_col = column(f"Today · {today:%b} {today.day}", rows, len(todays), 6, "Nothing today", extra="")
-    tomorrow_col = column(f"Tomorrow · {tomorrow:%b} {tomorrow.day}", [agenda_row(e, tomorrow) for e in later], len(later), 6,
+    today_col = column(f"Today · {today:%b} {today.day}", rows, len(todays), today_limit, "Nothing today", extra="")
+    tomorrow_col = column(f"Tomorrow · {tomorrow:%b} {tomorrow.day}", [agenda_row(e, tomorrow) for e in later], len(later), tomorrow_limit,
                           "Nothing scheduled",
                           extra=f'<span class="label label--small label--outline">{hi_lo(wx_day(wx, tomorrow))}</span>')
 
