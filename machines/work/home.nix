@@ -50,7 +50,7 @@
     enable = true;
     lifecycle.intakeEnabled = true;
     lifecycle.dispatchEnabled = true;
-    # Hold new Close until descriptor-free mapped-writer guard proof passes.
-    lifecycle.close.enable = false;
+    # Installed mapped-writer guard and owning-hook proofs pass on this host.
+    lifecycle.close.enable = true;
   };
 }
