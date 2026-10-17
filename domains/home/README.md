@@ -26,6 +26,8 @@ The shared workspace process inspector also checks bounded file mappings. Descri
 
 Close intake stays disabled while the installed capability4/body3 scratch workflow is tested. Capability1/2/3 histories retain their captured readers, fingerprints and limits. Other hosts also keep Close disabled.
 
+The cleanup helper starts above `projects/`. Its project-name argument therefore does not resolve into the protected project during process inspection. External relative-path consumers still hold cleanup.
+
 `apps/agent-harness/` declares a default-disabled canonical Close lane with an explicitly cleared inactive runtime port and immutable active runtime ports, owning cleanup receipts and a pending status until required evidence is complete.
 
 `apps/agent-harness/` declares the workspace allocator and inspection runtime used by home sessions.
@@ -128,6 +130,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-16: Correct the helper launch directory after installed scratch cleanup detected its own relative project argument; keep intake disabled for a new installed proof.
 
 - 2026-10-16: Pin versioned canonical scratch receipts and held-path evidence; disable new Close until installed native/helper recovery passes.
 
