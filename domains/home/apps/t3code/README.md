@@ -28,6 +28,7 @@ README.md   # this file
 ```
 
 There is no `parts/`. T3 itself runs from its source checkout. Review uses a separate immutable native package retained through the launcher closure; its commands stay off the user PATH.
+The home and work machine files hold their separate Review opt-ins; the module keeps the default disabled.
 
 ## Design decisions
 
@@ -47,6 +48,10 @@ There is no `parts/`. T3 itself runs from its source checkout. Review uses a sep
   The pin changes only with matching T3 policy and native acceptance evidence.
   A disabled launcher clears an inherited Review launch variable. This option
   does not enable tracker intake or dispatch.
+  Home and work opt in after separate native read, result and termination checks.
+  Home's configuration uses the same tested launcher and native resources.
+  A running server keeps its old launch settings until a controlled explicit
+  restart and runtime verification. Desktop Review remains disabled.
 
 - **Electron comes from nixpkgs, through `ELECTRON_OVERRIDE_DIST_PATH`.** The
   Electron binary npm downloads expects an FHS dynamic linker and cannot run on
@@ -189,6 +194,8 @@ laptop, for ad-hoc headless use. That script is hand-installed and is not manage
 here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
+
+- 2026-10-17: Configure home's tested Review opt-in without changing the shared default, desktop setting or tracker Close authority; require controlled runtime adoption after activation.
 
 - 2026-10-16: Share the desktop keep-old policy with the headless service so implicit Home Manager switches preserve running agents. Check both rendered shapes and a missing-policy control; document deferred runtime changes and current consistent Borg recovery.
 

@@ -28,6 +28,10 @@
     enable = true;
     desktop.enable = false;
     serve.enable = true;
+    # HWC-EXCEPTION(Law 16): this is per-host native acceptance, not a shared
+    # headless default. Home passed read/result/termination and recovery gates.
+    # Permanent by design: each future host must establish its own readiness.
+    review.enable = true;
     serve.port = 3773;
     # 0.0.0.0, not loopback, and this matches what hwc-laptop already does:
     # its desktop app runs serverExposureMode = "network-accessible" and its
