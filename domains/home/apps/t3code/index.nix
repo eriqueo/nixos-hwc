@@ -38,6 +38,9 @@
 }:
 let
   cfg = config.hwc.home.apps.t3code;
+  # A running harness can carry the agent applying this generation. Launch and
+  # environment changes take effect at a separately controlled explicit restart.
+  switchMethod = "keep-old";
 
   # Review's native protocol/resources are an integrity boundary, independent
   # of the user's rolling CLI. Permanent pin by design: update only alongside
@@ -543,7 +546,7 @@ in
         After = [ "graphical-session.target" ];
         # T3 carries the agent running `hms`; switching this unit in place
         # severs that command. Apply unit changes on the next explicit restart.
-        X-SwitchMethod = "keep-old";
+        X-SwitchMethod = switchMethod;
       };
       Service = {
         # THE BACKEND ESCAPES THIS UNIT'S CGROUP, so systemd's own KillMode
@@ -583,6 +586,7 @@ in
         Description = "T3 Code headless server (${cfg.repo})";
         After = [ "network-online.target" ];
         Wants = [ "network-online.target" ];
+        X-SwitchMethod = switchMethod;
       };
       Service = {
         WorkingDirectory = cfg.repo;

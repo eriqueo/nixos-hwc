@@ -2919,6 +2919,41 @@
         touch "$out"
       '';
 
+      t3-switch-policy = let
+        targets = [
+          { host = "hwc-home"; unit = "t3-serve"; }
+          { host = "hwc-work"; unit = "t3-serve"; }
+          { host = "hwc-laptop"; unit = "t3code"; }
+        ];
+        units = map (target: let
+          home = self.nixosConfigurations.${target.host}.config.home-manager.users.eric;
+        in {
+          inherit (target) host unit;
+          policy = home.systemd.user.services.${target.unit}.Unit.X-SwitchMethod or null;
+          file = home.home.file."${home.xdg.configHome}/systemd/user/${target.unit}.service".source;
+        }) targets;
+        fixtures = pkgs.writeText "t3-switch-policy.json" (builtins.toJSON units);
+      in
+      assert lib.assertMsg (lib.all (unit: unit.policy == "keep-old") units)
+        "t3-switch-policy: an implicit home switch must preserve each running T3 shape";
+      pkgs.runCommand "t3-switch-policy" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${fixtures} <<'PY'
+        import configparser, json, pathlib, sys
+        def keeps_active(text):
+            unit = configparser.RawConfigParser(strict=False)
+            unit.optionxform = str
+            unit.read_string(text)
+            return unit.get('Unit', 'X-SwitchMethod', fallback=None) == 'keep-old'
+        for item in json.loads(pathlib.Path(sys.argv[1]).read_text()):
+            text = pathlib.Path(item['file']).read_text()
+            assert keeps_active(text), item
+            missing = '\n'.join(line for line in text.splitlines() if not line.startswith('X-SwitchMethod='))
+            assert missing != text and not keeps_active(missing), 'missing-policy control escaped'
+            print(item['host'] + '/' + item['unit'] + ': rendered keep-old and removal control pass')
+        PY
+        touch "$out"
+      '';
+
       user-runtime-paths = let
         laptopSystem = self.nixosConfigurations.hwc-laptop;
         laptop = laptopSystem.config.home-manager.users.eric;

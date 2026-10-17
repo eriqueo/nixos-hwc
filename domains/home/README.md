@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+`apps/t3code/` shares a keep-old policy across desktop and headless units. Implicit home switches preserve running agents; launcher, environment and policy changes require a controlled explicit restart and runtime verification.
+
 `apps/agent-harness/` supplies readable refusal guidance for unsupported Close previews, with its compatibility and cleanup limits documented there. The same owner documents the typed finding contract for Close assessments.
 
 Manual and capability4 canonical scratch cleanup use the pinned bounded filesystem owner. It refuses unsafe paths, stages private data outside the public archive, and expires only matching qualified archives. Canonical Close requires durable preparation, private removal and public archive facts. Changed or incomplete artifacts stay held with possible locations to inspect.
@@ -132,6 +134,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-16: Preserve active headless T3 during implicit Home Manager switches through the existing desktop keep-old policy. Check actual rendered units and missing-policy controls; retain explicit restart and crash behavior.
 
 - 2026-10-16: Pin the tested Close finding example; preserve result validation and existing cleanup authority.
 

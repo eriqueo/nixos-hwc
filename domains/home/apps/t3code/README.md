@@ -23,7 +23,7 @@ index.nix   # hwc.home.apps.t3code — desktop launcher + Electron shim + deskto
             #   endpoint survives a reboot; headless t3-serve unit; t3-update;
             #   DX2 handoff adapter using the pinned delegate helper and forwarding T3's result limit without
             #   allowing policy overrides; opt-in isolated Review native package
-            #   and startup ports; activation-time repo check
+            #   and startup ports; shared keep-running switch policy; activation-time repo check
 README.md   # this file
 ```
 
@@ -78,10 +78,12 @@ There is no `parts/`. T3 itself runs from its source checkout. Review uses a sep
 
 - **Home Manager switches keep the running harness.** T3 carries the agent
   invoking `hms`, so restarting its unit during activation aborts the command
-  that is applying the generation. `RemainAfterExit` keeps a successful
-  Electron single-instance handoff active, and `X-SwitchMethod=keep-old`
-  defers future unit changes until an explicit restart. The existing backend
-  sweep still runs for an intentional service restart or stop.
+  that is applying the generation. Both service shapes share
+  `X-SwitchMethod=keep-old`. Launcher, environment and policy changes wait for
+  a separately controlled explicit restart and runtime verification; changing
+  Nix configuration alone does not apply them to the running process.
+  `RemainAfterExit` keeps a successful Electron single-instance handoff active.
+  Explicit restarts and crash recovery retain their existing behavior.
 
 - **`port` is set, and Tailscale Serve is not.** `T3CODE_PORT` reaches the
   desktop backend and fixes its port — measured 2026-08-26 with `T3CODE_PORT=3891`,
@@ -140,8 +142,10 @@ There is no `parts/`. T3 itself runs from its source checkout. Review uses a sep
 - **`~/.t3/userdata` is CRITICAL and is in Borg.** It holds the event-sourced
   SQLite store plus the server signing key; losing the key invalidates every
   paired client and the store is regenerable from nothing. `~/.t3/caches` and
-  `~/.t3/worktrees` are REPLACEABLE and stay out. The copy is taken live, so stop
-  `t3-serve.service` before a run whose restore must be certain.
+  `~/.t3/worktrees` are REPLACEABLE and stay out. Borg uses a readonly online
+  SQLite snapshot and excludes the raw database/WAL/SHM tuple. Other userdata
+  remains covered. See the [Borg recovery owner](../../../data/borg/README.md)
+  for the snapshot location, failure behavior and private restore checks.
 
 ## Rebuilding after a pull
 
@@ -185,6 +189,8 @@ laptop, for ad-hoc headless use. That script is hand-installed and is not manage
 here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
+
+- 2026-10-16: Share the desktop keep-old policy with the headless service so implicit Home Manager switches preserve running agents. Check both rendered shapes and a missing-policy control; document deferred runtime changes and current consistent Borg recovery.
 
 - 2026-10-16: Retain private Review resources through launcher references, avoiding a collision with the normal Codex command.
 
