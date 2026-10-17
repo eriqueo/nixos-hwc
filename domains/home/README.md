@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+The shared workspace process inspector also checks bounded file mappings. Descriptor-free mappings hold removal; malformed, unavailable or over-limit observations stay unknown. Close stays disabled until the pinned guard passes actual installed tests.
+
 Close is temporarily disabled on hwc-work after an actual descriptor-free mapped writer passed the process guard. Re-enable only after its repair passes source, owning-effect and installed guard tests. Capability1/2/3 histories remain readable; all hosts keep Close disabled during this repair.
 
 `apps/agent-harness/` declares a default-disabled canonical Close lane with an explicitly cleared inactive runtime port and immutable active runtime ports, owning cleanup receipts and a pending status until required evidence is complete.
@@ -122,6 +124,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-16: Pin bounded file-mapping process inspection and its actual worktree-removal regression; retain disabled Close until installed proof.
 
 - 2026-10-16: Disable new Close while repairing a confirmed memory-mapping gap in current-user process inspection; preserve existing lifecycle readers and data.
 
