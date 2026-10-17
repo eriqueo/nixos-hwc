@@ -12,6 +12,8 @@ source and one mutable state store.
 
 ## Structure
 
+The pinned tracker explains unsupported Close previews in plain words. The refusal keeps its error code and status, sends no Close request, and restores the button focus. Legacy error responses remain readable. Cleanup admission and authority are unchanged.
+
 The pinned `tracker/scratch.py` owns bounded manual and capability4 canonical scratch planning, cleanup and qualified archive expiry. Physical no-follow roots and anchored operations refuse unsafe trees. Private stages remain outside public archives; public markers bind the observed archive identity and metadata. Canonical body3 captures a sanitized summary and requires durable preparation, private removal and public archive facts. Unknown recovery observes only; it never repeats cleanup. Held evidence lists possible locations, not presence claims. Missing or changed proof holds expiry. Historical dated archives keep their reader until the tracked fleet drain.
 
 Manual `ws close` and canonical Close use the shared whole-project observer before cleanup effects. A private scratch consumer holds cleanup even when checkout observations are clear. Unknown observations refuse; existing preservation and private-at-close/public-30-day policy remains. This is an as-of check, not containment against future writers.
@@ -101,6 +103,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-10-16: Pin tested unsupported-Close guidance after fresh-context resume and installed independent Review; preserve the existing cleanup limits and hwc-work-only enablement.
 
 - 2026-10-16: Enable hwc-work capability4 scratch Close after36 installed native/helper checks and exact fixture retirement; preserve other hosts disabled.
 

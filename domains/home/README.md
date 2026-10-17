@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+`apps/agent-harness/` supplies readable refusal guidance for unsupported Close previews, with its compatibility and cleanup limits documented there.
+
 Manual and capability4 canonical scratch cleanup use the pinned bounded filesystem owner. It refuses unsafe paths, stages private data outside the public archive, and expires only matching qualified archives. Canonical Close requires durable preparation, private removal and public archive facts. Changed or incomplete artifacts stay held with possible locations to inspect.
 
 Manual workspace close checks the whole project, including private scratch, before cleanup and at each checkout, link, private-purge and archive effect. Canonical Close uses the same observer. Busy or unknown process state holds the remaining tree.
@@ -130,6 +132,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-16: Pin tested unsupported-Close guidance after fresh-context resume and installed independent Review; preserve the existing cleanup limits and hwc-work-only enablement.
 
 - 2026-10-16: Enable hwc-work scratch Close after36 installed checks, qualified archive recovery and exact fixture retirement; leave other hosts disabled.
 
