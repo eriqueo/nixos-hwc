@@ -18,13 +18,13 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
-Manual scratch cleanup uses the pinned bounded filesystem owner. It refuses unsafe paths, stages private data outside the public archive, and expires only matching qualified archives. Changed or incomplete artifacts stay held; canonical Close still refuses nonempty scratch.
+Manual and capability4 canonical scratch cleanup use the pinned bounded filesystem owner. It refuses unsafe paths, stages private data outside the public archive, and expires only matching qualified archives. Canonical Close requires durable preparation, private removal and public archive facts. Changed or incomplete artifacts stay held with possible locations to inspect.
 
-Manual workspace close checks the whole project, including private scratch, before cleanup and at each checkout, link, private-purge and archive effect. Busy or unknown process state holds the remaining tree. Canonical nonempty scratch handling remains unsupported.
+Manual workspace close checks the whole project, including private scratch, before cleanup and at each checkout, link, private-purge and archive effect. Canonical Close uses the same observer. Busy or unknown process state holds the remaining tree.
 
 The shared workspace process inspector also checks bounded file mappings. Descriptor-free mappings hold removal; malformed, unavailable or over-limit observations stay unknown. The pinned guard passed actual installed tests before Close enablement.
 
-Close is enabled on hwc-work after the installed mapped-writer repair passed two sealed writable-mapping observations and19 actual owning-hook checks. Capability1/2/3 histories remain readable; other hosts keep Close disabled.
+Close intake stays disabled while the installed capability4/body3 scratch workflow is tested. Capability1/2/3 histories retain their captured readers, fingerprints and limits. Other hosts also keep Close disabled.
 
 `apps/agent-harness/` declares a default-disabled canonical Close lane with an explicitly cleared inactive runtime port and immutable active runtime ports, owning cleanup receipts and a pending status until required evidence is complete.
 
@@ -128,6 +128,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-16: Pin versioned canonical scratch receipts and held-path evidence; disable new Close until installed native/helper recovery passes.
 
 - 2026-10-16: Pin bounded manual scratch cleanup and qualified archive expiry; retain canonical empty-scratch Close and historical dated archives.
 

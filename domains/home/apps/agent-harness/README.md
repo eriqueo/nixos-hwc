@@ -12,13 +12,13 @@ source and one mutable state store.
 
 ## Structure
 
-The pinned `tracker/scratch.py` owns bounded manual scratch planning, cleanup and qualified archive expiry. Physical no-follow roots and anchored operations refuse unsafe trees. Private stages remain outside public archives; public markers bind the observed archive identity and metadata. Missing or changed proof holds expiry. Historical dated archives keep their reader until the tracked fleet drain; canonical capability3 still refuses nonempty scratch.
+The pinned `tracker/scratch.py` owns bounded manual and capability4 canonical scratch planning, cleanup and qualified archive expiry. Physical no-follow roots and anchored operations refuse unsafe trees. Private stages remain outside public archives; public markers bind the observed archive identity and metadata. Canonical body3 captures a sanitized summary and requires durable preparation, private removal and public archive facts. Unknown recovery observes only; it never repeats cleanup. Held evidence lists possible locations, not presence claims. Missing or changed proof holds expiry. Historical dated archives keep their reader until the tracked fleet drain.
 
-Manual `ws close` uses the same observer for the whole project before cleanup and at each checkout, link, private-purge and archive effect. A private scratch consumer now holds cleanup even when checkout observations are clear. Unknown observations refuse; existing preservation and private-at-close/public-30-day policy remains. This does not expand canonical Close to nonempty scratch or establish containment against future writers.
+Manual `ws close` and canonical Close use the shared whole-project observer before cleanup effects. A private scratch consumer holds cleanup even when checkout observations are clear. Unknown observations refuse; existing preservation and private-at-close/public-30-day policy remains. This is an as-of check, not containment against future writers.
 
 The shared workspace inspector checks file-backed memory mappings as well as cwd, descriptors and arguments. It caps maps at 4 MiB per process and 32 MiB per scan; missing, unreadable, malformed or excess data holds cleanup as unknown. Mapping hits expose only PID and kind. This is a current-user, as-of observation, not a lock against later writers.
 
-Close is enabled on hwc-work after the installed mapped-writer repair passed two sealed writable-mapping observations and19 actual owning-hook checks. Capability1/2/3 histories remain readable; other hosts keep Close disabled.
+Close intake stays disabled while the installed capability4/body3 scratch workflow is tested. Capability1/2/3 histories retain their captured readers, fingerprints and limits. Other hosts also keep Close disabled.
 
 `tracker.lifecycle.close` defaults off and clears the relay runtime port while disabled. Its immutable runtime metadata captures the static revision, workspace/brain roots and explicit ordinary profile. The relay binds the installed ws path separately to avoid a derivation cycle. The ws runtime includes Bash/systemd; hub and relay restart on Close protocol changes. Canonical Close keeps pending evidence visible and accepts Closed only after the note, every authorized removed-or-kept disposition and both worker shutdown proofs. Keep needs a human reason and fresh matching physical identity, clean state, preservation and process checks. Unsupported lanes remain held.
 
@@ -99,6 +99,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-10-16: Pin capability4/body3 scratch summary, durable phase receipts and observation-only recovery; hold intake pending installed proof.
 
 - 2026-10-16: Pin bounded manual scratch cleanup, postverified qualified public archives and matching expiry. Keep canonical capability3/body2 unchanged.
 

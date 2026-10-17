@@ -51,6 +51,7 @@
     lifecycle.intakeEnabled = true;
     lifecycle.dispatchEnabled = true;
     # Installed mapped-writer guard and owning-hook proofs pass on this host.
-    lifecycle.close.enable = true;
+    # Keep intake off until the installed capability4 scratch workflow passes.
+    lifecycle.close.enable = false;
   };
 }
