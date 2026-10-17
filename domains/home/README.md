@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+Manual workspace close checks the whole project, including private scratch, before cleanup and at each checkout, link, private-purge and archive effect. Busy or unknown process state holds the remaining tree. Canonical nonempty scratch handling remains unsupported.
+
 The shared workspace process inspector also checks bounded file mappings. Descriptor-free mappings hold removal; malformed, unavailable or over-limit observations stay unknown. The pinned guard passed actual installed tests before Close enablement.
 
 Close is enabled on hwc-work after the installed mapped-writer repair passed two sealed writable-mapping observations and19 actual owning-hook checks. Capability1/2/3 histories remain readable; other hosts keep Close disabled.
@@ -124,6 +126,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-16: Pin whole-project process checks for manual close, preserving private/public scratch when a consumer is active or inspection is unknown.
 
 - 2026-10-16: Re-enable hwc-work Close after actual immutable mapped-writer and19 owning-hook checks; preserve all other hosts disabled.
 
