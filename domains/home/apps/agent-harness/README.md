@@ -12,6 +12,8 @@ source and one mutable state store.
 
 ## Structure
 
+The pinned `tracker/scratch.py` owns bounded manual scratch planning, cleanup and qualified archive expiry. Physical no-follow roots and anchored operations refuse unsafe trees. Private stages remain outside public archives; public markers bind the observed archive identity and metadata. Missing or changed proof holds expiry. Historical dated archives keep their reader until the tracked fleet drain; canonical capability3 still refuses nonempty scratch.
+
 Manual `ws close` uses the same observer for the whole project before cleanup and at each checkout, link, private-purge and archive effect. A private scratch consumer now holds cleanup even when checkout observations are clear. Unknown observations refuse; existing preservation and private-at-close/public-30-day policy remains. This does not expand canonical Close to nonempty scratch or establish containment against future writers.
 
 The shared workspace inspector checks file-backed memory mappings as well as cwd, descriptors and arguments. It caps maps at 4 MiB per process and 32 MiB per scan; missing, unreadable, malformed or excess data holds cleanup as unknown. Mapping hits expose only PID and kind. This is a current-user, as-of observation, not a lock against later writers.
@@ -97,6 +99,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-10-16: Pin bounded manual scratch cleanup, postverified qualified public archives and matching expiry. Keep canonical capability3/body2 unchanged.
 
 - 2026-10-16: Pin whole-project process checks for manual close, preserving private/public scratch when a consumer is active or inspection is unknown.
 

@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+Manual scratch cleanup uses the pinned bounded filesystem owner. It refuses unsafe paths, stages private data outside the public archive, and expires only matching qualified archives. Changed or incomplete artifacts stay held; canonical Close still refuses nonempty scratch.
+
 Manual workspace close checks the whole project, including private scratch, before cleanup and at each checkout, link, private-purge and archive effect. Busy or unknown process state holds the remaining tree. Canonical nonempty scratch handling remains unsupported.
 
 The shared workspace process inspector also checks bounded file mappings. Descriptor-free mappings hold removal; malformed, unavailable or over-limit observations stay unknown. The pinned guard passed actual installed tests before Close enablement.
@@ -126,6 +128,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-16: Pin bounded manual scratch cleanup and qualified archive expiry; retain canonical empty-scratch Close and historical dated archives.
 
 - 2026-10-16: Pin whole-project process checks for manual close, preserving private/public scratch when a consumer is active or inspection is unknown.
 
