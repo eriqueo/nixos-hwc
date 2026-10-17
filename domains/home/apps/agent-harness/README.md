@@ -18,7 +18,7 @@ Manual `ws close` and canonical Close use the shared whole-project observer befo
 
 The shared workspace inspector checks file-backed memory mappings as well as cwd, descriptors and arguments. It caps maps at 4 MiB per process and 32 MiB per scan; missing, unreadable, malformed or excess data holds cleanup as unknown. Mapping hits expose only PID and kind. This is a current-user, as-of observation, not a lock against later writers.
 
-Close intake stays disabled while the installed capability4/body3 scratch workflow is tested. Capability1/2/3 histories retain their captured readers, fingerprints and limits. Other hosts also keep Close disabled.
+Close is enabled on hwc-work after36 installed capability4/body3 checks. Mixed Remove/Keep, stale preview refusal, private removal and public qualified archiving pass. One withheld archive ACK recovers through observation after exact helper shutdown; each effect occurs once. Capability1/2/3 histories retain captured readers, fingerprints and limits. Other hosts keep Close disabled.
 
 The helper launches from captured `workspaceRoot`, above `projects/`. Its project-name argv no longer resolves into the protected project; the observer still checks external and ancestor processes without exemptions.
 
@@ -101,6 +101,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-10-16: Enable hwc-work capability4 scratch Close after36 installed native/helper checks and exact fixture retirement; preserve other hosts disabled.
 
 - 2026-10-16: Pin the helper launch-directory correction and composed observer regressions; require a new installed acceptance before enabling Close.
 
