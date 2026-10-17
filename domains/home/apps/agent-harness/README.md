@@ -12,7 +12,7 @@ source and one mutable state store.
 
 ## Structure
 
-The pinned tracker explains unsupported Close previews in plain words. The refusal keeps its error code and status, sends no Close request, and restores the button focus. Legacy error responses remain readable. Cleanup admission and authority are unchanged.
+The pinned tracker explains unsupported Close previews in plain words. The refusal keeps its error code and status, sends no Close request, and restores the button focus. Legacy error responses remain readable. Cleanup admission and authority are unchanged. Review and Close share one typed finding example; Close states the existing code/detail bounds. Strict result validation and the Review prompt are preserved.
 
 The pinned `tracker/scratch.py` owns bounded manual and capability4 canonical scratch planning, cleanup and qualified archive expiry. Physical no-follow roots and anchored operations refuse unsafe trees. Private stages remain outside public archives; public markers bind the observed archive identity and metadata. Canonical body3 captures a sanitized summary and requires durable preparation, private removal and public archive facts. Unknown recovery observes only; it never repeats cleanup. Held evidence lists possible locations, not presence claims. Missing or changed proof holds expiry. Historical dated archives keep their reader until the tracked fleet drain.
 
@@ -103,6 +103,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-10-16: Pin the shared typed finding example and explicit Close finding bounds after fresh-context tests and installed independent Review. Result schema, strict validation, Review prompt and cleanup authority stay unchanged.
 
 - 2026-10-16: Pin tested unsupported-Close guidance after fresh-context resume and installed independent Review; preserve the existing cleanup limits and hwc-work-only enablement.
 
