@@ -3057,7 +3057,16 @@
       # Exercise rendered Borg hooks and helpers, including their failure paths.
       borg-recovery = let
         hosts = map (name: self.nixosConfigurations.${name}.config) [ "hwc-home" "hwc-work" ];
-        hookFiles = map (c: pkgs.writeText "borg-pre-hook" c.services.borgbackup.jobs.hwc-backup.preHook) hosts;
+        fixtures = map (c: pkgs.writeText "borg-recovery.json" (builtins.toJSON {
+          host = c.networking.hostName;
+          hook = c.services.borgbackup.jobs.hwc-backup.preHook;
+          customHook = c.hwc.data.borg.preBackupScript;
+          snapshots = c.hwc.data.borg.sqliteSnapshots;
+          stateRoot = "${c.hwc.paths.state}/borg-sqlite";
+          paths = c.services.borgbackup.jobs.hwc-backup.paths;
+          exclude = c.services.borgbackup.jobs.hwc-backup.exclude;
+          cli = "${lib.findFirst (p: (p.name or "") == "borg-sqlite-snapshot") null c.environment.systemPackages}/bin/borg-sqlite-snapshot";
+        })) hosts;
         restore = lib.findFirst (p: (p.name or "") == "borg-restore") null
           self.nixosConfigurations.hwc-work.config.environment.systemPackages;
       in
@@ -3065,15 +3074,61 @@
         (c.systemd.services.borgbackup-job-hwc-backup.preStart or ""))) hosts;
       assert lib.all (c: lib.hasInfix (builtins.unsafeDiscardStringContext "${c.services.postgresql.package}/bin/pg_dumpall")
         c.services.borgbackup.jobs.hwc-backup.preHook) hosts;
-      pkgs.runCommand "borg-recovery" { nativeBuildInputs = [ pkgs.python3 pkgs.bash pkgs.coreutils ]; } ''
-        python3 - ${lib.concatStringsSep " " (map toString hookFiles)} ${restore}/bin/borg-restore <<'PY'
-        import gzip, os, pathlib, re, subprocess, sys, tempfile
+      pkgs.runCommand "borg-recovery" { nativeBuildInputs = [ pkgs.python3 pkgs.bash pkgs.coreutils pkgs.borgbackup pkgs.util-linux ]; } ''
+        python3 - ${lib.concatStringsSep " " (map toString fixtures)} ${restore}/bin/borg-restore <<'PY'
+        import gzip, hashlib, json, os, pathlib, pwd, re, shlex, shutil, sqlite3, subprocess, sys, tempfile, threading, time
+
+        def run(argv, *, cwd=None, env=None, check=True):
+            return subprocess.run(argv, cwd=cwd, env=env, check=check, capture_output=True, text=True, timeout=30)
+
+        def coherent(path, marker=None, *, wal=False):
+            uri = path.as_uri() + ('?mode=ro' if wal else '?mode=ro&immutable=1')
+            with sqlite3.connect(uri, uri=True, timeout=2) as db:
+                assert db.execute('PRAGMA integrity_check').fetchall() == [('ok',)]
+                row = db.execute('SELECT a.value,b.value,c.epoch,c.marker FROM alpha a,beta b,control c').fetchone()
+            assert row[0] == row[1] == row[2], ('mixed transaction', row)
+            if marker is not None:
+                assert row[3] == marker, ('stale snapshot', row)
+            return row
+
+        def initialize(path):
+            db = sqlite3.connect(path, timeout=2)
+            db.execute('PRAGMA journal_mode=WAL')
+            db.execute('PRAGMA wal_autocheckpoint=0')
+            db.executescript('CREATE TABLE alpha(value INTEGER); CREATE TABLE beta(value INTEGER); '
+                'CREATE TABLE control(epoch INTEGER,marker TEXT); CREATE TABLE payload(data BLOB); '
+                "INSERT INTO alpha VALUES(0); INSERT INTO beta VALUES(0); INSERT INTO control VALUES(0,'initial');")
+            db.executemany('INSERT INTO payload VALUES(?)', [(b'x' * 4096,) for _ in range(200)])
+            db.commit()
+            db.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+            return db
+
+        def transaction(db, epoch, marker):
+            with db:
+                db.execute('UPDATE alpha SET value=?', (epoch,))
+                db.execute('UPDATE beta SET value=?', (epoch,))
+                db.execute('UPDATE control SET epoch=?,marker=?', (epoch, marker))
+
+        def require_failure(script, marker):
+            marker.unlink(missing_ok=True)
+            result = run(['bash', '-c', script + '\nprintf downstream > ' + shlex.quote(str(marker))], check=False)
+            assert result.returncode != 0, ('snapshot failure swallowed', result.stdout, result.stderr)
+            assert not marker.exists(), 'Borg create boundary reached after failed snapshot'
+
+        def must_detect(check, label):
+            try:
+                check()
+            except AssertionError:
+                return
+            raise AssertionError('seeded wiring violation escaped: ' + label)
+
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
             producer = root / "su"
             producer.write_text("#!${pkgs.bash}/bin/bash\nif [ -e " + str(root / "fail") + " ]; then exit 23; fi\nprintf 'valid SQL snapshot\\n'\n")
             producer.chmod(0o700)
-            for i, hook in enumerate(sys.argv[1:-1]):
+            for i, fixture in enumerate(sys.argv[1:-1]):
+                spec = json.loads(pathlib.Path(fixture).read_text())
                 dest = root / str(i)
                 dest.mkdir()
                 nested = dest / "service-split" / "recovery.json"
@@ -3083,21 +3138,229 @@
                 old = dest / "postgresql-old.sql.gz"
                 old.write_text("expired")
                 os.utime(old, (1, 1))
-                script = pathlib.Path(hook).read_text().replace("/var/lib/backups", str(dest))
+                script = spec['hook']
+                # Remove ONLY the exact declared custom suffix: Meals, CouchDB
+                # and arr belong to their own owners, not this shared-hook test.
+                custom = spec['customHook']
+                if custom:
+                    assert script.endswith(custom), 'custom-hook composition changed'
+                    script = script[:-len(custom)]
+                assert 'borg-sqlite-snapshot' in script, 'shared snapshot caller absent'
+                assert set(spec['snapshots']) == {'t3'}
+                config = spec['snapshots']['t3']
+                state = dest / 'borg-sqlite'
+                userdata = dest / 'userdata'
+                userdata.mkdir()
+                source = userdata / 'state.sqlite'
+                # Substitute composition ports only; production helper and its
+                # namespace/identity/permission/failure behavior remain intact.
+                script = script.replace(spec['stateRoot'], str(state)).replace(config['source'], str(source))
+                script = script.replace(shlex.quote(config['user']), shlex.quote(pwd.getpwuid(os.getuid()).pw_name))
+                script = script.replace('/var/lib/backups', str(dest))
                 script = script.replace("/run/wrappers/bin/su", str(producer))
-                # Host-specific CouchDB/arr producers are outside this PG test.
-                script = script.replace("systemctl is-active --quiet couchdb", "false")
-                script = script.replace('SRC="/opt/', 'SRC="' + str(root) + '/absent/')
-                subprocess.run(["bash", "-c", script], check=True)
+                db = initialize(source)
+                run(["bash", "-c", script])
                 output = next(dest.glob("postgresql-2*.sql.gz"))
                 before = output.read_bytes()
                 assert gzip.decompress(before) == b"valid SQL snapshot\n"
                 assert not old.exists() and nested.read_text() == "keep"
                 (root / "fail").touch()
-                assert subprocess.run(["bash", "-c", script]).returncode != 0
+                assert run(["bash", "-c", script], check=False).returncode != 0
                 assert output.read_bytes() == before
                 assert not list(dest.glob(".postgresql-*"))
                 (root / "fail").unlink()
+                ready = state / 'ready' / 't3.sqlite'
+                coherent(ready, 'initial')
+                assert ready.stat().st_uid == os.getuid()
+                assert ready.stat().st_mode & 0o777 == 0o600
+
+                # A main(epoch0)/WAL(epoch1) tuple can pass integrity_check yet
+                # violate transaction invariants. This is a known-bad control,
+                # not attribution of any particular production archive failure.
+                raw = dest / 'raw.sqlite'
+                shutil.copyfile(source, raw)
+                transaction(db, 1, 'checkpointed')
+                db.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+                db.execute("UPDATE control SET marker='later-committed'")
+                db.commit()
+                shutil.copyfile(pathlib.Path(str(source) + '-wal'), pathlib.Path(str(raw) + '-wal'))
+                with sqlite3.connect(raw.as_uri() + '?mode=ro', uri=True) as mixed:
+                    assert mixed.execute('PRAGMA integrity_check').fetchall() == [('ok',)]
+                    assert mixed.execute('SELECT a.value,b.value,c.epoch FROM alpha a,beta b,control c').fetchone() == (0, 0, 1)
+                must_detect(lambda: coherent(raw, wal=True), 'raw file-copy consistency')
+
+                # Remove the actual caller. A still-valid old snapshot must not
+                # satisfy the fresh committed marker required by this consumer.
+                cli = spec['cli']
+                omitted = script.replace(cli, 'true')
+                assert omitted != script
+                run(['bash', '-c', omitted])
+                must_detect(lambda: coherent(ready, 'later-committed'), 'snapshot invocation removed')
+                run(['bash', '-c', script])
+                coherent(ready, 'later-committed')
+
+                # Separate real writer runs while the actual rendered hook/CLI
+                # execute. The fixture's atomic invariant must survive churn.
+                stop, started = threading.Event(), threading.Event()
+                commits, errors = [], []
+                def writing():
+                    writer = None
+                    try:
+                        writer = sqlite3.connect(source, timeout=2)
+                        writer.execute('PRAGMA wal_autocheckpoint=0')
+                        epoch = 2
+                        deadline = time.monotonic() + 20
+                        while not stop.is_set():
+                            assert epoch < 10002 and time.monotonic() < deadline, 'owned writer exceeded budget'
+                            transaction(writer, epoch, 'active-writer')
+                            commits.append(time.monotonic())
+                            started.set()
+                            epoch += 1
+                            # Remain active until the caller finishes, with a
+                            # strict budget and low WAL churn on slow builders.
+                            stop.wait(.005)
+                    except BaseException as error:
+                        errors.append(repr(error))
+                        started.set()
+                    finally:
+                        if writer is not None:
+                            writer.close()
+                thread = threading.Thread(target=writing)
+                thread.start()
+                try:
+                    assert started.wait(5) and not errors
+                    begin = time.monotonic()
+                    run(['bash', '-c', script])
+                    end = time.monotonic()
+                    coherent(ready)
+                    assert any(begin < tick < end for tick in commits), 'writer did not overlap snapshot caller'
+                finally:
+                    stop.set()
+                    thread.join(5)
+                assert not thread.is_alive() and not errors, errors
+
+                # Exercise standalone CLI, including required source and size
+                # failures; each preserves the old published bytes and staging.
+                argv = [cli, 'create', '--state-root', str(state), '--name', 't3', '--source', str(source),
+                    '--user', pwd.getpwuid(os.getuid()).pw_name, '--max-bytes', str(config['maxBytes']),
+                    '--timeout-seconds', str(config['timeoutSeconds'])]
+                run(argv)
+                coherent(ready)
+                lastgood = ready.read_bytes()
+                slot = state / 'staging' / 't3'
+                slot.mkdir(mode=0o700)
+                held_file = slot / 'keep-existing-slot'
+                held_file.write_text('another attempt owns this slot')
+                assert run(argv, check=False).returncode != 0
+                assert held_file.read_text() == 'another attempt owns this slot'
+                assert ready.read_bytes() == lastgood
+                held_file.unlink()
+                slot.rmdir()
+                alias = userdata / 'source-alias.sqlite'
+                alias.symlink_to(source)
+                invalid = userdata / 'invalid.sqlite'
+                invalid.write_bytes(b'not a SQLite database' * 100)
+                for broken in [argv[:argv.index('--source') + 1] + [str(userdata / 'missing.sqlite')] + argv[argv.index('--source') + 2:],
+                               argv[:argv.index('--source') + 1] + [str(alias)] + argv[argv.index('--source') + 2:],
+                               argv[:argv.index('--source') + 1] + [str(invalid)] + argv[argv.index('--source') + 2:],
+                               argv[:argv.index('--max-bytes') + 1] + ['1'] + argv[argv.index('--max-bytes') + 2:]]:
+                    assert run(broken, check=False).returncode != 0
+                    assert ready.read_bytes() == lastgood
+                    assert not list((state / 'staging').glob('**/*.sqlite'))
+                alias.unlink()
+                invalid.unlink()
+                # A last-good symlink cannot redirect publication or modify its
+                # target. Restore only this fixture's exact saved regular file.
+                saved = ready.with_name('saved-lastgood')
+                ready.rename(saved)
+                target = dest / 'symlink-target'
+                target.write_text('keep target intact')
+                ready.symlink_to(target)
+                try:
+                    assert run(argv, check=False).returncode != 0
+                    assert ready.is_symlink() and target.read_text() == 'keep target intact'
+                    assert saved.read_bytes() == lastgood
+                finally:
+                    ready.unlink()
+                    saved.rename(ready)
+                # Rollback-journal EXCLUSIVE lock forces a genuine reader wait;
+                # the real worker must fail within its configured small budget.
+                locked = userdata / 'locked.sqlite'
+                locker = initialize(locked)
+                locker.execute('PRAGMA journal_mode=DELETE')
+                locker.execute('BEGIN EXCLUSIVE')
+                bounded = argv.copy()
+                bounded[bounded.index('--source') + 1] = str(locked)
+                bounded[bounded.index('--timeout-seconds') + 1] = '1'
+                begin = time.monotonic()
+                try:
+                    assert run(bounded, check=False).returncode != 0
+                    assert time.monotonic() - begin < 8, 'worker deadline did not bound lock wait'
+                    assert ready.read_bytes() == lastgood
+                    assert not list((state / 'staging').glob('**/*.sqlite'))
+                finally:
+                    locker.rollback()
+                    locker.close()
+                    locked.unlink()
+                # Real failed producer through rendered call site must stop
+                # before the next archive step. A wrapper swallowing its error
+                # is an independent wiring mutation, required to be detected.
+                failed = script.replace(str(source), str(userdata / 'missing.sqlite'))
+                downstream = dest / 'borg-create-started'
+                require_failure(failed, downstream)
+                assert ready.read_bytes() == lastgood
+                swallow = dest / 'swallow-snapshot-error'
+                swallow.write_text('#!${pkgs.bash}/bin/bash\n' + shlex.quote(cli) + ' "$@" || true\n')
+                swallow.chmod(0o700)
+                must_detect(lambda: require_failure(failed.replace(cli, str(swallow)), downstream), 'producer failure swallowed')
+                assert ready.read_bytes() == lastgood
+
+                # Local disposable Borg repository: use actual evaluated exact
+                # excludes and source coverage, preserving other userdata.
+                (userdata / 'pairing-fixture').write_text('synthetic credential placeholder')
+                staging = state / 'staging' / 'not-an-archive-input'
+                staging.write_text('partial')
+                assert any(pathlib.PurePosixPath(spec['stateRoot'] + '/ready').is_relative_to(p) for p in spec['paths'])
+                assert str(pathlib.PurePosixPath(config['source']).parent) in spec['paths']
+                def remap(value):
+                    return value.replace(spec['stateRoot'], str(state)).replace(config['source'], str(source))
+                excludes = [remap(value) for value in spec['exclude']]
+                env = {k: v for k, v in os.environ.items() if not k.startswith('BORG_')}
+                env.update(BORG_CACHE_DIR=str(dest / 'cache'), BORG_CONFIG_DIR=str(dest / 'config'),
+                    BORG_SECURITY_DIR=str(dest / 'security'), BORG_CHECK_I_KNOW_WHAT_I_AM_DOING='YES')
+                repo = dest / 'repo'
+                run(['borg', 'init', '--encryption=none', str(repo)], env=env)
+                def archive(name, patterns):
+                    args = ['borg', 'create', '--compression', 'none']
+                    for pattern in patterns:
+                        args += ['--exclude', pattern]
+                    run([*args, str(repo) + '::' + name, str(state), str(userdata)], env=env)
+                    extracted = dest / ('extract-' + name)
+                    extracted.mkdir()
+                    run(['borg', 'extract', str(repo) + '::' + name], cwd=extracted, env=env)
+                    return extracted
+                def verify_archive(extracted):
+                    copied = extracted / str(state).lstrip('/')
+                    restored_user = extracted / str(userdata).lstrip('/')
+                    coherent(copied / 'ready' / 't3.sqlite')
+                    assert (restored_user / 'pairing-fixture').read_text() == 'synthetic credential placeholder'
+                    assert not any((restored_user / ('state.sqlite' + suffix)).exists() for suffix in ("", '-wal', '-shm')), 'raw SQLite entered archive'
+                    assert not (copied / 'staging' / 'not-an-archive-input').exists(), 'staging entered archive'
+                verify_archive(archive('valid', excludes))
+                raw_patterns = [value for value in excludes if str(source) in value]
+                assert len(raw_patterns) == 3, raw_patterns
+                must_detect(lambda: verify_archive(archive('raw-exclusion-removed', [value for value in excludes if value not in raw_patterns])), 'raw SQLite exclusions removed')
+                db.close()
+                print(json.dumps({'host': spec['host'], 'state': 'passed',
+                    'snapshotSha256': hashlib.sha256(ready.read_bytes()).hexdigest(),
+                    'checks': ['postgresql-publication-retention-failure', 'rendered-hook-sqlite-publication',
+                        'raw-wal-mixed-transaction-red', 'concurrent-writer-snapshot', 'standalone-cli',
+                        'existing-slot-held', 'source-symlink-missing-invalid-size-held',
+                        'lastgood-symlink-held', 'real-lock-deadline', 'lastgood-preserved',
+                        'failed-hook-stops-downstream', 'local-borg-archive-extract',
+                        'non-database-userdata-preserved', 'raw-and-staging-excluded'],
+                    'mutationsDetected': ['snapshot-caller-removed', 'producer-failure-swallowed',
+                        'raw-sqlite-exclusions-removed']}), flush=True)
             fake = root / "borg"
             fake.write_text("#!${pkgs.bash}/bin/bash\nexit 42\n")
             fake.chmod(0o700)

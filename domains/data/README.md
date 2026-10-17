@@ -20,13 +20,14 @@ data/
 ├── README.md       # This file
 ├── databases/      # PostgreSQL / Redis management
 ├── backup/         # Rsync backup automation (retired on server; borg is primary)
-├── borg/           # Borg backup job and atomic PostgreSQL snapshots: local or SSH remote (hwc.data.borg.*)
+├── borg/           # Borg jobs and atomic PostgreSQL/SQLite snapshots: local or SSH remote (hwc.data.borg.*)
 ├── storage/        # Storage mount management
 ├── syncthing/      # Bidirectional file sync over Tailscale
 └── couchdb/        # CouchDB for Obsidian LiveSync
 ```
 
 ## Changelog
+- 2026-10-16: Borg creates bounded online SQLite snapshots as the application user, validates private copies and publishes atomically. The base role supplies T3 once; raw database/WAL/SHM paths are excluded while remaining userdata stays covered.
 - 2026-09-26: Machine references follow machines/home; the home job pins its historical Borg archive/prune identity.
 - 2026-09-26: Centralize version-matched PostgreSQL dumps with atomic publication and failure propagation. Restore helpers preserve failure status; jobs respect repository locks. Local dump retention excludes nested migration archives.
 - 2026-09-25: Retired `cloudbeaver/` (service-split audit: 0 requests in the 9 days of vhost logs; Eric: no longer used). Workspace archived to hwc-server `/var/lib/backups/service-split-wave3/cloudbeaver.tar.zst` before deletion.

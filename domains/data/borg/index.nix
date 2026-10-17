@@ -16,6 +16,25 @@ let
   cfg = config.hwc.data.borg;
   paths = config.hwc.paths;
   enabled = cfg.enable;
+  snapshots = lib.mapAttrsToList (name: value: value // { inherit name; }) cfg.sqliteSnapshots;
+  snapshotRoot = "${paths.state}/borg-sqlite";
+  snapshotReady = "${snapshotRoot}/ready";
+  snapshotPackage = pkgs.writeShellScriptBin "borg-sqlite-snapshot" ''
+    export PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.util-linux pkgs.python3 ]}
+    exec ${pkgs.python3}/bin/python3 ${./sqlite-snapshot.py} "$@"
+  '';
+  sqliteBackup = lib.concatMapStrings (value: ''
+    ${snapshotPackage}/bin/borg-sqlite-snapshot create \
+      --state-root ${lib.escapeShellArg snapshotRoot} --name ${lib.escapeShellArg value.name} \
+      --source ${lib.escapeShellArg value.source} --user ${lib.escapeShellArg value.user} \
+      --max-bytes ${toString value.maxBytes} --timeout-seconds ${toString value.timeoutSeconds} || exit "$?"
+  '') snapshots;
+  snapshotExcludes = lib.concatMap (value: map (suffix: "pf:${value.source}${suffix}")
+    [ "" "-wal" "-shm" ]) snapshots
+    ++ lib.optional (snapshots != []) "pp:${snapshotRoot}/staging";
+  snapshotSources = lib.optional (snapshots != [] && !(lib.any
+    (source: source == snapshotReady || lib.hasPrefix "${lib.removeSuffix "/" source}/" snapshotReady)
+    cfg.sources)) snapshotReady;
 
   # Job name for systemd service
   jobName = "hwc-backup";
@@ -127,6 +146,19 @@ in
         ".local/share/Trash"
       ];
       description = "Patterns to exclude from backup";
+    };
+
+    sqliteSnapshots = lib.mkOption {
+      default = {};
+      description = "CRITICAL SQLite online snapshots; one last-good file and one bounded staging slot per name. Failure aborts Borg. Restore ready/<name>.sqlite, not raw live database files.";
+      type = lib.types.attrsOf (lib.types.submodule {
+        options = {
+          source = lib.mkOption { type = lib.types.str; description = "Absolute physical SQLite source path, owned by user"; };
+          user = lib.mkOption { type = lib.types.str; description = "Existing application user for the readonly source worker"; };
+          maxBytes = lib.mkOption { type = lib.types.ints.between 1 68719476736; default = 8589934592; description = "Maximum bytes per snapshot (default 8 GiB)"; };
+          timeoutSeconds = lib.mkOption { type = lib.types.ints.between 1 3600; default = 600; description = "Deadline for snapshot and validation"; };
+        };
+      });
     };
 
     #==========================================================================
@@ -309,13 +341,13 @@ in
         sudo systemctl start borgbackup-job-${jobName}.service
         echo "Check status: journalctl -fu borgbackup-job-${jobName}.service"
       '')
-    ];
+    ] ++ lib.optional (snapshots != []) snapshotPackage;
 
     # Borg backup job using NixOS module
     services.borgbackup.jobs.${jobName} = {
       # What to back up
-      paths = cfg.sources;
-      exclude = cfg.excludePatterns;
+      paths = cfg.sources ++ snapshotSources;
+      exclude = cfg.excludePatterns ++ snapshotExcludes;
 
       # Repository (local path or SSH URL)
       repo = repoUrl;
@@ -336,7 +368,7 @@ in
       startAt = []; # We use our own timer for more control
 
       # Pre-backup hook (database dumps, etc.)
-      preHook = postgresBackup + lib.optionalString (cfg.preBackupScript != null) cfg.preBackupScript;
+      preHook = postgresBackup + sqliteBackup + lib.optionalString (cfg.preBackupScript != null) cfg.preBackupScript;
 
       # Post-backup hook
       postHook = lib.mkIf (cfg.postBackupScript != null) cfg.postBackupScript;
@@ -361,7 +393,8 @@ in
       # Read-write paths for pre/post hooks. A remote repo is not a path.
       readWritePaths = [
         "/var/lib/backups"
-      ] ++ lib.optional (!cfg.repo.remote.enable) cfg.repo.path;
+      ] ++ lib.optional (snapshots != []) snapshotRoot
+        ++ lib.optional (!cfg.repo.remote.enable) cfg.repo.path;
     };
 
     # Custom timer with random delay support
@@ -427,12 +460,25 @@ in
     # Ensure backup directory structure exists
     systemd.tmpfiles.rules = [
       "d /var/lib/backups 0750 root root -"
+    ] ++ lib.optionals (snapshots != []) [
+      "d ${snapshotRoot} 0711 root root -"
+      "d ${snapshotRoot}/staging 0711 root root -"
+      "d ${snapshotReady} 0700 root root -"
     ];
 
     #==========================================================================
     # VALIDATION
     #==========================================================================
     assertions = [
+      {
+        assertion = builtins.length snapshots <= 16 && lib.all (value:
+          builtins.match "[a-z][a-z0-9-]{0,31}" value.name != null
+          && lib.hasPrefix "/" value.source
+          && !(lib.hasPrefix "${snapshotRoot}/" value.source)
+          && builtins.hasAttr value.user config.users.users) snapshots
+          && builtins.length (lib.unique (map (value: value.source) snapshots)) == builtins.length snapshots;
+        message = "Borg SQLite snapshots need at most 16 unique absolute sources outside staging, safe names and existing application users";
+      }
       {
         assertion = cfg.sources != [];
         message = "hwc.data.borg.sources must not be empty";

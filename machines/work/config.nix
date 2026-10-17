@@ -481,10 +481,7 @@
       "/var/lib/radicale"    # CalDAV/CardDAV collections (CRITICAL)
       "/var/lib/estimator"   # built estimator bundle (REPLACEABLE, small)
       "/opt/business"        # CMS app, website repo working tree
-      # T3 Code state (CRITICAL): event-sourced SQLite store + this host's own
-      # signing key and pairing credentials. Copied live; see the same note on
-      # hwc-server. caches/ and worktrees/ are replaceable and not listed.
-      "/home/eric/.t3/userdata"
+      # The base role adds T3 userdata and its consistent SQLite snapshot.
     ];
     excludePatterns = [
       ".cache"
