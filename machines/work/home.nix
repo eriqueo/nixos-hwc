@@ -50,7 +50,7 @@
     enable = true;
     lifecycle.intakeEnabled = true;
     lifecycle.dispatchEnabled = true;
-    # Installed mixed Remove/Keep native/helper acceptance passed26 checks.
-    lifecycle.close.enable = true;
+    # Hold new Close until descriptor-free mapped-writer guard proof passes.
+    lifecycle.close.enable = false;
   };
 }

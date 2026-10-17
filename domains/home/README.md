@@ -18,7 +18,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
-hwc-work enables capability3 Close after installed mixed Remove/Keep acceptance. One bulk confirmation binds each of up to4 ordinary direct worktrees to Remove or Keep with a reason. Exact capability1/2 readers retain their original limits and removal evidence; other hosts stay disabled.
+Close is temporarily disabled on hwc-work after an actual descriptor-free mapped writer passed the process guard. Re-enable only after its repair passes source, owning-effect and installed guard tests. Capability1/2/3 histories remain readable; all hosts keep Close disabled during this repair.
 
 `apps/agent-harness/` declares a default-disabled canonical Close lane with an explicitly cleared inactive runtime port and immutable active runtime ports, owning cleanup receipts and a pending status until required evidence is complete.
 
@@ -122,6 +122,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-16: Disable new Close while repairing a confirmed memory-mapping gap in current-user process inspection; preserve existing lifecycle readers and data.
 
 - 2026-10-16: Enable completed-retention Close on hwc-work after26 actual installed native/helper checks, including kept identity/bytes and exact fixture retirement.
 

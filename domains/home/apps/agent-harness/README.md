@@ -12,7 +12,7 @@ source and one mutable state store.
 
 ## Structure
 
-hwc-work enables capability3 Close after installed mixed Remove/Keep acceptance. One bulk confirmation binds each of up to4 ordinary direct worktrees to Remove or Keep with a reason. Exact capability1/2 readers retain their original limits and removal evidence; other hosts stay disabled.
+Close is temporarily disabled on hwc-work after an actual descriptor-free mapped writer passed the process guard. Re-enable only after its repair passes source, owning-effect and installed guard tests. Capability1/2/3 histories remain readable; all hosts keep Close disabled during this repair.
 
 `tracker.lifecycle.close` defaults off and clears the relay runtime port while disabled. Its immutable runtime metadata captures the static revision, workspace/brain roots and explicit ordinary profile. The relay binds the installed ws path separately to avoid a derivation cycle. The ws runtime includes Bash/systemd; hub and relay restart on Close protocol changes. Canonical Close keeps pending evidence visible and accepts Closed only after the note, every authorized removed-or-kept disposition and both worker shutdown proofs. Keep needs a human reason and fresh matching physical identity, clean state, preservation and process checks. Unsupported lanes remain held.
 
@@ -93,6 +93,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-10-16: Disable new Close while repairing a confirmed memory-mapping gap in current-user process inspection; preserve existing lifecycle readers and data.
 
 - 2026-10-16: Enable completed-retention Close on hwc-work after26 actual installed native/helper checks, including kept identity/bytes and exact fixture retirement.
 
