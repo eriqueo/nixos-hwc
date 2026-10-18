@@ -190,10 +190,20 @@ let
       pkgs.coreutils
       pkgs.curl
       pkgs.systemd
+      # Upstream's desktop build compiles a libsecret browser-import helper
+      # (apps/desktop/scripts/build-browser-secret.mjs: pkg-config + cc).
+      pkgs.pkg-config
+      pkgs.stdenv.cc
     ];
     text = ''
       REPO=${lib.escapeShellArg cfg.repo}
       cd "$REPO"
+      export PKG_CONFIG_PATH=${
+        lib.makeSearchPath "lib/pkgconfig" [
+          pkgs.libsecret.dev
+          pkgs.glib.dev
+        ]
+      }
 
       git pull --ff-only
       # Electron is a desktop-only dependency and its npm binary cannot run on
