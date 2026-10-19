@@ -2919,6 +2919,29 @@
         touch "$out"
       '';
 
+      t3-update-gate = let
+        root = "/tmp/t3-update-gate";
+        fixture = (self.nixosConfigurations.hwc-work.extendModules {
+          modules = [ ({ lib, ... }: {
+            home-manager.users.eric = {
+              home.homeDirectory = lib.mkForce "${root}/home";
+              hwc.home.apps.t3code.repo = lib.mkForce "${root}/primary";
+              hwc.home.apps.agent-harness = {
+                nixosRepo = lib.mkForce "${root}/nixos";
+                workspaceRoot = lib.mkForce "${root}/workspace";
+              };
+            };
+          }) ];
+        }).config.home-manager.users.eric;
+        updater = builtins.head (builtins.filter (p: (p.name or "") == "t3-update") fixture.home.packages);
+        python = pkgs.python3.withPackages (p: [ p.jsonschema ]);
+      in pkgs.runCommand "t3-update-gate" { nativeBuildInputs = [ python pkgs.git ]; } ''
+        python3 -B ${./domains/home/apps/t3code/test_update_gate.py} \
+          --updater ${updater}/bin/t3-update --root ${root}
+        python3 -B ${inputs.agent-harness}/tracker/t3_release.test.py
+        touch "$out"
+      '';
+
       t3-switch-policy = let
         targets = [
           { host = "hwc-home"; unit = "t3-serve"; }

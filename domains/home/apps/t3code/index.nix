@@ -34,6 +34,7 @@
   config,
   lib,
   pkgs,
+  inputs,
   ...
 }:
 let
@@ -179,11 +180,54 @@ let
     '';
   };
 
-  # One command for the whole update, because the three steps are not
-  # independent: the server bundle embeds the web client, so pulling without
-  # rebuilding leaves source, bundle and client assets on different revisions.
+  # The harness owns release state and native verification. This module binds
+  # its immutable command ports; it never pulls or rebuilds the serving tree.
+  releaseContract = builtins.fromJSON (
+    builtins.readFile "${inputs.agent-harness}/tracker/t3-release-contract.json"
+  );
+  harnessCfg = config.hwc.home.apps.agent-harness;
+  releasePython = pkgs.python3.withPackages (p: [ p.jsonschema ]);
+  releaseRuntime = pkgs.writeText "t3-update-runtime.json" (builtins.toJSON {
+    schemaVersion = releaseContract.runtimeVersion;
+    primary = cfg.repo;
+    home = config.home.homeDirectory;
+    userdata = "${config.home.homeDirectory}/.t3/userdata";
+    serviceUnit = if cfg.serve.enable then "t3-serve.service" else "t3code.service";
+    nixosRoot = harnessCfg.nixosRepo;
+    harnessRoot = "/etc/agent-harness/tracker";
+    harnessSource = harnessCfg.editableSource;
+    manifest = "/etc/agent-harness-manifest.json";
+    systemLink = "/run/current-system";
+    workspaceRoot = harnessCfg.workspaceRoot;
+    launcher = lib.getExe (if cfg.serve.enable then serveLauncher else launcher);
+    python = lib.getExe releasePython;
+    node = lib.getExe pkgs.nodejs;
+    headless = cfg.serve.enable;
+    closeEnabled = harnessCfg.tracker.lifecycle.close.enable;
+    workerProfile = harnessCfg.tracker.lifecycle.close.profile;
+    buildCommands = [
+      {
+        argv = [ "npx" "--yes" "pnpm@${cfg.pnpmVersion}" "install" "--frozen-lockfile" "--config.confirmModulesPurge=false" ];
+        environment = { };
+      }
+      {
+        argv = [ "npx" "--yes" "pnpm@${cfg.pnpmVersion}" "-r" "rebuild" "node-pty" ];
+        environment.npm_config_build_from_source = "true";
+      }
+      {
+        argv = [ "npx" "--yes" "pnpm@${cfg.pnpmVersion}" ]
+          ++ (if cfg.serve.enable then [ "exec" "vp" "run" "--filter" "t3" "build" ] else [ "build" ]);
+        environment = { };
+      }
+    ];
+    buildEnvironment = {
+      ELECTRON_SKIP_BINARY_DOWNLOAD = "1";
+      PKG_CONFIG_PATH = lib.makeSearchPath "lib/pkgconfig" [ pkgs.libsecret.dev pkgs.glib.dev ];
+    };
+  });
   updater = pkgs.writeShellApplication {
     name = "t3-update";
+    passthru = { inherit releaseRuntime; };
     runtimeInputs = [
       pkgs.nodejs
       pkgs.git
@@ -195,45 +239,12 @@ let
       pkgs.pkg-config
       pkgs.stdenv.cc
       # node-gyp, for the node-pty source build below.
-      pkgs.python3
+      releasePython
       pkgs.gnumake
     ];
     text = ''
-      REPO=${lib.escapeShellArg cfg.repo}
-      cd "$REPO"
-      export PKG_CONFIG_PATH=${
-        lib.makeSearchPath "lib/pkgconfig" [
-          pkgs.libsecret.dev
-          pkgs.glib.dev
-        ]
-      }
-
-      git pull --ff-only
-      # Electron is a desktop-only dependency and its npm binary cannot run on
-      # NixOS anyway; skipping the download saves ~200MB per install.
-      export ELECTRON_SKIP_BINARY_DOWNLOAD=1
-      # t3-update runs without a TTY (ssh, units), where pnpm aborts instead of
-      # asking to purge a node_modules laid out by an older lockfile.
-      npx --yes pnpm@${cfg.pnpmVersion} install --frozen-lockfile \
-        --config.confirmModulesPurge=false
-      # node-pty's linux-x64 prebuild needs libstdc++ from an FHS path, which
-      # Electron's process does not provide on NixOS, so the desktop backend
-      # dies at startup. A local build gets a Nix RUNPATH.
-      npm_config_build_from_source=true \
-        npx --yes pnpm@${cfg.pnpmVersion} -r rebuild node-pty
-      ${
-        if cfg.serve.enable then
-          "npx --yes pnpm@${cfg.pnpmVersion} exec vp run --filter t3 build"
-        else
-          "npx --yes pnpm@${cfg.pnpmVersion} build"
-      }
-
-      echo "built $(git rev-parse --short HEAD)"
-
-      ${lib.optionalString cfg.serve.enable ''
-        systemctl --user restart t3-serve.service
-        systemctl --user --no-pager --lines=0 status t3-serve.service
-      ''}
+      exec python3 ${inputs.agent-harness}/tracker/t3_release.py \
+        --runtime-config ${releaseRuntime} "$@"
     '';
   };
 
