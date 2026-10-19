@@ -114,10 +114,20 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 - `firefly-cron.timer` — daily 03:10 hit on `/api/v1/cron/<token>` (recurring transactions, bill warnings, auto-budgets fire nowhere without this)
 - `firefly-digest.timer` — daily 07:15 finance digest (balances, bills due 7d, yesterday's transactions) → hwc-notify `topic=finance` → #hwc-alerts. Skips with a journal note until a PAT exists at `/run/agenix/firefly-pat` (drop `firefly-pat.age` in `domains/secrets/parts/services/` to arm it).
 - `firefly-explorer.socket` — `/run/firefly-explorer.sock`, `root:root` mode `0600`; only root-run Caddy can connect.
-- `firefly-explorer.service` — immutable explorer package; validates its token, Firefly account, UI assets, and tailscaled socket before serving. Every API request is authorized with Tailscale WhoIs. Split groups remain read-only; writes are limited to existing category/expense-account ids and existing tags.
+- `firefly-explorer.service` — a bounded `ExecStartPre` polls `firefly`'s internal
+  port for up to 180 s before starting (podman-firefly reports active before PHP
+  listens), then fails loudly; immutable explorer package; validates its token, Firefly account, UI assets, and tailscaled socket before serving. Every API request is authorized with Tailscale WhoIs. Split groups remain read-only; writes are limited to existing category/expense-account ids and existing tags.
 
 ## Changelog
 
+- 2026-09-25: `firefly-explorer.service` gained a bounded `ExecStartPre` that waits
+  up to 180 s (36 × 5 s curl) for Firefly to answer before starting, then fails
+  loudly. The explorer exits when its startup check cannot reach Firefly, and
+  `podman-firefly` reports active before PHP listens — its first start on hwc-work
+  lost that race and would have at every boot (`a98d11eb`).
+- 2026-09-25: `firefly-digest`'s notify URL now derives from
+  `hwc.notifications.notify.url` instead of a hardcoded `http://127.0.0.1:11600`;
+  the hwc-notify dispatcher moved to hwc-work in service-split wave 3 (`2fdea699`).
 - 2026-09-21: Pinned Explorer `0605857`: serve current HTML without conditional caching, since Nix-normalized mtimes can otherwise return stale 304 responses and reference removed JavaScript builds. Static asset caching, Tailscale API checks, and finance data are unchanged.
 - 2026-09-16: Pinned Firefly Explorer fix `90a8a587`: tailscaled LocalAPI requires `Host: local-tailscaled.sock` even over its Unix socket. The original package used `localhost`, so the deployed authorization boundary failed closed with 403 for every API request. A Unix-socket regression test now watches the exact Host requirement.
 - 2026-09-16: Added the Workbench Finance recurring-payment explorer from the revision-locked private `pnc-statement-pipeline` flake. The default report scans Firefly history from 2019-08-19; date controls filter visible occurrences without narrowing cadence/status analysis. Caddy reaches it only through a root-owned `0600` Unix socket, API reads require the configured Tailscale identity, and exact-fingerprint writes are limited to one journal's existing category, expense account, or tags. Added a dedicated encrypted PAT instead of sharing the digest token.
