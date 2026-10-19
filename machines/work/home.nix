@@ -52,5 +52,11 @@
     lifecycle.dispatchEnabled = true;
     # Installed capability4 scratch Close passed36 native/helper recovery checks.
     lifecycle.close.enable = true;
+    # Protocol2 Codex sessions are shared. Close requires an owned per-thread
+    # process so shutdown can be proved before any workspace cleanup.
+    lifecycle.close.profile = {
+      instanceId = "claudeAgent";
+      model = "claude-sonnet-5-5";
+    };
   };
 }
