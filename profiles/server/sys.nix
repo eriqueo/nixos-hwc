@@ -111,6 +111,10 @@
   # Server CLI package set
   hwc.system.core.packages.server.enable = true;
 
+  # Headless agent browsers need the same foreign-binary libraries as GUI
+  # browsers. Reuse the core-owned bundle; T3 keeps Chromium's sandbox enabled.
+  hwc.system.core.nixld.guiLibs.enable = lib.mkDefault true;
+
   # Container runtime — Podman only, Docker force-disabled
   virtualisation = {
     docker.enable = lib.mkForce false;
