@@ -41,6 +41,15 @@ in {
           # MaxStartups "10:30:60" throttles parallel unauth’d connections
           MaxStartups = "10:30:60";
         };
+        # Tailnet peers may open local forwards (`ssh -L`), so a dev server on one
+        # host can be viewed as `localhost` from another — Firebase sign-in and
+        # browser geolocation only work on localhost or HTTPS. Remote forwards
+        # (`-R`) and every non-tailnet address stay off. NixOS appends
+        # extraConfig after the global settings, where a Match block must sit.
+        extraConfig = ''
+          Match Address 100.64.0.0/10,fd7a:115c:a1e0::/48
+            AllowTcpForwarding local
+        '';
       };
     }
 
