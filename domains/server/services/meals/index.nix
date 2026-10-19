@@ -13,7 +13,8 @@ let
     baseUrl = cfg.url;
     groceriesUrl = "https://todo.${domain}/groceries";
     areas = config.hwc.business.workbench.registry;
-    converter = { inherit (config.hwc.server.ai.dx2) baseUrl model apiKeyFile; };
+    converter = { inherit (config.hwc.server.ai.dx2) baseUrl model apiKeyFile; modelIdentity = cfg.cookingModelIdentity; };
+    cookingPromotion = cfg.cookingPromotion;
     gatewayUrl = "http://127.0.0.1:${toString config.hwc.system.mcp.port}/mcp";
   });
   command = "${app}/bin/hwc-meals --config ${settings}";
@@ -37,6 +38,8 @@ in {
     enable = lib.mkEnableOption "reviewed recipes, dinners and shared groceries";
     port = lib.mkOption { type = lib.types.port; default = 8425; description = "Loopback Meals HTTP port."; };
     writesEnabled = lib.mkOption { type = lib.types.bool; default = false; description = "Allow reviewed effects; keep false during restore and initial acceptance."; };
+    cookingModelIdentity = lib.mkOption { type = lib.types.str; default = "unverified"; description = "Immutable provider model identity for recipe evaluation. A generic alias cannot enable schema-3 saving."; };
+    cookingPromotion = lib.mkOption { type = lib.types.nullOr (lib.types.attrsOf lib.types.anything); default = null; description = "Operator-owned evaluation receipt bound to the exact shipped engine, prompt and model. Null keeps the new cooking engine in preview."; };
     url = lib.mkOption { type = lib.types.str; readOnly = true; default = "https://meals.${domain}"; description = "Canonical planner URL."; };
     collections = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule { options = {

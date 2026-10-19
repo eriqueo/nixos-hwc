@@ -9,7 +9,7 @@
 
 ## Structure
 
-`services/meals/` deploys the independent Meals package, exact CalDAV targets, CRITICAL same-user SQLite backup and seven-day preview cleanup. Recipe conversion consumes the shared DX2 endpoint facts and existing credential path; only reviewed diagrams enter the recipe store. Wall Home/Week reserve dinner rows and provide tap/QR access to the persistent Meals-owned cooking page through a bounded GET-only loopback transport; Calendar routes managed edits to Meals.
+`services/meals/` deploys the independent Meals package, exact CalDAV targets, CRITICAL same-user SQLite backup and seven-day preview cleanup. Recipe conversion consumes the shared DX2 endpoint facts and existing credential path; only reviewed diagrams enter the recipe store. The schema-3 candidate has bounded cancellable conversion jobs and stays in preview unless an operator-owned quality receipt matches the shipped engine, prompt and immutable model identity. Wall Home/Week reserve dinner rows and provide tap/QR access to the persistent Meals-owned cooking page through a bounded GET-only loopback transport; Calendar routes managed edits to Meals.
 
 Calendar phone writes consume the gateway's sync receipt; they preserve the saved local result and show a sync failure without another wait.
 
@@ -75,6 +75,8 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+
+- 2026-10-19: Meals adds schema-3 readers and a preview cooking interpreter. `cookingModelIdentity` and `cookingPromotion` bind saving to measured release evidence; defaults keep its writer disabled. Unsaved conversion evidence uses the existing seven-day cleanup and saved provenance joins the CRITICAL SQLite backup.
 
 - 2026-10-16: Home/Week tablet clients add a reserved Tonight’s dinner tap/QR footer. The cooking route proxies only Meals read pages/assets/API with 16 request slots, three-second socket timeout and 256 KiB cap; existing rotation stays separate. Meals receives the host timezone for date selection.
 
