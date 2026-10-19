@@ -194,6 +194,9 @@ let
       # (apps/desktop/scripts/build-browser-secret.mjs: pkg-config + cc).
       pkgs.pkg-config
       pkgs.stdenv.cc
+      # node-gyp, for the node-pty source build below.
+      pkgs.python3
+      pkgs.gnumake
     ];
     text = ''
       REPO=${lib.escapeShellArg cfg.repo}
@@ -210,6 +213,11 @@ let
       # NixOS anyway; skipping the download saves ~200MB per install.
       export ELECTRON_SKIP_BINARY_DOWNLOAD=1
       npx --yes pnpm@${cfg.pnpmVersion} install --frozen-lockfile
+      # node-pty's linux-x64 prebuild needs libstdc++ from an FHS path, which
+      # Electron's process does not provide on NixOS, so the desktop backend
+      # dies at startup. A local build gets a Nix RUNPATH.
+      npm_config_build_from_source=true \
+        npx --yes pnpm@${cfg.pnpmVersion} -r rebuild node-pty
       ${
         if cfg.serve.enable then
           "npx --yes pnpm@${cfg.pnpmVersion} exec vp run --filter t3 build"

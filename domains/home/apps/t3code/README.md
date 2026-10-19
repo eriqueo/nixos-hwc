@@ -190,6 +190,8 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
+- 2026-10-19: `t3-update` rebuilds node-pty from source. Upstream's node-pty 1.2.0-beta.15 prebuild cannot find libstdc++ under Electron on NixOS, so the desktop backend crash-looped with `NodePtyModuleLoadError`. The local build gets a Nix RUNPATH.
+
 - 2026-10-17: `t3-update` provides `pkg-config`, a C compiler and libsecret/glib pkg-config paths, which upstream's desktop build needs for its browser-import helper. hwc-laptop takes Electron 44 from the locked `nixpkgs-tailscale` input, because the fork now follows upstream (orchestration protocol 2, required by the current iPhone app). hwc-work stays on the v1 fork until Review is ported.
 
 - 2026-10-16: Share the desktop keep-old policy with the headless service so implicit Home Manager switches preserve running agents. Check both rendered shapes and a missing-policy control; document deferred runtime changes and current consistent Borg recovery.
