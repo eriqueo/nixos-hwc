@@ -26,7 +26,9 @@ operator withdrawal. It removes only that intent from pending work, preserves
 uncertain effects and never contacts Proton. Fairness commits before provider reads.
 Uncertain command recovery has its own fair cursor and a ten-second ceiling,
 leaving time for unrelated queued work. Explicit baseline replacement requires
-a fresh fingerprint and uses the existing label owner for one message.
+a fresh fingerprint and uses the existing label owner for one message. Review
+guards and operation results contain uncertain labels within that Message-ID;
+other identities keep progressing under their shared leases.
 Classifier startup rebuilds event lookup indexes so retained history does not
 consume the command budget through repeated disposition scans.
 
@@ -154,6 +156,8 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-10-19: Scope explicit baseline review and its pending result to the target message, preserving unrelated uncertain receipts and physical leases.
 
 - 2026-10-19: Bound uncertain readback recovery and add exact, reviewed baseline label replacement without changing health ownership or warning policy.
 

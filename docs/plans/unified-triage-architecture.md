@@ -7,6 +7,12 @@ and compatibility retirement remain acceptance work; model State stays shadow.
 
 ## October 19 — bounded recovery and reviewed baseline labels
 
+Live follow-up: an actual-CLI regression showed that one uncertain label write
+blocked unrelated explicit reviews at account scope. Review guards and operation
+results now use the target Message-ID, while the shared owner still enforces all
+physical identity leases. Same-message uncertainty remains blocked. Reverting
+either the guard or pending-result integration fails the new regression.
+
 Eric approved investigating the open label and command cases. Q1 selects local
 reviewed labels for the 50 baseline copies recorded in the October 14 private
 snapshot. A separate changed-projection conflict remains protected. Current
