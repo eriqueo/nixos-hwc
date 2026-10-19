@@ -191,6 +191,7 @@ let
     schemaVersion = releaseContract.runtimeVersion;
     primary = cfg.repo;
     home = config.home.homeDirectory;
+    hubUrl = harnessCfg.tracker.url;
     userdata = "${config.home.homeDirectory}/.t3/userdata";
     serviceUnit = if cfg.serve.enable then "t3-serve.service" else "t3code.service";
     nixosRoot = harnessCfg.nixosRepo;

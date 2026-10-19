@@ -2950,29 +2950,42 @@
         ];
         units = map (target: let
           home = self.nixosConfigurations.${target.host}.config.home-manager.users.eric;
+          updater = builtins.head (builtins.filter (p: (p.name or "") == "t3-update") home.home.packages);
         in {
           inherit (target) host unit;
           policy = home.systemd.user.services.${target.unit}.Unit.X-SwitchMethod or null;
           file = home.home.file."${home.xdg.configHome}/systemd/user/${target.unit}.service".source;
+          # Schema inspection only; these paths are never executed by this fixture.
+          runtime = builtins.unsafeDiscardStringContext updater.releaseRuntime.drvAttrs.text;
         }) targets;
         fixtures = pkgs.writeText "t3-switch-policy.json" (builtins.toJSON units);
       in
       assert lib.assertMsg (lib.all (unit: unit.policy == "keep-old") units)
         "t3-switch-policy: an implicit home switch must preserve each running T3 shape";
-      pkgs.runCommand "t3-switch-policy" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-        python3 - ${fixtures} <<'PY'
-        import configparser, json, pathlib, sys
+      pkgs.runCommand "t3-switch-policy" {
+        nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.jsonschema ])) ];
+      } ''
+        python3 -B - ${fixtures} ${inputs.agent-harness}/tracker/t3_release.py <<'PY'
+        import configparser, importlib.util, json, pathlib, sys, tempfile
+        spec = importlib.util.spec_from_file_location('t3_release', sys.argv[2])
+        release = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(release)
         def keeps_active(text):
             unit = configparser.RawConfigParser(strict=False)
             unit.optionxform = str
             unit.read_string(text)
             return unit.get('Unit', 'X-SwitchMethod', fallback=None) == 'keep-old'
         for item in json.loads(pathlib.Path(sys.argv[1]).read_text()):
+            with tempfile.NamedTemporaryFile(mode='w+', suffix='.json') as runtime_file:
+                runtime_file.write(item['runtime']); runtime_file.flush()
+                runtime = release.load_runtime(pathlib.Path(runtime_file.name))
+            assert runtime['serviceUnit'] == item['unit'] + '.service', item['host']
+            assert runtime['headless'] == (item['unit'] == 't3-serve'), item['host']
             text = pathlib.Path(item['file']).read_text()
             assert keeps_active(text), item
             missing = '\n'.join(line for line in text.splitlines() if not line.startswith('X-SwitchMethod='))
             assert missing != text and not keeps_active(missing), 'missing-policy control escaped'
-            print(item['host'] + '/' + item['unit'] + ': rendered keep-old and removal control pass')
+            print(item['host'] + '/' + item['unit'] + ': runtime schema, rendered keep-old and removal control pass')
         PY
         touch "$out"
       '';

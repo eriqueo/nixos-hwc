@@ -179,7 +179,8 @@ queue. It verifies exact scope absence, keeps a private cold database copy and o
 artifacts, starts the tested build and fast-forwards source after health. It never
 restores the database. A healthy new runtime stays running if later checks fail.
 `--continue-thread THREAD_UUID` can wake the initiating thread after this operation.
-Receipts distinguish built, verified, queued, adopted and held states.
+Status reads the recorded receipt. Establish current runtime identity before
+reporting adoption; a historical receipt does not prove that the process still runs.
 
 No `hms` is needed for application promotion — launchers read the working tree at run time.
 Run `hms` only after changing `desktop.electronPackage`, `repo`, the desktop
@@ -210,7 +211,7 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
-- 2026-10-19: Replace the serving-tree pull/build/restart updater with the pinned staged release driver. Bind build/native/recovery receipts to installed inputs and refuse unsupported promotion shapes. Add a generated-caller regression using disposable Git and precise refusal codes.
+- 2026-10-19: Replace the serving-tree pull/build/restart updater with the pinned staged release driver. Bind build/native/recovery receipts and the lifecycle hub URL to installed inputs; refuse unsupported promotion shapes. Add a generated-caller regression using disposable Git and precise refusal codes.
 
 - 2026-10-19: Home, laptop and work now serve protocol 2 from fork commit `1b7362548`. Work retains Review; its tracker relay negotiates Review and Close capabilities. Authenticated HTTP/WebSocket reads and each host's largest legacy conversation pass live checks. Phone pairing and worker lifecycle use remain unverified.
 
