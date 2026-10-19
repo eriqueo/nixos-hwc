@@ -27,6 +27,10 @@ data/
 ```
 
 ## Changelog
+- 2026-10-19: Law 12 drift sweep — `couchdb/README.md` records the 2026-03-31 move
+  to the kebab-case `hwc.secrets.api."couchdb-admin-{username,password}"` keys, and
+  `databases/README.md` records the 2026-09-25 superuser declaration for the
+  primary PostgreSQL role. Documentation only.
 - 2026-10-16: Borg creates bounded online SQLite snapshots as the application user, validates private copies and publishes atomically. The base role supplies T3 once; raw database/WAL/SHM paths are excluded while remaining userdata stays covered.
 - 2026-09-26: Machine references follow machines/home; the home job pins its historical Borg archive/prune identity.
 - 2026-09-26: Centralize version-matched PostgreSQL dumps with atomic publication and failure propagation. Restore helpers preserve failure status; jobs respect repository locks. Local dump retention excludes nested migration archives.

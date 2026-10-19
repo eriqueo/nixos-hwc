@@ -70,6 +70,12 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-10-19: Law 12 drift sweep over this domain's child READMEs — `frigate/`
+  (exported Prometheus rules), `mousehole/` and `qbittorrent/` (the shared
+  `mkVpnAssertions` helper), `slskd/` (Networking and Service Dependencies
+  rewritten for the own-tunnel/forwarded-port design, plus its first changelog)
+  and `immich-container/` (header, namespace and Structure corrected from the
+  retired `domains/server/containers/immich` layout). Documentation only.
 - 2026-10-11/12: `youtube/` gained X (Twitter) capture in the transcripts service —
   posts and threads saved as Markdown, a login import plus headless capture adapter
   and TweetDetail parser, the thread/replies/author-replies modes, an end condition

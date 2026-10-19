@@ -124,6 +124,10 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
+- 2026-10-19: `parts/workflows/README.md` and
+  `parts/estimator-integration/README.md` refreshed in the Law 12 drift sweep
+  (08a's cursor paging documented; the estimator integration gained a Structure
+  block, a changelog and a correction to its dead app path). Documentation only.
 - 2026-10-07: `parts/workflows/08a-jt-data-provider.json` re-exported for the estimator
   fix: the bundle's retired webhook host corrected, authenticated JobTread page cursors
   followed so customer queries no longer stop at fifty records, stable draft edits

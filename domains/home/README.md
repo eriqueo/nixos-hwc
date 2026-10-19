@@ -137,6 +137,11 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-19: Law 12 drift sweep over this domain's child READMEs — `apps/`
+  (dead `aerc/`/`librewolf/` entries removed from its tree, t3code recorded),
+  `apps/proton-pass/` (narrowed tray-patch anchor) and `core/` (the
+  `gitWithPackCleanup` move and the repo-hooks exact git-dir match).
+  Documentation only.
 - 2026-10-19: Regenerated the "Applications (current modules)" list from
   `domains/home/apps/`. It had drifted badly — it claimed 52 modules when the
   directory holds 69, still listed `librewolf` (retired for `firefox`) and `n8n`,

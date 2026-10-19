@@ -152,6 +152,8 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-10-19: Law 12 drift sweep — `calendar/README.md` records the `meals` id
+  added to `radicaleCalendarIds` on 2026-10-16. Documentation only.
 - 2026-10-16: Sync the separate Meals calendar alongside Family, Work and Personal; managed dinner detail edits remain in the planner.
 
 - 2026-10-15: Lifecycle behaviours, slice 3 (agent/mail-labels/lifecycles.md). `classifier/` gains

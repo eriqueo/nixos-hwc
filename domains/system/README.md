@@ -75,6 +75,10 @@ domains/system/
 
 ## Changelog
 
+- 2026-10-19: Law 12 drift sweep — `mcp/README.md` records the `hwc_meals_caldav`
+  tool and the fixed calendar/task repeats, and `core/authentik/README.md` records
+  the declared database role that replaced its dead `postStart` script.
+  Documentation only.
 - 2026-10-16: Add scoped Meals CalDAV read/create/update/delete with conditional headers and exact UID readback; legacy task APIs remain unchanged.
 
 - 2026-10-14: MCP calendar creation supports repeat/until, with timed last dates inclusive through the end of that day. Tasks support versioned date-only fixed schedules, month/leap-date skipping, and ETag conditional completion that advances one occurrence without duplicating tasks. Legacy timed reminders retain their rules.

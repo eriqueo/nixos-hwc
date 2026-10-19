@@ -65,6 +65,13 @@ business/
 
 ## Changelog
 
+- 2026-10-19: Law 12 drift sweep across this domain's child READMEs —
+  `databases/`, `firefly/`, `paperless/` and `datax/fb-group-scraper/`. The first
+  three gained missing changelog entries (the 2026-08-28 Postgres role
+  declarations, the Firefly-explorer startup wait, the Paperless move to hwc-work
+  and its media-directory correction); fb-group-scraper's Usage/Options/Schema
+  sections were rewritten, having still documented a SQLite `store.mjs` layer the
+  code does not have. Documentation only.
 - 2026-10-16: Register Meals beside Calendar and Tasks in the shared Workbench area list.
 
 - 2026-10-12: workbench: `tasks` (route `todo`) and `calendar` (route `calendar`) join the area registry. Both are phone apps served by the wall-display process (`domains/server/services/wall-display/parts/apps.py`).
