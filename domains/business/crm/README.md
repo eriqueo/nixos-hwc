@@ -41,6 +41,7 @@ crm/
 | `.smtp.passwordSecretRef` | `proton-bridge-password` | agenix. |
 | `.jtGrantKeyRef` | `jobtread-grant-key` | Manual-lead JT create. |
 | `.preliminaryBudgets.enable` | false | New calculator jobs receive preliminary budgets with assumptions; proposals held for review. |
+| `.mailIndex.enable` | true | Contact mail comes from the local notmuch index (`HOME`, notmuch binary, `paths.user.mailSyncStatus`), not Proton Bridge (app D75). |
 | `.tick.enable` / `.tick.onCalendar` | true / hourly | Persistent timer. |
 | `.leadscoutIngest.enable` | true | lead_scout → funnel board ingest timer. |
 | `.leadscoutIngest.onCalendar` | `*:00/30` | Every 30 min, persistent. |
@@ -65,6 +66,7 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 (`machines/work/config.nix`).
 
 ## Changelog
+- **2026-10-19** — Pass the CRM the local mail index: `HOME`, the notmuch binary and the mail-sync status path (`mailIndex.enable`, default on). The CRM reads contact mail there instead of Proton Bridge (app D75). Sending still uses Bridge SMTP.
 - **2026-10-07** — Bind the existing estimator engine to a bounded automatic preliminary-budget worker on hwc-work. Job-scoped reservations, immutable plans and receipts use the existing CRM database backup. Historical and already-budgeted jobs remain unchanged; no customer proposal is created or sent.
 - **2026-10-05** — Share the existing Page token and Page ID with the CRM service for manual Messenger replies (app D66). Import keeps its narrow Page credential; Page-token rotation now restarts the service. CRITICAL send receipts share the existing CRM database backup.
 - **2026-10-05** — Declare the on-demand inquiry assistant in the existing CRM service. One worker, queue/day caps, tool-free Pi/DX2, explicit reviewed sends, and bounded shutdown. Its CRITICAL judgments and reviews share the CRM database backup. Enabled on hwc-work.

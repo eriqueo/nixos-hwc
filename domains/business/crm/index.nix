@@ -132,6 +132,14 @@ let
         )
       }"
     ''}
+    ${lib.optionalString cfg.mailIndex.enable ''
+      # hwc-crm D75: the email log, Emails tab and reply detection read the
+      # local notmuch index the mail domain syncs (mail-retriage precedent),
+      # not Proton Bridge. Its status file says how fresh the index is.
+      export HOME="${paths.user.home}"
+      export HWC_CRM_NOTMUCH_BIN="${pkgs.notmuch}/bin/notmuch"
+      export HWC_CRM_MAIL_SYNC_STATUS="${paths.user.mailSyncStatus}"
+    ''}
     ${lib.optionalString (cfg.calendar.enable && cfg.rolodex.enable) ''
       export HWC_CRM_CARDDAV_USER="${cfg.rolodex.user}"
       export HWC_CRM_CARDDAV_PASSWORD_FILE="/run/hwc-crm/carddav-pw"
@@ -360,6 +368,16 @@ in
     statePath = lib.mkOption {
       type = lib.types.str;
       default = "${paths.state}/crm";
+    };
+
+    mailIndex.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Read contact mail from the local notmuch index (hwc-crm D75).
+        Needs the mail domain's maildir and notmuch config for cfg.user on
+        this host. Off: the CRM shows no email thread or log.
+      '';
     };
 
     user = lib.mkOption {
