@@ -353,15 +353,23 @@ let
   # any tailnet device opens it by name over HTTPS (sign-in and geolocation need
   # a secure origin). No firewall opening: only tailscale0, a trusted
   # interface, reaches these listeners. An idle port answers 502.
+  #
+  # Dev servers guard their dev-only resources (Next.js: allowedDevOrigins)
+  # against other origins, so the preview origin is presented as the dev
+  # server's own localhost origin. Only an Origin equal to this listener's is
+  # rewritten; the project's own config never has to name the tailnet.
   devPreview = config.hwc.networking.reverseProxy.devPreview;
-  renderDevPreview = port: ''
-    ${rootHost}:${toString (port + devPreview.portOffset)} {
+  renderDevPreview = port:
+    let httpsPort = toString (port + devPreview.portOffset);
+    in ''
+    ${rootHost}:${httpsPort} {
       tls {
         get_certificate tailscale
         protocols tls1.2 tls1.3
         alpn h2 http/1.1
       }
       reverse_proxy 127.0.0.1:${toString port} {
+        header_up Origin "^https://${lib.escapeRegex rootHost}:${httpsPort}$" "http://localhost:${toString port}"
         flush_interval -1
       }
     }
