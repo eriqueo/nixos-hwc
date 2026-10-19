@@ -21,10 +21,11 @@ design note below.
 index.nix   # hwc.home.apps.t3code — desktop launcher + Electron shim + desktop
             #   entry; pinned backend port and advertised host, so the phone's
             #   endpoint survives a reboot; headless t3-serve unit; t3-update
-            #   with unattended dependency install and node-pty source rebuild;
+            #   with a pinned staged build/native verification/recovery/promotion driver;
             #   DX2 handoff adapter using the pinned delegate helper and forwarding T3's result limit without
             #   allowing policy overrides; opt-in isolated Review native package
             #   and startup ports; shared keep-running switch policy; activation-time repo check
+test_update_gate.py # real generated updater refuses failed evidence before Git/build/restart effects
 README.md   # this file
 ```
 
@@ -148,21 +149,39 @@ There is no `parts/`. T3 itself runs from its source checkout. Review uses a sep
   remains covered. See the [Borg recovery owner](../../../data/borg/README.md)
   for the snapshot location, failure behavior and private restore checks.
 
-## Rebuilding after a pull
+## Staging an update
 
 ```
-t3-update
+t3-update build CANDIDATE PROJECT_SCRATCH
+t3-update verify CANDIDATE BUILD_RECEIPT PROJECT_SCRATCH
+t3-update recovery CANDIDATE PROJECT_SCRATCH
+t3-update check CANDIDATE NATIVE_RECEIPT RECOVERY_RECEIPT
+t3-update promote CANDIDATE NATIVE_RECEIPT RECOVERY_RECEIPT PROJECT_SCRATCH
+t3-update status OPERATION_RECEIPT
 ```
 
-One command, because the three steps are not independent: the server bundle
-**embeds** the web client (`apps/server/vite.config.ts` declares
-`dependsOn: ["@t3tools/web#build"]` and the build lands in
-`apps/server/dist/client`), so a pull without a rebuild leaves source, bundle and
-client assets on different revisions. On a `serve` machine `t3-update` also
-restarts `t3-serve.service`; on a `desktop` machine it does not touch the running
-app.
+Use a clean named candidate worktree in a registered project's checkout directory.
+`PROJECT_SCRATCH` is that project's existing workspace scratch directory. The
+candidate must share Git ownership with `repo` and be a fast-forward from its clean
+main branch. Build installs dependencies and rebuilds node-pty in the candidate.
+It leaves serving source and artifacts untouched. Every command prints its receipt.
 
-No `hms` is needed for a pull — the launchers read the working tree at run time.
+Native verification drives fresh resume, independent Review and ordinary Close on
+a new disposable checkout. Recovery copies old/new artifacts and tests actual
+OLD→NEW→OLD→NEW plus one keyed continuation. Evidence binds exact artifact hashes,
+host, installed harness, Nix revision, launcher and active generation. Changed inputs
+require fresh evidence. Failed or legacy receipts refuse before promotion effects.
+
+Promotion supports headless hosts with local Close enabled, unchanged dependencies
+and provider/adapter source changes. Other shapes refuse pending an appropriate
+recovery recipe. One bounded user unit waits for global idle and an empty lifecycle
+queue. It verifies exact scope absence, keeps a private cold database copy and old
+artifacts, starts the tested build and fast-forwards source after health. It never
+restores the database. A healthy new runtime stays running if later checks fail.
+`--continue-thread THREAD_UUID` can wake the initiating thread after this operation.
+Receipts distinguish built, verified, queued, adopted and held states.
+
+No `hms` is needed for application promotion — launchers read the working tree at run time.
 Run `hms` only after changing `desktop.electronPackage`, `repo`, the desktop
 entry, or anything under `serve.*`.
 
@@ -190,6 +209,8 @@ laptop, for ad-hoc headless use. That script is hand-installed and is not manage
 here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
+
+- 2026-10-19: Replace the serving-tree pull/build/restart updater with the pinned staged release driver. Bind build/native/recovery receipts to installed inputs and refuse unsupported promotion shapes. Add a generated-caller regression using disposable Git and precise refusal codes.
 
 - 2026-10-19: Home, laptop and work now serve protocol 2 from fork commit `1b7362548`. Work retains Review; its tracker relay negotiates Review and Close capabilities. Authenticated HTTP/WebSocket reads and each host's largest legacy conversation pass live checks. Phone pairing and worker lifecycle use remain unverified.
 
