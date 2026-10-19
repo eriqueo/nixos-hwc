@@ -42,6 +42,9 @@ domains/mail/calendar/
 
 ## Changelog
 
+- 2026-10-16: Added `meals` to `radicaleCalendarIds`, so khal/khalt see a fourth
+  Radicale collection alongside `work`, `family` and `personal` — the reviewed-meals
+  integration projects onto it (`2135f127`).
 - 2026-10-13: `radicale.extraCollections` defaults to the ids in `domains/server/services/radicale/parts/mirror-catalog.nix`, the same list the server mirrors from. The machine copies in laptop and work `home.nix` are deleted.
 - 2026-10-01: The `.ics` watcher also imports from `hwc.paths.user.calendarDrop` (private, unsynced) and moves those files to its `imported/`; event-scout hands events there instead of the synced Downloads folder. It now imports with the khalt fork's `khal`, as this module already documented, and its log names Radicale rather than iCloud.
 - 2026-09-24: Radicale is the only backend. Deleted the iCloud `accounts`

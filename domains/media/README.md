@@ -70,6 +70,18 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-10-11/12: `youtube/` gained X (Twitter) capture in the transcripts service —
+  posts and threads saved as Markdown, a login import plus headless capture adapter
+  and TweetDetail parser, the thread/replies/author-replies modes, an end condition
+  driven by X's own terminate signal with a longer wait for slow pages, and DX2
+  translation so non-English posts are saved in English. `youtube/README.md` is the
+  living detail for it (`8dc54fc3`, `d5136885`, `d714a02b`, `208e267f`, `65ee6a6f`).
+- 2026-10-06: `youtube/` transcript reliability work — failed items are retried and
+  already-saved videos skipped, failed transcripts recovered with a Whisper
+  fallback that downloads the best audio track, yt-dlp's "This video is
+  unavailable" classified as unavailable rather than a generic failure, and words
+  Whisper splits across segment boundaries rejoined (`9f9f1240`, `cd35f416`,
+  `c32e3ae1`, `993b4950`, `1eb17a7f`).
 - 2026-09-30: Preserve Radarr's local executable-title rejection score during Recyclarr sync. Sonarr and Radarr runtime settings prefer Usenet with a 24-hour torrent delay and fail executable/dangerous downloads for automatic replacement.
 - 2026-09-26: Machine references follow machines/home; media state and service ownership are unchanged.
 - 2026-09-25: Service split wave 4: sonarr/radarr/lidarr pass the media-pipeline webhook URL from `hwc.automation.n8n.publicUrl` (n8n on hwc-work); `lib/arr-config.nix` no longer defaults it to a host literal.
