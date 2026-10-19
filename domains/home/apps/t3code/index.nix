@@ -100,6 +100,9 @@ let
       agent-harness-doctor >/dev/null || echo "t3code: agent harness health check failed; run agent-harness doctor" >&2
       ${reviewEnvironment}
 
+      # Electron's external node-pty prebuild needs the C++ runtime at dlopen.
+      export LD_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
       if [ ! -f "$MAIN" ]; then
         echo "t3code: $MAIN is missing — the fork is not built." >&2
         echo "  cd $REPO" >&2

@@ -18,7 +18,7 @@ design note below.
 ## Structure
 
 ```
-index.nix   # hwc.home.apps.t3code — desktop launcher + Electron shim + desktop
+index.nix   # hwc.home.apps.t3code — desktop launcher + C++ runtime + Electron shim + desktop
             #   entry; pinned backend port and advertised host, so the phone's
             #   endpoint survives a reboot; headless t3-serve unit; t3-update;
             #   DX2 handoff adapter using the pinned delegate helper and forwarding T3's result limit without
@@ -189,6 +189,8 @@ laptop, for ad-hoc headless use. That script is hand-installed and is not manage
 here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
+
+- 2026-10-19: Give the desktop launcher the Nix C++ runtime library path. Electron 44 could not load the external node-pty prebuild without `libstdc++.so.6`; loading the module and spawning a disposable terminal pass with that library path.
 
 - 2026-10-17: `t3-update` provides `pkg-config`, a C compiler and libsecret/glib pkg-config paths, which upstream's desktop build needs for its browser-import helper. hwc-laptop takes Electron 44 from the locked `nixpkgs-tailscale` input, because the fork now follows upstream (orchestration protocol 2, required by the current iPhone app). hwc-work stays on the v1 fork until Review is ported.
 
