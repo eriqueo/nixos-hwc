@@ -20,7 +20,8 @@ design note below.
 ```
 index.nix   # hwc.home.apps.t3code — desktop launcher + Electron shim + desktop
             #   entry; pinned backend port and advertised host, so the phone's
-            #   endpoint survives a reboot; headless t3-serve unit; t3-update;
+            #   endpoint survives a reboot; headless t3-serve unit; t3-update
+            #   with unattended dependency install and node-pty source rebuild;
             #   DX2 handoff adapter using the pinned delegate helper and forwarding T3's result limit without
             #   allowing policy overrides; opt-in isolated Review native package
             #   and startup ports; shared keep-running switch policy; activation-time repo check
@@ -190,11 +191,13 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
+- 2026-10-19: Home, laptop and work now serve protocol 2 from fork commit `1b7362548`. Work retains Review; its tracker relay negotiates Review and Close capabilities. Authenticated HTTP/WebSocket reads and each host's largest legacy conversation pass live checks. Phone pairing and worker lifecycle use remain unverified.
+
 - 2026-10-19: `t3-update` passes `--config.confirmModulesPurge=false`, so a lockfile jump (v1 fork → protocol 2) no longer aborts with `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY` over ssh.
 
 - 2026-10-19: `t3-update` rebuilds node-pty from source. Upstream's node-pty 1.2.0-beta.15 prebuild cannot find libstdc++ under Electron on NixOS, so the desktop backend crash-looped with `NodePtyModuleLoadError`. The local build gets a Nix RUNPATH.
 
-- 2026-10-17: `t3-update` provides `pkg-config`, a C compiler and libsecret/glib pkg-config paths, which upstream's desktop build needs for its browser-import helper. hwc-laptop takes Electron 44 from the locked `nixpkgs-tailscale` input, because the fork now follows upstream (orchestration protocol 2, required by the current iPhone app). hwc-work stays on the v1 fork until Review is ported.
+- 2026-10-17: `t3-update` provides `pkg-config`, a C compiler and libsecret/glib pkg-config paths, which upstream's desktop build needs for its browser-import helper. hwc-laptop takes Electron 44 from the locked `nixpkgs-tailscale` input, because the fork now follows upstream (orchestration protocol 2, required by the current iPhone app).
 
 - 2026-10-16: Share the desktop keep-old policy with the headless service so implicit Home Manager switches preserve running agents. Check both rendered shapes and a missing-policy control; document deferred runtime changes and current consistent Borg recovery.
 
