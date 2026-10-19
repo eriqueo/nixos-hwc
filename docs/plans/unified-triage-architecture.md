@@ -4,6 +4,39 @@ Status: workflow contract v3 remains active. The October 9 reliability repair
 adds physical effect ownership and independent availability. Its seven-day soak
 and compatibility retirement remain acceptance work; model State stays shadow.
 
+
+## October 19 — bounded recovery and reviewed baseline labels
+
+Eric approved investigating the open label and command cases. Q1 selects local
+reviewed labels for the 50 baseline copies recorded in the October 14 private
+snapshot. A separate changed-projection conflict remains protected. Current
+observation found 71 label conflicts (70 baseline) and 21 queued/conflicted commands.
+The baseline allowlist still intersects all 50 saved candidates; none of those
+cases has a pending mailbox command in the inspected review.
+
+A production-command fixture reproduces starvation: four slow uncertain readbacks
+consume the run before an unrelated queued identity can COPY. Recovery now uses
+one snapshot per effect, a separate durable cursor, and at most ten seconds or a
+third of the remaining run budget. At the limit it defers and retains identity
+leases. Unknown requests never gain retry authority.
+
+An explicit review-label-write --replace-baseline fingerprint operation requires
+fresh exact evidence, no prior projection, no pending command for the case and
+operator evidence. It records schema-1 authorization, then passes that exact
+single-message observation to the existing durable label writer. No background
+writer consumes the authorization as a permanent overwrite policy. Real folders,
+stars, sender learning and the separate changed-projection guard stay protected.
+Tests cover stale evidence, prior projection, queued commands, no learning and
+unchanged real folders. Removing either production integration fails its fixture.
+
+Release proof: run clean npm install/build/test on the final source commit; pin
+that revision, run affected Nix checks and build, then switch on hwc-work. Before
+live reconciliation, take and restore-test an online ledger backup. Use only the
+saved 50-message allowlist with fresh per-message previews. Verify an ordinary
+cycle, preserve unresolved command histories and report exact remaining cases.
+Recovery disables effects and keeps the current ledger; never restore an older
+backup over newer events. Health policy and production health code are out of scope.
+
 ## Mail sync reliability — approved October 9
 
 Eric approved the rigorous repair in chat. The reproduced failure reserved an

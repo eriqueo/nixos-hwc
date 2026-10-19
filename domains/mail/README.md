@@ -24,6 +24,9 @@ leases. Unknown dispatches receive readback only; unrelated records continue.
 `review-transport --withdraw ID` takes the owner lock and appends an explicit
 operator withdrawal. It removes only that intent from pending work, preserves
 uncertain effects and never contacts Proton. Fairness commits before provider reads.
+Uncertain command recovery has its own fair cursor and a ten-second ceiling,
+leaving time for unrelated queued work. Explicit baseline replacement requires
+a fresh fingerprint and uses the existing label owner for one message.
 Classifier startup rebuilds event lookup indexes so retained history does not
 consume the command budget through repeated disposition scans.
 
@@ -151,6 +154,8 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-10-19: Bound uncertain readback recovery and add exact, reviewed baseline label replacement without changing health ownership or warning policy.
 
 - 2026-10-16: Sync the separate Meals calendar alongside Family, Work and Personal; managed dinner detail edits remain in the planner.
 
