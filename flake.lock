@@ -554,11 +554,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792444313,
-        "narHash": "sha256-sKKGJ4c5QBlaBVnVKtUoM2pqAC9UbVs0rU6L8wydnsQ=",
+        "lastModified": 1792446712,
+        "narHash": "sha256-r/Ab980KR12YkrF4WJGJM3bmYBGVq7ykdK8PADZH7k8=",
         "owner": "eriqueo",
         "repo": "meals",
-        "rev": "b7ec2b7d11ac35fd6757f40a32082a971916f789",
+        "rev": "cb569ffbf0a71483220c8e7043141d50c35e18ee",
         "type": "github"
       },
       "original": {
