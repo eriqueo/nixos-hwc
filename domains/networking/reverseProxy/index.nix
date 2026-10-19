@@ -348,10 +348,42 @@ let
       }
     '';
 
+  # Development preview: each listed local port P (a dev server on 127.0.0.1:P)
+  # is served at https://<rootHost>:<P + portOffset> with the Tailscale cert, so
+  # any tailnet device opens it by name over HTTPS (sign-in and geolocation need
+  # a secure origin). No firewall opening: only tailscale0, a trusted
+  # interface, reaches these listeners. An idle port answers 502.
+  devPreview = config.hwc.networking.reverseProxy.devPreview;
+  renderDevPreview = port: ''
+    ${rootHost}:${toString (port + devPreview.portOffset)} {
+      tls {
+        get_certificate tailscale
+        protocols tls1.2 tls1.3
+        alpn h2 http/1.1
+      }
+      reverse_proxy 127.0.0.1:${toString port} {
+        flush_interval -1
+      }
+    }
+  '';
+
 in
 {
   options.hwc.networking.reverseProxy = {
     enable = mkEnableOption "Reverse proxy service (Caddy)";
+    devPreview = {
+      ports = mkOption {
+        type = types.listOf types.port;
+        default = [ ];
+        example = lib.range 3011 3019;
+        description = "Local dev-server ports to publish on this host's tailnet name over HTTPS (tailnet-only; see renderDevPreview).";
+      };
+      portOffset = mkOption {
+        type = types.port;
+        default = 10000;
+        description = "HTTPS port = dev port + this offset, so Caddy never binds the dev server's own port.";
+      };
+    };
     routeOwner = mkOption {
       type = types.nullOr (types.enum (lib.attrNames config.hwc.networking.hosts.servers));
       default = null;
@@ -461,6 +493,8 @@ in
         ${rootBlock}
 
         ${concatStringsSep "\n" (map renderRoute portRoutes)}
+
+        ${concatStringsSep "\n" (map renderDevPreview devPreview.ports)}
 
         ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "static") routes))}
 

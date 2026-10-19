@@ -1,5 +1,5 @@
 # hwc-work — MS-02 work and development application server.
-{ config, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 {
   imports = [
     ./hardware.nix
@@ -433,6 +433,10 @@
   # hwc-server until each app, its data, and its callers have migrated.
   hwc.networking.reverseProxy.enable = true;
   hwc.networking.reverseProxy.routeOwner = "work";
+  # DataX dev servers (tools/bin/dev-server.sh --port 3011..3019) open from any
+  # tailnet device at https://hwc-work.<tailnet>:13011..13019. Firebase allows
+  # sign-in on the tailnet domain (authorized 2026-10-19).
+  hwc.networking.reverseProxy.devPreview.ports = lib.range 3011 3019;
 
   # Storage tiers and scheduled business services remain disabled until the
   # drives and ownership for each service are established.

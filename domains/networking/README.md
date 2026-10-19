@@ -61,6 +61,7 @@ networking/
 
 ## Changelog
 
+- 2026-10-19: `reverseProxy.devPreview.{ports,portOffset}` publishes local dev-server ports at `https://<rootHost>:<port+offset>` with the Tailscale cert, tailnet-only (no firewall opening; tailscale0 is trusted). hwc-work sets 3011–3019 → 13011–13019 for DataX dev servers; Firebase authorizes `ocelot-wahoo.ts.net` for sign-in.
 - 2026-10-16: Assign meals.hwc.iheartwoodcraft.com to work for the reviewed meal planner.
 - 2026-10-15: `reverseProxy/` — vhost routes take `headersIfAbsent = { Name = value; }`, a request header set only when the client sent none (`not header` matcher + `request_header`; `header_up ?Name` is rejected for request headers). First user: `tasks` (Radicale) defaults `Authorization` to eric.
 
