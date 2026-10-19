@@ -213,7 +213,7 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
-- 2026-10-19: Derive the native Review default from headless mode after actual private work/home acceptance. Remove the duplicate work override; check integrated/standalone defaults and enabled/forced-disabled startup ports. Configuration changes still wait for controlled app adoption.
+- 2026-10-19: Derive the native Review default from headless mode after actual private work/home acceptance. Remove the duplicate work override; check integrated defaults and enabled/forced-disabled startup ports. Configuration changes still wait for controlled app adoption.
 
 - 2026-10-19: Replace the serving-tree pull/build/restart updater with the pinned staged release driver. Bind build/native/recovery receipts and the lifecycle hub URL to installed inputs; refuse unsupported promotion shapes. Add a generated-caller regression using disposable Git and precise refusal codes.
 

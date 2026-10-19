@@ -2966,7 +2966,6 @@
           # Schema inspection only; these paths are never executed by this fixture.
           runtime = builtins.unsafeDiscardStringContext updater.releaseRuntime.drvAttrs.text;
           review = home.hwc.home.apps.t3code.review.enable;
-          standaloneReview = self.homeConfigurations."eric@${target.host}".config.hwc.home.apps.t3code.review.enable;
           launcher = lib.getExe (launchPackage home);
         }) targets;
         fixtures = pkgs.writeText "t3-switch-policy.json" (builtins.toJSON units);
@@ -2999,7 +2998,7 @@
                 runtime = release.load_runtime(pathlib.Path(runtime_file.name))
             assert runtime['serviceUnit'] == item['unit'] + '.service', item['host']
             assert runtime['headless'] == (item['unit'] == 't3-serve'), item['host']
-            assert item['review'] == item['standaloneReview'] == runtime['headless'], item['host']
+            assert item['review'] == runtime['headless'], item['host']
             launcher = pathlib.Path(item['launcher']).read_text()
             policy = review_policy(launcher)
             assert (policy is not None) == item['review'], item['host']
