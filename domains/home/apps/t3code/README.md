@@ -190,6 +190,8 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
+- 2026-10-19: `t3-update` passes `--config.confirmModulesPurge=false`, so a lockfile jump (v1 fork → protocol 2) no longer aborts with `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY` over ssh.
+
 - 2026-10-19: `t3-update` rebuilds node-pty from source. Upstream's node-pty 1.2.0-beta.15 prebuild cannot find libstdc++ under Electron on NixOS, so the desktop backend crash-looped with `NodePtyModuleLoadError`. The local build gets a Nix RUNPATH.
 
 - 2026-10-17: `t3-update` provides `pkg-config`, a C compiler and libsecret/glib pkg-config paths, which upstream's desktop build needs for its browser-import helper. hwc-laptop takes Electron 44 from the locked `nixpkgs-tailscale` input, because the fork now follows upstream (orchestration protocol 2, required by the current iPhone app). hwc-work stays on the v1 fork until Review is ported.

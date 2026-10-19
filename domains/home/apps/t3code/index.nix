@@ -212,7 +212,10 @@ let
       # Electron is a desktop-only dependency and its npm binary cannot run on
       # NixOS anyway; skipping the download saves ~200MB per install.
       export ELECTRON_SKIP_BINARY_DOWNLOAD=1
-      npx --yes pnpm@${cfg.pnpmVersion} install --frozen-lockfile
+      # t3-update runs without a TTY (ssh, units), where pnpm aborts instead of
+      # asking to purge a node_modules laid out by an older lockfile.
+      npx --yes pnpm@${cfg.pnpmVersion} install --frozen-lockfile \
+        --config.confirmModulesPurge=false
       # node-pty's linux-x64 prebuild needs libstdc++ from an FHS path, which
       # Electron's process does not provide on NixOS, so the desktop backend
       # dies at startup. A local build gets a Nix RUNPATH.
