@@ -31,6 +31,19 @@ core/
 ```
 
 ## Changelog
+- 2026-10-14: shell: the Git-with-pack-cleanup build moved out of this domain.
+  `parts/git-package.nix` (added and whitespace-repaired the same day) was deleted
+  and both consumers now select the shared `overlays/git.nix` package:
+  `home.packages` substitutes `pkgs.gitWithPackCleanup` for `pkgs.git`, and
+  `programs.git.package` takes `lib.hiPrio pkgs.gitWithPackCleanup`. Containing it
+  to runtime command profiles keeps the compiler-bootstrap Git unchanged
+  (`caa21867`, `6f43a179`, `0e8b7f4f`).
+- 2026-10-14: repo-hooks: a repo now qualifies by exact git-dir match —
+  `git rev-parse --absolute-git-dir` must equal `<path>/.git` (checkout) or
+  `<path>` itself (bare, e.g. the agent-state hub) — instead of testing
+  `[ -e <path>/.git ]`. This both accepts bare repos, so the hub can pin a
+  validating `pre-receive` hook, and stops a non-repo path from pinning the hooks
+  of an enclosing repo (`55bb1cdc`).
 - 2026-10-11: shell: `_hwc_ls` renamed `hwc_ls`. Claude Code's shell snapshot drops functions whose names start with one underscore but keeps aliases, so agent shells got `ls` → a missing function and every `ls` failed "command not found".
 - 2026-10-10: shell: `ls` aliases to `_hwc_ls` (`parts/zsh-init.nix`), which runs eza with the `programs.eza` options only when stdin and stdout are both terminals and coreutils `ls` otherwise. eza 0.23 reads file names from stdin when stdin is not a terminal, so `ls` printed nothing in agent tool shells and in pipes. A first attempt named the function `ls`; zsh alias-expanded the name against `/etc/zshrc`'s `ls='ls --color=tty'` and aborted `.zshrc`, hence the separate name.
 - 2026-10-08: Add `net-tools --details` forwarding to both execution and printed commands.

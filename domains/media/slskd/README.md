@@ -150,19 +150,35 @@ From slskd documentation:
 
 ## Networking
 
+`network.mode` defaults to **`vpn`**, and `allowClearnet = false` makes
+`mode = "media"` a build failure. slskd lives inside its OWN gluetun instance
+(`vpnInstance`, default `gluetun-slskd`) rather than sharing qBittorrent's: Proton
+forwards exactly one port per WireGuard session, and Soulseek without an inbound
+port loses uploads and degrades search/browse — which is what soularr depends on.
+
 ### Ports
 
-- **5031** (host) → **5030** (container): Web UI (HTTP, proxied via Caddy HTTPS 8443)
-- **50300** (host) → **50300** (container): Soulseek P2P (TCP)
+On the VPN slskd has no interface of its own:
+
+- Web UI is published by the gluetun instance (see that instance's `ports`), not by
+  this container.
+- The Soulseek listen port is the tunnel's NAT-PMP **forwarded port**, read from
+  `${gluetun.stateRoot}/<vpnInstance>/forwarded-port` by the config generator (the
+  sole writer of `slskd.yml`, so the port cannot drift between two producers).
+  `listenPort` is only the off-VPN / pre-first-sync fallback.
+
+Off-VPN (`allowClearnet = true`) the module falls back to host publishes
+**5031 → 5030** (Web UI, proxied via Caddy) and **`listenPort`** (Soulseek P2P).
 
 ### Firewall
 
 ```nix
-networking.firewall.allowedTCPPorts = [ 50300 5031 ];
+# Only emitted when network.mode != "vpn".
+networking.firewall.allowedTCPPorts = [ cfg.listenPort 5031 ];
 ```
 
-- **50300**: Required for Soulseek network connectivity
-- **5031**: Internal HTTP, proxied by Caddy
+Inside the tunnel the inbound path is the forwarded port on the tunnel's own
+interface and the host firewall is not in it, so no ports are opened.
 
 ### Caddy Route
 
@@ -190,9 +206,10 @@ agenix.service
     ↓
 slskd-config-generator.service (generates config from secrets)
     ↓
-init-media-network.service (creates media-network)
+podman-gluetun-slskd.service (the tunnel; slskd shares its netns)
     ↓
-podman-slskd.service (starts container)
+podman-slskd.service (starts container; bindsTo/partOf the tunnel, so a
+                      container whose netns went away goes away with it)
 ```
 
 ### Restart Behavior
@@ -423,6 +440,27 @@ shares.directories = [
 
 ---
 
-**Last Updated**: 2025-11-06
+## Changelog
+
+- 2026-09-10: Comment correction only — the tmpfiles owner reference moved from
+  `_shared/directories.nix` to `media/directories.nix` (`ca49bf2b`).
+- 2026-08-20: **slskd moved inside a VPN tunnel, and the leak became a build
+  failure.** `network.mode` had defaulted to `"media"` since the module was
+  written, so slskd egressed on the house IP for six weeks (~29.4 GB out, 15.5 GB
+  in) while every sibling downloader was tunnelled; the ordering line that looked
+  like it wired slskd to gluetun lived in a module whose `enable` was never set.
+  The default is now `"vpn"` and an assertion rejects `"media"` unless the new
+  `allowClearnet` is set explicitly. New `vpnInstance` option (default
+  `gluetun-slskd`) gives slskd its own tunnel, because Proton forwards one port per
+  WireGuard session. The config generator now reads the tunnel's NAT-PMP forwarded
+  port from `${gluetun.stateRoot}/<instance>/forwarded-port` and writes it as
+  `listen_port`, with `listenPort` as the off-VPN fallback; host port publishes and
+  firewall openings are emitted only off-VPN; and the unit uses `bindsTo`/`partOf`
+  on the tunnel instead of a bare `after`. Shared VPN assertions come from
+  `lib/mkContainer.nix` (`mkVpnAssertions`) (`0f102aa4`).
+
+**Last Updated**: 2026-10-19 (Networking, Service Dependencies and Changelog
+refreshed from the module; older sections predate that and are not re-verified
+here)
 **Architecture Version**: HWC 6.0
 **Module Version**: Container with runtime secret injection

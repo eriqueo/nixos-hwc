@@ -137,6 +137,23 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-10-19: Law 12 drift sweep over this domain's child READMEs — `apps/`
+  (dead `aerc/`/`librewolf/` entries removed from its tree, t3code recorded),
+  `apps/proton-pass/` (narrowed tray-patch anchor) and `core/` (the
+  `gitWithPackCleanup` move and the repo-hooks exact git-dir match).
+  Documentation only.
+- 2026-10-19: Regenerated the "Applications (current modules)" list from
+  `domains/home/apps/`. It had drifted badly — it claimed 52 modules when the
+  directory holds 69, still listed `librewolf` (retired for `firefox`) and `n8n`,
+  and omitted every module added since, including `agent-harness`, `t3code`,
+  `tether`, `courier`, `pi`, `rea`, `vectorcraft`, `workbench`, `todui`, `khalt`,
+  `zellij`, `bitwarden`, `vesktop`, `eden`, `doctl` and `firefox`. Documentation
+  only; no module changed.
+- 2026-10-17: `apps/t3code/` moved onto upstream T3 — the iPhone app now requires
+  orchestration protocol 2. `t3-update` gained `pkg-config`, `cc` and the
+  libsecret/glib pkg-config paths upstream's desktop build needs; hwc-laptop's
+  desktop runs Electron 44 from the locked `nixpkgs-tailscale` input; the
+  agent-harness tracker relay speaks protocol 2 alongside 1 (`8765bef5`).
 - 2026-10-16: Pin tested legacy Close delivery retirement and the shared typed handoff parser. Preserve historical readers, late acknowledgements, occupied holds and canonical replay. Fleet enablement stays separate.
 
 - 2026-10-16: Preserve active headless T3 during implicit Home Manager switches through the existing desktop keep-old policy. Check actual rendered units and missing-policy controls; retain explicit restart and crash behavior.
@@ -392,16 +409,18 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 Options live under `hwc.home.apps.<name>.*`; defaults come from the role
 home halves (`profiles/base/home.nix`, `profiles/desktop/home.nix`);
 per-machine adjustments go in `machines/<host>/home.nix`. Current set
-(52 modules):
+(69 modules, regenerated from `domains/home/apps/` on 2026-10-19):
 ```
-aider, analysis, betterbird, blender, bottles-unwrapped, calcure,
-calcurse, chromium, claude-code, claude-desktop, codex, dt, dxlog,
-freecad, gemini-cli, google-cloud-sdk, gpg, herdr, hyprland, imv,
-ipcalc, jellyfin-media-player, kitty, librewolf, localsend, markitdown,
-mpv, n8n, neomutt, nvim, obsidian, onlyoffice-desktopeditors, opencode,
-proton-authenticator, proton-mail, proton-pass, qbittorrent, qutebrowser,
-scraper, slack, slack-cli, swaync, thunar, thunderbird, tmux, transcript-formatter,
-tuxedo, wasistlos, waybar, whisper-cpp, xournalpp, yazi
+agent-harness, aider, analysis, bitwarden, blender, bottles-unwrapped,
+brain, calcure, calcurse, chromium, claude-code, claude-desktop, codex,
+courier, doctl, dt, dxlog, eden, exodos, firefox, freecad, gemini-cli,
+google-cloud-sdk, gpg, gpu-screen-recorder, herdr, hwc-dictation, hyprland,
+imv, ipcalc, jellyfin-media-player, khalt, kitty, localsend, markitdown,
+mpv, neomutt, nvim, obsidian, onlyoffice-desktopeditors, opencode,
+pave-query-builder, pi, proton-authenticator, proton-mail, proton-pass,
+qbittorrent, qutebrowser, rea, scraper, slack, slack-cli, swaync, t3code,
+tether, tetro, thunar, tmux, todui, tuxedo, vectorcraft, vesktop, wasistlos,
+waybar, whisper-cpp, workbench, xournalpp, yazi, zellij
 ```
 Update this list whenever `domains/home/apps/` gains or loses a module.
 

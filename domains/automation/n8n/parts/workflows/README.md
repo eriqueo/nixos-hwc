@@ -196,6 +196,8 @@ send one result through hwc-notify.
 **Features:**
 - API key authentication via `x-api-key` header
 - GraphQL queries to JobTread API
+- Follows authenticated JobTread page cursors, so the customer list is no longer
+  truncated at the first fifty records (fixed 2026-10-07)
 - Filters jobs by Phase custom field (1-3 = estimating stages)
 - Returns formatted dropdown data with IDs, names, addresses
 
@@ -373,6 +375,19 @@ flake check); unit tests at `workspace/automation/test_n8n_workflow_export.py`.
 
 ---
 
+## Changelog
+
+- 2026-10-07: `08a-jt-data-provider.json` re-exported for the estimator fix — the
+  retired webhook host corrected, JobTread cursor paging followed (customer queries
+  had stopped at fifty records), stable draft edits preserved and exact reviewed
+  quantities sent. No other export in this directory changed (`ad7d89e3`).
+- 2026-09-25: `01-media-pipeline-orchestration.json` and
+  `02-frigate-surveillance-intelligence.json` re-exported for the wave-4 routing
+  verification, repointing both at the Jellyfin and Frigate vhosts instead of server
+  loopback — recorded in "Regeneration status" above (`91a8be6b`).
+
+---
+
 ## Related Documentation
 
 - **Full Implementation Guide:** `/home/eric/.nixos/docs/automation/n8n-workflows-implementation-guide.md`
@@ -382,5 +397,5 @@ flake check); unit tests at `workspace/automation/test_n8n_workflow_export.py`.
 
 ---
 
-**Last Updated:** 2026-03-24
+**Last Updated:** 2026-10-19 (see Changelog above)
 **Author:** Eric (with Claude assistance)

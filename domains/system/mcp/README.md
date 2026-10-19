@@ -486,6 +486,25 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-10-16: New `hwc_meals_caldav` tool, registered only when
+  `hwc.system.mcp.mealCollections` declares both a `groceries` and a `meals`
+  collection (a new `attrsOf (attrsOf str)` option passed to the service as
+  `HWC_MEAL_COLLECTIONS`). It is a versioned, collection-scoped conditional
+  CalDAV protocol — `schemaVersion 1`, a managed UID prefix
+  (`meal-grocery-`/`meal-dinner-`), a strong reviewed ETag on update/delete, and
+  payload identity checks (`X-HWC-MEAL-SCHEMA`, one component, matching UID) —
+  with no reuse of the legacy upsert path. `davRequest` gained a `timeoutMs`
+  option; uncertain network outcomes are reported as such rather than retried
+  blind (`2135f127`).
+- 2026-10-14: Fixed calendar and task repeats for the wall display.
+  `hwc_calendar create` takes `repeat` (from `REPEAT_FREQUENCIES`) and an
+  inclusive `until`, validated before khal runs and echoed in the response.
+  `hwc_tasks_add`'s `recurrence` accepts a date-only fixed schedule (only
+  `frequency` and `startDate` required, optional `until`) alongside the legacy
+  weekly timed phone reminder, and `hwc_tasks_update` can set or clear it;
+  completing a web-created fixed schedule now advances it, with `expectedDue`
+  required to prevent duplicate advancement, while foreign recurring reminders
+  keep their old completion behavior (`b3b5dbd8`).
 - 2026-10-14: Calendar create/edit/delete replace an unobserved detached sync with one bounded Radicale-pair sync. Responses expose `syncComplete`; partial failures retain the local mutation and state that sync did not complete.
 
 - 2026-10-14: `hwc_calendar create` carries `endDate` for timed multi-day events as well as all-day ranges. Explicit reversed ranges fail validation before khal runs. `tests/calendar.test.ts` checks both behaviors.

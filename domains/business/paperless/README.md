@@ -18,6 +18,7 @@ domains/business/paperless/
 ├── index.nix              # Option definitions + imports
 ├── sys.nix                # System packages + email-to-paperless command
 ├── README.md              # This file
+├── paperless_integration_spec.md  # Intake/integration spec notes
 ├── parts/
     ├── config.nix         # Paperless + Tika/Gotenberg containers, env generation, cleanup timer
     ├── directories.nix    # tmpfiles rules for storage directories (SOLE producer)
@@ -100,9 +101,9 @@ hwc.business.paperless = {
 
 | Path | Purpose | Retention |
 |------|---------|-----------|
-| `storage.mediaDir/originals` | Original uploaded documents | Indefinite + backup |
-| `storage.mediaDir/archive` | OCR'd PDF/A copies | Indefinite + backup |
-| `storage.mediaDir/thumbnails` | Document thumbnails | Indefinite |
+| `storage.mediaDir/documents/originals` | Original uploaded documents | Indefinite + backup |
+| `storage.mediaDir/documents/archive` | OCR'd PDF/A copies | Indefinite + backup |
+| `storage.mediaDir/documents/thumbnails` | Document thumbnails | Indefinite |
 | `storage.dataDir` | Search index, DB cache | Recreatable |
 | `storage.consumeDir` | Drop zone for auto-import | Transient |
 | `storage.stagingDir` | Pre-processing area | Cleaned after 7 days |
@@ -116,6 +117,22 @@ hwc.business.paperless = {
 - `paperless-cleanup.service` / `paperless-cleanup.timer` — daily staging/export cleanup
 
 ## Changelog
+
+- 2026-09-25: `parts/directories.nix` stopped pre-creating
+  `mediaDir/{originals,archive,thumbnails}`. Paperless keeps those under
+  `media/documents/` itself, so the top-level siblings were always empty (230
+  originals in `documents/originals`, 0 in the top-level one). The Storage Layout
+  table above is corrected to the real paths (`e37f25a4`).
+- 2026-09-25: Service split wave 3, slice 3.3 — Paperless (+Tika, Gotenberg, mail
+  ingest) and Redis now run on hwc-work. New `serverAlias` option (default `work`)
+  names the Paperless host; `receipts.enable` became independent of `enable` and no
+  longer defaults true, because the phone-receipts watcher runs on the host holding
+  `receipts.mobileDir` (hwc-server, via Syncthing) rather than the Paperless host.
+  The mover now does a local `mv` when Paperless is local and otherwise `rsync -a
+  --remove-source-files` over SSH into the remote consume dir, read from that host's
+  evaluated config — rsync's temp-write-then-rename keeps the consumer from seeing a
+  partial file. An assertion fires if the named host has no `storage.consumeDir`
+  (`4f78f8a3`).
 
 - 2026-09-16: `ocr.continueOnSoftRenderError` (on by default) sets
   `PAPERLESS_OCR_USER_ARGS={"continue_on_soft_render_error":true}`. Ghostscript

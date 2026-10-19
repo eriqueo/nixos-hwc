@@ -12,30 +12,42 @@ User application configuration via Home Manager.
 `agent-harness/` owns workspace process inspection and its pinned runtime; see its module README.
 ```
 apps/
-├── aerc/           # Email client
+├── agent-harness/  # Workspace allocator, process inspection, Review/Close lanes
 ├── aider/          # AI coding assistant
 ├── blender/        # 3D modeling
 ├── bitwarden/      # Desktop client for the self-hosted vault
 ├── chromium/       # Browser
+├── courier/        # Messages app over tetherd (private flake input)
+├── firefox/        # Browser (replaced librewolf)
 ├── freecad/        # CAD software
 ├── gpu-screen-recorder/  # Call/screen recording (gsr-toggle script + sys.nix capture wrapper)
 ├── hyprland/       # Wayland compositor
 ├── kitty/          # Terminal emulator
-├── librewolf/      # Privacy browser
 ├── mpv/            # Media player
 ├── obsidian/       # Note-taking
+├── t3code/         # T3 desktop + headless units (upstream build, Electron 44)
+├── tether/         # iMessage/SMS from the iPhone over Bluetooth (laptop only)
 ├── xournalpp/      # PDF annotator / handwritten notes
 ├── vesktop/        # Discord client with Vencord built in
 ├── waybar/         # Status bar
 ├── tuxedo/         # todo.txt TUI (keyboard-driven task manager)
 ├── todui/          # VTODO task TUI (external flake input; HWC adapter only)
 ├── pave-query-builder/  # Pave/JobTread API query TUI+CLI (external flake input; HWC adapter only)
-├── eden/            # Switch 1 emulator derived from Yuzu and Sudachi
-└── ... (30+ apps)
+├── eden/           # Switch 1 emulator derived from Yuzu and Sudachi
+└── ... (69 modules total — the full list lives in `domains/home/README.md`)
 ```
 
 ## Changelog
 
+- 2026-10-19: Corrected the illustrative tree above. It still listed `aerc/` and
+  `librewolf/`, neither of which exists in this directory, and undercounted the
+  module set as "30+"; `firefox/`, `agent-harness/`, `t3code/`, `tether/` and
+  `courier/` are now shown, with the authoritative full list pointed at
+  `domains/home/README.md`. Documentation only.
+- 2026-10-17: `t3code/` builds from upstream T3 (the iPhone app requires
+  orchestration protocol 2). `t3-update` gained `pkg-config`, `cc` and the
+  libsecret/glib pkg-config paths; the laptop desktop runs Electron 44 from the
+  locked `nixpkgs-tailscale` input — see `t3code/README.md` (`8765bef5`).
 - 2026-10-16: Bind workspace removal to an immutable, caller-scoped process inspector and declare its Python runtime. Preserve all checkouts when inspection is busy, unavailable or exceeds its bounds.
 - 2026-09-26: Added the Bitwarden desktop client as an independent app module; Proton app buttons share Hyprland's window toggle.
 - 2026-09-14: Added Vesktop through Home Manager's native `programs.vesktop`

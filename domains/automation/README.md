@@ -89,6 +89,11 @@ workspace/automation/
 
 ## Changelog
 
+- 2026-10-19: Law 12 drift sweep across this domain's child READMEs —
+  `brain-sweep/`, `mail-janitor/`, `n8n/`, `n8n/parts/workflows/` and
+  `n8n/parts/estimator-integration/` gained the changelog entries they were
+  missing (the wave-3 notify-URL change, the 2026-10-07 estimator export, and the
+  server tailnet rename). Documentation only.
 - 2026-10-14: vault-sync retries pull+push 3 times, 30 s apart, before failing. A one-off network gap after resume or a push race with another host paged P1 even though the next cycle succeeded.
 - 2026-10-07: Estimator customer lookup now returns JobTread's next-page cursor instead of silently stopping at 50 customers. Client loading is bounded to 20 pages and reports overflow.
 - 2026-10-12: screenshot-renamer alerts post to `<notify.url>/notify`. The app got the bare dispatcher URL, which answers 404; urllib raised it as an I/O error, so `screenshot-renamer-check` exited 1 every 5 minutes (864 failures from 2026-10-09) and never recorded or delivered its `review-backlog` alert.

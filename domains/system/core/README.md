@@ -23,6 +23,10 @@ core/
 ```
 
 ## Changelog
+- 2026-10-19: Law 12 drift sweep — `authentik/README.md` records the 2026-08-28
+  change that declared its database role (`ensureUsers` + `ensureDBOwnership`) in
+  place of a `postStart` block whose `CREATE ROLE` and four GRANTs never ran.
+  Documentation only.
 - 2026-10-14: Select the shared gitWithPackCleanup runtime package for the system command profile, preserving bootstrap Git.
 - 2026-09-27: Declare `SystemMaxUse=1G` as a default independent of audit enablement; home keeps its explicit 8G policy.
 - 2026-09-24: `coredump.nix` uses `settings.Coredump` on 26.05 while retaining

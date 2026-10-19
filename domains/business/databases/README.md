@@ -13,12 +13,19 @@ Business data layer for Heartwood Craft. Manages the `hwc` PostgreSQL database s
 
 ```
 domains/business/databases/
-├── index.nix                    # Module: hwc.business.databases.* (database provisioning)
-├── schema.sql                   # Full business schema (690 lines, 15+ tables, views, triggers)
-├── catalog.db                   # SQLite catalog (source for migration to Postgres)
-├── migrate_catalog.py           # Migration script: SQLite -> Postgres catalog_items table
-├── export_calculator_json.py    # Export DB → calculator-bathroom.json for website calculator
-├── export_estimator_data.py     # Export DB → tradeRates.json, templates.json, catalog_export.json
+├── index.nix                      # Module: hwc.business.databases.* (database + business_user)
+├── schema.sql                     # Full business schema (tables, views, triggers)
+├── migrate_canonical.sql          # Canonical-schema migration
+├── migrations/
+│   ├── 001-catalog-schema-split.sql   # Catalog schema split (grants to business_user)
+│   └── 002-estimator-site-visit.sql   # Assembly-rule repair for estimator site visits
+├── catalog.db                     # SQLite catalog (source for migration to Postgres)
+├── migrate_catalog.py             # Migration script: SQLite -> Postgres catalog_items table
+├── seed_catalog.py                # Seed the catalog tables
+├── populate_assembly_logic.py     # Populate assembly_rules condition triggers/formulas
+├── export_calculator_json.py      # Export DB → calculator-bathroom.json for website calculator
+├── export_estimator_data.py       # Export DB → tradeRates.json, templates.json, catalog_export.json
+├── CATALOG_NAMING_CONVENTION.md   # Naming rules for catalog items
 └── README.md
 ```
 
@@ -85,6 +92,23 @@ After enabling and rebuilding:
 
 ## Changelog
 
+- 2026-10-07: Added `migrations/002-estimator-site-visit.sql` — an idempotent
+  assembly-rule repair for the estimator's shower/site-visit scope (condition
+  triggers rewritten, the niche waste factor corrected from 0.1 to 1.0). Existing
+  trade rates unchanged; rebuild the JSON with `export_estimator_data.py` after
+  applying it (`ad7d89e3`).
+- 2026-08-28: `business_user` is now declared here via
+  `services.postgresql.ensureUsers` — this module owns it, because `schema.sql` and
+  `migrations/001-catalog-schema-split.sql` grant to it by name and nothing else in
+  the repo mentions it. No `ensureDBOwnership`: `eric` owns the database and its
+  objects; `business_user` is only a grantee (`53e84228`).
+- 2026-08-28: Deleted the four `$PSQL` GRANT lines from `postStart` and the
+  per-database backup registration. `$PSQL` is undefined in the generated
+  postgresql post-start script and `|| true` swallowed the command-not-found, so
+  none of them ever ran — and they were not load-bearing, since `cfg.user` is both
+  a superuser and the database owner. `postgresql-db-backup` was retired 2026-08-26
+  (Law 15); `hwc` now rides the borg pre-hook's nightly `pg_dumpall` into
+  `/var/lib/backups` (`e82ca994`).
 - 2026-05-01: Added export scripts, estimate_templates table, 70 catalog items with Craftsman/JT rates
 - 2026-04-12: Created index.nix module (hwc.business.databases.*), wired into business domain
 - 2026-03-24: Granted n8n postgres user access to hwc schema
