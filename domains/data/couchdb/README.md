@@ -73,4 +73,9 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-03-31: The secret fallbacks moved from the camelCase attrs
+  `hwc.secrets.api.couchdbAdminUsernameFile` / `…PasswordFile` to the
+  kebab-case keys `hwc.secrets.api."couchdb-admin-username"` /
+  `"couchdb-admin-password"`, each with `or null`, matching the secrets
+  domain's naming. Option descriptions updated to match (`17b9283b`).
 - 2026-03-25: Created README per Law 12

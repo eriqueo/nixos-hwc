@@ -9,9 +9,14 @@ Installs the Proton Pass desktop client. Its native colored tray icon opens the 
 
 ## Structure
 - `index.nix` — enable option and package wiring.
-- `parts/session.nix` — desktop package and Linux tray click patch. The exact-match patch fails the build if Proton changes the bundled handler.
+- `parts/session.nix` — desktop package and Linux tray click patch. The exact-match patch fails the build if Proton changes the bundled handler; it anchors on the single `tray.on('double-click', …)` line rather than the surrounding `win32` guard.
 
 ## Changelog
+- 2026-09-26: Narrowed the tray patch's `--replace-fail` anchor to the bare
+  `tray.on('double-click', onOpenPassHandler);` line and appended the Linux
+  `click` registration after it, instead of matching the two-line `win32` guard
+  block. Same resulting behavior; a more stable match against upstream
+  reformatting (`b3c8e5dc`).
 - 2026-09-26: Wired Linux tray activation to Proton Pass's existing open handler. The upstream bundle only registered a Windows double-click handler, so Waybar's left-click activation did nothing.
 - 2026-09-26: Removed the unused `~/.config/protonpass/config.json` producer and inert options. Proton Pass keeps its real writable config.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).
