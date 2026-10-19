@@ -78,8 +78,30 @@ All webhook endpoints require `x-api-key` header matching `ESTIMATOR_API_KEY` en
 - **Phase**: `22P4fguBu3Ub` - Jobs with phase 1-3 are estimating stages
 - **Job Type**: `22P4fgU4XmLY` - bathroom, deck, kitchen, etc.
 
+## Structure
+
+```
+domains/automation/n8n/parts/estimator-integration/
+├── README.md         # This file — integration contract + endpoint map
+├── CHANGELOG.md      # Integration-specific history
+└── NEXT-SESSION.md   # Operator runbook: credential setup + endpoint smoke tests
+```
+
+Documentation only — the workflow JSON this describes lives in `../workflows/`, and
+the migration it references lives in `../migrations/`. No `.nix` module here.
+
 ## Related Files
 
 - Workflows: `/home/eric/.nixos/domains/automation/n8n/parts/workflows/`
-- Estimator App: `/home/eric/.nixos/workspace/projects/react/heartwood-assembler/`
+- Estimator App: not in this repo. The old
+  `/home/eric/.nixos/workspace/projects/react/heartwood-assembler/` path is dead
+  (the `workspace/projects/` tree was removed in the 2026-03-26 restructure); the
+  current app location is unverified from this repo's history.
 - Server Config: `/home/eric/.nixos/machines/server/config.nix`
+
+## Changelog
+
+- 2026-06-02: `NEXT-SESSION.md` swept for the server tailnet rename
+  `hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net` (the old name stopped
+  resolving). Mechanical hostname substitution across the credential-setup URL and the
+  three curl smoke tests; no endpoint, auth or payload change (`56c1f6c8`).

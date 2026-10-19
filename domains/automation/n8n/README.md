@@ -124,6 +124,12 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
+- 2026-10-07: `parts/workflows/08a-jt-data-provider.json` re-exported for the estimator
+  fix: the bundle's retired webhook host corrected, authenticated JobTread page cursors
+  followed so customer queries no longer stop at fifty records, stable draft edits
+  preserved, and exact reviewed quantities sent. No module or option change in this
+  directory (`ad7d89e3`).
+
 - 2026-10-02: Document `.com` public webhook receivers and the current work tailnet editor. `publicUrl` is derived from the tailnet route; there is no separate `webhookUrl` option. Retain `.me` until actual external sender settings are verified.
 
 - 2026-09-08: Event discovery, curation and calendar review moved to Event Scout
