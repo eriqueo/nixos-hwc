@@ -20,7 +20,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 The pinned handoff poll carries versioned handoff messages only. Old Close records retain history, late acknowledgements and safety holds, but grant no dispatch. Relays refuse unsupported messages before calling T3; canonical Review and Close use their reserved protocol.
 
-`apps/t3code/` shares a keep-old policy across desktop and headless units. Implicit home switches preserve running agents; launcher, environment and policy changes require a controlled explicit restart and runtime verification.
+`apps/t3code/` shares a keep-old policy across desktop and headless units. Native Review defaults to headless mode after contained acceptance on work and home; desktop stays off. Implicit home switches preserve running agents; launcher, environment and policy changes require a controlled explicit restart and runtime verification.
 
 `apps/agent-harness/` supplies readable refusal guidance for unsupported Close previews, with its compatibility and cleanup limits documented there. The same owner documents the typed finding contract for Close assessments.
 
@@ -38,7 +38,7 @@ The cleanup helper starts above `projects/`. Its project-name argument therefore
 
 `apps/agent-harness/` declares the workspace allocator and inspection runtime used by home sessions.
 
-`apps/agent-harness/` exposes separate, default-disabled Review intake and dispatch switches. `apps/t3code/` supplies the isolated native runtime; hwc-work enables the tested lane. Other hosts keep Review disabled.
+`apps/agent-harness/` exposes separate, default-disabled Review intake and dispatch switches. `apps/t3code/` supplies the isolated native runtime on headless hosts. Tracker intake remains work-only.
 
 The tracker supports one bulk review for grouped project choices, with browser drafts and one reviewed submission.
 
@@ -136,6 +136,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-19: Share the headless T3 Review default after contained work/home acceptance; preserve desktop and explicit disable, work-only tracker intake and controlled runtime adoption.
 
 - 2026-10-16: Pin tested legacy Close delivery retirement and the shared typed handoff parser. Preserve historical readers, late acknowledgements, occupied holds and canonical replay. Fleet enablement stays separate.
 

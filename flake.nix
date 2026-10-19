@@ -2948,6 +2948,14 @@
           { host = "hwc-work"; unit = "t3-serve"; }
           { host = "hwc-laptop"; unit = "t3code"; }
         ];
+        launchPackage = home: builtins.head (builtins.filter
+          (p: (p.name or "") == (if home.hwc.home.apps.t3code.serve.enable then "t3-serve" else "t3code"))
+          home.home.packages);
+        reviewDisabled = (self.nixosConfigurations.hwc-home.extendModules {
+          modules = [ ({ lib, ... }: {
+            home-manager.users.eric.hwc.home.apps.t3code.review.enable = lib.mkForce false;
+          }) ];
+        }).config.home-manager.users.eric;
         units = map (target: let
           home = self.nixosConfigurations.${target.host}.config.home-manager.users.eric;
           updater = builtins.head (builtins.filter (p: (p.name or "") == "t3-update") home.home.packages);
@@ -2957,6 +2965,9 @@
           file = home.home.file."${home.xdg.configHome}/systemd/user/${target.unit}.service".source;
           # Schema inspection only; these paths are never executed by this fixture.
           runtime = builtins.unsafeDiscardStringContext updater.releaseRuntime.drvAttrs.text;
+          review = home.hwc.home.apps.t3code.review.enable;
+          standaloneReview = self.homeConfigurations."eric@${target.host}".config.hwc.home.apps.t3code.review.enable;
+          launcher = lib.getExe (launchPackage home);
         }) targets;
         fixtures = pkgs.writeText "t3-switch-policy.json" (builtins.toJSON units);
       in
@@ -2965,8 +2976,8 @@
       pkgs.runCommand "t3-switch-policy" {
         nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.jsonschema ])) ];
       } ''
-        python3 -B - ${fixtures} ${inputs.agent-harness}/tracker/t3_release.py <<'PY'
-        import configparser, importlib.util, json, pathlib, sys, tempfile
+        python3 -B - ${fixtures} ${inputs.agent-harness}/tracker/t3_release.py ${lib.getExe (launchPackage reviewDisabled)} <<'PY'
+        import configparser, importlib.util, json, pathlib, shlex, sys, tempfile
         spec = importlib.util.spec_from_file_location('t3_release', sys.argv[2])
         release = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(release)
@@ -2975,17 +2986,32 @@
             unit.optionxform = str
             unit.read_string(text)
             return unit.get('Unit', 'X-SwitchMethod', fallback=None) == 'keep-old'
+        def review_policy(text):
+            exports = [line for line in text.splitlines() if line.strip().startswith('export T3CODE_REVIEW_LAUNCH=')]
+            if not exports:
+                assert 'unset T3CODE_REVIEW_LAUNCH' in text
+                return None
+            assert len(exports) == 1
+            return json.loads(shlex.split(exports[0].strip())[1].split('=', 1)[1])
         for item in json.loads(pathlib.Path(sys.argv[1]).read_text()):
             with tempfile.NamedTemporaryFile(mode='w+', suffix='.json') as runtime_file:
                 runtime_file.write(item['runtime']); runtime_file.flush()
                 runtime = release.load_runtime(pathlib.Path(runtime_file.name))
             assert runtime['serviceUnit'] == item['unit'] + '.service', item['host']
             assert runtime['headless'] == (item['unit'] == 't3-serve'), item['host']
+            assert item['review'] == item['standaloneReview'] == runtime['headless'], item['host']
+            launcher = pathlib.Path(item['launcher']).read_text()
+            policy = review_policy(launcher)
+            assert (policy is not None) == item['review'], item['host']
+            if policy is not None:
+                missing_review = '\n'.join('unset T3CODE_REVIEW_LAUNCH' if line.strip().startswith('export T3CODE_REVIEW_LAUNCH=') else line for line in launcher.splitlines())
+                assert missing_review != launcher and review_policy(missing_review) is None, 'missing-review control escaped'
             text = pathlib.Path(item['file']).read_text()
             assert keeps_active(text), item
             missing = '\n'.join(line for line in text.splitlines() if not line.startswith('X-SwitchMethod='))
             assert missing != text and not keeps_active(missing), 'missing-policy control escaped'
-            print(item['host'] + '/' + item['unit'] + ': runtime schema, rendered keep-old and removal control pass')
+            print(item['host'] + '/' + item['unit'] + ': runtime schema, Review defaults, rendered keep-old and removal controls pass')
+        assert review_policy(pathlib.Path(sys.argv[3]).read_text()) is None, 'forced disable leaked Review'
         PY
         touch "$out"
       '';

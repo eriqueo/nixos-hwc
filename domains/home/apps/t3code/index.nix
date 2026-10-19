@@ -325,7 +325,12 @@ in
     };
 
     review = {
-      enable = lib.mkEnableOption "the server-owned isolated Codex Review profile";
+      # Both configured headless hosts passed contained native Review. Keep
+      # this shared default here. Desktop stays opt-in; explicit disable wins.
+      enable = lib.mkEnableOption "the server-owned isolated Codex Review profile" // {
+        default = cfg.serve.enable;
+        defaultText = lib.literalExpression "config.hwc.home.apps.t3code.serve.enable";
+      };
       package = lib.mkOption {
         type = lib.types.package;
         default = reviewNative;

@@ -23,7 +23,7 @@ index.nix   # hwc.home.apps.t3code — desktop launcher + Electron shim + deskto
             #   endpoint survives a reboot; headless t3-serve unit; t3-update
             #   with a pinned staged build/native verification/recovery/promotion driver;
             #   DX2 handoff adapter using the pinned delegate helper and forwarding T3's result limit without
-            #   allowing policy overrides; opt-in isolated Review native package
+            #   allowing policy overrides; headless-default isolated Review native package
             #   and startup ports; shared keep-running switch policy; activation-time repo check
 test_update_gate.py # real generated updater refuses failed evidence before Git/build/restart effects
 README.md   # this file
@@ -41,7 +41,9 @@ There is no `parts/`. T3 itself runs from its source checkout. Review uses a sep
   `apps/desktop/dist-electron/main.cjs` out of `cfg.repo` and prints the exact
   build commands when that file is missing.
 
-- **Review has a fixed native tool bundle.** `review.enable` defaults to false.
+- **Review has a fixed native tool bundle.** `review.enable` defaults to `serve.enable`.
+  Work and home passed contained native Review against the protocol2 candidate.
+  Desktop stays off by default, and explicit disable clears the startup port.
   When enabled, both launchers pass startup-owned paths to T3; provider settings
   cannot select these paths. The package contains Codex0.163 plus its code tool
   host and sandbox resources. T3 checks their expected hashes before copying an
@@ -210,6 +212,8 @@ laptop, for ad-hoc headless use. That script is hand-installed and is not manage
 here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
+
+- 2026-10-19: Derive the native Review default from headless mode after actual private work/home acceptance. Remove the duplicate work override; check integrated/standalone defaults and enabled/forced-disabled startup ports. Configuration changes still wait for controlled app adoption.
 
 - 2026-10-19: Replace the serving-tree pull/build/restart updater with the pinned staged release driver. Bind build/native/recovery receipts and the lifecycle hub URL to installed inputs; refuse unsupported promotion shapes. Add a generated-caller regression using disposable Git and precise refusal codes.
 
