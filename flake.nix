@@ -3040,7 +3040,8 @@
         && settings.baseUrl == cfg.url
         && settings.timeZone == work.time.timeZone
         && (builtins.fromJSON (builtins.unsafeDiscardStringContext (builtins.readFile work.systemd.services.wall-display.environment.WALL_CONFIG))).meals.readUrl == "http://127.0.0.1:${toString cfg.port}"
-        && settings.converter == { inherit (work.hwc.server.ai.dx2) baseUrl model apiKeyFile; }
+        && settings.converter == { inherit (work.hwc.server.ai.dx2) baseUrl model apiKeyFile; modelIdentity = cfg.cookingModelIdentity; }
+        && settings.cookingPromotion == cfg.cookingPromotion
         && work.hwc.system.mcp.mealCollections == cfg.collections
         && work.hwc.networking.shared.routeOwners.meals.owner == "work"
         && (lib.findFirst (r: r.name == "meals") {} work.hwc.networking.shared.routes).headers."X-Forwarded-For" == "{remote_host}"
