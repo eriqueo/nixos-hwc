@@ -146,6 +146,38 @@ class DisplayContract(unittest.TestCase):
         self.assertIn('20260928T060000Z', query)
         self.assertIn('20261102T070000Z', query)
 
+    def test_agenda_groups_synced_copies_but_raw_events_remain(self):
+        day = dt.date(2026, 10, 23)
+        start = dt.datetime(2026, 10, 23, 9, tzinfo=screens.TZ)
+        def event(title, cid, uid, hour=9, endhour=11, writable=True):
+            return dict(summary=title, cal=cid, calName=cid, uid=uid, writable=writable,
+                        start=start.replace(hour=hour), end=start.replace(hour=endhour),
+                        allday=False, date=day.isoformat(), endDate=None, startTime=f'{hour:02}:00',
+                        endTime=f'{endhour:02}:00', recurring=True, location='', description='', mealUrl=None)
+        rows = [event('Busy', 'hwc', 'busy'), event('DataX Office Hours', 'hwc', 'copy'),
+                event('DATAx Office Hours', 'mirror', 'original', writable=False),
+                event('Busy', 'hwc', 'lone-busy', 15, 16),
+                event('DataX Office Hours', 'hwc', 'later', 12, 13),
+                event('DataX Office Hours', 'hwc', 'different-end', 9, 10),
+                event('Unrelated appointment', 'hwc', 'unrelated')]
+        class Reader:
+            def from_tailnet(self): return False
+        with patch.object(apps, 'read_events', return_value=([], rows)):
+            state = apps.agenda(Reader(), 'day', day)
+            self.assertEqual(len(apps.read_events(day, day)[1]), 7)
+        visible = state['days'][0]['events']
+        office = [e for e in visible if e['summary'].casefold() == 'datax office hours' and e['endTime']=='11:00']
+        self.assertEqual(len(office), 1)
+        self.assertEqual(office[0]['uid'], 'copy')
+        self.assertEqual(len(visible), 5)
+        self.assertEqual([e['uid'] for e in visible if e['summary']=='Busy'], ['lone-busy'])
+        self.assertIn('unrelated', [e['uid'] for e in visible])
+        self.assertEqual(rows[0]['summary'], 'Busy')
+        same_time_meals = [dict(rows[1], mealUrl='https://meals.test/meals/'+uid, uid=uid) for uid in ('meal-a', 'meal-b')]
+        self.assertEqual(len(screens.display_events(same_time_meals)), 2)
+        # Same title at two different durations and the later session stay distinct.
+        self.assertEqual(len([e for e in visible if e['summary'].casefold() == 'datax office hours']), 3)
+
     def test_home_filters_before_ranking_and_counting(self):
         now = dt.datetime(2026, 10, 14, 12, tzinfo=screens.TZ)
         def task(title, list_, day):

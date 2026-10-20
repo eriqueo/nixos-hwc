@@ -394,6 +394,7 @@ def agenda(h, view, day):
     first, last, prev, nxt = view_range(view, day)
     today = now().date()
     cals, events = read_events(first, last)
+    events = screens.display_events(events)
     days, d = [], first
     while d <= last:
         todays = [e for e in events if screens.on_day(e, d)]

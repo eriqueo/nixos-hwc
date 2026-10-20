@@ -149,7 +149,7 @@ def load_events(first_day):
     start = dt.datetime.combine(first, dt.time(), TZ)
     stop = dt.datetime.combine(end, dt.time(), TZ)
     query = EVENT_REPORT.format(s=utc_stamp(start), e=utc_stamp(stop))
-    cals, events, seen = collections("VEVENT"), [], set()
+    cals, events = collections("VEVENT"), []
     for href, name in cals:
         for ev in components(href, query, "VEVENT"):
             if str(ev.get("STATUS", "")).upper() == "CANCELLED":
@@ -163,16 +163,9 @@ def load_events(first_day):
             else:
                 e = s + dt.timedelta(days=1) if allday else s
             summary = str(ev.get("SUMMARY", "")).strip() or "(busy)"
-            # The mirrored feeds can carry the same event twice.
-            key = (str(ev.get("UID")), s) if managed_meal(href, ev) else (summary.lower(), s)
-            if key in seen:
-                continue
-            seen.add(key)
             events.append({"summary": summary, "start": s, "end": e,
                            "allday": allday, "calendar": name, "uid": str(ev.get("UID", "")), "meal": managed_meal(href, ev)})
-    shown = drop_shadowed_busy(events, lambda e: e["summary"],
-                               lambda e: (e["allday"], e["start"], e["end"]))
-    return {"calendars": [n for _, n in cals], "events": shown}
+    return {"calendars": [n for _, n in cals], "events": display_events(events)}
 
 
 # Titles a free/busy feed gives an event it will not describe. Proton work
@@ -197,6 +190,26 @@ def drop_shadowed_busy(events, summary, span):
     titled = [e for e in events if not is_placeholder(summary(e))]
     return [e for e in events
             if not is_placeholder(summary(e)) or not any(coincide(e, t) for t in titled)]
+
+
+def display_events(events):
+    """Presentation only: group synced copies, keeping mutation identities raw.
+
+    Exact spans prevent merging separate sessions or different durations. Prefer
+    the writable copy for an existing edit link; do not combine source records.
+    Managed dinners keep their own UID identity even with identical titles.
+    """
+    shown = drop_shadowed_busy(events, lambda e: e["summary"],
+                               lambda e: (e["allday"], e["start"], e["end"]))
+    groups = {}
+    for event in shown:
+        identity = (("meal", event["uid"]) if event.get("meal") or event.get("mealUrl") else
+                    ("event", ' '.join(event["summary"].casefold().split())))
+        key = (identity, event["allday"], event["start"], event["end"])
+        previous = groups.get(key)
+        if previous is None or (event.get("writable") and not previous.get("writable")):
+            groups[key] = event
+    return list(groups.values())
 
 
 def load_tasks(today):
