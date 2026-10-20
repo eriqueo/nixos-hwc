@@ -125,7 +125,10 @@ WALL_CONTROL_CSS = """
 
 COOKING_CONTROL_CSS = WALL_CONTROL_CSS + (
     '.wall-controls{position:fixed;bottom:0;left:0;right:0;z-index:20}'
-    '.cooking-phone{display:none!important}body{padding-bottom:128px!important}')
+    '.cooking-phone{display:none!important}body{padding-bottom:128px!important}'
+    # A filter on body makes position:fixed relative to the scrolled body.
+    # Keep grayscale on content so the footer stays attached to the viewport.
+    'body.wall-cooking{filter:none}body.wall-cooking>.content{filter:grayscale(1)}')
 # Hash only our fixed styles; keep arbitrary inline scripts/styles blocked.
 COOKING_STYLE_HASHES = ' '.join("'sha256-" + base64.b64encode(hashlib.sha256(css.encode()).digest()).decode() + "'"
                               for css in (WALL_CONTROL_CSS, COOKING_CONTROL_CSS))
