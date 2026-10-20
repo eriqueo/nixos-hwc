@@ -24,6 +24,7 @@ navigation. Reviews leave device rotation and presence untouched.
 And /device/<name> is a web client: a browser shows that device's rotation as
 images and reloads itself, which survives reboots where the TRMNL app cannot.
 """
+import base64
 import datetime as dt
 import hashlib
 import html
@@ -120,6 +121,14 @@ WALL_CONTROL_CSS = """
 .wall-controls a:focus-visible{outline:3px solid black;outline-offset:3px}
 @media(max-width:600px){.wall-controls{gap:6px;font-size:16px}.wall-controls a{padding:0 9px}.wall-phone img{width:64px;height:64px}.wall-phone span{display:none}}
 """
+
+
+COOKING_CONTROL_CSS = WALL_CONTROL_CSS + (
+    '.wall-controls{position:fixed;bottom:0;left:0;right:0;z-index:20}'
+    '.cooking-phone{display:none!important}body{padding-bottom:128px!important}')
+# Hash only our fixed styles; keep arbitrary inline scripts/styles blocked.
+COOKING_STYLE_HASHES = ' '.join("'sha256-" + base64.b64encode(hashlib.sha256(css.encode()).digest()).decode() + "'"
+                              for css in (WALL_CONTROL_CSS, COOKING_CONTROL_CSS))
 
 
 def log(msg):
@@ -479,8 +488,7 @@ class Handler(BaseHTTPRequestHandler):
                 device = parse_qs(self.path.partition("?")[2]).get("device", [""])[0]
                 if ctype.startswith("text/html") and device in DEVICES:
                     footer = wall_controls(device, "meals", dt.datetime.now(TZ))
-                    body = body.decode("utf-8").replace('</head>', '<style>' + WALL_CONTROL_CSS +
-                        '.wall-controls{position:fixed;bottom:0;left:0;right:0;z-index:20}.cooking-phone{display:none!important}body{padding-bottom:128px!important}</style></head>', 1)
+                    body = body.decode("utf-8").replace('</head>', '<style>' + COOKING_CONTROL_CSS + '</style></head>', 1)
                     body = body.replace('</body>', footer + '</body>', 1).encode('utf-8')
                 self.send(response.code, ctype, body)
         except (OSError, ValueError, urllib.error.URLError):
@@ -687,7 +695,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", cache)
         if self.path.startswith(COOKING_PREFIX + "/"):
             self.send_header("X-Content-Type-Options", "nosniff")
-            self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; frame-ancestors 'none'")
+            self.send_header("Content-Security-Policy", f"default-src 'self'; script-src 'self'; style-src 'self' {COOKING_STYLE_HASHES}; img-src 'self'; frame-ancestors 'none'")
         self.end_headers()
         self.wfile.write(data)
 

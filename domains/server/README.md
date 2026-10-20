@@ -76,7 +76,7 @@ Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
 
-- 2026-10-20: Wall tablet pages share Home, Tasks, Events, Meals and Month links. `/device/<name>/scenes/<scene>` holds the chosen page across refreshes; original device entry still rotates. Month uses an explicit, at-most-42-day CalDAV range with a separate single-entry cache, today marker, bounded entries and overflow counts. Existing scene phone QR codes remain; Meals keeps the same bar.
+- 2026-10-20: Wall tablet pages share Home, Tasks, Events, Meals and Month links. `/device/<name>/scenes/<scene>` holds the chosen page across refreshes; original device entry still rotates. Month uses an explicit, at-most-42-day CalDAV range with a separate single-entry cache, today marker, bounded entries and overflow counts. Existing scene phone QR codes remain; Meals keeps the same bar, with fixed stylesheet hashes allowed by its content security policy.
 
 - 2026-10-19: Meals adds recipe category editing/filtering and direct recipe → ingredient review → Shared groceries. Recipe contributions share existing ETag, purchase-conflict and keyed-effect protections; metadata preserves cooking evidence and dinner snapshots.
 

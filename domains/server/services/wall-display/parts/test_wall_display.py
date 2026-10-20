@@ -70,6 +70,7 @@ class DisplayContract(unittest.TestCase):
                     for _ in range(server.COOKING_CAPACITY):server.COOKING_SLOTS.release()
                 with urlopen(url+'/cooking/dates/2026-10-16?device=ipad') as r:
                     wrapped = r.read().decode()
+                    self.assertIn(server.COOKING_STYLE_HASHES, r.headers["Content-Security-Policy"])
                 self.assertIn('aria-label="Wall pages"', wrapped)
                 self.assertIn('>Month</a>', wrapped)
                 self.assertIn('Open Meals on your phone', wrapped)
