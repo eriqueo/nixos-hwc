@@ -56,7 +56,7 @@ domains/server/
 │   ├── inbox-processor/  # Phone capture processor (whisper-server + Tesseract; optional DX2 voice-note cleanup)
 │   ├── meals/            # Independent reviewed meal planner, backup and retention wiring
 │   ├── radicale/         # Self-hosted CalDAV (tasks.hwc.*, two-way task sync)
-│   └── wall-display/     # TRMNL scenes + tablet rotation, scene review and held Meals cooking routes; Family Home, week, weather, tasks, groceries; QR-linked phone apps and contract tests
+│   └── wall-display/     # TRMNL scenes + tablet rotation, scene review and held Meals cooking routes; Family Home, week/month calendar, weather, tasks, groceries; fixed scene routes and shared tablet button bar; QR-linked phone apps and contract tests
 │       └── parts/        #   server.py (protocol, host dispatch, renderer, web client), screens.py (screens, CalDAV reads),
 │                         #   apps.py (todo.* Tasks and calendar.* Calendar phone apps; writes via the MCP gateway),
 │                         #   voice.py (tap-to-talk: whisper → DX2 → Piper, writes need confirmation)
@@ -75,6 +75,8 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+
+- 2026-10-20: Wall tablet pages share Home, Tasks, Events, Meals and Month links. `/device/<name>/scenes/<scene>` holds the chosen page across refreshes; original device entry still rotates. Month uses an explicit, at-most-42-day CalDAV range with a separate single-entry cache, today marker, bounded entries and overflow counts. Existing scene phone QR codes remain; Meals keeps the same bar.
 
 - 2026-10-19: Meals adds recipe category editing/filtering and direct recipe → ingredient review → Shared groceries. Recipe contributions share existing ETag, purchase-conflict and keyed-effect protections; metadata preserves cooking evidence and dinner snapshots.
 

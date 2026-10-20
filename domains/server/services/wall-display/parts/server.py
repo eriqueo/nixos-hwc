@@ -81,15 +81,45 @@ class NoCookingRedirect(urllib.request.HTTPRedirectHandler):
 
 COOKING_HTTP = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoCookingRedirect())
 
-def dinner_controls(name, scene, now):
-    if scene not in ("home", "week") or not (CONFIG.get("meals") or {}).get("readUrl"):
-        return ""
-    day = now.date().isoformat()
-    path = COOKING_PREFIX + "/dates/" + day
-    return (f'<nav class="dinner-controls" aria-label="Dinner">'
-            f'<a href="{path}?device={quote(name)}">Tonight’s dinner</a>'
-            f'<img src="{COOKING_PREFIX}/qr/dates/{day}" alt="Open dinner on phone" width="96" height="96">'
-            '<span>Scan for dinner<br>on your phone</span></nav>')
+# Wall destination labels and targets have one owner. Scene routes keep a
+# chosen page fixed; the original /device/<name> remains the rotating entry.
+WALL_DESTINATIONS = (("home", "Home"), ("tasks", "Tasks"), ("week", "Events"),
+                     ("meals", "Meals"), ("month", "Month"))
+
+
+def scene_url(name, scene):
+    return f"/device/{quote(name, safe='')}/scenes/{quote(scene, safe='')}"
+
+
+def wall_controls(name, scene, now):
+    links = []
+    for target, label in WALL_DESTINATIONS:
+        if target == "meals":
+            if not (CONFIG.get("meals") or {}).get("readUrl"):
+                continue
+            url = f"{COOKING_PREFIX}/dates/{now.date().isoformat()}?device={quote(name, safe='')}"
+        else:
+            if target not in DEVICES[name]["playlist"]:
+                continue
+            url = scene_url(name, target)
+        current = ' aria-current="page"' if target == scene else ''
+        links.append(f'<a href="{html.escape(url, quote=True)}"{current}>{label}</a>')
+    phone = ''
+    if scene == "meals":
+        phone = (f'<span class="wall-phone"><img src="{COOKING_PREFIX}/qr/dates/{now.date().isoformat()}" '
+                 'alt="Open Meals on your phone" width="96" height="96"><span>Open Meals<br>on your phone</span></span>')
+    return '<nav class="wall-controls" aria-label="Wall pages">' + ''.join(links) + phone + '</nav>'
+
+
+# Grayscale device surface, shared by the image client and cooking page.
+WALL_CONTROL_CSS = """
+.wall-controls{height:112px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:10px;padding:8px max(8px,env(safe-area-inset-right)) 8px max(8px,env(safe-area-inset-left));background:white;border-top:2px solid black;font:18px sans-serif;flex-wrap:wrap}
+.wall-controls a{position:static;display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 16px;border:2px solid black;border-radius:4px;color:black;text-decoration:none;box-sizing:border-box}
+.wall-controls a[aria-current=page]{background:black;color:white}
+.wall-phone{display:flex;align-items:center;gap:8px;font-size:14px}.wall-phone img{display:block;width:96px;height:96px}
+.wall-controls a:focus-visible{outline:3px solid black;outline-offset:3px}
+@media(max-width:600px){.wall-controls{gap:6px;font-size:16px}.wall-controls a{padding:0 9px}.wall-phone img{width:64px;height:64px}.wall-phone span{display:none}}
+"""
 
 
 def log(msg):
@@ -206,6 +236,7 @@ class Renderer:
 
     def changed(self):
         screens.calendar.invalidate()
+        screens.month_calendar.invalidate()
         screens.todo.invalidate()
         self.wake.set()
 
@@ -381,11 +412,15 @@ class Handler(BaseHTTPRequestHandler):
         elif path.startswith("/images/"):
             self.serve_image(path[len("/images/"):])
         elif path.startswith("/device/"):
-            address = path[len("/device/"):].split("/")
+            address = path[len("/device/"):].rstrip("/").split("/")
             if len(address) == 3 and address[1] == "images":
                 self.current_image(*map(unquote, (address[0], address[2])))
+            elif len(address) == 3 and address[1] == "scenes":
+                self.web_client(unquote(address[0]), unquote(address[2]))
+            elif len(address) == 1:
+                self.web_client(unquote(address[0]))
             else:
-                self.web_client(path[len("/device/"):].strip("/"))
+                self.send(404, "text/plain", "unknown device route")
         elif path == "/healthz":
             ok, body = health()
             self.send(200 if ok else 503, "application/json", json.dumps(body))
@@ -413,10 +448,12 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith((COOKING_PREFIX + "/dates/", COOKING_PREFIX + "/dinners/")):
             device = parse_qs(self.path.partition("?")[2]).get("device", [""])[0]
             back = "/device/" + quote(device) if device in DEVICES else "/"
+            controls = wall_controls(device, "meals", dt.datetime.now(TZ)) if device in DEVICES else ""
             return self.send(503, "text/html; charset=utf-8",
-                '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">'
+                '<!doctype html><head><meta name="viewport" content="width=device-width,initial-scale=1">'
+                f'<style>{WALL_CONTROL_CSS}</style></head><body>'
                 '<h1>Meals is unavailable</h1><p>Your calendar and other wall pages still work.</p>'
-                f'<p><a href="{back}">Back to wall</a></p><p><a href="{html.escape(self.path, quote=True)}">Try again</a></p>')
+                f'<p><a href="{back}">Back to wall</a></p><p><a href="{html.escape(self.path, quote=True)}">Try again</a></p>{controls}</body>')
         return self.json(503, {"error": {"code": "MEALS_UNAVAILABLE", "message": "Meals is unavailable. Your open recipe has been kept."}})
 
     def cooking_read(self, path):
@@ -439,6 +476,12 @@ class Handler(BaseHTTPRequestHandler):
                 if len(body) > COOKING_LIMIT:
                     raise ValueError("cooking response limit")
                 ctype = response.headers.get("Content-Type", "application/octet-stream")
+                device = parse_qs(self.path.partition("?")[2]).get("device", [""])[0]
+                if ctype.startswith("text/html") and device in DEVICES:
+                    footer = wall_controls(device, "meals", dt.datetime.now(TZ))
+                    body = body.decode("utf-8").replace('</head>', '<style>' + WALL_CONTROL_CSS +
+                        '.wall-controls{position:fixed;bottom:0;left:0;right:0;z-index:20}.cooking-phone{display:none!important}body{padding-bottom:128px!important}</style></head>', 1)
+                    body = body.replace('</body>', footer + '</body>', 1).encode('utf-8')
                 self.send(response.code, ctype, body)
         except (OSError, ValueError, urllib.error.URLError):
             self.cooking_unavailable(path)
@@ -530,7 +573,7 @@ class Handler(BaseHTTPRequestHandler):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{escape(scene.capitalize())} · Wall Display</title><style>{REVIEW_CSS}</style></head>
 <body><header><h1>Wall Display</h1><nav aria-label="Display">{device_links}</nav></header>
-<main><nav aria-label="Scenes">{scene_links}</nav>{dinner_controls(name, scene, dt.datetime.now(TZ))}
+<main><nav aria-label="Scenes">{scene_links}</nav>{wall_controls(name, scene, dt.datetime.now(TZ))}
 <div class="scene-heading"><h2>{escape(scene.capitalize())}</h2>
 <span>{index + 1} of {len(playlist)} · {device["width"]} × {device["height"]}</span></div>
 <div class="preview">{preview}</div>
@@ -548,27 +591,32 @@ class Handler(BaseHTTPRequestHandler):
             return self.json(503, {"error": "scene image is not ready"})
         self.json(200, {"image": f"/images/{image}"})
 
-    def web_client(self, name):
+    def web_client(self, name, scene=None):
         """A browser acting as the device: each load shows the next playlist
         image and reloads after refreshRate. For kiosks that must come back
         on their own after a reboot (the TRMNL Android app cannot).
 
-        Touch: the left third links to ?go=prev (one screen back), the rest
-        to the next screen. Plain links, no script, so any browser works."""
+        Touch: the left third selects the previous fixed scene, the rest
+        selects the next. Fixed scenes refresh in place; the base route rotates."""
         device = devices.get(name)
-        if device is None:
-            return self.send(404, "text/plain", "unknown device")
+        if device is None or (scene is not None and scene not in device.spec["playlist"]):
+            return self.send(404, "text/plain", "unknown device or scene")
         back = "go=prev" in self.path.partition("?")[2].split("&")
         with _devices_lock:
-            if back:
+            if back and scene is None:
                 device.cursor -= 2  # the cursor already points past the screen on view
-            target = device.next_target()
+            target = ((scene, device.spec["width"], device.spec["height"], device.spec["grays"])
+                      if scene is not None else device.next_target())
             device.seen = time.time()
             device.report = {"client": "web"}
         img = renderer.image(target)
         wait = device.spec["refreshRate"] if img else 60
-        here = f"/device/{name}"
-        dinner = dinner_controls(name, target[0], dt.datetime.now(TZ))
+        here = scene_url(name, scene) if scene is not None else f"/device/{quote(name, safe='')}"
+        controls = wall_controls(name, target[0], dt.datetime.now(TZ))
+        playlist = device.spec["playlist"]
+        index = playlist.index(target[0])
+        previous = scene_url(name, playlist[(index - 1) % len(playlist)])
+        following = scene_url(name, playlist[(index + 1) % len(playlist)])
         body = (f'<img id="scene-image" src="/images/{img}" alt="">' if img
                 else "<p>No image rendered yet.</p>")
         # With voice on, a script reloads instead (it waits out a recording
@@ -585,14 +633,12 @@ class Handler(BaseHTTPRequestHandler):
 {refresh}
 <title>{name}</title>
 <style>html,body{{margin:0;height:100%;background:#fff;overflow:hidden}}
-#scene-image{{display:block;width:100vw;height:calc(100vh - {112 if dinner else 0}px);object-fit:contain}}
-.prev,.next{{position:fixed;top:0;bottom:{112 if dinner else 0}px}}
+#scene-image{{display:block;width:100vw;height:calc(100vh - 112px);object-fit:contain}}
+.prev,.next{{position:fixed;top:0;bottom:112px}}
 .prev{{left:0;width:33vw}}.next{{left:33vw;right:0}}
-.dinner-controls{{height:112px;display:flex;align-items:center;justify-content:center;gap:16px;background:white;border-top:2px solid black;box-sizing:border-box;font:18px sans-serif}}
-.dinner-controls a{{position:static;display:flex;align-items:center;min-height:48px;padding:0 16px;border:2px solid black;color:black;text-decoration:none}}
-.dinner-controls img{{width:96px;height:96px}}
+{WALL_CONTROL_CSS}
 </style>
-</head><body>{body}<a class="prev" href="{here}?go=prev" aria-label="previous"></a><a class="next" href="{here}" aria-label="next"></a>{dinner}{image_updates(name, target[0]) if img else ''}</body></html>""")
+</head><body>{body}<a class="prev" href="{previous}" aria-label="previous"></a><a class="next" href="{following}" aria-label="next"></a>{controls}{image_updates(name, target[0]) if img else ''}</body></html>""")
 
     def serve_image(self, name):
         if not IMAGE_NAME.match(name):

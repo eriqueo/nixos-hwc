@@ -179,6 +179,7 @@ let
   links = {
     home = calendarAddUrl;
     week = calendarAddUrl;
+    month = calendarAddUrl;
     tasks = "https://todo.${vhostDomain}/";
     groceries = "https://todo.${vhostDomain}${groceryPath}";
     briefing = "https://workbench.${vhostDomain}/";
@@ -301,8 +302,8 @@ in
           };
           playlist = lib.mkOption {
             type = lib.types.nonEmptyListOf lib.types.str;
-            default = [ "home" "week" "weather" "tasks" "groceries" ];
-            description = "Screens shown in turn, one per refresh. Names: home, week, weather, tasks, groceries, briefing (the server refuses others at boot).";
+            default = [ "home" "week" "month" "weather" "tasks" "groceries" ];
+            description = "Screens shown in turn, one per refresh. Names: home, week, month, weather, tasks, groceries, briefing (the server refuses others at boot).";
           };
           voice = lib.mkOption {
             type = lib.types.bool;

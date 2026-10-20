@@ -19,7 +19,7 @@ fixture = tempfile.TemporaryDirectory()
 root = Path(fixture.name)
 (root / "framework/icons").mkdir(parents=True)
 specs = {name: dict(width=w, height=h, grays=16, scale=scale, voice=False,
-                   refreshRate=900, playlist=["home", "week", "weather", "tasks", "groceries"])
+                   refreshRate=900, playlist=["home", "week", "weather", "tasks", "groceries", "month"])
          for name, w, h, scale in [("ipad", 2048, 1536, 2.56), ("fire-hd8", 1280, 800, 1.6)]}
 config = dict(port=8424, stateDir=str(root), assets=str(root), devices=specs,
               crispFontsConf=str(root / "fonts"), timeZone="America/Denver",
@@ -40,6 +40,9 @@ class DisplayContract(unittest.TestCase):
         from http.server import BaseHTTPRequestHandler
         class Meals(BaseHTTPRequestHandler):
             def do_GET(self):
+                if self.path.startswith('/cooking/dates/'):
+                    self.send_response(200); self.send_header('Content-Type','text/html'); self.end_headers()
+                    self.wfile.write(b'<html><head></head><body>Meals</body></html>'); return
                 self.send_response(200); self.send_header('Content-Type','application/json'); self.end_headers()
                 self.wfile.write(b'x' * (server.COOKING_LIMIT+1) if self.path.endswith('/large') else b'{"schemaVersion":1}')
             def log_message(self,*args): pass
@@ -65,10 +68,17 @@ class DisplayContract(unittest.TestCase):
                     self.assertEqual(raised.exception.code,503);raised.exception.close()
                 finally:
                     for _ in range(server.COOKING_CAPACITY):server.COOKING_SLOTS.release()
-                controls=server.dinner_controls('ipad','home',dt.datetime(2026,10,16,tzinfo=screens.TZ))
+                with urlopen(url+'/cooking/dates/2026-10-16?device=ipad') as r:
+                    wrapped = r.read().decode()
+                self.assertIn('aria-label="Wall pages"', wrapped)
+                self.assertIn('>Month</a>', wrapped)
+                self.assertIn('Open Meals on your phone', wrapped)
+                with urlopen(url+'/cooking/dates/2026-10-16') as r:
+                    self.assertNotIn('Wall pages', r.read().decode())
+                controls=server.wall_controls('ipad','home',dt.datetime(2026,10,16,tzinfo=screens.TZ))
                 self.assertIn('/cooking/dates/2026-10-16?device=ipad',controls)
-                self.assertIn('/cooking/qr/dates/2026-10-16',controls)
-                self.assertEqual(server.dinner_controls('ipad','weather',dt.datetime.now(screens.TZ)),'')
+                self.assertIn('>Meals</a>',controls)
+                self.assertIn('>Tasks</a>', server.wall_controls('ipad','weather',dt.datetime.now(screens.TZ)))
                 with patch.object(server.COOKING_HTTP,'open',side_effect=TimeoutError):
                     with self.assertRaises(HTTPError) as raised:urlopen(url+'/cooking/api/dinners/fixture')
                     self.assertEqual(raised.exception.code,503);raised.exception.close()
@@ -76,6 +86,64 @@ class DisplayContract(unittest.TestCase):
         finally:
             for h in (http,upstream):h.shutdown();h.server_close()
             for t in threads:t.join()
+
+    def test_byos_rotation_still_returns_next_image(self):
+        handler = object.__new__(server.Handler)
+        handler.headers = {'ID': 'fixture', 'access-token': 'secret'}
+        device = server.devices['ipad']; before = device.cursor
+        with patch.dict(server.BY_ID, fixture='ipad'), patch.object(server, 'load_keys', return_value={'fixture': 'secret'}), patch.object(server.Handler, 'url', return_value='https://wall.test/images/fixture.png'), patch.object(server.renderer, 'image', return_value='fixture.png'), patch.object(server.Handler, 'json') as send:
+            handler.byos_display()
+        self.assertEqual(device.cursor, before + 1)
+        self.assertEqual(send.call_args.args[0], 200)
+
+    def test_fixed_scene_navigation_does_not_rotate_and_has_bar(self):
+        http = ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
+        thread = threading.Thread(target=http.serve_forever, daemon=True); thread.start()
+        before = server.devices['ipad'].cursor
+        try:
+            with patch.object(server.renderer, 'image', return_value='fixture.png'):
+                for scene in ('home', 'tasks', 'week', 'month'):
+                    with urlopen(f'http://127.0.0.1:{http.server_port}/device/ipad/scenes/{scene}') as r:
+                        page = r.read().decode()
+                    for label in ('Home', 'Tasks', 'Events', 'Month'):
+                        self.assertIn('>' + label + '</a>', page)
+                    self.assertIn(f'url=/device/ipad/scenes/{scene}', page)
+                    self.assertIn('aria-current="page"', page)
+                    self.assertIn('class="prev"', page)
+                self.assertEqual(server.devices['ipad'].cursor, before)
+                with self.assertRaises(HTTPError) as raised:
+                    urlopen(f'http://127.0.0.1:{http.server_port}/device/ipad/scenes/unknown')
+                self.assertEqual(raised.exception.code, 404); raised.exception.close()
+        finally:
+            http.shutdown(); http.server_close(); thread.join()
+
+    def test_month_range_grid_overflow_and_today(self):
+        now = dt.datetime(2026, 10, 20, 12, tzinfo=screens.TZ)
+        def event(title, start, end):
+            return dict(summary=title, start=start, end=end, allday=True, meal=False)
+        events = [event('Trip', dt.date(2026, 9, 30), dt.date(2026, 10, 3))]
+        events += [event(f'Event {i}', now.date(), now.date()+dt.timedelta(days=1)) for i in range(6)]
+        with patch.object(screens.month_calendar, 'get', return_value={'events': events}) as source:
+            page = screens.month(now, specs['ipad'])
+        source.assert_called_once_with((dt.date(2026, 9, 28), dt.date(2026, 11, 2)))
+        self.assertIn('October 2026', page)
+        self.assertEqual(page.count('class="w-monthday'), 35)
+        self.assertIn('aria-label="Today, October 20"', page)
+        self.assertIn('Trip', page)
+        self.assertIn('more', page)
+        for year, month, days in [(2024, 2, 29), (2026, 2, 28), (2026, 12, 31)]:
+            first, end = screens.month_range(dt.date(year, month, 15))
+            self.assertEqual(first.weekday(), 0); self.assertEqual(end.weekday(), 0)
+            self.assertLessEqual(first, dt.date(year, month, 1))
+            self.assertGreater(end, dt.date(year, month, days))
+            self.assertLessEqual((end-first).days, 42)
+
+    def test_event_loader_uses_explicit_exclusive_range(self):
+        with patch.object(screens, 'collections', return_value=[('/family/', 'Family')]), patch.object(screens, 'components', return_value=[]) as components:
+            screens.load_events((dt.date(2026, 9, 28), dt.date(2026, 11, 2)))
+        query = components.call_args.args[1]
+        self.assertIn('20260928T060000Z', query)
+        self.assertIn('20261102T070000Z', query)
 
     def test_home_filters_before_ranking_and_counting(self):
         now = dt.datetime(2026, 10, 14, 12, tzinfo=screens.TZ)

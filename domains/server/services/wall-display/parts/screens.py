@@ -14,6 +14,7 @@ is fetched from the network at render time.
 Data is cached here (Cached) so the HTML preview, the renderer and every
 device share one fetch per source.
 """
+import calendar as month_grid
 import base64
 import datetime as dt
 import html
@@ -144,8 +145,10 @@ def dinner_row(events, day):
 
 
 def load_events(first_day):
-    start = dt.datetime.combine(first_day, dt.time(), TZ)
-    query = EVENT_REPORT.format(s=utc_stamp(start), e=utc_stamp(start + dt.timedelta(days=DAYS)))
+    first, end = first_day if isinstance(first_day, tuple) else (first_day, first_day + dt.timedelta(days=DAYS))
+    start = dt.datetime.combine(first, dt.time(), TZ)
+    stop = dt.datetime.combine(end, dt.time(), TZ)
+    query = EVENT_REPORT.format(s=utc_stamp(start), e=utc_stamp(stop))
     cals, events, seen = collections("VEVENT"), [], set()
     for href, name in cals:
         for ev in components(href, query, "VEVENT"):
@@ -383,12 +386,15 @@ class Cached:
 
 
 calendar = Cached("calendar", load_events, CAL_TTL)
+# Single-entry, rebuildable month cache; at most 42 days, using the same parser.
+month_calendar = Cached("month calendar", load_events, CAL_TTL)
 weather = Cached("forecast", load_weather, WX_TTL)
 todo = Cached("tasks", load_tasks, CAL_TTL)
 briefing = Cached("briefing", load_briefing, CAL_TTL)
 # A source only used by an optional screen is not loaded without a render.
 # Keep it out of health checks when no device rotates through that screen.
-SOURCES = [calendar, weather, todo] + ([briefing] if BRIEFING and any(
+SOURCES = [calendar, weather, todo] + ([month_calendar] if any(
+    "month" in d["playlist"] for d in CONFIG["devices"].values()) else []) + ([briefing] if BRIEFING and any(
     "briefing" in device["playlist"] for device in CONFIG["devices"].values()) else [])
 
 
@@ -700,6 +706,41 @@ def week(now, device):
                 instance=(f"{PLACE} · " if PLACE else "") + ((wx or {}).get("now") or "forecast unavailable"))
 
 
+def month_range(today):
+    weeks = month_grid.Calendar(firstweekday=0).monthdatescalendar(today.year, today.month)
+    return weeks[0][0], weeks[-1][-1] + dt.timedelta(days=1)
+
+
+def month(now, device):
+    today = now.date()
+    first, end = month_range(today)
+    data = month_calendar.get((first, end))
+    events = (data or {}).get("events", [])
+    rows = (end - first).days // 7
+    cells = []
+    # Keep text legible at six weeks on the shorter Fire profile.
+    limit = 2 if rows <= 5 and profile(device)[1] >= 560 else 1
+    for offset in range((end - first).days):
+        day = first + dt.timedelta(days=offset)
+        current = day == today
+        label = ('Today, ' if current else '') + f'{day:%B} {day.day}'
+        day_events = events_on(events, day)
+        lines = []
+        for ev in day_events[:limit]:
+            when = '' if ev['allday'] else clock(ev['start']) + ' '
+            lines.append(f'<div class="w-month-event w-c1">{E(when + ev["summary"])}</div>')
+        cells.append(f'<div class="w-monthday{" w-outside" if day.month != today.month else ""}">'
+                     f'<span class="w-monthdate{" w-current" if current else ""}" aria-label="{E(label)}">{day.day}</span>'
+                     + ''.join(lines) + more(len(day_events) - limit) + '</div>')
+    weekdays = ''.join(f'<span>{day}</span>' for day in ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'))
+    body = (f'<div class="w-monthhead"><span class="title">{today:%B %Y}</span>'
+            f'<span class="label label--small">Scan to add events on your phone</span></div>'
+            f'<div class="w-row w-flex"><div class="w-monthwrap"><div class="w-weekdays">{weekdays}</div>'
+            f'<div class="w-monthgrid" style="grid-template-rows:repeat({rows},minmax(0,1fr))">{"".join(cells)}</div></div>'
+            f'{qr("month", device, "Add calendar event")}</div>')
+    return page("Month", now, device, body, [month_calendar], instance=f'{today:%B %Y}')
+
+
 def weather_screen(now, device):
     today = now.date()
     wx = weather.get()
@@ -803,13 +844,25 @@ def brief(now, device):
 # The closed screen vocabulary: index.nix validates playlists against these
 # names through the generated config, and the server serves nothing else.
 SCREENS = {"home": home, "week": week, "weather": weather_screen, "tasks": tasks,
-           "groceries": groceries, "briefing": brief}
+           "groceries": groceries, "briefing": brief, "month": month}
 
 
 # Layout on top of the framework: its type scale, labels and title bar do
 # the look; these rules only place things. Black, white and the framework's
 # greys; no motion.
 CSS = """
+.w-monthhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.w-monthwrap{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
+.w-weekdays,.w-monthgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.w-weekdays{text-align:center;font-weight:bold;flex:none}
+.w-monthgrid{flex:1;min-height:0;border-top:1px solid #000;border-left:1px solid #000}
+.w-monthday{min-height:0;min-width:0;overflow:hidden;border-right:1px solid #000;border-bottom:1px solid #000;padding:3px;display:flex;flex-direction:column;gap:2px}
+.w-monthdate{font-weight:bold;align-self:flex-start;padding:0 4px}
+.w-current{background:#000;color:#fff;border-radius:3px}
+.w-outside{color:#666}
+.w-month-event{font-size:12px;line-height:1.2}
+.w-monthday .w-more{font-size:11px!important;line-height:1.1!important}
+
 .w-dinner{display:flex;flex-direction:column;gap:2px;border-bottom:1px solid #000;padding-bottom:4px;flex:none}
 .w-fill{display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:8px;overflow:hidden}
 .w-row{display:flex;gap:12px;min-height:0}
