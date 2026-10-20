@@ -953,6 +953,8 @@
     };
     sunshine = {
       enable = true;
+      headless = true;
+      bindAddress = config.hwc.networking.hosts.ips.main;
       openFirewall = true;
       capSysAdmin = true;
     };

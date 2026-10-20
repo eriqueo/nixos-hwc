@@ -3,6 +3,68 @@ let
   cfg = config.hwc.gaming.retroarch;
   paths = config.hwc.paths;
 
+  # Keep the executable payload beside its wiring: index.nix owns options and
+  # dependencies; stream-session.py preserves the exercised pilot supervisor.
+  streamState = "${cfg.dataDir}/config/katamari-stream-pilot";
+  streamRuntime = "/run/hwc/sunshine";
+  streamSession = pkgs.replaceVarsWith {
+    src = ./stream-session.py;
+    isExecutable = true;
+    replacements = {
+      python = lib.getExe pkgs.python3;
+      state = streamState;
+      runtime = streamRuntime;
+      pcsx = "${pkgs.pcsx2}/bin/pcsx2-qt";
+      xvfb = "${pkgs.xorg-server}/bin/Xvfb";
+      pulse = "${pkgs.pulseaudio}/bin/pulseaudio";
+      openbox = "${pkgs.openbox}/bin/openbox";
+      game = "${cfg.romsDir}/ps2/Katamari Damacy/Katamari_Damacy.iso";
+      sunshine = lib.getExe config.services.sunshine.package;
+      libx11 = pkgs.libX11;
+      libxtst = pkgs.libXtst;
+    };
+  };
+  streamApps = (pkgs.formats.json {}).generate "sunshine-headless-apps.json" {
+    env = {};
+    apps = [
+      { name = "Desktop"; }
+      {
+        name = "RetroArch";
+        cmd = "${retroarchWithCores}/bin/retroarch --menu --fullscreen";
+        auto-detach = false;
+        wait-all = true;
+      }
+      {
+        name = "Katamari Damacy";
+        cmd = "${streamSession} game";
+        working-dir = streamState;
+        auto-detach = false;
+        wait-all = true;
+        exit-timeout = 10;
+        output = "${streamState}/game-launch.log";
+      }
+    ];
+  };
+  streamConf = (pkgs.formats.keyValue {}).generate "sunshine-headless.conf" {
+    sunshine_name = config.networking.hostName;
+    capture = "x11";
+    encoder = "nvenc";
+    audio_sink = "katamari_stream";
+    virtual_sink = "katamari_stream";
+    channels = 1;
+    upnp = "disabled";
+    origin_web_ui_allowed = "wan";
+    bind_address = cfg.sunshine.bindAddress;
+    address_family = "ipv4";
+    file_apps = streamApps;
+    file_state = "${streamState}/state.json";
+    credentials_file = "${streamState}/credentials.json";
+    pkey = "${streamState}/server-key.pem";
+    cert = "${streamState}/server-cert.pem";
+    log_path = "/dev/null"; # Console logs go to the host's bounded journal.
+    min_log_level = 2;
+  };
+
   # RetroArch with selected cores
   retroarchWithCores = pkgs.retroarch.withCores (cores:
     lib.filter (x: x != null) [
@@ -110,6 +172,14 @@ in
     sunshine = {
       enable = lib.mkEnableOption "Sunshine game streaming server (Moonlight compatible)";
 
+      headless = lib.mkEnableOption "Managed headless streaming using existing private pairing and game state";
+
+      bindAddress = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "Tailscale address for the headless Sunshine listener";
+      };
+
       port = lib.mkOption {
         type = lib.types.port;
         default = 47989;
@@ -153,9 +223,36 @@ in
     # Sunshine game streaming service
     services.sunshine = lib.mkIf cfg.sunshine.enable {
       enable = true;
-      autoStart = true;
+      autoStart = !cfg.sunshine.headless;
       capSysAdmin = cfg.sunshine.capSysAdmin;
       openFirewall = cfg.sunshine.openFirewall;
+    };
+
+    # CRITICAL: the existing private pairing and emulator state stays in place.
+    # No prepare/reset command runs here. Runtime files are REPLACEABLE and
+    # systemd removes them on stop; the host journal bounds console logs.
+    systemd.services.sunshine-headless = lib.mkIf (cfg.sunshine.enable && cfg.sunshine.headless) {
+      description = "Headless Sunshine streaming desktop";
+      wantedBy = [ "multi-user.target" ];
+      wants = [ "user@1000.service" "tailscaled.service" ];
+      after = [ "user@1000.service" "tailscaled.service" ];
+      path = [ pkgs.coreutils pkgs.xauth pkgs.xrandr ];
+      environment = {
+        HOME = config.users.users.eric.home;
+        XDG_RUNTIME_DIR = "/run/user/1000";
+        DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/1000/bus";
+      };
+      serviceConfig = {
+        User = lib.mkForce "eric";
+        Group = "users";
+        SupplementaryGroups = [ "uinput" "input" "video" "render" ];
+        RuntimeDirectory = "hwc/sunshine";
+        RuntimeDirectoryMode = "0700";
+        ExecStart = "${streamSession} run ${streamConf}";
+        KillMode = "control-group";
+        TimeoutStopSec = 15;
+        Restart = "no"; # Fail visibly; do not loop on a broken display or encoder.
+      };
     };
 
     # RetroArch data directories
@@ -218,6 +315,10 @@ in
     # VALIDATION
     #==========================================================================
     assertions = [
+      {
+        assertion = !cfg.sunshine.headless || cfg.sunshine.bindAddress != "";
+        message = "Headless Sunshine requires an explicit Tailscale bind address";
+      }
       {
         assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.enable;
         message = "hwc.gaming.retroarch.gpu requires hwc.system.hardware.gpu.enable = true";

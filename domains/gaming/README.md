@@ -11,13 +11,16 @@ Gaming services including retro emulation (RetroArch) and WebDAV-based save sync
 
 ## Structure
 
-Machine reference follows machines/home; gaming settings are unchanged.
+The optional headless Sunshine service owns its display, audio and input bridge.
+It reuses the existing private Katamari pairing and save directory, binds to the
+machine's Tailscale address, and offers Desktop, RetroArch and Katamari apps.
 
 ```
 domains/gaming/
 ├── index.nix           # Domain aggregator
 ├── retroarch/          # RetroArch emulator + Sunshine streaming
-│   └── index.nix       # Options + implementation
+│   ├── index.nix       # Options, dependencies and managed streaming service
+│   └── stream-session.py # Supervised display/audio/input and game launcher
 └── webdav/             # dufs WebDAV server for save sync
     └── index.nix       # Options + implementation
 ```
@@ -41,6 +44,7 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+- 2026-10-20: Manage the home streaming desktop at boot with Nix-owned dependencies; preserve existing pairing and saves instead of relying on expired pilot store paths.
 - 2026-09-26: Machine reference follows machines/home; gaming settings are unchanged.
 
 - 2026-07-11: webdav — `User = lib.mkForce "eric"` per the native-services Architecture Law (was bare; no-op today, verified by before/after eval).
