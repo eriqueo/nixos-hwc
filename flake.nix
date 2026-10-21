@@ -274,6 +274,7 @@
           silenceDeprecatedAliases
           gitCleanupOverlay
           pandasStubsOverlay   # TEMP: skip pandas-stubs tests (upstream pytest-9.1.1 breakage)
+          nodejsSecurityOverlay  # TEMP: Node Oct-2026 security release + brotli CVE fix
           # Expose the cowork-capable Claude Desktop package (package-only flake,
           # no overlay of its own) under pkgs for the home app module.
           (final: prev: {
@@ -313,13 +314,17 @@
     pandasStubsOverlay = import ./overlays/pandas-stubs.nix;
     # TEMP: native Git pack cleanup on cancellation; removal test in the overlay.
     gitCleanupOverlay = import ./overlays/git.nix;
+    # Node.js security overlay — TEMPORARY (tracked). Node 24.22.1 / 22.23.4
+    # with brotli CVE-2026-111497 fix, ahead of both channels. See the file
+    # header for the removal condition.
+    nodejsSecurityOverlay = import ./overlays/nodejs-security.nix;
 
     # Pkgs helper with optional overlays (server uses this)
     # CUDA enabled - using cache.nixos-cuda.org for pre-built binaries
     mkPkgsWithOverlays = system: nixpkgsInput: extraOverlays:
       import nixpkgsInput {
         inherit system;
-        overlays = [ silenceDeprecatedAliases gitCleanupOverlay pandasStubsOverlay claudeCodeOverlay cloudflaredOverlay ] ++ extraOverlays;
+        overlays = [ silenceDeprecatedAliases gitCleanupOverlay pandasStubsOverlay nodejsSecurityOverlay claudeCodeOverlay cloudflaredOverlay ] ++ extraOverlays;
         config = {
           allowUnfree = true;
           nvidia.acceptLicense = true;

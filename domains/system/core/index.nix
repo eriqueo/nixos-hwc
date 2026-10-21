@@ -64,6 +64,17 @@
       # AUTO-MANAGED: journald rotates oldest archived journals at this cap.
       # A host or audit policy can replace it (home retains its 8G window).
       services.journald.extraConfig = lib.mkDefault "SystemMaxUse=1G";
+
+      # TEMPORARY (tracked): distrust the eMudhra emSign roots that Mozilla
+      # removed in NSS 3.131.1 after eight emSign intermediate keys proved
+      # recoverable (disclosed 2026-10-17). emSign Root CA - G1 stays, as in
+      # NSS. Remove when `nix eval .#nixosConfigurations.<host>.pkgs.cacert.version`
+      # reports >= 3.131.1 for every machine (the bundle then lacks these labels).
+      security.pki.caCertificateBlacklist = [
+        "emSign ECC Root CA - G3"
+        "emSign Root CA - C1"
+        "emSign ECC Root CA - C3"
+      ];
     }
 
     (lib.mkIf config.hwc.system.core.nixld.guiLibs.enable {
