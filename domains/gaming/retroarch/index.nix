@@ -7,6 +7,11 @@ let
   # dependencies; stream-session.py preserves the exercised pilot supervisor.
   streamState = "${cfg.dataDir}/config/katamari-stream-pilot";
   streamRuntime = "/run/hwc/sunshine";
+  streamCatalog = (pkgs.formats.json {}).generate "sunshine-game-catalog.json" {
+    schemaVersion = 1;
+    roms = cfg.romsDir;
+    games = cfg.sunshine.games;
+  };
   streamSession = pkgs.replaceVarsWith {
     src = ./stream-session.py;
     isExecutable = true;
@@ -15,10 +20,11 @@ let
       state = streamState;
       runtime = streamRuntime;
       pcsx = "${pkgs.pcsx2}/bin/pcsx2-qt";
+      dolphin = "${pkgs.dolphin-emu}/bin/dolphin-emu";
+      catalog = streamCatalog;
       xvfb = "${pkgs.xorg-server}/bin/Xvfb";
       pulse = "${pkgs.pulseaudio}/bin/pulseaudio";
       openbox = "${pkgs.openbox}/bin/openbox";
-      game = "${cfg.romsDir}/ps2/Katamari Damacy/Katamari_Damacy.iso";
       sunshine = lib.getExe config.services.sunshine.package;
       libx11 = pkgs.libX11;
       libxtst = pkgs.libXtst;
@@ -34,16 +40,15 @@ let
         auto-detach = false;
         wait-all = true;
       }
-      {
-        name = "Katamari Damacy";
-        cmd = "${streamSession} game";
+    ] ++ map (game: {
+        name = game.title;
+        cmd = "${streamSession} game ${lib.escapeShellArg game.id}";
         working-dir = streamState;
         auto-detach = false;
         wait-all = true;
         exit-timeout = 10;
         output = "${streamState}/game-launch.log";
-      }
-    ];
+      }) cfg.sunshine.games;
   };
   streamConf = (pkgs.formats.keyValue {}).generate "sunshine-headless.conf" {
     sunshine_name = config.networking.hostName;
@@ -52,6 +57,7 @@ let
     audio_sink = "katamari_stream";
     virtual_sink = "katamari_stream";
     channels = 1;
+    gamepad = "x360";
     upnp = "disabled";
     origin_web_ui_allowed = "wan";
     bind_address = cfg.sunshine.bindAddress;
@@ -173,6 +179,19 @@ in
       enable = lib.mkEnableOption "Sunshine game streaming server (Moonlight compatible)";
 
       headless = lib.mkEnableOption "Managed headless streaming using existing private pairing and game state";
+
+      games = lib.mkOption {
+        default = [];
+        description = "Direct Sunshine game launchers; ROM paths are relative to romsDir";
+        type = lib.types.listOf (lib.types.submodule {
+          options = {
+            id = lib.mkOption { type = lib.types.strMatching "[a-z0-9]+(-[a-z0-9]+)*"; };
+            title = lib.mkOption { type = lib.types.str; };
+            system = lib.mkOption { type = lib.types.enum [ "ps2" "gamecube" ]; };
+            rom = lib.mkOption { type = lib.types.str; };
+          };
+        });
+      };
 
       bindAddress = lib.mkOption {
         type = lib.types.str;
@@ -315,6 +334,14 @@ in
     # VALIDATION
     #==========================================================================
     assertions = [
+      {
+        assertion = let games = cfg.sunshine.games; in
+          lib.length (lib.unique (map (game: game.id) games)) == lib.length games
+          && lib.length (lib.unique (map (game: game.title) games)) == lib.length games
+          && lib.all (game: game.title != "" && !(lib.hasPrefix "/" game.rom)
+            && !(lib.elem ".." (lib.splitString "/" game.rom))) games;
+        message = "Sunshine games require unique IDs/titles and ROM paths inside romsDir";
+      }
       {
         assertion = !cfg.sunshine.headless || cfg.sunshine.bindAddress != "";
         message = "Headless Sunshine requires an explicit Tailscale bind address";

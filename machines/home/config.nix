@@ -955,6 +955,68 @@
       enable = true;
       headless = true;
       bindAddress = config.hwc.networking.hosts.ips.main;
+      # Direct streaming is reserved for PS2 and the heavier GameCube library.
+      # Disc entries share emulator memory cards; original images stay read-only.
+      games = [
+        { id = "katamari-damacy"; title = "Katamari Damacy"; system = "ps2";
+          rom = "ps2/Katamari Damacy/Katamari_Damacy.iso"; }
+        { id = "armored-core-3"; title = "Armored Core 3"; system = "ps2";
+          rom = "ps2/Armored core 3/ArmoredCore3.ISO"; }
+        { id = "final-fantasy-x"; title = "Final Fantasy X"; system = "ps2";
+          rom = "ps2/Final Fantasy X/Final Fantasy X.ISO"; }
+        { id = "simpsons-hit-and-run"; title = "The Simpsons - Hit & Run"; system = "ps2";
+          rom = "ps2/Simpsons Hit and Run/THE_SIMPSONS_HIT_AND_RUN.ISO"; }
+        { id = "half-life"; title = "Half-Life"; system = "ps2";
+          rom = "ps2/half-life/HL.nrg"; }
+        { id = "super-mario-strikers"; title = "Super Mario Strikers"; system = "gamecube";
+          rom = "gamecube/gc/Super Mario Strikers (USA).iso"; }
+        { id = "timesplitters-future-perfect"; title = "TimeSplitters - Future Perfect"; system = "gamecube";
+          rom = "gamecube/gc/TimeSplitters - Future Perfect (USA).iso"; }
+        { id = "mario-power-tennis"; title = "Mario Power Tennis"; system = "gamecube";
+          rom = "gamecube/gc/Mario Power Tennis (USA) (v1.00).iso"; }
+        { id = "mario-party-4"; title = "Mario Party 4"; system = "gamecube";
+          rom = "gamecube/gc/Mario Party 4/mario party 4.iso"; }
+        { id = "mario-party-5"; title = "Mario Party 5"; system = "gamecube";
+          rom = "gamecube/gc/Mario Party 5/Mario Party 5 NTSC-U.iso"; }
+        { id = "metroid-prime"; title = "Metroid Prime"; system = "gamecube";
+          rom = "gamecube/gc/Metroid Prime/metroid prime.gcm"; }
+        { id = "star-wars-rogue-leader"; title = "Star Wars - Rogue Leader"; system = "gamecube";
+          rom = "gamecube/gc/Star Wars Rogue Leader/star wars rouge leader.gcm"; }
+        { id = "smash-bros-melee"; title = "Super Smash Bros. Melee"; system = "gamecube";
+          rom = "gamecube/gc/Smash Brothers Melee/smash bros melee.gcm"; }
+        { id = "mario-kart-double-dash"; title = "Mario Kart - Double Dash!!"; system = "gamecube";
+          rom = "gamecube/gc/Mario Kart Double Dash/mario kart double dash.iso"; }
+        { id = "paper-mario-ttyd"; title = "Paper Mario - The Thousand-Year Door"; system = "gamecube";
+          rom = "gamecube/gc/Paper Mario/paper mario.iso"; }
+        { id = "bomberman-generation"; title = "Bomberman Generation"; system = "gamecube";
+          rom = "gamecube/gc/Bomberman Generation/Bomberman Generation NTSC-U.iso"; }
+        { id = "soulcalibur-ii"; title = "Soulcalibur II"; system = "gamecube";
+          rom = "gamecube/gc/Soul Calibre 2/soul calibur 2.iso"; }
+        { id = "resident-evil-2"; title = "Resident Evil 2"; system = "gamecube";
+          rom = "gamecube/gc/resident evil/Resident Evil 2 NTSC.iso"; }
+        { id = "resident-evil-3"; title = "Resident Evil 3 - Nemesis"; system = "gamecube";
+          rom = "gamecube/gc/resident evil/Resident Evil 3 NTSC.iso"; }
+        { id = "resident-evil-disc-1"; title = "Resident Evil (Disc 1)"; system = "gamecube";
+          rom = "gamecube/gc/Resident Evil 1/Resident Evil 1 Disc 1.iso"; }
+        { id = "resident-evil-disc-2"; title = "Resident Evil (Disc 2)"; system = "gamecube";
+          rom = "gamecube/gc/Resident Evil 1/Resident Evil 1 Disc 2.iso"; }
+        { id = "resident-evil-4-disc-1"; title = "Resident Evil 4 (Disc 1)"; system = "gamecube";
+          rom = "gamecube/gc/Resident Evil 4/Resident Evil 4 Disc 1.iso"; }
+        { id = "resident-evil-4-disc-2"; title = "Resident Evil 4 (Disc 2)"; system = "gamecube";
+          rom = "gamecube/gc/Resident Evil 4/Resident Evil 4 Disc 2.iso"; }
+        { id = "metal-gear-solid-twin-snakes-disc-1"; title = "Metal Gear Solid - The Twin Snakes (Disc 1)"; system = "gamecube";
+          rom = "gamecube/gc/Metal Gear Solid Twin Sn/MGS Twin Snakes Disc 1.iso"; }
+        { id = "metal-gear-solid-twin-snakes-disc-2"; title = "Metal Gear Solid - The Twin Snakes (Disc 2)"; system = "gamecube";
+          rom = "gamecube/gc/Metal Gear Solid Twin Sn/MGS Twin Snakes Disc 2.iso"; }
+        { id = "resident-evil-0-disc-1"; title = "Resident Evil 0 (Disc 1)"; system = "gamecube";
+          rom = "gamecube/gc/resident evil/resident evil 0 cd1.gcm"; }
+        { id = "resident-evil-0-disc-2"; title = "Resident Evil 0 (Disc 2)"; system = "gamecube";
+          rom = "gamecube/gc/resident evil/resident evil 0 cd2.gcm"; }
+        { id = "resident-evil-code-veronica-disc-1"; title = "Resident Evil - Code Veronica X (Disc 1)"; system = "gamecube";
+          rom = "gamecube/gc/resident evil/resident evil code veronica cd1.iso"; }
+        { id = "resident-evil-code-veronica-disc-2"; title = "Resident Evil - Code Veronica X (Disc 2)"; system = "gamecube";
+          rom = "gamecube/gc/resident evil/resident evil code veronica cd2.iso"; }
+      ];
       openFirewall = true;
       capSysAdmin = true;
     };

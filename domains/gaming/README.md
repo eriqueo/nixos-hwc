@@ -13,7 +13,11 @@ Gaming services including retro emulation (RetroArch) and WebDAV-based save sync
 
 The optional headless Sunshine service owns its display, audio and input bridge.
 It reuses the existing private Katamari pairing and save directory, binds to the
-machine's Tailscale address, and offers Desktop, RetroArch and Katamari apps.
+machine's Tailscale address, and derives direct game launchers from the machine's
+`sunshine.games` catalog alongside Desktop and RetroArch. PS2 uses the existing
+PCSX2 saves; GameCube uses a separate persistent Dolphin user directory.
+Controller profiles retain keyboard input and add streamed SDL gamepads. Nero
+images are converted into a bounded, rebuildable cache without changing sources.
 
 ```
 domains/gaming/
@@ -44,6 +48,7 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+- 2026-10-20: Add a typed server game catalog, direct PS2/GameCube streaming, controller profiles and Nero image conversion; retain pairing and existing saves.
 - 2026-10-20: Manage the home streaming desktop at boot with Nix-owned dependencies; preserve existing pairing and saves instead of relying on expired pilot store paths.
 - 2026-09-26: Machine reference follows machines/home; gaming settings are unchanged.
 
