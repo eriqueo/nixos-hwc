@@ -142,8 +142,11 @@ def playable_image(entry):
         cache = BASE / 'disc-cache'; cache.mkdir(exist_ok=True)
         target = cache / (entry['id'] + '.iso'); meta = target.with_suffix('.json')
         if target.exists() and target.stat().st_size == length and meta.exists():
-            if json.loads(meta.read_text()) == expected:
-                return target
+            try:
+                if json.loads(meta.read_text()) == expected:
+                    return target
+            except (OSError, ValueError):
+                pass  # REPLACEABLE metadata is rebuilt from the original image.
         temp = target.with_suffix('.iso.tmp')
         f.seek(start)
         with temp.open('wb') as output:
@@ -276,7 +279,9 @@ def game():
         args = [DOLPHIN, '--batch', '--user=' + str(BASE/'dolphin'),
                 '--video_backend=Vulkan', '-C', 'Dolphin.Display.Fullscreen=True',
                 '-C', 'Dolphin.Interface.ConfirmStop=False',
-                '-C', 'Dolphin.Core.AutoDiscChange=True']
+                '-C', 'Dolphin.Core.AutoDiscChange=True',
+                '-C', 'Logger.Options.WriteToConsole=True',
+                '-C', 'Logger.Logs.BOOT=True', '-C', 'Logger.Logs.CORE=True']
         for port in range(4):
             args += ['-C', f'Dolphin.Core.SIDevice{port}=6']
         return game_process(args + ['--exec=' + str(image)], env, game_id)
