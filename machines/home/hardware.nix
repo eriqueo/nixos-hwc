@@ -34,12 +34,17 @@ in
   # Permanent by design: keep the workspace address while its build/test
   # data lives on SATA. REPLACEABLE game/build copies stay until explicit
   # project closeout; unique scripts remain alongside them. No TTL cleanup.
-  fileSystems."${paths.user.agents}/projects/${switchProject}" = {
-    device = "${paths.hot.root}/agent-projects/${switchProject}";
-    fsType = "none";
-    options = [ "bind" ];
-    depends = [ paths.hot.root ];
-  };
+  # A user-derived fileSystems attribute name recurses through users.users
+  # and RPC/NFS filesystem detection. Resolve this address in the later
+  # systemd mount list instead, with the same required SATA dependency.
+  systemd.mounts = [{
+    what = "${paths.hot.root}/agent-projects/${switchProject}";
+    where = "${paths.user.agents}/projects/${switchProject}";
+    type = "none";
+    options = "bind";
+    unitConfig.RequiresMountsFor = paths.hot.root;
+    wantedBy = [ "local-fs.target" ];
+  }];
 
   # Swap space for server (16GB) - prevents OOM kills during high load
   # Located on SSD for better performance
