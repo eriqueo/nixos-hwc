@@ -43,6 +43,9 @@ in
     type = "none";
     options = "bind";
     unitConfig.RequiresMountsFor = paths.hot.root;
+    # If SATA is unavailable, the uncovered mountpoint must reject user
+    # writes instead of quietly filling the root disk again.
+    mountConfig.DirectoryMode = "0000";
     wantedBy = [ "local-fs.target" ];
   }];
 
