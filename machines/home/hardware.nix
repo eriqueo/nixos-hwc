@@ -37,6 +37,11 @@ in
   # A user-derived fileSystems attribute name recurses through users.users
   # and RPC/NFS filesystem detection. Resolve this address in the later
   # systemd mount list instead, with the same required SATA dependency.
+  # Temporary activation bridge (2026-10-22, Eric approved): the generated
+  # unit and local-fs.target.wants link live in /etc/systemd/system.attached
+  # while unrelated CUDA rebuilds block a full switch. Remove those two
+  # attached entries once /etc/static/systemd/system contains this mount;
+  # the declarative unit has higher lookup priority than the bridge.
   systemd.mounts = [{
     what = "${paths.hot.root}/agent-projects/${switchProject}";
     where = "${paths.user.agents}/projects/${switchProject}";
