@@ -2,7 +2,10 @@
 # and may be overwritten by future invocations.  Please make changes
 # to /etc/nixos/configuration.nix instead.
 { config, lib, pkgs, modulesPath, ... }:
-
+let
+  paths = config.hwc.paths;
+  switchProject = "switch-recomp";
+in
 {
   imports =
     [ (modulesPath + "/installer/scan/not-detected.nix")
@@ -27,6 +30,16 @@
       fsType = "vfat";
       options = [ "fmask=0022" "dmask=0022" ];
     };
+
+  # Permanent by design: keep the workspace address while its build/test
+  # data lives on SATA. REPLACEABLE game/build copies stay until explicit
+  # project closeout; unique scripts remain alongside them. No TTL cleanup.
+  fileSystems."${paths.user.agents}/projects/${switchProject}" = {
+    device = "${paths.hot.root}/agent-projects/${switchProject}";
+    fsType = "none";
+    options = [ "bind" ];
+    depends = [ paths.hot.root ];
+  };
 
   # Swap space for server (16GB) - prevents OOM kills during high load
   # Located on SSD for better performance
