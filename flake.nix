@@ -373,6 +373,7 @@
     # pkgs-stable with CUDA overlay for server (Immich ML GPU acceleration)
     pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ serverOverlay tailscaleOverlay ghidraOverlay ];
 
+    checkRuntimeScope = mkNodeRuntimeScope pkgs;
     laptopRuntimeScope = mkNodeRuntimeScope pkgs-laptop;
     serverRuntimeScope = mkNodeRuntimeScope pkgs-stable;
     serverCudaRuntimeScope = mkNodeRuntimeScope pkgs-stable-cuda;
@@ -620,6 +621,8 @@
     # are burned down (see workspace/plans/2026-07-05-phase-plan-handoff.md).
     #========================================================================
     checks.${system} = let
+      # Test tools follow the same native-runtime boundary as deployed hosts.
+      pkgs = checkRuntimeScope.pkgs;
       keymapGrammar = import ./domains/home/keymap/grammar.nix { inherit lib; };
       keymapValidator = pkgs.writeText "keymap-validator.py" ''
         import json, pathlib, sys, tomllib
