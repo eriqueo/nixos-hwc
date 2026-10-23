@@ -102,10 +102,10 @@ let
         cp -r bin include lib share CHANGELOG.md LICENSE README.md "$out/"
         runHook postInstall
       '';
-      # Make the new interpreter discoverable to patchShebangs. The runtime
-      # itself is fixed by autoPatchelf before install checks execute it.
+      # fixup uses patchShebangs --host, which searches HOST_PATH, not PATH.
+      # autoPatchelf fixes the interpreter itself before install checks run.
       preFixup = ''
-        export PATH="$out/bin:$PATH"
+        export HOST_PATH="$out/bin:$HOST_PATH"
       '';
       doInstallCheck = true;
       installCheckPhase = ''
