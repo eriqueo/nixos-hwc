@@ -55,8 +55,10 @@ let
     for (const [name, expected] of Object.entries(manifest)) {
       assert.equal(process.versions[name], expected, name + ' dependency mismatch');
     }
-    const removedRoots = /emSign Root CA - (G3|C1)|emSign ECC Root CA - C3/;
-    assert(!tls.rootCertificates.some(pem => removedRoots.test(new X509Certificate(pem).subject)));
+    const emSignRoots = tls.rootCertificates
+      .map(pem => new X509Certificate(pem).toLegacyObject().subject.CN)
+      .filter(name => name?.startsWith('emSign ')).sort();
+    assert.deepEqual(emSignRoots, ['emSign Root CA - G1']);
     assert.throws(() => dns.resolve('example\0.invalid', () => {}), { code: 'ERR_INVALID_ARG_VALUE' });
     assert(tls.checkServerIdentity('0x7f.0.0.1', { subjectaltname: 'DNS:0x7f.0.0.1' }));
     const data = Buffer.from('HWC native runtime security smoke test');
