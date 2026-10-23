@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+`apps/courier/` receives its system-derived tailnet hostname in both Home Manager lanes through the flake shared arguments.
+
 The pinned handoff poll carries versioned handoff messages only. Old Close records retain history, late acknowledgements and safety holds, but grant no dispatch. Relays refuse unsupported messages before calling T3; canonical Review and Close use their reserved protocol.
 
 `apps/t3code/` shares a keep-old policy across desktop and headless units. Implicit home switches preserve running agents; launcher, environment and policy changes require a controlled explicit restart and runtime verification.
@@ -136,6 +138,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-23: Repair Courier tailnet evaluation in standalone `hms` by passing the system-derived hostname through shared arguments.
 
 - 2026-10-16: Pin tested legacy Close delivery retirement and the shared typed handoff parser. Preserve historical readers, late acknowledgements, occupied holds and canonical replay. Fleet enablement stays separate.
 

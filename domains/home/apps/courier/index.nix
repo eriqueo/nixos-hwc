@@ -12,7 +12,7 @@
 # https://<host>:<tailnet.port> through `tailscale serve`; courier still binds
 # loopback only. The app enforces the login, Origin and device checks.
 
-{ config, lib, pkgs, inputs, osConfig ? { }, ... }:
+{ config, lib, pkgs, inputs, osConfig ? { }, courierTailnetHost ? null, ... }:
 
 let
   cfg = config.hwc.home.apps.courier;
@@ -87,7 +87,11 @@ in
 
       host = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
-        default = if hostName == null then null else "${hostName}.${(hmLib.fleet osConfig).tailnetSuffix}";
+        # Standalone hms has no osConfig. The flake passes the system-owned
+        # name to both lanes, just as it passes the Tether package.
+        default = if courierTailnetHost != null then courierTailnetHost
+          else if hostName == null then null
+          else "${hostName}.${(hmLib.fleet osConfig).tailnetSuffix}";
         defaultText = lib.literalExpression ''"<networking.hostName>.<hwc.networking.hosts.tailnetSuffix>"'';
         description = "MagicDNS name devices use to reach this machine.";
       };
@@ -175,7 +179,7 @@ in
         message = "hwc.home.apps.courier opens its window with chromium-hwc (hwc.home.apps.chromium.enable).";
       }
       {
-        assertion = !cfg.tailnet.enable || (cfg.tailnet.login != null && cfg.tailnet.host != null && hmLib.isNixOSHost osConfig);
+        assertion = !cfg.tailnet.enable || (cfg.tailnet.login != null && cfg.tailnet.host != null && (hmLib.isNixOSHost osConfig || courierTailnetHost != null));
         message = "hwc.home.apps.courier.tailnet needs a NixOS host (for its tailscale CLI), tailnet.login and tailnet.host.";
       }
     ];
