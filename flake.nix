@@ -3657,14 +3657,6 @@
         (c.systemd.services.borgbackup-job-hwc-backup.preStart or ""))) hosts;
       assert lib.all (c: lib.hasInfix (builtins.unsafeDiscardStringContext "${c.services.postgresql.package}/bin/pg_dumpall")
         c.services.borgbackup.jobs.hwc-backup.preHook) hosts;
-      assert lib.assertMsg (lib.all (c: !c.hwc.automation.n8n.enable || (
-        c.hwc.data.borg.sqliteSnapshots ? n8n
-        && c.hwc.data.borg.sqliteSnapshots.n8n.source == "${c.hwc.automation.n8n.dataDir}/database.sqlite"
-        && c.hwc.data.borg.sqliteSnapshots.n8n.user == "eric"
-        && lib.any (p: p == c.hwc.automation.n8n.dataDir
-          || lib.hasPrefix "${lib.removeSuffix "/" p}/" c.hwc.automation.n8n.dataDir)
-          c.services.borgbackup.jobs.hwc-backup.paths
-      )) hosts) "n8n needs its online SQLite snapshot and config/key directory in Borg";
       pkgs.runCommand "borg-recovery" { nativeBuildInputs = [ pkgs.python3 pkgs.bash pkgs.coreutils pkgs.borgbackup pkgs.util-linux ]; } ''
         python3 - ${lib.concatStringsSep " " (map toString fixtures)} ${restore}/bin/borg-restore <<'PY'
         import gzip, hashlib, json, os, pathlib, pwd, re, shlex, shutil, sqlite3, subprocess, sys, tempfile, threading, time

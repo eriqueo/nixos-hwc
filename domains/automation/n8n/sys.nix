@@ -127,14 +127,8 @@ in
       cpus = "2.0";
     })
 
-    # Keep a coherent database beside the other Borg snapshots. The config
-    # encryption key stays in dataDir's existing archive coverage; Borg owns
-    # the online-backup limits, publication and raw DB/WAL/SHM exclusions.
+    # Ensure data directory exists
     {
-      hwc.data.borg.sqliteSnapshots.n8n = {
-        source = "${cfg.dataDir}/database.sqlite";
-        user = "eric";
-      };
       systemd.tmpfiles.rules = [
         "d ${cfg.dataDir} 0755 1000 1000 -"
         "d /run/n8n 0755 root root -"
