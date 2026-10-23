@@ -36,7 +36,7 @@
   hwc.monitoring.fleet-map.enable = true;
   hwc.business.workbench.web = {
     enable = true;
-    writeTiles = [ "today/mail" "mail/triage" ];
+    writeTiles = [ "today/mail" "mail/triage" "today/tasks" "crm-jobs/pipeline" "crm-network/network" ];
   };
   # The cert exporter requires a system bridge unit no host runs, and nothing
   # reads its pem; the mail role's user-unit bridge serves plaintext loopback.

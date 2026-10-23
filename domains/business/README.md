@@ -19,7 +19,7 @@ website identity, tracking endpoint and briefing/report API consumers.
 
 The Workbench registry includes Meals, resolving its destination from the shared route owner.
 `workbench.web` optionally serves the read-only browser shell from the pinned Workbench package on loopback :11680. It uses the TUI manifests and canonical Scout styles, preserves `/areas.json` for specialist app switchers, and keeps the existing private vhost. Disable it to restore the static directory.
-Explicit `writeTiles` enable declared Mail actions at the same private origin. The CRITICAL reservation/receipt journal lives under `hwc.paths.state/workbench`, with a Borg online SQLite snapshot, eight active reservations and thirty-day bounded terminal history. Restart cancels unused reservations and contains interrupted submissions; it never replays them.
+Explicit `writeTiles` enable declared Mail and task actions/edits plus legal CRM Jobs/Network moves at the same private origin. The CRITICAL reservation/receipt journal lives under `hwc.paths.state/workbench`, with a Borg online SQLite snapshot, eight active reservations and thirty-day bounded terminal history. Restart invalidates unused reservations and contains interrupted submissions; it never replays them.
 
 Estimator Flooring supports named click-lock LVT/LVP and tile areas with shared trade pricing, explicit scope costs and exact JobTread quantities. The area contract lives in `estimator/src/engine/flooring.js`; its editor is `FlooringScope.jsx`. Draft v3 uses separate storage keys and retains legacy recovery snapshots.
 
@@ -65,10 +65,15 @@ business/
 ├── morning-briefing/  # hwc.business.morningBriefing — local gather + Laya mail snapshot
 ├── paperless/         # hwc.business.paperless — Paperless-NGX documents
 ├── website/           # hwc.business.website — Heartwood CMS + 11ty + webapps
-└── workbench/         # hwc.business.workbench — area registry, static directory and optional read-only web shell
+└── workbench/         # hwc.business.workbench — area registry, static directory and optional browser shell with declared actions
 ```
 
 ## Changelog
+
+- 2026-10-23: Workbench enables declared task actions/edits and CRM Jobs/Network
+  actions with legal-stage controls through the private reservation journal.
+  Changed-only forms share TUI coercion; preflight rejects revoked targets or
+  changed confirmation contracts. Computed Server/Refinery stages remain gated.
 
 - 2026-10-23: Pin Umami 3.4.1 with corrected Node and application dependencies.
   Old/new/old image tests preserve the schema and original rows while exercising
