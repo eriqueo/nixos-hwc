@@ -95,6 +95,7 @@ let
       repo = destinationUrl target;
       encryption = { mode = cfg.encryption.mode; passCommand = "cat ${config.hwc.secrets.api.${target.passphraseSecret}}"; };
       environment.BORG_RSH = destinationRsh name target;
+      extraCreateArgs = lib.optionalString (target.uploadLimitKiB > 0) "--upload-ratelimit ${toString target.uploadLimitKiB}";
       # An SSH URL must never enter ReadWritePaths.
       # Include application-provided writable snapshot paths (for example Meals)
       # while excluding the primary local repository from the remote job.
@@ -248,6 +249,8 @@ in
           passphraseSecret = lib.mkOption { type = lib.types.str; description = "Independent agenix encryption passphrase"; };
           startAt = lib.mkOption { type = lib.types.str; description = "Independent systemd calendar schedule"; };
           checkAt = lib.mkOption { type = lib.types.str; default = "Sun *-*-* 14:00:00"; description = "Repository consistency-check calendar; full cryptographic verification is a separate recovery acceptance step"; };
+          timeoutSeconds = lib.mkOption { type = lib.types.ints.between 1 43200; default = 43200; description = "Job deadline in seconds, including lock wait; cancellation keeps Borg checkpoints"; };
+          uploadLimitKiB = lib.mkOption { type = lib.types.ints.between 0 65536; default = 0; description = "Upload limit in KiB/s, zero for unlimited"; };
         };
       });
     };
@@ -588,6 +591,7 @@ in
       lib.nameValuePair "borgbackup-job-${destinationJobName name}"
         (jobService // {
           serviceConfig = jobService.serviceConfig // {
+            TimeoutStartSec = target.timeoutSeconds;
             LoadCredential = [ (destinationCredential target) ];
           };
           onFailure = lib.optionals (cfg.notifications.onFailure && (config.hwc.monitoring.alerts.enable or false))

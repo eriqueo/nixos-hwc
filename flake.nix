@@ -3363,7 +3363,7 @@
           hostKey = lib.removeSuffix "\n" (builtins.readFile ./machines/xps/SSH_HOST_ED25519_PUBLIC_KEY.txt);
         }; }).config;
       in host.hwc.data.borg.additionalDestinations.maryland.repository == repositories.${name}.path
-        && host.systemd.services.borgbackup-job-hwc-backup-maryland.serviceConfig.TimeoutStartSec == "8h"
+        && host.systemd.services.borgbackup-job-hwc-backup-maryland.serviceConfig.TimeoutStartSec == 28800
         && lib.hasInfix "--upload-ratelimit 2048" host.services.borgbackup.jobs.hwc-backup-maryland.extraCreateArgs
       ) [ "hwc-home" "hwc-work" ];
       pkgs.runCommand "xps-offsite-storage" { nativeBuildInputs = [ pkgs.python3 pkgs.bash pkgs.coreutils pkgs.ripgrep ]; } ''
@@ -3496,7 +3496,7 @@
       assert secondary.encryption.passCommand == "cat /run/agenix/borg-fixture-pass";
       assert (unit "hwc-backup-test").serviceConfig.LoadCredential == [ "borg-ssh-key:/run/agenix/borg-fixture-ssh" ];
       assert !(lib.any (lib.hasPrefix "ssh:") secondary.readWritePaths);
-      assert (unit "hwc-backup-test").serviceConfig.TimeoutStartSec == "12h";
+      assert (unit "hwc-backup-test").serviceConfig.TimeoutStartSec == 43200;
       assert c.systemd.services.borg-check-test.environment.BORG_RSH == secondary.environment.BORG_RSH;
       assert c.systemd.services.borg-check-test.serviceConfig.LoadCredential == (unit "hwc-backup-test").serviceConfig.LoadCredential;
       assert lib.hasSuffix "check --lock-wait 300 ssh://borg@192.0.2.10/fixture/offsite" c.systemd.services.borg-check-test.serviceConfig.ExecStart;

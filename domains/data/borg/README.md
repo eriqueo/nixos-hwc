@@ -120,6 +120,9 @@ remote integrity checks, and file/database restores. Interactive primary wrapper
 and `borg-check` continue to refer to the primary repository. Each enabled additional
 destination has `borg-check-<name>` and a timer using the same pinned SSH identity.
 These perform repository consistency checks, not full cryptographic verification.
+`timeoutSeconds` bounds each extra backup at 1–43200 seconds; `uploadLimitKiB`
+bounds transport uploads (0 is unlimited). The fleet server role uses eight hours
+and 2048 KiB/s without defining service bodies in a role.
 Additional SSH operations require systemd credential delivery; invoking the generated
 Borg wrapper alone does not load its private identity.
 
@@ -135,6 +138,7 @@ Borg wrapper alone does not load its private identity.
 - `borg-check-<name>.service` / timer — additional destination consistency checks
 
 ## Changelog
+- 2026-10-23: Expose typed per-destination timeout/upload limits; domain-owned units enforce them.
 - 2026-10-23: Add per-destination consistency services/timers with bounded repository locking and shared private SSH credentials.
 - 2026-10-23: Deliver additional SSH identities through private systemd credentials from standard root:secrets 0440 agenix mounts. Refuse missing credential delivery before SSH.
 - 2026-10-23: Add disabled-by-default independent SSH destinations with pinned host keys, dedicated credentials, native per-target jobs/timers and bounded snapshot/archive serialization. Preserve primary identities and application snapshot permissions.

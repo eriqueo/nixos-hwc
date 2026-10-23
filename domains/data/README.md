@@ -20,13 +20,14 @@ data/
 ├── README.md       # This file
 ├── databases/      # PostgreSQL / Redis management
 ├── backup/         # Rsync backup automation (retired on server; borg is primary)
-├── borg/           # Borg jobs, independent SSH destinations, private credential delivery and serialized snapshots (hwc.data.borg.*)
+├── borg/           # Borg jobs, independent SSH destinations, private credentials, per-target deadlines/rate limits and serialized snapshots (hwc.data.borg.*)
 ├── storage/        # Storage mount management
 ├── syncthing/      # Bidirectional file sync over Tailscale
 └── couchdb/        # CouchDB for Obsidian LiveSync
 ```
 
 ## Changelog
+- 2026-10-23: Keep per-destination time/rate limits in the Borg capability; server roles assign typed policy and receive instance metadata from flake composition.
 - 2026-10-23: Additional Borg destinations load SSH identities through systemd credentials while secret mounts retain root:secrets 0440.
 - 2026-10-23: Add disabled-by-default independent SSH destinations with pinned host keys, dedicated credentials, native per-target jobs/timers and bounded snapshot/archive serialization. Preserve primary identities and application snapshot permissions.
 - 2026-10-16: Borg creates bounded online SQLite snapshots as the application user, validates private copies and publishes atomically. The base role supplies T3 once; raw database/WAL/SHM paths are excluded while remaining userdata stays covered.

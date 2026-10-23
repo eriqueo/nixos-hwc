@@ -13,7 +13,6 @@ let
   offsiteEnabled = config.hwc.data.borg.enable && offsiteStorage != null
     && (offsiteStorage.ready or false) && builtins.hasAttr config.networking.hostName offsiteRepos;
   credentialStem = "borg-${lib.removePrefix "hwc-" config.networking.hostName}-offsite";
-  offsiteJob = "hwc-backup-maryland";
 in
 {
   imports = [
@@ -50,12 +49,8 @@ in
     sshKeySecret = "${credentialStem}-ssh-key";
     passphraseSecret = "${credentialStem}-passphrase";
     startAt = "*-*-* 06:00:00";
-  };
-  services.borgbackup.jobs.${offsiteJob} = lib.mkIf offsiteEnabled {
-    extraCreateArgs = [ "--upload-ratelimit" "2048" ];
-  };
-  systemd.services."borgbackup-job-${offsiteJob}" = lib.mkIf offsiteEnabled {
-    serviceConfig.TimeoutStartSec = lib.mkForce "8h";
+    uploadLimitKiB = 2048;
+    timeoutSeconds = 28800;
   };
 
   # SMART disk monitoring on every serving host (was a single machine's
