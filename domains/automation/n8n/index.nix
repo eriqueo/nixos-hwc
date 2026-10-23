@@ -22,7 +22,9 @@ in
 
     image = lib.mkOption {
       type = lib.types.str;
-      default = "docker.io/n8nio/n8n@sha256:845ac21710739d7206086974295f7f93932e0fa8dd87af6d9fb0b7aa0338ad15";  # reviewed 2.44.6; critical workflow DB — pinned
+      # TEMPORARY recovery: restore the exact old app against current data if
+      # release verification fails. Remove after the corrected release passes.
+      default = "docker.io/n8nio/n8n@sha256:7d90cdb066ae31f08776b0f8287d33102c4b55d7d0173faf5edb5767c94d2b83";
       description = "n8n container image";
     };
 

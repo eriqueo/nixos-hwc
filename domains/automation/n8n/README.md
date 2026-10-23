@@ -125,6 +125,10 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
+- 2026-10-23: Prepare an image-only recovery revision selecting the exact prior
+  2.10.3 image. Keep the current migrated database and all independent work;
+  the private old-image consumer passed on both original and new execution data.
+
 - 2026-10-23: Pin the reviewed2.44.6 image, which runs Node26.12.1 with corrected
   c-ares, OpenSSL and built-in trust roots. Private old/new/old checks preserve
   workflow definitions, credential decryption and historical execution payloads
