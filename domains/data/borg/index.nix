@@ -1,4 +1,4 @@
-# domains/system/services/borg/index.nix
+# domains/data/borg/index.nix
 #
 # BORG BACKUP - Deduplicating encrypted backup service
 #
@@ -70,6 +70,111 @@ let
     ) || exit "$?"
   '';
 
+  destinations = cfg.additionalDestinations;
+  lockRoot = "${paths.state}/borg-jobs";
+  serializationHook = lib.optionalString (destinations != {}) ''
+    exec 9>${lib.escapeShellArg "${lockRoot}/snapshot-archive.lock"}
+    ${pkgs.util-linux}/bin/flock --wait 300 9 || exit "$?"
+  '';
+  destinationJobName = name: "${jobName}-${name}";
+  destinationRsh = name: target:
+    let knownHosts = pkgs.writeText "borg-${name}-known-hosts" "${target.host} ${target.hostKey}\n";
+    in "ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+      + " -o UserKnownHostsFile=${knownHosts} -o ConnectTimeout=15"
+      + " -o ServerAliveInterval=30 -o ServerAliveCountMax=3"
+      + " -i /run/agenix/${target.sshKeySecret}";
+  destinationUrl = target: "ssh://${target.user}@${target.host}${target.repository}";
+  destinationJobs = lib.mapAttrs' (name: target: lib.nameValuePair (destinationJobName name)
+    (backupJob // {
+      repo = destinationUrl target;
+      encryption = { mode = cfg.encryption.mode; passCommand = "cat /run/agenix/${target.passphraseSecret}"; };
+      environment.BORG_RSH = destinationRsh name target;
+      # An SSH URL must never enter ReadWritePaths.
+      # Include application-provided writable snapshot paths (for example Meals)
+      # while excluding the primary local repository from the remote job.
+      readWritePaths = lib.filter (path: cfg.repo.remote.enable || path != cfg.repo.path)
+        config.services.borgbackup.jobs.${jobName}.readWritePaths;
+    })) destinations;
+
+  backupJob = {
+    # What to back up
+    paths = cfg.sources ++ snapshotSources;
+    exclude = cfg.excludePatterns ++ snapshotExcludes;
+
+    # Repository (local path or SSH URL)
+    repo = repoUrl;
+
+    # Encryption
+    encryption = {
+      mode = cfg.encryption.mode;
+      passCommand = "cat /run/agenix/${cfg.encryption.passphraseSecret}";
+    };
+
+    # Compression
+    compression = cfg.compression;
+
+    # Don't fail on borg warnings (exit 1) like "file changed during backup"
+    failOnWarnings = false;
+
+    # Schedule
+    startAt = []; # We use our own timer for more control
+
+    # Pre-backup hook (database dumps, etc.)
+    preHook = serializationHook + postgresBackup + sqliteBackup + lib.optionalString (cfg.preBackupScript != null) cfg.preBackupScript;
+
+    # Post-backup hook
+    postHook = lib.mkIf (cfg.postBackupScript != null) cfg.postBackupScript;
+
+    # Retention policy (pruning)
+    prune.keep = {
+      daily = cfg.retention.daily;
+      weekly = cfg.retention.weekly;
+      monthly = cfg.retention.monthly;
+    } // lib.optionalAttrs (cfg.retention.yearly > 0) {
+      yearly = cfg.retention.yearly;
+    };
+
+    # Reduce compact I/O — only rewrite segments with >25% freed space (default 10%)
+    extraCompactArgs = [ "--threshold" "25" ];
+
+    # Environment for hooks and the remote transport
+    environment = {
+      BORG_RSH = borgRsh;
+    };
+
+    # Read-write paths for pre/post hooks. A remote repo is not a path.
+    readWritePaths = [
+      "/var/lib/backups"
+    ] ++ lib.optional (destinations != {}) lockRoot
+      ++ lib.optional (snapshots != []) snapshotRoot
+      ++ lib.optional (!cfg.repo.remote.enable) cfg.repo.path;
+  };
+
+  jobService = {
+    onFailure = lib.mkIf (cfg.notifications.onFailure && (config.hwc.monitoring.alerts.enable or false)) [
+      "hwc-service-failure-notifier@borgbackup-job-${jobName}.service"
+    ];
+    # Don't kill running backups on nixos-rebuild switch
+    restartIfChanged = false;
+    # Wait up to 1h for lock instead of failing immediately
+    environment.BORG_LOCK_WAIT = "3600";
+    # Don't run backup while borg-check is running
+    conflicts = [ "borg-check.service" ];
+    after = [ "borg-check.service" ];
+    # Respect readers and other writers. A stale lock is an operator recovery
+    # action after checking its holder, never an automatic startup step.
+    # Prevent stuck borg processes from blocking future backups
+    serviceConfig = {
+      Type = "oneshot";              # Backup runs to completion, not a long-lived daemon
+      TimeoutStartSec = "12h";      # Allow up to 12h (compact can be slow on large repos)
+      CPUSchedulingPolicy = lib.mkForce "other";  # Best-effort (default) instead of idle
+      IOSchedulingClass = lib.mkForce "best-effort";  # Fair I/O instead of idle scraps
+      TimeoutStopSec = "5min";      # Give borg time to finish gracefully
+      KillMode = "mixed";            # SIGTERM to main, SIGKILL to remaining after timeout
+      KillSignal = "SIGINT";         # Borg handles SIGINT gracefully (checkpoint)
+    };
+  };
+
   # Build OnCalendar string
   onCalendar =
     if cfg.schedule.frequency == "daily" then
@@ -122,6 +227,22 @@ in
           '';
         };
       };
+    };
+
+    additionalDestinations = lib.mkOption {
+      default = {};
+      description = "Independent encrypted SSH repositories. No targets by default; at most four. Each native job uses the shared sources and snapshot producer under a 300-second host lock. Retention follows the primary policy.";
+      type = lib.types.attrsOf (lib.types.submodule {
+        options = {
+          host = lib.mkOption { type = lib.types.str; description = "Pinned SSH hostname or IPv4 address"; };
+          user = lib.mkOption { type = lib.types.str; default = "borg"; description = "Restricted storage account"; };
+          repository = lib.mkOption { type = lib.types.str; description = "Absolute remote repository path"; };
+          hostKey = lib.mkOption { type = lib.types.str; description = "Pinned public SSH host key (algorithm and base64)"; };
+          sshKeySecret = lib.mkOption { type = lib.types.str; description = "Dedicated root-only agenix SSH identity"; };
+          passphraseSecret = lib.mkOption { type = lib.types.str; description = "Independent agenix encryption passphrase"; };
+          startAt = lib.mkOption { type = lib.types.str; description = "Independent systemd calendar schedule"; };
+        };
+      });
     };
 
     #==========================================================================
@@ -290,7 +411,7 @@ in
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf enabled {
+  config = lib.mkIf enabled (lib.mkMerge [ {
 
     # Borg package + helper scripts
     environment.systemPackages = [
@@ -343,59 +464,8 @@ in
       '')
     ] ++ lib.optional (snapshots != []) snapshotPackage;
 
-    # Borg backup job using NixOS module
-    services.borgbackup.jobs.${jobName} = {
-      # What to back up
-      paths = cfg.sources ++ snapshotSources;
-      exclude = cfg.excludePatterns ++ snapshotExcludes;
-
-      # Repository (local path or SSH URL)
-      repo = repoUrl;
-
-      # Encryption
-      encryption = {
-        mode = cfg.encryption.mode;
-        passCommand = "cat /run/agenix/${cfg.encryption.passphraseSecret}";
-      };
-
-      # Compression
-      compression = cfg.compression;
-
-      # Don't fail on borg warnings (exit 1) like "file changed during backup"
-      failOnWarnings = false;
-
-      # Schedule
-      startAt = []; # We use our own timer for more control
-
-      # Pre-backup hook (database dumps, etc.)
-      preHook = postgresBackup + sqliteBackup + lib.optionalString (cfg.preBackupScript != null) cfg.preBackupScript;
-
-      # Post-backup hook
-      postHook = lib.mkIf (cfg.postBackupScript != null) cfg.postBackupScript;
-
-      # Retention policy (pruning)
-      prune.keep = {
-        daily = cfg.retention.daily;
-        weekly = cfg.retention.weekly;
-        monthly = cfg.retention.monthly;
-      } // lib.optionalAttrs (cfg.retention.yearly > 0) {
-        yearly = cfg.retention.yearly;
-      };
-
-      # Reduce compact I/O — only rewrite segments with >25% freed space (default 10%)
-      extraCompactArgs = [ "--threshold" "25" ];
-
-      # Environment for hooks and the remote transport
-      environment = {
-        BORG_RSH = borgRsh;
-      };
-
-      # Read-write paths for pre/post hooks. A remote repo is not a path.
-      readWritePaths = [
-        "/var/lib/backups"
-      ] ++ lib.optional (snapshots != []) snapshotRoot
-        ++ lib.optional (!cfg.repo.remote.enable) cfg.repo.path;
-    };
+    # The primary job retains its established name and machine overrides.
+    services.borgbackup.jobs.${jobName} = backupJob;
 
     # Custom timer with random delay support
     systemd.timers."borgbackup-job-${jobName}" = {
@@ -407,31 +477,7 @@ in
       };
     };
 
-    # Failure notification + better timeout handling
-    systemd.services."borgbackup-job-${jobName}" = {
-      onFailure = lib.mkIf (cfg.notifications.onFailure && (config.hwc.monitoring.alerts.enable or false)) [
-        "hwc-service-failure-notifier@borgbackup-job-${jobName}.service"
-      ];
-      # Don't kill running backups on nixos-rebuild switch
-      restartIfChanged = false;
-      # Wait up to 1h for lock instead of failing immediately
-      environment.BORG_LOCK_WAIT = "3600";
-      # Don't run backup while borg-check is running
-      conflicts = [ "borg-check.service" ];
-      after = [ "borg-check.service" ];
-      # Respect readers and other writers. A stale lock is an operator recovery
-      # action after checking its holder, never an automatic startup step.
-      # Prevent stuck borg processes from blocking future backups
-      serviceConfig = {
-        Type = "oneshot";              # Backup runs to completion, not a long-lived daemon
-        TimeoutStartSec = "12h";      # Allow up to 12h (compact can be slow on large repos)
-        CPUSchedulingPolicy = lib.mkForce "other";  # Best-effort (default) instead of idle
-        IOSchedulingClass = lib.mkForce "best-effort";  # Fair I/O instead of idle scraps
-        TimeoutStopSec = "5min";      # Give borg time to finish gracefully
-        KillMode = "mixed";            # SIGTERM to main, SIGKILL to remaining after timeout
-        KillSignal = "SIGINT";         # Borg handles SIGINT gracefully (checkpoint)
-      };
-    };
+    systemd.services."borgbackup-job-${jobName}" = jobService;
 
     # Repository integrity check timer
     systemd.services.borg-check = lib.mkIf cfg.monitoring.enable {
@@ -471,6 +517,31 @@ in
     #==========================================================================
     assertions = [
       {
+        assertion = builtins.length (builtins.attrNames destinations) <= 4
+          && lib.all (name: builtins.match "[a-z][a-z0-9-]{0,31}" name != null) (builtins.attrNames destinations)
+          && lib.all (target:
+            builtins.match "[A-Za-z0-9][A-Za-z0-9.-]*" target.host != null
+            && builtins.match "[a-z_][a-z0-9_-]*" target.user != null
+            && builtins.match "/[A-Za-z0-9/_.-]+" target.repository != null
+            && !(lib.elem ".." (lib.splitString "/" target.repository))
+            && builtins.match "[A-Za-z0-9_-]+" target.sshKeySecret != null
+            && builtins.match "[A-Za-z0-9_-]+" target.passphraseSecret != null
+            && builtins.match "ssh-ed25519 [A-Za-z0-9+/=]+" target.hostKey != null
+            && builtins.hasAttr target.sshKeySecret config.age.secrets
+            && builtins.hasAttr target.passphraseSecret config.age.secrets
+            && config.age.secrets.${target.sshKeySecret}.mode == "0400"
+            && config.age.secrets.${target.sshKeySecret}.owner == "root"
+            && target.sshKeySecret != cfg.repo.remote.sshKeySecret
+            && target.passphraseSecret != cfg.encryption.passphraseSecret
+          ) (builtins.attrValues destinations)
+          && builtins.length (lib.unique (map destinationUrl (builtins.attrValues destinations))) == builtins.length (builtins.attrNames destinations)
+          && !(lib.elem repoUrl (map destinationUrl (builtins.attrValues destinations)))
+          && builtins.length (lib.unique (map (target: target.passphraseSecret) (builtins.attrValues destinations))) == builtins.length (builtins.attrNames destinations)
+          && builtins.length (lib.unique (map (target: target.sshKeySecret) (builtins.attrValues destinations))) == builtins.length (builtins.attrNames destinations)
+          && (destinations == {} || cfg.encryption.mode != "none");
+        message = "Additional Borg destinations need at most four safe unique SSH paths, pinned ed25519 host keys, declared credentials and independent encrypted identities";
+      }
+      {
         assertion = builtins.length snapshots <= 16 && lib.all (value:
           builtins.match "[a-z][a-z0-9-]{0,31}" value.name != null
           && lib.hasPrefix "/" value.source
@@ -501,5 +572,19 @@ in
     warnings = lib.optionals (cfg.encryption.mode == "none") [
       "Borg backup encryption is disabled. This is not recommended for sensitive data."
     ];
-  };
+  } {
+    services.borgbackup.jobs = destinationJobs;
+    systemd.services = lib.mapAttrs' (name: target:
+      lib.nameValuePair "borgbackup-job-${destinationJobName name}"
+        (jobService // {
+          onFailure = lib.optionals (cfg.notifications.onFailure && (config.hwc.monitoring.alerts.enable or false))
+            [ "hwc-service-failure-notifier@borgbackup-job-${destinationJobName name}.service" ];
+        })) destinations;
+    systemd.timers = lib.mapAttrs' (name: target:
+      lib.nameValuePair "borgbackup-job-${destinationJobName name}" {
+        wantedBy = [ "timers.target" ];
+        timerConfig = { OnCalendar = target.startAt; RandomizedDelaySec = cfg.schedule.randomDelay; Persistent = true; };
+      }) destinations;
+    systemd.tmpfiles.rules = lib.optional (destinations != {}) "d ${lockRoot} 0700 root root -";
+  } ]);
 }
