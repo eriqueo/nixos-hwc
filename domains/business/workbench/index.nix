@@ -202,6 +202,16 @@ in
         default = "${config.hwc.paths.user.home}/600_apps/scout/packages/ui/src/styles";
         description = "Canonical HWC palette.css and shell.css producer; validated at service startup.";
       };
+      writeTiles = lib.mkOption {
+        type = lib.types.listOf (lib.types.strMatching "[a-z0-9-]+/[a-z0-9-]+");
+        default = [];
+        description = "Explicit manifest hub/tile addresses allowed to perform declared item actions at the private origin.";
+      };
+      stateDir = lib.mkOption {
+        type = lib.types.path;
+        default = "${config.hwc.paths.state}/workbench";
+        description = "CRITICAL action reservations and receipt metadata; Borg takes an online SQLite snapshot.";
+      };
     };
 
     areas = lib.mkOption {
@@ -266,7 +276,7 @@ in
     } else { root = "${hubSite}"; }))];
 
     systemd.services.workbench-web = lib.mkIf cfg.web.enable {
-      description = "Workbench read-only web workspace";
+      description = "Workbench web workspace";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" "hwc-sys-mcp.service" ];
       environment = {
@@ -276,24 +286,43 @@ in
       serviceConfig = {
         User = lib.mkForce "eric";
         Group = "users";
-        ExecStart = lib.escapeShellArgs [
+        ExecStart = lib.escapeShellArgs ([
           "${inputs.workbench.packages.${pkgs.system}.default}/bin/workbench"
           "serve" "--host" "127.0.0.1" "--port" (toString cfg.web.port)
           "--styles-dir" cfg.web.stylesDir "--areas-file" areasJson
           "--public-host" "${cfg.routeName}.${vhostDomain}"
-        ];
+        ] ++ lib.optionals (cfg.web.writeTiles != []) [
+          "--state-file" "${cfg.web.stateDir}/actions.sqlite3"
+        ] ++ lib.concatMap (tile: [ "--write-tile" tile ]) cfg.web.writeTiles);
         Restart = "on-failure";
         RestartSec = 5;
         TimeoutStopSec = 20;
         NoNewPrivileges = true;
         ProtectSystem = "strict";
+        ReadWritePaths = lib.optional (cfg.web.writeTiles != []) cfg.web.stateDir;
         PrivateTmp = true;
         UMask = "0077";
       };
     };
 
+    systemd.tmpfiles.rules = lib.optionals (cfg.web.enable && cfg.web.writeTiles != []) [
+      "d ${cfg.web.stateDir} 0700 eric users -"
+    ];
+    hwc.data.borg.sqliteSnapshots = lib.optionalAttrs (cfg.web.enable && cfg.web.writeTiles != []) {
+      workbench-actions = {
+        source = "${cfg.web.stateDir}/actions.sqlite3";
+        user = "eric";
+        maxBytes = 64 * 1024 * 1024;
+        timeoutSeconds = 60;
+      };
+    };
+
     # VALIDATION
     assertions = [
+      {
+        assertion = !(cfg.web.enable && cfg.web.writeTiles != []) || config.hwc.data.borg.enable;
+        message = "hwc.business.workbench.web writes require Borg coverage for the critical action journal.";
+      }
       {
         assertion = !cfg.web.enable || config.hwc.system.mcp.enable;
         message = "hwc.business.workbench.web requires the local MCP gateway.";
