@@ -100,12 +100,17 @@ let
         cp -r bin include lib share CHANGELOG.md LICENSE README.md "$out/"
         runHook postInstall
       '';
+      # Make the new interpreter discoverable to patchShebangs. The runtime
+      # itself is fixed by autoPatchelf before install checks execute it.
+      preFixup = ''
+        export PATH="$out/bin:$PATH"
+      '';
       doInstallCheck = true;
       installCheckPhase = ''
         runHook preInstallCheck
         "$out/bin/node" ${runtimeCheck} ${lib.escapeShellArg (builtins.toJSON (runtimeDependencies // { node = release.version; }))} "$out"
-        "$out/bin/node" "$out/lib/node_modules/npm/bin/npm-cli.js" --version
-        "$out/bin/node" "$out/lib/node_modules/npm/bin/npx-cli.js" --version
+        "$out/bin/npm" --version
+        "$out/bin/npx" --version
         runHook postInstallCheck
       '';
       setupHook = prev.nodejs-slim_22.setupHook;
