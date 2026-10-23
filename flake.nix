@@ -487,6 +487,13 @@
         specialArgs = {
           inherit inputs;
           nixosApiVersion = ch.apiVersion;
+          # Instance binding belongs at composition; the server role consumes
+          # generic storage metadata without naming a machine or key file.
+          offsiteStorage = let storage = self.nixosConfigurations.hwc-xps.config; in {
+            repositories = storage.services.borgbackup.repos;
+            address = storage.hwc.networking.hosts.selfIp;
+            hostKey = lib.removeSuffix "\n" (builtins.readFile ./machines/xps/SSH_HOST_ED25519_PUBLIC_KEY.txt);
+          };
         };
         modules = [
           ({ lib, ... }: {
@@ -3326,6 +3333,86 @@
         # [-] character class keeps this lint from matching its own definition
         "rg 'github:eriqueo/nixos[-]hwc' flake.nix"
       ];
+      xps-offsite-storage = let
+        c = self.nixosConfigurations.hwc-xps.config;
+        repositories = c.services.borgbackup.repos;
+        unit = c.systemd.services.xps-offsite-storage;
+        fixture = pkgs.writeText "xps-offsite-storage.json" (builtins.unsafeDiscardStringContext (builtins.toJSON {
+          script = unit.script;
+          root = c.hwc.paths.backup;
+        }));
+      in
+      assert unit.unitConfig.AssertPathIsMountPoint == c.hwc.paths.media.root;
+      assert unit.serviceConfig.TimeoutStartSec == "60s";
+      assert c.hwc.monitoring.prometheus.agent.enable;
+      assert lib.all (name:
+        lib.elem "xps-offsite-storage.service" c.systemd.services."borgbackup-repo-${name}".requires
+        && c.systemd.services."borgbackup-repo-${name}".unitConfig.AssertPathIsMountPoint == repositories.${name}.path
+        && repositories.${name}.allowSubRepos == false
+      ) [ "hwc-home" "hwc-work" ];
+      assert lib.all (name: let host = self.nixosConfigurations.${name}.config; in
+        host.hwc.data.borg.additionalDestinations.maryland.repository == repositories.${name}.path
+        && host.systemd.services.borgbackup-job-hwc-backup-maryland.serviceConfig.TimeoutStartSec == "8h"
+        && lib.hasInfix "--upload-ratelimit 2048" host.services.borgbackup.jobs.hwc-backup-maryland.extraCreateArgs
+      ) [ "hwc-home" "hwc-work" ];
+      pkgs.runCommand "xps-offsite-storage" { nativeBuildInputs = [ pkgs.python3 pkgs.bash pkgs.coreutils pkgs.ripgrep ]; } ''
+        python3 - ${fixture} <<'PY'
+        import copy,json,os,pathlib,re,shutil,subprocess,sys,tempfile
+        spec=json.loads(pathlib.Path(sys.argv[1]).read_text())
+        with tempfile.TemporaryDirectory() as temporary:
+            root=pathlib.Path(temporary)
+            state=root/'state.json';events=root/'events'
+            probe=root/'probe'
+            probe.write_text('#!'+sys.executable+'\n'+"""
+        import json,os,pathlib,sys
+        name=pathlib.Path(sys.argv[0]).name;a=sys.argv[1:]
+        state=pathlib.Path(os.environ['PROBE_STATE']);data=json.loads(state.read_text())
+        def event(value):
+            with open(os.environ['PROBE_EVENTS'],'a') as log:log.write(value+'\n')
+        if name=='zpool':print(os.environ.get('PROBE_HEALTH','ONLINE'))
+        elif name=='zfs':
+            if a[0]=='list':
+                if os.environ.get('PROBE_LIST_FAIL')=='1':raise SystemExit(2)
+                print('media-pool');print('\n'.join(data))
+            elif a[0]=='get':print(data[a[-1]][a[-2]])
+            elif a[0]=='create':
+                props=dict(a[i+1].split('=',1) for i,v in enumerate(a) if v=='-o')
+                assert a[-1] not in data
+                data[a[-1]]=props;state.write_text(json.dumps(data));event('create '+a[-1])
+            else:raise SystemExit(2)
+        elif name=='mountpoint':
+            if a[-1]==os.environ.get('PROBE_BAD_MOUNT'):raise SystemExit(1)
+        else:event(name)
+        """)
+            probe.chmod(0o755)
+            for name in ['zpool','zfs','mountpoint','chmod','chown']:(root/name).symlink_to(probe)
+            script=re.sub(r'/nix/store/[^/]+/bin/(zpool|zfs|mountpoint|chmod|chown)',lambda m:str(root/m[1]),spec['script'])
+            script=re.sub(r'/nix/store/[^/]+/bin/(timeout|rg)',lambda m:shutil.which(m[1]),script)
+            def run(initial,**extra):
+                state.write_text(json.dumps(initial));events.write_text("")
+                answer=subprocess.run(['bash','-c',script],env=dict(os.environ,PROBE_STATE=str(state),PROBE_EVENTS=str(events),**extra),capture_output=True,text=True,timeout=10)
+                return answer,json.loads(state.read_text()),events.read_text().splitlines()
+            answer,created,writes=run({})
+            assert answer.returncode==0,answer.stderr
+            assert set(created)=={'media-pool/offsite','media-pool/offsite/home','media-pool/offsite/work'}
+            assert created['media-pool/offsite']['quota']=='1099511627776'
+            assert created['media-pool/offsite/home']['quota']=='805306368000'
+            assert created['media-pool/offsite/work']['quota']=='161061273600'
+            answer,again,writes=run(created)
+            assert answer.returncode==0 and again==created and not any(x.startswith('create ') for x in writes)
+            for bad in ['media-pool/offsite','media-pool/offsite/work']:
+                drift=copy.deepcopy(created);drift[bad]['quota']='1'
+                answer,retained,writes=run(drift)
+                assert answer.returncode!=0 and retained==drift and writes==[], 'existing drift was changed'
+            for extra in [{'PROBE_HEALTH':'SUSPENDED'},{'PROBE_LIST_FAIL':'1'}]:
+                answer,retained,writes=run({},**extra)
+                assert answer.returncode!=0 and retained=={} and writes==[]
+            answer,retained,writes=run(created,PROBE_BAD_MOUNT=created['media-pool/offsite/work']['mountpoint'])
+            assert answer.returncode!=0 and retained==created and writes==[]
+        print('bounded dataset creation, repeat startup, drift/missing mount/unavailable pool refusal passed')
+        PY
+        touch $out
+      '';
       secrets-offsite-scope = let
         gen = import ./domains/secrets/parts/lib.nix {};
         everyone = builtins.attrValues gen.hostKeys ++ [ "ssh-ed25519 recovery-user-fixture" ];
@@ -3495,6 +3582,7 @@
           customHook = c.hwc.data.borg.preBackupScript;
           snapshots = c.hwc.data.borg.sqliteSnapshots;
           stateRoot = "${c.hwc.paths.state}/borg-sqlite";
+          lockRoot = "${c.hwc.paths.state}/borg-jobs";
           paths = c.services.borgbackup.jobs.hwc-backup.paths;
           exclude = c.services.borgbackup.jobs.hwc-backup.exclude;
           cli = "${lib.findFirst (p: (p.name or "") == "borg-sqlite-snapshot") null c.environment.systemPackages}/bin/borg-sqlite-snapshot";
@@ -3575,6 +3663,10 @@
                 old.write_text("expired")
                 os.utime(old, (1, 1))
                 script = spec['hook']
+                if 'exec 9>' in script:
+                    locks = dest / 'borg-jobs'
+                    locks.mkdir()
+                    script = script.replace(spec['lockRoot'], str(locks))
                 # Remove ONLY the exact declared custom suffix: Meals, CouchDB
                 # and arr belong to their own owners, not this shared-hook test.
                 custom = spec['customHook']

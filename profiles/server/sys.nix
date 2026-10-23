@@ -7,8 +7,13 @@
 #
 # USED BY: see the machines table in flake.nix
 
-{ config, lib, ... }:
-
+{ config, lib, offsiteStorage ? null, ... }:
+let
+  offsiteRepos = if offsiteStorage == null then {} else offsiteStorage.repositories;
+  offsiteEnabled = config.hwc.data.borg.enable && builtins.hasAttr config.networking.hostName offsiteRepos;
+  credentialStem = "borg-${lib.removePrefix "hwc-" config.networking.hostName}-offsite";
+  offsiteJob = "hwc-backup-maryland";
+in
 {
   imports = [
     ../../domains/data/index.nix
@@ -34,6 +39,23 @@
   hwc.monitoring.prometheus.agent.enable = lib.mkDefault true;
   hwc.monitoring.cadvisor.enable = lib.mkDefault config.hwc.monitoring.prometheus.agent.enable;
   hwc.monitoring.podman-exporter.enable = lib.mkDefault config.hwc.monitoring.prometheus.agent.enable;
+
+  # Role policy: configured primary Borg clients also write an independent
+  # Maryland repository declared by the storage host. Paths have one producer.
+  hwc.data.borg.additionalDestinations.maryland = lib.mkIf offsiteEnabled {
+    host = offsiteStorage.address;
+    repository = offsiteRepos.${config.networking.hostName}.path;
+    hostKey = offsiteStorage.hostKey;
+    sshKeySecret = "${credentialStem}-ssh-key";
+    passphraseSecret = "${credentialStem}-passphrase";
+    startAt = "*-*-* 06:00:00";
+  };
+  services.borgbackup.jobs.${offsiteJob} = lib.mkIf offsiteEnabled {
+    extraCreateArgs = [ "--upload-ratelimit" "2048" ];
+  };
+  systemd.services."borgbackup-job-${offsiteJob}" = lib.mkIf offsiteEnabled {
+    serviceConfig.TimeoutStartSec = lib.mkForce "8h";
+  };
 
   # SMART disk monitoring on every serving host (was a single machine's
   # one-off, so the other serving hosts had none). Short test daily 02:00,

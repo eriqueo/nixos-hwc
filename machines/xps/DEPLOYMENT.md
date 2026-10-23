@@ -10,6 +10,7 @@ The old installation template described active-active redundancy that was never 
 - `machines/xps/config.nix`: machine-specific services, ZFS pool import, local network and startup safeguards.
 - `machines/xps/hardware.nix`: boot/root UUIDs and detected boot modules.
 - `machines/xps/home.nix`: desktop overrides for this machine.
+- `machines/xps/SSH_HOST_ED25519_PUBLIC_KEY.txt`: verified SSH host-key pin for offsite clients; separate from the age recipient identity.
 - `domains/media/jellyfin-native/index.nix`: native Jellyfin package, user/group, generated policy and cache cleanup.
 - `domains/data/borg/`: the existing fleet backup capability. Do not add a second backup framework.
 - `CHARTER.md` and `CLAUDE.md`: release and architecture rules.
@@ -92,6 +93,33 @@ For a disk/enclosure fault, inspect `zpool status`, SMART through stable IDs and
 Use a normal shutdown when possible before changing enclosure power or cables. A suspended ZFS pool previously blocked shutdown; forced restart needs explicit authorization because pending writes may be lost. Bring the enclosure up before booting the XPS, then inspect the imported pool and scrub state.
 
 If a release fails, fix forward or revert its source commit on main under the repository policy. Emergency boot of a previous generation can restore access, but reconcile the source and any database changes before declaring recovery complete.
+
+## Declared backup destination
+
+The source declares `media-pool/offsite` mounted at `/mnt/media/offsite`, with
+a 1 TiB parent quota. The home/work child quotas are 750/150 GiB. Native Borg
+serves only the corresponding repository to its dedicated SSH key; server quotas
+are 700G/140G and subrepositories are forbidden. `xps-offsite-storage` validates
+all existing datasets before creating any missing child. Property or mount drift
+fails without resizing or deleting data. Repo initialization requires that unit
+and each child mount. Nothing is created merely by evaluating or building source.
+
+The server role derives client paths from these declarations. Home/work retain
+their primary jobs and gain independent Maryland jobs at 06:00 MDT, limited to
+2048 KiB/s uploads and eight hours. Interrupted initial seeding can require several
+runs before the first complete archive. Do not start a manual seed inside the
+nine-hour window before the primary backup. Shared snapshots/archives serialize
+per host; contention fails after 300 seconds. Completion and failure are visible
+in each native unit. Weekly `borg-check-maryland` checks repository consistency;
+full cryptographic verification and real restores are separate acceptance steps.
+
+New offsite credentials exclude XPS from age recipients and mounts. Home, work,
+laptop and the existing user identity retain recovery. Secret mounts remain
+root:secrets 0440; systemd delivers private SSH identities. Repository-key exports
+must be encrypted and retained outside the destination after initialization.
+
+Current activation, hardware checks, recovery checkpoint evidence and archive
+coverage remain on the tracker. No source declaration alone establishes readiness.
 
 ## Offsite recovery acceptance
 

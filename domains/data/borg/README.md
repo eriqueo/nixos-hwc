@@ -135,6 +135,7 @@ Borg wrapper alone does not load its private identity.
 - `borg-check-<name>.service` / timer — additional destination consistency checks
 
 ## Changelog
+- 2026-10-23: Add per-destination consistency services/timers with bounded repository locking and shared private SSH credentials.
 - 2026-10-23: Deliver additional SSH identities through private systemd credentials from standard root:secrets 0440 agenix mounts. Refuse missing credential delivery before SSH.
 - 2026-10-23: Add disabled-by-default independent SSH destinations with pinned host keys, dedicated credentials, native per-target jobs/timers and bounded snapshot/archive serialization. Preserve primary identities and application snapshot permissions.
 - 2026-10-16: Add bounded readonly SQLite online snapshots, private validation and atomic publication. Derive archive paths and exact raw-file exclusions from one map. Preserve other userdata and fail before Borg on producer errors. Exercise actual rendered hooks and archive extraction with wiring mutations.

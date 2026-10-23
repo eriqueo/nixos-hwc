@@ -20,7 +20,7 @@ data/
 ├── README.md       # This file
 ├── databases/      # PostgreSQL / Redis management
 ├── backup/         # Rsync backup automation (retired on server; borg is primary)
-├── borg/           # Borg jobs, optional independent SSH destinations and serialized atomic snapshots (hwc.data.borg.*)
+├── borg/           # Borg jobs, independent SSH destinations, private credential delivery and serialized snapshots (hwc.data.borg.*)
 ├── storage/        # Storage mount management
 ├── syncthing/      # Bidirectional file sync over Tailscale
 └── couchdb/        # CouchDB for Obsidian LiveSync
