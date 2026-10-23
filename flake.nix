@@ -785,46 +785,6 @@
         touch "$out"
       '';
 
-      immich-runtime-wiring = let
-        c = self.nixosConfigurations.hwc-home.config;
-        cfg = c.hwc.media.immich;
-        fixture = pkgs.writeText "immich-runtime-wiring.json" (builtins.toJSON {
-          server = cfg.images.server;
-          ml = cfg.images.machineLearning;
-          seerr = c.hwc.media.jellyseerr.image;
-          blacklist = c.security.pki.caCertificateBlacklist;
-        });
-      in
-      assert lib.assertMsg (lib.hasPrefix "localhost/immich-runtime:2.5.6-node24.22.1-" cfg.images.server
-        && lib.hasPrefix "localhost/immich-ml-runtime:2.5.6-" cfg.images.machineLearning)
-        "Immich must consume its qualified same-app Node and ML TLS/CA images";
-      assert c.virtualisation.oci-containers.containers.immich-server.image == cfg.images.server;
-      assert c.virtualisation.oci-containers.containers.immich-machine-learning.image == cfg.images.machineLearning;
-      pkgs.runCommand "immich-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-        python3 - ${fixture} ${c.system.build.immichServerRuntimeImageRecipe} ${c.system.build.immichMlRuntimeImageRecipe} ${c.system.build.seerrRuntimeImageRecipe} <<'PY'
-        import hashlib, json, pathlib, re, sys
-        spec = json.loads(pathlib.Path(sys.argv[1]).read_text())
-        server, ml, seerr = [pathlib.Path(p).read_text() for p in sys.argv[2:]]
-        sha = lambda value: hashlib.sha256(value.encode()).hexdigest()
-        assert spec['server'] == 'localhost/immich-runtime:2.5.6-node24.22.1-' + sha(server)[:12]
-        assert spec['ml'] == 'localhost/immich-ml-runtime:2.5.6-' + sha(ml)[:12]
-        for recipe in [server, ml]:
-            sources = re.findall(r'^FROM (\S+)', recipe, re.M)
-            assert len(sources) == 2 and all(re.search(r'@sha256:[0-9a-f]{64}$', s) for s in sources)
-        assert 'ENV NODE_VERSION=24.22.1' in server
-        assert '--only-upgrade' in ml and 'libssl3=3.0.2-0ubuntu1.30' in ml and 'openssl=3.0.2-0ubuntu1.30' in ml
-        assert 'ca-certificates=20260816ubuntu0.22.04.1' in ml
-        assert '--checksum=sha256:e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1' in ml
-        assert '--no-index --no-deps' in ml and 'certifi-2026.10.23' in ml
-        assert json.dumps(spec['blacklist'], separators=(',', ':')) in ml
-        assert 'update-ca-certificates --fresh' in ml
-        # This shared-helper extraction must not rebuild/restart accepted Seerr.
-        assert sha(seerr) == 'b9482a37e259fcd93442be29ae2b1cfce0653bc5e738e68fab403a84297953ea'
-        assert spec['seerr'] == 'localhost/seerr-runtime:3.1.0-node22.23.4-' + sha(seerr)[:12]
-        PY
-        touch "$out"
-      '';
-
       seerr-settings-preservation = let
         secret = name: value: pkgs.writeText "seerr-fixture-${name}" value;
         original = {

@@ -14,7 +14,7 @@ Seerr (formerly Jellyseerr) is a request management and media discovery tool for
 
 ```
 jellyseerr/
-├── index.nix       # Options, immutable runtime inputs and shared recipe wiring
+├── index.nix       # Options, runtime image recipe and module aggregator
 ├── sys.nix         # Container configuration (mkContainer)
 ├── README.md       # This file
 └── parts/
@@ -69,10 +69,6 @@ Seerr depends on:
 - `/opt/apps/jellyseerr/config:/app/config` - Configuration and database
 
 ## Changelog
-
-- 2026-10-23: Use the shared pure Node image recipe from `domains/lib/mkContainer.nix`.
-  The accepted Seerr recipe bytes, Dockerfile store path and image tag remain
-  identical. The runtime wiring check rejects a change to that identity.
 
 - 2026-10-23: Add an immutable runtime-only image recipe and derived local tag.
   It replaces Node while retaining exact app bytes and database compatibility;

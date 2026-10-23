@@ -26,23 +26,6 @@
 { lib, pkgs }:
 
 rec {
-  # Preserve an application's bytes while selecting a separately qualified
-  # Node executable. Callers own immutable inputs and compatibility evidence.
-  mkNodeRuntimeImage =
-    { name, appVersion, nodeVersion, upstreamImage, nodeSourceImage }:
-    let
-      recipe = ''
-        FROM ${nodeSourceImage} AS secure-node
-        FROM ${upstreamImage}
-        COPY --from=secure-node /usr/local/bin/node /usr/local/bin/node
-        ENV NODE_VERSION=${nodeVersion}
-      '';
-    in {
-      inherit recipe;
-      image = "localhost/${name}-runtime:${appVersion}-node${nodeVersion}-${builtins.substring 0 12 (builtins.hashString "sha256" recipe)}";
-      dockerfile = pkgs.writeText "${name}-runtime.Dockerfile" recipe;
-    };
-
   mkContainer =
     { name
     , image
