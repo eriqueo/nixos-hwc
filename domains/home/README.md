@@ -18,7 +18,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
-`apps/courier/` receives its system-derived tailnet hostname in both Home Manager lanes through the flake shared arguments.
+`apps/courier/` receives its system-derived tailnet hostname in both Home Manager lanes through the flake shared arguments, with the shared fleet fallback for appliance hosts.
 
 The pinned handoff poll carries versioned handoff messages only. Old Close records retain history, late acknowledgements and safety holds, but grant no dispatch. Relays refuse unsupported messages before calling T3; canonical Review and Close use their reserved protocol.
 
@@ -139,7 +139,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
-- 2026-10-23: Repair Courier tailnet evaluation in standalone `hms` by passing the system-derived hostname through shared arguments.
+- 2026-10-23: Repair Courier tailnet evaluation in standalone `hms` by passing the system-derived hostname through guarded shared arguments and the existing fleet fallback.
 
 - 2026-10-16: Pin tested legacy Close delivery retirement and the shared typed handoff parser. Preserve historical readers, late acknowledgements, occupied holds and canonical replay. Fleet enablement stays separate.
 
