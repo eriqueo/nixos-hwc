@@ -12,10 +12,11 @@
 # https://<host>:<tailnet.port> through `tailscale serve`; courier still binds
 # loopback only. The app enforces the login, Origin and device checks.
 
-{ config, lib, pkgs, inputs, osConfig ? { }, courierTailnetHost ? null, ... }:
+{ config, lib, pkgs, inputs, osConfig ? { }, specialArgs, ... }:
 
 let
   cfg = config.hwc.home.apps.courier;
+  courierTailnetHost = specialArgs.courierTailnetHost or null;
   app = inputs.courier.packages.${pkgs.stdenv.hostPlatform.system}.default;
   colors = config.hwc.home.theme.colors;
   hmLib = import ../../../lib/hm.nix { inherit lib; };
