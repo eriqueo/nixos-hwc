@@ -231,29 +231,36 @@ async function loadCase(id: string): Promise<ReviewCase | null> {
 
 /**
  * Derive the `-R owner/name` arg gh wants from the stored `repo`. The card's
- * repo may be a full URL, an `owner/name` slug, or a local path; we normalise
- * to `owner/name`. Returns null when we cannot (caller falls back to no -R, but
- * for merge/close we require a slug so gh targets the right remote).
+ * repo may be a canonical GitHub HTTPS/SSH remote or an `owner/name` slug.
+ * Reject other hosts and extra path/query components rather than dropping their
+ * provenance and accidentally targeting a different repository on GitHub.
  */
 function repoSlug(repo: string): string | null {
-  const trimmed = repo.trim().replace(/\.git$/, "").replace(/\/+$/, "");
-  // git@github.com:owner/name
-  const ssh = /^git@[^:]+:(.+)$/.exec(trimmed);
-  if (ssh) return ssh[1];
-  // https://github.com/owner/name  (or any host)
-  const url = /^https?:\/\/[^/]+\/(.+)$/.exec(trimmed);
-  if (url) return url[1];
-  // already owner/name (exactly two non-empty path segments)
-  const segs = trimmed.split("/").filter(Boolean);
-  if (segs.length === 2) return segs.join("/");
-  // local path like /home/eric/600_apps/foo → take the last segment as name,
-  // but without an owner gh -R is ambiguous; signal "no slug".
-  return null;
+  const path = repo.trim().replace(/^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)/, "");
+  const match = /^([A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?)\/([A-Za-z0-9_.-]{1,100})$/.exec(path);
+  if (!match) return null;
+  const name = match[2].replace(/\.git$/, "");
+  if (!name || name === "." || name === "..") return null;
+  return `${match[1].toLowerCase()}/${name}`;
+}
+
+/** Standing merge authority applies only to Eric's GitHub repositories.
+ * A stored mergeable flag is historical evidence, never permission or a live
+ * mergeability check. gh decides whether the current PR can actually merge.
+ */
+function mergeEligibility(review: Review): { allowed: true; repo: string; prNumber: number } | { allowed: false } {
+  const repo = repoSlug(review.repo);
+  if (review.status !== "needs-you" || review.verdict !== "merge-ready"
+      || !Number.isSafeInteger(review.prNumber) || review.prNumber == null || review.prNumber <= 0
+      || !repo || repo.split("/")[0] !== "eriqueo") return { allowed: false };
+  return { allowed: true, repo, prNumber: review.prNumber };
 }
 
 function gh(args: string[]): Promise<{ exitCode: number; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
-    execFile("gh", args, { timeout: 60000, maxBuffer: 4 * 1024 * 1024 }, (error, stdout, stderr) => {
+    // A bare -R slug must not inherit an unrelated enterprise GH_HOST.
+    execFile("gh", args, { timeout: 60000, maxBuffer: 4 * 1024 * 1024,
+      env: { ...process.env, GH_HOST: "github.com" } }, (error, stdout, stderr) => {
       const code = error && "code" in error ? (error.code as number) : 0;
       resolve({
         exitCode: typeof code === "number" ? code : 1,
@@ -342,12 +349,13 @@ function priorityOf(verdict: Verdict): "critical" | "normal" | "low" {
 }
 
 /** The write actions a review allows in its current state — the card's `actions`.
- * `merge` only for an open merge-ready PR; `requeue` for work that needs
+ * `merge` only for an eligible review; gh checks the live PR at dispatch.
+ * `requeue` for work that needs
  * another run (needs-work, a reject recommendation, or a rejected review). */
 function reviewVerbs(review: Review): string[] {
   if (review.status === "merged" || review.status === "requeued") return [];
   if (review.status === "rejected") return ["requeue"];
-  if (review.verdict === "merge-ready") return review.prNumber != null ? ["merge"] : [];
+  if (review.verdict === "merge-ready") return mergeEligibility(review).allowed ? ["merge"] : [];
   return ["requeue"];
 }
 
@@ -577,14 +585,13 @@ export function nightlyReviewTools(): ToolDef[] {
             if (!review) {
               return mcpError({ type: "NOT_FOUND", message: `No review found for id '${id}'`, suggestion: "Use action=board to list available review ids", context: { id } });
             }
-            if (review.prNumber == null) {
-              return mcpError({ type: "VALIDATION_ERROR", message: `Review '${id}' has no prNumber — nothing to merge`, suggestion: "Only cards that opened a PR can be merged", context: { id } });
+            const eligibility = mergeEligibility(review);
+            if (!eligibility.allowed) {
+              return mcpError({ type: "PERMISSION_DENIED", message: `Review '${id}' is not eligible for merge`, suggestion: "Merge requires a needs-you, merge-ready review with a positive PR number in an eriqueo GitHub repository. Inspect the current review and PR.", context: { id } });
             }
-            const slug = repoSlug(review.repo);
-            if (!slug) {
-              return mcpError({ type: "VALIDATION_ERROR", message: `Cannot derive owner/name from repo '${review.repo}'`, suggestion: "The review's repo must be a github URL or owner/name slug for gh -R", context: { repo: review.repo } });
-            }
-            const ghArgs = ["pr", "merge", String(review.prNumber), `--${method}`, "-R", slug];
+            const slug = eligibility.repo;
+            // Non-retriable dispatch: a lost result can follow an accepted merge.
+            const ghArgs = ["pr", "merge", String(eligibility.prNumber), `--${method}`, "-R", slug];
             const res = await gh(ghArgs);
             if (res.exitCode !== 0) {
               return mcpError({ type: "COMMAND_FAILED", message: `gh pr merge failed for PR #${review.prNumber}`, error: res.stderr.slice(0, 500), suggestion: "Check the PR is mergeable, gh is authenticated, and the branch is not protected", context: { command: `gh ${ghArgs.join(" ")}`, exitCode: res.exitCode } });

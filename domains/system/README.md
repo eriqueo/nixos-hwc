@@ -9,6 +9,8 @@
 
 ## Structure
 
+MCP `mcp/src/src/tools/nightly-review.ts` shares merge eligibility between nightly/Refinery action lists and dispatch. Only needs-you, merge-ready reviews with positive PR numbers in Eric's GitHub repositories can dispatch a merge; `gh` checks the live PR.
+
 MCP `mealCollections` enables the additive version-1 conditional meal protocol in `mcp/src/src/tools/tasks.ts`; exact collection identities and ETags bound every effect.
 
 `mcp/src/src/tools/calendar.ts` carries timed multi-day end dates through to khal; calendar tests cover range validation and command arguments.
@@ -74,6 +76,8 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-10-23: Enforce the same owned-GitHub repository, review-state and PR-number checks in nightly/Refinery merge discovery and dispatch. Reject malformed/non-GitHub remotes and bind `gh` to github.com; keep requeue actions available under their existing state rules.
 
 - 2026-10-16: Add scoped Meals CalDAV read/create/update/delete with conditional headers and exact UID readback; legacy task APIs remain unchanged.
 

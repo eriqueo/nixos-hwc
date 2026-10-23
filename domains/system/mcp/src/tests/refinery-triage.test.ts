@@ -48,6 +48,7 @@ beforeAll(async () => {
   await mkdir(reviews);
   process.env.REFINERY_ITEMS_DIR = items;
   process.env.REFINERY_REVIEWS_DIR = reviews;
+  process.env.REFINERY_VAULT_DIR = root;
   process.env.REFINERY_BOARD_URL = "http://board.test";
   vi.stubGlobal("fetch", fetchMock);
   // Env is read at module load, so import after setting it.
@@ -125,6 +126,123 @@ describe("hwc_refinery triage board", () => {
 });
 
 describe("hwc_refinery prefix routing", () => {
+  it.each([
+    { repo: "ContractorCTO/datax" },
+    { repo: "ContractorCTO/dx-mcp" },
+    { repo: "elstruck/datax" },
+    { repo: "elstruck/dx-mcp" },
+    { repo: "https://github.com/ContractorCTO/datax.git" },
+    { repo: "git@github.com:elstruck/dx-mcp.git" },
+    { repo: "upstream/project" },
+    { repo: "https://gitlab.com/eriqueo/x" },
+    { repo: "git@gitlab.com:eriqueo/x" },
+    { repo: "https://github.com.evil.test/eriqueo/x" },
+    { repo: "https://github.com/eriqueo/x/pull/1" },
+    { repo: "https://github.com/eriqueo/x?repo=y" },
+    { repo: "https://github.com/eriqueo/x#fragment" },
+    { repo: "https://github.com@evil.test/eriqueo/x" },
+    { repo: "https://github.com:443/eriqueo/x" },
+    { repo: "https://github.com/eriqueo/%78" },
+    { repo: "/eriqueo/x" },
+    { repo: "eriqueo//x" },
+    { repo: "eriqueo/.." },
+    { repo: "eriqueo/x/extra" },
+    { repo: "eriqueo/x/" },
+    { status: "merged" },
+    { status: "requeued" },
+    { status: "rejected" },
+    { verdict: "needs-work" },
+    { verdict: "reject" },
+    { prNumber: null },
+    { prNumber: 0 },
+    { prNumber: -1 },
+    { prNumber: 1.5 },
+    { prNumber: Number.MAX_SAFE_INTEGER + 1 },
+  ])("denies merge projection and forged requests for %j without gh", async (fields) => {
+    const id = "authority-denied";
+    await writeFile(join(reviews, `${id}.json`), JSON.stringify(review(id, fields)));
+    try {
+      const cards = (await triage()).flatMap(stage => stage.cards);
+      expect(cards.find(card => card.id === `pr:${id}`)!.actions).not.toContain("merge");
+      // Both public entry points must defend themselves, even without board discovery.
+      const { nightlyReviewTools } = await import("../src/tools/nightly-review.js");
+      for (const [entry, requestId] of [[tool, `pr:${id}`], [nightlyReviewTools()[0], id]] as const) {
+        const result = await entry.handler({ action: "merge", id: requestId });
+        expect(result.status).toBe("error");
+      }
+      expect(run).not.toHaveBeenCalled();
+    } finally {
+      await rm(join(reviews, `${id}.json`));
+    }
+  });
+
+  it.each(["eriqueo/owned-repo", "https://github.com/eriqueo/owned-repo.git", "git@github.com:eriqueo/owned-repo.git", "ssh://git@github.com/eriqueo/owned-repo.git"])(
+    "merges a valid owned review from %s through gh", async (repo) => {
+      const id = "authority-owned";
+      await writeFile(join(reviews, `${id}.json`), JSON.stringify(review(id, { repo, mergeable: null })));
+      try {
+        const cards = (await triage()).flatMap(stage => stage.cards);
+        expect(cards.find(card => card.id === `pr:${id}`)!.actions).toEqual(["merge"]);
+        expect((await tool.handler({ action: "merge", id: `pr:${id}` })).status).toBe("ok");
+        expect(run).toHaveBeenCalledTimes(1);
+        expect(run.mock.calls[0][1]).toEqual(["pr", "merge", String(id.length), "--squash", "-R", "eriqueo/owned-repo"]);
+        expect(run.mock.calls[0][2].env.GH_HOST).toBe("github.com");
+      } finally {
+        await rm(join(reviews, `${id}.json`));
+      }
+    },
+  );
+
+  it("rechecks a stale board action before dispatch and leaves gh authoritative", async () => {
+    const id = "authority-stale";
+    const path = join(reviews, `${id}.json`);
+    await writeFile(path, JSON.stringify(review(id, {})));
+    try {
+      expect((await triage()).flatMap(stage => stage.cards).find(card => card.id === `pr:${id}`)!.actions).toEqual(["merge"]);
+      await writeFile(path, JSON.stringify(review(id, { status: "requeued" })));
+      expect((await tool.handler({ action: "merge", id: `pr:${id}` })).status).toBe("error");
+      expect(run).not.toHaveBeenCalled();
+      await writeFile(path, JSON.stringify(review(id, { mergeable: true })));
+      run.mockImplementation((_bin, _args, _opts, cb) => cb({ code: 1 }, "", "PR is not mergeable"));
+      expect(await tool.handler({ action: "merge", id: `pr:${id}` })).toMatchObject({ status: "error", error_type: "COMMAND_FAILED" });
+      const detail = await tool.handler({ action: "detail", id: `pr:${id}` });
+      expect(detail.data).toMatchObject({ status: "needs-you" });
+      expect(run).toHaveBeenCalledTimes(1);
+    } finally {
+      await rm(path);
+    }
+  });
+
+  it.each([{ status: "unknown" }, { verdict: "unknown" }])("denies malformed review state %j", async (fields) => {
+    const id = "authority-malformed";
+    await writeFile(join(reviews, `${id}.json`), JSON.stringify(review(id, fields)));
+    try {
+      expect((await tool.handler({ action: "merge", id: `pr:${id}` })).status).toBe("error");
+      expect(run).not.toHaveBeenCalled();
+    } finally {
+      await rm(join(reviews, `${id}.json`));
+    }
+  });
+
+  it("preserves upstream review reads and requeue without granting merge", async () => {
+    const id = "authority-requeue";
+    const goalDir = join(root, "_inbox", "nightly_builds", "g");
+    await mkdir(goalDir, { recursive: true });
+    const cardFile = `01-${id}.md`;
+    await writeFile(join(goalDir, cardFile), "---\nstatus: reviewed\n---\nFixture\n");
+    await writeFile(join(reviews, `${id}.json`), JSON.stringify(review(id, { repo: "ContractorCTO/datax", verdict: "needs-work", cardFile })));
+    try {
+      expect((await tool.handler({ action: "detail", id: `pr:${id}` })).status).toBe("ok");
+      expect((await triage()).flatMap(stage => stage.cards).find(card => card.id === `pr:${id}`)!.actions).toEqual(["requeue"]);
+      expect((await tool.handler({ action: "requeue", id: `pr:${id}` })).status).toBe("ok");
+      expect(run).toHaveBeenCalledTimes(1);
+      expect(run.mock.calls[0][1]).toEqual(["pr", "close", String(id.length), "-R", "contractorcto/datax"]);
+    } finally {
+      await rm(join(reviews, `${id}.json`));
+      await rm(join(goalDir, cardFile));
+    }
+  });
+
   it.each([
     ["run", { id: "f" }, "/run"],
     ["park", { id: "f", status: "parked" }, "/status"],
