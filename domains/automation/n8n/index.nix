@@ -22,7 +22,7 @@ in
 
     image = lib.mkOption {
       type = lib.types.str;
-      default = "docker.io/n8nio/n8n:2.10.3";  # critical tier (Law 15 v12.4): workflow DB — pinned
+      default = "docker.io/n8nio/n8n@sha256:845ac21710739d7206086974295f7f93932e0fa8dd87af6d9fb0b7aa0338ad15";  # reviewed 2.44.6; critical workflow DB — pinned
       description = "n8n container image";
     };
 

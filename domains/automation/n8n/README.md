@@ -13,7 +13,7 @@ n8n workflow automation platform running as a Podman container. Handles alert ro
 
 ```
 domains/automation/n8n/
-├── index.nix          # Option definitions, firewall rules, container orchestration
+├── index.nix          # Options, reviewed immutable image pin, firewall rules
 ├── sys.nix            # Container definition, env file generation (+ rotation
 │                      #   restartTriggers on the .age sources), tmpfiles
 ├── README.md          # This file
@@ -39,7 +39,8 @@ of the system closure, so it does not belong under `domains/`.
 ```nix
 hwc.automation.n8n = {
   enable = true;
-  image = "docker.io/n8nio/n8n:latest";
+  # Default: reviewed 2.44.6; retain an immutable image for workflow recovery.
+  image = "docker.io/n8nio/n8n@sha256:845ac21710739d7206086974295f7f93932e0fa8dd87af6d9fb0b7aa0338ad15";
   port = 5678;
   webhookUrl = "https://n8n.heartwoodcraft.me";
   dataDir = "/var/lib/hwc/n8n";
@@ -123,6 +124,17 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 - `hwc-n8n-mcp-env.service` — generates bridge env file from agenix secrets
 
 ## Changelog
+
+- 2026-10-23: Pin the reviewed2.44.6 image, which runs Node26.12.1 with corrected
+  c-ares, OpenSSL and built-in trust roots. Private old/new/old checks preserve
+  workflow definitions, credential decryption and historical execution payloads
+  through142→301 migrations. The old image also reads an execution written by
+  the new image. Both images pass a dummy HMAC/env Code-node check, and all19
+  used node/version pairs remain supported. Preserve the SQLite/config key pair
+  and current data for recovery; never restore a stale database over later work.
+  The exact prior image is
+  `docker.io/n8nio/n8n@sha256:7d90cdb066ae31f08776b0f8287d33102c4b55d7d0173faf5edb5767c94d2b83`.
+  These checks do not execute production workflows or contact their providers.
 
 - 2026-10-02: Document `.com` public webhook receivers and the current work tailnet editor. `publicUrl` is derived from the tailnet route; there is no separate `webhookUrl` option. Retain `.me` until actual external sender settings are verified.
 
