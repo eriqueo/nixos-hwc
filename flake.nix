@@ -769,6 +769,78 @@
         touch "$out"
       '';
 
+      seerr-settings-preservation = let
+        secret = name: value: pkgs.writeText "seerr-fixture-${name}" value;
+        original = {
+          "jellyfin-api-key" = secret "jellyfin" "fixture-jellyfin\n";
+          "radarr-api-key" = secret "radarr" "fixture-radarr\n";
+          "sonarr-api-key" = secret "sonarr" "fixture-sonarr\n";
+        };
+        generator = secrets: (import ./domains/media/jellyseerr/parts/settings.nix {
+          inherit pkgs;
+          config.hwc.secrets.api = secrets;
+        }).generateSettingsScript;
+        rotated = original // { "radarr-api-key" = secret "radarr-rotated" "fixture-rotated\n"; };
+        empty = original // { "sonarr-api-key" = secret "empty" ""; };
+        missing = original // { "sonarr-api-key" = "/no-such-seerr-fixture-secret"; };
+        home = self.nixosConfigurations.hwc-home;
+        liveGenerator = (import ./domains/media/jellyseerr/parts/settings.nix {
+          inherit (home) pkgs;
+          inherit (home) config;
+        }).generateSettingsScript;
+        preStart = pkgs.writeText "seerr-production-prestart" home.config.systemd.services.podman-jellyseerr.preStart;
+      in pkgs.runCommand "seerr-settings-preservation" {
+        nativeBuildInputs = [ pkgs.python3 pkgs.jq pkgs.coreutils ];
+      } ''
+        python3 - ${generator original} ${generator rotated} ${generator empty} ${generator missing} ${preStart} ${liveGenerator} <<'PYTEST'
+        import hashlib, json, pathlib, re, subprocess, sys, tempfile
+        original, rotated, empty, missing, prestart, live = sys.argv[1:]
+        helpers = re.findall(r'/nix/store/[^\s]+jellyseerr-ensure-settings', pathlib.Path(prestart).read_text())
+        assert len(helpers) == 1 and live in pathlib.Path(helpers[0]).read_text(), 'production preStart bypasses settings owner'
+        seed = {'main': {'apiKey': 'keep-api', 'localLogin': True, 'clientSetting': 'keep-main'},
+                'clientId': 'keep-client', 'vapidPrivate': 'keep-private', 'vapidPublic': 'keep-public',
+                'network': {'proxy': 'keep-network'}, 'migrations': {'fixture': True},
+                'jellyfin': {'libraries': [{'id': 'fixture-library', 'enabled': True}]},
+                'radarr': [{'id': 0, 'hostname': 'old-host', 'appOwnedOption': 'keep-radarr'}, {'id': 9, 'hostname': 'undeclared'}],
+                'sonarr': [{'id': 0, 'appOwnedOption': 'keep-sonarr'}]}
+        def run(script, target):
+            return subprocess.run([script, str(target)], capture_output=True, text=True, timeout=5)
+        def preserved(value):
+            for key in ['clientId', 'vapidPrivate', 'vapidPublic', 'network', 'migrations']:
+                assert value.get(key) == seed[key], 'lost app-owned ' + key
+            assert value['main']['apiKey'] == 'keep-api' and value['main']['clientSetting'] == 'keep-main'
+            assert value['jellyfin']['libraries'] == seed['jellyfin']['libraries']
+            assert value['radarr'][0]['appOwnedOption'] == 'keep-radarr'
+            assert value['sonarr'][0]['appOwnedOption'] == 'keep-sonarr'
+            assert value['main']['localLogin'] is False and value['main']['defaultPermissions'] == 222
+            assert value['jellyfin']['apiKey'] == 'fixture-jellyfin'
+            assert [v['id'] for v in value['radarr']] == [0] and value['radarr'][0]['hostname'] == 'radarr'
+        with tempfile.TemporaryDirectory() as root:
+            target = pathlib.Path(root) / 'settings.json'
+            target.write_text(json.dumps(seed))
+            assert run(original, target).returncode == 0
+            preserved(json.loads(target.read_text()))
+            first = target.read_bytes()
+            assert run(original, target).returncode == 0 and target.read_bytes() == first, 'reconciliation is not idempotent'
+            assert run(rotated, target).returncode == 0
+            value = json.loads(target.read_text()); preserved(value)
+            assert value['radarr'][0]['apiKey'] == 'fixture-rotated', 'rotation was ignored'
+            for bad in [empty, missing]:
+                before = target.read_bytes()
+                assert run(bad, target).returncode != 0 and target.read_bytes() == before, 'failed secret damaged old settings'
+            target.write_text('{malformed')
+            before = target.read_bytes()
+            assert run(original, target).returncode != 0 and target.read_bytes() == before, 'malformed settings were overwritten'
+            assert sorted(p.name for p in pathlib.Path(root).iterdir()) == ['settings.json'], 'temporary files leaked'
+            target.unlink()
+            assert run(original, target).returncode == 0
+            fresh = json.loads(target.read_text())
+            assert fresh['main']['initialized'] and fresh['main']['defaultPermissions'] == 222
+        print('production wiring, preservation, ownership, rotation, atomic failures and bootstrap pass')
+        PYTEST
+        touch "$out"
+      '';
+
       node-runtime-wiring =
         let
           server = host: self.nixosConfigurations."hwc-${host}";
