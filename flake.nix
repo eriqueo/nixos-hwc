@@ -319,7 +319,7 @@
     # header for the removal condition.
     nodejsSecurityOverlay = import ./overlays/nodejs-security.nix;
 
-    # TEMPORARY: server modules select corrected runtimes without feeding them
+    # TEMPORARY: native modules select corrected runtimes without feeding them
     # back into Nixpkgs' package fixed point (which rebuilds Chromium/CUDA torch).
     # Remove with nodejs-security.nix after the pinned packages pass its manifest.
     mkNodeRuntimeScope = original:
@@ -373,6 +373,7 @@
     # pkgs-stable with CUDA overlay for server (Immich ML GPU acceleration)
     pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ serverOverlay tailscaleOverlay ghidraOverlay ];
 
+    laptopRuntimeScope = mkNodeRuntimeScope pkgs-laptop;
     serverRuntimeScope = mkNodeRuntimeScope pkgs-stable;
     serverCudaRuntimeScope = mkNodeRuntimeScope pkgs-stable-cuda;
 
@@ -407,8 +408,9 @@
       laptop = {
         channel   = "unstable";
         roles     = [ "base" "desktop" ];
-        nixosPkgs = pkgs-laptop;
-        hmPkgs    = pkgs-laptop;
+        nixosPkgs = laptopRuntimeScope.pkgs;
+        hmPkgs    = laptopRuntimeScope.pkgs;
+        scopedNodeRuntime = true;
         hmBackupExt  = "hm-bak";
         extraModules = [ inputs.nixvirt.nixosModules.default ];
       };
@@ -742,25 +744,29 @@
       node-runtime-wiring =
         let
           server = host: self.nixosConfigurations."hwc-${host}";
-          runtime22 = serverRuntimeScope.pkgs.nodejsRuntime_22;
-          runtime24 = serverRuntimeScope.pkgs.nodejsRuntime_24;
-          scope = host: if host == "home" then serverCudaRuntimeScope else serverRuntimeScope;
-          hasRuntime = packages: lib.any (package: package.outPath == runtime24.outPath) packages;
+          scope = host: {
+            home = serverCudaRuntimeScope;
+            work = serverRuntimeScope;
+            laptop = laptopRuntimeScope;
+          }.${host};
+          runtime22 = host: (scope host).pkgs.nodejsRuntime_22;
+          runtime24 = host: (scope host).pkgs.nodejsRuntime_24;
+          hasRuntime = host: packages: lib.any (package: package.outPath == (runtime24 host).outPath) packages;
           hostValid = host:
             let system = server host; baseline = (scope host).buildPkgs; in
-            system.pkgs.nodejs.outPath == runtime24.outPath
-            && system.pkgs.nodejs_22.outPath == runtime22.outPath
+            system.pkgs.nodejs.outPath == (runtime24 host).outPath
+            && system.pkgs.nodejs_22.outPath == (runtime22 host).outPath
             && system.pkgs.chromium.browser.drvPath == baseline.chromium.browser.drvPath
             && system.pkgs.python3Packages.torch.drvPath == baseline.python3Packages.torch.drvPath
             && system.pkgs.python3Packages.torchvision.drvPath == baseline.python3Packages.torchvision.drvPath
-            && hasRuntime system.config.home-manager.users.eric.hwc.home.apps.t3code.serve.packages
-            && hasRuntime self.homeConfigurations."eric@hwc-${host}".config.hwc.home.apps.t3code.serve.packages;
+            && hasRuntime host system.config.home-manager.users.eric.hwc.home.apps.t3code.serve.packages
+            && hasRuntime host self.homeConfigurations."eric@hwc-${host}".config.hwc.home.apps.t3code.serve.packages;
           commandUsesRuntime = unit:
-            lib.hasPrefix "${runtime22}/bin/node "
+            lib.hasPrefix "${runtime22 "work"}/bin/node "
               (server "work").config.systemd.services.${unit}.serviceConfig.ExecStart;
         in
-        assert lib.assertMsg (lib.all hostValid [ "work" "home" ])
-          "Server Node runtime selection, Home Manager parity or no-cascade contract failed";
+        assert lib.assertMsg (lib.all hostValid [ "work" "home" "laptop" ])
+          "Node runtime selection, Home Manager parity or no-cascade contract failed";
         assert lib.assertMsg (lib.all commandUsesRuntime [ "hwc-notify" "hwc-sys-mcp" "heartwood-cms" "hwc-leads" ])
           "Native Node22 service command did not select the corrected runtime";
         pkgs.runCommand "node-runtime-wiring" { } ''
