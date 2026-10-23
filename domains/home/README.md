@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+The laptop and servers expose the explicit native Node runtime in both Home Manager lanes. Their build packages stay on the pinned channel. The `node-runtime-wiring` check verifies runtime selection and preserves the baseline Chromium and torch derivations.
+
 `apps/courier/` receives its system-derived tailnet hostname in both Home Manager lanes through the flake shared arguments, with the shared fleet fallback for appliance hosts.
 
 The pinned handoff poll carries versioned handoff messages only. Old Close records retain history, late acknowledgements and safety holds, but grant no dispatch. Relays refuse unsupported messages before calling T3; canonical Review and Close use their reserved protocol.
@@ -138,6 +140,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-23: Apply the existing scoped native Node runtime to the laptop and extend the wiring check to cover its NixOS and standalone Home Manager lanes, avoiding a Chromium/torch rebuild cascade during secret activation.
 
 - 2026-10-23: Repair Courier tailnet evaluation in standalone `hms` by passing the system-derived hostname through guarded shared arguments and the existing fleet fallback.
 
