@@ -18,7 +18,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
-The laptop and servers expose the explicit native Node runtime in both Home Manager lanes. Their build packages stay on the pinned channel. The `node-runtime-wiring` check verifies runtime selection and preserves the baseline Chromium and torch derivations.
+The laptop and servers expose the explicit native Node runtime in both Home Manager lanes. Their build packages stay on the pinned channel. Flake check tools use that same boundary. The `node-runtime-wiring` check verifies runtime selection and preserves the baseline Chromium and torch derivations.
 
 `apps/courier/` receives its system-derived tailnet hostname in both Home Manager lanes through the flake shared arguments, with the shared fleet fallback for appliance hosts.
 
