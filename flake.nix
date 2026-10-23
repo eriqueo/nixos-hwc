@@ -3465,8 +3465,12 @@
             producer = root / "su"
             producer.write_text("#!${pkgs.bash}/bin/bash\nif [ -e " + str(root / "fail") + " ]; then exit 23; fi\nprintf 'valid SQL snapshot\\n'\n")
             producer.chmod(0o700)
-            for i, fixture in enumerate(sys.argv[1:-1]):
+            cases = []
+            for fixture in sys.argv[1:-1]:
                 spec = json.loads(pathlib.Path(fixture).read_text())
+                assert 't3' in spec['snapshots'], 'T3 backup registration absent'
+                cases.extend((spec, name) for name in sorted(spec['snapshots']))
+            for i, (spec, snapshot_name) in enumerate(cases):
                 dest = root / str(i)
                 dest.mkdir()
                 nested = dest / "service-split" / "recovery.json"
@@ -3484,16 +3488,27 @@
                     assert script.endswith(custom), 'custom-hook composition changed'
                     script = script[:-len(custom)]
                 assert 'borg-sqlite-snapshot' in script, 'shared snapshot caller absent'
-                assert set(spec['snapshots']) == {'t3'}
-                config = spec['snapshots']['t3']
+                config = spec['snapshots'][snapshot_name]
                 state = dest / 'borg-sqlite'
                 userdata = dest / 'userdata'
                 userdata.mkdir()
                 source = userdata / 'state.sqlite'
                 # Substitute composition ports only; production helper and its
                 # namespace/identity/permission/failure behavior remain intact.
-                script = script.replace(spec['stateRoot'], str(state)).replace(config['source'], str(source))
-                script = script.replace(shlex.quote(config['user']), shlex.quote(pwd.getpwuid(os.getuid()).pw_name))
+                source_ports = {config['source']: str(source)}
+                other_databases = []
+                for name, entry in spec['snapshots'].items():
+                    if name != snapshot_name:
+                        other = dest / ('other-' + name) / 'state.sqlite'
+                        other.parent.mkdir()
+                        other_databases.append(initialize(other))
+                        source_ports[entry['source']] = str(other)
+                    # Replace an argument, never substrings such as --state-root.
+                    script = script.replace("--user '" + entry['user'] + "'",
+                        '--user ' + shlex.quote(pwd.getpwuid(os.getuid()).pw_name))
+                script = script.replace(spec['stateRoot'], str(state))
+                for original, replacement in source_ports.items():
+                    script = script.replace(original, replacement)
                 script = script.replace('/var/lib/backups', str(dest))
                 script = script.replace("/run/wrappers/bin/su", str(producer))
                 db = initialize(source)
@@ -3507,7 +3522,7 @@
                 assert output.read_bytes() == before
                 assert not list(dest.glob(".postgresql-*"))
                 (root / "fail").unlink()
-                ready = state / 'ready' / 't3.sqlite'
+                ready = state / 'ready' / (snapshot_name + '.sqlite')
                 coherent(ready, 'initial')
                 assert ready.stat().st_uid == os.getuid()
                 assert ready.stat().st_mode & 0o777 == 0o600
@@ -3579,13 +3594,13 @@
 
                 # Exercise standalone CLI, including required source and size
                 # failures; each preserves the old published bytes and staging.
-                argv = [cli, 'create', '--state-root', str(state), '--name', 't3', '--source', str(source),
+                argv = [cli, 'create', '--state-root', str(state), '--name', snapshot_name, '--source', str(source),
                     '--user', pwd.getpwuid(os.getuid()).pw_name, '--max-bytes', str(config['maxBytes']),
                     '--timeout-seconds', str(config['timeoutSeconds'])]
                 run(argv)
                 coherent(ready)
                 lastgood = ready.read_bytes()
-                slot = state / 'staging' / 't3'
+                slot = state / 'staging' / snapshot_name
                 slot.mkdir(mode=0o700)
                 held_file = slot / 'keep-existing-slot'
                 held_file.write_text('another attempt owns this slot')
@@ -3661,7 +3676,10 @@
                 assert any(pathlib.PurePosixPath(spec['stateRoot'] + '/ready').is_relative_to(p) for p in spec['paths'])
                 assert str(pathlib.PurePosixPath(config['source']).parent) in spec['paths']
                 def remap(value):
-                    return value.replace(spec['stateRoot'], str(state)).replace(config['source'], str(source))
+                    value = value.replace(spec['stateRoot'], str(state))
+                    for original, replacement in source_ports.items():
+                        value = value.replace(original, replacement)
+                    return value
                 excludes = [remap(value) for value in spec['exclude']]
                 env = {k: v for k, v in os.environ.items() if not k.startswith('BORG_')}
                 env.update(BORG_CACHE_DIR=str(dest / 'cache'), BORG_CONFIG_DIR=str(dest / 'config'),
@@ -3680,7 +3698,7 @@
                 def verify_archive(extracted):
                     copied = extracted / str(state).lstrip('/')
                     restored_user = extracted / str(userdata).lstrip('/')
-                    coherent(copied / 'ready' / 't3.sqlite')
+                    coherent(copied / 'ready' / (snapshot_name + '.sqlite'))
                     assert (restored_user / 'pairing-fixture').read_text() == 'synthetic credential placeholder'
                     assert not any((restored_user / ('state.sqlite' + suffix)).exists() for suffix in ("", '-wal', '-shm')), 'raw SQLite entered archive'
                     assert not (copied / 'staging' / 'not-an-archive-input').exists(), 'staging entered archive'
@@ -3689,7 +3707,9 @@
                 assert len(raw_patterns) == 3, raw_patterns
                 must_detect(lambda: verify_archive(archive('raw-exclusion-removed', [value for value in excludes if value not in raw_patterns])), 'raw SQLite exclusions removed')
                 db.close()
-                print(json.dumps({'host': spec['host'], 'state': 'passed',
+                for connection in other_databases:
+                    connection.close()
+                print(json.dumps({'host': spec['host'], 'database': snapshot_name, 'state': 'passed',
                     'snapshotSha256': hashlib.sha256(ready.read_bytes()).hexdigest(),
                     'checks': ['postgresql-publication-retention-failure', 'rendered-hook-sqlite-publication',
                         'raw-wal-mixed-transaction-red', 'concurrent-writer-snapshot', 'standalone-cli',
