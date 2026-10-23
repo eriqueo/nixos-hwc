@@ -10,15 +10,15 @@
 # Access-Control-Allow-Origin: *), so adding a seventh area is one entry in
 # `areas` plus that area's own route/deploy work — no edit in any app shell.
 #
-# The hub itself is rendered at evaluation time into a store path and served by
-# a static `root` vhost (briefing precedent). No service, no port, no runtime
-# JavaScript needed to list the areas: an unavailable area cannot break the page.
+# The optional read-only web shell consumes the TUI's packaged hub manifests.
+# Its loopback service serves the same generated registry at /areas.json. The
+# static directory remains the default and rollback when web.enable is false.
 #
 # Living architecture: brain tech/development/builds/hwc_web_app_shell.md.
 #
 # NAMESPACE: hwc.business.workbench.*
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, inputs, ... }:
 let
   cfg = config.hwc.business.workbench;
   vhostDomain = config.hwc.networking.shared.vhostDomain;
@@ -190,7 +190,19 @@ in
       description = "Vhost name of the hub: <routeName>.<vhostDomain>.";
     };
 
-
+    web = {
+      enable = lib.mkEnableOption "read-only Workbench web shell";
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 11680;
+        description = "Loopback HTTP listener behind the Workbench private vhost.";
+      };
+      stylesDir = lib.mkOption {
+        type = lib.types.str;
+        default = "${config.hwc.paths.user.home}/600_apps/scout/packages/ui/src/styles";
+        description = "Canonical HWC palette.css and shell.css producer; validated at service startup.";
+      };
+    };
 
     areas = lib.mkOption {
       type = lib.types.listOf areaType;
@@ -245,15 +257,47 @@ in
   # IMPLEMENTATION
   #============================================================================
   config = lib.mkIf cfg.enable {
-    # Tailnet-private vhost: workbench.<vhostDomain>, static store path.
+    # The existing private vhost and owner map retain the access boundary.
     hwc.networking.shared.routes = [({
       name = cfg.routeName;
       mode = "vhost";
-      root = "${hubSite}";
-    })];
+    } // (if cfg.web.enable then {
+      upstream = "http://127.0.0.1:${toString cfg.web.port}";
+    } else { root = "${hubSite}"; }))];
+
+    systemd.services.workbench-web = lib.mkIf cfg.web.enable {
+      description = "Workbench read-only web workspace";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "network.target" "hwc-sys-mcp.service" ];
+      environment = {
+        HOME = config.hwc.paths.user.home;
+        WORKBENCH_GATEWAY_URL = "http://127.0.0.1:${toString config.hwc.system.mcp.port}";
+      };
+      serviceConfig = {
+        User = lib.mkForce "eric";
+        Group = "users";
+        ExecStart = lib.escapeShellArgs [
+          "${inputs.workbench.packages.${pkgs.system}.default}/bin/workbench"
+          "serve" "--host" "127.0.0.1" "--port" (toString cfg.web.port)
+          "--styles-dir" cfg.web.stylesDir "--areas-file" areasJson
+          "--public-host" "${cfg.routeName}.${vhostDomain}"
+        ];
+        Restart = "on-failure";
+        RestartSec = 5;
+        TimeoutStopSec = 20;
+        NoNewPrivileges = true;
+        ProtectSystem = "strict";
+        PrivateTmp = true;
+        UMask = "0077";
+      };
+    };
 
     # VALIDATION
     assertions = [
+      {
+        assertion = !cfg.web.enable || config.hwc.system.mcp.enable;
+        message = "hwc.business.workbench.web requires the local MCP gateway.";
+      }
       {
         assertion = duplicateIds == [ ];
         message = "hwc.business.workbench: duplicate area id(s): ${lib.concatStringsSep ", " duplicateIds}";

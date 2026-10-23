@@ -15,6 +15,7 @@ finance, business databases, website/CMS, and the daily morning briefing.
 ## Structure
 
 The Workbench registry includes Meals, resolving its destination from the shared route owner.
+`workbench.web` optionally serves the read-only browser shell from the pinned Workbench package on loopback :11680. It uses the TUI manifests and canonical Scout styles, preserves `/areas.json` for specialist app switchers, and keeps the existing private vhost. Disable it to restore the static directory.
 
 Estimator Flooring supports named click-lock LVT/LVP and tile areas with shared trade pricing, explicit scope costs and exact JobTread quantities. The area contract lives in `estimator/src/engine/flooring.js`; its editor is `FlooringScope.jsx`. Draft v3 uses separate storage keys and retains legacy recovery snapshots.
 
@@ -60,10 +61,12 @@ business/
 ├── morning-briefing/  # hwc.business.morningBriefing — local gather + Laya mail snapshot
 ├── paperless/         # hwc.business.paperless — Paperless-NGX documents
 ├── website/           # hwc.business.website — Heartwood CMS + 11ty + webapps
-└── workbench/         # hwc.business.workbench — HWC Workbench hub (area registry + static launcher)
+└── workbench/         # hwc.business.workbench — area registry, static directory and optional read-only web shell
 ```
 
 ## Changelog
+
+- 2026-10-23: Workbench can serve its read-only web shell behind the private vhost on hwc-work. The pinned package shares TUI manifests and gateway reads, uses canonical Scout styles, and preserves the generated specialist-app directory contract.
 
 - 2026-10-16: Register Meals beside Calendar and Tasks in the shared Workbench area list.
 
