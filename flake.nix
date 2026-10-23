@@ -3363,7 +3363,7 @@
             root=pathlib.Path(temporary)
             state=root/'state.json';events=root/'events'
             probe=root/'probe'
-            probe.write_text('#!'+sys.executable+'\n'+"""
+            probe.write_text('#!'+sys.executable+'\n'+r"""
         import json,os,pathlib,sys
         name=pathlib.Path(sys.argv[0]).name;a=sys.argv[1:]
         state=pathlib.Path(os.environ['PROBE_STATE']);data=json.loads(state.read_text())
