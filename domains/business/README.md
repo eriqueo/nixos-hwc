@@ -16,6 +16,7 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 `umami/` pins its qualified security image while preserving the analytics database,
 website identity, tracking endpoint and briefing/report API consumers.
+Its service recognizes Next's drained SIGTERM exit and restarts unsolicited exits.
 
 The Workbench registry includes Meals, resolving its destination from the shared route owner.
 `workbench.web` optionally serves the read-only browser shell from the pinned Workbench package on loopback :11680. It uses the TUI manifests and canonical Scout styles, preserves `/areas.json` for specialist app switchers, and keeps the existing private vhost. Disable it to restore the static directory.
@@ -75,6 +76,9 @@ business/
   Changed-only forms share TUI coercion; preflight rejects revoked targets or
   changed confirmation contracts. Computed Server/Refinery stages remain gated.
 
+- 2026-10-23: Match Umami's unit to Next's deliberate exit 143 after draining.
+  Planned stops stay clean; unexpected termination still restarts and ordinary
+  failures remain visible. The policy is specific to this application contract.
 - 2026-10-23: Pin Umami 3.4.1 with corrected Node and application dependencies.
   Old/new/old image tests preserve the schema and original rows while exercising
   login, reporting and isolated event ingestion; production data stays in place.
