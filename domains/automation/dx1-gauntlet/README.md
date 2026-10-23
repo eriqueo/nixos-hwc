@@ -16,6 +16,8 @@ No code changes, no customer contact — the human reviews each
 
 ## Structure
 
+Gauntlet poll and run-now services keep in-flight investigations during system switches. Changed runtimes take effect on the next scheduled or requested run.
+
 ```
 dx1-gauntlet/
 └── index.nix    # hwc.automation.dx1Gauntlet.{enable,onCalendar,maxCases,gauntletDir}
@@ -35,6 +37,8 @@ agenix token are all **shared with sr-gauntlet** — one credential and one
 worktree source, two consumers.
 
 ## Changelog
+
+- 2026-10-23: Do not restart SR/DX1 investigations when a runtime or unit changes during a system switch. Check the rendered policy with `gauntlet-switch-policy`.
 
 - 2026-09-29: `gauntletDir` defaults to `~/700_datax/gauntlets/dx1_gauntlet`. The
   pipeline gained a remote (`eriqueo/dx1_gauntlet`), and hwc-work's checkout

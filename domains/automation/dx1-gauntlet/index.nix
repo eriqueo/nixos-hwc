@@ -141,6 +141,8 @@ in
       description = "DX1 Gauntlet — case-ledger investigations (headless Claude Code)";
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
+      # Let timers/path requests start work; switches must not restart jobs.
+      restartIfChanged = false;
       environment = dxgEnv;
       path = dxgPath;
       serviceConfig = {
@@ -179,6 +181,8 @@ in
       description = "DX1 Gauntlet — targeted run-now drain (refinery board trigger)";
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
+      # Let timers/path requests start work; switches must not restart jobs.
+      restartIfChanged = false;
       environment = dxgEnv;
       path = dxgPath;
       serviceConfig = {

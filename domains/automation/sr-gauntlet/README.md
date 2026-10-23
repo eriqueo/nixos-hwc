@@ -12,6 +12,8 @@ replies — the human reviews each `investigations/<date>-<srId>/REPORT.md`.
 
 ## Structure
 
+Gauntlet poll and run-now services keep in-flight investigations during system switches. Changed runtimes take effect on the next scheduled or requested run.
+
 ```
 sr-gauntlet/
 └── index.nix    # hwc.automation.srGauntlet.{enable,onCalendar,maxSrs,gauntletDir,
@@ -59,6 +61,8 @@ Rotate by re-running `claude setup-token` and re-encrypting the secret; oneshot
 units re-read it each run, so no restart is needed.
 
 ## Changelog
+
+- 2026-10-23: Do not restart SR/DX1 investigations when a runtime or unit changes during a system switch. Check the rendered policy with `gauntlet-switch-policy`.
 
 - **2026-09-30**: Both units take the marker from
   `hwc.system.apps.agent-harness.pipelineEnvironment` instead of a local literal.

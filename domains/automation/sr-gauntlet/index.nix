@@ -214,6 +214,8 @@ in
       description = "SR Gauntlet — DataX support-request investigations (headless Claude Code)";
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
+      # Let timers/path requests start work; switches must not restart jobs.
+      restartIfChanged = false;
       environment = srgEnv;
       path = srgPath;
       serviceConfig = {
@@ -255,6 +257,8 @@ in
       description = "SR Gauntlet — targeted run-now drain (refinery board trigger)";
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
+      # Let timers/path requests start work; switches must not restart jobs.
+      restartIfChanged = false;
       environment = srgEnv;
       path = srgPath;
       serviceConfig = {

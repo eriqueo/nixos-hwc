@@ -14,6 +14,8 @@ readme-freshness weekly Law-12 drift report.
 
 ## Structure
 
+Gauntlet poll and run-now services keep in-flight investigations during system switches. Changed runtimes take effect on the next scheduled or requested run.
+
 `n8n/parts/workflows/08a-jt-data-provider.json` keeps the customer query source for live workflow `d5Gm2LRKHtcQhio9`. It forwards JobTread page cursors, returns response version 1, and uses primary location IDs from the API.
 
 Screenshot naming runs beside the inbox janitor on its single owner. `screenshot-renamer/index.nix` starts a pinned app when screenshot or privacy receipt folders change, with work-driven retries, a separate progress checker and daily receipt backup. Shadow mode mounts screenshots read-only. Apply requires recovery proof. Eric selected live operator review instead of the scored holdout gate; the 95% quality and 50% coverage targets remain unverified.
@@ -88,6 +90,8 @@ workspace/automation/
 ```
 
 ## Changelog
+
+- 2026-10-23: Do not restart SR/DX1 investigations when a runtime or unit changes during a system switch. Check the rendered policy with `gauntlet-switch-policy`.
 
 - 2026-10-14: vault-sync retries pull+push 3 times, 30 s apart, before failing. A one-off network gap after resume or a push race with another host paged P1 even though the next cycle succeeded.
 - 2026-10-07: Estimator customer lookup now returns JobTread's next-page cursor instead of silently stopping at 50 customers. Client loading is bounded to 20 pages and reports overflow.
