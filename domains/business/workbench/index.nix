@@ -198,9 +198,9 @@ in
         description = "Loopback HTTP listener behind the Workbench private vhost.";
       };
       stylesDir = lib.mkOption {
-        type = lib.types.str;
-        default = "${config.hwc.paths.user.home}/600_apps/scout/packages/ui/src/styles";
-        description = "Canonical HWC palette.css and shell.css producer; validated at service startup.";
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Optional canonical stylesheet override; null uses the verified styles bundled in the Workbench package. Explicit overrides are validated at startup.";
       };
       writeTiles = lib.mkOption {
         type = lib.types.listOf (lib.types.strMatching "[a-z0-9-]+/[a-z0-9-]+");
@@ -289,8 +289,10 @@ in
         ExecStart = lib.escapeShellArgs ([
           "${inputs.workbench.packages.${pkgs.system}.default}/bin/workbench"
           "serve" "--host" "127.0.0.1" "--port" (toString cfg.web.port)
-          "--styles-dir" cfg.web.stylesDir "--areas-file" areasJson
+          "--areas-file" areasJson
           "--public-host" "${cfg.routeName}.${vhostDomain}"
+        ] ++ lib.optionals (cfg.web.stylesDir != null) [
+          "--styles-dir" cfg.web.stylesDir
         ] ++ lib.optionals (cfg.web.writeTiles != []) [
           "--state-file" "${cfg.web.stateDir}/actions.sqlite3"
         ] ++ lib.concatMap (tile: [ "--write-tile" tile ]) cfg.web.writeTiles);

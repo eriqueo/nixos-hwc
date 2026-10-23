@@ -1373,6 +1373,25 @@
       '';
 
       # Exercise the actual laptop module wiring, not a second layout renderer.
+      workbench-web-service = let
+        work = self.nixosConfigurations.hwc-work;
+        command = work.config.systemd.services.workbench-web.serviceConfig.ExecStart;
+        overridePath = "/tmp/workbench explicit styles";
+        overridden = (work.extendModules { modules = [{
+          hwc.business.workbench.web.stylesDir = lib.mkForce overridePath;
+        }]; }).config.systemd.services.workbench-web.serviceConfig.ExecStart;
+      in
+      assert lib.assertMsg (work.config.hwc.business.workbench.web.enable
+        && work.config.hwc.business.workbench.web.stylesDir == null
+        && !(lib.hasInfix "--styles-dir" command))
+        "workbench-web: default service must consume bundled styles";
+      assert lib.assertMsg (lib.hasInfix
+        (lib.escapeShellArgs [ "--styles-dir" overridePath ]) overridden)
+        "workbench-web: explicit styles override must survive argv escaping";
+      pkgs.runCommand "workbench-web-service" {} ''
+        touch "$out"
+      '';
+
       workbench-navigation = let
         home = self.homeConfigurations."eric@hwc-laptop".config;
         navigation = import ./domains/home/apps/zellij/parts/tabs.nix {
