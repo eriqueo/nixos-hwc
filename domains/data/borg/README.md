@@ -13,7 +13,7 @@ Borg deduplicating encrypted backup service. Provides block-level deduplication,
 
 ```
 domains/data/borg/
-├── index.nix          # Options, PostgreSQL/SQLite snapshots, Borg jobs, CLI tools
+├── index.nix          # Options, shared snapshot/jobs, optional independent SSH destinations, CLI tools
 ├── sqlite-snapshot.py # Readonly application-user copy and private atomic publication
 └── README.md          # This file
 ```
@@ -90,6 +90,36 @@ Restore the archived `ready/<name>.sqlite` in private disposable state first.
 Check SQLite integrity and required application records before an offline restore.
 Never overlay it onto a running application's database.
 
+## Independent destinations
+
+`additionalDestinations.<name>` adds an encrypted SSH repository without changing
+`hwc-backup` or its historical archive prefix. No machine enables one by default.
+Declare `host`, `repository` (absolute remote path), `hostKey` (ed25519 public key),
+`sshKeySecret`, `passphraseSecret`, `startAt` (systemd calendar), and optionally
+`user` (default `borg`). Each destination needs its own declared SSH identity and
+encryption secret; the SSH key mount must be root-owned mode 0400.
+
+Generated native units are `borgbackup-job-hwc-backup-<name>.service` and timer.
+They share source/exclusion lists, snapshot producers, compression and retention.
+They inherit application-provided snapshot write paths, but cannot write the
+primary repository. Each has an independent failure status/notification and the
+existing 12-hour job deadline. SSH pins the declared host key, allows only the
+chosen identity and has connection/liveness deadlines. This interface supports
+at most four safe, unique destinations. Repository data is AUTO-MANAGED through
+the inherited prune/compact policy; provision and test a server-side quota too.
+
+When destinations exist, all native backup jobs hold one per-host lock through
+snapshot publication, archive creation and completion. A contender fails after
+300 seconds; it never scans a snapshot while another archive is reading it.
+An empty map retains the original primary hook and permissions. Existing manual
+snapshot writers must respect this lock before offsite activation.
+
+This is source support, not a production offsite deployment. Before enabling it,
+verify seed/catch-up timing, remote quota enforcement, independent key recovery,
+remote integrity checks, and file/database restores. Interactive primary wrappers
+and `borg-check` continue to refer to the primary repository. Use the generated
+native per-job Borg wrapper for explicit additional-repository operations.
+
 ## Dependencies
 
 - **agenix secret**: `borg-passphrase` (repository encryption passphrase)
@@ -101,6 +131,7 @@ Never overlay it onto a running application's database.
 - `borg-check.service` / `borg-check.timer` — weekly repository integrity check
 
 ## Changelog
+- 2026-10-23: Add disabled-by-default independent SSH destinations with pinned host keys, dedicated credentials, native per-target jobs/timers and bounded snapshot/archive serialization. Preserve primary identities and application snapshot permissions.
 - 2026-10-16: Add bounded readonly SQLite online snapshots, private validation and atomic publication. Derive archive paths and exact raw-file exclusions from one map. Preserve other userdata and fail before Borg on producer errors. Exercise actual rendered hooks and archive extraction with wiring mutations.
 - 2026-09-26: Share configured-version PostgreSQL dumps across hosts; fail closed and publish atomically. Preserve restore errors, wait for locks, and keep nested recovery archives outside daily dump cleanup.
 

@@ -3220,6 +3220,143 @@
         # [-] character class keeps this lint from matching its own definition
         "rg 'github:eriqueo/nixos[-]hwc' flake.nix"
       ];
+      # Run the generated native jobs against a transport probe. Native Borg
+      # encryption/restore/quota behavior is independently exercised in fixtures.
+      borg-destinations = let
+        base = self.nixosConfigurations.hwc-home;
+        fixtureModule = { lib, config, ... }: {
+          services.postgresql.enable = lib.mkForce false;
+          hwc.data.borg.sqliteSnapshots = lib.mkForce {};
+          hwc.data.borg.preBackupScript = lib.mkForce ''
+            printf 'producer\n' >> "$PROBE_EVENTS"
+            if [ "$PROBE_FAIL" = 1 ]; then exit 23; fi
+          '';
+          age.secrets.borg-fixture-ssh = {
+            file = ./domains/secrets/parts/system/borg-passphrase.age;
+            mode = "0400";
+          };
+          age.secrets.borg-fixture-pass.file = ./domains/secrets/parts/system/borg-passphrase.age;
+          hwc.data.borg.additionalDestinations.test = {
+            host = "192.0.2.10";
+            repository = "/fixture/offsite";
+            hostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEnjV1K+7pHtjsFJKKm07ty4fTayNLQ+lOPoUhTkEP50";
+            sshKeySecret = "borg-fixture-ssh";
+            passphraseSecret = "borg-fixture-pass";
+            startAt = "*-*-* 04:00:00";
+          };
+          services.borgbackup.jobs = lib.genAttrs [ "hwc-backup" "hwc-backup-test" ]
+            (_: { inhibitsSleep = lib.mkForce false; });
+        };
+        c = (base.extendModules { modules = [ fixtureModule ]; }).config;
+        primary = c.services.borgbackup.jobs.hwc-backup;
+        secondary = c.services.borgbackup.jobs.hwc-backup-test;
+        # Inspect this module's real assertion without forcing unrelated fleet
+        # assertion messages whose interpolation may require optional settings.
+        valid = config: let
+          module = import ./domains/data/borg/index.nix { inherit config lib pkgs; };
+          assertions = (builtins.head module.config.content.contents).assertions;
+        in (lib.findFirst (a: lib.hasPrefix "Additional Borg destinations" a.message)
+          (throw "destination assertion absent") assertions).assertion;
+        invalid = settings: (base.extendModules { modules = [ fixtureModule settings ]; }).config;
+        unit = name: c.systemd.services."borgbackup-job-${name}";
+        scripts = map (name: pkgs.writeText "${name}-entry.sh" (unit name).script)
+          [ "hwc-backup" "hwc-backup-test" ];
+      in
+      assert valid c;
+      assert !(valid (invalid { hwc.data.borg.encryption.mode = lib.mkForce "none"; }));
+      assert !(valid (invalid { hwc.data.borg.additionalDestinations.test.passphraseSecret = lib.mkForce "borg-passphrase"; }));
+      assert !(valid (invalid { hwc.data.borg.additionalDestinations.test.host = lib.mkForce "bad host"; }));
+      assert primary.repo == base.config.services.borgbackup.jobs.hwc-backup.repo;
+      assert secondary.repo == "ssh://borg@192.0.2.10/fixture/offsite";
+      assert primary.paths == secondary.paths && primary.exclude == secondary.exclude;
+      assert primary.preHook == secondary.preHook;
+      assert secondary.encryption.passCommand == "cat /run/agenix/borg-fixture-pass";
+      assert lib.hasInfix "StrictHostKeyChecking=yes" secondary.environment.BORG_RSH;
+      assert lib.hasInfix "IdentitiesOnly=yes" secondary.environment.BORG_RSH;
+      assert lib.hasInfix "UserKnownHostsFile=" secondary.environment.BORG_RSH;
+      assert !(lib.any (lib.hasPrefix "ssh:") secondary.readWritePaths);
+      assert (unit "hwc-backup-test").serviceConfig.TimeoutStartSec == "12h";
+      assert c.systemd.timers.borgbackup-job-hwc-backup-test.timerConfig.OnCalendar == "*-*-* 04:00:00";
+      pkgs.runCommand "borg-destinations" { nativeBuildInputs = [ pkgs.python3 pkgs.bash pkgs.coreutils pkgs.util-linux ]; } ''
+        python3 - ${lib.concatStringsSep " " (map toString scripts)} <<'PY'
+        import json, os, pathlib, re, shutil, subprocess, sys, tempfile, time
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            lockdir = root / 'locks'
+            lockdir.mkdir()
+            bindir = root / 'bin'
+            bindir.mkdir()
+            # Execute the native generated job, replacing only repository I/O.
+            probe = bindir / 'borg'
+            probe.write_text('#!/usr/bin/env bash\n'
+                'printf "%s\n" "$1" >> "$PROBE_EVENTS"\n'
+                'if [ "$PROBE_TRANSPORT_FAIL" = 1 ]; then exit 42; fi\n'
+                'if [ "$1" = create ]; then\n'
+                '  touch "$PROBE_ENTERED"\n'
+                '  while [ ! -e "$PROBE_RELEASE" ]; do sleep .02; done\n'
+                'fi\n')
+            probe.chmod(0o755)
+            scripts = []
+            for index, entry in enumerate(sys.argv[1:]):
+                command = pathlib.Path(entry).read_text().strip()
+                assert command.startswith('exec '), command
+                native = pathlib.Path(command.removeprefix('exec ')).read_text()
+                assert 'exec 9>' in native and 'flock --wait 300 9' in native, 'serialization integration absent'
+                native = native.replace('${c.hwc.paths.state}/borg-jobs', str(lockdir))
+                # One accelerated deadline; the production value remains pinned above.
+                native = native.replace('flock --wait 300 9', 'flock --wait 1 9')
+                script = root / ('job-' + str(index))
+                script.write_text(native)
+                scripts.append(script)
+            def environment(label, fail=False, transport_fail=False):
+                return dict(os.environ, PATH=str(bindir) + ':' + os.environ['PATH'],
+                    PROBE_EVENTS=str(root / (label + '-events')), PROBE_FAIL='1' if fail else '0',
+                    PROBE_TRANSPORT_FAIL='1' if transport_fail else '0',
+                    PROBE_ENTERED=str(root / (label + '-entered')), PROBE_RELEASE=str(root / (label + '-release')))
+            def launch(index, label, fail=False, transport_fail=False):
+                return subprocess.Popen(['bash', str(scripts[index])], env=environment(label, fail, transport_fail),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            def finish(process):
+                process.communicate(timeout=8)
+                return process.returncode
+            def wait_for(path):
+                until = time.monotonic() + 5
+                while not path.exists():
+                    assert time.monotonic() < until, path
+                    time.sleep(.02)
+            processes = []
+            try:
+                first = launch(0, 'first'); processes.append(first)
+                wait_for(root / 'first-entered')
+                # The lock must cover create, not only the producer's preHook.
+                (root / 'blocked-release').touch()
+                second = launch(1, 'blocked'); processes.append(second)
+                assert finish(second) != 0
+                assert not (root / 'blocked-events').exists(), 'producer ran despite held archive lock'
+                (root / 'first-release').touch()
+                assert finish(first) == 0
+                (root / 'next-release').touch()
+                next_job = launch(1, 'next'); processes.append(next_job)
+                assert finish(next_job) == 0
+                assert (root / 'next-events').read_text().splitlines()[0] == 'producer'
+                failed = launch(1, 'failed', True); processes.append(failed)
+                assert finish(failed) == 23
+                assert (root / 'failed-events').read_text().splitlines() == ['producer'], 'archive ran after producer failure'
+                offline = launch(1, 'offline', transport_fail=True); processes.append(offline)
+                assert finish(offline) == 42
+                assert not (root / 'offline-entered').exists()
+                (root / 'primary-after-outage-release').touch()
+                primary_after = launch(0, 'primary-after-outage'); processes.append(primary_after)
+                assert finish(primary_after) == 0, 'offsite failure disabled the primary job'
+            finally:
+                for process in processes:
+                    if process.poll() is None:
+                        process.kill()
+                        process.communicate(timeout=5)
+        print('native jobs: serialization, lock timeout, recovery and producer failure passed')
+        PY
+        touch $out
+      '';
       # Exercise rendered Borg hooks and helpers, including their failure paths.
       borg-recovery = let
         hosts = map (name: self.nixosConfigurations.${name}.config) [ "hwc-home" "hwc-work" ];
