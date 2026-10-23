@@ -69,7 +69,7 @@ business/
 
 ## Changelog
 
-- 2026-10-23: Pin Umami 3.4.1 with corrected Node and application dependencies.
+- 2026-10-23: Emergency Umami recovery pins the exact prior 3.4.0 image.
   Old/new/old image tests preserve the schema and original rows while exercising
   login, reporting and isolated event ingestion; production data stays in place.
 - 2026-10-23: Workbench can serve its read-only web shell behind the private vhost on hwc-work. The pinned package shares TUI manifests and gateway reads, uses canonical Scout styles, and preserves the generated specialist-app directory contract.
