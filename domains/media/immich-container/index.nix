@@ -6,6 +6,44 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.media.immich;
+  helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
+  appVersion = "2.5.6";
+  # Temporary: preserve the app/schema while qualifying runtime and trust fixes.
+  # Remove these derived images when an upstream release passes same-data
+  # old/new/old consumers, corrected Node/TLS/root and actual CUDA checks.
+  serverRuntime = helpers.mkNodeRuntimeImage {
+    name = "immich";
+    inherit appVersion;
+    nodeVersion = "24.22.1";
+    upstreamImage = "ghcr.io/immich-app/immich-server@sha256:8b14246ee4c53e39191a54279f8c72f3eed3c026c5b23d0f7e4ab5e69e3aac4a";
+    nodeSourceImage = "docker.io/library/node@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205";
+  };
+  mlBaseImage = "ghcr.io/immich-app/immich-machine-learning@sha256:6bfdbe69ffcd0543f8f8fc45993d9b1559aa3c92078c44b41ece67132d16d9d3";
+  certifi = rec {
+    version = "2026.10.23";
+    filename = "certifi-${version}-py3-none-any.whl";
+    sha256 = "e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1";
+    url = "https://files.pythonhosted.org/packages/32/d1/a3652fe2c19134d0d15922177821d863cbd7e842d53a21bbe7e8e3a1b5ac/${filename}";
+  };
+  opensslVersion = "3.0.2-0ubuntu1.30"; # Ubuntu USN-8847-1, Jammy backports
+  caCertificatesVersion = "20260816ubuntu0.22.04.1";
+  # Ubuntu's CA update still trusts C1/C3. The existing system policy owns the
+  # exclusions; translate its labels to the distro's existing config format.
+  caPolicy = builtins.toJSON config.security.pki.caCertificateBlacklist;
+  caPolicyScript = "from pathlib import Path; import json,sys; p=Path('/etc/ca-certificates.conf'); blocked={'mozilla/'+n.replace(' ','_')+'.crt' for n in json.loads(sys.argv[1])}; p.write_text(''.join('!'+l if l.strip() in blocked else l for l in p.read_text().splitlines(True)))";
+  caPolicyCheck = "import ssl,json,sys,certifi; blocked=set(json.loads(sys.argv[1])); roots=lambda p:{v for c in ssl.create_default_context(cafile=p).get_ca_certs() for row in c['subject'] for k,v in row if k=='commonName'}; assert all(not roots(p)&blocked for p in [certifi.where(),'/etc/ssl/certs/ca-certificates.crt']), 'blocked root remains trusted'";
+  mlRuntimeRecipe = ''
+    FROM ${mlBaseImage} AS certifi-builder
+    ADD --checksum=sha256:${certifi.sha256} ${certifi.url} /tmp/${certifi.filename}
+    RUN /opt/venv/bin/python -m ensurepip && /opt/venv/bin/python -m pip install --no-index --no-deps --force-reinstall /tmp/${certifi.filename}
+    FROM ${mlBaseImage}
+    RUN apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends --only-upgrade -y libssl3=${opensslVersion} openssl=${opensslVersion} ca-certificates=${caCertificatesVersion} && apt-get clean && rm -rf /var/lib/apt/lists/* /opt/venv/lib/python3.11/site-packages/certifi /opt/venv/lib/python3.11/site-packages/certifi-2025.11.12.dist-info
+    COPY --from=certifi-builder /opt/venv/lib/python3.11/site-packages/certifi /opt/venv/lib/python3.11/site-packages/certifi
+    COPY --from=certifi-builder /opt/venv/lib/python3.11/site-packages/certifi-${certifi.version}.dist-info /opt/venv/lib/python3.11/site-packages/certifi-${certifi.version}.dist-info
+    RUN /opt/venv/bin/python -c ${lib.escapeShellArg caPolicyScript} ${lib.escapeShellArg caPolicy} && update-ca-certificates --fresh
+    RUN /opt/venv/bin/python -c ${lib.escapeShellArg caPolicyCheck} ${lib.escapeShellArg caPolicy}
+  '';
+  mlRuntimeImage = "localhost/immich-ml-runtime:${appVersion}-${builtins.substring 0 12 (builtins.hashString "sha256" mlRuntimeRecipe)}";
 in
 {
   imports = [
@@ -20,8 +58,8 @@ in
     enable = lib.mkEnableOption "Immich photo management server (containerized)";
 
     images = {
-      server = lib.mkOption { type = lib.types.str; default = "ghcr.io/immich-app/immich-server:v2"; description = "Immich server container image"; };
-      machineLearning = lib.mkOption { type = lib.types.str; default = "ghcr.io/immich-app/immich-machine-learning:v2-cuda"; description = "Immich ML container image"; };
+      server = lib.mkOption { type = lib.types.str; default = serverRuntime.image; description = "Qualified same-app Node image; build system.build.immichServerRuntimeImageRecipe"; };
+      machineLearning = lib.mkOption { type = lib.types.str; default = mlRuntimeImage; description = "Qualified same-app TLS/CA image; build system.build.immichMlRuntimeImageRecipe"; };
       redis = lib.mkOption { type = lib.types.str; default = "docker.io/library/redis:7.2-alpine"; description = "Redis container image"; };
     };
 
@@ -98,5 +136,8 @@ in
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf cfg.enable { };
+  config = lib.mkIf cfg.enable {
+    system.build.immichServerRuntimeImageRecipe = serverRuntime.dockerfile;
+    system.build.immichMlRuntimeImageRecipe = pkgs.writeText "immich-ml-runtime.Dockerfile" mlRuntimeRecipe;
+  };
 }

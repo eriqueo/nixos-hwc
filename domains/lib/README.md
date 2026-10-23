@@ -11,7 +11,7 @@ any domain (media, networking, data, etc.) can use them without depending on the
 ## Boundaries
 
 - **Pure functions only**: No `config` access, no NixOS module boilerplate
-- **Container definitions only**: No systemd services in mkContainer (mkInfraContainer has them as they're integral to infrastructure containers)
+- **Container definitions and image recipes only**: No systemd services in mkContainer (mkInfraContainer has them as they're integral to infrastructure containers)
 - **Domain-independent**: No assumptions about which domain imports these
 
 ## Structure
@@ -22,7 +22,7 @@ Standalone HM fleet fallback covers hwc-home, hwc-work and hwc-xps; dependency-u
 lib/
 ├── README.md              # This file
 ├── hm.nix                 # HM handshakes, fleet data, runtime Radicale password argv
-├── mkContainer.nix        # Application containers (media apps, *arr services)
+├── mkContainer.nix        # Application containers, shared pure Node image recipe
 ├── mkInfraContainer.nix   # Infrastructure containers (gluetun, pihole)
 ├── mkTsNode.nix           # Direct-node tsx loader launcher for Scout native units
 └── arr-config.nix         # *arr-specific config.xml enforcement
@@ -51,6 +51,11 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+- 2026-10-23: Add `mkNodeRuntimeImage` for Seerr and Immich. It derives the local
+  tag and Dockerfile from one recipe with immutable app/Node inputs. Seerr's
+  accepted recipe bytes and tag stay identical; `immich-runtime-wiring` checks
+  the real OCI consumers and that preserved identity. It builds no image or
+  service itself. Existing `mkContainer` behavior is unchanged.
 - 2026-10-14: `hm.nix` `fleet` also returns `tailnetSuffix` (from `hwc.networking.hosts.tailnetSuffix`, literal fallback for standalone HM), for courier's tailnet host.
 - 2026-09-30: Add hwc-work's tailnet IP and FQDN to `hm.nix`'s standalone Home Manager fleet fallback for the work SSH shortcut.
 - 2026-09-29: Add `mkTsNode.nix`: `{ loader, run }` for units that run Scout TypeScript with `node --import` on the hoisted tsx loader, so the unit's main PID is the app. Consumers: lead/home/research/event scout and hwc-control-bot.
