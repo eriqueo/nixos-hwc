@@ -55,9 +55,12 @@ Seerr depends on:
 
 ## Changelog
 
-- 2026-10-23: Add `seerr-settings-preservation` against the actual generator and
-  production pre-start binding. It checks app identity/library state, declared
-  policy, secret rotation, idempotence and failure containment before release.
+- 2026-10-23: Reconcile declared settings atomically while retaining app identity,
+  API/VAPID keys, library selection and unknown fields on matching server IDs.
+  Nix still owns its declared policy, secrets and server membership. Invalid
+  JSON or missing keys leave existing settings intact. The production-bound
+  `seerr-settings-preservation` check covers preservation, rotation, idempotence,
+  failure containment and first-start setup.
 
 - 2026-06-09: Access moved from tailnet port `:5543` to name-based vhost `jellyseerr.hwc.iheartwoodcraft.com` (shared `*.hwc.iheartwoodcraft.com` wildcard cert). `applicationUrl` in settings updated to match. See `domains/networking/README.md`.
 - 2026-03-07: Upgraded from Jellyseerr to Seerr (ghcr.io/seerr-team/seerr:latest), added --init flag

@@ -9,11 +9,23 @@ let
 
   # Generate settings JSON at runtime using a script
   generateSettingsScript = pkgs.writeShellScript "jellyseerr-generate-settings" ''
+    set -euo pipefail
+    umask 077
     JELLYFIN_KEY=$(cat ${config.hwc.secrets.api."jellyfin-api-key"} | tr -d '[:space:]')
     RADARR_KEY=$(cat ${config.hwc.secrets.api."radarr-api-key"} | tr -d '[:space:]')
     SONARR_KEY=$(cat ${config.hwc.secrets.api."sonarr-api-key"} | tr -d '[:space:]')
 
-    cat > "$1" << EOF
+    [ -n "$JELLYFIN_KEY" ] && [ -n "$RADARR_KEY" ] && [ -n "$SONARR_KEY" ] || {
+      echo "Seerr requires nonempty integration keys" >&2
+      exit 1
+    }
+    target="$1"
+    desired=""
+    merged=""
+    trap 'rm -f -- "$desired" "$merged"' EXIT
+    desired=$(mktemp "$target.declarative.XXXXXX")
+    merged=$(mktemp "$target.merged.XXXXXX")
+    cat > "$desired" << EOF
     {
       "main": {
         "initialized": true,
@@ -77,6 +89,24 @@ let
       }]
     }
     EOF
+    if [ -e "$target" ] || [ -L "$target" ]; then
+      [ -f "$target" ] || { echo "Seerr settings must be a regular file" >&2; exit 1; }
+      ${pkgs.jq}/bin/jq -e 'type == "object"' "$target" >/dev/null
+      # Nix owns declared values and server membership; Seerr owns identities,
+      # library selection and unknown fields on each matching server ID.
+      ${pkgs.jq}/bin/jq -e -s '
+        def servers($old; $wanted):
+          [$wanted[] | . as $owned |
+            (($old // [] | map(select(.id == $owned.id)) | .[0]) // {}) * $owned];
+        .[0] as $old | .[1] as $wanted |
+        ($old * $wanted) |
+        .radarr = servers($old.radarr; $wanted.radarr) |
+        .sonarr = servers($old.sonarr; $wanted.sonarr)
+      ' "$target" "$desired" > "$merged"
+    else
+      ${pkgs.jq}/bin/jq -e 'select(type == "object")' "$desired" > "$merged"
+    fi
+    mv -f -- "$merged" "$target"
   '';
 in
 {
