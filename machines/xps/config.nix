@@ -1,11 +1,13 @@
 # nixos-hwc/machines/xps/config.nix
 #
 # MACHINE: HWC-XPS
-# Dell XPS 2018 — remote peer server with desktop environment.
-# Peer server to hwc-server. Runs its own services independently.
+# Dell XPS 2018 in Maryland — independent local media and proposed offsite
+# recovery. Primary application ownership stays on home/work.
 
 { config, lib, pkgs, ... }:
-{
+let
+  mediaPool = "media-pool";
+in {
   imports = [
     ./hardware.nix
 
@@ -31,12 +33,11 @@
   boot.supportedFilesystems = [ "zfs" ];
   boot.zfs.forceImportRoot = false;
   boot.zfs.forceImportAll = false;
-  boot.zfs.extraPools = [ "media-pool" ];
+  boot.zfs.extraPools = [ mediaPool ];
 
   # Make ZFS import non-blocking — don't hang boot if DAS is disconnected
-  systemd.services."zfs-import-media-pool" = {
+  systemd.services."zfs-import-${mediaPool}" = {
     serviceConfig.TimeoutStartSec = "30s";  # Fail fast if pool unavailable
-    unitConfig.ConditionPathExists = "/dev/sda";  # Skip entirely if DAS not connected
   };
 
   # ZFS imports the external media pool; the generic mount module must not
@@ -89,13 +90,9 @@
 
   services.thermald.enable = true;
 
-  # hwc.data.backup — configure when /mnt/backup is mounted
-
-  # GPU — Intel integrated only; uncomment if NVIDIA MX150 is detected
-  # hwc.system.hardware.gpu = {
-  #   type = "nvidia";
-  #   nvidia.driver = "stable";
-  # };
+  # Intel UHD 630 and NVIDIA GTX 1050 Ti Mobile were detected on 2026-10-22.
+  # Jellyfin starts with software encoding; hardware acceleration needs its
+  # own driver and real-transcode verification before it is enabled.
 
   # Desktop environment
   hwc.system.apps.hyprland.enable = true;
@@ -141,18 +138,36 @@
       RequiresMountsFor = [ config.hwc.paths.media.root ];
       AssertPathIsMountPoint = config.hwc.paths.media.root;
     };
+    # A suspended ZFS pool can remain mounted. Check the pool's own health
+    # before Jellyfin touches its database or scans files; never wait forever.
+    preStart = lib.mkBefore ''
+      if ! pool_health=$(${pkgs.coreutils}/bin/timeout 10s ${config.boot.zfs.package}/bin/zpool list -H -o health ${lib.escapeShellArg mediaPool}); then
+        echo "Jellyfin cannot read the media pool state. Inspect: zpool status ${mediaPool}" >&2
+        exit 1
+      fi
+      case "$pool_health" in
+        ONLINE) ;;
+        DEGRADED)
+          echo "WARNING: The media mirror is degraded. Inspect: zpool status ${mediaPool}" >&2
+          ;;
+        *)
+          echo "Jellyfin cannot use the media pool in state $pool_health. Inspect: zpool status ${mediaPool}" >&2
+          exit 1
+          ;;
+      esac
+    '';
   };
 
   # Reverse proxy for local services
   hwc.networking.reverseProxy.enable = true;
 
-  # CouchDB for Obsidian LiveSync comes from the server role.
+  # The older running generation still has CouchDB and a central monitoring
+  # stack. This source does not enable them. Classify their consumers before
+  # switching; keep the migration and current state in DEPLOYMENT.md.
 
-  # Not scraped: hwc-xps is not reachable from the fleet (no authorized ssh
-  # key, 2026-09-25), so it cannot be deployed with a tailnet-bound agent;
-  # enabling it would page "target down". Re-enable when it is reachable.
-  # (Its own central stack was dropped with the monitoring role: its
-  # Alertmanager posted to a dead localhost:11600.)
+  # Central monitoring belongs to work. SSH was restored on 2026-10-22;
+  # enable this agent together with a matching fleet scrape target and a
+  # verified alert path, rather than publishing an unobserved exporter.
   hwc.monitoring.prometheus.agent.enable = false;
 
   # No automation on xps. n8n and mqtt live on the business role, which xps does

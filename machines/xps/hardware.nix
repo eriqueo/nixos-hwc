@@ -10,8 +10,7 @@
     [ (modulesPath + "/installer/scan/not-detected.nix")
     ];
 
-  # Dell XPS 2018 typical kernel modules (8th gen Intel)
-  # These will be auto-detected during installation
+  # Boot modules retained from the working 8th-generation Intel system.
   boot.initrd.availableKernelModules = [ "xhci_pci" "nvme" "usb_storage" "sd_mod" "rtsx_pci_sdmmc" ];
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-intel" ];
@@ -37,25 +36,11 @@
   # Hot storage — XPS has no separate hot partition
   # /mnt/hot is a directory on root, managed via hwc.system.mounts.hot.enable = false in config.nix
 
-  # Media storage (external DAS with 2x3TB HDDs)
-  # TODO: Configure during installation
-  # Options: Single drive, RAID1 mirror, or separate volumes
-  # Using by-label for flexibility (can be changed to by-uuid)
-  # fileSystems."/mnt/media" = {
-  #   device = "/dev/disk/by-label/media";  # Or by-uuid after setup
-  #   fsType = "ext4";
-  # };
-  # NOTE: This is defined in config.nix for visibility
+  # The TerraMaster's two 3TB drives form the ZFS media-pool mirror.
+  # config.nix imports it; the dataset owns /mnt/media. Do not add an ext4
+  # mount here. Neither a separate hot partition nor a backup volume exists.
 
-  # Backup storage (external DAS partition)
-  # TODO: Configure during installation
-  # fileSystems."/mnt/backup" = {
-  #   device = "/dev/disk/by-label/backup";  # Or by-uuid after setup
-  #   fsType = "ext4";
-  # };
-  # NOTE: This is defined in config.nix for visibility
-
-  # Swap file for laptop (16GB recommended for 8-16GB RAM)
+  # 16GB swap file on the SSD; this machine has 32GB RAM.
   # Located on root filesystem
   swapDevices = [{
     device = "/var/swapfile";

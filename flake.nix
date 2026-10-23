@@ -3496,6 +3496,65 @@
       assert lib.hasInfix vhost home.services.caddy.extraConfig;
       pkgs.runCommand "phone-ingest-ownership" {} ''touch "$out"'';
 
+      # Exercise the XPS guard through the production preStart, before any
+      # database setup. The fixture replaces OS probes and drops their string
+      # contexts so this check does not build ZFS/FFmpeg merely to mock them.
+      xps-media-readiness = let
+        peer = self.nixosConfigurations.hwc-xps.config;
+        service = peer.systemd.services.jellyfin;
+        preflight = builtins.head (lib.splitString "DATA_DIR=" service.preStart);
+        encoding = (builtins.head service.restartTriggers).text;
+        homeEncoding = (builtins.head self.nixosConfigurations.hwc-home.config.systemd.services.jellyfin.restartTriggers).text;
+        fixture = pkgs.writeText "xps-media-readiness.json" (builtins.toJSON {
+          script = builtins.unsafeDiscardStringContext preflight;
+          zpool = builtins.unsafeDiscardStringContext "${peer.boot.zfs.package}/bin/zpool";
+          pool = builtins.head peer.boot.zfs.extraPools;
+        });
+      in
+      assert lib.assertMsg (lib.hasInfix "pool_health=" preflight)
+        "XPS Jellyfin must run its pool guard before database setup";
+      assert service.unitConfig.AssertPathIsMountPoint == peer.hwc.paths.media.root;
+      assert lib.elem "zfs-mount.service" service.requires;
+      assert lib.hasInfix "<HardwareAccelerationType>none</HardwareAccelerationType>" encoding;
+      assert lib.hasInfix "<EnableHardwareEncoding>false</EnableHardwareEncoding>" encoding;
+      assert lib.hasInfix "<HardwareAccelerationType>nvenc</HardwareAccelerationType>" homeEncoding;
+      pkgs.runCommand "xps-media-readiness" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${fixture} ${pkgs.bash}/bin/bash ${pkgs.coreutils}/bin/timeout <<'PY'
+        import json, pathlib, re, subprocess, sys, tempfile, time
+        fixture = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        bash, timeout = sys.argv[2:]
+        original = fixture["script"]
+        matches = re.findall(r"(/nix/store/[^\s]+/bin/timeout) 10s", original)
+        assert len(matches) == 1, "production probe must have one 10-second deadline"
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            fake = root / "zpool"
+            script = root / "preflight"
+            script.write_text(original.replace(matches[0], timeout).replace(fixture["zpool"], str(fake)))
+            def run(state):
+                fake.write_text("#!${pkgs.python3}/bin/python3\n"
+                    "import sys,time\n"
+                    + "assert sys.argv[1:] == " + repr(["list", "-H", "-o", "health", fixture["pool"]]) + "\n"
+                    + ("time.sleep(30)\n" if state == "TIMEOUT" else
+                       "sys.exit(3)\n" if state == "PROBE_FAILED" else "print(" + repr(state) + ")\n"))
+                fake.chmod(0o700)
+                start = time.monotonic()
+                result = subprocess.run([bash, "-e", str(script)], capture_output=True, text=True, timeout=15)
+                return result, time.monotonic() - start
+            for state in ["ONLINE", "DEGRADED"]:
+                result, _ = run(state)
+                assert result.returncode == 0, (state, result.stderr)
+                if state == "DEGRADED":
+                    assert result.stderr, "degraded storage must emit a warning"
+            for state in ["SUSPENDED", "UNAVAIL", "FAULTED", "UNKNOWN", "PROBE_FAILED", "TIMEOUT"]:
+                result, elapsed = run(state)
+                assert result.returncode != 0, (state, "startup unexpectedly passed")
+                assert elapsed < 15, (state, "probe exceeded its ceiling")
+            print("XPS production preflight: healthy/degraded accepted; unavailable, suspended, failed and timed-out probes rejected")
+        PY
+        touch "$out"
+      '';
+
       # Service-split retirement contract, evaluated through production units.
       fleet-map-routing = let
         work = self.nixosConfigurations.hwc-work.config;
