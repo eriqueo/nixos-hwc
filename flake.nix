@@ -3669,13 +3669,17 @@
                 must_detect(lambda: require_failure(failed.replace(cli, str(swallow)), downstream), 'producer failure swallowed')
                 assert ready.read_bytes() == lastgood
 
-                # Local disposable Borg repository: use actual evaluated exact
-                # excludes and source coverage, preserving other userdata.
+                # Local disposable Borg repository: actual evaluated excludes
+                # and ready-snapshot coverage, plus synthetic userdata inputs
+                # to stress raw-database exclusion and unrelated-file retention.
                 (userdata / 'pairing-fixture').write_text('synthetic credential placeholder')
                 staging = state / 'staging' / 'not-an-archive-input'
                 staging.write_text('partial')
                 assert any(pathlib.PurePosixPath(spec['stateRoot'] + '/ready').is_relative_to(p) for p in spec['paths'])
-                assert str(pathlib.PurePosixPath(config['source']).parent) in spec['paths']
+                # T3 also owns non-database userdata; database-only journals
+                # such as Workbench are covered by the published ready snapshot.
+                if snapshot_name == 't3':
+                    assert str(pathlib.PurePosixPath(config['source']).parent) in spec['paths']
                 def remap(value):
                     value = value.replace(spec['stateRoot'], str(state))
                     for original, replacement in source_ports.items():
