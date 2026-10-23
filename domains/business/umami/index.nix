@@ -40,8 +40,9 @@ in
 
     image = lib.mkOption {
       type = lib.types.str;
-      default = "ghcr.io/umami-software/umami:postgresql-latest";
-      description = "Umami container image (postgresql variant)";
+      # 3.4.1 security hotfix; qualified against the unchanged 3.4.0 schema.
+      default = "ghcr.io/umami-software/umami@sha256:f2c645cc5cdff76e7fbfe4c7eeabc7e363840bd34364f4f719b69d11f9ef1c19";
+      description = "Umami container image";
     };
 
     databaseName = lib.mkOption {

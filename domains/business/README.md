@@ -14,6 +14,9 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+`umami/` pins its qualified security image while preserving the analytics database,
+website identity, tracking endpoint and briefing/report API consumers.
+
 The Workbench registry includes Meals, resolving its destination from the shared route owner.
 `workbench.web` optionally serves the read-only browser shell from the pinned Workbench package on loopback :11680. It uses the TUI manifests and canonical Scout styles, preserves `/areas.json` for specialist app switchers, and keeps the existing private vhost. Disable it to restore the static directory.
 
@@ -66,6 +69,9 @@ business/
 
 ## Changelog
 
+- 2026-10-23: Pin Umami 3.4.1 with corrected Node and application dependencies.
+  Old/new/old image tests preserve the schema and original rows while exercising
+  login, reporting and isolated event ingestion; production data stays in place.
 - 2026-10-23: Workbench can serve its read-only web shell behind the private vhost on hwc-work. The pinned package shares TUI manifests and gateway reads, uses canonical Scout styles, and preserves the generated specialist-app directory contract.
 
 - 2026-10-16: Register Meals beside Calendar and Tasks in the shared Workbench area list.
