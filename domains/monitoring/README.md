@@ -20,6 +20,9 @@ Both templates consume literal unit names with `%i`, matching the OnFailure call
 `fleet-map/` owns the read-only snapshot publisher; app code is a separate locked input. Its site contains only generated HTML. The production route check pins work ownership, the bounded unit and its host command path. Refresh: `sudo systemctl start fleet-map-publish`.
 
 Homepage fleet labels/selectors use hwc-home; SMART sender derives from the local hostname.
+Homepage pins its reviewed image digest. Its config directory, five deployed YAML
+files and container IDs use the shared service identity, so tmpfiles and activation
+keep the running dashboard able to read and initialize its config.
 
 Camera monitoring consumes Frigate native metrics and config-derived expected FPS. The Cameras dashboard distinguishes enabled cameras from disabled ones.
 
@@ -67,6 +70,9 @@ monitoring/
 
 ## Changelog
 
+- 2026-10-23: Pin Homepage 2.7.0 with corrected Node. Keep its config owned by
+  the shared service identity during activation and tmpfiles runs; root ownership
+  previously caused the services API to exit with EACCES until the container restarted.
 - 2026-10-06: Preserve hyphens in system and user failure notifier instances.
   Alerts and recovery commands now refer to the failed unit, such as `hwc-crm-tick`.
   The evaluated and rendered unit check verifies the template argument.
