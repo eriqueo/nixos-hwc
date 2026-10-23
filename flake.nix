@@ -3285,7 +3285,7 @@
             bindir.mkdir()
             # Execute the native generated job, replacing only repository I/O.
             probe = bindir / 'borg'
-            probe.write_text('#!/usr/bin/env bash\n'
+            probe.write_text('#!' + shutil.which('bash') + '\n'
                 'printf "%s\n" "$1" >> "$PROBE_EVENTS"\n'
                 'if [ "$PROBE_TRANSPORT_FAIL" = 1 ]; then exit 42; fi\n'
                 'if [ "$1" = create ]; then\n'
