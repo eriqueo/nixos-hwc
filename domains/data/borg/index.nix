@@ -77,17 +77,23 @@ let
     ${pkgs.util-linux}/bin/flock --wait 300 9 || exit "$?"
   '';
   destinationJobName = name: "${jobName}-${name}";
+  destinationCheckName = name: "borg-check-${name}";
+  destinationCredential = target: "borg-ssh-key:${config.hwc.secrets.api.${target.sshKeySecret}}";
   destinationRsh = name: target:
     let knownHosts = pkgs.writeText "borg-${name}-known-hosts" "${target.host} ${target.hostKey}\n";
-    in "ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
-      + " -o UserKnownHostsFile=${knownHosts} -o ConnectTimeout=15"
-      + " -o ServerAliveInterval=30 -o ServerAliveCountMax=3"
-      + " -i /run/agenix/${target.sshKeySecret}";
+    in toString (pkgs.writeShellScript "borg-${name}-ssh" ''
+      set -eu
+      test -r "$CREDENTIALS_DIRECTORY/borg-ssh-key"
+      exec ${pkgs.openssh}/bin/ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+        -o UserKnownHostsFile=${knownHosts} -o ConnectTimeout=15 \
+        -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+        -i "$CREDENTIALS_DIRECTORY/borg-ssh-key" "$@"
+    '');
   destinationUrl = target: "ssh://${target.user}@${target.host}${target.repository}";
   destinationJobs = lib.mapAttrs' (name: target: lib.nameValuePair (destinationJobName name)
     (backupJob // {
       repo = destinationUrl target;
-      encryption = { mode = cfg.encryption.mode; passCommand = "cat /run/agenix/${target.passphraseSecret}"; };
+      encryption = { mode = cfg.encryption.mode; passCommand = "cat ${config.hwc.secrets.api.${target.passphraseSecret}}"; };
       environment.BORG_RSH = destinationRsh name target;
       # An SSH URL must never enter ReadWritePaths.
       # Include application-provided writable snapshot paths (for example Meals)
@@ -238,9 +244,10 @@ in
           user = lib.mkOption { type = lib.types.str; default = "borg"; description = "Restricted storage account"; };
           repository = lib.mkOption { type = lib.types.str; description = "Absolute remote repository path"; };
           hostKey = lib.mkOption { type = lib.types.str; description = "Pinned public SSH host key (algorithm and base64)"; };
-          sshKeySecret = lib.mkOption { type = lib.types.str; description = "Dedicated root-only agenix SSH identity"; };
+          sshKeySecret = lib.mkOption { type = lib.types.str; description = "Agenix SSH identity delivered privately through systemd LoadCredential"; };
           passphraseSecret = lib.mkOption { type = lib.types.str; description = "Independent agenix encryption passphrase"; };
           startAt = lib.mkOption { type = lib.types.str; description = "Independent systemd calendar schedule"; };
+          checkAt = lib.mkOption { type = lib.types.str; default = "Sun *-*-* 14:00:00"; description = "Repository consistency-check calendar; full cryptographic verification is a separate recovery acceptance step"; };
         };
       });
     };
@@ -529,7 +536,10 @@ in
             && builtins.match "ssh-ed25519 [A-Za-z0-9+/=]+" target.hostKey != null
             && builtins.hasAttr target.sshKeySecret config.age.secrets
             && builtins.hasAttr target.passphraseSecret config.age.secrets
-            && config.age.secrets.${target.sshKeySecret}.mode == "0400"
+            && builtins.hasAttr target.sshKeySecret config.hwc.secrets.api
+            && builtins.hasAttr target.passphraseSecret config.hwc.secrets.api
+            && config.age.secrets.${target.sshKeySecret}.mode == "0440"
+            && config.age.secrets.${target.sshKeySecret}.group == "secrets"
             && config.age.secrets.${target.sshKeySecret}.owner == "root"
             && target.sshKeySecret != cfg.repo.remote.sshKeySecret
             && target.passphraseSecret != cfg.encryption.passphraseSecret
@@ -574,17 +584,42 @@ in
     ];
   } {
     services.borgbackup.jobs = destinationJobs;
-    systemd.services = lib.mapAttrs' (name: target:
+    systemd.services = lib.mkMerge [ (lib.mapAttrs' (name: target:
       lib.nameValuePair "borgbackup-job-${destinationJobName name}"
         (jobService // {
+          serviceConfig = jobService.serviceConfig // {
+            LoadCredential = [ (destinationCredential target) ];
+          };
           onFailure = lib.optionals (cfg.notifications.onFailure && (config.hwc.monitoring.alerts.enable or false))
             [ "hwc-service-failure-notifier@borgbackup-job-${destinationJobName name}.service" ];
-        })) destinations;
-    systemd.timers = lib.mapAttrs' (name: target:
+        })) destinations)
+      (lib.mkIf cfg.monitoring.enable (lib.mapAttrs' (name: target:
+        lib.nameValuePair (destinationCheckName name) {
+          description = "Check independent Borg repository ${name}";
+          restartIfChanged = false;
+          onFailure = lib.optionals (cfg.notifications.onFailure && (config.hwc.monitoring.alerts.enable or false))
+            [ "hwc-service-failure-notifier@${destinationCheckName name}.service" ];
+          environment = {
+            BORG_RSH = destinationRsh name target;
+            BORG_PASSCOMMAND = "cat ${config.hwc.secrets.api.${target.passphraseSecret}}";
+          };
+          serviceConfig = jobService.serviceConfig // {
+            ExecStart = "${pkgs.borgbackup}/bin/borg check --lock-wait 300 ${destinationUrl target}";
+            LoadCredential = [ (destinationCredential target) ];
+          };
+        }) destinations))
+    ];
+    systemd.timers = lib.mkMerge [ (lib.mapAttrs' (name: target:
       lib.nameValuePair "borgbackup-job-${destinationJobName name}" {
         wantedBy = [ "timers.target" ];
         timerConfig = { OnCalendar = target.startAt; RandomizedDelaySec = cfg.schedule.randomDelay; Persistent = true; };
-      }) destinations;
+      }) destinations)
+      (lib.mkIf cfg.monitoring.enable (lib.mapAttrs' (name: target:
+        lib.nameValuePair (destinationCheckName name) {
+          wantedBy = [ "timers.target" ];
+          timerConfig = { OnCalendar = target.checkAt; RandomizedDelaySec = cfg.schedule.randomDelay; Persistent = true; };
+        }) destinations))
+    ];
     systemd.tmpfiles.rules = lib.optional (destinations != {}) "d ${lockRoot} 0700 root root -";
   } ]);
 }

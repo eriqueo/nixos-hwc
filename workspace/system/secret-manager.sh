@@ -14,7 +14,7 @@ set -euo pipefail
 #==============================================================================
 # CONFIGURATION
 #==============================================================================
-readonly NIXOS_DIR="${HOME}/.nixos"
+readonly NIXOS_DIR="${HWC_NIXOS_DIR:-${HOME}/.nixos}"
 readonly SECRETS_PARTS="${NIXOS_DIR}/domains/secrets/parts"
 readonly SECRETS_DECL="${NIXOS_DIR}/domains/secrets/declarations"
 readonly AGE_KEY_FILE="/etc/age/keys.txt"
@@ -37,22 +37,33 @@ log_error() { echo -e "${RED}❌${NC} $*" >&2; }
 log_header() { echo -e "\n${BOLD}${BLUE}$*${NC}"; }
 log_step() { echo -e "\n${BOLD}$*${NC}"; }
 
-# Read the shared recipient set from the authoritative agenix rules. Reject
-# differing sets: this tool's encrypt-to-everyone operation cannot represent
-# per-secret recipient restrictions without explicitly choosing a rule.
+# Resolve the exact existing rule or a new flat payload's declared policy.
+# Unscoped rules must still agree; scoped rules never widen the default set.
 get_recipients() {
-  nix eval --json --file "${NIXOS_DIR}/secrets.nix" --apply '
-    rules: let
-      sets = map (rule: rule.publicKeys) (builtins.attrValues rules);
-      recipients = builtins.head sets;
-    in assert builtins.all (keys: keys == recipients) sets; recipients
+  local target="${1#"${NIXOS_DIR}/"}"
+  HWC_SECRET_POLICY_REPO="$NIXOS_DIR" HWC_SECRET_POLICY_TARGET="$target" nix eval --impure --json --expr '
+    let
+      repo = builtins.getEnv "HWC_SECRET_POLICY_REPO";
+      target = builtins.getEnv "HWC_SECRET_POLICY_TARGET";
+      gen = import (repo + "/domains/secrets/parts/lib.nix") {};
+      rules = import (repo + "/secrets.nix");
+      entries = gen.walkParts (repo + "/domains/secrets/parts");
+      unscoped = builtins.filter (entry: !(builtins.hasAttr entry.name gen.offsiteScopes)) entries;
+      sets = map (entry: rules.${"domains/secrets/parts/" + entry.rel}.publicKeys) unscoped;
+      everyone = builtins.head sets;
+      scoped = gen.offsiteRecipientOverrides everyone;
+      name = gen.deriveName (builtins.baseNameOf target);
+    in assert builtins.all (keys: keys == everyone) sets;
+      if builtins.hasAttr target rules then rules.${target}.publicKeys
+      else assert builtins.match "domains/secrets/parts/(services|infrastructure|home|system)/[a-z0-9-]+[.]age" target != null;
+        scoped.${name} or everyone
   ' | jq -er '.[]'
 }
 
-# Encrypt stdin to all recipients, writing to the file named by $1.
-encrypt_to_everyone() {
+# Encrypt stdin using this destination's policy, not another payload's scope.
+encrypt_to_policy() {
   local recipients
-  recipients=$(get_recipients) || return 1
+  recipients=$(get_recipients "$1") || return 1
   age -R <(printf '%s\n' "$recipients") -o "$1"
 }
 
@@ -217,9 +228,9 @@ add_secret() {
   # Ensure category directory exists
   mkdir -p "$secret_dir"
 
-  # Encrypt to all recipients (use printf to avoid a trailing newline)
-  if printf '%s' "$secret_value" | encrypt_to_everyone "$secret_file"; then
-    log_info "Encrypted secret saved (all hosts): $secret_file"
+  # Encrypt to the selected policy recipients (use printf to avoid a trailing newline)
+  if printf '%s' "$secret_value" | encrypt_to_policy "$secret_file"; then
+    log_info "Encrypted secret saved (policy recipients): $secret_file"
   else
     log_error "Failed to encrypt secret"
     return 1
@@ -300,9 +311,9 @@ edit_secret() {
     fi
   fi
 
-  # Re-encrypt to all recipients (use printf to avoid a trailing newline)
-  if printf '%s' "$new_value" | encrypt_to_everyone "$secret_file"; then
-    log_info "Secret updated (all hosts): $secret_file"
+  # Re-encrypt to the selected policy recipients (use printf to avoid a trailing newline)
+  if printf '%s' "$new_value" | encrypt_to_policy "$secret_file"; then
+    log_info "Secret updated (policy recipients): $secret_file"
     echo ""
     echo "Next step: sudo nixos-rebuild switch --flake .#\$(hostname)"
   else

@@ -58,6 +58,7 @@ in
   config = lib.mkIf config.hwc.secrets.declarations.enable {
     age.secrets = gen.mkMounts {
       inherit partsDir fileFor defaultMount mountOverrides;
+      hostName = config.networking.hostName;
     };
 
     # No two .age paths may derive the same age.secrets name (would silently

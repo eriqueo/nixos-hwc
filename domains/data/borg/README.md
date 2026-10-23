@@ -97,7 +97,7 @@ Never overlay it onto a running application's database.
 Declare `host`, `repository` (absolute remote path), `hostKey` (ed25519 public key),
 `sshKeySecret`, `passphraseSecret`, `startAt` (systemd calendar), and optionally
 `user` (default `borg`). Each destination needs its own declared SSH identity and
-encryption secret; the SSH key mount must be root-owned mode 0400.
+encryption secret; the secret mounts use root:secrets mode 0440. Systemd LoadCredential gives the job a private SSH identity, read through CREDENTIALS_DIRECTORY.
 
 Generated native units are `borgbackup-job-hwc-backup-<name>.service` and timer.
 They share source/exclusion lists, snapshot producers, compression and retention.
@@ -117,8 +117,11 @@ snapshot writers must respect this lock before offsite activation.
 This is source support, not a production offsite deployment. Before enabling it,
 verify seed/catch-up timing, remote quota enforcement, independent key recovery,
 remote integrity checks, and file/database restores. Interactive primary wrappers
-and `borg-check` continue to refer to the primary repository. Use the generated
-native per-job Borg wrapper for explicit additional-repository operations.
+and `borg-check` continue to refer to the primary repository. Each enabled additional
+destination has `borg-check-<name>` and a timer using the same pinned SSH identity.
+These perform repository consistency checks, not full cryptographic verification.
+Additional SSH operations require systemd credential delivery; invoking the generated
+Borg wrapper alone does not load its private identity.
 
 ## Dependencies
 
@@ -128,9 +131,11 @@ native per-job Borg wrapper for explicit additional-repository operations.
 ## Systemd Units
 
 - `borgbackup-job-hwc-backup.service` / timer — scheduled Borg backup
-- `borg-check.service` / `borg-check.timer` — weekly repository integrity check
+- `borg-check.service` / `borg-check.timer` — weekly primary consistency check
+- `borg-check-<name>.service` / timer — additional destination consistency checks
 
 ## Changelog
+- 2026-10-23: Deliver additional SSH identities through private systemd credentials from standard root:secrets 0440 agenix mounts. Refuse missing credential delivery before SSH.
 - 2026-10-23: Add disabled-by-default independent SSH destinations with pinned host keys, dedicated credentials, native per-target jobs/timers and bounded snapshot/archive serialization. Preserve primary identities and application snapshot permissions.
 - 2026-10-16: Add bounded readonly SQLite online snapshots, private validation and atomic publication. Derive archive paths and exact raw-file exclusions from one map. Preserve other userdata and fail before Borg on producer errors. Exercise actual rendered hooks and archive extraction with wiring mutations.
 - 2026-09-26: Share configured-version PostgreSQL dumps across hosts; fail closed and publish atomically. Preserve restore errors, wait for locks, and keep nested recovery archives outside daily dump cleanup.

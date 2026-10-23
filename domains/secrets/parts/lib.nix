@@ -29,6 +29,27 @@ let
     readDir attrNames concatMap elemAt genList length listToAttrs
     concatStringsSep replaceStrings split filter isString match head;
 
+  # One policy producer for offsite credentials. The destination stores only
+  # ciphertext; other hosts and the existing user identity retain recovery.
+  readKey = file: replaceStrings [ "\n" "\r" ] [ "" "" ] (builtins.readFile file);
+  hostKeys = {
+    hwc-home = readKey ../../../machines/home/AGE_PUBLIC_KEY.txt;
+    hwc-work = readKey ../../../machines/work/AGE_PUBLIC_KEY.txt;
+    hwc-laptop = readKey ../../../machines/laptop/AGE_PUBLIC_KEY.txt;
+    hwc-xps = readKey ../../../machines/xps/AGE_PUBLIC_KEY.txt;
+  };
+  offsiteRecoveryHosts = [ "hwc-home" "hwc-work" "hwc-laptop" ];
+  offsiteScopes = listToAttrs (map (name: {
+    inherit name; value = offsiteRecoveryHosts;
+  }) [ "borg-home-offsite-passphrase" "borg-work-offsite-passphrase"
+       "borg-home-offsite-ssh-key" "borg-work-offsite-ssh-key"
+       "borg-home-offsite-repository-key" "borg-work-offsite-repository-key" ]);
+  mountAllowed = hostName: name:
+    !(offsiteScopes ? ${name}) || builtins.elem hostName offsiteScopes.${name};
+  offsiteRecipientOverrides = everyone: builtins.mapAttrs (_: hosts:
+    filter (key: !(builtins.elem key (builtins.attrValues hostKeys))
+      || builtins.elem key (map (host: hostKeys.${host}) hosts)) everyone) offsiteScopes;
+
   # "a/b/c" -> [ "a" "b" "c" ]  (builtins.split interleaves match groups; drop them)
   splitSlash = s: filter isString (split "/" s);
 
@@ -78,7 +99,7 @@ let
     in go "";
 
 in {
-  inherit deriveName walkParts;
+  inherit deriveName walkParts hostKeys offsiteScopes mountAllowed offsiteRecipientOverrides;
 
   # ── recipients (for secrets.nix) ────────────────────────────────────────────
   #   partsDir        : path literal to domains/secrets/parts
@@ -103,9 +124,9 @@ in {
   #                    literals resolve relative to the calling file)
   #   defaultMount   : { mode; owner; group; } applied to every secret
   #   mountOverrides : name -> partial attrset merged over the default
-  mkMounts = { partsDir, fileFor, defaultMount, mountOverrides ? { } }:
+  mkMounts = { partsDir, fileFor, defaultMount, mountOverrides ? { }, hostName ? null }:
     let
-      entries  = walkParts partsDir;
+      entries  = filter (entry: hostName == null || mountAllowed hostName entry.name) (walkParts partsDir);
       mountFor = e: {
         name  = e.name;
         value = (defaultMount // { file = fileFor e.rel; })

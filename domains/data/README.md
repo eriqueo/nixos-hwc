@@ -27,6 +27,7 @@ data/
 ```
 
 ## Changelog
+- 2026-10-23: Additional Borg destinations load SSH identities through systemd credentials while secret mounts retain root:secrets 0440.
 - 2026-10-23: Add disabled-by-default independent SSH destinations with pinned host keys, dedicated credentials, native per-target jobs/timers and bounded snapshot/archive serialization. Preserve primary identities and application snapshot permissions.
 - 2026-10-16: Borg creates bounded online SQLite snapshots as the application user, validates private copies and publishes atomically. The base role supplies T3 once; raw database/WAL/SHM paths are excluded while remaining userdata stays covered.
 - 2026-09-26: Machine references follow machines/home; the home job pins its historical Borg archive/prune identity.

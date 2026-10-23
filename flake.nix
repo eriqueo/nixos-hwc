@@ -3326,6 +3326,23 @@
         # [-] character class keeps this lint from matching its own definition
         "rg 'github:eriqueo/nixos[-]hwc' flake.nix"
       ];
+      secrets-offsite-scope = let
+        gen = import ./domains/secrets/parts/lib.nix {};
+        everyone = builtins.attrValues gen.hostKeys ++ [ "ssh-ed25519 recovery-user-fixture" ];
+        recipients = gen.offsiteRecipientOverrides everyone;
+        names = builtins.attrNames gen.offsiteScopes;
+      in
+      assert builtins.length names == 6;
+      assert lib.all (name:
+        !(gen.mountAllowed "hwc-xps" name)
+        && !(gen.mountAllowed "unknown-host" name)
+        && lib.all (host: gen.mountAllowed host name) [ "hwc-home" "hwc-work" "hwc-laptop" ]
+        && !(lib.elem gen.hostKeys.hwc-xps recipients.${name})
+        && lib.elem "ssh-ed25519 recovery-user-fixture" recipients.${name}
+        && lib.all (host: lib.elem gen.hostKeys.${host} recipients.${name}) [ "hwc-home" "hwc-work" "hwc-laptop" ]
+      ) names;
+      assert gen.mountAllowed "hwc-xps" "borg-passphrase";
+      pkgs.runCommand "secrets-offsite-scope" {} ''touch $out'';
       # Run the generated native jobs against a transport probe. Native Borg
       # encryption/restore/quota behavior is independently exercised in fixtures.
       borg-destinations = let
@@ -3339,8 +3356,9 @@
           '';
           age.secrets.borg-fixture-ssh = {
             file = ./domains/secrets/parts/system/borg-passphrase.age;
-            mode = "0400";
+            mode = "0440";
             owner = "root";
+            group = "secrets";
           };
           age.secrets.borg-fixture-pass.file = ./domains/secrets/parts/system/borg-passphrase.age;
           hwc.data.borg.additionalDestinations.test = {
@@ -3378,14 +3396,15 @@
       assert primary.paths == secondary.paths && primary.exclude == secondary.exclude;
       assert primary.preHook == secondary.preHook;
       assert secondary.encryption.passCommand == "cat /run/agenix/borg-fixture-pass";
-      assert lib.hasInfix "StrictHostKeyChecking=yes" secondary.environment.BORG_RSH;
-      assert lib.hasInfix "IdentitiesOnly=yes" secondary.environment.BORG_RSH;
-      assert lib.hasInfix "UserKnownHostsFile=" secondary.environment.BORG_RSH;
+      assert (unit "hwc-backup-test").serviceConfig.LoadCredential == [ "borg-ssh-key:/run/agenix/borg-fixture-ssh" ];
       assert !(lib.any (lib.hasPrefix "ssh:") secondary.readWritePaths);
       assert (unit "hwc-backup-test").serviceConfig.TimeoutStartSec == "12h";
+      assert c.systemd.services.borg-check-test.environment.BORG_RSH == secondary.environment.BORG_RSH;
+      assert c.systemd.services.borg-check-test.serviceConfig.LoadCredential == (unit "hwc-backup-test").serviceConfig.LoadCredential;
+      assert lib.hasSuffix "check --lock-wait 300 ssh://borg@192.0.2.10/fixture/offsite" c.systemd.services.borg-check-test.serviceConfig.ExecStart;
       assert c.systemd.timers.borgbackup-job-hwc-backup-test.timerConfig.OnCalendar == "*-*-* 04:00:00";
       pkgs.runCommand "borg-destinations" { nativeBuildInputs = [ pkgs.python3 pkgs.bash pkgs.coreutils pkgs.util-linux ]; } ''
-        python3 - ${lib.concatStringsSep " " (map toString scripts)} <<'PY'
+        python3 - ${lib.concatStringsSep " " (map toString scripts)} ${secondary.environment.BORG_RSH} <<'PY'
         import json, os, pathlib, re, shutil, subprocess, sys, tempfile, time
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
@@ -3403,8 +3422,11 @@
                 '  while [ ! -e "$PROBE_RELEASE" ]; do sleep .02; done\n'
                 'fi\n')
             probe.chmod(0o755)
+            transport = pathlib.Path(sys.argv[3]).read_text()
+            assert 'StrictHostKeyChecking=yes' in transport and 'IdentitiesOnly=yes' in transport
+            assert 'UserKnownHostsFile=' in transport and '$CREDENTIALS_DIRECTORY/borg-ssh-key' in transport
             scripts = []
-            for index, entry in enumerate(sys.argv[1:]):
+            for index, entry in enumerate(sys.argv[1:3]):
                 command = pathlib.Path(entry).read_text().strip()
                 assert command.startswith('exec '), command
                 native = pathlib.Path(command.removeprefix('exec ')).read_text()
