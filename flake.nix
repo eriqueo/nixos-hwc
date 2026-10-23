@@ -3230,6 +3230,7 @@
           age.secrets.borg-fixture-ssh = {
             file = ./domains/secrets/parts/system/borg-passphrase.age;
             mode = "0400";
+            owner = "root";
           };
           age.secrets.borg-fixture-pass.file = ./domains/secrets/parts/system/borg-passphrase.age;
           hwc.data.borg.additionalDestinations.test = {
