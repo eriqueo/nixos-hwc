@@ -132,6 +132,12 @@ in
       systemd.services.podman-umami = {
         after = [ "postgresql.service" "init-media-network.service" ];
         wants = [ "postgresql.service" ];
+        serviceConfig = {
+          # Next drains requests, then deliberately exits 143 for SIGTERM.
+          # Keep unsolicited termination recoverable as well as planned stops clean.
+          SuccessExitStatus = [ 143 ];
+          Restart = lib.mkForce "always";
+        };
       };
 
       # VALIDATION
