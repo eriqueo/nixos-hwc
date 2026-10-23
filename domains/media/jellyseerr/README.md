@@ -14,7 +14,7 @@ Seerr (formerly Jellyseerr) is a request management and media discovery tool for
 
 ```
 jellyseerr/
-├── index.nix       # Options and module aggregator
+├── index.nix       # Options, runtime image recipe and module aggregator
 ├── sys.nix         # Container configuration (mkContainer)
 ├── README.md       # This file
 └── parts/
@@ -30,11 +30,26 @@ jellyseerr/
 ```nix
 hwc.media.jellyseerr = {
   enable = true;                                    # Enable Seerr
-  image = "ghcr.io/seerr-team/seerr:latest";       # Container image
+  # image defaults to the qualified local runtime tag derived from its recipe.
   network.mode = "media";                           # Network mode: "media" or "vpn"
   gpu.enable = false;                               # GPU acceleration (not needed)
 };
 ```
+
+### Runtime image
+
+The temporary default retains exact Seerr 3.1.0 and its schema while copying only
+Node 22.23.4 from a pinned official Seerr image. Both inputs use immutable digests.
+Build `.#nixosConfigurations.hwc-home.config.system.build.seerrRuntimeImageRecipe`,
+then use its Dockerfile with `podman build --format=docker --pull=never` and the
+evaluated `hwc.media.jellyseerr.image` tag. Cache both
+pinned inputs first. This build does not restart the service. Keep the old image
+and current data for recovery; never restore stale data over later requests.
+
+The 3.5 migration removes `user_settings.discordId`, which breaks 3.1 auth on
+rollback. Broader application advisories and compatible migration remain tracked
+as `brain-w8phr6`; the Node-only image is not a fully patched application claim.
+Remove the custom image after an upstream release passes data/recovery checks.
 
 ### Network Configuration
 
@@ -54,6 +69,10 @@ Seerr depends on:
 - `/opt/apps/jellyseerr/config:/app/config` - Configuration and database
 
 ## Changelog
+
+- 2026-10-23: Add an immutable runtime-only image recipe and derived local tag.
+  It replaces Node while retaining exact app bytes and database compatibility;
+  application upgrade/recovery remains separately tracked.
 
 - 2026-10-23: Reconcile declared settings atomically while retaining app identity,
   API/VAPID keys, library selection and unknown fields on matching server IDs.
