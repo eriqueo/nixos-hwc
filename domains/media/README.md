@@ -20,7 +20,7 @@ media/
 ├── README.md                # This file
 │
 ├── jellyfin-container/      # Jellyfin media server (container)
-├── jellyfin-native/         # Jellyfin media server (native NixOS)
+├── jellyfin-native/         # Native Jellyfin; home GPU and XPS local libraries
 ├── navidrome-container/     # Navidrome music server (container)
 ├── navidrome-native/        # Navidrome music server (native NixOS)
 ├── audiobookshelf/          # Audiobook/podcast server
@@ -70,6 +70,7 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-10-22: Restore the XPS local Jellyfin library through the native module. GPU-disabled instances now generate software encoding settings; the XPS treats its Maryland LAN as local and refuses startup without its ZFS media mount.
 - 2026-09-30: Preserve Radarr's local executable-title rejection score during Recyclarr sync. Sonarr and Radarr runtime settings prefer Usenet with a 24-hour torrent delay and fail executable/dangerous downloads for automatic replacement.
 - 2026-09-26: Machine references follow machines/home; media state and service ownership are unchanged.
 - 2026-09-25: Service split wave 4: sonarr/radarr/lidarr pass the media-pipeline webhook URL from `hwc.automation.n8n.publicUrl` (n8n on hwc-work); `lib/arr-config.nix` no longer defaults it to a host literal.

@@ -47,7 +47,7 @@
       <ThrottleDelaySeconds>${toString transcode.throttleDelaySeconds}</ThrottleDelaySeconds>
       <EnableSegmentDeletion>${lib.boolToString transcode.enableSegmentDeletion}</EnableSegmentDeletion>
       <SegmentKeepSeconds>${toString transcode.segmentKeepSeconds}</SegmentKeepSeconds>
-      <HardwareAccelerationType>nvenc</HardwareAccelerationType>
+      <HardwareAccelerationType>${if cfg.gpu.enable then "nvenc" else "none"}</HardwareAccelerationType>
       <VaapiDevice>/dev/dri/renderD128</VaapiDevice>
       <QsvDevice />
       <EnableTonemapping>false</EnableTonemapping>
@@ -70,11 +70,11 @@
       <EnableDecodingColorDepth10Vp9>true</EnableDecodingColorDepth10Vp9>
       <EnableDecodingColorDepth10HevcRext>false</EnableDecodingColorDepth10HevcRext>
       <EnableDecodingColorDepth12HevcRext>false</EnableDecodingColorDepth12HevcRext>
-      <EnableEnhancedNvdecDecoder>true</EnableEnhancedNvdecDecoder>
+      <EnableEnhancedNvdecDecoder>${lib.boolToString cfg.gpu.enable}</EnableEnhancedNvdecDecoder>
       <PreferSystemNativeHwDecoder>false</PreferSystemNativeHwDecoder>
       <EnableIntelLowPowerH264HwEncoder>false</EnableIntelLowPowerH264HwEncoder>
       <EnableIntelLowPowerHevcHwEncoder>false</EnableIntelLowPowerHevcHwEncoder>
-      <EnableHardwareEncoding>true</EnableHardwareEncoding>
+      <EnableHardwareEncoding>${lib.boolToString cfg.gpu.enable}</EnableHardwareEncoding>
       <AllowHevcEncoding>true</AllowHevcEncoding>
       <AllowAv1Encoding>false</AllowAv1Encoding>
       <EnableSubtitleExtraction>true</EnableSubtitleExtraction>

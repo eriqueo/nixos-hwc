@@ -19,7 +19,7 @@
     ../../domains/notifications/index.nix
     ../../domains/networking/index.nix
     ../../domains/data/index.nix
-    # ../../domains/media/index.nix    # Enable when storage is mounted
+    ../../domains/media/jellyfin-native/index.nix
     # ../../domains/business/index.nix # Enable when business services are needed
   ];
 
@@ -39,7 +39,8 @@
     unitConfig.ConditionPathExists = "/dev/sda";  # Skip entirely if DAS not connected
   };
 
-  # Storage — external DAS not yet connected
+  # ZFS imports the external media pool; the generic mount module must not
+  # create a competing ext4 mount for it.
   hwc.system.mounts = {
     hot.enable = false;
     media.enable = false;
@@ -119,6 +120,28 @@
   # Off until /mnt/backup is mounted and a local/cloud method is configured —
   # enabled-with-no-methods was a no-op that only emitted an eval warning.
   hwc.data.backup.enable = false;
+
+  # Independent Maryland library. Clients use this host's LAN address rather
+  # than the home server's Jellyfin vhost, so playback stays in this house.
+  # Media is REPLACEABLE from the home library; existing Jellyfin users and
+  # library definitions remain in the native service's persistent state.
+  hwc.media.jellyfin = {
+    enable = true;
+    openFirewall = true;
+    gpu.enable = false;
+    network.localSubnets = [ "192.168.1.0/24" ];
+  };
+
+  # Refuse to scan the root filesystem's empty mount directory when the DAS
+  # is absent. ZFS owns the mount, and the assertion fails startup loudly.
+  systemd.services.jellyfin = {
+    after = [ "zfs-mount.service" ];
+    requires = [ "zfs-mount.service" ];
+    unitConfig = {
+      RequiresMountsFor = [ config.hwc.paths.media.root ];
+      AssertPathIsMountPoint = config.hwc.paths.media.root;
+    };
+  };
 
   # Reverse proxy for local services
   hwc.networking.reverseProxy.enable = true;
