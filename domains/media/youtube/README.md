@@ -6,7 +6,7 @@ YouTube transcript extraction for the media library: one FastAPI service
 (`transcripts`) with a web UI at `transcripts.hwc.iheartwoodcraft.com`.
 Captions come from youtube-transcript-api, then yt-dlp subtitles; when neither
 works (no captions, or YouTube blocking this server's IP) a job falls back to
-transcribing the audio with the local whisper-server.
+transcribing the audio with Deepgram (Nova-3, English).
 
 The same service saves X (Twitter) posts. Paste a post URL and choose an
 **X capture** mode (`x_mode` on `POST /job` and `POST /xpost`):
@@ -41,8 +41,8 @@ header counts them. `translate.enable` (default: on wherever
 
 ## Boundaries
 
-- **Manages**: the `transcripts` systemd unit, its save-location whitelist (`outputRoots`), the `n8n-transcript-extract` helper, the Whisper-fallback wiring, the DX2 translation wiring
-- **Does NOT manage**: whisper-server itself (-> `domains/server/native/ai/whisper`), media library directories other than `outputDirectory` (-> `domains/media/directories.nix`), the Caddy vhost (-> `domains/networking/routes.nix`)
+- **Manages**: the `transcripts` systemd unit, its save-location whitelist (`outputRoots`), the `n8n-transcript-extract` helper, the Deepgram-fallback wiring, the DX2 translation wiring
+- **Does NOT manage**: media library directories other than `outputDirectory` (-> `domains/media/directories.nix`), the Caddy vhost (-> `domains/networking/routes.nix`)
 
 ## Structure
 
@@ -55,11 +55,11 @@ domains/media/youtube/
 
 workspace/media/youtube-services/   # runtime source, read from the checkout (paths.nixos)
 ├── api.py                    # FastAPI: /job, /job/{id}, /job/{id}/retry, /transcript, /xpost, /x/session, /config, /health, UI; saved-file scan
-├── transcript.py             # caption sources, Whisper fallback, failure reasons, cleaning, markdown
+├── transcript.py             # caption sources, bounded Deepgram audio uploads, failure reasons, cleaning, markdown
 ├── xpost.py                  # X posts: syndication + guest GraphQL fetch, thread walk, TweetDetail parser, modes, DX2 translation, markdown
 ├── xbrowser.py               # logged-in X capture: Playwright profile, scroll loop, cookie import
 ├── fixtures/                 # trimmed real TweetDetail response for parser tests
-├── test_transcript.py        # unittest: reasons, Whisper decision, dedup, retry, library contract, X posts, capture loop
+├── test_transcript.py        # unittest: reasons, Deepgram adapter and extraction decision, dedup, retry, library contract, X posts, capture loop
 └── pyproject.toml
 ```
 
@@ -70,15 +70,20 @@ hwc.media.youtube.transcripts = {
   enable = true;
   port = 8100;
   outputDirectory = "/mnt/media/transcripts";
-  whisper.enable = true;        # default: follows hwc.server.ai.whisper.enable
-  whisper.maxDuration = 10800;  # seconds; longer videos fail as too_long
+  deepgram.enable = true;
+  deepgram.model = "nova-3";
+  deepgram.maxDuration = 10800;  # paid-audio ceiling in seconds
 };
 ```
 
 Each failed video reports one reason: `rate_limited`, `no_captions`,
-`unavailable`, `invalid_url`, `whisper_failed`, `too_long`, `timeout`, `error`.
-Whisper output carries `**Source:** Whisper ...` in the file and a Whisper
-badge in the UI. `POST /transcript` is synchronous and never uses Whisper.
+`unavailable`, `invalid_url`, `deepgram_failed`, `transcription_busy`, `too_long`, `timeout`, `error`.
+Deepgram output carries `**Source:** Deepgram ...` in the file and a Deepgram
+badge in the UI. `POST /transcript` remains synchronous and captions-only.
+
+The generated `deepgram-api-key` secret supplies the service through a file path, never a plaintext environment variable. Startup checks the key and tools. Audio is processed as sequential 180-second chunks with one active audio job; extra audio work is rejected as `transcription_busy`. Billed requests are never retried automatically. An explicit job retry can submit earlier chunks again. Request IDs are returned in job results and logged for inspection. HTTP operations have a 120-second deadline; uploads and responses have size caps. Actual decoded duration is checked before the first paid request. Existing saved files remain readable.
+
+The health response is version 2, with a `deepgram` status object. Its legacy `whisper` object permanently reports the old provider disabled for older health probes.
 
 Idempotent by video ID: before fetching, a job scans every save location's
 `.md` headers (`saved_video_id`, the inverse of `format_markdown`) and returns
@@ -96,6 +101,7 @@ Tests (run on hwc-home with the service interpreter):
 | `transcripts` | 8100 | Transcript API + web UI |
 
 ## Changelog
+- 2026-10-23: Replace the transcript audio fallback with Deepgram Nova-3, generated secret wiring, bounded cancellable uploads, request IDs and an audio capacity limit. Preserve captions-first jobs, the synchronous captions endpoint, saved-file readers and X capture. The flake check exercises the adapter, extraction path and generated service wiring.
 - 2026-10-12: English translation of X posts. Posts carry X's `lang` tag; `xpost.translate_posts` sends every non-English text (and quoted text) to DX2 through `xpost.dx2_translator` (OpenAI-compatible, thinking off, key read per request from `hwc.server.ai.dx2.apiKeyFile`) and replaces it with English before the file is written. Fail-open per request; the new `**Translated:**` header line records languages, count and failures. New option `translate.enable`, asserted to need the dx2 module. The translator lives in `xpost.py`, not a new file: it acts only on the X post shape, and `transcript.py` is the YouTube side.
 - 2026-10-12: X capture stop rule. A capture ends only on X's bottom `TimelineTerminateTimeline` (`Conversation.ended`), not on a page without a Bottom cursor; while X has not ended the timeline it waits up to 12 stale scrolls (was 4). Measured live: X sends a page every 3-7 s, and the old rule saved 60 of ~400 replies as if complete.
 - 2026-10-12: X capture modes end to end. `POST /job` and `POST /xpost` take `x_mode` (`post`, `thread`, `replies`, `author_replies`) and `limit`; `api._fetch_x` dispatches `post` to the logged-out walk and the rest to `xbrowser.capture`. Jobs, in-flight checks, dedup and retry key X items by `xpost.x_key(id, mode)`, and retry replays mode and limit. The UI gains an "X capture" select (labels from `xpost.X_MODE_LABELS` via `/config`) and a replies limit. Saved titles name the mode; replies files state coverage. Gate passed before the build: a logged-in `replies` capture of poteto's post under the unit's sandbox returned 204 direct replies.

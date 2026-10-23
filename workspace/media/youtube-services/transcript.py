@@ -2,19 +2,20 @@
 YouTube transcript extraction and cleaning.
 
 Captions come from youtube-transcript-api, with yt-dlp subtitles as a fallback;
-when neither yields captions, the audio is transcribed by the local
-whisper-server. yt-dlp also supplies metadata. No NLP libraries, no LLM.
+when neither yields captions, Deepgram transcribes the audio.
+yt-dlp also supplies metadata. No NLP libraries, no LLM.
 """
 
 import asyncio
 import json
 import logging
+import math
 import os
 import re
 import tempfile
 import time
 import wave
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 logger = logging.getLogger("transcripts")
@@ -28,7 +29,8 @@ REASON_TEXT = {
     "no_captions": "Video has no captions",
     "unavailable": "Unavailable (private, removed, age- or member-restricted)",
     "invalid_url": "Not a YouTube or X URL",
-    "whisper_failed": "Audio transcription failed",
+    "deepgram_failed": "Deepgram audio transcription failed",
+    "transcription_busy": "Another audio transcription is running; retry this item when it finishes",
     "too_long": "Video is too long for audio transcription",
     "timeout": "Timed out",
     "login_required": "X login is missing or expired; import the cookies again",
@@ -180,7 +182,7 @@ def format_duration(seconds: int) -> str:
 
 # ---------------------------------------------------------------------------
 # Transcript sources: captions (youtube-transcript-api, then yt-dlp subtitles),
-# then Whisper over the audio. Each source returns segments or raises a
+# then Deepgram over the audio. Each source returns segments or raises a
 # TranscriptError carrying one reason from REASON_TEXT.
 # ---------------------------------------------------------------------------
 @dataclass
@@ -194,7 +196,8 @@ class Segment:
 class Transcript:
     segments: list[Segment]
     source: str  # human label written into the markdown, e.g. "YouTube captions (auto-generated)"
-    kind: str    # "captions" | "whisper"
+    kind: str    # "captions" | "deepgram"
+    request_ids: list[str] = field(default_factory=list)
 
 
 # A 429 is per-IP, not per-video, so the cooldown is process-wide: after any
@@ -310,21 +313,86 @@ async def _try_ytdlp_subs(video_id: str, langs: list[str]) -> Transcript:
     raise TranscriptError("no_captions", "yt-dlp found no subtitles")
 
 
-# Whisper (whisper.cpp server, OpenAI-compatible). Audio is cut into chunks so
-# the shared server — also used for phone dictation and the inbox processor —
-# is held for one chunk (~20 s at the measured 10x real time on the P1000),
-# never for a whole 90-minute video.
-WHISPER_CHUNK_SECONDS = 180
-WHISPER_AUDIO_FORMAT = "bestaudio[acodec=opus]/bestaudio"
-# Whisper marks non-speech with bracketed tags ("[BLANK_AUDIO]", "[Music]").
-_NON_SPEECH = re.compile(r"^\s*[\[\(][^\]\)]*[\]\)]\s*$")
+# Bounded uploads: 180 s of mono 16 kHz PCM is under 8 MiB. Chunks run
+# sequentially; billed requests are non-retriable, including timeouts/429s.
+AUDIO_CHUNK_SECONDS = 180
+AUDIO_FORMAT = "bestaudio[acodec=opus]/bestaudio"
+DEEPGRAM_CHUNK_TIMEOUT = 120
+MAX_AUDIO_BYTES = 8 * 1024 * 1024
+MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+DEEPGRAM_URL = "https://api.deepgram.com/v1/listen"
+AUDIO_PROVIDER = "deepgram"
+AUDIO_PROVIDER_LABEL = "Deepgram"
+
+
+def audio_budget(duration: int) -> float:
+    return 900 + 600 + math.ceil(max(1, duration) / AUDIO_CHUNK_SECONDS) * DEEPGRAM_CHUNK_TIMEOUT
+
+
+@dataclass
+class AudioChunk:
+    segments: list[Segment]
+    request_id: str
+
+
+def deepgram_chunk(result: dict) -> AudioChunk:
+    """Parse untrusted provider data once, before it enters the audio pipeline."""
+    try:
+        request_id = result["metadata"]["request_id"]
+        utterances = result["results"]["utterances"]
+        if not isinstance(request_id, str) or not request_id or len(request_id) > 128:
+            raise ValueError()
+        if not isinstance(utterances, list):
+            raise ValueError()
+        segments = []
+        for utterance in utterances:
+            text, start, end = (utterance[k] for k in ("transcript", "start", "end"))
+            if (not isinstance(text, str) or type(start) not in (int, float)
+                    or type(end) not in (int, float) or not math.isfinite(start)
+                    or not math.isfinite(end) or start < 0 or end < start):
+                raise ValueError()
+            if text.strip():
+                segments.append(Segment(text.strip(), float(start), float(end - start)))
+        return AudioChunk(segments, request_id)
+    except (KeyError, TypeError, ValueError):
+        raise TranscriptError("deepgram_failed", "invalid provider response") from None
+
+
+async def _post_deepgram_chunk(client, api_key: str, model: str, path: str) -> AudioChunk:
+    """One billed attempt. Async HTTP cancellation closes the upload/response."""
+    import httpx
+    try:
+        with open(path, "rb") as audio:
+            content = audio.read(MAX_AUDIO_BYTES + 1)
+        if len(content) > MAX_AUDIO_BYTES:
+            raise TranscriptError("deepgram_failed", "audio chunk exceeds upload limit")
+        async with asyncio.timeout(DEEPGRAM_CHUNK_TIMEOUT):
+            async with client.stream(
+                "POST", DEEPGRAM_URL, content=content,
+                headers={"Authorization": f"Token {api_key}", "Content-Type": "audio/wav"},
+                params={"model": model, "language": "en", "smart_format": "true", "utterances": "true"},
+            ) as response:
+                if response.status_code != 200:
+                    # Never expose response bodies, headers, or exception text.
+                    raise TranscriptError("deepgram_failed", f"Deepgram HTTP {response.status_code}")
+                body = bytearray()
+                async for block in response.aiter_bytes():
+                    body.extend(block)
+                    if len(body) > MAX_RESPONSE_BYTES:
+                        raise TranscriptError("deepgram_failed", "provider response exceeds limit")
+        return deepgram_chunk(json.loads(body))
+    except (httpx.HTTPError, TimeoutError):
+        raise TranscriptError("deepgram_failed", "request failed or timed out; not retried") from None
+    except (json.JSONDecodeError, UnicodeError):
+        raise TranscriptError("deepgram_failed", "invalid provider response") from None
 
 
 async def transcribe_audio(
     video_id: str,
-    whisper_url: str,
+    api_key: str,
     model_label: str,
     on_stage: Callable[[str], None] = lambda s: None,
+    *, client, max_seconds: int,
 ) -> Transcript:
     url = f"https://www.youtube.com/watch?v={video_id}"
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -334,7 +402,7 @@ async def transcribe_audio(
         # CPU, while the 125 kbps track of the same minute matched the
         # captions nearly word for word. ~15 MB per 15 min is cheap.
         code, _, stderr = await _run(
-            ["yt-dlp", "-f", WHISPER_AUDIO_FORMAT, "--no-playlist",
+            ["yt-dlp", "-f", AUDIO_FORMAT, "--no-playlist",
              "-o", os.path.join(tmpdir, "audio.%(ext)s"), url],
             timeout=900,
         )
@@ -343,76 +411,53 @@ async def transcribe_audio(
             err = classify_ytdlp_error(stderr)
             if err.reason == "rate_limited":
                 _note_rate_limit()
-            raise TranscriptError(err.reason if err.reason in ("rate_limited", "unavailable") else "whisper_failed",
+            raise TranscriptError(err.reason if err.reason in ("rate_limited", "unavailable") else "deepgram_failed",
                                   f"audio download: {err.detail}")
         audio_path = os.path.join(tmpdir, audio[0])
 
         on_stage("splitting audio")
         code, _, stderr = await _run(
             ["ffmpeg", "-nostdin", "-loglevel", "error", "-i", audio_path, "-ac", "1", "-ar", "16000",
-             "-c:a", "pcm_s16le", "-f", "segment", "-segment_time", str(WHISPER_CHUNK_SECONDS),
+             "-c:a", "pcm_s16le", "-f", "segment", "-segment_time", str(AUDIO_CHUNK_SECONDS),
              os.path.join(tmpdir, "chunk%04d.wav")],
             timeout=600,
         )
         os.remove(audio_path)
         chunks = sorted(f for f in os.listdir(tmpdir) if f.startswith("chunk"))
         if code != 0 or not chunks:
-            raise TranscriptError("whisper_failed", f"ffmpeg: {stderr.strip()[-200:]}")
+            raise TranscriptError("deepgram_failed", f"ffmpeg: {stderr.strip()[-200:]}")
+
+        # Check actual decoded audio as well as metadata before any billed call.
+        durations = []
+        for name in chunks:
+            with wave.open(os.path.join(tmpdir, name)) as audio:
+                durations.append(audio.getnframes() / audio.getframerate())
+        if sum(durations) > max_seconds:
+            raise TranscriptError("too_long", "decoded audio exceeds the configured duration limit")
 
         segments: list[Segment] = []
+        request_ids: list[str] = []
         offset = 0.0
         for i, name in enumerate(chunks, 1):
-            on_stage(f"transcribing audio {i}/{len(chunks)}")
+            on_stage(f"transcribing with Deepgram {i}/{len(chunks)}")
             path = os.path.join(tmpdir, name)
             try:
-                result = await asyncio.to_thread(_post_whisper_chunk, whisper_url, path)
-            except Exception as e:
-                raise TranscriptError("whisper_failed", f"chunk {i}/{len(chunks)}: {type(e).__name__}: {e}"[:300]) from e
-            segments.extend(whisper_segments(result, offset))
+                chunk = await _post_deepgram_chunk(client, api_key, model_label, path)
+            except TranscriptError as e:
+                raise TranscriptError(e.reason, f"chunk {i}/{len(chunks)}: {e.detail}") from None
+            request_ids.append(chunk.request_id)
+            logger.info("Deepgram request completed: %s", chunk.request_id)
+            segments.extend(Segment(s.text, offset + s.start, s.duration) for s in chunk.segments)
             # Offset by the chunk's real length; the segment muxer cuts on
-            # packet boundaries, so i * WHISPER_CHUNK_SECONDS drifts.
+            # packet boundaries, so i * AUDIO_CHUNK_SECONDS drifts.
             with wave.open(path) as w:
                 offset += w.getnframes() / w.getframerate()
             os.remove(path)
 
     if not segments:
-        raise TranscriptError("whisper_failed", "no speech recognised")
-    return Transcript(segments, f"Whisper speech-to-text ({model_label}) — machine transcription of the audio", "whisper")
-
-
-def _post_whisper_chunk(whisper_url: str, path: str) -> dict:
-    import requests
-    with open(path, "rb") as fh:
-        r = requests.post(
-            whisper_url,
-            files={"file": (os.path.basename(path), fh, "audio/wav")},
-            data={"response_format": "verbose_json"},
-            timeout=600,
-        )
-    r.raise_for_status()
-    return r.json()
-
-
-def whisper_segments(result: dict, offset: float) -> list[Segment]:
-    """Turn one verbose_json response into segments on the video's timeline.
-
-    Whisper starts a segment's text with a space when it begins a new word;
-    without one, the segment continues the previous word ("Cl" + "oning"), so
-    it is glued on rather than becoming a segment of its own."""
-    out: list[Segment] = []
-    for s in result.get("segments") or []:
-        raw = s.get("text") or ""
-        text = raw.strip()
-        if not text or _NON_SPEECH.match(text):
-            continue
-        start = float(s.get("start", 0.0))
-        end = float(s.get("end", start))
-        if out and not raw[:1].isspace():
-            prev = out[-1]
-            out[-1] = Segment(text=prev.text + text, start=prev.start, duration=offset + end - prev.start)
-            continue
-        out.append(Segment(text=text, start=offset + start, duration=end - start))
-    return out
+        raise TranscriptError("deepgram_failed", "no speech recognised")
+    return Transcript(segments, f"{AUDIO_PROVIDER_LABEL} speech-to-text ({model_label}) — machine transcription of the audio",
+                      AUDIO_PROVIDER, request_ids)
 
 
 def _parse_vtt(vtt_text: str) -> list[Segment]:

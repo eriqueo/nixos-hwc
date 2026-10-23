@@ -7,7 +7,7 @@
 # ARCHITECTURE:
 #   - Single FastAPI process
 #   - youtube-transcript-api for captions, yt-dlp for subtitles + metadata
-#   - Whisper fallback: yt-dlp audio -> ffmpeg chunks -> local whisper-server
+#   - Deepgram fallback: yt-dlp audio -> bounded ffmpeg chunks -> Deepgram API
 #   - DX2 (remote, OpenAI-compatible) translates non-English X posts to English
 #   - No local LLM, no spaCy, no PostgreSQL
 #   - Caddy vhost at transcripts.hwc.iheartwoodcraft.com (upstream 127.0.0.1:8100)
@@ -25,16 +25,16 @@ let
     uvicorn
     pydantic
     youtube-transcript-api
-    requests # Whisper chunk uploads
+    requests # caption source HTTP
+    httpx # cancellable Deepgram uploads
     playwright # logged-in X captures (xbrowser.py)
   ];
 
   # Writable state: the X browser profile (imported login cookies) lives here.
   stateDir = "/var/lib/hwc/transcripts";
 
-  whisper = config.hwc.server.ai.whisper or { };
-  whisperUrl = lib.optionalString cfg.whisper.enable
-    "http://127.0.0.1:${toString (whisper.port or 0)}/v1/audio/transcriptions";
+  secrets = config.hwc.secrets.api;
+  deepgramKeyFile = secrets."deepgram-api-key" or "";
 
   # DX2 endpoint facts. The `or` keeps this file evaluable when the dx2 module
   # is not imported; the assertion below rejects translate.enable without it.
@@ -57,9 +57,9 @@ let
     export YT_TRANSCRIPTS_OUTPUT_ROOTS="${lib.concatStringsSep ":" (map toString outputRoots)}"
     export YT_TRANSCRIPTS_DEFAULT_MODE="${cfg.defaultFormat}"
     export YT_TRANSCRIPTS_LANGUAGES="${lib.concatStringsSep "," cfg.languages}"
-    export YT_TRANSCRIPTS_WHISPER_URL="${whisperUrl}"
-    export YT_TRANSCRIPTS_WHISPER_MODEL="${whisper.model or "whisper"}"
-    export YT_TRANSCRIPTS_WHISPER_MAX_SECONDS="${toString cfg.whisper.maxDuration}"
+    export YT_TRANSCRIPTS_DEEPGRAM_KEY_FILE="${lib.optionalString cfg.deepgram.enable deepgramKeyFile}"
+    export YT_TRANSCRIPTS_DEEPGRAM_MODEL="${cfg.deepgram.model}"
+    export YT_TRANSCRIPTS_DEEPGRAM_MAX_SECONDS="${toString cfg.deepgram.maxDuration}"
     # Chromium for X captures. HOME must be writable for Chromium's config and
     # crash files, and ProtectHome leaves /home/eric read-only.
     export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
@@ -101,6 +101,7 @@ in
       description = "YouTube Transcripts API";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ];
+      restartTriggers = lib.optionals cfg.deepgram.enable [ config.age.secrets."deepgram-api-key".file ];
 
       serviceConfig = {
         Type = "exec";
@@ -111,6 +112,7 @@ in
         # Run as eric (owns output dirs)
         User = lib.mkForce "eric";
         Group = lib.mkForce "users";
+        SupplementaryGroups = lib.optional cfg.deepgram.enable "secrets";
 
         StateDirectory = "hwc/transcripts";
         # Owner-only: the X profile holds a login session.
@@ -148,8 +150,8 @@ in
 
     assertions = [
       {
-        assertion = cfg.whisper.enable -> (whisper.enable or false);
-        message = "hwc.media.youtube.transcripts.whisper.enable needs hwc.server.ai.whisper.enable on the same host.";
+        assertion = cfg.deepgram.enable -> (secrets ? deepgram-api-key);
+        message = "hwc.media.youtube.transcripts.deepgram.enable needs the generated deepgram-api-key secret.";
       }
       {
         assertion = cfg.translate.enable -> (config.hwc.server.ai ? dx2);

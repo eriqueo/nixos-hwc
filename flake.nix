@@ -744,6 +744,30 @@
         touch $out
       '';
     in {
+      transcripts-deepgram = let
+        c = self.nixosConfigurations.hwc-home.config;
+        service = c.systemd.services.transcripts;
+        python = pkgs.python3.withPackages (ps: with ps; [
+          fastapi uvicorn youtube-transcript-api requests httpx playwright
+        ]);
+      in
+      assert lib.assertMsg (c.hwc.media.youtube.transcripts.deepgram.enable
+        && service.serviceConfig.User == "eric"
+        && lib.elem "secrets" service.serviceConfig.SupplementaryGroups
+        && lib.elem c.age.secrets.deepgram-api-key.file service.restartTriggers)
+        "Transcripts Deepgram credential, identity or reload wiring failed";
+      pkgs.runCommand "transcripts-deepgram" { nativeBuildInputs = [ python pkgs.ripgrep ]; } ''
+        export PYTHONPATH=${./workspace/media/youtube-services}
+        cd ${./workspace/media/youtube-services}
+        python3 -m unittest -q test_transcript
+        rg -F ${lib.escapeShellArg ''export YT_TRANSCRIPTS_DEEPGRAM_KEY_FILE="${c.hwc.secrets.api.deepgram-api-key}"''} ${service.serviceConfig.ExecStart} >/dev/null
+        if rg 'YT_TRANSCRIPTS_WHISPER_' ${service.serviceConfig.ExecStart}; then
+          echo "Transcripts still exports a Whisper execution path" >&2
+          exit 1
+        fi
+        touch "$out"
+      '';
+
       node-runtime-wiring =
         let
           server = host: self.nixosConfigurations."hwc-${host}";

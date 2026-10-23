@@ -1,4 +1,4 @@
-"""Tests for transcript sourcing and the Whisper fallback decision.
+"""Tests for transcript sourcing and the Deepgram fallback decision.
 
 Run with the service's interpreter (needs fastapi + youtube-transcript-api):
     PYTHONPATH=<service pythonPath>:. python3 -m unittest -v test_transcript
@@ -12,8 +12,9 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-os.environ["YT_TRANSCRIPTS_WHISPER_URL"] = "http://whisper.test/v1/audio/transcriptions"
-os.environ["YT_TRANSCRIPTS_WHISPER_MAX_SECONDS"] = "3600"
+os.environ["YT_TRANSCRIPTS_DEEPGRAM_KEY_FILE"] = "/test/deepgram-key"
+os.environ["YT_TRANSCRIPTS_DEEPGRAM_MAX_SECONDS"] = "3600"
+os.environ["YT_TRANSCRIPTS_DEEPGRAM_MODEL"] = "nova-3"
 
 import transcript as T  # noqa: E402
 
@@ -70,28 +71,120 @@ class Reasons(unittest.TestCase):
         self.assertEqual(e.reason, "unavailable")
 
 
-class WhisperSegments(unittest.TestCase):
-    def test_offset_and_non_speech_filter(self):
-        result = {"segments": [
-            {"text": " Hello there", "start": 1.0, "end": 2.5},
-            {"text": " [BLANK_AUDIO]", "start": 3.0, "end": 9.0},
-            {"text": " (music)", "start": 9.0, "end": 12.0},
-            {"text": "", "start": 12.0, "end": 13.0},
-        ]}
-        segs = T.whisper_segments(result, offset=180.0)
-        self.assertEqual([(s.text, s.start, s.duration) for s in segs], [("Hello there", 181.0, 1.5)])
+class DeepgramResponse(unittest.TestCase):
+    def test_utterances_keep_timestamps_and_request_id(self):
+        result = {"metadata": {"request_id": "01a16a39-c5d5-73d1-97b0-a1fefcfd3431"},
+                  "results": {"utterances": [{"transcript": "Hello there.", "start": 1.0, "end": 2.5}]}}
+        chunk = T.deepgram_chunk(result)
+        self.assertEqual([(s.text, s.start, s.duration) for s in chunk.segments], [("Hello there.", 1.0, 1.5)])
+        self.assertEqual(chunk.request_id, result["metadata"]["request_id"])
 
-    def test_word_split_across_segments_is_rejoined(self):
-        # Shape seen live on 2026-10-06: "...Cl" / "oning yourself", "I" / "'ve been".
-        result = {"segments": [
-            {"text": " Cl", "start": 0.0, "end": 0.5},
-            {"text": "oning yourself takes", "start": 0.5, "end": 2.0},
-            {"text": " a new model I", "start": 2.0, "end": 3.0},
-            {"text": "'ve been using", "start": 3.0, "end": 4.0},
-        ]}
-        segs = T.whisper_segments(result, offset=0.0)
-        self.assertEqual(T.raw_transcript(segs), "Cloning yourself takes a new model I've been using")
-        self.assertEqual((segs[0].start, segs[0].duration), (0.0, 2.0))
+    def test_invalid_timestamps_are_coded_failures(self):
+        for start, end in [(float("nan"), 1), (3, 2), ("1", 2), (-1, 2)]:
+            with self.subTest(start=start, end=end), self.assertRaises(T.TranscriptError) as cm:
+                T.deepgram_chunk({"metadata": {"request_id": "id"}, "results": {
+                    "utterances": [{"transcript": "hello", "start": start, "end": end}]}})
+            self.assertEqual(cm.exception.reason, "deepgram_failed")
+
+    def test_silence_is_an_empty_chunk(self):
+        self.assertEqual(T.deepgram_chunk({"metadata": {"request_id": "id"},
+                                          "results": {"utterances": []}}).segments, [])
+
+
+class DeepgramHTTP(unittest.TestCase):
+    def _call(self, handler, content=b"wav", response_limit=None):
+        import httpx
+        async def go(path):
+            async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+                return await T._post_deepgram_chunk(client, "test-token", "nova-3", str(path))
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d, "chunk.wav"); p.write_bytes(content)
+            return run(go(p))
+
+    def test_authenticated_wav_request_and_provider_parameters(self):
+        import httpx
+        calls = []
+        def handle(request):
+            calls.append(request)
+            self.assertEqual(request.headers["Authorization"], "Token test-token")
+            self.assertEqual(request.headers["Content-Type"], "audio/wav")
+            self.assertEqual(request.content, b"wav")
+            self.assertEqual(request.url.params["model"], "nova-3")
+            self.assertEqual(request.url.params["utterances"], "true")
+            self.assertEqual(request.url.scheme, "https")
+            self.assertEqual(request.url.host, "api.deepgram.com")
+            return httpx.Response(200, json={"metadata": {"request_id": "request-1"},
+                "results": {"utterances": [{"transcript": "Hello.", "start": 0, "end": 1}]}})
+        chunk = self._call(handle)
+        self.assertEqual(chunk.request_id, "request-1")
+        self.assertEqual(len(calls), 1)
+
+    def test_billed_http_failures_are_not_retried_or_exposed(self):
+        import httpx
+        for status in [401, 429, 500]:
+            calls = []
+            def handle(request):
+                calls.append(request)
+                return httpx.Response(status, text="private test-token response")
+            with self.subTest(status=status), self.assertRaises(T.TranscriptError) as cm:
+                self._call(handle)
+            self.assertEqual(cm.exception.reason, "deepgram_failed")
+            self.assertEqual(len(calls), 1)
+            self.assertNotIn("test-token", str(cm.exception))
+            self.assertIn(str(status), str(cm.exception))
+
+    def test_network_failure_is_not_retried_or_exposed(self):
+        import httpx
+        calls = []
+        def handle(request):
+            calls.append(request)
+            raise httpx.ReadTimeout("private test-token", request=request)
+        with self.assertRaises(T.TranscriptError) as cm:
+            self._call(handle)
+        self.assertEqual(len(calls), 1)
+        self.assertNotIn("test-token", str(cm.exception))
+
+    def test_cancellation_propagates(self):
+        def handle(request):
+            raise asyncio.CancelledError()
+        with self.assertRaises(asyncio.CancelledError):
+            self._call(handle)
+
+    def test_response_size_is_bounded(self):
+        import httpx
+        with mock.patch.object(T, "MAX_RESPONSE_BYTES", 3), self.assertRaises(T.TranscriptError) as cm:
+            self._call(lambda request: httpx.Response(200, content=b"oversized"))
+        self.assertIn("limit", cm.exception.detail)
+
+    def test_upload_limit_rejects_before_http_effect(self):
+        handler = mock.Mock()
+        with mock.patch.object(T, "MAX_AUDIO_BYTES", 2), self.assertRaises(T.TranscriptError):
+            self._call(handler)
+        handler.assert_not_called()
+
+
+class DeepgramAudioPipeline(unittest.TestCase):
+    def test_chunk_offsets_use_actual_audio_lengths_and_publish_ids(self):
+        import wave
+        async def prepare(args, timeout):
+            if args[0] == "yt-dlp":
+                root = Path(args[args.index("-o") + 1]).parent
+                (root / "audio.opus").write_bytes(b"download")
+            else:
+                root = Path(args[-1]).parent
+                for i, frames in enumerate([20000, 32000]):
+                    with wave.open(str(root / f"chunk{i:04d}.wav"), "wb") as w:
+                        w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000)
+                        w.writeframes(b"\0\0" * frames)
+            return 0, "", ""
+        post = mock.AsyncMock(side_effect=[T.AudioChunk([T.Segment("Hello", .1, .4)], "r1"),
+                                          T.AudioChunk([T.Segment("world", .5, .5)], "r2")])
+        with mock.patch.object(T, "_run", side_effect=prepare), mock.patch.object(T, "_post_deepgram_chunk", post):
+            result = run(T.transcribe_audio("abcdefghijk", "test-token", "nova-3", client=object(), max_seconds=10))
+        self.assertEqual([s.start for s in result.segments], [.1, 1.75])
+        self.assertEqual(result.request_ids, ["r1", "r2"])
+        self.assertEqual(result.kind, "deepgram")
+        self.assertEqual(post.await_count, 2)
 
 
 class FetchCaptions(unittest.TestCase):
@@ -130,45 +223,47 @@ class FetchCaptions(unittest.TestCase):
 
 @unittest.skipIf(api is None, "fastapi not installed")
 class ExtractWiring(unittest.TestCase):
-    """The production decision point: api._extract chooses captions or Whisper."""
+    """The production decision point: api._extract chooses captions or Deepgram."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.out = Path(self.tmp.name)
         self.meta = T.VideoMeta("abcdefghijk", "A Title", "Chan", 600, "20260101",
                                 "https://www.youtube.com/watch?v=abcdefghijk")
-        self.whisper = T.Transcript([T.Segment("spoken words", 0, 2)], "Whisper speech-to-text (small.en)", "whisper")
+        self.deepgram = T.Transcript([T.Segment("spoken words", 0, 2)], "Deepgram speech-to-text (nova-3)", "deepgram", ["request-1"])
 
     def tearDown(self):
         self.tmp.cleanup()
 
-    def _extract(self, caption_exc, allow_whisper=True, duration=600):
+    def _extract(self, caption_exc, allow_audio=True, duration=600):
         self.meta.duration = duration
-        audio = mock.AsyncMock(return_value=self.whisper)
+        audio = mock.AsyncMock(return_value=self.deepgram)
         with mock.patch.object(api, "fetch_metadata", new=mock.AsyncMock(return_value=self.meta)), \
              mock.patch.object(api, "fetch_captions", new=mock.AsyncMock(side_effect=caption_exc)), \
-             mock.patch.object(api, "transcribe_audio", new=audio):
-            result = run(api._extract(self.meta.url, "raw", self.out, allow_whisper=allow_whisper))
+             mock.patch.object(api, "transcribe_audio", new=audio), \
+             mock.patch.object(api, "read_deepgram_key", return_value="test-token"):
+            result = run(api._extract(self.meta.url, "raw", self.out, allow_audio=allow_audio))
         return result, audio
 
-    def test_no_captions_falls_back_to_whisper(self):
+    def test_no_captions_falls_back_to_deepgram(self):
         result, audio = self._extract(T.TranscriptError("no_captions"))
         audio.assert_awaited_once()
-        self.assertEqual(result["source"], "whisper")
-        self.assertIn("**Source:** Whisper", Path(result["filename"]).read_text())
+        self.assertEqual(result["source"], "deepgram")
+        self.assertEqual(result["transcription_request_ids"], ["request-1"])
+        self.assertIn("**Source:** Deepgram", Path(result["filename"]).read_text())
 
-    def test_rate_limited_falls_back_to_whisper(self):
+    def test_rate_limited_falls_back_to_deepgram(self):
         result, _ = self._extract(T.TranscriptError("rate_limited"))
-        self.assertEqual(result["source"], "whisper")
+        self.assertEqual(result["source"], "deepgram")
 
-    def test_unavailable_never_uses_whisper(self):
+    def test_unavailable_never_uses_deepgram(self):
         with self.assertRaises(T.TranscriptError) as cm:
             self._extract(T.TranscriptError("unavailable"))
         self.assertEqual(cm.exception.reason, "unavailable")
 
-    def test_sync_endpoint_path_never_uses_whisper(self):
+    def test_sync_endpoint_path_never_uses_deepgram(self):
         with self.assertRaises(T.TranscriptError) as cm:
-            self._extract(T.TranscriptError("no_captions"), allow_whisper=False)
+            self._extract(T.TranscriptError("no_captions"), allow_audio=False)
         self.assertEqual(cm.exception.reason, "no_captions")
 
     def test_over_cap_is_too_long(self):
@@ -176,6 +271,31 @@ class ExtractWiring(unittest.TestCase):
             self._extract(T.TranscriptError("no_captions"), duration=4000)
         self.assertEqual(cm.exception.reason, "too_long")
         self.assertIn("captions: no_captions", cm.exception.detail)
+
+    def test_captions_bypass_paid_audio_and_key_reads(self):
+        audio = mock.AsyncMock()
+        captions = T.Transcript([T.Segment("caption", 0, 1)], "captions", "captions")
+        with mock.patch.object(api, "fetch_metadata", new=mock.AsyncMock(return_value=self.meta)), \
+             mock.patch.object(api, "fetch_captions", new=mock.AsyncMock(return_value=captions)), \
+             mock.patch.object(api, "transcribe_audio", audio), \
+             mock.patch.object(api, "read_deepgram_key", side_effect=AssertionError("key read")):
+            result = run(api._extract(self.meta.url, "raw", self.out, allow_audio=True))
+        self.assertEqual(result["source"], "captions")
+        audio.assert_not_awaited()
+
+    def test_busy_audio_is_rejected_without_provider_call(self):
+        with mock.patch.object(api, "_audio_lock") as lock:
+            lock.locked.return_value = True
+            with self.assertRaises(T.TranscriptError) as cm:
+                self._extract(T.TranscriptError("no_captions"))
+        self.assertEqual(cm.exception.reason, "transcription_busy")
+
+    def test_missing_or_empty_key_is_a_coded_failure(self):
+        for path in [self.out / "missing-key", self.out / "empty-key"]:
+            if path.name == "empty-key": path.write_text("")
+            with mock.patch.object(api, "DEEPGRAM_KEY_FILE", str(path)), self.assertRaises(T.TranscriptError) as cm:
+                api.read_deepgram_key()
+            self.assertEqual(cm.exception.reason, "deepgram_failed")
 
 
 class SavedHeader(unittest.TestCase):
@@ -251,7 +371,7 @@ class JobDedupAndRetry(unittest.TestCase):
         return job
 
     @staticmethod
-    def _ok(url, mode, dest, allow_whisper=False, on_stage=None):
+    def _ok(url, mode, dest, allow_audio=False, on_stage=None):
         return {"url": url, "title": "t", "filename": str(dest / "f.md"), "transcript": "x", "source": "captions"}
 
     def test_saved_video_is_skipped_not_fetched(self):
