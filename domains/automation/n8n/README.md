@@ -15,7 +15,8 @@ n8n workflow automation platform running as a Podman container. Handles alert ro
 domains/automation/n8n/
 ├── index.nix          # Options, reviewed immutable image pin, firewall rules
 ├── sys.nix            # Container definition, env file generation (+ rotation
-│                      #   restartTriggers on the .age sources), tmpfiles
+│                      #   restartTriggers on the .age sources), tmpfiles,
+│                      #   online SQLite snapshot registration for Borg
 ├── README.md          # This file
 └── parts/
     ├── estimator-integration/  # Estimator webhook integration
@@ -124,6 +125,14 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 - `hwc-n8n-mcp-env.service` — generates bridge env file from agenix secrets
 
 ## Changelog
+
+- 2026-10-23: Register the live SQLite database with Borg's bounded online
+  snapshot producer. Borg archives `borg-sqlite/ready/n8n.sqlite` and excludes
+  the raw database, WAL and SHM files. Restore that snapshot as `database.sqlite`
+  with the matching n8n `config` encryption key from the same archive. Other
+  n8n state keeps its existing directory coverage. A successful Borg job alone
+  does not establish recoverability; the shared recovery check exercises the
+  rendered hook, failure containment and restored snapshot.
 
 - 2026-10-23: Pin the reviewed2.44.6 image, which runs Node26.12.1 with corrected
   c-ares, OpenSSL and built-in trust roots. Private old/new/old checks preserve
