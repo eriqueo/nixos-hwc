@@ -8,6 +8,7 @@ import logging
 import os
 import shutil
 import uuid
+import httpx
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -21,6 +22,7 @@ from transcript import (
     TranscriptError, extract_video_id, is_playlist_url, fetch_metadata, fetch_playlist,
     fetch_captions, transcribe_audio, clean_transcript, raw_transcript, format_markdown,
     format_duration, saved_video_id,
+    audio_budget, AUDIO_PROVIDER, AUDIO_PROVIDER_LABEL, DEEPGRAM_CHUNK_TIMEOUT,
 )
 import xbrowser
 import xpost
@@ -45,13 +47,23 @@ PORT = int(os.getenv("YT_TRANSCRIPTS_PORT", "8100"))
 DEFAULT_MODE = os.getenv("YT_TRANSCRIPTS_DEFAULT_MODE", "clean")
 LANGUAGES = os.getenv("YT_TRANSCRIPTS_LANGUAGES", "en,en-US,en-GB").split(",")
 
-# Whisper fallback. An empty URL disables it (Nix sets it only when the local
-# whisper-server is enabled). Videos longer than WHISPER_MAX_SECONDS are not
-# transcribed: at the measured ~10x real time a 3 h video holds the shared GPU
-# server for ~18 min.
-WHISPER_URL = os.getenv("YT_TRANSCRIPTS_WHISPER_URL", "")
-WHISPER_MODEL = os.getenv("YT_TRANSCRIPTS_WHISPER_MODEL", "whisper")
-WHISPER_MAX_SECONDS = int(os.getenv("YT_TRANSCRIPTS_WHISPER_MAX_SECONDS", "10800"))
+# The composition root owns configuration and credential reads. Only the key
+# file path enters the environment; the adapter receives the key explicitly.
+DEEPGRAM_KEY_FILE = os.getenv("YT_TRANSCRIPTS_DEEPGRAM_KEY_FILE", "")
+DEEPGRAM_MODEL = os.getenv("YT_TRANSCRIPTS_DEEPGRAM_MODEL", "")
+DEEPGRAM_MAX_SECONDS = int(os.getenv("YT_TRANSCRIPTS_DEEPGRAM_MAX_SECONDS", "0"))
+# One audio job at a time. At capacity reject, rather than queue billed work.
+_audio_lock = asyncio.Lock()
+
+
+def read_deepgram_key() -> str:
+    try:
+        key = Path(DEEPGRAM_KEY_FILE).read_text().strip()
+    except (OSError, UnicodeError):
+        raise TranscriptError("deepgram_failed", "API key file is unreadable") from None
+    if not key or any(c.isspace() for c in key):
+        raise TranscriptError("deepgram_failed", "API key file is empty or malformed")
+    return key
 
 # English translation of non-English X posts through DX2. An empty URL
 # disables it and posts save in their original language.
@@ -62,17 +74,14 @@ translator = (xpost.dx2_translator(DX2_URL, os.getenv("YT_TRANSCRIPTS_DX2_MODEL"
 
 # Wall-clock budgets. /transcript is synchronous and captions-only, so it keeps
 # the old 60 s ceiling; job videos bound each stage separately instead
-# (metadata 20 s inside fetch_metadata, captions CAPTION_TIMEOUT, Whisper a
-# budget scaled by duration — 5x the measured 0.1 s per audio second, plus
-# queueing behind other whisper-server users).
+# (metadata 20 s inside fetch_metadata, captions CAPTION_TIMEOUT, audio bounded
+# by its download/conversion budgets and the number of HTTP upload chunks).
 VIDEO_TIMEOUT = 60
 CAPTION_TIMEOUT = 75
 POST_TIMEOUT = 120  # an X thread walk: up to xpost.MAX_THREAD posts, ~1 s each
 # A logged-in capture: the scroll budget plus browser start, page load and the
 # wait for its first response.
 CAPTURE_TIMEOUT = xbrowser.CAPTURE_BUDGET_SECONDS + 90
-def whisper_budget(duration: int) -> float:
-    return 120 + duration * 0.5
 
 # Pause between videos in a job, so a batch is not a burst.
 PACE_SECONDS = 2.0
@@ -81,7 +90,7 @@ PACE_SECONDS = 2.0
 STATUS_FOR_REASON = {"invalid_url": 400, "no_captions": 404, "unavailable": 404,
                      "rate_limited": 503, "timeout": 504, "login_required": 409}
 
-app = FastAPI(title="Transcripts", version="4.1.0")
+app = FastAPI(title="Transcripts", version="4.2.0")
 
 
 # ---------------------------------------------------------------------------
@@ -285,7 +294,7 @@ def write_transcript(out_dir: Path, title: str, key: str, md: str) -> Path:
 # ---------------------------------------------------------------------------
 # Core extraction
 # ---------------------------------------------------------------------------
-async def _extract(url: str, mode: str, out_dir: Path, allow_whisper: bool = False,
+async def _extract(url: str, mode: str, out_dir: Path, allow_audio: bool = False,
                    on_stage=lambda stage: None) -> dict:
     """Extract one video's transcript and write it into out_dir. Returns result dict.
 
@@ -311,17 +320,23 @@ async def _extract(url: str, mode: str, out_dir: Path, allow_whisper: bool = Fal
         caption_failure = e
 
     if caption_failure:
-        if not (allow_whisper and WHISPER_URL) or caption_failure.reason == "unavailable":
+        if not (allow_audio and DEEPGRAM_KEY_FILE) or caption_failure.reason == "unavailable":
             raise caption_failure
         captions_said = f"captions: {caption_failure.reason}"
-        if meta.duration > WHISPER_MAX_SECONDS:
+        if meta.duration > DEEPGRAM_MAX_SECONDS:
             raise TranscriptError("too_long", f"{format_duration(meta.duration)} is over the "
-                                  f"{format_duration(WHISPER_MAX_SECONDS)} limit; {captions_said}")
-        budget = whisper_budget(meta.duration)
-        logger.info(f"{video_id}: {captions_said}; transcribing audio with Whisper (budget {budget:.0f}s)")
+                                  f"{format_duration(DEEPGRAM_MAX_SECONDS)} limit; {captions_said}")
+        if _audio_lock.locked():
+            raise TranscriptError("transcription_busy")
+        budget = audio_budget(meta.duration or DEEPGRAM_MAX_SECONDS)
+        logger.info(f"{video_id}: {captions_said}; transcribing audio with Deepgram (budget {budget:.0f}s)")
         try:
-            transcript = await asyncio.wait_for(
-                transcribe_audio(video_id, WHISPER_URL, WHISPER_MODEL, on_stage), timeout=budget)
+            async with _audio_lock:
+                key = read_deepgram_key()
+                async with httpx.AsyncClient(timeout=DEEPGRAM_CHUNK_TIMEOUT, trust_env=False) as client:
+                    transcript = await asyncio.wait_for(
+                        transcribe_audio(video_id, key, DEEPGRAM_MODEL, on_stage,
+                                         client=client, max_seconds=DEEPGRAM_MAX_SECONDS), timeout=budget)
         except asyncio.TimeoutError:
             raise TranscriptError("timeout", f"audio transcription passed {budget:.0f}s; {captions_said}")
         except TranscriptError as e:
@@ -343,6 +358,7 @@ async def _extract(url: str, mode: str, out_dir: Path, allow_whisper: bool = Fal
         "transcript": text,
         "filename": str(filepath),
         "source": transcript.kind,
+        "transcription_request_ids": transcript.request_ids,
     }
 
 
@@ -579,7 +595,7 @@ async def _run_job(job_id: str, urls: list[str], items: list[WorkItem], mode: st
             if key.startswith("x:"):
                 result = await _extract_post(item.url, item.dest, item.x_mode, item.limit, on_stage=stage)
             else:
-                result = await _extract(item.url, mode, item.dest, allow_whisper=True, on_stage=stage)
+                result = await _extract(item.url, mode, item.dest, allow_audio=True, on_stage=stage)
             result["playlist"] = item.playlist
             job.results.append(result)
         except TranscriptError as e:
@@ -614,7 +630,8 @@ async def get_job(job_id: str):
 async def config():
     return {"roots": [str(r) for r in OUTPUT_ROOTS], "default_mode": DEFAULT_MODE,
             "x_modes": xpost.X_MODE_LABELS, "x_login_modes": sorted(xpost.LOGIN_MODES),
-            "x_limit_default": xpost.REPLY_LIMIT_DEFAULT, "x_limit_max": xpost.REPLY_LIMIT_MAX}
+            "x_limit_default": xpost.REPLY_LIMIT_DEFAULT, "x_limit_max": xpost.REPLY_LIMIT_MAX,
+            "audio_provider": {"id": AUDIO_PROVIDER, "label": AUDIO_PROVIDER_LABEL}}
 
 
 # ---------------------------------------------------------------------------
@@ -644,11 +661,15 @@ async def health():
     disk = shutil.disk_usage(OUTPUT_DIR) if OUTPUT_DIR.exists() else None
     return {
         "status": "healthy",
+        "schema_version": 2,
         "disk_free_gb": round(disk.free / (1024**3), 1) if disk else None,
         "output_dir": str(OUTPUT_DIR),
         "output_roots": [str(r) for r in OUTPUT_ROOTS],
-        "whisper": {"url": WHISPER_URL or None, "model": WHISPER_MODEL,
-                    "max_seconds": WHISPER_MAX_SECONDS, "ffmpeg": shutil.which("ffmpeg")},
+        "deepgram": {"enabled": bool(DEEPGRAM_KEY_FILE), "model": DEEPGRAM_MODEL or None,
+                     "max_seconds": DEEPGRAM_MAX_SECONDS, "active": _audio_lock.locked()},
+        # Additive health compatibility, permanent by design: old probes see
+        # Whisper disabled; no Whisper execution/configuration path remains.
+        "whisper": {"url": None, "model": None, "max_seconds": 0, "ffmpeg": shutil.which("ffmpeg")},
         "x_session": xbrowser.session_status(),
         "translate": {"url": DX2_URL or None},
     }
@@ -702,7 +723,7 @@ async def ui():
   .results .path { color: #059669; word-break: break-all; font-size: .78rem; }
   .results .fail .title { color: #dc2626; }
   .results .fail .path { color: #b91c1c; }
-  .badge.whisper { background: #fef3c7; color: #92400e; }
+  .badge.audio { background: #fef3c7; color: #92400e; }
   .badge { display: inline-block; background: #ede9fe; color: #6d28d9; border-radius: 5px;
            padding: .05rem .4rem; font-size: .68rem; margin-right: .35rem; vertical-align: middle; }
   .results .skip .title { color: #444; font-weight: 600; }
@@ -771,7 +792,7 @@ async def ui():
 
 <script>
 const $=id=>document.getElementById(id);
-let _results=[], _base=[], _jobId=null, _xmodes={post:'Post'};
+let _results=[], _base=[], _jobId=null, _xmodes={post:'Post'}, _audioProvider=null;
 
 function rowHtml() {
   return `<div class="urlrow">
@@ -794,6 +815,7 @@ function delRow(btn) {
 async function loadConfig() {
   try {
     const r=await fetch('/config'); const d=await r.json();
+    _audioProvider=d.audio_provider;
     $('base').innerHTML=d.roots.map(p=>`<option value="${p}">${p}</option>`).join('');
     if(d.default_mode) $('mode').value=d.default_mode==='raw'?'raw':'clean';
     _xmodes=d.x_modes;
@@ -827,7 +849,7 @@ function renderResults(status) {
       li.className='ok';
       if(r.status==='exists') li.className='skip';
       const src=r.status==='exists'?'<span class="badge saved" title="Found an existing transcript for this video; not fetched again">Already saved</span>'
-        :r.source==='whisper'?'<span class="badge whisper" title="No captions could be fetched; transcribed from the audio">Whisper</span>'
+        :r.source===_audioProvider?.id?`<span class="badge audio" title="No captions could be fetched; transcribed from the audio">${_audioProvider.label}</span>`
         :r.source==='x'?`<span class="badge x">${xBadge(r)}</span>`:'';
       li.innerHTML=`<div class="body"><div class="title">${badge}${src}${r.title||''}</div><div class="path">${r.filename||''}</div></div>`;
       const b=document.createElement('button'); b.className='copy'; b.textContent='Copy';
@@ -923,9 +945,14 @@ loadX();
 
 
 if __name__ == "__main__":
-    # Refuse to run half-alive: the Whisper fallback shells out to ffmpeg.
-    if WHISPER_URL and not shutil.which("ffmpeg"):
-        raise SystemExit("YT_TRANSCRIPTS_WHISPER_URL is set but ffmpeg is not on PATH")
+    # Refuse to start with a fallback that cannot download/convert/authenticate.
+    if DEEPGRAM_KEY_FILE:
+        if not DEEPGRAM_MODEL or DEEPGRAM_MAX_SECONDS <= 0 or any(not shutil.which(tool) for tool in ("ffmpeg", "yt-dlp")):
+            raise SystemExit("Deepgram needs a model, ffmpeg and yt-dlp")
+        try:
+            read_deepgram_key()
+        except TranscriptError:
+            raise SystemExit("Deepgram API key file is unreadable, empty or malformed") from None
     # X captures need the bundled Chromium.
     browsers = os.getenv("PLAYWRIGHT_BROWSERS_PATH", "")
     if not browsers or not any(Path(browsers).glob("chromium-*")):

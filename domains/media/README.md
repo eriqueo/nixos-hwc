@@ -12,6 +12,8 @@ photo management, and video surveillance services.
 
 ## Structure
 
+`youtube/` runs the transcripts site with captions-first extraction and a bounded Deepgram audio fallback, using the generated `deepgram-api-key` mount.
+
 Machine references follow machines/home; media state and service ownership are unchanged.
 
 ```
@@ -70,6 +72,7 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-10-23: Switch the transcripts site audio fallback from local Whisper to Deepgram Nova-3. Keep captions, X capture and existing saved transcripts; wire the key through the generated secrets facade and add the provider contract check.
 - 2026-10-22: Restore the XPS local Jellyfin library through the native module. GPU-disabled instances now generate software encoding settings; the XPS treats its Maryland LAN as local and refuses startup without its ZFS media mount or a readable pool state. A degraded mirror emits a warning; an unavailable or suspended pool blocks startup.
 - 2026-09-30: Preserve Radarr's local executable-title rejection score during Recyclarr sync. Sonarr and Radarr runtime settings prefer Usenet with a 24-hour torrent delay and fail executable/dangerous downloads for automatic replacement.
 - 2026-09-26: Machine references follow machines/home; media state and service ownership are unchanged.

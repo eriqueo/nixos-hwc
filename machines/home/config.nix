@@ -1086,6 +1086,7 @@
   # YouTube services (legacy transcript API removed 2026-07-05 — superseded by
   # yt-transcripts-api v2; its scriptDir had pointed at a nonexistent path)
   hwc.media.youtube.transcripts = {
+    deepgram.enable = true;
     enable = lib.mkDefault true;
     port = 8100;
     outputDirectory = "/mnt/media/transcripts";
