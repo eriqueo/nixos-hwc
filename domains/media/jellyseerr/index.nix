@@ -22,7 +22,7 @@ in
   #==========================================================================
   options.hwc.media.jellyseerr = {
     enable = lib.mkEnableOption "jellyseerr container";
-    image = lib.mkOption { type = lib.types.str; default = runtimeImage; description = "Qualified container image; local default built from system.build.seerrRuntimeImageRecipe"; };
+    image = lib.mkOption { type = lib.types.str; default = upstreamImage; description = "Recovery image pinned to the exact prior app/runtime; settings preservation stays enabled"; };
     network.mode = lib.mkOption { type = lib.types.enum [ "media" "vpn" ]; default = "media"; };
     gpu.enable = lib.mkOption { type = lib.types.bool; default = false; };
   };

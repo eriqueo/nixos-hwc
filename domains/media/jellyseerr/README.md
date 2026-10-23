@@ -70,6 +70,10 @@ Seerr depends on:
 
 ## Changelog
 
+- Recovery candidate: pin the exact prior image while keeping atomic settings
+  preservation and current data. This is an availability fallback with the old
+  Node runtime; it does not restore a stale database.
+
 - 2026-10-23: Add an immutable runtime-only image recipe and derived local tag.
   It replaces Node while retaining exact app bytes and database compatibility;
   application upgrade/recovery remains separately tracked.
