@@ -3498,6 +3498,12 @@
           (throw "destination assertion absent") assertions).assertion;
         invalid = settings: (base.extendModules { modules = [ fixtureModule settings ]; }).config;
         unit = name: c.systemd.services."borgbackup-job-${name}";
+        xpsSnapshot = pkgs.writeText "xps-state-snapshot.json" (builtins.toJSON {
+          hook = xps.services.borgbackup.jobs.hwc-backup-home.preHook;
+          source = xps.hwc.data.borg.sqliteSnapshots.jellyfin.source;
+          state = "${xps.hwc.paths.state}/borg-sqlite";
+          locks = "${xps.hwc.paths.state}/borg-jobs";
+        });
         scripts = map (name: pkgs.writeText "${name}-entry.sh" (unit name).script)
           [ "hwc-backup" "hwc-backup-test" ];
       in
@@ -3529,8 +3535,27 @@
       assert lib.hasSuffix "check --lock-wait 300 ssh://borg@192.0.2.10/fixture/offsite" c.systemd.services.borg-check-test.serviceConfig.ExecStart;
       assert c.systemd.timers.borgbackup-job-hwc-backup-test.timerConfig.OnCalendar == "*-*-* 04:00:00";
       pkgs.runCommand "borg-destinations" { nativeBuildInputs = [ pkgs.python3 pkgs.bash pkgs.coreutils pkgs.util-linux ]; } ''
-        python3 - ${lib.concatStringsSep " " (map toString scripts)} ${secondary.environment.BORG_RSH} <<'PY'
-        import json, os, pathlib, re, shutil, subprocess, sys, tempfile, time
+        python3 - ${lib.concatStringsSep " " (map toString scripts)} ${secondary.environment.BORG_RSH} ${xpsSnapshot} <<'PY'
+        import json, os, pathlib, pwd, re, shutil, sqlite3, subprocess, sys, tempfile, time
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            source = root/'jellyfin.db'
+            with sqlite3.connect(source) as db:
+                db.execute('CREATE TABLE history(value TEXT)')
+                db.execute("INSERT INTO history VALUES('last-good')")
+            spec = json.loads(pathlib.Path(sys.argv[4]).read_text())
+            (root/'locks').mkdir()
+            hook = spec['hook'].replace(spec['source'],str(source)).replace(spec['state'],str(root/'snapshots')).replace(spec['locks'],str(root/'locks'))
+            hook = re.sub(r"(--user\s+)(?:'eric'|eric)(?=\s|$)", lambda m:m[1]+pwd.getpwuid(os.getuid()).pw_name,hook)
+            subprocess.run(['bash','-c',hook],check=True,timeout=20,capture_output=True)
+            ready = root/'snapshots/ready/jellyfin.sqlite'
+            with sqlite3.connect(ready) as db:
+                assert db.execute('PRAGMA quick_check').fetchone() == ('ok',)
+                assert db.execute('SELECT value FROM history').fetchone() == ('last-good',)
+            before = ready.read_bytes()
+            source.unlink()
+            failed = subprocess.run(['bash','-c',hook],timeout=20,capture_output=True)
+            assert failed.returncode != 0 and ready.read_bytes() == before, 'failed XPS snapshot replaced last-good copy'
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
             lockdir = root / 'locks'
