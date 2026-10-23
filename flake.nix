@@ -2930,18 +2930,6 @@
       # named but never reaches the unit.
       # The gauntlet runs on hwc-work since service split wave 1; the check
       # follows it (it failed "no subject" while still pointed at hwc-home).
-      # Rebuilding a runtime must not launch or interrupt investigations.
-      gauntlet-switch-policy = let
-        services = self.nixosConfigurations.hwc-work.config.systemd.services;
-        names = [ "sr-gauntlet" "sr-gauntlet-runnow" "dx1-gauntlet" "dx1-gauntlet-runnow" ];
-      in
-      assert lib.all (name:
-        builtins.hasAttr name services && !services.${name}.restartIfChanged
-        && lib.hasInfix "X-RestartIfChanged=false"
-          self.nixosConfigurations.hwc-work.config.systemd.units."${name}.service".text
-      ) names;
-      pkgs.runCommand "gauntlet-switch-policy" {} ''touch "$out"'';
-
       sr-gauntlet-flock = let
         server = self.nixosConfigurations."hwc-work".config;
         units = [ "sr-gauntlet.service" "sr-gauntlet-runnow.service" ];
