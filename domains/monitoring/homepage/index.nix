@@ -49,8 +49,9 @@ in
 
     image = lib.mkOption {
       type = lib.types.str;
-      # Homepage 2.7.0 supplies the October 2026 Node security fixes.
-      default = "ghcr.io/gethomepage/homepage@sha256:f1c9e802a0b9de6f64ef8d3e3d3aac4283f250e0a8ff5ebd170d791811431c99";
+      # Emergency image recovery retains the ownership repair.
+      # Remove this fallback after the reviewed 2.7.0 release is accepted.
+      default = "ghcr.io/gethomepage/homepage@sha256:643bd0be730d40f69d58028a55d1a896739333e8815786df42bc97f109ecbe61";
       description = "Homepage container image";
     };
 

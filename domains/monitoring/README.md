@@ -70,7 +70,7 @@ monitoring/
 
 ## Changelog
 
-- 2026-10-23: Pin Homepage 2.7.0 with corrected Node. Keep its config owned by
+- 2026-10-23: Emergency Homepage recovery pins the prior 2.4.0 image. Keep its config owned by
   the shared service identity during activation and tmpfiles runs; root ownership
   previously caused the services API to exit with EACCES until the container restarted.
 - 2026-10-06: Preserve hyphens in system and user failure notifier instances.
