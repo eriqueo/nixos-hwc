@@ -6,7 +6,7 @@ The old installation template described active-active redundancy that was never 
 
 ## Configuration owners
 
-- `flake.nix`: stable channel and base/desktop/server role membership.
+- `flake.nix`: stable channel, base/desktop/server role membership and the same scoped native Node runtime used on work. The runtime binding preserves Chromium/PyTorch build dependencies.
 - `machines/xps/config.nix`: machine-specific services, ZFS pool import, local network and startup safeguards.
 - `machines/xps/hardware.nix`: boot/root UUIDs and detected boot modules.
 - `machines/xps/home.nix`: desktop overrides for this machine.

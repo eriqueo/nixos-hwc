@@ -418,8 +418,9 @@
       xps = {
         channel   = "stable";
         roles     = [ "base" "desktop" "server" ];
-        nixosPkgs = pkgs-stable;
-        hmPkgs    = pkgs-stable;
+        nixosPkgs = serverRuntimeScope.pkgs;
+        hmPkgs    = serverRuntimeScope.pkgs;
+        scopedNodeRuntime = true;
       };
       kids = {
         channel   = "unstable";
@@ -858,6 +859,7 @@
             home = serverCudaRuntimeScope;
             work = serverRuntimeScope;
             laptop = laptopRuntimeScope;
+            xps = serverRuntimeScope;
           }.${host};
           runtime22 = host: (scope host).pkgs.nodejsRuntime_22;
           runtime24 = host: (scope host).pkgs.nodejsRuntime_24;
@@ -875,7 +877,7 @@
             lib.hasPrefix "${runtime22 "work"}/bin/node "
               (server "work").config.systemd.services.${unit}.serviceConfig.ExecStart;
         in
-        assert lib.assertMsg (lib.all hostValid [ "work" "home" "laptop" ])
+        assert lib.assertMsg (lib.all hostValid [ "work" "home" "laptop" "xps" ])
           "Node runtime selection, Home Manager parity or no-cascade contract failed";
         assert lib.assertMsg (lib.all commandUsesRuntime [ "hwc-notify" "hwc-sys-mcp" "heartwood-cms" "hwc-leads" ])
           "Native Node22 service command did not select the corrected runtime";
