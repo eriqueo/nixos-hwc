@@ -1,4 +1,4 @@
-# domains/server/containers/immich/
+# domains/media/immich-container/
 
 ## Purpose
 
@@ -12,13 +12,16 @@ Immich photo management with NVIDIA CUDA GPU acceleration for ML operations (Sma
 ## Structure
 
 ```
-domains/server/containers/immich/
-├── index.nix           # Container definition with GPU config
-├── options.nix         # hwc.server.containers.immich.* options
-└── sys.nix             # System-lane packages
+domains/media/immich-container/
+├── index.nix           # hwc.media.immich options and exact recovery image pins
+├── sys.nix             # System-lane import point
+└── parts/config.nix    # Containers, mounts, database and GPU dependencies
 ```
 
 ## GPU Optimizations
+
+The historical performance estimates below are unverified. They do not qualify
+this recovery image or measure the current host.
 
 ### Performance Gains
 
@@ -78,6 +81,11 @@ journalctl -u immich-machine-learning | grep -i "onnx\|cuda"  # CUDA provider
 **Poor performance**: Check GPU memory usage, TensorRT cache population, process priorities
 
 ## Changelog
+
+- 2026-10-23: Pin exact prior 2.5.6 server/ML artifacts for availability recovery
+  against current data. Verified registry archives and old/new/old consumers
+  preserve 18 core tables and 55 migrations. These older runtimes remain
+  unpatched; replace the recovery selection after corrected-runtime acceptance.
 
 - 2026-03-27: Fixed Prometheus metrics port mappings — added host-side port publishing for apiPort (8091) and microservicesPort (8092) which were only set as container env vars but never exposed, causing false ServiceDown alerts
 - 2026-02-26: Created README per Law 12 (migrated from docs/infrastructure/)

@@ -20,8 +20,11 @@ in
     enable = lib.mkEnableOption "Immich photo management server (containerized)";
 
     images = {
-      server = lib.mkOption { type = lib.types.str; default = "ghcr.io/immich-app/immich-server:v2"; description = "Immich server container image"; };
-      machineLearning = lib.mkOption { type = lib.types.str; default = "ghcr.io/immich-app/immich-machine-learning:v2-cuda"; description = "Immich ML container image"; };
+      # Temporary availability recovery: exact prior 2.5.6 artifacts consume
+      # current data. Replace after the corrected runtime release passes live
+      # acceptance; these old TLS/Node versions are not security remediation.
+      server = lib.mkOption { type = lib.types.str; default = "ghcr.io/immich-app/immich-server@sha256:8b14246ee4c53e39191a54279f8c72f3eed3c026c5b23d0f7e4ab5e69e3aac4a"; description = "Immich server container image"; };
+      machineLearning = lib.mkOption { type = lib.types.str; default = "ghcr.io/immich-app/immich-machine-learning@sha256:6bfdbe69ffcd0543f8f8fc45993d9b1559aa3c92078c44b41ece67132d16d9d3"; description = "Immich ML container image"; };
       redis = lib.mkOption { type = lib.types.str; default = "docker.io/library/redis:7.2-alpine"; description = "Redis container image"; };
     };
 
