@@ -127,6 +127,9 @@ describe("hwc_refinery triage board", () => {
 
 describe("hwc_refinery prefix routing", () => {
   it.each([
+    { repo: "eriqueo/datax" },
+    { repo: "eriqueo/dx-mcp" },
+    { repo: "https://github.com/eriqueo/jt-mcp.git" },
     { repo: "ContractorCTO/datax" },
     { repo: "ContractorCTO/dx-mcp" },
     { repo: "elstruck/datax" },

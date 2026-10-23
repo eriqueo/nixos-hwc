@@ -244,15 +244,20 @@ function repoSlug(repo: string): string | null {
   return `${match[1].toLowerCase()}/${name}`;
 }
 
-/** Standing merge authority applies only to Eric's GitHub repositories.
+/** Standing merge authority applies only to Eric's GitHub repositories,
+ * excluding DataX/dx-mcp/jt-mcp even when the repository is an owned fork.
  * A stored mergeable flag is historical evidence, never permission or a live
  * mergeability check. gh decides whether the current PR can actually merge.
  */
+const EXCLUDED_MERGE_REPOSITORY_NAMES = new Set(["datax", "dx-mcp", "jt-mcp"]);
+
 function mergeEligibility(review: Review): { allowed: true; repo: string; prNumber: number } | { allowed: false } {
   const repo = repoSlug(review.repo);
+  const [owner, name] = repo?.split("/") ?? [];
   if (review.status !== "needs-you" || review.verdict !== "merge-ready"
       || !Number.isSafeInteger(review.prNumber) || review.prNumber == null || review.prNumber <= 0
-      || !repo || repo.split("/")[0] !== "eriqueo") return { allowed: false };
+      || !repo || owner !== "eriqueo"
+      || EXCLUDED_MERGE_REPOSITORY_NAMES.has(name.toLowerCase())) return { allowed: false };
   return { allowed: true, repo, prNumber: review.prNumber };
 }
 

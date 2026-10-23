@@ -9,7 +9,7 @@
 
 ## Structure
 
-MCP `mcp/src/src/tools/nightly-review.ts` shares merge eligibility between nightly/Refinery action lists and dispatch. Only needs-you, merge-ready reviews with positive PR numbers in Eric's GitHub repositories can dispatch a merge; `gh` checks the live PR.
+MCP `mcp/src/src/tools/nightly-review.ts` shares merge eligibility between nightly/Refinery action lists and dispatch. Only needs-you, merge-ready reviews with positive PR numbers in Eric's GitHub repositories can dispatch a merge. DataX/dx-mcp/jt-mcp repositories remain excluded even under owned forks; `gh` checks the live PR.
 
 MCP `mealCollections` enables the additive version-1 conditional meal protocol in `mcp/src/src/tools/tasks.ts`; exact collection identities and ETags bound every effect.
 
@@ -76,6 +76,10 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-10-23: Apply the DataX/dx-mcp/jt-mcp merge exclusion to owned forks too;
+  the shared eligibility rule takes precedence over repository ownership.
+
 
 - 2026-10-23: Enforce the same owned-GitHub repository, review-state and PR-number checks in nightly/Refinery merge discovery and dispatch. Reject malformed/non-GitHub remotes and bind `gh` to github.com; keep requeue actions available under their existing state rules.
 
