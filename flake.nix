@@ -3504,8 +3504,9 @@
                         other_databases.append(initialize(other))
                         source_ports[entry['source']] = str(other)
                     # Replace an argument, never substrings such as --state-root.
-                    script = script.replace("--user '" + entry['user'] + "'",
-                        '--user ' + shlex.quote(pwd.getpwuid(os.getuid()).pw_name))
+                    user_argument = r"(--user\s+)(?:'" + re.escape(entry['user']) + r"'|" + re.escape(entry['user']) + r")(?=\s|$)"
+                    script = re.sub(user_argument,
+                        lambda match: match[1] + shlex.quote(pwd.getpwuid(os.getuid()).pw_name), script)
                 script = script.replace(spec['stateRoot'], str(state))
                 for original, replacement in source_ports.items():
                     script = script.replace(original, replacement)
