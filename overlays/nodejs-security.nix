@@ -64,6 +64,11 @@ let
     const db = new DatabaseSync(':memory:');
     assert.equal(db.prepare('select 42 as value').get().value, 42);
     db.close();
+    // Preserve buildNpmPackage's existing node-gyp selection contract.
+    process.env.NIX_NODEJS_BUILDNPMPACKAGE = '1';
+    const setPath = require(process.argv[3] + '/lib/node_modules/npm/node_modules/@npmcli/run-script/lib/set-path.js');
+    const paths = setPath('/isolated', ['/project-injected-bin'], { PATH: '/trusted-bin' }).PATH.split(':');
+    assert(paths.indexOf('/trusted-bin') < paths.indexOf('/project-injected-bin'), 'Nix node-gyp PATH precedence missing');
     console.log(JSON.stringify({ result: 'pass', versions: process.versions }));
   '';
   mkRuntime = major:
@@ -77,6 +82,16 @@ let
       };
       nativeBuildInputs = [ prev.autoPatchelfHook ];
       buildInputs = [ prev.stdenv.cc.cc.lib ];
+      # Reuse the pinned Nixpkgs npm compatibility patch; do not fork its logic.
+      prePatch = ''
+        mkdir deps
+        mv lib/node_modules/npm deps/npm
+      '';
+      patches = [ (prev.path + "/pkgs/development/web/nodejs/node-npm-build-npm-package-logic.patch") ];
+      postPatch = ''
+        mv deps/npm lib/node_modules/npm
+        rmdir deps
+      '';
       dontBuild = true;
       dontStrip = true;
       installPhase = ''
@@ -88,7 +103,7 @@ let
       doInstallCheck = true;
       installCheckPhase = ''
         runHook preInstallCheck
-        "$out/bin/node" ${runtimeCheck} ${lib.escapeShellArg (builtins.toJSON (runtimeDependencies // { node = release.version; }))}
+        "$out/bin/node" ${runtimeCheck} ${lib.escapeShellArg (builtins.toJSON (runtimeDependencies // { node = release.version; }))} "$out"
         "$out/bin/node" "$out/lib/node_modules/npm/bin/npm-cli.js" --version
         "$out/bin/node" "$out/lib/node_modules/npm/bin/npx-cli.js" --version
         runHook postInstallCheck
