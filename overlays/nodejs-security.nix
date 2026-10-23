@@ -154,7 +154,17 @@ let
           buildNodejs = final.callPackage fn
             (fnArgs // lib.optionalAttrs brotliNeedsFix { brotli = brotliFixed; });
         in
-        args: buildNodejs (args // lib.optionalAttrs bump { inherit version sha256; });
+        args: buildNodejs (args // lib.optionalAttrs bump {
+          inherit version sha256;
+          # Node 24.20+ includes emulator support upstream; older Nixpkgs
+          # recipes still add its backport. Keep every other recipe patch.
+          # Remove this filter when the source bump retires with the overlay.
+          patches = lib.filter (patch:
+            !(lib.versions.major version == "24"
+              && lib.versionAtLeast version "24.20.0"
+              && builtins.baseNameOf (toString patch) == "configure-emulator.patch")
+          ) (args.patches or [ ]);
+        });
     };
 in {
   nodejsRuntime_22 = mkRuntime "22";

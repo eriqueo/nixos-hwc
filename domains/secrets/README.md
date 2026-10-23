@@ -9,6 +9,8 @@
 
 ## Structure
 
+`parts/services/deepgram-api-key.age` supplies the generated `deepgram-api-key` mount with the default `root:secrets` ownership and `0440` mode. The encrypted payload is CRITICAL source data retained in Git; agenix recreates the runtime mount.
+
 `parts/services/hwc-gateway-com.age` holds the replacement gateway's isolated
 Access origin credentials as Wrangler secrets JSON. The generator mounts it
 as `root:secrets / 0440`. The retired `.me` gateway and Hostinger SFTP payloads and mounts are removed.
@@ -62,6 +64,7 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-10-23: Add the existing Deepgram API key ciphertext to the generated all-host secret set. Verified decryption without printing the key.
 
 - 2026-10-19: `hardening.nix` keeps `AllowTcpForwarding no` globally but allows `local` forwarding for tailnet addresses (100.64.0.0/10, fd7a:115c:a1e0::/48), so `ssh -L <port>:localhost:<port> hwc-work` shows a remote dev server as `localhost` on the laptop (Firebase sign-in and geolocation need localhost or HTTPS). Remote (`-R`) forwarding stays off everywhere.
 - 2026-10-02: Added `crm-meta-app-secret` (`parts/services/`), the Meta app secret hwc-crm uses to check `X-Hub-Signature-256` on Messenger deliveries. Supplied by Eric, shape checked (32 hex) without display; standard `root:secrets / 0440`, encrypted to the existing recipients.
