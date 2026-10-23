@@ -759,6 +759,7 @@
       pkgs.runCommand "transcripts-deepgram" { nativeBuildInputs = [ python pkgs.ripgrep ]; } ''
         export PYTHONPATH=${./workspace/media/youtube-services}
         cd ${./workspace/media/youtube-services}
+        python3 -c "import api"
         python3 -m unittest -q test_transcript
         rg -F ${lib.escapeShellArg ''export YT_TRANSCRIPTS_DEEPGRAM_KEY_FILE="${c.hwc.secrets.api.deepgram-api-key}"''} ${service.serviceConfig.ExecStart} >/dev/null
         if rg 'YT_TRANSCRIPTS_WHISPER_' ${service.serviceConfig.ExecStart}; then

@@ -354,7 +354,7 @@ def deepgram_chunk(result: dict) -> AudioChunk:
             if text.strip():
                 segments.append(Segment(text.strip(), float(start), float(end - start)))
         return AudioChunk(segments, request_id)
-    except (KeyError, TypeError, ValueError):
+    except (KeyError, TypeError, ValueError, OverflowError):
         raise TranscriptError("deepgram_failed", "invalid provider response") from None
 
 

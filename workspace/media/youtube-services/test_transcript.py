@@ -80,7 +80,7 @@ class DeepgramResponse(unittest.TestCase):
         self.assertEqual(chunk.request_id, result["metadata"]["request_id"])
 
     def test_invalid_timestamps_are_coded_failures(self):
-        for start, end in [(float("nan"), 1), (3, 2), ("1", 2), (-1, 2)]:
+        for start, end in [(float("nan"), 1), (3, 2), ("1", 2), (-1, 2), (10**1000, 10**1001)]:
             with self.subTest(start=start, end=end), self.assertRaises(T.TranscriptError) as cm:
                 T.deepgram_chunk({"metadata": {"request_id": "id"}, "results": {
                     "utterances": [{"transcript": "hello", "start": start, "end": end}]}})
@@ -185,6 +185,12 @@ class DeepgramAudioPipeline(unittest.TestCase):
         self.assertEqual(result.request_ids, ["r1", "r2"])
         self.assertEqual(result.kind, "deepgram")
         self.assertEqual(post.await_count, 2)
+        post.reset_mock()
+        with mock.patch.object(T, "_run", side_effect=prepare), mock.patch.object(T, "_post_deepgram_chunk", post):
+            with self.assertRaises(T.TranscriptError) as cm:
+                run(T.transcribe_audio("abcdefghijk", "test-token", "nova-3", client=object(), max_seconds=1))
+        self.assertEqual(cm.exception.reason, "too_long")
+        post.assert_not_awaited()
 
 
 class FetchCaptions(unittest.TestCase):
@@ -289,6 +295,30 @@ class ExtractWiring(unittest.TestCase):
             with self.assertRaises(T.TranscriptError) as cm:
                 self._extract(T.TranscriptError("no_captions"))
         self.assertEqual(cm.exception.reason, "transcription_busy")
+
+    def test_concurrent_audio_work_is_shed_and_slot_is_released(self):
+        async def exercise():
+            entered, release = asyncio.Event(), asyncio.Event()
+            async def audio(*args, **kwargs):
+                entered.set()
+                await release.wait()
+                return self.deepgram
+            with mock.patch.object(api, "fetch_metadata", new=mock.AsyncMock(return_value=self.meta)), \
+                 mock.patch.object(api, "fetch_captions", new=mock.AsyncMock(side_effect=T.TranscriptError("no_captions"))), \
+                 mock.patch.object(api, "read_deepgram_key", return_value="test-token"), \
+                 mock.patch.object(api, "transcribe_audio", side_effect=audio) as call:
+                first = asyncio.create_task(api._extract(self.meta.url, "raw", self.out, allow_audio=True))
+                await entered.wait()
+                try:
+                    with self.assertRaises(T.TranscriptError) as cm:
+                        await api._extract(self.meta.url, "raw", self.out, allow_audio=True)
+                    self.assertEqual(cm.exception.reason, "transcription_busy")
+                    self.assertEqual(call.call_count, 1)
+                finally:
+                    release.set()
+                    await first
+                self.assertFalse(api._audio_lock.locked())
+        run(exercise())
 
     def test_missing_or_empty_key_is_a_coded_failure(self):
         for path in [self.out / "missing-key", self.out / "empty-key"]:
