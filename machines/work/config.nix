@@ -97,10 +97,10 @@
   hwc.automation.refinery = {
     enable = true;
     mode = "container";
-    # eriqueo/refinery 6a1cb1f: tracker project link, /api/items and
-    # /api/attention read models for the hub, hub back-links; built locally with
-    # deploy/build-image.sh from that commit (356/356 engine tests); no registry pull.
-    image = "localhost/refinery:6a1cb1f-docker";
+    # eriqueo/refinery 4c88394: immutable corrected Node22.23.4 base, same
+    # 6a1cb1f application artifacts. 356 engine tests and isolated old/new/old
+    # state/API recovery pass; locally built with deploy/build-image.sh.
+    image = "localhost/refinery:4c88394-node22.23.4";
     imagePull = "never";
   };
   hwc.automation.nightlyBuilds = {
