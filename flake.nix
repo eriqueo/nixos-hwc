@@ -459,11 +459,14 @@
     # path, Courier tailnet hostname, and the Tether package (built once by
     # the system half; without it standalone `hms` dropped the tetherd unit).
     homeSpecialArgs = name: ch:
-      let sysConfig = self.nixosConfigurations."hwc-${name}".config; in {
+      let
+        sysConfig = self.nixosConfigurations."hwc-${name}".config;
+        hmLib = import ./domains/lib/hm.nix { inherit lib; };
+      in {
         inherit inputs;
         nixosApiVersion = ch.apiVersion;
         screenshotRoot = lib.attrByPath [ "hwc" "paths" "screenshots" ] null sysConfig;
-        courierTailnetHost = "${sysConfig.networking.hostName}.${sysConfig.hwc.networking.hosts.tailnetSuffix}";
+        courierTailnetHost = "${sysConfig.networking.hostName}.${(hmLib.fleet sysConfig).tailnetSuffix}";
         tetherPackage =
           if lib.attrByPath [ "hwc" "system" "apps" "tether" "enable" ] false sysConfig
           then sysConfig.hwc.system.apps.tether.package
