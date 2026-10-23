@@ -317,35 +317,10 @@
     # Node.js security overlay — TEMPORARY (tracked). Node 24.22.1 / 22.23.4
     # with brotli CVE-2026-111497 fix, ahead of both channels. See the file
     # header for the removal condition.
-    nodejsSecurityOverlay = import ./overlays/nodejs-security.nix;
-
-    # TEMPORARY: server modules select corrected runtimes without feeding them
-    # back into Nixpkgs' package fixed point (which rebuilds Chromium/CUDA torch).
-    # Remove with nodejs-security.nix after the pinned packages pass its manifest.
-    mkNodeRuntimeScope = original:
-      let
-        buildPkgs = import original.path {
-          inherit (original) system config;
-          overlays = map (overlay: final: prev:
-            let result = overlay final prev; in
-            if result ? nodejsRuntime_22 && result ? nodejsRuntime_24 then
-              builtins.removeAttrs result [ "nodejs-slim_22" "nodejs-slim_24" ]
-            else result) original.overlays;
-        };
-        runtime22 = buildPkgs.nodejsRuntime_22;
-        runtime24 = buildPkgs.nodejsRuntime_24;
-        defaultRuntime = { "22" = runtime22; "24" = runtime24; }.${lib.versions.major buildPkgs.nodejs.version};
-      in {
-        inherit buildPkgs;
-        pkgs = buildPkgs // {
-          nodejs = defaultRuntime;
-          nodejs_22 = runtime22;
-          nodejs_24 = runtime24;
-          nodejs-slim = defaultRuntime;
-          nodejs-slim_22 = runtime22;
-          nodejs-slim_24 = runtime24;
-        };
-      };
+    # RECOVERY ONLY: retain accepted source and mounts with baseline Node.
+    # This restores the prior exposure; reinstate the corrected runtime
+    # selection after the failed native release has been diagnosed.
+    nodejsSecurityOverlay = final: prev: { };
 
     # Pkgs helper with optional overlays (server uses this)
     # CUDA enabled - using cache.nixos-cuda.org for pre-built binaries
@@ -373,9 +348,6 @@
     # pkgs-stable with CUDA overlay for server (Immich ML GPU acceleration)
     pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ serverOverlay tailscaleOverlay ghidraOverlay ];
 
-    serverRuntimeScope = mkNodeRuntimeScope pkgs-stable;
-    serverCudaRuntimeScope = mkNodeRuntimeScope pkgs-stable-cuda;
-
     # Firestick is the one aarch64 machine
     pkgs-firestick = mkPkgs "aarch64-linux" nixpkgs [];
 
@@ -393,16 +365,14 @@
       home = {
         channel   = "stable";
         roles     = [ "base" "server" ];
-        nixosPkgs = serverCudaRuntimeScope.pkgs; # CUDA build packages, explicit native Node
-        hmPkgs    = serverRuntimeScope.pkgs;     # standalone HM stays plain stable
-        scopedNodeRuntime = true;
+        nixosPkgs = pkgs-stable-cuda;  # CUDA overlay (Immich ML / llama.cpp)
+        hmPkgs    = pkgs-stable;       # standalone HM lane stays plain stable
       };
       work = {
         channel   = "stable";
         roles     = [ "base" "server" "mail" "business" "monitoring" ];
-        nixosPkgs = serverRuntimeScope.pkgs;
-        hmPkgs    = serverRuntimeScope.pkgs;
-        scopedNodeRuntime = true;
+        nixosPkgs = pkgs-stable;
+        hmPkgs    = pkgs-stable;
       };
       laptop = {
         channel   = "unstable";
@@ -482,14 +452,7 @@
           nixosApiVersion = ch.apiVersion;
         };
         modules = [
-          ({ lib, ... }: {
-            nixpkgs.hostPlatform = sysArch;
-            # nixpkgs.pkgs is re-extended by the framework, losing a shallow
-            # runtime view. Its documented module-argument override preserves it.
-            _module.args = lib.optionalAttrs (m.scopedNodeRuntime or false) {
-              pkgs = lib.mkForce m.nixosPkgs;
-            };
-          })
+          { nixpkgs.hostPlatform = sysArch; }
           # Record the git rev the system was built from → /run/current-system/
           # configuration-revision. Feeds the morning-briefing config-drift tile
           # (deployed-vs-HEAD); null on dirty-tree builds, which is itself signal.
@@ -525,11 +488,6 @@
           ++ [
             (./machines + "/${name}/home.nix")
             { home.username = "eric"; home.homeDirectory = "/home/eric"; }
-            ({ lib, ... }: {
-              _module.args = lib.optionalAttrs (m.scopedNodeRuntime or false) {
-                pkgs = lib.mkForce m.hmPkgs;
-              };
-            })
           ];
       };
 
@@ -735,34 +693,6 @@
         touch $out
       '';
     in {
-      node-runtime-wiring =
-        let
-          server = host: self.nixosConfigurations."hwc-${host}";
-          runtime22 = serverRuntimeScope.pkgs.nodejsRuntime_22;
-          runtime24 = serverRuntimeScope.pkgs.nodejsRuntime_24;
-          scope = host: if host == "home" then serverCudaRuntimeScope else serverRuntimeScope;
-          hasRuntime = packages: lib.any (package: package.outPath == runtime24.outPath) packages;
-          hostValid = host:
-            let system = server host; baseline = (scope host).buildPkgs; in
-            system.pkgs.nodejs.outPath == runtime24.outPath
-            && system.pkgs.nodejs_22.outPath == runtime22.outPath
-            && system.pkgs.chromium.browser.drvPath == baseline.chromium.browser.drvPath
-            && system.pkgs.python3Packages.torch.drvPath == baseline.python3Packages.torch.drvPath
-            && system.pkgs.python3Packages.torchvision.drvPath == baseline.python3Packages.torchvision.drvPath
-            && hasRuntime system.config.home-manager.users.eric.hwc.home.apps.t3code.serve.packages
-            && hasRuntime self.homeConfigurations."eric@hwc-${host}".config.hwc.home.apps.t3code.serve.packages;
-          commandUsesRuntime = unit:
-            lib.hasPrefix "${runtime22}/bin/node "
-              (server "work").config.systemd.services.${unit}.serviceConfig.ExecStart;
-        in
-        assert lib.assertMsg (lib.all hostValid [ "work" "home" ])
-          "Server Node runtime selection, Home Manager parity or no-cascade contract failed";
-        assert lib.assertMsg (lib.all commandUsesRuntime [ "hwc-notify" "hwc-sys-mcp" "heartwood-cms" "hwc-leads" ])
-          "Native Node22 service command did not select the corrected runtime";
-        pkgs.runCommand "node-runtime-wiring" { } ''
-          touch "$out"
-        '';
-
       screenshot-renamer = let
         c = self.nixosConfigurations.hwc-home.config;
         worker = c.systemd.services.screenshot-renamer.serviceConfig;
