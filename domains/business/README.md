@@ -20,7 +20,7 @@ Its service recognizes Next's drained SIGTERM exit and restarts unsolicited exit
 
 The Workbench registry includes Meals, resolving its destination from the shared route owner.
 `workbench.web` optionally serves the read-only browser shell from the pinned Workbench package on loopback :11680. It uses the TUI manifests and canonical Scout styles, preserves `/areas.json` for specialist app switchers, and keeps the existing private vhost. Disable it to restore the static directory.
-Explicit `writeTiles` enable declared Mail and task actions/edits plus legal CRM Jobs/Network moves and Refinery item actions at the same private origin. The CRITICAL reservation/receipt journal lives under `hwc.paths.state/workbench`, with a Borg online SQLite snapshot, eight active reservations and thirty-day bounded terminal history. Restart invalidates unused reservations and contains interrupted submissions; it never replays them. Browser selection supports fifty-item sequential batches with explicit continuation, recoverable session discovery and paged durable action history. Closing the page stops future submissions; issued children retain their own receipts. Bulk edits capture focused-item prefills and selected targets, apply only changed declared fields, and expose frozen values during recovery. Declared source requests use separate controls from read-only Refresh and remain available after failed reads; acknowledgement does not establish completion.
+Explicit `writeTiles` enable declared Mail and task actions/edits plus legal CRM Jobs/Network moves and Refinery item actions at the same private origin. The CRITICAL reservation/receipt journal lives under `hwc.paths.state/workbench`, with a Borg online SQLite snapshot, eight active reservations and thirty-day bounded terminal history. Restart invalidates unused reservations and contains interrupted submissions; it never replays them. Browser selection supports fifty-item sequential batches with explicit continuation, recoverable session discovery and paged durable action history. Closing the page stops future submissions; issued children retain their own receipts. Bulk edits capture focused-item prefills and selected targets, apply only changed declared fields, and expose frozen values during recovery. Declared source requests use separate controls from read-only Refresh and remain available after failed reads; acknowledgement does not establish completion. First hub opens and explicit Refresh request fresh reads; revisits and background polls retain source caches.
 
 Estimator Flooring supports named click-lock LVT/LVP and tile areas with shared trade pricing, explicit scope costs and exact JobTread quantities. The area contract lives in `estimator/src/engine/flooring.js`; its editor is `FlooringScope.jsx`. Draft v3 uses separate storage keys and retains legacy recovery snapshots.
 
@@ -70,6 +70,9 @@ business/
 ```
 
 ## Changelog
+
+- 2026-10-23: Match Workbench first-open read freshness to the TUI while
+  preserving cached revisits and background reads. Refresh remains read-only.
 
 - 2026-10-23: Workbench adds manifest-owned source requests through the private
   journal, confirmation and recovery path. Shared TUI/browser intent checks reject
