@@ -16,6 +16,7 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 The Workbench registry includes Meals, resolving its destination from the shared route owner.
 `workbench.web` optionally serves the read-only browser shell from the pinned Workbench package on loopback :11680. It uses the TUI manifests and canonical Scout styles, preserves `/areas.json` for specialist app switchers, and keeps the existing private vhost. Disable it to restore the static directory.
+Explicit `writeTiles` enable declared Mail actions at the same private origin. The CRITICAL reservation/receipt journal lives under `hwc.paths.state/workbench`, with a Borg online SQLite snapshot, eight active reservations and thirty-day bounded terminal history. Restart cancels unused reservations and contains interrupted submissions; it never replays them.
 
 Estimator Flooring supports named click-lock LVT/LVP and tile areas with shared trade pricing, explicit scope costs and exact JobTread quantities. The area contract lives in `estimator/src/engine/flooring.js`; its editor is `FlooringScope.jsx`. Draft v3 uses separate storage keys and retains legacy recovery snapshots.
 
@@ -65,6 +66,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-10-23: Add explicit Mail action tile opt-ins, a private writable journal directory and the existing Borg online snapshot binding. The app reserves IDs before effects and preserves uncertain outcomes across restart and restore.
 
 - 2026-10-23: Workbench can serve its read-only web shell behind the private vhost on hwc-work. The pinned package shares TUI manifests and gateway reads, uses canonical Scout styles, and preserves the generated specialist-app directory contract.
 
