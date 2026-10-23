@@ -16,6 +16,10 @@
 
 let
   cfg = config.hwc.monitoring.homepage;
+  identity = config.hwc.system.core.identity;
+  installConfig = source: name: ''
+    ${pkgs.coreutils}/bin/install -m 0644 -o ${identity.user} -g ${identity.group} ${source} ${cfg.dataDir}/${name}.yaml
+  '';
 
   # YAML config files for Homepage
   settingsYaml = pkgs.writeText "homepage-settings.yaml" (builtins.readFile ./parts/settings.yaml);
@@ -45,7 +49,8 @@ in
 
     image = lib.mkOption {
       type = lib.types.str;
-      default = "ghcr.io/gethomepage/homepage:latest";
+      # Homepage 2.7.0 supplies the October 2026 Node security fixes.
+      default = "ghcr.io/gethomepage/homepage@sha256:f1c9e802a0b9de6f64ef8d3e3d3aac4283f250e0a8ff5ebd170d791811431c99";
       description = "Homepage container image";
     };
 
@@ -80,8 +85,8 @@ in
 
       environment = {
         HOMEPAGE_ALLOWED_HOSTS = "*";
-        PUID = "1000";
-        PGID = "100";
+        PUID = toString identity.puid;
+        PGID = toString identity.pgid;
       };
 
       extraOptions = [
@@ -93,18 +98,17 @@ in
 
     # Ensure data directory exists and deploy config files
     systemd.tmpfiles.rules = [
-      "d ${cfg.dataDir} 0750 root root -"
+      "d ${cfg.dataDir} 0750 ${identity.user} ${identity.group} -"
     ];
 
     # Deploy YAML config files to data directory
     system.activationScripts.homepageConfig = ''
-      mkdir -p ${cfg.dataDir}
-      cp -f ${settingsYaml} ${cfg.dataDir}/settings.yaml
-      cp -f ${servicesYaml} ${cfg.dataDir}/services.yaml
-      cp -f ${widgetsYaml} ${cfg.dataDir}/widgets.yaml
-      cp -f ${dockerYaml} ${cfg.dataDir}/docker.yaml
-      cp -f ${bookmarksYaml} ${cfg.dataDir}/bookmarks.yaml
-      chmod 0644 ${cfg.dataDir}/*.yaml
+      ${pkgs.coreutils}/bin/install -d -m 0750 -o ${identity.user} -g ${identity.group} ${cfg.dataDir}
+      ${installConfig settingsYaml "settings"}
+      ${installConfig servicesYaml "services"}
+      ${installConfig widgetsYaml "widgets"}
+      ${installConfig dockerYaml "docker"}
+      ${installConfig bookmarksYaml "bookmarks"}
     '';
 
     # Caddy reverse proxy route
