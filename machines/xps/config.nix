@@ -193,6 +193,36 @@ in {
   systemd.services.borgbackup-repo-hwc-home = offsiteRepoGuard "hwc-home";
   systemd.services.borgbackup-repo-hwc-work = offsiteRepoGuard "hwc-work";
 
+  # CRITICAL: library definitions, users and watch history. Source/config and
+  # media have separate owners; archive a consistent SQLite copy, not WAL files.
+  hwc.data.borg = lib.mkIf (offsiteStorage != null && offsiteStorage.ready) {
+    enable = true;
+    primary.enable = false;
+    sources = [ config.services.jellyfin.dataDir ];
+    sqliteSnapshots.jellyfin = {
+      source = "${config.services.jellyfin.dataDir}/data/jellyfin.db";
+      user = "eric";
+      maxBytes = 1073741824;
+    };
+    excludePatterns = [
+      "${config.services.jellyfin.dataDir}/cache"
+      "${config.services.jellyfin.dataDir}/log"
+      "${config.services.jellyfin.dataDir}/metadata"
+      "${config.services.jellyfin.dataDir}/data/*.broken-backup"
+    ];
+    additionalDestinations.home = {
+      host = offsiteStorage.recovery.address;
+      user = offsiteStorage.recovery.repository.user;
+      repository = offsiteStorage.recovery.repository.path;
+      hostKey = offsiteStorage.recovery.hostKey;
+      sshKeySecret = "borg-xps-state-ssh-key";
+      passphraseSecret = "borg-xps-state-passphrase";
+      startAt = "*-*-* 02:30:00";
+      timeoutSeconds = 3600;
+      uploadLimitKiB = 1024;
+    };
+  };
+
   # Independent Maryland library. Clients use this host's LAN address rather
   # than the home server's Jellyfin vhost, so playback stays in this house.
   # Media is REPLACEABLE from the home library; existing Jellyfin users and

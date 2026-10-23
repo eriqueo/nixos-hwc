@@ -549,6 +549,19 @@
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEnjV1K+7pHtjsFJKKm07ty4fTayNLQ+lOPoUhTkEP50 root@hwc-work borg-to-server"
     ];
   };
+  # AUTO-MANAGED: XPS Jellyfin recovery state, bounded by server quota and
+  # client retention. Its dedicated key cannot reach the other repositories.
+  services.borgbackup.repos.hwc-xps = {
+    path = "${config.hwc.paths.backup}/borg-hwc-xps";
+    authorizedKeys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICwyn1MMYk5MxGeE0aLMYJItfIzbxLxzoHZOR75z+TM9 borg-xps-state-ssh-key" ];
+    quota = "10G";
+    allowSubRepos = false;
+    inherit (config.services.borgbackup.repos.hwc-work) user group;
+  };
+  systemd.services.borgbackup-repo-hwc-xps.unitConfig = {
+    RequiresMountsFor = [ config.hwc.paths.backup ];
+    AssertPathIsMountPoint = config.hwc.paths.backup;
+  };
   systemd.tmpfiles.rules = [ "z /mnt/backup 0751 root root -" ];
 
   # hwc-work's eric key. It clones and syncs the brain vault and claude-config

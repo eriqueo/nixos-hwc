@@ -128,9 +128,9 @@ in
     monitoring.enable = true;
   };
 
-  # Both configured Borg hosts protect existing T3 state even if the app is
+  # Configured primary Borg hosts protect existing T3 state even if the app is
   # disabled later. Do not depend on the home activation lane for data policy.
-  hwc.data.borg = lib.mkIf config.hwc.data.borg.enable {
+  hwc.data.borg = lib.mkIf (config.hwc.data.borg.enable && config.hwc.data.borg.primary.enable) {
     sources = lib.mkAfter [ t3State ];
     sqliteSnapshots.t3 = { source = "${t3State}/state.sqlite"; user = userName; };
   };

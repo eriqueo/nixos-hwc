@@ -113,7 +113,7 @@ per host; contention fails after 300 seconds. Completion and failure are visible
 in each native unit. Weekly `borg-check-maryland` checks repository consistency;
 full cryptographic verification and real restores are separate acceptance steps.
 
-New offsite credentials exclude XPS from age recipients and mounts. Home, work,
+Home/work offsite credentials exclude XPS from age recipients and mounts. Home, work,
 laptop and the existing user identity retain recovery. Secret mounts remain
 root:secrets 0440; systemd delivers private SSH identities. Repository-key exports
 must be encrypted and retained outside the destination after initialization.
@@ -134,3 +134,16 @@ The tracked plan owns the replication recipe, capacity bound and verification. P
 - Record the deployed revision, schedule, operator commands and known recovery lag.
 
 Do not describe a copied media folder, an SSD-local archive or an ONLINE mirror as completion of this offsite recovery contract.
+
+## XPS application-state recovery
+
+After the rollout gate opens, XPS backs up its Jellyfin state to home's dedicated
+`borg-hwc-xps` repository, limited to 10G. It uses a separate SSH key and passphrase
+that XPS can decrypt as the origin. The daily 02:30 job has a one-hour deadline
+and a 1024 KiB/s upload limit. A validated online SQLite snapshot replaces the raw
+database/WAL files in archives. Cache, logs and replaceable metadata are excluded.
+This covers Jellyfin users, library definitions and watch history. It does not
+claim full-host or T3 coverage. Source and encrypted configuration live in Git;
+other legacy application state remains in the verified recovery checkpoint.
+Retire the old SSD-local backup timer only after the real remote state archive
+and restore pass. Verify `borgbackup-job-hwc-backup-home` and `borg-check-home`.

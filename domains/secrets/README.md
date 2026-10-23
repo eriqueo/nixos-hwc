@@ -64,6 +64,7 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-10-23: Add independent XPS-origin Jellyfin-state SSH/passphrase payloads under default recipients; home/work offsite payloads still exclude XPS.
 - 2026-10-23: Scope new offsite credentials and repository-key exports to recovery hosts, excluding the storage-only XPS. Use one policy for recipient overrides and mount selection; preserve all existing payload policies. New mounts use root:secrets 0440, with systemd LoadCredential providing private SSH key copies. Parity checks now honor host scopes.
 - 2026-10-23: Add the existing Deepgram API key ciphertext to the generated all-host secret set. Verified decryption without printing the key.
 

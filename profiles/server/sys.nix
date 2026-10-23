@@ -10,7 +10,7 @@
 { config, lib, offsiteStorage ? null, ... }:
 let
   offsiteRepos = if offsiteStorage == null then {} else offsiteStorage.repositories;
-  offsiteEnabled = config.hwc.data.borg.enable && offsiteStorage != null
+  offsiteEnabled = config.hwc.data.borg.enable && config.hwc.data.borg.primary.enable && offsiteStorage != null
     && (offsiteStorage.ready or false) && builtins.hasAttr config.networking.hostName offsiteRepos;
   credentialStem = "borg-${lib.removePrefix "hwc-" config.networking.hostName}-offsite";
 in

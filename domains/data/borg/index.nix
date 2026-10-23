@@ -100,7 +100,7 @@ let
       # Include application-provided writable snapshot paths (for example Meals)
       # while excluding the primary local repository from the remote job.
       readWritePaths = lib.filter (path: cfg.repo.remote.enable || path != cfg.repo.path)
-        config.services.borgbackup.jobs.${jobName}.readWritePaths;
+        (if cfg.primary.enable then config.services.borgbackup.jobs.${jobName}.readWritePaths else backupJob.readWritePaths);
     })) destinations;
 
   backupJob = {
@@ -166,8 +166,8 @@ let
     # Wait up to 1h for lock instead of failing immediately
     environment.BORG_LOCK_WAIT = "3600";
     # Don't run backup while borg-check is running
-    conflicts = [ "borg-check.service" ];
-    after = [ "borg-check.service" ];
+    conflicts = lib.optional cfg.primary.enable "borg-check.service";
+    after = lib.optional cfg.primary.enable "borg-check.service";
     # Respect readers and other writers. A stale lock is an operator recovery
     # action after checking its holder, never an automatic startup step.
     # Prevent stuck borg processes from blocking future backups
@@ -196,6 +196,11 @@ in
   # OPTIONS
   options.hwc.data.borg = {
     enable = lib.mkEnableOption "Borg deduplicating backup service";
+    primary.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Create the established primary job, wrappers and primary check. Disable for explicitly scoped additional-destination-only backups.";
+    };
 
     #==========================================================================
     # REPOSITORY CONFIGURATION
@@ -424,9 +429,7 @@ in
   config = lib.mkIf enabled (lib.mkMerge [ {
 
     # Borg package + helper scripts
-    environment.systemPackages = [
-      pkgs.borgbackup
-
+    environment.systemPackages = [ pkgs.borgbackup ] ++ lib.optionals cfg.primary.enable [
       # borg-hwc: wrapper with passphrase pre-loaded
       (pkgs.writeShellScriptBin "borg-hwc" ''
         export BORG_PASSCOMMAND="cat /run/agenix/${cfg.encryption.passphraseSecret}"
@@ -475,10 +478,10 @@ in
     ] ++ lib.optional (snapshots != []) snapshotPackage;
 
     # The primary job retains its established name and machine overrides.
-    services.borgbackup.jobs.${jobName} = backupJob;
+    services.borgbackup.jobs.${jobName} = lib.mkIf cfg.primary.enable backupJob;
 
     # Custom timer with random delay support
-    systemd.timers."borgbackup-job-${jobName}" = {
+    systemd.timers."borgbackup-job-${jobName}" = lib.mkIf cfg.primary.enable {
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = onCalendar;
@@ -487,10 +490,10 @@ in
       };
     };
 
-    systemd.services."borgbackup-job-${jobName}" = jobService;
+    systemd.services."borgbackup-job-${jobName}" = lib.mkIf cfg.primary.enable jobService;
 
     # Repository integrity check timer
-    systemd.services.borg-check = lib.mkIf cfg.monitoring.enable {
+    systemd.services.borg-check = lib.mkIf (cfg.primary.enable && cfg.monitoring.enable) {
       description = "Borg repository integrity check";
       # Don't restart on nixos-rebuild - this runs for hours and blocks switch-to-configuration
       restartIfChanged = false;
@@ -503,7 +506,7 @@ in
       };
     };
 
-    systemd.timers.borg-check = lib.mkIf cfg.monitoring.enable {
+    systemd.timers.borg-check = lib.mkIf (cfg.primary.enable && cfg.monitoring.enable) {
       description = "Weekly Borg repository check";
       wantedBy = [ "timers.target" ];
       timerConfig = {
@@ -526,6 +529,10 @@ in
     # VALIDATION
     #==========================================================================
     assertions = [
+      {
+        assertion = cfg.primary.enable || destinations != {};
+        message = "An enabled Borg capability needs a primary job or at least one additional destination";
+      }
       {
         assertion = builtins.length (builtins.attrNames destinations) <= 4
           && lib.all (name: builtins.match "[a-z][a-z0-9-]{0,31}" name != null) (builtins.attrNames destinations)

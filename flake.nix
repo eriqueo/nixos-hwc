@@ -497,6 +497,11 @@
             repositories = storage.services.borgbackup.repos;
             address = storage.hwc.networking.hosts.selfIp;
             hostKey = lib.removeSuffix "\n" (builtins.readFile ./machines/xps/SSH_HOST_ED25519_PUBLIC_KEY.txt);
+            recovery = let home = self.nixosConfigurations.hwc-home.config; in {
+              address = home.hwc.networking.hosts.selfIp;
+              repository = home.services.borgbackup.repos.hwc-xps;
+              hostKey = lib.removeSuffix "\n" (builtins.readFile ./machines/home/SSH_HOST_ED25519_PUBLIC_KEY.txt);
+            };
           };
         };
         modules = [
@@ -3471,6 +3476,17 @@
             (_: { inhibitsSleep = lib.mkForce false; });
         };
         c = (base.extendModules { modules = [ fixtureModule ]; }).config;
+        xps = (self.nixosConfigurations.hwc-xps.extendModules { specialArgs.offsiteStorage = {
+          ready = true;
+          repositories = self.nixosConfigurations.hwc-xps.config.services.borgbackup.repos;
+          address = self.nixosConfigurations.hwc-xps.config.hwc.networking.hosts.selfIp;
+          hostKey = lib.removeSuffix "\n" (builtins.readFile ./machines/xps/SSH_HOST_ED25519_PUBLIC_KEY.txt);
+          recovery = {
+            address = base.config.hwc.networking.hosts.selfIp;
+            repository = base.config.services.borgbackup.repos.hwc-xps;
+            hostKey = lib.removeSuffix "\n" (builtins.readFile ./machines/home/SSH_HOST_ED25519_PUBLIC_KEY.txt);
+          };
+        }; }).config;
         primary = c.services.borgbackup.jobs.hwc-backup;
         secondary = c.services.borgbackup.jobs.hwc-backup-test;
         # Inspect this module's real assertion without forcing unrelated fleet
@@ -3485,6 +3501,17 @@
         scripts = map (name: pkgs.writeText "${name}-entry.sh" (unit name).script)
           [ "hwc-backup" "hwc-backup-test" ];
       in
+      assert valid xps;
+      assert builtins.attrNames xps.services.borgbackup.jobs == [ "hwc-backup-home" ];
+      assert !(builtins.hasAttr "borg-check" xps.systemd.services);
+      assert builtins.attrNames xps.hwc.data.borg.sqliteSnapshots == [ "jellyfin" ];
+      assert xps.hwc.data.borg.sources == [ xps.services.jellyfin.dataDir ];
+      assert xps.services.borgbackup.jobs.hwc-backup-home.repo == "ssh://${base.config.services.borgbackup.repos.hwc-xps.user}@${base.config.hwc.networking.hosts.selfIp}${base.config.services.borgbackup.repos.hwc-xps.path}";
+      assert xps.systemd.services.borgbackup-job-hwc-backup-home.serviceConfig.LoadCredential == [ "borg-ssh-key:/run/agenix/borg-xps-state-ssh-key" ];
+      assert xps.systemd.services.borgbackup-job-hwc-backup-home.serviceConfig.TimeoutStartSec == 3600;
+      assert lib.elem "pf:/var/lib/hwc/jellyfin/data/jellyfin.db" xps.services.borgbackup.jobs.hwc-backup-home.exclude;
+      assert base.config.services.borgbackup.repos.hwc-xps.quota == "10G";
+      assert base.config.systemd.services.borgbackup-repo-hwc-xps.unitConfig.AssertPathIsMountPoint == base.config.hwc.paths.backup;
       assert valid c;
       assert !(valid (invalid { hwc.data.borg.encryption.mode = lib.mkForce "none"; }));
       assert !(valid (invalid { hwc.data.borg.additionalDestinations.test.passphraseSecret = lib.mkForce "borg-passphrase"; }));
