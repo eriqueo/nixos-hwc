@@ -104,7 +104,7 @@ all existing datasets before creating any missing child. Property or mount drift
 fails without resizing or deleting data. Repo initialization requires that unit
 and each child mount. Nothing is created merely by evaluating or building source.
 
-The server role derives client paths from these declarations. Home/work retain
+A temporary composition-root rollout gate keeps clients and XPS agent publication disabled until the cable/destination and real restore pass. This prevents another fleet rebuild from starting premature backup jobs. The server role derives client paths from these declarations once the gate opens. Home/work retain
 their primary jobs and gain independent Maryland jobs at 06:00 MDT, limited to
 2048 KiB/s uploads and eight hours. Interrupted initial seeding can require several
 runs before the first complete archive. Do not start a manual seed inside the

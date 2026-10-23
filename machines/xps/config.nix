@@ -4,7 +4,7 @@
 # Dell XPS 2018 in Maryland — independent local media and proposed offsite
 # recovery. Primary application ownership stays on home/work.
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, offsiteStorage ? null, ... }:
 let
   mediaPool = "media-pool";
   offsiteDataset = "${mediaPool}/offsite";
@@ -242,7 +242,7 @@ in {
 
   # Central monitoring stays on work. Its fleet aggregation reads this
   # agent declaration and automatically includes XPS node/service probes.
-  hwc.monitoring.prometheus.agent.enable = true;
+  hwc.monitoring.prometheus.agent.enable = offsiteStorage != null && (offsiteStorage.ready or false);
 
   # No automation on xps. n8n and mqtt live on the business role, which xps does
   # not take. The server role still imports domains/automation and defaults these

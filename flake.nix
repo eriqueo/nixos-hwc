@@ -490,6 +490,9 @@
           # Instance binding belongs at composition; the server role consumes
           # generic storage metadata without naming a machine or key file.
           offsiteStorage = let storage = self.nixosConfigurations.hwc-xps.config; in {
+            # Temporary rollout gate: enable after the cable/destination and
+            # real restricted-repository restore pass, before controlled rollout.
+            ready = false;
             repositories = storage.services.borgbackup.repos;
             address = storage.hwc.networking.hosts.selfIp;
             hostKey = lib.removeSuffix "\n" (builtins.readFile ./machines/xps/SSH_HOST_ED25519_PUBLIC_KEY.txt);
@@ -3344,14 +3347,20 @@
       in
       assert unit.unitConfig.AssertPathIsMountPoint == c.hwc.paths.media.root;
       assert unit.serviceConfig.TimeoutStartSec == "60s";
-      assert c.hwc.monitoring.prometheus.agent.enable;
+      assert !c.hwc.monitoring.prometheus.agent.enable;
       assert lib.all (name:
         lib.elem "xps-offsite-storage.service" c.systemd.services."borgbackup-repo-${name}".requires
         && c.systemd.services."borgbackup-repo-${name}".unitConfig.AssertPathIsMountPoint == repositories.${name}.path
         && repositories.${name}.allowSubRepos == false
       ) [ "hwc-home" "hwc-work" ];
-      assert lib.all (name: let host = self.nixosConfigurations.${name}.config; in
-        host.hwc.data.borg.additionalDestinations.maryland.repository == repositories.${name}.path
+      assert lib.all (name: let
+        host = (self.nixosConfigurations.${name}.extendModules { specialArgs.offsiteStorage = {
+          ready = true;
+          repositories = c.services.borgbackup.repos;
+          address = c.hwc.networking.hosts.selfIp;
+          hostKey = lib.removeSuffix "\n" (builtins.readFile ./machines/xps/SSH_HOST_ED25519_PUBLIC_KEY.txt);
+        }; }).config;
+      in host.hwc.data.borg.additionalDestinations.maryland.repository == repositories.${name}.path
         && host.systemd.services.borgbackup-job-hwc-backup-maryland.serviceConfig.TimeoutStartSec == "8h"
         && lib.hasInfix "--upload-ratelimit 2048" host.services.borgbackup.jobs.hwc-backup-maryland.extraCreateArgs
       ) [ "hwc-home" "hwc-work" ];
