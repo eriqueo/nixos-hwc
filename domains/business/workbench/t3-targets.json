@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "targets": {
+    "workbench-project": {
+      "label": "Workbench project · T3 laptop",
+      "origin": "https://hwc-laptop.ocelot-wahoo.ts.net",
+      "environmentId": "6963f56d-60a2-4791-86d1-17cd538847a3",
+      "threadId": "b908cc11-3831-4a3c-8d69-7eccb8c82bfd",
+      "credentialReference": "workbench-laptop"
+    }
+  }
+}
