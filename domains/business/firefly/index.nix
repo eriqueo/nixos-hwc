@@ -7,6 +7,48 @@
 let
   cfg = config.hwc.business.firefly;
   paths = config.hwc.paths;
+  helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
+  picoAppVersion = "1.10.1";
+  picoNodeVersion = "22.23.4";
+  # Temporary same-app security correction. Retire when an upstream image
+  # passes actual Node/shared-library/trust and current-data recovery checks.
+  # Exact signed Alpine packages also fix PHP's real shared consumers.
+  picoPackages = map (p: p // rec {
+    file = "${p.name}-${p.version}.apk";
+    url = "https://dl-cdn.alpinelinux.org/alpine/v3.22/main/x86_64/${file}";
+    source = pkgs.fetchurl { inherit url; inherit (p) hash; };
+  }) [
+    { name = "c-ares"; version = "1.34.9-r0"; hash = "sha256-myOqB5Ae1kveC+fsVE+NKynegNmWJ33IYSGMVP/4vJc="; }
+    { name = "brotli-libs"; version = "1.1.1-r0"; hash = "sha256-nlJhhFd2L2W/Jz9C1x24CEYzoenZOP8mEQFbog1EqM8="; }
+    { name = "libcrypto3"; version = "3.5.9-r0"; hash = "sha256-P1glztX94cZqU3aj9gdrPAhTitUtnvI/BphX4hLZF1o="; }
+    { name = "libssl3"; version = "3.5.9-r0"; hash = "sha256-aAHHQLl2C1sI2o22Nn68GLLMTbrzcfcUhClTi4uwTiM="; }
+    { name = "ca-certificates"; version = "20261020-r0"; hash = "sha256-jddThpmWGSejYyfWIrO56fXJRP19SGoMuLa4M9x0z78="; }
+    { name = "ca-certificates-bundle"; version = "20261020-r0"; hash = "sha256-01IWoKmt3nkDHfJGdZutA/I1zyAb8K/4Q2uIv/WVlOs="; }
+  ];
+  picoRuntime = helpers.mkRuntimeImage {
+    name = "firefly-pico";
+    version = "${picoAppVersion}-node${picoNodeVersion}";
+    # Bind every APK byte selection to the recipe-derived image identity.
+    recipe = lib.concatMapStrings (p: "# APK ${p.file} ${p.hash}\n") picoPackages + ''
+      FROM docker.io/library/node@sha256:9fee3a1d85a49993660c8ffc774ceafadc0b52eda69b4c981f6b6a1cfabcfe98 AS secure-node
+      FROM docker.io/cioraneanu/firefly-pico@sha256:2bc76980f6be5a4e36581dbed8c381e119a2318031d2f1cf5d9cb14b7286a633
+      COPY *.apk /tmp/hwc-runtime-apks/
+      RUN apk add --no-network --no-cache --repositories-file /dev/null /tmp/hwc-runtime-apks/*.apk && update-ca-certificates --fresh && rm -r /tmp/hwc-runtime-apks
+      COPY --from=secure-node /usr/local/bin/node /usr/bin/node
+      ENV NODE_VERSION=${picoNodeVersion}
+    '';
+  };
+  picoManifest = pkgs.writeText "firefly-pico-runtime-manifest.json" (builtins.toJSON {
+    schemaVersion = 1;
+    packages = map (p: builtins.removeAttrs p [ "source" ]) picoPackages;
+  });
+  # REPLACEABLE: regenerated from fixed-hash package sources and the recipe.
+  picoContext = pkgs.runCommand "firefly-pico-runtime-context" {} ''
+    mkdir -p "$out"
+    cp ${picoRuntime.dockerfile} "$out/Dockerfile"
+    cp ${picoManifest} "$out/manifest.json"
+    ${lib.concatMapStrings (p: "cp ${p.source} \"$out/${p.file}\"\n") picoPackages}
+  '';
 in
 {
   # OPTIONS
@@ -23,8 +65,8 @@ in
 
       pico = lib.mkOption {
         type = lib.types.str;
-        default = "cioraneanu/firefly-pico:1.10.1";  # critical tier (Law 15 v12.4): financial data — pinned
-        description = "Firefly-Pico mobile companion container image";
+        default = picoRuntime.image;  # critical tier: immutable app/runtime/library inputs
+        description = "Qualified Pico image built from system.build.fireflyPicoRuntimeImageContext";
       };
 
       importer = lib.mkOption {
@@ -337,7 +379,25 @@ in
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf cfg.enable { };
+  config = lib.mkIf cfg.enable {
+    system.build.fireflyPicoRuntimeImageContext = picoContext;
+    system.build.fireflyPicoRuntimeImageRecipe = picoRuntime.dockerfile;
+    # Keep explicit image overrides usable for compatible current-data recovery.
+    # Prebuild during deployment; startup never builds or downloads an image.
+    virtualisation.oci-containers.containers = lib.mkIf
+      (cfg.pico.enable && cfg.images.pico == picoRuntime.image) {
+        firefly-pico.pull = lib.mkForce "never";
+      };
+    systemd.services = lib.mkIf
+      (cfg.pico.enable && cfg.images.pico == picoRuntime.image) {
+        podman-firefly-pico.preStart = lib.mkBefore ''
+          ${pkgs.podman}/bin/podman image exists ${lib.escapeShellArg picoRuntime.image} || {
+            echo "Firefly-Pico requires the reviewed image from ${picoContext} before startup" >&2
+            exit 1
+          }
+        '';
+      };
+  };
 
   #==========================================================================
   # VALIDATION

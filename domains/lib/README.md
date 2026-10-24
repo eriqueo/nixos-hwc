@@ -22,7 +22,7 @@ Standalone HM fleet fallback covers hwc-home, hwc-work and hwc-xps; dependency-u
 lib/
 ├── README.md              # This file
 ├── hm.nix                 # HM handshakes, fleet data, runtime Radicale password argv
-├── mkContainer.nix        # Application containers, shared pure Node image recipe
+├── mkContainer.nix        # Application containers, pure runtime identity and Node recipe
 ├── mkInfraContainer.nix   # Infrastructure containers (gluetun, pihole)
 ├── mkTsNode.nix           # Direct-node tsx loader launcher for Scout native units
 └── arr-config.nix         # *arr-specific config.xml enforcement
@@ -51,6 +51,9 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+- 2026-10-23: Extract `mkRuntimeImage` as the shared recipe/tag/Dockerfile
+  producer for Pico's executable and shared-library correction. Existing
+  `mkNodeRuntimeImage` delegates with unchanged Seerr/Immich/Audio identities.
 - 2026-10-23: Add `mkNodeRuntimeImage` for Seerr and Immich. It derives the local
   tag and Dockerfile from one recipe with immutable app/Node inputs. Seerr's
   accepted recipe bytes and tag stay identical; `immich-runtime-wiring` checks

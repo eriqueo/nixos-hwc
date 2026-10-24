@@ -26,6 +26,14 @@
 { lib, pkgs }:
 
 rec {
+  # One identity producer for immutable runtime recipes, including callers
+  # that qualify shared libraries as well as the Node executable.
+  mkRuntimeImage = { name, version, recipe }: {
+    inherit recipe;
+    image = "localhost/${name}-runtime:${version}-${builtins.substring 0 12 (builtins.hashString "sha256" recipe)}";
+    dockerfile = pkgs.writeText "${name}-runtime.Dockerfile" recipe;
+  };
+
   # Preserve an application's bytes while selecting a separately qualified
   # Node executable. Callers own immutable inputs and compatibility evidence.
   mkNodeRuntimeImage =
@@ -37,10 +45,9 @@ rec {
         COPY --from=secure-node /usr/local/bin/node /usr/local/bin/node
         ENV NODE_VERSION=${nodeVersion}
       '';
-    in {
-      inherit recipe;
-      image = "localhost/${name}-runtime:${appVersion}-node${nodeVersion}-${builtins.substring 0 12 (builtins.hashString "sha256" recipe)}";
-      dockerfile = pkgs.writeText "${name}-runtime.Dockerfile" recipe;
+    in mkRuntimeImage {
+      inherit name recipe;
+      version = "${appVersion}-node${nodeVersion}";
     };
 
   mkContainer =

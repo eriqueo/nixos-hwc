@@ -11,6 +11,16 @@ Firefly III personal finance manager running as a Podman container, with optiona
 
 ## Structure
 
+`index.nix` also owns the temporary same-app Pico security recipe. It replaces
+the actual `/usr/bin/node` with qualified Node 22.23.4 and supplies six signed,
+fixed-hash Alpine packages for PHP's shared libraries and certificate stores.
+`system.build.fireflyPicoRuntimeImageContext` regenerates the offline build
+context. Prebuild its recipe-derived local tag before deployment. The default
+image has `pull = "never"`; startup fails if that image is absent.
+Explicit image overrides remain available for compatible current-data recovery.
+Remove this correction when a qualified upstream image passes the same runtime,
+trust and current-data checks. Original finance services and data paths stay in place.
+
 ```
 domains/business/firefly/
 ├── index.nix          # Option definitions + imports
@@ -117,6 +127,10 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 - `firefly-explorer.service` — immutable explorer package; validates its token, Firefly account, UI assets, and tailscaled socket before serving. Every API request is authorized with Tailscale WhoIs. Split groups remain read-only; writes are limited to existing category/expense-account ids and existing tags.
 
 ## Changelog
+
+- 2026-10-23: Add same-app Pico Node/shared-library/trust correction with an
+  immutable offline context and local-image startup guard. Private real-archive
+  old/new/old preserves all 15 tables and the key; live activation is separate.
 
 - 2026-09-21: Pinned Explorer `0605857`: serve current HTML without conditional caching, since Nix-normalized mtimes can otherwise return stale 304 responses and reference removed JavaScript builds. Static asset caching, Tailscale API checks, and finance data are unchanged.
 - 2026-09-16: Pinned Firefly Explorer fix `90a8a587`: tailscaled LocalAPI requires `Host: local-tailscaled.sock` even over its Unix socket. The original package used `localhost`, so the deployed authorization boundary failed closed with 403 for every API request. A Unix-socket regression test now watches the exact Host requirement.
