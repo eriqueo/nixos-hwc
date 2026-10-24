@@ -67,7 +67,8 @@ in
 
       pico = lib.mkOption {
         type = lib.types.str;
-        default = picoRuntime.image;  # critical tier: immutable app/runtime/library inputs
+        # Availability recovery only; retire this default after fix-forward.
+        default = "docker.io/cioraneanu/firefly-pico@sha256:2bc76980f6be5a4e36581dbed8c381e119a2318031d2f1cf5d9cb14b7286a633";
         description = "Qualified Pico image built from system.build.fireflyPicoRuntimeImageContext";
       };
 

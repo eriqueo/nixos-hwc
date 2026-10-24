@@ -16,8 +16,10 @@ the actual `/usr/bin/node` with qualified Node 22.23.4 and supplies six signed,
 fixed-hash Alpine packages for PHP's shared libraries and certificate stores.
 Each OpenSSL/certificate release supplies both related package versions.
 `system.build.fireflyPicoRuntimeImageContext` regenerates the offline build
-context. Prebuild its recipe-derived local tag before deployment. The default
-image has `pull = "never"`; startup fails if that image is absent.
+context. This availability recovery selects the exact original image against
+current data. It retains known security gaps and does not complete the security
+release. The corrected local-image override requires prebuilding its tag,
+has `pull = "never"`, and fails startup if that image is absent.
 Explicit image overrides remain available for compatible current-data recovery.
 Remove this correction when a qualified upstream image passes the same runtime,
 trust and current-data checks. Original finance services and data paths stay in place.
@@ -128,6 +130,9 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 - `firefly-explorer.service` — immutable explorer package; validates its token, Firefly account, UI assets, and tailscaled socket before serving. Every API request is authorized with Tailscale WhoIs. Split groups remain read-only; writes are limited to existing category/expense-account ids and existing tags.
 
 ## Changelog
+
+- 2026-10-23: Availability recovery selects original Pico 1.10.1 by digest.
+  Preserve current database/key and the qualified fix-forward recipe.
 
 - 2026-10-23: Add same-app Pico Node/shared-library/trust correction with an
   immutable offline context and local-image startup guard. Private real-archive

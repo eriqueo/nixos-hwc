@@ -16,7 +16,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 `firefly/` owns Pico's same-app runtime recipe and fixed-hash offline package
 context. Each shared source release supplies its related package versions once.
-Its local image must be prebuilt; startup checks it and never pulls it.
+The recovery default pins the original Pico image for availability only.
+The corrected local-image override must be prebuilt; startup never pulls it.
 
 `umami/` pins its qualified security image while preserving the analytics database,
 website identity, tracking endpoint and briefing/report API consumers.
@@ -74,6 +75,9 @@ business/
 ```
 
 ## Changelog
+
+- 2026-10-23: Availability recovery pins Pico's exact original image while
+  retaining current data, the corrected recipe and all independent work.
 
 - 2026-10-23: Qualify Pico 1.10.1 with Node 22.23.4, corrected shared libraries
   and certificate stores. Keep core, importer, Explorer, keys and finance timers.
