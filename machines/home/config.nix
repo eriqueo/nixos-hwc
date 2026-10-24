@@ -441,8 +441,9 @@
       "__pycache__"
       "*.log"
       # Immich regenerable data — rebuilt automatically from originals
-      "/mnt/media/photos/thumbs"
-      "/mnt/media/photos/encoded-video"
+      # Follow the configured app layout, which can sit below the photo source.
+      "${config.hwc.media.immich.storage.locations.thumbs}"
+      "${config.hwc.media.immich.storage.locations.encodedVideo}"
       # Live PostgreSQL data files — already backed up via pg_dumpall in preHook
       # Backing up raw PG files causes "file changed" warnings that fail the job
       "/var/lib/hwc/postgresql"
