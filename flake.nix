@@ -3016,6 +3016,90 @@
         touch "$out"
       '';
 
+      scout-member-backup = let
+        c = self.nixosConfigurations.hwc-work.config;
+        member = c.hwc.server.ai.leadScout.memberInstance;
+        producer = c.system.build.scoutMemberSnapshot or null;
+        job = c.services.borgbackup.jobs.hwc-backup;
+        spec = pkgs.writeText "scout-member-backup.json" (builtins.toJSON {
+          inherit producer;
+          hook = job.preHook;
+          paths = job.paths;
+          exclude = job.exclude;
+          writable = job.readWritePaths;
+          user = c.hwc.server.ai.leadScout.user;
+          container = "${member.projectName}_db_1";
+          raw = "${member.directory}/pgdata";
+          graph = "${c.users.users.eric.home}/.local/share/containers/storage";
+          runtime = "/run/user/${toString c.users.users.eric.uid}/containers";
+        });
+      in
+      assert lib.assertMsg (producer != null && lib.hasInfix
+        (builtins.unsafeDiscardStringContext (toString producer)) job.preHook)
+        "Rootless Scout needs its consistent snapshot in the actual Borg pre-hook";
+      pkgs.runCommand "scout-member-backup" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${spec} <<'PY'
+        import json, os, pathlib, runpy, subprocess, sys, tempfile, time
+        spec = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        script = pathlib.Path(spec['producer'])
+        text = script.read_text()
+        assert 'runuser' in text and spec['container'] in text
+        assert 'POSTGRES_USER' in text and 'POSTGRES_DB' in text
+        assert '/var/lib/backups/scout-member/current.dump' in spec['hook']
+        assert '/var/lib/backups' in spec['paths']
+        assert 'pp:' + spec['raw'] in spec['exclude']
+        assert spec['graph'] in spec['writable'] and spec['runtime'] in spec['writable']
+        assert '|| exit' in spec['hook'].split(spec['producer'], 1)[1].splitlines()[0]
+        module = runpy.run_path(str(script))
+        snapshot = module['snapshot']
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp); dest = root / 'snapshot/current.dump'
+            fake = root / 'pg-port'
+            fake.write_text('#!' + sys.executable + '\n' + """
+        import os, sys, time
+        mode = os.environ.get('SCOUT_FIXTURE_MODE', 'good')
+        if 'pg_dump' in sys.argv[-1]:
+            if mode == 'dump-fail': sys.exit(9)
+            if mode == 'timeout': time.sleep(3)
+            sys.stdout.buffer.write(b'PGDMP' + b'x' * (8192 if mode == 'oversize' else 32))
+        else:
+            raw = sys.stdin.buffer.read()
+            if mode == 'invalid' or not raw.startswith(b'PGDMP'): sys.exit(7)
+        """.strip() + '\n')
+            fake.chmod(0o700)
+            command = [str(fake)]
+            snapshot(dest, command, max_bytes=4096, timeout_seconds=2)
+            good = dest.read_bytes()
+            assert good == b'PGDMP' + b'x' * 32
+            assert dest.stat().st_mode & 0o777 == 0o600
+            assert dest.parent.stat().st_mode & 0o777 == 0o700
+            for mode in ('dump-fail', 'invalid', 'oversize', 'timeout'):
+                os.environ['SCOUT_FIXTURE_MODE'] = mode
+                started = time.monotonic()
+                try: snapshot(dest, command, max_bytes=4096, timeout_seconds=.15)
+                except (RuntimeError, subprocess.SubprocessError, OSError): pass
+                else: raise AssertionError('bad producer accepted: ' + mode)
+                assert time.monotonic() - started < 2
+                assert dest.read_bytes() == good, mode
+                assert not dest.with_name('pending.dump').exists(), mode
+            os.environ.pop('SCOUT_FIXTURE_MODE')
+            # A killed previous producer may leave only its pending slot. It is
+            # replaced under the same lock, without accumulating timestamp files.
+            dest.with_name('pending.dump').write_bytes(b'stale')
+            snapshot(dest, command, max_bytes=4096, timeout_seconds=2)
+            assert dest.read_bytes() == good
+            import fcntl
+            with (dest.parent / 'snapshot.lock').open('rb') as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                try: snapshot(dest, command, max_bytes=4096, timeout_seconds=2)
+                except BlockingIOError: pass
+                else: raise AssertionError('concurrent snapshot acquired occupied slot')
+            assert dest.read_bytes() == good
+        print('valid/failure/invalid/oversize/deadline/stale/lock/permissions/lastgood passed')
+        PY
+        touch "$out"
+      '';
+
       lead-scout-member-recovery = let
         work = self.nixosConfigurations.hwc-work;
         candidate = work.config;
