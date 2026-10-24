@@ -3459,12 +3459,16 @@
         units = map (target: let
           home = self.nixosConfigurations.${target.host}.config.home-manager.users.eric;
           updater = builtins.head (builtins.filter (p: (p.name or "") == "t3-update") home.home.packages);
+          desktopLauncher = builtins.head (builtins.filter (p: (p.name or "") == "t3code") home.home.packages);
         in {
           inherit (target) host unit;
           policy = home.systemd.user.services.${target.unit}.Unit.X-SwitchMethod or null;
           file = home.home.file."${home.xdg.configHome}/systemd/user/${target.unit}.service".source;
           # Schema inspection only; these paths are never executed by this fixture.
           runtime = builtins.unsafeDiscardStringContext updater.releaseRuntime.drvAttrs.text;
+        } // lib.optionalAttrs (target.unit == "t3code") {
+          launcherFile = lib.getExe desktopLauncher;
+          profileLauncher = "${home.home.profileDirectory}/bin/t3code";
         }) targets;
         fixtures = pkgs.writeText "t3-switch-policy.json" (builtins.toJSON units);
       in
@@ -3474,7 +3478,7 @@
         nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.jsonschema ])) ];
       } ''
         python3 -B - ${fixtures} ${inputs.agent-harness}/tracker/t3_release.py <<'PY'
-        import configparser, importlib.util, json, pathlib, sys, tempfile
+        import configparser, importlib.util, json, pathlib, shlex, sys, tempfile
         spec = importlib.util.spec_from_file_location('t3_release', sys.argv[2])
         release = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(release)
@@ -3491,6 +3495,17 @@
             assert runtime['headless'] == (item['unit'] == 't3-serve'), item['host']
             text = pathlib.Path(item['file']).read_text()
             assert keeps_active(text), item
+            if item['unit'] == 't3code':
+                launcher = pathlib.Path(item['launcherFile']).read_text()
+                def bound_launcher(script):
+                    return any(shlex.split(line.strip()) ==
+                        ['export', 'T3CODE_DESKTOP_LAUNCHER=' + item['profileLauncher']]
+                        for line in script.splitlines()
+                        if line.strip().startswith('export T3CODE_DESKTOP_LAUNCHER='))
+                assert bound_launcher(launcher), 'T3 URI registration lost the trusted launcher'
+                removed = '\n'.join(line for line in launcher.splitlines()
+                    if not line.strip().startswith('export T3CODE_DESKTOP_LAUNCHER='))
+                assert not bound_launcher(removed), 'missing-launcher control escaped'
             missing = '\n'.join(line for line in text.splitlines() if not line.startswith('X-SwitchMethod='))
             assert missing != text and not keeps_active(missing), 'missing-policy control escaped'
             print(item['host'] + '/' + item['unit'] + ': runtime schema, rendered keep-old and removal control pass')

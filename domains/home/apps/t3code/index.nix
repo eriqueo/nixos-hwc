@@ -116,6 +116,9 @@ let
       mkdir -p "$SHIM"
       ln -sfn "$(command -v electron)" "$SHIM/electron"
       export ELECTRON_OVERRIDE_DIST_PATH="$SHIM"
+      # URI registration must preserve this wrapper's Electron and environment
+      # setup instead of launching the underlying bare Electron executable.
+      export T3CODE_DESKTOP_LAUNCHER=${lib.escapeShellArg "${config.home.profileDirectory}/bin/t3code"}
 
       # Electron's Vulkan loader otherwise enumerates NVIDIA even though the
       # Intel render node is explicitly selected. Limit Vulkan discovery only

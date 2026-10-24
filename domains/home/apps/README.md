@@ -29,12 +29,17 @@ apps/
 ├── waybar/         # Status bar
 ├── tuxedo/         # todo.txt TUI (keyboard-driven task manager)
 ├── todui/          # VTODO task TUI (external flake input; HWC adapter only)
+├── t3code/         # Agent desktop and server launchers; trusted desktop URI binding
 ├── pave-query-builder/  # Pave/JobTread API query TUI+CLI (external flake input; HWC adapter only)
 ├── eden/            # Switch 1 emulator derived from Yuzu and Sudachi
 └── ... (30+ apps)
 ```
 
 ## Changelog
+
+- 2026-10-24: Bind T3 Code URI registration to its stable Home Manager launcher,
+  preserving the selected Electron runtime and application environment when a
+  Workbench conversation link opens T3.
 
 - 2026-10-16: Bind workspace removal to an immutable, caller-scoped process inspector and declare its Python runtime. Preserve all checkouts when inspection is busy, unavailable or exceeds its bounds.
 - 2026-09-26: Added the Bitwarden desktop client as an independent app module; Proton app buttons share Hyprland's window toggle.
