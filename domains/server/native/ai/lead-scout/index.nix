@@ -743,7 +743,7 @@ in
         environment = {
           XDG_RUNTIME_DIR = memberRuntime;
           DBUS_SESSION_BUS_ADDRESS = "unix:path=${memberRuntime}/bus";
-          PATH = "${lib.makeBinPath [ pkgs.podman pkgs.coreutils pkgs.util-linux ]}:/run/wrappers/bin:/run/current-system/sw/bin";
+          PATH = lib.mkForce "${lib.makeBinPath [ pkgs.podman pkgs.coreutils pkgs.util-linux ]}:/run/wrappers/bin:/run/current-system/sw/bin";
         };
         serviceConfig = {
           Type = "oneshot";

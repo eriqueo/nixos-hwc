@@ -3239,6 +3239,7 @@
           core = ./domains/server/native/ai/lead-scout/member-snapshot.py;
           config = c.system.build.scoutMemberSnapshotConfig;
           unit = browserSnapshot.serviceConfig;
+          unitText = c.systemd.units."scout-member-snapshot.service".text;
           hook = job.preHook;
           paths = job.paths;
           exclude = job.exclude;
@@ -3271,6 +3272,8 @@
         text = pathlib.Path(spec['core']).read_text()
         config = json.loads(pathlib.Path(spec['config']).read_text())
         assert spec['unit']['User'] == spec['user'] == 'eric'
+        assert 'Environment=' in spec['unitText'] and '/run/wrappers/bin' in spec['unitText']
+        assert 'XDG_RUNTIME_DIR=/run/user/1000' in spec['unitText']
         assert spec['container'] in config['pg'] and 'runuser' not in config['pg']
         assert 'POSTGRES_USER' in text and 'POSTGRES_DB' in text
         assert 'scout-member-snapshot.service' in spec['hook']

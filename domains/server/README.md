@@ -24,7 +24,9 @@ and its thaw cleanup through one composed implementation. The Borg hook starts
 an unscheduled same-user oneshot with a15-second startup deadline and5-second
 cleanup budget. It freezes only an idle exact app, captures PG16 SQL, full browser
 data including logs/WAL and hard-linked files plus matching private settings, then resumes the same
-process. Frozen process checks read its exact cgroup/proc state, since Podman
+process. Its explicit rootless PATH overrides the systemd module default; the
+backup check renders the complete unit, including environment merges.
+Frozen process checks read its exact cgroup/proc state, since Podman
 refuses `top` while paused. Failure cleanup checks PID/start/cgroup identity and has a kernel-thaw
 fallback; needing that fallback fails the backup visibly. Complete bundles
 publish atomically, with one current, one previous and one pending slot, each
@@ -88,6 +90,7 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+- 2026-10-24: Fix the Scout snapshot PATH priority conflict and render its complete systemd unit in the backup regression check.
 
 - 2026-10-24: Extend the member's existing Borg producer to complete SQL/browser/settings bundles, including recovery logs and WAL. Bind capture and thaw to a bounded same-user oneshot, preserve process identity and last-good publication, retain the legacy SQL artifact, and remove rootless runtime write access from the Borg job. No app source/image or member supervision change.
 
