@@ -10,6 +10,8 @@ let
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
   picoAppVersion = "1.10.1";
   picoNodeVersion = "22.23.4";
+  picoOpenSSLVersion = "3.5.9-r0";
+  picoCertificatesVersion = "20261020-r0";
   # Temporary same-app security correction. Retire when an upstream image
   # passes actual Node/shared-library/trust and current-data recovery checks.
   # Exact signed Alpine packages also fix PHP's real shared consumers.
@@ -20,10 +22,10 @@ let
   }) [
     { name = "c-ares"; version = "1.34.9-r0"; hash = "sha256-myOqB5Ae1kveC+fsVE+NKynegNmWJ33IYSGMVP/4vJc="; }
     { name = "brotli-libs"; version = "1.1.1-r0"; hash = "sha256-nlJhhFd2L2W/Jz9C1x24CEYzoenZOP8mEQFbog1EqM8="; }
-    { name = "libcrypto3"; version = "3.5.9-r0"; hash = "sha256-P1glztX94cZqU3aj9gdrPAhTitUtnvI/BphX4hLZF1o="; }
-    { name = "libssl3"; version = "3.5.9-r0"; hash = "sha256-aAHHQLl2C1sI2o22Nn68GLLMTbrzcfcUhClTi4uwTiM="; }
-    { name = "ca-certificates"; version = "20261020-r0"; hash = "sha256-jddThpmWGSejYyfWIrO56fXJRP19SGoMuLa4M9x0z78="; }
-    { name = "ca-certificates-bundle"; version = "20261020-r0"; hash = "sha256-01IWoKmt3nkDHfJGdZutA/I1zyAb8K/4Q2uIv/WVlOs="; }
+    { name = "libcrypto3"; version = picoOpenSSLVersion; hash = "sha256-P1glztX94cZqU3aj9gdrPAhTitUtnvI/BphX4hLZF1o="; }
+    { name = "libssl3"; version = picoOpenSSLVersion; hash = "sha256-aAHHQLl2C1sI2o22Nn68GLLMTbrzcfcUhClTi4uwTiM="; }
+    { name = "ca-certificates"; version = picoCertificatesVersion; hash = "sha256-jddThpmWGSejYyfWIrO56fXJRP19SGoMuLa4M9x0z78="; }
+    { name = "ca-certificates-bundle"; version = picoCertificatesVersion; hash = "sha256-01IWoKmt3nkDHfJGdZutA/I1zyAb8K/4Q2uIv/WVlOs="; }
   ];
   picoRuntime = helpers.mkRuntimeImage {
     name = "firefly-pico";

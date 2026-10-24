@@ -15,7 +15,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 ## Structure
 
 `firefly/` owns Pico's same-app runtime recipe and fixed-hash offline package
-context. Its local image must be prebuilt; startup checks it and never pulls it.
+context. Each shared source release supplies its related package versions once.
+Its local image must be prebuilt; startup checks it and never pulls it.
 
 `umami/` pins its qualified security image while preserving the analytics database,
 website identity, tracking endpoint and briefing/report API consumers.
@@ -77,6 +78,7 @@ business/
 - 2026-10-23: Qualify Pico 1.10.1 with Node 22.23.4, corrected shared libraries
   and certificate stores. Keep core, importer, Explorer, keys and finance timers.
   Expose an offline build context and require its local image before startup.
+  Derive each OpenSSL/certificate package pair from one release version.
 
 - 2026-10-23: Default the Workbench service to its packaged canonical styles,
   removing the mutable Scout checkout dependency. Keep explicit stylesheet
