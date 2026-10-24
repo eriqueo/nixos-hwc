@@ -137,7 +137,7 @@ Do not describe a copied media folder, an SSD-local archive or an ONLINE mirror 
 
 ## XPS application-state recovery
 
-After the rollout gate opens, XPS backs up its Jellyfin state to home's dedicated
+The independent recovery gate enables XPS Jellyfin-state backups to home's dedicated
 `borg-hwc-xps` repository, limited to 10G. It uses a separate SSH key and passphrase
 that XPS can decrypt as the origin. The daily 02:30 job has a one-hour deadline
 and a 1024 KiB/s upload limit. A validated online SQLite snapshot replaces the raw
@@ -164,3 +164,8 @@ The bounded pool-health query runs in `xps-media-ready`, a separate oneshot as
 for completion before database setup. The oneshot does not remain active, so a
 later Jellyfin start checks the pool again. Jellyfin keeps its device sandbox;
 putting the query in its own preStart fails under that sandbox.
+
+`offsiteStorage.recovery.ready` controls the SSD-to-home state backup separately
+from the Maryland enclosure's `ready` gate. The existing home destination can
+protect current Jellyfin state before the USB cable is replaced. The Maryland
+repository initialization, uploads and metrics-agent publication stay held.

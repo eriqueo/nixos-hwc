@@ -498,6 +498,9 @@
             address = storage.hwc.networking.hosts.selfIp;
             hostKey = lib.removeSuffix "\n" (builtins.readFile ./machines/xps/SSH_HOST_ED25519_PUBLIC_KEY.txt);
             recovery = let home = self.nixosConfigurations.hwc-home.config; in {
+              # SSD state backup to the existing home destination is independent
+              # of the held Maryland enclosure/replication rollout.
+              ready = true;
               address = home.hwc.networking.hosts.selfIp;
               repository = home.services.borgbackup.repos.hwc-xps;
               hostKey = lib.removeSuffix "\n" (builtins.readFile ./machines/home/SSH_HOST_ED25519_PUBLIC_KEY.txt);
@@ -3771,6 +3774,7 @@
           address = self.nixosConfigurations.hwc-xps.config.hwc.networking.hosts.selfIp;
           hostKey = lib.removeSuffix "\n" (builtins.readFile ./machines/xps/SSH_HOST_ED25519_PUBLIC_KEY.txt);
           recovery = {
+            ready = true;
             address = base.config.hwc.networking.hosts.selfIp;
             repository = base.config.services.borgbackup.repos.hwc-xps;
             hostKey = lib.removeSuffix "\n" (builtins.readFile ./machines/home/SSH_HOST_ED25519_PUBLIC_KEY.txt);

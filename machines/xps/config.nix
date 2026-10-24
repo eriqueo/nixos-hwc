@@ -198,7 +198,7 @@ in {
 
   # CRITICAL: library definitions, users and watch history. Source/config and
   # media have separate owners; archive a consistent SQLite copy, not WAL files.
-  hwc.data.borg = lib.mkIf (offsiteStorage != null && offsiteStorage.ready) {
+  hwc.data.borg = lib.mkIf (offsiteStorage != null && (offsiteStorage.recovery.ready or false)) {
     enable = true;
     primary.enable = false;
     sources = [ config.services.jellyfin.dataDir ];
