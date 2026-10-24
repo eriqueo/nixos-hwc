@@ -762,7 +762,9 @@ in
           TimeoutStopSec = "5s";
           KillMode = "control-group";
           KillSignal = "SIGKILL";
-          MemoryMax = "512M";
+          # Includes page cache for the full profile archive. Cold-copy proof
+          # needs2GiB; the9-second copy and15+5-second cleanup bounds stay fixed.
+          MemoryMax = "2G";
           CPUQuota = "200%";
           TasksMax = 128;
         };
