@@ -8,7 +8,8 @@ let
   snapshotPath = "/var/lib/backups/mousehole/state.json";
   # CRITICAL: one last-good JSON snapshot and one bounded pending slot. A racing,
   # malformed or missing live file aborts backup rather than publishing bad state.
-  snapshot = pkgs.writeScript "mousehole-state-snapshot" ''#!${pkgs.python3}/bin/python3
+  snapshot = pkgs.writeScript "mousehole-state-snapshot" ''
+    #!${pkgs.python3}/bin/python3
     import json, os, pathlib, sys
     os.umask(0o077)
     source, destination = map(pathlib.Path, sys.argv[1:])

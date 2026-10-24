@@ -803,6 +803,9 @@
       assert lib.elem "--network=container:gluetun" container.extraOptions;
       assert container.dependsOn == [ "gluetun" ];
       assert c.systemd.services.podman-mousehole.bindsTo == [ "podman-gluetun.service" ];
+      assert lib.assertMsg (lib.hasInfix (toString c.system.build.mouseholeStateSnapshot)
+        c.services.borgbackup.jobs.hwc-backup.preHook)
+        "Mousehole state snapshot must run in the effective Borg producer hook";
       pkgs.runCommand "mousehole-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
         python3 - ${fixture} ${c.system.build.mouseholeRuntimeImageRecipe} <<'PY'
         import hashlib, json, os, pathlib, re, runpy, subprocess, sys, tempfile
@@ -827,7 +830,9 @@
             good = b'{"currentCookie":"fixture-only","lastMam":{"response":{"httpStatus":200}}}'
             source.write_bytes(good)
             def run(): return subprocess.run([script, str(source), str(dest)], capture_output=True)
-            assert run().returncode == 0 and dest.read_bytes() == good
+            first = run()
+            assert first.returncode == 0, first.stderr.decode()[:300]
+            assert dest.read_bytes() == good
             assert dest.stat().st_mode & 0o777 == 0o600
             assert dest.parent.stat().st_mode & 0o777 == 0o700
             for bad in (b'{"currentCookie":', b'[]', b'{}', b'x' * (1048576 + 1)):
