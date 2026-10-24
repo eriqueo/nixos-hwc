@@ -32,7 +32,9 @@ fallback; needing that fallback fails the backup visibly. Complete bundles
 publish atomically, with one current, one previous and one pending slot, each
 bounded to2GiB. Borg excludes raw pgdata/data, staging, previous and retained
 legacy SQL-only artifacts; it archives the complete current bundle and retains
-the existing compose/configuration sources. Actual live qualification is required
+the existing compose/configuration sources. The private bundle child sits beside
+member state under the traversable HWC parent; the root-only backup parent keeps
+its existing permissions. Actual live qualification is required
 before treating a source build as backup coverage.
 Its optional invitation mail units expose a same-user Unix socket to fixed
 loopback Proton Bridge SMTP. Runtime sender, password and pinned certificate
@@ -90,6 +92,7 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+- 2026-10-24: Place same-user Scout bundles beside member state after a live root-only parent failure; prove real systemd parent access and check the rendered destination relationship.
 - 2026-10-24: Fix the Scout snapshot PATH priority conflict and render its complete systemd unit in the backup regression check.
 
 - 2026-10-24: Extend the member's existing Borg producer to complete SQL/browser/settings bundles, including recovery logs and WAL. Bind capture and thaw to a bounded same-user oneshot, preserve process identity and last-good publication, retain the legacy SQL artifact, and remove rootless runtime write access from the Borg job. No app source/image or member supervision change.

@@ -44,7 +44,9 @@ let
   memberGraph = "${memberUser.home}/.local/share/containers/storage";
   memberRunroot = "${memberRuntime}/containers";
   memberSnapshotPath = "/var/lib/backups/scout-member/current.dump";
-  memberBundleRoot = "${builtins.dirOf (builtins.dirOf memberSnapshotPath)}/scout-member-browser";
+  # The existing /var/lib/backups parent is root-only. Keep same-user bundles
+  # beside member state; StateDirectory owns the private child, not its parent.
+  memberBundleRoot = "${builtins.dirOf member.directory}/scout-member-browser";
   memberSnapshotUnit = "scout-member-snapshot";
   memberSnapshotConfig = pkgs.writeText "scout-member-snapshot-config.json" (builtins.toJSON {
     user = cfg.user;
