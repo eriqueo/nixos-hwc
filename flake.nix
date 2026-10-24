@@ -785,6 +785,52 @@
         touch "$out"
       '';
 
+      firefly-pico-runtime-wiring = let
+        c = self.nixosConfigurations.hwc-work.config;
+        image = c.hwc.business.firefly.images.pico;
+        fixture = pkgs.writeText "firefly-pico-runtime-wiring.json" (builtins.toJSON {
+          inherit image;
+          container = c.virtualisation.oci-containers.containers.firefly-pico;
+          preStart = c.systemd.services.podman-firefly-pico.preStart;
+          context = c.system.build.fireflyPicoRuntimeImageContext or null;
+        });
+      in
+      assert lib.assertMsg (lib.hasPrefix "localhost/firefly-pico-runtime:1.10.1-node22.23.4-" image)
+        "Firefly-Pico must consume its qualified same-app runtime and shared libraries";
+      assert c.virtualisation.oci-containers.containers.firefly-pico.image == image;
+      pkgs.runCommand "firefly-pico-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${fixture} <<'PY'
+        import base64, hashlib, json, pathlib, re, sys
+        spec = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        context = pathlib.Path(spec['context'])
+        recipe = (context / 'Dockerfile').read_text()
+        manifest = json.loads((context / 'manifest.json').read_text())
+        assert manifest['schemaVersion'] == 1
+        assert spec['image'] == 'localhost/firefly-pico-runtime:1.10.1-node22.23.4-' + hashlib.sha256(recipe.encode()).hexdigest()[:12]
+        assert spec['container']['image'] == spec['image'] and spec['container']['pull'] == 'never'
+        assert spec['image'] in spec['preStart'] and ' image exists ' in spec['preStart']
+        assert str(context) in spec['preStart'] and '/bin/podman build ' not in spec['preStart']
+        assert re.findall(r'^FROM (\S+)', recipe, re.M) == [
+            'docker.io/library/node@sha256:9fee3a1d85a49993660c8ffc774ceafadc0b52eda69b4c981f6b6a1cfabcfe98',
+            'docker.io/cioraneanu/firefly-pico@sha256:2bc76980f6be5a4e36581dbed8c381e119a2318031d2f1cf5d9cb14b7286a633']
+        assert 'COPY --from=secure-node /usr/local/bin/node /usr/bin/node' in recipe
+        assert 'ENV NODE_VERSION=22.23.4' in recipe
+        assert 'apk add --no-network --no-cache --repositories-file /dev/null' in recipe
+        assert 'update-ca-certificates --fresh' in recipe and '--allow-untrusted' not in recipe
+        expected = {'c-ares':'1.34.9-r0', 'brotli-libs':'1.1.1-r0',
+            'libcrypto3':'3.5.9-r0', 'libssl3':'3.5.9-r0',
+            'ca-certificates':'20261020-r0', 'ca-certificates-bundle':'20261020-r0'}
+        assert {p['name']:p['version'] for p in manifest['packages']} == expected
+        assert {p.name for p in context.iterdir()} == {'Dockerfile','manifest.json'} | {p['file'] for p in manifest['packages']}
+        for package in manifest['packages']:
+            data = (context / package['file']).read_bytes()
+            assert package['hash'] == 'sha256-' + base64.b64encode(hashlib.sha256(data).digest()).decode()
+            assert '# APK ' + package['file'] + ' ' + package['hash'] in recipe
+            assert package['url'] == 'https://dl-cdn.alpinelinux.org/alpine/v3.22/main/x86_64/' + package['file']
+        PY
+        touch "$out"
+      '';
+
       audiobookshelf-runtime-wiring = let
         c = self.nixosConfigurations.hwc-home.config;
         image = c.hwc.media.audiobookshelf.image;
