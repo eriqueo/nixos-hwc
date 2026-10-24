@@ -3721,6 +3721,12 @@
         (c.systemd.services.borgbackup-job-hwc-backup.preStart or ""))) hosts;
       assert lib.all (c: lib.hasInfix (builtins.unsafeDiscardStringContext "${c.services.postgresql.package}/bin/pg_dumpall")
         c.services.borgbackup.jobs.hwc-backup.preHook) hosts;
+      assert lib.assertMsg (lib.all (c:
+        let snapshots = c.hwc.data.borg.sqliteSnapshots;
+        in snapshots ? t3 && snapshots ? t3-v2
+          && snapshots.t3-v2.source == "${dirOf snapshots.t3.source}/statev2.sqlite"
+          && snapshots.t3-v2.user == snapshots.t3.user
+      ) hosts) "T3 current statev2.sqlite needs an online snapshot alongside retained V1 history";
       assert lib.assertMsg (lib.all (c: !c.hwc.automation.n8n.enable || (
         c.hwc.data.borg.sqliteSnapshots ? n8n
         && c.hwc.data.borg.sqliteSnapshots.n8n.source == "${c.hwc.automation.n8n.dataDir}/database.sqlite"
@@ -4015,7 +4021,7 @@
                 assert any(pathlib.PurePosixPath(spec['stateRoot'] + '/ready').is_relative_to(p) for p in spec['paths'])
                 # T3 also owns non-database userdata; database-only journals
                 # such as Workbench are covered by the published ready snapshot.
-                if snapshot_name == 't3':
+                if snapshot_name in ('t3', 't3-v2'):
                     assert str(pathlib.PurePosixPath(config['source']).parent) in spec['paths']
                 def remap(value):
                     value = value.replace(spec['stateRoot'], str(state))
