@@ -11,6 +11,12 @@
 
 `parts/system/borg-xps-state-repository-key.age` is CRITICAL recovery material for the XPS-to-home Jellyfin repository. It uses the existing all-host/user recovery policy because XPS is the data origin, with the generated root:secrets 0440 mount. The corresponding passphrase is required too.
 
+`parts/services/workbench-t3-credentials.age` holds the versioned dedicated
+Workbench T3 credential map, encrypted for the generated default recipients.
+The CRITICAL ciphertext stays in Git; agenix recreates root:secrets / 0440.
+Workbench reads it at startup and restarts when its ciphertext changes. Expiry
+comes from T3; reconnection creates a new grant and revokes the prior grant.
+
 `parts/services/deepgram-api-key.age` supplies the generated `deepgram-api-key` mount with the default `root:secrets` ownership and `0440` mode. The encrypted payload is CRITICAL source data retained in Git; agenix recreates the runtime mount.
 
 `parts/services/hwc-gateway-com.age` holds the replacement gateway's isolated
@@ -20,7 +26,7 @@ as `root:secrets / 0440`. The retired `.me` gateway and Hostinger SFTP payloads 
 Host recipients read the unchanged public key from machines/home; no rekeying or encrypted-payload changes.
 ```
 domains/secrets/
-├── index.nix            # Aggregator (imports declarations, API, emergency, hardening)
+├── index.nix            # Aggregator and inline read-only runtime-path facade
 ├── declarations/        # Generated age.secrets declarations
 │   ├── index.nix        # Aggregates caddy + generated
 │   ├── caddy.nix        # caddy-cert/caddy-key OPTIONS
@@ -36,7 +42,6 @@ domains/secrets/
 │   │   ├── datax-app-env.age # Complete app development environment
 │   │   └── discord-webhook/ # Per-domain Discord webhook payloads
 │   └── system/          # User passwords, SSH keys, backups
-├── secrets-api.nix      # Stable path facade → `hwc.secrets.api.*`
 ├── emergency.nix        # Recovery account/password wiring
 ├── hardening.nix        # Firewall/SSH/fail2ban/audit toggles under `hwc.secrets.hardening.*`
 └── vaultwarden/         # Self-hosted Bitwarden password manager; pinned image (hwc.secrets.vaultwarden.*)
@@ -66,6 +71,8 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-10-24: Add the separately consented Workbench T3 credential map. Verify
+  encrypted bytes by host-key decryption before publication; no message sent.
 - 2026-10-24: Preserve the real XPS-state Borg repository-key export under the existing default recovery policy; verified server-key equality and byte-for-byte decryption on home/work/XPS without plaintext files.
 - 2026-10-23: Add independent XPS-origin Jellyfin-state SSH/passphrase payloads under default recipients; home/work offsite payloads still exclude XPS.
 - 2026-10-23: Scope new offsite credentials and repository-key exports to recovery hosts, excluding the storage-only XPS. Use one policy for recipient overrides and mount selection; preserve all existing payload policies. New mounts use root:secrets 0440, with systemd LoadCredential providing private SSH key copies. Parity checks now honor host scopes.

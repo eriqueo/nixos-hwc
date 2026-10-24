@@ -297,6 +297,11 @@ in
       description = "Workbench web workspace";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" "hwc-sys-mcp.service" ];
+      # Credentials are read once at startup. Ciphertext changes must reload
+      # this consumer even though its runtime secret pathname remains stable.
+      restartTriggers = lib.optionals cfg.web.handoff.enable [
+        config.age.secrets.${cfg.web.handoff.credentialsSecret}.file
+      ];
       environment = {
         HOME = config.hwc.paths.user.home;
         WORKBENCH_GATEWAY_URL = "http://127.0.0.1:${toString config.hwc.system.mcp.port}";

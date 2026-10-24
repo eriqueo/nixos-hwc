@@ -36,6 +36,7 @@
   hwc.monitoring.fleet-map.enable = true;
   hwc.business.workbench.web = {
     enable = true;
+    handoff.enable = true;
     writeTiles = [ "today/mail" "mail/triage" "today/tasks" "crm-jobs/pipeline" "crm-network/network" "refinery/board" ];
   };
   # The cert exporter requires a system bridge unit no host runs, and nothing

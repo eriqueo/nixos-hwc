@@ -1564,17 +1564,20 @@
       workbench-web-service = let
         work = self.nixosConfigurations.hwc-work;
         command = work.config.systemd.services.workbench-web.serviceConfig.ExecStart;
+        disabledHandoff = (work.extendModules { modules = [{
+          hwc.business.workbench.web.handoff.enable = lib.mkForce false;
+        }]; }).config;
         handoffOnly = (work.extendModules { modules = [{
           hwc.business.workbench.web = {
             writeTiles = lib.mkForce [];
             handoff.enable = true;
           };
-          hwc.secrets.api."workbench-t3-credentials" = "/run/agenix/workbench-t3-credentials";
         }]; }).config;
         handoffService = handoffOnly.systemd.services.workbench-web;
         publicTargets = builtins.fromJSON (builtins.readFile ./domains/business/workbench/t3-targets.json);
         handoffEnvironment = handoffService.environment;
         handoffMount = builtins.fromJSON handoffEnvironment.WORKBENCH_HANDOFF_CREDENTIAL_MOUNT;
+        handoffSecret = handoffOnly.age.secrets.${handoffOnly.hwc.business.workbench.web.handoff.credentialsSecret};
         overridePath = "/tmp/workbench explicit styles";
         overridden = (work.extendModules { modules = [{
           hwc.business.workbench.web.stylesDir = lib.mkForce overridePath;
@@ -1587,13 +1590,16 @@
       assert lib.assertMsg (lib.hasInfix
         (lib.escapeShellArgs [ "--styles-dir" overridePath ]) overridden)
         "workbench-web: explicit styles override must survive argv escaping";
-      assert lib.assertMsg (work.config.systemd.services.workbench-web.environment.WORKBENCH_HANDOFF_TARGETS == "{}")
+      assert lib.assertMsg (disabledHandoff.systemd.services.workbench-web.environment.WORKBENCH_HANDOFF_TARGETS == "{}")
         "workbench-web: disabled handoffs must override ambient targets";
       assert lib.assertMsg (builtins.fromJSON handoffEnvironment.WORKBENCH_HANDOFF_TARGETS == publicTargets.targets
         && handoffMount.linkDirectory == handoffOnly.age.secretsDir
         && handoffMount.generationDirectory == handoffOnly.age.secretsMountPoint
         && handoffEnvironment.WORKBENCH_HANDOFF_CREDENTIALS_FILE == handoffOnly.hwc.secrets.api."workbench-t3-credentials")
         "workbench-web: handoff configuration must use the public registry and generated secret facade";
+      assert lib.assertMsg (handoffSecret.owner == "root" && handoffSecret.group == "secrets"
+        && handoffSecret.mode == "0440" && lib.elem handoffSecret.file handoffService.restartTriggers)
+        "workbench-web: generated private credentials must reload their consumer on rotation";
       assert lib.assertMsg (lib.hasInfix (lib.escapeShellArgs [ "--state-file"
         handoffOnly.hwc.data.borg.sqliteSnapshots.workbench-actions.source ]) handoffService.serviceConfig.ExecStart
         && lib.elem handoffOnly.hwc.business.workbench.web.stateDir handoffService.serviceConfig.ReadWritePaths)
