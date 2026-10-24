@@ -30,7 +30,7 @@ let
       --max-bytes ${toString value.maxBytes} --timeout-seconds ${toString value.timeoutSeconds} || exit "$?"
   '') snapshots;
   snapshotExcludes = lib.concatMap (value: map (suffix: "pf:${value.source}${suffix}")
-    [ "" "-wal" "-shm" "-journal" ]) snapshots
+    [ "" "-wal" "-shm" ]) snapshots
     ++ lib.optional (snapshots != []) "pp:${snapshotRoot}/staging";
   snapshotSources = lib.optional (snapshots != [] && !(lib.any
     (source: source == snapshotReady || lib.hasPrefix "${lib.removeSuffix "/" source}/" snapshotReady)

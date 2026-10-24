@@ -19,12 +19,6 @@ in
   options.hwc.media.audiobookshelf = {
     enable = mkEnableOption "Audiobookshelf audiobook and podcast server";
 
-    dataDir = mkOption {
-      type = types.str;
-      default = "${paths.apps.root}/audiobookshelf/config";
-      description = "Application configuration and SQLite database directory";
-    };
-
     image = mkOption {
       type = types.str;
       default = "ghcr.io/advplyr/audiobookshelf:2.32.1";  # critical tier (Law 15 v12.4): library state — pinned

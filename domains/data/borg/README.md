@@ -19,8 +19,7 @@ domains/data/borg/
 ```
 
 The flake's `borg-recovery` check exercises the rendered hook and real local
-archives, including rollback-journal exclusion and Audio registration coverage.
-Its Home media fixture uses evaluated Immich storage paths and keeps
+archives. Its Home media fixture uses evaluated Immich storage paths and keeps
 original/profile/upload/external/archive files while rejecting regenerable caches.
 
 ## Namespace
@@ -80,8 +79,7 @@ and `timeoutSeconds` (600 default). The base role binds T3 on Borg-enabled hosts
 The application user reads the live database through SQLite's online backup API.
 The caller validates its own private copy, then publishes it atomically at
 `${hwc.paths.state}/borg-sqlite/ready/<name>.sqlite`. Borg includes that file
-and excludes the exact raw database, WAL, SHM and rollback-journal paths. These
-are archive exclusions; live sidecars remain untouched. Other userdata, including
+and excludes the exact raw database, WAL and SHM paths. Other userdata, including
 pairing keys and attachments, remains covered.
 
 These files are CRITICAL backed-up data. There is one last-good snapshot per
@@ -144,7 +142,6 @@ Borg wrapper alone does not load its private identity.
 - `borg-check-<name>.service` / timer — additional destination consistency checks
 
 ## Changelog
-- 2026-10-23: Exclude raw SQLite rollback journals alongside DB/WAL/SHM. Test the real archive boundary with an independently removed journal exclusion and require Audiobookshelf config/metadata coverage.
 - 2026-10-23: Exercise actual Home Immich media paths in local archive recovery, including original-file retention and removed-cache-exclusion mutation.
 - 2026-10-23: Expose typed per-destination timeout/upload limits; domain-owned units enforce them.
 - 2026-10-23: Add per-destination consistency services/timers with bounded repository locking and shared private SSH credentials.

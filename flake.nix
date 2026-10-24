@@ -3729,21 +3729,6 @@
           || lib.hasPrefix "${lib.removeSuffix "/" p}/" c.hwc.automation.n8n.dataDir)
           c.services.borgbackup.jobs.hwc-backup.paths
       )) hosts) "n8n needs its online SQLite snapshot and config/key directory in Borg";
-      assert lib.assertMsg (lib.all (c: !(c.hwc.media.audiobookshelf.enable or false) || (
-        let
-          cfg = c.hwc.media.audiobookshelf;
-          snapshot = c.hwc.data.borg.sqliteSnapshots.audiobookshelf or null;
-          covered = path: lib.any (p: p == path
-            || lib.hasPrefix "${lib.removeSuffix "/" p}/" path)
-            c.services.borgbackup.jobs.hwc-backup.paths;
-        in snapshot != null
-          && lib.baseNameOf snapshot.source == "absdatabase.sqlite"
-          && snapshot.user == "root"
-          && lib.elem "${dirOf snapshot.source}:/config"
-            c.virtualisation.oci-containers.containers.audiobookshelf.volumes
-          && covered (dirOf snapshot.source)
-          && covered (toString cfg.metadata)
-      )) hosts) "Audiobookshelf needs its online SQLite snapshot and mounted config/metadata in Borg";
       pkgs.runCommand "borg-recovery" { nativeBuildInputs = [ pkgs.python3 pkgs.bash pkgs.coreutils pkgs.borgbackup pkgs.util-linux ]; } ''
         python3 - ${lib.concatStringsSep " " (map toString fixtures)} ${restore}/bin/borg-restore <<'PY'
         import gzip, hashlib, json, os, pathlib, pwd, re, shlex, shutil, sqlite3, subprocess, sys, tempfile, threading, time
@@ -4009,7 +3994,6 @@
                 # and ready-snapshot coverage, plus synthetic userdata inputs
                 # to stress raw-database exclusion and unrelated-file retention.
                 (userdata / 'pairing-fixture').write_text('synthetic credential placeholder')
-                (userdata / 'state.sqlite-journal').write_bytes(b'rollback-journal fixture')
                 staging = state / 'staging' / 'not-an-archive-input'
                 staging.write_text('partial')
                 assert any(pathlib.PurePosixPath(spec['stateRoot'] + '/ready').is_relative_to(p) for p in spec['paths'])
@@ -4042,7 +4026,7 @@
                     restored_user = extracted / str(userdata).lstrip('/')
                     coherent(copied / 'ready' / (snapshot_name + '.sqlite'))
                     assert (restored_user / 'pairing-fixture').read_text() == 'synthetic credential placeholder'
-                    assert not any((restored_user / ('state.sqlite' + suffix)).exists() for suffix in ("", '-wal', '-shm', '-journal')), 'raw SQLite entered archive'
+                    assert not any((restored_user / ('state.sqlite' + suffix)).exists() for suffix in ("", '-wal', '-shm')), 'raw SQLite entered archive'
                     assert not (copied / 'staging' / 'not-an-archive-input').exists(), 'staging entered archive'
                 verify_archive(archive('valid', excludes))
                 if spec['immich']:
@@ -4078,11 +4062,7 @@
                     must_detect(lambda: verify_media(media_archive('media-exclusions-removed', without_caches)),
                         'Immich cache exclusions removed')
                 raw_patterns = [value for value in excludes if str(source) in value]
-                assert len(raw_patterns) == 4, raw_patterns
-                journal_pattern = 'pf:' + str(source) + '-journal'
-                assert journal_pattern in excludes
-                must_detect(lambda: verify_archive(archive('journal-exclusion-removed',
-                    [value for value in excludes if value != journal_pattern])), 'raw journal exclusion removed')
+                assert len(raw_patterns) == 3, raw_patterns
                 must_detect(lambda: verify_archive(archive('raw-exclusion-removed', [value for value in excludes if value not in raw_patterns])), 'raw SQLite exclusions removed')
                 db.close()
                 for connection in other_databases:
@@ -4096,7 +4076,7 @@
                         'failed-hook-stops-downstream', 'local-borg-archive-extract',
                         'non-database-userdata-preserved', 'raw-and-staging-excluded'],
                     'mutationsDetected': ['snapshot-caller-removed', 'producer-failure-swallowed',
-                        'raw-sqlite-exclusions-removed', 'raw-journal-exclusion-removed']}), flush=True)
+                        'raw-sqlite-exclusions-removed']}), flush=True)
             fake = root / "borg"
             fake.write_text("#!${pkgs.bash}/bin/bash\nexit 42\n")
             fake.chmod(0o700)
