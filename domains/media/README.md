@@ -25,7 +25,7 @@ media/
 ├── jellyfin-native/         # Native Jellyfin; home GPU and XPS local libraries
 ├── navidrome-container/     # Navidrome music server (container)
 ├── navidrome-native/        # Navidrome music server (native NixOS)
-├── audiobookshelf/          # Audiobook/podcast server
+├── audiobookshelf/          # Audiobook/podcast server, config path and Borg recovery registration
 ├── jellyseerr/              # Media request management
 │
 ├── sonarr/                  # TV show management
@@ -72,6 +72,7 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-10-23: Register Audiobookshelf's root-owned live SQLite through the bounded Borg producer. Cover config/token identity and metadata, and derive existing mounts/pre-start paths from one dataDir. Keep its image, permissions and original audio storage unchanged.
 - 2026-10-23: Switch the transcripts site audio fallback from local Whisper to Deepgram Nova-3. Keep captions, X capture and existing saved transcripts; wire the key through the generated secrets facade and add the provider contract check.
 - 2026-10-22: Restore the XPS local Jellyfin library through the native module. GPU-disabled instances now generate software encoding settings; the XPS treats its Maryland LAN as local and refuses startup without its ZFS media mount or a readable pool state. A degraded mirror emits a warning; an unavailable or suspended pool blocks startup.
 - 2026-09-30: Preserve Radarr's local executable-title rejection score during Recyclarr sync. Sonarr and Radarr runtime settings prefer Usenet with a 24-hour torrent delay and fail executable/dangerous downloads for automatic replacement.

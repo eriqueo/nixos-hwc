@@ -2,14 +2,12 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.media.audiobookshelf;
-  appsRoot = config.hwc.paths.apps.root;
-  configPath = "${appsRoot}/audiobookshelf/config";
 
   # Script to ensure audiobookshelf directories exist with correct permissions
   ensureConfig = pkgs.writeShellScript "ensure-audiobookshelf-config" ''
     set -euo pipefail
 
-    CONFIG_DIR="${configPath}"
+    CONFIG_DIR="${cfg.dataDir}"
     LIBRARY_DIR="${cfg.library}"
     PODCASTS_DIR="${cfg.podcasts}"
     METADATA_DIR="${cfg.metadata}"
