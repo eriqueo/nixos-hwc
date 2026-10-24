@@ -22,7 +22,7 @@ in
   #==========================================================================
   options.hwc.media.mousehole = {
     enable = lib.mkEnableOption "Mousehole - MyAnonamouse seedbox IP updater";
-    image = lib.mkOption { type = lib.types.str; default = runtime.image; description = "Qualified same-app image from system.build.mouseholeRuntimeImageRecipe"; };
+    image = lib.mkOption { type = lib.types.str; default = "docker.io/tmmrtn/mousehole@sha256:5d4ec733d7eb9c20300f7976da4f4778e744b4089969bdd0478d3c4b2353420a"; description = "Original compatible image for availability recovery against current state"; };
     port = lib.mkOption { type = lib.types.int; default = 5010; description = "Port for Mousehole web UI"; };
     checkInterval = lib.mkOption { type = lib.types.int; default = 300; description = "Interval in seconds between IP checks"; };
     staleResponseSeconds = lib.mkOption { type = lib.types.int; default = 86400; description = "How long a MAM response is considered valid"; };

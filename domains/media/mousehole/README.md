@@ -223,6 +223,8 @@ Cadence should match `checkInterval` (default 5 min).
 
 ## Changelog
 
+- **2026-10-23 recovery**: Pin the exact original compatible image for availability recovery against current state. Retain the snapshot hook and independent work. This fallback retains the old Bun trust defect and does not complete security acceptance.
+
 - **2026-10-23**: Pin original0.2.0 app and official fixed Bun1.4.4 through a recipe-derived local image. Preserve VPN/state/credential; prebuild outside startup. Add bounded atomic JSON snapshots to the existing Borg hook and correct Home/access/probe guidance. Source checks exercise generated executable, invalid/racing-input preservation, and actual image/hook binding removal.
 
 - **2026-06-29**: Initial README. Service has been live and healthy on hwc-server
