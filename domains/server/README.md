@@ -19,6 +19,10 @@ Brain MCP public clients use the `.com` OAuth gateway and Service Auth origin;
 `native/ai/lead-scout` owns the disabled member recovery unit. It adopts the
 runtime compose project, waits for either container to exit and stops app before
 db. Runtime compose owns static addresses; Nix only validates exact trust.
+When enabled with Borg, the member owner also supplies a consistent rootless
+PostgreSQL snapshot. It keeps one private last-good dump and one bounded pending
+slot; a failed producer aborts backup. Borg excludes raw live pgdata and retains
+compose, configuration, credentials and app data through their existing source.
 Its optional invitation mail units expose a same-user Unix socket to fixed
 loopback Proton Bridge SMTP. Runtime sender, password and pinned certificate
 files are rebuilt from the configured address, existing pass entry and Bridge.
@@ -75,6 +79,8 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+
+- 2026-10-24: Register the member instance's rootless PG16 logical snapshot in the existing Borg job. Bound output to512MiB and120seconds, validate before atomic publication, preserve the last good dump on failure, and exclude raw pgdata. Member runtime and supervision stay unchanged.
 
 - 2026-10-20: Calendar agenda and wall scenes share presentation-only synced-event grouping. Case/space-equivalent titles with exact start/end collapse to one entry, retaining the writable copy when available; shadowed Busy placeholders are suppressed while lone Busy slots remain. Raw calendar reads, mutation identities and verification counts remain unchanged. Managed dinners keep separate UID identity.
 
