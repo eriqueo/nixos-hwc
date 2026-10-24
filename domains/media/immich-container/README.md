@@ -25,6 +25,11 @@ domains/media/immich-container/
 
 ## Runtime images
 
+This descendant recovery revision selects the retained previous server/ML
+images against current data. Its older Brotli inputs are an availability
+fallback and do not satisfy security acceptance. Corrected build contexts stay
+available; remove the fallback overrides after qualified recovery or promotion.
+
 The temporary defaults retain Immich 2.5.6. The server copies Node 24.22.1 from
 an immutable official Node image while retaining the app and Node ABI 137. The
 shared pure recipe also serves Seerr without changing its accepted image.
@@ -87,6 +92,8 @@ and the existing live mount wiring through runtime-only releases.
 
 ## Changelog
 
+- 2026-10-24: Prepare a descendant availability fallback with exact retained
+  server/ML images, preserving current data and independent source changes.
 - 2026-10-24: Export fixed-hash shared Brotli build contexts for the server and
   Pillow. Keep the app and existing TLS/CA inputs; require reviewed local images
   at startup and check the generated library and production wiring.
