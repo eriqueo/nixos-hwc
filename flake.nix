@@ -985,7 +985,8 @@
       in
       assert lib.assertMsg (lib.hasInfix "COPY ${manifest.brotli.filename} /tmp/hwc-brotli.deb" server
         && lib.hasInfix "dpkg -i /tmp/hwc-brotli.deb" server
-        && lib.hasInfix "COPY pillow-brotli/" ml)
+        && lib.hasInfix "COPY pillow-brotli/" ml
+        && lib.hasInfix "RUN chmod ${manifest.pillowLibraryMode}" ml)
         "Immich recipes must consume both corrected shared Brotli inputs";
       assert cfg.images.server == "localhost/immich-runtime:2.5.6-node24.22.1-${builtins.substring 0 12 (builtins.hashString "sha256" server)}";
       assert cfg.images.machineLearning == "localhost/immich-ml-runtime:2.5.6-${builtins.substring 0 12 (builtins.hashString "sha256" ml)}";
@@ -1008,7 +1009,9 @@
         for name in spec['pillowLibraries'].values():
             copied = ml / 'pillow-brotli' / name
             assert copied.read_bytes() == (libraries / name).read_bytes()
-            assert stat.S_IMODE(copied.stat().st_mode) == 0o755
+            # Nix canonicalizes executable store inputs to read-only. The
+            # image recipe restores the original container mode explicitly.
+            assert stat.S_IMODE(copied.stat().st_mode) == int(spec['pillowLibraryMode'], 8) & ~0o222
         common = libraries / spec['pillowLibraries']['common']
         decoder = libraries / spec['pillowLibraries']['decoder']
         ctypes.CDLL(str(common), mode=ctypes.RTLD_GLOBAL)

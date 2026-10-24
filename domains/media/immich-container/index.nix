@@ -84,6 +84,7 @@ let
     RUN /opt/venv/bin/python -c ${lib.escapeShellArg caPolicyScript} ${lib.escapeShellArg caPolicy} && update-ca-certificates --fresh
     RUN /opt/venv/bin/python -c ${lib.escapeShellArg caPolicyCheck} ${lib.escapeShellArg caPolicy}
     COPY pillow-brotli/ ${mlSitePackages}/pillow.libs/
+    RUN chmod ${pillowLibraryMode} ${mlSitePackages}/pillow.libs/${pillowLibraries.common} ${mlSitePackages}/pillow.libs/${pillowLibraries.decoder}
   '';
   mlRuntimeImage = "localhost/immich-ml-runtime:${appVersion}-${builtins.substring 0 12 (builtins.hashString "sha256" mlRuntimeRecipe)}";
   securityManifest = pkgs.writeText "immich-runtime-security.json" (builtins.toJSON {
