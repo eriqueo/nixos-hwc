@@ -990,8 +990,8 @@
       assert c.virtualisation.oci-containers.containers.immich-machine-learning.image == cfg.images.machineLearning;
       assert c.virtualisation.oci-containers.containers.immich-server.pull == "never";
       assert c.virtualisation.oci-containers.containers.immich-machine-learning.pull == "never";
-      assert lib.hasInfix "image exists ${cfg.images.server}" c.systemd.services.podman-immich-server.preStart;
-      assert lib.hasInfix "image exists ${cfg.images.machineLearning}" c.systemd.services.podman-immich-machine-learning.preStart;
+      assert lib.hasInfix "image exists ${lib.escapeShellArg cfg.images.server}" c.systemd.services.podman-immich-server.preStart;
+      assert lib.hasInfix "image exists ${lib.escapeShellArg cfg.images.machineLearning}" c.systemd.services.podman-immich-machine-learning.preStart;
       pkgs.runCommand "immich-shared-brotli-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
         python3 - ${serverContext} ${mlContext} ${libraries} <<'PY'
         import ctypes, hashlib, json, pathlib, stat, sys
