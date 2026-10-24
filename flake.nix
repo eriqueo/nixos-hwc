@@ -3646,6 +3646,7 @@
       assert unit.unitConfig.AssertPathIsMountPoint == c.hwc.paths.media.root;
       assert unit.serviceConfig.TimeoutStartSec == "60s";
       assert !c.hwc.monitoring.prometheus.agent.enable;
+      assert builtins.attrNames c.services.borgbackup.jobs == [ "hwc-backup-home" ];
       assert lib.all (name:
         lib.elem "xps-offsite-storage.service" c.systemd.services."borgbackup-repo-${name}".requires
         && c.systemd.services."borgbackup-repo-${name}".unitConfig.AssertPathIsMountPoint == repositories.${name}.path
