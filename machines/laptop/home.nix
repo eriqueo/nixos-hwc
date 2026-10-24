@@ -90,6 +90,7 @@ in
       enable = true;
       summary.enable = true;
       externalLinks.enable = true;
+      mail.enable = true;
     };
   };
 

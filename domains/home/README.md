@@ -18,6 +18,10 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+`apps/workbench/` also binds optional native Mail to the declared fleet helper.
+The mail role installs that foreground helper/profile; the laptop opts into the
+native entry. The app owns the protocol, while aerc owns its account and files.
+
 `apps/workbench/` translates optional native desktop and central TUI settings
 through the app-owned generic module. Both HM lanes consume one route-derived
 server origin. Native tools are separate opt-ins; the qualified laptop enables
@@ -145,6 +149,9 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-24: Prepare optional native Mail/helper bindings from the current
+  aerc and fleet owners, with no launch or source action at activation.
 
 - 2026-10-24: Wire the qualified Workbench desktop and central TUI through one
   guarded origin and app-owned configuration, with both-lane consumer checks.

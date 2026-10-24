@@ -72,8 +72,9 @@ let
   queries = searchRegistry.aercText + lib.concatStringsSep "\n"
     (lib.mapAttrsToList (name: query: "${name}=${query}") queryAliases) + "\n";
 
+  accountName = "unified";
   accountsConf = ''
-    [unified]
+    [${accountName}]
     source              = notmuch://${maildirBase}
     maildir-store       = ${maildirBase}
     folders-exclude     = ~^\\..*,~^proton(/.*)?$,~^proton-hwc$,~^proton-personal$,~^gmail-business$,~^gmail-personal$,~^acc:,~^hwc_email$,~^proton-native$
@@ -225,5 +226,5 @@ in
     chafa poppler-utils jq mpv xdg-utils ov xclip
   ];
 
-  inherit accountsFile;
+  inherit accountsFile accountName;
 }

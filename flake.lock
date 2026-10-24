@@ -8,11 +8,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789498470,
-        "narHash": "sha256-7+/3mRcmLKi4I5M3T6ZyxPGnN33Q2f7/vYXQo13zRvA=",
+        "lastModified": 1792870733,
+        "narHash": "sha256-uZqszJV73R1lO7PzDfWaGNSfSSZr9Xf5rAUWtAtz624=",
         "owner": "eriqueo",
         "repo": "aerc",
-        "rev": "fe52be5c31f72c27bf3d1be079e8fcfd0f8872c5",
+        "rev": "172adfef836539796af7e79b5ae02f338c536abc",
         "type": "github"
       },
       "original": {
@@ -1125,11 +1125,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792863881,
-        "narHash": "sha256-USy7RXX8H3ImQMPXRB8z94PHF9axOgJ/Au7XDLyBbs8=",
+        "lastModified": 1792871007,
+        "narHash": "sha256-GSAbkL0ra1YeiixG1Y3UzXuuj39XKb7i6TlVLY06mVM=",
         "owner": "eriqueo",
         "repo": "workbench",
-        "rev": "03e367d68326498598c6ec25b4d90a31e71b78b6",
+        "rev": "1166712080690dddf3895b869e5db5ed15b91956",
         "type": "github"
       },
       "original": {

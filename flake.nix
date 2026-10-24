@@ -459,16 +459,33 @@
       builtins.filter builtins.pathExists
         (map (r: ./profiles + "/${r}/${lane}") roles);
 
+    # Fleet mail ownership supplies both client targets and existing mail checks.
+    mailMachines = lib.filterAttrs (_: machine: lib.elem "mail" machine.roles) machines;
+    mailOwner = assert lib.assertMsg (lib.length (builtins.attrNames mailMachines) == 1)
+      "mail consumers: expected one mail-role owner";
+      builtins.head (builtins.attrNames mailMachines);
+    mailHost = "hwc-${mailOwner}";
+
     # Both Home Manager lanes receive the same system-owned values: the capture
     # path, Courier tailnet hostname, and the Tether package (built once by
     # the system half; without it standalone `hms` dropped the tetherd unit).
     homeSpecialArgs = name: ch:
       let
         sysConfig = self.nixosConfigurations."hwc-${name}".config;
+        mailSystem = self.nixosConfigurations.${mailHost}.config;
+        mailHome = mailSystem.home-manager.users.eric;
         hmLib = import ./domains/lib/hm.nix { inherit lib; };
       in {
         inherit inputs;
         nixosApiVersion = ch.apiVersion;
+        # Remote paths are identity data, not local execution dependencies.
+        # The mail owner's system and consumer check retain their real context;
+        # copying it here would install the server's Mail stack on the laptop.
+        workbenchMailTarget = {
+          host = mailSystem.hwc.networking.hosts.fqdn.${mailOwner};
+          remoteHelper = builtins.unsafeDiscardStringContext mailHome.programs.workbench.mailHelper.executable;
+          remoteProfile = builtins.unsafeDiscardStringContext mailHome.programs.workbench.mailHelper.profilePath;
+        };
         screenshotRoot = lib.attrByPath [ "hwc" "paths" "screenshots" ] null sysConfig;
         courierTailnetHost = "${sysConfig.networking.hostName}.${(hmLib.fleet sysConfig).tailnetSuffix}";
         tetherPackage =
@@ -742,12 +759,7 @@
             assert native_commands <= space_commands, f"manager actions without Space path: {native_commands - space_commands}"
       '';
       keymapGrammarFile = pkgs.writeText "keymap-grammar.json" (builtins.toJSON keymapGrammar);
-      # Resolve mail checks from the capability owner. The service split moved
-      # mail off hwc-home; a literal host left the checks with no subject.
-      mailMachines = lib.filterAttrs (_: machine: lib.elem "mail" machine.roles) machines;
-      mailHost = assert lib.assertMsg (lib.length (builtins.attrNames mailMachines) == 1)
-        "mail checks: expected one mail-role owner";
-        "hwc-${builtins.head (builtins.attrNames mailMachines)}";
+      # Reuse the fleet capability owner instead of a second host declaration.
       # Runtime mail controls depend on osConfig; inspect the deployed integrated
       # HM configuration rather than the standalone evaluation without that port.
       mailHome = self.nixosConfigurations.${mailHost}.config.home-manager.users.eric;
@@ -1667,6 +1679,10 @@
       workbench-desktop-consumer = let
         home = self.homeConfigurations."eric@hwc-laptop".config;
         systemHome = self.nixosConfigurations.hwc-laptop.config.home-manager.users.eric;
+        mailSystemHome = self.nixosConfigurations.${mailHost}.config.home-manager.users.eric;
+        mailStandaloneHome = self.homeConfigurations."eric@${mailHost}".config;
+        helper = mailSystemHome.programs.workbench.mailHelper;
+        launch = mailSystemHome.hwc.mail.aerc.launchInfo;
         origin = home.hwc.home.apps.workbench.serverUrl;
         native = inputs.workbench.packages.${system}.desktop;
         # Inspect public rendered JSON as data; retain real tool contexts in
@@ -1682,7 +1698,7 @@
         # real HWC and application modules remain the producers under test.
         fixture = settings: systemConfig: inputs.home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
-          extraSpecialArgs = { inherit inputs; osConfig = systemConfig; };
+          extraSpecialArgs = { inherit inputs; osConfig = systemConfig; workbenchMailTarget = null; };
           modules = [ ./domains/home/apps/workbench/index.nix
             ({ lib, ... }: {
               options.hwc.home = {
@@ -1719,8 +1735,26 @@
         linksOnly = (fixture { serverUrl = "https://fixture.invalid"; desktop = {
           enable = true; externalLinks.enable = true;
         }; } {}).config;
+        missingMailTarget = (fixture { serverUrl = "https://fixture.invalid";
+          desktop = { enable = true; mail.enable = true; };
+        } {}).config;
+        missingMailOwner = (fixture { mailHelper.enable = true; } {}).config;
+        fixtureMailTarget = { host = "mail.fixture.invalid";
+          remoteHelper = "/opt/workbench/bin/workbench";
+          remoteProfile = "/opt/workbench/mail.json";
+        };
+        explicitMail = (fixture { serverUrl = "https://fixture.invalid";
+          desktop = { enable = true; mail = {
+            enable = true;
+            target = fixtureMailTarget;
+          }; };
+        } {}).config;
+        mailTargetOnly = (fixture { serverUrl = "https://fixture.invalid";
+          desktop = { enable = true; mail.target = fixtureMailTarget; };
+        } {}).config;
         off = (fixture { serverUrl = "https://fixture.invalid"; desktop = {
           summary.enable = true; externalLinks.enable = true;
+          mail = { enable = true; target = fixtureMailTarget; };
         }; } {}).config;
         central = (fixture { enable = true; serverUrl = origin; handoff.enable = true; } {}).config;
         centralOff = (fixture { enable = true; serverUrl = origin; } {}).config;
@@ -1731,10 +1765,26 @@
         route = { name = "workbench"; mode = "vhost"; owner = "work"; };
         checkOrigin = cfg: cfg.programs.workbench.desktop.origin == cfg.hwc.home.apps.workbench.serverUrl
           && cfg.programs.workbench.handoff.serviceUrl == cfg.hwc.home.apps.workbench.serverUrl;
+        mailTarget = cfg: cfg.programs.workbench.desktop.mail;
+        checkMailTarget = cfg: let target = mailTarget cfg; in target != null
+          && target.host == self.nixosConfigurations.${mailHost}.config.hwc.networking.hosts.fqdn.${mailOwner}
+          && target.remoteHelper == helper.executable && target.remoteProfile == helper.profilePath
+          && builtins.getContext target.remoteHelper == {} && builtins.getContext target.remoteProfile == {}
+          && builtins.getContext target.terminal != {} && builtins.getContext target.ssh != {};
         payload = pkgs.writeText "workbench-desktop-consumers.json" (builtins.toJSON {
           inherit origin;
           standalone = desktopJson home;
           nixos = desktopJson systemHome;
+          expectedMail = {
+            host = self.nixosConfigurations.${mailHost}.config.hwc.networking.hosts.fqdn.${mailOwner};
+            remoteHelper = helper.executable;
+            remoteProfile = helper.profilePath;
+            terminal = lib.getExe pkgs.kitty;
+            ssh = lib.getExe pkgs.openssh;
+          };
+          inherit launch;
+          localCache = home.xdg.cacheHome;
+          remoteCache = mailSystemHome.xdg.cacheHome;
           tools = { terminal = lib.getExe pkgs.kitty; editor = lib.getExe pkgs.neovim-unwrapped;
             opener = lib.getExe' pkgs.xdg-utils "xdg-open"; };
         });
@@ -1757,6 +1807,28 @@
         && (desktopJson linksOnly).editor == null && (desktopJson linksOnly).externalOpener != null
         && !(off.xdg.configFile ? "workbench/desktop.json"))
         "workbench desktop: each native capability requires its own enable and desktop enable";
+      assert lib.assertMsg (!valid missingMailTarget && !valid missingMailOwner
+        && valid explicitMail && (desktopJson explicitMail).mail != null
+        && (desktopJson explicitMail).editor == null && (desktopJson explicitMail).externalOpener == null
+        && valid mailTargetOnly && !((desktopJson mailTargetOnly) ? mail)
+        && !((desktopJson explicit) ? mail))
+        "workbench Mail: independent clients need a fixed target and helpers need an aerc owner";
+      assert lib.assertMsg (checkMailTarget home && checkMailTarget systemHome
+        && helper.enable && mailStandaloneHome.programs.workbench.mailHelper.enable
+        && helper.executable == mailStandaloneHome.programs.workbench.mailHelper.executable
+        && helper.profilePath == mailStandaloneHome.programs.workbench.mailHelper.profilePath
+        && helper.profilePath == toString mailSystemHome.xdg.configFile."workbench/mail-helper.json".source
+        && helper.profilePath == toString mailStandaloneHome.xdg.configFile."workbench/mail-helper.json".source)
+        "workbench Mail: both HM lanes must retain the matching helper/profile and consume the fleet target";
+      assert lib.assertMsg (launch == mailStandaloneHome.hwc.mail.aerc.launchInfo
+        && launch.aercConf == toString mailSystemHome.home.file.".config/aerc/aerc.conf".source
+        && launch.bindsConf == toString mailSystemHome.home.file.".config/aerc/binds.conf".source
+        # Regex needles cannot carry store context; this comparison inspects
+        # text only. The launch/profile values above retain their dependencies.
+        && lib.hasInfix (builtins.unsafeDiscardStringContext launch.accountsConf)
+          mailSystemHome.home.activation.aercAccounts.data
+        && lib.any (package: "${package}/bin/aerc" == launch.aerc) mailSystemHome.home.packages)
+        "workbench Mail: launch facts must match the actual aerc configuration and installed client";
       assert lib.assertMsg (!checkOrigin (home // { programs = home.programs // {
           workbench = home.programs.workbench // { handoff.serviceUrl = "https://wrong.invalid"; };
         }; }) && !checkOrigin (home // { programs = home.programs // {
@@ -1770,13 +1842,27 @@
       pkgs.runCommand "workbench-desktop-consumer" { nativeBuildInputs = [ pkgs.python3 ]; } ''
         WORKBENCH_HANDOFF_SERVICE_URL=ambient-invalid ${wrapped central}/bin/workbench > central.json
         env -u WORKBENCH_HANDOFF_SERVICE_URL ${wrapped centralOff}/bin/workbench > disabled.json
-        python3 - ${payload} ${native} <<'PY'
-        import json, pathlib, sys
+        python3 - ${payload} ${native} ${helper.profilePath} <<'PY'
+        import configparser, json, pathlib, sys
         value = json.loads(pathlib.Path(sys.argv[1]).read_text())
         for cfg in (value['standalone'], value['nixos']):
             assert cfg == dict(schemaVersion=1, origin=value['origin'],
                 editor=dict(terminal=value['tools']['terminal'], editor=value['tools']['editor']),
-                externalOpener=value['tools']['opener']), cfg
+                externalOpener=value['tools']['opener'], mail=cfg['mail']), cfg
+            target = cfg['mail']
+            assert set(target) == set(value['expectedMail']) | {'runtimeRoot'}, target
+            assert all(target[key] == expected for key, expected in value['expectedMail'].items()), target
+            assert pathlib.Path(target['runtimeRoot']).parent == pathlib.Path(value['localCache']), target
+            assert len((target['runtimeRoot'] + '/' + '0'*32).encode()) < 108, target
+        profile = json.loads(pathlib.Path(sys.argv[3]).read_text())
+        assert set(profile) == set(value['launch']) | {'schemaVersion', 'protocol', 'runtime'}, profile
+        assert profile['schemaVersion'] == 1 and isinstance(profile['protocol'], str) and profile['protocol']
+        assert all(profile[key] == expected for key, expected in value['launch'].items()), profile
+        assert pathlib.Path(profile['runtime']).parent == pathlib.Path(value['remoteCache']), profile
+        assert len((profile['runtime'] + '/' + '0'*32 + '/aerc.sock').encode()) < 108, profile
+        account = configparser.ConfigParser(interpolation=None)
+        account.read(profile['accountsConf'])
+        assert profile['account'] in account.sections(), 'Declared account is absent from the real generated file'
         assert json.loads(pathlib.Path('central.json').read_text()) == {'WORKBENCH_HANDOFF_SERVICE_URL': value['origin']}
         assert json.loads(pathlib.Path('disabled.json').read_text()) == {}
         package = pathlib.Path(sys.argv[2])

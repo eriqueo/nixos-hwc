@@ -12,6 +12,9 @@
     ../../domains/mail/index.nix
   ];
 
+  # Installs a declared foreground helper/profile; never starts a client or daemon.
+  hwc.home.apps.workbench.mailHelper.enable = lib.mkDefault true;
+
   hwc.mail = {
     enable = true;
     bridge.enable = lib.mkDefault true;

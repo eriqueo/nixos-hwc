@@ -14,6 +14,11 @@ Unified email workflow across Proton and Gmail identities. Uses notmuch for inde
 
 ## Structure
 
+`launchInfo` exports the owned executable, logical account and generated aerc,
+accounts and bindings paths for declared launchers. Disabled aerc exports null.
+The account name remains one producer in `parts/config.nix`; consumers do not
+copy account files or credentials.
+
 Shared action metadata: `domains/home/keymap/grammar.nix`; pure context adapter:
 `domains/home/keymap/parts/to-aerc.nix`; command realizations: `parts/binds.nix`.
 The classifier contract supplies State labels and the read-only Bulk query.
@@ -249,6 +254,10 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
    `proton/Labels/<name>/`.
 
 ## Changelog
+- 2026-10-24: Expose read-only launch facts and derive the account header from
+  the same logical name for the optional Workbench foreground Mail helper.
+  Update the fork pin to preserve pending explicit queries during startup and
+  ignore superseded directory completions, including virtual-tree cancellation.
 - 2026-10-12: Share aerc action rows and bare aliases with Workbench schema 2; move compose/replies/forward to c; retain routing, unsubscribe and read-status menus under m.
 - 2026-10-09: Document physical command ownership, separate availability and dedicated Drafts/Sent uploads; retire the described MailMover pipeline.
 - 2026-10-01: Add canonical DONT KNOW display/default, one-step correction,

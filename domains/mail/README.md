@@ -9,6 +9,10 @@ Self-contained email domain: client UI, accounts, sync, indexing, sending, and b
 
 ## Structure
 
+`aerc.launchInfo` exposes read-only client/account/configuration facts to declared
+launchers. The optional Workbench helper consumes those facts; Mail still owns
+the account and its generated files. Installing its profile starts no client.
+
 `calendar/index.nix` includes the separate `meals` collection in Radicale calendar sync.
 
 `mbsync/` binds the bounded System One coordinator. Each account fetches
@@ -147,11 +151,10 @@ the selected message with `Space r a`; review or disable rules with `Space r m`.
 Rules live as append-only events in the classifier ledger, and Junk rules ask
 for an extra confirmation before they can send future matches to Trash.
 
-Future Workbench integration should consume the same selected-item context
-contract used by the existing hubs: a global action can hand the selected
-mail/task/document to an agent with a stable source and item ID. That action is
-deliberately not part of this mail slice; any write-back must remain an explicit
-review/apply step.
+Workbench selected-item handoffs preserve the same stable source and item
+identity as its hubs. Mail write-back still requires a declared action and
+explicit review. The optional native Mail helper consumes only the exported
+client launch facts; it adds no arbitrary-command or mailbox-write endpoint.
 
 ## Known Issues
 
@@ -159,6 +162,9 @@ review/apply step.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-10-24: Export aerc-owned launch facts for the optional Workbench native
+  Mail helper without duplicating account/configuration or credentials.
 
 - 2026-10-19: Add explicit exact-evidence label replacement for reviewed prior-projection conflicts, preserving folders, stars and original projection evidence.
 

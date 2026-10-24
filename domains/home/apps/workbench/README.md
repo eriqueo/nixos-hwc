@@ -16,6 +16,14 @@ shell's aerc alias, one-shot analysis via the selected Codex package, browser vi
 - ❌ Pane grid/theme belong to `domains/home/apps/zellij/`; keymap grammar to `domains/home/keymap/`
 
 ## Structure
+
+`mailHelper.enable` installs the app-owned foreground helper/profile using
+aerc-owned launch facts. `desktop.mail.enable` consumes a fixed remote helper
+and profile from the fleet composition. Both default off in the module; the
+mail role supplies the helper and the qualified laptop supplies the native
+entry. Runtime sockets use the Home Manager cache root and remain bounded and
+owned by the foreground resource. No daemon or account action starts at activation.
+
 - `index.nix` — imports the app-owned generic module; TUI wiring, wb-reload, shared Zellij package, versioned keymap, Codex provider, registry navigation, guarded server origin, central TUI handoffs, and optional native capabilities.
 
 `serverUrl` derives from the sole `workbench` vhost in the system's shared route
@@ -35,6 +43,8 @@ independent-HM guards, route derivation, capability switches, rendered JSON,
 wrapped central-client environment and the installed desktop entry.
 
 ## Changelog
+- 2026-10-24: Bind the app-owned native Mail/helper schema to aerc launch facts
+  and one fleet-owned remote target, preserving existing TUI destinations.
 - 2026-10-24: Share one route-derived origin across both HM lanes, native desktop
   and central TUI. Enable the tested laptop consumer with separate local
   capability switches; retain app-owned schema/entry and credential boundaries.

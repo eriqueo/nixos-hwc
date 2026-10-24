@@ -11,7 +11,7 @@
 # Auto-imported by domains/home/apps/index.nix (readDir). `inputs` arrives via
 # extraSpecialArgs (see flake.nix mkNixos/mkHome).
 
-{ config, lib, pkgs, inputs, osConfig ? {}, ... }:
+{ config, lib, pkgs, inputs, osConfig ? {}, workbenchMailTarget ? null, ... }:
 
 let
   cfg = config.hwc.home.apps.workbench;
@@ -25,6 +25,12 @@ let
     && (route.mode or "") == "vhost") routes;
   defaultServerUrl = if builtins.length serverRoutes == 1 && domain != ""
     then "https://${(builtins.head serverRoutes).name}.${domain}" else "";
+  mailLaunch = lib.attrByPath [ "hwc" "mail" "aerc" "launchInfo" ] null config;
+  # AUTO-MANAGED runtime: the foreground helper owns one bounded resource and
+  # removes its sockets when that resource closes. No business content lives here.
+  # The helper creates this one directory; a headless host need not have the
+  # desktop app's separate workbench cache tree yet.
+  mailRuntimeRoot = "${config.xdg.cacheHome}/workbench-mail";
 
   # Active system palette -> flat token map, string values only, handed to the
   # app as JSON via the generic module's `palette` option (which sets
@@ -96,11 +102,23 @@ in
     };
 
     handoff.enable = lib.mkEnableOption "central TUI handoffs through the private Workbench service";
+    mailHelper.enable = lib.mkEnableOption "the foreground Workbench Mail helper profile";
 
     desktop = {
       enable = lib.mkEnableOption "optional bundled Workbench desktop consumer";
       summary.enable = lib.mkEnableOption "confirmed read-only temporary item summaries";
       externalLinks.enable = lib.mkEnableOption "confirmed HTTPS/exact T3 conversation opening";
+      mail = {
+        enable = lib.mkEnableOption "confirmed exact-thread opening in an owned Mail window";
+        target = lib.mkOption {
+          type = lib.types.nullOr (lib.types.submodule {
+            options = lib.genAttrs [ "host" "remoteHelper" "remoteProfile" ]
+              (_: lib.mkOption { type = lib.types.str; });
+          });
+          default = workbenchMailTarget;
+          description = "Fixed helper target supplied by the fleet composition; independent HM must supply it explicitly.";
+        };
+      };
     };
 
     hubOrder = lib.mkOption {
@@ -202,7 +220,27 @@ in
       } else null;
       externalOpener = if cfg.desktop.externalLinks.enable
         then lib.getExe' pkgs.xdg-utils "xdg-open" else null;
+      mail = if cfg.desktop.mail.enable && cfg.desktop.mail.target != null then
+        cfg.desktop.mail.target // {
+          terminal = lib.getExe pkgs.kitty;
+          ssh = lib.getExe pkgs.openssh;
+          runtimeRoot = mailRuntimeRoot;
+        } else null;
     };
+  }) (lib.mkIf cfg.mailHelper.enable {
+    programs.workbench.mailHelper = {
+      enable = true;
+      profile = if mailLaunch == null then {} else mailLaunch // { runtime = mailRuntimeRoot; };
+    };
+    assertions = [{
+      assertion = mailLaunch != null;
+      message = "Workbench Mail helper requires the aerc capability's generated launchInfo.";
+    }];
+  }) (lib.mkIf (cfg.desktop.enable && cfg.desktop.mail.enable) {
+    assertions = [{
+      assertion = cfg.desktop.mail.target != null;
+      message = "Workbench native Mail requires a fixed helper target; independent Home Manager must configure it explicitly.";
+    }];
   }) (lib.mkIf (cfg.desktop.enable || (cfg.enable && cfg.handoff.enable)) {
     assertions = [{
       assertion = builtins.match "https://[^/?#@[:space:]]+/?" cfg.serverUrl != null;

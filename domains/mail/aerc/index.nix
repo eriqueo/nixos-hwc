@@ -17,7 +17,24 @@ let
   sievePart  = import ./parts/sieve.nix  { inherit lib pkgs config; };
 in
 {
-  options.hwc.mail.aerc.enable = lib.mkEnableOption "aerc terminal email client";
+  options.hwc.mail.aerc = {
+    enable = lib.mkEnableOption "aerc terminal email client";
+    launchInfo = lib.mkOption {
+      type = lib.types.nullOr (lib.types.submodule {
+        options = lib.genAttrs [ "aerc" "account" "aercConf" "accountsConf" "bindsConf" ]
+          (_: lib.mkOption { type = lib.types.str; });
+      });
+      default = if cfg.enable then {
+        aerc = lib.getExe aercPkg;
+        account = cfgPart.accountName;
+        aercConf = toString config.home.file.".config/aerc/aerc.conf".source;
+        accountsConf = toString cfgPart.accountsFile;
+        bindsConf = toString config.home.file.".config/aerc/binds.conf".source;
+      } else null;
+      readOnly = true;
+      description = "Read-only executable, logical account and generated configuration paths for declared client launchers.";
+    };
+  };
 
   config = lib.mkIf cfg.enable {
     home.packages = (cfgPart.packages or []);
