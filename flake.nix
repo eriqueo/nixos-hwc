@@ -3317,10 +3317,15 @@
       scout-member-backup = let
         c = self.nixosConfigurations.hwc-work.config;
         member = c.hwc.server.ai.leadScout.memberInstance;
+        browserSnapshot = c.systemd.services.scout-member-snapshot or null;
         producer = c.system.build.scoutMemberSnapshot or null;
         job = c.services.borgbackup.jobs.hwc-backup;
         spec = pkgs.writeText "scout-member-backup.json" (builtins.toJSON {
           inherit producer;
+          core = ./domains/server/native/ai/lead-scout/member-snapshot.py;
+          config = c.system.build.scoutMemberSnapshotConfig;
+          unit = browserSnapshot.serviceConfig;
+          unitText = c.systemd.units."scout-member-snapshot.service".text;
           hook = job.preHook;
           paths = job.paths;
           exclude = job.exclude;
@@ -3332,22 +3337,42 @@
           runtime = "/run/user/1000/containers";
         });
       in
+      assert lib.assertMsg (browserSnapshot != null
+        && browserSnapshot.serviceConfig.Type == "oneshot"
+        && browserSnapshot.serviceConfig.KillMode == "control-group"
+        && browserSnapshot.serviceConfig.KillSignal == "SIGKILL"
+        && browserSnapshot.serviceConfig.TimeoutStartSec == "15s"
+        && browserSnapshot.serviceConfig.TimeoutStopSec == "5s"
+        && lib.hasInfix "thaw" browserSnapshot.serviceConfig.ExecStopPost
+        && lib.hasInfix "scout-member-snapshot.service" job.preHook)
+        "Scout recurring browser backup needs its bounded oneshot/thaw in the actual Borg hook";
       assert lib.assertMsg (producer != null && lib.hasInfix
-        (builtins.unsafeDiscardStringContext (toString producer)) job.preHook)
-        "Rootless Scout needs its consistent snapshot in the actual Borg pre-hook";
+        (builtins.unsafeDiscardStringContext (toString producer)) browserSnapshot.serviceConfig.ExecStart
+        && lib.hasInfix (builtins.unsafeDiscardStringContext (toString producer)) browserSnapshot.serviceConfig.ExecStopPost)
+        "Scout capture and cleanup must use the same composed producer";
       pkgs.runCommand "scout-member-backup" { nativeBuildInputs = [ pkgs.python3 ]; } ''
         python3 - ${spec} <<'PY'
         import json, os, pathlib, runpy, subprocess, sys, tempfile, time
         spec = json.loads(pathlib.Path(sys.argv[1]).read_text())
         script = pathlib.Path(spec['producer'])
-        text = script.read_text()
-        assert 'runuser' in text and spec['container'] in text
+        text = pathlib.Path(spec['core']).read_text()
+        config = json.loads(pathlib.Path(spec['config']).read_text())
+        assert spec['unit']['User'] == spec['user'] == 'eric'
+        assert spec['unit']['MemoryMax'] == '2G'
+        assert pathlib.PurePosixPath(config['destination']).parent == pathlib.PurePosixPath(config['data']).parent.parent
+        assert spec['unit']['StateDirectory'] == config['destination'].removeprefix('/var/lib/')
+        assert 'Environment=' in spec['unitText'] and '/run/wrappers/bin' in spec['unitText']
+        assert 'XDG_RUNTIME_DIR=/run/user/1000' in spec['unitText']
+        assert spec['container'] in config['pg'] and 'runuser' not in config['pg']
         assert 'POSTGRES_USER' in text and 'POSTGRES_DB' in text
-        assert '/var/lib/backups/scout-member/current.dump' in spec['hook']
+        assert 'scout-member-snapshot.service' in spec['hook']
         assert '/var/lib/backups' in spec['paths']
         assert 'pp:' + spec['raw'] in spec['exclude']
-        assert spec['graph'] in spec['writable'] and spec['runtime'] in spec['writable']
-        assert '|| exit' in spec['hook'].split(spec['producer'], 1)[1].splitlines()[0]
+        assert 'pp:' + config['data'] in spec['exclude']
+        assert 'pp:' + config['destination'] + '/pending' in spec['exclude']
+        assert 'pp:' + config['destination'] + '/previous' in spec['exclude']
+        assert spec['graph'] not in spec['writable'] and spec['runtime'] not in spec['writable']
+        assert '|| exit' in spec['hook'].split('scout-member-snapshot.service', 1)[1].splitlines()[0]
         module = runpy.run_path(str(script))
         snapshot = module['snapshot']
         with tempfile.TemporaryDirectory() as tmp:
@@ -3393,6 +3418,59 @@
                 except BlockingIOError: pass
                 else: raise AssertionError('concurrent snapshot acquired occupied slot')
             assert dest.read_bytes() == good
+            core = runpy.run_path(spec['core'])
+            bundle = root / 'bundles'; bundle.mkdir()
+            def stage(value):
+                pending = bundle / 'pending'; pending.mkdir()
+                (pending / 'manifest.json').write_text('{"schemaVersion":1}')
+                (pending / 'marker').write_text(value)
+            stage('one'); core['publish'](bundle)
+            assert (bundle / 'current/marker').read_text() == 'one'
+            (bundle / 'pending').mkdir()
+            try: core['publish'](bundle)
+            except RuntimeError: pass
+            else: raise AssertionError('incomplete bundle published')
+            assert (bundle / 'current/marker').read_text() == 'one'
+            (bundle / 'pending').rmdir()
+            stage('two'); core['publish'](bundle)
+            assert (bundle / 'current/marker').read_text() == 'two'
+            assert (bundle / 'previous/marker').read_text() == 'one'
+            stage('three'); core['publish'](bundle)
+            assert (bundle / 'current/marker').read_text() == 'three'
+            assert (bundle / 'previous/marker').read_text() == 'two'
+            assert sorted(p.name for p in bundle.iterdir()) == ['current', 'previous']
+            pending = bundle / 'pending'; pending.symlink_to(bundle / 'previous', target_is_directory=True)
+            try: core['publish'](bundle)
+            except RuntimeError: pass
+            else: raise AssertionError('symlink bundle accepted')
+            assert (bundle / 'current/marker').read_text() == 'three'
+            pending.unlink()
+            state = root / 'state.json'
+            state.write_text(json.dumps({'phase':'armed','pauseRequested':True,'cid':'wrong',
+                'identity':{'pid':os.getpid(),'start':'wrong','cgroup':'wrong'}}))
+            try: core['thaw']({}, state)
+            except RuntimeError: pass
+            else: raise AssertionError('wrong process identity accepted for thaw')
+            state.write_text('{"phase":"unpaused"}')
+            core['thaw']({}, state)  # terminal cleanup has no repeated effect
+            # The real Podman boundary rejects top after pause (exit125).
+            # A frozen check must use its injected cgroup/proc reader instead.
+            control = root / 'control-port'
+            control.write_text('#!' + sys.executable + '\n' + """
+        import sys
+        if sys.argv[1] == 'top': sys.exit(125)
+        print('{"jobs":0,"inline":0,"transactions":0}')
+        """.strip() + '\n')
+            control.chmod(0o700)
+            private = {'pg':[str(control)],'podman':[str(control)],'app':'private','uid':1000}
+            try: core['quiescent'](private)
+            except RuntimeError: pass
+            else: raise AssertionError('paused top rejection was ignored')
+            core['quiescent'](private, {'phase':'frozen'}, lambda state, uid: ['podman-init','node'])
+            for names in (['node','chromium'], ['podman-init'], []):
+                try: core['quiescent'](private, {'phase':'frozen'}, lambda state, uid: names)
+                except RuntimeError: pass
+                else: raise AssertionError('invalid frozen writer set accepted')
         print('valid/failure/invalid/oversize/deadline/stale/lock/permissions/lastgood passed')
         PY
         touch "$out"
