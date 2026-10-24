@@ -147,3 +147,14 @@ claim full-host or T3 coverage. Source and encrypted configuration live in Git;
 other legacy application state remains in the verified recovery checkpoint.
 Retire the old SSD-local backup timer only after the real remote state archive
 and restore pass. Verify `borgbackup-job-hwc-backup-home` and `borg-check-home`.
+
+## Software updates before a cable change
+
+The system can be updated while `ready=false`. That hold disables backup clients,
+agent publication and automatic repository-directory initialization. The ZFS
+bootstrap has no independent boot target. This allows native Jellyfin/software
+activation without creating offsite datasets or starting backup uploads.
+Take and validate a fresh quiesced Jellyfin checkpoint before activation. Keep
+existing state/configuration checkpoints. Inspect native Jellyfin, remote access
+and unchanged dataset inventory after the switch. Cable speed/stability, actual
+destination restores and reboot acceptance remain separate checks.

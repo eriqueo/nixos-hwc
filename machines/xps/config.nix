@@ -16,6 +16,9 @@ let
       key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJWkksdWaqAL9rUv48tIhDneMgvoS1+UrQavhMNAadb6 borg-work-offsite-ssh-key"; };
   };
   offsiteRepoGuard = name: {
+    # Hold automatic directory/dataset creation while the cable/recovery gate
+    # is closed. Remove this hold by opening ready after destination acceptance.
+    wantedBy = lib.mkForce (lib.optional (offsiteStorage != null && offsiteStorage.ready) "multi-user.target");
     after = [ "xps-offsite-storage.service" ];
     requires = [ "xps-offsite-storage.service" ];
     unitConfig.AssertPathIsMountPoint = config.services.borgbackup.repos.${name}.path;

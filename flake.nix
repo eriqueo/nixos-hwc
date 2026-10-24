@@ -3647,6 +3647,7 @@
         lib.elem "xps-offsite-storage.service" c.systemd.services."borgbackup-repo-${name}".requires
         && c.systemd.services."borgbackup-repo-${name}".unitConfig.AssertPathIsMountPoint == repositories.${name}.path
         && repositories.${name}.allowSubRepos == false
+        && c.systemd.services."borgbackup-repo-${name}".wantedBy == []
       ) [ "hwc-home" "hwc-work" ];
       assert lib.all (name: let
         host = (self.nixosConfigurations.${name}.extendModules { specialArgs.offsiteStorage = {
@@ -3795,6 +3796,7 @@
         scripts = map (name: pkgs.writeText "${name}-entry.sh" (unit name).script)
           [ "hwc-backup" "hwc-backup-test" ];
       in
+      assert lib.all (name: xps.systemd.services."borgbackup-repo-${name}".wantedBy == [ "multi-user.target" ]) [ "hwc-home" "hwc-work" ];
       assert valid xps;
       assert builtins.attrNames xps.services.borgbackup.jobs == [ "hwc-backup-home" ];
       assert !(builtins.hasAttr "borg-check" xps.systemd.services);
