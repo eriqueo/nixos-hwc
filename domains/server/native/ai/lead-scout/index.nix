@@ -37,7 +37,10 @@ let
   member = cfg.memberInstance;
   invitationMail = member.invitationMail;
   memberUser = config.users.users.${cfg.user};
-  memberRuntime = "/run/user/${toString memberUser.uid}";
+  # Law4 standard UID1000 applies when Nix delegates allocation. Verify the
+  # actual account at the executable boundary before accessing rootless state.
+  memberUid = if memberUser.uid == null then 1000 else memberUser.uid;
+  memberRuntime = "/run/user/${toString memberUid}";
   memberGraph = "${memberUser.home}/.local/share/containers/storage";
   memberRunroot = "${memberRuntime}/containers";
   memberSnapshotPath = "/var/lib/backups/scout-member/current.dump";
@@ -46,7 +49,7 @@ let
   # Fixed rootless ports preserve the running compose DB; no password leaves it.
   memberSnapshot = pkgs.writeScript "scout-member-snapshot" ''
     #!${pkgs.python3}/bin/python3
-    import fcntl, os, pathlib, resource, signal, subprocess, sys, time
+    import fcntl, os, pathlib, pwd, resource, signal, subprocess, sys, time
 
     def snapshot(destination, command, max_bytes=536870912, timeout_seconds=120):
         os.umask(0o077)
@@ -83,7 +86,7 @@ let
                     os.fsync(output.fileno())
                 if not 5 < pending.stat().st_size <= max_bytes:
                     raise RuntimeError('member database snapshot exceeds bound or is empty')
-                with pending.open('rb') as source:
+                with pending.open('rb', buffering=0) as source:
                     if source.read(5) != b'PGDMP':
                         raise RuntimeError('member database snapshot has invalid format')
                     source.seek(0)
@@ -96,6 +99,8 @@ let
                 pending.unlink(missing_ok=True)
 
     if __name__ == '__main__':
+        if pwd.getpwnam(${builtins.toJSON cfg.user}).pw_uid != ${toString memberUid}:
+            raise SystemExit('[scout-member-backup] rootless account identity mismatch')
         command = ${builtins.toJSON [
           "${pkgs.util-linux}/bin/runuser" "-u" cfg.user "--"
           "${pkgs.coreutils}/bin/env" "XDG_RUNTIME_DIR=${memberRuntime}"

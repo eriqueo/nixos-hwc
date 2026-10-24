@@ -3031,7 +3031,7 @@
           container = "${member.projectName}_db_1";
           raw = "${member.directory}/pgdata";
           graph = "${c.users.users.eric.home}/.local/share/containers/storage";
-          runtime = "/run/user/${toString c.users.users.eric.uid}/containers";
+          runtime = "/run/user/1000/containers";
         });
       in
       assert lib.assertMsg (producer != null && lib.hasInfix
