@@ -158,3 +158,9 @@ Take and validate a fresh quiesced Jellyfin checkpoint before activation. Keep
 existing state/configuration checkpoints. Inspect native Jellyfin, remote access
 and unchanged dataset inventory after the switch. Cable speed/stability, actual
 destination restores and reboot acceptance remain separate checks.
+
+The bounded pool-health query runs in `xps-media-ready`, a separate oneshot as
+`eric:users` with only `/dev/zfs` device access. Jellyfin requires it and waits
+for completion before database setup. The oneshot does not remain active, so a
+later Jellyfin start checks the pool again. Jellyfin keeps its device sandbox;
+putting the query in its own preStart fails under that sandbox.

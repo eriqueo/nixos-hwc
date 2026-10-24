@@ -4392,13 +4392,14 @@
       assert lib.hasInfix vhost home.services.caddy.extraConfig;
       pkgs.runCommand "phone-ingest-ownership" {} ''touch "$out"'';
 
-      # Exercise the XPS guard through the production preStart, before any
-      # database setup. The fixture replaces OS probes and drops their string
+      # Exercise the XPS dependency guard before the native database preStart.
+      # Its own sandbox permits only the ZFS device; Jellyfin stays restricted. The fixture replaces OS probes and drops their string
       # contexts so this check does not build ZFS/FFmpeg merely to mock them.
       xps-media-readiness = let
         peer = self.nixosConfigurations.hwc-xps.config;
         service = peer.systemd.services.jellyfin;
-        preflight = builtins.head (lib.splitString "DATA_DIR=" service.preStart);
+        readiness = peer.systemd.services.xps-media-ready or {};
+        preflight = readiness.script or "";
         encoding = (builtins.head service.restartTriggers).text;
         homeEncoding = (builtins.head self.nixosConfigurations.hwc-home.config.systemd.services.jellyfin.restartTriggers).text;
         fixture = pkgs.writeText "xps-media-readiness.json" (builtins.toJSON {
@@ -4408,7 +4409,16 @@
         });
       in
       assert lib.assertMsg (lib.hasInfix "pool_health=" preflight)
-        "XPS Jellyfin must run its pool guard before database setup";
+        "XPS Jellyfin needs its independent pool readiness service";
+      assert lib.elem "xps-media-ready.service" service.requires && lib.elem "xps-media-ready.service" service.after;
+      assert readiness.serviceConfig.User == "eric" && readiness.serviceConfig.Group == "users";
+      assert readiness.serviceConfig.Type == "oneshot" && !(readiness.serviceConfig.RemainAfterExit or false);
+      assert readiness.serviceConfig.DevicePolicy == "closed" && readiness.serviceConfig.DeviceAllow == [ "/dev/zfs rw" ];
+      assert readiness.serviceConfig.NoNewPrivileges && readiness.serviceConfig.ProtectSystem == "strict";
+      assert readiness.serviceConfig.TimeoutStartSec == "15s" && readiness.serviceConfig.TimeoutStopSec == "5s";
+      assert readiness.unitConfig.AssertPathIsMountPoint == peer.hwc.paths.media.root;
+      assert !(lib.elem "/dev/zfs rw" service.serviceConfig.DeviceAllow);
+      assert !(lib.hasInfix "pool_health=" service.preStart) && lib.hasInfix "DATA_DIR=" service.preStart;
       assert service.unitConfig.AssertPathIsMountPoint == peer.hwc.paths.media.root;
       assert lib.elem "zfs-mount.service" service.requires;
       assert lib.hasInfix "<HardwareAccelerationType>none</HardwareAccelerationType>" encoding;

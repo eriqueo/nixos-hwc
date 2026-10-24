@@ -237,18 +237,30 @@ in {
     network.localSubnets = [ "192.168.1.0/24" ];
   };
 
-  # Refuse to scan the root filesystem's empty mount directory when the DAS
-  # is absent. ZFS owns the mount, and the assertion fails startup loudly.
-  systemd.services.jellyfin = {
+  # Keep pool queries out of Jellyfin's device sandbox. This short-lived
+  # readiness unit can access /dev/zfs; the media daemon cannot.
+  systemd.services.xps-media-ready = {
     after = [ "zfs-mount.service" ];
     requires = [ "zfs-mount.service" ];
     unitConfig = {
       RequiresMountsFor = [ config.hwc.paths.media.root ];
       AssertPathIsMountPoint = config.hwc.paths.media.root;
     };
-    # A suspended ZFS pool can remain mounted. Check the pool's own health
-    # before Jellyfin touches its database or scans files; never wait forever.
-    preStart = lib.mkBefore ''
+    serviceConfig = {
+      User = lib.mkForce "eric";
+      Group = "users";
+      Type = "oneshot";
+      RemainAfterExit = false;
+      DevicePolicy = "closed";
+      DeviceAllow = [ "/dev/zfs rw" ];
+      NoNewPrivileges = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      PrivateTmp = true;
+      TimeoutStartSec = "15s";
+      TimeoutStopSec = "5s";
+    };
+    script = ''
       if ! pool_health=$(${pkgs.coreutils}/bin/timeout 10s ${config.boot.zfs.package}/bin/zpool list -H -o health ${lib.escapeShellArg mediaPool}); then
         echo "Jellyfin cannot read the media pool state. Inspect: zpool status ${mediaPool}" >&2
         exit 1
@@ -264,6 +276,17 @@ in {
           ;;
       esac
     '';
+  };
+
+  # Refuse startup on an absent mount; finish the independent readiness
+  # query before the native database preStart. Each start reruns the oneshot.
+  systemd.services.jellyfin = {
+    after = [ "zfs-mount.service" "xps-media-ready.service" ];
+    requires = [ "zfs-mount.service" "xps-media-ready.service" ];
+    unitConfig = {
+      RequiresMountsFor = [ config.hwc.paths.media.root ];
+      AssertPathIsMountPoint = config.hwc.paths.media.root;
+    };
   };
 
   # Reverse proxy for local services
