@@ -973,6 +973,53 @@
         touch "$out"
       '';
 
+      immich-shared-brotli-wiring = let
+        c = self.nixosConfigurations.hwc-home.config;
+        cfg = c.hwc.media.immich;
+        serverContext = c.system.build.immichServerRuntimeImageContext;
+        mlContext = c.system.build.immichMlRuntimeImageContext;
+        libraries = c.system.build.immichPillowBrotliLibraries;
+        manifest = builtins.fromJSON c.system.build.immichRuntimeSecurityManifest.text;
+        server = c.system.build.immichServerRuntimeImageRecipe.text;
+        ml = c.system.build.immichMlRuntimeImageRecipe.text;
+      in
+      assert lib.assertMsg (lib.hasInfix "COPY ${manifest.brotli.filename} /tmp/hwc-brotli.deb" server
+        && lib.hasInfix "dpkg -i /tmp/hwc-brotli.deb" server
+        && lib.hasInfix "COPY pillow-brotli/" ml)
+        "Immich recipes must consume both corrected shared Brotli inputs";
+      assert cfg.images.server == "localhost/immich-runtime:2.5.6-node24.22.1-${builtins.substring 0 12 (builtins.hashString "sha256" server)}";
+      assert cfg.images.machineLearning == "localhost/immich-ml-runtime:2.5.6-${builtins.substring 0 12 (builtins.hashString "sha256" ml)}";
+      assert c.virtualisation.oci-containers.containers.immich-server.image == cfg.images.server;
+      assert c.virtualisation.oci-containers.containers.immich-machine-learning.image == cfg.images.machineLearning;
+      assert c.virtualisation.oci-containers.containers.immich-server.pull == "never";
+      assert c.virtualisation.oci-containers.containers.immich-machine-learning.pull == "never";
+      assert lib.hasInfix "image exists ${cfg.images.server}" c.systemd.services.podman-immich-server.preStart;
+      assert lib.hasInfix "image exists ${cfg.images.machineLearning}" c.systemd.services.podman-immich-machine-learning.preStart;
+      pkgs.runCommand "immich-shared-brotli-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${serverContext} ${mlContext} ${libraries} <<'PY'
+        import ctypes, hashlib, json, pathlib, stat, sys
+        server, ml, libraries = map(pathlib.Path, sys.argv[1:])
+        spec = json.loads((server / 'manifest.json').read_text())
+        assert spec == json.loads((ml / 'manifest.json').read_text())
+        assert spec['brotli']['version'] == '1.1.0-2+deb13u1'
+        assert spec['brotli']['sha256'] == 'db46824c60fee46aff3cc0be3e5f736bc606cae669b1fb17516a41e8073251a9'
+        package = server / spec['brotli']['filename']
+        assert hashlib.sha256(package.read_bytes()).hexdigest() == spec['brotli']['sha256']
+        for name in spec['pillowLibraries'].values():
+            copied = ml / 'pillow-brotli' / name
+            assert copied.read_bytes() == (libraries / name).read_bytes()
+            assert stat.S_IMODE(copied.stat().st_mode) == 0o755
+        common = libraries / spec['pillowLibraries']['common']
+        decoder = libraries / spec['pillowLibraries']['decoder']
+        ctypes.CDLL(str(common), mode=ctypes.RTLD_GLOBAL)
+        lib = ctypes.CDLL(str(decoder))
+        lib.BrotliDecoderErrorString.argtypes = [ctypes.c_int]
+        lib.BrotliDecoderErrorString.restype = ctypes.c_char_p
+        assert any(b'BLOCK_SWITCH' in lib.BrotliDecoderErrorString(i) for i in range(-64, 1)), 'security backport absent from generated loader input'
+        PY
+        touch "$out"
+      '';
+
       seerr-settings-preservation = let
         secret = name: value: pkgs.writeText "seerr-fixture-${name}" value;
         original = {
