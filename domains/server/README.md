@@ -80,7 +80,7 @@ Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
 
-- 2026-10-24: Register the member instance's rootless PG16 logical snapshot in the existing Borg job. Bound output to512MiB and120seconds, verify the actual rootless account and validate before atomic publication, preserve the last good dump on failure, and exclude raw pgdata. Member runtime and supervision stay unchanged.
+- 2026-10-24: Register the member instance's rootless PG16 logical snapshot in the existing Borg job. Count output in the parent up to512MiB with a120-second deadline, verify the actual rootless account and validate before atomic publication, preserve the last good dump on failure, and exclude raw pgdata. Member runtime and supervision stay unchanged.
 
 - 2026-10-20: Calendar agenda and wall scenes share presentation-only synced-event grouping. Case/space-equivalent titles with exact start/end collapse to one entry, retaining the writable copy when available; shadowed Busy placeholders are suppressed while lone Busy slots remain. Raw calendar reads, mutation identities and verification counts remain unchanged. Managed dinners keep separate UID identity.
 

@@ -49,7 +49,7 @@ let
   # Fixed rootless ports preserve the running compose DB; no password leaves it.
   memberSnapshot = pkgs.writeScript "scout-member-snapshot" ''
     #!${pkgs.python3}/bin/python3
-    import fcntl, os, pathlib, pwd, resource, signal, subprocess, sys, time
+    import fcntl, os, pathlib, pwd, selectors, signal, subprocess, sys, time
 
     def snapshot(destination, command, max_bytes=536870912, timeout_seconds=120):
         os.umask(0o077)
@@ -65,19 +65,39 @@ let
             pending = root / 'pending.dump'
             pending.unlink(missing_ok=True)
             def run(args, output, source=None):
-                def bound():
-                    resource.setrlimit(resource.RLIMIT_FSIZE, (max_bytes, max_bytes))
+                # runuser resets inherited file-size limits. Count bytes in this
+                # parent before writing, rather than trusting a child rlimit.
+                capture = output != subprocess.DEVNULL
                 child = subprocess.Popen(command + args, stdin=source or subprocess.DEVNULL,
-                    stdout=output, stderr=subprocess.DEVNULL, start_new_session=True, preexec_fn=bound)
+                    stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL, start_new_session=True)
                 try:
+                    if capture:
+                        with selectors.DefaultSelector() as events:
+                            events.register(child.stdout, selectors.EVENT_READ)
+                            count = 0
+                            while True:
+                                left = deadline - time.monotonic()
+                                if left <= 0 or not events.select(left):
+                                    raise subprocess.TimeoutExpired(command, timeout_seconds)
+                                chunk = os.read(child.stdout.fileno(), min(65536, max_bytes-count+1))
+                                if not chunk:
+                                    break
+                                count += len(chunk)
+                                if count > max_bytes:
+                                    raise RuntimeError('member database snapshot exceeds byte bound')
+                                output.write(chunk)
                     code = child.wait(timeout=max(.001, deadline - time.monotonic()))
+                    if code != 0:
+                        raise RuntimeError('member database snapshot port failed')
                 except BaseException:
                     try: os.killpg(child.pid, signal.SIGKILL)
                     except ProcessLookupError: pass
                     child.wait()
                     raise
-                if code != 0:
-                    raise RuntimeError('member database snapshot port failed')
+                finally:
+                    if child.stdout is not None:
+                        child.stdout.close()
             try:
                 with pending.open('xb') as output:
                     os.fchmod(output.fileno(), 0o600)
