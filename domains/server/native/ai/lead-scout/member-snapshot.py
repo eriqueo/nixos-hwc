@@ -367,8 +367,8 @@ def create_bundle(config, root, state_file, invocation):
                    or '..' in pathlib.PurePosixPath(member.name).parts for member in members):
                 raise BackupError('archive_path')
             manifest['entries'] = len(members)
-            manifest['logEntries'] = sum(member.isfile() and member.name.endswith('.log') for member in members)
-            if sum(member.isfile() for member in members) != expected_files or manifest['logEntries'] != expected_logs:
+            manifest['logEntries'] = sum((member.isfile() or member.islnk()) and member.name.endswith('.log') for member in members)
+            if sum(member.isfile() or member.islnk() for member in members) != expected_files or manifest['logEntries'] != expected_logs:
                 raise BackupError('profile_entry_coverage')
         write_json(pending / 'manifest.json', manifest)
         publish(root)

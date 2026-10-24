@@ -23,7 +23,7 @@ When enabled with Borg, `member-snapshot.py` supplies the SQL/profile producer
 and its thaw cleanup through one composed implementation. The Borg hook starts
 an unscheduled same-user oneshot with a15-second startup deadline and5-second
 cleanup budget. It freezes only an idle exact app, captures PG16 SQL, full browser
-data including logs/WAL and matching private settings, then resumes the same
+data including logs/WAL and hard-linked files plus matching private settings, then resumes the same
 process. Failure cleanup checks PID/start/cgroup identity and has a kernel-thaw
 fallback; needing that fallback fails the backup visibly. Complete bundles
 publish atomically, with one current, one previous and one pending slot, each
