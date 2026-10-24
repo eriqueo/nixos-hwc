@@ -120,8 +120,11 @@ in
     enable = lib.mkEnableOption "Immich photo management server (containerized)";
 
     images = {
-      server = lib.mkOption { type = lib.types.str; default = serverRuntime.image; description = "Qualified same-app Node/shared-library image; build system.build.immichServerRuntimeImageContext"; };
-      machineLearning = lib.mkOption { type = lib.types.str; default = mlRuntimeImage; description = "Qualified same-app TLS/CA/Pillow image; build system.build.immichMlRuntimeImageContext"; };
+      # Availability fallback only: preserve current data and all independent
+      # source work. Remove these overrides after the corrected candidate passes
+      # live consumer checks; these older libraries do not satisfy security acceptance.
+      server = lib.mkOption { type = lib.types.str; default = "localhost/immich-runtime:2.5.6-node24.22.1-f32636aa93be"; description = "Retained same-app availability fallback; current data stays in place"; };
+      machineLearning = lib.mkOption { type = lib.types.str; default = "localhost/immich-ml-runtime:2.5.6-4f8e382d4716"; description = "Retained same-app availability fallback; current data stays in place"; };
       redis = lib.mkOption { type = lib.types.str; default = "docker.io/library/redis:7.2-alpine"; description = "Redis container image"; };
     };
 
