@@ -18,6 +18,10 @@ domains/data/borg/
 └── README.md          # This file
 ```
 
+The flake's `borg-recovery` check exercises the rendered hook and real local
+archives. Its Home media fixture uses evaluated Immich storage paths and keeps
+original/profile/upload/external/archive files while rejecting regenerable caches.
+
 ## Namespace
 
 `hwc.data.borg.*`
@@ -138,6 +142,7 @@ Borg wrapper alone does not load its private identity.
 - `borg-check-<name>.service` / timer — additional destination consistency checks
 
 ## Changelog
+- 2026-10-23: Exercise actual Home Immich media paths in local archive recovery, including original-file retention and removed-cache-exclusion mutation.
 - 2026-10-23: Expose typed per-destination timeout/upload limits; domain-owned units enforce them.
 - 2026-10-23: Add per-destination consistency services/timers with bounded repository locking and shared private SSH credentials.
 - 2026-10-23: Deliver additional SSH identities through private systemd credentials from standard root:secrets 0440 agenix mounts. Refuse missing credential delivery before SSH.

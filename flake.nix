@@ -3707,6 +3707,11 @@
           lockRoot = "${c.hwc.paths.state}/borg-jobs";
           paths = c.services.borgbackup.jobs.hwc-backup.paths;
           exclude = c.services.borgbackup.jobs.hwc-backup.exclude;
+          immich = lib.optionalAttrs c.hwc.media.immich.enable {
+            root = c.hwc.media.immich.storage.basePath;
+            originals = with c.hwc.media.immich.storage.locations; [ library profile ];
+            regenerable = with c.hwc.media.immich.storage.locations; [ thumbs encodedVideo ];
+          };
           cli = "${lib.findFirst (p: (p.name or "") == "borg-sqlite-snapshot") null c.environment.systemPackages}/bin/borg-sqlite-snapshot";
         })) hosts;
         restore = lib.findFirst (p: (p.name or "") == "borg-restore") null
@@ -4024,6 +4029,38 @@
                     assert not any((restored_user / ('state.sqlite' + suffix)).exists() for suffix in ("", '-wal', '-shm')), 'raw SQLite entered archive'
                     assert not (copied / 'staging' / 'not-an-archive-input').exists(), 'staging entered archive'
                 verify_archive(archive('valid', excludes))
+                if spec['immich']:
+                    # Use the evaluated media namespace and real Borg patterns.
+                    # Cache exclusion must retain originals, not just drop data.
+                    media = spec['immich']
+                    origin = next(p for p in spec['paths'] if pathlib.PurePosixPath(media['root']).is_relative_to(p))
+                    photos = dest / 'photos'
+                    def media_fixture(original, name):
+                        path = photos / pathlib.PurePosixPath(original).relative_to(origin) / name
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_text('media fixture')
+                        return path
+                    originals = [media_fixture(p, 'original.jpg') for p in media['originals']]
+                    originals += [media_fixture(media['root'] + '/upload', 'new.jpg'),
+                        media_fixture(origin + '/external', 'original.jpg'),
+                        media_fixture(origin + '/archive', 'original.jpg')]
+                    caches = [media_fixture(p, 'regenerated.cache') for p in media['regenerable']]
+                    media_patterns = [p.replace(origin, str(photos)) for p in spec['exclude']]
+                    def media_archive(name, patterns):
+                        args = ['borg', 'create', '--compression', 'none']
+                        for pattern in patterns:
+                            args += ['--exclude', pattern]
+                        target = str(repo) + '::' + name
+                        run([*args, target, str(photos)], env=env)
+                        return set(run(['borg', 'list', '--short', target], env=env).stdout.splitlines())
+                    def verify_media(paths):
+                        assert all(str(p).lstrip('/') in paths for p in originals), 'original media absent'
+                        assert all(str(p).lstrip('/') not in paths for p in caches), 'regenerable Immich cache entered archive'
+                    verify_media(media_archive('media-valid', media_patterns))
+                    without_caches = [p for p in media_patterns if not any(
+                        cache.replace(origin, str(photos)) in p for cache in media['regenerable'])]
+                    must_detect(lambda: verify_media(media_archive('media-exclusions-removed', without_caches)),
+                        'Immich cache exclusions removed')
                 raw_patterns = [value for value in excludes if str(source) in value]
                 assert len(raw_patterns) == 3, raw_patterns
                 must_detect(lambda: verify_archive(archive('raw-exclusion-removed', [value for value in excludes if value not in raw_patterns])), 'raw SQLite exclusions removed')
