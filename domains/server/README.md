@@ -16,24 +16,13 @@ Calendar phone writes consume the gateway's sync receipt; they preserve the save
 Brain MCP public clients use the `.com` OAuth gateway and Service Auth origin;
 `native/ai/brain-mcp/AUTH.md` records the private path and remaining alias cleanup.
 
-`native/ai/lead-scout` owns the optional member recovery unit. It adopts the
+`native/ai/lead-scout` owns the disabled member recovery unit. It adopts the
 runtime compose project, waits for either container to exit and stops app before
 db. Runtime compose owns static addresses; Nix only validates exact trust.
-When enabled with Borg, `member-snapshot.py` supplies the SQL/profile producer
-and its thaw cleanup through one composed implementation. The Borg hook starts
-an unscheduled same-user oneshot with a15-second startup deadline and5-second
-cleanup budget. It freezes only an idle exact app, captures PG16 SQL, full browser
-data including logs/WAL and hard-linked files plus matching private settings, then resumes the same
-process. Its explicit rootless PATH overrides the systemd module default; the
-backup check renders the complete unit, including environment merges.
-Frozen process checks read its exact cgroup/proc state, since Podman
-refuses `top` while paused. Failure cleanup checks PID/start/cgroup identity and has a kernel-thaw
-fallback; needing that fallback fails the backup visibly. Complete bundles
-publish atomically, with one current, one previous and one pending slot, each
-bounded to2GiB. Borg excludes raw pgdata/data, staging, previous and retained
-legacy SQL-only artifacts; it archives the complete current bundle and retains
-the existing compose/configuration sources. Actual live qualification is required
-before treating a source build as backup coverage.
+When enabled with Borg, the member owner also supplies a consistent rootless
+PostgreSQL snapshot. It keeps one private last-good dump and one bounded pending
+slot; a failed producer aborts backup. Borg excludes raw live pgdata and retains
+compose, configuration, credentials and app data through their existing source.
 Its optional invitation mail units expose a same-user Unix socket to fixed
 loopback Proton Bridge SMTP. Runtime sender, password and pinned certificate
 files are rebuilt from the configured address, existing pass entry and Bridge.
@@ -90,9 +79,7 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
-- 2026-10-24: Fix the Scout snapshot PATH priority conflict and render its complete systemd unit in the backup regression check.
-
-- 2026-10-24: Extend the member's existing Borg producer to complete SQL/browser/settings bundles, including recovery logs and WAL. Bind capture and thaw to a bounded same-user oneshot, preserve process identity and last-good publication, retain the legacy SQL artifact, and remove rootless runtime write access from the Borg job. No app source/image or member supervision change.
+- 2026-10-24: Retain the prior SQL-only Scout backup as the descendant availability-recovery configuration for the browser-bundle release; preserve all new complete bundles and current app data during recovery.
 
 - 2026-10-24: Register the member instance's rootless PG16 logical snapshot in the existing Borg job. Count output in the parent up to512MiB with a120-second deadline, verify the actual rootless account and validate before atomic publication, preserve the last good dump on failure, and exclude raw pgdata. Member runtime and supervision stay unchanged.
 
