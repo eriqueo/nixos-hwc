@@ -22,7 +22,8 @@ db. Runtime compose owns static addresses; Nix only validates exact trust.
 When enabled with Borg, `member-snapshot.py` supplies the SQL/profile producer
 and its thaw cleanup through one composed implementation. The Borg hook starts
 an unscheduled same-user oneshot with a15-second startup deadline and5-second
-cleanup budget. It freezes only an idle exact app, captures PG16 SQL, full browser
+cleanup budget. Its2GiB memory limit includes archive page cache; the copy
+deadline stays at9seconds. It freezes only an idle exact app, captures PG16 SQL, full browser
 data including logs/WAL and hard-linked files plus matching private settings, then resumes the same
 process. Its explicit rootless PATH overrides the systemd module default; the
 backup check renders the complete unit, including environment merges.
@@ -92,6 +93,7 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+- 2026-10-24: Budget2GiB including file cache for the Scout snapshot; five cold full-profile passes retain the9-second copy and15+5-second containment limits.
 - 2026-10-24: Add the cold-profile memory-budget regression after512MiB failed five copy deadlines and2GiB passed all five with unchanged copy/lifecycle limits.
 - 2026-10-24: Place same-user Scout bundles beside member state after a live root-only parent failure; prove real systemd parent access and check the rendered destination relationship.
 - 2026-10-24: Fix the Scout snapshot PATH priority conflict and render its complete systemd unit in the backup regression check.
