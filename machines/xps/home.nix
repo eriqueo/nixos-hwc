@@ -7,6 +7,13 @@
 { inputs, lib, pkgs, ... }:
 
 {
+  # Work owns mail. This recovery/media instance has no local Maildir.
+  hwc.mail = {
+    enable = lib.mkForce false;
+    aerc.enable = lib.mkForce false;
+    afew.enable = lib.mkForce false;
+  };
+
   # Disable heavyweight apps not needed on this lightweight server/laptop build
   hwc.home.apps = {
     blender.enable = lib.mkForce false;
