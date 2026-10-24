@@ -3707,7 +3707,7 @@
           lockRoot = "${c.hwc.paths.state}/borg-jobs";
           paths = c.services.borgbackup.jobs.hwc-backup.paths;
           exclude = c.services.borgbackup.jobs.hwc-backup.exclude;
-          immich = lib.optionalAttrs c.hwc.media.immich.enable {
+          immich = lib.optionalAttrs (c.hwc.media.immich.enable or false) {
             root = c.hwc.media.immich.storage.basePath;
             originals = with c.hwc.media.immich.storage.locations; [ library profile ];
             regenerable = with c.hwc.media.immich.storage.locations; [ thumbs encodedVideo ];
