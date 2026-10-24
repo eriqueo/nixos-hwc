@@ -152,7 +152,10 @@ let
     # Read-write paths for pre/post hooks. A remote repo is not a path.
     readWritePaths = [
       "/var/lib/backups"
-    ] ++ lib.optional (destinations != {}) lockRoot
+    # A readonly SQLite connection may create WAL/SHM when no writer holds
+    # them open. Permit only registered database parents; SQL stays mode=ro.
+    ] ++ lib.unique (map (value: builtins.dirOf value.source) snapshots)
+      ++ lib.optional (destinations != {}) lockRoot
       ++ lib.optional (snapshots != []) snapshotRoot
       ++ lib.optional (!cfg.repo.remote.enable) cfg.repo.path;
   };
@@ -565,6 +568,7 @@ in
         assertion = builtins.length snapshots <= 16 && lib.all (value:
           builtins.match "[a-z][a-z0-9-]{0,31}" value.name != null
           && lib.hasPrefix "/" value.source
+          && builtins.dirOf value.source != "/"
           && !(lib.hasPrefix "${snapshotRoot}/" value.source)
           && builtins.hasAttr value.user config.users.users) snapshots
           && builtins.length (lib.unique (map (value: value.source) snapshots)) == builtins.length snapshots;

@@ -201,6 +201,7 @@ in {
   hwc.data.borg = lib.mkIf (offsiteStorage != null && (offsiteStorage.recovery.ready or false)) {
     enable = true;
     primary.enable = false;
+    monitoring.enable = true;
     sources = [ config.services.jellyfin.dataDir ];
     sqliteSnapshots.jellyfin = {
       source = "${config.services.jellyfin.dataDir}/data/jellyfin.db";

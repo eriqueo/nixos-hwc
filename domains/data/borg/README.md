@@ -148,6 +148,7 @@ Borg wrapper alone does not load its private identity.
 - `borg-check-<name>.service` / timer — additional destination consistency checks
 
 ## Changelog
+- 2026-10-24: Give SQLite snapshot workers registered database-parent access for temporary WAL/SHM creation while keeping SQL read-only; forbid root-level database parents and test native job wiring.
 - 2026-10-23: Require current T3 V2 recovery coverage alongside retained V1 history; exercise both registrations through the same producer/archive fixtures. Keep existing legacy snapshot identity and userdata coverage.
 - 2026-10-23: Exclude raw SQLite rollback journals alongside DB/WAL/SHM. Test the real archive boundary with an independently removed journal exclusion and require Audiobookshelf config/metadata coverage.
 - 2026-10-23: Exercise actual Home Immich media paths in local archive recovery, including original-file retention and removed-cache-exclusion mutation.

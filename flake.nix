@@ -3811,6 +3811,7 @@
       assert xps.systemd.services.borgbackup-job-hwc-backup-home.serviceConfig.LoadCredential == [ "borg-ssh-key:/run/agenix/borg-xps-state-ssh-key" ];
       assert xps.systemd.services.borgbackup-job-hwc-backup-home.serviceConfig.TimeoutStartSec == 3600;
       assert lib.elem "pf:/var/lib/hwc/jellyfin/data/jellyfin.db" xps.services.borgbackup.jobs.hwc-backup-home.exclude;
+      assert lib.elem "/var/lib/hwc/jellyfin/data" xps.services.borgbackup.jobs.hwc-backup-home.readWritePaths;
       assert base.config.services.borgbackup.repos.hwc-xps.quota == "10G";
       assert base.config.systemd.services.borgbackup-repo-hwc-xps.unitConfig.AssertPathIsMountPoint == base.config.hwc.paths.backup;
       assert valid c;
@@ -3955,6 +3956,8 @@
       in
       assert lib.all (c: !(lib.hasInfix "break-lock"
         (c.systemd.services.borgbackup-job-hwc-backup.preStart or ""))) hosts;
+      assert lib.all (c: lib.all (snapshot: lib.elem (builtins.dirOf snapshot.source)
+        c.services.borgbackup.jobs.hwc-backup.readWritePaths) (builtins.attrValues c.hwc.data.borg.sqliteSnapshots)) hosts;
       assert lib.all (c: lib.hasInfix (builtins.unsafeDiscardStringContext "${c.services.postgresql.package}/bin/pg_dumpall")
         c.services.borgbackup.jobs.hwc-backup.preHook) hosts;
       assert lib.assertMsg (lib.all (c:
