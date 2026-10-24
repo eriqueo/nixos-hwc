@@ -3231,6 +3231,7 @@
       scout-member-backup = let
         c = self.nixosConfigurations.hwc-work.config;
         member = c.hwc.server.ai.leadScout.memberInstance;
+        browserSnapshot = c.systemd.services.scout-member-snapshot or null;
         producer = c.system.build.scoutMemberSnapshot or null;
         job = c.services.borgbackup.jobs.hwc-backup;
         spec = pkgs.writeText "scout-member-backup.json" (builtins.toJSON {
@@ -3246,6 +3247,15 @@
           runtime = "/run/user/1000/containers";
         });
       in
+      assert lib.assertMsg (browserSnapshot != null
+        && browserSnapshot.serviceConfig.Type == "oneshot"
+        && browserSnapshot.serviceConfig.KillMode == "control-group"
+        && browserSnapshot.serviceConfig.KillSignal == "SIGKILL"
+        && browserSnapshot.serviceConfig.TimeoutStartSec == "15s"
+        && browserSnapshot.serviceConfig.TimeoutStopSec == "5s"
+        && lib.hasInfix "thaw" browserSnapshot.serviceConfig.ExecStopPost
+        && lib.hasInfix "scout-member-snapshot.service" job.preHook)
+        "Scout recurring browser backup needs its bounded oneshot/thaw in the actual Borg hook";
       assert lib.assertMsg (producer != null && lib.hasInfix
         (builtins.unsafeDiscardStringContext (toString producer)) job.preHook)
         "Rootless Scout needs its consistent snapshot in the actual Borg pre-hook";
