@@ -16,13 +16,19 @@ Calendar phone writes consume the gateway's sync receipt; they preserve the save
 Brain MCP public clients use the `.com` OAuth gateway and Service Auth origin;
 `native/ai/brain-mcp/AUTH.md` records the private path and remaining alias cleanup.
 
-`native/ai/lead-scout` owns the disabled member recovery unit. It adopts the
+`native/ai/lead-scout` owns the member recovery unit. It adopts the
 runtime compose project, waits for either container to exit and stops app before
 db. Runtime compose owns static addresses; Nix only validates exact trust.
-When enabled with Borg, the member owner also supplies a consistent rootless
-PostgreSQL snapshot. It keeps one private last-good dump and one bounded pending
-slot; a failed producer aborts backup. Borg excludes raw live pgdata and retains
-compose, configuration, credentials and app data through their existing source.
+When enabled with Borg, `member-snapshot.py` supplies a paired PostgreSQL and
+browser-profile bundle. The existing oneshot reads profile files before capture
+through `ExecStartPre`, without freezing the app. Preparation and capture share
+the 2 GiB memory limit and each has a 15-second startup deadline. Capture retains
+its 9-second copy deadline and 5-second cleanup bound. Preparation does not
+replace the frozen read or its database, settings and process-identity checks.
+The producer keeps current and previous complete bundles plus one pending slot,
+each bounded to 2 GiB; failure preserves the last good bundle and aborts Borg.
+The tar includes profile logs and SQLite sidecars. Borg excludes changing raw
+profile/pgdata and unpublished bundles. The legacy SQL-only dump remains on disk.
 Its optional invitation mail units expose a same-user Unix socket to fixed
 loopback Proton Bridge SMTP. Runtime sender, password and pinned certificate
 files are rebuilt from the configured address, existing pass entry and Bridge.
@@ -79,6 +85,7 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+- 2026-10-24: Restore the paired Scout browser/PG producer with bounded read-only preparation in its existing unit's pre-start phase. Keep the shared memory, frozen-copy and cleanup limits; test preparation bounds and require the composed preparation command in the actual unit.
 - 2026-10-24: Retain SQL-only availability recovery for the cold-qualified Scout snapshot while preserving the accepted Workbench Mail release and all current app data.
 - 2026-10-24: Retain a descendant SQL-only availability recovery for the corrected Scout state-parent release, preserving current app data and complete browser bundles.
 - 2026-10-24: Retain the prior SQL-only Scout backup as the descendant availability-recovery configuration for the browser-bundle release; preserve all new complete bundles and current app data during recovery.
