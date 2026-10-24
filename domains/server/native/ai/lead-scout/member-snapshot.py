@@ -209,7 +209,22 @@ def pg(config, sql):
         'exec psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" -qAt -v ON_ERROR_STOP=1 -c "$1"',
         'snapshot', 'SET default_transaction_read_only=on; SET statement_timeout=1000; ' + sql]))
 
-def quiescent(config):
+def frozen_process_names(state, uid):
+    _, leaf = assert_identity(state)
+    events = dict(line.split() for line in (leaf / 'cgroup.events').read_text().splitlines())
+    if events.get('frozen') != '1':
+        raise BackupError('kernel_freeze_not_observed')
+    pids = {int(pid) for group in leaf.rglob('cgroup.procs')
+            for pid in group.read_text().splitlines()}
+    names = []
+    for pid in pids:
+        proc = pathlib.Path('/proc') / str(pid)
+        if proc.stat().st_uid != uid:
+            raise BackupError('process_owner_changed')
+        names.append((proc / 'comm').read_text().strip())
+    return names
+
+def quiescent(config, state=None, frozen_names=frozen_process_names):
     value = pg(config, """SELECT json_build_object(
         'jobs',(SELECT count(*) FROM pipeline_jobs WHERE state IN ('running','queued','interrupted','held_uncertain')),
         'inline',(SELECT count(*) FROM pipeline_inline_owner),
@@ -218,9 +233,14 @@ def quiescent(config):
             AND pid<>pg_backend_pid() AND state IS DISTINCT FROM 'idle'))""")
     if any(value.values()):
         raise BackupError('instance_busy')
-    rows = podman(config, 'top', config['app'], 'hpid', 'comm').splitlines()[1:]
-    names = [line.split(None, 1)[1] for line in rows]
-    if not names or any(name not in ['node', 'podman-init'] for name in names):
+    if state is None:
+        rows = podman(config, 'top', config['app'], 'hpid', 'comm').splitlines()[1:]
+        names = [line.split(None, 1)[1] for line in rows]
+    else:
+        # Podman top refuses paused containers. The exact frozen cgroup is
+        # the authoritative process owner after pause, not an executable probe.
+        names = frozen_names(state, config['uid'])
+    if 'node' not in names or any(name not in ['node', 'podman-init', 'catatonit'] for name in names):
         raise BackupError('browser_or_other_writer_active')
 
 def sync_dir(path):
@@ -319,7 +339,7 @@ def create_bundle(config, root, state_file, invocation):
             write_json(state_file, state)
             if not container(config, app['Id'])['State']['Paused']:
                 raise BackupError('pause_not_observed')
-            quiescent(config)
+            quiescent(config, state)
             if container(config, app['Id'])['Id'] != app['Id']:
                 raise BackupError('container_identity')
             for name, value in files.items():

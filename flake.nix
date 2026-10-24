@@ -3361,6 +3361,24 @@
             else: raise AssertionError('wrong process identity accepted for thaw')
             state.write_text('{"phase":"unpaused"}')
             core['thaw']({}, state)  # terminal cleanup has no repeated effect
+            # The real Podman boundary rejects top after pause (exit125).
+            # A frozen check must use its injected cgroup/proc reader instead.
+            control = root / 'control-port'
+            control.write_text('#!' + sys.executable + '\n' + """
+        import sys
+        if sys.argv[1] == 'top': sys.exit(125)
+        print('{"jobs":0,"inline":0,"transactions":0}')
+        """.strip() + '\n')
+            control.chmod(0o700)
+            private = {'pg':[str(control)],'podman':[str(control)],'app':'private','uid':1000}
+            try: core['quiescent'](private)
+            except RuntimeError: pass
+            else: raise AssertionError('paused top rejection was ignored')
+            core['quiescent'](private, {'phase':'frozen'}, lambda state, uid: ['podman-init','node'])
+            for names in (['node','chromium'], ['podman-init'], []):
+                try: core['quiescent'](private, {'phase':'frozen'}, lambda state, uid: names)
+                except RuntimeError: pass
+                else: raise AssertionError('invalid frozen writer set accepted')
         print('valid/failure/invalid/oversize/deadline/stale/lock/permissions/lastgood passed')
         PY
         touch "$out"

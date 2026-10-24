@@ -24,7 +24,8 @@ and its thaw cleanup through one composed implementation. The Borg hook starts
 an unscheduled same-user oneshot with a15-second startup deadline and5-second
 cleanup budget. It freezes only an idle exact app, captures PG16 SQL, full browser
 data including logs/WAL and hard-linked files plus matching private settings, then resumes the same
-process. Failure cleanup checks PID/start/cgroup identity and has a kernel-thaw
+process. Frozen process checks read its exact cgroup/proc state, since Podman
+refuses `top` while paused. Failure cleanup checks PID/start/cgroup identity and has a kernel-thaw
 fallback; needing that fallback fails the backup visibly. Complete bundles
 publish atomically, with one current, one previous and one pending slot, each
 bounded to2GiB. Borg excludes raw pgdata/data, staging, previous and retained
