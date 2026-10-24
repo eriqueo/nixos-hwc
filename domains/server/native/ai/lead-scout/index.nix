@@ -36,103 +36,6 @@ let
   # compose invocation, preflight, health proof and trusted-peer check.
   member = cfg.memberInstance;
   invitationMail = member.invitationMail;
-  memberUser = config.users.users.${cfg.user};
-  # Law4 standard UID1000 applies when Nix delegates allocation. Verify the
-  # actual account at the executable boundary before accessing rootless state.
-  memberUid = if memberUser.uid == null then 1000 else memberUser.uid;
-  memberRuntime = "/run/user/${toString memberUid}";
-  memberGraph = "${memberUser.home}/.local/share/containers/storage";
-  memberRunroot = "${memberRuntime}/containers";
-  memberSnapshotPath = "/var/lib/backups/scout-member/current.dump";
-  # CRITICAL: one last-good consistent PG16 dump plus one bounded pending slot.
-  # Borg owns long-term retention; its pre-hook fails closed. Permanent by design.
-  # Fixed rootless ports preserve the running compose DB; no password leaves it.
-  memberSnapshot = pkgs.writeScript "scout-member-snapshot" ''
-    #!${pkgs.python3}/bin/python3
-    import fcntl, os, pathlib, pwd, selectors, signal, subprocess, sys, time
-
-    def snapshot(destination, command, max_bytes=536870912, timeout_seconds=120):
-        os.umask(0o077)
-        root = destination.parent
-        if root.is_symlink():
-            raise RuntimeError('snapshot directory must not be a symlink')
-        root.mkdir(mode=0o700, parents=True, exist_ok=True)
-        root.chmod(0o700)
-        deadline = time.monotonic() + timeout_seconds
-        with (root / 'snapshot.lock').open('a+b') as lock:
-            os.fchmod(lock.fileno(), 0o600)
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            pending = root / 'pending.dump'
-            pending.unlink(missing_ok=True)
-            def run(args, output, source=None):
-                # runuser resets inherited file-size limits. Count bytes in this
-                # parent before writing, rather than trusting a child rlimit.
-                capture = output != subprocess.DEVNULL
-                child = subprocess.Popen(command + args, stdin=source or subprocess.DEVNULL,
-                    stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL, start_new_session=True)
-                try:
-                    if capture:
-                        with selectors.DefaultSelector() as events:
-                            events.register(child.stdout, selectors.EVENT_READ)
-                            count = 0
-                            while True:
-                                left = deadline - time.monotonic()
-                                if left <= 0 or not events.select(left):
-                                    raise subprocess.TimeoutExpired(command, timeout_seconds)
-                                chunk = os.read(child.stdout.fileno(), min(65536, max_bytes-count+1))
-                                if not chunk:
-                                    break
-                                count += len(chunk)
-                                if count > max_bytes:
-                                    raise RuntimeError('member database snapshot exceeds byte bound')
-                                output.write(chunk)
-                    code = child.wait(timeout=max(.001, deadline - time.monotonic()))
-                    if code != 0:
-                        raise RuntimeError('member database snapshot port failed')
-                except BaseException:
-                    try: os.killpg(child.pid, signal.SIGKILL)
-                    except ProcessLookupError: pass
-                    child.wait()
-                    raise
-                finally:
-                    if child.stdout is not None:
-                        child.stdout.close()
-            try:
-                with pending.open('xb') as output:
-                    os.fchmod(output.fileno(), 0o600)
-                    run(['sh', '-c', 'export PGOPTIONS="-c statement_timeout=90000 -c lock_timeout=5000"; exec pg_dump --format=custom --username="$POSTGRES_USER" --dbname="$POSTGRES_DB"'], output)
-                    output.flush()
-                    os.fsync(output.fileno())
-                if not 5 < pending.stat().st_size <= max_bytes:
-                    raise RuntimeError('member database snapshot exceeds bound or is empty')
-                with pending.open('rb', buffering=0) as source:
-                    if source.read(5) != b'PGDMP':
-                        raise RuntimeError('member database snapshot has invalid format')
-                    source.seek(0)
-                    run(['pg_restore', '--list'], subprocess.DEVNULL, source)
-                os.replace(pending, destination)
-                fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
-                try: os.fsync(fd)
-                finally: os.close(fd)
-            finally:
-                pending.unlink(missing_ok=True)
-
-    if __name__ == '__main__':
-        if pwd.getpwnam(${builtins.toJSON cfg.user}).pw_uid != ${toString memberUid}:
-            raise SystemExit('[scout-member-backup] rootless account identity mismatch')
-        command = ${builtins.toJSON [
-          "${pkgs.util-linux}/bin/runuser" "-u" cfg.user "--"
-          "${pkgs.coreutils}/bin/env" "XDG_RUNTIME_DIR=${memberRuntime}"
-          "PATH=${lib.makeBinPath [ pkgs.podman pkgs.coreutils pkgs.util-linux ]}:/run/wrappers/bin:/run/current-system/sw/bin"
-          "${pkgs.podman}/bin/podman" "--root" memberGraph "--runroot" memberRunroot
-          "exec" "-i" "${member.projectName}_db_1"
-        ]}
-        try:
-            snapshot(pathlib.Path(sys.argv[1]), command)
-        except Exception:
-            raise SystemExit('[scout-member-backup] snapshot failed; previous dump retained')
-  '';
   # REPLACEABLE runtime files, rebuilt from the existing same-user pass store
   # and local Proton Bridge certificate. Stable directory inode for bind mount.
   invitationMailPrepare = pkgs.writeShellScript "lead-scout-invitation-mail-prepare" ''
@@ -906,19 +809,6 @@ in
         "X-Real-IP" = "{remote_host}";
       };
     }];
-
-    system.build.scoutMemberSnapshot = lib.mkIf member.enable memberSnapshot;
-    # Raw live pgdata is not a consistent archive. Keep compose/env/config/data
-    # through the existing source and publish its separate logical DB first.
-    hwc.data.borg = lib.mkIf (member.enable && config.hwc.data.borg.enable) {
-      preBackupScript = lib.mkAfter ''
-        ${memberSnapshot} ${lib.escapeShellArg memberSnapshotPath} || exit "$?"
-      '';
-      excludePatterns = [ "pp:${member.directory}/pgdata" ];
-    };
-    services.borgbackup.jobs.hwc-backup.readWritePaths = lib.mkIf
-      (member.enable && config.hwc.data.borg.enable && config.hwc.data.borg.primary.enable)
-      [ memberGraph memberRunroot ];
 
     # Member instance: rootless, so a user unit in eric's manager (linger is on
     # via the server role). Activation remains separate — see memberInstance.enable.
