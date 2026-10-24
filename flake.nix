@@ -785,6 +785,75 @@
         touch "$out"
       '';
 
+      mousehole-runtime-wiring = let
+        c = self.nixosConfigurations.hwc-home.config;
+        image = c.hwc.media.mousehole.image;
+        container = c.virtualisation.oci-containers.containers.mousehole;
+        fixture = pkgs.writeText "mousehole-runtime-wiring.json" (builtins.toJSON {
+          inherit image container;
+          preStart = c.systemd.services.podman-mousehole.preStart;
+          hook = c.services.borgbackup.jobs.hwc-backup.preHook;
+          paths = c.services.borgbackup.jobs.hwc-backup.paths;
+          snapshot = c.system.build.mouseholeStateSnapshot or null;
+        });
+      in
+      assert lib.assertMsg (lib.hasPrefix "localhost/mousehole-runtime:0.2.0-bun1.4.4-" image)
+        "Mousehole must consume its qualified same-app Bun runtime";
+      assert container.image == image && container.pull == "never";
+      assert lib.elem "--network=container:gluetun" container.extraOptions;
+      assert container.dependsOn == [ "gluetun" ];
+      assert c.systemd.services.podman-mousehole.bindsTo == [ "podman-gluetun.service" ];
+      pkgs.runCommand "mousehole-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${fixture} ${c.system.build.mouseholeRuntimeImageRecipe} <<'PY'
+        import hashlib, json, os, pathlib, re, runpy, subprocess, sys, tempfile
+        from unittest.mock import patch
+        spec = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        recipe = pathlib.Path(sys.argv[2]).read_text()
+        assert spec['image'] == 'localhost/mousehole-runtime:0.2.0-bun1.4.4-' + hashlib.sha256(recipe.encode()).hexdigest()[:12]
+        assert re.findall(r'^FROM (\S+)', recipe, re.M) == [
+            'docker.io/oven/bun@sha256:b740c3f5600e6360684f240d31c67ffb759def968bfa98ed98c4cce970707735',
+            'docker.io/tmmrtn/mousehole@sha256:9adfcfddb3395d33f0fbef50a6dc52a930769c57f2c0af2b3b9d6f7bfda6195c']
+        assert 'COPY --from=secure-bun /usr/local/bin/bun /usr/local/bin/bun' in recipe
+        assert len(recipe.strip().splitlines()) == 3
+        assert spec['image'] in spec['preStart'] and ' image exists ' in spec['preStart']
+        assert 'podman build' not in spec['preStart']
+        script = spec['snapshot']
+        assert script and script in spec['hook']
+        assert '/var/lib/backups/mousehole/state.json' in spec['hook']
+        assert '/opt/mousehole/data/state.json' in spec['hook']
+        assert '/var/lib/backups' in spec['paths']
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d); source = root / 'live.json'; dest = root / 'snapshot/state.json'
+            good = b'{"currentCookie":"fixture-only","lastMam":{"response":{"httpStatus":200}}}'
+            source.write_bytes(good)
+            def run(): return subprocess.run([script, str(source), str(dest)], capture_output=True)
+            assert run().returncode == 0 and dest.read_bytes() == good
+            assert dest.stat().st_mode & 0o777 == 0o600
+            assert dest.parent.stat().st_mode & 0o777 == 0o700
+            for bad in (b'{"currentCookie":', b'[]', b'{}', b'x' * (1048576 + 1)):
+                source.write_bytes(bad)
+                assert run().returncode != 0 and dest.read_bytes() == good
+            source.unlink()
+            assert run().returncode != 0 and dest.read_bytes() == good
+            source.write_bytes(good)
+            real_open = pathlib.Path.open; reads = [0]
+            def raced_open(p, *args, **kwargs):
+                if p == source and args and args[0] == 'rb':
+                    reads[0] += 1
+                    if reads[0] == 2:
+                        with real_open(source, 'wb') as f: f.write(b'{"currentCookie":"changed"}')
+                return real_open(p, *args, **kwargs)
+            try:
+                with patch.object(sys, 'argv', [script, str(source), str(dest)]), patch.object(pathlib.Path, 'open', raced_open):
+                    runpy.run_path(script, run_name='__main__')
+            except (RuntimeError, ValueError): pass
+            else: raise AssertionError('racing input must fail before snapshot publication')
+            assert reads[0] == 2 and dest.read_bytes() == good
+            assert not list(dest.parent.glob('*.pending'))
+        PY
+        touch "$out"
+      '';
+
       firefly-pico-runtime-wiring = let
         c = self.nixosConfigurations.hwc-work.config;
         image = c.hwc.business.firefly.images.pico;
