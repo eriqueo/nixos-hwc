@@ -39,7 +39,8 @@ CA package still trusts C1/C3, so the recipe derives exclusions from the existin
 The server also installs Debian's hash-pinned Brotli security backport
 `1.1.0-2+deb13u1`. ML replaces Pillow's two Brotli libraries from that same
 package. The generated pair preserves Pillow's existing hashed loader names,
-relative loader path and executable file modes. It keeps the signed package's
+relative loader path; the image restores the original 0755 mode from read-only
+store inputs. It keeps the signed package's
 decoder code. OpenCV's separate TLS dependency is outside this Brotli correction.
 
 Build `system.build.immichServerRuntimeImageContext` and
