@@ -6,15 +6,6 @@ let
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
   cfg = config.hwc.media.audiobookshelf;
   paths = config.hwc.paths;
-  # Temporary supported runtime for the pinned app. Retire when an upstream
-  # image passes actual runtime/native/trust and current-data recovery checks.
-  runtime = helpers.mkNodeRuntimeImage {
-    name = "audiobookshelf";
-    appVersion = "2.32.1";
-    nodeVersion = "24.22.1";
-    upstreamImage = "ghcr.io/advplyr/audiobookshelf@sha256:f903aeade7ecf8beb2a5fd63411910705f7cff8d1acddb1a37a9171ef171b849";
-    nodeSourceImage = "docker.io/library/node@sha256:47019ffab12a48f49795a8279603f87e91a64de017fb9aa874e64f489b686079";
-  };
 in
 {
   #==========================================================================
@@ -36,8 +27,10 @@ in
 
     image = mkOption {
       type = types.str;
-      default = runtime.image;  # critical tier: immutable app/runtime inputs
-      description = "Qualified same-app image built from system.build.audiobookshelfRuntimeImageRecipe";
+      # Availability recovery baseline contains the previous Node20 runtime.
+      # Replace after the supported-runtime release passes live consumer/data checks.
+      default = "ghcr.io/advplyr/audiobookshelf@sha256:f903aeade7ecf8beb2a5fd63411910705f7cff8d1acddb1a37a9171ef171b849";
+      description = "Container image for Audiobookshelf";
     };
 
     network.mode = mkOption {
@@ -75,7 +68,6 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    system.build.audiobookshelfRuntimeImageRecipe = runtime.dockerfile;
     # Container definition is in sys.nix
     # Service dependencies are in parts/config.nix
 

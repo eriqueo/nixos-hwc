@@ -785,31 +785,6 @@
         touch "$out"
       '';
 
-      audiobookshelf-runtime-wiring = let
-        c = self.nixosConfigurations.hwc-home.config;
-        image = c.hwc.media.audiobookshelf.image;
-        fixture = pkgs.writeText "audiobookshelf-runtime-wiring.json" (builtins.toJSON { inherit image; });
-      in
-      assert lib.assertMsg (lib.hasPrefix "localhost/audiobookshelf-runtime:2.32.1-node24.22.1-" image)
-        "Audiobookshelf must consume its qualified same-app Node24 image";
-      assert c.virtualisation.oci-containers.containers.audiobookshelf.image == image;
-      pkgs.runCommand "audiobookshelf-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-        python3 - ${fixture} ${c.system.build.audiobookshelfRuntimeImageRecipe} <<'PY'
-        import hashlib, json, pathlib, re, sys
-        spec = json.loads(pathlib.Path(sys.argv[1]).read_text())
-        recipe = pathlib.Path(sys.argv[2]).read_text()
-        assert spec['image'] == 'localhost/audiobookshelf-runtime:2.32.1-node24.22.1-' + hashlib.sha256(recipe.encode()).hexdigest()[:12]
-        sources = re.findall(r'^FROM (\S+)', recipe, re.M)
-        assert sources == [
-            'docker.io/library/node@sha256:47019ffab12a48f49795a8279603f87e91a64de017fb9aa874e64f489b686079',
-            'ghcr.io/advplyr/audiobookshelf@sha256:f903aeade7ecf8beb2a5fd63411910705f7cff8d1acddb1a37a9171ef171b849']
-        assert 'COPY --from=secure-node /usr/local/bin/node /usr/local/bin/node' in recipe
-        assert 'ENV NODE_VERSION=24.22.1' in recipe
-        assert len([line for line in recipe.splitlines() if line.strip()]) == 4
-        PY
-        touch "$out"
-      '';
-
       immich-runtime-wiring = let
         c = self.nixosConfigurations.hwc-home.config;
         cfg = c.hwc.media.immich;
