@@ -33,6 +33,8 @@ The source enables local native Jellyfin and preserves its existing state under 
 
 Media folders are `/mnt/media/tv`, `/mnt/media/movies` and `/mnt/media/music`. These contain selected copies, not an automatically synchronized copy of home's library. Home's full media library exceeds this mirror's capacity.
 
+Local mail synchronization is disabled on XPS; work owns mail. The inherited desktop mail defaults do not make this recovery/media machine a mail owner.
+
 The independent Jellyfin database has its own account and API credentials. Do not assume home's API key or account policy applies to it. Never put passwords or API tokens in this guide.
 
 The October 24 cutover retired local CouchDB and central monitoring. CouchDB had no application databases; its state and the five-dashboard Grafana database were preserved in validated encrypted checkpoints. Central monitoring remains on work. The tracker owns current timer and health evidence.
@@ -179,7 +181,9 @@ recovery directory. Do not extract over the running server.
 
 The archive carries the application tree at `var/lib/hwc/jellyfin` and its
 consistent database at `var/lib/hwc/borg-sqlite/ready/jellyfin.sqlite`. Put that
-snapshot at the restored application's `data/jellyfin.db` path. Start an isolated
+snapshot at the restored application's `data/jellyfin.db` path. Set the restored
+application tree to `eric:users`, keeping the database private, before starting it
+as that user. Start an isolated
 instance of the matching Jellyfin version and verify login and library data
 before any intentional production replacement. Preserve the current state first.
 

@@ -4542,6 +4542,7 @@
         workHome = work.home-manager.users.eric;
         prune = workHome.systemd.user.services.podman-image-prune or {};
         peer = self.nixosConfigurations.hwc-xps.config;
+        peerHome = peer.home-manager.users.eric;
         absent = units: names: lib.all (name: !(builtins.hasAttr name units)) names;
       in
       assert lib.assertMsg (
@@ -4555,6 +4556,8 @@
         && lib.elem "SUPER,E,exec,kitty -e ${mailCommand}"
           laptopHome.wayland.windowManager.hyprland.settings.bind)
         "service split: laptop shell and desktop mail must reach the work mail owner";
+      assert !peerHome.hwc.mail.enable && !peerHome.hwc.mail.aerc.enable && !peerHome.hwc.mail.afew.enable
+        && absent peerHome.systemd.user.services [ "mbsync" "protonmail-bridge" ];
       assert lib.assertMsg (absent server.systemd.services [
         "podman-authentik-server" "podman-authentik-worker" "authentik-env"
         "llama-embed" "podman-n8n" "nightly-builds"
