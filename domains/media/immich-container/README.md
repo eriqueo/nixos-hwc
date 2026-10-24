@@ -16,7 +16,7 @@ photo library, PostgreSQL data and NVIDIA interfaces.
 
 ```
 domains/media/immich-container/
-├── index.nix          # hwc.media.immich options, immutable image inputs/recipes
+├── index.nix          # Options, pinned image/library inputs and build contexts
 ├── sys.nix            # System-lane import point
 ├── README.md
 └── parts/
@@ -24,6 +24,11 @@ domains/media/immich-container/
 ```
 
 ## Runtime images
+
+This descendant recovery revision selects the retained previous server/ML
+images against current data. Its older Brotli inputs are an availability
+fallback and do not satisfy security acceptance. Corrected build contexts stay
+available; remove the fallback overrides after qualified recovery or promotion.
 
 The temporary defaults retain Immich 2.5.6. The server copies Node 24.22.1 from
 an immutable official Node image while retaining the app and Node ABI 137. The
@@ -36,16 +41,30 @@ resolution; its temporary pip tooling is absent from the final image. Ubuntu's
 CA package still trusts C1/C3, so the recipe derives exclusions from the existing
 `security.pki.caCertificateBlacklist` and regenerates the default store.
 
-Build the Dockerfile outputs `system.build.immichServerRuntimeImageRecipe` and
-`system.build.immichMlRuntimeImageRecipe`. Cache their pinned inputs, then build
-Docker-format images with the evaluated `hwc.media.immich.images` tags. Use an
-empty build context. Building images does not switch services.
+The server also installs Debian's hash-pinned Brotli security backport
+`1.1.0-2+deb13u1`. ML replaces Pillow's two Brotli libraries from that same
+package. The generated pair preserves Pillow's existing hashed loader names,
+relative loader path; the image restores the original 0755 mode from read-only
+store inputs. It keeps the signed package's
+decoder code. OpenCV's separate TLS dependency is outside this Brotli correction.
+
+Build `system.build.immichServerRuntimeImageContext` and
+`system.build.immichMlRuntimeImageContext`. Each contains its Dockerfile,
+manifest and local replacement inputs. Cache the pinned parent images, then
+build Docker-format images with the evaluated `hwc.media.immich.images` tags;
+Docker format preserves inherited health checks. An uncached ML build still
+downloads its pinned TLS/CA inputs. Building images does not switch services.
+Default containers require their prebuilt local images and refuse startup if
+they are absent. Startup does not pull or build replacement images.
 
 Private qualification checks actual Node and native image processing, both
 certificate stores, outbound model-host HTTPS, ML's own health check and a
 profiled tiny CUDA inference. Old/new/old authenticated API reads preserve 18
 core tables and 55 migrations without a database reset. `immich-runtime-wiring`
 checks the selected OCI images against their generated recipe hashes.
+`immich-shared-brotli-wiring` checks both contexts, package hash, generated
+loader inputs, file modes and actual OCI/startup bindings. These source checks
+do not replace qualification of the final images with current data and CUDA.
 
 Retain exact old images and current data for recovery. Remove the temporary
 recipes after an upstream release passes those runtime, data and recovery
@@ -73,6 +92,11 @@ and the existing live mount wiring through runtime-only releases.
 
 ## Changelog
 
+- 2026-10-24: Prepare a descendant availability fallback with exact retained
+  server/ML images, preserving current data and independent source changes.
+- 2026-10-24: Export fixed-hash shared Brotli build contexts for the server and
+  Pillow. Keep the app and existing TLS/CA inputs; require reviewed local images
+  at startup and check the generated library and production wiring.
 - 2026-10-23: Pin same-app server/ML runtime recipes, correct Node/shared TLS and
   certificate consumers, and bind the selected image tags to recipe checks.
   Document actual module ownership and remove unmeasured speed estimates.
