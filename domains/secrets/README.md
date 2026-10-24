@@ -9,6 +9,8 @@
 
 ## Structure
 
+`parts/system/borg-xps-state-repository-key.age` is CRITICAL recovery material for the XPS-to-home Jellyfin repository. It uses the existing all-host/user recovery policy because XPS is the data origin, with the generated root:secrets 0440 mount. The corresponding passphrase is required too.
+
 `parts/services/deepgram-api-key.age` supplies the generated `deepgram-api-key` mount with the default `root:secrets` ownership and `0440` mode. The encrypted payload is CRITICAL source data retained in Git; agenix recreates the runtime mount.
 
 `parts/services/hwc-gateway-com.age` holds the replacement gateway's isolated
@@ -47,7 +49,7 @@ these same rules instead of maintaining another host list.
 ## How It Fits Together
 1. **Generator** (`lib.nix`): a pure, `builtins`-only function that `readDir`-walks `parts/**` for `*.age` (excluding `caddy/`) and emits BOTH the recipient rules (for `secrets.nix`) and the `age.secrets` mounts (for `declarations/generated.nix`). The directory tree of `.age` files is the single source of truth. Secret name = the path under the category dir with subdir segments prefixed, joined by `-`, base name truncated at the first `.`, and `_`→`-` (e.g. `jellyfin/admin-password.age` → `jellyfin-admin-password`).
 2. **Declarations** (`declarations/generated.nix`): mounts every secret with `mode=0440 owner=root group=secrets` by default, overridden per-name only for the handful that differ (the `mountOverrides` map). `caddy.nix` + `parts/caddy.nix` stay hand-written because the caddy certs are selected by hostname at runtime.
-3. **Recipients** (`secrets.nix`): generated via `lib.nix`'s `mkRecipients`. Existing payloads retain `everyone`; offsite backup credentials and recovery-key exports exclude XPS and retain home/work/laptop plus the existing user identity. The same scope filters mounts, so XPS does not attempt decryption. Only the four caddy rules are hand-written.
+3. **Recipients** (`secrets.nix`): generated via `lib.nix`'s `mkRecipients`. Existing payloads retain `everyone`; home/work offsite backup credentials and their recovery-key exports exclude XPS and retain home/work/laptop plus the existing user identity. The same scope filters mounts, so XPS does not attempt decryption. Only the four caddy rules are hand-written.
 4. **API Facade** (`index.nix`): maps decrypted paths to `config.hwc.secrets.api.*` so consumers never touch `age.secrets.*` directly.
 5. **Emergency** (`emergency.nix`): opt-in recovery credentials and wiring for lockout scenarios.
 6. **Hardening** (`hardening.nix`): opt-in firewall/SSH/audit/fail2ban settings; guarded by `hwc.secrets.hardening.*` options.
@@ -64,6 +66,7 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-10-24: Preserve the real XPS-state Borg repository-key export under the existing default recovery policy; verified server-key equality and byte-for-byte decryption on home/work/XPS without plaintext files.
 - 2026-10-23: Add independent XPS-origin Jellyfin-state SSH/passphrase payloads under default recipients; home/work offsite payloads still exclude XPS.
 - 2026-10-23: Scope new offsite credentials and repository-key exports to recovery hosts, excluding the storage-only XPS. Use one policy for recipient overrides and mount selection; preserve all existing payload policies. New mounts use root:secrets 0440, with systemd LoadCredential providing private SSH key copies. Parity checks now honor host scopes.
 - 2026-10-23: Add the existing Deepgram API key ciphertext to the generated all-host secret set. Verified decryption without printing the key.

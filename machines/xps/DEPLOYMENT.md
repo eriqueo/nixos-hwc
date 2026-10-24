@@ -17,7 +17,7 @@ The old installation template described active-active redundancy that was never 
 
 ## Hardware and storage
 
-SSH inspection on October 22–23, 2026 found an i7-8750H with six cores/twelve threads, 32 GB RAM, Intel UHD 630 and an NVIDIA GTX 1050 Ti Mobile. The internal NVMe is nominally 1 TB. Hardware transcoding has not been exercised; the proposed Jellyfin configuration uses software encoding.
+SSH inspection on October 22–23, 2026 found an i7-8750H with six cores/twelve threads, 32 GB RAM, Intel UHD 630 and an NVIDIA GTX 1050 Ti Mobile. The internal NVMe is nominally 1 TB. Hardware transcoding has not been exercised; native Jellyfin is configured for software encoding.
 
 The TerraMaster D2-320 contains two 3 TB WD Red drives in the ZFS `media-pool` mirror. Usable pool capacity is about 2.7 TiB, not the sum of both disks. ZFS owns its mount at `/mnt/media`. Do not format these drives or add an ext4 mount for that path.
 
@@ -35,11 +35,11 @@ Media folders are `/mnt/media/tv`, `/mnt/media/movies` and `/mnt/media/music`. T
 
 The independent Jellyfin database has its own account and API credentials. Do not assume home's API key or account policy applies to it. Never put passwords or API tokens in this guide.
 
-The older running generation includes CouchDB and central monitoring services. Current source does not enable those services. Classify their callers and preserve their state before a full switch retires anything. The source's SMART and scrub declarations likewise need activation and runtime checks before being reported as live.
+The October 24 cutover retired local CouchDB and central monitoring. CouchDB had no application databases; its state and the five-dashboard Grafana database were preserved in validated encrypted checkpoints. Central monitoring remains on work. The tracker owns current timer and health evidence.
 
-The investigation started `jellyfin-recovery.service` as a transient validation service using the cached 10.11.4 package. It is not permanent startup. Stop it and verify it is inactive before activating native `jellyfin.service`; remove the transient service when that transition is exercised.
+Native `jellyfin.service` replaced the transient 10.11.4 recovery process on October 24. A normal reboot loaded Linux 6.18.53 and started Jellyfin 10.11.11. Real admin login, Nathan S1E4 and matching media bytes passed after boot. Current source revision and archive evidence live on the tracker.
 
-The legacy `server-backup.timer` is not proof of complete backups: its observed run saved system/configuration archives on the root SSD, skipped authenticated CouchDB and still reported success. Resolve that coverage and reporting before relying on it. Its replacement or retirement is part of the recovery plan, not an implicit side effect of a system update.
+The legacy `server-backup.timer` reported success while skipping authenticated CouchDB and writing to the root SSD. It is retired. Its archives remain intact. The replacement protects the scoped Jellyfin state on home; Git and the retained encrypted checkpoints cover the declared configuration/legacy recovery material, not a full-host ongoing archive.
 
 ## Access
 
@@ -104,7 +104,7 @@ all existing datasets before creating any missing child. Property or mount drift
 fails without resizing or deleting data. Repo initialization requires that unit
 and each child mount. Nothing is created merely by evaluating or building source.
 
-A temporary composition-root rollout gate keeps clients and XPS agent publication disabled until the cable/destination and real restore pass. This prevents another fleet rebuild from starting premature backup jobs. The server role derives client paths from these declarations once the gate opens. Home/work retain
+A temporary composition-root rollout gate keeps Maryland clients and XPS agent publication disabled until the cable/destination and real restore pass. This prevents another fleet rebuild from starting premature backup jobs. The server role derives client paths from these declarations once the gate opens. Home/work retain
 their primary jobs and gain independent Maryland jobs at 06:00 MDT, limited to
 2048 KiB/s uploads and eight hours. Interrupted initial seeding can require several
 runs before the first complete archive. Do not start a manual seed inside the
@@ -139,18 +139,17 @@ Do not describe a copied media folder, an SSD-local archive or an ONLINE mirror 
 
 The independent recovery gate enables XPS Jellyfin-state backups to home's dedicated
 `borg-hwc-xps` repository, limited to 10G. It uses a separate SSH key and passphrase
-that XPS can decrypt as the origin. The daily 02:30 job has a one-hour deadline
+that XPS can decrypt as the origin. The daily 02:30 MDT job has up to one hour of random delay, a one-hour deadline
 and a 1024 KiB/s upload limit. A validated online SQLite snapshot replaces the raw
 database/WAL files in archives. Cache, logs and replaceable metadata are excluded.
 This covers Jellyfin users, library definitions and watch history. It does not
 claim full-host or T3 coverage. Source and encrypted configuration live in Git;
 other legacy application state remains in the verified recovery checkpoint.
-Retire the old SSD-local backup timer only after the real remote state archive
-and restore pass. Verify `borgbackup-job-hwc-backup-home` and `borg-check-home`.
+Keep the old SSD-local archives until recovery is no longer needed. Verify `borgbackup-job-hwc-backup-home` and `borg-check-home`.
 
 ## Software updates before a cable change
 
-The system can be updated while `ready=false`. That hold disables backup clients,
+The system can be updated while `ready=false`. That hold disables Maryland backup clients,
 agent publication and automatic repository-directory initialization. The ZFS
 bootstrap has no independent boot target. This allows native Jellyfin/software
 activation without creating offsite datasets or starting backup uploads.
@@ -169,3 +168,25 @@ putting the query in its own preStart fails under that sandbox.
 from the Maryland enclosure's `ready` gate. The existing home destination can
 protect current Jellyfin state before the USB cable is replaced. The Maryland
 repository initialization, uploads and metrics-agent publication stay held.
+
+## Restore the XPS state from home
+
+On home, become root with `sudo -i`. The local repository is
+`/mnt/backup/borg-hwc-xps`. Set `BORG_REPO` to that path and set
+`BORG_PASSCOMMAND` to `cat /run/agenix/borg-xps-state-passphrase`.
+Run `borg list` to select a completed archive. Extract it into a new private
+recovery directory. Do not extract over the running server.
+
+The archive carries the application tree at `var/lib/hwc/jellyfin` and its
+consistent database at `var/lib/hwc/borg-sqlite/ready/jellyfin.sqlite`. Put that
+snapshot at the restored application's `data/jellyfin.db` path. Start an isolated
+instance of the matching Jellyfin version and verify login and library data
+before any intentional production replacement. Preserve the current state first.
+
+The encrypted repository-key export is
+`domains/secrets/parts/system/borg-xps-state-repository-key.age` in Git. It matches
+the real repository and decrypts on home, work and XPS. It complements the
+passphrase; neither replaces the other. Normal extraction uses the repository's
+existing key. Import a recovery key only when repairing a missing repository key.
+Weekly `borg-check-home` performs consistency checks. Full `--verify-data` and
+actual isolated application restores are separate checks recorded on the tracker.
