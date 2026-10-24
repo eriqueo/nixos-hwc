@@ -133,6 +133,9 @@ in
   hwc.data.borg = lib.mkIf (config.hwc.data.borg.enable && config.hwc.data.borg.primary.enable) {
     sources = lib.mkAfter [ t3State ];
     sqliteSnapshots.t3 = { source = "${t3State}/state.sqlite"; user = userName; };
+    # V2 is the active thread store. Keep V1 for rollback/lazy import; both
+    # need consistent snapshots, not file copies beside changing WAL data.
+    sqliteSnapshots.t3-v2 = { source = "${t3State}/statev2.sqlite"; user = userName; };
   };
 
   # Networking — universal base

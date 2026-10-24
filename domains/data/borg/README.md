@@ -19,7 +19,8 @@ domains/data/borg/
 ```
 
 The flake's `borg-recovery` check exercises the rendered hook and real local
-archives, including rollback-journal exclusion and Audio registration coverage.
+archives, including rollback-journal exclusion, current/legacy T3 and Audio
+registration coverage.
 Its Home media fixture uses evaluated Immich storage paths and keeps
 original/profile/upload/external/archive files while rejecting regenerable caches.
 
@@ -76,7 +77,10 @@ hwc.data.borg = {
 ## SQLite recovery
 
 `sqliteSnapshots.<name>` declares `source`, `user`, `maxBytes` (8 GiB default)
-and `timeoutSeconds` (600 default). The base role binds T3 on Borg-enabled hosts.
+and `timeoutSeconds` (600 default). The base role binds both current T3 V2
+(`t3-v2`, `statev2.sqlite`) and retained V1 history (`t3`, `state.sqlite`) on
+primary Borg hosts. Restore the snapshot for the matching app database;
+the legacy snapshot alone does not contain current V2 thread writes.
 The application user reads the live database through SQLite's online backup API.
 The caller validates its own private copy, then publishes it atomically at
 `${hwc.paths.state}/borg-sqlite/ready/<name>.sqlite`. Borg includes that file
@@ -144,6 +148,7 @@ Borg wrapper alone does not load its private identity.
 - `borg-check-<name>.service` / timer — additional destination consistency checks
 
 ## Changelog
+- 2026-10-23: Require current T3 V2 recovery coverage alongside retained V1 history; exercise both registrations through the same producer/archive fixtures. Keep existing legacy snapshot identity and userdata coverage.
 - 2026-10-23: Exclude raw SQLite rollback journals alongside DB/WAL/SHM. Test the real archive boundary with an independently removed journal exclusion and require Audiobookshelf config/metadata coverage.
 - 2026-10-23: Exercise actual Home Immich media paths in local archive recovery, including original-file retention and removed-cache-exclusion mutation.
 - 2026-10-23: Expose typed per-destination timeout/upload limits; domain-owned units enforce them.
