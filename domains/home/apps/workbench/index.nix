@@ -17,6 +17,15 @@ let
   cfg = config.hwc.home.apps.workbench;
   zellijPkg = config.hwc.home.apps.zellij.package;
 
+  # One origin producer: consume the same named vhost catalog as Caddy and
+  # laptop DNS. Independent HM has no osConfig and must supply serverUrl.
+  routes = lib.attrByPath [ "hwc" "networking" "shared" "effectiveRoutes" ] [] osConfig;
+  domain = lib.attrByPath [ "hwc" "networking" "shared" "vhostDomain" ] "" osConfig;
+  serverRoutes = lib.filter (route: (route.name or "") == "workbench"
+    && (route.mode or "") == "vhost") routes;
+  defaultServerUrl = if builtins.length serverRoutes == 1 && domain != ""
+    then "https://${(builtins.head serverRoutes).name}.${domain}" else "";
+
   # Active system palette -> flat token map, string values only, handed to the
   # app as JSON via the generic module's `palette` option (which sets
   # WORKBENCH_PALETTE). Identical contract to tasq's paletteJson.
@@ -80,6 +89,20 @@ in
   options.hwc.home.apps.workbench = {
     enable = lib.mkEnableOption "workbench — Textual TUI ops host (zellij-orchestrated)";
 
+    serverUrl = lib.mkOption {
+      type = lib.types.str;
+      default = defaultServerUrl;
+      description = "Private HTTPS Workbench origin shared by desktop and central TUI; derived from the sole named vhost, or explicitly supplied for independent Home Manager.";
+    };
+
+    handoff.enable = lib.mkEnableOption "central TUI handoffs through the private Workbench service";
+
+    desktop = {
+      enable = lib.mkEnableOption "optional bundled Workbench desktop consumer";
+      summary.enable = lib.mkEnableOption "confirmed read-only temporary item summaries";
+      externalLinks.enable = lib.mkEnableOption "confirmed HTTPS/exact T3 conversation opening";
+    };
+
     hubOrder = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [];
@@ -118,7 +141,7 @@ in
   #============================================================================
   # IMPLEMENTATION
   #============================================================================
-  config = lib.mkIf cfg.enable {
+  config = lib.mkMerge [ (lib.mkIf cfg.enable {
     # wb-reload binary on the session PATH — used by the SUPER+W Hyprland keybind
     # (kitty -e wb-reload) and available interactively. See let-block note.
     home.packages = [ wbReload ];
@@ -128,6 +151,7 @@ in
     # peer TUIs on its PATH so `zellij action` can spawn them.
     programs.workbench = {
       enable = true;
+      handoff.serviceUrl = if cfg.handoff.enable then cfg.serverUrl else "";
       palette = colors;
       gatewayUrl = cfg.gatewayUrl;
       offline = cfg.offline;
@@ -166,5 +190,23 @@ in
     xdg.configFile = lib.optionalAttrs (kmWb != "") {
       "workbench/keymap.json".text = kmWb;
     };
-  };
+  }) (lib.mkIf cfg.desktop.enable {
+    # The app owns its schema, package and entry. No credentials enter native
+    # config, and tool paths cannot come from a browser or source item.
+    programs.workbench.desktop = {
+      enable = true;
+      origin = cfg.serverUrl;
+      summary = if cfg.desktop.summary.enable then {
+        terminal = lib.getExe pkgs.kitty;
+        editor = lib.getExe pkgs.neovim-unwrapped;
+      } else null;
+      externalOpener = if cfg.desktop.externalLinks.enable
+        then lib.getExe' pkgs.xdg-utils "xdg-open" else null;
+    };
+  }) (lib.mkIf (cfg.desktop.enable || (cfg.enable && cfg.handoff.enable)) {
+    assertions = [{
+      assertion = builtins.match "https://[^/?#@[:space:]]+/?" cfg.serverUrl != null;
+      message = "Workbench desktop/central TUI requires one private HTTPS serverUrl; independent Home Manager must configure it explicitly.";
+    }];
+  }) ];
 }

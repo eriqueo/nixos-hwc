@@ -18,6 +18,11 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+`apps/workbench/` translates optional native desktop and central TUI settings
+through the app-owned generic module. Both HM lanes consume one route-derived
+server origin. Native tools are separate opt-ins; the qualified laptop enables
+them without autostart, credentials or sends at activation.
+
 The laptop and servers expose the explicit native Node runtime in both Home Manager lanes. Their build packages stay on the pinned channel. Flake check tools use that same boundary. The `node-runtime-wiring` check verifies runtime selection and preserves the baseline Chromium and torch derivations.
 
 `apps/courier/` receives its system-derived tailnet hostname in both Home Manager lanes through the flake shared arguments, with the shared fleet fallback for appliance hosts.
@@ -140,6 +145,9 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-10-24: Wire the qualified Workbench desktop and central TUI through one
+  guarded origin and app-owned configuration, with both-lane consumer checks.
 
 - 2026-10-23: Apply the existing scoped native Node runtime to the laptop and extend the wiring check to cover its NixOS and standalone Home Manager lanes, avoiding a Chromium/torch rebuild cascade during secret activation.
 

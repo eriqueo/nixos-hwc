@@ -10,13 +10,34 @@ shell's aerc alias, one-shot analysis via the selected Codex package, browser vi
 ## Boundaries
 - ✅ `hwc.home.apps.workbench.enable`; `gatewayUrl`, `offline`, `hubsDir` options; `wb-reload` binary (kills + recreates the zellij `workbench` session); versioned `workbench/keymap.json`; bounded Codex selected-item runner
 - ✅ Tool tabs imported from `../zellij/parts/tabs.nix` so host navigation can't drift from the layout
+- ✅ Optional bundled desktop, confirmed read-only summaries and validated HTTPS/exact T3 opening; central TUI uses the server's existing handoff authority
+- ❌ Native JSON/schema/desktop entry and T3 OAuth credentials remain with their app/service owners
 - ❌ The app itself lives in the `workbench` flake input (600_apps); this module only supplies values
 - ❌ Pane grid/theme belong to `domains/home/apps/zellij/`; keymap grammar to `domains/home/keymap/`
 
 ## Structure
-- `index.nix` — imports the flake's HM module; options + programs.workbench wiring, wb-reload, shared Zellij package, versioned keymap, one-shot Codex provider, registry landing hub + shared standing-tool destinations
+- `index.nix` — imports the app-owned generic module; TUI wiring, wb-reload, shared Zellij package, versioned keymap, Codex provider, registry navigation, guarded server origin, central TUI handoffs, and optional native capabilities.
+
+`serverUrl` derives from the sole `workbench` vhost in the system's shared route
+catalog and its domain. Standalone HWC `hms` consumes that resolved NixOS HM
+value through the flake composition. Independent Home Manager defaults empty
+and must supply an explicit HTTPS origin when enabling a desktop or central TUI.
+Neither path depends on a local business registry.
+
+`desktop.enable`, `desktop.summary.enable`, `desktop.externalLinks.enable` and
+`handoff.enable` default off. Only the qualified laptop opts in.
+The generic app owns native JSON, package and desktop
+entry. HWC supplies only the shared origin and trusted Kitty, unwrapped Neovim,
+and xdg-open paths. Installation does not launch tools or send messages.
+
+The `workbench-desktop-consumer` flake check exercises both actual HM lanes,
+independent-HM guards, route derivation, capability switches, rendered JSON,
+wrapped central-client environment and the installed desktop entry.
 
 ## Changelog
+- 2026-10-24: Share one route-derived origin across both HM lanes, native desktop
+  and central TUI. Enable the tested laptop consumer with separate local
+  capability switches; retain app-owned schema/entry and credential boundaries.
 - 2026-10-12: Share aerc rows with Workbench schema 2; generate isolated compose launcher, omit aerc view controls and unsafe thread actions, guard launcher coverage and global keys; move compose/replies/forward to c; retain routing, unsubscribe and read-status menus under m.
 
 - 2026-10-06: Consume current mail State keys and five-State fixtures. Unstarted

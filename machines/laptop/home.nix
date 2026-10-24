@@ -84,6 +84,13 @@ in
     # the tailnet; without this workbench points at a dead local 127.0.0.1:6200
     # and silently falls back to fixtures. (enable: desktop role.)
     workbench.gatewayUrl = "http://hwc-work:6200";
+    # Qualified native consumer; no autostart or source/agent effects at activation.
+    workbench.handoff.enable = true;
+    workbench.desktop = {
+      enable = true;
+      summary.enable = true;
+      externalLinks.enable = true;
+    };
   };
 
   # Calendar: self-hosted Radicale (CalDAV) via khalt's khal + vdirsyncer,

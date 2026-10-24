@@ -550,7 +550,13 @@
           roleHalves "home.nix" m.roles
           ++ [
             (./machines + "/${name}/home.nix")
-            { home.username = "eric"; home.homeDirectory = "/home/eric"; }
+            {
+              home.username = "eric"; home.homeDirectory = "/home/eric";
+              # Consume the one system-HM origin producer without injecting
+              # osConfig into every standalone home module.
+              hwc.home.apps.workbench.serverUrl = lib.mkDefault
+                self.nixosConfigurations."hwc-${name}".config.home-manager.users.eric.hwc.home.apps.workbench.serverUrl;
+            }
             ({ lib, ... }: {
               _module.args = lib.optionalAttrs (m.scopedNodeRuntime or false) {
                 pkgs = lib.mkForce m.hmPkgs;
@@ -1655,6 +1661,131 @@
         && lib.elem handoffOnly.hwc.business.workbench.web.stateDir handoffService.serviceConfig.ReadWritePaths)
         "workbench-web: handoff-only service needs the backed-up writable journal";
       pkgs.runCommand "workbench-web-service" {} ''
+        touch "$out"
+      '';
+
+      workbench-desktop-consumer = let
+        home = self.homeConfigurations."eric@hwc-laptop".config;
+        systemHome = self.nixosConfigurations.hwc-laptop.config.home-manager.users.eric;
+        origin = home.hwc.home.apps.workbench.serverUrl;
+        native = inputs.workbench.packages.${system}.desktop;
+        # Inspect public rendered JSON as data; retain real tool contexts in
+        # payload.tools and the production HM file, never execute parsed paths.
+        desktopJson = cfg: builtins.fromJSON (builtins.unsafeDiscardStringContext
+          cfg.xdg.configFile."workbench/desktop.json".text);
+        # The real generic module wraps this harmless probe. Never execute a
+        # source tool or a graphical program from a configuration check.
+        probe = pkgs.writeShellScriptBin "workbench" ''
+          exec ${pkgs.python3}/bin/python3 -c 'import json,os; print(json.dumps({k:v for k,v in os.environ.items() if k.startswith("WORKBENCH_HANDOFF_")}))'
+        '';
+        # HWC-EXCEPTION(Law 10): fixture-only declarations for sibling ports;
+        # real HWC and application modules remain the producers under test.
+        fixture = settings: systemConfig: inputs.home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          extraSpecialArgs = { inherit inputs; osConfig = systemConfig; };
+          modules = [ ./domains/home/apps/workbench/index.nix
+            ({ lib, ... }: {
+              options.hwc.home = {
+                apps.zellij.package = lib.mkOption { type = lib.types.package; default = probe; };
+                apps.codex.package = lib.mkOption { type = lib.types.nullOr lib.types.package; default = null; };
+                theme = lib.mkOption { type = lib.types.attrs; default = {}; };
+                keymap = lib.mkOption { type = lib.types.attrs; default = {}; };
+                core.shell = lib.mkOption { type = lib.types.attrs; default = {}; };
+              };
+              config = {
+                home = { username = "fixture"; homeDirectory = "/tmp/workbench-consumer"; stateVersion = "26.05"; };
+                hwc.home.apps.workbench = settings;
+                programs.workbench = {
+                  package = probe;
+                  desktop.package = probe;
+                  agentCommand = lib.mkForce "";
+                  extraRuntimePackages = lib.mkForce [];
+                };
+              };
+            })
+          ];
+        };
+        valid = cfg: let attempt = builtins.tryEval (lib.all (entry: entry.assertion) cfg.assertions);
+          in attempt.success && attempt.value;
+        independent = (fixture {} {}).config;
+        missing = (fixture { desktop.enable = true; } {}).config;
+        centralMissing = (fixture { enable = true; handoff.enable = true; } {}).config;
+        centralInvalid = (fixture { enable = true; handoff.enable = true;
+          serverUrl = "http://fixture.invalid"; } {}).config;
+        explicit = (fixture { serverUrl = "https://fixture.invalid"; desktop.enable = true; } {}).config;
+        summaryOnly = (fixture { serverUrl = "https://fixture.invalid"; desktop = {
+          enable = true; summary.enable = true;
+        }; } {}).config;
+        linksOnly = (fixture { serverUrl = "https://fixture.invalid"; desktop = {
+          enable = true; externalLinks.enable = true;
+        }; } {}).config;
+        off = (fixture { serverUrl = "https://fixture.invalid"; desktop = {
+          summary.enable = true; externalLinks.enable = true;
+        }; } {}).config;
+        central = (fixture { enable = true; serverUrl = origin; handoff.enable = true; } {}).config;
+        centralOff = (fixture { enable = true; serverUrl = origin; } {}).config;
+        wrapped = cfg: builtins.head (lib.filter (pkg: (pkg.name or "") == "workbench-wrapped") cfg.home.packages);
+        fromRoutes = routes: domain: (fixture {} { hwc.networking.shared = {
+          effectiveRoutes = routes; vhostDomain = domain;
+        }; }).config.hwc.home.apps.workbench.serverUrl;
+        route = { name = "workbench"; mode = "vhost"; owner = "work"; };
+        checkOrigin = cfg: cfg.programs.workbench.desktop.origin == cfg.hwc.home.apps.workbench.serverUrl
+          && cfg.programs.workbench.handoff.serviceUrl == cfg.hwc.home.apps.workbench.serverUrl;
+        payload = pkgs.writeText "workbench-desktop-consumers.json" (builtins.toJSON {
+          inherit origin;
+          standalone = desktopJson home;
+          nixos = desktopJson systemHome;
+          tools = { terminal = lib.getExe pkgs.kitty; editor = lib.getExe pkgs.neovim-unwrapped;
+            opener = lib.getExe' pkgs.xdg-utils "xdg-open"; };
+        });
+      in
+      assert lib.assertMsg (origin != "" && checkOrigin home && checkOrigin systemHome
+        && desktopJson home == desktopJson systemHome)
+        "workbench desktop: both HM lanes must consume the one resolved HTTPS origin";
+      assert lib.assertMsg (fromRoutes [route] "fixture.invalid" == "https://workbench.fixture.invalid"
+        && fromRoutes [] "fixture.invalid" == ""
+        && fromRoutes [route route] "fixture.invalid" == ""
+        && fromRoutes [(route // { mode = "subpath"; })] "fixture.invalid" == ""
+        && fromRoutes [route] "" == "")
+        "workbench desktop: URL must derive only from one named vhost and its domain";
+      assert lib.assertMsg (independent.hwc.home.apps.workbench.serverUrl == "" && valid independent
+        && !valid missing && !valid centralMissing && !valid centralInvalid
+        && valid explicit && !explicit.programs.workbench.enable)
+        "workbench desktop: independent HM must stay guarded and require explicit origin only when enabled";
+      assert lib.assertMsg ((desktopJson explicit).editor == null && (desktopJson explicit).externalOpener == null
+        && (desktopJson summaryOnly).editor != null && (desktopJson summaryOnly).externalOpener == null
+        && (desktopJson linksOnly).editor == null && (desktopJson linksOnly).externalOpener != null
+        && !(off.xdg.configFile ? "workbench/desktop.json"))
+        "workbench desktop: each native capability requires its own enable and desktop enable";
+      assert lib.assertMsg (!checkOrigin (home // { programs = home.programs // {
+          workbench = home.programs.workbench // { handoff.serviceUrl = "https://wrong.invalid"; };
+        }; }) && !checkOrigin (home // { programs = home.programs // {
+          workbench = home.programs.workbench // { desktop = home.programs.workbench.desktop // { origin = "https://wrong.invalid"; }; };
+        }; }))
+        "workbench desktop: mismatched native/central wiring must fail the origin contract";
+      assert lib.assertMsg (lib.elem native home.home.packages && lib.elem native systemHome.home.packages
+        && lib.all (host: !self.homeConfigurations."eric@hwc-${host}".config.hwc.home.apps.workbench.desktop.enable)
+          [ "home" "work" "xps" "kids" "firestick" ])
+        "workbench desktop: install only on the qualified laptop, in both HM lanes";
+      pkgs.runCommand "workbench-desktop-consumer" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        WORKBENCH_HANDOFF_SERVICE_URL=ambient-invalid ${wrapped central}/bin/workbench > central.json
+        env -u WORKBENCH_HANDOFF_SERVICE_URL ${wrapped centralOff}/bin/workbench > disabled.json
+        python3 - ${payload} ${native} <<'PY'
+        import json, pathlib, sys
+        value = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        for cfg in (value['standalone'], value['nixos']):
+            assert cfg == dict(schemaVersion=1, origin=value['origin'],
+                editor=dict(terminal=value['tools']['terminal'], editor=value['tools']['editor']),
+                externalOpener=value['tools']['opener']), cfg
+        assert json.loads(pathlib.Path('central.json').read_text()) == {'WORKBENCH_HANDOFF_SERVICE_URL': value['origin']}
+        assert json.loads(pathlib.Path('disabled.json').read_text()) == {}
+        package = pathlib.Path(sys.argv[2])
+        entry = (package/'share/applications/com.iheartwoodcraft.workbench.desktop').read_text()
+        assert 'Exec=workbench-desktop\n' in entry and 'Icon=workbench\n' in entry
+        assert 'StartupWMClass=Workbench-desktop\n' in entry
+        assert (package/'bin/workbench-desktop').is_file()
+        assert (package/'share/icons/hicolor/192x192/apps/workbench.png').read_bytes()[:8] == b'\x89PNG\r\n\x1a\n'
+        PY
         touch "$out"
       '';
 
