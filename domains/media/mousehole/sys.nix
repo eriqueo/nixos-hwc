@@ -15,6 +15,7 @@ in
     (mkContainer {
       name = "mousehole";
       image = cfg.image;
+      pull = if lib.hasPrefix "localhost/mousehole-runtime:" cfg.image then "never" else "missing";
       networkMode = "vpn";  # Runs inside gluetun's network namespace
       gpuEnable = false;
       timeZone = config.time.timeZone or "UTC";
