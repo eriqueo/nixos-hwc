@@ -803,7 +803,7 @@
       assert lib.elem "--network=container:gluetun" container.extraOptions;
       assert container.dependsOn == [ "gluetun" ];
       assert c.systemd.services.podman-mousehole.bindsTo == [ "podman-gluetun.service" ];
-      assert lib.assertMsg (lib.hasInfix (toString c.system.build.mouseholeStateSnapshot)
+      assert lib.assertMsg (lib.hasInfix (builtins.unsafeDiscardStringContext (toString c.system.build.mouseholeStateSnapshot))
         c.services.borgbackup.jobs.hwc-backup.preHook)
         "Mousehole state snapshot must run in the effective Borg producer hook";
       pkgs.runCommand "mousehole-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''

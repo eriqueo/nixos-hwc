@@ -223,7 +223,7 @@ Cadence should match `checkInterval` (default 5 min).
 
 ## Changelog
 
-- **2026-10-23**: Pin original0.2.0 app and official fixed Bun1.4.4 through a recipe-derived local image. Preserve VPN/state/credential; prebuild outside startup. Add bounded atomic JSON snapshots to the existing Borg hook and correct Home/access/probe guidance.
+- **2026-10-23**: Pin original0.2.0 app and official fixed Bun1.4.4 through a recipe-derived local image. Preserve VPN/state/credential; prebuild outside startup. Add bounded atomic JSON snapshots to the existing Borg hook and correct Home/access/probe guidance. Source checks exercise generated executable, invalid/racing-input preservation, and actual image/hook binding removal.
 
 - **2026-06-29**: Initial README. Service has been live and healthy on hwc-server
   since 2026-06-11 (5-min IP checks, idle steady state).
