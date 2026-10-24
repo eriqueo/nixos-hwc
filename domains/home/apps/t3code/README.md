@@ -19,7 +19,7 @@ design note below.
 
 ```
 index.nix   # hwc.home.apps.t3code — desktop launcher + Electron shim + desktop
-            #   entry; pinned backend port and advertised host, so the phone's
+            #   entry and stable URI launcher binding; pinned backend port and advertised host, so the phone's
             #   endpoint survives a reboot; headless t3-serve unit; t3-update
             #   with a pinned staged build/native verification/recovery/promotion driver;
             #   DX2 handoff adapter using the pinned delegate helper and forwarding T3's result limit without
@@ -210,6 +210,11 @@ laptop, for ad-hoc headless use. That script is hand-installed and is not manage
 here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
+
+- 2026-10-24: Give Linux URI registration the stable Home Manager T3 launcher,
+  preserving its Electron and environment setup when conversation links open.
+  The source-side launcher/URI forwarding repair is staged separately; the
+  active desktop must adopt that repair before its own registration changes.
 
 - 2026-10-19: Replace the serving-tree pull/build/restart updater with the pinned staged release driver. Bind build/native/recovery receipts and the lifecycle hub URL to installed inputs; refuse unsupported promotion shapes. Add a generated-caller regression using disposable Git and precise refusal codes.
 

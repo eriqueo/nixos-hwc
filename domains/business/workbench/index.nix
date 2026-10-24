@@ -10,7 +10,7 @@
 # Access-Control-Allow-Origin: *), so adding a seventh area is one entry in
 # `areas` plus that area's own route/deploy work — no edit in any app shell.
 #
-# The optional read-only web shell consumes the TUI's packaged hub manifests.
+# The optional web shell consumes the TUI's packaged hub manifests.
 # Its loopback service serves the same generated registry at /areas.json. The
 # static directory remains the default and rollback when web.enable is false.
 #
@@ -21,6 +21,11 @@
 { config, lib, pkgs, inputs, ... }:
 let
   cfg = config.hwc.business.workbench;
+  # Public target data also drives connection setup. Keeping it in this module
+  # would force the operator client to load the server module or duplicate IDs.
+  targetProfile = builtins.fromJSON (builtins.readFile ./t3-targets.json);
+  needsJournal = cfg.web.writeTiles != [] || cfg.web.handoff.enable;
+  actionJournal = "${cfg.web.stateDir}/actions.sqlite3";
   vhostDomain = config.hwc.networking.shared.vhostDomain;
   # effectiveRoutes: includes stubs for vhosts another host owns (routeOwners).
   routes = config.hwc.networking.shared.effectiveRoutes;
@@ -191,7 +196,7 @@ in
     };
 
     web = {
-      enable = lib.mkEnableOption "read-only Workbench web shell";
+      enable = lib.mkEnableOption "Workbench web shell";
       port = lib.mkOption {
         type = lib.types.port;
         default = 11680;
@@ -201,6 +206,19 @@ in
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Optional canonical stylesheet override; null uses the verified styles bundled in the Workbench package. Explicit overrides are validated at startup.";
+      };
+      handoff = {
+        enable = lib.mkEnableOption "configured T3 conversation handoffs";
+        targets = lib.mkOption {
+          type = lib.types.attrsOf lib.types.attrs;
+          default = assert targetProfile.schemaVersion == 1; targetProfile.targets;
+          description = "Explicit T3 target allowlist; Workbench validates its typed records and requires selection for every Send.";
+        };
+        credentialsSecret = lib.mkOption {
+          type = lib.types.str;
+          default = "workbench-t3-credentials";
+          description = "Generated agenix secret name containing the separate versioned T3 credential map.";
+        };
       };
       writeTiles = lib.mkOption {
         type = lib.types.listOf (lib.types.strMatching "[a-z0-9-]+/[a-z0-9-]+");
@@ -279,9 +297,23 @@ in
       description = "Workbench web workspace";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" "hwc-sys-mcp.service" ];
+      # Credentials are read once at startup. Ciphertext changes must reload
+      # this consumer even though its runtime secret pathname remains stable.
+      restartTriggers = lib.optionals cfg.web.handoff.enable [
+        config.age.secrets.${cfg.web.handoff.credentialsSecret}.file
+      ];
       environment = {
         HOME = config.hwc.paths.user.home;
         WORKBENCH_GATEWAY_URL = "http://127.0.0.1:${toString config.hwc.system.mcp.port}";
+        WORKBENCH_HANDOFF_TARGETS = builtins.toJSON (if cfg.web.handoff.enable then cfg.web.handoff.targets else {});
+      } // lib.optionalAttrs cfg.web.handoff.enable {
+        WORKBENCH_HANDOFF_CREDENTIALS_FILE = config.hwc.secrets.api.${cfg.web.handoff.credentialsSecret};
+        WORKBENCH_HANDOFF_CREDENTIAL_MOUNT = builtins.toJSON {
+          linkDirectory = config.age.secretsDir;
+          generationDirectory = config.age.secretsMountPoint;
+          ownerUid = 0;
+          groupName = "secrets";
+        };
       };
       serviceConfig = {
         User = lib.mkForce "eric";
@@ -293,26 +325,26 @@ in
           "--public-host" "${cfg.routeName}.${vhostDomain}"
         ] ++ lib.optionals (cfg.web.stylesDir != null) [
           "--styles-dir" cfg.web.stylesDir
-        ] ++ lib.optionals (cfg.web.writeTiles != []) [
-          "--state-file" "${cfg.web.stateDir}/actions.sqlite3"
+        ] ++ lib.optionals needsJournal [
+          "--state-file" actionJournal
         ] ++ lib.concatMap (tile: [ "--write-tile" tile ]) cfg.web.writeTiles);
         Restart = "on-failure";
         RestartSec = 5;
         TimeoutStopSec = 20;
         NoNewPrivileges = true;
         ProtectSystem = "strict";
-        ReadWritePaths = lib.optional (cfg.web.writeTiles != []) cfg.web.stateDir;
+        ReadWritePaths = lib.optional needsJournal cfg.web.stateDir;
         PrivateTmp = true;
         UMask = "0077";
       };
     };
 
-    systemd.tmpfiles.rules = lib.optionals (cfg.web.enable && cfg.web.writeTiles != []) [
+    systemd.tmpfiles.rules = lib.optionals (cfg.web.enable && needsJournal) [
       "d ${cfg.web.stateDir} 0700 eric users -"
     ];
-    hwc.data.borg.sqliteSnapshots = lib.optionalAttrs (cfg.web.enable && cfg.web.writeTiles != []) {
+    hwc.data.borg.sqliteSnapshots = lib.optionalAttrs (cfg.web.enable && needsJournal) {
       workbench-actions = {
-        source = "${cfg.web.stateDir}/actions.sqlite3";
+        source = actionJournal;
         user = "eric";
         maxBytes = 64 * 1024 * 1024;
         timeoutSeconds = 60;
@@ -322,7 +354,11 @@ in
     # VALIDATION
     assertions = [
       {
-        assertion = !(cfg.web.enable && cfg.web.writeTiles != []) || config.hwc.data.borg.enable;
+        assertion = !(cfg.web.enable && cfg.web.handoff.enable) || config.hwc.secrets.api ? ${cfg.web.handoff.credentialsSecret};
+        message = "Workbench T3 handoffs require a separately provisioned generated agenix credential.";
+      }
+      {
+        assertion = !(cfg.web.enable && needsJournal) || config.hwc.data.borg.enable;
         message = "hwc.business.workbench.web writes require Borg coverage for the critical action journal.";
       }
       {
