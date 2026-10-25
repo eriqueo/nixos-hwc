@@ -6,7 +6,7 @@
 # REPLACES: profiles/session.nix
 # USED BY: see the machines table in flake.nix
 
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, options, ... }:
 
 {
   #==========================================================================
@@ -34,7 +34,11 @@
   # Thunar's admin:// backend needs system D-Bus/polkit registration and
   # GIO modules in the session environment, beyond the HM package install.
   services.gvfs.enable = true;
-  security.polkit.enablePkexecWrapper = true;
+  # Permanent by design: stable already installs this wrapper with polkit;
+  # newer NixOS modules expose a separate opt-in. Keep both role consumers valid.
+  security.polkit = lib.optionalAttrs (options.security.polkit ? enablePkexecWrapper) {
+    enablePkexecWrapper = true;
+  };
 
   # nix-ld GUI libs (extends base role set for graphical machines)
   hwc.system.core.nixld.guiLibs.enable = true;

@@ -23,7 +23,7 @@ nothing else. Machines compose roles via the `machines` registry in
 
 ```
 base/        sys.nix  home.nix    # every machine — system core, secrets, CLI env
-desktop/     sys.nix  home.nix    # laptop, xps — screen + human (GUI apps, mail client menu)
+desktop/     sys.nix  home.nix    # laptop, xps — screen + human (GVfs/polkit, GUI apps, mail client menu)
 server/      sys.nix              # server, work, xps — serving infrastructure
 business/    sys.nix              # work — Heartwood operations
 monitoring/  sys.nix              # work — central observability
@@ -33,6 +33,7 @@ mail/        home.nix             # work — hwc.mail menu
 ```
 
 ## Changelog
+- 2026-10-25: Guard the newer pkexec wrapper opt-in by its declared option; stable desktop systems retain their existing polkit wrapper and newer systems keep explicit enablement.
 - 2026-10-25: Desktop administrator browsing enables the NixOS pkexec wrapper and the Hyprland authentication agent; standard polkit policy still controls access.
 - 2026-10-25: Desktop system role enables GVfs for Thunar administrator browsing, device integration, and GIO session modules.
 - 2026-10-19: Server roles enable the core-owned nix-ld GUI library bundle for sandboxed headless agent browsers.
