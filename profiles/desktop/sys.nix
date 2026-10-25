@@ -31,6 +31,10 @@
   # dconf required for GTK applications
   programs.dconf.enable = true;
 
+  # Thunar's admin:// backend needs system D-Bus/polkit registration and
+  # GIO modules in the session environment, beyond the HM package install.
+  services.gvfs.enable = true;
+
   # nix-ld GUI libs (extends base role set for graphical machines)
   hwc.system.core.nixld.guiLibs.enable = true;
 }

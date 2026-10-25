@@ -12,7 +12,8 @@ applications for directories, archives, text (micro), and PDF (zathura).
 - ❌ Not the terminal file manager — see `domains/home/apps/yazi/`
 
 ## Structure
-- `index.nix` — options, packages, mimeApps, session vars, xfconf seed activation
+- `index.nix` — options, packages, mimeApps, session vars, xfconf seed activation, and the Thunar (Administrator) launcher using `admin:///`. The desktop system profile enables GVfs integration; its standard polkit policy controls authentication.
 
 ## Changelog
+- 2026-10-25: Add a Thunar (Administrator) launcher. Enable the supporting GVfs system integration in the desktop role.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).
