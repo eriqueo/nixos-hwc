@@ -174,11 +174,16 @@ let
     set -euo pipefail
     image=$(${memberCompose} config | ${pkgs.yq-go}/bin/yq '.services.app.image // ""' -)
     pull=$(${memberCompose} config | ${pkgs.yq-go}/bin/yq '.services.app.pull_policy // ""' -)
-    [ "$image" = ${lib.escapeShellArg memberImage.image} ] && [ "$pull" = never ] \
+    [ -n "$image" ] && [ "$pull" = never ] \
       || { echo "[lead-scout-member] configure the qualified local image with pull_policy: never" >&2; exit 1; }
-    ${pkgs.podman}/bin/podman image exists "$image" \
-      || { echo "[lead-scout-member] build and qualify the local runtime image before starting" >&2; exit 1; }
-    expected=$(${pkgs.podman}/bin/podman image inspect -f '{{.Id}}' "$image")
+    for selected in "$image" ${lib.escapeShellArg memberImage.image}; do
+      ${pkgs.podman}/bin/podman image exists "$selected" \
+        || { echo "[lead-scout-member] build and qualify the local runtime image before starting" >&2; exit 1; }
+    done
+    expected=$(${pkgs.podman}/bin/podman image inspect -f '{{.Id}}' ${lib.escapeShellArg memberImage.image})
+    selected=$(${pkgs.podman}/bin/podman image inspect -f '{{.Id}}' "$image")
+    [ "$selected" = "$expected" ] \
+      || { echo "[lead-scout-member] compose image differs from the qualified local image" >&2; exit 1; }
     name="''${COMPOSE_PROJECT_NAME:?}_app_1"
     if ${pkgs.podman}/bin/podman container exists "$name"; then
       actual=$(${pkgs.podman}/bin/podman inspect -f '{{.Image}}' "$name")

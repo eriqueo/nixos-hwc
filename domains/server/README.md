@@ -24,7 +24,8 @@ Runtime compose owns static addresses; Nix only validates exact trust.
 `system.build.scoutMemberRuntimeImageContext` rebuilds the private same-app image
 context from a pinned base digest, signed fixed-hash Brotli package and public
 Chrome distrust policy. Context generation does not change the running image. The startup guard requires
-that local image, `pull_policy: never` and matching existing app image identity.
+that local image, `pull_policy: never` and matching compose/existing app image IDs.
+The established compose alias can remain when it selects the qualified image.
 A mismatch stops preparation before compose can adopt or create containers.
 When enabled with Borg, `member-snapshot.py` supplies a paired PostgreSQL and
 browser-profile bundle. The existing oneshot reads profile files before capture
