@@ -21,7 +21,9 @@ runtime compose project, waits for either container to exit and stops app before
 db. Runtime compose owns static addresses; Nix only validates exact trust.
 `system.build.scoutMemberRuntimeImageContext` rebuilds the private same-app image
 context from a pinned base digest, signed fixed-hash Brotli package and public
-Chrome distrust policy. Context generation does not change the running image.
+Chrome distrust policy. Context generation does not change the running image. The startup guard requires
+that local image, `pull_policy: never` and matching existing app image identity.
+A mismatch stops preparation before compose can adopt or create containers.
 When enabled with Borg, `member-snapshot.py` supplies a paired PostgreSQL and
 browser-profile bundle. The existing oneshot reads profile files before capture
 through `ExecStartPre`, without freezing the app. Preparation and capture share
@@ -88,7 +90,7 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
-- 2026-10-25: Export the reproducible Scout member library/trust image context. Preserve compose, supervision and paired backup behavior; live image adoption remains a separate release.
+- 2026-10-25: Export the reproducible Scout member library/trust image context and reject missing or mismatched local images before compose startup. Preserve paired backup; live image adoption remains a separate release.
 - 2026-10-24: Restore the paired Scout browser/PG producer with bounded read-only preparation in its existing unit's pre-start phase. Keep the shared memory, frozen-copy and cleanup limits; test preparation bounds and require the composed preparation command in the actual unit.
 - 2026-10-24: Retain SQL-only availability recovery for the cold-qualified Scout snapshot while preserving the accepted Workbench Mail release and all current app data.
 - 2026-10-24: Retain a descendant SQL-only availability recovery for the corrected Scout state-parent release, preserving current app data and complete browser bundles.
