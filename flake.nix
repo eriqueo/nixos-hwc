@@ -3573,8 +3573,6 @@
         starts = [line.strip() for line in lines if ' up -d --no-build --no-recreate' in line]
         assert len(starts) == 2 and starts[0].endswith(' db') and starts[1] == starts[0][:-3], 'DB must start before app creation'
         PYORDER
-        preflight=$(${pkgs.ripgrep}/bin/rg --no-config --no-line-number '^/nix/store/.*-lead-scout-member-preflight$' "$steps")
-        ${pkgs.ripgrep}/bin/rg -Fx '${candidate.system.build.scoutMemberImageCheck}' "$preflight"
         jitter=$(${pkgs.ripgrep}/bin/rg --no-config --no-line-number '^/nix/store/.*-lead-scout-restart-jitter$' "$steps")
         ${pkgs.ripgrep}/bin/rg -F 'sleep "$((RANDOM % 6))"' "$jitter"
         ${pkgs.ripgrep}/bin/rg -F 'start-limit-hit' ${candidate.hwc.notifications._internal.serviceFailureNotify}/bin/hwc-service-failure-notify

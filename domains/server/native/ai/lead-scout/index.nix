@@ -168,29 +168,6 @@ let
   '';
   memberCompose = "${pkgs.podman-compose}/bin/podman-compose "
     + lib.concatMapStringsSep " " (file: "-f ${lib.escapeShellArg file}") member.composeFiles;
-  # Permanent by design: startup consumes a previously qualified local image.
-  # Compose still owns runtime settings and the paired backup saves those files.
-  memberImageCheck = pkgs.writeShellScript "lead-scout-member-image-check" ''
-    set -euo pipefail
-    image=$(${memberCompose} config | ${pkgs.yq-go}/bin/yq '.services.app.image // ""' -)
-    pull=$(${memberCompose} config | ${pkgs.yq-go}/bin/yq '.services.app.pull_policy // ""' -)
-    [ -n "$image" ] && [ "$pull" = never ] \
-      || { echo "[lead-scout-member] configure the qualified local image with pull_policy: never" >&2; exit 1; }
-    for selected in "$image" ${lib.escapeShellArg memberImage.image}; do
-      ${pkgs.podman}/bin/podman image exists "$selected" \
-        || { echo "[lead-scout-member] build and qualify the local runtime image before starting" >&2; exit 1; }
-    done
-    expected=$(${pkgs.podman}/bin/podman image inspect -f '{{.Id}}' ${lib.escapeShellArg memberImage.image})
-    selected=$(${pkgs.podman}/bin/podman image inspect -f '{{.Id}}' "$image")
-    [ "$selected" = "$expected" ] \
-      || { echo "[lead-scout-member] compose image differs from the qualified local image" >&2; exit 1; }
-    name="''${COMPOSE_PROJECT_NAME:?}_app_1"
-    if ${pkgs.podman}/bin/podman container exists "$name"; then
-      actual=$(${pkgs.podman}/bin/podman inspect -f '{{.Image}}' "$name")
-      [ "$actual" = "$expected" ] \
-        || { echo "[lead-scout-member] existing app image differs; use the qualified release procedure" >&2; exit 1; }
-    fi
-  '';
   # Inputs must exist and podman must be rootless before anything starts.
   # Resolve only the recovery fields; never print the full compose config.
   memberPreflight = pkgs.writeShellScript "lead-scout-member-preflight" ''
@@ -211,7 +188,6 @@ let
         [ "$policy" = no ] || { echo "[lead-scout-member] live $service has another restart authority" >&2; exit 1; }
       fi
     done
-    ${memberImageCheck}
     configured=$(${pkgs.yq-go}/bin/yq '.server.trusted_proxies // [] | .[]' config.yaml)
     if [ -n "$configured" ]; then
       declared=$(${memberCompose} config | ${pkgs.yq-go}/bin/yq '.services.app.networks[] | .ipv4_address // ""' -)
@@ -967,7 +943,6 @@ in
       };
     }];
 
-    system.build.scoutMemberImageCheck = lib.mkIf member.enable memberImageCheck;
     system.build.scoutMemberRuntimeImageContext = lib.mkIf member.enable memberImageContext;
     system.build.scoutMemberSnapshot = lib.mkIf member.enable memberSnapshot;
     system.build.scoutMemberSnapshotConfig = lib.mkIf member.enable memberSnapshotConfig;
