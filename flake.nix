@@ -286,6 +286,13 @@
           gitCleanupOverlay
           pandasStubsOverlay   # TEMP: skip pandas-stubs tests (upstream pytest-9.1.1 breakage)
           nodejsSecurityOverlay  # TEMP: Node Oct-2026 security release + brotli CVE fix
+          # Base, not per-set: claude-code must come from ONE pinned source for
+          # the whole fleet. Wired to a single stable set, it left the
+          # `nixpkgs`-channel machines (hwc-laptop, hwc-kids) on whatever that
+          # channel's last bump happened to carry — 2.1.220, below T3 Code's
+          # 2.1.293 model gate. Lazy: the overlay's nixpkgs import is only
+          # forced on sets that actually demand claude-code.
+          claudeCodeOverlay
           # Expose the cowork-capable Claude Desktop package (package-only flake,
           # no overlay of its own) under pkgs for the home app module.
           (final: prev: {
@@ -380,12 +387,9 @@
     pkgs-laptop = mkPkgs system nixpkgs [ tailscaleOverlay ];
 
     # Stable package set with the temporary Tailscale security update.
-    # claudeCodeOverlay belongs here, not only in mkPkgsWithOverlays: stable
-    # 26.05 is frozen at claude-code 2.1.223, so every stable machine that is
-    # NOT the CUDA server (hwc-xps, hwc-work, standalone HM) was pinned to that
-    # build with no way to move. The overlay was written to fix exactly this and
-    # was wired to one of the two stable sets.
-    pkgs-stable = mkPkgs system nixpkgs-stable [ tailscaleOverlay ghidraOverlay claudeCodeOverlay ];
+    # claudeCodeOverlay is NOT listed here — it moved into mkPkgs' base list so
+    # every machine takes the CLI from the same pin. See that list's comment.
+    pkgs-stable = mkPkgs system nixpkgs-stable [ tailscaleOverlay ghidraOverlay ];
 
     # pkgs-stable with CUDA overlay for server (Immich ML GPU acceleration)
     pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ serverOverlay tailscaleOverlay ghidraOverlay ];

@@ -19,10 +19,11 @@ let
       [General]
       loginMode=emptySession
     '';
+    # Lid policy is NOT seeded here — plasmaLidPolicy below is its one
+    # producer, because a seed cannot reach an existing file.
     "powerdevilrc" = ''
       [AC][SuspendAndShutdown]
       AutoSuspendAction=0
-      LidAction=0
     '';
   };
 in {
@@ -53,6 +54,22 @@ in {
           install -m 0600 ${pkgs.writeText "plasma-default-${name}" content} "$HOME/.config/${name}"
         fi
       '') defaults)}
+    '';
+
+    # Lid policy is machine policy, not a user preference: this desktop shares
+    # its host with household services that must survive a closed lid.
+    # PowerDevil holds logind's handle-lid-switch inhibitor for the whole
+    # session, so `services.logind` settings cannot carry the guarantee — these
+    # per-profile keys are the only signal it honours. Enforced on every
+    # activation rather than seeded, because PowerDevil writes powerdevilrc on
+    # first run and an existing file never receives a seed.
+    home.activation.plasmaLidPolicy = lib.hm.dag.entryAfter [ "plasmaDefaults" ] ''
+      for profile in AC Battery LowBattery; do
+        run ${lib.getExe' pkgs.kdePackages.kconfig "kwriteconfig6"} \
+          --file "$HOME/.config/powerdevilrc" \
+          --group "$profile" --group SuspendAndShutdown \
+          --key LidAction 0
+      done
     '';
     home.file."Desktop/Start Here.txt".text = ''
       Welcome

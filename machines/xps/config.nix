@@ -140,6 +140,10 @@ in {
   # Plasma's default daemon competes with this instance's existing TLP owner.
   services.power-profiles-daemon.enable = lib.mkForce false;
 
+  # Covers Eric's Hyprland session and the no-session case only. Whenever dad's
+  # Plasma session is active, PowerDevil takes logind's handle-lid-switch
+  # inhibitor and these settings stop applying — the lid guarantee for that
+  # session lives in domains/home/apps/plasma (plasmaLidPolicy).
   services.logind.settings.Login = {
     HandleLidSwitch = "ignore";
     HandleLidSwitchDocked = "ignore";
