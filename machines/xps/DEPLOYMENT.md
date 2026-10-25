@@ -194,3 +194,52 @@ passphrase; neither replaces the other. Normal extraction uses the repository's
 existing key. Import a recovery key only when repairing a missing repository key.
 Weekly `borg-check-home` performs consistency checks. Full `--verify-data` and
 actual isolated application restores are separate checks recorded on the tracker.
+
+## Household desktop and remote administration
+
+Dad uses UID1001 with a private home/group, native Plasma/SDDM and automatic
+login. Eric retains his existing SSH/Tailscale/sudo identity and Hyprland session
+choice. Dad has video/render access but no wheel, users, secrets, disk or container
+authority. Instance polkit denies Dad power, network, disk and service management.
+Use Eric’s account to change networks or system settings. Physical power loss and
+forced power-button holds remain outside software control.
+
+The paths domain must not export HOME globally: PAM/systemd select the actual
+account home. HWC_USER_HOME still identifies the primary HWC account. If an old
+Dad session inherited Eric’s home during a transition, stop the display manager,
+terminate only Dad’s session and start the display manager again. Do not relax
+Eric’s0700 home permissions. Stock Plasma settings are seeded once; subsequent
+user edits survive builds. The desktop Start Here file explains normal use.
+
+Steam and Proton-GE use the shared gaming capability. Installed games stay on
+SSD; game installation is not proof of compatibility. The first rollout keeps
+the existing Intel graphics/kernel. Proprietary NVIDIA loading/reboot remains a
+separate maintenance action requiring proved unattended recovery. Do not promise
+B-17 Redux performance on the1050Ti below its listed1070 minimum.
+
+The existing10G encrypted XPS-to-Home state job also includes Dad’s Documents,
+Desktop, Pictures, .config and Steam userdata/compatdata (including local saves).
+Installed Steam games, Downloads and shader caches are excluded by the positive
+source list. Steam Cloud is not a substitute. Quota failure must remain visible;
+do not silently enlarge the repository or prune unrelated archives. Personal
+files/settings are CRITICAL; game installs are REPLACEABLE from Steam. Verify a
+real restored Dad file before claiming new personal-data coverage.
+
+For remote-only live updates, retain/root the complete old system closure. Arm a
+local root systemd timer BEFORE native test activation. It must run the old
+system’s nixos-rebuild test --no-reexec --store-path after five minutes with a
+120-second action deadline. Reconnect through a NEW Tailscale SSH session and
+verify sudo, native services, Dad authority/home and actual desktop before stopping
+the timer. Loss-of-client restore and confirmation were exercised October25;
+an actual failed desktop transition was restored successfully too. This protects
+userspace activation, not a pre-userspace kernel hang. Keep boot/kernel changes
+separate; no automatic forced reboot or shared Git reset. Reconcile reviewed main
+with the final running system before release. Runtime records and exact store
+paths belong in the project handoff, not this permanent procedure.
+
+Dad’s generated recovery password and yescrypt hash use the existing encrypted
+secret owner (dad-login-password and dad-login-password-hash). Do not share Eric’s
+password, use an empty password, print values in chat or put credentials in Steam
+launch options. Eric can recover/rotate Dad’s password privately via the existing
+secret workflow. Dad’s automatic login does not require entering it. A future
+manual login or explicit lock still needs that password.
