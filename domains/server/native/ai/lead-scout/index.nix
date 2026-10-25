@@ -244,10 +244,6 @@ let
     set -euo pipefail
     ${restartJitter}
     ${memberPreflight}
-    # Start the retained DB before compose creates a missing replacement app.
-    # Otherwise that app can claim the stopped DB's previous IPAM allocation.
-    # Permanent by design: one supervisor still owns both container starts.
-    ${memberCompose} up -d --no-build --no-recreate db
     ${memberCompose} up -d --no-build --no-recreate
     ${memberHealth}
     ${memberTrustCheck}
