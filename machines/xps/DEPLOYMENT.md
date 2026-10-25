@@ -200,8 +200,10 @@ actual isolated application restores are separate checks recorded on the tracker
 Dad uses UID1001 with a private home/group, native Plasma/SDDM and automatic
 login. Eric retains his existing SSH/Tailscale/sudo identity and Hyprland session
 choice. Dad has video/render access but no wheel, users, secrets, disk or container
-authority. Instance polkit denies Dad power, network, disk and service management.
-Use Eric’s account to change networks or system settings. Physical power loss and
+authority. Instance polkit permits Wi-Fi scan/radio/connection and own-profile changes
+only from Dad’s active local session. System-wide network settings, global
+network shutdown, power, disk and service management remain denied. Use Eric’s
+account for system settings. Physical power loss and
 forced power-button holds remain outside software control.
 
 The paths domain must not export HOME globally: PAM/systemd select the actual

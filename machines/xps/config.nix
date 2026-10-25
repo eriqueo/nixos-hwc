@@ -181,10 +181,20 @@ in {
   hardware.graphics = { enable = true; enable32Bit = true; };
 
   # A local household session may use the GPU, never service credentials or
-  # power/network administration. Eric retains the existing wheel/sudo policy.
+  # system administration. Local Wi-Fi use must still work without Eric.
+  # Eric retains the existing wheel/sudo policy and system connection ownership.
   security.polkit.extraConfig = ''
     polkit.addRule(function(action, subject) {
       if (subject.user !== "dad") return;
+      var wifiActions = [
+        "org.freedesktop.NetworkManager.enable-disable-wifi",
+        "org.freedesktop.NetworkManager.wifi.scan",
+        "org.freedesktop.NetworkManager.network-control",
+        "org.freedesktop.NetworkManager.settings.modify.own"
+      ];
+      if (subject.local && subject.active && wifiActions.indexOf(action.id) !== -1) {
+        return polkit.Result.YES;
+      }
       if (action.id.indexOf("org.freedesktop.NetworkManager.") === 0 ||
           action.id.indexOf("org.freedesktop.udisks2.") === 0 ||
           action.id.indexOf("org.freedesktop.systemd1.manage-") === 0 ||

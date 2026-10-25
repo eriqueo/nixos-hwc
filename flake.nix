@@ -4851,7 +4851,38 @@
       assert c.home-manager.users.dad.hwc.home.apps.plasma.enable;
       assert lib.elem "${dad.home}/Documents" c.hwc.data.borg.sources;
       assert !c.programs.steam.remotePlay.openFirewall;
-      pkgs.runCommand "xps-household-desktop" {} "touch $out";
+      pkgs.runCommand "xps-household-desktop" { nativeBuildInputs = [ pkgs.nodejs ]; } ''
+        node - ${pkgs.writeText "dad-polkit.js" c.security.polkit.extraConfig} <<'JS'
+        const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:assert/strict');
+        const rules = [];
+        vm.runInNewContext(fs.readFileSync(process.argv[2], 'utf8'), {
+          polkit: { addRule: f => rules.push(f), Result: { YES:'yes', NO:'no' } }
+        });
+        const decide = (id, local=true, active=true) => {
+          for (const rule of rules) {
+            const answer = rule({id, lookup:()=>null}, {user:'dad', local, active, isInGroup:()=>false});
+            if (answer !== undefined) return answer;
+          }
+        };
+        const wifi = ['enable-disable-wifi','wifi.scan','network-control','settings.modify.own'];
+        for (const suffix of wifi) {
+          const id = 'org.freedesktop.NetworkManager.'+suffix;
+          assert.equal(decide(id), 'yes', id);
+          assert.equal(decide(id, false, true), 'no', id+' remote');
+          assert.equal(decide(id, true, false), 'no', id+' inactive');
+        }
+        for (const id of [
+          'org.freedesktop.NetworkManager.settings.modify.system',
+          'org.freedesktop.NetworkManager.enable-disable-network',
+          'org.freedesktop.NetworkManager.settings.modify.hostname',
+          'org.freedesktop.login1.power-off', 'org.freedesktop.login1.suspend',
+          'org.freedesktop.udisks2.filesystem-mount-system',
+          'org.freedesktop.systemd1.manage-units'
+        ]) assert.equal(decide(id), 'no', id);
+        console.log('Actual Dad policy: local Wi-Fi permitted; remote/system/power/disk authority denied.');
+        JS
+        touch $out
+      '';
 
       xps-media-readiness = let
         peer = self.nixosConfigurations.hwc-xps.config;
