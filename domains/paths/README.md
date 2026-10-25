@@ -11,6 +11,9 @@ Central path definitions providing machine-aware filesystem abstraction. Enables
 
 ## Structure
 
+Session exports use `HWC_USER_HOME` for the primary HWC identity. They do not
+override `HOME`: PAM/systemd supply each login/service account's actual home.
+
 `user.inbox` is available on every host. Laptop capture and the inbox owner derive their screenshot directory from this shared root.
 
 `user.apps` owns independent source checkouts (`~/600_apps`). `user.go` owns
@@ -69,6 +72,8 @@ in {
 4. Allow per-machine overrides
 
 ## Changelog
+- 2026-10-25: Remove the global HOME override after actual Dad HM/Plasma startup
+  attempted Eric's private directory; retain the explicit HWC_USER_HOME export.
 - 2026-10-01: `user.inbox` is available on every host. Laptop capture and the inbox owner derive their screenshot directory from this shared root.
 - 2026-10-01: Added `user.calendarDrop` (`~/.local/state/calendar-drop`), the private folder programs hand `.ics` files to for the calendar watcher.
 - 2026-09-30: Added `user.agents` (`~/800_agents`), the agent workspace root on every host.

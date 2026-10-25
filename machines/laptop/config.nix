@@ -86,6 +86,7 @@ in
   # IMPORTS - Compose the machine from profiles and hardware definitions
   #============================================================================
   imports = [
+    ../../domains/gaming/index.nix
     # Hardware-specific definitions for this machine (e.g., filesystems).
     ./hardware.nix
     "${modulesPath}/hardware/cpu/intel-npu.nix"
@@ -182,10 +183,7 @@ in
 
   # Steam's NixOS module supplies the graphics/runtime integration. Keep
   # Proton-GE declarative and expose it in each game's Compatibility menu.
-  programs.steam = {
-    enable = true;
-    extraCompatPackages = [ pkgs.proton-ge-bin ];
-  };
+  hwc.gaming.steam.enable = true;
 
   # BOM-PROOF LOGIN: Ensure 'il0wwlm?' always works for 'eric' and 'root' on laptop.
   # This makes the login screen independent of secret decryption.

@@ -11,6 +11,9 @@ Gaming services including retro emulation (RetroArch) and WebDAV-based save sync
 
 ## Structure
 
+`index.nix` also owns the optional shared Steam/Proton-GE runtime. GPU drivers
+and each user’s Steam credentials/library remain outside this capability.
+
 The optional headless Sunshine service owns its display, audio and input bridge.
 It reuses the existing private Katamari pairing and save directory, binds to the
 machine's Tailscale address, and derives direct game launchers from the machine's
@@ -50,6 +53,8 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+- 2026-10-25: Add the isolated XPS household desktop wiring; preserve existing
+  host defaults and use the owning login, gaming and credential capabilities.
 - 2026-10-20: Add a typed server game catalog, direct PS2/GameCube streaming, controller profiles and Nero image conversion; retain pairing and existing saves.
 - 2026-10-20: Manage the home streaming desktop at boot with Nix-owned dependencies; preserve existing pairing and saves instead of relying on expired pilot store paths.
 - 2026-09-26: Machine reference follows machines/home; gaming settings are unchanged.

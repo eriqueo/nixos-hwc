@@ -18,6 +18,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+`apps/plasma/` provides isolated household desktop defaults, browser/file associations and seed-only settings.
+
 `apps/workbench/` also binds optional native Mail to the declared fleet helper.
 The mail role installs that foreground helper/profile; the laptop opts into the
 native entry. The app owns the protocol, while aerc owns its account and files.
@@ -149,6 +151,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-10-25: Add optional stock Plasma user defaults without importing Eric’s personal roles.
 
 - 2026-10-24: Prepare optional native Mail/helper bindings from the current
   aerc and fleet owners, with no launch or source action at activation.

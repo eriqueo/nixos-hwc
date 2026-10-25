@@ -591,7 +591,8 @@ in
 
   config.environment.sessionVariables = filterNulls {
     # Universal
-    HOME = cfg.user.home;
+    # PAM/systemd select HOME for the actual login/service identity. Exporting
+    # Eric's path here overrides every other account, including HM activation.
     HWC_USER_HOME = cfg.user.home;
     HWC_STATE_DIR = cfg.state;
     HWC_CACHE_DIR = cfg.cache;

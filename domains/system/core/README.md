@@ -15,7 +15,7 @@ core/
 │   └── parts/
 │       └── config.nix
 ├── login/           # greetd + tuigreet, hyprStart session wrapper
-│   └── index.nix    # session policy, guarded compositor DRM preference
+│   └── index.nix    # Hyprland/greetd or Plasma/SDDM; guarded compositor DRM preference
 ├── coredump.nix     # systemd-coredump retention caps
 ├── nix-build-limits.nix # nix-daemon MemoryHigh/MemoryMax cgroup ceiling
 ├── index.nix        # Core aggregator, overridable journal ceiling, emSign root distrust
@@ -23,6 +23,8 @@ core/
 ```
 
 ## Changelog
+- 2026-10-25: Add the isolated XPS household desktop wiring; preserve existing
+  host defaults and use the owning login, gaming and credential capabilities.
 - 2026-10-21: Distrust emSign ECC Root CA - G3, emSign Root CA - C1 and emSign ECC Root CA - C3 in the system CA bundle on every machine (eMudhra intermediate key compromise; mirrors NSS 3.131.1, G1 kept). Temporary until each channel ships cacert >= 3.131.1. Node's own root store is fixed by the companion `overlays/nodejs-security.nix`.
 - 2026-10-14: Select the shared gitWithPackCleanup runtime package for the system command profile, preserving bootstrap Git.
 - 2026-09-27: Declare `SystemMaxUse=1G` as a default independent of audit enablement; home keeps its explicit 8G policy.

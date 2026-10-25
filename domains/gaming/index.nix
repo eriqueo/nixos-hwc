@@ -7,11 +7,17 @@
 # USED BY:
 #   - machines/home/config.nix
 
-{ lib, config, ... }:
+{ lib, config, pkgs, ... }:
 
 {
   imports = [
     ./retroarch/index.nix
     ./webdav/index.nix
   ];
+
+  options.hwc.gaming.steam.enable = lib.mkEnableOption "Steam with declarative Proton-GE";
+  config.programs.steam = lib.mkIf config.hwc.gaming.steam.enable {
+    enable = true;
+    extraCompatPackages = [ pkgs.proton-ge-bin ];
+  };
 }
