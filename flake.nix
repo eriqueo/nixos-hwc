@@ -50,17 +50,6 @@
     # Remove this temporary pin when both Nixpkgs inputs provide >= 1.102.3.
     nixpkgs-tailscale.url = "github:NixOS/nixpkgs/4975466d324710c576dc11ad614684e6bd8cad8e";
 
-    # Claude Code source for overlays/claude-code.nix. It is its OWN input, not
-    # `nixpkgs`, because the CLI ships several releases a week while a channel
-    # bump moves the whole machine: tying the two together means claude-code is
-    # only as fresh as the last world rebuild. Measured 2026-10-25 — stable
-    # 26.05 and the `nixpkgs` pin both carried 2.1.223 while upstream was at
-    # 2.1.308, so neither existing input could feed the overlay.
-    # Remove this pin when its rev is OLDER than the `nixpkgs` input's (compare
-    # `lastModified` in flake.lock): at that point `nixpkgs` is the fresher
-    # source and the overlay should read it directly again.
-    nixpkgs-claude-code.url = "github:NixOS/nixpkgs/3ec636362e1816bc2f0888fa0fa2c69f1bc9e504";
-
     # Static agent policy and adapters. Mutable memories and the mistakes
     # ledger live in ~/800_agents/state and never enter this Nix input.
     agent-harness = {
@@ -303,8 +292,7 @@
     };
 
     # Claude Code overlay - backport from unstable to stable.
-    # Source is `nixpkgs-claude-code`, not `nixpkgs`: see that input's comment.
-    claudeCodeOverlay = import ./overlays/claude-code.nix { nixpkgs-unstable = inputs.nixpkgs-claude-code; };
+    claudeCodeOverlay = import ./overlays/claude-code.nix { nixpkgs-unstable = nixpkgs; };
 
     # Cloudflared overlay - backport from unstable to stable
     # Stable 26.05 lags upstream cloudflared releases; the daemon needs to track

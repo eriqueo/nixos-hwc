@@ -3,9 +3,12 @@
 # Stable 26.05 freezes claude-code at the version it branched with (2.1.223 as
 # of 2026-10-25) while the CLI ships several releases a week.
 #
-# `nixpkgs-unstable` is the ROLE, not a specific input: flake.nix feeds this the
-# dedicated `nixpkgs-claude-code` pin so the CLI's version is independent of a
-# whole-machine channel bump. Bump: change that input's rev in flake.nix.
+# Fed the `nixpkgs` (nixos-unstable) input, so claude-code on the stable
+# machines is only as fresh as the last `nix flake update nixpkgs`. A dedicated
+# input decoupling the two was tried on 2026-10-25 and removed the same day:
+# nixos-unstable's HEAD was the rev the pin already named, and Law 14 forbids
+# two inputs that resolve identically. Reintroduce the separate input only when
+# the channel is genuinely behind on this package again.
 
 { nixpkgs-unstable }:
 
