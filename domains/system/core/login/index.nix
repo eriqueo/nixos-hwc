@@ -46,7 +46,13 @@ in
 
     # --- Login Manager Sub-Module ---
     loginManager = {
-      enable = lib.mkEnableOption "Enable greetd + tuigreet login manager";
+      enable = lib.mkEnableOption "Enable the selected graphical login stack";
+
+      backend = lib.mkOption {
+        type = lib.types.enum [ "hyprland" "plasma" ];
+        default = "hyprland";
+        description = "Hyprland uses greetd; Plasma uses native SDDM. Only one login stack runs.";
+      };
 
       autoLoginUser = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
@@ -122,7 +128,7 @@ in
     # LOGIN MANAGER (greetd + tuigreet)
     #=========================================================================
 
-    services.greetd = lib.mkIf cfg.loginManager.enable {
+    services.greetd = lib.mkIf (cfg.loginManager.enable && cfg.loginManager.backend == "hyprland") {
       enable = true;
 
       settings =
@@ -297,7 +303,19 @@ in
 
     # Keep these to avoid display-manager conflicts (NixOS 24.11+ uses services.displayManager)
     services.displayManager.gdm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
-    services.displayManager.sddm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
+    services.displayManager.sddm = lib.mkIf cfg.loginManager.enable {
+      enable = cfg.loginManager.backend == "plasma";
+      wayland.enable = cfg.loginManager.backend == "plasma";
+    };
+    services.desktopManager.plasma6.enable = lib.mkIf
+      (cfg.loginManager.enable && cfg.loginManager.backend == "plasma") true;
+    services.displayManager.defaultSession = lib.mkIf
+      (cfg.loginManager.enable && cfg.loginManager.backend == "plasma") "plasma";
+    services.displayManager.autoLogin = lib.mkIf
+      (cfg.loginManager.enable && cfg.loginManager.backend == "plasma") {
+        enable = cfg.loginManager.autoLoginUser != null;
+        user = if cfg.loginManager.autoLoginUser == null then "" else cfg.loginManager.autoLoginUser;
+      };
 
     #=========================================================================
     # RESCUE TTY — Always-available text console (lockout prevention)

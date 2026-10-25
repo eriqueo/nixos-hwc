@@ -7,6 +7,7 @@
 { config, lib, pkgs, offsiteStorage ? null, ... }:
 let
   mediaPool = "media-pool";
+  dadHome = config.users.users.dad.home;
   offsiteDataset = "${mediaPool}/offsite";
   offsiteRoot = config.hwc.paths.backup;
   offsitePeers = {
@@ -72,6 +73,7 @@ in {
     ../../domains/notifications/index.nix
     ../../domains/networking/index.nix
     ../../domains/data/index.nix
+    ../../domains/gaming/index.nix
     ../../domains/media/jellyfin-native/index.nix
     # ../../domains/business/index.nix # Enable when business services are needed
   ];
@@ -150,9 +152,55 @@ in {
   hwc.system.apps.waybar.enable = true;
   hwc.system.apps.chromium.enable = true;
 
-  # Session management (greetd + autologin) via hwc.system.core.session
-  # Enabled by profiles/session.nix — autoLoginUser = "eric"
-  hwc.system.core.session.loginManager.enable = true;
+  # Dad's desktop is separate from Eric's retained admin/Hyprland account.
+  hwc.system.core.session.loginManager = {
+    enable = true;
+    backend = "plasma";
+    autoLoginUser = "dad";
+  };
+  users.groups.dad = {};
+  users.users.dad = {
+    isNormalUser = true;
+    uid = 1001;
+    group = "dad";
+    description = "Dad";
+    home = "${builtins.dirOf config.hwc.paths.user.home}/dad";
+    homeMode = "0700";
+    shell = pkgs.bashInteractive;
+    extraGroups = [ "video" "render" ];
+    hashedPasswordFile = config.hwc.secrets.api.dad-login-password-hash;
+  };
+  home-manager.users.dad = {
+    imports = [ ../../domains/home/apps/plasma/index.nix ];
+    home = { username = "dad"; homeDirectory = dadHome; stateVersion = "26.05"; };
+    hwc.home.apps.plasma.enable = true;
+  };
+  hwc.gaming.steam.enable = true;
+  hardware.graphics = { enable = true; enable32Bit = true; };
+
+  # A local household session may use the GPU, never service credentials or
+  # power/network administration. Eric retains the existing wheel/sudo policy.
+  security.polkit.extraConfig = ''
+    polkit.addRule(function(action, subject) {
+      if (subject.user !== "dad") return;
+      if (action.id.indexOf("org.freedesktop.NetworkManager.") === 0 ||
+          action.id.indexOf("org.freedesktop.udisks2.") === 0 ||
+          action.id.indexOf("org.freedesktop.systemd1.manage-") === 0 ||
+          /^org\.freedesktop\.login1\.(power-off|reboot|suspend|hibernate|hybrid-sleep|set-|manage|halt)/.test(action.id)) {
+        return polkit.Result.NO;
+      }
+    });
+  '';
+  services.logind.settings.Login.HandlePowerKey = "ignore";
+  services.logind.settings.Login.HandleSuspendKey = "ignore";
+  # CRITICAL documents and local game saves; downloads/installed games stay
+  # replaceable on SSD. Precreate only the scoped source directories so the
+  # existing bounded Borg job can run before Steam's first login.
+  systemd.tmpfiles.rules = map (relative:
+    "d ${dadHome}/${relative} 0700 dad dad -"
+  ) [ "Documents" "Desktop" "Pictures" ".local" ".local/share"
+      ".local/share/Steam" ".local/share/Steam/userdata"
+      ".local/share/Steam/steamapps" ".local/share/Steam/steamapps/compatdata" ];
 
   hwc.ai.mcp = {
     enable = false;
@@ -202,7 +250,10 @@ in {
     enable = true;
     primary.enable = false;
     monitoring.enable = true;
-    sources = [ config.services.jellyfin.dataDir ];
+    sources = [ config.services.jellyfin.dataDir ] ++ map (relative: "${dadHome}/${relative}") [
+      "Documents" "Desktop" "Pictures"
+      ".local/share/Steam/userdata" ".local/share/Steam/steamapps/compatdata"
+    ];
     sqliteSnapshots.jellyfin = {
       source = "${config.services.jellyfin.dataDir}/data/jellyfin.db";
       user = "eric";
@@ -213,6 +264,7 @@ in {
       "${config.services.jellyfin.dataDir}/log"
       "${config.services.jellyfin.dataDir}/metadata"
       "${config.services.jellyfin.dataDir}/data/*.broken-backup"
+      "${dadHome}/.local/share/Steam/steamapps/compatdata/*/pfx/drive_c/windows/temp"
     ];
     additionalDestinations.home = {
       host = offsiteStorage.recovery.address;

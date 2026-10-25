@@ -4224,7 +4224,7 @@
       assert builtins.attrNames xps.services.borgbackup.jobs == [ "hwc-backup-home" ];
       assert !(builtins.hasAttr "borg-check" xps.systemd.services);
       assert builtins.attrNames xps.hwc.data.borg.sqliteSnapshots == [ "jellyfin" ];
-      assert xps.hwc.data.borg.sources == [ xps.services.jellyfin.dataDir ];
+      assert xps.hwc.data.borg.sources == [ xps.services.jellyfin.dataDir ] ++ map (relative: "${xps.users.users.dad.home}/${relative}") [ "Documents" "Desktop" "Pictures" ".local/share/Steam/userdata" ".local/share/Steam/steamapps/compatdata" ];
       assert xps.services.borgbackup.jobs.hwc-backup-home.repo == "ssh://${base.config.services.borgbackup.repos.hwc-xps.user}@${base.config.hwc.networking.hosts.selfIp}${base.config.services.borgbackup.repos.hwc-xps.path}";
       assert xps.systemd.services.borgbackup-job-hwc-backup-home.serviceConfig.LoadCredential == [ "borg-ssh-key:/run/agenix/borg-xps-state-ssh-key" ];
       assert xps.systemd.services.borgbackup-job-hwc-backup-home.serviceConfig.TimeoutStartSec == 3600;
@@ -4821,6 +4821,28 @@
       # Exercise the XPS dependency guard before the native database preStart.
       # Its own sandbox permits only the ZFS device; Jellyfin stays restricted. The fixture replaces OS probes and drops their string
       # contexts so this check does not build ZFS/FFmpeg merely to mock them.
+      xps-household-desktop = let
+        c = self.nixosConfigurations.hwc-xps.config;
+        dad = c.users.users.dad;
+        session = c.hwc.system.core.session.loginManager;
+      in
+      assert session.backend == "plasma" && session.autoLoginUser == "dad";
+      assert c.services.displayManager.sddm.enable && !c.services.greetd.enable;
+      assert c.services.desktopManager.plasma6.enable && c.services.displayManager.autoLogin.user == "dad";
+      assert c.systemd.services."getty@tty2".enable;
+      assert dad.uid != c.users.users.eric.uid && dad.group == "dad" && dad.homeMode == "0700";
+      assert lib.all (group: !(lib.elem group dad.extraGroups)) [ "wheel" "secrets" "users" "disk" "storage" "docker" "podman" ];
+      assert dad.hashedPasswordFile == c.hwc.secrets.api.dad-login-password-hash;
+      assert c.hardware.graphics.enable32Bit && c.programs.steam.enable;
+      assert lib.elem self.nixosConfigurations.hwc-xps.pkgs.proton-ge-bin c.programs.steam.extraCompatPackages;
+      assert c.services.openssh.enable && c.services.tailscale.enable && c.users.users.eric.linger;
+      assert c.hwc.media.jellyfin.enable && !c.hwc.media.jellyfin.gpu.enable;
+      assert c.services.logind.settings.Login.HandleLidSwitch == "ignore";
+      assert c.home-manager.users.dad.hwc.home.apps.plasma.enable;
+      assert lib.elem "${dad.home}/Documents" c.hwc.data.borg.sources;
+      assert !c.programs.steam.remotePlay.openFirewall;
+      pkgs.runCommand "xps-household-desktop" {} "touch $out";
+
       xps-media-readiness = let
         peer = self.nixosConfigurations.hwc-xps.config;
         service = peer.systemd.services.jellyfin;

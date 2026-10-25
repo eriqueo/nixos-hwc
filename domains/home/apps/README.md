@@ -22,6 +22,7 @@ apps/
 ├── hyprland/       # Wayland compositor
 ├── kitty/          # Terminal emulator
 ├── librewolf/      # Privacy browser
+├── plasma/         # Stock household desktop, seed-only user defaults
 ├── mpv/            # Media player
 ├── obsidian/       # Note-taking
 ├── xournalpp/      # PDF annotator / handwritten notes
@@ -36,6 +37,8 @@ apps/
 ```
 
 ## Changelog
+- 2026-10-25: Add the isolated XPS household desktop wiring; preserve existing
+  host defaults and use the owning login, gaming and credential capabilities.
 
 - 2026-10-24: Bind T3 Code URI registration to its stable Home Manager launcher,
   preserving the selected Electron runtime and application environment when a
