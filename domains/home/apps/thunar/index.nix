@@ -49,6 +49,15 @@ in
       categories = [ "TextEditor" "Development" "ConsoleOnly" ];
     };
 
+    xdg.desktopEntries.thunar-admin = lib.mkIf cfg.enable {
+      name = "Thunar (Administrator)";
+      comment = "Browse files with administrator access";
+      exec = "${lib.getExe thunarPkg} admin:///";
+      icon = "system-file-manager";
+      terminal = false;
+      categories = [ "System" "FileManager" ];
+    };
+
     #==========================================================================
     # CONDITIONAL THUNAR CONFIGURATION
     # These settings are only merged if `hwc.home.apps.thunar.enable` is true.
