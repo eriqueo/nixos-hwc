@@ -273,6 +273,7 @@
         overlays = [
           silenceDeprecatedAliases
           gitCleanupOverlay
+          torchvisionBuildOverlay
           pandasStubsOverlay   # TEMP: skip pandas-stubs tests (upstream pytest-9.1.1 breakage)
           nodejsSecurityOverlay  # TEMP: Node Oct-2026 security release + brotli CVE fix
           # Expose the cowork-capable Claude Desktop package (package-only flake,
@@ -312,6 +313,23 @@
     # that otherwise fails the whole HM user-environment). See the file header for
     # the removal condition.
     pandasStubsOverlay = import ./overlays/pandas-stubs.nix;
+    # TEMPORARY: torchvision invokes torch's Ninja adapter directly, bypassing
+    # Nix's Ninja phase and its core budget. Remove when pinned torchvision
+    # forwards NIX_BUILD_CORES itself and torchvision-worker-budget still passes.
+    torchvisionBuildOverlay = final: prev: {
+      pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
+        (pyfinal: pyprev: {
+          torchvision = pyprev.torchvision.overridePythonAttrs (old: {
+            preBuild = (old.preBuild or "") + ''
+              case "''${NIX_BUILD_CORES:-}" in
+                ""|0*|*[!0-9]*) echo "torchvision requires a positive Nix core budget" >&2; exit 1 ;;
+              esac
+              export MAX_JOBS="$NIX_BUILD_CORES"
+            '';
+          });
+        })
+      ];
+    };
     # TEMP: native Git pack cleanup on cancellation; removal test in the overlay.
     gitCleanupOverlay = import ./overlays/git.nix;
     # Node.js security overlay — TEMPORARY (tracked). Node 24.22.1 / 22.23.4
@@ -360,7 +378,7 @@
     mkPkgsWithOverlays = system: nixpkgsInput: extraOverlays:
       import nixpkgsInput {
         inherit system;
-        overlays = [ silenceDeprecatedAliases gitCleanupOverlay pandasStubsOverlay nodejsSecurityOverlay claudeCodeOverlay cloudflaredOverlay ] ++ extraOverlays;
+        overlays = [ silenceDeprecatedAliases gitCleanupOverlay pandasStubsOverlay torchvisionBuildOverlay nodejsSecurityOverlay claudeCodeOverlay cloudflaredOverlay ] ++ extraOverlays;
         config = {
           allowUnfree = true;
           nvidia.acceptLicense = true;
@@ -1120,6 +1138,26 @@
         PYTEST
         touch "$out"
       '';
+
+      torchvision-worker-budget =
+        let
+          hooks = map (host: pkgs.writeText "torchvision-${host}-prebuild"
+            (self.nixosConfigurations."hwc-${host}".pkgs.python3Packages.torchvision.preBuild or ""))
+            [ "work" "home" ];
+        in pkgs.runCommand "torchvision-worker-budget" { } ''
+          for hook in ${lib.escapeShellArgs (map toString hooks)}; do
+            for cores in 1 2; do
+              NIX_BUILD_CORES="$cores" ${pkgs.bash}/bin/bash -euc                 'unset MAX_JOBS; source "$1"; test "$MAX_JOBS" = "$NIX_BUILD_CORES"' -- "$hook"
+            done
+            for cores in "" 0 00 invalid; do
+              if NIX_BUILD_CORES="$cores" ${pkgs.bash}/bin/bash -euc 'source "$1"' -- "$hook"; then
+                echo "torchvision accepted an invalid core budget" >&2
+                exit 1
+              fi
+            done
+          done
+          touch "$out"
+        '';
 
       node-runtime-wiring =
         let
