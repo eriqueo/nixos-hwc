@@ -35,6 +35,44 @@ let
   # Member instance (options.memberInstance). One composition root for its
   # compose invocation, preflight, health proof and trusted-peer check.
   member = cfg.memberInstance;
+  # Temporary same-app library and browser-trust correction. Retire after an
+  # upstream image passes the library, Chrome policy and saved-profile proofs.
+  # Public certificates only; no user settings or test CA keys enter the store.
+  memberChromePolicyText = ''
+    {
+      "CADistrustedCertificates": [
+        "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"
+      ]
+    }
+  '';
+  memberChromePolicy = pkgs.writeText "scout-chrome-distrust-policy.json" memberChromePolicyText;
+  memberBrotliFile = "libbrotli1_1.0.9-2+deb12u1_amd64.deb";
+  memberBrotliHash = "e27b3d655fa6fadd7a56f706687e94573c0af68b7d6df394a32a381a3a6c6d8b";
+  memberBrotli = pkgs.fetchurl {
+    url = "https://security.debian.org/debian-security/pool/updates/main/b/brotli/${memberBrotliFile}";
+    sha256 = memberBrotliHash;
+  };
+  memberImage = (import ../../../../lib/mkContainer.nix { inherit lib pkgs; }).mkRuntimeImage {
+    name = "scout-member";
+    version = "51a6a0eb";
+    recipe = ''
+      FROM localhost/lead-scout@sha256:4293934a89e0ee609192310a5cc915382535268d353247c7a53fa566331046a3
+      COPY ${memberBrotliFile} /tmp/scout-brotli.deb
+      RUN echo '${memberBrotliHash}  /tmp/scout-brotli.deb' | sha256sum -c - && dpkg -i /tmp/scout-brotli.deb && rm /tmp/scout-brotli.deb
+      # Chromium policy SHA256: ${builtins.hashString "sha256" memberChromePolicyText}
+      COPY chrome-distrust-policy.json /etc/opt/chrome_for_testing/policies/managed/hwc-emsign-distrust.json
+    '';
+  };
+  # REPLACEABLE: built from fixed-hash input, public policy and exact recipe.
+  # No build or image replacement runs during application startup.
+  memberImageContext = pkgs.runCommand "scout-member-runtime-context" {} ''
+    mkdir -p "$out"
+    cp ${memberImage.dockerfile} "$out/Dockerfile"
+    cp ${memberChromePolicy} "$out/chrome-distrust-policy.json"
+    cp ${memberBrotli} "$out/${memberBrotliFile}"
+  '';
   invitationMail = member.invitationMail;
   memberUser = config.users.users.${cfg.user};
   # Law4 standard UID1000 applies when Nix delegates allocation. Verify the
@@ -901,6 +939,7 @@ in
       };
     }];
 
+    system.build.scoutMemberRuntimeImageContext = lib.mkIf member.enable memberImageContext;
     system.build.scoutMemberSnapshot = lib.mkIf member.enable memberSnapshot;
     system.build.scoutMemberSnapshotConfig = lib.mkIf member.enable memberSnapshotConfig;
     # The complete bundle carries logs/WAL inside its tar. Global *.log/raw
