@@ -505,13 +505,13 @@ in
     # because that machine lives on a household LAN the firewall trusts
     # wholesale, so there is no pair-by-tailnet-IP fallback here on purpose.
     #
-    # REACHABILITY NEEDS ONE DNS RECORD. `*.<vhostDomain>` resolves to hwc-home,
-    # whose Caddy renders routeOwner = "main" only — an xps-owned route is
-    # filtered out there and answers 404. t3-work works because it has its own A
-    # record pointing at its owner; this needs the same:
-    #   t3-xps.<vhostDomain>  A  <hwc.networking.hosts.ips.xps>   (deSEC)
-    # Until that record exists, reach it with
-    #   curl --resolve t3-xps.<vhostDomain>:443:<ips.xps> ...
+    # REACHABILITY RESTS ON ITS OWN DNS RECORD, like every other owner-pinned
+    # name. `*.<vhostDomain>` resolves to hwc-home, whose Caddy renders
+    # routeOwner = "main" only, so an xps-owned route is filtered out there and
+    # answers 404. The deSEC A record
+    #   t3-xps.<vhostDomain>  A  100.126.80.42   (created 2026-10-25, TTL 900)
+    # is what steers the name to this owner instead. If it is ever lost, the
+    # symptom is a 404 from 100.77.195.118, not a T3 failure.
     # The alternative — forwardFrom = [ "main" ] — is deliberately NOT used: it
     # would change hwc-home's rendered Caddy config, and this route owns nothing
     # on that host.

@@ -277,16 +277,24 @@ vhost is the only door.
 `https://t3-xps.hwc.iheartwoodcraft.com`, tailnet-only, behind the wildcard
 certificate and T3's own pairing auth.
 
-This needs the deSEC A record `t3-xps.hwc.iheartwoodcraft.com -> 100.126.80.42`,
-the same per-owner record every other owner-pinned name has. Without it,
-`*.hwc.iheartwoodcraft.com` resolves to hwc-home, whose Caddy renders
-`routeOwner = "main"` only, so an xps-owned route is filtered out and answers
-404. Until the record exists, reach it with an explicit resolve:
+This rests on the deSEC A record `t3-xps.hwc.iheartwoodcraft.com -> 100.126.80.42`
+(created 2026-10-25, TTL 900), the same per-owner record every other owner-pinned
+name has. Without it, `*.hwc.iheartwoodcraft.com` resolves to hwc-home, whose
+Caddy renders `routeOwner = "main"` only, so an xps-owned route is filtered out
+and answers 404.
+
+So a 404 here means the DNS record, not the backend. Check in that order:
 
 ```bash
+dig +short t3-xps.hwc.iheartwoodcraft.com          # expect 100.126.80.42
 curl --resolve t3-xps.hwc.iheartwoodcraft.com:443:100.126.80.42 \
-  https://t3-xps.hwc.iheartwoodcraft.com/
+  https://t3-xps.hwc.iheartwoodcraft.com/          # bypasses DNS entirely
 ```
+
+If the second answers 200 and the first does not resolve to this host, the
+backend is fine and the record is the problem. deSEC publishes zone changes on
+a ~60s batch cycle, and its two nameservers do not update together — check both
+`ns1.desec.io` and `ns2.desec.org` before concluding a write failed.
 
 The pairing URL and QR that `t3 serve` prints at startup are loopback URLs and
 are useless from a phone. Eric mints his own against the real hostname:
