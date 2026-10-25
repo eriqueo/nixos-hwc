@@ -135,6 +135,8 @@ in {
       RUNTIME_PM_ON_AC = "auto";
     };
   };
+  # Plasma's default daemon competes with this instance's existing TLP owner.
+  services.power-profiles-daemon.enable = lib.mkForce false;
 
   services.logind.settings.Login = {
     HandleLidSwitch = "ignore";
