@@ -4,9 +4,22 @@
 # Role home halves (base, desktop) provide defaults via the flake glue;
 # this file adjusts only what is unique to this machine.
 
-{ lib, ... }:
+{ lib, pkgs, ... }:
 
 {
+  # Codex pinned to the upstream release binary. This machine is on the stable
+  # channel (flake machines table: channel = "stable"), and 26.05 freezes codex
+  # at the version it branched with — 0.146.0, with no path forward short of a
+  # channel bump. The pin is the module's documented opt-in for exactly this.
+  #
+  # NOT promoted to a profile or made the module default, even though
+  # machines/laptop/home.nix carries the same line: parts/package.nix fetches
+  # an x86_64 musl tarball, and hwc-firestick is aarch64, so a default would
+  # break its build. hwc-home also stays on stock pkgs.codex deliberately.
+  # Promote only together with arch selection in the module.
+  hwc.home.apps.codex.package =
+    pkgs.callPackage ../../domains/home/apps/codex/parts/package.nix { };
+
   # Work owns mail. This recovery/media instance has no local Maildir.
   hwc.mail = {
     enable = lib.mkForce false;
