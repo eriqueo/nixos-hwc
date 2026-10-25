@@ -180,6 +180,13 @@ in
   # those paths onto the live PATH. See domains/home/apps/claude-desktop.
   hwc.system.core.envfs.enable = true;
 
+  # Steam's NixOS module supplies the graphics/runtime integration. Keep
+  # Proton-GE declarative and expose it in each game's Compatibility menu.
+  programs.steam = {
+    enable = true;
+    extraCompatPackages = [ pkgs.proton-ge-bin ];
+  };
+
   # BOM-PROOF LOGIN: Ensure 'il0wwlm?' always works for 'eric' and 'root' on laptop.
   # This makes the login screen independent of secret decryption.
   hwc.system.users.user.useSecrets = false;
