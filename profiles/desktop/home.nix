@@ -18,6 +18,9 @@
   # GUI WORKSTATION DEFAULTS
   #======================================================================
 
+  # GVfs administrator browsing must be able to request authentication.
+  services.hyprpolkitagent.enable = lib.mkDefault true;
+
   hwc.home = {
     # Fonts (GUI machines)
     theme.fonts.enable = lib.mkDefault true;

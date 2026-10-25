@@ -33,6 +33,7 @@ mail/        home.nix             # work — hwc.mail menu
 ```
 
 ## Changelog
+- 2026-10-25: Desktop administrator browsing enables the NixOS pkexec wrapper and the Hyprland authentication agent; standard polkit policy still controls access.
 - 2026-10-25: Desktop system role enables GVfs for Thunar administrator browsing, device integration, and GIO session modules.
 - 2026-10-19: Server roles enable the core-owned nix-ld GUI library bundle for sandboxed headless agent browsers.
 - 2026-09-28: Desktop role's `hwc.mail.bridge.enable` is now `mkDefault true`, so a machine can opt out; hwc-laptop does.
