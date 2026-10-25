@@ -4833,6 +4833,8 @@
       assert dad.uid != c.users.users.eric.uid && dad.group == "dad" && dad.homeMode == "0700";
       assert lib.all (group: !(lib.elem group dad.extraGroups)) [ "wheel" "secrets" "users" "disk" "storage" "docker" "podman" ];
       assert dad.hashedPasswordFile == c.hwc.secrets.api.dad-login-password-hash;
+      assert !(c.environment.sessionVariables ? HOME);
+      assert c.home-manager.users.dad.home.homeDirectory == dad.home;
       assert c.hardware.graphics.enable32Bit && c.programs.steam.enable;
       assert lib.elem self.nixosConfigurations.hwc-xps.pkgs.proton-ge-bin c.programs.steam.extraCompatPackages;
       assert c.services.openssh.enable && c.services.tailscale.enable && c.users.users.eric.linger;
