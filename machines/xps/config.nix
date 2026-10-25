@@ -8,6 +8,8 @@
 let
   mediaPool = "media-pool";
   dadHome = config.users.users.dad.home;
+  # Same path the base role names for a primary Borg host; one producer.
+  t3State = "${config.hwc.paths.user.home}/.t3/userdata";
   offsiteDataset = "${mediaPool}/offsite";
   offsiteRoot = config.hwc.paths.backup;
   offsitePeers = {
@@ -262,7 +264,7 @@ in {
     enable = true;
     primary.enable = false;
     monitoring.enable = true;
-    sources = [ config.services.jellyfin.dataDir ] ++ map (relative: "${dadHome}/${relative}") [
+    sources = [ config.services.jellyfin.dataDir t3State ] ++ map (relative: "${dadHome}/${relative}") [
       "Documents" "Desktop" "Pictures" ".config"
       ".local/share/Steam/userdata" ".local/share/Steam/steamapps/compatdata"
     ];
@@ -271,6 +273,28 @@ in {
       user = "eric";
       maxBytes = 1073741824;
     };
+    # CRITICAL: this host's T3 environment — the event-sourced thread store and
+    # the server signing key, which no other machine holds and which nothing can
+    # regenerate (losing the key invalidates every paired client).
+    #
+    # Spelled out HERE rather than inherited: profiles/base/sys.nix registers
+    # the same three entries, but only when `primary.enable` is true, and XPS
+    # deliberately keeps it false so a missing primary job is not invented. The
+    # registrations are what is wanted; the primary job is not. ~/.t3/caches and
+    # ~/.t3/worktrees stay REPLACEABLE and out — the source is `userdata` only.
+    # The raw db/-wal/-shm/-journal tuple is excluded automatically by the
+    # snapshot producer (domains/data/borg/index.nix `snapshotExcludes`), so
+    # Borg stores the consistent copy and never a torn file beside live WAL.
+    #
+    # ONLY `t3-v2`, where the base role registers both V1 and V2. V1
+    # (`state.sqlite`) exists on hwc-server and hwc-work because their stores
+    # were MIGRATED to protocol 2 and keep the old file for rollback and lazy
+    # import. This environment was created at protocol 2 and has no V1 history
+    # to protect. Registering it anyway would not be harmless: a snapshot whose
+    # source does not exist fails the copy worker, and `sqliteBackup` propagates
+    # that with `|| exit "$?"`, taking down the Jellyfin and Dad-personal-file
+    # archive with it. ADD `t3` WHEN: `~/.t3/userdata/state.sqlite` exists here.
+    sqliteSnapshots.t3-v2 = { source = "${t3State}/statev2.sqlite"; user = "eric"; };
     excludePatterns = [
       "${config.services.jellyfin.dataDir}/cache"
       "${config.services.jellyfin.dataDir}/log"

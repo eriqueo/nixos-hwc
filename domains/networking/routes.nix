@@ -40,6 +40,7 @@ in
     projects = "work";   # the project tracker hub (agent-harness tracker), a Workbench area
     workbench = "work";  # wave 1: hub; hwc-server keeps the module on for its areas.json
     t3-work = "work";
+    t3-xps = "xps";
     brain-mcp = { owner = "work"; mode = "port"; };  # wave 1
     monitor = "work";    # wave 2: DataX monitor
     # wave 2 fused window: business apps, scouts, Radicale, gateway, briefing
@@ -492,6 +493,30 @@ in
     # ~/.t3 store and phone pairing), not a move of `t3`. Same port, other host.
     {
       name = "t3-work";
+      mode = "vhost";
+      upstream = "http://127.0.0.1:3773";
+    }
+    # T3 Code on hwc-xps — a third, separate T3 environment, for agents working
+    # on the Maryland recovery/media machine without an SSH session per task.
+    # Same port, other host; its own ~/.t3 store, signing key and pairing.
+    #
+    # THIS VHOST IS THE ONLY DOOR, which is not true of the other two. XPS binds
+    # `serve.host = "127.0.0.1"` (machines/xps/home.nix) rather than 0.0.0.0,
+    # because that machine lives on a household LAN the firewall trusts
+    # wholesale, so there is no pair-by-tailnet-IP fallback here on purpose.
+    #
+    # REACHABILITY NEEDS ONE DNS RECORD. `*.<vhostDomain>` resolves to hwc-home,
+    # whose Caddy renders routeOwner = "main" only — an xps-owned route is
+    # filtered out there and answers 404. t3-work works because it has its own A
+    # record pointing at its owner; this needs the same:
+    #   t3-xps.<vhostDomain>  A  <hwc.networking.hosts.ips.xps>   (deSEC)
+    # Until that record exists, reach it with
+    #   curl --resolve t3-xps.<vhostDomain>:443:<ips.xps> ...
+    # The alternative — forwardFrom = [ "main" ] — is deliberately NOT used: it
+    # would change hwc-home's rendered Caddy config, and this route owns nothing
+    # on that host.
+    {
+      name = "t3-xps";
       mode = "vhost";
       upstream = "http://127.0.0.1:3773";
     }

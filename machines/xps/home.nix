@@ -4,7 +4,7 @@
 # Role home halves (base, desktop) provide defaults via the flake glue;
 # this file adjusts only what is unique to this machine.
 
-{ inputs, lib, pkgs, ... }:
+{ lib, ... }:
 
 {
   # Work owns mail. This recovery/media instance has no local Maildir.
@@ -23,12 +23,31 @@
     slack.enable = lib.mkForce false;
     bottles-unwrapped.enable = lib.mkForce false;
 
-    # XPS stays on nixpkgs-stable, which no longer packages Electron 43, while
-    # the T3 Code desktop bundle is compiled against Electron 43.4.1. Use the
-    # same locked unstable input as hwc-laptop so the runtime major remains 43.
-    # REMOVE WHEN: apps/desktop/package.json moves to a major packaged by the
-    # locked stable input; then restore the module default and run the XPS eval.
-    t3code.desktop.electronPackage =
-      inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system}.electron_43;
+    # T3 Code, headless shape — this machine's OWN agent environment, not a
+    # move of hwc-server's or hwc-work's. Each host keeps its own ~/.t3 store,
+    # signing key and pairing; nothing is copied between them.
+    #
+    # The desktop role (profiles/desktop/home.nix) turns the Electron shape on
+    # by default, and XPS takes that role for Dad's Plasma seat and Eric's
+    # Hyprland session. Here it is turned off: the module asserts the two shapes
+    # never coexist, because both write the same ~/.t3 SQLite store. Turning
+    # desktop off also retires the Electron 43 override this file used to carry
+    # (XPS is on nixpkgs-stable, which dropped Electron 43) — `electronPackage`
+    # is only ever read when `desktop.enable` is true.
+    t3code = {
+      desktop.enable = false;
+      serve.enable = true;
+      serve.port = 3773;
+
+      # LOOPBACK, deliberately NOT the 0.0.0.0 that hwc-server and hwc-work
+      # use. Those two sit in Eric's own house; this one sits in Dad's, on a
+      # household LAN that the firewall already trusts wholesale
+      # (`trustedInterfaces` carries eno1 — domains/system/networking/index.nix).
+      # A wider bind here would answer to every device on that LAN, which is
+      # exactly what "private environment" rules out. Caddy is the only door:
+      # t3-xps.<vhostDomain> (domains/networking/routes.nix), tailnet-only, with
+      # the wildcard certificate and T3's own pairing auth behind it.
+      serve.host = "127.0.0.1";
+    };
   };
 }
