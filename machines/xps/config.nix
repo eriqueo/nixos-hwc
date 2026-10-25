@@ -253,7 +253,7 @@ in {
     primary.enable = false;
     monitoring.enable = true;
     sources = [ config.services.jellyfin.dataDir ] ++ map (relative: "${dadHome}/${relative}") [
-      "Documents" "Desktop" "Pictures"
+      "Documents" "Desktop" "Pictures" ".config"
       ".local/share/Steam/userdata" ".local/share/Steam/steamapps/compatdata"
     ];
     sqliteSnapshots.jellyfin = {

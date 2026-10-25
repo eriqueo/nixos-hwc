@@ -4224,7 +4224,7 @@
       assert builtins.attrNames xps.services.borgbackup.jobs == [ "hwc-backup-home" ];
       assert !(builtins.hasAttr "borg-check" xps.systemd.services);
       assert builtins.attrNames xps.hwc.data.borg.sqliteSnapshots == [ "jellyfin" ];
-      assert xps.hwc.data.borg.sources == [ xps.services.jellyfin.dataDir ] ++ map (relative: "${xps.users.users.dad.home}/${relative}") [ "Documents" "Desktop" "Pictures" ".local/share/Steam/userdata" ".local/share/Steam/steamapps/compatdata" ];
+      assert xps.hwc.data.borg.sources == [ xps.services.jellyfin.dataDir ] ++ map (relative: "${xps.users.users.dad.home}/${relative}") [ "Documents" "Desktop" "Pictures" ".config" ".local/share/Steam/userdata" ".local/share/Steam/steamapps/compatdata" ];
       assert xps.services.borgbackup.jobs.hwc-backup-home.repo == "ssh://${base.config.services.borgbackup.repos.hwc-xps.user}@${base.config.hwc.networking.hosts.selfIp}${base.config.services.borgbackup.repos.hwc-xps.path}";
       assert xps.systemd.services.borgbackup-job-hwc-backup-home.serviceConfig.LoadCredential == [ "borg-ssh-key:/run/agenix/borg-xps-state-ssh-key" ];
       assert xps.systemd.services.borgbackup-job-hwc-backup-home.serviceConfig.TimeoutStartSec == 3600;
