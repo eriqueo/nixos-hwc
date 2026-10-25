@@ -245,3 +245,110 @@ password, use an empty password, print values in chat or put credentials in Stea
 launch options. Eric can recover/rotate Dad’s password privately via the existing
 secret workflow. Dad’s automatic login does not require entering it. A future
 manual login or explicit lock still needs that password.
+
+## Private T3 agent environment
+
+XPS runs its own T3 Code environment so agents work on this machine without an
+SSH session per task. It is a third environment, not a copy: its own `~/.t3`
+store, signing key, `environment-id` and pairing. Never copy a store, a signing
+key or a pairing token between hosts — two writers on one event-sourced SQLite
+store is a known failure, and a shared key would let one host's clients act as
+another's.
+
+Owners: `machines/xps/home.nix` (headless shape and bind), `domains/home/apps/t3code/`
+(the module and its `t3-update` release driver), `domains/networking/routes.nix`
+(the `t3-xps` vhost), `machines/xps/config.nix` (state protection).
+
+### Shape
+
+Headless `t3 serve`, not the Electron app. The desktop role turns the Electron
+shape on by default and this machine turns it off; the module asserts the two
+shapes never coexist. Build artifacts live in the fork's working tree at
+`~/600_apps/t3code`, which the launcher runs and does not build.
+
+The backend binds `127.0.0.1:3773`, deliberately unlike hwc-server and hwc-work,
+which bind `0.0.0.0`. Those two sit in Eric's house. This one sits in Dad's, on
+a household LAN the firewall trusts wholesale (`trustedInterfaces` carries
+`eno1`). So there is no pair-by-tailnet-IP fallback here, on purpose: the Caddy
+vhost is the only door.
+
+### Reaching it
+
+`https://t3-xps.hwc.iheartwoodcraft.com`, tailnet-only, behind the wildcard
+certificate and T3's own pairing auth.
+
+This needs the deSEC A record `t3-xps.hwc.iheartwoodcraft.com -> 100.126.80.42`,
+the same per-owner record every other owner-pinned name has. Without it,
+`*.hwc.iheartwoodcraft.com` resolves to hwc-home, whose Caddy renders
+`routeOwner = "main"` only, so an xps-owned route is filtered out and answers
+404. Until the record exists, reach it with an explicit resolve:
+
+```bash
+curl --resolve t3-xps.hwc.iheartwoodcraft.com:443:100.126.80.42 \
+  https://t3-xps.hwc.iheartwoodcraft.com/
+```
+
+The pairing URL and QR that `t3 serve` prints at startup are loopback URLs and
+are useless from a phone. Eric mints his own against the real hostname:
+
+```bash
+cd ~/600_apps/t3code && node apps/server/dist/bin.mjs \
+  auth pairing create --base-url https://t3-xps.hwc.iheartwoodcraft.com
+```
+
+A pairing link is a credential. Do not put one in this guide, in chat, in Git or
+in a log, and do not consume Eric's link on his behalf.
+
+### Providers
+
+The service PATH is explicit, because a systemd user unit inherits none. On this
+host `claude`, `codex`, `pi` and `herdr` all come from
+`/etc/profiles/per-user/eric/bin`; `~/.npm-global/bin` is empty, so
+`agent-harness.cliUpdates` is deliberately NOT enabled here as it is on the other
+two servers. The consequence is real and worth knowing: T3 hides any model whose
+manifest `minVersion` is newer than the installed CLI, and the CLIs here move
+only when the Nix profile does.
+
+Provider authentication is per-host and interactive. `codex login` on this
+machine is Eric's to run; an expired token shows up as `401` from
+`wss://chatgpt.com/backend-api/codex/responses`, not as a service failure.
+
+### Updating the fork
+
+Use `t3-update` (see `domains/home/apps/t3code/README.md`), not a hand-run
+`pnpm build` in the serving tree. It stages a candidate, verifies it natively,
+proves OLD->NEW->OLD recovery and only then promotes. `hms` is not needed for an
+application update — the launcher reads the working tree at run time. Run the
+system lane only after changing anything under `serve.*`, `repo`, or the route.
+
+### State and recovery
+
+`~/.t3/userdata` is CRITICAL: it holds the event-sourced thread store and the
+server signing key, which nothing can regenerate and no other machine holds.
+Losing the key invalidates every paired client. `~/.t3/caches` and
+`~/.t3/worktrees` are REPLACEABLE and are not backed up.
+
+It rides the existing bounded XPS-to-home Borg job — the same 10G repository,
+the same 02:30 schedule, the same retention. Registration is explicit in
+`machines/xps/config.nix` rather than inherited from `profiles/base/sys.nix`,
+because the base role attaches it to `primary.enable`, which this host keeps
+false so a missing primary job is not invented.
+
+Only the `t3-v2` snapshot is registered. V1 `state.sqlite` exists on the other
+two hosts because their stores were MIGRATED to protocol 2; this environment was
+created at it. Do not add `t3` until `~/.t3/userdata/state.sqlite` actually
+exists here — a snapshot whose source is missing fails the copy worker, and the
+job propagates that, taking the Jellyfin and Dad-personal-file archive down with
+it.
+
+Borg stores the consistent snapshot at `var/lib/hwc/borg-sqlite/ready/t3-v2.sqlite`
+and excludes the live `statev2.sqlite` / `-wal` / `-shm` / `-journal` tuple
+automatically. To recover, restore that snapshot to
+`~/.t3/userdata/statev2.sqlite` with the service stopped, and restore
+`~/.t3/userdata/secrets/` alongside it — the store without the signing key means
+re-pairing every client.
+
+Known gap, separately owned: `agent-harness-doctor` reports `FAIL mutable state
+ownership` because `~/800_agents/state` has no clone here, and XPS has no SSH
+path to the hub on hwc-home. Agents run without the shared state; this is the
+existing backlog item, not a T3 fault.
