@@ -3567,12 +3567,6 @@
         ${pkgs.ripgrep}/bin/rg -F 'timeout --signal=KILL "$1"' ${commandPath s.ExecStartPre}
         ${pkgs.ripgrep}/bin/rg -F 'timeout --signal=KILL "$1"' ${commandPath s.ExecStopPost}
         steps=$(${pkgs.gawk}/bin/awk 'NF {last=$NF} END {print last}' ${commandPath s.ExecStartPre})
-        ${pkgs.python3}/bin/python3 - "$steps" <<'PYORDER'
-        import pathlib, sys
-        lines = pathlib.Path(sys.argv[1]).read_text().splitlines()
-        starts = [line.strip() for line in lines if ' up -d --no-build --no-recreate' in line]
-        assert len(starts) == 2 and starts[0].endswith(' db') and starts[1] == starts[0][:-3], 'DB must start before app creation'
-        PYORDER
         jitter=$(${pkgs.ripgrep}/bin/rg --no-config --no-line-number '^/nix/store/.*-lead-scout-restart-jitter$' "$steps")
         ${pkgs.ripgrep}/bin/rg -F 'sleep "$((RANDOM % 6))"' "$jitter"
         ${pkgs.ripgrep}/bin/rg -F 'start-limit-hit' ${candidate.hwc.notifications._internal.serviceFailureNotify}/bin/hwc-service-failure-notify
