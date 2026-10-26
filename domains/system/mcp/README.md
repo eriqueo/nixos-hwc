@@ -263,7 +263,7 @@ generation. Do not repoint it at ignored `src/dist/` output or treat a service
 restart as deployment; that was the stale-code failure this package boundary
 removed.
 
-## Tools (44 hwc-sys)
+## Tools (44 hwc-sys, +1 conditional)
 
 ### Configuration (7)
 
@@ -350,6 +350,17 @@ server-side grocery list.
 | `hwc_tasks_add` | Add task. Summary supports the todui inline dialect (`+proj @ctx (A) due:YYYY-MM-DD`) or explicit fields; optional `idempotencyKey` makes a repeated source update one CalDAV item. A validated weekly `recurrence` adds timezone-aware DTSTART/DUE/RRULE fields for Apple Reminders. |
 | `hwc_tasks_update` | By uid: edit fields / complete / reopen / delete. Property-surgical edits preserve RRULE and Apple metadata. |
 | `hwc_tasks_lists` | List the task lists (with active counts) or create a new one (MKCALENDAR). |
+
+### Meals (1, conditional)
+
+`hwc_meals_caldav` is registered **only** when `hwc.system.mcp.mealCollections`
+declares both a `groceries` and a `meals` collection; the module passes them to the
+gateway as `HWC_MEAL_COLLECTIONS` (JSON). It is a separate, versioned protocol rather
+than a reuse of `hwc_tasks_*`.
+
+| Tool | Description |
+|------|-------------|
+| `hwc_meals_caldav` | Collection-scoped **conditional** read/create/update/delete against the configured meals collections. Requires `schemaVersion: 1`, a managed UID (`meal-grocery-` / `meal-dinner-` prefix) and, for update/delete, the exact reviewed strong ETag (`If-Match`; `create` uses `If-None-Match: *`). Payloads must carry `X-HWC-MEAL-SCHEMA:1`, an `X-HWC-MEAL-OPERATION` line, exactly one matching component (VTODO for groceries, VEVENT for meals) and the declared UID. Refusals and uncertain outcomes come back as `COLLECTION_UNAVAILABLE` / `REMOTE_CONFLICT` / `REMOTE_READ` — **read before retrying**. |
 
 ### Website (4)
 
@@ -486,6 +497,27 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-10-23: `hwc_nightly_review merge` excludes DataX forks. `EXCLUDED_MERGE_REPOSITORY_NAMES`
+  (`datax`, `dx-mcp`, `jt-mcp`) is checked case-insensitively in `mergeEligibility`, so an
+  owned fork of an upstream DataX repo is never mergeable from the Workbench even though its
+  owner is `eriqueo`.
+- 2026-10-23: Merge authority is now decided by one `mergeEligibility` gate instead of
+  scattered per-action checks. It requires `status: needs-you`, `verdict: merge-ready`, a safe
+  positive integer `prNumber`, and an owner of `eriqueo` — a stored mergeable flag is
+  historical evidence, never permission, and `gh` still decides live mergeability at dispatch.
+  `repoSlug` was tightened to accept only canonical GitHub HTTPS/SSH remotes or an
+  `owner/name` slug (validated against GitHub's own name grammar, lowercased owner, `.git`
+  stripped, `.`/`..` rejected) rather than any host or a local path, so provenance cannot be
+  dropped and a different repository targeted. `gh` is invoked with `GH_HOST=github.com` so a
+  bare `-R` slug cannot inherit an unrelated enterprise host. `reviewVerbs` offers `merge`
+  only when the gate allows it.
+- 2026-10-16: Added the conditional `hwc_meals_caldav` tool (see **Meals** above) and the
+  `hwc.system.mcp.mealCollections` option that gates it, passed to the gateway as
+  `HWC_MEAL_COLLECTIONS`. `mealTools()` returns an empty list unless both collections are
+  declared, so nothing is registered on hosts without them.
+- 2026-10-14: `hwc_tasks_*` and `hwc_calendar_*` gained fixed calendar/task repeats —
+  `fixedRecurrence`, `managedSchedule` and `nextScheduledDate` in the CalDAV executor, with
+  `tests/{calendar,tasks-recurrence}.test.ts` covering them. Built for the wall display.
 - 2026-10-14: Calendar create/edit/delete replace an unobserved detached sync with one bounded Radicale-pair sync. Responses expose `syncComplete`; partial failures retain the local mutation and state that sync did not complete.
 
 - 2026-10-14: `hwc_calendar create` carries `endDate` for timed multi-day events as well as all-day ranges. Explicit reversed ranges fail validation before khal runs. `tests/calendar.test.ts` checks both behaviors.
