@@ -368,6 +368,23 @@ Hardening: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome=read-only`, `
 
 ## Changelog
 
+- **2026-09-25**: `hwc.notifications.notify.url` is the single producer of "where hwc-notify
+  is". New `serverAlias` option (default `"work"`) names the one host that runs the
+  dispatcher, and the read-only derived `url` composes it with `reverseProxyPort` through
+  `hwc.networking.hosts.url`. Senders POST to `<url>/notify`, Alertmanager to
+  `<url>/webhook/alertmanager`; every sender module on every host now defaults to it instead
+  of deriving loopback from `bindAddr`, and hwc-work's six machine overrides are gone. Change
+  the `serverAlias` default, not a machine override, when the dispatcher moves (service split
+  wave 3, slice 3.1 — the dispatcher itself moved to hwc-work).
+- **2026-09-25**: Removed the `voice-log` topic route (`#ops`). The `hwc:ops:voice-log` n8n
+  workflow had no successful run since 2026-03-31 and was retired with its export and probe.
+- **2026-09-21**: The two leads rules — `calculator-source-to-leads` and
+  `leads-topic-to-leads` — deliver to `smtp-office` as well as `discord-hwc-leads`, so a new
+  lead, a CRM failure or a calendar reminder also lands in Eric's inbox and a muted Discord
+  cannot hide a customer.
+- **2026-09-19**: Removed the `persona-daemon` topic route (`#ops`) with the retirement of the
+  local chat stack (persona-daemon, hwc-llm personas, hwc-ai-agent, llama-gpu/llama-cpu).
+  llama-embed and whisper stayed.
 - **2026-09-07**: The executive brief stopped deleting the body. Since
   2026-08-29 a notification with an `executive` block rendered `meaning` in
   place of `body` on Discord and instead of it on SMTP, so every producer that
