@@ -13,6 +13,8 @@ Gaming services including retro emulation (RetroArch) and WebDAV-based save sync
 
 `index.nix` also owns the optional shared Steam/Proton-GE runtime. GPU drivers
 and each user’s Steam credentials/library remain outside this capability.
+`steam.gpuOffload` runs Steam and its games on the NVIDIA dGPU of a PRIME
+laptop by adding the GPU domain's `offloadProfile` to Steam's FHS profile.
 
 The optional headless Sunshine service owns its display, audio and input bridge.
 It reuses the existing private Katamari pairing and save directory, binds to the
@@ -53,6 +55,8 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+- 2026-10-25: Add `steam.gpuOffload` (PRIME dGPU for Steam and its games);
+  enabled on XPS only, other hosts' Steam derivation is unchanged.
 - 2026-10-25: Add the isolated XPS household desktop wiring; preserve existing
   host defaults and use the owning login, gaming and credential capabilities.
 - 2026-10-20: Add a typed server game catalog, direct PS2/GameCube streaming, controller profiles and Nero image conversion; retain pairing and existing saves.

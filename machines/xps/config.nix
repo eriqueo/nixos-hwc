@@ -152,8 +152,34 @@ in {
   services.thermald.enable = true;
 
   # Intel UHD 630 and NVIDIA GTX 1050 Ti Mobile were detected on 2026-10-22.
-  # Jellyfin starts with software encoding; hardware acceleration needs its
-  # own driver and real-transcode verification before it is enabled.
+  # nouveau killed a game's GPU channel on 2026-10-25, so the GTX 1050 Ti
+  # (Pascal) runs the last driver branch that supports it, the same one
+  # hwc-home's P1000 uses. Intel keeps the panel; NVIDIA renders on demand.
+  # Jellyfin stays on software encoding; hardware transcoding needs its own
+  # real-transcode verification before it is enabled.
+  hwc.system.hardware.gpu = {
+    enable = true;
+    type = "nvidia";
+    nvidia = {
+      driver = "legacy_580";
+      # Server-era override; omitted on PRIME laptops (hwc-laptop precedent).
+      legacyPerfLevelOverride = false;
+      prime.enable = true;
+      prime.nvidiaBusId = "PCI:1:0:0";
+      prime.intelBusId = "PCI:0:2:0";
+    };
+  };
+  hwc.gaming.steam.gpuOffload = true;
+
+  # Unattended recovery for an unattended host: a panic or lockup reboots
+  # instead of hanging, and a stalled PID 1 trips the hardware watchdog.
+  # Boot/kernel trials stage the new generation with bootctl set-oneshot
+  # while the default stays on the last good one (DEPLOYMENT.md).
+  # Kernel parameters, not sysctls, so they hold before any module loads.
+  # Soft lockups stay non-fatal: the USB enclosure has produced recoverable
+  # stalls here.
+  boot.kernelParams = [ "panic=10" "nmi_watchdog=panic" ];
+  systemd.settings.Manager.RuntimeWatchdogSec = "60s";
 
   # Desktop environment
   hwc.system.apps.hyprland.enable = true;

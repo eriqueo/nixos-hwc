@@ -53,7 +53,17 @@ let
   # One producer for intentional NVIDIA PRIME offload. Hybrid sessions pin EGL
   # to Mesa below, and individual clients may pin Vulkan to Intel, so an opt-in
   # launch must remove both restrictions before restoring the complete NVIDIA
-  # selection vocabulary.
+  # selection vocabulary. gpu-offload and launchers that cannot exec through it
+  # (Steam's FHS profile) both consume this text via prime.offloadProfile.
+  offloadProfile = ''
+    unset __EGL_VENDOR_LIBRARY_FILENAMES
+    unset VK_DRIVER_FILES
+    unset VK_ICD_FILENAMES
+    export __NV_PRIME_RENDER_OFFLOAD=1
+    export __GLX_VENDOR_LIBRARY_NAME=nvidia
+    export __VK_LAYER_NV_optimus=NVIDIA_only
+  '';
+
   nvidiaOffload = pkgs.writeShellScriptBin "gpu-offload" ''
     #!/usr/bin/env bash
     if [[ $# -eq 0 ]]; then
@@ -61,12 +71,7 @@ let
       exit 64
     fi
 
-    unset __EGL_VENDOR_LIBRARY_FILENAMES
-    unset VK_DRIVER_FILES
-    unset VK_ICD_FILENAMES
-    export __NV_PRIME_RENDER_OFFLOAD=1
-    export __GLX_VENDOR_LIBRARY_NAME=nvidia
-    export __VK_LAYER_NV_optimus=NVIDIA_only
+    ${offloadProfile}
     exec "$@"
   '';
 
@@ -194,6 +199,16 @@ in
           type = t.str;
           default = "PCI:0:2:0";
           description = "Intel iGPU bus ID.";
+        };
+        offloadProfile = lib.mkOption {
+          type = t.lines;
+          default = offloadProfile;
+          readOnly = true;
+          description = ''
+            Shell text that selects the NVIDIA dGPU for the current process and
+            its children (the body of gpu-offload). For launchers that cannot
+            exec through gpu-offload, such as Steam's FHS profile.
+          '';
         };
       };
     };

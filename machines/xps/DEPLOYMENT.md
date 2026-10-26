@@ -214,10 +214,27 @@ Eric’s0700 home permissions. Stock Plasma settings are seeded once; subsequent
 user edits survive builds. The desktop Start Here file explains normal use.
 
 Steam and Proton-GE use the shared gaming capability. Installed games stay on
-SSD; game installation is not proof of compatibility. The first rollout keeps
-the existing Intel graphics/kernel. Proprietary NVIDIA loading/reboot remains a
-separate maintenance action requiring proved unattended recovery. Do not promise
+SSD; game installation is not proof of compatibility. Do not promise
 B-17 Redux performance on the1050Ti below its listed1070 minimum.
+
+nouveau hung a game's GPU channel on October 25, so the GTX 1050 Ti runs the
+proprietary `legacy_580` driver with PRIME offload. Intel keeps the panel;
+Steam and its games render on NVIDIA through `hwc.gaming.steam.gpuOffload`.
+Check with `nvidia-smi` while a game runs. The Pascal dGPU cannot power down
+at idle under this driver, so expect a few watts more heat.
+
+Boot/kernel changes use a one-shot trial so a failed boot returns by itself.
+`panic=10`, `nmi_watchdog=panic` and the 60-second systemd hardware watchdog
+turn a panic, hard lockup or stalled PID 1 into a reboot. Procedure:
+
+1. `sudo nixos-rebuild boot --flake .#hwc-xps` from reviewed main.
+2. `sudo bootctl set-default <last-good>.conf` and
+   `sudo bootctl set-oneshot <new>.conf`; confirm both in `bootctl status`.
+3. Reboot. Verify the new entry booted, SSH/Tailscale, Dad's session and the
+   changed capability. Any failed boot or reboot lands on the last good entry.
+4. Only then `sudo bootctl set-default <new>.conf`.
+
+A software-hung desktop with a live network still needs an SSH reboot.
 
 The existing10G encrypted XPS-to-Home state job also includes Dad’s Documents,
 Desktop, Pictures, .config and Steam userdata/compatdata (including local saves).

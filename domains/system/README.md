@@ -78,6 +78,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-10-25: `gpu/` — the PRIME offload environment is one read-only value, `nvidia.prime.offloadProfile`; `gpu-offload` and Steam's FHS profile both consume it.
 - 2026-10-25: Add an explicit Plasma/SDDM login choice while retaining existing host defaults.
 
 - 2026-10-23: Apply the DataX/dx-mcp/jt-mcp merge exclusion to owned forks too;
