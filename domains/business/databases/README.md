@@ -13,10 +13,18 @@ Business data layer for Heartwood Craft. Manages the `hwc` PostgreSQL database s
 
 ```
 domains/business/databases/
-├── index.nix                    # Module: hwc.business.databases.* (database provisioning)
+├── index.nix                    # Module: hwc.business.databases.* (database provisioning;
+│                                #   declares the `business_user` grantee role)
 ├── schema.sql                   # Full business schema (690 lines, 15+ tables, views, triggers)
+├── migrate_canonical.sql        # Canonical-catalog migration SQL
+├── CATALOG_NAMING_CONVENTION.md # Naming rules for catalog items / assembly rules
+├── migrations/
+│   ├── 001-catalog-schema-split.sql   # Catalog schema split (grants to business_user)
+│   └── 002-estimator-site-visit.sql   # Idempotent assembly-rule / site-visit repair
 ├── catalog.db                   # SQLite catalog (source for migration to Postgres)
 ├── migrate_catalog.py           # Migration script: SQLite -> Postgres catalog_items table
+├── seed_catalog.py              # Seed the catalog tables
+├── populate_assembly_logic.py   # Populate assembly rules / formulas
 ├── export_calculator_json.py    # Export DB → calculator-bathroom.json for website calculator
 ├── export_estimator_data.py     # Export DB → tradeRates.json, templates.json, catalog_export.json
 └── README.md
@@ -85,6 +93,21 @@ After enabling and rebuilding:
 
 ## Changelog
 
+- 2026-10-07: Added `migrations/002-estimator-site-visit.sql` — idempotent assembly-rule repair
+  for the estimator's site-visit work: shower/tile/tub condition triggers rewritten, and the
+  niche waste factor corrected from 0.1 to 1.0. Existing trade rates unchanged. Re-run
+  `export_estimator_data.py` after applying it.
+- 2026-08-28: Declared `services.postgresql.ensureUsers = [{ name = "business_user"; }]`. The
+  role existed on the live cluster by hand; `schema.sql` (772-774) and
+  `migrations/001-catalog-schema-split.sql` grant to it by name, so a rebuilt cluster would
+  have run those grants against a nonexistent role. No `ensureDBOwnership` — `eric` owns the
+  database and its objects; `business_user` is a grantee.
+- 2026-08-28: Deleted the four `$PSQL` GRANT lines from `postStart` and the per-database backup
+  registration. `$PSQL` is undefined in the generated postgresql post-start script and `|| true`
+  swallowed the command-not-found, so none of the grants had ever run — and they were no-ops
+  anyway (`eric` is a superuser and owns this database). `postgresql-db-backup` was retired
+  2026-08-26, so the backup registration was dead config that read as a backup; `hwc` rides the
+  borg pre-hook's nightly `pg_dumpall` instead. See `domains/data/databases/README.md`.
 - 2026-05-01: Added export scripts, estimate_templates table, 70 catalog items with Craftsman/JT rates
 - 2026-04-12: Created index.nix module (hwc.business.databases.*), wired into business domain
 - 2026-03-24: Granted n8n postgres user access to hwc schema

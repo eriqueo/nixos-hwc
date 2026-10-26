@@ -41,7 +41,9 @@ hwc.data.couchdb = {
     ];
   };
 
-  # Defaults to hwc.secrets.api paths if null
+  # Default to hwc.secrets.api."couchdb-admin-username" / "couchdb-admin-password"
+  # when null (quoted attribute names, with `or null` so an absent attribute
+  # does not fail evaluation)
   secrets.adminUsername = null;
   secrets.adminPassword = null;
 
@@ -73,4 +75,9 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-03-31: The secret-path fallbacks read `config.hwc.secrets.api."couchdb-admin-username"`
+  and `."couchdb-admin-password"` (quoted names, guarded with `or null`) instead of the
+  camelCase `couchdbAdminUsernameFile` / `couchdbAdminPasswordFile` attributes. Option
+  descriptions follow. Committed as `update` with no message body, so the motivation is
+  **unverified** — the attribute rename itself is what the diff shows.
 - 2026-03-25: Created README per Law 12
