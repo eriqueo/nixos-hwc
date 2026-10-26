@@ -30,6 +30,22 @@ The nightly rebuild allowlist uses hwc-home; machine-directory references follow
 automation/
 ├── index.nix    # Domain aggregator
 ├── README.md    # This file
+├── brain-sweep/    # Nightly brain-vault drift detector (hwc.automation.brainSweep.*)
+│   ├── index.nix   # Sweep service + nightly timer; notifyUrl defaults to notify.url
+│   └── README.md   # Detector-not-fixer rationale; checks live in the brain CLI repo
+├── mail-janitor/   # Weekly age-aware Gmail anti-buildup sweep (hwc.automation.mailJanitor.*)
+│   ├── index.nix   # Options + timer/service; notifyUrl defaults to notify.url
+│   ├── janitor.py  # PRESERVE/TXN/TRIAGE/NOISE classifier + per-account IMAP sweep
+│   └── README.md   # Tier model + dry-run rollout
+├── refinery/       # Refinery board/engine, pipelines and gauntlet definitions
+│   ├── index.nix   # Options + native bundles pinned to the `refinery` flake input
+│   ├── engine/ parts/ pipelines/ gauntlets/ domains.yaml
+│   └── README.md
+├── screenshot-renamer/  # Folder-triggered screenshot naming + progress checker
+│   └── index.nix        # Pinned app, work-driven retries, daily receipt backup
+├── vault-sync/     # Brain-vault git sync on both hosts (hwc.automation.vaultSync.*)
+│   ├── index.nix   # Pull+push with 3 retries 30 s apart; push failure is fatal
+│   └── README.md
 ├── inbox-janitor/  # Server-only timer draining ~/000_inbox/downloads (hwc.automation.inboxJanitor.*)
 │   ├── index.nix   # Options + systemd oneshot service/timer (every 30m); dryRun default on
 │   ├── janitor.py  # Engine: pure classify() core + I/O edges; reads ~/000_inbox/_inbox-routing.yaml
@@ -62,9 +78,10 @@ automation/
 │   │              #   ~/700_datax/gauntlets/dx1_gauntlet/run.sh + the /dx1 run-now drain
 │   └── README.md  # Containment model + provisioning gate (enable=false until checkout exists)
 └── n8n/         # n8n workflow automation
-    ├── index.nix     # Options (incl. secrets.*) + firewall rules
+    ├── index.nix     # Options (incl. secrets.*) + reviewed image pin + firewall rules
     ├── sys.nix       # Container via mkContainer; secrets env file +
-    │                 #   restartTriggers on the .age sources (rotation)
+    │                 #   restartTriggers on the .age sources (rotation);
+    │                 #   registers database.sqlite with Borg's online-snapshot producer
     └── parts/
         ├── migrations/  # SQL migrations for workflow data
         └── workflows/   # DERIVED redacted exports of the live workflows
@@ -90,6 +107,13 @@ workspace/automation/
 ```
 
 ## Changelog
+
+- 2026-10-23: n8n's live SQLite database is registered with Borg's bounded online-snapshot
+  producer (`hwc.data.borg.sqliteSnapshots.n8n` in `n8n/sys.nix`); Borg archives the ready
+  snapshot and excludes the raw DB/WAL/SHM. The shared recovery check asserts the wiring, so
+  removing the registration fails the check. See `n8n/README.md` for the restore procedure.
+- 2026-10-23: n8n image pinned to the reviewed 2.44.6 security release. Details and the
+  old/new/old data checks are in `n8n/README.md`.
 
 - 2026-10-23: Do not restart SR/DX1 investigations when a runtime or unit changes during a system switch. Check the rendered policy with `gauntlet-switch-policy`.
 
