@@ -27,6 +27,8 @@ data/
 ```
 
 ## Changelog
+- 2026-10-26: Documentation only — Law 12 refresh of `databases/README.md` (the declared
+  superuser clause) and `couchdb/README.md` (the quoted secret-path attributes). No code change.
 - 2026-10-24: Give SQLite snapshot workers registered database-parent access for temporary WAL/SHM creation while keeping SQL read-only; forbid root-level database parents and test native job wiring.
 - 2026-10-23: Allow an explicit additional-destination-only Borg client, so XPS Jellyfin state can use a bounded home repository without claiming T3 or full-host coverage.
 - 2026-10-23: Keep per-destination time/rate limits in the Borg capability; server roles assign typed policy and receive instance metadata from flake composition.

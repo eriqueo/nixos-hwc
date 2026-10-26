@@ -72,6 +72,10 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-10-26: Documentation only — Law 12 refresh of `frigate/`, `qbittorrent/` and `slskd/`
+  READMEs. slskd's was the largest gap: it still described the pre-2026-08-20 clearnet module
+  (media network, `:latest` image, published ports, `domains/server/containers/slskd/` paths).
+  No code change.
 - 2026-10-24: Export Immich's signed-package Brotli backport contexts and Pillow loader inputs. Preserve the app and existing TLS/CA recipe inputs; restore original image file modes from read-only Nix inputs, bind both OCI consumers to prebuilt local images and add shared-library wiring checks.
 - 2026-10-23: Select the qualified Audiobookshelf 2.32.1 app with immutable Node 24.22.1 through the existing runtime-image helper. Export its recipe and test actual container/image wiring; keep app, native addon, data paths and backup policy unchanged.
 - 2026-10-23: Register Audiobookshelf's root-owned live SQLite through the bounded Borg producer. Cover config/token identity and metadata, and derive existing mounts/pre-start paths from one dataDir. Keep its image, permissions and original audio storage unchanged.

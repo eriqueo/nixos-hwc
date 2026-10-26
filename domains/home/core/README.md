@@ -26,11 +26,27 @@ core/
 │   └── parts/         #   aliases, ssh, zsh-init, prompt, fzf
 ├── development/       # hwc.home.core.development — language toolchains
 ├── repo-hooks/        # hwc.home.core.repoHooks — core.hooksPath -> a store dir:
-│                      #   dispatchers to the tree's .githooks + pinned hooks
+│                      #   dispatchers to the tree's .githooks + pinned hooks.
+│                      #   Qualifies checkouts AND bare repos (hubs) by exact
+│                      #   git-dir match
 └── xdg-dirs.nix       # XDG user directory layout (000_inbox, 100_hwc, …)
 ```
 
 ## Changelog
+- 2026-10-14: shell: the pack-cleanup Git pin moved out of this domain. `shell/parts/git-package.nix`
+  — which built a patched Git (`register_tempfile`/`delete_tempfile` around `index-pack`'s
+  `tmp_pack_XXXXXX`, plus a cancellation regression test) — was added and then **deleted** the
+  same day; `shell/index.nix` now substitutes `pkgs.gitWithPackCleanup` for `pkgs.git` in the
+  shell bundle and sets `programs.git.package = lib.hiPrio pkgs.gitWithPackCleanup`. The pin
+  belongs to a runtime command profile, not to this module. (Its one intermediate commit
+  rewrote the patch text as `concatStringsSep` over quoted lines, because a Nix `''` string
+  does not preserve the patch's leading-space and tab columns.)
+- 2026-10-14: `repo-hooks/` qualifies a target by exact git-dir match — `git rev-parse
+  --absolute-git-dir` must equal `realpath <path>/.git` (checkout) or `realpath <path>` (bare).
+  The old `[ -e "<path>/.git" ]` test could not see a bare repo, so a hub got no pinned hooks,
+  and a non-repo path would otherwise have pinned the hooks of an enclosing repo. This is what
+  lets hwc-home pin a `pre-receive` hook on the agent-state hub: a hand push of invalid
+  memories had blocked every host because only `state-sync` validated before pushing.
 - 2026-10-11: shell: `_hwc_ls` renamed `hwc_ls`. Claude Code's shell snapshot drops functions whose names start with one underscore but keeps aliases, so agent shells got `ls` → a missing function and every `ls` failed "command not found".
 - 2026-10-10: shell: `ls` aliases to `_hwc_ls` (`parts/zsh-init.nix`), which runs eza with the `programs.eza` options only when stdin and stdout are both terminals and coreutils `ls` otherwise. eza 0.23 reads file names from stdin when stdin is not a terminal, so `ls` printed nothing in agent tool shells and in pipes. A first attempt named the function `ls`; zsh alias-expanded the name against `/etc/zshrc`'s `ls='ls --color=tty'` and aborted `.zshrc`, hence the separate name.
 - 2026-10-08: Add `net-tools --details` forwarding to both execution and printed commands.

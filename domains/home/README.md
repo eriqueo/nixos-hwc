@@ -151,6 +151,26 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-10-25: `apps/claude-code/` README records the overlay move the code change owed. The
+  `claudeCodeOverlay` went from `pkgs-stable`'s extra overlays into `mkPkgs`' base list, so
+  every channel gets it — hwc-laptop and hwc-kids were on claude-code 2.1.220, under T3 Code's
+  2.1.293 `minVersion` gate. A nixpkgs bump was measured and reverted instead (journald
+  `extraConfig` removal + khalt setuptools-scm). The code landed inside the Plasma lid commit
+  via a `git stash pop` from a concurrent session, which is why the Law 12 record is a separate
+  commit. xps, laptop and kids evaluate to 2.1.308.
+- 2026-10-25: `apps/plasma/` makes `plasmaLidPolicy` the sole producer of PowerDevil's
+  `LidAction`, rewriting it for the AC, Battery and LowBattery profiles on **every** activation
+  via `kwriteconfig6`. It was previously seeded for AC only, in a file PowerDevil creates on
+  first run — so it never reached the other two profiles and could not correct an existing
+  file. `services.logind` cannot carry this guarantee: PowerDevil holds the
+  `handle-lid-switch` inhibitor for the whole session.
+- 2026-10-25: `apps/codex/parts/package.nix` bumped 0.146.0 → 0.164.0 (upstream static-musl
+  asset; tarball member name unchanged, so the build is otherwise untouched), and the
+  claude-code overlay was wired into `pkgs-stable` from a dedicated `nixpkgs-claude-code`
+  input. The stable 26.05 branch freezes both CLIs at the version it was cut with, so
+  stable-channel machines had no path forward. The codex pin stays opt-in per machine rather
+  than a profile default: the asset URL is x86_64-only (hwc-firestick is aarch64) and hwc-home
+  stays on stock `pkgs.codex` by choice.
 - 2026-10-25: Add optional stock Plasma user defaults without importing Eric’s personal roles.
 
 - 2026-10-24: Prepare optional native Mail/helper bindings from the current
@@ -418,16 +438,19 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 Options live under `hwc.home.apps.<name>.*`; defaults come from the role
 home halves (`profiles/base/home.nix`, `profiles/desktop/home.nix`);
 per-machine adjustments go in `machines/<host>/home.nix`. Current set
-(52 modules):
+(70 modules):
 ```
-aider, analysis, betterbird, blender, bottles-unwrapped, calcure,
-calcurse, chromium, claude-code, claude-desktop, codex, dt, dxlog,
-freecad, gemini-cli, google-cloud-sdk, gpg, herdr, hyprland, imv,
-ipcalc, jellyfin-media-player, kitty, librewolf, localsend, markitdown,
-mpv, n8n, neomutt, nvim, obsidian, onlyoffice-desktopeditors, opencode,
-proton-authenticator, proton-mail, proton-pass, qbittorrent, qutebrowser,
-scraper, slack, slack-cli, swaync, thunar, thunderbird, tmux, transcript-formatter,
-tuxedo, wasistlos, waybar, whisper-cpp, xournalpp, yazi
+agent-harness, aider, analysis, bitwarden, blender, bottles-unwrapped,
+brain, calcure, calcurse, chromium, claude-code, claude-desktop, codex,
+courier, doctl, dt, dxlog, eden, exodos, firefox, freecad, gemini-cli,
+google-cloud-sdk, gpg, gpu-screen-recorder, herdr, hwc-dictation,
+hyprland, imv, ipcalc, jellyfin-media-player, khalt, kitty, localsend,
+markitdown, mpv, neomutt, nvim, obsidian, onlyoffice-desktopeditors,
+opencode, pave-query-builder, pi, plasma, proton-authenticator,
+proton-mail, proton-pass, qbittorrent, qutebrowser, rea, scraper, slack,
+slack-cli, swaync, t3code, tether, tetro, thunar, tmux, todui, tuxedo,
+vectorcraft, vesktop, wasistlos, waybar, whisper-cpp, workbench,
+xournalpp, yazi, zellij
 ```
 Update this list whenever `domains/home/apps/` gains or loses a module.
 

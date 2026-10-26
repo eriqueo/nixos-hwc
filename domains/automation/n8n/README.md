@@ -126,6 +126,10 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
+- 2026-10-26: Documentation only — `parts/workflows/README.md` records the 2026-10-07
+  `08a-jt-data-provider.json` paging change, and `parts/estimator-integration/README.md`
+  gained `## Structure`/`## Changelog`. No code change.
+
 - 2026-10-23: Register the live SQLite database with Borg's bounded online
   snapshot producer. Borg archives `borg-sqlite/ready/n8n.sqlite` and excludes
   the raw database, WAL and SHM files. Restore that snapshot as `database.sqlite`

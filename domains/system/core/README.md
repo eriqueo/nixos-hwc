@@ -23,6 +23,9 @@ core/
 ```
 
 ## Changelog
+- 2026-10-26: Documentation only — `authentik/README.md` records the 2026-08-28 switch from
+  the dead `postgresql.postStart` role script to declared `ensureUsers` +
+  `ensureDBOwnership`. No code change.
 - 2026-10-25: Add the isolated XPS household desktop wiring; preserve existing
   host defaults and use the owning login, gaming and credential capabilities.
 - 2026-10-21: Distrust emSign ECC Root CA - G3, emSign Root CA - C1 and emSign ECC Root CA - C3 in the system CA bundle on every machine (eMudhra intermediate key compromise; mirrors NSS 3.131.1, G1 kept). Temporary until each channel ships cacert >= 3.131.1. Node's own root store is fixed by the companion `overlays/nodejs-security.nix`.

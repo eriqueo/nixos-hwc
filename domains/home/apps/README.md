@@ -12,17 +12,18 @@ User application configuration via Home Manager.
 `agent-harness/` owns workspace process inspection and its pinned runtime; see its module README.
 ```
 apps/
-├── aerc/           # Email client
 ├── aider/          # AI coding assistant
 ├── blender/        # 3D modeling
 ├── bitwarden/      # Desktop client for the self-hosted vault
 ├── chromium/       # Browser
+├── claude-code/    # Claude Code CLI (version comes from the fleet-wide overlay)
+├── codex/          # Codex CLI; parts/package.nix is the opt-in static-musl pin
+├── firefox/        # Browser (replaced the retired librewolf module)
 ├── freecad/        # CAD software
 ├── gpu-screen-recorder/  # Call/screen recording (gsr-toggle script + sys.nix capture wrapper)
 ├── hyprland/       # Wayland compositor
 ├── kitty/          # Terminal emulator
-├── librewolf/      # Privacy browser
-├── plasma/         # Stock household desktop, seed-only user defaults
+├── plasma/         # Stock household desktop, seed-only user defaults + lid policy
 ├── mpv/            # Media player
 ├── obsidian/       # Note-taking
 ├── xournalpp/      # PDF annotator / handwritten notes
@@ -33,10 +34,24 @@ apps/
 ├── t3code/         # Agent desktop and server launchers; trusted desktop URI binding
 ├── pave-query-builder/  # Pave/JobTread API query TUI+CLI (external flake input; HWC adapter only)
 ├── eden/            # Switch 1 emulator derived from Yuzu and Sudachi
-└── ... (30+ apps)
+└── ... (70 modules in total — the full list is in ../README.md)
 ```
 
 ## Changelog
+- 2026-10-25: `claude-code/README.md` records the overlay move that landed without its own
+  Law 12 entry: `claudeCodeOverlay` moved from `pkgs-stable`'s extra overlays into `mkPkgs`'
+  base list, so every channel resolves it (laptop and kids were on 2.1.220, under T3 Code's
+  2.1.293 `minVersion` gate). The code arrived inside the Plasma lid commit through a
+  `git stash pop` from a concurrent session. A nixpkgs bump was tried and reverted instead.
+- 2026-10-25: `plasma/` — `plasmaLidPolicy` is now the one producer of PowerDevil's
+  `LidAction` and rewrites it for the AC, Battery and LowBattery profiles on every activation
+  (`kwriteconfig6`), instead of seeding AC only into a file PowerDevil creates on first run.
+  `services.logind` is not sufficient: PowerDevil holds the session's `handle-lid-switch`
+  inhibitor. Keeps hwc-xps awake with the lid closed.
+- 2026-10-25: `codex/parts/package.nix` 0.146.0 → 0.164.0 (static-musl release asset; member
+  name unchanged, build otherwise untouched); hwc-xps opts into the pin. Deliberately not a
+  profile or module default — the asset URL is x86_64-only (hwc-firestick is aarch64) and
+  hwc-home stays on stock `pkgs.codex`.
 - 2026-10-25: Add the isolated XPS household desktop wiring; preserve existing
   host defaults and use the owning login, gaming and credential capabilities.
 

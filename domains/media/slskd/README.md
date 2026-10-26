@@ -23,8 +23,13 @@ slskd is a modern, web-based Soulseek client for peer-to-peer music sharing. Thi
 
 ### Service Type
 - **Container**: Podman (via `virtualisation.oci-containers`)
-- **Image**: `slskd/slskd:latest`
-- **Network**: `media-network` (internal container network)
+- **Image**: `slskd/slskd:0.21.4` (pinned — see `VERSION.md`)
+- **Network**: `vpn` by default — slskd lives in the netns of its **own** gluetun
+  instance, `hwc.media.slskd.vpnInstance` (default `gluetun-slskd`). It does not share
+  qBittorrent's tunnel: Proton forwards exactly one port per WireGuard session, and
+  Soulseek without an inbound port loses uploads and degrades search/browse, which is
+  what soularr depends on. `network.mode = "media"` is a **build failure** unless
+  `hwc.media.slskd.allowClearnet = true`.
 - **Routing**: Port mode (HTTPS port 8443) - slskd is subpath-hostile
 
 ### Directory Structure
@@ -44,6 +49,14 @@ slskd is a modern, web-based Soulseek client for peer-to-peer music sharing. Thi
 2. Reads encrypted secrets from `/run/agenix/`
 3. Generates `/etc/slskd/slskd.yml` with substituted values
 4. Container mounts the generated config file
+
+The generator is also the **sole producer of the Soulseek listen port**. It reads
+`<gluetun.stateRoot>/<vpnInstance>/forwarded-port`, which the tunnel's port-sync writes
+and which restarts this generator, and falls back to `hwc.media.slskd.listenPort`
+(default 50300) off-VPN or before the first sync. One writer means Proton's rotating
+NAT-PMP port cannot drift between two producers.
+
+Directory creation is **not** done here — `domains/media/directories.nix` owns it.
 
 **Why Runtime Generation?**
 
@@ -119,7 +132,7 @@ shares = {
 
 ### Adding New Shares
 
-Edit `domains/server/containers/slskd/parts/config.nix`:
+Edit `domains/media/slskd/parts/config.nix`:
 
 ```nix
 shares = {
@@ -133,7 +146,7 @@ shares = {
 
 Then rebuild:
 ```bash
-git add domains/server/containers/slskd/parts/config.nix
+git add domains/media/slskd/parts/config.nix
 git commit -m "add new slskd share"
 sudo nixos-rebuild switch --flake .#hwc-server
 ```
@@ -152,17 +165,24 @@ From slskd documentation:
 
 ### Ports
 
+**On the VPN (the default), slskd publishes nothing of its own.** It has no interface:
+the web UI is published by the gluetun instance's `ports`, and the inbound Soulseek path
+is the tunnel's forwarded port on the tunnel's interface.
+
+Off-VPN only (`network.mode = "media"` + `allowClearnet = true`):
+
 - **5031** (host) → **5030** (container): Web UI (HTTP, proxied via Caddy HTTPS 8443)
-- **50300** (host) → **50300** (container): Soulseek P2P (TCP)
+- **`listenPort`** (host) → same (container): Soulseek P2P (TCP), default 50300
 
 ### Firewall
 
 ```nix
-networking.firewall.allowedTCPPorts = [ 50300 5031 ];
+networking.firewall.allowedTCPPorts =
+  lib.optionals (cfg.network.mode != "vpn") [ cfg.listenPort 5031 ];
 ```
 
-- **50300**: Required for Soulseek network connectivity
-- **5031**: Internal HTTP, proxied by Caddy
+The host firewall is only meaningful off-VPN — it is not in the inbound path when slskd
+sits inside the tunnel's namespace.
 
 ### Caddy Route
 
@@ -185,15 +205,23 @@ slskd doesn't support URL base configuration and hardcodes paths in JavaScript/a
 
 ## Service Dependencies
 
+On the VPN:
+
 ```
 agenix.service
     ↓
-slskd-config-generator.service (generates config from secrets)
+slskd-config-generator.service (config + forwarded port from secrets/port file)
     ↓
-init-media-network.service (creates media-network)
+podman-gluetun-slskd.service (the tunnel)
     ↓
-podman-slskd.service (starts container)
+podman-slskd.service (joins the tunnel's netns)
 ```
+
+`podman-slskd` carries `bindsTo` + `partOf` on the tunnel unit (qBittorrent's shape), so a
+container whose netns is gone goes away with it rather than lingering in an undefined
+network state. The cost is an slskd restart whenever the tunnel restarts — an in-flight
+transfer is worth less than a known egress. Off-VPN it orders after
+`init-media-network.service` instead.
 
 ### Restart Behavior
 
@@ -289,7 +317,9 @@ sudo cat /run/agenix/slskd-soulseek-password
 
 **Common causes**:
 - Incorrect Soulseek password
-- Port 50300 blocked by firewall
+- On the VPN: the tunnel is down, or no forwarded port has been synced yet (check
+  `<gluetun.stateRoot>/<vpnInstance>/forwarded-port` and the instance's port-sync unit)
+- Off-VPN: `listenPort` blocked by firewall
 - Network connectivity issues
 
 ---
@@ -298,16 +328,12 @@ sudo cat /run/agenix/slskd-soulseek-password
 
 ### Updating Container Image
 
-The module uses `slskd/slskd:latest` which can be updated:
+The image is **pinned** via `hwc.media.slskd.image` (default `slskd/slskd:0.21.4`), not
+`:latest`. Bump the option default in `index.nix`, record it in `VERSION.md`, commit, then
+rebuild — `podman pull` alone changes nothing, since the pinned tag is what the unit runs.
 
 ```bash
-# Pull latest image
-sudo podman pull slskd/slskd:latest
-
-# Restart container
-sudo systemctl restart podman-slskd
-
-# Check version in logs
+# After bumping the pin and rebuilding, confirm the version in logs
 journalctl -u podman-slskd | grep -i "version"
 ```
 
@@ -339,10 +365,17 @@ sudo systemctl restart podman-slskd
 ## Configuration Files
 
 ### Primary Configuration
-- **Module**: `domains/server/containers/slskd/`
-- **Options**: `options.nix` (enable, image, network mode)
-- **System Integration**: `sys.nix` (podman backend)
-- **Container Config**: `parts/config.nix` (main config generation)
+
+```
+domains/media/slskd/
+├── index.nix          # hwc.media.slskd.* options + VPN assertions
+├── sys.nix            # mkContainer wiring, conditional ports/firewall, unit ordering
+├── parts/config.nix   # slskd.yml generator (secrets + forwarded port)
+├── VERSION.md         # image pin tracking
+└── README.md          # This file
+```
+
+There is no `options.nix` — options are declared inline in `index.nix`.
 
 ### Secret Declarations
 - **Location**: `domains/secrets/declarations/server.nix`
@@ -423,6 +456,26 @@ shares.directories = [
 
 ---
 
-**Last Updated**: 2025-11-06
+## Changelog
+
+- 2026-09-10: `parts/config.nix` comment corrected — directory creation comes from
+  `media/directories.nix`, not `_shared/directories.nix`. Part of making
+  `/mnt/media/youtube` single-producer; no behavior change here.
+- 2026-08-20: slskd moved into its **own** gluetun tunnel and can no longer leave it by
+  accident. `network.mode` now defaults to `"vpn"` and `"media"` is a build failure unless
+  the new `allowClearnet` is set — it had defaulted to `"media"` since the module was
+  written, so slskd egressed on the house IP for six weeks (~29.4 GB out, 15.5 GB in) while
+  every sibling downloader was tunnelled; the ordering line that looked like it wired slskd
+  to gluetun lived in a module whose `enable` was never set. New options `vpnInstance`
+  (default `gluetun-slskd`, its own Proton key — one forwarded port per WireGuard session)
+  and `listenPort` (default 50300, the off-VPN/pre-sync fallback). The hand-copied
+  "is gluetun enabled" assertion was replaced by `mkVpnAssertions`, which checks the
+  **specific** tunnel the container joins. `sys.nix` publishes ports and opens the firewall
+  only off-VPN, and `podman-slskd` gained `bindsTo`/`partOf` on the tunnel unit. The config
+  generator became the sole writer of `listen_port`, taking the tunnel's forwarded port.
+
+---
+
+**Last Updated**: 2026-09-10
 **Architecture Version**: HWC 6.0
 **Module Version**: Container with runtime secret injection

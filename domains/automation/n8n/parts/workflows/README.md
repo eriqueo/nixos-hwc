@@ -198,6 +198,11 @@ send one result through hwc-notify.
 - GraphQL queries to JobTread API
 - Filters jobs by Phase custom field (1-3 = estimating stages)
 - Returns formatted dropdown data with IDs, names, addresses
+- Customers are paged: the query takes an optional `page` and asks for `nextPage`,
+  so the caller can walk past the 50-record page size instead of stopping there
+- Each customer carries `primaryLocationId` and its full `locations` list; the
+  flattened `address` prefers the primary location, falling back to the first one
+- The customers response is versioned (`version: 1`)
 
 **Request Headers:**
 ```
@@ -207,10 +212,18 @@ x-api-key: {ESTIMATOR_API_KEY}
 **Response (Customers):**
 ```json
 {
+  "version": 1,
   "customers": [
-    { "id": "uuid", "name": "John Smith", "address": "123 Main St, City, ST 12345" }
+    {
+      "id": "uuid",
+      "name": "John Smith",
+      "primaryLocationId": "uuid",
+      "address": "123 Main St, City, ST 12345",
+      "locations": [ { "id": "uuid", "name": "Home", "address": "123 Main St, City, ST 12345" } ]
+    }
   ],
-  "count": 42
+  "count": 42,
+  "nextPage": null
 }
 ```
 
@@ -370,6 +383,33 @@ these exports are review artifacts, not a restore mechanism for credentials.
 **Checks:** `python3 workspace/automation/n8n-workflow-export.py scan --dir
 domains/automation/n8n/parts/workflows` (wired as the `n8n-workflow-secret-literals`
 flake check); unit tests at `workspace/automation/test_n8n_workflow_export.py`.
+
+---
+
+## Structure
+
+```
+workflows/
+├── README.md                                   # This file
+├── 01-media-pipeline-orchestration.json        # canonical export (_hwc marker)
+├── 02-frigate-surveillance-intelligence.json   # canonical export (_hwc marker)
+├── 08a-jt-data-provider.json                   # pre-canonicalizer, hand-maintained
+└── 08b-estimate-router.json                    # pre-canonicalizer, hand-maintained
+```
+
+The `03-`, `05-`, `11-` and the wave-4 batch (`04/06/07/09/10`) sections above describe
+workflows that no longer exist here or in live n8n; their retirement notes are kept as the
+record of why. Only the four files listed above are tracked.
+
+## Changelog
+
+- 2026-10-07: `08a-jt-data-provider.json` — the customers branch now follows JobTread's page
+  cursor (`page` in, `nextPage` out) instead of silently stopping at the 50-record page size,
+  returns `version: 1`, and exposes `primaryLocationId` plus the full `locations` list per
+  customer with the flattened `address` taken from the primary location. Hand-maintained
+  edit, not a canonicalized export — the file still carries no `_hwc` block.
+- 2026-09-25: `01-` and `02-` regenerated from live n8n for service-split wave 4 (Jellyfin and
+  Frigate reached via their tailnet vhosts instead of server loopback).
 
 ---
 
