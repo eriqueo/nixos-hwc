@@ -163,6 +163,9 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-10-26: Documentation only — `calendar/README.md` records the `meals` collection added
+  to `radicaleCalendarIds` on 2026-10-16. No code change.
+
 - 2026-10-24: Export aerc-owned launch facts for the optional Workbench native
   Mail helper without duplicating account/configuration or credentials.
 

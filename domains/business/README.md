@@ -76,6 +76,10 @@ business/
 
 ## Changelog
 
+- 2026-10-26: Documentation only — Law 12 refresh of `databases/`, `paperless/` and
+  `datax/fb-group-scraper/` READMEs (the scraper's SQLite docs described a layer the v2.0.0
+  JSON-emitting rewrite removed). No code change.
+
 - 2026-10-24: Enable the separately authorized T3 connection on work; restart
   Workbench when its generated credential changes. Preserve private access.
 

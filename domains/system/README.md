@@ -78,6 +78,9 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-10-26: Documentation only — `mcp/README.md` records the conditional `hwc_meals_caldav`
+  tool, the fixed calendar/task repeats and the `hwc_nightly_review` merge-authority gate;
+  `core/authentik/README.md` records the declared DB role. No code change.
 - 2026-10-25: `gpu/` — the PRIME offload environment is one read-only value, `nvidia.prime.offloadProfile`; `gpu-offload` and Steam's FHS profile both consume it.
 - 2026-10-25: Add an explicit Plasma/SDDM login choice while retaining existing host defaults.
 

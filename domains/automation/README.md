@@ -108,6 +108,10 @@ workspace/automation/
 
 ## Changelog
 
+- 2026-10-26: Documentation only — Law 12 refresh of `brain-sweep/`, `mail-janitor/`,
+  `n8n/parts/workflows/` and `n8n/parts/estimator-integration/` READMEs, plus the missing
+  subdirectories in this file's `## Structure`. No code change.
+
 - 2026-10-23: n8n's live SQLite database is registered with Borg's bounded online-snapshot
   producer (`hwc.data.borg.sqliteSnapshots.n8n` in `n8n/sys.nix`); Borg archives the ready
   snapshot and excludes the raw DB/WAL/SHM. The shared recovery check asserts the wiring, so
