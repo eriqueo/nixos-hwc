@@ -77,24 +77,27 @@ let
 
   # REPLACEABLE launcher metadata is generated from the one game catalog.
   # Native app sign-in/preferences are CRITICAL under cfg.dataDir (existing backup owner).
+  # Pegasus adds games to every collection already declared. Define games first,
+  # then collections with explicit files, so Movies never inherits the ROMs.
   tvMetadata = pkgs.writeTextDir "metadata.pegasus.txt" (''
-    collection: Movies
-    shortname: movies
-    file: ${lib.getExe pkgs.jellyfin-desktop}
-
     game: Jellyfin
     file: ${lib.getExe pkgs.jellyfin-desktop}
     launch: ${lib.getExe pkgs.jellyfin-desktop} --tv --fullscreen --config-dir ${lib.escapeShellArg "${tvState}/jellyfin"}
-
-    collection: Games
-    shortname: games
-    ${lib.concatMapStringsSep "\n" (game: "file: ${cfg.romsDir}/${game.rom}") cfg.sunshine.games}
 
   '' + lib.concatMapStringsSep "\n" (game: ''
     game: ${game.title}
     file: ${cfg.romsDir}/${game.rom}
     launch: ${streamSession} local-game ${lib.escapeShellArg game.id}
-  '') cfg.sunshine.games);
+  '') cfg.sunshine.games + ''
+
+    collection: Movies
+    shortname: movies
+    file: ${lib.getExe pkgs.jellyfin-desktop}
+
+    collection: Games
+    shortname: games
+    ${lib.concatMapStringsSep "\n" (game: "file: ${cfg.romsDir}/${game.rom}") cfg.sunshine.games}
+  '');
   tvGameDirs = pkgs.writeText "tv-game-dirs.txt" "${tvMetadata}\n";
   tvSession = pkgs.writeShellScript "hwc-tv-session" ''
     set -eu
