@@ -80,6 +80,7 @@ let
   tvMetadata = pkgs.writeTextDir "metadata.pegasus.txt" (''
     collection: Movies
     shortname: movies
+    file: ${lib.getExe pkgs.jellyfin-desktop}
 
     game: Jellyfin
     file: ${lib.getExe pkgs.jellyfin-desktop}
@@ -87,6 +88,7 @@ let
 
     collection: Games
     shortname: games
+    ${lib.concatMapStringsSep "\n" (game: "file: ${cfg.romsDir}/${game.rom}") cfg.sunshine.games}
 
   '' + lib.concatMapStringsSep "\n" (game: ''
     game: ${game.title}

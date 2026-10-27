@@ -28,7 +28,8 @@ explicit Disc 2 launchers retained. Each emulator has a bounded runtime boot log
 
 `retroarch.tv.enable` adds a separate, automatically logged-in X11/Openbox TV
 session. Pegasus presents Movies (Jellyfin Desktop in TV mode) and Games from
-the same catalog used by Sunshine. `tv.audioSink` selects HDMI for local apps
+the same catalog used by Sunshine, with explicit file membership for each
+collection. `tv.audioSink` selects HDMI for local apps
 while retaining the Pi's separate virtual display and audio session.
 A host-wide nonblocking game lock rejects concurrent emulator launches
 before shared save/cache effects. TV profiles live below RetroArch's backed-up
@@ -67,6 +68,7 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+- 2026-10-27: Restrict Movies to Jellyfin and Games to catalog ROMs; collection ordering does not define membership.
 - 2026-10-27: Add the optional native Movies/Games TV session, preserve Pi streaming, serialize shared-save game launches, and wait for actual Sunshine listener readiness.
 - 2026-10-25: Add `steam.gpuOffload` (PRIME dGPU for Steam and its games);
   enabled on XPS only, other hosts' Steam derivation is unchanged.
