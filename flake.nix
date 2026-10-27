@@ -338,12 +338,12 @@
     # header for the removal condition.
     nodejsSecurityOverlay = import ./overlays/nodejs-security.nix;
 
-    # TEMPORARY: use the qualified full Node interfaces for package builds and
-    # native modules. Slim packages retain Nixpkgs' separate npm-output API.
+    # TEMPORARY: native modules select corrected runtimes without feeding them
+    # back into Nixpkgs' package fixed point (which rebuilds Chromium/CUDA torch).
     # Remove with nodejs-security.nix after the pinned packages pass its manifest.
     mkNodeRuntimeScope = original:
       let
-        basePkgs = import original.path {
+        buildPkgs = import original.path {
           inherit (original) system config;
           overlays = map (overlay: final: prev:
             let result = overlay final prev; in
@@ -351,14 +351,6 @@
               builtins.removeAttrs result [ "nodejs-slim_22" "nodejs-slim_24" ]
             else result) original.overlays;
         };
-        buildPkgs = basePkgs.appendOverlays [ (final: prev: {
-          nodejs = {
-            "22" = prev.nodejsRuntime_22;
-            "24" = prev.nodejsRuntime_24;
-          }.${lib.versions.major prev.nodejs.version};
-          nodejs_22 = prev.nodejsRuntime_22;
-          nodejs_24 = prev.nodejsRuntime_24;
-        }) ];
         runtime22 = buildPkgs.nodejsRuntime_22;
         runtime24 = buildPkgs.nodejsRuntime_24;
         defaultRuntime = { "22" = runtime22; "24" = runtime24; }.${lib.versions.major buildPkgs.nodejs.version};
@@ -1158,9 +1150,6 @@
             let system = server host; baseline = (scope host).buildPkgs; in
             system.pkgs.nodejs.outPath == (runtime24 host).outPath
             && system.pkgs.nodejs_22.outPath == (runtime22 host).outPath
-            && baseline.nodejs.outPath == (runtime24 host).outPath
-            && baseline.nodejs_22.outPath == (runtime22 host).outPath
-            && baseline.nodejs_24.outPath == (runtime24 host).outPath
             && system.pkgs.chromium.browser.drvPath == baseline.chromium.browser.drvPath
             && system.pkgs.python3Packages.torch.drvPath == baseline.python3Packages.torch.drvPath
             && system.pkgs.python3Packages.torchvision.drvPath == baseline.python3Packages.torchvision.drvPath
@@ -1171,7 +1160,7 @@
               (server "work").config.systemd.services.${unit}.serviceConfig.ExecStart;
         in
         assert lib.assertMsg (lib.all hostValid [ "work" "home" "laptop" "xps" ])
-          "Node build/runtime selection, package-scope or Home Manager parity failed";
+          "Node runtime selection, Home Manager parity or no-cascade contract failed";
         assert lib.assertMsg (lib.all commandUsesRuntime [ "hwc-notify" "hwc-sys-mcp" "heartwood-cms" "hwc-leads" ])
           "Native Node22 service command did not select the corrected runtime";
         pkgs.runCommand "node-runtime-wiring" { } ''
