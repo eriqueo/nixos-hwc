@@ -7,6 +7,8 @@ let
   # dependencies; stream-session.py preserves the exercised pilot supervisor.
   streamState = "${cfg.dataDir}/config/katamari-stream-pilot";
   streamRuntime = "/run/hwc/sunshine";
+  tvState = "${cfg.dataDir}/config/tv";
+  tvRuntime = "/run/hwc/tv";
   streamCatalog = (pkgs.formats.json {}).generate "sunshine-game-catalog.json" {
     schemaVersion = 1;
     roms = cfg.romsDir;
@@ -19,6 +21,7 @@ let
       python = lib.getExe pkgs.python3;
       state = streamState;
       runtime = streamRuntime;
+      inherit tvRuntime;
       pcsx = "${pkgs.pcsx2}/bin/pcsx2-qt";
       dolphin = "${pkgs.dolphin-emu}/bin/dolphin-emu";
       catalog = streamCatalog;
@@ -61,6 +64,7 @@ let
     upnp = "disabled";
     origin_web_ui_allowed = "wan";
     bind_address = cfg.sunshine.bindAddress;
+    port = cfg.sunshine.port;
     address_family = "ipv4";
     file_apps = streamApps;
     file_state = "${streamState}/state.json";
@@ -70,6 +74,51 @@ let
     log_path = "/dev/null"; # Console logs go to the host's bounded journal.
     min_log_level = 2;
   };
+
+  # REPLACEABLE launcher metadata is generated from the one game catalog.
+  # Native app sign-in/preferences are CRITICAL under cfg.dataDir (existing backup owner).
+  tvMetadata = pkgs.writeTextDir "metadata.pegasus.txt" (''
+    collection: Movies
+    shortname: movies
+
+    game: Jellyfin
+    file: ${lib.getExe pkgs.jellyfin-desktop}
+    launch: ${lib.getExe pkgs.jellyfin-desktop} --tv --fullscreen --config-dir ${lib.escapeShellArg "${tvState}/jellyfin"}
+
+    collection: Games
+    shortname: games
+
+  '' + lib.concatMapStringsSep "\n" (game: ''
+    game: ${game.title}
+    file: ${cfg.romsDir}/${game.rom}
+    launch: ${streamSession} local-game ${lib.escapeShellArg game.id}
+  '') cfg.sunshine.games);
+  tvGameDirs = pkgs.writeText "tv-game-dirs.txt" "${tvMetadata}\n";
+  tvSession = pkgs.writeShellScript "hwc-tv-session" ''
+    set -eu
+    export XDG_CONFIG_HOME=${lib.escapeShellArg "${tvState}/config"}
+    export QT_QPA_PLATFORM=xcb
+    export QT_QPA_PLATFORMTHEME=generic
+    export QT_STYLE_OVERRIDE=Fusion
+    ${pkgs.xset}/bin/xset s off
+    ${pkgs.xset}/bin/xset -dpms
+    ${pkgs.util-linux}/bin/setsid ${pkgs.openbox}/bin/openbox --sm-disable &
+    wm=$!
+    launcher=""
+    cleanup() {
+      trap - EXIT TERM INT
+      [ -z "$launcher" ] || kill -- -"$launcher" 2>/dev/null || true
+      kill -- -"$wm" 2>/dev/null || true
+      # Separate process groups exclude the existing Pi session. Two-second drain.
+      ${pkgs.coreutils}/bin/sleep 2
+      [ -z "$launcher" ] || kill -KILL -- -"$launcher" 2>/dev/null || true
+      kill -KILL -- -"$wm" 2>/dev/null || true
+    }
+    trap cleanup EXIT TERM INT
+    ${pkgs.util-linux}/bin/setsid ${pkgs.pegasus-frontend}/bin/pegasus-fe --disable-menu-reboot --disable-menu-shutdown --disable-menu-suspend &
+    launcher=$!
+    wait "$launcher"
+  '';
 
   # RetroArch with selected cores
   retroarchWithCores = pkgs.retroarch.withCores (cores:
@@ -111,6 +160,8 @@ in
     gpu = {
       enable = lib.mkEnableOption "GPU hardware acceleration for emulation and streaming";
     };
+
+    tv.enable = lib.mkEnableOption "Boot into the local Movies and Games TV session";
 
     cores = {
       # Core emulator selection - enable what you need
@@ -234,7 +285,8 @@ in
       retroarchWithCores
       pkgs.retroarch-assets
       pkgs.libretro-shaders-slang
-    ] ++ lib.optionals cfg.sunshine.enable [
+    ] ++ lib.optionals cfg.tv.enable [ pkgs.pegasus-frontend pkgs.jellyfin-desktop pkgs.alsa-utils ]
+      ++ lib.optionals cfg.sunshine.enable [
       pkgs.sunshine
       pkgs.moonlight-qt  # Client for testing
     ];
@@ -262,6 +314,8 @@ in
         DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/1000/bus";
       };
       serviceConfig = {
+        Type = "notify";
+        TimeoutStartSec = 120;
         User = lib.mkForce "eric";
         Group = "users";
         SupplementaryGroups = [ "uinput" "input" "video" "render" ];
@@ -274,6 +328,24 @@ in
       };
     };
 
+    # Physical TV and virtual Pi streaming use separate display/audio sessions.
+    services.xserver = lib.mkIf cfg.tv.enable {
+      enable = true;
+      displayManager.lightdm.enable = true;
+      displayManager.session = [{
+        name = "hwc-tv";
+        manage = "desktop";
+        start = ''
+          ${tvSession} &
+          waitPID=$!
+        '';
+      }];
+    };
+    services.displayManager = lib.mkIf cfg.tv.enable {
+      defaultSession = "hwc-tv";
+      autoLogin = { enable = true; user = "eric"; };
+    };
+
     # RetroArch data directories
     systemd.tmpfiles.rules = [
       "d ${cfg.dataDir} 0755 eric users -"
@@ -284,6 +356,13 @@ in
       "d ${cfg.dataDir}/system 0755 eric users -"
       "d ${cfg.dataDir}/playlists 0755 eric users -"
       "d ${cfg.dataDir}/thumbnails 0755 eric users -"
+    ] ++ lib.optionals cfg.tv.enable [
+      "d ${tvState} 0700 eric users -"
+      "d ${tvState}/config 0700 eric users -"
+      "d ${tvState}/config/pegasus-frontend 0700 eric users -"
+      "d ${tvState}/jellyfin 0700 eric users -"
+      "d ${tvRuntime} 0700 eric users -"
+      "L+ ${tvState}/config/pegasus-frontend/game_dirs.txt - - - - ${tvGameDirs}"
     ];
 
     # Firewall configuration for RetroArch netplay
@@ -335,10 +414,17 @@ in
     #==========================================================================
     assertions = [
       {
+        assertion = !cfg.tv.enable || (cfg.gpu.enable && cfg.sunshine.headless
+          && config.hwc.system.hardware.audio.enable
+          && !config.hwc.system.core.session.loginManager.enable);
+        message = "Local TV requires GPU/audio, the retained headless streaming session, and no competing login manager";
+      }
+      {
         assertion = let games = cfg.sunshine.games; in
           lib.length (lib.unique (map (game: game.id) games)) == lib.length games
           && lib.length (lib.unique (map (game: game.title) games)) == lib.length games
-          && lib.all (game: game.title != "" && !(lib.hasPrefix "/" game.rom)
+          && lib.all (game: game.title != "" && !(lib.hasInfix "\n" game.title)
+            && !(lib.hasInfix "\n" game.rom) && !(lib.hasPrefix "/" game.rom)
             && !(lib.elem ".." (lib.splitString "/" game.rom))) games;
         message = "Sunshine games require unique IDs/titles and ROM paths inside romsDir";
       }
