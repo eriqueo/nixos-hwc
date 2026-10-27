@@ -5,13 +5,17 @@ Pairing, emulator saves and BIOS sidecars are CRITICAL existing data.
 Display/audio runtime state is REPLACEABLE and removed by systemd.
 """
 import ctypes
+import errno
+import fcntl
 import hashlib
+import ipaddress
 import json
 import os
 from pathlib import Path
 import selectors
 import re
 import signal
+import socket
 import struct
 import subprocess
 import sys
@@ -26,6 +30,57 @@ XVFB = '@xvfb@'
 PULSE = '@pulse@'
 OPENBOX = '@openbox@'
 SUN = '@sunshine@'
+
+
+def stream_endpoint(config):
+    values = {}
+    for line in config.read_text().splitlines():
+        if '=' in line and not line.lstrip().startswith('#'):
+            key, value = line.split('=', 1)
+            values[key.strip()] = value.strip()
+    address = str(ipaddress.IPv4Address(values['bind_address']))
+    port = int(values.get('port', '47989')) + 21
+    if not 1 <= port <= 65535:
+        raise RuntimeError('STREAM_PORT_INVALID')
+    return address, port
+
+
+def wait_for_address(address, timeout=60, clock=time.monotonic, pause=time.sleep):
+    # Bounded local prerequisite wait, not a retry of the streaming effect.
+    deadline = clock() + timeout
+    while True:
+        with socket.socket() as probe:
+            try:
+                probe.bind((address, 0))
+                return
+            except OSError as error:
+                if error.errno != errno.EADDRNOTAVAIL:
+                    raise
+        if clock() >= deadline:
+            raise RuntimeError('STREAM_ADDRESS_TIMEOUT')
+        pause(min(0.25, max(0, deadline - clock())))
+
+
+def wait_for_listener(address, port, children, timeout=15,
+                      clock=time.monotonic, pause=time.sleep):
+    deadline = clock() + timeout
+    while True:
+        if any(child.poll() is not None for child in children):
+            raise RuntimeError('STREAM_CHILD_EXITED')
+        try:
+            with socket.create_connection((address, port), timeout=0.25):
+                return
+        except OSError:
+            if clock() >= deadline:
+                raise RuntimeError('STREAM_LISTENER_TIMEOUT')
+            pause(min(0.25, max(0, deadline - clock())))
+
+
+def notify_ready(endpoint):
+    if endpoint:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as notification:
+            notification.connect('\0' + endpoint[1:] if endpoint.startswith('@') else endpoint)
+            notification.sendall(b'READY=1\nSTATUS=Streaming listener ready')
 
 
 
@@ -163,10 +218,10 @@ def playable_image(entry):
         return target
 
 
-def game_process(args, env, game_id):
+def game_process(args, env, game_id, runtime=RUNTIME):
     # Foreground ownership lets Sunshine stop the emulator on disconnect.
     # AUTO-MANAGED log: last 64 KiB per configured game; discard oldest at limit.
-    log = RUNTIME / (game_id + '.log')
+    log = runtime / (game_id + '.log')
     child = subprocess.Popen(args, env=env, stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT, start_new_session=True)
     def stop(signum, frame):
@@ -201,6 +256,8 @@ def run():
     for required in ['credentials.json', 'server-key.pem', 'server-cert.pem']:
         if not (BASE / required).is_file():
             raise RuntimeError('Pilot preparation is incomplete: ' + required)
+    address, port = stream_endpoint(Path(sys.argv[2]))
+    wait_for_address(address)
     RUNTIME.mkdir(mode=0o700, exist_ok=True)
     for entry in catalog().values():
         if not entry['path'].is_file():
@@ -248,6 +305,8 @@ def run():
         else:
             raise RuntimeError('Virtual input initialization timed out')
         children.append(subprocess.Popen([sys.executable,str(Path(__file__).resolve()),'input'],env=env))
+        wait_for_listener(address, port, children)
+        notify_ready(os.environ.get('NOTIFY_SOCKET'))
         while all(p.poll() is None for p in children):
             time.sleep(0.5)
         raise RuntimeError('A pilot process exited; stopping the session')
@@ -266,7 +325,19 @@ def run():
                 p.wait(timeout=2)
 
 
-def game():
+def game(runtime=RUNTIME):
+    # Keyed before media/cache/config effects: one emulator owns shared saves.
+    # Permanent by design; kernel flock releases on process exit, even after a crash.
+    with (BASE / 'game.lock').open('a') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print('GAME_BUSY: close the current game before starting another.', file=sys.stderr)
+            return 2
+        return launch_game(runtime)
+
+
+def launch_game(runtime):
     games = catalog()
     game_id = sys.argv[2] if len(sys.argv) > 2 else next(iter(games))
     if game_id not in games:
@@ -287,7 +358,7 @@ def game():
                     if source.read(6) == game_code:
                         discs.append(other['path'])
         if len(discs) > 1:
-            playlist = RUNTIME / (game_id + '.m3u')
+            playlist = runtime / (game_id + '.m3u')
             playlist.write_text(''.join(str(path) + '\n' for path in discs))
             image = playlist
         args = [DOLPHIN, '--batch', '--user=' + str(BASE/'dolphin'),
@@ -298,7 +369,7 @@ def game():
                 '-C', 'Logger.Logs.BOOT=True', '-C', 'Logger.Logs.CORE=True']
         for port in range(4):
             args += ['-C', f'Dolphin.Core.SIDevice{port}=6']
-        return game_process(args + ['--exec=' + str(image)], env, game_id)
+        return game_process(args + ['--exec=' + str(image)], env, game_id, runtime)
     args=[PCSX,'-nogui','-fullscreen','-fastboot']
     marker=BASE/'resume-state'
     # The legacy one-launch marker belongs only to the original Katamari game.
@@ -308,7 +379,7 @@ def game():
             raise RuntimeError('Invalid pilot resume state')
         args.extend(['-statefile',str(state)])
         marker.unlink()  # One launch only; preserve the state file itself.
-    return game_process(args+['--',str(image)],env,game_id)
+    return game_process(args+['--',str(image)],env,game_id,runtime)
 
 
 def input_bridge():
@@ -371,4 +442,6 @@ def input_bridge():
 
 
 if __name__ == '__main__':
-    raise SystemExit({'run':run,'game':game,'input':input_bridge}[sys.argv[1]]())
+    commands = {'run': run, 'game': game, 'input': input_bridge,
+                'local-game': lambda: game(Path('@tvRuntime@'))}
+    raise SystemExit(commands[sys.argv[1]]())

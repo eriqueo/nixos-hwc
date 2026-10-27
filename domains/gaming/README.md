@@ -26,12 +26,23 @@ images are converted into a bounded, rebuildable cache without changing sources.
 Multi-disc GameCube games use runtime playlists for automatic disc changes, with
 explicit Disc 2 launchers retained. Each emulator has a bounded runtime boot log.
 
+`retroarch.tv.enable` adds a separate, automatically logged-in X11/Openbox TV
+session. Pegasus presents Movies (Jellyfin Desktop in TV mode) and Games from
+the same catalog used by Sunshine. It keeps the Pi's virtual display and audio
+session. A host-wide nonblocking game lock rejects concurrent emulator launches
+before shared save/cache effects. TV profiles live below RetroArch's backed-up
+data directory; generated catalog files rebuild from Nix. Bluetooth controllers
+need an actual adapter; ordinary display cables do not supply TV-remote input.
+The Sunshine unit waits for its configured address and RTSP listener before
+reporting ready, with bounded startup and visible failure rather than a loop.
+
 ```
 domains/gaming/
 ├── index.nix           # Domain aggregator
 ├── retroarch/          # RetroArch emulator + Sunshine streaming
 │   ├── index.nix       # Options, dependencies and managed streaming service
-│   └── stream-session.py # Supervised display/audio/input and game launcher
+│   ├── stream-session.py # Supervised display/audio/input and game launcher
+│   └── test_session.py # Startup and shared-save ownership regressions
 └── webdav/             # dufs WebDAV server for save sync
     └── index.nix       # Options + implementation
 ```
@@ -55,6 +66,7 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+- 2026-10-27: Add the optional native Movies/Games TV session, preserve Pi streaming, serialize shared-save game launches, and wait for actual Sunshine listener readiness.
 - 2026-10-25: Add `steam.gpuOffload` (PRIME dGPU for Steam and its games);
   enabled on XPS only, other hosts' Steam derivation is unchanged.
 - 2026-10-25: Add the isolated XPS household desktop wiring; preserve existing

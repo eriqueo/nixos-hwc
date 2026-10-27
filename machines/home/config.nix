@@ -705,8 +705,9 @@
   };
 
   # Session/sudo/lingering/permitCertUid come from the server role.
-  # X11 services disabled for headless server
-  # services.xserver.enable = true;
+  # The gaming capability owns the local TV session; server services stay independent.
+  hwc.system.hardware.audio.enable = true;
+  hwc.system.hardware.bluetooth.enable = true;
 
   #============================================================================
   # STORAGE PATHS
@@ -955,6 +956,7 @@
   hwc.gaming.retroarch = {
     enable = lib.mkDefault true;
     gpu.enable = true;
+    tv.enable = true;
     cores = {
       dosbox-pure = true;
       snes9x = true;
