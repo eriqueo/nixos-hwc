@@ -27,8 +27,8 @@ final: prev:
 let
   lib = prev.lib;
 
-  # TEMPORARY: qualified upstream runtimes also supply the full Node build
-  # interfaces through mkNodeRuntimeScope. Remove when pinned Node includes the
+  # TEMPORARY: explicit upstream runtimes avoid rebuilding every build-time
+  # Node consumer. Remove when the pinned Nixpkgs Node packages include the
   # October fixes in both Node and its linked libraries and pass these checks.
   # Hashes were verified against Node's signed SHASUMS256.txt on 2026-10-23.
   runtimeReleases = {
