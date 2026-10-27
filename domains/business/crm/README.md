@@ -21,7 +21,7 @@ hard guard on first-contact sends.
 ```
 crm/
 ├── README.md      # This file.
-└── index.nix      # hwc.business.crm.* options + service + tick timer
+└── index.nix      # hwc.business.crm.* options + readiness gate + tick timer
                    #   + lead_scout ingest timer + route
                    #   + bounded on-demand Pi/DX2 worker settings
                    #   + automatic preliminary-budget worker and source-bound Node engine
@@ -66,6 +66,10 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 (`machines/work/config.nix`).
 
 ## Changelog
+
+- 2026-10-27: CRM startup waits for HTTP/database health before dependent
+  Rolodex and sequence timers can run. Read-only probes stop after 20 attempts;
+  timer POSTs are not retried.
 - **2026-10-19** — Pass the CRM the local mail index: `HOME`, the notmuch binary and the mail-sync status path (`mailIndex.enable`, default on). The CRM reads contact mail there instead of Proton Bridge (app D75). Sending still uses Bridge SMTP.
 - **2026-10-07** — Bind the existing estimator engine to a bounded automatic preliminary-budget worker on hwc-work. Job-scoped reservations, immutable plans and receipts use the existing CRM database backup. Historical and already-budgeted jobs remain unchanged; no customer proposal is created or sent.
 - **2026-10-05** — Share the existing Page token and Page ID with the CRM service for manual Messenger replies (app D66). Import keeps its narrow Page credential; Page-token rotation now restarts the service. CRITICAL send receipts share the existing CRM database backup.

@@ -76,6 +76,10 @@ business/
 
 ## Changelog
 
+- 2026-10-27: CRM startup waits for HTTP/database health before dependent
+  Rolodex and sequence timers can run. Read-only probes stop after 20 attempts;
+  timer POSTs are not retried.
+
 - 2026-10-24: Enable the separately authorized T3 connection on work; restart
   Workbench when its generated credential changes. Preserve private access.
 

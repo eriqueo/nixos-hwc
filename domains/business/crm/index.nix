@@ -723,6 +723,23 @@ in
           lib.optional cfg.calendar.enable "+${caldavPwGen}" # root: reads htpasswd
           ++ [ "${migrate}" ]; # eric: additive + idempotent
         ExecStart = "${crmWrapper}";
+        # After=/Requires= consumers must wait for HTTP + database readiness,
+        # not just exec(). Only this read-only probe retries; timer POSTs do not.
+        ExecStartPost = pkgs.writeShellScript "hwc-crm-ready" ''
+          for ((attempt = 1; attempt <= 20; attempt++)); do
+            if ${pkgs.curl}/bin/curl --fail --silent --show-error \
+              --connect-timeout 1 --max-time 1 --output /dev/null \
+              http://${cfg.bindAddr}:${toString cfg.port}/health; then
+              exit 0
+            fi
+            if ((attempt < 20)); then
+              ${pkgs.coreutils}/bin/sleep "0.$((500 + RANDOM % 500))"
+            fi
+          done
+          echo "CRM readiness failed after 20 attempts" >&2
+          exit 1
+        '';
+        TimeoutStartSec = 120; # migrations + bounded readiness; failure blocks dependents
         Restart = "always";
         RestartSec = "5s";
         TimeoutStopSec = 180; # intake drain plus bounded assistant process cancellation
