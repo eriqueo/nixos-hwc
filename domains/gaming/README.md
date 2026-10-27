@@ -28,8 +28,9 @@ explicit Disc 2 launchers retained. Each emulator has a bounded runtime boot log
 
 `retroarch.tv.enable` adds a separate, automatically logged-in X11/Openbox TV
 session. Pegasus presents Movies (Jellyfin Desktop in TV mode) and Games from
-the same catalog used by Sunshine. It keeps the Pi's virtual display and audio
-session. A host-wide nonblocking game lock rejects concurrent emulator launches
+the same catalog used by Sunshine. `tv.audioSink` selects HDMI for local apps
+while retaining the Pi's separate virtual display and audio session.
+A host-wide nonblocking game lock rejects concurrent emulator launches
 before shared save/cache effects. TV profiles live below RetroArch's backed-up
 data directory; generated catalog files rebuild from Nix. Bluetooth controllers
 need an actual adapter; ordinary display cables do not supply TV-remote input.

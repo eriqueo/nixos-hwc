@@ -100,6 +100,7 @@ let
     export QT_QPA_PLATFORM=xcb
     export QT_QPA_PLATFORMTHEME=generic
     export QT_STYLE_OVERRIDE=Fusion
+    ${lib.optionalString (cfg.tv.audioSink != "") "export PULSE_SINK=${lib.escapeShellArg cfg.tv.audioSink}"}
     ${pkgs.xset}/bin/xset s off
     ${pkgs.xset}/bin/xset -dpms
     ${pkgs.util-linux}/bin/setsid ${pkgs.openbox}/bin/openbox --sm-disable &
@@ -161,7 +162,14 @@ in
       enable = lib.mkEnableOption "GPU hardware acceleration for emulation and streaming";
     };
 
-    tv.enable = lib.mkEnableOption "Boot into the local Movies and Games TV session";
+    tv = {
+      enable = lib.mkEnableOption "Boot into the local Movies and Games TV session";
+      audioSink = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "Native PulseAudio/PipeWire sink for the physical TV apps; empty uses the user's default";
+      };
+    };
 
     cores = {
       # Core emulator selection - enable what you need

@@ -957,6 +957,7 @@
     enable = lib.mkDefault true;
     gpu.enable = true;
     tv.enable = true;
+    tv.audioSink = "alsa_output.pci-0000_01_00.1.hdmi-stereo";
     cores = {
       dosbox-pure = true;
       snes9x = true;
