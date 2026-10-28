@@ -599,6 +599,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-electron": {
+      "locked": {
+        "lastModified": 1790185690,
+        "narHash": "sha256-xJ+X4hBtOcAFGBOe5nAMyMUeF9foJBmIOu3NjBqBycU=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "4975466d324710c576dc11ad614684e6bd8cad8e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "4975466d324710c576dc11ad614684e6bd8cad8e",
+        "type": "github"
+      }
+    },
     "nixpkgs-lib": {
       "locked": {
         "lastModified": 1774748309,
@@ -632,17 +648,17 @@
     },
     "nixpkgs-tailscale": {
       "locked": {
-        "lastModified": 1790185690,
-        "narHash": "sha256-xJ+X4hBtOcAFGBOe5nAMyMUeF9foJBmIOu3NjBqBycU=",
+        "lastModified": 1792545570,
+        "narHash": "sha256-IDjnZBEbQXtfmdmQM1fFMjagxZLHNhryO7I2fm7GzGY=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "4975466d324710c576dc11ad614684e6bd8cad8e",
+        "rev": "28427eef571bbb085812d3c1457bf2b4e85f5272",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "4975466d324710c576dc11ad614684e6bd8cad8e",
+        "rev": "28427eef571bbb085812d3c1457bf2b4e85f5272",
         "type": "github"
       }
     },
@@ -775,6 +791,7 @@
         "meals": "meals",
         "nixpkgs": "nixpkgs",
         "nixpkgs-claude-code": "nixpkgs-claude-code",
+        "nixpkgs-electron": "nixpkgs-electron",
         "nixpkgs-stable": "nixpkgs-stable",
         "nixpkgs-tailscale": "nixpkgs-tailscale",
         "nixvirt": "nixvirt",

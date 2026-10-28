@@ -46,9 +46,12 @@
 
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-26.05";
-    # TS-2026-011 needs Tailscale >= 1.102.3; stable 26.05 has 1.98.10.
-    # Remove this temporary pin when both Nixpkgs inputs provide >= 1.102.3.
-    nixpkgs-tailscale.url = "github:NixOS/nixpkgs/4975466d324710c576dc11ad614684e6bd8cad8e";
+    # TS-2026-013 needs Tailscale >= 1.104.2; stable 26.05 has 1.98.10.
+    # Remove this temporary pin when both Nixpkgs inputs provide >= 1.104.2.
+    nixpkgs-tailscale.url = "github:NixOS/nixpkgs/28427eef571bbb085812d3c1457bf2b4e85f5272";
+    # Keep the laptop Electron runtime independent of Tailscale security updates.
+    # Remove when the main nixpkgs input provides electron_44.
+    nixpkgs-electron.url = "github:NixOS/nixpkgs/4975466d324710c576dc11ad614684e6bd8cad8e";
 
     # Claude Code source for overlays/claude-code.nix. It is its OWN input, not
     # `nixpkgs`, because the CLI ships several releases a week while a channel

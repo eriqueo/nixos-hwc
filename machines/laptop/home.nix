@@ -46,11 +46,11 @@ in
     t3code.desktop.lanHost = "100.71.213.18";
     # The fork now follows upstream (orchestration protocol 2), whose desktop
     # bundle is compiled against Electron 44.4.5. The laptop's nixpkgs tops out
-    # at electron_43; the locked nixpkgs-tailscale input carries electron_44
+    # at electron_43; the locked nixpkgs-electron input carries electron_44
     # (44.3.0, cached). REMOVE WHEN: the main nixpkgs input packages
     # electron_44; then point the module default at it and drop this line.
     t3code.desktop.electronPackage =
-      inputs.nixpkgs-tailscale.legacyPackages.${pkgs.stdenv.hostPlatform.system}.electron_44;
+      inputs.nixpkgs-electron.legacyPackages.${pkgs.stdenv.hostPlatform.system}.electron_44;
     scraper.enable = true;
     markitdown.enable = true;
     dt.enable = true;
