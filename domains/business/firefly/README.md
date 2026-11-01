@@ -24,7 +24,8 @@ the actual `/usr/bin/node` with qualified Node 22.23.4 and supplies six signed,
 fixed-hash Alpine packages for PHP's shared libraries and certificate stores.
 Each OpenSSL/certificate release supplies both related package versions.
 `system.build.fireflyPicoRuntimeImageContext` regenerates the offline build
-context. Prebuild its recipe-derived local tag before deployment. The default
+context. Prebuild each recipe-derived local tag with `podman build --format=docker`
+before deployment so the upstream health-check metadata is retained. The default
 image has `pull = "never"`; startup fails if that image is absent.
 Explicit image overrides remain available for compatible current-data recovery.
 Remove this correction when a qualified upstream image passes the same runtime,
