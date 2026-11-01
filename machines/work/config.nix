@@ -408,9 +408,12 @@
         # Only external receivers cross the public boundary. Internal mail,
         # media and camera workflows retain their existing tailnet URLs.
         # Permanent by design: new receivers require an explicit public route.
+        # Temporary Quo quarantine: unsigned SMS events can trigger replies and
+        # lead writes. Restore quo-sms only after signature verification rejects
+        # forged requests in the deployed receiver (domain-exposure-review C1).
         "api.iheartwoodcraft.com" = {
           service = "http://localhost:${toString config.hwc.automation.n8n.port}";
-          path = "^/webhook/(jt-jobs|jt-customers|estimate-push|quo-sms)$";
+          path = "^/webhook/(jt-jobs|jt-customers|estimate-push)$";
         };
 
         # Umami — script.js + /api/send must be visitor-reachable.

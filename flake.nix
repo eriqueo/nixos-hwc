@@ -925,9 +925,9 @@
         def denied(data, path):
             assert 'service: http_status:404' in route(data, path), path
         for path in ['/webhook/mail-action', '/webhook/media-pipeline', '/webhook/frigate-events',
-                     '/webhook/', '/rest/workflows', '/webhook/quo-sms/extra']:
+                     '/webhook/', '/rest/workflows', '/webhook/quo-sms', '/webhook/quo-sms/extra']:
             denied(config, path)
-        for name in ['jt-jobs', 'jt-customers', 'estimate-push', 'quo-sms']:
+        for name in ['jt-jobs', 'jt-customers', 'estimate-push']:
             assert 'service: http://localhost:5678' in route(config, '/webhook/' + name), name
         broad = json.loads(json.dumps(config))
         for rule in broad['ingress']:
