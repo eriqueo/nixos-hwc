@@ -77,6 +77,9 @@ business/
 
 ## Changelog
 
+- 2026-10-31: Keep the Importer optional when adding its runtime startup guard;
+  the wiring check also evaluates the disabled service path.
+
 - 2026-10-31: Firefly preserves its three application versions while qualifying
   PHP 8.5.12 for Core/Importer and signed PHP 8.2.35-r0 packages for Pico.
   Recipe-derived local images require prebuilding before startup.

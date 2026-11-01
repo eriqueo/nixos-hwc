@@ -447,7 +447,7 @@ in
     # Keep explicit image overrides usable for compatible current-data recovery.
     # Prebuild during deployment; startup never builds or downloads an image.
     virtualisation.oci-containers.containers = lib.mkMerge (
-      lib.mapAttrsToList (kind: runtime: lib.mkIf (cfg.images.${kind} == runtime.image) {
+      lib.mapAttrsToList (kind: runtime: lib.mkIf ((kind == "core" || cfg.importer.enable) && cfg.images.${kind} == runtime.image) {
         ${if kind == "core" then "firefly" else "firefly-importer"}.pull = lib.mkForce "never";
       }) phpRuntimes ++ [
         (lib.mkIf (cfg.pico.enable && cfg.images.pico == picoRuntime.image) {
@@ -455,7 +455,7 @@ in
         })
       ]);
     systemd.services = lib.mkMerge (
-      lib.mapAttrsToList (kind: runtime: lib.mkIf (cfg.images.${kind} == runtime.image) {
+      lib.mapAttrsToList (kind: runtime: lib.mkIf ((kind == "core" || cfg.importer.enable) && cfg.images.${kind} == runtime.image) {
         ${if kind == "core" then "podman-firefly" else "podman-firefly-importer"}.preStart = lib.mkBefore ''
           ${pkgs.podman}/bin/podman image exists ${lib.escapeShellArg runtime.image} || {
             echo "Firefly ${kind} requires its reviewed PHP runtime image before startup" >&2

@@ -137,6 +137,9 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
+- 2026-10-31: Keep the Importer optional when adding its runtime startup guard;
+  the wiring check also evaluates the disabled service path.
+
 - 2026-10-31: Add same-app PHP 8.5.12 runtime contexts for Core and Importer;
   extend Pico's offline context with PHP 8.2.35-r0 and every installed PHP82
   extension. All three default images fail closed when not prebuilt. App versions,

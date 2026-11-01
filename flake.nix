@@ -906,6 +906,9 @@
 
       firefly-php-runtime-wiring = let
         c = self.nixosConfigurations.hwc-work.config;
+        disabledImporter = (self.nixosConfigurations.hwc-work.extendModules {
+          modules = [ { hwc.business.firefly.importer.enable = lib.mkForce false; } ];
+        }).config;
         specs = map (spec: spec // {
           image = c.hwc.business.firefly.images.${spec.kind};
           container = c.virtualisation.oci-containers.containers.${spec.name};
@@ -915,7 +918,10 @@
           { kind = "importer"; name = "firefly-importer"; appVersion = "2.3.4"; context = c.system.build.fireflyImporterRuntimeImageContext; }
         ];
         fixture = pkgs.writeText "firefly-php-runtime-wiring.json" (builtins.toJSON specs);
-      in pkgs.runCommand "firefly-php-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+      in
+      assert !(disabledImporter.virtualisation.oci-containers.containers ? firefly-importer);
+      assert !(disabledImporter.systemd.services ? podman-firefly-importer);
+      pkgs.runCommand "firefly-php-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
         python3 - ${fixture} <<'PY'
         import hashlib, json, pathlib, re, sys
         for spec in json.loads(pathlib.Path(sys.argv[1]).read_text()):
