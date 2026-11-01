@@ -405,11 +405,12 @@
         # app has no auth of its own.
         "monitor.iheartwoodcraft.com" = "http://localhost:4400";
 
-        # Production-domain webhook ingress (Twilio SMS, JobTread pulls):
-        # only /webhook/* reaches n8n; other paths hit the 404 default.
+        # Only external receivers cross the public boundary. Internal mail,
+        # media and camera workflows retain their existing tailnet URLs.
+        # Permanent by design: new receivers require an explicit public route.
         "api.iheartwoodcraft.com" = {
           service = "http://localhost:${toString config.hwc.automation.n8n.port}";
-          path = "^/webhook/";
+          path = "^/webhook/(jt-jobs|jt-customers|estimate-push|quo-sms)$";
         };
 
         # Umami — script.js + /api/send must be visitor-reachable.

@@ -904,6 +904,45 @@
         touch "$out"
       '';
 
+      public-webhook-ingress = let
+        c = self.nixosConfigurations.hwc-work.config;
+        tunnel = c.services.cloudflared.tunnels.${c.hwc.networking.cloudflared.tunnelId};
+        fixture = pkgs.writeText "public-webhook-ingress.json" (builtins.toJSON {
+          ingress = (lib.mapAttrsToList (hostname: rule:
+            { inherit hostname; } // (if builtins.isString rule then { service = rule; } else rule)
+          ) tunnel.ingress) ++ [ { service = tunnel.default; } ];
+        });
+      in pkgs.runCommand "public-webhook-ingress" { nativeBuildInputs = [ pkgs.python3 pkgs.cloudflared ]; } ''
+        python3 - ${fixture} <<'PY'
+        import json, pathlib, subprocess, sys
+        config = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        def route(data, path):
+            pathlib.Path('ingress.json').write_text(json.dumps(data))
+            result = subprocess.run(['cloudflared', 'tunnel', '--config', 'ingress.json',
+                'ingress', 'rule', 'https://api.iheartwoodcraft.com' + path],
+                check=True, capture_output=True, text=True)
+            return result.stdout + result.stderr
+        def denied(data, path):
+            assert 'service: http_status:404' in route(data, path), path
+        for path in ['/webhook/mail-action', '/webhook/media-pipeline', '/webhook/frigate-events',
+                     '/webhook/', '/rest/workflows', '/webhook/quo-sms/extra']:
+            denied(config, path)
+        for name in ['jt-jobs', 'jt-customers', 'estimate-push', 'quo-sms']:
+            assert 'service: http://localhost:5678' in route(config, '/webhook/' + name), name
+        broad = json.loads(json.dumps(config))
+        for rule in broad['ingress']:
+            if rule.get('hostname') == 'api.iheartwoodcraft.com':
+                rule['path'] = '^/webhook/'
+        try:
+            denied(broad, '/webhook/mail-action')
+        except AssertionError:
+            print('seeded public mail exposure rejected')
+        else:
+            raise AssertionError('broad public route was accepted')
+        PY
+        touch $out
+      '';
+
       firefly-php-runtime-wiring = let
         c = self.nixosConfigurations.hwc-work.config;
         disabledImporter = (self.nixosConfigurations.hwc-work.extendModules {
