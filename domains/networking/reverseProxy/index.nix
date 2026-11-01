@@ -524,7 +524,10 @@ in
       };
     };
 
-    networking.firewall.allowedTCPPorts =
+    # These listeners serve private tailnet names. Public website traffic uses
+    # cloudflared's loopback origin; DNS-01 and Tailscale issue certificates
+    # without opening these ports on LAN or WAN interfaces.
+    networking.firewall.interfaces.tailscale0.allowedTCPPorts =
       [ 80 443 ]
       ++ (lib.map (r: r.port) (portRoutes ++ lib.filter (r: r.mode == "static") routes));
   })

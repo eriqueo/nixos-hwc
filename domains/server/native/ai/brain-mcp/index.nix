@@ -4,7 +4,7 @@
 # Exposes the vault CRUD/refactor tools (read/write/list/search_notes, lint,
 # inbox, delete/move/replace/frontmatter/commit) plus semantic retrieval
 # (search_semantic, related_notes — brainvec index + llama-embed on :11502).
-# Binds to 127.0.0.1:9876 (Tailscale tunnel added in Phase 12).
+# Listens on all IPv4 addresses; firewall permits direct access via Tailscale.
 { config, lib, pkgs, inputs, ... }:
 let
   cfg = config.hwc.server.ai.brainMcp;
@@ -25,7 +25,7 @@ in
     port = lib.mkOption {
       type = lib.types.port;
       default = 9876;
-      description = "Internal port the Brain MCP server listens on (127.0.0.1 only)";
+      description = "Brain MCP listen port; direct remote access is restricted to Tailscale";
     };
 
     vaultPath = lib.mkOption {
@@ -141,9 +141,7 @@ in
     };
 
     #==========================================================================
-    # CADDY REVERSE PROXY — port mode on :13443 (Phase 12)
-    # Deviation: tailscale serve --https=8443 not viable (port 8443 owned by slskd/Caddy).
-    # Creates https://hwc-server.ocelot-wahoo.ts.net:13443 via Caddy with Tailscale cert.
+    # CADDY REVERSE PROXY — configured HTTPS port with a Tailscale certificate.
     #==========================================================================
     # Owned by hwc-work since the service split (wave 1); ownership is the
     # routeOwners entry in domains/networking/routes.nix.
@@ -156,9 +154,9 @@ in
 
     #==========================================================================
     # FIREWALL — port 9876 for direct Tailscale IP access from laptop (Claude Code MCP).
-    # Port 13443 opened automatically by reverseProxy.nix for port-mode routes.
+    # The configured HTTPS port is also allowed only on tailscale0 by reverseProxy.
     #==========================================================================
-    networking.firewall.allowedTCPPorts = [ cfg.port ];
+    networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ cfg.port ];
 
   };
 }

@@ -15,6 +15,8 @@ Calendar phone writes consume the gateway's sync receipt; they preserve the save
 
 Brain MCP public clients use the `.com` OAuth gateway and Service Auth origin;
 `native/ai/brain-mcp/AUTH.md` records the private path and remaining alias cleanup.
+Direct Brain MCP access uses its existing listener with a `tailscale0`-only
+firewall rule. The public gateway reaches the origin over loopback.
 
 `native/ai/lead-scout` owns the member recovery unit. It adopts the
 runtime compose project, waits for either container to exit and stops app before
@@ -93,6 +95,8 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+- 2026-11-01: Restrict direct Brain MCP firewall access to Tailscale and correct
+  its listener documentation; preserve the public gateway and private clients.
 - 2026-10-25: Start the retained member database before creating a replacement app, inside the existing preparation deadline. Test generated ordering to prevent stopped-database IP allocation reuse.
 - 2026-10-25: Export the reproducible Scout member library/trust image context and reject missing or mismatched local images before compose startup. Preserve paired backup; live image adoption remains a separate release.
 - 2026-10-24: Restore the paired Scout browser/PG producer with bounded read-only preparation in its existing unit's pre-start phase. Keep the shared memory, frozen-copy and cleanup limits; test preparation bounds and require the composed preparation command in the actual unit.

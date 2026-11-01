@@ -18,6 +18,9 @@ Provides network infrastructure that other domains depend on:
 
 ## Structure
 
+`reverseProxy` permits its HTTP, HTTPS and port-mode listeners only on
+`tailscale0`. Public tunnel origins use loopback and need no WAN firewall ports.
+
 `cloudflared.accessLog` routes all tunnel-origin requests, including fallback404,
 through a loopback-only Caddy listener derived from the existing ingress table.
 The original host/path gates and upstreams remain in force. Version1 JSON records
@@ -70,6 +73,9 @@ networking/
 ```
 
 ## Changelog
+
+- 2026-11-01: Restrict reverse-proxy firewall openings to the Tailscale interface.
+  Keep public Cloudflare ingress on loopback; check evaluated private ports.
 
 - 2026-11-01: Add opt-in sanitized, bounded logging across every tunnel route and
   its fallback, with loopback-only binding and original route gates preserved.

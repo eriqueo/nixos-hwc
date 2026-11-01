@@ -9,6 +9,9 @@
 
 ## Structure
 
+`networking` leaves HTTP/HTTPS firewall rules to the serving module. The server
+role does not implicitly expose web ports on every interface.
+
 `core/login/` selects one login stack: existing Hyprland/greetd or native Plasma/SDDM.
 
 MCP `mcp/src/src/tools/nightly-review.ts` shares merge eligibility between nightly/Refinery action lists and dispatch. Only needs-you, merge-ready reviews with positive PR numbers in Eric's GitHub repositories can dispatch a merge. DataX/dx-mcp/jt-mcp repositories remain excluded even under owned forks; `gh` checks the live PR.
@@ -78,6 +81,9 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-11-01: Remove implicit global HTTP/HTTPS openings from the server firewall
+  profile; reverse-proxy rules now select their Tailscale interface.
 - 2026-10-25: `gpu/` — the PRIME offload environment is one read-only value, `nvidia.prime.offloadProfile`; `gpu-offload` and Steam's FHS profile both consume it.
 - 2026-10-25: Add an explicit Plasma/SDDM login choice while retaining existing host defaults.
 

@@ -1032,6 +1032,54 @@
         touch $out
       '';
 
+      private-origin-firewall = let
+        fixture = pkgs.writeText "private-origin-firewall.json" (builtins.toJSON
+          (lib.genAttrs [ "hwc-work" "hwc-home" ] (host: let
+            c = self.nixosConfigurations.${host}.config;
+          in {
+            inherit (c.networking.firewall) enable allowedTCPPorts allowedTCPPortRanges;
+            tailnet = c.networking.firewall.interfaces.tailscale0.allowedTCPPorts;
+            tailnetRanges = c.networking.firewall.interfaces.tailscale0.allowedTCPPortRanges;
+            caddy = c.services.caddy.extraConfig;
+            brainPort = if c.hwc.server.ai.brainMcp.enable then c.hwc.server.ai.brainMcp.port else null;
+            logPort = c.hwc.networking.cloudflared.accessLog.port;
+          })));
+      in pkgs.runCommand "private-origin-firewall" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${fixture} <<'PY'
+        import copy, json, pathlib, re, sys
+        configs = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        def contains(ports, ranges, port):
+            return port in ports or any(r['from'] <= port <= r['to'] for r in ranges)
+        def check(host, c):
+            # Extract the actual rendered tailnet listeners, independently of
+            # the Nix route filter that also generates firewall allowances.
+            ports = {80, 443} | {int(p) for p in re.findall(r'^\s*[^\s{}]+\.ts\.net:(\d+)\s*\{', c['caddy'], re.M)}
+            if c['brainPort'] is not None:
+                ports.add(c['brainPort'])
+            assert c['enable']
+            for port in ports:
+                assert not contains(c['allowedTCPPorts'], c['allowedTCPPortRanges'], port), (host, 'global private port', port)
+                assert contains(c['tailnet'], c['tailnetRanges'], port), (host, 'missing tailnet port', port)
+            assert not contains(c['allowedTCPPorts'], c['allowedTCPPortRanges'], c['logPort'])
+            if host == 'hwc-work':
+                assert set(c['allowedTCPPorts']) == {22, 22000}
+                assert not c['allowedTCPPortRanges']
+        for host, c in configs.items():
+            check(host, c)
+        for port in [80, 443, configs['hwc-work']['brainPort']]:
+            bad = copy.deepcopy(configs['hwc-work'])
+            bad['allowedTCPPorts'].append(port)
+            try:
+                check('hwc-work', bad)
+            except AssertionError:
+                pass
+            else:
+                raise AssertionError(('seeded global leak accepted', port))
+        print('work/home private listeners retain tailnet access; global leaks rejected')
+        PY
+        touch "$out"
+      '';
+
       firefly-php-runtime-wiring = let
         c = self.nixosConfigurations.hwc-work.config;
         disabledImporter = (self.nixosConfigurations.hwc-work.extendModules {

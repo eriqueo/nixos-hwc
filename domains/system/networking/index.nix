@@ -238,8 +238,9 @@ in
       # Prevents kernel from dropping legitimate reply packets
       checkReversePath = "loose";
       allowedTCPPorts =
+        # Service owners declare their own listeners and allowed interfaces.
+        # A serving role alone must not expose HTTP/HTTPS on every interface.
         cfg.firewall.extraTcpPorts
-        ++ (lib.optionals (cfg.firewall.level == "server") [ 80 443 ])
         ++ (lib.optionals cfg.ssh.enable [ cfg.ssh.port ])
         ++ (lib.optionals cfg.nfs.server.enable [ 2049 ])
         ++ (lib.optionals cfg.samba.enable [ 139 445 ]);
