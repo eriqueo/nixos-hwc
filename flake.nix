@@ -1037,7 +1037,7 @@
           (lib.genAttrs [ "hwc-work" "hwc-home" ] (host: let
             c = self.nixosConfigurations.${host}.config;
           in {
-            inherit (c.networking.firewall) enable allowedTCPPorts allowedTCPPortRanges;
+            inherit (c.networking.firewall) enable allowedTCPPorts allowedTCPPortRanges trustedInterfaces;
             tailnet = c.networking.firewall.interfaces.tailscale0.allowedTCPPorts;
             tailnetRanges = c.networking.firewall.interfaces.tailscale0.allowedTCPPortRanges;
             caddy = c.services.caddy.extraConfig;
@@ -1062,7 +1062,12 @@
                 # preserves that separate policy; work is the public origin.
                 if host == 'hwc-work' or port != 443:
                     assert not contains(c['allowedTCPPorts'], c['allowedTCPPortRanges'], port), (host, 'global private port', port)
-                assert contains(c['tailnet'], c['tailnetRanges'], port), (host, 'missing tailnet port', port)
+                assert 'tailscale0' in c['trustedInterfaces'] or contains(c['tailnet'], c['tailnetRanges'], port), (host, 'missing tailnet port', port)
+            # Explicit service rules must survive even if Tailscale's blanket
+            # trust is narrowed later. Dev previews use that existing trust.
+            assert {80, 443} <= set(c['tailnet'])
+            if c['brainPort'] is not None:
+                assert c['brainPort'] in c['tailnet']
             assert not contains(c['allowedTCPPorts'], c['allowedTCPPortRanges'], c['logPort'])
             if host == 'hwc-work':
                 assert set(c['allowedTCPPorts']) == {22, 22000}
