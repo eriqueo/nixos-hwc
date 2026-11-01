@@ -190,9 +190,9 @@ in
     };
     # The tunnel logger owns public access records; avoid a second raw URI log
     # at the static backend, where report rewrites contain capability IDs.
-    services.caddy.virtualHosts."http://:${toString cfg.originPort}".logFormat =
-      lib.mkIf config.hwc.networking.cloudflared.accessLog.enable null;
-    services.caddy.virtualHosts."http://:${toString cfg.originPort}".extraConfig = ''
+    services.caddy.virtualHosts."http://:${toString cfg.originPort}" = {
+      logFormat = lib.mkIf config.hwc.networking.cloudflared.accessLog.enable null;
+      extraConfig = ''
       # Tunnel preserves the public Host header; accept both names on loopback.
       bind 127.0.0.1
       root * ${cfg.publishDir}/current
@@ -333,6 +333,7 @@ in
         file_server
       }
     '';
+    };
     hwc.networking.cloudflared.extraIngress = {
       "iheartwoodcraft.com" = "http://127.0.0.1:${toString cfg.originPort}";
       "www.iheartwoodcraft.com" = "http://127.0.0.1:${toString cfg.originPort}";
