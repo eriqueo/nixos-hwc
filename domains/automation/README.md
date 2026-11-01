@@ -14,6 +14,9 @@ readme-freshness weekly Law-12 drift report.
 
 ## Structure
 
+`n8n/` pins reviewed 2.46.1; offline migration and credential checks use an
+isolated SQLite copy with workflows disabled before production activation.
+
 Gauntlet poll and run-now services keep in-flight investigations during system switches. Changed runtimes take effect on the next scheduled or requested run.
 
 `n8n/parts/workflows/08a-jt-data-provider.json` keeps the customer query source for live workflow `d5Gm2LRKHtcQhio9`. It forwards JobTread page cursors, returns response version 1, and uses primary location IDs from the API.
@@ -90,6 +93,8 @@ workspace/automation/
 ```
 
 ## Changelog
+
+- 2026-11-01: Update n8n's immutable security image to qualified 2.46.1.
 
 - 2026-10-23: Do not restart SR/DX1 investigations when a runtime or unit changes during a system switch. Check the rendered policy with `gauntlet-switch-policy`.
 

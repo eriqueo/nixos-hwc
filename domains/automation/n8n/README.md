@@ -11,6 +11,10 @@ n8n workflow automation platform running as a Podman container. Handles alert ro
 
 ## Structure
 
+The image pin selects reviewed n8n 2.46.1. Qualify upgrades against an isolated
+SQLite backup and its matching credential key before activation; workflows must
+remain disabled in that copy. Keep the original database and key together for recovery.
+
 ```
 domains/automation/n8n/
 ├── index.nix          # Options, reviewed immutable image pin, firewall rules
@@ -40,8 +44,7 @@ of the system closure, so it does not belong under `domains/`.
 ```nix
 hwc.automation.n8n = {
   enable = true;
-  # Default: reviewed 2.44.6; retain an immutable image for workflow recovery.
-  image = "docker.io/n8nio/n8n@sha256:845ac21710739d7206086974295f7f93932e0fa8dd87af6d9fb0b7aa0338ad15";
+  # Omit image to use the reviewed immutable pin from index.nix.
   port = 5678;
   webhookUrl = "https://n8n.heartwoodcraft.me";
   dataDir = "/var/lib/hwc/n8n";
@@ -125,6 +128,10 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 - `hwc-n8n-mcp-env.service` — generates bridge env file from agenix secrets
 
 ## Changelog
+
+- 2026-11-01: Pin 2.46.1 for the October 28 security fixes. Offline qualification
+  preserves workflows, nodes and credentials and exercises old-image recovery;
+  activation and real consumer checks are separate.
 
 - 2026-10-23: Register the live SQLite database with Borg's bounded online
   snapshot producer. Borg archives `borg-sqlite/ready/n8n.sqlite` and excludes
