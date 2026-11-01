@@ -984,9 +984,9 @@
             extra = extra.replace('reverse_proxy ' + upstream + ' {', 'reverse_proxy http://127.0.0.1:' + str(backend.server_port) + ' {')
         log = pathlib.Path.cwd() / 'access.log'
         fmt = f['logFormat'].replace('/var/log/caddy/access-public-origin.log', str(log))
-        config = '{ admin off }\nhttp://:' + str(port) + ' {\nlog {\n' + fmt + '\n}\n' + extra + '\n}\n'
+        config = '{\n admin off\n}\nhttp://:' + str(port) + ' {\nlog {\n' + fmt + '\n}\n' + extra + '\n}\n'
         pathlib.Path('Caddyfile').write_text(config)
-        subprocess.run(['caddy', 'validate', '--config', 'Caddyfile', '--adapter', 'caddyfile'], check=True, capture_output=True)
+        subprocess.run(['caddy', 'validate', '--config', 'Caddyfile', '--adapter', 'caddyfile'], check=True)
         process = subprocess.Popen(['caddy', 'run', '--config', 'Caddyfile', '--adapter', 'caddyfile'], stdout=subprocess.DEVNULL, stderr=open('runtime.log', 'w'))
         def request(host, path, body=None):
             headers = {'Host': host, 'Cf-Ray': 'test-request-id', 'Cf-Connecting-Ip': '192.0.2.1',
