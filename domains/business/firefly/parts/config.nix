@@ -20,11 +20,12 @@ let
   # Indefinite retention; paths.state is covered by the host's Borg backup.
   oauthDir = "${paths.state}/firefly/oauth";
   requireOAuthKeys = pkgs.writeShellScript "firefly-require-oauth-keys" ''
-    set -eu
+    set -euo pipefail
     test -s ${oauthDir}/oauth-private.key
     test -s ${oauthDir}/oauth-public.key
-    ${pkgs.openssl}/bin/openssl pkey -in ${oauthDir}/oauth-private.key -pubout |
-      ${pkgs.diffutils}/bin/cmp - ${oauthDir}/oauth-public.key
+    private_public=$(${pkgs.openssl}/bin/openssl pkey -in ${oauthDir}/oauth-private.key -pubout -outform DER | ${pkgs.coreutils}/bin/sha256sum)
+    public=$(${pkgs.openssl}/bin/openssl pkey -pubin -in ${oauthDir}/oauth-public.key -pubout -outform DER | ${pkgs.coreutils}/bin/sha256sum)
+    test "$private_public" = "$public"
   '';
 
   # Network configuration
