@@ -41,6 +41,9 @@ let
       handle @${name} {
         reverse_proxy ${rule.service} {
           trusted_proxies 127.0.0.1/32 ::1/128
+          # Preserve the tunnel's existing proxy-hop contract (n8n trusts one
+          # hop); appending this loopback hop would hide the actual client.
+          header_up X-Forwarded-For {http.request.header.X-Forwarded-For}
           flush_interval -1
         }
       }

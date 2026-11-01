@@ -991,7 +991,7 @@
         def request(host, path, body=None):
             headers = {'Host': host, 'Cf-Ray': 'test-request-id', 'Cf-Connecting-Ip': '192.0.2.1',
                        'Authorization': 'Bearer ORIGIN_PRIVACY_CANARY', 'Cookie': 'ORIGIN_PRIVACY_CANARY',
-                       'X-Secret': 'ORIGIN_PRIVACY_CANARY', 'X-Forwarded-Proto': 'https'}
+                       'X-Secret': 'ORIGIN_PRIVACY_CANARY', 'X-Forwarded-Proto': 'https', 'X-Forwarded-For': '192.0.2.1'}
             try:
                 r = urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:' + str(port) + path, data=body, headers=headers), timeout=3)
             except urllib.error.HTTPError as error: r = error
@@ -1009,6 +1009,7 @@
                 assert actual.endswith('?token=ORIGIN_PRIVACY_CANARY') and body == b'ORIGIN_PRIVACY_CANARY'
                 assert headers['Host'] == host and headers['Authorization'] == 'Bearer ORIGIN_PRIVACY_CANARY'
                 assert headers['X-Forwarded-Proto'] == 'https'
+                assert headers['X-Forwarded-For'] == '192.0.2.1'
             for host, path in [('api.iheartwoodcraft.com', '/webhook/mail-action'),
                                ('api.iheartwoodcraft.com', '/webhook/media-pipeline'),
                                ('api.iheartwoodcraft.com', '/rest/workflows'),
