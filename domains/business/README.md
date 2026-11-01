@@ -16,7 +16,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 `firefly/` owns same-app PHP runtime recipes for Core and Importer, and Pico's
 fixed-hash offline PHP/Node/shared-library package context. Each shared source release supplies its related package versions once.
-Its local image must be prebuilt; startup checks it and never pulls it.
+Its local images must be prebuilt with Docker-format health-check metadata;
+startup checks them and never pulls them.
 
 `umami/` pins its qualified security image while preserving the analytics database,
 website identity, tracking endpoint and briefing/report API consumers.
