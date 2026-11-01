@@ -30,6 +30,10 @@
   networking.hostName = "hwc-work";
   system.stateVersion = "25.11";
 
+  # Public HTTP arrives through cloudflared on loopback. Override the base
+  # role's global HTTPS allowance; service owners permit private tailnet ports.
+  hwc.secrets.hardening.firewall.allowedServices = lib.mkForce [ "ssh" ];
+
   # The server role supplies Podman, CLI tools and server path defaults.
   # CouchDB stays with phone storage on the home server.
   hwc.data.couchdb.enable = false;
