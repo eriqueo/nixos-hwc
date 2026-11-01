@@ -18,6 +18,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 fixed-hash offline PHP/Node/shared-library package context. Each shared source release supplies its related package versions once.
 Its local images must be prebuilt with Docker-format health-check metadata;
 startup checks them and never pulls them.
+Core's existing OAuth signing keys persist in backed-up state; startup checks
+their pair before container replacement.
 
 `umami/` pins its qualified security image while preserving the analytics database,
 website identity, tracking endpoint and briefing/report API consumers.
@@ -76,6 +78,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-01: Persist Firefly Core's OAuth key pair across runtime image changes.
 
 - 2026-10-31: Keep the Importer optional when adding its runtime startup guard;
   the wiring check also evaluates the disabled service path.

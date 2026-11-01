@@ -11,6 +11,11 @@ Firefly III personal finance manager running as a Podman container, with optiona
 
 ## Structure
 
+`parts/config.nix` persists the existing OAuth key pair under
+`hwc.paths.state/firefly/oauth`, covered by the state backup. Startup refuses a
+missing or mismatched pair before replacing the container. Seed the existing
+keys before the first activation; replacing them invalidates existing tokens.
+
 `index.nix` owns temporary same-app PHP runtime recipes for all three finance
 containers. Core 6.6.6 and Importer 2.3.4 retain their application bytes and
 configuration; an immutable official Firefly image supplies PHP 8.5.12 and its
@@ -136,6 +141,9 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 - `firefly-explorer.service` — immutable explorer package; validates its token, Firefly account, UI assets, and tailscaled socket before serving. Every API request is authorized with Tailscale WhoIs. Split groups remain read-only; writes are limited to existing category/expense-account ids and existing tags.
 
 ## Changelog
+
+- 2026-11-01: Persist the existing Core OAuth signing keys and check their pair
+  before container startup, so runtime image replacement preserves API tokens.
 
 - 2026-10-31: Keep the Importer optional when adding its runtime startup guard;
   the wiring check also evaluates the disabled service path.

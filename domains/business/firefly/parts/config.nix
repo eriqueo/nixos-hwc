@@ -16,6 +16,16 @@ let
   fireflyUpload = "${fireflyRoot}/upload";
   fireflyPicoRoot = "${fireflyRoot}/pico";
   fireflyEnvFile = "${fireflyRoot}/.env";
+  # CRITICAL: keep the existing OAuth identity across container replacement.
+  # Indefinite retention; paths.state is covered by the host's Borg backup.
+  oauthDir = "${paths.state}/firefly/oauth";
+  requireOAuthKeys = pkgs.writeShellScript "firefly-require-oauth-keys" ''
+    set -eu
+    test -s ${oauthDir}/oauth-private.key
+    test -s ${oauthDir}/oauth-public.key
+    ${pkgs.openssl}/bin/openssl pkey -in ${oauthDir}/oauth-private.key -pubout |
+      ${pkgs.diffutils}/bin/cmp - ${oauthDir}/oauth-public.key
+  '';
 
   # Network configuration
   mediaNetworkName = "media-network";
@@ -33,6 +43,7 @@ in
       systemd.tmpfiles.rules = [
         "d ${fireflyRoot} 0755 eric users -"
         "d ${fireflyUpload} 0777 eric users -"
+        "d ${oauthDir} 0700 root root -"
       ] ++ lib.optionals cfg.pico.enable [
         "d ${fireflyPicoRoot} 0755 eric users -"
       ];
@@ -88,6 +99,9 @@ in
 
       volumes = [
         "${fireflyUpload}:/var/www/html/storage/upload:rw"
+        # Vendor startup chmods the key pair; retain its existing owner/mode.
+        "${oauthDir}/oauth-private.key:/var/www/html/storage/oauth-private.key:rw"
+        "${oauthDir}/oauth-public.key:/var/www/html/storage/oauth-public.key:rw"
       ];
     })
 
@@ -179,6 +193,7 @@ in
           wants = [ "network-online.target" ];
           serviceConfig = {
             SupplementaryGroups = [ "secrets" ];
+            ExecStartPre = lib.mkBefore [ requireOAuthKeys ];
           };
           # Generate env file with APP_KEY from agenix secret
           preStart = lib.mkAfter ''
