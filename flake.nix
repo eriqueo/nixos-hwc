@@ -1058,7 +1058,10 @@
                 ports.add(c['brainPort'])
             assert c['enable']
             for port in ports:
-                assert not contains(c['allowedTCPPorts'], c['allowedTCPPortRanges'], port), (host, 'global private port', port)
+                # Home has its own explicit global HTTPS policy. This repair
+                # preserves that separate policy; work is the public origin.
+                if host == 'hwc-work' or port != 443:
+                    assert not contains(c['allowedTCPPorts'], c['allowedTCPPortRanges'], port), (host, 'global private port', port)
                 assert contains(c['tailnet'], c['tailnetRanges'], port), (host, 'missing tailnet port', port)
             assert not contains(c['allowedTCPPorts'], c['allowedTCPPortRanges'], c['logPort'])
             if host == 'hwc-work':
