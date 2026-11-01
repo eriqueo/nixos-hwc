@@ -393,6 +393,7 @@
       enable = true;
       tunnelId = "1536327b-2641-4706-8ad9-48c94d0b11f9";
       credentialsFile = config.age.secrets.cloudflared-tunnel-credentials.path;
+      accessLog.enable = true;
       # Public n8n ingress is restricted to the .com webhook paths below.
       domain = null;
       extraIngress = {

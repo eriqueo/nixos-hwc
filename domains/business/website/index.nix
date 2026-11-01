@@ -188,6 +188,10 @@ in
       wantedBy = [ "timers.target" ];
       timerConfig = { OnCalendar = "daily"; Persistent = true; RandomizedDelaySec = "30m"; };
     };
+    # The tunnel logger owns public access records; avoid a second raw URI log
+    # at the static backend, where report rewrites contain capability IDs.
+    services.caddy.virtualHosts."http://:${toString cfg.originPort}".logFormat =
+      lib.mkIf config.hwc.networking.cloudflared.accessLog.enable null;
     services.caddy.virtualHosts."http://:${toString cfg.originPort}".extraConfig = ''
       # Tunnel preserves the public Host header; accept both names on loopback.
       bind 127.0.0.1

@@ -14,6 +14,9 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+The website backend defers access logging to the networking tunnel logger when
+enabled, avoiding duplicate raw query/capability records.
+
 `firefly/` owns same-app PHP runtime recipes for Core and Importer, and Pico's
 fixed-hash offline PHP/Node/shared-library package context. Each shared source release supplies its related package versions once.
 Its local images must be prebuilt with Docker-format health-check metadata;
@@ -78,6 +81,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-01: Defer public website access logging to the sanitized origin logger.
 
 - 2026-11-01: Persist Firefly Core's OAuth key pair across runtime image changes.
 

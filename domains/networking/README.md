@@ -18,6 +18,16 @@ Provides network infrastructure that other domains depend on:
 
 ## Structure
 
+`cloudflared.accessLog` routes all tunnel-origin requests, including fallback404,
+through a loopback-only Caddy listener derived from the existing ingress table.
+The original host/path gates and upstreams remain in force. Version1 JSON records
+retain method, host, sanitized path, status, duration, client IP and Cloudflare Ray
+ID; header collections, query strings, report capabilities and bodies are omitted.
+AUTO-MANAGED logs in `/var/log/caddy/access-public-origin.log` use0600 permissions,
+daily or50MiB rotation, at most30 rotated files and30-day expiry. The oldest records
+are dropped at the first bound; this does not guarantee30days at high volume.
+Cloudflare edge blocks, cache hits and Worker-only requests never reach this logger.
+
 `routes.nix` assigns the Meals vhost to work; the service module supplies its loopback upstream.
 
 `cloudflared.domain` is optional and null on work. Public n8n ingress uses only
@@ -60,6 +70,9 @@ networking/
 ```
 
 ## Changelog
+
+- 2026-11-01: Add opt-in sanitized, bounded logging across every tunnel route and
+  its fallback, with loopback-only binding and original route gates preserved.
 
 - 2026-10-25: New `t3-xps` vhost (owner `xps`) for the private headless T3 Code environment on the Maryland machine, so agents work there without an SSH session per task. Unlike `t3` and `t3-work`, the backend binds `127.0.0.1` rather than `0.0.0.0` (machines/xps/home.nix) — that host sits on a household LAN the firewall trusts wholesale, so this vhost is the only door and there is no pair-by-tailnet-IP fallback. The deSEC A record `t3-xps.hwc.iheartwoodcraft.com → 100.126.80.42` was created the same day and verified: the name resolves to the owner, the vhost answers 200 behind the wildcard certificate and `/api/projects` refuses unauthenticated at 401. Without that record `*.hwc.iheartwoodcraft.com` lands on hwc-home, whose `routeOwner = "main"` filters an xps-owned route out and answers 404 — that 404 is the symptom of a lost record, not of a broken backend. `forwardFrom = [ "main" ]` was rejected rather than used: it would rewrite hwc-home's Caddy config for a route that owns nothing there.
 - 2026-10-19: `reverseProxy.devPreview.{ports,portOffset}` publishes local dev-server ports at `https://<rootHost>:<port+offset>` with the Tailscale cert, tailnet-only (no firewall opening; tailscale0 is trusted). hwc-work sets 3011–3019 → 13011–13019 for DataX dev servers; Firebase authorizes `ocelot-wahoo.ts.net` for sign-in.

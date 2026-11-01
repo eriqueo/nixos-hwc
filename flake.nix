@@ -923,12 +923,12 @@
                 check=True, capture_output=True, text=True)
             return result.stdout + result.stderr
         def denied(data, path):
-            assert 'service: http_status:404' in route(data, path), path
+            assert 'hostname: api.iheartwoodcraft.com' not in route(data, path), path
         for path in ['/webhook/mail-action', '/webhook/media-pipeline', '/webhook/frigate-events',
                      '/webhook/', '/rest/workflows', '/webhook/quo-sms/extra']:
             denied(config, path)
         for name in ['jt-jobs', 'jt-customers', 'estimate-push', 'quo-sms']:
-            assert 'service: http://localhost:5678' in route(config, '/webhook/' + name), name
+            assert 'hostname: api.iheartwoodcraft.com' in route(config, '/webhook/' + name), name
         broad = json.loads(json.dumps(config))
         for rule in broad['ingress']:
             if rule.get('hostname') == 'api.iheartwoodcraft.com':
@@ -939,6 +939,94 @@
             print('seeded public mail exposure rejected')
         else:
             raise AssertionError('broad public route was accepted')
+        PY
+        touch $out
+      '';
+
+      public-origin-logging = let
+        c = self.nixosConfigurations.hwc-work.config;
+        cfg = c.hwc.networking.cloudflared;
+        site = c.services.caddy.virtualHosts."http://:${toString cfg.accessLog.port}";
+        tunnel = c.services.cloudflared.tunnels.${cfg.tunnelId};
+        fixture = pkgs.writeText "public-origin-logging.json" (builtins.toJSON {
+          inherit (site) extraConfig logFormat;
+          inherit (cfg) extraIngress accessLog;
+          inherit (tunnel) ingress default;
+          websiteLog = c.services.caddy.virtualHosts."http://:${toString c.hwc.business.website.originPort}".logFormat;
+        });
+      in pkgs.runCommand "public-origin-logging" { nativeBuildInputs = [ pkgs.python3 c.services.caddy.package ]; } ''
+        python3 - ${fixture} <<'PY'
+        import http.server, json, pathlib, socket, subprocess, sys, threading, time, urllib.request, urllib.error
+        f = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        proxy = 'http://127.0.0.1:' + str(f['accessLog']['port'])
+        assert f['default'] == proxy and f['websiteLog'] is None
+        assert all(r['service'] == proxy for r in f['ingress'].values()), 'origin bypasses logger'
+        # The former direct-origin wiring must fail this same assertion.
+        old = json.loads(json.dumps(f))
+        old['ingress']['api.iheartwoodcraft.com']['service'] = 'http://localhost:5678'
+        assert not all(r['service'] == proxy for r in old['ingress'].values())
+        seen = []
+        class Backend(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):
+                body = self.rfile.read(int(self.headers.get('Content-Length', 0)))
+                seen.append((self.path, dict(self.headers), body))
+                self.send_response(201); self.send_header('Set-Cookie', 'ORIGIN_PRIVACY_CANARY'); self.end_headers()
+                self.wfile.write(b'ok')
+            do_GET = do_POST
+            def log_message(self, *args): pass
+        backend = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Backend)
+        threading.Thread(target=backend.serve_forever, daemon=True).start()
+        with socket.socket() as sock:
+            sock.bind(('127.0.0.1', 0)); port = sock.getsockname()[1]
+        extra = f['extraConfig']
+        for rule in f['extraIngress'].values():
+            upstream = rule if isinstance(rule, str) else rule['service']
+            extra = extra.replace('reverse_proxy ' + upstream + ' {', 'reverse_proxy http://127.0.0.1:' + str(backend.server_port) + ' {')
+        log = pathlib.Path.cwd() / 'access.log'
+        fmt = f['logFormat'].replace('/var/log/caddy/access-public-origin.log', str(log))
+        config = '{ admin off }\nhttp://:' + str(port) + ' {\nlog {\n' + fmt + '\n}\n' + extra + '\n}\n'
+        pathlib.Path('Caddyfile').write_text(config)
+        subprocess.run(['caddy', 'validate', '--config', 'Caddyfile', '--adapter', 'caddyfile'], check=True, capture_output=True)
+        process = subprocess.Popen(['caddy', 'run', '--config', 'Caddyfile', '--adapter', 'caddyfile'], stdout=subprocess.DEVNULL, stderr=open('runtime.log', 'w'))
+        def request(host, path, body=None):
+            headers = {'Host': host, 'Cf-Ray': 'test-request-id', 'Cf-Connecting-Ip': '192.0.2.1',
+                       'Authorization': 'Bearer ORIGIN_PRIVACY_CANARY', 'Cookie': 'ORIGIN_PRIVACY_CANARY',
+                       'X-Secret': 'ORIGIN_PRIVACY_CANARY', 'X-Forwarded-Proto': 'https'}
+            try:
+                r = urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:' + str(port) + path, data=body, headers=headers), timeout=3)
+            except urllib.error.HTTPError as error: r = error
+            status = r.status; r.read(); r.close(); return status
+        try:
+            for attempt in range(100):
+                try:
+                    with socket.create_connection(('127.0.0.1', port), timeout=.1): break
+                except OSError: time.sleep(.02)
+            else: raise AssertionError('Caddy did not start')
+            for host, rule in f['extraIngress'].items():
+                path = '/webhook/quo-sms' if host.startswith('api.') else '/hooks/contact' if host.startswith('crm.') else '/api/reports/ORIGIN_PRIVACY_CANARY' if host.startswith('reports.') else '/security-review'
+                assert request(host, path + '?token=ORIGIN_PRIVACY_CANARY', b'ORIGIN_PRIVACY_CANARY') == 201, host
+                actual, headers, body = seen[-1]
+                assert actual.endswith('?token=ORIGIN_PRIVACY_CANARY') and body == b'ORIGIN_PRIVACY_CANARY'
+                assert headers['Host'] == host and headers['Authorization'] == 'Bearer ORIGIN_PRIVACY_CANARY'
+                assert headers['X-Forwarded-Proto'] == 'https'
+            for host, path in [('api.iheartwoodcraft.com', '/webhook/mail-action'),
+                               ('api.iheartwoodcraft.com', '/webhook/media-pipeline'),
+                               ('api.iheartwoodcraft.com', '/rest/workflows'),
+                               ('crm.iheartwoodcraft.com', '/api/leads'),
+                               ('unknown.example', '/')]:
+                assert request(host, path) == 404, (host, path)
+        finally:
+            process.terminate(); process.wait(timeout=5); backend.shutdown()
+        data = log.read_text()
+        assert 'ORIGIN_PRIVACY_CANARY' not in data, 'sensitive metadata leaked'
+        rows = [json.loads(line) for line in data.splitlines()]
+        assert len(rows) == len(f['extraIngress']) + 5
+        assert all(str(r['schemaVersion']) == '1' and r['request_id'] == 'test-request-id' and r['client_ip'] == '192.0.2.1' for r in rows)
+        assert all('uri' not in r['request'] and 'headers' not in r['request'] and 'resp_headers' not in r for r in rows)
+        assert any(r['path'] == '/report/[redacted]' for r in rows)
+        for bound in ['mode 0600', 'roll_size 50MiB', 'roll_at 00:00', 'roll_keep 30', 'roll_keep_for 30d']:
+            assert bound in fmt
+        print('all origin routes, denied fallbacks, body/auth/proxy identity and log privacy pass')
         PY
         touch $out
       '';

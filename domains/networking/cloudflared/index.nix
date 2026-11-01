@@ -23,6 +23,29 @@
 
 let
   cfg = config.hwc.networking.cloudflared;
+  origins = lib.mapAttrs (_: value:
+    if builtins.isString value then { service = value; } else value
+  ) (lib.optionalAttrs (cfg.domain != null) {
+    ${cfg.domain} = "http://${cfg.n8nHost}:${toString cfg.n8nPort}";
+  } // cfg.extraIngress);
+  loggerOrigin = "http://127.0.0.1:${toString cfg.accessLog.port}";
+  # One producer for public destinations and path gates. The fallback crosses
+  # this listener too, so repeat the original selectors before proxying.
+  originRoutes = lib.concatStringsSep "\n" (lib.imap0 (i: hostname:
+    let rule = origins.${hostname}; name = "origin${toString i}";
+    in ''
+      @${name} {
+        host ${hostname}
+        ${lib.optionalString (rule ? path) "path_regexp ${name} ${rule.path}"}
+      }
+      handle @${name} {
+        reverse_proxy ${rule.service} {
+          trusted_proxies 127.0.0.1/32 ::1/128
+          flush_interval -1
+        }
+      }
+    ''
+  ) (lib.attrNames origins));
 in
 {
   #==========================================================================
@@ -30,6 +53,15 @@ in
   #==========================================================================
   options.hwc.networking.cloudflared = {
     enable = lib.mkEnableOption "Cloudflare Tunnel for public webhook ingress";
+
+    accessLog = {
+      enable = lib.mkEnableOption "bounded, sanitized logs for every origin tunnel request";
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 8097;
+        description = "Loopback-only Caddy origin logging proxy port; never open in the firewall";
+      };
+    };
 
     tunnelId = lib.mkOption {
       type = lib.types.str;
@@ -103,11 +135,12 @@ in
 
         tunnels.${cfg.tunnelId} = {
           credentialsFile = cfg.credentialsFile;
-          default = "http_status:404";
+          default = if cfg.accessLog.enable then loggerOrigin else "http_status:404";
 
-          ingress = lib.optionalAttrs (cfg.domain != null) {
-            ${cfg.domain} = "http://${cfg.n8nHost}:${toString cfg.n8nPort}";
-          } // cfg.extraIngress;
+          ingress = lib.mapAttrs (_: rule:
+            if cfg.accessLog.enable then rule // { service = loggerOrigin; }
+            else rule
+          ) origins;
         };
       };
 
@@ -117,6 +150,52 @@ in
           message = "hwc.networking.cloudflared.tunnelId must be set (run: cloudflared tunnel create hwc-server)";
         }
       ];
+    })
+
+    (lib.mkIf (cfg.enable && cfg.accessLog.enable) {
+      assertions = [ {
+        assertion = config.services.caddy.enable && lib.all (rule:
+          lib.hasPrefix "http://" rule.service && !(rule ? originRequest)
+          && rule.service != loggerOrigin
+        ) (lib.attrValues origins);
+        message = "Tunnel access logging requires Caddy and non-recursive HTTP origins without originRequest overrides";
+      } ];
+      services.caddy.virtualHosts."http://:${toString cfg.accessLog.port}" = {
+        # AUTO-MANAGED security metadata: drop oldest at either retention bound.
+        logFormat = ''
+          output file /var/log/caddy/access-public-origin.log {
+            mode 0600
+            roll_size 50MiB
+            roll_at 00:00
+            roll_keep 30
+            roll_keep_for 30d
+          }
+          format filter {
+            wrap json
+            fields {
+              request>headers delete
+              request>uri delete
+              resp_headers delete
+              path regexp "^/(api/reports|report)/.*" "/report/[redacted]"
+            }
+          }
+        '';
+        extraConfig = ''
+          bind 127.0.0.1
+          log_append schemaVersion 1
+          log_append <path {path}
+          log_append request_id {http.request.header.Cf-Ray}
+          log_append client_ip {http.request.header.Cf-Connecting-Ip}
+          ${originRoutes}
+          handle {
+            respond 404
+          }
+        '';
+      };
+      systemd.services."cloudflared-tunnel-${cfg.tunnelId}" = {
+        requires = [ "caddy.service" ];
+        after = [ "caddy.service" ];
+      };
     })
   ];
 }
