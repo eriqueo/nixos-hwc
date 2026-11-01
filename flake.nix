@@ -904,6 +904,35 @@
         touch "$out"
       '';
 
+      firefly-php-runtime-wiring = let
+        c = self.nixosConfigurations.hwc-work.config;
+        specs = map (spec: spec // {
+          image = c.hwc.business.firefly.images.${spec.kind};
+          container = c.virtualisation.oci-containers.containers.${spec.name};
+          preStart = c.systemd.services.${"podman-" + spec.name}.preStart;
+        }) [
+          { kind = "core"; name = "firefly"; appVersion = "6.6.6"; context = c.system.build.fireflyCoreRuntimeImageContext; }
+          { kind = "importer"; name = "firefly-importer"; appVersion = "2.3.4"; context = c.system.build.fireflyImporterRuntimeImageContext; }
+        ];
+        fixture = pkgs.writeText "firefly-php-runtime-wiring.json" (builtins.toJSON specs);
+      in pkgs.runCommand "firefly-php-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${fixture} <<'PY'
+        import hashlib, json, pathlib, re, sys
+        for spec in json.loads(pathlib.Path(sys.argv[1]).read_text()):
+            recipe = (pathlib.Path(spec['context']) / 'Dockerfile').read_text()
+            expected = 'localhost/' + spec['name'] + '-runtime:' + spec['appVersion'] + '-php8.5.12-'
+            assert spec['image'] == expected + hashlib.sha256(recipe.encode()).hexdigest()[:12]
+            assert spec['container']['image'] == spec['image'] and spec['container']['pull'] == 'never'
+            assert spec['image'] in spec['preStart'] and ' image exists ' in spec['preStart']
+            sources = re.findall(r'^FROM (\S+)', recipe, re.M)
+            assert len(sources) == 2 and all('@sha256:' in image for image in sources)
+            assert 'COPY --from=secure-php /usr/local/sbin/php-fpm /usr/local/sbin/php-fpm' in recipe
+            assert 'COPY --from=secure-php /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/' in recipe
+            assert '/var/www/html' not in recipe and 'ENV PHP_VERSION=8.5.12 ' in recipe
+        PY
+        touch "$out"
+      '';
+
       firefly-pico-runtime-wiring = let
         c = self.nixosConfigurations.hwc-work.config;
         image = c.hwc.business.firefly.images.pico;
@@ -939,13 +968,19 @@
         expected = {'c-ares':'1.34.9-r0', 'brotli-libs':'1.1.1-r0',
             'libcrypto3':'3.5.9-r0', 'libssl3':'3.5.9-r0',
             'ca-certificates':'20261020-r0', 'ca-certificates-bundle':'20261020-r0'}
+        php_packages = ['php82', 'php82-common', 'php82-ctype', 'php82-curl', 'php82-dom',
+            'php82-fileinfo', 'php82-fpm', 'php82-iconv', 'php82-mbstring', 'php82-mysqlnd',
+            'php82-opcache', 'php82-openssl', 'php82-pdo', 'php82-pdo_mysql', 'php82-pdo_pgsql',
+            'php82-pdo_sqlite', 'php82-phar', 'php82-session', 'php82-simplexml', 'php82-tokenizer',
+            'php82-xml', 'php82-xmlwriter', 'php82-zip']
+        expected.update({name: '8.2.35-r0' for name in php_packages})
         assert {p['name']:p['version'] for p in manifest['packages']} == expected
         assert {p.name for p in context.iterdir()} == {'Dockerfile','manifest.json'} | {p['file'] for p in manifest['packages']}
         for package in manifest['packages']:
             data = (context / package['file']).read_bytes()
             assert package['hash'] == 'sha256-' + base64.b64encode(hashlib.sha256(data).digest()).decode()
             assert '# APK ' + package['file'] + ' ' + package['hash'] in recipe
-            assert package['url'] == 'https://dl-cdn.alpinelinux.org/alpine/v3.22/main/x86_64/' + package['file']
+            assert package['url'] == 'https://dl-cdn.alpinelinux.org/alpine/v3.22/' + ('community' if package['name'].startswith('php82') else 'main') + '/x86_64/' + package['file']
         PY
         touch "$out"
       '';

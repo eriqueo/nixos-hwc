@@ -14,8 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
-`firefly/` owns Pico's same-app runtime recipe and fixed-hash offline package
-context. Each shared source release supplies its related package versions once.
+`firefly/` owns same-app PHP runtime recipes for Core and Importer, and Pico's
+fixed-hash offline PHP/Node/shared-library package context. Each shared source release supplies its related package versions once.
 Its local image must be prebuilt; startup checks it and never pulls it.
 
 `umami/` pins its qualified security image while preserving the analytics database,
@@ -75,6 +75,10 @@ business/
 ```
 
 ## Changelog
+
+- 2026-10-31: Firefly preserves its three application versions while qualifying
+  PHP 8.5.12 for Core/Importer and signed PHP 8.2.35-r0 packages for Pico.
+  Recipe-derived local images require prebuilding before startup.
 
 - 2026-10-27: CRM startup waits for HTTP/database health before dependent
   Rolodex and sequence timers can run. Read-only probes stop after 20 attempts;

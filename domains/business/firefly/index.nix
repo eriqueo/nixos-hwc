@@ -12,12 +12,41 @@ let
   picoNodeVersion = "22.23.4";
   picoOpenSSLVersion = "3.5.9-r0";
   picoCertificatesVersion = "20261020-r0";
+  picoPhpVersion = "8.2.35-r0";
+  phpVersion = "8.5.12";
+  # Temporary same-app PHP correction: retire once qualified upstream images
+  # preserve the current app/schema and meet the PHP security floor.
+  # The donor supplies PHP and its extensions only, never application bytes.
+  phpRuntimeDonor = "docker.io/fireflyiii/core@sha256:321dc39c1d956aaf67d8adbfa48485190361d6d51640bafb9c029c48f296374d";
+  phpRuntimes = lib.mapAttrs (_: app: helpers.mkRuntimeImage {
+    name = app.name;
+    version = "${app.version}-php${phpVersion}";
+    recipe = ''
+      FROM ${phpRuntimeDonor} AS secure-php
+      FROM ${app.image}
+      COPY --from=secure-php /usr/local/bin/php /usr/local/bin/php-config /usr/local/bin/phpize /usr/local/bin/
+      COPY --from=secure-php /usr/local/sbin/php-fpm /usr/local/sbin/php-fpm
+      COPY --from=secure-php /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
+      ENV PHP_VERSION=${phpVersion} PHP_URL=https://www.php.net/distributions/php-${phpVersion}.tar.xz PHP_ASC_URL=https://www.php.net/distributions/php-${phpVersion}.tar.xz.asc PHP_SHA256=08bc2eba2a588654ade1357174aa646b761556c862dda0678345ee29ed481209
+    '';
+  }) {
+    core = {
+      name = "firefly";
+      version = "6.6.6";
+      image = "docker.io/fireflyiii/core@sha256:6515902b1a7c5b9a0b0a3b4db02a4c917aef7b3152a65d14aace5faf0ffee0bc";
+    };
+    importer = {
+      name = "firefly-importer";
+      version = "2.3.4";
+      image = "docker.io/fireflyiii/data-importer@sha256:ca64bb047cc9a0fc261af0ca07fe74e01bb0a0d5e9a0a3564248c69620a2c7e9";
+    };
+  };
   # Temporary same-app security correction. Retire when an upstream image
   # passes actual Node/shared-library/trust and current-data recovery checks.
   # Exact signed Alpine packages also fix PHP's real shared consumers.
   picoPackages = map (p: p // rec {
     file = "${p.name}-${p.version}.apk";
-    url = "https://dl-cdn.alpinelinux.org/alpine/v3.22/main/x86_64/${file}";
+    url = "https://dl-cdn.alpinelinux.org/alpine/v3.22/${p.repository or "main"}/x86_64/${file}";
     source = pkgs.fetchurl { inherit url; inherit (p) hash; };
   }) [
     { name = "c-ares"; version = "1.34.9-r0"; hash = "sha256-myOqB5Ae1kveC+fsVE+NKynegNmWJ33IYSGMVP/4vJc="; }
@@ -26,6 +55,29 @@ let
     { name = "libssl3"; version = picoOpenSSLVersion; hash = "sha256-aAHHQLl2C1sI2o22Nn68GLLMTbrzcfcUhClTi4uwTiM="; }
     { name = "ca-certificates"; version = picoCertificatesVersion; hash = "sha256-jddThpmWGSejYyfWIrO56fXJRP19SGoMuLa4M9x0z78="; }
     { name = "ca-certificates-bundle"; version = picoCertificatesVersion; hash = "sha256-01IWoKmt3nkDHfJGdZutA/I1zyAb8K/4Q2uIv/WVlOs="; }
+    { name = "php82"; version = picoPhpVersion; repository = "community"; hash = "sha256-XbwjF26fwQjBXdSoAdy0K6ZOoJBbwB5E+5XKqzCMm28="; }
+    { name = "php82-common"; version = picoPhpVersion; repository = "community"; hash = "sha256-kpxuWa2IhAaVjRdR0rig4JH5l1/M2Z/0ChGm6Z/kMEU="; }
+    { name = "php82-ctype"; version = picoPhpVersion; repository = "community"; hash = "sha256-YYRQaDsT9HOJbW1BKtgbVZr7pHM3oYAszlLhsIvAy5c="; }
+    { name = "php82-curl"; version = picoPhpVersion; repository = "community"; hash = "sha256-Y84JNVNa2N5PlB6SktW3Go/UrJt+Ncm21w830c5H2Sc="; }
+    { name = "php82-dom"; version = picoPhpVersion; repository = "community"; hash = "sha256-Z34TXl2qvYjTNMgICGq9pVNtLGbCoRyF1CExFpB2cAc="; }
+    { name = "php82-fileinfo"; version = picoPhpVersion; repository = "community"; hash = "sha256-ZYEByJ8ayO60fqnEJS6TRs554Np6owxx8howr8BCQbE="; }
+    { name = "php82-fpm"; version = picoPhpVersion; repository = "community"; hash = "sha256-iVwLOt5yyA0ZRLbVJY7PxbGlCmiWXON1R7rmOYOEiag="; }
+    { name = "php82-iconv"; version = picoPhpVersion; repository = "community"; hash = "sha256-s9rGHwvwNLK6kVpTC2977XbEc886IYi6A1AG/uu6nzs="; }
+    { name = "php82-mbstring"; version = picoPhpVersion; repository = "community"; hash = "sha256-Akh5BY8uy/kps7ic/RuwirsKkwSXdKIHZKxKLK/Cynw="; }
+    { name = "php82-mysqlnd"; version = picoPhpVersion; repository = "community"; hash = "sha256-kYIRmcwBxlnlky6/+BQxG+xjO5OZg3HxQ37vt+uFNEo="; }
+    { name = "php82-opcache"; version = picoPhpVersion; repository = "community"; hash = "sha256-oIRCt4VuIo67pACZIFGdzdfS1x8yRPX+nyZuKBubvgs="; }
+    { name = "php82-openssl"; version = picoPhpVersion; repository = "community"; hash = "sha256-QU8Z/r6psS++QZDvXGzBKpYK5FaJNmpPH0ZjgdHFAtg="; }
+    { name = "php82-pdo"; version = picoPhpVersion; repository = "community"; hash = "sha256-rSVlF2OIVixZfu2T/M2NAY9pQIiddUl7SlkoBhMDgxU="; }
+    { name = "php82-pdo_mysql"; version = picoPhpVersion; repository = "community"; hash = "sha256-/43YZBzyQz56pPhLuNcXnJk0bHIyoMAo2g18uZ/yKLk="; }
+    { name = "php82-pdo_pgsql"; version = picoPhpVersion; repository = "community"; hash = "sha256-qRj+TsDCHattj2fQkVT9u4EgvuZQ6rrABdToWHKRk2Y="; }
+    { name = "php82-pdo_sqlite"; version = picoPhpVersion; repository = "community"; hash = "sha256-Aam3CVO3qswFRwch41xY+pI5/b4MUas/aik9TKdyPGU="; }
+    { name = "php82-phar"; version = picoPhpVersion; repository = "community"; hash = "sha256-A4RbWaLFuAAWqo1daXR/PgOduFChHQrNncBpC55eDYc="; }
+    { name = "php82-session"; version = picoPhpVersion; repository = "community"; hash = "sha256-TNy/8961HYO5DpEgwvvgRgzyjP98ASRgtYHEeJaC9vY="; }
+    { name = "php82-simplexml"; version = picoPhpVersion; repository = "community"; hash = "sha256-PJyaPWBZRgSIP1lkIfI2wZ8i6Vq+MHqpSsD/8AiLris="; }
+    { name = "php82-tokenizer"; version = picoPhpVersion; repository = "community"; hash = "sha256-YcQxIbWdmJwC/Zs8ZcVO+zpuuOs/jVGOOYIfpZgCGbw="; }
+    { name = "php82-xml"; version = picoPhpVersion; repository = "community"; hash = "sha256-eSK44JhAUyATlcNBKZZO0po2jdIsxbJ13drCEnuata4="; }
+    { name = "php82-xmlwriter"; version = picoPhpVersion; repository = "community"; hash = "sha256-C4BumwxAcKlQ2KiTLMb4QT/nlbc+P8tsoyO7MJu1i/Q="; }
+    { name = "php82-zip"; version = picoPhpVersion; repository = "community"; hash = "sha256-aQn/UFHlZU8goo8SFB19Bbxg/E8dv6fs5URmT0iOI+c="; }
   ];
   picoRuntime = helpers.mkRuntimeImage {
     name = "firefly-pico";
@@ -61,7 +113,7 @@ in
     images = {
       core = lib.mkOption {
         type = lib.types.str;
-        default = "docker.io/fireflyiii/core:version-6.6.6";  # critical tier (Law 15 v12.4): financial data — pinned
+        default = phpRuntimes.core.image;  # critical tier: same app, qualified PHP runtime
         description = "Firefly III core container image";
       };
 
@@ -73,7 +125,7 @@ in
 
       importer = lib.mkOption {
         type = lib.types.str;
-        default = "docker.io/fireflyiii/data-importer:version-2.3.4";  # critical tier (Law 15 v12.4): financial data — pinned
+        default = phpRuntimes.importer.image;  # critical tier: same app, qualified PHP runtime
         description = "Firefly III data importer container image";
       };
     };
@@ -382,23 +434,44 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
+    system.build.fireflyCoreRuntimeImageContext = pkgs.runCommand "firefly-core-runtime-context" {} ''
+      mkdir -p "$out"
+      cp ${phpRuntimes.core.dockerfile} "$out/Dockerfile"
+    '';
+    system.build.fireflyImporterRuntimeImageContext = pkgs.runCommand "firefly-importer-runtime-context" {} ''
+      mkdir -p "$out"
+      cp ${phpRuntimes.importer.dockerfile} "$out/Dockerfile"
+    '';
     system.build.fireflyPicoRuntimeImageContext = picoContext;
     system.build.fireflyPicoRuntimeImageRecipe = picoRuntime.dockerfile;
     # Keep explicit image overrides usable for compatible current-data recovery.
     # Prebuild during deployment; startup never builds or downloads an image.
-    virtualisation.oci-containers.containers = lib.mkIf
-      (cfg.pico.enable && cfg.images.pico == picoRuntime.image) {
-        firefly-pico.pull = lib.mkForce "never";
-      };
-    systemd.services = lib.mkIf
-      (cfg.pico.enable && cfg.images.pico == picoRuntime.image) {
-        podman-firefly-pico.preStart = lib.mkBefore ''
-          ${pkgs.podman}/bin/podman image exists ${lib.escapeShellArg picoRuntime.image} || {
-            echo "Firefly-Pico requires the reviewed image from ${picoContext} before startup" >&2
+    virtualisation.oci-containers.containers = lib.mkMerge (
+      lib.mapAttrsToList (kind: runtime: lib.mkIf (cfg.images.${kind} == runtime.image) {
+        ${if kind == "core" then "firefly" else "firefly-importer"}.pull = lib.mkForce "never";
+      }) phpRuntimes ++ [
+        (lib.mkIf (cfg.pico.enable && cfg.images.pico == picoRuntime.image) {
+          firefly-pico.pull = lib.mkForce "never";
+        })
+      ]);
+    systemd.services = lib.mkMerge (
+      lib.mapAttrsToList (kind: runtime: lib.mkIf (cfg.images.${kind} == runtime.image) {
+        ${if kind == "core" then "podman-firefly" else "podman-firefly-importer"}.preStart = lib.mkBefore ''
+          ${pkgs.podman}/bin/podman image exists ${lib.escapeShellArg runtime.image} || {
+            echo "Firefly ${kind} requires its reviewed PHP runtime image before startup" >&2
             exit 1
           }
         '';
-      };
+      }) phpRuntimes ++ [
+        (lib.mkIf (cfg.pico.enable && cfg.images.pico == picoRuntime.image) {
+          podman-firefly-pico.preStart = lib.mkBefore ''
+            ${pkgs.podman}/bin/podman image exists ${lib.escapeShellArg picoRuntime.image} || {
+              echo "Firefly-Pico requires the reviewed image from ${picoContext} before startup" >&2
+              exit 1
+            }
+          '';
+        })
+      ]);
   };
 
   #==========================================================================

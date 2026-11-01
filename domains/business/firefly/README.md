@@ -11,7 +11,15 @@ Firefly III personal finance manager running as a Podman container, with optiona
 
 ## Structure
 
-`index.nix` also owns the temporary same-app Pico security recipe. It replaces
+`index.nix` owns temporary same-app PHP runtime recipes for all three finance
+containers. Core 6.6.6 and Importer 2.3.4 retain their application bytes and
+configuration; an immutable official Firefly image supplies PHP 8.5.12 and its
+matching extensions. `system.build.fireflyCoreRuntimeImageContext` and
+`system.build.fireflyImporterRuntimeImageContext` regenerate those contexts.
+Pico retains app 1.10.1 and upgrades its 23 installed PHP82 packages together
+to signed, fixed-hash Alpine 8.2.35-r0 packages in its offline context.
+
+The Pico recipe also preserves its earlier security correction. It replaces
 the actual `/usr/bin/node` with qualified Node 22.23.4 and supplies six signed,
 fixed-hash Alpine packages for PHP's shared libraries and certificate stores.
 Each OpenSSL/certificate release supplies both related package versions.
@@ -44,9 +52,8 @@ hwc.business.firefly = {
   enable = true;
 
   images = {
-    core = "docker.io/fireflyiii/core:version-6.6.6";
-    pico = "cioraneanu/firefly-pico:1.10.1";
-    importer = "docker.io/fireflyiii/data-importer:version-2.3.4";
+    # Omit overrides to use the qualified local runtime images.
+    # Explicit images remain available for compatible current-data recovery.
   };
 
   settings = {
@@ -128,6 +135,11 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 - `firefly-explorer.service` — immutable explorer package; validates its token, Firefly account, UI assets, and tailscaled socket before serving. Every API request is authorized with Tailscale WhoIs. Split groups remain read-only; writes are limited to existing category/expense-account ids and existing tags.
 
 ## Changelog
+
+- 2026-10-31: Add same-app PHP 8.5.12 runtime contexts for Core and Importer;
+  extend Pico's offline context with PHP 8.2.35-r0 and every installed PHP82
+  extension. All three default images fail closed when not prebuilt. App versions,
+  data paths, credentials and schema code remain unchanged. Live activation is separate.
 
 - 2026-10-23: Add same-app Pico Node/shared-library/trust correction with an
   immutable offline context and local-image startup guard. Private real-archive
