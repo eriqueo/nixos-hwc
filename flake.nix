@@ -1032,6 +1032,40 @@
         touch $out
       '';
 
+      fleet-kernel-security = let
+        fixture = pkgs.writeText "fleet-kernel-security.json" (builtins.toJSON
+          (lib.mapAttrs (_: host: let c = host.config; in {
+            kernel = c.boot.kernelPackages.kernel.version;
+            mptcp = c.boot.kernel.sysctl."net.mptcp.enabled" or null;
+            migration = c.boot.kernel.sysctl."net.ipv4.tcp_migrate_req" or null;
+            firewall = c.networking.firewall.extraCommands;
+          }) self.nixosConfigurations));
+      in pkgs.runCommand "fleet-kernel-security" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${fixture} <<'PY'
+        import copy, json, pathlib, sys
+        def check(host, c):
+            version = tuple(map(int, c['kernel'].split('.')[:3]))
+            assert version[:2] == (6, 18) and version >= (6, 18, 56), (host, 'unpatched kernel', c['kernel'])
+            assert c['mptcp'] == 0 and c['migration'] == 0, (host, 'missing sysctl containment')
+            for token in ['-t raw', 'PREROUTING', '-p tcp', '--u32', '0>>24&0xF=0x6:0xF', 'CVE-2026-98432-containment', '-j DROP']:
+                assert token in c['firewall'], (host, 'missing early packet filter', token)
+        configs = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        assert configs
+        for host, c in configs.items():
+            check(host, c)
+            for key, value in [('kernel', '6.18.53'), ('mptcp', 1), ('firewall', "")]:
+                bad = copy.deepcopy(c); bad[key] = value
+                try:
+                    check(host, bad)
+                except AssertionError:
+                    pass
+                else:
+                    raise AssertionError((host, 'seeded unsafe configuration accepted', key))
+        print('all declared machines select a fixed kernel and persistent TCP containment')
+        PY
+        touch "$out"
+      '';
+
       private-origin-firewall = let
         fixture = pkgs.writeText "private-origin-firewall.json" (builtins.toJSON
           (lib.genAttrs [ "hwc-work" "hwc-home" ] (host: let
