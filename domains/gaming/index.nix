@@ -13,6 +13,7 @@
   imports = [
     ./retroarch/index.nix
     ./webdav/index.nix
+    ./switch-stream/index.nix
   ];
 
   options.hwc.gaming.steam = {

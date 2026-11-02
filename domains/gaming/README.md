@@ -16,6 +16,61 @@ and each user’s Steam credentials/library remain outside this capability.
 `steam.gpuOffload` runs Steam and its games on the NVIDIA dGPU of a PRIME
 laptop by adding the GPU domain's `offloadProfile` to Steam's FHS profile.
 
+`switch-stream/` owns the laptop's Switch streaming session and a repeatable
+Batocera client installer. `index.nix` owns Nix options, packages, the Sunshine
+catalog and the graphical-session user unit. `stream.py` owns startup, selective
+Eden input settings, private pairing migration, client provisioning and backup.
+`test_stream.py` exercises these production entry points. This uses Hyprland's
+`HWC-GAME` output at 1080p60 and workspace 99, with a separate Pulse server so
+streaming does not change the laptop's normal audio default. Sunshine captures
+with wlroots and encodes with Intel VAAPI; Eden uses Vulkan. Streamed keyboard
+and mouse input are disabled. Native dialogs stay on the streaming output.
+
+The Pi stays on Batocera. Its native `switch_stream` service restores the HDMI
+PCM bridge, 1080p60 TV mode and Bluetooth connectability at boot. The Bluetooth
+agent guard applies only to the exercised factory source, skips a native fix,
+and refuses unknown versions. Separate **Ports** launchers select the laptop
+without replacing the existing hwc-home Moonlight host or its game entries.
+Client settings disable controller mouse mode and swap Nintendo face buttons.
+The stream uses 720p60, HEVC, 10 Mbps, and no performance overlay.
+
+After the laptop's normal system activation:
+
+1. Restore private pairing state to `~/.local/share/hwc-switch-stream/`, or run
+   `hwc-switch-stream migrate <private-existing-sunshine-directory>` once. Its
+   `state.json`, `key.pem`, and `cert.pem` retain pairing; a conflicting identity
+   fails before replacement. Credentials are copied only when present.
+2. Run `hwc-switch-stream pi-setup` to install the native Pi service and Ports
+   launchers over root SSH. Existing Bluetooth bonds and Moonlight host records
+   stay private and in place. On a replacement Pi, restore those private records
+   from backup or pair the controller and Moonlight again.
+3. Start the host with `hwc-switch-stream start` after saving and closing Eden.
+   At subsequent graphical logins, the user unit starts automatically. A live
+   trial/game blocks takeover; a runtime defer marker permits safe installation
+   during play and disappears on reboot. The explicit start command clears it.
+4. On the Pi, select **Ports → Switch - lets-go-pikachu** or **Switch - library**.
+   The laptop must be awake, logged in to Hyprland, with the dump mount present.
+
+Eden settings merge before each managed game launch while Eden is stopped.
+Handheld input uses slot 8; disconnected slot 0 retains the same bindings for
+native meta shortcuts. **Home + Start** pauses/resumes. **L + Start + Select**
+stops emulation after confirmation and returns to the controller-navigable
+library. Save in the game first. Text entry uses Eden's controller keyboard.
+The launch lock rejects a second emulator before configuration or save effects.
+
+Private pairing, keys and saves are **CRITICAL**, retained indefinitely outside
+Nix/Git. `hwc-switch-stream backup` writes private laptop and Pi snapshots on the
+existing backup mount, keeping latest and previous copies. Run it after saving
+and closing the game for a stable save snapshot. The laptop archive contains
+`sunshine/`, `eden-config/`, `eden-keys/`, and `eden-saves/`; restore them to the
+state path above, `~/.config/eden/`, `~/.local/share/eden/keys/`, and
+`~/.local/share/eden/nand/user/` respectively, while apps are stopped.
+The Pi archive is relative to `/userdata/system/`. ROMs and firmware are
+user-managed and are not included. Runtime sockets/status files are replaceable;
+console logs use systemd's bounded journal or Batocera syslog. One private
+pre-change INI copy is retained per edited configuration. No continuous backup
+schedule is installed by this module.
+
 The optional headless Sunshine service owns its display, audio and input bridge.
 It reuses the existing private Katamari pairing and save directory, binds to the
 machine's Tailscale address, and derives direct game launchers from the machine's
@@ -46,6 +101,10 @@ domains/gaming/
 │   ├── index.nix       # Options, dependencies and managed streaming service
 │   ├── stream-session.py # Supervised display/audio/input and game launcher
 │   └── test_session.py # Startup and shared-save ownership regressions
+├── switch-stream/      # Laptop Switch streaming and native Batocera setup
+│   ├── index.nix       # Options, dependencies, catalog and user service
+│   ├── stream.py       # Host/client setup, launch, input and private backup
+│   └── test_stream.py  # Production entry-point regressions
 └── webdav/             # dufs WebDAV server for save sync
     └── index.nix       # Options + implementation
 ```
@@ -69,6 +128,7 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+- 2026-11-02: Declare laptop Switch streaming, handheld controls, private audio/display, native Pi HDMI/Bluetooth startup, separate client launchers, pairing migration and bounded private snapshots.
 - 2026-10-27: Declare game metadata before explicit Movies/Games file filters to prevent Pegasus implicit cross-membership.
 - 2026-10-27: Add the optional native Movies/Games TV session, preserve Pi streaming, serialize shared-save game launches, and wait for actual Sunshine listener readiness.
 - 2026-10-25: Add `steam.gpuOffload` (PRIME dGPU for Steam and its games);

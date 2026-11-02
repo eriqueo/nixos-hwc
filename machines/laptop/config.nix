@@ -184,6 +184,17 @@ in
   # Steam's NixOS module supplies the graphics/runtime integration. Keep
   # Proton-GE declarative and expose it in each game's Compatibility menu.
   hwc.gaming.steam.enable = true;
+  hwc.gaming.switch-stream = {
+    enable = true;
+    bindAddress = "100.71.213.18";
+    piAddress = "100.120.51.123";
+    gameRoot = "${config.hwc.paths.backup}/downloads/MIG Switch Game Collection";
+    games = [{
+      id = "lets-go-pikachu";
+      title = "Pokémon Let's Go Pikachu";
+      file = "Pokemon Lets Go Pikachu.xci/Pokemon Lets Go Pikachu.xci";
+    }];
+  };
 
   # BOM-PROOF LOGIN: Ensure 'il0wwlm?' always works for 'eric' and 'root' on laptop.
   # This makes the login screen independent of secret decryption.
