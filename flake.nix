@@ -46,9 +46,6 @@
 
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-26.05";
-    # TS-2026-013 needs Tailscale >= 1.104.2; stable 26.05 has 1.98.10.
-    # Remove this temporary pin when both Nixpkgs inputs provide >= 1.104.2.
-    nixpkgs-tailscale.url = "github:NixOS/nixpkgs/28427eef571bbb085812d3c1457bf2b4e85f5272";
     # Keep the laptop Electron runtime independent of Tailscale security updates.
     # Remove when the main nixpkgs input provides electron_44.
     nixpkgs-electron.url = "github:NixOS/nixpkgs/4975466d324710c576dc11ad614684e6bd8cad8e";
@@ -321,9 +318,6 @@
     # current Cloudflare edge protocol to keep the tunnel healthy.
     cloudflaredOverlay = import ./overlays/cloudflared.nix { nixpkgs-unstable = nixpkgs; };
 
-    tailscaleOverlay = final: prev: {
-      tailscale = inputs.nixpkgs-tailscale.legacyPackages.${prev.stdenv.hostPlatform.system}.tailscale;
-    };
 
     # Ghidra overlay — TEMPORARY (tracked). REA accepts only Ghidra 12.1.x;
     # stable 26.05 has 12.0.4. See the file header for the removal condition.
@@ -387,15 +381,15 @@
 
     # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)
     pkgs = mkPkgs system nixpkgs [];
-    pkgs-laptop = mkPkgs system nixpkgs [ tailscaleOverlay ];
+    pkgs-laptop = mkPkgs system nixpkgs [ ];
 
     # Stable package set with the temporary Tailscale security update.
     # claudeCodeOverlay is NOT listed here — it moved into mkPkgs' base list so
     # every machine takes the CLI from the same pin. See that list's comment.
-    pkgs-stable = mkPkgs system nixpkgs-stable [ tailscaleOverlay ghidraOverlay ];
+    pkgs-stable = mkPkgs system nixpkgs-stable [ ghidraOverlay ];
 
     # pkgs-stable with CUDA overlay for server (Immich ML GPU acceleration)
-    pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ serverOverlay tailscaleOverlay ghidraOverlay ];
+    pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ serverOverlay ghidraOverlay ];
 
     checkRuntimeScope = mkNodeRuntimeScope pkgs;
     laptopRuntimeScope = mkNodeRuntimeScope pkgs-laptop;
@@ -1036,6 +1030,8 @@
         fixture = pkgs.writeText "fleet-kernel-security.json" (builtins.toJSON
           (lib.mapAttrs (_: host: let c = host.config; in {
             kernel = c.boot.kernelPackages.kernel.version;
+            tailscale = c.services.tailscale.package.version;
+            openssl = host.pkgs.openssl.version;
             mptcp = c.boot.kernel.sysctl."net.mptcp.enabled" or null;
             migration = c.boot.kernel.sysctl."net.ipv4.tcp_migrate_req" or null;
             # Inspect rendered policy, without building another architecture's
@@ -1047,7 +1043,13 @@
         import copy, json, pathlib, sys
         def check(host, c):
             version = tuple(map(int, c['kernel'].split('.')[:3]))
-            assert version[:2] == (6, 18) and version >= (6, 18, 56), (host, 'unpatched kernel', c['kernel'])
+            assert version[:2] == (6, 18) and version >= (6, 18, 60), (host, 'outdated kernel baseline', c['kernel'])
+            # Tailscale Oct26 SSH/Serve fixes; OpenSSL Sep29 security release.
+            # These are minimum fixed versions, not a substitute for CVE scans.
+            assert tuple(map(int, c['tailscale'].split('.')[:3])) >= (1, 104, 4), (host, 'outdated Tailscale', c['tailscale'])
+            ssl = tuple(map(int, c['openssl'].split('.')[:3]))
+            ssl_floors = {(3, 0): (3, 0, 23), (3, 4): (3, 4, 8), (3, 5): (3, 5, 9), (3, 6): (3, 6, 5), (4, 0): (4, 0, 3)}
+            assert ssl[:2] in ssl_floors and ssl >= ssl_floors[ssl[:2]], (host, 'unreviewed OpenSSL baseline', c['openssl'])
             assert c['mptcp'] == 0 and c['migration'] == 0, (host, 'missing sysctl containment')
             for token in ['-w 5', '-t raw', 'PREROUTING', '-p tcp', '--u32', '0>>24&0xF=0x6:0xF', 'CVE-2026-98432-containment', '-j DROP']:
                 assert token in c['firewall'], (host, 'missing early packet filter', token)
@@ -1055,7 +1057,7 @@
         assert configs
         for host, c in configs.items():
             check(host, c)
-            for key, value in [('kernel', '6.18.53'), ('mptcp', 1), ('firewall', "")]:
+            for key, value in [('kernel', '6.18.57'), ('tailscale', '1.104.2'), ('openssl', '3.6.4'), ('mptcp', 1), ('firewall', "")]:
                 bad = copy.deepcopy(c); bad[key] = value
                 try:
                     check(host, bad)
@@ -1063,7 +1065,7 @@
                     pass
                 else:
                     raise AssertionError((host, 'seeded unsafe configuration accepted', key))
-        print('all declared machines select a fixed kernel and persistent TCP containment')
+        print('all declared machines select reviewed kernel/Tailscale/OpenSSL baselines and persistent TCP containment')
         PY
         touch "$out"
       '';
