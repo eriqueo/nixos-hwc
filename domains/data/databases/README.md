@@ -103,7 +103,8 @@ facts, each measured on the live cluster 2026-08-28:
    matching rule wins, so **every local and every container connection may assume
    any role without a password.** The `md5` rules below those lines are
    unreachable.
-2. **`eric` is a Postgres superuser** (`rolsuper = t`), and a superuser bypasses
+2. **`eric` is a Postgres superuser** (`rolsuper = t`, declared via
+   `ensureClauses.superuser` since 2026-09-25), and a superuser bypasses
    every privilege check.
 3. **`eric` owns every table** in `datax_monitor`, `firefly`, `firefly_pico`
    and `paperless` — 6, 81, 15 and 68 tables respectively. `hwc` is mixed:
@@ -201,6 +202,7 @@ it, these three sit in the nightly `pg_dumpall` and cost only disk.
 
 ## Changelog
 
+- 2026-09-25: The primary user's superuser bit is now declared (`ensureClauses.superuser = true`) instead of assumed. hwc-server's `eric` was made superuser by hand; hwc-work's cluster created it without, so crm (reads `lead_scout`/`umami`) and the hwc-sys gateway (reads `umami`) would have failed there after the service split. No-op on hwc-server.
 - 2026-08-28: Corrected the access audit after a live owner census: `hwc` has 10 `eric`-owned and 31 `postgres`-owned tables; superuser access, not blanket object ownership, is the general reason the deleted grants were redundant. Clarified that n8n's own store is SQLite even though workflows access other PostgreSQL databases.
 - 2026-07-06: postgresql: add a best-effort `ExecStartPre` that waits (≤120s, exits 0 on timeout) for the podman gateway `10.89.0.1` before start. Same boot race as redis-main, but postgres does NOT fail when the address is absent — it starts localhost-only and silently drops the missing listen address, so `Restart=on-failure` can't heal it. The 2026-07-06 boot left postgres 127.0.0.1-only; paperless crash-looped (17k+ "connection refused", 0 successful starts) and firefly errored all morning until a manual restart rebound `10.89.0.1`. net-only containers (jellyfin/sonarr/qbittorrent) bring the bridge up independently, so the wait can't deadlock against postgres-dependent containers.
 - 2026-07-05: redis-main: add `Restart=on-failure` + `RestartSec=5s` + unlimited start burst. Ordering on init-media-network is insufficient — the podman gateway IP (10.89.0.1) only appears when the first attached container starts; the 2026-07-05 reboot left redis dead on a one-shot bind failure.

@@ -17,9 +17,9 @@ First run requires a one-time interactive login to capture session cookies:
 node index.mjs --login --headed
 ```
 
-This opens a browser. Log in to Facebook manually, press Enter in the terminal, and the session is saved to `./data/session.json`. Subsequent runs reuse this session headlessly.
+This opens a persistent Chromium profile. Log in to Facebook (passkeys work); the script polls for the `c_user` cookie and saves once login completes — no Enter press. The profile lives in `./data/browser-profile` and later runs reuse it headlessly.
 
-If the session expires (you'll see "Session expired"), re-run the login step.
+If the login lapses (you'll see "Not logged in. Run with --login --headed first."), re-run the login step.
 
 ## Usage
 
@@ -37,7 +37,7 @@ node index.mjs jobtread -n 50 -d comments
 node index.mjs jobtread -n 100 -q
 
 # Custom paths
-node index.mjs jobtread --db ./mydata/jt.db --session ./mydata/session.json
+node index.mjs jobtread -o ./mydata/jt.json --profile ./mydata/browser-profile
 ```
 
 ### Options
@@ -46,8 +46,8 @@ node index.mjs jobtread --db ./mydata/jt.db --session ./mydata/session.json
 |------|-------------|---------|
 | `-n, --posts` | Number of posts to collect | 50 |
 | `-d, --depth` | `posts` or `comments` | posts |
-| `--db` | SQLite database path | `./data/posts.db` |
-| `--session` | Session state file | `./data/session.json` |
+| `-o, --output` | Write JSON to file | stdout |
+| `--profile` | Browser profile directory | `./data/browser-profile` |
 | `--headed` | Show the browser window | off |
 | `--login` | Interactive login mode | — |
 | `-q, --quiet` | Minimal output | off |
@@ -80,6 +80,10 @@ Posts are identified by FB's canonical post ID extracted from the URL (`/posts/1
 - Comments from later runs attach to the original post record
 
 ## Schema
+
+> **Unverified / stale:** no SQLite store exists in this directory (no `store.mjs`, no `--db`
+> flag) — the CLI writes JSON to stdout or `-o`. The schema and queries below predate that
+> and are kept only as the intended shape.
 
 **posts** — `post_id, group_url, author, body, source, url, timestamp, reactions, comment_count, first_seen, last_seen`
 
@@ -117,11 +121,24 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 ## Structure
 
 ```
-├── index.mjs    CLI, browser lifecycle, scroll loop, comment expansion
-├── parse.mjs    FB GraphQL response parsers (ported from API Monitor)
-├── store.mjs    SQLite persistence layer
+├── Containerfile      Playwright v1.59.1-noble image
+├── index.mjs          CLI, persistent-profile browser, scroll loop, comment expansion
+├── parse.mjs          FB GraphQL response parsers (ported from API Monitor)
+├── package.json       playwright pinned to 1.59.1 (matches the image)
+├── package-lock.json
 ├── data/
-│   ├── posts.db       ← created on first run
-│   └── session.json   ← created on login
-└── package.json
+│   └── browser-profile/   ← created on login (not tracked)
+└── README.md
 ```
+
+## Changelog
+
+- 2026-05-21: Removed the laptop `shell.nix` (added 2026-05-11 for Playwright on NixOS).
+- 2026-05-11: Login switched to `launchPersistentContext` with a `--profile` directory
+  (replaces `--session`/storageState); login is detected by polling for the `c_user`
+  cookie, surviving passkey redirects, with no Enter press. Playwright pinned to 1.59.1 in
+  `package.json`, `package-lock.json` and the `Containerfile`.
+- 2026-05-13: Comment mode opens each post's dialog in place instead of navigating to its
+  URL, waits for `CometSinglePostDialogContentQuery`, and only scrolls/expands when a dialog
+  overlay is present (headless FB renders none). These landed in commits titled
+  "jobber mcp" / "fix(jobber-mcp)…".
