@@ -9,6 +9,9 @@
 
 ## Structure
 
+Core journal limits use the declared channel API: structured settings on unstable,
+legacy text on stable. Both keep the same overridable retention limits.
+
 `core` selects the fixed6.18 stable kernel across both channels. `networking`
 disables MPTCP/request migration and drops IPv4 TCP packets carrying IP options before handshake
 processing while older kernels remain booted. The fleet security check covers
@@ -86,6 +89,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-11-02: Preserve the journal retention default across stable and unstable journald APIs during the security baseline refresh.
 
 - 2026-11-02: Select Linux6.18.57 for CVE-2026-98432 and persist early TCP-option
   containment, with bounded firewall lock waits, removal conditions and seeded checks. The active

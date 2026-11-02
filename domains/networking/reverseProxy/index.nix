@@ -578,8 +578,8 @@ in
         plugins = [ "github.com/caddy-dns/desec@v1.1.0" ];
         # FOD hash tracks the vendored Go deps of caddy+plugin; nixpkgs source
         # or packaging changes can alter it even when caddy's version is unchanged.
-        # Last refreshed for the 26.05 input update (2026-09).
-        hash = "sha256-oEKfWN5U1LI25vNvr/QZE2C8PQyIgBAGH/1YhUDoGr0=";
+        # Refreshed for Caddy2.11.7 and the November2026 channel inputs.
+        hash = "sha256-HrLRezw+q5+dRdJS662686n7xsImSxNb3UqlSo61R8E=";
       };
       extraConfig = ''
         # Root tailnet listener exists only where subpath routes or MCP need it.
