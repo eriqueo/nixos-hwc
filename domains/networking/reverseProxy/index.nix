@@ -263,6 +263,14 @@ let
       # `headersIfAbsent = { Name = value; }` sets a request header only when
       # the client sent none (header_up cannot be conditional). Rendered on the
       # owner only; a legacy host forwards the request unchanged to it.
+      lanGuard = lib.optionalString (lanAccess.enable && lib.elem r.name lanAccess.routes) ''
+        @${r.name}_outside_lan not remote_ip ${concatStringsSep " " lanNetworks}
+        respond @${r.name}_outside_lan "Use Tailscale to reach the service owner" 403
+        # The owner sees this proxy's tailnet identity. Refuse writes here
+        # so household LAN clients cannot inherit that identity's authority.
+        @${r.name}_lan_write not method GET HEAD
+        respond @${r.name}_lan_write "LAN display access is read-only" 405
+      '';
       defaultHeaders = lib.optionalString (!remoteOwner) (concatStringsSep "\n"
         (lib.mapAttrsToList (name: value: ''
           @${r.name}_no_${name} not header ${name} *
@@ -271,15 +279,7 @@ let
     in ''
       @${r.name} host ${r.name}.${vhostDomain}
       handle @${r.name} {
-        ${lib.optionalString (lanAccess.enable && lib.elem r.name lanAccess.routes) ''
-          @${r.name}_outside_lan not remote_ip ${concatStringsSep " " lanNetworks}
-          respond @${r.name}_outside_lan "Use Tailscale to reach the service owner" 403
-          # The owner sees this proxy's tailnet identity. Refuse writes here
-          # so household LAN clients cannot inherit that identity's authority.
-          @${r.name}_lan_write not method GET HEAD
-          respond @${r.name}_lan_write "LAN display access is read-only" 405
-        ''}
-        ${defaultHeaders}
+        ${lanGuard}${defaultHeaders}
         ${body}
       }
     '';
