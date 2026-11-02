@@ -1038,7 +1038,9 @@
             kernel = c.boot.kernelPackages.kernel.version;
             mptcp = c.boot.kernel.sysctl."net.mptcp.enabled" or null;
             migration = c.boot.kernel.sysctl."net.ipv4.tcp_migrate_req" or null;
-            firewall = c.networking.firewall.extraCommands;
+            # Inspect rendered policy, without building another architecture's
+            # iptables merely because its store path occurs in this text.
+            firewall = builtins.unsafeDiscardStringContext c.networking.firewall.extraCommands;
           }) self.nixosConfigurations));
       in pkgs.runCommand "fleet-kernel-security" { nativeBuildInputs = [ pkgs.python3 ]; } ''
         python3 - ${fixture} <<'PY'
