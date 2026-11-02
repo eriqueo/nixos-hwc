@@ -50,4 +50,5 @@ authentik/
 - Podman + media network (when `network.mode = "media"`)
 
 ## Changelog
+- 2026-08-28: Replaced the `$PSQL` postStart CREATE ROLE + GRANT block (never ran: `$PSQL` is undefined in the post-start script and every line ended `|| true`) with `services.postgresql.ensureUsers = [{ name = database.user; ensureDBOwnership = true; }]`. The live role had been created by hand; a rebuilt cluster would have lacked it. The placeholder password is dropped — the podman bridge matches a `trust` pg_hba rule.
 - 2026-03-26: Initial scaffolding — server/worker containers, DB provisioning, Caddy reverse proxy, secret integration

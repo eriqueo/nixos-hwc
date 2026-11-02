@@ -486,6 +486,12 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-10-23: `hwc_nightly_review` merge is gated by `mergeEligibility`: a `needs-you`, `merge-ready` review with a positive PR number in an `eriqueo/*` GitHub repo, excluding repo names `datax`, `dx-mcp` and `jt-mcp` even as owned forks; otherwise `PERMISSION_DENIED`. `repoSlug` accepts only canonical github.com HTTPS/SSH remotes or `owner/name`, and `gh` runs with `GH_HOST=github.com`. Covered by `tests/refinery-triage.test.ts`.
+
+- 2026-10-16: New `mealCollections` option → `HWC_MEAL_COLLECTIONS`; when it names both `groceries` and `meals`, `hwc_meals_caldav` registers — schema-v1, collection-scoped conditional CalDAV read/create/update/delete of managed `meal-grocery-*`/`meal-dinner-*` UIDs, with `If-None-Match`/`If-Match` ETag guards.
+
+- 2026-10-14: `hwc_calendar create` accepts `repeat` (daily/weekly/monthly/yearly) and inclusive `until`. `hwc_tasks_add` accepts fixed date-only recurrence (legacy weekly timed reminders still work); completing a web-created fixed schedule with `expectedDue` advances it to the next date, and edit can set or remove recurrence. Tests in `calendar.test.ts` and `tasks-recurrence.test.ts`.
+
 - 2026-10-14: Calendar create/edit/delete replace an unobserved detached sync with one bounded Radicale-pair sync. Responses expose `syncComplete`; partial failures retain the local mutation and state that sync did not complete.
 
 - 2026-10-14: `hwc_calendar create` carries `endDate` for timed multi-day events as well as all-day ranges. Explicit reversed ranges fail validation before khal runs. `tests/calendar.test.ts` checks both behaviors.
@@ -815,18 +821,28 @@ domains/system/mcp/
         │   ├── registry.ts
         │   ├── morning-status.ts          # hwc_morning_status (infra-only composite)
         │   ├── morning-brief.ts           # hwc_morning_brief (rich briefing.json reshaper)
-        │   ├── nightly-review.ts          # Nightly review board/actions + terminal attempt cases
+        │   ├── nightly-review.ts          # Nightly review board/actions + guarded merge eligibility
+        │   ├── refinery.ts
         │   ├── datax.ts
         │   ├── config.ts
         │   ├── services.ts
+        │   ├── server-overview.ts
         │   ├── monitoring.ts
         │   ├── secrets.ts
         │   ├── storage.ts
         │   ├── network.ts
         │   ├── mail.ts
+        │   ├── mail-triage.ts
         │   ├── calendar.ts
+        │   ├── tasks.ts                   # hwc_tasks_* + hwc_meals_caldav (mealTools)
         │   ├── media.ts
         │   ├── build.ts
+        │   ├── cms.ts
+        │   ├── website.ts
+        │   ├── site-analytics.ts
+        │   ├── estimator.ts
+        │   ├── leads.ts
+        │   ├── notify.ts
         │   ├── today.ts                   # hwc_today — Today Queue (board/summary/delta + verbs)
         │   └── today-ledger.ts            # pure case-ledger state machine behind hwc_today
         ├── transforms/
@@ -835,5 +851,6 @@ domains/system/mcp/
             └── index.ts
 ```
 
-Tests: `src/tests/today-ledger.test.ts` (vitest — `npm test`; excluded from
-the dist build by tsconfig).
+Tests: `src/tests/*.test.ts` — calendar, datax, mail-digest, refinery-triage,
+server-overview, site-analytics, tasks-recurrence, today-ledger, website
+(vitest — `npm test`; excluded from the dist build by tsconfig).
