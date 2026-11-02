@@ -241,11 +241,11 @@ in
     # =========================
     networking.firewall = {
       extraCommands = ''
-        ${pkgs.iptables}/bin/iptables -w -t raw -C PREROUTING ${tcpOptionRule} 2>/dev/null ||
-          ${pkgs.iptables}/bin/iptables -w -t raw -I PREROUTING 1 ${tcpOptionRule}
+        ${pkgs.iptables}/bin/iptables -w 5 -t raw -C PREROUTING ${tcpOptionRule} 2>/dev/null ||
+          ${pkgs.iptables}/bin/iptables -w 5 -t raw -I PREROUTING 1 ${tcpOptionRule}
       '';
       extraStopCommands = ''
-        ${pkgs.iptables}/bin/iptables -w -t raw -D PREROUTING ${tcpOptionRule} 2>/dev/null || true
+        ${pkgs.iptables}/bin/iptables -w 5 -t raw -D PREROUTING ${tcpOptionRule} 2>/dev/null || true
       '';
       enable    = cfg.firewall.level != "off";
       allowPing = cfg.firewall.level == "basic";

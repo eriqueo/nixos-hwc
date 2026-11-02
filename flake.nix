@@ -1049,7 +1049,7 @@
             version = tuple(map(int, c['kernel'].split('.')[:3]))
             assert version[:2] == (6, 18) and version >= (6, 18, 56), (host, 'unpatched kernel', c['kernel'])
             assert c['mptcp'] == 0 and c['migration'] == 0, (host, 'missing sysctl containment')
-            for token in ['-t raw', 'PREROUTING', '-p tcp', '--u32', '0>>24&0xF=0x6:0xF', 'CVE-2026-98432-containment', '-j DROP']:
+            for token in ['-w 5', '-t raw', 'PREROUTING', '-p tcp', '--u32', '0>>24&0xF=0x6:0xF', 'CVE-2026-98432-containment', '-j DROP']:
                 assert token in c['firewall'], (host, 'missing early packet filter', token)
         configs = json.loads(pathlib.Path(sys.argv[1]).read_text())
         assert configs

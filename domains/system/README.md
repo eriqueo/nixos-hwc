@@ -88,7 +88,7 @@ domains/system/
 ## Changelog
 
 - 2026-11-02: Select Linux6.18.57 for CVE-2026-98432 and persist early TCP-option
-  containment, with explicit removal conditions and seeded checks. The active
+  containment, with bounded firewall lock waits, removal conditions and seeded checks. The active
   deployment scope is work, home and laptop; other hosts are not activated.
 
 - 2026-11-01: Remove implicit global HTTP/HTTPS openings from the server firewall
