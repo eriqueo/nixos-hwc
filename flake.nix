@@ -1116,7 +1116,7 @@
             assert marker in c['caddy'] and marker not in c['disabledCaddy']
             block = c['caddy'].split('handle @' + route + ' {', 1)[1].split('\n      }', 1)[0]
             guard = '@' + route + '_lan_write'
-            assert guard + ' not method GET HEAD' in block
+            assert guard + ' not method GET HEAD' in [line.strip() for line in block.splitlines()]
             assert '@' + route + '_outside_lan not remote_ip ' + address + '/' in block
             assert 'respond @' + route + '_outside_lan "Use Tailscale to reach the service owner" 403' in block
             assert 'respond ' + guard + ' "LAN display access is read-only" 405' in block
