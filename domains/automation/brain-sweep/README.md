@@ -29,7 +29,7 @@ domains/automation/brain-sweep/
 hwc.automation.brainSweep.enable = true;         # nightly at 03:30 by default
 # hwc.automation.brainSweep.interval  = "*-*-* 03:30:00";
 # hwc.automation.brainSweep.repoDir   = "/home/eric/600_apps/brain";
-# hwc.automation.brainSweep.notifyUrl = "http://127.0.0.1:11600";  # "" disables notify
+# hwc.automation.brainSweep.notifyUrl = config.hwc.notifications.notify.url;  # default; "" disables notify
 ```
 
 ## Design Decisions
@@ -49,6 +49,9 @@ hwc.automation.brainSweep.enable = true;         # nightly at 03:30 by default
 
 ## Changelog
 
+- 2026-09-25: `notifyUrl` now defaults to `hwc.notifications.notify.url` (the one hwc-notify
+  address) instead of hard-coded loopback `http://127.0.0.1:11600`, so the sweep reaches the
+  dispatcher after its move to hwc-work.
 - 2026-07-23: Created. Operationalizes the long-designed-but-never-deployed janitor
   ([[janitor]] in the vault). Replaces the mythical `brain-janitor-nightly` scheduled prompt with
   a real deterministic sweep. Enabled on hwc-server (`machines/server/config.nix`).
