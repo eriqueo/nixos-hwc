@@ -37,6 +37,12 @@ apps/
 ```
 
 ## Changelog
+- 2026-10-25: codex pin bumped 0.146.0 → 0.164.0 (`codex/parts/package.nix`) and hwc-xps
+  opts into it. `plasma/` now rewrites `LidAction` for the AC, Battery and LowBattery
+  PowerDevil profiles on every activation, so hwc-xps stays awake with the lid closed. The
+  claude-code overlay move is recorded in `claude-code/README.md`; the nixpkgs bump that
+  touched it was reverted the same day.
+
 - 2026-10-25: Add the isolated XPS household desktop wiring; preserve existing
   host defaults and use the owning login, gaming and credential capabilities.
 

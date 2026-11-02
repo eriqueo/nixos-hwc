@@ -31,6 +31,8 @@ core/
 ```
 
 ## Changelog
+- 2026-10-14: shell: `pkgs.git` in `shell.packages` and `programs.git.package` (hiPrio) are swapped for `pkgs.gitWithPackCleanup`, which cleans cancelled Git pack downloads. The wrapper first landed as `shell/parts/git-package.nix`, then moved to `overlays/git.nix` so the cleanup is contained to runtime command profiles; `parts/` is unchanged net.
+- 2026-10-14: repo-hooks: a repo qualifies by exact git-dir match — `<path>/.git` for a checkout or `<path>` itself for a bare repo (e.g. the agent-state hub) — instead of `-e <path>/.git`, so a non-repo path never pins an enclosing repo's hooks.
 - 2026-10-11: shell: `_hwc_ls` renamed `hwc_ls`. Claude Code's shell snapshot drops functions whose names start with one underscore but keeps aliases, so agent shells got `ls` → a missing function and every `ls` failed "command not found".
 - 2026-10-10: shell: `ls` aliases to `_hwc_ls` (`parts/zsh-init.nix`), which runs eza with the `programs.eza` options only when stdin and stdout are both terminals and coreutils `ls` otherwise. eza 0.23 reads file names from stdin when stdin is not a terminal, so `ls` printed nothing in agent tool shells and in pipes. A first attempt named the function `ls`; zsh alias-expanded the name against `/etc/zshrc`'s `ls='ls --color=tty'` and aborted `.zshrc`, hence the separate name.
 - 2026-10-08: Add `net-tools --details` forwarding to both execution and printed commands.

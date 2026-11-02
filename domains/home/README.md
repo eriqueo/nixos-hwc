@@ -151,6 +151,10 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-10-25: `apps/codex` pin 0.146.0 → 0.164.0 (opted in on hwc-xps); `apps/plasma`
+  owns `LidAction` for all three PowerDevil profiles so hwc-xps ignores the closed lid.
+  The claude-code overlay move is recorded in `apps/claude-code/README.md`.
+
 - 2026-10-25: Add optional stock Plasma user defaults without importing Eric’s personal roles.
 
 - 2026-10-24: Prepare optional native Mail/helper bindings from the current
