@@ -11,7 +11,7 @@ import subprocess
 import socket
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 spec = importlib.util.spec_from_file_location('stream', Path(__file__).with_name('stream.py'))
 stream = importlib.util.module_from_spec(spec)
@@ -19,6 +19,28 @@ spec.loader.exec_module(stream)
 
 
 class StreamTests(unittest.TestCase):
+    def test_focus_recovery_preserves_valid_dialog_focus_and_survives_probe_errors(self):
+        for result in [Mock(returncode=0), OSError('display temporarily unavailable')]:
+            wait = Mock(side_effect=[subprocess.TimeoutExpired('eden', .5), 0])
+            with patch.object(stream.subprocess, 'run', side_effect=[result]), patch.object(stream, 'call') as calls:
+                self.assertEqual(stream.keep_library_focus('/xdotool', '42', wait), 0)
+                calls.assert_not_called()
+
+    def test_game_restores_lost_library_focus_after_emulation_stops(self):
+        with tempfile.TemporaryDirectory() as directory:
+            child = Mock()
+            child.wait.side_effect = [subprocess.TimeoutExpired('eden', .5), 0]
+            child.poll.return_value = None
+            cfg = {'state': directory, 'binaries': {'eden': '/eden', 'xdotool': '/xdotool'}}
+            def call(args, **kwargs):
+                return '42' if 'search' in args else ''
+            with patch.object(stream, 'prepare_eden'), patch.object(stream, 'wait_ready', side_effect=lambda probe, *a, **k: probe()), \
+                 patch.object(stream, 'stop_children'), patch.object(stream, 'call', side_effect=call) as calls, \
+                 patch.object(stream.subprocess, 'Popen', return_value=child), \
+                 patch.object(stream.subprocess, 'run', return_value=Mock(returncode=1)):
+                self.assertEqual(stream.game(cfg, 'library'), 0)
+            self.assertEqual(sum(c.args[0] == ['/xdotool', 'windowfocus', '42'] for c in calls.call_args_list), 2)
+
     def test_prepare_wires_handheld_and_meta_input_without_touching_other_state(self):
         with tempfile.TemporaryDirectory() as directory:
             config = Path(directory) / 'qt-config.ini'

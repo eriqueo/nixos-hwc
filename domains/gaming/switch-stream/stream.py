@@ -196,6 +196,52 @@ def stop_children(children):
             child.kill(); child.wait(timeout=2)
 
 
+def keep_library_focus(xdotool, window, wait):
+    """Recover X11 logical focus after Eden destroys its game render window.
+
+    Poll only during this emulator's lifetime. Preserve any valid focus,
+    including text dialogs and other X11 apps; never activate a Hyprland window.
+    """
+    failed = False
+    while True:
+        try:
+            return wait(timeout=0.5)
+        except subprocess.TimeoutExpired:
+            try:
+                focus = subprocess.run([xdotool, 'getwindowfocus'], capture_output=True, timeout=2)
+                if focus.returncode == 0:
+                    continue
+                call([xdotool, 'windowfocus', window])
+                failed = False
+            except (OSError, subprocess.SubprocessError):
+                # A focus failure must not terminate a game with unsaved progress.
+                if not failed:
+                    print('EDEN_FOCUS_UNAVAILABLE: library focus could not be restored', file=sys.stderr, flush=True)
+                failed = True
+
+
+def watch_focus(cfg, pid):
+    """Attach the same focus recovery to an already-running trial, without restarting it."""
+    proc = Path('/proc') / str(int(pid))
+    if proc.stat().st_uid != os.getuid() or (proc / 'exe').resolve().name not in ['eden', '.eden-wrapped']:
+        raise RuntimeError('EDEN_PROCESS_REQUIRED')
+    started = (proc / 'stat').read_text().split(') ', 1)[1].split()[19]
+    xdotool = cfg['binaries']['xdotool']
+    windows = call([xdotool, 'search', '--name', '^eden [|]']).splitlines()
+    if len(windows) != 1:
+        raise RuntimeError('EDEN_WINDOW_AMBIGUOUS')
+    def wait(timeout):
+        time.sleep(timeout)
+        try:
+            if (proc / 'stat').read_text().split(') ', 1)[1].split()[19] != started:
+                return 0
+        except FileNotFoundError:
+            return 0
+        raise subprocess.TimeoutExpired('eden', timeout)
+    print('Watching library focus until this Eden process exits', flush=True)
+    return keep_library_focus(xdotool, windows[0], wait)
+
+
 def host_run(cfg, sunshine_config):
     for name in ['state.json', 'key.pem', 'cert.pem']:
         if not (Path(cfg['state']) / name).is_file():
@@ -274,7 +320,7 @@ def game(cfg, game_id):
             if len(window) != 1:
                 raise RuntimeError('EDEN_WINDOW_AMBIGUOUS')
             call([cfg['binaries']['xdotool'], 'windowfocus', window[0]])
-            return child.wait()
+            return keep_library_focus(cfg['binaries']['xdotool'], window[0], child.wait)
         except KeyboardInterrupt:
             return 0
         finally:
@@ -417,6 +463,7 @@ def main():
         raise RuntimeError('CONFIG_VERSION_UNSUPPORTED')
     command, *args = sys.argv[2:]
     commands = {
+        'watch-focus': lambda: watch_focus(cfg, args[0]),
         'start': lambda: start(cfg),
         'migrate': lambda: migrate(cfg, Path(args[0])),
         'prepare': lambda: prepare_eden(cfg),
