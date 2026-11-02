@@ -86,7 +86,7 @@ def merge_file(path, updates, may_change=True):
     atomic(path, changed.encode())
 
 
-def controller_settings():
+def controller_settings(port=0):
     buttons = dict(a=1, b=0, x=2, y=3, lstick=12, rstick=13, l=5, r=6,
                    zl=7, zr=8, plus=10, minus=9, home=11, screenshot=4,
                    slleft=5, srleft=6, slright=5, srright=6)
@@ -102,8 +102,19 @@ def controller_settings():
         values[f'player_{player}_connected'] = 'true' if player == 8 else 'false'
         values[f'player_{player}_type'] = '4'
         for key, value in bindings.items():
-            values[f'player_{player}_{key}'] = f'"engine:sdl,port:0,guid:{GUID},{value}"'
+            values[f'player_{player}_{key}'] = f'"engine:sdl,port:{port},guid:{GUID},{value}"'
     return {key: value for k, v in values.items() for key, value in [(k, v), (k + '\\default', 'false')]}
+
+
+def prepare_profiles(cfg):
+    # Native per-game profiles keep Pikachu's proven global handheld setup intact.
+    # Config::InputProfile omits the player_N_ prefix and preserves SDL device ports.
+    folder = Path(cfg['edenConfig']).parent / 'input'
+    for port in [0, 1]:
+        values = {k.removeprefix('player_0_'): v for k, v in controller_settings(port).items()
+                  if k.startswith('player_0_')}
+        values.update(type='0', connected='true')
+        merge_file(folder / f'HWC SN30 Pro P{port + 1}.ini', {'Controls': values})
 
 
 def eden_running():
@@ -119,6 +130,7 @@ def eden_running():
 def prepare_eden(cfg):
     if eden_running():
         raise RuntimeError('EDEN_BUSY: keep the current game running; prepare settings on the next launch')
+    prepare_profiles(cfg)
     path = Path(cfg['edenConfig'])
     ui = {'fullscreen': 'true'}
     for name, chord in [('Continue\\Pause%20Emulation', 'Home+Plus'), ('Stop%20Emulation', 'L+Plus+Minus')]:
@@ -480,6 +492,7 @@ def main():
         raise RuntimeError('CONFIG_VERSION_UNSUPPORTED')
     command, *args = sys.argv[2:]
     commands = {
+        'profiles': lambda: prepare_profiles(cfg),
         'watch-focus': lambda: watch_focus(cfg, args[0]),
         'start': lambda: start(cfg),
         'migrate': lambda: migrate(cfg, Path(args[0])),

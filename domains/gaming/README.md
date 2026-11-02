@@ -56,6 +56,12 @@ After the laptop's normal system activation:
    The laptop must be awake, logged in to Hyprland, with the dump mount present.
 
 Eden settings merge before each managed game launch while Eden is stopped.
+The launcher also generates native `HWC SN30 Pro P1` and `HWC SN30 Pro P2`
+input profiles on separate streamed device ports. Select these in a game's
+Input Profiles settings when it needs Pro Controllers or two players. The
+game's native custom configuration retains that choice; Pikachu's global
+handheld configuration stays intact. `hwc-switch-stream profiles` refreshes
+only these profiles and is safe while the emulator is open.
 Handheld input uses slot 8; disconnected slot 0 retains the same bindings for
 native meta shortcuts. **Home + Start** pauses/resumes. **L + Start + Select**
 stops emulation after confirmation and returns to the controller-navigable
@@ -132,6 +138,7 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+- 2026-11-02: Generate distinct Pro Controller profiles for players 1 and 2 without changing Pikachu's handheld settings.
 - 2026-11-02: Detect game-to-library transitions and restore Qt activation even when the X11 focus ID remains valid.
 - 2026-11-02: Restore lost library focus throughout an Eden session after stopping emulation; retain dialog and laptop desktop focus.
 - 2026-11-02: Declare laptop Switch streaming, handheld controls, private audio/display, native Pi HDMI/Bluetooth startup, separate client launchers, pairing migration and bounded private snapshots.

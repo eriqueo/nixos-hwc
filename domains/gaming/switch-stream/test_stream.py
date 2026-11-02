@@ -19,6 +19,24 @@ spec.loader.exec_module(stream)
 
 
 class StreamTests(unittest.TestCase):
+    def test_pro_profiles_keep_players_on_distinct_ports_without_changing_handheld_settings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / 'qt-config.ini'; config.write_text('[Controls]\nplayer_8_connected=true\n')
+            before = config.read_bytes()
+            stream.prepare_profiles({'edenConfig': str(config)})
+            for port in [0, 1]:
+                ini = configparser.ConfigParser(interpolation=None); ini.optionxform = str
+                profile = config.parent / 'input' / f'HWC SN30 Pro P{port + 1}.ini'
+                ini.read(profile)
+                self.assertEqual(ini['Controls']['type'], '0')
+                self.assertEqual(ini['Controls']['connected'], 'true')
+                self.assertIn(f'port:{port},', ini['Controls']['button_a'])
+                self.assertIn(f'port:{port},', ini['Controls']['lstick'])
+                first = profile.read_bytes()
+                stream.prepare_profiles({'edenConfig': str(config)})
+                self.assertEqual(profile.read_bytes(), first)
+            self.assertEqual(config.read_bytes(), before)
+
     def test_pending_library_recovery_waits_for_a_dialog_to_close(self):
         wait = Mock(side_effect=[subprocess.TimeoutExpired('eden', .5)] * 3 + [0])
         with patch.object(stream, 'call', return_value='eden | 0.2.1 (nixpkgs) 1.0.0') as calls, \
