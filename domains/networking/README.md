@@ -7,7 +7,7 @@ Provides network infrastructure that other domains depend on:
 - Cloudflare Tunnel for public ingress (MCPs, n8n, webhooks)
 - Podman media-network creation
 - Gluetun VPN container for download stack
-- Pi-hole DNS container
+- Opt-in local DNS for selected read-only LAN vhosts
 - Centralized route definitions for all services
 
 ## Boundaries
@@ -20,6 +20,21 @@ Provides network infrastructure that other domains depend on:
 
 `reverseProxy` permits its HTTP, HTTPS and port-mode listeners only on
 `tailscale0`. Public tunnel origins use loopback and need no WAN firewall ports.
+
+`reverseProxy.lanAccess` adds selected read-only vhosts to an existing LAN gateway.
+Home selects `wall`; it forwards HTTPS to the work owner with the original host
+and verified TLS name. Sources outside the configured LAN subnet return 403.
+GET and HEAD pass; other methods return 405 before the
+upstream sees them. The work server's direct Tailscale route keeps its existing
+write policy. No work firewall ports or public DNS records change.
+
+The same selected route names generate exact dnsmasq records at home's registered
+LAN address, 192.168.0.97. DNS binds only that address; TCP/UDP 53 and HTTPS 443 are
+allowed on the configured LAN interface. Other names use the host's existing
+upstream resolvers. AAAA queries for local names get no upstream tailnet address.
+The in-memory cache holds at most 256 entries, with at most 64 forwarded queries.
+Configuration is checked before dnsmasq starts. Clients opt in through their
+home-Wi-Fi DNS setting; router DHCP, host DNS and remote-phone DNS stay unchanged.
 
 `cloudflared.accessLog` routes all tunnel-origin requests, including fallback404,
 through a loopback-only Caddy listener derived from the existing ingress table.
@@ -46,7 +61,10 @@ to the same CouchDB. The separate n8n compatibility observation window remains.
 
 `routeOwners.map` assigns the fleet map to work; the existing wildcard HTTPS renderer serves its generated static site.
 
-Home and work render owned routes. Home retains explicit n8n port/webhook forwards and the shared MCP entrypoint; moved app vhost fallbacks are removed. Retained n8n port logs are bounded to five 50 MiB files/seven days and omit request headers and URIs.
+Home and work render owned routes. Home retains explicit n8n port/webhook forwards,
+the shared MCP entrypoint and its selected read-only LAN wall gateway. Other moved
+app vhost fallbacks remain removed. Retained n8n port logs are bounded to five 50 MiB
+files/seven days and omit request headers and URIs.
 
 The host registry now names hwc-home; stable application vhosts and IPs remain unchanged.
 
@@ -59,7 +77,7 @@ networking/
 ├── hosts/              # Host registry: tailnetSuffix + server/work aliases + derived fqdn/url helper
 │   └── index.nix
 ├── reverseProxy/       # Caddy NixOS service, DNS plugin + owner-filtered route rendering
-│   └── index.nix       # Includes explicit former-owner port forwards
+│   └── index.nix       # Former-owner forwards and opt-in read-only LAN vhosts/DNS
 ├── routes.nix          # Centralized service route definitions
 ├── podman-network.nix  # media-network systemd service
 ├── cloudflared/        # Cloudflare Tunnel (public webhook ingress)
@@ -73,6 +91,10 @@ networking/
 ```
 
 ## Changelog
+
+- 2026-11-02: Add home's read-only wall gateway and exact local DNS override.
+  Preserve the public Tailscale answer and work firewall. Check rendered routing,
+  disabled wiring, resolver binding and rejection of seeded unsafe configurations.
 
 - 2026-11-01: Restrict reverse-proxy firewall openings to the Tailscale interface.
   Keep public Cloudflare ingress on loopback; check evaluated private ports.

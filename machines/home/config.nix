@@ -771,6 +771,13 @@
     enable = lib.mkDefault true;
     # Moved app vhosts resolve directly to work; only explicit forwards remain.
     routeOwner = "main";
+    # The iPad can keep LocalDevVPN enabled while the wall uses home Wi-Fi.
+    # Remote phones retain the direct work-owned Tailscale hostname and writes.
+    lanAccess = {
+      enable = true;
+      interface = "eno1";
+      routes = [ "wall" ];
+    };
     # domain defaults to this host's own tailnet FQDN (networking.hostName +
     # hwc.networking.hosts.tailnetSuffix) — no override needed.
   };

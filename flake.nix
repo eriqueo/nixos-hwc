@@ -1068,6 +1068,79 @@
         touch "$out"
       '';
 
+      wall-lan-access = let
+        home = self.nixosConfigurations.hwc-home.config;
+        work = self.nixosConfigurations.hwc-work.config;
+        disabled = (self.nixosConfigurations.hwc-home.extendModules {
+          modules = [ { hwc.networking.reverseProxy.lanAccess.enable = lib.mkForce false; } ];
+        }).config;
+        lan = home.hwc.networking.reverseProxy.lanAccess;
+        address = home.hwc.networking.hosts.lanIps.${home.hwc.networking.hosts.self};
+        route = lib.head lan.routes;
+        hostname = "${route}.${home.hwc.networking.shared.vhostDomain}";
+        owner = home.hwc.networking.shared.routeOwners.${route}.owner;
+        fixture = pkgs.writeText "wall-lan-access.json" (builtins.toJSON {
+          inherit address hostname route;
+          caddy = home.services.caddy.extraConfig;
+          disabledCaddy = disabled.services.caddy.extraConfig;
+          dns = home.services.dnsmasq.settings;
+          workDns = work.services.dnsmasq.enable;
+          dnsEnabled = home.services.dnsmasq.enable;
+          disabledDns = disabled.services.dnsmasq.enable;
+          workLan = work.hwc.networking.reverseProxy.lanAccess.enable;
+          upstream = "https://${home.hwc.networking.hosts.ips.${owner}}";
+          lanFirewall = home.networking.firewall.interfaces.${lan.interface};
+          workGlobalPorts = work.networking.firewall.allowedTCPPorts;
+          preStart = home.systemd.services.dnsmasq.preStart;
+        });
+      in pkgs.runCommand "wall-lan-access" { nativeBuildInputs = [ pkgs.python3 pkgs.dnsmasq ]; } ''
+        dnsmasq --test --conf-file=${home.services.dnsmasq.configFile}
+        python3 - ${fixture} <<'PY'
+        import copy, json, pathlib, sys
+        cfg = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        def check(c):
+            route, name, address = c['route'], c['hostname'], c['address']
+            assert c['dnsEnabled'] and not c['disabledDns']
+            assert not c['workDns'] and not c['workLan']
+            assert c['dns']['listen-address'] == [address]
+            assert c['dns']['bind-interfaces'] == [True] and c['dns']['no-resolv'] == [True]
+            assert c['dns']['host-record'] == [name + ',' + address]
+            assert c['dns']['local'] == ['/' + name + '/']
+            assert address not in c['dns']['server'] and c['dns']['server']
+            assert c['dns']['cache-size'][0] <= 256 and c['dns']['dns-forward-max'][0] <= 64
+            assert {53, 443} <= set(c['lanFirewall']['allowedTCPPorts'])
+            assert 53 in c['lanFirewall']['allowedUDPPorts']
+            assert 53 not in c['workGlobalPorts'] and 443 not in c['workGlobalPorts']
+            assert 'dnsmasq --test' in c['preStart']
+            marker = '@' + route + ' host ' + name
+            assert marker in c['caddy'] and marker not in c['disabledCaddy']
+            block = c['caddy'].split('handle @' + route + ' {', 1)[1].split('\n      }', 1)[0]
+            guard = '@' + route + '_lan_write'
+            assert guard + ' not method GET HEAD' in block
+            assert '@' + route + '_outside_lan not remote_ip ' + address + '/' in block
+            assert 'respond @' + route + '_outside_lan "Use Tailscale to reach the service owner" 403' in block
+            assert 'respond ' + guard + ' "LAN display access is read-only" 405' in block
+            assert block.index('respond ' + guard) < block.index('reverse_proxy ')
+            assert 'reverse_proxy ' + c['upstream'] in block
+            assert 'tls_server_name ' + name in block
+        check(cfg)
+        for key in ['caddy', 'dns']:
+            bad = copy.deepcopy(cfg)
+            if key == 'caddy':
+                bad[key] = bad[key].replace('not method GET HEAD', 'not method GET HEAD POST')
+            else:
+                bad[key]['listen-address'] = ['0.0.0.0']
+            try:
+                check(bad)
+            except AssertionError:
+                pass
+            else:
+                raise AssertionError(('unsafe LAN configuration accepted', key))
+        print('LAN DNS, read-only proxy and independent remote access wiring checked')
+        PY
+        touch "$out"
+      '';
+
       private-origin-firewall = let
         fixture = pkgs.writeText "private-origin-firewall.json" (builtins.toJSON
           (lib.genAttrs [ "hwc-work" "hwc-home" ] (host: let
@@ -5321,7 +5394,8 @@
         ownerName = work.hwc.networking.hosts.fqdn.work;
         oldListener = "${server.hwc.networking.shared.rootHost}:${port}";
         serverCaddy = server.services.caddy.extraConfig;
-        workVhosts = lib.attrNames (lib.filterAttrs (_: o: o.owner == "work" && o.mode == "vhost")
+        workVhosts = lib.attrNames (lib.filterAttrs (name: o: o.owner == "work" && o.mode == "vhost"
+          && !(lib.elem name server.hwc.networking.reverseProxy.lanAccess.routes))
           work.hwc.networking.shared.routeOwners);
       in
       assert lib.assertMsg (lib.all (name:
@@ -5336,7 +5410,8 @@
         && lib.hasInfix "reverse_proxy https://${ownerIp}:${port}" serverCaddy
         && lib.hasInfix "tls_server_name ${ownerName}" serverCaddy
         && lib.hasInfix "header_up Host ${ownerName}" serverCaddy
-        && lib.elem route.port server.networking.firewall.allowedTCPPorts)
+        && lib.elem route.port server.networking.firewall.interfaces.tailscale0.allowedTCPPorts
+        && !(lib.elem route.port server.networking.firewall.allowedTCPPorts))
         "n8n compatibility: former-owner listener, upstream, TLS identity or firewall missing";
       assert lib.assertMsg (lib.hasInfix "${ownerName}:${port}" work.services.caddy.extraConfig
         && lib.hasInfix "reverse_proxy http://127.0.0.1:${toString work.hwc.automation.n8n.port}" work.services.caddy.extraConfig)

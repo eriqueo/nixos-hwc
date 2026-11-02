@@ -7,9 +7,16 @@ let
   # Serving hosts render their own routes plus explicit compatibility entries.
   # XPS retains null mode until its serving role can be deployed and checked.
   routeOwner      = config.hwc.networking.reverseProxy.routeOwner;
+  lanAccess       = config.hwc.networking.reverseProxy.lanAccess;
+  selfAlias       = config.hwc.networking.hosts.self;
+  lanIp           = config.hwc.networking.hosts.lanIps.${if selfAlias == null then "" else selfAlias} or null;
+  lanNetworks     = map (address: "${address.address}/${toString address.prefixLength}")
+    (config.networking.interfaces.${lanAccess.interface}.ipv4.addresses or []);
+  lanName         = name: "${name}.${config.hwc.networking.shared.vhostDomain}";
   routes          = lib.filter
     (r: routeOwner == null || (r.owner or "main") == routeOwner
-      || lib.elem routeOwner (r.forwardFrom or []))
+      || lib.elem routeOwner (r.forwardFrom or [])
+      || (lanAccess.enable && lib.elem r.name lanAccess.routes))
     config.hwc.networking.shared.effectiveRoutes;
 
   # Route ownership has one producer: shared.routeOwners (routes.nix), the
@@ -264,6 +271,14 @@ let
     in ''
       @${r.name} host ${r.name}.${vhostDomain}
       handle @${r.name} {
+        ${lib.optionalString (lanAccess.enable && lib.elem r.name lanAccess.routes) ''
+          @${r.name}_outside_lan not remote_ip ${concatStringsSep " " lanNetworks}
+          respond @${r.name}_outside_lan "Use Tailscale to reach the service owner" 403
+          # The owner sees this proxy's tailnet identity. Refuse writes here
+          # so household LAN clients cannot inherit that identity's authority.
+          @${r.name}_lan_write not method GET HEAD
+          respond @${r.name}_lan_write "LAN display access is read-only" 405
+        ''}
         ${defaultHeaders}
         ${body}
       }
@@ -379,6 +394,24 @@ in
 {
   options.hwc.networking.reverseProxy = {
     enable = mkEnableOption "Reverse proxy service (Caddy)";
+    lanAccess = {
+      enable = mkEnableOption "read-only home-LAN vhosts and their local DNS answers";
+      interface = mkOption {
+        type = types.str;
+        default = "";
+        description = "Home-LAN interface permitted to query DNS and reach HTTPS. Address comes from hosts.lanIps for this host.";
+      };
+      routes = mkOption {
+        type = types.listOf (types.enum (lib.attrNames config.hwc.networking.shared.routeOwners));
+        default = [];
+        description = "Existing owned vhost names to expose read-only through this host. Also produces exact local DNS records; public and tailnet DNS stay unchanged.";
+      };
+      upstreamDNS = mkOption {
+        type = types.listOf types.str;
+        default = config.networking.nameservers;
+        description = "Resolvers for names outside the selected local vhosts. Must not include this gateway's own address.";
+      };
+    };
     devPreview = {
       ports = mkOption {
         type = types.listOf types.port;
@@ -483,6 +516,58 @@ in
 
   config = lib.mkMerge [
   { hwc.networking.shared.effectiveRoutes = ownedRoutes ++ remoteStubs; }
+
+  (mkIf lanAccess.enable {
+    assertions = [
+      {
+        assertion = config.hwc.networking.reverseProxy.enable
+          && lanIp != null && lanAccess.interface != "" && lanAccess.routes != []
+          && lanNetworks != [];
+        message = "LAN vhosts require Caddy, a registered home-LAN address, an interface and at least one route.";
+      }
+      {
+        assertion = lib.all (name: ownerMap.${name}.mode == "vhost") lanAccess.routes;
+        message = "LAN access accepts only named vhost routes.";
+      }
+      {
+        assertion = lanAccess.upstreamDNS != [] && !(lib.elem lanIp lanAccess.upstreamDNS);
+        message = "LAN DNS needs upstream resolvers and must not forward to itself.";
+      }
+    ];
+
+    # Opt-in split DNS: only clients selecting this LAN resolver see these
+    # answers. Do not change DHCP, the host's own DNS or public tailnet records.
+    # REPLACEABLE cache: in memory, 256 entries; restart rebuilds from config
+    # and upstream DNS. At most 64 concurrent forwarded queries (dnsmasq limit).
+    services.dnsmasq = {
+      enable = true;
+      resolveLocalQueries = false;
+      settings = {
+        listen-address = [ lanIp ];
+        bind-interfaces = true;
+        no-resolv = true;
+        no-hosts = true;
+        server = lanAccess.upstreamDNS;
+        host-record = map (name: "${lanName name},${lanIp}") lanAccess.routes;
+        # Suppress upstream AAAA answers for the local IPv4-only names too.
+        local = map (name: "/${lanName name}/") lanAccess.routes;
+        local-ttl = 60;
+        cache-size = 256;
+        dns-forward-max = 64;
+      };
+    };
+    # NixOS already runs dnsmasq --test before start. Wait for the static LAN
+    # address before binding; stop within a fixed deadline on shutdown.
+    systemd.services.dnsmasq = {
+      wants = [ "network-online.target" ];
+      after = [ "network-online.target" ];
+      serviceConfig.TimeoutStopSec = "10s";
+    };
+    networking.firewall.interfaces.${lanAccess.interface} = {
+      allowedTCPPorts = [ 53 443 ];
+      allowedUDPPorts = [ 53 ];
+    };
+  })
 
   (mkIf config.hwc.networking.reverseProxy.enable {
     services.caddy = {
