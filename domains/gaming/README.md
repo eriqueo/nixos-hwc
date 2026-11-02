@@ -25,8 +25,9 @@ Eden input settings, private pairing migration, client provisioning and backup.
 streaming does not change the laptop's normal audio default. Sunshine captures
 with wlroots and encodes with Intel VAAPI; Eden uses Vulkan. Streamed keyboard
 and mouse input are disabled. Native dialogs stay on the streaming output.
-The game launcher restores lost X11 logical focus after a render window closes,
-so D-pad library navigation works after stopping a game. It preserves valid
+The game launcher cycles X11 logical focus on each return to the library, since
+Eden can remain inactive in Qt while X11 still names its main window as focused.
+This restores D-pad navigation after stopping a game. It preserves valid
 dialog/other-app focus and never activates the laptop's physical desktop window.
 
 The Pi stays on Batocera. Its native `switch_stream` service restores the HDMI
@@ -131,6 +132,7 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+- 2026-11-02: Detect game-to-library transitions and restore Qt activation even when the X11 focus ID remains valid.
 - 2026-11-02: Restore lost library focus throughout an Eden session after stopping emulation; retain dialog and laptop desktop focus.
 - 2026-11-02: Declare laptop Switch streaming, handheld controls, private audio/display, native Pi HDMI/Bluetooth startup, separate client launchers, pairing migration and bounded private snapshots.
 - 2026-10-27: Declare game metadata before explicit Movies/Games file filters to prevent Pegasus implicit cross-membership.

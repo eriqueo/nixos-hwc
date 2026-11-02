@@ -19,12 +19,37 @@ spec.loader.exec_module(stream)
 
 
 class StreamTests(unittest.TestCase):
+    def test_pending_library_recovery_waits_for_a_dialog_to_close(self):
+        wait = Mock(side_effect=[subprocess.TimeoutExpired('eden', .5)] * 3 + [0])
+        with patch.object(stream, 'call', return_value='eden | 0.2.1 (nixpkgs) 1.0.0') as calls, \
+             patch.object(stream.subprocess, 'run', side_effect=[Mock(returncode=0, stdout=b'99\n'),
+                   Mock(returncode=0, stdout=b'42\n'), Mock(returncode=0, stdout=b'42\n')]), \
+             patch.object(stream.time, 'sleep'):
+            self.assertEqual(stream.keep_library_focus('/xdotool', '42', wait), 0)
+        self.assertEqual([c.args[0] for c in calls.call_args_list if 'windowfocus' in c.args[0]],
+                         [['/xdotool', 'windowfocus', '0'], ['/xdotool', 'windowfocus', '42']])
+
+    def test_library_returns_cycle_focus_even_when_x11_reports_the_same_window(self):
+        titles = iter(['eden | 0.2.1 (nixpkgs) 1.0.0',
+                       'eden | 0.2.1 (nixpkgs) 1.0.0 | Pikachu | 1.0.0 | Nvidia',
+                       'eden | 0.2.1 (nixpkgs) 1.0.0',
+                       'eden | 0.2.1 (nixpkgs) 1.0.0'])
+        def call(args, **kwargs):
+            return next(titles) if 'getwindowname' in args else ''
+        wait = Mock(side_effect=[subprocess.TimeoutExpired('eden', .5)] * 4 + [0])
+        with patch.object(stream, 'call', side_effect=call) as calls, \
+             patch.object(stream.subprocess, 'run', return_value=Mock(returncode=0, stdout=b'42\n')), \
+             patch.object(stream.time, 'sleep'):
+            self.assertEqual(stream.keep_library_focus('/xdotool', '42', wait), 0)
+        effects = [c.args[0] for c in calls.call_args_list if 'windowfocus' in c.args[0]]
+        self.assertEqual(effects, [['/xdotool', 'windowfocus', '0'], ['/xdotool', 'windowfocus', '42']] * 2)
+
     def test_focus_recovery_preserves_valid_dialog_focus_and_survives_probe_errors(self):
         for result in [Mock(returncode=0), OSError('display temporarily unavailable')]:
             wait = Mock(side_effect=[subprocess.TimeoutExpired('eden', .5), 0])
             with patch.object(stream.subprocess, 'run', side_effect=[result]), patch.object(stream, 'call') as calls:
                 self.assertEqual(stream.keep_library_focus('/xdotool', '42', wait), 0)
-                calls.assert_not_called()
+                self.assertFalse(any('windowfocus' in c.args[0] for c in calls.call_args_list))
 
     def test_game_restores_lost_library_focus_after_emulation_stops(self):
         with tempfile.TemporaryDirectory() as directory:

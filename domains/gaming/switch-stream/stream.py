@@ -197,21 +197,38 @@ def stop_children(children):
 
 
 def keep_library_focus(xdotool, window, wait):
-    """Recover X11 logical focus after Eden destroys its game render window.
+    """Restore Qt activation when Eden returns from a game to its library.
 
-    Poll only during this emulator's lifetime. Preserve any valid focus,
+    Poll only during this emulator's lifetime. Preserve other valid focus,
     including text dialogs and other X11 apps; never activate a Hyprland window.
     """
     failed = False
+    was_library = False
+    pending_library = False
     while True:
         try:
             return wait(timeout=0.5)
         except subprocess.TimeoutExpired:
             try:
+                title = call([xdotool, 'getwindowname', window])
+                # Eden 0.2.1's compiled idle title has one separator; running
+                # titles append game/version/GPU (MainWindow::UpdateWindowTitle).
+                library = isinstance(title, str) and title.startswith('eden | ') and title.count(' | ') == 1
+                pending_library = library and (pending_library or not was_library)
+                was_library = library
                 focus = subprocess.run([xdotool, 'getwindowfocus'], capture_output=True, timeout=2)
                 if focus.returncode == 0:
-                    continue
+                    # X focus can still name the main window after Qt has
+                    # deactivated it. Preserve actual dialogs/other apps only.
+                    if focus.stdout.strip() != window.encode() or not pending_library:
+                        continue
+                if pending_library:
+                    # A no-op XSetInputFocus(main) emits no FocusIn. A complete
+                    # transition is needed after Eden destroys its render window.
+                    call([xdotool, 'windowfocus', '0'])
+                    time.sleep(0.05)
                 call([xdotool, 'windowfocus', window])
+                pending_library = False
                 failed = False
             except (OSError, subprocess.SubprocessError):
                 # A focus failure must not terminate a game with unsaved progress.
