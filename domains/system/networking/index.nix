@@ -4,10 +4,11 @@
 let
   cfg = config.hwc.system.networking;
   types = lib.types;
-  # TEMPORARY CVE-2026-98432 containment: reject IPv4 TCP options before TCP
-  # handshake processing, including existing MPTCP listeners. Remove this rule
-  # and the sysctls only after every reachable fleet host boots a fixed kernel
-  # and offline hosts have a fixed boot configuration staged and verified.
+  # TEMPORARY CVE-2026-98432 containment: reject IPv4 TCP packets carrying IP
+  # options before handshake processing, including existing MPTCP listeners.
+  # This does not reject normal TCP options such as SACK or window scaling.
+  # Remove this rule and the sysctls after every host in the authorized rollout
+  # boots a fixed kernel, and fleet-kernel-security retains its kernel guard.
   tcpOptionRule = "-p tcp -m u32 --u32 '0>>24&0xF=0x6:0xF' -m comment --comment CVE-2026-98432-containment -j DROP";
 in
 {
