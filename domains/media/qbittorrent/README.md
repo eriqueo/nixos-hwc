@@ -116,6 +116,11 @@ journalctl -u podman-qbittorrent -f
 
 ## Changelog
 
+- **2026-08-20**: gluetun became multi-instance. The VPN assertion now comes from
+  the shared `helpers.mkVpnAssertions` (checks the `gluetun` instance in
+  `hwc.networking.gluetun.instances`) instead of the single
+  `hwc.networking.gluetun.enable` flag. Behaviour otherwise unchanged.
+
 - **2026-08-01**: Split `privacy.enable` into per-protocol toggles
   (`anonymousMode`/`dht`/`pex`/`lsd`) and turned **DHT + PeX back on** by
   default. The blanket-off posture was redundant with the gluetun tunnel (the

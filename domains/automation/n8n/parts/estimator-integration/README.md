@@ -78,6 +78,21 @@ All webhook endpoints require `x-api-key` header matching `ESTIMATOR_API_KEY` en
 - **Phase**: `22P4fguBu3Ub` - Jobs with phase 1-3 are estimating stages
 - **Job Type**: `22P4fgU4XmLY` - bathroom, deck, kitchen, etc.
 
+## Structure
+
+```
+estimator-integration/
+├── CHANGELOG.md     # Session-by-session deployment log (2026-03)
+├── NEXT-SESSION.md  # Deployment/credential/test checklist
+└── README.md
+```
+
+## Changelog
+
+- 2026-06-02: Mechanical rename in `NEXT-SESSION.md` — tailnet host
+  `hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net` in the n8n UI
+  and webhook test URLs. Earlier history is in `CHANGELOG.md`.
+
 ## Related Files
 
 - Workflows: `/home/eric/.nixos/domains/automation/n8n/parts/workflows/`

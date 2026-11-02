@@ -142,6 +142,10 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
+- 2026-11-01: The OAuth key-pair startup check compares SHA-256 digests of both keys'
+  DER public form (`openssl pkey … -outform DER`) instead of a byte `cmp` of PEM text,
+  so an equivalent key in different PEM encoding no longer fails; `pipefail` added.
+
 - 2026-11-01: Persist the existing Core OAuth signing keys and check their pair
   before container startup, so runtime image replacement preserves API tokens.
 

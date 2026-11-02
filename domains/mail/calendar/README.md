@@ -12,7 +12,7 @@ NAMESPACE: `hwc.home.apps`-adjacent but lives under mail — `hwc.mail.calendar.
 Radicale is the only backend: the self-hosted CalDAV server
 (`tasks.hwc.iheartwoodcraft.com`, same vhost + `radicale-htpasswd` secret as
 the tasks backend). One VEVENT pair (`calendar_radicale`) pinned to `work`,
-`family`, and `personal` (plus `radicale.extraCollections`), synced into
+`family`, `personal` and `meals` (plus `radicale.extraCollections`), synced into
 `calendars-radicale/`. The `work` collection's displayname is
 `hwc.mail.calendar.primaryCalendar` (`hwc`); khal's default, `busy`, and
 todoman's default list all resolve by it. Collection paths and user-facing
@@ -42,6 +42,7 @@ domains/mail/calendar/
 
 ## Changelog
 
+- 2026-10-16: `meals` joins the pinned Radicale VEVENT collections (`work`, `family`, `personal`, `meals`), part of the reviewed meals/calendar projection integration.
 - 2026-10-13: `radicale.extraCollections` defaults to the ids in `domains/server/services/radicale/parts/mirror-catalog.nix`, the same list the server mirrors from. The machine copies in laptop and work `home.nix` are deleted.
 - 2026-10-01: The `.ics` watcher also imports from `hwc.paths.user.calendarDrop` (private, unsynced) and moves those files to its `imported/`; event-scout hands events there instead of the synced Downloads folder. It now imports with the khalt fork's `khal`, as this module already documented, and its log names Radicale rather than iCloud.
 - 2026-09-24: Radicale is the only backend. Deleted the iCloud `accounts`

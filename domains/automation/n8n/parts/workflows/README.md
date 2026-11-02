@@ -190,12 +190,13 @@ send one result through hwc-notify.
 **Purpose:** Provide JobTread customer and job data for the Heartwood Estimator app dropdowns
 
 **Triggers:**
-- Webhook `GET /webhook/jt-customers` (Fetch all customers)
+- Webhook `GET /webhook/jt-customers[?page={cursor}]` (one page of customers)
 - Webhook `GET /webhook/jt-jobs?customerId={id}` (Fetch jobs for customer)
 
 **Features:**
 - API key authentication via `x-api-key` header
-- GraphQL queries to JobTread API
+- Pave queries to JobTread API; customers are fetched 50 per page and the
+  caller follows `nextPage` (an optional `page` string, max 2000 chars)
 - Filters jobs by Phase custom field (1-3 = estimating stages)
 - Returns formatted dropdown data with IDs, names, addresses
 
@@ -207,10 +208,14 @@ x-api-key: {ESTIMATOR_API_KEY}
 **Response (Customers):**
 ```json
 {
+  "version": 1,
   "customers": [
-    { "id": "uuid", "name": "John Smith", "address": "123 Main St, City, ST 12345" }
+    { "id": "uuid", "name": "John Smith", "primaryLocationId": "uuid",
+      "address": "123 Main St, City, 12345",
+      "locations": [{ "id": "uuid", "name": "Home", "address": "123 Main St, City, 12345" }] }
   ],
-  "count": 42
+  "count": 42,
+  "nextPage": "cursor-or-null"
 }
 ```
 
@@ -382,5 +387,16 @@ flake check); unit tests at `workspace/automation/test_n8n_workflow_export.py`.
 
 ---
 
-**Last Updated:** 2026-03-24
+## Changelog
+
+- 2026-10-07: `08a-jt-data-provider.json` customers path rebuilt — validates an
+  optional `page` cursor, builds a Pave `organization.accounts` query (size 50),
+  and returns `{version, customers, count, nextPage}` with per-location
+  addresses. The old unpaged query stopped at fifty customers. The separate
+  `Respond Unauthorized (Customers)` node is gone; the jobs path is only
+  reordered/reformatted.
+
+---
+
+**Last Updated:** 2026-11-02
 **Author:** Eric (with Claude assistance)

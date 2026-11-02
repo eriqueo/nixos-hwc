@@ -28,6 +28,8 @@ The CMS deploy action performs local publication. The API remains at loopback po
 
 ## Changelog
 
+- 2026-11-01: Declare the `http://:<originPort>` Caddy vhost as one attribute set
+  (`logFormat` + `extraConfig`) instead of two dotted assignments; behavior unchanged.
 - 2026-11-01: Use the common sanitized tunnel access log instead of a duplicate
   raw-URI website backend log when origin logging is enabled.
 - 2026-10-07: Add optional customer measurements/counts/finishes mapped directly to estimator inputs. Fix grouped calculator price conditions by reusing the estimator parser. Preserve original lead receipts and category-based rough ranges.
