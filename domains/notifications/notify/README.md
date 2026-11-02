@@ -368,6 +368,19 @@ Hardening: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome=read-only`, `
 
 ## Changelog
 
+- **2026-09-25**: One address for hwc-notify. New `serverAlias` (default `"work"`,
+  service split wave 3) names the dispatcher host, and read-only `url` derives its
+  base URL from it plus `reverseProxyPort` via `hwc.networking.hosts.url`. Every
+  sender on every host defaults to `<url>/notify` (Alertmanager to
+  `<url>/webhook/alertmanager`); the dispatcher runs on hwc-work. Same day, the
+  `voice-log` topic route was removed with the retired market-intelligence and
+  dormant n8n workflows.
+- **2026-09-21**: `calculator-source-to-leads` and `leads-topic-to-leads` also deliver
+  to `smtp-office`, so new leads, CRM failures and calendar reminders reach email
+  when Discord is muted.
+- **2026-09-19**: Removed the `persona-daemon` topic route with the retired local
+  chat stack.
+
 - **2026-09-07**: The executive brief stopped deleting the body. Since
   2026-08-29 a notification with an `executive` block rendered `meaning` in
   place of `body` on Discord and instead of it on SMTP, so every producer that

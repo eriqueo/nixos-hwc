@@ -23,8 +23,10 @@ slskd is a modern, web-based Soulseek client for peer-to-peer music sharing. Thi
 
 ### Service Type
 - **Container**: Podman (via `virtualisation.oci-containers`)
-- **Image**: `slskd/slskd:latest`
-- **Network**: `media-network` (internal container network)
+- **Image**: `slskd/slskd:0.21.4` (pinned)
+- **Network**: `network.mode = "vpn"` (default) — inside its own gluetun instance
+  `vpnInstance = "gluetun-slskd"`. `"media"` (media-network, house IP) fails the build
+  unless `allowClearnet = true`.
 - **Routing**: Port mode (HTTPS port 8443) - slskd is subpath-hostile
 
 ### Directory Structure
@@ -152,17 +154,21 @@ From slskd documentation:
 
 ### Ports
 
+On the VPN (default) slskd publishes no host ports: the gluetun instance publishes
+the web UI, and the Soulseek listen port is the tunnel's NAT-PMP forwarded port, read
+by `slskd-config-generator` from `<gluetun stateRoot>/<vpnInstance>/forwarded-port`
+(fallback `listenPort`, default 50300).
+
+Off-VPN (`media` + `allowClearnet`) only:
 - **5031** (host) → **5030** (container): Web UI (HTTP, proxied via Caddy HTTPS 8443)
-- **50300** (host) → **50300** (container): Soulseek P2P (TCP)
+- **`listenPort`** (host) → same (container): Soulseek P2P (TCP)
 
 ### Firewall
 
 ```nix
-networking.firewall.allowedTCPPorts = [ 50300 5031 ];
+networking.firewall.allowedTCPPorts =
+  lib.optionals (cfg.network.mode != "vpn") [ cfg.listenPort 5031 ];
 ```
-
-- **50300**: Required for Soulseek network connectivity
-- **5031**: Internal HTTP, proxied by Caddy
 
 ### Caddy Route
 
@@ -188,11 +194,11 @@ slskd doesn't support URL base configuration and hardcodes paths in JavaScript/a
 ```
 agenix.service
     ↓
-slskd-config-generator.service (generates config from secrets)
+slskd-config-generator.service (generates config from secrets + forwarded port)
     ↓
-init-media-network.service (creates media-network)
+podman-gluetun-slskd.service (VPN; init-media-network.service off-VPN)
     ↓
-podman-slskd.service (starts container)
+podman-slskd.service (starts container; bindsTo/partOf the tunnel on VPN)
 ```
 
 ### Restart Behavior
@@ -423,6 +429,18 @@ shares.directories = [
 
 ---
 
-**Last Updated**: 2025-11-06
+## Changelog
+
+- 2026-09-10: Comment fix only — tmpfiles ownership now cited as `media/directories.nix`.
+- 2026-08-20: slskd moves into its own gluetun instance (`vpnInstance`, default
+  `gluetun-slskd`; Proton forwards one port per session). `network.mode` defaults to
+  `"vpn"`, and `"media"` is a build failure unless `allowClearnet = true` — the old
+  `"media"` default had egressed on the house IP. The listen port follows the tunnel's
+  forwarded port (`listenPort` fallback); host ports/firewall apply only off-VPN; the
+  container binds to the tunnel unit. Assertions come from `helpers.mkVpnAssertions`.
+
+---
+
+**Last Updated**: 2026-11-02
 **Architecture Version**: HWC 6.0
 **Module Version**: Container with runtime secret injection
