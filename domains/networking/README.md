@@ -95,6 +95,8 @@ networking/
 - 2026-11-02: Add home's read-only wall gateway and exact local DNS override.
   Preserve the public Tailscale answer and work firewall. Check rendered routing,
   disabled wiring, resolver binding and rejection of seeded unsafe configurations.
+  The method-guard check rejects added write methods; unselected hosts retain
+  identical Caddy output, including whitespace.
 
 - 2026-11-01: Restrict reverse-proxy firewall openings to the Tailscale interface.
   Keep public Cloudflare ingress on loopback; check evaluated private ports.
