@@ -82,6 +82,8 @@ business/
 
 ## Changelog
 
+- 2026-11-01: website merges its dynamic origin-vhost Caddy attributes into one set.
+
 - 2026-11-01: Defer public website access logging to the sanitized origin logger.
 
 - 2026-11-01: Persist Firefly Core's OAuth key pair across runtime image changes.

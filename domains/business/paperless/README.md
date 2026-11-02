@@ -100,9 +100,9 @@ hwc.business.paperless = {
 
 | Path | Purpose | Retention |
 |------|---------|-----------|
-| `storage.mediaDir/originals` | Original uploaded documents | Indefinite + backup |
-| `storage.mediaDir/archive` | OCR'd PDF/A copies | Indefinite + backup |
-| `storage.mediaDir/thumbnails` | Document thumbnails | Indefinite |
+| `storage.mediaDir/documents/originals` | Original uploaded documents (created by Paperless) | Indefinite + backup |
+| `storage.mediaDir/documents/archive` | OCR'd PDF/A copies (created by Paperless) | Indefinite + backup |
+| `storage.mediaDir/documents/thumbnails` | Document thumbnails (created by Paperless) | Indefinite |
 | `storage.dataDir` | Search index, DB cache | Recreatable |
 | `storage.consumeDir` | Drop zone for auto-import | Transient |
 | `storage.stagingDir` | Pre-processing area | Cleaned after 7 days |
@@ -116,6 +116,15 @@ hwc.business.paperless = {
 - `paperless-cleanup.service` / `paperless-cleanup.timer` — daily staging/export cleanup
 
 ## Changelog
+
+- 2026-09-25: Stopped pre-creating `mediaDir/{originals,archive,thumbnails}` in
+  `directories.nix`; Paperless uses `media/documents/*` and those top-level dirs
+  were always empty.
+- 2026-09-25: Paperless (+ Tika, Gotenberg, mail ingest) moves to hwc-work (service split
+  wave 3). New `serverAlias` option (default `"work"`) names the Paperless host.
+  `receipts.enable` is now independent of `enable` and off by default: the watcher runs
+  on the host holding the phone folder and, when Paperless is remote, rsyncs each drop
+  over SSH into that host's consume dir, read from its evaluated config.
 
 - 2026-09-16: `ocr.continueOnSoftRenderError` (on by default) sets
   `PAPERLESS_OCR_USER_ARGS={"continue_on_soft_render_error":true}`. Ghostscript

@@ -13,10 +13,17 @@ Business data layer for Heartwood Craft. Manages the `hwc` PostgreSQL database s
 
 ```
 domains/business/databases/
-├── index.nix                    # Module: hwc.business.databases.* (database provisioning)
-├── schema.sql                   # Full business schema (690 lines, 15+ tables, views, triggers)
+├── index.nix                    # Module: hwc.business.databases.* (database + business_user role)
+├── schema.sql                   # Full business schema (~780 lines, 15+ tables, views, triggers)
 ├── catalog.db                   # SQLite catalog (source for migration to Postgres)
+├── CATALOG_NAMING_CONVENTION.md # Canonical catalog item naming rule (JT ↔ Postgres ↔ assembler key)
 ├── migrate_catalog.py           # Migration script: SQLite -> Postgres catalog_items table
+├── migrate_canonical.sql        # Adds canonical naming to catalog_items
+├── seed_catalog.py              # Upserts catalog_items from canonical_catalog_FINAL.csv
+├── populate_assembly_logic.py   # Copies assembler.js add() logic onto catalog_items
+├── migrations/
+│   ├── 001-catalog-schema-split.sql   # catalog_items / assembly_rules / estimate_line_items split
+│   └── 002-estimator-site-visit.sql   # Idempotent assembly-rule repair + panel shower/vinyl items
 ├── export_calculator_json.py    # Export DB → calculator-bathroom.json for website calculator
 ├── export_estimator_data.py     # Export DB → tradeRates.json, templates.json, catalog_export.json
 └── README.md
@@ -84,6 +91,15 @@ After enabling and rebuilding:
 3. Verify: `sudo -u postgres psql -d hwc -c "\dt public.*"`
 
 ## Changelog
+
+- 2026-10-07: Added `migrations/002-estimator-site-visit.sql` — idempotent `assembly_rules`
+  condition repairs (shower/tile/tub triggers; supplier `include_*_material` flags gate
+  purchases only), niche waste factor 0.1 → 1, and site-verified panel shower,
+  vinyl/Marmoleum and shower-door catalog items/rules. Existing rates unchanged.
+- 2026-08-28: Deleted the four `$PSQL` postStart GRANT lines (never ran: `$PSQL` is undefined
+  in the post-start script) and the per-database backup registration (that service was
+  retired 2026-08-26). Declared `business_user` via `ensureUsers`, since `schema.sql` and
+  migration 001 grant to it and it had only existed by hand.
 
 - 2026-05-01: Added export scripts, estimate_templates table, 70 catalog items with Craftsman/JT rates
 - 2026-04-12: Created index.nix module (hwc.business.databases.*), wired into business domain
