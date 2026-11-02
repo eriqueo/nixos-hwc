@@ -1,5 +1,5 @@
 # domains/system/core/index.nix — aggregates core system functionality
-{ lib, config, pkgs, ... }:
+{ lib, config, pkgs, options, ... }:
 let
   # TEMPORARY: CVE-2026-98432 requires >=6.18.56. Keep the existing stable
   # branch and use its next maintenance release, not a fleet-wide channel bump.
@@ -19,6 +19,7 @@ let
         };
       };
     };
+  journalLimit = "1G";
 in
 {
   #==========================================================================
@@ -85,7 +86,11 @@ in
 
       # AUTO-MANAGED: journald rotates oldest archived journals at this cap.
       # A host or audit policy can replace it (home retains its 8G window).
-      services.journald.extraConfig = lib.mkDefault "SystemMaxUse=1G";
+      services.journald = if options.services.journald ? settings then {
+        settings.Journal.SystemMaxUse = lib.mkDefault journalLimit;
+      } else {
+        extraConfig = lib.mkDefault "SystemMaxUse=${journalLimit}";
+      };
 
       # TEMPORARY (tracked): distrust the eMudhra emSign roots that Mozilla
       # removed in NSS 3.131.1 after eight emSign intermediate keys proved

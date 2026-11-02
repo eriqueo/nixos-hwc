@@ -8,6 +8,7 @@ Foundational system configuration: identity, filesystem structure, boot, and cro
 - Does NOT manage: Networking → `networking/`, user accounts → `users/`
 
 ## Structure
+The journal ceiling is declared through the available channel option without changing its value.
 `index.nix` selects a fixed6.18 stable kernel independently of the channel pin.
 Remove the temporary source override once both channels supply the fixed release.
 
@@ -26,6 +27,7 @@ core/
 ```
 
 ## Changelog
+- 2026-11-02: Select the declared journald API while preserving the1G default and per-host overrides.
 - 2026-11-02: Select Linux6.18.57 without changing the rest of either channel;
   keep the kernel package set coherent for external drivers and boot modules.
 - 2026-10-25: Add the isolated XPS household desktop wiring; preserve existing

@@ -17,6 +17,7 @@ Provides network infrastructure that other domains depend on:
 - Route definitions: currently centralized in `routes.nix`, will be distributed to individual domains as they migrate
 
 ## Structure
+The reverse proxy builds the deSEC DNS plugin against the channel's Caddy release; its dependency hash changes with the vendor closure.
 
 `reverseProxy` permits its HTTP, HTTPS and port-mode listeners only on
 `tailscale0`. Public tunnel origins use loopback and need no WAN firewall ports.
@@ -91,6 +92,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-11-02: Refresh the deSEC plugin dependency hash for Caddy2.11.7 on the November security baseline.
 
 - 2026-11-02: Add home's read-only wall gateway and exact local DNS override.
   Preserve the public Tailscale answer and work firewall. Check rendered routing,
