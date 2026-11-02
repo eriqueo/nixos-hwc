@@ -19,6 +19,18 @@ spec.loader.exec_module(stream)
 
 
 class StreamTests(unittest.TestCase):
+    def test_library_recovers_root_focus_after_a_dialog_closes_without_a_title_change(self):
+        wait = Mock(side_effect=[subprocess.TimeoutExpired('eden', .5)] * 3 + [0])
+        # Main window, real dialog, then root (no owning client PID).
+        results = [Mock(returncode=0, stdout=b'42\n'),
+                   Mock(returncode=0, stdout=b'99\n'), Mock(returncode=0, stdout=b'123\n'),
+                   Mock(returncode=0, stdout=b'1061\n'), Mock(returncode=1, stdout=b'')]
+        with patch.object(stream, 'call', return_value='eden | 0.2.1 (nixpkgs) 1.0.0') as calls, \
+             patch.object(stream.subprocess, 'run', side_effect=results), patch.object(stream.time, 'sleep'):
+            stream.keep_library_focus('/xdotool', '42', wait)
+        effects = [c.args[0] for c in calls.call_args_list if 'windowfocus' in c.args[0]]
+        self.assertEqual(effects, [['/xdotool', 'windowfocus', '0'], ['/xdotool', 'windowfocus', '42']] * 2)
+
     def test_pro_profiles_keep_players_on_distinct_ports_without_changing_handheld_settings(self):
         with tempfile.TemporaryDirectory() as directory:
             config = Path(directory) / 'qt-config.ini'; config.write_text('[Controls]\nplayer_8_connected=true\n')
@@ -41,6 +53,7 @@ class StreamTests(unittest.TestCase):
         wait = Mock(side_effect=[subprocess.TimeoutExpired('eden', .5)] * 3 + [0])
         with patch.object(stream, 'call', return_value='eden | 0.2.1 (nixpkgs) 1.0.0') as calls, \
              patch.object(stream.subprocess, 'run', side_effect=[Mock(returncode=0, stdout=b'99\n'),
+                   Mock(returncode=0, stdout=b'123\n'),
                    Mock(returncode=0, stdout=b'42\n'), Mock(returncode=0, stdout=b'42\n')]), \
              patch.object(stream.time, 'sleep'):
             self.assertEqual(stream.keep_library_focus('/xdotool', '42', wait), 0)
@@ -63,9 +76,10 @@ class StreamTests(unittest.TestCase):
         self.assertEqual(effects, [['/xdotool', 'windowfocus', '0'], ['/xdotool', 'windowfocus', '42']] * 2)
 
     def test_focus_recovery_preserves_valid_dialog_focus_and_survives_probe_errors(self):
-        for result in [Mock(returncode=0), OSError('display temporarily unavailable')]:
+        for result in [Mock(returncode=0, stdout=b'99\n'), OSError('display temporarily unavailable')]:
             wait = Mock(side_effect=[subprocess.TimeoutExpired('eden', .5), 0])
-            with patch.object(stream.subprocess, 'run', side_effect=[result]), patch.object(stream, 'call') as calls:
+            with patch.object(stream.subprocess, 'run', side_effect=[result, Mock(returncode=0, stdout=b'123\n')]), \
+                 patch.object(stream, 'call', return_value='eden | 0.2.1 (nixpkgs) 1.0.0') as calls:
                 self.assertEqual(stream.keep_library_focus('/xdotool', '42', wait), 0)
                 self.assertFalse(any('windowfocus' in c.args[0] for c in calls.call_args_list))
 

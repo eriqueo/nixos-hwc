@@ -29,6 +29,8 @@ The game launcher cycles X11 logical focus on each return to the library, since
 Eden can remain inactive in Qt while X11 still names its main window as focused.
 This restores D-pad navigation after stopping a game. It preserves valid
 dialog/other-app focus and never activates the laptop's physical desktop window.
+When closing a dialog leaves X11 focus on an unowned root window, the helper
+restores library focus even without a game-title transition.
 
 The Pi stays on Batocera. Its native `switch_stream` service restores the HDMI
 PCM bridge, 1080p60 TV mode and Bluetooth connectability at boot. The Bluetooth
@@ -138,6 +140,7 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+- 2026-11-02: Recover library navigation when modal closure leaves focus on the X11 root window; retain focus in owned app/dialog windows.
 - 2026-11-02: Generate distinct Pro Controller profiles for players 1 and 2 without changing Pikachu's handheld settings.
 - 2026-11-02: Detect game-to-library transitions and restore Qt activation even when the X11 focus ID remains valid.
 - 2026-11-02: Restore lost library focus throughout an Eden session after stopping emulation; retain dialog and laptop desktop focus.
