@@ -8,6 +8,9 @@ Foundational system configuration: identity, filesystem structure, boot, and cro
 - Does NOT manage: Networking → `networking/`, user accounts → `users/`
 
 ## Structure
+`index.nix` selects a fixed6.18 stable kernel independently of the channel pin.
+Remove the temporary source override once both channels supply the fixed release.
+
 ```
 core/
 ├── authentik/       # SSO/Identity Provider (hwc.system.core.authentik.*)
@@ -23,6 +26,8 @@ core/
 ```
 
 ## Changelog
+- 2026-11-02: Select Linux6.18.57 without changing the rest of either channel;
+  keep the kernel package set coherent for external drivers and boot modules.
 - 2026-10-25: Add the isolated XPS household desktop wiring; preserve existing
   host defaults and use the owning login, gaming and credential capabilities.
 - 2026-10-21: Distrust emSign ECC Root CA - G3, emSign Root CA - C1 and emSign ECC Root CA - C3 in the system CA bundle on every machine (eMudhra intermediate key compromise; mirrors NSS 3.131.1, G1 kept). Temporary until each channel ships cacert >= 3.131.1. Node's own root store is fixed by the companion `overlays/nodejs-security.nix`.

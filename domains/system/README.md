@@ -9,6 +9,11 @@
 
 ## Structure
 
+`core` selects the fixed6.18 stable kernel across both channels. `networking`
+disables MPTCP/request migration and drops IPv4 TCP options before handshake
+processing while older kernels remain booted. The fleet security check covers
+every declared machine; a successful build does not prove the new kernel booted.
+
 `networking` leaves HTTP/HTTPS firewall rules to the serving module. The server
 role does not implicitly expose web ports on every interface.
 
@@ -81,6 +86,9 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-11-02: Select Linux6.18.57 for CVE-2026-98432 and persist early TCP-option
+  containment across the fleet, with explicit removal conditions and seeded checks.
 
 - 2026-11-01: Remove implicit global HTTP/HTTPS openings from the server firewall
   profile; reverse-proxy rules now select their Tailscale interface.

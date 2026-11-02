@@ -1,5 +1,25 @@
 # domains/system/core/index.nix — aggregates core system functionality
 { lib, config, pkgs, ... }:
+let
+  # TEMPORARY: CVE-2026-98432 requires >=6.18.56. Keep the existing stable
+  # branch and use its next maintenance release, not a fleet-wide channel bump.
+  # Remove this override when every channel's linux_6_18 is >=6.18.57 and the
+  # fleet-kernel-security check still passes without it.
+  channelKernel = pkgs.linuxKernel.kernels.linux_6_18;
+  securityVersion = "6.18.57";
+  securityKernel = if lib.versionAtLeast channelKernel.version securityVersion
+    then channelKernel
+    else channelKernel.override {
+      argsOverride = rec {
+        version = securityVersion;
+        modDirVersion = version;
+        src = pkgs.fetchurl {
+          url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${version}.tar.xz";
+          hash = "sha256-W9ms3ILsXvw3kK6EDlqqQN/efv/yYc9t3pAtxXCs+Yw=";
+        };
+      };
+    };
+in
 {
   #==========================================================================
   # OPTIONS
@@ -61,6 +81,8 @@
   #==========================================================================
   config = lib.mkMerge [
     {
+      boot.kernelPackages = lib.mkDefault (pkgs.linuxPackagesFor securityKernel);
+
       # AUTO-MANAGED: journald rotates oldest archived journals at this cap.
       # A host or audit policy can replace it (home retains its 8G window).
       services.journald.extraConfig = lib.mkDefault "SystemMaxUse=1G";

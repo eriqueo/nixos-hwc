@@ -4,6 +4,11 @@
 let
   cfg = config.hwc.system.networking;
   types = lib.types;
+  # TEMPORARY CVE-2026-98432 containment: reject IPv4 TCP options before TCP
+  # handshake processing, including existing MPTCP listeners. Remove this rule
+  # and the sysctls only after every reachable fleet host boots a fixed kernel
+  # and offline hosts have a fixed boot configuration staged and verified.
+  tcpOptionRule = "-p tcp -m u32 --u32 '0>>24&0xF=0x6:0xF' -m comment --comment CVE-2026-98432-containment -j DROP";
 in
 {
   #==========================================================================
@@ -224,6 +229,8 @@ in
     # IP Forwarding (required for container networking / WireGuard in containers)
     # =========================
     boot.kernel.sysctl = {
+      "net.mptcp.enabled" = 0;
+      "net.ipv4.tcp_migrate_req" = 0;
       "net.ipv4.ip_forward" = 1;
       "net.ipv4.conf.all.forwarding" = 1;
     };
@@ -232,6 +239,13 @@ in
     # Firewall
     # =========================
     networking.firewall = {
+      extraCommands = ''
+        ${pkgs.iptables}/bin/iptables -w -t raw -C PREROUTING ${tcpOptionRule} 2>/dev/null ||
+          ${pkgs.iptables}/bin/iptables -w -t raw -I PREROUTING 1 ${tcpOptionRule}
+      '';
+      extraStopCommands = ''
+        ${pkgs.iptables}/bin/iptables -w -t raw -D PREROUTING ${tcpOptionRule} 2>/dev/null || true
+      '';
       enable    = cfg.firewall.level != "off";
       allowPing = cfg.firewall.level == "basic";
       # Required for WireGuard behind NAT (e.g., Podman containers)
