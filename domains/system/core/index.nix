@@ -1,24 +1,6 @@
 # domains/system/core/index.nix — aggregates core system functionality
 { lib, config, pkgs, options, ... }:
 let
-  # TEMPORARY: CVE-2026-98432 requires >=6.18.56. Keep the existing stable
-  # branch and use its next maintenance release, not a fleet-wide channel bump.
-  # Remove this override when every channel's linux_6_18 is >=6.18.57 and the
-  # fleet-kernel-security check still passes without it.
-  channelKernel = pkgs.linuxKernel.kernels.linux_6_18;
-  securityVersion = "6.18.57";
-  securityKernel = if lib.versionAtLeast channelKernel.version securityVersion
-    then channelKernel
-    else channelKernel.override {
-      argsOverride = rec {
-        version = securityVersion;
-        modDirVersion = version;
-        src = pkgs.fetchurl {
-          url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${version}.tar.xz";
-          hash = "sha256-W9ms3ILsXvw3kK6EDlqqQN/efv/yYc9t3pAtxXCs+Yw=";
-        };
-      };
-    };
   journalLimit = "1G";
 in
 {
@@ -82,7 +64,7 @@ in
   #==========================================================================
   config = lib.mkMerge [
     {
-      boot.kernelPackages = lib.mkDefault (pkgs.linuxPackagesFor securityKernel);
+      boot.kernelPackages = lib.mkDefault (pkgs.linuxPackagesFor pkgs.linuxKernel.kernels.linux_6_18);
 
       # AUTO-MANAGED: journald rotates oldest archived journals at this cap.
       # A host or audit policy can replace it (home retains its 8G window).
@@ -92,16 +74,9 @@ in
         extraConfig = lib.mkDefault "SystemMaxUse=${journalLimit}";
       };
 
-      # TEMPORARY (tracked): distrust the eMudhra emSign roots that Mozilla
-      # removed in NSS 3.131.1 after eight emSign intermediate keys proved
-      # recoverable (disclosed 2026-10-17). emSign Root CA - G1 stays, as in
-      # NSS. Remove when `nix eval .#nixosConfigurations.<host>.pkgs.cacert.version`
-      # reports >= 3.131.1 for every machine (the bundle then lacks these labels).
-      security.pki.caCertificateBlacklist = [
-        "emSign ECC Root CA - G3"
-        "emSign Root CA - C1"
-        "emSign ECC Root CA - C3"
-      ];
+      # The reviewed channel CA bundles already remove the compromised emSign
+      # roots. fleet-kernel-security guards their minimum version; blacklisting
+      # names that no longer exist makes the Nix CA-bundle builder fail.
     }
 
     (lib.mkIf config.hwc.system.core.nixld.guiLibs.enable {

@@ -17,6 +17,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
+`apps/onlyoffice-desktopeditors` retains its scale/libGL launch policy while
+requiring the vendor binary to build without the retired GTK2 input.
 
 `apps/plasma/` provides isolated household desktop defaults, browser/file associations and seed-only settings.
 
@@ -151,6 +153,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-02: Keep OnlyOffice on GTK3/Qt with strict dependency checks during the security baseline refresh.
 - 2026-10-25: Add optional stock Plasma user defaults without importing Eric’s personal roles.
 
 - 2026-10-24: Prepare optional native Mail/helper bindings from the current

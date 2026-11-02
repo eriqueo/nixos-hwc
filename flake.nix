@@ -1026,12 +1026,26 @@
         touch $out
       '';
 
+      onlyoffice-runtime = let
+        home = self.nixosConfigurations.hwc-laptop.config.home-manager.users.eric;
+        package = lib.findFirst (p: (p.pname or "") == "onlyoffice-desktopeditors") null home.home.packages;
+      in assert package != null;
+      assert lib.all (p: !((p.pname or "") == "gtk+" && lib.versions.major (p.version or "0") == "2")) package.derivation.buildInputs;
+      pkgs.runCommand "onlyoffice-runtime" {} ''
+        # Realizing the vendor derivation also runs strict autoPatchelf. A
+        # remaining mandatory GTK2 dependency must fail there, never be ignored.
+        test -x ${package}/bin/onlyoffice-desktopeditors
+        test -x ${package.derivation}/share/desktopeditors/DesktopEditors
+        touch "$out"
+      '';
+
       fleet-kernel-security = let
         fixture = pkgs.writeText "fleet-kernel-security.json" (builtins.toJSON
           (lib.mapAttrs (_: host: let c = host.config; in {
             kernel = c.boot.kernelPackages.kernel.version;
             tailscale = c.services.tailscale.package.version;
             openssl = host.pkgs.openssl.version;
+            cacert = host.pkgs.cacert.version;
             mptcp = c.boot.kernel.sysctl."net.mptcp.enabled" or null;
             migration = c.boot.kernel.sysctl."net.ipv4.tcp_migrate_req" or null;
             # Inspect rendered policy, without building another architecture's
@@ -1050,6 +1064,7 @@
             ssl = tuple(map(int, c['openssl'].split('.')[:3]))
             ssl_floors = {(3, 0): (3, 0, 23), (3, 4): (3, 4, 8), (3, 5): (3, 5, 9), (3, 6): (3, 6, 5), (4, 0): (4, 0, 3)}
             assert ssl[:2] in ssl_floors and ssl >= ssl_floors[ssl[:2]], (host, 'unreviewed OpenSSL baseline', c['openssl'])
+            assert tuple(map(int, c['cacert'].split('.'))) >= (3, 131, 1), (host, 'outdated trust bundle', c['cacert'])
             assert c['mptcp'] == 0 and c['migration'] == 0, (host, 'missing sysctl containment')
             for token in ['-w 5', '-t raw', 'PREROUTING', '-p tcp', '--u32', '0>>24&0xF=0x6:0xF', 'CVE-2026-98432-containment', '-j DROP']:
                 assert token in c['firewall'], (host, 'missing early packet filter', token)
@@ -1057,7 +1072,7 @@
         assert configs
         for host, c in configs.items():
             check(host, c)
-            for key, value in [('kernel', '6.18.57'), ('tailscale', '1.104.2'), ('openssl', '3.6.4'), ('mptcp', 1), ('firewall', "")]:
+            for key, value in [('kernel', '6.18.57'), ('tailscale', '1.104.2'), ('openssl', '3.6.4'), ('cacert', '3.130'), ('mptcp', 1), ('firewall', "")]:
                 bad = copy.deepcopy(c); bad[key] = value
                 try:
                     check(host, bad)

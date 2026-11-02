@@ -89,6 +89,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-11-02: Use the refreshed channel kernel and CA bundle without expired temporary overrides; regressions fail the fleet security check.
 - 2026-11-02: Preserve the journal retention default across stable and unstable journald APIs during the security baseline refresh.
 
 - 2026-11-02: Select Linux6.18.57 for CVE-2026-98432 and persist early TCP-option

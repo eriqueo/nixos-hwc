@@ -8,7 +8,10 @@ Installs OnlyOffice Desktop Editors as a one-package Home Manager app via `domai
 - ❌ Does not manage: document defaults, MIME associations, or in-app settings.
 
 ## Structure
+The package omits upstream's retired GTK2 build input while retaining GTK3/Qt,
+strict autoPatchelf checks, libGL and the existing scale setting.
 - `index.nix` — mkSimpleApp call with the `onlyoffice-desktopeditors.override` (libGL + forced scale).
 
 ## Changelog
+- 2026-11-02: Remove the legacy GTK2 packaging input and require the actual vendor binary to pass strict dependency checks on the refreshed channel.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).
