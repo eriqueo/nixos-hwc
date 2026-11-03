@@ -12,6 +12,8 @@ photo management, and video surveillance services.
 
 ## Structure
 
+`sabnzbd/` exports the immutable5.1.3 security recipe and offline context. It applies two guarded XSS backports, preserves stable script-log links, updates selected signed Alpine/Python inputs, and requires the prebuilt local image. Its existing config/queue/API identity and history SQLite use the shared Borg producer.
+
 `navidrome-container/` emits a Nix-built0.64.2 image with Go1.27.3, fixed x/net and native media libraries, including seven exact upstream RTSP/SFTP/DASH/HDR/PSSH security patches. Its explicit data bind, startup database guard and Borg SQLite snapshot replace anonymous-volume storage.
 
 Frigate uses explicit NVIDIA CDI access and no-new-privileges; its configuration contract rejects privileged mode.
@@ -84,6 +86,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-03: Qualify SABnzbd5.1.3 with stable XSS backports, current native/Python security inputs and no-new-privileges. Preserve VPN, categories, scripts, download/event mounts and current-data code recovery; register history/config with Borg.
 
 - 2026-11-03: Include chi5.4.0 and the remaining applicable FFmpeg medium fixes. Retain the8.1 native library ABI while backporting the additive PSSH append API. Omit query strings and header collections from application logs so Subsonic tokens cannot enter the journal.
 

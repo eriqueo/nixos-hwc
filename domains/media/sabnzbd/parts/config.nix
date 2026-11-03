@@ -147,6 +147,8 @@ in
     (mkContainer {
       name = "sabnzbd";
       image = cfg.image;
+      pull = if cfg.image == cfg._runtimeImage then "never" else "missing";
+      extraOptions = [ "--security-opt=no-new-privileges" ];
       networkMode = if cfg.network.mode == "vpn" then "vpn" else "media";
       gpuEnable = cfg.gpu.enable;
       timeZone = config.time.timeZone or "America/Denver";

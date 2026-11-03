@@ -1674,6 +1674,56 @@
         touch "$out"
       '';
 
+      sabnzbd-runtime-wiring = let
+        c = self.nixosConfigurations.hwc-home.config;
+        container = c.virtualisation.oci-containers.containers.sabnzbd;
+        recipe = c.system.build.sabnzbdRuntimeImageRecipe;
+        context = c.system.build.sabnzbdRuntimeImageContext;
+        data = "${c.hwc.paths.apps.root}/sabnzbd/config";
+      in
+      assert lib.assertMsg
+        (container.image == "localhost/sabnzbd-runtime:5.1.3-security-${builtins.substring 0 12 (builtins.hashString "sha256" (builtins.readFile recipe))}")
+        "SABnzbd must consume the qualified stable security recipe";
+      assert container.image == c.hwc.media.sabnzbd._runtimeImage;
+      assert container.pull == "never";
+      assert lib.elem "--security-opt=no-new-privileges" container.extraOptions;
+      assert lib.elem "${data}:/config" container.volumes;
+      assert lib.elem "${c.hwc.paths.hot.root}/events:/mnt/hot/events" container.volumes;
+      assert lib.elem "${c.hwc.paths.hot.downloads}/scripts:/config/scripts:ro" container.volumes;
+      assert c.hwc.data.borg.sqliteSnapshots.sabnzbd.source == "${data}/admin/history1.db";
+      assert c.hwc.data.borg.sqliteSnapshots.sabnzbd.user == "root";
+      assert lib.elem data c.hwc.data.borg.sources;
+      assert lib.hasInfix "podman image exists" c.systemd.services.podman-sabnzbd.preStart;
+      pkgs.runCommand "sabnzbd-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${context} ${recipe} <<'PY'
+        import ast, hashlib, json, pathlib, sys
+        root=pathlib.Path(sys.argv[1]); recipe=pathlib.Path(sys.argv[2]).read_text()
+        assert (root/'Dockerfile').read_text()==recipe
+        assert recipe.startswith('FROM lscr.io/linuxserver/sabnzbd@sha256:2b69019ef0b01bcdb9fb5d6641516bd57cb73b8f98b1a34f61ab749c5ea63376\n')
+        assert '--repositories-file /dev/null --no-network --no-cache' in recipe
+        assert '--no-index --no-deps --no-cache-dir --force-reinstall' in recipe
+        assert '/lsiopy/bin/python3 /tmp/hwc/apply-backports.py' in recipe
+        assert 'pip check' in recipe and 'apk verify' in recipe
+        manifest=json.loads((root/'manifest.json').read_text()); assert manifest['schemaVersion']==1
+        assert json.loads((root/'backports.json').read_text())==manifest['backports']
+        assert {p['name']:p['version'] for p in manifest['wheels']} == {'certifi':'2026.10.23','PyJWT':'2.15.1','urllib3':'2.8.0','oauthlib':'4.0.1'}
+        assert {p['name']:p['version'] for p in manifest['apks']} == {'curl':'8.23.0-r0','libcurl':'8.23.0-r0','libexpat':'2.10.0-r0','ca-certificates-bundle':'20261020-r0'}
+        import base64
+        for p in manifest['apks']+manifest['wheels']:
+            assert 'sha256-'+base64.b64encode(hashlib.sha256((root/p['file']).read_bytes()).digest()).decode()==p['hash']
+            assert '/tmp/hwc/'+p['file'] in recipe
+        expected={'sabnzbd/postproc.py':'dbcd60746ae1b8890ce3ac6f85715bfe244080ec4f957dfaaa141b4242bc3e97',
+          'interfaces/Glitter/templates/static/javascripts/knockout-extensions.js':'a344b7a1aea287934f36154eb5d3d73ca57592b688bcba51454134cd44e8b35b',
+          'interfaces/wizard/static/javascript/checkserver.js':'332318b1bcad64fa7565b4272313c7ef4adeca9c14ba0516fc119037a4fe0360',
+          'interfaces/Config/templates/config_server.tmpl':'ee5516fdb731f859a518633387c361a7996bbc2f3e7fc2cca875cfe80f1efe34'}
+        assert {k:v['patchedSha256'] for k,v in manifest['backports'].items()}==expected
+        program=(root/'apply-backports.py').read_text();ast.parse(program)
+        assert 'SOURCE_MISMATCH:' in program and 'PATCH_MISMATCH:' in program and 'MISSING_HUNK:' in program
+        assert 'postproc.*.pyc' in program
+        PY
+        touch "$out"
+      '';
+
       vaultwarden-runtime-wiring = let
         c = self.nixosConfigurations.hwc-work.config;
         container = c.virtualisation.oci-containers.containers.vaultwarden;
