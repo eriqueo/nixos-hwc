@@ -74,3 +74,13 @@
  }
 +
 +export default Utils
+--- a/utils/MathUtils.js
++++ b/utils/MathUtils.js
+@@ -1,6 +1,6 @@
+ import { Parser } from 'expr-eval'
+ 
+-const parser = new Parser()
++const parser = new Parser({ operators: { assignment: false } })
+ 
+ export const evalMath = (value) => {
+   if (!value || value === '') {

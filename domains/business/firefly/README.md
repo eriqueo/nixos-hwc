@@ -157,6 +157,10 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
+- 2026-11-02: Disable calculator variable assignment; arithmetic and hostile
+  expression checks pass against the patched utility.
+
+
 - 2026-11-02: Exercise the actual Pico calculator during offline image builds,
   including arithmetic and hostile expressions. Preserve source patch and cache
   input identities in the image recipe.
