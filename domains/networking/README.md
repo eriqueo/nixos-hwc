@@ -19,6 +19,7 @@ Provides network infrastructure that other domains depend on:
 ## Structure
 
 Static vhosts declare API handlers as a list of exact path patterns, upstreams, optional methods, Origin requirements and upstream headers. API handlers and SPA files are mutually exclusive; runtime secret-file placeholders never enter the browser bundle.
+Both callers use this list: estimator's private APIs and briefing's existing `/mcp*` proxy.
 
 The public n8n origin admits only the Quo receiver retained by Eric. Estimator
 customer/job reads and estimate writes stay on their configured tailnet URL.
