@@ -27,7 +27,7 @@ let
     COPY composer.phar /tmp/hwc-composer.phar
     ${lib.optionalString (kind == "pico") "WORKDIR /var/www/html"}
     COPY composer.json composer.lock ./
-    RUN COMPOSER_CACHE_DIR=/tmp/hwc-composer-cache COMPOSER_DISABLE_NETWORK=1 php /tmp/hwc-composer.phar install --no-dev --no-scripts --no-plugins --prefer-dist --no-interaction --optimize-autoloader && rm -f bootstrap/cache/packages.php bootstrap/cache/services.php && ${if kind == "pico" then "true" else "cp /tmp/hwc-composer.phar /usr/bin/composer && chmod 755 /usr/bin/composer"} && rm -r /tmp/hwc-composer-cache /tmp/hwc-composer.phar
+    RUN COMPOSER_CACHE_DIR=/tmp/hwc-composer-cache COMPOSER_DISABLE_NETWORK=1 php /tmp/hwc-composer.phar install --no-dev --no-scripts --no-plugins --prefer-dist --no-interaction --optimize-autoloader && rm -f bootstrap/cache/packages.php bootstrap/cache/services.php && chown www-data:www-data bootstrap/cache && ${if kind == "pico" then "true" else "cp /tmp/hwc-composer.phar /usr/bin/composer && chmod 755 /usr/bin/composer"} && rm -r /tmp/hwc-composer-cache /tmp/hwc-composer.phar
     ${lib.optionalString (kind == "pico") "WORKDIR /var/www/html/front"}
   '';
   composerContext = kind: ''

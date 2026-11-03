@@ -1320,10 +1320,12 @@
             assert 'COPY *.deb /tmp/hwc-runtime-debs/' in recipe
             assert 'apt-get --no-download --yes -o Dir::Cache::archives=/tmp/hwc-runtime-debs -o Dpkg::Options::=--force-confold install /tmp/hwc-runtime-debs/*.deb' in recipe
             assert recipe.rstrip().endswith('USER www-data')
-            assert 'COMPOSER_DISABLE_NETWORK=1' in recipe
+            assert 'chown www-data:www-data bootstrap/cache' in recipe
+        assert 'COMPOSER_DISABLE_NETWORK=1' in recipe
             assert 'install --no-dev --no-scripts --no-plugins' in recipe
             assert 'cp /tmp/hwc-composer.phar /usr/bin/composer' in recipe
             assert 'rm -f bootstrap/cache/packages.php bootstrap/cache/services.php' in recipe
+            assert 'chown www-data:www-data bootstrap/cache' in recipe
             assert {'composer.json', 'composer.lock', 'composer.phar', 'composer-cache'} <= {p.name for p in context.iterdir()}
         PY
         touch "$out"
@@ -1393,6 +1395,7 @@
         for name in ['pico-front-package.json','pico-front-package-lock.json','pico-frontend.patch',
                      'pico-frontend-test.mjs','pico-frontend-cache.mjs','pico-python-vendor.py']:
             assert hashlib.sha256((context / name).read_bytes()).hexdigest() in recipe
+        assert 'chown www-data:www-data bootstrap/cache' in recipe
         assert 'COMPOSER_DISABLE_NETWORK=1' in recipe
         assert 'install --no-dev --no-scripts --no-plugins' in recipe
         for package in manifest['packages']:

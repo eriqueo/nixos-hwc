@@ -175,6 +175,7 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
   Rebuild Pico’s Nuxt output with fixed-hash npm inputs and the existing 1.10.1
   public version, repair its calculator
   and vendored Python archive libraries, and exercise their real consumers.
+  Give the existing app user ownership of the invalidated provider cache directory.
   Extend wiring checks to cover input hashes, build/test calls and startup guards.
   Exact app versions and serving configuration remain unchanged. Deployment is
   owned by the parent and does not occur in this checkout.
