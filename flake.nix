@@ -327,6 +327,8 @@
                 streamlit = pythonFinal.callPackage
                   (inputs.nixpkgs + "/pkgs/development/python-modules/streamlit") {};
               } // prev.lib.optionalAttrs (pythonPrev ? mcp_1) {
+                  # TEMPORARY:7.71's peer contract excludes MCP2. Remove
+                  # when its upstream recipe selects mcp_1 or supports MCP2.
                   posthog = pythonPrev.posthog.override { mcp = pythonFinal.mcp_1; };
                 })
             ];
@@ -1073,9 +1075,9 @@
         hosts = [ "work" "home" "laptop" ];
         valid = host: let
           python = self.nixosConfigurations."hwc-${host}".pkgs.python3Packages;
-          peer = lib.findFirst (p: (p.pname or "") == "mcp") null python.posthog.nativeCheckInputs;
         in lib.versionAtLeast python.streamlit.version "1.62.0"
-          && (peer == null || lib.versionOlder peer.version "2");
+          # Force the real package boundary, including upstream problem checks.
+          && builtins.isString python.posthog.drvPath;
       in assert lib.assertMsg (lib.all valid hosts)
         "Python compatibility overlay must reach normal and CUDA host package sets";
       pkgs.runCommand "python-runtime-wiring" {} ''touch "$out"'';
