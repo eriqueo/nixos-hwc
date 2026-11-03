@@ -84,6 +84,11 @@ let
       };
       nativeBuildInputs = [ prev.autoPatchelfHook ];
       buildInputs = [ prev.stdenv.cc.cc.lib ];
+      # Permanent by design: retain the upstream ELF program-header order.
+      # patchelf0.19.2's sorting makes Node22 crash before main on the laptop;
+      # the original binary via the loader and --no-sort both run correctly.
+      # All manifest, Brotli, TLS, SQLite and npm install checks stay enabled.
+      patchelfFlags = [ "--no-sort" ];
       # Reuse the pinned Nixpkgs npm compatibility patch; do not fork its logic.
       prePatch = ''
         mkdir deps
