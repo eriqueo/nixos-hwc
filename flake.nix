@@ -1455,6 +1455,10 @@
           container = c.virtualisation.oci-containers.containers.paperless-gotenberg;
           preStart = c.systemd.services.podman-paperless-gotenberg.preStart;
           paperless = c.hwc.business.paperless.image;
+          paperlessContext = c.system.build.paperlessRuntimeImageContext;
+          paperlessContainer = c.virtualisation.oci-containers.containers.paperless;
+          paperlessPreStart = c.systemd.services.podman-paperless.preStart;
+          tika = c.virtualisation.oci-containers.containers.paperless-tika;
         });
       in pkgs.runCommand "gotenberg-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
         python3 - ${fixture} <<'PYGOT'
@@ -1479,12 +1483,27 @@
             assert '--chromium-allow-list=file:///tmp/.*' in value['container']['cmd']
             assert {'--libreoffice-deny-list=.*','--api-disable-download-from=true','--webhook-disable=true'} <= set(value['container']['cmd'])
             assert not value['container']['ports'] and not value['container']['volumes']
-            assert value['paperless'] == 'ghcr.io/paperless-ngx/paperless-ngx:3.1.3'
+            assert value['paperless'] == expected_paperless
+            assert value['paperlessContainer']['image'] == expected_paperless
+            assert value['paperlessContainer']['pull'] == 'never'
+            assert expected_paperless in value['paperlessPreStart']
+            assert value['tika']['image'] == 'docker.io/apache/tika@sha256:b99f19c4fd76237dafe7d22f719b9bddfa9a449da687c597a41e2f6d9a595418'
+            assert not value['tika']['ports'] and not value['tika']['volumes']
+        client_context = pathlib.Path(spec['paperlessContext'])
+        client_recipe = (client_context/'Dockerfile').read_text()
+        assert 'FROM ghcr.io/paperless-ngx/paperless-ngx@sha256:aa810a36942c63d4ee70d00eda7236cd3d6acfb7eb3f7987fb568ed14df8817a' in client_recipe
+        assert '--no-index --no-deps' in client_recipe
+        assert hashlib.sha256((client_context/'tika_client-2.0.0-py3-none-any.whl').read_bytes()).hexdigest() == '44dd7a5227ab2d25bc88b8ff282039602eaac0592e542ee0486d9535ec1be9b2'
+        expected_paperless = 'localhost/paperless-runtime:3.1.3-tika-client2.0.0-'+hashlib.sha256(client_recipe.encode()).hexdigest()[:12]
         check(spec)
         stale = copy.deepcopy(spec); stale['container']['image'] = 'docker.io/gotenberg/gotenberg:8.34'
         try: check(stale)
         except AssertionError: print('seeded missing production integration rejected')
         else: raise AssertionError('old converter escaped production check')
+        stale_client = copy.deepcopy(spec); stale_client['paperlessContainer']['image'] = 'ghcr.io/paperless-ngx/paperless-ngx:3.1.3'
+        try: check(stale_client)
+        except AssertionError: print('seeded incompatible old client rejected')
+        else: raise AssertionError('old client escaped paired runtime check')
         assert '--no-download' in recipe and 'apt-get update' not in recipe
         assert recipe.rstrip().endswith('USER gotenberg')
         print('PASS exact converter inputs and actual Paperless wiring')

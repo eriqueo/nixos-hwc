@@ -15,7 +15,7 @@ Paperless-NGX document management system running as a Podman container. Provides
 
 Paperless joins its normal network and the private conversion bridge. Tika and Gotenberg join only the private bridge; they have no host ports or data mounts.
 
-`index.nix` owns the fixed-hash Gotenberg runtime context and prebuilt-image guard. Its patched Chromium and vendor security release retain the installed Paperless client conversion contract.
+`index.nix` owns the fixed-hash Paperless client and Gotenberg runtime contexts and prebuilt-image guards. Paperless remains 3.1.3, paired with upstream tika-client 2.0.0 and immutable Tika 4.2.0/CXF 4.2.4. Gotenberg uses patched Chromium and the vendor security release.
 
 ```
 domains/business/paperless/
@@ -40,7 +40,7 @@ domains/business/paperless/
 ```nix
 hwc.business.paperless = {
   enable = true;
-  image = "ghcr.io/paperless-ngx/paperless-ngx:2.14";
+  # Keep the qualified default image and its matching Tika client.
   port = 8102;                      # Internal HTTP port
   network.mode = "media";           # Podman network
 
@@ -73,8 +73,7 @@ hwc.business.paperless = {
   consumer.subdirsAsTags = true;    # consume/a/b/x.pdf → tags a, b
 
   officeIngest.enable = true;       # Tika + Gotenberg sidecars (.doc/.docx/.odt/.rtf/.ppt)
-  officeIngest.tikaImage = "docker.io/apache/tika:3.3.1.0";
-  officeIngest.gotenbergImage = "docker.io/gotenberg/gotenberg:8.7.0";
+  # Keep the qualified default Tika and Gotenberg images.
 
   admin.user = "eric";
   admin.email = "eric@hwc.local";
@@ -120,6 +119,8 @@ hwc.business.paperless = {
 - `paperless-cleanup.service` / `paperless-cleanup.timer` — daily staging/export cleanup
 
 ## Changelog
+
+- 2026-11-02: Pair fixed Tika 4.2.0/CXF 4.2.4 with upstream client 2.0.0 on unchanged Paperless 3.1.3. Actual Office text, mail HTML and metadata calls pass old/new/restored contracts. Offline builds install only the verified client wheel, without dependency resolution or database migration.
 
 - 2026-11-02: Merge sidecar network supervision separately from existing Paperless startup, retaining both sets of systemd dependencies.
 

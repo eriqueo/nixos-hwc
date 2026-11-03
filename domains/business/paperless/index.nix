@@ -29,6 +29,29 @@ let
       cp ${source} "$out/debian/${p.file}"
     '') gotenbergPackages}
   '';
+  # Keep the application/schema at 3.1.3 while its supported client speaks
+  # Tika 4's fixed CXF and changed wire protocol. Remove this overlay when a
+  # qualified vendor Paperless image includes tika-client >=2 and the actual
+  # Office/mail/metadata and recovery contracts pass against Tika >=4.2.0.
+  tikaClientWheel = pkgs.fetchurl {
+    url = "https://files.pythonhosted.org/packages/81/fe/ee25b47093fc1a71fa49bffdf8ede1f6dc0fde3212fa3568fac20d63e2ac/tika_client-2.0.0-py3-none-any.whl";
+    hash = "sha256-RN16UierLSW8iLj/KCA5YC6qwFkuVC7gSG2VNewb6bI=";
+  };
+  paperlessRuntime = helpers.mkRuntimeImage {
+    name = "paperless";
+    version = "3.1.3-tika-client2.0.0";
+    recipe = ''
+      FROM ghcr.io/paperless-ngx/paperless-ngx@sha256:aa810a36942c63d4ee70d00eda7236cd3d6acfb7eb3f7987fb568ed14df8817a
+      # Fixed client wheel ${tikaClientWheel.outputHash}
+      COPY tika_client-2.0.0-py3-none-any.whl /tmp/
+      RUN python3 -m pip install --no-index --no-deps --no-cache-dir --force-reinstall /tmp/tika_client-2.0.0-py3-none-any.whl && rm /tmp/tika_client-2.0.0-py3-none-any.whl
+    '';
+  };
+  paperlessContext = pkgs.runCommand "paperless-runtime-context" {} ''
+    mkdir -p "$out"
+    cp ${paperlessRuntime.dockerfile} "$out/Dockerfile"
+    cp ${tikaClientWheel} "$out/tika_client-2.0.0-py3-none-any.whl"
+  '';
 in
 {
   # OPTIONS
@@ -39,7 +62,7 @@ in
       type = lib.types.str;
       # v3 renamed or requires several env vars (see parts/config.nix) and only
       # migrates a database already at 2.20.15 — do not jump from older 2.x.
-      default = "ghcr.io/paperless-ngx/paperless-ngx:3.1.3";
+      default = if cfg.officeIngest.enable then paperlessRuntime.image else "ghcr.io/paperless-ngx/paperless-ngx:3.1.3";
       description = "Paperless-NGX container image";
     };
 
@@ -205,14 +228,14 @@ in
     # SKIPS everything else, silently — a .docx dropped in the consume dir is
     # not an error, it just never becomes a document. Tika extracts the text and
     # metadata; Gotenberg renders the file to PDF for the archive copy. Both are
-    # sidecars on media-network reached by container DNS, so they publish no host
+    # sidecars on the private bridge reached by container DNS, so they publish no host
     # port and claim nothing in domains/networking/routes.nix.
     officeIngest = {
       enable = lib.mkEnableOption "Tika + Gotenberg sidecars for Office document ingest" // { default = true; };
 
       tikaImage = lib.mkOption {
         type = lib.types.str;
-        default = "docker.io/apache/tika:3.3.1.0";
+        default = "docker.io/apache/tika@sha256:b99f19c4fd76237dafe7d22f719b9bddfa9a449da687c597a41e2f6d9a595418"; # 4.2.0, CXF 4.2.4
         description = "Apache Tika server container image";
       };
 
@@ -348,11 +371,26 @@ in
   # IMPLEMENTATION
   #=========================================================================
   config = lib.mkIf cfg.enable {
+    system.build.paperlessRuntimeImageContext = paperlessContext;
+    system.build.paperlessRuntimeImageRecipe = paperlessRuntime.dockerfile;
     system.build.gotenbergRuntimeImageContext = gotenbergContext;
     system.build.gotenbergRuntimeImageRecipe = gotenbergRuntime.dockerfile;
-    virtualisation.oci-containers.containers = lib.mkIf
+    virtualisation.oci-containers.containers = lib.mkMerge [
+      (lib.mkIf (cfg.image == paperlessRuntime.image) {
+        paperless.pull = lib.mkForce "never";
+      })
+      (lib.mkIf
       (cfg.officeIngest.enable && cfg.officeIngest.gotenbergImage == gotenbergRuntime.image) {
       paperless-gotenberg.pull = lib.mkForce "never";
+      })
+    ];
+    systemd.services.podman-paperless = lib.mkIf (cfg.image == paperlessRuntime.image) {
+      preStart = lib.mkBefore ''
+        ${pkgs.podman}/bin/podman image exists ${lib.escapeShellArg paperlessRuntime.image} || {
+          echo "Paperless requires the qualified client image from ${paperlessContext}" >&2
+          exit 1
+        }
+      '';
     };
     systemd.services.podman-paperless-gotenberg = lib.mkIf
       (cfg.officeIngest.enable && cfg.officeIngest.gotenbergImage == gotenbergRuntime.image) {

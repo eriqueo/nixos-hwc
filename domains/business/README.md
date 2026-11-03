@@ -16,7 +16,7 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 Document processors use a private conversion bridge; only Paperless also joins its normal application network.
 
-Paperless owns a fixed-hash Gotenberg8.39.0/Chromium156 runtime with an offline build and prebuilt-image guard.
+Paperless owns fixed-hash client2.0.0 and Gotenberg8.39.0/Chromium156 runtime contexts with offline builds and prebuilt-image guards. Its unchanged3.1.3 application uses the matching Tika4.2.0/CXF4.2.4 server.
 
 `estimator/` serves its PWA without browser credentials. Exact private webhook handlers inject a runtime agenix credential; existing CRM job-intake routes remain separate.
 
@@ -97,6 +97,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-02: Pair the existing Paperless application with supported Tika4.2.0/client2.0.0 to remove the old CXF dependency while preserving Office/mail text and metadata consumers.
 
 - 2026-11-02: Merge sidecar network supervision separately from existing Paperless startup, retaining both sets of systemd dependencies.
 
