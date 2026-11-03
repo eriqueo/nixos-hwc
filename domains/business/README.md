@@ -91,6 +91,10 @@ business/
 
 ## Changelog
 
+- 2026-11-02: Bound native compilation and source test workers to four per
+  build; run every selected upstream test through the existing harnesses.
+
+
 - 2026-11-02: Isolate serving INI files in the build stage so nested upstream
   test subprocesses also use neutral settings. Final serving INI files stay
   in the original application stage.

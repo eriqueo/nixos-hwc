@@ -17,7 +17,7 @@ build_library() {
   tar xf "/sources/$archive" -C "$directory" --strip-components=1
   cd "$directory"
   ./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu "$@"
-  make -j2
+  make -j4
   make check
   make install
   ldconfig
@@ -29,8 +29,8 @@ mkdir curl
 cd curl
 tar xf /sources/curl.tar.xz --strip-components=1
 ./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu --with-openssl --with-gssapi --with-libssh2 --with-nghttp2 --with-nghttp3 --with-ngtcp2 --with-librtmp --enable-ldap --enable-ldaps --enable-versioned-symbols
-make -j2
-make test
+make -j4
+make test TFLAGS=-j4
 make install
 ldconfig
 cd /build
@@ -42,10 +42,10 @@ configure_options=$(/usr/local/bin/php-config --configure-options)
 configure_options=${configure_options%% build_alias=*}
 # Intentional word splitting: php-config emits configure arguments.
 ./configure $configure_options
-make -j2
+make -j4
 # make test inherits the serving image's php.ini (including environment-based
 # lexer settings). Run the full upstream harness with its own development INI.
-NO_INTERACTION=1 REPORT_EXIT_STATUS=1 sapi/cli/php -n run-tests.php -n -c php.ini-development -d extension_dir=/build/php/modules -d extension=sodium -j2
+NO_INTERACTION=1 REPORT_EXIT_STATUS=1 sapi/cli/php -n run-tests.php -n -c php.ini-development -d extension_dir=/build/php/modules -d extension=sodium -j4
 cp sapi/cli/php /native/usr/local/bin/php
 cp sapi/fpm/php-fpm /native/usr/local/sbin/php-fpm
 cp /usr/bin/curl /native/usr/bin/curl
