@@ -91,6 +91,9 @@ business/
 
 ## Changelog
 
+- 2026-11-02: Run Pico Composer installation from the Laravel root, then restore
+  its original frontend working directory for container startup.
+
 - 2026-11-02: Add same-app Composer dependency lock repairs. Offline installs
   use fixed-hash archives, disable scripts/plugins/network, retain each framework
   major and replace build tooling with Composer 2.10.3. Use APT to order Debian
