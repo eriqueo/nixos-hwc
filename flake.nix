@@ -1924,6 +1924,11 @@
         && builtins.elem c.system.build.postgresqlApplicationRoleTool unit.restartTriggers) apps;
       assert builtins.elem c.system.build.postgresqlApplicationRoleTool operator.restartTriggers;
       assert builtins.elem "postgresql-setup.service" operator.after && builtins.elem "postgresql-setup.service" operator.requires;
+      assert lib.all (name: let unit = c.systemd.services.${name}; in
+        builtins.elem "postgresql-setup.service" unit.after
+        && builtins.elem "postgresql-setup.service" unit.requires
+        && unit.environment.PGHOST == db.localPeerEnvironment.PGHOST)
+        [ "hwc-crm" "hwc-crm-leadscout-ingest" ];
       assert c.virtualisation.oci-containers.containers.n8n.environment.DB_TYPE == "sqlite";
       assert lib.all (name: let secret = c.age.secrets.${name}; in
         secret.owner == "root" && secret.group == "secrets" && secret.mode == "0440")

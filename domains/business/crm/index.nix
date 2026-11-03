@@ -23,6 +23,9 @@ let
   paths = config.hwc.paths;
   calendarPrincipal = "eric";
   calendarPath = name: "${calendarPrincipal}/${name}";
+  localDatabaseEnvironment = config.hwc.data.databases.postgresql.localPeerEnvironment;
+  exportLocalDatabaseEnvironment = lib.concatStrings (lib.mapAttrsToList
+    (name: value: "export ${name}=${lib.escapeShellArg value}\n") localDatabaseEnvironment);
 
   # Same JT org registry hwc-leads uses — one source of truth for the
   # org id / custom field ids / default location.
@@ -64,6 +67,7 @@ let
     ''export HWC_CRM_META_PAGE_ID="${cfg.meta.pageId}"'';
 
   messengerImport = pkgs.writeShellScriptBin "hwc-crm-messenger-import" ''
+    ${exportLocalDatabaseEnvironment}
     export PYTHONPATH="${cfg.projectDir}/src"
     export HWC_CRM_PG_DSN="${cfg.postgresDsn}"
     ${exportMetaSecrets metaPageSecrets}
@@ -701,10 +705,11 @@ in
       wantedBy = [ "multi-user.target" ];
       after = [
         "network-online.target"
-        "postgresql.service"
+        "postgresql-setup.service"
       ];
       wants = [ "network-online.target" ];
-      requires = [ "postgresql.service" ];
+      requires = [ "postgresql-setup.service" ];
+      environment = localDatabaseEnvironment;
 
       restartTriggers =
         lib.optional (cfg.jtGrantKeyRef != null) config.age.secrets.${cfg.jtGrantKeyRef}.file
@@ -791,12 +796,12 @@ in
     # lead_scout schema drift is loud instead of a silent lead drought.
     systemd.services.hwc-crm-leadscout-ingest = lib.mkIf cfg.leadscoutIngest.enable {
       description = "hwc-crm lead_scout ingest (hot/warm FB posts onto the funnel board)";
-      after = [ "postgresql.service" ];
-      requires = [ "postgresql.service" ];
+      after = [ "postgresql-setup.service" ];
+      requires = [ "postgresql-setup.service" ];
       onFailure = lib.mkIf (config.hwc.monitoring.alerts.enable or false) [
         "hwc-service-failure-notifier@hwc-crm-leadscout-ingest.service"
       ];
-      environment = {
+      environment = localDatabaseEnvironment // {
         PYTHONPATH = "${cfg.projectDir}/src";
         HWC_CRM_PG_DSN = cfg.postgresDsn;
         HWC_CRM_DATAX_DSN = cfg.leadscoutIngest.dataxDsn;
