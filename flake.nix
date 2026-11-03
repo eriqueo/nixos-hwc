@@ -321,11 +321,17 @@
     pythonCompatibilityOverlay = final: prev: {
             pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
               (pythonFinal: pythonPrev: {
-                # TEMPORARY: stable Streamlit1.58 excludes Pillow13, which
-                # that channel now supplies. Backport the maintained recipe;
-                # remove when stable carries Streamlit1.62 or newer.
-                streamlit = pythonFinal.callPackage
-                  (inputs.nixpkgs + "/pkgs/development/python-modules/streamlit") {};
+                # TEMPORARY: channel Streamlit excludes security-fixed Pillow13.
+                # Upstream1.66.1 declares pillow<14,>=9.2.0. Keep the recipe's
+                # dependency checks; remove when both channels supply>=1.66.1.
+                streamlit = (pythonFinal.callPackage
+                  (inputs.nixpkgs + "/pkgs/development/python-modules/streamlit") {}).overridePythonAttrs {
+                    version = "1.66.1";
+                    src = prev.fetchurl {
+                      url = "https://files.pythonhosted.org/packages/7f/20/d6490a27b4985907364112f40511c8e575efe042fb05983d060c753daf1c/streamlit-1.66.1.tar.gz";
+                      hash = "sha256-dxCotnRp2nr3vzUDybaK/KVnb4MvYvm9oSIeDOEZQdE=";
+                    };
+                  };
               } // prev.lib.optionalAttrs (pythonPrev ? mcp_1) {
                   # TEMPORARY:7.71's peer contract excludes MCP2. Remove
                   # when its upstream recipe selects mcp_1 or supports MCP2.
@@ -1075,7 +1081,7 @@
         hosts = [ "work" "home" "laptop" ];
         valid = host: let
           python = self.nixosConfigurations."hwc-${host}".pkgs.python3Packages;
-        in lib.versionAtLeast python.streamlit.version "1.62.0"
+        in lib.versionAtLeast python.streamlit.version "1.66.1"
           # Force the real package boundary, including upstream problem checks.
           && builtins.isString python.posthog.drvPath;
       in assert lib.assertMsg (lib.all valid hosts)
