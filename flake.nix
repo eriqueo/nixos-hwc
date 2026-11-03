@@ -2066,8 +2066,8 @@
         assert '--no-index --no-deps' in ml and 'certifi-2026.10.23' in ml
         assert 'emSign Root CA - C1' in ml and 'emSign ECC Root CA - C3' in ml
         assert 'update-ca-certificates --fresh' in ml
-        # This shared-helper extraction must not rebuild/restart accepted Seerr.
-        assert sha(seerr) == 'b9482a37e259fcd93442be29ae2b1cfce0653bc5e738e68fab403a84297953ea'
+        # Security backports preserve the accepted same-app Node recipe prefix.
+        assert sha(seerr.split('# Security backports', 1)[0]) == 'b9482a37e259fcd93442be29ae2b1cfce0653bc5e738e68fab403a84297953ea'
         assert spec['seerr'] == 'localhost/seerr-runtime:3.1.0-node22.23.4-' + sha(seerr)[:12]
         PY
         touch "$out"
@@ -2120,6 +2120,41 @@
         lib.BrotliDecoderErrorString.restype = ctypes.c_char_p
         assert any(b'BLOCK_SWITCH' in lib.BrotliDecoderErrorString(i) for i in range(-64, 1)), 'security backport absent from generated loader input'
         PY
+        touch "$out"
+      '';
+
+      seerr-security-wiring = let
+        c = self.nixosConfigurations.hwc-home.config;
+        binding = pkgs.writeText "seerr-security-binding.json" (builtins.toJSON {
+          selected = c.hwc.media.jellyseerr.image;
+          container = c.virtualisation.oci-containers.containers.jellyseerr.image;
+        });
+      in pkgs.runCommand "seerr-security-wiring" { nativeBuildInputs = [ pkgs.python3 pkgs.nodejs ]; } ''
+        python3 - ${binding} ${c.system.build.seerrRuntimeImageRecipe} ${c.system.build.seerrRuntimeImageContext} ${c.system.build.seerrRequestPermissions} <<'PYTEST'
+        import hashlib, json, pathlib, subprocess, sys
+        binding = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        recipe = pathlib.Path(sys.argv[2]).read_text()
+        context = pathlib.Path(sys.argv[3]); producer = pathlib.Path(sys.argv[4]).read_text()
+        manifest = json.loads((context / 'manifest.json').read_text())
+        patcher = (context / 'apply-backports.cjs').read_text()
+        sha = lambda value: hashlib.sha256(value.encode()).hexdigest()
+        assert (context / 'Dockerfile').read_text() == recipe, 'context bypasses recipe'
+        assert binding['selected'] == binding['container'] == 'localhost/seerr-runtime:3.1.0-node22.23.4-' + sha(recipe)[:12], 'container bypasses security recipe'
+        assert binding['selected'] in producer, 'permission vocabulary uses a different image'
+        assert 'COPY --chown=node:node . /tmp/hwc-seerr/' in recipe and 'RUN node /tmp/hwc-seerr/apply-backports.cjs &&' in recipe, 'image bypasses security backports'
+        assert sha(recipe.split('# Security backports', 1)[0]) == 'b9482a37e259fcd93442be29ae2b1cfce0653bc5e738e68fab403a84297953ea', 'unrelated base image change'
+        canonical = json.dumps(manifest, separators=(',', ':'), sort_keys=True)
+        assert '# Security backports ' + sha(canonical + patcher) in recipe, 'backport inputs not bound to image'
+        assert manifest['schemaVersion'] == 1
+        assert set(manifest['advisories']) == {'GHSA-mc6w-69r3-62h8', 'GHSA-8j73-j6rc-q8xh', 'GHSA-xc6j-6p6h-p799'}
+        assert set(manifest['backports']) == {'dist/lib/imageproxy.js', 'dist/entity/User.js', 'dist/entity/Media.js', 'dist/routes/auth.js', 'dist/routes/movie.js', 'dist/routes/tv.js'}, 'schema or unrelated app change'
+        for spec in manifest['backports'].values():
+            assert len(spec['sourceSha256']) == len(spec['patchedSha256']) == 64 and spec['sourceSha256'] != spec['patchedSha256']
+            assert spec['replacements'] and all(len(pair) == 2 and pair[0] != pair[1] for pair in spec['replacements'])
+        assert 'SEERR_BACKPORT_SOURCE_MISMATCH' in patcher and 'SEERR_BACKPORT_RESULT_MISMATCH' in patcher and 'SEERR_BACKPORT_HUNK_MISMATCH' in patcher
+        subprocess.run(['node', '--check', str(context / 'apply-backports.cjs')], check=True)
+        print('production image, base parity, six-file security context and app-owned permission wiring pass')
+        PYTEST
         touch "$out"
       '';
 

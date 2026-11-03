@@ -46,7 +46,7 @@ media/
 ├── navidrome-container/     # Navidrome music server (container)
 ├── navidrome-native/        # Navidrome music server (native NixOS)
 ├── audiobookshelf/          # Pinned app/supported Node recipe, config path and Borg recovery registration
-├── jellyseerr/              # Media requests; app-owned grants and private config
+├── jellyseerr/              # Media requests; upstream security hunks, grants and private config
 │
 ├── sonarr/                  # TV show management
 ├── radarr/                  # Movie management
@@ -92,6 +92,10 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-03: Seerr's offline image context backports upstream avatar-cache and
+  nested user/media privacy fixes without changing its schema or dependencies.
+  Source/result hashes and production image/context wiring reject drift.
 
 - 2026-11-03: Seerr resolves request/auto-approval flags once from its configured
   app, uses them for safe defaults and additive user grants, and persists private

@@ -14,7 +14,7 @@ Seerr (formerly Jellyseerr) is a request management and media discovery tool for
 
 ```
 jellyseerr/
-├── index.nix       # Options, immutable runtime inputs and shared recipe wiring
+├── index.nix       # Options, exact upstream security hunks and image context
 ├── sys.nix         # Container configuration (mkContainer)
 ├── README.md       # This file
 └── parts/
@@ -38,18 +38,22 @@ hwc.media.jellyseerr = {
 
 ### Runtime image
 
-The temporary default retains exact Seerr 3.1.0 and its schema while copying only
-Node 22.23.4 from a pinned official Seerr image. Both inputs use immutable digests.
-Build `.#nixosConfigurations.hwc-home.config.system.build.seerrRuntimeImageRecipe`,
-then use its Dockerfile with `podman build --format=docker --pull=never` and the
-evaluated `hwc.media.jellyseerr.image` tag. Cache both
-pinned inputs first. This build does not restart the service. Keep the old image
-and current data for recovery; never restore stale data over later requests.
+The default preserves Seerr 3.1.0's schema and Node 22.23.4 while backporting
+three upstream security fixes. Exact source/result hashes restrict changes to
+six compiled files. The fixes sanitize avatar-cache filenames, omit nested user
+notification settings, allow only public settings in `/auth/me`, and apply the
+upstream media/user/issue filters in movie and TV details.
+
+Build `.#nixosConfigurations.hwc-home.config.system.build.seerrRuntimeImageContext`,
+then pass that context to `podman build --network=none --format=docker --pull=never`
+with the evaluated `hwc.media.jellyseerr.image` tag. Cache both immutable vendor
+inputs first. Keep the qualified old image and current data for recovery.
 
 The 3.5 migration removes `user_settings.discordId`, which breaks 3.1 auth on
-rollback. Broader application advisories and compatible migration remain tracked
-as `brain-w8phr6`; the Node-only image is not a fully patched application claim.
-Remove the custom image after an upstream release passes data/recovery checks.
+recovery. A full compatible migration remains under
+[brain-w8phr6](https://refinery.hwc.iheartwoodcraft.com/project/brain-w8phr6).
+Remove the backports when a vendor image passes the same security, native and
+current-data recovery checks. These three fixes do not clear all app dependencies.
 
 ### Network Configuration
 
@@ -69,6 +73,10 @@ Seerr depends on:
 - `/opt/apps/jellyseerr/config:/app/config` - Configuration and database
 
 ## Changelog
+
+- 2026-11-03: Add exact upstream avatar-cache and user/media privacy backports to
+  the same-schema image. Bind the six-file patch manifest and patcher to the image
+  identity and production wiring check; fail closed on any source or hunk drift.
 
 - 2026-11-03: Derive request and auto-approval flags from the configured app in a
   bounded, read-only container with no network or config mount. Share that mask
