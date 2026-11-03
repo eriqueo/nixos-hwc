@@ -1926,7 +1926,7 @@
         target = binding['environment']['DB_PASSWORD_FILE']
         assert '/run/agenix/immich-db-password:' + target + ':ro' in binding['volumes']
         lines = [s.split() for s in binding['authentication'].splitlines() if s.strip() and not s.lstrip().startswith('#')]
-        assert lines[0] == ['local', 'all', 'all', 'peer']
+        assert lines[:2] == [['local', 'all', 'postgres', 'peer', 'map=postgres'], ['local', 'all', 'all', 'peer']]
         assert not any('trust' in row for row in lines)
         assert all(row[-1] == 'scram-sha-256' for row in lines if row[0] == 'host')
         PY
