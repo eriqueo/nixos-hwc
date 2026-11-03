@@ -91,6 +91,9 @@ business/
 
 ## Changelog
 
+- 2026-11-02: Invalidate generated Laravel provider caches after offline Composer
+  installation; otherwise removed development providers can break bootstrap.
+
 - 2026-11-02: Point APT at the fixed-hash local archive cache explicitly so
   download-disabled installation resolves all selected package files.
 
