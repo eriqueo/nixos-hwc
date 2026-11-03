@@ -19,7 +19,7 @@ Print uses `hwc-screenshot` with a hash-bound policy marker. Ctrl+Print makes a 
 - `parts/behavior.nix` — the keybind records (SUPER-based, conditional todui/dt/gsr/dictation binds), mouse binds, the `resize` submap, and window rules. Returns settings, keybinds, submaps, the dictation toggle/cancel commands and the courier toggle (`courierCommand`) shared with Waybar, and the SUPER+W Workbench command shared with session autostart. `settings` is what Hyprland loads; `keybinds` supplies the legend.
 - Floating windows are centered and limited to 80% of their current monitor's logical width and height. Small dialogs retain their requested size. Bluetooth starts at 40% width / 50% height; title-matched file pickers start at 50% / 60%. Hyprland supplies monitor dimensions and scale at runtime; no screen dimensions are copied into these rules.
 - Credential utilities float at 70% monitor width / 80% height, keeping their sidebars and details readable without splitting the browser into a narrow tile.
-- `parts/hardware.nix` — monitor layout (eDP-1 + DP-1), workspace→monitor mapping, input/touchpad/per-device settings.
+- `parts/hardware.nix` — monitor layout (eDP-1 + the VG248 external matched by `desc:`, plus a `,preferred,auto,1` fallback for any other output), workspace→monitor mapping, input/touchpad/per-device settings.
 - `parts/scripts.nix` — helper script bins: smart-move, workspace-overview, monitor-toggle, refinery-intake, etc.
 - `parts/session.nix` — exec-once autostart list (swaybg wallpaper, cliphist, workspace-pinned Chromium, kitty and — when enabled — Workbench on 3), cursor env vars, and the `hyprland-keybinds-viewer` package.
 - The session starts enabled Bitwarden and Proton Pass clients so their native Waybar tray icons exist after login. Bitwarden uses its native `--autostart` mode; Proton Pass follows its normal startup behavior.
@@ -31,6 +31,8 @@ Every binding is declared **once** in `parts/behavior.nix`, as a record carrying
 It is deliberately *not* read from `hyprctl binds -j`: that API emits malformed JSON in Hyprland 0.56.0 (keys and values misaligned — `"keycode": RETURN`, `"allow_input_capture": ,`), and carries no descriptions, so the best it could ever print is `exec hyprland-monitor-toggle`.
 
 ## Changelog
+
+- 2026-11-03: Match the external monitor by description, not connector. It came up as DP-2, so the DP-1 rules dropped workspaces 11-18 and its position. Unlisted outputs now get `,preferred,auto,1`.
 
 - 2026-10-14: `hyprland-app-toggle --show CLASS CMD…`: show and focus, never hide. courier's alert Open uses it.
 - 2026-10-12: SUPER+U toggles courier (iPhone messages). `parts/behavior.nix` exports the toggle as `courierCommand` so Waybar's badge click runs the same command.

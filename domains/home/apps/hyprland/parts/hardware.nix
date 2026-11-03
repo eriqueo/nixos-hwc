@@ -22,6 +22,9 @@
 let
   # Dependencies for scripts
   inherit (pkgs) hyprland jq libnotify;
+  # Matched by description: its connector name changes with the port
+  # (DP-1 vs DP-2), which silently dropped the 11-18 workspace binding.
+  external = "desc:Ancor Communications Inc VG248 E6LMQS027213";
 in
 {
   #============================================================================
@@ -29,9 +32,10 @@ in
   #============================================================================
   monitor = [
     "eDP-1,2560x1600@165,0x0,1"      # Laptop at 0,0 (left)
-    "DP-1,1920x1080@60,2560x0,1"     # External at 2560,0 (right)
+    "${external},1920x1080@60,2560x0,1"  # External at 2560,0 (right), on any port
+    ",preferred,auto,1"              # Any other output goes right of the rest
   ];
-  
+
   #============================================================================
   # WORKSPACE ASSIGNMENTS - Monitor-specific workspace mapping
   #============================================================================
@@ -46,15 +50,15 @@ in
     "7,monitor:eDP-1"
     "8,monitor:eDP-1"
     
-    # Monitor ID 1 (DP-1) gets workspaces 11-18
-    "11,monitor:DP-1"
-    "12,monitor:DP-1"
-    "13,monitor:DP-1"
-    "14,monitor:DP-1"
-    "15,monitor:DP-1"
-    "16,monitor:DP-1"
-    "17,monitor:DP-1"
-    "18,monitor:DP-1"
+    # The external monitor gets workspaces 11-18
+    "11,monitor:${external}"
+    "12,monitor:${external}"
+    "13,monitor:${external}"
+    "14,monitor:${external}"
+    "15,monitor:${external}"
+    "16,monitor:${external}"
+    "17,monitor:${external}"
+    "18,monitor:${external}"
   ];
 
   #============================================================================
