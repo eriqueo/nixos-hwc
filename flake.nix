@@ -957,9 +957,10 @@
         def denied(data, path):
             assert 'hostname: api.iheartwoodcraft.com' not in route(data, path), path
         for path in ['/webhook/mail-action', '/webhook/media-pipeline', '/webhook/frigate-events',
-                     '/webhook/', '/rest/workflows', '/webhook/quo-sms/extra']:
+                     '/webhook/', '/rest/workflows', '/webhook/quo-sms/extra',
+                     '/webhook/jt-jobs', '/webhook/jt-customers', '/webhook/estimate-push']:
             denied(config, path)
-        for name in ['jt-jobs', 'jt-customers', 'estimate-push', 'quo-sms']:
+        for name in ['quo-sms']:
             assert 'hostname: api.iheartwoodcraft.com' in route(config, '/webhook/' + name), name
         broad = json.loads(json.dumps(config))
         for rule in broad['ingress']:

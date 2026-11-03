@@ -17,6 +17,9 @@ Provides network infrastructure that other domains depend on:
 - Route definitions: currently centralized in `routes.nix`, will be distributed to individual domains as they migrate
 
 ## Structure
+
+The public n8n origin admits only the Quo receiver retained by Eric. Estimator
+customer/job reads and estimate writes stay on their configured tailnet URL.
 The reverse proxy builds the deSEC DNS plugin against the channel's Caddy release; its dependency hash changes with the vendor closure.
 
 `reverseProxy` permits its HTTP, HTTPS and port-mode listeners only on
@@ -92,6 +95,9 @@ networking/
 ```
 
 ## Changelog
+
+- 2026-11-02: Remove public estimator webhook routes after verifying the PWA's
+  configured tailnet destination. Quo remains public by Eric's instruction.
 - 2026-11-02: Refresh the deSEC plugin dependency hash for Caddy2.11.7 on the November security baseline.
 
 - 2026-11-02: Add home's read-only wall gateway and exact local DNS override.

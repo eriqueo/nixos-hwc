@@ -415,7 +415,9 @@
         # Permanent by design: new receivers require an explicit public route.
         "api.iheartwoodcraft.com" = {
           service = "http://localhost:${toString config.hwc.automation.n8n.port}";
-          path = "^/webhook/(jt-jobs|jt-customers|estimate-push|quo-sms)$";
+          # Estimator reads/writes use the configured tailnet webhook URL.
+          # Browser-visible API keys cannot authorize public customer access.
+          path = "^/webhook/quo-sms$";
         };
 
         # Umami — script.js + /api/send must be visitor-reachable.
