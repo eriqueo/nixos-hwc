@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Morning-briefing live sources run concurrently after the MCP handshake. Research queues use four-profile batches alongside lessons and ingest-health reads; refinery files use sixteen-read batches. `morning-briefing/gather.test.mjs` checks overlap, bounds and stable partial output through the `morning-briefing-async` flake check.
+
 The website backend defers access logging to the networking tunnel logger when
 enabled, avoiding duplicate raw query/capability records.
 
@@ -81,6 +83,7 @@ business/
 ```
 
 ## Changelog
+- 2026-11-02: Overlap independent morning-briefing gathers while preserving alert order, profile order and partial results; bound profile and file batches.
 
 - 2026-11-01: Defer public website access logging to the sanitized origin logger.
 

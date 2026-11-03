@@ -2,6 +2,7 @@
  * hwc_mail — consolidated mail tool (search, read, send, reply, tag, sync, health, accounts, folders).
  */
 
+import { mapReads } from "../executors/concurrency.js";
 import { execFile, spawn } from "node:child_process";
 import { readFileSync, statSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
@@ -513,12 +514,13 @@ export async function executeMailHealth(): Promise<ToolResult> {
     const result: Record<string, unknown> = {};
     const now = Math.floor(Date.now() / 1000);
 
-    const lastHealthyRaw = await readSafe(join(MAIL_HEALTH_STATE, "last-healthy"));
     // summary.json is what mail-health.service publishes each run: the open
     // cases from the single case store (System One health-cases), each with
     // outcome, message and how long it has been open.
-    const summaryRaw = await readSafe(join(MAIL_HEALTH_STATE, "summary.json"));
-
+    const [lastHealthyRaw, summaryRaw] = await Promise.all([
+      readSafe(join(MAIL_HEALTH_STATE, "last-healthy")),
+      readSafe(join(MAIL_HEALTH_STATE, "summary.json")),
+    ]);
     if (lastHealthyRaw) {
       const ts = parseInt(lastHealthyRaw, 10);
       result.lastHealthy = {
@@ -562,10 +564,12 @@ export async function executeMailHealth(): Promise<ToolResult> {
 
     try {
       const nm = await notmuchBin();
-      const cntRes = await notmuchExec(nm, ["count"]);
+      const [cntRes, urRes] = await Promise.all([
+        notmuchExec(nm, ["count"]),
+        notmuchExec(nm, ["count", "tag:unread"]),
+      ]);
       if (cntRes.exitCode === 0) {
         const total = parseInt(cntRes.stdout.trim(), 10) || 0;
-        const urRes = await notmuchExec(nm, ["count", "tag:unread"]);
         const unread = urRes.exitCode === 0 ? parseInt(urRes.stdout.trim(), 10) || 0 : 0;
         result.notmuch = { totalMessages: total, unread };
       }
@@ -1134,12 +1138,12 @@ export function mailTools(): ToolDef[] {
 
             try {
               const nm = await notmuchBin();
-              for (const f of folders) {
+              await mapReads(folders, async (f) => {
                 const res = await notmuchExec(nm, ["count", `folder:${f.name}`]);
                 if (res.exitCode === 0) {
                   f.count = parseInt(res.stdout.trim(), 10) || 0;
                 }
-              }
+              });
             } catch {
               /* counts unavailable */
             }

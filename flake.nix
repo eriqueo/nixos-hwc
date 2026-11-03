@@ -3655,6 +3655,13 @@
         touch "$out"
       '';
 
+      morning-briefing-async = pkgs.runCommand "morning-briefing-async" {
+        nativeBuildInputs = [ pkgs.nodejs_22 ];
+      } ''
+        node --test ${./domains/business/morning-briefing}/gather.test.mjs
+        touch "$out"
+      '';
+
       # The gateway must run the TypeScript build produced by Nix. Pointing
       # systemd back at ignored checkout dist/ output recreates the stale-code
       # failure this boundary removes. Referencing the entry point also builds

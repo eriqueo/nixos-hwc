@@ -3,6 +3,7 @@
  * These are read-only context that clients can pull on demand.
  */
 
+import { mapReads } from "../executors/concurrency.js";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { ResourceDef } from "../types.js";
@@ -36,15 +37,15 @@ export function allResources(nixosConfigPath: string): ResourceDef[] {
 
         try {
           const domains = await readdir(domainsDir, { withFileTypes: true });
-          for (const d of domains) {
-            if (!d.isDirectory()) continue;
+          const branches = await mapReads(domains.filter((d) => d.isDirectory()), async (d) => {
             const domainPath = join(domainsDir, d.name);
             const entries = await readdir(domainPath, { withFileTypes: true });
-            tree[d.name] = {
+            return [d.name, {
               subdomains: entries.filter((e) => e.isDirectory()).map((e) => e.name).sort(),
               files: entries.filter((e) => e.name.endsWith(".nix")).map((e) => e.name).sort(),
-            };
-          }
+            }] as const;
+          });
+          Object.assign(tree, Object.fromEntries(branches));
         } catch {
           return JSON.stringify({ error: "Could not read domains directory" });
         }
@@ -108,10 +109,10 @@ export function allResources(nixosConfigPath: string): ResourceDef[] {
           const files = await readdir(declDir);
           const inventory: Record<string, string[]> = {};
 
-          for (const file of files) {
-            if (!file.endsWith(".nix") || file === "index.nix") continue;
+          const contents = await mapReads(files.filter((f) => f.endsWith(".nix") && f !== "index.nix"),
+            async (file) => [file, await readFile(join(declDir, file), "utf-8")] as const);
+          for (const [file, content] of contents) {
             const category = file.replace(".nix", "");
-            const content = await readFile(join(declDir, file), "utf-8");
 
             const names: string[] = [];
             // Try flat format: age.secrets.name = { ... }
@@ -154,8 +155,8 @@ export function allResources(nixosConfigPath: string): ResourceDef[] {
           const machines = await readdir(machinesDir, { withFileTypes: true });
           const matrix: Record<string, { profiles: string[]; domains: string[] }> = {};
 
-          for (const m of machines) {
-            if (!m.isDirectory()) continue;
+          const configs = await mapReads(machines.filter((m) => m.isDirectory()), async (m) => {
+            const key = `hwc-${m.name}`;
             const configPath = join(machinesDir, m.name, "config.nix");
             try {
               const content = await readFile(configPath, "utf-8");
@@ -169,11 +170,12 @@ export function allResources(nixosConfigPath: string): ResourceDef[] {
                 (d) => d.replace("/index.nix", "")
               );
 
-              matrix[`hwc-${m.name}`] = { profiles, domains };
+              return [key, { profiles, domains }] as const;
             } catch {
-              matrix[`hwc-${m.name}`] = { profiles: [], domains: [] };
+              return [key, { profiles: [], domains: [] }] as const;
             }
-          }
+          });
+          Object.assign(matrix, Object.fromEntries(configs));
 
           return JSON.stringify(matrix, null, 2);
         } catch {

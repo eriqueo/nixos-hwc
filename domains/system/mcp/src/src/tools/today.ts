@@ -38,6 +38,7 @@
  * owns all I/O and is the single writer of the state file.
  */
 
+import { mapReads } from "../executors/concurrency.js";
 import { readFile, writeFile, rename, mkdir, access } from "node:fs/promises";
 import { join } from "node:path";
 import type { ToolDef, ToolResult } from "../types.js";
@@ -483,7 +484,8 @@ export function todayTools(): ToolDef[] {
 
         // ── reads ──────────────────────────────────────────────────
         const live = all.filter((i) => visibleIds.has(i.id));
-        for (const i of live) i.report = await reportFor(i);
+        const reports = await mapReads(live, reportFor);
+        live.forEach((item, index) => { item.report = reports[index]; });
         live.sort(rank);
         // Every red makes the queue — a red squeezed out by the cap is an
         // invisible emergency. The cap only limits how many ambers pad it out.

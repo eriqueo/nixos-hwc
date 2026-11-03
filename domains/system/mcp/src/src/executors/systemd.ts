@@ -4,6 +4,7 @@
 
 import { safeExec, execOrThrow } from "./shell.js";
 import type { ServiceStatus } from "../types.js";
+import { mapReads } from "./concurrency.js";
 
 /**
  * Get status of a specific systemd service.
@@ -69,21 +70,19 @@ export async function listServices(): Promise<ServiceStatus[]> {
       u === "caddy.service" || u === "sshd.service" ||
       u === "protonmail-bridge.service" || u === "borgbackup-job-hwc.service"));
 
-  const statuses: ServiceStatus[] = [];
-  for (const unit of units) {
+  return mapReads(units, async (unit): Promise<ServiceStatus> => {
     try {
-      statuses.push(await getServiceStatus(unit));
+      return await getServiceStatus(unit);
     } catch {
-      statuses.push({
+      return {
         name: unit,
         activeState: "error",
         subState: "error",
         description: "Failed to query",
         type: unit.startsWith("podman-") ? "container" : "native",
-      });
+      };
     }
-  }
-  return statuses;
+  });
 }
 
 /**

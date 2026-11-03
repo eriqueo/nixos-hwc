@@ -22,6 +22,7 @@
  * /promote. The board owns the state machine; this tool never edits item files.
  */
 
+import { mapReads } from "../executors/concurrency.js";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ToolDef, ToolResult } from "../types.js";
@@ -214,14 +215,11 @@ async function routeToNightly(action: string, args: Record<string, unknown>, id:
 async function loadItems(): Promise<RefineryItem[] | null> {
   try {
     const files = await readdir(ITEMS_DIR);
-    const items: RefineryItem[] = [];
-    for (const f of files) {
-      if (!f.endsWith(".md")) continue;
+    const items = await mapReads(files.filter((f) => f.endsWith(".md")), async (f) => {
       const raw = await readFile(join(ITEMS_DIR, f), "utf8").catch(() => "");
-      const it = extractItem(raw);
-      if (it) items.push(it);
-    }
-    return items;
+      return extractItem(raw);
+    });
+    return items.filter((it): it is RefineryItem => it !== null);
   } catch {
     return null; // store dir unreadable — degrade to empty-but-flagged
   }
@@ -366,7 +364,10 @@ export function refineryTools(): ToolDef[] {
           return { status: "ok", message: `refinery ${action}: ${id}` };
         }
 
-        const items = await loadItems();
+        const [items, nightly] = await Promise.all([
+          loadItems(),
+          action === "triage" ? loadNightlyEntries() : Promise.resolve(null),
+        ]);
 
         const itemsByStage: Record<Stage, RefineryItem[]> = { action: [], active: [], hopper: [] };
         for (const it of items ?? []) {
@@ -402,8 +403,7 @@ export function refineryTools(): ToolDef[] {
           };
         }
 
-        if (action === "triage") {
-          const nightly = await loadNightlyEntries();
+        if (action === "triage" && nightly) {
           const ref = <T extends { id: string }>(card: T) => ({ ...card, id: `${REF_PREFIX}${card.id}` });
           const pr = <T extends { id: string }>(card: T) => ({ ...card, id: `${PR_PREFIX}${card.id}` });
           // Within a stage, PRs keep the nightly lane order (merge-ready first).

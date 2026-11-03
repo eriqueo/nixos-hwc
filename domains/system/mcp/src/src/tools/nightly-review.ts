@@ -18,6 +18,7 @@
  * any malformed record (skipped, not thrown — the board reports the skip count).
  */
 
+import { mapReads } from "../executors/concurrency.js";
 import { execFile } from "node:child_process";
 import { readFile, writeFile, readdir, mkdir, unlink } from "node:fs/promises";
 import { join } from "node:path";
@@ -167,18 +168,13 @@ async function loadAllReviews(): Promise<{ reviews: Review[]; malformed: number 
   } catch {
     return { reviews: [], malformed: 0 };
   }
-  const reviews: Review[] = [];
-  let malformed = 0;
-  for (const f of files) {
+  const parsed = await mapReads(files, async (f) => {
     try {
-      const parsed = parseReview(JSON.parse(await readFile(join(REVIEWS_DIR, f), "utf-8")));
-      if (parsed) reviews.push(parsed);
-      else malformed++;
-    } catch {
-      malformed++;
-    }
-  }
-  return { reviews, malformed };
+      return parseReview(JSON.parse(await readFile(join(REVIEWS_DIR, f), "utf-8")));
+    } catch { return null; }
+  });
+  const reviews = parsed.filter((r): r is Review => r !== null);
+  return { reviews, malformed: parsed.length - reviews.length };
 }
 
 /** Load a single review by id (the safeId-mapped file). null if absent/malformed. */
@@ -210,7 +206,7 @@ function parseCase(raw: unknown): ReviewCase | null {
 async function loadAllCases(): Promise<ReviewCase[]> {
   try {
     const files = (await readdir(CASES_DIR)).filter((f) => f.endsWith(".json"));
-    const cases = await Promise.all(files.map(async (f) => parseCase(JSON.parse(await readFile(join(CASES_DIR, f), "utf-8")))));
+    const cases = await mapReads(files, async (f) => parseCase(JSON.parse(await readFile(join(CASES_DIR, f), "utf-8"))));
     return cases.filter((c): c is ReviewCase => c !== null);
   } catch {
     return [];
@@ -445,8 +441,7 @@ export async function loadNightlyEntries(): Promise<{
   retryableCases: number;
   malformed: number;
 }> {
-  const { reviews, malformed } = await loadAllReviews();
-  const cases = await loadAllCases();
+  const [{ reviews, malformed }, cases] = await Promise.all([loadAllReviews(), loadAllCases()]);
   const terminal = cases.filter((x) => x.state !== "retryable");
   const entries: NightlyEntry[] = [
     ...reviews.map((r) => ({ lane: laneOf(r) as NightlyEntry["lane"], at: r.reviewedAt, card: toCard(r) as NightlyCard })),
