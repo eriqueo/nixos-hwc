@@ -1254,7 +1254,7 @@
                 data = (context / package['file']).read_bytes()
                 assert package['hash'] == 'sha256-' + base64.b64encode(hashlib.sha256(data).digest()).decode()
             assert 'COPY *.deb /tmp/hwc-runtime-debs/' in recipe
-            assert 'apt-get --no-download --yes -o Dpkg::Options::=--force-confold install /tmp/hwc-runtime-debs/*.deb' in recipe
+            assert 'apt-get --no-download --yes -o Dir::Cache::archives=/tmp/hwc-runtime-debs -o Dpkg::Options::=--force-confold install /tmp/hwc-runtime-debs/*.deb' in recipe
             assert recipe.rstrip().endswith('USER www-data')
             assert 'COMPOSER_DISABLE_NETWORK=1' in recipe
             assert 'install --no-dev --no-scripts --no-plugins' in recipe

@@ -91,6 +91,9 @@ business/
 
 ## Changelog
 
+- 2026-11-02: Point APT at the fixed-hash local archive cache explicitly so
+  download-disabled installation resolves all selected package files.
+
 - 2026-11-02: Run Pico Composer installation from the Laravel root, then restore
   its original frontend working directory for container startup.
 

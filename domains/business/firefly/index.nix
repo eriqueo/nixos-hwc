@@ -58,7 +58,7 @@ let
       FROM ${app.image}
       USER root
       COPY *.deb /tmp/hwc-runtime-debs/
-      RUN DEBIAN_FRONTEND=noninteractive apt-get --no-download --yes -o Dpkg::Options::=--force-confold install /tmp/hwc-runtime-debs/*.deb && test -z "$(dpkg --audit)" && rm -r /tmp/hwc-runtime-debs
+      RUN DEBIAN_FRONTEND=noninteractive apt-get --no-download --yes -o Dir::Cache::archives=/tmp/hwc-runtime-debs -o Dpkg::Options::=--force-confold install /tmp/hwc-runtime-debs/*.deb && test -z "$(dpkg --audit)" && rm -r /tmp/hwc-runtime-debs
       COPY --from=secure-php /usr/local/bin/php /usr/local/bin/php-config /usr/local/bin/phpize /usr/local/bin/
       COPY --from=secure-php /usr/local/sbin/php-fpm /usr/local/sbin/php-fpm
       COPY --from=secure-php /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
