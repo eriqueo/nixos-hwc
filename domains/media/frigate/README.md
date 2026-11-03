@@ -33,6 +33,8 @@ Owns Frigate and its generated configuration. Prometheus owns alert evaluation; 
 
 ## Structure
 
+`index.nix` also exports the pinned same-app runtime recipe and requires its prebuilt image before startup.
+
 - `index.nix`: options, container, atomic config generation, native metrics and expected-camera recording rules.
 - `parts/config.nix`: camera settings, masks, zones and recording retention.
 - `parts/labelmap.py`: rebuild labels from the installed ONNX model on every config generation.
@@ -692,6 +694,8 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+
+- 2026-11-02: Select a pinned same-app image with the Starlette Host parser security backport; retain camera/model/storage wiring.
 
 - 2026-09-24: Document measured camera substream settings, native clock changes, readiness deadline and field-validation issue; remove stale storage/performance examples and obsolete mask descriptions.
 - 2026-09-24: Correct masks, regenerate labels from model metadata, use native metrics and expected-camera rules, share Reolink main stream, enforce config dependency/restarts and remove unused buffer/inert retention knobs. Footage retention unchanged.

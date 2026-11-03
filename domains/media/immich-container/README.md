@@ -14,6 +14,8 @@ photo library, PostgreSQL data and NVIDIA interfaces.
 
 ## Structure
 
+The ML recipe consumes the shared exact-source Starlette Host parser backport from `domains/lib/mkContainer.nix`.
+
 The pinned Ubuntu image owns its emSign distrust list independently of the newer host NSS bundle. An empty host blacklist does not remove roots from this container. Prebuild its exact context before activation.
 
 ```
@@ -88,6 +90,8 @@ trigger an automatic database file-path migration. Keep `/usr/src/app/upload`
 and the existing live mount wiring through runtime-only releases.
 
 ## Changelog
+
+- 2026-11-02: Backport Starlette CVE-2026-48710 in the existing ML recipe; retain all photo/database/GPU paths and dependencies.
 
 - 2026-11-02: Preserve container CA distrust when host NSS retires its blacklist; prevent policy regression during channel upgrades.
 

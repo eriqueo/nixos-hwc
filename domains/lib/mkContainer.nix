@@ -52,6 +52,35 @@ rec {
       version = "${appVersion}-node${nodeVersion}";
     };
 
+  # Temporary CVE-2026-48710 backport of upstream Starlette commit
+  # 764dab0dcfb9033d75442d7a359645c9f94648c6. Remove when the upstream
+  # app images contain the fix and pass actual URL/FastAPI/GPU checks.
+  # Exact before/after hashes fail closed on drift; no dependency resolution.
+  mkStarletteHostBackport = { python, version, sourceSha256, patchedSha256 }:
+    let program = ''
+      import hashlib, importlib, sys
+      from pathlib import Path
+      import starlette, starlette.datastructures as ds
+      version, original, patched = sys.argv[1:]
+      p = Path(ds.__file__)
+      before = p.read_bytes()
+      assert starlette.__version__ == version
+      assert hashlib.sha256(before).hexdigest() == original
+      source = before.decode()
+      old = '            if host_header is not None:'
+      assert source.count(old) == 1 and source.count('class URL:') == 1
+      pattern = r'^([a-z0-9.-]+|\[[a-f0-9]*:[a-f0-9.:]+\])(?::[0-9]+)?$'
+      source = source.replace(old, old[:-1] + ' and _HOST_RE.fullmatch(host_header):')
+      source = source.replace('class URL:', 'import re\n_HOST_RE = re.compile(' + repr(pattern) + ', re.IGNORECASE)\n\nclass URL:', 1)
+      assert hashlib.sha256(source.encode()).hexdigest() == patched
+      p.write_text(source)
+      importlib.reload(ds)
+      for host in [b'foo/?x=', b'foo/#', b'foo/bar', b'user@foo', b'foo\\bar', b'foo bar']:
+          url = ds.URL(scope={'scheme':'http','server':('example.com',80),'path':'/admin','headers':[(b'host',host)]})
+          assert url.path == '/admin' and url.netloc == 'example.com'
+    '';
+    in "RUN ${python} -c ${lib.escapeShellArg program} ${lib.escapeShellArgs [ version sourceSha256 patchedSha256 ]}\n";
+
   mkContainer =
     { name
     , image

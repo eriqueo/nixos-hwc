@@ -14,6 +14,20 @@
 let
   cfg = config.hwc.media.frigate;
   labelPython = pkgs.python3.withPackages (p: [ p.onnx ]);
+  helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
+  # Temporary same-app URL parser repair; remove after upstream passes the
+  # malformed-Host, current-data recovery and actual GPU consumer checks.
+  runtime = helpers.mkRuntimeImage {
+    name = "frigate";
+    version = "0.16.2-tensorrt-hostfix";
+    recipe = "FROM ghcr.io/blakeblackshear/frigate@sha256:7351ca2ddbce6d712c8a13842eeb4248844e5334565e71b4f6ae438ddaf9d04d\n"
+      + helpers.mkStarletteHostBackport {
+        python = "python3";
+        version = "0.41.2";
+        sourceSha256 = "8a7347a833948318e88d255ce45379a0bd378b3b903369c8803ce7eddce109b8";
+        patchedSha256 = "60226bc6d65a92494998726d2040d6fd6cc624a7c77a70af5d7e28e306ca8de6";
+      };
+  };
 in
 {
   imports = [
@@ -29,7 +43,7 @@ in
 
     image = lib.mkOption {
       type = lib.types.str;
-      default = "ghcr.io/blakeblackshear/frigate:0.16.2-tensorrt";
+      default = runtime.image;
       description = ''
         Container image for Frigate NVR.
         Uses -tensorrt variant which includes CUDA support for ONNX detector.
@@ -76,6 +90,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    system.build.frigateRuntimeImageRecipe = runtime.dockerfile;
+    virtualisation.oci-containers.containers.frigate.pull = lib.mkIf (cfg.image == runtime.image) "never";
 
     # Config generation service (substitutes secrets into nix-generated YAML template)
     systemd.services.frigate-config = {
@@ -142,6 +158,12 @@ in
 
     # Ensure Frigate starts after mosquitto (for MQTT events) and CDI spec generation
     systemd.services.podman-frigate = {
+      preStart = lib.mkIf (cfg.image == runtime.image) (lib.mkBefore ''
+        ${pkgs.podman}/bin/podman image exists ${lib.escapeShellArg runtime.image} || {
+          echo "Prebuild Frigate from ${runtime.dockerfile} before activation" >&2
+          exit 1
+        }
+      '');
       after = [ "mosquitto.service" "frigate-config.service" ]
         ++ lib.optional cfg.gpu.enable "nvidia-container-toolkit-cdi-generator.service";
       wants = [ "mosquitto.service" ];

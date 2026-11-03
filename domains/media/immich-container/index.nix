@@ -91,7 +91,12 @@ let
     RUN /opt/venv/bin/python -c ${lib.escapeShellArg caPolicyCheck} ${lib.escapeShellArg caPolicy}
     COPY pillow-brotli/ ${mlSitePackages}/pillow.libs/
     RUN chmod ${pillowLibraryMode} ${mlSitePackages}/pillow.libs/${pillowLibraries.common} ${mlSitePackages}/pillow.libs/${pillowLibraries.decoder}
-  '';
+  '' + helpers.mkStarletteHostBackport {
+    python = "/opt/venv/bin/python";
+    version = "0.50.0";
+    sourceSha256 = "dde752330006431c7ebc1ccb948a95825be5bd6b8c03839133cdee59899c3030";
+    patchedSha256 = "77253c43dce33af8b92b1b76794c6b39205419a520663246dfba595e4c76b283";
+  };
   mlRuntimeImage = "localhost/immich-ml-runtime:${appVersion}-${builtins.substring 0 12 (builtins.hashString "sha256" mlRuntimeRecipe)}";
   securityManifest = pkgs.writeText "immich-runtime-security.json" (builtins.toJSON {
     schemaVersion = 1;

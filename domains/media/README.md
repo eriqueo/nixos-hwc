@@ -12,6 +12,8 @@ photo management, and video surveillance services.
 
 ## Structure
 
+Frigate and Immich ML derive same-app images with the shared Starlette Host parser backport.
+
 `immich-container/` keeps its pinned Ubuntu CA distrust policy even after host NSS removes the same roots. Its exact local runtime images must be built before activation.
 
 `youtube/` runs the transcripts site with captions-first extraction and a bounded Deepgram audio fallback, using the generated `deepgram-api-key` mount.
@@ -74,6 +76,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-02: Backport Starlette CVE-2026-48710 for Frigate and Immich ML without changing app/schema/GPU versions; require prebuilt images.
 
 - 2026-11-02: Keep Immich ML legacy trust-store policy independent of the upgraded host bundle.
 - 2026-10-24: Export Immich's signed-package Brotli backport contexts and Pillow loader inputs. Preserve the app and existing TLS/CA recipe inputs; restore original image file modes from read-only Nix inputs, bind both OCI consumers to prebuilt local images and add shared-library wiring checks.
