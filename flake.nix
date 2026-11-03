@@ -1719,7 +1719,9 @@
         assert {k:v['patchedSha256'] for k,v in manifest['backports'].items()}==expected
         program=(root/'apply-backports.py').read_text();ast.parse(program)
         assert 'SOURCE_MISMATCH:' in program and 'PATCH_MISMATCH:' in program and 'MISSING_HUNK:' in program
-        assert 'postproc.*.pyc' in program
+        assert 'postproc.*.pyc' in program and 'client.*.pyc' in program
+        assert manifest['pythonHttpBackport']['patchedSha256']=='1bf66af1b10a72bb91ae15c3f935fd80cdcc38cc10f57aed05797702c4785ad2'
+        assert "/usr/lib/python3.14/http/client.py" in program
         PY
         touch "$out"
       '';
