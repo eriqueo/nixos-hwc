@@ -6,6 +6,7 @@ Never log SQL, password verifiers or exception text.
 import argparse
 import base64
 from dataclasses import dataclass
+from enum import Enum
 import hashlib
 import hmac
 import json
@@ -54,9 +55,19 @@ def scram_matches(password, verifier):
 
 
 @dataclass(frozen=True)
-class PasswordSource:
-    field: str | None = None
-    encoding: str = "password"
+class RawPassword:
+    pass
+
+
+class CredentialEncoding(Enum):
+    PASSWORD = "password"
+    POSTGRESQL_URL = "postgresql-url"
+
+
+@dataclass(frozen=True)
+class EnvironmentPassword:
+    field: str
+    encoding: CredentialEncoding
 
 
 @dataclass(frozen=True)
@@ -75,13 +86,14 @@ class SharedTables:
 @dataclass(frozen=True)
 class Role:
     name: str
-    credential: PasswordSource
+    credential: RawPassword | EnvironmentPassword
     authority: OwnedDatabase | SharedTables
     prepare_sql: str
 
 
 def parse_roles(value, admin, contract):
     require(contract["schemaVersion"] == 2, "CONTRACT_VERSION_INVALID")
+    require(set(contract["encodings"]) == {encoding.value for encoding in CredentialEncoding}, "ENCODING_HANDLER_SET_MISMATCH")
     # Temporary expand/read compatibility. Remove when active home/work role
     # configs both prove schemaVersion2 in domain-exposure-review/plan.md
     # (https://refinery.hwc.iheartwoodcraft.com/project/brain-o7xth7).
@@ -105,7 +117,7 @@ def parse_roles(value, admin, contract):
         require(isinstance(credential, dict) and len(credential) == 1, "CREDENTIAL_TAG_INVALID")
         if set(credential) == {"password"}:
             require(isinstance(credential["password"], str), "CREDENTIAL_SECRET_INVALID")
-            source = PasswordSource()
+            source = RawPassword()
         else:
             require(set(credential) == {"environment"}, "CREDENTIAL_TAG_INVALID")
             env = credential["environment"]
@@ -113,7 +125,7 @@ def parse_roles(value, admin, contract):
             require(isinstance(env["secret"], str) and isinstance(env["field"], str)
                     and re.fullmatch(r"[A-Z_][A-Z0-9_]*", env["field"]), "ENV_FIELD_INVALID")
             require(env["encoding"] in contract["encodings"], "ENV_ENCODING_INVALID")
-            source = PasswordSource(env["field"], env["encoding"])
+            source = EnvironmentPassword(env["field"], CredentialEncoding(env["encoding"]))
         tag = spec["authority"]
         require(isinstance(tag, dict) and len(tag) == 1, "AUTHORITY_TAG_INVALID")
         if set(tag) == {"owned"}:
@@ -158,7 +170,7 @@ def parse_roles(value, admin, contract):
 def password_from_credential(raw, role, byte_bound):
     require(len(raw) <= byte_bound, "CREDENTIAL_BYTE_BOUND")
     password = raw
-    if role.credential.field is not None:
+    if isinstance(role.credential, EnvironmentPassword):
         values = []
         for line in raw.decode("ascii").splitlines():
             key, separator, value = line.partition("=")
@@ -166,12 +178,16 @@ def password_from_credential(raw, role, byte_bound):
                 values.append(value)
         require(len(values) == 1, "ENV_FIELD_MISSING_OR_DUPLICATE")
         password = values[0].encode("ascii")
-        if role.credential.encoding == "postgresql-url":
+        if role.credential.encoding == CredentialEncoding.POSTGRESQL_URL:
             parsed = urlsplit(values[0])
             require(parsed.scheme in {"postgresql", "postgres"}
                     and unquote(parsed.username or "") == role.name
                     and unquote(parsed.path) == "/" + role.authority.database, "DATABASE_URL_IDENTITY_MISMATCH")
             password = unquote(parsed.password or "").encode("ascii")
+        else:
+            require(role.credential.encoding == CredentialEncoding.PASSWORD, "ENCODING_HANDLER_MISSING")
+    else:
+        require(isinstance(role.credential, RawPassword), "CREDENTIAL_HANDLER_MISSING")
     require(bool(re.fullmatch(rb"[A-Za-z0-9_-]{64}", password)), "PASSWORD_FORMAT_INVALID")
     return password
 

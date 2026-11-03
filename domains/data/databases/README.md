@@ -18,6 +18,9 @@ domains/data/databases/
 └── README.md
 ```
 
+The Python boundary decodes credential tags into separate raw/environment types
+and verifies its closed encoding enum against the generated Nix contract.
+
 ## Configuration
 
 ```nix
@@ -247,6 +250,7 @@ search is not authority to drop their retained data.
   state is SQLite; the leftover `n8n` database is not its configured store.
 
 ## Changelog
+- 2026-11-03: Represent decoded credential sources as distinct types, without nullable fields standing in for a variant.
 - 2026-11-03: Add versioned owned/shared role authority, environment credential decoding, explicit native peer environments and cross-client rotation wiring. Correct the historical claim that the n8n PostgreSQL role had no consumer.
 - 2026-11-03: Keep the native postgres OS-account peer map and replace the complete composed HBA rule set, including unreachable appended md5 defaults.
 - 2026-11-03: Add peer/SCRAM mode and protected, bounded per-app role provisioning; scope owner changes to declared database schemas and preserve extension members.
