@@ -113,7 +113,7 @@ in
     hwc.data.borg = lib.mkIf config.hwc.data.borg.enable {
       sqliteSnapshots.sabnzbd = {
         source = "${config.hwc.paths.apps.root}/sabnzbd/config/admin/history1.db";
-        user = "root";
+        user = "eric";
       };
       sources = [ "${config.hwc.paths.apps.root}/sabnzbd/config" ];
     };

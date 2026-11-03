@@ -1691,7 +1691,7 @@
       assert lib.elem "${c.hwc.paths.hot.root}/events:/mnt/hot/events" container.volumes;
       assert lib.elem "${c.hwc.paths.hot.downloads}/scripts:/config/scripts:ro" container.volumes;
       assert c.hwc.data.borg.sqliteSnapshots.sabnzbd.source == "${data}/admin/history1.db";
-      assert c.hwc.data.borg.sqliteSnapshots.sabnzbd.user == "root";
+      assert c.hwc.data.borg.sqliteSnapshots.sabnzbd.user == "eric";
       assert lib.elem data c.hwc.data.borg.sources;
       assert lib.hasInfix "podman image exists" c.systemd.services.podman-sabnzbd.preStart;
       pkgs.runCommand "sabnzbd-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
