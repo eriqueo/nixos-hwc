@@ -17,6 +17,14 @@ finance, business databases, website/CMS, and the daily morning briefing.
 `estimator/` serves its PWA without browser credentials. Exact private webhook handlers inject a runtime agenix credential; existing CRM job-intake routes remain separate.
 
 Morning-briefing live sources run concurrently after the MCP handshake. Research queues use four-profile batches alongside lessons and ingest-health reads; refinery files use sixteen-read batches. `morning-briefing/gather.test.mjs` checks overlap, bounds and stable partial output through the `morning-briefing-async` flake check.
+The three `*-composer.json` / `*-composer.lock` pairs define production-only
+Composer inputs. `composer-runtime-packages.json` pins each changed dist archive
+by URL and SHA256; `index.nix` rebuilds the offline cache. Install scripts and
+plugins never run during builds, so build-time database migration is excluded.
+
+Firefly runtime contexts include exact-hash Debian and Alpine package manifests.
+The recipes install these vendor OS fixes offline before restoring the original
+container user. No app or schema upgrade runs during the image build.
 
 The website backend defers access logging to the networking tunnel logger when
 enabled, avoiding duplicate raw query/capability records.
@@ -88,6 +96,30 @@ business/
 - 2026-11-02: Overlap independent morning-briefing gathers while preserving alert order, profile order and partial results; bound profile and file batches.
 
 - 2026-11-02: Move estimator credentials out of the browser and keep public estimator webhooks blocked.
+
+- 2026-11-02: Complete Core’s direct advisory repair with phpseclib 3.0.58 and
+  Symfony Expression Language 8.1.9 plus compatible locked dependencies. Pin all
+  six archive hashes and qualify parser depth rejection and X25519 consumption.
+
+- 2026-11-02: Add ABI-matched PHP 8.5.12/libxml2 2.15.4/curl 8.23.0/ngtcp2
+  1.25.0 source rebuilds with offline upstream tests, neutral build-stage INI and loopback-only local test name
+  resolution in the network-isolated build.
+  Rebuild Pico’s Nuxt output with lock-derived fixed-hash npm inputs and the existing 1.10.1
+  public version, repair its calculator
+  and vendored Python archive libraries, and exercise their real consumers.
+  Keep the existing app user’s provider cache and `/run` ownership after package
+  updates, so first requests and the non-root Nginx PID file remain writable.
+  Extend wiring checks to cover input hashes, build/test calls and startup guards.
+  Exact app versions and serving configuration remain unchanged. Deployment is
+  owned by the parent and does not occur in this checkout.
+
+- 2026-11-02: Add fixed-hash signed-vendor OS package inventories and offline
+  APT/APK installation to all three same-app finance contexts. Pin production
+  Composer dependency repairs, replace `/usr/bin/composer` with 2.10.3, disable
+  build scripts/plugins/network, and invalidate generated provider caches.
+  Preserve the app versions, service metadata and original working directories.
+  Wiring checks verify package hashes, offline installation and startup guards.
+  Current-data qualification and live deployment remain separate.
 
 - 2026-11-01: Defer public website access logging to the sanitized origin logger.
 

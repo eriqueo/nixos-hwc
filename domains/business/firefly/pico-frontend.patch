@@ -1,0 +1,86 @@
+--- a/utils/RomanianLanguageUtils.js
++++ b/utils/RomanianLanguageUtils.js
+@@ -1,6 +1,6 @@
+ // export function sortByPath = (list, path) => list.sort((a,b) => (a.attributes.tag > b.attributes.tag) ? 1 : ((b.attributes.tag > a.attributes.tag) ? -1 : 0))
+ 
+-export default class RomanianUtils {
++export class RomanianUtils {
+   // Speech to text sometimes types numbers as words... This
+   static numberDictionary = {
+     // Slang ones
+@@ -98,3 +98,5 @@
+       .join(' ')
+   }
+ }
++
++export default RomanianUtils
+--- a/utils/LanguageUtils.js
++++ b/utils/LanguageUtils.js
+@@ -1,4 +1,4 @@
+-export default class LanguageUtils {
++export class LanguageUtils {
+   static removeAccents(text) {
+     if (!text) {
+       return ''
+@@ -23,3 +23,5 @@
+ 
+ 
+ }
++
++export default LanguageUtils
+--- a/utils/UIUtils.js
++++ b/utils/UIUtils.js
+@@ -1,4 +1,4 @@
+-export default class UIUtils {
++export class UIUtils {
+   static showToast(text, duration = 3000) {}
+ 
+   static showToastSuccess(message, duration = 1000) {
+@@ -65,3 +65,5 @@
+   }
+ }
+ 
++
++export default UIUtils
+--- a/utils/ResponseUtils.js
++++ b/utils/ResponseUtils.js
+@@ -2,10 +2,12 @@
+ const STATUS_CODE_SUCCESS = 200
+ const STATUS_CODE_SUCCESS_DELETE = 204
+ 
+-export default class ResponseUtils {
++export class ResponseUtils {
+   static isSuccess(response) {
+     const responseStatus = _.get(response, 'status', ' - ')
+     const successCodesList = [STATUS_CODE_SUCCESS, STATUS_CODE_SUCCESS_DELETE]
+     return successCodesList.includes(responseStatus)
+   }
+ }
++
++export default ResponseUtils
+--- a/utils/Utils.js
++++ b/utils/Utils.js
+@@ -1,6 +1,6 @@
+ import _ from 'lodash'
+ 
+-export default class Utils {
++export class Utils {
+ 
+   static updateListWithNewItems(list, newItems) {
+     newItems = _.isArray(newItems) ? newItems : [newItems]
+@@ -26,3 +26,5 @@
+   }
+   return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, (c) => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16))
+ }
++
++export default Utils
+--- a/utils/MathUtils.js
++++ b/utils/MathUtils.js
+@@ -1,6 +1,6 @@
+ import { Parser } from 'expr-eval'
+ 
+-const parser = new Parser()
++const parser = new Parser({ operators: { assignment: false } })
+ 
+ export const evalMath = (value) => {
+   if (!value || value === '') {

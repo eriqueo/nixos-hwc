@@ -1,0 +1,136 @@
+{
+  "name": "firefly-iii/data-importer",
+  "description": "Firefly III Data Import Tool.",
+  "keywords": [
+    "firefly iii",
+    "firefly-iii",
+    "firefly",
+    "csv",
+    "import",
+    "comma separated file",
+    "importing",
+    "tool",
+    "finance",
+    "finances",
+    "manager",
+    "management",
+    "euro",
+    "dollar",
+    "laravel",
+    "money",
+    "currency",
+    "financials",
+    "financial",
+    "budgets",
+    "administration",
+    "tool",
+    "tooling",
+    "help",
+    "helper",
+    "assistant",
+    "planning",
+    "organizing",
+    "bills",
+    "personal finance",
+    "budgets",
+    "budgeting",
+    "budgeting tool",
+    "budgeting application",
+    "transactions",
+    "self hosted",
+    "self-hosted",
+    "transfers",
+    "management"
+  ],
+  "license": "AGPL-3.0-or-later",
+  "homepage": "https://github.com/firefly-iii/data-importer",
+  "type": "project",
+  "readme": "readme.md",
+  "authors": [
+    {
+      "name": "James Cole",
+      "email": "james@firefly-iii.org",
+      "homepage": "https://github.com/firefly-iii",
+      "role": "Developer"
+    }
+  ],
+  "support": {
+    "email": "james@firefly-iii.org",
+    "issues": "https://github.com/firefly-iii/firefly-iii/issues",
+    "forum": "https://gitter.im/firefly-iii/firefly-iii",
+    "source": "https://github.com/firefly-iii/data-importer",
+    "docs": "https://docs.firefly-iii.org/"
+  },
+  "funding": [
+    {
+      "type": "patreon",
+      "url": "https://www.patreon.com/JC5"
+    },
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/JC5"
+    }
+  ],
+  "require": {
+    "php": ">=8.5",
+    "ext-bcmath": "*",
+    "ext-intl": "*",
+    "ext-json": "*",
+    "firebase/php-jwt": "^7.1",
+    "firefly-iii/api-support-classes": "@dev",
+    "genkgo/camt": ">=2.10.1",
+    "guzzlehttp/guzzle": "^7.11",
+    "laravel/framework": "^13",
+    "league/csv": "9.*",
+    "ramsey/uuid": "^4.9",
+    "spatie/enum": "^3.10",
+    "swaggest/json-schema": "^0.12.43",
+    "symfony/http-client": "^8.0",
+    "symfony/mailgun-mailer": "^8.0",
+    "thecodingmachine/safe": "^3.4"
+  },
+  "require-dev": {},
+  "config": {
+    "optimize-autoloader": true,
+    "preferred-install": "dist",
+    "sort-packages": true,
+    "allow-plugins": {
+      "composer/package-versions-deprecated": true,
+      "phpstan/extension-installer": true
+    }
+  },
+  "extra": {
+    "laravel": {
+      "dont-discover": []
+    },
+    "phpstan": {
+      "includes": [
+        "extension.neon"
+      ]
+    }
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "app/"
+    },
+    "classmap": [
+      "database/seeds"
+    ]
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "scripts": {
+    "post-autoload-dump": [
+      "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+      "@php artisan package:discover --ansi"
+    ],
+    "post-root-package-install": [
+      "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+    ]
+  }
+}
