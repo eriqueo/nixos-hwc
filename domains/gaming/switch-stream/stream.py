@@ -230,9 +230,17 @@ def keep_library_focus(xdotool, window, wait):
                 was_library = library
                 focus = subprocess.run([xdotool, 'getwindowfocus'], capture_output=True, timeout=2)
                 if focus.returncode == 0:
-                    # X focus can still name the main window after Qt has
-                    # deactivated it. Preserve actual dialogs/other apps only.
-                    if focus.stdout.strip() != window.encode() or not pending_library:
+                    focused = focus.stdout.strip().decode()
+                    if focused != window:
+                        # A closed modal can leave focus on Xwayland's root:
+                        # a valid XID without an owning client. Preserve real
+                        # dialogs/apps and recover this unowned library focus.
+                        owner = subprocess.run([xdotool, 'getwindowpid', focused],
+                                               capture_output=True, timeout=2)
+                        if not library or owner.returncode == 0:
+                            continue
+                        pending_library = True
+                    elif not pending_library:
                         continue
                 if pending_library:
                     # A no-op XSetInputFocus(main) emits no FocusIn. A complete
