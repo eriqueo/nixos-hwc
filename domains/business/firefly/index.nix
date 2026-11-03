@@ -158,7 +158,8 @@ let
     cp ${./pico-front-package-lock.json} "$out/pico-front-package-lock.json"
     cp ${./pico-frontend.patch} "$out/pico-frontend.patch"
     mkdir -p "$out/npm-packages"
-    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in "cp ${source} \"$out/npm-packages/${p.file}\"\n") frontendPackages}
+    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''cp ${source} "$out/npm-packages/${p.file}"
+'') frontendPackages}
     ${lib.concatMapStrings (p: "cp ${p.source} \"$out/${p.file}\"\n") picoPackages}
   '';
 in
