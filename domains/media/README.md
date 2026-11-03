@@ -12,6 +12,8 @@ photo management, and video surveillance services.
 
 ## Structure
 
+Frigate uses explicit NVIDIA CDI access and no-new-privileges; its configuration contract rejects privileged mode.
+
 Frigate and Immich ML derive same-app images with the shared Starlette Host parser backport.
 
 `immich-container/` keeps its pinned Ubuntu CA distrust policy even after host NSS removes the same roots. Its exact local runtime images must be built before activation.
@@ -76,6 +78,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-03: Remove Frigate privileged mode; preserve its image/data/GPU contract and enforce the safer flags in its existing wiring test.
 
 - 2026-11-02: Encode the backport as one Dockerfile RUN line and preserve a real FROM newline; check the complete recipe syntax.
 

@@ -28,6 +28,9 @@ assert fixture["configTemplate"] in fixture["restartTriggers"]
 assert fixture["port"] == 5000
 assert not fixture["ports"]
 assert "--sdnotify=healthy" in fixture["extraOptions"]
+assert "--privileged" not in fixture["extraOptions"]
+assert "--security-opt=no-new-privileges" in fixture["extraOptions"]
+assert "--device=nvidia.com/gpu=0" in fixture["extraOptions"]
 assert fixture["startupTimeout"] == 120
 assert not any(v.endswith(":/tmp/frigate") for v in fixture["volumes"])
 assert not fixture["exporterPresent"]

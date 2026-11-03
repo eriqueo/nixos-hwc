@@ -177,8 +177,8 @@ in
     };
 
     # Frigate container
-    # HWC-EXCEPTION(Law 5): NVR needs device/GPU access mkContainer does not model
-    # Justification: privileged devices (coral/GPU), shm sizing, and camera-network specifics; media-app helper assumptions (PUID/PGID linuxserver images) do not hold
+    # HWC-EXCEPTION(Law 5): NVR owns its device/shm/startup contract
+    # Justification: camera-network and s6 UID behavior differ from Linuxserver media apps. NVIDIA CDI grants the GPU explicitly; privileged mode is unnecessary.
     # Plan: permanent by design (revisit if an infra-shaped helper grows to fit)
     # Revocable: yes
     virtualisation.oci-containers.containers.frigate = {
@@ -190,7 +190,7 @@ in
       extraOptions = [
         "--network=host"
         "--security-opt=label=disable"
-        "--privileged"
+        "--security-opt=no-new-privileges"
         "--tmpfs=/tmp/cache:size=1g"
         "--shm-size=${cfg.resources.shmSize}"
         "--memory=${cfg.resources.memory}"

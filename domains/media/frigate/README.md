@@ -33,6 +33,8 @@ Owns Frigate and its generated configuration. Prometheus owns alert evaluation; 
 
 ## Structure
 
+The container uses its explicit NVIDIA CDI grant with no-new-privileges. It does not use privileged mode. The emitted-config contract checks these flags and GPU wiring.
+
 `index.nix` also exports the pinned same-app runtime recipe and requires its prebuilt image before startup.
 
 - `index.nix`: options, container, atomic config generation, native metrics and expected-camera recording rules.
@@ -694,6 +696,8 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+
+- 2026-11-03: Remove unnecessary privileged mode and enable no-new-privileges while preserving image, camera/model settings, mounts and explicit NVIDIA CDI access.
 
 - 2026-11-02: Encode the backport as one Dockerfile RUN line and preserve a real FROM newline; check the complete recipe syntax.
 
