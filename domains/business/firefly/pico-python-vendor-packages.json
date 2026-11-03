@@ -1,0 +1,16 @@
+[
+  {
+    "name": "jaraco.context",
+    "version": "6.1.0",
+    "file": "jaraco_context-6.1.0-py3-none-any.whl",
+    "url": "https://files.pythonhosted.org/packages/8d/48/aa685dbf1024c7bd82bede569e3a85f82c32fd3d79ba5fea578f0159571a/jaraco_context-6.1.0-py3-none-any.whl",
+    "hash": "sha256-pDte2FgVIj0NPP2218oNK8iUbyjzC28yFr2gcPaLrdo="
+  },
+  {
+    "name": "wheel",
+    "version": "0.46.2",
+    "file": "wheel-0.46.2-py3-none-any.whl",
+    "url": "https://files.pythonhosted.org/packages/13/2c/5e079cefe955ae58e5a052fe037c850ce493eb7269dedeb960237e78fb0f/wheel-0.46.2-py3-none-any.whl",
+    "hash": "sha256-M65gcl1p6qJJvBmC5zmUPCOzS1jVHxy2JTRTdzrKbmU="
+  }
+]

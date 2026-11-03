@@ -151,6 +151,8 @@ let
   # calculator, dependency and offline rebuild qualification.
   frontendManifest = ./pico-frontend-packages.json;
   frontendPackages = builtins.fromJSON (builtins.readFile frontendManifest);
+  pythonVendorManifest = ./pico-python-vendor-packages.json;
+  pythonVendorPackages = builtins.fromJSON (builtins.readFile pythonVendorManifest);
   frontendNpm = pkgs.fetchurl {
     url = "https://registry.npmjs.org/npm/-/npm-11.19.1.tgz";
     hash = "sha256-n1i/8BYEyxsUAI/vFNzrFNg2pJIl5FxsLjfeO+PnB/A=";
@@ -179,6 +181,10 @@ let
       ENV NODE_VERSION=${picoNodeVersion}
       ${composerRecipe "pico"}
       ${frontendRecipe}
+      # Vendor fixes ${builtins.hashFile "sha256" pythonVendorManifest} ${builtins.hashFile "sha256" ./pico-python-vendor.py}
+      COPY python-vendor/ /tmp/python-vendor/
+      COPY pico-python-vendor.py /tmp/pico-python-vendor.py
+      RUN python3 /tmp/pico-python-vendor.py && rm -r /tmp/python-vendor /tmp/pico-python-vendor.py
     '';
   };
   picoManifest = pkgs.writeText "firefly-pico-runtime-manifest.json" (builtins.toJSON {
@@ -195,6 +201,11 @@ let
     cp ${./pico-front-package-lock.json} "$out/pico-front-package-lock.json"
     cp ${./pico-frontend.patch} "$out/pico-frontend.patch"
     cp ${./pico-frontend-test.mjs} "$out/pico-frontend-test.mjs"
+    cp ${./pico-python-vendor.py} "$out/pico-python-vendor.py"
+    mkdir -p "$out/python-vendor"
+    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''
+      cp ${source} "$out/python-vendor/${p.file}"
+    '') pythonVendorPackages}
     cp ${frontendNpm} "$out/npm.tgz"
     cp ${./pico-frontend-cache.mjs} "$out/pico-frontend-cache.mjs"
     mkdir -p "$out/npm-packages"
