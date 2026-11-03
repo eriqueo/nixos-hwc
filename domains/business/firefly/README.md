@@ -151,6 +151,9 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
+- 2026-11-02: Replace the actual `/usr/bin/composer` executable, matching the
+  image inventory, rather than adding a second binary earlier in PATH.
+
 - 2026-11-02: Invalidate generated Laravel provider caches after offline Composer
   installation; otherwise removed development providers can break bootstrap.
 
