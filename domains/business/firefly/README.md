@@ -151,27 +151,13 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
-- 2026-11-02: Replace the actual `/usr/bin/composer` executable, matching the
-  image inventory, rather than adding a second binary earlier in PATH.
-
-- 2026-11-02: Invalidate generated Laravel provider caches after offline Composer
-  installation; otherwise removed development providers can break bootstrap.
-
-- 2026-11-02: Point APT at the fixed-hash local archive cache explicitly so
-  download-disabled installation resolves all selected package files.
-
-- 2026-11-02: Run Pico Composer installation from the Laravel root, then restore
-  its original frontend working directory for container startup.
-
-- 2026-11-02: Add same-app Composer dependency lock repairs. Offline installs
-  use fixed-hash archives, disable scripts/plugins/network, retain each framework
-  major and replace build tooling with Composer 2.10.3. Use APT to order Debian
-  pre-dependencies; a raw dpkg glob cannot satisfy their configuration order.
-
-- 2026-11-02: Add signed-vendor, fixed-hash OS dependency repairs to all three
-  same-app finance runtime contexts. Bind the Debian inventory to each image tag;
-  update Pico nginx, curl, PostgreSQL client, Expat, Python and shared libraries.
-  Candidate qualification and deployment remain separate.
+- 2026-11-02: Add fixed-hash signed-vendor OS package inventories and offline
+  APT/APK installation to all three same-app finance contexts. Pin production
+  Composer dependency repairs, replace `/usr/bin/composer` with 2.10.3, disable
+  build scripts/plugins/network, and invalidate generated provider caches.
+  Preserve the app versions, service metadata and original working directories.
+  Wiring checks verify package hashes, offline installation and startup guards.
+  Current-data qualification and live deployment remain separate.
 
 - 2026-11-01: Persist the existing Core OAuth signing keys and check their pair
   before container startup, so runtime image replacement preserves API tokens.

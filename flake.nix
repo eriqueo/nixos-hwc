@@ -1258,6 +1258,8 @@
             assert recipe.rstrip().endswith('USER www-data')
             assert 'COMPOSER_DISABLE_NETWORK=1' in recipe
             assert 'install --no-dev --no-scripts --no-plugins' in recipe
+            assert 'cp /tmp/hwc-composer.phar /usr/bin/composer' in recipe
+            assert 'rm -f bootstrap/cache/packages.php bootstrap/cache/services.php' in recipe
             assert {'composer.json', 'composer.lock', 'composer.phar', 'composer-cache'} <= {p.name for p in context.iterdir()}
         PY
         touch "$out"
