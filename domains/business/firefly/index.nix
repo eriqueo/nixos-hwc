@@ -116,6 +116,19 @@ let
     { name = "php82-xmlwriter"; version = picoPhpVersion; repository = "community"; hash = "sha256-C4BumwxAcKlQ2KiTLMb4QT/nlbc+P8tsoyO7MJu1i/Q="; }
     { name = "php82-zip"; version = picoPhpVersion; repository = "community"; hash = "sha256-aQn/UFHlZU8goo8SFB19Bbxg/E8dv6fs5URmT0iOI+c="; }
   ]);
+  # Temporary frontend repair. Remove when the same-app upstream output passes
+  # calculator, dependency and offline rebuild qualification.
+  frontendManifest = ./pico-frontend-packages.json;
+  frontendPackages = builtins.fromJSON (builtins.readFile frontendManifest);
+  frontendRecipe = ''
+    # Frontend inputs ${builtins.hashFile "sha256" frontendManifest} ${builtins.hashFile "sha256" ./pico-front-package-lock.json} ${builtins.hashFile "sha256" ./pico-front-package.json} ${builtins.hashFile "sha256" ./pico-frontend.patch}
+    COPY --from=secure-node /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
+    COPY npm-packages/ /tmp/npm-packages/
+    COPY pico-front-package.json ./package.json
+    COPY pico-front-package-lock.json ./package-lock.json
+    COPY pico-frontend.patch /tmp/pico-frontend.patch
+    RUN patch -p1 < /tmp/pico-frontend.patch && rm -rf node_modules .nuxt .output && for f in /tmp/npm-packages/*.tgz; do node /usr/local/lib/node_modules/npm/bin/npm-cli.js cache add "$f" --cache /tmp/npm-cache --offline; done && node /usr/local/lib/node_modules/npm/bin/npm-cli.js ci --cache /tmp/npm-cache --offline --include=dev && node /usr/local/lib/node_modules/npm/bin/npm-cli.js run build && rm -rf node_modules /tmp/npm-packages /tmp/npm-cache /tmp/pico-frontend.patch /usr/local/lib/node_modules/npm
+  '';
   picoRuntime = helpers.mkRuntimeImage {
     name = "firefly-pico";
     version = "${picoAppVersion}-node${picoNodeVersion}";
@@ -128,6 +141,7 @@ let
       COPY --from=secure-node /usr/local/bin/node /usr/bin/node
       ENV NODE_VERSION=${picoNodeVersion}
       ${composerRecipe "pico"}
+      ${frontendRecipe}
     '';
   };
   picoManifest = pkgs.writeText "firefly-pico-runtime-manifest.json" (builtins.toJSON {
@@ -140,6 +154,11 @@ let
     cp ${picoRuntime.dockerfile} "$out/Dockerfile"
     cp ${picoManifest} "$out/manifest.json"
     ${composerContext "pico"}
+    cp ${./pico-front-package.json} "$out/pico-front-package.json"
+    cp ${./pico-front-package-lock.json} "$out/pico-front-package-lock.json"
+    cp ${./pico-frontend.patch} "$out/pico-frontend.patch"
+    mkdir -p "$out/npm-packages"
+    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in "cp ${source} \"$out/npm-packages/${p.file}\"\n") frontendPackages}
     ${lib.concatMapStrings (p: "cp ${p.source} \"$out/${p.file}\"\n") picoPackages}
   '';
 in

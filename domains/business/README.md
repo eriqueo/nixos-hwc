@@ -91,6 +91,12 @@ business/
 
 ## Changelog
 
+- 2026-11-02: Rebuild Pico’s frontend offline from hash-pinned npm inputs.
+  Use the maintained expr-eval fork, current Axios and Lodash, and expose
+  existing utility classes through named exports for Nuxt’s generated imports.
+  Candidate recovery is exercised separately from deployment.
+
+
 - 2026-11-02: Add fixed-hash signed-vendor OS package inventories and offline
   APT/APK installation to all three same-app finance contexts. Pin production
   Composer dependency repairs, replace `/usr/bin/composer` with 2.10.3, disable

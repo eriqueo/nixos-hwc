@@ -11,6 +11,12 @@ Firefly III personal finance manager running as a Podman container, with optiona
 
 ## Structure
 
+`pico-front-package*.json` and `pico-frontend-packages.json` own the locked
+frontend inputs. `pico-frontend.patch` preserves default exports and supplies
+named exports used by Nuxt auto-imports. The recipe rebuilds the real output
+with network access disabled and removes build dependencies afterwards.
+
+
 The three `*-composer.json` / `*-composer.lock` pairs define production-only
 Composer inputs. `composer-runtime-packages.json` pins each changed dist archive
 by URL and SHA256; `index.nix` rebuilds the offline cache. Install scripts and
@@ -150,6 +156,12 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 - `firefly-explorer.service` — immutable explorer package; validates its token, Firefly account, UI assets, and tailscaled socket before serving. Every API request is authorized with Tailscale WhoIs. Split groups remain read-only; writes are limited to existing category/expense-account ids and existing tags.
 
 ## Changelog
+
+- 2026-11-02: Rebuild Pico’s frontend offline from hash-pinned npm inputs.
+  Use the maintained expr-eval fork, current Axios and Lodash, and expose
+  existing utility classes through named exports for Nuxt’s generated imports.
+  Candidate recovery is exercised separately from deployment.
+
 
 - 2026-11-02: Add fixed-hash signed-vendor OS package inventories and offline
   APT/APK installation to all three same-app finance contexts. Pin production
