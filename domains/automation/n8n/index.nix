@@ -14,6 +14,33 @@
 let
   cfg = config.hwc.automation.n8n;
   paths = config.hwc.paths;
+  helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
+  # TEMPORARY:2.46.1 and2.46.4 retain vulnerable system Brotli/curl.
+  # Preserve the app and all other DHI libraries. Remove after an upstream
+  # image passes the same library scan and isolated database/key recovery.
+  securityApks = [
+    { file = "brotli-libs-1.2.1-r0.apk"; sha256 = "62a7e37e43bbfc1f8525a00ad2125fd5897135dc93b849733884cb78ffd8e26c"; }
+    { file = "libcurl-8.23.0-r0.apk"; sha256 = "1f70ca404818805a6465b615bbfe84ef861488a963d7e630108ebd7fbaa51665"; }
+  ];
+  securityRuntime = helpers.mkRuntimeImage {
+    name = "n8n";
+    version = "2.46.1-brotli1.2.1-curl8.23.0";
+    recipe = ''
+      FROM docker.io/library/alpine@sha256:c26612752c78b18faacd63c7d50f4592c2e7b0f25e0e20e82bd74e465c57ab0d AS security
+      RUN mkdir /packages ${lib.concatMapStrings (apk: '' \
+          && wget -q -O /packages/${apk.file} https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/${apk.file} \
+          && echo '${apk.sha256}  /packages/${apk.file}' | sha256sum -c -'') securityApks}
+      FROM docker.io/n8nio/n8n@sha256:aaab3b3a5a317850d07fca58630bdcf97783f37ba7a7a52792a1b1e594395f11
+      USER root
+      COPY --from=security /sbin/apk /tmp/apk-security
+      COPY --from=security /usr/lib/libapk.so.3.0.0 /tmp/apk-security-lib/libapk.so.3.0.0
+      COPY --from=security /etc/apk/keys /tmp/apk-security-keys
+      COPY --from=security /packages /tmp/apk-security-packages
+      RUN LD_LIBRARY_PATH=/tmp/apk-security-lib /tmp/apk-security --repositories-file /dev/null --keys-dir /tmp/apk-security-keys --no-network add --upgrade /tmp/apk-security-packages/*.apk \
+          && rm -rf /tmp/apk-security /tmp/apk-security-lib /tmp/apk-security-keys /tmp/apk-security-packages
+      USER node
+    '';
+  };
 in
 {
   # OPTIONS
@@ -22,7 +49,7 @@ in
 
     image = lib.mkOption {
       type = lib.types.str;
-      default = "docker.io/n8nio/n8n@sha256:aaab3b3a5a317850d07fca58630bdcf97783f37ba7a7a52792a1b1e594395f11";  # reviewed 2.46.1; critical workflow DB — pinned
+      default = securityRuntime.image;
       description = "n8n container image";
     };
 
@@ -150,6 +177,12 @@ in
       in config.hwc.networking.hosts.url { server = owner; port = route.port; };
   }
   (lib.mkIf cfg.enable {
+    # Build/tag this context before activation; the service never substitutes a
+    # mutable registry image when its qualified local runtime is absent.
+    system.build.n8nRuntimeImageContext = pkgs.runCommand "n8n-runtime-context" {} ''
+      mkdir -p "$out"
+      ln -s ${securityRuntime.dockerfile} "$out/Dockerfile"
+    '';
     # Firewall - localhost + Tailscale
     networking.firewall.interfaces."lo".allowedTCPPorts = [ cfg.port ];
     networking.firewall.interfaces."tailscale0".allowedTCPPorts =

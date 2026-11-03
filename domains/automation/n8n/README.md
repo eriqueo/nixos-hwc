@@ -11,7 +11,9 @@ n8n workflow automation platform running as a Podman container. Handles alert ro
 
 ## Structure
 
-The image pin selects reviewed n8n 2.46.1. Qualify upgrades against an isolated
+The image recipe preserves reviewed n8n2.46.1 and updates only system Brotli1.2.1
+and curl8.23.0 from fixed-hash signed Alpine packages. Build and tag
+`system.build.n8nRuntimeImageContext` before activation. Qualify upgrades against an isolated
 SQLite backup and its matching credential key before activation; workflows must
 remain disabled in that copy. Keep the original database and key together for recovery.
 
@@ -128,6 +130,11 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 - `hwc-n8n-mcp-env.service` — generates bridge env file from agenix secrets
 
 ## Changelog
+
+- 2026-11-02: Add the content-addressed OS repair recipe. An isolated consistent
+  SQLite backup reads all8 workflows and decrypts all21 credentials with identical
+  old/new/restored exports. The candidate starts with workflows disabled and no
+  network. Production activation and final-context checks remain separate.
 
 - 2026-11-01: Pin 2.46.1 for the October 28 security fixes. Offline qualification
   preserves workflows, nodes and credentials and exercises old-image recovery;

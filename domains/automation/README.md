@@ -14,7 +14,7 @@ readme-freshness weekly Law-12 drift report.
 
 ## Structure
 
-`n8n/` pins reviewed 2.46.1; offline migration and credential checks use an
+`n8n/` preserves reviewed2.46.1 in a fixed-hash Brotli/curl repair recipe; offline migration and credential checks use an
 isolated SQLite copy with workflows disabled before production activation.
 
 Gauntlet poll and run-now services keep in-flight investigations during system switches. Changed runtimes take effect on the next scheduled or requested run.
@@ -93,6 +93,9 @@ workspace/automation/
 ```
 
 ## Changelog
+
+- 2026-11-02: Add n8n's same-app OS repair context after isolated database/key
+  read, decrypt, startup and old-image recovery checks.
 
 - 2026-11-01: Update n8n's immutable security image to qualified 2.46.1.
 
