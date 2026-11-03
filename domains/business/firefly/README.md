@@ -11,6 +11,11 @@ Firefly III personal finance manager running as a Podman container, with optiona
 
 ## Structure
 
+Core and Pico declare separate owned PostgreSQL roles and read protected
+password environment files. The data capability provisions them before startup.
+Core atomically publishes the existing APP_KEY/cron environment file at0600;
+OAuth keys, encryption keys and current financial data stay in place.
+
 `native-runtime-sources.json` and `native-build-packages.json` pin upstream
 sources and acquisition-verified Debian build dependencies.
 `pico-python-vendor-packages.json` pins two upstream wheels.
@@ -118,7 +123,10 @@ hwc.business.firefly = {
     port = 5432;
     name = "firefly";
     picoName = "firefly_pico";
-    user = "eric";
+    picoUser = "firefly_pico";
+    picoPasswordSecret = "firefly-pico-db-env";
+    user = "firefly";
+    passwordSecret = "firefly-db-env";
   };
 
   storage = {
@@ -169,6 +177,7 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 - `firefly-explorer.service` — immutable explorer package; validates its token, Firefly account, UI assets, and tailscaled socket before serving. Every API request is authorized with Tailscale WhoIs. Split groups remain read-only; writes are limited to existing category/expense-account ids and existing tags.
 
 ## Changelog
+- 2026-11-03: Declare restricted database ownership, protected password environment delivery and provisioning/rotation dependencies.
 
 - 2026-11-02: Complete Core’s direct advisory repair with phpseclib 3.0.58 and
   Symfony Expression Language 8.1.9 plus compatible locked dependencies. Pin all

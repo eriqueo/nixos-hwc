@@ -13,9 +13,9 @@ let
   # Downloads folder 2026-10-01 (agent-workspace S7).
   inbox = config.hwc.paths.user.calendarDrop;
   origin = "https://event-scout.${config.hwc.networking.shared.vhostDomain}";
-  environment = {
+  peerEnvironment = config.hwc.data.databases.postgresql.peerEnvironmentFor { role = dbName; database = dbName; };
+  environment = peerEnvironment // {
     NODE_ENV = "production";
-    DATABASE_URL = "postgresql://${dbName}@localhost/${dbName}";
     EVENT_SCOUT_CONTROL_TOKEN_FILE = tokenFile;
     EVENT_SCOUT_ACTOR = cfg.reviewerId;
     EVENT_SCOUT_ORIGIN = origin;
@@ -62,18 +62,15 @@ in {
       "d ${inbox} 0750 eric users - -"
       "d ${inbox}/imported 0750 eric users - -"
     ];
-    services.postgresql = {
-      ensureDatabases = [ dbName ];
-      ensureUsers = [{ name = dbName; ensureDBOwnership = true; }];
-    };
+    hwc.data.databases.postgresql.localPeerRoles.${dbName} = dbName;
     # CRITICAL database: included in fleet pg_dumpall/Borg; no second backup job.
     hwc.networking.shared.routes = [{ name = "event-scout"; mode = "vhost"; upstream = "http://127.0.0.1:${toString cfg.port}"; }];
     systemd.services.event-scout = {
       description = "Event Scout private review dashboard and control API";
       wantedBy = [ "multi-user.target" ];
       wants = [ "network-online.target" ];
-      after = [ "network-online.target" "postgresql.service" ];
-      requires = [ "postgresql.service" ];
+      after = [ "network-online.target" "postgresql-setup.service" ];
+      requires = [ "postgresql-setup.service" ];
       inherit environment;
       startLimitIntervalSec = 300;
       startLimitBurst = 5;
@@ -84,9 +81,9 @@ in {
     };
     systemd.services.event-scout-sweep = {
       description = "Discover and curate local events; deliver a bounded Discord shortlist";
-      after = [ "network-online.target" "postgresql.service" "hwc-control-bot.service" ];
+      after = [ "network-online.target" "postgresql-setup.service" "hwc-control-bot.service" ];
       wants = [ "network-online.target" "hwc-control-bot.service" ];
-      requires = [ "postgresql.service" ];
+      requires = [ "postgresql-setup.service" ];
       inherit environment;
       onFailure = lib.mkIf (config.hwc.monitoring.alerts.enable or false) [ "hwc-service-failure-notifier@event-scout-sweep.service" ];
       serviceConfig = serviceConfig // { Type = "oneshot"; ExecStart = command "sweep"; TimeoutStartSec = "10min"; };

@@ -8,6 +8,21 @@ let
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
   cfg = config.hwc.automation.n8n;
   paths = config.hwc.paths;
+  workflowPostgres = cfg.workflowPostgresql;
+  managedPostgres = workflowPostgres.credentialIds != [];
+  postgresSecretFile = config.hwc.secrets.api.${workflowPostgres.passwordSecret};
+  postgresDependencies = lib.optional managedPostgres "postgresql-application-roles.service";
+  postgresCredentialConfig = pkgs.writeText "n8n-postgresql-credentials.json" (builtins.toJSON {
+    schemaVersion = 1;
+    inherit (workflowPostgres) credentialIds database;
+    vendorDefaults = { host = "localhost"; port = 5432; };
+    desired = {
+      user = workflowPostgres.role;
+      host = "localhost";
+      port = config.services.postgresql.settings.port;
+      password = "={{ $env.${workflowPostgres.passwordEnvironmentField} }}";
+    };
+  });
 
   # This host's tailnet identity (n8n validates Origin against N8N_HOST) and
   # the editor/webhook base URL from the read-only `publicUrl` (index.nix);
@@ -122,7 +137,8 @@ in
       } // cfg.extraEnv;
       environmentFiles =
         (lib.optional (cfg.encryption.keyFile != null) cfg.encryption.keyFile)
-        ++ (lib.optional hasSecrets secretsEnvFile);
+        ++ (lib.optional hasSecrets secretsEnvFile)
+        ++ lib.optional managedPostgres postgresSecretFile;
       memory = "2g";
       cpus = "2.0";
     })
@@ -136,10 +152,30 @@ in
         user = "eric";
       };
       systemd.tmpfiles.rules = [
-        "d ${cfg.dataDir} 0755 1000 1000 -"
+        "d ${cfg.dataDir} 0755 1000 100 -"
         "d /run/n8n 0755 root root -"
       ];
     }
+
+    (lib.mkIf managedPostgres {
+      system.build.n8nPostgresqlCredentialConfig = postgresCredentialConfig;
+      systemd.services.podman-n8n = {
+        after = postgresDependencies;
+        requires = postgresDependencies;
+        restartTriggers = [ config.age.secrets.${workflowPostgres.passwordSecret}.file
+          config.system.build.postgresqlApplicationRoleTool ./postgres-credentials.py ];
+        serviceConfig.TimeoutStartSec = lib.mkForce 480;
+        # The existing OCI unit has already stopped its app before preStart.
+        # The helper rejects a running app and changes only declared IDs.
+        preStart = lib.mkAfter ''
+          ${pkgs.python3}/bin/python ${./postgres-credentials.py} ${postgresCredentialConfig} \
+            --data-dir ${lib.escapeShellArg cfg.dataDir} \
+            --podman ${pkgs.podman}/bin/podman --image ${lib.escapeShellArg cfg.image} \
+            ${lib.optionalString (cfg.encryption.keyFile != null)
+              "--encryption-env-file ${lib.escapeShellArg cfg.encryption.keyFile}"}
+        '';
+      };
+    })
 
     # Generate secrets env file before container starts
     (lib.mkIf hasSecrets {

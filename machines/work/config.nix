@@ -465,7 +465,10 @@
     version = "15";
     package = pkgs.postgresql_15;
     containerNetwork.enable = true;
+    authenticationMode = "peer-scram";
   };
+  # Existing workflow credential identities are specific to this instance.
+  hwc.automation.n8n.workflowPostgresql.credentialIds = [ "iXtijdayy9OMPQvY" "postgres-hwc-cred" ];
 
   # Backups push to the server's DAS over the tailnet rather than to a local
   # disk: this host has one SSD and no backup pool. The server declares the

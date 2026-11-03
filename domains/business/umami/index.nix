@@ -98,9 +98,8 @@ in
 
       ports = [ "127.0.0.1:${toString cfg.port}:3000" ];
 
-      # DATABASE_URL + APP_SECRET live in the agenix env file; the DB
-      # connection uses the podman gateway (10.89.0.1) trust rule, so the
-      # URL carries no password — APP_SECRET is the only real secret.
+      # The unchanged APP_SECRET and password-bearing DATABASE_URL share the
+      # existing protected OCI environment file; never put either in Nix.
       environmentFiles = [ config.age.secrets."umami-env".path ];
 
       environment = {
@@ -109,29 +108,18 @@ in
     })
 
     {
-      # Database registration (engine creates it; role added below)
-      hwc.data.databases.postgresql.databases = [ cfg.databaseName ];
-
-      # Umami connects as role "umami" from the podman subnet (trust auth).
-      # ensureDatabases owns the db as postgres, so create the role and hand
-      # over the schema.
-      # NOTE: deliberately self-contained — current nixpkgs runs the ensure*
-      # logic in postgresql-setup.service, so postgresql.service's postStart
-      # has NO $PSQL preamble anymore. (The older hwc modules' $PSQL lines in
-      # this hook are all dead code saved only by their `|| true`.) Absolute
-      # binary paths + a private variable keep this block working regardless.
-      systemd.services.postgresql.postStart = lib.mkAfter ''
-        UMAMI_PSQL="${config.services.postgresql.package}/bin/psql"
-        $UMAMI_PSQL -tAc "SELECT 1 FROM pg_roles WHERE rolname='umami'" | ${pkgs.gnugrep}/bin/grep -q 1 || \
-          $UMAMI_PSQL -c "CREATE ROLE umami LOGIN" || true
-        $UMAMI_PSQL -c "ALTER DATABASE ${cfg.databaseName} OWNER TO umami" || true
-        $UMAMI_PSQL -d ${cfg.databaseName} -c "ALTER SCHEMA public OWNER TO umami" || true
-      '';
+      hwc.data.databases.postgresql.applicationRoles.${cfg.databaseName} = {
+        credential.environment = {
+          secret = "umami-env"; field = "DATABASE_URL"; encoding = "postgresql-url";
+        };
+        authority.owned = {};
+      };
 
       # Start after postgres is up (container network + db)
       systemd.services.podman-umami = {
-        after = [ "postgresql.service" "init-media-network.service" ];
-        wants = [ "postgresql.service" ];
+        after = [ "postgresql.service" "postgresql-application-roles.service" "init-media-network.service" ];
+        requires = [ "postgresql-application-roles.service" ];
+        restartTriggers = [ config.age.secrets.umami-env.file config.system.build.postgresqlApplicationRoleTool ];
         serviceConfig = {
           # Next drains requests, then deliberately exits 143 for SIGTERM.
           # Keep unsolicited termination recoverable as well as planned stops clean.

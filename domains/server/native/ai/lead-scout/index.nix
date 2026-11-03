@@ -25,6 +25,7 @@ let
   # `datax_monitor`, which IS DataX monitoring and is a different database
   # (domains/business/datax-monitor).
   dbName = "lead_scout";
+  peerEnvironment = config.hwc.data.databases.postgresql.peerEnvironmentFor { role = dbName; database = dbName; };
 
   node = "/run/current-system/sw/bin/node";
   # Direct node + tsx loader: the main PID is the app (domains/lib/mkTsNode.nix).
@@ -563,10 +564,10 @@ let
       description = "Lead Scout Discord reply approval bot (${programId})";
       after = [
         "network-online.target"
-        "postgresql.service"
+        "postgresql-setup.service"
       ];
       wants = [ "network-online.target" ];
-      requires = [ "postgresql.service" ];
+      requires = [ "postgresql-setup.service" ];
       wantedBy = [ "multi-user.target" ];
 
       # Five failed starts in five minutes leave the unit visibly failed. This
@@ -575,7 +576,7 @@ let
       startLimitIntervalSec = 300;
       startLimitBurst = 5;
 
-      environment = {
+      environment = peerEnvironment // {
         DATABASE_URL = cfg.databaseUrl;
         LOG_LEVEL = "info";
         NODE_ENV = "production";
@@ -666,7 +667,7 @@ in
 
     databaseUrl = lib.mkOption {
       type = lib.types.str;
-      default = "postgresql://${dbName}@localhost/${dbName}";
+      default = peerEnvironment.DATABASE_URL;
       description = "PostgreSQL connection string";
     };
 
@@ -893,15 +894,7 @@ in
     # role hwc.business.crm's read-only ingest connects as) is unaffected.
     # What the role GAINS is schema public's UC via pg_database_owner, which is
     # how home_scout and research_scout get CREATE for their app migrations.
-    services.postgresql = {
-      ensureDatabases = [ dbName ];
-      ensureUsers = [
-        {
-          name = dbName;
-          ensureDBOwnership = true;
-        }
-      ];
-    };
+    hwc.data.databases.postgresql.localPeerRoles.${dbName} = dbName;
 
     # NO postStart grant — the `GRANT ${dbName} TO eric` line here was dead
     # (`$PSQL` undefined, `|| true` swallowing it) and unnecessary (trust auth
@@ -991,9 +984,10 @@ in
         description = "Lead Scout MCP + HTTP Server";
         after = [
           "network-online.target"
-          "postgresql.service"
+          "postgresql-setup.service"
         ]
         ++ lib.optional config.hwc.business.crm.enable "hwc-crm.service";
+        requires = [ "postgresql-setup.service" ];
         wants = [
           "network-online.target"
         ]
@@ -1002,7 +996,7 @@ in
 
         # HWC_PIPELINE marker: the workspace-guard only reports on the headless
         # classifier agent this unit launches (producer: agent-harness sys.nix).
-        environment = (config.hwc.system.apps.agent-harness.pipelineEnvironment or { }) // {
+        environment = (config.hwc.system.apps.agent-harness.pipelineEnvironment or { }) // peerEnvironment // {
           DATABASE_URL = cfg.databaseUrl;
           LOG_LEVEL = "info";
           NODE_ENV = "production";

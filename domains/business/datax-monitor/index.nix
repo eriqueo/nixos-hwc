@@ -25,6 +25,10 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.business.dataxMonitor;
+  databaseEnvironment = config.hwc.data.databases.postgresql.localPeerEnvironment // {
+    DATABASE_URL = cfg.databaseUrl;
+    NODE_ENV = "production";
+  };
   node = "/run/current-system/sw/bin/node";
   tsx = "${cfg.projectDir}/node_modules/tsx/dist/cli.mjs";
 
@@ -202,15 +206,12 @@ in
     # --- Migration (oneshot, before the API) --------------------------------
     systemd.services.datax-monitor-migrate = {
       description = "DataX Monitor — DB migration (applies schema.sql)";
-      after = [ "postgresql.service" ];
-      requires = [ "postgresql.service" ];
+      after = [ "postgresql-setup.service" ];
+      requires = [ "postgresql-setup.service" ];
       wantedBy = [ "multi-user.target" ];
       before = [ "datax-monitor.service" ];
       path = [ pkgs.nodejs ];
-      environment = {
-        DATABASE_URL = cfg.databaseUrl;
-        NODE_ENV = "production";
-      };
+      environment = databaseEnvironment;
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
@@ -228,10 +229,8 @@ in
       requires = [ "datax-monitor-migrate.service" ];
       wantedBy = [ "multi-user.target" ];
       path = [ pkgs.nodejs ];
-      environment = {
-        DATABASE_URL = cfg.databaseUrl;
+      environment = databaseEnvironment // {
         PORT = toString cfg.port;
-        NODE_ENV = "production";
         FIREBASE_PROJECT_ID = cfg.firebaseProjectId;
         UI_DIST = "${cfg.projectDir}/ui/dist";
       };
@@ -252,9 +251,7 @@ in
       wants = [ "network-online.target" ];
       requires = [ "datax-monitor-migrate.service" ];
       path = [ pkgs.nodejs ];
-      environment = {
-        DATABASE_URL = cfg.databaseUrl;
-        NODE_ENV = "production";
+      environment = databaseEnvironment // {
         FIREBASE_PROJECT_ID = cfg.firebaseProjectId;
       };
       serviceConfig = {

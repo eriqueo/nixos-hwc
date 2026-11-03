@@ -253,7 +253,8 @@ in
     #========================================================================
     systemd.services.hwc-leads = {
       description = "hwc-leads — unified lead pipeline";
-      after = [ "network-online.target" ];
+      after = [ "network-online.target" "postgresql-setup.service" ];
+      requires = [ "postgresql-setup.service" ];
       wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
 
@@ -271,7 +272,7 @@ in
          else null)
       ];
 
-      environment = {
+      environment = config.hwc.data.databases.postgresql.localPeerEnvironment // {
         HWC_LEADS_BIND_ADDR           = cfg.bindAddr;
         HWC_LEADS_PORT                = toString cfg.port;
         HWC_LEADS_STATE_DIR           = cfg.statePath;

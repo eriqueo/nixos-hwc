@@ -15,6 +15,8 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.server.ai.homeScout;
+  dbName = "home_scout";
+  peerEnvironment = config.hwc.data.databases.postgresql.peerEnvironmentFor { role = dbName; database = dbName; };
   node = "/run/current-system/sw/bin/node";
   tsNode = import ../../../../lib/mkTsNode.nix { } cfg.workspaceRoot;
   cli  = "${cfg.projectDir}/src/cli.ts";
@@ -83,10 +85,16 @@ let
     ${lib.concatMapStringsSep "\n" (renderLayer "overlays.layers") cfg.overlayLayers}
   '';
 
-  ingestEnv = {
+  ingestEnv = peerEnvironment // {
     DATABASE_URL = cfg.databaseUrl;
     HOMESCOUT_INGEST_CONFIG = "${ingestToml}";
     PYTHONPATH = "${cfg.projectDir}/ingest";
+  };
+  ingestUnitDefaults = {
+    after = [ "network-online.target" "postgresql-setup.service" ];
+    requires = [ "postgresql-setup.service" ];
+    wants = [ "network-online.target" ];
+    environment = ingestEnv;
   };
 
   ingestServiceDefaults = {
@@ -144,7 +152,7 @@ in
 
     databaseUrl = lib.mkOption {
       type = lib.types.str;
-      default = "postgresql://home_scout@localhost/home_scout";
+      default = peerEnvironment.DATABASE_URL;
       description = "PostgreSQL connection string";
     };
 
@@ -317,13 +325,7 @@ in
   #============================================================================
   config = lib.mkIf cfg.enable {
     # Database on the shared Postgres instance
-    services.postgresql = {
-      ensureDatabases = [ "home_scout" ];
-      ensureUsers = [{
-        name = "home_scout";
-        ensureDBOwnership = true;
-      }];
-    };
+    hwc.data.databases.postgresql.localPeerRoles.${dbName} = dbName;
 
     # No per-database backup registration, deliberately — see the same note in
     # domains/server/native/ai/research-scout/index.nix. home_scout is already
@@ -335,22 +337,23 @@ in
     # command-not-found. Removed 2026-08-28 with the other 53 dead statements —
     # rationale and the audit in domains/data/databases/README.md.
     #
-    # Nothing depended on it. `local all all trust` in pg_hba means any local
-    # connection may assume any role without a password, and `eric` is a
-    # superuser besides. The role itself is created by ensureUsers above.
+    # It was redundant under the old trust model. The database capability now
+    # declares the owner role and a specific OS-peer map; eric keeps local
+    # administrator access for intentional cross-database consumers.
 
     #--------------------------------------------------------------------------
     # Unified server
     #--------------------------------------------------------------------------
     systemd.services.home-scout = {
       description = "Home Scout MCP + HTTP Server";
-      after = [ "network-online.target" "postgresql.service" ];
+      after = [ "network-online.target" "postgresql-setup.service" ];
+      requires = [ "postgresql-setup.service" ];
       wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
 
       # HWC_PIPELINE marker: the workspace-guard only reports on the headless
       # agent this unit launches (producer: agent-harness sys.nix).
-      environment = (config.hwc.system.apps.agent-harness.pipelineEnvironment or { }) // {
+      environment = (config.hwc.system.apps.agent-harness.pipelineEnvironment or { }) // peerEnvironment // {
         DATABASE_URL = cfg.databaseUrl;
         LOG_LEVEL = "info";
         NODE_ENV = "production";
@@ -402,11 +405,8 @@ in
     #--------------------------------------------------------------------------
     # Ingest timers (Python, working-tree deploy like the node service)
     #--------------------------------------------------------------------------
-    systemd.services.home-scout-harvest = {
+    systemd.services.home-scout-harvest = ingestUnitDefaults // {
       description = "Home Scout daily HomeHarvest ingest";
-      after = [ "network-online.target" "postgresql.service" ];
-      wants = [ "network-online.target" ];
-      environment = ingestEnv;
       serviceConfig = ingestServiceDefaults // {
         ExecStart = "${ingestPython}/bin/python -m homescout_ingest.homeharvest_run";
       };
@@ -420,11 +420,8 @@ in
       };
     };
 
-    systemd.services.home-scout-cadastral = {
+    systemd.services.home-scout-cadastral = ingestUnitDefaults // {
       description = "Home Scout monthly MT cadastral parcel load";
-      after = [ "network-online.target" "postgresql.service" ];
-      wants = [ "network-online.target" ];
-      environment = ingestEnv;
       serviceConfig = ingestServiceDefaults // {
         ExecStart = "${ingestPython}/bin/python -m homescout_ingest.cadastral_run";
       };
@@ -438,11 +435,8 @@ in
       };
     };
 
-    systemd.services.home-scout-redfin = {
+    systemd.services.home-scout-redfin = ingestUnitDefaults // {
       description = "Home Scout monthly Redfin market trends load";
-      after = [ "network-online.target" "postgresql.service" ];
-      wants = [ "network-online.target" ];
-      environment = ingestEnv;
       serviceConfig = ingestServiceDefaults // {
         ExecStart = "${ingestPython}/bin/python -m homescout_ingest.redfin_run";
       };
@@ -460,11 +454,8 @@ in
     # listings arrive daily and need assigning. The run is cheap when nothing
     # moved — it re-scans only listings whose boundary or coordinates changed
     # — so it goes weekly rather than monthly.
-    systemd.services.home-scout-schools = {
+    systemd.services.home-scout-schools = ingestUnitDefaults // {
       description = "Home Scout school district boundary load + listing assignment";
-      after = [ "network-online.target" "postgresql.service" ];
-      wants = [ "network-online.target" ];
-      environment = ingestEnv;
       serviceConfig = ingestServiceDefaults // {
         ExecStart = "${ingestPython}/bin/python -m homescout_ingest.schools_run";
       };
@@ -481,11 +472,8 @@ in
     # Generic spatial overlays (flood, zoning, future land use, historic,
     # NCOD, STR). Same weekly cadence as schools, offset an hour so the two
     # boundary loads don't hammer the DB at once.
-    systemd.services.home-scout-overlays = {
+    systemd.services.home-scout-overlays = ingestUnitDefaults // {
       description = "Home Scout spatial-overlay load + listing assignment";
-      after = [ "network-online.target" "postgresql.service" ];
-      wants = [ "network-online.target" ];
-      environment = ingestEnv;
       serviceConfig = ingestServiceDefaults // {
         ExecStart = "${ingestPython}/bin/python -m homescout_ingest.overlays_run";
       };

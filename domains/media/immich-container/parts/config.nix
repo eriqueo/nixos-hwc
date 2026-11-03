@@ -56,7 +56,10 @@ let
   managedDatabase = cfg.database.passwordSecret != null;
   databasePasswordTarget = "/run/credentials/immich-db-password";
   databaseDependencies = lib.optional managedDatabase "postgresql-application-roles.service";
-  databaseSecretSources = lib.optional managedDatabase config.age.secrets.${cfg.database.passwordSecret}.file;
+  databaseSecretSources = lib.optionals managedDatabase [
+    config.age.secrets.${cfg.database.passwordSecret}.file
+    config.system.build.postgresqlApplicationRoleTool
+  ];
 
 in
 {
@@ -101,9 +104,11 @@ in
       }];
       hwc.data.databases.postgresql.applicationRoles = lib.optionalAttrs managedDatabase {
         ${cfg.database.name} = {
-          passwordSecret = cfg.database.passwordSecret;
-          takeOwnershipFrom = config.hwc.system.users.user.name or "eric";
-          schemas = [ "public" "vectors" ];
+          credential.password = cfg.database.passwordSecret;
+          authority.owned = {
+            takeOwnershipFrom = config.hwc.system.users.user.name or "eric";
+            schemas = [ "public" "vectors" ];
+          };
         };
       };
     }

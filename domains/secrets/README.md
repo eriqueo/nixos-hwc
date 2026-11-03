@@ -9,6 +9,8 @@
 
 ## Structure
 
+`parts/services/{firefly-db-env,firefly-pico-db-env,paperless-db-env,n8n-postgres-env}.age` carry separate CRITICAL database credentials in their consumers' existing environment-file formats. `umami-env.age` adds a password to DATABASE_URL while preserving APP_SECRET and all other fields. These payloads retain the generated five-recipient root:secrets0440 policy.
+
 `parts/services/immich-db-password.age` supplies home Immich and the shared PostgreSQL role operator. It follows the existing five-recipient default and generated root:secrets / 0440 mount. Git retains this CRITICAL encrypted credential; systemd and the vendor password-file loader consume protected runtime copies.
 
 `vaultwarden/index.nix` pins the qualified 1.37.5 security image, retains the
@@ -84,6 +86,7 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-11-03: Create four scoped PostgreSQL environment payloads and rotate only Umami's database URL password; verify work/home host-key byte parity.
 - 2026-11-03: Add and host-key-decrypt-check the isolated Immich database password under the existing generated default policy.
 - 2026-11-03: Upgrade Vaultwarden to immutable 1.37.5, retain client access settings, enable no-new-privileges and register current vault/RSA data plus online SQLite recovery with Borg.
 

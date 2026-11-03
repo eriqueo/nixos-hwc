@@ -456,9 +456,12 @@ in
 
       user = lib.mkOption {
         type = lib.types.str;
-        default = "eric";
-        description = "Database user";
+        default = cfg.database.name;
+        description = "Restricted database owner (must match the database name)";
       };
+      picoUser = lib.mkOption { type = lib.types.str; default = cfg.database.picoName; };
+      passwordSecret = lib.mkOption { type = lib.types.str; default = "firefly-db-env"; };
+      picoPasswordSecret = lib.mkOption { type = lib.types.str; default = "firefly-pico-db-env"; };
     };
 
     # Storage configuration

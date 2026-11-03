@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Firefly Core/Pico, Paperless and Umami declare separate database owners and protected OCI password environment files. Core publishes its existing app-key environment file atomically at0600; native Node clients receive an explicit local PostgreSQL socket.
+
 Document processors use a private conversion bridge; only Paperless also joins its normal application network.
 
 Paperless owns fixed-hash client2.0.0, Tika4.2.0 and Gotenberg8.39.0/Chromium156 runtime recipes with offline builds and prebuilt-image guards. Its unchanged3.1.3 application uses the matching Tika/CXF4.2.4 server; the unused Tika Pebble supervisor is removed.
@@ -99,6 +101,7 @@ business/
 ```
 
 ## Changelog
+- 2026-11-03: Move finance, document and analytics database clients to restricted owner roles; protect Core's app-key file and bind native Node clients to peer sockets.
 
 - 2026-11-02: Repair Paperless OS/Python dependencies on the existing application. Exercise codecs, OCR, actual Office parsing, and data/API parity through old/new/restored PostgreSQL15.19.
 

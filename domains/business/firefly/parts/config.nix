@@ -34,6 +34,14 @@ let
   # Secret file paths
   appKeyFile = config.age.secrets.firefly-app-key.path;
   cronTokenFile = config.age.secrets.firefly-cron-token.path;
+  databasePasswordField = "DB_PASSWORD";
+  databaseRole = secret: {
+    credential.environment = { inherit secret; field = databasePasswordField; };
+    authority.owned.takeOwnershipFrom = config.hwc.system.users.user.name or "eric";
+  };
+  databaseDependency = "postgresql-application-roles.service";
+  databaseTriggers = secret: [ config.age.secrets.${secret}.file
+    config.system.build.postgresqlApplicationRoleTool ];
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
@@ -66,7 +74,7 @@ in
       memorySwap = "2g";
 
       # Environment files for APP_KEY
-      environmentFiles = [ fireflyEnvFile ];
+      environmentFiles = [ fireflyEnvFile config.hwc.secrets.api.${cfg.database.passwordSecret} ];
 
       # Extra options for network alias
       extraOptions = lib.optionals (cfg.network.mode != "host") [
@@ -130,6 +138,7 @@ in
         "127.0.0.1:${toString cfg.reverseProxy.picoInternalPort}:80"
       ];
 
+      environmentFiles = [ config.hwc.secrets.api.${cfg.database.picoPasswordSecret} ];
       environment = {
         # Firefly connection
         FIREFLY_URL = cfg.pico.fireflyUrl;
@@ -139,7 +148,7 @@ in
         DB_HOST = cfg.database.host;
         DB_PORT = toString cfg.database.port;
         DB_DATABASE = cfg.database.picoName;
-        DB_USERNAME = cfg.database.user;
+        DB_USERNAME = cfg.database.picoUser;
       };
 
       volumes = [
@@ -189,26 +198,34 @@ in
     {
       systemd.services = {
         "podman-firefly" = {
-          after = [ "network-online.target" "postgresql.service" ]
+          after = [ "network-online.target" "postgresql.service" databaseDependency ]
             ++ lib.optional (cfg.network.mode == "media") "init-media-network.service";
           wants = [ "network-online.target" ];
+          requires = [ databaseDependency ];
+          restartTriggers = databaseTriggers cfg.database.passwordSecret;
           serviceConfig = {
             SupplementaryGroups = [ "secrets" ];
             ExecStartPre = lib.mkBefore [ requireOAuthKeys ];
           };
           # Generate env file with APP_KEY from agenix secret
           preStart = lib.mkAfter ''
-            APP_KEY=$(cat ${appKeyFile})
-            echo "APP_KEY=base64:$APP_KEY" > ${fireflyEnvFile}
-            echo "STATIC_CRON_TOKEN=$(cat ${cronTokenFile})" >> ${fireflyEnvFile}
-            chmod 644 ${fireflyEnvFile}
+            umask 077
+            env_tmp=$(mktemp "${fireflyRoot}/.env.XXXXXX")
+            trap 'rm -f "$env_tmp"' EXIT
+            printf '%s\n' "APP_KEY=base64:$(cat ${appKeyFile})" \
+              "STATIC_CRON_TOKEN=$(cat ${cronTokenFile})" > "$env_tmp"
+            chmod 600 "$env_tmp"
+            mv -f "$env_tmp" ${lib.escapeShellArg fireflyEnvFile}
+            trap - EXIT
           '';
         };
 
         "podman-firefly-pico" = lib.mkIf cfg.pico.enable {
-          after = [ "network-online.target" "postgresql.service" "podman-firefly.service" ]
+          after = [ "network-online.target" "postgresql.service" "podman-firefly.service" databaseDependency ]
             ++ lib.optional (cfg.network.mode == "media") "init-media-network.service";
           wants = [ "network-online.target" ];
+          requires = [ databaseDependency ];
+          restartTriggers = databaseTriggers cfg.database.picoPasswordSecret;
         };
       };
     }
@@ -230,11 +247,11 @@ in
     # DATABASE REGISTRATION
     #=========================================================================
     {
-      hwc.data.databases.postgresql.databases = [
-        cfg.database.name
-      ] ++ lib.optionals cfg.pico.enable [
-        cfg.database.picoName
-      ];
+      hwc.data.databases.postgresql.applicationRoles = {
+        ${cfg.database.name} = databaseRole cfg.database.passwordSecret;
+      } // lib.optionalAttrs cfg.pico.enable {
+        ${cfg.database.picoName} = databaseRole cfg.database.picoPasswordSecret;
+      };
     }
 
     #=========================================================================
@@ -242,6 +259,11 @@ in
     #=========================================================================
     {
       assertions = [
+        {
+          assertion = cfg.database.user == cfg.database.name
+            && (!cfg.pico.enable || cfg.database.picoUser == cfg.database.picoName);
+          message = "Firefly Core and Pico must use their own restricted database owners";
+        }
         {
           assertion = !cfg.enable || config.hwc.data.databases.postgresql.enable;
           message = "hwc.business.firefly requires PostgreSQL to be enabled (hwc.data.databases.postgresql.enable = true)";

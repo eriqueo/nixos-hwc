@@ -12,6 +12,8 @@ photo management, and video surveillance services.
 
 ## Structure
 
+Immich uses the versioned shared database-role contract and restarts with its provisioner when credentials or provisioning code change.
+
 Immich managed database credentials use the shared data capability and preserve its internal media paths.
 
 SABnzbd history snapshots run as the observed database owner, `eric`, through the shared Borg producer.
@@ -90,6 +92,7 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-11-03: Adapt Immich to the versioned role contract and bind its startup/restart to the shared credential provisioner.
 - 2026-11-03: Move home Immich to a managed non-superuser database role and vendor password-file loader, with provisioning before app startup.
 
 - 2026-11-03: Bind SABnzbd online history snapshots to the actual UID1000 source owner; preserve container/runtime and live data.

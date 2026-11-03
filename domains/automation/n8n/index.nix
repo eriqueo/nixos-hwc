@@ -15,6 +15,7 @@ let
   cfg = config.hwc.automation.n8n;
   paths = config.hwc.paths;
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
+  workflowPostgres = cfg.workflowPostgresql;
   # TEMPORARY:2.46.1 and2.46.4 retain vulnerable system Brotli/curl.
   # Preserve the app and all other DHI libraries. Remove after an upstream
   # image passes the same library scan and isolated database/key recovery.
@@ -89,6 +90,20 @@ in
         type = lib.types.nullOr lib.types.path;
         default = null;
         description = "Path to encryption key file for credentials (via agenix)";
+      };
+    };
+
+    workflowPostgresql = {
+      credentialIds = lib.mkOption {
+        type = lib.types.listOf (lib.types.strMatching "[A-Za-z0-9_-]+"); default = [];
+        description = "Existing PostgreSQL credential IDs for the shared HWC workflow database. Empty disables managed credential reconciliation; n8n's own state stays SQLite.";
+      };
+      database = lib.mkOption { type = lib.types.str; default = "hwc"; };
+      role = lib.mkOption { type = lib.types.str; default = "n8n"; };
+      passwordSecret = lib.mkOption { type = lib.types.str; default = "n8n-postgres-env"; };
+      passwordEnvironmentField = lib.mkOption {
+        type = lib.types.str; readOnly = true; default = "HWC_POSTGRES_PASSWORD";
+        description = "Single field consumed by the OCI environment file, role operator and credential expression.";
       };
     };
 
@@ -204,6 +219,15 @@ in
         assertion = cfg.dataDir != "";
         message = "n8n data directory must be configured (hwc.automation.n8n.dataDir)";
       }
+      {
+        assertion = workflowPostgres.credentialIds == [] || (
+          config.hwc.data.databases.postgresql.enable
+          && config.hwc.secrets.api ? ${workflowPostgres.passwordSecret}
+          && builtins.length workflowPostgres.credentialIds <= 16
+          && lib.length (lib.unique workflowPostgres.credentialIds) == lib.length workflowPostgres.credentialIds
+          && (cfg.extraEnv.N8N_BLOCK_ENV_ACCESS_IN_NODE or "false") == "false");
+        message = "Managed n8n PostgreSQL credentials require PostgreSQL, the generated password env file, <=16 unique existing IDs and enabled credential environment expressions";
+      }
       # One writer: the host that runs n8n must be the one the route table
       # sends callers to, or webhooks land on a host with no n8n.
       {
@@ -212,6 +236,37 @@ in
           + "hwc.networking.shared.routeOwners.n8n names '${owner}' (routes.nix).";
       }
     ];
+    # App-owned column policy is the exact union of the ten deployed SQL nodes.
+    # Data owns credential/GRANT mechanics; no shared table changes owner.
+    hwc.data.databases.postgresql.applicationRoles = lib.optionalAttrs (workflowPostgres.credentialIds != []) {
+      ${workflowPostgres.role} = {
+        credential.environment = {
+          secret = workflowPostgres.passwordSecret;
+          field = workflowPostgres.passwordEnvironmentField;
+        };
+        prepareSql = builtins.readFile ./parts/migrations/004-workflow-run-metadata.sql;
+        authority.shared = {
+          database = workflowPostgres.database;
+          tables = {
+            "public.leads" = {
+              select = [ "id" "name" "phone_e164" "service_type" "status" "created_at" ];
+              update = [ "sms_opted_out" "responded_at" "status" ];
+            };
+            "public.social_intelligence".select = [ "id" "source" "group_name" "summary" "category" "themes" "sentiment" "marketing_angle" "pain_points" "processed_at" "content_generated" "business_relevance" ];
+            "public.webhook_payloads".insert = [ "source" "raw_payload" "received_at" ];
+            "public.workflow_runs" = {
+              insert = [ "workflow_name" "started_at" "completed_at" "items_processed" "status" "metadata" ];
+              select = [ "id" ];
+            };
+            "public.processing_errors".insert = [ "workflow_name" "node_name" "error_message" "raw_payload" "failed_at" ];
+            "public.estimates" = {
+              insert = [ "job_number" "job_id" "job_name" "customer_name" "customer_id" "project_type" "total_cost" "total_price" "margin_percent" "labor_hours" "item_count" "project_state" "jt_payload" "pushed_to_jt" "jt_push_error" "jt_push_result" ];
+              select = [ "id" ];
+            };
+          };
+        };
+      };
+    };
   })
   ];
 }

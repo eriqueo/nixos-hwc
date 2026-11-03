@@ -124,7 +124,7 @@ in
       timeZone = config.time.timeZone or "UTC";
       ports = [ "127.0.0.1:${toString cfg.port}:8000" ];
       volumes = paperlessVolumes;
-      environmentFiles = [ envFile ];
+      environmentFiles = [ envFile config.hwc.secrets.api.${cfg.database.passwordSecret} ];
       memory = cfg.resources.memory;
       cpus = cfg.resources.cpus;
     })
@@ -211,32 +211,23 @@ in
         # sidecar that is slow or down must degrade to "Office files don't
         # import" — not take the whole document store offline. Coupling the
         # lifecycles is how this module got a 1600-restart crash loop before.
-        after = [ "network-online.target" "postgresql.service" "paperless-env.service" ]
+        after = [ "network-online.target" "postgresql.service" "postgresql-application-roles.service" "paperless-env.service" ]
           ++ lib.optional (cfg.network.mode == "media") "init-media-network.service"
           ++ lib.optional isolateConversion conversionNetworkUnit
           ++ lib.optionals cfg.officeIngest.enable [
             "podman-${tikaName}.service"
             "podman-${gotenbergName}.service"
           ];
-        requires = [ "paperless-env.service" ] ++ lib.optional isolateConversion conversionNetworkUnit;
+        requires = [ "paperless-env.service" "postgresql-application-roles.service" ] ++ lib.optional isolateConversion conversionNetworkUnit;
         wants = [ "network-online.target" ];
+        restartTriggers = [ config.age.secrets.${cfg.database.passwordSecret}.file
+          config.system.build.postgresqlApplicationRoleTool ];
       };
 
-      # Register database with PostgreSQL service
-      hwc.data.databases.postgresql.databases = [
-        cfg.database.name
-      ];
-
-      # No postStart privilege block. Eight `$PSQL` GRANT/ALTER DEFAULT PRIVILEGES
-      # lines used to sit here and none of them ever ran: `$PSQL` is undefined in
-      # the generated postgresql post-start script and `|| true` swallowed the
-      # command-not-found (audit 2026-08-28, domains/data/databases/README.md).
-      #
-      # They are not restored, because they were never load-bearing. Paperless
-      # connects as `${cfg.database.user}`, which is `eric` — a Postgres superuser
-      # who also owns all 68 tables in this database. A grant to the owner grants
-      # nothing. `pg_class.relacl` in `paperless` holds zero rows, which is the
-      # measurement that proves no grant here has ever taken effect.
+      hwc.data.databases.postgresql.applicationRoles.${cfg.database.name} = {
+        credential.environment = { secret = cfg.database.passwordSecret; field = "PAPERLESS_DBPASS"; };
+        authority.owned.takeOwnershipFrom = config.hwc.system.users.user.name or "eric";
+      };
 
       # Cleanup timer for auto-managed staging/export
       systemd.services.paperless-cleanup = lib.mkIf cfg.retention.cleanup.enable {
@@ -258,6 +249,10 @@ in
 
       # VALIDATION
       assertions = [
+        {
+          assertion = cfg.database.user == cfg.database.name;
+          message = "Paperless must connect as its own restricted PostgreSQL owner";
+        }
         {
           assertion = !cfg.enable || config.hwc.data.databases.postgresql.enable;
           message = "paperless requires PostgreSQL (hwc.data.databases.postgresql.enable = true)";

@@ -13,6 +13,10 @@ Paperless-NGX document management system running as a Podman container. Provides
 
 ## Structure
 
+Paperless declares its own PostgreSQL owner and loads PAPERLESS_DBPASS from a
+protected environment file. It requires role provisioning before startup and
+restarts with credential/provisioner changes; converter isolation stays in place.
+
 Paperless joins its normal network and the private conversion bridge. Tika and Gotenberg join only the private bridge; they have no host ports or data mounts.
 
 `index.nix` owns the fixed-hash Paperless client, Tika and Gotenberg runtime recipes and prebuilt-image guards. Paperless remains 3.1.3, paired with upstream tika-client 2.0.0 and immutable Tika 4.2.0/CXF 4.2.4. Tika retains its direct Java entrypoint and non-root user; its unused Pebble supervisor is removed. Gotenberg uses patched Chromium and the vendor security release.
@@ -50,7 +54,8 @@ hwc.business.paperless = {
     host = "10.89.0.1";             # media-network gateway
     port = 5432;
     name = "paperless";
-    user = "eric";
+    user = "paperless";
+    passwordSecret = "paperless-db-env";
   };
 
   redis = {
@@ -121,6 +126,7 @@ hwc.business.paperless = {
 - `paperless-cleanup.service` / `paperless-cleanup.timer` — daily staging/export cleanup
 
 ## Changelog
+- 2026-11-03: Declare restricted database ownership, protected password environment delivery and provisioning/rotation dependencies.
 
 - 2026-11-02: Repair the existing application's Python, image-processing, compression, certificate and OS dependencies. Actual codecs, OCR, Office parser and restored PostgreSQL15.19 consumers pass; all74tables and authenticated document API fingerprints match old/new/restored. Application/schema stays3.1.3.
 

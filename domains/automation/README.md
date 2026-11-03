@@ -14,6 +14,8 @@ readme-freshness weekly Law-12 drift report.
 
 ## Structure
 
+n8n declares column-scoped PostgreSQL authority for its shared workflow tables while its own state stays SQLite. The stopped-app credential bridge changes only declared PostgreSQL credential IDs, preserves unrelated state, and stores a runtime password expression.
+
 Estimator integration documentation contains placeholders only. The server proxy owns the shared webhook credential; browser builds never receive it.
 
 `n8n/` preserves reviewed2.46.1 in a fixed-hash Brotli/curl repair recipe; offline migration and credential checks use an
@@ -95,6 +97,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-11-03: Declare n8n workflow PostgreSQL grants and a bounded stopped-app credential bridge; add the calendar logger's missing nullable metadata column.
 
 - 2026-11-02: Remove the disclosed estimator credential from current historical setup documents and document server-side injection.
 

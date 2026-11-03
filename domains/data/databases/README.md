@@ -7,7 +7,7 @@ Foundational database services (PostgreSQL, Redis, InfluxDB) used by both contai
 ## Boundaries
 
 - **Manages**: PostgreSQL (with pgvector), Redis cache, InfluxDB time-series, backup scheduling
-- **Does NOT manage**: Application-specific database schemas (→ respective service modules), database user permissions (→ service modules), backup storage location (→ machine config)
+- **Does NOT manage**: Application-specific database schemas (→ respective service modules), application permission policy (→ service modules; this capability applies it), backup storage location (→ machine config)
 
 ## Structure
 
@@ -102,15 +102,32 @@ actual password-file client and MCP socket client qualification. Work and laptop
 retain the annotated `legacy-trust` mode while their clients are migrated under
 the domain-exposure-review project; this is not a fleet completion claim.
 
-Application modules declare `applicationRoles.<database>` with `passwordSecret`,
-`schemas` and optional `takeOwnershipFrom`. The database capability declares the
-owning non-superuser role, then runs `postgresql-application-roles` after native
-setup. Systemd loads protected credentials; the helper never puts passwords in
-arguments, environment or logs. Matching SCRAM verifiers keep their salt.
-Each database transaction reconciles at most 4096 non-extension owner operations;
-there are at most 16 roles and 8 schemas per role. Exceeding a bound fails closed.
-No retry loop runs. Extension membership in both pg_class and pg_type, unrelated
-databases and peer administrator authority stay outside that migration.
+Application modules declare `applicationRoles.<role>` with exactly one credential
+source (`password` or `environment`) and authority (`owned` or `shared`). Owned
+roles match their database name. Shared roles receive exact table-column grants
+and sequence usage, without owning shared tables. The helper removes that role's
+excess direct column, table, routine, schema and default grants. It refuses
+unexpected ownership, memberships, authority in another database, PUBLIC schema
+creation or callable application security-definer functions.
+
+The data capability owns the schemaVersion2 configuration/limits contract and
+restricted role declaration. Systemd loads protected credentials after native
+PostgreSQL setup. Each database transaction includes its role password, bounded
+application-owned preparation SQL, grants and ownership changes. Matching SCRAM
+verifiers keep their salt. Limits are16roles,8owned schemas,32shared tables,
+64columns per privilege,4096SQL operations,16KiB per credential and64KiB trusted
+preparation SQL. Exceeding a limit rolls back and fails; no retry loop runs.
+Extension membership in pg_class and pg_type, unrelated databases and peer admin
+authority remain outside owner reconciliation.
+
+Native modules register `localPeerRoles` and consume `peerEnvironmentFor`.
+PGHOST/PGPORT/PGUSER plus an empty-host DATABASE_URL work with postgres.js,
+node-postgres and libpq; the URI `?host=` form does not work with postgres.js.
+`localPeerEnvironment` also binds intentional primary-user clients to the socket.
+Each peer app waits for postgresql-setup. Application units depend on the role
+operator and restart with its tool. Its tool identity includes every consumed
+ciphertext revision, so rotating one credential cannot strand another requiring
+client after the shared operator restarts.
 
 The helper is a service payload beside `index.nix`, which retains the options and
 Nix wiring. It provides one executable SQL/credential boundary for actual private
@@ -212,24 +229,25 @@ and were declared nowhere. A rebuilt cluster would not have reproduced them.
 | `business_user` role | `domains/business/databases/index.nix` | `ensureUsers`, no ownership — `schema.sql:772-774` grants to it by name |
 | `authentik` role | `domains/system/core/authentik/parts/config.nix` | `ensureUsers` with `ensureDBOwnership` |
 
-**Left in place, and not a gap — three leftovers with no consumer.** The `n8n`
-database and `n8n` role are residue: `domains/automation/n8n/sys.nix:77` sets
-`DB_TYPE = "sqlite"`, so n8n has not used Postgres since that switch. Nothing in
-the repo references `youtube_transcripts` or `youtube_videos` at all. Declaring
-any of the three would be inventing a consumer. **Dropping them is a decision
-about live data, so it belongs to Eric, not to a cleanup commit.** Until he makes
-it, these three sit in the nightly `pg_dumpall` and cost only disk.
+**Current correction to the historical n8n audit.** n8n's own state is SQLite,
+but the PostgreSQL role is an active client: the2026-11-03 live census found two
+stored PostgreSQL credentials used by ten nodes against six public tables in hwc.
+The module now declares that shared authority and updates only those credential
+IDs. This does not make the leftover n8n database its application store.
+Repository searches found no youtube_transcripts/youtube_videos consumer; that
+search is not authority to drop their retained data.
 
 ## Consumers
 
-- `domains/media/immich/` - PostgreSQL + Redis
-- `domains/media/paperless/` - PostgreSQL + Redis
+- `domains/media/immich-container/` - PostgreSQL + Redis
+- `domains/business/paperless/` - PostgreSQL + Redis
 - `domains/business/firefly/` - PostgreSQL
 - `domains/business/databases/` - PostgreSQL (hwc database — see that module's README for schema docs)
 - n8n workflows use PostgreSQL nodes for application databases, but n8n's own
   state is SQLite; the leftover `n8n` database is not its configured store.
 
 ## Changelog
+- 2026-11-03: Add versioned owned/shared role authority, environment credential decoding, explicit native peer environments and cross-client rotation wiring. Correct the historical claim that the n8n PostgreSQL role had no consumer.
 - 2026-11-03: Keep the native postgres OS-account peer map and replace the complete composed HBA rule set, including unreachable appended md5 defaults.
 - 2026-11-03: Add peer/SCRAM mode and protected, bounded per-app role provisioning; scope owner changes to declared database schemas and preserve extension members.
 

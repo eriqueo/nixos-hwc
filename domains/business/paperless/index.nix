@@ -203,9 +203,10 @@ in
 
       user = lib.mkOption {
         type = lib.types.str;
-        default = "eric";
-        description = "PostgreSQL user";
+        default = cfg.database.name;
+        description = "Restricted PostgreSQL owner (must match the database name)";
       };
+      passwordSecret = lib.mkOption { type = lib.types.str; default = "paperless-db-env"; };
     };
 
     redis = {

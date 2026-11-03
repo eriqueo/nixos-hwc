@@ -19,17 +19,42 @@ let
   paths = config.hwc.paths;
   primaryUser = config.hwc.system.users.user.name or "eric";
   applicationRoles = cfg.postgresql.applicationRoles;
-  roleConfig = pkgs.writeText "postgresql-application-roles.json" (builtins.toJSON
-    (lib.mapAttrs (_: role: { inherit (role) schemas takeOwnershipFrom; }) applicationRoles));
+  nameType = lib.types.strMatching "[a-z_][a-z0-9_]{0,62}";
+  roleContract = {
+    schemaVersion = 2;
+    privileges = [ "select" "insert" "update" ];
+    encodings = [ "password" "postgresql-url" ];
+    limits = { roles = 16; schemas = 8; tables = 32; columns = 64;
+      operations = 4096; credentialBytes = 16384; sqlBytes = 65536; };
+  };
+  contractFile = pkgs.writeText "postgresql-application-role-contract.json" (builtins.toJSON roleContract);
+  roleConfig = pkgs.writeText "postgresql-application-roles.json" (builtins.toJSON {
+    inherit (roleContract) schemaVersion;
+    roles = lib.mapAttrs (_: role: { inherit (role) credential authority prepareSql; }) applicationRoles;
+  });
+  credentialSecret = role: if role.credential ? password then role.credential.password
+    else role.credential.environment.secret;
+  ownedRoles = lib.filterAttrs (_: role: role.authority ? owned) applicationRoles;
+  restrictedUser = name: ownsDatabase: {
+    inherit name;
+    ensureDBOwnership = ownsDatabase;
+    ensureClauses = { login = true; superuser = false; createdb = false;
+      createrole = false; replication = false; bypassrls = false; };
+  };
   rolePython = pkgs.python3.withPackages (ps: [ ps.psycopg ]);
   roleTool = pkgs.writeShellScript "postgresql-application-roles" ''
+    # Credential revision ${builtins.hashString "sha256" (lib.concatStringsSep ":"
+      (map (file: builtins.hashFile "sha256" file) roleSecretSources))}
+    # All Requires-clients restart with this tool when any shared credential
+    # rotates, so restarting the operator cannot leave a sibling stopped.
     exec ${rolePython}/bin/python ${./application-roles.py} ${roleConfig} \
+      --contract ${contractFile} \
       --socket ${lib.escapeShellArg config.services.postgresql.settings.unix_socket_directories} \
       --port ${toString config.services.postgresql.settings.port} \
       --admin-role ${lib.escapeShellArg primaryUser}
   '';
   roleSecretSources = lib.mapAttrsToList (_: role:
-    config.age.secrets.${role.passwordSecret}.file) applicationRoles;
+    config.age.secrets.${credentialSecret role}.file) applicationRoles;
 in
 {
   # OPTIONS
@@ -84,25 +109,76 @@ in
 
       applicationRoles = lib.mkOption {
         default = {};
-        description = "At most 16 application roles, each named for its owned database. App modules declare identity and migration scope; this capability owns provisioning.";
+        description = "Bounded restricted application roles. App modules declare owned-database or shared-table authority; this capability owns transactional provisioning.";
         type = lib.types.attrsOf (lib.types.submodule {
           options = {
-            passwordSecret = lib.mkOption {
-              type = lib.types.str;
-              description = "Generated agenix secret name containing 64 URL-safe ASCII password bytes.";
+            credential = lib.mkOption {
+              description = "Generated agenix raw password or existing OCI environment-file protocol. Passwords contain 64 URL-safe ASCII bytes.";
+              type = lib.types.attrTag {
+                password = lib.mkOption { type = lib.types.str; };
+                environment = lib.mkOption {
+                  type = lib.types.submodule {
+                    options = {
+                      secret = lib.mkOption { type = lib.types.str; };
+                      field = lib.mkOption { type = lib.types.strMatching "[A-Z_][A-Z0-9_]*"; };
+                      encoding = lib.mkOption { type = lib.types.enum roleContract.encodings; default = "password"; };
+                    };
+                  };
+                };
+              };
             };
-            takeOwnershipFrom = lib.mkOption {
-              type = lib.types.nullOr (lib.types.strMatching "[a-z_][a-z0-9_]{0,62}");
-              default = null;
-              description = "Transfer only non-extension objects from this previous role in the named database/schemas. Permanent reconciliation; never REASSIGN OWNED.";
+            authority = lib.mkOption {
+              description = "Exactly one authority boundary. Shared roles never acquire database or object ownership.";
+              type = lib.types.attrTag {
+                owned = lib.mkOption {
+                  type = lib.types.submodule {
+                    options = {
+                      takeOwnershipFrom = lib.mkOption {
+                        type = lib.types.nullOr nameType; default = null;
+                        description = "Reconcile only this previous owner's non-extension objects in this role's database/schemas; never REASSIGN OWNED.";
+                      };
+                      schemas = lib.mkOption { type = lib.types.listOf nameType; default = [ "public" ]; };
+                    };
+                  };
+                };
+                shared = lib.mkOption {
+                  type = lib.types.submodule {
+                    options = {
+                      database = lib.mkOption { type = nameType; };
+                      tables = lib.mkOption {
+                        description = "Schema-qualified tables and exact allowed columns; direct excess grants/default grants are revoked for this role only.";
+                        type = lib.types.attrsOf (lib.types.submodule {
+                          options = lib.genAttrs roleContract.privileges (_: lib.mkOption {
+                            type = lib.types.listOf nameType; default = [];
+                          });
+                        });
+                      };
+                    };
+                  };
+                };
+              };
             };
-            schemas = lib.mkOption {
-              type = lib.types.listOf (lib.types.strMatching "[a-z_][a-z0-9_]{0,62}");
-              default = [ "public" ];
-              description = "Explicit application schemas eligible for scoped ownership reconciliation.";
+            prepareSql = lib.mkOption {
+              type = lib.types.lines; default = "";
+              description = "Trusted application-owned idempotent schema preparation, at most 64KiB, in the same bounded database transaction. Never untrusted input.";
             };
           };
         });
+      };
+
+      localPeerRoles = lib.mkOption {
+        type = lib.types.attrsOf nameType; default = {};
+        description = "Native application owner role to same-name database mapping. Only the primary OS identity may assume each declared role over the Unix socket.";
+      };
+
+      localPeerEnvironment = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str; readOnly = true;
+        description = "Explicit native socket/port for local OS-peer clients, including clients whose empty-host URI otherwise defaults to TCP.";
+      };
+
+      peerEnvironmentFor = lib.mkOption {
+        type = lib.types.functionTo (lib.types.attrsOf lib.types.str); readOnly = true;
+        description = "Standard PostgreSQL environment for a declared native role and database; compatible with postgres.js, node-postgres and libpq.";
       };
 
       extensions = lib.mkOption {
@@ -221,6 +297,12 @@ in
   config = lib.mkMerge [
     # PostgreSQL
     (lib.mkIf cfg.postgresql.enable {
+      hwc.data.databases.postgresql.localPeerEnvironment = {
+        PGHOST = config.services.postgresql.settings.unix_socket_directories;
+        PGPORT = toString config.services.postgresql.settings.port;
+      };
+      hwc.data.databases.postgresql.peerEnvironmentFor = { role, database }:
+        cfg.postgresql.localPeerEnvironment // { PGUSER = role; DATABASE_URL = "postgresql:///${database}"; };
       services.postgresql = {
         enable = true;
         # Version drift is caught by the assertion below: cluster's on-disk
@@ -229,7 +311,10 @@ in
         extensions = cfg.postgresql.extensions;
         dataDir = cfg.postgresql.dataDir;
 
-        ensureDatabases = cfg.postgresql.databases ++ builtins.attrNames applicationRoles;
+        ensureDatabases = cfg.postgresql.databases ++ builtins.attrNames ownedRoles
+          ++ builtins.attrValues cfg.postgresql.localPeerRoles
+          ++ lib.mapAttrsToList (_: role: role.authority.shared.database)
+            (lib.filterAttrs (_: role: role.authority ? shared) applicationRoles);
 
         # One producer for "the primary user has a Postgres login role."
         #
@@ -252,12 +337,8 @@ in
         ensureUsers = [{
           name = primaryUser;
           ensureClauses.superuser = true;
-        }] ++ lib.mapAttrsToList (name: _: {
-          inherit name;
-          ensureDBOwnership = true;
-          ensureClauses = { login = true; superuser = false; createdb = false;
-            createrole = false; replication = false; bypassrls = false; };
-        }) applicationRoles;
+        }] ++ lib.mapAttrsToList (name: role: restrictedUser name (role.authority ? owned)) applicationRoles
+          ++ lib.mapAttrsToList (name: _: restrictedUser name true) cfg.postgresql.localPeerRoles;
 
         settings = lib.mkMerge [
           {
@@ -281,6 +362,9 @@ in
           # Retain NixOS's OS-postgres maintenance identity map. This is
           # peer authentication, not permission to assume postgres over TCP.
           local all postgres peer map=postgres
+        '' + lib.concatStringsSep "\n" (lib.mapAttrsToList (role: database:
+          "local ${database} ${role} peer map=hwc-apps") cfg.postgresql.localPeerRoles) + ''
+
           local all all peer
           host all all 127.0.0.1/32 scram-sha-256
           host all all ::1/128 scram-sha-256
@@ -297,10 +381,13 @@ in
           # Allow connections from Podman media-network (10.89.0.0/16)
           host all all 10.89.0.0/16 trust
         '';
+        identMap = lib.mkAfter (lib.concatStringsSep "\n" (lib.mapAttrsToList (role: _:
+          "hwc-apps ${primaryUser} ${role}") cfg.postgresql.localPeerRoles));
       };
 
       system.build.postgresqlApplicationRoleTool = roleTool;
       system.build.postgresqlApplicationRoleConfig = roleConfig;
+      system.build.postgresqlApplicationRoleContract = contractFile;
       system.build.postgresqlApplicationRolePython = rolePython;
       systemd.services.postgresql-application-roles = lib.mkIf (applicationRoles != {}) {
         description = "Provision restricted PostgreSQL application roles";
@@ -308,7 +395,7 @@ in
         requires = [ "postgresql-setup.service" ];
         wantedBy = [ "multi-user.target" ];
         partOf = [ "postgresql.service" ];
-        restartTriggers = roleSecretSources;
+        restartTriggers = roleSecretSources ++ [ roleTool ];
         serviceConfig = {
           Type = "oneshot";
           RemainAfterExit = true;
@@ -316,7 +403,7 @@ in
           Group = "users";
           SupplementaryGroups = [ "secrets" ];
           LoadCredential = lib.mapAttrsToList (name: role:
-            "${name}:${config.hwc.secrets.api.${role.passwordSecret}}") applicationRoles;
+            "${name}:${config.hwc.secrets.api.${credentialSecret role}}") applicationRoles;
           ExecStart = roleTool;
           TimeoutStartSec = 120;
           TimeoutStopSec = 10;
@@ -492,17 +579,30 @@ in
     (lib.mkIf cfg.postgresql.enable {
       assertions = [
         {
-          assertion = builtins.length (builtins.attrNames applicationRoles) <= 16
+          assertion = builtins.length (builtins.attrNames applicationRoles) <= roleContract.limits.roles
             && lib.all (name: builtins.match "[a-z_][a-z0-9_]{0,62}" name != null
               && name != primaryUser && name != "postgres" && !(lib.hasPrefix "pg_" name))
               (builtins.attrNames applicationRoles);
-          message = "PostgreSQL application roles require <=16 safe, non-administrator database names";
+          message = "PostgreSQL application roles require <=16 safe, non-administrator role names";
         }
         {
-          assertion = lib.all (role: config.hwc.secrets.api ? ${role.passwordSecret}
-            && builtins.length role.schemas > 0 && builtins.length role.schemas <= 8)
+          assertion = lib.all (role: config.hwc.secrets.api ? ${credentialSecret role}
+            && (if role.authority ? owned then
+              builtins.length role.authority.owned.schemas > 0
+              && builtins.length role.authority.owned.schemas <= roleContract.limits.schemas
+              else builtins.length (builtins.attrNames role.authority.shared.tables) > 0
+                && builtins.length (builtins.attrNames role.authority.shared.tables) <= roleContract.limits.tables)
+            && builtins.stringLength role.prepareSql <= roleContract.limits.sqlBytes)
             (builtins.attrValues applicationRoles);
-          message = "PostgreSQL application roles require a generated secret and 1..8 explicit schemas";
+          message = "PostgreSQL application roles require a generated secret, bounded schema/table authority and bounded trusted preparation SQL";
+        }
+        {
+          assertion = lib.all (role: builtins.match "[a-z_][a-z0-9_]{0,62}" role != null
+            && role != primaryUser && role != "postgres" && !(lib.hasPrefix "pg_" role)
+            && role == cfg.postgresql.localPeerRoles.${role} && !(applicationRoles ? ${role}))
+            (builtins.attrNames cfg.postgresql.localPeerRoles)
+            && builtins.length (builtins.attrNames cfg.postgresql.localPeerRoles) <= roleContract.limits.roles;
+          message = "Native PostgreSQL peer mappings require <=16 safe, distinct, non-administrator owner roles named for their database";
         }
         {
           assertion =

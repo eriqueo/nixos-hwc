@@ -11,6 +11,16 @@ n8n workflow automation platform running as a Podman container. Handles alert ro
 
 ## Structure
 
+`postgres-credentials.py` runs from the stopped OCI unit before startup. It uses
+the actual vendor CLI to update only declared existing PostgreSQL IDs, verifies
+readback and all other SQLite rows, and skips unchanged records. The password
+stays in the protected OCI environment file; SQLite stores its expression.
+The helper forbids running-app changes, external networking, unknown credential
+scope and unbounded output/time. Each CLI call has a90second container deadline,
+4MiB output/1MiB error bounds and no retry; the unit has a480second startup bound.
+The application declares exact shared-table columns and the additive nullable
+calendar-log column in `parts/migrations/004-workflow-run-metadata.sql`.
+
 The image recipe preserves reviewed n8n2.46.1 and updates only system Brotli1.2.1
 and curl8.23.0 from fixed-hash signed Alpine packages. Build and tag
 `system.build.n8nRuntimeImageContext` before activation. Qualify upgrades against an isolated
@@ -20,6 +30,7 @@ remain disabled in that copy. Keep the original database and key together for re
 ```
 domains/automation/n8n/
 ├── index.nix          # Options, reviewed immutable image pin, firewall rules
+├── postgres-credentials.py # Bounded vendor-CLI credential reconciliation
 ├── sys.nix            # Container definition, env file generation (+ rotation
 │                      #   restartTriggers on the .age sources), tmpfiles,
 │                      #   online SQLite snapshot registration for Borg
@@ -48,11 +59,10 @@ hwc.automation.n8n = {
   enable = true;
   # Omit image to use the reviewed immutable pin from index.nix.
   port = 5678;
-  webhookUrl = "https://n8n.heartwoodcraft.me";
   dataDir = "/var/lib/hwc/n8n";
   timezone = "America/Denver";
 
-  database.type = "sqlite";
+  workflowPostgresql.credentialIds = [ "existing-postgres-credential-id" ];
 
   encryption.keyFile = config.age.secrets.n8n-encryption-key.path;
 
@@ -71,41 +81,8 @@ hwc.automation.n8n = {
 
 ## MCP Access
 
-n8n's MCP tooling now runs as a **stdio backend of the unified gateway** (`hwc-sys-mcp`, port 6200) — see `domains/system/mcp/`. The old standalone HTTP bridge (port 6201, `mcp-bridge.nix`) was removed 2026-07-05.
-
-### Namespace
-
-`hwc.automation.n8n.mcpBridge.*`
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `enable` | bool | false | Enable the MCP HTTP bridge |
-| `port` | port | 6201 | HTTP listen port |
-| `host` | string | "127.0.0.1" | Bind address |
-| `authTokenFile` | path or null | null | agenix secret for AUTH_TOKEN (uses static internal token if null) |
-
-### Claude.ai Connection URL
-
-```
-https://hwc-mcp.iheartwoodcraft.com/mcp
-```
-
-### Testing
-
-```bash
-# Health check (through public Cloudflare Tunnel)
-curl -s https://mcp.heartwoodcraft.me/health | jq .
-
-# n8n MCP initialize
-curl -s -X POST https://hwc-mcp.iheartwoodcraft.com/mcp \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
-
-# Verify clean .well-known 404
-curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/oauth-authorization-server
-# → HTTP: 404 (empty body)
-```
+n8n tools run through the unified stdio gateway in `domains/system/mcp/`.
+This module does not start the retired standalone MCP HTTP bridge.
 
 ## Dependencies
 
@@ -126,10 +103,9 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 ## Systemd Units
 
 - `podman-n8n.service` — main n8n container (generates secrets env file in preStart)
-- `hwc-n8n-mcp.service` — MCP HTTP bridge (npm install + patch + run)
-- `hwc-n8n-mcp-env.service` — generates bridge env file from agenix secrets
 
 ## Changelog
+- 2026-11-03: Declare restricted workflow PostgreSQL columns and protected password expressions; reconcile only reviewed credential IDs before startup and preserve all unrelated state. Add the missing nullable calendar-run metadata column.
 
 - 2026-11-02: Add the content-addressed OS repair recipe. An isolated consistent
   SQLite backup reads all8 workflows and decrypts all21 credentials with identical

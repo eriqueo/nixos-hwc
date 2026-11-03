@@ -22,6 +22,7 @@ let
   # registration below is the fifth consumer, which is where a repeated
   # literal stops being harmless.
   dbName = "research_scout";
+  peerEnvironment = config.hwc.data.databases.postgresql.peerEnvironmentFor { role = dbName; database = dbName; };
 
   node = "/run/current-system/sw/bin/node";
   tsNode = import ../../../../lib/mkTsNode.nix { } cfg.workspaceRoot;
@@ -41,7 +42,7 @@ let
     request_delay = 3.0
   '';
 
-  ingestEnv = {
+  ingestEnv = peerEnvironment // {
     DATABASE_URL = cfg.databaseUrl;
     RESEARCHSCOUT_INGEST_CONFIG = "${ingestToml}";
     PYTHONPATH = "${cfg.projectDir}/ingest";
@@ -77,7 +78,7 @@ in
 
     databaseUrl = lib.mkOption {
       type = lib.types.str;
-      default = "postgresql://${dbName}@localhost/${dbName}";
+      default = peerEnvironment.DATABASE_URL;
       description = "PostgreSQL connection string";
     };
 
@@ -178,13 +179,7 @@ in
   #============================================================================
   config = lib.mkIf cfg.enable {
     # Database on the shared Postgres instance
-    services.postgresql = {
-      ensureDatabases = [ dbName ];
-      ensureUsers = [{
-        name = dbName;
-        ensureDBOwnership = true;
-      }];
-    };
+    hwc.data.databases.postgresql.localPeerRoles.${dbName} = dbName;
 
     # NO postStart grant — the `GRANT ${dbName} TO eric` line here was dead
     # (`$PSQL` undefined, `|| true` swallowing it) and unnecessary (trust auth
@@ -213,7 +208,8 @@ in
     #--------------------------------------------------------------------------
     systemd.services.research-scout = {
       description = "Research Scout MCP + HTTP Server";
-      after = [ "network-online.target" "postgresql.service" ];
+      after = [ "network-online.target" "postgresql-setup.service" ];
+      requires = [ "postgresql-setup.service" ];
       wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
       # 2026-08-26 premortem: alerts.sources.serviceFailures.autoDetect covers a
@@ -225,7 +221,7 @@ in
 
       # HWC_PIPELINE marker: the workspace-guard only reports on the headless
       # agent this unit launches (producer: agent-harness sys.nix).
-      environment = (config.hwc.system.apps.agent-harness.pipelineEnvironment or { }) // {
+      environment = (config.hwc.system.apps.agent-harness.pipelineEnvironment or { }) // peerEnvironment // {
         DATABASE_URL = cfg.databaseUrl;
         LOG_LEVEL = "info";
         NODE_ENV = "production";
@@ -306,7 +302,8 @@ in
     #--------------------------------------------------------------------------
     systemd.services.research-scout-arxiv = {
       description = "Research Scout daily arXiv ingest";
-      after = [ "network-online.target" "postgresql.service" ];
+      after = [ "network-online.target" "postgresql-setup.service" ];
+      requires = [ "postgresql-setup.service" ];
       wants = [ "network-online.target" ];
       # A oneshot that exits non-zero leaves no process to notice. Zero new
       # items is also a NORMAL arXiv weekend (2026-08-19, 08-22, 08-23 each
