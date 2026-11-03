@@ -1,17 +1,49 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.media.navidrome;
-  # Temporary dependency override: remove when the upstream package selects
-  # x/net >=0.62 and this image's module/native/current-data checks pass.
-  # Temporary upstream CVE-2026-107696 fix. Remove when the pinned FFmpeg
-  # source contains this redirect bound and the finite redirect contract passes.
+  # Temporary upstream FFmpeg security backports for RTSP, SFTP, DASH,
+  # HDR metadata and PSSH handling. Remove when the pinned source contains
+  # these fixes and the finite protocol/native/data contracts pass.
   runtimeFfmpeg = pkgs.ffmpeg-headless.overrideAttrs (old: {
-    patches = old.patches ++ [ (pkgs.fetchurl {
-      url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/eb9cef3ef1f6adac1e701e3f5f06739a0fcb0c97.patch";
-      hash = "sha256-89nXK7WjusxfLXexFWGRK///1KCZHVhHv/ejnpfQ8gw=";
-    }) ];
+    patches = old.patches ++ [
+      (pkgs.fetchurl {
+        url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/eb9cef3ef1f6adac1e701e3f5f06739a0fcb0c97.patch";
+        hash = "sha256-89nXK7WjusxfLXexFWGRK///1KCZHVhHv/ejnpfQ8gw=";
+      })
+      (pkgs.fetchurl {
+        url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/2b822b7fb6ed195546bc9fd9bdb794e98222bdce.patch";
+        hash = "sha256-TqQb9dlUMsvItoIxMsuRwktg8fgydihkC7oG1aMbjLY=";
+      })
+      (pkgs.fetchurl {
+        url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/ed27bfcbbbc0872c0195eaf4dd2c0c93b9f1778e.patch";
+        hash = "sha256-k8mKaeJaSHUJ9VYe3bRwRaAMf778eu8/uY1sE1kdTZA=";
+      })
+      (pkgs.fetchurl {
+        url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/2c2f6e96e31795ae95a8f8323a493ffbc493111f.patch";
+        hash = "sha256-1JATHLDUYF16yik4tb+aBoXKjAvLt+9hzusSOADIvjc=";
+      })
+      (pkgs.fetchurl {
+        url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/969c7eb091989a664cb7bf66a1f02051cc46cb52.patch";
+        hash = "sha256-MvUlNrmlGn9hh9pvtxN/a+Lri97Xl1cIIhlHGyR2m1Y=";
+      })
+      # Retain the stable8.1 library ABI/version metadata; apply every code
+      # and test hunk of the upstream additive append API for the MOV fix.
+      (pkgs.fetchpatch {
+        url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/d1434518fbd03789e3e5dc0657a7a9f1123ce074.patch";
+        excludes = [ "doc/APIchanges" "libavutil/version.h" ];
+        hash = "sha256-4UeAbD1Puot0IzOQQVU7Ybs5MWisMEDkmCeYwe3kmv8=";
+      })
+      (pkgs.fetchurl {
+        url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/71403a21b02a92b925e26e609e9bd3e48df451cf.patch";
+        hash = "sha256-Pkt4BbUGZ04u0qXVL5eAsTGrdRrcFhfGBaYvHmA5Fbs=";
+      })
+    ];
   });
+  # Temporary Go overrides: remove when upstream selects x/net >=0.62
+  # and chi >=5.4 and the module/native/current-data checks pass.
   moduleSums = pkgs.writeText "navidrome-fixed-go.sum" ''
+    github.com/go-chi/chi/v5 v5.4.0 h1:+ufzvFTGKyin26Or5DLrlIDq4ygIDBVcj7oVNeeaYFE=
+    github.com/go-chi/chi/v5 v5.4.0/go.mod h1:d1IG7GtKPSjPyBP365PH8sAGVHk3qfB/IhjFNRH1wWM=
     golang.org/x/net v0.62.0 h1:18ELalfM5+XNRwzM2nYqXsZQ9ByS1uhj2O/U7+5jqRY=
     golang.org/x/net v0.62.0/go.mod h1:WgDCOTH8iwtB66T4/GfI94AHo/hhdb7Hah9NDseQfiI=
     golang.org/x/crypto v0.58.0 h1:COkYLr4k7nDI4r6QtMML2AfzeIswWHAJthLS6K/M/54=
@@ -29,9 +61,59 @@ let
     golang.org/x/telemetry v0.0.0-20260924152758-ed294f943157 h1:DftxASHKl6JolFPqoN+2WrFO53JvkHwRXvFqf8gsivA=
     golang.org/x/telemetry v0.0.0-20260924152758-ed294f943157/go.mod h1:i+ivNqjDnTF3WTElsdk5g9V5DTSBYgdNo7xTU9SDwYA=
   '';
+  # Temporary log privacy backport: remove when upstream omits query strings
+  # and header collections and the actual app log contract passes.
+  privacyPatch = pkgs.writeText "navidrome-request-log-privacy.patch"
+    (lib.concatStringsSep "\n" [
+      "--- a/server/middlewares.go"
+      "+++ b/server/middlewares.go"
+      "@@ -3,7 +3,6 @@"
+      " import ("
+      " \t\"cmp\""
+      " \t\"context\""
+      "-\t\"encoding/json\""
+      " \t\"errors\""
+      " \t\"fmt\""
+      " \t\"io/fs\""
+      "@@ -39,7 +38,7 @@"
+      " \t\tnext.ServeHTTP(ww, r)"
+      " \t\tstatus := ww.Status()"
+      " "
+      "-\t\tmessage := fmt.Sprintf(\"HTTP: %s %s://%s%s\", r.Method, scheme, r.Host, r.RequestURI)"
+      "+\t\tmessage := fmt.Sprintf(\"HTTP: %s %s://%s%s\", r.Method, scheme, r.Host, r.URL.EscapedPath())"
+      " \t\tlogArgs := []any{"
+      " \t\t\tr.Context(),"
+      " \t\t\tmessage,"
+      "@@ -48,10 +47,7 @@"
+      " \t\t\t\"httpStatus\", ww.Status(),"
+      " \t\t\t\"responseSize\", ww.BytesWritten(),"
+      " \t\t}"
+      "-\t\tif log.IsGreaterOrEqualTo(log.LevelTrace) {"
+      "-\t\t\theaders, _ := json.Marshal(r.Header)"
+      "-\t\t\tlogArgs = append(logArgs, \"header\", string(headers))"
+      "-\t\t} else if log.IsGreaterOrEqualTo(log.LevelDebug) {"
+      "+\t\tif log.IsGreaterOrEqualTo(log.LevelDebug) {"
+      " \t\t\tlogArgs = append(logArgs, \"userAgent\", r.UserAgent())"
+      " \t\t}"
+      " "
+      "--- a/server/auth.go"
+      "+++ b/server/auth.go"
+      "@@ -55,7 +55,7 @@"
+      " \t\treturn"
+      " \t}"
+      " \tif user == nil {"
+      "-\t\tlog.Warn(r, \"Unsuccessful login\", \"username\", username, \"request\", r.Header)"
+      "+\t\tlog.Warn(r, \"Unsuccessful login\", \"username\", username)"
+      " \t\t_ = rest.RespondWithError(w, http.StatusUnauthorized, \"Invalid username or password\")"
+      " \t\treturn"
+      " \t}"
+      ""
+    ]);
   runtimePackage = (pkgs.navidrome.override { ffmpeg-headless = runtimeFfmpeg; }).overrideAttrs (old: {
+  patches = old.patches ++ [ privacyPatch ];
   postPatch = old.postPatch + ''
     substituteInPlace go.mod \
+      --replace-fail 'github.com/go-chi/chi/v5 v5.3.2' 'github.com/go-chi/chi/v5 v5.4.0' \
       --replace-fail 'golang.org/x/net v0.59.0' 'golang.org/x/net v0.62.0' \
       --replace-fail 'golang.org/x/crypto v0.57.0' 'golang.org/x/crypto v0.58.0' \
       --replace-fail 'golang.org/x/text v0.42.0' 'golang.org/x/text v0.43.0' \
@@ -42,7 +124,7 @@ let
       --replace-fail 'golang.org/x/telemetry v0.0.0-20260811182544-a038080d80e5' 'golang.org/x/telemetry v0.0.0-20260924152758-ed294f943157'
     cat ${moduleSums} >> go.sum
   '';
-  vendorHash = "sha256-hFRBDiQOGbw1KLyIwnnj3JqDZfriHtH9H2BaobjYXsA=";
+  vendorHash = "sha256-XSqZCTEF9pj+dOuvDkHahBJk81GnVScpzsP1NeoOs1Y=";
   });
   runtimeArchive = pkgs.dockerTools.buildLayeredImage {
     name = "localhost/navidrome-runtime";

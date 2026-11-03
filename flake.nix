@@ -1710,7 +1710,7 @@
         assert ffmpeg + '/bin' in pathlib.Path(package + '/bin/navidrome').read_text()
         metadata = subprocess.check_output([go, 'version', '-m', package + '/bin/.navidrome-wrapped'], text=True)
         assert ': go1.27.3' in metadata
-        expected = {'golang.org/x/net':'v0.62.0','golang.org/x/crypto':'v0.58.0',
+        expected = {'github.com/go-chi/chi/v5':'v5.4.0','golang.org/x/net':'v0.62.0','golang.org/x/crypto':'v0.58.0',
             'golang.org/x/sys':'v0.49.0','golang.org/x/text':'v0.43.0'}
         modules = {p[1]:p[2] for line in metadata.splitlines() if len(p := line.split()) >= 3 and p[0] == 'dep'}
         assert all(modules.get(k) == v for k,v in expected.items())
