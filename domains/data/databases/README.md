@@ -20,6 +20,8 @@ domains/data/databases/
 
 The Python boundary decodes credential tags into separate raw/environment types
 and verifies its closed encoding enum against the generated Nix contract.
+It requires versioned configuration and rejects the retired unversioned shape
+before reading credentials or opening a database connection.
 
 ## Configuration
 
@@ -100,10 +102,10 @@ re-enabled; if you do, point `outputDir` at a path borg actually carries.
 ## Authentication and application roles
 
 `authenticationMode = "peer-scram"` uses OS peer identity on Unix sockets and
-SCRAM on loopback and the enabled Podman bridge. Home enables it after Immich's
-actual password-file client and MCP socket client qualification. Work and laptop
-retain the annotated `legacy-trust` mode while their clients are migrated under
-the domain-exposure-review project; this is not a fleet completion claim.
+SCRAM on loopback and the enabled Podman bridge. Home and Work enable this mode
+after their own-role applications and native peer/MCP clients pass qualification.
+Each other host needs its own client and activation evidence under the
+domain-exposure-review project; server adoption is not fleet completion.
 
 Application modules declare `applicationRoles.<role>` with exactly one credential
 source (`password` or `environment`) and authority (`owned` or `shared`). Owned
@@ -250,6 +252,7 @@ search is not authority to drop their retained data.
   state is SQLite; the leftover `n8n` database is not its configured store.
 
 ## Changelog
+- 2026-11-03: Retire the unversioned role adapter after both servers consume V2; require old-shape rejection and document their qualified peer/SCRAM clients.
 - 2026-11-03: Represent decoded credential sources as distinct types, without nullable fields standing in for a variant.
 - 2026-11-03: Add versioned owned/shared role authority, environment credential decoding, explicit native peer environments and cross-client rotation wiring. Correct the historical claim that the n8n PostgreSQL role had no consumer.
 - 2026-11-03: Keep the native postgres OS-account peer map and replace the complete composed HBA rule set, including unreachable appended md5 defaults.

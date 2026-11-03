@@ -94,14 +94,6 @@ class Role:
 def parse_roles(value, admin, contract):
     require(contract["schemaVersion"] == 2, "CONTRACT_VERSION_INVALID")
     require(set(contract["encodings"]) == {encoding.value for encoding in CredentialEncoding}, "ENCODING_HANDLER_SET_MISMATCH")
-    # Temporary expand/read compatibility. Remove when active home/work role
-    # configs both prove schemaVersion2 in domain-exposure-review/plan.md
-    # (https://refinery.hwc.iheartwoodcraft.com/project/brain-o7xth7).
-    if isinstance(value, dict) and "schemaVersion" not in value:
-        value = {"schemaVersion": 2, "roles": {
-            name: {"credential": {"password": name}, "authority": {"owned": spec}, "prepareSql": ""}
-            for name, spec in value.items()
-        }}
     require(isinstance(value, dict) and set(value) == {"schemaVersion", "roles"}
             and value["schemaVersion"] == contract["schemaVersion"], "CONFIG_VERSION_INVALID")
     value = value["roles"]

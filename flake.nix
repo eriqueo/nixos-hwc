@@ -1945,6 +1945,14 @@
         module_spec.loader.exec_module(module)
         parsed = module.parse_roles(config, 'eric', contract)
         assert len(parsed) == 5 and config['roles'] == binding['roles']
+        legacy = {name: spec['authority']['owned'] for name, spec in config['roles'].items()
+          if 'owned' in spec['authority']}
+        try:
+          module.parse_roles(legacy, 'eric', contract)
+        except module.ContractError as error:
+          assert error.code == 'CONFIG_VERSION_INVALID'
+        else:
+          raise AssertionError('UNVERSIONED_ROLE_CONFIG_ACCEPTED')
         assert config['roles']['n8n']['prepareSql'] == pathlib.Path(sys.argv[7]).read_text()
         assert 'ADD COLUMN IF NOT EXISTS metadata jsonb' in config['roles']['n8n']['prepareSql']
         lines = [line.split() for line in binding['authentication'].splitlines() if line.strip() and not line.lstrip().startswith('#')]
