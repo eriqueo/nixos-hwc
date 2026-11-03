@@ -103,7 +103,6 @@
       localsend.enable = lib.mkDefault true;
       opencode.enable = lib.mkDefault true;
       google-cloud-sdk.enable = lib.mkDefault true;
-      slack.enable = lib.mkDefault true;
       slack-cli.enable = lib.mkDefault true;
     };
   };

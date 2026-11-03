@@ -17,6 +17,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
+Aider has been removed from the app modules and shared fleet defaults.
 The Python compatibility overlay reaches normal and CUDA package sets; the
 `python-runtime-wiring` check evaluates the actual three host consumers.
 `apps/claude-desktop/` uses the shared supported Electron44 runtime, also selected
@@ -158,6 +159,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-11-03: Remove unused Aider and its fleet settings; stop pulling its full Python/GPU dependency set into the home profile.
 - 2026-11-02: Select upstream Streamlit1.66.1, whose declared Pillow13 support preserves Aider's browser mode. Earlier channel recipes rejected Pillow13 at the runtime dependency check.
 - 2026-11-02: Keep PostHog's MCP1 peer contract using the channel's maintained1.29 package with tests enabled. Meals packaging also preserves OCR wrapper argument boundaries.
 - 2026-11-02: Refresh Claude Desktop and its Electron runtime; retain T3's44 ABI and update the calendar fork's structured-build environment.
@@ -431,7 +434,7 @@ home halves (`profiles/base/home.nix`, `profiles/desktop/home.nix`);
 per-machine adjustments go in `machines/<host>/home.nix`. Current set
 (52 modules):
 ```
-aider, analysis, betterbird, blender, bottles-unwrapped, calcure,
+analysis, betterbird, blender, bottles-unwrapped, calcure,
 calcurse, chromium, claude-code, claude-desktop, codex, dt, dxlog,
 freecad, gemini-cli, google-cloud-sdk, gpg, herdr, hyprland, imv,
 ipcalc, jellyfin-media-player, kitty, librewolf, localsend, markitdown,
