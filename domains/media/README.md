@@ -22,6 +22,8 @@ Frigate and Immich ML derive same-app images with the shared Starlette Host pars
 
 Machine references follow machines/home; media state and service ownership are unchanged.
 
+`audiobookshelf/` exports the immutable2.37.2/Node24.22.2 recipe. Its existing SQLite/config/token/metadata paths and Borg recovery owner remain unchanged.
+
 ```
 media/
 ├── index.nix                # Domain aggregator
@@ -78,6 +80,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-03: Pin Audiobookshelf2.37.2 application security fixes and Node24.22.2 through the existing runtime helper; preserve library/progress/token identity and backup wiring. Private vendor old/new/restored current-database authentication, library and cover consumers pass.
 
 - 2026-11-03: Remove Frigate privileged mode; preserve its image/data/GPU contract and enforce the safer flags in its existing wiring test.
 

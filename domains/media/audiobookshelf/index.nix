@@ -10,10 +10,10 @@ let
   # image passes actual runtime/native/trust and current-data recovery checks.
   runtime = helpers.mkNodeRuntimeImage {
     name = "audiobookshelf";
-    appVersion = "2.32.1";
-    nodeVersion = "24.22.1";
-    upstreamImage = "ghcr.io/advplyr/audiobookshelf@sha256:f903aeade7ecf8beb2a5fd63411910705f7cff8d1acddb1a37a9171ef171b849";
-    nodeSourceImage = "docker.io/library/node@sha256:47019ffab12a48f49795a8279603f87e91a64de017fb9aa874e64f489b686079";
+    appVersion = "2.37.2";
+    nodeVersion = "24.22.2";
+    upstreamImage = "ghcr.io/advplyr/audiobookshelf@sha256:37c2057e150694970442579815c646fe6bdc01c95b9d1547c4c9068be8844ef3";
+    nodeSourceImage = "docker.io/library/node@sha256:4eefa1bfce4197942661ef9148247d779ddf1bb0ee006d3294a467609de60724";
   };
 in
 {
