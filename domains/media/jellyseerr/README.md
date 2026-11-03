@@ -14,7 +14,7 @@ Seerr (formerly Jellyseerr) is a request management and media discovery tool for
 
 ```
 jellyseerr/
-├── index.nix       # Options, exact upstream security hunks and image context
+├── index.nix       # Options, upstream security hunks, signed native inputs and image context
 ├── sys.nix         # Container configuration (mkContainer)
 ├── README.md       # This file
 └── parts/
@@ -73,6 +73,10 @@ Seerr depends on:
 - `/opt/apps/jellyseerr/config:/app/config` - Configuration and database
 
 ## Changelog
+
+- 2026-11-03: Add five fixed-hash, vendor-signed Alpine 3.22 native updates:
+  OpenSSL 3.5.9, musl 1.2.5-r13 and zlib 1.3.2-r1. The offline image build
+  verifies every archive before installation and restores the node runtime user.
 
 - 2026-11-03: Add exact upstream avatar-cache and user/media privacy backports to
   the same-schema image. Bind the six-file patch manifest and patcher to the image

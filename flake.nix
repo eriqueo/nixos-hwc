@@ -2141,11 +2141,20 @@
         assert (context / 'Dockerfile').read_text() == recipe, 'context bypasses recipe'
         assert binding['selected'] == binding['container'] == 'localhost/seerr-runtime:3.1.0-node22.23.4-' + sha(recipe)[:12], 'container bypasses security recipe'
         assert binding['selected'] in producer, 'permission vocabulary uses a different image'
-        assert 'COPY --chown=node:node . /tmp/hwc-seerr/' in recipe and 'RUN node /tmp/hwc-seerr/apply-backports.cjs &&' in recipe, 'image bypasses security backports'
+        assert 'COPY --chown=node:node . /tmp/hwc-seerr/' in recipe and '&& node /tmp/hwc-seerr/apply-backports.cjs &&' in recipe, 'image bypasses security backports'
         assert sha(recipe.split('# Security backports', 1)[0]) == 'b9482a37e259fcd93442be29ae2b1cfce0653bc5e738e68fab403a84297953ea', 'unrelated base image change'
         canonical = json.dumps(manifest, separators=(',', ':'), sort_keys=True)
         assert '# Security backports ' + sha(canonical + patcher) in recipe, 'backport inputs not bound to image'
         assert manifest['schemaVersion'] == 1
+        assert 'RUN apk verify ' in recipe and 'apk --repositories-file /dev/null --no-network --no-cache add ' in recipe, 'image bypasses signed offline native update'
+        assert recipe.rstrip().endswith('USER node:node'), 'native build leaves runtime root'
+        assert {p['name']: p['version'] for p in manifest['apks']} == {'libcrypto3':'3.5.9-r0', 'libssl3':'3.5.9-r0', 'musl':'1.2.5-r13', 'musl-utils':'1.2.5-r13', 'zlib':'1.3.2-r1'}
+        import base64
+        for package in manifest['apks']:
+            assert package['url'].startswith('https://dl-cdn.alpinelinux.org/alpine/v3.22/main/x86_64/')
+            archive = context / package['file']
+            assert 'sha256-' + base64.b64encode(hashlib.sha256(archive.read_bytes()).digest()).decode() == package['hash'], 'context archive drift'
+            assert recipe.count('/tmp/hwc-seerr/' + package['file']) == 2, 'native input bypasses verify or install'
         assert set(manifest['advisories']) == {'GHSA-mc6w-69r3-62h8', 'GHSA-8j73-j6rc-q8xh', 'GHSA-xc6j-6p6h-p799'}
         assert set(manifest['backports']) == {'dist/lib/imageproxy.js', 'dist/entity/User.js', 'dist/entity/Media.js', 'dist/routes/auth.js', 'dist/routes/movie.js', 'dist/routes/tv.js'}, 'schema or unrelated app change'
         for spec in manifest['backports'].values():
