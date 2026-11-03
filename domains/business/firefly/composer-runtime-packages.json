@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "packages": {
+    "core": [
+      {
+        "name": "guzzlehttp/guzzle",
+        "version": "7.16.1",
+        "url": "https://api.github.com/repos/guzzle/guzzle/zipball/81755d989b3007ca7f88a069857553cd08e7dc2e",
+        "file": "guzzlehttp/guzzle/6edda838a52580a37e1dda8ea0b7c4e877c6aade.zip",
+        "hash": "sha256-2VnR3qDl+IHj/PiYH8NIF/P3AogyDRZcswqS6iTbRW4="
+      },
+      {
+        "name": "guzzlehttp/promises",
+        "version": "2.6.0",
+        "url": "https://api.github.com/repos/guzzle/promises/zipball/3d88c829bd5f13d13847b39067dbf09a60af2154",
+        "file": "guzzlehttp/promises/7e84b8f1bbae57b52e124f9c702fd276ad89132e.zip",
+        "hash": "sha256-/amvu32u/YgSApY9xDdug4p68g9gBocOSDfvJ2aWkL8="
+      },
+      {
+        "name": "guzzlehttp/psr7",
+        "version": "2.13.2",
+        "url": "https://api.github.com/repos/guzzle/psr7/zipball/adee536f95101929f262b8c59e8a61472f347d58",
+        "file": "guzzlehttp/psr7/4e05aa42166303362634d2907b430aab7641a66d.zip",
+        "hash": "sha256-SE07ETnucJoQcNVjlR4CNAHIaK3HUHgIEVCnEA13vnI="
+      },
+      {
+        "name": "laravel/framework",
+        "version": "v13.39.0",
+        "url": "https://api.github.com/repos/laravel/framework/zipball/d52c3b3129e4c8e213c97cdc68f94b0b7d27f181",
+        "file": "laravel/framework/fd6e69514b7bcc901bcd364e8fa5b1e5233db108.zip",
+        "hash": "sha256-Nj276PuoyPNmLGFAHuZHetvRT9SH/WWh70pyt2NUQl0="
+      },
+      {
+        "name": "laravel/prompts",
+        "version": "v0.3.26",
+        "url": "https://api.github.com/repos/laravel/prompts/zipball/2d1e9bf6bab8d3f383c254db7f2b4ea8816d55e0",
+        "file": "laravel/prompts/390d29937a0a5aeeef4382e8b32bb4c1607a994e.zip",
+        "hash": "sha256-f9NyRbU0VjCL7Gtag2ooVHa42pPDNBK9Krhk/9CVmN0="
+      },
+      {
+        "name": "league/commonmark",
+        "version": "2.10.7",
+        "url": "https://api.github.com/repos/thephpleague/commonmark/zipball/8eb53e906fd60c67038d22f1f1cab420ed58b8be",
+        "file": "league/commonmark/733c7028ca9554162e9e8e704c59f60a5302d7cb.zip",
+        "hash": "sha256-7ESXcIDC5XFe9CUM36z2k3bHDfISc/fYfPd7x5YInbc="
+      },
+      {
+        "name": "league/flysystem",
+        "version": "3.36.0",
+        "url": "https://api.github.com/repos/thephpleague/flysystem/zipball/f7fb152932f30072d573510cbd4dd657d6475b25",
+        "file": "league/flysystem/62e4150041ec61f93c7cbc8220524a3797ee311e.zip",
+        "hash": "sha256-v8QUlm7Nq0bRjmSXWmNE91dKQJr+9XdPThgtPmB5L+E="
+      },
+      {
+        "name": "symfony/http-foundation",
+        "version": "v8.1.10",
+        "url": "https://api.github.com/repos/symfony/http-foundation/zipball/79325f87c3a2acc7564ddce9f457046e980e7255",
+        "file": "symfony/http-foundation/221f95e1535b2b5c17abed1700e1c22eae75bf71.zip",
+        "hash": "sha256-LHZz+fEPyhDcUnSRd47T1cUK3O2tO+omcqJU/ISTaO0="
+      },
+      {
+        "name": "symfony/mime",
+        "version": "v8.1.10",
+        "url": "https://api.github.com/repos/symfony/mime/zipball/8d1232052c9cdef170ed9608b3147bca4f61ff69",
+        "file": "symfony/mime/18384897c5e73af57f04c73cc7a853ef377e40b7.zip",
+        "hash": "sha256-5gnSZHmQ+q60m1hHdXK0aHIKMYCarOz2lobHa80t6w8="
+      }
+    ],
+    "importer": [
+      {
+        "name": "guzzlehttp/guzzle",
+        "version": "7.16.1",
+        "url": "https://api.github.com/repos/guzzle/guzzle/zipball/81755d989b3007ca7f88a069857553cd08e7dc2e",
+        "file": "guzzlehttp/guzzle/6edda838a52580a37e1dda8ea0b7c4e877c6aade.zip",
+        "hash": "sha256-2VnR3qDl+IHj/PiYH8NIF/P3AogyDRZcswqS6iTbRW4="
+      },
+      {
+        "name": "guzzlehttp/promises",
+        "version": "2.6.0",
+        "url": "https://api.github.com/repos/guzzle/promises/zipball/3d88c829bd5f13d13847b39067dbf09a60af2154",
+        "file": "guzzlehttp/promises/7e84b8f1bbae57b52e124f9c702fd276ad89132e.zip",
+        "hash": "sha256-/amvu32u/YgSApY9xDdug4p68g9gBocOSDfvJ2aWkL8="
+      },
+      {
+        "name": "guzzlehttp/psr7",
+        "version": "2.13.2",
+        "url": "https://api.github.com/repos/guzzle/psr7/zipball/adee536f95101929f262b8c59e8a61472f347d58",
+        "file": "guzzlehttp/psr7/4e05aa42166303362634d2907b430aab7641a66d.zip",
+        "hash": "sha256-SE07ETnucJoQcNVjlR4CNAHIaK3HUHgIEVCnEA13vnI="
+      },
+      {
+        "name": "laravel/framework",
+        "version": "v13.39.0",
+        "url": "https://api.github.com/repos/laravel/framework/zipball/d52c3b3129e4c8e213c97cdc68f94b0b7d27f181",
+        "file": "laravel/framework/fd6e69514b7bcc901bcd364e8fa5b1e5233db108.zip",
+        "hash": "sha256-Nj276PuoyPNmLGFAHuZHetvRT9SH/WWh70pyt2NUQl0="
+      },
+      {
+        "name": "laravel/prompts",
+        "version": "v0.3.26",
+        "url": "https://api.github.com/repos/laravel/prompts/zipball/2d1e9bf6bab8d3f383c254db7f2b4ea8816d55e0",
+        "file": "laravel/prompts/390d29937a0a5aeeef4382e8b32bb4c1607a994e.zip",
+        "hash": "sha256-f9NyRbU0VjCL7Gtag2ooVHa42pPDNBK9Krhk/9CVmN0="
+      },
+      {
+        "name": "league/commonmark",
+        "version": "2.10.7",
+        "url": "https://api.github.com/repos/thephpleague/commonmark/zipball/8eb53e906fd60c67038d22f1f1cab420ed58b8be",
+        "file": "league/commonmark/733c7028ca9554162e9e8e704c59f60a5302d7cb.zip",
+        "hash": "sha256-7ESXcIDC5XFe9CUM36z2k3bHDfISc/fYfPd7x5YInbc="
+      },
+      {
+        "name": "league/flysystem",
+        "version": "3.36.0",
+        "url": "https://api.github.com/repos/thephpleague/flysystem/zipball/f7fb152932f30072d573510cbd4dd657d6475b25",
+        "file": "league/flysystem/62e4150041ec61f93c7cbc8220524a3797ee311e.zip",
+        "hash": "sha256-v8QUlm7Nq0bRjmSXWmNE91dKQJr+9XdPThgtPmB5L+E="
+      },
+      {
+        "name": "symfony/http-foundation",
+        "version": "v8.1.10",
+        "url": "https://api.github.com/repos/symfony/http-foundation/zipball/79325f87c3a2acc7564ddce9f457046e980e7255",
+        "file": "symfony/http-foundation/221f95e1535b2b5c17abed1700e1c22eae75bf71.zip",
+        "hash": "sha256-LHZz+fEPyhDcUnSRd47T1cUK3O2tO+omcqJU/ISTaO0="
+      },
+      {
+        "name": "symfony/mime",
+        "version": "v8.1.10",
+        "url": "https://api.github.com/repos/symfony/mime/zipball/8d1232052c9cdef170ed9608b3147bca4f61ff69",
+        "file": "symfony/mime/18384897c5e73af57f04c73cc7a853ef377e40b7.zip",
+        "hash": "sha256-5gnSZHmQ+q60m1hHdXK0aHIKMYCarOz2lobHa80t6w8="
+      }
+    ],
+    "pico": [
+      {
+        "name": "guzzlehttp/guzzle",
+        "version": "7.16.1",
+        "url": "https://api.github.com/repos/guzzle/guzzle/zipball/81755d989b3007ca7f88a069857553cd08e7dc2e",
+        "file": "guzzlehttp/guzzle/6edda838a52580a37e1dda8ea0b7c4e877c6aade.zip",
+        "hash": "sha256-2VnR3qDl+IHj/PiYH8NIF/P3AogyDRZcswqS6iTbRW4="
+      },
+      {
+        "name": "guzzlehttp/promises",
+        "version": "2.6.0",
+        "url": "https://api.github.com/repos/guzzle/promises/zipball/3d88c829bd5f13d13847b39067dbf09a60af2154",
+        "file": "guzzlehttp/promises/7e84b8f1bbae57b52e124f9c702fd276ad89132e.zip",
+        "hash": "sha256-/amvu32u/YgSApY9xDdug4p68g9gBocOSDfvJ2aWkL8="
+      },
+      {
+        "name": "guzzlehttp/psr7",
+        "version": "2.13.2",
+        "url": "https://api.github.com/repos/guzzle/psr7/zipball/adee536f95101929f262b8c59e8a61472f347d58",
+        "file": "guzzlehttp/psr7/4e05aa42166303362634d2907b430aab7641a66d.zip",
+        "hash": "sha256-SE07ETnucJoQcNVjlR4CNAHIaK3HUHgIEVCnEA13vnI="
+      },
+      {
+        "name": "laravel/framework",
+        "version": "v12.70.2",
+        "url": "https://api.github.com/repos/laravel/framework/zipball/4dc928b47c05a2a96ba51c39d2bd7749b5ea332e",
+        "file": "laravel/framework/1e7d895c90dcfe6affdfa545fb7db267693e3c26.zip",
+        "hash": "sha256-Sz0/olXDpDB1GRP0oimTWN8a8Zcq+ZP6ReX9u3tbdSM="
+      },
+      {
+        "name": "league/commonmark",
+        "version": "2.10.7",
+        "url": "https://api.github.com/repos/thephpleague/commonmark/zipball/8eb53e906fd60c67038d22f1f1cab420ed58b8be",
+        "file": "league/commonmark/733c7028ca9554162e9e8e704c59f60a5302d7cb.zip",
+        "hash": "sha256-7ESXcIDC5XFe9CUM36z2k3bHDfISc/fYfPd7x5YInbc="
+      },
+      {
+        "name": "league/flysystem",
+        "version": "3.36.0",
+        "url": "https://api.github.com/repos/thephpleague/flysystem/zipball/f7fb152932f30072d573510cbd4dd657d6475b25",
+        "file": "league/flysystem/62e4150041ec61f93c7cbc8220524a3797ee311e.zip",
+        "hash": "sha256-v8QUlm7Nq0bRjmSXWmNE91dKQJr+9XdPThgtPmB5L+E="
+      },
+      {
+        "name": "symfony/http-foundation",
+        "version": "v7.4.22",
+        "url": "https://api.github.com/repos/symfony/http-foundation/zipball/63eda1d0c4de229d6b3e825709e49dd5c149699a",
+        "file": "symfony/http-foundation/7291c543a9d5d29216c6d485495a27b4886601fc.zip",
+        "hash": "sha256-EZ4atS5uIqtQioC6zIKq/1kFax0h/ysHSyqcCYB+TTk="
+      },
+      {
+        "name": "symfony/mailer",
+        "version": "v7.4.22",
+        "url": "https://api.github.com/repos/symfony/mailer/zipball/1aa1e2ee7515826bb17b0ad0d2f16962fcaa7859",
+        "file": "symfony/mailer/6e31f0c564a4e510ff70237e907cdfd29d5f2681.zip",
+        "hash": "sha256-l73Y48ATq/f2RGgL6rl20fq+lv9eURhy+/vn3H3w74U="
+      },
+      {
+        "name": "symfony/mime",
+        "version": "v7.4.22",
+        "url": "https://api.github.com/repos/symfony/mime/zipball/94a4c017435bc515f5ac80421a2c555fb9ca3676",
+        "file": "symfony/mime/8fb042efceed581661ee7a480c31efc5a7cdb535.zip",
+        "hash": "sha256-40rbs/1rSSb+zjjZyWxFMbYbDlS59/vXa6nxeHZMUEk="
+      },
+      {
+        "name": "symfony/polyfill-intl-idn",
+        "version": "v1.43.0",
+        "url": "https://api.github.com/repos/symfony/polyfill-intl-idn/zipball/533d68cf99c8f8ee2e8893c59ed59192e92cfd74",
+        "file": "symfony/polyfill-intl-idn/45017d08b181c280c82b22ee563fc314923dae5c.zip",
+        "hash": "sha256-Sm+VYX6NfPK2KZDH85C8uSV4GtB7INob3L1cjRIiSZY="
+      },
+      {
+        "name": "symfony/polyfill-php83",
+        "version": "v1.43.0",
+        "url": "https://api.github.com/repos/symfony/polyfill-php83/zipball/80ccff923a8d61f73ebe9da0aa94e25232f004ce",
+        "file": "symfony/polyfill-php83/6fac9c2ec043c73ce0404357fdf7166225ab6251.zip",
+        "hash": "sha256-fwjMguZT3eIKb0+MeZMeIoloxwTxV4oizh4JIvIUIU8="
+      },
+      {
+        "name": "symfony/polyfill-php84",
+        "version": "v1.43.0",
+        "url": "https://api.github.com/repos/symfony/polyfill-php84/zipball/22c6548499cbe5c5bb072fc0c42312dff062a015",
+        "file": "symfony/polyfill-php84/b8cbf9ec9c5ce5b56802e968d29456b080834d9f.zip",
+        "hash": "sha256-WNQJIPF8VHrgFpKCFu0zQyWYB0Uh82RqtoNctPWoUVI="
+      },
+      {
+        "name": "symfony/polyfill-php85",
+        "version": "v1.43.0",
+        "url": "https://api.github.com/repos/symfony/polyfill-php85/zipball/86a42cbcc07adc331481a5ab310a4024bfc227f6",
+        "file": "symfony/polyfill-php85/fef9b9c1e2bb6134489e49854cba1c99149f44eb.zip",
+        "hash": "sha256-FidrnuiV6ZU7cd1VEHvdtaraZBEoAHdYHxlopcT8CMw="
+      },
+      {
+        "name": "symfony/routing",
+        "version": "v7.4.22",
+        "url": "https://api.github.com/repos/symfony/routing/zipball/f79ed6fbf60d9e32d358054f1915295f3b8a6f7a",
+        "file": "symfony/routing/f97c81c7fb3c8af21727be731c4c19cf20fc221b.zip",
+        "hash": "sha256-Y5p1qsLZWqpeFSjjFLmXtPWfTgLbu9v94iR4Uqe7LCc="
+      }
+    ]
+  }
+}

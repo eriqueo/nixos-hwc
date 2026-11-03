@@ -11,6 +11,11 @@ Firefly III personal finance manager running as a Podman container, with optiona
 
 ## Structure
 
+The three `*-composer.json` / `*-composer.lock` pairs define production-only
+Composer inputs. `composer-runtime-packages.json` pins each changed dist archive
+by URL and SHA256; `index.nix` rebuilds the offline cache. Install scripts and
+plugins never run during builds, so build-time database migration is excluded.
+
 Firefly runtime contexts include exact-hash Debian and Alpine package manifests.
 The recipes install these vendor OS fixes offline before restoring the original
 container user. No app or schema upgrade runs during the image build.
@@ -22,7 +27,7 @@ keys before the first activation; replacing them invalidates existing tokens.
 
 `index.nix` owns temporary same-app PHP runtime recipes for all three finance
 containers. Core 6.6.6 and Importer 2.3.4 retain their application bytes and
-configuration; an immutable official Firefly image supplies PHP 8.5.12 and its
+configuration outside Composer inputs/vendor dependencies; an immutable official Firefly image supplies PHP 8.5.12 and its
 matching extensions. `system.build.fireflyCoreRuntimeImageContext` and
 `system.build.fireflyImporterRuntimeImageContext` regenerate those contexts.
 Pico retains app 1.10.1 and upgrades its 23 installed PHP82 packages together
@@ -145,6 +150,11 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 - `firefly-explorer.service` — immutable explorer package; validates its token, Firefly account, UI assets, and tailscaled socket before serving. Every API request is authorized with Tailscale WhoIs. Split groups remain read-only; writes are limited to existing category/expense-account ids and existing tags.
 
 ## Changelog
+
+- 2026-11-02: Add same-app Composer dependency lock repairs. Offline installs
+  use fixed-hash archives, disable scripts/plugins/network, retain each framework
+  major and replace build tooling with Composer 2.10.3. Use APT to order Debian
+  pre-dependencies; a raw dpkg glob cannot satisfy their configuration order.
 
 - 2026-11-02: Add signed-vendor, fixed-hash OS dependency repairs to all three
   same-app finance runtime contexts. Bind the Debian inventory to each image tag;

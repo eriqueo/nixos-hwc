@@ -1256,6 +1256,9 @@
             assert 'COPY *.deb /tmp/hwc-runtime-debs/' in recipe
             assert 'apt-get --no-download --yes -o Dpkg::Options::=--force-confold install /tmp/hwc-runtime-debs/*.deb' in recipe
             assert recipe.rstrip().endswith('USER www-data')
+            assert 'COMPOSER_DISABLE_NETWORK=1' in recipe
+            assert 'install --no-dev --no-scripts --no-plugins' in recipe
+            assert {'composer.json', 'composer.lock', 'composer.phar', 'composer-cache'} <= {p.name for p in context.iterdir()}
         PY
         touch "$out"
       '';
@@ -1306,7 +1309,10 @@
         assert len(actual) == len(manifest['packages'])  # no competing package pins
         assert {'nginx', 'libcurl', 'libpq', 'libexpat', 'python3', 'nodejs',
             'musl', 'zlib', 'pcre2', 'nghttp2-libs', 'libxml2'} <= actual.keys()
-        assert {p.name for p in context.iterdir()} == {'Dockerfile','manifest.json'} | {p['file'] for p in manifest['packages']}
+        assert {p.name for p in context.iterdir()} == {'Dockerfile','manifest.json',
+            'composer.json','composer.lock','composer.phar','composer-cache'} | {p['file'] for p in manifest['packages']}
+        assert 'COMPOSER_DISABLE_NETWORK=1' in recipe
+        assert 'install --no-dev --no-scripts --no-plugins' in recipe
         for package in manifest['packages']:
             data = (context / package['file']).read_bytes()
             assert package['hash'] == 'sha256-' + base64.b64encode(hashlib.sha256(data).digest()).decode()

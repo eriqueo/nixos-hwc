@@ -14,6 +14,11 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+The three `*-composer.json` / `*-composer.lock` pairs define production-only
+Composer inputs. `composer-runtime-packages.json` pins each changed dist archive
+by URL and SHA256; `index.nix` rebuilds the offline cache. Install scripts and
+plugins never run during builds, so build-time database migration is excluded.
+
 Firefly runtime contexts include exact-hash Debian and Alpine package manifests.
 The recipes install these vendor OS fixes offline before restoring the original
 container user. No app or schema upgrade runs during the image build.
@@ -85,6 +90,11 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-02: Add same-app Composer dependency lock repairs. Offline installs
+  use fixed-hash archives, disable scripts/plugins/network, retain each framework
+  major and replace build tooling with Composer 2.10.3. Use APT to order Debian
+  pre-dependencies; a raw dpkg glob cannot satisfy their configuration order.
 
 - 2026-11-02: Add signed-vendor, fixed-hash OS dependency repairs to all three
   same-app finance runtime contexts. Bind the Debian inventory to each image tag;

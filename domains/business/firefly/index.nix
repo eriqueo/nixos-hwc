@@ -14,6 +14,29 @@ let
   picoCertificatesVersion = "20261020-r0";
   picoPhpVersion = "8.2.35-r0";
   phpVersion = "8.5.12";
+  # Temporary same-app dependency repair; retire with qualified upstream images.
+  composerManifest = ./composer-runtime-packages.json;
+  composerPackages = (builtins.fromJSON (builtins.readFile composerManifest)).packages;
+  composerBinary = pkgs.fetchurl {
+    url = "https://getcomposer.org/download/2.10.3/composer.phar";
+    hash = "sha256-ei03nVuP/aoChYDvJklMNtL+70sXjT3RRzpNvF4XyNY=";
+  };
+  composerRecipe = kind: ''
+    # Composer inputs ${builtins.hashFile "sha256" composerManifest} ${builtins.hashFile "sha256" (./. + "/${kind}-composer.lock")} ${builtins.hashFile "sha256" (./. + "/${kind}-composer.json")}
+    COPY composer-cache/ /tmp/hwc-composer-cache/files/
+    COPY composer.phar /tmp/hwc-composer.phar
+    COPY composer.json composer.lock ./
+    RUN COMPOSER_CACHE_DIR=/tmp/hwc-composer-cache COMPOSER_DISABLE_NETWORK=1 php /tmp/hwc-composer.phar install --no-dev --no-scripts --no-plugins --prefer-dist --no-interaction --optimize-autoloader && ${if kind == "pico" then "true" else "cp /tmp/hwc-composer.phar /usr/local/bin/composer && chmod 755 /usr/local/bin/composer"} && rm -r /tmp/hwc-composer-cache /tmp/hwc-composer.phar
+  '';
+  composerContext = kind: ''
+    cp ${composerBinary} "$out/composer.phar"
+    cp ${./. + "/${kind}-composer.json"} "$out/composer.json"
+    cp ${./. + "/${kind}-composer.lock"} "$out/composer.lock"
+    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''
+      mkdir -p "$out/composer-cache/${p.name}"
+      cp ${source} "$out/composer-cache/${p.file}"
+    '') composerPackages.${kind}}
+  '';
   # Temporary same-app PHP correction: retire once qualified upstream images
   # preserve the current app/schema and meet the PHP security floor.
   # The donor supplies PHP and its extensions only, never application bytes.
@@ -24,7 +47,7 @@ let
   debianPackages = map (p: p // {
     source = pkgs.fetchurl { inherit (p) url hash; };
   }) (builtins.fromJSON (builtins.readFile debianManifest));
-  phpRuntimes = lib.mapAttrs (_: app: helpers.mkRuntimeImage {
+  phpRuntimes = lib.mapAttrs (kind: app: helpers.mkRuntimeImage {
     name = app.name;
     version = "${app.version}-php${phpVersion}";
     recipe = ''
@@ -38,6 +61,7 @@ let
       COPY --from=secure-php /usr/local/sbin/php-fpm /usr/local/sbin/php-fpm
       COPY --from=secure-php /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
       ENV PHP_VERSION=${phpVersion} PHP_URL=https://www.php.net/distributions/php-${phpVersion}.tar.xz PHP_ASC_URL=https://www.php.net/distributions/php-${phpVersion}.tar.xz.asc PHP_SHA256=08bc2eba2a588654ade1357174aa646b761556c862dda0678345ee29ed481209
+      ${composerRecipe kind}
       USER www-data
     '';
   }) {
@@ -101,6 +125,7 @@ let
       RUN apk add --no-network --no-cache --repositories-file /dev/null /tmp/hwc-runtime-apks/*.apk && update-ca-certificates --fresh && rm -r /tmp/hwc-runtime-apks
       COPY --from=secure-node /usr/local/bin/node /usr/bin/node
       ENV NODE_VERSION=${picoNodeVersion}
+      ${composerRecipe "pico"}
     '';
   };
   picoManifest = pkgs.writeText "firefly-pico-runtime-manifest.json" (builtins.toJSON {
@@ -112,6 +137,7 @@ let
     mkdir -p "$out"
     cp ${picoRuntime.dockerfile} "$out/Dockerfile"
     cp ${picoManifest} "$out/manifest.json"
+    ${composerContext "pico"}
     ${lib.concatMapStrings (p: "cp ${p.source} \"$out/${p.file}\"\n") picoPackages}
   '';
 in
@@ -449,12 +475,14 @@ in
       mkdir -p "$out"
       cp ${phpRuntimes.core.dockerfile} "$out/Dockerfile"
       cp ${debianManifest} "$out/manifest.json"
+      ${composerContext "core"}
       ${lib.concatMapStrings (p: "cp ${p.source} \"$out/${p.file}\"\n") debianPackages}
     '';
     system.build.fireflyImporterRuntimeImageContext = pkgs.runCommand "firefly-importer-runtime-context" {} ''
       mkdir -p "$out"
       cp ${phpRuntimes.importer.dockerfile} "$out/Dockerfile"
       cp ${debianManifest} "$out/manifest.json"
+      ${composerContext "importer"}
       ${lib.concatMapStrings (p: "cp ${p.source} \"$out/${p.file}\"\n") debianPackages}
     '';
     system.build.fireflyPicoRuntimeImageContext = picoContext;
