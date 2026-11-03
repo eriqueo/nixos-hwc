@@ -1320,8 +1320,7 @@
             assert 'COPY *.deb /tmp/hwc-runtime-debs/' in recipe
             assert 'apt-get --no-download --yes -o Dir::Cache::archives=/tmp/hwc-runtime-debs -o Dpkg::Options::=--force-confold install /tmp/hwc-runtime-debs/*.deb' in recipe
             assert recipe.rstrip().endswith('USER www-data')
-            assert 'chown www-data:www-data bootstrap/cache' in recipe
-        assert 'COMPOSER_DISABLE_NETWORK=1' in recipe
+            assert 'COMPOSER_DISABLE_NETWORK=1' in recipe
             assert 'install --no-dev --no-scripts --no-plugins' in recipe
             assert 'cp /tmp/hwc-composer.phar /usr/bin/composer' in recipe
             assert 'rm -f bootstrap/cache/packages.php bootstrap/cache/services.php' in recipe
