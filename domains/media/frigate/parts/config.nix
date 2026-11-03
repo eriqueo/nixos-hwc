@@ -41,7 +41,7 @@ let
 
   # Full config structure
   frigateConfig = {
-    version = "0.16.0";
+    version = "0.18-0";
 
     # MQTT for event publishing to n8n workflows
     # Frigate uses --network=host so 127.0.0.1 reaches host mosquitto
@@ -99,10 +99,8 @@ let
 
     record = {
       enabled = true;
-      retain = {
-        days = 3;
-        mode = "motion";
-      };
+      continuous.days = 0;
+      motion.days = 3;
       alerts.retain = {
         days = 14;
         mode = "motion";

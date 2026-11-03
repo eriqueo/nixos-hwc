@@ -1,6 +1,6 @@
 # Frigate NVR - Network Video Recorder
 
-**Version**: 0.16.2-tensorrt
+**Version**: 0.18.2-tensorrt
 **Domain**: `hwc.media.frigate`
 **Architecture**: Nix-generated configuration (Charter v12.6)
 **Status**: ✅ Production
@@ -35,7 +35,7 @@ Owns Frigate and its generated configuration. Prometheus owns alert evaluation; 
 
 The container uses its explicit NVIDIA CDI grant with no-new-privileges. It does not use privileged mode. The emitted-config contract checks these flags and GPU wiring.
 
-`index.nix` also exports the pinned same-app runtime recipe and requires its prebuilt image before startup.
+`index.nix` also exports the pinned 0.18.2 runtime recipe with its exact Starlette backport and requires its prebuilt image before startup. The native 0.18 configuration keeps three days of motion and fourteen days of event footage; continuous recording retention is zero.
 
 - `index.nix`: options, container, atomic config generation, native metrics and expected-camera recording rules.
 - `parts/config.nix`: camera settings, masks, zones and recording retention.
@@ -55,7 +55,7 @@ The ONNX model at `configPath/models/yolov9-s-320.onnx` is an existing external 
 
 Metrics come directly from `/api/metrics`; there is no exporter container. Expected FPS comes from the same camera settings as the YAML. Offline alerts persist during long outages; five minutes of recovery is required before resolution. Missing camera metrics and unavailable/stale telemetry have separate alerts. The obsolete detection-spike rule queried a metric that never existed and was removed.
 
-The recording cache is a bounded 1 GiB RAM mount at `/tmp/cache`. The unused SSD mount at `/tmp/frigate` is removed; its old empty directory may remain on disk. No footage is deleted by this change. The deployed version remains 0.16.2.
+The recording cache is a bounded 1 GiB RAM mount at `/tmp/cache`. The unused SSD mount at `/tmp/frigate` is removed; its old empty directory may remain on disk. Frigate owns footage retention.
 
 Camera-side settings are separate from Nix. On September 24, both active Cobra substreams were set to 1280×720 at 5 FPS with a 10-frame GOP; their main streams remain 4K at 15 FPS. Reolink's substream is 640×360 with its supported 7 FPS setting (RTSP advertises 22/3); its main stream remains 4K at 25 FPS. Frigate still detects at 3/3/2 FPS and scales the Reolink input to 480×270.
 
@@ -696,6 +696,8 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+
+- 2026-11-03: Pin vendor0.18.2 application security fixes, retain the qualified Starlette Host-parser backport, and encode the same motion/event retention in the native0.18 config. Private real-data upgrade and old-code/current-database recovery tests pass; actual YOLO model runs through the CUDA detector.
 
 - 2026-11-03: Remove unnecessary privileged mode and enable no-new-privileges while preserving image, camera/model settings, mounts and explicit NVIDIA CDI access.
 

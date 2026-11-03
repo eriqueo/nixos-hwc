@@ -1703,17 +1703,18 @@
         c = self.nixosConfigurations.hwc-home.config;
         frigate = c.system.build.frigateRuntimeImageRecipe.text;
         ml = c.system.build.immichMlRuntimeImageRecipe.text;
-        expectedFrigate = "localhost/frigate-runtime:0.16.2-tensorrt-hostfix-${builtins.substring 0 12 (builtins.hashString "sha256" frigate)}";
+        expectedFrigate = "localhost/frigate-runtime:0.18.2-tensorrt-hostfix-${builtins.substring 0 12 (builtins.hashString "sha256" frigate)}";
         expectedMl = "localhost/immich-ml-runtime:2.5.6-${builtins.substring 0 12 (builtins.hashString "sha256" ml)}";
       in
       assert c.virtualisation.oci-containers.containers.frigate.image == expectedFrigate;
       assert c.virtualisation.oci-containers.containers.immich-machine-learning.image == expectedMl;
       assert c.virtualisation.oci-containers.containers.frigate.pull == "never";
+      assert lib.hasInfix "FROM ghcr.io/blakeblackshear/frigate@sha256:1cafb6ebbaff0aaf275cc3f31951bcf7e29f3989f18a10ba9565091367d8736c" frigate;
       assert lib.hasInfix "image exists ${lib.escapeShellArg expectedFrigate}" c.systemd.services.podman-frigate.preStart;
       pkgs.runCommand "starlette-host-backport-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
         python3 - ${c.system.build.frigateRuntimeImageRecipe} ${c.system.build.immichMlRuntimeImageRecipe} <<'PYTEST'
         import pathlib, shlex, sys
-        expected = [('0.41.2', '8a7347a833948318e88d255ce45379a0bd378b3b903369c8803ce7eddce109b8', '60226bc6d65a92494998726d2040d6fd6cc624a7c77a70af5d7e28e306ca8de6'),
+        expected = [('0.47.3', 'ce16c619c99e45507a3aebedf47c2807c8122bd9396e21f7cd48636f9715fa8c', '5c163e52df0a615c7860136b30d010c48696c0774011db8879a3299e025ed441'),
                     ('0.50.0', 'dde752330006431c7ebc1ccb948a95825be5bd6b8c03839133cdee59899c3030', '77253c43dce33af8b92b1b76794c6b39205419a520663246dfba595e4c76b283')]
         programs = []
         for path, hashes in zip(sys.argv[1:], expected):

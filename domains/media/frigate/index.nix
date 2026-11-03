@@ -15,19 +15,19 @@ let
   cfg = config.hwc.media.frigate;
   labelPython = pkgs.python3.withPackages (p: [ p.onnx ]);
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
-  # Temporary same-app URL parser repair; remove after upstream passes the
+  # Temporary URL parser repair; remove after upstream passes the
   # malformed-Host, current-data recovery and actual GPU consumer checks.
   runtime = helpers.mkRuntimeImage {
     name = "frigate";
-    version = "0.16.2-tensorrt-hostfix";
+    version = "0.18.2-tensorrt-hostfix";
     recipe = ''
-      FROM ghcr.io/blakeblackshear/frigate@sha256:7351ca2ddbce6d712c8a13842eeb4248844e5334565e71b4f6ae438ddaf9d04d
+      FROM ghcr.io/blakeblackshear/frigate@sha256:1cafb6ebbaff0aaf275cc3f31951bcf7e29f3989f18a10ba9565091367d8736c
     ''
       + helpers.mkStarletteHostBackport {
         python = "python3";
-        version = "0.41.2";
-        sourceSha256 = "8a7347a833948318e88d255ce45379a0bd378b3b903369c8803ce7eddce109b8";
-        patchedSha256 = "60226bc6d65a92494998726d2040d6fd6cc624a7c77a70af5d7e28e306ca8de6";
+        version = "0.47.3";
+        sourceSha256 = "ce16c619c99e45507a3aebedf47c2807c8122bd9396e21f7cd48636f9715fa8c";
+        patchedSha256 = "5c163e52df0a615c7860136b30d010c48696c0774011db8879a3299e025ed441";
       };
   };
 in
