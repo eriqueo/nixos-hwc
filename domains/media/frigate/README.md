@@ -698,6 +698,7 @@ hwc.media.frigate = {
 ## Changelog
 
 - 2026-11-03: Pin vendor0.18.2 application security fixes, retain the qualified Starlette Host-parser backport, and encode the same motion/event retention in the native0.18 config. Private real-data upgrade and old-code/current-database recovery tests pass; actual YOLO model runs through the CUDA detector.
+- 2026-11-03: Emit native0.18 named motion masks from the existing polygon coordinates; preserve enabled masks and their coverage checks. An API200 alone can also indicate the configuration editor, so qualification must require the actual policy and camera settings.
 
 - 2026-11-03: Remove unnecessary privileged mode and enable no-new-privileges while preserving image, camera/model settings, mounts and explicit NVIDIA CDI access.
 

@@ -51,7 +51,9 @@ for name, camera in config["cameras"].items():
     width, height = camera["detect"]["width"], camera["detect"]["height"]
     mask = Image.new("L", (width, height), 255)
     draw = ImageDraw.Draw(mask)
-    for polygon in camera["motion"]["mask"]:
+    for entry in camera["motion"]["mask"].values():
+        assert entry["enabled"]
+        polygon = entry["coordinates"]
         xy = [float(x) for x in polygon.split(",")]
         assert len(xy) >= 6 and len(xy) % 2 == 0, (name, polygon)
         points = list(zip(xy[::2], xy[1::2]))

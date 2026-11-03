@@ -24,6 +24,15 @@ let
   # Reolink RTSP URL template (different credentials and path)
   reolinkUrl = stream: "rtsp://\${REOLINK_USER}:\${REOLINK_PASS_ENCODED}@\${REOLINK_IP}:554/${stream}";
 
+  # Native 0.18 mask objects preserve the ordered polygons and names produced
+  # by Frigate's 0.16-to-0.18 configuration migration.
+  motionMasks = coordinates: lib.listToAttrs (lib.imap1 (index: polygon:
+    lib.nameValuePair "motion_mask_${toString index}" {
+      friendly_name = "Motion Mask ${toString index}";
+      enabled = true;
+      coordinates = polygon;
+    }) coordinates);
+
   # Shared ffmpeg configuration for go2rtc restreams
   # Uses CUDA hwaccel but outputs to CPU memory (nv12) to avoid color space issues
   # during IR mode transitions while still benefiting from GPU decoding
@@ -152,7 +161,7 @@ let
           ];
         };
         detect = { width = 1280; height = 720; fps = 3; };
-        motion.mask = [
+        motion.mask = motionMasks [
           # September 24 image: sidewalk/approach lies below y=150.
           # The former two-point masks drew lines; y=300 would hide arrivals.
           "0,0,1280,0,1280,150,0,150"
@@ -177,7 +186,7 @@ let
           ];
         };
         detect = { width = 1280; height = 720; fps = 5; };
-        motion.mask = [
+        motion.mask = motionMasks [
           "0,0,1280,0,1280,50,0,50" # Timestamp strip
           "0,0,1280,0,1280,280,0,280" # Street (camera remains disabled)
           "1150,600,1280,600,1280,720,1150,720" # Green bin corner
@@ -195,7 +204,7 @@ let
           ];
         };
         detect = { width = 1280; height = 720; fps = 3; };
-        motion.mask = [
+        motion.mask = motionMasks [
           "0,0,1280,0,1280,30,0,30" # Timestamp only; preserve distant arrivals
           # Street and sidewalk beyond the fence (polygon covering top area)
           "0,0,0,320,400,280,900,280,1280,320,1280,0"
@@ -225,7 +234,7 @@ let
           ];
         };
         detect = { width = 480; height = 270; fps = 2; };
-        motion.mask = [
+        motion.mask = motionMasks [
           "0,0,480,0,480,16,0,16" # Timestamp strip
           "0,0,0,150,75,135,75,0"  # Neighbor's area (left side with blue car)
           "435,0,435,90,480,90,480,0"  # Far right edge
