@@ -24,6 +24,8 @@ Machine references follow machines/home; media state and service ownership are u
 
 `audiobookshelf/` exports the immutable2.37.2/Node24.22.2 recipe. Its existing SQLite/config/token/metadata paths and Borg recovery owner remain unchanged.
 
+Its offline runtime context patches form-data/proxy-addr and isolates form-data's added dependencies beneath that package. Exact archive hashes and install commands are checked; startup requires the prebuilt local image.
+
 ```
 media/
 ├── index.nix                # Domain aggregator
@@ -80,6 +82,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-03: Add signed, fixed-hash form-data4.0.6/proxy-addr2.0.8 inputs and their isolated dependency closure to Audiobookshelf's offline context; preserve app/data/runtime and fail startup if the qualified image is missing.
 
 - 2026-11-03: Pin Audiobookshelf2.37.2 application security fixes and Node24.22.2 through the existing runtime helper; preserve library/progress/token identity and backup wiring. Private vendor old/new/restored current-database authentication, library and cover consumers pass.
 

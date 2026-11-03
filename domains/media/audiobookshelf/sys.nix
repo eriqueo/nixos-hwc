@@ -9,6 +9,7 @@ in
     (helpers.mkContainer {
       name = "audiobookshelf";
       image = cfg.image;
+      pull = if cfg.image == cfg._runtimeImage then "never" else "missing";
       networkMode = cfg.network.mode;
       gpuEnable = false;  # Audiobookshelf doesn't need GPU
       timeZone = config.time.timeZone or "UTC";

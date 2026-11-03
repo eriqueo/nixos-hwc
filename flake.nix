@@ -1682,9 +1682,11 @@
       assert lib.assertMsg (lib.hasPrefix "localhost/audiobookshelf-runtime:2.37.2-node24.22.2-" image)
         "Audiobookshelf must consume its qualified application and Node24 image";
       assert c.virtualisation.oci-containers.containers.audiobookshelf.image == image;
+      assert c.virtualisation.oci-containers.containers.audiobookshelf.pull == "never";
+      assert lib.hasInfix "image exists ${lib.escapeShellArg image}" c.systemd.services.podman-audiobookshelf.preStart;
       pkgs.runCommand "audiobookshelf-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-        python3 - ${fixture} ${c.system.build.audiobookshelfRuntimeImageRecipe} <<'PY'
-        import hashlib, json, pathlib, re, sys
+        python3 - ${fixture} ${c.system.build.audiobookshelfRuntimeImageRecipe} ${c.system.build.audiobookshelfRuntimeImageContext} <<'PY'
+        import base64, hashlib, json, pathlib, re, shlex, sys
         spec = json.loads(pathlib.Path(sys.argv[1]).read_text())
         recipe = pathlib.Path(sys.argv[2]).read_text()
         assert spec['image'] == 'localhost/audiobookshelf-runtime:2.37.2-node24.22.2-' + hashlib.sha256(recipe.encode()).hexdigest()[:12]
@@ -1694,7 +1696,32 @@
             'ghcr.io/advplyr/audiobookshelf@sha256:37c2057e150694970442579815c646fe6bdc01c95b9d1547c4c9068be8844ef3']
         assert 'COPY --from=secure-node /usr/local/bin/node /usr/local/bin/node' in recipe
         assert 'ENV NODE_VERSION=24.22.2' in recipe
-        assert len([line for line in recipe.splitlines() if line.strip()]) == 4
+        context = pathlib.Path(sys.argv[3])
+        assert (context / 'Dockerfile').read_text() == recipe
+        manifest = context / 'manifest.json'
+        assert '# Fixed dependency inputs ' + hashlib.sha256(manifest.read_bytes()).hexdigest() in recipe
+        spec = json.loads(manifest.read_text())
+        assert spec['schemaVersion'] == 1 and len(spec['packages']) == 15
+        top = {p['name']:p['version'] for p in spec['packages'] if p['path'] == p['name']}
+        assert top == {'form-data':'4.0.6', 'proxy-addr':'2.0.8'}
+        assert {p.name for p in (context / 'npm').iterdir()} == {p['file'] for p in spec['packages']}
+        active = [line for line in recipe.splitlines() if line.strip() and not line.lstrip().startswith('#')]
+        assert len(active) == 6 and 'COPY npm/ /tmp/hwc-audiobookshelf-npm/' in active
+        run = next(line[4:] for line in active if line.startswith('RUN '))
+        commands = [[]]
+        for arg in shlex.split(run):
+            if arg == '&&': commands.append([])
+            else: commands[-1].append(arg)
+        expected = []
+        for p in spec['packages']:
+            assert p['path'] in top or re.fullmatch(r'form-data/node_modules/[a-z0-9][a-z0-9._-]*', p['path'])
+            assert p['hash'].startswith('sha512-')
+            assert hashlib.sha512((context / 'npm' / p['file']).read_bytes()).digest() == base64.b64decode(p['hash'][7:])
+            destination = '/app/node_modules/' + p['path']
+            expected.extend([['rm','-rf',destination], ['mkdir','-p',destination],
+                ['tar','-xzf','/tmp/hwc-audiobookshelf-npm/'+p['file'],'-C',destination,'--strip-components=1','--no-same-owner']])
+        expected.append(['rm','-r','/tmp/hwc-audiobookshelf-npm'])
+        assert commands == expected, 'production must install the complete isolated closure without a resolver'
         PY
         touch "$out"
       '';
