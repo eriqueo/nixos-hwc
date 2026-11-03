@@ -156,6 +156,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-02: Backport Streamlit1.62's maintained recipe to match the server channel's Pillow13 dependency; preserve Aider's browser mode.
 - 2026-11-02: Keep PostHog's MCP1 peer contract using the channel's maintained1.29 package with tests enabled. Meals packaging also preserves OCR wrapper argument boundaries.
 - 2026-11-02: Refresh Claude Desktop and its Electron runtime; retain T3's44 ABI and update the calendar fork's structured-build environment.
 - 2026-11-02: Keep OnlyOffice on GTK3/Qt with strict dependency checks during the security baseline refresh.

@@ -289,8 +289,13 @@
           # Remove when upstream selects mcp_1 or supports MCP2 itself.
           (final: prev: {
             pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
-              (pythonFinal: pythonPrev:
-                prev.lib.optionalAttrs (pythonPrev ? mcp_1) {
+              (pythonFinal: pythonPrev: {
+                # TEMPORARY: stable Streamlit1.58 excludes Pillow13, which
+                # that channel now supplies. Backport the maintained recipe;
+                # remove when stable carries Streamlit1.62 or newer.
+                streamlit = pythonFinal.callPackage
+                  (inputs.nixpkgs + "/pkgs/development/python-modules/streamlit") {};
+              } // prev.lib.optionalAttrs (pythonPrev ? mcp_1) {
                   posthog = pythonPrev.posthog.override { mcp = pythonFinal.mcp_1; };
                 })
             ];
