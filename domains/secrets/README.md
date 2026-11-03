@@ -9,6 +9,10 @@
 
 ## Structure
 
+`vaultwarden/index.nix` pins the qualified 1.37.5 security image, retains the
+client origin and account settings, and registers its critical data/RSA directory
+and online SQLite snapshot with Borg. The container uses no-new-privileges.
+
 `parts/services/estimator-api-key.age` is the server-only estimator/n8n credential. It retains the existing five-recipient policy and generated root:secrets0440 mount. Caddy reads it at request time; n8n reloads its environment when ciphertext changes. Never pass it to Vite or browser storage. The encrypted prior value remains recoverable in Git.
 
 `parts/system/dad-login-password{,-hash}.age` retain a generated household
@@ -78,6 +82,7 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-11-03: Upgrade Vaultwarden to immutable 1.37.5, retain client access settings, enable no-new-privileges and register current vault/RSA data plus online SQLite recovery with Borg.
 
 - 2026-11-02: Rotate the disclosed estimator key after deploying server-side proxy injection and a credential-free PWA. Encrypt to the exact existing recipient rule and verify work host-key decryption without plaintext files.
 - 2026-10-25: Add the isolated XPS household desktop wiring; preserve existing

@@ -11,14 +11,14 @@ Self-hosted Bitwarden-compatible password manager. Provides secure credential st
 ## Structure
 ```
 vaultwarden/
-└── index.nix    # Options + pinned container config (single-file module)
+└── index.nix    # Options, immutable container, runtime env and Borg SQLite/data registration
 ```
 
 ## Configuration
 | Option | Default | Description |
 |--------|---------|-------------|
 | `enable` | `false` | Enable Vaultwarden |
-| `image` | `docker.io/vaultwarden/server:1.37.3` | Pinned container image |
+| `image` | `docker.io/vaultwarden/server@sha256:f8863ab2519364bfc657144006682a830784e0bb501606d5e34516ee76b60b5c` | Qualified 1.37.5 security image |
 | `port` | `8222` | Internal container port mapping |
 | `reverseProxy.port` | `15443` | External Tailscale HTTPS port |
 | `network.mode` | `"media"` | Podman network mode |
@@ -33,6 +33,7 @@ vaultwarden/
 - Caddy reverse proxy via `networking/routes.nix`
 
 ## Changelog
+- 2026-11-03: Pin 1.37.5 security image, preserve client origin/prelogin and account settings, enable no-new-privileges, and register the critical vault/RSA directory plus online SQLite snapshot with Borg.
 - 2026-09-26: Pinned 1.37.3 for Bitwarden 2026.7+ password sign-in. The old 1.35.4 image returned 404 for `/identity/accounts/prelogin/password`.
 - 2026-06-09: Access moved from tailnet port `:15443` to name-based vhost `vaultwarden.hwc.iheartwoodcraft.com` (shared `*.hwc.iheartwoodcraft.com` wildcard cert). Container `DOMAIN` env updated to the new origin — Vaultwarden pins WebAuthn/passkeys to `DOMAIN`, so it must equal the browser URL. `reverseProxy.port` is now vestigial (vhost opens only :443). See `domains/networking/README.md`.
 - 2026-03-26: Initial scaffolding — container, env file, reverse proxy, secret integration
