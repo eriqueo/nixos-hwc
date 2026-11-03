@@ -1299,7 +1299,7 @@
             assert 'make check' in native and 'make test' in native
             assert 'REPORT_EXIT_STATUS=1 sapi/cli/php -n run-tests.php' in native
             assert '-c php.ini-development' in native
-            assert 'getent ahostsv4 localhost' in native
+            assert 'getent hosts localhost' in native
             assert 'SKIP_' not in native
             for directory, manifest_name in [('native-sources', 'native-sources/manifest.json'), ('native-build-debs', 'native-build-packages.json')]:
                 manifest_path = pathlib.Path(spec['context']) / manifest_name
