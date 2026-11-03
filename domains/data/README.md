@@ -27,7 +27,7 @@ data/
 ```
 
 ## Changelog
-- 2026-11-03: Own the complete hardened HBA rule set while retaining NixOS's root/postgres maintenance peer map; remove appended weaker defaults.
+- 2026-11-03: Own the complete composed HBA rule set while retaining NixOS's root/postgres maintenance peer map; remove appended weaker defaults.
 - 2026-11-03: Add protected per-application SCRAM provisioning after PostgreSQL setup; migrate home Immich and preserve local peer administration. Other hosts retain an explicit tracked compatibility mode until their clients pass.
 - 2026-10-24: Give SQLite snapshot workers registered database-parent access for temporary WAL/SHM creation while keeping SQL read-only; forbid root-level database parents and test native job wiring.
 - 2026-10-23: Allow an explicit additional-destination-only Borg client, so XPS Jellyfin state can use a bounded home repository without claiming T3 or full-host coverage.

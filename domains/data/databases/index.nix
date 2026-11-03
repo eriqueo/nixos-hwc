@@ -277,7 +277,7 @@ in
           })
         ];
 
-        authentication = if cfg.postgresql.authenticationMode == "peer-scram" then lib.mkForce ''
+        authentication = if cfg.postgresql.authenticationMode == "peer-scram" then lib.mkForce (''
           # Retain NixOS's OS-postgres/root maintenance identity map. This is
           # peer authentication, not permission to assume postgres over TCP.
           local all postgres peer map=postgres
@@ -286,7 +286,7 @@ in
           host all all ::1/128 scram-sha-256
         '' + lib.optionalString cfg.postgresql.containerNetwork.enable ''
           host all all 10.89.0.0/16 scram-sha-256
-        '' else ''
+        '') else ''
           # Temporary: work/laptop clients remain under domain-exposure-review
           # brain-o7xth7/C2. Remove legacy-trust after their actual app, workflow,
           # MCP and backup clients pass peer/SCRAM current-data qualification.
