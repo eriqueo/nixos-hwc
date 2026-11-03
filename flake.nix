@@ -283,6 +283,18 @@
           gitCleanupOverlay
           pandasStubsOverlay   # TEMP: skip pandas-stubs tests (upstream pytest-9.1.1 breakage)
           nodejsSecurityOverlay  # TEMP: Node Oct-2026 security release + brotli CVE fix
+          # TEMPORARY: PostHog7's tested peer contract is mcp>=1.28.1,<2.
+          # The channel wires its tests to MCP2 and marks the package broken.
+          # Use the channel's maintained1.29 recipe, retaining all tests.
+          # Remove when upstream selects mcp_1 or supports MCP2 itself.
+          (final: prev: {
+            pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+              (pythonFinal: pythonPrev:
+                prev.lib.optionalAttrs (pythonPrev ? mcp_1) {
+                  posthog = pythonPrev.posthog.override { mcp = pythonFinal.mcp_1; };
+                })
+            ];
+          })
           # Base, not per-set: claude-code must come from ONE pinned source for
           # the whole fleet. Wired to a single stable set, it left the
           # `nixpkgs`-channel machines (hwc-laptop, hwc-kids) on whatever that
