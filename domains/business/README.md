@@ -94,7 +94,8 @@ business/
 - 2026-11-02: Add ABI-matched PHP 8.5.12/libxml2 2.15.4/curl 8.23.0/ngtcp2
   1.25.0 source rebuilds with offline upstream tests, neutral build-stage INI and loopback-only local test name
   resolution in the network-isolated build.
-  Rebuild Pico’s Nuxt output with fixed-hash npm inputs, repair its calculator
+  Rebuild Pico’s Nuxt output with fixed-hash npm inputs and the existing 1.10.1
+  public version, repair its calculator
   and vendored Python archive libraries, and exercise their real consumers.
   Extend wiring checks to cover input hashes, build/test calls and startup guards.
   Exact app versions and serving configuration remain unchanged. Deployment is

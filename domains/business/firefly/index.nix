@@ -167,7 +167,7 @@ let
     COPY pico-front-package-lock.json ./package-lock.json
     COPY pico-frontend.patch /tmp/pico-frontend.patch
     COPY pico-frontend-test.mjs ./hwc-frontend-test.mjs
-    RUN mkdir -p /usr/local/lib/node_modules/npm && tar xf /tmp/npm.tgz -C /usr/local/lib/node_modules/npm --strip-components=1 && patch -p1 < /tmp/pico-frontend.patch && rm -rf node_modules .nuxt .output && node /tmp/pico-frontend-cache.mjs && node /usr/local/lib/node_modules/npm/bin/npm-cli.js ci --cache /tmp/npm-cache --offline --include=dev && node /usr/local/lib/node_modules/npm/bin/npm-cli.js run build && node hwc-frontend-test.mjs && apk del --no-network patch && rm -rf node_modules /tmp/npm-packages /tmp/npm-cache /tmp/pico-frontend.patch /tmp/pico-frontend-cache.mjs /tmp/npm.tgz /usr/local/lib/node_modules/npm
+    RUN mkdir -p /usr/local/lib/node_modules/npm && tar xf /tmp/npm.tgz -C /usr/local/lib/node_modules/npm --strip-components=1 && patch -p1 < /tmp/pico-frontend.patch && rm -rf node_modules .nuxt .output && node /tmp/pico-frontend-cache.mjs && node /usr/local/lib/node_modules/npm/bin/npm-cli.js ci --cache /tmp/npm-cache --offline --include=dev && NUXT_PUBLIC_VERSION=${picoAppVersion} node /usr/local/lib/node_modules/npm/bin/npm-cli.js run build && node hwc-frontend-test.mjs && apk del --no-network patch && rm -rf node_modules /tmp/npm-packages /tmp/npm-cache /tmp/pico-frontend.patch /tmp/pico-frontend-cache.mjs /tmp/npm.tgz /usr/local/lib/node_modules/npm
   '';
   picoRuntime = helpers.mkRuntimeImage {
     name = "firefly-pico";
