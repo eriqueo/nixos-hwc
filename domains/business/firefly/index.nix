@@ -27,7 +27,7 @@ let
     COPY composer.phar /tmp/hwc-composer.phar
     ${lib.optionalString (kind == "pico") "WORKDIR /var/www/html"}
     COPY composer.json composer.lock ./
-    RUN COMPOSER_CACHE_DIR=/tmp/hwc-composer-cache COMPOSER_DISABLE_NETWORK=1 php /tmp/hwc-composer.phar install --no-dev --no-scripts --no-plugins --prefer-dist --no-interaction --optimize-autoloader && rm -f bootstrap/cache/packages.php bootstrap/cache/services.php && ${if kind == "pico" then "true" else "cp /tmp/hwc-composer.phar /usr/bin/composer && chmod 755 /usr/bin/composer"} && rm -r /tmp/hwc-composer-cache /tmp/hwc-composer.phar
+    RUN COMPOSER_CACHE_DIR=/tmp/hwc-composer-cache COMPOSER_DISABLE_NETWORK=1 php /tmp/hwc-composer.phar install --no-dev --no-scripts --no-plugins --prefer-dist --no-interaction --optimize-autoloader && rm -f bootstrap/cache/packages.php bootstrap/cache/services.php && chown www-data:www-data bootstrap/cache && ${if kind == "pico" then "true" else "cp /tmp/hwc-composer.phar /usr/bin/composer && chmod 755 /usr/bin/composer"} && rm -r /tmp/hwc-composer-cache /tmp/hwc-composer.phar
     ${lib.optionalString (kind == "pico") "WORKDIR /var/www/html/front"}
   '';
   composerContext = kind: ''
@@ -49,19 +49,51 @@ let
   debianPackages = map (p: p // {
     source = pkgs.fetchurl { inherit (p) url hash; };
   }) (builtins.fromJSON (builtins.readFile debianManifest));
+  nativeSourcesManifest = ./native-runtime-sources.json;
+  nativeBuildManifest = ./native-build-packages.json;
+  nativeSources = builtins.fromJSON (builtins.readFile nativeSourcesManifest);
+  nativeBuildPackages = builtins.fromJSON (builtins.readFile nativeBuildManifest);
+  nativeRecipe = ''
+    # Native inputs ${builtins.hashFile "sha256" nativeSourcesManifest} ${builtins.hashFile "sha256" nativeBuildManifest} ${builtins.hashFile "sha256" ./native-runtime-build.sh}
+    FROM docker.io/fireflyiii/core@sha256:6515902b1a7c5b9a0b0a3b4db02a4c917aef7b3152a65d14aace5faf0ffee0bc AS native-build
+    USER root
+    COPY *.deb /tmp/hwc-runtime-debs/
+    COPY native-build-debs/ /tmp/hwc-runtime-debs/
+    RUN DEBIAN_FRONTEND=noninteractive apt-get --no-download --yes -o Dir::Cache::archives=/tmp/hwc-runtime-debs -o Dpkg::Options::=--force-confold install /tmp/hwc-runtime-debs/*.deb && test -z "$(dpkg --audit)"
+    COPY --from=secure-php /usr/local/bin/php-config /usr/local/bin/php-config
+    COPY native-sources/ /sources/
+    COPY native-runtime-build.sh /build-native.sh
+    RUN sh /build-native.sh
+  '';
+  nativeContext = ''
+    cp ${./native-runtime-build.sh} "$out/native-runtime-build.sh"
+    mkdir -p "$out/native-build-debs" "$out/native-sources"
+    cp ${nativeSourcesManifest} "$out/native-sources/manifest.json"
+    cp ${nativeBuildManifest} "$out/native-build-packages.json"
+    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''
+      cp ${source} "$out/native-sources/${p.file}"
+    '') nativeSources}
+    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''
+      cp ${source} "$out/native-build-debs/${p.file}"
+    '') nativeBuildPackages}
+  '';
   phpRuntimes = lib.mapAttrs (kind: app: helpers.mkRuntimeImage {
     name = app.name;
     version = "${app.version}-php${phpVersion}";
     recipe = ''
       # Debian package selection ${builtins.hashFile "sha256" debianManifest}
       FROM ${phpRuntimeDonor} AS secure-php
+      ${nativeRecipe}
       FROM ${app.image}
       USER root
       COPY *.deb /tmp/hwc-runtime-debs/
       RUN DEBIAN_FRONTEND=noninteractive apt-get --no-download --yes -o Dir::Cache::archives=/tmp/hwc-runtime-debs -o Dpkg::Options::=--force-confold install /tmp/hwc-runtime-debs/*.deb && test -z "$(dpkg --audit)" && rm -r /tmp/hwc-runtime-debs
-      COPY --from=secure-php /usr/local/bin/php /usr/local/bin/php-config /usr/local/bin/phpize /usr/local/bin/
-      COPY --from=secure-php /usr/local/sbin/php-fpm /usr/local/sbin/php-fpm
-      COPY --from=secure-php /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
+      # Delete the old ABI libraries through their real package owner.
+      RUN apt-get --yes purge curl libcurl4t64 libxml2 && test -z "$(dpkg --audit)"
+      COPY --from=native-build /native/ /
+      RUN ldconfig
+      COPY --from=secure-php /usr/local/bin/php-config /usr/local/bin/phpize /usr/local/bin/
+            COPY --from=secure-php /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
       ENV PHP_VERSION=${phpVersion} PHP_URL=https://www.php.net/distributions/php-${phpVersion}.tar.xz PHP_ASC_URL=https://www.php.net/distributions/php-${phpVersion}.tar.xz.asc PHP_SHA256=08bc2eba2a588654ade1357174aa646b761556c862dda0678345ee29ed481209
       ${composerRecipe kind}
       USER www-data
@@ -116,6 +148,33 @@ let
     { name = "php82-xmlwriter"; version = picoPhpVersion; repository = "community"; hash = "sha256-C4BumwxAcKlQ2KiTLMb4QT/nlbc+P8tsoyO7MJu1i/Q="; }
     { name = "php82-zip"; version = picoPhpVersion; repository = "community"; hash = "sha256-aQn/UFHlZU8goo8SFB19Bbxg/E8dv6fs5URmT0iOI+c="; }
   ]);
+  # Temporary frontend repair. Remove when the same-app upstream output passes
+  # calculator, dependency and offline rebuild qualification.
+  frontendPackages = lib.imap0 (i: p: {
+    file = "${toString i}.tgz";
+    url = p.resolved;
+    hash = p.integrity;
+  }) (builtins.filter (p: p ? resolved && p ? integrity && lib.hasPrefix "https:" p.resolved)
+    (builtins.attrValues (builtins.fromJSON (builtins.readFile ./pico-front-package-lock.json)).packages));
+  frontendManifestText = builtins.toJSON frontendPackages;
+  frontendManifest = pkgs.writeText "firefly-pico-frontend-packages.json" frontendManifestText;
+  pythonVendorManifest = ./pico-python-vendor-packages.json;
+  pythonVendorPackages = builtins.fromJSON (builtins.readFile pythonVendorManifest);
+  frontendNpm = pkgs.fetchurl {
+    url = "https://registry.npmjs.org/npm/-/npm-11.19.1.tgz";
+    hash = "sha256-n1i/8BYEyxsUAI/vFNzrFNg2pJIl5FxsLjfeO+PnB/A=";
+  };
+  frontendRecipe = ''
+    # Frontend inputs ${builtins.hashString "sha256" frontendManifestText} ${builtins.hashFile "sha256" ./pico-front-package-lock.json} ${builtins.hashFile "sha256" ./pico-front-package.json} ${builtins.hashFile "sha256" ./pico-frontend.patch} ${builtins.hashFile "sha256" ./pico-frontend-test.mjs} ${builtins.hashFile "sha256" ./pico-frontend-cache.mjs} ${frontendNpm}
+    COPY npm.tgz /tmp/npm.tgz
+    COPY pico-frontend-cache.mjs /tmp/pico-frontend-cache.mjs
+    COPY npm-packages/ /tmp/npm-packages/
+    COPY pico-front-package.json ./package.json
+    COPY pico-front-package-lock.json ./package-lock.json
+    COPY pico-frontend.patch /tmp/pico-frontend.patch
+    COPY pico-frontend-test.mjs ./hwc-frontend-test.mjs
+    RUN mkdir -p /usr/local/lib/node_modules/npm && tar xf /tmp/npm.tgz -C /usr/local/lib/node_modules/npm --strip-components=1 && patch -p1 < /tmp/pico-frontend.patch && rm -rf node_modules .nuxt .output && node /tmp/pico-frontend-cache.mjs && node /usr/local/lib/node_modules/npm/bin/npm-cli.js ci --cache /tmp/npm-cache --offline --include=dev && NUXT_PUBLIC_VERSION=${picoAppVersion} node /usr/local/lib/node_modules/npm/bin/npm-cli.js run build && node hwc-frontend-test.mjs && apk del --no-network patch && rm -rf node_modules /tmp/npm-packages /tmp/npm-cache /tmp/pico-frontend.patch /tmp/pico-frontend-cache.mjs /tmp/npm.tgz /usr/local/lib/node_modules/npm
+  '';
   picoRuntime = helpers.mkRuntimeImage {
     name = "firefly-pico";
     version = "${picoAppVersion}-node${picoNodeVersion}";
@@ -128,6 +187,11 @@ let
       COPY --from=secure-node /usr/local/bin/node /usr/bin/node
       ENV NODE_VERSION=${picoNodeVersion}
       ${composerRecipe "pico"}
+      ${frontendRecipe}
+      # Vendor fixes ${builtins.hashFile "sha256" pythonVendorManifest} ${builtins.hashFile "sha256" ./pico-python-vendor.py}
+      COPY python-vendor/ /tmp/python-vendor/
+      COPY pico-python-vendor.py /tmp/pico-python-vendor.py
+      RUN python3 /tmp/pico-python-vendor.py && rm -r /tmp/python-vendor /tmp/pico-python-vendor.py
     '';
   };
   picoManifest = pkgs.writeText "firefly-pico-runtime-manifest.json" (builtins.toJSON {
@@ -140,6 +204,22 @@ let
     cp ${picoRuntime.dockerfile} "$out/Dockerfile"
     cp ${picoManifest} "$out/manifest.json"
     ${composerContext "pico"}
+    cp ${frontendManifest} "$out/npm-packages.json"
+    cp ${pythonVendorManifest} "$out/python-vendor.json"
+    cp ${./pico-front-package.json} "$out/pico-front-package.json"
+    cp ${./pico-front-package-lock.json} "$out/pico-front-package-lock.json"
+    cp ${./pico-frontend.patch} "$out/pico-frontend.patch"
+    cp ${./pico-frontend-test.mjs} "$out/pico-frontend-test.mjs"
+    cp ${./pico-python-vendor.py} "$out/pico-python-vendor.py"
+    mkdir -p "$out/python-vendor"
+    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''
+      cp ${source} "$out/python-vendor/${p.file}"
+    '') pythonVendorPackages}
+    cp ${frontendNpm} "$out/npm.tgz"
+    cp ${./pico-frontend-cache.mjs} "$out/pico-frontend-cache.mjs"
+    mkdir -p "$out/npm-packages"
+    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''cp ${source} "$out/npm-packages/${p.file}"
+'') frontendPackages}
     ${lib.concatMapStrings (p: "cp ${p.source} \"$out/${p.file}\"\n") picoPackages}
   '';
 in
@@ -478,6 +558,7 @@ in
       cp ${phpRuntimes.core.dockerfile} "$out/Dockerfile"
       cp ${debianManifest} "$out/manifest.json"
       ${composerContext "core"}
+      ${nativeContext}
       ${lib.concatMapStrings (p: "cp ${p.source} \"$out/${p.file}\"\n") debianPackages}
     '';
     system.build.fireflyImporterRuntimeImageContext = pkgs.runCommand "firefly-importer-runtime-context" {} ''
@@ -485,6 +566,7 @@ in
       cp ${phpRuntimes.importer.dockerfile} "$out/Dockerfile"
       cp ${debianManifest} "$out/manifest.json"
       ${composerContext "importer"}
+      ${nativeContext}
       ${lib.concatMapStrings (p: "cp ${p.source} \"$out/${p.file}\"\n") debianPackages}
     '';
     system.build.fireflyPicoRuntimeImageContext = picoContext;

@@ -112,5 +112,10 @@
     "version": "3.12.16-r0",
     "repository": "main",
     "hash": "sha256-tJlo/w2Og3hwnU726i4xsue2mySUUgeyR7tr8IXuHc4="
+  },
+  {
+    "name": "patch",
+    "version": "2.8-r0",
+    "hash": "sha256-80CY3eZyoG17YBwS0uWFu/RzKS3QjX4KgemtJ5YhlqY="
   }
 ]

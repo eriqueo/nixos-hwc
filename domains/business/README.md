@@ -91,6 +91,17 @@ business/
 
 ## Changelog
 
+- 2026-11-02: Add ABI-matched PHP 8.5.12/libxml2 2.15.4/curl 8.23.0/ngtcp2
+  1.25.0 source rebuilds with offline upstream tests, neutral build-stage INI and loopback-only local test name
+  resolution in the network-isolated build.
+  Rebuild Pico’s Nuxt output with lock-derived fixed-hash npm inputs and the existing 1.10.1
+  public version, repair its calculator
+  and vendored Python archive libraries, and exercise their real consumers.
+  Give the existing app user ownership of the invalidated provider cache directory.
+  Extend wiring checks to cover input hashes, build/test calls and startup guards.
+  Exact app versions and serving configuration remain unchanged. Deployment is
+  owned by the parent and does not occur in this checkout.
+
 - 2026-11-02: Add fixed-hash signed-vendor OS package inventories and offline
   APT/APK installation to all three same-app finance contexts. Pin production
   Composer dependency repairs, replace `/usr/bin/composer` with 2.10.3, disable

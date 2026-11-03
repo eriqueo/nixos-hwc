@@ -11,6 +11,24 @@ Firefly III personal finance manager running as a Podman container, with optiona
 
 ## Structure
 
+`native-runtime-sources.json` and `native-build-packages.json` pin upstream
+sources and acquisition-verified Debian build dependencies.
+`pico-python-vendor-packages.json` pins two upstream wheels.
+`pico-python-vendor.py` replaces those vendored libraries and checks supervisor
+imports and archive traversal containment. `pico-frontend-cache.mjs` seeds the
+fixed npm cache; `pico-frontend-test.mjs` exercises the calculator.
+`native-runtime-build.sh` compiles and tests the libraries and the same PHP
+version in an isolated build stage. The final stage removes the old ABI
+libraries and copies only the new runtime binaries, libraries and provenance.
+
+
+`pico-front-package*.json` own the locked frontend inputs. `index.nix` derives
+the context’s `npm-packages.json` directly from the lock, so archive URLs and
+integrity values have one source. `pico-frontend.patch` preserves default exports and supplies
+named exports used by Nuxt auto-imports. The recipe rebuilds the real output
+with network access disabled and removes build dependencies afterwards.
+
+
 The three `*-composer.json` / `*-composer.lock` pairs define production-only
 Composer inputs. `composer-runtime-packages.json` pins each changed dist archive
 by URL and SHA256; `index.nix` rebuilds the offline cache. Install scripts and
@@ -27,8 +45,9 @@ keys before the first activation; replacing them invalidates existing tokens.
 
 `index.nix` owns temporary same-app PHP runtime recipes for all three finance
 containers. Core 6.6.6 and Importer 2.3.4 retain their application bytes and
-configuration outside Composer inputs/vendor dependencies; an immutable official Firefly image supplies PHP 8.5.12 and its
-matching extensions. `system.build.fireflyCoreRuntimeImageContext` and
+configuration outside Composer inputs/vendor dependencies; the native build compiles PHP 8.5.12 against current ABI-matched libraries.
+An immutable official Firefly donor supplies its configure options and matching
+shared extensions. `system.build.fireflyCoreRuntimeImageContext` and
 `system.build.fireflyImporterRuntimeImageContext` regenerate those contexts.
 Pico retains app 1.10.1 and upgrades its 23 installed PHP82 packages together
 to signed, fixed-hash Alpine 8.2.35-r0 packages in its offline context.
@@ -150,6 +169,17 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 - `firefly-explorer.service` — immutable explorer package; validates its token, Firefly account, UI assets, and tailscaled socket before serving. Every API request is authorized with Tailscale WhoIs. Split groups remain read-only; writes are limited to existing category/expense-account ids and existing tags.
 
 ## Changelog
+
+- 2026-11-02: Add ABI-matched PHP 8.5.12/libxml2 2.15.4/curl 8.23.0/ngtcp2
+  1.25.0 source rebuilds with offline upstream tests, neutral build-stage INI and loopback-only local test name
+  resolution in the network-isolated build.
+  Rebuild Pico’s Nuxt output with fixed-hash npm inputs and the existing 1.10.1
+  public version, repair its calculator
+  and vendored Python archive libraries, and exercise their real consumers.
+  Give the existing app user ownership of the invalidated provider cache directory.
+  Extend wiring checks to cover input hashes, build/test calls and startup guards.
+  Exact app versions and serving configuration remain unchanged. Deployment is
+  owned by the parent and does not occur in this checkout.
 
 - 2026-11-02: Add fixed-hash signed-vendor OS package inventories and offline
   APT/APK installation to all three same-app finance contexts. Pin production
