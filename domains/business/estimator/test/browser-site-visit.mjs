@@ -3,7 +3,6 @@ import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
-const key = 'local-browser-test';
 const mappings = JSON.parse(readFileSync(new URL('../src/data/jtMappings.json', import.meta.url), 'utf8'));
 const rates = JSON.parse(readFileSync(new URL('../src/data/tradeRates.json', import.meta.url), 'utf8'));
 const dev = spawn('npm', ['run', 'dev', '--', '--host', '127.0.0.1', '--port', '5189', '--strictPort'], { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -19,10 +18,6 @@ try {
  const prepared=JSON.parse(readFileSync(new URL('../src/data/preparedDraft.json',import.meta.url),'utf8'));
  const fresh=await browser.newContext({viewport:{width:390,height:900}});
  const ready=await fresh.newPage();
- await ready.addInitScript(()=>{
-   localStorage.setItem('hwc-webhook-base','https://example.test/webhook');
-   localStorage.setItem('hwc-api-key','test');
- });
  await ready.route('**/webhook/jt-customers?*',r=>r.fulfill({json:{customers:[{id:prepared.state.customerId,name:'Carrie'}]}}));
  await ready.route('**/webhook/jt-jobs?*',r=>r.fulfill({json:{jobs:[{id:prepared.state.jobId,name:prepared.state.jobName,number:411,displayName:'#411'}]}}));
  await ready.goto('http://127.0.0.1:5189/');
@@ -41,12 +36,9 @@ for (const width of [390,768,1440]) {
  const page = await context.newPage();
  const errors=[]; page.on('pageerror',e=>errors.push(e.message));
  await page.route(/\/api\/jobs\/[^/]+\/calculator-intake$/, route => route.fulfill({status:404,contentType:'application/json',body:'{}'}));
- await page.addInitScript(({key}) => {
+ await page.addInitScript(() => {
    if (!localStorage.getItem('hwc-estimate-state')) localStorage.setItem('hwc-estimate-state',JSON.stringify({projectType:'bathroom'}));
-   localStorage.setItem('hwc-webhook-base','https://hwc-work.ocelot-wahoo.ts.net/webhook');
-   localStorage.setItem('hwc-api-key',key);
-   localStorage.setItem('hwc-webhook-url','https://hwc-work.ocelot-wahoo.ts.net/webhook/estimate-push');
- },{key});
+ });
  await page.route('**/webhook/jt-customers?*', route => {
    const page2=new URL(route.request().url()).searchParams.get('page');
    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({version:1,customers:page2 ? [{id:'customer-test',name:'Site visit customer',locations:[]}] : [{id:'first',name:'First',locations:[]}],nextPage:page2 ? null:'page-two'})});
@@ -217,9 +209,6 @@ for (const width of [390,768,1440]) {
  const intakeContext = await browser.newContext({ viewport:{width,height:900}, ignoreHTTPSErrors:true, serviceWorkers:'block' });
  const intakePage = await intakeContext.newPage();
  const intakeErrors=[]; intakePage.on('pageerror',e=>intakeErrors.push(e.message));
- await intakePage.addInitScript(() => {
-   localStorage.setItem('hwc-webhook-base','https://test.invalid/webhook'); localStorage.setItem('hwc-api-key','fixture');
- });
  await intakePage.route('**/webhook/jt-customers?*', r=>r.fulfill({json:{customers:[{id:'c',name:'Calculator customer'}]}}));
  await intakePage.route('**/webhook/jt-jobs?*', r=>r.fulfill({json:{jobs:[{id:'job-carrie',name:'Bathroom',displayName:'#411 Bathroom',number:411},{id:'other',name:'Other',displayName:'#412 Other',number:412}]}}));
  const intake = { schema_version:1,jt_job_id:'job-carrie',lead_id:'fixture',calculator:'bathroom',report_id:'i682fxmu',rough_estimate:{low:20000,high:29000},
@@ -285,9 +274,6 @@ for (const width of [390,768,1440]) {
    const legacy = JSON.stringify({state_version:2,projectType:'bathroom',mode:'existing',jobId:'floor-test',customerId:'floor-customer',jobName:'Flooring fixture',calculator_input_status:'none'});
    await page.addInitScript(legacy=>{
      if (!localStorage.getItem('hwc-estimate-state')) localStorage.setItem('hwc-estimate-state',legacy);
-     localStorage.setItem('hwc-webhook-base','https://example.test/webhook');
-     localStorage.setItem('hwc-webhook-url','https://example.test/webhook/estimate-push');
-     localStorage.setItem('hwc-api-key','fixture');
    },legacy);
    await page.route('**/webhook/jt-customers?*',r=>r.fulfill({json:{customers:[{id:'floor-customer',name:'Flooring fixture'}]}}));
    await page.route('**/webhook/jt-jobs?*',r=>r.fulfill({json:{jobs:[{id:'floor-test',name:'Flooring fixture',number:1,displayName:'#1'},{id:'other-floor',name:'Other fixture',number:2,displayName:'#2'}]}}));
@@ -446,7 +432,6 @@ for (const width of [390,768,1440]) {
    assert.equal(kind==='bathroom'?payload.projectState.bathroom_length_ft:payload.projectState.deck_length_ft,kind==='bathroom'?9.5:16);
    const received={preliminary_budget:{schema_version:1,state:'completed',quote_hold:true,budget_group_id:'fixture-budget'},schema_version:1,calculator:kind,answers:payload.projectState,rough_estimate:payload.estimate,report_id:'contract-report',lead_id:'fixture',jt_job_id:'contract-job'};
    await page.addInitScript(kind=>{
-     localStorage.setItem('hwc-webhook-base','https://example.test/webhook');localStorage.setItem('hwc-api-key','test');
      localStorage.setItem('hwc-estimate-state',JSON.stringify({projectType:kind,mode:'existing',jobId:'contract-job',customerId:'fixture',touched_fields:[]}));
    },kind);
    await page.route('**/webhook/jt-customers?*',r=>r.fulfill({json:{customers:[{id:'fixture',name:'Contract fixture'}]}}));

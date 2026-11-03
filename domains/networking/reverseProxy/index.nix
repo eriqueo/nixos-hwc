@@ -214,6 +214,35 @@ let
   # hole — served behind a single wildcard cert (*.<vhostDomain>) via ACME DNS-01.
   vhostRoutes = lib.filter (r: (r.mode or "") == "vhost") routes;
 
+  # Static apps share the route table with their exact API handlers. Secrets
+  # use Caddy runtime placeholders in headers, never Nix/build-time reads.
+  renderApiRoute = name: index: api:
+    let id = "${name}_api_${toString index}";
+    in ''
+      @${id} path ${concatStringsSep " " api.paths}
+      handle @${id} {
+        header Cache-Control "no-store"
+        ${lib.optionalString (api ? methods) ''
+          @${id}_method not method ${concatStringsSep " " api.methods}
+          respond @${id}_method "Method not allowed" 405
+        ''}
+        ${lib.optionalString (api ? origin) ''
+          @${id}_foreign_origin {
+            header Origin *
+            not header Origin ${api.origin}
+          }
+          respond @${id}_foreign_origin "Origin not allowed" 403
+          @${id}_cross_site header_regexp Sec-Fetch-Site ^(cross-site|same-site)$
+          respond @${id}_cross_site "Origin not allowed" 403
+          ${lib.optionalString (api.requireOrigin or false) ''
+            @${id}_missing_origin not header Origin ${api.origin}
+            respond @${id}_missing_origin "Origin required" 403
+          ''}
+        ''}
+        ${mkProxyBlock api}
+      }
+    '';
+
   renderVhostRoute = r:
     let
       # An owner is the one host with the local backend. Legacy Caddy hosts
@@ -233,27 +262,20 @@ let
           # Static file server (CORS-enabled for cross-origin embedding).
           # Only hashed build assets are cached immutably; the SPA/PWA shell and
           # generated data files revalidate so updates are picked up.
-          header Access-Control-Allow-Origin "*"
-          header Access-Control-Allow-Methods "GET, OPTIONS"
-          header Access-Control-Allow-Headers "Content-Type"
           header /assets/* Cache-Control "public, max-age=31536000, immutable"
           ${if (r ? api) then ''
-          # Same-origin API proxy (optional `api = { path; upstream; }` on a
-          # static vhost) — lets a served SPA call a loopback service without
-          # CORS or a second vhost. The static half sits in a sibling catch-all
-          # handle: bare try_files is a REWRITE and would run before `handle`
-          # in Caddy's directive order, turning POST ${r.api.path} into
-          # /index.html (file_server → 405). Sibling handles are mutually
-          # exclusive and most-specific-path wins, which is what we want.
-          handle ${r.api.path}* {
-            reverse_proxy ${r.api.upstream}
-          }
+          # Mutually exclusive handles keep SPA rewriting out of API requests.
+          ${concatStringsSep "\n" (lib.imap0 (renderApiRoute r.name) r.api)}
           handle {
+            header Access-Control-Allow-Origin "*"
             root * ${r.root}
             try_files {path} /index.html
             file_server
           }
           '' else ''
+          header Access-Control-Allow-Origin "*"
+          header Access-Control-Allow-Methods "GET, OPTIONS"
+          header Access-Control-Allow-Headers "Content-Type"
           root * ${r.root}
           try_files {path} /index.html
           file_server

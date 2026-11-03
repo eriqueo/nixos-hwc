@@ -1,11 +1,8 @@
-import { fetchPreliminaryBudget, automaticBudgetBlocks } from '../api/crm.js';
+import { ESTIMATOR_WEBHOOK, fetchPreliminaryBudget, automaticBudgetBlocks } from '../api/crm.js';
 import { useState, useRef } from 'react';
 import { C, GROUP_COLORS, mono } from '../styles/theme.js';
 import { Box } from './Section.jsx';
 import { buildProjectParameters, buildJtItems, estimateIssues } from '../engine/assembler.js';
-
-const WEBHOOK_URL = import.meta.env.VITE_WEBHOOK_URL ?? localStorage.getItem('hwc-webhook-url') ?? '';
-const API_KEY = import.meta.env.VITE_API_KEY ?? localStorage.getItem('hwc-api-key') ?? '';
 
 const COL = '1fr 54px 70px 70px 80px 80px 30px';
 
@@ -49,8 +46,6 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
 
   const pushToWebhook = async () => {
     if (inFlight.current) return;
-    if (!WEBHOOK_URL) { setPushMsg('no-url'); return; }
-    if (!API_KEY) { setPushMsg('no-key'); return; }
     if (!canPush()) { setPushMsg('no-job'); return; }
 
     // Fresh job-scoped ownership check also covers manual entry and stale drafts.
@@ -123,11 +118,10 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
         timestamp: new Date().toISOString(),
       };
 
-      const response = await fetch(WEBHOOK_URL, {
+      const response = await fetch(ESTIMATOR_WEBHOOK, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': API_KEY,
         },
         body: JSON.stringify(payload),
       });
@@ -375,8 +369,6 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
         <p>This draft already attempted a send to this job. Check JobTread for saved items before sending again.</p>
         <button onClick={() => set('last_push_attempt', null)}>I reviewed JobTread; allow another send</button>
       </div>}
-      {pushMsg === 'no-url' && <StatusBox>No webhook URL. Set <code>VITE_WEBHOOK_URL</code> or localStorage.</StatusBox>}
-      {pushMsg === 'no-key' && <StatusBox>No API key. Set <code>VITE_API_KEY</code> or localStorage.</StatusBox>}
       {pushMsg === 'no-job' && <StatusBox>Select a job, or fill in new job/customer details in Scope tab.</StatusBox>}
 
       {pushResult && (

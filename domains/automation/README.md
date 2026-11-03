@@ -14,6 +14,8 @@ readme-freshness weekly Law-12 drift report.
 
 ## Structure
 
+Estimator integration documentation contains placeholders only. The server proxy owns the shared webhook credential; browser builds never receive it.
+
 `n8n/` preserves reviewed2.46.1 in a fixed-hash Brotli/curl repair recipe; offline migration and credential checks use an
 isolated SQLite copy with workflows disabled before production activation.
 
@@ -93,6 +95,8 @@ workspace/automation/
 ```
 
 ## Changelog
+
+- 2026-11-02: Remove the disclosed estimator credential from current historical setup documents and document server-side injection.
 
 - 2026-11-02: Add n8n's same-app OS repair context after isolated database/key
   read, decrypt, startup and old-image recovery checks.

@@ -11,7 +11,7 @@
 - [x] All indexes created
 
 ### Phase 2: Secrets & Credentials
-- [x] Generated API key: `T8SLQ1N8wxg9tlwRa8FG1p17ZDUj3w1NwBKVVwQVxWQ=`
+- [x] Generated API key: `<server-side runtime credential>`
 - [x] Added ESTIMATOR_API_KEY to n8n config (`profiles/monitoring.nix`)
 
 ### Phase 3: Import Workflows
@@ -61,17 +61,17 @@ Access: https://hwc-server.ocelot-wahoo.ts.net:2443
 ### 5. Test Endpoints
 ```bash
 # Test customers endpoint
-curl -H "x-api-key: T8SLQ1N8wxg9tlwRa8FG1p17ZDUj3w1NwBKVVwQVxWQ=" \
+curl -H "x-api-key: <server-side runtime credential>" \
   https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/jt-customers
 
 # Test jobs endpoint
-curl -H "x-api-key: T8SLQ1N8wxg9tlwRa8FG1p17ZDUj3w1NwBKVVwQVxWQ=" \
+curl -H "x-api-key: <server-side runtime credential>" \
   "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/jt-jobs?customerId={uuid}"
 
 # Test estimate push
 curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/estimate-push \
   -H "Content-Type: application/json" \
-  -H "x-api-key: T8SLQ1N8wxg9tlwRa8FG1p17ZDUj3w1NwBKVVwQVxWQ=" \
+  -H "x-api-key: <server-side runtime credential>" \
   -d '{"action":"push_estimate","mode":"existing","jobId":"xxx","jtPayload":[],"totals":{}}'
 ```
 

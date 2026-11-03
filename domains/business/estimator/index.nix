@@ -3,7 +3,7 @@
 # Heartwood Estimate Assembler — Static React PWA
 # NAMESPACE: hwc.business.estimator.*
 #
-# Build service reads source from the Nix store, injects secrets at build time,
+# Build service reads source from the Nix store, without browser credentials,
 # and deploys to a versioned directory with atomic symlink swap.
 #
 # Rebuild:   estimator-build   (shell alias for systemctl start)
@@ -14,7 +14,11 @@
 { config, lib, pkgs, ... }:
 let
   cfg  = config.hwc.business.estimator;
-  root = config.hwc.networking.shared.rootHost;
+  webhookBase = "/webhook";
+  webhookUrl = "${webhookBase}/estimate-push";
+  origin = "https://estimator.${config.hwc.networking.shared.vhostDomain}";
+  upstream = "http://127.0.0.1:${toString config.hwc.automation.n8n.port}";
+  apiHeaders = { "x-api-key" = "{file.${config.hwc.secrets.api.estimator-api-key}}"; };
 
   # ── Source as Nix store input ──────────────────────────────────────────────
   # Filtered copy: excludes node_modules, dist, .env files.
@@ -37,8 +41,7 @@ let
     runtimeInputs = with pkgs; [ nodejs_22 rsync coreutils findutils bash ];
     text = ''
       source_dir="${appSource}"
-      webhook_url="${cfg.webhookUrl}"
-      api_key_file="${cfg.apiKeyFile}"
+      webhook_url="${webhookUrl}"
       workdir="/var/lib/estimator-build/app"
       servedir="/var/lib/estimator"
       builds_dir="$servedir/builds"
@@ -62,12 +65,10 @@ let
         --exclude='node_modules' --exclude='dist' --exclude='.env*' \
         "$source_dir/" "$workdir/"
 
-      # ── 4. Write ephemeral .env.production ────────────────────────────
-      api_key="$(cat "$api_key_file")"
-      {
-        printf 'VITE_WEBHOOK_URL=%s\n' "$webhook_url"
-        printf 'VITE_API_KEY=%s\n' "$api_key"
-      } > "$workdir/.env.production"
+      # No credentials enter Vite or the public build. Remove the config on
+      # failure as well as success; drafts live in the browser, not here.
+      trap 'rm -f "$workdir/.env.production"' EXIT
+      printf 'VITE_WEBHOOK_URL=%s\n' "$webhook_url" > "$workdir/.env.production"
 
       # ── 5. Install deps (only if lockfile changed) ────────────────────
       lock_hash="$( { sha256sum "$workdir/package-lock.json"; node --version; } | sha256sum | cut -d' ' -f1)"
@@ -123,21 +124,15 @@ in {
       description = "Tailscale HTTPS port to expose the app on.";
     };
 
-    webhookUrl = lib.mkOption {
-      type        = lib.types.str;
-      default     = "";
-      description = "n8n webhook URL injected as VITE_WEBHOOK_URL at build time.";
-    };
-
-    apiKeyFile = lib.mkOption {
-      type        = lib.types.path;
-      description = "Path to file containing the API key (read at build time, baked into bundle).";
-      example     = "/run/agenix/estimator-api-key";
-    };
   };
 
   # ── IMPLEMENTATION ────────────────────────────────────────────────────────
   config = lib.mkIf cfg.enable {
+    assertions = [{
+      assertion = config.hwc.secrets.api ? "estimator-api-key"
+        && config.hwc.automation.n8n.enable;
+      message = "Estimator requires the server-side estimator credential and local n8n.";
+    }];
     # Caddy name-based vhost: estimator.<vhostDomain> serves the PWA from the
     # build symlink, under the shared wildcard cert. The vhost static renderer
     # caches hashed /assets/* immutably and revalidates the PWA shell.
@@ -146,7 +141,22 @@ in {
       mode = "vhost";
       root = "/var/lib/estimator/dist";
       # Tailnet-only, same-origin calculator intake. Public ingress unchanged.
-      api = { path = "/api/jobs/"; upstream = "http://127.0.0.1:${toString config.hwc.business.crm.port}"; };
+      api = [
+        { paths = [ "/api/jobs/*" ]; upstream = "http://127.0.0.1:${toString config.hwc.business.crm.port}"; }
+        {
+          paths = [ "${webhookBase}/jt-customers" "${webhookBase}/jt-jobs" ];
+          methods = [ "GET" ];
+          inherit origin upstream;
+          headers = apiHeaders;
+        }
+        {
+          paths = [ webhookUrl ];
+          methods = [ "POST" ];
+          requireOrigin = true;
+          inherit origin upstream;
+          headers = apiHeaders;
+        }
+      ];
     }];
 
     # Open the port in the firewall (Tailscale interface only)
@@ -154,9 +164,9 @@ in {
 
     # Build service — manual trigger only
     systemd.services.estimator-build = {
-      description = "Build Heartwood Estimator PWA with baked-in secrets";
-      after = [ "agenix.service" "network-online.target" ];
-      wants = [ "agenix.service" "network-online.target" ];
+      description = "Build Heartwood Estimator PWA";
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
       # No wantedBy — manual trigger via: systemctl start estimator-build
       serviceConfig = {
         Type = "oneshot";

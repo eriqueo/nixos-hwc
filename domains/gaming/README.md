@@ -11,6 +11,8 @@ Gaming services including retro emulation (RetroArch) and WebDAV-based save sync
 
 ## Structure
 
+`retroarch/stream-session.py` discovers only exact Sunshine virtual-device names and vendor/product IDs. Both legacy passthrough and current libvirtualhid identities map to keyboard/relative mouse roles; duplicates fail and physical/absolute devices stay excluded.
+
 `index.nix` also owns the optional shared Steam/Proton-GE runtime. GPU drivers
 and each user’s Steam credentials/library remain outside this capability.
 `steam.gpuOffload` runs Steam and its games on the NVIDIA dGPU of a PRIME
@@ -140,6 +142,8 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+
+- 2026-11-02: Accept current Sunshine libvirtualhid identities in readiness and the Xvfb input bridge, using one guarded discovery path.
 - 2026-11-02: Recover library navigation when modal closure leaves focus on the X11 root window; retain focus in owned app/dialog windows.
 - 2026-11-02: Generate distinct Pro Controller profiles for players 1 and 2 without changing Pikachu's handheld settings.
 - 2026-11-02: Detect game-to-library transitions and restore Qt activation even when the X11 focus ID remains valid.

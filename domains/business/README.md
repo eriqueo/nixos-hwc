@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+`estimator/` serves its PWA without browser credentials. Exact private webhook handlers inject a runtime agenix credential; existing CRM job-intake routes remain separate.
+
 The website backend defers access logging to the networking tunnel logger when
 enabled, avoiding duplicate raw query/capability records.
 
@@ -81,6 +83,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-02: Move estimator credentials out of the browser and keep public estimator webhooks blocked.
 
 - 2026-11-01: Defer public website access logging to the sanitized origin logger.
 

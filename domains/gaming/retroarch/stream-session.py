@@ -31,6 +31,34 @@ PULSE = '@pulse@'
 OPENBOX = '@openbox@'
 SUN = '@sunshine@'
 
+# Sunshine switched to libvirtualhid names/IDs. Keep the previous release's
+# exact identity too; physical devices and the absolute mouse remain excluded.
+VIRTUAL_INPUT_DEVICES = {
+    'Keyboard passthrough': ('keyboard', 'beef', 'dead'),
+    'Mouse passthrough': ('mouse', 'beef', 'dead'),
+    'libvirtualhid Keyboard': ('keyboard', '1209', '0002'),
+    'libvirtualhid Mouse': ('mouse', '1209', '0003'),
+}
+
+
+def virtual_input_devices(sysfs, devfs):
+    paths = {}
+    for candidate in sysfs.glob('event*/device/name'):
+        try:
+            identity = VIRTUAL_INPUT_DEVICES.get(candidate.read_text().strip())
+            if identity is None:
+                continue
+            role, vendor, product = identity
+            device = candidate.parent
+            if (device/'id/vendor').read_text().strip() != vendor or (device/'id/product').read_text().strip() != product:
+                continue
+        except FileNotFoundError:
+            continue  # A hot-unplug is not a valid input device.
+        if role in paths:
+            raise RuntimeError('Ambiguous virtual input devices')
+        paths[role] = devfs/device.parent.name
+    return paths
+
 
 def stream_endpoint(config):
     values = {}
@@ -296,8 +324,7 @@ def run():
         children.append(subprocess.Popen([OPENBOX,'--sm-disable'],env=env))
         children.append(subprocess.Popen([SUN,sys.argv[2]],env=env))
         for _ in range(50):
-            names={p.read_text().strip() for p in Path('/sys/class/input').glob('event*/device/name')}
-            if {'Keyboard passthrough','Mouse passthrough'} <= names:
+            if set(virtual_input_devices(Path('/sys/class/input'), Path('/dev/input'))) == {'keyboard', 'mouse'}:
                 break
             if any(p.poll() is not None for p in children):
                 raise RuntimeError('A pilot dependency failed before input initialization')
@@ -384,14 +411,7 @@ def launch_game(runtime):
 
 def input_bridge():
     # Permanent by design: Xvfb lacks evdev input; forward only Sunshine's named virtual devices.
-    paths = {}
-    for candidate in Path('/sys/class/input').glob('event*/device/name'):
-        name=candidate.read_text().strip()
-        device=candidate.parent
-        if name in ['Keyboard passthrough','Mouse passthrough'] and (device/'id/vendor').read_text().strip()=='beef' and (device/'id/product').read_text().strip()=='dead':
-            if name in paths:
-                raise RuntimeError('Ambiguous virtual input devices')
-            paths[name]=Path('/dev/input')/device.parent.name
+    paths = virtual_input_devices(Path('/sys/class/input'), Path('/dev/input'))
     if len(paths)!=2:
         raise RuntimeError('Expected Sunshine keyboard and relative mouse devices')
     x=ctypes.CDLL('@libx11@/lib/libX11.so.6')
@@ -419,7 +439,7 @@ def input_bridge():
                 if not data or len(data)%event.size:
                     raise RuntimeError('Virtual input stream closed or malformed')
                 for _,_,kind,code,value in event.iter_unpack(data):
-                    if kind==1 and code<256 and key.data=='Keyboard passthrough' and value in [0,1]:
+                    if kind==1 and code<256 and key.data=='keyboard' and value in [0,1]:
                         t.XTestFakeKeyEvent(display,code+8,value,0)
                         if value:pressed.add(code+8)
                         else:pressed.discard(code+8)

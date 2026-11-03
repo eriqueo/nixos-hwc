@@ -68,9 +68,15 @@ let
   };
   opensslVersion = "3.0.2-0ubuntu1.30"; # Ubuntu USN-8847-1, Jammy backports
   caCertificatesVersion = "20260816ubuntu0.22.04.1";
-  # Ubuntu's CA update still trusts C1/C3. The existing system policy owns the
-  # exclusions; translate its labels to the distro's existing config format.
-  caPolicy = builtins.toJSON config.security.pki.caCertificateBlacklist;
+  # This pinned Ubuntu bundle still trusts these compromised roots after the
+  # host's newer NSS bundle has removed them. Keep the legacy-container policy
+  # here; an empty host blacklist is not proof about this separate trust store.
+  # Remove when the upstream base passes caPolicyCheck without this filter.
+  caPolicy = builtins.toJSON [
+    "emSign ECC Root CA - G3"
+    "emSign Root CA - C1"
+    "emSign ECC Root CA - C3"
+  ];
   caPolicyScript = "from pathlib import Path; import json,sys; p=Path('/etc/ca-certificates.conf'); blocked={'mozilla/'+n.replace(' ','_')+'.crt' for n in json.loads(sys.argv[1])}; p.write_text(''.join('!'+l if l.strip() in blocked else l for l in p.read_text().splitlines(True)))";
   caPolicyCheck = "import ssl,json,sys,certifi; blocked=set(json.loads(sys.argv[1])); roots=lambda p:{v for c in ssl.create_default_context(cafile=p).get_ca_certs() for row in c['subject'] for k,v in row if k=='commonName'}; assert all(not roots(p)&blocked for p in [certifi.where(),'/etc/ssl/certs/ca-certificates.crt']), 'blocked root remains trusted'";
   mlRuntimeRecipe = "# Pillow Brotli ${pillowBrotli} sha256:${brotli.sha256}\n" + ''

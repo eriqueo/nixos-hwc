@@ -142,17 +142,20 @@ assert.throws(() => parseDraft({ ...migrated, custom_items: {} }));
 console.log('PASS legacy draft migration and import validation');
 const { fetchCrmList } = await import('../src/api/crm.js');
 const requests=[];
-const request = async url => {
+const request = async (url, options) => {
+ assert.equal(options.headers, undefined, "browser must send no credential");
+ assert.equal(options.cache, "no-store");
+ assert.ok(url.startsWith("/webhook/jt-"), "API must stay same-origin");
  requests.push(url);
- const second = new URL(url).searchParams.get('page') === 'cursor & two';
+ const second = new URL(url, "https://estimator.test").searchParams.get('page') === 'cursor & two';
  return { ok:true, json:async () => ({ customers: second ? [{ id:'carrie', name:'Carrie' }] : [{ id:'first', name:'First' }], nextPage:second ? null:'cursor & two' }) };
 };
-const customers=await fetchCrmList({base:'https://example.test/webhook',key:'test',resource:'customers',signal:new AbortController().signal,request});
+const customers=await fetchCrmList({resource:'customers',signal:new AbortController().signal,request});
 assert.ok(customers.some(c=>c.id==='carrie')); assert.equal(requests.length,2);
-await assert.rejects(fetchCrmList({base:'https://example.test',key:'test',resource:'customers',signal:new AbortController().signal,
+await assert.rejects(fetchCrmList({resource:'customers',signal:new AbortController().signal,
  request:async()=>({ok:false,status:401})}), /401/);
 console.log('PASS paged CRM list and HTTP error handling');
-const jobs = await fetchCrmList({base:'https://example.test',key:'test',resource:'jobs',signal:new AbortController().signal,
+const jobs = await fetchCrmList({resource:'jobs',signal:new AbortController().signal,
  request:async()=>({ok:true,json:async()=>({jobs:[{id:'new',name:'Zulu'},{id:'old',name:'Alpha'}]})})});
 assert.deepEqual(jobs.map(j=>j.id),['new','old'],'keep server job order');
 const workflow=JSON.parse(readFileSync(new URL('../../../automation/n8n/parts/workflows/08a-jt-data-provider.json',import.meta.url),'utf8'));

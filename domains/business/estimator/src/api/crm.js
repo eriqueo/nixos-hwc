@@ -1,3 +1,7 @@
+// Relative same-origin route; Caddy supplies the credential at runtime.
+export const ESTIMATOR_WEBHOOK = import.meta.env?.VITE_WEBHOOK_URL || '/webhook/estimate-push';
+const WEBHOOK_BASE = ESTIMATOR_WEBHOOK.slice(0, ESTIMATOR_WEBHOOK.lastIndexOf('/'));
+
 // Shared calculator -> estimator contract. Feet and counts are customer reports,
 // never site verification. The public calculator imports this same vocabulary.
 export const CALCULATOR_INPUT_VERSION = 2;
@@ -110,15 +114,15 @@ function parsePreliminaryStatus(budget) {
   if (budget !== null && (!budget || budget.schema_version !== 1 || !['pending','reserved','completed','failed','uncertain','skipped'].includes(budget.state) || budget.quote_hold !== true)) throw Error('Automatic budget status has an unsupported format. Reload before sending.');
 }
 
-export async function fetchCrmList({ base, key, resource, params = {}, signal, request = fetch }) {
+export async function fetchCrmList({ resource, params = {}, signal, request = fetch }) {
   const rows = new Map();
   let page;
   const cursors = new Set();
   for (let count = 0; count < 20; count++) {
     const query = new URLSearchParams(params);
     if (page) query.set('page', page);
-    const response = await request(`${base}/jt-${resource}?${query}`, {
-      headers: { 'x-api-key': key }, signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]),
+    const response = await request(`${WEBHOOK_BASE}/jt-${resource}?${query}`, {
+      cache: 'no-store', signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]),
     });
     if (!response.ok) throw new Error(`CRM request failed (${response.status})`);
     const data = await response.json();

@@ -7,7 +7,7 @@
 - Created `estimates` table with all indexes in `hwc` database
 
 ### Configuration
-- Generated API key: `T8SLQ1N8wxg9tlwRa8FG1p17ZDUj3w1NwBKVVwQVxWQ=`
+- Generated API key: `<server-side runtime credential>`
 - Added `ESTIMATOR_API_KEY` to n8n config in `profiles/monitoring.nix`
 - Created `.env` file in heartwood-assembler with VITE_WEBHOOK_URL and VITE_API_KEY
 

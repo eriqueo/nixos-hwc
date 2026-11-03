@@ -68,6 +68,8 @@ Material markup: cost x 1.429
 
 ## Structure
 
+The private estimator origin proxies exact customer/job reads and estimate writes. Caddy reads `estimator-api-key` at runtime and overwrites client keys. The PWA carries no API credential. Foreign Origin/Fetch Metadata and wrong methods are rejected; writes require the exact estimator Origin. Public tunnel routes stay blocked. Existing `/api/jobs/*` reads and local drafts are preserved.
+
 ```
 domains/business/estimator/
 ├── index.nix              # NixOS module: build service, Caddy, firewall
@@ -125,8 +127,6 @@ domains/business/estimator/
 hwc.business.estimator = {
   enable     = true;
   port       = 13443;
-  webhookUrl = "https://hwc-server.ocelot-wahoo.ts.net/webhook/estimate-push";
-  apiKeyFile = config.age.secrets.estimator-api-key.path;
 };
 ```
 
@@ -137,7 +137,7 @@ hwc.business.estimator = {
 python3 ~/.nixos/domains/business/databases/export_estimator_data.py
 
 # After changing app source, nixos-rebuild first (Nix store source):
-sudo nixos-rebuild switch --flake ~/.nixos#hwc-server
+sudo nixos-rebuild switch --flake ~/.nixos#hwc-work
 sudo systemctl start estimator-build
 
 # Force rebuild (bypass hash check):
@@ -186,6 +186,8 @@ and is NOT a refactor gate.
 
 ## Changelog
 
+- 2026-11-02: Remove browser credentials; use exact same-origin proxy routes with runtime key injection and origin/method guards. Preserve paging, draft recovery and manual write locks; rebuild tracked assets.
+
 - 2026-10-09: Preliminary plan lines carry `needsConfirmation` unless every input to their quantity traces to calculator answers (`geometry.js` `DERIVED_INPUTS` maps derived keys to raw inputs). Fixed quantities, template/preset inputs, fallbacks and allowances are marked; the CRM writes the mark to JobTread's `Needs Confirmation` cost item field.
 
 - 2026-10-09: Deck calculator categories become rough dimensions where the customer gave no number: size → the calculator's own sq ft at a 2:3 footprint, height band → midpoint, stairs → treads at a 7.5" rise, a chosen railing → the exposed edge. Each is a "verify on site" assumption; customer numbers win. Taylor Chernock's XL L-shaped deck had priced as the 12×10 template with no railing ($11.3k against a $39–72k calculator range).
@@ -208,6 +210,6 @@ and is NOT a refactor gate.
 - 2026-06-12: Golden-master parity oracle — `test/golden/*.json` snapshots for all 8 templates captured from the live engine, strict runner `test/golden-master.test.js` (exit 1 on diff, `--update` / `--perturb` modes), `test:golden` npm script. Safety net for estimator refactor steps 02–04.
 - 2026-06-09: Access moved from the bespoke `services.caddy.extraConfig` PWA block on tailnet port `:13443` to a `vhost` route `estimator.hwc.iheartwoodcraft.com` under the shared `*.hwc.iheartwoodcraft.com` wildcard cert. PWA cache behaviour preserved by the vhost renderer's assets-only-immutable policy. See `domains/networking/README.md`.
 - 2026-05-01: Bottom-up pricing engine — Job #306 rates, Craftsman production rates, 8 new scope items, deck assembler, templates, MCP tools, DB export pipeline
-- 2026-04-22: NixOS-managed build service with baked-in secrets, versioned deploys
+- 2026-04-22: Initial NixOS-managed build service (browser credential injection removed2026-11-02), versioned deploys
 - 2026-03-25: Created README per Law 12
 - 2026-03-23: Moved from webapps domain into business domain

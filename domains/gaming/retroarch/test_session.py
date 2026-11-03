@@ -17,6 +17,25 @@ spec.loader.exec_module(session)
 
 
 class SessionTests(unittest.TestCase):
+    def test_virtual_input_accepts_release_identities_and_rejects_other_devices(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            def device(number, name, vendor, product):
+                base = root/f'event{number}'/'device'
+                (base/'id').mkdir(parents=True)
+                for field, value in [('name',name), ('id/vendor',vendor), ('id/product',product)]:
+                    (base/field).write_text(value)
+            device(1, 'libvirtualhid Keyboard', '1209', '0002')
+            device(2, 'libvirtualhid Mouse', '1209', '0003')
+            device(3, 'libvirtualhid Mouse (Absolute)', '1209', '0003')
+            device(4, 'Keyboard passthrough', '1234', 'dead')
+            self.assertEqual(session.virtual_input_devices(root, Path('/dev/input')),
+                {'keyboard':Path('/dev/input/event1'), 'mouse':Path('/dev/input/event2')})
+            # Old and new devices together are ambiguous, never silently chosen.
+            device(5, 'Keyboard passthrough', 'beef', 'dead')
+            with self.assertRaisesRegex(RuntimeError, 'Ambiguous'):
+                session.virtual_input_devices(root, Path('/dev/input'))
+
     def test_busy_game_rejects_before_media_or_child_effects(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
@@ -99,6 +118,7 @@ class SessionTests(unittest.TestCase):
             with patch.object(session, 'BASE', base), patch.object(session, 'RUNTIME', base), \
                  patch.object(session, 'catalog', return_value={}), \
                  patch.object(session, 'prepare_controllers'), \
+                 patch.object(session, 'virtual_input_devices', return_value={'keyboard':Path('/dev/input/event1'),'mouse':Path('/dev/input/event2')}), \
                  patch.object(session, 'wait_for_address'), \
                  patch.object(session, 'wait_for_listener', side_effect=RuntimeError('STREAM_NOT_READY')) as listener, \
                  patch.object(session, 'notify_ready', side_effect=RuntimeError('UNEXPECTED_READY')) as notify, \

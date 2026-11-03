@@ -18,6 +18,8 @@ Provides network infrastructure that other domains depend on:
 
 ## Structure
 
+Static vhosts declare API handlers as a list of exact path patterns, upstreams, optional methods, Origin requirements and upstream headers. API handlers and SPA files are mutually exclusive; runtime secret-file placeholders never enter the browser bundle.
+
 The public n8n origin admits only the Quo receiver retained by Eric. Estimator
 customer/job reads and estimate writes stay on their configured tailnet URL.
 The reverse proxy builds the deSEC DNS plugin against the channel's Caddy release; its dependency hash changes with the vendor closure.
@@ -95,6 +97,8 @@ networking/
 ```
 
 ## Changelog
+
+- 2026-11-02: Extend the sole static API route owner for estimator reads/writes; verify actual rendered Caddy guards, runtime key reload and CRM/static parity, including a seeded missing-handler failure.
 
 - 2026-11-02: Remove public estimator webhook routes after verifying the PWA's
   configured tailnet destination. Quo remains public by Eric's instruction.

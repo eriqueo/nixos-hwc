@@ -976,6 +976,122 @@
         touch $out
       '';
 
+      estimator-private-api = let
+        c = self.nixosConfigurations.hwc-work.config;
+        route = lib.findFirst (r: r.name == "estimator") null c.hwc.networking.shared.effectiveRoutes;
+        fixture = pkgs.writeText "estimator-private-api.json" (builtins.toJSON {
+          caddy = c.services.caddy.extraConfig;
+          inherit route;
+          origin = "https://estimator.${c.hwc.networking.shared.vhostDomain}";
+          secret = c.hwc.secrets.api.estimator-api-key;
+          build = c.systemd.services.estimator-build.serviceConfig.ExecStart;
+        });
+      in pkgs.runCommand "estimator-private-api" {
+        nativeBuildInputs = [ pkgs.python3 c.services.caddy.package ];
+      } ''
+        python3 - ${fixture} <<'PY'
+        import http.server, json, pathlib, socket, subprocess, sys, tempfile, threading, time
+        import urllib.request, urllib.error
+        f = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        # Exercise the real rendered handler, not a copy of its policy.
+        marker = '@estimator host '
+        start = f['caddy'].index(marker)
+        opening = f['caddy'].index('{', f['caddy'].index('handle @estimator {', start))
+        depth, end = 1, opening + 1
+        while depth:
+            depth += (f['caddy'][end] == '{') - (f['caddy'][end] == '}')
+            end += 1
+        handler = f['caddy'][start:end]
+        script = pathlib.Path(f['build']).read_text()
+        assert 'VITE_API_KEY' not in script and f['secret'] not in script
+        assert 'VITE_WEBHOOK_URL' in script
+        seen = []
+        class Backend(http.server.BaseHTTPRequestHandler):
+            def do_GET(self): self.reply()
+            def do_POST(self): self.reply()
+            def reply(self):
+                n = int(self.headers.get('Content-Length', '0'))
+                seen.append((self.command, self.path, self.headers.get('x-api-key'), self.rfile.read(n)))
+                self.send_response(200); self.send_header('Content-Type', 'application/json')
+                self.end_headers(); self.wfile.write(b'{"ok":true}')
+            def log_message(self, *_): pass
+        backend = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Backend)
+        threading.Thread(target=backend.serve_forever, daemon=True).start()
+        def free_port():
+            with socket.socket() as s:
+                s.bind(('127.0.0.1', 0)); return s.getsockname()[1]
+        with tempfile.TemporaryDirectory() as tmp:
+            p = pathlib.Path(tmp); secret = p / 'key'; secret.write_text('fixture-key-one')
+            (p / 'index.html').write_text('estimator fixture')
+            handler = handler.replace(f['route']['root'], str(p)).replace(f['secret'], str(secret))
+            for api in f['route']['api']:
+                handler = handler.replace(api['upstream'], 'http://127.0.0.1:' + str(backend.server_port))
+            host = f['origin'].removeprefix('https://')
+            def exercise(text, seeded=False):
+                port = free_port(); cfg = p / 'Caddyfile'
+                cfg.write_text('{ admin off\n auto_https off }\nhttp://127.0.0.1:' + str(port) + ' {\n' + text + '\n}\n')
+                adapted = subprocess.run(['caddy','adapt','--adapter','caddyfile','--config',str(cfg)], capture_output=True, check=True)
+                assert b'fixture-key-one' not in adapted.stdout, 'credential entered adapted config'
+                out = p / 'config.json'; out.write_bytes(adapted.stdout)
+                with (p/'caddy.log').open('w') as log:
+                    proc = subprocess.Popen(['caddy','run','--config',str(out)], stdout=log, stderr=log)
+                    try:
+                        for _ in range(100):
+                            try:
+                                with socket.create_connection(('127.0.0.1', port), timeout=.1): break
+                            except OSError:
+                                if proc.poll() is not None: raise AssertionError('Caddy startup failed')
+                                time.sleep(.02)
+                        else: raise AssertionError('Caddy startup timeout')
+                        def request(path, method='GET', headers=None):
+                            req = urllib.request.Request('http://127.0.0.1:' + str(port) + path,
+                                data=b'fixture-body' if method == 'POST' else None,
+                                method=method, headers={'Host':host, **(headers or {})})
+                            try:
+                                with urllib.request.urlopen(req, timeout=3) as r: return r.status, r.read(), r.headers
+                            except urllib.error.HTTPError as e: return e.code, e.read(), e.headers
+                        before = len(seen)
+                        status, _, headers = request('/webhook/jt-customers?page=two', headers={'x-api-key':'forged'})
+                        assert status == 200 and len(seen) == before + 1, 'customer API not wired'
+                        if seeded: return
+                        assert seen[-1][:3] == ('GET','/webhook/jt-customers?page=two','fixture-key-one')
+                        assert headers.get('Cache-Control') == 'no-store' and not headers.get('Access-Control-Allow-Origin')
+                        secret.write_text('fixture-key-two')
+                        assert request('/webhook/jt-jobs?customerId=fixture')[0] == 200
+                        assert seen[-1][2] == 'fixture-key-two', 'key must reload from runtime file'
+                        assert request('/webhook/estimate-push','POST', {'Origin':f['origin'],'Sec-Fetch-Site':'same-origin','x-api-key':'forged'})[0] == 200
+                        assert seen[-1] == ('POST','/webhook/estimate-push','fixture-key-two',b'fixture-body')
+                        before = len(seen)
+                        for path, method, h, expected in [
+                            ('/webhook/jt-customers','POST',{},405),
+                            ('/webhook/jt-jobs','GET',{'Origin':'https://evil.test'},403),
+                            ('/webhook/jt-customers','GET',{'Sec-Fetch-Site':'cross-site'},403),
+                            ('/webhook/jt-customers','GET',{'Sec-Fetch-Site':'same-site'},403),
+                            ('/webhook/estimate-push','GET',{},405),
+                            ('/webhook/estimate-push','POST',{},403),
+                            ('/webhook/estimate-push','POST',{'Origin':'https://evil.test'},403),
+                            ('/webhook/estimate-push','OPTIONS',{},405),
+                        ]:
+                            assert request(path, method, h)[0] == expected, (path, method, expected)
+                        assert request('/webhook/jt-customers/extra')[1] == b'estimator fixture'
+                        assert len(seen) == before, 'denied request reached backend'
+                        assert request('/api/jobs/fixture/calculator-intake')[0] == 200
+                        assert seen[-1][2] is None, 'credential leaked to CRM handler'
+                        assert request('/')[1] == b'estimator fixture'
+                    finally:
+                        proc.terminate(); proc.wait(timeout=5)
+            exercise(handler)
+            # Removing the actual production API matcher must break the proof.
+            try: exercise(handler.replace('/webhook/jt-customers', '/not-the-customer-route'), seeded=True)
+            except AssertionError as e:
+                assert str(e) == 'customer API not wired'; print('seeded missing API wiring rejected')
+            else: raise AssertionError('missing API wiring accepted')
+        backend.shutdown()
+        print('PASS real estimator Caddy routing, runtime credentials, origin/method guards and static/CRM parity')
+        PY
+        touch "$out"
+      '';
+
       public-origin-logging = let
         c = self.nixosConfigurations.hwc-work.config;
         cfg = c.hwc.networking.cloudflared;
@@ -1383,7 +1499,6 @@
           server = cfg.images.server;
           ml = cfg.images.machineLearning;
           seerr = c.hwc.media.jellyseerr.image;
-          blacklist = c.security.pki.caCertificateBlacklist;
         });
       in
       assert lib.assertMsg (lib.hasPrefix "localhost/immich-runtime:2.5.6-node24.22.1-" cfg.images.server
@@ -1407,7 +1522,7 @@
         assert 'ca-certificates=20260816ubuntu0.22.04.1' in ml
         assert '--checksum=sha256:e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1' in ml
         assert '--no-index --no-deps' in ml and 'certifi-2026.10.23' in ml
-        assert json.dumps(spec['blacklist'], separators=(',', ':')) in ml
+        assert 'emSign Root CA - C1' in ml and 'emSign ECC Root CA - C3' in ml
         assert 'update-ca-certificates --fresh' in ml
         # This shared-helper extraction must not rebuild/restart accepted Seerr.
         assert sha(seerr) == 'b9482a37e259fcd93442be29ae2b1cfce0653bc5e738e68fab403a84297953ea'

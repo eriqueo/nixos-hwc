@@ -14,6 +14,8 @@ photo library, PostgreSQL data and NVIDIA interfaces.
 
 ## Structure
 
+The pinned Ubuntu image owns its emSign distrust list independently of the newer host NSS bundle. An empty host blacklist does not remove roots from this container. Prebuild its exact context before activation.
+
 ```
 domains/media/immich-container/
 ├── index.nix          # Options, pinned image/library inputs and build contexts
@@ -34,7 +36,7 @@ only Jammy `libssl3`/`openssl` to `3.0.2-0ubuntu1.30`, the distro CA package and
 hash-pinned certifi 2026.10.23. A builder installs certifi without dependency
 resolution; its temporary pip tooling is absent from the final image. Ubuntu's
 CA package still trusts C1/C3, so the recipe derives exclusions from the existing
-`security.pki.caCertificateBlacklist` and regenerates the default store.
+the pinned-container emSign distrust list and regenerates the default store.
 
 The server also installs Debian's hash-pinned Brotli security backport
 `1.1.0-2+deb13u1`. ML replaces Pillow's two Brotli libraries from that same
@@ -86,6 +88,8 @@ trigger an automatic database file-path migration. Keep `/usr/src/app/upload`
 and the existing live mount wiring through runtime-only releases.
 
 ## Changelog
+
+- 2026-11-02: Preserve container CA distrust when host NSS retires its blacklist; prevent policy regression during channel upgrades.
 
 - 2026-10-24: Export fixed-hash shared Brotli build contexts for the server and
   Pillow. Keep the app and existing TLS/CA inputs; require reviewed local images

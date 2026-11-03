@@ -6,11 +6,6 @@ import { Select } from './Select.jsx';
 import { PROJECT_TYPES } from '../engine/intake.js';
 import { fetchCrmList, fetchCalculatorIntake } from '../api/crm.js';
 
-const API_BASE = import.meta.env.VITE_WEBHOOK_URL?.replace('/estimate-push', '')
-  || localStorage.getItem('hwc-webhook-base')
-  || '';
-const API_KEY = import.meta.env.VITE_API_KEY || localStorage.getItem('hwc-api-key') || '';
-
 // Responsive styles - these are baseline, components add mobile overrides
 const inputStyle = {
   width: '100%',
@@ -63,12 +58,10 @@ export function JobSelector({ s, set, selectJob, prefill }) {
 
   // Fetch customers on mount
   useEffect(() => {
-    if (!API_BASE || !API_KEY) return;
-
     setLoading(l => ({ ...l, customers: true }));
     const controller = new AbortController();
     setError(null);
-    fetchCrmList({ base: API_BASE, key: API_KEY, resource: 'customers', signal: controller.signal })
+    fetchCrmList({ resource: 'customers', signal: controller.signal })
       .then(rows => {
         if (controller.signal.aborted) return;
         setCustomers(rows);
@@ -84,7 +77,7 @@ export function JobSelector({ s, set, selectJob, prefill }) {
 
   // Fetch jobs when customer changes
   useEffect(() => {
-    if (!API_BASE || !API_KEY || !s.customerId) {
+    if (!s.customerId) {
       setJobs([]);
       return;
     }
@@ -93,7 +86,7 @@ export function JobSelector({ s, set, selectJob, prefill }) {
     setJobs([]);
     const controller = new AbortController();
     setError(null);
-    fetchCrmList({ base: API_BASE, key: API_KEY, resource: 'jobs', params: { customerId: s.customerId }, signal: controller.signal })
+    fetchCrmList({ resource: 'jobs', params: { customerId: s.customerId }, signal: controller.signal })
       .then(rows => {
         if (controller.signal.aborted) return;
         setJobs(rows);
@@ -127,24 +120,6 @@ export function JobSelector({ s, set, selectJob, prefill }) {
   }, [s.mode, s.customerId, s.customerName, s.locationId, selectJob]);
 
   const isNewCustomer = s.mode === 'new_customer';
-
-  // Show config warning if no API configured
-  if (!API_BASE || !API_KEY) {
-    return (
-      <Box>
-        <Label color={C.acc}>Job Selection</Label>
-        <div style={{ padding: 10, backgroundColor: C.card2, borderRadius: 5, fontSize: 11, color: C.txD }}>
-          <p style={{ margin: '0 0 8px' }}>Webhook not configured. Set environment variables:</p>
-          <code style={{ display: 'block', fontSize: 10 }}>
-            VITE_WEBHOOK_URL, VITE_API_KEY
-          </code>
-          <p style={{ margin: '8px 0 0', fontSize: 10 }}>
-            Or set in console: <code>localStorage.setItem('hwc-webhook-base', 'https://...')</code>
-          </p>
-        </div>
-      </Box>
-    );
-  }
 
   return (
     <Box>

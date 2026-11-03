@@ -78,13 +78,6 @@
   hwc.business.estimator = {
     enable     = lib.mkDefault true;
     port       = 13443;
-    # Posted by the browser to n8n's host (the /webhook subpath follows
-    # routeOwners.webhook; other hosts forward it there).
-    webhookUrl = config.hwc.networking.hosts.url {
-      server = config.hwc.networking.shared.routeOwners.webhook.owner;
-      path = "/webhook/estimate-push";
-    };
-    apiKeyFile = config.age.secrets.estimator-api-key.path;
   };
 
   #==========================================================================
@@ -99,7 +92,7 @@
     dataDir = "/var/lib/hwc/n8n";
     # Workflow secrets (loaded from agenix)
     secrets = {
-      estimatorApiKeyFile = config.age.secrets.estimator-api-key.path;
+      estimatorApiKeyFile = config.hwc.secrets.api.estimator-api-key;
       jobtreadGrantKeyFile = config.age.secrets.jobtread-grant-key.path;
       discordWebhookUrlFile = config.age.secrets.discord-webhook-url.path;
       # Camera channel — shared with hwc-notify's discord-frigate channel.

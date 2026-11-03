@@ -49,7 +49,7 @@ This integration connects the Heartwood Estimator PWA to JobTread, Postgres, and
 |------|---------|
 | `src/components/JobSelector.jsx` | Customer/job selection UI |
 | `src/hooks/useProjectState.js` | State model with job fields |
-| `src/components/EstimateTab.jsx` | Push logic with API key auth |
+| `src/components/EstimateTab.jsx` | Same-origin push logic without browser credentials |
 | `src/components/ScopeTab.jsx` | Includes JobSelector |
 
 ### Database
@@ -60,7 +60,7 @@ This integration connects the Heartwood Estimator PWA to JobTread, Postgres, and
 
 ## Authentication
 
-All webhook endpoints require `x-api-key` header matching `ESTIMATOR_API_KEY` env var in n8n.
+All webhook endpoints require `x-api-key` matching `ESTIMATOR_API_KEY` in n8n. Only the private estimator proxy receives the key from agenix and injects it at runtime. Public estimator webhook paths are blocked. The browser sends same-origin requests without credentials.
 
 ## Environment Variables
 
@@ -70,8 +70,7 @@ All webhook endpoints require `x-api-key` header matching `ESTIMATOR_API_KEY` en
 - `POSTGRES_REST_URL` - PostgREST endpoint (default: `http://127.0.0.1:3001`)
 
 ### Estimator App
-- `VITE_WEBHOOK_URL` - Full URL to estimate-push endpoint
-- `VITE_API_KEY` - Same as ESTIMATOR_API_KEY
+- `VITE_WEBHOOK_URL` - Relative same-origin estimate-push path; no API key enters Vite.
 
 ## JobTread Custom Fields
 

@@ -9,6 +9,8 @@ User application configuration via Home Manager.
 
 ## Structure
 
+`claude-desktop/` uses the shared supported Electron44.10.1 runtime. `onlyoffice-desktopeditors/` drops its unused GTK2 build input while retaining strict ELF resolution and the existing launcher.
+
 `agent-harness/` owns workspace process inspection and its pinned runtime; see its module README.
 ```
 apps/
@@ -37,6 +39,8 @@ apps/
 ```
 
 ## Changelog
+
+- 2026-11-02: Refresh Claude Desktop Electron and OnlyOffice build compatibility for the November channels; strict runtime checks remain enabled.
 - 2026-10-25: Add the isolated XPS household desktop wiring; preserve existing
   host defaults and use the owning login, gaming and credential capabilities.
 
