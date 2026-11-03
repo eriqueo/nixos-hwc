@@ -35,7 +35,6 @@ in
     qutebrowser.enable = true;
     vesktop.enable = true;
     qbittorrent.enable = true;
-    aider.enable = true;
     # shareConfig (and its two-way sync) defaults on with the package.
     claude-code.enable = true;
     claude-desktop.enable = true;

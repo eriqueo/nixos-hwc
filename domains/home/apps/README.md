@@ -15,7 +15,6 @@ User application configuration via Home Manager.
 ```
 apps/
 ├── aerc/           # Email client
-├── aider/          # AI coding assistant
 ├── blender/        # 3D modeling
 ├── bitwarden/      # Desktop client for the self-hosted vault
 ├── chromium/       # Browser
@@ -39,6 +38,8 @@ apps/
 ```
 
 ## Changelog
+
+- 2026-11-03: Remove the unused Aider module, package, generated config and shell setup.
 
 - 2026-11-02: Refresh Claude Desktop Electron and OnlyOffice build compatibility for the November channels; strict runtime checks remain enabled.
 - 2026-10-25: Add the isolated XPS household desktop wiring; preserve existing

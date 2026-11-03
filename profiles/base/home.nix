@@ -58,7 +58,6 @@
       herdr.enable = lib.mkDefault true;
       codex.enable = lib.mkDefault true;
       pi.enable = lib.mkDefault true;
-      aider.enable = lib.mkDefault true;
       gemini-cli.enable = lib.mkDefault true;
       # x86_64 only: its Apktool (aapt) has no aarch64 build, and REA's own
       # engine support is Linux x64.

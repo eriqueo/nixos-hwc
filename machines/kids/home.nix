@@ -30,7 +30,6 @@
       gpg.enable = false;
       herdr.enable = false;
       codex.enable = false;
-      aider.enable = false;
       gemini-cli.enable = false;
     };
   };
