@@ -12,6 +12,8 @@ photo management, and video surveillance services.
 
 ## Structure
 
+`navidrome-container/` emits a Nix-built0.64.2 image with Go1.27.3, fixed x/net and native media libraries. Its explicit data bind, startup database guard and Borg SQLite snapshot replace anonymous-volume storage.
+
 Frigate uses explicit NVIDIA CDI access and no-new-privileges; its configuration contract rejects privileged mode.
 
 Frigate and Immich ML derive same-app images with the shared Starlette Host parser backport.
@@ -82,6 +84,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-03: Qualify Navidrome0.64.2 with fixed Go module inputs and the pinned Nix native runtime. Bind current data explicitly and register its existing SQLite backup owner; refuse an empty replacement database. Private vendor current-data and compatible0.64.1 recovery consumers pass; final runtime qualification precedes activation.
 
 - 2026-11-03: Add signed, fixed-hash form-data4.0.6/proxy-addr2.0.8 inputs and their isolated dependency closure to Audiobookshelf's offline context; preserve app/data/runtime and fail startup if the qualified image is missing.
 

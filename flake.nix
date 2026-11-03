@@ -1674,6 +1674,47 @@
         touch "$out"
       '';
 
+      navidrome-runtime-wiring = let
+        c = self.nixosConfigurations.hwc-home.config;
+        archive = c.system.build.navidromeRuntimeImage;
+        package = c.system.build.navidromeRuntimePackage;
+        container = c.virtualisation.oci-containers.containers.navidrome;
+        data = c.hwc.media.navidrome.dataDir;
+      in
+      assert lib.assertMsg (container.image == "${archive.imageName}:${archive.imageTag}") "Navidrome must consume its qualified runtime";
+      assert container.pull == "never";
+      assert lib.elem "${data}:/data" container.volumes;
+      assert lib.all (v: !(lib.hasSuffix ":/config" v)) container.volumes;
+      assert lib.elem "--security-opt=no-new-privileges" container.extraOptions;
+      assert c.hwc.data.borg.sqliteSnapshots.navidrome.source == "${data}/navidrome.db";
+      assert c.hwc.data.borg.sqliteSnapshots.navidrome.user == "root";
+      assert lib.elem data c.hwc.data.borg.sources;
+      assert lib.hasInfix "test -s ${lib.escapeShellArg "${data}/navidrome.db"}" c.systemd.services.podman-navidrome.preStart;
+      assert lib.hasInfix "podman load --input ${archive}" c.systemd.services.podman-navidrome.preStart;
+      pkgs.runCommand "navidrome-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${archive} ${package} ${pkgs.go_1_27}/bin/go <<'PY'
+        import json, pathlib, subprocess, sys, tarfile
+        archive, package, go = sys.argv[1:]
+        with tarfile.open(archive) as t:
+            manifest = json.load(t.extractfile('manifest.json'))
+            assert len(manifest) == 1
+            cfg = json.load(t.extractfile(manifest[0]['Config']))['config']
+        assert cfg['Entrypoint'] == [package + '/bin/navidrome']
+        assert cfg['WorkingDir'] == '/data'
+        assert 'ND_DATAFOLDER=/data' in cfg['Env'] and 'ND_MUSICFOLDER=/music' in cfg['Env']
+        assert not cfg.get('Volumes'), 'data must not silently fall back to an anonymous volume'
+        version = subprocess.check_output([package + '/bin/navidrome', '--version'], text=True)
+        assert version.startswith('0.64.2 ')
+        metadata = subprocess.check_output([go, 'version', '-m', package + '/bin/.navidrome-wrapped'], text=True)
+        assert ': go1.27.3' in metadata
+        expected = {'golang.org/x/net':'v0.62.0','golang.org/x/crypto':'v0.58.0',
+            'golang.org/x/sys':'v0.49.0','golang.org/x/text':'v0.43.0'}
+        modules = {p[1]:p[2] for line in metadata.splitlines() if len(p := line.split()) >= 3 and p[0] == 'dep'}
+        assert all(modules.get(k) == v for k,v in expected.items())
+        PY
+        touch "$out"
+      '';
+
       audiobookshelf-runtime-wiring = let
         c = self.nixosConfigurations.hwc-home.config;
         image = c.hwc.media.audiobookshelf.image;
