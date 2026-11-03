@@ -143,8 +143,13 @@ let
   memberNpm = map (p: p // {
     source = pkgs.fetchurl { inherit (p) url hash; name = p.archive; };
   }) memberNpmCatalog;
+  # The original private app-build digest has been retired locally. Retain the
+  # exact qualified same-app parent currently serving the member; its Brotli
+  # and trust fixes are idempotent below. Replace after upstream qualification.
+  memberBaseImage = "localhost/scout-member-runtime@sha256:7ab46330eb8be78fa7870325422e6a5b58e65f8c6a9a73b351fd4d55c5cf4ea4";
   memberSecurityManifest = pkgs.writeText "scout-member-runtime-security.json" (builtins.toJSON {
     schemaVersion = 1;
+    baseImage = memberBaseImage;
     chrome = { inherit (memberChrome) version archive url sha256; };
     debian = memberDebianCatalog;
     npm = memberNpmCatalog;
@@ -153,7 +158,7 @@ let
     name = "scout-member";
     version = "51a6a0eb-chrome${memberChrome.version}";
     recipe = ''
-      FROM localhost/lead-scout@sha256:4293934a89e0ee609192310a5cc915382535268d353247c7a53fa566331046a3
+      FROM ${memberBaseImage}
       COPY ${memberBrotliFile} /tmp/scout-brotli.deb
       RUN echo '${memberBrotliHash}  /tmp/scout-brotli.deb' | sha256sum -c - && dpkg -i /tmp/scout-brotli.deb && rm /tmp/scout-brotli.deb
       # Chromium policy SHA256: ${builtins.hashString "sha256" memberChromePolicyText}

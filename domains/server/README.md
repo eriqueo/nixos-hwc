@@ -10,6 +10,7 @@
 ## Structure
 
 The Scout member runtime preserves app51a6a0eb while pinning ChromeStable156.0.8078.79, Playwright/core1.64.1, shell-quote1.11.0, proxy-addr2.0.8 and fixed Debian archives. Its existing index holds the package catalog; the sibling snapshot helper remains the paired SQL/profile owner. Build the exported context offline before adoption; the startup image-ID guard still applies. Old/new/restored profile and database checks protect saved authentication.
+The retained qualified parent replaces a retired local app-build digest; keep that image available for context rebuilds and recovery.
 
 `services/meals/` deploys the independent Meals package, exact CalDAV targets, CRITICAL same-user SQLite backup and seven-day preview cleanup. Recipes support multiple categories and direct reviewed grocery contributions without a calendar dinner. Recipe conversion consumes the shared DX2 endpoint facts and existing credential path; only reviewed diagrams enter the recipe store. The schema-3 candidate has bounded cancellable conversion jobs and stays in preview unless an operator-owned quality receipt matches the shipped engine, prompt and immutable model identity. Wall Home/Week reserve dinner rows and provide tap/QR access to the persistent Meals-owned cooking page through a bounded GET-only loopback transport; Calendar routes managed edits to Meals.
 
