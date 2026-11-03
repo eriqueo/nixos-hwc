@@ -1233,7 +1233,7 @@
       assert !(disabledImporter.systemd.services ? podman-firefly-importer);
       pkgs.runCommand "firefly-php-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
         python3 - ${fixture} <<'PY'
-        import hashlib, json, pathlib, re, sys
+        import base64, hashlib, json, pathlib, re, sys
         for spec in json.loads(pathlib.Path(sys.argv[1]).read_text()):
             recipe = (pathlib.Path(spec['context']) / 'Dockerfile').read_text()
             expected = 'localhost/' + spec['name'] + '-runtime:' + spec['appVersion'] + '-php8.5.12-'
@@ -1245,6 +1245,17 @@
             assert 'COPY --from=secure-php /usr/local/sbin/php-fpm /usr/local/sbin/php-fpm' in recipe
             assert 'COPY --from=secure-php /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/' in recipe
             assert '/var/www/html' not in recipe and 'ENV PHP_VERSION=8.5.12 ' in recipe
+            context = pathlib.Path(spec['context'])
+            manifest = context / 'manifest.json'
+            assert hashlib.sha256(manifest.read_bytes()).hexdigest() in recipe
+            packages = json.loads(manifest.read_text())
+            assert len({p['file'] for p in packages}) == len(packages)
+            for package in packages:
+                data = (context / package['file']).read_bytes()
+                assert package['hash'] == 'sha256-' + base64.b64encode(hashlib.sha256(data).digest()).decode()
+            assert 'COPY *.deb /tmp/hwc-runtime-debs/' in recipe
+            assert 'dpkg --force-confold -i /tmp/hwc-runtime-debs/*.deb' in recipe
+            assert recipe.rstrip().endswith('USER www-data')
         PY
         touch "$out"
       '';
@@ -1290,7 +1301,11 @@
             'php82-pdo_sqlite', 'php82-phar', 'php82-session', 'php82-simplexml', 'php82-tokenizer',
             'php82-xml', 'php82-xmlwriter', 'php82-zip']
         expected.update({name: '8.2.35-r0' for name in php_packages})
-        assert {p['name']:p['version'] for p in manifest['packages']} == expected
+        actual = {p['name']:p['version'] for p in manifest['packages']}
+        assert all(actual[name] == version for name, version in expected.items())
+        assert len(actual) == len(manifest['packages'])  # no competing package pins
+        assert {'nginx', 'libcurl', 'libpq', 'libexpat', 'python3', 'nodejs',
+            'musl', 'zlib', 'pcre2', 'nghttp2-libs', 'libxml2'} <= actual.keys()
         assert {p.name for p in context.iterdir()} == {'Dockerfile','manifest.json'} | {p['file'] for p in manifest['packages']}
         for package in manifest['packages']:
             data = (context / package['file']).read_bytes()
