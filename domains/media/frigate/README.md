@@ -4,7 +4,7 @@
 **Domain**: `hwc.media.frigate`
 **Architecture**: Nix-generated configuration (Charter v12.6)
 **Status**: ✅ Production
-**Last Updated**: 2026-09-24
+**Last Updated**: 2026-11-03
 
 ---
 
@@ -112,7 +112,7 @@ curl -s http://localhost:5000/api/stats | jq '{
 
 # Expected output:
 # {
-#   "version": "0.16.2-4d58206",
+#   "version": "0.18.2-cfa08c5",
 #   "detector_ms": 24,
 #   "cameras": [
 #     {"name": "cobra_cam_1", "fps": 3.0},
@@ -242,9 +242,10 @@ they cannot be inferred from a camera being offline.
 ```yaml
 record:
   enabled: true
-  retain:
+  continuous:
+    days: 0           # Do not retain continuous footage
+  motion:
     days: 3           # General motion recordings: 3 days
-    mode: motion      # Only record when motion detected
   alerts:
     retain:
       days: 14        # Alert clips: 14 days
@@ -276,7 +277,7 @@ snapshots:
 ### Automated Cleanup
 
 **1. Frigate Native Cleanup** (Primary)
-- Runs automatically based on `retain.days` settings
+- Uses the native `record.continuous`, `record.motion` and event retention settings
 - Deletes recordings older than retention period
 - Manages database and clips
 
@@ -611,7 +612,7 @@ journalctl -u podman-frigate.service -f
 ```nix
 hwc.media.frigate = {
   enable = true;
-  image = "ghcr.io/blakeblackshear/frigate:0.16.2-tensorrt";
+  # Keep the qualified default image; build its emitted runtime context first.
   port = 5000;
 
   gpu = {
@@ -699,6 +700,8 @@ hwc.media.frigate = {
 
 ## Changelog
 
+- 2026-11-03: Correct the version, native retention and image examples so copied instructions preserve the qualified security runtime.
+
 - 2026-11-03: Add an immutable offline context for eleven signed OS updates and Pillow13/certifi2026.10.18, preserving the qualified0.18.2 application, model, database and configuration.
 - 2026-11-03: Scope the distro-Python installation override to the two selected vendor wheels during image construction; retain the PEP668 marker and disable dependency resolution.
 
@@ -741,6 +744,6 @@ hwc.media.frigate = {
 
 ---
 
-**Last Updated**: 2026-09-24
+**Last Updated**: 2026-11-03
 **Maintainer**: Eric
 **Status**: Production ✅
