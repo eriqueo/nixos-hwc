@@ -1254,7 +1254,7 @@
                 data = (context / package['file']).read_bytes()
                 assert package['hash'] == 'sha256-' + base64.b64encode(hashlib.sha256(data).digest()).decode()
             assert 'COPY *.deb /tmp/hwc-runtime-debs/' in recipe
-            assert 'dpkg --force-confold -i /tmp/hwc-runtime-debs/*.deb' in recipe
+            assert 'apt-get --no-download --yes -o Dpkg::Options::=--force-confold install /tmp/hwc-runtime-debs/*.deb' in recipe
             assert recipe.rstrip().endswith('USER www-data')
         PY
         touch "$out"
