@@ -91,6 +91,12 @@ business/
 
 ## Changelog
 
+- 2026-11-02: Add candidate source rebuild inputs for PHP 8.5.12 with libxml2
+  2.15.4, curl 8.23.0 and ngtcp2 1.25.0. Run upstream test suites offline.
+  Preserve the donor PHP build options and shared extension set. Candidate
+  qualification must pass before release; no deployment occurs here.
+
+
 - 2026-11-02: Supply hash-pinned Alpine patch for the frontend build and remove
   it after compilation; the upstream runtime does not include that tool.
 

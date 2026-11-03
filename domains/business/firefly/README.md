@@ -11,6 +11,13 @@ Firefly III personal finance manager running as a Podman container, with optiona
 
 ## Structure
 
+`native-runtime-sources.json` and `native-build-packages.json` pin upstream
+sources and acquisition-verified Debian build dependencies.
+`native-runtime-build.sh` compiles and tests the libraries and the same PHP
+version in an isolated build stage. The final stage removes the old ABI
+libraries and copies only the new runtime binaries, libraries and provenance.
+
+
 `pico-front-package*.json` and `pico-frontend-packages.json` own the locked
 frontend inputs. `pico-frontend.patch` preserves default exports and supplies
 named exports used by Nuxt auto-imports. The recipe rebuilds the real output
@@ -156,6 +163,12 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 - `firefly-explorer.service` — immutable explorer package; validates its token, Firefly account, UI assets, and tailscaled socket before serving. Every API request is authorized with Tailscale WhoIs. Split groups remain read-only; writes are limited to existing category/expense-account ids and existing tags.
 
 ## Changelog
+
+- 2026-11-02: Add candidate source rebuild inputs for PHP 8.5.12 with libxml2
+  2.15.4, curl 8.23.0 and ngtcp2 1.25.0. Run upstream test suites offline.
+  Preserve the donor PHP build options and shared extension set. Candidate
+  qualification must pass before release; no deployment occurs here.
+
 
 - 2026-11-02: Supply hash-pinned Alpine patch for the frontend build and remove
   it after compilation; the upstream runtime does not include that tool.

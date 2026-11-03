@@ -1,0 +1,22 @@
+[
+  {
+    "file": "php.tar.xz",
+    "url": "https://www.php.net/distributions/php-8.5.12.tar.xz",
+    "hash": "sha256-CLwuuipYhlSt4TVxdKpka3YVVshi3aBng0XuKe1IEgk="
+  },
+  {
+    "file": "curl.tar.xz",
+    "url": "https://curl.se/download/curl-8.23.0.tar.xz",
+    "hash": "sha256-ja3X0lNqMU+YKtBaZRtxP0Jr99Aswsds/7l5byIY5sU="
+  },
+  {
+    "file": "ngtcp2.tar.xz",
+    "url": "https://github.com/ngtcp2/ngtcp2/releases/download/v1.25.0/ngtcp2-1.25.0.tar.xz",
+    "hash": "sha256-KjTSSEuheEel0RllcE6d0PrExtjvx1/+HsfeZtjGtvs="
+  },
+  {
+    "file": "libxml2.tar.xz",
+    "url": "https://download.gnome.org/sources/libxml2/2.15/libxml2-2.15.4.tar.xz",
+    "hash": "sha256-mAh/0YHZBwck8/vGXHN32wMDjrkr2II3Ta/0SUATiCE="
+  }
+]

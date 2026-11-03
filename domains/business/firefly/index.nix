@@ -49,19 +49,50 @@ let
   debianPackages = map (p: p // {
     source = pkgs.fetchurl { inherit (p) url hash; };
   }) (builtins.fromJSON (builtins.readFile debianManifest));
+  nativeSourcesManifest = ./native-runtime-sources.json;
+  nativeBuildManifest = ./native-build-packages.json;
+  nativeSources = builtins.fromJSON (builtins.readFile nativeSourcesManifest);
+  nativeBuildPackages = builtins.fromJSON (builtins.readFile nativeBuildManifest);
+  nativeRecipe = ''
+    # Native inputs ${builtins.hashFile "sha256" nativeSourcesManifest} ${builtins.hashFile "sha256" nativeBuildManifest} ${builtins.hashFile "sha256" ./native-runtime-build.sh}
+    FROM docker.io/fireflyiii/core@sha256:6515902b1a7c5b9a0b0a3b4db02a4c917aef7b3152a65d14aace5faf0ffee0bc AS native-build
+    USER root
+    COPY *.deb /tmp/hwc-runtime-debs/
+    COPY native-build-debs/ /tmp/hwc-native-debs/
+    RUN DEBIAN_FRONTEND=noninteractive apt-get --no-download --yes -o Dpkg::Options::=--force-confold install /tmp/hwc-runtime-debs/*.deb /tmp/hwc-native-debs/*.deb && test -z "$(dpkg --audit)"
+    COPY --from=secure-php /usr/local/bin/php-config /usr/local/bin/php-config
+    COPY native-sources/ /sources/
+    COPY native-runtime-build.sh /build-native.sh
+    RUN sh /build-native.sh
+  '';
+  nativeContext = ''
+    cp ${./native-runtime-build.sh} "$out/native-runtime-build.sh"
+    mkdir -p "$out/native-build-debs" "$out/native-sources"
+    cp ${nativeSourcesManifest} "$out/native-sources/manifest.json"
+    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''
+      cp ${source} "$out/native-sources/${p.file}"
+    '') nativeSources}
+    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''
+      cp ${source} "$out/native-build-debs/${p.file}"
+    '') nativeBuildPackages}
+  '';
   phpRuntimes = lib.mapAttrs (kind: app: helpers.mkRuntimeImage {
     name = app.name;
     version = "${app.version}-php${phpVersion}";
     recipe = ''
       # Debian package selection ${builtins.hashFile "sha256" debianManifest}
       FROM ${phpRuntimeDonor} AS secure-php
+      ${nativeRecipe}
       FROM ${app.image}
       USER root
       COPY *.deb /tmp/hwc-runtime-debs/
       RUN DEBIAN_FRONTEND=noninteractive apt-get --no-download --yes -o Dir::Cache::archives=/tmp/hwc-runtime-debs -o Dpkg::Options::=--force-confold install /tmp/hwc-runtime-debs/*.deb && test -z "$(dpkg --audit)" && rm -r /tmp/hwc-runtime-debs
-      COPY --from=secure-php /usr/local/bin/php /usr/local/bin/php-config /usr/local/bin/phpize /usr/local/bin/
-      COPY --from=secure-php /usr/local/sbin/php-fpm /usr/local/sbin/php-fpm
-      COPY --from=secure-php /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
+      # Delete the old ABI libraries through their real package owner.
+      RUN apt-get --yes purge curl libcurl4t64 libxml2 && test -z "$(dpkg --audit)"
+      COPY --from=native-build /native/ /
+      RUN ldconfig
+      COPY --from=secure-php /usr/local/bin/php-config /usr/local/bin/phpize /usr/local/bin/
+            COPY --from=secure-php /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
       ENV PHP_VERSION=${phpVersion} PHP_URL=https://www.php.net/distributions/php-${phpVersion}.tar.xz PHP_ASC_URL=https://www.php.net/distributions/php-${phpVersion}.tar.xz.asc PHP_SHA256=08bc2eba2a588654ade1357174aa646b761556c862dda0678345ee29ed481209
       ${composerRecipe kind}
       USER www-data
@@ -500,6 +531,7 @@ in
       cp ${phpRuntimes.core.dockerfile} "$out/Dockerfile"
       cp ${debianManifest} "$out/manifest.json"
       ${composerContext "core"}
+      ${nativeContext}
       ${lib.concatMapStrings (p: "cp ${p.source} \"$out/${p.file}\"\n") debianPackages}
     '';
     system.build.fireflyImporterRuntimeImageContext = pkgs.runCommand "firefly-importer-runtime-context" {} ''
@@ -507,6 +539,7 @@ in
       cp ${phpRuntimes.importer.dockerfile} "$out/Dockerfile"
       cp ${debianManifest} "$out/manifest.json"
       ${composerContext "importer"}
+      ${nativeContext}
       ${lib.concatMapStrings (p: "cp ${p.source} \"$out/${p.file}\"\n") debianPackages}
     '';
     system.build.fireflyPicoRuntimeImageContext = picoContext;
