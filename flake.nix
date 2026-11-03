@@ -1690,7 +1690,8 @@
       assert c.hwc.data.borg.sqliteSnapshots.navidrome.user == "root";
       assert lib.elem data c.hwc.data.borg.sources;
       assert lib.hasInfix "test -s ${lib.escapeShellArg "${data}/navidrome.db"}" c.systemd.services.podman-navidrome.preStart;
-      assert lib.hasInfix "podman load --input ${archive}" c.systemd.services.podman-navidrome.preStart;
+      assert lib.hasInfix (builtins.unsafeDiscardStringContext "podman load --input ${archive}")
+        (builtins.unsafeDiscardStringContext c.systemd.services.podman-navidrome.preStart);
       pkgs.runCommand "navidrome-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
         python3 - ${archive} ${package} ${pkgs.go_1_27}/bin/go <<'PY'
         import json, pathlib, subprocess, sys, tarfile
