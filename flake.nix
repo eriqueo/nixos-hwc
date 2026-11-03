@@ -1029,8 +1029,9 @@
             host = f['origin'].removeprefix('https://')
             def exercise(text, seeded=False):
                 port = free_port(); cfg = p / 'Caddyfile'
-                cfg.write_text('{ admin off\n auto_https off }\nhttp://127.0.0.1:' + str(port) + ' {\n' + text + '\n}\n')
-                adapted = subprocess.run(['caddy','adapt','--adapter','caddyfile','--config',str(cfg)], capture_output=True, check=True)
+                cfg.write_text('{\n admin off\n auto_https off\n}\nhttp://127.0.0.1:' + str(port) + ' {\n' + text + '\n}\n')
+                adapted = subprocess.run(['caddy','adapt','--adapter','caddyfile','--config',str(cfg)], capture_output=True)
+                assert adapted.returncode == 0, adapted.stderr.decode()
                 assert b'fixture-key-one' not in adapted.stdout, 'credential entered adapted config'
                 out = p / 'config.json'; out.write_bytes(adapted.stdout)
                 with (p/'caddy.log').open('w') as log:
