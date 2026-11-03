@@ -5,7 +5,7 @@
 # Source: github:johnzfitch/claude-cowork-linux (flake input `claude-cowork`,
 # exposed as pkgs.claude-cowork-linux via overlay in flake.nix). This port runs
 # Claude Code directly under bubblewrap (no VM/FHS wrapper); the package bundles
-# its own runtime deps (electron_41, bubblewrap, curl, zstd, dbus, …) on PATH.
+# its own runtime deps (supported Electron, bubblewrap, curl, zstd, dbus, …) on PATH.
 # MCP config at ~/.config/Claude/claude_desktop_config.json is untouched.
 { config, lib, pkgs, ... }:
 let

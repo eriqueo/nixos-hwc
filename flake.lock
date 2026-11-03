@@ -127,11 +127,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1785277948,
-        "narHash": "sha256-A4X5EtO6h306eBWBYiLWxBi1EU43qi0Ec/TeT/C9CqQ=",
+        "lastModified": 1792882905,
+        "narHash": "sha256-p2PTQT404NWjFEQVeeoXsij5HuEyWetOwCdhBvEVrPQ=",
         "owner": "johnzfitch",
         "repo": "claude-cowork-linux",
-        "rev": "0152733c844976d80e5e0fcf2c46d4a63123d408",
+        "rev": "6dce41d3f9d7e455e88cd9d66e06969c99fab6b2",
         "type": "github"
       },
       "original": {
@@ -534,11 +534,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791832536,
-        "narHash": "sha256-M36Dz7Edu8rKsJ8dJZ//bwGnacLIMP9bEnRqwY2D6ys=",
+        "lastModified": 1793664216,
+        "narHash": "sha256-KLCqjGTheXVE2ehcJW34wT98H68wk9+vDGhN9QU/DEI=",
         "owner": "eriqueo",
         "repo": "khalt",
-        "rev": "5df245ad08021ffc9b627c93f98007821385d4d0",
+        "rev": "493148e0f83eb7a11688c01fd1a7fb265efe92c2",
         "type": "github"
       },
       "original": {
@@ -554,11 +554,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792446712,
-        "narHash": "sha256-r/Ab980KR12YkrF4WJGJM3bmYBGVq7ykdK8PADZH7k8=",
+        "lastModified": 1793664497,
+        "narHash": "sha256-o1hXxPpO8dRf2KitTh9wxC4tNi4cNwHaqF8sacHS5Xg=",
         "owner": "eriqueo",
         "repo": "meals",
-        "rev": "cb569ffbf0a71483220c8e7043141d50c35e18ee",
+        "rev": "f88a78ee07206e56970f22170027c45869bd17c6",
         "type": "github"
       },
       "original": {
@@ -596,22 +596,6 @@
         "owner": "NixOS",
         "repo": "nixpkgs",
         "rev": "3ec636362e1816bc2f0888fa0fa2c69f1bc9e504",
-        "type": "github"
-      }
-    },
-    "nixpkgs-electron": {
-      "locked": {
-        "lastModified": 1790185690,
-        "narHash": "sha256-xJ+X4hBtOcAFGBOe5nAMyMUeF9foJBmIOu3NjBqBycU=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "4975466d324710c576dc11ad614684e6bd8cad8e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "4975466d324710c576dc11ad614684e6bd8cad8e",
         "type": "github"
       }
     },
@@ -775,7 +759,6 @@
         "meals": "meals",
         "nixpkgs": "nixpkgs",
         "nixpkgs-claude-code": "nixpkgs-claude-code",
-        "nixpkgs-electron": "nixpkgs-electron",
         "nixpkgs-stable": "nixpkgs-stable",
         "nixvirt": "nixvirt",
         "pave-query-builder": "pave-query-builder",
