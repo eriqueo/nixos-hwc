@@ -700,6 +700,7 @@ hwc.media.frigate = {
 ## Changelog
 
 - 2026-11-03: Add an immutable offline context for eleven signed OS updates and Pillow13/certifi2026.10.18, preserving the qualified0.18.2 application, model, database and configuration.
+- 2026-11-03: Scope the distro-Python installation override to the two selected vendor wheels during image construction; retain the PEP668 marker and disable dependency resolution.
 
 - 2026-11-03: Pin vendor0.18.2 application security fixes, retain the qualified Starlette Host-parser backport, and encode the same motion/event retention in the native0.18 config. Private real-data upgrade and old-code/current-database recovery tests pass; actual YOLO model runs through the CUDA detector.
 - 2026-11-03: Emit native0.18 named motion masks from the existing polygon coordinates; preserve enabled masks and their coverage checks. An API200 alone can also indicate the configuration editor, so qualification must require the actual policy and camera settings.

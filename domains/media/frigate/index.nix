@@ -33,7 +33,9 @@ let
       COPY debian/ /tmp/hwc-frigate-debs/
       RUN DEBIAN_FRONTEND=noninteractive apt-get --no-download --yes -o Dir::Cache::archives=/tmp/hwc-frigate-debs -o Dpkg::Options::=--force-confold install /tmp/hwc-frigate-debs/*.deb && test -z "$(dpkg --audit)" && rm -r /tmp/hwc-frigate-debs
       COPY wheels/ /tmp/hwc-frigate-wheels/
-      RUN python3 -m pip install --no-index --no-deps --no-cache-dir --force-reinstall /tmp/hwc-frigate-wheels/*.whl && rm -r /tmp/hwc-frigate-wheels
+      # The image uses distro Python with vendor wheels in /usr/local. This
+      # build owns exactly these two replacements; retain its PEP668 marker.
+      RUN python3 -m pip install --no-index --no-deps --no-cache-dir --force-reinstall --break-system-packages /tmp/hwc-frigate-wheels/*.whl && rm -r /tmp/hwc-frigate-wheels
     ''
       + helpers.mkStarletteHostBackport {
         python = "python3";
