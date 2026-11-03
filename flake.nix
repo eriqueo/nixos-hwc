@@ -990,7 +990,7 @@
         nativeBuildInputs = [ pkgs.python3 c.services.caddy.package ];
       } ''
         python3 - ${fixture} <<'PY'
-        import http.server, json, pathlib, socket, subprocess, sys, tempfile, threading, time
+        import http.server, json, os, pathlib, socket, subprocess, sys, tempfile, threading, time
         import urllib.request, urllib.error
         f = json.loads(pathlib.Path(sys.argv[1]).read_text())
         # Exercise the real rendered handler, not a copy of its policy.
@@ -1029,13 +1029,14 @@
             host = f['origin'].removeprefix('https://')
             def exercise(text, seeded=False):
                 port = free_port(); cfg = p / 'Caddyfile'
-                cfg.write_text('{\n admin off\n auto_https off\n}\nhttp://127.0.0.1:' + str(port) + ' {\n' + text + '\n}\n')
+                cfg.write_text('{\n admin off\n auto_https off\n persist_config off\n}\nhttp://:' + str(port) + ' {\n bind 127.0.0.1\n' + text + '\n}\n')
                 adapted = subprocess.run(['caddy','adapt','--adapter','caddyfile','--config',str(cfg)], capture_output=True)
                 assert adapted.returncode == 0, adapted.stderr.decode()
                 assert b'fixture-key-one' not in adapted.stdout, 'credential entered adapted config'
                 out = p / 'config.json'; out.write_bytes(adapted.stdout)
                 with (p/'caddy.log').open('w') as log:
-                    proc = subprocess.Popen(['caddy','run','--config',str(out)], stdout=log, stderr=log)
+                    proc = subprocess.Popen(['caddy','run','--config',str(out)], stdout=log, stderr=log,
+                        env={**os.environ, 'XDG_CONFIG_HOME':str(p/'config'), 'XDG_DATA_HOME':str(p/'data')})
                     try:
                         for _ in range(100):
                             try:
