@@ -230,7 +230,7 @@ it, these three sit in the nightly `pg_dumpall` and cost only disk.
   state is SQLite; the leftover `n8n` database is not its configured store.
 
 ## Changelog
-- 2026-11-03: Keep the native postgres/root peer map and replace the complete composed HBA rule set, including unreachable appended md5 defaults.
+- 2026-11-03: Keep the native postgres OS-account peer map and replace the complete composed HBA rule set, including unreachable appended md5 defaults.
 - 2026-11-03: Add peer/SCRAM mode and protected, bounded per-app role provisioning; scope owner changes to declared database schemas and preserve extension members.
 
 - 2026-08-28: Corrected the access audit after a live owner census: `hwc` has 10 `eric`-owned and 31 `postgres`-owned tables; superuser access, not blanket object ownership, is the general reason the deleted grants were redundant. Clarified that n8n's own store is SQLite even though workflows access other PostgreSQL databases.

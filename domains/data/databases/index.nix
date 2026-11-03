@@ -278,7 +278,7 @@ in
         ];
 
         authentication = if cfg.postgresql.authenticationMode == "peer-scram" then lib.mkForce (''
-          # Retain NixOS's OS-postgres/root maintenance identity map. This is
+          # Retain NixOS's OS-postgres maintenance identity map. This is
           # peer authentication, not permission to assume postgres over TCP.
           local all postgres peer map=postgres
           local all all peer
