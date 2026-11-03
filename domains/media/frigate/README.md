@@ -37,6 +37,8 @@ The container uses its explicit NVIDIA CDI grant with no-new-privileges. It does
 
 `index.nix` also exports the pinned 0.18.2 runtime recipe with its exact Starlette backport and requires its prebuilt image before startup. The native 0.18 configuration keeps three days of motion and fourteen days of event footage; continuous recording retention is zero.
 
+The generated runtime context supplies eleven signed Debian security archives and fixed Pillow13/certifi wheels. The recipe installs them offline without dependency resolution. Its manifest hashes bind the context to the selected image; `starlette-host-backport-wiring` verifies the emitted context and recipe.
+
 - `index.nix`: options, container, atomic config generation, native metrics and expected-camera recording rules.
 - `parts/config.nix`: camera settings, masks, zones and recording retention.
 - `parts/labelmap.py`: rebuild labels from the installed ONNX model on every config generation.
@@ -696,6 +698,8 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+
+- 2026-11-03: Add an immutable offline context for eleven signed OS updates and Pillow13/certifi2026.10.18, preserving the qualified0.18.2 application, model, database and configuration.
 
 - 2026-11-03: Pin vendor0.18.2 application security fixes, retain the qualified Starlette Host-parser backport, and encode the same motion/event retention in the native0.18 config. Private real-data upgrade and old-code/current-database recovery tests pass; actual YOLO model runs through the CUDA detector.
 - 2026-11-03: Emit native0.18 named motion masks from the existing polygon coordinates; preserve enabled masks and their coverage checks. An API200 alone can also indicate the configuration editor, so qualification must require the actual policy and camera settings.

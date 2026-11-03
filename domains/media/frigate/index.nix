@@ -15,6 +15,13 @@ let
   cfg = config.hwc.media.frigate;
   labelPython = pkgs.python3.withPackages (p: [ p.onnx ]);
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
+  runtimeDebs = builtins.fromJSON ''
+    [{"name":"libsasl2-modules-db","version":"2.1.28+dfsg-10+deb12u1","file":"libsasl2-modules-db_2.1.28+dfsg-10+deb12u1_amd64.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/c/cyrus-sasl2/libsasl2-modules-db_2.1.28+dfsg-10+deb12u1_amd64.deb","hash":"sha256-bIbKj+mn1lLmGIdLh1O0tuxrQu12SbPziOONCpkEe6U="},{"name":"libsasl2-2","version":"2.1.28+dfsg-10+deb12u1","file":"libsasl2-2_2.1.28+dfsg-10+deb12u1_amd64.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/c/cyrus-sasl2/libsasl2-2_2.1.28+dfsg-10+deb12u1_amd64.deb","hash":"sha256-1vIECOK+kuvZ9eOxwZNbB177PwOrtfSPe5kaCtPi1qU="},{"name":"libbrotli1","version":"1.0.9-2+deb12u1","file":"libbrotli1_1.0.9-2+deb12u1_amd64.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/b/brotli/libbrotli1_1.0.9-2+deb12u1_amd64.deb","hash":"sha256-4ns9ZV+m+t16VvcGaH6UVzwK9ot9bfOUoyo4GjpsbYs="},{"name":"tzdata","version":"2026f-0+deb12u1","file":"tzdata_2026f-0+deb12u1_all.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/t/tzdata/tzdata_2026f-0+deb12u1_all.deb","hash":"sha256-MlTrhwyKlJUYIUgFruXkJ2r3aZmI6ouaOlg80PHqsxw="},{"name":"libssl3","version":"3.0.22-1~deb12u2","file":"libssl3_3.0.22-1~deb12u2_amd64.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/o/openssl/libssl3_3.0.22-1~deb12u2_amd64.deb","hash":"sha256-y0eEdA2qmzsOrqK0RLvvpoZ5Svu/PWeNI4wf2YdfLv0="},{"name":"libjq1","version":"1.6-2.1+deb12u3","file":"libjq1_1.6-2.1+deb12u3_amd64.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/j/jq/libjq1_1.6-2.1+deb12u3_amd64.deb","hash":"sha256-XppwgboQzoJvbT0QOqm5EhcMWtyDbiVhAAczVxmV3Vs="},{"name":"libexpat1","version":"2.5.0-1+deb12u5","file":"libexpat1_2.5.0-1+deb12u5_amd64.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/e/expat/libexpat1_2.5.0-1+deb12u5_amd64.deb","hash":"sha256-yuXe1mbYVz3TMGC8ZvusIe6osQGmtW4q+L1ZD8+mXXk="},{"name":"perl-base","version":"5.36.0-7+deb12u4","file":"perl-base_5.36.0-7+deb12u4_amd64.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/p/perl/perl-base_5.36.0-7+deb12u4_amd64.deb","hash":"sha256-19GUOuyVl2Kb9zB178xe9tyb2pbXjoDYQxVuzUSEeLg="},{"name":"ca-certificates","version":"20250419~deb12u2","file":"ca-certificates_20250419~deb12u2_all.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/c/ca-certificates/ca-certificates_20250419~deb12u2_all.deb","hash":"sha256-ufdrUnGnrDc/1efhtbgmpx3dcCtCoNEElV7LGs//yUs="},{"name":"openssl","version":"3.0.22-1~deb12u2","file":"openssl_3.0.22-1~deb12u2_amd64.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/o/openssl/openssl_3.0.22-1~deb12u2_amd64.deb","hash":"sha256-XN8Lc1scipauC/g+0yjIPCFw+DIN7bA16YcFtgstDP4="},{"name":"jq","version":"1.6-2.1+deb12u3","file":"jq_1.6-2.1+deb12u3_amd64.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/j/jq/jq_1.6-2.1+deb12u3_amd64.deb","hash":"sha256-wl8/2iASB+2YsdY2hvLYG53+uZ8astHTX7P3tqHBB9w="}]
+  '';
+  runtimeWheels = builtins.fromJSON ''
+    [{"name":"Pillow","version":"13.0.0","url":"https://files.pythonhosted.org/packages/36/46/f509b74787f40ce0627501089d630b2c741b63b244c1f40b640b3b01e181/pillow-13.0.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl","file":"pillow-13.0.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl","hash":"sha256-piXfmipVl/peUmbgGu/IJgS7hdKR41R5gehjVg112mw="},{"name":"certifi","version":"2026.10.18","url":"https://files.pythonhosted.org/packages/08/ba/95dd616042484f7c83a06974388b37b837732740ee70bc5dc715b5fcd55a/certifi-2026.10.18-py3-none-any.whl","file":"certifi-2026.10.18-py3-none-any.whl","hash":"sha256-cxkcR6qnnaOU6P7i28LsgnQyyrVjERIsnker9545D2I="}]
+  '';
+  runtimeInputs = { debian = runtimeDebs; wheels = runtimeWheels; };
   # Temporary URL parser repair; remove after upstream passes the
   # malformed-Host, current-data recovery and actual GPU consumer checks.
   runtime = helpers.mkRuntimeImage {
@@ -22,6 +29,11 @@ let
     version = "0.18.2-tensorrt-hostfix";
     recipe = ''
       FROM ghcr.io/blakeblackshear/frigate@sha256:1cafb6ebbaff0aaf275cc3f31951bcf7e29f3989f18a10ba9565091367d8736c
+      # Fixed runtime inputs ${builtins.hashString "sha256" (builtins.toJSON runtimeInputs)}
+      COPY debian/ /tmp/hwc-frigate-debs/
+      RUN DEBIAN_FRONTEND=noninteractive apt-get --no-download --yes -o Dir::Cache::archives=/tmp/hwc-frigate-debs -o Dpkg::Options::=--force-confold install /tmp/hwc-frigate-debs/*.deb && test -z "$(dpkg --audit)" && rm -r /tmp/hwc-frigate-debs
+      COPY wheels/ /tmp/hwc-frigate-wheels/
+      RUN python3 -m pip install --no-index --no-deps --no-cache-dir --force-reinstall /tmp/hwc-frigate-wheels/*.whl && rm -r /tmp/hwc-frigate-wheels
     ''
       + helpers.mkStarletteHostBackport {
         python = "python3";
@@ -30,6 +42,18 @@ let
         patchedSha256 = "5c163e52df0a615c7860136b30d010c48696c0774011db8879a3299e025ed441";
       };
   };
+  runtimeManifest = pkgs.writeText "frigate-runtime-packages.json" (builtins.toJSON runtimeInputs);
+  runtimeContext = pkgs.runCommand "frigate-runtime-context" {} ''
+    mkdir -p "$out/debian" "$out/wheels"
+    cp ${runtime.dockerfile} "$out/Dockerfile"
+    cp ${runtimeManifest} "$out/manifest.json"
+    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''
+      cp ${source} "$out/debian/${p.file}"
+    '') runtimeDebs}
+    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''
+      cp ${source} "$out/wheels/${p.file}"
+    '') runtimeWheels}
+  '';
 in
 {
   imports = [
@@ -93,6 +117,7 @@ in
 
   config = lib.mkIf cfg.enable {
     system.build.frigateRuntimeImageRecipe = runtime.dockerfile;
+    system.build.frigateRuntimeImageContext = runtimeContext;
     virtualisation.oci-containers.containers.frigate.pull = lib.mkIf (cfg.image == runtime.image) "never";
 
     # Config generation service (substitutes secrets into nix-generated YAML template)

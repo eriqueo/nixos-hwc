@@ -1712,12 +1712,12 @@
       assert lib.hasInfix "FROM ghcr.io/blakeblackshear/frigate@sha256:1cafb6ebbaff0aaf275cc3f31951bcf7e29f3989f18a10ba9565091367d8736c" frigate;
       assert lib.hasInfix "image exists ${lib.escapeShellArg expectedFrigate}" c.systemd.services.podman-frigate.preStart;
       pkgs.runCommand "starlette-host-backport-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-        python3 - ${c.system.build.frigateRuntimeImageRecipe} ${c.system.build.immichMlRuntimeImageRecipe} <<'PYTEST'
-        import pathlib, shlex, sys
+        python3 - ${c.system.build.frigateRuntimeImageRecipe} ${c.system.build.immichMlRuntimeImageRecipe} ${c.system.build.frigateRuntimeImageContext} <<'PYTEST'
+        import base64, hashlib, json, pathlib, shlex, sys
         expected = [('0.47.3', 'ce16c619c99e45507a3aebedf47c2807c8122bd9396e21f7cd48636f9715fa8c', '5c163e52df0a615c7860136b30d010c48696c0774011db8879a3299e025ed441'),
                     ('0.50.0', 'dde752330006431c7ebc1ccb948a95825be5bd6b8c03839133cdee59899c3030', '77253c43dce33af8b92b1b76794c6b39205419a520663246dfba595e4c76b283')]
         programs = []
-        for path, hashes in zip(sys.argv[1:], expected):
+        for path, hashes in zip(sys.argv[1:3], expected):
             recipe = pathlib.Path(path).read_text()
             assert all(line.split()[0] in {'FROM', 'RUN', 'COPY', 'ADD', 'ENV'} for line in recipe.splitlines() if line.strip() and not line.startswith('#'))
             at = recipe.rindex('RUN ')
@@ -1728,6 +1728,20 @@
             assert 'hashlib.sha256(source.encode()).hexdigest() == patched' in args[2]
             programs.append(args[2])
         assert programs[0] == programs[1], 'backport must have one producer'
+        context = pathlib.Path(sys.argv[3])
+        recipe = pathlib.Path(sys.argv[1]).read_text()
+        manifest = context / 'manifest.json'
+        assert (context / 'Dockerfile').read_text() == recipe
+        assert '# Fixed runtime inputs ' + hashlib.sha256(manifest.read_bytes()).hexdigest() in recipe
+        assert 'apt-get --no-download' in recipe and 'pip install --no-index --no-deps' in recipe
+        inputs = json.loads(manifest.read_text())
+        assert len(inputs['debian']) == 11 and len(inputs['wheels']) == 2
+        assert {p['name'].lower():p['version'] for p in inputs['wheels']} == {'pillow':'13.0.0','certifi':'2026.10.18'}
+        for group, directory in [('debian', 'debian'), ('wheels', 'wheels')]:
+            assert {p.name for p in (context / directory).iterdir()} == {p['file'] for p in inputs[group]}
+            for p in inputs[group]:
+                actual = hashlib.sha256((context / directory / p['file']).read_bytes()).digest()
+                assert actual == base64.b64decode(p['hash'].removeprefix('sha256-')), p['name']
         PYTEST
         touch "$out"
       '';
