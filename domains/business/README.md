@@ -18,6 +18,8 @@ Document processors use a private conversion bridge; only Paperless also joins i
 
 Paperless owns fixed-hash client2.0.0, Tika4.2.0 and Gotenberg8.39.0/Chromium156 runtime recipes with offline builds and prebuilt-image guards. Its unchanged3.1.3 application uses the matching Tika/CXF4.2.4 server; the unused Tika Pebble supervisor is removed.
 
+The same Paperless runtime pins Python3.14.10, current signed Debian security packages and fixed Python libraries while retaining its application files and database schema.
+
 `estimator/` serves its PWA without browser credentials. Exact private webhook handlers inject a runtime agenix credential; existing CRM job-intake routes remain separate.
 
 Morning-briefing live sources run concurrently after the MCP handshake. Research queues use four-profile batches alongside lessons and ingest-health reads; refinery files use sixteen-read batches. `morning-briefing/gather.test.mjs` checks overlap, bounds and stable partial output through the `morning-briefing-async` flake check.
@@ -97,6 +99,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-02: Repair Paperless OS/Python dependencies on the existing application. Exercise codecs, OCR, actual Office parsing, and data/API parity through old/new/restored PostgreSQL15.19.
 
 - 2026-11-02: Remove Tika's unused Go supervisor while retaining its direct Java entrypoint, server bytes and non-root identity.
 

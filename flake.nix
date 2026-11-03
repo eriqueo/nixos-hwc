@@ -1496,8 +1496,19 @@
         client_recipe = (client_context/'Dockerfile').read_text()
         assert 'FROM ghcr.io/paperless-ngx/paperless-ngx@sha256:aa810a36942c63d4ee70d00eda7236cd3d6acfb7eb3f7987fb568ed14df8817a' in client_recipe
         assert '--no-index --no-deps' in client_recipe
-        assert hashlib.sha256((client_context/'tika_client-2.0.0-py3-none-any.whl').read_bytes()).hexdigest() == '44dd7a5227ab2d25bc88b8ff282039602eaac0592e542ee0486d9535ec1be9b2'
-        expected_paperless = 'localhost/paperless-runtime:3.1.3-tika-client2.0.0-'+hashlib.sha256(client_recipe.encode()).hexdigest()[:12]
+        assert 'FROM docker.io/library/python@sha256:ec6a14df5b63e3fbb3498e3240f7f640c230f9dca67683d23265db3866697f2d AS patched-python' in client_recipe
+        assert '! -name site-packages' in client_recipe and '--no-download' in client_recipe
+        client_packages = json.loads((client_context/'manifest.json').read_text())
+        assert len(client_packages['debian']) == 64
+        assert {'libbrotli1','ghostscript','libgs10','libc6','libraw23t64','perl','libglib2.0-0t64','curl'} <= {p['name'] for p in client_packages['debian']}
+        assert {p['name'].lower():p['version'] for p in client_packages['wheels']} == {
+            'tika-client':'2.0.0','pillow':'13.0.0','brotli':'1.2.1','anyio':'4.14.2','pyjwt':'2.14.0','certifi':'2026.10.18'}
+        for group,folder in [('debian','debian'),('wheels','wheels')]:
+            for p in client_packages[group]:
+                digest = hashlib.sha256((client_context/folder/p['file']).read_bytes()).digest()
+                assert p['hash'] == 'sha256-'+base64.b64encode(digest).decode()
+        assert hashlib.sha256((client_context/'wheels/tika_client-2.0.0-py3-none-any.whl').read_bytes()).hexdigest() == '44dd7a5227ab2d25bc88b8ff282039602eaac0592e542ee0486d9535ec1be9b2'
+        expected_paperless = 'localhost/paperless-runtime:3.1.3-python3.14.10-'+hashlib.sha256(client_recipe.encode()).hexdigest()[:12]
         tika_recipe = pathlib.Path(spec['tikaRecipe']).read_text()
         assert 'FROM docker.io/apache/tika@sha256:b99f19c4fd76237dafe7d22f719b9bddfa9a449da687c597a41e2f6d9a595418' in tika_recipe
         assert 'test -f /usr/bin/pebble && rm /usr/bin/pebble' in tika_recipe

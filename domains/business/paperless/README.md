@@ -17,6 +17,8 @@ Paperless joins its normal network and the private conversion bridge. Tika and G
 
 `index.nix` owns the fixed-hash Paperless client, Tika and Gotenberg runtime recipes and prebuilt-image guards. Paperless remains 3.1.3, paired with upstream tika-client 2.0.0 and immutable Tika 4.2.0/CXF 4.2.4. Tika retains its direct Java entrypoint and non-root user; its unused Pebble supervisor is removed. Gotenberg uses patched Chromium and the vendor security release.
 
+The Paperless recipe also replaces Python within 3.14 with the fixed vendor 3.14.10 interpreter, retains application packages, and installs 64 authenticated Debian updates plus fixed Brotli, Pillow, AnyIO, PyJWT and certifi wheels. Every archive has a fixed hash. The build has no network access or dependency resolution.
+
 ```
 domains/business/paperless/
 ├── index.nix              # Option definitions + imports
@@ -119,6 +121,8 @@ hwc.business.paperless = {
 - `paperless-cleanup.service` / `paperless-cleanup.timer` — daily staging/export cleanup
 
 ## Changelog
+
+- 2026-11-02: Repair the existing application's Python, image-processing, compression, certificate and OS dependencies. Actual codecs, OCR, Office parser and restored PostgreSQL15.19 consumers pass; all74tables and authenticated document API fingerprints match old/new/restored. Application/schema stays3.1.3.
 
 - 2026-11-02: Remove the unused Go-based Pebble executable from the Tika runtime; retain all Java server files, the vendor entrypoint and UID/GID35002. Guard the prebuilt local image before startup.
 
