@@ -1,0 +1,116 @@
+[
+  {
+    "name": "musl",
+    "version": "1.2.5-r13",
+    "repository": "main",
+    "hash": "sha256-NZiQvHxNxf7nqFGS3mCkccmH5GZHZyiFeL7KYKRNssg="
+  },
+  {
+    "name": "alpine-release",
+    "version": "3.22.7-r0",
+    "repository": "main",
+    "hash": "sha256-V0GiCx/9Bi0ywPhyWzH4ZFwlsfD6W/fArM/uiweWO4Q="
+  },
+  {
+    "name": "zlib",
+    "version": "1.3.2-r1",
+    "repository": "main",
+    "hash": "sha256-ryTlAmReKzksroM4Vtd2aRrCFlU2Ll22nXuJ8Uf3YhY="
+  },
+  {
+    "name": "libapk2",
+    "version": "2.14.12-r0",
+    "repository": "main",
+    "hash": "sha256-RB2dw0xPmPFLowo1WSgdb0V3MDtO+m64wWJ0ZpecP0c="
+  },
+  {
+    "name": "apk-tools",
+    "version": "2.14.12-r0",
+    "repository": "main",
+    "hash": "sha256-/fijJyGeHm5dTkX719t89Igf4+ZB6DHljKpy6Doays4="
+  },
+  {
+    "name": "musl-utils",
+    "version": "1.2.5-r13",
+    "repository": "main",
+    "hash": "sha256-D7UtHXLzTNaQJyWK3KSNtddbIIcjdMX2vQBgDwJ53dY="
+  },
+  {
+    "name": "pcre2",
+    "version": "10.46-r1",
+    "repository": "main",
+    "hash": "sha256-4ODjxfO0o3p3eZpzZ7tA3ThZa+VfVvO8YPLLS1hPhCw="
+  },
+  {
+    "name": "nginx",
+    "version": "1.28.3-r7",
+    "repository": "main",
+    "hash": "sha256-wEGOM64sRy7FZP3EfPdW4g0i4a3h340h4jpZ0410j/E="
+  },
+  {
+    "name": "nghttp2-libs",
+    "version": "1.69.0-r0",
+    "repository": "main",
+    "hash": "sha256-1u5RXTDXA+lLVe+cCgKuoFMxP2VKy9LGVdGOOQfstmo="
+  },
+  {
+    "name": "nodejs",
+    "version": "22.23.4-r0",
+    "repository": "main",
+    "hash": "sha256-cp+XRMSbbIrM2HpI7+nQWp/O1htOkjUBenYe9seJ+tI="
+  },
+  {
+    "name": "xz-libs",
+    "version": "5.8.4-r0",
+    "repository": "main",
+    "hash": "sha256-N+Fpt7QAME+nAnyrefnBx6KA6DrPbJVGM4S4q7frslQ="
+  },
+  {
+    "name": "libxml2",
+    "version": "2.13.9-r1",
+    "repository": "main",
+    "hash": "sha256-vjYWmMb3KPSSuZVQ6Z6JiuR4lA/lk9jBGxTF89G1qTg="
+  },
+  {
+    "name": "libcurl",
+    "version": "8.14.1-r4",
+    "repository": "main",
+    "hash": "sha256-OIfzsuZrUTyw+CEa9jaaD/r4cnDAXtHxj3MT7dxrNmA="
+  },
+  {
+    "name": "libpq",
+    "version": "17.11-r0",
+    "repository": "main",
+    "hash": "sha256-gDOx5r4Xe2ed41e859b0NehTb7WYAXrNqJ88fnsav2o="
+  },
+  {
+    "name": "libexpat",
+    "version": "2.10.0-r0",
+    "repository": "main",
+    "hash": "sha256-j/g6iXtTk4Mu29KnUAw3uraFoX14IZJdlUYPAXR9usI="
+  },
+  {
+    "name": "python3",
+    "version": "3.12.16-r0",
+    "repository": "main",
+    "hash": "sha256-S9G/W5gM35BsBKUHJYz66LRLMHDYK3xMv3fvJVK72wY="
+  },
+  {
+    "name": "python3-pycache-pyc0",
+    "version": "3.12.16-r0",
+    "repository": "main",
+    "hash": "sha256-sbFzLgk9NM6cHhJvvAE8kpmJXtWglhXQiOIg6DA+Ins="
+  },
+  {
+    "name": "pyc",
+    "version": "3.12.16-r0",
+    "repository": "main",
+    "hash": "sha256-NYj7rhN2CUuMc/gwC/63/zlNF6Zm1AdknwbZByo/IJQ="
+  },
+  {
+    "name": "python3-pyc",
+    "version": "3.12.16-r0",
+    "repository": "main",
+    "hash": "sha256-tJlo/w2Og3hwnU726i4xsue2mySUUgeyR7tr8IXuHc4="
+  }
+]

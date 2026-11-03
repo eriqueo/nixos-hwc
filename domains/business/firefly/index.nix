@@ -18,16 +18,27 @@ let
   # preserve the current app/schema and meet the PHP security floor.
   # The donor supplies PHP and its extensions only, never application bytes.
   phpRuntimeDonor = "docker.io/fireflyiii/core@sha256:321dc39c1d956aaf67d8adbfa48485190361d6d51640bafb9c029c48f296374d";
+  # Same-release vendor security updates, authenticated by APT during acquisition.
+  # Temporary: remove with the runtime overlay once upstream passes qualification.
+  debianManifest = ./debian-runtime-packages.json;
+  debianPackages = map (p: p // {
+    source = pkgs.fetchurl { inherit (p) url hash; };
+  }) (builtins.fromJSON (builtins.readFile debianManifest));
   phpRuntimes = lib.mapAttrs (_: app: helpers.mkRuntimeImage {
     name = app.name;
     version = "${app.version}-php${phpVersion}";
     recipe = ''
+      # Debian package selection ${builtins.hashFile "sha256" debianManifest}
       FROM ${phpRuntimeDonor} AS secure-php
       FROM ${app.image}
+      USER root
+      COPY *.deb /tmp/hwc-runtime-debs/
+      RUN DEBIAN_FRONTEND=noninteractive dpkg --force-confold -i /tmp/hwc-runtime-debs/*.deb && dpkg --audit && rm -r /tmp/hwc-runtime-debs
       COPY --from=secure-php /usr/local/bin/php /usr/local/bin/php-config /usr/local/bin/phpize /usr/local/bin/
       COPY --from=secure-php /usr/local/sbin/php-fpm /usr/local/sbin/php-fpm
       COPY --from=secure-php /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
       ENV PHP_VERSION=${phpVersion} PHP_URL=https://www.php.net/distributions/php-${phpVersion}.tar.xz PHP_ASC_URL=https://www.php.net/distributions/php-${phpVersion}.tar.xz.asc PHP_SHA256=08bc2eba2a588654ade1357174aa646b761556c862dda0678345ee29ed481209
+      USER www-data
     '';
   }) {
     core = {
@@ -48,7 +59,7 @@ let
     file = "${p.name}-${p.version}.apk";
     url = "https://dl-cdn.alpinelinux.org/alpine/v3.22/${p.repository or "main"}/x86_64/${file}";
     source = pkgs.fetchurl { inherit url; inherit (p) hash; };
-  }) [
+  }) ((builtins.fromJSON (builtins.readFile ./alpine-runtime-packages.json)) ++ [
     { name = "c-ares"; version = "1.34.9-r0"; hash = "sha256-myOqB5Ae1kveC+fsVE+NKynegNmWJ33IYSGMVP/4vJc="; }
     { name = "brotli-libs"; version = "1.1.1-r0"; hash = "sha256-nlJhhFd2L2W/Jz9C1x24CEYzoenZOP8mEQFbog1EqM8="; }
     { name = "libcrypto3"; version = picoOpenSSLVersion; hash = "sha256-P1glztX94cZqU3aj9gdrPAhTitUtnvI/BphX4hLZF1o="; }
@@ -78,7 +89,7 @@ let
     { name = "php82-xml"; version = picoPhpVersion; repository = "community"; hash = "sha256-eSK44JhAUyATlcNBKZZO0po2jdIsxbJ13drCEnuata4="; }
     { name = "php82-xmlwriter"; version = picoPhpVersion; repository = "community"; hash = "sha256-C4BumwxAcKlQ2KiTLMb4QT/nlbc+P8tsoyO7MJu1i/Q="; }
     { name = "php82-zip"; version = picoPhpVersion; repository = "community"; hash = "sha256-aQn/UFHlZU8goo8SFB19Bbxg/E8dv6fs5URmT0iOI+c="; }
-  ];
+  ]);
   picoRuntime = helpers.mkRuntimeImage {
     name = "firefly-pico";
     version = "${picoAppVersion}-node${picoNodeVersion}";
@@ -437,10 +448,14 @@ in
     system.build.fireflyCoreRuntimeImageContext = pkgs.runCommand "firefly-core-runtime-context" {} ''
       mkdir -p "$out"
       cp ${phpRuntimes.core.dockerfile} "$out/Dockerfile"
+      cp ${debianManifest} "$out/manifest.json"
+      ${lib.concatMapStrings (p: "cp ${p.source} \"$out/${p.file}\"\n") debianPackages}
     '';
     system.build.fireflyImporterRuntimeImageContext = pkgs.runCommand "firefly-importer-runtime-context" {} ''
       mkdir -p "$out"
       cp ${phpRuntimes.importer.dockerfile} "$out/Dockerfile"
+      cp ${debianManifest} "$out/manifest.json"
+      ${lib.concatMapStrings (p: "cp ${p.source} \"$out/${p.file}\"\n") debianPackages}
     '';
     system.build.fireflyPicoRuntimeImageContext = picoContext;
     system.build.fireflyPicoRuntimeImageRecipe = picoRuntime.dockerfile;

@@ -14,6 +14,10 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Firefly runtime contexts include exact-hash Debian and Alpine package manifests.
+The recipes install these vendor OS fixes offline before restoring the original
+container user. No app or schema upgrade runs during the image build.
+
 The website backend defers access logging to the networking tunnel logger when
 enabled, avoiding duplicate raw query/capability records.
 
@@ -81,6 +85,11 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-02: Add signed-vendor, fixed-hash OS dependency repairs to all three
+  same-app finance runtime contexts. Bind the Debian inventory to each image tag;
+  update Pico nginx, curl, PostgreSQL client, Expat, Python and shared libraries.
+  Candidate qualification and deployment remain separate.
 
 - 2026-11-01: Defer public website access logging to the sanitized origin logger.
 

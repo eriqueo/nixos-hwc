@@ -1,0 +1,277 @@
+[
+  {
+    "file": "nginx_1.30.6-1~trixie_amd64.deb",
+    "url": "https://nginx.org/packages/debian/pool/nginx/n/nginx/nginx_1.30.6-1%7etrixie_amd64.deb",
+    "hash": "sha256-jcml2m1iszqu8gwEd2CoLHsYyQEAJRKQ719VO53jvDw="
+  },
+  {
+    "file": "libc6-dev_2.41-12+deb13u4_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/g/glibc/libc6-dev_2.41-12%2bdeb13u4_amd64.deb",
+    "hash": "sha256-H9pzTavNgLdyZqCatisPHj4W2AkdtiiZiQsiAHRWMqI="
+  },
+  {
+    "file": "libc-dev-bin_2.41-12+deb13u4_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/g/glibc/libc-dev-bin_2.41-12%2bdeb13u4_amd64.deb",
+    "hash": "sha256-LCEXXWqCg+1WbRVMDAvAb2CDblOwueH3TBTqxYa2jCQ="
+  },
+  {
+    "file": "linux-libc-dev_6.12.115-2_all.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/l/linux/linux-libc-dev_6.12.115-2_all.deb",
+    "hash": "sha256-I1uiyy6md/Ssr0ArAn520wU0KHD22A2CLX7pcT4vD/U="
+  },
+  {
+    "file": "libc6_2.41-12+deb13u4_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/g/glibc/libc6_2.41-12%2bdeb13u4_amd64.deb",
+    "hash": "sha256-lnqmJgVyEIHD6yoXZQYRp5KqgC12plEdGEAkJiPSBMk="
+  },
+  {
+    "file": "base-files_13.8+deb13u7_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/b/base-files/base-files_13.8%2bdeb13u7_amd64.deb",
+    "hash": "sha256-/NQrtctj97/EMmqSVBJHhyIG1goZL9/2XKFOuD7UCLk="
+  },
+  {
+    "file": "bash_5.2.37-2+b10_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37-2%2bb10_amd64.deb",
+    "hash": "sha256-L9ewTxt8qinE5oP1IW5q81SkHjzc9udTlNfNpoD5q4I="
+  },
+  {
+    "file": "bsdutils_1%3a2.41.5-0+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/u/util-linux/bsdutils_2.41.5-0%2bdeb13u1_amd64.deb",
+    "hash": "sha256-2TWlECdSoRCL3x6BXImoSsiNGUm/BJp4QXj5RqCbFNo="
+  },
+  {
+    "file": "gzip_1.13-1+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/g/gzip/gzip_1.13-1%2bdeb13u1_amd64.deb",
+    "hash": "sha256-dM8SISvu5KuNRzvcAQer+ejO9zdJIZji9JRKGfFCsKw="
+  },
+  {
+    "file": "libperl5.40_5.40.1-6+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/p/perl/libperl5.40_5.40.1-6%2bdeb13u1_amd64.deb",
+    "hash": "sha256-5Ed3/0etJI0d69V+H5arXokGGjQQCK45iAujtfwV8nM="
+  },
+  {
+    "file": "perl_5.40.1-6+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/p/perl/perl_5.40.1-6%2bdeb13u1_amd64.deb",
+    "hash": "sha256-7xRcJHeH1vQNze/VtBdQJISCfN4NVVmYwX/Vsn7B4d0="
+  },
+  {
+    "file": "perl-base_5.40.1-6+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/p/perl/perl-base_5.40.1-6%2bdeb13u1_amd64.deb",
+    "hash": "sha256-t5VGQTeg9NRD/JKE9Lk+iD+4OIPLUzrfMArGYIB6NSo="
+  },
+  {
+    "file": "perl-modules-5.40_5.40.1-6+deb13u1_all.deb",
+    "url": "https://deb.debian.org/debian/pool/main/p/perl/perl-modules-5.40_5.40.1-6%2bdeb13u1_all.deb",
+    "hash": "sha256-TEbN2PMTWqHJXwfoF/jl2b5ZBodEGsHCfjqMSUAPNc4="
+  },
+  {
+    "file": "liblastlog2-2_2.41.5-0+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/u/util-linux/liblastlog2-2_2.41.5-0%2bdeb13u1_amd64.deb",
+    "hash": "sha256-q7dq7L9RR55uGThz392qG4hmfcCx24KhEoamdVC6FVc="
+  },
+  {
+    "file": "libuuid1_2.41.5-0+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/u/util-linux/libuuid1_2.41.5-0%2bdeb13u1_amd64.deb",
+    "hash": "sha256-wb9MTD/0jFf6v5MwfftWmWtgz6M5J6/EFYtds2+ych4="
+  },
+  {
+    "file": "libblkid1_2.41.5-0+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/u/util-linux/libblkid1_2.41.5-0%2bdeb13u1_amd64.deb",
+    "hash": "sha256-gVNfPCwO/HMpZZB8h0kQOgomN3x2FiLJzjm0yS3N5S8="
+  },
+  {
+    "file": "libmount1_2.41.5-0+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/u/util-linux/libmount1_2.41.5-0%2bdeb13u1_amd64.deb",
+    "hash": "sha256-bQD0Xy6A4HjpBuPu3s07ppE+Of70m/82HuWD8X8A7AU="
+  },
+  {
+    "file": "libsmartcols1_2.41.5-0+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/u/util-linux/libsmartcols1_2.41.5-0%2bdeb13u1_amd64.deb",
+    "hash": "sha256-2WusnIgFaF8nNIhQmKIUuClQ2m67GCwnprehJKAyM5I="
+  },
+  {
+    "file": "util-linux_2.41.5-0+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/u/util-linux/util-linux_2.41.5-0%2bdeb13u1_amd64.deb",
+    "hash": "sha256-fVsRdsw9jMaykLPsF69FjzYtkgCEXzDaIgV6gZh0RDA="
+  },
+  {
+    "file": "mount_2.41.5-0+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/u/util-linux/mount_2.41.5-0%2bdeb13u1_amd64.deb",
+    "hash": "sha256-63CmFRFKxAEjdovrIOMCVU1ct+2zMpC+fkGOvhB1yHg="
+  },
+  {
+    "file": "libsqlite3-0_3.46.1-7+deb13u2_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/s/sqlite3/libsqlite3-0_3.46.1-7%2bdeb13u2_amd64.deb",
+    "hash": "sha256-CkWa2v/ZARCfeBGrZfWOepV7SQfQVTnPPRGE79zeBGg="
+  },
+  {
+    "file": "libc-bin_2.41-12+deb13u4_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/g/glibc/libc-bin_2.41-12%2bdeb13u4_amd64.deb",
+    "hash": "sha256-3Ix5ZH/jpfN/cqQAQU9wJj0CEvAQ/ywJ+ZDjDZHjjRw="
+  },
+  {
+    "file": "libaudit-common_1%3a4.0.2-2+deb13u1_all.deb",
+    "url": "https://deb.debian.org/debian/pool/main/a/audit/libaudit-common_4.0.2-2%2bdeb13u1_all.deb",
+    "hash": "sha256-udMuX/BP10eqy31rPru79zTd77LxaV8LGypLXlGxBS4="
+  },
+  {
+    "file": "libaudit1_1%3a4.0.2-2+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/a/audit/libaudit1_4.0.2-2%2bdeb13u1_amd64.deb",
+    "hash": "sha256-PR3T8DGlbwG3R+KswOFFdSElgOb6Y9gAxEywox8e39c="
+  },
+  {
+    "file": "login_1%3a4.16.0-2+really2.41.5-0+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/u/util-linux/login_4.16.0-2%2breally2.41.5-0%2bdeb13u1_amd64.deb",
+    "hash": "sha256-j8WGlTKnPVd8Srte2RfgSLvXIUhwLqHcrdOBcGTz6Ic="
+  },
+  {
+    "file": "libexpat1_2.9.0-1~deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/e/expat/libexpat1_2.9.0-1%7edeb13u1_amd64.deb",
+    "hash": "sha256-/v+HR3LK6QSuTSTpF7NWZJUr7EtK6RAKTt2lp/p0aDI="
+  },
+  {
+    "file": "libcap2_1%3a2.75-10+deb13u1+b3_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/libc/libcap2/libcap2_2.75-10%2bdeb13u1%2bb3_amd64.deb",
+    "hash": "sha256-ifxNNPx6KK1vD80MVhqyU7ne32939aAAtHwnbIKVv2c="
+  },
+  {
+    "file": "liblzma5_5.8.1-1+deb13u2_amd64.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/x/xz-utils/liblzma5_5.8.1-1%2bdeb13u2_amd64.deb",
+    "hash": "sha256-s4rKsw8pW/EGamYy4xy9ChmA8pJLOAQM2hMdXepThOw="
+  },
+  {
+    "file": "libpcre2-8-0_10.46-1~deb13u3_amd64.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/p/pcre2/libpcre2-8-0_10.46-1%7edeb13u3_amd64.deb",
+    "hash": "sha256-4ib2YdkY8E2vOM28SAa37X1u+Vx+sK3mkvw1DjGXAEA="
+  },
+  {
+    "file": "openssl-provider-legacy_3.5.7-1~deb13u3_amd64.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/o/openssl/openssl-provider-legacy_3.5.7-1%7edeb13u3_amd64.deb",
+    "hash": "sha256-wS4CZsR4B0mkcCuJWayXlon0GC4Y7thail65DtDhbqs="
+  },
+  {
+    "file": "libssl3t64_3.5.7-1~deb13u3_amd64.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/o/openssl/libssl3t64_3.5.7-1%7edeb13u3_amd64.deb",
+    "hash": "sha256-/xa8BIvNfRslYJRFC3nHeUfY52/iokvZm5ECHVkfoHQ="
+  },
+  {
+    "file": "tzdata_2026f-0+deb13u1_all.deb",
+    "url": "https://deb.debian.org/debian/pool/main/t/tzdata/tzdata_2026f-0%2bdeb13u1_all.deb",
+    "hash": "sha256-LBxWEJFAKINDDQ1HxXo8CqALRK/IpiOSZQZahyEaXBE="
+  },
+  {
+    "file": "openssl_3.5.7-1~deb13u3_amd64.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/o/openssl/openssl_3.5.7-1%7edeb13u3_amd64.deb",
+    "hash": "sha256-Q6nLzyqKDh8KHD9aM+4fVrJpaQ56ISnystBYLniVidc="
+  },
+  {
+    "file": "ca-certificates_20250419+deb13u1_all.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/c/ca-certificates/ca-certificates_20250419%2bdeb13u1_all.deb",
+    "hash": "sha256-wQWFrCLH9henPTlO6im6cdA1bzUK6XOxkEPRsBf4D1Q="
+  },
+  {
+    "file": "libc-l10n_2.41-12+deb13u4_all.deb",
+    "url": "https://deb.debian.org/debian/pool/main/g/glibc/libc-l10n_2.41-12%2bdeb13u4_all.deb",
+    "hash": "sha256-26qIX1UExn/kPAefduKys5/PZHrjmICqs91m5I9edy0="
+  },
+  {
+    "file": "locales_2.41-12+deb13u4_all.deb",
+    "url": "https://deb.debian.org/debian/pool/main/g/glibc/locales_2.41-12%2bdeb13u4_all.deb",
+    "hash": "sha256-/8VXjVwsMMpw1GETkI8gCgmrbl6e2hmUY68yhdu6row="
+  },
+  {
+    "file": "xz-utils_5.8.1-1+deb13u2_amd64.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/x/xz-utils/xz-utils_5.8.1-1%2bdeb13u2_amd64.deb",
+    "hash": "sha256-ZrBg7y8JciyUe6AZ2l6aY/a6yde/kLMjOacsA5CsxT8="
+  },
+  {
+    "file": "libbrotli1_1.1.0-2+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/b/brotli/libbrotli1_1.1.0-2%2bdeb13u1_amd64.deb",
+    "hash": "sha256-20aCTGD+5Gr/PMC+Pl9za8YGyuZpsfsXUWpB6AcyUak="
+  },
+  {
+    "file": "libssh2-1t64_1.11.1-1+deb13u2_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/libs/libssh2/libssh2-1t64_1.11.1-1%2bdeb13u2_amd64.deb",
+    "hash": "sha256-27ECTBktTSkrfPqQK5YHbP6BtWpe7U+yjaNui/VD5Jo="
+  },
+  {
+    "file": "curl_8.14.1-2+deb13u7_amd64.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/c/curl/curl_8.14.1-2%2bdeb13u7_amd64.deb",
+    "hash": "sha256-E1Y2vYtxPFgtM+UOxONupVzDxdo/Ervra4fSvL06Bkk="
+  },
+  {
+    "file": "libcurl4t64_8.14.1-2+deb13u7_amd64.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/c/curl/libcurl4t64_8.14.1-2%2bdeb13u7_amd64.deb",
+    "hash": "sha256-T4m9Pnozu9j3QigXqKjiIzyeGU/anDMeM7+YcF9SW/w="
+  },
+  {
+    "file": "exim4-config_4.98.2-1+deb13u5_all.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/e/exim4/exim4-config_4.98.2-1%2bdeb13u5_all.deb",
+    "hash": "sha256-KCn0feUKXslTgFE1omygUCRem4n+JKAwZGuJ/qGMUPY="
+  },
+  {
+    "file": "exim4-base_4.98.2-1+deb13u5_amd64.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/e/exim4/exim4-base_4.98.2-1%2bdeb13u5_amd64.deb",
+    "hash": "sha256-MrycLEBzG/y3Td3HhBJvYt+ENetQ42FOwrJbVQtRYy0="
+  },
+  {
+    "file": "exim4-daemon-light_4.98.2-1+deb13u5_amd64.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/e/exim4/exim4-daemon-light_4.98.2-1%2bdeb13u5_amd64.deb",
+    "hash": "sha256-i5X795nUePcRyDPu3Dpjk1e+Q9deQdlEawHfyCZaJpE="
+  },
+  {
+    "file": "libcom-err2_1.47.2-3+b12_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/e/e2fsprogs/libcom-err2_1.47.2-3%2bb12_amd64.deb",
+    "hash": "sha256-vUPgILj+05nbPuvwmBEfEPukxDb/+ZzK1yzH4nyXZOw="
+  },
+  {
+    "file": "libevent-2.1-7t64_2.1.13-stable-1~deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/libe/libevent/libevent-2.1-7t64_2.1.13-stable-1%7edeb13u1_amd64.deb",
+    "hash": "sha256-miqabEzqr+KA+POf+iF7tQcZxeef63X0EnVcQDanbKA="
+  },
+  {
+    "file": "libmbedcrypto16_3.6.6-0.1~deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/m/mbedtls/libmbedcrypto16_3.6.6-0.1%7edeb13u1_amd64.deb",
+    "hash": "sha256-s4uvLsrKeyizAF00uBCO6bF2gUJrIGYoE5lek5rqbfo="
+  },
+  {
+    "file": "libmbedx509-7_3.6.6-0.1~deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/m/mbedtls/libmbedx509-7_3.6.6-0.1%7edeb13u1_amd64.deb",
+    "hash": "sha256-4LZjDvz56uLgUXJJZXa8MjW+E0prv42kzzVw+6ZfZbg="
+  },
+  {
+    "file": "libmbedtls21_3.6.6-0.1~deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/m/mbedtls/libmbedtls21_3.6.6-0.1%7edeb13u1_amd64.deb",
+    "hash": "sha256-nigFBa+l9apwNOSU50Zsgtjpry6zvy7fRrqwvXti4aw="
+  },
+  {
+    "file": "libpq5_17.11-0+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/p/postgresql-17/libpq5_17.11-0%2bdeb13u1_amd64.deb",
+    "hash": "sha256-IKTJ71i0uvkN7aZ8+yzAYoccBigw3dwjTSj1rHkxuGs="
+  },
+  {
+    "file": "libtasn1-6_4.20.0-2+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/libt/libtasn1-6/libtasn1-6_4.20.0-2%2bdeb13u1_amd64.deb",
+    "hash": "sha256-I/7G4GWDziutmywEybSF6QRA4lmxq/hnfNgNPOYIMa0="
+  },
+  {
+    "file": "libunbound8_1.26.2-0+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian-security/pool/updates/main/u/unbound/libunbound8_1.26.2-0%2bdeb13u1_amd64.deb",
+    "hash": "sha256-WwV7BBo59AII3fmu/xtVgabDr2jJqWx4Sg1icPGUOho="
+  },
+  {
+    "file": "libxml2_2.12.7+dfsg+really2.9.14-2.1+deb13u3_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/libx/libxml2/libxml2_2.12.7%2bdfsg%2breally2.9.14-2.1%2bdeb13u3_amd64.deb",
+    "hash": "sha256-4Ma2PORgKgNqUm9g/l5sFYZxBogFjZj8EAG5sxR7fv0="
+  },
+  {
+    "file": "unzip_6.0-29+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/u/unzip/unzip_6.0-29%2bdeb13u1_amd64.deb",
+    "hash": "sha256-/BH4c2vexvxGpoZPdbzgyCBqeQ3zfbyrXdslsb8PWPA="
+  },
+  {
+    "file": "zip_3.0-15+deb13u1_amd64.deb",
+    "url": "https://deb.debian.org/debian/pool/main/z/zip/zip_3.0-15%2bdeb13u1_amd64.deb",
+    "hash": "sha256-NbfuHyr7ztLDVtX3SG/1oFqWFij+fH8IxYK2soQ+ZIk="
+  }
+]

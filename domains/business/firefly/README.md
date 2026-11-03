@@ -11,6 +11,10 @@ Firefly III personal finance manager running as a Podman container, with optiona
 
 ## Structure
 
+Firefly runtime contexts include exact-hash Debian and Alpine package manifests.
+The recipes install these vendor OS fixes offline before restoring the original
+container user. No app or schema upgrade runs during the image build.
+
 `parts/config.nix` persists the existing OAuth key pair under
 `hwc.paths.state/firefly/oauth`, covered by the state backup. Startup refuses a
 missing or mismatched pair before replacing the container. Seed the existing
@@ -141,6 +145,11 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 - `firefly-explorer.service` — immutable explorer package; validates its token, Firefly account, UI assets, and tailscaled socket before serving. Every API request is authorized with Tailscale WhoIs. Split groups remain read-only; writes are limited to existing category/expense-account ids and existing tags.
 
 ## Changelog
+
+- 2026-11-02: Add signed-vendor, fixed-hash OS dependency repairs to all three
+  same-app finance runtime contexts. Bind the Debian inventory to each image tag;
+  update Pico nginx, curl, PostgreSQL client, Expat, Python and shared libraries.
+  Candidate qualification and deployment remain separate.
 
 - 2026-11-01: Persist the existing Core OAuth signing keys and check their pair
   before container startup, so runtime image replacement preserves API tokens.
