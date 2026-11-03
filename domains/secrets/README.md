@@ -9,6 +9,8 @@
 
 ## Structure
 
+`parts/services/estimator-api-key.age` is the server-only estimator/n8n credential. It retains the existing five-recipient policy and generated root:secrets0440 mount. Caddy reads it at request time; n8n reloads its environment when ciphertext changes. Never pass it to Vite or browser storage. The encrypted prior value remains recoverable in Git.
+
 `parts/system/dad-login-password{,-hash}.age` retain a generated household
 login recovery password and its yescrypt consumer hash under the existing
 default recovery recipients. Both use generated root:secrets0440 mounts; Dad
@@ -76,6 +78,8 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+
+- 2026-11-02: Rotate the disclosed estimator key after deploying server-side proxy injection and a credential-free PWA. Encrypt to the exact existing recipient rule and verify work host-key decryption without plaintext files.
 - 2026-10-25: Add the isolated XPS household desktop wiring; preserve existing
   host defaults and use the owning login, gaming and credential capabilities.
 - 2026-10-24: Add the separately consented Workbench T3 credential map. Verify
