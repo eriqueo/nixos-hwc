@@ -1471,7 +1471,6 @@
         recipe = (context / 'Dockerfile').read_text()
         manifest = json.loads((context / 'manifest.json').read_text())
         assert manifest['schemaVersion'] == 1
-        assert recipe.splitlines()[0] == 'FROM '+manifest['baseImage']
         assert spec['image'] == 'localhost/firefly-pico-runtime:1.10.1-node22.23.4-' + hashlib.sha256(recipe.encode()).hexdigest()[:12]
         assert spec['container']['image'] == spec['image'] and spec['container']['pull'] == 'never'
         assert spec['image'] in spec['preStart'] and ' image exists ' in spec['preStart']
@@ -4124,6 +4123,7 @@
         manifest = json.loads((root/'manifest.json').read_text())
         recipe = (root/'Dockerfile').read_text()
         assert manifest['schemaVersion'] == 1
+        assert recipe.splitlines()[0] == 'FROM '+manifest['baseImage']
         def current(m):
             assert tuple(map(int,m['chrome']['version'].split('.'))) >= (156,0,8078,79), 'stale browser'
         current(manifest)
