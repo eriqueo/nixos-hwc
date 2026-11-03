@@ -69,6 +69,7 @@ let
     cp ${./native-runtime-build.sh} "$out/native-runtime-build.sh"
     mkdir -p "$out/native-build-debs" "$out/native-sources"
     cp ${nativeSourcesManifest} "$out/native-sources/manifest.json"
+    cp ${nativeBuildManifest} "$out/native-build-packages.json"
     ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''
       cp ${source} "$out/native-sources/${p.file}"
     '') nativeSources}
@@ -197,6 +198,8 @@ let
     cp ${picoRuntime.dockerfile} "$out/Dockerfile"
     cp ${picoManifest} "$out/manifest.json"
     ${composerContext "pico"}
+    cp ${frontendManifest} "$out/npm-packages.json"
+    cp ${pythonVendorManifest} "$out/python-vendor.json"
     cp ${./pico-front-package.json} "$out/pico-front-package.json"
     cp ${./pico-front-package-lock.json} "$out/pico-front-package-lock.json"
     cp ${./pico-frontend.patch} "$out/pico-frontend.patch"

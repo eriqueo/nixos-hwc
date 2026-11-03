@@ -1290,8 +1290,22 @@
             assert spec['container']['image'] == spec['image'] and spec['container']['pull'] == 'never'
             assert spec['image'] in spec['preStart'] and ' image exists ' in spec['preStart']
             sources = re.findall(r'^FROM (\S+)', recipe, re.M)
-            assert len(sources) == 2 and all('@sha256:' in image for image in sources)
-            assert 'COPY --from=secure-php /usr/local/sbin/php-fpm /usr/local/sbin/php-fpm' in recipe
+            assert len(sources) == 3 and all('@sha256:' in image for image in sources)
+            assert 'COPY --from=native-build /native/ /' in recipe
+            assert 'RUN sh /build-native.sh' in recipe
+            assert 'apt-get --yes purge curl libcurl4t64 libxml2' in recipe
+            native = (pathlib.Path(spec['context']) / 'native-runtime-build.sh').read_text()
+            assert hashlib.sha256(native.encode()).hexdigest() in recipe
+            assert 'make check' in native and 'make test' in native
+            assert 'REPORT_EXIT_STATUS=1 sapi/cli/php -n run-tests.php' in native
+            assert '-c php.ini-development' in native
+            assert 'SKIP_' not in native
+            for directory, manifest_name in [('native-sources', 'native-sources/manifest.json'), ('native-build-debs', 'native-build-packages.json')]:
+                manifest_path = pathlib.Path(spec['context']) / manifest_name
+                assert hashlib.sha256(manifest_path.read_bytes()).hexdigest() in recipe
+                for package in json.loads(manifest_path.read_text()):
+                    data = (pathlib.Path(spec['context']) / directory / package['file']).read_bytes()
+                    assert package['hash'] == 'sha256-' + base64.b64encode(hashlib.sha256(data).digest()).decode()
             assert 'COPY --from=secure-php /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/' in recipe
             assert '/var/www/html' not in recipe and 'ENV PHP_VERSION=8.5.12 ' in recipe
             context = pathlib.Path(spec['context'])
@@ -1361,7 +1375,23 @@
         assert {'nginx', 'libcurl', 'libpq', 'libexpat', 'python3', 'nodejs',
             'musl', 'zlib', 'pcre2', 'nghttp2-libs', 'libxml2'} <= actual.keys()
         assert {p.name for p in context.iterdir()} == {'Dockerfile','manifest.json',
-            'composer.json','composer.lock','composer.phar','composer-cache'} | {p['file'] for p in manifest['packages']}
+            'composer.json','composer.lock','composer.phar','composer-cache',
+            'pico-front-package.json','pico-front-package-lock.json','pico-frontend.patch',
+            'pico-frontend-test.mjs','pico-frontend-cache.mjs','npm.tgz','npm-packages',
+            'npm-packages.json','python-vendor.json','python-vendor','pico-python-vendor.py'} | {p['file'] for p in manifest['packages']}
+        assert 'npm-cli.js ci --cache /tmp/npm-cache --offline --include=dev' in recipe
+        assert 'npm-cli.js run build && node hwc-frontend-test.mjs' in recipe
+        assert 'RUN python3 /tmp/pico-python-vendor.py' in recipe
+        for directory, manifest_name in [('npm-packages', 'npm-packages.json'), ('python-vendor', 'python-vendor.json')]:
+            manifest_path = context / manifest_name
+            assert hashlib.sha256(manifest_path.read_bytes()).hexdigest() in recipe
+            for package in json.loads(manifest_path.read_text()):
+                algorithm, expected = package['hash'].split('-', 1)
+                data = (context / directory / package['file']).read_bytes()
+                assert expected == base64.b64encode(hashlib.new(algorithm, data).digest()).decode()
+        for name in ['pico-front-package.json','pico-front-package-lock.json','pico-frontend.patch',
+                     'pico-frontend-test.mjs','pico-frontend-cache.mjs','pico-python-vendor.py']:
+            assert hashlib.sha256((context / name).read_bytes()).hexdigest() in recipe
         assert 'COMPOSER_DISABLE_NETWORK=1' in recipe
         assert 'install --no-dev --no-scripts --no-plugins' in recipe
         for package in manifest['packages']:

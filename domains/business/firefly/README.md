@@ -164,6 +164,11 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
+- 2026-11-02: Extend wiring checks to require upstream native tests, offline
+  frontend compilation, calculator checks, Python vendor checks and verified
+  bytes for every new context input.
+
+
 - 2026-11-02: Exercise the repaired wheel’s current unpack API with a synthetic
   traversal archive and verify the outside sentinel’s bytes and mode.
 
