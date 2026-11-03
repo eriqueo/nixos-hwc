@@ -48,6 +48,21 @@ let
     }
   '';
   memberChromePolicy = pkgs.writeText "scout-chrome-distrust-policy.json" memberChromePolicyText;
+  # Derive legacy OS-store exclusions from the same public certificates used
+  # by Chrome. New Node roots already omit them; the older Debian bundle does not.
+  memberCaPolicy = pkgs.writeText "scout-member-ca-policy.cjs" ''
+    const fs = require('fs');
+    const { X509Certificate } = require('crypto');
+    const policy = JSON.parse(fs.readFileSync('/etc/opt/chrome/policies/managed/hwc-emsign-distrust.json'));
+    const denied = new Set(policy.CADistrustedCertificates.map(value => {
+      const subject = new X509Certificate(Buffer.from(value, 'base64')).subject;
+      const name = subject.split('\n').find(line => line.startsWith('CN=')).slice(3);
+      return 'mozilla/' + name.replaceAll(' ', '_') + '.crt';
+    }));
+    const path = '/etc/ca-certificates.conf';
+    const lines = fs.readFileSync(path, 'utf8').split('\n');
+    fs.writeFileSync(path, lines.map(line => denied.has(line) ? '!' + line : line).join('\n'));
+  '';
   memberBrotliFile = "libbrotli1_1.0.9-2+deb12u1_amd64.deb";
   memberBrotliHash = "e27b3d655fa6fadd7a56f706687e94573c0af68b7d6df394a32a381a3a6c6d8b";
   memberBrotli = pkgs.fetchurl {
@@ -167,6 +182,8 @@ let
       COPY debian/ /tmp/scout-runtime/
       COPY ${memberChrome.archive} /tmp/scout-runtime/${memberChrome.archive}
       RUN DEBIAN_FRONTEND=noninteractive apt-get --no-download -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- install --no-install-recommends -y /tmp/scout-runtime/*.deb && apt-get clean && rm -rf /tmp/scout-runtime /var/lib/apt/lists/*
+      COPY scout-member-ca-policy.cjs /tmp/scout-member-ca-policy.cjs
+      RUN node /tmp/scout-member-ca-policy.cjs && update-ca-certificates --fresh && rm /tmp/scout-member-ca-policy.cjs
       COPY npm/ /tmp/scout-npm/
       ${lib.concatMapStringsSep "\n" (p: ''
         RUN rm -rf ${p.target} && mkdir -p ${p.target} && tar -xzf /tmp/scout-npm/${p.archive} --strip-components=1 -C ${p.target}
@@ -186,6 +203,7 @@ let
     cp ${memberSecurityManifest} "$out/manifest.json"
     cp ${memberImage.dockerfile} "$out/Dockerfile"
     cp ${memberChromePolicy} "$out/chrome-distrust-policy.json"
+    cp ${memberCaPolicy} "$out/scout-member-ca-policy.cjs"
     cp ${memberBrotli} "$out/${memberBrotliFile}"
   '';
   invitationMail = member.invitationMail;
