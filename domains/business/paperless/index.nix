@@ -2,6 +2,33 @@
 let
   cfg = config.hwc.business.paperless;
   paths = config.hwc.paths;
+  # Temporary browser patch: retire when a qualified vendor image includes
+  # Chromium >=156.0.8078.79 and passes the Paperless conversion contracts.
+  helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
+  gotenbergPackages = builtins.fromJSON ''
+    [{"name":"chromium-common","version":"156.0.8078.79-1~deb13u1","file":"chromium-common_156.0.8078.79-1~deb13u1_amd64.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/c/chromium/chromium-common_156.0.8078.79-1~deb13u1_amd64.deb","hash":"sha256-KdmjMSO8xaukd0briactlzv3pzfjggQlx0lpBPcjX70="},{"name":"chromium","version":"156.0.8078.79-1~deb13u1","file":"chromium_156.0.8078.79-1~deb13u1_amd64.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/c/chromium/chromium_156.0.8078.79-1~deb13u1_amd64.deb","hash":"sha256-kyV3f7hC6vo/mSIJ7m8babrXbDMRqI79TXdyzsIuN5U="},{"name":"libnss3","version":"2:3.110-1+deb13u5","file":"libnss3_2%3a3.110-1+deb13u5_amd64.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/n/nss/libnss3_3.110-1+deb13u5_amd64.deb","hash":"sha256-cFmDkWXDnnNP9ZxxL96D716gEyiHKBnfur0cCOdfMRY="},{"name":"tzdata","version":"2026f-0+deb13u1","file":"tzdata_2026f-0+deb13u1_all.deb","url":"https://deb.debian.org/debian/pool/main/t/tzdata/tzdata_2026f-0+deb13u1_all.deb","hash":"sha256-LBxWEJFAKINDDQ1HxXo8CqALRK/IpiOSZQZahyEaXBE="}]
+  '';
+  gotenbergRuntime = helpers.mkRuntimeImage {
+    name = "paperless-gotenberg";
+    version = "8.39.0-chromium156.0.8078.79";
+    recipe = ''
+      FROM docker.io/gotenberg/gotenberg@sha256:5a9c6b8e5e65c35236f99ff1b55f16a3bbc2fb6d9518292a7c15ca433d5bab24
+      # Fixed APT inputs ${builtins.hashString "sha256" (builtins.toJSON gotenbergPackages)}
+      USER root
+      COPY debian/ /tmp/hwc-gotenberg-debs/
+      RUN DEBIAN_FRONTEND=noninteractive apt-get --no-download --yes -o Dir::Cache::archives=/tmp/hwc-gotenberg-debs -o Dpkg::Options::=--force-confold install /tmp/hwc-gotenberg-debs/*.deb && test -z "$(dpkg --audit)" && rm -r /tmp/hwc-gotenberg-debs
+      USER gotenberg
+    '';
+  };
+  gotenbergManifest = pkgs.writeText "gotenberg-runtime-packages.json" (builtins.toJSON gotenbergPackages);
+  gotenbergContext = pkgs.runCommand "gotenberg-runtime-context" {} ''
+    mkdir -p "$out/debian"
+    cp ${gotenbergRuntime.dockerfile} "$out/Dockerfile"
+    cp ${gotenbergManifest} "$out/manifest.json"
+    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''
+      cp ${source} "$out/debian/${p.file}"
+    '') gotenbergPackages}
+  '';
 in
 {
   # OPTIONS
@@ -191,10 +218,8 @@ in
 
       gotenbergImage = lib.mkOption {
         type = lib.types.str;
-        # Pinned to the version paperless-ngx 3.1.3 ships in its own compose file.
-        # Gotenberg's chromium/libreoffice routes have changed shape across 8.x
-        # minors; track cfg.image when bumping, not the newest tag.
-        default = "docker.io/gotenberg/gotenberg:8.34";
+        # Qualified with the installed Paperless client: HTML/DOCX -> PDF/A-2B.
+        default = gotenbergRuntime.image;
         description = "Gotenberg container image";
       };
     };
@@ -322,7 +347,23 @@ in
   #=========================================================================
   # IMPLEMENTATION
   #=========================================================================
-  config = lib.mkIf cfg.enable { };
+  config = lib.mkIf cfg.enable {
+    system.build.gotenbergRuntimeImageContext = gotenbergContext;
+    system.build.gotenbergRuntimeImageRecipe = gotenbergRuntime.dockerfile;
+    virtualisation.oci-containers.containers = lib.mkIf
+      (cfg.officeIngest.enable && cfg.officeIngest.gotenbergImage == gotenbergRuntime.image) {
+      paperless-gotenberg.pull = lib.mkForce "never";
+    };
+    systemd.services.podman-paperless-gotenberg = lib.mkIf
+      (cfg.officeIngest.enable && cfg.officeIngest.gotenbergImage == gotenbergRuntime.image) {
+      preStart = lib.mkBefore ''
+        ${pkgs.podman}/bin/podman image exists ${lib.escapeShellArg gotenbergRuntime.image} || {
+          echo "Gotenberg requires the qualified image from ${gotenbergContext}" >&2
+          exit 1
+        }
+      '';
+    };
+  };
 
   #=========================================================================
   # VALIDATION

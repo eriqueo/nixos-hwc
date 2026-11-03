@@ -13,6 +13,8 @@ Paperless-NGX document management system running as a Podman container. Provides
 
 ## Structure
 
+`index.nix` owns the fixed-hash Gotenberg runtime context and prebuilt-image guard. Its patched Chromium and vendor security release retain the installed Paperless client conversion contract.
+
 ```
 domains/business/paperless/
 ├── index.nix              # Option definitions + imports
@@ -116,6 +118,8 @@ hwc.business.paperless = {
 - `paperless-cleanup.service` / `paperless-cleanup.timer` — daily staging/export cleanup
 
 ## Changelog
+
+- 2026-11-02: Qualify Gotenberg8.39.0 with Debian Chromium156.0.8078.79, NSS security updates and unchanged JavaScript-disabled/file-only restrictions. The actual Paperless client passes isolated old/new/restored HTML and DOCX to PDF/A-2B contracts; no documents or database migrate.
 
 - 2026-09-16: `ocr.continueOnSoftRenderError` (on by default) sets
   `PAPERLESS_OCR_USER_ARGS={"continue_on_soft_render_error":true}`. Ghostscript

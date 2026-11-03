@@ -1382,6 +1382,50 @@
         touch "$out"
       '';
 
+      gotenberg-runtime-wiring = let
+        c = self.nixosConfigurations.hwc-work.config;
+        fixture = pkgs.writeText "gotenberg-runtime-wiring.json" (builtins.toJSON {
+          context = c.system.build.gotenbergRuntimeImageContext;
+          image = c.hwc.business.paperless.officeIngest.gotenbergImage;
+          container = c.virtualisation.oci-containers.containers.paperless-gotenberg;
+          preStart = c.systemd.services.podman-paperless-gotenberg.preStart;
+          paperless = c.hwc.business.paperless.image;
+        });
+      in pkgs.runCommand "gotenberg-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${fixture} <<'PYGOT'
+        import base64, copy, hashlib, json, pathlib, sys
+        spec = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        root = pathlib.Path(spec['context'])
+        recipe = (root/'Dockerfile').read_text()
+        packages = json.loads((root/'manifest.json').read_text())
+        assert len(packages) == 4
+        assert {p['name'] for p in packages} == {'chromium','chromium-common','libnss3','tzdata'}
+        for p in packages:
+            data = (root/'debian'/p['file']).read_bytes()
+            assert p['hash'] == 'sha256-'+base64.b64encode(hashlib.sha256(data).digest()).decode()
+            if p['name'].startswith('chromium'):
+                assert p['version'] == '156.0.8078.79-1~deb13u1'
+        expected = 'localhost/paperless-gotenberg-runtime:8.39.0-chromium156.0.8078.79-'+hashlib.sha256(recipe.encode()).hexdigest()[:12]
+        def check(value):
+            assert value['image'] == expected and value['container']['image'] == expected
+            assert value['container']['pull'] == 'never'
+            assert expected in value['preStart'] and ' image exists ' in value['preStart']
+            assert '--chromium-disable-javascript=true' in value['container']['cmd']
+            assert '--chromium-allow-list=file:///tmp/.*' in value['container']['cmd']
+            assert not value['container']['ports'] and not value['container']['volumes']
+            assert value['paperless'] == 'ghcr.io/paperless-ngx/paperless-ngx:3.1.3'
+        check(spec)
+        stale = copy.deepcopy(spec); stale['container']['image'] = 'docker.io/gotenberg/gotenberg:8.34'
+        try: check(stale)
+        except AssertionError: print('seeded missing production integration rejected')
+        else: raise AssertionError('old converter escaped production check')
+        assert '--no-download' in recipe and 'apt-get update' not in recipe
+        assert recipe.rstrip().endswith('USER gotenberg')
+        print('PASS exact converter inputs and actual Paperless wiring')
+        PYGOT
+        touch "$out"
+      '';
+
       firefly-php-runtime-wiring = let
         c = self.nixosConfigurations.hwc-work.config;
         disabledImporter = (self.nixosConfigurations.hwc-work.extendModules {

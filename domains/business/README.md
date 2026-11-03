@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Paperless owns a fixed-hash Gotenberg8.39.0/Chromium156 runtime with an offline build and prebuilt-image guard.
+
 `estimator/` serves its PWA without browser credentials. Exact private webhook handlers inject a runtime agenix credential; existing CRM job-intake routes remain separate.
 
 Morning-briefing live sources run concurrently after the MCP handshake. Research queues use four-profile batches alongside lessons and ingest-health reads; refinery files use sixteen-read batches. `morning-briefing/gather.test.mjs` checks overlap, bounds and stable partial output through the `morning-briefing-async` flake check.
@@ -93,6 +95,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-02: Patch the stateless Paperless converter while preserving its actual HTML/DOCX-to-PDF/A client contract and ingress restrictions.
 - 2026-11-02: Overlap independent morning-briefing gathers while preserving alert order, profile order and partial results; bound profile and file batches.
 
 - 2026-11-02: Move estimator credentials out of the browser and keep public estimator webhooks blocked.
