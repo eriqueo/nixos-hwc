@@ -91,6 +91,10 @@ business/
 
 ## Changelog
 
+- 2026-11-02: Pin npm 11.19.1 to match the lockfile resolver and seed its cache
+  from verified archive bytes with one archive in memory at a time.
+
+
 - 2026-11-02: Add candidate source rebuild inputs for PHP 8.5.12 with libxml2
   2.15.4, curl 8.23.0 and ngtcp2 1.25.0. Run upstream test suites offline.
   Preserve the donor PHP build options and shared extension set. Candidate
