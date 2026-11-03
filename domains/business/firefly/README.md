@@ -13,6 +13,10 @@ Firefly III personal finance manager running as a Podman container, with optiona
 
 `native-runtime-sources.json` and `native-build-packages.json` pin upstream
 sources and acquisition-verified Debian build dependencies.
+`pico-python-vendor-packages.json` pins two upstream wheels.
+`pico-python-vendor.py` replaces those vendored libraries and checks supervisor
+imports and archive traversal containment. `pico-frontend-cache.mjs` seeds the
+fixed npm cache; `pico-frontend-test.mjs` exercises the calculator.
 `native-runtime-build.sh` compiles and tests the libraries and the same PHP
 version in an isolated build stage. The final stage removes the old ABI
 libraries and copies only the new runtime binaries, libraries and provenance.
@@ -40,8 +44,9 @@ keys before the first activation; replacing them invalidates existing tokens.
 
 `index.nix` owns temporary same-app PHP runtime recipes for all three finance
 containers. Core 6.6.6 and Importer 2.3.4 retain their application bytes and
-configuration outside Composer inputs/vendor dependencies; an immutable official Firefly image supplies PHP 8.5.12 and its
-matching extensions. `system.build.fireflyCoreRuntimeImageContext` and
+configuration outside Composer inputs/vendor dependencies; the native build compiles PHP 8.5.12 against current ABI-matched libraries.
+An immutable official Firefly donor supplies its configure options and matching
+shared extensions. `system.build.fireflyCoreRuntimeImageContext` and
 `system.build.fireflyImporterRuntimeImageContext` regenerate those contexts.
 Pico retains app 1.10.1 and upgrades its 23 installed PHP82 packages together
 to signed, fixed-hash Alpine 8.2.35-r0 packages in its offline context.
@@ -164,66 +169,13 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
-- 2026-11-02: Bound native compilation and source test workers to four per
-  build; run every selected upstream test through the existing harnesses.
-
-
-- 2026-11-02: Isolate serving INI files in the build stage so nested upstream
-  test subprocesses also use neutral settings. Final serving INI files stay
-  in the original application stage.
-
-
-- 2026-11-02: Extend wiring checks to require upstream native tests, offline
-  frontend compilation, calculator checks, Python vendor checks and verified
-  bytes for every new context input.
-
-
-- 2026-11-02: Exercise the repaired wheel’s current unpack API with a synthetic
-  traversal archive and verify the outside sentinel’s bytes and mode.
-
-
-- 2026-11-02: Replace setuptools-vendored jaraco.context and wheel from
-  fixed-hash upstream wheels and check supervisor/pkg_resources imports.
-  Keep the exact supervisor’s required setuptools API.
-
-
-- 2026-11-02: Run the complete PHP source harness with its upstream INI.
-  The app’s environment-based lexer settings otherwise change test semantics.
-  The focused multibyte suite passes with the upstream test configuration.
-
-
-- 2026-11-02: Use one explicit APT archive directory for offline runtime and
-  build inputs, preserving dependency resolution without downloads.
-
-
-- 2026-11-02: Pin npm 11.19.1 to match the lockfile resolver and seed its cache
-  from verified archive bytes with one archive in memory at a time.
-
-
-- 2026-11-02: Add candidate source rebuild inputs for PHP 8.5.12 with libxml2
-  2.15.4, curl 8.23.0 and ngtcp2 1.25.0. Run upstream test suites offline.
-  Preserve the donor PHP build options and shared extension set. Candidate
-  qualification must pass before release; no deployment occurs here.
-
-
-- 2026-11-02: Supply hash-pinned Alpine patch for the frontend build and remove
-  it after compilation; the upstream runtime does not include that tool.
-
-
-- 2026-11-02: Disable calculator variable assignment; arithmetic and hostile
-  expression checks pass against the patched utility.
-
-
-- 2026-11-02: Exercise the actual Pico calculator during offline image builds,
-  including arithmetic and hostile expressions. Preserve source patch and cache
-  input identities in the image recipe.
-
-
-- 2026-11-02: Rebuild Pico’s frontend offline from hash-pinned npm inputs.
-  Use the maintained expr-eval fork, current Axios and Lodash, and expose
-  existing utility classes through named exports for Nuxt’s generated imports.
-  Candidate recovery is exercised separately from deployment.
-
+- 2026-11-02: Add ABI-matched PHP 8.5.12/libxml2 2.15.4/curl 8.23.0/ngtcp2
+  1.25.0 source rebuilds with offline upstream tests and neutral build-stage INI.
+  Rebuild Pico’s Nuxt output with fixed-hash npm inputs, repair its calculator
+  and vendored Python archive libraries, and exercise their real consumers.
+  Extend wiring checks to cover input hashes, build/test calls and startup guards.
+  Exact app versions and serving configuration remain unchanged. Deployment is
+  owned by the parent and does not occur in this checkout.
 
 - 2026-11-02: Add fixed-hash signed-vendor OS package inventories and offline
   APT/APK installation to all three same-app finance contexts. Pin production
