@@ -1382,6 +1382,71 @@
         touch "$out"
       '';
 
+      paperless-converter-isolation = let
+        work = self.nixosConfigurations.hwc-work;
+        c = work.config;
+        helper = import ./domains/lib/mkContainer.nix { inherit lib; pkgs = work.pkgs; };
+        network = builtins.head c.hwc.networking.internalContainerNetworks;
+        unit = lib.removeSuffix ".service" (helper.internalNetworkUnit network);
+        options = mode: (helper.mkContainer { name = "probe"; image = "probe"; networkMode = mode; gpuEnable = false; }).virtualisation.oci-containers.containers.probe.extraOptions;
+        rejects = mode: !(builtins.tryEval (builtins.deepSeq (options mode) true)).success;
+        fixture = pkgs.writeText "paperless-converter-isolation.json" (builtins.toJSON {
+          inherit network unit;
+          containers = lib.genAttrs [ "paperless" "paperless-tika" "paperless-gotenberg" ] (name: {
+            networks = builtins.filter (lib.hasPrefix "--network=") c.virtualisation.oci-containers.containers.${name}.extraOptions;
+            after = c.systemd.services.${"podman-"+name}.after;
+            requires = c.systemd.services.${"podman-"+name}.requires;
+          });
+          initializer = c.systemd.services.${unit}.script;
+        });
+      in
+      assert c.hwc.networking.internalContainerNetworks == [ "paperless-conversion" ];
+      assert builtins.head (options "media") == "--network=media-network";
+      assert builtins.head (options "host") == "--network=host";
+      assert builtins.head (options "vpn") == "--network=container:gluetun";
+      assert builtins.head (options { kind = "named"; names = [ "one" "two" ]; }) == "--network=one,two";
+      assert lib.all rejects [ {} { kind = "unknown"; names = ["one"]; } {kind="named";names=[];} {kind="named";names=["one" "one"];} {kind="named";names=["bad,name"];} ];
+      pkgs.runCommand "paperless-converter-isolation" { nativeBuildInputs = [pkgs.python3]; } ''
+        python3 - ${fixture} <<'PYISO'
+        import copy, json, pathlib, subprocess, sys
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        spec = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        def check(value):
+            for name,c in value['containers'].items():
+                expected = 'media-network,'+value['network'] if name == 'paperless' else value['network']
+                assert c['networks'] == ['--network='+expected]
+                assert value['unit']+'.service' in c['after'] and value['unit']+'.service' in c['requires']
+        check(spec)
+        leaked = copy.deepcopy(spec); leaked['containers']['paperless-gotenberg']['networks'] = ['--network=media-network']
+        try: check(leaked)
+        except AssertionError: print('seeded shared converter network rejected')
+        else: raise AssertionError('converter egress escaped isolation check')
+        source = spec['initializer'].split("<<'PY'\n",1)[1].rsplit('\nPY',1)[0]
+        good = {'internal':True,'dns_enabled':True,'ipv6_enabled':False,'driver':'bridge'}
+        def execute(metadata,code=0):
+            effects=[]
+            def run(argv,**kwargs):
+                effects.append(argv)
+                return SimpleNamespace(returncode=code if 'exists' in argv else 0)
+            with patch('subprocess.run',side_effect=run), patch('subprocess.check_output',return_value=json.dumps([metadata]).encode()):
+                exec(compile(source,'actual-network-initializer','exec'),{})
+            return effects
+        execute(good)
+        assert any('create' in argv for argv in execute(good,1))
+        for field,value in [('internal',False),('dns_enabled',False),('ipv6_enabled',True),('driver','macvlan')]:
+            bad={**good,field:value}
+            try: execute(bad)
+            except SystemExit as e: assert str(e)=='internal_network_policy_mismatch'
+            else: raise AssertionError('unsafe network accepted')
+        try: execute(good,125)
+        except SystemExit as e: assert str(e)=='internal_network_inspection_failed'
+        else: raise AssertionError('inspection error accepted')
+        print('PASS actual named-network wiring and fail-closed initializer')
+        PYISO
+        touch "$out"
+      '';
+
       gotenberg-runtime-wiring = let
         c = self.nixosConfigurations.hwc-work.config;
         fixture = pkgs.writeText "gotenberg-runtime-wiring.json" (builtins.toJSON {
@@ -1412,6 +1477,7 @@
             assert expected in value['preStart'] and ' image exists ' in value['preStart']
             assert '--chromium-disable-javascript=true' in value['container']['cmd']
             assert '--chromium-allow-list=file:///tmp/.*' in value['container']['cmd']
+            assert {'--libreoffice-deny-list=.*','--api-disable-download-from=true','--webhook-disable=true'} <= set(value['container']['cmd'])
             assert not value['container']['ports'] and not value['container']['volumes']
             assert value['paperless'] == 'ghcr.io/paperless-ngx/paperless-ngx:3.1.3'
         check(spec)

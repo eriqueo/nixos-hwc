@@ -18,6 +18,8 @@ Provides network infrastructure that other domains depend on:
 
 ## Structure
 
+`internalContainerNetworks` declares application-private Podman bridges. Startup validates internal routing, DNS, driver and IPv6 before dependent containers start.
+
 Static vhosts declare API handlers as a list of exact path patterns, upstreams, optional methods, Origin requirements and upstream headers. API handlers and SPA files are mutually exclusive; runtime secret-file placeholders never enter the browser bundle.
 Both callers use this list: estimator's private APIs and briefing's existing `/mcp*` proxy.
 
@@ -98,6 +100,8 @@ networking/
 ```
 
 ## Changelog
+
+- 2026-11-02: Add validated internal Podman bridges for document converters; retain the existing media network.
 
 - 2026-11-02: Extend the sole static API route owner for estimator reads/writes; verify actual rendered Caddy guards, runtime key reload and CRM/static parity, including a seeded missing-handler failure.
 

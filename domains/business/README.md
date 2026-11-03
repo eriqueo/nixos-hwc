@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Document processors use a private conversion bridge; only Paperless also joins its normal application network.
+
 Paperless owns a fixed-hash Gotenberg8.39.0/Chromium156 runtime with an offline build and prebuilt-image guard.
 
 `estimator/` serves its PWA without browser credentials. Exact private webhook handlers inject a runtime agenix credential; existing CRM job-intake routes remain separate.
@@ -95,6 +97,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-02: Contain untrusted document processors on an internal bridge while preserving conversion DNS names and data.
 
 - 2026-11-02: Patch the stateless Paperless converter while preserving its actual HTML/DOCX-to-PDF/A client contract and ingress restrictions.
 - 2026-11-02: Overlap independent morning-briefing gathers while preserving alert order, profile order and partial results; bound profile and file batches.

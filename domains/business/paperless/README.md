@@ -13,6 +13,8 @@ Paperless-NGX document management system running as a Podman container. Provides
 
 ## Structure
 
+Paperless joins its normal network and the private conversion bridge. Tika and Gotenberg join only the private bridge; they have no host ports or data mounts.
+
 `index.nix` owns the fixed-hash Gotenberg runtime context and prebuilt-image guard. Its patched Chromium and vendor security release retain the installed Paperless client conversion contract.
 
 ```
@@ -118,6 +120,8 @@ hwc.business.paperless = {
 - `paperless-cleanup.service` / `paperless-cleanup.timer` — daily staging/export cleanup
 
 ## Changelog
+
+- 2026-11-02: Isolate Tika/Gotenberg from the database and internet; disable unused download/webhook and LibreOffice outbound fetches.
 
 - 2026-11-02: Qualify Gotenberg8.39.0 with Debian Chromium156.0.8078.79, NSS security updates and unchanged JavaScript-disabled/file-only restrictions. The actual Paperless client passes isolated old/new/restored HTML and DOCX to PDF/A-2B contracts; no documents or database migrate.
 

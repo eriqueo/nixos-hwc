@@ -15,6 +15,9 @@ let
   gotenbergName = "paperless-gotenberg";
   tikaPort = 9998;
   gotenbergPort = 3000;
+  conversionNetwork = "paperless-conversion";
+  isolateConversion = cfg.officeIngest.enable && cfg.network.mode == "media";
+  conversionNetworkUnit = helpers.internalNetworkUnit conversionNetwork;
 
   # Paperless' own origin. This is NOT cosmetic: Django validates the Origin of
   # every unsafe request against PAPERLESS_CSRF_TRUSTED_ORIGINS below, so if
@@ -114,7 +117,9 @@ in
     (helpers.mkContainer {
       name = "paperless";
       image = cfg.image;
-      networkMode = cfg.network.mode;
+      networkMode = if isolateConversion then {
+        kind = "named"; names = [ helpers.mediaNetworkName conversionNetwork ];
+      } else cfg.network.mode;
       gpuEnable = false;
       timeZone = config.time.timeZone or "UTC";
       ports = [ "127.0.0.1:${toString cfg.port}:8000" ];
@@ -133,10 +138,12 @@ in
       (helpers.mkContainer {
         name = tikaName;
         image = cfg.officeIngest.tikaImage;
-        networkMode = cfg.network.mode;
+        networkMode = if isolateConversion then {
+          kind = "named"; names = [ conversionNetwork ];
+        } else cfg.network.mode;
         gpuEnable = false;
         timeZone = config.time.timeZone or "UTC";
-        ports = [];   # media-network DNS only; nothing to claim in routes.nix
+        ports = [];   # Private conversion DNS only; no host listener.
         memory = "2g";
         cpus = "2.0";
       })
@@ -144,7 +151,9 @@ in
       (helpers.mkContainer {
         name = gotenbergName;
         image = cfg.officeIngest.gotenbergImage;
-        networkMode = cfg.network.mode;
+        networkMode = if isolateConversion then {
+          kind = "named"; names = [ conversionNetwork ];
+        } else cfg.network.mode;
         gpuEnable = false;
         timeZone = config.time.timeZone or "UTC";
         ports = [];
@@ -159,11 +168,20 @@ in
           "gotenberg"
           "--chromium-disable-javascript=true"
           "--chromium-allow-list=file:///tmp/.*"
+          "--libreoffice-deny-list=.*"
+          "--api-disable-download-from=true"
+          "--webhook-disable=true"
         ];
       })
     ]))
 
     {
+      hwc.networking.internalContainerNetworks = lib.optional isolateConversion conversionNetwork;
+      systemd.services = lib.mkIf isolateConversion
+        (lib.genAttrs [ "podman-${tikaName}" "podman-${gotenbergName}" ] (_: {
+          after = [ conversionNetworkUnit ];
+          requires = [ conversionNetworkUnit ];
+        }));
       # Storage dirs (incl. the bind-mount sources) are declared once, in
       # parts/directories.nix. A second producer for the same four paths used
       # to live here; systemd-tmpfiles kept the first line and logged
@@ -193,11 +211,12 @@ in
         # lifecycles is how this module got a 1600-restart crash loop before.
         after = [ "network-online.target" "postgresql.service" "paperless-env.service" ]
           ++ lib.optional (cfg.network.mode == "media") "init-media-network.service"
+          ++ lib.optional isolateConversion conversionNetworkUnit
           ++ lib.optionals cfg.officeIngest.enable [
             "podman-${tikaName}.service"
             "podman-${gotenbergName}.service"
           ];
-        requires = [ "paperless-env.service" ];
+        requires = [ "paperless-env.service" ] ++ lib.optional isolateConversion conversionNetworkUnit;
         wants = [ "network-online.target" ];
       };
 

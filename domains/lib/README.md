@@ -16,6 +16,8 @@ any domain (media, networking, data, etc.) can use them without depending on the
 
 ## Structure
 
+`mkContainer` also accepts `{ kind = "named"; names = [ ... ]; }` for explicit bridge membership. Legacy media/host/VPN callers retain their network arguments.
+
 Standalone HM fleet fallback covers hwc-home, hwc-work and hwc-xps; dependency-update commands use hwc-home.
 
 ```
@@ -51,6 +53,8 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+
+- 2026-11-02: Add explicit named-network records and one internal-network unit-name producer.
 - 2026-10-23: Extract `mkRuntimeImage` as the shared recipe/tag/Dockerfile
   producer for Pico's executable and shared-library correction. Existing
   `mkNodeRuntimeImage` delegates with unchanged Seerr/Immich/Audio identities.

@@ -8,6 +8,12 @@
 { lib, config, ... }:
 
 {
+  options.hwc.networking.internalContainerNetworks = lib.mkOption {
+    type = lib.types.listOf (lib.types.strMatching "[a-zA-Z0-9][a-zA-Z0-9_.-]*");
+    default = [];
+    description = "Internal Podman bridges with DNS and no external route";
+  };
+
   imports = [
     # Host registry — single source of truth for tailnet identities.
     # Declares hwc.networking.hosts.{tailnetSuffix,servers,primary,fqdn,url}.

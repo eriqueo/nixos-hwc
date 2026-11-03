@@ -26,6 +26,8 @@
 { lib, pkgs }:
 
 rec {
+  mediaNetworkName = "media-network";
+  internalNetworkUnit = name: "init-internal-network-${name}.service";
   # One identity producer for immutable runtime recipes, including callers
   # that qualify shared libraries as well as the Node executable.
   mkRuntimeImage = { name, version, recipe }: {
@@ -53,7 +55,7 @@ rec {
   mkContainer =
     { name
     , image
-    , networkMode ? "media"     # "media" | "vpn" | "host"
+    , networkMode ? "media"     # "media" | "vpn" | "host" | { kind="named"; names=[...]; }
     , vpnContainer ? "gluetun"  # which tunnel instance "vpn" mode joins
     , gpuEnable ? true
     , gpuMode ? "intel"         # "intel" | "nvidia-cdi" | "nvidia-legacy"
@@ -83,9 +85,16 @@ rec {
       # and enabled lives in mkVpnAssertions below, which every VPN-mode module
       # calls.
       podmanNetworkOpts =
-        if networkMode == "vpn" then [ "--network=container:${vpnContainer}" ]
+        if builtins.isAttrs networkMode then
+          let names = networkMode.names or []; in
+          assert (networkMode.kind or null) == "named";
+          assert builtins.isList names && names != [];
+          assert lib.all (name: builtins.isString name && builtins.match "[a-zA-Z0-9][a-zA-Z0-9_.-]*" name != null) names;
+          assert builtins.length (lib.unique names) == builtins.length names;
+          [ "--network=${lib.concatStringsSep "," names}" ]
+        else if networkMode == "vpn" then [ "--network=container:${vpnContainer}" ]
         else if networkMode == "host" then [ "--network=host" ]
-        else [ "--network=media-network" ];
+        else [ "--network=${mediaNetworkName}" ];
 
       # GPU options based on mode
       gpuOpts =
