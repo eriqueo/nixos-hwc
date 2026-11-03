@@ -158,7 +158,13 @@ in
       port = lib.mkOption { type = lib.types.port; default = 5432; description = "PostgreSQL port"; };
       name = lib.mkOption { type = lib.types.str; default = "immich"; description = "Database name"; };
       user = lib.mkOption { type = lib.types.str; default = "immich"; description = "Database user"; };
-      passwordFile = lib.mkOption { type = lib.types.nullOr lib.types.path; default = null; description = "Path to file containing database password"; };
+      passwordSecret = lib.mkOption { type = lib.types.nullOr lib.types.str; default = null; description = "Generated agenix secret for a restricted database role; enables managed role provisioning."; };
+      passwordFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = if cfg.database.passwordSecret == null then null
+          else config.hwc.secrets.api.${cfg.database.passwordSecret};
+        description = "Protected password path consumed by the vendor DB_PASSWORD_FILE loader.";
+      };
     };
 
     redis = {

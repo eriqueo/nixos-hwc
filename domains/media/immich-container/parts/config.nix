@@ -53,6 +53,10 @@ let
 
   # Redis URL for containers
   redisUrl = "redis://${cfg.redis.host}:${toString cfg.redis.port}";
+  managedDatabase = cfg.database.passwordSecret != null;
+  databasePasswordTarget = "/run/credentials/immich-db-password";
+  databaseDependencies = lib.optional managedDatabase "postgresql-application-roles.service";
+  databaseSecretSources = lib.optional managedDatabase config.age.secrets.${cfg.database.passwordSecret}.file;
 
 in
 {
@@ -87,37 +91,21 @@ in
     # POSTGRESQL DATABASE SETUP
     #=========================================================================
     {
-      # Fifteen `$PSQL` GRANT / ALTER DEFAULT PRIVILEGES lines used to sit here —
-      # the eight-line block for schema `public`, then seven more for the
-      # pgvector `vectors` schema — and not one ever ran. `$PSQL` is undefined in
-      # the generated postgresql post-start script and `|| true` swallowed the
-      # command-not-found. Full audit in domains/data/databases/README.md
-      # (2026-08-28).
-      #
-      # The grants are not restored. Immich connects as its own role `immich`,
-      # which owns the `immich` database, so the app never touched them. Their
-      # only purpose was to let `eric` read the database from a psql prompt, and
-      # `eric` is a superuser, so that access was already unconditional.
-      #
-      # The database and its OWNING role are now declared. Neither was declared
-      # anywhere in this repo before 2026-08-28 — both existed on the live cluster
-      # by hand, and a rebuilt cluster would not have reproduced either. The audit
-      # that deleted the dead grants is what surfaced that gap.
-      #
-      # The owner is `cfg.database.name`, NOT `cfg.database.user`. Those are two
-      # different facts and this module's options do not distinguish them:
-      # machines/home/config.nix:1133 sets `database.user = "eric"` (the role the
-      # container CONNECTS as, via trust auth), while the live `immich` database
-      # and every object in it are owned by a separate `immich` role. Declaring
-      # ownership from `database.user` would emit
-      # `ALTER DATABASE immich OWNER TO eric` — a live ownership change wearing a
-      # cleanup's clothes. NixOS's own ensureDBOwnership assertion caught that on
-      # the first eval; the name below is what reproduces live state unchanged.
-      hwc.data.databases.postgresql.databases = [ cfg.database.name ];
-      services.postgresql.ensureUsers = [{
+      # Keep the database owner separate from a legacy connecting user. Managed
+      # credentials use the database's own role and shared bounded provisioning.
+      # The operator excludes extension members and never REASSIGNs OWNED.
+      hwc.data.databases.postgresql.databases = lib.optional (!managedDatabase) cfg.database.name;
+      services.postgresql.ensureUsers = lib.optionals (!managedDatabase) [{
         name = cfg.database.name;
         ensureDBOwnership = true;
       }];
+      hwc.data.databases.postgresql.applicationRoles = lib.optionalAttrs managedDatabase {
+        ${cfg.database.name} = {
+          passwordSecret = cfg.database.passwordSecret;
+          takeOwnershipFrom = config.hwc.system.users.user.name or "eric";
+          schemas = [ "public" "vectors" ];
+        };
+      };
     }
 
     #=========================================================================
@@ -180,7 +168,6 @@ in
 
       environment = {
         IMMICH_PORT = toString cfg.settings.port;
-        DB_URL = dbUrl;
         DB_HOSTNAME = cfg.database.host;
         DB_PORT = toString cfg.database.port;
         DB_DATABASE_NAME = cfg.database.name;
@@ -192,7 +179,9 @@ in
           then cfg.storage.basePath
           else cfg.settings.mediaLocation;
         IMMICH_LOG_LEVEL = cfg.observability.logLevel;
-      } // lib.optionalAttrs cfg.storage.enable {
+      } // (if cfg.database.passwordFile == null then { DB_URL = dbUrl; } else {
+        DB_PASSWORD_FILE = databasePasswordTarget;
+      }) // lib.optionalAttrs cfg.storage.enable {
         THUMB_LOCATION = cfg.storage.locations.thumbs;
         ENCODED_VIDEO_LOCATION = cfg.storage.locations.encodedVideo;
         PROFILE_LOCATION = cfg.storage.locations.profile;
@@ -208,7 +197,9 @@ in
 
       volumes = [
         "${cfg.storage.basePath}:/usr/src/app/upload:rw"
-      ] ++ lib.optionals cfg.storage.enable [
+      ] ++ lib.optional (cfg.database.passwordFile != null)
+        "${cfg.database.passwordFile}:${databasePasswordTarget}:ro"
+      ++ lib.optionals cfg.storage.enable [
         "${cfg.storage.locations.library}:/usr/src/app/upload/library:rw"
         "${cfg.storage.locations.thumbs}:/usr/src/app/upload/thumbs:rw"
         "${cfg.storage.locations.encodedVideo}:/usr/src/app/upload/encoded-video:rw"
@@ -243,10 +234,10 @@ in
       ];
 
       environment = {
-        DB_URL = dbUrl;
         REDIS_HOSTNAME = cfg.redis.host;
         REDIS_PORT = toString cfg.redis.port;
-      } // lib.optionalAttrs cfg.gpu.enable {
+      } // lib.optionalAttrs (!managedDatabase) { DB_URL = dbUrl; }
+        // lib.optionalAttrs cfg.gpu.enable {
         NVIDIA_VISIBLE_DEVICES = "0";
         NVIDIA_DRIVER_CAPABILITIES = "compute,utility";
         CUDA_VISIBLE_DEVICES = "0";
@@ -280,11 +271,12 @@ in
     {
       systemd.services = {
         "podman-immich-server" = {
-          after = [ "network-online.target" "postgresql.service" ]
+          restartTriggers = databaseSecretSources;
+          after = [ "network-online.target" "postgresql.service" ] ++ databaseDependencies
             ++ lib.optional cfg.redis.enable "podman-immich-redis.service"
             ++ lib.optional (cfg.network.mode == "media") "init-media-network.service"
             ++ lib.optional cfg.gpu.enable "nvidia-container-toolkit-cdi-generator.service";
-          requires = lib.optional cfg.gpu.enable "nvidia-container-toolkit-cdi-generator.service";
+          requires = databaseDependencies ++ lib.optional cfg.gpu.enable "nvidia-container-toolkit-cdi-generator.service";
           wants = [ "network-online.target" ];
         };
 
@@ -342,6 +334,11 @@ in
     #=========================================================================
     {
       assertions = [
+        {
+          assertion = !managedDatabase || (cfg.database.user == cfg.database.name
+            && cfg.database.passwordFile == config.hwc.secrets.api.${cfg.database.passwordSecret});
+          message = "Managed Immich database credentials must use its own named role and generated secret mount";
+        }
         {
           assertion = !cfg.enable || (cfg.settings.mediaLocation != null);
           message = "hwc.media.immich requires mediaLocation to be set";

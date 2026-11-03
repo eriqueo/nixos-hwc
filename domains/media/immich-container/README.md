@@ -14,6 +14,8 @@ photo library, PostgreSQL data and NVIDIA interfaces.
 
 ## Structure
 
+Managed database credentials use the vendor `DB_PASSWORD_FILE` loader and a read-only secret bind. The server omits `DB_URL`, requires shared role provisioning before startup, and reloads on encrypted-secret changes. Existing container-visible media paths stay unchanged.
+
 The ML recipe consumes the shared exact-source Starlette Host parser backport from `domains/lib/mkContainer.nix`.
 
 The pinned Ubuntu image owns its emSign distrust list independently of the newer host NSS bundle. An empty host blacklist does not remove roots from this container. Prebuild its exact context before activation.
@@ -90,6 +92,7 @@ trigger an automatic database file-path migration. Keep `/usr/src/app/upload`
 and the existing live mount wiring through runtime-only releases.
 
 ## Changelog
+- 2026-11-03: Wire the existing password-file option to vendor startup, use Immich's restricted owning role, and require protected shared PostgreSQL provisioning.
 
 - 2026-11-02: Encode the backport as one Dockerfile RUN line and preserve a real FROM newline; check the complete recipe syntax.
 

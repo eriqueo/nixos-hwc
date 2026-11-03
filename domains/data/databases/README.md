@@ -14,6 +14,7 @@ Foundational database services (PostgreSQL, Redis, InfluxDB) used by both contai
 ```
 domains/data/databases/
 ├── index.nix           # Options + implementation (PostgreSQL, Redis, InfluxDB, backups)
+├── application-roles.py # Bounded, transactional credential/owner reconciliation
 └── README.md
 ```
 
@@ -93,7 +94,36 @@ backup concern). It covered 3 of 14 databases and wrote to
 the drive whose loss it existed to survive. The module still works and can be
 re-enabled; if you do, point `outputDir` at a path borg actually carries.
 
-## The access model — read this before adding a GRANT
+## Authentication and application roles
+
+`authenticationMode = "peer-scram"` uses OS peer identity on Unix sockets and
+SCRAM on loopback and the enabled Podman bridge. Home enables it after Immich's
+actual password-file client and MCP socket client qualification. Work and laptop
+retain the annotated `legacy-trust` mode while their clients are migrated under
+the domain-exposure-review project; this is not a fleet completion claim.
+
+Application modules declare `applicationRoles.<database>` with `passwordSecret`,
+`schemas` and optional `takeOwnershipFrom`. The database capability declares the
+owning non-superuser role, then runs `postgresql-application-roles` after native
+setup. Systemd loads protected credentials; the helper never puts passwords in
+arguments, environment or logs. Matching SCRAM verifiers keep their salt.
+Each database transaction reconciles at most 4096 non-extension owner operations;
+there are at most 16 roles and 8 schemas per role. Exceeding a bound fails closed.
+No retry loop runs. Extension membership in both pg_class and pg_type, unrelated
+databases and peer administrator authority stay outside that migration.
+
+The helper is a service payload beside `index.nix`, which retains the options and
+Nix wiring. It provides one executable SQL/credential boundary for actual private
+PostgreSQL qualification and production; embedding it in Nix would hide that seam.
+Secrets and databases are CRITICAL and backed up by their existing agenix/Git and
+Borg owners. The operator creates no persistent file or second backup mechanism.
+
+## Historical access audit (2026-08-28)
+
+The following describes the old trust model and why its dead grants were removed.
+It does not describe the repaired home authentication path.
+
+### Read this before adding a GRANT
 
 **There is no privilege system here to speak of, and that is deliberate.** Three
 facts, each measured on the live cluster 2026-08-28:
@@ -200,6 +230,7 @@ it, these three sit in the nightly `pg_dumpall` and cost only disk.
   state is SQLite; the leftover `n8n` database is not its configured store.
 
 ## Changelog
+- 2026-11-03: Add peer/SCRAM mode and protected, bounded per-app role provisioning; scope owner changes to declared database schemas and preserve extension members.
 
 - 2026-08-28: Corrected the access audit after a live owner census: `hwc` has 10 `eric`-owned and 31 `postgres`-owned tables; superuser access, not blanket object ownership, is the general reason the deleted grants were redundant. Clarified that n8n's own store is SQLite even though workflows access other PostgreSQL databases.
 - 2026-07-06: postgresql: add a best-effort `ExecStartPre` that waits (≤120s, exits 0 on timeout) for the podman gateway `10.89.0.1` before start. Same boot race as redis-main, but postgres does NOT fail when the address is absent — it starts localhost-only and silently drops the missing listen address, so `Restart=on-failure` can't heal it. The 2026-07-06 boot left postgres 127.0.0.1-only; paperless crash-looped (17k+ "connection refused", 0 successful starts) and firefly errored all morning until a manual restart rebound `10.89.0.1`. net-only containers (jellyfin/sonarr/qbittorrent) bring the bridge up independently, so the wait can't deadlock against postgres-dependent containers.

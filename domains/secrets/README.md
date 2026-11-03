@@ -9,6 +9,8 @@
 
 ## Structure
 
+`parts/services/immich-db-password.age` supplies home Immich and the shared PostgreSQL role operator. It follows the existing five-recipient default and generated root:secrets / 0440 mount. Git retains this CRITICAL encrypted credential; systemd and the vendor password-file loader consume protected runtime copies.
+
 `vaultwarden/index.nix` pins the qualified 1.37.5 security image, retains the
 client origin and account settings, and registers its critical data/RSA directory
 and online SQLite snapshot with Borg. The container uses no-new-privileges.
@@ -82,6 +84,7 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-11-03: Add and host-key-decrypt-check the isolated Immich database password under the existing generated default policy.
 - 2026-11-03: Upgrade Vaultwarden to immutable 1.37.5, retain client access settings, enable no-new-privileges and register current vault/RSA data plus online SQLite recovery with Borg.
 
 - 2026-11-02: Rotate the disclosed estimator key after deploying server-side proxy injection and a credential-free PWA. Encrypt to the exact existing recipient rule and verify work host-key decryption without plaintext files.

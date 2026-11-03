@@ -17,6 +17,19 @@
 let
   cfg = config.hwc.data.databases;
   paths = config.hwc.paths;
+  primaryUser = config.hwc.system.users.user.name or "eric";
+  applicationRoles = cfg.postgresql.applicationRoles;
+  roleConfig = pkgs.writeText "postgresql-application-roles.json" (builtins.toJSON
+    (lib.mapAttrs (_: role: { inherit (role) schemas takeOwnershipFrom; }) applicationRoles));
+  rolePython = pkgs.python3.withPackages (ps: [ ps.psycopg ]);
+  roleTool = pkgs.writeShellScript "postgresql-application-roles" ''
+    exec ${rolePython}/bin/python ${./application-roles.py} ${roleConfig} \
+      --socket ${lib.escapeShellArg config.services.postgresql.settings.unix_socket_directories} \
+      --port ${toString config.services.postgresql.settings.port} \
+      --admin-role ${lib.escapeShellArg primaryUser}
+  '';
+  roleSecretSources = lib.mapAttrsToList (_: role:
+    config.age.secrets.${role.passwordSecret}.file) applicationRoles;
 in
 {
   # OPTIONS
@@ -61,6 +74,35 @@ in
         type = lib.types.listOf lib.types.str;
         default = [];
         description = "Databases to create";
+      };
+
+      authenticationMode = lib.mkOption {
+        type = lib.types.enum [ "legacy-trust" "peer-scram" ];
+        default = "legacy-trust";
+        description = "Local OS peer authentication and SCRAM TCP, enabled after each host's clients are migrated.";
+      };
+
+      applicationRoles = lib.mkOption {
+        default = {};
+        description = "At most 16 application roles, each named for its owned database. App modules declare identity and migration scope; this capability owns provisioning.";
+        type = lib.types.attrsOf (lib.types.submodule {
+          options = {
+            passwordSecret = lib.mkOption {
+              type = lib.types.str;
+              description = "Generated agenix secret name containing 64 URL-safe ASCII password bytes.";
+            };
+            takeOwnershipFrom = lib.mkOption {
+              type = lib.types.nullOr (lib.types.strMatching "[a-z_][a-z0-9_]{0,62}");
+              default = null;
+              description = "Transfer only non-extension objects from this previous role in the named database/schemas. Permanent reconciliation; never REASSIGN OWNED.";
+            };
+            schemas = lib.mkOption {
+              type = lib.types.listOf (lib.types.strMatching "[a-z_][a-z0-9_]{0,62}");
+              default = [ "public" ];
+              description = "Explicit application schemas eligible for scoped ownership reconciliation.";
+            };
+          };
+        });
       };
 
       extensions = lib.mkOption {
@@ -187,7 +229,7 @@ in
         extensions = cfg.postgresql.extensions;
         dataDir = cfg.postgresql.dataDir;
 
-        ensureDatabases = cfg.postgresql.databases;
+        ensureDatabases = cfg.postgresql.databases ++ builtins.attrNames applicationRoles;
 
         # One producer for "the primary user has a Postgres login role."
         #
@@ -208,12 +250,21 @@ in
         # (reads umami) would have hit permission errors there after the
         # service split. ensureClauses is idempotent on hwc-server.
         ensureUsers = [{
-          name = config.hwc.system.users.user.name or "eric";
+          name = primaryUser;
           ensureClauses.superuser = true;
-        }];
+        }] ++ lib.mapAttrsToList (name: _: {
+          inherit name;
+          ensureDBOwnership = true;
+          ensureClauses = { login = true; superuser = false; createdb = false;
+            createrole = false; replication = false; bypassrls = false; };
+        }) applicationRoles;
 
         settings = lib.mkMerge [
           {
+            password_encryption = "scram-sha-256";
+            # Name the native PostgreSQL default explicitly so local clients
+            # and the role operator consume the same socket-directory fact.
+            unix_socket_directories = "/run/postgresql";
             listen_addresses = lib.mkForce (
               if cfg.postgresql.containerNetwork.enable
               then "localhost,10.89.0.1"
@@ -226,7 +277,16 @@ in
           })
         ];
 
-        authentication = ''
+        authentication = if cfg.postgresql.authenticationMode == "peer-scram" then ''
+          local all all peer
+          host all all 127.0.0.1/32 scram-sha-256
+          host all all ::1/128 scram-sha-256
+        '' + lib.optionalString cfg.postgresql.containerNetwork.enable ''
+          host all all 10.89.0.0/16 scram-sha-256
+        '' else ''
+          # Temporary: work/laptop clients remain under domain-exposure-review
+          # brain-o7xth7/C2. Remove legacy-trust after their actual app, workflow,
+          # MCP and backup clients pass peer/SCRAM current-data qualification.
           local all all trust
           host all all 127.0.0.1/32 trust
           host all all ::1/128 trust
@@ -234,6 +294,35 @@ in
           # Allow connections from Podman media-network (10.89.0.0/16)
           host all all 10.89.0.0/16 trust
         '';
+      };
+
+      system.build.postgresqlApplicationRoleTool = roleTool;
+      system.build.postgresqlApplicationRoleConfig = roleConfig;
+      system.build.postgresqlApplicationRolePython = rolePython;
+      systemd.services.postgresql-application-roles = lib.mkIf (applicationRoles != {}) {
+        description = "Provision restricted PostgreSQL application roles";
+        after = [ "postgresql-setup.service" "agenix.service" ];
+        requires = [ "postgresql-setup.service" ];
+        wantedBy = [ "multi-user.target" ];
+        partOf = [ "postgresql.service" ];
+        restartTriggers = roleSecretSources;
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          User = lib.mkForce primaryUser;
+          Group = "users";
+          SupplementaryGroups = [ "secrets" ];
+          LoadCredential = lib.mapAttrsToList (name: role:
+            "${name}:${config.hwc.secrets.api.${role.passwordSecret}}") applicationRoles;
+          ExecStart = roleTool;
+          TimeoutStartSec = 120;
+          TimeoutStopSec = 10;
+          NoNewPrivileges = true;
+          ProtectSystem = "strict";
+          ProtectHome = true;
+          PrivateTmp = true;
+          RestrictAddressFamilies = [ "AF_UNIX" ];
+        };
       };
 
       # PostgreSQL listens on 10.89.0.1 (Podman network gateway) — wait for it.
@@ -399,6 +488,19 @@ in
     # Validation
     (lib.mkIf cfg.postgresql.enable {
       assertions = [
+        {
+          assertion = builtins.length (builtins.attrNames applicationRoles) <= 16
+            && lib.all (name: builtins.match "[a-z_][a-z0-9_]{0,62}" name != null
+              && name != primaryUser && name != "postgres" && !(lib.hasPrefix "pg_" name))
+              (builtins.attrNames applicationRoles);
+          message = "PostgreSQL application roles require <=16 safe, non-administrator database names";
+        }
+        {
+          assertion = lib.all (role: config.hwc.secrets.api ? ${role.passwordSecret}
+            && builtins.length role.schemas > 0 && builtins.length role.schemas <= 8)
+            (builtins.attrValues applicationRoles);
+          message = "PostgreSQL application roles require a generated secret and 1..8 explicit schemas";
+        }
         {
           assertion =
             builtins.match "${cfg.postgresql.version}\\..*"

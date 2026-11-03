@@ -618,7 +618,7 @@
     };
     postgres = {
       command = "npx";
-      args = [ "-y" "@modelcontextprotocol/server-postgres" "postgresql://localhost:5432/postgres" ];
+      args = [ "-y" "@modelcontextprotocol/server-postgres" "postgresql://eric@localhost/postgres?host=${config.services.postgresql.settings.unix_socket_directories}" ];
     };
     puppeteer = {
       command = "npx";
@@ -1094,7 +1094,8 @@
       host = "127.0.0.1";
       port = 5432;
       name = "immich";
-      user = "eric";
+      user = "immich";
+      passwordSecret = "immich-db-password";
     };
     redis = {
       enable = true;
@@ -1120,6 +1121,7 @@
   # Version pinned to 15 in domains/data/databases/index.nix (data format lock)
   hwc.data.databases.postgresql = {
     enable = lib.mkDefault true;
+    authenticationMode = "peer-scram";
     version = "15";
     package = pkgs.postgresql_15; # Cluster on-disk format is v15 — do not bump without pg_upgrade
 

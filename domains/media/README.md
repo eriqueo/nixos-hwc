@@ -12,6 +12,8 @@ photo management, and video surveillance services.
 
 ## Structure
 
+Immich managed database credentials use the shared data capability and preserve its internal media paths.
+
 SABnzbd history snapshots run as the observed database owner, `eric`, through the shared Borg producer.
 
 `sabnzbd/` exports the immutable5.1.3 security recipe and offline context. It applies two guarded XSS backports, preserves stable script-log links, updates selected signed Alpine/Python inputs, backports strict HTTP response framing with whitespace compatibility, and requires the prebuilt local image. Its existing config/queue/API identity and history SQLite use the shared Borg producer.
@@ -88,6 +90,7 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-11-03: Move home Immich to a managed non-superuser database role and vendor password-file loader, with provisioning before app startup.
 
 - 2026-11-03: Bind SABnzbd online history snapshots to the actual UID1000 source owner; preserve container/runtime and live data.
 

@@ -18,7 +18,7 @@ Machine references follow machines/home; the home job pins its historical Borg a
 data/
 ├── index.nix       # Domain aggregator
 ├── README.md       # This file
-├── databases/      # PostgreSQL / Redis management
+├── databases/      # PostgreSQL / Redis, peer/SCRAM and bounded credential/owner reconciliation
 ├── backup/         # Rsync backup automation (retired on server; borg is primary)
 ├── borg/           # Borg jobs, independent SSH destinations, private credentials, per-target deadlines/rate limits and serialized snapshots (hwc.data.borg.*)
 ├── storage/        # Storage mount management
@@ -27,6 +27,7 @@ data/
 ```
 
 ## Changelog
+- 2026-11-03: Add protected per-application SCRAM provisioning after PostgreSQL setup; migrate home Immich and preserve local peer administration. Other hosts retain an explicit tracked compatibility mode until their clients pass.
 - 2026-10-24: Give SQLite snapshot workers registered database-parent access for temporary WAL/SHM creation while keeping SQL read-only; forbid root-level database parents and test native job wiring.
 - 2026-10-23: Allow an explicit additional-destination-only Borg client, so XPS Jellyfin state can use a bounded home repository without claiming T3 or full-host coverage.
 - 2026-10-23: Keep per-destination time/rate limits in the Borg capability; server roles assign typed policy and receive instance metadata from flake composition.

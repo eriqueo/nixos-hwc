@@ -1890,6 +1890,49 @@
         touch "$out"
       '';
 
+      immich-database-auth-wiring = let
+        c = self.nixosConfigurations.hwc-home.config;
+        db = c.hwc.media.immich.database;
+        container = c.virtualisation.oci-containers.containers.immich-server;
+        app = c.systemd.services.podman-immich-server;
+        operator = c.systemd.services.postgresql-application-roles;
+        secret = c.age.secrets.immich-db-password;
+        dependency = "postgresql-application-roles.service";
+        fixture = pkgs.writeText "immich-database-auth-wiring.json" (builtins.toJSON {
+          inherit (c.services.postgresql) authentication;
+          inherit (container) environment volumes;
+          role = c.hwc.data.databases.postgresql.applicationRoles.immich;
+        });
+      in
+      assert lib.assertMsg (c.hwc.data.databases.postgresql.authenticationMode == "peer-scram") "Home must use peer/SCRAM authentication";
+      assert db.user == "immich" && db.name == "immich" && db.passwordSecret == "immich-db-password";
+      assert !(container.environment ? DB_URL) && !(container.environment ? DB_PASSWORD);
+      assert builtins.elem dependency app.after && builtins.elem dependency app.requires;
+      assert builtins.elem secret.file app.restartTriggers && builtins.elem secret.file operator.restartTriggers;
+      assert operator.serviceConfig.LoadCredential == [ "immich:${secret.path}" ];
+      assert secret.owner == "root" && secret.group == "secrets" && secret.mode == "0440";
+      assert operator.serviceConfig.User == "eric" && operator.serviceConfig.RestrictAddressFamilies == [ "AF_UNIX" ];
+      assert builtins.elem "postgresql-setup.service" operator.after && builtins.elem "postgresql-setup.service" operator.requires;
+      pkgs.runCommand "immich-database-auth-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${fixture} ${c.system.build.postgresqlApplicationRoleTool} ${c.system.build.postgresqlApplicationRoleConfig} ${./domains/data/databases/application-roles.py} <<'PY'
+        import json, pathlib, sys
+        binding = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        tool = pathlib.Path(sys.argv[2]).read_text()
+        spec = json.loads(pathlib.Path(sys.argv[3]).read_text())
+        assert sys.argv[4] in tool and sys.argv[3] in tool
+        assert '--socket /run/postgresql' in tool and '--admin-role eric' in tool
+        assert spec == {'immich': {'schemas': ['public', 'vectors'], 'takeOwnershipFrom': 'eric'}}
+        assert binding['environment']['DB_USERNAME'] == 'immich'
+        target = binding['environment']['DB_PASSWORD_FILE']
+        assert '/run/agenix/immich-db-password:' + target + ':ro' in binding['volumes']
+        lines = [s.split() for s in binding['authentication'].splitlines() if s.strip() and not s.lstrip().startswith('#')]
+        assert lines[0] == ['local', 'all', 'all', 'peer']
+        assert not any('trust' in row for row in lines)
+        assert all(row[-1] == 'scram-sha-256' for row in lines if row[0] == 'host')
+        PY
+        touch "$out"
+      '';
+
       immich-runtime-wiring = let
         c = self.nixosConfigurations.hwc-home.config;
         cfg = c.hwc.media.immich;
