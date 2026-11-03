@@ -121,13 +121,14 @@ let
   frontendManifest = ./pico-frontend-packages.json;
   frontendPackages = builtins.fromJSON (builtins.readFile frontendManifest);
   frontendRecipe = ''
-    # Frontend inputs ${builtins.hashFile "sha256" frontendManifest} ${builtins.hashFile "sha256" ./pico-front-package-lock.json} ${builtins.hashFile "sha256" ./pico-front-package.json} ${builtins.hashFile "sha256" ./pico-frontend.patch}
+    # Frontend inputs ${builtins.hashFile "sha256" frontendManifest} ${builtins.hashFile "sha256" ./pico-front-package-lock.json} ${builtins.hashFile "sha256" ./pico-front-package.json} ${builtins.hashFile "sha256" ./pico-frontend.patch} ${builtins.hashFile "sha256" ./pico-frontend-test.mjs}
     COPY --from=secure-node /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
     COPY npm-packages/ /tmp/npm-packages/
     COPY pico-front-package.json ./package.json
     COPY pico-front-package-lock.json ./package-lock.json
     COPY pico-frontend.patch /tmp/pico-frontend.patch
-    RUN patch -p1 < /tmp/pico-frontend.patch && rm -rf node_modules .nuxt .output && for f in /tmp/npm-packages/*.tgz; do node /usr/local/lib/node_modules/npm/bin/npm-cli.js cache add "$f" --cache /tmp/npm-cache --offline; done && node /usr/local/lib/node_modules/npm/bin/npm-cli.js ci --cache /tmp/npm-cache --offline --include=dev && node /usr/local/lib/node_modules/npm/bin/npm-cli.js run build && rm -rf node_modules /tmp/npm-packages /tmp/npm-cache /tmp/pico-frontend.patch /usr/local/lib/node_modules/npm
+    COPY pico-frontend-test.mjs ./hwc-frontend-test.mjs
+    RUN patch -p1 < /tmp/pico-frontend.patch && rm -rf node_modules .nuxt .output && for f in /tmp/npm-packages/*.tgz; do node /usr/local/lib/node_modules/npm/bin/npm-cli.js cache add "$f" --cache /tmp/npm-cache --offline; done && node /usr/local/lib/node_modules/npm/bin/npm-cli.js ci --cache /tmp/npm-cache --offline --include=dev && node /usr/local/lib/node_modules/npm/bin/npm-cli.js run build && node hwc-frontend-test.mjs && rm -rf node_modules /tmp/npm-packages /tmp/npm-cache /tmp/pico-frontend.patch /usr/local/lib/node_modules/npm
   '';
   picoRuntime = helpers.mkRuntimeImage {
     name = "firefly-pico";
@@ -157,6 +158,7 @@ let
     cp ${./pico-front-package.json} "$out/pico-front-package.json"
     cp ${./pico-front-package-lock.json} "$out/pico-front-package-lock.json"
     cp ${./pico-frontend.patch} "$out/pico-frontend.patch"
+    cp ${./pico-frontend-test.mjs} "$out/pico-frontend-test.mjs"
     mkdir -p "$out/npm-packages"
     ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''cp ${source} "$out/npm-packages/${p.file}"
 '') frontendPackages}

@@ -91,6 +91,11 @@ business/
 
 ## Changelog
 
+- 2026-11-02: Exercise the actual Pico calculator during offline image builds,
+  including arithmetic and hostile expressions. Preserve source patch and cache
+  input identities in the image recipe.
+
+
 - 2026-11-02: Rebuild Pico’s frontend offline from hash-pinned npm inputs.
   Use the maintained expr-eval fork, current Axios and Lodash, and expose
   existing utility classes through named exports for Nuxt’s generated imports.
