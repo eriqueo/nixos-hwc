@@ -3,6 +3,14 @@ let
   cfg = config.hwc.media.navidrome;
   # Temporary dependency override: remove when the upstream package selects
   # x/net >=0.62 and this image's module/native/current-data checks pass.
+  # Temporary upstream CVE-2026-107696 fix. Remove when the pinned FFmpeg
+  # source contains this redirect bound and the finite redirect contract passes.
+  runtimeFfmpeg = pkgs.ffmpeg-headless.overrideAttrs (old: {
+    patches = old.patches ++ [ (pkgs.fetchurl {
+      url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/eb9cef3ef1f6adac1e701e3f5f06739a0fcb0c97.patch";
+      hash = "sha256-89nXK7WjusxfLXexFWGRK///1KCZHVhHv/ejnpfQ8gw=";
+    }) ];
+  });
   moduleSums = pkgs.writeText "navidrome-fixed-go.sum" ''
     golang.org/x/net v0.62.0 h1:18ELalfM5+XNRwzM2nYqXsZQ9ByS1uhj2O/U7+5jqRY=
     golang.org/x/net v0.62.0/go.mod h1:WgDCOTH8iwtB66T4/GfI94AHo/hhdb7Hah9NDseQfiI=
@@ -21,7 +29,7 @@ let
     golang.org/x/telemetry v0.0.0-20260924152758-ed294f943157 h1:DftxASHKl6JolFPqoN+2WrFO53JvkHwRXvFqf8gsivA=
     golang.org/x/telemetry v0.0.0-20260924152758-ed294f943157/go.mod h1:i+ivNqjDnTF3WTElsdk5g9V5DTSBYgdNo7xTU9SDwYA=
   '';
-  runtimePackage = pkgs.navidrome.overrideAttrs (old: {
+  runtimePackage = (pkgs.navidrome.override { ffmpeg-headless = runtimeFfmpeg; }).overrideAttrs (old: {
   postPatch = old.postPatch + ''
     substituteInPlace go.mod \
       --replace-fail 'golang.org/x/net v0.59.0' 'golang.org/x/net v0.62.0' \
@@ -81,6 +89,7 @@ in
   config = lib.mkIf cfg.enable {
     system.build.navidromeRuntimeImage = runtimeArchive;
     system.build.navidromeRuntimePackage = runtimePackage;
+    system.build.navidromeRuntimeFfmpeg = runtimeFfmpeg;
     systemd.services.podman-navidrome.preStart = lib.mkBefore ''
       # Do not replace an existing anonymous volume with an empty database.
       test -s ${lib.escapeShellArg "${cfg.dataDir}/navidrome.db"} || {

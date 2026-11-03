@@ -1678,6 +1678,7 @@
         c = self.nixosConfigurations.hwc-home.config;
         archive = c.system.build.navidromeRuntimeImage;
         package = c.system.build.navidromeRuntimePackage;
+        ffmpeg = c.system.build.navidromeRuntimeFfmpeg;
         container = c.virtualisation.oci-containers.containers.navidrome;
         data = c.hwc.media.navidrome.dataDir;
       in
@@ -1693,9 +1694,9 @@
       assert lib.hasInfix (builtins.unsafeDiscardStringContext "podman load --input ${archive}")
         (builtins.unsafeDiscardStringContext c.systemd.services.podman-navidrome.preStart);
       pkgs.runCommand "navidrome-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-        python3 - ${archive} ${package} ${pkgs.go_1_27}/bin/go <<'PY'
+        python3 - ${archive} ${package} ${pkgs.go_1_27}/bin/go ${ffmpeg} <<'PY'
         import json, pathlib, subprocess, sys, tarfile
-        archive, package, go = sys.argv[1:]
+        archive, package, go, ffmpeg = sys.argv[1:]
         with tarfile.open(archive) as t:
             manifest = json.load(t.extractfile('manifest.json'))
             assert len(manifest) == 1
@@ -1706,6 +1707,7 @@
         assert not cfg.get('Volumes'), 'data must not silently fall back to an anonymous volume'
         version = subprocess.check_output([package + '/bin/navidrome', '--version'], text=True)
         assert version.startswith('0.64.2 ')
+        assert ffmpeg + '/bin' in pathlib.Path(package + '/bin/navidrome').read_text()
         metadata = subprocess.check_output([go, 'version', '-m', package + '/bin/.navidrome-wrapped'], text=True)
         assert ': go1.27.3' in metadata
         expected = {'golang.org/x/net':'v0.62.0','golang.org/x/crypto':'v0.58.0',

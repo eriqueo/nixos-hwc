@@ -12,7 +12,7 @@ photo management, and video surveillance services.
 
 ## Structure
 
-`navidrome-container/` emits a Nix-built0.64.2 image with Go1.27.3, fixed x/net and native media libraries. Its explicit data bind, startup database guard and Borg SQLite snapshot replace anonymous-volume storage.
+`navidrome-container/` emits a Nix-built0.64.2 image with Go1.27.3, fixed x/net and native media libraries, including the exact upstream RTSP redirect bound. Its explicit data bind, startup database guard and Borg SQLite snapshot replace anonymous-volume storage.
 
 Frigate uses explicit NVIDIA CDI access and no-new-privileges; its configuration contract rejects privileged mode.
 
@@ -84,6 +84,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-03: Backport FFmpeg upstream eb9cef3 for the remaining RTSP redirect flaw inside Navidrome's qualified runtime; bind its exact native codec package into the image check. Other raw high matches map to current libssh releases or source-verified zlib/FFmpeg backports.
 
 - 2026-11-03: Qualify Navidrome0.64.2 with fixed Go module inputs and the pinned Nix native runtime. Bind current data explicitly and register its existing SQLite backup owner; refuse an empty replacement database. Private vendor current-data and compatible0.64.1 recovery consumers pass; final runtime qualification precedes activation.
 
