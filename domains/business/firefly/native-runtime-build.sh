@@ -5,6 +5,12 @@ set -eu
 export SOURCE_DATE_EPOCH=1793577600
 mkdir -p /build /native/usr/lib/x86_64-linux-gnu /native/usr/bin /native/usr/local/bin /native/usr/local/sbin
 cd /build
+# Buildah's network=none can leave /etc/hosts empty. Bind only the local test
+# server name; external networking remains unavailable in this build namespace.
+if ! getent ahostsv4 localhost >/dev/null; then
+  printf '127.0.0.1 localhost\n' >> /etc/hosts
+fi
+getent ahostsv4 localhost >/dev/null
 # The build stage inherits a serving INI with environment interpolation. Nested
 # upstream test subprocesses use the compiled default INI search path, so isolate
 # that serving configuration here too. The final image retains its original INI.
