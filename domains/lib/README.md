@@ -56,6 +56,8 @@ re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
 
+- 2026-11-02: Encode the backport as one Dockerfile RUN line and preserve a real FROM newline; check the complete recipe syntax.
+
 - 2026-11-02: Add a shared exact-source Starlette CVE-2026-48710 backport recipe; consumers supply verified original/patched hashes.
 
 - 2026-11-02: Add explicit named-network records and one internal-network unit-name producer.

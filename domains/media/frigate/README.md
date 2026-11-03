@@ -695,6 +695,8 @@ hwc.media.frigate = {
 
 ## Changelog
 
+- 2026-11-02: Encode the backport as one Dockerfile RUN line and preserve a real FROM newline; check the complete recipe syntax.
+
 - 2026-11-02: Select a pinned same-app image with the Starlette Host parser security backport; retain camera/model/storage wiring.
 
 - 2026-09-24: Document measured camera substream settings, native clock changes, readiness deadline and field-validation issue; remove stale storage/performance examples and obsolete mask descriptions.

@@ -91,6 +91,8 @@ and the existing live mount wiring through runtime-only releases.
 
 ## Changelog
 
+- 2026-11-02: Encode the backport as one Dockerfile RUN line and preserve a real FROM newline; check the complete recipe syntax.
+
 - 2026-11-02: Backport Starlette CVE-2026-48710 in the existing ML recipe; retain all photo/database/GPU paths and dependencies.
 
 - 2026-11-02: Preserve container CA distrust when host NSS retires its blacklist; prevent policy regression during channel upgrades.

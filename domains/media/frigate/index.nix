@@ -20,7 +20,9 @@ let
   runtime = helpers.mkRuntimeImage {
     name = "frigate";
     version = "0.16.2-tensorrt-hostfix";
-    recipe = "FROM ghcr.io/blakeblackshear/frigate@sha256:7351ca2ddbce6d712c8a13842eeb4248844e5334565e71b4f6ae438ddaf9d04d\n"
+    recipe = ''
+      FROM ghcr.io/blakeblackshear/frigate@sha256:7351ca2ddbce6d712c8a13842eeb4248844e5334565e71b4f6ae438ddaf9d04d
+    ''
       + helpers.mkStarletteHostBackport {
         python = "python3";
         version = "0.41.2";

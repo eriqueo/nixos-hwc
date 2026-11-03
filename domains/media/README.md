@@ -77,6 +77,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-02: Encode the backport as one Dockerfile RUN line and preserve a real FROM newline; check the complete recipe syntax.
+
 - 2026-11-02: Backport Starlette CVE-2026-48710 for Frigate and Immich ML without changing app/schema/GPU versions; require prebuilt images.
 
 - 2026-11-02: Keep Immich ML legacy trust-store policy independent of the upgraded host bundle.

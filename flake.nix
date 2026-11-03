@@ -1718,6 +1718,7 @@
         programs = []
         for path, hashes in zip(sys.argv[1:], expected):
             recipe = pathlib.Path(path).read_text()
+            assert all(line.split()[0] in {'FROM', 'RUN', 'COPY', 'ADD', 'ENV'} for line in recipe.splitlines() if line.strip() and not line.startswith('#'))
             at = recipe.rindex('RUN ')
             args = shlex.split(recipe[at + 4:])
             assert args[1] == '-c' and tuple(args[3:]) == hashes

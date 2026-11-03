@@ -79,7 +79,7 @@ rec {
           url = ds.URL(scope={'scheme':'http','server':('example.com',80),'path':'/admin','headers':[(b'host',host)]})
           assert url.path == '/admin' and url.netloc == 'example.com'
     '';
-    in "RUN ${python} -c ${lib.escapeShellArg program} ${lib.escapeShellArgs [ version sourceSha256 patchedSha256 ]}\n";
+    in "RUN ${python} -c ${lib.escapeShellArg ("exec(" + builtins.toJSON program + ")")} ${lib.escapeShellArgs [ version sourceSha256 patchedSha256 ]}\n";
 
   mkContainer =
     { name
