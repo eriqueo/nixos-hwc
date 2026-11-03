@@ -164,6 +164,10 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
+- 2026-11-02: Use one explicit APT archive directory for offline runtime and
+  build inputs, preserving dependency resolution without downloads.
+
+
 - 2026-11-02: Pin npm 11.19.1 to match the lockfile resolver and seed its cache
   from verified archive bytes with one archive in memory at a time.
 

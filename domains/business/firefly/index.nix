@@ -58,8 +58,8 @@ let
     FROM docker.io/fireflyiii/core@sha256:6515902b1a7c5b9a0b0a3b4db02a4c917aef7b3152a65d14aace5faf0ffee0bc AS native-build
     USER root
     COPY *.deb /tmp/hwc-runtime-debs/
-    COPY native-build-debs/ /tmp/hwc-native-debs/
-    RUN DEBIAN_FRONTEND=noninteractive apt-get --no-download --yes -o Dpkg::Options::=--force-confold install /tmp/hwc-runtime-debs/*.deb /tmp/hwc-native-debs/*.deb && test -z "$(dpkg --audit)"
+    COPY native-build-debs/ /tmp/hwc-runtime-debs/
+    RUN DEBIAN_FRONTEND=noninteractive apt-get --no-download --yes -o Dir::Cache::archives=/tmp/hwc-runtime-debs -o Dpkg::Options::=--force-confold install /tmp/hwc-runtime-debs/*.deb && test -z "$(dpkg --audit)"
     COPY --from=secure-php /usr/local/bin/php-config /usr/local/bin/php-config
     COPY native-sources/ /sources/
     COPY native-runtime-build.sh /build-native.sh
