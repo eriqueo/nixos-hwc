@@ -164,6 +164,11 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
+- 2026-11-02: Run the complete PHP source harness with its upstream INI.
+  The app’s environment-based lexer settings otherwise change test semantics.
+  The focused multibyte suite passes with the upstream test configuration.
+
+
 - 2026-11-02: Use one explicit APT archive directory for offline runtime and
   build inputs, preserving dependency resolution without downloads.
 

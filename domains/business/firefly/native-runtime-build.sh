@@ -37,7 +37,9 @@ configure_options=${configure_options%% build_alias=*}
 # Intentional word splitting: php-config emits configure arguments.
 ./configure $configure_options
 make -j2
-NO_INTERACTION=1 REPORT_EXIT_STATUS=1 make test TESTS=-j2
+# make test inherits the serving image's php.ini (including environment-based
+# lexer settings). Run the full upstream harness with its own development INI.
+NO_INTERACTION=1 REPORT_EXIT_STATUS=1 sapi/cli/php -n run-tests.php -n -c php.ini-development -d extension_dir=/build/php/modules -d extension=sodium -j2
 cp sapi/cli/php /native/usr/local/bin/php
 cp sapi/fpm/php-fpm /native/usr/local/sbin/php-fpm
 cp /usr/bin/curl /native/usr/bin/curl
