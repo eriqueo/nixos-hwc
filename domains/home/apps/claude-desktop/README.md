@@ -9,6 +9,8 @@ Installs the Claude Desktop GUI — the Cowork-capable Linux port (`pkgs.claude-
 
 ## Structure
 - `index.nix` — enable option and package install.
+  The flake overlay selects Electron44.10.1 for the upstream launcher.
 
 ## Changelog
+- 2026-11-02: Update the port source and replace its end-of-life Electron41 dependency with the shared Electron44 runtime. Isolated launch qualification is required before activation.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

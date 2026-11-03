@@ -46,9 +46,6 @@
 
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-26.05";
-    # Keep the laptop Electron runtime independent of Tailscale security updates.
-    # Remove when the main nixpkgs input provides electron_44.
-    nixpkgs-electron.url = "github:NixOS/nixpkgs/4975466d324710c576dc11ad614684e6bd8cad8e";
 
     # Claude Code source for overlays/claude-code.nix. It is its OWN input, not
     # `nixpkgs`, because the CLI ships several releases a week while a channel
@@ -121,7 +118,7 @@
       # different approach: it extracts the macOS app, stubs the macOS-native
       # modules (@ant/claude-swift, @ant/claude-native) in JS, translates VM
       # /sessions paths to host paths in-process, and runs Claude Code directly
-      # under bubblewrap (no VM, no FHS wrapper) against nixpkgs electron_41.
+      # under bubblewrap; the overlay supplies a supported Electron runtime.
       # Research preview — may need a version bump when Claude Desktop updates.
       url = "github:johnzfitch/claude-cowork-linux";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -296,8 +293,23 @@
           # Expose the cowork-capable Claude Desktop package (package-only flake,
           # no overlay of its own) under pkgs for the home app module.
           (final: prev: {
+            # TEMPORARY: the channel's44.9.3 predates October security fixes.
+            # Retain T3's Electron44 ABI. Remove when its channel provides
+            # Electron44.10.1 or newer; hashes are upstream SHASUMS256.txt.
+            electron_44 = (prev.callPackage
+              (inputs.nixpkgs + "/pkgs/development/tools/electron/binary/generic.nix")
+              {}) "44.10.1" {
+                x86_64-linux = "2be868b71b0aa71f30e6b5567a106a35a049385e963183c074aad1975ead5167";
+                aarch64-linux = "0e16c008d628a9c8758ee75b6e2faf2f2ee5365e7e522f0884c8e52d0d551d2c";
+                headers = "sha256-rsL5MzFdTiloJkECseOlSGQYhs0EdC8KGwoTouD58QU=";
+              };
+            # TEMPORARY: upstream names an EOL electron_41 argument. Preserve
+            # its app/launcher, qualify with44, and remove when upstream's
+            # recipe requests a supported runtime itself.
             claude-cowork-linux =
-              inputs.claude-cowork.packages.${prev.stdenv.hostPlatform.system}.default;
+              inputs.claude-cowork.packages.${prev.stdenv.hostPlatform.system}.default.override {
+                electron_41 = final.electron_44;
+              };
           })
         ] ++ extraOverlays;
       };

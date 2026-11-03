@@ -17,6 +17,9 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
+`apps/claude-desktop/` uses the shared supported Electron44 runtime, also selected
+by the laptop's T3 launcher. Calendar packaging exports its fork version through
+the Python build environment.
 `apps/onlyoffice-desktopeditors` retains its scale/libGL launch policy while
 requiring the vendor binary to build without the retired GTK2 input.
 
@@ -153,6 +156,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-02: Refresh Claude Desktop and its Electron runtime; retain T3's44 ABI and update the calendar fork's structured-build environment.
 - 2026-11-02: Keep OnlyOffice on GTK3/Qt with strict dependency checks during the security baseline refresh.
 - 2026-10-25: Add optional stock Plasma user defaults without importing Eric’s personal roles.
 

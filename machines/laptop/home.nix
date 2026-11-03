@@ -44,13 +44,8 @@ in
     # option's description — the desktop app resolves exposure once at bootstrap
     # and silently falls back to loopback when that one read comes up empty.
     t3code.desktop.lanHost = "100.71.213.18";
-    # The fork now follows upstream (orchestration protocol 2), whose desktop
-    # bundle is compiled against Electron 44.4.5. The laptop's nixpkgs tops out
-    # at electron_43; the locked nixpkgs-electron input carries electron_44
-    # (44.3.0, cached). REMOVE WHEN: the main nixpkgs input packages
-    # electron_44; then point the module default at it and drop this line.
-    t3code.desktop.electronPackage =
-      inputs.nixpkgs-electron.legacyPackages.${pkgs.stdenv.hostPlatform.system}.electron_44;
+    # Match the desktop bundle's Electron44 ABI with the shared patched runtime.
+    t3code.desktop.electronPackage = pkgs.electron_44;
     scraper.enable = true;
     markitdown.enable = true;
     dt.enable = true;
