@@ -91,6 +91,10 @@ business/
 
 ## Changelog
 
+- 2026-11-02: Exercise the repaired wheel’s current unpack API with a synthetic
+  traversal archive and verify the outside sentinel’s bytes and mode.
+
+
 - 2026-11-02: Replace setuptools-vendored jaraco.context and wheel from
   fixed-hash upstream wheels and check supervisor/pkg_resources imports.
   Keep the exact supervisor’s required setuptools API.

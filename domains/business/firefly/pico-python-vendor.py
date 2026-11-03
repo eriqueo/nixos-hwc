@@ -21,7 +21,34 @@ for wheel in sorted(pathlib.Path('/tmp/python-vendor').glob('*.whl')):
 import supervisor
 import pkg_resources
 from jaraco import context
-from wheel.cli import unpack
+from wheel._commands import unpack
 assert callable(context.tarball)
 assert callable(unpack.unpack)
-print('supervisor and repaired vendor imports pass')
+# Exercise the fixed wheel unpack path against a synthetic traversal archive.
+import base64
+import hashlib
+import io
+import csv
+import stat
+import tempfile
+with tempfile.TemporaryDirectory() as temp:
+    root = pathlib.Path(temp)
+    sentinel = root / 'sentinel'
+    sentinel.write_text('keep')
+    sentinel.chmod(0o600)
+    payload = b'archive'
+    digest = base64.urlsafe_b64encode(hashlib.sha256(payload).digest()).rstrip(b'=').decode()
+    record = f'../../sentinel,sha256={digest},{len(payload)}\nprobe-1.dist-info/RECORD,,\n'
+    archive_path = root / 'probe-1-py3-none-any.whl'
+    with zipfile.ZipFile(archive_path, 'w') as archive:
+        info = zipfile.ZipInfo('../../sentinel')
+        info.external_attr = (stat.S_IFREG | 0o777) << 16
+        archive.writestr(info, payload)
+        archive.writestr('probe-1.dist-info/RECORD', record)
+    try:
+        unpack.unpack(str(archive_path), str(root / 'unpacked'))
+    except (ValueError, zipfile.BadZipFile):
+        pass
+    assert sentinel.read_text() == 'keep'
+    assert stat.S_IMODE(sentinel.stat().st_mode) == 0o600
+print('supervisor imports and wheel traversal containment pass')
