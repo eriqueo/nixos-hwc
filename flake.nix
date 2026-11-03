@@ -283,23 +283,7 @@
           gitCleanupOverlay
           pandasStubsOverlay   # TEMP: skip pandas-stubs tests (upstream pytest-9.1.1 breakage)
           nodejsSecurityOverlay  # TEMP: Node Oct-2026 security release + brotli CVE fix
-          # TEMPORARY: PostHog7's tested peer contract is mcp>=1.28.1,<2.
-          # The channel wires its tests to MCP2 and marks the package broken.
-          # Use the channel's maintained1.29 recipe, retaining all tests.
-          # Remove when upstream selects mcp_1 or supports MCP2 itself.
-          (final: prev: {
-            pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
-              (pythonFinal: pythonPrev: {
-                # TEMPORARY: stable Streamlit1.58 excludes Pillow13, which
-                # that channel now supplies. Backport the maintained recipe;
-                # remove when stable carries Streamlit1.62 or newer.
-                streamlit = pythonFinal.callPackage
-                  (inputs.nixpkgs + "/pkgs/development/python-modules/streamlit") {};
-              } // prev.lib.optionalAttrs (pythonPrev ? mcp_1) {
-                  posthog = pythonPrev.posthog.override { mcp = pythonFinal.mcp_1; };
-                })
-            ];
-          })
+          pythonCompatibilityOverlay
           # Base, not per-set: claude-code must come from ONE pinned source for
           # the whole fleet. Wired to a single stable set, it left the
           # `nixpkgs`-channel machines (hwc-laptop, hwc-kids) on whatever that
@@ -330,6 +314,23 @@
           })
         ] ++ extraOverlays;
       };
+
+    # Python peer compatibility applies to both normal and CUDA package sets.
+    # PostHog7 requires MCP1; stable Streamlit needs the maintained Pillow13 recipe.
+    # Removal conditions are attached to the two package overrides below.
+    pythonCompatibilityOverlay = final: prev: {
+            pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+              (pythonFinal: pythonPrev: {
+                # TEMPORARY: stable Streamlit1.58 excludes Pillow13, which
+                # that channel now supplies. Backport the maintained recipe;
+                # remove when stable carries Streamlit1.62 or newer.
+                streamlit = pythonFinal.callPackage
+                  (inputs.nixpkgs + "/pkgs/development/python-modules/streamlit") {};
+              } // prev.lib.optionalAttrs (pythonPrev ? mcp_1) {
+                  posthog = pythonPrev.posthog.override { mcp = pythonFinal.mcp_1; };
+                })
+            ];
+          };
 
     # Server-specific overlay for CUDA support
     # Uses cache.nixos-cuda.org for pre-built binaries (avoid 8+ hour local builds)
@@ -397,7 +398,7 @@
     mkPkgsWithOverlays = system: nixpkgsInput: extraOverlays:
       import nixpkgsInput {
         inherit system;
-        overlays = [ silenceDeprecatedAliases gitCleanupOverlay pandasStubsOverlay nodejsSecurityOverlay claudeCodeOverlay cloudflaredOverlay ] ++ extraOverlays;
+        overlays = [ silenceDeprecatedAliases gitCleanupOverlay pandasStubsOverlay nodejsSecurityOverlay pythonCompatibilityOverlay claudeCodeOverlay cloudflaredOverlay ] ++ extraOverlays;
         config = {
           allowUnfree = true;
           nvidia.acceptLicense = true;
@@ -1067,6 +1068,17 @@
         test -x ${package.derivation}/share/desktopeditors/DesktopEditors
         touch "$out"
       '';
+
+      python-runtime-wiring = let
+        hosts = [ "work" "home" "laptop" ];
+        valid = host: let
+          python = self.nixosConfigurations."hwc-${host}".pkgs.python3Packages;
+          peer = lib.findFirst (p: (p.pname or "") == "mcp") null python.posthog.nativeCheckInputs;
+        in lib.versionAtLeast python.streamlit.version "1.62.0"
+          && (peer == null || lib.versionOlder peer.version "2");
+      in assert lib.assertMsg (lib.all valid hosts)
+        "Python compatibility overlay must reach normal and CUDA host package sets";
+      pkgs.runCommand "python-runtime-wiring" {} ''touch "$out"'';
 
       fleet-kernel-security = let
         fixture = pkgs.writeText "fleet-kernel-security.json" (builtins.toJSON

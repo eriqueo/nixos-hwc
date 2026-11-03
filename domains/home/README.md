@@ -17,6 +17,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
+The Python compatibility overlay reaches normal and CUDA package sets; the
+`python-runtime-wiring` check evaluates the actual three host consumers.
 `apps/claude-desktop/` uses the shared supported Electron44 runtime, also selected
 by the laptop's T3 launcher. Calendar packaging exports its fork version through
 the Python build environment.
