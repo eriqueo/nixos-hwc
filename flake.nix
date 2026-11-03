@@ -4055,6 +4055,49 @@
         touch "$out"
       '';
 
+      scout-member-runtime = let
+        c = self.nixosConfigurations.hwc-work.config;
+        context = c.system.build.scoutMemberRuntimeImageContext;
+        guard = c.system.build.scoutMemberImageCheck;
+      in pkgs.runCommand "scout-member-runtime" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${context} ${guard} <<'PY'
+        import base64, hashlib, json, pathlib, sys, tarfile
+        root = pathlib.Path(sys.argv[1])
+        manifest = json.loads((root/'manifest.json').read_text())
+        recipe = (root/'Dockerfile').read_text()
+        assert manifest['schemaVersion'] == 1
+        def current(m):
+            assert tuple(map(int,m['chrome']['version'].split('.'))) >= (156,0,8078,79), 'stale browser'
+        current(manifest)
+        old = json.loads(json.dumps(manifest)); old['chrome']['version'] = '148.0.7778.96'
+        try: current(old)
+        except AssertionError: print('seeded stale browser rejected')
+        else: raise AssertionError('stale browser accepted')
+        assert hashlib.sha256((root/manifest['chrome']['archive']).read_bytes()).hexdigest() == manifest['chrome']['sha256']
+        assert len(manifest['debian']) == 65
+        assert len({p['archive'] for p in manifest['debian']}) == 65
+        for p in manifest['debian']:
+            assert hashlib.sha256((root/'debian'/p['archive']).read_bytes()).hexdigest() == p['sha256']
+        assert {p['name'] for p in manifest['npm']} == {'playwright','playwright-core','shell-quote','proxy-addr'}
+        for p in manifest['npm']:
+            archive = root/'npm'/p['archive']
+            assert 'sha512-'+base64.b64encode(hashlib.sha512(archive.read_bytes()).digest()).decode() == p['hash']
+            with tarfile.open(archive) as tar:
+                metadata = json.load(tar.extractfile('package/package.json'))
+                assert metadata['name'] == p['name'] and metadata['version'] == p['version']
+            assert p['target'] in recipe and p['archive'] in recipe
+        assert '--no-download' in recipe and 'apt-get update' not in recipe
+        assert 'ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/google-chrome-stable' in recipe
+        assert '/ms-playwright/chromium-1223' in recipe and '/ms-playwright/chromium_headless_shell-1223' in recipe
+        assert '/etc/opt/chrome/policies/managed/hwc-emsign-distrust.json' in recipe
+        expected = 'localhost/scout-member-runtime:51a6a0eb-chrome'+manifest['chrome']['version']+'-'+hashlib.sha256(recipe.encode()).hexdigest()[:12]
+        check = pathlib.Path(sys.argv[2]).read_text()
+        assert expected in check and 'existing app image differs' in check
+        print('PASS fixed archives, browser floor, dependency metadata and actual image guard')
+        PY
+        touch "$out"
+      '';
+
       lead-scout-member-recovery = let
         work = self.nixosConfigurations.hwc-work;
         candidate = work.config;

@@ -54,21 +54,131 @@ let
     url = "https://security.debian.org/debian-security/pool/updates/main/b/brotli/${memberBrotliFile}";
     sha256 = memberBrotliHash;
   };
+  # Signed Google Release/Packages and authenticated Debian APT metadata were
+  # verified before pinning these archives. Context builds/installers are offline.
+  # REPLACEABLE: fetchurl hashes plus this catalog rebuild the qualified image.
+  memberChrome = rec {
+    version = "156.0.8078.79";
+    archive = "google-chrome-stable_${version}-1_amd64.deb";
+    url = "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/${archive}";
+    sha256 = "be1a1e161419f5c8272432f6860912550d8e29985e925913fa800493a0d0c955";
+    source = pkgs.fetchurl { inherit url sha256; name = archive; };
+  };
+  memberDebianCatalog = builtins.fromJSON ''[
+    {"archive":"scout-runtime-000.deb","url":"https://deb.debian.org/debian/pool/main/a/adwaita-icon-theme/adwaita-icon-theme_43-1_all.deb","sha256":"4b67610565d16b604d3efd9908e8e4b5d71873c5d0f9347433df509020f22af7"},
+    {"archive":"scout-runtime-001.deb","url":"https://deb.debian.org/debian/pool/main/a/apparmor/libapparmor1_3.0.8-3_amd64.deb","sha256":"4b79f49eafc2017374da9ec206b5495433eadd2b1ea078c3895c99e72825e9d3"},
+    {"archive":"scout-runtime-002.deb","url":"https://deb.debian.org/debian/pool/main/a/argon2/libargon2-1_0%7e20171227-0.3%2bdeb12u1_amd64.deb","sha256":"4a8155b06270b88eed34d132acfc8ccc0b85499e1c4bfd7f31f8b199af42b1de"},
+    {"archive":"scout-runtime-003.deb","url":"https://deb.debian.org/debian/pool/main/c/cairo/libcairo-gobject2_1.16.0-7_amd64.deb","sha256":"5898b4c1093ff40bade7acb92affc4a5b5b76a1737cd41cfa2a09cdc2d864d4c"},
+    {"archive":"scout-runtime-004.deb","url":"https://deb.debian.org/debian/pool/main/c/colord/libcolord2_1.4.6-2.2_amd64.deb","sha256":"6e5a48b72ae316301103d642c8881cc06205cb4b5f54c25c467b2847048d268f"},
+    {"archive":"scout-runtime-005.deb","url":"https://deb.debian.org/debian/pool/main/c/cryptsetup/libcryptsetup12_2.6.1-4%7edeb12u2_amd64.deb","sha256":"b9a607c219be5ef04bc0fcfaec3752d9a1ba07df8d3bb2aed9bf348f90d1b6cc"},
+    {"archive":"scout-runtime-006.deb","url":"https://deb.debian.org/debian/pool/main/c/curl/libcurl3-gnutls_7.88.1-10%2bdeb12u15_amd64.deb","sha256":"bf430ecf80f7808704e0187cddc582fd57fc98789ea356d4797651edad387ef3"},
+    {"archive":"scout-runtime-007.deb","url":"https://deb.debian.org/debian/pool/main/d/dbus/dbus_1.14.10-1%7edeb12u1_amd64.deb","sha256":"35932ffdc1ae80348e93c1263c504e62cae8a2a1476f1541ef63a9cc0a271ef9"},
+    {"archive":"scout-runtime-008.deb","url":"https://deb.debian.org/debian/pool/main/d/dbus/dbus-bin_1.14.10-1%7edeb12u1_amd64.deb","sha256":"7273d6f5ddcafa6bc81e319997f60e9b511a92c4414c1d4ecb05cba9e755da57"},
+    {"archive":"scout-runtime-009.deb","url":"https://deb.debian.org/debian/pool/main/d/dbus/dbus-daemon_1.14.10-1%7edeb12u1_amd64.deb","sha256":"d35e43de83f7df870196d292a60a56d320c47ce503bc586b30e47a192090302e"},
+    {"archive":"scout-runtime-010.deb","url":"https://deb.debian.org/debian/pool/main/d/dbus/dbus-session-bus-common_1.14.10-1%7edeb12u1_all.deb","sha256":"b19cb8e3581d6b09ff3f46fee23de2813811353228c666c9d1ad885598062e43"},
+    {"archive":"scout-runtime-011.deb","url":"https://deb.debian.org/debian/pool/main/d/dbus/dbus-system-bus-common_1.14.10-1%7edeb12u1_all.deb","sha256":"2111d3d0c98ac68ee973274058447e6fab1c359fec1d4bb195f5fcc5833a19e2"},
+    {"archive":"scout-runtime-012.deb","url":"https://deb.debian.org/debian/pool/main/d/dbus/dbus-user-session_1.14.10-1%7edeb12u1_amd64.deb","sha256":"4c3aaad251f876214fadb5580dd5f4925f73838832135e6d1dab981eb963be6b"},
+    {"archive":"scout-runtime-013.deb","url":"https://deb.debian.org/debian/pool/main/d/dconf/dconf-gsettings-backend_0.40.0-4_amd64.deb","sha256":"790a8ad2a229b378bbda7a0f32d9d8a522c986b08c556210c0514978ad88e356"},
+    {"archive":"scout-runtime-014.deb","url":"https://deb.debian.org/debian/pool/main/d/dconf/dconf-service_0.40.0-4_amd64.deb","sha256":"2650490642fb7e66da94943d381cea277cb811e3a4aadb6386fcd402a8390759"},
+    {"archive":"scout-runtime-015.deb","url":"https://deb.debian.org/debian/pool/main/d/dconf/libdconf1_0.40.0-4_amd64.deb","sha256":"d438bb2e3b5afaee2a90bb3fb541dcd2e47eefbc43994b5d0461c18648741e36"},
+    {"archive":"scout-runtime-016.deb","url":"https://deb.debian.org/debian/pool/main/g/gdk-pixbuf/libgdk-pixbuf-2.0-0_2.42.10%2bdfsg-1%2bdeb12u4_amd64.deb","sha256":"19673127f2530deb7cf637c688a4e16384e6887627296e16b8169038928cadc3"},
+    {"archive":"scout-runtime-017.deb","url":"https://deb.debian.org/debian/pool/main/g/gdk-pixbuf/libgdk-pixbuf2.0-common_2.42.10%2bdfsg-1%2bdeb12u4_all.deb","sha256":"0f3df073ca7eed5564ea3faceff819d94932d924c56474f1e42799a8017a2d30"},
+    {"archive":"scout-runtime-018.deb","url":"https://deb.debian.org/debian/pool/main/g/gtk%2b3.0/gtk-update-icon-cache_3.24.38-2%7edeb12u3_amd64.deb","sha256":"6df214515e719d9099f6df89f4581abe34b63ea9237b76e93843e83226b2e9cb"},
+    {"archive":"scout-runtime-019.deb","url":"https://deb.debian.org/debian/pool/main/g/gtk%2b3.0/libgtk-3-0_3.24.38-2%7edeb12u3_amd64.deb","sha256":"0ff7375c98b5a8d6aafc6096b21d9f7bae4ecb581d31fce5d37be18f55b489a2"},
+    {"archive":"scout-runtime-020.deb","url":"https://deb.debian.org/debian/pool/main/g/gtk%2b3.0/libgtk-3-common_3.24.38-2%7edeb12u3_all.deb","sha256":"f2642d127d85440acbfc2ed404d3932d8b2fbe8a576ead7f93f35ac1fa999c92"},
+    {"archive":"scout-runtime-021.deb","url":"https://deb.debian.org/debian/pool/main/h/hicolor-icon-theme/hicolor-icon-theme_0.17-2_all.deb","sha256":"20304d34b85a734ec1e4830badf3a3a70a5dc5f9c1afc0b2230ecd760c81b5e0"},
+    {"archive":"scout-runtime-022.deb","url":"https://deb.debian.org/debian/pool/main/i/iptables/libip4tc2_1.8.9-2_amd64.deb","sha256":"f2c48b367f9ec13f9aa577e7ccf81b371ce5d5fe22dddf9d7aa99f1e0bb7cfc4"},
+    {"archive":"scout-runtime-023.deb","url":"https://deb.debian.org/debian/pool/main/j/jbigkit/libjbig0_2.1-6.1_amd64.deb","sha256":"6b07c77b700a615642888a82ba92a7e7c429d04b9c8669c62b2263f15c4c4059"},
+    {"archive":"scout-runtime-024.deb","url":"https://deb.debian.org/debian/pool/main/j/json-c/libjson-c5_0.16-2_amd64.deb","sha256":"d0e1ed8637d1c26b9720f6057d6355f18378bba5cc2553e459d1632783c00d70"},
+    {"archive":"scout-runtime-025.deb","url":"https://deb.debian.org/debian/pool/main/k/kmod/libkmod2_30%2b20221128-1_amd64.deb","sha256":"af63bbbfc15fbd1f254b15c393b3b95b18b18cc81348fc1b4f1c9c34b4d672d7"},
+    {"archive":"scout-runtime-026.deb","url":"https://deb.debian.org/debian/pool/main/l/lcms2/liblcms2-2_2.14-2%2bdeb12u1_amd64.deb","sha256":"333efe13d165b8a98194d95e72fd10b502ebbee4dc2eb43fc2ab83e2b53e5f17"},
+    {"archive":"scout-runtime-027.deb","url":"https://deb.debian.org/debian/pool/main/l/lerc/liblerc4_4.0.0%2bds-2_amd64.deb","sha256":"771f5c47ca69f24ca61e4be0c98c5912b182ce442f921697d17a472f3ded5c9c"},
+    {"archive":"scout-runtime-028.deb","url":"https://deb.debian.org/debian/pool/main/libd/libdeflate/libdeflate0_1.14-1_amd64.deb","sha256":"3d4b39f94317b64a860db8a7a8b581b555124cd461fe07ec0d347edbdb9f6683"},
+    {"archive":"scout-runtime-029.deb","url":"https://deb.debian.org/debian/pool/main/libe/libepoxy/libepoxy0_1.5.10-1_amd64.deb","sha256":"050cbedc9c2a5cce976151c720a3817f2103a01e6ac255bdd6f2c6a7509b04c3"},
+    {"archive":"scout-runtime-030.deb","url":"https://deb.debian.org/debian/pool/main/libj/libjpeg-turbo/libjpeg62-turbo_2.1.5-2_amd64.deb","sha256":"95ec30140789a342add8f8371ed018924de51b539056522b66f207b25cba9cad"},
+    {"archive":"scout-runtime-031.deb","url":"https://deb.debian.org/debian/pool/main/libp/libpsl/libpsl5_0.21.2-1_amd64.deb","sha256":"4f0d35610204e4e754b057748719744114621f2f6f4202d846c314860a981afb"},
+    {"archive":"scout-runtime-032.deb","url":"https://deb.debian.org/debian/pool/main/libw/libwebp/libwebp7_1.2.4-0.2%2bdeb12u1_amd64.deb","sha256":"7259b7ce46444694ce536360ad53acb68eb3b47a7ff81d7b1b8a3939b2ac9918"},
+    {"archive":"scout-runtime-033.deb","url":"https://deb.debian.org/debian/pool/main/libx/libxcursor/libxcursor1_1.2.1-1_amd64.deb","sha256":"49e167048661be4c614fff81429e9eaef38e54ef1d2150a5d2a8c53919217529"},
+    {"archive":"scout-runtime-034.deb","url":"https://deb.debian.org/debian/pool/main/libx/libxinerama/libxinerama1_1.1.4-3_amd64.deb","sha256":"8dde8f74d2fc001f306fb1295a86850145e93191d35c983c7f52eb21b0a7f8cb"},
+    {"archive":"scout-runtime-035.deb","url":"https://deb.debian.org/debian/pool/main/l/lvm2/dmsetup_1.02.185-2_amd64.deb","sha256":"c73fc490b93c83550ed272de69ec96c5da30d4456b889f9e93c7fd8e53860b85"},
+    {"archive":"scout-runtime-036.deb","url":"https://deb.debian.org/debian/pool/main/l/lvm2/libdevmapper1.02.1_1.02.185-2_amd64.deb","sha256":"aaa78ca236055fedccf637eacf7bda02bf1980b2db668dccd202b04d0d2cfe04"},
+    {"archive":"scout-runtime-037.deb","url":"https://deb.debian.org/debian/pool/main/n/ncurses/libncursesw6_6.4-4_amd64.deb","sha256":"98fa7a53dc565a38b65fb70422ad08001bf5361d8fbc74255280c329996a6bec"},
+    {"archive":"scout-runtime-038.deb","url":"https://deb.debian.org/debian/pool/main/n/nghttp2/libnghttp2-14_1.52.0-1%2bdeb12u3_amd64.deb","sha256":"5a5736cee57e51c1baed869979e6ecdbc6495e939e33203d6cfe3b6e5a149e3f"},
+    {"archive":"scout-runtime-039.deb","url":"https://deb.debian.org/debian/pool/main/o/openldap/libldap-2.5-0_2.5.13%2bdfsg-5_amd64.deb","sha256":"4b6c30f6554149c594628d945edc6003f0eea8d0cc1341638c0e71375db147ed"},
+    {"archive":"scout-runtime-040.deb","url":"https://deb.debian.org/debian/pool/main/p/pango1.0/libpangocairo-1.0-0_1.50.12%2bds-1_amd64.deb","sha256":"96695f9cdd3bf346e3555cf0aa158e23a36114d6dec203b00ab4e93f1b77aab9"},
+    {"archive":"scout-runtime-041.deb","url":"https://deb.debian.org/debian/pool/main/p/pango1.0/libpangoft2-1.0-0_1.50.12%2bds-1_amd64.deb","sha256":"78da3f494109f6e7a39c4626aaae7571c600c5854cecda0bc0c902224986a63b"},
+    {"archive":"scout-runtime-042.deb","url":"https://deb.debian.org/debian/pool/main/p/procps/libproc2-0_4.0.2-3_amd64.deb","sha256":"e82ba5d01929eafb8b9954606a3c38b0332a987c2b3432388b4ee7365e54deae"},
+    {"archive":"scout-runtime-043.deb","url":"https://deb.debian.org/debian/pool/main/p/procps/procps_4.0.2-3_amd64.deb","sha256":"d9d0e75779cb79af869181f17b93c5c263a2b89cac6a0193c436160a4483ddc1"},
+    {"archive":"scout-runtime-044.deb","url":"https://deb.debian.org/debian/pool/main/r/rtmpdump/librtmp1_2.4%2b20151223.gitfa8646d.1-2%2bb2_amd64.deb","sha256":"e1f69020dc2c466e421ec6a58406b643be8b5c382abf0f8989011c1d3df91c87"},
+    {"archive":"scout-runtime-045.deb","url":"https://deb.debian.org/debian/pool/main/s/shared-mime-info/shared-mime-info_2.2-1_amd64.deb","sha256":"dd026add873483566faefebbd8779a1e5e14ab2e44682ebfe238c3828a2b936b"},
+    {"archive":"scout-runtime-046.deb","url":"https://deb.debian.org/debian/pool/main/s/systemd/libpam-systemd_252.39-1%7edeb12u2_amd64.deb","sha256":"5629028998971da269a165cdbeb1c7606e9c37e58030217ae93f55233388be32"},
+    {"archive":"scout-runtime-047.deb","url":"https://deb.debian.org/debian/pool/main/s/systemd/libsystemd-shared_252.39-1%7edeb12u2_amd64.deb","sha256":"01458465c816b9eb63b92241869ddb46f332b8f498cf7a5979b84ec293cfdfda"},
+    {"archive":"scout-runtime-048.deb","url":"https://deb.debian.org/debian/pool/main/s/systemd/systemd_252.39-1%7edeb12u2_amd64.deb","sha256":"286f879c537bfba92e59d580c075ad20ab49020244c79634656850a306dd462b"},
+    {"archive":"scout-runtime-049.deb","url":"https://deb.debian.org/debian/pool/main/s/systemd/systemd-sysv_252.39-1%7edeb12u2_amd64.deb","sha256":"e3dc84316cfdf7e3feefe4eaf507758d2630ea131e1834e1f07525b3e537db2d"},
+    {"archive":"scout-runtime-050.deb","url":"https://deb.debian.org/debian/pool/main/t/tiff/libtiff6_4.5.0-6%2bdeb12u4_amd64.deb","sha256":"255cd1d9f204355c366638ee21756234a8d43c03a3de18a5af6cdd94765b5053"},
+    {"archive":"scout-runtime-051.deb","url":"https://deb.debian.org/debian/pool/main/u/util-linux/libfdisk1_2.38.1-5%2bdeb12u3_amd64.deb","sha256":"8af145cff6ca72529f63e0bf6d9c68c8512387e67f64e66d00e36f72bed99160"},
+    {"archive":"scout-runtime-052.deb","url":"https://deb.debian.org/debian/pool/main/v/vulkan-loader/libvulkan1_1.3.239.0-1_amd64.deb","sha256":"622f28b807ba55a1f5ad1622ff83aa2c5b11fedbec074850e04c10a8f28b43d3"},
+    {"archive":"scout-runtime-053.deb","url":"https://deb.debian.org/debian/pool/main/w/wayland/libwayland-client0_1.21.0-1_amd64.deb","sha256":"1f002d028b8b79eec9847c636d8886d10dfe8c884cc2bebe18086b1391c5a28d"},
+    {"archive":"scout-runtime-054.deb","url":"https://deb.debian.org/debian/pool/main/w/wayland/libwayland-cursor0_1.21.0-1_amd64.deb","sha256":"0b684467ec795024fcaae99ea4384959cc4052b2da5adec38c9b76dfed9bcf41"},
+    {"archive":"scout-runtime-055.deb","url":"https://deb.debian.org/debian/pool/main/w/wayland/libwayland-egl1_1.21.0-1_amd64.deb","sha256":"cb4225f0e15e00a3570d4cbc288c87ff477d73e741c3f1c5a6d47cf350d45378"},
+    {"archive":"scout-runtime-056.deb","url":"https://deb.debian.org/debian/pool/main/w/wget/wget_1.21.3-1%2bdeb12u1_amd64.deb","sha256":"b389052d1d8a8cacec4f0380d9ee54e8082bfbebe374299be95b5286c9380f80"},
+    {"archive":"scout-runtime-057.deb","url":"https://deb.debian.org/debian/pool/main/x/xdg-utils/xdg-utils_1.1.3-4.1_all.deb","sha256":"0e31caa8c34643f7eedb4d373ee61943c09061275b5fa727524fc568d0a9e332"},
+    {"archive":"scout-runtime-058.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/c/ca-certificates/ca-certificates_20250419%7edeb12u2_all.deb","sha256":"b9f76b5271a7ac373fd5e7e1b5b826a71ddd702b42a0d104955ecb1acfffc94b"},
+    {"archive":"scout-runtime-059.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/c/cyrus-sasl2/libsasl2-2_2.1.28%2bdfsg-10%2bdeb12u1_amd64.deb","sha256":"d6f20408e2be92ebd9f5e3b1c1935b075efb3f03abb5f48f7b991a0ad3e2d6a5"},
+    {"archive":"scout-runtime-060.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/c/cyrus-sasl2/libsasl2-modules-db_2.1.28%2bdfsg-10%2bdeb12u1_amd64.deb","sha256":"6c86ca8fe9a7d652e618874b8753b4b6ec6b42ed7649b3f388e38d0a99047ba5"},
+    {"archive":"scout-runtime-061.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/libs/libssh2/libssh2-1_1.10.0-3%2bdeb12u1_amd64.deb","sha256":"fff72a194e493f88e100a2567e22472bb4ab828d429c2956965c6f2f134f1b3a"},
+    {"archive":"scout-runtime-062.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/o/openssl/libssl3_3.0.22-1%7edeb12u2_amd64.deb","sha256":"cb4784740daa9b3b0eaea2b444bbefa686794afbbf3d678d238c1fd9875f2efd"},
+    {"archive":"scout-runtime-063.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/o/openssl/openssl_3.0.22-1%7edeb12u2_amd64.deb","sha256":"5cdf0b735b1c8a96ae0bf83ed328c83c2170f8320dedb035e98705b60b2d0cfe"},
+    {"archive":"scout-runtime-064.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/p/perl/perl-base_5.36.0-7%2bdeb12u4_amd64.deb","sha256":"d7d1943aec9597629bf73075efcc5ef6dc9bda96d78e80d843156ecd448478b8"}
+  ]'';
+  memberDebian = map (p: p // {
+    source = pkgs.fetchurl { inherit (p) url sha256; name = p.archive; };
+  }) memberDebianCatalog;
+  memberNpmCatalog = builtins.fromJSON ''[
+    {"name":"playwright","version":"1.64.1","archive":"playwright-1.64.1.tgz","url":"https://registry.npmjs.org/playwright/-/playwright-1.64.1.tgz","hash":"sha512-HCrVhHr5QQuwYoswEUGTb7gGp522yflbv/ST8nF4sFWGuLjQCt17Q/EubpGGSNKYn1tsTCPZxqHhHCfVURu7UA==","target":"/app/apps/lead-scout/node_modules/playwright"},
+    {"name":"playwright-core","version":"1.64.1","archive":"playwright-core-1.64.1.tgz","url":"https://registry.npmjs.org/playwright-core/-/playwright-core-1.64.1.tgz","hash":"sha512-BC4s8y6SEVA6Q1rSxZTto8hI1KUI3xXlHGZgvGqP4IqPdI/a6FX9H29IDNz7vKo9l21b6LfYosScPL6M3xxyDQ==","target":"/app/apps/lead-scout/node_modules/playwright-core"},
+    {"name":"shell-quote","version":"1.11.0","archive":"shell-quote-1.11.0.tgz","url":"https://registry.npmjs.org/shell-quote/-/shell-quote-1.11.0.tgz","hash":"sha512-JdxDPD0DBTyu08pq0kPC0xSNet/qsU07qT6IsX1AS8oO2ICNRY4ldNa8OAI6PuwAH8tG3lxEhbqmyp4Dw4036g==","target":"/app/node_modules/shell-quote"},
+    {"name":"proxy-addr","version":"2.0.8","archive":"proxy-addr-2.0.8.tgz","url":"https://registry.npmjs.org/proxy-addr/-/proxy-addr-2.0.8.tgz","hash":"sha512-5nnx0yGyVUcY6t9RnWcARWtwT9F1D8O9rt08htPvnd49W1IgZtmLkhu9WfMzQj1cFxjHIO6connUNVW5k7AVyQ==","target":"/app/node_modules/proxy-addr"}
+  ]'';
+  memberNpm = map (p: p // {
+    source = pkgs.fetchurl { inherit (p) url hash; name = p.archive; };
+  }) memberNpmCatalog;
+  memberSecurityManifest = pkgs.writeText "scout-member-runtime-security.json" (builtins.toJSON {
+    schemaVersion = 1;
+    chrome = { inherit (memberChrome) version archive url sha256; };
+    debian = memberDebianCatalog;
+    npm = memberNpmCatalog;
+  });
   memberImage = (import ../../../../lib/mkContainer.nix { inherit lib pkgs; }).mkRuntimeImage {
     name = "scout-member";
-    version = "51a6a0eb";
+    version = "51a6a0eb-chrome${memberChrome.version}";
     recipe = ''
       FROM localhost/lead-scout@sha256:4293934a89e0ee609192310a5cc915382535268d353247c7a53fa566331046a3
       COPY ${memberBrotliFile} /tmp/scout-brotli.deb
       RUN echo '${memberBrotliHash}  /tmp/scout-brotli.deb' | sha256sum -c - && dpkg -i /tmp/scout-brotli.deb && rm /tmp/scout-brotli.deb
       # Chromium policy SHA256: ${builtins.hashString "sha256" memberChromePolicyText}
       COPY chrome-distrust-policy.json /etc/opt/chrome_for_testing/policies/managed/hwc-emsign-distrust.json
+      COPY chrome-distrust-policy.json /etc/opt/chrome/policies/managed/hwc-emsign-distrust.json
+      COPY debian/ /tmp/scout-runtime/
+      COPY ${memberChrome.archive} /tmp/scout-runtime/${memberChrome.archive}
+      RUN DEBIAN_FRONTEND=noninteractive apt-get --no-download -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- install --no-install-recommends -y /tmp/scout-runtime/*.deb && apt-get clean && rm -rf /tmp/scout-runtime /var/lib/apt/lists/*
+      COPY npm/ /tmp/scout-npm/
+      ${lib.concatMapStringsSep "\n" (p: ''
+        RUN rm -rf ${p.target} && mkdir -p ${p.target} && tar -xzf /tmp/scout-npm/${p.archive} --strip-components=1 -C ${p.target}
+      '') memberNpm}
+      RUN rm -rf /tmp/scout-npm /ms-playwright/chromium-1223 /ms-playwright/chromium_headless_shell-1223 /ms-playwright/.links
+      ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+      RUN node -e "const fs=require('fs'),p='/app/apps/lead-scout/package.json',d=JSON.parse(fs.readFileSync(p));d.dependencies.playwright=require('playwright/package.json').version;fs.writeFileSync(p,JSON.stringify(d,null,2)+'\\n');"
     '';
   };
   # REPLACEABLE: built from fixed-hash input, public policy and exact recipe.
   # No build or image replacement runs during application startup.
   memberImageContext = pkgs.runCommand "scout-member-runtime-context" {} ''
-    mkdir -p "$out"
+    mkdir -p "$out/debian" "$out/npm"
+    ${lib.concatMapStringsSep "\n" (p: ''cp ${p.source} "$out/debian/${p.archive}"'') memberDebian}
+    ${lib.concatMapStringsSep "\n" (p: ''cp ${p.source} "$out/npm/${p.archive}"'') memberNpm}
+    cp ${memberChrome.source} "$out/${memberChrome.archive}"
+    cp ${memberSecurityManifest} "$out/manifest.json"
     cp ${memberImage.dockerfile} "$out/Dockerfile"
     cp ${memberChromePolicy} "$out/chrome-distrust-policy.json"
     cp ${memberBrotli} "$out/${memberBrotliFile}"
@@ -969,6 +1079,7 @@ in
 
     system.build.scoutMemberImageCheck = lib.mkIf member.enable memberImageCheck;
     system.build.scoutMemberRuntimeImageContext = lib.mkIf member.enable memberImageContext;
+    system.build.scoutMemberRuntimeSecurityManifest = lib.mkIf member.enable memberSecurityManifest;
     system.build.scoutMemberSnapshot = lib.mkIf member.enable memberSnapshot;
     system.build.scoutMemberSnapshotConfig = lib.mkIf member.enable memberSnapshotConfig;
     # The complete bundle carries logs/WAL inside its tar. Global *.log/raw

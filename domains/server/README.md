@@ -9,6 +9,8 @@
 
 ## Structure
 
+The Scout member runtime preserves app51a6a0eb while pinning ChromeStable156.0.8078.79, Playwright/core1.64.1, shell-quote1.11.0, proxy-addr2.0.8 and fixed Debian archives. Its existing index holds the package catalog; the sibling snapshot helper remains the paired SQL/profile owner. Build the exported context offline before adoption; the startup image-ID guard still applies. Old/new/restored profile and database checks protect saved authentication.
+
 `services/meals/` deploys the independent Meals package, exact CalDAV targets, CRITICAL same-user SQLite backup and seven-day preview cleanup. Recipes support multiple categories and direct reviewed grocery contributions without a calendar dinner. Recipe conversion consumes the shared DX2 endpoint facts and existing credential path; only reviewed diagrams enter the recipe store. The schema-3 candidate has bounded cancellable conversion jobs and stays in preview unless an operator-owned quality receipt matches the shipped engine, prompt and immutable model identity. Wall Home/Week reserve dinner rows and provide tap/QR access to the persistent Meals-owned cooking page through a bounded GET-only loopback transport; Calendar routes managed edits to Meals.
 
 Calendar phone writes consume the gateway's sync receipt; they preserve the saved local result and show a sync failure without another wait.
@@ -95,6 +97,8 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+
+- 2026-11-02: Replace the stale Scout member browser and affected libraries through fixed-hash offline inputs. Preserve compiled app/Node, current data, the public trust policy and guarded compose adoption; delete old browser fallbacks.
 - 2026-11-01: Restrict direct Brain MCP firewall access to Tailscale and correct
   its listener documentation; preserve the public gateway and private clients.
 - 2026-10-25: Start the retained member database before creating a replacement app, inside the existing preparation deadline. Test generated ordering to prevent stopped-database IP allocation reuse.
