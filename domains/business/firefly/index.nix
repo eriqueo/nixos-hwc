@@ -128,7 +128,7 @@ let
     COPY pico-front-package-lock.json ./package-lock.json
     COPY pico-frontend.patch /tmp/pico-frontend.patch
     COPY pico-frontend-test.mjs ./hwc-frontend-test.mjs
-    RUN patch -p1 < /tmp/pico-frontend.patch && rm -rf node_modules .nuxt .output && for f in /tmp/npm-packages/*.tgz; do node /usr/local/lib/node_modules/npm/bin/npm-cli.js cache add "$f" --cache /tmp/npm-cache --offline; done && node /usr/local/lib/node_modules/npm/bin/npm-cli.js ci --cache /tmp/npm-cache --offline --include=dev && node /usr/local/lib/node_modules/npm/bin/npm-cli.js run build && node hwc-frontend-test.mjs && rm -rf node_modules /tmp/npm-packages /tmp/npm-cache /tmp/pico-frontend.patch /usr/local/lib/node_modules/npm
+    RUN patch -p1 < /tmp/pico-frontend.patch && rm -rf node_modules .nuxt .output && for f in /tmp/npm-packages/*.tgz; do node /usr/local/lib/node_modules/npm/bin/npm-cli.js cache add "$f" --cache /tmp/npm-cache --offline; done && node /usr/local/lib/node_modules/npm/bin/npm-cli.js ci --cache /tmp/npm-cache --offline --include=dev && node /usr/local/lib/node_modules/npm/bin/npm-cli.js run build && node hwc-frontend-test.mjs && apk del --no-network patch && rm -rf node_modules /tmp/npm-packages /tmp/npm-cache /tmp/pico-frontend.patch /usr/local/lib/node_modules/npm
   '';
   picoRuntime = helpers.mkRuntimeImage {
     name = "firefly-pico";

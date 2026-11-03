@@ -91,6 +91,10 @@ business/
 
 ## Changelog
 
+- 2026-11-02: Supply hash-pinned Alpine patch for the frontend build and remove
+  it after compilation; the upstream runtime does not include that tool.
+
+
 - 2026-11-02: Disable calculator variable assignment; arithmetic and hostile
   expression checks pass against the patched utility.
 
