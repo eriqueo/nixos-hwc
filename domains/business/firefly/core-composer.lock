@@ -291,7 +291,7 @@
       ],
       "authors": [
         {
-          "name": "Christian L\u00fcck",
+          "name": "Christian Lück",
           "email": "christian@clue.engineering"
         }
       ],
@@ -1330,7 +1330,7 @@
           "homepage": "https://github.com/Nyholm"
         },
         {
-          "name": "M\u00e1rk S\u00e1gi-Kaz\u00e1r",
+          "name": "Márk Sági-Kazár",
           "email": "mark.sagikazar@gmail.com",
           "homepage": "https://github.com/sagikazarmark"
         },
@@ -1529,7 +1529,7 @@
           "homepage": "https://github.com/Nyholm"
         },
         {
-          "name": "M\u00e1rk S\u00e1gi-Kaz\u00e1r",
+          "name": "Márk Sági-Kazár",
           "email": "mark.sagikazar@gmail.com",
           "homepage": "https://github.com/sagikazarmark"
         },
@@ -1539,7 +1539,7 @@
           "homepage": "https://github.com/Tobion"
         },
         {
-          "name": "M\u00e1rk S\u00e1gi-Kaz\u00e1r",
+          "name": "Márk Sági-Kazár",
           "email": "mark.sagikazar@gmail.com",
           "homepage": "https://sagikazarmark.hu"
         }
@@ -2483,7 +2483,7 @@
       ],
       "authors": [
         {
-          "name": "Lu\u00eds Cobucci",
+          "name": "Luís Cobucci",
           "email": "lcobucci@gmail.com",
           "role": "Developer"
         }
@@ -3434,7 +3434,7 @@
       ],
       "authors": [
         {
-          "name": "Tautvydas Tij\u016bnaitis",
+          "name": "Tautvydas Tijūnaitis",
           "email": "tautvydas@mailersend.com",
           "homepage": "https://mailersend.com",
           "role": "Developer"
@@ -3501,7 +3501,7 @@
       ],
       "authors": [
         {
-          "name": "Tautvydas Tij\u016bnaitis",
+          "name": "Tautvydas Tijūnaitis",
           "email": "tautvydas@mailersend.com",
           "homepage": "https://mailersend.com",
           "role": "Developer"
@@ -3783,7 +3783,7 @@
           "homepage": "https://nette.org/contributors"
         }
       ],
-      "description": "\ud83d\udcd0 Nette Schema: validating data structures against a given Schema.",
+      "description": "📐 Nette Schema: validating data structures against a given Schema.",
       "homepage": "https://nette.org",
       "keywords": [
         "config",
@@ -3862,7 +3862,7 @@
           "homepage": "https://nette.org/contributors"
         }
       ],
-      "description": "\ud83d\udee0  Nette Utils: lightweight utilities for string & array manipulation, image handling, safe JSON encoding/decoding, validation, slug or strong password generating etc.",
+      "description": "🛠  Nette Utils: lightweight utilities for string & array manipulation, image handling, safe JSON encoding/decoding, validation, slug or strong password generating etc.",
       "homepage": "https://nette.org",
       "keywords": [
         "array",
@@ -4315,7 +4315,7 @@
       ],
       "authors": [
         {
-          "name": "M\u00e1rk S\u00e1gi-Kaz\u00e1r",
+          "name": "Márk Sági-Kazár",
           "email": "mark.sagikazar@gmail.com"
         }
       ],
@@ -4390,7 +4390,7 @@
       ],
       "authors": [
         {
-          "name": "M\u00e1rk S\u00e1gi-Kaz\u00e1r",
+          "name": "Márk Sági-Kazár",
           "email": "mark.sagikazar@gmail.com"
         }
       ],
@@ -4511,7 +4511,7 @@
           "email": "geloen.eric@gmail.com"
         },
         {
-          "name": "M\u00e1rk S\u00e1gi-Kaz\u00e1r",
+          "name": "Márk Sági-Kazár",
           "email": "mark.sagikazar@gmail.com",
           "homepage": "https://sagikazarmark.hu"
         }
@@ -4580,7 +4580,7 @@
       ],
       "authors": [
         {
-          "name": "M\u00e1rk S\u00e1gi-Kaz\u00e1r",
+          "name": "Márk Sági-Kazár",
           "email": "mark.sagikazar@gmail.com"
         }
       ],
@@ -4634,7 +4634,7 @@
           "email": "joel.wurtz@gmail.com"
         },
         {
-          "name": "M\u00e1rk S\u00e1gi-Kaz\u00e1r",
+          "name": "Márk Sági-Kazár",
           "email": "mark.sagikazar@gmail.com"
         }
       ],
@@ -4726,16 +4726,16 @@
     },
     {
       "name": "phpseclib/phpseclib",
-      "version": "3.0.55",
+      "version": "3.0.58",
       "source": {
         "type": "git",
         "url": "https://github.com/phpseclib/phpseclib.git",
-        "reference": "db9744e6d47e742b1f974e965ad49bdd041105af"
+        "reference": "91f3a6436bb84040ac0cf49e761977f17d16a39b"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/phpseclib/phpseclib/zipball/db9744e6d47e742b1f974e965ad49bdd041105af",
-        "reference": "db9744e6d47e742b1f974e965ad49bdd041105af",
+        "url": "https://api.github.com/repos/phpseclib/phpseclib/zipball/91f3a6436bb84040ac0cf49e761977f17d16a39b",
+        "reference": "91f3a6436bb84040ac0cf49e761977f17d16a39b",
         "shasum": ""
       },
       "require": {
@@ -4783,7 +4783,7 @@
           "role": "Developer"
         },
         {
-          "name": "Hans-J\u00fcrgen Petrich",
+          "name": "Hans-Jürgen Petrich",
           "email": "petrich@tronic-media.com",
           "role": "Developer"
         },
@@ -4816,7 +4816,7 @@
       ],
       "support": {
         "issues": "https://github.com/phpseclib/phpseclib/issues",
-        "source": "https://github.com/phpseclib/phpseclib/tree/3.0.55"
+        "source": "https://github.com/phpseclib/phpseclib/tree/3.0.58"
       },
       "funding": [
         {
@@ -4832,7 +4832,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2026-06-14T23:24:10+00:00"
+      "time": "2026-11-02T10:45:48+00:00"
     },
     {
       "name": "pragmarx/google2fa",
@@ -5060,7 +5060,7 @@
       ],
       "authors": [
         {
-          "name": "Till Kr\u00fcss",
+          "name": "Till Krüss",
           "homepage": "https://till.im",
           "role": "Maintainer"
         }
@@ -6447,16 +6447,16 @@
     },
     {
       "name": "symfony/cache",
-      "version": "v8.1.1",
+      "version": "v8.1.10",
       "source": {
         "type": "git",
         "url": "https://github.com/symfony/cache.git",
-        "reference": "c14decc1b0755b1e8ab6babeef56e1880348e817"
+        "reference": "385f37a95296a9d4bc0204c9c49ee4765d4fe989"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/symfony/cache/zipball/c14decc1b0755b1e8ab6babeef56e1880348e817",
-        "reference": "c14decc1b0755b1e8ab6babeef56e1880348e817",
+        "url": "https://api.github.com/repos/symfony/cache/zipball/385f37a95296a9d4bc0204c9c49ee4765d4fe989",
+        "reference": "385f37a95296a9d4bc0204c9c49ee4765d4fe989",
         "shasum": ""
       },
       "require": {
@@ -6465,7 +6465,7 @@
         "psr/log": "^1.1|^2|^3",
         "symfony/cache-contracts": "^3.6",
         "symfony/service-contracts": "^2.5|^3",
-        "symfony/var-exporter": "^8.1"
+        "symfony/var-exporter": "^8.1.1"
       },
       "conflict": {
         "ext-redis": "<6.1",
@@ -6477,7 +6477,7 @@
         "symfony/cache-implementation": "1.1|2.0|3.0"
       },
       "require-dev": {
-        "cache/integration-tests": "dev-master",
+        "cache/integration-tests": "^1.0.3",
         "doctrine/dbal": "^4.3",
         "predis/predis": "^1.1|^2.0",
         "psr/simple-cache": "^1.0|^2.0|^3.0",
@@ -6522,7 +6522,7 @@
         "psr6"
       ],
       "support": {
-        "source": "https://github.com/symfony/cache/tree/v8.1.1"
+        "source": "https://github.com/symfony/cache/tree/v8.1.10"
       },
       "funding": [
         {
@@ -6542,7 +6542,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2026-06-17T15:04:37+00:00"
+      "time": "2026-10-28T10:55:21+00:00"
     },
     {
       "name": "symfony/cache-contracts",
@@ -6837,7 +6837,7 @@
           "email": "fabien@symfony.com"
         },
         {
-          "name": "Jean-Fran\u00e7ois Simon",
+          "name": "Jean-François Simon",
           "email": "jeanfrancois.simon@sensiolabs.com"
         },
         {
@@ -7190,16 +7190,16 @@
     },
     {
       "name": "symfony/expression-language",
-      "version": "v8.1.1",
+      "version": "v8.1.9",
       "source": {
         "type": "git",
         "url": "https://github.com/symfony/expression-language.git",
-        "reference": "13b74638d9c7c6854fcbb7e89a42a90fdca51f57"
+        "reference": "9c2729bca940d84938dc0b435d037e4844f237c9"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/symfony/expression-language/zipball/13b74638d9c7c6854fcbb7e89a42a90fdca51f57",
-        "reference": "13b74638d9c7c6854fcbb7e89a42a90fdca51f57",
+        "url": "https://api.github.com/repos/symfony/expression-language/zipball/9c2729bca940d84938dc0b435d037e4844f237c9",
+        "reference": "9c2729bca940d84938dc0b435d037e4844f237c9",
         "shasum": ""
       },
       "require": {
@@ -7233,7 +7233,7 @@
       "description": "Provides an engine that can compile and evaluate expressions",
       "homepage": "https://symfony.com",
       "support": {
-        "source": "https://github.com/symfony/expression-language/tree/v8.1.1"
+        "source": "https://github.com/symfony/expression-language/tree/v8.1.9"
       },
       "funding": [
         {
@@ -7253,7 +7253,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2026-06-09T10:54:51+00:00"
+      "time": "2026-10-09T13:58:01+00:00"
     },
     {
       "name": "symfony/finder",
@@ -8084,16 +8084,16 @@
     },
     {
       "name": "symfony/polyfill-deepclone",
-      "version": "v1.40.0",
+      "version": "v1.43.2",
       "source": {
         "type": "git",
         "url": "https://github.com/symfony/polyfill-deepclone.git",
-        "reference": "dca4ccba5f360070b574414dce4c1e7a559844fa"
+        "reference": "82274308b59f6e96f53a3fb37fc40877d843e5a5"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/symfony/polyfill-deepclone/zipball/dca4ccba5f360070b574414dce4c1e7a559844fa",
-        "reference": "dca4ccba5f360070b574414dce4c1e7a559844fa",
+        "url": "https://api.github.com/repos/symfony/polyfill-deepclone/zipball/82274308b59f6e96f53a3fb37fc40877d843e5a5",
+        "reference": "82274308b59f6e96f53a3fb37fc40877d843e5a5",
         "shasum": ""
       },
       "require": {
@@ -8147,7 +8147,7 @@
         "shim"
       ],
       "support": {
-        "source": "https://github.com/symfony/polyfill-deepclone/tree/v1.40.0"
+        "source": "https://github.com/symfony/polyfill-deepclone/tree/v1.43.2"
       },
       "funding": [
         {
@@ -8167,7 +8167,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2026-06-12T07:27:17+00:00"
+      "time": "2026-10-14T07:17:09+00:00"
     },
     {
       "name": "symfony/polyfill-intl-grapheme",
@@ -8791,7 +8791,7 @@
       ],
       "authors": [
         {
-          "name": "Gr\u00e9goire Pineau",
+          "name": "Grégoire Pineau",
           "email": "lyrixx@lyrixx.info"
         },
         {
@@ -9064,16 +9064,16 @@
     },
     {
       "name": "symfony/service-contracts",
-      "version": "v3.7.1",
+      "version": "v3.7.3",
       "source": {
         "type": "git",
         "url": "https://github.com/symfony/service-contracts.git",
-        "reference": "c0a284bab1ed8aa0417e3d69250ab437739563a0"
+        "reference": "15e6a07ec2a2c75ceb1b21dd98105ee8456d2257"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/symfony/service-contracts/zipball/c0a284bab1ed8aa0417e3d69250ab437739563a0",
-        "reference": "c0a284bab1ed8aa0417e3d69250ab437739563a0",
+        "url": "https://api.github.com/repos/symfony/service-contracts/zipball/15e6a07ec2a2c75ceb1b21dd98105ee8456d2257",
+        "reference": "15e6a07ec2a2c75ceb1b21dd98105ee8456d2257",
         "shasum": ""
       },
       "require": {
@@ -9127,7 +9127,7 @@
         "standards"
       ],
       "support": {
-        "source": "https://github.com/symfony/service-contracts/tree/v3.7.1"
+        "source": "https://github.com/symfony/service-contracts/tree/v3.7.3"
       },
       "funding": [
         {
@@ -9147,7 +9147,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2026-06-16T09:55:08+00:00"
+      "time": "2026-07-27T15:39:01+00:00"
     },
     {
       "name": "symfony/string",
@@ -9450,7 +9450,7 @@
       ],
       "authors": [
         {
-          "name": "Gr\u00e9goire Pineau",
+          "name": "Grégoire Pineau",
           "email": "lyrixx@lyrixx.info"
         },
         {
@@ -9581,22 +9581,22 @@
     },
     {
       "name": "symfony/var-exporter",
-      "version": "v8.1.1",
+      "version": "v8.1.10",
       "source": {
         "type": "git",
         "url": "https://github.com/symfony/var-exporter.git",
-        "reference": "75b74315b4e4be40e5534cf9c5cc30dd0907ed71"
+        "reference": "e94442cdefc1df995528d26acb40d25c2d50504d"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/symfony/var-exporter/zipball/75b74315b4e4be40e5534cf9c5cc30dd0907ed71",
-        "reference": "75b74315b4e4be40e5534cf9c5cc30dd0907ed71",
+        "url": "https://api.github.com/repos/symfony/var-exporter/zipball/e94442cdefc1df995528d26acb40d25c2d50504d",
+        "reference": "e94442cdefc1df995528d26acb40d25c2d50504d",
         "shasum": ""
       },
       "require": {
         "php": ">=8.4.1",
         "symfony/deprecation-contracts": "^2.5|^3",
-        "symfony/polyfill-deepclone": "^1.40"
+        "symfony/polyfill-deepclone": "^1.43.1"
       },
       "require-dev": {
         "symfony/property-access": "^7.4|^8.0",
@@ -9640,7 +9640,7 @@
         "serialize"
       ],
       "support": {
-        "source": "https://github.com/symfony/var-exporter/tree/v8.1.1"
+        "source": "https://github.com/symfony/var-exporter/tree/v8.1.10"
       },
       "funding": [
         {
@@ -9660,7 +9660,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2026-06-27T09:05:56+00:00"
+      "time": "2026-10-22T14:30:01+00:00"
     },
     {
       "name": "thecodingmachine/safe",

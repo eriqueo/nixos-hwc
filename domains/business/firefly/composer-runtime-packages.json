@@ -52,6 +52,27 @@
         "hash": "sha256-v8QUlm7Nq0bRjmSXWmNE91dKQJr+9XdPThgtPmB5L+E="
       },
       {
+        "name": "phpseclib/phpseclib",
+        "version": "3.0.58",
+        "url": "https://api.github.com/repos/phpseclib/phpseclib/zipball/91f3a6436bb84040ac0cf49e761977f17d16a39b",
+        "file": "phpseclib/phpseclib/7e37e210d36b09cec41f26e367f04d9c5655ee27.zip",
+        "hash": "sha256-ngVVa5SnbSKzyHuE0lIHtWYDw3eRFAMLZIpsW86Uyyk="
+      },
+      {
+        "name": "symfony/cache",
+        "version": "v8.1.10",
+        "url": "https://api.github.com/repos/symfony/cache/zipball/385f37a95296a9d4bc0204c9c49ee4765d4fe989",
+        "file": "symfony/cache/f75c42831b80b0b03d17dcc684e7cc4df090c2e8.zip",
+        "hash": "sha256-FN99LuB7YARLZ76Zsp7s+T+RNrhsdS8ChfCqd6aVaKk="
+      },
+      {
+        "name": "symfony/expression-language",
+        "version": "v8.1.9",
+        "url": "https://api.github.com/repos/symfony/expression-language/zipball/9c2729bca940d84938dc0b435d037e4844f237c9",
+        "file": "symfony/expression-language/a47954edc14fd8ce2f378275ac1607fd55f5a1ab.zip",
+        "hash": "sha256-f2sAXZJOQg6Myxo+LNLUcE4NCU+7ixVbqNTPIDExDFY="
+      },
+      {
         "name": "symfony/http-foundation",
         "version": "v8.1.10",
         "url": "https://api.github.com/repos/symfony/http-foundation/zipball/79325f87c3a2acc7564ddce9f457046e980e7255",
@@ -64,6 +85,27 @@
         "url": "https://api.github.com/repos/symfony/mime/zipball/8d1232052c9cdef170ed9608b3147bca4f61ff69",
         "file": "symfony/mime/18384897c5e73af57f04c73cc7a853ef377e40b7.zip",
         "hash": "sha256-5gnSZHmQ+q60m1hHdXK0aHIKMYCarOz2lobHa80t6w8="
+      },
+      {
+        "name": "symfony/polyfill-deepclone",
+        "version": "v1.43.2",
+        "url": "https://api.github.com/repos/symfony/polyfill-deepclone/zipball/82274308b59f6e96f53a3fb37fc40877d843e5a5",
+        "file": "symfony/polyfill-deepclone/5c30bca5902dbb12c50b2d540aa104ede5b862f1.zip",
+        "hash": "sha256-EzvCCnZspD5I3ImIn+uMmeWb4mlMjabqR9CgC/7EMSg="
+      },
+      {
+        "name": "symfony/service-contracts",
+        "version": "v3.7.3",
+        "url": "https://api.github.com/repos/symfony/service-contracts/zipball/15e6a07ec2a2c75ceb1b21dd98105ee8456d2257",
+        "file": "symfony/service-contracts/c6a7d178d170bbb533db58498ed82da9b2563d6d.zip",
+        "hash": "sha256-7DBRVYldeBvIvsgQEaNd6lXIj4SbKmouC2iRlfSw9m0="
+      },
+      {
+        "name": "symfony/var-exporter",
+        "version": "v8.1.10",
+        "url": "https://api.github.com/repos/symfony/var-exporter/zipball/e94442cdefc1df995528d26acb40d25c2d50504d",
+        "file": "symfony/var-exporter/93a8fa0634e1c9e4c76b451ca9e0284afa042296.zip",
+        "hash": "sha256-Pps1uQ0f70XWeLOtZilrzdngFrBLkNwpAmIziSzZN7s="
       }
     ],
     "importer": [

@@ -170,6 +170,10 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 
 ## Changelog
 
+- 2026-11-02: Complete Core’s direct advisory repair with phpseclib 3.0.58 and
+  Symfony Expression Language 8.1.9 plus compatible locked dependencies. Pin all
+  six archive hashes and qualify parser depth rejection and X25519 consumption.
+
 - 2026-11-02: Add ABI-matched PHP 8.5.12/libxml2 2.15.4/curl 8.23.0/ngtcp2
   1.25.0 source rebuilds with offline upstream tests, neutral build-stage INI and loopback-only local test name
   resolution in the network-isolated build.
