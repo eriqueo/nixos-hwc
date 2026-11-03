@@ -91,6 +91,11 @@ business/
 
 ## Changelog
 
+- 2026-11-02: Isolate serving INI files in the build stage so nested upstream
+  test subprocesses also use neutral settings. Final serving INI files stay
+  in the original application stage.
+
+
 - 2026-11-02: Extend wiring checks to require upstream native tests, offline
   frontend compilation, calculator checks, Python vendor checks and verified
   bytes for every new context input.

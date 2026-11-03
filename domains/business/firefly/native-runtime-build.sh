@@ -5,6 +5,12 @@ set -eu
 export SOURCE_DATE_EPOCH=1793577600
 mkdir -p /build /native/usr/lib/x86_64-linux-gnu /native/usr/bin /native/usr/local/bin /native/usr/local/sbin
 cd /build
+# The build stage inherits a serving INI with environment interpolation. Nested
+# upstream test subprocesses use the compiled default INI search path, so isolate
+# that serving configuration here too. The final image retains its original INI.
+if [ -d /usr/local/etc/php ]; then
+  mv /usr/local/etc/php /build/serving-php-ini
+fi
 build_library() {
   archive=$1; directory=$2; shift 2
   mkdir "$directory"
