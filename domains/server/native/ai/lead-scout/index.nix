@@ -63,6 +63,20 @@ let
     const lines = fs.readFileSync(path, 'utf8').split('\n');
     fs.writeFileSync(path, lines.map(line => denied.has(line) ? '!' + line : line).join('\n'));
   '';
+  # APT --no-download requires upgraded essential packages in its canonical
+  # archive cache, even when their .deb files were passed as absolute paths.
+  memberDebCache = pkgs.writeText "scout-member-deb-cache.cjs" ''
+    const fs = require('fs');
+    const { execFileSync } = require('child_process');
+    const [input, cache] = process.argv.slice(2);
+    fs.mkdirSync(cache, {recursive:true});
+    for (const name of fs.readdirSync(input).filter(name => name.endsWith('.deb'))) {
+      const file = input + '/' + name;
+      const field = name => execFileSync('dpkg-deb', ['-f',file,name], {encoding:'utf8'}).trim();
+      const archive = field('Package') + '_' + field('Version').replaceAll(':','%3a') + '_' + field('Architecture') + '.deb';
+      fs.copyFileSync(file, cache + '/' + archive);
+    }
+  '';
   memberBrotliFile = "libbrotli1_1.0.9-2+deb12u1_amd64.deb";
   memberBrotliHash = "e27b3d655fa6fadd7a56f706687e94573c0af68b7d6df394a32a381a3a6c6d8b";
   memberBrotli = pkgs.fetchurl {
@@ -181,7 +195,8 @@ let
       COPY chrome-distrust-policy.json /etc/opt/chrome/policies/managed/hwc-emsign-distrust.json
       COPY debian/ /tmp/scout-runtime/
       COPY ${memberChrome.archive} /tmp/scout-runtime/${memberChrome.archive}
-      RUN DEBIAN_FRONTEND=noninteractive apt-get --no-download -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- install --no-install-recommends -y /tmp/scout-runtime/*.deb && apt-get clean && rm -rf /tmp/scout-runtime /var/lib/apt/lists/*
+      COPY scout-member-deb-cache.cjs /tmp/scout-member-deb-cache.cjs
+      RUN node /tmp/scout-member-deb-cache.cjs /tmp/scout-runtime /var/cache/apt/archives && DEBIAN_FRONTEND=noninteractive apt-get --no-download -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- install --no-install-recommends -y /tmp/scout-runtime/*.deb && apt-get clean && rm -rf /tmp/scout-runtime /var/lib/apt/lists/* /tmp/scout-member-deb-cache.cjs
       COPY scout-member-ca-policy.cjs /tmp/scout-member-ca-policy.cjs
       RUN node /tmp/scout-member-ca-policy.cjs && update-ca-certificates --fresh && rm /tmp/scout-member-ca-policy.cjs
       COPY npm/ /tmp/scout-npm/
@@ -204,6 +219,7 @@ let
     cp ${memberImage.dockerfile} "$out/Dockerfile"
     cp ${memberChromePolicy} "$out/chrome-distrust-policy.json"
     cp ${memberCaPolicy} "$out/scout-member-ca-policy.cjs"
+    cp ${memberDebCache} "$out/scout-member-deb-cache.cjs"
     cp ${memberBrotli} "$out/${memberBrotliFile}"
   '';
   invitationMail = member.invitationMail;
