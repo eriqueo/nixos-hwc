@@ -93,11 +93,15 @@ async function main() {
   let available = true;
   try {
     const files = await readdir(DIR);
-    for (const f of files) {
-      if (!f.endsWith(".md")) continue;
-      const raw = await readFile(join(DIR, f), "utf8").catch(() => "");
-      const it = extractItem(raw);
-      if (it) items.push(it);
+    const names = files.filter((f) => f.endsWith(".md"));
+    // Sixteen file reads per batch; remaining files wait for the batch to finish.
+    const fileBatchSize = 16;
+    for (let i = 0; i < names.length; i += fileBatchSize) {
+      const batch = await Promise.all(names.slice(i, i + fileBatchSize).map(async (f) => {
+        const raw = await readFile(join(DIR, f), "utf8").catch(() => "");
+        return extractItem(raw);
+      }));
+      items.push(...batch.filter(Boolean));
     }
   } catch {
     available = false; // dir missing (e.g. reading from the laptop) — degrade quietly

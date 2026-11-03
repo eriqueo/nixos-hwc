@@ -3,6 +3,7 @@ import { REPEAT_FREQUENCIES, isRepeatFrequency, validDate } from "../executors/c
  * hwc_calendar — consolidated calendar tool (list, create, edit, delete, sync).
  */
 
+import { mapReads } from "../executors/concurrency.js";
 import { execFile } from "node:child_process";
 import { readdir, readFile, unlink } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
@@ -328,12 +329,12 @@ async function searchIcsFiles(query: string, dateFilter: string | undefined, zon
     log.warn("No .ics files found under vdirsyncer calendar roots");
   }
 
-  for (const icsPath of icsPaths) {
+  const matches = await mapReads(icsPaths, async (icsPath): Promise<IcsEvent | null> => {
     try {
       const vevents = parseVevents(await readFile(icsPath, "utf-8"));
       // The series master; any other VEVENT overrides one occurrence (RECURRENCE-ID).
       const event = vevents.find((e) => !e.has("RECURRENCE-ID")) ?? vevents[0];
-      if (!event) continue;
+      if (!event) return null;
       const text = (name: string) => {
         const value = event.get(name)?.value;
         return value ? icsUnescape(value) : null;
@@ -341,13 +342,13 @@ async function searchIcsFiles(query: string, dateFilter: string | undefined, zon
       const summary = text("SUMMARY");
       const uid = event.get("UID")?.value;
 
-      if (!summary || !uid) continue;
-      if (!summary.toLowerCase().includes(lowerQuery)) continue;
+      if (!summary || !uid) return null;
+      if (!summary.toLowerCase().includes(lowerQuery)) return null;
 
       const start = icsTime(event.get("DTSTART"), zone);
-      if (dateFilter && start?.date !== dateFilter) continue;
+      if (dateFilter && start?.date !== dateFilter) return null;
 
-      results.push({
+      return {
         path: icsPath,
         uid,
         summary,
@@ -357,9 +358,10 @@ async function searchIcsFiles(query: string, dateFilter: string | undefined, zon
         location: text("LOCATION"),
         description: text("DESCRIPTION"),
         recurring: vevents.length > 1 || ["RRULE", "RDATE", "RECURRENCE-ID"].some((p) => event.has(p)),
-      });
-    } catch { /* file not readable */ }
-  }
+      };
+    } catch { return null; /* file not readable */ }
+  });
+  results.push(...matches.filter((event): event is IcsEvent => event !== null));
 
   return results;
 }

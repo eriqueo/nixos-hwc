@@ -21,17 +21,19 @@ export async function executeHealthCheck(components?: string[]): Promise<ToolRes
   try {
     const requested = components || ["all"];
     const checkAll = requested.includes("all");
-    const result: HealthComponent[] = [];
+    // Fixed fan-out: at most three independent component checks.
+    const checksToRun: Array<() => Promise<HealthComponent>> = [];
 
     if (checkAll || requested.includes("services")) {
-      result.push(await checkServices());
+      checksToRun.push(checkServices);
     }
     if (checkAll || requested.includes("storage")) {
-      result.push(await checkStorage());
+      checksToRun.push(checkStorage);
     }
     if (checkAll || requested.includes("containers")) {
-      result.push(await checkContainers());
+      checksToRun.push(checkContainers);
     }
+    const result = await Promise.all(checksToRun.map((check) => check()));
 
     const hasRed = result.some((c) => c.status === "red");
     const hasYellow = result.some((c) => c.status === "yellow");

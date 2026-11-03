@@ -16,6 +16,8 @@ Dashboard: `https://briefing.hwc.iheartwoodcraft.com`
 
 ## Structure
 
+`gather-live.mjs` overlaps three independent sources after the MCP handshake and merges results in source order. `gather-research.mjs` overlaps its queue, lessons and health groups, with four profile requests per batch. `gather-refinery.mjs` reads sixteen files per batch. Remaining work waits at each batch boundary. `gather.test.mjs` tests these scripts with held I/O and partial failures; run `node --test domains/business/morning-briefing/gather.test.mjs` or the `morning-briefing-async` flake check.
+
 Mail snapshots provide State order and display names from the canonical
 contract. Counts, dashboard tabs and email renderers consume those fields.
 
@@ -167,6 +169,7 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+- 2026-11-02: Overlap independent live and research gathers; batch refinery file reads and profile queues while preserving order and graceful degradation.
 - 2026-10-15: "FROM YOUR MAIL" block. `gather-live.mjs` splits the CalDAV tasks that sit in the
   mail proposals list (the classifier contract's `lifecyclePolicy.taskList`, reaching the unit as
   `HWC_MAIL_PROPOSALS_LIST`) into `sections.mail_proposals`; `run.sh` renders them with their due

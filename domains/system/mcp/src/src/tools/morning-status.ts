@@ -28,8 +28,9 @@ export function morningStatusTool(briefingPath = BRIEFING_PATH): ToolDef {
       let raw: string;
       let mtime: Date | null = null;
       try {
-        raw = await readFile(briefingPath, "utf-8");
-        mtime = (await stat(briefingPath)).mtime;
+        const [content, info] = await Promise.all([readFile(briefingPath, "utf-8"), stat(briefingPath)]);
+        raw = content;
+        mtime = info.mtime;
       } catch {
         return {
           status: "error",

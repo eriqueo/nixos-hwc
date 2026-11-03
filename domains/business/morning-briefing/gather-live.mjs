@@ -135,7 +135,7 @@ function plusDays(n) {
 
 // ── Section gatherers ────────────────────────────────────────────────────────
 const out = { sections: {}, alerts: [], errors: [] };
-function fail(section, err) {
+function fail(out, section, err) {
   out.errors.push({ section, message: String(err.message || err).slice(0, 200) });
 }
 
@@ -149,7 +149,7 @@ function customField(job, name) {
   return v;
 }
 
-async function gatherJobs() {
+async function gatherJobs(out) {
   // Pave rejects size>~50 with the nested JOB_FIELDS as HTTP 413 (query
   // complexity, not body bytes). 18 open jobs today; 50 keeps headroom.
   // Open = closedOn null (PAVE jobs have no status field).
@@ -219,7 +219,7 @@ async function gatherJobs() {
   }
 }
 
-async function gatherOverdue() {
+async function gatherOverdue(out) {
   // Same rule jt-mcp's list_overdue used: past due, money still owed, not a draft.
   const docs = await paveNodes("documents", DOCUMENT_FIELDS, {
     and: [
@@ -251,7 +251,7 @@ async function gatherOverdue() {
   out._outstanding = { count: items.length, amount: total };
 }
 
-async function gatherTasks() {
+async function gatherTasks(out) {
   const raw = await callTool("hwc_tasks_list", { status: "active" });
   const items = raw?.data?.tasks ?? [];
   const week = plusDays(7);
@@ -296,9 +296,21 @@ try {
   process.exit(0);
 }
 
-await gatherJobs().catch((e) => fail("jobs", e));
-await gatherOverdue().catch((e) => fail("overdue", e));
-await gatherTasks().catch((e) => fail("tasks", e));
+// Fixed three-source fan-out. Merge in source order so alert/error order stays stable.
+const gathered = await Promise.all([
+  ["jobs", gatherJobs], ["overdue", gatherOverdue], ["tasks", gatherTasks],
+].map(async ([section, gather]) => {
+  const partial = { sections: {}, alerts: [], errors: [] };
+  await gather(partial).catch((e) => fail(partial, section, e));
+  return partial;
+}));
+for (const partial of gathered) {
+  Object.assign(out.sections, partial.sections);
+  out.alerts.push(...partial.alerts);
+  out.errors.push(...partial.errors);
+  if (partial._snapshot) out._snapshot = partial._snapshot;
+  if (partial._outstanding) out._outstanding = partial._outstanding;
+}
 
 out.sections.weekly_snapshot = {
   ok: true,

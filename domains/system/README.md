@@ -9,6 +9,8 @@
 
 ## Structure
 
+MCP read scheduling lives in `mcp/src/src/executors/concurrency.ts`: eight reads per invocation, ordered results, waiting at capacity, and draining active reads before rejection. Status composites overlap their independent checks.
+
 Core journal limits use the declared channel API: structured settings on unstable,
 legacy text on stable. Both keep the same overridable retention limits.
 
@@ -89,6 +91,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-11-02: Overlap independent MCP status, calendar, mail-count, board and resource reads with bounded scheduling; retain output order and per-source failures.
 - 2026-11-02: Use the refreshed channel kernel and CA bundle without expired temporary overrides; regressions fail the fleet security check.
 - 2026-11-02: Preserve the journal retention default across stable and unstable journald APIs during the security baseline refresh.
 

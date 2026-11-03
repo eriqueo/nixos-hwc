@@ -2,6 +2,7 @@
  * hwc_website — consolidated website tool (list, read, write, delete).
  */
 
+import { mapReads } from "../executors/concurrency.js";
 import { readdir, readFile, writeFile, rename, mkdir, stat } from "node:fs/promises";
 import { join, basename, extname, isAbsolute } from "node:path";
 import matter from "gray-matter";
@@ -107,20 +108,17 @@ export function websiteTools(websiteSiteDir: string): ToolDef[] {
               return PAGE_EXTENSIONS.includes(ext) && !f.startsWith(".");
             });
 
-            const items = await Promise.all(
-              files.map(async (f) => {
-                const filePath = join(dir, f);
-                const raw = await readFile(filePath, "utf-8");
-                const { data: frontmatter } = matter(raw);
-                const s = await stat(filePath);
-                return {
-                  slug: basename(f, extname(f)),
-                  extension: extname(f),
-                  frontmatter,
-                  lastModified: s.mtime.toISOString(),
-                };
-              }),
-            );
+            const items = await mapReads(files, async (f) => {
+              const filePath = join(dir, f);
+              const [raw, s] = await Promise.all([readFile(filePath, "utf-8"), stat(filePath)]);
+              const { data: frontmatter } = matter(raw);
+              return {
+                slug: basename(f, extname(f)),
+                extension: extname(f),
+                frontmatter,
+                lastModified: s.mtime.toISOString(),
+              };
+            });
 
             if (type === "blog") {
               items.sort((a, b) => {
@@ -187,9 +185,8 @@ export function websiteTools(websiteSiteDir: string): ToolDef[] {
               return mcpError({ type: "NOT_FOUND", message: `${type} '${slug}' not found`, suggestion: `Use hwc_website action=list to see available ${type}` });
             }
 
-            const raw = await readFile(filePath, "utf-8");
+            const [raw, s] = await Promise.all([readFile(filePath, "utf-8"), stat(filePath)]);
             const { data: frontmatter, content: body } = matter(raw);
-            const s = await stat(filePath);
 
             return {
               status: "ok",
