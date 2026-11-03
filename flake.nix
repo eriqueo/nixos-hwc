@@ -1294,6 +1294,7 @@
             assert 'COPY --from=native-build /native/ /' in recipe
             assert 'RUN sh /build-native.sh' in recipe
             assert 'apt-get --yes purge curl libcurl4t64 libxml2' in recipe
+            assert 'chown www-data:www-data /run' in recipe
             native = (pathlib.Path(spec['context']) / 'native-runtime-build.sh').read_text()
             assert hashlib.sha256(native.encode()).hexdigest() in recipe
             assert 'make check' in native and 'make test' in native

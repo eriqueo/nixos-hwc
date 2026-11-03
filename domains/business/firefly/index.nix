@@ -14,6 +14,7 @@ let
   picoCertificatesVersion = "20261020-r0";
   picoPhpVersion = "8.2.35-r0";
   phpVersion = "8.5.12";
+  phpWorkerUser = "www-data";
   # Temporary same-app dependency repair; retire with qualified upstream images.
   composerManifest = ./composer-runtime-packages.json;
   composerPackages = (builtins.fromJSON (builtins.readFile composerManifest)).packages;
@@ -27,7 +28,7 @@ let
     COPY composer.phar /tmp/hwc-composer.phar
     ${lib.optionalString (kind == "pico") "WORKDIR /var/www/html"}
     COPY composer.json composer.lock ./
-    RUN COMPOSER_CACHE_DIR=/tmp/hwc-composer-cache COMPOSER_DISABLE_NETWORK=1 php /tmp/hwc-composer.phar install --no-dev --no-scripts --no-plugins --prefer-dist --no-interaction --optimize-autoloader && rm -f bootstrap/cache/packages.php bootstrap/cache/services.php && chown www-data:www-data bootstrap/cache && ${if kind == "pico" then "true" else "cp /tmp/hwc-composer.phar /usr/bin/composer && chmod 755 /usr/bin/composer"} && rm -r /tmp/hwc-composer-cache /tmp/hwc-composer.phar
+    RUN COMPOSER_CACHE_DIR=/tmp/hwc-composer-cache COMPOSER_DISABLE_NETWORK=1 php /tmp/hwc-composer.phar install --no-dev --no-scripts --no-plugins --prefer-dist --no-interaction --optimize-autoloader && rm -f bootstrap/cache/packages.php bootstrap/cache/services.php && chown ${phpWorkerUser}:${phpWorkerUser} bootstrap/cache && ${if kind == "pico" then "true" else "cp /tmp/hwc-composer.phar /usr/bin/composer && chmod 755 /usr/bin/composer"} && rm -r /tmp/hwc-composer-cache /tmp/hwc-composer.phar
     ${lib.optionalString (kind == "pico") "WORKDIR /var/www/html/front"}
   '';
   composerContext = kind: ''
@@ -91,12 +92,13 @@ let
       # Delete the old ABI libraries through their real package owner.
       RUN apt-get --yes purge curl libcurl4t64 libxml2 && test -z "$(dpkg --audit)"
       COPY --from=native-build /native/ /
-      RUN ldconfig
+      # Vendor packages reset /run ownership; retain the upstream non-root contract.
+      RUN ldconfig && chown ${phpWorkerUser}:${phpWorkerUser} /run
       COPY --from=secure-php /usr/local/bin/php-config /usr/local/bin/phpize /usr/local/bin/
             COPY --from=secure-php /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
       ENV PHP_VERSION=${phpVersion} PHP_URL=https://www.php.net/distributions/php-${phpVersion}.tar.xz PHP_ASC_URL=https://www.php.net/distributions/php-${phpVersion}.tar.xz.asc PHP_SHA256=08bc2eba2a588654ade1357174aa646b761556c862dda0678345ee29ed481209
       ${composerRecipe kind}
-      USER www-data
+      USER ${phpWorkerUser}
     '';
   }) {
     core = {
