@@ -98,6 +98,8 @@ business/
 
 ## Changelog
 
+- 2026-11-02: Merge sidecar network supervision separately from existing Paperless startup, retaining both sets of systemd dependencies.
+
 - 2026-11-02: Contain untrusted document processors on an internal bridge while preserving conversion DNS names and data.
 
 - 2026-11-02: Patch the stateless Paperless converter while preserving its actual HTML/DOCX-to-PDF/A client contract and ingress restrictions.

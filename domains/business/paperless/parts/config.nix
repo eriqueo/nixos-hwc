@@ -182,6 +182,8 @@ in
           after = [ conversionNetworkUnit ];
           requires = [ conversionNetworkUnit ];
         }));
+    }
+    {
       # Storage dirs (incl. the bind-mount sources) are declared once, in
       # parts/directories.nix. A second producer for the same four paths used
       # to live here; systemd-tmpfiles kept the first line and logged

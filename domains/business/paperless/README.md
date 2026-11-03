@@ -121,6 +121,8 @@ hwc.business.paperless = {
 
 ## Changelog
 
+- 2026-11-02: Merge sidecar network supervision separately from existing Paperless startup, retaining both sets of systemd dependencies.
+
 - 2026-11-02: Isolate Tika/Gotenberg from the database and internet; disable unused download/webhook and LibreOffice outbound fetches.
 
 - 2026-11-02: Qualify Gotenberg8.39.0 with Debian Chromium156.0.8078.79, NSS security updates and unchanged JavaScript-disabled/file-only restrictions. The actual Paperless client passes isolated old/new/restored HTML and DOCX to PDF/A-2B contracts; no documents or database migrate.
