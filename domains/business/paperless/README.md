@@ -15,7 +15,7 @@ Paperless-NGX document management system running as a Podman container. Provides
 
 Paperless joins its normal network and the private conversion bridge. Tika and Gotenberg join only the private bridge; they have no host ports or data mounts.
 
-`index.nix` owns the fixed-hash Paperless client and Gotenberg runtime contexts and prebuilt-image guards. Paperless remains 3.1.3, paired with upstream tika-client 2.0.0 and immutable Tika 4.2.0/CXF 4.2.4. Gotenberg uses patched Chromium and the vendor security release.
+`index.nix` owns the fixed-hash Paperless client, Tika and Gotenberg runtime recipes and prebuilt-image guards. Paperless remains 3.1.3, paired with upstream tika-client 2.0.0 and immutable Tika 4.2.0/CXF 4.2.4. Tika retains its direct Java entrypoint and non-root user; its unused Pebble supervisor is removed. Gotenberg uses patched Chromium and the vendor security release.
 
 ```
 domains/business/paperless/
@@ -119,6 +119,8 @@ hwc.business.paperless = {
 - `paperless-cleanup.service` / `paperless-cleanup.timer` — daily staging/export cleanup
 
 ## Changelog
+
+- 2026-11-02: Remove the unused Go-based Pebble executable from the Tika runtime; retain all Java server files, the vendor entrypoint and UID/GID35002. Guard the prebuilt local image before startup.
 
 - 2026-11-02: Pair fixed Tika 4.2.0/CXF 4.2.4 with upstream client 2.0.0 on unchanged Paperless 3.1.3. Actual Office text, mail HTML and metadata calls pass old/new/restored contracts. Offline builds install only the verified client wheel, without dependency resolution or database migration.
 

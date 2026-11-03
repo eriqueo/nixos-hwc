@@ -1459,6 +1459,8 @@
           paperlessContainer = c.virtualisation.oci-containers.containers.paperless;
           paperlessPreStart = c.systemd.services.podman-paperless.preStart;
           tika = c.virtualisation.oci-containers.containers.paperless-tika;
+          tikaRecipe = c.system.build.tikaRuntimeImageRecipe;
+          tikaPreStart = c.systemd.services.podman-paperless-tika.preStart;
         });
       in pkgs.runCommand "gotenberg-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
         python3 - ${fixture} <<'PYGOT'
@@ -1487,7 +1489,8 @@
             assert value['paperlessContainer']['image'] == expected_paperless
             assert value['paperlessContainer']['pull'] == 'never'
             assert expected_paperless in value['paperlessPreStart']
-            assert value['tika']['image'] == 'docker.io/apache/tika@sha256:b99f19c4fd76237dafe7d22f719b9bddfa9a449da687c597a41e2f6d9a595418'
+            assert value['tika']['image'] == expected_tika and value['tika']['pull'] == 'never'
+            assert expected_tika in value['tikaPreStart']
             assert not value['tika']['ports'] and not value['tika']['volumes']
         client_context = pathlib.Path(spec['paperlessContext'])
         client_recipe = (client_context/'Dockerfile').read_text()
@@ -1495,6 +1498,11 @@
         assert '--no-index --no-deps' in client_recipe
         assert hashlib.sha256((client_context/'tika_client-2.0.0-py3-none-any.whl').read_bytes()).hexdigest() == '44dd7a5227ab2d25bc88b8ff282039602eaac0592e542ee0486d9535ec1be9b2'
         expected_paperless = 'localhost/paperless-runtime:3.1.3-tika-client2.0.0-'+hashlib.sha256(client_recipe.encode()).hexdigest()[:12]
+        tika_recipe = pathlib.Path(spec['tikaRecipe']).read_text()
+        assert 'FROM docker.io/apache/tika@sha256:b99f19c4fd76237dafe7d22f719b9bddfa9a449da687c597a41e2f6d9a595418' in tika_recipe
+        assert 'test -f /usr/bin/pebble && rm /usr/bin/pebble' in tika_recipe
+        assert tika_recipe.rstrip().endswith('USER 35002:35002')
+        expected_tika = 'localhost/paperless-tika-runtime:4.2.0-'+hashlib.sha256(tika_recipe.encode()).hexdigest()[:12]
         check(spec)
         stale = copy.deepcopy(spec); stale['container']['image'] = 'docker.io/gotenberg/gotenberg:8.34'
         try: check(stale)

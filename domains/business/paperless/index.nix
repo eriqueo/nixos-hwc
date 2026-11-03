@@ -52,6 +52,19 @@ let
     cp ${paperlessRuntime.dockerfile} "$out/Dockerfile"
     cp ${tikaClientWheel} "$out/tika_client-2.0.0-py3-none-any.whl"
   '';
+  # The vendor entrypoint directly starts Java; its unused Pebble supervisor
+  # carries a separate outdated Go runtime. Remove that unused executable,
+  # rather than exposing or treating it as a Java-server vulnerability.
+  tikaRuntime = helpers.mkRuntimeImage {
+    name = "paperless-tika";
+    version = "4.2.0";
+    recipe = ''
+      FROM docker.io/apache/tika@sha256:b99f19c4fd76237dafe7d22f719b9bddfa9a449da687c597a41e2f6d9a595418
+      USER root
+      RUN test -f /usr/bin/pebble && rm /usr/bin/pebble
+      USER 35002:35002
+    '';
+  };
 in
 {
   # OPTIONS
@@ -235,7 +248,7 @@ in
 
       tikaImage = lib.mkOption {
         type = lib.types.str;
-        default = "docker.io/apache/tika@sha256:b99f19c4fd76237dafe7d22f719b9bddfa9a449da687c597a41e2f6d9a595418"; # 4.2.0, CXF 4.2.4
+        default = tikaRuntime.image; # 4.2.0, CXF 4.2.4
         description = "Apache Tika server container image";
       };
 
@@ -373,11 +386,15 @@ in
   config = lib.mkIf cfg.enable {
     system.build.paperlessRuntimeImageContext = paperlessContext;
     system.build.paperlessRuntimeImageRecipe = paperlessRuntime.dockerfile;
+    system.build.tikaRuntimeImageRecipe = tikaRuntime.dockerfile;
     system.build.gotenbergRuntimeImageContext = gotenbergContext;
     system.build.gotenbergRuntimeImageRecipe = gotenbergRuntime.dockerfile;
     virtualisation.oci-containers.containers = lib.mkMerge [
       (lib.mkIf (cfg.image == paperlessRuntime.image) {
         paperless.pull = lib.mkForce "never";
+      })
+      (lib.mkIf (cfg.officeIngest.enable && cfg.officeIngest.tikaImage == tikaRuntime.image) {
+        paperless-tika.pull = lib.mkForce "never";
       })
       (lib.mkIf
       (cfg.officeIngest.enable && cfg.officeIngest.gotenbergImage == gotenbergRuntime.image) {
@@ -388,6 +405,15 @@ in
       preStart = lib.mkBefore ''
         ${pkgs.podman}/bin/podman image exists ${lib.escapeShellArg paperlessRuntime.image} || {
           echo "Paperless requires the qualified client image from ${paperlessContext}" >&2
+          exit 1
+        }
+      '';
+    };
+    systemd.services.podman-paperless-tika = lib.mkIf
+      (cfg.officeIngest.enable && cfg.officeIngest.tikaImage == tikaRuntime.image) {
+      preStart = lib.mkBefore ''
+        ${pkgs.podman}/bin/podman image exists ${lib.escapeShellArg tikaRuntime.image} || {
+          echo "Tika requires the qualified image from ${tikaRuntime.dockerfile}" >&2
           exit 1
         }
       '';
