@@ -5,12 +5,41 @@
 
 { config, pkgs, ... }:
 let
-  defaultPermissions = 222;
+  # The configured app owns the bit vocabulary. Run only its pure enum module,
+  # without config mounts, network, write access or inherited privileges.
+  requestPermissionsScript = pkgs.writeShellScript "jellyseerr-request-permissions" ''
+    set -euo pipefail
+    exec ${pkgs.podman}/bin/podman run --rm --pull=never --network=none \
+      --user=1000:100 --cap-drop=all --security-opt=no-new-privileges \
+      --read-only --memory=128m --cpus=1 --pids-limit=64 --timeout=15 \
+      --entrypoint=/usr/local/bin/node \
+      ${pkgs.lib.escapeShellArg config.hwc.media.jellyseerr.image} -e '
+        const { Permission } = require("/app/dist/lib/permissions.js");
+        const bit = value => Number.isInteger(value) && value > 0 &&
+          value <= 0x40000000 && (value & (value - 1)) === 0;
+        if (![Permission.REQUEST, Permission.AUTO_APPROVE, Permission.ADMIN].every(bit) ||
+            Permission.REQUEST === Permission.AUTO_APPROVE) {
+          throw new Error("SEERR_PERMISSION_ENUM_INVALID");
+        }
+        const mask = Permission.REQUEST | Permission.AUTO_APPROVE;
+        const forbidden = Object.entries(Permission)
+          .filter(([name]) => name === "ADMIN" || name.startsWith("MANAGE_"));
+        if (forbidden.some(([, value]) => !bit(value) || (mask & value) !== 0)) {
+          throw new Error("SEERR_REQUEST_PERMISSION_HAS_MANAGEMENT_AUTHORITY");
+        }
+        process.stdout.write(String(mask) + "\n");
+      '
+  '';
 
   # Generate settings JSON at runtime using a script
   generateSettingsScript = pkgs.writeShellScript "jellyseerr-generate-settings" ''
     set -euo pipefail
     umask 077
+    [ "$#" -eq 2 ] && [[ "$2" =~ ^[1-9][0-9]{0,9}$ ]] && [ "$2" -le 2147483647 ] || {
+      echo "SEERR_PERMISSION_MASK_INVALID" >&2
+      exit 1
+    }
+    permissionMask="$2"
     JELLYFIN_KEY=$(cat ${config.hwc.secrets.api."jellyfin-api-key"} | tr -d '[:space:]')
     RADARR_KEY=$(cat ${config.hwc.secrets.api."radarr-api-key"} | tr -d '[:space:]')
     SONARR_KEY=$(cat ${config.hwc.secrets.api."sonarr-api-key"} | tr -d '[:space:]')
@@ -34,7 +63,7 @@ let
         "mediaServerType": 2,
         "mediaServerLogin": true,
         "localLogin": false,
-        "defaultPermissions": ${toString defaultPermissions}
+        "defaultPermissions": $permissionMask
       },
       "public": {
         "initialized": true,
@@ -110,5 +139,5 @@ let
   '';
 in
 {
-  inherit generateSettingsScript;
+  inherit generateSettingsScript requestPermissionsScript;
 }

@@ -2142,54 +2142,70 @@
           inherit (home) pkgs;
           inherit (home) config;
         }).generateSettingsScript;
+        liveProducer = home.config.system.build.seerrRequestPermissions;
+        liveUpdater = home.config.system.build.seerrUserPermissions;
         preStart = pkgs.writeText "seerr-production-prestart" home.config.systemd.services.podman-jellyseerr.preStart;
       in pkgs.runCommand "seerr-settings-preservation" {
         nativeBuildInputs = [ pkgs.python3 pkgs.jq pkgs.coreutils ];
       } ''
-        python3 - ${generator original} ${generator rotated} ${generator empty} ${generator missing} ${preStart} ${liveGenerator} <<'PYTEST'
+        python3 - ${generator original} ${generator rotated} ${generator empty} ${generator missing} ${preStart} ${liveGenerator} ${liveProducer} ${liveUpdater} <<'PYTEST'
         import hashlib, json, pathlib, re, subprocess, sys, tempfile
-        original, rotated, empty, missing, prestart, live = sys.argv[1:]
+        original, rotated, empty, missing, prestart, live, producer, updater = sys.argv[1:]
+        startup = pathlib.Path(prestart).read_text()
         helpers = re.findall(r'/nix/store/[^\s]+jellyseerr-ensure-settings', pathlib.Path(prestart).read_text())
         assert len(helpers) == 1 and live in pathlib.Path(helpers[0]).read_text(), 'production preStart bypasses settings owner'
+        ensure = pathlib.Path(helpers[0]).read_text()
+        assert startup.count(producer) == 1, 'production bypasses app-owned permission vocabulary'
+        assert startup.index(producer) < startup.index(helpers[0]) < startup.index(updater), 'permissions resolve after persistent writes'
+        assert re.search(re.escape(helpers[0]) + r' "\$permissionMask"', startup), 'settings bypasses shared mask'
+        assert re.search(re.escape(updater) + r' "\$permissionMask"', startup), 'SQL bypasses shared mask'
+        assert live + ' "' in ensure and '"$1"' in ensure, 'generator bypasses shared mask'
+        assert 'install -d -m 0700' in ensure and 'chmod 0600' in ensure, 'settings privacy lost'
         seed = {'main': {'apiKey': 'keep-api', 'localLogin': True, 'clientSetting': 'keep-main'},
                 'clientId': 'keep-client', 'vapidPrivate': 'keep-private', 'vapidPublic': 'keep-public',
                 'network': {'proxy': 'keep-network'}, 'migrations': {'fixture': True},
                 'jellyfin': {'libraries': [{'id': 'fixture-library', 'enabled': True}]},
                 'radarr': [{'id': 0, 'hostname': 'old-host', 'appOwnedOption': 'keep-radarr'}, {'id': 9, 'hostname': 'undeclared'}],
                 'sonarr': [{'id': 0, 'appOwnedOption': 'keep-sonarr'}]}
-        def run(script, target):
-            return subprocess.run([script, str(target)], capture_output=True, text=True, timeout=5)
-        def preserved(value):
+        def run(script, target, *mask):
+            return subprocess.run([script, str(target), *mask], capture_output=True, text=True, timeout=5)
+        def preserved(value, mask=160):
             for key in ['clientId', 'vapidPrivate', 'vapidPublic', 'network', 'migrations']:
                 assert value.get(key) == seed[key], 'lost app-owned ' + key
             assert value['main']['apiKey'] == 'keep-api' and value['main']['clientSetting'] == 'keep-main'
             assert value['jellyfin']['libraries'] == seed['jellyfin']['libraries']
             assert value['radarr'][0]['appOwnedOption'] == 'keep-radarr'
             assert value['sonarr'][0]['appOwnedOption'] == 'keep-sonarr'
-            assert value['main']['localLogin'] is False and value['main']['defaultPermissions'] == 222
+            assert value['main']['localLogin'] is False and value['main']['defaultPermissions'] == mask
             assert value['jellyfin']['apiKey'] == 'fixture-jellyfin'
             assert [v['id'] for v in value['radarr']] == [0] and value['radarr'][0]['hostname'] == 'radarr'
         with tempfile.TemporaryDirectory() as root:
             target = pathlib.Path(root) / 'settings.json'
             target.write_text(json.dumps(seed))
-            assert run(original, target).returncode == 0
+            assert run(original, target, '160').returncode == 0
             preserved(json.loads(target.read_text()))
             first = target.read_bytes()
-            assert run(original, target).returncode == 0 and target.read_bytes() == first, 'reconciliation is not idempotent'
-            assert run(rotated, target).returncode == 0
+            assert run(original, target, '160').returncode == 0 and target.read_bytes() == first, 'reconciliation is not idempotent'
+            assert run(rotated, target, '160').returncode == 0
             value = json.loads(target.read_text()); preserved(value)
             assert value['radarr'][0]['apiKey'] == 'fixture-rotated', 'rotation was ignored'
             for bad in [empty, missing]:
                 before = target.read_bytes()
-                assert run(bad, target).returncode != 0 and target.read_bytes() == before, 'failed secret damaged old settings'
+                assert run(bad, target, '160').returncode != 0 and target.read_bytes() == before, 'failed secret damaged old settings'
+            for args in [(), ("",), ('0',), ('-1',), ('1;SELECT 1',), ('01',), ('2147483648',), ('999999999999999999999',)]:
+                before = target.read_bytes()
+                assert run(original, target, *args).returncode != 0 and target.read_bytes() == before, 'invalid mask damaged old settings'
+            assert run(original, target, '32').returncode == 0
+            preserved(json.loads(target.read_text()), mask=32)
+            assert target.stat().st_mode & 0o777 == 0o600, 'settings file is not private'
             target.write_text('{malformed')
             before = target.read_bytes()
-            assert run(original, target).returncode != 0 and target.read_bytes() == before, 'malformed settings were overwritten'
+            assert run(original, target, '160').returncode != 0 and target.read_bytes() == before, 'malformed settings were overwritten'
             assert sorted(p.name for p in pathlib.Path(root).iterdir()) == ['settings.json'], 'temporary files leaked'
             target.unlink()
-            assert run(original, target).returncode == 0
+            assert run(original, target, '160').returncode == 0
             fresh = json.loads(target.read_text())
-            assert fresh['main']['initialized'] and fresh['main']['defaultPermissions'] == 222
+            assert fresh['main']['initialized'] and fresh['main']['defaultPermissions'] == 160
         print('production wiring, preservation, ownership, rotation, atomic failures and bootstrap pass')
         PYTEST
         touch "$out"

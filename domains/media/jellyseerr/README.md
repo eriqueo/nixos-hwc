@@ -18,9 +18,9 @@ jellyseerr/
 ├── sys.nix         # Container configuration (mkContainer)
 ├── README.md       # This file
 └── parts/
-    ├── config.nix    # Systemd dependencies and tmpfiles
-    ├── settings.nix  # Declarative values and app-state preservation
-    └── setup.nix     # Pre-start setup scripts
+    ├── config.nix    # Systemd dependencies and private config directory
+    ├── settings.nix  # App-owned request flags and preserved settings
+    └── setup.nix     # Shared mask, additive user grants and private settings
 ```
 
 ## Configuration
@@ -69,6 +69,12 @@ Seerr depends on:
 - `/opt/apps/jellyseerr/config:/app/config` - Configuration and database
 
 ## Changelog
+
+- 2026-11-03: Derive request and auto-approval flags from the configured app in a
+  bounded, read-only container with no network or config mount. Share that mask
+  between future-user defaults and additive existing-user grants. Preserve all
+  other user permissions, report SQL failures, and keep config/settings at
+  0700/0600. The production-bound settings check covers wiring and invalid masks.
 
 - 2026-10-23: Use the shared pure Node image recipe from `domains/lib/mkContainer.nix`.
   The accepted Seerr recipe bytes, Dockerfile store path and image tag remain

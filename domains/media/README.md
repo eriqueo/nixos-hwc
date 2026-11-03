@@ -46,7 +46,7 @@ media/
 ├── navidrome-container/     # Navidrome music server (container)
 ├── navidrome-native/        # Navidrome music server (native NixOS)
 ├── audiobookshelf/          # Pinned app/supported Node recipe, config path and Borg recovery registration
-├── jellyseerr/              # Media request management
+├── jellyseerr/              # Media requests; app-owned grants and private config
 │
 ├── sonarr/                  # TV show management
 ├── radarr/                  # Movie management
@@ -92,6 +92,10 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-03: Seerr resolves request/auto-approval flags once from its configured
+  app, uses them for safe defaults and additive user grants, and persists private
+  0700/0600 config/settings modes without erasing owner or custom grants.
 - 2026-11-03: Adapt Immich to the versioned role contract and bind its startup/restart to the shared credential provisioner.
 - 2026-11-03: Move home Immich to a managed non-superuser database role and vendor password-file loader, with provisioning before app startup.
 
