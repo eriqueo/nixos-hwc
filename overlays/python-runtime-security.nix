@@ -236,9 +236,14 @@ let
       meta = application.meta or {};
     } ''
       ${prev.python3}/bin/python3 -B ${applicationBuilder} ${application} ${python} ${runtime} "$out" ${python.executable}
-      for appLauncher in "$out/bin/"*; do
-        ${prev.coreutils}/bin/timeout --kill-after=2s 30s "$appLauncher" --help > /dev/null
-      done
+      ${prev.python3}/bin/python3 -B - "$out" <<'PY'
+from pathlib import Path
+import subprocess
+import sys
+for launcher in (Path(sys.argv[1]) / 'bin').iterdir():
+    if not launcher.name.startswith('.'):
+        subprocess.run([str(launcher), '--help'], stdout=subprocess.DEVNULL, check=True, timeout=30)
+PY
     '';
 in
 assert spec.schemaVersion == 1;
