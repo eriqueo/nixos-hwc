@@ -11,6 +11,8 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
+import select
 import shlex
 import signal
 import socket
@@ -25,6 +27,7 @@ PI_BASE = Path('/userdata/system/configs/switch-stream')
 MOONLIGHT = Path('/userdata/system/.config/Moonlight Game Streaming Project/Moonlight.conf')
 PREFS = {'gamepadmouse': 'false', 'swapfacebuttons': 'true'}
 STREAM_OPTIONS = ['--720', '--fps', '60', '--bitrate', '10000', '--video-codec', 'HEVC', '--no-quit-after']
+EDEN_CLASS = '^([Ee]den|dev[.]eden_emu[.]eden)$'
 
 
 def call(args, **kwargs):
@@ -279,6 +282,91 @@ def watch_focus(cfg, pid):
     return keep_library_focus(xdotool, windows[0], wait)
 
 
+def apply_layout(cfg, hypr):
+    """Place the captured output, its workspace and Eden in the running compositor.
+
+    These runtime rules last only until a config reload. The user's catch-all
+    output rule then puts this output flush against the real screens, where the
+    pointer and new windows reach it, so WorkspaceGuard reapplies them.
+    """
+    monitor = json.dumps(cfg['monitor']); workspace = str(cfg['workspace'])
+    call([hypr, 'eval', 'hl.monitor({output=' + monitor + ',mode="1920x1080@60",position="10000x0",scale=1})'])
+    call([hypr, 'eval', 'hl.workspace_rule({workspace=' + json.dumps(workspace) + ',monitor=' + monitor + ',persistent=true})'])
+    call([hypr, 'eval', 'hl.window_rule({match={class=' + json.dumps(EDEN_CLASS) + '},workspace='
+          + json.dumps(workspace + ' silent') + ',no_initial_focus=true,suppress_event="activate"})'])
+
+
+def evict_strays(cfg, hypr):
+    """Return every non-Eden window on the captured workspace to the visible desktop."""
+    workspace = str(cfg['workspace'])
+    strays = [c['address'] for c in json.loads(call([hypr, '-j', 'clients']))
+              if c.get('mapped') and c['workspace']['name'] == workspace
+              and not re.match(EDEN_CLASS, c.get('class') or '')]
+    if not strays:
+        return
+    real = [m for m in json.loads(call([hypr, '-j', 'monitors'])) if m['name'] != cfg['monitor']]
+    target = next((m for m in real if m.get('focused')), real[0] if real else None)
+    if target is None:
+        return  # No visible output exists to receive them.
+    destination = json.dumps(str(target['activeWorkspace']['id']))
+    for address in strays:
+        call([hypr, 'dispatch', 'hl.dsp.window.move({workspace=' + destination
+              + ',window=' + json.dumps('address:' + address) + ',follow=false})'])
+
+
+class WorkspaceGuard:
+    """Keep the captured workspace Eden-only while the listener runs.
+
+    Hyprland's event socket reports reloads and window placement. A guard
+    failure is reported once and retried; it never stops a stream with unsaved play.
+    """
+    PLACEMENT = (b'openwindow>>', b'movewindowv2>>')
+
+    def __init__(self, cfg, hypr):
+        self.cfg, self.hypr = cfg, hypr
+        self.path = (Path(os.environ['XDG_RUNTIME_DIR']) / 'hypr'
+                     / os.environ.get('HYPRLAND_INSTANCE_SIGNATURE', '') / '.socket2.sock')
+        self.sock, self.buffer, self.failed, self.stale = None, b'', False, False
+
+    def close(self):
+        if self.sock is not None:
+            self.sock.close()
+        self.sock, self.buffer = None, b''
+
+    def wait(self, timeout):
+        try:
+            if self.sock is None:
+                sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                try:
+                    sock.connect(str(self.path))
+                except OSError:
+                    sock.close(); raise
+                self.sock = sock
+                # Subscribe before scanning so a placement between them is still seen.
+                # A reconnect can follow a reload this guard did not observe.
+                if self.stale:
+                    apply_layout(self.cfg, self.hypr)
+                evict_strays(self.cfg, self.hypr)
+                self.stale = False
+            if not select.select([self.sock], [], [], timeout)[0]:
+                return
+            data = self.sock.recv(65536)
+            if not data:
+                raise ConnectionError('Hyprland event socket closed')
+            *lines, self.buffer = (self.buffer + data).split(b'\n')
+            if any(line.startswith(b'configreloaded>>') for line in lines):
+                apply_layout(self.cfg, self.hypr)
+            if any(line.startswith((b'configreloaded>>',) + self.PLACEMENT) for line in lines):
+                evict_strays(self.cfg, self.hypr)
+            self.failed = False
+        except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
+            self.close(); self.stale = True
+            if not self.failed:
+                print('STREAM_WORKSPACE_GUARD_UNAVAILABLE: ' + str(error), file=sys.stderr, flush=True)
+            self.failed = True
+            time.sleep(timeout)
+
+
 def host_run(cfg, sunshine_config):
     for name in ['state.json', 'key.pem', 'cert.pem']:
         if not (Path(cfg['state']) / name).is_file():
@@ -290,15 +378,14 @@ def host_run(cfg, sunshine_config):
     monitors = json.loads(call([hypr, '-j', 'monitors', 'all']))
     if cfg['monitor'] not in [m['name'] for m in monitors]:
         call([hypr, 'output', 'create', 'headless', cfg['monitor']])
-    call([hypr, 'eval', 'hl.monitor({output=' + json.dumps(cfg['monitor']) + ',mode="1920x1080@60",position="10000x0",scale=1})'])
-    call([hypr, 'eval', 'hl.workspace_rule({workspace=' + json.dumps(str(cfg['workspace'])) + ',monitor=' + json.dumps(cfg['monitor']) + ',persistent=true})'])
+    apply_layout(cfg, hypr)
     focused = next((m['name'] for m in monitors if m.get('focused')), None)
     # The workspace does not exist on a fresh boot. Focus creates it using the
     # rule above; moving a nonexistent workspace fails before the listener starts.
     call([hypr, 'dispatch', 'hl.dsp.focus({workspace=' + json.dumps(str(cfg['workspace'])) + '})'])
     if focused:
         call([hypr, 'dispatch', 'hl.dsp.focus({monitor=' + json.dumps(focused) + '})'])
-    call([hypr, 'eval', 'hl.window_rule({match={class="^([Ee]den|dev[.]eden_emu[.]eden)$"},workspace=' + json.dumps(str(cfg['workspace']) + ' silent') + ',no_initial_focus=true,suppress_event="activate"})'])
+    events = WorkspaceGuard(cfg, hypr)
     runtime = Path(os.environ['XDG_RUNTIME_DIR']) / 'hwc-switch-stream'
     runtime.mkdir(exist_ok=True, mode=0o700)
     env = dict(os.environ, PULSE_SERVER='unix:' + str(runtime / 'pulse.socket'))
@@ -319,11 +406,12 @@ def host_run(cfg, sunshine_config):
                 notification.connect('\0' + endpoint[1:] if endpoint.startswith('@') else endpoint)
                 notification.sendall(b'READY=1\nSTATUS=Switch stream listener ready')
         while all(p.poll() is None for p in children):
-            time.sleep(0.5)
+            events.wait(0.5)
         raise RuntimeError('STREAM_CHILD_EXITED')
     except KeyboardInterrupt:
         pass
     finally:
+        events.close()
         stop_children(children)
 
 

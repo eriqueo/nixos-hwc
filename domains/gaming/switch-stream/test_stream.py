@@ -198,13 +198,51 @@ class StreamTests(unittest.TestCase):
                  patch.object(stream, 'wait_ready'), patch.object(stream, 'stop_children'), \
                  patch.object(stream.subprocess, 'Popen', return_value=Mock(poll=Mock(return_value=None))), \
                  patch.dict(stream.os.environ, {'XDG_RUNTIME_DIR': directory}), \
-                 patch.object(stream.time, 'sleep', side_effect=KeyboardInterrupt):
+                 patch.object(stream, 'WorkspaceGuard') as guard:
+                guard.return_value.wait.side_effect = KeyboardInterrupt
                 stream.host_run(cfg, '/private/sunshine.conf')
+            guard.return_value.close.assert_called_once_with()
             expressions = [c[2] for c in commands if c[1] in ['eval', 'dispatch']]
             self.assertTrue(any('hl.workspace_rule' in e for e in expressions))
             self.assertTrue(any('hl.dsp.focus({workspace="99"})' == e for e in expressions))
             self.assertTrue(any('hl.window_rule' in e for e in expressions))
             self.assertFalse(any(c[1] == 'keyword' or 'moveworkspacetomonitor' in c for c in commands))
+
+    def test_captured_workspace_returns_non_eden_windows_to_the_focused_desktop(self):
+        cfg = {'monitor': 'HWC-GAME', 'workspace': 99}
+        clients = [{'address': '0xe', 'mapped': True, 'class': 'eden', 'workspace': {'name': '99'}},
+                   {'address': '0xd', 'mapped': True, 'class': 'dev.eden_emu.eden', 'workspace': {'name': '99'}},
+                   {'address': '0xa', 'mapped': True, 'class': 'com.t3tools.T3Code', 'workspace': {'name': '99'}},
+                   {'address': '0xb', 'mapped': True, 'class': 'kitty', 'workspace': {'name': '8'}}]
+        monitors = [{'name': 'HWC-GAME', 'focused': False, 'activeWorkspace': {'id': 99}},
+                    {'name': 'DP-2', 'focused': False, 'activeWorkspace': {'id': 11}},
+                    {'name': 'eDP-1', 'focused': True, 'activeWorkspace': {'id': 8}}]
+        def call(args, **kwargs):
+            return json.dumps(clients if 'clients' in args else monitors) if '-j' in args else 'ok'
+        with patch.object(stream, 'call', side_effect=call) as calls:
+            stream.evict_strays(cfg, '/hyprctl')
+        moves = [c.args[0][2] for c in calls.call_args_list if c.args[0][1] == 'dispatch']
+        self.assertEqual(moves, ['hl.dsp.window.move({workspace="8",window="address:0xa",follow=false})'])
+
+    def test_guard_reapplies_layout_after_reload_and_survives_a_lost_event_socket(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory) / 'hypr' / 'sig'; folder.mkdir(parents=True)
+            server = socket.socket(socket.AF_UNIX); server.bind(str(folder / '.socket2.sock')); server.listen()
+            with server, patch.dict(stream.os.environ, {'XDG_RUNTIME_DIR': directory, 'HYPRLAND_INSTANCE_SIGNATURE': 'sig'}), \
+                 patch.object(stream, 'apply_layout') as layout, patch.object(stream, 'evict_strays') as evict, \
+                 patch.object(stream.time, 'sleep'):
+                guard = stream.WorkspaceGuard({}, '/hyprctl')
+                guard.wait(0.01)  # Connect, then scan strays already present.
+                peer, _ = server.accept()
+                self.assertEqual((layout.call_count, evict.call_count), (0, 1))
+                peer.sendall(b'activewindow>>kitty,x\nconfigrel'); guard.wait(1)
+                self.assertEqual((layout.call_count, evict.call_count), (0, 1))
+                peer.sendall(b'oaded>>\nopenwindow>>a,99,T3,x\n'); guard.wait(1)
+                self.assertEqual((layout.call_count, evict.call_count), (1, 2))
+                peer.close(); guard.wait(1)  # Socket lost: report, retry, never raise.
+                guard.wait(0.01); server.accept()[0].close()
+                self.assertEqual((layout.call_count, evict.call_count), (2, 3))
+                guard.close()
 
     def test_host_refuses_to_take_over_active_game(self):
         with tempfile.TemporaryDirectory() as directory:
