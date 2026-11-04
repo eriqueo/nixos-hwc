@@ -29,6 +29,7 @@
   openjdk21,
   apktool,
   binwalk,
+  util-linux,
   # Extra tools put on REA's PATH, for a host that needs more engines.
   extraTools ? [ ],
 }:
@@ -73,6 +74,7 @@ buildNpmPackage {
       --set-default GHIDRA_INSTALL_DIR ${ghidra}/lib/ghidra \
       --set-default JAVA_HOME ${openjdk21.home} \
       --set-default REA_BINWALK_COMMAND ${binwalk}/bin/binwalk \
+      --set-default REA_FIRMWARE_PRLIMIT_COMMAND ${util-linux}/bin/prlimit \
       --set-default REA_JADX_MCP_JAR ${jadxMcpJar}
 
     runHook postInstall
@@ -87,6 +89,11 @@ buildNpmPackage {
     # A REA bump that moves the audited JADX release fails here, not at analysis time.
     grep -q '${jadxSha256}' \
       "$out/lib/node_modules/rea-agents/dist/android/JadxRelease.js"
+    # Exercise the firmware provider through the installed wrapper: --help does
+    # not resolve Binwalk or its resource limiter. No camera firmware is needed.
+    node --input-type=module -e 'import fs from "node:fs"; import zlib from "node:zlib"; fs.writeFileSync("firmware.gz", zlib.gzipSync(Buffer.alloc(4096, 65)));'
+    "$out/bin/rea" inspect-firmware-regions "$PWD/firmware.gz" --format json > firmware-report.json
+    node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const r = JSON.parse(fs.readFileSync("firmware-report.json", "utf8")); assert.equal(r.provider.id, "binwalk"); assert(r.normalized_result.regions.some(x => x.signature === "gzip" && x.offset === 0));'
     runHook postInstallCheck
   '';
 

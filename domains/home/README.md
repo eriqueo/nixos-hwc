@@ -17,6 +17,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
+REA's package wrapper supplies the Nix firmware resource limiter and checks Binwalk against a generated gzip fixture.
 Waybar patches its built-in workspace clicks for Hyprland Lua IPC; calendar text escapes Pango markup.
 Desktop helpers and the laptop streaming host use native Hyprland Lua IPC. Workspace selection and window moves share the monitor-aware helper; streaming creates its configured workspace before focusing it.
 The Hyprland module renders the existing settings and keybinding records through Home Manager's Lua API. `hyprland-lua-config` checks the actual generated configuration with the selected compositor and rejects the retired format.
@@ -165,6 +166,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-04: apps/rea supplies the firmware provider's Nix resource limiter and checks a real Binwalk scan during package installation.
 - 2026-11-04: Fix built-in Waybar workspace switching under Lua and escape calendar markup.
 - 2026-11-04: Keep monitor-position arithmetic in the shell when rendering Lua IPC commands.
 - 2026-11-04: Migrate desktop helper and laptop streaming calls to Lua IPC, including startup on a fresh workspace.

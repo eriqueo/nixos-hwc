@@ -23,7 +23,8 @@ shared skill set. Pinned to the published `rea-agents` **6.3.0** release.
 index.nix          # home lane: `rea` package; curated harness skill → agent-harness extraSkills
 sys.nix            # system lane: `rea mcp` entry → agent-harness userMcp.extraServers
 parts/package.nix  # buildNpmPackage over the npm release; wrapper sets
-                   # GHIDRA_INSTALL_DIR, JAVA_HOME, REA_BINWALK_COMMAND, REA_UNBLOB_COMMAND
+                   # GHIDRA_INSTALL_DIR, JAVA_HOME, REA_BINWALK_COMMAND,
+                   # REA_FIRMWARE_PRLIMIT_COMMAND, REA_JADX_MCP_JAR
 parts/src/         # package.json + package-lock.json pinning rea-agents (the only inputs)
 ```
 
@@ -54,6 +55,7 @@ nix run nixpkgs#prefetch-npm-deps -- ./package-lock.json   # → npmDepsHash in 
 
 ## Changelog
 
+- 2026-11-04: Wire the firmware provider's resource limiter to Nix util-linux; the package install check scans a generated gzip fixture through REA and verifies its signature.
 - 2026-10-16: Load the curated skill from the shared harness pin; preserve the REA package, MCP server and optional skill flag.
 - 2026-10-12: Android APK analysis wired. `parts/package.nix` fetches the
   jadx-headless-mcp 0.7.1 release jar by the URL and sha256 that rea-agents
