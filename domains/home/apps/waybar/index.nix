@@ -45,7 +45,12 @@ in
       # just the bluetooth module instead. Remove once upstream
       # src/modules/bluetooth.cpp checks manager_ before use.
       package = pkgs.waybar.overrideAttrs (old: {
-        patches = (old.patches or []) ++ [ ./patches/bluetooth-null-manager.patch ];
+        # Hyprland 0.57 uses Lua IPC; remove when pinned Waybar sends
+        # native Lua commands from its workspace buttons.
+        patches = (old.patches or []) ++ [
+          ./patches/bluetooth-null-manager.patch
+          ./patches/hyprland-lua-ipc.patch
+        ];
       });
       settings = behavior;
       systemd.enable = true;
