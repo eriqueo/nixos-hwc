@@ -191,6 +191,8 @@ assert lib.assertMsg (lib.all (host:
 assert lib.assertMsg (lib.all (field:
   lib.elem "postgresql-application-roles.service" work.config.systemd.services.hwc-crm.${field}
 ) [ "after" "requires" ]) "CRM_ROLE_RECONCILIATION_ORDER";
+assert lib.assertMsg (lib.elem work.config.system.build.postgresqlApplicationRoleTool
+  work.config.systemd.services.hwc-crm.restartTriggers) "CRM_ROLE_OPERATOR_RESTART_LIFECYCLE";
 assert lib.assertMsg (work.config.systemd.services.hwc-sys-mcp.serviceConfig.ExecStartPost == gatewayReady.command
   && work.config.systemd.services.hwc-sys-mcp.serviceConfig.TimeoutStartSec == gatewayReady.timeoutSeconds
   && lib.elem "hwc-sys-mcp.service" work.config.systemd.services.meals.after

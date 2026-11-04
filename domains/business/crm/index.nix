@@ -725,7 +725,8 @@ in
         ++ lib.optional (
           cfg.emailTransport == "smtp"
         ) config.age.secrets.${cfg.smtp.passwordSecretRef}.file
-        ++ map (ref: config.age.secrets.${ref}.file) (lib.attrValues metaSecrets);
+        ++ map (ref: config.age.secrets.${ref}.file) (lib.attrValues metaSecrets)
+        ++ lib.optional (roleOperator != []) config.system.build.postgresqlApplicationRoleTool;
 
       serviceConfig = {
         Type = "exec";

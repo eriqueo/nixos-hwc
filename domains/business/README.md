@@ -14,8 +14,9 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
-CRM waits for configured PostgreSQL role reconciliation before schema assertions
-and uses the shared native HTTP readiness command before dependents start.
+CRM follows the configured PostgreSQL role operator's restart lifecycle and waits
+for reconciliation before schema assertions. Its shared HTTP readiness command
+holds dependents until the application responds.
 
 Workbench web and the Finance explorer select the shared Python runtime
 packages on owned instances. The explorer uses its existing role package port.
@@ -118,6 +119,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-04: Restart CRM with the shared role operator so its new Requires dependency cannot leave it stopped after credential or operator updates.
 
 - 2026-11-04: Serialize CRM startup after PostgreSQL role ACL reconciliation; retain bounded HTTP readiness through the shared helper.
 
