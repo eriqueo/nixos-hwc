@@ -17,6 +17,8 @@ Mount-protected repositories use native removable-device behavior to suppress ac
 
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 
+Home also archives its configured Syncthing work, personal, tech and brain folder paths. Syncthing moves current files; Borg supplies independent retained history. Inspect Syncthing pull errors before treating the replica as current.
+
 ```
 domains/data/borg/
 ├── index.nix          # Options, shared snapshot/jobs, optional independent SSH destinations, CLI tools
@@ -154,6 +156,8 @@ Borg wrapper alone does not load its private identity.
 - `borg-check-<name>.service` / timer — additional destination consistency checks
 
 ## Changelog
+
+- 2026-11-04: Cover Home's synced work, personal, tech and brain folders in its existing archive. Derive source paths from Syncthing and require their coverage in the recovery check.
 
 - 2026-11-04: Disable native automatic directory creation for mount-protected local repositories. Provision their empty directory only on the verified filesystem; absent directories fail startup rather than create a root-filesystem fallback.
 

@@ -383,6 +383,11 @@ borg-recovery = let
   restore = lib.findFirst (p: (p.name or "") == "borg-restore") null
     self.nixosConfigurations.hwc-work.config.environment.systemPackages;
 in
+assert lib.assertMsg (let c = self.nixosConfigurations.hwc-home.config;
+  in lib.all (id: lib.elem c.services.syncthing.settings.folders.${id}.path
+    c.services.borgbackup.jobs.hwc-backup.paths)
+    [ "100_hwc" "200_personal" "300_tech" "brain" ])
+  "Home's synced documents and vault need independent Borg archive coverage";
 assert lib.all (c: !(lib.hasInfix "break-lock"
   (c.systemd.services.borgbackup-job-hwc-backup.preStart or ""))) hosts;
 assert lib.all (c: lib.all (snapshot: lib.elem (builtins.dirOf snapshot.source)

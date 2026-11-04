@@ -14,6 +14,8 @@ storage (mount management), Syncthing (file sync), and CouchDB (Obsidian LiveSyn
 
 `borg/` owns optional local mount/free-space admission and native repository initialization quotas. Laptop critical-state policy selects those options from its machine instance.
 
+Home's Borg policy consumes the existing Syncthing paths for independent document and vault history.
+
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 
 `databases/` owns schemaVersion2 role provisioning for owned databases and shared table columns, including direct/default privilege reconciliation. It also supplies standard PostgreSQL peer environment settings to native clients; each application declares its scope.
@@ -37,6 +39,8 @@ data/
 ```
 
 ## Changelog
+
+- 2026-11-04: Add Home's synced documents and brain vault to its existing Borg job; check the evaluated source coverage.
 
 - 2026-11-04: Keep mount-protected Borg repository paths out of activation-time tmpfiles creation.
 

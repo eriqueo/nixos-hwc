@@ -431,7 +431,8 @@
       "/var/lib/hwc" # Service state directories
       "/var/lib/backups" # Database dumps
       # The base role adds T3 userdata and its consistent SQLite snapshot.
-    ];
+    ] ++ map (id: config.services.syncthing.settings.folders.${id}.path)
+      [ "100_hwc" "200_personal" "300_tech" "brain" ];
 
     excludePatterns = [
       ".cache"
