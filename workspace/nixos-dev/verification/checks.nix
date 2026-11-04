@@ -1,6 +1,20 @@
 # Pure verification function; not a NixOS or Home Manager module.
-{ laptopRuntimeScope, lib, pkgs, repoRoot, self, serverCudaRuntimeScope, serverRuntimeScope, system }:
+{ inputs, laptopRuntimeScope, lib, pkgs, repoRoot, self, serverCudaRuntimeScope, serverRuntimeScope, system }:
 {
+temporary-pin-retirement = let
+  # Raw locked recipes, before our overlays: overridden versions prove no expiry.
+  raw = source: import source { inherit system; config.allowUnfree = true; };
+  stable = raw inputs.nixpkgs-stable;
+  channels = [ stable (raw inputs.nixpkgs) ];
+in
+assert lib.assertMsg (lib.any (p: lib.versionOlder p.electron_44.version "44.10.1") channels)
+  "Retire the Electron44 overlay: both locked channels now supply >=44.10.1";
+assert lib.assertMsg (lib.any (p: lib.versionOlder p.python3Packages.streamlit.version "1.66.1") channels)
+  "Retire the Streamlit override: both locked channels now supply >=1.66.1";
+assert lib.assertMsg (lib.versionOlder stable.ghidra.version "12.1")
+  "Retire the Ghidra backport: locked stable now supplies >=12.1; retain REA's supported-range check";
+pkgs.runCommand "temporary-pin-retirement" {} ''touch "$out"'';
+
 local-release-wiring = let
   homes = map (system: system.config.home-manager.users.eric)
     (lib.attrValues self.nixosConfigurations)

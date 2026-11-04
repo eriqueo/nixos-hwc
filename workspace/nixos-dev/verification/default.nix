@@ -11,6 +11,10 @@ let
       // lib.optionalAttrs (name == "n8n-route-compatibility") {
         kind = "compatibility";
         retirement = "Remove legacy-port assertions only after all former-owner n8n clients use the work endpoint; retain owner/firewall contracts.";
+      }
+      // lib.optionalAttrs (name == "temporary-pin-retirement") {
+        kind = "compatibility";
+        retirement = "Remove each Electron, Streamlit or Ghidra override and its expiry predicate when raw locked channels meet the documented version condition; retain independent runtime checks.";
       })
       (f (builtins.intersectAttrs (builtins.functionArgs f) context));
   groups = [
