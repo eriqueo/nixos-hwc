@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Customer report pages override public caching with no-store, suppress referrers and disallow indexing. Calculator build dependencies use patched Vite 6 and the existing React plugin.
+
 Website response policies and website-scoped HTTPS enforcement live in website/index.nix. The website-security flake check exercises the evaluated origin, including errors, assets and redirect host safety.
 
 Firefly Core/Pico, Paperless and Umami declare separate database owners and protected OCI password environment files. Core publishes its existing app-key environment file atomically at0600; native Node clients receive an explicit local PostgreSQL socket.
@@ -106,6 +108,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-04: Protect report URLs from caching/referrers and patch calculator build dependencies.
 
 - 2026-11-04: Add website HTTPS enforcement, baseline browser protections and a production-config Caddy regression check.
 - 2026-11-03: Bind CRM maintenance consumers to the local socket and order server/ingest startup after PostgreSQL role setup.

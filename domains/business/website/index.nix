@@ -199,6 +199,15 @@ in
       encode zstd gzip
       header X-HWC-Website-Origin ${config.networking.hostName}
       header Cache-Control "public, max-age=0, must-revalidate"
+      # Report URLs are bearer capabilities. Cover both query-style and
+      # path-style links before the internal report rewrite.
+      @privateReport path /report /report/*
+      header @privateReport {
+        Cache-Control "no-store"
+        Referrer-Policy "no-referrer"
+        X-Robots-Tag "noindex, nofollow, noarchive"
+        defer
+      }
       # Cloudflare overwrites this header from the visitor's protocol. The
       # listener is loopback-only; never derive redirects from an untrusted Host.
       @insecure header X-Forwarded-Proto http
