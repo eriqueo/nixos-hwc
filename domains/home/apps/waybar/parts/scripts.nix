@@ -16,13 +16,13 @@ in
     address=$(window)
     if [[ -n "$address" ]]; then
       workspace=$(hyprctl activeworkspace -j | jq -r '.id')
-      hyprctl dispatch movetoworkspace "$workspace,address:$address"
-      hyprctl dispatch focuswindow "address:$address"
+      hyprctl dispatch "hl.dsp.window.move({workspace='$workspace',window='address:$address'})"
+      hyprctl dispatch "hl.dsp.focus({window='address:$address'})"
       exit 0
     fi
 
     launch() {
-      hyprctl dispatch exec ${pkgs.bitwarden-desktop}/bin/bitwarden
+      hyprctl dispatch 'hl.dsp.exec_cmd("${pkgs.bitwarden-desktop}/bin/bitwarden")'
       for _ in {1..10}; do
         sleep 1
         [[ -n "$(window)" ]] && return 0
@@ -169,7 +169,7 @@ in
     WORKSPACE="''$1"
     CURRENT=$(hyprctl activewindow -j | jq -r '.workspace.id // 1' 2>/dev/null || echo "1")
     if [[ "''$CURRENT" != "''$WORKSPACE" ]]; then
-      hyprctl dispatch workspace "''$WORKSPACE"
+      hyprctl dispatch "hl.dsp.focus({workspace='$WORKSPACE'})"
       WORKSPACE_INFO=$(hyprctl workspaces -j | jq -r ".[] | select(.id==''$WORKSPACE) | \"Workspace ''$WORKSPACE: \(.windows) windows\"" 2>/dev/null || echo "Workspace ''$WORKSPACE")
       notify-send "Workspace" "''$WORKSPACE_INFO" -t 1000 -i desktop
     fi

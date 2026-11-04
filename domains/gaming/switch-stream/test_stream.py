@@ -181,6 +181,31 @@ class StreamTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'BLUETOOTH_AGENT_UNSUPPORTED'):
             stream.patched_agent(source + '# upgraded\n')
 
+    def test_host_creates_workspace_through_lua_before_starting_listener(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ['state.json', 'key.pem', 'cert.pem']:
+                (root / name).touch()
+            cfg = {'state': directory, 'monitor': 'HWC-GAME', 'workspace': 99,
+                   'host': '192.0.2.1', 'binaries': {'hyprctl': '/hyprctl', 'pulse': '/pulse', 'sunshine': '/sunshine'}}
+            commands = []
+            def call(args, **kwargs):
+                commands.append(args)
+                return json.dumps([{'name': 'eDP-1', 'focused': True}])
+            with patch.object(stream, 'eden_running', return_value=False), \
+                 patch.object(stream.subprocess, 'run', return_value=Mock(returncode=1)), \
+                 patch.object(stream, 'call', side_effect=call), \
+                 patch.object(stream, 'wait_ready'), patch.object(stream, 'stop_children'), \
+                 patch.object(stream.subprocess, 'Popen', return_value=Mock(poll=Mock(return_value=None))), \
+                 patch.dict(stream.os.environ, {'XDG_RUNTIME_DIR': directory}), \
+                 patch.object(stream.time, 'sleep', side_effect=KeyboardInterrupt):
+                stream.host_run(cfg, '/private/sunshine.conf')
+            expressions = [c[2] for c in commands if c[1] in ['eval', 'dispatch']]
+            self.assertTrue(any('hl.workspace_rule' in e for e in expressions))
+            self.assertTrue(any('hl.dsp.focus({workspace="99"})' == e for e in expressions))
+            self.assertTrue(any('hl.window_rule' in e for e in expressions))
+            self.assertFalse(any(c[1] == 'keyword' or 'moveworkspacetomonitor' in c for c in commands))
+
     def test_host_refuses_to_take_over_active_game(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

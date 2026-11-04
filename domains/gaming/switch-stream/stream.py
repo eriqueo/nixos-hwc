@@ -290,15 +290,15 @@ def host_run(cfg, sunshine_config):
     monitors = json.loads(call([hypr, '-j', 'monitors', 'all']))
     if cfg['monitor'] not in [m['name'] for m in monitors]:
         call([hypr, 'output', 'create', 'headless', cfg['monitor']])
-    call([hypr, 'keyword', 'monitor', f"{cfg['monitor']},1920x1080@60,10000x0,1"])
-    call([hypr, 'keyword', 'workspace', f"{cfg['workspace']},monitor:{cfg['monitor']},persistent:true"])
-    call([hypr, 'dispatch', 'moveworkspacetomonitor', f"{cfg['workspace']} {cfg['monitor']}"])
+    call([hypr, 'eval', 'hl.monitor({output=' + json.dumps(cfg['monitor']) + ',mode="1920x1080@60",position="10000x0",scale=1})'])
+    call([hypr, 'eval', 'hl.workspace_rule({workspace=' + json.dumps(str(cfg['workspace'])) + ',monitor=' + json.dumps(cfg['monitor']) + ',persistent=true})'])
     focused = next((m['name'] for m in monitors if m.get('focused')), None)
-    call([hypr, 'dispatch', 'workspace', str(cfg['workspace'])])
+    # The workspace does not exist on a fresh boot. Focus creates it using the
+    # rule above; moving a nonexistent workspace fails before the listener starts.
+    call([hypr, 'dispatch', 'hl.dsp.focus({workspace=' + json.dumps(str(cfg['workspace'])) + '})'])
     if focused:
-        call([hypr, 'dispatch', 'focusmonitor', focused])
-    for effects in [f"workspace {cfg['workspace']} silent", 'no_initial_focus on, suppress_event activate']:
-        call([hypr, 'keyword', 'windowrule', f'match:class ^([Ee]den|dev[.]eden_emu[.]eden)$, {effects}'])
+        call([hypr, 'dispatch', 'hl.dsp.focus({monitor=' + json.dumps(focused) + '})'])
+    call([hypr, 'eval', 'hl.window_rule({match={class="^([Ee]den|dev[.]eden_emu[.]eden)$"},workspace=' + json.dumps(str(cfg['workspace']) + ' silent') + ',no_initial_focus=true,suppress_event="activate"})'])
     runtime = Path(os.environ['XDG_RUNTIME_DIR']) / 'hwc-switch-stream'
     runtime.mkdir(exist_ok=True, mode=0o700)
     env = dict(os.environ, PULSE_SERVER='unix:' + str(runtime / 'pulse.socket'))

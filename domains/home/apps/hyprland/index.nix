@@ -108,7 +108,7 @@ let
 
   basePkgs = with pkgs; [
     wofi hyprshot grim hypridle swaybg swaylock cliphist wl-clipboard
-    brightnessctl networkmanager wirelesstools hyprsome wlogout fend
+    brightnessctl networkmanager wirelesstools wlogout fend
     socat  # For monitor hotplug listener
   ];
 
@@ -130,19 +130,19 @@ let
     clients=$(${pkgs.hyprland}/bin/hyprctl clients -j)
     address=$(printf '%s' "$clients" | ${pkgs.jq}/bin/jq -r --arg class "$class" '[.[] | select(.class == $class) | .address] | first // empty')
     if [[ -z "$address" ]]; then
-      ${pkgs.hyprland}/bin/hyprctl dispatch exec "$*"
+      ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.exec_cmd($(${pkgs.jq}/bin/jq -Rn --arg cmd "$*" '$cmd'))"
       exit
     fi
     window_workspace=$(printf '%s' "$clients" | ${pkgs.jq}/bin/jq -r --arg address "$address" '.[] | select(.address == $address) | .workspace.id')
     current_workspace=$(${pkgs.hyprland}/bin/hyprctl activeworkspace -j | ${pkgs.jq}/bin/jq -r '.id')
     if [[ "$show" == 1 ]]; then
-      ${pkgs.hyprland}/bin/hyprctl dispatch movetoworkspace "$current_workspace,address:$address"
-      ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "address:$address"
+      ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.window.move({workspace='$current_workspace',window='address:$address'})"
+      ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({window='address:$address'})"
     elif [[ "$window_workspace" == "$current_workspace" ]]; then
-      ${pkgs.hyprland}/bin/hyprctl dispatch movetoworkspacesilent "special:password-managers,address:$address"
+      ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.window.move({workspace='special:password-managers',window='address:$address',follow=false})"
     else
-      ${pkgs.hyprland}/bin/hyprctl dispatch movetoworkspace "$current_workspace,address:$address"
-      ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "address:$address"
+      ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.window.move({workspace='$current_workspace',window='address:$address'})"
+      ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({window='address:$address'})"
     fi
   '';
 

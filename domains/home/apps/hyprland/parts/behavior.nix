@@ -89,7 +89,7 @@
   wsSlots = [1 2 3 4 5 6 7 8];
   sendToWs = map (n: {
     mods = "${mod} CTRL"; key = toString n;
-    act = "exec,hyprsome move ${toString n}";
+    act = "exec,hwc-workspace-switch --move ${toString n}";
     desc = "Send window to workspace ${toString n}";
   }) wsSlots;
   switchToWs = map (n: {

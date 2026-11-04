@@ -59,8 +59,8 @@ let
       "5" = []; "6" = []; "7" = []; "8" = [];
     };
     on-click = "activate";
-    on-scroll-up = "hyprctl dispatch workspace e+1";
-    on-scroll-down = "hyprctl dispatch workspace e-1";
+    on-scroll-up = "hyprctl dispatch 'hl.dsp.focus({workspace=\"e+1\"})'";
+    on-scroll-down = "hyprctl dispatch 'hl.dsp.focus({workspace=\"e-1\"})'";
   };
 
   workspaceExternal = {
@@ -79,8 +79,8 @@ let
       "15" = []; "16" = []; "17" = []; "18" = [];
     };
     on-click = "activate";
-    on-scroll-up = "hyprctl dispatch workspace e+1";
-    on-scroll-down = "hyprctl dispatch workspace e-1";
+    on-scroll-up = "hyprctl dispatch 'hl.dsp.focus({workspace=\"e+1\"})'";
+    on-scroll-down = "hyprctl dispatch 'hl.dsp.focus({workspace=\"e-1\"})'";
   };
 
   ollamaWidget = lib.optionalAttrs ollamaEnabled {

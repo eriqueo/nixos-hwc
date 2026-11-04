@@ -17,6 +17,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
+Desktop helpers and the laptop streaming host use native Hyprland Lua IPC. Workspace selection and window moves share the monitor-aware helper; streaming creates its configured workspace before focusing it.
 The Hyprland module renders the existing settings and keybinding records through Home Manager's Lua API. `hyprland-lua-config` checks the actual generated configuration with the selected compositor and rejects the retired format.
 Aider has been removed from the app modules and shared fleet defaults.
 
@@ -163,6 +164,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-04: Migrate desktop helper and laptop streaming calls to Lua IPC, including startup on a fresh workspace.
 - 2026-11-04: Generate Lua for Hyprland 0.57 while preserving settings, keybindings, resize exits, rules and startup hooks; validate the generated file with the actual parser.
 
 - 2026-11-03: Remove unused Aider and its fleet settings; stop pulling its full Python/GPU dependency set into the home profile.

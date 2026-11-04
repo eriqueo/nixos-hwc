@@ -91,7 +91,7 @@
     # window. Without this, holding the chord buries the desktop in legends.
     if ${pkgs.hyprland}/bin/hyprctl clients -j 2>/dev/null \
       | ${pkgs.jq}/bin/jq -e '.[] | select(.class == "hypr-keybinds")' >/dev/null 2>&1; then
-      ${pkgs.hyprland}/bin/hyprctl dispatch closewindow class:hypr-keybinds
+      ${pkgs.hyprland}/bin/hyprctl dispatch 'hl.dsp.window.close({window="class:hypr-keybinds"})'
       exit 0
     fi
 

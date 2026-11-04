@@ -11,6 +11,7 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 - ❌ Does not provide gpu-toggle/gpu-launch (infrastructure GPU module) or the acpid lid handler (`machines/laptop/config.nix`); requires swaync enabled (asserted)
 
 ## Structure
+Desktop helpers and the laptop streaming host use native Hyprland Lua IPC. Workspace selection and window moves share the monitor-aware helper; streaming creates its configured workspace before focusing it.
 - `index.nix` — options, packages, programs.waybar, systemd service, assertions
 - `sys.nix` — system-lane option + hardware/network assertions
 - `parts/behavior.nix` — module layout and per-widget settings, including daemon-driven dictation status and a tooltip shortcut derived from Hyprland's binding record, and the courier unread badge (`courier status --follow --waybar`; click runs Hyprland's `courierCommand`)
@@ -23,6 +24,7 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 - `patches/bluetooth-null-manager.patch` — bluetooth module throws (module dropped, bar survives) when the org.bluez manager is unavailable
 
 ## Changelog
+- 2026-11-04: Migrate desktop helper and laptop streaming calls to Lua IPC, including startup on a fresh workspace.
 - 2026-10-13: Patched waybar so a timed-out org.bluez object manager disables only the bluetooth module. Before, a wedged bluetoothd segfaulted the bar on every `Restart=always` attempt. Stock `waybar` removed from `parts/packages.nix` so the patched `programs.waybar.package` is the only one on PATH.
 - 2026-10-12: `custom/courier`: iPhone messages unread badge next to dictation, shown when courier is enabled. It streams from courier's control socket. Classes: `unread` (blue, count), `idle`, `offline` (dimmed), `down`. Click toggles the window.
 - 2026-09-27: Use Bitwarden's native tray icon as its only bar button and enlarge Authenticator's visible mark to match the tray.

@@ -32,7 +32,7 @@ with pkgs;
     POS_BEFORE=$(echo "$BEFORE" | ${jq}/bin/jq -r '"\(.at[0]),\(.at[1])"')
 
     # Try to move within workspace
-    ${hyprland}/bin/hyprctl dispatch movewindow "$DIRECTION"
+    ${hyprland}/bin/hyprctl dispatch "hl.dsp.window.move({direction='$DIRECTION'})"
 
     # Small delay for Hyprland to process
     sleep 0.05
@@ -44,10 +44,10 @@ with pkgs;
     # If position unchanged, window was at edge - move to adjacent monitor
     if [[ "$POS_BEFORE" == "$POS_AFTER" ]]; then
       case "$DIRECTION" in
-        l) ${hyprland}/bin/hyprctl dispatch movewindow mon:-1 ;;
-        r) ${hyprland}/bin/hyprctl dispatch movewindow mon:+1 ;;
-        u) ${hyprland}/bin/hyprctl dispatch movewindow mon:-1 ;;
-        d) ${hyprland}/bin/hyprctl dispatch movewindow mon:+1 ;;
+        l) ${hyprland}/bin/hyprctl dispatch 'hl.dsp.window.move({monitor="-1"})' ;;
+        r) ${hyprland}/bin/hyprctl dispatch 'hl.dsp.window.move({monitor="+1"})' ;;
+        u) ${hyprland}/bin/hyprctl dispatch 'hl.dsp.window.move({monitor="-1"})' ;;
+        d) ${hyprland}/bin/hyprctl dispatch 'hl.dsp.window.move({monitor="+1"})' ;;
       esac
     fi
   '')
@@ -74,7 +74,7 @@ with pkgs;
 
     if [[ -n "$SELECTED" ]]; then
       WORKSPACE_ID=$(echo "$SELECTED" | cut -d: -f1)
-      ${hyprsome}/bin/hyprsome workspace "$WORKSPACE_ID"
+      ${hyprland}/bin/hyprctl dispatch "hl.dsp.focus({workspace='$WORKSPACE_ID'})"
       ${libnotify}/bin/notify-send "Workspace" "Switched to workspace $WORKSPACE_ID" -t 1000 -i desktop
     fi
   '')
@@ -113,11 +113,11 @@ with pkgs;
 
     if [[ $LAPTOP_POS -eq 0 ]]; then
       # Laptop is on left, move external to left (use --batch for atomic change)
-      ${hyprland}/bin/hyprctl --batch "keyword monitor $EXTERNAL,$EXTERNAL_SPEC,0x0,$EXTERNAL_SCALE ; keyword monitor $LAPTOP,$LAPTOP_SPEC,''${EXTERNAL_WIDTH}x0,$LAPTOP_SCALE"
+      ${hyprland}/bin/hyprctl eval "hl.monitor({output='$EXTERNAL',mode='$EXTERNAL_SPEC',position='0x0',scale=$EXTERNAL_SCALE}); hl.monitor({output='$LAPTOP',mode='$LAPTOP_SPEC',position='''${EXTERNAL_WIDTH}x0',scale=$LAPTOP_SCALE})"
       ${libnotify}/bin/notify-send "Monitor" "External on left" -t 1500 -i display
     else
       # Laptop is on right, move external to right
-      ${hyprland}/bin/hyprctl --batch "keyword monitor $LAPTOP,$LAPTOP_SPEC,0x0,$LAPTOP_SCALE ; keyword monitor $EXTERNAL,$EXTERNAL_SPEC,''${LAPTOP_WIDTH}x0,$EXTERNAL_SCALE"
+      ${hyprland}/bin/hyprctl eval "hl.monitor({output='$LAPTOP',mode='$LAPTOP_SPEC',position='0x0',scale=$LAPTOP_SCALE}); hl.monitor({output='$EXTERNAL',mode='$EXTERNAL_SPEC',position='''${LAPTOP_WIDTH}x0',scale=$EXTERNAL_SCALE})"
       ${libnotify}/bin/notify-send "Monitor" "External on right" -t 1500 -i display
     fi
 
@@ -167,6 +167,8 @@ with pkgs;
     #!/usr/bin/env bash
     set -euo pipefail
 
+    MOVE=0
+    if [[ "''${1:-}" == --move ]]; then MOVE=1; shift; fi
     SLOT="''${1:?slot required (1-8)}"
     STATE_FILE="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc-workspace-link"
 
@@ -174,7 +176,14 @@ with pkgs;
     FOCUSED=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r '.[] | select(.focused) | .name')
 
     # Always switch current monitor normally
-    ${hyprsome}/bin/hyprsome workspace "$SLOT"
+    if [[ ! "$SLOT" =~ ^[1-8]$ ]]; then exit 64; fi
+    TARGET=$SLOT
+    if [[ ! "$FOCUSED" =~ ^(eDP|LVDS) ]]; then TARGET=$((SLOT + 10)); fi
+    if [[ "$MOVE" == 1 ]]; then
+      ${hyprland}/bin/hyprctl dispatch "hl.dsp.window.move({workspace='$TARGET'})"
+      exit
+    fi
+    ${hyprland}/bin/hyprctl dispatch "hl.dsp.focus({workspace='$TARGET'})"
 
     # Linked mode: sync the other monitor to the same slot
     if [[ -f "$STATE_FILE" ]]; then
@@ -193,9 +202,9 @@ with pkgs;
       fi
 
       # Focus the other monitor first so the workspace dispatch lands there (not here)
-      ${hyprland}/bin/hyprctl dispatch focusmonitor "$OTHER"
-      ${hyprland}/bin/hyprctl dispatch workspace "$TARGET_WS"
-      ${hyprland}/bin/hyprctl dispatch focusmonitor "$FOCUSED"
+      ${hyprland}/bin/hyprctl dispatch "hl.dsp.focus({monitor='$OTHER'})"
+      ${hyprland}/bin/hyprctl dispatch "hl.dsp.focus({workspace='$TARGET_WS'})"
+      ${hyprland}/bin/hyprctl dispatch "hl.dsp.focus({monitor='$FOCUSED'})"
     fi
   '')
 

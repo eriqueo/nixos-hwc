@@ -10,6 +10,7 @@ Gaming services including retro emulation (RetroArch) and WebDAV-based save sync
 - **Does NOT manage**: GPU drivers (→ `domains/system/`), ROMs/content files (user-managed), firewall (→ machine config)
 
 ## Structure
+Desktop helpers and the laptop streaming host use native Hyprland Lua IPC. Workspace selection and window moves share the monitor-aware helper; streaming creates its configured workspace before focusing it.
 
 `retroarch/stream-session.py` discovers only exact Sunshine virtual-device names and vendor/product IDs. Both legacy passthrough and current libvirtualhid identities map to keyboard/relative mouse roles; duplicates fail and physical/absolute devices stay excluded.
 
@@ -144,6 +145,7 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+- 2026-11-04: Migrate desktop helper and laptop streaming calls to Lua IPC, including startup on a fresh workspace.
 
 - 2026-11-02: Accept current Sunshine libvirtualhid identities in readiness and the Xvfb input bridge, using one guarded discovery path.
 
