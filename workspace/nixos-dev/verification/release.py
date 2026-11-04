@@ -37,6 +37,12 @@ def active_revision(lane):
         return None
 
 
+def generation(lane):
+    paths = ([Path('/run/current-system')] if lane == 'system' else
+             [Path.home() / '.local/state/nix/profiles/home-manager', Path.home() / '.nix-profile'])
+    return tuple(str(path.resolve()) for path in paths)
+
+
 def changed(repo, candidate, baselines):
     if not baselines or any(not baseline for baseline in baselines):
         return None
@@ -86,13 +92,15 @@ def inventory_for(source):
     return json.loads(run(['nix', 'eval', '--json', source + '#lib.verification']))
 
 
-def build_checks(source, names):
-    subprocess.run(['nix', 'build', '--no-link', *[source + '#checks.x86_64-linux.' + n for n in names]], check=True)
+def build_checks(source, names, nix_args=()):
+    subprocess.run(['nix', 'build', '--no-link', *nix_args,
+                    *[source + '#checks.x86_64-linux.' + n for n in names]], check=True)
 
 
 def snapshot(repo, candidate, lane):
     clean(repo)
-    return (revision(repo, 'HEAD'), revision(repo, 'main'), candidate, lane, active_revision(lane))
+    return (revision(repo, 'HEAD'), revision(repo, 'main'), candidate, lane,
+            active_revision(lane), generation(lane))
 
 
 def unchanged(repo, token):
@@ -110,29 +118,29 @@ def release_lock(repo):
         yield
 
 
-def verify(repo, candidate, target, lane, full=False):
+def verify(repo, candidate, target, lane, full=False, nix_args=()):
     token = snapshot(repo, candidate, lane)
     source = uri(repo, candidate)
     inventory = inventory_for(source)
     names, reason = select(inventory, None if full else changed(repo, candidate, [token[1], token[4]]))
     print(json.dumps({'candidate': candidate, 'target': target, 'lane': lane,
                       'reason': reason, 'checks': names}), flush=True)
-    build_checks(source, names)
+    build_checks(source, names, nix_args)
     assembly = (f'homeConfigurations."eric@{target}".activationPackage' if lane == 'home'
                 else f'nixosConfigurations.{target}.config.system.build.toplevel')
-    output = run(['nix', 'build', '--no-link', '--print-out-paths', source + '#' + assembly])
+    output = run(['nix', 'build', '--no-link', '--print-out-paths', *nix_args, source + '#' + assembly])
     unchanged(repo, token)
     return token, output.splitlines()[-1]
 
 
-def release(repo, candidate, target, lane, action, full=False):
+def release(repo, candidate, target, lane, action, full=False, nix_args=()):
     # Authority stays local: remote hosts run this command through SSH on that host.
     if target != socket.gethostname():
         raise ValueError('Run release on the target host; do not build another host toplevel here')
     if git(repo, 'branch', '--show-current') != 'main':
         raise ValueError('Integrate and activate from the primary main checkout')
     with release_lock(repo):
-        token, output = verify(repo, candidate, target, lane, full)
+        token, output = verify(repo, candidate, target, lane, full, nix_args)
         # The fast-forward check precedes changing runtime checkout files.
         subprocess.run(['git', '-C', str(repo), 'merge-base', '--is-ancestor', token[0], candidate], check=True)
         unchanged(repo, token)
@@ -141,7 +149,7 @@ def release(repo, candidate, target, lane, action, full=False):
         if revision(repo, 'HEAD') != candidate or revision(repo, 'main') != candidate:
             raise ValueError('Main moved during integration; refusing activation')
         clean(repo)
-        if active_revision(lane) != token[4]:
+        if active_revision(lane) != token[4] or generation(lane) != token[5]:
             raise ValueError('Active generation changed during integration; rerun verification')
         if action == 'merge' or action == 'build':
             return
@@ -151,7 +159,7 @@ def release(repo, candidate, target, lane, action, full=False):
             subprocess.run([output + '/activate'], check=True)
         else:
             subprocess.run(['sudo', 'env', 'HOME=/root', 'nixos-rebuild', action,
-                            '--flake', uri(repo, candidate) + '#' + target], check=True)
+                            '--flake', uri(repo, candidate) + '#' + target, *nix_args], check=True)
         print(f'{candidate}: activated {target} via {lane}; live service health still requires inspection')
 
 
@@ -164,7 +172,10 @@ def main():
     parser.add_argument('--lane', choices=('system', 'home'), default='system')
     parser.add_argument('--action', choices=('merge', 'build', 'test', 'switch'), default='switch')
     parser.add_argument('--full', action='store_true')
-    args = parser.parse_args()
+    args, nix_args = parser.parse_known_args()
+    allowed = {'--show-trace', '--refresh', '--verbose', '--print-build-logs', '-L', '--keep-going'}
+    if any(arg not in allowed for arg in nix_args):
+        parser.error('Unsupported Nix argument; target, flake and output cannot be overridden')
     repo = args.repo.resolve()
     if args.command == 'governance':
         source = uri(repo)
@@ -183,9 +194,9 @@ def main():
     elif args.command == 'verify':
         if args.target != socket.gethostname():
             raise ValueError('Verify the assembly on its target host')
-        verify(repo, candidate, args.target, args.lane, args.full)
+        verify(repo, candidate, args.target, args.lane, args.full, nix_args)
     else:
-        release(repo, candidate, args.target, args.lane, args.action, args.full)
+        release(repo, candidate, args.target, args.lane, args.action, args.full, nix_args)
 
 
 if __name__ == '__main__':

@@ -36,6 +36,8 @@ data/
 
 ## Changelog
 
+- 2026-11-04: Update the Borg XPS destination check for its existing T3 V2 backup registration.
+
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 - 2026-11-03: Remove the unversioned role reader after Work and Home consumed V2; reject the old shape in the actual provisioning wiring check.
 - 2026-11-03: Keep decoded credential variants distinct and require the Nix encoding contract to match Python's handled enum.

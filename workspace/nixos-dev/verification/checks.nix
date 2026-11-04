@@ -1,6 +1,20 @@
 # Pure verification function; not a NixOS or Home Manager module.
 { laptopRuntimeScope, lib, pkgs, repoRoot, self, serverCudaRuntimeScope, serverRuntimeScope, system }:
 {
+local-release-wiring = let
+  homes = map (system: system.config.home-manager.users.eric)
+    (lib.attrValues self.nixosConfigurations)
+    ++ map (home: home.config) (lib.attrValues self.homeConfigurations);
+  gated = home: let init = home.programs.zsh.initContent; in
+    lib.hasInfix "verification/release.py\" deploy" init
+    && lib.hasInfix "--lane system --action" init
+    && lib.hasInfix "--lane home" init
+    && !(lib.hasInfix "sudo env HOME=/root nixos-rebuild" init)
+    && !(lib.hasInfix "activator=$(nix build" init);
+in
+assert lib.assertMsg (lib.all gated homes) "Both generated activation helpers must use the local release gate";
+pkgs.runCommand "local-release-wiring" {} ''touch "$out"'';
+
 claude-installation = let
   hasClaude = packages: lib.any (p: lib.getName p == "claude-code") packages;
   coherent = home:

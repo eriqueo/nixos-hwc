@@ -136,27 +136,19 @@ pkgs.runCommand "sr-gauntlet-flock" {} ''
   touch $out
 '';
 
-# ── A quiet nightly-builds morning stays quiet ──────────────────────
-# The no-action branch of the morning review must record and send
-# nothing. Two directions: the P5 "nothing needs you" card must not come
-# back, and the POST must stay behind the nb_notify gate.
-nightly-review-silent = pkgs.runCommand "nightly-review-silent" {
-  nativeBuildInputs = [ pkgs.ripgrep ];
+# Exercise the generated wrapper: quiet mornings have no external effect,
+# while decisions and errors still notify and every run retains its audit.
+nightly-review-silent = let
+  work = self.nixosConfigurations.hwc-work.config;
+  fixture = pkgs.writeText "nightly-review-fixture.json" (builtins.toJSON {
+    script = work.systemd.services.nightly-builds-review.serviceConfig.ExecStart;
+    cli = "${work.hwc.automation.refinery.package}/bin/refinery-morning-review";
+  });
+in pkgs.runCommand "nightly-review-silent" {
+  nativeBuildInputs = [ pkgs.python3 pkgs.bash pkgs.jq pkgs.coreutils ];
 } ''
-  cd ${self}
-  src=domains/automation/nightly-builds/index.nix
-  fail=0
-  if rg -q 'prio=5' "$src"; then
-    echo "FAIL: the morning review has a P5 branch again — a morning with no" >&2
-    echo "      decision must send nothing, not a card saying so." >&2
-    fail=1
-  fi
-  rg -q 'nb_notify=0' "$src" || {
-    echo "FAIL: no nb_notify=0 branch — the no-action path is not silent." >&2; fail=1; }
-  rg -q 'if \[ "\$nb_notify" = 1 \]' "$src" || {
-    echo "FAIL: the notify POST is no longer gated on nb_notify." >&2; fail=1; }
-  [ "$fail" = 0 ] || exit 1
-  touch $out
+  python3 ${./test_nightly_review.py} ${fixture}
+  touch "$out"
 '';
 
 # Tracked n8n workflow JSON is a REDACTED DERIVED EXPORT of live n8n
