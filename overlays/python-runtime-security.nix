@@ -230,8 +230,8 @@ let
       outputs = application.outputs or [ "out" ];
       extraOutputs = lib.remove "out" outputs;
     in
-    assert lib.assertMsg (builtins.elem "out" outputs && builtins.length outputs <= 2
-      && lib.all (name: name == "man") extraOutputs
+    assert lib.assertMsg (builtins.elem "out" outputs && builtins.length outputs <= 4
+      && lib.all (name: builtins.elem name [ "man" "doc" "dist" ]) extraOutputs
       && lib.all (name: builtins.elem name outputs) (application.meta.outputsToInstall or [ "out" ]))
       "APP_OUTPUT_PROTOCOL_UNSUPPORTED";
     prev.runCommand "${application.name}-http-framing" ({
