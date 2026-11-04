@@ -19,13 +19,73 @@ hyprland-lua-config = let
   home = self.nixosConfigurations.hwc-laptop.config.home-manager.users.eric;
   hypr = home.wayland.windowManager.hyprland;
   candidate = pkgs.writeText "hyprland.lua" home.xdg.configFile."hypr/hyprland.lua".text;
+  launcher = lib.findFirst (p: (p.name or "") == "waybar-launch") null home.home.packages;
+  switcher = lib.findFirst (p: (p.name or "") == "hwc-workspace-switch") null
+    self.nixosConfigurations.hwc-laptop.config.environment.systemPackages;
+  bars = pkgs.writeText "waybar-fixture.json" (builtins.toJSON home.programs.waybar.settings);
+  cursor = home.hwc.home.theme.cursor.hyprcursor.name;
+  cursorAssets = home.home.file.".local/share/icons/${cursor}".source;
 in assert hypr.configType == "lua";
 assert !(home.xdg.configFile ? "hypr/hyprland.conf");
-pkgs.runCommand "hyprland-lua-config" { nativeBuildInputs = [ hypr.package ]; } ''
+pkgs.runCommand "hyprland-lua-config" { nativeBuildInputs = [ hypr.package pkgs.python3 pkgs.jq ]; } ''
   export HOME="$TMPDIR" XDG_RUNTIME_DIR="$TMPDIR"
   mkdir -p "$TMPDIR/hypr"
   Hyprland --verify-config -c ${candidate} > parser.log 2>&1
   cat parser.log
+  test -f ${cursorAssets}/manifest.hl
+  python3 - ${candidate} ${launcher}/bin/waybar-launch ${switcher}/bin/hwc-workspace-switch ${bars} <<'PYTEST'
+  import json, os, pathlib, re, signal, subprocess, sys, time
+  cfg = pathlib.Path(sys.argv[1]).read_text()
+  def mouse_flags(text):
+      blocks = re.findall(r'hl.bind\("SUPER \+ mouse:27[23]".*?\n}\)', text, re.S)
+      return len(blocks) == 2 and all('["mouse"] = true' in b for b in blocks)
+  assert mouse_flags(cfg), "Mouse bindings lost their mouse flag"
+  assert not mouse_flags(cfg.replace('["mouse"] = true', '["mouse"] = false'))
+  assert 'hl.env("HYPRCURSOR_THEME", "${cursor}")' in cfg
+  root = pathlib.Path.cwd()/'desktop-fixture'
+  root.mkdir(); (root/'bin').mkdir(); (root/'waybar').mkdir()
+  (root/'waybar/config').write_text(pathlib.Path(sys.argv[4]).read_text())
+  monitors = [dict(name='HWC-GAME', make="", focused=False),
+              dict(name='eDP-1', make='BOE', focused=True),
+              dict(name='DP-2', make='Ancor', focused=False)]
+  log = root/'dispatch.log'
+  hyprctl = root/'bin/hyprctl'
+  hyprctl.write_text('#!${pkgs.python3}/bin/python3\nimport json,sys\n'
+      + 'if sys.argv[1]=="monitors": print('+repr(json.dumps(monitors))+')\n'
+      + 'else: open('+repr(str(log))+',"a").write(" ".join(sys.argv[1:])+"\\n")\n')
+  hyprctl.chmod(0o755)
+  bar = root/'bin/waybar'
+  bar.write_text('#!${pkgs.python3}/bin/python3\nimport sys,signal,time,pathlib\n'
+      + 'p=pathlib.Path(sys.argv[sys.argv.index("-c")+1])\n'
+      + 'signal.signal(signal.SIGUSR2,lambda *_: print("RELOAD",flush=True))\n'
+      + 'print(p.read_text(),flush=True)\nwhile True: time.sleep(0.05)\n')
+  bar.chmod(0o755)
+  env = os.environ | dict(XDG_CONFIG_HOME=str(root), XDG_RUNTIME_DIR=str(root),
+      PATH=str(root/'bin')+':'+os.environ['PATH'])
+  launch = (root/'launch')
+  launch.write_text(re.sub(r'export PATH=.*', 'export PATH='+env['PATH'], pathlib.Path(sys.argv[2]).read_text()))
+  output = root/'output'
+  with output.open('w') as out:
+      proc = subprocess.Popen(['bash',str(launch)],env=env,stdout=out,stderr=out)
+      try:
+          deadline=time.monotonic()+5
+          while time.monotonic()<deadline and 'DP-2' not in output.read_text(): time.sleep(0.05)
+          assert 'DP-2' in output.read_text() and 'HWC-GAME' not in output.read_text(), output.read_text()
+          proc.send_signal(signal.SIGUSR2)
+          deadline=time.monotonic()+5
+          while time.monotonic()<deadline and 'RELOAD' not in output.read_text(): time.sleep(0.05)
+          assert proc.poll() is None and 'RELOAD' in output.read_text(), output.read_text()
+      finally:
+          proc.terminate()
+          proc.wait(timeout=5)
+  assert not list(pathlib.Path(os.environ['TMPDIR']).glob('tmp.*')), "Launcher leaked temp config"
+  switch = root/'switch'
+  switch.write_text(re.sub(r'/nix/store/[^ /]+/bin/hyprctl',str(hyprctl),pathlib.Path(sys.argv[3]).read_text()))
+  (root/'hwc-workspace-link').touch()
+  subprocess.run(['bash',str(switch),'2'],env=env,check=True,timeout=5)
+  dispatches=log.read_text()
+  assert "monitor='DP-2'" in dispatches and 'HWC-GAME' not in dispatches, dispatches
+  PYTEST
   printf 'exec-once = true\n' > legacy.conf
   if Hyprland --verify-config -c "$PWD/legacy.conf" > legacy.log 2>&1; then
     echo "Parser accepted the retired configuration format" >&2

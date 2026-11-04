@@ -17,6 +17,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
+Desktop wiring preserves mouse flags, uses packaged native cursor assets, and excludes virtual displays from bars and linked workspace selection. Waybar forwards reload to its child and cleans its generated configuration.
 
 Owned instances select checked Python interpreters and package environments
 without rebuilding their native dependencies. Workbench TUI and Mail helpers
@@ -173,6 +174,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-04: Repair declarative desktop cursor, mouse bindings, physical-output selection and Waybar reload supervision; extend generated desktop checks.
 
 - 2026-11-04: Select the strict HTTP response parser for interactive Python
   environments and Workbench launchers while preserving their package graphs.

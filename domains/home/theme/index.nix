@@ -96,14 +96,11 @@ in
     # Materialize the selected palette as a read-only token set for apps.
     hwc.home.theme.colors = activePalette;
 
-    # Pointer cursor from the palette. Only size + xcursor are wired:
-    # the palettes' hyprcursor blocks reference an asset tree
-    # (modules/home/theme/assets/...) that no longer exists in the repo —
-    # wiring them would break eval. Hyprland falls back to XCursor
-    # rendering, same as before. (Backlog: restore hyprcursor assets.)
+    # Both cursor formats come from the installed palette package.
     hwc.home.theme.cursor = lib.mkDefault {
       size    = (activePalette.cursor or {}).size or 24;
       xcursor = (activePalette.cursor or {}).xcursor or {};
+      hyprcursor = (activePalette.cursor or {}).hyprcursor or {};
     };
 
     # Qt apps follow the GTK dark theme.

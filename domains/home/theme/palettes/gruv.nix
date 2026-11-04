@@ -145,9 +145,7 @@
     # Hyprland side (Hyprcursor)
     hyprcursor = {
       name         = "Nordzy-hyprcursors";
-      # path in your repo containing the hyprcursor assets (manifest.hl + hyprcursors/)
       # The Hyprland-session adapter will link this into ~/.local/share/icons
-      assetPathRel = "modules/home/theme/assets/cursors/Nordzy-hyprcursors";
     };
   };
 }
