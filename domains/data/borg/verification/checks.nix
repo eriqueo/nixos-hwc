@@ -21,6 +21,9 @@ laptop-critical-state = let
   });
 in
 assert c.hwc.data.borg.enable;
+assert job.removableDevice;
+assert !(builtins.hasAttr c.hwc.data.borg.repo.path
+  c.systemd.tmpfiles.settings.borgbackup-job-hwc-backup);
 assert c.hwc.data.borg.repo.storageQuotaBytes == 21474836480;
 assert c.hwc.data.borg.repo.minimumFreeBytes == 21474836480;
 assert c.systemd.services.borgbackup-job-hwc-backup.unitConfig.AssertPathIsMountPoint == c.hwc.paths.backup;

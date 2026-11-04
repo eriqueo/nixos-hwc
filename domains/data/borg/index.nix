@@ -114,6 +114,7 @@ let
   destinationJobs = lib.mapAttrs' (name: target: lib.nameValuePair (destinationJobName name)
     (backupJob // {
       repo = destinationUrl target;
+      removableDevice = false;
       # An independent remote target must not depend on local repository admission.
       preHook = producerHook;
       extraInitArgs = [];
@@ -134,6 +135,10 @@ let
 
     # Repository (local path or SSH URL)
     repo = repoUrl;
+    # Native tmpfiles otherwise creates this path during activation, before
+    # the job's mount assertion. Provision protected local repos on their
+    # verified filesystem explicitly; never materialize a fallback root path.
+    removableDevice = !cfg.repo.remote.enable && cfg.repo.requiredMountPoint != null;
 
     # Encryption
     encryption = {

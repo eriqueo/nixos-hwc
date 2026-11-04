@@ -38,6 +38,8 @@ data/
 
 ## Changelog
 
+- 2026-11-04: Keep mount-protected Borg repository paths out of activation-time tmpfiles creation.
+
 - 2026-11-04: Add opt-in Borg local repository admission and initialization quotas for bounded laptop critical-state protection.
 
 - 2026-11-04: Extend the XPS Borg fixture to execute its full current snapshot hook without touching live data.
