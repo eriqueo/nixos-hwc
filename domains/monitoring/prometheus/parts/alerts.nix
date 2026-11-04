@@ -37,6 +37,16 @@
           };
         }
         {
+          alert = "WebsiteSecurityCheckFailed";
+          expr = ''probe_success{job=~"probe-website-security|probe-website-https|probe-report-privacy"} == 0'';
+          for = "5m";
+          labels = { severity = "P4"; category = "website"; };
+          annotations = {
+            summary = "Website security check failed: {{ $labels.instance }}";
+            description = "A public HTTPS, browser-policy or report-privacy check failed for five minutes. Inspect the probe in Prometheus, then the website Caddy configuration and hwc-crm service on hwc-work.";
+          };
+        }
+        {
           alert = "CrmIntakeDown";
           expr = ''probe_success{job="probe-crm-intake"} == 0'';
           for = "5m";

@@ -149,4 +149,63 @@ pkgs.runCommand "fleet-map-routing" { nativeBuildInputs = [ pkgs.python3 ]; } ''
   PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v
   touch "$out"
 '';
+# Actual exporter + scrape wiring. Distinct failures: missing browser header,
+# missing page CSP, missing private cache policy and wrong HTTPS redirect.
+website-security-probes = let
+  c = self.nixosConfigurations.hwc-work.config;
+  fixture = pkgs.writeText "website-security-probes.json" (builtins.toJSON {
+    config = c.services.prometheus.exporters.blackbox.configFile;
+    jobs = c.services.prometheus.scrapeConfigs;
+    rules = c.services.prometheus.ruleFiles;
+    alert = lib.findFirst (r: r.alert == "WebsiteSecurityCheckFailed") null
+      (lib.concatMap (g: g.rules) (import (repoRoot + "/domains/monitoring/prometheus/parts/alerts.nix") { inherit lib; }).groups);
+  });
+in pkgs.runCommand "website-security-probes" {
+  nativeBuildInputs = [ pkgs.python3 c.services.prometheus.exporters.blackbox.package pkgs.prometheus.cli ];
+} ''
+  python3 - ${fixture} <<'PY'
+  import http.server,json,pathlib,socket,subprocess,sys,threading,time,urllib.request,urllib.parse
+  f=json.loads(pathlib.Path(sys.argv[1]).read_text())
+  jobs={j['job_name']:j for j in f['jobs']}
+  for name,module in [('probe-website-security','website_security'),('probe-website-https','website_https_redirect'),('probe-report-privacy','report_privacy')]:
+      assert jobs[name]['params']['module']==[module]
+      assert jobs[name]['scrape_interval']=='2m'
+  class Fixture(http.server.BaseHTTPRequestHandler):
+      def log_message(self,*args): pass
+      def do_GET(self):
+          private='private' in self.path; redirect='redirect' in self.path
+          body=b'<meta http-equiv="Content-Security-Policy" content="script-src self">' if self.path!='/no-meta' else b'missing policy'
+          self.send_response(404 if private else 308 if redirect else 200)
+          headers={'Content-Type':'text/html','X-Content-Type-Options':'nosniff','X-Frame-Options':'SAMEORIGIN','Strict-Transport-Security':'max-age=604800','Content-Security-Policy':"object-src 'none'",'Permissions-Policy':'camera=()','Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Robots-Tag':'noindex','Location':'https://iheartwoodcraft.com/'}
+          if self.path=='/no-frame':headers.pop('X-Frame-Options')
+          if self.path=='/bad-private':headers.pop('Cache-Control')
+          if self.path=='/bad-redirect':headers['Location']='http://attacker.invalid/'
+          for key,value in headers.items():self.send_header(key,value)
+          self.end_headers();self.wfile.write(body)
+  server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Fixture)
+  threading.Thread(target=server.serve_forever,daemon=True).start()
+  with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
+  process=subprocess.Popen(['blackbox_exporter','--config.file='+f['config'],'--web.listen-address=127.0.0.1:'+str(port)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+  base='http://127.0.0.1:'+str(port)
+  try:
+      for _ in range(100):
+          try:urllib.request.urlopen(base+'/metrics',timeout=1).close();break
+          except OSError:time.sleep(.05)
+      else:raise AssertionError('exporter startup failed')
+      for module,path,success in [('website_security','/good',1),('website_security','/no-frame',0),('website_security','/no-meta',0),('report_privacy','/private',1),('report_privacy','/bad-private',0),('website_https_redirect','/redirect',1),('website_https_redirect','/bad-redirect',0)]:
+          query=urllib.parse.urlencode({'module':module,'target':'http://127.0.0.1:'+str(server.server_port)+path})
+          text=urllib.request.urlopen(base+'/probe?'+query,timeout=20).read().decode()
+          assert '\nprobe_success '+str(success)+'\n' in text,(module,path,text)
+  finally:process.terminate();process.wait(timeout=5);server.shutdown();server.server_close()
+  alert=f['alert'];assert alert['for']=='5m'
+  test={'rule_files':f['rules'],'evaluation_interval':'1m','tests':[{
+      'interval':'1m','input_series':[{'series':'probe_success{job="probe-website-security",instance="fixture"}','values':'0+0x6 1+0x7'}],
+      'alert_rule_test':[{'eval_time':t,'alertname':alert['alert'],'exp_alerts':[] if t!='6m' else [{'exp_labels':{'job':'probe-website-security','instance':'fixture',**alert['labels']},'exp_annotations':{k:v.replace('{{ $labels.instance }}','fixture') for k,v in alert['annotations'].items()}}]} for t in ['4m','6m','14m']]}]}
+  pathlib.Path('alert-transition.json').write_text(json.dumps(test))
+  subprocess.run(['promtool','test','rules','alert-transition.json'],check=True)
+  print('PASS actual security probes, seeded regressions and alert pending/firing/recovered states')
+  PY
+  touch "$out"
+'';
+
 }

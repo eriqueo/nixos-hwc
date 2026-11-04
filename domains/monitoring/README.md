@@ -13,6 +13,8 @@ Other domains register their scrape configs via `hwc.monitoring.prometheus.scrap
 
 ## Structure
 
+Prometheus checks public website headers/CSP, the HTTP-to-HTTPS redirect and privacy headers on a nonexistent report every two minutes. WebsiteSecurityCheckFailed alerts after five minutes through the existing Alertmanager route. Probes create no customer records. The website-security-probes integration check exercises the actual Blackbox configuration with missing-header and missing-CSP fixtures.
+
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 
 `alerts/index.nix` owns both system and user failure templates. The user template
@@ -71,6 +73,8 @@ monitoring/
 ```
 
 ## Changelog
+
+- 2026-11-04: Add bounded public website security and report privacy probes with a five-minute alert and real-exporter regression checks.
 
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 
