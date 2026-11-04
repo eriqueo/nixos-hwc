@@ -554,6 +554,26 @@ function makeResearch(r){
     $('a',{href:url,target:'_blank',class:'item-meta'},'review \u2192')));
   return sec;
 }
+function makeProjects(p){
+  // The tracker portfolio: what needs Eric, then the cap and the groups.
+  const sec=$('div',{class:'section'});
+  const need=(p.counts&&(p.counts.overdue+p.counts.waits+p.counts.expiring))||0;
+  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Projects'),$('span',{class:'sec-count'},need?`${need} need you`:'nothing waiting')));
+  if(p.available===false||!p.counts){sec.appendChild($('div',{class:'alert alert-warning'},'tracker hub unreachable'));return sec}
+  const row=(text,url,meta)=>{const r=$('div',{class:'item'});r.appendChild($('a',{class:'item-title',href:url,target:'_blank'},text));if(meta)r.appendChild($('span',{class:'item-meta'},` ${meta}`));return r};
+  (p.overdue||[]).slice(0,3).forEach(o=>sec.appendChild(row(o.title,o.url,`${o.days}d overdue`)));
+  (p.waits||[]).slice(0,4).forEach(w=>sec.appendChild(row(w.title,w.url,`${w.days}d: ${w.ask}`)));
+  (p.expiring||[]).slice(0,2).forEach(c=>sec.appendChild(row(`${c.title} · ${c.card}`,c.url,c.daysLeft<=0?'expires today':`expires in ${c.daysLeft}d`)));
+  const cap=p.cap||{};
+  sec.appendChild($('div',{class:'item-meta',style:'margin-top:6px'},`${cap.products||0} of ${cap.limit||8} live products${cap.over?' — over the cap':''} · ${p.counts.parked||0} parked`));
+  (p.groups||[]).forEach(g=>{
+    const pct=g.avgComplete==null?'':` · ${Math.round(g.avgComplete*100)}%`;
+    sec.appendChild($('div',{class:'item'},$('span',{class:'item-title'},g.label),$('span',{class:'item-meta'},` ${g.count} live, ${g.needYou} need you${pct}`)));
+  });
+  sec.appendChild($('a',{class:'lnk',href:p.url||'http://hwc-work:8765',target:'_blank'},'open the tracker →'));
+  return sec;
+}
+
 function makeWebsite(w){
   const sec=$('div',{class:'section'});
   const hdr=$('div',{class:'sec-hdr'},$('span',null,'Website'),$('span',{class:'sec-count'},'7 days'));
@@ -939,6 +959,7 @@ function render(data,liveThreads){
     system:'https://grafana.hwc.iheartwoodcraft.com',backup:'https://grafana.hwc.iheartwoodcraft.com',
     config_drift:'https://github.com/eriqueo/nixos-hwc',
     refinery:'https://refinery.hwc.iheartwoodcraft.com',
+    projects:'http://hwc-work:8765',
     research:'https://research-scout.hwc.iheartwoodcraft.com'};
   const SOURCE_SECTION={invoice:'overdue',lead:'leads',task:'tasks',system:'system',refinery:'refinery',nightly:'nightly-builds',mail:'mail'};
   const represented=new Set(((s.today&&s.today.items)||[]).map(it=>SOURCE_SECTION[it.source]).filter(Boolean));
@@ -971,6 +992,7 @@ function render(data,liveThreads){
   if(s.weather){_sectionCount++;grid.appendChild(tile(makeWeather(s.weather)))}
   if(s.weekly_snapshot){_sectionCount++;grid.appendChild(tile(makeSnapshot(s.weekly_snapshot)))}
   if(s.website&&Object.keys(s.website).length){_sectionCount++;grid.appendChild(tile(makeWebsite(s.website)))}
+  if(s.projects&&Object.keys(s.projects).length){_sectionCount++;grid.appendChild(tile(makeProjects(s.projects)))}
   if(s.research&&Object.keys(s.research).length){_sectionCount++;grid.appendChild(tile(makeResearch(s.research)))}
   if(s.recent_documents){const d=makeRecentDocs(s.recent_documents);if(d){_sectionCount++;grid.appendChild(tile(d))}}
   if(s.backup&&Object.keys(s.backup).length){_sectionCount++;grid.appendChild(tile(makeBackup(s.backup)))}

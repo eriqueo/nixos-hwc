@@ -524,6 +524,35 @@ AGENTS_ALERTS=$(echo "${AGENTS_JSON}" | jq -c '
 ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq --argjson a "${AGENTS_ALERTS}" '. + $a' 2>/dev/null || echo "${ALERTS_JSON}")
 echo "${ALERTS_JSON}" | jq empty 2>/dev/null || ALERTS_JSON='[]'
 
+# -- projects: the tracker hub's portfolio (hub /api/portfolio on this host),
+#    reduced to what Eric acts on: overdue products, waits on him past the
+#    threshold, cards about to expire, the live-product cap. gather-projects.mjs
+#    emits {} on any failure. Waits past the threshold are also one hwc-notify
+#    message on the `projects` topic, so the ping reaches Discord as well as this
+#    page; the dispatcher dedupes by title within a day. --
+PROJECTS_JSON=$(TRACKER_URL="${TRACKER_URL:-http://127.0.0.1:8765}" WAIT_DAYS="${PROJECT_WAIT_DAYS:-7}" timeout 30 node "${AGENT_DIR}/gather-projects.mjs" 2>>"${LOG_FILE}" || echo '{}')
+echo "${PROJECTS_JSON}" | jq empty 2>/dev/null || PROJECTS_JSON='{}'
+PROJECT_ALERTS=$(echo "${PROJECTS_JSON}" | jq -c '
+  [ (if (.counts.overdue // 0) > 0 then {level:"warning",section:"projects",
+      message:"\(.counts.overdue) project(s) past their review date: \(.overdue | map(.title) | join(", "))"} else empty end),
+    (if (.counts.waits // 0) > 0 then {level:"warning",section:"projects",
+      message:"\(.counts.waits) project(s) waiting on you for 7+ days: \(.waits | map("\(.title) (\(.days)d)") | join(", "))"} else empty end),
+    (if (.cap.over // false) then {level:"warning",section:"projects",
+      message:"\(.cap.products) live products exceed the cap of \(.cap.limit); park or finish one"} else empty end) ]' 2>/dev/null || echo '[]')
+ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq --argjson a "${PROJECT_ALERTS}" '. + $a' 2>/dev/null || echo "${ALERTS_JSON}")
+echo "${ALERTS_JSON}" | jq empty 2>/dev/null || ALERTS_JSON='[]'
+if [ "$(echo "${PROJECTS_JSON}" | jq -r '.actionable // false')" = true ] && [ -n "${HWC_NOTIFY_URL:-}" ]; then
+  NOTIFY_PAYLOAD=$(echo "${PROJECTS_JSON}" | jq -c --arg day "$(date +%F)" '
+    {topic:"projects", title:"[tracker] \($day) projects digest", priority:3, source:"morning-briefing", tags:["tracker"],
+     body:(([ (.overdue[] | "overdue \(.days)d: \(.title)"),
+             (.waits[] | "waiting on you \(.days)d: \(.title) — \(.ask)"),
+             (.expiring[] | "card expires in \(.daysLeft)d: \(.title) \(.card)"),
+             (if .cap.over then "\(.cap.products) live products over the cap of \(.cap.limit)" else empty end) ]
+           | .[:10] | join("\n")) + "\n" + .url)}')
+  curl -fsS --max-time 10 -X POST -H 'content-type: application/json' -d "${NOTIFY_PAYLOAD}" "${HWC_NOTIFY_URL}/notify" >/dev/null 2>>"${LOG_FILE}" \
+    || log "WARN: projects digest notification failed"
+fi
+
 # -- research: research-scout's review lane. How many articles wait for Eric to
 #    read, the top few, and the standing themes report over the takeaways he has
 #    already written. Loopback REST to the unified server (:8422/api/<tool>) —
@@ -555,7 +584,8 @@ if jq -n \
   --argjson backup "${BACKUP_JSON}" \
   --argjson refinery "${REFINERY_JSON}" \
   --argjson agents "${AGENTS_JSON}" \
-  --argjson research "${RESEARCH_JSON}" '
+  --argjson research "${RESEARCH_JSON}" \
+  --argjson projects "${PROJECTS_JSON}" '
   {
     generated_at: $now,
     sections: {
@@ -581,6 +611,7 @@ if jq -n \
       refinery: $refinery,
       agents: $agents,
       research: $research,
+      projects: $projects,
       website: $website,
       weather: $weather,
       comms: { source: "none", items: [] },
