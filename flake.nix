@@ -2155,14 +2155,17 @@
             archive = context / package['file']
             assert 'sha256-' + base64.b64encode(hashlib.sha256(archive.read_bytes()).digest()).decode() == package['hash'], 'context archive drift'
             assert recipe.count('/tmp/hwc-seerr/' + package['file']) == 2, 'native input bypasses verify or install'
-        assert set(manifest['advisories']) == {'GHSA-mc6w-69r3-62h8', 'GHSA-8j73-j6rc-q8xh', 'GHSA-xc6j-6p6h-p799'}
-        assert set(manifest['backports']) == {'dist/lib/imageproxy.js', 'dist/entity/User.js', 'dist/entity/Media.js', 'dist/routes/auth.js', 'dist/routes/movie.js', 'dist/routes/tv.js'}, 'schema or unrelated app change'
+        assert set(manifest['advisories']) == {'GHSA-mc6w-69r3-62h8', 'GHSA-8j73-j6rc-q8xh', 'GHSA-xc6j-6p6h-p799', 'GHSA-c4j6-fc7j-m34r'}
+        assert set(manifest['backports']) == {'dist/lib/imageproxy.js', 'dist/entity/User.js', 'dist/entity/Media.js', 'dist/routes/auth.js', 'dist/routes/movie.js', 'dist/routes/tv.js', 'node_modules/next/dist/server/lib/router-server.js'}, 'schema or unrelated app change'
+        next_spec = manifest['backports']['node_modules/next/dist/server/lib/router-server.js']
+        assert next_spec['patchedSha256'] == 'bf28825f0722216ac23dfdee8fa74f594867996d48fbadc592427a3f6eb49f6c', 'Next upstream routing repair missing'
+        assert len(next_spec['replacements']) == 2
         for spec in manifest['backports'].values():
             assert len(spec['sourceSha256']) == len(spec['patchedSha256']) == 64 and spec['sourceSha256'] != spec['patchedSha256']
             assert spec['replacements'] and all(len(pair) == 2 and pair[0] != pair[1] for pair in spec['replacements'])
         assert 'SEERR_BACKPORT_SOURCE_MISMATCH' in patcher and 'SEERR_BACKPORT_RESULT_MISMATCH' in patcher and 'SEERR_BACKPORT_HUNK_MISMATCH' in patcher
         subprocess.run(['node', '--check', str(context / 'apply-backports.cjs')], check=True)
-        print('production image, base parity, six-file security context and app-owned permission wiring pass')
+        print('production image, base parity, app and Next security context and app-owned permission wiring pass')
         PYTEST
         touch "$out"
       '';

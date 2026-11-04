@@ -46,7 +46,7 @@ media/
 ├── navidrome-container/     # Navidrome music server (container)
 ├── navidrome-native/        # Navidrome music server (native NixOS)
 ├── audiobookshelf/          # Pinned app/supported Node recipe, config path and Borg recovery registration
-├── jellyseerr/              # Media requests; upstream fixes, signed native updates and private config
+├── jellyseerr/              # Media requests; app/Next routing fixes, signed native updates and private config
 │
 ├── sonarr/                  # TV show management
 ├── radarr/                  # Movie management
@@ -92,6 +92,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-03: Backport Next WebSocket routing checks to Seerr so only completed external rewrites can proxy upgrades. Bind the exact dependency source and result without changing the app schema.
 
 - 2026-11-03: Add five fixed-hash, vendor-signed Alpine 3.22 native updates:
   OpenSSL 3.5.9, musl 1.2.5-r13 and zlib 1.3.2-r1. The offline image build
