@@ -9,6 +9,8 @@
 
 ## Structure
 
+`verification/` contains pure flake checks for this capability; production modules do not import it.
+
 Native Scout services register their own peer role/database with the data capability and consume its PGHOST/PGPORT/PGUSER environment. Main services, approval bots and ingest timers wait for PostgreSQL setup; application schemas remain Scout-owned.
 
 The Scout member runtime preserves app51a6a0eb while pinning ChromeStable156.0.8078.79, Playwright/core1.64.1, shell-quote1.11.0, proxy-addr2.0.8 and fixed Debian archives. Its existing index holds the package catalog; the sibling snapshot helper remains the paired SQL/profile owner. Build the exported context offline before adoption; the startup image-ID guard still applies. Old/new/restored profile and database checks protect saved authentication.
@@ -104,6 +106,8 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+
+- 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 - 2026-11-03: Bind native Scout SQL clients to explicit OS-peer sockets across postgres.js, MCP node-postgres and Python ingest; order every active client after role setup.
 
 - 2026-11-02: Replace the stale Scout member browser and affected libraries through fixed-hash offline inputs. Preserve compiled app/Node, current data, the public trust policy and guarded compose adoption; delete old browser fallbacks.
