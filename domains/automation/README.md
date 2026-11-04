@@ -102,6 +102,8 @@ workspace/automation/
 
 ## Changelog
 
+- 2026-11-04: Limit the workflow-secret scanner source to its canonical tool and tracked exports; exclude unrelated repository files.
+
 - 2026-11-04: Execute the generated morning-review wrapper against isolated CLI/notification ports, replacing its exact-source test. Cover silence, decisions, errors and a removed-gate mutation.
 
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.

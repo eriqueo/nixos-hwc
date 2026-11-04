@@ -27,8 +27,8 @@ previous=$(git rev-parse --symbolic-full-name '@{-1}' 2>/dev/null)
 echo >&2
 echo "post-checkout: the primary checkout must stay on a branch." >&2
 echo "Services read this checkout at runtime, so deploy from main here:" >&2
-echo "  git -C <worktree> rebase origin/main && git merge --ff-only <branch>" >&2
-echo "  sudo nixos-rebuild switch --flake .#hwc-<host>" >&2
+echo "  git -C <worktree> rebase origin/main" >&2
+echo "  python3 workspace/nixos-dev/verification/release.py deploy --candidate <branch>" >&2
 case "$previous" in
   refs/heads/*)
     if git checkout -q "${previous#refs/heads/}"; then

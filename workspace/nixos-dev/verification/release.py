@@ -120,6 +120,17 @@ def release_lock(repo):
 
 def verify(repo, candidate, target, lane, full=False, nix_args=()):
     token = snapshot(repo, candidate, lane)
+    if lane == 'home':
+        baseline = active_revision('system')
+        if not baseline:
+            raise ValueError('Cannot establish pending system changes; use the system lane')
+        pending = git(repo, 'diff', '--name-only', revision(repo, baseline), candidate).splitlines()
+        for path in pending:
+            home_only = (path.startswith('domains/home/')
+                         or (path.startswith(('profiles/', 'machines/')) and path.endswith('/home.nix'))
+                         or path.endswith('.md'))
+            if not home_only:
+                raise ValueError('Pending system or mixed change requires the system lane: ' + path)
     source = uri(repo, candidate)
     inventory = inventory_for(source)
     names, reason = select(inventory, None if full else changed(repo, candidate, [token[1], token[4]]))

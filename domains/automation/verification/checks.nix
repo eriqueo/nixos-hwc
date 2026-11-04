@@ -158,10 +158,19 @@ in pkgs.runCommand "nightly-review-silent" {
 # git through a hand-pasted export. The rule table lives in the tool, not
 # here — one producer — and is exercised by
 # workspace/automation/test_n8n_workflow_export.py.
-n8n-workflow-secret-literals = pkgs.runCommand "n8n-workflow-secret-literals" {
+n8n-workflow-secret-literals = let
+  src = lib.fileset.toSource {
+    root = repoRoot;
+    fileset = lib.fileset.unions [
+      (repoRoot + "/workspace/automation/n8n-workflow-export.py")
+      (repoRoot + "/domains/automation/n8n/parts/workflows")
+    ];
+  };
+in pkgs.runCommand "n8n-workflow-secret-literals" {
+  inherit src;
   nativeBuildInputs = [ pkgs.python3 ];
 } ''
-  cd ${self}
+  cd "$src"
   python3 workspace/automation/n8n-workflow-export.py \
     scan --dir domains/automation/n8n/parts/workflows
   touch $out

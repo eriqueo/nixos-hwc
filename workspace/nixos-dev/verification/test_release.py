@@ -1,7 +1,9 @@
 import json
+import os
 from pathlib import Path
 import socket
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -69,11 +71,17 @@ class ReleaseContract(unittest.TestCase):
         self.assertIsNone(release.changed(self.repo, release.revision(self.repo, 'HEAD'), [self.candidate]))
 
     def test_failed_required_build_cannot_move_main(self):
-        with patch.object(release, 'active_revision', return_value=self.base), \
-             patch.object(release, 'inventory_for', return_value=INVENTORY), \
-             patch.object(release, 'build_checks', side_effect=subprocess.CalledProcessError(1, ['nix'])):
-            with self.assertRaises(subprocess.CalledProcessError):
-                release.release(self.repo, self.candidate, socket.gethostname(), 'system', 'merge')
+        with tempfile.TemporaryDirectory() as temp:
+            nix = Path(temp) / 'nix'
+            nix.write_text(f'#!{sys.executable}\nimport sys\n'
+                           f'if sys.argv[1] == "eval": print({json.dumps(INVENTORY)!r})\n'
+                           'else: sys.exit(17)\n')
+            nix.chmod(0o755)
+            with patch.object(release, 'active_revision', return_value=self.base), \
+                 patch.dict(os.environ, PATH=temp + ':' + os.environ['PATH']):
+                with self.assertRaises(subprocess.CalledProcessError) as failure:
+                    release.release(self.repo, self.candidate, socket.gethostname(), 'system', 'merge')
+                self.assertEqual(failure.exception.returncode, 17)
         self.assertEqual(release.revision(self.repo, 'main'), self.base)
         self.assertEqual(release.revision(self.repo, 'HEAD'), self.base)
 
@@ -93,6 +101,16 @@ class ReleaseContract(unittest.TestCase):
                 release.release(self.repo, self.candidate, socket.gethostname(), 'system', 'merge')
             self.assertEqual(verify.call_args.args[1], self.candidate)
         self.assertEqual(release.revision(self.repo, 'main'), self.base)
+
+    def test_home_lane_cannot_skip_pending_system_changes(self):
+        self.git('checkout', 'feature')
+        (self.repo / 'flake.lock').write_text('{}')
+        self.git('add', '--', 'flake.lock')
+        self.git('commit', '-m', 'system input')
+        candidate = release.revision(self.repo, 'HEAD')
+        with patch.object(release, 'active_revision', return_value=self.base):
+            with self.assertRaisesRegex(ValueError, 'system or mixed'):
+                release.verify(self.repo, candidate, socket.gethostname(), 'home')
 
 
 if __name__ == '__main__':

@@ -450,6 +450,18 @@ assert_contains "--no-switch still commits" \
   "$(git -C "$REPO" show --name-only --pretty=format: HEAD)" "domains/home/apps/fixtureapp/index.nix"
 
 echo
+echo "CASE 11 — local activation routes through the release gate and propagates failure"
+OUT11=$(bash -c '
+  source "$1"
+  REPO_ROOT="$2"
+  current_hostname() { printf "hwc-fixturehost"; }
+  python3() { printf "GATED %s\n" "$*"; return 17; }
+  activate_home hwc-fixturehost true true
+' _ "$SUT" "$REPO" 2>&1); RC11=$?
+assert_eq "release gate failure blocks app activation" "1" "$RC11"
+assert_contains "actual scaffold activation calls release gate" "$OUT11" \
+  "verification/release.py deploy --repo $REPO --lane home --target hwc-fixturehost"
+
 echo "-----------------------------------------------------------------"
 printf 'passed: %d   failed: %d\n' "$PASS" "$FAIL"
 if (( FAIL > 0 )); then

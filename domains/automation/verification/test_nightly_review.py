@@ -13,10 +13,10 @@ with tempfile.TemporaryDirectory() as temp:
     bin_dir = root / 'bin'
     bin_dir.mkdir()
     cli = bin_dir / 'review'
-    cli.write_text('#!/usr/bin/env python3\nimport os, sys\nprint(os.environ["SUMMARY"])\n'
+    cli.write_text(f'#!{sys.executable}\nimport os, sys\nprint(os.environ["SUMMARY"])\n'
                    'print("human log", file=sys.stderr)\nsys.exit(int(os.environ["REVIEW_EXIT"]))\n')
     curl = bin_dir / 'curl'
-    curl.write_text('#!/usr/bin/env python3\nimport json, os, sys\n'
+    curl.write_text(f'#!{sys.executable}\nimport json, os, sys\n'
                     'with open(os.environ["EFFECTS"], "a") as f: f.write(json.dumps(sys.argv[1:])+"\\n")\n')
     for path in (cli, curl):
         path.chmod(0o755)
