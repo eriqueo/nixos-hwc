@@ -56,8 +56,11 @@ Selection is conservative: traced Waybar leaf changes select home/keymap/mail
 consumers plus governance/shared contracts; changes confined to an existing
 verification owner select that owner. Other configuration changes, locks, shared
 inputs, additions, deletions and unknown deployed revisions run the full suite.
-Standalone Home Manager has no known source revision, so its gate runs the full
-suite. Results exist only inside one invocation, bound to candidate, target and
+Standalone Home Manager records a versioned revision receipt only after successful
+activation and an exact current-home generation match. Unknown, failed, malformed
+or changed-generation receipts run the full suite. The replaceable receipt lives at
+`~/.local/state/hwc-release/home.json`; removing it restores conservative selection.
+Results exist only inside one invocation, bound to candidate, target and
 lane; changed main or active generations require verification again.
 
 Direct Git merges and direct rebuild commands bypass this supported local gate.

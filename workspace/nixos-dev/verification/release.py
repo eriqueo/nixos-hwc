@@ -4,10 +4,13 @@ import argparse
 from contextlib import contextmanager
 import fcntl
 import json
+import os
 from pathlib import Path
+import re
 import socket
 import subprocess
 import sys
+import tempfile
 
 
 def run(args, cwd=None):
@@ -27,10 +30,66 @@ def clean(repo):
         raise ValueError('Commit explicitly staged changes first; the checkout must be clean')
 
 
-def active_revision(lane):
-    # Standalone HM has its own generation; NixOS revision cannot identify it.
-    if lane == 'home':
+def home_receipt(home):
+    # AUTO-MANAGED: one replaceable <=4 KiB receipt; full checks rebuild trust.
+    return home / '.local/state/hwc-release/home.json'
+
+
+def home_generation(home):
+    return tuple(str((home / path).resolve()) for path in (
+        '.local/state/home-manager/gcroots/current-home',
+        '.local/state/nix/profiles/home-manager', '.nix-profile'))
+
+
+def home_revision(home, target):
+    try:
+        path = home_receipt(home)
+        with path.open() as stream:
+            raw = stream.read(4097)
+        if len(raw) > 4096:
+            return None
+        data = json.loads(raw)
+        if (not isinstance(data, dict) or data.get('schemaVersion') != 1
+                or data.get('target') != target or data.get('lane') != 'home'
+                or not isinstance(data.get('revision'), str)
+                or not re.fullmatch(r'[0-9a-f]{40}', data['revision'])
+                or data.get('generation') != list(home_generation(home))):
+            return None
+        pointer = home / '.local/state/home-manager/gcroots/current-home'
+        if not pointer.is_symlink() or not pointer.resolve(strict=True).is_dir():
+            return None
+        return data['revision']
+    except (OSError, ValueError, RuntimeError):
         return None
+
+
+def activate_home(output, candidate, target, home):
+    receipt = home_receipt(home)
+    # Non-retried activation may partly succeed. Never retain old trust on failure.
+    receipt.unlink(missing_ok=True)
+    subprocess.run([output + '/activate'], check=True)
+    pointer = home / '.local/state/home-manager/gcroots/current-home'
+    if not pointer.is_symlink() or pointer.resolve(strict=True) != Path(output).resolve(strict=True):
+        raise ValueError('Home Manager did not publish the expected current-home generation')
+    data = {'schemaVersion': 1, 'target': target, 'lane': 'home',
+            'revision': candidate, 'generation': home_generation(home)}
+    receipt.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', dir=receipt.parent, prefix='.home-', delete=False) as stream:
+            temporary = Path(stream.name)
+            json.dump(data, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, receipt)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def active_revision(lane):
+    if lane == 'home':
+        return home_revision(Path.home(), socket.gethostname())
     try:
         return json.loads(run(['nixos-version', '--json']))['configurationRevision'] or None
     except (OSError, subprocess.CalledProcessError, KeyError, json.JSONDecodeError):
@@ -38,9 +97,8 @@ def active_revision(lane):
 
 
 def generation(lane):
-    paths = ([Path('/run/current-system')] if lane == 'system' else
-             [Path.home() / '.local/state/nix/profiles/home-manager', Path.home() / '.nix-profile'])
-    return tuple(str(path.resolve()) for path in paths)
+    return ((str(Path('/run/current-system').resolve()),) if lane == 'system'
+            else home_generation(Path.home()))
 
 
 def changed(repo, candidate, baselines):
@@ -167,7 +225,7 @@ def release(repo, candidate, target, lane, action, full=False, nix_args=()):
         if lane == 'home':
             if action != 'switch':
                 raise ValueError('Standalone Home Manager supports switch only')
-            subprocess.run([output + '/activate'], check=True)
+            activate_home(output, candidate, target, Path.home())
         else:
             subprocess.run(['sudo', 'env', 'HOME=/root', 'nixos-rebuild', action,
                             '--flake', uri(repo, candidate) + '#' + target, *nix_args], check=True)
