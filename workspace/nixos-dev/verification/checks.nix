@@ -6,7 +6,7 @@ local-release-wiring = let
     (lib.attrValues self.nixosConfigurations)
     ++ map (home: home.config) (lib.attrValues self.homeConfigurations);
   gated = home: let init = home.programs.zsh.initContent; in
-    lib.hasInfix "verification/release.py\" deploy" init
+    builtins.length (lib.splitString "verification/release.py\" deploy" init) == 3
     && lib.hasInfix "--lane system --action" init
     && lib.hasInfix "--lane home" init
     && !(lib.hasInfix "sudo env HOME=/root nixos-rebuild" init)
