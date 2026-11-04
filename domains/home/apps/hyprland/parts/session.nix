@@ -22,9 +22,8 @@
   xcursorName = xc.name or "Adwaita";
   hyprcursorName = hc.name or xcursorName;
 
-  hyprcursorSource =
-    if (hc ? assetPathRel)
-    then ../../.. + "/${hc.assetPathRel}"
+  hyprcursorSource = if hc ? name
+    then "${pkgByName (hc.package or (xc.package or "adwaita-icon-theme"))}/share/icons/${hyprcursorName}"
     else null;
 
   #============================================================================

@@ -11,6 +11,7 @@ token sets, GTK/Qt theming, fonts, and pointer cursor.
   token set themselves (see canonical accessor below).
 
 ## Structure
+Desktop wiring preserves mouse flags, uses packaged native cursor assets, and excludes virtual displays from bars and linked workspace selection. Waybar forwards reload to its child and cleans its generated configuration.
 ```
 theme/
 ├── index.nix        # Options + palette materialization + qt platform theme
@@ -37,6 +38,7 @@ There is no separate "adapters" layer — that design was never built; the
 former README describing it was aspirational.
 
 ## Changelog
+- 2026-11-04: Repair declarative desktop cursor, mouse bindings, physical-output selection and Waybar reload supervision; extend generated desktop checks.
 - 2026-09-24: Default dconf activation to `theme.graphical`, preserving file-based GTK settings while avoiding desktop D-Bus writes on headless hosts. Fixes first activation of `hwc-work` without a dconf service.
 - 2026-09-02: Explicitly enable `home.pointerCursor` on graphical hosts,
   preserving the existing cursor output without Home Manager's deprecated

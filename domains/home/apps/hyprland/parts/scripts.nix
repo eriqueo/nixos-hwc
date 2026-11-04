@@ -219,7 +219,7 @@ with pkgs;
     # Linked mode: sync the other monitor to the same slot
     if [[ -f "$STATE_FILE" ]]; then
       MONITORS=$(${hyprland}/bin/hyprctl monitors -j)
-      EXTERNAL=$(echo "$MONITORS" | ${jq}/bin/jq -r '.[] | select(.name | test("^(eDP|LVDS)") | not) | .name' | head -1)
+      EXTERNAL=$(echo "$MONITORS" | ${jq}/bin/jq -r '.[] | select(.make != "" and (.name | test("^(eDP|LVDS)") | not)) | .name' | head -1)
       if [[ -z "$EXTERNAL" ]]; then
         exit 0  # Single monitor — nothing to sync
       fi

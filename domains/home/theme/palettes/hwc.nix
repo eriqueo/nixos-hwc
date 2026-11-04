@@ -156,7 +156,6 @@
 
     hyprcursor = {
       name         = "Nordzy-hyprcursors";
-      assetPathRel = "modules/home/theme/assets/cursors/Nordzy-hyprcursors";
     };
   };
 }

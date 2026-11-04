@@ -53,10 +53,10 @@ let
     else if lib.elem name [ "fullscreen" "pseudo" "pin" ] then "hl.dsp.window.${name}()"
     else if name == "exit" then "hl.dsp.exit()"
     else throw "Unmapped Hyprland dispatcher: ${name}";
-  binding = repeating: value:
+  binding = repeating: mouse: value:
     let xs = split value; mods = lib.head xs; key = builtins.elemAt xs 1;
     in { _args = [ ((lib.optionalString (mods != "") (lib.replaceStrings [ " " ] [ " + " ] mods + " + ")) + key)
-      (raw (dispatch (lib.concatStringsSep "," (lib.drop 2 xs)))) { inherit repeating; } ]; };
+      (raw (dispatch (lib.concatStringsSep "," (lib.drop 2 xs)))) { inherit repeating mouse; } ]; };
   rule = value:
     lib.foldl' (acc: field:
       let pair = lib.splitString " " field; key = lib.head pair;
@@ -82,7 +82,8 @@ let
         in { colors = lib.take 2 parts; angle = lib.toInt (lib.removeSuffix "deg" (builtins.elemAt parts 2)); };
       };
     };
-    bind = map (binding false) ((legacySettings.bind or []) ++ (legacySettings.bindm or []));
+    bind = map (binding false false) (legacySettings.bind or [])
+      ++ map (binding false true) (legacySettings.bindm or []);
     window_rule = map rule (legacySettings.windowrule or []);
     layer_rule = map rule (legacySettings.layerrule or []);
     monitor = map (value: let xs = split value; in {
@@ -245,8 +246,8 @@ in
       configType = "lua";
       importantPrefixes = [ "config" "curve" ];
       submaps = lib.mapAttrs (_: submap: {
-        settings.bind = map (binding false) (submap.settings.bind or [])
-          ++ map (binding true) (submap.settings.binde or []);
+        settings.bind = map (binding false false) (submap.settings.bind or [])
+          ++ map (binding true false) (submap.settings.binde or []);
       }) behavior.submaps;
       settings = luaSettings;
     };
