@@ -82,24 +82,51 @@ with pkgs;
   #============================================================================
   # MONITOR TOGGLE - Switch external monitor position (left/right)
   #============================================================================
+  # No argument: flip the external screen's side and remember it for that screen
+  # (keyed by its EDID description, so each desk keeps its own side).
+  # `apply`: restore the remembered side (default right, the config default).
+  # hyprland-monitor-listener runs it after config reloads, which discard
+  # runtime monitor rules, and after hotplugs.
   (writeShellScriptBin "hyprland-monitor-toggle" ''
     #!/usr/bin/env bash
     set -euo pipefail
 
+    MODE="''${1:-toggle}"
+    if [[ "$MODE" != toggle && "$MODE" != apply ]]; then
+      echo "usage: hyprland-monitor-toggle [apply]" >&2
+      exit 64
+    fi
+    STATE_DIR="''${XDG_STATE_HOME:-$HOME/.local/state}/hypr/external-side"
+
     # Get monitor data once
     MONITOR_DATA=$(${hyprland}/bin/hyprctl monitors -j)
 
-    # Identify laptop and external monitors
-    LAPTOP=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r '.[] | select(.name | test("eDP|LVDS")) | .name' | head -1)
-    EXTERNAL=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r '.[] | select(.name | test("eDP|LVDS") | not) | .name' | head -1)
+    # Identify laptop and external monitors. Physical outputs only: headless
+    # outputs (the HWC-GAME stream capture) report no make.
+    LAPTOP=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r '.[] | select(.make != "" and (.name | test("eDP|LVDS"))) | .name' | head -1)
+    EXTERNAL=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r '.[] | select(.make != "" and (.name | test("eDP|LVDS") | not)) | .name' | head -1)
 
-    if [[ -z "$EXTERNAL" ]]; then
+    if [[ -z "$EXTERNAL" || -z "$LAPTOP" ]]; then
+      [[ "$MODE" == apply ]] && exit 0
       ${libnotify}/bin/notify-send "Monitor" "No external monitor detected" -t 2000 -i display
       exit 1
     fi
 
-    # Get current laptop position
+    DESCRIPTION=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$EXTERNAL\") | .description")
+    STATE="$STATE_DIR/$(printf '%s' "$DESCRIPTION" | ${coreutils}/bin/tr -c 'A-Za-z0-9._-' '_')"
+
+    # The laptop at x=0 means the external screen is currently on the right.
     LAPTOP_POS=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | .x")
+    if [[ $LAPTOP_POS -eq 0 ]]; then CURRENT=right; else CURRENT=left; fi
+    if [[ "$MODE" == apply ]]; then
+      SIDE=$(${coreutils}/bin/cat "$STATE" 2>/dev/null || echo right)
+      [[ "$SIDE" == left ]] || SIDE=right
+      [[ "$SIDE" == "$CURRENT" ]] && exit 0
+    elif [[ "$CURRENT" == right ]]; then
+      SIDE=left
+    else
+      SIDE=right
+    fi
 
     # Get monitor specs (resolution@refresh,position,scale)
     LAPTOP_SPEC=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | \"\(.width)x\(.height)@\(.refreshRate | floor)\"")
@@ -111,14 +138,18 @@ with pkgs;
     LAPTOP_WIDTH=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | (.width / .scale | floor)")
     EXTERNAL_WIDTH=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$EXTERNAL\") | (.width / .scale | floor)")
 
-    if [[ $LAPTOP_POS -eq 0 ]]; then
-      # Laptop is on left, move external to left (apply both rules in one Lua request)
+    if [[ "$SIDE" == left ]]; then
+      # Move external to left (apply both rules in one Lua request)
       ${hyprland}/bin/hyprctl eval "hl.monitor({output='$EXTERNAL',mode='$EXTERNAL_SPEC',position='0x0',scale=$EXTERNAL_SCALE}); hl.monitor({output='$LAPTOP',mode='$LAPTOP_SPEC',position='$((EXTERNAL_WIDTH))x0',scale=$LAPTOP_SCALE})"
-      ${libnotify}/bin/notify-send "Monitor" "External on left" -t 1500 -i display
     else
-      # Laptop is on right, move external to right
+      # Move external to right
       ${hyprland}/bin/hyprctl eval "hl.monitor({output='$LAPTOP',mode='$LAPTOP_SPEC',position='0x0',scale=$LAPTOP_SCALE}); hl.monitor({output='$EXTERNAL',mode='$EXTERNAL_SPEC',position='$((LAPTOP_WIDTH))x0',scale=$EXTERNAL_SCALE})"
-      ${libnotify}/bin/notify-send "Monitor" "External on right" -t 1500 -i display
+    fi
+
+    if [[ "$MODE" == toggle ]]; then
+      ${coreutils}/bin/mkdir -p "$STATE_DIR"
+      printf '%s\n' "$SIDE" > "$STATE.new" && ${coreutils}/bin/mv "$STATE.new" "$STATE"
+      ${libnotify}/bin/notify-send "Monitor" "External on $SIDE" -t 1500 -i display
     fi
 
     # Restart waybar to pick up monitor changes

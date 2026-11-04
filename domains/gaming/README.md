@@ -30,6 +30,10 @@ Eden input settings, private pairing migration, client provisioning and backup.
 streaming does not change the laptop's normal audio default. Sunshine captures
 with wlroots and encodes with Intel VAAPI; Eden uses Vulkan. Streamed keyboard
 and mouse input are disabled. Native dialogs stay on the streaming output.
+Workspace 99 is Eden-only: while the listener runs, `stream.py` follows
+Hyprland's event socket, returns any other window to the focused desktop
+workspace, and reapplies the output position (`10000x0`, off the real screens'
+edge) and rules after each config reload, which otherwise discards them.
 The game launcher cycles X11 logical focus on each return to the library, since
 Eden can remain inactive in Qt while X11 still names its main window as focused.
 This restores D-pad navigation after stopping a game. It preserves valid
@@ -145,6 +149,7 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+- 2026-11-04: Keep streaming workspace 99 Eden-only and reapply the off-screen `HWC-GAME` position after Hyprland reloads; a reload had placed it beside the laptop screen, where app windows became unreachable.
 - 2026-11-04: Migrate desktop helper and laptop streaming calls to Lua IPC, including startup on a fresh workspace.
 
 - 2026-11-02: Accept current Sunshine libvirtualhid identities in readiness and the Xvfb input bridge, using one guarded discovery path.
