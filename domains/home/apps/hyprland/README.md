@@ -33,6 +33,7 @@ Every binding is declared **once** in `parts/behavior.nix`, as a record carrying
 It is deliberately *not* read from `hyprctl binds -j`: that API emits malformed JSON in Hyprland 0.56.0 (keys and values misaligned — `"keycode": RETURN`, `"allow_input_capture": ,`), and carries no descriptions, so the best it could ever print is `exec hyprland-monitor-toggle`.
 
 ## Changelog
+- 2026-11-04: Keep monitor-position arithmetic in the shell when rendering Lua IPC commands.
 - 2026-11-04: Migrate desktop helper and laptop streaming calls to Lua IPC, including startup on a fresh workspace.
 - 2026-11-04: Generate Lua for Hyprland 0.57 while preserving settings, keybindings, resize exits, rules and startup hooks; validate the generated file with the actual parser.
 

@@ -164,6 +164,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-04: Keep monitor-position arithmetic in the shell when rendering Lua IPC commands.
 - 2026-11-04: Migrate desktop helper and laptop streaming calls to Lua IPC, including startup on a fresh workspace.
 - 2026-11-04: Generate Lua for Hyprland 0.57 while preserving settings, keybindings, resize exits, rules and startup hooks; validate the generated file with the actual parser.
 

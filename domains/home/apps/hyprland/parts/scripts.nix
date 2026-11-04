@@ -112,12 +112,12 @@ with pkgs;
     EXTERNAL_WIDTH=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$EXTERNAL\") | (.width / .scale | floor)")
 
     if [[ $LAPTOP_POS -eq 0 ]]; then
-      # Laptop is on left, move external to left (use --batch for atomic change)
-      ${hyprland}/bin/hyprctl eval "hl.monitor({output='$EXTERNAL',mode='$EXTERNAL_SPEC',position='0x0',scale=$EXTERNAL_SCALE}); hl.monitor({output='$LAPTOP',mode='$LAPTOP_SPEC',position='''${EXTERNAL_WIDTH}x0',scale=$LAPTOP_SCALE})"
+      # Laptop is on left, move external to left (apply both rules in one Lua request)
+      ${hyprland}/bin/hyprctl eval "hl.monitor({output='$EXTERNAL',mode='$EXTERNAL_SPEC',position='0x0',scale=$EXTERNAL_SCALE}); hl.monitor({output='$LAPTOP',mode='$LAPTOP_SPEC',position='$((EXTERNAL_WIDTH))x0',scale=$LAPTOP_SCALE})"
       ${libnotify}/bin/notify-send "Monitor" "External on left" -t 1500 -i display
     else
       # Laptop is on right, move external to right
-      ${hyprland}/bin/hyprctl eval "hl.monitor({output='$LAPTOP',mode='$LAPTOP_SPEC',position='0x0',scale=$LAPTOP_SCALE}); hl.monitor({output='$EXTERNAL',mode='$EXTERNAL_SPEC',position='''${LAPTOP_WIDTH}x0',scale=$EXTERNAL_SCALE})"
+      ${hyprland}/bin/hyprctl eval "hl.monitor({output='$LAPTOP',mode='$LAPTOP_SPEC',position='0x0',scale=$LAPTOP_SCALE}); hl.monitor({output='$EXTERNAL',mode='$EXTERNAL_SPEC',position='$((LAPTOP_WIDTH))x0',scale=$EXTERNAL_SCALE})"
       ${libnotify}/bin/notify-send "Monitor" "External on right" -t 1500 -i display
     fi
 
@@ -172,7 +172,7 @@ with pkgs;
     SLOT="''${1:?slot required (1-8)}"
     STATE_FILE="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc-workspace-link"
 
-    # Capture focused monitor before any dispatch (hyprsome may shift state)
+    # Capture focused monitor before any dispatch
     FOCUSED=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r '.[] | select(.focused) | .name')
 
     # Always switch current monitor normally
