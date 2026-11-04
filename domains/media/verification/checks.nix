@@ -518,6 +518,8 @@ in pkgs.runCommand "seerr-security-wiring" { nativeBuildInputs = [ pkgs.python3 
   assert not wired(recipe.replace('COPY --from=dependency-builder --chown=node:node /app/node_modules /app/node_modules', "")), 'runtime copy seed did not fail'
   assert '--frozen-lockfile' in builder and '--ignore-scripts' in builder and "['--prod','--offline']" in builder
   assert 'SEERR_NATIVE_SOURCE' in builder and 'SEERR_NATIVE_ABI' in builder and 'SEERR_MAIL_TYPE_PATCH' in builder
+  assert 'build.cjs strip-tools /app /tmp/hwc-seerr-native' in recipe
+  assert 'ENV NODE_ENV=production' in recipe and 'CMD ["node", "dist/index.js"]' in recipe
   subprocess.run(['node', '--check', str(context / 'dependencies/build.cjs')], check=True)
   print('production image, base parity, app and Next security context and app-owned permission wiring pass')
   PYTEST
