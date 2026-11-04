@@ -1,19 +1,21 @@
 # claude-code
 
 ## Purpose
-Installs the Claude Code CLI (Nix package + Obsidian MCP cert trust) and, independently, symlinks the shared `~/.claude-config` git repo (skills/agents/commands/CLAUDE.md/engineering-principles.md) into `~/.claude/` so all hosts share one config. Enable via `hwc.home.apps.claude-code.enable`; `shareConfig.enable` can be turned on standalone (e.g. hwc-server, which runs claude from npm).
+Owns Claude Code CLI installation through `hwc.home.apps.claude-code.enable`. The base role enables the Nix package; the laptop selects its existing self-updating native installation. Obsidian certificate trust is a separate opt-in. Shared configuration belongs to the agent-harness module; the disabled legacy `shareConfig` interface remains available.
 
 ## Boundaries
 - ✅ `pkgs.claude-code`, `NODE_EXTRA_CA_CERTS` pointing at the Obsidian Local REST API cert, `mkOutOfStoreSymlink` links for `shareConfig.items`, optional `claude-config-pull` user service+timer (ff-only pull, default 15min), append-only self-heal of the gate-hook entries into `~/.claude/settings.json` at activation (`shareConfig.wireGateHooks`).
 - ❌ Does not manage the claude-config repo contents or clone it; does not touch host-local `~/.claude/{plans,docs,memory}`; never auto-commits/pushes the config repo; never edits or removes existing settings.json entries (heal is append-only — Claude Code stays the file's primary writer).
 
 ## Structure
+The `index.nix` installation selector accepts `nix` or `native`. Native mode adds `~/.local/bin` to the session path and installs no Nix CLI. `obsidianCert.enable` controls the local certificate independently. Generic shell and system bundles no longer install Claude.
 - `index.nix` — options (`enable`, `shareConfig.{enable,repoPath,items,extraConfigDirs,sync,wireGateHooks}`), Claude package + cert var, symlink generation, memory-link activation, two-way sync service + timer, settings.json gate-hook heal activation (fourteen entries), assertions.
 - `config-sync.sh` — `claude-config-sync link|sync`: moves real per-project memory dirs into `~/.claude-config/projects/<slug>/memory` and links them back into every config dir; commits only `MISTAKES.md` and `projects/*/memory`; merges the hub without autostash; keeps both versions of a conflicting memory file; pushes; runs `sync.postMerge`.
 - `config-sync.test.sh` — fixture test for `config-sync.sh` against throwaway hub clones (22 cases).
 - `settings-heal.jq`, `settings-heal.test.sh` — settings.json heal filter and its fixture test.
 
 ## Changelog
+- 2026-11-04: Make this app the CLI installation owner; preserve native laptop updates and opt-in Obsidian trust. Stable hosts backport from the existing unstable channel after retiring the stale dedicated input.
 
 - 2026-10-25: `pkgs.claude-code` on the stable-channel machines is now the unstable backport. No change in this directory — the fix is in `flake.nix`/`overlays/claude-code.nix` — but it changes which build this module installs, so it is recorded here. `overlays/claude-code.nix` existed to lift claude-code out of stable, and was wired only into `mkPkgsWithOverlays` (the CUDA server); `pkgs-stable` never got it, so hwc-xps and hwc-work were pinned to whatever 26.05 branched with (2.1.223, against upstream 2.1.308). The overlay now reads a dedicated `nixpkgs-claude-code` input instead of `nixpkgs`, because the CLI ships several releases a week and sourcing it from the system channel made its version a side effect of a whole-machine rebuild.
 - 2026-10-25: The overlay moved from `pkgs-stable`'s extra overlays into `mkPkgs`' base list, so `pkgs.claude-code` is the same pinned build on EVERY machine, both channels. Fixing only the stable sets left the unstable-channel machines (hwc-laptop, hwc-kids) on whatever the `nixpkgs` pin last carried — 2.1.220, below T3 Code's 2.1.293 `adapter.claudeCode.minVersion` gate, which is why the laptop's T3 threads showed no current models. The alternative, bumping `nixpkgs`, was tried and reverted: unstable removed `services.journald.extraConfig` (used at four sites here) and `khalt` fails its setuptools-scm version detection. Verified by eval — hwc-xps, hwc-laptop and hwc-kids all resolve 2.1.308. The overlay body is lazy, so aarch64 `pkgs-firestick` pays nothing for it. Code landed in 9666ed2ea, which a concurrent session committed under its own subject; this entry is the Law 12 record.

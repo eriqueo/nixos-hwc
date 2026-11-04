@@ -197,6 +197,7 @@ let
     "custom/khal" = {
       format = "{}";
       exec = "waybar-khal";
+      escape = true;
       return-type = "json";
       interval = 300;
       on-click = "kitty --single-instance -e ikhal";

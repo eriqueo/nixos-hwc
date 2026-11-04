@@ -1,0 +1,29 @@
+--- a/src/modules/hyprland/workspace.cpp
++++ b/src/modules/hyprland/workspace.cpp
+@@ -71,20 +71,20 @@
+     try {
+       if (id() > 0) {  // normal
+         if (m_workspaceManager.moveToMonitor()) {
+-          m_ipc.getSocket1Reply("dispatch focusworkspaceoncurrentmonitor " + std::to_string(id()));
++          m_ipc.getSocket1Reply("dispatch hl.dsp.focus({workspace=" + std::to_string(id()) + ",monitor=\"current\"})");
+         } else {
+-          m_ipc.getSocket1Reply("dispatch workspace " + std::to_string(id()));
++          m_ipc.getSocket1Reply("dispatch hl.dsp.focus({workspace=" + std::to_string(id()) + "})");
+         }
+       } else if (!isSpecial()) {  // named (this includes persistent)
+         if (m_workspaceManager.moveToMonitor()) {
+-          m_ipc.getSocket1Reply("dispatch focusworkspaceoncurrentmonitor name:" + name());
++          m_ipc.getSocket1Reply("dispatch hl.dsp.focus({workspace=" + Json::writeString(Json::StreamWriterBuilder(), Json::Value(name())) + ",monitor=\"current\"})");
+         } else {
+-          m_ipc.getSocket1Reply("dispatch workspace name:" + name());
++          m_ipc.getSocket1Reply("dispatch hl.dsp.focus({workspace=" + Json::writeString(Json::StreamWriterBuilder(), Json::Value(name())) + "})");
+         }
+       } else if (id() != -99) {  // named special
+-        m_ipc.getSocket1Reply("dispatch togglespecialworkspace " + name());
++        m_ipc.getSocket1Reply("dispatch hl.dsp.workspace.toggle_special(" + Json::writeString(Json::StreamWriterBuilder(), Json::Value(name())) + ")");
+       } else {  // special
+-        m_ipc.getSocket1Reply("dispatch togglespecialworkspace");
++        m_ipc.getSocket1Reply("dispatch hl.dsp.workspace.toggle_special()");
+       }
+       return true;
+     } catch (const std::exception& e) {
