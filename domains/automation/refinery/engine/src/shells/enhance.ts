@@ -16,6 +16,10 @@
 // exposed via `boardEnhancer(true)` (returns hooks, touches no DOM) so tests
 // exercise the exact functions the browser runs.
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const sortKeyFromTextPatternRegex = /[≤,]/g;
+const sortKeyFromTextPatternRegex2 = /-?\d+(\.\d+)?/;
+
 export interface EnhancerHooks {
   sortKeyFromText: (s: string) => number | null;
   compareKeys: (a: number | null, b: number | null, dir: 1 | -1) => number;
@@ -34,7 +38,7 @@ export function boardEnhancer(hooksOnly?: boolean): EnhancerHooks | void {
   // "88.8%" → 88.8 · "≤0.27M / ≤1.75M (n=3)" → 0.27 · "1.2 / 2.8" → 1.2 ·
   // "27 (22/5⑂)" → 27 · "—"/"" → null (sorts last in BOTH directions).
   function sortKeyFromText(s: string): number | null {
-    const m = s.replace(/[≤,]/g, "").match(/-?\d+(\.\d+)?/);
+    const m = s.replace((sortKeyFromTextPatternRegex.lastIndex = 0, sortKeyFromTextPatternRegex), "").match(sortKeyFromTextPatternRegex2);
     return m ? parseFloat(m[0]) : null;
   }
 

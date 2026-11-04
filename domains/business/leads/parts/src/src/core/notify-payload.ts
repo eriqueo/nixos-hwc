@@ -16,6 +16,9 @@
 import type { Lead, Priority } from "./types.js";
 import { buildJobName } from "./jt-graph.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const summarisePatternRegex = /_/g;
+
 export interface NotificationInput {
   readonly title: string;
   readonly body: string;
@@ -58,7 +61,7 @@ function summarise(lead: Lead, jtUrlBase: string | undefined): string {
       lines.push(`Estimate:   $${calc.estimate.low.toLocaleString()} – $${calc.estimate.high.toLocaleString()}`);
     }
     const tl = calc.projectState["timeline"];
-    if (typeof tl === "string") lines.push(`Timeline:   ${tl.replace(/_/g, " ")}`);
+    if (typeof tl === "string") lines.push(`Timeline:   ${tl.replace((summarisePatternRegex.lastIndex = 0, summarisePatternRegex), " ")}`);
     if (calc.reportId) lines.push(`Report:     ${calc.reportId}`);
   }
   if (lead.payload.source === "appointment") {

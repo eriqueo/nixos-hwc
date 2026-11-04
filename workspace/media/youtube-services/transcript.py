@@ -18,6 +18,14 @@ import wave
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+__PARSE_VTT_COMPILE_RE = _compiled_re.compile(r"(\d{2}):(\d{2}):(\d{2})\.(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})\.(\d{3})")
+__PARSE_VTT_COMPILE_RE_2 = _compiled_re.compile(r"<[^>]+>")
+__SPLIT_BY_SENTENCES_FINDITER_RE = _compiled_re.compile(r"[^.?!]+[.?!]")
+
+
 logger = logging.getLogger("transcripts")
 
 
@@ -463,8 +471,8 @@ async def transcribe_audio(
 def _parse_vtt(vtt_text: str) -> list[Segment]:
     """Parse VTT subtitle file into segments."""
     segments = []
-    time_pattern = re.compile(r"(\d{2}):(\d{2}):(\d{2})\.(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})\.(\d{3})")
-    tag_pattern = re.compile(r"<[^>]+>")
+    time_pattern = __PARSE_VTT_COMPILE_RE
+    tag_pattern = __PARSE_VTT_COMPILE_RE_2
 
     lines = vtt_text.split("\n")
     i = 0
@@ -618,7 +626,7 @@ def _split_by_sentences(text: str, every: int = 5) -> list[str]:
     parts = _SENTENCE_END.split(text)
     # Reconstruct sentences with their terminators
     sentences = []
-    for m in re.finditer(r"[^.?!]+[.?!]", text):
+    for m in __SPLIT_BY_SENTENCES_FINDITER_RE.finditer(text):
         sentences.append(m.group().strip())
 
     if not sentences:

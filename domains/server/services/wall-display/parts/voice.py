@@ -43,6 +43,21 @@ import wave
 import screens
 from screens import CONFIG, TZ
 
+import re as _compiled_re
+
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_TRANSCRIBE_SUB_RE_2 = _compiled_re.compile(r"\s+")
+
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_SPEAKABLE_SUB_RE = _compiled_re.compile(r"<think>.*?</think>", _compiled_re.S)
+_SPEAKABLE_SUB_RE_2 = _compiled_re.compile(r"[*_#`>|]+")
+_TRANSCRIBE_SUB_RE = _compiled_re.compile(r"\[[^\]]*\]|\([^)]*\)")
+_SPEAKABLE_SUB_RE_3 = _compiled_re.compile(r"\s+")
+_SYNTH_SEARCH_RE = _compiled_re.compile(r"Wrote (\S+\.wav)\s*$")
+
+
 VOICE = CONFIG.get("voice") or None
 ENABLED = VOICE is not None
 
@@ -406,7 +421,7 @@ def transcribe(audio, ctype):
     with urllib.request.urlopen(req, timeout=WHISPER_TIMEOUT) as r:
         text = json.loads(r.read()).get("text") or ""
     # whisper marks silence and noise as "[BLANK_AUDIO]", "(wind blowing)" ...
-    return re.sub(r"\s+", " ", re.sub(r"\[[^\]]*\]|\([^)]*\)", " ", text)).strip()
+    return _TRANSCRIBE_SUB_RE_2.sub(" ", _TRANSCRIBE_SUB_RE.sub(" ", text)).strip()
 
 
 def chat(messages, tools):
@@ -443,9 +458,9 @@ def system_prompt(now, lists):
 
 
 def speakable(text):
-    text = re.sub(r"<think>.*?</think>", " ", text or "", flags=re.S)
-    text = re.sub(r"[*_#`>|]+", " ", text)
-    return re.sub(r"\s+", " ", text).strip()[:500]
+    text = _SPEAKABLE_SUB_RE.sub(" ", text or "")
+    text = _SPEAKABLE_SUB_RE_2.sub(" ", text)
+    return _SPEAKABLE_SUB_RE_3.sub(" ", text).strip()[:500]
 
 
 def think(heard, record):
@@ -589,7 +604,7 @@ class Piper:
 
     def synth(self, text):
         """WAV bytes for one line of text, or None (Piper down or timed out)."""
-        line = re.sub(r"\s+", " ", text).strip()
+        line = _SPEAKABLE_SUB_RE_3.sub(" ", text).strip()
         if not line:
             return None
         with self.lock:
@@ -612,7 +627,7 @@ class Piper:
                 if msg is None:
                     self.last_error = f"piper exited: {' | '.join(self.tail)[-300:]}"
                     return None
-                m = re.search(r"Wrote (\S+\.wav)\s*$", msg)
+                m = _SYNTH_SEARCH_RE.search(msg)
                 if m:
                     path = m.group(1)
                     try:

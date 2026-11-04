@@ -18,6 +18,13 @@ from email.parser import BytesParser
 from html.parser import HTMLParser
 from urllib.parse import urlsplit
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_COMPACT_URL_FULLMATCH_RE = _compiled_re.compile(r"[a-z0-9.-]+")
+_HANDLE_STARTTAG_SEARCH_RE = _compiled_re.compile(r"\s")
+
+
 
 COMPACT_URL_AT = 72
 OSC_8 = "\x1b]8;;{url}\x1b\\{label}\x1b]8;;\x1b\\"
@@ -57,7 +64,7 @@ def compact_url(match: re.Match[str]) -> str:
 
     if hostname.startswith("www."):
         hostname = hostname[4:]
-    if not re.fullmatch(r"[a-z0-9.-]+", hostname):
+    if not _COMPACT_URL_FULLMATCH_RE.fullmatch(hostname):
         return match.group(0)
 
     return OSC_8.format(url=url, label=f"↗ {hostname}")
@@ -103,7 +110,7 @@ class HTMLLinks(HTMLParser):
                 valid = parsed.scheme in ("http", "https") and parsed.hostname
             except ValueError:
                 valid = False
-            if valid and sanitize(href) == href and not re.search(r"\s", href):
+            if valid and sanitize(href) == href and not _HANDLE_STARTTAG_SEARCH_RE.search(href):
                 self.target = href
         elif tag == "img" and self.target:
             self.label.append(dict(attrs).get("alt") or "")

@@ -8,6 +8,9 @@
 import { execFile } from "node:child_process";
 import { GitPort } from "../executors/ports.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const resolveBasePatternRegex = /^origin\//;
+
 export interface GitWorktreeConfig {
   bin?: string; // default $REFINERY_GIT_BIN or "git"
   timeoutMs?: number; // default 120000 (worktree add / push can be slow)
@@ -64,7 +67,7 @@ export function makeGitWorktree(cfg: GitWorktreeConfig = {}): GitPort {
       // Refresh remotes; tolerate fetch failure (offline) like the live run.sh.
       await git(repo, ["fetch", "--quiet", "origin"]).catch(() => undefined);
       const head = await git(repo, ["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"]);
-      const name = head.stdout.trim().replace(/^origin\//, "");
+      const name = head.stdout.trim().replace(resolveBasePatternRegex, "");
       return name ? `origin/${name}` : "origin/main";
     },
 

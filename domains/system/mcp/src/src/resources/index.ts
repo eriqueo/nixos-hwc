@@ -8,6 +8,20 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { ResourceDef } from "../types.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const allResourcesBlockRegexRegex = /\{\s*\n([^}]*?name\s*=\s*"[^"]+";[^}]*?)\}/g;
+const allResourcesPatternRegex = /name\s*=\s*"([^"]+)"/;
+const allResourcesPatternRegex2 = /mode\s*=\s*"([^"]+)"/;
+const allResourcesPatternRegex3 = /port\s*=\s*(\d+)/;
+const allResourcesPatternRegex4 = /path\s*=\s*"([^"]+)"/;
+const allResourcesPatternRegex5 = /upstream\s*=\s*"([^"]+)"/;
+const allResourcesFlatRegexRegex = /age\.secrets\.([\w-]+)\s*=/g;
+const allResourcesPatternRegex6 = /age\.secrets\s*=\s*\{([\s\S]*)\};/;
+const allResourcesEntryRegexRegex = /^\s*([\w-]+)\s*=\s*\{/gm;
+const allResourcesPatternRegex7 = /imports\s*=\s*\[([\s\S]*?)\];/;
+const allResourcesPatternRegex8 = /profiles\/[\w.]+/g;
+const allResourcesPatternRegex9 = /domains\/[\w/]+/g;
+
 export function allResources(nixosConfigPath: string): ResourceDef[] {
   return [
     // ── Charter ─────────────────────────────────────────────────────────
@@ -68,18 +82,18 @@ export function allResources(nixosConfigPath: string): ResourceDef[] {
           );
           // Extract route blocks
           const routes: Array<Record<string, unknown>> = [];
-          const blockRegex = /\{\s*\n([^}]*?name\s*=\s*"[^"]+";[^}]*?)\}/g;
-          let match: RegExpExecArray | null;
+          const blockRegex = allResourcesBlockRegexRegex;
 
-          while ((match = blockRegex.exec(content)) !== null) {
+
+          for (const match of content.matchAll(blockRegex)) {
             const block = match[1];
             const entry: Record<string, unknown> = {};
 
-            const nameMatch = block.match(/name\s*=\s*"([^"]+)"/);
-            const modeMatch = block.match(/mode\s*=\s*"([^"]+)"/);
-            const portMatch = block.match(/port\s*=\s*(\d+)/);
-            const pathMatch = block.match(/path\s*=\s*"([^"]+)"/);
-            const upstreamMatch = block.match(/upstream\s*=\s*"([^"]+)"/);
+            const nameMatch = block.match(allResourcesPatternRegex);
+            const modeMatch = block.match(allResourcesPatternRegex2);
+            const portMatch = block.match(allResourcesPatternRegex3);
+            const pathMatch = block.match(allResourcesPatternRegex4);
+            const upstreamMatch = block.match(allResourcesPatternRegex5);
 
             if (nameMatch) entry.name = nameMatch[1];
             if (modeMatch) entry.mode = modeMatch[1];
@@ -116,17 +130,17 @@ export function allResources(nixosConfigPath: string): ResourceDef[] {
 
             const names: string[] = [];
             // Try flat format: age.secrets.name = { ... }
-            const flatRegex = /age\.secrets\.([\w-]+)\s*=/g;
-            let m: RegExpExecArray | null;
-            while ((m = flatRegex.exec(content)) !== null) {
+            const flatRegex = allResourcesFlatRegexRegex;
+
+            for (const m of content.matchAll(flatRegex)) {
               names.push(m[1]);
             }
             // If none found, try nested: age.secrets = { name = { ... }; }
             if (names.length === 0) {
-              const nestedMatch = content.match(/age\.secrets\s*=\s*\{([\s\S]*)\};/);
+              const nestedMatch = content.match(allResourcesPatternRegex6);
               if (nestedMatch) {
-                const entryRegex = /^\s*([\w-]+)\s*=\s*\{/gm;
-                while ((m = entryRegex.exec(nestedMatch[1])) !== null) {
+                const entryRegex = allResourcesEntryRegexRegex;
+                for (const m of nestedMatch[1].matchAll(entryRegex)) {
                   if (!["file", "mode", "owner", "group", "path"].includes(m[1])) {
                     names.push(m[1]);
                   }
@@ -160,13 +174,13 @@ export function allResources(nixosConfigPath: string): ResourceDef[] {
             const configPath = join(machinesDir, m.name, "config.nix");
             try {
               const content = await readFile(configPath, "utf-8");
-              const importBlock = content.match(/imports\s*=\s*\[([\s\S]*?)\];/);
+              const importBlock = content.match(allResourcesPatternRegex7);
               const block = importBlock?.[1] || "";
 
-              const profiles = (block.match(/profiles\/[\w.]+/g) || []).map(
+              const profiles = (block.match((allResourcesPatternRegex8.lastIndex = 0, allResourcesPatternRegex8)) || []).map(
                 (p) => p.replace("profiles/", "").replace(".nix", "")
               );
-              const domains = (block.match(/domains\/[\w/]+/g) || []).map(
+              const domains = (block.match((allResourcesPatternRegex9.lastIndex = 0, allResourcesPatternRegex9)) || []).map(
                 (d) => d.replace("/index.nix", "")
               );
 

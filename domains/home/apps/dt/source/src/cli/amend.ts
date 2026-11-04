@@ -2,9 +2,12 @@ import { getDb } from '../db/connection.js';
 import { updateSession } from '../db/queries.js';
 import type { Session } from '../lib/types.js';
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const resolveTimeArgTestRegex = /^\d{1,2}:\d{2}$/;
+
 function resolveTimeArg(input: string, referenceDate: string): string {
   // If it looks like HH:MM, resolve to ISO on the reference date
-  if (/^\d{1,2}:\d{2}$/.test(input)) {
+  if (resolveTimeArgTestRegex.test(input)) {
     const [h, m] = input.split(':').map(Number);
     const d = new Date(referenceDate);
     d.setHours(h, m, 0, 0);
@@ -19,10 +22,10 @@ export function cmdAmend(
   opts: { start?: string; end?: string; category?: string; notes?: string }
 ): void {
   const db = getDb();
-  let session: Session;
+  let session: Pick<Session, 'id' | 'start_at'>;
 
   if (target === 'last') {
-    const row = db.prepare('SELECT * FROM sessions ORDER BY start_at DESC LIMIT 1').get() as Session | undefined;
+    const row = db.prepare('SELECT id, start_at FROM sessions ORDER BY start_at DESC LIMIT 1').get() as Pick<Session, 'id' | 'start_at'> | undefined;
     if (!row) {
       console.error('No sessions found');
       process.exit(1);
@@ -34,7 +37,7 @@ export function cmdAmend(
       console.error('Target must be "last" or a session ID');
       process.exit(1);
     }
-    const row = db.prepare('SELECT * FROM sessions WHERE id = ?').get(id) as Session | undefined;
+    const row = db.prepare('SELECT id, start_at FROM sessions WHERE id = ?').get(id) as Pick<Session, 'id' | 'start_at'> | undefined;
     if (!row) {
       console.error(`Session ${id} not found`);
       process.exit(1);

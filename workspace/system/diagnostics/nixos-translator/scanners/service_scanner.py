@@ -11,6 +11,13 @@ import re
 from pathlib import Path
 from typing import Dict, List, Set
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+__REMOVE_COMMENTS_SUB_RE = _compiled_re.compile(r'#.*$', _compiled_re.MULTILINE)
+__REMOVE_COMMENTS_SUB_RE_2 = _compiled_re.compile(r'/\*.*?\*/', _compiled_re.DOTALL)
+
+
 
 class ServiceScanner:
     def __init__(self, source_path: Path, verbose: bool = False):
@@ -64,9 +71,9 @@ class ServiceScanner:
     def _remove_comments(self, content: str) -> str:
         """Remove Nix comments from content"""
         # Remove single-line comments
-        content = re.sub(r'#.*$', '', content, flags=re.MULTILINE)
+        content = __REMOVE_COMMENTS_SUB_RE.sub('', content)
         # Remove multi-line comments
-        content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
+        content = __REMOVE_COMMENTS_SUB_RE_2.sub('', content)
         return content
 
     def _find_enable_statements(self, content: str, source_file: Path):

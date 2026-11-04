@@ -18,6 +18,22 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 import tempfile
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_EXTRACT_METADATA_FINDALL_RE = _compiled_re.compile(r'nixosConfigurations\.(\w+)')
+_EXTRACT_CONTAINERS_FROM_FILES_FINDITER_RE = _compiled_re.compile(r'virtualisation\.oci-containers\.containers\.(\w+)\s*=\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}', _compiled_re.MULTILINE | _compiled_re.DOTALL)
+_EXTRACT_SYSTEMD_SERVICES_FINDITER_RE = _compiled_re.compile(r'systemd\.services\.([a-zA-Z0-9_-]+)\s*=\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}', _compiled_re.MULTILINE | _compiled_re.DOTALL)
+_EXTRACT_ENVIRONMENT_VARIABLES_FINDITER_RE = _compiled_re.compile(r'environment\.variables\s*=\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}', _compiled_re.MULTILINE | _compiled_re.DOTALL)
+_EXTRACT_SECRETS_FINDITER_RE = _compiled_re.compile(r'sops\.secrets\.([a-zA-Z0-9_-]+)\s*=\s*\{([^}]+)\}', _compiled_re.MULTILINE | _compiled_re.DOTALL)
+_EXTRACT_CONTAINERS_FROM_FILES_SEARCH_RE = _compiled_re.compile(r'image\s*=\s*["\']([^"\']+)["\']')
+_EXTRACT_CONTAINERS_FROM_FILES_SEARCH_RE_2 = _compiled_re.compile(r'volumes\s*=\s*\[([^\]]+)\]', _compiled_re.DOTALL)
+_EXTRACT_CONTAINERS_FROM_FILES_SEARCH_RE_3 = _compiled_re.compile(r'ports\s*=\s*\[([^\]]+)\]', _compiled_re.DOTALL)
+_EXTRACT_CONTAINERS_FROM_FILES_SEARCH_RE_4 = _compiled_re.compile(r'environment\s*=\s*\{([^}]+)\}', _compiled_re.DOTALL)
+_EXTRACT_ENVIRONMENT_VARIABLES_FINDALL_RE = _compiled_re.compile(r'(\w+)\s*=\s*["\']([^"\']*)["\']')
+_EXTRACT_CONTAINERS_FROM_FILES_FINDALL_RE = _compiled_re.compile(r'["\']([^"\']+)["\']')
+
+
 class ConfigExtractor:
     def __init__(self, config_path: str):
         self.config_path = Path(config_path)
@@ -70,7 +86,7 @@ class ConfigExtractor:
                 with open(flake_nix) as f:
                     content = f.read()
                     # Simple regex to find nixosConfigurations
-                    configs = re.findall(r'nixosConfigurations\.(\w+)', content)
+                    configs = _EXTRACT_METADATA_FINDALL_RE.findall(content)
                     self.output["metadata"]["flake_configs"] = list(set(configs))
             except:
                 pass
@@ -119,10 +135,7 @@ class ConfigExtractor:
                     
                     # Extract container definitions using regex
                     # Look for virtualisation.oci-containers.containers.NAME patterns
-                    container_matches = re.finditer(
-                        r'virtualisation\.oci-containers\.containers\.(\w+)\s*=\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}',
-                        content, re.MULTILINE | re.DOTALL
-                    )
+                    container_matches = _EXTRACT_CONTAINERS_FROM_FILES_FINDITER_RE.finditer(content)
                     
                     for match in container_matches:
                         name = match.group(1)
@@ -135,27 +148,27 @@ class ConfigExtractor:
                         }
                         
                         # Extract key properties with regex
-                        image_match = re.search(r'image\s*=\s*["\']([^"\']+)["\']', definition)
+                        image_match = _EXTRACT_CONTAINERS_FROM_FILES_SEARCH_RE.search(definition)
                         if image_match:
                             container_info["image"] = image_match.group(1)
                         
                         # Extract volumes array
-                        volumes_match = re.search(r'volumes\s*=\s*\[([^\]]+)\]', definition, re.DOTALL)
+                        volumes_match = _EXTRACT_CONTAINERS_FROM_FILES_SEARCH_RE_2.search(definition)
                         if volumes_match:
                             volumes_text = volumes_match.group(1)
                             # Extract quoted strings
-                            volume_matches = re.findall(r'["\']([^"\']+)["\']', volumes_text)
+                            volume_matches = _EXTRACT_CONTAINERS_FROM_FILES_FINDALL_RE.findall(volumes_text)
                             container_info["volumes"] = volume_matches
                         
                         # Extract ports array
-                        ports_match = re.search(r'ports\s*=\s*\[([^\]]+)\]', definition, re.DOTALL)
+                        ports_match = _EXTRACT_CONTAINERS_FROM_FILES_SEARCH_RE_3.search(definition)
                         if ports_match:
                             ports_text = ports_match.group(1)
-                            port_matches = re.findall(r'["\']([^"\']+)["\']', ports_text)
+                            port_matches = _EXTRACT_CONTAINERS_FROM_FILES_FINDALL_RE.findall(ports_text)
                             container_info["ports"] = port_matches
                         
                         # Extract environment
-                        env_match = re.search(r'environment\s*=\s*\{([^}]+)\}', definition, re.DOTALL)
+                        env_match = _EXTRACT_CONTAINERS_FROM_FILES_SEARCH_RE_4.search(definition)
                         if env_match:
                             env_text = env_match.group(1)
                             container_info["environment_raw"] = env_text.strip()
@@ -183,10 +196,7 @@ class ConfigExtractor:
                     content = f.read()
                     
                     # Look for systemd.services.NAME patterns
-                    service_matches = re.finditer(
-                        r'systemd\.services\.([a-zA-Z0-9_-]+)\s*=\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}',
-                        content, re.MULTILINE | re.DOTALL
-                    )
+                    service_matches = _EXTRACT_SYSTEMD_SERVICES_FINDITER_RE.finditer(content)
                     
                     for match in service_matches:
                         name = match.group(1)
@@ -217,16 +227,13 @@ class ConfigExtractor:
                     content = f.read()
                     
                     # Look for environment.variables patterns
-                    env_matches = re.finditer(
-                        r'environment\.variables\s*=\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}',
-                        content, re.MULTILINE | re.DOTALL
-                    )
+                    env_matches = _EXTRACT_ENVIRONMENT_VARIABLES_FINDITER_RE.finditer(content)
                     
                     for match in env_matches:
                         definition = match.group(1)
                         
                         # Extract individual variables
-                        var_matches = re.findall(r'(\w+)\s*=\s*["\']([^"\']*)["\']', definition)
+                        var_matches = _EXTRACT_ENVIRONMENT_VARIABLES_FINDALL_RE.findall(definition)
                         for var_name, var_value in var_matches:
                             env_vars[var_name] = {
                                 "value": var_value,
@@ -254,10 +261,7 @@ class ConfigExtractor:
                     content = f.read()
                     
                     # Look for sops.secrets patterns
-                    secret_matches = re.finditer(
-                        r'sops\.secrets\.([a-zA-Z0-9_-]+)\s*=\s*\{([^}]+)\}',
-                        content, re.MULTILINE | re.DOTALL
-                    )
+                    secret_matches = _EXTRACT_SECRETS_FINDITER_RE.finditer(content)
                     
                     for match in secret_matches:
                         name = match.group(1)

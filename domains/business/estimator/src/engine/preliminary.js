@@ -11,6 +11,10 @@ import { assemble, buildJtItems, estimateIssues, computeTotals } from './assembl
 import templates from '../data/templates.json' with { type: 'json' };
 import parameters from '../data/parameters.json' with { type: 'json' };
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const preparePreliminaryTestRegex = /(_ft|_in|_sqft|_lf|_allowance)$/;
+const derivedPatternRegex = /\{(\w+)\}/g;
+
 export function preparePreliminary(raw) {
   const intake = parseCalculatorIntake(raw, raw.jt_job_id);
   const answers = intake.answers;
@@ -40,7 +44,7 @@ export function preparePreliminary(raw) {
   const presetInScope = key => intake.calculator === 'deck' ? deckFields.has(key) : !deckFields.has(key);
   const assumptions = Object.entries(state).filter(([key]) =>
     !['state_version','projectType','job_type','measurements_checked','calculator_scope_checked'].includes(key) &&
-    (Object.hasOwn(template.state,key) || (presetInScope(key) && /(_ft|_in|_sqft|_lf|_allowance)$/.test(key))) &&
+    (Object.hasOwn(template.state,key) || (presetInScope(key) && preparePreliminaryTestRegex.test(key))) &&
     (patch[key] === undefined || patch[key] === null || patch[key] === 'unknown'))
     .filter(([,value])=>value !== null)
     .map(([field,value]) => ({ field, value, source:Object.hasOwn(template.state,field) ? `Template: ${template.name}` : 'Estimator preset — review' }));
@@ -59,7 +63,7 @@ export function preparePreliminary(raw) {
   const fromCalculator = new Set(Object.entries(patch).filter(([key,value]) => value !== null && value !== 'unknown' &&
     !['projectType','job_type','measurements_checked','calculator_scope_checked'].includes(key)).map(([key]) => key));
   const derived = item => {
-    const inputs = [...(item.quantityFormula || '').matchAll(/\{(\w+)\}/g)].flatMap(m => rawInputs(m[1]));
+    const inputs = [...(item.quantityFormula || '').matchAll((derivedPatternRegex.lastIndex = 0, derivedPatternRegex))].flatMap(m => rawInputs(m[1]));
     return !item._usedDefault && !item.name.startsWith('Allowance |') && inputs.length > 0 && inputs.every(k => fromCalculator.has(k));
   };
   const jtItems = buildJtItems(mapped).map((i,n) => ({ ...i, needsConfirmation: !derived(mapped[n]) }));

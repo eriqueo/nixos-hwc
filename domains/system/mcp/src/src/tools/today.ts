@@ -59,6 +59,12 @@ import {
   type ObservedItem,
 } from "./today-ledger.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const slugPatternRegex = /[^a-z0-9]+/g;
+const slugPatternRegex2 = /^-|-$/g;
+const deriveItemsPatternRegex = /[\d.,%]+/g;
+const interpolatePatternRegex = /\{\{(\w+)\}\}/g;
+
 const BRIEFING_DIR =
   process.env.HWC_BRIEFING_DIR ||
   "/home/eric/.nixos/domains/business/morning-briefing";
@@ -119,7 +125,7 @@ function daysAgo(iso: string | undefined | null): number {
 
 /** Stable, filename-safe id fragment. */
 function slug(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+  return s.toLowerCase().replace((slugPatternRegex.lastIndex = 0, slugPatternRegex), "-").replace((slugPatternRegex2.lastIndex = 0, slugPatternRegex2), "").slice(0, 60);
 }
 
 // Effort defaults per source — data, not judgment calls scattered in code.
@@ -233,7 +239,7 @@ function deriveItems(b: Record<string, any>): TodayItem[] {
     // the same underlying problem — a fluctuating figure must not mint a new
     // id every run or dismissals never stick.
     items.push({
-      id: `system:${slug(String(a.message ?? a.section ?? "alert").replace(/[\d.,%]+/g, ""))}`,
+      id: `system:${slug(String(a.message ?? a.section ?? "alert").replace((deriveItemsPatternRegex.lastIndex = 0, deriveItemsPatternRegex), ""))}`,
       source: "system",
       title: String(a.message ?? "System alert"),
       // Alerts include forecasts ("disk full in ~3d"), so the reason states
@@ -274,7 +280,7 @@ async function fileExists(p: string): Promise<boolean> {
 
 /** Interpolate {{VAR}} placeholders; unknown vars stay literal (loud, greppable). */
 function interpolate(tpl: string, vars: Record<string, string>): string {
-  return tpl.replace(/\{\{(\w+)\}\}/g, (m, k) => (k in vars ? vars[k] : m));
+  return tpl.replace((interpolatePatternRegex.lastIndex = 0, interpolatePatternRegex), (m, k) => (k in vars ? vars[k] : m));
 }
 
 async function queueDispatch(item: TodayItem): Promise<string> {

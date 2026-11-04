@@ -5,7 +5,7 @@ import type { WaybarOutput, SessionState } from '../lib/types.js';
 
 export function cmdStatus(opts: { waybar?: boolean; json?: boolean }): void {
   const config = loadConfig();
-  const active = getActiveSession();
+  const active = opts.json ? getActiveSession() : getActiveSession(['start_at', 'category']);
 
   if (!active) {
     if (opts.waybar) {

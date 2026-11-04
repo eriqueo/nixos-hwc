@@ -9,6 +9,18 @@ from pathlib import Path
 from datetime import datetime
 import requests
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_PARSE_COMMIT_SECTION_SEARCH_RE = _compiled_re.compile(r'\*\*Date:\*\* (.+)')
+_PARSE_COMMIT_SECTION_SEARCH_RE_2 = _compiled_re.compile(r'\*\*Message:\*\* (.+)')
+_PARSE_COMMIT_SECTION_SEARCH_RE_3 = _compiled_re.compile(r'```diff\n(.*?)\n```', _compiled_re.DOTALL)
+_PARSE_RECENT_CHANGES_SPLIT_RE = _compiled_re.compile(r'^## Commit:', _compiled_re.MULTILINE)
+_DETECT_ADDITIONS_SEARCH_RE = _compiled_re.compile(r'containers\.(\w+)')
+_DETECT_REMOVALS_SEARCH_RE = _compiled_re.compile(r'services\.(\w+)')
+_ANALYZE_DIFF_SEARCH_RE = _compiled_re.compile(r'[+-]{3} [ab]/(.+)')
+
+
 class AIDocumentationGenerator:
     def __init__(self):
         self.changelog_path = Path("/etc/nixos/docs/SYSTEM_CHANGELOG.md")
@@ -320,7 +332,7 @@ class AIDocumentationGenerator:
             return commits
             
         content = self.changelog_path.read_text()
-        commit_sections = re.split(r'^## Commit:', content, flags=re.MULTILINE)[1:]
+        commit_sections = _PARSE_RECENT_CHANGES_SPLIT_RE.split(content)[1:]
         
         for section in commit_sections[-10:]:  # Last 10 commits
             commit = self.parse_commit_section(section)
@@ -334,9 +346,9 @@ class AIDocumentationGenerator:
         """Extract meaningful info from a commit section"""
         lines = section.split('\n')
         commit_hash = lines[0].strip()
-        date_match = re.search(r'\*\*Date:\*\* (.+)', section)
-        msg_match = re.search(r'\*\*Message:\*\* (.+)', section)
-        diff_match = re.search(r'```diff\n(.*?)\n```', section, re.DOTALL)
+        date_match = _PARSE_COMMIT_SECTION_SEARCH_RE.search(section)
+        msg_match = _PARSE_COMMIT_SECTION_SEARCH_RE_2.search(section)
+        diff_match = _PARSE_COMMIT_SECTION_SEARCH_RE_3.search(section)
         diff_content = diff_match.group(1) if diff_match else ""
         
         return {
@@ -366,7 +378,7 @@ class AIDocumentationGenerator:
         
         for line in lines:
             if line.startswith('+++') or line.startswith('---'):
-                file_match = re.search(r'[+-]{3} [ab]/(.+)', line)
+                file_match = _ANALYZE_DIFF_SEARCH_RE.search(line)
                 if file_match:
                     current_file = file_match.group(1)
                     if current_file not in changes['files_modified']:
@@ -384,11 +396,11 @@ class AIDocumentationGenerator:
         content = line[1:].strip()
         
         if 'virtualisation.oci-containers.containers' in content:
-            container_match = re.search(r'containers\.(\w+)', content)
+            container_match = _DETECT_ADDITIONS_SEARCH_RE.search(content)
             if container_match:
                 changes['containers_added'].append(container_match.group(1))
         elif 'services.' in content and 'enable = true' in content:
-            service_match = re.search(r'services\.(\w+)', content)
+            service_match = _DETECT_REMOVALS_SEARCH_RE.search(content)
             if service_match:
                 changes['services_added'].append(service_match.group(1))
         elif any(gpu_term in content.lower() for gpu_term in ['nvidia', 'cuda', 'gpu', 'tensorrt']):
@@ -404,7 +416,7 @@ class AIDocumentationGenerator:
         """Detect what was removed"""
         content = line[1:].strip()
         if 'enable = true' in content and 'services.' in content:
-            service_match = re.search(r'services\.(\w+)', content)
+            service_match = _DETECT_REMOVALS_SEARCH_RE.search(content)
             if service_match:
                 changes['services_removed'].append(service_match.group(1))
 

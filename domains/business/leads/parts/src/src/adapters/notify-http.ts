@@ -9,6 +9,9 @@
 import type { NotifyClient, NotifyResult } from "../ports/notify.js";
 import type { NotificationInput } from "../core/notify-payload.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const makeNotifyHttpClientPatternRegex = /\/+$/;
+
 export interface NotifyHttpAdapterOpts {
   readonly baseUrl: string;
   readonly timeoutMs?: number;
@@ -16,7 +19,7 @@ export interface NotifyHttpAdapterOpts {
 
 export function makeNotifyHttpClient(opts: NotifyHttpAdapterOpts): NotifyClient {
   const timeout = opts.timeoutMs ?? 5_000;
-  const url = `${opts.baseUrl.replace(/\/+$/, "")}/notify`;
+  const url = `${opts.baseUrl.replace(makeNotifyHttpClientPatternRegex, "")}/notify`;
 
   return {
     async send(input: NotificationInput): Promise<NotifyResult> {

@@ -12,6 +12,12 @@ import re
 from pathlib import Path
 from typing import Dict, List, Set
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+__SCAN_SECRET_USAGE_FINDALL_RE = _compiled_re.compile(r'config\.age\.secrets\.([a-zA-Z0-9_-]+)')
+
+
 
 class SecretsScanner:
     def __init__(self, source_path: Path, verbose: bool = False):
@@ -124,7 +130,7 @@ class SecretsScanner:
                     content = f.read()
 
                 # Find secret references
-                secret_refs = re.findall(r'config\.age\.secrets\.([a-zA-Z0-9_-]+)', content)
+                secret_refs = __SCAN_SECRET_USAGE_FINDALL_RE.findall(content)
 
                 for secret_name in set(secret_refs):
                     if secret_name in self.secrets:

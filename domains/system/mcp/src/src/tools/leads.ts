@@ -15,6 +15,9 @@ import type { ToolDef, ToolResult } from "../types.js";
 import { mcpError } from "../errors.js";
 import { contract } from "../result.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const leadsToolsPatternRegex = /\/$/;
+
 const LEADS_BASE = "http://127.0.0.1:11650";
 
 const ACTIONS = ["recent", "get", "replay", "health"] as const;
@@ -136,7 +139,7 @@ export function leadsTools(): ToolDef[] {
               const SCOUTED = new Set(["facebook_scrape", "network_scrape"]);
               const classedSource = (s: string): string =>
                 INBOUND.has(s) ? `inbound · ${s}` : SCOUTED.has(s) ? `scouted · ${s}` : s;
-              const crmUiBase = (process.env.HWC_CRM_UI_URL || "https://crm.hwc.iheartwoodcraft.com").replace(/\/$/, "");
+              const crmUiBase = (process.env.HWC_CRM_UI_URL || "https://crm.hwc.iheartwoodcraft.com").replace(leadsToolsPatternRegex, "");
               return {
                 status: "ok",
                 message: "recent leads",

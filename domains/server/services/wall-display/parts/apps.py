@@ -34,6 +34,12 @@ import urllib.request
 import screens
 from screens import CONFIG, TZ
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_DATE_FIELD_FULLMATCH_RE = _compiled_re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
 APPS = CONFIG.get("apps") or {}
 GROCERY_PATH = APPS["paths"]["groceries"]
 GATEWAY = APPS.get("gatewayUrl")  # None: no gateway on this host, apps are read-only
@@ -169,7 +175,7 @@ def text_field(body, key, limit, required=False, multiline=False):
 
 
 def date_field(v, key):
-    if not isinstance(v, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
+    if not isinstance(v, str) or not _DATE_FIELD_FULLMATCH_RE.fullmatch(v):
         raise Invalid(f"{key} must be a date YYYY-MM-DD")
     try:
         d = dt.date.fromisoformat(v)

@@ -24,6 +24,9 @@ import {
   type SrRecord,
 } from "../executors/sr-gauntlet-state.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const phaseTitlePatternRegex = /-/g;
+
 // SR2's canonical phase ids (datax lib/sr2/types.ts CANONICAL_PHASE_IDS). The
 // cache carries phase ids only, not the srPhases docs with names and
 // positions, so stages order as: open canonical phases, custom lanes
@@ -79,7 +82,7 @@ export function orderPhases(present: Iterable<string>): string[] {
 }
 
 const phaseTitle = (id: string): string => {
-  const words = id.replace(/-/g, " ");
+  const words = id.replace((phaseTitlePatternRegex.lastIndex = 0, phaseTitlePatternRegex), " ");
   return words.charAt(0).toUpperCase() + words.slice(1);
 };
 

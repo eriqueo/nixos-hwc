@@ -54,6 +54,13 @@ import time
 import urllib.error
 import urllib.request
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_READ_API_KEY_SEARCH_RE = _compiled_re.compile(r"<ApiKey>([a-f0-9]+)</ApiKey>")
+_PICK_RELEASE_FINDALL_RE = _compiled_re.compile(r"\b(480|576|720|1080|2160)p?\b")
+
+
 CONFIG_XML = "/opt/radarr/config/config.xml"
 BASE = "http://127.0.0.1:7878/api/v3"
 
@@ -95,7 +102,7 @@ class RadarrError(RuntimeError):
 
 def read_api_key(path):
     with open(path, "r", encoding="utf-8") as fh:
-        m = re.search(r"<ApiKey>([a-f0-9]+)</ApiKey>", fh.read())
+        m = _READ_API_KEY_SEARCH_RE.search(fh.read())
     if not m:
         raise RadarrError(f"no <ApiKey> in {path}")
     return m.group(1)
@@ -227,7 +234,7 @@ def pick_release(key, cand, max_rate, require_in_profile, allow_lower_res, shrin
         # parsed as Bluray-720p and passed a 720p floor. When the title states a
         # resolution of its own, believe the lower of the two.
         if not allow_lower_res:
-            claimed = [int(m) for m in re.findall(r"\b(480|576|720|1080|2160)p?\b", r.get("title") or "")]
+            claimed = [int(m) for m in _PICK_RELEASE_FINDALL_RE.findall(r.get("title") or "")]
             if claimed and max(claimed) < cur_res:
                 continue
         if require_in_profile and not profile_allows(cand["profile"], q.get("name")):

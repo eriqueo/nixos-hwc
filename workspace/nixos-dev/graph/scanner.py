@@ -12,6 +12,13 @@ from pathlib import Path
 from typing import Dict, List, Set, Tuple, Optional
 from dataclasses import dataclass, field
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+__EXTRACT_FROM_ASSERTIONS_FINDALL_RE = _compiled_re.compile(r'config\.hwc\.([a-zA-Z0-9_.]+)')
+__EXTRACT_FROM_COMMENTS_FINDALL_RE = _compiled_re.compile(r'hwc\.[a-zA-Z0-9_.]+')
+
+
 
 @dataclass
 class Module:
@@ -172,7 +179,7 @@ class ModuleScanner:
                     continue
 
                 # Extract module names (hwc.X.Y.Z)
-                matches = re.findall(r'hwc\.[a-zA-Z0-9_.]+', stripped)
+                matches = __EXTRACT_FROM_COMMENTS_FINDALL_RE.findall(stripped)
                 dependencies.update(matches)
 
         return dependencies
@@ -194,7 +201,7 @@ class ModuleScanner:
 
         for assertion in assertions:
             # Extract hwc.X.Y references
-            deps = re.findall(r'config\.hwc\.([a-zA-Z0-9_.]+)', assertion)
+            deps = __EXTRACT_FROM_ASSERTIONS_FINDALL_RE.findall(assertion)
 
             for dep in deps:
                 dep_name = f"hwc.{dep}"

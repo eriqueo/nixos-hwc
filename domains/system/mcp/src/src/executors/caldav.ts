@@ -13,6 +13,38 @@
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const davRequestPatternRegex = /\/$/;
+const xmlUnescapePatternRegex = /&lt;/g;
+const xmlUnescapePatternRegex2 = /&gt;/g;
+const xmlUnescapePatternRegex3 = /&quot;/g;
+const xmlUnescapePatternRegex4 = /&#13;/g;
+const xmlUnescapePatternRegex5 = /&amp;/g;
+const createTaskListPatternRegex = /-/g;
+const escapeXmlPatternRegex = /&/g;
+const escapeXmlPatternRegex2 = /</g;
+const escapeXmlPatternRegex3 = />/g;
+const escapeXmlPatternRegex4 = /"/g;
+const unfoldIcsPatternRegex = /\r?\n[ \t]/g;
+const icsUnescapePatternRegex = /\\n/gi;
+const icsUnescapePatternRegex2 = /\\,/g;
+const icsUnescapePatternRegex3 = /\\;/g;
+const icsUnescapePatternRegex4 = /\\\\/g;
+const icsEscapePatternRegex = /\\/g;
+const icsEscapePatternRegex2 = /;/g;
+const icsEscapePatternRegex3 = /,/g;
+const icsEscapePatternRegex4 = /\r?\n/g;
+const formatDuePatternRegex = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2}))?/;
+const parseVtodoPatternRegex = /BEGIN:VTODO([\s\S]*?)END:VTODO/;
+const parseVtodoTestRegex = /^RRULE[;:]/m;
+const utcStampPatternRegex = /[-:]/g;
+const utcStampPatternRegex2 = /\.\d{3}/;
+const editVtodoPatternRegex = /BEGIN:VTODO[\s\S]*?END:VTODO/;
+const editVtodoPatternRegex2 = /^SEQUENCE(?:;[^:\n]*)?:(\d+)\s*$/m;
+const editVtodoPatternRegex3 = /END:VTODO/;
+const validDateTestRegex = /^\d{4}-\d{2}-\d{2}$/;
+const managedSchedulePatternRegex = /^FREQ=(DAILY|WEEKLY|MONTHLY|YEARLY)(?:;UNTIL=(\d{8}))?$/;
+
 const BASE_URL =
   process.env.HWC_TASKS_CALDAV_URL || "https://tasks.hwc.iheartwoodcraft.com";
 const HTPASSWD_PATH =
@@ -41,7 +73,7 @@ export async function davRequest(
   opts: { body?: string; headers?: Record<string, string>; timeoutMs?: number } = {},
 ): Promise<{ status: number; body: string; etag: string | null }> {
   const { user, password } = await credential();
-  const url = `${BASE_URL.replace(/\/$/, "")}${path}`;
+  const url = `${BASE_URL.replace(davRequestPatternRegex, "")}${path}`;
   const res = await fetch(url, {
     method,
     ...(opts.timeoutMs ? { signal: AbortSignal.timeout(opts.timeoutMs) } : {}),
@@ -70,18 +102,23 @@ export interface TaskList {
 
 const RESPONSE_RE = /<response>([\s\S]*?)<\/response>/g;
 
-function xmlText(block: string, tag: string): string | null {
-  const m = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`));
+const XML_TEXT_PATTERNS = {
+  href: /<href[^>]*>([\s\S]*?)<\/href>/,
+  displayname: /<displayname[^>]*>([\s\S]*?)<\/displayname>/,
+};
+
+function xmlText(block: string, tag: keyof typeof XML_TEXT_PATTERNS): string | null {
+  const m = block.match(XML_TEXT_PATTERNS[tag]);
   return m ? m[1].trim() : null;
 }
 
 function xmlUnescape(s: string): string {
   return s
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#13;/g, "\r")
-    .replace(/&amp;/g, "&");
+    .replace((xmlUnescapePatternRegex.lastIndex = 0, xmlUnescapePatternRegex), "<")
+    .replace((xmlUnescapePatternRegex2.lastIndex = 0, xmlUnescapePatternRegex2), ">")
+    .replace((xmlUnescapePatternRegex3.lastIndex = 0, xmlUnescapePatternRegex3), '"')
+    .replace((xmlUnescapePatternRegex4.lastIndex = 0, xmlUnescapePatternRegex4), "\r")
+    .replace((xmlUnescapePatternRegex5.lastIndex = 0, xmlUnescapePatternRegex5), "&");
 }
 
 export async function listTaskLists(): Promise<TaskList[]> {
@@ -107,7 +144,7 @@ export async function listTaskLists(): Promise<TaskList[]> {
 
 export async function createTaskList(name: string): Promise<TaskList> {
   const user = await davUser();
-  const href = `/${user}/${randomUUID().replace(/-/g, "").toUpperCase()}/`;
+  const href = `/${user}/${randomUUID().replace((createTaskListPatternRegex.lastIndex = 0, createTaskListPatternRegex), "").toUpperCase()}/`;
   const { status, body } = await davRequest("MKCALENDAR", href, {
     body:
       `<?xml version="1.0"?>` +
@@ -123,10 +160,10 @@ export async function createTaskList(name: string): Promise<TaskList> {
 
 function escapeXml(s: string): string {
   return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace((escapeXmlPatternRegex.lastIndex = 0, escapeXmlPatternRegex), "&amp;")
+    .replace((escapeXmlPatternRegex2.lastIndex = 0, escapeXmlPatternRegex2), "&lt;")
+    .replace((escapeXmlPatternRegex3.lastIndex = 0, escapeXmlPatternRegex3), "&gt;")
+    .replace((escapeXmlPatternRegex4.lastIndex = 0, escapeXmlPatternRegex4), "&quot;");
 }
 
 /* ════════════════════════════════════════════════════════════════ */
@@ -148,34 +185,44 @@ export interface Task {
 
 /** Unfold RFC 5545 folded lines (CRLF or LF followed by space/tab). */
 export function unfoldIcs(raw: string): string {
-  return raw.replace(/\r?\n[ \t]/g, "");
+  return raw.replace((unfoldIcsPatternRegex.lastIndex = 0, unfoldIcsPatternRegex), "");
 }
 
 export function icsUnescape(s: string): string {
   return s
-    .replace(/\\n/gi, "\n")
-    .replace(/\\,/g, ",")
-    .replace(/\\;/g, ";")
-    .replace(/\\\\/g, "\\");
+    .replace((icsUnescapePatternRegex.lastIndex = 0, icsUnescapePatternRegex), "\n")
+    .replace((icsUnescapePatternRegex2.lastIndex = 0, icsUnescapePatternRegex2), ",")
+    .replace((icsUnescapePatternRegex3.lastIndex = 0, icsUnescapePatternRegex3), ";")
+    .replace((icsUnescapePatternRegex4.lastIndex = 0, icsUnescapePatternRegex4), "\\");
 }
 
 function icsEscape(s: string): string {
   return s
-    .replace(/\\/g, "\\\\")
-    .replace(/;/g, "\\;")
-    .replace(/,/g, "\\,")
-    .replace(/\r?\n/g, "\\n");
+    .replace((icsEscapePatternRegex.lastIndex = 0, icsEscapePatternRegex), "\\\\")
+    .replace((icsEscapePatternRegex2.lastIndex = 0, icsEscapePatternRegex2), "\\;")
+    .replace((icsEscapePatternRegex3.lastIndex = 0, icsEscapePatternRegex3), "\\,")
+    .replace((icsEscapePatternRegex4.lastIndex = 0, icsEscapePatternRegex4), "\\n");
 }
 
 /** Extract "PROP" or "PROP;PARAMS" value from an unfolded VTODO body. */
-function icsProp(body: string, prop: string): { params: string; value: string } | null {
-  const m = body.match(new RegExp(`^${prop}((?:;[^:\\n]*)?):(.*)$`, "mi"));
+const ICS_PROPERTY_NAMES = ["UID", "CATEGORIES", "DUE", "SUMMARY", "STATUS", "PRIORITY", "DESCRIPTION", "X-HWC-REPEAT", "RRULE"] as const;
+const ICS_PROPERTY_PATTERNS = Object.fromEntries(ICS_PROPERTY_NAMES.map((prop) =>
+  [prop, new RegExp(`^${prop}((?:;[^:\\n]*)?):(.*)$`, "mi")]
+)) as Record<typeof ICS_PROPERTY_NAMES[number], RegExp>;
+
+const ICS_EDIT_PATTERNS = new Map(
+  [...ICS_PROPERTY_NAMES, "DTSTART", "SEQUENCE", "LAST-MODIFIED", "DTSTAMP"].map((prop) =>
+    [prop, new RegExp(`^${prop}(?:;[^:\\n]*)?:.*(?:\\r?\\n)`, "mi")] as const)
+);
+
+function icsProp(body: string, prop: typeof ICS_PROPERTY_NAMES[number]): { params: string; value: string } | null {
+  const m = body.match(ICS_PROPERTY_PATTERNS[prop]);
   return m ? { params: m[1] || "", value: m[2].trim() } : null;
 }
 
 function formatDue(v: string): string {
   // 20260620 or 20260620T... → 2026-06-20 (keep time when present)
-  const m = v.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2}))?/);
+  const m = v.match(formatDuePatternRegex);
   if (!m) return v;
   const date = `${m[1]}-${m[2]}-${m[3]}`;
   return m[4] ? `${date} ${m[4]}:${m[5]}` : date;
@@ -183,7 +230,7 @@ function formatDue(v: string): string {
 
 export function parseVtodo(raw: string, href: string, list: string): Task | null {
   const unfolded = unfoldIcs(raw);
-  const todoMatch = unfolded.match(/BEGIN:VTODO([\s\S]*?)END:VTODO/);
+  const todoMatch = unfolded.match(parseVtodoPatternRegex);
   if (!todoMatch) return null;
   const body = todoMatch[1];
 
@@ -207,12 +254,12 @@ export function parseVtodo(raw: string, href: string, list: string): Task | null
     due: dueRaw ? formatDue(dueRaw) : null,
     categories,
     description: icsUnescape(icsProp(body, "DESCRIPTION")?.value || ""),
-    recurring: /^RRULE[;:]/m.test(body),
+    recurring: parseVtodoTestRegex.test(body),
   };
 }
 
 function utcStamp(): string {
-  return new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  return new Date().toISOString().replace((utcStampPatternRegex.lastIndex = 0, utcStampPatternRegex), "").replace(utcStampPatternRegex2, "");
 }
 
 /** Build a fresh VTODO ics document. due = "YYYY-MM-DD" (all-day unless start is set). */
@@ -245,14 +292,14 @@ export function buildVtodo(fields: {
     lines.push(`CATEGORIES:${fields.categories.map(icsEscape).join(",")}`);
   if (fields.priority) lines.push(`PRIORITY:${fields.priority}`);
   if (fields.start) {
-    const stamp = `${fields.start.date.replace(/-/g, "")}T${fields.start.time.replace(":", "")}00`;
+    const stamp = `${fields.start.date.replace((createTaskListPatternRegex.lastIndex = 0, createTaskListPatternRegex), "")}T${fields.start.time.replace(":", "")}00`;
     lines.push(`DTSTART;TZID=${fields.start.timezone}:${stamp}`);
     if (fields.due) lines.push(`DUE;TZID=${fields.start.timezone}:${stamp}`);
   } else if (fields.due) {
-    lines.push(`DUE;VALUE=DATE:${fields.due.replace(/-/g, "")}`);
+    lines.push(`DUE;VALUE=DATE:${fields.due.replace((createTaskListPatternRegex.lastIndex = 0, createTaskListPatternRegex), "")}`);
   }
   if (fields.rrule) {
-    if (!fields.start && fields.due) lines.push(`DTSTART;VALUE=DATE:${fields.due.replace(/-/g, "")}`);
+    if (!fields.start && fields.due) lines.push(`DTSTART;VALUE=DATE:${fields.due.replace((createTaskListPatternRegex.lastIndex = 0, createTaskListPatternRegex), "")}`);
     lines.push(`RRULE:${fields.rrule}`);
   }
   if (fields.managedRepeat) lines.push("X-HWC-REPEAT:fixed-v1");
@@ -272,7 +319,7 @@ export function buildVtodo(fields: {
 export function editVtodo(raw: string, props: Record<string, string | null>): string {
   let ics = unfoldIcs(raw);
 
-  const todoMatch = ics.match(/BEGIN:VTODO[\s\S]*?END:VTODO/);
+  const todoMatch = ics.match(editVtodoPatternRegex);
   if (!todoMatch) throw new Error("no VTODO component in document");
   let body = todoMatch[0];
 
@@ -283,21 +330,21 @@ export function editVtodo(raw: string, props: Record<string, string | null>): st
   };
 
   // SEQUENCE bump
-  const seqMatch = body.match(/^SEQUENCE(?:;[^:\n]*)?:(\d+)\s*$/m);
+  const seqMatch = body.match(editVtodoPatternRegex2);
   all.SEQUENCE = `:${(seqMatch ? parseInt(seqMatch[1], 10) : 0) + 1}`;
 
   for (const [prop, rest] of Object.entries(all)) {
-    const lineRe = new RegExp(`^${prop}(?:;[^:\\n]*)?:.*(?:\\r?\\n)`, "mi");
+    const lineRe = ICS_EDIT_PATTERNS.get(prop) ?? new RegExp(`^${prop}(?:;[^:\\n]*)?:.*(?:\\r?\\n)`, "mi");
     if (rest === null) {
       body = body.replace(lineRe, "");
     } else if (lineRe.test(body)) {
       body = body.replace(lineRe, `${prop}${rest}\r\n`);
     } else {
-      body = body.replace(/END:VTODO/, `${prop}${rest}\r\nEND:VTODO`);
+      body = body.replace(editVtodoPatternRegex3, `${prop}${rest}\r\nEND:VTODO`);
     }
   }
 
-  ics = ics.replace(/BEGIN:VTODO[\s\S]*?END:VTODO/, body);
+  ics = ics.replace(editVtodoPatternRegex, body);
   return ics;
 }
 
@@ -361,7 +408,7 @@ export function isRepeatFrequency(value: unknown): value is RepeatFrequency {
   return typeof value === "string" && REPEAT_FREQUENCIES.includes(value as RepeatFrequency);
 }
 export function validDate(value: unknown): value is string {
-  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+  return typeof value === "string" && validDateTestRegex.test(value) &&
     !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
 }
 export function fixedRecurrence(value: unknown): { due: string; rrule: string; managedRepeat: true } | null {
@@ -369,7 +416,7 @@ export function fixedRecurrence(value: unknown): { due: string; rrule: string; m
   const v = value as Record<string, unknown>;
   if (!isRepeatFrequency(v.frequency) || !validDate(v.startDate) ||
       (v.until !== undefined && (!validDate(v.until) || v.until < v.startDate))) return null;
-  return { due: v.startDate, rrule: `FREQ=${String(v.frequency).toUpperCase()}${v.until ? `;UNTIL=${String(v.until).replace(/-/g, "")}` : ""}`, managedRepeat: true };
+  return { due: v.startDate, rrule: `FREQ=${String(v.frequency).toUpperCase()}${v.until ? `;UNTIL=${String(v.until).replace((createTaskListPatternRegex.lastIndex = 0, createTaskListPatternRegex), "")}` : ""}`, managedRepeat: true };
 }
 export function nextScheduledDate(due: string, frequency: RepeatFrequency, today: string, until?: string): string | null {
   if (!validDate(due) || !validDate(today) || (until && !validDate(until))) throw new Error("Invalid repeat date");
@@ -398,7 +445,7 @@ export function nextScheduledDate(due: string, frequency: RepeatFrequency, today
 export function managedSchedule(raw: string): { frequency: RepeatFrequency; due: string; until?: string } | null {
   const body = unfoldIcs(raw);
   if (icsProp(body, "X-HWC-REPEAT")?.value !== "fixed-v1") return null;
-  const rule = icsProp(body, "RRULE")?.value.match(/^FREQ=(DAILY|WEEKLY|MONTHLY|YEARLY)(?:;UNTIL=(\d{8}))?$/);
+  const rule = icsProp(body, "RRULE")?.value.match(managedSchedulePatternRegex);
   const due = icsProp(body, "DUE");
   if (!rule || due?.params !== ";VALUE=DATE") throw new Error("Managed repeat schedule is invalid; nothing changed");
   const date = (v: string) => `${v.slice(0,4)}-${v.slice(4,6)}-${v.slice(6,8)}`;

@@ -8,6 +8,9 @@ import { readFileSync, existsSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const classifyDomainPatternRegex = /\(.*?\)/g;
+
 export const DomainSchema = z.object({
   key: z.string().min(1),
   label: z.string().min(1),
@@ -39,7 +42,7 @@ export function loadDomains(file?: string): DomainRegistry {
  *  convention — "kidpix: …", "nixos repo: …"). Returns a domain key, or the
  *  fallback key when there's no clear short prefix or no alias matches. */
 export function classifyDomain(text: string, reg: DomainRegistry): string {
-  const head = (text.split(":")[0] || "").toLowerCase().replace(/\(.*?\)/g, "").trim();
+  const head = (text.split(":")[0] || "").toLowerCase().replace((classifyDomainPatternRegex.lastIndex = 0, classifyDomainPatternRegex), "").trim();
   if (!head || head.length > 30) return reg.fallback.key; // no clear prefix → unknown
   for (const d of reg.domains) {
     const aliases = [d.key.toLowerCase(), ...d.match.map((m) => m.toLowerCase())];

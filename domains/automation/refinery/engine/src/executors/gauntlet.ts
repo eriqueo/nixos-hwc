@@ -10,6 +10,9 @@ import { Item, Executor, ExecutorResult } from "../contracts.js";
 import { GauntletContract } from "../gauntlets/contract.js";
 import { ProcessPort, ResultReader } from "../gauntlets/ports.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const templatePatternRegex = /\{(\w+)\}/g;
+
 export interface GauntletPorts {
   process: ProcessPort;
   reader: ResultReader;
@@ -22,13 +25,14 @@ function dateOf(clock?: () => string): string {
 }
 
 function template(s: string, vars: Record<string, string>): string {
-  return s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k]! : m));
+  return s.replace((templatePatternRegex.lastIndex = 0, templatePatternRegex), (m, k) => (k in vars ? vars[k]! : m));
 }
 
 export function makeGauntletExecutor(
   contract: GauntletContract,
   ports: GauntletPorts,
 ): Executor {
+  const verdictPattern = new RegExp(contract.verdictPattern, "g");
   return {
     id: `gauntlet:${contract.id}`,
     async run(item: Item): Promise<ExecutorResult> {
@@ -71,10 +75,10 @@ export function makeGauntletExecutor(
 
       // The gauntlet owns its verdict token; we read it from stdout, falling
       // back to the report body. verdictPattern is data — group 1 is the token.
-      const re = new RegExp(contract.verdictPattern, "g");
+
       const haystack = res.stdout || (await ports.reader.readReport(reportPath)) || "";
       let verdict: string | null = null;
-      for (const m of haystack.matchAll(re)) verdict = m[1] ?? m[0];
+      for (const m of haystack.matchAll(verdictPattern)) verdict = m[1] ?? m[0];
 
       if (!verdict) {
         return fail(`no verdict token (/${contract.verdictPattern}/) in gauntlet ${contract.id} output`, { reportPresent: true, output });

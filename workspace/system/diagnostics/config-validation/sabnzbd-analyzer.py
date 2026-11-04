@@ -9,6 +9,13 @@ import json
 import sys
 from pathlib import Path
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_ANALYZE_SABNZBD_CONFIG_SEARCH_RE = _compiled_re.compile(r'volumes\s*=\s*\[([^\]]+)\]', _compiled_re.DOTALL)
+_ANALYZE_SABNZBD_CONFIG_FINDALL_RE = _compiled_re.compile(r'["\']([^"\']+)["\']')
+
+
 def analyze_sabnzbd_config(config_path):
     """Analyze SABnzbd configuration for critical components"""
     config_path = Path(config_path)
@@ -53,10 +60,10 @@ def analyze_sabnzbd_config(config_path):
                     result["sabnzbd_container"]["file"] = str(file_path.relative_to(config_path))
                     
                     # Extract volumes
-                    volumes_match = re.search(r'volumes\s*=\s*\[([^\]]+)\]', content, re.DOTALL)
+                    volumes_match = _ANALYZE_SABNZBD_CONFIG_SEARCH_RE.search(content)
                     if volumes_match:
                         volumes_text = volumes_match.group(1)
-                        volumes = re.findall(r'["\']([^"\']+)["\']', volumes_text)
+                        volumes = _ANALYZE_SABNZBD_CONFIG_FINDALL_RE.findall(volumes_text)
                         result["sabnzbd_container"]["volumes"] = volumes
                         
                         # Check for critical mounts

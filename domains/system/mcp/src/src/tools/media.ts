@@ -7,6 +7,9 @@ import type { ToolDef, ToolResult } from "../types.js";
 import { catchError } from "../errors.js";
 import { contract } from "../result.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const getSabnzbdApiKeyPatternRegex = /^api_key\s*=\s*(.+)$/m;
+
 const ARR_SERVICES = [
   { name: "sonarr", port: 8989 },
   { name: "radarr", port: 7878 },
@@ -35,7 +38,7 @@ async function getSabnzbdApiKey(): Promise<string | null> {
   for (const path of configPaths) {
     try {
       const content = await readFile(path, "utf-8");
-      const match = content.match(/^api_key\s*=\s*(.+)$/m);
+      const match = content.match(getSabnzbdApiKeyPatternRegex);
       if (match?.[1]?.trim()) return match[1].trim();
     } catch {
       continue;

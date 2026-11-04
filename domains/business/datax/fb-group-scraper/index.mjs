@@ -8,6 +8,13 @@ import {
   findPostIdInResponse, getOpName,
 } from './parse.mjs';
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const scrapeGroupPatternRegex = /\n/g;
+const expandReplyThreadsPatternRegex = /^\d+\s+Repl(?:y|ies)$/i;
+const expandReplyThreadsPatternRegex2 = /^View\s+\d+\s+repl(?:y|ies)$/i;
+const expandReplyThreadsPatternRegex3 = /^View\s+more\s+repl(?:y|ies)$/i;
+const expandReplyThreadsPatternRegex4 = /replied\s+·\s+\d+\s+Repl(?:y|ies)$/i;
+
 // ── Config ──
 
 const DEFAULTS = {
@@ -153,7 +160,7 @@ async function scrapeGroup(page, opts) {
           if (post.comments.length > existing.comments.length) existing.comments = post.comments;
         } else if (posts.size < opts.posts) {
           posts.set(post.postId, post);
-          log(opts, `  [${posts.size}/${opts.posts}] ${post.author}: ${(post.body || '').slice(0, 60).replace(/\n/g, ' ')}`);
+          log(opts, `  [${posts.size}/${opts.posts}] ${post.author}: ${(post.body || '').slice(0, 60).replace((scrapeGroupPatternRegex.lastIndex = 0, scrapeGroupPatternRegex), ' ')}`);
         }
       }
     } catch { /* non-feed responses ignored */ }
@@ -356,10 +363,10 @@ async function tryCloseDialog(page) {
 
 async function expandReplyThreads(page) {
   const replyPatterns = [
-    /^\d+\s+Repl(?:y|ies)$/i,
-    /^View\s+\d+\s+repl(?:y|ies)$/i,
-    /^View\s+more\s+repl(?:y|ies)$/i,
-    /replied\s+·\s+\d+\s+Repl(?:y|ies)$/i,
+    expandReplyThreadsPatternRegex,
+    expandReplyThreadsPatternRegex2,
+    expandReplyThreadsPatternRegex3,
+    expandReplyThreadsPatternRegex4,
   ];
 
   for (let round = 0; round < 5; round++) {

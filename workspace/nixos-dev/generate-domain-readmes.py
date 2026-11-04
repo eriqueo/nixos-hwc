@@ -31,6 +31,13 @@ from pathlib import Path
 from typing import Dict, List, Set, Tuple, Optional
 from dataclasses import dataclass
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_EXTRACT_SECTIONS_FINDITER_RE = _compiled_re.compile(r'^##\s+(.+)$', _compiled_re.MULTILINE)
+_EXTRACT_SECTIONS_SUB_RE = _compiled_re.compile(r'[✅❌🔗🔧⚙️🎨🐚⌨️🌊📊🖥️🌐]')
+
+
 
 @dataclass
 class DomainInfo:
@@ -127,10 +134,10 @@ class DomainREADMEValidator:
 
         # Extract h2 headers (## Section Name)
         sections = set()
-        for match in re.finditer(r'^##\s+(.+)$', content, re.MULTILINE):
+        for match in _EXTRACT_SECTIONS_FINDITER_RE.finditer(content):
             section = match.group(1).strip()
             # Remove emoji and extra formatting
-            section = re.sub(r'[✅❌🔗🔧⚙️🎨🐚⌨️🌊📊🖥️🌐]', '', section).strip()
+            section = _EXTRACT_SECTIONS_SUB_RE.sub('', section).strip()
             sections.add(section)
 
         return sections

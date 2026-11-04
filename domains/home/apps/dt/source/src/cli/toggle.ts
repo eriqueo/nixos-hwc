@@ -4,7 +4,7 @@ import { elapsedMinutes, formatDuration } from '../lib/time.js';
 
 export function cmdToggle(category?: string): void {
   const config = loadConfig();
-  const active = getActiveSession();
+  const active = getActiveSession(['id']);
 
   if (active) {
     const session = endSession();

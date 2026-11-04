@@ -6,6 +6,29 @@ from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup, NavigableString, Tag
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_FILENAME_BASE_SUB_RE = _compiled_re.compile(r"[^a-z0-9]")
+_EXTRACT_CONTENT_SUB_RE = _compiled_re.compile(r"\s+\n")
+_EXTRACT_CONTENT_SUB_RE_2 = _compiled_re.compile(r"\n{3,}")
+_IS_INTERNAL_HREF_MATCH_RE = _compiled_re.compile(r"^(tel:|mailto:|javascript:|data:)", _compiled_re.I)
+_WIDTH_SEARCH_RE = _compiled_re.compile(r"\s(\d+)w")
+_EXTRACT_IMAGES_SEARCH_RE = _compiled_re.compile(r"background-image:\s*url\((['\"]?)(.*?)\1\)", _compiled_re.I)
+_EXTRACT_PLATFORM_HINTS_SEARCH_RE = _compiled_re.compile(r"\bwp-\w+")
+_PARSE_SRCSET_FOR_LARGEST_SUB_RE = _compiled_re.compile(r"\s+\d+w$")
+_EXTRACT_PLATFORM_HINTS_SEARCH_RE_2 = _compiled_re.compile(r"elementor", _compiled_re.I)
+_EXTRACT_PLATFORM_HINTS_SEARCH_RE_3 = _compiled_re.compile(r"(et-|divi)", _compiled_re.I)
+_EXTRACT_PLATFORM_HINTS_SEARCH_RE_4 = _compiled_re.compile(r"(leadconnector|stcdn\.leadconnectorhq\.com)", _compiled_re.I)
+_WC_SPLIT_RE = _compiled_re.compile(r"\s+")
+_EXTRACT_LINKS_SEARCH_RE = _compiled_re.compile(r"\bnofollow\b", _compiled_re.I)
+_EXTRACT_LINKS_SEARCH_RE_2 = _compiled_re.compile(r"\bnoopener\b", _compiled_re.I)
+_TOKENIZE_SUB_RE = _compiled_re.compile(r"[^\w\s]")
+_EXTRACT_FORMS_SUB_RE = _compiled_re.compile(r"[*:]\s*$")
+_EXTRACT_CONTACTS_SOCIAL_SUB_RE = _compiled_re.compile(r"^www\.")
+_EXTRACT_FORMS_SEARCH_RE = _compiled_re.compile(r"\*\s*$")
+
+
 TOOL_VERSION = "3.2.0"
 SCHEMA_VERSION = "raw-harvest-v1"
 
@@ -34,7 +57,7 @@ def now_iso():
     return datetime.now(timezone.utc).isoformat()
 
 def filename_base(hostname, suffix=""):
-    domain = re.sub(r"[^a-z0-9]", "_", (hostname or "site").lower())
+    domain = _FILENAME_BASE_SUB_RE.sub("_", (hostname or "site").lower())
     date = datetime.now().date().isoformat()
     return f"raw_{domain}_{date}{'_' + suffix if suffix else ''}"
 
@@ -45,7 +68,7 @@ def safe(fn, fallback=None):
         return fallback
 
 def tokenize(s):
-    return [w for w in re.sub(r"[^\w\s]", " ", (s or "").lower()).split() if len(w) > 2]
+    return [w for w in _TOKENIZE_SUB_RE.sub(" ", (s or "").lower()).split() if len(w) > 2]
 
 def jaccard(a_str, b_str):
     a, b = set(tokenize(a_str)), set(tokenize(b_str))
@@ -55,13 +78,13 @@ def jaccard(a_str, b_str):
     return inter / uni
 
 def wc(text):
-    return len([w for w in re.split(r"\s+", (text or "").strip()) if w])
+    return len([w for w in _WC_SPLIT_RE.split((text or "").strip()) if w])
 
 def is_internal_href(href, origin):
     try:
         if not href: return False
         if href.startswith("#"): return False
-        if re.match(r"^(tel:|mailto:|javascript:|data:)", href, re.I): return False
+        if _IS_INTERNAL_HREF_MATCH_RE.match(href): return False
         if href.startswith("/"): return True
         u = urlparse(urljoin(origin, href))
         return u.scheme in ("http","https") and u.netloc == urlparse(origin).netloc
@@ -225,8 +248,8 @@ def extract_links(root, origin):
         abs_url = safe(lambda: urljoin(origin, href), "")
         rel = a.get("rel")
         rel_str = " ".join(rel) if isinstance(rel, list) else (rel or "")
-        nofollow = bool(re.search(r"\bnofollow\b", rel_str, re.I)) if rel_str else None
-        noopener = bool(re.search(r"\bnoopener\b", rel_str, re.I)) if rel_str else None
+        nofollow = bool(_EXTRACT_LINKS_SEARCH_RE.search(rel_str)) if rel_str else None
+        noopener = bool(_EXTRACT_LINKS_SEARCH_RE_2.search(rel_str)) if rel_str else None
         target = a.get("target")
         ctx_tag = "content"
         p = a.find_parent(["nav","header","footer","aside"])
@@ -262,11 +285,11 @@ def parse_srcset_for_largest(srcset):
     if not srcset: return ""
     parts = [p.strip() for p in srcset.split(",") if p.strip()]
     def width(p):
-        m = re.search(r"\s(\d+)w", p)
+        m = _WIDTH_SEARCH_RE.search(p)
         return int(m.group(1)) if m else 0
     parts.sort(key=width, reverse=True)
     first = parts[0] if parts else ""
-    return re.sub(r"\s+\d+w$", "", first).strip()
+    return _PARSE_SRCSET_FOR_LARGEST_SUB_RE.sub("", first).strip()
 
 def extract_images(root):
     items = []
@@ -307,7 +330,7 @@ def extract_images(root):
     background_images = []
     for el in root.select("[style*='background-image']"):
         style = el.get("style") or ""
-        m = re.search(r"background-image:\s*url\((['\"]?)(.*?)\1\)", style, re.I)
+        m = _EXTRACT_IMAGES_SEARCH_RE.search(style)
         if m and m.group(2):
             background_images.append({"selector": get_selector(el), "url": m.group(2)})
 
@@ -324,8 +347,8 @@ def extract_images(root):
     }
 
 def extract_content(root):
-    scoped_text = re.sub(r"\s+\n", "\n", text_from(root))
-    scoped_text = re.sub(r"\n{3,}", "\n\n", scoped_text)
+    scoped_text = _EXTRACT_CONTENT_SUB_RE.sub("\n", text_from(root))
+    scoped_text = _EXTRACT_CONTENT_SUB_RE_2.sub("\n\n", scoped_text)
     blocks = []
     candidates = root.select("p, li, h1, h2, h3, h4, h5, h6, div")
     for el in candidates:
@@ -364,8 +387,8 @@ def extract_forms(root):
             fields.append({
                 "name": field.get("name",""),
                 "id": field.get("id",""),
-                "label": re.sub(r"[*:]\s*$","", label_text),
-                "required": field.has_attr("required") or bool(re.search(r"\*\s*$", label_text)),
+                "label": _EXTRACT_FORMS_SUB_RE.sub("", label_text),
+                "required": field.has_attr("required") or bool(_EXTRACT_FORMS_SEARCH_RE.search(label_text)),
                 "type": t_raw or "text"
             })
         forms_out.append({
@@ -399,7 +422,7 @@ def extract_contacts_social(root):
             host = ""
         host = host.lower()
         if any(d in host for d in SOCIAL_DOMAINS):
-            site = re.sub(r"^www\.", "", host).split(".")[0]
+            site = _EXTRACT_CONTACTS_SOCIAL_SUB_RE.sub("", host).split(".")[0]
             social.append({"site": site, "url": href})
     return {"phones": phones, "emails": emails, "socialProfiles": dedupe_by_url(social)}
 
@@ -438,15 +461,15 @@ def extract_platform_hints(soup):
     hrefs = []
     for n in soup.find_all(["link","script"]):
         hrefs.append(n.get("href") or n.get("src") or "")
-    if any(re.search(r"elementor", h or "", re.I) for h in hrefs):
+    if any(_EXTRACT_PLATFORM_HINTS_SEARCH_RE_2.search(h or "") for h in hrefs):
         hints.append({"name":"Elementor","signal":"assets","confidence":0.9})
-    if any(re.search(r"(et-|divi)", h or "", re.I) for h in hrefs):
+    if any(_EXTRACT_PLATFORM_HINTS_SEARCH_RE_3.search(h or "") for h in hrefs):
         hints.append({"name":"Divi","signal":"assets","confidence":0.85})
-    if any(re.search(r"(leadconnector|stcdn\.leadconnectorhq\.com)", h or "", re.I) for h in hrefs):
+    if any(_EXTRACT_PLATFORM_HINTS_SEARCH_RE_4.search(h or "") for h in hrefs):
         hints.append({"name":"GoHighLevel","signal":"CDN","confidence":0.95})
     body = soup.body
     body_cls = " ".join(body.get("class", [])) .lower() if body else ""
-    if not any(h["name"]=="WordPress" for h in hints) and re.search(r"\bwp-\w+", body_cls):
+    if not any(h["name"]=="WordPress" for h in hints) and _EXTRACT_PLATFORM_HINTS_SEARCH_RE.search(body_cls):
         hints.append({"name":"WordPress","signal":"body class","confidence":0.7})
     return {"hints": hints}
 

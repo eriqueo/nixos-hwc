@@ -30,6 +30,9 @@ import { contract } from "../result.js";
 import { mcpError } from "../errors.js";
 import { loadNightlyEntries, nightlyReviewTools, type NightlyEntry } from "./nightly-review.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const extractItemPatternRegex = /```json\n([\s\S]*?)\n```/;
+
 const ITEMS_DIR = process.env.REFINERY_ITEMS_DIR || "/var/lib/refinery/items";
 const BOARD_URL = process.env.REFINERY_URL || "https://refinery.hwc.iheartwoodcraft.com";
 /** The board service itself, for write proxying — loopback, same host. */
@@ -104,7 +107,7 @@ const NIGHTLY_STAGE: Record<NightlyEntry["lane"], "needs-you" | "done"> = {
  * state). The engine migrates lazily on load, so untouched item files still
  * carry the old names; reading them raw made those items invisible here. */
 function extractItem(md: string): RefineryItem | null {
-  const m = md.match(/```json\n([\s\S]*?)\n```/);
+  const m = md.match(extractItemPatternRegex);
   if (!m) return null;
   try {
     const raw = JSON.parse(m[1]) as Record<string, unknown>;

@@ -13,6 +13,11 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const readFleetSnapshotsTestRegex = /^\d{4}-\d{2}-\d{2}\.json$/;
+const caseStatusLabelPatternRegex = /^peak=(\d+) < (\d+)$/;
+const caseStatusLabelTestRegex = /hash|unchanged/;
+
 export interface FleetMember {
   id?: string;
   name?: string;
@@ -98,7 +103,7 @@ export function readFleetSnapshots(dx1Dir: string): { latest: FleetSnapshot | nu
   const dir = join(dx1Dir, "state", "fleet-history");
   if (!existsSync(dir)) return { latest: null, previous: null };
   const files = readdirSync(dir)
-    .filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
+    .filter((f) => readFleetSnapshotsTestRegex.test(f))
     .sort()
     .reverse(); // newest first (date-named files sort lexically)
   const parsed: FleetSnapshot[] = [];
@@ -229,10 +234,10 @@ export function caseStatusLabel(c: Dx1CaseRow): string {
   const s = c.status ?? "";
   if (s === "queue") return "queued for the next run";
   const reason = s.startsWith("skip: ") ? s.slice(6) : s;
-  const peak = reason.match(/^peak=(\d+) < (\d+)$/);
+  const peak = reason.match(caseStatusLabelPatternRegex);
   if (peak) return `below threshold (${peak[1]} of ${peak[2]} failures)`;
   if (reason === "state=resolved") return c.investigated ? "resolved — already investigated" : "resolved";
-  if (/hash|unchanged/.test(reason)) return "already investigated — unchanged";
+  if (caseStatusLabelTestRegex.test(reason)) return "already investigated — unchanged";
   return reason || "—";
 }
 

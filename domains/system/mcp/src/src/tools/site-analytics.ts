@@ -3,13 +3,17 @@ import type { ToolDef, ExecResult } from "../types.js";
 import { contract } from "../result.js";
 import { mcpError } from "../errors.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const siteAnalyticsToolsTestRegex = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+const siteAnalyticsToolsTestRegex2 = /^[a-z_][a-z0-9_]*$/i;
+
 type Query = (sql: string, db: string, options: {timeout:number}) => Promise<ExecResult>;
 
 export function siteAnalyticsTools(websiteId: string, database: string, query: Query): ToolDef[] {
   return [{name:"hwc_site_analytics", description:"Business website visits and page views for the last seven days, plus top pages. Read-only Umami aggregates.",
     inputSchema:{type:"object",properties:{}},
     handler: async () => {
-      if (!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(websiteId) || !/^[a-z_][a-z0-9_]*$/i.test(database))
+      if (!siteAnalyticsToolsTestRegex.test(websiteId) || !siteAnalyticsToolsTestRegex2.test(database))
         return mcpError({type:"UNAVAILABLE",message:"Business analytics is not configured."});
       // Fixed SQL, no caller-supplied filters. Four-second deadline, fourteen-day
       // scan for comparison, five aggregate page rows. No personal/session data leaves SQL.

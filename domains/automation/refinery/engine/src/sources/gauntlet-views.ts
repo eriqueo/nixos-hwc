@@ -10,6 +10,13 @@
 import { Item } from "../contracts.js";
 import { readDx1LedgerEntries } from "./dx1-fleet.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const parsePatternRegex = /investigations\/(\d{4}-\d{2}-\d{2})-/;
+const buildGauntletExportPatternRegex = /^investigations\//;
+const buildGauntletExportPatternRegex2 = /\/$/;
+const buildGauntletExportPatternRegex3 = /:/g;
+const buildGauntletExportPatternRegex4 = /[^A-Za-z0-9._+-]/g;
+
 /** A CSS-only tab on the detail page backed by files in the run dir. A
  * single-file tab renders the content bare; a multi-file tab (dx1 Evidence =
  * context.md + FINDINGS.md) renders each PRESENT file as a named section —
@@ -196,7 +203,7 @@ const SR_VIEW: GauntletView = {
   },
   // sr run dirs are date-prefixed (investigations/<YYYY-MM-DD>-<srId>/).
   sortDate: (item) => {
-    const m = str(pl(item).run).match(/investigations\/(\d{4}-\d{2}-\d{2})-/);
+    const m = str(pl(item).run).match(parsePatternRegex);
     return m ? m[1]! : "";
   },
 };
@@ -361,11 +368,11 @@ export function buildGauntletExport(
 ): { filename: string; markdown: string } | null {
   const run = pl(item).run;
   const runName = typeof run === "string"
-    ? run.replace(/^investigations\//, "").replace(/\/$/, "")
+    ? run.replace(buildGauntletExportPatternRegex, "").replace(buildGauntletExportPatternRegex2, "")
     : item.id.slice(view.prefix.length);
   // ":" (case fingerprints) is unfriendly in download filenames on some OSes —
   // same "+" encoding as the run-now spool.
-  const base = runName.replace(/:/g, "+").replace(/[^A-Za-z0-9._+-]/g, "") || view.key;
+  const base = runName.replace((buildGauntletExportPatternRegex3.lastIndex = 0, buildGauntletExportPatternRegex3), "+").replace((buildGauntletExportPatternRegex4.lastIndex = 0, buildGauntletExportPatternRegex4), "") || view.key;
   const name = (p: string) => `${base}-${p}.md`;
 
   const tab = view.tabs.find((t) => t.key === part);

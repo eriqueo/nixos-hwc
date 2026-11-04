@@ -12,6 +12,22 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, statSync, renameS
 import { join, dirname } from "node:path";
 import { EvidenceRef, Item } from "../contracts.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const parseNightlyCardFilenameExecRegex = /^(\d{2})[-_](.+)\.md$/;
+const frontmatterExecRegex = /^---\n([\s\S]*?)\n---/;
+const frontmatterExecRegex2 = /^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$/;
+const frontmatterPatternRegex = /^["']|["']$/g;
+const bodyOfExecRegex = /^---\n[\s\S]*?\n---\n?/;
+const readStepsPatternRegex = /\.md$/;
+const buildProjectItemExecRegex = /^#\s+(.*)$/m;
+const buildProjectItemPatternRegex = /^Goal:\s*/i;
+const buildProjectItemExecRegex2 = /(\d{4}-\d{2}-\d{2})/;
+const setStatusTestRegex = /^status:.*$/m;
+const requeueReviewCardTestRegex = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const setCardPrTestRegex = /^pr:.*$/m;
+const setProjectModeTestRegex = /^mode:.*$/m;
+const readReportPatternRegex = /\/$/;
+
 export const NB_PREFIX = "nb:";
 export const NIGHTLY_BUILD_PIPELINE = "nightly-build";
 
@@ -21,7 +37,7 @@ export const NIGHTLY_BUILD_PIPELINE = "nightly-build";
  * here so board projection and morning-review discovery cannot drift apart.
  */
 export function parseNightlyCardFilename(file: string): { n: string; slug: string } | null {
-  const match = /^(\d{2})[-_](.+)\.md$/.exec(file);
+  const match = parseNightlyCardFilenameExecRegex.exec(file);
   return match ? { n: match[1], slug: match[2] } : null;
 }
 
@@ -46,16 +62,16 @@ export interface NbStep {
 
 function frontmatter(text: string): Record<string, string> {
   const out: Record<string, string> = {};
-  const m = /^---\n([\s\S]*?)\n---/.exec(text);
+  const m = frontmatterExecRegex.exec(text);
   if (!m) return out;
   for (const line of m[1].split("\n")) {
-    const mm = /^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$/.exec(line);
-    if (mm) out[mm[1]] = mm[2].replace(/^["']|["']$/g, "").trim();
+    const mm = frontmatterExecRegex2.exec(line);
+    if (mm) out[mm[1]] = mm[2].replace((frontmatterPatternRegex.lastIndex = 0, frontmatterPatternRegex), "").trim();
   }
   return out;
 }
 function bodyOf(text: string): string {
-  const m = /^---\n[\s\S]*?\n---\n?/.exec(text);
+  const m = bodyOfExecRegex.exec(text);
   return m ? text.slice(m[0].length).trim() : text.trim();
 }
 
@@ -73,7 +89,7 @@ function readSteps(goalDir: string): NbStep[] {
     steps.push({
       n: cardName.n,
       file: f,
-      title: fm.title || f.replace(/\.md$/, ""),
+      title: fm.title || f.replace(readStepsPatternRegex, ""),
       status: fm.status || "draft",
       step: fm.step || "",
       run: fm.run || "",
@@ -128,8 +144,8 @@ function buildProjectItem(dir: string, goalId: string, finished: boolean): Item 
   if (existsSync(goalPath)) {
     const gtext = readFileSync(goalPath, "utf8");
     goalBody = bodyOf(gtext);
-    const h = /^#\s+(.*)$/m.exec(goalBody);
-    if (h) title = h[1].trim().replace(/^Goal:\s*/i, "");
+    const h = buildProjectItemExecRegex.exec(goalBody);
+    if (h) title = h[1].trim().replace(buildProjectItemPatternRegex, "");
     if (frontmatter(gtext).mode === "immediate") mode = "immediate";
   }
   const nextPending = steps.find((s) => isPending(s.status));
@@ -145,7 +161,7 @@ function buildProjectItem(dir: string, goalId: string, finished: boolean): Item 
   // that either, so both fall back to "(undated)" rather than fabricating now().
   const evidence: EvidenceRef[] = [];
   for (const s of steps) {
-    const at = /(\d{4}-\d{2}-\d{2})/.exec(s.run)?.[1] ?? "(undated)";
+    const at = buildProjectItemExecRegex2.exec(s.run)?.[1] ?? "(undated)";
     if (s.run) evidence.push({ kind: "run", ref: s.run, at });
     if (s.pr) evidence.push({ kind: "pr", ref: s.pr, at });
   }
@@ -272,10 +288,10 @@ function setStatus(vaultDir: string, goalId: string, file: string, newStatus: st
   const path = join(vaultDir, "_inbox", "nightly_builds", goalId, file);
   if (!existsSync(path)) return false;
   const text = readFileSync(path, "utf8");
-  const m = /^---\n([\s\S]*?)\n---/.exec(text);
+  const m = frontmatterExecRegex.exec(text);
   if (!m) return false;
-  const newFm = /^status:.*$/m.test(m[1])
-    ? m[1].replace(/^status:.*$/m, `status: ${newStatus}`)
+  const newFm = setStatusTestRegex.test(m[1])
+    ? m[1].replace(setStatusTestRegex, `status: ${newStatus}`)
     : `${m[1]}\nstatus: ${newStatus}`;
   writeFileSync(path, text.replace(m[1], newFm));
   return true;
@@ -289,7 +305,7 @@ export function requeueReviewCard(
   cardSlug: string,
   cardFile?: string,
 ): boolean {
-  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(goalId) || goalId === ".." || cardFile?.includes("/")) return false;
+  if (!requeueReviewCardTestRegex.test(goalId) || goalId === ".." || cardFile?.includes("/")) return false;
   const activeDir = join(vaultDir, "_inbox", "nightly_builds", goalId);
   const finishedDir = join(vaultDir, "_inbox", "nightly_builds", FINISHED_DIR, goalId);
   const sourceDir = existsSync(activeDir) ? activeDir : existsSync(finishedDir) ? finishedDir : null;
@@ -318,11 +334,11 @@ export function setCardPr(vaultDir: string, goalId: string, file: string, url: s
   const path = join(vaultDir, "_inbox", "nightly_builds", goalId, file);
   if (!existsSync(path)) return false;
   const text = readFileSync(path, "utf8");
-  const m = /^---\n([\s\S]*?)\n---/.exec(text);
+  const m = frontmatterExecRegex.exec(text);
   if (!m) return false;
   if (frontmatter(text).pr === url) return true; // already recorded — idempotent
-  const newFm = /^pr:.*$/m.test(m[1])
-    ? m[1].replace(/^pr:.*$/m, `pr: ${url}`)
+  const newFm = setCardPrTestRegex.test(m[1])
+    ? m[1].replace(setCardPrTestRegex, `pr: ${url}`)
     : `${m[1]}\npr: ${url}`;
   writeFileSync(path, text.replace(m[1], newFm));
   return true;
@@ -359,10 +375,10 @@ export function setProjectMode(vaultDir: string, goalId: string, mode: NbMode): 
   const goalPath = join(vaultDir, "_inbox", "nightly_builds", goalId, "_goal.md");
   if (!existsSync(goalPath)) return false;
   const text = readFileSync(goalPath, "utf8");
-  const m = /^---\n([\s\S]*?)\n---/.exec(text);
+  const m = frontmatterExecRegex.exec(text);
   if (!m) return false;
-  const newFm = /^mode:.*$/m.test(m[1])
-    ? m[1].replace(/^mode:.*$/m, `mode: ${mode}`)
+  const newFm = setProjectModeTestRegex.test(m[1])
+    ? m[1].replace(setProjectModeTestRegex, `mode: ${mode}`)
     : `${m[1]}\nmode: ${mode}`;
   writeFileSync(goalPath, text.replace(m[1], newFm));
   return true;
@@ -380,6 +396,6 @@ export function unqueueStep(vaultDir: string, goalId: string): string | null {
 /** Read a REPORT.md from a run dir relative to baseDir (path traversal guarded). */
 export function readReport(baseDir: string, run: string): string | null {
   if (!run || run.includes("..") || run.startsWith("/")) return null;
-  const path = join(baseDir, run.replace(/\/$/, ""), "REPORT.md");
+  const path = join(baseDir, run.replace(readReportPatternRegex, ""), "REPORT.md");
   return existsSync(path) ? readFileSync(path, "utf8") : null;
 }

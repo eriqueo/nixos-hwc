@@ -28,6 +28,41 @@ from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_EXTRACT_EVENT_LINK_COMPILE_RE = _compiled_re.compile(r"\b(register|registration|rsvp|event|details|learn more|calendar|join)\b", _compiled_re.IGNORECASE)
+_PARSE_STRUCTURED_FIELDS_SEARCH_RE = _compiled_re.compile(r"(?:^|\n)\s*Date:\s*(.+)", _compiled_re.IGNORECASE)
+_PARSE_STRUCTURED_FIELDS_SEARCH_RE_2 = _compiled_re.compile(r"(?:^|\n)\s*Time:\s*(.+)", _compiled_re.IGNORECASE)
+_PARSE_STRUCTURED_FIELDS_SEARCH_RE_3 = _compiled_re.compile(r"(?P<sh>\d{1,2})(?::(?P<sm>\d{2}))?\s*(?P<sa>[ap])(?:m)?\s*"
+        r"[-–—]\s*(?P<eh>\d{1,2})(?::(?P<em>\d{2}))?\s*(?P<ea>[ap])(?:m)?", _compiled_re.IGNORECASE)
+_PARSE_STRUCTURED_FIELDS_SEARCH_RE_4 = _compiled_re.compile(r"\b\d{1,2}/\d{1,2}/(?:\d{2}|\d{4})\b")
+_PARSE_STRUCTURED_FIELDS_SEARCH_RE_5 = _compiled_re.compile(r"(?:^|\n)\s*(?:Link|URL|Join|Meeting\s*Link)[^:]*:\s*(https?://\S+)", _compiled_re.IGNORECASE)
+_PARSE_STRUCTURED_FIELDS_SEARCH_RE_6 = _compiled_re.compile(r"(?:^|\n)\s*Password:\s*(\S+)", _compiled_re.IGNORECASE)
+_PARSE_STRUCTURED_FIELDS_SEARCH_RE_7 = _compiled_re.compile(r"(?:^|\n)\s*(?:Location|Where|Venue):\s*(.+)", _compiled_re.IGNORECASE)
+_PARSE_STRUCTURED_FIELDS_SEARCH_RE_8 = _compiled_re.compile(r"\b(?P<val>\d+)\s*[- ]?\s*(?P<unit>minutes?|mins?|hours?|hrs?)\b|"
+        r"\b(?P<hours>\d+)h\b", _compiled_re.IGNORECASE)
+_NORMALIZE_TWO_DIGIT_YEAR_SUB_RE = _compiled_re.compile(r"(\b\d{1,2}/\d{1,2}/)(\d{2})\b")
+_HANDLE_BODY_PARSE_MATCH_RE = _compiled_re.compile(r"(\d+)\s*(m|min|h|hr|hour)?", _compiled_re.IGNORECASE)
+_EXTRACT_HTML_LINK_RECORDS_FINDITER_RE = _compiled_re.compile(r"<a\b[^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", _compiled_re.IGNORECASE | _compiled_re.DOTALL)
+_HAS_EXPLICIT_TIME_SEARCH_RE = _compiled_re.compile(r"\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b\d{1,2}:\d{2}\b", _compiled_re.IGNORECASE)
+__PARSE_TEMPLATE_MATCH_RE = _compiled_re.compile(r"^(\w[\w\s]*?):\s*(.*)")
+_EXTRACT_HTML_LINK_RECORDS_FINDITER_RE_2 = _compiled_re.compile(r"<img\b([^>]*)>", _compiled_re.IGNORECASE | _compiled_re.DOTALL)
+_COMPACT_REFERENCE_TEXT_SUB_RE = _compiled_re.compile(r"\s+")
+_EXTRACT_HTML_TEXT_SUB_RE = _compiled_re.compile(r"<style[^>]*>.*?</style>", _compiled_re.DOTALL | _compiled_re.IGNORECASE)
+_EXTRACT_HTML_TEXT_SUB_RE_2 = _compiled_re.compile(r"<script[^>]*>.*?</script>", _compiled_re.DOTALL | _compiled_re.IGNORECASE)
+_EXTRACT_HTML_TEXT_SUB_RE_3 = _compiled_re.compile(r"<[^>]+>")
+_EXTRACT_HTML_TEXT_SUB_RE_4 = _compiled_re.compile(r"&nbsp;")
+_EXTRACT_HTML_TEXT_SUB_RE_5 = _compiled_re.compile(r"&amp;")
+_EXTRACT_HTML_TEXT_SUB_RE_6 = _compiled_re.compile(r"&[a-z]+;")
+_EXTRACT_HTML_LINK_RECORDS_SEARCH_RE = _compiled_re.compile(r"\bwidth=[\"']?(\d+)", _compiled_re.IGNORECASE)
+_EXTRACT_HTML_LINK_RECORDS_SEARCH_RE_2 = _compiled_re.compile(r"\bheight=[\"']?(\d+)", _compiled_re.IGNORECASE)
+_EXTRACT_HTML_LINK_RECORDS_SEARCH_RE_3 = _compiled_re.compile(r"\balt=[\"']([^\"']*)[\"']", _compiled_re.IGNORECASE)
+_EXTRACT_HTML_LINKS_FINDALL_RE = _compiled_re.compile(r'href=["\']?(https?://[^"\'>\s]+)', _compiled_re.IGNORECASE)
+_PARSE_STRUCTURED_FIELDS_SEARCH_RE_9 = _compiled_re.compile(r"zoom|meet|teams|webinar|gotomeeting|whereby", _compiled_re.IGNORECASE)
+_EXTRACT_HTML_LINK_RECORDS_SEARCH_RE_4 = _compiled_re.compile(r"\bsrc=[\"']([^\"']+)[\"']", _compiled_re.IGNORECASE)
+
+
 MAX_REMOTE_IMAGE_BYTES = 8 * 1024 * 1024
 REMOTE_IMAGE_TIMEOUT_SECONDS = 10
 OCR_TIMEOUT_SECONDS = 20
@@ -89,13 +124,13 @@ def extract_html_text(msg) -> str:
             if payload:
                 html = payload.decode("utf-8", errors="ignore")
                 # Strip tags, keep text content
-                text = re.sub(r"<style[^>]*>.*?</style>", "", html, flags=re.DOTALL | re.IGNORECASE)
-                text = re.sub(r"<script[^>]*>.*?</script>", "", text, flags=re.DOTALL | re.IGNORECASE)
-                text = re.sub(r"<[^>]+>", " ", text)
-                text = re.sub(r"&nbsp;", " ", text)
-                text = re.sub(r"&amp;", "&", text)
-                text = re.sub(r"&[a-z]+;", " ", text)
-                text = re.sub(r"\s+", " ", text)
+                text = _EXTRACT_HTML_TEXT_SUB_RE.sub("", html)
+                text = _EXTRACT_HTML_TEXT_SUB_RE_2.sub("", text)
+                text = _EXTRACT_HTML_TEXT_SUB_RE_3.sub(" ", text)
+                text = _EXTRACT_HTML_TEXT_SUB_RE_4.sub(" ", text)
+                text = _EXTRACT_HTML_TEXT_SUB_RE_5.sub("&", text)
+                text = _EXTRACT_HTML_TEXT_SUB_RE_6.sub(" ", text)
+                text = _COMPACT_REFERENCE_TEXT_SUB_RE.sub(" ", text)
                 return text
     return ""
 
@@ -108,7 +143,7 @@ def extract_html_links(msg) -> list[str]:
             payload = part.get_payload(decode=True)
             if payload:
                 html = payload.decode("utf-8", errors="ignore")
-                urls.extend(re.findall(r'href=["\']?(https?://[^"\'>\s]+)', html, re.IGNORECASE))
+                urls.extend(_EXTRACT_HTML_LINKS_FINDALL_RE.findall(html))
     return urls
 
 
@@ -136,30 +171,26 @@ def extract_html_link_records(msg) -> list[dict]:
         if not payload:
             continue
         source = payload.decode("utf-8", errors="ignore")
-        for match in re.finditer(
-            r"<a\b[^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>",
-            source,
-            re.IGNORECASE | re.DOTALL,
-        ):
+        for match in _EXTRACT_HTML_LINK_RECORDS_FINDITER_RE.finditer(source):
             href = unescape(match.group(1)).strip()
             if not href.lower().startswith(("http://", "https://")):
                 continue
             inner = match.group(2)
-            text = unescape(re.sub(r"<[^>]+>", " ", inner))
-            text = re.sub(r"\s+", " ", text).strip()
+            text = unescape(_EXTRACT_HTML_TEXT_SUB_RE_3.sub(" ", inner))
+            text = _COMPACT_REFERENCE_TEXT_SUB_RE.sub(" ", text).strip()
             image_area = 0
             image_src = ""
-            for image in re.finditer(r"<img\b([^>]*)>", inner, re.IGNORECASE | re.DOTALL):
+            for image in _EXTRACT_HTML_LINK_RECORDS_FINDITER_RE_2.finditer(inner):
                 attrs = image.group(1)
-                width = re.search(r"\bwidth=[\"']?(\d+)", attrs, re.IGNORECASE)
-                height = re.search(r"\bheight=[\"']?(\d+)", attrs, re.IGNORECASE)
+                width = _EXTRACT_HTML_LINK_RECORDS_SEARCH_RE.search(attrs)
+                height = _EXTRACT_HTML_LINK_RECORDS_SEARCH_RE_2.search(attrs)
                 if width and height:
                     area = int(width.group(1)) * int(height.group(1))
                     if area > image_area:
                         image_area = area
-                        src = re.search(r"\bsrc=[\"']([^\"']+)[\"']", attrs, re.IGNORECASE)
+                        src = _EXTRACT_HTML_LINK_RECORDS_SEARCH_RE_4.search(attrs)
                         image_src = unescape(src.group(1)).strip() if src else ""
-                alt = re.search(r"\balt=[\"']([^\"']*)[\"']", attrs, re.IGNORECASE)
+                alt = _EXTRACT_HTML_LINK_RECORDS_SEARCH_RE_3.search(attrs)
                 if not text and alt:
                     text = unescape(alt.group(1)).strip()
             records.append({
@@ -179,10 +210,7 @@ def extract_event_link(msg) -> tuple[str, str] | None:
     """
     records = extract_html_link_records(msg)
 
-    label_pattern = re.compile(
-        r"\b(register|registration|rsvp|event|details|learn more|calendar|join)\b",
-        re.IGNORECASE,
-    )
+    label_pattern = _EXTRACT_EVENT_LINK_COMPILE_RE
     for record in records:
         if label_pattern.search(record["text"]):
             return "Event page", record["href"]
@@ -299,23 +327,18 @@ def parse_structured_fields(body: str, msg=None) -> dict:
     """Extract structured key: value fields from email body."""
     fields = {}
 
-    m = re.search(r"(?:^|\n)\s*Date:\s*(.+)", body, re.IGNORECASE)
+    m = _PARSE_STRUCTURED_FIELDS_SEARCH_RE.search(body)
     if m:
         fields["date_raw"] = m.group(1).strip()
 
-    m = re.search(r"(?:^|\n)\s*Time:\s*(.+)", body, re.IGNORECASE)
+    m = _PARSE_STRUCTURED_FIELDS_SEARCH_RE_2.search(body)
     if m:
         fields["time_raw"] = m.group(1).strip()
 
     # School/community mail and OCR text often contain a compact time range.
     # Normalize it into the same fields as explicit Date:/Time: lines and
     # derive the duration.
-    time_range = re.search(
-        r"(?P<sh>\d{1,2})(?::(?P<sm>\d{2}))?\s*(?P<sa>[ap])(?:m)?\s*"
-        r"[-–—]\s*(?P<eh>\d{1,2})(?::(?P<em>\d{2}))?\s*(?P<ea>[ap])(?:m)?",
-        body,
-        re.IGNORECASE,
-    )
+    time_range = _PARSE_STRUCTURED_FIELDS_SEARCH_RE_3.search(body)
     if time_range:
         fields.setdefault(
             "time_raw",
@@ -334,15 +357,12 @@ def parse_structured_fields(body: str, msg=None) -> dict:
         if 0 < duration <= 12 * 60:
             fields["duration_min"] = duration
 
-    numeric_date = re.search(r"\b\d{1,2}/\d{1,2}/(?:\d{2}|\d{4})\b", body)
+    numeric_date = _PARSE_STRUCTURED_FIELDS_SEARCH_RE_4.search(body)
     if numeric_date:
         fields.setdefault("date_raw", numeric_date.group(0))
 
     # Link: try plaintext first, then fall back to HTML hrefs
-    m = re.search(
-        r"(?:^|\n)\s*(?:Link|URL|Join|Meeting\s*Link)[^:]*:\s*(https?://\S+)",
-        body, re.IGNORECASE,
-    )
+    m = _PARSE_STRUCTURED_FIELDS_SEARCH_RE_5.search(body)
     if m:
         fields["link"] = m.group(1).strip()
     elif msg:
@@ -352,7 +372,7 @@ def parse_structured_fields(body: str, msg=None) -> dict:
         # never promote the first arbitrary campaign link.
         meeting_urls = [
             u for u in html_urls
-            if re.search(r"zoom|meet|teams|webinar|gotomeeting|whereby", u, re.IGNORECASE)
+            if _PARSE_STRUCTURED_FIELDS_SEARCH_RE_9.search(u)
         ]
         if meeting_urls:
             fields["link"] = meeting_urls[0]
@@ -362,25 +382,18 @@ def parse_structured_fields(body: str, msg=None) -> dict:
             if event_link:
                 fields["link_label"], fields["link"] = event_link
 
-    m = re.search(r"(?:^|\n)\s*Password:\s*(\S+)", body, re.IGNORECASE)
+    m = _PARSE_STRUCTURED_FIELDS_SEARCH_RE_6.search(body)
     if m:
         fields["password"] = m.group(1).strip()
 
-    m = re.search(
-        r"(?:^|\n)\s*(?:Location|Where|Venue):\s*(.+)", body, re.IGNORECASE
-    )
+    m = _PARSE_STRUCTURED_FIELDS_SEARCH_RE_7.search(body)
     if m:
         fields["location"] = m.group(1).strip()
 
     # Duration: "90-minute", "1 hour", "2h", "30 min". Preserve a time-
     # range-derived duration, which is more authoritative, and do not allow a
     # bare "h" across whitespace (OCR once turned "$25\nh..." into 25 hours).
-    m = re.search(
-        r"\b(?P<val>\d+)\s*[- ]?\s*(?P<unit>minutes?|mins?|hours?|hrs?)\b|"
-        r"\b(?P<hours>\d+)h\b",
-        body,
-        re.IGNORECASE,
-    )
+    m = _PARSE_STRUCTURED_FIELDS_SEARCH_RE_8.search(body)
     if m and "duration_min" not in fields:
         if m.group("hours"):
             fields["duration_min"] = int(m.group("hours")) * 60
@@ -402,11 +415,7 @@ def detect_timezone(text: str) -> str | None:
 
 def normalize_two_digit_year(text: str) -> str:
     """Treat email-style numeric years as 20xx, independent of dateparser's pivot."""
-    return re.sub(
-        r"(\b\d{1,2}/\d{1,2}/)(\d{2})\b",
-        lambda match: f"{match.group(1)}20{match.group(2)}",
-        text,
-    )
+    return _NORMALIZE_TWO_DIGIT_YEAR_SUB_RE.sub(lambda match: f"{match.group(1)}20{match.group(2)}", text)
 
 
 def parse_datetime(fields: dict, body: str):
@@ -494,11 +503,7 @@ def parse_date_only(text: str):
 
 
 def has_explicit_time(text: str) -> bool:
-    return bool(re.search(
-        r"\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b\d{1,2}:\d{2}\b",
-        text,
-        re.IGNORECASE,
-    ))
+    return bool(_HAS_EXPLICIT_TIME_SEARCH_RE.search(text))
 
 
 def clean_event_title(subject: str) -> str:
@@ -516,7 +521,7 @@ def clean_event_title(subject: str) -> str:
 
 def compact_reference_text(text: str, width: int = 96, limit: int = 1600) -> str:
     """Keep review context readable without dumping a newsletter footer wall."""
-    text = re.sub(r"\s+", " ", text).strip()
+    text = _COMPACT_REFERENCE_TEXT_SUB_RE.sub(" ", text).strip()
     if len(text) > limit:
         text = text[: limit - 1].rstrip() + "…"
     return "\n".join(textwrap.wrap(text, width=width, break_long_words=False))
@@ -697,7 +702,7 @@ def _parse_template(text: str) -> dict | None:
         if in_desc:
             desc_lines.append(line)
             continue
-        m = re.match(r"^(\w[\w\s]*?):\s*(.*)", line)
+        m = __PARSE_TEMPLATE_MATCH_RE.match(line)
         if m:
             key = m.group(1).strip().lower()
             result[key] = m.group(2).strip()
@@ -896,7 +901,7 @@ def handle_body_parse(msg, tesseract: str, draft_path: str | None = None):
 
     # Parse duration
     dur_str = edited.get("duration", "60m")
-    dur_m = re.match(r"(\d+)\s*(m|min|h|hr|hour)?", dur_str, re.IGNORECASE)
+    dur_m = _HANDLE_BODY_PARSE_MATCH_RE.match(dur_str)
     if dur_m:
         val = int(dur_m.group(1))
         unit = (dur_m.group(2) or "m").lower()

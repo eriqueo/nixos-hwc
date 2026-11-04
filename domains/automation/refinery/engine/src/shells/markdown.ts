@@ -6,8 +6,27 @@
 // lists, blockquotes, hr, paragraphs. Output is meant to live in a `.md` block
 // whose CSS wraps long lines.
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const escPatternRegex = /[&<>"']/g;
+const obsidianHrefPatternRegex = /^\//;
+const obsidianHrefPatternRegex2 = /#[^#]*$/;
+const obsidianHrefPatternRegex3 = /\.md$/;
+const inlinePatternRegex = /`([^`]+)`/g;
+const inlinePatternRegex2 = /\*\*([^*]+)\*\*/g;
+const inlinePatternRegex3 = /(^|[^*])\*([^*\n]+)\*/g;
+const inlinePatternRegex4 = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+const inlinePatternRegex5 = /\[([^\]]+)\]\((https?:[^)\s]+)\)/g;
+const inlinePatternRegex6 = /\[([^\]]+)\]\(([^)\s]+\.md(?:#[^)\s]*)?)\)/g;
+const mdToHtmlTestRegex = /^\s*```/;
+const mdToHtmlTestRegex2 = /^\s*$/;
+const mdToHtmlExecRegex = /^(#{1,6})\s+(.*)$/;
+const mdToHtmlTestRegex3 = /^\s*([-*_])\1{2,}\s*$/;
+const mdToHtmlExecRegex2 = /^\s*[-*]\s+(.*)$/;
+const mdToHtmlExecRegex3 = /^\s*\d+\.\s+(.*)$/;
+const mdToHtmlExecRegex4 = /^\s*&gt;\s?(.*)$/;
+
 function esc(s: string): string {
-  return s.replace(/[&<>"']/g, (c) =>
+  return s.replace((escPatternRegex.lastIndex = 0, escPatternRegex), (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string),
   );
 }
@@ -18,31 +37,31 @@ function esc(s: string): string {
 // obsidian:// URI has no heading support). Vault name is late-bound.
 const OBSIDIAN_VAULT = process.env.REFINERY_OBSIDIAN_VAULT ?? "brain";
 function obsidianHref(target: string): string {
-  const file = target.replace(/^\//, "").replace(/#[^#]*$/, "").replace(/\.md$/, "");
+  const file = target.replace(obsidianHrefPatternRegex, "").replace(obsidianHrefPatternRegex2, "").replace(obsidianHrefPatternRegex3, "");
   return `obsidian://open?vault=${encodeURIComponent(OBSIDIAN_VAULT)}&amp;file=${encodeURIComponent(file)}`;
 }
 
 function inline(s: string): string {
   return s
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>")
+    .replace((inlinePatternRegex.lastIndex = 0, inlinePatternRegex), "<code>$1</code>")
+    .replace((inlinePatternRegex2.lastIndex = 0, inlinePatternRegex2), "<strong>$1</strong>")
+    .replace((inlinePatternRegex3.lastIndex = 0, inlinePatternRegex3), "$1<em>$2</em>")
     // Legacy wikilinks: [[target]] / [[target|label]] — deprecated by the OKF
     // link standard but still present in older goal/card bodies.
     .replace(
-      /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
+      (inlinePatternRegex4.lastIndex = 0, inlinePatternRegex4),
       (_m, target: string, label?: string) =>
         `<a class="vlink" href="${obsidianHref(target)}" title="${target}">${label ?? target}</a>`,
     )
     // External links: [text](http...) — href already escaped; only allow http(s).
-    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2">$1</a>')
+    .replace((inlinePatternRegex5.lastIndex = 0, inlinePatternRegex5), '<a href="$2">$1</a>')
     // OKF vault cross-links: [text](relative/path.md[#anchor]) — standard
     // markdown links into the vault. The board is home-masked and can't read
     // arbitrary vault paths, so link out to Obsidian instead: an
     // obsidian://open deep link opens the note on any machine with the vault
     // (full path stays on hover).
     .replace(
-      /\[([^\]]+)\]\(([^)\s]+\.md(?:#[^)\s]*)?)\)/g,
+      (inlinePatternRegex6.lastIndex = 0, inlinePatternRegex6),
       (_m, text: string, path: string) =>
         `<a class="vlink" href="${obsidianHref(path)}" title="${path}">${text}</a>`,
     );
@@ -71,7 +90,7 @@ export function mdToHtml(md: string): string {
   for (const raw of lines) {
     const line = raw;
     // fenced code
-    const fence = /^\s*```/.test(line);
+    const fence = mdToHtmlTestRegex.test(line);
     if (fence) {
       flushPara();
       closeList();
@@ -88,12 +107,12 @@ export function mdToHtml(md: string): string {
       out.push(line);
       continue;
     }
-    if (/^\s*$/.test(line)) {
+    if (mdToHtmlTestRegex2.test(line)) {
       flushPara();
       closeList();
       continue;
     }
-    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+    const heading = mdToHtmlExecRegex.exec(line);
     if (heading) {
       flushPara();
       closeList();
@@ -101,14 +120,14 @@ export function mdToHtml(md: string): string {
       out.push(`<h${level}>${inline(heading[2])}</h${level}>`);
       continue;
     }
-    if (/^\s*([-*_])\1{2,}\s*$/.test(line)) {
+    if (mdToHtmlTestRegex3.test(line)) {
       flushPara();
       closeList();
       out.push("<hr>");
       continue;
     }
-    const ul = /^\s*[-*]\s+(.*)$/.exec(line);
-    const ol = /^\s*\d+\.\s+(.*)$/.exec(line);
+    const ul = mdToHtmlExecRegex2.exec(line);
+    const ol = mdToHtmlExecRegex3.exec(line);
     if (ul || ol) {
       flushPara();
       const want = ul ? "ul" : "ol";
@@ -120,7 +139,7 @@ export function mdToHtml(md: string): string {
       out.push(`<li>${inline((ul ?? ol)![1])}</li>`);
       continue;
     }
-    const quote = /^\s*&gt;\s?(.*)$/.exec(line); // ">" was escaped
+    const quote = mdToHtmlExecRegex4.exec(line); // ">" was escaped
     if (quote) {
       flushPara();
       closeList();

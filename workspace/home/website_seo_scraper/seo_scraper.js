@@ -2,6 +2,10 @@
 // This is the formatted version for editing - DO NOT use this as bookmarklet
 // Use the minified version from bookmarklet_ready_to_paste.txt
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const getPageInfoPatternRegex = /\s+/;
+const displayResultsPatternRegex = /[^a-zA-Z0-9]/g;
+
 javascript:(function(){
     // Remove existing analysis if present
     if (document.getElementById('seo-analysis')) {
@@ -147,7 +151,7 @@ javascript:(function(){
     // Get page information
     function getPageInfo() {
         return safeExecute(() => {
-            const wordCount = document.body.innerText.split(/\s+/).length;
+            const wordCount = document.body.innerText.split(getPageInfoPatternRegex).length;
             const lastModified = document.lastModified;
             
             return {
@@ -268,7 +272,7 @@ javascript:(function(){
         // Store data globally for clipboard access
         window.seoDataGlobal = seoData;
         
-        const domain = seoData.domain.replace(/[^a-zA-Z0-9]/g, '_');
+        const domain = seoData.domain.replace((displayResultsPatternRegex.lastIndex = 0, displayResultsPatternRegex), '_');
         const timestamp = new Date().toISOString().slice(0, 10);
         const filename = 'seo_analysis_' + domain + '_' + timestamp;
 

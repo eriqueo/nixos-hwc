@@ -69,7 +69,7 @@ def export_trade_rates(db: sqlite3.Connection) -> dict:
 
 
 def export_state_keys(db: sqlite3.Connection) -> list:
-    rows = db.execute('SELECT * FROM state_keys ORDER BY id').fetchall()
+    rows = db.execute('SELECT key, category, value_type, default_value, options, unit, description, drives, required, project_type FROM state_keys ORDER BY id').fetchall()
     return [
         {
             'key':         r['key'],
@@ -90,7 +90,10 @@ def export_state_keys(db: sqlite3.Connection) -> list:
 def export_catalog(db: sqlite3.Connection) -> list:
     rows = db.execute('''
         SELECT
-            ci.*,
+            ci.id, ci.canonical_name, ci.budget_group_path, ci.default_qty,
+            ci.unit_cost, ci.unit_price, ci.labor_wage, ci.labor_burden,
+            ci.waste_factor, ci.production_rate, ci.qty_driver_key,
+            ci.qty_formula, ci.condition_trigger, ci.notes,
             cc.code  AS code_str,
             ct.name  AS type_name,
             u.name   AS unit_name,

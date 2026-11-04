@@ -18,6 +18,8 @@ n8n declares column-scoped PostgreSQL authority for its shared workflow tables w
 
 Estimator integration documentation contains placeholders only. The server proxy owns the shared webhook credential; browser builds never receive it.
 
+Refinery and janitor parsers share fixed module patterns; gauntlet executors compile configured verdict patterns once per executor. Native verdict matching reuses compiled patterns without retaining caller-owned regex objects.
+
 `n8n/` preserves reviewed2.46.1 in a fixed-hash Brotli/curl repair recipe; offline migration and credential checks use an
 isolated SQLite copy with workflows disabled before production activation.
 
@@ -100,6 +102,8 @@ workspace/automation/
 - 2026-11-03: Declare n8n workflow PostgreSQL grants and a bounded stopped-app credential bridge; add the calendar logger's missing nullable metadata column.
 
 - 2026-11-02: Remove the disclosed estimator credential from current historical setup documents and document server-side injection.
+
+- 2026-11-02: Hoist fixed parser patterns and reuse configured verdict patterns without changing gate or runner behavior.
 
 - 2026-11-02: Add n8n's same-app OS repair context after isolated database/key
   read, decrypt, startup and old-image recovery checks.
