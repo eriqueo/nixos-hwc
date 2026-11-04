@@ -14,7 +14,8 @@ Seerr (formerly Jellyseerr) is a request management and media discovery tool for
 
 ```
 jellyseerr/
-├── index.nix       # Options, upstream security hunks, signed native inputs and image context
+├── index.nix       # Options, security hunks, signed inputs and frozen dependency image builder
+├── dependencies.json # One versioned package/lock/tool/native/type input source
 ├── sys.nix         # Container configuration (mkContainer)
 ├── README.md       # This file
 └── parts/
@@ -45,9 +46,25 @@ notification settings, allow only public settings in `/auth/me`, and apply the
 upstream media/user/issue filters in movie and TV details.
 
 Build `.#nixosConfigurations.hwc-home.config.system.build.seerrRuntimeImageContext`,
-then pass that context to `podman build --network=none --format=docker --pull=never`
-with the evaluated `hwc.media.jellyseerr.image` tag. Cache both immutable vendor
-inputs first. Keep the qualified old image and current data for recovery.
+then pass that context to `podman build --format=docker --pull=never` with the
+evaluated `hwc.media.jellyseerr.image` tag. Cache both immutable vendor inputs first.
+The dependency stage fetches the frozen package set with lifecycle scripts disabled.
+Its next RUN disables networking for type checking, client compilation and a clean
+offline production install. The final stage retains the same compiled server and
+copies only the new modules, client output and package/lock metadata. It omits the
+compiler cache and preserves the same-version SQLite native binding by hash and ABI.
+Keep the qualified old image and current data for recovery.
+
+`dependencies.json` owns the package, native YAML-compatible lock and pinned public
+build inputs. Regenerate its package/lock fields from pnpm's output, parsed as YAML,
+then run this frozen build and current-data qualification. Do not edit resolved
+package versions by hand. The checked legacy email-template declaration patch
+uses Nodemailer's public Transporter type and retires when upstream includes it.
+
+Run one image build at a time. Require 32 GiB available RAM and 20 GiB free disk.
+Set a 16 GiB memory limit, two CPUs, an 1800-second deadline and a 2 GiB file limit.
+Stop on a limit and remove only the captured build containers and partial output.
+Source integration alone does not qualify an image for activation.
 
 The 3.5 migration removes `user_settings.discordId`, which breaks 3.1 auth on
 recovery. A full compatible migration remains under
@@ -73,6 +90,10 @@ Seerr depends on:
 - `/opt/apps/jellyseerr/config:/app/config` - Configuration and database
 
 ## Changelog
+
+- 2026-11-04: Add a frozen same-schema dependency and Next 15 client rebuild.
+  Keep compiled server, migrations and native ABI; disable install scripts and
+  compiler networking, build a clean runtime closure and discard compiler cache.
 
 - 2026-11-03: Add five fixed-hash, vendor-signed Alpine 3.22 native updates:
   OpenSSL 3.5.9, musl 1.2.5-r13 and zlib 1.3.2-r1. The offline image build

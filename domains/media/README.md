@@ -48,7 +48,7 @@ media/
 ├── navidrome-container/     # Navidrome music server (container)
 ├── navidrome-native/        # Navidrome music server (native NixOS)
 ├── audiobookshelf/          # Pinned app/supported Node recipe, config path and Borg recovery registration
-├── jellyseerr/              # Media requests; app/Next routing fixes, signed native updates and private config
+├── jellyseerr/              # Media requests; frozen dependency/client build, app backports and private config
 │
 ├── sonarr/                  # Pinned app/.NET/SQLite and qualified utility backports; existing binds
 ├── radarr/                  # Movie management
@@ -94,6 +94,10 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-04: Seerr's versioned dependency source freezes package, lock, public
+  tool and checked native/type inputs. The image compiles Next 15 without network,
+  installs a clean production graph and retains the same compiled server/schema.
 
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 
