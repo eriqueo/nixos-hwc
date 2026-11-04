@@ -280,9 +280,11 @@ in
     retention = { daily = 7; weekly = 2; monthly = 1; yearly = 0; };
     monitoring.enable = true;
   };
-  systemd.services.borgbackup-job-hwc-backup.serviceConfig = {
-    TimeoutStartSec = lib.mkForce "1h";
-    UMask = "0077";
+  systemd.services.borgbackup-job-hwc-backup = lib.mkIf config.hwc.data.borg.enable {
+    serviceConfig = {
+      TimeoutStartSec = lib.mkForce "1h";
+      UMask = "0077";
+    };
   };
 
   # Declarative ProtonVPN via WireGuard, on demand only: `vpnon` / `vpnoff` /

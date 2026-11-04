@@ -246,7 +246,7 @@ in
         description = "Local destination admission floor in bytes. Below it the job exits73 before any snapshot or archive write.";
       };
       storageQuotaBytes = lib.mkOption {
-        type = lib.types.nullOr lib.types.ints.positive;
+        type = lib.types.nullOr (lib.types.ints.between 10000000 9223372036854775807);
         default = null;
         description = "Native Borg quota applied when initializing a new repository. At the limit Borg refuses writes; existing repositories require explicit migration.";
       };

@@ -52,9 +52,9 @@ pkgs.runCommand "laptop-critical-state" { nativeBuildInputs = [ pkgs.python3 pkg
           if okay:
               assert result.returncode == 0, (args, result.stderr)
           return result
-      borg('init', '--encryption=repokey-blake2', '--storage-quota=5M', repository)
+      borg('init', '--encryption=repokey-blake2', '--storage-quota=10M', repository)
       borg('create', repository + '::good', '.')
-      (source/'oversize').write_bytes(os.urandom(8 * 1024 * 1024))
+      (source/'oversize').write_bytes(os.urandom(16 * 1024 * 1024))
       assert borg('create', repository + '::too-big', '.', okay=False).returncode != 0
       restore = root/'restore'
       restore.mkdir()
