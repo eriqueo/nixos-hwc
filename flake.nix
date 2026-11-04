@@ -2336,6 +2336,14 @@
         assert 'comm -12 /tmp/runtime-owned.txt /tmp/app-owned.txt' in script
         assert 'sha256sum -c -' in script
         assert 'includedFrameworks' in script and 'frameworks' in script
+        packages=json.loads((context/'manifest.json').read_text())
+        assert packages
+        def valid_payload(data, expected): return hashlib.sha256(data).hexdigest()==expected
+        for p in packages:
+          data=(context/(p['name']+'.dll')).read_bytes()
+          assert valid_payload(data,p['dllSha256'])
+          assert not valid_payload(data+b'violation',p['dllSha256'])
+        assert 'sha256sum -c -' in script and '--slurpfile packages manifest.json' in script
         PY
         touch "$out"
       '';

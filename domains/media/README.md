@@ -92,6 +92,7 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-11-04: Add signed curl 8.23 and hash-bound patched ImageSharp, JSON, PKCS/ASN.1 and IdentityModel libraries to the Sonarr runtime context; keep every dependency manifest in sync with the actual assemblies.
 - 2026-11-04: Pin Sonarr 4.0.20.3014 and rehost its managed assemblies on verified ASP.NET 10.0.14; derive runtime-owned removals from the vendor manifest and retain application assets.
 
 - 2026-11-03: Pin Calibre 9.17.0 by vendor digest for current content-server, metadata and conversion security fixes. Preserve the existing library and desktop/content routes.
