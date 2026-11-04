@@ -17,6 +17,10 @@ shell's aerc alias, one-shot analysis via the selected Codex package, browser vi
 
 ## Structure
 
+The TUI and Mail helper select the shared runtime package on owned instances.
+Its launcher chain uses the checked Python response parser and the original
+application assets. The generic app module still owns environment wrapping.
+
 `mailHelper.enable` installs the app-owned foreground helper/profile using
 aerc-owned launch facts. `desktop.mail.enable` consumes a fixed remote helper
 and profile from the fleet composition. Both default off in the module; the
@@ -43,6 +47,9 @@ independent-HM guards, route derivation, capability switches, rendered JSON,
 wrapped central-client environment and the installed desktop entry.
 
 ## Changelog
+- 2026-11-04: Bind both TUI and Mail helper to the checked Python runtime
+  package, preserving app code and the app-owned wrapping protocol.
+
 - 2026-10-24: Bind the app-owned native Mail/helper schema to aerc launch facts
   and one fleet-owned remote target, preserving existing TUI destinations.
 - 2026-10-24: Share one route-derived origin across both HM lanes, native desktop

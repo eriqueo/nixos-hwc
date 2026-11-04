@@ -9,6 +9,10 @@ Self-contained email domain: client UI, accounts, sync, indexing, sending, and b
 
 ## Structure
 
+The classifier selects the checked HTTP-framing runtime on owned instances.
+Its separate CPU package graph supplies the same Laya, Torch and model inputs;
+classification policy and the ledger remain with System One.
+
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 
 Fixed patterns in the aerc text filter and calendar/task ingestion scripts compile at module load. Matching, date parsing and message handling keep their existing call sites.
@@ -166,6 +170,9 @@ client launch facts; it adds no arbitrary-command or mailbox-write endpoint.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-11-04: Select the strict response parser for the classifier launcher
+  while retaining its CPU-only dependencies, model and authority contract.
 
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 - 2026-11-02: Hoist fixed text-filter and calendar/task parser patterns without changing ingestion behavior.

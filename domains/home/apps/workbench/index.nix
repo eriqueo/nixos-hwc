@@ -208,6 +208,8 @@ in
     xdg.configFile = lib.optionalAttrs (kmWb != "") {
       "workbench/keymap.json".text = kmWb;
     };
+  }) (lib.mkIf ((cfg.enable || cfg.mailHelper.enable) && pkgs ? pythonHttpApplications) {
+    programs.workbench.package = lib.mkDefault pkgs.pythonHttpApplications.workbench;
   }) (lib.mkIf cfg.desktop.enable {
     # The app owns its schema, package and entry. No credentials enter native
     # config, and tool paths cannot come from a browser or source item.

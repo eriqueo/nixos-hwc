@@ -7,7 +7,7 @@
 #
 # USED BY: see the machines table in flake.nix
 
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 
 {
   imports = [
@@ -37,6 +37,10 @@
 
   # Firefly III personal finance
   hwc.business.firefly.enable = lib.mkDefault true;
+  # Select the checked runtime through the existing package port. The app,
+  # credentials, account authority and immutable native graph stay unchanged.
+  hwc.business.firefly.explorer.package = lib.mkIf (pkgs ? pythonHttpApplications)
+    (lib.mkDefault pkgs.pythonHttpApplications.pnc-statement-pipeline);
 
   # Business database layer (hwc PostgreSQL database)
   hwc.business.databases.enable = lib.mkDefault true;
