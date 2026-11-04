@@ -91,6 +91,7 @@ let
   }).overrideAttrs (old: {
     # Only these two commands ship. Run all six upstream suites for them;
     # unrelated dd/split VM-limit tests fail in the mixed libc build harness.
+    checkTarget = "check-am";
     checkFlags = (old.checkFlags or []) ++ [
       "TESTS=tests/uniq/uniq.pl tests/uniq/uniq-perf.sh tests/uniq/uniq-collate.sh tests/unexpand/unexpand.pl tests/unexpand/bounded-memory.sh tests/unexpand/mb.sh"
     ];
