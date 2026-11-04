@@ -135,6 +135,8 @@ def library($p): {type:"package",serviceable:true,sha512:("sha512-"+$p.sha512),p
     cp ${updateDeps} "$out/update-deps.jq"
     cp ${dependencyPayload}/* "$out/"
     cp ${sqliteNative}/lib/libsqlite3.so.0 "$out/libsqlite3.so.0"
+    printf '%s\n' '${sqliteNative.version}' > "$out/sqlite-version"
+    sha256sum "$out/libsqlite3.so.0" | cut -d' ' -f1 > "$out/sqlite-sha256"
   '';
 
 in

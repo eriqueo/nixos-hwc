@@ -2344,6 +2344,12 @@
           assert valid_payload(data,p['dllSha256'])
           assert not valid_payload(data+b'violation',p['dllSha256'])
         assert 'sha256sum -c -' in script and '--slurpfile packages manifest.json' in script
+        native=(context/'libsqlite3.so.0').read_bytes()
+        assert native.startswith(b'\x7fELF')
+        expected=(context/'sqlite-sha256').read_text().strip()
+        assert valid_payload(native,expected) and not valid_payload(native+b'violation',expected)
+        assert (context/'sqlite-version').read_text().strip()
+        assert 'del sqlite-libs' in script and 'cp libsqlite3.so.0 /usr/lib/libsqlite3.so.0' in script
         PY
         touch "$out"
       '';
