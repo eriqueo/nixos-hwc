@@ -1080,6 +1080,46 @@
         touch "$out"
       '';
 
+      website-security = let
+        c = self.nixosConfigurations.hwc-work.config;
+        origin = c.services.caddy.virtualHosts."http://:${toString c.hwc.business.website.originPort}".extraConfig;
+        fixture = pkgs.writeText "website-security.caddy" (builtins.replaceStrings
+          [ (toString c.hwc.business.website.publishDir + "/current") ] [ "__fixture_root__" ] origin);
+      in pkgs.runCommand "website-security" { nativeBuildInputs = [ pkgs.python3 c.services.caddy.package ]; } ''
+        python3 - ${fixture} "$(command -v caddy)" <<'PY'
+        import pathlib,socket,subprocess,tempfile,time,urllib.request,urllib.error,sys
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+         def redirect_request(self,*args): return None
+        opener=urllib.request.build_opener(NoRedirect)
+        def exercise(config):
+         with tempfile.TemporaryDirectory() as d:
+          root=pathlib.Path(d);(root/'index.html').write_text('website fixture');(root/'app.js').write_text('console.log(1)')
+          with socket.socket() as s: s.bind(('127.0.0.1',0));port=s.getsockname()[1]
+          config=config.replace('root * __fixture_root__','root * '+d)
+          cf=root/'Caddyfile';cf.write_text('{ admin off\n auto_https off\n}\nhttp://:'+str(port)+' {\n'+config+'\n}')
+          proc=subprocess.Popen([sys.argv[2],'run','--config',str(cf),'--adapter','caddyfile'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+          def get(path,scheme='https',host='iheartwoodcraft.com'):
+           req=urllib.request.Request('http://127.0.0.1:'+str(port)+path,headers={'X-Forwarded-Proto':scheme,'Host':host})
+           try:return opener.open(req,timeout=2)
+           except urllib.error.HTTPError as e:return e
+          try:
+           for _ in range(100):
+            try:r=get('/');break
+            except OSError:time.sleep(.05)
+           else:raise AssertionError('Caddy failed startup')
+           for path,status in [('/',200),('/app.js',200),('/missing',404),('/.env',404)]:
+            r=get(path);assert r.status==status,(path,r.status)
+            for h,v in [('X-Content-Type-Options','nosniff'),('X-Frame-Options','SAMEORIGIN'),('Referrer-Policy','strict-origin-when-cross-origin'),('Strict-Transport-Security','max-age=604800')]:assert r.headers.get(h)==v,(path,h,r.headers.get(h))
+            assert "object-src 'none'" in r.headers['Content-Security-Policy']
+            assert 'camera=()' in r.headers['Permissions-Policy']
+           r=get('/contact/?from=fixture','http','attacker.invalid');assert r.status==308,r.status
+           assert r.headers['Location']=='https://iheartwoodcraft.com/contact/?from=fixture',r.headers['Location']
+          finally:proc.terminate();proc.wait(timeout=5)
+        config=pathlib.Path(sys.argv[1]).read_text();exercise(config);print('PASS production Caddy security headers, errors, assets, HTTPS redirect, path/query and fixed redirect host')
+        PY
+        touch "$out"
+      '';
+
       public-origin-logging = let
         c = self.nixosConfigurations.hwc-work.config;
         cfg = c.hwc.networking.cloudflared;

@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Website response policies and website-scoped HTTPS enforcement live in website/index.nix. The website-security flake check exercises the evaluated origin, including errors, assets and redirect host safety.
+
 Firefly Core/Pico, Paperless and Umami declare separate database owners and protected OCI password environment files. Core publishes its existing app-key environment file atomically at0600; native Node clients receive an explicit local PostgreSQL socket.
 CRM's server, ingest timer and import CLI use the same socket owner; services wait for the declared administrator role before starting.
 
@@ -104,6 +106,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-04: Add website HTTPS enforcement, baseline browser protections and a production-config Caddy regression check.
 - 2026-11-03: Bind CRM maintenance consumers to the local socket and order server/ingest startup after PostgreSQL role setup.
 - 2026-11-03: Move finance, document and analytics database clients to restricted owner roles; protect Core's app-key file and bind native Node clients to peer sockets.
 

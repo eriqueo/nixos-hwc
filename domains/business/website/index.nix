@@ -199,6 +199,22 @@ in
       encode zstd gzip
       header X-HWC-Website-Origin ${config.networking.hostName}
       header Cache-Control "public, max-age=0, must-revalidate"
+      # Cloudflare overwrites this header from the visitor's protocol. The
+      # listener is loopback-only; never derive redirects from an untrusted Host.
+      @insecure header X-Forwarded-Proto http
+      redir @insecure https://iheartwoodcraft.com{uri} 308
+      header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        Referrer-Policy strict-origin-when-cross-origin
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+        # Staged HSTS: extend duration after public journey verification;
+        # do not cover unrelated subdomains or request preload.
+        Strict-Transport-Security "max-age=604800"
+        # Baseline policy, permanent by design. Script/connect allowlists are
+        # a separate rollout after browser inventory in the security plan.
+        Content-Security-Policy "object-src 'none'; base-uri 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
+      }
       route {
         @private path_regexp private (^|/)\.
         respond @private 404
