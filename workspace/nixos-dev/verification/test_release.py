@@ -103,6 +103,26 @@ class ReleaseContract(unittest.TestCase):
             self.assertEqual(verify.call_args.args[1], self.candidate)
         self.assertEqual(release.revision(self.repo, 'main'), self.base)
 
+    def test_older_candidate_refuses_before_verification(self):
+        self.git('merge', '--ff-only', self.candidate)
+        with patch.object(release, 'verify', side_effect=AssertionError('expensive verification started')) as verify:
+            with self.assertRaises(subprocess.CalledProcessError):
+                release.release(self.repo, self.base, socket.gethostname(), 'system', 'merge')
+            verify.assert_not_called()
+        self.assertEqual(release.revision(self.repo, 'HEAD'), self.candidate)
+        self.assertEqual(release.revision(self.repo, 'main'), self.candidate)
+
+    def test_divergent_candidate_refuses_before_verification(self):
+        self.file.write_text('{ main = true; }')
+        self.git('commit', '-am', 'intervening main')
+        current = release.revision(self.repo, 'HEAD')
+        with patch.object(release, 'verify', side_effect=AssertionError('expensive verification started')) as verify:
+            with self.assertRaises(subprocess.CalledProcessError):
+                release.release(self.repo, self.candidate, socket.gethostname(), 'system', 'merge')
+            verify.assert_not_called()
+        self.assertEqual(release.revision(self.repo, 'HEAD'), current)
+        self.assertEqual(release.revision(self.repo, 'main'), current)
+
     def test_home_lane_cannot_skip_pending_system_changes(self):
         self.git('checkout', 'feature')
         (self.repo / 'flake.lock').write_text('{}')

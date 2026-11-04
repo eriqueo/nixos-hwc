@@ -210,9 +210,10 @@ def release(repo, candidate, target, lane, action, full=False, nix_args=()):
     if git(repo, 'branch', '--show-current') != 'main':
         raise ValueError('Integrate and activate from the primary main checkout')
     with release_lock(repo):
+        # Refuse known ancestry conflicts before spending resources on verification.
+        subprocess.run(['git', '-C', str(repo), 'merge-base', '--is-ancestor',
+                        revision(repo, 'HEAD'), candidate], check=True)
         token, output = verify(repo, candidate, target, lane, full, nix_args)
-        # The fast-forward check precedes changing runtime checkout files.
-        subprocess.run(['git', '-C', str(repo), 'merge-base', '--is-ancestor', token[0], candidate], check=True)
         unchanged(repo, token)
         if token[0] != candidate:
             subprocess.run(['git', '-C', str(repo), 'merge', '--ff-only', candidate], check=True)
