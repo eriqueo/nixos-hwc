@@ -11,9 +11,11 @@ Edit, build and publish iheartwoodcraft.com on hwc-work. Cloudflare provides pub
 
 ## Structure
 
+Website HSTS uses a one-year lifetime after public journey verification, with no preload or subdomain extension.
+
 Customer report pages override public caching with no-store, suppress referrers and disallow indexing. Calculator build dependencies use patched Vite 6 and the existing React plugin.
 
-The public origin enforces visitor HTTPS using Cloudflare’s protocol header and a fixed canonical redirect host. Baseline response policies block MIME sniffing, foreign framing, object embeds and base URL injection; device APIs are disabled. HSTS starts at seven days without subdomain coverage. The website-security flake check exercises the evaluated Caddy configuration on HTML, assets and errors. Strict script-source policy remains a tracked follow-on.
+The public origin enforces visitor HTTPS using Cloudflare’s protocol header and a fixed canonical redirect host. Baseline response policies block MIME sniffing, foreign framing, object embeds and base URL injection; device APIs are disabled. HSTS uses one year without subdomain coverage. The website-security flake check exercises the evaluated Caddy configuration on HTML, assets and errors. Strict script-source policy remains a tracked follow-on.
 
 When the common tunnel-origin logger is enabled, the static backend disables its
 duplicate raw-URI access log. Public requests are recorded by the sanitized
@@ -31,6 +33,8 @@ Publishing builds the calculator then the 11ty site. Preview builds do not chang
 The CMS deploy action performs local publication. The API remains at loopback port 8095 behind its existing private route. Caddy's public origin binds only 127.0.0.1:8096; no public inbound firewall port is added. The tunnel serves `iheartwoodcraft.com` and `www.iheartwoodcraft.com` from this origin.
 
 ## Changelog
+
+- 2026-11-04: Extend website HSTS to one year after customer-flow tests; preserve subdomain scope.
 
 - 2026-11-04: Protect report URLs from caching/referrers and patch calculator build dependencies.
 

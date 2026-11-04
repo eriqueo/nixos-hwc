@@ -496,7 +496,7 @@ in pkgs.runCommand "website-security" { nativeBuildInputs = [ pkgs.python3 c.ser
      else:raise AssertionError('Caddy failed startup')
      for path,status in [('/',200),('/app.js',200),('/missing',404),('/.env',404)]:
       r=get(path);assert r.status==status,(path,r.status)
-      for h,v in [('X-Content-Type-Options','nosniff'),('X-Frame-Options','SAMEORIGIN'),('Referrer-Policy','strict-origin-when-cross-origin'),('Strict-Transport-Security','max-age=604800')]:assert r.headers.get(h)==v,(path,h,r.headers.get(h))
+      for h,v in [('X-Content-Type-Options','nosniff'),('X-Frame-Options','SAMEORIGIN'),('Referrer-Policy','strict-origin-when-cross-origin'),('Strict-Transport-Security','max-age=31536000')]:assert r.headers.get(h)==v,(path,h,r.headers.get(h))
       assert "object-src 'none'" in r.headers['Content-Security-Policy']
       assert 'camera=()' in r.headers['Permissions-Policy']
      assert get('/').headers['Cache-Control'] == 'public, max-age=0, must-revalidate'

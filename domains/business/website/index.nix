@@ -217,9 +217,9 @@ in
         X-Frame-Options SAMEORIGIN
         Referrer-Policy strict-origin-when-cross-origin
         Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
-        # Staged HSTS: extend duration after public journey verification;
-        # do not cover unrelated subdomains or request preload.
-        Strict-Transport-Security "max-age=604800"
+        # Public journey fixtures pass. Scope HSTS to this hostname only;
+        # unrelated subdomains and preload remain outside this policy.
+        Strict-Transport-Security "max-age=31536000"
         # Baseline policy, permanent by design. Script/connect allowlists are
         # a separate rollout after browser inventory in the security plan.
         Content-Security-Policy "object-src 'none'; base-uri 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
