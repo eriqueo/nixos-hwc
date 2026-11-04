@@ -49,7 +49,8 @@ def home_revision(home, target):
         if len(raw) > 4096:
             return None
         data = json.loads(raw)
-        if (not isinstance(data, dict) or data.get('schemaVersion') != 1
+        if (not isinstance(data, dict) or type(data.get('schemaVersion')) is not int
+                or data.get('schemaVersion') != 1
                 or data.get('target') != target or data.get('lane') != 'home'
                 or not isinstance(data.get('revision'), str)
                 or not re.fullmatch(r'[0-9a-f]{40}', data['revision'])

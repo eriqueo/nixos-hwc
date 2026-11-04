@@ -59,7 +59,8 @@ class ReleaseContract(unittest.TestCase):
         for paths in (None, {'flake.lock'}, {'flake.nix'}, {'unmapped'}, {'domains/lib/hm.nix'}):
             self.assertEqual(release.select(INVENTORY, paths)[0], sorted(INVENTORY))
         self.assertIsNone(release.changed(self.repo, self.candidate, [None]))
-        self.assertIsNone(release.active_revision('home'))
+        with patch.object(Path, 'home', return_value=self.repo):
+            self.assertIsNone(release.active_revision('home'))
 
     def test_rename_and_delete_broaden(self):
         self.git('checkout', 'feature')
@@ -196,7 +197,8 @@ class HomeProvenance(unittest.TestCase):
         release.activate_home(str(self.output), self.candidate, self.target, self.home)
         path = release.home_receipt(self.home)
         valid = json.loads(path.read_text())
-        variants = [dict(valid, schemaVersion=2), dict(valid, target='foreign'),
+        variants = [dict(valid, schemaVersion=2), dict(valid, schemaVersion=True),
+                    dict(valid, schemaVersion=1.0), dict(valid, target='foreign'),
                     dict(valid, revision='HEAD'), dict(valid, lane='system')]
         for data in variants:
             path.write_text(json.dumps(data))
