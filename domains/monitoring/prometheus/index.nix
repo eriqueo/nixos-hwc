@@ -45,6 +45,41 @@ let
       timeout = "15s";
       http = { method = "GET"; preferred_ip_protocol = "ip4"; valid_status_codes = [ 200 ]; };
     };
+    # Security probes use the public edge but create no customer records.
+    website_security = {
+      prober = "http"; timeout = "15s";
+      http = {
+        method = "GET"; preferred_ip_protocol = "ip4"; valid_status_codes = [ 200 ];
+        tls_config.min_version = "TLS12";
+        fail_if_header_not_matches = [
+          { header = "X-Content-Type-Options"; regexp = "^nosniff$"; }
+          { header = "X-Frame-Options"; regexp = "^SAMEORIGIN$"; }
+          { header = "Strict-Transport-Security"; regexp = "max-age=[1-9][0-9]*"; }
+          { header = "Content-Security-Policy"; regexp = "object-src 'none'"; }
+          { header = "Permissions-Policy"; regexp = "camera=\\(\\)"; }
+        ];
+        fail_if_body_not_matches_regexp = [ "http-equiv=\"Content-Security-Policy\"" ];
+      };
+    };
+    website_https_redirect = {
+      prober = "http"; timeout = "15s";
+      http = {
+        preferred_ip_protocol = "ip4"; valid_status_codes = [ 308 ]; follow_redirects = false;
+        fail_if_header_not_matches = [ { header = "Location"; regexp = "^https://iheartwoodcraft[.]com/"; } ];
+      };
+    };
+    report_privacy = {
+      prober = "http"; timeout = "15s";
+      http = {
+        preferred_ip_protocol = "ip4"; valid_status_codes = [ 404 ];
+        tls_config.min_version = "TLS12";
+        fail_if_header_not_matches = [
+          { header = "Cache-Control"; regexp = "^no-store$"; }
+          { header = "Referrer-Policy"; regexp = "^no-referrer$"; }
+          { header = "X-Robots-Tag"; regexp = "noindex"; }
+        ];
+      };
+    };
     # CORS preflight — proves a public webhook ingress chain (Cloudflare proxy
     # → tunnel → app) end to end without creating a lead.
     http_options_2xx = {
@@ -342,6 +377,13 @@ in
             "https://iheartwoodcraft.com/llms.txt"
             "https://iheartwoodcraft.com/js/calculator.bundle.js"
           ]; }
+        { job = "probe-website-security"; module = "website_security"; interval = "2m";
+          targets = [ { url = "https://iheartwoodcraft.com/"; } ]; }
+        { job = "probe-website-https"; module = "website_https_redirect"; interval = "2m";
+          targets = [ { url = "http://iheartwoodcraft.com/"; } ]; }
+        # Fixed nonexistent capability: checks error privacy, never reads a customer report.
+        { job = "probe-report-privacy"; module = "report_privacy"; interval = "2m";
+          targets = [ { url = "https://reports.iheartwoodcraft.com/api/reports/security-monitor-nonexistent"; } ]; }
         # Public webhook ingress (Cloudflare proxy → tunnel → n8n) via CORS
         # preflight on a live webhook (estimate-push; calculator-lead was retired 2026-09-25)
         { job = "probe-webhook-ingress"; module = "http_options_2xx";
