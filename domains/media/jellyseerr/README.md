@@ -53,6 +53,9 @@ Its next RUN disables networking for type checking, client compilation and a cle
 offline production install. The final stage retains the same compiled server and
 copies only the new modules, client output and package/lock metadata. It omits the
 compiler cache and preserves the same-version SQLite native binding by hash and ABI.
+The final command runs the vendor's plain Node start command directly with its
+production environment. Global npm/corepack and their own symlinks stay out of
+the runtime; the frozen build uses its separate pinned pnpm tool.
 Keep the qualified old image and current data for recovery.
 
 `dependencies.json` owns the package, native YAML-compatible lock and pinned public
@@ -94,6 +97,7 @@ Seerr depends on:
 - 2026-11-04: Add a frozen same-schema dependency and Next 15 client rebuild.
   Keep compiled server, migrations and native ABI; disable install scripts and
   compiler networking, build a clean runtime closure and discard compiler cache.
+  Run the equivalent plain Node command and remove global package-manager tools.
 
 - 2026-11-03: Add five fixed-hash, vendor-signed Alpine 3.22 native updates:
   OpenSSL 3.5.9, musl 1.2.5-r13 and zlib 1.3.2-r1. The offline image build

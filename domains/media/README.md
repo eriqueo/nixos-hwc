@@ -98,6 +98,7 @@ workspace/media/
 - 2026-11-04: Seerr's versioned dependency source freezes package, lock, public
   tool and checked native/type inputs. The image compiles Next 15 without network,
   installs a clean production graph and retains the same compiled server/schema.
+  Direct Node startup replaces the vendor's npm wrapper and its global build tools.
 
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 
