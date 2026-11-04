@@ -93,6 +93,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-04: Pass the six utility suites as one quoted Automake TESTS value. The first scoped build ran only uniq.pl because the generic flag path split the value; its evidence is retained as an incomplete qualification.
+
 - 2026-11-04: Run the scoped utility suites through Automake's top-level check target so their paths do not propagate into unrelated gnulib subdirectories.
 
 - 2026-11-04: The musl coreutils build runs all six upstream uniq/unexpand suites for the two shipped commands. The initial full suite retained 541 passes, 190 skips and two unrelated dd/split memory-limit harness failures; actual target UTF-8 and security cases remain required.
