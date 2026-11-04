@@ -42,14 +42,107 @@ for(const [name,spec] of Object.entries(manifest.backports)){
 for(const [target,changed] of writes)fs.writeFileSync(target,changed);
   '';
   manifest = pkgs.writeText "seerr-security-backports.json" (builtins.toJSON runtimeInputs);
+  # Temporary same-schema rebuild; remove with the backports when a vendor
+  # image passes security, native and old/new current-data recovery checks.
+  dependencyInputs = builtins.fromJSON (builtins.readFile ./dependencies.json);
+  dependencyActions = { fetch = "fetch"; compile = "compile"; };
+  dependencyBuild = pkgs.writeText "seerr-dependency-build.cjs" ''
+    'use strict';
+    const fs=require('fs'),path=require('path'),crypto=require('crypto'),{createRequire}=require('module'),{spawnSync}=require('child_process');
+    const spec=JSON.parse(fs.readFileSync(path.join(__dirname,'dependencies.json'),'utf8'));
+    const [action,root,native]=process.argv.slice(2);
+    const sha=value=>crypto.createHash('sha256').update(value).digest('hex');
+    const fail=code=>{throw Error(code);};
+    if(spec.schemaVersion!==1||spec.package.version!==${builtins.toJSON appVersion}||spec.lock.lockfileVersion!=='9.0')fail('SEERR_DEPENDENCY_FORMAT');
+    if(root!=='/app'||native!=='/tmp/hwc-seerr-native')fail('SEERR_BUILD_PATH');
+    const local=()=>createRequire(path.join(root,'package.json'));
+    const pnpm=path.join(__dirname,'pnpm/bin/pnpm.cjs');
+    const install=production=>{
+      const result=spawnSync(process.execPath,[pnpm,'install','--frozen-lockfile','--ignore-scripts',
+        '--store-dir=/tmp/hwc-seerr-store','--network-concurrency=4','--child-concurrency=2',
+        '--config.confirmModulesPurge=false',...(production?['--prod','--offline']:['--prod=false'])],
+        {cwd:root,stdio:'inherit',timeout:900000});
+      if(result.error||result.status!==0)fail('SEERR_FROZEN_INSTALL');
+    };
+    const binding=()=>{
+      const req=local(),file=req.resolve('sqlite3/package.json');
+      if(JSON.parse(fs.readFileSync(file)).version!==spec.sqliteBinding.packageVersion||process.versions.modules!==spec.sqliteBinding.nodeAbi)fail('SEERR_NATIVE_ABI');
+      return path.dirname(file);
+    };
+    const restore=()=>{
+      const dest=binding();
+      for(const item of spec.sqliteBinding.files){
+        const source=path.join(native,item.path),target=path.join(dest,item.path);
+        if(sha(fs.readFileSync(source))!==item.sha256)fail('SEERR_NATIVE_INPUT');
+        fs.mkdirSync(path.dirname(target),{recursive:true});fs.copyFileSync(source,target);
+        if(sha(fs.readFileSync(target))!==item.sha256)fail('SEERR_NATIVE_COPY');
+      }
+      if(local()('sqlite3').VERSION!==spec.sqliteBinding.sqliteVersion)fail('SEERR_SQLITE_VERSION');
+    };
+    const actions={
+      [${builtins.toJSON dependencyActions.fetch}]:()=>{
+        if(local()('./package.json').version!==spec.package.version)fail('SEERR_BASE_APP');
+        const original=binding();
+        for(const item of spec.sqliteBinding.files){
+          const file=path.join(original,item.path),target=path.join(native,item.path);
+          if(sha(fs.readFileSync(file))!==item.sha256)fail('SEERR_NATIVE_SOURCE');
+          fs.mkdirSync(path.dirname(target),{recursive:true});fs.copyFileSync(file,target);
+        }
+        fs.rmSync(path.join(root,'node_modules'),{recursive:true});
+        fs.writeFileSync(path.join(root,'package.json'),JSON.stringify(spec.package,null,2));
+        // JSON is native YAML syntax; pnpm validates this exact frozen lock.
+        fs.writeFileSync(path.join(root,'pnpm-lock.yaml'),JSON.stringify(spec.lock,null,2));
+        install(false);restore();
+      },
+      [${builtins.toJSON dependencyActions.compile}]:()=>{
+        if(Object.values(require('os').networkInterfaces()).flat().some(x=>!x.internal))fail('SEERR_COMPILER_NETWORK');
+        const req=local(),pkg=req.resolve('@types/email-templates/package.json'),types=JSON.parse(fs.readFileSync(pkg));
+        if(types.version!=='8.0.4'||fs.realpathSync(req.resolve('nodemailer/package.json'))!==fs.realpathSync(createRequire(pkg).resolve('nodemailer/package.json')))fail('SEERR_MAIL_TYPE_PRODUCER');
+        const file=path.join(path.dirname(pkg),types.types),source=fs.readFileSync(file,'utf8');
+        if(sha(source)!==spec.mailTypes.sourceSha256)fail('SEERR_MAIL_TYPE_SOURCE');
+        // Temporary: remove when the upstream union includes the bundled public Transporter.
+        const patched=source.replace('type NodeMailerTransportOptions =','type NodeMailerTransportOptions =\n        | import("nodemailer").Transporter');
+        if(sha(patched)!==spec.mailTypes.patchedSha256)fail('SEERR_MAIL_TYPE_PATCH');
+        fs.writeFileSync(file+'.security-types',patched);fs.renameSync(file+'.security-types',file);
+        const config=path.join(root,'next.config.js'),saved=fs.readFileSync(config);
+        fs.appendFileSync(config,'\nmodule.exports.experimental={...module.exports.experimental,cpus:2};\n');
+        const result=spawnSync(process.execPath,[path.join(root,'node_modules/next/dist/bin/next'),'build','--no-lint'],{cwd:root,stdio:'inherit',timeout:800000});
+        fs.writeFileSync(config,saved);
+        if(result.error||result.status!==0)fail('SEERR_CLIENT_BUILD');
+        fs.rmSync(path.join(root,'node_modules'),{recursive:true});install(true);restore();
+        // REPLACEABLE compiler cache never enters the runtime image.
+        fs.rmSync(path.join(root,'.next/cache'),{recursive:true,force:true});fs.mkdirSync(path.join(root,'.next/cache'));
+      }
+    };
+    if(!Object.hasOwn(actions,action))fail('SEERR_BUILD_ACTION');
+    actions[action]();
+  '';
+  dependencyManifest = pkgs.writeText "seerr-dependencies.json" (builtins.toJSON dependencyInputs);
+  pnpmArchive = pkgs.fetchurl {
+    url = dependencyInputs.pnpm.dist.tarball;
+    hash = dependencyInputs.pnpm.dist.integrity;
+  };
   runtime = helpers.mkRuntimeImage {
     name = "seerr";
     version = "${appVersion}-node${nodeVersion}";
-    recipe = baseRuntime.recipe + ''
+    recipe = lib.replaceStrings [ "FROM ${upstreamImage}\n" ] [ "FROM ${upstreamImage} AS seerr-base\n" ] baseRuntime.recipe + ''
       # Security backports ${builtins.hashString "sha256" (builtins.toJSON runtimeInputs + builtins.readFile applyBackports)}
       USER root
       COPY --chown=node:node . /tmp/hwc-seerr/
       RUN apk verify ${lib.concatMapStringsSep " " (p: lib.escapeShellArg "/tmp/hwc-seerr/${p.file}") runtimeInputs.apks} && apk --repositories-file /dev/null --no-network --no-cache add ${lib.concatMapStringsSep " " (p: lib.escapeShellArg "/tmp/hwc-seerr/${p.file}") runtimeInputs.apks} && node /tmp/hwc-seerr/apply-backports.cjs && rm -r /tmp/hwc-seerr
+      USER node:node
+      FROM seerr-base AS dependency-builder
+      # Frozen dependency inputs ${builtins.hashString "sha256" (builtins.toJSON dependencyInputs + builtins.readFile dependencyBuild)}
+      COPY --chown=node:node dependencies /tmp/hwc-seerr-dependencies
+      ENV CI=true NEXT_TELEMETRY_DISABLED=1 npm_config_ignore_scripts=true NODE_OPTIONS=--max-old-space-size=4096
+      RUN node /tmp/hwc-seerr-dependencies/build.cjs ${dependencyActions.fetch} /app /tmp/hwc-seerr-native
+      RUN --network=none node /tmp/hwc-seerr-dependencies/build.cjs ${dependencyActions.compile} /app /tmp/hwc-seerr-native
+      FROM seerr-base
+      USER root
+      RUN rm -r /app/node_modules /app/.next
+      COPY --from=dependency-builder --chown=node:node /app/node_modules /app/node_modules
+      COPY --from=dependency-builder --chown=node:node /app/.next /app/.next
+      COPY --from=dependency-builder --chown=node:node /app/package.json /app/pnpm-lock.yaml /app/
       USER node:node
     '';
   };
@@ -58,6 +151,10 @@ for(const [target,changed] of writes)fs.writeFileSync(target,changed);
     cp ${runtime.dockerfile} "$out/Dockerfile"
     cp ${manifest} "$out/manifest.json"
     cp ${applyBackports} "$out/apply-backports.cjs"
+    mkdir -p "$out/dependencies/pnpm"
+    cp ${dependencyManifest} "$out/dependencies/dependencies.json"
+    cp ${dependencyBuild} "$out/dependencies/build.cjs"
+    tar -xzf ${pnpmArchive} --strip-components=1 -C "$out/dependencies/pnpm"
     ${lib.concatMapStrings (p: let archive = pkgs.fetchurl { inherit (p) url hash; }; in ''
       cp ${archive} "$out/${p.file}"
     '') runtimeInputs.apks}

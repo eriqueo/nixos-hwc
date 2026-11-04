@@ -377,7 +377,7 @@ pkgs.runCommand "immich-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; 
   assert 'emSign Root CA - C1' in ml and 'emSign ECC Root CA - C3' in ml
   assert 'update-ca-certificates --fresh' in ml
   # Security backports preserve the accepted same-app Node recipe prefix.
-  assert sha(seerr.split('# Security backports', 1)[0]) == 'b9482a37e259fcd93442be29ae2b1cfce0653bc5e738e68fab403a84297953ea'
+  assert sha(seerr.split('# Security backports', 1)[0].replace(' AS seerr-base', "")) == 'b9482a37e259fcd93442be29ae2b1cfce0653bc5e738e68fab403a84297953ea'
   assert spec['seerr'] == 'localhost/seerr-runtime:3.1.0-node22.23.4-' + sha(seerr)[:12]
   PY
   touch "$out"
@@ -472,7 +472,7 @@ in pkgs.runCommand "seerr-security-wiring" { nativeBuildInputs = [ pkgs.python3 
   assert binding['selected'] == binding['container'] == 'localhost/seerr-runtime:3.1.0-node22.23.4-' + sha(recipe)[:12], 'container bypasses security recipe'
   assert binding['selected'] in producer, 'permission vocabulary uses a different image'
   assert 'COPY --chown=node:node . /tmp/hwc-seerr/' in recipe and '&& node /tmp/hwc-seerr/apply-backports.cjs &&' in recipe, 'image bypasses security backports'
-  assert sha(recipe.split('# Security backports', 1)[0]) == 'b9482a37e259fcd93442be29ae2b1cfce0653bc5e738e68fab403a84297953ea', 'unrelated base image change'
+  assert sha(recipe.split('# Security backports', 1)[0].replace(' AS seerr-base', "")) == 'b9482a37e259fcd93442be29ae2b1cfce0653bc5e738e68fab403a84297953ea', 'unrelated base image change'
   canonical = json.dumps(manifest, separators=(',', ':'), sort_keys=True)
   assert '# Security backports ' + sha(canonical + patcher) in recipe, 'backport inputs not bound to image'
   assert manifest['schemaVersion'] == 1
@@ -495,6 +495,30 @@ in pkgs.runCommand "seerr-security-wiring" { nativeBuildInputs = [ pkgs.python3 
       assert spec['replacements'] and all(len(pair) == 2 and pair[0] != pair[1] for pair in spec['replacements'])
   assert 'SEERR_BACKPORT_SOURCE_MISMATCH' in patcher and 'SEERR_BACKPORT_RESULT_MISMATCH' in patcher and 'SEERR_BACKPORT_HUNK_MISMATCH' in patcher
   subprocess.run(['node', '--check', str(context / 'apply-backports.cjs')], check=True)
+  dependencies = json.loads((context / 'dependencies/dependencies.json').read_text())
+  builder = (context / 'dependencies/build.cjs').read_text()
+  canonical = json.dumps(dependencies, separators=(',', ':'), sort_keys=True)
+  assert '# Frozen dependency inputs ' + sha(canonical + builder) in recipe, 'resolver source bypasses image identity'
+  assert dependencies['schemaVersion'] == 1 and dependencies['lock']['lockfileVersion'] == '9.0'
+  assert dependencies['package']['version'] == '3.1.0' and dependencies['package']['dependencies']['typeorm'] == '0.3.28'
+  assert dependencies['package']['dependencies']['next'] == '15.5.29'
+  assert dependencies['package']['dependencies']['sharp'] == '0.35.5'
+  assert dependencies['package']['dependencies']['nodemailer'] == '10.3.1'
+  assert len(dependencies['lock']['packages']) <= 2500
+  assert all(item['resolution'].get('integrity', "").startswith('sha512-') for item in dependencies['lock']['packages'].values()), 'unbound registry input'
+  def wired(text):
+      return all(part in text for part in [
+          'FROM seerr-base AS dependency-builder',
+          'RUN --network=none node /tmp/hwc-seerr-dependencies/build.cjs compile /app /tmp/hwc-seerr-native',
+          'COPY --from=dependency-builder --chown=node:node /app/node_modules /app/node_modules',
+          'COPY --from=dependency-builder --chown=node:node /app/.next /app/.next',
+          'COPY --from=dependency-builder --chown=node:node /app/package.json /app/pnpm-lock.yaml /app/'])
+  assert wired(recipe)
+  assert not wired(recipe.replace('RUN --network=none node ', 'RUN node ')), 'compiler network seed did not fail'
+  assert not wired(recipe.replace('COPY --from=dependency-builder --chown=node:node /app/node_modules /app/node_modules', "")), 'runtime copy seed did not fail'
+  assert '--frozen-lockfile' in builder and '--ignore-scripts' in builder and "['--prod','--offline']" in builder
+  assert 'SEERR_NATIVE_SOURCE' in builder and 'SEERR_NATIVE_ABI' in builder and 'SEERR_MAIL_TYPE_PATCH' in builder
+  subprocess.run(['node', '--check', str(context / 'dependencies/build.cjs')], check=True)
   print('production image, base parity, app and Next security context and app-owned permission wiring pass')
   PYTEST
   touch "$out"
