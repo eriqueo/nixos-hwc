@@ -45,7 +45,7 @@ for(const [target,changed] of writes)fs.writeFileSync(target,changed);
   # Temporary same-schema rebuild; remove with the backports when a vendor
   # image passes security, native and old/new current-data recovery checks.
   dependencyInputs = builtins.fromJSON (builtins.readFile ./dependencies.json);
-  dependencyActions = { fetch = "fetch"; compile = "compile"; };
+  dependencyActions = { fetch = "fetch"; compile = "compile"; stripTools = "strip-tools"; };
   dependencyBuild = pkgs.writeText "seerr-dependency-build.cjs" ''
     'use strict';
     const fs=require('fs'),path=require('path'),crypto=require('crypto'),{createRequire}=require('module'),{spawnSync}=require('child_process');
@@ -80,6 +80,17 @@ for(const [target,changed] of writes)fs.writeFileSync(target,changed);
       if(local()('sqlite3').VERSION!==spec.sqliteBinding.sqliteVersion)fail('SEERR_SQLITE_VERSION');
     };
     const actions={
+      [${builtins.toJSON dependencyActions.stripTools}]:()=>{
+        // The vendor start script is exactly NODE_ENV=production node dist/index.js.
+        // Run that command directly; package managers are build tools, not runtime inputs.
+        const tools=['npm','corepack'].map(name=>'/usr/local/lib/node_modules/'+name);
+        if(tools.some(file=>!fs.statSync(file).isDirectory()))fail('SEERR_BUILD_TOOL_SOURCE');
+        for(const name of fs.readdirSync('/usr/local/bin')){
+          const file=path.join('/usr/local/bin',name);
+          if(fs.lstatSync(file).isSymbolicLink()&&tools.some(root=>fs.realpathSync(file).startsWith(root+'/')))fs.unlinkSync(file);
+        }
+        for(const file of tools)fs.rmSync(file,{recursive:true});
+      },
       [${builtins.toJSON dependencyActions.fetch}]:()=>{
         if(local()('./package.json').version!==spec.package.version)fail('SEERR_BASE_APP');
         const original=binding();
@@ -129,7 +140,7 @@ for(const [target,changed] of writes)fs.writeFileSync(target,changed);
       # Security backports ${builtins.hashString "sha256" (builtins.toJSON runtimeInputs + builtins.readFile applyBackports)}
       USER root
       COPY --chown=node:node . /tmp/hwc-seerr/
-      RUN apk verify ${lib.concatMapStringsSep " " (p: lib.escapeShellArg "/tmp/hwc-seerr/${p.file}") runtimeInputs.apks} && apk --repositories-file /dev/null --no-network --no-cache add ${lib.concatMapStringsSep " " (p: lib.escapeShellArg "/tmp/hwc-seerr/${p.file}") runtimeInputs.apks} && node /tmp/hwc-seerr/apply-backports.cjs && rm -r /tmp/hwc-seerr
+      RUN apk verify ${lib.concatMapStringsSep " " (p: lib.escapeShellArg "/tmp/hwc-seerr/${p.file}") runtimeInputs.apks} && apk --repositories-file /dev/null --no-network --no-cache add ${lib.concatMapStringsSep " " (p: lib.escapeShellArg "/tmp/hwc-seerr/${p.file}") runtimeInputs.apks} && node /tmp/hwc-seerr/apply-backports.cjs && node /tmp/hwc-seerr/dependencies/build.cjs ${dependencyActions.stripTools} /app /tmp/hwc-seerr-native && rm -r /tmp/hwc-seerr
       USER node:node
       FROM seerr-base AS dependency-builder
       # Frozen dependency inputs ${builtins.hashString "sha256" (builtins.toJSON dependencyInputs + builtins.readFile dependencyBuild)}
@@ -143,6 +154,8 @@ for(const [target,changed] of writes)fs.writeFileSync(target,changed);
       COPY --from=dependency-builder --chown=node:node /app/node_modules /app/node_modules
       COPY --from=dependency-builder --chown=node:node /app/.next /app/.next
       COPY --from=dependency-builder --chown=node:node /app/package.json /app/pnpm-lock.yaml /app/
+      ENV NODE_ENV=production
+      CMD ["node", "dist/index.js"]
       USER node:node
     '';
   };
