@@ -8,6 +8,8 @@
 - No Home Manager logic lives here; cross-lane assertions are guarded so the system lane stands alone.
 
 ## Structure
+
+`verification/` contains pure flake checks for this capability; production modules do not import it.
 `core/packages.nix` no longer installs Claude in its server bundle. The Home Manager app owns that CLI, including the executable path used by headless consumers.
 
 MCP parsers share fixed module patterns. CalDAV property patterns compile at module load, and file parsers use independent matchAll iterators across awaits. SSE session lookup extracts only the request query; regression tests check URL decoding parity and fixed-pattern placement.
@@ -94,6 +96,8 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 - 2026-11-04: Consolidate Claude installation in its app module; keep native laptop updates and Nix-managed CLI availability on other hosts.
 - 2026-11-02: Hoist MCP patterns, precompile known CalDAV properties, preserve independent parser cursors and remove query-only URL parsing.
 - 2026-11-02: Overlap independent MCP status, calendar, mail-count, board and resource reads with bounded scheduling; retain output order and per-source failures.

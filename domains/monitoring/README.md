@@ -13,6 +13,8 @@ Other domains register their scrape configs via `hwc.monitoring.prometheus.scrap
 
 ## Structure
 
+`verification/` contains pure flake checks for this capability; production modules do not import it.
+
 `alerts/index.nix` owns both system and user failure templates. The user template
 calls the existing notification producer with `--user`; delivery stays in notifications.
 Both templates consume literal unit names with `%i`, matching the OnFailure callers.
@@ -69,6 +71,8 @@ monitoring/
 ```
 
 ## Changelog
+
+- 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 
 - 2026-10-23: Pin Homepage 2.7.0 with corrected Node. Keep its config owned by
   the shared service identity during activation and tmpfiles runs; root ownership

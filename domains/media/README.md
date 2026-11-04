@@ -12,6 +12,8 @@ photo management, and video surveillance services.
 
 ## Structure
 
+`verification/` contains pure flake checks for this capability; production modules do not import it.
+
 Immich uses the versioned shared database-role contract and restarts with its provisioner when credentials or provisioning code change.
 
 Immich managed database credentials use the shared data capability and preserve its internal media paths.
@@ -92,6 +94,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 
 - 2026-11-04: Pass the six utility suites as one quoted Automake TESTS value. The first scoped build ran only uniq.pl because the generic flag path split the value; its evidence is retained as an incomplete qualification.
 

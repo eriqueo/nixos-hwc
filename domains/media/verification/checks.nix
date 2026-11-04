@@ -1,0 +1,732 @@
+# Pure verification function; not a NixOS or Home Manager module.
+{ lib, pkgs, repoRoot, self }:
+{
+
+transcripts-deepgram = let
+  c = self.nixosConfigurations.hwc-home.config;
+  service = c.systemd.services.transcripts;
+  python = pkgs.python3.withPackages (ps: with ps; [
+    fastapi uvicorn youtube-transcript-api requests httpx playwright
+  ]);
+in
+assert lib.assertMsg (c.hwc.media.youtube.transcripts.deepgram.enable
+  && service.serviceConfig.User == "eric"
+  && lib.elem "secrets" service.serviceConfig.SupplementaryGroups
+  && lib.elem c.age.secrets.deepgram-api-key.file service.restartTriggers)
+  "Transcripts Deepgram credential, identity or reload wiring failed";
+pkgs.runCommand "transcripts-deepgram" { nativeBuildInputs = [ python pkgs.ripgrep ]; } ''
+  export PYTHONPATH=${(repoRoot + "/workspace/media/youtube-services")}
+  cd ${(repoRoot + "/workspace/media/youtube-services")}
+  python3 -c "import api"
+  python3 -m unittest -q test_transcript
+  rg -F ${lib.escapeShellArg ''export YT_TRANSCRIPTS_DEEPGRAM_KEY_FILE="${c.hwc.secrets.api.deepgram-api-key}"''} ${service.serviceConfig.ExecStart} >/dev/null
+  if rg 'YT_TRANSCRIPTS_WHISPER_' ${service.serviceConfig.ExecStart}; then
+    echo "Transcripts still exports a Whisper execution path" >&2
+    exit 1
+  fi
+  touch "$out"
+'';
+
+mousehole-runtime-wiring = let
+  c = self.nixosConfigurations.hwc-home.config;
+  image = c.hwc.media.mousehole.image;
+  container = c.virtualisation.oci-containers.containers.mousehole;
+  fixture = pkgs.writeText "mousehole-runtime-wiring.json" (builtins.toJSON {
+    inherit image container;
+    preStart = c.systemd.services.podman-mousehole.preStart;
+    hook = c.services.borgbackup.jobs.hwc-backup.preHook;
+    paths = c.services.borgbackup.jobs.hwc-backup.paths;
+    snapshot = c.system.build.mouseholeStateSnapshot or null;
+  });
+in
+assert lib.assertMsg (lib.hasPrefix "localhost/mousehole-runtime:0.2.0-bun1.4.4-" image)
+  "Mousehole must consume its qualified same-app Bun runtime";
+assert container.image == image && container.pull == "never";
+assert lib.elem "--network=container:gluetun" container.extraOptions;
+assert container.dependsOn == [ "gluetun" ];
+assert c.systemd.services.podman-mousehole.bindsTo == [ "podman-gluetun.service" ];
+assert lib.assertMsg (lib.hasInfix (builtins.unsafeDiscardStringContext (toString c.system.build.mouseholeStateSnapshot))
+  c.services.borgbackup.jobs.hwc-backup.preHook)
+  "Mousehole state snapshot must run in the effective Borg producer hook";
+pkgs.runCommand "mousehole-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${fixture} ${c.system.build.mouseholeRuntimeImageRecipe} <<'PY'
+  import hashlib, json, os, pathlib, re, runpy, subprocess, sys, tempfile
+  from unittest.mock import patch
+  spec = json.loads(pathlib.Path(sys.argv[1]).read_text())
+  recipe = pathlib.Path(sys.argv[2]).read_text()
+  assert spec['image'] == 'localhost/mousehole-runtime:0.2.0-bun1.4.4-' + hashlib.sha256(recipe.encode()).hexdigest()[:12]
+  assert re.findall(r'^FROM (\S+)', recipe, re.M) == [
+      'docker.io/oven/bun@sha256:b740c3f5600e6360684f240d31c67ffb759def968bfa98ed98c4cce970707735',
+      'docker.io/tmmrtn/mousehole@sha256:9adfcfddb3395d33f0fbef50a6dc52a930769c57f2c0af2b3b9d6f7bfda6195c']
+  assert 'COPY --from=secure-bun /usr/local/bin/bun /usr/local/bin/bun' in recipe
+  assert len(recipe.strip().splitlines()) == 3
+  assert spec['image'] in spec['preStart'] and ' image exists ' in spec['preStart']
+  assert 'podman build' not in spec['preStart']
+  script = spec['snapshot']
+  assert script and script in spec['hook']
+  assert '/var/lib/backups/mousehole/state.json' in spec['hook']
+  assert '/opt/mousehole/data/state.json' in spec['hook']
+  assert '/var/lib/backups' in spec['paths']
+  with tempfile.TemporaryDirectory() as d:
+      root = pathlib.Path(d); source = root / 'live.json'; dest = root / 'snapshot/state.json'
+      good = b'{"currentCookie":"fixture-only","lastMam":{"response":{"httpStatus":200}}}'
+      source.write_bytes(good)
+      def run(): return subprocess.run([script, str(source), str(dest)], capture_output=True)
+      first = run()
+      assert first.returncode == 0, first.stderr.decode()[:300]
+      assert dest.read_bytes() == good
+      assert dest.stat().st_mode & 0o777 == 0o600
+      assert dest.parent.stat().st_mode & 0o777 == 0o700
+      for bad in (b'{"currentCookie":', b'[]', b'{}', b'x' * (1048576 + 1)):
+          source.write_bytes(bad)
+          assert run().returncode != 0 and dest.read_bytes() == good
+      source.unlink()
+      assert run().returncode != 0 and dest.read_bytes() == good
+      source.write_bytes(good)
+      real_open = pathlib.Path.open; reads = [0]
+      def raced_open(p, *args, **kwargs):
+          if p == source and args and args[0] == 'rb':
+              reads[0] += 1
+              if reads[0] == 2:
+                  with real_open(source, 'wb') as f: f.write(b'{"currentCookie":"changed"}')
+          return real_open(p, *args, **kwargs)
+      try:
+          with patch.object(sys, 'argv', [script, str(source), str(dest)]), patch.object(pathlib.Path, 'open', raced_open):
+              runpy.run_path(script, run_name='__main__')
+      except (RuntimeError, ValueError): pass
+      else: raise AssertionError('racing input must fail before snapshot publication')
+      assert reads[0] == 2 and dest.read_bytes() == good
+      assert not list(dest.parent.glob('*.pending'))
+  PY
+  touch "$out"
+'';
+
+sabnzbd-runtime-wiring = let
+  c = self.nixosConfigurations.hwc-home.config;
+  container = c.virtualisation.oci-containers.containers.sabnzbd;
+  recipe = c.system.build.sabnzbdRuntimeImageRecipe;
+  context = c.system.build.sabnzbdRuntimeImageContext;
+  data = "${c.hwc.paths.apps.root}/sabnzbd/config";
+in
+assert lib.assertMsg
+  (container.image == "localhost/sabnzbd-runtime:5.1.3-security-${builtins.substring 0 12 (builtins.hashString "sha256" (builtins.readFile recipe))}")
+  "SABnzbd must consume the qualified stable security recipe";
+assert container.image == c.hwc.media.sabnzbd._runtimeImage;
+assert container.pull == "never";
+assert lib.elem "--security-opt=no-new-privileges" container.extraOptions;
+assert lib.elem "${data}:/config" container.volumes;
+assert lib.elem "${c.hwc.paths.hot.root}/events:/mnt/hot/events" container.volumes;
+assert lib.elem "${c.hwc.paths.hot.downloads}/scripts:/config/scripts:ro" container.volumes;
+assert c.hwc.data.borg.sqliteSnapshots.sabnzbd.source == "${data}/admin/history1.db";
+assert c.hwc.data.borg.sqliteSnapshots.sabnzbd.user == "eric";
+assert lib.elem data c.hwc.data.borg.sources;
+assert lib.hasInfix "podman image exists" c.systemd.services.podman-sabnzbd.preStart;
+pkgs.runCommand "sabnzbd-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${context} ${recipe} <<'PY'
+  import ast, hashlib, json, pathlib, sys
+  root=pathlib.Path(sys.argv[1]); recipe=pathlib.Path(sys.argv[2]).read_text()
+  assert (root/'Dockerfile').read_text()==recipe
+  assert recipe.startswith('FROM lscr.io/linuxserver/sabnzbd@sha256:2b69019ef0b01bcdb9fb5d6641516bd57cb73b8f98b1a34f61ab749c5ea63376\n')
+  assert '--repositories-file /dev/null --no-network --no-cache' in recipe
+  assert '--no-index --no-deps --no-cache-dir --force-reinstall' in recipe
+  assert '/lsiopy/bin/python3 /tmp/hwc/apply-backports.py' in recipe
+  assert 'pip check' in recipe and 'apk verify' in recipe
+  manifest=json.loads((root/'manifest.json').read_text()); assert manifest['schemaVersion']==1
+  assert json.loads((root/'backports.json').read_text())==manifest['backports']
+  assert {p['name']:p['version'] for p in manifest['wheels']} == {'certifi':'2026.10.23','PyJWT':'2.15.1','urllib3':'2.8.0','oauthlib':'4.0.1'}
+  assert {p['name']:p['version'] for p in manifest['apks']} == {'curl':'8.23.0-r0','libcurl':'8.23.0-r0','libexpat':'2.10.0-r0','ca-certificates-bundle':'20261020-r0'}
+  import base64
+  for p in manifest['apks']+manifest['wheels']:
+      assert 'sha256-'+base64.b64encode(hashlib.sha256((root/p['file']).read_bytes()).digest()).decode()==p['hash']
+      assert '/tmp/hwc/'+p['file'] in recipe
+  expected={'sabnzbd/postproc.py':'dbcd60746ae1b8890ce3ac6f85715bfe244080ec4f957dfaaa141b4242bc3e97',
+    'interfaces/Glitter/templates/static/javascripts/knockout-extensions.js':'a344b7a1aea287934f36154eb5d3d73ca57592b688bcba51454134cd44e8b35b',
+    'interfaces/wizard/static/javascript/checkserver.js':'332318b1bcad64fa7565b4272313c7ef4adeca9c14ba0516fc119037a4fe0360',
+    'interfaces/Config/templates/config_server.tmpl':'ee5516fdb731f859a518633387c361a7996bbc2f3e7fc2cca875cfe80f1efe34'}
+  assert {k:v['patchedSha256'] for k,v in manifest['backports'].items()}==expected
+  program=(root/'apply-backports.py').read_text();ast.parse(program)
+  assert 'SOURCE_MISMATCH:' in program and 'PATCH_MISMATCH:' in program and 'MISSING_HUNK:' in program
+  assert 'postproc.*.pyc' in program and 'client.*.pyc' in program
+  assert manifest['pythonHttpBackport']['patchedSha256']=='1bf66af1b10a72bb91ae15c3f935fd80cdcc38cc10f57aed05797702c4785ad2'
+  assert "/usr/lib/python3.14/http/client.py" in program
+  PY
+  touch "$out"
+'';
+
+navidrome-runtime-wiring = let
+  c = self.nixosConfigurations.hwc-home.config;
+  archive = c.system.build.navidromeRuntimeImage;
+  package = c.system.build.navidromeRuntimePackage;
+  ffmpeg = c.system.build.navidromeRuntimeFfmpeg;
+  container = c.virtualisation.oci-containers.containers.navidrome;
+  data = c.hwc.media.navidrome.dataDir;
+in
+assert lib.assertMsg (container.image == "${archive.imageName}:${archive.imageTag}") "Navidrome must consume its qualified runtime";
+assert container.pull == "never";
+assert lib.elem "${data}:/data" container.volumes;
+assert lib.all (v: !(lib.hasSuffix ":/config" v)) container.volumes;
+assert lib.elem "--security-opt=no-new-privileges" container.extraOptions;
+assert c.hwc.data.borg.sqliteSnapshots.navidrome.source == "${data}/navidrome.db";
+assert c.hwc.data.borg.sqliteSnapshots.navidrome.user == "root";
+assert lib.elem data c.hwc.data.borg.sources;
+assert lib.hasInfix "test -s ${lib.escapeShellArg "${data}/navidrome.db"}" c.systemd.services.podman-navidrome.preStart;
+assert lib.hasInfix (builtins.unsafeDiscardStringContext "podman load --input ${archive}")
+  (builtins.unsafeDiscardStringContext c.systemd.services.podman-navidrome.preStart);
+pkgs.runCommand "navidrome-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${archive} ${package} ${pkgs.go_1_27}/bin/go ${ffmpeg} <<'PY'
+  import json, pathlib, subprocess, sys, tarfile
+  archive, package, go, ffmpeg = sys.argv[1:]
+  with tarfile.open(archive) as t:
+      manifest = json.load(t.extractfile('manifest.json'))
+      assert len(manifest) == 1
+      cfg = json.load(t.extractfile(manifest[0]['Config']))['config']
+  assert cfg['Entrypoint'] == [package + '/bin/navidrome']
+  assert cfg['WorkingDir'] == '/data'
+  assert 'ND_DATAFOLDER=/data' in cfg['Env'] and 'ND_MUSICFOLDER=/music' in cfg['Env']
+  assert not cfg.get('Volumes'), 'data must not silently fall back to an anonymous volume'
+  version = subprocess.check_output([package + '/bin/navidrome', '--version'], text=True)
+  assert version.startswith('0.64.2 ')
+  assert ffmpeg + '/bin' in pathlib.Path(package + '/bin/navidrome').read_text()
+  metadata = subprocess.check_output([go, 'version', '-m', package + '/bin/.navidrome-wrapped'], text=True)
+  assert ': go1.27.3' in metadata
+  expected = {'github.com/go-chi/chi/v5':'v5.4.0','golang.org/x/net':'v0.62.0','golang.org/x/crypto':'v0.58.0',
+      'golang.org/x/sys':'v0.49.0','golang.org/x/text':'v0.43.0'}
+  modules = {p[1]:p[2] for line in metadata.splitlines() if len(p := line.split()) >= 3 and p[0] == 'dep'}
+  assert all(modules.get(k) == v for k,v in expected.items())
+  PY
+  touch "$out"
+'';
+
+audiobookshelf-runtime-wiring = let
+  c = self.nixosConfigurations.hwc-home.config;
+  image = c.hwc.media.audiobookshelf.image;
+  fixture = pkgs.writeText "audiobookshelf-runtime-wiring.json" (builtins.toJSON { inherit image; });
+in
+assert lib.assertMsg (lib.hasPrefix "localhost/audiobookshelf-runtime:2.37.2-node24.22.2-" image)
+  "Audiobookshelf must consume its qualified application and Node24 image";
+assert c.virtualisation.oci-containers.containers.audiobookshelf.image == image;
+assert c.virtualisation.oci-containers.containers.audiobookshelf.pull == "never";
+assert lib.hasInfix "image exists ${lib.escapeShellArg image}" c.systemd.services.podman-audiobookshelf.preStart;
+pkgs.runCommand "audiobookshelf-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${fixture} ${c.system.build.audiobookshelfRuntimeImageRecipe} ${c.system.build.audiobookshelfRuntimeImageContext} <<'PY'
+  import base64, hashlib, json, pathlib, re, shlex, sys
+  spec = json.loads(pathlib.Path(sys.argv[1]).read_text())
+  recipe = pathlib.Path(sys.argv[2]).read_text()
+  assert spec['image'] == 'localhost/audiobookshelf-runtime:2.37.2-node24.22.2-' + hashlib.sha256(recipe.encode()).hexdigest()[:12]
+  sources = re.findall(r'^FROM (\S+)', recipe, re.M)
+  assert sources == [
+      'docker.io/library/node@sha256:4eefa1bfce4197942661ef9148247d779ddf1bb0ee006d3294a467609de60724',
+      'ghcr.io/advplyr/audiobookshelf@sha256:37c2057e150694970442579815c646fe6bdc01c95b9d1547c4c9068be8844ef3']
+  assert 'COPY --from=secure-node /usr/local/bin/node /usr/local/bin/node' in recipe
+  assert 'ENV NODE_VERSION=24.22.2' in recipe
+  context = pathlib.Path(sys.argv[3])
+  assert (context / 'Dockerfile').read_text() == recipe
+  manifest = context / 'manifest.json'
+  assert '# Fixed dependency inputs ' + hashlib.sha256(manifest.read_bytes()).hexdigest() in recipe
+  spec = json.loads(manifest.read_text())
+  assert spec['schemaVersion'] == 1 and len(spec['packages']) == 15
+  top = {p['name']:p['version'] for p in spec['packages'] if p['path'] == p['name']}
+  assert top == {'form-data':'4.0.6', 'proxy-addr':'2.0.8'}
+  assert {p.name for p in (context / 'npm').iterdir()} == {p['file'] for p in spec['packages']}
+  active = [line for line in recipe.splitlines() if line.strip() and not line.lstrip().startswith('#')]
+  assert len(active) == 6 and 'COPY npm/ /tmp/hwc-audiobookshelf-npm/' in active
+  run = next(line[4:] for line in active if line.startswith('RUN '))
+  commands = [[]]
+  for arg in shlex.split(run):
+      if arg == '&&': commands.append([])
+      else: commands[-1].append(arg)
+  expected = []
+  for p in spec['packages']:
+      assert p['path'] in top or re.fullmatch(r'form-data/node_modules/[a-z0-9][a-z0-9._-]*', p['path'])
+      assert p['hash'].startswith('sha512-')
+      assert hashlib.sha512((context / 'npm' / p['file']).read_bytes()).digest() == base64.b64decode(p['hash'][7:])
+      destination = '/app/node_modules/' + p['path']
+      expected.extend([['rm','-rf',destination], ['mkdir','-p',destination],
+          ['tar','-xzf','/tmp/hwc-audiobookshelf-npm/'+p['file'],'-C',destination,'--strip-components=1','--no-same-owner']])
+  expected.append(['rm','-r','/tmp/hwc-audiobookshelf-npm'])
+  assert commands == expected, 'production must install the complete isolated closure without a resolver'
+  PY
+  touch "$out"
+'';
+
+starlette-host-backport-wiring = let
+  c = self.nixosConfigurations.hwc-home.config;
+  frigate = c.system.build.frigateRuntimeImageRecipe.text;
+  ml = c.system.build.immichMlRuntimeImageRecipe.text;
+  expectedFrigate = "localhost/frigate-runtime:0.18.2-tensorrt-hostfix-${builtins.substring 0 12 (builtins.hashString "sha256" frigate)}";
+  expectedMl = "localhost/immich-ml-runtime:2.5.6-${builtins.substring 0 12 (builtins.hashString "sha256" ml)}";
+in
+assert c.virtualisation.oci-containers.containers.frigate.image == expectedFrigate;
+assert c.virtualisation.oci-containers.containers.immich-machine-learning.image == expectedMl;
+assert c.virtualisation.oci-containers.containers.frigate.pull == "never";
+assert lib.hasInfix "FROM ghcr.io/blakeblackshear/frigate@sha256:1cafb6ebbaff0aaf275cc3f31951bcf7e29f3989f18a10ba9565091367d8736c" frigate;
+assert lib.hasInfix "image exists ${lib.escapeShellArg expectedFrigate}" c.systemd.services.podman-frigate.preStart;
+pkgs.runCommand "starlette-host-backport-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${c.system.build.frigateRuntimeImageRecipe} ${c.system.build.immichMlRuntimeImageRecipe} ${c.system.build.frigateRuntimeImageContext} <<'PYTEST'
+  import base64, hashlib, json, pathlib, shlex, sys
+  expected = [('0.47.3', 'ce16c619c99e45507a3aebedf47c2807c8122bd9396e21f7cd48636f9715fa8c', '5c163e52df0a615c7860136b30d010c48696c0774011db8879a3299e025ed441'),
+              ('0.50.0', 'dde752330006431c7ebc1ccb948a95825be5bd6b8c03839133cdee59899c3030', '77253c43dce33af8b92b1b76794c6b39205419a520663246dfba595e4c76b283')]
+  programs = []
+  for path, hashes in zip(sys.argv[1:3], expected):
+      recipe = pathlib.Path(path).read_text()
+      assert all(line.split()[0] in {'FROM', 'RUN', 'COPY', 'ADD', 'ENV'} for line in recipe.splitlines() if line.strip() and not line.startswith('#'))
+      at = recipe.rindex('RUN ')
+      args = shlex.split(recipe[at + 4:])
+      assert args[1] == '-c' and tuple(args[3:]) == hashes
+      compile(args[2], '<backport>', 'exec')
+      assert '_HOST_RE.fullmatch(host_header)' in args[2]
+      assert 'hashlib.sha256(source.encode()).hexdigest() == patched' in args[2]
+      programs.append(args[2])
+  assert programs[0] == programs[1], 'backport must have one producer'
+  context = pathlib.Path(sys.argv[3])
+  recipe = pathlib.Path(sys.argv[1]).read_text()
+  manifest = context / 'manifest.json'
+  assert (context / 'Dockerfile').read_text() == recipe
+  assert '# Fixed runtime inputs ' + hashlib.sha256(manifest.read_bytes()).hexdigest() in recipe
+  assert 'apt-get --no-download' in recipe and 'pip install --no-index --no-deps' in recipe
+  inputs = json.loads(manifest.read_text())
+  assert len(inputs['debian']) == 11 and len(inputs['wheels']) == 2
+  assert {p['name'].lower():p['version'] for p in inputs['wheels']} == {'pillow':'13.0.0','certifi':'2026.10.18'}
+  for group, directory in [('debian', 'debian'), ('wheels', 'wheels')]:
+      assert {p.name for p in (context / directory).iterdir()} == {p['file'] for p in inputs[group]}
+      for p in inputs[group]:
+          actual = hashlib.sha256((context / directory / p['file']).read_bytes()).digest()
+          assert actual == base64.b64decode(p['hash'].removeprefix('sha256-')), p['name']
+  PYTEST
+  touch "$out"
+'';
+
+immich-database-auth-wiring = let
+  c = self.nixosConfigurations.hwc-home.config;
+  db = c.hwc.media.immich.database;
+  container = c.virtualisation.oci-containers.containers.immich-server;
+  app = c.systemd.services.podman-immich-server;
+  operator = c.systemd.services.postgresql-application-roles;
+  secret = c.age.secrets.immich-db-password;
+  dependency = "postgresql-application-roles.service";
+  fixture = pkgs.writeText "immich-database-auth-wiring.json" (builtins.toJSON {
+    inherit (c.services.postgresql) authentication;
+    inherit (container) environment volumes;
+    role = c.hwc.data.databases.postgresql.applicationRoles.immich;
+  });
+in
+assert lib.assertMsg (c.hwc.data.databases.postgresql.authenticationMode == "peer-scram") "Home must use peer/SCRAM authentication";
+assert db.user == "immich" && db.name == "immich" && db.passwordSecret == "immich-db-password";
+assert !(container.environment ? DB_URL) && !(container.environment ? DB_PASSWORD);
+assert builtins.elem dependency app.after && builtins.elem dependency app.requires;
+assert builtins.elem secret.file app.restartTriggers && builtins.elem secret.file operator.restartTriggers;
+assert operator.serviceConfig.LoadCredential == [ "immich:${secret.path}" ];
+assert secret.owner == "root" && secret.group == "secrets" && secret.mode == "0440";
+assert operator.serviceConfig.User == "eric" && operator.serviceConfig.RestrictAddressFamilies == [ "AF_UNIX" ];
+assert builtins.elem "postgresql-setup.service" operator.after && builtins.elem "postgresql-setup.service" operator.requires;
+pkgs.runCommand "immich-database-auth-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${fixture} ${c.system.build.postgresqlApplicationRoleTool} ${c.system.build.postgresqlApplicationRoleConfig} ${(repoRoot + "/domains/data/databases/application-roles.py")} <<'PY'
+  import json, pathlib, sys
+  binding = json.loads(pathlib.Path(sys.argv[1]).read_text())
+  tool = pathlib.Path(sys.argv[2]).read_text()
+  spec = json.loads(pathlib.Path(sys.argv[3]).read_text())
+  assert sys.argv[4] in tool and sys.argv[3] in tool
+  assert '--socket /run/postgresql' in tool and '--admin-role eric' in tool
+  assert spec == {'schemaVersion': 2, 'roles': {'immich': {
+    'credential': {'password': 'immich-db-password'},
+    'authority': {'owned': {'schemas': ['public', 'vectors'], 'takeOwnershipFrom': 'eric'}},
+    'prepareSql': "",
+  }}}
+  assert '--contract ' in tool
+  assert binding['environment']['DB_USERNAME'] == 'immich'
+  target = binding['environment']['DB_PASSWORD_FILE']
+  assert '/run/agenix/immich-db-password:' + target + ':ro' in binding['volumes']
+  lines = [s.split() for s in binding['authentication'].splitlines() if s.strip() and not s.lstrip().startswith('#')]
+  assert lines[:2] == [['local', 'all', 'postgres', 'peer', 'map=postgres'], ['local', 'all', 'all', 'peer']]
+  assert not any('trust' in row for row in lines)
+  assert all(row[-1] == 'scram-sha-256' for row in lines if row[0] == 'host')
+  PY
+  touch "$out"
+'';
+
+immich-runtime-wiring = let
+  c = self.nixosConfigurations.hwc-home.config;
+  cfg = c.hwc.media.immich;
+  fixture = pkgs.writeText "immich-runtime-wiring.json" (builtins.toJSON {
+    server = cfg.images.server;
+    ml = cfg.images.machineLearning;
+    seerr = c.hwc.media.jellyseerr.image;
+  });
+in
+assert lib.assertMsg (lib.hasPrefix "localhost/immich-runtime:2.5.6-node24.22.1-" cfg.images.server
+  && lib.hasPrefix "localhost/immich-ml-runtime:2.5.6-" cfg.images.machineLearning)
+  "Immich must consume its qualified same-app Node and ML TLS/CA images";
+assert c.virtualisation.oci-containers.containers.immich-server.image == cfg.images.server;
+assert c.virtualisation.oci-containers.containers.immich-machine-learning.image == cfg.images.machineLearning;
+pkgs.runCommand "immich-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${fixture} ${c.system.build.immichServerRuntimeImageRecipe} ${c.system.build.immichMlRuntimeImageRecipe} ${c.system.build.seerrRuntimeImageRecipe} <<'PY'
+  import hashlib, json, pathlib, re, sys
+  spec = json.loads(pathlib.Path(sys.argv[1]).read_text())
+  server, ml, seerr = [pathlib.Path(p).read_text() for p in sys.argv[2:]]
+  sha = lambda value: hashlib.sha256(value.encode()).hexdigest()
+  assert spec['server'] == 'localhost/immich-runtime:2.5.6-node24.22.1-' + sha(server)[:12]
+  assert spec['ml'] == 'localhost/immich-ml-runtime:2.5.6-' + sha(ml)[:12]
+  for recipe in [server, ml]:
+      sources = re.findall(r'^FROM (\S+)', recipe, re.M)
+      assert len(sources) == 2 and all(re.search(r'@sha256:[0-9a-f]{64}$', s) for s in sources)
+  assert 'ENV NODE_VERSION=24.22.1' in server
+  assert '--only-upgrade' in ml and 'libssl3=3.0.2-0ubuntu1.30' in ml and 'openssl=3.0.2-0ubuntu1.30' in ml
+  assert 'ca-certificates=20260816ubuntu0.22.04.1' in ml
+  assert '--checksum=sha256:e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1' in ml
+  assert '--no-index --no-deps' in ml and 'certifi-2026.10.23' in ml
+  assert 'emSign Root CA - C1' in ml and 'emSign ECC Root CA - C3' in ml
+  assert 'update-ca-certificates --fresh' in ml
+  # Security backports preserve the accepted same-app Node recipe prefix.
+  assert sha(seerr.split('# Security backports', 1)[0]) == 'b9482a37e259fcd93442be29ae2b1cfce0653bc5e738e68fab403a84297953ea'
+  assert spec['seerr'] == 'localhost/seerr-runtime:3.1.0-node22.23.4-' + sha(seerr)[:12]
+  PY
+  touch "$out"
+'';
+
+immich-shared-brotli-wiring = let
+  c = self.nixosConfigurations.hwc-home.config;
+  cfg = c.hwc.media.immich;
+  serverContext = c.system.build.immichServerRuntimeImageContext;
+  mlContext = c.system.build.immichMlRuntimeImageContext;
+  libraries = c.system.build.immichPillowBrotliLibraries;
+  manifest = builtins.fromJSON c.system.build.immichRuntimeSecurityManifest.text;
+  server = c.system.build.immichServerRuntimeImageRecipe.text;
+  ml = c.system.build.immichMlRuntimeImageRecipe.text;
+in
+assert lib.assertMsg (lib.hasInfix "COPY ${manifest.brotli.filename} /tmp/hwc-brotli.deb" server
+  && lib.hasInfix "dpkg -i /tmp/hwc-brotli.deb" server
+  && lib.hasInfix "COPY pillow-brotli/" ml
+  && lib.hasInfix "RUN chmod ${manifest.pillowLibraryMode}" ml)
+  "Immich recipes must consume both corrected shared Brotli inputs";
+assert cfg.images.server == "localhost/immich-runtime:2.5.6-node24.22.1-${builtins.substring 0 12 (builtins.hashString "sha256" server)}";
+assert cfg.images.machineLearning == "localhost/immich-ml-runtime:2.5.6-${builtins.substring 0 12 (builtins.hashString "sha256" ml)}";
+assert c.virtualisation.oci-containers.containers.immich-server.image == cfg.images.server;
+assert c.virtualisation.oci-containers.containers.immich-machine-learning.image == cfg.images.machineLearning;
+assert c.virtualisation.oci-containers.containers.immich-server.pull == "never";
+assert c.virtualisation.oci-containers.containers.immich-machine-learning.pull == "never";
+assert lib.hasInfix "image exists ${lib.escapeShellArg cfg.images.server}" c.systemd.services.podman-immich-server.preStart;
+assert lib.hasInfix "image exists ${lib.escapeShellArg cfg.images.machineLearning}" c.systemd.services.podman-immich-machine-learning.preStart;
+pkgs.runCommand "immich-shared-brotli-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${serverContext} ${mlContext} ${libraries} <<'PY'
+  import ctypes, hashlib, json, pathlib, stat, sys
+  server, ml, libraries = map(pathlib.Path, sys.argv[1:])
+  spec = json.loads((server / 'manifest.json').read_text())
+  assert spec == json.loads((ml / 'manifest.json').read_text())
+  assert spec['brotli']['version'] == '1.1.0-2+deb13u1'
+  assert spec['brotli']['sha256'] == 'db46824c60fee46aff3cc0be3e5f736bc606cae669b1fb17516a41e8073251a9'
+  package = server / spec['brotli']['filename']
+  assert hashlib.sha256(package.read_bytes()).hexdigest() == spec['brotli']['sha256']
+  for name in spec['pillowLibraries'].values():
+      copied = ml / 'pillow-brotli' / name
+      assert copied.read_bytes() == (libraries / name).read_bytes()
+      # Nix canonicalizes executable store inputs to read-only. The
+      # image recipe restores the original container mode explicitly.
+      assert stat.S_IMODE(copied.stat().st_mode) == int(spec['pillowLibraryMode'], 8) & ~0o222
+  common = libraries / spec['pillowLibraries']['common']
+  decoder = libraries / spec['pillowLibraries']['decoder']
+  ctypes.CDLL(str(common), mode=ctypes.RTLD_GLOBAL)
+  lib = ctypes.CDLL(str(decoder))
+  lib.BrotliDecoderErrorString.argtypes = [ctypes.c_int]
+  lib.BrotliDecoderErrorString.restype = ctypes.c_char_p
+  assert any(b'BLOCK_SWITCH' in lib.BrotliDecoderErrorString(i) for i in range(-64, 1)), 'security backport absent from generated loader input'
+  PY
+  touch "$out"
+'';
+
+calibre-security-wiring = let
+  c = self.nixosConfigurations.hwc-home.config;
+  binding = pkgs.writeText "calibre-security-binding.json" (builtins.toJSON {
+    selected = c.hwc.media.calibre.image;
+    container = c.virtualisation.oci-containers.containers.calibre.image;
+    volumes = c.virtualisation.oci-containers.containers.calibre.volumes;
+    library = toString c.hwc.media.calibre.library;
+    config = "${c.hwc.paths.apps.root}/calibre/config";
+  });
+in pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${binding} <<'PYTEST'
+  import json,sys
+  v=json.load(open(sys.argv[1]))
+  assert v['selected'] == v['container'] == 'lscr.io/linuxserver/calibre@sha256:b198fc03a6abc6be7e251a9958e50e74634b00e447c7b25e92c191c8077ba378'
+  assert v['library'] + ':/books' in v['volumes']
+  assert v['config'] + ':/config' in v['volumes']
+  PYTEST
+  touch "$out"
+'';
+
+seerr-security-wiring = let
+  c = self.nixosConfigurations.hwc-home.config;
+  binding = pkgs.writeText "seerr-security-binding.json" (builtins.toJSON {
+    selected = c.hwc.media.jellyseerr.image;
+    container = c.virtualisation.oci-containers.containers.jellyseerr.image;
+  });
+in pkgs.runCommand "seerr-security-wiring" { nativeBuildInputs = [ pkgs.python3 pkgs.nodejs ]; } ''
+  python3 - ${binding} ${c.system.build.seerrRuntimeImageRecipe} ${c.system.build.seerrRuntimeImageContext} ${c.system.build.seerrRequestPermissions} <<'PYTEST'
+  import hashlib, json, pathlib, subprocess, sys
+  binding = json.loads(pathlib.Path(sys.argv[1]).read_text())
+  recipe = pathlib.Path(sys.argv[2]).read_text()
+  context = pathlib.Path(sys.argv[3]); producer = pathlib.Path(sys.argv[4]).read_text()
+  manifest = json.loads((context / 'manifest.json').read_text())
+  patcher = (context / 'apply-backports.cjs').read_text()
+  sha = lambda value: hashlib.sha256(value.encode()).hexdigest()
+  assert (context / 'Dockerfile').read_text() == recipe, 'context bypasses recipe'
+  assert binding['selected'] == binding['container'] == 'localhost/seerr-runtime:3.1.0-node22.23.4-' + sha(recipe)[:12], 'container bypasses security recipe'
+  assert binding['selected'] in producer, 'permission vocabulary uses a different image'
+  assert 'COPY --chown=node:node . /tmp/hwc-seerr/' in recipe and '&& node /tmp/hwc-seerr/apply-backports.cjs &&' in recipe, 'image bypasses security backports'
+  assert sha(recipe.split('# Security backports', 1)[0]) == 'b9482a37e259fcd93442be29ae2b1cfce0653bc5e738e68fab403a84297953ea', 'unrelated base image change'
+  canonical = json.dumps(manifest, separators=(',', ':'), sort_keys=True)
+  assert '# Security backports ' + sha(canonical + patcher) in recipe, 'backport inputs not bound to image'
+  assert manifest['schemaVersion'] == 1
+  assert 'RUN apk verify ' in recipe and 'apk --repositories-file /dev/null --no-network --no-cache add ' in recipe, 'image bypasses signed offline native update'
+  assert recipe.rstrip().endswith('USER node:node'), 'native build leaves runtime root'
+  assert {p['name']: p['version'] for p in manifest['apks']} == {'libcrypto3':'3.5.9-r0', 'libssl3':'3.5.9-r0', 'musl':'1.2.5-r13', 'musl-utils':'1.2.5-r13', 'zlib':'1.3.2-r1'}
+  import base64
+  for package in manifest['apks']:
+      assert package['url'].startswith('https://dl-cdn.alpinelinux.org/alpine/v3.22/main/x86_64/')
+      archive = context / package['file']
+      assert 'sha256-' + base64.b64encode(hashlib.sha256(archive.read_bytes()).digest()).decode() == package['hash'], 'context archive drift'
+      assert recipe.count('/tmp/hwc-seerr/' + package['file']) == 2, 'native input bypasses verify or install'
+  assert set(manifest['advisories']) == {'GHSA-mc6w-69r3-62h8', 'GHSA-8j73-j6rc-q8xh', 'GHSA-xc6j-6p6h-p799', 'GHSA-c4j6-fc7j-m34r'}
+  assert set(manifest['backports']) == {'dist/lib/imageproxy.js', 'dist/entity/User.js', 'dist/entity/Media.js', 'dist/routes/auth.js', 'dist/routes/movie.js', 'dist/routes/tv.js', 'node_modules/next/dist/server/lib/router-server.js'}, 'schema or unrelated app change'
+  next_spec = manifest['backports']['node_modules/next/dist/server/lib/router-server.js']
+  assert next_spec['patchedSha256'] == 'bf28825f0722216ac23dfdee8fa74f594867996d48fbadc592427a3f6eb49f6c', 'Next upstream routing repair missing'
+  assert len(next_spec['replacements']) == 2
+  for spec in manifest['backports'].values():
+      assert len(spec['sourceSha256']) == len(spec['patchedSha256']) == 64 and spec['sourceSha256'] != spec['patchedSha256']
+      assert spec['replacements'] and all(len(pair) == 2 and pair[0] != pair[1] for pair in spec['replacements'])
+  assert 'SEERR_BACKPORT_SOURCE_MISMATCH' in patcher and 'SEERR_BACKPORT_RESULT_MISMATCH' in patcher and 'SEERR_BACKPORT_HUNK_MISMATCH' in patcher
+  subprocess.run(['node', '--check', str(context / 'apply-backports.cjs')], check=True)
+  print('production image, base parity, app and Next security context and app-owned permission wiring pass')
+  PYTEST
+  touch "$out"
+'';
+
+seerr-settings-preservation = let
+  secret = name: value: pkgs.writeText "seerr-fixture-${name}" value;
+  original = {
+    "jellyfin-api-key" = secret "jellyfin" "fixture-jellyfin\n";
+    "radarr-api-key" = secret "radarr" "fixture-radarr\n";
+    "sonarr-api-key" = secret "sonarr" "fixture-sonarr\n";
+  };
+  generator = secrets: (import (repoRoot + "/domains/media/jellyseerr/parts/settings.nix") {
+    inherit pkgs;
+    config.hwc.secrets.api = secrets;
+  }).generateSettingsScript;
+  rotated = original // { "radarr-api-key" = secret "radarr-rotated" "fixture-rotated\n"; };
+  empty = original // { "sonarr-api-key" = secret "empty" ""; };
+  missing = original // { "sonarr-api-key" = "/no-such-seerr-fixture-secret"; };
+  home = self.nixosConfigurations.hwc-home;
+  liveGenerator = (import (repoRoot + "/domains/media/jellyseerr/parts/settings.nix") {
+    inherit (home) pkgs;
+    inherit (home) config;
+  }).generateSettingsScript;
+  liveProducer = home.config.system.build.seerrRequestPermissions;
+  liveUpdater = home.config.system.build.seerrUserPermissions;
+  preStart = pkgs.writeText "seerr-production-prestart" home.config.systemd.services.podman-jellyseerr.preStart;
+in pkgs.runCommand "seerr-settings-preservation" {
+  nativeBuildInputs = [ pkgs.python3 pkgs.jq pkgs.coreutils ];
+} ''
+  python3 - ${generator original} ${generator rotated} ${generator empty} ${generator missing} ${preStart} ${liveGenerator} ${liveProducer} ${liveUpdater} <<'PYTEST'
+  import hashlib, json, pathlib, re, subprocess, sys, tempfile
+  original, rotated, empty, missing, prestart, live, producer, updater = sys.argv[1:]
+  startup = pathlib.Path(prestart).read_text()
+  helpers = re.findall(r'/nix/store/[^\s]+jellyseerr-ensure-settings', pathlib.Path(prestart).read_text())
+  assert len(helpers) == 1 and live in pathlib.Path(helpers[0]).read_text(), 'production preStart bypasses settings owner'
+  ensure = pathlib.Path(helpers[0]).read_text()
+  assert startup.count(producer) == 1, 'production bypasses app-owned permission vocabulary'
+  assert startup.index(producer) < startup.index(helpers[0]) < startup.index(updater), 'permissions resolve after persistent writes'
+  assert re.search(re.escape(helpers[0]) + r' "\$permissionMask"', startup), 'settings bypasses shared mask'
+  assert re.search(re.escape(updater) + r' "\$permissionMask"', startup), 'SQL bypasses shared mask'
+  assert live + ' "' in ensure and '"$1"' in ensure, 'generator bypasses shared mask'
+  assert 'install -d -m 0700' in ensure and 'chmod 0600' in ensure, 'settings privacy lost'
+  seed = {'main': {'apiKey': 'keep-api', 'localLogin': True, 'clientSetting': 'keep-main'},
+          'clientId': 'keep-client', 'vapidPrivate': 'keep-private', 'vapidPublic': 'keep-public',
+          'network': {'proxy': 'keep-network'}, 'migrations': {'fixture': True},
+          'jellyfin': {'libraries': [{'id': 'fixture-library', 'enabled': True}]},
+          'radarr': [{'id': 0, 'hostname': 'old-host', 'appOwnedOption': 'keep-radarr'}, {'id': 9, 'hostname': 'undeclared'}],
+          'sonarr': [{'id': 0, 'appOwnedOption': 'keep-sonarr'}]}
+  def run(script, target, *mask):
+      return subprocess.run([script, str(target), *mask], capture_output=True, text=True, timeout=5)
+  def preserved(value, mask=160):
+      for key in ['clientId', 'vapidPrivate', 'vapidPublic', 'network', 'migrations']:
+          assert value.get(key) == seed[key], 'lost app-owned ' + key
+      assert value['main']['apiKey'] == 'keep-api' and value['main']['clientSetting'] == 'keep-main'
+      assert value['jellyfin']['libraries'] == seed['jellyfin']['libraries']
+      assert value['radarr'][0]['appOwnedOption'] == 'keep-radarr'
+      assert value['sonarr'][0]['appOwnedOption'] == 'keep-sonarr'
+      assert value['main']['localLogin'] is False and value['main']['defaultPermissions'] == mask
+      assert value['jellyfin']['apiKey'] == 'fixture-jellyfin'
+      assert [v['id'] for v in value['radarr']] == [0] and value['radarr'][0]['hostname'] == 'radarr'
+  with tempfile.TemporaryDirectory() as root:
+      target = pathlib.Path(root) / 'settings.json'
+      target.write_text(json.dumps(seed))
+      assert run(original, target, '160').returncode == 0
+      preserved(json.loads(target.read_text()))
+      first = target.read_bytes()
+      assert run(original, target, '160').returncode == 0 and target.read_bytes() == first, 'reconciliation is not idempotent'
+      assert run(rotated, target, '160').returncode == 0
+      value = json.loads(target.read_text()); preserved(value)
+      assert value['radarr'][0]['apiKey'] == 'fixture-rotated', 'rotation was ignored'
+      for bad in [empty, missing]:
+          before = target.read_bytes()
+          assert run(bad, target, '160').returncode != 0 and target.read_bytes() == before, 'failed secret damaged old settings'
+      for args in [(), ("",), ('0',), ('-1',), ('1;SELECT 1',), ('01',), ('2147483648',), ('999999999999999999999',)]:
+          before = target.read_bytes()
+          assert run(original, target, *args).returncode != 0 and target.read_bytes() == before, 'invalid mask damaged old settings'
+      assert run(original, target, '32').returncode == 0
+      preserved(json.loads(target.read_text()), mask=32)
+      assert target.stat().st_mode & 0o777 == 0o600, 'settings file is not private'
+      target.write_text('{malformed')
+      before = target.read_bytes()
+      assert run(original, target, '160').returncode != 0 and target.read_bytes() == before, 'malformed settings were overwritten'
+      assert sorted(p.name for p in pathlib.Path(root).iterdir()) == ['settings.json'], 'temporary files leaked'
+      target.unlink()
+      assert run(original, target, '160').returncode == 0
+      fresh = json.loads(target.read_text())
+      assert fresh['main']['initialized'] and fresh['main']['defaultPermissions'] == 160
+  print('production wiring, preservation, ownership, rotation, atomic failures and bootstrap pass')
+  PYTEST
+  touch "$out"
+'';
+
+sonarr-runtime-wiring = let
+  c = self.nixosConfigurations.hwc-home.config;
+  binding = pkgs.writeText "sonarr-runtime-binding.json" (builtins.toJSON {
+    image = c.virtualisation.oci-containers.containers.sonarr.image;
+    pull = c.virtualisation.oci-containers.containers.sonarr.pull;
+    ports = c.virtualisation.oci-containers.containers.sonarr.ports;
+    volumes = c.virtualisation.oci-containers.containers.sonarr.volumes;
+    context = c.system.build.sonarrRuntimeImageContext;
+  });
+in pkgs.runCommand "sonarr-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${binding} <<'PY'
+  import json,hashlib,pathlib,sys
+  b=json.loads(pathlib.Path(sys.argv[1]).read_text());context=pathlib.Path(b['context'])
+  recipe=(context/'Dockerfile').read_text()
+  def valid(binding):
+    return binding['image'].startswith('localhost/sonarr-runtime:') and binding['image'].endswith('-'+hashlib.sha256(recipe.encode()).hexdigest()[:12]) and binding['pull']=='never'
+  assert valid(b)
+  assert not valid(dict(b,image='lscr.io/linuxserver/sonarr:latest'))
+  assert not valid(dict(b,pull='missing'))
+  assert b['ports']==['127.0.0.1:8989:8989']
+  assert len(b['volumes'])==3 and all(any(v.endswith(':'+p) for v in b['volumes']) for p in ['/config','/tv','/downloads'])
+  script=(context/'apply-runtime.sh').read_text()
+  assert 'comm -12 /tmp/runtime-owned.txt /tmp/app-owned.txt' in script
+  assert 'sha256sum -c -' in script
+  assert 'includedFrameworks' in script and 'frameworks' in script
+  packages=json.loads((context/'manifest.json').read_text())
+  assert packages
+  def valid_payload(data, expected): return hashlib.sha256(data).hexdigest()==expected
+  for p in packages:
+    data=(context/(p['name']+'.dll')).read_bytes()
+    assert valid_payload(data,p['dllSha256'])
+    assert not valid_payload(data+b'violation',p['dllSha256'])
+  assert 'sha256sum -c -' in script and '--slurpfile packages manifest.json' in script
+  native=(context/'libsqlite3.so.0').read_bytes()
+  assert native.startswith(b'\x7fELF')
+  expected=(context/'sqlite-sha256').read_text().strip()
+  assert valid_payload(native,expected) and not valid_payload(native+b'violation',expected)
+  assert (context/'sqlite-version').read_text().strip()
+  assert 'del sqlite-libs' in script and 'cp libsqlite3.so.0 /usr/lib/libsqlite3.so.0' in script
+  hashes=dict(line.split()[::-1] for line in (context/'utilities-sha256').read_text().splitlines())
+  assert set(hashes)=={'busybox','uniq','unexpand'}
+  for name,expected in hashes.items():
+    data=(context/name).read_bytes()
+    assert data.startswith(b'\x7fELF') and valid_payload(data,expected)
+    assert not valid_payload(data+b'violation',expected)
+  assert 'sha256sum -c utilities-sha256' in script
+  assert 'for name in busybox uniq unexpand' in script
+  assert 'install -m 0755 "$name" "$target.hwc-new"' in script and 'mv -fT "$target.hwc-new" "$target"' in script
+  PY
+  touch "$out"
+'';
+frigate-contract = let
+  server = self.nixosConfigurations.hwc-home.config;
+  frigate = server.hwc.media.frigate;
+  fixture = pkgs.writeText "frigate-contract.json" (builtins.toJSON {
+    settings = frigate._settings;
+    inherit (frigate) port;
+    configTemplate = frigate._configTemplate;
+    configScript = server.systemd.services.frigate-config.script;
+    credentials = server.systemd.services.frigate-config.serviceConfig.LoadCredential;
+    inherit (server.systemd.services.podman-frigate) requires restartTriggers;
+    inherit (server.virtualisation.oci-containers.containers.frigate) ports volumes extraOptions;
+    startupTimeout = server.systemd.services.podman-frigate.serviceConfig.TimeoutStartSec;
+    exporterPresent = server.virtualisation.oci-containers.containers ? frigate-exporter;
+    scrapes = server.hwc.monitoring.prometheus.scrapeConfigs;
+    rules = import (repoRoot + "/domains/monitoring/prometheus/parts/alerts.nix") { inherit lib; };
+    # Exported for the central Prometheus (another host since wave 3).
+    configurationRules = server.hwc.monitoring.prometheus.rules;
+  });
+in pkgs.runCommand "frigate-contract" {
+  nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.onnx p.pillow ])) pkgs.prometheus.cli ];
+} ''
+  python3 ${(repoRoot + "/domains/media/frigate/parts/test_config.py")} ${fixture} ${(repoRoot + "/domains/media/frigate/parts/labelmap.py")}
+  touch $out
+'';
+
+xps-media-readiness = let
+  peer = self.nixosConfigurations.hwc-xps.config;
+  service = peer.systemd.services.jellyfin;
+  readiness = peer.systemd.services.xps-media-ready or {};
+  preflight = readiness.script or "";
+  encoding = (builtins.head service.restartTriggers).text;
+  homeEncoding = (builtins.head self.nixosConfigurations.hwc-home.config.systemd.services.jellyfin.restartTriggers).text;
+  fixture = pkgs.writeText "xps-media-readiness.json" (builtins.toJSON {
+    script = builtins.unsafeDiscardStringContext preflight;
+    zpool = builtins.unsafeDiscardStringContext "${peer.boot.zfs.package}/bin/zpool";
+    pool = builtins.head peer.boot.zfs.extraPools;
+  });
+in
+assert lib.assertMsg (lib.hasInfix "pool_health=" preflight)
+  "XPS Jellyfin needs its independent pool readiness service";
+assert lib.elem "xps-media-ready.service" service.requires && lib.elem "xps-media-ready.service" service.after;
+assert readiness.serviceConfig.User == "eric" && readiness.serviceConfig.Group == "users";
+assert readiness.serviceConfig.Type == "oneshot" && !(readiness.serviceConfig.RemainAfterExit or false);
+assert readiness.serviceConfig.DevicePolicy == "closed" && readiness.serviceConfig.DeviceAllow == [ "/dev/zfs rw" ];
+assert readiness.serviceConfig.NoNewPrivileges && readiness.serviceConfig.ProtectSystem == "strict";
+assert readiness.serviceConfig.TimeoutStartSec == "15s" && readiness.serviceConfig.TimeoutStopSec == "5s";
+assert readiness.unitConfig.AssertPathIsMountPoint == peer.hwc.paths.media.root;
+assert !(lib.elem "/dev/zfs rw" service.serviceConfig.DeviceAllow);
+assert !(lib.hasInfix "pool_health=" service.preStart) && lib.hasInfix "DATA_DIR=" service.preStart;
+assert service.unitConfig.AssertPathIsMountPoint == peer.hwc.paths.media.root;
+assert lib.elem "zfs-mount.service" service.requires;
+assert lib.hasInfix "<HardwareAccelerationType>none</HardwareAccelerationType>" encoding;
+assert lib.hasInfix "<EnableHardwareEncoding>false</EnableHardwareEncoding>" encoding;
+assert lib.hasInfix "<HardwareAccelerationType>nvenc</HardwareAccelerationType>" homeEncoding;
+pkgs.runCommand "xps-media-readiness" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${fixture} ${pkgs.bash}/bin/bash ${pkgs.coreutils}/bin/timeout <<'PY'
+  import json, pathlib, re, subprocess, sys, tempfile, time
+  fixture = json.loads(pathlib.Path(sys.argv[1]).read_text())
+  bash, timeout = sys.argv[2:]
+  original = fixture["script"]
+  matches = re.findall(r"(/nix/store/[^\s]+/bin/timeout) 10s", original)
+  assert len(matches) == 1, "production probe must have one 10-second deadline"
+  with tempfile.TemporaryDirectory() as directory:
+      root = pathlib.Path(directory)
+      fake = root / "zpool"
+      script = root / "preflight"
+      script.write_text(original.replace(matches[0], timeout).replace(fixture["zpool"], str(fake)))
+      def run(state):
+          fake.write_text("#!${pkgs.python3}/bin/python3\n"
+              "import sys,time\n"
+              + "assert sys.argv[1:] == " + repr(["list", "-H", "-o", "health", fixture["pool"]]) + "\n"
+              + ("time.sleep(30)\n" if state == "TIMEOUT" else
+                 "sys.exit(3)\n" if state == "PROBE_FAILED" else "print(" + repr(state) + ")\n"))
+          fake.chmod(0o700)
+          start = time.monotonic()
+          result = subprocess.run([bash, "-e", str(script)], capture_output=True, text=True, timeout=15)
+          return result, time.monotonic() - start
+      for state in ["ONLINE", "DEGRADED"]:
+          result, _ = run(state)
+          assert result.returncode == 0, (state, result.stderr)
+          if state == "DEGRADED":
+              assert result.stderr, "degraded storage must emit a warning"
+      for state in ["SUSPENDED", "UNAVAIL", "FAULTED", "UNKNOWN", "PROBE_FAILED", "TIMEOUT"]:
+          result, elapsed = run(state)
+          assert result.returncode != 0, (state, "startup unexpectedly passed")
+          assert elapsed < 15, (state, "probe exceeded its ceiling")
+      print("XPS production preflight: healthy/degraded accepted; unavailable, suspended, failed and timed-out probes rejected")
+  PY
+  touch "$out"
+'';
+}

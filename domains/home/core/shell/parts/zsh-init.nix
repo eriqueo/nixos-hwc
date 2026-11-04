@@ -96,9 +96,10 @@
           # LITERAL string "~root" — and nix then creates `./~root/.nix-defexpr`
           # junk in the cwd (the repo). Absolute /root keeps nix's root-owned
           # state where it belongs and silences the "$HOME not owned" warning.
-          sudo env HOME=/root nixos-rebuild "$@" --flake "$HWC_NIXOS_DIR#$(hostname)" 2>&1 | tee "$log"
+          python3 "$HWC_NIXOS_DIR/workspace/nixos-dev/verification/release.py" deploy \
+            --repo "$HWC_NIXOS_DIR" --lane system --action "$@" 2>&1 | tee "$log"
           rc=''${pipestatus[1]}
-          warns=$(grep -E '^(evaluation warning|warning|trace):' "$log" | sort -u)
+          warns=$(rg '^(evaluation warning|warning|trace):' "$log" | sort -u)
           rm -f "$log"
           if [ -n "$warns" ]; then
             print -P "\n%F{yellow}── warnings (deduped) ──%f"
@@ -107,12 +108,6 @@
           return $rc
         }
         snix() {
-          if [ -n "$(git -C "$HWC_NIXOS_DIR" status --porcelain 2>/dev/null)" ]; then
-            print -P "%F{yellow}dirty git tree%f — doctrine: commit before rebuild"
-            git -C "$HWC_NIXOS_DIR" status --short
-            read -q "?continue anyway? [y/N] " || { print; return 1; }
-            print
-          fi
           _hwc_rebuild switch "$@" || return $?
           [[ -o interactive ]] && _hwc_reinit_prompt
           if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
@@ -137,11 +132,8 @@
         # no-op if the new generation didn't change hyprland config.
         # Extra args (e.g. --show-trace, --refresh) are forwarded to nix build.
         hms() {
-          local activator
-          activator=$(nix build --no-link --print-out-paths \
-            "$HWC_NIXOS_DIR#homeConfigurations.\"eric@$(hostname)\".activationPackage" \
-            "$@") || return $?
-          "$activator/activate" || return $?
+          python3 "$HWC_NIXOS_DIR/workspace/nixos-dev/verification/release.py" deploy \
+            --repo "$HWC_NIXOS_DIR" --lane home "$@" || return $?
           [[ -o interactive ]] && _hwc_reinit_prompt
           if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
             hyprctl reload >/dev/null

@@ -17,6 +17,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
+
+`verification/` contains pure flake checks for this capability; production modules do not import it.
 REA's package wrapper supplies the Nix firmware resource limiter and checks Binwalk against a generated gzip fixture.
 Waybar patches its built-in workspace clicks for Hyprland Lua IPC; calendar text escapes Pango markup.
 Claude CLI installation belongs to `apps/claude-code/`, enabled by the base role. The laptop selects its native updater; other hosts retain Nix packages. Shell bundles no longer install a second CLI.
@@ -167,6 +169,10 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-11-04: Route shell rebuild helpers through selected local verification before activation.
+
+- 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 - 2026-11-04: apps/rea supplies the firmware provider's Nix resource limiter and procps dependency, and checks a real Binwalk scan during package installation.
 - 2026-11-04: Fix built-in Waybar workspace switching under Lua and escape calendar markup.
 - 2026-11-04: Consolidate Claude installation in its app module; keep native laptop updates and Nix-managed CLI availability on other hosts.
