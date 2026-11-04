@@ -12,6 +12,8 @@ storage (mount management), Syncthing (file sync), and CouchDB (Obsidian LiveSyn
 
 ## Structure
 
+`borg/` owns optional local mount/free-space admission and native repository initialization quotas. Laptop critical-state policy selects those options from its machine instance.
+
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 
 `databases/` owns schemaVersion2 role provisioning for owned databases and shared table columns, including direct/default privilege reconciliation. It also supplies standard PostgreSQL peer environment settings to native clients; each application declares its scope.
@@ -35,6 +37,8 @@ data/
 ```
 
 ## Changelog
+
+- 2026-11-04: Add opt-in Borg local repository admission and initialization quotas for bounded laptop critical-state protection.
 
 - 2026-11-04: Extend the XPS Borg fixture to execute its full current snapshot hook without touching live data.
 

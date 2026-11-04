@@ -42,6 +42,27 @@ let
   # One producer for "where the repository is": local path or SSH URL.
   repoUrl = if cfg.repo.remote.enable then cfg.repo.remote.path else cfg.repo.path;
 
+  localPreflight = pkgs.writeShellScript "borg-local-preflight" ''
+    set -euo pipefail
+    ${lib.optionalString (cfg.repo.requiredMountPoint != null) ''
+      ${pkgs.util-linux}/bin/mountpoint --quiet -- ${lib.escapeShellArg cfg.repo.requiredMountPoint} || {
+        echo BORG_REPOSITORY_MOUNT_ABSENT >&2; exit 72;
+      }
+    ''}
+    ${lib.optionalString (cfg.repo.minimumFreeBytes > 0) ''
+      report=$(${pkgs.coreutils}/bin/df --output=avail -B1 -- ${lib.escapeShellArg cfg.repo.requiredMountPoint}) || exit 74
+      available="''${report##*$'\n'}"
+      [[ "$available" =~ ^[[:space:]]*([0-9]+)[[:space:]]*$ ]] || exit 74
+      [ "''${BASH_REMATCH[1]}" -ge ${toString cfg.repo.minimumFreeBytes} ] || {
+        echo BORG_REPOSITORY_LOW_SPACE >&2; exit 73;
+      }
+    ''}
+  '';
+  localPreflightHook = lib.optionalString (!cfg.repo.remote.enable
+    && (cfg.repo.requiredMountPoint != null || cfg.repo.minimumFreeBytes > 0)) "${localPreflight}\n";
+  producerHook = serializationHook + postgresBackup + sqliteBackup
+    + lib.optionalString (cfg.preBackupScript != null) cfg.preBackupScript;
+
   # SSH command for the job and the interactive wrappers. The key flag is
   # present only when a remote key secret is named.
   borgRsh = "ssh -o StrictHostKeyChecking=accept-new"
@@ -93,6 +114,9 @@ let
   destinationJobs = lib.mapAttrs' (name: target: lib.nameValuePair (destinationJobName name)
     (backupJob // {
       repo = destinationUrl target;
+      # An independent remote target must not depend on local repository admission.
+      preHook = producerHook;
+      extraInitArgs = [];
       encryption = { mode = cfg.encryption.mode; passCommand = "cat ${config.hwc.secrets.api.${target.passphraseSecret}}"; };
       environment.BORG_RSH = destinationRsh name target;
       extraCreateArgs = lib.optionalString (target.uploadLimitKiB > 0) "--upload-ratelimit ${toString target.uploadLimitKiB}";
@@ -127,7 +151,9 @@ let
     startAt = []; # We use our own timer for more control
 
     # Pre-backup hook (database dumps, etc.)
-    preHook = serializationHook + postgresBackup + sqliteBackup + lib.optionalString (cfg.preBackupScript != null) cfg.preBackupScript;
+    preHook = localPreflightHook + producerHook;
+    extraInitArgs = lib.optionals (cfg.repo.storageQuotaBytes != null)
+      [ "--storage-quota" (toString cfg.repo.storageQuotaBytes) ];
 
     # Post-backup hook
     postHook = lib.mkIf (cfg.postBackupScript != null) cfg.postBackupScript;
@@ -209,6 +235,21 @@ in
     # REPOSITORY CONFIGURATION
     #==========================================================================
     repo = {
+      requiredMountPoint = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Required local repository mount. Refuse before initialization when absent; null preserves existing behavior.";
+      };
+      minimumFreeBytes = lib.mkOption {
+        type = lib.types.ints.unsigned;
+        default = 0;
+        description = "Local destination admission floor in bytes. Below it the job exits73 before any snapshot or archive write.";
+      };
+      storageQuotaBytes = lib.mkOption {
+        type = lib.types.nullOr lib.types.ints.positive;
+        default = null;
+        description = "Native Borg quota applied when initializing a new repository. At the limit Borg refuses writes; existing repositories require explicit migration.";
+      };
       path = lib.mkOption {
         type = lib.types.str;
         default = "${toString paths.backup}/borg";
@@ -493,7 +534,11 @@ in
       };
     };
 
-    systemd.services."borgbackup-job-${jobName}" = lib.mkIf cfg.primary.enable jobService;
+    systemd.services."borgbackup-job-${jobName}" = lib.mkIf cfg.primary.enable (jobService // {
+      unitConfig = lib.optionalAttrs (cfg.repo.requiredMountPoint != null) {
+        AssertPathIsMountPoint = cfg.repo.requiredMountPoint;
+      };
+    });
 
     # Repository integrity check timer
     systemd.services.borg-check = lib.mkIf (cfg.primary.enable && cfg.monitoring.enable) {
@@ -532,6 +577,13 @@ in
     # VALIDATION
     #==========================================================================
     assertions = [
+      {
+        assertion = (cfg.repo.requiredMountPoint == null || (
+          !cfg.repo.remote.enable && lib.hasPrefix "/" cfg.repo.requiredMountPoint
+          && lib.hasPrefix "${lib.removeSuffix "/" cfg.repo.requiredMountPoint}/" cfg.repo.path
+        )) && (cfg.repo.minimumFreeBytes == 0 || cfg.repo.requiredMountPoint != null);
+        message = "Borg local admission requires an absolute mount containing the local repository; a free-space floor needs that mount.";
+      }
       {
         assertion = cfg.primary.enable || destinations != {};
         message = "An enabled Borg capability needs a primary job or at least one additional destination";

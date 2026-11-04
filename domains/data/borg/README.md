@@ -11,6 +11,8 @@ Borg deduplicating encrypted backup service. Provides block-level deduplication,
 
 ## Structure
 
+`index.nix` also owns opt-in local repository admission and new-repository quotas. The primary guard runs before snapshot writers and native Borg initialization. Independent remote jobs do not inherit that local admission rule. Quota exhaustion refuses writes and leaves a visible failed job; it never deletes unrelated data. Repository archives are AUTO-MANAGED by the declared retention policy and quota.
+
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 
 ```
@@ -150,6 +152,8 @@ Borg wrapper alone does not load its private identity.
 - `borg-check-<name>.service` / timer — additional destination consistency checks
 
 ## Changelog
+
+- 2026-11-04: Add optional local mount/free-space admission before producers and repository initialization, plus a native new-repository quota. Keep independent remote targets independent of the local guard. Laptop selects a separate critical-state repository with a20 GiB quota and20 GiB free-space floor; existing archives are not migrated or deleted.
 
 - 2026-11-04: Give every registered XPS SQLite snapshot an isolated source fixture; test last-good preservation for Jellyfin and T3 V2 failures.
 

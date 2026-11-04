@@ -1,6 +1,73 @@
 # Pure verification function; not a NixOS or Home Manager module.
 { lib, pkgs, repoRoot, self }:
 {
+laptop-critical-state = let
+  machine = self.nixosConfigurations.hwc-laptop;
+  c = machine.config;
+  job = c.services.borgbackup.jobs.hwc-backup;
+  probe = mount: minimum: let
+    config = (machine.extendModules { modules = [ {
+      hwc.data.borg.repo = {
+        path = lib.mkForce "${lib.removeSuffix "/" mount}/borg-probe";
+        requiredMountPoint = lib.mkForce mount;
+        minimumFreeBytes = lib.mkForce minimum;
+      };
+    } ]; }).config;
+  in builtins.head (lib.splitString "\n" config.services.borgbackup.jobs.hwc-backup.preHook);
+  fixtures = pkgs.writeText "laptop-borg-admission.json" (builtins.toJSON {
+    absent = probe "/borg-mount-absent" 1;
+    full = probe "/" 9223372036854775807;
+    valid = probe "/" 1;
+  });
+in
+assert c.hwc.data.borg.enable;
+assert c.hwc.data.borg.repo.storageQuotaBytes == 21474836480;
+assert c.hwc.data.borg.repo.minimumFreeBytes == 21474836480;
+assert c.systemd.services.borgbackup-job-hwc-backup.unitConfig.AssertPathIsMountPoint == c.hwc.paths.backup;
+assert lib.hasInfix "--storage-quota" job.extraInitArgs;
+assert c.hwc.data.borg.sqliteSnapshots ? t3 && c.hwc.data.borg.sqliteSnapshots ? t3-v2;
+assert lib.elem "${c.hwc.paths.user.home}/.t3/userdata" job.paths;
+assert lib.elem "${c.hwc.paths.user.home}/.ssh" job.paths;
+assert !(lib.elem c.hwc.paths.backup job.paths);
+pkgs.runCommand "laptop-critical-state" { nativeBuildInputs = [ pkgs.python3 pkgs.borgbackup ]; } ''
+  python3 - ${fixtures} <<'PY'
+  import json, os, pathlib, sqlite3, subprocess, sys, tempfile
+  fixtures = json.loads(pathlib.Path(sys.argv[1]).read_text())
+  for name, expected in [('absent', 72), ('full', 73), ('valid', 0)]:
+      result = subprocess.run([fixtures[name]], capture_output=True, timeout=10)
+      assert result.returncode == expected, (name, result.returncode, result.stderr)
+  # A real encrypted repository, quota refusal and isolated SQLite restore.
+  # All data and credentials below are synthetic; no user state is accessed.
+  with tempfile.TemporaryDirectory() as temp:
+      root = pathlib.Path(temp)
+      source = root / 'source'
+      source.mkdir()
+      with sqlite3.connect(source / 'state.sqlite') as db:
+          db.execute('CREATE TABLE proof(value TEXT)')
+          db.execute("INSERT INTO proof VALUES('last-good')")
+      repository = str(root / 'repository')
+      env = dict(os.environ, BORG_PASSPHRASE='synthetic-fixture-only', BORG_CACHE_DIR=str(root/'cache'), BORG_SECURITY_DIR=str(root/'security'))
+      def borg(*args, okay=True):
+          result = subprocess.run(['borg', *args], cwd=source, env=env, capture_output=True, timeout=30)
+          if okay:
+              assert result.returncode == 0, (args, result.stderr)
+          return result
+      borg('init', '--encryption=repokey-blake2', '--storage-quota=5M', repository)
+      borg('create', repository + '::good', '.')
+      (source/'oversize').write_bytes(os.urandom(8 * 1024 * 1024))
+      assert borg('create', repository + '::too-big', '.', okay=False).returncode != 0
+      restore = root/'restore'
+      restore.mkdir()
+      result = subprocess.run(['borg', 'extract', repository + '::good'], cwd=restore, env=env, capture_output=True, timeout=30)
+      assert result.returncode == 0, result.stderr
+      with sqlite3.connect(restore/'state.sqlite') as db:
+          assert db.execute('PRAGMA quick_check').fetchone() == ('ok',)
+          assert db.execute('SELECT value FROM proof').fetchone() == ('last-good',)
+  print('mount/space refusal, encrypted archive, quota refusal and last-good SQLite restore pass')
+  PY
+  touch "$out"
+'';
+
 xps-offsite-storage = let
   c = self.nixosConfigurations.hwc-xps.config;
   repositories = c.services.borgbackup.repos;

@@ -263,9 +263,27 @@ in
     };
   };
 
-  # Rsync backup DISABLED - consolidated to Borg
-  # TODO: Enable Borg on laptop when backup drive is mounted
+  # The old broad rsync tree stays disabled. Protect only laptop-specific state;
+  # existing synced data, games and prior backups keep their current owners.
   hwc.data.backup.enable = false;
+  hwc.data.borg = {
+    enable = true;
+    repo = {
+      path = "${config.hwc.paths.backup}/borg-laptop-state";
+      requiredMountPoint = config.hwc.paths.backup;
+      minimumFreeBytes = 20 * 1024 * 1024 * 1024;
+      storageQuotaBytes = 20 * 1024 * 1024 * 1024;
+    };
+    # The base role adds T3 userdata and both online SQLite snapshots.
+    sources = map (relative: "${config.hwc.paths.user.home}/${relative}")
+      [ ".ssh" ".local/share/hwc-switch-stream" ];
+    retention = { daily = 7; weekly = 2; monthly = 1; yearly = 0; };
+    monitoring.enable = true;
+  };
+  systemd.services.borgbackup-job-hwc-backup.serviceConfig = {
+    TimeoutStartSec = lib.mkForce "1h";
+    UMask = "0077";
+  };
 
   # Declarative ProtonVPN via WireGuard, on demand only: `vpnon` / `vpnoff` /
   # `vpnstatus` (shell aliases) start/stop wg-quick-protonvpn.
