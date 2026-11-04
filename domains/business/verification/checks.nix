@@ -480,6 +480,7 @@ in pkgs.runCommand "website-security" { nativeBuildInputs = [ pkgs.python3 c.ser
   def exercise(config):
    with tempfile.TemporaryDirectory() as d:
     root=pathlib.Path(d);(root/'index.html').write_text('website fixture');(root/'app.js').write_text('console.log(1)')
+    (root/'report').mkdir();(root/'report/index.html').write_text('private fixture')
     with socket.socket() as s: s.bind(('127.0.0.1',0));port=s.getsockname()[1]
     config=config.replace('root * __fixture_root__','root * '+d)
     cf=root/'Caddyfile';cf.write_text('{ admin off\n auto_https off\n}\nhttp://:'+str(port)+' {\n'+config+'\n}')
@@ -498,6 +499,12 @@ in pkgs.runCommand "website-security" { nativeBuildInputs = [ pkgs.python3 c.ser
       for h,v in [('X-Content-Type-Options','nosniff'),('X-Frame-Options','SAMEORIGIN'),('Referrer-Policy','strict-origin-when-cross-origin'),('Strict-Transport-Security','max-age=604800')]:assert r.headers.get(h)==v,(path,h,r.headers.get(h))
       assert "object-src 'none'" in r.headers['Content-Security-Policy']
       assert 'camera=()' in r.headers['Permissions-Policy']
+     assert get('/').headers['Cache-Control'] == 'public, max-age=0, must-revalidate'
+     for path in ['/report/', '/report/?id=fixture', '/report/fixture', '/report/fixture/']:
+      r=get(path);assert r.status==200,(path,r.status)
+      assert r.headers['Cache-Control']=='no-store',(path,'private report cache policy')
+      assert r.headers['Referrer-Policy']=='no-referrer',(path,'private report referrer policy')
+      assert r.headers['X-Robots-Tag']=='noindex, nofollow, noarchive'
      r=get('/contact/?from=fixture','http','attacker.invalid');assert r.status==308,r.status
      assert r.headers['Location']=='https://iheartwoodcraft.com/contact/?from=fixture',r.headers['Location']
     finally:proc.terminate();proc.wait(timeout=5)

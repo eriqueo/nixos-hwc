@@ -144,7 +144,7 @@ borg-destinations = let
   unit = name: c.systemd.services."borgbackup-job-${name}";
   xpsSnapshot = pkgs.writeText "xps-state-snapshot.json" (builtins.toJSON {
     hook = xps.services.borgbackup.jobs.hwc-backup-home.preHook;
-    source = xps.hwc.data.borg.sqliteSnapshots.jellyfin.source;
+    sources = lib.mapAttrs (_: snapshot: snapshot.source) xps.hwc.data.borg.sqliteSnapshots;
     state = "${xps.hwc.paths.state}/borg-sqlite";
     locks = "${xps.hwc.paths.state}/borg-jobs";
   });
@@ -186,23 +186,30 @@ pkgs.runCommand "borg-destinations" { nativeBuildInputs = [ pkgs.python3 pkgs.ba
   import json, os, pathlib, pwd, re, shutil, sqlite3, subprocess, sys, tempfile, time
   with tempfile.TemporaryDirectory() as temporary:
       root = pathlib.Path(temporary)
-      source = root/'jellyfin.db'
-      with sqlite3.connect(source) as db:
-          db.execute('CREATE TABLE history(value TEXT)')
-          db.execute("INSERT INTO history VALUES('last-good')")
       spec = json.loads(pathlib.Path(sys.argv[4]).read_text())
       (root/'locks').mkdir()
-      hook = spec['hook'].replace(spec['source'],str(source)).replace(spec['state'],str(root/'snapshots')).replace(spec['locks'],str(root/'locks'))
+      hook = spec['hook'].replace(spec['state'],str(root/'snapshots')).replace(spec['locks'],str(root/'locks'))
+      sources = {}
+      def create_source(name):
+          with sqlite3.connect(sources[name]) as db:
+              db.execute('CREATE TABLE history(value TEXT)')
+              db.execute('INSERT INTO history VALUES(?)', ('last-good-' + name,))
+      for name, live_path in spec['sources'].items():
+          sources[name] = root / (name + '.db')
+          create_source(name)
+          hook = hook.replace(live_path, str(sources[name]))
       hook = re.sub(r"(--user\s+)(?:'eric'|eric)(?=\s|$)", lambda m:m[1]+pwd.getpwuid(os.getuid()).pw_name,hook)
       subprocess.run(['bash','-c',hook],check=True,timeout=20,capture_output=True)
-      ready = root/'snapshots/ready/jellyfin.sqlite'
-      with sqlite3.connect(ready) as db:
-          assert db.execute('PRAGMA quick_check').fetchone() == ('ok',)
-          assert db.execute('SELECT value FROM history').fetchone() == ('last-good',)
-      before = ready.read_bytes()
-      source.unlink()
-      failed = subprocess.run(['bash','-c',hook],timeout=20,capture_output=True)
-      assert failed.returncode != 0 and ready.read_bytes() == before, 'failed XPS snapshot replaced last-good copy'
+      for name in sources:
+          ready = root / 'snapshots/ready' / (name + '.sqlite')
+          with sqlite3.connect(ready) as db:
+              assert db.execute('PRAGMA quick_check').fetchone() == ('ok',)
+              assert db.execute('SELECT value FROM history').fetchone() == ('last-good-' + name,)
+          before = ready.read_bytes()
+          sources[name].unlink()
+          failed = subprocess.run(['bash','-c',hook],timeout=20,capture_output=True)
+          assert failed.returncode != 0 and ready.read_bytes() == before, 'failed XPS snapshot replaced last-good copy: ' + name
+          create_source(name)
   with tempfile.TemporaryDirectory() as temporary:
       root = pathlib.Path(temporary)
       lockdir = root / 'locks'

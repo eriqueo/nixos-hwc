@@ -36,6 +36,8 @@ data/
 
 ## Changelog
 
+- 2026-11-04: Extend the XPS Borg fixture to execute its full current snapshot hook without touching live data.
+
 - 2026-11-04: Update the Borg XPS destination check for its existing T3 V2 backup registration.
 
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.

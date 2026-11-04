@@ -151,6 +151,8 @@ Borg wrapper alone does not load its private identity.
 
 ## Changelog
 
+- 2026-11-04: Give every registered XPS SQLite snapshot an isolated source fixture; test last-good preservation for Jellyfin and T3 V2 failures.
+
 - 2026-11-04: Keep the XPS destination contract current with its T3 V2 snapshot and state directory; preserve Jellyfin transport and recovery fixtures.
 
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
