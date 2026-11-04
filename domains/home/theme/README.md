@@ -11,7 +11,7 @@ token sets, GTK/Qt theming, fonts, and pointer cursor.
   token set themselves (see canonical accessor below).
 
 ## Structure
-Desktop wiring preserves mouse flags, uses packaged native cursor assets, and excludes virtual displays from bars and linked workspace selection. Waybar forwards reload to its child and cleans its generated configuration.
+The palette supplies both XCursor and native Hyprcursor tokens. Hyprland links native assets from the installed cursor package.
 ```
 theme/
 ├── index.nix        # Options + palette materialization + qt platform theme
@@ -26,8 +26,7 @@ theme/
 ## How it works
 1. `hwc.home.theme.palette` selects a palette (default `hwc`).
 2. `index.nix` materializes it as `hwc.home.theme.colors` and wires the
-   palette's cursor block into `hwc.home.theme.cursor` (xcursor only —
-   hyprcursor assets are not in the repo; backlog).
+   palette's cursor block into `hwc.home.theme.cursor` (both cursor formats).
 3. Apps consume tokens via the guarded read:
    `(config.hwc.home.theme or {}).colors or {}` — never by importing
    palette files directly.
