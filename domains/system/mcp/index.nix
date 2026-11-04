@@ -18,6 +18,10 @@ let
   cfg = config.hwc.system.mcp;
   paths = config.hwc.paths;
   inherit (lib) mkIf mkMerge;
+  ready = (import ../../lib/mkHttpReady.nix { inherit lib pkgs; }) {
+    name = "hwc-sys-mcp";
+    url = "http://${cfg.host}:${toString cfg.port}/health";
+  };
 
   # khalt supersedes plain khal — its package ships the full `khal`/`ikhal` CLI
   # (source fork). The MCP's hwc_calendar tool shells out to this `khal` and
@@ -348,6 +352,9 @@ in
         {
           Type = "simple";
           ExecStart = "${mcpNodejs}/bin/node ${mcpMain}";
+          # Meals' After/Requires must wait for HTTP, not process creation.
+          ExecStartPost = ready.command;
+          TimeoutStartSec = ready.timeoutSeconds;
           EnvironmentFile = "/run/hwc-sys-mcp/env";
           WorkingDirectory = srcDir;
           Restart = "on-failure";

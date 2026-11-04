@@ -21,6 +21,13 @@
 let
   cfg = config.hwc.business.crm;
   paths = config.hwc.paths;
+  ready = (import ../../lib/mkHttpReady.nix { inherit lib pkgs; }) {
+    name = "hwc-crm";
+    url = "http://${cfg.bindAddr}:${toString cfg.port}/health";
+  };
+  roleOperator = lib.optional
+    (config.hwc.data.databases.postgresql.applicationRoles != {})
+    "postgresql-application-roles.service";
   calendarPrincipal = "eric";
   calendarPath = name: "${calendarPrincipal}/${name}";
   localDatabaseEnvironment = config.hwc.data.databases.postgresql.localPeerEnvironment;
@@ -706,9 +713,11 @@ in
       after = [
         "network-online.target"
         "postgresql-setup.service"
-      ];
+      ] ++ roleOperator;
       wants = [ "network-online.target" ];
-      requires = [ "postgresql-setup.service" ];
+      # Shared-role reconciliation revokes routine ACLs in this database.
+      # Serialize it before CREATE OR REPLACE in the CRM schema assertions.
+      requires = [ "postgresql-setup.service" ] ++ roleOperator;
       environment = localDatabaseEnvironment;
 
       restartTriggers =
@@ -730,20 +739,7 @@ in
         ExecStart = "${crmWrapper}";
         # After=/Requires= consumers must wait for HTTP + database readiness,
         # not just exec(). Only this read-only probe retries; timer POSTs do not.
-        ExecStartPost = pkgs.writeShellScript "hwc-crm-ready" ''
-          for ((attempt = 1; attempt <= 20; attempt++)); do
-            if ${pkgs.curl}/bin/curl --fail --silent --show-error \
-              --connect-timeout 1 --max-time 1 --output /dev/null \
-              http://${cfg.bindAddr}:${toString cfg.port}/health; then
-              exit 0
-            fi
-            if ((attempt < 20)); then
-              ${pkgs.coreutils}/bin/sleep "0.$((500 + RANDOM % 500))"
-            fi
-          done
-          echo "CRM readiness failed after 20 attempts" >&2
-          exit 1
-        '';
+        ExecStartPost = ready.command;
         TimeoutStartSec = 120; # migrations + bounded readiness; failure blocks dependents
         Restart = "always";
         RestartSec = "5s";

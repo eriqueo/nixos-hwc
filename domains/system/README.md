@@ -9,6 +9,9 @@
 
 ## Structure
 
+The MCP gateway uses the shared native HTTP readiness command before its
+After/Requires consumers can start.
+
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 `core/packages.nix` no longer installs Claude in its server bundle. The Home Manager app owns that CLI, including the executable path used by headless consumers.
 
@@ -96,6 +99,8 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-11-04: Hold MCP startup until its HTTP health endpoint responds, preventing dependent Meals preflight from racing the listener.
 
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 - 2026-11-04: Consolidate Claude installation in its app module; keep native laptop updates and Nix-managed CLI availability on other hosts.

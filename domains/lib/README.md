@@ -1,8 +1,8 @@
-# lib/ — Pure Container Helpers
+# lib/ — Pure Configuration Helpers
 
 ## Purpose
 
-Domain-independent pure helper functions for building OCI container definitions.
+Domain-independent pure helper functions for containers, native launchers and Home Manager composition.
 These are **not** NixOS modules — they are plain functions that take `{ lib, pkgs }` and return attribute sets.
 
 Extracted from `domains/server/containers/_shared/` during DDD migration so that
@@ -11,10 +11,13 @@ any domain (media, networking, data, etc.) can use them without depending on the
 ## Boundaries
 
 - **Pure functions only**: No `config` access, no NixOS module boilerplate
-- **Container definitions and image recipes only**: No systemd services in mkContainer (mkInfraContainer has them as they're integral to infrastructure containers)
+- **Caller-owned services**: Native readiness and launcher helpers return commands. No systemd services in mkContainer (mkInfraContainer includes its infrastructure container wiring).
 - **Domain-independent**: No assumptions about which domain imports these
 
 ## Structure
+
+`mkHttpReady.nix` supplies one bounded read-only HTTP readiness command and
+timeout for native CRM and MCP units. The caller owns its service dependencies.
 
 `mkContainer.nix` also owns the hash-guarded Starlette Host parser backport shared by Frigate and Immich ML.
 
@@ -29,6 +32,9 @@ lib/
 ├── mkContainer.nix        # Application containers, pure runtime identity and Node recipe
 ├── mkInfraContainer.nix   # Infrastructure containers (gluetun, pihole)
 ├── mkTsNode.nix           # Direct-node tsx loader launcher for Scout native units
+├── mkHttpReady.nix        # Bounded read-only native HTTP readiness command
+├── mkSimpleApp.nix        # Home Manager one-package module factory
+├── deps-update.nix        # Shared buildNpmPackage dependency update command
 └── arr-config.nix         # *arr-specific config.xml enforcement
 ```
 
@@ -55,6 +61,8 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+
+- 2026-11-04: Share bounded HTTP readiness between CRM and the MCP gateway so dependent services wait for a real response.
 
 - 2026-11-02: Encode the backport as one Dockerfile RUN line and preserve a real FROM newline; check the complete recipe syntax.
 

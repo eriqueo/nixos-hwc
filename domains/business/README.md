@@ -14,6 +14,9 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+CRM waits for configured PostgreSQL role reconciliation before schema assertions
+and uses the shared native HTTP readiness command before dependents start.
+
 Workbench web and the Finance explorer select the shared Python runtime
 packages on owned instances. The explorer uses its existing role package port.
 The runtime packages retain the app assets and native library graph.
@@ -115,6 +118,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-04: Serialize CRM startup after PostgreSQL role ACL reconciliation; retain bounded HTTP readiness through the shared helper.
 
 - 2026-11-04: Morning briefing gains a Projects section from the tracker hub's portfolio (`gather-projects.mjs`, `trackerUrl` option): overdue products, waits on Eric past 7 days, expiring cards and the live-product cap, as watchlist alerts, a dashboard tile and one `projects` notification when anything is actionable.
 - 2026-11-04: Select checked HTTP-framing runtimes for Workbench and Finance

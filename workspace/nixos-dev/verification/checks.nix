@@ -53,6 +53,12 @@ pkgs.runCommand "claude-installation" { } ''touch $out'';
 python-runtime-wiring = let
   hosts = [ "work" "home" "laptop" ];
   work = self.nixosConfigurations.hwc-work;
+  httpReady = import (repoRoot + "/domains/lib/mkHttpReady.nix") { inherit lib; pkgs = work.pkgs; };
+  gatewayReady = httpReady {
+    name = "hwc-sys-mcp";
+    url = "http://${work.config.hwc.system.mcp.host}:${toString work.config.hwc.system.mcp.port}/health";
+  };
+  readinessFixture = httpReady { name = "fixture"; url = "http://127.0.0.1:FIXTURE_PORT/health"; attempts = 3; };
   applications = lib.attrValues work.pkgs.pythonHttpApplications ++ [ work.pkgs.piper-tts ];
   finance = work.pkgs.pythonHttpApplications.pnc-statement-pipeline;
   clientContract = pkgs.writeText "python-finance-http-contract.py" ''
@@ -146,6 +152,12 @@ python-runtime-wiring = let
   disabledFirefly = (work.extendModules { modules = [{
     hwc.business.firefly.explorer.package = lib.mkForce inputs.pnc-statement-pipeline.packages.${system}.default;
   }]; }).config;
+  disabledCrmOrdering = (work.extendModules { modules = [{
+    systemd.services.hwc-crm.after = lib.mkForce [ "postgresql-setup.service" ];
+  }]; }).config;
+  disabledGatewayReadiness = (work.extendModules { modules = [{
+    systemd.services.hwc-sys-mcp.serviceConfig.ExecStartPost = lib.mkForce "";
+  }]; }).config;
   cases = map (host: let
     hostPkgs = self.nixosConfigurations."hwc-${host}".pkgs;
     original = hostPkgs.python3.runtimeSource or hostPkgs.python3;
@@ -176,7 +188,71 @@ assert lib.assertMsg (lib.all (host:
   homeValid self.nixosConfigurations."hwc-${host}".config.home-manager.users.eric
   && homeValid self.homeConfigurations."eric@hwc-${host}".config
 ) hosts) "Workbench TUI and mail-helper must use the qualified runtime in both home lanes";
+assert lib.assertMsg (lib.all (field:
+  lib.elem "postgresql-application-roles.service" work.config.systemd.services.hwc-crm.${field}
+) [ "after" "requires" ]) "CRM_ROLE_RECONCILIATION_ORDER";
+assert lib.assertMsg (work.config.systemd.services.hwc-sys-mcp.serviceConfig.ExecStartPost == gatewayReady.command
+  && work.config.systemd.services.hwc-sys-mcp.serviceConfig.TimeoutStartSec == gatewayReady.timeoutSeconds
+  && lib.elem "hwc-sys-mcp.service" work.config.systemd.services.meals.after
+  && lib.elem "hwc-sys-mcp.service" work.config.systemd.services.meals.requires
+  && !(lib.elem "postgresql-application-roles.service" disabledCrmOrdering.systemd.services.hwc-crm.after)
+  && disabledGatewayReadiness.systemd.services.hwc-sys-mcp.serviceConfig.ExecStartPost != gatewayReady.command)
+  "NATIVE_STARTUP_READINESS_WIRING";
 pkgs.runCommand "python-runtime-wiring" {} ''
+  ${pkgs.python3}/bin/python3 -B - ${readinessFixture.command} <<'PY'
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+import subprocess
+import tempfile
+import threading
+import sys
+
+class Peer(BaseHTTPRequestHandler):
+    def do_GET(self):
+        assert self.path == '/health', 'READINESS_NOT_HEALTH_GET'
+        self.server.requests += 1
+        ready = self.server.recover and self.server.requests >= 2
+        self.send_response(200 if ready else 503)
+        self.end_headers()
+    def log_message(self, *_):
+        pass
+
+def accept(result, requests, recover):
+    assert (result.returncode == 0) == recover, 'READINESS_RESULT'
+    assert requests == (2 if recover else 3), 'READINESS_ATTEMPT_BOUND'
+
+source = Path(sys.argv[1]).read_text()
+assert source.count('FIXTURE_PORT') == 1
+for recover in [True, False]:
+    with tempfile.TemporaryDirectory() as directory:
+        server = HTTPServer(('127.0.0.1', 0), Peer)
+        server.timeout = 1
+        server.requests, server.recover = 0, recover
+        worker = threading.Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        try:
+            script = Path(directory) / 'ready'
+            script.write_text(source.replace('FIXTURE_PORT', str(server.server_port)))
+            script.chmod(0o700)
+            result = subprocess.run([str(script)], capture_output=True, text=True, timeout=10)
+            accept(result, server.requests, recover)
+            if not recover:
+                assert 'readiness failed after 3 attempts' in result.stderr
+            # A successful noop is insufficient: it must exercise the HTTP peer.
+            noop = subprocess.run(['${pkgs.bash}/bin/bash', '-c', 'exit 0'], check=True)
+            try:
+                accept(noop, 0, True)
+            except AssertionError as error:
+                assert str(error) == 'READINESS_ATTEMPT_BOUND'
+            else:
+                raise AssertionError('NOOP_READINESS_SEED')
+        finally:
+            server.shutdown()
+            server.server_close()
+            worker.join(2)
+            assert not worker.is_alive(), 'READINESS_PEER_DRAIN'
+print('Actual readiness producer waits for recovery and refuses permanent failure at its bound')
+PY
   ${lib.concatMapStrings (case: ''
     ${case.original.interpreter} -B ${case.runtime.runtimeContract} --baseline
     ${case.runtime.interpreter} -B ${case.runtime.runtimeContract} ${case.runtime}
