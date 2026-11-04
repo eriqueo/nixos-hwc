@@ -1,0 +1,155 @@
+# TEMPORARY: CPython response framing backports, including optional whitespace.
+# Remove runtime selection when the unmodified locked interpreters and managed
+# app launchers pass python-http-runtime-contract on work, home and laptop.
+# nodejs-security.nix owns Node's binary/library protocol; it cannot own Python's
+# adjacent stdlib and withPackages wrapper protocol. Native build graphs stay put.
+final: prev:
+let
+  lib = prev.lib;
+  spec = builtins.fromJSON (builtins.readFile ./python-http-framing.json);
+  manifest = prev.writeText "python-http-framing.json" (builtins.toJSON spec);
+  contract = prev.writeText "python-http-runtime-contract.py" ''
+    import hashlib
+    import http.client
+    import io
+    import json
+    from pathlib import Path
+    import site
+    import sqlite3
+    import ssl
+    import sys
+    import zlib
+
+    class Socket:
+        def __init__(self, raw):
+            self.raw = raw
+        def makefile(self, *args):
+            return io.BytesIO(self.raw)
+
+    def length(value):
+        response = http.client.HTTPResponse(Socket(b"HTTP/1.1 200 OK\r\nContent-Length: " + value + b"\r\n\r\n"))
+        response.begin()
+        return response.length
+
+    def chunk(value, size):
+        response = http.client.HTTPResponse(Socket(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n" + value + b"\r\n" + b"X" * size + b"\r\n0\r\n\r\n"))
+        response.begin()
+        try:
+            return response.read() == b"X" * size
+        except http.client.HTTPException:
+            return False
+
+    assert length(b"5") == 5 and length(b"5 \t") == 5, "NORMAL_LENGTH_OR_OWS"
+    assert chunk(b"a", 10) and chunk(b"A;extension=yes", 10), "NORMAL_CHUNK"
+    rejected = [length(value) is None for value in (b"+5", b"1_0", b"-5", b"0x5", b"5 0")]
+    rejected += [not chunk(value, size) for value, size in ((b"+a", 10), (b"0xa", 10), (b"1_0", 16))]
+    baseline = sys.argv[1] == "--baseline"
+    assert (not all(rejected)) if baseline else all(rejected), "RAW_FIXED_RETIRE_BACKPORT" if baseline else "MALFORMED_HTTP_FRAMING"
+    if not baseline:
+        root = Path(sys.argv[1])
+        assert Path(http.client.__file__).is_relative_to(root), "STDLIB_SELECTION"
+        proof = json.loads((root / "nix-support/http-framing.json").read_text())
+        assert hashlib.sha256(Path(http.client.__file__).read_bytes()).hexdigest() == proof["patchedSha256"], "STDLIB_HASH"
+        assert hashlib.sha256((root / "bin" / proof["executable"]).read_bytes()).hexdigest() == proof["originalExecutableSha256"], "EXECUTABLE_PARITY"
+    assert sqlite3.connect(":memory:").execute("select 42").fetchone() == (42,), "SQLITE_ABI"
+    assert zlib.decompress(zlib.compress(b"runtime ABI")) == b"runtime ABI", "ZLIB_ABI"
+    print(json.dumps({"passed": True, "baselineStillAffected": baseline, "httpClient": http.client.__file__, "noUserSite": sys.flags.no_user_site, "userSiteEnabled": site.ENABLE_USER_SITE, "openssl": ssl.OPENSSL_VERSION, "sqlite": sqlite3.sqlite_version}))
+  '';
+  builder = prev.writeText "python-http-runtime.py" ''
+    import hashlib
+    import json
+    from pathlib import Path
+    import shutil
+    import sys
+
+    original, output = map(Path, sys.argv[1:3])
+    executable, lib_prefix = sys.argv[3:5]
+    spec = json.loads(Path(sys.argv[5]).read_text())
+    assert spec["schemaVersion"] == 1, "PYTHON_HTTP_SPEC_VERSION"
+    source_http = original / "lib" / lib_prefix / "http"
+    raw = (source_http / "client.py").read_bytes()
+    source_hash = hashlib.sha256(raw).hexdigest()
+    assert source_hash in spec["nativeSources"], "PYTHON_HTTP_SOURCE_DRIFT"
+    text = raw.decode()
+    for before, after in spec["replacements"]:
+        assert text.count(before) == 1, "PYTHON_HTTP_HUNK_DRIFT"
+        text = text.replace(before, after)
+    patched = text.encode()
+    patched_hash = hashlib.sha256(patched).hexdigest()
+    assert patched_hash == spec["nativeSources"][source_hash], "PYTHON_HTTP_RESULT_DRIFT"
+    assert (original / "bin" / executable).is_file(), "PYTHON_EXECUTABLE_MISSING"
+    output.mkdir()
+    for entry in original.iterdir():
+        if entry.name not in {"bin", "lib", "nix-support"}:
+            (output / entry.name).symlink_to(entry)
+    (output / "bin").mkdir()
+    for entry in (original / "bin").iterdir():
+        target = output / "bin" / entry.name
+        if entry.name == executable:
+            # Preserve the exact ELF or withPackages wrapper and all its flags.
+            # Its existing argv0 resolution discovers the adjacent stdlib.
+            shutil.copyfile(entry, target)
+            target.chmod(0o755)
+        elif entry.name in {"python", "python3"}:
+            target.symlink_to(executable)
+        else:
+            target.symlink_to(entry)
+    for alias in {"python", "python3"}:
+        if not (output / "bin" / alias).exists():
+            (output / "bin" / alias).symlink_to(executable)
+    (output / "lib").mkdir()
+    for entry in (original / "lib").iterdir():
+        if entry.name != lib_prefix:
+            (output / "lib" / entry.name).symlink_to(entry)
+    stdlib = output / "lib" / lib_prefix
+    stdlib.mkdir()
+    for entry in (original / "lib" / lib_prefix).iterdir():
+        if entry.name != "http":
+            (stdlib / entry.name).symlink_to(entry)
+    (stdlib / "http").mkdir()
+    copied = (output / "bin" / executable).stat().st_size
+    for entry in source_http.iterdir():
+        if entry.name == "__pycache__":
+            continue
+        assert entry.is_file(), "PYTHON_HTTP_LAYOUT_DRIFT"
+        data = patched if entry.name == "client.py" else entry.read_bytes()
+        (stdlib / "http" / entry.name).write_bytes(data)
+        copied += len(data)
+    assert copied <= 8388608, "PYTHON_HTTP_OUTPUT_LIMIT"
+    assert sum(1 for _ in output.rglob("*")) <= 5000, "PYTHON_HTTP_ENTRY_LIMIT"
+    support = output / "nix-support"
+    support.mkdir()
+    if (original / "nix-support").is_dir():
+        for entry in (original / "nix-support").iterdir():
+            (support / entry.name).symlink_to(entry)
+    proof = {"schemaVersion": 1, "original": str(original), "executable": executable, "originalExecutableSha256": hashlib.sha256((original / "bin" / executable).read_bytes()).hexdigest(), "sourceSha256": source_hash, "patchedSha256": patched_hash, "copiedBytes": copied, "upstreamCommits": spec["upstreamCommits"]}
+    (support / "http-framing.json").write_text(json.dumps(proof, indent=2) + "\n")
+  '';
+  mkRuntime = original:
+    if original.httpFramingPatched or false then original else
+    let
+      base = original.python or original;
+      runtime = prev.runCommand "${original.name}-http-framing" {
+      preferLocalBuild = true;
+      passthru = (original.passthru or {}) // {
+        httpFramingPatched = true;
+        runtimeSource = original;
+        runtimeContract = contract;
+        runtimeBuilder = builder;
+        runtimeManifest = manifest;
+        interpreter = "${runtime}/bin/${base.executable}";
+        withPackages = packages: mkRuntime (base.withPackages packages);
+      };
+      meta = original.meta or {};
+    } ''
+      ${prev.python3}/bin/python3 -B ${builder} ${original} "$out" ${base.executable} ${base.libPrefix} ${manifest}
+      "$out/bin/${base.executable}" -B ${contract} "$out"
+    '';
+    in runtime;
+in
+assert spec.schemaVersion == 1;
+{
+  # The container retains its existing source/result hashes and protocol shape.
+  pythonHttpFramingBackport = builtins.removeAttrs spec [ "schemaVersion" "nativeSources" ];
+  mkPythonHttpRuntime = mkRuntime;
+}
