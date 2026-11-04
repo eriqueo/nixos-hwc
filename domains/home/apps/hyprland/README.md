@@ -8,7 +8,7 @@ Configures the Hyprland Wayland window manager as the desktop session: full `way
 - ❌ Does not manage: waybar/swaync/kitty/yazi config (their own app modules), the greeter/login path (`domains/system`), the palette itself (`domains/home/theme`), or GPU launch scripts (`gpu-launch` comes from elsewhere).
 
 ## Structure
-Desktop wiring preserves mouse flags, uses packaged native cursor assets, and excludes virtual displays from bars and linked workspace selection. Waybar forwards reload to its child and cleans its generated configuration.
+Desktop wiring preserves mouse flags, installs session cursor links from packaged native assets, and excludes virtual displays from bars and linked workspace selection. Waybar forwards reload to its child and cleans its generated configuration.
 Desktop helpers and the laptop streaming host use native Hyprland Lua IPC. Workspace selection and window moves share the monitor-aware helper; streaming creates its configured workspace before focusing it.
 The Hyprland module renders the existing settings and keybinding records through Home Manager's Lua API. `hyprland-lua-config` checks the actual generated configuration with the selected compositor and rejects the retired format.
 

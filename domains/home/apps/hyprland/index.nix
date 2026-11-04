@@ -222,7 +222,9 @@ in
       (isNixOSHost && eglVendorLibraryFilenames != null)
       { __EGL_VENDOR_LIBRARY_FILENAMES = eglVendorLibraryFilenames; };
 
-    home.file.".local/state/hypr/.keep".text = "";
+    home.file = session.files // {
+      ".local/state/hypr/.keep".text = "";
+    };
 
     # Monitor hotplug listener - restarts waybar when monitors are added/removed
     systemd.user.services.hyprland-monitor-listener = {
