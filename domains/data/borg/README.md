@@ -13,6 +13,8 @@ Borg deduplicating encrypted backup service. Provides block-level deduplication,
 
 `index.nix` also owns opt-in local repository admission and new-repository quotas. The primary guard runs before snapshot writers and native Borg initialization. Independent remote jobs do not inherit that local admission rule. Quota exhaustion refuses writes and leaves a visible failed job; it never deletes unrelated data. Repository archives are AUTO-MANAGED by the declared retention policy and quota.
 
+Mount-protected repositories use native removable-device behavior to suppress activation-time directory creation. Before first activation, provision an empty root-owned0700 repository directory on the verified mounted filesystem. The deployment owner must pin that filesystem while creating the directory and refuse an unexpected existing target. Loss of the disk or directory subsequently fails startup without creating a fallback on root. Changing the quota of an existing repository requires an explicit Borg migration; the initialization flag only governs a new repository.
+
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 
 ```
