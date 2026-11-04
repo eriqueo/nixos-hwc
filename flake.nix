@@ -2336,6 +2336,14 @@
         assert valid_payload(native,expected) and not valid_payload(native+b'violation',expected)
         assert (context/'sqlite-version').read_text().strip()
         assert 'del sqlite-libs' in script and 'cp libsqlite3.so.0 /usr/lib/libsqlite3.so.0' in script
+        hashes=dict(line.split()[::-1] for line in (context/'utilities-sha256').read_text().splitlines())
+        assert set(hashes)=={'busybox','uniq','unexpand'}
+        for name,expected in hashes.items():
+          data=(context/name).read_bytes()
+          assert data.startswith(b'\x7fELF') and valid_payload(data,expected)
+          assert not valid_payload(data+b'violation',expected)
+        assert 'sha256sum -c utilities-sha256' in script
+        assert 'cp busybox /bin/busybox' in script and 'cp uniq unexpand /usr/bin/' in script
         PY
         touch "$out"
       '';

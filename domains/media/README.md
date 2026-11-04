@@ -48,7 +48,7 @@ media/
 ├── audiobookshelf/          # Pinned app/supported Node recipe, config path and Borg recovery registration
 ├── jellyseerr/              # Media requests; app/Next routing fixes, signed native updates and private config
 │
-├── sonarr/                  # Pinned app/supported .NET recipe; existing TV/config/download binds
+├── sonarr/                  # Pinned app/.NET/SQLite and qualified utility backports; existing binds
 ├── radarr/                  # Movie management
 ├── lidarr/                  # Music management
 ├── prowlarr/                # Indexer management
@@ -92,6 +92,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-04: Sonarr's existing runtime context builds Alpine's exact BusyBox source/config/44 vendor patches plus the pinned upstream URL framing fix, and replaces only GNU uniq/unexpand with the pinned musl security backports. Hash-bound payloads retain the vendor applet set and target libc; actual framing, UTF-8, boot and current-data recovery qualify the image before activation.
 - 2026-11-04: Export native SQLite version/hash with the image context and reject changed native-library payloads in the wiring check.
 - 2026-11-04: Read SQLite feature flags from the pinned derivation's exported build attribute.
 - 2026-11-04: Replace Sonarr's older Alpine SQLite library with hash-bound upstream 3.54.1 built for musl; retain the pinned Nix SQLite feature flags and remove the superseded package.
