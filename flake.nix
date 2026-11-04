@@ -47,17 +47,6 @@
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-26.05";
 
-    # Claude Code source for overlays/claude-code.nix. It is its OWN input, not
-    # `nixpkgs`, because the CLI ships several releases a week while a channel
-    # bump moves the whole machine: tying the two together means claude-code is
-    # only as fresh as the last world rebuild. Measured 2026-10-25 — stable
-    # 26.05 and the `nixpkgs` pin both carried 2.1.223 while upstream was at
-    # 2.1.308, so neither existing input could feed the overlay.
-    # Remove this pin when its rev is OLDER than the `nixpkgs` input's (compare
-    # `lastModified` in flake.lock): at that point `nixpkgs` is the fresher
-    # source and the overlay should read it directly again.
-    nixpkgs-claude-code.url = "github:NixOS/nixpkgs/3ec636362e1816bc2f0888fa0fa2c69f1bc9e504";
-
     # Static agent policy and adapters. Mutable memories and the mistakes
     # ledger live in ~/800_agents/state and never enter this Nix input.
     agent-harness = {
@@ -104,10 +93,6 @@
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
-    codex = {
-      url = "github:openai/codex?ref=rust-v0.101.0";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
 
     claude-cowork = {
       # Cowork-capable Claude Desktop for Linux. Replaces aaddrick's
@@ -281,16 +266,8 @@
         overlays = [
           silenceDeprecatedAliases
           gitCleanupOverlay
-          pandasStubsOverlay   # TEMP: skip pandas-stubs tests (upstream pytest-9.1.1 breakage)
           nodejsSecurityOverlay  # TEMP: Node Oct-2026 security release + brotli CVE fix
           pythonCompatibilityOverlay
-          # Base, not per-set: claude-code must come from ONE pinned source for
-          # the whole fleet. Wired to a single stable set, it left the
-          # `nixpkgs`-channel machines (hwc-laptop, hwc-kids) on whatever that
-          # channel's last bump happened to carry — 2.1.220, below T3 Code's
-          # 2.1.293 model gate. Lazy: the overlay's nixpkgs import is only
-          # forced on sets that actually demand claude-code.
-          claudeCodeOverlay
           # Expose the cowork-capable Claude Desktop package (package-only flake,
           # no overlay of its own) under pkgs for the home app module.
           (final: prev: {
@@ -347,25 +324,15 @@
       # No per-package overrides needed with binary cache
     };
 
-    # Claude Code overlay - backport from unstable to stable.
-    # Source is `nixpkgs-claude-code`, not `nixpkgs`: see that input's comment.
-    claudeCodeOverlay = import ./overlays/claude-code.nix { nixpkgs-unstable = inputs.nixpkgs-claude-code; };
+    # Stable hosts backport the CLI from the existing unstable channel.
+    claudeCodeOverlay = import ./overlays/claude-code.nix { nixpkgs-unstable = nixpkgs; };
 
-    # Cloudflared overlay - backport from unstable to stable
-    # Stable 26.05 lags upstream cloudflared releases; the daemon needs to track
-    # current Cloudflare edge protocol to keep the tunnel healthy.
-    cloudflaredOverlay = import ./overlays/cloudflared.nix { nixpkgs-unstable = nixpkgs; };
 
 
     # Ghidra overlay — TEMPORARY (tracked). REA accepts only Ghidra 12.1.x;
     # stable 26.05 has 12.0.4. See the file header for the removal condition.
     ghidraOverlay = import ./overlays/ghidra.nix { nixpkgs-unstable = nixpkgs; };
 
-    # pandas-stubs overlay — TEMPORARY (tracked). Skips pandas-stubs' failing test
-    # phase on the 2026-07-25 nixpkgs (upstream pytest-9.1.1 deprecation-as-error
-    # that otherwise fails the whole HM user-environment). See the file header for
-    # the removal condition.
-    pandasStubsOverlay = import ./overlays/pandas-stubs.nix;
     # TEMP: native Git pack cleanup on cancellation; removal test in the overlay.
     gitCleanupOverlay = import ./overlays/git.nix;
     # Node.js security overlay — TEMPORARY (tracked). Node 24.22.1 / 22.23.4
@@ -406,7 +373,7 @@
     mkPkgsWithOverlays = system: nixpkgsInput: extraOverlays:
       import nixpkgsInput {
         inherit system;
-        overlays = [ silenceDeprecatedAliases gitCleanupOverlay pandasStubsOverlay nodejsSecurityOverlay pythonCompatibilityOverlay claudeCodeOverlay cloudflaredOverlay ] ++ extraOverlays;
+        overlays = [ silenceDeprecatedAliases gitCleanupOverlay nodejsSecurityOverlay pythonCompatibilityOverlay claudeCodeOverlay ] ++ extraOverlays;
         config = {
           allowUnfree = true;
           nvidia.acceptLicense = true;
@@ -421,10 +388,8 @@
     pkgs = mkPkgs system nixpkgs [];
     pkgs-laptop = mkPkgs system nixpkgs [ ];
 
-    # Stable package set with the temporary Tailscale security update.
-    # claudeCodeOverlay is NOT listed here — it moved into mkPkgs' base list so
-    # every machine takes the CLI from the same pin. See that list's comment.
-    pkgs-stable = mkPkgs system nixpkgs-stable [ ghidraOverlay ];
+    # Stable hosts use the current CLI without a separate nixpkgs pin.
+    pkgs-stable = mkPkgs system nixpkgs-stable [ ghidraOverlay claudeCodeOverlay ];
 
     # pkgs-stable with CUDA overlay for server (Immich ML GPU acceleration)
     pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ serverOverlay ghidraOverlay ];
@@ -837,6 +802,27 @@
         touch $out
       '';
     in {
+      claude-installation = let
+        hasClaude = packages: lib.any (p: lib.getName p == "claude-code") packages;
+        coherent = home:
+          let cfg = home.hwc.home.apps.claude-code; in
+          cfg.enable
+          && hasClaude home.home.packages == (cfg.installMethod == "nix")
+          && (home.home.sessionVariables ? NODE_EXTRA_CA_CERTS) == cfg.obsidianCert.enable;
+        homes = map (system: system.config.home-manager.users.eric)
+          (lib.attrValues self.nixosConfigurations)
+          ++ map (home: home.config) (lib.attrValues self.homeConfigurations);
+        laptop = self.nixosConfigurations.hwc-laptop.config.home-manager.users.eric;
+      in
+      assert lib.assertMsg (lib.all coherent homes
+        && laptop.hwc.home.apps.claude-code.installMethod == "native"
+        && laptop.hwc.home.apps.claude-code.obsidianCert.enable
+        && lib.elem "${laptop.home.homeDirectory}/.local/bin" laptop.home.sessionPath
+        && lib.all (system: !hasClaude system.config.environment.systemPackages)
+          (lib.attrValues self.nixosConfigurations))
+        "Claude must have one app-owned installation, with native laptop updates and opt-in Obsidian trust";
+      pkgs.runCommand "claude-installation" { } ''touch $out'';
+
       transcripts-deepgram = let
         c = self.nixosConfigurations.hwc-home.config;
         service = c.systemd.services.transcripts;

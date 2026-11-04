@@ -8,11 +8,13 @@ Installs the OpenAI Codex CLI (stock `pkgs.codex` by default, overridable via `p
 - ❌ Does not manage API keys/auth or any `config.toml` contents inside `~/.config/codex/`; the pinned package is NOT the default (server intentionally uses stock pkgs.codex).
 
 ## Structure
+The laptop uses channel Codex 0.166.0 after retiring its older 0.164.0 override. XPS retains the release-binary override while stable supplies 0.146.0. The unused Codex source flake input is removed; it was not the module's default package source.
 - `index.nix` — options (`enable`, `package`, `env`, `sharedConfigRepo`, `shareHarness`), install, config dir, hooks link, `AGENTS.md` render and hook trust activation, assertion.
 - `hooks-trust.py` — records Codex trust for the shared `~/.codex/hooks.json` entries through the app-server API; beside `index.nix` so it runs by hand against a scratch `CODEX_HOME`.
 - `parts/package.nix` — optional pinned codex 0.164.0 derivation from the upstream static-musl release tarball. `x86_64-linux` only: the asset URL is architecture-specific, which is why the pin is opt-in per machine rather than the module default (hwc-firestick is aarch64).
 
 ## Changelog
+- 2026-11-04: Retire the laptop's stale release-binary override in favor of channel Codex 0.166.0; retain the XPS override and correct the package option's default-source description.
 - 2026-10-25: `parts/package.nix` bumped 0.146.0 → 0.164.0, and hwc-xps opted into the pin. XPS is a stable-channel machine, and 26.05 freezes `pkgs.codex` at 0.146.0 — the version the branch was cut with — so the machine had no path forward short of a channel bump that moves everything else with it. Same one-liner hwc-laptop already carries; deliberately NOT promoted to a profile or module default because the tarball is x86_64-only and hwc-home stays on stock `pkgs.codex` by choice. HM-only → `hms`.
 - 2026-10-01: Removed `sharedSkillSource`, `sharedSkills` and `workflowSkills`. The two allowlists gave Codex 9 of the shared skills, and hand copies filled the gap and went stale (13 dirs on hwc-laptop dated Aug 28–Sep 13). Codex now reads the whole agent-harness skill set at `~/.agents/skills`; `~/.codex/skills` keeps only Codex's `.system`. HM-only.
 

@@ -19,6 +19,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 ## Structure
 REA's package wrapper supplies the Nix firmware resource limiter and checks Binwalk against a generated gzip fixture.
 Waybar patches its built-in workspace clicks for Hyprland Lua IPC; calendar text escapes Pango markup.
+Claude CLI installation belongs to `apps/claude-code/`, enabled by the base role. The laptop selects its native updater; other hosts retain Nix packages. Shell bundles no longer install a second CLI.
 Desktop helpers and the laptop streaming host use native Hyprland Lua IPC. Workspace selection and window moves share the monitor-aware helper; streaming creates its configured workspace before focusing it.
 The Hyprland module renders the existing settings and keybinding records through Home Manager's Lua API. `hyprland-lua-config` checks the actual generated configuration with the selected compositor and rejects the retired format.
 Aider has been removed from the app modules and shared fleet defaults.
@@ -168,6 +169,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 ## Changelog
 - 2026-11-04: apps/rea supplies the firmware provider's Nix resource limiter and procps dependency, and checks a real Binwalk scan during package installation.
 - 2026-11-04: Fix built-in Waybar workspace switching under Lua and escape calendar markup.
+- 2026-11-04: Consolidate Claude installation in its app module; keep native laptop updates and Nix-managed CLI availability on other hosts.
 - 2026-11-04: Keep monitor-position arithmetic in the shell when rendering Lua IPC commands.
 - 2026-11-04: Migrate desktop helper and laptop streaming calls to Lua IPC, including startup on a fresh workspace.
 - 2026-11-04: Generate Lua for Hyprland 0.57 while preserving settings, keybindings, resize exits, rules and startup hooks; validate the generated file with the actual parser.

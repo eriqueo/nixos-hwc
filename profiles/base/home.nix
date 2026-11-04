@@ -53,6 +53,7 @@
     # CLI apps
     apps = {
       agent-harness.enable = lib.mkDefault true;
+      claude-code.enable = lib.mkDefault true;
       gpg.enable = lib.mkDefault true;
       yazi.enable = lib.mkDefault true;
       herdr.enable = lib.mkDefault true;
