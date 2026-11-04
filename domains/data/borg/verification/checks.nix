@@ -49,13 +49,14 @@ pkgs.runCommand "laptop-critical-state" { nativeBuildInputs = [ pkgs.python3 pkg
           db.execute('CREATE TABLE proof(value TEXT)')
           db.execute("INSERT INTO proof VALUES('last-good')")
       repository = str(root / 'repository')
+      pathlib.Path(repository).mkdir(mode=0o700)
       env = dict(os.environ, BORG_PASSPHRASE='synthetic-fixture-only', BORG_CACHE_DIR=str(root/'cache'), BORG_SECURITY_DIR=str(root/'security'))
       def borg(*args, okay=True):
           result = subprocess.run(['borg', *args], cwd=source, env=env, capture_output=True, timeout=30)
           if okay:
               assert result.returncode == 0, (args, result.stderr)
           return result
-      borg('init', '--encryption=repokey-blake2', '--storage-quota=10M', repository)
+      borg('init', '--encryption=repokey-blake2', '--storage-quota=10000000', repository)
       borg('create', repository + '::good', '.')
       (source/'oversize').write_bytes(os.urandom(16 * 1024 * 1024))
       assert borg('create', repository + '::too-big', '.', okay=False).returncode != 0
