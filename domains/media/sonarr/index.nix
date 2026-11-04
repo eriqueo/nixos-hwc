@@ -20,7 +20,7 @@ let
     };
     nativeBuildInputs = [ pkgs.patchelf ];
     # Reuse the pinned package's feature vocabulary; do not create a second list.
-    env.NIX_CFLAGS_COMPILE = pkgs.pkgsMusl.sqlite.env.NIX_CFLAGS_COMPILE;
+    env.NIX_CFLAGS_COMPILE = pkgs.pkgsMusl.sqlite.NIX_CFLAGS_COMPILE;
     dontConfigure = true;
     buildPhase = ''
       runHook preBuild
