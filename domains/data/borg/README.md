@@ -151,6 +151,8 @@ Borg wrapper alone does not load its private identity.
 
 ## Changelog
 
+- 2026-11-04: Keep the XPS destination contract current with its T3 V2 snapshot and state directory; preserve Jellyfin transport and recovery fixtures.
+
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 - 2026-10-24: Give SQLite snapshot workers registered database-parent access for temporary WAL/SHM creation while keeping SQL read-only; forbid root-level database parents and test native job wiring.
 - 2026-10-23: Require current T3 V2 recovery coverage alongside retained V1 history; exercise both registrations through the same producer/archive fixtures. Keep existing legacy snapshot identity and userdata coverage.

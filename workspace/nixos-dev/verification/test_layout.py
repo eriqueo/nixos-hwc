@@ -1,10 +1,17 @@
 from pathlib import Path
 import tempfile
+import subprocess
+import sys
 import unittest
 import layout
 
 
 class LayoutContract(unittest.TestCase):
+    def test_missing_parser_is_a_tool_failure(self):
+        result = subprocess.run([sys.executable, '-S', str(Path(layout.__file__)), '.'], capture_output=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(b'tree_sitter', result.stderr)
+
     def test_actual_syntax_and_mutations(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
