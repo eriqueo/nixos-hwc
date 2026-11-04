@@ -23,6 +23,7 @@ Print uses `hwc-screenshot` with a hash-bound policy marker. Ctrl+Print makes a 
 - Credential utilities float at 70% monitor width / 80% height, keeping their sidebars and details readable without splitting the browser into a narrow tile.
 - `parts/hardware.nix` — monitor layout (eDP-1 + the VG248 external matched by `desc:`, plus a `,preferred,auto,1` fallback for any other output), workspace→monitor mapping, input/touchpad/per-device settings.
 - `parts/scripts.nix` — helper script bins: smart-move, workspace-overview, monitor-toggle, refinery-intake, etc.
+- SUPER+SHIFT+M (`hyprland-monitor-toggle`) flips the external screen's side and remembers it per screen description in `~/.local/state/hypr/external-side/`; screens with no record default to the right. The monitor listener runs `hyprland-monitor-toggle apply` at login, after hotplugs and after config reloads, which discard runtime monitor rules. Headless outputs (no make, e.g. `HWC-GAME`) are never treated as the external screen.
 - `parts/session.nix` — exec-once autostart list (swaybg wallpaper, cliphist, workspace-pinned Chromium, kitty and — when enabled — Workbench on 3), cursor env vars, and the `hyprland-keybinds-viewer` package.
 - The session starts enabled Bitwarden and Proton Pass clients so their native Waybar tray icons exist after login. Bitwarden uses its native `--autostart` mode; Proton Pass follows its normal startup behavior.
 - `parts/theme.nix` — palette→presentation. Returns `{ settings, card }`: Hyprland colors/gaps/blur/animations, plus the SUPER+? legend card painted from `behavior.keybinds`.
@@ -33,6 +34,7 @@ Every binding is declared **once** in `parts/behavior.nix`, as a record carrying
 It is deliberately *not* read from `hyprctl binds -j`: that API emits malformed JSON in Hyprland 0.56.0 (keys and values misaligned — `"keycode": RETURN`, `"allow_input_capture": ,`), and carries no descriptions, so the best it could ever print is `exec hyprland-monitor-toggle`.
 
 ## Changelog
+- 2026-11-04: Remember the external screen's side per screen and restore it after reloads, hotplugs and login; a reload had reset it to the config default. The toggle ignores headless outputs, which it could previously pick as the external screen.
 - 2026-11-04: Keep monitor-position arithmetic in the shell when rendering Lua IPC commands.
 - 2026-11-04: Migrate desktop helper and laptop streaming calls to Lua IPC, including startup on a fresh workspace.
 - 2026-11-04: Generate Lua for Hyprland 0.57 while preserving settings, keybindings, resize exits, rules and startup hooks; validate the generated file with the actual parser.

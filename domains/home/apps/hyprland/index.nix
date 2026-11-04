@@ -146,10 +146,13 @@ let
     fi
   '';
 
-  # Monitor hotplug listener script
+  # Monitor hotplug listener script. The toggle is a system-lane package (sys.nix).
+  monitorToggle = "/run/current-system/sw/bin/hyprland-monitor-toggle";
   monitorListenerPkg = pkgs.writeShellScriptBin "hyprland-monitor-listener" ''
     #!/usr/bin/env bash
-    # Listen to Hyprland IPC socket for monitor events and restart waybar
+    # Listen to Hyprland IPC socket for monitor events and restart waybar.
+    # Restore the remembered external-screen side at login, after hotplugs and
+    # after config reloads, which discard the toggle's runtime monitor rules.
 
     SOCKET="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
 
@@ -165,13 +168,18 @@ let
     fi
 
     echo "hyprland-monitor-listener: listening on $SOCKET"
+    ${monitorToggle} apply || echo "hyprland-monitor-listener: side restore failed" >&2
 
     ${pkgs.socat}/bin/socat -U - "UNIX-CONNECT:$SOCKET" | while read -r line; do
       case "$line" in
+        configreloaded*)
+          ${monitorToggle} apply || echo "hyprland-monitor-listener: side restore failed" >&2
+          ;;
         monitoradded*|monitorremoved*)
           echo "hyprland-monitor-listener: $line - restarting waybar"
           # Small delay to let monitor fully initialize
           sleep 1
+          ${monitorToggle} apply || echo "hyprland-monitor-listener: side restore failed" >&2
           ${pkgs.systemd}/bin/systemctl --user restart waybar
           ;;
       esac
