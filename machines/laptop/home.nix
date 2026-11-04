@@ -43,6 +43,8 @@ in
     t3code.desktop.lanHost = "100.71.213.18";
     # Match the desktop bundle's Electron44 ABI with the shared patched runtime.
     t3code.desktop.electronPackage = pkgs.electron_44;
+    # Qualified source forwards shutdown to its captured Electron child.
+    t3code.desktop.managedChildShutdown = true;
     scraper.enable = true;
     markitdown.enable = true;
     dt.enable = true;

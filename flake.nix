@@ -5227,6 +5227,19 @@
             text = pathlib.Path(item['file']).read_text()
             assert keeps_active(text), item
             if item['unit'] == 't3code':
+                def managed_shutdown(script):
+                    unit = configparser.RawConfigParser(strict=False)
+                    unit.optionxform = str
+                    unit.read_string(script)
+                    return (not unit.has_option('Service', 'ExecStartPre')
+                        and not unit.has_option('Service', 'ExecStopPost')
+                        and unit.get('Service', 'KillMode', fallback=None) == 'control-group'
+                        and unit.get('Service', 'TimeoutStopSec', fallback=None) == '30')
+                assert managed_shutdown(text), 'laptop retained unsafe process sweeps or lost bounded shutdown'
+                assert not managed_shutdown(text.replace('[Service]', '[Service]\nExecStopPost=/bin/false', 1)), 'cleanup-hook control escaped'
+                missing_deadline = '\n'.join(line for line in text.splitlines()
+                    if not line.startswith('TimeoutStopSec='))
+                assert not managed_shutdown(missing_deadline), 'missing shutdown deadline control escaped'
                 launcher = pathlib.Path(item['launcherFile']).read_text()
                 def bound_launcher(script):
                     return any(shlex.split(line.strip()) ==

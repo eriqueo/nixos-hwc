@@ -24,7 +24,8 @@ index.nix   # hwc.home.apps.t3code — desktop launcher + Electron shim + deskto
             #   with a pinned staged build/native verification/recovery/promotion driver;
             #   DX2 handoff adapter using the pinned delegate helper and forwarding T3's result limit without
             #   allowing policy overrides; opt-in isolated Review native package
-            #   and startup ports; shared keep-running switch policy; activation-time repo check
+            #   and startup ports; shared keep-running switch policy; qualified captured-child
+            #   desktop shutdown without process sweeps; activation-time repo check
 test_update_gate.py # real generated updater refuses failed evidence before Git/build/restart effects
 README.md   # this file
 ```
@@ -112,7 +113,15 @@ There is no `parts/`. T3 itself runs from its source checkout. Review uses a sep
   measured on 2026-08-26, which surfaced as `Primary environment request failed
   during fetch-session-state (HTTP 500)`. The assertion fails the build instead.
 
-- **The headless unit does NOT carry the desktop unit's `pkill` sweep.** That
+- **Qualified desktops stop the captured Electron child.** Laptop enables
+  `desktop.managedChildShutdown` after actual normal-launcher tests preserve
+  saved threads, profile state and the Chromium sandbox, then stop both desktop
+  and backend. Its unit omits `pkill` hooks and uses a 30-second stop deadline.
+  Other desktop configurations retain compatibility until their source forwards
+  signals and passes the same shutdown qualification. Remove the compatibility
+  branch when every configured desktop passes. Keep-old still defers restarts.
+
+- **The headless unit does NOT carry the legacy desktop `pkill` sweep.** That
   sweep exists because Electron moves the backend it spawns into a sibling
   systemd scope, outside the unit's cgroup. `t3 serve` is the process systemd
   starts, so it stays in the unit's own cgroup and `KillMode=control-group`
@@ -210,6 +219,10 @@ laptop, for ad-hoc headless use. That script is hand-installed and is not manage
 here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
+
+- 2026-11-04: Bind qualified laptop launcher shutdown to its captured Electron
+  child. Remove its broad process sweeps, preserve keep-old activation, and check
+  the rendered unit plus seeded cleanup-hook and missing-deadline failures.
 
 - 2026-10-24: Give Linux URI registration the stable Home Manager T3 launcher,
   preserving its Electron and environment setup when conversation links open.
