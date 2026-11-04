@@ -183,8 +183,11 @@ let
             target = Path(forward[3])
             assert target.parent == original / "bin" and target.name in entries, "APP_WRAPPER_TARGET_DRIFT"
             graph[name] = {"kind": LauncherKind.SHELL, "target": target.name}
-        patched = text.replace(str(python), str(runtime)).replace(str(original), str(output))
-        assert str(python) not in patched and str(original) not in patched, "APP_RUNTIME_REFERENCE_LEFT"
+        # Keep original module and asset origins, including identity hashes
+        # derived from __file__. Only self-execution paths move to this output.
+        original_bin, output_bin = str(original / "bin"), str(output / "bin")
+        patched = text.replace(str(python), str(runtime)).replace(original_bin, output_bin)
+        assert str(python) not in patched and original_bin not in patched, "APP_RUNTIME_REFERENCE_LEFT"
         launchers[name] = (source, text, patched)
     reachable = set()
     for command in commands:
@@ -213,7 +216,7 @@ let
         target = output / "bin" / name
         target.write_text(after)
         target.chmod(source.stat().st_mode & 0o777)
-        proof["launchers"][name] = {"originalSha256": hashlib.sha256(before.encode()).hexdigest(), "patchedSha256": hashlib.sha256(after.encode()).hexdigest(), "pythonSubstitutions": before.count(str(python)), "selfSubstitutions": before.count(str(original))}
+        proof["launchers"][name] = {"originalSha256": hashlib.sha256(before.encode()).hexdigest(), "patchedSha256": hashlib.sha256(after.encode()).hexdigest(), "pythonSubstitutions": before.count(str(python)), "selfSubstitutions": before.count(str(original / "bin"))}
     support = output / "nix-support"
     support.mkdir()
     if (original / "nix-support").is_dir():

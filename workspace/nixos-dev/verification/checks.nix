@@ -124,6 +124,19 @@ python-runtime-wiring = let
     assert malformed == baseline, "ACTUAL_FINANCE_HTTP_FRAMING"
     print(json.dumps({"passed": True, "actualJsonApi": True, "baseline": baseline, "malformedChunkAccepted": malformed, "httpClient": http.client.__file__, "onlyOwnedLoopbackPeers": True}))
   '';
+  originContract = pkgs.writeText "python-app-origin-contract.py" ''
+    from pathlib import Path
+    import runpy
+    import sys
+
+    inner, original, runtime = map(Path, sys.argv[1:4])
+    namespace = runpy.run_path(str(inner), run_name="runtime_origin_probe")
+    module = sys.modules[namespace["main"].__module__]
+    assert Path(module.__file__).is_relative_to(original / "lib"), "APP_MODULE_ORIGIN"
+    import http.client
+    assert Path(http.client.__file__).is_relative_to(runtime / "lib"), "APP_HTTP_ORIGIN"
+    print("Original app module origin and repaired HTTP runtime pass")
+  '';
   homeValid = home: !(home.programs.workbench.enable || home.programs.workbench.mailHelper.enable)
     || (home.programs.workbench.package.pythonHttpRuntime.httpFramingPatched or false);
   disabledWorkbench = (work.extendModules { modules = [{
@@ -208,11 +221,13 @@ import json
 from pathlib import Path
 import shlex
 import subprocess
+import tempfile
 
 apps = json.loads(Path('${pkgs.writeText "python-runtime-applications.json" (builtins.toJSON (map (app: {
   path = toString app;
   original = toString app.sourceApplication;
   python = toString app.pythonHttpRuntime;
+  sourcePython = toString app.sourcePython;
   executable = app.sourcePython.executable;
 }) applications))}').read_text())
 for app in apps:
@@ -226,6 +241,13 @@ for app in apps:
         text = (root / 'bin' / name).read_text()
         if node['kind'] == 'python':
             assert text.splitlines()[0] == '#!' + str(runtime / 'bin' / app['executable']), 'APP_OLD_INTERPRETER'
+            probe = [str(runtime / 'bin' / app['executable']), '-B', '${originContract}']
+            subprocess.run(probe + [str(root / 'bin' / name), str(original), str(runtime)], check=True, timeout=30)
+            with tempfile.TemporaryDirectory() as directory:
+                seeded = Path(directory) / name
+                seeded.write_text(text.replace(str(original / 'lib'), str(root / 'lib')))
+                wrong_origin = subprocess.run(probe + [str(seeded), str(original), str(runtime)], capture_output=True, text=True, timeout=30)
+                assert wrong_origin.returncode != 0 and 'APP_MODULE_ORIGIN' in wrong_origin.stderr, 'APP_ORIGIN_SEED'
         elif node['kind'] == 'shell':
             forwards = [shlex.split(line) for line in text.splitlines() if line.startswith('exec -a "$0" ')]
             assert len(forwards) == 1 and forwards[0][3] == str(root / 'bin' / node['target']), 'APP_OLD_FORWARD'
