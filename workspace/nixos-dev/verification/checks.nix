@@ -52,6 +52,13 @@ pkgs.runCommand "claude-installation" { } ''touch $out'';
 
 python-runtime-wiring = let
   hosts = [ "work" "home" "laptop" ];
+  cases = map (host: let
+    hostPkgs = self.nixosConfigurations."hwc-${host}".pkgs;
+    original = hostPkgs.python3;
+    runtime = hostPkgs.mkPythonHttpRuntime original;
+  in { inherit original runtime;
+    environment = runtime.withPackages (p: [ p.httpx ]);
+  }) hosts;
   valid = host: let
     python = self.nixosConfigurations."hwc-${host}".pkgs.python3Packages;
   in lib.versionAtLeast python.streamlit.version "1.66.1"
@@ -59,7 +66,51 @@ python-runtime-wiring = let
     && builtins.isString python.posthog.drvPath;
 in assert lib.assertMsg (lib.all valid hosts)
   "Python compatibility overlay must reach normal and CUDA host package sets";
-pkgs.runCommand "python-runtime-wiring" {} ''touch "$out"'';
+assert lib.assertMsg (lib.all (case:
+  case.runtime.runtimeSource.outPath == case.original.outPath
+  && case.runtime.pkgs.torch.drvPath == case.original.pkgs.torch.drvPath
+  && case.runtime.pkgs.torchvision.drvPath == case.original.pkgs.torchvision.drvPath
+) cases) "Python runtime must preserve the native package build graph";
+pkgs.runCommand "python-runtime-wiring" {} ''
+  ${lib.concatMapStrings (case: ''
+    ${case.original.interpreter} -B ${case.runtime.runtimeContract} --baseline
+    ${case.runtime.interpreter} -B ${case.runtime.runtimeContract} ${case.runtime}
+    ${case.environment.interpreter} -B ${case.runtime.runtimeContract} ${case.environment}
+    ${case.environment.interpreter} -B -c 'import httpx; assert httpx.__version__'
+  '') cases}
+  ${pkgs.python3}/bin/python3 -B - <<'PY'
+import json
+from pathlib import Path
+import subprocess
+import tempfile
+
+cases = json.loads(Path('${pkgs.writeText "python-runtime-cases.json" (builtins.toJSON (map (case: {
+  original = case.original.interpreter;
+  runtime = toString case.runtime;
+  contract = toString case.runtime.runtimeContract;
+  builder = toString case.runtime.runtimeBuilder;
+  manifest = toString case.runtime.runtimeManifest;
+  inherit (case.original) executable libPrefix;
+}) cases))}').read_text())
+for case in cases:
+    # The real raw interpreter passes normal/OWS controls above, but fails the
+    # production contract when the runtime integration is disabled.
+    disabled = subprocess.run([case['original'], '-B', case['contract'], case['runtime']], capture_output=True, text=True)
+    assert disabled.returncode != 0 and 'MALFORMED_HTTP_FRAMING' in disabled.stderr, 'MISSING_RUNTIME_SEED'
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        source = root / 'input/lib' / case['libPrefix'] / 'http'
+        source.mkdir(parents=True)
+        target = source / 'client.py'
+        target.write_text('unrecognized source\n')
+        command = [case['original'], '-B', case['builder'], str(root / 'input'), str(root / 'output'), case['executable'], case['libPrefix'], case['manifest']]
+        drift = subprocess.run(command, capture_output=True, text=True)
+        assert drift.returncode != 0 and 'PYTHON_HTTP_SOURCE_DRIFT' in drift.stderr, 'SOURCE_DRIFT_SEED'
+        assert not (root / 'output').exists(), 'SOURCE_DRIFT_CREATED_OUTPUT'
+print('Python raw/fixed/env/native contracts and disabled/source-drift seeds pass')
+PY
+  touch "$out"
+'';
 
 node-runtime-wiring =
   let

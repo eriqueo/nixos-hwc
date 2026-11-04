@@ -260,7 +260,7 @@
           permittedInsecurePackages = [ "qtwebengine-5.15.19" ];
         } // lib.optionalAttrs cudaSupport { cudaSupport = true; };
         overlays = [ silenceDeprecatedAliases gitCleanupOverlay nodejsSecurityOverlay
-          pythonCompatibilityOverlay ] ++ overlays;
+          pythonCompatibilityOverlay pythonRuntimeSecurityOverlay ] ++ overlays;
       };
 
     mkPkgs = system: nixpkgsInput: extraOverlays:
@@ -338,6 +338,9 @@
     # with brotli CVE-2026-111497 fix, ahead of both channels. See the file
     # header for the removal condition.
     nodejsSecurityOverlay = import ./overlays/nodejs-security.nix;
+    # Helpers only: keep Python build/package graphs unchanged. Runtime
+    # consumers select the checked stdlib explicitly after qualification.
+    pythonRuntimeSecurityOverlay = import ./overlays/python-runtime-security.nix;
 
     # TEMPORARY: native modules select corrected runtimes without feeding them
     # back into Nixpkgs' package fixed point (which rebuilds Chromium/CUDA torch).

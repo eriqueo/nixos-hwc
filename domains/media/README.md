@@ -22,6 +22,9 @@ SABnzbd history snapshots run as the observed database owner, `eric`, through th
 
 `sabnzbd/` exports the immutable5.1.3 security recipe and offline context. It applies two guarded XSS backports, preserves stable script-log links, updates selected signed Alpine/Python inputs, backports strict HTTP response framing with whitespace compatibility, and requires the prebuilt local image. Its existing config/queue/API identity and history SQLite use the shared Borg producer.
 
+Its Python framing replacements and upstream references come from
+`overlays/python-http-framing.json`; SAB retains its own source/result hashes.
+
 `navidrome-container/` emits a Nix-built0.64.2 image with Go1.27.3, fixed x/net and native media libraries, including seven exact upstream RTSP/SFTP/DASH/HDR/PSSH security patches. Its explicit data bind, startup database guard and Borg SQLite snapshot replace anonymous-volume storage.
 
 Frigate uses explicit NVIDIA CDI access and no-new-privileges; its configuration contract rejects privileged mode.
@@ -94,6 +97,9 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-04: Share SAB's existing Python framing replacements with the native
+  runtime helper, retaining its exact generated context and container inputs.
 
 - 2026-11-04: Seerr's versioned dependency source freezes package, lock, public
   tool and checked native/type inputs. The image compiles Next 15 without network,
