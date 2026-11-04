@@ -1126,14 +1126,9 @@ activate_home() { # <machine> <evaluated> <committed>
     fi
 
     log "Activating Home Manager for $machine (hms)..."
-    local activator
-    if ! activator=$("${NIX[@]}" build --no-link --print-out-paths \
-            "$REPO_ROOT#homeConfigurations.\"eric@$machine\".activationPackage"); then
-        error "Home Manager build failed; the commit stands, nothing was activated"
-        return 1
-    fi
-    if ! "$activator/activate" >&2; then
-        error "Home Manager activation failed"
+    if ! python3 "$REPO_ROOT/workspace/nixos-dev/verification/release.py" deploy \
+            --repo "$REPO_ROOT" --lane home --target "$machine" >&2; then
+        error "Home Manager verification or activation failed; the commit stands"
         return 1
     fi
     if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] && command -v hyprctl >/dev/null 2>&1; then
@@ -1163,6 +1158,8 @@ show_configuration_hints() {
         info "  https://nix-community.github.io/home-manager/options.xhtml"
     fi
     info "Module: $app_dir/index.nix"
+    info "Verification: local constraints belong in module assertions; distinct HWC integration tests belong in the owning verification/ function and explicit registry."
+    info "Keep test bodies out of flake.nix. Temporary compatibility checks need a checkable retirement condition."
     echo >&2
 }
 

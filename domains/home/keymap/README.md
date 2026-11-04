@@ -13,6 +13,8 @@ Plain-language design + rationale: `docs/UNIFIED-KEYMAP-SPEC.md`.
 
 ## Structure
 
+`verification/` contains pure flake checks for this capability; production modules do not import it.
+
 Aerc's `Space g k` opens DONT KNOW and `Space g b` opens Bulk. The State choice
 key `k` corrects a thread to DONT KNOW; mail-contract data supplies its display.
 
@@ -105,6 +107,8 @@ chords within each section, compares its Space rows with the grammar, and
 requires each configured native manager command to have a Space path.
 
 ## Changelog
+
+- 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 - 2026-10-12: Generate KEYMAP.md from grammar; add drift check and docs app with bounded brain marker replacement; remove the unused aerc Markdown export.
 - 2026-10-12: Fix Mail bare compose regression; omit folder move and fact/tag menus that item intents cannot supply. Workbench check loads real upstream manifests and rejects seeded bare compose.
 - 2026-10-12: Share aerc rows with Workbench schema 2; generate isolated compose launcher, omit aerc view controls and unsafe thread actions, guard launcher coverage and global keys; move compose/replies/forward to c; retain routing, unsubscribe and read-status menus under m.

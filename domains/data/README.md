@@ -12,6 +12,8 @@ storage (mount management), Syncthing (file sync), and CouchDB (Obsidian LiveSyn
 
 ## Structure
 
+`verification/` contains pure flake checks for this capability; production modules do not import it.
+
 `databases/` owns schemaVersion2 role provisioning for owned databases and shared table columns, including direct/default privilege reconciliation. It also supplies standard PostgreSQL peer environment settings to native clients; each application declares its scope.
 Decoded credentials use separate raw-password and environment-password types; URI decoding uses a closed encoding enum.
 The role boundary requires versioned payloads; unversioned input fails before credential or database access.
@@ -33,6 +35,12 @@ data/
 ```
 
 ## Changelog
+
+- 2026-11-04: Extend the XPS Borg fixture to execute its full current snapshot hook without touching live data.
+
+- 2026-11-04: Update the Borg XPS destination check for its existing T3 V2 backup registration.
+
+- 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 - 2026-11-03: Remove the unversioned role reader after Work and Home consumed V2; reject the old shape in the actual provisioning wiring check.
 - 2026-11-03: Keep decoded credential variants distinct and require the Nix encoding contract to match Python's handled enum.
 - 2026-11-03: Extend transactional role provisioning with tagged credential/authority boundaries, shared column grants, native peer settings and complete client rotation triggers.

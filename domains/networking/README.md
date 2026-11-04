@@ -18,6 +18,8 @@ Provides network infrastructure that other domains depend on:
 
 ## Structure
 
+`verification/` contains pure flake checks for this capability; production modules do not import it.
+
 `internalContainerNetworks` declares application-private Podman bridges. Startup validates internal routing, DNS, driver and IPv6 before dependent containers start.
 
 Static vhosts declare API handlers as a list of exact path patterns, upstreams, optional methods, Origin requirements and upstream headers. API handlers and SPA files are mutually exclusive; runtime secret-file placeholders never enter the browser bundle.
@@ -100,6 +102,8 @@ networking/
 ```
 
 ## Changelog
+
+- 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 
 - 2026-11-02: Add validated internal Podman bridges for document converters; retain the existing media network.
 
