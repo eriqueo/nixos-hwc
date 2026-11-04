@@ -65,7 +65,7 @@ media/
 ├── recyclarr/               # *arr quality profile sync; preserves Radarr executable rejection
 ├── slskd/                   # Soulseek client
 ├── soularr/                 # Soulseek-Lidarr integration
-├── calibre/                 # Ebook management
+├── calibre/                 # Immutable Calibre 9.17 image; existing library/config paths
 ├── books/                   # LazyLibrarian
 │
 ├── immich-container/        # Photo management, pinned runtime/library contexts
@@ -92,6 +92,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-03: Pin Calibre 9.17.0 by vendor digest for current content-server, metadata and conversion security fixes. Preserve the existing library and desktop/content routes.
 
 - 2026-11-03: Backport Next WebSocket routing checks to Seerr so only completed external rewrites can proxy upgrades. Bind the exact dependency source and result without changing the app schema.
 

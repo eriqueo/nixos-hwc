@@ -2123,6 +2123,26 @@
         touch "$out"
       '';
 
+      calibre-security-wiring = let
+        c = self.nixosConfigurations.hwc-home.config;
+        binding = pkgs.writeText "calibre-security-binding.json" (builtins.toJSON {
+          selected = c.hwc.media.calibre.image;
+          container = c.virtualisation.oci-containers.containers.calibre.image;
+          volumes = c.virtualisation.oci-containers.containers.calibre.volumes;
+          library = toString c.hwc.media.calibre.library;
+          config = "${c.hwc.paths.apps.root}/calibre/config";
+        });
+      in pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${binding} <<'PYTEST'
+        import json,sys
+        v=json.load(open(sys.argv[1]))
+        assert v['selected'] == v['container'] == 'lscr.io/linuxserver/calibre@sha256:b198fc03a6abc6be7e251a9958e50e74634b00e447c7b25e92c191c8077ba378'
+        assert v['library'] + ':/books' in v['volumes']
+        assert v['config'] + ':/config' in v['volumes']
+        PYTEST
+        touch "$out"
+      '';
+
       seerr-security-wiring = let
         c = self.nixosConfigurations.hwc-home.config;
         binding = pkgs.writeText "seerr-security-binding.json" (builtins.toJSON {

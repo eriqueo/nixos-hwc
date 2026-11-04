@@ -11,7 +11,9 @@ in
   #==========================================================================
   options.hwc.media.calibre = {
     enable = lib.mkEnableOption "Calibre ebook management container";
-    image = lib.mkOption { type = lib.types.str; default = "lscr.io/linuxserver/calibre:latest"; description = "Container image for Calibre"; };
+    # Critical library state: upgrade this immutable vendor image only after
+    # current-data startup and compatible-code recovery checks pass.
+    image = lib.mkOption { type = lib.types.str; default = "lscr.io/linuxserver/calibre@sha256:b198fc03a6abc6be7e251a9958e50e74634b00e447c7b25e92c191c8077ba378"; description = "Qualified Calibre 9.17.0 vendor image"; };
     network.mode = lib.mkOption { type = lib.types.enum [ "media" "vpn" ]; default = "media"; description = "Network mode"; };
     gpu.enable = lib.mkOption { type = lib.types.bool; default = false; description = "Enable GPU support for Calibre"; };
     ports = {
