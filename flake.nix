@@ -2343,7 +2343,8 @@
           assert data.startswith(b'\x7fELF') and valid_payload(data,expected)
           assert not valid_payload(data+b'violation',expected)
         assert 'sha256sum -c utilities-sha256' in script
-        assert 'cp busybox /bin/busybox' in script and 'cp uniq unexpand /usr/bin/' in script
+        assert 'for name in busybox uniq unexpand' in script
+        assert 'install -m 0755 "$name" "$target.hwc-new"' in script and 'mv -fT "$target.hwc-new" "$target"' in script
         PY
         touch "$out"
       '';

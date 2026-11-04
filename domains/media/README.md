@@ -93,6 +93,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-04: Utility replacement uses fresh inodes and atomic renames, preserving the running BusyBox shell and the shared GNU coreutils target behind vendor applet symlinks.
+
 - 2026-11-04: Sonarr's existing runtime context builds Alpine's exact BusyBox source/config/44 vendor patches plus the pinned upstream URL framing fix, and replaces only GNU uniq/unexpand with the pinned musl security backports. Hash-bound payloads retain the vendor applet set and target libc; actual framing, UTF-8, boot and current-data recovery qualify the image before activation.
 - 2026-11-04: Export native SQLite version/hash with the image context and reject changed native-library payloads in the wiring check.
 - 2026-11-04: Read SQLite feature flags from the pinned derivation's exported build attribute.

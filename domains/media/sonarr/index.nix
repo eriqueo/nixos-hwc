@@ -172,8 +172,14 @@ def library($p): {type:"package",serviceable:true,sha512:("sha512-"+$p.sha512),p
     apk --repositories-file /dev/null --no-network del sqlite-libs
     cp libsqlite3.so.0 /usr/lib/libsqlite3.so.0
     sha256sum -c utilities-sha256
-    cp busybox /bin/busybox
-    cp uniq unexpand /usr/bin/
+    # Replace inodes: the shell executes BusyBox, and GNU applets are symlinks
+    # to one shared coreutils binary. Never follow those links while writing.
+    for name in busybox uniq unexpand; do
+      target=/usr/bin/$name
+      if [ "$name" = busybox ]; then target=/bin/busybox; fi
+      install -m 0755 "$name" "$target.hwc-new"
+      mv -fT "$target.hwc-new" "$target"
+    done
     cd /
     rm -r /tmp/hwc-sonarr /tmp/runtime-owned.txt /tmp/app-owned.txt
   '';
