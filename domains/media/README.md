@@ -93,6 +93,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-04: BusyBox's linker receives static archive names through its library-name interface, retaining only the target musl runtime dependency.
+
 - 2026-11-04: BusyBox reuses the pinned build-helper bounds fix after fortify trapped split-include's one-byte overflow; runtime hardening stays enabled.
 
 - 2026-11-04: Utility replacement uses fresh inodes and atomic renames, preserving the running BusyBox shell and the shared GNU coreutils target behind vendor applet symlinks.

@@ -67,7 +67,8 @@ let
       runHook preBuild
       make -j"$NIX_BUILD_CORES" SKIP_STRIP=y \
         CONFIG_EXTRA_CFLAGS="-I${pkgs.pkgsMusl.utmps.dev}/include/utmps -I${pkgs.pkgsMusl.skalibs.dev}/include" \
-        CONFIG_EXTRA_LDLIBS="${pkgs.pkgsMusl.utmps.lib}/lib/libutmps.a ${pkgs.pkgsMusl.skalibs.lib}/lib/libskarnet.a"
+        CONFIG_EXTRA_LDFLAGS="-L${pkgs.pkgsMusl.utmps.lib}/lib -L${pkgs.pkgsMusl.skalibs.lib}/lib" \
+        CONFIG_EXTRA_LDLIBS=":libutmps.a :libskarnet.a"
       runHook postBuild
     '';
     installPhase = ''
