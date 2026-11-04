@@ -11,6 +11,7 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 - ❌ Does not provide gpu-toggle/gpu-launch (infrastructure GPU module) or the acpid lid handler (`machines/laptop/config.nix`); requires swaync enabled (asserted)
 
 ## Structure
+Desktop wiring preserves mouse flags, uses packaged native cursor assets, and excludes virtual displays from bars and linked workspace selection. Waybar forwards reload to its child and cleans its generated configuration.
 Waybar patches its built-in workspace clicks for Hyprland Lua IPC; calendar text escapes Pango markup.
 Desktop helpers and the laptop streaming host use native Hyprland Lua IPC. Workspace selection and window moves share the monitor-aware helper; streaming creates its configured workspace before focusing it.
 - `index.nix` — options, packages, programs.waybar, systemd service, assertions
@@ -25,6 +26,7 @@ Desktop helpers and the laptop streaming host use native Hyprland Lua IPC. Works
 - `patches/bluetooth-null-manager.patch` — bluetooth module throws (module dropped, bar survives) when the org.bluez manager is unavailable
 
 ## Changelog
+- 2026-11-04: Repair declarative desktop cursor, mouse bindings, physical-output selection and Waybar reload supervision; extend generated desktop checks.
 - 2026-11-04: Fix built-in Waybar workspace switching under Lua and escape calendar markup.
 - 2026-11-04: Migrate desktop helper and laptop streaming calls to Lua IPC, including startup on a fresh workspace.
 - 2026-10-13: Patched waybar so a timed-out org.bluez object manager disables only the bluetooth module. Before, a wedged bluetoothd segfaulted the bar on every `Restart=always` attempt. Stock `waybar` removed from `parts/packages.nix` so the patched `programs.waybar.package` is the only one on PATH.

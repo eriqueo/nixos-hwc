@@ -11,6 +11,7 @@ token sets, GTK/Qt theming, fonts, and pointer cursor.
   token set themselves (see canonical accessor below).
 
 ## Structure
+The palette supplies both XCursor and native Hyprcursor tokens. Hyprland links native assets from the installed cursor package.
 ```
 theme/
 ├── index.nix        # Options + palette materialization + qt platform theme
@@ -25,8 +26,7 @@ theme/
 ## How it works
 1. `hwc.home.theme.palette` selects a palette (default `hwc`).
 2. `index.nix` materializes it as `hwc.home.theme.colors` and wires the
-   palette's cursor block into `hwc.home.theme.cursor` (xcursor only —
-   hyprcursor assets are not in the repo; backlog).
+   palette's cursor block into `hwc.home.theme.cursor` (both cursor formats).
 3. Apps consume tokens via the guarded read:
    `(config.hwc.home.theme or {}).colors or {}` — never by importing
    palette files directly.
@@ -37,6 +37,7 @@ There is no separate "adapters" layer — that design was never built; the
 former README describing it was aspirational.
 
 ## Changelog
+- 2026-11-04: Repair declarative desktop cursor, mouse bindings, physical-output selection and Waybar reload supervision; extend generated desktop checks.
 - 2026-09-24: Default dconf activation to `theme.graphical`, preserving file-based GTK settings while avoiding desktop D-Bus writes on headless hosts. Fixes first activation of `hwc-work` without a dconf service.
 - 2026-09-02: Explicitly enable `home.pointerCursor` on graphical hosts,
   preserving the existing cursor output without Home Manager's deprecated

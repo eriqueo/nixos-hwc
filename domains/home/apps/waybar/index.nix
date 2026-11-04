@@ -80,6 +80,7 @@ in
         ExecReload = "${pkgs.coreutils}/bin/kill -SIGUSR2 $MAINPID";
         Restart = lib.mkForce "always";
         RestartSec = 3;
+        TimeoutStopSec = 10;
       };
       Install = { WantedBy = [ "graphical-session.target" ]; };
     };

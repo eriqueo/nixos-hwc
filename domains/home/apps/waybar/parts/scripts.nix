@@ -89,11 +89,16 @@ in
       exit 1
     fi
 
+    TMP_CONFIG=$(mktemp)
+    trap 'rm -f "''$TMP_CONFIG"' EXIT
+
+    render_config() {
+    MONITORS=$(hyprctl monitors -j)
     # Get all monitor names, classifying each as internal or external
     # Internal: eDP-*, LVDS-* patterns (laptop screens)
     # External: everything else
     INTERNAL_MONITORS=$(echo "''$MONITORS" | jq -r '.[] | select(.name | test("^(eDP|LVDS)")) | .name')
-    EXTERNAL_MONITORS=$(echo "''$MONITORS" | jq -r '.[] | select(.name | test("^(eDP|LVDS)") | not) | .name')
+    EXTERNAL_MONITORS=$(echo "''$MONITORS" | jq -r '.[] | select(.make != "" and (.name | test("^(eDP|LVDS)") | not)) | .name')
 
     # Read template configs from the static config file
     # Index 0 = external template, Index 1 = internal template
@@ -101,9 +106,6 @@ in
     INTERNAL_TEMPLATE=$(jq '.[1]' "''$CONFIG_SRC")
 
     # Build dynamic config array
-    TMP_CONFIG=$(mktemp)
-    trap 'rm -f "''$TMP_CONFIG"' EXIT
-
     echo "[" > "''$TMP_CONFIG"
     FIRST=true
 
@@ -130,7 +132,19 @@ in
       exit 1
     fi
 
-    waybar -c "''$TMP_CONFIG" -s "''$STYLE_SRC"
+    }
+    render_config
+    waybar -c "''$TMP_CONFIG" -s "''$STYLE_SRC" &
+    bar_pid=$!
+    # systemd signals this launcher. Refresh the generated config and forward
+    # reload to the bar; an interrupted wait must keep supervising that child.
+    trap 'render_config && kill -USR2 "$bar_pid"' USR2
+    trap 'kill -TERM "$bar_pid" 2>/dev/null || true; wait "$bar_pid" || true; exit 0' TERM INT
+    status=0
+    while kill -0 "$bar_pid" 2>/dev/null; do
+      wait "$bar_pid" && status=0 || status=$?
+    done
+    exit "$status"
   '';
   
   "khal" = sh "waybar-khal" ''
