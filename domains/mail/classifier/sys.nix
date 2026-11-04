@@ -30,7 +30,10 @@ let
     ];
     doCheck = false;
   };
-  python = cpuPkgs.python3.withPackages (_: [ laya ]);
+  buildPython = cpuPkgs.python3.withPackages (_: [ laya ]);
+  # Keep the separate CPU-only package graph and model/authority contract.
+  python = if (pkgs.python3.httpFramingPatched or false)
+    then pkgs.mkPythonHttpRuntime buildPython else buildPython;
   runtime = pkgs.writeShellApplication {
     name = "mail-classifier-runtime";
     runtimeInputs = [ python pkgs.notmuch ];

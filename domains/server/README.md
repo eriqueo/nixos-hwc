@@ -9,6 +9,10 @@
 
 ## Structure
 
+Meals and the wall display's Piper command select checked Python runtime
+packages on owned instances. Their app assets and native libraries come from
+the existing packages; data and model paths keep their existing owners.
+
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 
 Native Scout services register their own peer role/database with the data capability and consume its PGHOST/PGPORT/PGUSER environment. Main services, approval bots and ingest timers wait for PostgreSQL setup; application schemas remain Scout-owned.
@@ -106,6 +110,9 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+
+- 2026-11-04: Select runtime-only HTTP framing repairs for Meals and Piper,
+  preserving service behavior, model inputs and persistent data paths.
 
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 - 2026-11-03: Bind native Scout SQL clients to explicit OS-peer sockets across postgres.js, MCP node-postgres and Python ingest; order every active client after role setup.

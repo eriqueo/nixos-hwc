@@ -131,6 +131,8 @@ let
       base = original.python or original;
       runtime = prev.runCommand "${original.name}-http-framing" {
       preferLocalBuild = true;
+      pname = original.pname or "python3";
+      version = base.version;
       passthru = (original.passthru or {}) // {
         httpFramingPatched = true;
         runtimeSource = original;
@@ -146,10 +148,103 @@ let
       "$out/bin/${base.executable}" -B ${contract} "$out"
     '';
     in runtime;
+  applicationBuilder = prev.writeText "python-http-application.py" ''
+    import hashlib
+    import json
+    from pathlib import Path
+    import shlex
+    import sys
+    from enum import StrEnum
+
+    class LauncherKind(StrEnum):
+        PYTHON = "python"
+        SHELL = "shell"
+
+    original, python, runtime, output = map(Path, sys.argv[1:5])
+    executable = sys.argv[5]
+    entries = {entry.name for entry in (original / "bin").iterdir()}
+    commands = [name for name in entries if not name.startswith(".")]
+    assert 1 <= len(commands) <= 16 and len(entries) <= 64, "APP_ENTRYPOINT_LIMIT"
+    launchers = {}
+    graph = {}
+    for name in sorted(entries):
+        source = original / "bin" / name
+        assert source.is_file() and source.stat().st_size <= 131072, "APP_LAUNCHER_LIMIT"
+        text = source.read_text()
+        assert text.startswith("#!") and str(original) in text, "APP_LAUNCHER_CONTRACT"
+        if text.splitlines()[0] == "#!" + str(python / "bin" / executable):
+            graph[name] = {"kind": LauncherKind.PYTHON, "interpreter": str(python / "bin" / executable)}
+        else:
+            assert "/bin/bash" in text.splitlines()[0], "APP_INTERPRETER_DRIFT"
+            forwards = [shlex.split(line) for line in text.splitlines() if line.startswith('exec -a "$0" ')]
+            assert len(forwards) == 1, "APP_SHELL_FORWARD_DRIFT"
+            forward = forwards[0]
+            assert len(forward) == 5 and forward[:3] == ["exec", "-a", "$0"] and forward[4] == "$@", "APP_SHELL_ARGV_DRIFT"
+            target = Path(forward[3])
+            assert target.parent == original / "bin" and target.name in entries, "APP_WRAPPER_TARGET_DRIFT"
+            graph[name] = {"kind": LauncherKind.SHELL, "target": target.name}
+        patched = text.replace(str(python), str(runtime)).replace(str(original), str(output))
+        assert str(python) not in patched and str(original) not in patched, "APP_RUNTIME_REFERENCE_LEFT"
+        launchers[name] = (source, text, patched)
+    reachable = set()
+    for command in commands:
+        current = command
+        visited = set()
+        while True:
+            assert current not in visited, "APP_WRAPPER_CYCLE"
+            visited.add(current)
+            reachable.add(current)
+            descriptor = graph[current]
+            match descriptor["kind"]:
+                case LauncherKind.PYTHON:
+                    break
+                case LauncherKind.SHELL:
+                    current = descriptor["target"]
+                case _:
+                    raise AssertionError("APP_WRAPPER_KIND")
+    assert reachable == entries, "APP_ORPHAN_LAUNCHER"
+    output.mkdir()
+    for entry in original.iterdir():
+        if entry.name not in {"bin", "nix-support"}:
+            (output / entry.name).symlink_to(entry)
+    (output / "bin").mkdir()
+    proof = {"schemaVersion": 1, "commands": sorted(commands), "wrapperGraph": graph, "original": str(original), "originalPython": str(python), "runtime": str(runtime), "launchers": {}}
+    for name, (source, before, after) in launchers.items():
+        target = output / "bin" / name
+        target.write_text(after)
+        target.chmod(source.stat().st_mode & 0o777)
+        proof["launchers"][name] = {"originalSha256": hashlib.sha256(before.encode()).hexdigest(), "patchedSha256": hashlib.sha256(after.encode()).hexdigest(), "pythonSubstitutions": before.count(str(python)), "selfSubstitutions": before.count(str(original))}
+    support = output / "nix-support"
+    support.mkdir()
+    if (original / "nix-support").is_dir():
+        for entry in (original / "nix-support").iterdir():
+            (support / entry.name).symlink_to(entry)
+    (support / "http-framing-application.json").write_text(json.dumps(proof, indent=2) + "\n")
+  '';
+  mkApplication = { application, python }:
+    let runtime = mkRuntime python; in
+    prev.runCommand "${application.name}-http-framing" {
+      preferLocalBuild = true;
+      pname = lib.getName application;
+      version = application.version or (lib.getVersion application);
+      passthru = (application.passthru or {}) // {
+        sourceApplication = application;
+        sourcePython = python;
+        runtimeApplicationBuilder = applicationBuilder;
+        pythonHttpRuntime = runtime;
+      };
+      meta = application.meta or {};
+    } ''
+      ${prev.python3}/bin/python3 -B ${applicationBuilder} ${application} ${python} ${runtime} "$out" ${python.executable}
+      for appLauncher in "$out/bin/"*; do
+        ${prev.coreutils}/bin/timeout --kill-after=2s 30s "$appLauncher" --help > /dev/null
+      done
+    '';
 in
 assert spec.schemaVersion == 1;
 {
   # The container retains its existing source/result hashes and protocol shape.
   pythonHttpFramingBackport = builtins.removeAttrs spec [ "schemaVersion" "nativeSources" ];
   mkPythonHttpRuntime = mkRuntime;
+  mkPythonHttpApplication = mkApplication;
 }

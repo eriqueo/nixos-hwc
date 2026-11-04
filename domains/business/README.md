@@ -14,6 +14,10 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Workbench web and the Finance explorer select the shared Python runtime
+packages on owned instances. The explorer uses its existing role package port.
+The runtime packages retain the app assets and native library graph.
+
 Website HSTS uses a one-year lifetime after public journey verification, with no preload or subdomain extension.
 
 Customer report pages override public caching with no-store, suppress referrers and disallow indexing. Calculator build dependencies use patched Vite 6 and the existing React plugin.
@@ -111,6 +115,9 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-04: Select checked HTTP-framing runtimes for Workbench and Finance
+  launchers, preserving their code, credentials and data ownership.
 
 - 2026-11-04: Extend website HSTS to one year after customer-flow tests; preserve subdomain scope.
 

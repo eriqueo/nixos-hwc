@@ -4,7 +4,7 @@
 let
   cfg = config.hwc.server.services.meals;
   state = "${config.hwc.paths.state}/meals";
-  app = inputs.meals.packages.${pkgs.system}.default;
+  app = pkgs.pythonHttpApplications.meals or inputs.meals.packages.${pkgs.system}.default;
   domain = config.hwc.networking.shared.vhostDomain;
   settings = pkgs.writeText "meals.json" (builtins.toJSON {
     inherit (cfg) port writesEnabled;

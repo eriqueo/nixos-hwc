@@ -21,6 +21,7 @@
 { config, lib, pkgs, inputs, ... }:
 let
   cfg = config.hwc.business.workbench;
+  workbenchApp = pkgs.pythonHttpApplications.workbench or inputs.workbench.packages.${pkgs.system}.default;
   # Public target data also drives connection setup. Keeping it in this module
   # would force the operator client to load the server module or duplicate IDs.
   targetProfile = builtins.fromJSON (builtins.readFile ./t3-targets.json);
@@ -319,7 +320,7 @@ in
         User = lib.mkForce "eric";
         Group = "users";
         ExecStart = lib.escapeShellArgs ([
-          "${inputs.workbench.packages.${pkgs.system}.default}/bin/workbench"
+          "${workbenchApp}/bin/workbench"
           "serve" "--host" "127.0.0.1" "--port" (toString cfg.web.port)
           "--areas-file" areasJson
           "--public-host" "${cfg.routeName}.${vhostDomain}"

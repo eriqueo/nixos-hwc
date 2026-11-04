@@ -18,6 +18,10 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 
+Owned instances select checked Python interpreters and package environments
+without rebuilding their native dependencies. Workbench TUI and Mail helpers
+consume the same runtime package catalog in both Home Manager lanes.
+
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 REA's package wrapper supplies the Nix firmware resource limiter and checks Binwalk against a generated gzip fixture.
 Waybar patches its built-in workspace clicks for Hyprland Lua IPC; calendar text escapes Pango markup.
@@ -169,6 +173,9 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-11-04: Select the strict HTTP response parser for interactive Python
+  environments and Workbench launchers while preserving their package graphs.
 
 - 2026-11-04: T3 laptop opts into qualified captured-child shutdown without process sweeps. Check its rendered unit, preserved keep-old policy and negative cleanup/deadline controls.
 

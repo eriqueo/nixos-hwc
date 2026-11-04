@@ -1,5 +1,5 @@
 # Pure verification function; not a NixOS or Home Manager module.
-{ inputs, laptopRuntimeScope, lib, pkgs, repoRoot, self, serverCudaRuntimeScope, serverRuntimeScope, system }:
+{ inputs, laptopRuntimeScope, lib, machines, pkgs, repoRoot, self, serverCudaRuntimeScope, serverRuntimeScope, system }:
 {
 temporary-pin-retirement = let
   # Raw locked recipes, before our overlays: overridden versions prove no expiry.
@@ -52,11 +52,93 @@ pkgs.runCommand "claude-installation" { } ''touch $out'';
 
 python-runtime-wiring = let
   hosts = [ "work" "home" "laptop" ];
+  work = self.nixosConfigurations.hwc-work;
+  applications = lib.attrValues work.pkgs.pythonHttpApplications ++ [ work.pkgs.piper-tts ];
+  finance = work.pkgs.pythonHttpApplications.pnc-statement-pipeline;
+  clientContract = pkgs.writeText "python-finance-http-contract.py" ''
+    import json
+    from pathlib import Path
+    import queue
+    import runpy
+    import socket
+    import sys
+    import threading
+
+    inner = Path(sys.argv[1])
+    assert sys.argv[2] in {"baseline", "fixed"}, "HTTP_CONTRACT_MODE"
+    baseline = sys.argv[2] == "baseline"
+    # Reuse the shipped entry's dependency prelude without calling its CLI.
+    # The actual app imports its HTTP client before any test observer does.
+    runpy.run_path(str(inner), run_name="runtime_client_probe")
+    import http.client
+    from pnc_statement_pipeline.http import JsonApi
+
+    value = {"ok": True}
+    payload = json.dumps(value, separators=(",", ":")).encode()
+
+    def serve(listener, response, errors):
+        try:
+            with listener:
+                connection, _ = listener.accept()
+                with connection:
+                    connection.settimeout(3)
+                    request = b""
+                    while b"\r\n\r\n" not in request:
+                        data = connection.recv(1024)
+                        assert data and len(request) + len(data) <= 16384, "OWNED_PEER_REQUEST_LIMIT"
+                        request += data
+                    assert request.startswith(b"GET /fixture HTTP/1.1\r\n"), "OWNED_PEER_METHOD"
+                    connection.sendall(response)
+        except BaseException as error:
+            errors.put_nowait(error)
+
+    def accepted(kind):
+        listener = socket.socket()
+        listener.settimeout(3)
+        listener.bind(("127.0.0.1", 0))
+        listener.listen(1)
+        address = "http://127.0.0.1:" + str(listener.getsockname()[1])
+        head = b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n"
+        if kind == "bad-chunk":
+            response = head + b"Transfer-Encoding: chunked\r\n\r\n+" + format(len(payload), "x").encode() + b"\r\n" + payload + b"\r\n0\r\n\r\n"
+        else:
+            response = head + b"Content-Length: " + str(len(payload)).encode() + (b" \t" if kind == "ows" else b"") + b"\r\n\r\n" + payload
+        errors = queue.Queue(maxsize=1)
+        worker = threading.Thread(target=serve, args=(listener, response, errors), daemon=True)
+        worker.start()
+        try:
+            try:
+                result = JsonApi(address, "fixture-only", auth_scheme="Bearer").get("/fixture") == value
+            except http.client.HTTPException:
+                result = False
+        finally:
+            listener.close()
+            worker.join(4)
+            assert not worker.is_alive(), "OWNED_PEER_DRAIN"
+        if not errors.empty():
+            raise errors.get_nowait()
+        return result
+
+    assert accepted("normal") and accepted("ows"), "ACTUAL_FINANCE_HTTP_COMPATIBILITY"
+    malformed = accepted("bad-chunk")
+    assert malformed == baseline, "ACTUAL_FINANCE_HTTP_FRAMING"
+    print(json.dumps({"passed": True, "actualJsonApi": True, "baseline": baseline, "malformedChunkAccepted": malformed, "httpClient": http.client.__file__, "onlyOwnedLoopbackPeers": True}))
+  '';
+  homeValid = home: !(home.programs.workbench.enable || home.programs.workbench.mailHelper.enable)
+    || (home.programs.workbench.package.pythonHttpRuntime.httpFramingPatched or false);
+  disabledWorkbench = (work.extendModules { modules = [{
+    systemd.services.workbench-web.serviceConfig.ExecStart = lib.mkForce
+      "${inputs.workbench.packages.${system}.default}/bin/workbench serve";
+  }]; }).config;
+  disabledFirefly = (work.extendModules { modules = [{
+    hwc.business.firefly.explorer.package = lib.mkForce inputs.pnc-statement-pipeline.packages.${system}.default;
+  }]; }).config;
   cases = map (host: let
     hostPkgs = self.nixosConfigurations."hwc-${host}".pkgs;
-    original = hostPkgs.python3;
+    original = hostPkgs.python3.runtimeSource or hostPkgs.python3;
     runtime = hostPkgs.mkPythonHttpRuntime original;
   in { inherit original runtime;
+    selected = hostPkgs.python3;
     environment = runtime.withPackages (p: [ p.httpx ]);
   }) hosts;
   valid = host: let
@@ -67,10 +149,20 @@ python-runtime-wiring = let
 in assert lib.assertMsg (lib.all valid hosts)
   "Python compatibility overlay must reach normal and CUDA host package sets";
 assert lib.assertMsg (lib.all (case:
-  case.runtime.runtimeSource.outPath == case.original.outPath
+  (case.selected.httpFramingPatched or false)
+  && case.selected.outPath == case.runtime.outPath
+  && case.runtime.runtimeSource.outPath == case.original.outPath
   && case.runtime.pkgs.torch.drvPath == case.original.pkgs.torch.drvPath
   && case.runtime.pkgs.torchvision.drvPath == case.original.pkgs.torchvision.drvPath
 ) cases) "Python runtime must preserve the native package build graph";
+assert lib.assertMsg (lib.all (host: machines.${host}.hmPkgs.python3.httpFramingPatched or false) hosts
+  && lib.all (host: !(self.nixosConfigurations.${host}.pkgs.python3.httpFramingPatched or false))
+    [ "hwc-xps" "hwc-kids" "hwc-firestick" ])
+  "Python runtime selection must cover both owned lanes and exclude other instances";
+assert lib.assertMsg (lib.all (host:
+  homeValid self.nixosConfigurations."hwc-${host}".config.home-manager.users.eric
+  && homeValid self.homeConfigurations."eric@hwc-${host}".config
+) hosts) "Workbench TUI and mail-helper must use the qualified runtime in both home lanes";
 pkgs.runCommand "python-runtime-wiring" {} ''
   ${lib.concatMapStrings (case: ''
     ${case.original.interpreter} -B ${case.runtime.runtimeContract} --baseline
@@ -78,6 +170,8 @@ pkgs.runCommand "python-runtime-wiring" {} ''
     ${case.environment.interpreter} -B ${case.runtime.runtimeContract} ${case.environment}
     ${case.environment.interpreter} -B -c 'import httpx; assert httpx.__version__'
   '') cases}
+  ${finance.sourcePython.interpreter} -B ${clientContract} ${finance.sourceApplication}/bin/.pnc-statements-wrapped baseline
+  ${finance.pythonHttpRuntime.interpreter} -B ${clientContract} ${finance}/bin/.pnc-statements-wrapped fixed
   ${pkgs.python3}/bin/python3 -B - <<'PY'
 import json
 from pathlib import Path
@@ -108,6 +202,81 @@ for case in cases:
         assert drift.returncode != 0 and 'PYTHON_HTTP_SOURCE_DRIFT' in drift.stderr, 'SOURCE_DRIFT_SEED'
         assert not (root / 'output').exists(), 'SOURCE_DRIFT_CREATED_OUTPUT'
 print('Python raw/fixed/env/native contracts and disabled/source-drift seeds pass')
+PY
+  ${pkgs.python3}/bin/python3 -B - <<'PY'
+import json
+from pathlib import Path
+import shlex
+import subprocess
+
+apps = json.loads(Path('${pkgs.writeText "python-runtime-applications.json" (builtins.toJSON (map (app: {
+  path = toString app;
+  original = toString app.sourceApplication;
+  python = toString app.pythonHttpRuntime;
+  executable = app.sourcePython.executable;
+}) applications))}').read_text())
+for app in apps:
+    root, original, runtime = map(Path, (app['path'], app['original'], app['python']))
+    proof = json.loads((root / 'nix-support/http-framing-application.json').read_text())
+    assert proof['original'] == str(original) and proof['runtime'] == str(runtime), 'APP_SOURCE_BINDING'
+    for entry in original.iterdir():
+        if entry.name not in {'bin', 'nix-support'}:
+            assert (root / entry.name).is_symlink() and (root / entry.name).resolve() == entry.resolve(), 'APP_ASSET_PARITY'
+    for name, node in proof['wrapperGraph'].items():
+        text = (root / 'bin' / name).read_text()
+        if node['kind'] == 'python':
+            assert text.splitlines()[0] == '#!' + str(runtime / 'bin' / app['executable']), 'APP_OLD_INTERPRETER'
+        elif node['kind'] == 'shell':
+            forwards = [shlex.split(line) for line in text.splitlines() if line.startswith('exec -a "$0" ')]
+            assert len(forwards) == 1 and forwards[0][3] == str(root / 'bin' / node['target']), 'APP_OLD_FORWARD'
+        else:
+            raise AssertionError('APP_WRAPPER_KIND')
+    for command in proof['commands']:
+        normal = subprocess.run([str(root / 'bin' / command), '--help'], capture_output=True, text=True, timeout=30)
+        assert normal.returncode == 0 and 'usage:' in normal.stdout.lower(), 'APP_CLI'
+
+wiring = json.loads(Path('${pkgs.writeText "python-runtime-consumers.json" (builtins.toJSON {
+  workbench = work.config.systemd.services.workbench-web.serviceConfig.ExecStart;
+  workbenchPackage = toString work.pkgs.pythonHttpApplications.workbench;
+  meals = work.config.systemd.services.meals.serviceConfig.ExecStart;
+  mealsPackage = toString work.pkgs.pythonHttpApplications.meals;
+  firefly = work.config.systemd.services.firefly-explorer.serviceConfig.ExecStart;
+  fireflyPackage = toString work.pkgs.pythonHttpApplications.pnc-statement-pipeline;
+  wall = work.config.systemd.services.wall-display.serviceConfig.ExecStart;
+  wallConfig = toString work.config.systemd.services.wall-display.environment.WALL_CONFIG;
+  piperPackage = toString work.pkgs.piper-tts;
+  classifier = toString work.config.systemd.services.mail-classifier-model.serviceConfig.ExecStart;
+  disabledWorkbench = disabledWorkbench.systemd.services.workbench-web.serviceConfig.ExecStart;
+  disabledFirefly = disabledFirefly.systemd.services.firefly-explorer.serviceConfig.ExecStart;
+  oldFinanceArgv = [ finance.sourcePython.interpreter "-B" (toString clientContract)
+    "${finance.sourceApplication}/bin/.pnc-statements-wrapped" "fixed" ];
+})}').read_text())
+def selected(command, package, name):
+    return shlex.split(command)[0] == str(Path(package) / 'bin' / name)
+for key, name in [('workbench', 'workbench'), ('meals', 'hwc-meals'), ('firefly', 'firefly-explorer')]:
+    assert selected(wiring[key], wiring[key + 'Package'], name), 'SERVICE_RUNTIME_BINDING:' + key
+assert not selected(wiring['disabledWorkbench'], wiring['workbenchPackage'], 'workbench'), 'WORKBENCH_WIRING_SEED'
+assert not selected(wiring['disabledFirefly'], wiring['fireflyPackage'], 'firefly-explorer'), 'FIREFLY_WIRING_SEED'
+old_finance = subprocess.run(wiring['oldFinanceArgv'], capture_output=True, text=True, timeout=30)
+assert old_finance.returncode != 0 and 'ACTUAL_FINANCE_HTTP_FRAMING' in old_finance.stderr, 'ACTUAL_FINANCE_OLD_SOURCE_RED'
+wall = json.loads(Path(wiring['wallConfig']).read_text())
+if wall['voice'] is not None:
+    assert wall['voice']['piper'] == str(Path(wiring['piperPackage']) / 'bin/piper'), 'PIPER_CONSUMER_BINDING'
+wall_python = Path(shlex.split(wiring['wall'])[0]).parent.parent
+assert (wall_python / 'nix-support/http-framing.json').is_file(), 'WALL_PYTHON_BINDING'
+classifier = Path(wiring['classifier'])
+for _ in range(4):
+    package = classifier.parent.parent
+    if (package / 'nix-support/http-framing.json').is_file():
+        break
+    assert classifier.read_bytes().startswith(b'#!'), 'CLASSIFIER_RUNTIME_BINDING'
+    forwards = [shlex.split(line.rstrip('\\').strip()) for line in classifier.read_text().splitlines() if line.strip().startswith('exec ')]
+    assert len(forwards) == 1 and len(forwards[0]) >= 2, 'CLASSIFIER_FORWARD'
+    classifier = Path(forwards[0][1])
+else:
+    raise AssertionError('CLASSIFIER_RUNTIME_BINDING')
+assert (classifier.parent.parent / 'nix-support/http-framing.json').is_file(), 'CLASSIFIER_RUNTIME_BINDING'
+print('Actual Python app assets, launchers, CLI, service/home/CPU wiring and disabled-caller seeds pass')
 PY
   touch "$out"
 '';
