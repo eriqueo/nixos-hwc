@@ -47,7 +47,11 @@ let
     version = busyboxInputs.version;
     src = pkgs.fetchurl { inherit (busyboxInputs.source) url hash; };
     patches = map (p: pkgs.fetchurl { inherit (p) url hash; }) busyboxInputs.patches
-      ++ [ (pkgs.path + "/pkgs/os-specific/linux/busybox/CVE-2025-60876.patch") ];
+      ++ [
+        (pkgs.path + "/pkgs/os-specific/linux/busybox/CVE-2025-60876.patch")
+        # Required by Nix's fortify headers; build helper only, no applet change.
+        (pkgs.path + "/pkgs/os-specific/linux/busybox/build-system-buffer-overflow.patch")
+      ];
     nativeBuildInputs = [ pkgs.perl pkgs.patchelf ];
     hardeningDisable = [ "format" ];
     enableParallelBuilding = true;
