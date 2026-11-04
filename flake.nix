@@ -2311,6 +2311,25 @@
           touch "$out"
         '';
 
+      hyprland-lua-config = let
+        home = self.nixosConfigurations.hwc-laptop.config.home-manager.users.eric;
+        hypr = home.wayland.windowManager.hyprland;
+        candidate = pkgs.writeText "hyprland.lua" home.xdg.configFile."hypr/hyprland.lua".text;
+      in assert hypr.configType == "lua";
+      assert !(home.xdg.configFile ? "hypr/hyprland.conf");
+      pkgs.runCommand "hyprland-lua-config" { nativeBuildInputs = [ hypr.package ]; } ''
+        export HOME="$TMPDIR" XDG_RUNTIME_DIR="$TMPDIR"
+        mkdir -p "$TMPDIR/hypr"
+        Hyprland --verify-config -c ${candidate} > parser.log 2>&1
+        cat parser.log
+        printf 'exec-once = true\n' > legacy.conf
+        if Hyprland --verify-config -c "$PWD/legacy.conf" > legacy.log 2>&1; then
+          echo "Parser accepted the retired configuration format" >&2
+          exit 1
+        fi
+        touch "$out"
+      '';
+
       screenshot-renamer = let
         c = self.nixosConfigurations.hwc-home.config;
         worker = c.systemd.services.screenshot-renamer.serviceConfig;
@@ -2337,8 +2356,8 @@
         && lib.elem "${c.hwc.paths.state}/screenshot-renamer/ledger.sqlite*" c.services.borgbackup.jobs.hwc-backup.exclude
         && c.systemd.timers.screenshot-renamer-check.wantedBy == [ "timers.target" ]
         && c.systemd.services.screenshot-renamer-check.serviceConfig.BindReadOnlyPaths == []
-        && lib.any (b: lib.hasInfix "hwc-screenshot" b && lib.hasInfix "--private" b) binds
-        && lib.any (b: lib.hasInfix "hwc-screenshot" b && lib.hasInfix "--private" b)
+        && lib.any (b: lib.hasInfix "hwc-screenshot" (builtins.toJSON b) && lib.hasInfix "--private" (builtins.toJSON b)) binds
+        && lib.any (b: lib.hasInfix "hwc-screenshot" (builtins.toJSON b) && lib.hasInfix "--private" (builtins.toJSON b))
           self.homeConfigurations."eric@hwc-laptop".config.wayland.windowManager.hyprland.settings.bind)
         "screenshot wiring must apply with explicit operator review, monitoring and capture privacy";
       pkgs.runCommand "screenshot-renamer-contract" {
@@ -6207,7 +6226,8 @@
         && !(server.home-manager.users.eric.systemd.user.services ? podman-image-prune)
       ) "service split: rootless build-cache retention must be bounded and preserve referenced/named images";
       assert lib.assertMsg (laptopHome.hwc.home.core.shell.aliases.aerc == mailCommand
-        && lib.elem "SUPER,E,exec,kitty -e ${mailCommand}"
+        && lib.any (b: builtins.elemAt b._args 0 == "SUPER + E"
+          && lib.hasInfix "kitty -e ${mailCommand}" (builtins.toJSON b))
           laptopHome.wayland.windowManager.hyprland.settings.bind)
         "service split: laptop shell and desktop mail must reach the work mail owner";
       assert !peerHome.hwc.mail.enable && !peerHome.hwc.mail.aerc.enable && !peerHome.hwc.mail.afew.enable

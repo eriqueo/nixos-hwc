@@ -30,6 +30,80 @@ let
        then import ./parts/hardware.nix { inherit lib pkgs; }
        else {};
 
+  # Keep the existing declarative records as the single source for the legend
+  # and compositor. This boundary renders them through Home Manager's Lua API.
+  toLua = lib.generators.toLua {};
+  raw = expr: lib.generators.mkLuaInline expr;
+  split = lib.splitString ",";
+  rest = xs: lib.concatStringsSep "," (lib.tail xs);
+  call = name: value: "hl.dsp.${name}(${toLua value})";
+  dispatch = action:
+    let xs = split action; name = lib.head xs; arg = rest xs;
+    in if name == "exec" then call "exec_cmd" arg
+    else if name == "movefocus" then call "focus" { direction = arg; }
+    else if name == "workspace" then call "focus" { workspace = arg; }
+    else if name == "submap" then call "submap" arg
+    else if name == "layoutmsg" then call "layout" arg
+    else if name == "resizeactive" then
+      let xy = lib.splitString " " arg;
+      in call "window.resize" { x = lib.toInt (lib.head xy); y = lib.toInt (builtins.elemAt xy 1); relative = true; }
+    else if name == "movewindow" then "hl.dsp.window.drag()"
+    else if name == "resizewindow" then "hl.dsp.window.resize()"
+    else if name == "killactive" then "hl.dsp.window.close()"
+    else if lib.elem name [ "fullscreen" "pseudo" "pin" ] then "hl.dsp.window.${name}()"
+    else if name == "exit" then "hl.dsp.exit()"
+    else throw "Unmapped Hyprland dispatcher: ${name}";
+  binding = repeating: value:
+    let xs = split value; mods = lib.head xs; key = builtins.elemAt xs 1;
+    in { _args = [ ((lib.optionalString (mods != "") (lib.replaceStrings [ " " ] [ " + " ] mods + " + ")) + key)
+      (raw (dispatch (lib.concatStringsSep "," (lib.drop 2 xs)))) { inherit repeating; } ]; };
+  rule = value:
+    lib.foldl' (acc: field:
+      let pair = lib.splitString " " field; key = lib.head pair;
+          value = lib.concatStringsSep " " (lib.tail pair);
+          typed = if value == "on" then true else if value == "off" then false else value;
+      in if lib.hasPrefix "match:" key then acc // { match = (acc.match or {}) // { ${lib.removePrefix "match:" key} = value; }; }
+      else acc // { ${key} = typed; }) {} (lib.splitString ", " value);
+  legacySettings = lib.foldl' lib.recursiveUpdate {} [
+    { debug.enable_stdout_logs = false; }
+    (lib.filterAttrs (_: v: v != null) (builtins.intersectAttrs { monitor = null; workspace = null; input = null; device = null; } hw))
+    behavior.settings
+    { "exec-once" = session.execOnce or []; env = session.env or []; }
+    theme.settings
+  ];
+  luaSettings = {
+    config = (builtins.removeAttrs legacySettings [ "bind" "bindm" "windowrule" "layerrule" "monitor" "workspace" "device" "exec-once" "env" "animations" ]) // {
+      animations = builtins.removeAttrs legacySettings.animations [ "bezier" "animation" ];
+      input = legacySettings.input // { touchpad = (builtins.removeAttrs legacySettings.input.touchpad [ "tap-to-click" ]) // {
+        tap_to_click = legacySettings.input.touchpad."tap-to-click";
+      }; };
+      general = legacySettings.general // { "col.active_border" =
+        let parts = lib.splitString " " legacySettings.general."col.active_border";
+        in { colors = lib.take 2 parts; angle = lib.toInt (lib.removeSuffix "deg" (builtins.elemAt parts 2)); };
+      };
+    };
+    bind = map (binding false) ((legacySettings.bind or []) ++ (legacySettings.bindm or []));
+    window_rule = map rule (legacySettings.windowrule or []);
+    layer_rule = map rule (legacySettings.layerrule or []);
+    monitor = map (value: let xs = split value; in {
+      output = lib.head xs; mode = builtins.elemAt xs 1;
+      position = builtins.elemAt xs 2; scale = builtins.elemAt xs 3;
+    }) (legacySettings.monitor or []);
+    workspace_rule = map (value: let xs = split value; in {
+      workspace = lib.head xs; monitor = lib.removePrefix "monitor:" (builtins.elemAt xs 1);
+    }) (legacySettings.workspace or []);
+    device = legacySettings.device or [];
+    env = map (value: let xs = split value; in { _args = [ (lib.head xs) (rest xs) ]; }) (legacySettings.env or []);
+    curve = map (value: let xs = split value; num = n: builtins.fromJSON (builtins.elemAt xs n); in {
+      _args = [ (lib.head xs) { type = "bezier"; points = [ [ (num 1) (num 2) ] [ (num 3) (num 4) ] ]; } ];
+    }) legacySettings.animations.bezier;
+    animation = map (value: let xs = split value; in {
+      leaf = lib.head xs; enabled = builtins.elemAt xs 1 == "1";
+      speed = lib.toInt (builtins.elemAt xs 2); bezier = builtins.elemAt xs 3;
+    } // lib.optionalAttrs (lib.length xs > 4) { style = builtins.elemAt xs 4; }) legacySettings.animations.animation;
+    on = [{ _args = [ "hyprland.start" (raw ("function()\n" + lib.concatMapStrings (cmd: "hl.exec_cmd(${toLua cmd})\n") (legacySettings."exec-once" or []) + "end")) ]; }];
+  };
+
   wallpaperPath = ../../theme/nord-mountains.jpg;
 
   basePkgs = with pkgs; [
@@ -160,30 +234,13 @@ in
       enable  = true;
       package = pkgs.hyprland;
 
-      # Submaps (e.g. `resize`) are declared alongside the global binds in
-      # parts/behavior.nix. HM emits the `submap = <name>` / `submap = reset`
-      # framing itself, so ordering is not our problem.
-      submaps = behavior.submaps;
-
-      settings = lib.mkMerge [
-        {
-          debug = {
-            enable_stdout_logs = false;
-          };
-        }
-
-        (lib.optionalAttrs (hw ? monitor   && hw.monitor   != null) { monitor   = hw.monitor;   })
-        (lib.optionalAttrs (hw ? workspace && hw.workspace != null) { workspace = hw.workspace; })
-        (lib.optionalAttrs (hw ? input     && hw.input     != null) { input     = hw.input;     })
-        (lib.optionalAttrs (hw ? device    && hw.device    != null) { device    = hw.device;    })
-
-        behavior.settings
-
-        (lib.optionalAttrs (session ? execOnce && session.execOnce != null) { "exec-once" = session.execOnce; })
-        (lib.optionalAttrs (session ? env      && session.env      != null) { env         = session.env;      })
-
-        theme.settings
-      ];
+      configType = "lua";
+      importantPrefixes = [ "config" "curve" ];
+      submaps = lib.mapAttrs (_: submap: {
+        settings.bind = map (binding false) (submap.settings.bind or [])
+          ++ map (binding true) (submap.settings.binde or []);
+      }) behavior.submaps;
+      settings = luaSettings;
     };
 
     # Wallpaper — swaybg is simpler and avoids hyprpaper IPC version mismatches

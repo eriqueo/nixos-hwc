@@ -8,6 +8,7 @@ Configures the Hyprland Wayland window manager as the desktop session: full `way
 - ❌ Does not manage: waybar/swaync/kitty/yazi config (their own app modules), the greeter/login path (`domains/system`), the palette itself (`domains/home/theme`), or GPU launch scripts (`gpu-launch` comes from elsewhere).
 
 ## Structure
+The Hyprland module renders the existing settings and keybinding records through Home Manager's Lua API. `hyprland-lua-config` checks the actual generated configuration with the selected compositor and rejects the retired format.
 
 The screenshot wrapper pins its capture, clipboard and notification tools; it waits for background image output before publication.
 
@@ -31,6 +32,7 @@ Every binding is declared **once** in `parts/behavior.nix`, as a record carrying
 It is deliberately *not* read from `hyprctl binds -j`: that API emits malformed JSON in Hyprland 0.56.0 (keys and values misaligned — `"keycode": RETURN`, `"allow_input_capture": ,`), and carries no descriptions, so the best it could ever print is `exec hyprland-monitor-toggle`.
 
 ## Changelog
+- 2026-11-04: Generate Lua for Hyprland 0.57 while preserving settings, keybindings, resize exits, rules and startup hooks; validate the generated file with the actual parser.
 
 - 2026-11-03: Match the external monitor by description, not connector. It came up as DP-2, so the DP-1 rules dropped workspaces 11-18 and its position. Unlisted outputs now get `,preferred,auto,1`.
 

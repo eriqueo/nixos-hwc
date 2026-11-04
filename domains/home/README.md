@@ -17,6 +17,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
+The Hyprland module renders the existing settings and keybinding records through Home Manager's Lua API. `hyprland-lua-config` checks the actual generated configuration with the selected compositor and rejects the retired format.
 Aider has been removed from the app modules and shared fleet defaults.
 The Python compatibility overlay reaches normal and CUDA package sets; the
 `python-runtime-wiring` check evaluates the actual three host consumers.
@@ -159,6 +160,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-04: Generate Lua for Hyprland 0.57 while preserving settings, keybindings, resize exits, rules and startup hooks; validate the generated file with the actual parser.
 
 - 2026-11-03: Remove unused Aider and its fleet settings; stop pulling its full Python/GPU dependency set into the home profile.
 - 2026-11-02: Select upstream Streamlit1.66.1, whose declared Pillow13 support preserves Aider's browser mode. Earlier channel recipes rejected Pillow13 at the runtime dependency check.
