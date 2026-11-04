@@ -55,7 +55,7 @@ nix run nixpkgs#prefetch-npm-deps -- ./package-lock.json   # → npmDepsHash in 
 
 ## Changelog
 
-- 2026-11-04: Wire the firmware provider's resource limiter to Nix util-linux; the package install check scans a generated gzip fixture through REA and verifies its signature.
+- 2026-11-04: Wire the firmware provider's resource limiter to Nix util-linux and supply procps for child-process ownership; the package install check scans a generated gzip fixture through REA and verifies its signature.
 - 2026-10-16: Load the curated skill from the shared harness pin; preserve the REA package, MCP server and optional skill flag.
 - 2026-10-12: Android APK analysis wired. `parts/package.nix` fetches the
   jadx-headless-mcp 0.7.1 release jar by the URL and sha256 that rea-agents

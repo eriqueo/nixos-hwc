@@ -166,7 +166,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
-- 2026-11-04: apps/rea supplies the firmware provider's Nix resource limiter and checks a real Binwalk scan during package installation.
+- 2026-11-04: apps/rea supplies the firmware provider's Nix resource limiter and procps dependency, and checks a real Binwalk scan during package installation.
 - 2026-11-04: Fix built-in Waybar workspace switching under Lua and escape calendar markup.
 - 2026-11-04: Keep monitor-position arithmetic in the shell when rendering Lua IPC commands.
 - 2026-11-04: Migrate desktop helper and laptop streaming calls to Lua IPC, including startup on a fresh workspace.
