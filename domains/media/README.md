@@ -12,6 +12,9 @@ photo management, and video surveillance services.
 
 ## Structure
 
+The native YouTube transcript wrapper resolves yt-dlp through the checked HTTP
+runtime catalog while retaining its original application and native dependencies.
+
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 
 Immich uses the versioned shared database-role contract and restarts with its provisioner when credentials or provisioning code change.
@@ -97,6 +100,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-04: Select the checked native yt-dlp launcher for transcript subprocesses; retain their provider, output and credential settings.
 
 - 2026-11-04: Share SAB's existing Python framing replacements with the native
   runtime helper, retaining its exact generated context and container inputs.

@@ -380,17 +380,21 @@
 
     # Runtime selection stays outside Python's package fixed point. Preserve
     # native/CUDA build packages; only the three owned instances opt in below.
-    mkPythonRuntimeScope = original: original // {
-      python3 = original.mkPythonHttpRuntime original.python3;
-      pythonHttpApplications = lib.mapAttrs (_: source: original.mkPythonHttpApplication {
-        application = source.packages.${original.system}.default;
-        python = source.inputs.nixpkgs.legacyPackages.${original.system}.python3;
-      }) { inherit (inputs) workbench meals pnc-statement-pipeline; };
-      piper-tts = original.mkPythonHttpApplication {
-        application = original.piper-tts;
-        python = original.python3;
+    mkPythonRuntimeScope = original:
+      let
+        applications = (lib.mapAttrs (_: source: original.mkPythonHttpApplication {
+          application = source.packages.${original.system}.default;
+          python = source.inputs.nixpkgs.legacyPackages.${original.system}.python3;
+        }) { inherit (inputs) workbench meals pnc-statement-pipeline; })
+          // lib.genAttrs [ "piper-tts" "yt-dlp" ] (name: original.mkPythonHttpApplication {
+            application = original.${name};
+            python = original.python3;
+          });
+      in original // {
+        python3 = original.mkPythonHttpRuntime original.python3;
+        pythonHttpApplications = applications;
+        inherit (applications) piper-tts yt-dlp;
       };
-    };
 
     # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)
     pkgs = mkPkgs system nixpkgs [];

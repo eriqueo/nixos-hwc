@@ -59,9 +59,11 @@ python-runtime-wiring = let
     url = "http://${work.config.hwc.system.mcp.host}:${toString work.config.hwc.system.mcp.port}/health";
   };
   readinessFixture = httpReady { name = "fixture"; url = "http://127.0.0.1:FIXTURE_PORT/health"; attempts = 3; };
-  applications = lib.attrValues work.pkgs.pythonHttpApplications ++ [ work.pkgs.piper-tts ];
+  ytdlpCases = map (host: self.nixosConfigurations."hwc-${host}".pkgs.yt-dlp) hosts;
+  applications = lib.attrValues work.pkgs.pythonHttpApplications ++ lib.tail ytdlpCases;
   finance = work.pkgs.pythonHttpApplications.pnc-statement-pipeline;
   clientContract = pkgs.writeText "python-finance-http-contract.py" ''
+    from enum import StrEnum
     import json
     from pathlib import Path
     import queue
@@ -71,13 +73,33 @@ python-runtime-wiring = let
     import threading
 
     inner = Path(sys.argv[1])
+    class ClientKind(StrEnum):
+        FINANCE = "finance"
+        YTDLP = "ytdlp"
+    kind = ClientKind(sys.argv[3])
     assert sys.argv[2] in {"baseline", "fixed"}, "HTTP_CONTRACT_MODE"
     baseline = sys.argv[2] == "baseline"
     # Reuse the shipped entry's dependency prelude without calling its CLI.
     # The actual app imports its HTTP client before any test observer does.
     runpy.run_path(str(inner), run_name="runtime_client_probe")
     import http.client
-    from pnc_statement_pipeline.http import JsonApi
+    if kind is ClientKind.FINANCE:
+        from pnc_statement_pipeline.http import JsonApi
+        def read(address):
+            return JsonApi(address, "fixture-only", auth_scheme="Bearer").get("/fixture")
+        framing_errors = (http.client.HTTPException,)
+    elif kind is ClientKind.YTDLP:
+        import logging
+        from yt_dlp.networking import Request
+        from yt_dlp.networking._urllib import UrllibRH
+        from yt_dlp.networking.exceptions import IncompleteRead
+        def read(address):
+            with UrllibRH(logger=logging.getLogger("fixture"), timeout=3, proxies={}) as client:
+                with client.send(Request(address + "/fixture")) as response:
+                    return json.loads(response.read())
+        framing_errors = (http.client.HTTPException, IncompleteRead)
+    else:
+        raise AssertionError("CLIENT_KIND")
 
     value = {"ok": True}
     payload = json.dumps(value, separators=(",", ":")).encode()
@@ -114,8 +136,8 @@ python-runtime-wiring = let
         worker.start()
         try:
             try:
-                result = JsonApi(address, "fixture-only", auth_scheme="Bearer").get("/fixture") == value
-            except http.client.HTTPException:
+                result = read(address) == value
+            except framing_errors:
                 result = False
         finally:
             listener.close()
@@ -125,10 +147,10 @@ python-runtime-wiring = let
             raise errors.get_nowait()
         return result
 
-    assert accepted("normal") and accepted("ows"), "ACTUAL_FINANCE_HTTP_COMPATIBILITY"
+    assert accepted("normal") and accepted("ows"), "ACTUAL_CLIENT_HTTP_COMPATIBILITY"
     malformed = accepted("bad-chunk")
-    assert malformed == baseline, "ACTUAL_FINANCE_HTTP_FRAMING"
-    print(json.dumps({"passed": True, "actualJsonApi": True, "baseline": baseline, "malformedChunkAccepted": malformed, "httpClient": http.client.__file__, "onlyOwnedLoopbackPeers": True}))
+    assert malformed == baseline, "ACTUAL_CLIENT_HTTP_FRAMING"
+    print(json.dumps({"passed": True, "actualClient": kind, "baseline": baseline, "malformedChunkAccepted": malformed, "httpClient": http.client.__file__, "onlyOwnedLoopbackPeers": True}))
   '';
   originContract = pkgs.writeText "python-app-origin-contract.py" ''
     from pathlib import Path
@@ -145,6 +167,9 @@ python-runtime-wiring = let
   '';
   homeValid = home: !(home.programs.workbench.enable || home.programs.workbench.mailHelper.enable)
     || (home.programs.workbench.package.pythonHttpRuntime.httpFramingPatched or false);
+  ytdlpHomeValid = home: !home.hwc.home.core.shell.enable || lib.all (package:
+    lib.getName package != "yt-dlp" || (package.pythonHttpRuntime.httpFramingPatched or false)
+  ) home.hwc.home.core.shell.packages;
   disabledWorkbench = (work.extendModules { modules = [{
     systemd.services.workbench-web.serviceConfig.ExecStart = lib.mkForce
       "${inputs.workbench.packages.${system}.default}/bin/workbench serve";
@@ -188,6 +213,13 @@ assert lib.assertMsg (lib.all (host:
   homeValid self.nixosConfigurations."hwc-${host}".config.home-manager.users.eric
   && homeValid self.homeConfigurations."eric@hwc-${host}".config
 ) hosts) "Workbench TUI and mail-helper must use the qualified runtime in both home lanes";
+assert lib.assertMsg (lib.all (app: app.pythonHttpRuntime.httpFramingPatched or false) ytdlpCases
+  && lib.all (host:
+    ytdlpHomeValid self.nixosConfigurations."hwc-${host}".config.home-manager.users.eric
+    && ytdlpHomeValid self.homeConfigurations."eric@hwc-${host}".config
+  ) hosts
+  && lib.all (host: !(self.nixosConfigurations.${host}.pkgs.yt-dlp.pythonHttpRuntime.httpFramingPatched or false))
+    [ "hwc-xps" "hwc-kids" "hwc-firestick" ]) "YTDLP_NATIVE_RUNTIME_SELECTION";
 assert lib.assertMsg (lib.all (field:
   lib.elem "postgresql-application-roles.service" work.config.systemd.services.hwc-crm.${field}
 ) [ "after" "requires" ]) "CRM_ROLE_RECONCILIATION_ORDER";
@@ -261,8 +293,12 @@ PY
     ${case.environment.interpreter} -B ${case.runtime.runtimeContract} ${case.environment}
     ${case.environment.interpreter} -B -c 'import httpx; assert httpx.__version__'
   '') cases}
-  ${finance.sourcePython.interpreter} -B ${clientContract} ${finance.sourceApplication}/bin/.pnc-statements-wrapped baseline
-  ${finance.pythonHttpRuntime.interpreter} -B ${clientContract} ${finance}/bin/.pnc-statements-wrapped fixed
+  ${finance.sourcePython.interpreter} -B ${clientContract} ${finance.sourceApplication}/bin/.pnc-statements-wrapped baseline finance
+  ${finance.pythonHttpRuntime.interpreter} -B ${clientContract} ${finance}/bin/.pnc-statements-wrapped fixed finance
+  ${lib.concatMapStrings (app: ''
+    ${app.sourcePython.interpreter} -B ${clientContract} ${app.sourceApplication}/bin/.yt-dlp-wrapped baseline ytdlp
+    ${app.pythonHttpRuntime.interpreter} -B ${clientContract} ${app}/bin/.yt-dlp-wrapped fixed ytdlp
+  '') ytdlpCases}
   ${pkgs.python3}/bin/python3 -B - <<'PY'
 import json
 from pathlib import Path
@@ -349,7 +385,11 @@ wiring = json.loads(Path('${pkgs.writeText "python-runtime-consumers.json" (buil
   disabledWorkbench = disabledWorkbench.systemd.services.workbench-web.serviceConfig.ExecStart;
   disabledFirefly = disabledFirefly.systemd.services.firefly-explorer.serviceConfig.ExecStart;
   oldFinanceArgv = [ finance.sourcePython.interpreter "-B" (toString clientContract)
-    "${finance.sourceApplication}/bin/.pnc-statements-wrapped" "fixed" ];
+    "${finance.sourceApplication}/bin/.pnc-statements-wrapped" "fixed" "finance" ];
+  oldYtdlpArgv = map (app: [ app.sourcePython.interpreter "-B" (toString clientContract)
+    "${app.sourceApplication}/bin/.yt-dlp-wrapped" "fixed" "ytdlp" ]) ytdlpCases;
+  transcripts = toString self.nixosConfigurations.hwc-home.config.systemd.services.transcripts.serviceConfig.ExecStart;
+  transcriptsYtdlp = toString self.nixosConfigurations.hwc-home.pkgs.yt-dlp;
 })}').read_text())
 def selected(command, package, name):
     return shlex.split(command)[0] == str(Path(package) / 'bin' / name)
@@ -358,7 +398,11 @@ for key, name in [('workbench', 'workbench'), ('meals', 'hwc-meals'), ('firefly'
 assert not selected(wiring['disabledWorkbench'], wiring['workbenchPackage'], 'workbench'), 'WORKBENCH_WIRING_SEED'
 assert not selected(wiring['disabledFirefly'], wiring['fireflyPackage'], 'firefly-explorer'), 'FIREFLY_WIRING_SEED'
 old_finance = subprocess.run(wiring['oldFinanceArgv'], capture_output=True, text=True, timeout=30)
-assert old_finance.returncode != 0 and 'ACTUAL_FINANCE_HTTP_FRAMING' in old_finance.stderr, 'ACTUAL_FINANCE_OLD_SOURCE_RED'
+assert old_finance.returncode != 0 and 'ACTUAL_CLIENT_HTTP_FRAMING' in old_finance.stderr, 'ACTUAL_FINANCE_OLD_SOURCE_RED'
+for argv in wiring['oldYtdlpArgv']:
+    old_ytdlp = subprocess.run(argv, capture_output=True, text=True, timeout=30)
+    assert old_ytdlp.returncode != 0 and 'ACTUAL_CLIENT_HTTP_FRAMING' in old_ytdlp.stderr, 'ACTUAL_YTDLP_OLD_SOURCE_RED'
+assert 'export PATH="' + wiring['transcriptsYtdlp'] + '/bin:' in Path(wiring['transcripts']).read_text(), 'TRANSCRIPTS_YTDLP_RUNTIME_BINDING'
 wall = json.loads(Path(wiring['wallConfig']).read_text())
 if wall['voice'] is not None:
     assert wall['voice']['piper'] == str(Path(wiring['piperPackage']) / 'bin/piper'), 'PIPER_CONSUMER_BINDING'
