@@ -32,6 +32,9 @@ gather-today.mjs       # Step 2c: expanded hwc_today board + case-ledger delta �
                        #   sections.today (bounded view, explorable depth, changes)
 gather-refinery.mjs    # Step 1c: refinery item store (local .md read) →
                        #   sections.refinery (action/active/hopper stages)
+gather-projects.mjs    # Step 1c: tracker hub portfolio (loopback :8765/api/portfolio) →
+                       #   sections.projects (overdue, waits on Eric 7d+, expiring
+                       #   cards, live-product cap); one hwc-notify `projects` digest
 gather-research.mjs    # Step 1c: research-scout review lane over loopback REST
                        #   (:8422/api/<tool>) → sections.research (articles
                        #   awaiting review + the standing themes report)

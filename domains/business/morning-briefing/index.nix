@@ -37,6 +37,14 @@ in
       default = "http://127.0.0.1:9090";
       description = "Prometheus the briefing queries for down targets and the disk forecast.";
     };
+    trackerUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "http://127.0.0.1:8765";
+      description = ''
+        The project tracker hub (hwc.home.apps.agent-harness.tracker, a user
+        unit on this host) read by gather-projects.mjs for the Projects section.
+      '';
+    };
     onCalendar = lib.mkOption {
       type = with lib.types; either str (listOf str);
       default = "*-*-* 06:00:00";
@@ -65,6 +73,10 @@ in
         # uses); the grant key is the agenix secret, readable via `secrets`.
         HWC_JT_ORG_ID = (import ../leads/parts/jt-mappings.nix).organizationId;
         HWC_JT_GRANT_KEY_FILE = config.age.secrets.jobtread-grant-key.path;
+        # Projects section (gather-projects.mjs): the tracker hub runs as a user
+        # unit on this host; its digest goes out through the notify dispatcher.
+        TRACKER_URL = cfg.trackerUrl;
+        HWC_NOTIFY_URL = "http://127.0.0.1:${toString config.hwc.notifications.notify.port}";
       } // lib.optionalAttrs (cfg.hostHealthFrom != null) {
         BRIEFING_HOST = config.hwc.networking.hosts.servers.${cfg.hostHealthFrom};
       };

@@ -112,6 +112,8 @@ business/
 
 ## Changelog
 
+- 2026-11-04: Morning briefing gains a Projects section from the tracker hub's portfolio (`gather-projects.mjs`, `trackerUrl` option): overdue products, waits on Eric past 7 days, expiring cards and the live-product cap, as watchlist alerts, a dashboard tile and one `projects` notification when anything is actionable.
+
 - 2026-11-04: Extend website HSTS to one year after customer-flow tests; preserve subdomain scope.
 
 - 2026-11-04: Protect report URLs from caching/referrers and patch calculator build dependencies.

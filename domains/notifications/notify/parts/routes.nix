@@ -29,6 +29,9 @@ let
     { topic = "media";                channels = [ "discord-media" ]; }
     { topic = "monitoring";           channels = [ "discord-ops" ]; }
     { topic = "nightly-builds";       channels = [ "discord-nightly-builds" ]; }
+    # Project tracker digest (morning-briefing run.sh): overdue products, waits
+    # on Eric, expiring cards. Ops channel until a projects channel exists.
+    { topic = "projects";             channels = [ "discord-ops" ]; }
     # Keep email as the complete long-form copy; Discord truncates embeds at
     # 4096 characters. The dedicated channel adds a scan-friendly scout view.
     { topic = "research-scout";       channels = [ "discord-research-scout" "smtp-office" ]; }

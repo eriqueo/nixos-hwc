@@ -119,3 +119,29 @@ test("refinery batches file reads and keeps file order with unreadable items", a
   assert.equal(out.counts.total, 19);
   assert.deepEqual(out.stages.hopper.slice(0, 3).map((c) => c.id), ["0", "2", "3"]);
 });
+
+test("projects reduces the hub portfolio to overdue, waits and the cap, and survives a failed page", async () => {
+  const today = "2026-11-04";
+  const folio = { today, liveCap: 8, counts: { live: 3, products: 9, parked: 1, stale: 0 },
+    groups: [{ label: "DataX", count: 3, needYou: 2, stale: 0, avgComplete: 0.5 }],
+    projects: {
+      a: { id: "a", title: "A", status: "active", kind: "product", overdue: true, overdueDays: 4, reviewBy: "2026-10-31", open: 0, replans: 3, progress: { terminalReached: false }, waits: [] },
+      b: { id: "b", title: "B", status: "active", kind: "product", overdue: false, open: 1, replans: 0, progress: { terminalReached: false },
+           waits: [{ on: "eric", days: 12, expired: true, ask: "Measure" }, { on: "external", days: 30, ask: "vendor" }, { on: "eric", days: 2, ask: "fresh" }] },
+      c: { id: "c", title: "C", status: "complete", kind: "task", overdue: true, overdueDays: 9, open: 0, waits: [] } } };
+  const page = { cards: [{ id: "C1", title: "Old", status: "open", expires: "2026-11-05" }, { id: "C2", status: "open", expires: "2026-12-01" }] };
+  const run = await load("gather-projects.mjs", { fetch: async (url) => response(url.endsWith("/api/portfolio") ? folio : page) });
+  const out = await run();
+  assert.equal(out.available, true);
+  assert.deepEqual(out.overdue.map((o) => [o.id, o.days]), [["a", 4]]);
+  assert.deepEqual(out.waits.map((w) => [w.id, w.days, w.expired]), [["b", 12, true]]);
+  assert.deepEqual(out.expiring.map((c) => [c.card, c.daysLeft]), [["C1", 1]]);
+  assert.deepEqual(out.churn.map((c) => c.id), ["a"]);
+  assert.deepEqual(out.cap, { products: 9, limit: 8, over: true });
+  assert.equal(out.actionable, true);
+  // A project page that fails must not drop the section: expiring stays bounded to the pages read.
+  const partial = await load("gather-projects.mjs", { fetch: async (url) => { if (url.endsWith("/api/portfolio")) return response(folio); throw new Error("page down"); } });
+  const degraded = await partial();
+  assert.deepEqual(degraded.expiring, []);
+  assert.deepEqual(degraded.overdue.map((o) => o.id), ["a"]);
+});
