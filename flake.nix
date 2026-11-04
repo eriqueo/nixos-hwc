@@ -250,24 +250,23 @@
       system       = prev.stdenv.hostPlatform.system;
     };
 
-    # Add the overlay here - this is the safest approach
-    mkPkgs = system: nixpkgsInput: extraOverlays:
+    # One import policy; callers keep their channel and ordered overlay suffix.
+    mkPackageSet = { system, nixpkgsInput, overlays, cudaSupport ? false }:
       import nixpkgsInput {
         inherit system;
         config = {
           allowUnfree = true;
-          # Accept NVIDIA license for legacy driver support
           nvidia.acceptLicense = true;
-          # Allow insecure qtwebengine for jellyfin-media-player
-          permittedInsecurePackages = [
-            "qtwebengine-5.15.19"
-          ];
-        };
+          permittedInsecurePackages = [ "qtwebengine-5.15.19" ];
+        } // lib.optionalAttrs cudaSupport { cudaSupport = true; };
+        overlays = [ silenceDeprecatedAliases gitCleanupOverlay nodejsSecurityOverlay
+          pythonCompatibilityOverlay ] ++ overlays;
+      };
+
+    mkPkgs = system: nixpkgsInput: extraOverlays:
+      mkPackageSet {
+        inherit system nixpkgsInput;
         overlays = [
-          silenceDeprecatedAliases
-          gitCleanupOverlay
-          nodejsSecurityOverlay  # TEMP: Node Oct-2026 security release + brotli CVE fix
-          pythonCompatibilityOverlay
           # Expose the cowork-capable Claude Desktop package (package-only flake,
           # no overlay of its own) under pkgs for the home app module.
           (final: prev: {
@@ -368,20 +367,12 @@
         };
       };
 
-    # Pkgs helper with optional overlays (server uses this)
-    # CUDA enabled - using cache.nixos-cuda.org for pre-built binaries
+    # CUDA remains explicit; its Claude overlay precedes caller overlays.
     mkPkgsWithOverlays = system: nixpkgsInput: extraOverlays:
-      import nixpkgsInput {
-        inherit system;
-        overlays = [ silenceDeprecatedAliases gitCleanupOverlay nodejsSecurityOverlay pythonCompatibilityOverlay claudeCodeOverlay ] ++ extraOverlays;
-        config = {
-          allowUnfree = true;
-          nvidia.acceptLicense = true;
-          cudaSupport = true;  # Binary cache should provide pre-built CUDA packages
-          permittedInsecurePackages = [
-            "qtwebengine-5.15.19"
-          ];
-        };
+      mkPackageSet {
+        inherit system nixpkgsInput;
+        cudaSupport = true;
+        overlays = [ claudeCodeOverlay ] ++ extraOverlays;
       };
 
     # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)
