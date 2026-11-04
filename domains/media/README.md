@@ -93,6 +93,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-04: The musl coreutils build runs all six upstream uniq/unexpand suites for the two shipped commands. The initial full suite retained 541 passes, 190 skips and two unrelated dd/split memory-limit harness failures; actual target UTF-8 and security cases remain required.
+
 - 2026-11-04: BusyBox's linker receives static archive names through its library-name interface, retaining only the target musl runtime dependency.
 
 - 2026-11-04: BusyBox reuses the pinned build-helper bounds fix after fortify trapped split-include's one-byte overflow; runtime hardening stays enabled.

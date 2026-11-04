@@ -83,12 +83,18 @@ let
   };
   # The pinned coreutils package carries both upstream 9.11 security backports.
   # Copy only the affected commands. Remove when the vendor includes the fixes.
-  coreutilsNative = pkgs.pkgsMusl.coreutils.override {
+  coreutilsNative = (pkgs.pkgsMusl.coreutils.override {
     singleBinary = false;
     gmpSupport = false;
     aclSupport = false;
     attrSupport = false;
-  };
+  }).overrideAttrs (old: {
+    # Only these two commands ship. Run all six upstream suites for them;
+    # unrelated dd/split VM-limit tests fail in the mixed libc build harness.
+    checkFlags = (old.checkFlags or []) ++ [
+      "TESTS=tests/uniq/uniq.pl tests/uniq/uniq-perf.sh tests/uniq/uniq-collate.sh tests/unexpand/unexpand.pl tests/unexpand/bounded-memory.sh tests/unexpand/mb.sh"
+    ];
+  });
   utilityPayload = pkgs.runCommand "sonarr-utility-payload" { nativeBuildInputs = [ pkgs.patchelf ]; } ''
     mkdir -p "$out"
     cp ${busyboxNative}/bin/busybox "$out/"
