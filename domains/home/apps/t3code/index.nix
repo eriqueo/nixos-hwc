@@ -474,6 +474,17 @@ in
         '';
       };
 
+      managedChildShutdown = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Require the source launcher to forward SIGINT/SIGTERM to its captured
+          Electron child. Omit legacy command-line cleanup hooks and give the
+          app 30 seconds to stop its backend. Enable only after qualifying that
+          source and its desktop/backend shutdown on this machine.
+        '';
+      };
+
       desktopEntry.enable = lib.mkOption {
         type = lib.types.bool;
         default = true;
@@ -596,24 +607,24 @@ in
         # "Primary environment request failed during fetch-session-state
         # (HTTP 500)".
         #
-        # So the unit sweeps by command line instead of by cgroup. The pattern
-        # names this repo's own bin.mjs, so a second checkout is untouched.
-        # `-` prefixes are required: pkill exits 1 when nothing matches, which
-        # is the normal case and must not fail the unit.
-        #
-        # THIS SWEEP IS ELECTRON-SPECIFIC. The headless unit below does not
-        # carry it: `t3 serve` is the process systemd starts, so it stays in the
-        # unit's own cgroup and ordinary KillMode reaches it.
-        ExecStartPre = "-${pkgs.procps}/bin/pkill -f ${lib.escapeShellArg "${cfg.repo}/apps/server/dist/bin.mjs"}";
+        # Temporary compatibility for unqualified desktop source: remove this
+        # branch when every configured desktop forwards launcher signals and
+        # passes actual desktop/backend shutdown qualification. Qualified source
+        # stops its captured child; command-line sweeps could hit active agents.
         ExecStart = lib.getExe launcher;
-        ExecStopPost = "-${pkgs.procps}/bin/pkill -f ${lib.escapeShellArg "${cfg.repo}/apps/server/dist/bin.mjs"}";
         # Electron's single-instance handoff exits successfully when the app is
         # already open. Keep the unit active so sd-switch does not start it on
         # every `hms` and fire the backend cleanup hooks around that no-op.
         RemainAfterExit = true;
         Restart = "on-failure";
         RestartSec = 5;
-      };
+      } // (if cfg.desktop.managedChildShutdown then {
+        KillMode = "control-group";
+        TimeoutStopSec = 30;
+      } else {
+        ExecStartPre = "-${pkgs.procps}/bin/pkill -f ${lib.escapeShellArg "${cfg.repo}/apps/server/dist/bin.mjs"}";
+        ExecStopPost = "-${pkgs.procps}/bin/pkill -f ${lib.escapeShellArg "${cfg.repo}/apps/server/dist/bin.mjs"}";
+      });
       Install.WantedBy = [ "graphical-session.target" ];
     };
 

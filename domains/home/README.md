@@ -51,7 +51,7 @@ The laptop and servers expose the explicit native Node runtime in both Home Mana
 
 The pinned handoff poll carries versioned handoff messages only. Old Close records retain history, late acknowledgements and safety holds, but grant no dispatch. Relays refuse unsupported messages before calling T3; canonical Review and Close use their reserved protocol.
 
-`apps/t3code/` shares a keep-old policy across desktop and headless units. Implicit home switches preserve running agents; launcher, environment and policy changes require a controlled explicit restart and runtime verification.
+`apps/t3code/` shares a keep-old policy across desktop and headless units. Qualified laptop source forwards shutdown to its captured Electron child with a 30-second deadline; its unit omits broad process sweeps. Implicit home switches preserve running agents; launcher, environment and policy changes require a controlled explicit restart and runtime verification.
 
 `apps/agent-harness/` supplies readable refusal guidance for unsupported Close previews, with its compatibility and cleanup limits documented there. The same owner documents the typed finding contract for Close assessments.
 
@@ -167,6 +167,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-11-04: T3 laptop opts into qualified captured-child shutdown without process sweeps. Check its rendered unit, preserved keep-old policy and negative cleanup/deadline controls.
 - 2026-11-04: apps/rea supplies the firmware provider's Nix resource limiter and procps dependency, and checks a real Binwalk scan during package installation.
 - 2026-11-04: Fix built-in Waybar workspace switching under Lua and escape calendar markup.
 - 2026-11-04: Consolidate Claude installation in its app module; keep native laptop updates and Nix-managed CLI availability on other hosts.
