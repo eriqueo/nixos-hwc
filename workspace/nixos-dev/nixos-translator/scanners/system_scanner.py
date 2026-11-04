@@ -13,6 +13,19 @@ import re
 from pathlib import Path
 from typing import Dict, List, Set
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+__EXTRACT_USER_INFO_SEARCH_RE = _compiled_re.compile(r'users\.users\.(\w+)\s*=')
+__EXTRACT_USER_INFO_SEARCH_RE_2 = _compiled_re.compile(r'extraGroups\s*=\s*\[(.*?)\]', _compiled_re.DOTALL)
+__EXTRACT_USER_INFO_SEARCH_RE_3 = _compiled_re.compile(r'shell\s*=.*?/(\w+)')
+__EXTRACT_FIREWALL_RULES_FINDALL_RE = _compiled_re.compile(r'allowedTCPPorts\s*=.*?\[(.*?)\]', _compiled_re.DOTALL)
+__EXTRACT_FIREWALL_RULES_FINDALL_RE_2 = _compiled_re.compile(r'allowedUDPPorts\s*=.*?\[(.*?)\]', _compiled_re.DOTALL)
+__EXTRACT_MACHINE_CONFIG_FINDALL_RE = _compiled_re.compile(r'hwc\.paths\.(\w+)\s*=\s*"([^"]+)"')
+__EXTRACT_USER_INFO_FINDALL_RE = _compiled_re.compile(r'"(\w+)"')
+__EXTRACT_FIREWALL_RULES_FINDALL_RE_3 = _compiled_re.compile(r'(\d+)')
+
+
 
 class SystemScanner:
     def __init__(self, source_path: Path, verbose: bool = False):
@@ -93,7 +106,7 @@ class SystemScanner:
                 content = f.read()
 
             # Extract username
-            user_match = re.search(r'users\.users\.(\w+)\s*=', content)
+            user_match = __EXTRACT_USER_INFO_SEARCH_RE.search(content)
             if not user_match:
                 return
 
@@ -107,14 +120,14 @@ class SystemScanner:
             }
 
             # Extract groups
-            groups_match = re.search(r'extraGroups\s*=\s*\[(.*?)\]', content, re.DOTALL)
+            groups_match = __EXTRACT_USER_INFO_SEARCH_RE_2.search(content)
             if groups_match:
                 groups_text = groups_match.group(1)
-                groups = re.findall(r'"(\w+)"', groups_text)
+                groups = __EXTRACT_USER_INFO_FINDALL_RE.findall(groups_text)
                 user_info['groups'] = groups
 
             # Extract shell
-            shell_match = re.search(r'shell\s*=.*?/(\w+)', content)
+            shell_match = __EXTRACT_USER_INFO_SEARCH_RE_3.search(content)
             if shell_match:
                 user_info['shell'] = f"/bin/{shell_match.group(1)}"
 
@@ -151,15 +164,15 @@ class SystemScanner:
                 content = f.read()
 
             # Extract TCP ports
-            tcp_match = re.findall(r'allowedTCPPorts\s*=.*?\[(.*?)\]', content, re.DOTALL)
+            tcp_match = __EXTRACT_FIREWALL_RULES_FINDALL_RE.findall(content)
             for match in tcp_match:
-                ports = re.findall(r'(\d+)', match)
+                ports = __EXTRACT_FIREWALL_RULES_FINDALL_RE_3.findall(match)
                 self.firewall['tcp_ports'].update(map(int, ports))
 
             # Extract UDP ports
-            udp_match = re.findall(r'allowedUDPPorts\s*=.*?\[(.*?)\]', content, re.DOTALL)
+            udp_match = __EXTRACT_FIREWALL_RULES_FINDALL_RE_2.findall(content)
             for match in udp_match:
-                ports = re.findall(r'(\d+)', match)
+                ports = __EXTRACT_FIREWALL_RULES_FINDALL_RE_3.findall(match)
                 self.firewall['udp_ports'].update(map(int, ports))
 
         except Exception as e:
@@ -193,7 +206,7 @@ class SystemScanner:
                 content = f.read()
 
             # Extract paths from machine config
-            path_assignments = re.findall(r'hwc\.paths\.(\w+)\s*=\s*"([^"]+)"', content)
+            path_assignments = __EXTRACT_MACHINE_CONFIG_FINDALL_RE.findall(content)
             for path_name, path_value in path_assignments:
                 self.filesystems['paths'][path_name] = path_value
 

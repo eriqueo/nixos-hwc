@@ -11,6 +11,10 @@
 
 import { z } from "zod";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const safeReviewIdPatternRegex = /[^A-Za-z0-9._-]+/g;
+const safeReviewIdPatternRegex2 = /^-+|-+$/g;
+
 export const DiffstatSchema = z.object({
   files: z.number().int().nonnegative(),
   insertions: z.number().int().nonnegative(),
@@ -89,5 +93,5 @@ export type ReviewCase = z.infer<typeof ReviewCaseSchema>;
  * ReviewsStore to map an id → "<safeReviewId(id)>.json".
  */
 export function safeReviewId(id: string): string {
-  return id.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "review";
+  return id.replace((safeReviewIdPatternRegex.lastIndex = 0, safeReviewIdPatternRegex), "-").replace((safeReviewIdPatternRegex2.lastIndex = 0, safeReviewIdPatternRegex2), "") || "review";
 }

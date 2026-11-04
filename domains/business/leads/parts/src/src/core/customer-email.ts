@@ -12,6 +12,9 @@
 
 import type { Lead } from "./types.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const renderCalculatorBodyPatternRegex = /_/g;
+
 export interface RenderedEmail {
   readonly to: string;
   readonly subject: string;
@@ -52,11 +55,11 @@ function renderCalculatorBody(lead: Lead): string {
   const ps = calc.projectState;
   const stateEntries = Object.entries(ps)
     .filter(([k]) => k !== "features")
-    .map(([k, v]) => `  ${k.replace(/_/g, " ")}: ${String(v).replace(/_/g, " ")}`)
+    .map(([k, v]) => `  ${k.replace((renderCalculatorBodyPatternRegex.lastIndex = 0, renderCalculatorBodyPatternRegex), " ")}: ${String(v).replace((renderCalculatorBodyPatternRegex.lastIndex = 0, renderCalculatorBodyPatternRegex), " ")}`)
     .join("\n");
   const features = Array.isArray(ps["features"])
     ? (ps["features"] as unknown[]).filter((v): v is string => typeof v === "string")
-        .join(", ").replace(/_/g, " ")
+        .join(", ").replace((renderCalculatorBodyPatternRegex.lastIndex = 0, renderCalculatorBodyPatternRegex), " ")
     : "";
 
   const reportLine = calc.reportId

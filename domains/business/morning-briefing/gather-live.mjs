@@ -13,6 +13,13 @@
 // dashboard alert by run.sh) instead of killing the run. Exit code is 0 unless
 // even the gateway handshake failed.
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const gatherJobsTestRegex = /test/i;
+const gatherJobsTestRegex2 = /^TT-/;
+const lostTestRegex = /closed\s*lost/i;
+const gatherJobsTestRegex3 = /1\.\s*Contacted/i;
+const gatherJobsTestRegex4 = /new\s*lead/i;
+
 const GATEWAY = process.env.HWC_GATEWAY_URL || "http://127.0.0.1:6200/mcp";
 const FETCH_TIMEOUT_MS = 30_000;
 const JT_JOB_URL = (id) => `https://app.jobtread.com/jobs/${id}`;
@@ -168,16 +175,16 @@ async function gatherJobs(out) {
     url: JT_JOB_URL(j.id),
     // Test data marks itself in the job name, the account name ("Token Test
     // Client"), or a "TT-" job-name prefix.
-    is_test: /test/i.test(`${j.name || ""} ${j.location?.account?.name || ""}`) || /^TT-/.test(j.name || ""),
+    is_test: gatherJobsTestRegex.test(`${j.name || ""} ${j.location?.account?.name || ""}`) || gatherJobsTestRegex2.test(j.name || ""),
   }));
 
-  const lost = (j) => /closed\s*lost/i.test(j.status);
+  const lost = (j) => lostTestRegex.test(j.status);
   const active = mapped.filter((j) => !j.is_test && !lost(j))
     .sort((a, b) => (a.phase || "9").localeCompare(b.phase || "9"));
   out.sections.jobs = { ok: true, active };
 
   const leads = mapped
-    .filter((j) => !j.is_test && /1\.\s*Contacted/i.test(j.phase) && /new\s*lead/i.test(j.status))
+    .filter((j) => !j.is_test && gatherJobsTestRegex3.test(j.phase) && gatherJobsTestRegex4.test(j.status))
     .map((j) => ({
       name: j.account || j.name,
       job_name: j.name,

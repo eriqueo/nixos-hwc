@@ -10,13 +10,17 @@
 
 import type { Report } from "../core/report.js";
 
+export type ReportView = Pick<Report, "id" | "templateId" | "createdAt"> &
+  ({ readonly revokedAt: string; readonly payload?: never } |
+   { readonly revokedAt?: undefined; readonly payload: Report["payload"] });
+
 export interface ReportStore {
   /**
    * Look up a live report by its public id. Returns undefined when
    * the report doesn't exist; callers that need to distinguish
    * not-found from revoked should check Report.revokedAt themselves.
    */
-  byId(reportId: string): Promise<Report | undefined>;
+  byId(reportId: string): Promise<ReportView | undefined>;
 
   /**
    * Append now() to viewed_at. Idempotent in the loose sense — every

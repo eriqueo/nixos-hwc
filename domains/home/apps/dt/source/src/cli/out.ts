@@ -3,7 +3,7 @@ import { elapsedMinutes, formatDuration } from '../lib/time.js';
 
 export function cmdOut(opts: { notes?: string; category?: string }): void {
   try {
-    const active = getActiveSession();
+    const active = getActiveSession(['id']);
     if (!active) {
       console.error('Not clocked in');
       process.exit(1);

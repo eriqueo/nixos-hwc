@@ -8,6 +8,16 @@ import { join, relative } from "node:path";
 import type { ToolDef, ToolResult } from "../types.js";
 import { catchError } from "../errors.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const parseSecretDeclarationsFlatRegexRegex = /age\.secrets\.([\w-]+)\s*=\s*\{/g;
+const parseSecretDeclarationsPatternRegex = /age\.secrets\s*=\s*\{/;
+const parseSecretDeclarationsEntryRegexRegex = /([\w-]+)\s*=\s*\{/g;
+const parseSecretBlockPatternRegex = /mode\s*=\s*"([^"]+)"/;
+const parseSecretBlockPatternRegex2 = /owner\s*=\s*"([^"]+)"/;
+const parseSecretBlockPatternRegex3 = /group\s*=\s*"([^"]+)"/;
+const parseSecretBlockPatternRegex4 = /file\s*=\s*(?:\.\.\/|\.\/)parts\/([^;]+\.age)/;
+const walkForSecretRefsRefRegexRegex = /(?:config\.)?age\.secrets\.([\w-]+)(?:\.path)?/g;
+
 interface SecretDeclaration {
   name: string;
   category: string;
@@ -140,11 +150,11 @@ async function parseSecretDeclarations(
   // 2. Nested: age.secrets = { name = { ... }; name2 = { ... }; };
 
   // Try flat format first
-  const flatRegex = /age\.secrets\.([\w-]+)\s*=\s*\{/g;
-  let match: RegExpExecArray | null;
+  const flatRegex = parseSecretDeclarationsFlatRegexRegex;
+
   let foundFlat = false;
 
-  while ((match = flatRegex.exec(content)) !== null) {
+  for (const match of content.matchAll(flatRegex)) {
     foundFlat = true;
     const name = match[1];
     const blockStart = match.index + match[0].length - 1;
@@ -154,14 +164,14 @@ async function parseSecretDeclarations(
 
   // If no flat matches, try nested format: age.secrets = { ... }
   if (!foundFlat) {
-    const nestedMatch = content.match(/age\.secrets\s*=\s*\{/);
+    const nestedMatch = content.match(parseSecretDeclarationsPatternRegex);
     if (nestedMatch && nestedMatch.index !== undefined) {
       const outerBlock = extractBlock(content, nestedMatch.index + nestedMatch[0].length - 1);
       // Parse individual secret entries within the block
-      const entryRegex = /([\w-]+)\s*=\s*\{/g;
-      let entryMatch: RegExpExecArray | null;
+      const entryRegex = parseSecretDeclarationsEntryRegexRegex;
 
-      while ((entryMatch = entryRegex.exec(outerBlock)) !== null) {
+
+      for (const entryMatch of outerBlock.matchAll(entryRegex)) {
         const name = entryMatch[1];
         // Skip Nix keywords that aren't secret names
         if (["file", "mode", "owner", "group", "path"].includes(name)) continue;
@@ -193,14 +203,14 @@ async function parseSecretBlock(
   category: string,
   partsDir: string
 ): Promise<SecretDeclaration> {
-  const modeMatch = block.match(/mode\s*=\s*"([^"]+)"/);
-  const ownerMatch = block.match(/owner\s*=\s*"([^"]+)"/);
-  const groupMatch = block.match(/group\s*=\s*"([^"]+)"/);
+  const modeMatch = block.match(parseSecretBlockPatternRegex);
+  const ownerMatch = block.match(parseSecretBlockPatternRegex2);
+  const groupMatch = block.match(parseSecretBlockPatternRegex3);
 
   // Check if .age file exists
   let ageFileExists = false;
   // Match: file = ../parts/category/name.age; or file = ./parts/...
-  const fileMatch = block.match(/file\s*=\s*(?:\.\.\/|\.\/)parts\/([^;]+\.age)/);
+  const fileMatch = block.match(parseSecretBlockPatternRegex4);
   if (fileMatch) {
     try {
       await access(join(partsDir, fileMatch[1]));
@@ -273,9 +283,9 @@ async function walkForSecretRefs(
         const refs: string[] = [];
 
         // Match age.secrets.name references (not declarations)
-        const refRegex = /(?:config\.)?age\.secrets\.([\w-]+)(?:\.path)?/g;
-        let match: RegExpExecArray | null;
-        while ((match = refRegex.exec(content)) !== null) {
+        const refRegex = walkForSecretRefsRefRegexRegex;
+
+        for (const match of content.matchAll(refRegex)) {
           if (!refs.includes(match[1])) {
             refs.push(match[1]);
           }

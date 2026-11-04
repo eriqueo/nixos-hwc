@@ -12,6 +12,10 @@ import { TtlCache } from "../cache.js";
 import { mcpError, catchError } from "../errors.js";
 import { contract } from "../result.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const scanDomainForServicesSvcRegexRegex = /systemd\.services\.([\w-]+)\s*=/g;
+const scanDomainForServicesContainerRegexRegex = /oci-containers\.containers\.([\w-]+)\s*=/g;
+
 const cache = new TtlCache();
 
 export function servicesTools(runtimeTtl: number, nixosConfigPath?: string): ToolDef[] {
@@ -486,9 +490,9 @@ async function scanDomainForServices(
         const content = await readFile(fullPath, "utf-8");
         const relFile = fullPath.split(`domains/${domain}/`)[1] || entry.name;
 
-        const svcRegex = /systemd\.services\.([\w-]+)\s*=/g;
-        let match;
-        while ((match = svcRegex.exec(content)) !== null) {
+        const svcRegex = scanDomainForServicesSvcRegexRegex;
+
+        for (const match of content.matchAll(svcRegex)) {
           const name = match[1];
           if (!results.some((r) => r.name === name)) {
             const directPort = content.match(new RegExp(`${name}[\\s\\S]{0,500}?(?:listen|port).*?(\\d{4,5})`, "i"));
@@ -496,8 +500,8 @@ async function scanDomainForServices(
           }
         }
 
-        const containerRegex = /oci-containers\.containers\.([\w-]+)\s*=/g;
-        while ((match = containerRegex.exec(content)) !== null) {
+        const containerRegex = scanDomainForServicesContainerRegexRegex;
+        for (const match of content.matchAll(containerRegex)) {
           const name = match[1];
           if (!results.some((r) => r.name === name)) {
             const portMapMatch = content.match(new RegExp(`${name}[\\s\\S]{0,1000}?ports\\s*=\\s*\\[[^\\]]*?"(\\d+):\\d+"`, "i"));

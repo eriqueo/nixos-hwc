@@ -39,7 +39,6 @@ export interface PostgresLeadStoreOpts {
 
 interface LeadRow {
   id: string;
-  source: string;
   status: string;
   payload: unknown;
   received_at: string;
@@ -64,11 +63,7 @@ function asLeadStatus(s: string): LeadStatus {
 
 function rowToLead(row: LeadRow): Lead {
   const payload = row.payload as LeadPayload;
-  const jt: { -readonly [K in keyof Lead["jt"]]: Lead["jt"][K] } = {};
-  if (row.jt_account_id)  jt.accountId  = row.jt_account_id;
-  if (row.jt_location_id) jt.locationId = row.jt_location_id;
-  if (row.jt_contact_id)  jt.contactId  = row.jt_contact_id;
-  if (row.jt_job_id)      jt.jobId      = row.jt_job_id;
+  const jt = rowToJtIds(row);
   return {
     id: row.id,
     payload,
@@ -77,6 +72,22 @@ function rowToLead(row: LeadRow): Lead {
     jt,
   };
 }
+
+type JtRow = Pick<LeadRow, "jt_account_id" | "jt_location_id" | "jt_contact_id" | "jt_job_id">;
+
+function rowToJtIds(row: JtRow): Lead["jt"] {
+  const jt: { -readonly [K in keyof Lead["jt"]]: Lead["jt"][K] } = {};
+  if (row.jt_account_id)  jt.accountId  = row.jt_account_id;
+  if (row.jt_location_id) jt.locationId = row.jt_location_id;
+  if (row.jt_contact_id)  jt.contactId  = row.jt_contact_id;
+  if (row.jt_job_id)      jt.jobId      = row.jt_job_id;
+  return jt;
+}
+
+const SELECT_JT_IDS_SQL = `
+  SELECT jt_account_id, jt_location_id, jt_contact_id, jt_job_id
+  FROM hwc.leads WHERE id = $1::uuid
+`;
 
 const INSERT_SQL = `
   INSERT INTO hwc.leads (
@@ -128,7 +139,7 @@ const INSERT_REPORT_SQL = `
 `;
 
 const SELECT_BY_ID_SQL = `
-  SELECT id::text AS id, source, status, payload, received_at::text AS received_at,
+  SELECT id::text AS id, status, payload, received_at::text AS received_at,
          jt_account_id, jt_location_id, jt_contact_id, jt_job_id
   FROM hwc.leads
   WHERE id = $1::uuid
@@ -255,6 +266,12 @@ export function makePostgresLeadStore(opts: PostgresLeadStoreOpts): LeadStore {
       return rowToLead(row);
     },
 
+    async jtIds(leadId: string): Promise<Lead["jt"] | undefined> {
+      const result = await pool.query<JtRow>(SELECT_JT_IDS_SQL, [leadId]);
+      const row = result.rows[0];
+      return row ? rowToJtIds(row) : undefined;
+    },
+
     async recent(query: RecentQuery): Promise<readonly Lead[]> {
       const limit = Math.min(query.limit ?? 50, 500);
       const conds: string[] = [];
@@ -271,7 +288,7 @@ export function makePostgresLeadStore(opts: PostgresLeadStoreOpts): LeadStore {
       const limitParam = `$${params.length}`;
       const whereClause = conds.length > 0 ? `WHERE ${conds.join(" AND ")}` : "";
       const sql = `
-        SELECT id::text AS id, source, status, payload, received_at::text AS received_at,
+        SELECT id::text AS id, status, payload, received_at::text AS received_at,
          jt_account_id, jt_location_id, jt_contact_id, jt_job_id
         FROM hwc.leads
         ${whereClause}

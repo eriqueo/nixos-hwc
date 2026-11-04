@@ -26,6 +26,16 @@ import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
 import { mcpError, catchError } from "../errors.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const safeIdPatternRegex = /[^A-Za-z0-9._-]+/g;
+const safeIdPatternRegex2 = /^-+|-+$/g;
+const repoSlugPatternRegex = /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)/;
+const repoSlugExecRegex = /^([A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?)\/([A-Za-z0-9_.-]{1,100})$/;
+const repoSlugPatternRegex2 = /\.git$/;
+const setCardQueuedExecRegex = /^\d{2}[-_](.+)\.md$/;
+const setCardQueuedExecRegex2 = /^---\n([\s\S]*?)\n---/;
+const setCardQueuedTestRegex = /^status:.*$/m;
+
 /* ════════════════════════════════════════════════════════════════ */
 /*  Late-bound paths                                                */
 /* ════════════════════════════════════════════════════════════════ */
@@ -153,7 +163,7 @@ function parseReview(raw: unknown): Review | null {
 
 /** Same id→filename mapping the backend uses: unsafe runs → "-". */
 function safeId(id: string): string {
-  return id.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "review";
+  return id.replace((safeIdPatternRegex.lastIndex = 0, safeIdPatternRegex), "-").replace((safeIdPatternRegex2.lastIndex = 0, safeIdPatternRegex2), "") || "review";
 }
 
 function reviewPath(id: string): string {
@@ -232,10 +242,10 @@ async function loadCase(id: string): Promise<ReviewCase | null> {
  * provenance and accidentally targeting a different repository on GitHub.
  */
 function repoSlug(repo: string): string | null {
-  const path = repo.trim().replace(/^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)/, "");
-  const match = /^([A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?)\/([A-Za-z0-9_.-]{1,100})$/.exec(path);
+  const path = repo.trim().replace(repoSlugPatternRegex, "");
+  const match = repoSlugExecRegex.exec(path);
   if (!match) return null;
-  const name = match[2].replace(/\.git$/, "");
+  const name = match[2].replace(repoSlugPatternRegex2, "");
   if (!name || name === "." || name === "..") return null;
   return `${match[1].toLowerCase()}/${name}`;
 }
@@ -288,7 +298,7 @@ async function setCardQueued(goal: string, cardSlug: string, cardFile?: string):
   if (!resolvedFile) {
     try {
       resolvedFile = (await readdir(goalDir)).find((f) => {
-        const m = /^\d{2}[-_](.+)\.md$/.exec(f);
+        const m = setCardQueuedExecRegex.exec(f);
         return m?.[1] === cardSlug;
       });
     } catch {
@@ -303,10 +313,10 @@ async function setCardQueued(goal: string, cardSlug: string, cardFile?: string):
   } catch {
     return false;
   }
-  const m = /^---\n([\s\S]*?)\n---/.exec(text);
+  const m = setCardQueuedExecRegex2.exec(text);
   if (!m) return false;
-  const newFm = /^status:.*$/m.test(m[1])
-    ? m[1].replace(/^status:.*$/m, "status: queued")
+  const newFm = setCardQueuedTestRegex.test(m[1])
+    ? m[1].replace(setCardQueuedTestRegex, "status: queued")
     : `${m[1]}\nstatus: queued`;
   await writeFile(path, text.replace(m[1], newFm), "utf-8");
   return true;

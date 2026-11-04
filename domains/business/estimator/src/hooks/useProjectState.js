@@ -4,6 +4,11 @@ import { parseCalculatorIntake } from '../api/crm.js';
 
 import { parseFlooring, createFlooring } from '../engine/flooring.js';
 import { calculatorPatch, applyCalculatorIntake, DEFAULT_STATE, PROJECT_TYPES } from '../engine/intake.js';
+
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const applyPreparedDraftTestRegex = /(_ft|_in|_sqft|_lf|_allowance)$/;
+const parseDraftTestRegex = /^(rule|pick|custom):/;
+
 export { calculatorPatch, applyCalculatorIntake, DEFAULT_STATE } from '../engine/intake.js';
 
 export const STORAGE_KEY = 'hwc-estimate-state-v3';
@@ -63,7 +68,7 @@ export function applyPreparedDraft(saved, prepared = preparedDraft) {
     const state = parseDraft(prepared.state);
     // The prepared worksheet explicitly labels its zero measurements/quotes
     // as placeholders. Fresh copies show unknown; saved field work is retained.
-    for (const [key,value] of Object.entries(state)) if (value === 0 && /(_ft|_in|_sqft|_lf|_allowance)$/.test(key)) state[key] = null;
+    for (const [key,value] of Object.entries(state)) if (value === 0 && applyPreparedDraftTestRegex.test(key)) state[key] = null;
     return { ...state, prepared_draft_revision: prepared.revision };
   }
   if (saved.jobId !== prepared.state.jobId || saved.prepared_draft_revision === prepared.revision) return saved;
@@ -93,7 +98,7 @@ export function parseDraft(saved) {
   for (const field of ['budget_overrides', 'budget_removed']) {
     const values = saved[field];
     if (values !== undefined && (!values || typeof values !== 'object' || Array.isArray(values) ||
-      Object.entries(values).some(([key,value]) => !/^(rule|pick|custom):/.test(key) ||
+      Object.entries(values).some(([key,value]) => !parseDraftTestRegex.test(key) ||
         (field === 'budget_overrides' ? typeof value !== 'number' || !Number.isFinite(value) || value < 0 : typeof value !== 'boolean')))) throw new Error(`Invalid draft field: ${field}`);
   }
   return { ...DEFAULT_STATE, ...saved, state_version: 3,

@@ -13,6 +13,10 @@
 
 import type { Lead } from "./types.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const toE164PatternRegex = /\D/g;
+const buildJobDescriptionPatternRegex = /_/g;
+
 export interface JtMappings {
   readonly organizationId: string;
   readonly defaultLocation: { readonly name: string; readonly address: string };
@@ -25,7 +29,7 @@ const PAVE_GRANT = Symbol("$");
 /** Normalise a phone string to E.164 (US default). Returns null on garbage. */
 export function toE164(raw: string | undefined): string | null {
   if (!raw) return null;
-  const digits = raw.replace(/\D/g, "");
+  const digits = raw.replace((toE164PatternRegex.lastIndex = 0, toE164PatternRegex), "");
   if (digits.length === 10) return `+1${digits}`;
   if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
   return digits.length > 0 ? `+${digits}` : null;
@@ -86,14 +90,14 @@ export function buildJobDescription(lead: Lead): string {
     if (c.reportId) lines.push(`Report id: ${c.reportId}`);
     const stateEntries = Object.entries(c.projectState)
       .filter(([k]) => k !== "features")
-      .map(([k, v]) => `  ${k.replace(/_/g, " ")}: ${String(v).replace(/_/g, " ")}`);
+      .map(([k, v]) => `  ${k.replace((buildJobDescriptionPatternRegex.lastIndex = 0, buildJobDescriptionPatternRegex), " ")}: ${String(v).replace((buildJobDescriptionPatternRegex.lastIndex = 0, buildJobDescriptionPatternRegex), " ")}`);
     if (stateEntries.length > 0) {
       lines.push("Selections:");
       lines.push(...stateEntries);
     }
     const features = c.projectState["features"];
     if (Array.isArray(features) && features.length > 0) {
-      lines.push(`  features: ${(features as unknown[]).join(", ").replace(/_/g, " ")}`);
+      lines.push(`  features: ${(features as unknown[]).join(", ").replace((buildJobDescriptionPatternRegex.lastIndex = 0, buildJobDescriptionPatternRegex), " ")}`);
     }
   }
 

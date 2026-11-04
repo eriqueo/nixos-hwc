@@ -9,6 +9,9 @@ import { execFile } from "node:child_process";
 import type { ExecResult } from "../types.js";
 import { log } from "../log.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const psqlExecPatternRegex = /(\d+)$/m;
+
 const DEFAULT_DB = "hwc";
 
 /**
@@ -70,7 +73,7 @@ export async function psqlExec(
     throw new Error(`psql error: ${result.stderr}`);
   }
   // Parse "UPDATE N" or "INSERT 0 N" from stdout
-  const match = result.stdout.match(/(\d+)$/m);
+  const match = result.stdout.match(psqlExecPatternRegex);
   return {
     rowCount: match ? parseInt(match[1], 10) : 0,
     output: result.stdout.trim(),

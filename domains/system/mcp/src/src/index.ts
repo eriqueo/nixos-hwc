@@ -467,8 +467,11 @@ async function main() {
       }
 
       if (url?.startsWith("/messages") && method === "POST") {
-        const parsedUrl = new URL(url, "http://localhost");
-        const sessionId = parsedUrl.searchParams.get("sessionId");
+        const queryStart = url.indexOf("?");
+        const fragmentStart = url.indexOf("#");
+        const queryEnd = fragmentStart < 0 ? url.length : fragmentStart;
+        const params = new URLSearchParams(queryStart < 0 || queryStart > queryEnd ? "" : url.slice(queryStart + 1, queryEnd));
+        const sessionId = params.get("sessionId");
         const sseTransport = sessionId ? sseSessions.get(sessionId) : undefined;
 
         if (sseTransport) {

@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "hwc-leads — unified lead pipeline (Phase 2 of the notification + lead-pipeline restructure).",
+  "description": "hwc-leads \u2014 unified lead pipeline (Phase 2 of the notification + lead-pipeline restructure).",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "start": "node dist/main.js"
+    "start": "node dist/main.js",
+    "test": "npm run build && node --test dist/__tests__/*.test.js"
   },
   "dependencies": {
     "nodemailer": "^6.10.1",

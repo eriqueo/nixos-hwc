@@ -21,8 +21,13 @@ import { PALETTE_CSS } from "./palette.css.js";
 import { SHELL_CSS } from "./shell.css.js";
 import { REFINERY_AREA_ID, WORKBENCH_HOME, type WorkbenchRegistry } from "./workbench.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const escPatternRegex = /[&<>"']/g;
+const compactTextPatternRegex = /\s+/g;
+const prViewTestRegex = /^https?:\/\/\S+$/;
+
 function esc(s: string): string {
-  return s.replace(/[&<>"']/g, (c) =>
+  return s.replace((escPatternRegex.lastIndex = 0, escPatternRegex), (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string),
   );
 }
@@ -36,7 +41,7 @@ function titleOf(item: Item): string {
 }
 
 function compactText(value: string, max = 220): string {
-  const oneLine = value.replace(/\s+/g, " ").trim();
+  const oneLine = value.replace((compactTextPatternRegex.lastIndex = 0, compactTextPatternRegex), " ").trim();
   if (oneLine.length <= max) return oneLine;
   const cut = oneLine.slice(0, max - 1);
   const boundary = cut.lastIndexOf(" ");
@@ -1723,7 +1728,7 @@ export function renderFinishedProject(item: Item): string {
   // Render escaped; linkify only when it's plainly an http(s) URL.
   const prView = (pr: string): string => {
     if (!pr) return "";
-    const url = /^https?:\/\/\S+$/.test(pr.trim());
+    const url = prViewTestRegex.test(pr.trim());
     const inner = url
       ? `<a class="kv" href="${esc(pr.trim())}" rel="noreferrer">${esc(pr.trim())}</a>`
       : `<span class="kv">${esc(pr)}</span>`;

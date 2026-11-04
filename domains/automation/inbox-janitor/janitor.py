@@ -42,6 +42,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+__F_SIZE_MATCH_RE = _compiled_re.compile(r"\s*(>=|<=|>|<|==)\s*([\d.]+)\s*([kmgt]?b?)\s*$", _compiled_re.I)
+__DAYS_MATCH_RE = _compiled_re.compile(r"\s*([\d.]+)\s*([dwmy]?)")
+__SYNCTHING_APIKEY_SEARCH_RE = _compiled_re.compile(r"<apikey>([^<]+)</apikey>")
+_SLUGIFY_SUB_RE = _compiled_re.compile(r"[^a-z0-9]+")
+_SOURCE_HOST_OF_SEARCH_RE = _compiled_re.compile(r"https?://([^/]+)/")
+
+
 try:
     import yaml
 except ImportError:
@@ -139,7 +149,7 @@ def _f_name(m: FileMeta, param: dict) -> Optional[dict]:
 
 @filt("size")
 def _f_size(m: FileMeta, param: str) -> Optional[dict]:
-    mo = re.match(r"\s*(>=|<=|>|<|==)\s*([\d.]+)\s*([kmgt]?b?)\s*$", str(param), re.I)
+    mo = __F_SIZE_MATCH_RE.match(str(param))
     if not mo:
         return None
     op, num, unit = mo.group(1), float(mo.group(2)), mo.group(3).lower()
@@ -164,7 +174,7 @@ def _f_age(m: FileMeta, param: dict) -> Optional[dict]:
 
 
 def _days(s) -> float:
-    mo = re.match(r"\s*([\d.]+)\s*([dwmy]?)", str(s))
+    mo = __DAYS_MATCH_RE.match(str(s))
     if not mo:
         raise ValueError(f"bad age value: {s!r} (want e.g. '7d', '2w')")
     n = float(mo.group(1)); u = mo.group(2)
@@ -208,7 +218,7 @@ def classify(m: FileMeta, cfg: dict) -> Decision:
 
 # ---- naming (pure templating; no eval) --------------------------------------
 def slugify(stem: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "_", stem.lower()).strip("_")
+    return _SLUGIFY_SUB_RE.sub("_", stem.lower()).strip("_")
 
 
 _TOKEN = re.compile(r"\{([\w.]+)\}")
@@ -262,7 +272,7 @@ def source_host_of(p: Path) -> Optional[str]:
     for attr in ("user.xdg.origin.url", "user.xdg.referrer.url"):
         try:
             url = os.getxattr(str(p), attr).decode(errors="replace")
-            mo = re.search(r"https?://([^/]+)/", url)
+            mo = _SOURCE_HOST_OF_SEARCH_RE.search(url)
             if mo:
                 return mo.group(1)
         except OSError:
@@ -342,7 +352,7 @@ def _syncthing_apikey() -> Optional[str]:
     cfgpath = Path(os.environ.get("SYNCTHING_CONFIG",
                                   str(Path.home() / ".config/syncthing/config.xml")))
     try:
-        mo = re.search(r"<apikey>([^<]+)</apikey>", cfgpath.read_text())
+        mo = __SYNCTHING_APIKEY_SEARCH_RE.search(cfgpath.read_text())
         return mo.group(1).strip() if mo else None
     except OSError:
         return None

@@ -26,6 +26,12 @@ from typing import Callable, Optional
 from transcript import TranscriptError
 import xpost
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+__LAUNCH_COMPILE_RE = _compiled_re.compile(r"\.(png|jpe?g|gif|webp|mp4|m3u8|woff2?)(\?|$)")
+
+
 logger = logging.getLogger("transcripts")
 
 PROFILE_DIR = Path(os.getenv("X_PROFILE_DIR", "/var/lib/hwc/transcripts/x-profile"))
@@ -174,7 +180,7 @@ async def _launch(pw):
     ua = (await page.evaluate("navigator.userAgent")).replace("HeadlessChrome", "Chrome")
     cdp = await ctx.new_cdp_session(page)
     await cdp.send("Network.setUserAgentOverride", {"userAgent": ua})
-    await page.route(re.compile(r"\.(png|jpe?g|gif|webp|mp4|m3u8|woff2?)(\?|$)"),
+    await page.route(__LAUNCH_COMPILE_RE,
                      lambda route: route.abort())
     return ctx, page
 

@@ -28,6 +28,11 @@ import type { JtClient } from "./ports/jt.js";
 import type { NotifyClient } from "./ports/notify.js";
 import type { CustomerEmailClient } from "./ports/customer-email.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const mainExecRegex = /^\/leads\/([0-9a-f-]{36})$/;
+const mainExecRegex2 = /^\/leads\/([0-9a-f-]{36})\/replay$/;
+const mainExecRegex3 = /^\/api\/reports\/([A-Za-z0-9-]{4,64})$/;
+
 const MAX_BODY_BYTES = 64 * 1024;
 
 /**
@@ -347,7 +352,7 @@ async function main(): Promise<void> {
           // same customer, the same duplication one layer over.
           const priorIds = saved.kind === "inserted"
             ? {}
-            : ((await store.byId(caseId).catch(() => undefined))?.jt ?? {});
+            : ((await store.jtIds(caseId).catch(() => undefined)) ?? {});
           const result = await jt.createGraph(caseLead, priorIds);
           jtIds = {
             ...(result.ids.accountId  ? { accountId:  result.ids.accountId  } : {}),
@@ -448,7 +453,7 @@ async function main(): Promise<void> {
 
     // ── GET /leads/:id ─────────────────────────────────────────────────
     {
-      const m = /^\/leads\/([0-9a-f-]{36})$/.exec(url);
+      const m = mainExecRegex.exec(url);
       if (method === "GET" && m && m[1]) {
         const leadId = m[1];
         void (async () => {
@@ -478,7 +483,7 @@ async function main(): Promise<void> {
     // whatever NEW ids get created; status flips to "complete" once
     // every step is in place.
     {
-      const m = /^\/leads\/([0-9a-f-]{36})\/replay$/.exec(url);
+      const m = mainExecRegex2.exec(url);
       if (method === "POST" && m && m[1]) {
         const leadId = m[1];
         void (async () => {
@@ -551,7 +556,7 @@ async function main(): Promise<void> {
     // (Hostinger) and this service is on the tailnet/Caddy host. Allow
     // the production origin so the report.njk fetch lands.
     {
-      const m = /^\/api\/reports\/([A-Za-z0-9-]{4,64})$/.exec(url);
+      const m = mainExecRegex3.exec(url);
       if (method === "GET" && m && m[1]) {
         const reportId = m[1];
         void (async () => {
@@ -602,10 +607,13 @@ async function main(): Promise<void> {
     if (method === "GET" && url.startsWith("/leads/recent")) {
       void (async () => {
         try {
-          const u = new URL(url, `http://${config.bindAddr}`);
-          const limit = Math.min(500, Math.max(1, parseInt(u.searchParams.get("limit") ?? "50", 10) || 50));
-          const sourceParam = u.searchParams.get("source");
-          const statusParam = u.searchParams.get("status");
+          const queryStart = url.indexOf("?");
+          const fragmentStart = url.indexOf("#");
+          const queryEnd = fragmentStart < 0 ? url.length : fragmentStart;
+          const params = new URLSearchParams(queryStart < 0 || queryStart > queryEnd ? "" : url.slice(queryStart + 1, queryEnd));
+          const limit = Math.min(500, Math.max(1, parseInt(params.get("limit") ?? "50", 10) || 50));
+          const sourceParam = params.get("source");
+          const statusParam = params.get("status");
           const validSources = ["contact", "calculator", "appointment"] as const;
           const validStatuses = ["received", "validated", "pending_jt", "complete", "failed"] as const;
           const source = validSources.find((s) => s === sourceParam);

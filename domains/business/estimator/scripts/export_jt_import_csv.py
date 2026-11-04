@@ -173,7 +173,7 @@ def main():
             ar.project_type as rule_project_type
         FROM catalog_items ci
         LEFT JOIN LATERAL (
-            SELECT * FROM assembly_rules ar2
+            SELECT production_rate, waste_factor, qty_formula, default_qty, condition_trigger, project_type FROM assembly_rules ar2
             WHERE ar2.catalog_item_id = ci.id AND ar2.is_active = true
             ORDER BY
                 CASE ar2.project_type

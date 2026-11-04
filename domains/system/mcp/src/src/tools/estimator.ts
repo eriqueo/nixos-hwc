@@ -8,6 +8,9 @@ import { mcpError, catchError } from "../errors.js";
 import { psqlJson, psqlExec } from "../executors/psql.js";
 import { log } from "../log.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const estimatorToolsPatternRegex = /'/g;
+
 function runScript(
   scriptPath: string,
   args: string[] = [],
@@ -106,7 +109,7 @@ export function estimatorTools(nixosConfigPath: string): ToolDef[] {
             if (!trade) return mcpError({ type: "VALIDATION_ERROR", message: "trade is required for action=update_rate" });
 
             const existing = await psqlJson(
-              `SELECT trade FROM trade_rates WHERE trade = '${trade.replace(/'/g, "''")}'`,
+              `SELECT trade FROM trade_rates WHERE trade = '${trade.replace((estimatorToolsPatternRegex.lastIndex = 0, estimatorToolsPatternRegex), "''")}'`,
             );
             if (existing.length === 0) {
               return mcpError({ type: "NOT_FOUND", message: `Trade '${trade}' not found`, suggestion: "Use hwc_estimator action=rates to list valid trades" });
@@ -122,11 +125,11 @@ export function estimatorTools(nixosConfigPath: string): ToolDef[] {
             }
 
             sets.push("updated_at = now()");
-            const sql = `UPDATE trade_rates SET ${sets.join(", ")} WHERE trade = '${trade.replace(/'/g, "''")}'`;
+            const sql = `UPDATE trade_rates SET ${sets.join(", ")} WHERE trade = '${trade.replace((estimatorToolsPatternRegex.lastIndex = 0, estimatorToolsPatternRegex), "''")}'`;
             await psqlExec(sql);
 
             const updated = await psqlJson(
-              `SELECT trade, base_wage, burden_factor, markup_factor, unit_cost, unit_price FROM trade_rates WHERE trade = '${trade.replace(/'/g, "''")}'`,
+              `SELECT trade, base_wage, burden_factor, markup_factor, unit_cost, unit_price FROM trade_rates WHERE trade = '${trade.replace((estimatorToolsPatternRegex.lastIndex = 0, estimatorToolsPatternRegex), "''")}'`,
             );
 
             return {
@@ -144,7 +147,7 @@ export function estimatorTools(nixosConfigPath: string): ToolDef[] {
           try {
             const pt = args.project_type as string | undefined;
             const where = pt
-              ? `WHERE is_active = true AND project_type = '${pt.replace(/'/g, "''")}'`
+              ? `WHERE is_active = true AND project_type = '${pt.replace((estimatorToolsPatternRegex.lastIndex = 0, estimatorToolsPatternRegex), "''")}'`
               : "WHERE is_active = true";
             const rows = await psqlJson(
               `SELECT id, name, project_type, description, created_at::text, updated_at::text FROM estimate_templates ${where} ORDER BY project_type, name`,
@@ -163,10 +166,10 @@ export function estimatorTools(nixosConfigPath: string): ToolDef[] {
             if (!name || !pt || !args.state) {
               return mcpError({ type: "VALIDATION_ERROR", message: "name, project_type, and state are required for action=save_template" });
             }
-            const escapedName = name.replace(/'/g, "''");
-            const escapedPt = pt.replace(/'/g, "''");
-            const desc = ((args.description as string) || "").replace(/'/g, "''");
-            const stateJson = JSON.stringify(args.state).replace(/'/g, "''");
+            const escapedName = name.replace((estimatorToolsPatternRegex.lastIndex = 0, estimatorToolsPatternRegex), "''");
+            const escapedPt = pt.replace((estimatorToolsPatternRegex.lastIndex = 0, estimatorToolsPatternRegex), "''");
+            const desc = ((args.description as string) || "").replace((estimatorToolsPatternRegex.lastIndex = 0, estimatorToolsPatternRegex), "''");
+            const stateJson = JSON.stringify(args.state).replace((estimatorToolsPatternRegex.lastIndex = 0, estimatorToolsPatternRegex), "''");
 
             const sql =
               `INSERT INTO estimate_templates (name, project_type, description, state) ` +
@@ -190,7 +193,7 @@ export function estimatorTools(nixosConfigPath: string): ToolDef[] {
           try {
             const name = args.name as string;
             if (!name) return mcpError({ type: "VALIDATION_ERROR", message: "name is required for action=delete_template" });
-            const escapedName = name.replace(/'/g, "''");
+            const escapedName = name.replace((estimatorToolsPatternRegex.lastIndex = 0, estimatorToolsPatternRegex), "''");
             const result = await psqlExec(
               `UPDATE estimate_templates SET is_active = false, updated_at = now() WHERE name = '${escapedName}'`,
             );
@@ -214,10 +217,10 @@ export function estimatorTools(nixosConfigPath: string): ToolDef[] {
             const trade = args.trade as string | undefined;
             const search = args.search as string | undefined;
 
-            if (it) conditions.push(`item_type = '${it.replace(/'/g, "''")}'`);
-            if (trade) conditions.push(`trade = '${trade.replace(/'/g, "''")}'`);
+            if (it) conditions.push(`item_type = '${it.replace((estimatorToolsPatternRegex.lastIndex = 0, estimatorToolsPatternRegex), "''")}'`);
+            if (trade) conditions.push(`trade = '${trade.replace((estimatorToolsPatternRegex.lastIndex = 0, estimatorToolsPatternRegex), "''")}'`);
             if (search) {
-              const s = search.replace(/'/g, "''");
+              const s = search.replace((estimatorToolsPatternRegex.lastIndex = 0, estimatorToolsPatternRegex), "''");
               conditions.push(`(display_name ILIKE '%${s}%' OR canonical_name ILIKE '%${s}%' OR description ILIKE '%${s}%')`);
             }
 
@@ -241,10 +244,10 @@ export function estimatorTools(nixosConfigPath: string): ToolDef[] {
             const trade = args.trade as string | undefined;
             const search = args.search as string | undefined;
 
-            if (pt) conditions.push(`ar.project_type = '${pt.replace(/'/g, "''")}'`);
-            if (trade) conditions.push(`ci.trade = '${trade.replace(/'/g, "''")}'`);
+            if (pt) conditions.push(`ar.project_type = '${pt.replace((estimatorToolsPatternRegex.lastIndex = 0, estimatorToolsPatternRegex), "''")}'`);
+            if (trade) conditions.push(`ci.trade = '${trade.replace((estimatorToolsPatternRegex.lastIndex = 0, estimatorToolsPatternRegex), "''")}'`);
             if (search) {
-              const s = search.replace(/'/g, "''");
+              const s = search.replace((estimatorToolsPatternRegex.lastIndex = 0, estimatorToolsPatternRegex), "''");
               conditions.push(`(ci.display_name ILIKE '%${s}%' OR ar.description ILIKE '%${s}%')`);
             }
 

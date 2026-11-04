@@ -24,6 +24,13 @@ from pathlib import Path
 import pandas as pd
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_EXTRACT_GROUP_NAME_SEARCH_RE = _compiled_re.compile(r"/groups/([^/?]+)")
+_EXTRACT_GROUP_NAME_SEARCH_RE_2 = _compiled_re.compile(r"/r/([^/?]+)")
+
+
 # Configuration
 SCRIPT_DIR = Path(__file__).parent
 SITES_CONFIG = SCRIPT_DIR / "sites.json"
@@ -231,10 +238,10 @@ def save_csv(posts: list[dict], source: str, group_name: str, output_path: Path)
 def extract_group_name(url: str, site_name: str) -> str:
     """Extract group/subreddit name from URL."""
     if site_name == "facebook_group":
-        match = re.search(r"/groups/([^/?]+)", url)
+        match = _EXTRACT_GROUP_NAME_SEARCH_RE.search(url)
         return match.group(1) if match else "unknown_group"
     elif site_name == "reddit":
-        match = re.search(r"/r/([^/?]+)", url)
+        match = _EXTRACT_GROUP_NAME_SEARCH_RE_2.search(url)
         return match.group(1) if match else "unknown_subreddit"
     elif site_name == "nextdoor":
         return "nextdoor_feed"

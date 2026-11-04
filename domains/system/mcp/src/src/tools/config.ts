@@ -8,6 +8,24 @@ import type { ToolDef, ToolResult } from "../types.js";
 import { nixEval, flakeMetadata } from "../executors/nix.js";
 import { mcpError, catchError } from "../errors.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const configToolsPatternRegex = /hostName\s*=\s*"([^"]+)"/;
+const configToolsPatternRegex2 = /stateVersion\s*=\s*"([^"]+)"/;
+const configToolsPatternRegex3 = /type\s*=\s*(?:types\.|lib\.types\.)?([\w.]+)/;
+const configToolsPatternRegex4 = /default\s*=\s*([^;]{1,60})/;
+const parseRoutesBlockRegexRegex = /\{\s*\n([^}]*?name\s*=\s*"[^"]+";[^}]*?)\}/g;
+const parseRoutesPatternRegex = /name\s*=\s*"([^"]+)"/;
+const parseRoutesPatternRegex2 = /mode\s*=\s*"([^"]+)"/;
+const parseRoutesPatternRegex3 = /port\s*=\s*(\d+)/;
+const parseRoutesPatternRegex4 = /path\s*=\s*"([^"]+)"/;
+const parseRoutesPatternRegex5 = /upstream\s*=\s*"([^"]+)"/;
+const parseRoutesPatternRegex6 = /needsUrlBase\s*=\s*(true|false)/;
+const parseImportsPatternRegex = /imports\s*=\s*\[([\s\S]*?)\];/;
+const parseImportsPathRegexRegex = /(?:\.\/)([^\s;]+\.nix)|(?:\.\.\/)+([^\s;]+\.nix)/g;
+const parseImportsPatternRegex2 = /(?:profiles|domains)\/[^\s;}\]]+/g;
+const searchOptionDeclarationsPatternRegex = /([\w.]+)\s*=\s*(?:lib\.)?mk(?:Option|EnableOption)/;
+const searchOptionDeclarationsPatternRegex2 = /^\s*([\w]+)\s*=\s*\{/;
+
 const HOSTS = ["hwc-home", "hwc-work", "hwc-laptop", "hwc-xps", "hwc-kids", "hwc-firestick"] as const;
 
 export function configTools(nixosConfigPath: string, declarativeTtl: number): ToolDef[] {
@@ -166,8 +184,8 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
             const isStable = flakeContent.includes(`${host} = nixpkgs-stable`) ||
                              flakeContent.includes(`${host.replace("hwc-", "")} = nixpkgs-stable`);
 
-            const hostnameMatch = content.match(/hostName\s*=\s*"([^"]+)"/);
-            const stateVersionMatch = content.match(/stateVersion\s*=\s*"([^"]+)"/);
+            const hostnameMatch = content.match(configToolsPatternRegex);
+            const stateVersionMatch = content.match(configToolsPatternRegex2);
 
             return {
               status: "ok",
@@ -201,8 +219,8 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
             const byFile = new Map<string, Array<{ line: number; name: string; type: string; default?: string }>>();
             for (const r of results) {
               if (!byFile.has(r.file)) byFile.set(r.file, []);
-              const typeMatch = r.snippet.match(/type\s*=\s*(?:types\.|lib\.types\.)?([\w.]+)/);
-              const defaultMatch = r.snippet.match(/default\s*=\s*([^;]{1,60})/);
+              const typeMatch = r.snippet.match(configToolsPatternRegex3);
+              const defaultMatch = r.snippet.match(configToolsPatternRegex4);
               byFile.get(r.file)!.push({
                 line: r.line,
                 name: r.name,
@@ -312,17 +330,17 @@ interface Route {
 
 function parseRoutes(content: string): Route[] {
   const routes: Route[] = [];
-  const blockRegex = /\{\s*\n([^}]*?name\s*=\s*"[^"]+";[^}]*?)\}/g;
+  const blockRegex = (parseRoutesBlockRegexRegex.lastIndex = 0, parseRoutesBlockRegexRegex);
   let match: RegExpExecArray | null;
 
   while ((match = blockRegex.exec(content)) !== null) {
     const block = match[1];
-    const nameMatch = block.match(/name\s*=\s*"([^"]+)"/);
-    const modeMatch = block.match(/mode\s*=\s*"([^"]+)"/);
-    const portMatch = block.match(/port\s*=\s*(\d+)/);
-    const pathMatch = block.match(/path\s*=\s*"([^"]+)"/);
-    const upstreamMatch = block.match(/upstream\s*=\s*"([^"]+)"/);
-    const urlBaseMatch = block.match(/needsUrlBase\s*=\s*(true|false)/);
+    const nameMatch = block.match(parseRoutesPatternRegex);
+    const modeMatch = block.match(parseRoutesPatternRegex2);
+    const portMatch = block.match(parseRoutesPatternRegex3);
+    const pathMatch = block.match(parseRoutesPatternRegex4);
+    const upstreamMatch = block.match(parseRoutesPatternRegex5);
+    const urlBaseMatch = block.match(parseRoutesPatternRegex6);
 
     if (nameMatch && modeMatch) {
       routes.push({
@@ -341,18 +359,18 @@ function parseRoutes(content: string): Route[] {
 
 function parseImports(content: string): string[] {
   const imports: string[] = [];
-  const importBlockMatch = content.match(/imports\s*=\s*\[([\s\S]*?)\];/);
+  const importBlockMatch = content.match(parseImportsPatternRegex);
   if (!importBlockMatch) return imports;
 
   const block = importBlockMatch[1];
-  const pathRegex = /(?:\.\/)([^\s;]+\.nix)|(?:\.\.\/)+([^\s;]+\.nix)/g;
+  const pathRegex = (parseImportsPathRegexRegex.lastIndex = 0, parseImportsPathRegexRegex);
   let match: RegExpExecArray | null;
 
   while ((match = pathRegex.exec(block)) !== null) {
     imports.push(match[1] || match[2]);
   }
 
-  const stringPaths = block.match(/(?:profiles|domains)\/[^\s;}\]]+/g);
+  const stringPaths = block.match((parseImportsPatternRegex2.lastIndex = 0, parseImportsPatternRegex2));
   if (stringPaths) {
     for (const p of stringPaths) {
       if (!imports.some((i) => i.includes(p))) {
@@ -404,14 +422,14 @@ async function searchOptionDeclarations(
              lines.slice(Math.max(0, i - 2), i + 5).join("\n").toLowerCase().includes(query))
           ) {
             const contextBefore = lines.slice(Math.max(0, i - 10), i + 1).join("\n");
-            const fullPathMatch = contextBefore.match(/([\w.]+)\s*=\s*(?:lib\.)?mk(?:Option|EnableOption)/);
+            const fullPathMatch = contextBefore.match(searchOptionDeclarationsPatternRegex);
             let optionName = fullPathMatch?.[1] || "unknown";
 
             if (optionName === "enable" || optionName === "unknown") {
               const widerContext = lines.slice(Math.max(0, i - 20), i + 1);
               const pathParts: string[] = [];
               for (const ctx of widerContext) {
-                const attrMatch = ctx.match(/^\s*([\w]+)\s*=\s*\{/);
+                const attrMatch = ctx.match(searchOptionDeclarationsPatternRegex2);
                 if (attrMatch) pathParts.push(attrMatch[1]);
               }
               if (fullPathMatch?.[1]) pathParts.push(fullPathMatch[1]);

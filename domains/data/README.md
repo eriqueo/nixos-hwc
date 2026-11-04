@@ -16,6 +16,8 @@ storage (mount management), Syncthing (file sync), and CouchDB (Obsidian LiveSyn
 Decoded credentials use separate raw-password and environment-password types; URI decoding uses a closed encoding enum.
 The role boundary requires versioned payloads; unversioned input fails before credential or database access.
 
+`borg/sqlite-snapshot.py` compiles its fixed database-name pattern once at module load. Snapshot ordering, retention and read-only SQL stay unchanged.
+
 Machine references follow machines/home; the home job pins its historical Borg archive/prune identity.
 
 ```
@@ -36,6 +38,8 @@ data/
 - 2026-11-03: Extend transactional role provisioning with tagged credential/authority boundaries, shared column grants, native peer settings and complete client rotation triggers.
 - 2026-11-03: Own the complete composed HBA rule set while retaining NixOS's postgres maintenance peer map; remove appended weaker defaults.
 - 2026-11-03: Add protected per-application SCRAM provisioning after PostgreSQL setup; migrate home Immich and preserve local peer administration. Other hosts retain an explicit tracked compatibility mode until their clients pass.
+
+- 2026-11-02: Hoist the SQLite snapshot name pattern without changing backup behavior.
 - 2026-10-24: Give SQLite snapshot workers registered database-parent access for temporary WAL/SHM creation while keeping SQL read-only; forbid root-level database parents and test native job wiring.
 - 2026-10-23: Allow an explicit additional-destination-only Borg client, so XPS Jellyfin state can use a bounded home repository without claiming T3 or full-host coverage.
 - 2026-10-23: Keep per-destination time/rate limits in the Borg capability; server roles assign typed policy and receive instance metadata from flake composition.

@@ -13,6 +13,23 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+__EXTRACT_FROM_OPTIONS_SEARCH_RE = _compiled_re.compile(r'image\s*=.*?default\s*=\s*"([^"]+)"', _compiled_re.DOTALL)
+__EXTRACT_FROM_OPTIONS_SEARCH_RE_2 = _compiled_re.compile(r'network\.mode.*?default\s*=\s*"(\w+)"', _compiled_re.DOTALL)
+__EXTRACT_FROM_OPTIONS_SEARCH_RE_3 = _compiled_re.compile(r'gpu\.enable.*?default\s*=\s*(true|false)', _compiled_re.DOTALL)
+__EXTRACT_FROM_CONFIG_SEARCH_RE = _compiled_re.compile(r'image\s*=\s*(?:cfg\.image|"([^"]+)"|(\w+))')
+__EXTRACT_FROM_CONFIG_SEARCH_RE_2 = _compiled_re.compile(r'ports\s*=\s*\[(.*?)\]', _compiled_re.DOTALL)
+__EXTRACT_FROM_CONFIG_SEARCH_RE_3 = _compiled_re.compile(r'volumes\s*=\s*\[(.*?)\]', _compiled_re.DOTALL)
+__EXTRACT_FROM_CONFIG_SEARCH_RE_4 = _compiled_re.compile(r'environment\s*=\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}', _compiled_re.DOTALL)
+__EXTRACT_FROM_CONFIG_SEARCH_RE_5 = _compiled_re.compile(r'dependsOn\s*=.*?\[\s*"([^"]+)"\s*\]', _compiled_re.DOTALL)
+__EXTRACT_FROM_CONFIG_SEARCH_RE_6 = _compiled_re.compile(r'extraOptions\s*=\s*\[(.*?)\]', _compiled_re.DOTALL)
+__EXTRACT_FROM_CONFIG_SEARCH_RE_7 = _compiled_re.compile(r'environmentFiles\s*=\s*\[(.*?)\]', _compiled_re.DOTALL)
+__EXTRACT_FROM_CONFIG_FINDALL_RE = _compiled_re.compile(r'"([^"]+)"')
+__EXTRACT_FROM_CONFIG_FINDALL_RE_2 = _compiled_re.compile(r'(\w+)\s*=\s*(?:"([^"]+)"|(\d+)|toString\s+\w+\.(\w+))')
+
+
 
 class EnhancedContainerScanner:
     def __init__(self, source_path: Path, verbose: bool = False):
@@ -80,17 +97,17 @@ class EnhancedContainerScanner:
                 content = f.read()
 
             # Extract default image
-            image_match = re.search(r'image\s*=.*?default\s*=\s*"([^"]+)"', content, re.DOTALL)
+            image_match = __EXTRACT_FROM_OPTIONS_SEARCH_RE.search(content)
             if image_match:
                 container_info['image'] = image_match.group(1)
 
             # Extract network mode
-            network_match = re.search(r'network\.mode.*?default\s*=\s*"(\w+)"', content, re.DOTALL)
+            network_match = __EXTRACT_FROM_OPTIONS_SEARCH_RE_2.search(content)
             if network_match:
                 container_info['network_mode'] = network_match.group(1)
 
             # Extract GPU setting
-            gpu_match = re.search(r'gpu\.enable.*?default\s*=\s*(true|false)', content, re.DOTALL)
+            gpu_match = __EXTRACT_FROM_OPTIONS_SEARCH_RE_3.search(content)
             if gpu_match:
                 container_info['gpu_enabled'] = gpu_match.group(1) == 'true'
 
@@ -113,48 +130,48 @@ class EnhancedContainerScanner:
             config_block = container_match.group(1)
 
             # Extract image (might override options)
-            image_match = re.search(r'image\s*=\s*(?:cfg\.image|"([^"]+)"|(\w+))', config_block)
+            image_match = __EXTRACT_FROM_CONFIG_SEARCH_RE.search(config_block)
             if image_match and image_match.group(1):
                 container_info['image'] = image_match.group(1)
 
             # Extract ports
-            ports_match = re.search(r'ports\s*=\s*\[(.*?)\]', config_block, re.DOTALL)
+            ports_match = __EXTRACT_FROM_CONFIG_SEARCH_RE_2.search(config_block)
             if ports_match:
                 ports_text = ports_match.group(1)
                 # Find quoted port strings
-                port_strings = re.findall(r'"([^"]+)"', ports_text)
+                port_strings = __EXTRACT_FROM_CONFIG_FINDALL_RE.findall(ports_text)
                 container_info['ports'] = port_strings
 
             # Extract volumes
-            volumes_match = re.search(r'volumes\s*=\s*\[(.*?)\]', config_block, re.DOTALL)
+            volumes_match = __EXTRACT_FROM_CONFIG_SEARCH_RE_3.search(config_block)
             if volumes_match:
                 volumes_text = volumes_match.group(1)
                 # Find quoted volume strings
-                volume_strings = re.findall(r'"([^"]+)"', volumes_text)
+                volume_strings = __EXTRACT_FROM_CONFIG_FINDALL_RE.findall(volumes_text)
                 container_info['volumes'] = volume_strings
 
             # Extract environment variables
-            env_match = re.search(r'environment\s*=\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}', config_block, re.DOTALL)
+            env_match = __EXTRACT_FROM_CONFIG_SEARCH_RE_4.search(config_block)
             if env_match:
                 env_block = env_match.group(1)
                 # Extract key = value pairs
-                env_pairs = re.findall(r'(\w+)\s*=\s*(?:"([^"]+)"|(\d+)|toString\s+\w+\.(\w+))', env_block)
+                env_pairs = __EXTRACT_FROM_CONFIG_FINDALL_RE_2.findall(env_block)
                 for match in env_pairs:
                     key = match[0]
                     value = match[1] or match[2] or match[3] or 'CONFIG_VALUE'
                     container_info['environment'][key] = value
 
             # Extract depends_on
-            depends_match = re.search(r'dependsOn\s*=.*?\[\s*"([^"]+)"\s*\]', config_block, re.DOTALL)
+            depends_match = __EXTRACT_FROM_CONFIG_SEARCH_RE_5.search(config_block)
             if depends_match:
                 container_info['depends_on'] = [depends_match.group(1)]
 
             # Extract extra options (for GPU, network, capabilities)
-            extra_opts_match = re.search(r'extraOptions\s*=\s*\[(.*?)\]', config_block, re.DOTALL)
+            extra_opts_match = __EXTRACT_FROM_CONFIG_SEARCH_RE_6.search(config_block)
             if extra_opts_match:
                 extra_text = extra_opts_match.group(1)
                 # Find quoted option strings
-                option_strings = re.findall(r'"([^"]+)"', extra_text)
+                option_strings = __EXTRACT_FROM_CONFIG_FINDALL_RE.findall(extra_text)
                 container_info['extra_options'] = option_strings
 
                 # Parse extra options for special flags
@@ -167,9 +184,9 @@ class EnhancedContainerScanner:
                         container_info['gpu_enabled'] = True
 
             # Check for secrets/environment files
-            env_file_match = re.search(r'environmentFiles\s*=\s*\[(.*?)\]', config_block, re.DOTALL)
+            env_file_match = __EXTRACT_FROM_CONFIG_SEARCH_RE_7.search(config_block)
             if env_file_match:
-                env_files = re.findall(r'"([^"]+)"', env_file_match.group(1))
+                env_files = __EXTRACT_FROM_CONFIG_FINDALL_RE.findall(env_file_match.group(1))
                 container_info['secrets'] = [{'type': 'env_file', 'path': f} for f in env_files]
 
         except Exception as e:

@@ -26,6 +26,12 @@ import requests
 
 from transcript import TranscriptError
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_TRANSLATE_SUB_RE = _compiled_re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$")
+
+
 logger = logging.getLogger("transcripts")
 
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -479,7 +485,7 @@ def dx2_translator(base_url: str, model: str, key_file: str):
                             headers={"Authorization": f"Bearer {key}"})
         res.raise_for_status()
         content = res.json()["choices"][0]["message"]["content"]
-        content = re.sub(r"^\s*```(?:json)?\s*|\s*```\s*$", "", content)
+        content = _TRANSLATE_SUB_RE.sub("", content)
         out = json.loads(content)
         if not isinstance(out, dict):
             raise ValueError("DX2 reply is not a JSON object")

@@ -485,6 +485,7 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **nvidia-smi PATH fallback**: GPU tool tries PATH first, then `/run/current-system/sw/bin/nvidia-smi`
 
 ## Changelog
+- 2026-11-02: Hoist fixed patterns, precompile CalDAV properties and remove full URL parsing from SSE query lookup.
 - 2026-11-02: Remove independent read barriers from status tools and file-backed boards; add bounded ordered scheduling and handler-level concurrency regressions.
 
 - 2026-10-14: Calendar create/edit/delete replace an unobserved detached sync with one bounded Radicale-pair sync. Responses expose `syncComplete`; partial failures retain the local mutation and state that sync did not complete.
@@ -742,6 +743,8 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **2026-04-02**: Root podman fix, parameter validation, `.mcp.json` registration, Phase 1-3 foundation.
 
 ## Structure
+
+Fixed regexes live at module scope; stateful uses reset cursors or use independent matchAll iterators. CalDAV precompiles known property patterns. `tests/server-overview.test.ts` checks fixed-pattern placement and query decoding parity with the prior URL parser.
 
 `src/src/executors/concurrency.ts` schedules up to eight reads per invocation. Excess items wait; failures stop admission and drain active reads before rejection. Systemd discovery, calendar search, board files, mail folder counts, website lists and resources use it. Fixed health, storage and media reads overlap while dependent writes, fallback probes and sync remain ordered. `tests/server-overview.test.ts` pins overlap, limits, result order and partial failures.
 

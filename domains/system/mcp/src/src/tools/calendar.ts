@@ -14,6 +14,11 @@ import { contract } from "../result.js";
 import type { ResultEnvelope, ToolDef, ToolResult } from "../types.js";
 import { log } from "../log.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const parseVeventsPatternRegex = /\r?\n/;
+const icsTimePatternRegex = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/;
+const icsTimePatternRegex2 = /;TZID=(?:"([^"]*)"|([^;]*))/i;
+
 /* ════════════════════════════════════════════════════════════════ */
 /*  Binary resolution                                              */
 /* ════════════════════════════════════════════════════════════════ */
@@ -217,7 +222,7 @@ const ICS_LINE_RE = /^([A-Za-z0-9-]+)((?:;(?:"[^"]*"|[^";:])*)*):(.*)$/;
 function parseVevents(raw: string): IcsProps[] {
   const events: IcsProps[] = [];
   const stack: string[] = [];
-  for (const line of unfoldIcs(raw).split(/\r?\n/)) {
+  for (const line of unfoldIcs(raw).split(parseVeventsPatternRegex)) {
     const m = line.match(ICS_LINE_RE);
     if (!m) continue;
     const name = m[1].toUpperCase();
@@ -256,12 +261,12 @@ function wallClock(instant: number, zone: string): number {
  * malformed or its TZID is not an IANA zone.
  */
 function icsTime(prop: { params: string; value: string } | undefined, zone: string): IcsTime | null {
-  const m = prop?.value.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/);
+  const m = prop?.value.match(icsTimePatternRegex);
   if (!prop || !m) return null;
   const [, y, mo, d, h, mi, s, utc] = m;
   if (h === undefined) return { date: `${y}-${mo}-${d}`, time: null };
   let wall = Date.UTC(+y, +mo - 1, +d, +h, +mi, +s);
-  const tzid = prop.params.match(/;TZID=(?:"([^"]*)"|([^;]*))/i);
+  const tzid = prop.params.match(icsTimePatternRegex2);
   const source = utc ? "UTC" : tzid ? (tzid[1] ?? tzid[2]) : null;
   if (source) {
     try {

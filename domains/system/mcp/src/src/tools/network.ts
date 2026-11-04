@@ -10,6 +10,14 @@ import { TtlCache } from "../cache.js";
 import { mcpError, catchError } from "../errors.js";
 import { contract } from "../result.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const parseCaddyRoutesBlockRegexRegex = /\{\s*\n([^}]*?name\s*=\s*"[^"]+";[^}]*?)\}/g;
+const parseCaddyRoutesPatternRegex = /name\s*=\s*"([^"]+)"/;
+const parseCaddyRoutesPatternRegex2 = /mode\s*=\s*"([^"]+)"/;
+const parseCaddyRoutesPatternRegex3 = /port\s*=\s*(\d+)/;
+const parseCaddyRoutesPatternRegex4 = /upstream\s*=\s*"([^"]+)"/;
+const parseCaddyRoutesPatternRegex5 = /path\s*=\s*"([^"]+)"/;
+
 const cache = new TtlCache();
 
 export function networkTools(runtimeTtl: number, nixosConfigPath?: string): ToolDef[] {
@@ -273,16 +281,16 @@ interface ParsedRoute {
 
 function parseCaddyRoutes(content: string): ParsedRoute[] {
   const routes: ParsedRoute[] = [];
-  const blockRegex = /\{\s*\n([^}]*?name\s*=\s*"[^"]+";[^}]*?)\}/g;
+  const blockRegex = (parseCaddyRoutesBlockRegexRegex.lastIndex = 0, parseCaddyRoutesBlockRegexRegex);
   let match: RegExpExecArray | null;
 
   while ((match = blockRegex.exec(content)) !== null) {
     const block = match[1];
-    const nameMatch = block.match(/name\s*=\s*"([^"]+)"/);
-    const modeMatch = block.match(/mode\s*=\s*"([^"]+)"/);
-    const portMatch = block.match(/port\s*=\s*(\d+)/);
-    const upstreamMatch = block.match(/upstream\s*=\s*"([^"]+)"/);
-    const pathMatch = block.match(/path\s*=\s*"([^"]+)"/);
+    const nameMatch = block.match(parseCaddyRoutesPatternRegex);
+    const modeMatch = block.match(parseCaddyRoutesPatternRegex2);
+    const portMatch = block.match(parseCaddyRoutesPatternRegex3);
+    const upstreamMatch = block.match(parseCaddyRoutesPatternRegex4);
+    const pathMatch = block.match(parseCaddyRoutesPatternRegex5);
 
     if (nameMatch && modeMatch) {
       routes.push({

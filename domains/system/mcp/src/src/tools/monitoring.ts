@@ -10,6 +10,10 @@ import { instantQuery, rangeQuery } from "../executors/prometheus.js";
 import { mcpError, catchError } from "../errors.js";
 import { contract } from "../result.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const monitoringToolsPatternRegex = /\S+\s+\S+\s+\S+\s+\S+\s+(\S+?)(?:\[\d+\])?:/;
+const checkStoragePatternRegex = /\s+/;
+
 interface HealthComponent {
   name: string;
   status: "green" | "yellow" | "red";
@@ -141,7 +145,7 @@ export function monitoringTools(): ToolDef[] {
 
             const byUnit: Record<string, string[]> = {};
             for (const line of lines) {
-              const match = line.match(/\S+\s+\S+\s+\S+\s+\S+\s+(\S+?)(?:\[\d+\])?:/);
+              const match = line.match(monitoringToolsPatternRegex);
               const unit = match?.[1] || "unknown";
               if (!byUnit[unit]) byUnit[unit] = [];
               byUnit[unit].push(line);
@@ -290,7 +294,7 @@ async function checkStorage(): Promise<HealthComponent> {
     let worstPercent = 0;
 
     for (const line of lines) {
-      const parts = line.trim().split(/\s+/);
+      const parts = line.trim().split(checkStoragePatternRegex);
       if (parts.length >= 3) {
         const percent = parseInt(parts[1], 10);
         mounts.push({ mount: parts[0], percent, available: parts[2] });
@@ -304,7 +308,7 @@ async function checkStorage(): Promise<HealthComponent> {
     try {
       const result = await safeExec("df", ["-h", "--output=target,pcent,avail", "/"], { timeout: 5000 });
       const lines = result.stdout.split("\n").filter(Boolean).slice(1);
-      const parts = lines[0]?.trim().split(/\s+/) || [];
+      const parts = lines[0]?.trim().split(checkStoragePatternRegex) || [];
       const percent = parseInt(parts[1] || "0", 10);
       return {
         name: "storage",

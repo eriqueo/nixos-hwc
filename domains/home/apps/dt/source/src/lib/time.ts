@@ -1,3 +1,8 @@
+
+
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const parseDateTestRegex = /^\d{4}-\d{2}-\d{2}$/;
+
 export function elapsedMinutes(start: string, end?: string | null): number {
   const s = new Date(start).getTime();
   const e = end ? new Date(end).getTime() : Date.now();
@@ -89,7 +94,7 @@ export function parseDate(input: string): string {
     return d.toISOString().split('T')[0];
   }
   // Validate YYYY-MM-DD
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input)) {
+  if (!parseDateTestRegex.test(input)) {
     throw new Error(`Invalid date: ${input}. Use YYYY-MM-DD, "today", or "yesterday".`);
   }
   return input;

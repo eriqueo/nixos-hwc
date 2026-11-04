@@ -21,6 +21,11 @@ import { contract } from "../result.js";
 import { mcpError } from "../errors.js";
 import { mailThreadsByState, MAIL_DOMAINS, MAIL_FACTS, mailFactTag, mailDomainTag, MAIL_STATES, MAIL_ACTION_STATE, MAIL_STATE_DISPLAY_NAMES, mailStateTag, mailTagActions, classifierMutation, classifierMutationError, acceptedMailCommand } from "./mail.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const reflectLiveStatesTestRegex = /^[0-9a-f]{1,64}$/;
+const mailTriageToolsPatternRegex = /^thread:/;
+const mailTriageToolsTestRegex = /^[0-9a-f]+$/i;
+
 /** Default briefing output path (run.sh writes here, then injects .mail_triage). */
 const DEFAULT_BRIEFING_JSON =
   "/home/eric/.nixos/domains/business/morning-briefing/output/briefing.json";
@@ -138,7 +143,7 @@ export async function reflectLiveStates(
   // overflow or invalid cache identity fails visibly, never falls back to all mail.
   const ids = [...new Set(MAIL_STATES.flatMap(state =>
     (cached[state] ?? []).map(thread => thread.thread_id)))];
-  if (ids.length > 512 || ids.some(id => typeof id !== "string" || !/^[0-9a-f]{1,64}$/.test(id))) {
+  if (ids.length > 512 || ids.some(id => typeof id !== "string" || !reflectLiveStatesTestRegex.test(id))) {
     throw Error("Mail triage requires at most 512 valid hexadecimal thread IDs");
   }
   if (ids.length === 0) return emptyStates();
@@ -303,8 +308,8 @@ export function mailTriageTools(
 
         // ── writes: {action, id[, target]} — the generic card_actions path ──
         if (action !== "board" && action !== "summary" && action !== "digest") {
-          const id = String(args.id ?? "").replace(/^thread:/, "").trim();
-          if (!/^[0-9a-f]+$/i.test(id)) {
+          const id = String(args.id ?? "").replace(mailTriageToolsPatternRegex, "").trim();
+          if (!mailTriageToolsTestRegex.test(id)) {
             return mcpError({
               type: "VALIDATION_ERROR",
               message: `write '${action}' needs a notmuch thread id (hex), got ${JSON.stringify(args.id ?? null)}`,

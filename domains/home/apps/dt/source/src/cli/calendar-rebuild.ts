@@ -22,8 +22,8 @@ export function cmdCalendarRebuild(): void {
 
   const db = getDb();
   const sessions = db
-    .prepare('SELECT * FROM sessions WHERE end_at IS NOT NULL ORDER BY start_at ASC')
-    .all() as Session[];
+    .prepare('SELECT id, start_at, end_at, category, notes FROM sessions WHERE end_at IS NOT NULL ORDER BY start_at ASC')
+    .all() as Pick<Session, 'id' | 'start_at' | 'end_at' | 'category' | 'notes'>[];
 
   let count = 0;
   for (const s of sessions) {

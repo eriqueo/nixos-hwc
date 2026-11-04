@@ -11,6 +11,10 @@ import { MarkdownItemStore } from "./stores/markdown-store.js";
 import { resolveLlm } from "./adapters/resolver.js";
 import { runPipelineOnce } from "./cli/run-once.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const parseArgsPatternRegex = /[^a-z0-9]+/g;
+const parseArgsPatternRegex2 = /^-|-$/g;
+
 interface Args {
   pipeline: string;
   input: string;
@@ -29,7 +33,7 @@ function parseArgs(argv: string[]): Args {
   };
   const pipeline = get("--pipeline", "project-ideation");
   const input = get("--input");
-  const slug = input.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48);
+  const slug = input.toLowerCase().replace((parseArgsPatternRegex.lastIndex = 0, parseArgsPatternRegex), "-").replace((parseArgsPatternRegex2.lastIndex = 0, parseArgsPatternRegex2), "").slice(0, 48);
   return {
     pipeline,
     input,

@@ -26,6 +26,15 @@ import { PrReview, ReviewCase } from "./contract.js";
 import { GitFactsPort, GitHubPort, ReviewsStore } from "./ports.js";
 import { reviewBranch, ReviewInput } from "./reviewer.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const frontmatterExecRegex = /^---\n([\s\S]*?)\n---/;
+const frontmatterExecRegex2 = /^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$/;
+const frontmatterPatternRegex = /^["']|["']$/g;
+const bodyOfExecRegex = /^---\n[\s\S]*?\n---\n?/;
+const deriveBranchExecRegex = /branch `([^`]+)`/;
+const deriveBranchPatternRegex = /^runs\//;
+const deriveBranchPatternRegex2 = /\/$/;
+
 export interface MorningReviewConfig {
   vaultDir: string;
   defaultRepo: string;
@@ -80,16 +89,16 @@ interface DoneCard {
 
 function frontmatter(text: string): Record<string, string> {
   const out: Record<string, string> = {};
-  const m = /^---\n([\s\S]*?)\n---/.exec(text);
+  const m = frontmatterExecRegex.exec(text);
   if (!m) return out;
   for (const line of m[1].split("\n")) {
-    const mm = /^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$/.exec(line);
-    if (mm) out[mm[1]] = mm[2].replace(/^["']|["']$/g, "").trim();
+    const mm = frontmatterExecRegex2.exec(line);
+    if (mm) out[mm[1]] = mm[2].replace((frontmatterPatternRegex.lastIndex = 0, frontmatterPatternRegex), "").trim();
   }
   return out;
 }
 function bodyOf(text: string): string {
-  const m = /^---\n[\s\S]*?\n---\n?/.exec(text);
+  const m = bodyOfExecRegex.exec(text);
   return m ? text.slice(m[0].length).trim() : text.trim();
 }
 function isDone(s: string): boolean {
@@ -98,10 +107,10 @@ function isDone(s: string): boolean {
 
 /** Branch exactly as run.sh derives it: card body `branch \`x\``, else nightly/<run-name>. */
 function deriveBranch(body: string, goal: string, slug: string, run: string): string {
-  const m = /branch `([^`]+)`/.exec(body);
+  const m = deriveBranchExecRegex.exec(body);
   if (m) return m[1];
   // RUN_NAME is "<date>-<goal>-<slug>"; recover it from the run dir if present.
-  const runName = run.replace(/^runs\//, "").replace(/\/$/, "");
+  const runName = run.replace(deriveBranchPatternRegex, "").replace(deriveBranchPatternRegex2, "");
   return runName ? `nightly/${runName}` : `nightly/${goal}-${slug}`;
 }
 

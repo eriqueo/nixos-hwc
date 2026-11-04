@@ -76,6 +76,8 @@ export interface LeadStore {
   save(lead: Lead, report?: Report): Promise<SaveResult>;
   /** Look up by Lead.id (UUID). */
   byId(leadId: string): Promise<Lead | undefined>;
+  /** Read only the existing scalar JobTread IDs; never load the lead payload. */
+  jtIds(leadId: string): Promise<Lead["jt"] | undefined>;
   /** Most-recent-first paged view, with optional source/status filters. */
   recent(query: RecentQuery): Promise<readonly Lead[]>;
   /** Set JT IDs + jt_synced_at. Only non-null fields are written. */

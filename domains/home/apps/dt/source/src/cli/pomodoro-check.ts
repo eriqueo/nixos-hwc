@@ -3,6 +3,9 @@ import { getActiveSession, setPomodorosNotified } from '../db/queries.js';
 import { loadConfig } from '../config/index.js';
 import { elapsedMinutes, formatDuration } from '../lib/time.js';
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const cmdPomodoroCheckPatternRegex = /"/g;
+
 // Designed for a systemd user timer that fires every minute while clocked in.
 // On each tick: if elapsed minutes have crossed another pomodoro boundary
 // since the last notification, fire notify-send and bump the counter.
@@ -10,7 +13,7 @@ export function cmdPomodoroCheck(): void {
   const config = loadConfig();
   const interval = Math.max(1, Math.round(config.pomodoro_minutes ?? 25));
 
-  const active = getActiveSession();
+  const active = getActiveSession(['id', 'start_at', 'category', 'pomodoros_notified']);
   if (!active) return;
 
   const mins = elapsedMinutes(active.start_at);
@@ -28,7 +31,7 @@ export function cmdPomodoroCheck(): void {
 
   try {
     execSync(
-      `notify-send -u low -a dt "${title.replace(/"/g, '\\"')}" "${body.replace(/"/g, '\\"')}"`,
+      `notify-send -u low -a dt "${title.replace((cmdPomodoroCheckPatternRegex.lastIndex = 0, cmdPomodoroCheckPatternRegex), '\\"')}" "${body.replace((cmdPomodoroCheckPatternRegex.lastIndex = 0, cmdPomodoroCheckPatternRegex), '\\"')}"`,
       { stdio: 'ignore' }
     );
   } catch {
